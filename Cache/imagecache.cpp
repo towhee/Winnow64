@@ -155,6 +155,7 @@ ImageCache::ImageCache(QObject *parent,
 
         decoder->moveToThread(thread);
         connect(decoder, &ImageDecoder::done, this, &ImageCache::fillCache);
+        // connect(this, &ImageCache::decode, decoder, &ImageDecoder::decode);
 
         thread->start();
         decoders.append(decoder);
@@ -345,7 +346,8 @@ void ImageCache::updateToCache()
     Called by run() if was not isRunning().
     In either case, this is running in the ImageCache thread.
 */
-    if (debugLog || G::isLogger || G::isFlowLogger) log("updateToCache");
+    if (debugLog || G::isLogger || G::isFlowLogger)
+        log("updateToCache");
 
     QString fun = "ImageCache::updateToCache";
     if (debugCaching)
@@ -441,6 +443,8 @@ void ImageCache::trimOutsideTargetRange()
     Any images in imCache that are no longer in the target range are removed.
 */
     QString src = "ImageCache::trimOutsideTargetRange";
+    if (debugLog || G::isLogger)
+        log("trimOutsideTargetRange");
     if (debugCaching) qDebug() << src;
 
     // rows being removed
@@ -472,8 +476,6 @@ void ImageCache::trimOutsideTargetRange()
         icd->remove(key);
     }
 
-    // folders were added or removed from datamodel and toCache/toCacheStatus
-    // have already been cleared and repopulated in setTargetRange
     if (instance != dm->instance) return;
 
     // Trim toCacheStatus outside target range
@@ -490,86 +492,128 @@ void ImageCache::trimOutsideTargetRange()
                   }),
                   toCache.end());
 
-    updateStatus("Update all rows", src);
+    updateStatus("Update all rows", "ImageCache::trimOutsideTargetRange");
 }
 
-// void ImageCache::trimOutsideTargetRange()
-// /*
-//     Any images in imCache that are no longer in the target range are removed.
-// */
-// {
-//     QString src = "ImageCache::trimOutsideTargetRange";
-//     if (debugCaching) qDebug() << src;
+// --- Cache Pressure Helpers ---
 
-//     removedFromCache.clear();
+qint64 ImageCache::nowMs() { return QDateTime::currentMSecsSinceEpoch(); }
 
-//     // trim imCache outside target range
-//     auto it = icd->imCache.begin();
-//     while (it != icd->imCache.end()) {
-//         QString fPath = it.key();
-//         int sfRow = dm->proxyRowFromPath(fPath, src);
-//         // fPath not in datamodel if sfRow == -1
-//         if (!isValidKey(sfRow)) {
-//             // Erase and move iterator forward
-//             it = icd->imCache.erase(it);
-//             continue;
-//         }
-//         if (sfRow < targetFirst || sfRow > targetLast) {
-//             if (debugCaching)
-//             {
-//                 qDebug().noquote()
-//                     << src.leftJustified(col0Width, ' ')
-//                     << "sfRow =" << sfRow
-//                     << "isCached =" << dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()
-//                     << "targetFirst =" << targetFirst
-//                     << "targetLast =" << targetLast
-//                     << "fPath =" << fPath
-//                     ;
-//             }
-//             // Erase and move iterator forward
-//             it = icd->imCache.erase(it);
-//             // emit setCached(sfRow, false, instance);
-//             // bulk update datamodel cached status in updateToCache()
-//             removedFromCache.append(sfRow);
-//         }
-//         else {
-//             ++it; // move forward if no removal
-//         }
-//     }
+inline void ImageCache::noteItemSizeMB(float szMB) {
+    if (szMB <= 0) return;
+    emaItemMB = (emaItemMB < 0) ? szMB : (0.8f * emaItemMB + 0.2f * szMB);
+}
 
-//     // folders were added or removed from datamodel and toCache/toCacheStatus
-//     // have already been cleared and repopulated in setTargetRange
-//     if (instance != dm->instance) return;
+inline void ImageCache::updateMotion(int key, bool isForwardNow) {
+    const qint64 t = nowMs();
+    if (lastMoveMs == 0) { lastMoveMs = t; lastKeyForMotion = key; return; }
 
-//     // trim toCacheStatus outside target range
-//     for (int sfRow : toCache) {
-//         if (sfRow < targetFirst || sfRow > targetLast) {
-//             toCacheStatus.remove(sfRow);
-//             if (isValidKey(sfRow) && !removedFromCache.contains(sfRow)) {
-//                 // emit setCached(sfRow, false, instance);
-//                 // bulk update datamodel cached status in updateToCache()
-//                 removedFromCache.append(sfRow);
-//             }
-//         }
-//     }
+    const int dRows = key - lastKeyForMotion;
+    const qint64 dt = t - lastMoveMs;
 
-//     // trim toCache outside target range
-//     auto itt = toCache.begin();  // Ensures a mutable iterator
-//     toCache.erase(std::remove_if(itt, toCache.end(), [&](int sfRow) {
-//                       return sfRow < targetFirst || sfRow > targetLast;
-//                   }), toCache.end());
+    // only consider pure forward steps in the current direction
+    if (isForwardNow && dRows == +1) {
+        if (emaStepMs < 0) emaStepMs = dt;
+        else               emaStepMs = 0.7 * emaStepMs + 0.3 * dt;
+        ++forwardStreak;
+    } else {
+        // break the streak on any non +1 forward step
+        forwardStreak = 0;
+        // slowly relax EMA upward to avoid permanently “rapid”
+        if (emaStepMs > 0) emaStepMs = 0.9 * emaStepMs + 0.1 * 250.0;
+    }
 
-//     if (debugCaching)
-//     {
-//         qDebug().noquote()
-//             << src.leftJustified(col0Width, ' ')
-//             << "toCache:" << toCache
+    lastMoveMs = t;
+    lastKeyForMotion = key;
+}
 
-//             ;
-//     }
+inline bool ImageCache::isRapidForward() const {
+    qDebug() << "ImageCache::isRapidForward"
+             << "isForward =" << isForward
+             << "forwardStreak =" << forwardStreak
+             << "rapidMinStreak =" << rapidMinStreak
+             << "emaStepMs =" << emaStepMs
+             << "rapidStepMsThreshold =" << rapidStepMsThreshold
+                ;
+    return isForward &&
+           forwardStreak >= rapidMinStreak &&
+           emaStepMs > 0.0 &&
+           emaStepMs <= rapidStepMsThreshold;
+}
 
-//     updateStatus("Update all rows", src);
-// }
+inline int ImageCache::calcResizeStepMB() const {
+    // aim for a few images worth, but stay within min/max
+    const int byItems = (emaItemMB > 0) ? int(std::ceil(emaItemMB * 3.0f)) : 0;
+    int step = qMax(minStepMB, byItems);
+    step = qMin(step, maxStepMB);
+    return step;
+}
+
+void ImageCache::releavePressure() {
+    const qint64 t = nowMs();
+
+    // Gate by “rapid forward” unless we still have the first-adjust free pass
+    const bool rapidOk = isRapidForward() || firstAdjustFreePass;
+    // Only act if user is ripping forward AND cooldown elapsed
+    if (!rapidOk) {
+        qDebug() << "ImageCache::releavePressure rapidForward == false"
+            ;
+        return;
+    }
+    if (!firstAdjustFreePass && (t - lastAdjustMs < adjustCooldownMs)) {
+        qDebug() << "ImageCache::releavePressure cooldown"
+                 << "lastAdjustMs =" << lastAdjustMs
+                 << "adjustCooldownMs =" << adjustCooldownMs
+            ;
+        return;
+    }
+    qDebug() << "ImageCache::releavePressure currentPressure =" << currentPressure;
+
+    // No flip-flopping: only grow on high pressure, shrink on very low pressure
+    if (currentPressure <= pressureHigh) {
+        const int step = calcResizeStepMB();
+        const int newMax = qMin(maxMBCeiling, maxMB + step);
+        qDebug() << "ImageCache::releavePressure high check"
+                 << "step =" << step
+                 << "maxMB =" << maxMB
+                 << "newMax =" << newMax
+            ;
+        if (newMax != maxMB) {
+            maxMB = newMax;
+            lastAdjustMs = t;
+            qDebug() << "ImageCache::releavePressure high"
+                     << "currentPressure =" << currentPressure
+                     << "step =" << step
+                     << "maxMB =" << maxMB
+                ;
+            if (isShowCacheStatus)
+                updateStatus("Update all rows", "ImageCache::releasePressure");
+        }
+    }
+    else if (currentPressure > pressureLow) {
+        const int step = calcResizeStepMB();
+        const int newMax = qMax(minMB, maxMB - step);
+        qDebug() << "ImageCache::releavePressure low check"
+                 << "step =" << step
+                 << "maxMB =" << maxMB
+                 << "newMax =" << newMax
+            ;
+        if (newMax != maxMB) {
+            maxMB = newMax;
+            lastAdjustMs = t;
+            qDebug() << "ImageCache::releavePressure low "
+                     << "currentPressure =" << currentPressure
+                     << "step =" << step
+                     << "maxMB =" << maxMB
+                ;
+            if (isShowCacheStatus)
+                updateStatus("Update all rows", "ImageCache::releasePressure");
+        }
+    }
+    // otherwise stay put and keep observing
+}
+
+// --- End Cache Pressure ---
 
 void ImageCache::setTargetRange(int key)
 {
@@ -599,20 +643,30 @@ void ImageCache::setTargetRange(int key)
       have been iterated.  targetFirst and targetLast are used in trimOutsideTargetRange
       and showCacheStatus.
 */
-    // --- init & guards ---
+    if (debugLog || G::isLogger)
+        log("setTargetRange", "row = " + QVariant(key).toString());
+
     if (abort) return;
 
     const int n = dm->sf->rowCount();
     if (n <= 0 || key < 0 || key >= n) return;
 
     float sumMB = 0.0f;
-    int nearestToTarget = 0;
+    int nearestToTarget = -1;
 
     // If folders changed, reset target queues
     if (instance != dm->instance) {
         toCache.clear();
         toCacheStatus.clear();
         instance = dm->instance;
+
+        // --- reset motion/pressure & allow one immediate adjust ---
+        forwardStreak = 0;
+        emaStepMs = -1.0;
+        emaItemMB = -1.0f;
+        currentPressure = INT_MAX;
+        lastAdjustMs = 0;
+        firstAdjustFreePass = true;     // <- enable first-adjust bypass
     }
 
     // Direction helpers
@@ -627,9 +681,8 @@ void ImageCache::setTargetRange(int key)
 
     auto addToQueue = [&](int pos) {
         if (abort) return;
-        // if (pos < 0 || pos >= n) return;
 
-        // Videos: mark cached; do not count toward sumMB (preserves your behavior)
+        // Videos: mark cached; do not count toward sumMB
         if (dm->valueSf(pos, G::VideoColumn).toBool()) {
             emit setCached(pos, true, instance);
             (pos < key) ? targetFirst = pos : targetLast = pos;
@@ -637,12 +690,24 @@ void ImageCache::setTargetRange(int key)
         }
 
         const float szMB = dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
+        noteItemSizeMB(szMB);
 
         // Only count/queue if we still have room
         if (sumMB + szMB < maxMB) {
             const QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
+            // If not already queued to cache, then add to queue
             if (!toCache.contains(pos) && !icd->contains(fPath)) {
                 toCacheAppend(pos);
+            }
+            // Get pressure on cache
+            if (toCache.contains(pos) && nearestToTarget == -1) {
+                nearestToTarget = pos;
+                currentPressure = qAbs(nearestToTarget - key);
+                // /*
+                qDebug() << "ImageCache::setTargetRange pressure ="
+                         << currentPressure
+                         << "maxMB =" << maxMB
+                    ; //*/
             }
             sumMB += szMB;
             (pos < key) ? targetFirst = pos : targetLast = pos;
@@ -669,6 +734,15 @@ void ImageCache::setTargetRange(int key)
         addToQueue(aheadPos);
         aheadPos += dir;
     }
+
+    // Pressure
+    // currentPressure = (nearestToTarget == -1) ? INT_MAX
+    //                                           : qAbs(nearestToTarget - key);
+
+    // update motion heuristics and try pressure relief
+    maxMBCeiling = G::availableMemoryMB * 0.9;
+    updateMotion(key, isForward);
+    releavePressure();
 }
 
 void ImageCache::removeCachedImage(QString fPath)
@@ -779,11 +853,13 @@ void ImageCache::memChk()
     Mac::availableMemory();
 #endif
 
+    return;
+
     // Current usage and headroom
     quint64 zero = 0.0;
     quint64 availMB = qMax(zero, G::availableMemoryMB);
-    // quint64 currMB  = icd->sizeMB();
-    quint64 currMB  = getImCacheSize();
+    quint64 currMB  = icd->sizeMB();
+    // quint64 currMB  = getImCacheSize();
     quint64 roomMB  = maxMB - currMB;
 
     // If the cache headroom is larger than what's actually free,
@@ -797,12 +873,12 @@ void ImageCache::memChk()
         // maxMB = minMB;  // maxMB change
     }
 
-    qDebug() << "imageCache::memCheck"
-             << "G::availableMemoryMB =" << G::availableMemoryMB
-             << "maxMB =" << maxMB
-             // << "icd->sizeMB() =" << icd->sizeMB()
-             << "getImCacheSize() =" << getImCacheSize()
-        ;
+    // qDebug() << "imageCache::memCheck"
+    //          << "G::availableMemoryMB =" << G::availableMemoryMB
+    //          << "maxMB =" << maxMB
+    //          // << "icd->sizeMB() =" << icd->sizeMB()
+    //          << "getImCacheSize() =" << getImCacheSize()
+    //     ;
 
 }
 
@@ -1350,7 +1426,7 @@ void ImageCache::adjustCacheMem(quint64 ms, quint64 mb)
         prevMsAve = msAve;
     }
 
-    /*
+    // /*
     qDebug() << "imageCache::adjustCacheMem"
              << "G::availableMemoryMB =" << G::availableMemoryMB
              << "decodeImageCount =" << decodeImageCount
@@ -1696,11 +1772,6 @@ void ImageCache::decodeNextImage(int id, int sfRow)
             );
     }
 
-    // if (!isValidKey(sfRow)) {
-    //     qDebug() << src << "row =" << sfRow << "is invalid";
-    //     return;
-    // }
-
     // set isCaching
     if (toCacheStatus.contains(sfRow)) {
         toCacheStatus[sfRow].isCaching = true;
@@ -1743,6 +1814,8 @@ void ImageCache::decodeNextImage(int id, int sfRow)
     }
 
     if (!decoderThreads[id]->isRunning()) decoderThreads[id]->start();
+
+    // emit decode(sfRow, instance);
 
     bool success = false;
     if (!abort)
@@ -2155,7 +2228,8 @@ void ImageCache::dispatch()
     added to imCache. More details are available in the fillCache comments and at the top of
     this class.
 */
-    if (debugCaching || G::isLogger || G::isFlowLogger) log("dispatch");
+    if (debugCaching || G::isLogger || G::isFlowLogger)
+        log("dispatch", "row = " + QVariant(currRow).toString());
 
     // req'd?
     if (dm->sf->rowCount() == 0) {

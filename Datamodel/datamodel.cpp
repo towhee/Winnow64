@@ -2124,6 +2124,7 @@ void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
     setData(dmIdx, value, role);
     setData(dmIdx, align, Qt::TextAlignmentRole);
 }
+
 void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
                          QString src, int role, int align)
 {

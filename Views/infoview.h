@@ -96,6 +96,7 @@ public:
         SelectedRow,
         PickedRow,
         CacheRow,
+        FreeMemRow,
         MonitorRow,
         statusInfoRowsEnd   // insert additional items before this
     };

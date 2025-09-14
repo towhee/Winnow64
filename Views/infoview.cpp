@@ -377,6 +377,7 @@ void InfoView::setupOk()
     ok->setData(ok->index(SelectedRow, 0, statusInfoIdx), "Selected");
     ok->setData(ok->index(PickedRow, 0, statusInfoIdx), "Picked");
     ok->setData(ok->index(CacheRow, 0, statusInfoIdx), "Cache");
+    ok->setData(ok->index(FreeMemRow, 0, statusInfoIdx), "Free Memory");
     ok->setData(ok->index(MonitorRow, 0, statusInfoIdx), "Monitor");
 
     // tooltip for EC
@@ -546,8 +547,7 @@ void InfoView::updateInfo(const int &row)
     if (s == "0") s = "";
     ok->setData(ok->index(ISORow, 1, imageInfoIdx), s);
     s = dm->sf->index(row, G::ExposureCompensationColumn).data().toString();
-//    s = QString::number(dm->sf->index(row, G::ExposureCompensationColumn).data().toDouble(), 'f', 1) + " EV";
-    if (s != "") s += " EV";
+    if (!s.endsWith("EV")) s += " EV";
     ok->setData(ok->index(ExposureCompensationRow, 1, imageInfoIdx), s);
     s = dm->sf->index(row, G::FocalLengthColumn).data().toString() + "mm";
     if (s == "0mm") s = "";

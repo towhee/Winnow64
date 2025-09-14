@@ -41,12 +41,12 @@ void MW::initialize()
 
     // status bar buttons / labels
     modifyImagesBtn = new BarBtn();
-    msg = "Toggle permit modify images on/off.";
+    msg = "Toggle on/off to permit modify images.";
     modifyImagesBtn->setToolTip(msg);
     connect(modifyImagesBtn, &BarBtn::clicked, this, &MW::toggleModifyImagesClick);
 
     includeSidecarsToggleBtn = new BarBtn();
-    msg = "Toggle include sidecars when dragging on/off.";
+    msg = "Toggle on/off to include sidecars when dragging.";
     includeSidecarsToggleBtn->setToolTip(msg);
     connect(includeSidecarsToggleBtn, &BarBtn::clicked, this, &MW::toggleIncludeSidecarsClick);
 
