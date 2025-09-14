@@ -35,7 +35,7 @@ void ImageCacheData::remove(const QString &key)
     // take() gives us the removed value so we can adjust bytes
     QImage img = imCache.take(key);
     // if (img.isNull()) return false;
-    qDebug() << "ImageCacheData::remove" << key << img.sizeInBytes();
+    // qDebug() << "ImageCacheData::remove" << key << img.sizeInBytes();
 
     bytes.fetch_sub(static_cast<quint64>(img.sizeInBytes()),
                     std::memory_order_relaxed);

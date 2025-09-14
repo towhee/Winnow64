@@ -1,112 +1,82 @@
-Winnow uses the DockWidget favDock to dock the bookmarks (QTreeWidget).  A double mouse click toggles
-the dock between docked and float state.  I want this to only occur when the double mouse click is
-in the dock title bar, not when it is propogated from bookmarks. Currently, a double mouse click in
-bookmarks is triggering the toggle between docked and floating.
 
-void MW::createFavDock()
+
+void ImageCache::setTargetRange(int key)
 {
-    if (G::isLogger) G::log("MW::createFavDock");
-    favDockTabText = "Bookmarks";
-    // favDockTabText = "  🔖  ";
-    dockTextNames << favDockTabText;
-    favDock = new DockWidget(favDockTabText, "BookmarkDock", this);  // Bookmarks📗 🔖 🏷️ 🗂️
-    // favDock->setObjectName("Bookmarks");
-    favDock->setWidget(bookmarks);
-    connect(favDock, &DockWidget::focus, this, &MW::focusOnDock);
+    if (debugLog || G::isLogger)
+        log("setTargetRange", "row = " + QVariant(key).toString());
 
-    // customize the favDock titlebar
-    QHBoxLayout *favTitleLayout = new QHBoxLayout();
-    favTitleLayout->setContentsMargins(0, 0, 0, 0);
-    favTitleLayout->setSpacing(0);
-    favTitleBar = new DockTitleBar("Bookmarks", favTitleLayout);
-    favDock->setTitleBarWidget(favTitleBar);
-}
+    if (abort) return;
 
-DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QWidget()
-{
-    setStyle();
-    setLayout(titleBarLayout);
-    titleLabel = new QLabel;
-    titleLabel->setTextFormat(Qt::RichText);
-    setTitle(title);
-    titleLabel->setText(title);
-    titleLabel->setStyleSheet("border:none;");
-    titleBarLayout->addWidget(titleLabel);
-    titleBarLayout->addStretch();
-}
+    const int n = dm->sf->rowCount();
+    if (n <= 0 || key < 0 || key >= n) return;
 
-void DockTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    QWidget::mouseDoubleClickEvent(event);
-}
+    float sumMB = 0.0f;
+    int nearestToTarget = -1;
 
-DockWidget::DockWidget(const QString &title, QString objName, QWidget *parent)
-: QDockWidget(title, parent)
-{
-setObjectName(objName);
-isRestoring = false;
-}
-
-bool DockWidget::hasCustomTitleBar()
-{
-QWidget *titleBarWidget = this->titleBarWidget();
-if (titleBarWidget) return true;
-else return false;
-}
-
-bool DockWidget::event(QEvent *event)
-{
-/*
-QDockWidget title bar overrides MouseButtonDblClick and does not propogate the event
-so it cannot be captured in DockWidget.  Instead capture here.
-
-The QDockWidget topLevelChanged signal is not employed because it fires after the
-DockWidget floating status has changed, and we need to know before, so we can save
-the floating geometry.
-*/
-if (event->type() == QEvent::NonClientAreaMouseButtonDblClick) {
-
-    /* This event is fired when the default (non-custom) floating DockWidget titlebar
-    is dblclick. If the DockWidget has a custom titlebar then this event is not
-    fired. So, only the thumbDock DockWidget when floating. */
-
-    if (G::isLogger) G::log("DockWidget::event", "QEvent::NonClientAreaMouseButtonDblClick " + objectName());
-    qDebug() << "DockWidget::event NonClientAreaMouseButtonDblClick" << objectName()
-             << "isFloating =" << isFloating();
-    save();
-    setFloating(false);
-    emit focus(this);
-    // do not propogate event
-    return true;
-}
-
-if (event->type() == QEvent::MouseButtonDblClick) {
-    /*  This event is fired for DockWidgets with a custom titlebar when they are both
-    floating and docked and non-custom titlebar DockWidgets when docked. */
-    if (G::isLogger) G::log("DockWidget::event", "QEvent::MouseButtonDblClick " + objectName());
-    qDebug() << "DockWidget::event MouseButtonDblClick" << objectName()
-             << "isFloating =" << isFloating();
-    if (isFloating() && hasCustomTitleBar()) {
-        save();
-        setFloating(false);
-        emit focus(this);
+    // If folders changed, reset target queues
+    if (instance != dm->instance) {
+        toCache.clear();
+        toCacheStatus.clear();
+        instance = dm->instance;
     }
-    else {
-        doubleClickDocked = true;
-        setDefaultFloatingGeometry();
-        setFloating(true);  // must preceed calling restore()
-        restore();
+
+    // Direction helpers
+    const int dir = isForward ? +1 : -1;
+
+    // Forward phase aims for ~2/3 of capacity
+    const float forwardCap = maxMB * (2.0f / 3.0f);
+
+    // Positions: ahead starts at key, behind starts one step opposite
+    int aheadPos  = key;
+    int behindPos = key - dir;   // if dir=+1 -> key-1; if dir=-1 -> key+1
+
+    auto addToQueue = [&](int pos) {
+        if (abort) return;
+
+        // Videos: mark cached; do not count toward sumMB
+        if (dm->valueSf(pos, G::VideoColumn).toBool()) {
+            emit setCached(pos, true, instance);
+            (pos < key) ? targetFirst = pos : targetLast = pos;
+            return;
+        }
+
+        const float szMB = dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
+
+        // Only count/queue if we still have room
+        if (sumMB + szMB < maxMB) {
+            const QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
+            // If not already queued to cache, then add to queue
+            if (!toCache.contains(pos) && !icd->contains(fPath)) {
+                toCacheAppend(pos);
+            }
+            // Get pressure on cache
+            if (toCache.contains(pos) && nearestToTarget == -1) {
+                nearestToTarget = pos;
+                int pressure = qAbs(nearestToTarget - key);
+            }
+            sumMB += szMB;
+            (pos < key) ? targetFirst = pos : targetLast = pos;
+        }
+    };
+
+    // Fill forward up to ~2/3 capacity
+    while (!abort && sumMB < forwardCap) {
+        if (aheadPos < 0 || aheadPos >= n) break;
+        addToQueue(aheadPos);
+        aheadPos += dir;
     }
-    // do not propogate event
-    return true;
-}
 
-QDockWidget::event(event);
-return true;
-}
+    // Fill behind until total reaches maxMB
+    while (!abort && sumMB < maxMB) {
+        if (behindPos < 0 || behindPos >= n) break;
+        addToQueue(behindPos);
+        behindPos -= dir;
+    }
 
-void BookMarks::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    event->ignore();
-    return;
+    // Fill forward again if still not full
+    while (!abort && sumMB < maxMB) {
+        if (aheadPos < 0 || aheadPos >= n) break;
+        addToQueue(aheadPos);
+        aheadPos += dir;
+    }
 }

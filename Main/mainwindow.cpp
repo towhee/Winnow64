@@ -3394,9 +3394,11 @@ void MW::updateImageCacheStatus(QString instruction,
             + QString::number(imageCache->decoderCount)
             + " threads)"
             ;
+    QString freeMem = QString::number(double(G::availableMemoryMB)/1024,'f',1) + "GB";
     if (G::useInfoView) {
         QStandardItemModel *k = infoView->ok;
         k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
+        k->setData(k->index(infoView->FreeMemRow, 1, infoView->statusInfoIdx), freeMem);
     }
 
     // if (!isShowCacheProgressBar) cacheProgressBar->hide();

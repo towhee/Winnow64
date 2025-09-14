@@ -149,6 +149,47 @@ private:
     bool isShowCacheStatus;     // show in app status bar
     bool firstDispatchNewDM;
 
+    // --- Cache pressure section ---
+    bool firstAdjustFreePass = false;   // bypass rapid/cooldown once after folder change
+    qint64 lastAdjustMs = 0;              // last time we changed maxMB
+    qint64 lastMoveMs   = 0;              // last time setTargetRange saw a move
+    int    lastKeyForMotion = -1;         // last row key we saw
+
+    // motion heuristics (EMA = Exponential Moving Average)
+    double emaStepMs = -1.0;              // EMA of time between successive forward steps
+    int    forwardStreak = 0;             // count of consecutive forward steps
+
+    // pressure bookkeeping
+    int    currentPressure = INT_MAX;     // rows ahead to first queued target; INT_MAX if none
+
+    // tuning knobs (feel free to expose via settings)
+    int    pressureHigh  = 3;             // “need more cache” when pressure <= this
+    int    pressureLow   = 50;            // “too much cache” when pressure > this
+    int    adjustCooldownMs = 100;        // min delay between cache-size adjustments
+    int    rapidStepMsThreshold = 70;     // user is “rapid” if EMA step ≤ this (≈14 FPS)
+    // int    rapidStepMsThreshold = 70;     // user is “rapid” if EMA step ≤ this (≈14 FPS)
+    int    rapidMinStreak = 5;            // need at least N consecutive forward steps
+
+    // step sizing (we try to resize in chunks ≈ a few images)
+    float  emaItemMB = -1.0f;             // EMA of item size seen while queuing
+    int    minStepMB = 128;               // never resize by less than this
+    int    maxStepMB = 1024;              // never resize by more than this
+
+    // optional ceiling; if you already track available mem, use that instead
+    quint64 maxMBCeiling = G::availableMemoryMB * 0.9;          // soft cap (MB) to prevent runaway growth
+
+    // pressure helpers
+    static qint64 nowMs();
+    inline void noteItemSizeMB(float szMB);
+    inline void updateMotion(int key, bool isForwardNow);
+    inline bool isRapidForward() const;
+    inline int calcResizeStepMB() const;
+
+    void releavePressure();
+
+    // --- End Cache pressure section ---
+
+
     void launchDecoders(QString src);
     bool okToCache(int id, int sfRow);
     bool nullInImCache();
