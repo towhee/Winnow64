@@ -94,16 +94,19 @@ void MW::writeSettings()
     settings->setValue("isSlideShowWrap", isSlideShowWrap);
 
     // image cache
-    settings->setValue("cacheMethod", cacheMethod);
-    settings->setValue("cacheSizeMethod", cacheSizeStrategy);
-    settings->setValue("cacheMinSize", cacheMinSize);
-    settings->setValue("isShowCacheStatus", isShowCacheProgressBar);
-    settings->setValue("cacheDelay", cacheDelay);
-    settings->setValue("cacheStatusWidth", cacheBarProgressWidth);
-    settings->setValue("cacheWtAhead", cacheWtAhead);
-    settings->setValue("isCachePreview", isCachePreview);
-    settings->setValue("cachePreviewWidth", cachePreviewWidth);
-    settings->setValue("cachePreviewHeight", cachePreviewHeight);
+    settings->setValue("autoMaxMB", imageCache->getAutoMaxMB());
+    settings->setValue("cacheMaxMB", imageCache->getMaxMB());
+    settings->setValue("isShowCacheStatus", imageCache->getShowCacheStatus());
+    // settings->setValue("cacheMethod", cacheMethod);
+    // settings->setValue("cacheSizeMethod", cacheSizeStrategy);
+    // settings->setValue("cacheMinSize", cacheMinSize);
+    // settings->setValue("isShowCacheStatus", isShowCacheProgressBar);
+    // settings->setValue("cacheDelay", cacheDelay);
+    // settings->setValue("cacheStatusWidth", cacheBarProgressWidth);
+    // settings->setValue("cacheWtAhead", cacheWtAhead);
+    // settings->setValue("isCachePreview", isCachePreview);
+    // settings->setValue("cachePreviewWidth", cachePreviewWidth);
+    // settings->setValue("cachePreviewHeight", cachePreviewHeight);
 
     settings->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
     settings->setValue("isIconNumberVisible", iconNumberVisibleAction->isChecked());
@@ -327,19 +330,19 @@ bool MW::loadSettings()
         // filters
 
         // cache
-        cacheMethod = "Concurrent";
-        cacheSizeStrategy = "Moderate";
-        cacheMinMB = 2000;
-        cacheMinSize = "2 GB";
-        cacheSizePercentOfAvailable = 50;
-        cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.5);
-        isShowCacheProgressBar = true;
-        cacheBarProgressWidth = 200;
-        progressWidthBeforeResizeWindow = cacheBarProgressWidth;
-        cacheWtAhead = 7;
-        isCachePreview = false;
-        cachePreviewWidth = 2000;
-        cachePreviewHeight = 1600;
+        // cacheMethod = "Concurrent";
+        // cacheSizeStrategy = "Moderate";
+        // cacheMinMB = 2000;
+        // cacheMinSize = "2 GB";
+        // cacheSizePercentOfAvailable = 50;
+        // cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.5);
+        // isShowCacheProgressBar = true;
+        // cacheBarProgressWidth = 200;
+        // progressWidthBeforeResizeWindow = cacheBarProgressWidth;
+        // cacheWtAhead = 7;
+        // isCachePreview = false;
+        // cachePreviewWidth = 2000;
+        // cachePreviewHeight = 1600;
 
         if (!isSettings || simulateJustInstalled) return true;
     }
@@ -480,21 +483,7 @@ bool MW::loadSettings()
     if (settings->contains("isSlideShowRandom")) isSlideShowRandom = settings->value("isSlideShowRandom").toBool();
     if (settings->contains("isSlideShowWrap")) isSlideShowWrap = settings->value("isSlideShowWrap").toBool();
 
-    // image cache
-    if (settings->contains("cacheSizePercentOfAvailable")) cacheSizePercentOfAvailable = settings->value("cacheSizePercentOfAvailable").toInt();
-    if (settings->contains("cacheSizePercentOfAvailable")) cacheSizePercentOfAvailable = settings->value("cacheSizePercentOfAvailable").toInt();
-    if (settings->contains("cacheSizeMethod")) setImageCacheSize(settings->value("cacheSizeMethod").toString());
-    else setImageCacheSize("Moderate");
-    if (settings->contains("cacheMinSize")) setImageCacheMinSize(settings->value("cacheMinSize").toString());
-    else setImageCacheMinSize("4 GB");
-    if (settings->contains("isShowCacheStatus")) isShowCacheProgressBar = settings->value("isShowCacheStatus").toBool();
-    if (settings->contains("cacheStatusWidth")) cacheBarProgressWidth = settings->value("cacheStatusWidth").toInt();
-    progressWidthBeforeResizeWindow = cacheBarProgressWidth;
-    if (settings->contains("cacheWtAhead")) cacheWtAhead = settings->value("cacheWtAhead").toInt();
-    if (settings->contains("isCachePreview")) isCachePreview = settings->value("isCachePreview").toBool();
-    if (settings->contains("cachePreviewWidth")) cachePreviewWidth = settings->value("cachePreviewWidth").toInt();
-    if (settings->contains("cachePreviewHeight")) cachePreviewHeight = settings->value("cachePreviewHeight").toInt();
-    // setImageCacheParameters();
+    // image cache (see initialize.cpp MW::createImageCache)
 
     // full screen
     if (settings->contains("isFullScreenFolders")) fullScreenDocks.isFolders = settings->value("isFullScreenFolders").toBool();

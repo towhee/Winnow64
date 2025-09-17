@@ -43,26 +43,40 @@ void Mac::initializeAppDelegate() {
 
 void Mac::availableMemory()
 {
-    if (G::isLogger)
-      G::log("Mac::availableMemory");
-    vm_size_t page_size;
-    mach_port_t mach_port;
-    mach_msg_type_number_t count;
-    vm_statistics64_data_t vm_stats;
-
-    mach_port = mach_host_self();
-    count = sizeof(vm_stats) / sizeof(natural_t);
-    if (KERN_SUCCESS == host_page_size(mach_port, &page_size) &&
-        KERN_SUCCESS == host_statistics64(mach_port, HOST_VM_INFO,
-        (host_info64_t)&vm_stats, &count))
-    {
-        long long free_memory = (int64_t)vm_stats.free_count * (int64_t)page_size;
-        /*
-        long long used_memory = ((int64_t)vm_stats.active_count +
-                                 (int64_t)vm_stats.inactive_count +
-                                 (int64_t)vm_stats.wire_count) *  (int64_t)page_size;*/
-        G::availableMemoryMB = static_cast<quint32>(free_memory / (1024 * 1024));
+    if (G::isLogger) G::log("Mac::availableMemory");
+    vm_size_t page_size = 0;
+    mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
+    vm_statistics64_data_t vm_stats{};
+    kern_return_t kr1 = host_page_size(mach_host_self(), &page_size);
+    kern_return_t kr2 = host_statistics64(mach_host_self(),
+                                          HOST_VM_INFO64,
+                                          (host_info64_t)&vm_stats,
+                                          &count);
+    if (kr1 == KERN_SUCCESS && kr2 == KERN_SUCCESS) {
+        // free + inactive (+ speculative if available in this SDK)
+        uint64_t freePages = vm_stats.free_count + vm_stats.inactive_count;
+#ifdef __MAC_10_9
+        freePages += vm_stats.speculative_count;
+#endif
+        uint64_t freeBytes = (uint64_t)freePages * (uint64_t)page_size;
+        G::availableMemoryMB = static_cast<quint32>(freeBytes / (1024ull * 1024ull));
     }
+    // if (G::isLogger)
+    //   G::log("Mac::availableMemory");
+    // vm_size_t page_size;
+    // mach_port_t mach_port;
+    // mach_msg_type_number_t count;
+    // vm_statistics64_data_t vm_stats;
+
+    // mach_port = mach_host_self();
+    // count = sizeof(vm_stats) / sizeof(natural_t);
+    // if (KERN_SUCCESS == host_page_size(mach_port, &page_size) &&
+    //     KERN_SUCCESS == host_statistics64(mach_port, HOST_VM_INFO,
+    //     (host_info64_t)&vm_stats, &count))
+    // {
+    //     long long free_memory = (int64_t)vm_stats.free_count * (int64_t)page_size;
+    //     G::availableMemoryMB = static_cast<quint32>(free_memory / (1024 * 1024));
+    // }
 }
 
 qint64 Mac::getResidentMemoryUsageBytes()

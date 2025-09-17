@@ -184,7 +184,6 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         if (w.isColorManage) toggleColorManage(Tog::on);
         else toggleColorManage(Tog::off);
     }
-    cacheSizeStrategy = w.cacheSizeMethod;
     if (sortColumn != w.sortColumn) {
         sortColumn = w.sortColumn;
         updateSortColumn(sortColumn);
@@ -275,7 +274,6 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
 
     // Processes
     wsd.isColorManage = G::colorManage;
-    wsd.cacheSizeMethod = cacheSizeStrategy;
     wsd.sortColumn = sortColumn;
     wsd.isReverseSort = sortReverseAction->isChecked();
 }
@@ -522,7 +520,6 @@ QString MW::reportWorkspaces()
             // << "\n  isEmbelDisplay            " << G::s(ws.isEmbelDisplay)
             << "\nProcesses:"
             << "\n  isColorManage             " << G::s(ws.isColorManage)
-            << "\n  cacheSizeMethod           " << G::s(ws.cacheSizeMethod)
             << "\n  sortColumn                " << G::s(ws.sortColumn)
             << "\n  isReverseSort             " << G::s(ws.isReverseSort)
             << "\n"
@@ -587,7 +584,6 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         << "\nisCompareDisplay" << ws.isCompareDisplay
         << "\nisEmbelDisplay" << ws.isEmbelDisplay
         << "\nisColorManage" << ws.isColorManage
-        << "\ncacheSizeMethod" << ws.cacheSizeMethod
         << "\nsortColumn" << ws.sortColumn
         << "\nisReverseSort" << ws.isReverseSort
         //*/
@@ -657,7 +653,6 @@ void MW::loadWorkspaces()
 
         // Processes
         ws.isColorManage = settings->value("isColorManage").toBool();
-        ws.cacheSizeMethod = settings->value("cacheSizeMethod").toString();
         ws.sortColumn = settings->value("sortColumn").toInt();
         ws.isReverseSort = settings->value("isReverseSort").toBool();
         workspaces->append(ws);
@@ -728,7 +723,6 @@ void MW::saveWorkspaces()
 
         // Processes
         settings->setValue("isColorManage", ws.isColorManage);
-        settings->setValue("cacheSizeMethod", ws.cacheSizeMethod);
         settings->setValue("sortColumn", ws.sortColumn);
         settings->setValue("isReverseSort", ws.isReverseSort);
     }

@@ -1,53 +1,82 @@
-In MW create
-QHash<QString,bool>subsystemState (isIdle)
-bool allIdle;
 
-slot MW::aborted(const QString subSystem)
+
+void ImageCache::setTargetRange(int key)
 {
-    subsystemState[subSystem] = true;
+    if (debugLog || G::isLogger)
+        log("setTargetRange", "row = " + QVariant(key).toString());
 
-    // iterate subsystemState and if all are true then set allIdle = true;
-}
+    if (abort) return;
 
-void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDataModel, bool recurse)
-{
-    stop();
+    const int n = dm->sf->rowCount();
+    if (n <= 0 || key < 0 || key >= n) return;
 
-    // do more stuff
-}
+    float sumMB = 0.0f;
+    int nearestToTarget = -1;
 
-MW::stop()
-{
-    // iterate subsystemState and set to subsyster.isIdle()
-
-    G::stop   = true;
-    dm->abort = true;
-    allIdle = false;
-
-    // initialize stopped state for MetaRead, ImageCache, BuildFilters
-    for (auto it = stopped.begin(); it != stopped.end(); ++it) {
-        it.value() = false;
+    // If folders changed, reset target queues
+    if (instance != dm->instance) {
+        toCache.clear();
+        toCacheStatus.clear();
+        instance = dm->instance;
     }
 
-    emit abortMetaRead();
-    emit abortImageCache();
-    emit abortBuildFilters();
+    // Direction helpers
+    const int dir = isForward ? +1 : -1;
 
-    // wait until abort done
-    QEventLoop loop;
-    QTimer to; to.setSingleShot(true); to.start(10000);
+    // Forward phase aims for ~2/3 of capacity
+    const float forwardCap = maxMB * (2.0f / 3.0f);
 
-    connect(&to, &QTimer::timeout, &loop, [&]
-        {
-            qDebug() << "MW::stop timeout";
-            loop.quit();
-        });
+    // Positions: ahead starts at key, behind starts one step opposite
+    int aheadPos  = key;
+    int behindPos = key - dir;   // if dir=+1 -> key-1; if dir=-1 -> key+1
 
-    // Every aborted(...) updates state and maybe quits:
-    auto maybeQuit = [&]{
-        // QMutexLocker l(&stateMtx);
-        if (allIdle) loop.quit();
+    auto addToQueue = [&](int pos) {
+        if (abort) return;
+
+        // Videos: mark cached; do not count toward sumMB
+        if (dm->valueSf(pos, G::VideoColumn).toBool()) {
+            emit setCached(pos, true, instance);
+            (pos < key) ? targetFirst = pos : targetLast = pos;
+            return;
+        }
+
+        const float szMB = dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
+
+        // Only count/queue if we still have room
+        if (sumMB + szMB < maxMB) {
+            const QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
+            // If not already queued to cache, then add to queue
+            if (!toCache.contains(pos) && !icd->contains(fPath)) {
+                toCacheAppend(pos);
+            }
+            // Get pressure on cache
+            if (toCache.contains(pos) && nearestToTarget == -1) {
+                nearestToTarget = pos;
+                int pressure = qAbs(nearestToTarget - key);
+            }
+            sumMB += szMB;
+            (pos < key) ? targetFirst = pos : targetLast = pos;
+        }
     };
 
-    reset(src);
+    // Fill forward up to ~2/3 capacity
+    while (!abort && sumMB < forwardCap) {
+        if (aheadPos < 0 || aheadPos >= n) break;
+        addToQueue(aheadPos);
+        aheadPos += dir;
+    }
+
+    // Fill behind until total reaches maxMB
+    while (!abort && sumMB < maxMB) {
+        if (behindPos < 0 || behindPos >= n) break;
+        addToQueue(behindPos);
+        behindPos -= dir;
+    }
+
+    // Fill forward again if still not full
+    while (!abort && sumMB < maxMB) {
+        if (aheadPos < 0 || aheadPos >= n) break;
+        addToQueue(aheadPos);
+        aheadPos += dir;
+    }
 }
