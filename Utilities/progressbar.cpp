@@ -199,6 +199,7 @@ void ProgressBar::updateImageCacheProgress(int fromItem,
 
     /*
        qDebug()
+            << "ProgressBar::updateImageCacheProgress"
             << "Total rows =" << items
             << "barWidth" << barWidth
             << "itemWidth" << itemWidth

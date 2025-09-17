@@ -60,12 +60,6 @@ void MW::initialize()
     panToFocusToggleBtn->setToolTip(msg);
     connect(panToFocusToggleBtn, &BarBtn::clicked, this, &MW::togglePanToFocusClick);
 
-    cacheMethodBtn = new BarBtn();
-    msg = "Toggle cache size Thrifty > Moderate > Greedy > Thrifty... \n"
-          "Ctrl + Click to open cache preferences.";
-    cacheMethodBtn->setToolTip(msg);
-    connect(cacheMethodBtn, &BarBtn::clicked, this, &MW::toggleImageCacheStrategy);
-
     reverseSortBtn = new BarBtn();
     reverseSortBtn ->setToolTip("Toggle sort direction: Mouse click or shortcut Opt/Alt + S");
     connect(reverseSortBtn, &BarBtn::clicked, this, &MW::toggleSortDirectionClick);
@@ -371,6 +365,21 @@ void MW::createImageCache()
 
     imageCache = new ImageCache(this, icd, dm);
 
+    // load settings
+    if (!isSettings || simulateJustInstalled) {
+        imageCache->setAutoMaxMB(true);
+        imageCache->setMaxMB(8000);
+        imageCache->setShowCacheStatus(true);
+    }
+    else {
+        if (settings->contains("autoMaxMB"))
+            imageCache->setAutoMaxMB(settings->value("autoMaxMB").toBool());
+        if (settings->contains("cacheMaxMB"))
+            imageCache->setMaxMB(settings->value("cacheMaxMB").toULongLong());
+        if (settings->contains("isShowCacheStatus"))
+            imageCache->setShowCacheStatus(settings->value("isShowCacheStatus").toBool());
+    }
+
     connect(&imageCacheThread, &QThread::finished,
             imageCache, &QObject::deleteLater);
 
@@ -401,9 +410,21 @@ void MW::createImageCache()
             imageCache, &ImageCache::initialize,
             Qt::BlockingQueuedConnection);
 
-    // Signal to update imageCache parameters
-    connect(this, &MW::imageCacheChangeParam,
-            imageCache, &ImageCache::updateImageCacheParam);
+    // // Signal to update imageCache parameters
+    // connect(this, &MW::imageCacheChangeParam,
+    //         imageCache, &ImageCache::updateImageCacheParam);
+
+    // Signal to update imageCache auto cache size
+    connect(this, &MW::setAutoMaxMB,
+            imageCache, &ImageCache::setAutoMaxMB);
+
+    // Signal to update imageCache maxMB
+    connect(this, &MW::setMaxMB,
+            imageCache, &ImageCache::setMaxMB);
+
+    // Signal to update imageCache show cache status
+    connect(this, &MW::setShowCacheStatus,
+            imageCache, &ImageCache::setShowCacheStatus);
 
     // Signal to ImageCache new image selection
     connect(this, &MW::setImageCachePosition,
@@ -1038,23 +1059,14 @@ void MW::createStatusBar()
     // label to show imageThreadRunning status
     imageThreadRunningLabel = new QLabel;
     statusBar()->addPermanentWidget(imageThreadRunningLabel);
-    tip = "Image caching:\n";
-    tip += "\n";
-    tip += "  • Green:    \tAll cached\n";
-    tip += "  • Red:      \tCaching in progress\n";
-    tip += "  • Gray:     \tEmpty folder, no images to cache\n";
-    tip += "\n";
-    tip += "Click to go to cache preferences.";
+    bool isAutoSize = imageCache->getAutoMaxMB();
+    quint64 maxMB = imageCache->getMaxMB();
     imageThreadRunningLabel->setObjectName("ImageCacheStatus");
+    tip = getImageCacheRunningTip(isAutoSize, maxMB);
     imageThreadRunningLabel->setToolTip(tip);
     // imageThreadRunningLabel->setFixedWidth(charWidth);
 
     setCacheRunningLightsWidth();
-
-    // label to show cache amount
-    //    setImageCacheSize(cacheSizeStrategy);
-    //    statusBar()->addPermanentWidget(cacheMethodBtn);
-    //    cacheMethodBtn->show();
 
     // add process progress bar to left side of statusBar
     progressBar = new QProgressBar;

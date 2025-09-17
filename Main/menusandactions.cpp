@@ -1615,22 +1615,6 @@ void MW::createMiscActions()
     addAction(copyInfoTextToClipboardAction);
     connect(copyInfoTextToClipboardAction, &QAction::triggered, infoView, &InfoView::copyEntry);
 
-    // Non- Menu actions
-    thriftyCacheAction = new QAction(tr("Thrifty Cache"), this);
-    addAction(thriftyCacheAction);
-    thriftyCacheAction->setShortcut(QKeySequence("F10"));
-    connect(thriftyCacheAction, &QAction::triggered, this, &MW::thriftyCache);
-
-    moderateCacheAction = new QAction(tr("Moderate Cache"), this);
-    addAction(moderateCacheAction);
-    moderateCacheAction->setShortcut(QKeySequence("F11"));
-    connect(moderateCacheAction, &QAction::triggered, this, &MW::moderateCache);
-
-    greedyCacheAction = new QAction(tr("Greedy Cache"), this);
-    addAction(greedyCacheAction);
-    greedyCacheAction->setShortcut(QKeySequence("F12"));
-    connect(greedyCacheAction, &QAction::triggered, this, &MW::greedyCache);
-
     // Rory (extra functionality)
     roryAction = new QAction(tr("Test"), this);
     roryAction->setObjectName("rory");
@@ -2559,17 +2543,17 @@ void MW::enableSelectionDependentMenus()
     thumbsShrinkAction->setEnabled(dmHasRows);
 
     // Help menu
-    helpDiagnosticsMenu->setEnabled(dmHasRows);
-    diagnosticsAllAction->setEnabled(dmHasRows);
-    diagnosticsCurrentAction->setEnabled(dmHasRows);
-    diagnosticsMainAction->setEnabled(dmHasRows);
-    diagnosticsGridViewAction->setEnabled(dmHasRows);
-    diagnosticsThumbViewAction->setEnabled(dmHasRows);
-    diagnosticsImageViewAction->setEnabled(dmHasRows);
-    diagnosticsMetadataAction->setEnabled(dmHasRows);
-    diagnosticsDataModelAction->setEnabled(dmHasRows);
-    diagnosticsMetadataCacheAction->setEnabled(dmHasRows);
-    diagnosticsImageCacheAction->setEnabled(dmHasRows);
+    // helpDiagnosticsMenu->setEnabled(dmHasRows);
+    // diagnosticsAllAction->setEnabled(dmHasRows);
+    // diagnosticsCurrentAction->setEnabled(dmHasRows);
+    // diagnosticsMainAction->setEnabled(dmHasRows);
+    // diagnosticsGridViewAction->setEnabled(dmHasRows);
+    // diagnosticsThumbViewAction->setEnabled(dmHasRows);
+    // diagnosticsImageViewAction->setEnabled(dmHasRows);
+    // diagnosticsMetadataAction->setEnabled(dmHasRows);
+    // diagnosticsDataModelAction->setEnabled(dmHasRows);
+    // diagnosticsMetadataCacheAction->setEnabled(dmHasRows);
+    // diagnosticsImageCacheAction->setEnabled(dmHasRows);
     diagnosticsEmbellishAction->setEnabled(dmHasRows);
 
     // Missing thumbnails: rename and set enabled state
