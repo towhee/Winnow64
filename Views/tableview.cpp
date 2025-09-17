@@ -142,7 +142,8 @@ bool TableView::isRowVisible(int row)
 
 {
     if (isDebug || G::isLogger) G::log("TableView::isRowVisible");
-    defaultColumnWidth[G::PathColumn] = (row >= firstVisibleRow && row <= lastVisibleRow);
+    // defaultColumnWidth[G::PathColumn] = (row >= firstVisibleRow && row <= lastVisibleRow);
+    return (row >= firstVisibleRow && row <= lastVisibleRow);
 }
 
 void TableView::scrollToRow(int row, QString source)

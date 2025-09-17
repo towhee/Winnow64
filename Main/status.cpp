@@ -231,7 +231,7 @@ void MW::updateProgressBarWidth()
         int availableSpace = availableSpaceForProgressBar();
         if (availableSpace < cacheBarProgressWidth) cacheBarProgressWidth = availableSpace;
         progressLabel->setFixedWidth(cacheBarProgressWidth);
-        imageCache->updateStatus("Update all rows", "MW::updateProgressBarWidth");
+        imageCache->updateStatus(ImageCache::StatusAction::All, "MW::updateProgressBarWidth");
     }
 }
 
@@ -240,6 +240,23 @@ void MW::setCacheRunningLightsWidth() {
     int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 1.3;
     metadataThreadRunningLabel->setFixedWidth(charWidth);
     imageThreadRunningLabel->setFixedWidth(charWidth);
+}
+
+QString MW::getImageCacheRunningTip(bool isAuto, quint64 maxMB)
+{
+    QString autoSize = QVariant(isAuto).toString();
+    QString ceiling = QVariant(maxMB).toString();
+    QString tip = "Image caching:\n";
+    tip += "\n";
+    tip += "  • Green:    \tAll cached\n";
+    tip += "  • Red:      \tCaching in progress\n";
+    tip += "  • Gray:     \tEmpty folder, no images to cache\n";
+    tip += "\n";
+    tip += "Auto size cache = " + autoSize + "\n";
+    tip += "Cache ceiling   = " + ceiling + "MB\n";
+    tip += "\n";
+    tip += "Click to go to cache preferences.";
+    return tip;
 }
 
 void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
@@ -305,7 +322,13 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
         #endif
     }
     imageThreadRunningLabel->setText("◉");
-    if (isShowCacheProgressBar) progressLabel->setVisible(showCacheLabel);
+    if (isShowCacheProgressBar) {
+        progressLabel->setVisible(showCacheLabel);
+        bool isAutoSize = imageCache->getAutoMaxMB();
+        quint64 maxMB = imageCache->getMaxMB();
+        QString tip = getImageCacheRunningTip(isAutoSize, maxMB);
+        imageThreadRunningLabel->setToolTip(tip);
+    }
 }
 
 void MW::setThreadRunStatusInactive()
@@ -544,28 +567,6 @@ void MW::togglePanToFocus(Tog n)
     imageView->panToFocus ? txt = "Pan to predicted focus point is ON"
                           : txt = "Pan to predicted focus point is OFF";
     // G::popUp->showPopup(txt);
-
-}
-
-void MW::toggleImageCacheStrategy()
-{
-/*
-    Called by cacheSizeBtn press
-*/
-    if (G::isLogger) G::log("MW::toggleImageCacheMethod");
-
-    if (qApp->keyboardModifiers() == Qt::ControlModifier) {
-        cachePreferences();
-        return;
-    }
-    QString strategy;
-    if (cacheSizeStrategy == "Thrifty") strategy = "Moderate";
-    else if (cacheSizeStrategy == "Moderate") strategy = "Greedy";
-    else if (cacheSizeStrategy == "Greedy") strategy = "Thrifty";
-    setImageCacheSize("Thrifty");
-    setImageCacheParameters();
-    if (preferencesDlg == nullptr) return;
-    pref->setItemValue("imageCacheStrategy", strategy);
 
 }
 
