@@ -535,7 +535,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     // persistant settings between sessions
     migrateOldSettings();
-    QString iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+    iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
             + "/settings.ini";
     settings = new QSettings(iniPath, QSettings::IniFormat);
     // settings = new QSettings("Winnow", "winnow_100");
@@ -929,29 +929,15 @@ void MW::resizeEvent(QResizeEvent *event)
     emit resizeMW(this->geometry(), centralWidget->geometry());
 
     // prevent progressBar overlapping in statusBar
-    int availSpace = availableSpaceForProgressBar();
-    if (availSpace < progressWidthBeforeResizeWindow && availSpace > cacheBarProgressWidth) {
-        cacheBarProgressWidth = availSpace;
-    }
     updateProgressBarWidth();
 
     // update current workspace
     ws.isMaximised = isMaximized();
-    // qDebug() << "MW::resizeEvent  ws.isMaximised =" << ws.isMaximised;
 
     // scroll to current
-    // int row = dm->currentSfRow;
-    // if (gridView->isVisible()) {
-    //     int row = gridView->midVisibleCell;
-    //     qDebug()
-    //             << "dm->currentSfRow =" << dm->currentSfRow
-    //             << "gridView->midVisibleCell =" << gridView->midVisibleCell
-    //                ;
-    //     // if (!thumbView->isCellVisible(row)) {
-    //         gridView->scrollToRow(row, fun);
-    //         // thumbView->scrollToCurrent(fun);
-    //     // }
-    // }
+    if (!thumbView->isCellVisible(dm->currentSfRow)) {
+        keyScrollCurrent();
+    }
 }
 
 void MW::changeEvent(QEvent *event) {
@@ -2163,7 +2149,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     G::t.start();
 
     QString fun = "MW::folderSelectionChange";
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         // G::log("","");
         {
@@ -3354,8 +3340,8 @@ void MW::loadEntireMetadataCache(QString source)
 
 }
 
-void MW::updateImageCacheStatus(QString instruction,
-                                float currMB, int maxMB, int tFirst, int tLast,
+void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
+                                quint64 currMB, quint64 maxMB, int tFirst, int tLast,
                                 QString source)
 {
 /*
@@ -3365,7 +3351,8 @@ void MW::updateImageCacheStatus(QString instruction,
 */
 
     if (G::isLogger) {
-        QString s = "Instruction: " + instruction + "  Source: " + source;
+        QString strInstruction = imageCache->statusAction.at(instruction);
+        QString s = "Instruction: " + strInstruction + "  Source: " + source;
         G::log("MW::updateImageCacheStatus", s);
     }
     if (G::isSlideShow && isSlideShowRandom) return;
@@ -3380,8 +3367,13 @@ void MW::updateImageCacheStatus(QString instruction,
     /*
     qDebug() << "MW::updateImageCacheStatus  Instruction ="
              << instruction
-             << "row =" << cache.key
              << "source =" << source
+             << "currMB =" << currMB
+             << "maxMB =" << maxMB
+             << "tFirst =" << tFirst
+             << "tLast =" << tLast
+             << "rows =" << dm->sf->rowCount()
+             << "cacheBarProgressWidth =" << cacheBarProgressWidth
              << "G::showProgress =" << G::showProgress
              << "G::showProgress::ImageCache =" << G::ShowProgress::ImageCache
                 ; //*/
@@ -3401,18 +3393,24 @@ void MW::updateImageCacheStatus(QString instruction,
         k->setData(k->index(infoView->FreeMemRow, 1, infoView->statusInfoIdx), freeMem);
     }
 
-    // if (!isShowCacheProgressBar) cacheProgressBar->hide();
-    if (G::showProgress != G::ShowProgress::ImageCache) return;
+    // update tooltip
+    if (instruction == ImageCache::StatusAction::Size) {
+        imageThreadRunningLabel->setToolTip(getImageCacheRunningTip(isAutoSize, maxMB));
+    }
 
-    // just repaint the progress bar gray and return.
-    if (instruction == "Clear") {
+
+    // if (!isShowCacheProgressBar) cacheProgressBar->hide();
+    // if (G::showProgress != G::ShowProgress::ImageCache) return;
+
+    // Clear: just repaint the progress bar gray and return.
+    if (instruction == ImageCache::StatusAction::Clear) {
         cacheProgressBar->clearImageCacheProgress();
         return;
     }
 
-    int rows = dm->sf->rowCount();
-
-    if (instruction == "Update all rows") {
+    // Update all rows
+    if (instruction == ImageCache::StatusAction::All) {
+        int rows = dm->sf->rowCount();
         // clear progress
         cacheProgressBar->clearImageCacheProgress();
         cacheProgressBar->updateImageCacheProgress(tFirst, tLast, rows,
@@ -3544,36 +3542,6 @@ void MW::syncEmbellishMenu()
     }
 }
 
-void MW::thriftyCache()
-{
-/*
-    Connected to F10
-*/
-    if (G::isLogger) G::log("MW::thriftyCache");
-    setImageCacheSize("Thrifty");
-    setImageCacheParameters();
-}
-
-void MW::moderateCache()
-{
-/*
-    Connected to F11
-*/
-    if (G::isLogger) G::log("MW::moderateCache");
-    setImageCacheSize("Moderate");
-    setImageCacheParameters();
-}
-
-void MW::greedyCache()
-{
-/*
-    Connected to F12
-*/
-    if (G::isLogger) G::log("MW::greedyCache");
-    setImageCacheSize("Greedy");
-    setImageCacheParameters();
-}
-
 void MW::setImageCacheMinSize(QString size)
 {
 /*
@@ -3594,39 +3562,6 @@ void MW::setImageCacheMinSize(QString size)
     else if (size == "48 GB") cacheMinMB = 48000;
     else if (size == "64 GB") cacheMinMB = 64000;
     if (cacheMaxMB < cacheMinMB) cacheMaxMB = cacheMinMB;
-}
-
-void MW::setImageCacheSize(QString method)
-{
-/*
-
-*/
-    if (G::isLogger) G::log("MW::setImageCacheSize");
-//    qDebug() << "MW::setImageCacheSize" << method;
-
-
-    // deal with possible deprecated settings
-    if (method != "Thrifty" && method != "Moderate" && method != "Greedy")
-        method = "Thrifty";
-
-    cacheSizeStrategy = method;
-
-    if (cacheSizeStrategy == "Thrifty") {
-        cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.10);
-        cacheMethodBtn->setIcon(QIcon(":/images/icon16/thrifty.png"));
-    }
-    if (cacheSizeStrategy == "Moderate") {
-        cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.50);
-        cacheMethodBtn->setIcon(QIcon(":/images/icon16/moderate.png"));
-    }
-    if (cacheSizeStrategy == "Greedy") {
-        cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.90);
-        cacheMethodBtn->setIcon(QIcon(":/images/icon16/greedy.png"));
-    }
-
-    if (cacheMaxMB < cacheMinMB) cacheMaxMB = cacheMinMB;
-
-//    if (cacheMaxMB > 0 && cacheMaxMB < 1000) cacheMaxMB = G::availableMemoryMB;
 }
 
 void MW::setImageCacheParameters()
@@ -3655,8 +3590,8 @@ void MW::setImageCacheParameters()
 
     // imageCache->cacheSizeChange();
 
-    bool okToShow = G::showProgress == G::ShowProgress::ImageCache;
-    emit imageCacheChangeParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
+    // bool okToShow = G::showProgress == G::ShowProgress::ImageCache;
+    // emit imageCacheChangeParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
 
 }
 

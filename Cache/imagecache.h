@@ -40,7 +40,11 @@ public:
     void removeFromCache(QStringList &pathList);
     void rename(QString oldPath, QString newPath);
 
-    void updateStatus(QString instruction, QString source); // update cached send signal
+    bool getAutoMaxMB();
+    quint64 getMaxMB();
+    bool getShowCacheStatus();
+
+    void updateStatus(int instruction, QString source); // update cached send signal
     QString reportToCache();
     QString diagnostics();
     QString reportCacheParameters();
@@ -56,6 +60,13 @@ public:
 
     int decoderCount = 1;
 
+    enum StatusAction {
+        Clear,
+        All,
+        Size
+    };
+    QStringList statusAction {"Clear", "All", "Size"};
+
     bool debugCaching = false;
     bool debugLog = false;
 
@@ -66,7 +77,7 @@ signals:
     void decode(int sfRow, int instance);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
-    void showCacheStatus(QString instruction,
+    void showCacheStatus(int instruction, bool isAutoSize,
                          quint64 currMB, quint64 maxMB, int targetFirst, int targetLast,
                          QString source = "");
     void centralMsg(QString msg);       // not being used
@@ -80,8 +91,13 @@ public slots:
     void abortProcessing();
     void initialize(quint64 cacheSizeMB, quint64 cacheMinMB,
                     bool isShowCacheStatus, int cacheWtAhead);
+
     void updateImageCacheParam(quint64 cacheSizeMB, quint64 cacheMinMB,
                                bool isShowCacheStatus, int cacheWtAhead);
+    void setAutoMaxMB(bool autoSize);
+    void setMaxMB(quint64 mb);
+    void setShowCacheStatus(bool isShowCacheStatus);
+
     void updateInstance();
     void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
@@ -130,6 +146,7 @@ private:
     QHash<int,CacheItem> toCacheStatus;
     QList<int> removedFromCache;// items removed in trimOutsideTargetRange
     QVector<float> imageSize;
+    QVector<int> pressureHistory;   // holds last 50 pressure readings
 
     int currRow;                // current image
     int prevRow;                // used to establish direction of travel
@@ -139,6 +156,7 @@ private:
     int sumStep;                // sum of step until threshold
     int directionChangeThreshold;//number of steps before change direction of cache
     int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
+    bool autoMaxMB;             // use releavePressure() to set maxMB
     quint64 maxMB;              // maximum MB available to cache
     quint64 minMB;              // minimum MB available to cache
     int targetFirst;            // beginning of target range to cache
@@ -150,7 +168,7 @@ private:
     bool firstDispatchNewDM;
 
     // --- Cache pressure section ---
-    bool firstAdjustFreePass = false;   // bypass rapid/cooldown once after folder change
+    bool firstAdjustFreePass = false;     // bypass rapid/cooldown once after folder change
     qint64 lastAdjustMs = 0;              // last time we changed maxMB
     qint64 lastMoveMs   = 0;              // last time setTargetRange saw a move
     int    lastKeyForMotion = -1;         // last row key we saw
@@ -167,7 +185,6 @@ private:
     int    pressureLow   = 50;            // “too much cache” when pressure > this
     int    adjustCooldownMs = 100;        // min delay between cache-size adjustments
     int    rapidStepMsThreshold = 70;     // user is “rapid” if EMA step ≤ this (≈14 FPS)
-    // int    rapidStepMsThreshold = 70;     // user is “rapid” if EMA step ≤ this (≈14 FPS)
     int    rapidMinStreak = 5;            // need at least N consecutive forward steps
 
     // step sizing (we try to resize in chunks ≈ a few images)

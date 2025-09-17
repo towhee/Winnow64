@@ -113,7 +113,6 @@ void MW::reportWorkspaceState()
              << "\nisCompareDisplay" << w.isCompareDisplay
              // << "\nisEmbelDisplay" << w.isEmbelDisplay
              << "\nisColorManage" << ws.isColorManage
-             << "\ncacheSizeMethod" << ws.cacheSizeMethod
                 ;
 }
 
@@ -178,6 +177,9 @@ QString MW::diagnostics()
     rpt << "\n" << "_WIN32_WINNT = " << G::s(_WIN32_WINNT);
     rpt << "\n" << "NTDDI_VERSION = " << G::s(NTDDI_VERSION);
 #endif
+    rpt << "\n";
+
+    rpt << "\n" << "Settings iniPath = " << iniPath;
     rpt << "\n";
 
     rpt << "\n" << "G::winOutProfilePath = " << G::winOutProfilePath;

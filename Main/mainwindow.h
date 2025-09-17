@@ -143,6 +143,7 @@ public:
 
     // QSettings
     QSettings *settings;
+    QString iniPath;
     QMap<QString, QAction *> actionKeys;
 
     QMap<QString, QString> pathTemplates;
@@ -203,7 +204,6 @@ public:
         bool isEmbelDisplay;
         // Processes
         bool isColorManage;
-        QString cacheSizeMethod;
         int sortColumn;
         bool isReverseSort;
     };
@@ -302,7 +302,7 @@ public:
     QStack<QString> *slideshowRandomHistoryStack;
 
     // preferences: cache
-    QString cacheMethod;
+    // QString cacheMethod;
     QString cacheSizeStrategy;
     QString cacheMinSize;
     int cacheSizePercentOfAvailable;
@@ -399,6 +399,9 @@ signals:
     void startImageCache();
     void initializeImageCache(int maxMB, int minMB, bool showStatus, int wtAhead);
     void imageCacheChangeParam(int maxMB, int minMB, bool showStatus, int wtAhead);
+    void setAutoMaxMB(bool autoSize);
+    void setMaxMB(quint64 mb);
+    void setShowCacheStatus(bool isShowCacheStatus);
     void setImageCachePosition(QString, QString);
     void imageCacheFilterChange(QString, QString);
     void imageCacheColorManageChange();
@@ -543,7 +546,6 @@ private slots:
     void toggleColorManage(Tog n = toggle);
     void togglePanToFocusClick();
     void togglePanToFocus(Tog n = toggle);
-    void toggleImageCacheStrategy();
     void allPreferences();
     void infoViewPreferences();
     void cachePreferences();
@@ -589,11 +591,12 @@ private slots:
     void setThreadRunStatusInactive();
     void setCacheStatusVisibility();
     void setCacheRunningLightsWidth();
+    QString getImageCacheRunningTip(bool isAuto, quint64 maxMB);
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel,
                                        bool success, QString src = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
-    void updateImageCacheStatus(QString instruction,
-                                float currMB, int maxMB, int tFirst, int tLast,
+    void updateImageCacheStatus(int instruction, bool isAutoSize,
+                                quint64 currMB, quint64 maxMB, int tFirst, int tLast,
                                 QString source);
     // caching
     void folderChanged(/*const QString folderPath, const QString op*/);
@@ -646,7 +649,6 @@ private slots:
     void prevRandomSlide();
     void setImageCacheParameters();
     void setImageCacheMinSize(QString size);
-    void setImageCacheSize(QString method);
     void selectAllThumbs();
     void removeBookmark();
     void refreshBookmarks();
@@ -709,10 +711,6 @@ private slots:
     void help();
     void helpShortcuts();
     void helpWelcome();
-
-    void thriftyCache();
-    void moderateCache();
-    void greedyCache();
 
 private:
 //    QApplication *app;

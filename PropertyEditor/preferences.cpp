@@ -162,7 +162,8 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "showCacheProgressBar") {
-        mw->isShowCacheProgressBar = v.toBool();
+        emit mw->setShowCacheStatus(v.toBool());
+        // mw->isShowCacheProgressBar = v.toBool();
         mw->progressLabel->setVisible(v.toBool());
         if (mw->isShowCacheProgressBar)  G::showProgress = G::ShowProgress::ImageCache;
         else G::showProgress = G::ShowProgress::MetaCache;
@@ -197,28 +198,26 @@ void Preferences::itemChange(QModelIndex idx)
     //     mw->setCacheMethod(v.toString());
     // }
 
-    if (source == "imageCacheStrategy") {
-        // get available memory
-        #ifdef Q_OS_WIN
-        Win::availableMemory();     // sets G::availableMemoryMB
-        #endif
-
-        #ifdef Q_OS_MAC
-        Mac::availableMemory();     // sets G::availableMemoryMB
-        #endif
-
-        mw->setImageCacheSize(v.toString());
-        mw->setImageCacheParameters();
-
-        int memAvail = mw->icd->sizeBytes() + G::availableMemoryMB;
-        QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
-                QString::number(memAvail) + " available MB";
-        static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
-    }
-
-    if (source == "imageCacheMinSize") {
-        mw->setImageCacheMinSize(v.toString());
-        mw->setImageCacheSize(v.toString());
+    if (source == "imageCacheSize") {
+        QString size = v.toString();
+        if (size == "Auto") emit mw->setAutoMaxMB(true);
+        else {
+            quint64 mb;
+            if (size == "0.5 GB") mb = 500;
+            else if (size == "1 GB") mb = 1000;
+            else if (size == "2 GB") mb = 2000;
+            else if (size == "4 GB") mb = 4000;
+            else if (size == "6 GB") mb = 6000;
+            else if (size == "8 GB") mb = 8000;
+            else if (size == "12 GB") mb = 12000;
+            else if (size == "16 GB") mb = 16000;
+            else if (size == "24 GB") mb = 24000;
+            else if (size == "32 GB") mb = 32000;
+            else if (size == "48 GB") mb = 48000;
+            else if (size == "64 GB") mb = 64000;
+            emit mw->setAutoMaxMB(false);
+            emit mw->setMaxMB(mb);
+        }
         mw->setImageCacheParameters();
         // get available memory
         #ifdef Q_OS_WIN
@@ -231,7 +230,7 @@ void Preferences::itemChange(QModelIndex idx)
         quint64 memAvail = mw->icd->sizeMB() + G::availableMemoryMB;
         QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
                 QString::number(memAvail) + " available MB";
-        static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
+        // static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
     }
 
     if (source == "cacheSizeMB") {
@@ -902,6 +901,7 @@ void Preferences::addItems()
     i.key = "labelChoice";
     i.delegateType = DT_Combo;
     i.type = "QString";
+    i.dropList.clear();
     i.dropList << "File name"
                << "Title";
     addItem(i);
@@ -1115,38 +1115,59 @@ void Preferences::addItems()
     // addItem(i);
 
     // Image cache size strategy
-    i.name = "imageCacheStrategy";
-    i.parentName = "CacheHeader";
-    i.captionText = "Caching strategy";
-    i.tooltip = "Select method of determining the size of the image cache\n"
-                "Thrifty  = larger of 10% of available memory or 2GB\n"
-                "Moderate = 50% of available memory\n"
-                "Greedy   = 90% of available memory";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = mw->cacheSizeStrategy;
-    i.key = "imageCacheStrategy";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "Thrifty"
-               << "Moderate"
-               << "Greedy";
-    addItem(i);
+    // i.name = "imageCacheStrategy";
+    // i.parentName = "CacheHeader";
+    // i.captionText = "Caching strategy";
+    // i.tooltip = "Select method of determining the size of the image cache\n"
+    //             "Thrifty  = larger of 10% of available memory or 2GB\n"
+    //             "Moderate = 50% of available memory\n"
+    //             "Greedy   = 90% of available memory";
+    // i.hasValue = true;
+    // i.captionIsEditable = false;
+    // i.value = mw->cacheSizeStrategy;
+    // i.key = "imageCacheStrategy";
+    // i.delegateType = DT_Combo;
+    // i.type = "QString";
+    // i.dropList.clear();
+    // i.dropList << "Thrifty"
+    //            << "Moderate"
+    //            << "Greedy";
+    // addItem(i);
 
-    // Image cache minimum size excluding metadata cache
-    i.name = "imageCacheMinSize";
+    // Image cache maximum size excluding metadata cache
+    i.name = "imageCacheSize";
     i.parentName = "CacheHeader";
-    i.captionText = "Minimum cache size";
-    i.tooltip = "Minimum cache size in GB, overriding amount set by cache strategy.\n"
+    i.captionText = "Cache size";
+    i.tooltip = "The cache size in GB, overriding amount set by cache strategy.\n"
                 "The actual cache size could be smaller if the operating system does\n"
                 "not have enough memory available.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->cacheMinSize;
-    i.key = "imageCacheMinSize";
+    QHash<int, QString> mbToSize = {
+        {0,     "Auto"},     // you can decide how to treat "Auto"
+        {500,   "0.5 GB"},
+        {1000,  "1 GB"},
+        {2000,  "2 GB"},
+        {4000,  "4 GB"},
+        {6000,  "6 GB"},
+        {8000,  "8 GB"},
+        {12000, "12 GB"},
+        {16000, "16 GB"},
+        {24000, "24 GB"},
+        {32000, "32 GB"},
+        {48000, "48 GB"},
+        {64000, "64 GB"}
+    };
+    if (mw->imageCache->getAutoMaxMB())
+        i.value = "Auto";
+    else
+        i.value = mbToSize.value(mw->imageCache->getMaxMB());
+    i.key = "imageCacheSize";
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "0.5 GB"
+    i.dropList.clear();
+    i.dropList << "Auto"
+               << "0.5 GB"
                << "1 GB"
                << "2 GB"
                << "4 GB"
@@ -1161,35 +1182,32 @@ void Preferences::addItems()
                 ;
     addItem(i);
 
-    // Available memory for caching
-    i.name = "availableMBToCache";
-    i.parentName = "CacheHeader";
-    i.captionText = "Image cache / Available memory";
-    i.tooltip = "The total amount of available memory in MB.  On some\n"
-                "systems, including Mac M chips, you can allocate more\n"
-                "than available, due to excellent memory swapping\n"
-                "performance."
-                ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    // get available memory
-    #ifdef Q_OS_WIN
-    Win::availableMemory();     // sets G::availableMemoryMB
-    #endif
-    #ifdef Q_OS_MAC
-    Mac::availableMemory();     // sets G::availableMemoryMB
-    #endif
-    int memAvail = mw->icd->sizeMB() + G::availableMemoryMB;
-    i.value = QString::number(mw->cacheMaxMB) + " of " +
-            QString::number(memAvail) + " available MB";
-
-//    i.value = QString::number(mw->cacheMaxMB) + " of " + QString::number(G::availableMemoryMB) + " MB";
-    i.key = "availableMBToCache";
-    i.delegateType = DT_Label;
-    i.type = "QString";
-    i.color = G::disabledColor.name();
-//    i.color = "#1b8a83";
-    availMBMsgWidget = addItem(i);
+    // // Available memory for caching
+    // i.name = "availableMBToCache";
+    // i.parentName = "CacheHeader";
+    // i.captionText = "Image cache / Available memory";
+    // i.tooltip = "The total amount of available memory in MB.  On some\n"
+    //             "systems, including Mac M chips, you can allocate more\n"
+    //             "than available, due to excellent memory swapping\n"
+    //             "performance."
+    //             ;
+    // i.hasValue = true;
+    // i.captionIsEditable = false;
+    // // get available memory
+    // #ifdef Q_OS_WIN
+    // Win::availableMemory();     // sets G::availableMemoryMB
+    // #endif
+    // #ifdef Q_OS_MAC
+    // Mac::availableMemory();     // sets G::availableMemoryMB
+    // #endif
+    // int memAvail = mw->icd->sizeMB() + G::availableMemoryMB;
+    // i.value = QString::number(mw->cacheMaxMB) + " of " +
+    //         QString::number(memAvail) + " available MB";
+    // i.key = "availableMBToCache";
+    // i.delegateType = DT_Label;
+    // i.type = "QString";
+    // i.color = G::disabledColor.name();
+    // availMBMsgWidget = addItem(i);
 
     // Slideshow Header (Root)
     i.name = "SlideshowHeader";
