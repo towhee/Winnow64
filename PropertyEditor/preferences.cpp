@@ -161,13 +161,22 @@ void Preferences::itemChange(QModelIndex idx)
         qDebug() << "Preferences::itemChange pickClick->volume() =" << mw->pickClick->volume();
     }
 
+    if (source == "iconChunkSize") {
+        mw->updateDefaultIconChunkSize(v.toInt());
+        mw->settings->setValue("iconChunkSize", v.toInt());
+    }
+
+    if (source == "loadOnlyVisibleIcons") {
+        G::loadOnlyVisibleIcons = v.toBool();
+    }
+
     if (source == "showCacheProgressBar") {
         emit mw->setShowCacheStatus(v.toBool());
         // mw->isShowCacheProgressBar = v.toBool();
         mw->progressLabel->setVisible(v.toBool());
         if (mw->isShowCacheProgressBar)  G::showProgress = G::ShowProgress::ImageCache;
         else G::showProgress = G::ShowProgress::MetaCache;
-        mw->setImageCacheParameters();
+        mw->refreshAfterImageCacheSizeChange();
         // hide/show progressWidthSlider in preferences
         // QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
         // if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
@@ -177,17 +186,6 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "progressWidthSlider") {
         mw->cacheBarProgressWidth = v.toInt();
         mw->updateProgressBarWidth();
-        mw->progressWidthBeforeResizeWindow = mw->cacheBarProgressWidth;
-        // mw->setImageCacheParameters();
-    }
-
-    if (source == "iconChunkSize") {
-        mw->updateDefaultIconChunkSize(v.toInt());
-        mw->settings->setValue("iconChunkSize", v.toInt());
-    }
-
-    if (source == "loadOnlyVisibleIcons") {
-        G::loadOnlyVisibleIcons = v.toBool();
     }
 
     if (source == "maxIconSize") {
@@ -200,9 +198,10 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "imageCacheSize") {
         QString size = v.toString();
-        if (size == "Auto") emit mw->setAutoMaxMB(true);
+        if (size == "Auto") mw->imageCache->setAutoMaxMB(true);
+        // if (size == "Auto") emit mw->setAutoMaxMB(true);
         else {
-            quint64 mb;
+            quint64 mb = 4000;
             if (size == "0.5 GB") mb = 500;
             else if (size == "1 GB") mb = 1000;
             else if (size == "2 GB") mb = 2000;
@@ -215,10 +214,13 @@ void Preferences::itemChange(QModelIndex idx)
             else if (size == "32 GB") mb = 32000;
             else if (size == "48 GB") mb = 48000;
             else if (size == "64 GB") mb = 64000;
+            mw->imageCache->setAutoMaxMB(false);
+            qDebug() << "mw->imageCache->setMaxMB(mb)";
+            // mw->imageCache->setMaxMB(mb);
             emit mw->setAutoMaxMB(false);
             emit mw->setMaxMB(mb);
         }
-        mw->setImageCacheParameters();
+        mw->refreshAfterImageCacheSizeChange();
         // get available memory
         #ifdef Q_OS_WIN
         Win::availableMemory();     // sets G::availableMemoryMB
@@ -228,24 +230,10 @@ void Preferences::itemChange(QModelIndex idx)
         #endif
 
         quint64 memAvail = mw->icd->sizeMB() + G::availableMemoryMB;
-        QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
+        quint64 maxMB = mw->imageCache->getMaxMB();
+        QString availMBMsg = QString::number(maxMB) + " of " +
                 QString::number(memAvail) + " available MB";
         // static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
-    }
-
-    if (source == "cacheSizeMB") {
-        mw->cacheMaxMB = v.toInt();
-        mw->setImageCacheParameters();
-    }
-
-    if (source == "cacheWtAhead") {
-        if (v.toString() == "50% ahead") mw->cacheWtAhead = 5;
-        if (v.toString() == "60% ahead") mw->cacheWtAhead = 6;
-        if (v.toString() == "70% ahead") mw->cacheWtAhead = 7;
-        if (v.toString() == "80% ahead") mw->cacheWtAhead = 8;
-        if (v.toString() == "90% ahead") mw->cacheWtAhead = 9;
-        if (v.toString() == "100% ahead") mw->cacheWtAhead = 10;
-         mw->setImageCacheParameters();
     }
 
     if (source == "slideShowDelay") {

@@ -320,15 +320,10 @@ QString MW::diagnostics()
     rpt << "\n" << "slideShowDelay = " << G::s(slideShowDelay);
     rpt << "\n" << "slideShowRandom = " << G::s(isSlideShowRandom);
     rpt << "\n" << "slideShowWrap = " << G::s(isSlideShowWrap);
-    rpt << "\n" << "cacheSizeMB = " << G::s(cacheMaxMB);
+    rpt << "\n" << "cacheSizeMB = " << G::s(imageCache->getMaxMB());
     rpt << "\n" << "showCacheStatus = " << G::s(isShowCacheProgressBar);
-    rpt << "\n" << "cacheDelay = " << G::s(cacheDelay);
     rpt << "\n" << "isShowCacheThreadActivity = " << G::s(isShowCacheProgressBar);
     rpt << "\n" << "progressWidth = " << G::s(cacheBarProgressWidth);
-    rpt << "\n" << "cacheWtAhead = " << G::s(cacheWtAhead);
-    rpt << "\n" << "isCachePreview = " << G::s(isCachePreview);
-    rpt << "\n" << "cachePreviewWidth = " << G::s(cachePreviewWidth);
-    rpt << "\n" << "cachePreviewHeight = " << G::s(cachePreviewHeight);
     rpt << "\n" << "fullScreenDocks.isFolders = " << G::s(fullScreenDocks.isFolders);
     rpt << "\n" << "fullScreenDocks.isFavs = " << G::s(fullScreenDocks.isFavs);
     rpt << "\n" << "fullScreenDocks.isFilters = " << G::s(fullScreenDocks.isFilters);

@@ -97,16 +97,6 @@ void MW::writeSettings()
     settings->setValue("autoMaxMB", imageCache->getAutoMaxMB());
     settings->setValue("cacheMaxMB", imageCache->getMaxMB());
     settings->setValue("isShowCacheStatus", imageCache->getShowCacheStatus());
-    // settings->setValue("cacheMethod", cacheMethod);
-    // settings->setValue("cacheSizeMethod", cacheSizeStrategy);
-    // settings->setValue("cacheMinSize", cacheMinSize);
-    // settings->setValue("isShowCacheStatus", isShowCacheProgressBar);
-    // settings->setValue("cacheDelay", cacheDelay);
-    // settings->setValue("cacheStatusWidth", cacheBarProgressWidth);
-    // settings->setValue("cacheWtAhead", cacheWtAhead);
-    // settings->setValue("isCachePreview", isCachePreview);
-    // settings->setValue("cachePreviewWidth", cachePreviewWidth);
-    // settings->setValue("cachePreviewHeight", cachePreviewHeight);
 
     settings->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
     settings->setValue("isIconNumberVisible", iconNumberVisibleAction->isChecked());
@@ -329,20 +319,7 @@ bool MW::loadSettings()
 
         // filters
 
-        // cache
-        // cacheMethod = "Concurrent";
-        // cacheSizeStrategy = "Moderate";
-        // cacheMinMB = 2000;
-        // cacheMinSize = "2 GB";
-        // cacheSizePercentOfAvailable = 50;
-        // cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.5);
-        // isShowCacheProgressBar = true;
-        // cacheBarProgressWidth = 200;
-        // progressWidthBeforeResizeWindow = cacheBarProgressWidth;
-        // cacheWtAhead = 7;
-        // isCachePreview = false;
-        // cachePreviewWidth = 2000;
-        // cachePreviewHeight = 1600;
+        // cache (see MW::createImageCache in initialize.cpp)
 
         if (!isSettings || simulateJustInstalled) return true;
     }

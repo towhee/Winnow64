@@ -89,11 +89,10 @@ public slots:
     void stop();
     // void newInstance();
     void abortProcessing();
-    void initialize(quint64 cacheSizeMB, quint64 cacheMinMB,
-                    bool isShowCacheStatus, int cacheWtAhead);
+    void initialize();
 
     void updateImageCacheParam(quint64 cacheSizeMB, quint64 cacheMinMB,
-                               bool isShowCacheStatus, int cacheWtAhead);
+                               bool isShowCacheStatus);
     void setAutoMaxMB(bool autoSize);
     void setMaxMB(quint64 mb);
     void setShowCacheStatus(bool isShowCacheStatus);
@@ -155,10 +154,9 @@ private:
     int step;                   // difference between key and prevKey
     int sumStep;                // sum of step until threshold
     int directionChangeThreshold;//number of steps before change direction of cache
-    int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
     bool autoMaxMB;             // use releavePressure() to set maxMB
     quint64 maxMB;              // maximum MB available to cache
-    quint64 minMB;              // minimum MB available to cache
+    quint64 minMB = 500;        // minimum MB available to cache
     int targetFirst;            // beginning of target range to cache
     int targetLast;             // end of the target range to cache
     int decodeImageCount;
@@ -178,11 +176,12 @@ private:
     int    forwardStreak = 0;             // count of consecutive forward steps
 
     // pressure bookkeeping
-    int    currentPressure = INT_MAX;     // rows ahead to first queued target; INT_MAX if none
+    int    pressure = INT_MAX;     // rows ahead to first queued target; INT_MAX if none
+    int    cushion = 0;
 
     // tuning knobs (feel free to expose via settings)
-    int    pressureHigh  = 3;             // “need more cache” when pressure <= this
-    int    pressureLow   = 50;            // “too much cache” when pressure > this
+    int    pressureHigh  = 10;             // “need more cache” when pressure <= this
+    int    pressureLow   = 20;            // “too much cache” when pressure > this
     int    adjustCooldownMs = 100;        // min delay between cache-size adjustments
     int    rapidStepMsThreshold = 70;     // user is “rapid” if EMA step ≤ this (≈14 FPS)
     int    rapidMinStreak = 5;            // need at least N consecutive forward steps
@@ -203,6 +202,7 @@ private:
     inline int calcResizeStepMB() const;
 
     void releavePressure();
+    bool isCushion();
 
     // --- End Cache pressure section ---
 

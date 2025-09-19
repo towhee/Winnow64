@@ -263,7 +263,7 @@ CACHE STATUS
 
 * Functions:
   MW::createStatusBar                       - add status labels to right side of status bar
-  MW::setImageCacheParameters               - preferences calls to update cache status
+  MW::refreshAfterImageCacheSizeChange               - preferences calls to update cache status
   MW::setThreadRunStatusInactive            - sets caching activity status lights gray
   MW::updateImageCachingThreadRunStatus     - sets image caching activity status light green/red
   MW::updateMetadataCachingThreadRunStatus  - sets metadata caching activity status light green/red
@@ -591,7 +591,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // enable / disable rory functions
     // rory();
 
-    setImageCacheParameters();
+    refreshAfterImageCacheSizeChange();
 
     // recall previous thumbDock state in case last closed in Grid mode
     if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
@@ -2980,12 +2980,9 @@ void MW::folderChanged()
     metaRead->initialize(fun);
 
     // initialize imageCache
-    int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
-    if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
     // guard for BlockingQueued connection
     if (imageCache->thread() != QThread::currentThread()) {
-        emit initializeImageCache(netCacheMBSize, cacheMinMB,
-                                  isShowCacheProgressBar, cacheWtAhead);
+        emit initializeImageCache();
     }
 
     // rev up metaRead
@@ -3345,9 +3342,9 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
                                 QString source)
 {
 /*
-    Displays a statusbar showing the image cache status. Also shows the cache size in the info
-    panel. All status info is passed by copy to prevent collisions on source data, which is
-    being continuously updated by ImageCache
+    Displays a statusbar showing the image cache status. Also shows the cache size in the
+    info panel. All status info is passed by copy to prevent collisions on source data,
+    which is being continuously updated by ImageCache
 */
 
     if (G::isLogger) {
@@ -3366,7 +3363,7 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
 
     /*
     qDebug() << "MW::updateImageCacheStatus  Instruction ="
-             << instruction
+             << imageCache->statusAction.at(instruction)
              << "source =" << source
              << "currMB =" << currMB
              << "maxMB =" << maxMB
@@ -3379,17 +3376,18 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
                 ; //*/
 
     // show cache amount ie "4.2 of 16.1GB (4 threads)" in info panel
-    QString cacheAmount = QString::number(double(currMB)/1024,'f',1)
+    QString autoMode = imageCache->getAutoMaxMB() ? " AUTO" : "";
+    QString cacheMsg = QString::number(double(currMB)/1024,'f',1)
             + " of "
             + QString::number(double(maxMB)/1024,'f',1)
-            + "GB ("
+            + "GB" + autoMode + " ("
             + QString::number(imageCache->decoderCount)
             + " threads)"
             ;
     QString freeMem = QString::number(double(G::availableMemoryMB)/1024,'f',1) + "GB";
     if (G::useInfoView) {
         QStandardItemModel *k = infoView->ok;
-        k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
+        k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheMsg);
         k->setData(k->index(infoView->FreeMemRow, 1, infoView->statusInfoIdx), freeMem);
     }
 
@@ -3409,7 +3407,9 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
     }
 
     // Update all rows
-    if (instruction == ImageCache::StatusAction::All) {
+    if (instruction == ImageCache::StatusAction::All ||
+        instruction == ImageCache::StatusAction::Clear)
+    {
         int rows = dm->sf->rowCount();
         // clear progress
         cacheProgressBar->clearImageCacheProgress();
@@ -3417,8 +3417,7 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
                                          cacheProgressBar->targetColorGradient);
         // cached
         for (int i = tFirst; i <= tLast; ++i) {
-            // if (i >= rows) break;
-            // qDebug() << "MW::updateImageCacheStatus i =" << i << "rows =" << rows;
+            if (i >= rows) break;
             if (dm->sf->index(i, G::IsCachedColumn).data().toBool()) {
                 cacheProgressBar->updateImageCacheProgress(i, i, rows,
                                   cacheProgressBar->imageCacheGradient);
@@ -3542,38 +3541,13 @@ void MW::syncEmbellishMenu()
     }
 }
 
-void MW::setImageCacheMinSize(QString size)
+void MW::refreshAfterImageCacheSizeChange()
 {
 /*
-
-*/
-    if (G::isLogger) G::log("MW::setImageCacheMinSize");
-    cacheMinSize = size;
-    if (size == "0.5 GB") cacheMinMB = 500;
-    else if (size == "1 GB") cacheMinMB = 1000;
-    else if (size == "2 GB") cacheMinMB = 2000;
-    else if (size == "4 GB") cacheMinMB = 4000;
-    else if (size == "6 GB") cacheMinMB = 6000;
-    else if (size == "8 GB") cacheMinMB = 8000;
-    else if (size == "12 GB") cacheMinMB = 12000;
-    else if (size == "16 GB") cacheMinMB = 16000;
-    else if (size == "24 GB") cacheMinMB = 24000;
-    else if (size == "32 GB") cacheMinMB = 32000;
-    else if (size == "48 GB") cacheMinMB = 48000;
-    else if (size == "64 GB") cacheMinMB = 64000;
-    if (cacheMaxMB < cacheMinMB) cacheMaxMB = cacheMinMB;
-}
-
-void MW::setImageCacheParameters()
-{
-/*
-    This slot is called from the preferences dialog with changes to the cache
-    parameters.  Any visibility changes are executed.
+    This slot is called from the preferences dialog.  Any visibility
+    changes are executed.
 */
     if (G::isLogger) G::log("MW::setImageCacheParameters");
-
-    int cacheNetMB = cacheMaxMB - static_cast<int>(G::metaCacheMB);
-    if (cacheNetMB < cacheMinMB) cacheNetMB = cacheMinMB;
 
     if (isShowCacheProgressBar) {
         G::showProgress = G::ShowProgress::ImageCache;
@@ -3587,12 +3561,6 @@ void MW::setImageCacheParameters()
     // thumbnail cache status indicators
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
-
-    // imageCache->cacheSizeChange();
-
-    // bool okToShow = G::showProgress == G::ShowProgress::ImageCache;
-    // emit imageCacheChangeParam(cacheNetMB, cacheMinMB, okToShow, cacheWtAhead);
-
 }
 
 void MW::showHiddenFiles()
@@ -4099,8 +4067,6 @@ void MW::setDisplayResolution()
     // color manage for new monitor
     getDisplayProfile();
 
-    cachePreviewWidth = G::displayPhysicalHorizontalPixels;
-    cachePreviewHeight = G::displayPhysicalVerticalPixels;
     /*
     qDebug() << "MW::setDisplayResolution DONE"
              << "screen->name() =" << screen->name()
@@ -5684,11 +5650,11 @@ void MW::rory()
     if (pref != nullptr) pref->rory();
     if (G::isRory) {
         isShowCacheProgressBar = true;
-        setImageCacheParameters();
+        refreshAfterImageCacheSizeChange();
     }
     else {
         isShowCacheProgressBar = false;
-        setImageCacheParameters();
+        refreshAfterImageCacheSizeChange();
         updateDefaultIconChunkSize(G::maxIconChunk);
     }
 
