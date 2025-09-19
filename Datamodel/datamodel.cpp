@@ -2387,7 +2387,6 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         // return;
     }
     if (G::stop) {
-        qDebug() << "DataModel::setIcon G::stop = true";
         return;
     }
     if (!dmIdx.isValid()) {

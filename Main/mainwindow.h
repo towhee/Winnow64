@@ -298,30 +298,17 @@ public:
     int slideShowDelay;
     bool isSlideShowRandom;
     bool isSlideShowWrap = true;
-//    bool updateImageCacheWhenFileSelectionChange = true; // rghcachechange
     QStack<QString> *slideshowRandomHistoryStack;
 
     // preferences: cache
-    // QString cacheMethod;
-    QString cacheSizeStrategy;
-    QString cacheMinSize;
-    int cacheSizePercentOfAvailable;
-    int cacheMinMB = 2000;
-    int cacheMaxMB;
-    int cacheDelay = 100;
     bool isShowCacheProgressBar;
     int cacheBarProgressWidth;
-    int progressWidthBeforeResizeWindow;
-    int cacheWtAhead;
-    bool isCachePreview;
-    int cachePreviewWidth;
-    int cachePreviewHeight;
 
     // first use
     bool isFirstTimeTableViewVisible = true;
 
     // tooltip for tabs in docked and tabified panels
-//    int prevTabIndex= -1;
+    // int prevTabIndex= -1;
 
     QDir currRootDir;
     int instance;
@@ -397,8 +384,7 @@ signals:
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     // void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
     void startImageCache();
-    void initializeImageCache(int maxMB, int minMB, bool showStatus, int wtAhead);
-    void imageCacheChangeParam(int maxMB, int minMB, bool showStatus, int wtAhead);
+    void initializeImageCache();
     void setAutoMaxMB(bool autoSize);
     void setMaxMB(quint64 mb);
     void setShowCacheStatus(bool isShowCacheStatus);
@@ -647,8 +633,7 @@ private slots:
     void setCombineRawJpg();
     void nextSlide();
     void prevRandomSlide();
-    void setImageCacheParameters();
-    void setImageCacheMinSize(QString size);
+    void refreshAfterImageCacheSizeChange();
     void selectAllThumbs();
     void removeBookmark();
     void refreshBookmarks();

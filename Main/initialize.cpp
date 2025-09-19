@@ -417,11 +417,11 @@ void MW::createImageCache()
 
     // Signal to update imageCache auto cache size
     connect(this, &MW::setAutoMaxMB,
-            imageCache, &ImageCache::setAutoMaxMB);
+            imageCache, &ImageCache::setAutoMaxMB, Qt::BlockingQueuedConnection);
 
     // Signal to update imageCache maxMB
     connect(this, &MW::setMaxMB,
-            imageCache, &ImageCache::setMaxMB);
+            imageCache, &ImageCache::setMaxMB, Qt::BlockingQueuedConnection);
 
     // Signal to update imageCache show cache status
     connect(this, &MW::setShowCacheStatus,
