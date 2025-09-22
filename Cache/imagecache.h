@@ -49,6 +49,7 @@ public:
     QString diagnostics();
     QString reportCacheParameters();
     QString reportCacheDecoders();
+    QString reportPressureItemList();
     QString reportCacheItemList(QString title = "");
     QString reportImCache();
     QString reportImCacheRows();
@@ -145,7 +146,18 @@ private:
     QHash<int,CacheItem> toCacheStatus;
     QList<int> removedFromCache;// items removed in trimOutsideTargetRange
     QVector<float> imageSize;
-    QVector<int> pressureHistory;   // holds last 50 pressure readings
+    struct PressureItem {
+        int sfRow;
+        bool isFirst;
+        bool isRapidForward;
+        bool isCooldown;
+        qint64 elapsedMs;
+        int pressure;
+        int stepMB;
+        quint64 maxMB;
+    } pressureItem;
+
+    QVector<PressureItem> pressureHistory;   // holds last 50 pressure readings
 
     int currRow;                // current image
     int prevRow;                // used to establish direction of travel
@@ -181,7 +193,7 @@ private:
 
     // tuning knobs (feel free to expose via settings)
     int    pressureHigh  = 10;             // “need more cache” when pressure <= this
-    int    pressureLow   = 20;            // “too much cache” when pressure > this
+    int    pressureLow   = 50;            // “too much cache” when pressure > this
     int    adjustCooldownMs = 100;        // min delay between cache-size adjustments
     int    rapidStepMsThreshold = 70;     // user is “rapid” if EMA step ≤ this (≈14 FPS)
     int    rapidMinStreak = 5;            // need at least N consecutive forward steps

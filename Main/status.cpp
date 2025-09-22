@@ -346,7 +346,8 @@ void MW::setThreadRunStatusInactive()
 
 void MW::resortImageCache()
 {
-    if (G::isLogger) G::log("MW::resortImageCache");
+    // if (G::isLogger)
+        G::log("MW::resortImageCache");
     if (!dm->sf->rowCount()) return;
     QString currentFilePath = dm->currentDmIdx.data(G::PathRole).toString();
     emit imageCacheFilterChange(currentFilePath, "MW::resortImageCache");
