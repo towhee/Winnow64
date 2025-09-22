@@ -2214,11 +2214,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
         G::log(fun,
-               "row = " + QString::number(current.row()) + " fun = " + fun
-               + " G::fileSelectionChangeSource = " + G::fileSelectionChangeSource);
+               "row = " + QString::number(current.row())
+               + " src = " + src);
+        // + " G::fileSelectionChangeSource = " + G::fileSelectionChangeSource);
         // can crash here
         // G::log("MW::fileSelectionChange", "Source: " + fun + " " + current.data(G::PathRole).toString());
     }
@@ -3071,7 +3072,7 @@ void MW::folderChangeCompleted()
     - update filters
     - resize tableView columns
 */
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
         int rows = dm->rowCount();
         QString msg = QString::number(rows) + " images";

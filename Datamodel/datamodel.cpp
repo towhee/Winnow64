@@ -1872,6 +1872,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         if (w == 0 || h == 0) mb = m.size / 1000000;
         else mb = static_cast<float>(w * h * 1.0 / 262144);
         setData(index(row, G::CacheSizeColumn), mb);
+        /*
+        QString msg = "row = " + QString::number(row) + " mb = " + QVariant(mb).toString();
+        G::log("DataModel::addMetadataForItem", msg);
+        //*/
     }
 
     // emit one compact notification (only if you need the view to refresh now)
