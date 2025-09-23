@@ -1126,9 +1126,15 @@ void Preferences::addItems()
     i.name = "imageCacheSize";
     i.parentName = "CacheHeader";
     i.captionText = "Cache size";
-    i.tooltip = "The cache size in GB, overriding amount set by cache strategy.\n"
-                "The actual cache size could be smaller if the operating system does\n"
-                "not have enough memory available.";
+    i.tooltip = "The maximum cache size in GB.  Auto allows Winnow to optimise the\n"
+                "cache size dynamically.\n\n"
+                "Note the cache size will be reduced if the operating system does\n"
+                "not have enough memory available.\n\n"
+                "Maximise performance:\n"
+                "  • turn color management off\n"
+                "  • set number of thumbnails to cache to greater than folder count\n"
+                "  • hide caching progess\n"
+        ;
     i.hasValue = true;
     i.captionIsEditable = false;
     QHash<int, QString> mbToSize = {
