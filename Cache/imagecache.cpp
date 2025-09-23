@@ -487,6 +487,7 @@ qint64 ImageCache::nowMs() { return QDateTime::currentMSecsSinceEpoch(); }
 inline void ImageCache::noteItemSizeMB(float szMB) {
     if (szMB <= 0) return;
     emaItemMB = (emaItemMB < 0) ? szMB : (0.8f * emaItemMB + 0.2f * szMB);
+    emaItemMB *= 2;
 }
 
 inline void ImageCache::updateMotion(int key, bool isForwardNow) {
@@ -513,13 +514,14 @@ inline void ImageCache::updateMotion(int key, bool isForwardNow) {
 }
 
 inline bool ImageCache::isRapidForward() const {
-    // qDebug() << "ImageCache::isRapidForward"
-    //          << "isForward =" << isForward
-    //          << "forwardStreak =" << forwardStreak
-    //          << "rapidMinStreak =" << rapidMinStreak
-    //          << "emaStepMs =" << emaStepMs
-    //          << "rapidStepMsThreshold =" << rapidStepMsThreshold
-    //             ;
+    qDebug() << "ImageCache::isRapidForward "
+             << "currRow =" << currRow
+             << "isForward =" << isForward
+             << "forwardStreak =" << forwardStreak
+             << "rapidMinStreak =" << rapidMinStreak
+             << "emaStepMs =" << emaStepMs
+             << "rapidStepMsThreshold =" << rapidStepMsThreshold
+                ;
     return isForward &&
            forwardStreak >= rapidMinStreak &&
            emaStepMs > 0.0 &&
@@ -540,16 +542,27 @@ void ImageCache::releavePressure() {
     // Gate by “rapid forward” unless we still have the first-adjust free pass
     const bool rapidOk = isRapidForward();
     qint64 elapsedMs = t - lastAdjustMs;
-    const bool isCooldown = elapsedMs < adjustCooldownMs;
+    const bool isCooldown = elapsedMs > adjustCooldownMs;
+    qDebug() << "ImageCache::releavePressure"
+             << "currRow =" << currRow
+             << "t =" << t
+             << "lastAdjustMs =" << lastAdjustMs
+             << "t - lastAdjustMs =" << t - lastAdjustMs
+             << "elapsedMs =" << elapsedMs
+             << "firstAdjustFreePass =" << firstAdjustFreePass
+        ;
     int stepMB = 0;
+    pressureItem.highChk = false;
+    pressureItem.lowChk = false;
     if (firstAdjustFreePass || (rapidOk && isCooldown)) {
-        qDebug() << "ImageCache::releavePressure pressure =" << pressure;
+        qDebug() << "ImageCache::releavePressure cushion =" << cushion;
 
 
-        // No flip-flopping: only grow on high pressure, shrink on very low pressure
-        if (pressure <= pressureHigh) {
+        // No flip-flopping: only grow on low cushion, shrink on very high cushion
+        if (cushion <= cushionLow) {
+            pressureItem.highChk = true;
             stepMB = calcResizeStepMB();
-            const int newMax = qMin(maxMBCeiling, maxMB + stepMB);
+            const qint64 newMax = qMin(maxMBCeiling, maxMB + stepMB);
             // /*
             qDebug() << "ImageCache::releavePressure high check"
                      << "step =" << step
@@ -561,7 +574,7 @@ void ImageCache::releavePressure() {
                 lastAdjustMs = t;
                 /*
                 qDebug() << "ImageCache::releavePressure high"
-                         << "pressure =" << pressure
+                         << "cushion =" << cushion
                          << "step =" << stepMB
                          << "maxMB =" << maxMB
                     ; //*/
@@ -569,9 +582,11 @@ void ImageCache::releavePressure() {
                     updateStatus(StatusAction::All, "ImageCache::releasePressure");
             }
         }
-        else if (pressure > pressureLow) {
-            stepMB = calcResizeStepMB();
-            const int newMax = qMax(minMB, maxMB - stepMB);
+        else if (cushion > cushionHigh) {
+            pressureItem.lowChk = true;
+            stepMB = -calcResizeStepMB();
+            if (stepMB > 0) qWarning() << "POSITIVE STEPMB";
+            const qint64 newMax = qMax(minMB, maxMB + stepMB);
             // /*
             qDebug() << "ImageCache::releavePressure low check"
                      << "step =" << step
@@ -598,33 +613,16 @@ void ImageCache::releavePressure() {
     pressureItem.isRapidForward = rapidOk;
     pressureItem.elapsedMs = elapsedMs;
     pressureItem.isCooldown = isCooldown;
-    pressureItem.pressure = pressure;
+    pressureItem.cushion = cushion;
     pressureItem.stepMB = stepMB;
+    pressureItem.ceilMB = maxMBCeiling;
+    pressureItem.cacheMB = icd->sizeMB();
     pressureItem.maxMB = maxMB;
 
-    firstAdjustFreePass = false;
-}
+    pressureHistory.append(pressureItem);
+    if (pressureHistory.size() > 50) pressureHistory.removeFirst();
 
-bool ImageCache::isCushion()
-{
-    if (debugLog || G::isLogger)
-        log("isCushion");
-    int available;
-    int n = dm->sf->rowCount();
-    int pos = dm->currentSfRow;
-    if (isForward) {
-        available = n - pos - 1;
-        cushion = targetLast - pos;
-    }
-    else {
-        available = pos + 1;
-        cushion = pos - targetFirst;
-    }
-    if (cushion > available) cushion = available;
-    qDebug() << "ImageCache::isCushion"
-             << "cushion =" << cushion
-        ;
-    return cushion >= pressureHigh;
+    firstAdjustFreePass = false;
 }
 
 // --- End Cache Pressure ---
@@ -658,12 +656,13 @@ void ImageCache::setTargetRange(int key)
     const int n = dm->sf->rowCount();
     if (n <= 0 || key < 0 || key >= n) return;
 
+    bool useHighCushion = false;
+
     // float sumMB = icd->sizeMB();
     float sumMB = 0.0f;
     // Forward phase aims for ~2/3 of capacity
     const float forwardMB = maxMB * (2.0f / 3.0f);
     int nearestNotCached = -1;
-    cushion = 0;
     targetFirst = key;
     targetLast = key;
 
@@ -681,7 +680,16 @@ void ImageCache::setTargetRange(int key)
     int aheadPos  = key;
     int behindPos = key - dir;   // if dir=+1 -> key-1; if dir=-1 -> key+1
 
+    float posMB;
+
     auto addToQueue = [&](int pos) {
+        // check for high cushion on first targeting in a new datamodel
+        if (firstDispatchNewDM && (pos > firstDispatchNewDM)) {
+            useHighCushion = true;
+            maxMB = qMin((quint64)(sumMB*1.5), maxMBCeiling);
+            return;
+        }
+
         // adjust target range
         (pos < key) ? targetFirst = pos : targetLast = pos;
 
@@ -692,7 +700,7 @@ void ImageCache::setTargetRange(int key)
         }
 
         const QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
-        const float posMB = dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
+        posMB = dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
         sumMB += posMB;
 
         // If not already queued to cache, then add to queue
@@ -709,17 +717,14 @@ void ImageCache::setTargetRange(int key)
 
         // Get pressure on cache
         if (autoMaxMB) {
-            noteItemSizeMB(posMB);
             if (toCache.contains(pos) && nearestNotCached == -1) {
+                noteItemSizeMB(posMB);
                 nearestNotCached = pos;
-                pressure = qAbs(nearestNotCached - key);
-                cushion = targetLast - nearestNotCached;
-                pressureHistory.append(pressureItem);
-                if (pressureHistory.size() > 50) pressureHistory.removeFirst();
+                cushion = qAbs(nearestNotCached - key);
                 /*
                 qDebug() << "ImageCache::setTargetRange"
                          << "pos =" << pos
-                         << "pressure =" << pressure
+                         << "cushion =" << cushion
                          << "cushion =" << cushion
                          << "targetFirst =" << targetFirst
                          << "targetLast =" << targetLast
@@ -730,26 +735,27 @@ void ImageCache::setTargetRange(int key)
     };
 
     // Fill forward up to ~2/3 capacity
-    while (!abort && sumMB < forwardMB) {
+    while (!abort && !useHighCushion && sumMB < forwardMB) {
         if (aheadPos < 0 || aheadPos >= n) break;
         addToQueue(aheadPos);
         aheadPos += dir;
     }
 
     // Fill behind until total reaches maxMB
-    while (!abort && sumMB < maxMB) {
+    while (!abort && !useHighCushion && sumMB < maxMB) {
         if (behindPos < 0 || behindPos >= n) break;
         addToQueue(behindPos);
         behindPos -= dir;
     }
 
     // Fill forward again if still not full (at start/end of folder when behind is smaller)
-    while (!abort && sumMB < maxMB) {
+    while (!abort && !useHighCushion && sumMB < maxMB) {
         if (aheadPos < 0 || aheadPos >= n) break;
         addToQueue(aheadPos);
         aheadPos += dir;
     }
 
+    /*
     QString msg = "row = " + QVariant(key).toString();
     msg += " n = " + QVariant(n).toString();
     msg += " behindPos = " + QVariant(behindPos).toString();
@@ -757,13 +763,23 @@ void ImageCache::setTargetRange(int key)
     msg += " targetFirst = " + QVariant(targetFirst).toString();
     msg += " targetLast = " + QVariant(targetLast).toString();
     log("setTargetRange", msg);
+    //*/
 
     // update motion heuristics and try pressure relief
     if (autoMaxMB) {
-        maxMBCeiling = G::availableMemoryMB * 0.9;
+        if (nearestNotCached == -1) {
+            isForward ? nearestNotCached = targetLast : nearestNotCached = targetFirst;
+            posMB = dm->sf->index(nearestNotCached, G::CacheSizeColumn).data().toFloat();
+            noteItemSizeMB(posMB);
+            cushion = qAbs(nearestNotCached - key);
+        }
+        // maxMBCeiling = G::availableMemoryMB * 0.9 + icd->sizeMB();
+        memChk();
         updateMotion(key, isForward);
         releavePressure();
     }
+
+    firstDispatchNewDM = false;
 }
 
 void ImageCache::removeCachedImage(QString fPath)
@@ -871,36 +887,56 @@ void ImageCache::memChk()
     Win::availableMemory();
 #endif
 #ifdef Q_OS_MAC
-    Mac::availableMemory();
+    const auto ramMB = Mac::totalMemoryMB();
+    const auto procMB = Mac::processFootprintMB();
+    const auto availMB = Mac::aggressiveAvailMB(); // free + inactive + speculative
+    const int  level = Mac::memoryPressureLevel();
+    const quint64 cacheMB = (quint64)icd->sizeMB();
+    // Mac::availableMemory();
 #endif
 
-    return;
+    // Small safety reserve: ~3% of RAM (min 256 MB, max 1024 MB)
+    int64_t safetyMB = std::clamp<int64_t>((int64_t)(ramMB * 0.03), 256, 1024);
 
-    // Current usage and headroom
-    quint64 zero = 0.0;
-    quint64 availMB = qMax(zero, G::availableMemoryMB);
-    quint64 currMB  = icd->sizeMB();
-    // quint64 currMB  = getImCacheSize();
-    quint64 roomMB  = maxMB - currMB;
+    // Hard cap: never plan to exceed RAM - safety
+    const int64_t hardCapFromRAM = std::max<int64_t>(0, ramMB - safetyMB);
 
-    // If the cache headroom is larger than what's actually free,
-    // reduce maxMB so we don't exceed available memory.
-    if (availMB < roomMB) {
-        maxMB = currMB + availMB;
+    // Opportunistic burst cap: use ~95% of currently reclaimable memory + what we already hold
+    // (so we can expand rapidly without forcing immediate eviction elsewhere)
+    const int64_t burstCapFromAvail = std::max<int64_t>(0, (int64_t)(availMB * 0.95) + cacheMB);
+
+    // Aggressive ceiling = the *smaller* of the two caps above
+    qint64 ceiling = std::min(hardCapFromRAM, burstCapFromAvail);
+
+    // Under OS pressure, clamp hard and immediately
+    if (level == 2) {           // CRITICAL
+        ceiling = std::min<int64_t>(ceiling, 256);   // slam to 256 MB
+    }
+    else if (level == 1) {      // WARN
+        ceiling = std::min<int64_t>(ceiling, 1024);  // downshift to ~1 GB
     }
 
-    // Always enforce the minimum
-    if (maxMB < minMB) {
-        // maxMB = minMB;  // maxMB change
-    }
+    // Ensure we never go below your configured minimums (if any)
+    ceiling = std::max<qint64>(ceiling, minMB);
 
-    // qDebug() << "imageCache::memCheck"
-    //          << "G::availableMemoryMB =" << G::availableMemoryMB
-    //          << "maxMB =" << maxMB
-    //          // << "icd->sizeMB() =" << icd->sizeMB()
-    //          << "getImCacheSize() =" << getImCacheSize()
-    //     ;
+    // Set the target TOTAL budget for the cache
+    maxMBCeiling = ceiling;
 
+    Mac::availableMemory();
+    qDebug() << "imageCache::memCheck"
+             << "ramMB =" << ramMB
+             << "procMB =" << procMB
+             << "availMB =" << availMB
+             << "level =" << level
+             << "safetyMB =" << safetyMB
+             << "hardCapFromRAM =" << hardCapFromRAM
+             << "burstCapFromAvail =" << burstCapFromAvail
+             << "ceiling =" << ceiling
+             << "maxMBCeiling =" << maxMBCeiling
+             << "G::availableMemoryMB =" << G::availableMemoryMB
+             << "maxMB =" << maxMB
+             << "icd->sizeMB() =" << icd->sizeMB()
+        ;
 }
 
 void ImageCache::updateStatus(int instruction, QString source)
@@ -1062,23 +1098,30 @@ QString ImageCache::reportPressureItemList()
     rpt.setString(&reportString);
     // header
     rpt.reset();
-    rpt << "Pressure history:\n";
+    rpt << "Pressure history: ";
+    rpt << "Auto Releave Pressure = " << QVariant(autoMaxMB).toString() << "\n";
     rpt.setFieldAlignment(QTextStream::AlignRight);
     rpt.setFieldWidth(9);
     rpt
         << "Key"
-        << "isFirst"
-        << "isRapid"
-        << "elapsed"
-        << "cooldown"
-        << "isCool"
-        << "pressure"
-        << "stepMB"
-        << "maxMB"
+        << "First"
+        << "Rapid"
+        << "Elapsed"
+        << "Cooldown"
+        << "Cool"
+        << "Cushion"
+        << "HighChk"
+        << "LowChk"
+        << "StepMB"
+        << "MinMB"
+        << "CeilMB"
+        << "VacheMB"
+        << "MaxMB"
         << "\n"
         ;
     // body
     for (PressureItem v : pressureHistory) {
+        if (v.elapsedMs > 999999) v.elapsedMs = 999999;
         rpt
             << QVariant(v.sfRow).toString()
             << QVariant(v.isFirst).toString()
@@ -1086,8 +1129,13 @@ QString ImageCache::reportPressureItemList()
             << QVariant(v.elapsedMs).toString()
             << QVariant(adjustCooldownMs).toString()
             << QVariant(v.isCooldown).toString()
-            << QVariant(v.pressure).toString()
+            << QVariant(v.cushion).toString()
+            << QVariant(v.highChk).toString()
+            << QVariant(v.lowChk).toString()
             << QVariant(v.stepMB).toString()
+            << QVariant(minMB).toString()
+            << QVariant(v.ceilMB).toString()
+            << QVariant(v.cacheMB).toString()
             << QVariant(v.maxMB).toString()
             << "\n"
             ;
@@ -1431,6 +1479,7 @@ void ImageCache::initialize()
     icd->clear();
     toCache.clear();
     toCacheStatus.clear();
+    pressureHistory.clear();
 
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
@@ -1458,8 +1507,8 @@ void ImageCache::initialize()
     forwardStreak = 0;
     emaStepMs = -1.0;
     emaItemMB = -1.0f;
-    pressure = 0;
-    // pressure = INT_MAX;
+    // cushion = 0;
+    cushion = INT_MAX;
     lastAdjustMs = 0;
     firstAdjustFreePass = true;     // <- enable first-adjust bypass
 
@@ -1691,7 +1740,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 
     currRow = dm->proxyRowFromPath(fPath, fun);
 
-    // if (debugLog || G::isLogger || G::isFlowLogger)
+    if (debugLog || G::isLogger || G::isFlowLogger)
         log("setCurrentPosition", "row = " + QString::number(currRow));
     if (debugCaching)
     {
@@ -1994,6 +2043,7 @@ bool ImageCache::okToCache(int id, int sfRow)
     Called by fillCache.  Returns true to add image to image cache.
 */
     QString src = "ImageCache::okToCache";
+    QString sRow = QString::number(sfRow);
     QString msg;
     bool success = true;
 
@@ -2003,14 +2053,14 @@ bool ImageCache::okToCache(int id, int sfRow)
     }
 
     if (sfRow >= dm->sf->rowCount()) {
-        msg += "Failed: row count exceeded. ";
+        msg += "Failed: row " + sRow + " exceeds row count. ";
         success = false;
     }
 
     // no longer in target range to cache
     if (!toCache.contains(sfRow)) {
-        qWarning() << src << "Failed: not in toCacheStatus";
-        msg += "Failed: not in toCacheStatus. ";
+        msg += "Failed: " + sRow + " not in toCacheStatus. ";
+        qWarning() << src << msg;
         success = false;
     }
 
@@ -2240,14 +2290,13 @@ void ImageCache::fillCache(int id)
                 return;
             }
 
-            // if (!isCushion()) {
-            //     qDebug() << "call releave";
-            //     pressure = cushion;
-            //     firstAdjustFreePass = true;
-            //     releavePressure();
-            //     dispatch();
-            //     return;
-            // }
+            if (cushion < cushionLow) {
+                qDebug() << "call releave";
+                firstAdjustFreePass = true;
+                releavePressure();
+                dispatch();
+                return;
+            }
 
             // else update cache progress in status bar
             if (isShowCacheStatus) {

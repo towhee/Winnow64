@@ -93,6 +93,70 @@ qint64 Mac::getResidentMemoryUsageBytes()
     return static_cast<qint64>(info.resident_size);
 }
 
+static inline uint64_t pageSizeBytes() {
+    vm_size_t ps = 0;
+    host_page_size(mach_host_self(), &ps);
+    return (uint64_t)ps;
+}
+
+uint64_t Mac::totalMemoryMB() {
+    uint64_t bytes = 0; size_t sz = sizeof(bytes);
+    if (sysctlbyname("hw.memsize", &bytes, &sz, nullptr, 0) == 0)
+        return bytes / (1024ull * 1024ull);
+    return 0;
+}
+
+uint64_t Mac::processFootprintMB() {
+    // 1) Your process's charged footprint (in MB)
+    task_vm_info_data_t info{};
+    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+    if (task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&info, &count) == KERN_SUCCESS) {
+        // phys_footprint is the number Apple recommends
+        return (uint64_t)(info.phys_footprint / (1024ull * 1024ull));
+    }
+    return 0;
+}
+
+// 2) Conservative system-available MB (free + speculative only)
+uint64_t Mac::aggressiveAvailMB() {
+    mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
+    vm_statistics64_data_t vm{};
+    if (host_statistics64(mach_host_self(), HOST_VM_INFO64, (host_info64_t)&vm, &count) == KERN_SUCCESS) {
+        uint64_t pages = (uint64_t)vm.free_count + vm.inactive_count + vm.speculative_count;
+        return (pages * pageSizeBytes()) / (1024ull * 1024ull);
+    }
+    return 0;
+}
+
+// 3) Current memory pressure level (0=normal, 1=warning, 2=critical).
+int Mac::memoryPressureLevel() {
+    // Use dispatch notifications for rapid backoff; keep this as a fallback heuristic if you like.
+    mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
+    vm_statistics64_data_t vm{};
+    if (host_statistics64(mach_host_self(), HOST_VM_INFO64, (host_info64_t)&vm, &count) != KERN_SUCCESS)
+        return 0;
+    const uint64_t freeLike = (vm.free_count + vm.inactive_count + vm.speculative_count) * pageSizeBytes();
+    if (freeLike < (256ull * 1024ull * 1024ull)) return 2;   // CRITICAL
+    if (freeLike < (1024ull * 1024ull * 1024ull)) return 1;  // WARN
+    return 0;                                                // NORMAL
+}
+
+// 4) Async pressure notifications (call once during app init)
+void Mac::startMemoryPressureMonitor(void (^handler)(int level)) {
+    dispatch_source_t src = dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE, 0,
+        DISPATCH_MEMORYPRESSURE_NORMAL | DISPATCH_MEMORYPRESSURE_WARN | DISPATCH_MEMORYPRESSURE_CRITICAL,
+        dispatch_get_main_queue());
+    dispatch_source_set_event_handler(src, ^{
+        unsigned long data = dispatch_source_get_data(src);
+        int level = 0;
+        if (data & DISPATCH_MEMORYPRESSURE_CRITICAL) level = 2;
+        else if (data & DISPATCH_MEMORYPRESSURE_WARN) level = 1;
+        else level = 0;
+        handler(level);
+    });
+    dispatch_resume(src);
+}
+
 void Mac::joinAllSpaces(WId wId)
 {
 /*

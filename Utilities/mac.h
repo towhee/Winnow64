@@ -26,6 +26,13 @@ public:
     static void initializeAppDelegate();
     static void availableMemory();
     static qint64 getResidentMemoryUsageBytes();
+
+    static uint64_t totalMemoryMB();
+    static uint64_t processFootprintMB();
+    static uint64_t aggressiveAvailMB();
+    static int memoryPressureLevel();
+    static void startMemoryPressureMonitor(void (^handler)(int level));
+
     static void joinAllSpaces(WId wId);
     static QString getDisplayProfileURL();
     static float getMouseCursorMagnification();
