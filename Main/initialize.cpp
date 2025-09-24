@@ -451,10 +451,6 @@ void MW::createImageCache()
     connect(imageCache, &ImageCache::refreshViews,
             this, &MW::refreshViewsOnCacheChange);
 
-    // Send message to setCentralMsg
-    connect(imageCache, &ImageCache::centralMsg,
-            this, &MW::setCentralMessage);
-
     // set values in the datamodel
     connect(imageCache, &ImageCache::setValSf, dm, &DataModel::setValSf);
 

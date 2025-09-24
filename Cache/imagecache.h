@@ -61,11 +61,7 @@ public:
 
     int decoderCount = 1;
 
-    enum StatusAction {
-        Clear,
-        All,
-        Size
-    };
+    enum StatusAction {Clear, All, Size};
     QStringList statusAction {"Clear", "All", "Size"};
 
     bool debugCaching = false;
@@ -81,7 +77,6 @@ signals:
     void showCacheStatus(int instruction, bool isAutoSize,
                          quint64 currMB, quint64 maxMB, int targetFirst, int targetLast,
                          QString source = "");
-    void centralMsg(QString msg);       // not being used
     void updateIsRunning(bool, bool);   // (isRunning, showCacheLabel)
     void refreshViews(QString fPath, bool isCached, QString src);
 
@@ -189,28 +184,26 @@ private:
 
     // motion heuristics (EMA = Exponential Moving Average)
     double emaStepMs = -1.0;              // EMA of time between successive forward steps
-    int    forwardStreak = 0;             // count of consecutive forward steps
+    int forwardStreak = 0;                // count of consecutive forward steps
 
     // cushion bookkeeping
-    int    cushion = INT_MAX;     // rows ahead to first queued target; INT_MAX if none
+    int cushion = INT_MAX;     // rows ahead to first queued target; INT_MAX if none
 
     // tuning knobs (feel free to expose via settings)
-    int    cushionLow  = 5;               // “need more cache” when pressure <= this
-    int    cushionHigh   = 15;            // “too much cache” when pressure > this
-    int    adjustCooldownMs = 100;        // min delay between cache-size adjustments
-    int    rapidStepMsThreshold = 70;     // user is “rapid” if EMA step ≤ this (≈14 FPS)
-    int    rapidMinStreak = 2;            // need at least N consecutive forward steps
+    int cushionLow  = 5;                  // “need more cache” when pressure <= this
+    int cushionHigh   = 15;               // “too much cache” when pressure > this
+    int adjustCooldownMs = 100;           // min delay between cache-size adjustments
+    int rapidStepMsThreshold = 70;        // user is “rapid” if EMA step ≤ this (≈14 FPS)
+    int rapidMinStreak = 2;               // need at least N consecutive forward steps
     // int    rapidMinStreak = 5;            // need at least N consecutive forward steps
 
     // step sizing (we try to resize in chunks ≈ a few images)
-    float  emaItemMB = -1.0f;             // EMA of item size seen while queuing
-    int    minStepMB = 256;               // never resize by less than this
-    int    maxStepMB = 1024;              // never resize by more than this
-    // int    minStepMB = 128;               // never resize by less than this
-    // int    maxStepMB = 1024;              // never resize by more than this
+    float emaItemMB = -1.0f;              // EMA of item size seen while queuing
+    int minStepMB = 256;                  // never resize by less than this
+    int maxStepMB = 1024;                 // never resize by more than this
 
     // optional ceiling; if you already track available mem, use that instead
-    quint64 maxMBCeiling = G::availableMemoryMB * 0.9;          // soft cap (MB) to prevent runaway growth
+    quint64 maxMBCeiling = G::availableMemoryMB * 0.9; // soft cap (MB) to prevent runaway growth
 
     // pressure helpers
     static qint64 nowMs();
@@ -222,7 +215,6 @@ private:
     void releavePressure();
 
     // --- End Cache pressure section ---
-
 
     void launchDecoders(QString src);
     bool okToCache(int id, int sfRow);
