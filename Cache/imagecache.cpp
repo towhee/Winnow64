@@ -482,6 +482,18 @@ void ImageCache::trimOutsideTargetRange()
 
 // --- Cache Pressure Helpers ---
 
+inline void ImageCache::decodeHistory(int msToDecode)
+{
+    // If this runs on a single ImageCache thread, no lock needed.
+    // If multiple threads may call it, guard with a mutex around this block.
+
+    if (Q_UNLIKELY(decodeMsAvg.window() != lastNDecoders))
+        decodeMsAvg.setWindow(lastNDecoders);
+
+    decodeMsAvg.push(msToDecode);
+    decoderMs = qMax(1, decodeMsAvg.avg());
+}
+
 qint64 ImageCache::nowMs() { return QDateTime::currentMSecsSinceEpoch(); }
 
 inline void ImageCache::noteItemSizeMB(float szMB) {
@@ -514,6 +526,7 @@ inline void ImageCache::updateMotion(int key, bool isForwardNow) {
 }
 
 inline bool ImageCache::isRapidForward() const {
+    /*
     qDebug() << "ImageCache::isRapidForward "
              << "currRow =" << currRow
              << "isForward =" << isForward
@@ -521,7 +534,7 @@ inline bool ImageCache::isRapidForward() const {
              << "rapidMinStreak =" << rapidMinStreak
              << "emaStepMs =" << emaStepMs
              << "rapidStepMsThreshold =" << rapidStepMsThreshold
-                ;
+                ;//*/
     return isForward &&
            forwardStreak >= rapidMinStreak &&
            emaStepMs > 0.0 &&
@@ -543,6 +556,7 @@ void ImageCache::releavePressure() {
     const bool rapidOk = isRapidForward();
     qint64 elapsedMs = t - lastAdjustMs;
     const bool isCooldown = elapsedMs > adjustCooldownMs;
+    /*
     qDebug() << "ImageCache::releavePressure"
              << "currRow =" << currRow
              << "t =" << t
@@ -550,20 +564,17 @@ void ImageCache::releavePressure() {
              << "t - lastAdjustMs =" << t - lastAdjustMs
              << "elapsedMs =" << elapsedMs
              << "firstAdjustFreePass =" << firstAdjustFreePass
-        ;
+        ;//*/
     int stepMB = 0;
     pressureItem.highChk = false;
     pressureItem.lowChk = false;
     if (firstAdjustFreePass || (rapidOk && isCooldown)) {
-        qDebug() << "ImageCache::releavePressure cushion =" << cushion;
-
-
         // No flip-flopping: only grow on low cushion, shrink on very high cushion
         if (cushion <= cushionLow) {
             pressureItem.highChk = true;
             stepMB = calcResizeStepMB();
             const qint64 newMax = qMin(maxMBCeiling, maxMB + stepMB);
-            // /*
+            /*
             qDebug() << "ImageCache::releavePressure high check"
                      << "step =" << step
                      << "maxMB =" << maxMB
@@ -587,7 +598,7 @@ void ImageCache::releavePressure() {
             stepMB = -calcResizeStepMB();
             if (stepMB > 0) qWarning() << "POSITIVE STEPMB";
             const qint64 newMax = qMax(minMB, maxMB + stepMB);
-            // /*
+            /*
             qDebug() << "ImageCache::releavePressure low check"
                      << "step =" << step
                      << "maxMB =" << maxMB
@@ -684,11 +695,12 @@ void ImageCache::setTargetRange(int key)
 
     auto addToQueue = [&](int pos) {
         // check for high cushion on first targeting in a new datamodel
-        if (firstDispatchNewDM && (pos > firstDispatchNewDM)) {
-            useHighCushion = true;
-            maxMB = qMin((quint64)(sumMB*1.5), maxMBCeiling);
-            return;
-        }
+        // if (firstDispatchNewDM) {
+        //     useHighCushion = true;
+        //     maxMB = qMin((quint64)(sumMB*1.5), maxMBCeiling);
+        //     qDebug() << "firstDispatchNewDM  maxMB =" << maxMB;
+        //     return;
+        // }
 
         // adjust target range
         (pos < key) ? targetFirst = pos : targetLast = pos;
@@ -887,14 +899,17 @@ void ImageCache::memChk()
     Win::availableMemory();
 #endif
 #ifdef Q_OS_MAC
+    /*
     const auto ramMB = Mac::totalMemoryMB();
     const auto procMB = Mac::processFootprintMB();
     const auto availMB = Mac::aggressiveAvailMB(); // free + inactive + speculative
     const int  level = Mac::memoryPressureLevel();
     const quint64 cacheMB = (quint64)icd->sizeMB();
-    // Mac::availableMemory();
+    //*/
+    Mac::availableMemory();
 #endif
 
+    /*
     // Small safety reserve: ~3% of RAM (min 256 MB, max 1024 MB)
     int64_t safetyMB = std::clamp<int64_t>((int64_t)(ramMB * 0.03), 256, 1024);
 
@@ -921,22 +936,26 @@ void ImageCache::memChk()
 
     // Set the target TOTAL budget for the cache
     maxMBCeiling = ceiling;
+    //*/
 
+    maxMBCeiling = std::max<qint64>(G::availableMemoryMB, minMB);;
+
+    /*
     Mac::availableMemory();
     qDebug() << "imageCache::memCheck"
-             << "ramMB =" << ramMB
-             << "procMB =" << procMB
-             << "availMB =" << availMB
-             << "level =" << level
-             << "safetyMB =" << safetyMB
-             << "hardCapFromRAM =" << hardCapFromRAM
-             << "burstCapFromAvail =" << burstCapFromAvail
-             << "ceiling =" << ceiling
+             // << "ramMB =" << ramMB
+             // << "procMB =" << procMB
+             // << "availMB =" << availMB
+             // << "level =" << level
+             // << "safetyMB =" << safetyMB
+             // << "hardCapFromRAM =" << hardCapFromRAM
+             // << "burstCapFromAvail =" << burstCapFromAvail
+             // << "ceiling =" << ceiling
              << "maxMBCeiling =" << maxMBCeiling
              << "G::availableMemoryMB =" << G::availableMemoryMB
              << "maxMB =" << maxMB
              << "icd->sizeMB() =" << icd->sizeMB()
-        ;
+        ;//*/
 }
 
 void ImageCache::updateStatus(int instruction, QString source)
@@ -1099,7 +1118,9 @@ QString ImageCache::reportPressureItemList()
     // header
     rpt.reset();
     rpt << "Pressure history: ";
-    rpt << "Auto Releave Pressure = " << QVariant(autoMaxMB).toString() << "\n";
+    rpt << "  Auto Releave Pressure = " << QVariant(autoMaxMB).toString();
+    rpt << "  Average time to decode = " << QVariant(decoderMs).toString() << " ms";
+    rpt << "\n";
     rpt.setFieldAlignment(QTextStream::AlignRight);
     rpt.setFieldWidth(9);
     rpt
@@ -1115,7 +1136,7 @@ QString ImageCache::reportPressureItemList()
         << "StepMB"
         << "MinMB"
         << "CeilMB"
-        << "VacheMB"
+        << "CacheMB"
         << "MaxMB"
         << "\n"
         ;
@@ -1189,6 +1210,7 @@ QString ImageCache::reportCacheItemList(QString title)
                 << "MetaLoad"
                 << "Video"
                 << "SizeMB"
+                << "Decode"
                 << "Offset"
                 << "Length"
                 ;
@@ -1222,6 +1244,7 @@ QString ImageCache::reportCacheItemList(QString title)
             << (dm->index(sfRow, G::MetadataLoadedColumn).data().toBool() ? "true" : "false")
             << (dm->index(sfRow, G::VideoColumn).data().toBool() ? "true" : "false")
             << QString::number(dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat(), 'f', 2)
+            << dm->sf->index(sfRow, G::MSToReadColumn).data().toInt()
             << dm->sf->index(sfRow, G::OffsetFullColumn).data().toInt()
             << dm->sf->index(sfRow, G::LengthFullColumn).data().toInt()
             ;
@@ -1480,6 +1503,7 @@ void ImageCache::initialize()
     toCache.clear();
     toCacheStatus.clear();
     pressureHistory.clear();
+    maxMB = 1024;
 
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
@@ -1520,56 +1544,6 @@ void ImageCache::initialize()
     abort = false;
 }
 
-void ImageCache::adjustCacheMem(quint64 ms, quint64 mb)
-{
-/*
-    Cache size is determined based on showing up to 30 FPS (keyboard repeat rate) = 30ms
-    Average decode image ms = t = 215ms
-    Synchronous decoders = 20 = n
-    Average image cache size = 174MB = s
-
-    t = 215ms
-    r = 30ms
-    n = 20
-    s = 174MB
-
-    ceil_t_over_r = (t + r - 1) / r = 8.13
-    imgsNeeded = 8.13 - 20 = -11.9
-    Bmin = 0
-    out_minMB = 0
-*/
-    if (G::isLogger) log("adjustCacheMem");
-    static quint64 prevMsAve = 1000000;
-    const int r = 30;
-    const int adjust = 200; // 340
-    decodeImageCount++;
-    decodeImageMsTot += ms;
-    decodeImageMBTot += mb;
-    quint64 msAve = decodeImageMsTot / decodeImageCount;
-    quint64 mbAve = decodeImageMBTot / decodeImageCount;
-
-    // if difference is greater than 10% then update maxMB
-    quint64 diff = (prevMsAve > msAve) ? (prevMsAve - msAve) : (msAve - prevMsAve);
-    // change threshold in %
-    int changeThreshold = 10;
-    bool isSignificantChange = diff * changeThreshold > prevMsAve;
-    if (isSignificantChange) {
-        maxMB = (msAve + r - 1) / r * mbAve * 2;
-        // maxMB = msAve * adjust / decoderCount;
-        prevMsAve = msAve;
-    }
-
-    // /*
-    qDebug() << "imageCache::adjustCacheMem"
-             << "G::availableMemoryMB =" << G::availableMemoryMB
-             << "decodeImageCount =" << decodeImageCount
-             << "ms =" << ms
-             << "msAve =" << msAve
-             << "maxMB =" << maxMB
-             << "isSignificantChange =" << isSignificantChange
-        ; //*/
-}
-
 void ImageCache::updateInstance()
 {
     if (G::isLogger) log("updateInstance");
@@ -1600,7 +1574,7 @@ bool ImageCache::getShowCacheStatus()
 
 void ImageCache::setMaxMB(quint64 mb)
 {
-    // if (G::isLogger)
+    if (G::isLogger)
         log("setMaxMB", QVariant(mb).toString());
     maxMB = mb;
     dispatch();
@@ -2122,7 +2096,8 @@ bool ImageCache::nullInImCache()
 
 void ImageCache::fillCache(int id)
 {
-/*
+
+    /*
     Read all the image files from the target range and save the QImages in  the
     concurrent image cache hash icd->imCache (see cachedata.h).
 
@@ -2180,7 +2155,6 @@ void ImageCache::fillCache(int id)
 
     int cacheRow = decoders[id]->sfRow;
 
-
     if (debugCaching)
     {
         QString fun = "ImageCache::fillCache";
@@ -2214,11 +2188,8 @@ void ImageCache::fillCache(int id)
                 ;
         }
         if (!abort) cacheImage(id, cacheRow);
-        /*
-        // adjust cache size based on folder contents
-        quint64 mbReqd = dm->sf->index(cacheRow, G::CacheSizeColumn).data().toInt();
-        if (!abort) adjustCacheMem(decoders[id]->msToDecode, mbReqd);
-        */
+        // calc average recent decoder time (not being used except reporting)
+        decodeHistory(decoders[id]->msToDecode);
     }
 
     // get next image to cache
@@ -2290,8 +2261,8 @@ void ImageCache::fillCache(int id)
                 return;
             }
 
+            // qDebug() << "ImageCache::fillCache chk cushion =" << cushion;
             if (cushion < cushionLow) {
-                qDebug() << "call releave";
                 firstAdjustFreePass = true;
                 releavePressure();
                 dispatch();

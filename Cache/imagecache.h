@@ -8,6 +8,7 @@
 #include "Metadata/metadata.h"
 #include "Image/pixmap.h"
 #include "Cache/imagedecoder.h"
+#include "Utilities/MovingAvg.h"
 #include <algorithm>         // reqd to sort cache
 #include <QMutex>
 #include <QSize>
@@ -176,7 +177,7 @@ private:
     bool isShowCacheStatus;     // show in app status bar
     bool firstDispatchNewDM;
 
-    // --- Cache pressure section ---
+    // --- Cache pressure section Req'd when autoMaxMB == true ---
     bool firstAdjustFreePass = false;     // bypass rapid/cooldown once after folder change
     qint64 lastAdjustMs = 0;              // last time we changed maxMB
     qint64 lastMoveMs   = 0;              // last time setTargetRange saw a move
@@ -195,12 +196,17 @@ private:
     int adjustCooldownMs = 100;           // min delay between cache-size adjustments
     int rapidStepMsThreshold = 70;        // user is “rapid” if EMA step ≤ this (≈14 FPS)
     int rapidMinStreak = 2;               // need at least N consecutive forward steps
-    // int    rapidMinStreak = 5;            // need at least N consecutive forward steps
 
     // step sizing (we try to resize in chunks ≈ a few images)
     float emaItemMB = -1.0f;              // EMA of item size seen while queuing
     int minStepMB = 256;                  // never resize by less than this
     int maxStepMB = 1024;                 // never resize by more than this
+
+    // decoder performance
+    int decoderMs = 250;                  // decode ms updated in decodeHistory()
+    int lastNDecoders = 10;               // number of times to calc average decode ms
+    Winnow::Util::MovingAvg decodeMsAvg { lastNDecoders };
+    inline void decodeHistory(int msToDecode);
 
     // optional ceiling; if you already track available mem, use that instead
     quint64 maxMBCeiling = G::availableMemoryMB * 0.9; // soft cap (MB) to prevent runaway growth
@@ -223,7 +229,6 @@ private:
     bool cacheUpToDate();           // target range all cached
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
     void trimOutsideTargetRange();// define start and end key in the target range to cache
-    void adjustCacheMem(quint64 ms, quint64 mb);
     bool anyDecoderCycling();        // All decoder status is ready
     void setDirection();            // caching direction
     bool okToDecode(int sfRow, int id, QString &msg);

@@ -175,7 +175,7 @@ void TableView::setDefaultColumnWidths()
         else if (column == G::RowNumberColumn) defaultColumnWidth[column] = fm.boundingRect("-999999-").width();
         else if (column == G::NameColumn) defaultColumnWidth[column] = fm.boundingRect("2019-02-25_0001.jpg========").width();
         else if (column == G::FolderNameColumn) defaultColumnWidth[column] = fm.boundingRect("This is the folder name========").width();
-        else if (column == G::MSToReadColumn) defaultColumnWidth[column] = fm.boundingRect("=Read ms=").width();
+        else if (column == G::MSToReadColumn) defaultColumnWidth[column] = fm.boundingRect("=Decode ms=").width();
         else if (column == G::PickColumn) defaultColumnWidth[column] = fm.boundingRect("===Pick===").width();
         else if (column == G::IngestedColumn) defaultColumnWidth[column] = fm.boundingRect("=Ingested=").width();
         else if (column == G::LabelColumn) defaultColumnWidth[column] = fm.boundingRect("=Colour=").width();

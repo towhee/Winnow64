@@ -217,7 +217,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::RowNumberColumn, new QStandardItem("#")); horizontalHeaderItem(G::RowNumberColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::FolderNameColumn, new QStandardItem("Folder Name")); horizontalHeaderItem(G::FolderNameColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::MSToReadColumn, new QStandardItem("Read ms")); horizontalHeaderItem(G::MSToReadColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::MSToReadColumn, new QStandardItem("Decode ms")); horizontalHeaderItem(G::MSToReadColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour")); horizontalHeaderItem(G::LabelColumn)->setData(false, G::GeekRole);
