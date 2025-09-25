@@ -892,9 +892,9 @@ void ImageCache::memChk()
     const auto availMB = Mac::aggressiveAvailMB(); // free + inactive + speculative
     const int  level = Mac::memoryPressureLevel();
     const quint64 cacheMB = (quint64)icd->sizeMB();
-    Mac::availableMemory();
+    // Mac::availableMemory();
 #endif
-    /* MacOS delux mem check
+
     // Small safety reserve: ~3% of RAM (min 256 MB, max 1024 MB)
     int64_t safetyMB = std::clamp<int64_t>((int64_t)(ramMB * 0.03), 256, 1024);
 
@@ -920,27 +920,23 @@ void ImageCache::memChk()
     ceiling = std::max<qint64>(ceiling, minMB);
 
     // Set the target TOTAL budget for the cache
-    maxMBCeiling = std::max<qint64>(ceiling, minMB);
-    */
+    maxMBCeiling = ceiling;
 
-    maxMBCeiling = std::max<qint64>(G::availableMemoryMB * 0.95, minMB);
-
-    /*
     Mac::availableMemory();
     qDebug() << "imageCache::memCheck"
-             // << "ramMB =" << ramMB
-             // << "procMB =" << procMB
-             // << "availMB =" << availMB
-             // << "level =" << level
-             // << "safetyMB =" << safetyMB
-             // << "hardCapFromRAM =" << hardCapFromRAM
-             // << "burstCapFromAvail =" << burstCapFromAvail
-             // << "ceiling =" << ceiling
+             << "ramMB =" << ramMB
+             << "procMB =" << procMB
+             << "availMB =" << availMB
+             << "level =" << level
+             << "safetyMB =" << safetyMB
+             << "hardCapFromRAM =" << hardCapFromRAM
+             << "burstCapFromAvail =" << burstCapFromAvail
+             << "ceiling =" << ceiling
              << "maxMBCeiling =" << maxMBCeiling
              << "G::availableMemoryMB =" << G::availableMemoryMB
              << "maxMB =" << maxMB
              << "icd->sizeMB() =" << icd->sizeMB()
-        ;//*/
+        ;
 }
 
 void ImageCache::updateStatus(int instruction, QString source)
