@@ -3072,7 +3072,7 @@ void MW::folderChangeCompleted()
     - update filters
     - resize tableView columns
 */
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         int rows = dm->rowCount();
         QString msg = QString::number(rows) + " images";
