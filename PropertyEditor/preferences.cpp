@@ -171,16 +171,16 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "showCacheProgressBar") {
-        emit mw->setShowCacheStatus(v.toBool());
-        // mw->isShowCacheProgressBar = v.toBool();
-        mw->progressLabel->setVisible(v.toBool());
-        if (mw->isShowCacheProgressBar)  G::showProgress = G::ShowProgress::ImageCache;
-        else G::showProgress = G::ShowProgress::MetaCache;
-        mw->refreshAfterImageCacheSizeChange();
+        // signal ImageCache
+        bool isShow = v.toBool();
+        emit mw->setShowCacheStatus(isShow);
+        mw->isShowCacheProgressBar = isShow;
+        mw->metaRead->showProgressInStatusbar = isShow;
+        mw->progressLabel->setVisible(isShow);
         // hide/show progressWidthSlider in preferences
-        // QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
-        // if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
-        // else setRowHidden(capIdx.row(), capIdx.parent(), true);
+        QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
+        if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
+        else setRowHidden(capIdx.row(), capIdx.parent(), true);
     }
 
     if (source == "progressWidthSlider") {
@@ -192,14 +192,33 @@ void Preferences::itemChange(QModelIndex idx)
         G::maxIconSize = v.toInt();
     }
 
-    // if (source == "cacheMethod") {
-    //     mw->setCacheMethod(v.toString());
-    // }
-
     if (source == "imageCacheSize") {
         QString size = v.toString();
-        if (size == "Auto") mw->imageCache->setAutoMaxMB(true);
-        // if (size == "Auto") emit mw->setAutoMaxMB(true);
+
+        // auto mode?
+        bool isAuto = size.startsWith("Auto");
+        mw->settings->setValue("autoMaxMB", isAuto);
+
+        if (isAuto) {
+            ImageCache::AutoStrategy as = ImageCache::AutoStrategy::Ignore;
+            if (size == "Auto Frugal") {
+                as = ImageCache::AutoStrategy::Frugal;
+                setItemValue("iconChunkSize", 100);
+            }
+            else if (size == "Auto Moderate") {
+                as = ImageCache::AutoStrategy::Moderate;
+                setItemValue("iconChunkSize", 25000);
+            }
+            else if (size == "Auto Greedy") {
+                as = ImageCache::AutoStrategy::Greedy;
+                setItemValue("iconChunkSize", 25000);
+            }
+            mw->imageCache->setAutoMaxMB(true, as);
+            QString strategy = mw->imageCache->autoStrategyStr.at(as);
+            mw->settings->setValue("autoMaxMBStrategy", strategy);
+        }
+
+        // manual set maxMB size
         else {
             quint64 mb = 4000;
             if (size == "0.5 GB") mb = 500;
@@ -217,8 +236,9 @@ void Preferences::itemChange(QModelIndex idx)
             mw->imageCache->setAutoMaxMB(false);
             qDebug() << "mw->imageCache->setMaxMB(mb)";
             // mw->imageCache->setMaxMB(mb);
-            emit mw->setAutoMaxMB(false);
+            emit mw->setAutoMaxMB(false, ImageCache::AutoStrategy::Ignore);
             emit mw->setMaxMB(mb);
+            mw->settings->setValue("cacheMaxMB", mb);
         }
         mw->refreshAfterImageCacheSizeChange();
         // get available memory
@@ -1085,43 +1105,6 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // // Cache method
-    // i.name = "cacheMethod";
-    // i.parentName = "CacheHeader";
-    // i.captionText = "Caching method";
-    // i.tooltip = "Linear: slower - loads all metadata, then loads all icons and \n"
-    //             "finally loads full size images.\n\n"
-    //             "Concurrent: faster. Loads everything together\n";
-    // i.hasValue = true;
-    // i.captionIsEditable = false;
-    // i.value = mw->cacheMethod;
-    // i.key = "cacheMethod";
-    // i.delegateType = DT_Combo;
-    // i.type = "QString";
-    // i.dropList << "Linear"
-    //            << "Concurrent";
-    // addItem(i);
-
-    // Image cache size strategy
-    // i.name = "imageCacheStrategy";
-    // i.parentName = "CacheHeader";
-    // i.captionText = "Caching strategy";
-    // i.tooltip = "Select method of determining the size of the image cache\n"
-    //             "Thrifty  = larger of 10% of available memory or 2GB\n"
-    //             "Moderate = 50% of available memory\n"
-    //             "Greedy   = 90% of available memory";
-    // i.hasValue = true;
-    // i.captionIsEditable = false;
-    // i.value = mw->cacheSizeStrategy;
-    // i.key = "imageCacheStrategy";
-    // i.delegateType = DT_Combo;
-    // i.type = "QString";
-    // i.dropList.clear();
-    // i.dropList << "Thrifty"
-    //            << "Moderate"
-    //            << "Greedy";
-    // addItem(i);
-
     // Image cache maximum size excluding metadata cache
     i.name = "imageCacheSize";
     i.parentName = "CacheHeader";
@@ -1138,7 +1121,9 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     QHash<int, QString> mbToSize = {
-        {0,     "Auto"},     // you can decide how to treat "Auto"
+        {0,     "Auto Frugal"},
+        {0,     "Auto Moderate"},
+        {0,     "Auto Greedy"},
         {500,   "0.5 GB"},
         {1000,  "1 GB"},
         {2000,  "2 GB"},
@@ -1152,15 +1137,18 @@ void Preferences::addItems()
         {48000, "48 GB"},
         {64000, "64 GB"}
     };
+    qDebug() << "pref maxMB =" << mw->imageCache->getMaxMB();
     if (mw->imageCache->getAutoMaxMB())
-        i.value = "Auto";
+        i.value = "Auto " + mw->imageCache->getAutoStrategy();
     else
         i.value = mbToSize.value(mw->imageCache->getMaxMB());
     i.key = "imageCacheSize";
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList.clear();
-    i.dropList << "Auto"
+    i.dropList << "Auto Frugal"
+               << "Auto Moderate"
+               << "Auto Greedy"
                << "0.5 GB"
                << "1 GB"
                << "2 GB"

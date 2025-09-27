@@ -476,7 +476,6 @@ void ImageCache::trimOutsideTargetRange()
                      return (sfRow < targetFirst || sfRow > targetLast);
                   }),
                   toCache.end());
-
     updateStatus(StatusAction::All, "ImageCache::trimOutsideTargetRange");
 }
 
@@ -589,8 +588,7 @@ void ImageCache::releavePressure() {
                          << "step =" << stepMB
                          << "maxMB =" << maxMB
                     ; //*/
-                if (isShowCacheStatus)
-                    updateStatus(StatusAction::All, "ImageCache::releasePressure");
+                updateStatus(StatusAction::All, "ImageCache::releasePressure");
             }
         }
         else if (cushion > cushionHigh) {
@@ -613,8 +611,7 @@ void ImageCache::releavePressure() {
                          << "step =" << step
                          << "maxMB =" << maxMB
                     ;//*/
-                if (isShowCacheStatus)
-                    updateStatus(StatusAction::All, "ImageCache::releasePressure");
+                updateStatus(StatusAction::All, "ImageCache::releasePressure");
             }
         }
         // otherwise stay put and keep observing
@@ -938,7 +935,7 @@ void ImageCache::memChk()
     maxMBCeiling = ceiling;
     //*/
 
-    maxMBCeiling = std::max<qint64>(G::availableMemoryMB, minMB);;
+    maxMBCeiling = std::max<qint64>(G::availableMemoryMB, minMB) * memThrottle;
 
     /*
     Mac::availableMemory();
@@ -978,6 +975,7 @@ void ImageCache::updateStatus(int instruction, QString source)
              << "currMB =" << currMB
              << "source =" << source
         ; //*/
+    if (!isShowCacheStatus) instruction = StatusAction::InfoOnly;
     emit showCacheStatus(instruction, autoMaxMB, currMB, maxMB,
                          targetFirst, targetLast, source);
 }
@@ -1032,6 +1030,7 @@ QString ImageCache::reportCacheParameters()
     rpt << "\n";
     rpt << "totFiles                 = " << dm->sf->rowCount() << "\n";
     rpt << "autoMaxMB                = " << QVariant(autoMaxMB).toString() << "\n";
+    rpt << "autoStrategy             = " << getAutoStrategy() << "\n";
     rpt << "currMB                   = " << icd->sizeMB() << "\n";
     rpt << "maxMB                    = " << maxMB << "\n";
     rpt << "minMB                    = " << minMB << "\n";
@@ -1503,7 +1502,7 @@ void ImageCache::initialize()
     toCache.clear();
     toCacheStatus.clear();
     pressureHistory.clear();
-    maxMB = 1024;
+    // maxMB = 1024;  // only if autoMaxMB?
 
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
@@ -1536,9 +1535,7 @@ void ImageCache::initialize()
     lastAdjustMs = 0;
     firstAdjustFreePass = true;     // <- enable first-adjust bypass
 
-    if (isShowCacheStatus) {
-        updateStatus(StatusAction::Clear, "ImageCache::initializeImageCache");
-    }
+    updateStatus(StatusAction::Clear, "ImageCache::initializeImageCache");
 
     isInitializing = false;
     abort = false;
@@ -1556,15 +1553,61 @@ bool ImageCache::getAutoMaxMB()
     return autoMaxMB;
 }
 
-void ImageCache::setAutoMaxMB(bool autoSize)
+QString ImageCache::getAutoStrategy()
+{
+    return autoStrategyStr.at(autoStrategy);
+}
+
+void ImageCache::setAutoMaxMB(bool autoSize, AutoStrategy strategy)
 {
     autoMaxMB = autoSize;
-    // updateStatus(StatusAction::Size, "ImageCache::setAutoMaxMB");
+    autoStrategy = strategy;
+    switch (strategy) {
+        case AutoStrategy::Frugal:
+            cushionLow  = 5;
+            cushionHigh = 15;
+            minStepMB = 128;
+            maxStepMB = 1024;
+            memThrottle = 0.8;
+            break;
+        case AutoStrategy::Moderate:
+            cushionLow  = 5;
+            cushionHigh = 25;
+            minStepMB = 512;
+            maxStepMB = 2048;
+            memThrottle = 1.0;
+            break;
+        case AutoStrategy::Greedy:
+            cushionLow  = 50;
+            cushionHigh = 100;
+            minStepMB = 1048;
+            maxStepMB = 4096;
+            memThrottle = 1.2;
+            break;
+        case AutoStrategy::Ignore:
+            break;
+        default:
+            break;
+    }
+
+        updateStatus(StatusAction::InfoOnly, "setAutoMaxMB");
+        qDebug()
+             << "ImageCache::setAutoMaxMB"
+             << "cushionLow =" << cushionLow
+             << "cushionHigh =" << cushionHigh
+             << "memThrottle =" << memThrottle
+             << "maxMBCeiling =" << maxMBCeiling
+                ;
 }
 
 quint64 ImageCache::getMaxMB()
 {
     return maxMB;
+}
+
+quint64 ImageCache::getMaxMBCeiling()
+{
+    return maxMBCeiling;
 }
 
 bool ImageCache::getShowCacheStatus()
@@ -1574,32 +1617,17 @@ bool ImageCache::getShowCacheStatus()
 
 void ImageCache::setMaxMB(quint64 mb)
 {
-    if (G::isLogger)
+    // if (G::isLogger)
         log("setMaxMB", QVariant(mb).toString());
     maxMB = mb;
     dispatch();
+    updateStatus(StatusAction::InfoOnly, "setMaxMB");
 }
 
 void ImageCache::setShowCacheStatus(bool isShowCacheStatus)
 {
     if (G::isLogger) log("setShowCacheStatus");
     this->isShowCacheStatus = isShowCacheStatus;
-}
-
-void ImageCache::updateImageCacheParam(quint64 cacheSizeMB,
-                                       quint64 cacheMinMB,
-                                       bool isShowCacheStatus)
-{
-/*
-    When various image cache parameters are changed in preferences they are updated here.
-*/
-    if (G::isLogger) log("updateImageCacheParam");
-    if (debugCaching) qDebug() << "ImageCache::updateImageCacheParam";
-    // rgh cache amount fix from pref to here
-    maxMB = cacheSizeMB;
-    minMB = cacheMinMB;
-    this->isShowCacheStatus = isShowCacheStatus;
-    reloadImageCache();
 }
 
 void ImageCache::filterChange(QString currentImageFullPath, QString src)
@@ -1662,7 +1690,7 @@ void ImageCache::reloadImageCache()
 /*
     Reload all images in the cache.  Used by colorManageChange.
 */
-    // if (debugCaching)
+    if (debugCaching)
         qDebug() << "ImageCache::colorManageChange";
     if (debugLog || G::isLogger || G::isFlowLogger) log("reloadImageCache");
     // QMutexLocker locker(&gMutex);   // req'd 2025-02-19
@@ -2008,7 +2036,8 @@ void ImageCache::cacheImage(int id, int sfRow)
     if (!abort) emit setCached(sfRow, true, instance);
 
     // update cache status in cache progress bar
-    if (!abort) updateStatus(StatusAction::All, "ImageCache::cacheImage");
+    if (!abort)
+        updateStatus(StatusAction::All, "ImageCache::cacheImage");
 }
 
 bool ImageCache::okToCache(int id, int sfRow)
@@ -2270,9 +2299,7 @@ void ImageCache::fillCache(int id)
             }
 
             // else update cache progress in status bar
-            if (isShowCacheStatus) {
-                updateStatus(StatusAction::All, "ImageCache::fillCache after check cacheUpToDate");
-            }
+            updateStatus(StatusAction::All, "ImageCache::fillCache after check cacheUpToDate");
 
             // turn off caching activity lights on statusbar
             emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
@@ -2357,9 +2384,12 @@ void ImageCache::dispatch()
     if (debugCaching || G::isLogger || G::isFlowLogger)
         log("dispatch", "row = " + QVariant(currRow).toString());
 
-    if (debugCaching)
+    // if (debugCaching)
     {
-        qDebug().noquote() << "ImageCache::dispatch  row =" << currRow;
+        qDebug().noquote() << "ImageCache::dispatch  row =" << currRow
+                           << "autoMaxMB =" << autoMaxMB
+                           << "maxMB =" << maxMB
+            ;
     }
 
     abort = false;

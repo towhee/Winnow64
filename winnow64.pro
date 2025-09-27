@@ -439,7 +439,8 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += $$files(Lib/*, true)
+DISTFILES += $$files(Lib/*, true) \
+    notes/Documentation.txt
 DISTFILES += Docs/ingestautopath
 DISTFILES += notes/InstallMediaPipe.txt
 DISTFILES += CMakeLists.txt

@@ -160,12 +160,6 @@ Q_NAMESPACE
         Heic
     };
 
-    extern enum ShowProgress {
-        None,
-        MetaCache,
-        ImageCache
-    } showProgress;
-
     // used to pass externalApps from MW to AppDlg
     struct App {
         QString name;

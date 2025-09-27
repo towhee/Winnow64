@@ -93,10 +93,10 @@ void MW::writeSettings()
     settings->setValue("isSlideShowRandom", isSlideShowRandom);
     settings->setValue("isSlideShowWrap", isSlideShowWrap);
 
-    // image cache
-    settings->setValue("autoMaxMB", imageCache->getAutoMaxMB());
-    settings->setValue("cacheMaxMB", imageCache->getMaxMB());
-    settings->setValue("isShowCacheStatus", imageCache->getShowCacheStatus());
+    // image cache (see preferences.cpp)
+    // settings->setValue("autoMaxMB", imageCache->getAutoMaxMB());
+    // settings->setValue("cacheMaxMB", imageCache->getMaxMB());
+    // settings->setValue("isShowCacheStatus", imageCache->getShowCacheStatus());
 
     settings->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
     settings->setValue("isIconNumberVisible", iconNumberVisibleAction->isChecked());

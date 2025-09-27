@@ -42,7 +42,9 @@ public:
     void rename(QString oldPath, QString newPath);
 
     bool getAutoMaxMB();
+    QString getAutoStrategy();
     quint64 getMaxMB();
+    quint64 getMaxMBCeiling();
     bool getShowCacheStatus();
 
     void updateStatus(int instruction, QString source); // update cached send signal
@@ -62,8 +64,11 @@ public:
 
     int decoderCount = 1;
 
-    enum StatusAction {Clear, All, Size};
+    enum StatusAction {Clear, All, Size, InfoOnly};
     QStringList statusAction {"Clear", "All", "Size"};
+
+    enum AutoStrategy {Frugal, Moderate, Greedy, Ignore};
+    QStringList autoStrategyStr {"Frugal", "Moderate", "Greedy", "Ignore"};
 
     bool debugCaching = false;
     bool debugLog = false;
@@ -88,9 +93,7 @@ public slots:
     void abortProcessing();
     void initialize();
 
-    void updateImageCacheParam(quint64 cacheSizeMB, quint64 cacheMinMB,
-                               bool isShowCacheStatus);
-    void setAutoMaxMB(bool autoSize);
+    void setAutoMaxMB(bool autoSize, AutoStrategy strategy = AutoStrategy::Ignore);
     void setMaxMB(quint64 mb);
     void setShowCacheStatus(bool isShowCacheStatus);
 
@@ -167,6 +170,7 @@ private:
     int sumStep;                // sum of step until threshold
     int directionChangeThreshold;//number of steps before change direction of cache
     bool autoMaxMB;             // use releavePressure() to set maxMB
+    AutoStrategy autoStrategy;  // Frugal, Moderate, Greedy or Ignore
     quint64 maxMB;              // maximum MB available to cache
     quint64 minMB = 500;        // minimum MB available to cache
     int targetFirst;            // beginning of target range to cache
@@ -182,6 +186,7 @@ private:
     qint64 lastAdjustMs = 0;              // last time we changed maxMB
     qint64 lastMoveMs   = 0;              // last time setTargetRange saw a move
     int lastKeyForMotion = -1;            // last row key we saw
+    float memThrottle = 1.0;              // factor to adjust maxMB
 
     // motion heuristics (EMA = Exponential Moving Average)
     double emaStepMs = -1.0;              // EMA of time between successive forward steps
@@ -192,7 +197,7 @@ private:
 
     // tuning knobs (feel free to expose via settings)
     int cushionLow  = 5;                  // “need more cache” when pressure <= this
-    int cushionHigh   = 15;               // “too much cache” when pressure > this
+    int cushionHigh = 15;                 // “too much cache” when pressure > this
     int adjustCooldownMs = 100;           // min delay between cache-size adjustments
     int rapidStepMsThreshold = 70;        // user is “rapid” if EMA step ≤ this (≈14 FPS)
     int rapidMinStreak = 2;               // need at least N consecutive forward steps
@@ -208,8 +213,8 @@ private:
     Winnow::Util::MovingAvg decodeMsAvg { lastNDecoders };
     inline void decodeHistory(int msToDecode);
 
-    // optional ceiling; if you already track available mem, use that instead
-    quint64 maxMBCeiling = G::availableMemoryMB * 0.9; // soft cap (MB) to prevent runaway growth
+    // cache size ceiling with default start amount (MB) to prevent runaway growth
+    quint64 maxMBCeiling = G::availableMemoryMB * 0.9;
 
     // pressure helpers
     static qint64 nowMs();

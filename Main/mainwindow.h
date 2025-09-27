@@ -382,10 +382,9 @@ signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src = "MW",
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
-    // void setIcon(QModelIndex dmIdx, const QPixmap pm, bool ok, int fromInstance, QString src);
     void startImageCache();
     void initializeImageCache();
-    void setAutoMaxMB(bool autoSize);
+    void setAutoMaxMB(bool autoSize, ImageCache::AutoStrategy strategy);
     void setMaxMB(quint64 mb);
     void setShowCacheStatus(bool isShowCacheStatus);
     void setImageCachePosition(QString, QString);
