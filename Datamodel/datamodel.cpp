@@ -2582,15 +2582,10 @@ void DataModel::setIconRange(int sfRow)
     //     G::iconChunkLoaded = true;
     //     return;
     // }
-    // row count less than icon range
     int rows = sf->rowCount();
-    int start;
-    int end;
-    start = sfRow - iconChunkSize / 2;
-    if (start < 0) start = 0;
-    end = start + iconChunkSize;
-    if (end >= rows) end = rows - 1;
-    // G::iconChunkLoaded = start >= startIconRange && end <= endIconRange;
+    int start = qMax(0, sfRow - iconChunkSize / 2);
+    int end = qMin(rows - 1, start + iconChunkSize);
+    start = qMax(0, end - iconChunkSize);
     // mutex.lock();
     startIconRange = start;
     endIconRange = end;
@@ -2602,6 +2597,7 @@ void DataModel::setChunkSize(int chunkSize)
 {
     iconChunkSize = chunkSize;
     checkChunkSize = chunkSize > rowCount();
+    setIconRange(currentSfRow);
 }
 
 void DataModel::clearAllIcons() // not being used
@@ -2616,7 +2612,11 @@ void DataModel::clearAllIcons() // not being used
 void DataModel::clearIconsOutsideChunkRange()
 {
     if (isDebug)
-    qDebug() << "DataModel::clearIconsOutsideChunkRange" << "instance =" << instance;
+    qDebug() << "DataModel::clearIconsOutsideChunkRange"
+                 << "instance =" << instance
+                 << "startIconRange =" << startIconRange
+                 << "endIconRange =" << endIconRange
+            ;
 
     // check if datamodel size is less than assigned icon cache chunk size
     if (iconChunkSize >= sf->rowCount()) {

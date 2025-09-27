@@ -303,6 +303,7 @@ void MW::createMetaRead()
     if (isSettings) {
        if (settings->contains("iconChunkSize")) {
            dm->defaultIconChunkSize = settings->value("iconChunkSize").toInt();
+           dm->iconChunkSize = dm->defaultIconChunkSize;
        }
     }
     else {
@@ -366,19 +367,51 @@ void MW::createImageCache()
 
     imageCache = new ImageCache(this, icd, dm);
 
+    /*
+    Control of the ImageCache size is either automatic or manual.
+
+    If automatic:
+        setAutoMaxMB(true, strategy)
+    If manual:
+        setAutoMaxMB(false, strategy = Ignore)
+        setMaxMB(mb)
+    */
+
     // load settings
     if (!isSettings || simulateJustInstalled) {
-        imageCache->setAutoMaxMB(true);
-        imageCache->setMaxMB(8000);
+        imageCache->setAutoMaxMB(true, ImageCache::AutoStrategy::Moderate);
         imageCache->setShowCacheStatus(true);
     }
     else {
-        if (settings->contains("autoMaxMB"))
-            imageCache->setAutoMaxMB(settings->value("autoMaxMB").toBool());
-        if (settings->contains("cacheMaxMB"))
-            imageCache->setMaxMB(settings->value("cacheMaxMB").toULongLong());
-        if (settings->contains("isShowCacheStatus"))
-            imageCache->setShowCacheStatus(settings->value("isShowCacheStatus").toBool());
+        bool isAuto = false;
+        ImageCache::AutoStrategy as = ImageCache::AutoStrategy::Ignore; // default
+        if (settings->contains("autoMaxMB")) {
+            isAuto = settings->value("autoMaxMB").toBool();
+            as = ImageCache::AutoStrategy::Moderate; // new default
+        }
+
+        if (settings->contains("autoMaxMBStrategy")) {
+            QString strategy = settings->value("autoMaxMBStrategy").toString();
+            if (strategy == "Frugal") as = ImageCache::AutoStrategy::Frugal;
+            if (strategy == "Moderate") as = ImageCache::AutoStrategy::Moderate;
+            if (strategy == "Greedy") as = ImageCache::AutoStrategy::Greedy;
+        }
+
+        quint64 cacheMaxMB = 1024; // default
+        if (settings->contains("cacheMaxMB")) {
+            cacheMaxMB = settings->value("cacheMaxMB").toULongLong();
+        }
+
+        imageCache->setAutoMaxMB(isAuto, as);
+        if (!isAuto) {
+            imageCache->setMaxMB(cacheMaxMB);
+        }
+
+        if (settings->contains("isShowCacheStatus")) {
+            bool isShow = settings->value("isShowCacheStatus").toBool();
+            imageCache->setShowCacheStatus(isShow);
+            isShowCacheProgressBar = isShow;
+        }
     }
 
     connect(&imageCacheThread, &QThread::finished,

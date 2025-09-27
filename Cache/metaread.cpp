@@ -55,6 +55,10 @@
         • dispatchFinished cleans up icons, resets flags, updates the statusbar and emits
           done, which signals MW::loadCurrentDone.
 
+    Icon Chunks
+
+
+
     Note: All data in the DataModel must be set using a queued connection.  When subsequent
     actions are dependent on the data being set use Qt::BlockingQueuedConnection.
 
@@ -491,7 +495,7 @@ QString MetaRead::reportMetaCache()
     return reportString;
 }
 
-// void MetaRead::cleanupIcons()
+// void MetaRead::cleanupIcons() replaced by emit cleanupIcons() signals DataModel::clearIconsOutsideChunkRange
 // {
 // /*
 //     Remove icons not in icon range after start row change, iconChunkSize change or
@@ -544,7 +548,15 @@ inline bool MetaRead::needToRead(int sfRow)
     bool isMeta = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
 
     // already reading this item?
-    if (isReading || isIcon) {
+    // if (isReading || isIcon) {
+    //     return false;
+    // }
+    // else {
+    //     QModelIndex sfReadingIdx = dm->sf->index(sfRow, G::MetadataReadingColumn);
+    //     dm->sf->setData(sfReadingIdx, true);
+    // }
+
+    if (isMeta && isIcon) {
         return false;
     }
     else {
@@ -555,11 +567,13 @@ inline bool MetaRead::needToRead(int sfRow)
     if (!isMeta) {
         needMeta = true;
     }
+
     if (!isIcon) {
         if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
             needIcon = true;
         }
     }
+
     return needMeta || needIcon;
 }
 
@@ -649,6 +663,13 @@ int MetaRead::pending()
         }
     }
     return pendingCount;
+}
+
+void MetaRead::setCycling(bool isCycling)
+{
+    for (bool v : cycling) {
+        v = isCycling;
+    }
 }
 
 bool MetaRead::allMetaIconLoaded()
@@ -821,7 +842,6 @@ void MetaRead::processReturningReader(int id, Reader *r)
             if (redoCount < redoMax) {
                 // try to read again
                 QThread::msleep(50);
-                // metaReadThread.msleep(50);
                 if (!abort) {
                     redo();
                 }
@@ -887,7 +907,13 @@ void MetaRead::dispatch(int id, bool isReturning)
            - if last row then quit after delay
 */
     QString fun = "MetaRead::dispatch";
-    // qDebug() << "MetaRead::dispatch id =" << id;
+    if (isDebug)
+    {
+        qDebug() << "MetaRead::dispatch id =" << id
+             << "isReturning =" << isReturning
+             << "dmRowCount =" << dmRowCount
+        ;
+    }
 
     // terse pointer to readers[id]
     r = readers[id];
@@ -978,7 +1004,6 @@ void MetaRead::dispatch(int id, bool isReturning)
                        << nextRow << "fPath is empty";
 
         if (isDebug)
-        // if (dm->sf->index(nextRow, G::VideoColumn).data().toBool())
         {
             QString fun1 = fun + " invoke reader";
             // QString ms = msElapsed();
@@ -1014,6 +1039,27 @@ void MetaRead::dispatch(int id, bool isReturning)
                                       );
         }
     }
+    else {
+        QString fun1 = fun + " no next row";
+        if (isDebug)
+        {
+        qDebug().noquote()
+            << fun1.leftJustified(col0Width)
+            << "id =" << QString::number(id).leftJustified(2, ' ')
+            << "redo =" << QString::number(redoCount).leftJustified(2, ' ')
+            // << "dmRow =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+            << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
+            << "okReadMeta =" << QVariant(needMeta).toString().leftJustified(5, ' ')
+            << "okReadIcon =" << QVariant(needIcon).toString().leftJustified(5, ' ')
+            << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+            << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+            << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+            << "a =" << QString::number(a).leftJustified(4, ' ')
+            << "b =" << QString::number(b).leftJustified(4, ' ')
+            ;
+        }
+            cycling[id] = false;
+    }
 
     // if done in both directions fire delay to quit in case isDone fails
     if (aIsDone && bIsDone && !isDone) {
@@ -1045,6 +1091,11 @@ void MetaRead::dispatchReaders()
             << "cycling =" << cycling.at(id)
             ;
         }
+
+        // dispatch(id, isReturning);
+        // continue;
+
+        // if (!reader[id]->pending) {
         if (!cycling.at(id)) {
             // readers[id]->status = Reader::Status::Ready;
             // readers[id]->fPath = "";
@@ -1111,6 +1162,7 @@ void MetaRead::dispatchFinished(QString src)
     }
 
     bool running = false;
+    setCycling(false);
     bool show = true;
     success = allMetaIconLoaded();
     if (G::useUpdateStatus && !G::allMetadataLoaded) {
@@ -1126,7 +1178,10 @@ void MetaRead::dispatchFinished(QString src)
         // signal MW::folderChangeCompleted
         emit done();
     }
-    G::iconChunkLoaded = true;      // rgh change to = dm->allIconChunkLoaded(first, last) ??
+    // G::iconChunkLoaded = true;      // rgh change to = dm->allIconChunkLoaded(first, last) ??
+    G::iconChunkLoaded = dm->isIconRangeLoaded();
+
+    emit done();
 
     setIdle();
 }

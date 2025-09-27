@@ -2,504 +2,8 @@
 #include "Main/global.h"
 #include <QMetaEnum>
 
-/* Program notes
-***********************************************************************************************
-
-INITIALIZATION
-
-Persistant settings are saved between sessions using QSettings. Persistant settings form two
-categories at runtime: action settings and preference settings. Action settings are boolean
-and maintained by the action item setChecked value. Preferences can be anything and are
-maintained as public variables, mostly in MW (this class) and managed in the prefDlg class.
-
-Not all settings can be read immediately as the classes that use them may not yet have been
-created. Examples of this are IconView parameters or the recent folders menu list, since
-IconView and the menus have not been created yet. Therefore some settings are assigned up
-front and the rest are assigned as needed.
-
-• Load QSettings
-• Set default values if no settings available (first time run)
-• Set preference settings including:
-    • General (previous folder etc)
-    • Slideshow
-    • Cache
-    • Full screen docks visible
-    • List of external apps
-    • Bookmarks
-    • Recent folders
-    • Ingest history folders
-    • Workspaces
-• Create actions and set checked based on persistant values from QSetting
-• Create bookmarks with persistant values from QSettings
-• Update external apps with persistant values from QSettings
-• Load shortcuts (based on being able to edit shortcuts)
-• Execute updateState function to implement all persistant state settings
-
-• Select a folder
-  • Load datamodel with QDir info on each image file
-  • Add the rest of the metadata to datamodel (incl thumbs as icons)
-  • Update the image cache
-
-***********************************************************************************************
-
-PROGRAM PIPELINE
-
-    • New folder selected:
-        - FSTree::mousePressEvent or
-          FSTree::select
-        - MW::folderSelectionChange             // prep based on mouse click modifier
-        - MW::stop                              // halt prior loading
-        - MW::reset                             // reset all parameters, new instance
-        - MW::clearDataModel
-        - DM::newInstance                       // if new primary folder
-        - DM::enqueueFolderSelection
-        - DM::enqueueOp
-        - DM::processNextFolder
-        - DM::addFolder
-        - DM::addFileDataForRow                 // iterate all rows
-        - MW::folderChanged
-        - MW::addFolder
-        - Selection::setCurrentRow
-        - Selection::setCurrentIndex
-        - DataModel::setCurrentSF               // update current indexes and fPath
-        - MW::update
-        - MetaRead::setStartRow
-        - MetaRead::run
-        - MetaRead::dispatchReaders
-        - Reader::read                          // prep reader
-        - Reader::run
-        - Reader::readMetadata
-        - Reader::readIcon
-        - MetaRead::dispatch
-        - MW::fileSelectionChange
-        - ImageView::loadImage
-        - ImageCache::setCurrentPosition
-        - ImageCache::run
-        - ImageCache::updateTargets
-        - ImageCache::launchDecoders
-        - ImageCache::fillCache
-        - ImageCache::nextToCache
-        - ImageCache::decodeNextImage
-        - ImageDecoder::read
-        - ImageDecoder::run
-        - ImageDecoder::decode
-        - ImageDecoder::rotate
-        - ImageDecoder::colorManage
-        - ImageCache::fillCache
-        - ImageCache::cacheImage
-        - ImageCache::nextToCache
-
-        * Use G::isFlowLogger or G::isLogger to output program progress
-
-PROGRAM FLOW - CONCURRENT - NEW FOLDER SELECTED
-
-    • Selecting a new folder in the Folders or Bookmarks panel calls MW::folderSelectionChange.
-
-    • All threads are stopped, the DataModel is cleared and all parameters are reset.
-
-    • The DataModel is loaded with the OS file system info in dm->load and dm->addFileData.
-
-    • MW::loadConcurrentNewFolder sets the current file path, initializes the imageCacheThread
-      and metaReadThread, and calls Selection::currentIndex(0).
-
-    • metaReadThread->setCurrentRow. This starts the metaReadThread, which iterates
-      through the DataModel, adding all the image metadata and thumbnail icons. For each
-      item, the metadata is also signalled to the imageCacheThread
-      ImageCache::addCacheItemImageMetadata.
-
-    • As the metaReadThread iterates, when it reaches a imageCacheTriggerCount, it signals
-      the imageCacheThread to start loading the cache.
-
-PROGRAM FLOW - CONCURRENT - NEW IMAGE SELECTED
-
-    A new image is selected which triggers fileSelectionChange:
-
-    • If starting the program select the first image in the folder.
-
-    • Record the current datamodel row and its file path.
-
-    • Update the thumbView and gridView delegates.
-
-    • Synchronize the thumb, grid and table views.   If in loupe mode, load the current
-      image.
-
-    • Update window title, statusbar, info panel and classification badges.
-
-    • Update the metadata and image caching.
-
-    • If the metadata has not been cached yet for the selected image (usually the first
-      in a new folder) then load the thumbnail.
-
-    • Update the cursor position on the image caching progress bar.
-
-A new image is selected which triggers a scroll event
-
-    • IconView selection change may trigger scroll signal, based on the current view:
-      thumb, grid or table.  MW::thumb/grid/tableHasScrolled are signalled.
-
-    • Update the icon range (firstVisible/lastVisible)
-
-Flow Flags:
-
-    G::isInitializing
-    G::stop
-    G::dmEmpty
-    G::allMetadataLoaded
-    G::iconChunkLoaded
-    G::isLinearLoadDone
-    dm->loadingModel
-    dm->basicFileInfoLoaded  // not used
-    G::isLinearLoading       // not used
-    G::ignoreScrollSignal
-    isFilterChange
-
-Current model row:
-
-    dm->currentRow
-    dm->currentFilePath
-    dm->currentDmIdx
-    dm->currentSfIdx
-    dm->currentFilePath
-    dm->currentFolderPath
-
-Icons:
-
-    dm->midIconRange;                   // used to determine MetaRead priority queue
-    dm->iconChunkSize;                  // max suggested number of icons to cache
-    dm->defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
-
-IconChunkSize:
-
-    Icons or thumbnails, 256px on the long side, are stored in the DataModel in column 0
-    and role G::IconRectRole  ie dm->index(row, 0).data(G::IconrectRole).  When a folder
-    is loaded, if there are a very large number of images, Winnow loads the icons in
-    chunks, defined by dm->iconChunkSize (limits are 1,000 to 10,000).  If the number of
-    visible icons is greater than the iconChunkSize, then the IconChunkSide is increased
-    to accomodate the visible icons.  As the user moves through the images, either by
-    selection or scrolling, the icon range is recalculated based on the midVisibleIcon.
-
-    When the user progresses through the images, the current image is centered in the
-    visible views (thumbView, gridView and tableView) using the midVisibleCell.
-
-Tracking the icon parameters:
-
-    The number of visible icons (visibleCellCount) can change whenever:
-
-        • the size of the view changes
-        • the size of the icons changes
-
-    When this happens:
-
-        //• IconView::updateVisibleCellCount is called.
-        • IconView::updateVisible is called.  A number of IconView operations use
-          the parameters defined in IconView::updateVisible.
-        • MW::updateIconRange updates the DataModel iconChunkSize based on which
-          view has the most visible icons and the current iconChunkSize.
-
-    The first, mid and last visible icons changes whenever there is a scroll event.  The
-    scroll event can triggered by the user scrolling or selecting another image.  Also, see
-    SCROLLING below.
-
-          • MW::thumbHasScrolled, MW::gridHasScrolled or MW::tableHasScrolled is triggered.
-          • MW::updateIconRange calls IconView::updateVisible.
-          • other visible views are scrolled to sync.
-
-Other Global flags:
-
-    G::isSlideShow;
-    G::isRunningColorAnalysis;
-    G::isRunningStackOperation;
-    G::isProcessingExportedImages;
-    G::isEmbellish;
-    G::colorManage;
-    G::modifySourceFiles;
-    G::backupBeforeModifying;
-    G::autoAddMissingThumbnails;
-    G::useSidecar;
-    G::renderVideoThumb;
-    G::includeSubfolders;
-
-Remove
-MW::scrollToCurrentRow
-Selection::updateVisible
-
-***********************************************************************************************
-
-CACHING
-
-• When a new folder or a new file is selected, or when a scroll event occurs in IconView
-  then the metadata cache (metadataCacheThread) is started.
-
-• If it is a new folder metadataCacheThread emits a signal back to
-  MW::loadImageCacheForNewFolder, where some housekeeping occurs and the ImageCache is
-  initialized and started in imageCacheThread.  The full size images are cached.
-
-• If a new image is selected then MW::fileSelectionChange restarts metadataCacheThread to
-  cache any additional metadata or icons, and then restarts the imageCacheThread to cache
-  any additional full size images.
-
-• If the user scrolls in the thumbView or gridView scroll events are sent to
-  MW::thumbHasScrolled.  The delay insures that is the user is rapidly scrolling
-  then the next scroll event supercedes the prior and the metadataCacheThread is only
-  restarted when there is a pause or the scrolling is slow.  In this scenario the
-  imageCacheThread is not restarted because a new image has not been selected.
-
-* see top of mdcache.cpp comments for more detail
-
-CACHE STATUS
-
-* Two status lights on the right side of the status bar (metadataThreadRunningLabel and
-  imageThreadRunningLabel) turn from green to red to indicate datamodel metadata and image
-  caching respectively.  A status light on the lower right of each thumbnail is made
-  visible when the associated image is cached.
-
-* An image cache progress bar (progressBar) shows the status of every image in the folder:
-  target range, isCached and cursor position.
-
-* The flag isShowCacheProgressBar toggles cache progress updates and the visibility of the
-  progress bar.
-
-* isCached is stored in datamodel as dm->sf->index(row, G::IsCachedColumn).data()
-
-* Functions:
-  MW::createStatusBar                       - add status labels to right side of status bar
-  MW::refreshAfterImageCacheSizeChange               - preferences calls to update cache status
-  MW::setThreadRunStatusInactive            - sets caching activity status lights gray
-  MW::updateImageCachingThreadRunStatus     - sets image caching activity status light green/red
-  MW::updateMetadataCachingThreadRunStatus  - sets metadata caching activity status light green/red
-  MW::setCacheStatusVisibility              - updateState calls to toggle progressBar visibility
-  MW::updateImageCacheStatus                - ImageCache calls to update image cache status
-  MW::setCachedStatus                       - sets isCached in datamodel and refreshes views
-
-ICON CACHING
-
-• Each icon is a 256px longside QIcon so we want to balance how many we load when weighing
-  performance vs memory footprint.
-
-• Icons are stored in the DataModel at dm->(row, 0).data(Qt::DecorationRole).  The loaded
-  status can be determined two ways:
-
-  1. dm->itemFromIndex(dmIdx)->icon().isNull()      // used up to 2023
-  2. dmIdx.data(Qt::DecorationRole).isNull()        // switch to in 2023
-
-• Cases:
-
-  1.
-
-• The default limit of icons to load is dm->defaultIconChunkSize, which is set in
-  preferences.  dm->iconChunkSize (the variable used to manage the actual number of
-  icons loaded) is initially set to dm->defaultIconChunkSize.
-
-• If the number of images in the folder(s) is less than dm->defaultIconChunkSize, then
-  all rows in the DataModel are loaded with an icon.
-
-• When there are more DataModel rows than the dm->defaultIconChunkSize then only the
-  default amount of icons are loaded.  As the user moves through the DataSet icons are
-  removed and added.
-
-• When there are more thumbnails (icons) visible in either thumbView, gridView or
-  tableView than dm->defaultIconChunkSize, then dm->iconChunkSize is adjusted to the
-  largest number in MW::updateIconRange.
-
-• CASE X: When the app is resized or the thumbnails are resized the number visible may change
-  and dm->iconChunkSize is adjusted in MW::updateIconRange.
-
-• When dm->iconChunkSize changes or there is a scroll event then the metadata cache
-  read process must be rerun to update the icons.
-•
-•
-•
-
-
-***********************************************************************************************
-
-DATAMODEL CHANGES
-
-Folder change
-    MW::folderSelectionChange
-        Housekeeping                    (stop cache threads, slideshow, initializing)
-    DataModel::load                     (load basic metadata for every eligible image)
-    MetadataCache::loadNewFolder
-    MetadataCache::setRange
-    MetadataCache::readMetadataIconChunk
-    MW::loadMetadataCache2ndPass
-    IconView::bestAspect
-    IconView::setThumbParameters
-    MetadataCache::loadNewFolder2ndPass
-    MetadataCache::setRange
-    MetadataCache::readMetadataIconChunk
-    MW::loadImageCacheForNewFolder
-    // need to repeat best fit?
-    IconView::bestAspect
-    IconView::setThumbParameters
-    ImageCache::initImageCache
-    ImageCache::updateImageCachePosition
-    ImageCache::updateImageCacheList
-    ImageCache::setPriorities
-    ImageCache::setTargetRange
-    ImageCache::run
-
-Image change
-    MW::fileSelectionChange
-    MW::updateMetadataCacheIconviewState
-    MetadataCache::fileSelectionChange
-    MetadataCache::setRange
-    MetadataCache::readMetadataIconChunk
-    ImageCache::updateImageCachePosition
-    ImageCache::updateImageCacheList
-    ImageCache::setPriorities
-    ImageCache::setTargetRange
-    ImageCache::run
-
-Filter change √
-    MW::filterChange
-    DataModel::newInstance
-    ImageCache::stop
-    SortFilter::filterChange
-    BuildFilters::update
-    IconView::refreshThumbs
-    MetaRead::initialize
-    ImageCache::filterChange
-    thumbView->selectThumb
-    MW::scrollToCurrentRowIfNotVisible
-
-Sort change
-    MW::sortThumbnails
-    thumbView->sortThumbs
-    ImageCache::rebuildImageCacheParameters
-    MW::scrollToCurrentRow
-
-Images inserted
-
-Images deleted
-
-Images modified
-
-INSTANCE
-
-The instance is a specific datamodel.  Every time the datamodel changes: either an folder is
-added or removed, then the instance is incremented.  When the instance changes:
-
-    MetaRead must be called
-    Filtering must be updated
-
-***********************************************************************************************
-
-SCROLLING
-
-When the user scrolls a datamodel view (thumbView, gridView or tableView) the scrollbar
-change signal is received by thumbHasScrolled, gridHasScrolled or tableHasScrolled. The
-other views are scrolled to sync with the source view midVisibleRow. The first, mid and
-last visible items are determined in MW::updateIconRange and the metaReadThread is called
-to update the metadata and icons in the range (chunk).
-
-However, when the program syncs the views this generates more scrollbar signals that
-would loop. This is prevented by the G::ignoreScrollSignal flag. This is also employed in
-fileSelectionChange, where visible views are scrolled to center on the current selection.
-
-Painting delays:
-
-    When the user changes modes in MW (ie from Grid to Loupe) a IconView instance (either
-    thumbView or gridView) can change state from hidden to visible. Since hidden widgets
-    cannot be accessed we need to wait until the IconView becomes visible and fully
-    repainted before attempting to scroll to the current index.
-
-    Also, when an IconView resize event occurs: triggered by a change in the gridView
-    cell size (thumbWidth) that requires justification; by a change in the thumbDock
-    splitter; or a resize of the application window; we also need to wait until
-    repainting the scrollbars is completed.
-
-    The last paint event is identified by calculating the maximum of the scrollbar range
-    and comparing it to the paint event, which updates the range each time. With larger
-    datasets (ie 1500+ thumbs) it can take a number of paint events and hundreds of ms to
-    complete. IconView::waitUntilScrollReady monitors this and returns when done.
-
-Scrollbar change flow:
-
-    • The ScrollBar signal valueChanged triggers MW::thumbHasScrolled, MW::thumbHasScrolled
-      or MW::tableHasScrolled.
-
-    • MW::updateIconRange updates the first, mid and last visible icons from all views to
-      find the greatest range of visible icons by calling IconView::updateVisible and
-      TableView::updateVisible. The dm->iconChunkSize is adjusted if it is less than the
-      visible icon range.
-
-    • Concurrent metadata loading:
-
-         MW::update(midVisibleIcon) is called and it loads any missing icons and
-         cleans up any orphaned icons (not in the iconChunkRange).
-
-Resizing icons or the icon viewport
-
-    When the IconView viewport is resized or the icon size is changed this results in a
-    scroll event. Since we want to keep the view centered on its original state, the
-    middle or center icon is tracked as dm->scrollToIcon. The G::resizingIcons is set for
-    the resize and the subsequent scroll event does not reset dm->scrollToIcon. In
-    MW::thumbHasScrolled or MW::gridHasScrolled resets G::resizingIcons to false.
-
-    This allows the three datamodel views to be synced using dm->scrollToIcon.
-
-
-FOCUS PREDICTOR
-
-    Focus predictor uses a machine learning model to predict where in the image
-    the user will want to review the image focus - for example, the eye of the
-    subject.  When enabled, and the loupe view is zoomed, as the used advances,
-    each image is panned to the predicted focus review location.
-
-Architecture
-
-    Data: this includes all the training images and a CSV file that records
-    the focus point, type and path.  This is all located at:
-    /Users/roryhill/Documents/Documents - Quark/FocusPointTrainer
-
-    Python: Code is used to execute the python scripts to create the model:
-    /Users/roryhill/Projects/FocusPointTrainer
-    - config.py
-    - model.py
-    - train_focus_model.py (Create the model)
-    - validate_focus_model.py
-
-    Model: focus_point_model at /Users/roryhill/Projects/FocusPointTrainer in
-    two versions: .pth and .onnx.
-
-    FocusPointTrainer: a c++ class to create the "labeling" data from the
-    training images in
-    /Users/roryhill/Documents/Documents - Quark/FocusPointTrainer/focuspoint.csv
-
-    FocusPredictor: a c++ class that uses the model to predict the focus point
-    for the current image.
-
-Process
-
-    1. The training data is created using FocusPointTrainer to append the
-       focus point, type and path for each training image to focuspoint.csv.
-
-    2. In Code, train_focus_model is run (run python in terminal).  This creates
-       focus_point_model.pth and focus_point_model.onnx. .pth is the native torch format
-       and it is converted to .onnx, the format that opencv uses. This enables c++ to use
-       the model with the opencv library.
-
-    3. Copy focus_point_model.onnx to
-       /Users/roryhill/Projects/Winnow64/DetectionModels
-
-    4. Use FocusPredictor::predict to return the normalized image coordinates for
-       the predicted focus location.
-
-Implementation
-
-    When focus prediction is enabled (Toggle Pan to Focus) and the loupe view is
-    zoomed, the ImageView pans to the predicted focus point.  See
-    - end of ImageView::loadImage
-    - ImageView::predictPanToFocus (get focus coord and pan)
-
-    When this occurs, the location of the ImageView viewport within the scene is
-    signalled to IconView, which tells IconViewDelegate to show a rectangle in
-    the thumbView thumbnail matching the viewport in the scene.  See
-    - ImageView::showPredictedFocus sends the rectangle and image aspect
-      - IconView::loupeRect receives rect/aspect, updates delegate
-        - IconViewDelegate::setVpRect
-
+/*
+   Program notes / ducumentation: see notes/Documentation.txt
 */
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
@@ -2399,7 +1903,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     // update cursor position on progressBar
-    if (cacheProgressBar->isVisible() && G::showProgress == G::ShowProgress::ImageCache) {
+    if (cacheProgressBar->isVisible()) {
         cacheProgressBar->updateCursor(dm->currentSfRow, dm->sf->rowCount());
     }
 
@@ -2779,15 +2283,12 @@ void MW::updateDefaultIconChunkSize(int size)
     This is called from preferences when the default icon chunk size is changed. Settings
     are updated and if the current chunk size is smaller then it is updated.
 */
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log("MW::updateDefaultIconChunkSize");
-    // update settings
-    // settings->setValue("iconChunkSize", size);
     dm->defaultIconChunkSize = size;
-    if (size > dm->iconChunkSize) {
-        dm->iconChunkSize = size;
-    }
+    dm->iconChunkSize = size;
     bool isFileSelectionChange = false;
+    // updateChange calls dm->setIconRange, which resets G::iconChunkLoaded
     updateChange(dm->currentSfRow, isFileSelectionChange, "MW::updateDefaultIconChunkSize");
 }
 
@@ -2958,15 +2459,17 @@ void MW::folderChanged()
     // If no new images added to datamodel (only removals or blank folders)
     if (dm->isAllMetadataAttempted()) {
         G::allMetadataLoaded = true;
-        G::iconChunkLoaded = true;
+        G::iconChunkLoaded = dm->isIconRangeLoaded();
         folderChangeCompleted();
         return;
     }
 
     // reset metadata progress
-    cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
-    isShowCacheProgressBar = true;
-    progressLabel->setVisible(true);
+    if (isShowCacheProgressBar) {
+        cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
+        // isShowCacheProgressBar = true;
+        progressLabel->setVisible(true);
+    }
 
     // no sorting or filtering until all metadata loaded
     reverseSortBtn->setEnabled(false);
@@ -3024,27 +2527,29 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
 
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
+    bool metaLoaded = G::allMetadataLoaded && G::iconChunkLoaded;
 
     /* debug
     {
         qDebug().noquote()
-                 << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
-                 << "isFileSelectionChange =" << QVariant(isFileSelectionChange).toString().leftJustified(5)
-                 << "src =" << src
-                 << "G::allMetadataLoaded =" << QVariant(G::allMetadataLoaded).toString().leftJustified(5)
-                 << "G::iconChunkLoaded =" << QVariant(G::iconChunkLoaded).toString().leftJustified(5)
-                 << "dm->startIconRange =" << dm->startIconRange
-                 << "dm->endIconRange =" << dm->endIconRange
-                 // << "dm->iconCount =" << dm->iconCount()
-                 // << "dm->abortLoadingModel =" << dm->abortLoadingModel
-                    ;
+         << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
+         << "isFileSelectionChange =" << QVariant(isFileSelectionChange).toString().leftJustified(5)
+         << "src =" << src
+         << "metaLoaded =" << QVariant(metaLoaded).toString().leftJustified(5)
+         << "G::allMetadataLoaded =" << QVariant(G::allMetadataLoaded).toString().leftJustified(5)
+         << "G::iconChunkLoaded =" << QVariant(G::iconChunkLoaded).toString().leftJustified(5)
+         << "dm->startIconRange =" << dm->startIconRange
+         << "dm->endIconRange =" << dm->endIconRange
+         // << "dm->iconCount =" << dm->iconCount()
+         // << "dm->abortLoadingModel =" << dm->abortLoadingModel
+            ;
     } //*/
 
-    bool metaLoaded = G::allMetadataLoaded && G::iconChunkLoaded;
 
     if (!metaLoaded) {
         if (G::useReadMeta) {
             updateMetadataThreadRunStatus(true, true, "MW::updateChange");
+            // metaRead->setStartRow(sfRow, isFileSelectionChange, src);
             QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                       Q_ARG(int, sfRow),
                                       Q_ARG(bool, isFileSelectionChange),
@@ -3377,15 +2882,19 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
                 ; //*/
 
     // show cache amount ie "4.2 of 16.1GB (4 threads)" in info panel
-    QString autoMode = imageCache->getAutoMaxMB() ? " AUTO" : "";
+    // QString ceiling = "Ceiling "
+    //         + QVariant(imageCache->getMaxMBCeiling() / 1024).toString()
+    //         + " GB ";
+    QString autoStrategy = imageCache->getAutoStrategy() + " mode";
+    QString autoMode = imageCache->getAutoMaxMB() ? autoStrategy : "";
     QString cacheMsg = QString::number(double(currMB)/1024,'f',1)
             + " of "
             + QString::number(double(maxMB)/1024,'f',1)
-            + "GB" + autoMode + " ("
+            + " GB " + autoMode;
+    QString freeMem = QString::number(double(G::availableMemoryMB)/1024,'f',1)
+            + " GB" + " ("
             + QString::number(imageCache->decoderCount)
-            + " threads)"
-            ;
-    QString freeMem = QString::number(double(G::availableMemoryMB)/1024,'f',1) + "GB";
+            + " threads)";
     if (G::useInfoView) {
         QStandardItemModel *k = infoView->ok;
         k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheMsg);
@@ -3549,15 +3058,6 @@ void MW::refreshAfterImageCacheSizeChange()
     changes are executed.
 */
     if (G::isLogger) G::log("MW::setImageCacheParameters");
-
-    if (isShowCacheProgressBar) {
-        G::showProgress = G::ShowProgress::ImageCache;
-    }
-    else {
-        G::showProgress = G::ShowProgress::MetaCache;
-        metaRead->showProgressInStatusbar = true;
-        // metaRead->showProgressInStatusbar = G::showProgress == G::ShowProgress::MetaCache;
-    }
 
     // thumbnail cache status indicators
     thumbView->refreshThumbs();

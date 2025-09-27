@@ -208,7 +208,6 @@ QString MW::diagnostics()
     rpt << "\n";
 
     rpt << "\n" << "G::isRory = " << G::s(G::isRory);
-    rpt << "\n" << "G::showProgress = " << G::s(G::showProgress);
     rpt << "\n" << "G::useApplicationStateChanged = " << G::s(G::useApplicationStateChanged);
     rpt << "\n" << "G::useZoomWindow = " << G::s(G::useZoomWindow);
     rpt << "\n" << "G::useFSTreeCount = " << G::s(G::useFSTreeCount);

@@ -86,6 +86,7 @@ private:
     bool allMetaIconLoaded();
     void redo();
     int pending();
+    void setCycling(bool isCycling);
     inline bool needToRead(int row);
     bool nextA();
     bool nextB();
