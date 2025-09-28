@@ -171,8 +171,8 @@ private:
     int directionChangeThreshold;//number of steps before change direction of cache
     bool autoMaxMB;             // use releavePressure() to set maxMB
     AutoStrategy autoStrategy;  // Frugal, Moderate, Greedy or Ignore
-    quint64 maxMB;              // maximum MB available to cache
-    quint64 minMB = 500;        // minimum MB available to cache
+    qint64 maxMB;               // maximum MB available to cache
+    qint64 minMB = 500;         // minimum MB available to cache
     int targetFirst;            // beginning of target range to cache
     int targetLast;             // end of the target range to cache
     int decodeImageCount;
@@ -204,8 +204,8 @@ private:
 
     // step sizing (we try to resize in chunks ≈ a few images)
     float emaItemMB = -1.0f;              // EMA of item size seen while queuing
-    int minStepMB = 256;                  // never resize by less than this
-    int maxStepMB = 1024;                 // never resize by more than this
+    quint64 minStepMB = 256;              // never resize by less than this
+    quint64 maxStepMB = 1024;             // never resize by more than this
 
     // decoder performance
     int decoderMs = 250;                  // decode ms updated in decodeHistory()
@@ -214,14 +214,14 @@ private:
     inline void decodeHistory(int msToDecode);
 
     // cache size ceiling with default start amount (MB) to prevent runaway growth
-    quint64 maxMBCeiling = G::availableMemoryMB * 0.9;
+    qint64 maxMBCeiling = G::availableMemoryMB * 0.9;
 
     // pressure helpers
     static qint64 nowMs();
     inline void noteItemSizeMB(float szMB);
     inline void updateMotion(int key, bool isForwardNow);
     inline bool isRapidForward() const;
-    inline int calcResizeStepMB() const;
+    inline quint64 calcResizeStepMB() const;
 
     void releavePressure();
 

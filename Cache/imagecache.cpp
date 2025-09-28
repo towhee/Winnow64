@@ -540,10 +540,10 @@ inline bool ImageCache::isRapidForward() const {
            emaStepMs <= rapidStepMsThreshold;
 }
 
-inline int ImageCache::calcResizeStepMB() const {
+inline quint64 ImageCache::calcResizeStepMB() const {
     // aim for a few images worth, but stay within min/max
-    const int byItems = (emaItemMB > 0) ? int(std::ceil(emaItemMB * 3.0f)) : 0;
-    int step = qMax(minStepMB, byItems);
+    const quint64 byItems = (emaItemMB > 0) ? quint64(std::ceil(emaItemMB * 3.0f)) : 0;
+    quint64 step = qMax(minStepMB, byItems);
     step = qMin(step, maxStepMB);
     return step;
 }
@@ -564,7 +564,7 @@ void ImageCache::releavePressure() {
              << "elapsedMs =" << elapsedMs
              << "firstAdjustFreePass =" << firstAdjustFreePass
         ;//*/
-    int stepMB = 0;
+    qint64 stepMB = 0;
     pressureItem.highChk = false;
     pressureItem.lowChk = false;
     if (firstAdjustFreePass || (rapidOk && isCooldown)) {
@@ -573,6 +573,7 @@ void ImageCache::releavePressure() {
             pressureItem.highChk = true;
             stepMB = calcResizeStepMB();
             const qint64 newMax = qMin(maxMBCeiling, maxMB + stepMB);
+
             /*
             qDebug() << "ImageCache::releavePressure high check"
                      << "step =" << step
@@ -593,13 +594,14 @@ void ImageCache::releavePressure() {
         }
         else if (cushion > cushionHigh) {
             pressureItem.lowChk = true;
-            stepMB = -calcResizeStepMB();
-            if (stepMB > 0) qWarning() << "POSITIVE STEPMB";
-            const qint64 newMax = qMax(minMB, maxMB + stepMB);
+            stepMB = calcResizeStepMB();
+            const quint64 newMax = qMax(minMB, maxMB - stepMB);
             /*
             qDebug() << "ImageCache::releavePressure low check"
-                     << "step =" << step
+                     << "stepMB =" << stepMB
+                     << "minMB =" << minMB
                      << "maxMB =" << maxMB
+                     << "maxMB - stepMB =" << maxMB - stepMB
                      << "newMax =" << newMax
                 ;//*/
             if (newMax != maxMB) {
@@ -608,7 +610,7 @@ void ImageCache::releavePressure() {
                 /*
                 qDebug() << "ImageCache::releavePressure low "
                          << "currentPressure =" << currentPressure
-                         << "step =" << step
+                         << "stepMB =" << stepMB
                          << "maxMB =" << maxMB
                     ;//*/
                 updateStatus(StatusAction::All, "ImageCache::releasePressure");
@@ -1120,6 +1122,12 @@ QString ImageCache::reportPressureItemList()
     rpt << "  Auto Releave Pressure = " << QVariant(autoMaxMB).toString();
     rpt << "  Average time to decode = " << QVariant(decoderMs).toString() << " ms";
     rpt << "\n";
+
+    if (!autoMaxMB) {
+        rpt << "\n";
+        return reportString;
+    }
+
     rpt.setFieldAlignment(QTextStream::AlignRight);
     rpt.setFieldWidth(9);
     rpt
@@ -1188,6 +1196,8 @@ QString ImageCache::reportCacheItemList(QString title)
     rpt.flush();
     reportString = "";
     rpt.setString(&reportString);
+
+    rpt << "Cache Item List: \n";
 
     int cachedCount = 0;
     for (int sfRow = 0; sfRow < dm->sf->rowCount(); ++sfRow) {
@@ -1502,7 +1512,7 @@ void ImageCache::initialize()
     toCache.clear();
     toCacheStatus.clear();
     pressureHistory.clear();
-    // maxMB = 1024;  // only if autoMaxMB?
+    if (autoMaxMB) maxMB = 1024;  // only if autoMaxMB?
 
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
@@ -2384,7 +2394,7 @@ void ImageCache::dispatch()
     if (debugCaching || G::isLogger || G::isFlowLogger)
         log("dispatch", "row = " + QVariant(currRow).toString());
 
-    // if (debugCaching)
+    if (debugCaching)
     {
         qDebug().noquote() << "ImageCache::dispatch  row =" << currRow
                            << "autoMaxMB =" << autoMaxMB
