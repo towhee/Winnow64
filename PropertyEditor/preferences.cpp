@@ -161,11 +161,6 @@ void Preferences::itemChange(QModelIndex idx)
         qDebug() << "Preferences::itemChange pickClick->volume() =" << mw->pickClick->volume();
     }
 
-    if (source == "iconChunkSize") {
-        mw->updateDefaultIconChunkSize(v.toInt());
-        mw->settings->setValue("iconChunkSize", v.toInt());
-    }
-
     if (source == "loadOnlyVisibleIcons") {
         G::loadOnlyVisibleIcons = v.toBool();
     }
@@ -192,6 +187,11 @@ void Preferences::itemChange(QModelIndex idx)
         G::maxIconSize = v.toInt();
     }
 
+    if (source == "iconChunkSize") {
+        mw->updateDefaultIconChunkSize(v.toInt());
+        mw->settings->setValue("iconChunkSize", v.toInt());
+    }
+
     if (source == "imageCacheSize") {
         QString size = v.toString();
 
@@ -204,6 +204,8 @@ void Preferences::itemChange(QModelIndex idx)
             if (size == "Auto Frugal") {
                 as = ImageCache::AutoStrategy::Frugal;
                 setItemValue("iconChunkSize", 100);
+                mw->updateDefaultIconChunkSize(100);
+                mw->settings->setValue("iconChunkSize", 100);
             }
             else if (size == "Auto Moderate") {
                 as = ImageCache::AutoStrategy::Moderate;

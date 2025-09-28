@@ -1181,7 +1181,7 @@ void MetaRead::dispatchFinished(QString src)
     // G::iconChunkLoaded = true;      // rgh change to = dm->allIconChunkLoaded(first, last) ??
     G::iconChunkLoaded = dm->isIconRangeLoaded();
 
-    emit done();
+    // emit done();
 
     setIdle();
 }
