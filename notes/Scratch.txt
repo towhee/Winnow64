@@ -1,82 +1,30 @@
-
-
-void ImageCache::setTargetRange(int key)
-{
-    if (debugLog || G::isLogger)
-        log("setTargetRange", "row = " + QVariant(key).toString());
-
-    if (abort) return;
-
-    const int n = dm->sf->rowCount();
-    if (n <= 0 || key < 0 || key >= n) return;
-
-    float sumMB = 0.0f;
-    int nearestToTarget = -1;
-
-    // If folders changed, reset target queues
-    if (instance != dm->instance) {
-        toCache.clear();
-        toCacheStatus.clear();
-        instance = dm->instance;
-    }
-
-    // Direction helpers
-    const int dir = isForward ? +1 : -1;
-
-    // Forward phase aims for ~2/3 of capacity
-    const float forwardCap = maxMB * (2.0f / 3.0f);
-
-    // Positions: ahead starts at key, behind starts one step opposite
-    int aheadPos  = key;
-    int behindPos = key - dir;   // if dir=+1 -> key-1; if dir=-1 -> key+1
-
-    auto addToQueue = [&](int pos) {
-        if (abort) return;
-
-        // Videos: mark cached; do not count toward sumMB
-        if (dm->valueSf(pos, G::VideoColumn).toBool()) {
-            emit setCached(pos, true, instance);
-            (pos < key) ? targetFirst = pos : targetLast = pos;
-            return;
-        }
-
-        const float szMB = dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
-
-        // Only count/queue if we still have room
-        if (sumMB + szMB < maxMB) {
-            const QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
-            // If not already queued to cache, then add to queue
-            if (!toCache.contains(pos) && !icd->contains(fPath)) {
-                toCacheAppend(pos);
-            }
-            // Get pressure on cache
-            if (toCache.contains(pos) && nearestToTarget == -1) {
-                nearestToTarget = pos;
-                int pressure = qAbs(nearestToTarget - key);
-            }
-            sumMB += szMB;
-            (pos < key) ? targetFirst = pos : targetLast = pos;
-        }
-    };
-
-    // Fill forward up to ~2/3 capacity
-    while (!abort && sumMB < forwardCap) {
-        if (aheadPos < 0 || aheadPos >= n) break;
-        addToQueue(aheadPos);
-        aheadPos += dir;
-    }
-
-    // Fill behind until total reaches maxMB
-    while (!abort && sumMB < maxMB) {
-        if (behindPos < 0 || behindPos >= n) break;
-        addToQueue(behindPos);
-        behindPos -= dir;
-    }
-
-    // Fill forward again if still not full
-    while (!abort && sumMB < maxMB) {
-        if (aheadPos < 0 || aheadPos >= n) break;
-        addToQueue(aheadPos);
-        aheadPos += dir;
-    }
-}
+47 MW::togglePick
+selected rows = QList(162)
+49,271 DataModel::modelRowFromProxyRow
+103 MW::pushPick
+BuildFilters::update
+24 MW::updatePickLog
+4 SortFilter::suspend                                suspendFiltering = true src = BuildFilters::update
+1 Buildfilters::abortProcessing                      starting, isGUI thread = true
+43 BuildFilters::abortProcessing                      emit stopped
+72 Filters::isAnyLabelChecked
+BuildFilters::updateCategory
+11 BuildFilters::run                                  afteraction = 0
+80 MW::memoryReqdForPicks
+2 MW::updateStatus
+2 MW::getZoom
+24 MW::getPosition
+55 MW::getPicked
+3 MW::getPosition
+2 MW::getZoom
+12 MW::getSelectedFileSize
+15 MW::memoryReqdForSelection
+22 MW::getPicked
+2 MW::metadataChanged
+46 InfoView::showOrHide
+107 MW::updateClassification
+316 Filters::updateCategoryItems                       Picks
+28 Filters::setCatFiltering
+8,436 BuildFilters::done                                 afteraction = 0
+2 Filters::updateProgress
+90,437 Filters::finishedBuildFilters

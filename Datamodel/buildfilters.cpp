@@ -239,10 +239,10 @@ void BuildFilters::build(AfterAction newAction)
         return;
     }
 
-    // Update action to take after build filters. If build has been previously called
-    // while the DataModel metadata was being loaded then the previous afterAction will
-    // still be defined and should be honoured unless the new call to build has a defined
-    // newAction.
+    /* Update action to take after build filters. If build has been previously called
+    while the DataModel metadata was being loaded then the previous afterAction will
+    still be defined and should be honoured unless the new call to build has a defined
+    newAction. */
 
     if (newAction != AfterAction::NoAfterAction) {
         afterAction = newAction;

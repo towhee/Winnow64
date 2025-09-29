@@ -3313,6 +3313,21 @@ void DataModel::setShowThumbNailSymbolHelp(bool showHelp)
     }
 }
 
+QString DataModel::diagnosticsAllRows()
+{
+    if (G::isLogger) G::log("DataModel::diagnostics");
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << diagnostics();
+    for (int row = 0; row < rowCount(); row++) {
+        rpt << "\n";
+        getDiagnosticsForRow(row, rpt);
+    }
+
+    return reportString;
+}
+
 QString DataModel::diagnostics()
 {
     if (G::isLogger) G::log("DataModel::diagnostics");
@@ -3326,6 +3341,7 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("instance", dots) << G::s(instance);
     rpt << "\n" << G::sj("primaryFolderPath", dots) << G::s(primaryFolderPath());
     rpt << "\n" << G::sj("firstFolderPathWithImages", dots) << G::s(firstFolderPathWithImages);
+    rpt << "\n";
     rpt << "\n" << G::sj("dmRowCount", dots) << G::s(rowCount());
     rpt << "\n" << G::sj("sfRowCount", dots) << G::s(sf->rowCount());
     rpt << "\n";
@@ -3334,6 +3350,7 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
     rpt << "\n" << G::sj("countInterval", dots) << G::s(countInterval);
     rpt << "\n" << G::sj("currentDMRow", dots) << G::s(currentDmRow);
+    rpt << "\n";
     rpt << "\n" << G::sj("currentSFRow", dots) << G::s(currentSfRow);
     rpt << "\n" << G::sj("firstVisibleIcon", dots) << G::s(firstVisibleIcon);
     rpt << "\n" << G::sj("lastVisibleIcon", dots) << G::s(lastVisibleIcon);
@@ -3357,10 +3374,10 @@ QString DataModel::diagnostics()
     rpt << "\n";
     rpt << "\n" << G::sj("raw", dots) << G::s(raw);
     rpt << "\n" << G::sj("jpg", dots) << G::s(jpg);
-    for(int row = 0; row < rowCount(); row++) {
-        rpt << "\n";
-        getDiagnosticsForRow(row, rpt);
-    }
+    // for (int row = 0; row < rowCount(); row++) {
+    //     rpt << "\n";
+    //     getDiagnosticsForRow(row, rpt);
+    // }
     rpt << "\n\n" ;
 
     // list fPathRow hash
@@ -3529,7 +3546,8 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << Utilities::centeredRptHdr('=', "Issues");
 
     QStringList issues = rptIssues(row);
-    rpt << "\n\nIssues: " << QString::number(issues.count());
+    QString sRow = QString::number(row);
+    rpt << "\n\nIssues for row " + sRow + ": " << QString::number(issues.count());
     for (const QString &str : issues) {
         rpt << "\n   " << str;
     }

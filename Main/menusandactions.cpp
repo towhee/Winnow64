@@ -1538,6 +1538,12 @@ void MW::createHelpActions()
     addAction(diagnosticsMainAction);
     connect(diagnosticsMainAction, &QAction::triggered, this, &MW::diagnosticsMain);
 
+    diagnosticsSelectionAction = new QAction(tr("Selection diagnostics"), this);
+    diagnosticsSelectionAction->setObjectName("diagnosticsSelection");
+    diagnosticsSelectionAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsSelectionAction);
+    connect(diagnosticsSelectionAction, &QAction::triggered, this, &MW::diagnosticsSelection);
+
     diagnosticsWorkspacesAction = new QAction(tr("Workspaces diagnostics"), this);
     diagnosticsWorkspacesAction->setObjectName("diagnosticsWorkspaces");
     diagnosticsWorkspacesAction->setShortcutVisibleInContextMenu(true);
@@ -1573,6 +1579,12 @@ void MW::createHelpActions()
     diagnosticsDataModelAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsDataModelAction);
     connect(diagnosticsDataModelAction, &QAction::triggered, this, &MW::diagnosticsDataModel);
+
+    diagnosticsDataModelAllRowsAction = new QAction(tr("DataModel diagnostics all rows"), this);
+    diagnosticsDataModelAllRowsAction->setObjectName("diagnosticsDataModelAllRows");
+    diagnosticsDataModelAllRowsAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsDataModelAllRowsAction);
+    connect(diagnosticsDataModelAllRowsAction, &QAction::triggered, this, &MW::diagnosticsDataModelAllRows);
 
     diagnosticsMetadataCacheAction = new QAction(tr("MetadataCache diagnostics"), this);
     diagnosticsMetadataCacheAction->setObjectName("diagnosticsMetadataCache");
@@ -2059,12 +2071,14 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
     helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
     helpDiagnosticsMenu->addAction(diagnosticsMainAction);
+    helpDiagnosticsMenu->addAction(diagnosticsSelectionAction);
     helpDiagnosticsMenu->addAction(diagnosticsWorkspacesAction);
     helpDiagnosticsMenu->addAction(diagnosticsGridViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsThumbViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataAction);
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAction);
+    helpDiagnosticsMenu->addAction(diagnosticsDataModelAllRowsAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
@@ -2296,6 +2310,8 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(separatorAction7);
     thumbViewActions->append(reportMetadataAction);
     thumbViewActions->append(diagnosticsCurrentAction);
+    thumbViewActions->append(diagnosticsDataModelAction);
+    thumbViewActions->append(diagnosticsSelectionAction);
     thumbViewActions->append(diagnosticsMetadataCacheAction);
     thumbViewActions->append(diagnosticsImageCacheAction);
     thumbViewActions->append(diagnosticsSessionIssuesAction);

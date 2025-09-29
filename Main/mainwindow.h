@@ -957,6 +957,7 @@ private:
     QAction *diagnosticsAllAction;
     QAction *diagnosticsCurrentAction;
     QAction *diagnosticsMainAction;
+    QAction *diagnosticsSelectionAction;
     QAction *diagnosticsWorkspacesAction;
     QAction *diagnosticsLogIssuesAction;
     QAction *diagnosticsSessionIssuesAction;
@@ -971,6 +972,7 @@ private:
     QAction *diagnosticsMetadataCacheAction;
     QAction *diagnosticsImageCacheAction;
     QAction *diagnosticsDataModelAction;
+    QAction *diagnosticsDataModelAllRowsAction;
     QAction *diagnosticsEmbellishAction;
     QAction *diagnosticsFiltersAction;
     QAction *diagnosticsFileTreeAction;
@@ -1354,6 +1356,7 @@ private:
     void diagnosticsCurrent();
     QString diagnostics();
     void diagnosticsMain();
+    void diagnosticsSelection();
     void diagnosticsWorkspaces();
     void diagnosticsGridView();
     void diagnosticsThumbView();
@@ -1366,6 +1369,7 @@ private:
     void diagnosticsMetadataCache();
     void diagnosticsImageCache();
     void diagnosticsDataModel();
+    void diagnosticsDataModelAllRows();
     void diagnosticsEmbellish();
     void diagnosticsErrors();
     void diagnosticsFilters();
