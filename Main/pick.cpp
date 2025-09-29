@@ -132,6 +132,8 @@ void MW::togglePick()
         rows.append(dmRow);
     }
 
+    qDebug() << "selected rows =" << rows;
+
     QString pickStatus;
 
     bool foundFalse = false;
@@ -139,7 +141,7 @@ void MW::togglePick()
     int dmRow;
     foreach (dmRow, rows) {
         QModelIndex pickIdx = dm->index(dmRow, G::PickColumn);
-        pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
+        pickStatus = pickIdx.data(Qt::EditRole).toString();
         foundFalse = (pickStatus == "Unpicked");
         if (foundFalse) break;
     }
@@ -172,7 +174,7 @@ void MW::togglePick()
     if (n > 1) pushPick("End multiple select");
 
     // avoid null proxy filter
-//    buildFilters->updateZeroCountCheckedItems(filters->picks, G::PickColumn);
+    // buildFilters->updateZeroCountCheckedItems(filters->picks, G::PickColumn);
 
     // update filter counts before filterChange
     buildFilters->updateCategory(BuildFilters::PickEdit);

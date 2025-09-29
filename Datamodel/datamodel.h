@@ -74,6 +74,7 @@ public:
     int nearestProxyRowFromDmRow(int dmRow);
     QString diagnostics();
     QString diagnosticsForCurrentRow();
+    QString diagnosticsAllRows();
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);

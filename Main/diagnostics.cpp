@@ -378,6 +378,7 @@ QString MW::diagnostics()
 }
 
 void MW::diagnosticsMain() {diagnosticsReport(this->diagnostics(), "Winnow Diagnostics: MainWindow");}
+void MW::diagnosticsSelection() {diagnosticsReport(sel->diagnostics(), "Winnow Diagnostics: Selection");}
 void MW::diagnosticsWorkspaces() {diagnosticsReport(this->reportWorkspaces(), "Winnow Diagnostics: WorkSpaces");}
 void MW::diagnosticsGridView() {diagnosticsReport(gridView->diagnostics(), "Winnow Diagnostics: GridView");}
 void MW::diagnosticsThumbView() {diagnosticsReport(thumbView->diagnostics(), "Winnow Diagnostics: ThumbView");}
@@ -393,6 +394,7 @@ void MW::diagnosticsXMP() {} // dummy for now
 void MW::diagnosticsMetadataCache() {diagnosticsReport(metaRead->diagnostics(), "Winnow Diagnostics: MetaRead");}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCache->diagnostics(), "Winnow Diagnostics: ImageCache");}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Diagnostics: Data Model");}
+void MW::diagnosticsDataModelAllRows() {diagnosticsReport(dm->diagnosticsAllRows(), "Winnow Diagnostics: Data Model All Rows");}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}
 void MW::diagnosticsFilters() {} // dummy for now
 void MW::diagnosticsFileTree() {} // dummy for now

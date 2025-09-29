@@ -138,7 +138,7 @@ void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
 
 void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)
 {
-    if (G::isLogger || G::isFlowLogger || isDebug)
+    // if (G::isLogger || G::isFlowLogger || isDebug)
         G::log("Selection::select(row)", "row = " + QString::number(sfRow));
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     //qDebug() << "Selection::select_row  sfRow =" << sfRow << "sfIdx =" << sfIdx << modifiers;
@@ -566,4 +566,53 @@ void Selection::selectionChanged(const QItemSelection &selected, const QItemSele
     // update number selected on status bar
     emit updateStatus(true, "", "Selection::selectionChanged");
     emit updateMissingThumbnails();
+}
+
+QString Selection::diagnostics()
+{
+    if (G::isLogger) G::log("MW::diagnosticsModelSelection");
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "Selection Diagnostics");
+    rpt << "\n";
+
+    rpt << "\n" << "dm->instance = " << G::s(dm->instance);
+    rpt << "\n" << "G::dmInstance = " << G::s(G::dmInstance);
+    rpt << "\n";
+    rpt << "\n" << "currentDmRow = " << G::s(dm->currentDmRow);
+    rpt << "\n" << "currentSfRow = " << G::s(dm->currentSfRow);
+    rpt << "\n";
+    rpt << "\n" << "selection count = " << G::s(count());
+
+    rpt << "\n" << "Selected rows:";
+    rpt << "\n";
+    rpt.setFieldAlignment(QTextStream::AlignRight);
+    rpt.setFieldWidth(9);
+    rpt << "sfRow" << "dmRow";
+    // rpt.setFieldAlignment(QTextStream::AlignLeft);
+    // rpt.setFieldWidth(3);
+    // rpt << "   ";
+    // rpt.setFieldWidth(15);
+    // rpt << "fPath matches";
+    rpt << "\n\n";
+    rpt.reset();
+
+    foreach (QModelIndex sfIdx, sm->selectedRows()) {
+        int dmRow = dm->sf->mapToSource(sfIdx).row();
+        int sfRow = sfIdx.row();
+        // rpt << "\n" << "  sfRow = " << G::s(sfRow).leftJustified(5) << "  dmRow = " << G::s(dmRow);
+        rpt.setFieldAlignment(QTextStream::AlignRight);
+        rpt.setFieldWidth(9);
+        rpt << G::s(sfRow) << G::s(dmRow);
+        // rpt.setFieldAlignment(QTextStream::AlignLeft);
+        // rpt.setFieldWidth(3);
+        // rpt << "   ";
+        // rpt.setFieldWidth(15);
+        // rpt << "fPath matches";
+        rpt << "\n";
+    }
+
+
+    return reportString;
 }

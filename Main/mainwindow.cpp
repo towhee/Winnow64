@@ -2577,7 +2577,7 @@ void MW::folderChangeCompleted()
     - update filters
     - resize tableView columns
 */
-    if (G::isLogger || G::isFlowLogger)
+    // if (G::isLogger || G::isFlowLogger)
     {
         int rows = dm->rowCount();
         QString msg = QString::number(rows) + " images";
@@ -2635,8 +2635,15 @@ void MW::folderChangeCompleted()
             && !filterDock->visibleRegion().isNull()
        )
     {
-        filters->filtersBuilt = false;
+        // as per 2025/09/29 version
+        // filters->reset();
+        // buildFilters->build();
+
+        // as per 2025/05/26 version
+        buildFilters->reset(false);
         buildFilters->build();
+        buildFilters->recount();
+        filters->setEnabled(true);
     }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial

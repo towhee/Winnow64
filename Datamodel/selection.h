@@ -36,6 +36,7 @@ public:
     void save(QString src = "");
     void recover(QString src = "");
     //void report();
+    QString diagnostics();
 
     QModelIndexList selectedRows;
     QModelIndexList selectedIndexes;

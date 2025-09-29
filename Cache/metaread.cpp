@@ -1171,17 +1171,14 @@ void MetaRead::dispatchFinished(QString src)
     emit cleanupIcons();
     isDispatching = false;
 
+    G::iconChunkLoaded = dm->isIconRangeLoaded();
+
     // do not emit done if only updated icon loading
     if (!G::allMetadataLoaded) {
         G::allMetadataLoaded = true;
-        // G::iconChunkLoaded = true;
         // signal MW::folderChangeCompleted
         emit done();
     }
-    // G::iconChunkLoaded = true;      // rgh change to = dm->allIconChunkLoaded(first, last) ??
-    G::iconChunkLoaded = dm->isIconRangeLoaded();
-
-    // emit done();
 
     setIdle();
 }
