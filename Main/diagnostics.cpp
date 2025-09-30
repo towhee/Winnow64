@@ -266,6 +266,8 @@ QString MW::diagnostics()
     rpt << "\n" << "G::isEmbellish = " << G::s(G::isEmbellish);
     rpt << "\n" << "G::includeSidecars = " << G::s(G::includeSidecars);
     rpt << "\n" << "G::colorManage = " << G::s(G::colorManage);
+    rpt << "\n" << "G::combineRawJpg = " << G::s(G::combineRawJpg);
+    rpt << "\n" << "combineRawJpg = " << G::s(combineRawJpg);
     rpt << "\n" << "G::modifySourceFiles = " << G::s(G::modifySourceFiles);
     rpt << "\n" << "G::backupBeforeModifying = " << G::s(G::backupBeforeModifying);
     rpt << "\n" << "G::autoAddMissingThumbnails = " << G::s(G::autoAddMissingThumbnails);
