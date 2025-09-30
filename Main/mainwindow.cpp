@@ -2656,7 +2656,8 @@ void MW::folderChangeCompleted()
     filters->setEnabled(true); //x
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
-    updateSortColumn(G::NameColumn);
+    // updateSortColumn(G::NameColumn);
+    if (sortColumn != G::NameColumn) sortChange("MW::folderChangeCompleted");
     enableStatusBarBtns();
 
     updateStatus(true, "", fun);

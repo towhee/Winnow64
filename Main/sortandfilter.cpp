@@ -70,8 +70,7 @@ void MW::filterChange(QString source)
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
-        G::popup->showPopup("Please wait for the folder to complete loading...", 2000);
-        return;
+         return;
     }
 
     if (G::stop) return;
@@ -475,107 +474,41 @@ void MW::sortChange(QString source)
     if (G::isLogger || G::isFlowLogger) qDebug() << "MW::sortChange  Src:" << source;
     //qDebug() << "MW::sortChange  Src:" << source;
 
-    if (G::isInitializing || !G::allMetadataLoaded) return;
-
-    /*
-    qDebug() << "MW::sortChange" << "source =" << source
-             << "G::isLinearLoadDone =" << G::isLinearLoadDone
-             << "G::isInitializing =" << G::isInitializing
-             << "prevSortColumn =" << prevSortColumn
-             << "sortColumn =" << sortColumn
-             << "isReverseSort =" << isReverseSort
-             << "prevIsReverseSort =" << prevIsReverseSort
-             //<< "coreSorts =" << coreSorts
-                ;
-//                */
-
-    // check if sorting has changed
-    bool sortHasChanged = true;
-    // bool sortHasChanged = false;
-    if (sortColumn != prevSortColumn || isReverseSort != prevIsReverseSort) {
-        sortHasChanged = true;
-        prevSortColumn = sortColumn;
-        prevIsReverseSort = isReverseSort;
-    }
-
-    bool doNotSort = false;
-    if (sortMenuUpdateToMatchTable)
-        doNotSort = true;
-    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
-        doNotSort = true;
-    if (!G::allMetadataLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
-        doNotSort = true;
-    if (G::allMetadataLoaded && !sortHasChanged)
-        doNotSort = true;
-    if (doNotSort) return;
-
-    // Need all metadata loaded before sorting non-fileSystem metadata
-    // rgh all metadata always loaded now - change this?
-    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
-        loadEntireMetadataCache("SortChange");
-
-    // failed to load all metadata, restore prior sort in menu and return
-    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn) {
-        /*
-        qDebug() << "MW::sortChange" << "failed"
-                 << "sortColumn =" << sortColumn
-                 << "prevSortColumn =" << prevSortColumn
-                 ;
-//                 */
-        updateSortColumn(prevSortColumn);
+    if (G::isInitializing || !G::allMetadataLoaded || sortMenuUpdateToMatchTable) {
         return;
     }
 
-    prevSortColumn = sortColumn;
-    /*
-    qDebug() << "MW::sortChange" << "succeeded"
-             << "sortColumn =" << sortColumn
-             << "prevSortColumn =" << prevSortColumn
-             << "  Commencing sort"
-             ;
-//             */
-
-    if (G::allMetadataLoaded) {
-        G::popup->showPopup("Sorting...", 0);
-    }
-    else {
-        setCentralMessage("Sorting images");
-    }
+    setCentralMessage("Sorting images");
 
     // save selection prior to sorting
     sel->save("MW::sortChange");
+
+    // do the sort
     thumbView->sortThumbs(sortColumn, isReverseSort);
+
+    // recover selection
     sel->recover("MW::sortChange");
 
     // get the current selected item
-    if (G::allMetadataLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
-    else dm->currentSfRow = 0;
+    dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
 
+    // update view delegates
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
-    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
-    //dm->selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
+
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
-    // also update datamodel, used in MdCache and EmbelProperties
-    //dm->currentFilePath = fPath;
 
     centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true, "", "MW::sortChange");
 
-    // sync image cache with datamodel filtered proxy unless sort has been triggered by a
-    // filter change, which will do its own rebuildImageCacheParameters
+    /* sync image cache with datamodel filtered proxy unless sort has been triggered by a
+       filter change, which will do its own rebuildImageCacheParameters */
     if (source != "filterChange")
         emit imageCacheFilterChange(fPath, "SortChange");
 
-    /* if the previous selected image is also part of the filtered datamodel then the
-       selected index does not change and fileSelectionChange will not be signalled.
-       Therefore we call it here to force the update to caching and icons */
-//    sel->select(idx);
-
     scrollToCurrentRowIfNotVisible();
     G::popup->reset();
-
 }
 
 void MW::sortReverse()
