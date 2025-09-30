@@ -844,7 +844,7 @@ void IconViewDelegate::paint(QPainter *painter,
     emit update(index, iconRect);
 
     // save the locations of the symbols so can show tooltips
-    dm->setData(dm->index(row, G::IconSymbolColumn), QVariant::fromValue(iconSymbolRects));
+    dm->sf->setData(dm->sf->index(row, G::IconSymbolColumn), QVariant::fromValue(iconSymbolRects));
 
     /*
     qDebug() << "IconViewDelegate::paint"
