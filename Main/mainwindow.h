@@ -339,7 +339,6 @@ public:
     bool gridDisplayFirstOpen = true;
     bool justUpdatedBestFit;
     int sortColumn = G::NameColumn;
-    int prevSortColumn = G::NameColumn;
     bool isReverseSort = false;
     bool prevIsReverseSort = false;
     bool preferencesHasFocus = false;

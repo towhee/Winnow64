@@ -139,6 +139,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Resort when filter change
 - When filter, pick and advance icon selection glitches (iconviewdelegate issue)
 - Fix icon chunk not working
 - Auto ImageCache buffer size option
