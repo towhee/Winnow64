@@ -470,37 +470,37 @@ void IconViewDelegate::paint(QPainter *painter,
     border.setColor(QColor(l40,l40,l40));
 
     // get data from model
-    int row = index.row();
+    int sfRow = index.row();
 
     // first/last visible (not being used at present)
-    if (row < firstVisible) firstVisible = row;
-    if (row > lastVisible) lastVisible = row;
+    if (sfRow < firstVisible) firstVisible = sfRow;
+    if (sfRow > lastVisible) lastVisible = sfRow;
     midVisible = firstVisible + ((lastVisible - firstVisible) / 2);
 
     QString labelText;
     if (labelChoice == "Title") {
-        labelText = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();
+        labelText = index.model()->index(sfRow, G::TitleColumn).data(Qt::DisplayRole).toString();
     }
     else {
-        labelText = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
+        labelText = index.model()->index(sfRow, G::NameColumn).data(Qt::DisplayRole).toString();
     }
-    QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
-    int ratingNumber = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toInt();
-    QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
-    QString duration = index.model()->index(row, G::DurationColumn).data(Qt::DisplayRole).toString();
+    QString colorClass = index.model()->index(sfRow, G::LabelColumn).data(Qt::EditRole).toString();
+    int ratingNumber = index.model()->index(sfRow, G::RatingColumn).data(Qt::EditRole).toInt();
+    QString rating = index.model()->index(sfRow, G::RatingColumn).data(Qt::EditRole).toString();
+    QString duration = index.model()->index(sfRow, G::DurationColumn).data(Qt::DisplayRole).toString();
     if (duration.isNull()) duration = "XXX";
-    bool isSelected = dm->isSelected(row);
-    bool isCurrentIndex = row == dm->currentSfRow;
-    QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
+    bool isSelected = dm->isSelected(sfRow);
+    bool isCurrentIndex = sfRow == dm->currentSfRow;
+    QString pickStatus = index.model()->index(sfRow, G::PickColumn).data(Qt::EditRole).toString();
     bool isPicked = pickStatus == "Picked";
     bool isRejected = pickStatus == "Rejected";
-    bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
-    bool isCached = index.model()->index(row, G::IsCachedColumn).data(Qt::EditRole).toBool();
-    bool isMissingThumb = index.model()->index(row, G::MissingThumbColumn).data().toBool();
-    bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
-    bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
-    bool isReadWrite = index.model()->index(row, G::ReadWriteColumn).data().toBool();
-    bool isCombineRawJpg = index.model()->index(row, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
+    bool isIngested = index.model()->index(sfRow, G::IngestedColumn).data(Qt::EditRole).toBool();
+    bool isCached = index.model()->index(sfRow, G::IsCachedColumn).data(Qt::EditRole).toBool();
+    bool isMissingThumb = index.model()->index(sfRow, G::MissingThumbColumn).data().toBool();
+    bool metaLoaded = index.model()->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+    bool isVideo = index.model()->index(sfRow, G::VideoColumn).data().toBool();
+    bool isReadWrite = index.model()->index(sfRow, G::ReadWriteColumn).data().toBool();
+    bool isCombineRawJpg = index.model()->index(sfRow, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
 
     // Cell structure (see IconViewDelegate Anatomy at top of file).
     QRect cellRect(option.rect);
@@ -770,7 +770,7 @@ void IconViewDelegate::paint(QPainter *painter,
         numberFont.setBold(true);
         painter->setFont(numberFont);
         QFontMetrics fm(numberFont);
-        QString labelNumber = QString::number(row + 1);
+        QString labelNumber = QString::number(sfRow + 1);
         int numberWidth = fm.boundingRect(labelNumber).width() + 4;
         QPoint numberTopLeft(frameRect.left(), frameRect.top());
         QPoint numberBottomRight(frameRect.left() + numberWidth + 4, frameRect.top() + iconNumberSize);
@@ -844,7 +844,7 @@ void IconViewDelegate::paint(QPainter *painter,
     emit update(index, iconRect);
 
     // save the locations of the symbols so can show tooltips
-    dm->sf->setData(dm->sf->index(row, G::IconSymbolColumn), QVariant::fromValue(iconSymbolRects));
+    dm->sf->setData(dm->sf->index(sfRow, G::IconSymbolColumn), QVariant::fromValue(iconSymbolRects));
 
     /*
     qDebug() << "IconViewDelegate::paint"

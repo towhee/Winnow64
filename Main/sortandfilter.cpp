@@ -102,7 +102,7 @@ void MW::filterChange(QString source)
     buildFilters->update();
 
     // recover sort after filtration
-    // sortChange("filterChange");
+    sortChange("filterChange");
 
     // allow fileSelectionChange()
     isFilterChange = false;
@@ -490,7 +490,8 @@ void MW::sortChange(QString source)
 //                */
 
     // check if sorting has changed
-    bool sortHasChanged = false;
+    bool sortHasChanged = true;
+    // bool sortHasChanged = false;
     if (sortColumn != prevSortColumn || isReverseSort != prevIsReverseSort) {
         sortHasChanged = true;
         prevSortColumn = sortColumn;
