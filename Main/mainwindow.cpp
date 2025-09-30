@@ -2656,8 +2656,9 @@ void MW::folderChangeCompleted()
     filters->setEnabled(true); //x
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
-    // updateSortColumn(G::NameColumn);
-    if (sortColumn != G::NameColumn) sortChange("MW::folderChangeCompleted");
+    // must retain default order in datamodel as ImageCache is already working
+    updateSortColumn(G::NameColumn);
+    // if (sortColumn != G::NameColumn) sortChange("MW::folderChangeCompleted");
     enableStatusBarBtns();
 
     updateStatus(true, "", fun);

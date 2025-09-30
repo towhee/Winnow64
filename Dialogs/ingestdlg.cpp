@@ -712,7 +712,7 @@ void IngestDlg::on_selectFolderBtn_clicked()
         (this, tr("Choose Ingest Primary Folder"), path,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
-        if(s.right(1) != "/") s += "/";
+        // if(s.right(1) != "/") s += "/";
         folderPath = s;
         manualFolderPath = folderPath;
         ui->manualFolderLabel->setText(folderPath);
@@ -733,7 +733,7 @@ void IngestDlg::on_selectFolderBtn_2_clicked()
         (this, tr("Choose Ingest Backup Folder"), path,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
-        if(s.right(1) != "/") s += "/";
+        // if(s.right(1) != "/") s += "/";
         folderPath2 = s;
         manualFolderPath2 = folderPath2;
         ui->manualFolderLabel_2->setText(folderPath2);
@@ -1013,6 +1013,10 @@ void IngestDlg::buildFileNameSequence()
     else {
         dirPath = folderPath;
     }
+    qDebug() << "IngestDlg::buildFileNameSequence"
+                "folderPath =" << folderPath
+                << "fileName1 =" << fileName1
+        ;
 
     if (fileCount == 1) {
         ui->folderPathLabel->setText(dirPath + fileName1);
