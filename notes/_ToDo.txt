@@ -139,6 +139,10 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- When filter, pick and advance icon selection glitches (iconviewdelegate issue)
+- Fix icon chunk not working
+- Auto ImageCache buffer size option
+- Record decoder times in ImageCache
 - When clear rating/label that is filtered redo filters to show all if nothing left
 - Replace DataModel setValue functions with row/col setVal versions
 - MW::stop redo using event loop and signals to MetaRead, ImageCache and BuildFilters
