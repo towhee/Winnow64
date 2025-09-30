@@ -1234,13 +1234,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::PathColumn), fPath, G::PathRole);
     // Show tooltips for each item in datamodel views - this has been moved to
     // IconView::mouseMoveEvent so can show tooltips for icon symbols as well
-    // QString tip = fPath;  //fileInfo.absoluteFilePath();
-    // if (showThumbNailSymbolHelp) tip += thumbnailHelp;
-    // setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
-    // setData(index(row, G::MSToReadColumn), 0);
-    // setData(index(row, G::MSToReadColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    // setData(index(row, G::IsCachedColumn), false); // see addMetadataForItem
     setData(index(row, G::PathColumn), false, G::DupHideRawRole);
     setData(index(row, G::NameColumn), fileInfo.fileName());
     setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
