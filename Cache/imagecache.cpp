@@ -704,7 +704,7 @@ void ImageCache::setTargetRange(int key)
     const int n = dm->sf->rowCount();
     if (n <= 0 || key < 0 || key >= n) return;
 
-    bool useHighCushion = false;
+    // bool useHighCushion = false;
 
     // float sumMB = icd->sizeMB();
     float sumMB = 0.0f;
@@ -728,6 +728,10 @@ void ImageCache::setTargetRange(int key)
     int aheadPos  = key;
     int behindPos = key - dir;   // if dir=+1 -> key-1; if dir=-1 -> key+1
 
+    // Auto counting
+    int count = 0;
+    targetCount = cushionHigh * 1.5;
+
     float imgMB;
 
     // Function to add to target range and to cache queue
@@ -745,6 +749,7 @@ void ImageCache::setTargetRange(int key)
         const QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
         imgMB = dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
         sumMB += imgMB;
+        count++;
 
         // If not already queued to cache, then add to queue
         if (!toCache.contains(pos) && !icd->contains(fPath)) {
@@ -778,25 +783,60 @@ void ImageCache::setTargetRange(int key)
         }
     };
 
-    // Fill forward up to ~2/3 capacity
-    while (!abort && !useHighCushion && sumMB < forwardMB) {
-        if (aheadPos < 0 || aheadPos >= n) break;
-        addToQueue(aheadPos);
-        aheadPos += dir;
-    }
+    if (isAutoMaxMB) {
+        // Fill forward up to ~2/3 capacity
+        while (!abort && count <= cushionHigh && sumMB < forwardMB) {
+            if (aheadPos < 0 || aheadPos >= n) break;
+            addToQueue(aheadPos);
+            aheadPos += dir;
+        }
 
-    // Fill behind until total reaches maxMB
-    while (!abort && !useHighCushion && sumMB < maxMB) {
-        if (behindPos < 0 || behindPos >= n) break;
-        addToQueue(behindPos);
-        behindPos -= dir;
-    }
+        // Fill behind until total reaches maxMB
+        while (!abort && count < targetCount && sumMB < maxMB) {
+            if (behindPos < 0 || behindPos >= n) break;
+            addToQueue(behindPos);
+            behindPos -= dir;
+        }
 
-    // Fill forward again if still not full (at start/end of folder when behind is smaller)
-    while (!abort && !useHighCushion && sumMB < maxMB) {
-        if (aheadPos < 0 || aheadPos >= n) break;
-        addToQueue(aheadPos);
-        aheadPos += dir;
+        // Fill forward again if still not full (at start/end of folder when behind is smaller)
+        while (!abort && count < targetCount && sumMB < maxMB) {
+            if (aheadPos < 0 || aheadPos >= n) break;
+            addToQueue(aheadPos);
+            aheadPos += dir;
+        }
+
+        // update motion heuristics and try pressure relief
+        if (nearestNotCached == -1) {
+            isForward ? nearestNotCached = targetLast : nearestNotCached = targetFirst;
+            imgMB = dm->sf->index(nearestNotCached, G::CacheSizeColumn).data().toFloat();
+            noteItemSizeMB(imgMB);
+            cushion = qAbs(nearestNotCached - key);
+        }
+        memChk();
+        updateMotion(key, isForward);
+        releavePressure();
+    }
+    else {
+        // Fill forward up to ~2/3 capacity
+        while (!abort && sumMB < forwardMB) {
+            if (aheadPos < 0 || aheadPos >= n) break;
+            addToQueue(aheadPos);
+            aheadPos += dir;
+        }
+
+        // Fill behind until total reaches maxMB
+        while (!abort && sumMB < maxMB) {
+            if (behindPos < 0 || behindPos >= n) break;
+            addToQueue(behindPos);
+            behindPos -= dir;
+        }
+
+        // Fill forward again if still not full (at start/end of folder when behind is smaller)
+        while (!abort && sumMB < maxMB) {
+            if (aheadPos < 0 || aheadPos >= n) break;
+            addToQueue(aheadPos);
+            aheadPos += dir;
+        }
     }
 
     /*
@@ -808,19 +848,6 @@ void ImageCache::setTargetRange(int key)
     msg += " targetLast = " + QVariant(targetLast).toString();
     log("setTargetRange", msg);
     //*/
-
-    // update motion heuristics and try pressure relief
-    if (isAutoMaxMB) {
-        if (nearestNotCached == -1) {
-            isForward ? nearestNotCached = targetLast : nearestNotCached = targetFirst;
-            imgMB = dm->sf->index(nearestNotCached, G::CacheSizeColumn).data().toFloat();
-            noteItemSizeMB(imgMB);
-            cushion = qAbs(nearestNotCached - key);
-        }
-        memChk();
-        updateMotion(key, isForward);
-        releavePressure();
-    }
 
     firstDispatchNewDM = false;
 }
@@ -991,16 +1018,11 @@ void ImageCache::memChk()
 
 void ImageCache::updateStatus(int instruction, QString source)
 /*
-    Displays a statusbar showing the image cache status. Also shows the cache size in the info
-    panel. All status info is passed by copy to prevent collisions on source data, which is
-    being continuously updated by ImageCache.
-
-    Note that the caching progressbar is no longer shown:
-    (unless G::showProgress == G::ShowProgress::ImageCache)
+    Displays a statusbar showing the image cache status. Also shows the cache size in the
+    info panel. All status info is passed by copy to prevent collisions on source data,
+    which is being continuously updated by ImageCache.
 */
 {
-    // rgh get G::showProgress == G::ShowProgress::ImageCache working
-    // not all items req'd passed via showCacheStatus since icd->cache struct eliminated
     quint64 currMB  = icd->sizeMB();
     /*
     qDebug() << "ImageCache::updateStatus"
@@ -1063,11 +1085,11 @@ QString ImageCache::reportCacheParameters()
 
     rpt << "\n";
     rpt << "totFiles                 = " << dm->sf->rowCount() << "\n";
-    rpt << "autoMaxMB                = " << QVariant(isAutoMaxMB).toString() << "\n";
-    rpt << "autoStrategy             = " << getAutoStrategy() << "\n";
     rpt << "currMB                   = " << icd->sizeMB() << "\n";
     rpt << "maxMB                    = " << maxMB << "\n";
     rpt << "minMB                    = " << minMB << "\n";
+    rpt << "maxMBCeiling             = " << maxMBCeiling << "\n";
+    rpt << "memThrottle              = " << memThrottle << "\n";
 
     rpt << "\n";
     rpt << "decoderCount             = " << decoderCount << "\n";
@@ -1082,12 +1104,28 @@ QString ImageCache::reportCacheParameters()
     rpt << "sumStep                  = " << sumStep << "\n";
     rpt << "directionChangeThreshold = " << directionChangeThreshold << "\n";
     rpt << "isForward                = " << (isForward ? "true" : "false") << "\n";
+
     rpt << "\n";
     rpt << "targetFirst              = " << targetFirst << "\n";
     rpt << "targetLast               = " << targetLast << "\n";
+    rpt << "cushion                  = " << cushion << "\n";
+    rpt << "targetCount              = " << targetCount << "\n";
+
+    rpt << "\n";
+    rpt << "autoMaxMB                = " << QVariant(isAutoMaxMB).toString() << "\n";
+    rpt << "autoStrategy             = " << getAutoStrategy() << "\n";
+    rpt << "cushionLow               = " << cushionLow << "\n";
+    rpt << "cushionHigh              = " << cushionHigh << "\n";
+
+    rpt << "\n";
+    rpt << "adjustCooldownMs         = " << adjustCooldownMs << "\n";
+    rpt << "rapidStepMsThreshold     = " << rapidStepMsThreshold << "\n";
+    rpt << "rapidMinStreak           = " << rapidStepMsThreshold << "\n";
+
 
     rpt << "\n";
     rpt << "toCache count            = " << toCache.count() << "\n";
+    rpt << "Cached count             = " << icd->imCache.count() << "\n";
     rpt << "cacheUpToDate            = " << (cacheUpToDate() ? "true" : "false") << "\n";
     rpt << "\n";
 
@@ -2332,8 +2370,9 @@ void ImageCache::fillCache(int id)
                 return;
             }
 
-            // qDebug() << "ImageCache::fillCache chk cushion =" << cushion;
-            if (cushion < cushionLow) {
+            bool moreAvailableToCache = icd->imCache.count() < dm->sf->rowCount();
+            if (cushion < cushionLow && moreAvailableToCache) {
+                // qDebug() << "ImageCache::fillCache chk cushion =" << cushion;
                 ignorePressureRestraints = true;
                 releavePressure();
                 dispatch();

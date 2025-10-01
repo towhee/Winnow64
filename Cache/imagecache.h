@@ -175,6 +175,7 @@ private:
     qint64 minMB = 500;         // minimum MB available to cache
     int targetFirst;            // beginning of target range to cache
     int targetLast;             // end of the target range to cache
+    int targetCount;
     int decodeImageCount;
     quint64 decodeImageMsTot;
     quint64 decodeImageMBTot;
@@ -182,7 +183,7 @@ private:
     bool firstDispatchNewDM;
 
     // --- Cache pressure section Req'd when autoMaxMB == true ---
-    bool ignorePressureRestraints = false;     // bypass rapid/cooldown once after folder change
+    bool ignorePressureRestraints = false;// bypass rapid/cooldown once after folder change
     qint64 lastAdjustMs = 0;              // last time we changed maxMB
     qint64 lastMoveMs   = 0;              // last time setTargetRange saw a move
     int lastKeyForMotion = -1;            // last row key we saw

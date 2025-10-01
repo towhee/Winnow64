@@ -323,13 +323,15 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     qint64 ms = rapidClick.elapsed();
     if (ms < 500) {
         event->ignore();
+        qApp->beep();
+        G::popup->showPopup("Rapid clicks are verboten");
         return;
     }
     rapidClick.restart();
+
     if (G::stop || G::isModifyingDatamodel) {
         qApp->beep();
-        // G::popUp->showPopup("Busy, try new bookmark in a sec.", 1000);
-        qDebug() << "BookMarks::mousePressEvent busy so ignore";
+        G::popup->showPopup("Busy, try new folder in a sec.", 1000);
         // qApp->processEvents();
         return;
     }

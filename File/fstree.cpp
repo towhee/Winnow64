@@ -945,18 +945,17 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     // if (G::isLogger) G::log("FSTree::mousePressEvent");
     // qDebug() << "FSTree::mousePressEvent" << event;
 
-    if (G::stop || G::isModifyingDatamodel) {
-        // G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
-        qDebug() << "FSTree::mousePressEvent busy so ignore";
-        return;
-    }
-
     // ignore rapid mouse press if still processing MW::stop
     qint64 ms = rapidClick.restart();
     if (ms < 500) {
         event->ignore();
+        qApp->beep();
         G::popup->showPopup("Rapid clicks are verboten");
-        qDebug() << "FSTree::mousePressEvent rapidClick =" << ms;
+        return;
+    }
+
+    if (G::stop || G::isModifyingDatamodel) {
+        G::popup->showPopup("Busy, try new folder in a sec.", 1000);
         return;
     }
 

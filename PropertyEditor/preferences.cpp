@@ -210,10 +210,14 @@ void Preferences::itemChange(QModelIndex idx)
             else if (size == "Auto Moderate") {
                 as = ImageCache::AutoStrategy::Moderate;
                 setItemValue("iconChunkSize", 25000);
+                mw->updateDefaultIconChunkSize(25000);
+                mw->settings->setValue("iconChunkSize", 25000);
             }
             else if (size == "Auto Greedy") {
                 as = ImageCache::AutoStrategy::Greedy;
                 setItemValue("iconChunkSize", 25000);
+                mw->updateDefaultIconChunkSize(25000);
+                mw->settings->setValue("iconChunkSize", 25000);
             }
             mw->imageCache->setAutoMaxMB(true, as);
             QString strategy = mw->imageCache->autoStrategyStr.at(as);

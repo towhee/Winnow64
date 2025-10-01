@@ -2891,15 +2891,20 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
                 ; //*/
 
     // show cache amount ie "4.2 of 16.1GB (4 threads)" in info panel
-    // QString ceiling = "Ceiling "
-    //         + QVariant(imageCache->getMaxMBCeiling() / 1024).toString()
-    //         + " GB ";
-    QString autoStrategy = imageCache->getAutoStrategy() + " mode";
-    QString autoMode = imageCache->getAutoMaxMB() ? autoStrategy : "";
-    QString cacheMsg = QString::number(double(currMB)/1024,'f',1)
-            + " of "
-            + QString::number(double(maxMB)/1024,'f',1)
-            + " GB " + autoMode;
+    bool isAuto = imageCache->getAutoMaxMB();
+    QString cacheMsg;
+    if (isAuto) {
+        QString autoStrategy = imageCache->getAutoStrategy() + " mode";
+        QString autoMode = imageCache->getAutoMaxMB() ? autoStrategy : "";
+        cacheMsg = QString::number(double(currMB)/1024,'f',1)
+                   + " GB   " + autoStrategy;
+    }
+    else {
+        cacheMsg = QString::number(double(currMB)/1024,'f',1)
+                + " of "
+                + QString::number(double(maxMB)/1024,'f',1)
+                + " GB ";
+    }
     QString freeMem = QString::number(double(G::availableMemoryMB)/1024,'f',1)
             + " GB" + " ("
             + QString::number(imageCache->decoderCount)
