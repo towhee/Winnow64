@@ -50,7 +50,7 @@ private:
     DataModel *dm;
     QMap<int,int>defaultColumnWidth;
     int frozenColumns;
-    bool isDebug;
+    bool isDebug = false;  // set true in TableView::TableView
     void createOkToShow();
     void setDefaultColumnWidths();
     void setFrozenModel(QAbstractItemModel *model);
