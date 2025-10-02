@@ -30,8 +30,8 @@ void MW::filterDockTabMousePress()
              << "filters->filtersBuilt =" << filters->filtersBuilt
         ; //*/
 
-    // Clicking on the filter dock tab toggles visibility before this function is called,
-    // so test for the opposite.
+    /* Clicking on the filter dock tab toggles visibility before this
+    function is called, so test for the opposite. */
     if (filterDock->isVisible() && !filters->filtersBuilt) {
         buildFilters->build();
     }

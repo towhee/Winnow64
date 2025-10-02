@@ -2447,7 +2447,6 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     }
 
     if (G::stop) {
-        qDebug() << "DataModel::setIcon G::stop = true";
         return;
     }
 
@@ -2643,10 +2642,12 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
         G::issue("Comment", errMsg, src, sfIdx.row());
+
+        /*
         qDebug() << src << sfRow << errMsg
                  << "ImageCache instance =" << instance
                  << "DataModel instance =" << this->instance
-            ;
+            ;//*/
         return;
     }
     if (!sfIdx.isValid()) {
