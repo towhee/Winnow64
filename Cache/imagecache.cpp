@@ -889,7 +889,6 @@ void ImageCache::removeFromCache(QStringList &pathList)
     // Mutex req'd (do not remove 2023-11-13)
     QMutexLocker locker(&gMutex);
 
-    // rgh confirm this is working
     // remove images from imCache and toCache
     for (int i = 0; i < pathList.count(); ++i) {
         QString fPathToRemove = pathList.at(i);
