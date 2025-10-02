@@ -238,7 +238,7 @@ void MW::updateProgressBarWidth()
 void MW::setCacheRunningLightsWidth() {
     QFontMetrics fm(metadataThreadRunningLabel->font());
     #ifdef Q_OS_WIN
-    int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 1.5;
+    int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 2;
     #endif
     #ifdef Q_OS_MAC
     int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 1.3;
