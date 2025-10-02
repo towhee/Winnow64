@@ -974,13 +974,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
     {
         static int prevTabIndex = -1;
-//        QString tabBarClassName = "QTabBar" || "QMainWindowTabBar";
-//        #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-//        tabBarClassName = "QMainWindowTabBar";
-//        #endif
-        QString name = QString(obj->metaObject()->className());
-        const bool isTabBarClassName = name == "QTabBar" || name == "QMainWindowTabBar";
-        if (isTabBarClassName) {
+        QString tabBarClassName = "QTabBar";
+        #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+        tabBarClassName = "QMainWindowTabBar";
+        #endif
+        if (QString(obj->metaObject()->className()) == tabBarClassName) {
              qDebug() << "MW::eventFilter obj->metaObject()->className() ="
                      << obj->metaObject()->className();
             // build filters when filter tab mouse clicked
@@ -1598,7 +1596,7 @@ void MW::handleStartupArgs(const QString &args)
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
 
         // embellish src images (pathList) and return paths to embellished images
-        QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);        
+        QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);
         if (!embellishedPaths.size()) return;
 
         // sort embellishedPaths
