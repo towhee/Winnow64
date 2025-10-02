@@ -978,9 +978,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
         tabBarClassName = "QMainWindowTabBar";
         #endif
-        if (QString(obj->metaObject()->className()) == tabBarClassName) {
-             qDebug() << "MW::eventFilter obj->metaObject()->className() ="
+        QString tb = QString(obj->metaObject()->className());
+        bool isTabBar = tb == "QTabBar" || tb == "QMainWindowTabBar";
+        if (isTabBar) {
+            /*
+            qDebug() << "MW::eventFilter obj->metaObject()->className() ="
                      << obj->metaObject()->className();
+            */
             // build filters when filter tab mouse clicked
             if (event->type() == QEvent::MouseButtonPress) {
                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
@@ -988,7 +992,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 int i = tabBar->tabAt(e->pos());
                  qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
                 if (tabBar->tabText(i) == filterDockTabText) {
-                    qDebug() << "MW::eventFilter filterDock mouse press";
+                    /*
+                    qDebug() << "MW::eventFilter filterDock mouse press";*/
                     filterDockTabMousePress();
                 }
             }
