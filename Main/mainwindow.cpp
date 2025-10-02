@@ -2178,6 +2178,9 @@ bool MW::reset(QString src)
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
 
+    // filters
+    buildFilters->reset();
+
     setWindowTitle(winnowWithVersion);
     if (G::useInfoView) {
         infoView->clearInfo();
@@ -2238,13 +2241,6 @@ bool MW::reset(QString src)
             asLoupeAction->setChecked(true);
         }
     }
-
-    // // filters (reqd?)
-    // filters->filtersBuilt = false;
-    // filters->loadingDataModel(false);
-    // dm->forceBuildFilters = false;
-    // uncheckAllFilters();
-    // buildFilters->reset();
 
     // turn thread activity buttons gray
     setThreadRunStatusInactive();
@@ -2577,7 +2573,7 @@ void MW::folderChangeCompleted()
     - update filters
     - resize tableView columns
 */
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         int rows = dm->rowCount();
         QString msg = QString::number(rows) + " images";
@@ -2631,16 +2627,11 @@ void MW::folderChangeCompleted()
              << "filterDock->visibleRegion().isNull() =" << filterDock->visibleRegion().isNull()
                 ; //*/
     if (dm->folderList.count() > 0
-            && dm->isQueueEmpty()
-            && !filterDock->visibleRegion().isNull()
+        && dm->isQueueEmpty()
+        && !filterDock->visibleRegion().isNull()
        )
     {
-        // as per 2025/09/29 version
-        // filters->reset();
-        // buildFilters->build();
-
-        // as per 2025/05/26 version
-        buildFilters->reset(false);
+        // buildFilters->reset(false);
         buildFilters->build();
         buildFilters->recount();
         filters->setEnabled(true);
