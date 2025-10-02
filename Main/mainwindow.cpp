@@ -974,11 +974,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
     {
         static int prevTabIndex = -1;
-        QString tabBarClassName = "QTabBar";
-        #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-        tabBarClassName = "QMainWindowTabBar";
-        #endif
-        if (QString(obj->metaObject()->className()) == tabBarClassName) {
+//        QString tabBarClassName = "QTabBar" || "QMainWindowTabBar";
+//        #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+//        tabBarClassName = "QMainWindowTabBar";
+//        #endif
+        QString name = QString(obj->metaObject()->className());
+        const bool isTabBarClassName = name == "QTabBar" || name == "QMainWindowTabBar";
+        if (isTabBarClassName) {
              qDebug() << "MW::eventFilter obj->metaObject()->className() ="
                      << obj->metaObject()->className();
             // build filters when filter tab mouse clicked
