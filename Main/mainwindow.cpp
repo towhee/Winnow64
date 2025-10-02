@@ -979,15 +979,16 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         tabBarClassName = "QMainWindowTabBar";
         #endif
         if (QString(obj->metaObject()->className()) == tabBarClassName) {
-            // qDebug() << "MW::eventFilter obj->metaObject()->className() =" << obj->metaObject()->className();
+             qDebug() << "MW::eventFilter obj->metaObject()->className() ="
+                     << obj->metaObject()->className();
             // build filters when filter tab mouse clicked
             if (event->type() == QEvent::MouseButtonPress) {
                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
                 int i = tabBar->tabAt(e->pos());
-                // qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
+                 qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
                 if (tabBar->tabText(i) == filterDockTabText) {
-                    // qDebug() << "MW::eventFilter filterDock mouse press";
+                    qDebug() << "MW::eventFilter filterDock mouse press";
                     filterDockTabMousePress();
                 }
             }

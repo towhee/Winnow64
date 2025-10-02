@@ -167,7 +167,7 @@ private:
     bool selectionInverted = false;
     QModelIndex newCurrentIndex;
 
-    bool isDebug;
+    bool isDebug = false;     // set true/false in constructor
 };
 
 

@@ -16,7 +16,7 @@ bool isErrorLogger = false;         // Writes error log messages to file or cons
 bool isIssueLogger = true;         // Writes issue log messages to file or console
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
 
-bool showAllEvents = false;
+bool showAllEvents = true;
 QFile logFile;                      // MW::openLog(), MW::closeLog()
 QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
 // Errors
