@@ -974,10 +974,10 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
     {
         static int prevTabIndex = -1;
-        QString tabBarClassName = "QTabBar";
-        #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-        tabBarClassName = "QMainWindowTabBar";
-        #endif
+        // QString tabBarClassName = "QTabBar";
+        // #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+        // tabBarClassName = "QMainWindowTabBar";
+        // #endif
         QString tb = QString(obj->metaObject()->className());
         bool isTabBar = tb == "QTabBar" || tb == "QMainWindowTabBar";
         if (isTabBar) {
@@ -1534,20 +1534,20 @@ void MW::handleStartupArgs(const QString &args)
             return;
         }
 
-        /* Get earliest lastModified time (t) for incoming files, then choose all files in the
-        folder that are Winnow supported formats and have been modified after (t). This allows
-        unlimited files to be received, getting around the command argument buffer limited
-        size.
+        /* Get earliest lastModified time (t) for incoming files, then choose all files
+        in the folder that are Winnow supported formats and have been modified after (t).
+        This allows unlimited files to be received, getting around the command argument
+        buffer limited size.
 
-        The earliest modified date for incoming files is a little bit tricky.  The incoming
-        files have been saved to the folder folderPath by the exporting program (ie lightroom).
-        However, this folder might already have existing files.  If the command argument
-        buffer has been exceeded then the argument list may not contain the earliest modified
-        file.  To determine which files are part of the incoming, the modified date of the first
-        file in the command argument buffer is used as a seed value, and any file with a
-        modified date up to 10 seconds earlier becomes the new seed value.  After reviewing all
-        the eligible files in folderPath the seed value will be the earliest modified incoming
-        file.   */
+        The earliest modified date for incoming files is a little bit tricky. The
+        incoming files have been saved to the folder folderPath by the exporting program
+        (ie lightroom). However, this folder might already have existing files. If the
+        command argument buffer has been exceeded then the argument list may not contain
+        the earliest modified file. To determine which files are part of the incoming,
+        the modified date of the first file in the command argument buffer is used as a
+        seed value, and any file with a modified date up to 10 seconds earlier becomes
+        the new seed value. After reviewing all the eligible files in folderPath the seed
+        value will be the earliest modified incoming file. */
 
         // get seed time (t) to start
         info = dir.entryInfoList().at(0);
@@ -1604,16 +1604,20 @@ void MW::handleStartupArgs(const QString &args)
         QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);
         if (!embellishedPaths.size()) return;
 
+        qDebug() << "MW::handleStartupArgs" << embellishedPaths;
+
         // sort embellishedPaths
         embellishedPaths.sort(Qt::CaseInsensitive);
 
         // go to first embellished image
         info.setFile(embellishedPaths.at(0));
         QString fDir = info.dir().absolutePath();
+        QString fPath = embellishedPaths.at(0);
 
         // if folder with embellished images is not already selected
         if (!dm->folderList.contains(fDir)) {
-            fsTree->select(fDir, "", "handleStartupArgs");
+            // fsTree->select(fDir, "", "handleStartupArgs");
+            folderAndFileSelectionChange(fPath, "handleStartupArgs");
         }
         else {
             imageView->currentImageHasChanged = true;
@@ -1621,10 +1625,9 @@ void MW::handleStartupArgs(const QString &args)
             // update filter counts
             buildFilters->recount();
             filterChange("MW::handleStartupArgs_remoteEmbellish");
+            // select first new embellished image
+            sel->select(fPath);
         }
-        // select first new embellished image
-        QString fPath = embellishedPaths.at(0);
-        sel->select(fPath);
     }
 
     // startup not triggered by embellish winnet
