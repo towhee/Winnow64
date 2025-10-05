@@ -974,20 +974,26 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
     {
         static int prevTabIndex = -1;
-        QString tabBarClassName = "QTabBar";
-        #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-        tabBarClassName = "QMainWindowTabBar";
-        #endif
-        if (QString(obj->metaObject()->className()) == tabBarClassName) {
-            // qDebug() << "MW::eventFilter obj->metaObject()->className() =" << obj->metaObject()->className();
+        // QString tabBarClassName = "QTabBar";
+        // #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+        // tabBarClassName = "QMainWindowTabBar";
+        // #endif
+        QString tb = QString(obj->metaObject()->className());
+        bool isTabBar = tb == "QTabBar" || tb == "QMainWindowTabBar";
+        if (isTabBar) {
+            /*
+            qDebug() << "MW::eventFilter obj->metaObject()->className() ="
+                     << obj->metaObject()->className();
+            */
             // build filters when filter tab mouse clicked
             if (event->type() == QEvent::MouseButtonPress) {
                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
                 int i = tabBar->tabAt(e->pos());
-                // qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
+                 qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
                 if (tabBar->tabText(i) == filterDockTabText) {
-                    // qDebug() << "MW::eventFilter filterDock mouse press";
+                    /*
+                    qDebug() << "MW::eventFilter filterDock mouse press";*/
                     filterDockTabMousePress();
                 }
             }
@@ -1528,20 +1534,20 @@ void MW::handleStartupArgs(const QString &args)
             return;
         }
 
-        /* Get earliest lastModified time (t) for incoming files, then choose all files in the
-        folder that are Winnow supported formats and have been modified after (t). This allows
-        unlimited files to be received, getting around the command argument buffer limited
-        size.
+        /* Get earliest lastModified time (t) for incoming files, then choose all files
+        in the folder that are Winnow supported formats and have been modified after (t).
+        This allows unlimited files to be received, getting around the command argument
+        buffer limited size.
 
-        The earliest modified date for incoming files is a little bit tricky.  The incoming
-        files have been saved to the folder folderPath by the exporting program (ie lightroom).
-        However, this folder might already have existing files.  If the command argument
-        buffer has been exceeded then the argument list may not contain the earliest modified
-        file.  To determine which files are part of the incoming, the modified date of the first
-        file in the command argument buffer is used as a seed value, and any file with a
-        modified date up to 10 seconds earlier becomes the new seed value.  After reviewing all
-        the eligible files in folderPath the seed value will be the earliest modified incoming
-        file.   */
+        The earliest modified date for incoming files is a little bit tricky. The
+        incoming files have been saved to the folder folderPath by the exporting program
+        (ie lightroom). However, this folder might already have existing files. If the
+        command argument buffer has been exceeded then the argument list may not contain
+        the earliest modified file. To determine which files are part of the incoming,
+        the modified date of the first file in the command argument buffer is used as a
+        seed value, and any file with a modified date up to 10 seconds earlier becomes
+        the new seed value. After reviewing all the eligible files in folderPath the seed
+        value will be the earliest modified incoming file. */
 
         // get seed time (t) to start
         info = dir.entryInfoList().at(0);
@@ -1595,8 +1601,10 @@ void MW::handleStartupArgs(const QString &args)
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
 
         // embellish src images (pathList) and return paths to embellished images
-        QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);        
+        QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);
         if (!embellishedPaths.size()) return;
+
+        qDebug() << "MW::handleStartupArgs" << embellishedPaths;
 
         // sort embellishedPaths
         embellishedPaths.sort(Qt::CaseInsensitive);
@@ -1604,10 +1612,12 @@ void MW::handleStartupArgs(const QString &args)
         // go to first embellished image
         info.setFile(embellishedPaths.at(0));
         QString fDir = info.dir().absolutePath();
+        QString fPath = embellishedPaths.at(0);
 
         // if folder with embellished images is not already selected
         if (!dm->folderList.contains(fDir)) {
-            fsTree->select(fDir, "", "handleStartupArgs");
+            // fsTree->select(fDir, "", "handleStartupArgs");
+            folderAndFileSelectionChange(fPath, "handleStartupArgs");
         }
         else {
             imageView->currentImageHasChanged = true;
@@ -1615,10 +1625,9 @@ void MW::handleStartupArgs(const QString &args)
             // update filter counts
             buildFilters->recount();
             filterChange("MW::handleStartupArgs_remoteEmbellish");
+            // select first new embellished image
+            sel->select(fPath);
         }
-        // select first new embellished image
-        QString fPath = embellishedPaths.at(0);
-        sel->select(fPath);
     }
 
     // startup not triggered by embellish winnet
@@ -2178,6 +2187,9 @@ bool MW::reset(QString src)
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
 
+    // filters
+    buildFilters->reset();
+
     setWindowTitle(winnowWithVersion);
     if (G::useInfoView) {
         infoView->clearInfo();
@@ -2238,13 +2250,6 @@ bool MW::reset(QString src)
             asLoupeAction->setChecked(true);
         }
     }
-
-    // // filters (reqd?)
-    // filters->filtersBuilt = false;
-    // filters->loadingDataModel(false);
-    // dm->forceBuildFilters = false;
-    // uncheckAllFilters();
-    // buildFilters->reset();
 
     // turn thread activity buttons gray
     setThreadRunStatusInactive();
@@ -2577,7 +2582,7 @@ void MW::folderChangeCompleted()
     - update filters
     - resize tableView columns
 */
-    // if (G::isLogger || G::isFlowLogger)
+    if (G::isLogger || G::isFlowLogger)
     {
         int rows = dm->rowCount();
         QString msg = QString::number(rows) + " images";
@@ -2631,16 +2636,11 @@ void MW::folderChangeCompleted()
              << "filterDock->visibleRegion().isNull() =" << filterDock->visibleRegion().isNull()
                 ; //*/
     if (dm->folderList.count() > 0
-            && dm->isQueueEmpty()
-            && !filterDock->visibleRegion().isNull()
+        && dm->isQueueEmpty()
+        && !filterDock->visibleRegion().isNull()
        )
     {
-        // as per 2025/09/29 version
-        // filters->reset();
-        // buildFilters->build();
-
-        // as per 2025/05/26 version
-        buildFilters->reset(false);
+        // buildFilters->reset(false);
         buildFilters->build();
         buildFilters->recount();
         filters->setEnabled(true);
