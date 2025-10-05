@@ -255,8 +255,9 @@ bool DockWidget::event(QEvent *event)
         /*  This event is fired for DockWidgets with a custom titlebar when they are both
         floating and docked and non-custom titlebar DockWidgets when docked. */
         if (G::isLogger) G::log("DockWidget::event", "QEvent::MouseButtonDblClick " + objectName());
+        /*
         qDebug() << "DockWidget::event MouseButtonDblClick" << objectName()
-                 << "isFloating =" << isFloating();
+                 << "isFloating =" << isFloating(); //*/
         if (isFloating() && hasCustomTitleBar()) {
             save();
             setFloating(false);

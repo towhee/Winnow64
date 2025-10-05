@@ -1670,13 +1670,6 @@ void ImageCache::setAutoMaxMB(bool autoSize, AutoStrategy strategy)
     }
 
         updateStatus(StatusAction::InfoOnly, "setAutoMaxMB");
-        qDebug()
-             << "ImageCache::setAutoMaxMB"
-             << "cushionLow =" << cushionLow
-             << "cushionHigh =" << cushionHigh
-             << "memThrottle =" << memThrottle
-             << "maxMBCeiling =" << maxMBCeiling
-                ;
 }
 
 quint64 ImageCache::getMaxMB()
