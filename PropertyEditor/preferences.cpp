@@ -1444,7 +1444,7 @@ void Preferences::addItems()
     addItem(i);
 
     // TableView geek fields to show
-    for(int row = 0; row < tv->rowCount(); row++) {
+    for (int row = 0; row < tv->rowCount(); row++) {
         // do not show if is a not a geek column
         if (!tv->index(row, 2).data().toBool()) continue;
         QString caption = tv->index(row, 0).data().toString();

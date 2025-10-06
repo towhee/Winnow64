@@ -580,6 +580,11 @@ void MW::createTableView()
         for (int i = 0; i <setFields.size(); ++i) {
             QString setField = setFields.at(i);
             bool okToShow = settings->value(setField).toBool();
+            /*
+            qDebug() << "MW::createTableView"
+                     << "Table field =" << setField
+                     << "okToShow =" << okToShow
+                ; //*/
             itemList = tableView->ok->findItems(setField);
             if (itemList.length()) {
                 int row = itemList[0]->row();
