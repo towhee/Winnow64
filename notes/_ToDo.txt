@@ -2,14 +2,12 @@ WHAT'S NEW
 
 
 BUGS / TO DO
-- Try using std::atomic<bool> for flags used in threads
-- TableView showing all columns at start when some columns are being hidden in pref
-- Do not show ICCBuf column in tableView
+- Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Copy path(s) not always working
 - Update menu filters when delete all filtered
 - Undo delete
 - Read media speed is unintuitive
-- https://doc.qt.io/qt-6/qtwidgets-itemviews-frozencolumn-example.html
+- Try using std::atomic<bool> for flags used in threads
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
 - Universal help color = rgb(43, 85, 49) used in "How this works"
 - Resolve Pixmap vs ImageDecoder classes
@@ -19,7 +17,6 @@ BUGS / TO DO
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
 - Check FindDuplicatesDlg still works (removed MW::createFrameDecoder)
-- Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Selection::okToSelect not being used
 - Prev and next folders
 - MW::deleteFiles filter/sort work? Does gridView refresh?
@@ -126,6 +123,7 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
+- Activating bullseye crashes if no image in imageView
 - Show images that have sidecars (indicator in thumbnail and col in datamodel)
 - When add new workspace the menu shortcut is not updated until reopen app
 - Heic thumb rotation wrong
@@ -139,6 +137,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- TableView showing all columns at start when some columns are being hidden in pref
 - On Windows Filters not refreshing if hidden and then reveal
 - Ingest Dlg not showing manual paths correctly
 - Resort when filter change

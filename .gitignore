@@ -1684,3 +1684,4 @@ Winnow_resource.rc
 *.idx
 Lib/libtiff
 /Lib
+Lib/.DS_Store

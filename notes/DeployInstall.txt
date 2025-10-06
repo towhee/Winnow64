@@ -183,7 +183,8 @@ Mac Developer Notes:
 	Company/Team ID: 2663CS489R
 	Winnow App ID: 2663CS489R.com.winnow.winnow
 	Developer certificate: 2663CS489R
-	App-Specific Password for Winnow Notarization: pclq-wccx-jyjg-ggpy
+        App-Specific Password for Winnow Notarization: pclq-wccx-jyjg-ggpy
+        Keychain login password (MacOS login): kirkpa
 
         /Users/roryhill/Projects/build-winnow64-Qt_6_8_2_for_macOS-Release/Winnow.app/Contents/entitlements.plist
 

@@ -2669,6 +2669,8 @@ void MW::folderChangeCompleted()
 
     // resize table columns now that all data is loaded
     tableView->resizeColumns();
+    // hide columns per preferences (redo because datamodel has been cleared)
+    tableView->showOrHide();
 
     // test if any null thumbnails
     // bool isNullIcon = false;

@@ -392,8 +392,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString s = "/Users/roryhill/Pictures/Zen2048/pbase2048/2025-09-27_0018_Zen2048.JPG";
-    folderAndFileSelectionChange(s, "test");
+
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
