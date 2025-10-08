@@ -564,12 +564,10 @@ void MW::togglePanToFocus(Tog n)
             imageView->predictPanToFocus();
             imageView->showPredictedFocus();
         }
-        // imageView->setBullseyeVisible(true);     // for testing
     }
     else {
         panFocusToggleAction->setChecked(false);
         panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target_bw.png"));
-        // imageView->setBullseyeVisible(false);    // for testing
     }
     QString txt;
     imageView->panToFocus ? txt = "Pan to predicted focus point is ON"

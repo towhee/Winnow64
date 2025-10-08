@@ -479,57 +479,146 @@ DISTFILES += notes/VideoScripts
 DISTFILES += notes/xmp.txt
 
 # *** MAC Libraries ***
+macx {
+    LIBS += -framework ApplicationServices
+    LIBS += -framework AppKit
+    LIBS += -framework CoreFoundation
+    LIBS += -framework Foundation
 
-macx:LIBS += -framework ApplicationServices
-macx:LIBS += -framework AppKit
-macx:LIBS += -framework CoreFoundation
-macx:LIBS += -framework Foundation
+    # --- Conditional linking paths ---
+    CONFIG(debug, debug|release) {
+        # Debug build - using Homebrew libraries
 
-# opencv
-macx:LIBS += \
-  $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_core.411.dylib \
-  $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_imgproc.411.dylib \
-  $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_dnn.411.dylib
-macx:INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
+        # opencv
+        LIBS += -L/opt/homebrew/lib \
+                -lopencv_core.411 \
+                -lopencv_imgproc.411 \
+                -lopencv_dnn.411
+        INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
 
-# libtiff
-macx:LIBS += $$OUT_PWD/Winnow.app/Contents/Frameworks/libtiff.6.dylib
-macx:INCLUDEPATH += /opt/homebrew/opt/libtiff/include
+        # libtiff
+        LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
+        INCLUDEPATH += /opt/homebrew/opt/libtiff/include
 
-# libjpeg-turbo
-macx:LIBS += $$OUT_PWD/Winnow.app/Contents/Frameworks/libturbojpeg.0.dylib
-macx:INCLUDEPATH += /opt/homebrew/opt/jpeg-turbo/include
+        # libjpeg-turbo
+        LIBS += -L/opt/homebrew/opt/jpeg-turbo/lib -lturbojpeg
+        INCLUDEPATH += /opt/homebrew/opt/jpeg-turbo/include
 
-# zLib
-macx:INCLUDEPATH += /usr/include
-macx:LIBS += -lz
+        # zlib (system)
+        LIBS += -lz
+        INCLUDEPATH += /usr/include
+        QMAKE_RPATHDIR += /opt/homebrew/lib
+
+    } else {
+        # Release build - using bundled dylibs
+
+        # opencv
+        LIBS += \
+            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_core.411.dylib \
+            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_imgproc.411.dylib \
+            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_dnn.411.dylib
+        INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
+
+        # libtiff
+        LIBS += $$OUT_PWD/Winnow.app/Contents/Frameworks/libtiff.6.dylib
+        INCLUDEPATH += /opt/homebrew/opt/libtiff/include
+
+        # libjpeg-turbo
+        LIBS += $$OUT_PWD/Winnow.app/Contents/Frameworks/libturbojpeg.0.dylib
+        INCLUDEPATH += /opt/homebrew/opt/jpeg-turbo/include
+
+        # zLib
+        LIBS += -lz
+        INCLUDEPATH += /usr/include
+    }
+}
 
 # *** WIN Libraries ***
+win32 {
+    CONFIG(debug, debug|release) {
+        message("🔧 Debug build - using debug libraries")
 
-# opencv
-win32:LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
-win32:INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
+        # --- OpenCV (single combined lib build) ---
+        LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
+        INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
 
-# libde265 (frame parallel)
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
-win32:INCLUDEPATH += $$PWD/Lib/libde265/include
-win32:DEPENDPATH  += $$PWD/Lib/libde265/release
+        # --- libde265 (frame parallel) ---
+        LIBS += -L$$PWD/Lib/libde265/debug -llibde265
+        INCLUDEPATH += $$PWD/Lib/libde265/include
+        DEPENDPATH  += $$PWD/Lib/libde265/debug
 
-# zLib
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/build/Release/ -lzlib
-win32:INCLUDEPATH += $$PWD/Lib/zlib
-win32:INCLUDEPATH += $$PWD/Lib/zlib/build
-win32:DEPENDPATH += $$PWD/Lib/zlib/build/Release
+        # --- zLib ---
+        LIBS += -L$$PWD/Lib/zlib/build/Debug -lzlib
+        INCLUDEPATH += $$PWD/Lib/zlib
+        INCLUDEPATH += $$PWD/Lib/zlib/build
+        DEPENDPATH  += $$PWD/Lib/zlib/build/Debug
 
-# libheif
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
-win32:INCLUDEPATH += $$PWD/Lib/libheif/include
-win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
+        # --- libheif ---
+        LIBS += -L$$PWD/Lib/libheif/debug -llibheif
+        INCLUDEPATH += $$PWD/Lib/libheif/include
+        DEPENDPATH  += $$PWD/Lib/libheif/debug
 
-# libtiff
-win32:LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
-win32:INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
-win32:INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
-win32:DEPENDPATH +=  $$PWD/Lib/libtiff/build/libtiff/Release
+        # --- libtiff ---
+        LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Debug -ltiff
+        INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
+        INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
+        DEPENDPATH  += $$PWD/Lib/libtiff/build/libtiff/Debug
+
+    } else {
+        message("🚀 Release build - using release libraries")
+
+        # --- OpenCV (single combined lib build) ---
+        LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
+        INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
+
+        # --- libde265 (frame parallel) ---
+        LIBS += -L$$PWD/Lib/libde265/release -llibde265
+        INCLUDEPATH += $$PWD/Lib/libde265/include
+        DEPENDPATH  += $$PWD/Lib/libde265/release
+
+        # --- zLib ---
+        LIBS += -L$$PWD/Lib/zlib/build/Release -lzlib
+        INCLUDEPATH += $$PWD/Lib/zlib
+        INCLUDEPATH += $$PWD/Lib/zlib/build
+        DEPENDPATH  += $$PWD/Lib/zlib/build/Release
+
+        # --- libheif ---
+        LIBS += -L$$PWD/Lib/libheif/release -llibheif
+        INCLUDEPATH += $$PWD/Lib/libheif/include
+        DEPENDPATH  += $$PWD/Lib/libheif/release
+
+        # --- libtiff ---
+        LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
+        INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
+        INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
+        DEPENDPATH  += $$PWD/Lib/libtiff/build/libtiff/Release
+    }
+}
+
+# # opencv
+# win32:LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
+# win32:INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
+
+# # libde265 (frame parallel)
+# win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
+# else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
+# win32:INCLUDEPATH += $$PWD/Lib/libde265/include
+# win32:DEPENDPATH  += $$PWD/Lib/libde265/release
+
+# # zLib
+# win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/build/Release/ -lzlib
+# win32:INCLUDEPATH += $$PWD/Lib/zlib
+# win32:INCLUDEPATH += $$PWD/Lib/zlib/build
+# win32:DEPENDPATH += $$PWD/Lib/zlib/build/Release
+
+# # libheif
+# win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
+# else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
+# win32:INCLUDEPATH += $$PWD/Lib/libheif/include
+# win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
+
+# # libtiff
+# win32:LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
+# win32:INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
+# win32:INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
+# win32:DEPENDPATH +=  $$PWD/Lib/libtiff/build/libtiff/Release

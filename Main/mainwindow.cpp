@@ -990,7 +990,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
                 int i = tabBar->tabAt(e->pos());
-                 qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
+                // qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
                 if (tabBar->tabText(i) == filterDockTabText) {
                     /*
                     qDebug() << "MW::eventFilter filterDock mouse press";*/
@@ -1689,20 +1689,19 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     if (resetDataModel) {
         // stop existing processes
         stop(fun);
-
         // sync bookmarks if exists
         bookmarks->select(folderPath);
-
-        // // initialize metaRead only when new instance and first folder loaded
-        // QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
     }
     else {
         // stop building but do not clear filters
         buildFilters->abortProcessing();
     }
 
-    // put folder in datamodel queue to add or remove
-    dm->enqueueFolderSelection(folderPath, op, recurse);
+    /* put folder in datamodel queue to add or remove if main thread
+       is not blocking */
+    QTimer::singleShot(0, this, [this, folderPath, op, recurse]{
+        dm->enqueueFolderSelection(folderPath, op, recurse);
+    });
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
@@ -2023,42 +2022,11 @@ void MW::refresh()
     sel->select(dm->currentSfIdx);  // runs metaread if new images
 }
 
-void MW::aborted(const QString name)
-{
-    // if (G::isLogger || G::isFlowLogger)
-        G::log("MW::aborted", name);
-    /*
-    qDebug() << "MW::aborted" << name;
-    //*/
-
-    /*
-    if (stopped.contains(name)) {
-        stopped[name] = true;
-    }
-
-    for (auto it = stopped.constBegin(); it != stopped.constEnd(); ++it) {
-        // qDebug() << "MW::aborted" << it.key() << it.value();
-        QString msg = it.key() + " = " + QVariant(it.value()).toString();
-        G::log("MW::aborted", msg);
-    }
-
-    allIdle = true;
-    for (auto it = stopped.constBegin(); it != stopped.constEnd(); ++it) {
-        if (!it.value()) {
-            allIdle = false;
-            break;
-        }
-    }
-
-    G::log("MW::aborted", "allIdle = " + QVariant(allIdle).toString());
-    */
-}
-
 bool MW::allIdle() const {
     for (const auto& v : stopped) {
         if (!v) {
-        // G::log("MW::allIdle", stopped.key(v) + " = " + QVariant(v).toString());
-        return false;
+            // G::log("MW::allIdle", stopped.key(v) + " = " + QVariant(v).toString());
+            return false;
         }
     }
     // G::log("MW::allIdle", "allIdle = true");
@@ -2078,10 +2046,10 @@ void MW::stop(QString src)
 
     DataModel instances:
 
-    The datamodel instance, dm->instance, starts at zero and is incremented when a
-    new folder is selected.  G::dmInstance is the global variant.  This is required
-    as the image decoders, running in separate threads, may still be decoding an
-    image from a prior folder.  See ImageCache::fillCache.
+    The datamodel instance, dm->instance, starts at zero and is incremented after the
+    datamodel is cleared. G::dmInstance is the global variant. This is required as the
+    image decoders, running in separate threads, may still be decoding an image from a
+    prior folder. See ImageCache::fillCache.
 
 */
 
@@ -2135,7 +2103,7 @@ void MW::stop(QString src)
 
     // Timeout handler
     connect(&to, &QTimer::timeout, &loop, [&]{
-        // if (G::isFlowLogger)
+        if (G::isFlowLogger)
             G::log("MW::stop", "timed out");
         loop.quit();
     });
@@ -2143,7 +2111,8 @@ void MW::stop(QString src)
     // If everything was already idle, skip waiting
     if (!allIdle()) {
         // G::log("MW::stop", "start loop");
-        loop.exec();                   // <-- this blocks until all idle or timeout
+        // this blocks until all idle or timeout
+        loop.exec();
     }
 
     // Clean up connections
@@ -2164,7 +2133,7 @@ void MW::stop(QString src)
     qApp->processEvents();
     G::stop = false;
 
-    return;
+    if (G::isLogger || G::isFlowLogger) G::log("MW::stop", "done");
 }
 
 bool MW::reset(QString src)

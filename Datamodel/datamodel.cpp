@@ -502,18 +502,6 @@ bool DataModel::isQueueEmpty()
     return folderQueue.isEmpty();
 }
 
-// bool DataModel::isQueueRemoveEmpty()
-// {
-//     QListIterator<QPair<QString, bool>> i(folderQueue);
-//     while (i.hasNext()) {
-//         QPair<QString, bool> folderOperation = i.next();
-//         if (!folderOperation.second) {
-//             return false;
-//         }
-//     }
-//     return true;
-// }
-
 void DataModel::enqueueOp(const QString& folderPath, G::FolderOp op)
 {
     // Toggle logic is handled by caller; here we only queue valid transitions.
@@ -536,42 +524,49 @@ void DataModel::enqueueOp(const QString& folderPath, G::FolderOp op)
 void DataModel::enqueueFolderSelection(const QString& folderPath,
                                        G::FolderOp op, bool recurse)
 {
-    // Normalize string → enum and expand recursion.
-    // const FolderOp op = parseOp(opStr);
-
-    auto enqueueDirOnly = [&](const QString& p) { enqueueOp(p, op); };
+/*
+    op = Add or Delete images in folderPath from datamodel
+    recurse = recurse all subfolders of folderPath
+*/
 
     if (recurse) {
-        // Only iterate directories; skip "." and ".."; skip symlinks to avoid loops.
+        // Only iterate directories; skip "." and ".."
+        // skip symlinks to avoid loops.
         QDirIterator it(folderPath,
                         QDir::Dirs | QDir::NoDotAndDotDot | QDir::Readable | QDir::Hidden,
                         QDirIterator::Subdirectories);
-        enqueueDirOnly(folderPath); // include the root
+        enqueueOp(folderPath, op);
         while (it.hasNext()) {
             const QString p = it.next();
             const QFileInfo fi = it.fileInfo();
-            if (!fi.isDir())       continue;
-            if (fi.isSymLink())    continue; // or follow if you need, but beware loops
-            enqueueDirOnly(p);
+            if (!fi.isDir()) continue;
+            if (fi.isSymLink()) continue;
+            enqueueOp(p, op);
         }
     } else {
-        enqueueDirOnly(folderPath);
+        enqueueOp(folderPath, op);
     }
+
+    QCoreApplication::processEvents();
 
     scheduleProcessing();
 }
 
 void DataModel::scheduleProcessing()
 {
+    if (G::isLogger)
+        G::log("", "Folder count = " + QVariant(folderQueue.count()).toString());
+
     if (isProcessingFolders) return;
     isProcessingFolders = true;
-    // Defer to event loop so UI stays responsive and we coalesce bursts.
-    QTimer::singleShot(0, this, &DataModel::processNextBatch);
+
+    processNextBatch();
 }
 
 void DataModel::processNextBatch()
 {
-    // Pump a reasonable number each tick to balance throughput/latency.
+    // qDebug() << "processNextBatch" << pendingPaths;
+    // qDebug() << "processNextBatch invoked on thread =" << QThread::currentThread();     // Pump a reasonable number each tick to balance throughput/latency.
     constexpr int kMaxPerTick = 64;
 
     int processed = 0;
@@ -581,6 +576,7 @@ void DataModel::processNextBatch()
 
         if (op == G::FolderOp::Add) {
             // NOTE: ensure addFolder() is fast/non-blocking or hands work to workers.
+            // qDebug() << "processNextBatch" << folderPath;
             addFolder(folderPath);
         } else {
             removeFolder(folderPath);
@@ -608,125 +604,7 @@ void DataModel::processNextBatch()
     isProcessingFolders = false;
     emit folderChange();
 }
-
-// void DataModel::enqueueOp(const QString folderPath, const QString op)
-// {
-// /*
-//     Add the folderPath to the processing queue.  Each queue item comprises of a string
-//     (folderPath) and bool (true Add or false Remove).  If Add then the images in the
-//     folder will be added to the datamodel, if Remove then the images in the folder will
-//     be removed from the datamodel.
 // */
-//     if (G::isLogger || G::isFlowLogger)
-//         G::log("DataModel::enqueueOp", op + " " + folderPath);
-
-//     if (op == "Add") {
-//         if (!folderList.contains(folderPath)) {
-//             folderQueue.enqueue(qMakePair(folderPath, true));
-//         }
-//     }
-
-//     if (op == "Remove") {
-//         if (folderList.contains(folderPath)) {
-//             folderQueue.enqueue(qMakePair(folderPath, false));
-//         }
-//     }
-
-//     if (op == "Toggle") {
-//         if (folderList.contains(folderPath)) {
-//             folderQueue.enqueue(qMakePair(folderPath, false));
-//         }
-//         else folderQueue.enqueue(qMakePair(folderPath, true));
-//     }
-
-//     // qDebug() << "DataModel::enqueueOp" << op << folderPath;
-// }
-
-// void DataModel::enqueueFolderSelection(const QString &folderPath, QString op, bool recurse)
-// {
-// /*
-//     Receive a folderPath for processing (add or remove from datamodel)
-//     - op is Add or Remove
-//     - recurse is add all subfolders as well
-//     - call enqueueOp to add operation to the queue
-//     - call processNextFolder to make the changes to the datamodel
-// */
-//     QString fun = "DataModel::enqueueFolderSelection";
-//     QString msg = "op = " + op +
-//                   " recurse = " + QVariant(recurse).toString() +
-//                   " folderPath = " + folderPath;
-//     if (G::isLogger || G::isFlowLogger)
-//         G::log(fun, msg);
-
-//     if (recurse) {
-//         enqueueOp(folderPath, op);
-//         QDirIterator it(folderPath, QDirIterator::Subdirectories);
-//         while (it.hasNext()) {
-//             QString dPath = it.next();
-//             if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
-//                 // G::log(fun, "subfolder: " + dPath);
-//                 enqueueOp(dPath, op);
-//             }
-//         }
-//     }
-//     else {
-//         enqueueOp(folderPath, op);
-//     }
-
-//     // If not already processing, start the processing
-//     if (!isProcessingFolders) {
-//         isProcessingFolders = true;
-//         processNextFolder();
-//     }
-// }
-
-// void DataModel::processNextFolder()
-// {
-// /*
-//     Recursively process each item (folderOperation) in the folderQueue.
-//     Each item comprises of a folderPath and bool:
-//     - folderOperation.first is the folderPath
-//     - folderOperation.second true = Add, false = Remove
-// */
-//     if (folderQueue.isEmpty()) {
-//         isProcessingFolders = false;
-//         isProcessingFolders = false;
-//         // qDebug() << "DataModel::processNextFolder" << "unwound";
-//         emit folderChange();
-//         return;
-//     }
-
-//     if (G::stop) return;
-
-//     QPair<QString, bool> folderOperation = folderQueue.dequeue();
-//     QString folderPath = folderOperation.first;
-//     bool addFolderImages = folderOperation.second;
-
-//     QString fun = "DataModel::processNextFolder";
-//     QString msg = "folderOperation.first = " + folderOperation.first + " " +
-//                   "folderOperation.second = " + QVariant(folderOperation.second).toString() +
-//                   " Remaining = " + QString::number(folderQueue.count())
-//                     ;
-//     if (G::isLogger || G::isFlowLogger)
-//         G::log(fun, msg);
-//     /*
-//     qDebug() << "DataModel::processNextFolder"
-//              << "folderQueue.count =" << folderQueue.count()
-//              << folderPath; //*/
-
-//     // add images from model
-//     if (addFolderImages) {
-//         addFolder(folderPath);
-//     }
-
-//     // remove images from model
-//     else {
-//         removeFolder(folderPath);
-//     }
-
-//     // Continue with the next folder operation
-//     processNextFolder();
-// }
 
 void DataModel::addFolder(const QString &folderPath)
 {
