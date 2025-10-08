@@ -56,7 +56,6 @@ public:
     void newInstance();
     bool sourceModified(QStringList &added, QStringList &removed, QStringList&modified);
     bool isQueueEmpty();
-    // bool isQueueRemoveEmpty();
     bool contains(QString &path);
     void find(QString text);
     ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
@@ -228,6 +227,7 @@ public slots:
     QString folderPathFromModelRow(int dmRow);
 
 private slots:
+    void processNextBatch(); // async pump
 
 private:
     Metadata *metadata;
@@ -239,7 +239,7 @@ private:
     // Pair of folderPath and operation type (true=add, false=remove)
     void enqueueOp(const QString& folderPath, G::FolderOp op);
     void scheduleProcessing();
-    void processNextBatch(); // async pump
+    // void processNextBatch(); // async pump
     QQueue<QPair<QString, G::FolderOp>> folderQueue;
     QSet<QString> pendingPaths;
     QMutex queueMutex;

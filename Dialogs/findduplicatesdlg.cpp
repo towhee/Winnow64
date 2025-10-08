@@ -606,7 +606,7 @@ void FindDuplicatesDlg::on_clrFoldersBtn_clicked()
 void FindDuplicatesDlg::getMetadataBItems()
 {
 /*
-    BThe B list bItems (target folder(s) images) of images is used to look for duplicates
+    The B list bItems (target folder(s) images) of images is used to look for duplicates
     of the candidate A list images in the datamodel. The list is built in buildBList().
 
     The list bItems contains all the information required for comparison:

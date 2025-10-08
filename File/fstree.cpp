@@ -1060,8 +1060,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         resetDataModel = true;
         recurse = true;
         emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
-        selectionModel()->clearSelection();
-        selectRecursively(dPath);
+        // selectionModel()->clearSelection();
+        // selectRecursively(dPath);
         return;
     }
 

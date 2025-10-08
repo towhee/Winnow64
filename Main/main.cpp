@@ -1,6 +1,7 @@
 #include "Main/mainwindow.h"
 #include <QApplication>
 #include "qtsingleapplication.h"
+#include <QMediaPlayer>
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
 #endif
@@ -30,6 +31,10 @@ int main(int argc, char *argv[])
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
                 Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     //*/
+
+    // silence multimedia reporting to console
+    qputenv("QT_LOGGING_RULES", "qt.multimedia.ffmpeg.*=false");
+    qputenv("QT_FFMPEG_LOG", "0");
 
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);

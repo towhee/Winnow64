@@ -421,7 +421,6 @@ public slots:
     void currentFolderDeletedExternally(QString path);
     void refresh();
     void updateImageCount();
-    void aborted(const QString subSystem);
     void stop(QString src = "");
     bool reset(QString src = "");
     void nullFiltration();

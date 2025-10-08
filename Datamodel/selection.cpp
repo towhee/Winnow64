@@ -138,7 +138,7 @@ void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
 
 void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)
 {
-    // if (G::isLogger || G::isFlowLogger || isDebug)
+    if (G::isLogger || G::isFlowLogger || isDebug)
         G::log("Selection::select(row)", "row = " + QString::number(sfRow));
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     //qDebug() << "Selection::select_row  sfRow =" << sfRow << "sfIdx =" << sfIdx << modifiers;
