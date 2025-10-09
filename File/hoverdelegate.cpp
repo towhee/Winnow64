@@ -19,9 +19,23 @@ void HoverDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
     QStyleOptionViewItem opt = option;
     QModelIndex idx0 = index.sibling(index.row(), 0);
     if (idx0 == hoveredIndex) {
-        // qDebug() << "HoverDelegate::paint idx0 =" << idx0;
         opt.state |= QStyle::State_MouseOver;
         painter->fillRect(opt.rect, hoverBackground);  // Highlight color
     }
+
+    // --- Handle over-limit highlight ---
+    // FSTree::markFolderOverLimit sets OverLimitRole = true on FSModel items
+    const bool isOverLimit = index.data(OverLimitRole).toBool();
+    if (isOverLimit) {
+        // Optional pale background tint to distinguish
+        // painter->fillRect(opt.rect, overLimitBackground);
+
+        // Change text color
+        opt.palette.setColor(QPalette::Text, overLimitTextColor);
+        // Override default text color when item is selected
+        opt.palette.setColor(QPalette::HighlightedText, overLimitTextColor);
+    }
+
+    // --- Paint normally using the modified option ---
     QStyledItemDelegate::paint(painter, opt, index);
 }

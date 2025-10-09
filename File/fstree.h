@@ -32,6 +32,26 @@ private:
     int computeImageCount(const QString &path);
 };
 
+// FSTreeDelegate.h
+class FSTreeDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit FSTreeDelegate(QObject *parent=nullptr)
+        : QStyledItemDelegate(parent) {}
+
+    void paint(QPainter *painter,
+               const QStyleOptionViewItem &option,
+               const QModelIndex &index) const override
+    {
+        QStyleOptionViewItem opt(option);
+        QString path = index.data(QFileSystemModel::FilePathRole).toString();
+        if (path == "/Users/roryhill/Pictures") {
+            opt.palette.setColor(QPalette::Text, QColor(255,165,0));  // orange
+        }
+        QStyledItemDelegate::paint(painter, opt, index);
+    }
+};
+
 class FSFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
@@ -50,19 +70,24 @@ class FSModel : public QFileSystemModel
     Q_OBJECT
 
 public:
-    FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg);
-	bool hasChildren(const QModelIndex &parent) const;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const;
-    QVariant headerData(int section, Qt::Orientation orientation, int role) const;
-    QVariant data(const QModelIndex &index, int role) const;
+    FSModel(QWidget *parent, Metadata &metadata, DataModel *dm, bool &combineRawJpg);
+    bool hasChildren(const QModelIndex &parent) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role) override;
     void clearCount();
     void updateCount(const QString &dPath);
+    enum { OverLimitRole = Qt::UserRole + 2 };
     bool showImageCount;
     bool &combineRawJpg;
     bool forceRefresh = true;
     Metadata &metadata;
+    DataModel *dm;
     int imageCountColumn = 4;
     QStringList *fileFilters;
+    QStringList maxRecursedRoots;
+    bool isMaxRecurse = false;
 
 signals:
     void update() const;        // const req'd but shows warning
@@ -84,6 +109,9 @@ public:
     int imageCount(QString path);
     bool isShowImageCount();
     qlonglong selectionCount();
+
+    void clearFolderOverLimit();
+    void markFolderOverLimit(const QString& folderPath, bool on);
 
     FSModel *fsModel;
     FSFilter *fsFilter;
@@ -113,6 +141,7 @@ public slots:
 private slots:
     void wheelStopped();
     void hasExpanded(const QPersistentModelIndex &index);
+    void onItemExpanded(const QModelIndex &index);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -153,7 +182,14 @@ signals:
 
 private:
     bool isItemVisible(const QModelIndex idx);
+    // void markFolderOverLimit(const QString& folderPath, bool on);
+    int  countSubdirsFast(const QString& root, int hardCap) const;
     void selectRecursively(QString folderPath, bool toggle = false);
+    int maxExpandLimit = 100;
+    QColor overLimitColor = QColor(68,95,118);   // orange
+    // Shared custom role for "too many subfolders" highlight
+    enum { OverLimitRole = Qt::UserRole + 2 };
+
     struct ViewState {
         QPointF scrollPosition;
         QList<QModelIndex> selectedIndexes;

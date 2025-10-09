@@ -150,11 +150,15 @@ CLASS FSModel subclassing QFileSystemModel
    to the model and display the image count beside each folder in the TreeView.
 */
 
-FSModel::FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg)
+FSModel::FSModel(QWidget *parent,
+                 Metadata &metadata,
+                 DataModel *dm,
+                 bool &combineRawJpg)
                  : QFileSystemModel(parent),
                    combineRawJpg(combineRawJpg),
                    metadata(metadata)
 {
+    this->dm = dm;
     fileFilters = new QStringList;
     // QStringList *fileFilters = new QStringList;
     dir = new QDir();
@@ -223,6 +227,20 @@ void FSModel::updateCount(const QString &dPath)
     emit dataChanged(idx, idx, roles);
 }
 
+bool FSModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    if (role == OverLimitRole) {
+        QString path = filePath(index);
+        if (value.toBool())
+            maxRecursedRoots.append(path);
+        else
+            maxRecursedRoots.removeOne(path);
+        emit dataChanged(index, index, {OverLimitRole});
+        return true;
+    }
+    return QFileSystemModel::setData(index, value, role);
+}
+
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
 /*
@@ -233,6 +251,10 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     if (index.column() == imageCountColumn /*&& showImageCount*/) {
         if (role == Qt::DisplayRole) {
             QString dPath = filePath(index);
+
+            if (isMaxRecurse && maxRecursedRoots.contains(dPath)) {
+                return dm->recurseImageCount(dPath);
+            }
 
             if (count.contains(dPath)) {
                 return count.value(dPath);  // Return cached value
@@ -270,6 +292,12 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
         if (role == Qt::ToolTipRole) {
             return QFileSystemModel::data(index, QFileSystemModel::FilePathRole);
         }
+
+        else if (role == OverLimitRole) {
+            QString path = filePath(index);
+            return maxRecursedRoots.contains(path);
+        }
+
         else {
             return QFileSystemModel::data(index, role);
         }
@@ -338,6 +366,10 @@ FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
     connect(fsModel, &QFileSystemModel::rowsAboutToBeRemoved,
             this, &FSTree::onRowsAboutToBeRemoved);
 
+    // prevent expansion of folders where OverLimitRole is true
+    connect(this, &QTreeView::expanded,
+            this, &FSTree::onItemExpanded);
+
     // Repaint when hover changes: Lambda function to call update
     connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
             this->viewport()->update();});
@@ -352,7 +384,7 @@ void FSTree::createModel()
     the folders by deleting the model and re-creating it.
 */
     if (G::isLogger) G::log("FSTree::createModel");
-    fsModel = new FSModel(this, *metadata, combineRawJpg);
+    fsModel = new FSModel(this, *metadata, dm, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath("");  //
     //fsModel->setRootPath(fsModel->myComputer().toString());
@@ -564,6 +596,48 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
     return false;
 }
 
+void FSTree::clearFolderOverLimit()
+{
+    for (QString folderPath : fsModel->maxRecursedRoots) {
+        const QModelIndex src = fsModel->index(folderPath);
+        if (!src.isValid()) continue;
+        fsModel->setData(src, false, OverLimitRole);
+    }
+    fsModel->maxRecursedRoots.clear();
+}
+
+void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
+{
+    const QModelIndex src = fsModel->index(folderPath);
+    if (!src.isValid()) return;
+
+    fsModel->setData(src, on, OverLimitRole);  // highlight flag
+    // const QModelIndex idx = fsFilter->mapFromSource(src);
+    // if (idx.isValid()) viewport()->update(visualRect(idx));
+
+    qDebug() << "FSTree::markFolderOverLimit overLimitColor ="
+             << overLimitColor
+             // << idx
+             // << visualRect(idx)
+             << folderPath;
+
+}
+
+int FSTree::countSubdirsFast(const QString& root, int hardCap) const
+{
+    // Count only directories; no symlinks, no dot dirs
+    int count = 0;
+    QDirIterator it(root,
+                    QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks,
+                    QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        it.next();
+        ++count;
+        if (count > hardCap) break; // EARLY EXIT
+    }
+    return count;
+}
+
 void FSTree::selectRecursively(QString folderPath, bool toggle)
 {
 /*
@@ -573,6 +647,20 @@ void FSTree::selectRecursively(QString folderPath, bool toggle)
 */
     // turn off image count for performance
     setShowImageCount(false);
+    qDebug() << "selectRecursively OverLimitRole =" << OverLimitRole;
+
+
+// check if recursed folder count exceeds maxExpandLimit
+    int recurseFoldersCount = countSubdirsFast(folderPath, maxExpandLimit);
+    qDebug() << "FSTree::selectRecursively recurseFoldersCount =" << recurseFoldersCount;
+    if (recurseFoldersCount >= maxExpandLimit) {
+        fsModel->isMaxRecurse = true;
+        fsModel->maxRecursedRoots.append(folderPath);
+        markFolderOverLimit(folderPath, true);
+        QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(folderPath));
+        selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        return;
+    }
 
     QStringList recursedFolders;
     recursedFolders.append(folderPath);
@@ -748,7 +836,7 @@ void FSTree::resizeColumns()
         QFont font = this->font();
         font.setPointSize(G::strFontSize.toInt());
         QFontMetrics fm(font);
-        imageCountColumnWidth = fm.boundingRect("99999").width();
+        imageCountColumnWidth = fm.boundingRect("(99999").width();
         showColumn(4);
         setColumnWidth(4, imageCountColumnWidth);
     }
@@ -760,46 +848,19 @@ void FSTree::resizeColumns()
     setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth - 10);
 }
 
-// void FSTree::expandAndWait(const QPersistentModelIndex &index)
-// {
-//     if (isDebug || G::isLogger)
-//         G::log("FSTree::expandAndWait", index.data().toString());
+void FSTree::onItemExpanded(const QModelIndex &index)
+{
+    if (index.data(OverLimitRole).toBool()) {
+        qDebug() << "Blocking manual expansion of OverLimit item:"
+                 << index.data(Qt::DisplayRole).toString();
 
-//     justExpandedIndex = index;  // Set the index to wait for
+        // Collapse immediately
+        QTreeView::setExpanded(index, false);
 
-//     // Connect the expanded signal to the hasExpanded slot
-//     connect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
-
-//     // Start the elapsed timer
-//     QElapsedTimer elapsedTimer;
-//     elapsedTimer.start();
-
-//     QEventLoop loop;
-
-//     // Set up a timeout timer for 1500 ms to avoid indefinite waiting
-//     QTimer timeoutTimer;
-//     timeoutTimer.setSingleShot(true);
-//     timeoutTimer.start(5000);
-
-//     // Connect the timeout and custom signal to quit the loop
-//     connect(&timeoutTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
-//     connect(this, &FSTree::indexExpanded, &loop, &QEventLoop::quit);
-
-//     // Delay the `setExpanded` call to ensure `loop.exec()` starts first
-//     QTimer::singleShot(0, this, [this, index]() {
-//         setExpanded(index, true);
-//     });
-
-//     // Start the event loop and wait until either expansion or timeout occurs
-//     loop.exec();
-
-//     // Log the elapsed time
-//     if (isDebug || G::isLogger)
-//         G::log("FSTree::expandAndWait", index.data().toString() + " expanded");
-
-//     // Clean up connections
-//     disconnect(this, &QTreeView::expanded, this, &FSTree::hasExpanded);
-// }
+        // Optional: provide feedback
+        G::popup->showPopup("This folder contains too many subfolders to expand automatically.");
+    }
+}
 
 void FSTree::hasExpanded(const QPersistentModelIndex &index)
 {
@@ -941,7 +1002,6 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     - shift modifier selects all unselected visible folders between the current index
       and the shift clicked index
 */
-
     // if (G::isLogger) G::log("FSTree::mousePressEvent");
     // qDebug() << "FSTree::mousePressEvent" << event;
 
@@ -987,15 +1047,22 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     int indentationOffset = level * indentation();
     int decorationWidth = style()->pixelMetric(QStyle::PM_IndicatorWidth);
     QRect decorationRect = QRect(indentationOffset, rect.top(), decorationWidth, rect.height());
-    /*
+    // /*
     qDebug() << "FSTree::mousePressEvent"
              << "level =" << level
              << "rect =" << rect
              << "decorationRect =" << decorationRect
              << "pos =" << event->pos()
              << "decorationRect.contains(event->pos()) ="
-             << decorationRect.contains(event->pos()); //*/
+             << decorationRect.contains(event->pos())
+             << "index.data(OverLimitRole).toBool() ="
+             << index.data(OverLimitRole).toBool()
+        ;
+    //*/
     if (decorationRect.contains(event->pos())) {
+        // if (index.data(OverLimitRole).toBool()) {
+        //     return;
+        // }
         QTreeView::mousePressEvent(event);
         return;
     }
@@ -1030,6 +1097,11 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
     if (isMeta) return;
 
+    // if starting a new selection clear maxRecursedRoots
+    if (!(isCtrl || isShift)) {
+        fsModel->maxRecursedRoots.clear();
+    }
+
     // New selection (primary folder)
     if (isNoModifier) {
         // qDebug() << "FSTree::mousePressEvent NEW SELECTION" << path;
@@ -1037,6 +1109,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         QTreeView::mousePressEvent(event);
         resetDataModel = true;
         recurse = false;
+        fsModel->isMaxRecurse = false;
         emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
         prevIdx = index;
         return;
@@ -1059,9 +1132,10 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifiers: Opt, New instance and Recurse");
         resetDataModel = true;
         recurse = true;
+        fsModel->isMaxRecurse = false;
         emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
-        // selectionModel()->clearSelection();
-        // selectRecursively(dPath);
+        selectionModel()->clearSelection();
+        selectRecursively(dPath);
         return;
     }
 

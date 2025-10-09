@@ -23,5 +23,12 @@ private:
     QModelIndex hoveredIndex;
     int b = G::backgroundShade + 20;
     QColor hoverBackground;
+
+    // --- New additions ---
+    QColor overLimitTextColor = QColor(255,165,0);   // orange
+    QColor overLimitBackground = QColor(255,245,220); // light background tint (optional)
+
+    // Shared custom role for "too many subfolders" highlight
+    enum { OverLimitRole = Qt::UserRole + 2 };
 };
 #endif // HOVERDELEGATE_H
