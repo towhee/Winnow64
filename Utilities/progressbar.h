@@ -20,7 +20,6 @@ public:
     void updateCursor(int item, int items);
     void saveProgressState();
     void recoverProgressState();
-    void setMetaProgressStyle(bool onTopOfCache);
 
     QColor cursorColor;
     QColor bgColor;
@@ -41,6 +40,7 @@ public slots:
 
 private:
     QPixmap state;
+    bool paintingActive = false;
 
     int counter = 0;
     int htOffset;           // the offset from the top of pnt to the progress bar

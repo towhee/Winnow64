@@ -229,7 +229,6 @@ void MW::createDataModel()
     icd = new ImageCacheData(this);
     metadata = new Metadata;
     cacheProgressBar = new ProgressBar(this);
-    cacheProgressBar->setMetaProgressStyle(true);
 
     // loadSettings not run yet
     if (isSettings && settings->contains("combineRawJpg"))

@@ -65,7 +65,7 @@ public:
     int decoderCount = 1;
 
     enum StatusAction {Clear, All, Size, InfoOnly};
-    QStringList statusAction {"Clear", "All", "Size"};
+    QStringList statusAction {"Clear", "All", "Size", "InfoOnly"};
 
     enum AutoStrategy {Frugal, Moderate, Greedy, Ignore};
     QStringList autoStrategyStr {"Frugal", "Moderate", "Greedy", "Ignore"};

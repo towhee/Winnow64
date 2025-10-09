@@ -456,12 +456,14 @@ QString WidgetCSS::treeView()
     "}"
 
     "QTreeView::item:selected {"
-        "color: " + textColor.name() + ";"
+        // interferes with FSTree overLimitColor formatting
+        // "color: " + textColor.name() + ";"
         "background-color: " + selectionColor.name() + ";"
     "}"
 
     "QTreeView::item:selected:!active {"
-        "color: " + textColor.name() + ";"
+        // interferes with FSTree overLimitColor formatting
+        // "color: " + textColor.name() + ";"
         "background: " + selectionColor.name() + ";"
     "}"
     ;

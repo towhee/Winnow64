@@ -2132,6 +2132,7 @@ void MW::stop(QString src)
 
     qApp->processEvents();
     G::stop = false;
+    G::isModifyingDatamodel = false;
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::stop", "done");
 }
@@ -2166,8 +2167,11 @@ bool MW::reset(QString src)
     }
     isDragDrop = false;
 
+    fsTree->clearFolderOverLimit();
     cacheProgressBar->clearImageCacheProgress();
+    cacheProgressBar->resetMetadataProgress(G::backgroundColor);
     progressLabel->setVisible(false);
+    // updateImageCacheStatus();
     filterStatusLabel->setVisible(false);
     updateClassification();
     thumbView->setUpdatesEnabled(false);
@@ -2380,7 +2384,7 @@ void MW::folderChanged()
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
-    G::isModifyingDatamodel = false;
+    // G::isModifyingDatamodel = false;
     int startRow = 0;
 
     // datamodel is empty
@@ -2438,12 +2442,12 @@ void MW::folderChanged()
         return;
     }
 
-    // reset metadata progress
-    if (isShowCacheProgressBar) {
-        cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
-        // isShowCacheProgressBar = true;
-        progressLabel->setVisible(true);
-    }
+    // // reset metadata progress
+    // if (isShowCacheProgressBar) {
+    //     cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
+    //     // isShowCacheProgressBar = true;
+    //     progressLabel->setVisible(true);
+    // }
 
     // no sorting or filtering until all metadata loaded
     reverseSortBtn->setEnabled(false);
@@ -2593,6 +2597,7 @@ void MW::folderChangeCompleted()
     }
 
     // hide metadata read progress after small delay
+    qDebug() << "MW::folderChangeCompleted resetMetadataProgress";
     QTimer::singleShot(1000, this, [this]() {
         cacheProgressBar->resetMetadataProgress(G::backgroundColor);
     });
@@ -2640,6 +2645,8 @@ void MW::folderChangeCompleted()
     tableView->resizeColumns();
     // hide columns per preferences (redo because datamodel has been cleared)
     tableView->showOrHide();
+
+    G::isModifyingDatamodel = false;
 
     // test if any null thumbnails
     // bool isNullIcon = false;
@@ -2839,6 +2846,7 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
         G::log("MW::updateImageCacheStatus", s);
     }
     if (G::isSlideShow && isSlideShowRandom) return;
+    if (G::stop) return;
 
     /*
     QString msg = "   currMB: " + QString::number(cache.currMB) +

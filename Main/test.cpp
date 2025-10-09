@@ -392,7 +392,22 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    // cacheProgressBar->clearImageCacheProgress();
+    // return;
 
+    qDebug() << dm->folderList.count();
+    return;
+
+    cacheProgressBar->resetMetadataProgress(G::backgroundColor);
+    return;
+
+    QString folder = "/Users/roryhill/Pictures";
+    fsTree->markFolderOverLimit(folder, true);
+    return;
+
+    int count = dm->recurseImageCount(folder);
+    qDebug() << count;
+    qDebug() << dm->folderImageCount;
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

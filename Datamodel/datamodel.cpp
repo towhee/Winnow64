@@ -346,6 +346,8 @@ void DataModel::clearDataModel()
     fPathRowClear();
     // clear the folder list
     folderList.clear();
+    // clear the folder image count hash
+    folderImageCount.clear();
     // reset firstFolderPathWithImages
     firstFolderPathWithImages = "";
     // reset iconChunkSize
@@ -716,6 +718,7 @@ void DataModel::addFolder(const QString &folderPath)
         row++;
     }
 
+    int folderRowCount = row - newRowCount;
     newRowCount = row;
 
     if (oldRowCount == 0 && newRowCount > 0) {
@@ -727,6 +730,9 @@ void DataModel::addFolder(const QString &folderPath)
     if (newRowCount > hugeIconThreshold) {
         iconChunkSize = 100;
     }
+
+    // update folder image count
+    folderImageCount[folderPath] = folderRowCount;
 
     if (folderQueue.isEmpty()) {
         endLoad(true);
@@ -872,6 +878,7 @@ void DataModel::removeFolder(const QString &folderPath)
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
 
     folderList.removeAll(folderPath);
+    folderImageCount.remove(folderPath);
     QModelIndex par = QModelIndex();
 
     // Collect all rows that need to be removed
@@ -3134,6 +3141,22 @@ void DataModel::clearPicks()
     for (int row = 0; row < sf->rowCount(); row++) {
         setData(index(row, G::PickColumn), "false");
     }
+}
+
+int DataModel::recurseImageCount(QString &parentFolder)
+{
+    if (G::isLogger) G::log("DataModel::recurseImageCount");
+
+    qint64 count = 0;
+    for (auto it = folderImageCount.constBegin(),
+         end = folderImageCount.constEnd();
+         it != end; ++it)
+    {
+        if (it.key().startsWith(parentFolder)) {
+            count += it.value();
+        }
+    }
+    return count;
 }
 
 void DataModel::setThumbnailLegend()

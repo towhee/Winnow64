@@ -105,6 +105,7 @@ public:
     bool isSelected(int row);
     void saveSelection();
     void restoreSelection();
+    int recurseImageCount(QString &parentFolder);
 
     void removeFolder(const QString &folderPath);
 
@@ -115,7 +116,9 @@ public:
 
     SortFilter *sf;
     QItemSelectionModel *selectionModel;
-    QStringList folderList;             // all folders in the datamodel
+    // all folders in the datamodel
+    QStringList folderList;
+    QHash<QString, int> folderImageCount;
     QDir::SortFlags thumbsSortFlags;
 
     // fPathRow hash and methods for concurrent access
