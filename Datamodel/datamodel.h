@@ -99,7 +99,6 @@ public:
     int nextPick();
     int prevPick();
     int nearestPick();
-    //QModelIndex nearestFiltered(QModelIndex dmIdx);
     bool getSelection(QStringList &list);
     QStringList getSelectionOrPicks();
     bool isSelected(int row);
@@ -181,8 +180,6 @@ public:
 signals:
     void stop(QString src);
     void folderChange();
-    // void addedFolderToDM(QString folderName, QString op);
-    // void removedFolderFromDM(QString folderName, QString op);
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
     void updateProgress(int progress);
@@ -191,9 +188,7 @@ signals:
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
 
 public slots:
-//    void unfilteredItemSearchCount();
     void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false);
-    // void enqueueFolderSelection(const QString &folderPath, QString op, bool recurse = false);
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m, QString src);
@@ -214,12 +209,9 @@ public slots:
     void setCached(int sfRow, bool isCached, int instance);
     void issue(const QSharedPointer<Issue>& issue);
     QStringList rptIssues(int sfRow);
-    // void errDM(Issue issue);
-    // void errGeneral(Issue issue);
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
-    // void processNextFolder();
     void imageCacheWaiting(int sfRow);
     bool isAllMetadataAttempted();
     bool isAllIconChunkLoaded(int first, int last);
@@ -242,7 +234,6 @@ private:
     // Pair of folderPath and operation type (true=add, false=remove)
     void enqueueOp(const QString& folderPath, G::FolderOp op);
     void scheduleProcessing();
-    // void processNextBatch(); // async pump
     QQueue<QPair<QString, G::FolderOp>> folderQueue;
     QSet<QString> pendingPaths;
     QMutex queueMutex;
@@ -278,7 +269,6 @@ private:
     double aspectRatio(int w, int h, int orientation);
     void processErr(Error e);
     void updateLoadStatus(int row);
-    // bool tooManyImagesWarning();
 
     int countInterval = 0;
 
