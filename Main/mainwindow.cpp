@@ -2169,7 +2169,7 @@ bool MW::reset(QString src)
 
     fsTree->clearFolderOverLimit();
     cacheProgressBar->clearImageCacheProgress();
-    cacheProgressBar->resetMetadataProgress(G::backgroundColor);
+    cacheProgressBar->clearMetadataProgress(G::backgroundColor);
     progressLabel->setVisible(false);
     // updateImageCacheStatus();
     filterStatusLabel->setVisible(false);
@@ -2599,7 +2599,7 @@ void MW::folderChangeCompleted()
     // hide metadata read progress after small delay
     qDebug() << "MW::folderChangeCompleted resetMetadataProgress";
     QTimer::singleShot(1000, this, [this]() {
-        cacheProgressBar->resetMetadataProgress(G::backgroundColor);
+        cacheProgressBar->clearMetadataProgress(G::backgroundColor);
     });
 
     // build filters if filter dock is visible
