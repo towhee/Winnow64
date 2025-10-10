@@ -16,10 +16,8 @@ public:
     void clearImageCacheProgress();
     void setBackgroundColor(const QColor &bg);
     void updateImageCacheProgress(int fromItem, int toItem, int items, QLinearGradient gradient);
-    void updateDoneItem(bool isDone, int item, int items, QColor doneColor);
+    // void updateDoneItem(bool isDone, int item, int items, QColor doneColor);
     void updateCursor(int item, int items);
-    void saveProgressState();
-    void recoverProgressState();
 
     QColor cursorColor;
     QColor bgColor;
@@ -35,7 +33,7 @@ public:
     QLinearGradient targetColorGradient;
 
 public slots:
-    void resetMetadataProgress(QColor bgColor);
+    void clearMetadataProgress(QColor bgColor);
     void updateMetadataCacheProgress(int item, int items);
 
 private:
@@ -43,10 +41,10 @@ private:
     bool paintingActive = false;
 
     int counter = 0;
-    int htOffset;           // the offset from the top of pnt to the progress bar
-    int ht;                 // the height of the progress bar
-    int metaHtOffset;       // the offset from the top of pnt to the progress bar for meta progress
-    int metaHt;             // the height of the progress bar for meta progress
+    int icHtOffset;           // the offset from the top of pnt to the progress bar
+    int icHt;                 // the height of the progress bar
+    int mrHtOffset;       // the offset from the top of pnt to the progress bar for meta progress
+    int mrHt;             // the height of the progress bar for meta progress
     int minCursorWidth = 2; // the minimum width in pixels of the current file position on the bar
 };
 

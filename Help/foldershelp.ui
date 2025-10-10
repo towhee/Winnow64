@@ -34,7 +34,7 @@
       </font>
      </property>
      <property name="frameShape">
-      <enum>QFrame::Shape::NoFrame</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <property name="html">
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -62,7 +62,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Calibri','sans-serif'; font-size:18pt; color:#ffff00;&quot;&gt;Alt/Opt modifier&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;The folder and all subfolders are recursively selected.  Combine with Ctrl/Cmd to toggle selection.  If only the Alt/Opt modifer is used, then any prior selection is cleared.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;The folder and all subfolders are recursively selected.  Combine with Ctrl/Cmd to toggle selection.  If only the Alt/Opt modifer is used, then any prior selection is cleared.  If there are too many subfolders then the root folder will not expand, but all the subfolders will be loaded and the root folder text will change to orange.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </item>

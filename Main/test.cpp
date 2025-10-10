@@ -398,7 +398,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     qDebug() << dm->folderList.count();
     return;
 
-    cacheProgressBar->resetMetadataProgress(G::backgroundColor);
+    cacheProgressBar->clearMetadataProgress(G::backgroundColor);
     return;
 
     QString folder = "/Users/roryhill/Pictures";
