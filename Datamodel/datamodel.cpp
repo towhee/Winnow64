@@ -3274,17 +3274,26 @@ QString DataModel::diagnostics()
     //     rpt << "\n";
     //     getDiagnosticsForRow(row, rpt);
     // }
-    rpt << "\n\n" ;
+    rpt << "\n\n";
+
+    // list folderList
+    rpt << "folderList:\n";
+    int i = 0;
+    for (QString folder : folderList) {
+        QString iStr = QVariant(++i).toString().rightJustified(5);
+        rpt << iStr << "  " << folder << "\n";
+    }
+    rpt << "\n";
 
     // list fPathRow hash
     QMap<int,QString> rowMap;
     rpt << "fPathRow hash:\n";
     for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i)
         rowMap.insert(i.value(), i.key());
-    for (int i = 0; i < rowMap.count(); i++)
-        rpt << i << "\t" << rowMap[i]<< "\n";
-
-        //rpt << i.value() << "\t" << i.key()  << "\n";
+    for (int i = 0; i < rowMap.count(); i++) {
+        QString iStr = QVariant(i).toString().rightJustified(5);
+        rpt << iStr << "  " << rowMap[i]<< "\n";
+    }
 
     return reportString;
 }

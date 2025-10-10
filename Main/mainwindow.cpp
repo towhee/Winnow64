@@ -2140,8 +2140,8 @@ void MW::stop(QString src)
 bool MW::reset(QString src)
 {
 /*
-    New instance and resets everything. Should only be called if
-    resetDataModel == true.
+    New instance and resets everything.
+    Only called from MW::stop.
 */
 
     if (G::isLogger || G::isFlowLogger)
@@ -2387,10 +2387,11 @@ void MW::folderChanged()
     // G::isModifyingDatamodel = false;
     int startRow = 0;
 
-    // datamodel is empty
+    // datamodel has rows
     if (dm->rowCount()) {
         infoView->enable(true);  // not setEnabled() because infoView uses a delegate
     }
+    // datamodel is empty
     else {
         updateStatus(false, "No supported images", "MW::folderChanged");
         setCentralMessage("No eligible images.");
@@ -2400,9 +2401,8 @@ void MW::folderChanged()
     // if there was a folder and file change
     if (folderAndFileChangePath != "") {
         dm->setCurrent(folderAndFileChangePath, instance);
-        // startRow = dm->currentDmRow;
         startRow = dm->rowFromPath(folderAndFileChangePath);
-        // folderAndFileChangePath = "";
+        folderAndFileChangePath = "";
     }
     // reset datamodel current index if it has been removed
     else if (!dm->currentDmIdx.isValid()) {
@@ -2442,23 +2442,14 @@ void MW::folderChanged()
         return;
     }
 
-    // // reset metadata progress
-    // if (isShowCacheProgressBar) {
-    //     cacheProgressBar->resetMetadataProgress(widgetCSS.progressBarBackgroundColor);
-    //     // isShowCacheProgressBar = true;
-    //     progressLabel->setVisible(true);
-    // }
-
     // no sorting or filtering until all metadata loaded
     reverseSortBtn->setEnabled(false);
     filters->setEnabled(false);
-    // filters->loadingDataModel(false);   // isLoaded = false
+    // filters->loadingDataModel(false);   // isLoaded = false  rgh why not req'd?
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
 
-    // // initialize metaRead only when new instance and first folder loaded
-    // QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
-    // QMetaObject::invokeMethod(metaRead, "initialize", Qt::BlockingQueuedConnection);
+    // initialize metaRead only when new instance and first folder loaded
     metaRead->initialize(fun);
 
     // initialize imageCache
@@ -2470,7 +2461,6 @@ void MW::folderChanged()
     // rev up metaRead
     if (G::useReadMeta) {
         updateMetadataThreadRunStatus(true, true, "MW::updateChange");
-        // qDebug() << "MW::folderChanged invoking metaRead  startRow =" << startRow;
         dm->setIconRange(startRow);
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, startRow),
@@ -2523,7 +2513,6 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
             ;
     } //*/
 
-
     if (!metaLoaded) {
         if (G::useReadMeta) {
             updateMetadataThreadRunStatus(true, true, "MW::updateChange");
@@ -2567,8 +2556,6 @@ void MW::folderChangeCompleted()
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
 
-    // G::isModifyingDatamodel = false;
-
     // missing thumbnails
     /*
     qDebug() << "MW::folderChangeCompleted"
@@ -2596,11 +2583,8 @@ void MW::folderChangeCompleted()
         chkMissingEmbeddedThumbnails("FromLoading");
     }
 
-    // hide metadata read progress after small delay
-    qDebug() << "MW::folderChangeCompleted resetMetadataProgress";
-    QTimer::singleShot(1000, this, [this]() {
-        cacheProgressBar->clearMetadataProgress(G::backgroundColor);
-    });
+    // hide metadata read progress
+    cacheProgressBar->clearMetadataProgress(G::backgroundColor);
 
     // build filters if filter dock is visible
     /*
@@ -2614,7 +2598,6 @@ void MW::folderChangeCompleted()
         && !filterDock->visibleRegion().isNull()
        )
     {
-        // buildFilters->reset(false);
         buildFilters->build();
         buildFilters->recount();
         filters->setEnabled(true);
@@ -2632,11 +2615,9 @@ void MW::folderChangeCompleted()
     sortMenu->setEnabled(true);
     // must retain default order in datamodel as ImageCache is already working
     updateSortColumn(G::NameColumn);
-    // if (sortColumn != G::NameColumn) sortChange("MW::folderChangeCompleted");
-    enableStatusBarBtns();
 
+    enableStatusBarBtns();
     updateStatus(true, "", fun);
-    // updateMetadataThreadRunStatus(false, true, "MW::folderChangeCompleted");
 
     // update image cache in case not already done during metaRead
     emit setImageCachePosition(dm->currentFilePath, fun);
@@ -2648,17 +2629,18 @@ void MW::folderChangeCompleted()
 
     G::isModifyingDatamodel = false;
 
-    // test if any null thumbnails
-    // bool isNullIcon = false;
-    // for (int i = 0; i < dm->rowCount(); ++i) {
-    //     QVariant icon = dm->index(i,0).data(Qt::DecorationRole);
-    //     if (icon.isNull()) {
-    //         // qWarning() << "Warning: row" << i << "icon is null"
-    //         //            << "G::iconChunkLoaded =" << G::iconChunkLoaded;
-    //         QString fPath = dm->index(i,0).data(G::PathRole).toString();
-    //         G::issue("Warning", "Icon is null", fun, i, fPath);
-    //     }
-    // }
+    /* test if any null thumbnails
+    bool isNullIcon = false;
+    for (int i = 0; i < dm->rowCount(); ++i) {
+        QVariant icon = dm->index(i,0).data(Qt::DecorationRole);
+        if (icon.isNull()) {
+            // qWarning() << "Warning: row" << i << "icon is null"
+            //            << "G::iconChunkLoaded =" << G::iconChunkLoaded;
+            QString fPath = dm->index(i,0).data(G::PathRole).toString();
+            G::issue("Warning", "Icon is null", fun, i, fPath);
+        }
+    }
+    //*/
 }
 
 void MW::thumbHasScrolled()
