@@ -480,11 +480,13 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            operation, then okay to exit full screen.  escapeFullScreen must be the last option
            tested.
         */
-
+        qDebug() << "event->key() == Qt::Key_Escape";
         G::popup->reset();
         dragLabel->hide();
         // end stress test
         if (G::isStressTest) G::isStressTest = false;
+        // stop selecting a new folder in FSTree
+        else if (fsTree->isSelectingFolders) G::stop = true;
         // stop loading a new folder
         else if (!G::allMetadataLoaded) stop("Escape key");
         // stop background ingest

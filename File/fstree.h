@@ -112,6 +112,7 @@ public:
 
     void clearFolderOverLimit();
     void markFolderOverLimit(const QString& folderPath, bool on);
+    bool isSelectingFolders = false;
 
     FSModel *fsModel;
     FSFilter *fsFilter;

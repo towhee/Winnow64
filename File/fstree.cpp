@@ -626,6 +626,7 @@ void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
 int FSTree::countSubdirsFast(const QString& root, int hardCap) const
 {
     // Count only directories; no symlinks, no dot dirs
+    qDebug() << "FSTree::countSubdirsFast start";
     int count = 0;
     QDirIterator it(root,
                     QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks,
@@ -634,7 +635,10 @@ int FSTree::countSubdirsFast(const QString& root, int hardCap) const
         it.next();
         ++count;
         if (count > hardCap) break; // EARLY EXIT
+        qApp->processEvents();
+        if (G::stop) break;
     }
+    qDebug() << "FSTree::countSubdirsFast done";
     return count;
 }
 
@@ -651,6 +655,7 @@ void FSTree::selectRecursively(QString folderPath, bool toggle)
 
 
 // check if recursed folder count exceeds maxExpandLimit
+    qDebug() << "FSTree::selectRecursively";
     int recurseFoldersCount = countSubdirsFast(folderPath, maxExpandLimit);
     qDebug() << "FSTree::selectRecursively recurseFoldersCount =" << recurseFoldersCount;
     if (recurseFoldersCount >= maxExpandLimit) {
@@ -668,6 +673,8 @@ void FSTree::selectRecursively(QString folderPath, bool toggle)
     // recurse and expand all subfolders
     QDirIterator it(folderPath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
+        qApp->processEvents();
+        if (G::stop) return;
         QString dPath = it.next();
         if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
             recursedFolders.append(dPath);
@@ -680,6 +687,8 @@ void FSTree::selectRecursively(QString folderPath, bool toggle)
 
     // select/deselect all recursed folders
     foreach (QString path, recursedFolders) {
+        qApp->processEvents();
+        if (G::stop) return;
         QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
         if (toggle)
             selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
@@ -1097,9 +1106,12 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
     if (isMeta) return;
 
+    isSelectingFolders = true;
+
     // if starting a new selection clear maxRecursedRoots
     if (!(isCtrl || isShift)) {
         fsModel->maxRecursedRoots.clear();
+        G::allMetadataLoaded = false;
     }
 
     // New selection (primary folder)
@@ -1112,6 +1124,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         fsModel->isMaxRecurse = false;
         emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
         prevIdx = index;
+        isSelectingFolders = false;
         return;
     }
 
@@ -1127,6 +1140,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             bool toggle = true;
             selectRecursively(dPath, toggle);
             prevIdx = index;
+            isSelectingFolders = false;
             return;
         }
         if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifiers: Opt, New instance and Recurse");
@@ -1136,6 +1150,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
         selectionModel()->clearSelection();
         selectRecursively(dPath);
+        isSelectingFolders = false;
         return;
     }
 
@@ -1162,6 +1177,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
         selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
         prevIdx = index;
+        isSelectingFolders = false;
         return;
     }
 
@@ -1189,7 +1205,10 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
         prevIdx = index;
+        isSelectingFolders = false;
+        return;
     }
+    isSelectingFolders = false;
 }
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
