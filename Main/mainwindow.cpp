@@ -486,7 +486,11 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // end stress test
         if (G::isStressTest) G::isStressTest = false;
         // stop selecting a new folder in FSTree
-        else if (fsTree->isSelectingFolders) G::stop = true;
+        else if (fsTree->isSelectingFolders) {
+            G::stop = true;
+            qDebug() << "";
+            return;
+        }
         // stop loading a new folder
         else if (!G::allMetadataLoaded) stop("Escape key");
         // stop background ingest

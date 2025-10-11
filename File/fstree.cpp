@@ -374,7 +374,24 @@ FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
     connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
             this->viewport()->update();});
 
+    // Connect watcher signals to your own slots/signals
+    connect(&watcher, &QFutureWatcher<int>::finished, this, [this]() {
+        int result = watcher.result();
+        bool cancelled = G::stop;
+        emit countFinished(result, cancelled);
+    });
+
+    // Connect your own signal to your slot
+    connect(this, &FSTree::countFinished, this, &FSTree::onCountFinished);
+
     isDebug = true;
+}
+
+FSTree::~FSTree()
+{
+    // Ensure thread stops cleanly on destruction
+    cancelCountSubdirs();
+    watcher.waitForFinished();
 }
 
 void FSTree::createModel()
@@ -623,82 +640,248 @@ void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
 
 }
 
-int FSTree::countSubdirsFast(const QString& root, int hardCap) const
+void FSTree::startCountSubdirs(const QString &root, int hardCap)
 {
-    // Count only directories; no symlinks, no dot dirs
-    qDebug() << "FSTree::countSubdirsFast start";
-    int count = 0;
-    QDirIterator it(root,
-                    QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks,
-                    QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        it.next();
-        ++count;
-        if (count > hardCap) break; // EARLY EXIT
-        qApp->processEvents();
-        if (G::stop) break;
+    if (watcher.isRunning()) {
+        qDebug() << "FSTree::startCountSubdirs already running, ignoring";
+        return;
     }
-    qDebug() << "FSTree::countSubdirsFast done";
+
+    G::stop = false;                 // reset cancellation flag
+    isSelectingFolders = true;       // your existing state flag
+
+    // Launch in background
+    QFuture<int> future = QtConcurrent::run([this, root, hardCap]() {
+        return countSubdirsFast(root, hardCap);
+    });
+
+    watcher.setFuture(future);
+}
+
+void FSTree::cancelCountSubdirs()
+{
+    if (watcher.isRunning()) {
+        G::stop = true;
+        watcher.waitForFinished();   // optional: block until done
+    }
+}
+
+int FSTree::countSubdirsFast(const QString &root, int hardCap)
+{
+    qDebug() << "FSTree::countSubdirsFast start (thread)" << QThread::currentThread();
+
+    int count = 0;
+    QStack<QString> stack;
+    stack.push(root);
+
+    while (!stack.isEmpty()) {
+        if (G::stop || count > hardCap)
+            break;
+
+        const QString path = stack.pop();
+        QDir dir(path);
+        const QFileInfoList subdirs = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+
+        for (const QFileInfo &fi : subdirs) {
+            if (G::stop || ++count > hardCap)
+                break;
+
+            stack.push(fi.absoluteFilePath());
+
+            // Occasionally report progress to GUI
+            if (count % 500 == 0)
+                QMetaObject::invokeMethod(
+                    this, "countProgress",
+                    Qt::QueuedConnection,
+                    Q_ARG(int, count));
+        }
+    }
+
+    qDebug() << "FSTree::countSubdirsFast done, count =" << count;
     return count;
 }
 
 void FSTree::selectRecursively(QString folderPath, bool toggle)
 {
-/*
-    This is done in two steps:
-    1. expand all subfolders using QDirIterator and setCurrentIndex
-    2. iterate and select or toggle each folder
-*/
-    // turn off image count for performance
-    setShowImageCount(false);
-    qDebug() << "selectRecursively OverLimitRole =" << OverLimitRole;
+    qDebug() << "FSTree::selectRecursively start";
 
-
-// check if recursed folder count exceeds maxExpandLimit
-    qDebug() << "FSTree::selectRecursively";
-    int recurseFoldersCount = countSubdirsFast(folderPath, maxExpandLimit);
-    qDebug() << "FSTree::selectRecursively recurseFoldersCount =" << recurseFoldersCount;
-    if (recurseFoldersCount >= maxExpandLimit) {
-        fsModel->isMaxRecurse = true;
-        fsModel->maxRecursedRoots.append(folderPath);
-        markFolderOverLimit(folderPath, true);
-        QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(folderPath));
-        selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    if (watcher.isRunning()) {
+        qDebug() << "FSTree::selectRecursively already running, ignoring";
         return;
     }
 
-    QStringList recursedFolders;
-    recursedFolders.append(folderPath);
+    // Remember parameters so we can resume later
+    pendingFolderPath = folderPath;
+    pendingToggle = toggle;
 
-    // recurse and expand all subfolders
-    QDirIterator it(folderPath, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        qApp->processEvents();
-        if (G::stop) return;
-        QString dPath = it.next();
-        if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
-            recursedFolders.append(dPath);
-            // use setCurrentIndex to force tree to expand
-            QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
-            // setCurrentIndex rapidly expands the treeview without selection
-            selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
-        }
+    // disable heavy UI bits
+    setShowImageCount(false);
+    isSelectingFolders = true;
+    G::stop = false;
+
+    qDebug() << "FSTree::selectRecursively starting async subdir count";
+    startCountSubdirs(folderPath, maxExpandLimit);
+}
+
+// called automatically when countSubdirsFast finishes
+void FSTree::onCountFinished(int recurseFoldersCount, bool wasCancelled)
+{
+    isSelectingFolders = false;
+    qDebug() << "FSTree::onCountFinished count =" << recurseFoldersCount
+             << "wasCancelled =" << wasCancelled
+        ;
+
+    if (wasCancelled) {
+        qDebug() << "FSTree::onCountFinished cancelled";
+        setShowImageCount(true);
+        return;
     }
 
-    // select/deselect all recursed folders
-    foreach (QString path, recursedFolders) {
-        qApp->processEvents();
-        if (G::stop) return;
+
+    if (recurseFoldersCount >= maxExpandLimit) {
+        qDebug() << "Over limit — marking folder";
+        fsModel->isMaxRecurse = true;
+        fsModel->maxRecursedRoots.append(pendingFolderPath);
+        markFolderOverLimit(pendingFolderPath, true);
+        QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(pendingFolderPath));
+        selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        setShowImageCount(true);
+        return;
+    }
+
+    // ✅ Proceed to expansion and selection only if below limit
+    qDebug() << "Expanding recursively...";
+    QStringList recursedFolders;
+    recursedFolders.append(pendingFolderPath);
+
+    QDirIterator it(pendingFolderPath, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks,
+                    QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        it.next();
+
+        const QFileInfo fi = it.fileInfo();
+        if (!fi.isDir()) continue;
+
+        QString dPath = fi.absoluteFilePath();
+        recursedFolders.append(dPath);
+        QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
+        selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+    }
+
+    for (const QString &path : recursedFolders) {
+
         QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
-        if (toggle)
+        if (pendingToggle)
             selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
         else
             selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
 
-    // turn image count back on
     setShowImageCount(true);
+    qDebug() << "FSTree::onCountFinished done";
 }
+
+// int FSTree::countSubdirsFast(const QString& root, int hardCap) const
+// {
+//     // Count only directories; no symlinks, no dot dirs
+//     qDebug() << "FSTree::countSubdirsFast start";
+
+//     QStack<QString> stack;
+//     stack.push(root);
+//     int count = 0;
+
+//     while (!stack.isEmpty()) {
+//         if (G::stop || count > hardCap)
+//             break;
+
+//         const QString path = stack.pop();
+//         QDir dir(path);
+//         const QFileInfoList subdirs = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+
+//         for (const QFileInfo &fi : subdirs) {
+//             if (G::stop || ++count > hardCap)
+//                 break;
+//             stack.push(fi.absoluteFilePath());
+//         }
+
+//         qApp->processEvents(QEventLoop::AllEvents, 50);
+//     }
+//     return count;
+
+//     /*
+//     int count = 0;
+//     QDirIterator it(root,
+//                     QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks,
+//                     QDirIterator::Subdirectories);
+//     while (it.hasNext()) {
+//         it.next();
+//         ++count;
+//         if (count > hardCap) break; // EARLY EXIT
+//         qApp->processEvents();
+//         if (G::stop) break;
+//     }
+//     qDebug() << "FSTree::countSubdirsFast done";
+//     return count;
+//     */
+// }
+
+// void FSTree::selectRecursively(QString folderPath, bool toggle)
+// {
+// /*
+//     This is done in two steps:
+//     1. expand all subfolders using QDirIterator and setCurrentIndex
+//     2. iterate and select or toggle each folder
+// */
+//     // turn off image count for performance
+//     setShowImageCount(false);
+//     qDebug() << "selectRecursively OverLimitRole =" << OverLimitRole;
+
+
+// // check if recursed folder count exceeds maxExpandLimit
+//     qDebug() << "FSTree::selectRecursively";
+//     int recurseFoldersCount = countSubdirsFast(folderPath, maxExpandLimit);
+//     qDebug() << "FSTree::selectRecursively recurseFoldersCount =" << recurseFoldersCount;
+//     if (recurseFoldersCount >= maxExpandLimit) {
+//         fsModel->isMaxRecurse = true;
+//         fsModel->maxRecursedRoots.append(folderPath);
+//         markFolderOverLimit(folderPath, true);
+//         QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(folderPath));
+//         selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+//         return;
+//     }
+
+//     QStringList recursedFolders;
+//     recursedFolders.append(folderPath);
+
+//     // recurse and expand all subfolders
+//     QDirIterator it(folderPath, QDirIterator::Subdirectories);
+//     while (it.hasNext()) {
+//         qApp->processEvents();
+//         if (G::stop) return;
+//         QString dPath = it.next();
+//         if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
+//             recursedFolders.append(dPath);
+//             // use setCurrentIndex to force tree to expand
+//             QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
+//             // setCurrentIndex rapidly expands the treeview without selection
+//             selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+//         }
+//     }
+
+//     // select/deselect all recursed folders
+//     foreach (QString path, recursedFolders) {
+//         qApp->processEvents();
+//         if (G::stop) return;
+//         QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
+//         if (toggle)
+//             selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
+//         else
+//             selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+//     }
+
+//     // turn image count back on
+//     setShowImageCount(true);
+// }
 
 QStringList FSTree::selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse)
 {

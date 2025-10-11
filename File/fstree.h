@@ -103,6 +103,7 @@ class FSTree : public QTreeView
 
 public:
     FSTree(QWidget *parent, DataModel *dm, Metadata *metadata);
+    ~FSTree() override;
     void createModel();
     void setShowImageCount(bool showImageCount);
     void updateAFolderCount(const QString &dPath);
@@ -122,6 +123,9 @@ public:
     QString selectSrc = "";
     QString currentFolderPath();
     QStringList selectedFolderPaths() const;
+
+    void startCountSubdirs(const QString &root, int hardCap);
+    void cancelCountSubdirs();
 
     bool combineRawJpg;
     QString hoverFolderName;
@@ -143,6 +147,7 @@ private slots:
     void wheelStopped();
     void hasExpanded(const QPersistentModelIndex &index);
     void onItemExpanded(const QModelIndex &index);
+    void onCountFinished(int count, bool wasCancelled);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -165,6 +170,8 @@ signals:
     void indexExpanded();
     void selectionChange();
     void folderSelectionChange(QString dPath, G::FolderOp op, bool resetDataModel, bool recurse = false);
+    void countProgress(int count);
+    void countFinished(int finalCount, bool wasCancelled);
     // void folderSelectionChange(QString dPath, QString op, bool resetDataModel, bool recurse = false);
     void datamodelQueue(QString dPath, bool isAdding);
     void addToDataModel(QString dPath);
@@ -190,6 +197,10 @@ private:
     QColor overLimitColor = QColor(68,95,118);   // orange
     // Shared custom role for "too many subfolders" highlight
     enum { OverLimitRole = Qt::UserRole + 2 };
+    QString pendingFolderPath;
+    bool pendingToggle = false;
+    int countSubdirsFast(const QString &root, int hardCap);
+    QFutureWatcher<int> watcher;
 
     struct ViewState {
         QPointF scrollPosition;

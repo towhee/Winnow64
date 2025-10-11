@@ -938,6 +938,21 @@ void MW::createFSTree()
     // update status in status bar
     connect(fsTree, &FSTree::status, this, &MW::updateStatus);
 
+
+
+    connect(fsTree, &FSTree::countProgress, this, [this](int count) {
+        statusBar()->showMessage(QString("Scanning... %1 folders").arg(count));
+    });
+
+    connect(fsTree, &FSTree::countFinished, this, [this](int finalCount, bool cancelled) {
+        // if (cancelled)
+        //     statusBar()->showMessage("Scan cancelled");
+        // else
+        //     statusBar()->showMessage(QString("Scan complete (%1 folders)").arg(finalCount));
+
+        fsTree->isSelectingFolders = false;
+    });
+
     // watch for drive removal (not working)
 //    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
     // this does not work to detect ejecting a drive
