@@ -1,5 +1,8 @@
 WHAT'S NEW
-
+- Auto cache size
+- TableView freeze first two columns
+- OS hanging when process large number of recursed folders
+- Ingest Dlg not showing manual paths correctly
 
 BUGS / TO DO
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
@@ -130,6 +133,8 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Updated _deploy.command
+- FSTree process large number of recursed folders
 - TableView showing all columns at start when some columns are being hidden in pref
 - On Windows Filters not refreshing if hidden and then reveal
 - Ingest Dlg not showing manual paths correctly
