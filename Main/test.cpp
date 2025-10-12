@@ -395,7 +395,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // cacheProgressBar->clearImageCacheProgress();
     // return;
 
-    qDebug() << dm->folderList.count();
+    updateImageCount();
     return;
 
     cacheProgressBar->clearMetadataProgress(G::backgroundColor);
