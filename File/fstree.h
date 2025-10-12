@@ -170,7 +170,7 @@ signals:
     void indexExpanded();
     void selectionChange();
     void folderSelectionChange(QString dPath, G::FolderOp op, bool resetDataModel, bool recurse = false);
-    void countProgress(int count);
+    void countProgress(bool keepBase, QString s, QString source);
     void countFinished(int finalCount, bool wasCancelled);
     // void folderSelectionChange(QString dPath, QString op, bool resetDataModel, bool recurse = false);
     void datamodelQueue(QString dPath, bool isAdding);
