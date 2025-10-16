@@ -1173,6 +1173,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     if (G::stop) {
         QString msg = "Aborted.";
         G::issue("Comment", msg, "Metadata::loadImageMetadata");
+        qDebug() << "Metadata::loadImageMetadata aborted (G::stop)" << fPath;
         return false;
     }
     // if (G::dmEmpty && !isRemote) return false;
@@ -1182,14 +1183,16 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
         QString msg = "Instance clash.";
         G::issue("Comment", msg, "Metadata::loadImageMetadata", -1, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata Instance clash", msg);
+        qDebug() << "Metadata::loadImageMetadata instance clash" << fPath;
         return false;
     }
 
-    // check if already loaded
+    // check if null file
     if (fPath == "") {
         QString msg = "Null file sent from " + source;
         G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata File not exist", fPath);
+        qDebug() << "Metadata::loadImageMetadata null file" << fPath;
         return false;
     }
 
@@ -1227,7 +1230,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
                 p.file.close();
             }
         }
-        //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
+        qDebug() << "Metadata::loadImageMetadata non-meta file type" << fPath;
         return true;
     }
 
@@ -1245,6 +1248,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
         G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
         //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
+        qDebug() << "Metadata::loadImageMetadata could not read metadata" << fPath;
         return false;
     }
 

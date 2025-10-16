@@ -190,6 +190,7 @@ DataModel::DataModel(QObject *parent,
     iconChunkSize = G::maxIconChunk;
     defaultIconChunkSize = G::maxIconChunk;
 
+    abort = false;
 
     // set true for debug output
     isDebug = false;
@@ -337,7 +338,7 @@ void DataModel::clearDataModel()
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::clearDataModel");
     // clear the model
     if (mLock) return;
-    if (isDebug)
+    // if (isDebug)
         qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
     clear();
     setModelProperties();
@@ -346,6 +347,8 @@ void DataModel::clearDataModel()
     fPathRowClear();
     // clear the folder list
     folderList.clear();
+    pendingPaths.clear();
+    folderQueue.clear();
     // clear the folder image count hash
     folderImageCount.clear();
     // reset firstFolderPathWithImages
@@ -509,6 +512,10 @@ void DataModel::enqueueOp(const QString& folderPath, G::FolderOp op)
     // Toggle logic is handled by caller; here we only queue valid transitions.
     const bool have = folderList.contains(folderPath);
 
+    if (op == G::FolderOp::Toggle) {
+        have ? op = G::FolderOp::Remove : op = G::FolderOp::Add;
+    }
+
     if (op == G::FolderOp::Add && !have) {
         if (!pendingPaths.contains(folderPath)) {
             pendingPaths.insert(folderPath);
@@ -549,7 +556,7 @@ void DataModel::enqueueFolderSelection(const QString& folderPath,
         enqueueOp(folderPath, op);
     }
 
-    QCoreApplication::processEvents();
+    // QCoreApplication::processEvents();
 
     scheduleProcessing();
 }
@@ -567,18 +574,26 @@ void DataModel::scheduleProcessing()
 
 void DataModel::processNextBatch()
 {
-    // qDebug() << "processNextBatch" << pendingPaths;
+    qDebug() << "processNextBatch";// << pendingPaths;
     // qDebug() << "processNextBatch invoked on thread =" << QThread::currentThread();     // Pump a reasonable number each tick to balance throughput/latency.
     constexpr int kMaxPerTick = 64;
 
     int processed = 0;
     while (processed < kMaxPerTick && !folderQueue.isEmpty() && !G::stop) {
+        if (abort) {
+            qDebug() << "processNextBatch1";
+            emit folderChange(abort);
+            return;
+        }
         auto [folderPath, op] = folderQueue.dequeue();
         pendingPaths.remove(folderPath); // it's leaving the queue now
 
         if (op == G::FolderOp::Add) {
             // NOTE: ensure addFolder() is fast/non-blocking or hands work to workers.
             // qDebug() << "processNextBatch" << folderPath;
+            QString step = "Loading folder " + folderPath + ".\n";
+            QString escapeClause = "\nPress \"Esc\" to stop.";
+            // emit centralMsg(step + escapeClause);
             addFolder(folderPath);
         } else {
             removeFolder(folderPath);
@@ -592,7 +607,8 @@ void DataModel::processNextBatch()
         folderQueue.clear();
         pendingPaths.clear();
         isProcessingFolders = false;
-        emit folderChange();  // state changed (cleared)
+        qDebug() << "processNextBatch2";
+        emit folderChange(abort);  // state changed (cleared)
         return;
     }
 
@@ -604,7 +620,8 @@ void DataModel::processNextBatch()
 
     // All done.
     isProcessingFolders = false;
-    emit folderChange();
+    qDebug() << "processNextBatch3";
+    emit folderChange(abort);
 }
 // */
 
@@ -613,10 +630,10 @@ void DataModel::addFolder(const QString &folderPath)
     QString fun = "DataModel::addFolder";
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, folderPath);
+    qDebug() << fun << folderPath;
 
     QMutexLocker locker(&mutex);
     abort = false;
-
     folderList.append(folderPath);
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
     locker.unlock(); // Unlock the queue while processing
@@ -635,8 +652,8 @@ void DataModel::addFolder(const QString &folderPath)
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
 
-    QString step = "Loading eligible image file information.<br>";
-    QString escapeClause = "Press \"Esc\" to stop.";
+    // QString step = "Loading eligible image file information.<br>";
+    // QString escapeClause = "Press \"Esc\" to stop.";
 
     // test if raw file to match jpg when same file names and one is a jpg
     QString prevRawSuffix = "";
@@ -652,8 +669,14 @@ void DataModel::addFolder(const QString &folderPath)
     int counter = 0;
     int countInterval = 100;
     for (const QFileInfo &fileInfo : folderFileInfoList) {
-        if (abort) return;
-        /*
+        // check for escape key release triggering abort
+        qApp->processEvents();
+        if (abort) {
+            qDebug() << "DataModel::addFolder aborting *************";
+            endLoad(false);
+            break;
+        }
+        // /*
         qDebug() << "DataModel::addFolder"
                  << "row =" << row
                  << "size =" << fileInfo.size()
@@ -673,8 +696,6 @@ void DataModel::addFolder(const QString &folderPath)
         setRowCount(row + 1);
         if (!columnCount()) setColumnCount(G::TotalColumns);
         addFileDataForRow(row, fileInfo);
-
-        if (row % countInterval == 0 && row > 0) updateLoadStatus(newRowCount);
 
         /*
         Save info for duplicated raw and jpg files, which generally are the result of
@@ -717,6 +738,8 @@ void DataModel::addFolder(const QString &folderPath)
         }
         row++;
     }
+
+    if (abort) return;
 
     int folderRowCount = row - newRowCount;
     newRowCount = row;
@@ -982,19 +1005,14 @@ void DataModel::find(QString text)
     }
 }
 
-void DataModel::abortLoad()  // not being used
-{
-    if (G::isLogger) G::log("DataModel::abortLoad", "instance = " + QString::number(instance));
-    if (isDebug) qDebug() << "DataModel::abortLoad" << "instance =" << instance;
-    if (loadingModel) abort = true;
-}
-
 bool DataModel::endLoad(bool success)
 {
     if (G::isLogger) G::log("DataModel::endLoad", "instance = " + QString::number(instance));
-    if (isDebug) qDebug() << "DataModel::endLoad" << "instance =" << instance
-                          << "success =" << success;
+    // if (isDebug)
+        qDebug() << "DataModel::endLoad" << "instance =" << instance
+                 << "success =" << success;
 
+    // abort = false;
     loadingModel = false;
     sf->suspend(false);
     if (success) {
@@ -1034,33 +1052,6 @@ bool DataModel::okManyImagesWarning()
     // qDebug() << "ret =" << ret;
     if (ret == QMessageBox::Yes) return true;
     return false;
-}
-
-void DataModel::updateLoadStatus(int row)
-{
-    QString step = "Searching for eligible images.\n";
-    QString escapeClause = "\nPress \"Esc\" to stop.";
-    // QString root;
-    // if (dir->isRoot()) root = "Drive ";
-    // else root = "Folder ";
-    // QString folder;
-    // folderList.count() > 1 ? folder = " folders " : folder = " folder ";
-    // QString imageCountStr = QString::number(row).leftJustified(6);
-    // QString folderCountStr = QString::number(folderList.count()).leftJustified(5);
-
-    QString s = step +
-                // imageCountStr + " found so far in " +
-                // folderCountStr + folder +
-                escapeClause;
-
-    emit centralMsg(s);        // rghmsg
-    // qApp->processEvents();               // crashing
-    /*
-    qDebug() << "DataModel::updateLoadStatus"
-             << "imageCount =" << rowCount()
-             << "abortLoadingModel =" << abortLoadingModel
-             << "thread =" << QThread::currentThreadId()
-        ;//*/
 }
 
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
@@ -3234,6 +3225,7 @@ QString DataModel::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
     rpt << "\n";
+    rpt << "\n" << G::sj("abort", dots) << G::s(abort);
     rpt << "\n" << G::sj("instance", dots) << G::s(instance);
     rpt << "\n" << G::sj("primaryFolderPath", dots) << G::s(primaryFolderPath());
     rpt << "\n" << G::sj("firstFolderPathWithImages", dots) << G::s(firstFolderPathWithImages);

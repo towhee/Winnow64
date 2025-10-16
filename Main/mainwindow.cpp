@@ -473,7 +473,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyReleaseEvent");
 
-    // qDebug() << "MW::keyReleaseEvent" << event;
+    qDebug() << "MW::keyReleaseEvent" << event;
 
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
@@ -486,13 +486,16 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // end stress test
         if (G::isStressTest) G::isStressTest = false;
         // stop selecting a new folder in FSTree
-        else if (fsTree->isSelectingFolders) {
-            G::stop = true;
-            qDebug() << "";
-            return;
-        }
+        // else if (fsTree->isSelectingFolders) {
+        //     G::stop = true;
+        //     qDebug() << "";
+        //     return;
+        // }
         // stop loading a new folder
-        else if (!G::allMetadataLoaded) stop("Escape key");
+        else if (!G::allMetadataLoaded) {
+            qDebug() << "event->key() == Qt::Key_Escape !G::allMetadataLoaded";
+            stop("Escape key");
+        }
         // stop background ingest
         // else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
@@ -1679,7 +1682,10 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
             G::log(fun, msg);
         }
     }
-    // qDebug() << fun << op << "resetDataModel =" << resetDataModel << folderPath;
+    qDebug() << fun << op
+             << "resetDataModel =" << resetDataModel
+             << "recurse =" << recurse
+             << folderPath;
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
@@ -1693,6 +1699,10 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
 
     // folder selection cleared and new folder selected
     if (resetDataModel) {
+        QString step = "Loading folders.\n";
+        QString escapeClause = "\nPress \"Esc\" to stop.";
+        setCentralMessage(step + escapeClause);
+        // qApp->processEvents();
         // stop existing processes
         stop(fun);
         // sync bookmarks if exists
@@ -1705,9 +1715,14 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
 
     /* put folder in datamodel queue to add or remove if main thread
        is not blocking */
-    QTimer::singleShot(0, this, [this, folderPath, op, recurse]{
-        dm->enqueueFolderSelection(folderPath, op, recurse);
-    });
+    dm->abort = false;
+    // QTimer::singleShot(0, this, [this, folderPath, op, recurse]{
+    //     dm->enqueueFolderSelection(folderPath, op, recurse);
+    // });
+
+    dm->enqueueFolderSelection(folderPath, op, recurse);
+    qDebug() << fun << "finished dm->enqueueFolderSelection";
+
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
@@ -2066,7 +2081,7 @@ void MW::stop(QString src)
     // ignore if already stopping
     if (G::stop) return;
 
-    // qDebug().noquote() << "MW::stop src =" << src;
+    qDebug().noquote() << "MW::stop src =" << src;
 
     // stop flags
     G::stop = true;
@@ -2129,11 +2144,10 @@ void MW::stop(QString src)
 
     G::log(""); // force show prev G::log in reset()
 
-    setCentralMessage("");
+    // setCentralMessage("");
 
     if (src == "Escape key") {
         setCentralMessage("Image loading has been aborted.");
-        // if (G::useProcessEvents) qApp->processEvents(); //rgh_ProcessEvents
     }
 
     qApp->processEvents();
@@ -2152,6 +2166,7 @@ bool MW::reset(QString src)
 
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::reset", "Source: " + src);
+    qDebug() << "MW::reset" << src;
 
     // datamodel
     dm->selectionModel->clear();
@@ -2174,6 +2189,8 @@ bool MW::reset(QString src)
     isDragDrop = false;
 
     fsTree->clearFolderOverLimit();
+    fsTree->setEnabled(true);
+    bookmarks->setEnabled(true);
     cacheProgressBar->clearImageCacheProgress();
     cacheProgressBar->clearMetadataProgress(G::backgroundColor);
     progressLabel->setVisible(false);
@@ -2375,7 +2392,7 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     return chunkSizeChanged;
 }
 
-void MW::folderChanged()
+void MW::folderChanged(bool aborted)
 {
 /*
     Signaled from DataModel::processNextFolder after all folders in the DataModel
@@ -2386,7 +2403,7 @@ void MW::folderChanged()
     msg += " dm->rowCount = " + QString::number(dm->rowCount());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    // qDebug() << fun << msg;
+    qDebug() << fun << msg << "G::stop =" << G::stop;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
@@ -2399,8 +2416,11 @@ void MW::folderChanged()
     }
     // datamodel is empty
     else {
-        updateStatus(false, "No supported images", "MW::folderChanged");
-        setCentralMessage("No eligible images.");
+        QString msg;
+        if (aborted) msg = "Loading folder(s) was aborted";
+        else msg = "No supported images";
+        updateStatus(false, msg, "MW::folderChanged");
+        setCentralMessage(msg);
         infoView->enable(false);  // not setEnabled() because infoView uses a delegate
     }
 

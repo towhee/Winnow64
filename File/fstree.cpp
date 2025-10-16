@@ -1,5 +1,6 @@
 #include "File/fstree.h"
 #include "Main/global.h"
+#include "Main/mainwindow.h"   // or whatever your MW header is actually called
 
 extern QStringList mountedDrives;
 QStringList mountedDrives;
@@ -330,7 +331,7 @@ CLASS FSTree subclassing QTreeView
 
    2. startCountSubdirs()
         → Launches countSubdirsFast() in a background thread using QtConcurrent::run()
-        → Assigns QFuture<int> to a class member QFutureWatcher<int> (watcher)
+        → Assigns QFuture<int> to a class member QFutureWatcher<int> (watcherCount)
 
    3. countSubdirsFast()
         → Recursively counts subfolders (non-blocking)
@@ -353,10 +354,11 @@ CLASS FSTree subclassing QTreeView
 
 */
 
-FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
+FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
         : QTreeView(parent), delegate(new HoverDelegate(this))
 {
     if (G::isLogger) G::log("FSTree::FSTree");
+    this->mw = mw;
     this->dm = dm;
     this->metadata = metadata;
     fileFilters = new QStringList;
@@ -418,8 +420,8 @@ FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
             this->viewport()->update();});
 
     // Connect watcher signals to your own slots/signals
-    connect(&watcher, &QFutureWatcher<int>::finished, this, [this]() {
-        int result = watcher.result();
+    connect(&watcherCount, &QFutureWatcher<int>::finished, this, [this]() {
+        int result = watcherCount.result();
         bool cancelled = G::stop;
         emit countFinished(result, cancelled);
     });
@@ -427,14 +429,17 @@ FSTree::FSTree(QWidget *parent, DataModel *dm, Metadata *metadata)
     // Connect your own signal to your slot
     connect(this, &FSTree::countFinished, this, &FSTree::onCountFinished);
 
+    connect(this, &FSTree::recurseCountProgress, this, [this](int count) {
+        // mw->setStatusMessage(QString("Scanning subfolders: %1").arg(count));
+    });
+
     isDebug = true;
 }
 
 FSTree::~FSTree()
 {
-    // Ensure thread stops cleanly on destruction
+    // Ensure CountSubdirs thread stops cleanly on destruction
     cancelCountSubdirs();
-    watcher.waitForFinished();
 }
 
 void FSTree::createModel()
@@ -647,6 +652,7 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
 
 void FSTree::clearFolderOverLimit()
 {
+    qDebug() << "FSTree::clearFolderOverLimit";
     for (QString folderPath : fsModel->maxRecursedRoots) {
         const QModelIndex src = fsModel->index(folderPath);
         if (!src.isValid()) continue;
@@ -657,6 +663,8 @@ void FSTree::clearFolderOverLimit()
 
 void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
 {
+    if (G::stop) return;
+
     const QModelIndex src = fsModel->index(folderPath);
     if (!src.isValid()) return;
 
@@ -674,7 +682,7 @@ void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
 
 void FSTree::startCountSubdirs(const QString &root, int hardCap)
 {
-    if (watcher.isRunning()) {
+    if (watcherCount.isRunning()) {
         qDebug() << "FSTree::startCountSubdirs already running, ignoring";
         return;
     }
@@ -683,24 +691,26 @@ void FSTree::startCountSubdirs(const QString &root, int hardCap)
     isSelectingFolders = true;       // your existing state flag
 
     // Launch in background
-    QFuture<int> future = QtConcurrent::run([this, root, hardCap]() {
+    QFuture<int> futureCount = QtConcurrent::run([this, root, hardCap]() {
         return countSubdirsFast(root, hardCap);
     });
 
-    watcher.setFuture(future);
+    watcherCount.setFuture(futureCount);
 }
 
 void FSTree::cancelCountSubdirs()
 {
-    if (watcher.isRunning()) {
-        G::stop = true;
-        watcher.waitForFinished();   // optional: block until done
+    if (watcherCount.isRunning()) {
+        watcherCount.waitForFinished();   // optional: block until done
     }
 }
 
 int FSTree::countSubdirsFast(const QString &root, int hardCap)
 {
-    qDebug() << "FSTree::countSubdirsFast start (thread)" << QThread::currentThread();
+    // qDebug() << "FSTree::countSubdirsFast start (thread)" << QThread::currentThread();
+
+    QElapsedTimer timer;
+    timer.start();
 
     int count = 0;
     QStack<QString> stack;
@@ -720,18 +730,35 @@ int FSTree::countSubdirsFast(const QString &root, int hardCap)
 
             stack.push(fi.absoluteFilePath());
         }
+
+        // Report progress every second
+        if (timer.elapsed() > 1000) {
+            emit recurseCountProgress(count);
+            qDebug() << "FSTree::countSubdirsFast update: count =" << count;
+            timer.restart();
+        }
     }
 
-    qDebug() << "FSTree::countSubdirsFast done, count =" << count;
+    // qDebug() << "FSTree::countSubdirsFast done, count =" << count;
     return count;
 }
 
 void FSTree::selectRecursively(QString folderPath, bool toggle)
 {
-    qDebug() << "FSTree::selectRecursively start";
+    if (G::isLogger)
+        G::log("FSTree::selectRecursively", folderPath);
 
-    if (watcher.isRunning()) {
-        qDebug() << "FSTree::selectRecursively already running, ignoring";
+    // qDebug() << "FSTree::selectRecursively start";
+    // QString step = "Loading folders.\n";
+    // QString escapeClause = "\nPress \"Esc\" to stop.";
+    // mw->setCentralMessage(step + escapeClause);
+    // qApp->processEvents();
+
+    if (watcherCount.isRunning()) {
+        qDebug() << "Deferring selectRecursively until previous count completes";
+        connect(&watcherCount, &QFutureWatcher<int>::finished, this,
+                [=]() mutable { selectRecursively(folderPath, toggle); },
+                Qt::SingleShotConnection);
         return;
     }
 
@@ -744,17 +771,25 @@ void FSTree::selectRecursively(QString folderPath, bool toggle)
     isSelectingFolders = true;
     G::stop = false;
 
-    qDebug() << "FSTree::selectRecursively starting async subdir count";
-    startCountSubdirs(folderPath, maxExpandLimit);
+    // qDebug() << "FSTree::selectRecursively starting async subdir count";
+    // startCountSubdirs(folderPath, maxExpandLimit);
+
+    int count = countSubdirsFast(folderPath, maxExpandLimit);
+    onCountFinished(count, false);
 }
 
 // called automatically when countSubdirsFast finishes
 void FSTree::onCountFinished(int recurseFoldersCount, bool wasCancelled)
 {
+    if (G::isLogger)
+        G::log("FSTree::onCountFinished", pendingFolderPath);
+
+    if (G::stop) return;
+
     isSelectingFolders = false;
-    qDebug() << "FSTree::onCountFinished count =" << recurseFoldersCount
-             << "wasCancelled =" << wasCancelled
-        ;
+    // qDebug() << "FSTree::onCountFinished count =" << recurseFoldersCount
+    //          << "wasCancelled =" << wasCancelled
+        // ;
 
     if (wasCancelled) {
         qDebug() << "FSTree::onCountFinished cancelled";
@@ -763,7 +798,12 @@ void FSTree::onCountFinished(int recurseFoldersCount, bool wasCancelled)
     }
 
     // Too many subfolders: just select root folder and mark orange
+    qDebug() << "FSTree::onCountFinished" << recurseFoldersCount << maxExpandLimit;
     if (recurseFoldersCount >= maxExpandLimit) {
+        QString step = "There are a lot of subfolders, this could take a minute.\n";
+        QString escapeClause = "\nPress \"Esc\" to stop.";
+        mw->setCentralMessage(step + escapeClause);
+        qApp->processEvents();
         qDebug() << "Over limit — marking folder";
         fsModel->isMaxRecurse = true;
         fsModel->maxRecursedRoots.append(pendingFolderPath);
@@ -775,7 +815,7 @@ void FSTree::onCountFinished(int recurseFoldersCount, bool wasCancelled)
     }
 
     // Proceed to expansion and selection only if below limit
-    qDebug() << "Expanding recursively...";
+    // qDebug() << "Expanding recursively...";
     QStringList recursedFolders;
     recursedFolders.append(pendingFolderPath);
 
@@ -1163,7 +1203,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     int indentationOffset = level * indentation();
     int decorationWidth = style()->pixelMetric(QStyle::PM_IndicatorWidth);
     QRect decorationRect = QRect(indentationOffset, rect.top(), decorationWidth, rect.height());
-    // /*
+    /*
     qDebug() << "FSTree::mousePressEvent"
              << "level =" << level
              << "rect =" << rect
@@ -1174,11 +1214,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
              << "index.data(OverLimitRole).toBool() ="
              << index.data(OverLimitRole).toBool()
         ;
-    //*/
+    // */
     if (decorationRect.contains(event->pos())) {
-        // if (index.data(OverLimitRole).toBool()) {
-        //     return;
-        // }
         QTreeView::mousePressEvent(event);
         return;
     }
@@ -1191,7 +1228,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     // index
     QModelIndex idx0 = index.sibling(index.row(), 0);
     QString dPath = idx0.data(QFileSystemModel::FilePathRole).toString();
-    bool recurse = false;
+    // bool recurse = false;
     bool resetDataModel = false;
     bool isAlt = event->modifiers() & Qt::AltModifier;
     bool isCtrl = event->modifiers() & Qt::ControlModifier;
@@ -1199,74 +1236,77 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     bool isMeta = event->modifiers() & Qt::MetaModifier;
     bool isNoModifier = event->modifiers() == Qt::NoModifier;
 
-    if (isDebug) {
+    if (isMeta) return;
+
+    bool isNoSelection = selectionModel()->selectedRows().isEmpty();
+    bool isClearAdd = isNoModifier;
+    bool isToggle = isCtrl;
+    bool isRecurse = isAlt;
+
+    resetDataModel = (
+                        (isNoSelection && (isClearAdd || isRecurse))
+                        ||
+                        ((isClearAdd || isRecurse) && !(isToggle || isShift))
+                     );
+
+    if (isDebug)
+    {
         qDebug() << " ";
         qDebug().noquote()
             << "FSTree::mousePressEvent"
-            << "isAlt =" << isAlt
-            << "isCtrl =" << isCtrl
+            << "isClearAdd =" << isClearAdd
+            << "isRecurse =" << isRecurse
+            << "isToggle =" << isToggle
             << "isShift =" << isShift
-            << "isMeta =" << isMeta
-            << "isNone =" << isNoModifier
+            << "resetDataModel =" << resetDataModel
+            << dPath
             ;
     }
 
-    if (isMeta) return;
 
-    isSelectingFolders = true;
-
-    // if starting a new selection clear maxRecursedRoots
-    if (!(isCtrl || isShift)) {
+    // reset datamodel
+    if (resetDataModel) {
+        QString step = "Selecting folders.\n";
+        QString escapeClause = "\nPress \"Esc\" to stop.";
+        mw->setCentralMessage(step + escapeClause);
+        qApp->processEvents();
         fsModel->maxRecursedRoots.clear();
         G::allMetadataLoaded = false;
     }
 
-    // New selection (primary folder)
-    if (isNoModifier) {
+    isSelectingFolders = true;
+
+    // Clear and select folder
+    if (isClearAdd) {
         // qDebug() << "FSTree::mousePressEvent NEW SELECTION" << path;
         if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "No modifiers, new instance");
         QTreeView::mousePressEvent(event);
-        resetDataModel = true;
-        recurse = false;
         fsModel->isMaxRecurse = false;
-        emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
+        emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, isRecurse);
         prevIdx = index;
-        isSelectingFolders = false;
-        return;
     }
 
     // recurse load all subfolders images
-    if (isAlt && !isShift) {
-        if (isCtrl) {
+    else if (isRecurse) {
+        if (isToggle) {
             // to do: deal with toggle
             if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifers: Opt + Cmd, Recurse");
-            resetDataModel = false;
-            // resetDataModel = true;
-            recurse = true;
-            emit folderSelectionChange(dPath, G::FolderOp::Toggle, resetDataModel, recurse);
-            bool toggle = true;
-            selectRecursively(dPath, toggle);
-            prevIdx = index;
-            isSelectingFolders = false;
-            return;
+            selectRecursively(dPath, isToggle);
+            emit folderSelectionChange(dPath, G::FolderOp::Toggle, resetDataModel, isRecurse);
         }
-        if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifiers: Opt, New instance and Recurse");
-        resetDataModel = true;
-        recurse = true;
-        fsModel->isMaxRecurse = false;
-        emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
-        selectionModel()->clearSelection();
-        selectRecursively(dPath);
-        isSelectingFolders = false;
-        return;
+        else {
+            if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifiers: Opt, New instance and Recurse");
+            selectionModel()->clearSelection();
+            selectRecursively(dPath);
+            emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, isRecurse);
+        }
+        prevIdx = index;
     }
 
     // toggle folder
-    if (isCtrl) {
+    else if (isToggle) {
         int folders = selectedFolderPaths().count();
         bool folderWasSelected = selectedFolderPaths().contains(dPath);
-        resetDataModel = false;
-        recurse = false;
         // qDebug() << "FSTree::mousePressEvent  isCtrl =" << isCtrl << "folderWasSelected =" << folderWasSelected;
         // ignore if click on only folder selected
         if (folderWasSelected) {
@@ -1274,22 +1314,20 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             if (folders < 2) return;
             // if (G::isLogger)
                 G::log("FSTree::mousePressEvent", "Cmd, Toggle Remove");
-            emit folderSelectionChange(dPath, G::FolderOp::Remove, resetDataModel, recurse);
+            emit folderSelectionChange(dPath, G::FolderOp::Remove, resetDataModel, isRecurse);
         }
         else {
             // if (G::isLogger)
                 G::log("FSTree::mousePressEvent", "Cmd, Toggle Add");
-            emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, recurse);
+            emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, isRecurse);
         }
         QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
         selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
         prevIdx = index;
-        isSelectingFolders = false;
-        return;
     }
 
     // Select visible unselected between previous selected folder to idx0
-    if (isShift) {
+    else if (isShift) {
         // if first mousePress includes shift (nothing has been selected yet)
         if (!prevIdx.isValid()) {
                 QModelIndexList selectedIndexes = selectionModel()->selectedIndexes();
@@ -1299,23 +1337,21 @@ void FSTree::mousePressEvent(QMouseEvent *event)
                 prevIdx = indexAt(QPoint(0, 0));
             }
         }
-        recurse = false;
-        if (isAlt) recurse = true;
-        QStringList foldersToAdd = selectVisibleBetween(prevIdx, idx0, recurse);
+        QStringList foldersToAdd = selectVisibleBetween(prevIdx, idx0, isRecurse);
         if (G::isLogger || G::isFlowLogger)
             G::log("FSTree::mousePressEvent", "Modifiers: Shift, Select All Between");
 
         foreach(QString path, foldersToAdd) {
             resetDataModel = false;
-            emit folderSelectionChange(path, G::FolderOp::Add, resetDataModel, recurse);
+            emit folderSelectionChange(path, G::FolderOp::Add, resetDataModel, isRecurse);
             QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
             selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
         prevIdx = index;
-        isSelectingFolders = false;
-        return;
     }
     isSelectingFolders = false;
+    fsModel->isMaxRecurse = false;
+
 }
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
@@ -1586,56 +1622,10 @@ void FSTree::debugSelectedFolders(QString msg)
 
 void FSTree::test()
 {
-    QList<QPersistentModelIndex> visibleIndexes;
-    QStringList visibleFolders;
+    QString src = "FSTree::selectRecursively";
+    QString msg = "Recursively scanning all subfolders";
+    mw->updateStatus(false, msg, src);
 
-    QModelIndex idx1 = indexAt(viewport()->rect().topLeft());
-    QModelIndex idx2 = indexAt(viewport()->rect().bottomLeft());
-
-    // Get the top and bottom visual rectangles
-    QRect topRect = visualRect(idx1);
-    QRect bottomRect = visualRect(idx2);
-
-    // Ensure idx1 is above idx2
-    if (topRect.top() > bottomRect.top()) {
-        std::swap(topRect, bottomRect);
-    }
-
-    // Calculate row height based on the distance between the top and bottom of the topRect
-    int rowHeight = topRect.height();
-
-    // Calculate the starting and ending Y positions
-    int yStart = topRect.top();
-    int yEnd = bottomRect.bottom();
-
-    // Iterate through each row within the viewport rectangle range
-    for (int y = yStart; y <= yEnd; y += rowHeight) {
-        QPoint pointInRow(viewport()->rect().left(), y);
-        QModelIndex index = indexAt(pointInRow);
-
-        // Check if the index is valid, then create an index in column 0
-        if (index.isValid()) {
-            QModelIndex idx0 = index.siblingAtColumn(0);
-            visibleIndexes.append(idx0);
-
-        }
-    }
-
-    // Select the unselected indexes
-    for (const QPersistentModelIndex &index : visibleIndexes) {
-        qDebug().noquote()
-                 << "FSTree::test"
-                 << "path =" << index.data(QFileSystemModel::FilePathRole).toString().leftJustified(60)
-                 << "isValid =" << QVariant(index.isValid()).toString().leftJustified(5)
-                 << "isSelected =" << QVariant(selectionModel()->isSelected(index)).toString().leftJustified(5)
-            ;
-
-        if (!index.isValid()) continue;
-        // if (!selectionModel()->isSelected(index)) {
-        //     selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-        //     visibleFolders.append(index.data(QFileSystemModel::FilePathRole).toString());
-        // }
-    }
 }
 
 void FSTree::howThisWorks()

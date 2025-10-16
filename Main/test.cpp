@@ -395,7 +395,12 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // cacheProgressBar->clearImageCacheProgress();
     // return;
 
-    updateImageCount();
+    // fsTree->test();
+    qDebug() << "test";
+    QString src = "FSTree::selectRecursively";
+    QString msg = "Recursively scanning all subfolders";
+    updateStatus(true, msg, src);
+
     return;
 
     cacheProgressBar->clearMetadataProgress(G::backgroundColor);

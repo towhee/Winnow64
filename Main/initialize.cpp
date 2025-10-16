@@ -885,7 +885,7 @@ void MW::createFSTree()
 {
     if (G::isLogger) G::log("MW::createFSTree");
     // loadSettings has not run yet (dependencies, but QSettings has been opened
-    fsTree = new FSTree(this, dm, metadata);
+    fsTree = new FSTree(this, dm, metadata, this);
     fsTree->setMaximumWidth(folderMaxWidth);
     fsTree->setShowImageCount(true);
     fsTree->combineRawJpg = combineRawJpg;
@@ -937,6 +937,10 @@ void MW::createFSTree()
 
     // update status in status bar
     connect(fsTree, &FSTree::status, this, &MW::updateStatus);
+
+    // update status in the central MessageTab
+    connect(fsTree, &FSTree::centralMsg, this, &MW::setCentralMessage);
+
 
     // watch for drive removal (not working)
 //    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);

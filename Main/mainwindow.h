@@ -432,6 +432,7 @@ public slots:
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setProgress(int value);
     void setStatus(QString state);
+    void updateStatus(bool keepBase = true, QString s = "", QString source = "");
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void setThumbDockHeight();  // signal from thumbView
     void setThumbDockFeatures(Qt::DockWidgetArea area);
@@ -566,7 +567,7 @@ private slots:
     void jump();
     void zoomToggle();
     // status functions
-    void updateStatus(bool keepBase = true, QString s = "", QString source = "");
+    // void updateStatus(bool keepBase = true, QString s = "", QString source = "");
     void clearStatus();
     void showPopUp(QString msg, int duration, bool isAutosize = false,
                    float opacity = 0.75, Qt::Alignment alignment = Qt::AlignHCenter);
@@ -582,7 +583,7 @@ private slots:
                                 quint64 currMB, quint64 maxMB, int tFirst, int tLast,
                                 QString source);
     // caching
-    void folderChanged(/*const QString folderPath, const QString op*/);
+    void folderChanged(bool aborted);
     void folderChangeCompleted();
     void updateChange(int sfRow, bool isCurrent = true, QString src = "");
 
