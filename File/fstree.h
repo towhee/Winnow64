@@ -97,12 +97,13 @@ private:
     mutable QHash <QString, QString> count;
 };
 
+class MW;  // forward declaration
 class FSTree : public QTreeView
 {
 	Q_OBJECT
 
 public:
-    FSTree(QWidget *parent, DataModel *dm, Metadata *metadata);
+    FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent = nullptr);
     ~FSTree() override;
     void createModel();
     void setShowImageCount(bool showImageCount);
@@ -172,6 +173,7 @@ signals:
     void folderSelectionChange(QString dPath, G::FolderOp op, bool resetDataModel, bool recurse = false);
     void countProgress(bool keepBase, QString s, QString source);
     void countFinished(int finalCount, bool wasCancelled);
+    void recurseCountProgress(int recurseCount);
     // void folderSelectionChange(QString dPath, QString op, bool resetDataModel, bool recurse = false);
     void datamodelQueue(QString dPath, bool isAdding);
     void addToDataModel(QString dPath);
@@ -187,8 +189,10 @@ signals:
     void renameRevealFileAction(QString folderName);
     void addBookmarkAction(QString folderName);
     void status(bool keepBase, QString msg, QString src);
+    void centralMsg(QString message);
 
 private:
+    MW *mw = nullptr;
     bool isItemVisible(const QModelIndex idx);
     // void markFolderOverLimit(const QString& folderPath, bool on);
     int  countSubdirsFast(const QString& root, int hardCap) const;
@@ -197,10 +201,12 @@ private:
     QColor overLimitColor = QColor(68,95,118);   // orange
     // Shared custom role for "too many subfolders" highlight
     enum { OverLimitRole = Qt::UserRole + 2 };
+
+    // Future thread to count recurvsive subdirs
     QString pendingFolderPath;
     bool pendingToggle = false;
     int countSubdirsFast(const QString &root, int hardCap);
-    QFutureWatcher<int> watcher;
+    QFutureWatcher<int> watcherCount;
 
     struct ViewState {
         QPointF scrollPosition;

@@ -1,396 +1,155 @@
-#!/opt/homebrew/bin/bash
+test0       13
+test1a      30
+test2       24
+test4       18
 
-# set -euo pipefail
+QString pendingFolderPath;
+bool pendingToggle = false;
+int countSubdirsFast(const QString &root, int hardCap);
+QFutureWatcher<int> watcherCount;
 
-# fix_dylibs
-#
-# This function scans all dynamic library (.dylib) dependencies in a macOS
-# Qt-based application bundle and ensures that all non-system dependencies:
-#
-#   - Are located inside the app's Frameworks directory
-#   - Have their internal install names (IDs) correctly set
-#   - Have any dependent references correctly patched to use @executable_path
-#
-# If a dependency is missing, it searches common Homebrew and local library
-# locations (/opt/homebrew/lib, /opt/homebrew/Cellar, /usr/local/lib),
-# and copies the first match into the Frameworks folder.
-#
-# Each modified binary is processed using `install_name_tool` to:
-#   - Set its internal ID:    @executable_path/../Frameworks/...
-#   - Patch references from absolute or @rpath-based paths to the Frameworks-relative path
-#
-# This script is intended to prepare the application for distribution by
-# eliminating external dylib dependencies and enabling proper code signing.
-#
-# Notes:
-#   - System libraries (/usr/lib, /System) and Qt framework references are ignored
-#   - Files are only processed once using a visited-tracking cache
-#   - install_name_tool warnings about invalidated signatures are expected and suppressed
+FSTree::FSTree
+    // Connect watcher signals to your own slots/signals
+connect(&watcherCount, &QFutureWatcher<int>::finished, this, [this]() {
+    int result = watcherCount.result();
+    bool cancelled = G::stop;
+    emit countFinished(result, cancelled);
+});
 
-# EDIT FOR NEW QT VERSIONS
-QTVERSION="6_9_2"
-QTVERSIONDIR="6.9.2"
-QTVERSIONTOOLS="4.6"
+// Connect your own signal to your slot
+connect(this, &FSTree::countFinished, this, &FSTree::onCountFinished);
 
-WINNOW_VERSION="2.03"
-WINNOW_DATE="2025-10-11"
+void FSTree::startCountSubdirs(const QString &root, int hardCap)
+{
+    if (watcherCount.isRunning()) {
+        qDebug() << "FSTree::startCountSubdirs already running, ignoring";
+        return;
+    }
 
-WINNOW_VERSION_NAME="Winnow${WINNOW_VERSION}"
-WINNOW_VERSION_APP="Winnow"${WINNOW_VERSION}".app"
-WINNOW_VERSION_DATE_APP="Winnow"${WINNOW_VERSION}_${WINNOW_DATE}".app"
+    G::stop = false;                 // reset cancellation flag
+    isSelectingFolders = true;       // your existing state flag
 
-RELEASE_PATH="/Users/roryhill/Projects/build-winnow64-Qt_${QTVERSION}_for_macOS-Release"
-RELEASE_APP_PATH="${RELEASE_PATH}/Winnow.app"
-FRAMEWORKS_PATH="${RELEASE_APP_PATH}/Contents/Frameworks"
-EXECUTABLE_PATH="${RELEASE_APP_PATH}/Contents/MacOS/Winnow"
+    // Launch in background
+    QFuture<int> futureCount = QtConcurrent::run([this, root, hardCap]() {
+        return countSubdirsFast(root, hardCap);
+    });
 
-QTBIN_PATH="/Users/roryhill/Qt/""$QTVERSIONDIR""/macos/bin"
-QTFRAMEWORKBIN_PATH="/Users/roryhill/Qt/Tools/QtInstallerFramework/""$QTVERSIONTOOLS""/bin"
-QTMULTIMEDIAPLUGIN_PATH="/Users/roryhill/Qt/""$QTVERSIONDIR""/macos/plugins/multimedia"
-
-SFTP_PATH="/var/www/html/winnow_mac/test"
-
-INSTALL_DATA_PATH="/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data"
-NOTARIZED_PATH="/Users/roryhill/Projects/WinnowInstall/Notarized"
-DMG_PATH="/Users/roryhill/Projects/WinnowInstall/DMG"
-DMG_APP="${DMG_PATH}/${WINNOW_VERSION_APP}"
-
-HIST_APPS_PATH="/Users/roryhill/Applications/Winnow${WINNOW_VERSION}"
-HIST_APP_PATH="${HIST_APPS_PATH}/${WINNOW_VERSION_DATE_APP}"
-
-APPLE_ID="hillrg@gmail.com"
-TEAM_ID="2663CS489R"
-ENTITLEMENTS="$RELEASE_PATH"/Winnow.app/Contents/entitlements.plist
-DEVELOPER_CERT="Developer ID Application: Robert Hill (2663CS489R)"
-
-# Associative array to avoid reprocessing (used in fix_dylibs)
-declare -A visited
-
-# Run macdeployqt to add or update the Qt frameworks for the current Qt version
-function deployQt() {
-        cd $RELEASE_PATH
-        echo "Run macdeployqt on Winnow.app to add frameworks"
-        "$QTBIN_PATH/macdeployqt" Winnow.app -appstore-compliant -verbose=3
-
-        # arm64 only
-        find "$RELEASE_APP_PATH/Contents/Frameworks" -type f -perm +111 -print0 | while IFS= read -r -d '' f; do
-            archs=$(lipo -info "$f" 2>/dev/null | grep -o 'x86_64')
-            if [ -n "$archs" ]; then
-                echo "Thinning $f"
-                lipo -thin arm64 "$f" -o "$f.arm64" && mv "$f.arm64" "$f"
-            fi
-        done
+    watcherCount.setFuture(futureCount);
 }
 
-# Strip symbols
-function strip_symbols() {
-        # strip Qt frameworks symbols
-        find "$RELEASE_APP_PATH/Contents/Frameworks" -type f -perm +111 -maxdepth 4 -print0 | while IFS= read -r -d '' f; do
-                # Skip symlinks
-                if [ -L "$f" ]; then
-                        continue
-                fi
-
-                # Check if it's a Mach-O binary (not a text or resource file)
-                if file "$f" | grep -q "Mach-O"; then
-                        echo "Stripping $f"
-                        strip -x "$f"
-                fi
-        done
-        # strip all dylib symbols in Frameworks
-        strip -x "$RELEASE_APP_PATH"/Contents/Frameworks/*.dylib
+void FSTree::cancelCountSubdirs()
+{
+    if (watcherCount.isRunning()) {
+        G::stop = true;
+        watcherCount.waitForFinished();   // optional: block until done
+    }
 }
 
-Try finding a library using known common paths and copy it
-# to $FRAMEWORKS_PATH/$base
-function resolve_dependency() {
-    local lib="$1"
-    local base=$(basename "$lib")
+int FSTree::countSubdirsFast(const QString &root, int hardCap)
+{
+    // qDebug() << "FSTree::countSubdirsFast start (thread)" << QThread::currentThread();
 
-    echo "🔍 Resolving missing dependency: $base"
+    int count = 0;
+    QStack<QString> stack;
+    stack.push(root);
 
-    # Paths to search
-    local search_roots=(
-        /opt/homebrew/lib
-        /opt/homebrew/Cellar
-        /usr/local/lib
-    )
+    while (!stack.isEmpty()) {
+        if (G::stop || count > hardCap)
+            break;
 
-    for root in "${search_roots[@]}"; do
-        local found
-        found=$(find "$root" -name "$base" -type f 2>/dev/null | head -n 1)
-        if [[ -n "$found" ]]; then
-            echo "✅ Found and copied: $found"
-            cp -p "$found" "$FRAMEWORKS_PATH/$base"
-            return 0
-        fi
-    done
+        const QString path = stack.pop();
+        QDir dir(path);
+        const QFileInfoList subdirs = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
 
-    echo "❌ Not found: $base"
-    return 1
+        for (const QFileInfo &fi : subdirs) {
+            if (G::stop || ++count > hardCap)
+                break;
+
+            stack.push(fi.absoluteFilePath());
+        }
+    }
+
+    // qDebug() << "FSTree::countSubdirsFast done, count =" << count;
+    return count;
 }
 
-function check_dylib() {
-    local input="$1"
-    local base_input=$(basename "$inputh")
+void FSTree::selectRecursively(QString folderPath, bool toggle)
+{
+    // qDebug() << "FSTree::selectRecursively start";
 
-    local dylib_path=$(realpath "$input" 2>/dev/null)
-    local dylib_name=$(basename "$dylib_path")
+    if (watcherCount.isRunning()) {
+        // qDebug() << "FSTree::selectRecursively already running, ignoring";
+        return;
+    }
 
-    [[ -z "$dylib_path" || ! -f "$dylib_path" ]] && echo "❌ Missing file: $input" && return
+    // Remember parameters so we can resume later
+    pendingFolderPath = folderPath;
+    pendingToggle = toggle;
 
-    if [[ -n "${visited[$dylib_path]}" ]]; then
-        # echo "⚠️  Already visited: $dylib_path"
-        return
-    fi
-    visited["$dylib_path"]=1
+    // disable heavy UI bits
+    setShowImageCount(false);
+    isSelectingFolders = true;
+    G::stop = false;
 
-    echo "🔍 Inspecting $dylib_name"
-
-    for arch in $(lipo -archs "$dylib_path"); do
-        # Read otool output into an array safely
-        mapfile -t deps < <(otool -arch "$arch" -L "$dylib_path" | tail -n +2 | awk '{print $1}')
-
-        for dep in "${deps[@]}"; do
-            # Skip safe/system dependencies
-            [[ "$dep" == @loader_path/* || "$dep" == /usr/lib/* || "$dep" == /System/* ]] && continue
-
-            local base_dep=$(basename "$dep")
-            local dep_path="$FRAMEWORKS_PATH/$base_dep"
-
-            echo "   ➤ $dylib_name → $base_dep"
-
-            # Try to resolve if missing
-            if [[ ! -f "$dep_path" ]]; then
-                if resolve_dependency "$base_dep"; then
-                    echo "   🛠 install_name_tool -id @executable_path/../Frameworks/$base_dep"
-                    install_name_tool -id "@executable_path/../Frameworks/$base_dep" "$dep_path" >/dev/null 2>&1
-                fi
-            fi
-
-            # Always try to patch reference if the file now exists
-            if [[ -f "$dep_path" ]]; then
-                local new_ref="@executable_path/../Frameworks/$base_dep"
-
-                if [[ "$dep" != "$new_ref" ]]; then
-                    if otool -L "$dylib_path" | grep -Fq "$dep"; then
-                        echo "   🧩 Patching reference to $dep in $dylib_name → $new_ref"
-                        install_name_tool -change "$dep" "$new_ref" "$dylib_path" >/dev/null 2>&1
-                    else
-                        echo "   ✅ Reference to $dep not found in $dylib_name"
-                    fi
-                # else
-                #     echo "   🔁 Reference to $dep already correct in $dylib_name"
-                fi
-            fi
-
-            # Recurse only if the file now exists
-            if [[ -f "$dep_path" ]]; then
-                check_dylib "$dep_path"
-            # else
-            #     echo "   ⚠️  Still missing: $base_dep"
-            fi
-        done
-    done
+    // qDebug() << "FSTree::selectRecursively starting async subdir count";
+    startCountSubdirs(folderPath, maxExpandLimit);
 }
 
-# Check Winnow.app homebrew dylib dependencies
-function check_App_dylib() {
-        for arch in $(lipo -archs "$EXECUTABLE_PATH"); do
-                echo "🔍 Checking executable [$arch]"
-                otool -arch "$arch" -L "$EXECUTABLE_PATH" | tail -n +2 | awk '{print $1}' | while read -r dep; do
-                        # echo "🔍 Checking executable [$arch] dependency $dep"
-                        [[ "$dep" != /opt/homebrew/* ]] && continue
-                        base_dep=$(basename "$dep")
-                        new_path="@executable_path/../Frameworks/$base_dep"
+// called automatically when countSubdirsFast finishes
+void FSTree::onCountFinished(int recurseFoldersCount, bool wasCancelled)
+{
+    isSelectingFolders = false;
 
-                        if [[ "$dep" != "$new_path" ]]; then
-                                echo "🔁 [$arch] Patching $dep → $new_path"
-                                install_name_tool -change "$dep" "$new_path" "$EXECUTABLE_PATH"
-                        else
-                                echo "✅ Executable dependency already correct: $base_dep [$arch]"
-                        fi
-                done
-        done
-}
+    if (wasCancelled) {
+        qDebug() << "FSTree::onCountFinished cancelled";
+        setShowImageCount(true);
+        return;
+    }
 
-function fix_dylibs() {
-        # Start with all dylibs in Frameworks
-        for dylib in "$FRAMEWORKS_PATH"/*.dylib; do
-                check_dylib "$dylib"
-        done
+    // Too many subfolders: just select root folder and mark orange
+    if (recurseFoldersCount >= maxExpandLimit) {
+        QString step = "There are a lot of subfolders, this could take a minute.\n";
+        QString escapeClause = "\nPress \"Esc\" to stop.";
+        mw->setCentralMessage(step + escapeClause);
+        qApp->processEvents();
+        qDebug() << "Over limit — marking folder";
+        fsModel->isMaxRecurse = true;
+        fsModel->maxRecursedRoots.append(pendingFolderPath);
+        markFolderOverLimit(pendingFolderPath, true);
+        QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(pendingFolderPath));
+        selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        setShowImageCount(true);
+        return;
+    }
 
-        # Check Winnow.app homebrew dylib dependencies
-        check_App_dylib
-}
+    // Proceed to expansion and selection only if below limit
+    // qDebug() << "Expanding recursively...";
+    QStringList recursedFolders;
+    recursedFolders.append(pendingFolderPath);
 
-function sign() {
-        cd "$RELEASE_PATH"
+    QDirIterator it(pendingFolderPath, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks,
+                    QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        it.next();
 
-        # Confirm and fix ownership
-        echo "🛠 Fixing ownership and permissions..."
-        sudo chown -R "$USER" "Winnow.app"
-        chmod -R u+rw "Winnow.app"
+        const QFileInfo fi = it.fileInfo();
+        if (!fi.isDir()) continue;
 
-        # Sign
-        echo "Sign Winnow.app"
-        codesign --force --deep --verify --verbose --options runtime --entitlements "$ENTITLEMENTS" --sign "$DEVELOPER_CERT" "Winnow.app"
+        QString dPath = fi.absoluteFilePath();
+        recursedFolders.append(dPath);
+        QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
+        selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+    }
 
-        if [ $? -ne 0 ]; then
-          read -p  "❌ Signing failed!"
-          return 1
-        fi
+    for (const QString &path : recursedFolders) {
 
-        echo "✅ Signed successfully"
-}
-
-function notarize() {
-        # Replace Winnow.app from release in /Users/roryhill/Projects/WinnowInstall/Notarize/
-        echo "RELEASE_PATH = $RELEASE_PATH"
-        cd "$RELEASE_PATH"
-
-        if [ ! -d "Winnow.app" ]; then
-          read -p "❌ Winnow.app not in release folder!"
-          return 1
-        fi
-
-        # Copy from release and rename with version
-        echo "Copy to WinnowInstall Notarized folder"
-        cp -R Winnow.app "$NOTARIZED_PATH/$WINNOW_VERSION_APP"
-
-        cd "$NOTARIZED_PATH"
-
-        # Remove existing ZIP
-        if [ -f ${INSTALL_NOTARIZED_PATH}/*.zip ]; then
-                rm ${INSTALL_NOTARIZED_PATH}/*.zip
-        fi
-
-        ZIP="${WINNOW_VERSION_NAME}.zip"
-        echo "📦 Creating ${ZIP} for notarization..."
-        ditto -c -k --keepParent "$WINNOW_VERSION_APP" "$ZIP"
-
-        if [ ! -f "$ZIP" ]; then
-          read -p "❌ ZIP creation failed!"
-          return 1
-        fi
-        return 1
-
-        echo "📤 Submitting for notarization..."
-        xcrun notarytool submit "$ZIP" \
-          --keychain-profile "AC_PASSWORD" \
-          --wait
-
-        if [ $? -ne 0 ]; then
-          read -p  "❌ Notarization failed!"
-          return 1
-        fi
-
-        echo "📌 Stapling ticket..."
-        xcrun stapler staple "$WINNOW_VERSION_APP"
-
-    echo "Verifying stapled app..."
-    spctl --assess --type exec --verbose=4 "$WINNOW_VERSION_APP"
-
-        echo "✅ Done! App is signed, notarized, and stapled."
-}
-
-# Copy the notarized app to the DMG folder so we don’t overwrite the notarized original
-function createDMG() {
-        cd "$NOTARIZED_PATH"
-
-    # Check Winnow2.XX is in Notarized folder
-        if [ ! -d "$WINNOW_VERSION_APP" ]; then
-          read -p "❌ ${WINNOW_VERSION_APP} not in folder!"
-          return 1
-        fi
-
-        # Remove existing Winnow.dmg from DMG folder
-        if [ -f ${DMG_PATH}/Winnow.dmg ]; then
-                rm ${DMG_PATH}/Winnow.dmg
-        fi
-
-        cp -R -f "$WINNOW_VERSION_APP" "$DMG_PATH"
-        cd "$DMG_PATH"
-
-        echo "Creating DMG"
-
-        if [ ! -d "$WINNOW_VERSION_APP" ]; then
-                echo "❌ ${WINNOW_VERSION_APP} not found in $DMG_PATH"
-                return 1
-    fi
-
-    hdiutil create -volname "Winnow" \
-    -srcfolder "$DMG_PATH/$WINNOW_VERSION_APP" \
-    -ov -format UDZO \
-    "$DMG_PATH/Winnow.dmg"
-
-        codesign --sign "Developer ID Application: Robert Hill (2663CS489R)" \
-         --timestamp \
-         --options runtime \
-         "$DMG_PATH"
-
-        echo "✅ DMG created at: ${DMG_PATH}/Winnow.dmg"
-}
-
-function doAll() {
-        sign
-        notarize
-        createDMG
-}
-
-function copyToHistoryn() {
-        # Create destination folder if it doesn't exist
-        mkdir -p "$HIST_APPS_PATH"
-
-        # Copy and rename
-        if [ -d "$DMG_APP" ]; then
-                cp -R "$DMG_APP" "$HIST_APP_PATH"
-                echo "Copied and renamed app to: $HIST_APP_PATH"
+        QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
+        if (pendingToggle)
+            selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
         else
-                echo "Error: Source app not found at $DMG_APP"
-                return 1
-        fi
+            selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    }
+
+    setShowImageCount(true);
+    qDebug() << "FSTree::onCountFinished done";
 }
-
-function test() {
-        echo "testing"
-        # rmdir -r -f ${DMG_PATH}/Winnow.app
-}
-
-show_menu() {
-        echo
-    echo "Options:"
-    echo "1) Update Qt Frameworks using macdeployqt"
-    echo "2) Fix dylibs dependencies"
-    echo "3) Strip symbols"
-    echo "4) Sign"
-    echo "5) Notarize"
-    echo "6) Create DMG"
-    echo "7) Copy to history"
-    echo "8) Sign, notarize, create DMG, copy to history"
-    echo "T) Test"
-    echo "Q) Quit"
-}
-
-while true; do
-    show_menu
-    read -p "Enter your choice: " choice
-
-    case "$choice" in
-        "1") deployQt ;;
-        "2") fix_dylibs ;;
-        "3") strip_symbols ;;
-        "4") sign ;;
-        "5") notarize ;;
-        "6") createDMG ;;
-        "7") copyToHistory ;;
-        "8") doAll ;;
-        "T"|"t") test ;;
-        "Q"|"q") echo "Goodbye!"; break ;;
-        *) echo "Invalid choice." ;;
-    esac
-
-    echo    # blank line for readability
-done
-
-exit 0

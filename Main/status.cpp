@@ -12,6 +12,8 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (G::isLogger)
         G::log(fun);
 
+    // qDebug() << fun << keepBase << s << source;
+
     // check if null filter
     if (dm->sf->rowCount() == 0) {
         statusLabel->setText("");
@@ -23,7 +25,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
             k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
         }
         updateStatusBar();
-        return;
+        // return;
     }
 
     QString status;

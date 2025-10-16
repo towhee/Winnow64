@@ -179,7 +179,7 @@ public:
 
 signals:
     void stop(QString src);
-    void folderChange();
+    void folderChange(bool aborted);
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
     void updateProgress(int progress);
@@ -209,7 +209,6 @@ public slots:
     void setCached(int sfRow, bool isCached, int instance);
     void issue(const QSharedPointer<Issue>& issue);
     QStringList rptIssues(int sfRow);
-    void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
     void imageCacheWaiting(int sfRow);
@@ -268,7 +267,6 @@ private:
     void rawPlusJpg();
     double aspectRatio(int w, int h, int orientation);
     void processErr(Error e);
-    void updateLoadStatus(int row);
 
     int countInterval = 0;
 

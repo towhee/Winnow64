@@ -5,6 +5,7 @@ WHAT'S NEW
 - Ingest Dlg not showing manual paths correctly
 
 BUGS / TO DO
+- FSTree context menu folder "false"
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Copy path(s) not always working
 - Update menu filters when delete all filtered
