@@ -29,6 +29,6 @@ private:
     QColor overLimitBackground = QColor(255,245,220); // light background tint (optional)
 
     // Shared custom role for "too many subfolders" highlight
-    enum { OverLimitRole = Qt::UserRole + 2 };
+    enum { OverLimitRole = 300 };
 };
 #endif // HOVERDELEGATE_H

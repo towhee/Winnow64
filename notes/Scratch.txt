@@ -153,3 +153,20 @@ void FSTree::onCountFinished(int recurseFoldersCount, bool wasCancelled)
     setShowImageCount(true);
     qDebug() << "FSTree::onCountFinished done";
 }
+
+Selection only: true
+Row 50 (0 children)
+  Col 0: Name = "_test1a"
+    Role 3 (toolTip) = /Users/roryhill/Pictures/_test1a
+    Role 258 (fileName) = _test1a
+    Role 252 (fileInfo) =
+    Role 257 (filePath) = /Users/roryhill/Pictures/_test1a
+    Role 259 (filePermissions) = 30549
+    Role 0 (display) = _test1a
+    Role 2 (edit) = _test1a
+    Role 1 (fileIcon) =
+  Col 1: Size = ""
+  Col 2: Kind = ""
+  Col 3: Date Modified = ""
+  Col 4: # = "17"
+    Role 0 (display) = 17

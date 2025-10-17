@@ -392,8 +392,14 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // cacheProgressBar->clearImageCacheProgress();
+    // fsTree->test();
     // return;
+
+    QString dPath = "/Users/roryhill/Pictures/_test1a";
+    qDebug() << fsTree->fsModel->maxRecursedRoots;
+    // fsTree->fsModel->updateCount(dPath);
+    fsTree->updateCount();
+    return;
 
     // fsTree->test();
     qDebug() << "test";

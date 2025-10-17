@@ -480,7 +480,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            operation, then okay to exit full screen.  escapeFullScreen must be the last option
            tested.
         */
-        qDebug() << "event->key() == Qt::Key_Escape";
+        // qDebug() << "event->key() == Qt::Key_Escape";
         G::popup->reset();
         dragLabel->hide();
         // end stress test
@@ -493,7 +493,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // }
         // stop loading a new folder
         else if (!G::allMetadataLoaded) {
-            qDebug() << "event->key() == Qt::Key_Escape !G::allMetadataLoaded";
+            // qDebug() << "event->key() == Qt::Key_Escape !G::allMetadataLoaded";
             stop("Escape key");
         }
         // stop background ingest
@@ -1716,11 +1716,11 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     /* put folder in datamodel queue to add or remove if main thread
        is not blocking */
     dm->abort = false;
-    // QTimer::singleShot(0, this, [this, folderPath, op, recurse]{
-    //     dm->enqueueFolderSelection(folderPath, op, recurse);
-    // });
+    QTimer::singleShot(0, this, [this, folderPath, op, recurse]{
+        dm->enqueueFolderSelection(folderPath, op, recurse);
+    });
 
-    dm->enqueueFolderSelection(folderPath, op, recurse);
+    // dm->enqueueFolderSelection(folderPath, op, recurse);
     qDebug() << fun << "finished dm->enqueueFolderSelection";
 
 }
@@ -2188,7 +2188,7 @@ bool MW::reset(QString src)
     }
     isDragDrop = false;
 
-    fsTree->clearFolderOverLimit();
+    // fsTree->clearFolderOverLimit();
     fsTree->setEnabled(true);
     bookmarks->setEnabled(true);
     cacheProgressBar->clearImageCacheProgress();
@@ -2407,6 +2407,9 @@ void MW::folderChanged(bool aborted)
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
+    // update FSTree image count if fsModel isMaxRecurse is true
+    if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
+
     // G::isModifyingDatamodel = false;
     int startRow = 0;
 
@@ -2581,6 +2584,9 @@ void MW::folderChangeCompleted()
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
+
+    // // update FSTree image count if fsModel isMaxRecurse is true
+    // if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
 
     // missing thumbnails
     /*
