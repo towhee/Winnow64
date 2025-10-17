@@ -961,6 +961,7 @@ private:
     QAction *diagnosticsLogIssuesAction;
     QAction *diagnosticsSessionIssuesAction;
     QAction *diagnosticsGridViewAction;
+    QAction *diagnosticsFSTreeAction;
     QAction *diagnosticsThumbViewAction;
     QAction *diagnosticsImageViewAction;
     QAction *diagnosticsInfoViewAction;
@@ -1372,7 +1373,7 @@ private:
     void diagnosticsEmbellish();
     void diagnosticsErrors();
     void diagnosticsFilters();
-    void diagnosticsFileTree();
+    void diagnosticsFSTree();
     void diagnosticsBookmarks();
     void diagnosticsPixmap();
     void diagnosticsThumb();

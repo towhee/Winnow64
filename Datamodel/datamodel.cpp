@@ -652,8 +652,11 @@ void DataModel::addFolder(const QString &folderPath)
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
 
-    // QString step = "Loading eligible image file information.<br>";
-    // QString escapeClause = "Press \"Esc\" to stop.";
+    QString step = "Loading eligible image file information.<br>";
+    step += folderPath + "<br>";
+    QString escapeClause = "Press \"Esc\" to stop.";
+    emit centralMsg(step + escapeClause);
+    qApp->processEvents();
 
     // test if raw file to match jpg when same file names and one is a jpg
     QString prevRawSuffix = "";
@@ -670,13 +673,13 @@ void DataModel::addFolder(const QString &folderPath)
     int countInterval = 100;
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         // check for escape key release triggering abort
-        qApp->processEvents();
+        // qApp->processEvents();
         if (abort) {
             qDebug() << "DataModel::addFolder aborting *************";
             endLoad(false);
             break;
         }
-        // /*
+        /*
         qDebug() << "DataModel::addFolder"
                  << "row =" << row
                  << "size =" << fileInfo.size()

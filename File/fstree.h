@@ -78,7 +78,7 @@ public:
     bool setData(const QModelIndex &index, const QVariant &value, int role) override;
     void clearCount();
     void updateCount(const QString &dPath);
-    enum { OverLimitRole = Qt::UserRole + 2 };
+    enum { OverLimitRole = 300 };
     bool showImageCount;
     bool &combineRawJpg;
     bool forceRefresh = true;
@@ -88,6 +88,9 @@ public:
     QStringList *fileFilters;
     QStringList maxRecursedRoots;
     bool isMaxRecurse = false;
+
+protected:
+    QHash<int, QByteArray> roleNames() const override;
 
 signals:
     void update() const;        // const req'd but shows warning
@@ -132,6 +135,8 @@ public:
     QString hoverFolderName;
 
     QFileSystemWatcher volumesWatcher;
+
+    QString diagnostics();
 
     void test();
     void debugSelectedFolders(QString msg = "");
@@ -199,8 +204,6 @@ private:
     void selectRecursively(QString folderPath, bool toggle = false);
     int maxExpandLimit = 100;
     QColor overLimitColor = QColor(68,95,118);   // orange
-    // Shared custom role for "too many subfolders" highlight
-    enum { OverLimitRole = Qt::UserRole + 2 };
 
     // Future thread to count recurvsive subdirs
     QString pendingFolderPath;
@@ -220,6 +223,7 @@ private:
     QElapsedTimer rapidClick;
     bool eventLoopRunning;
     QPersistentModelIndex justExpandedIndex;
+
     QModelIndex dndOrigSelection;
     QModelIndex prevCurrentIndex;
     QFileSystemModel fileSystemModel;
@@ -233,6 +237,9 @@ private:
     // QModelIndexList recursedForSelection;
     QModelIndex rightClickIndex;
     int imageCountColumnWidth;
+
+    QString dumpModelContents(bool isSelectionOnly);
+
     QElapsedTimer t;
     QTimer wheelTimer;
     bool wheelSpinningOnEntry;

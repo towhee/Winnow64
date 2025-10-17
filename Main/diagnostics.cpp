@@ -399,7 +399,7 @@ void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Di
 void MW::diagnosticsDataModelAllRows() {diagnosticsReport(dm->diagnosticsAllRows(), "Winnow Diagnostics: Data Model All Rows");}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}
 void MW::diagnosticsFilters() {} // dummy for now
-void MW::diagnosticsFileTree() {} // dummy for now
+void MW::diagnosticsFSTree() {diagnosticsReport(fsTree->diagnostics(), "Winnow Diagnostics: FSTree");}
 void MW::diagnosticsBookmarks() {} // dummy for now
 void MW::diagnosticsPixmap() {} // dummy for now
 void MW::diagnosticsThumb() {} // dummy for now

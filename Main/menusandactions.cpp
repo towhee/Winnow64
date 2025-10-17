@@ -1556,6 +1556,12 @@ void MW::createHelpActions()
     addAction(diagnosticsGridViewAction);
     connect(diagnosticsGridViewAction, &QAction::triggered, this, &MW::diagnosticsGridView);
 
+    diagnosticsFSTreeAction = new QAction(tr("FSTree diagnostics"), this);
+    diagnosticsFSTreeAction->setObjectName("diagnosticsFSTree");
+    diagnosticsFSTreeAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsFSTreeAction);
+    connect(diagnosticsFSTreeAction, &QAction::triggered, this, &MW::diagnosticsFSTree);
+
     diagnosticsThumbViewAction = new QAction(tr("ThumbView diagnostics"), this);
     diagnosticsThumbViewAction->setObjectName("diagnosticsThumbView");
     diagnosticsThumbViewAction->setShortcutVisibleInContextMenu(true);
@@ -2074,6 +2080,7 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsSelectionAction);
     helpDiagnosticsMenu->addAction(diagnosticsWorkspacesAction);
     helpDiagnosticsMenu->addAction(diagnosticsGridViewAction);
+    helpDiagnosticsMenu->addAction(diagnosticsFSTreeAction);
     helpDiagnosticsMenu->addAction(diagnosticsThumbViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataAction);
