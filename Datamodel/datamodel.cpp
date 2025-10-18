@@ -175,10 +175,7 @@ DataModel::DataModel(QObject *parent,
     sf->setSourceModel(this);
     selectionModel = new QItemSelectionModel(sf);
 
-    // root folder containing images to be added to the data model
-    dir = new QDir();
-
-    // eligible image file types
+     // eligible image file types
     fileFilters = new QStringList;
     foreach (const QString &str, metadata->supportedFormats) {
         fileFilters->append("*." + str);
@@ -194,17 +191,6 @@ DataModel::DataModel(QObject *parent,
 
     // set true for debug output
     isDebug = false;
-
-#ifdef QT_DEBUG  // or !defined(NDEBUG)
-    // Warn on contract violations but keep running.
-    new QAbstractItemModelTester(sf,
-         QAbstractItemModelTester::FailureReportingMode::Warning,
-         sf);
-// or
-    // new QAbstractItemModelTester(sf,
-    //      QAbstractItemModelTester::FailureReportingMode::Fatal,
-    //      sf);
-#endif
 }
 
 void DataModel::setModelProperties()

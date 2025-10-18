@@ -2032,15 +2032,17 @@ void MW::refresh()
 */
     if (G::isLogger) G::log("MW::refresh");
     qDebug() << "MW::refresh";
-    dm->refresh();
     // imageCache->updateInstance();
-    buildFilters->rebuild();
     fsTree->updateCount();
     bookmarks->updateCount();
-    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
-    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
-    // current is updated in DataModel if there has been a deletion
-    sel->select(dm->currentSfIdx);  // runs metaread if new images
+    if (dm->sf->rowCount()) {
+        dm->refresh();
+        buildFilters->rebuild();
+        thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+        gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+        // current is updated in DataModel if there has been a deletion
+        sel->select(dm->currentSfIdx);  // runs metaread if new images
+    }
 }
 
 bool MW::allIdle() const {
@@ -2409,6 +2411,10 @@ void MW::folderChanged(bool aborted)
     fsTree->setEnabled(true);
     // update FSTree image count if fsModel isMaxRecurse is true
     if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
+    if (aborted) {
+        fsTree->clearFolderOverLimit();
+        fsTree->selectionModel()->clear();
+    }
 
     // G::isModifyingDatamodel = false;
     int startRow = 0;

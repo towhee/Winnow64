@@ -33,24 +33,24 @@ private:
 };
 
 // FSTreeDelegate.h
-class FSTreeDelegate : public QStyledItemDelegate {
-    Q_OBJECT
-public:
-    explicit FSTreeDelegate(QObject *parent=nullptr)
-        : QStyledItemDelegate(parent) {}
+// class FSTreeDelegate : public QStyledItemDelegate {
+//     Q_OBJECT
+// public:
+//     explicit FSTreeDelegate(QObject *parent=nullptr)
+//         : QStyledItemDelegate(parent) {}
 
-    void paint(QPainter *painter,
-               const QStyleOptionViewItem &option,
-               const QModelIndex &index) const override
-    {
-        QStyleOptionViewItem opt(option);
-        QString path = index.data(QFileSystemModel::FilePathRole).toString();
-        if (path == "/Users/roryhill/Pictures") {
-            opt.palette.setColor(QPalette::Text, QColor(255,165,0));  // orange
-        }
-        QStyledItemDelegate::paint(painter, opt, index);
-    }
-};
+//     void paint(QPainter *painter,
+//                const QStyleOptionViewItem &option,
+//                const QModelIndex &index) const override
+//     {
+//         QStyleOptionViewItem opt(option);
+//         QString path = index.data(QFileSystemModel::FilePathRole).toString();
+//         if (path == "/Users/roryhill/Pictures") {
+//             opt.palette.setColor(QPalette::Text, QColor(255,165,0));  // orange
+//         }
+//         QStyledItemDelegate::paint(painter, opt, index);
+//     }
+// };
 
 class FSFilter : public QSortFilterProxyModel
 {
@@ -81,7 +81,6 @@ public:
     enum { OverLimitRole = 300 };
     bool showImageCount;
     bool &combineRawJpg;
-    bool forceRefresh = true;
     Metadata &metadata;
     DataModel *dm;
     int imageCountColumn = 4;
@@ -93,7 +92,7 @@ protected:
     QHash<int, QByteArray> roleNames() const override;
 
 signals:
-    void update() const;        // const req'd but shows warning
+    // void update() const;        // const req'd but shows warning
 
 private:
     QDir *dir;
@@ -128,9 +127,6 @@ public:
     QString currentFolderPath();
     QStringList selectedFolderPaths() const;
 
-    void startCountSubdirs(const QString &root, int hardCap);
-    void cancelCountSubdirs();
-
     bool combineRawJpg;
     QString hoverFolderName;
 
@@ -151,9 +147,8 @@ public slots:
 
 private slots:
     void wheelStopped();
-    void hasExpanded(const QPersistentModelIndex &index);
+    // void hasExpanded(const QPersistentModelIndex &index);
     void onItemExpanded(const QModelIndex &index);
-    void onCountFinished(int count, bool wasCancelled);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -173,13 +168,9 @@ protected:
 
 signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
-    void indexExpanded();
+    // void indexExpanded();
     void selectionChange();
     void folderSelectionChange(QString dPath, G::FolderOp op, bool resetDataModel, bool recurse = false);
-    void countProgress(bool keepBase, QString s, QString source);
-    void countFinished(int finalCount, bool wasCancelled);
-    void recurseCountProgress(int recurseCount);
-    // void folderSelectionChange(QString dPath, QString op, bool resetDataModel, bool recurse = false);
     void datamodelQueue(QString dPath, bool isAdding);
     void addToDataModel(QString dPath);
     void removeFromDataModel(QString dPath);
@@ -199,51 +190,42 @@ signals:
 private:
     MW *mw = nullptr;
     bool isItemVisible(const QModelIndex idx);
-    // void markFolderOverLimit(const QString& folderPath, bool on);
     int  countSubdirsFast(const QString& root, int hardCap) const;
     void selectRecursively(QString folderPath, bool toggle = false);
     int maxExpandLimit = 100;
     QColor overLimitColor = QColor(68,95,118);   // orange
 
-    // Future thread to count recurvsive subdirs
-    QString pendingFolderPath;
-    bool pendingToggle = false;
     int countSubdirsFast(const QString &root, int hardCap);
-    QFutureWatcher<int> watcherCount;
 
     struct ViewState {
         QPointF scrollPosition;
         QList<QModelIndex> selectedIndexes;
     };
-    void saveState(ViewState& state) const;
-    bool restoreState(const ViewState& state) const;
     QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
-    QSet<QPersistentModelIndex> nodesToExpand;
-    QElapsedTimer expansionTimer;
+    // QSet<QPersistentModelIndex> nodesToExpand;
+    // QElapsedTimer expansionTimer;
     QElapsedTimer rapidClick;
-    bool eventLoopRunning;
-    QPersistentModelIndex justExpandedIndex;
+    // bool eventLoopRunning;
+    // QPersistentModelIndex justExpandedIndex;
 
     QModelIndex dndOrigSelection;
     QModelIndex prevCurrentIndex;
     QFileSystemModel fileSystemModel;
-    QItemSelectionModel* treeSelectionModel;
     Metadata *metadata;
     DataModel *dm;
     HoverDelegate *delegate;
     QDir *dir;
     QStringList *fileFilters;
-    QList<QPersistentModelIndex> recursedForSelection;
+    // QList<QPersistentModelIndex> recursedForSelection;
     // QModelIndexList recursedForSelection;
     QModelIndex rightClickIndex;
     int imageCountColumnWidth;
 
-    QString dumpModelContents(bool isSelectionOnly);
+    QString diagModel(bool isSelectionOnly);
 
-    QElapsedTimer t;
+    // QElapsedTimer t;
     QTimer wheelTimer;
     bool wheelSpinningOnEntry;
-    bool isRecursiveSelection = false;
     bool isDebug = false;
 };
 

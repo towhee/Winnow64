@@ -252,7 +252,6 @@ private:
 
     bool mLock;
 
-    QDir *dir;
     QStringList *fileFilters;
     QFileInfo fileInfo;
     QImage emptyImg;
