@@ -979,7 +979,7 @@ void MW::createBookmarks()
     connect(bookmarks, &BookMarks::itemPressed, this, &MW::bookmarkClicked);
 
     // update folder image counts
-    connect(fsTree->fsModel, &FSModel::update, bookmarks, &BookMarks::updateBookmarks);
+    // connect(fsTree->fsModel, &FSModel::update, bookmarks, &BookMarks::updateBookmarks);
 
     // connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
     //         this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));

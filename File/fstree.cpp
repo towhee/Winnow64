@@ -6,6 +6,154 @@ extern QStringList mountedDrives;
 QStringList mountedDrives;
 
 /*------------------------------------------------------------------------------
+FSTree Subsystem Overview
+------------------------------------------------------------------------------*
+The FSTree subsystem implements the left-hand Folder Tree panel in Winnow.
+It displays the filesystem hierarchy, shows image counts beside each folder,
+supports recursive folder selection, and prevents deep recursion that could
+freeze the UI.  The system is composed of several cooperating classes:
+
+    FSTree (QTreeView)
+        ├── FSModel  (QFileSystemModel subclass)
+        │     └── ImageCounter (QThread worker for async counting)
+        ├── FSFilter (QSortFilterProxyModel subclass)
+        └── HoverDelegate (QStyledItemDelegate subclass)
+
+Together these classes provide a responsive, filterable, and asynchronous
+filesystem view integrated with the global DataModel and Metadata subsystems.
+
+-------------------------------------------------------------------------------
+FSTree  (QTreeView subclass)
+-------------------------------------------------------------------------------
+- Owns FSModel (source) and FSFilter (proxy).
+- Manages folder selection, recursion, and drag/drop.
+- Enforces a recursion depth limit (maxExpandLimit) to prevent UI stalls.
+- Marks over-limit folders (orange) using OverLimitRole = 300.
+- Coordinates with the DataModel through folderSelectionChange() signals.
+- Displays hover highlights via HoverDelegate.
+- Handles platform drive refresh, selection modifiers, and context menus.
+
+Key details:
+- countSubdirsFast() uses a non-recursive QStack traversal for safety.
+- selectRecursively() disables image count updates during recursion.
+- Over-limit folders cannot be manually expanded (blocked in onItemExpanded()).
+- rapidClick timer prevents double activation while stop() is processing.
+- onRowsAboutToBeRemoved() clears selection to prevent Qt auto-selecting next row.
+
+Mouse / Keyboard modifiers:
+  None      → clear + select single folder (reset DataModel)
+  Ctrl/Cmd  → toggle folder on/off
+  Alt/Opt   → recursively select subfolders
+  Shift     → select all visible folders between last and clicked row
+
+-------------------------------------------------------------------------------
+FSModel  (QFileSystemModel subclass)
+-------------------------------------------------------------------------------
+- Adds an image count column (#) at index 4.
+- Exposes custom role OverLimitRole (300) for orange over-limit highlight.
+- Launches ImageCounter threads to compute image counts asynchronously.
+- Caches results in QHash<QString, QString> count.
+- Integrates Metadata for supported image formats and RAW+JPG pairing.
+- Emits dataChanged() when a count completes to repaint the column.
+
+Notes:
+- data() triggers ImageCounter on demand (lazy evaluation per visible folder).
+- setData() intercepts OverLimitRole writes to track maxRecursedRoots.
+- roleNames() includes "overLimit" for debugging or QML inspection.
+
+-------------------------------------------------------------------------------
+ImageCounter  (QThread)
+-------------------------------------------------------------------------------
+- Worker thread that counts images in a folder without blocking the UI.
+- Uses QDirIterator and Metadata to filter eligible formats.
+- Handles RAW+JPG pairing if combineRawJpg is true.
+- Emits countReady(path, count) → FSModel updates cache and notifies view.
+
+-------------------------------------------------------------------------------
+FSFilter  (QSortFilterProxyModel subclass)
+-------------------------------------------------------------------------------
+- Filters out unwanted or hidden folders.
+- macOS: shows only /Users and /Volumes at root, hides system/hidden dirs.
+- Windows: excludes unmounted drives using global mountedDrives list.
+- Linux: allows all.
+- refresh() simply calls invalidateFilter().
+
+-------------------------------------------------------------------------------
+HoverDelegate  (QStyledItemDelegate subclass)
+-------------------------------------------------------------------------------
+- Handles hover and over-limit highlighting.
+- hoverBackground = G::backgroundShade + 20.
+- Over-limit text color = orange (255,165,0).
+- setHoveredIndex() updates current hover and emits hoverChanged().
+- paint() fills hover background and recolors text when OverLimitRole == true.
+- FSTree connects hoverChanged → viewport()->update() for repaint.
+
+-------------------------------------------------------------------------------
+Over-Limit Protection (maxExpandLimit)
+-------------------------------------------------------------------------------
+Purpose: prevent runaway recursion during deep folder selections.
+
+Workflow:
+1. FSTree::selectRecursively() calls countSubdirsFast().
+2. If subfolder count >= maxExpandLimit:
+       fsModel->setData(path, true, OverLimitRole);
+       markFolderOverLimit(path, true);
+       fsModel->isMaxRecurse = true;
+3. HoverDelegate paints the folder name orange.
+4. Manual expansion is immediately collapsed in onItemExpanded().
+
+Data members:
+    FSModel::OverLimitRole = 300
+    FSModel::isMaxRecurse
+    FSModel::maxRecursedRoots (QStringList)
+    FSTree::maxExpandLimit (default 100)
+
+-------------------------------------------------------------------------------
+Image Count Column
+-------------------------------------------------------------------------------
+- Optional fifth column (“#”) showing the number of image files in each folder.
+- Visible only when fsModel->showImageCount == true.
+- Updated via updateCount() and updateAFolderCount().
+- Width adjusted dynamically in resizeColumns() based on font metrics.
+
+-------------------------------------------------------------------------------
+Drag & Drop
+-------------------------------------------------------------------------------
+- Accepts both internal (Winnow) and external (Finder/Explorer) drops.
+- Internal drags infer sidecar files; external drops copy any file.
+- Uses mirrored code from Bookmarks::dropEvent for consistency.
+- Displays progress popup with ESC cancellation.
+- Emits updateCounts() after CopyAction.
+
+-------------------------------------------------------------------------------
+Diagnostics and Debugging
+-------------------------------------------------------------------------------
+- diagnostics() → human-readable state summary.
+- diagModel(selectionOnly) → dumps selected or expanded model with roles.
+- test() → qDebug() dump of entire tree.
+- OverLimitRole registration can be verified via diagModel() output.
+
+-------------------------------------------------------------------------------
+Key Constants and Relationships
+-------------------------------------------------------------------------------
+    OverLimitRole = 300  // must match in FSModel and HoverDelegate
+    imageCountColumn = 4
+    maxExpandLimit   = 100
+    combineRawJpg    // global flag shared with Metadata
+    G::stop, G::popup, G::isLogger, etc. govern background safety.
+
+-------------------------------------------------------------------------------
+Summary
+-------------------------------------------------------------------------------
+FSTree is a QTreeView-based folder browser tightly integrated with
+DataModel and Metadata.  It supports asynchronous image counting,
+recursive selection with over-limit protection, and visual feedback for
+hover and recursion states.  The design balances responsiveness,
+concurrency, and user feedback for very large folder hierarchies.
+
+*------------------------------------------------------------------------------*/
+
+/*------------------------------------------------------------------------------
 CLASS ImageCounter worker thread
 ------------------------------------------------------------------------------*/
 
@@ -333,44 +481,6 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
 CLASS FSTree subclassing QTreeView
 ------------------------------------------------------------------------------*/
 
-/*
- Async Folder Counting and Recursive Selection
- ---------------------------------------------
-
- FSTree::selectRecursively() initiates asynchronous counting of subfolders before
- deciding whether to expand and select them. This prevents the GUI from freezing during
- deep directory scans.
-
- Flow:
-   1. selectRecursively(folderPath, toggle)
-        → Stores parameters (pendingFolderPath, pendingToggle)
-        → Calls startCountSubdirs(folderPath, maxExpandLimit)
-
-   2. startCountSubdirs()
-        → Launches countSubdirsFast() in a background thread using QtConcurrent::run()
-        → Assigns QFuture<int> to a class member QFutureWatcher<int> (watcherCount)
-
-   3. countSubdirsFast()
-        → Recursively counts subfolders (non-blocking)
-        → Periodically checks G::stop for cancellation
-        → Returns the total folder count
-
-   4. QFutureWatcher::finished()
-        → Emits custom signal countFinished(result, wasCancelled)
-        → Connected to FSTree::onCountFinished()
-
-   5. onCountFinished()
-        → Executes on the GUI thread
-        → If count >= maxExpandLimit → marks folder as over limit (no expansion)
-        → Else → expands and selects all subfolders recursively
-
- Cancellation:
-   - MW::keyReleaseEvent() sets G::stop = true when ESC is pressed.
-   - countSubdirsFast() terminates early on the next loop iteration.
-   - onCountFinished() detects cancellation and exits cleanly.
-
-*/
-
 FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
         : QTreeView(parent), delegate(new HoverDelegate(this))
 {
@@ -385,7 +495,6 @@ FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
 
     // create model and filter
     createModel();
-    treeSelectionModel = selectionModel();
 
     // setup treeview
     for (int i = 1; i <= 3; ++i) {
@@ -436,28 +545,10 @@ FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
     connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
             this->viewport()->update();});
 
-    // Connect watcher signals to your own slots/signals
-    connect(&watcherCount, &QFutureWatcher<int>::finished, this, [this]() {
-        int result = watcherCount.result();
-        bool cancelled = G::stop;
-        emit countFinished(result, cancelled);
-    });
-
-    // Connect your own signal to your slot
-    connect(this, &FSTree::countFinished, this, &FSTree::onCountFinished);
-
-    connect(this, &FSTree::recurseCountProgress, this, [this](int count) {
-        // mw->setStatusMessage(QString("Scanning subfolders: %1").arg(count));
-    });
-
     isDebug = true;
 }
 
-FSTree::~FSTree()
-{
-    // Ensure CountSubdirs thread stops cleanly on destruction
-    cancelCountSubdirs();
-}
+FSTree::~FSTree() {}
 
 void FSTree::createModel()
 {
@@ -505,7 +596,7 @@ void FSTree::refreshModel()
     media card.
 */
     if (G::isLogger) G::log("FSTree::refreshModel");
-    //qDebug() << "FSTree::refreshModel";
+    qDebug() << "FSTree::refreshModel";
     mountedDrives.clear();
     // get mounted drives only
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
@@ -518,7 +609,7 @@ void FSTree::refreshModel()
     fsModel->clearCount();
     fsFilter->refresh();
     setFocus();
-    select(currentFolderPath());
+    // select(currentFolderPath());
 }
 
 bool FSTree::isShowImageCount()
@@ -699,39 +790,10 @@ void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
 
 }
 
-void FSTree::startCountSubdirs(const QString &root, int hardCap)
-{
-    if (watcherCount.isRunning()) {
-        qDebug() << "FSTree::startCountSubdirs already running, ignoring";
-        return;
-    }
-
-    G::stop = false;                 // reset cancellation flag
-    isSelectingFolders = true;       // your existing state flag
-
-    // Launch in background
-    QFuture<int> futureCount = QtConcurrent::run([this, root, hardCap]() {
-        return countSubdirsFast(root, hardCap);
-    });
-
-    watcherCount.setFuture(futureCount);
-}
-
-void FSTree::cancelCountSubdirs()
-{
-    if (watcherCount.isRunning()) {
-        watcherCount.waitForFinished();   // optional: block until done
-    }
-}
-
 int FSTree::countSubdirsFast(const QString &root, int hardCap)
 {
-    qDebug() << "FSTree::countSubdirsFast start (thread)"
-             << QThread::currentThread()
-             << "root =" << root;
-
-    QElapsedTimer timer;
-    timer.start();
+    if (G::isLogger)
+        G::log("FSTree::countSubdirsFast", root);
 
     int count = 0;
     QStack<QString> stack;
@@ -753,18 +815,8 @@ int FSTree::countSubdirsFast(const QString &root, int hardCap)
                 break;
 
             stack.push(fi.absoluteFilePath());
-            // qDebug() << fi.absoluteFilePath();
         }
-
-        // // Report progress every second
-        // if (timer.elapsed() > 1000) {
-        //     emit recurseCountProgress(count);
-        //     qDebug() << "FSTree::countSubdirsFast update: count =" << count;
-        //     timer.restart();
-        // }
     }
-
-    qDebug() << "FSTree::countSubdirsFast done, count =" << count << hardCap;
     return count;
 }
 
@@ -773,79 +825,33 @@ void FSTree::selectRecursively(QString folderPath, bool toggle)
     if (G::isLogger)
         G::log("FSTree::selectRecursively", folderPath);
 
-    // qDebug() << "FSTree::selectRecursively start";
-    // QString step = "Loading folders.\n";
-    // QString escapeClause = "\nPress \"Esc\" to stop.";
-    // mw->setCentralMessage(step + escapeClause);
-    // qApp->processEvents();
-
-    // if (watcherCount.isRunning()) {
-    //     qDebug() << "Deferring selectRecursively until previous count completes";
-    //     connect(&watcherCount, &QFutureWatcher<int>::finished, this,
-    //             [=]() mutable { selectRecursively(folderPath, toggle); },
-    //             Qt::SingleShotConnection);
-    //     return;
-    // }
-
-    // Remember parameters so we can resume later
-    pendingFolderPath = folderPath;
-    pendingToggle = toggle;
-
     // disable heavy UI bits
     setShowImageCount(false);
     isSelectingFolders = true;
-    G::stop = false;
+    // G::stop = false;
 
-    // qDebug() << "FSTree::selectRecursively starting async subdir count";
-    // startCountSubdirs(folderPath, maxExpandLimit);
-
-    int count = countSubdirsFast(folderPath, maxExpandLimit);
-    qDebug() << "FSTree::selectRecursively count =" << count;
-    onCountFinished(count, false);
-}
-
-// called automatically when countSubdirsFast finishes
-void FSTree::onCountFinished(int recurseFoldersCount, bool wasCancelled)
-{
-    if (G::isLogger)
-        G::log("FSTree::onCountFinished", pendingFolderPath);
-
-    if (G::stop) return;
+    int recurseFoldersCount = countSubdirsFast(folderPath, maxExpandLimit);
+    // onCountFinished(folderPath, toggle, count, false);
 
     isSelectingFolders = false;
-    // qDebug() << "FSTree::onCountFinished count =" << recurseFoldersCount
-    //          << "wasCancelled =" << wasCancelled
-        // ;
-
-    if (wasCancelled) {
-        qDebug() << "FSTree::onCountFinished cancelled";
-        setShowImageCount(true);
-        return;
-    }
 
     // Too many subfolders: just select root folder and mark orange
     qDebug() << "FSTree::onCountFinished" << recurseFoldersCount << maxExpandLimit;
     if (recurseFoldersCount >= maxExpandLimit) {
-        // QString step = "There are a lot of subfolders, this could take a minute.\n";
-        // QString escapeClause = "\nPress \"Esc\" to stop.";
-        // mw->setCentralMessage(step + escapeClause);
-        // qApp->processEvents();
-        // qDebug() << "Over limit — marking folder";
         fsModel->isMaxRecurse = true;
-        fsModel->maxRecursedRoots.append(pendingFolderPath);
-        markFolderOverLimit(pendingFolderPath, true);
-        QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(pendingFolderPath));
+        fsModel->maxRecursedRoots.append(folderPath);
+        markFolderOverLimit(folderPath, true);
+        QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(folderPath));
         selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         setShowImageCount(true);
         return;
     }
 
     // Proceed to expansion and selection only if below limit
-    // qDebug() << "Expanding recursively...";
     QStringList recursedFolders;
-    recursedFolders.append(pendingFolderPath);
+    recursedFolders.append(folderPath);
 
-    QDirIterator it(pendingFolderPath, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks,
+    QDirIterator it(folderPath, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks,
                     QDirIterator::Subdirectories);
     while (it.hasNext()) {
         it.next();
@@ -862,16 +868,14 @@ void FSTree::onCountFinished(int recurseFoldersCount, bool wasCancelled)
     for (const QString &path : recursedFolders) {
 
         QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
-        if (pendingToggle)
+        if (toggle)
             selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
         else
             selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
 
     setShowImageCount(true);
-    qDebug() << "FSTree::onCountFinished done";
 }
-
 
 QStringList FSTree::selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse)
 {
@@ -1044,22 +1048,22 @@ void FSTree::onItemExpanded(const QModelIndex &index)
     }
 }
 
-void FSTree::hasExpanded(const QPersistentModelIndex &index)
-{
-    if (isDebug || G::isLogger) {
-        QString msg;
-        if (justExpandedIndex == index) msg = "justExpandedIndex == index ";
-        else msg = "justExpandedIndex != index ";
-        msg += " Expanded = " + index.data().toString() +
-                      " Just Expanded = " + index.data().toString();
-        G::log("FSTree::hasExpanded", index.data().toString());
-    }
-    // qDebug() << "FSTree::hasExpanded" << t.elapsed() << index << justExpandedIndex;
+// void FSTree::hasExpanded(const QPersistentModelIndex &index)
+// {
+//     if (isDebug || G::isLogger) {
+//         QString msg;
+//         if (justExpandedIndex == index) msg = "justExpandedIndex == index ";
+//         else msg = "justExpandedIndex != index ";
+//         msg += " Expanded = " + index.data().toString() +
+//                       " Just Expanded = " + index.data().toString();
+//         G::log("FSTree::hasExpanded", index.data().toString());
+//     }
+//     // qDebug() << "FSTree::hasExpanded" << t.elapsed() << index << justExpandedIndex;
 
-    if (justExpandedIndex == index) {
-        emit indexExpanded();
-    }
-}
+//     if (justExpandedIndex == index) {
+//         emit indexExpanded();
+//     }
+// }
 
 void FSTree::resizeEvent(QResizeEvent *event)
 {
@@ -1083,40 +1087,6 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
     if (G::isInitializing) return;
     QTreeView::selectionChanged(selected, deselected);
 }
-
-void FSTree::saveState(ViewState& state) const
-{
-    // // Save the current selection
-    // const auto& selectionModel = this->selectionModel();
-    // if (selectionModel) {
-    //     const auto selectedIndexes = selectionModel->selectedIndexes();
-    //     state.selectedIndexes.clear();
-    //     for (const auto& index : selectedIndexes) {
-    //         if (index.isValid()) {
-    //             state.selectedIndexes << index;
-    //         }
-    //     }
-    // }
-}
-
-bool FSTree::restoreState(const ViewState& state) const
-{
-    // // Restore the selection
-    // const auto& selectionModel = treeSelectionModel;
-    // if (selectionModel) {
-    //     selectionModel->clearSelection(); // Clear any existing selection
-    //     QItemSelection selection;
-    //     for (const auto& index : state.selectedIndexes) {
-    //         if (index.isValid()) { // Ensure the index is still valid before selecting it
-    //             selection.select(index); // too few arguments
-    //         }
-    //     }
-    //     selectionModel->select(selection, QItemSelectionModel::Select);
-    // }
-
-    return true; // Return success
-}
-
 
 void FSTree::keyPressEvent(QKeyEvent *event){
     // prevent default key actions
@@ -1647,7 +1617,6 @@ QString FSTree::diagnostics()
     rpt << "\n";
     rpt << "\n" << G::sj("imageCountColumn", dots) << fsModel->imageCountColumn;
     rpt << "\n" << G::sj("imageCountColumnWidth", dots) << imageCountColumnWidth;
-    rpt << "\n" << G::sj("isRecursiveSelection", dots) << QVariant(isRecursiveSelection).toString();
     rpt << "\n" << G::sj("isMaxRecurse", dots) << QVariant(fsModel->isMaxRecurse).toString();
     rpt << "\n" << G::sj("maxExpandLimit", dots) << maxExpandLimit;
     rpt << "\n" << G::sj("Qt::UserRole", dots) << Qt::UserRole;
@@ -1660,12 +1629,12 @@ QString FSTree::diagnostics()
     rpt << "\n";
 
     rpt << "Selection fsModel detail:\n";
-    rpt << dumpModelContents(true);
+    rpt << diagModel(true);
 
     return reportString;
 }
 
-QString FSTree::dumpModelContents(bool isSelectionOnly)
+QString FSTree::diagModel(bool isSelectionOnly)
 {
     QAbstractItemModel *model = this->model();   // ✅ use the view's model (proxy or source)
     if (!model)
