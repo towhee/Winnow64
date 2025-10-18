@@ -1,27 +1,27 @@
 #include "File/bookmarks.h"
 #include "Main/global.h"
 
-class BookDelegate : public QStyledItemDelegate
-{
-public:
-    explicit BookDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
+// class BookDelegate : public QStyledItemDelegate
+// {
+// public:
+//     explicit BookDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
 
-// sizeHint only working for first 10 entries
-//    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override
-//    {
-//        static int count = 0;
-//        count++;
-//        index.isValid();          // suppress compiler warning
-//        int height = qRound(G::strFontSize.toInt() * 1.5 * G::ptToPx);
-//        qDebug() << "BookDelegate::sizeHint"
-//                 << count
-//                 << "height =" << height
-//                 << "G::strFontSize =" << G::strFontSize
-//                 << "G::ptToPx =" << G::ptToPx
-//            ;
-//        return QSize(option.rect.width(), height);
-//    }
-};
+// // sizeHint only working for first 10 entries
+// //    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override
+// //    {
+// //        static int count = 0;
+// //        count++;
+// //        index.isValid();          // suppress compiler warning
+// //        int height = qRound(G::strFontSize.toInt() * 1.5 * G::ptToPx);
+// //        qDebug() << "BookDelegate::sizeHint"
+// //                 << count
+// //                 << "height =" << height
+// //                 << "G::strFontSize =" << G::strFontSize
+// //                 << "G::ptToPx =" << G::ptToPx
+// //            ;
+// //        return QSize(option.rect.width(), height);
+// //    }
+// };
 
 /*
 A QStringList of paths to bookmarked folders is displayed as top level items
@@ -490,7 +490,7 @@ void BookMarks::dropEvent(QDropEvent *event)
     }
 
     // START MIRRORED CODE SECTION
-    // This code section is mirrored in BookMarks::dropEvent.::dropEvent.
+    // This code section is mirrored in FSTree::dropEvent.
     // Make sure to sync any changes.
 
     /* Drag and Drop files:

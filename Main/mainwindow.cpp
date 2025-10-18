@@ -877,7 +877,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     QModelIndex idx0 = idx.sibling(idx.row(), 0);
                     folderName = idx0.data(QFileSystemModel::FileNameRole).toString();
                     mouseOverFolderPath = idx0.data(QFileSystemModel::FilePathRole).toString();
-                    /*
+                    // /*
                     qDebug() << "MW::eventFilter QEvent::ContextMenu"
                              << "folderName =" << folderName
                              << "mouseOverFolderPath =" << mouseOverFolderPath
