@@ -81,6 +81,7 @@ FSFilter  (QSortFilterProxyModel subclass)
 -------------------------------------------------------------------------------
 HoverDelegate  (QStyledItemDelegate subclass)
 -------------------------------------------------------------------------------
+- Also used by Bookmarks
 - Handles hover and over-limit highlighting.
 - hoverBackground = G::backgroundShade + 20.
 - Over-limit text color = orange (255,165,0).
@@ -790,7 +791,7 @@ void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
 
 }
 
-int FSTree::countSubdirsFast(const QString &root, int hardCap)
+bool FSTree::isSubDirsOverLimit(const QString &root, int hardCap)
 {
     if (G::isLogger)
         G::log("FSTree::countSubdirsFast", root);
@@ -812,12 +813,12 @@ int FSTree::countSubdirsFast(const QString &root, int hardCap)
 
         for (const QFileInfo &fi : subdirs) {
             if (G::stop || ++count > hardCap)
-                break;
+                return true;
 
             stack.push(fi.absoluteFilePath());
         }
     }
-    return count;
+    return false;
 }
 
 void FSTree::selectRecursively(QString folderPath, bool toggle)
@@ -827,17 +828,9 @@ void FSTree::selectRecursively(QString folderPath, bool toggle)
 
     // disable heavy UI bits
     setShowImageCount(false);
-    isSelectingFolders = true;
-    // G::stop = false;
-
-    int recurseFoldersCount = countSubdirsFast(folderPath, maxExpandLimit);
-    // onCountFinished(folderPath, toggle, count, false);
-
-    isSelectingFolders = false;
 
     // Too many subfolders: just select root folder and mark orange
-    qDebug() << "FSTree::onCountFinished" << recurseFoldersCount << maxExpandLimit;
-    if (recurseFoldersCount >= maxExpandLimit) {
+    if (isSubDirsOverLimit(folderPath, maxExpandLimit)) {
         fsModel->isMaxRecurse = true;
         fsModel->maxRecursedRoots.append(folderPath);
         markFolderOverLimit(folderPath, true);
@@ -1271,8 +1264,6 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         G::allMetadataLoaded = false;
     }
 
-    isSelectingFolders = true;
-
     // Clear and select folder
     if (isClearAdd) {
         // qDebug() << "FSTree::mousePressEvent NEW SELECTION" << path;
@@ -1345,10 +1336,6 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         }
         prevIdx = index;
     }
-
-    isSelectingFolders = false;
-    // fsModel->isMaxRecurse = false;
-
 }
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)

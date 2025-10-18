@@ -32,26 +32,6 @@ private:
     int computeImageCount(const QString &path);
 };
 
-// FSTreeDelegate.h
-// class FSTreeDelegate : public QStyledItemDelegate {
-//     Q_OBJECT
-// public:
-//     explicit FSTreeDelegate(QObject *parent=nullptr)
-//         : QStyledItemDelegate(parent) {}
-
-//     void paint(QPainter *painter,
-//                const QStyleOptionViewItem &option,
-//                const QModelIndex &index) const override
-//     {
-//         QStyleOptionViewItem opt(option);
-//         QString path = index.data(QFileSystemModel::FilePathRole).toString();
-//         if (path == "/Users/roryhill/Pictures") {
-//             opt.palette.setColor(QPalette::Text, QColor(255,165,0));  // orange
-//         }
-//         QStyledItemDelegate::paint(painter, opt, index);
-//     }
-// };
-
 class FSFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
@@ -90,9 +70,6 @@ public:
 
 protected:
     QHash<int, QByteArray> roleNames() const override;
-
-signals:
-    // void update() const;        // const req'd but shows warning
 
 private:
     QDir *dir;
@@ -168,7 +145,6 @@ protected:
 
 signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
-    // void indexExpanded();
     void selectionChange();
     void folderSelectionChange(QString dPath, G::FolderOp op, bool resetDataModel, bool recurse = false);
     void datamodelQueue(QString dPath, bool isAdding);
@@ -195,18 +171,14 @@ private:
     int maxExpandLimit = 100;
     QColor overLimitColor = QColor(68,95,118);   // orange
 
-    int countSubdirsFast(const QString &root, int hardCap);
+    bool isSubDirsOverLimit(const QString &root, int hardCap);
 
     struct ViewState {
         QPointF scrollPosition;
         QList<QModelIndex> selectedIndexes;
     };
     QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
-    // QSet<QPersistentModelIndex> nodesToExpand;
-    // QElapsedTimer expansionTimer;
     QElapsedTimer rapidClick;
-    // bool eventLoopRunning;
-    // QPersistentModelIndex justExpandedIndex;
 
     QModelIndex dndOrigSelection;
     QModelIndex prevCurrentIndex;
@@ -216,14 +188,11 @@ private:
     HoverDelegate *delegate;
     QDir *dir;
     QStringList *fileFilters;
-    // QList<QPersistentModelIndex> recursedForSelection;
-    // QModelIndexList recursedForSelection;
     QModelIndex rightClickIndex;
     int imageCountColumnWidth;
 
     QString diagModel(bool isSelectionOnly);
 
-    // QElapsedTimer t;
     QTimer wheelTimer;
     bool wheelSpinningOnEntry;
     bool isDebug = false;
