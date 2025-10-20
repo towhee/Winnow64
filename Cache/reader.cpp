@@ -66,6 +66,8 @@ void Reader::stop()
 void Reader::abortProcessing()
 {
     QString fun = "Reader::abortProcessing";
+    if (G::isLogger) G::log(fun, fPath);
+
     // qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
 
     thumb->abortProcessing();
@@ -111,6 +113,7 @@ inline bool Reader::instanceOk()
 bool Reader::readMetadata()
 {
     QString fun = "Reader::readMetadata";
+    if (G::isLogger) G::log(fun, fPath);
     if (isDebug)
     {
         qDebug().noquote()
@@ -171,6 +174,7 @@ bool Reader::readMetadata()
 void Reader::readIcon()
 {
     QString fun = "Reader::readIcon";
+    if (G::isLogger) G::log(fun, fPath);
     if (isDebug)
     {
         qDebug().noquote()
@@ -203,7 +207,7 @@ void Reader::readIcon()
     // video
     if (isVideo) {
         if (G::renderVideoThumb) {
-            /*
+            // /*
             qDebug() << "Reader::readIcon"
                      << fPath
                      << " instance =" << instance
@@ -275,7 +279,9 @@ void Reader::read(int dmRow, QString filePath, int instance,
                   bool needMeta, bool needIcon)
 {
     QString fun = "Reader::read";
-    if (G::isLogger) G::log(fun, filePath);
+    QString need = "needMeta = "  + QVariant(needMeta).toString() +
+                   " needIcon = " + QVariant(needIcon).toString() + " ";
+    if (G::isLogger) G::log(fun, need + filePath);
     if (filePath.isEmpty()) {
         qWarning().noquote() << fun << "EMPTY FILEPATH";
     }

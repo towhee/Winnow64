@@ -1,14 +1,12 @@
 WHAT'S NEW
 - Auto cache size
-- TableView freeze first two columns
+- TableView freeze first two columns when scroll horizontally
 - OS hanging when process large number of recursed folders
 - Ingest Dlg not showing manual paths correctly
 
 BUGS / TO DO
-- FSTree context menu folder "false"
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Copy path(s) not always working
-- Update menu filters when delete all filtered
 - Undo delete
 - Try using std::atomic<bool> for flags used in threads
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
@@ -29,7 +27,6 @@ BUGS / TO DO
 - ImageView::loadImage happening twice when select a new primary folder
 - if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
 - Label colors not getting into LR during ingest
-- Figure out how to deal with very large datasets > 20,000 images (minimize icon chunk)
 - Maybe integrate apple sf symbols as svg
 - Test rename selected files
 - Add rotation to image modification
@@ -134,6 +131,9 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Select anchor wrong when change filter.  Clear selection to keep it simple.
+- Not reading sidecars in images in readMetadata if no metadata in file
+- Disable menu filters when item on it filtered datamodel
 - Updated _deploy.command
 - FSTree process large number of recursed folders
 - TableView showing all columns at start when some columns are being hidden in pref

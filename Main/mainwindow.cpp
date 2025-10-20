@@ -473,7 +473,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log("MW::keyReleaseEvent");
 
-    qDebug() << "MW::keyReleaseEvent" << event;
+    // qDebug() << "MW::keyReleaseEvent" << event;
 
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
@@ -1682,10 +1682,11 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
             G::log(fun, msg);
         }
     }
+    /*
     qDebug() << fun << op
              << "resetDataModel =" << resetDataModel
              << "recurse =" << recurse
-             << folderPath;
+             << folderPath; //*/
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
@@ -1721,7 +1722,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     });
 
     // dm->enqueueFolderSelection(folderPath, op, recurse);
-    qDebug() << fun << "finished dm->enqueueFolderSelection";
+    // qDebug() << fun << "finished dm->enqueueFolderSelection";
 
 }
 
@@ -2083,7 +2084,7 @@ void MW::stop(QString src)
     // ignore if already stopping
     if (G::stop) return;
 
-    qDebug().noquote() << "MW::stop src =" << src;
+    // qDebug().noquote() << "MW::stop src =" << src;
 
     // stop flags
     G::stop = true;
@@ -2168,7 +2169,7 @@ bool MW::reset(QString src)
 
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::reset", "Source: " + src);
-    qDebug() << "MW::reset" << src;
+    // qDebug() << "MW::reset" << src;
 
     // datamodel
     dm->selectionModel->clear();
@@ -2405,7 +2406,7 @@ void MW::folderChanged(bool aborted)
     msg += " dm->rowCount = " + QString::number(dm->rowCount());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    qDebug() << fun << msg << "G::stop =" << G::stop;
+    // qDebug() << fun << msg << "G::stop =" << G::stop;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
@@ -2960,7 +2961,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 /*
     Called by signal itemClicked in bookmark.
 */
-    if (G::isLogger) qDebug() << "MW::bookmarkClicked";
+    if (G::isLogger) G::log("MW::bookmarkClicked");
 
     if (G::stop) {
         G::popup->showPopup("Busy, try new folder in a sec.", 1000);

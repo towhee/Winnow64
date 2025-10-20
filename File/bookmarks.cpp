@@ -1,28 +1,6 @@
 #include "File/bookmarks.h"
 #include "Main/global.h"
 
-// class BookDelegate : public QStyledItemDelegate
-// {
-// public:
-//     explicit BookDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
-
-// // sizeHint only working for first 10 entries
-// //    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override
-// //    {
-// //        static int count = 0;
-// //        count++;
-// //        index.isValid();          // suppress compiler warning
-// //        int height = qRound(G::strFontSize.toInt() * 1.5 * G::ptToPx);
-// //        qDebug() << "BookDelegate::sizeHint"
-// //                 << count
-// //                 << "height =" << height
-// //                 << "G::strFontSize =" << G::strFontSize
-// //                 << "G::ptToPx =" << G::ptToPx
-// //            ;
-// //        return QSize(option.rect.width(), height);
-// //    }
-// };
-
 /*
 A QStringList of paths to bookmarked folders is displayed as top level items
 in a QWidgetTree in column 0.  Column 1 holds a count of the readable image files

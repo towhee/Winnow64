@@ -551,6 +551,8 @@ inline bool MetaRead::needToRead(int sfRow)
     // if (isReading || isIcon) {
     //     return false;
     // }
+    // }
+    // }
     // else {
     //     QModelIndex sfReadingIdx = dm->sf->index(sfRow, G::MetadataReadingColumn);
     //     dm->sf->setData(sfReadingIdx, true);

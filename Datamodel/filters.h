@@ -70,6 +70,7 @@ public:
     void setCategoryBackground(QTreeWidgetItem *cat);
     void setSearchNewFolder();
     void setCategoryFilterStatus(QTreeWidgetItem *item);
+    bool isPredefinedNonZeroCount(QString itemName);
     void disableColorZeroCountItems();
     void disableAllItems(bool disable);
     void disableAllHeaders(bool disable);

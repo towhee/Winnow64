@@ -58,6 +58,7 @@ signals:
     void filterLastDay();
     void searchTextEdit();
     void filterChange(QString src);
+    void updateFilterMenu(QString src);
 
 public slots:
     void abortProcessing();

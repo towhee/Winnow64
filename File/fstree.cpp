@@ -420,11 +420,11 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
         */
         if (role == Qt::DisplayRole) {
             QString dPath = filePath(index);
-
+            /*
             qDebug() << "FSModel::data"
                      << "isMaxRecurse =" << isMaxRecurse
                      << "maxRecursedRoots.contains(dPath) =" << maxRecursedRoots.contains(dPath)
-                     << dPath;
+                     << dPath; //*/
 
             if (isMaxRecurse && maxRecursedRoots.contains(dPath)) {
                 return dm->recurseImageCount(dPath);
@@ -597,7 +597,7 @@ void FSTree::refreshModel()
     media card.
 */
     if (G::isLogger) G::log("FSTree::refreshModel");
-    qDebug() << "FSTree::refreshModel";
+    // qDebug() << "FSTree::refreshModel";
     mountedDrives.clear();
     // get mounted drives only
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
@@ -761,7 +761,7 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
 
 void FSTree::clearFolderOverLimit()
 {
-    qDebug() << "FSTree::clearFolderOverLimit";
+    // qDebug() << "FSTree::clearFolderOverLimit";
     for (QString folderPath : fsModel->maxRecursedRoots) {
         const QModelIndex src = fsModel->index(folderPath);
         if (!src.isValid()) continue;
@@ -782,12 +782,12 @@ void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
     const QModelIndex idx = fsFilter->mapFromSource(src);
     if (idx.isValid()) viewport()->update(visualRect(idx));
     fsModel->isMaxRecurse = true;
-
+    /*
     qDebug() << "FSTree::markFolderOverLimit overLimitColor ="
              << overLimitColor
              // << idx
              // << visualRect(idx)
-             << folderPath;
+             << folderPath; //*/
 
 }
 
@@ -1030,8 +1030,10 @@ void FSTree::resizeColumns()
 void FSTree::onItemExpanded(const QModelIndex &index)
 {
     if (index.data(FSModel::OverLimitRole).toBool()) {
+        /*
         qDebug() << "Blocking manual expansion of OverLimit item:"
                  << index.data(Qt::DisplayRole).toString();
+                    //*/
 
         // Collapse immediately
         QTreeView::setExpanded(index, false);
@@ -1376,12 +1378,13 @@ void FSTree::contextMenuEvent(QContextMenuEvent *event)
     QString folderName = "";
     path = idx.data(Qt::ToolTipRole).toString();
     folderName = QFileInfo(path).fileName();
+    /*
     qDebug() << "FSTree::contextMenuEvent"
              << "idx =" << idx
              << "idx.isValid() =" << idx.isValid()
              << "event->pos() =" << event->pos()
              << "folderName =" << folderName
-        ;
+        ; //*/
 }
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)

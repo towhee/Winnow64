@@ -424,6 +424,7 @@ public slots:
     void stop(QString src = "");
     bool reset(QString src = "");
     void nullFiltration();
+    void updateFilterMenu(QString source = "");
     void filterLastDay();
     void searchTextEdit();
     void handleDrop(QString fPath);

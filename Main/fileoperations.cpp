@@ -94,6 +94,7 @@ void MW::pasteFiles(QString folderPath)
     }
     // update filter counts
     buildFilters->recount();
+    // updateFilterMenu("MW::pasteFiles");
 
     // update folder counts
     fsTree->updateAFolderCount(folderPath);

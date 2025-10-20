@@ -32,8 +32,8 @@ public:
 Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 {
 /*
-    Used to define criteria for filtering the datamodel, based on which items are checked in
-    the tree.
+    Used to define criteria for filtering the datamodel, based on which items are checked
+    in the tree.
 
     The tree contains top level items (Categories ie Ratings, Color Classes, File types
     ...). For each top level item the children are the filter choices to filter
@@ -546,6 +546,34 @@ void Filters::setCategoryFilterStatus(QTreeWidgetItem *item)
     }
 }
 
+bool Filters::isPredefinedNonZeroCount(QString itemName)
+{
+    if (G::isLogger) G::log("Filters::isPredefinedZeroCount");
+
+    qDebug() << "\nFilters::isPredefinedNonZeroCount Seeking:" << itemName;
+    bool isNonZero = false;
+
+    QList<QTreeWidgetItem*> items {picks, ratings, labels};
+    for (QTreeWidgetItem *item : items) {
+        for (int i = 0; i < item->childCount(); i++) {
+            qDebug() << "Filters::isPredefinedNonZeroCount"
+                     << item->text(0)
+                     << item->child(i)->text(0)
+                     << item->child(i)->text(2);
+            if (item->child(i)->text(0) == itemName) {
+                return item->child(i)->text(2) != "0";
+                if (item->child(i)->text(2) != "0") {
+                    isNonZero = true;
+                    break;
+                }
+            }
+        }
+    }
+    // not found
+    qDebug() << "Filters::isPredefinedNonZeroCount isNonZero:" << itemName << isNonZero;
+    return isNonZero;
+}
+
 void Filters::disableColorZeroCountItems()
 {
     // not being used
@@ -623,7 +651,7 @@ void Filters::disableColorAllHeaders(bool disable)
 
 void Filters::updateProgress(int progress)
 {
-    if (G::isLogger) G::log("Filters::updateProgress");
+    // if (G::isLogger) G::log("Filters::updateProgress");
     if (debugFilters)
     {
         qDebug() << "Filters::updateProgress" << progress;
@@ -1381,7 +1409,7 @@ void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidg
 */
     //    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
     if (debugFilters /*|| G::isLogger || G::isFlowLogger*/)
-        qDebug() << "Filters::addFilteredCountPerItem"
+        qDebug() << "Filters::updateUnfilteredCountPerItem"
                  << "category =" << category->text(0)
             ;
 
@@ -1403,18 +1431,18 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
 {
 /*
     All the unique values for a category are collected into a QMap object in
-    BuildFilters. The list is passed here, where unique values are extracted and added to
-    the category. For example, there could be multiple file types in the folder like JPG
-    and NEF. A QMap object is used so the items can be sorted by key in the same order as
-    the tableView. This function should only be used for dynamic categories - see
-    createDynamicFilters;
+    BuildFilters. The list is passed here, where unique values are extracted and
+    added to the category. For example, there could be multiple file types in the
+    folder like JPG and NEF. A QMap object is used so the items can be sorted by key
+    in the same order as the tableView. This function should only be used for
+    dynamic categories - see createDynamicFilters;
 
-    If a category item was just checked (activeCategory) then it is ignored, as the user
-    may want to check another item in the same category.
+    If a category item was just checked (activeCategory) then it is ignored, as the
+    user may want to check another item in the same category.
 */
 //    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
-    if (debugFilters)
-        qDebug() << "Filters::addFilteredCountPerItem"
+    // if (debugFilters)
+        qDebug() << "Filters::updateFilteredCountPerItem"
                  << "category =" << category->text(0)
                     ;
 
@@ -1424,10 +1452,12 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
         if (G::stop) return;
         category->child(i)->setData(2, Qt::EditRole, 0);
         QString key = category->child(i)->text(0);
-        //qDebug() << "Filters::addFilteredCountPerItem  key =" << key;
+        qDebug() << "Filters::updateFilteredCountPerItem  key =" << key << itemMap.value(key);
         if (itemMap.contains(key))
             category->child(i)->setData(2, Qt::EditRole, itemMap.value(key));
     }
+
+    qDebug() << " ";
 
     // sort the result
     //category->sortChildren(0, Qt::AscendingOrder);
@@ -1437,13 +1467,13 @@ void Filters::updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidge
 {
     /*
     All the unique values for a category are collected into a QMap object in
-    BuildFilters. The list is passed here, where category child items that are checked and
-    have a zero unfiltered count are unchecked.
+    BuildFilters. The list is passed here, where category child items that are
+    checked and have a zero unfiltered count are unchecked.
 
-    For example, if the Pick category picked items is checked, and all the datamodel picked
-    rows have been unpicked, then the filter picked item will be checked but have a zero
-    filtered count.  The filter picked item must be unchecked to avoid a proxy filter null
-    result.
+    For example, if the Pick category picked items is checked, and all the datamodel
+    picked rows have been unpicked, then the filter picked item will be checked but
+    have a zero filtered count. The filter picked item must be unchecked to avoid a
+    proxy filter null result.
 */
     //if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::updateZeroCountCheckedItems"

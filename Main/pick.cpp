@@ -64,7 +64,7 @@ void MW::togglePickUnlessRejected()
     }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "", "MW::togglePick");
+    updateStatus(true, "", "MW::togglePickUnlessRejected");
     updateClassification();
     updateClassification();
 }
@@ -101,6 +101,7 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
 
     // update filter counts
     buildFilters->updateCategory(BuildFilters::PickEdit);
+
 }
 
 void MW::togglePick()
@@ -132,7 +133,7 @@ void MW::togglePick()
         rows.append(dmRow);
     }
 
-    qDebug() << "selected rows =" << rows;
+    qDebug() << "MW::togglePick selected rows =" << rows;
 
     QString pickStatus;
 
