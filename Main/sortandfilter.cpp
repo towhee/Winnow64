@@ -24,7 +24,7 @@
 void MW::filterDockTabMousePress()
 {
     if (G::isLogger) G::log("MW::filterDockVisibilityChange");
-//    /*
+    /*
     qDebug() << "MW::filterDockTabMousePress"
              << "filterDock->isVisible() =" << filterDock->isVisible()
              << "filters->filtersBuilt =" << filters->filtersBuilt
@@ -50,6 +50,46 @@ void MW::updateAllFilters()
     // filterChange("updateAllFilters");
 }
 
+void MW::updateFilterMenu(QString source)
+{
+/*
+    Signalled from BuildFilters::updateCategoryItems and
+    BuildFilters::updateFilteredCounts.
+
+    After a filters recount enable/disable filter menu items based on whether they
+    are still in the proxy datamodel (dm->sf):
+
+    Disable filter menu items that are not in the filter menu and have a sf count = 0
+    Enable filter menu items that are in the filter menu and have a sf count > 0
+*/
+    if (G::isLogger) G::log("MW::updateFilterMenu");
+    qDebug() << "MW::updateFilterMenu source =" << source;
+
+    auto f = [this](const QString &name) {
+        return filters->isPredefinedNonZeroCount(name);
+    };
+
+    // picks
+    filterPickAction->setEnabled(f("Picked"));
+
+    // ratings
+    filterRating1Action->setEnabled(f("1"));
+    filterRating2Action->setEnabled(f("2"));
+    filterRating3Action->setEnabled(f("3"));
+    filterRating4Action->setEnabled(f("4"));
+    filterRating5Action->setEnabled(f("5"));
+
+    // color labels
+    filterRedAction->setEnabled(f("Red"));
+    filterYellowAction->setEnabled(f("Yellow"));
+    filterGreenAction->setEnabled(f("Green"));
+    filterBlueAction->setEnabled(f("Blue"));
+    filterPurpleAction->setEnabled(f("Purple"));
+
+    qDebug() << " ";
+    qDebug() << " ";
+}
+
 void MW::filterChange(QString source)
 {
 /*
@@ -58,6 +98,7 @@ void MW::filterChange(QString source)
     - the datamodel instance is incremented
     - the datamodel proxy filter is refreshed
     - the filter panel counts are updated
+    - pick, rating and label 0 count disabled, rest enabled
     - the current index is updated
     - any prior selection that is still available is set
     - the image cache is rebuilt to match the current filter
@@ -82,11 +123,6 @@ void MW::filterChange(QString source)
     // and MetaRead for the prior datamodel filter.
     dm->newInstance();
 
-    // stop ImageCache
-    // qDebug() << "MW::filterChange" << "emit abortImageCache()";
-    // emit abortImageCache();
-    // imageCache->abortProcessing();
-
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") syncActionsWithFilters();
 
@@ -95,10 +131,12 @@ void MW::filterChange(QString source)
     // prevent unwanted fileSelectionChange()
     isFilterChange = true;
 
-    // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
-    // scroll event and the metadataCache updates the icons and thumbnails
+    /* refresh the proxy sort/filter, which updates the selectionIndex, which
+    triggers a scroll event and the metadataCache updates the icons and
+    thumbnails */
+
     dm->sf->suspend(false, "MW::filterChange");
-    dm->sf->filterChange("MW::filterChange");  // crash (removed wait in SortFilter::filterChange)
+    dm->sf->filterChange("MW::filterChange"); // crash (removed wait in SortFilter::filterChange)
 
     // update filter panel image count by filter item
     buildFilters->update();
@@ -117,7 +155,6 @@ void MW::filterChange(QString source)
     if (!dm->sf->rowCount()) {
         nullFiltration();
         QApplication::restoreOverrideCursor();
-        // G::popUp->reset();
         return;
     }
 
@@ -147,14 +184,17 @@ void MW::filterChange(QString source)
     if (!G::removingRowsFromDM)
         emit imageCacheFilterChange(fPath, "MW::filterChange");
 
+    // clear selection after filtration
+    sel->clear();
+
     // select after filtration
     if (newSelectReqd) {
         sel->select(newSfIdx, Qt::NoModifier,"MW::filterChange");
     }
-    else {
-        // dm->setCurrentSF(newSfIdx, dm->instance);
-        emit updateCurrent(newSfIdx, G::dmInstance);
-    }
+    // else {
+    //     // dm->setCurrentSF(newSfIdx, dm->instance);
+    //     emit updateCurrent(newSfIdx, G::dmInstance);
+    // }
 
     // only scroll if filtration has changed visible cells in thumbView
     scrollToCurrentRowIfNotVisible();
@@ -163,110 +203,6 @@ void MW::filterChange(QString source)
     // emit setImageCachePosition(dm->currentFilePath, "MW::filterChange");
 
     QApplication::restoreOverrideCursor();
-
-
-    // if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
-    // // qDebug() << "MW::filterChange" << "called from:" << source;
-
-    // // ignore if new folder is being loaded
-    // if (!G::allMetadataLoaded) {
-    //     G::popup->showPopup("Please wait for the folder to complete loading...", 2000);
-    //     return;
-    // }
-
-    // if (G::stop) return;
-
-    // int sfRowCountBeforeFilter = dm->sf->rowCount();
-
-    // // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
-    // // and MetaRead for the prior datamodel filter.
-    // dm->newInstance();
-
-    // // if filter change source is the filter panel then sync menu actions isChecked property
-    // if (source == "Filters::itemClickedSignal") syncActionsWithFilters();
-
-    // QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    //  // prevent unwanted fileSelectionChange()
-    // isFilterChange = true;
-
-    // // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
-    // // scroll event and the metadataCache updates the icons and thumbnails
-    // dm->sf->suspend(false, "MW::filterChange");
-    // dm->sf->filterChange("MW::filterChange");  // crash (removed wait in SortFilter::filterChange)
-
-    // // update filter panel image count by filter item
-    // buildFilters->update();
-
-    // // recover sort after filtration
-    // // sortChange("filterChange");
-    // thumbView->sortThumbs(sortColumn, isReverseSort);
-
-    // // allow fileSelectionChange()
-    // isFilterChange = false;
-
-    // // update the status panel filtration status
-    // updateStatusBar();
-    // updateStatus(true, "", "MW::filterChange");
-
-    // // if filter has eliminated all rows so nothing to show
-    // if (!dm->sf->rowCount()) {
-    //     nullFiltration();
-    //     QApplication::restoreOverrideCursor();
-    //     // G::popUp->reset();
-    //     return;
-    // }
-
-    // thumbView->refreshThumbs();
-    // gridView->refreshThumbs();
-
-    // // sync the datamodel instance
-    // metaRead->initialize();
-
-    // // is the DataModel current index still in the filter.  If not, reset
-    // QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
-    // bool newSelectReqd = false;
-    // int oldRow = dm->currentSfIdx.row();
-    // int sfRows = dm->sf->rowCount();
-
-    // qDebug().noquote()
-    //     << "MW::filterChanged"
-    //     << "sfRows =" << sfRows
-    //     << "sfRowCountBeforeFilter =" << sfRowCountBeforeFilter
-    //     << "sel count =" << sel->count()
-    //     << "dm->currentDmIdx row =" << dm->currentDmIdx.row()
-    //     << "newSfIdx row =" << newSfIdx.row()
-    //     ;
-
-    // if (!newSfIdx.isValid()) {
-    //     newSelectReqd = true;
-    //     if (oldRow < sfRows) newSfIdx = dm->sf->index(oldRow, 0);
-    //     else newSfIdx = dm->sf->index(sfRows-1, 0);
-    // }
-    // else if (imageView->isNullImage() || sfRowCountBeforeFilter == 0) {
-    //     newSelectReqd = true;
-    // }
-
-    // // rebuild imageCacheList and update priorities in image cache
-    // QString fPath = newSfIdx.data(G::PathRole).toString();
-    // if (!G::removingRowsFromDM)
-    //     emit imageCacheFilterChange(fPath, "MW::filterChange");
-
-    // // select after filtration
-    // if (newSelectReqd) {
-    //     sel->select(newSfIdx, Qt::NoModifier,"MW::filterChange");
-    // }
-    // else {
-    //     emit updateCurrent(newSfIdx, G::dmInstance);
-    // }
-
-    // // only scroll if filtration has changed visible cells in thumbView
-    // scrollToCurrentRowIfNotVisible();
-
-    // // update ImageCache if priority queue has changed
-    // // emit setImageCachePosition(dm->currentFilePath, "MW::filterChange");
-
-    // QApplication::restoreOverrideCursor();
 }
 
 void MW::quickFilter()
@@ -597,8 +533,8 @@ void MW::toggleSortDirection(Tog n)
 void MW::setRating()
 {
 /*
-    Resolve the source menu action that called (could be any rating) and then set the rating
-    for all the selected thumbs.
+    Resolve the source menu action that called (could be any rating) and then set the
+    rating for all the selected thumbs.
 */
     if (G::isLogger) G::log("MW::setRating");
     qDebug() << "MW::setRating";

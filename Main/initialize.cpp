@@ -266,6 +266,7 @@ void MW::createDataModel()
     connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::abortProcessing);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
+    connect(buildFilters, &BuildFilters::updateFilterMenu, this, &MW::updateFilterMenu);
     connect(buildFilters, &BuildFilters::quickFilter, this, &MW::quickFilterComplete);
     connect(buildFilters, &BuildFilters::filterLastDay, this, &MW::filterLastDay);
     connect(buildFilters, &BuildFilters::searchTextEdit, this, &MW::searchTextEdit);

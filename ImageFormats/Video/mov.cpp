@@ -1,9 +1,10 @@
 #include "mov.h"
 #include "Main/global.h"
 
+bool MOV::isDebug = false;
+
 MOV::MOV()
 {
-    isDebug = true;
 }
 
 bool MOV::readAtomHeader(QFile &file, quint32 &size, char (&type)[4]) {
@@ -71,51 +72,145 @@ quint32 MOV::readUInt32(QFile &file) {
     return qFromBigEndian(value);  // Convert to host byte order
 }
 
-bool MOV::findAtom(QFile &file, const char *targetAtomType, quint32 &atomSize) {
+bool MOV::findAtom(QFile &file, const char *targetAtomType, quint32 &atomSize, qint64 limit) {
+    // char type[4];
+    // quint32 size;
+    // while (readAtomHeader(file, size, type)) {
+    //     // qDebug() << "Mov::findAtom  type:" << type;
+    //     if (strncmp(type, targetAtomType, 4) == 0) {
+    //         atomSize = size;
+    //         return true;
+    //     }
+    //     file.seek(file.pos() + size - 8);  // Skip to next atom
+    // }
+    // return false;
+
     char type[4];
     quint32 size;
+    qint64 fileSize = (limit > 0 ? limit : file.size());
+
     while (readAtomHeader(file, size, type)) {
-        // qDebug() << "Mov::findAtom  type:" << type;
+        if (size < 8) {
+            qWarning() << "Invalid atom size" << size;
+            return false;
+        }
+
         if (strncmp(type, targetAtomType, 4) == 0) {
             atomSize = size;
             return true;
         }
-        file.seek(file.pos() + size - 8);  // Skip to next atom
+
+        qint64 nextPos = file.pos() + (qint64)size - 8;
+        if (nextPos > fileSize) {
+            qWarning() << "Atom extends beyond EOF, aborting" << type << "size" << size;
+            return false;
+        }
+
+        if (!file.seek(nextPos)) {
+            qWarning() << "Failed to seek to next atom position";
+            return false;
+        }
     }
+
     return false;
+
 }
 
 QDateTime MOV::createDate(const QString &filePath) {
+    // QFile file(filePath);
+    // if (!file.open(QIODevice::ReadOnly)) {
+    //     qWarning() << "Failed to open file" << filePath;
+    //     return QDateTime();
+    // }
+
+    // quint32 moovSize;
+
+    // if (!findAtom(file, "moov", moovSize)) {
+    //     qWarning() << "moov atom not found!";
+    //     return QDateTime();
+    // }
+
+    // // Look for mvhd atom inside moov
+    // quint32 mvhdSize;
+    // if (!findAtom(file, "mvhd", mvhdSize)) {
+    //     qWarning() << "mvhd atom not found!";
+    //     return QDateTime();
+    // }
+
+    // // Seek to creation time (offset 12 bytes from start of mvhd atom)
+    // file.seek(file.pos() + 4);
+    // // file.seek(file.pos() + 12);
+    // quint32 creationTime = readUInt32(file);
+
+    // // Convert to QDateTime
+    // QDateTime baseDate(QDate(1904, 1, 1), QTime(0, 0), Qt::UTC);
+    // QDateTime createDate = baseDate.addSecs(creationTime);
+
+    // // qDebug() << "Mov::extractCreateDate" << createDate;
+
+    // return createDate;
+
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "Failed to open file" << filePath;
         return QDateTime();
     }
 
-    quint32 moovSize;
-
+    // --- Find the moov atom ---
+    quint32 moovSize = 0;
     if (!findAtom(file, "moov", moovSize)) {
         qWarning() << "moov atom not found!";
         return QDateTime();
     }
 
-    // Look for mvhd atom inside moov
-    quint32 mvhdSize;
-    if (!findAtom(file, "mvhd", mvhdSize)) {
+    qint64 moovStart = file.pos();
+    qint64 moovEnd   = moovStart + (qint64)moovSize - 8;
+
+    // --- Search for mvhd within moov bounds ---
+    quint32 mvhdSize = 0;
+    if (!findAtom(file, "mvhd", mvhdSize, moovEnd)) {
         qWarning() << "mvhd atom not found!";
         return QDateTime();
     }
 
-    // Seek to creation time (offset 12 bytes from start of mvhd atom)
-    file.seek(file.pos() + 4);
-    // file.seek(file.pos() + 12);
-    quint32 creationTime = readUInt32(file);
+    qint64 mvhdStart = file.pos();
 
-    // Convert to QDateTime
+    // --- Read mvhd version to determine field sizes ---
+    quint8 version = 0;
+    if (file.read((char*)&version, 1) != 1) {
+        qWarning() << "Failed to read mvhd version";
+        return QDateTime();
+    }
+
+    // Skip 3 bytes of flags
+    file.seek(file.pos() + 3);
+
+    quint64 creationTime = 0;
+
+    if (version == 0) {
+        // 32-bit creation/modification times
+        quint32 ctime32 = readUInt32(file);
+        creationTime = ctime32;
+    }
+    else if (version == 1) {
+        // 64-bit creation/modification times
+        quint64 ctime64 = 0;
+        file.read((char*)&ctime64, 8);
+        creationTime = qFromBigEndian(ctime64);
+    }
+    else {
+        qWarning() << "Unknown mvhd version" << version;
+        return QDateTime();
+    }
+
+    // --- Convert to QDateTime ---
     QDateTime baseDate(QDate(1904, 1, 1), QTime(0, 0), Qt::UTC);
-    QDateTime createDate = baseDate.addSecs(creationTime);
+    QDateTime createDate = baseDate.addSecs(static_cast<qint64>(creationTime));
 
-    // qDebug() << "Mov::extractCreateDate" << createDate;
+    // Debug info
+    if (isDebug)
+        qDebug() << "MOV::createDate" << filePath << "=>" << createDate.toString(Qt::ISODate);
 
     return createDate;
+
 }

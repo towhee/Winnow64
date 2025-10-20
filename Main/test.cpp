@@ -392,33 +392,19 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    fsTree->debugSelectedFolders();
+    updateFilterMenu("MW::test");
     return;
 
-    QString dPath = "/Users/roryhill/Pictures/_test1a";
-    qDebug() << fsTree->fsModel->maxRecursedRoots;
-    // fsTree->fsModel->updateCount(dPath);
-    fsTree->updateCount();
+    filters->isPredefinedNonZeroCount("Picked");
     return;
 
-    // fsTree->test();
-    qDebug() << "test";
-    QString src = "FSTree::selectRecursively";
-    QString msg = "Recursively scanning all subfolders";
-    updateStatus(true, msg, src);
-
-    return;
-
-    cacheProgressBar->clearMetadataProgress(G::backgroundColor);
-    return;
-
-    QString folder = "/Users/roryhill/Pictures";
-    fsTree->markFolderOverLimit(folder, true);
-    return;
-
-    int count = dm->recurseImageCount(folder);
-    qDebug() << count;
-    qDebug() << dm->folderImageCount;
+    for (int i = 0; i < 6; ++i) {
+    qDebug()
+        << filters->ratings->child(i)->text(0)
+        << filters->ratings->child(i)->text(2)
+        << filters->ratings->child(i)->text(3)
+        ;
+    }
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

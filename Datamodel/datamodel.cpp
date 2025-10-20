@@ -324,7 +324,7 @@ void DataModel::clearDataModel()
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::clearDataModel");
     // clear the model
     if (mLock) return;
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
     clear();
     setModelProperties();
@@ -560,7 +560,7 @@ void DataModel::scheduleProcessing()
 
 void DataModel::processNextBatch()
 {
-    qDebug() << "processNextBatch";// << pendingPaths;
+    // qDebug() << "processNextBatch";// << pendingPaths;
     // qDebug() << "processNextBatch invoked on thread =" << QThread::currentThread();     // Pump a reasonable number each tick to balance throughput/latency.
     constexpr int kMaxPerTick = 64;
 
@@ -606,7 +606,6 @@ void DataModel::processNextBatch()
 
     // All done.
     isProcessingFolders = false;
-    qDebug() << "processNextBatch3";
     emit folderChange(abort);
 }
 // */
@@ -616,7 +615,7 @@ void DataModel::addFolder(const QString &folderPath)
     QString fun = "DataModel::addFolder";
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, folderPath);
-    qDebug() << fun << folderPath;
+    // qDebug() << fun << folderPath;
 
     QMutexLocker locker(&mutex);
     abort = false;
@@ -661,7 +660,7 @@ void DataModel::addFolder(const QString &folderPath)
         // check for escape key release triggering abort
         // qApp->processEvents();
         if (abort) {
-            qDebug() << "DataModel::addFolder aborting *************";
+            // qDebug() << "DataModel::addFolder aborting *************";
             endLoad(false);
             break;
         }
@@ -997,7 +996,7 @@ void DataModel::find(QString text)
 bool DataModel::endLoad(bool success)
 {
     if (G::isLogger) G::log("DataModel::endLoad", "instance = " + QString::number(instance));
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::endLoad" << "instance =" << instance
                  << "success =" << success;
 
@@ -1590,9 +1589,13 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     search += m.label;
     setData(index(row, G::_LabelColumn), m._label);
-    setData(index(row, G::RatingColumn), m.rating);
+    // if (m.rating == "") m.rating = "No Rating";
+    // if (m.rating == "0") m.rating = "No Rating";
     if (m.rating == "0") m.rating = "";
+    setData(index(row, G::RatingColumn), m.rating);
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    // if (m._rating == "") m.rating = "No Rating";
+    // if (m._rating == "0") m.rating = "No Rating";
     if (m._rating == "0") m.rating = "";
     setData(index(row, G::_RatingColumn), m._rating);
 

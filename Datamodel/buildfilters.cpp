@@ -373,9 +373,9 @@ void BuildFilters::reset(bool collapse)
 void BuildFilters::updateUnfilteredSearchCount()
 /*
     When the search text changes then the total unfiltered that both match and do not
-    match may change.  BuildFilters::update is called, which in turn, calls this function
-    to update the unfiltered totals.  BuildFilters::updateFilteredCounts() is also called,
-    where the unfiltered totals are updated.
+    match may change. BuildFilters::update is called, which in turn, calls this function
+    to update the unfiltered totals. BuildFilters::updateFilteredCounts() is also called,
+    where the filtered totals are updated.
 */
 {
     QMap<QString,int> map;
@@ -527,15 +527,13 @@ void BuildFilters::updateUnfilteredCounts()
 void BuildFilters::updateFilteredCounts()
 {
 /*
-    Update the filtered DataModel item counts in Filters.  A QMap is used to count all the unique
-    items for each DataModel column that can be filtered and updates the unique item counts by
-    calling filters->addFilteredCountPerItem.
+    Update the filtered DataModel item counts in Filters. A QMap is used to count
+    all the unique items for each DataModel column that can be filtered and updates
+    the unique item counts by calling filters->addFilteredCountPerItem.
 */
     if (debugBuildFilters)
     {
-        qDebug()
-            << "BuildFilters::countMapFiltered"
-               ;
+        qDebug() << "BuildFilters::updateFilteredCounts";
     }
 
     QMap<QString,int> map;
@@ -557,6 +555,7 @@ void BuildFilters::updateFilteredCounts()
     filters->updateFilteredCountPerItem(map, filters->picks);
     map.clear();
 
+    qDebug() << "BuildFilters::updateFilteredCounts 1";
     for (int row = 0; row < rows; row++) {
         if (abort) return;
         map[dm->sf->index(row, G::RatingColumn).data().toString().trimmed()]++;
@@ -657,6 +656,9 @@ void BuildFilters::updateFilteredCounts()
     map.clear();
 
     filters->update();
+
+    qDebug() << "BuildFilters::updateFilterCounts emit updateFilterMenu";
+    emit updateFilterMenu("BuildFilters::updateFilterCounts");
 }
 
 void BuildFilters::updateCategoryItems()
@@ -733,8 +735,8 @@ void BuildFilters::updateCategoryItems()
     }
     filters->updateFilteredCountPerItem(map, cat);
 
-    // filter
-    //if (G::isFilter) emit filterChange("BuildFilters::updateCategory");
+    qDebug() << "BuildFilters::updateCategory emit updateFilterMenu";
+    emit updateFilterMenu("BuildFilters::updateCategory");
 }
 
 void BuildFilters::updateZeroCountCheckedItems(QTreeWidgetItem *cat, int dmColumn)

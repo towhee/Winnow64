@@ -1124,16 +1124,16 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
             G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
         }
 
+        if (G::useSidecar) {
+            parseSidecar();
+        }
+
         if (!parsed) {
             p.file.close();
             QString msg =  "Unable to parse metadata.";
             G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
             m.err += msg;
             return false;
-        }
-
-        if (G::useSidecar) {
-            parseSidecar();
         }
     }
     else {  // not open file
@@ -1209,7 +1209,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     m.video = videoFormats.contains(ext);
 
     if (!hasMetadataFormats.contains(ext)) {
-        bool parsedSidcar = false;
+        bool parsedSidecar = false;
 
         // get date created
         if (ext == "mov") m.createdDate = MOV::createDate(fPath);
@@ -1225,7 +1225,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
             p.file.setFileName(fPath);
             if (p.file.open(QIODevice::ReadOnly)) {
                 if (parseSidecar()) {
-                    parsedSidcar = true;
+                    parsedSidecar = true;
                 }
                 p.file.close();
             }
