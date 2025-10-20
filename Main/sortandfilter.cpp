@@ -184,14 +184,15 @@ void MW::filterChange(QString source)
     if (!G::removingRowsFromDM)
         emit imageCacheFilterChange(fPath, "MW::filterChange");
 
-    // clear selection after filtration
+    // clear selection after filtration to keep it simple
     sel->clear();
 
     // select after filtration
     if (newSelectReqd) {
         sel->select(newSfIdx, Qt::NoModifier,"MW::filterChange");
     }
-    // else {
+    // not retaining old selection, clearing instead to keep it simple
+    // else { // cancelled
     //     // dm->setCurrentSF(newSfIdx, dm->instance);
     //     emit updateCurrent(newSfIdx, G::dmInstance);
     // }
