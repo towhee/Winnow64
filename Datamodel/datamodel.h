@@ -267,8 +267,6 @@ private:
     double aspectRatio(int w, int h, int orientation);
     void processErr(Error e);
 
-    int countInterval = 0;
-
     bool isDebug = false;
 
     int imageCacheWaitingForRow = -1;
