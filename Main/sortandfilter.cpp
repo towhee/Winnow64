@@ -166,17 +166,11 @@ void MW::filterChange(QString source)
 
     // is the DataModel current index still in the filter.  If not, reset
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
-    bool newSelectReqd = false;
-    // int oldRow = dm->currentDmIdx.row();
     int oldRow = dm->currentSfIdx.row();
     int sfRows = dm->sf->rowCount();
     if (!newSfIdx.isValid()) {
-        newSelectReqd = true;
         if (oldRow < sfRows) newSfIdx = dm->sf->index(oldRow, 0);
         else newSfIdx = dm->sf->index(sfRows-1, 0);
-    }
-    else if (imageView->isNullImage()) {
-        newSelectReqd = true;
     }
 
     // rebuild imageCacheList and update priorities in image cache
@@ -184,24 +178,11 @@ void MW::filterChange(QString source)
     if (!G::removingRowsFromDM)
         emit imageCacheFilterChange(fPath, "MW::filterChange");
 
-    // clear selection after filtration to keep it simple
-    sel->clear();
-
-    // select after filtration
-    if (newSelectReqd) {
-        sel->select(newSfIdx, Qt::NoModifier,"MW::filterChange");
-    }
-    // not retaining old selection, clearing instead to keep it simple
-    // else { // cancelled
-    //     // dm->setCurrentSF(newSfIdx, dm->instance);
-    //     emit updateCurrent(newSfIdx, G::dmInstance);
-    // }
+    // clear selection and update datamodel current index
+    sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
 
     // only scroll if filtration has changed visible cells in thumbView
     scrollToCurrentRowIfNotVisible();
-
-    // update ImageCache if priority queue has changed
-    // emit setImageCachePosition(dm->currentFilePath, "MW::filterChange");
 
     QApplication::restoreOverrideCursor();
 }

@@ -550,18 +550,11 @@ bool Filters::isPredefinedNonZeroCount(QString itemName)
 {
     if (G::isLogger) G::log("Filters::isPredefinedZeroCount");
 
-    qDebug() << "\nFilters::isPredefinedNonZeroCount Seeking:" << itemName;
     bool isNonZero = false;
-
     QList<QTreeWidgetItem*> items {picks, ratings, labels};
     for (QTreeWidgetItem *item : items) {
         for (int i = 0; i < item->childCount(); i++) {
-            qDebug() << "Filters::isPredefinedNonZeroCount"
-                     << item->text(0)
-                     << item->child(i)->text(0)
-                     << item->child(i)->text(2);
             if (item->child(i)->text(0) == itemName) {
-                return item->child(i)->text(2) != "0";
                 if (item->child(i)->text(2) != "0") {
                     isNonZero = true;
                     break;
@@ -569,8 +562,6 @@ bool Filters::isPredefinedNonZeroCount(QString itemName)
             }
         }
     }
-    // not found
-    qDebug() << "Filters::isPredefinedNonZeroCount isNonZero:" << itemName << isNonZero;
     return isNonZero;
 }
 

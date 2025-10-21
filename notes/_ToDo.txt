@@ -3,8 +3,11 @@ WHAT'S NEW
 - TableView freeze first two columns when scroll horizontally
 - OS hanging when process large number of recursed folders
 - Ingest Dlg not showing manual paths correctly
+- Selections are now cleared after a filtration change
 
 BUGS / TO DO
+- Windows ingest "how this works" has a white titlebar.
+- Windows tooltips have a white background
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Copy path(s) not always working
 - Undo delete
@@ -131,6 +134,8 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Version 2.03
+- Selection count not updated correctly (should be 1) after a filter change.
 - Select anchor wrong when change filter.  Clear selection to keep it simple.
 - Not reading sidecars in images in readMetadata if no metadata in file
 - Disable menu filters when item on it filtered datamodel
