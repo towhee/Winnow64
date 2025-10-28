@@ -63,7 +63,8 @@ Synced panning:
 
 CompareView::CompareView(QWidget *parent,
                          QSize gridCell,
-                         DataModel *dm, Selection *sel,
+                         DataModel *dm,
+                         Selection *sel,
                          Metadata *metadata,
                          ImageCacheData *icd,
                          IconView *thumbView)
@@ -668,21 +669,23 @@ void CompareView::select()
     if (G::isLogger) G::log("CompareView::select");
     emit deselectAll();
     this->setFocus();
+
     // req'd for IconViewDelegate to show current item
-    dm->currentSfIdx = imageIndex;
-    dm->currentSfRow = imageIndex.row();
-    QString fPath = imageIndex.data(G::PathRole).toString();
+    int sfRow = imageIndex.row();
+    QModelIndex sfIdx = dm->sf->index(sfRow,0);
+    // update datamodel current index, row, fPath
+    if (!dm->setCurrentSF(sfIdx, G::dmInstance)) return;
+    // dm->currentSfIdx = sfIdx;
+    // dm->currentSfRow = sfRow;
+    QString fPath = dm->currentFilePath;
+    // QString fPath = sfIdx.data(G::PathRole).toString();
     // sync imageView used for loupe mode
     emit sync(fPath, false, "CompareView::select");
+    emit updateInfo(sfRow);
 
     thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
-    thumbView->setCurrentIndex(imageIndex);
+    thumbView->setCurrentIndex(sfIdx);
     thumbView->setSelectionMode(QAbstractItemView::NoSelection);
-
-    // thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
-    // sel->select(imageIndex, Qt::NoModifier,"CompareView::select");
-    // // prevent user selection in thumbView while comparing
-    // thumbView->setSelectionMode(QAbstractItemView::NoSelection);
 
     this->setStyleSheet("QGraphicsView  {"
                         "margin:1; "

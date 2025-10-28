@@ -63,7 +63,7 @@ void MW::updateFilterMenu(QString source)
     Enable filter menu items that are in the filter menu and have a sf count > 0
 */
     if (G::isLogger) G::log("MW::updateFilterMenu");
-    qDebug() << "MW::updateFilterMenu source =" << source;
+    // qDebug() << "MW::updateFilterMenu source =" << source;
 
     auto f = [this](const QString &name) {
         return filters->isPredefinedNonZeroCount(name);
@@ -132,8 +132,7 @@ void MW::filterChange(QString source)
     isFilterChange = true;
 
     /* refresh the proxy sort/filter, which updates the selectionIndex, which
-    triggers a scroll event and the metadataCache updates the icons and
-    thumbnails */
+    triggers a scroll event and MetaRead updates the icons and thumbnails */
 
     dm->sf->suspend(false, "MW::filterChange");
     dm->sf->filterChange("MW::filterChange"); // crash (removed wait in SortFilter::filterChange)
@@ -155,6 +154,8 @@ void MW::filterChange(QString source)
     if (!dm->sf->rowCount()) {
         nullFiltration();
         QApplication::restoreOverrideCursor();
+         if (G::isLogger || G::isFlowLogger)
+            G::log("MW::filterChange", "Null result");
         return;
     }
 
@@ -379,6 +380,9 @@ void MW::sortChangeFromAction()
     if (sortFocalLengthAction->isChecked()) sortColumn = G::FocalLengthColumn;
     if (sortTitleAction->isChecked()) sortColumn = G::TitleColumn;
     if (sortCreatorAction->isChecked()) sortColumn = G::CreatorColumn;
+
+    qDebug() << "MW::sortChangeFromAction sortColumn =" << sortColumn;
+
     sortChange("Action");
 }
 
@@ -389,11 +393,12 @@ void MW::sortChange(QString source)
 
     The initial sort is always by file name.
 
-    The sort order (ascending or descending) can be set by the menu, the button icon on the
-    statusbar or a workspace change.
+    The sort order (ascending or descending) can be set by the menu, the button icon
+    on the statusbar or a workspace change.
 */
-    if (G::isLogger || G::isFlowLogger) qDebug() << "MW::sortChange  Src:" << source;
-    //qDebug() << "MW::sortChange  Src:" << source;
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::sortChange",  "Src = " + source);
+    qDebug() << "MW::sortChange  Src:" << source;
 
     if (G::isInitializing || !G::allMetadataLoaded || sortMenuUpdateToMatchTable) {
         return;
@@ -405,6 +410,7 @@ void MW::sortChange(QString source)
     sel->save("MW::sortChange");
 
     // do the sort
+    qDebug() << "MW::sortChange  sortColumn =" << sortColumn << isReverseSort;
     thumbView->sortThumbs(sortColumn, isReverseSort);
 
     // recover selection

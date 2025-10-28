@@ -13,7 +13,8 @@ CompareImages::CompareImages(QWidget *parent,
                              Selection *sel,
                              IconView *thumbView,
                              ImageCacheData *icd,
-                             ImageView *imageView
+                             ImageView *imageView,
+                             InfoView *infoView
                              )
     : QWidget(parent)
 {
@@ -25,6 +26,7 @@ CompareImages::CompareImages(QWidget *parent,
     this->icd = icd;
     this->imageView = imageView;
     this->centralWidget = centralWidget;
+    this->infoView = infoView;
 
     // set up a grid to contain the imageviews
     gridLayout = new QGridLayout;
@@ -149,9 +151,12 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
         // when select a compareView also load it in imageView
         connect(imList->at(i), &CompareView::sync, imageView, &ImageView::loadImage);
 
-        //        // align
-        //        connect(imList->at(i), SIGNAL(align(QPointF, QModelIndex)),
-        //                this, SLOT(align(QPointF, QModelIndex)));
+        // when select a compareView show in infoView
+        connect(imList->at(i), &CompareView::updateInfo, infoView, &InfoView::updateInfo);
+
+        // align
+        // connect(imList->at(i), SIGNAL(align(QPointF, QModelIndex)),
+        //        this, SLOT(align(QPointF, QModelIndex)));
     }
 
     loadGrid();

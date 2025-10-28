@@ -386,25 +386,18 @@ void MW::ingestTest(QWidget* target)
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
 
-    // QString fPath = dm->currentFilePath;
-    // metadata->testNewFileFormat(fPath);
+    thumbView->sortThumbs(G::PathColumn, false);
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    updateFilterMenu("MW::test");
+    dm->sf->filterChange();
+    thumbView->update();             // repaint
+    thumbView->reset();              // if really stale    return;
+    int row = dm->proxyRowFromModelRow(16);
+    qDebug() << "sfRow from dmRow = 16 = " << row;
     return;
-
-    filters->isPredefinedNonZeroCount("Picked");
-    return;
-
-    for (int i = 0; i < 6; ++i) {
-    qDebug()
-        << filters->ratings->child(i)->text(0)
-        << filters->ratings->child(i)->text(2)
-        << filters->ratings->child(i)->text(3)
-        ;
-    }
+    thumbView->sortThumbs(G::SizeColumn, false);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

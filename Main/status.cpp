@@ -12,7 +12,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (G::isLogger)
         G::log(fun);
 
-    qDebug() << fun << keepBase << s << source;
+    // qDebug() << fun << keepBase << s << source;
 
     // check if null filter
     if (dm->sf->rowCount() == 0) {
@@ -58,7 +58,6 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
         base += spacer + "Pos: " + getPosition();
         if (source != "nextSlide") {
             QString s = QString::number(sel->count());
-            qDebug() << "MW::updateStatus Selected" << s;
             // Selected count
             base += spacer +" Selected: " + s;
             // Picked count

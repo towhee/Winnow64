@@ -1,1 +1,26 @@
-/Users/roryhill/.Trash/2025-10-19_0365 Focus Stack.tif
+QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=1630.74,225.652 scn=1630.74,225.652 gbl=6043.74,572.652 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) QWidgetWindow(0x6000002d9b60, name = "MWWindow") QPoint(6044,573)
+QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=133.742,175.652 scn=1630.74,225.652 gbl=6044,573 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) QWidget(0x6000029cffc0, name = "FiltersViewport") QPoint(6044,573)
+QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=135,196 scn=1630.74,225.652 gbl=6044,573 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) Filters(0x123e8ffd0, name = "Filters") QPoint(6044,573)
+QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=135,196 scn=1630.74,225.652 gbl=6044,573 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) QFrame(0x6000028cfd80) QPoint(6044,573)
+QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=135,226 scn=1630.74,225.652 gbl=6044,573 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) DockWidget(0x60000047e170, name = "FilterDock") QPoint(6044,573)
+
+
+DataModel Proxy for sort column 2:
+    0  _source_input.jpg
+    1  depth_map_v01.tif
+    2  depth_map_v34.tif
+    3  depth_map_zerene.tif
+    4  detail_layer_consensus_bright_region_map.png
+    5  detail_layer_consensus_hist.png
+    6  foreground_mask_overlay_v18.jpg
+    7  foreground_mask_v18.tif
+    8  s_depth_v15.tif
+    9  s_mask_v36.tif
+   10  s_masked_v22.tif
+   11  s_masked_v23.tif
+   12  s_masked_v24.tif
+   13  s_pmax_v33.tif
+   14  s_simple_v20.tif
+   15  s_simple_v35.tif
+   16  Zerene_dmap.tif
+   17  Zerene_pmax.tif

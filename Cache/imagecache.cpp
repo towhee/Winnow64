@@ -1705,14 +1705,12 @@ void ImageCache::setShowCacheStatus(bool isShowCacheStatus)
 void ImageCache::filterChange(QString currentImageFullPath, QString src)
 {
 /*
-    When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
-    rebuilt for the filtered dataset and isCached updated, the current image is set, and any
-    surplus cached images (not in the filtered dataset) are removed from imCache.
-    The image cache is now ready to run by calling setCachePosition().
+    When the datamodel is filtered the image cache needs to be updated. The current
+    image is set and setCachePosition() is called.
 */
     QString fun = "ImageCache::filterChange";
-    // if (debugLog || G::isLogger || G::isFlowLogger)
-        G::log("filterChange", "src = " + src);
+    if (debugLog || G::isLogger || G::isFlowLogger)
+        log("filterChange", "src = " + src);
     if (debugCaching)
     {
         qDebug().noquote()
@@ -1730,10 +1728,10 @@ void ImageCache::filterChange(QString currentImageFullPath, QString src)
     instance = dm->instance;
 
     // reset the image cache
-    icd->clear();
-    toCache.clear();
-    toCacheStatus.clear();
-    updateStatus(StatusAction::Clear, "filterChange");
+    // icd->clear();
+    // toCache.clear();
+    // toCacheStatus.clear();
+    // updateStatus(StatusAction::Clear, "filterChange");
 
     setCurrentPosition(currentImageFullPath, fun);
 }
@@ -1814,8 +1812,10 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
 
     currRow = dm->proxyRowFromPath(fPath, fun);
 
-    if (debugLog || G::isLogger || G::isFlowLogger)
-        log("setCurrentPosition", "row = " + QString::number(currRow));
+    if (debugLog || G::isLogger || G::isFlowLogger) {
+        QString msg = "row = " + QString::number(currRow) + " " + fPath;
+        log("setCurrentPosition", msg);
+    }
     if (debugCaching)
     {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')

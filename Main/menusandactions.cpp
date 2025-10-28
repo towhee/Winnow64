@@ -1580,6 +1580,12 @@ void MW::createHelpActions()
     addAction(diagnosticsMetadataAction);
     connect(diagnosticsMetadataAction, &QAction::triggered, this, &MW::diagnosticsMetadata);
 
+    diagnosticsFiltersAction = new QAction(tr("Filters diagnostics"), this);
+    diagnosticsFiltersAction->setObjectName("diagnosticsFilters");
+    diagnosticsFiltersAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsFiltersAction);
+    connect(diagnosticsFiltersAction, &QAction::triggered, this, &MW::diagnosticsFilters);
+
     diagnosticsDataModelAction = new QAction(tr("DataModel diagnostics"), this);
     diagnosticsDataModelAction->setObjectName("diagnosticsDataModel");
     diagnosticsDataModelAction->setShortcutVisibleInContextMenu(true);
@@ -2088,6 +2094,7 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAllRowsAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
+    helpDiagnosticsMenu->addAction(diagnosticsFiltersAction);
     helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
 }
 

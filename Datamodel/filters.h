@@ -78,6 +78,8 @@ public:
     void setProgressBarStyle();
     bool isOnlyMostRecentDayChecked();
 
+    QString diagnostics();
+
     bool combineRawJpg;
     bool buildingFilters = false;
     bool filtersBuilt = false;
@@ -104,6 +106,8 @@ public slots:
     void save();
     void restore();
     void reportSaved();
+    void disable();
+    void enable();
     void disableEmptyCat();
     void invertFilters();
     void clearAll();
@@ -139,7 +143,6 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
-//    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
     QMutex mutex;

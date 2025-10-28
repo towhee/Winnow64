@@ -525,6 +525,14 @@ void MW::createThumbView()
             this, SLOT(thumbHasScrolled()));
     connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
             this, SLOT(thumbHasScrolled()));
+
+    // Force thumbView to update whenever the proxy model layout changes
+    connect(dm->sf, &QAbstractItemModel::layoutChanged, thumbView, qOverload<>(&QListView::update));
+
+    // Also repaint when rows are moved or inserted, just to be safe
+    connect(dm->sf, &QAbstractItemModel::rowsMoved, thumbView, qOverload<>(&QListView::update));
+    connect(dm->sf, &QAbstractItemModel::rowsInserted, thumbView, qOverload<>(&QListView::update));
+    connect(dm->sf, &QAbstractItemModel::modelReset, thumbView, qOverload<>(&QListView::update));
 }
 
 void MW::createGridView()
@@ -732,8 +740,8 @@ void MW::createImageView()
 void MW::createCompareView()
 {
     if (G::isLogger) G::log("MW::createCompareView");
-    compareImages = new CompareImages(this, centralWidget, metadata,
-                                      dm, sel, thumbView, icd, imageView);
+    compareImages = new CompareImages(this, centralWidget, metadata, dm, sel,
+                                      thumbView, icd, imageView, infoView);
 
     if (isSettings) {
         if (settings->contains("lastPrefPage")) lastPrefPage = settings->value("lastPrefPage").toInt();

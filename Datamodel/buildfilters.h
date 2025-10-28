@@ -18,7 +18,7 @@ public:
 
     enum Action {
         Reset,
-        Update,
+        UpdateCounts,
         UpdateCategory
     } action;
 
