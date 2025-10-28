@@ -537,6 +537,8 @@ void Filters::setCategoryFilterStatus(QTreeWidgetItem *item)
         qDebug() << "Filters::setCategoryFilterStatus"
                     ;
 
+    if (!item->parent()) return;
+
     // is this category filtering after itemCheckStateHasChanged
     if (isCatFiltering(item->parent())) {
         item->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
@@ -590,17 +592,18 @@ void Filters::disableAllItems(bool disable)
     // not used
     if (G::isLogger) G::log("Filters::disableAllItems");
     if (debugFilters)
-        qDebug() << "Filters::disableAllItems"
-                    ;
-    QMutexLocker locker(&mutex);
+    qDebug() << "Filters::disableAllItems" << disable;
+    // QMutexLocker locker(&mutex);
+    mutex.lock();
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
-            (*it)->setDisabled(disable);
-         }
-        ++it;
+        if (disable) (*it)->setForeground(0, QBrush(G::disabledColor));
+        else (*it)->setForeground(0, QBrush(G::textColor));
+         ++it;
     }
+    mutex.unlock();
+    if (!disable) setEachCatTextColor();
 }
 
 void Filters::disableAllHeaders(bool disable)
@@ -615,7 +618,12 @@ void Filters::disableAllHeaders(bool disable)
     while (*it) {
         if (!(*it)->parent()) {
             if (disable) (*it)->setForeground(0, QBrush(G::disabledColor));
-            else (*it)->setForeground(0, QBrush(G::textColor));
+            else {
+                if (isCatFiltering(*it))
+                    (*it)->setForeground(0, QBrush(G::disabledColor));
+                else
+                    (*it)->setForeground(0, QBrush(G::textColor));
+            }
         }
         ++it;
     }
@@ -660,9 +668,9 @@ void Filters::setEachCatTextColor()
 /*
     Update all categories 'is filtering' status
 */
-    if (G::isLogger) G::log("Filters::setCatFiltering");
+    if (G::isLogger) G::log("Filters::setEachCatTextColor");
     if (debugFilters)
-        qDebug() << "Filters::setCatFiltering"
+        qDebug() << "Filters::setEachCatTextColor"
                     ;
 
     QMutexLocker locker(&mutex);
@@ -754,6 +762,19 @@ void Filters::disableEmptyCat()
         }
         ++it;
     }
+}
+
+void Filters::enable() {
+    if (G::isLogger) G::log("Filters::enable");
+    setEnabled(true);
+    disableAllItems(false);
+    setEachCatTextColor();
+}
+
+void Filters::disable() {
+    if (G::isLogger) G::log("Filters::disable");
+    setEnabled(false);
+    disableAllItems(true);
 }
 
 void Filters::invertFilters()
@@ -1031,7 +1052,7 @@ void Filters::restore()
         for (QTreeWidgetItem* child : children) {
             if (child->text(0) == state.item) {
                 child->setCheckState(0, Qt::Checked);
-                // /*
+                /*
                 qDebug().noquote() << state.parent.leftJustified(15)
                                    << child->text(0); //*/
                 break;
@@ -1431,8 +1452,8 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
     If a category item was just checked (activeCategory) then it is ignored, as the
     user may want to check another item in the same category.
 */
-//    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
-    // if (debugFilters)
+    // if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
+    if (debugFilters)
         qDebug() << "Filters::updateFilteredCountPerItem"
                  << "category =" << category->text(0)
                     ;
@@ -1443,12 +1464,9 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
         if (G::stop) return;
         category->child(i)->setData(2, Qt::EditRole, 0);
         QString key = category->child(i)->text(0);
-        qDebug() << "Filters::updateFilteredCountPerItem  key =" << key << itemMap.value(key);
         if (itemMap.contains(key))
             category->child(i)->setData(2, Qt::EditRole, itemMap.value(key));
     }
-
-    qDebug() << " ";
 
     // sort the result
     //category->sortChildren(0, Qt::AscendingOrder);
@@ -1678,7 +1696,11 @@ void Filters::mousePressEvent(QMouseEvent *event)
     (arrow head) is shown but its behavior is disabled as it does not
     support solo mode.
 */
+    qDebug() << "Filters::mousePressEvent" << event;
     if (G::isLogger) G::log("Filters::mousePressEvent");
+    if (G::mode == "Compare") {
+        G::popup->showPopup("Filters are unavailable while in Compare Mode", 3000);
+    }
     if (buildingFilters) return;
     QPoint p = event->pos();
     QModelIndex idx = indexAt(p);
@@ -1753,4 +1775,58 @@ void Filters::howThisWorks()
     dlg->setWindowTitle("Filters Help");
     dlg->setStyleSheet(G::css);
     dlg->exec();
+}
+
+QString Filters::diagnostics()
+{
+    if (G::isLogger) G::log("Filters::diagnostics");
+
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "Filters Diagnostics");
+
+    rpt << "\n\n";
+    rpt << "Filters:\n";
+    int catWidth = 30;
+    int itemWidth = 40;
+    int chkWidth = 9;
+    int countWidth = 17;
+    // column headers
+    rpt.setFieldAlignment(QTextStream::AlignLeft);
+    rpt.setFieldWidth(catWidth);
+    rpt << "Category";
+    rpt.setFieldWidth(itemWidth);
+    rpt << "Item";
+    rpt.setFieldWidth(chkWidth);
+    rpt << "Checked";
+    rpt.setFieldWidth(countWidth);
+    rpt.setFieldAlignment(QTextStream::AlignRight);
+    rpt << "Filtered Count" << "Unfiltered Count";
+    rpt << "\n";
+    rpt.reset();
+    // data
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if ((*it)->parent() /*&& (*it) != searchTrue*/) {
+            rpt.setFieldAlignment(QTextStream::AlignLeft);
+            rpt.setFieldWidth(catWidth);
+            rpt << (*it)->parent()->text(0);
+            rpt.setFieldWidth(itemWidth);
+            rpt << (*it)->text(0);
+            rpt.setFieldWidth(chkWidth);
+            rpt << QVariant((*it)->checkState(0) == Qt::Checked).toString();
+            rpt.setFieldAlignment(QTextStream::AlignRight);
+            rpt.setFieldWidth(countWidth);
+            rpt << (*it)->data(2, Qt::EditRole).toString();
+            rpt << (*it)->data(3, Qt::EditRole).toString();
+            rpt << "\n";
+        }
+        ++it;
+    }
+
+
+
+
+    return reportString;
 }

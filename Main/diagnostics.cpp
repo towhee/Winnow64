@@ -398,7 +398,7 @@ void MW::diagnosticsImageCache() {diagnosticsReport(imageCache->diagnostics(), "
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Diagnostics: Data Model");}
 void MW::diagnosticsDataModelAllRows() {diagnosticsReport(dm->diagnosticsAllRows(), "Winnow Diagnostics: Data Model All Rows");}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}
-void MW::diagnosticsFilters() {} // dummy for now
+void MW::diagnosticsFilters() {diagnosticsReport(filters->diagnostics(), "Winnow Diagnostics: Filters");}
 void MW::diagnosticsFSTree() {diagnosticsReport(fsTree->diagnostics(), "Winnow Diagnostics: FSTree");}
 void MW::diagnosticsBookmarks() {} // dummy for now
 void MW::diagnosticsPixmap() {} // dummy for now

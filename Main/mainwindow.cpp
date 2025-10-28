@@ -657,6 +657,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
     //*/
 
+    /* MOUSE BUTTON CLICK
+    {
+        if (event->type() == QEvent::MouseButtonPress) {
+            qDebug() << event << obj << QCursor::pos();
+        }
+    }   //*/
+
     /* MOUSE BUTTON DOUBLE CLICK
     {
         if (event->type() == QEvent::MouseButtonDblClick) {
@@ -1202,6 +1209,19 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 obj->objectName() == "ImageCacheStatus")
             {
                 preferences("CacheHeader");
+            }
+        }
+    }
+
+    /* FILTERS DOCK MOUSE CLICK
+       Not allowed when in Compare Mode.
+    */
+    {
+        if (event->type() == QEvent::MouseButtonPress) {
+            if (obj->objectName() == "Filters" && G::mode == "Compare")
+            {
+                QString msg = "Filtering is verboten in Compare Mode";
+                G::popup->showPopup(msg, 3000);
             }
         }
     }
@@ -2021,8 +2041,8 @@ void MW::refresh()
 /*
     Get a list of source image files (in the selected folders) that have been added,
     removed or modified. Refresh the datamodel, filters and views to match without
-    reloading all the folders. Update the image counts in FSTree and Bookmarks. Update
-    ImageCache.
+    reloading all the folders. Update the image counts in FSTree and Bookmarks.
+    Update ImageCache.
 
     Called by MW::saveAsFile if saved to a currently selected folder.
               MW::deleteFiles
@@ -2032,17 +2052,20 @@ void MW::refresh()
 
 */
     if (G::isLogger) G::log("MW::refresh");
-    qDebug() << "MW::refresh";
-    // imageCache->updateInstance();
+    // update image counts
     fsTree->updateCount();
     bookmarks->updateCount();
-    if (dm->sf->rowCount()) {
+    if (dm->rowCount()) {
         dm->refresh();
         buildFilters->rebuild();
+        filterChange("MW::refresh");
         thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
         gridView->iconViewDelegate->currentRow = dm->currentSfRow;
-        // current is updated in DataModel if there has been a deletion
-        sel->select(dm->currentSfIdx);  // runs metaread if new images
+        // current row is updated in DataModel if deletion or insertion
+        if (G::isLogger) G::log("MW::refresh Select Current Row ***************");
+        // QTimer::singleShot(500, this, [this]() {
+        //     sel->select(dm->currentSfRow);
+        // });
     }
 }
 
@@ -2639,7 +2662,7 @@ void MW::folderChangeCompleted()
     {
         buildFilters->build();
         buildFilters->recount();
-        filters->setEnabled(true);
+        // filters->setEnabled(true);
     }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
@@ -4704,7 +4727,7 @@ void MW::infoViewChanged(QStandardItem* item)
     are combined then the raw file rows are also updated in the data model.
 */
     if (!G::useInfoView) return;
-    if (G::isLogger) G::log("MW::metadataChanged");
+    if (G::isLogger) G::log("MW::infoViewChanged");
     // if new folder is invalid no relevent data has changed
      if (G::useInfoView) if (infoView->ignoreDataChange) return;
 

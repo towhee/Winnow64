@@ -295,6 +295,7 @@ void MW::deleteSelectedFiles()
     Build a QStringList of the selected files and call MW::deleteFiles.
 */
     if (G::isLogger) G::log("MW::deleteSelectedFiles");
+
     // make sure datamodel is loaded
     if (!G::allMetadataLoaded) {
         QString msg = "Please wait until the folder has been completely loaded<br>"
@@ -306,6 +307,7 @@ void MW::deleteSelectedFiles()
         return;
     }
 
+    // Warning MessageBox
     if (deleteWarning) {
         QMessageBox msgBox(this);
         int msgBoxWidth = 300;
@@ -327,17 +329,7 @@ void MW::deleteSelectedFiles()
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
         msgBox.show();
-        QPoint pos = geometry().center() + QPoint(0, 300);
-        /*
-        qDebug() << "MW::deleteSelectedFiles before move"
-                 << "msgBox =" << msgBox.pos()
-                 << "geometry().topLeft() =" << geometry().topLeft()
-                 << "geometry().center() =" << geometry().center()
-                 << "geometry() =" << geometry()
-                 << "pos =" << pos
-            ; //*/
         msgBox.move(geometry().center());
-//        msgBox.move(QPoint(0,0));
         int ret = msgBox.exec();
         resetFocus();
         if (ret == QMessageBox::Cancel) return;
@@ -364,7 +356,7 @@ void MW::dmRemove(QStringList pathList)
     datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
     the rows, updates dm->fPathRow.
 */
-    // qDebug() << "MW::dmRemove(QStringList pathList)" << pathList;
+    qDebug() << "MW::dmRemove(QStringList pathList)" << pathList;
 
     filters->save();
     clearAllFilters();

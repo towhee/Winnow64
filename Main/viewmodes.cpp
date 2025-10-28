@@ -39,6 +39,8 @@ void MW::loupeDisplay(const QString src)
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::loupeDisplay", "src = " + src);
     G::mode = "Loupe";
+    filterDock->setEnabled(true);
+    filters->enable();
     thumbDockVisibleAction->setEnabled(true);
     asLoupeAction->setChecked(true);
     updateStatus(true, "", "MW::loupeDisplay");
@@ -115,6 +117,8 @@ void MW::gridDisplay()
     // }
 
     G::mode = "Grid";
+    filterDock->setEnabled(true);
+    filters->enable();
     thumbDockVisibleAction->setEnabled(false);
     asGridAction->setChecked(true);
     updateStatus(true, "", "MW::gridDisplay");
@@ -202,6 +206,8 @@ void MW::tableDisplay()
     // }
 
     G::mode = "Table";
+    filterDock->setEnabled(true);
+    filters->enable();
     thumbDockVisibleAction->setEnabled(true);
     asTableAction->setChecked(true);
     updateStatus(true, "", "MW::tableDisplay");
@@ -304,6 +310,9 @@ void MW::compareDisplay()
         }
     }
 
+    // filters->disableAllItems(true);
+    filterDock->setEnabled(false);
+    filters->disable();
     thumbDockVisibleAction->setEnabled(true);
     asCompareAction->setChecked(true);
     updateStatus(true, "", "MW::compareDisplay");

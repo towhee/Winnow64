@@ -52,6 +52,7 @@ public slots:
 
 signals:
     void sync(QString fPath, bool replace = false, QString src = "");
+    void updateInfo(int sfRow);
     void togglePick();
     void zoomFromPct(QPointF scrollPct, QModelIndex idx, bool isZoom);
     void panFromPct(QPointF scrollPct, QModelIndex idx);

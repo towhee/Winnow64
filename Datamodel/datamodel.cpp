@@ -173,6 +173,9 @@ DataModel::DataModel(QObject *parent,
 
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
+    sf->setDynamicSortFilter(true);
+    sf->setSortCaseSensitivity(Qt::CaseInsensitive);
+    sf->setFilterCaseSensitivity(Qt::CaseInsensitive);
     selectionModel = new QItemSelectionModel(sf);
 
      // eligible image file types
@@ -447,24 +450,25 @@ void DataModel::remove(QString fPath)
     if (isDebug)
         qDebug() << "DataModel::remove" << "instance =" << instance << fPath;
 
-    // do not use a mutex here  rgh 2025-04-10
+    // do not use a mutex here because functions called from here
+    // use a mutex ie removeRow, fPathRowRemove    rgh 2025-04-10
 
     // remove row from datamodel
     int row;
     for (row = 0; row < rowCount(); ++row) {
         QString rowPath = index(row, 0).data(G::PathRole).toString();
         if (rowPath == fPath) {
-            QModelIndex par = QModelIndex();
             removeRow(row);
+            fPathRowRemove(fPath);
             break;
         }
     }
 
     // rebuild fPathRow hash
-    rebuildRowFromPathHash();
+    // rebuildRowFromPathHash();
 
     // update current index
-    int last = sf->rowCount() - 1;;
+    int last = sf->rowCount() - 1;
     currentSfRow <= last ? row = currentSfRow : row = last;
     QModelIndex sfIdx = sf->index(row,0);
     setCurrentSF(sfIdx, instance);
@@ -916,21 +920,23 @@ void DataModel::removeFolder(const QString &folderPath)
 
 void DataModel::refresh()
 {
+/*
+    The images in the datamodel are compared to the files in the source folders and
+    the datamodel is updated to match where there are differences (additions,
+    removals or modifications).
+*/
     if (G::isLogger) G::log("DataModel::refresh");
 
     QStringList added;
     QStringList removed;
     QStringList modified;
-    qDebug() << "DataModel::refresh instance =" << instance;
 
     if (!sourceModified(added, removed, modified)) {
-        qDebug() << "DataModel::refresh source was not modified";
         return;
     }
 
     // additions
     for (const QString &fPath : added) {
-        qDebug() << "DataModel::refresh add" << fPath;
         insert(fPath);
     }
 
@@ -947,9 +953,6 @@ void DataModel::refresh()
         setData(index(row, G::MetadataAttemptedColumn), false);
         setData(index(row, G::IconLoadedColumn), false);
     }
-
-    // qDebug() << "DataModel::refresh call newInstance";
-    // newInstance();
 }
 
 QString DataModel::primaryFolderPath()
@@ -2028,12 +2031,17 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     sf->setData(sfIdx, align, Qt::TextAlignmentRole);
 }
 
-void DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
+bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
 {
+    if (!sfIdx.isValid()) {
+        errMsg = "Invalid index.";
+        G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
+        return false;
+    }
     if (instance != this->instance) {
         errMsg = "Instance clash.";
         G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
-        return;
+        return false;
     }
 
     // update current index parameters
@@ -2052,6 +2060,7 @@ void DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
                  << "currentFilePath =" << currentFilePath
             ;
     }
+    return true;
 }
 
 void DataModel::setCurrent(QModelIndex dmIdx, int instance)
@@ -2695,17 +2704,17 @@ void DataModel::rebuildRowFromPathHash()
 bool DataModel::sourceModified(QStringList &added, QStringList &removed, QStringList &modified)
 {
 /*
-    Determine if the eligible file count has changed
-    and/or any images have been modified. If a file has been modified since the datamodel
-    was loaded then it is added to the modifiedFiles list.
+    Determine if the eligible file count has changed and/or any images have been
+    modified. If a file has been modified since the datamodel was loaded then it is
+    added to the modifiedFiles list.
 
     Called from MW::refreshDataModel.
 */
     if (G::isLogger) G::log("DataModel::sourceModified");
-    if (isDebug)
+    if (isDebug) {
         qDebug() << "DataModel::sourceModified"
                  << "instance =" << instance
-                 << folderList;
+                 << folderList;}
 
     bool hasChanged = false;
     QStringList srcImageFiles;
@@ -2761,7 +2770,7 @@ void DataModel::searchStringChange(QString searchString)
     filtered and unfiltered counts.
 */
     if (G::isLogger) G::log("DataModel::searchStringChange");
-    if (isDebug)
+    // if (isDebug)
          qDebug() << "DataModel::searchStringChange" << "instance =" << instance
                   << "searchString =" << searchString;
     // update datamodel search string match
@@ -3279,6 +3288,19 @@ QString DataModel::diagnostics()
         rpt << iStr << "  " << rowMap[i]<< "\n";
     }
 
+    rpt << "\n";
+
+    // list sort field in order
+    int sortColumn = G::NameColumn;
+    rpt << "DataModel Proxy for sort column " + G::s(sortColumn) + ":\n";
+    for (int sfRow = 0; sfRow < sf->rowCount(); sfRow++) {
+        rpt << G::s(sfRow).rightJustified(5) << "  ";
+        // rpt << QVariant(sfRow).toString().rightJustified(5);
+        rpt << G::s(index(sfRow, sortColumn).data());
+        rpt << "\n";
+    }
+
+
     return reportString;
 }
 
@@ -3452,6 +3474,7 @@ SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
     finished(true), suspendFiltering(false)
 {
     if (G::isLogger) G::log("SortFilter::SortFilter");
+    qDebug() << "SortFilter::SortFilter";
     this->filters = filters;
 }
 
@@ -3644,9 +3667,9 @@ void SortFilter::suspend(bool suspendFiltering, QString src)
     When false the filtering is refreshed.
 */
     QString msg = "suspendFiltering = " + QVariant(suspendFiltering).toString() +
-              " src = " + src;
+                  " src = " + src;
     if (G::isLogger) G::log("SortFilter::suspend", msg);
-    // qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
+    qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
     this->suspendFiltering = suspendFiltering;
 }
 

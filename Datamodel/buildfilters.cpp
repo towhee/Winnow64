@@ -181,14 +181,9 @@ bool BuildFilters::isBusy()
 void BuildFilters::rebuild()
 {
     if (G::isLogger || G::isFlowLogger)
-        G::log("BuildFilters::build");
-    filters->filtersBuilt = false;
-    filters->save();
+        G::log("BuildFilters::rebuild");
     reset(false);
-    dm->sf->suspend(false, "MW::filterChange");
-    dm->sf->filterChange("MW::filterChange");
     build();
-    filters->restore();
 }
 
 void BuildFilters::build(AfterAction newAction)
@@ -274,7 +269,7 @@ void BuildFilters::update()
                ;
     abortProcessing();
     if (filters->filtersBuilt) {
-        action = Action::Update;
+        action = Action::UpdateCounts;
         if (G::allMetadataLoaded) start(NormalPriority);
     }
     else build();
@@ -555,7 +550,6 @@ void BuildFilters::updateFilteredCounts()
     filters->updateFilteredCountPerItem(map, filters->picks);
     map.clear();
 
-    qDebug() << "BuildFilters::updateFilteredCounts 1";
     for (int row = 0; row < rows; row++) {
         if (abort) return;
         map[dm->sf->index(row, G::RatingColumn).data().toString().trimmed()]++;
@@ -657,7 +651,6 @@ void BuildFilters::updateFilteredCounts()
 
     filters->update();
 
-    qDebug() << "BuildFilters::updateFilterCounts emit updateFilterMenu";
     emit updateFilterMenu("BuildFilters::updateFilterCounts");
 }
 
@@ -1017,7 +1010,7 @@ void BuildFilters::run()
     case Action::Reset:
         if (!abort) appendUniqueItems();
         [[fallthrough]]; // deliberate fall-through
-    case Action::Update:
+    case Action::UpdateCounts:
         if (!abort) {
             updateFilteredCounts();
             updateUnfilteredSearchCount();

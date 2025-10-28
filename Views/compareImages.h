@@ -9,15 +9,23 @@
 #include "Image/imagealign.h"
 #include "Datamodel/datamodel.h"
 #include "Datamodel/selection.h"
+#include "Views/infoview.h"
 
 class CompareImages : public QWidget
 {
     Q_OBJECT
 
 public:
-    CompareImages(QWidget *parent, QWidget *centralWidget, Metadata *metadata,
-                  DataModel *dm, Selection *sel, IconView *thumbView,
-                  ImageCacheData *icd, ImageView *imageView);
+    CompareImages(QWidget *parent,
+                  QWidget *centralWidget,
+                  Metadata *metadata,
+                  DataModel *dm,
+                  Selection *sel,
+                  IconView *thumbView,
+                  ImageCacheData *icd,
+                  ImageView *imageView,
+                  InfoView *infoView
+                  );
 
     qreal toggleZoom;
     qreal zoomValue;
@@ -64,6 +72,7 @@ private:
     ImageCacheData *icd;
     ImageView *imageView;
     QWidget *centralWidget;
+    InfoView *infoView;
 //    bool &isRatingBadgeVisible;
 
     QGridLayout *gridLayout;
