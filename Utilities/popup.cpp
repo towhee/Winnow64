@@ -4,6 +4,14 @@
 #include <QApplication>
 #include <QDebug>
 
+#ifdef Q_OS_MAC
+#include <objc/objc.h>
+#include <objc/runtime.h>
+#include <objc/message.h>      // defines objc_msgSend
+typedef unsigned long NSUInteger;
+typedef long NSInteger;
+#endif
+
 /*
 This class shows a pop up message for a given time with an assigned transparency.
 The default time is 1500 ms and the default transparency is 75%.
@@ -21,10 +29,16 @@ all parts of the program. It is created once in MW::initialize.
 Popup::Popup(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget(parent)
 {
     this->source = source;
+
+    setAttribute(Qt::WA_NativeWindow, true);        // ensure NSWindow exists
+
     this->centralWidget = centralWidget;
     setWindowFlags(Qt::FramelessWindowHint |        // Disable window decoration
-                   Qt::Tool |                       // Discard display in a separate window
+                   Qt::ToolTip |                       // Discard display in a separate window
                    Qt::WindowStaysOnTopHint);       // Set on top of all windows
+    // setWindowFlags(Qt::FramelessWindowHint |        // Disable window decoration
+    //                Qt::Tool |                       // Discard display in a separate window
+    //                Qt::WindowStaysOnTopHint);       // Set on top of all windows
     setAttribute(Qt::WA_TranslucentBackground);     // Indicates that the background will be transparent
     setAttribute(Qt::WA_ShowWithoutActivating);     // At the show, the widget does not get the focus automatically
     setAttribute(Qt::WA_TransparentForMouseEvents, true);
@@ -107,8 +121,33 @@ void Popup::showPopup(const QString &text,
     int y = center.y() - h / 2;
     setGeometry(x, y, w, h);
 
+    // show();
+
+#ifdef Q_OS_MAC
+    // --- macOS special case: show window even if app inactive (e.g., Finder drag) ---
+    QWidget::setVisible(true); // mark QWidget as shown
+    WId wid = winId();
+    if (wid) {
+        id view = (id)reinterpret_cast<void *>(wid);
+        id nsWindow = ((id(*)(id, SEL))objc_msgSend)(view, sel_registerName("window"));
+        if (nsWindow) {
+            // ignores mouse events
+            ((void(*)(id, SEL, bool))objc_msgSend)(nsWindow,
+                 sel_registerName("setIgnoresMouseEvents:"),
+                 true);
+            // NSStatusWindowLevel is 25 in current SDKs
+            NSInteger level = 25;
+            ((void(*)(id, SEL, NSInteger))objc_msgSend)(nsWindow,
+                 sel_registerName("setLevel:"),
+                 level);
+            // show even when app inactive
+            ((void(*)(id, SEL))objc_msgSend)(nsWindow,
+                 sel_registerName("orderFrontRegardless"));
+        }
+    }
+#else
     show();
-    // QWidget::show();
+#endif
 
     // set popupDuration = 0 to keep open and manually close like a msgbox
     if (popupDuration > 0) hideTimer->start(popupDuration);

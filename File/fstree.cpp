@@ -1397,11 +1397,7 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
 
     if (!isInternal) {
         QString msg = "Copy to folder.";
-        if (!QApplication::activeWindow())
-            QToolTip::showText(QCursor::pos(), msg, this);
-        else
-            G::popup->showPopup(msg, 0);
-        // G::popup->showPopup(msg, 0);
+        G::popup->showPopup(msg, 0);
     }
 
     QModelIndexList selectedDirs = selectionModel()->selectedRows();
