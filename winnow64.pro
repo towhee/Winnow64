@@ -65,7 +65,9 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    ImageFormats/Base/rawbase.h \
+    ImageFormats/Tiff/tiffdecoder.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -197,8 +199,7 @@ HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/renamefile.h
 HEADERS += Utilities/showhelp.h
 HEADERS += Utilities/stresstest.h
-HEADERS += \
-    Utilities/usbutil.h
+HEADERS += Utilities/usbutil.h
 HEADERS += Utilities/utilities.h
 HEADERS += Views/compareImages.h
 HEADERS += Views/compareview.h
@@ -211,7 +212,9 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    ImageFormats/Base/rawbase.cpp \
+    ImageFormats/Tiff/tiffdecoder.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp

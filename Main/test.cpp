@@ -391,13 +391,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    dm->sf->filterChange();
-    thumbView->update();             // repaint
-    thumbView->reset();              // if really stale    return;
-    int row = dm->proxyRowFromModelRow(16);
-    qDebug() << "sfRow from dmRow = 16 = " << row;
-    return;
-    thumbView->sortThumbs(G::SizeColumn, false);
+    QString msg = "View folder and image.";
+    G::popup->showPopup(msg, 0);
+
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

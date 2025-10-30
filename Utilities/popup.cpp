@@ -5,17 +5,17 @@
 #include <QDebug>
 
 /*
-This class shows a pop up message for a given time with an assigned transparency. The default
-time is 1500 ms and the default transparency is 75%.
+This class shows a pop up message for a given time with an assigned transparency.
+The default time is 1500 ms and the default transparency is 75%.
 
 The widget will autosize to fit the text message if isAutoSize is true.
 
-If there are a series of progress messages (example loading filters) then use the first
-message to set the size and then set isAutoSize = false and setPopupText to change the text
-while keeping the pop up box size constant.
+If there are a series of progress messages (example loading filters) then use the
+first message to set the size and then set isAutoSize = false and setPopupText to
+change the text while keeping the pop up box size constant.
 
-In Winnow an instance of this class is created in global so that it is available to all parts
-of the program. It is created once in MW::initialize.
+In Winnow an instance of this class is created in global so that it is available to
+all parts of the program. It is created once in MW::initialize.
 */
 
 Popup::Popup(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget(parent)
@@ -27,6 +27,7 @@ Popup::Popup(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget
                    Qt::WindowStaysOnTopHint);       // Set on top of all windows
     setAttribute(Qt::WA_TranslucentBackground);     // Indicates that the background will be transparent
     setAttribute(Qt::WA_ShowWithoutActivating);     // At the show, the widget does not get the focus automatically
+    setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
     label.setTextFormat(Qt::RichText);
     label.setStyleSheet(

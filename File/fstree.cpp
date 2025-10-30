@@ -532,6 +532,7 @@ FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
 
     // mouse wheel is spinning
     wheelTimer.setSingleShot(true);
+
     connect(&wheelTimer, &QTimer::timeout, this, &FSTree::wheelStopped);
 
     // prevent select next folder when a folder is moved to trash/recycle
@@ -1390,7 +1391,18 @@ void FSTree::contextMenuEvent(QContextMenuEvent *event)
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log("FSTree::dragEnterEvent");
-    qDebug() << "FSTree::dragEnterEvent" << event-> dropAction() << event->modifiers();
+
+    bool isInternal;
+    event->source() ? isInternal = true : isInternal = false;
+
+    if (!isInternal) {
+        QString msg = "Copy to folder.";
+        if (!QApplication::activeWindow())
+            QToolTip::showText(QCursor::pos(), msg, this);
+        else
+            G::popup->showPopup(msg, 0);
+        // G::popup->showPopup(msg, 0);
+    }
 
     QModelIndexList selectedDirs = selectionModel()->selectedRows();
     if (selectedDirs.size() > 0) {
@@ -1405,11 +1417,12 @@ void FSTree::dragLeaveEvent(QDragLeaveEvent *event)
     QApplication::restoreOverrideCursor(); // Restore the original cursor when drag leaves
     event->accept();
     viewport()->update();
+    G::popup->reset();
 }
 
-void FSTree::dragMoveEvent(QDragMoveEvent *event)
+void FSTree::dragMoveEvent(QDragMoveEvent *event)  // not showing "View" label
 {
-    QModelIndex idx = indexAt(event->pos());
+    QModelIndex idx = indexAt(event->position().toPoint());
     // same row, column 0 (folder name)
     QModelIndex idx0 = idx.sibling(idx.row(), 0);
     if (idx0.isValid()) {
@@ -1420,8 +1433,13 @@ void FSTree::dragMoveEvent(QDragMoveEvent *event)
         delegate->setHoveredIndex(QModelIndex());  // No row hovered
     }
 
-    event->acceptProposedAction();
-    viewport()->update();  // Refresh view
+    // show the dragLabel to show images from the source folder
+    if (event->mimeData()->hasUrls()) {
+        // viewport()->update();  // Refresh view
+    }
+    else {
+        event->ignore();
+    }
 }
 
 
@@ -1435,6 +1453,7 @@ void FSTree::dropEvent(QDropEvent *event)
     if (G::isLogger) G::log(src);
     qDebug() << "FSTree::dropEvent";
 
+    G::popup->reset();
     // QString dropDir = indexAt(event->position().toPoint()).data(QFileSystemModel::FilePathRole).toString();
 
     // HandleDropOnFolder handle(event, dropDir);

@@ -12,7 +12,6 @@
 #include "Metadata/metareport.h"
 // req'd to report embedded jpeg
 #include "Metadata/iptc.h"
-#include "Metadata/gps.h"
 
 
 class Nikon : public QObject

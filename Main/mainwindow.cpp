@@ -482,7 +482,6 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         */
         // qDebug() << "event->key() == Qt::Key_Escape";
         G::popup->reset();
-        dragLabel->hide();
         // end stress test
         if (G::isStressTest) G::isStressTest = false;
         // stop selecting a new folder in FSTree
@@ -2061,11 +2060,6 @@ void MW::refresh()
         filterChange("MW::refresh");
         thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
         gridView->iconViewDelegate->currentRow = dm->currentSfRow;
-        // current row is updated in DataModel if deletion or insertion
-        if (G::isLogger) G::log("MW::refresh Select Current Row ***************");
-        // QTimer::singleShot(500, this, [this]() {
-        //     sel->select(dm->currentSfRow);
-        // });
     }
 }
 

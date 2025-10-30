@@ -1829,6 +1829,7 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program or folder in FSTree.
 */
     if (isDebug) G::log("IconView::startDrag", objectName());
+    qDebug() << "IconView::startDrag" << objectName();
 
     isMouseDrag = false;
 
