@@ -1122,7 +1122,6 @@ private:
     QWidget *thumbDockEmptyWidget;
     QVBoxLayout *imageViewContainer;
     Stack *meanStack;
-    QLabel *dragLabel = new QLabel(this);
 
     QStandardItemModel *imageModel;
 

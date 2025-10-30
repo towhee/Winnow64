@@ -134,6 +134,8 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Fix sort for case sensitivity
+- Fix refresh when filtered and delete all
 - Version 2.03
 - Selection count not updated correctly (should be 1) after a filter change.
 - Select anchor wrong when change filter.  Clear selection to keep it simple.

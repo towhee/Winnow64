@@ -28,11 +28,11 @@ void MW::initialize()
     hasGridBeenActivated = true;
     wasThumbDockVisible = true;
 
-    // drag text
-    dragLabel->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
-    dragLabel->setAttribute(Qt::WA_TranslucentBackground);
-    dragLabel->setStyleSheet("background: rgba(0, 0, 0, 150); color: white; padding: 5px; border-radius: 5px;");
-    dragLabel->hide();
+    // drag text not used but keep as example
+    // dragLabel->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
+    // dragLabel->setAttribute(Qt::WA_TranslucentBackground);
+    // dragLabel->setStyleSheet("background: rgba(0, 0, 0, 150); color: white; padding: 5px; border-radius: 5px;");
+    // dragLabel->hide();
 
     // window
     isDragDrop = false;

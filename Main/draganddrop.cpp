@@ -5,9 +5,10 @@
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log("MW::dragEnterEvent");
-    // qDebug() << "MW::dragEnterEvent";
 
     if (event->mimeData()->hasUrls()) {
+        QString msg = "View source folder.";
+        G::popup->showPopup(msg, 0);
         event->acceptProposedAction();
     }
 }
@@ -15,12 +16,15 @@ void MW::dragEnterEvent(QDragEnterEvent *event)
 void MW::dragLeaveEvent(QDragLeaveEvent *event)
 {
     if (G::isLogger) G::log("MW::dragEnterEvent");
-    dragLabel->hide();
+    G::popup->reset();
 }
 
 void MW::dragMoveEvent(QDragMoveEvent *event)
 {
     if (G::isLogger) G::log("MW::dragMoveEvent");
+    // qDebug() << "MW::dragMoveEvent" << event
+    //          << "hasUrls =" << event->mimeData()->hasUrls()
+    //          << "pos =" << QCursor::pos();
 
     // Cannot show in source folder as this is already the source
     QObject *source = event->source();
@@ -31,14 +35,15 @@ void MW::dragMoveEvent(QDragMoveEvent *event)
 
     // show the dragLabel to show images from the source folder
     if (event->mimeData()->hasUrls()) {
-        QString text = "Show image in source folder ";
-        dragLabel->setText(text);
-        dragLabel->adjustSize();
-        // Get global cursor position and move label near it
-        QPoint globalPos = QCursor::pos();
-        int xOffset = -dragLabel->width()/2;
-        dragLabel->move(globalPos + QPoint(xOffset, 10)); // Offset slightly from cursor
-        dragLabel->show();
+        // QString text = "View";
+        // dragLabel->setText(text);
+        // dragLabel->adjustSize();
+        // // Get global cursor position and move label near it
+        // QPoint globalPos = QCursor::pos();
+        // int xOffset = -dragLabel->width()/2;
+        // int yOffset = -dragLabel->height()*2;
+        // dragLabel->move(globalPos + QPoint(xOffset, yOffset));
+        // dragLabel->show();
 
         event->accept();
     }
@@ -50,6 +55,8 @@ void MW::dragMoveEvent(QDragMoveEvent *event)
 void MW::dropEvent(QDropEvent *event)
 {
     if (G::isLogger) G::log("MW::dropEvent");
+
+    G::popup->reset();
 
     QWidget *child = childAt(event->position().toPoint());
     if (child && (
@@ -79,7 +86,6 @@ void MW::dropEvent(QDropEvent *event)
     if (event->mimeData()->hasUrls()) {
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
         handleDrop(fPath);
-        dragLabel->hide();
         event->acceptProposedAction();
     }
 }
