@@ -67,7 +67,10 @@ QT += concurrent
 
 HEADERS += Cache/cachedata.h \
     ImageFormats/Base/rawbase.h \
-    ImageFormats/Tiff/tiffdecoder.h
+    ImageFormats/Tiff/tiffdecoder.h \
+    ImageStack/focusmeasure.h \
+    ImageStack/stackaligner.h \
+    ImageStack/stackcontroller.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -214,7 +217,10 @@ HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp \
     ImageFormats/Base/rawbase.cpp \
-    ImageFormats/Tiff/tiffdecoder.cpp
+    ImageFormats/Tiff/tiffdecoder.cpp \
+    ImageStack/focusmeasure.cpp \
+    ImageStack/stackaligner.cpp \
+    ImageStack/stackcontroller.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp

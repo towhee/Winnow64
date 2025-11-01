@@ -110,7 +110,7 @@ void MW::filterChange(QString source)
 */
 
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
-    qDebug() << "MW::filterChange" << "called from:" << source;
+    // qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
     if (!G::allMetadataLoaded) {
@@ -167,10 +167,10 @@ void MW::filterChange(QString source)
 
     // is the DataModel current index still in the filter.  If not, reset
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
-    int oldRow = dm->currentSfIdx.row();
+    int oldSfRow = dm->currentSfIdx.row();
     int sfRows = dm->sf->rowCount();
     if (!newSfIdx.isValid()) {
-        if (oldRow < sfRows) newSfIdx = dm->sf->index(oldRow, 0);
+        if (oldSfRow < sfRows) newSfIdx = dm->sf->index(oldSfRow, 0);
         else newSfIdx = dm->sf->index(sfRows-1, 0);
     }
 
@@ -179,7 +179,7 @@ void MW::filterChange(QString source)
     if (!G::removingRowsFromDM)
         emit imageCacheFilterChange(fPath, "MW::filterChange");
 
-    // clear selection and update datamodel current index
+    // // clear selection and update datamodel current index
     sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
 
     // only scroll if filtration has changed visible cells in thumbView
@@ -398,7 +398,7 @@ void MW::sortChange(QString source)
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::sortChange",  "Src = " + source);
-    qDebug() << "MW::sortChange  Src:" << source;
+    // qDebug() << "MW::sortChange  Src:" << source;
 
     if (G::isInitializing || !G::allMetadataLoaded || sortMenuUpdateToMatchTable) {
         return;
@@ -410,7 +410,7 @@ void MW::sortChange(QString source)
     sel->save("MW::sortChange");
 
     // do the sort
-    qDebug() << "MW::sortChange  sortColumn =" << sortColumn << isReverseSort;
+    // qDebug() << "MW::sortChange  sortColumn =" << sortColumn << isReverseSort;
     thumbView->sortThumbs(sortColumn, isReverseSort);
 
     // recover selection

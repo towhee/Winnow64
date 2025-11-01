@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QDebug>
 
+// --- macOS special case: show window even if app inactive (e.g., Finder drag) ---
 #ifdef Q_OS_MAC
 #include <objc/objc.h>
 #include <objc/runtime.h>
@@ -120,8 +121,6 @@ void Popup::showPopup(const QString &text,
     int x = center.x() - w / 2;
     int y = center.y() - h / 2;
     setGeometry(x, y, w, h);
-
-    // show();
 
 #ifdef Q_OS_MAC
     // --- macOS special case: show window even if app inactive (e.g., Finder drag) ---
