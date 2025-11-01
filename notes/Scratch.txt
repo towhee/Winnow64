@@ -24,3 +24,7 @@ DataModel Proxy for sort column 2:
    15  s_simple_v35.tif
    16  Zerene_dmap.tif
    17  Zerene_pmax.tif
+
+MW::filterChange dm->currentSfIdx = QModelIndex(0,0,0x6000014bc2d0,SortFilter(0x6000028706c0))
+newSfIdx =                          QModelIndex(0,0,0x6000014bc2d0,SortFilter(0x6000028706c0))
+dm->currentSfIdx.isValid() = true newSfIdx = true

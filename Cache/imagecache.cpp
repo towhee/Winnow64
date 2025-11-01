@@ -1716,7 +1716,12 @@ void ImageCache::filterChange(QString currentImageFullPath, QString src)
         qDebug().noquote()
             << fun.leftJustified(col0Width, ' ')
             << "dm->sf->rowCount() =" << dm->sf->rowCount()
+            << "icd->imCache.count() =" << icd->imCache.count()
             << "currentImageFullPath =" << currentImageFullPath
+            << "dm->fPathRowContains =" << dm->fPathRowContains(currentImageFullPath)
+            << "currentImageFullPath =" << currentImageFullPath
+            << "dm->proxyRowFromPath(currentImageFullPath, fun) ="
+            << dm->proxyRowFromPath(currentImageFullPath, fun)
             ;
     }
     if (dm->sf->rowCount() == 0) return;
@@ -1726,12 +1731,6 @@ void ImageCache::filterChange(QString currentImageFullPath, QString src)
 
     // update instance
     instance = dm->instance;
-
-    // reset the image cache
-    // icd->clear();
-    // toCache.clear();
-    // toCacheStatus.clear();
-    // updateStatus(StatusAction::Clear, "filterChange");
 
     setCurrentPosition(currentImageFullPath, fun);
 }

@@ -883,7 +883,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     QModelIndex idx0 = idx.sibling(idx.row(), 0);
                     folderName = idx0.data(QFileSystemModel::FileNameRole).toString();
                     mouseOverFolderPath = idx0.data(QFileSystemModel::FilePathRole).toString();
-                    // /*
+                    /*
                     qDebug() << "MW::eventFilter QEvent::ContextMenu"
                              << "folderName =" << folderName
                              << "mouseOverFolderPath =" << mouseOverFolderPath
@@ -2030,7 +2030,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
 void MW::updateImageCount()
 {
-    if (G::isLogger) G::log("MW::refresh");
+    if (G::isLogger) G::log("MW::updateImageCount");
     fsTree->updateCount();
     bookmarks->updateCount();
 }
@@ -2054,13 +2054,18 @@ void MW::refresh()
     // update image counts
     fsTree->updateCount();
     bookmarks->updateCount();
-    if (dm->rowCount()) {
-        dm->refresh();
-        buildFilters->rebuild();
-        filterChange("MW::refresh");
-        thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
-        gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+    dm->refresh();
+    qDebug() << "MW::refresh" << dm->rowCount() << dm->sf->rowCount();
+    if (dm->sf->rowCount()) {
+        // buildFilters->recount();
     }
+    else {
+        buildFilters->rebuild();
+    }
+    filterChange("MW::refresh");
+    buildFilters->recount();
+    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
 }
 
 bool MW::allIdle() const {

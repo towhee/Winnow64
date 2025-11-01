@@ -7,8 +7,12 @@ void MW::dragEnterEvent(QDragEnterEvent *event)
     if (G::isLogger) G::log("MW::dragEnterEvent");
 
     if (event->mimeData()->hasUrls()) {
-        QString msg = "View source folder.";
-        G::popup->showPopup(msg, 0);
+        bool isInternal;
+        event->source() ? isInternal = true : isInternal = false;
+        if (!isInternal) {
+            QString msg = "View source folder.";
+            G::popup->showPopup(msg, 0);
+        }
         event->acceptProposedAction();
     }
 }

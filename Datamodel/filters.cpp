@@ -1410,25 +1410,25 @@ void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidg
 {
     /*
     All the unique values for a category are collected into a QMap object in
-    BuildFilters. The list is passed here, where unique values are extracted and added to
-    the category. For example, there could be multiple file types in the folder like JPG
-    and NEF. A QMap object is used so the items can be sorted by key in the same order as
-    the tableView. This function should only be used for dynamic categories - see
-    createDynamicFilters;
+    BuildFilters. The list is passed here, where unique values are extracted and
+    added to the category. For example, there could be multiple file types in the
+    folder like JPG and NEF. A QMap object is used so the items can be sorted by key
+    in the same order as the tableView. This function should only be used for
+    dynamic categories - see createDynamicFilters;
 
-    If a category item was just checked (activeCategory) then it is ignored, as the user
-    may want to check another item in the same category.
+    If a category item was just checked (activeCategory) then it is ignored, as the
+    user may want to check another item in the same category.
 */
     //    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
-    if (debugFilters /*|| G::isLogger || G::isFlowLogger*/)
+    if (debugFilters)
         qDebug() << "Filters::updateUnfilteredCountPerItem"
                  << "category =" << category->text(0)
+                 << "itemMap =" << itemMap
             ;
 
     QMutexLocker locker(&mutex);
 
     for (int i = 0; i < category->childCount(); i++) {
-        if (abort) return;
         category->child(i)->setData(3, Qt::EditRole, 0);
         QString key = category->child(i)->text(0);
         if (itemMap.contains(key))
@@ -1696,7 +1696,6 @@ void Filters::mousePressEvent(QMouseEvent *event)
     (arrow head) is shown but its behavior is disabled as it does not
     support solo mode.
 */
-    qDebug() << "Filters::mousePressEvent" << event;
     if (G::isLogger) G::log("Filters::mousePressEvent");
     if (G::mode == "Compare") {
         G::popup->showPopup("Filters are unavailable while in Compare Mode", 3000);

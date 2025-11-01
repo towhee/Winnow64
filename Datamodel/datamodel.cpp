@@ -465,7 +465,7 @@ void DataModel::remove(QString fPath)
     }
 
     // rebuild fPathRow hash
-    // rebuildRowFromPathHash();
+    rebuildRowFromPathHash();
 
     // update current index
     int last = sf->rowCount() - 1;
@@ -926,17 +926,20 @@ void DataModel::refresh()
     removals or modifications).
 */
     if (G::isLogger) G::log("DataModel::refresh");
+    qDebug() << "DataModel::refresh";
 
     QStringList added;
     QStringList removed;
     QStringList modified;
 
     if (!sourceModified(added, removed, modified)) {
+        qDebug() << "DataModel::refresh nothing modified";
         return;
     }
 
     // additions
     for (const QString &fPath : added) {
+        qDebug() << "DataModel::refresh additions";
         insert(fPath);
     }
 
@@ -2530,7 +2533,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     if (!sfIdx.isValid()) {
         errMsg = "Invalid sfIdx.  Src: " + src;
         G::issue("Warning", errMsg, src, sfIdx.row());
-        qDebug() << sfRow << "isCached =" << isCached << errMsg;
+        // qDebug() << sfRow << "isCached =" << isCached << errMsg;
         return;
     }
     sf->setData(sfIdx, isCached);
@@ -2711,10 +2714,12 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
     Called from MW::refreshDataModel.
 */
     if (G::isLogger) G::log("DataModel::sourceModified");
-    if (isDebug) {
+    // if (isDebug)
+    {
         qDebug() << "DataModel::sourceModified"
                  << "instance =" << instance
-                 << folderList;}
+                 << folderList;
+    }
 
     bool hasChanged = false;
     QStringList srcImageFiles;
@@ -2731,6 +2736,7 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
             srcImageFiles << fPath;
             // in datamodel?
             if (!fPathRowContains(fPath)) {
+                qDebug() << "DataModel::sourceModified added" << fPath;
                 added << fPath;
             }
         }
@@ -2740,6 +2746,7 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
     for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i) {
         QString fPath = i.key();
         if (!srcImageFiles.contains(fPath)) {
+            qDebug() << "DataModel::sourceModified removed" << fPath;
             removed << fPath;
         }
     }
@@ -2753,6 +2760,7 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
         QDateTime t2 = info.lastModified();
         // many file formats to not include ms in datetime
         if (t1.msecsTo(t2) > 1000) {
+            qDebug() << "DataModel::sourceModified modified" << fPath;
             modified << fPath;
         }
     }
@@ -3474,7 +3482,7 @@ SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
     finished(true), suspendFiltering(false)
 {
     if (G::isLogger) G::log("SortFilter::SortFilter");
-    qDebug() << "SortFilter::SortFilter";
+    // qDebug() << "SortFilter::SortFilter";
     this->filters = filters;
 }
 
@@ -3669,7 +3677,7 @@ void SortFilter::suspend(bool suspendFiltering, QString src)
     QString msg = "suspendFiltering = " + QVariant(suspendFiltering).toString() +
                   " src = " + src;
     if (G::isLogger) G::log("SortFilter::suspend", msg);
-    qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
+    // qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
     this->suspendFiltering = suspendFiltering;
 }
 

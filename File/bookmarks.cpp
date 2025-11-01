@@ -391,6 +391,14 @@ void BookMarks::dragEnterEvent(QDragEnterEvent *event)
     if (G::isLogger) G::log("BookMarks::dragEnterEvent");
     QModelIndexList selectedDirs = selectionModel()->selectedRows();
 
+    bool isInternal;
+    event->source() ? isInternal = true : isInternal = false;
+
+    if (!isInternal) {
+        QString msg = "Copy to folder.";
+        G::popup->showPopup(msg, 0);
+    }
+
     if (selectedDirs.size() > 0) {
         dndOrigSelection = selectedDirs[0];
     }
@@ -408,6 +416,7 @@ void BookMarks::dragLeaveEvent(QDragLeaveEvent *event)
     QApplication::restoreOverrideCursor(); // Restore the original cursor when drag leaves
     // QWidget::dragLeaveEvent(event);
     event->accept();
+    G::popup->reset();
     emit status(true);
 }
 
@@ -437,6 +446,8 @@ void BookMarks::dropEvent(QDropEvent *event)
 */
     QString src = "BookMarks::dropEvent";
     if (G::isLogger) G::log(src);
+
+    G::popup->reset();
 
     const QMimeData *mimeData = event->mimeData();
     if (!mimeData->hasUrls()) return;

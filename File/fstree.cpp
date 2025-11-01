@@ -1393,12 +1393,15 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
     if (G::isLogger) G::log("FSTree::dragEnterEvent");
 
     bool isInternal;
+    QString msg;
     event->source() ? isInternal = true : isInternal = false;
-
-    if (!isInternal) {
-        QString msg = "Copy to folder.";
-        G::popup->showPopup(msg, 0);
+    msg = "Copy to folder.";
+    if (isInternal) {
+        if (!(event->keyboardModifiers() & Qt::AltModifier)) {
+            msg = "Move to folder.";
+        }
     }
+    G::popup->showPopup(msg, 0);
 
     QModelIndexList selectedDirs = selectionModel()->selectedRows();
     if (selectedDirs.size() > 0) {
@@ -1447,7 +1450,7 @@ void FSTree::dropEvent(QDropEvent *event)
 */
     QString src = "FSTree::dropEvent";
     if (G::isLogger) G::log(src);
-    qDebug() << "FSTree::dropEvent";
+    // qDebug() << "FSTree::dropEvent";
 
     G::popup->reset();
     // QString dropDir = indexAt(event->position().toPoint()).data(QFileSystemModel::FilePathRole).toString();

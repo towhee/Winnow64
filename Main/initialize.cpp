@@ -527,12 +527,24 @@ void MW::createThumbView()
             this, SLOT(thumbHasScrolled()));
 
     // Force thumbView to update whenever the proxy model layout changes
-    connect(dm->sf, &QAbstractItemModel::layoutChanged, thumbView, qOverload<>(&QListView::update));
+    // connect(dm->sf, &QAbstractItemModel::layoutChanged, thumbView, qOverload<>(&QListView::update));
 
     // Also repaint when rows are moved or inserted, just to be safe
-    connect(dm->sf, &QAbstractItemModel::rowsMoved, thumbView, qOverload<>(&QListView::update));
-    connect(dm->sf, &QAbstractItemModel::rowsInserted, thumbView, qOverload<>(&QListView::update));
-    connect(dm->sf, &QAbstractItemModel::modelReset, thumbView, qOverload<>(&QListView::update));
+    // connect(dm->sf, &QAbstractItemModel::rowsMoved, thumbView, qOverload<>(&QListView::update));
+    // connect(dm->sf, &QAbstractItemModel::rowsInserted, thumbView, qOverload<>(&QListView::update));
+    // connect(dm->sf, &QAbstractItemModel::modelReset, thumbView, qOverload<>(&QListView::update));
+
+    // // Force thumbView to update whenever the proxy model layout changes
+    // connect(dm->sf, &QAbstractItemModel::layoutChanged,
+    //         thumbView, static_cast<void (QWidget::*)()>(&QWidget::update));
+
+    // // Also repaint when rows are moved or inserted, just to be safe
+    // connect(dm->sf, &QAbstractItemModel::rowsMoved,
+    //         thumbView, static_cast<void (QWidget::*)()>(&QWidget::update));
+    // connect(dm->sf, &QAbstractItemModel::rowsInserted,
+    //         thumbView, static_cast<void (QWidget::*)()>(&QWidget::update));
+    // connect(dm->sf, &QAbstractItemModel::modelReset,
+    //         thumbView, static_cast<void (QWidget::*)()>(&QWidget::update));
 }
 
 void MW::createGridView()
@@ -918,7 +930,8 @@ void MW::createFSTree()
     connect(fsTree, &FSTree::folderSelectionChange, this, &MW::folderSelectionChange);
 
     // refresh datamodel after dragdrop operation
-    connect(fsTree, &FSTree::updateCounts, this, &MW::updateImageCount);
+    connect(fsTree, &FSTree::updateCounts, this, &MW::refresh);
+    // connect(fsTree, &FSTree::updateCounts, this, &MW::updateImageCount);
 
     // if move drag and drop then delete files from source folder(s)
     connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);

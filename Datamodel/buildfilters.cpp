@@ -385,16 +385,16 @@ void BuildFilters::updateUnfilteredSearchCount()
 void BuildFilters::updateUnfilteredCounts()
 {
 /*
-    Update the DataModel item counts in Filters.  A QMap is used to count all the unique
-    items for each DataModel column that can be filtered and updates the unique item counts by
-    calling filters->addFilteredCountPerItem.
+    Update the DataModel item counts in Filters. A QMap is used to count all the
+    unique items for each DataModel column that can be filtered and updates the
+    unique item counts by calling filters->addFilteredCountPerItem.
 
     This is used when images are deleted from a filtered dataset.
 */
     if (debugBuildFilters)
     {
         qDebug()
-            << "BuildFilters::countMapFiltered"
+            << "BuildFilters::updateUnfilteredCounts"
             ;
     }
 
