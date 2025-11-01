@@ -19,12 +19,17 @@ public:
     void stop();
     void loadInputImages(const QStringList &paths, const QList<QImage*> &images);
     bool runAlignment(bool saveAligned = true, bool useGpu = false);
+    bool runFocusMaps(const QString &alignedFolderPath);
     void test();
 
 signals:
     void progress(QString stage, int current, int total);
-    void finished(QString resultPath);
+    void finished(const QString &projectFolder);
+    void finishedFocus(const QString &projectFolder);
     void updateStatus(bool keepBase, QString msg, QString src);
+
+public slots:
+    void computeFocusMaps(const QString &projectFolder);
 
 private:
     void prepareProjectFolders();
