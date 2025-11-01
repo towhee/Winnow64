@@ -106,6 +106,8 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
         }
         infoView->ignoreDataChange = false;
     }
+
+
 }
 
 void MW::clearStatus()

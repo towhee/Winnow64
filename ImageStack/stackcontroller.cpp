@@ -7,121 +7,141 @@ StackController::StackController(QObject *parent)
 {
 }
 
-void StackController::setSourceFolder(const QString &path)
+void StackController::stop()
 {
-    srcFolder.setPath(path);
+    isAborted = true;
+    if (workerThread && workerThread->isRunning()) {
+        workerThread->requestInterruption();
+    }
+    emit updateStatus(false, "Focus stack operation aborted.", "StackController::stop");
 }
 
-void StackController::setInputFiles(const QStringList &filePaths)
+void StackController::test()
 {
-    inputFiles = filePaths;
-    if (inputFiles.isEmpty()) {
-        emit updateStatus(false, "No input files provided", "StackController::setInputFiles");
-        return;
+    emit updateStatus(false, "Focus stack operation test.", "StackController::stop");
+    runAlignment(false);
+}
+
+void StackController::prepareProjectFolders()
+{
+    if (inputPaths.isEmpty()) return;
+
+    QFileInfo fi(inputPaths.first());
+    QString baseName = fi.completeBaseName();
+
+    projectRoot = fi.dir().path();
+    projectFolder = projectRoot + "/" + baseName;
+
+    QDir dir;
+    if (!dir.exists(projectFolder)) {
+        dir.mkpath(projectFolder);
+        emit updateStatus(false,
+                          QString("Created project folder: %1").arg(projectFolder),
+                          "StackController::prepareProjectFolders");
     }
 
-    QFileInfo firstInfo(inputFiles.first());
-    projectBaseName = firstInfo.completeBaseName();
+    // subfolders for intermediate results
+    QStringList subDirs = { "aligned", "depth", "masks", "output" };
+    for (const QString &sub : subDirs) {
+        QString path = projectFolder + "/" + sub;
+        if (!dir.exists(path)) dir.mkpath(path);
+    }
 
-    QString projPath = srcFolder.filePath(QString("Stack_%1").arg(projectBaseName));
-    projectFolder.setPath(projPath);
+    alignedFolder = QDir(projectFolder + "/aligned");
+}
+
+void StackController::loadInputImages(const QStringList &paths, const QList<QImage*> &images)
+{
+    inputPaths = paths;
+    inputImages = images;
+
     prepareProjectFolders();
+
+    emit updateStatus(false,
+          QString("Loaded %1 images for stacking.").arg(images.size()),
+          "StackController::loadInputImages");
 }
 
-bool StackController::prepareProjectFolders()
+bool StackController::runAlignment(bool saveAligned, bool useGpu)
 {
-    if (!srcFolder.exists()) {
-        emit updateStatus(false, "Source folder does not exist", "StackController::prepareProjectFolders");
-        return false;
-    }
-
-    if (!projectFolder.exists()) {
-        if (!srcFolder.mkpath(projectFolder.dirName())) {
-            emit updateStatus(false, "Failed to create project folder", "StackController::prepareProjectFolders");
-            return false;
-        }
-    }
-
-    QStringList subDirs = {"aligned", "focus_maps", "depth_maps", "fused"};
-    for (const QString &name : subDirs) {
-        QString subPath = projectFolder.filePath(name);
-        QDir subDir(subPath);
-        if (!subDir.exists())
-            projectFolder.mkpath(name);
-    }
-
-    alignedFolder.setPath(projectFolder.filePath("aligned"));
-    focusMapFolder.setPath(projectFolder.filePath("focus_maps"));
-    depthMapFolder.setPath(projectFolder.filePath("depth_maps"));
-    fusedFolder.setPath(projectFolder.filePath("fused"));
-
-    emit updateStatus(false, "Project folder ready: " + projectFolder.path(), "StackController::prepareProjectFolders");
-    return true;
-}
-
-QMap<int, QImage> StackController::loadInputImages()
-{
-    QMap<int, QImage> stack;
-    if (inputFiles.isEmpty()) return stack;
-
-    int idx = 0;
-    for (const QString &filePath : inputFiles) {
-        QImage img(filePath);
-        if (img.isNull()) {
-            emit updateStatus(false, "Failed to load " + filePath, "StackController::loadInputImages");
-            continue;
-        }
-        stack.insert(idx++, img);
-    }
-
-    emit updateStatus(false, QString("Loaded %1 selected images").arg(stack.size()), "StackController::loadInputImages");
-    return stack;
-}
-
-bool StackController::runAlignment(bool saveAligned)
-{
-    if (inputFiles.isEmpty()) {
+    if (inputImages.isEmpty()) {
         emit updateStatus(false, "No input images to align", "StackController::runAlignment");
         return false;
     }
 
+    // Prepare folders (safe to call multiple times)
     prepareProjectFolders();
-    emit updateStatus(false, "Starting alignment...", "StackController::runAlignment");
+    emit updateStatus(false, "Starting threaded alignment...", "StackController::runAlignment");
 
-    QElapsedTimer timer;
-    timer.start();
+    // --- Create a dedicated worker thread and aligner ----------------------
+    workerThread = new QThread(this);
+    auto *aligner = new StackAligner();
+    aligner->moveToThread(workerThread);
 
-    QMap<int, QImage> stack = loadInputImages();
-    if (stack.isEmpty()) return false;
-
-    // --- StackAligner setup ---
-    StackAligner *aligner = new StackAligner(this);
+    // --- Pass configuration ------------------------------------------------
     aligner->setSearchRadius(10);
     aligner->setDownsample(2);
     aligner->setRotationStep(0.0f);
     aligner->setUseEdgeMaskWeighting(true);
+    aligner->setUseGpu(useGpu);
 
-    connect(aligner, &StackAligner::progress, this, [this](QString msg, int cur, int total) {
-        emit progress(msg, cur, total);
-        emit updateStatus(false, QString("%1 %2/%3").arg(msg).arg(cur).arg(total), "StackAligner::align");
-    });
-    connect(aligner, &StackAligner::updateStatus, this, &StackController::updateStatus);
+    // --- Forward signals to StackController (queued, cross-thread) ---------
+    connect(aligner, &StackAligner::updateStatus,
+            this, &StackController::updateStatus,
+            Qt::QueuedConnection);
 
-    QMap<int, QImage> aligned = aligner->align(stack);
+    connect(aligner, &StackAligner::progress,
+            this, &StackController::progress,
+            Qt::QueuedConnection);
 
-    emit updateStatus(false,
-                      QString("Alignment complete in %1 s").arg(timer.elapsed() / 1000.0, 0, 'f', 2),
-                      "StackController::runAlignment");
+    // --- Run alignment inside the worker thread ----------------------------
+    connect(workerThread, &QThread::started, aligner, [=]() {
+        QElapsedTimer timer;
+        timer.start();
 
-    if (saveAligned) {
-        int idx = 0;
-        for (auto it = aligned.begin(); it != aligned.end(); ++it) {
-            QString outPath = alignedFolder.filePath(QString("aligned_%1.jpg").arg(idx++, 3, 10, QChar('0')));
-            it.value().save(outPath, "JPEG", 95);
+        QList<QImage> aligned = aligner->align(inputImages);
+
+        if (isAborted) {
+            emit updateStatus(false, "Alignment aborted.", "StackController::runAlignment");
         }
-        emit updateStatus(false, "Aligned images saved to " + alignedFolder.path(), "StackController::runAlignment");
-    }
+        else {
+            emit updateStatus(false,
+                              QString("Alignment complete in %1 s")
+                                  .arg(timer.elapsed() / 1000.0, 0, 'f', 2),
+                              "StackController::runAlignment");
 
-    emit finished(projectFolder.path());
+            // --- Save aligned results if requested --------------------------
+            if (saveAligned && !aligned.isEmpty()) {
+                int idx = 0;
+                for (const QImage &img : aligned) {
+                    QString outPath = alignedFolder.filePath(
+                        QString("aligned_%1.jpg").arg(idx++, 3, 10, QChar('0')));
+                    if (!img.save(outPath, "JPEG", 95)) {
+                        emit updateStatus(false,
+                                          QString("Failed to save %1").arg(outPath),
+                                          "StackController::runAlignment");
+                    }
+                }
+                emit updateStatus(false,
+                                  "Aligned images saved to " + alignedFolder.path(),
+                                  "StackController::runAlignment");
+            }
+        }
+
+        // --- Signal completion ---------------------------------------------
+        emit finished(projectFolder);
+
+        // Cleanly exit thread
+        workerThread->quit();
+    });
+
+    // --- Cleanup when the thread finishes ----------------------------------
+    connect(workerThread, &QThread::finished, aligner, &QObject::deleteLater);
+    connect(workerThread, &QThread::finished, workerThread, &QObject::deleteLater);
+
+    // --- Start alignment ---------------------------------------------------
+    isAborted = false;
+    workerThread->start();
+
     return true;
 }

@@ -2,23 +2,25 @@
 
 StackAligner::StackAligner(QObject *parent) : QObject(parent) {}
 
+
 void StackAligner::setSearchRadius(int px)    { searchRadius = px; }
 void StackAligner::setRotationStep(float deg) { rotationStepDeg = deg; }
 void StackAligner::setDownsample(int f)       { downsample = qMax(1, f); }
 void StackAligner::setUseEdgeMaskWeighting(bool enabled) { useEdgeMaskWeighting = enabled; }
+void StackAligner::setUseGpu(bool enabled)    { useGpu = enabled; }
 
-QMap<int, QImage> StackAligner::align(const QMap<int, QImage> &stack)
+QList<QImage> StackAligner::align(const QList<QImage*> &images)
 {
-    QString src = "StackAligner::align";
-    if (stack.isEmpty()) {
+    const QString src = "StackAligner::align";
+    if (images.isEmpty()) {
         emit updateStatus(false, "No images provided for alignment", src);
         return {};
     }
 
-    emit updateStatus(false, QString("Starting alignment of %1 images").arg(stack.size()), src);
+    emit updateStatus(false, QString("Starting alignment of %1 images").arg(images.size()), src);
 
-    auto it = stack.begin();
-    const QImage refFull = it.value();
+    // --- Reference image ----------------------------------------------------
+    const QImage &refFull = *images.first();
     QImage refGray = toGray(refFull);
     if (downsample > 1)
         refGray = refGray.scaled(refGray.width() / downsample,
@@ -32,21 +34,31 @@ QMap<int, QImage> StackAligner::align(const QMap<int, QImage> &stack)
         refWeights = computeEdgeWeights(refGray);
     }
 
-    QMap<int, QImage> aligned;
-    aligned.insert(it.key(), refFull); // reference unchanged
-    ++it;
+    QList<QImage> aligned;
+    aligned.reserve(images.size());
+    aligned.append(refFull); // first image unchanged
 
-    int total = stack.size() - 1;
+    const int total = images.size() - 1;
     int count = 0;
 
-    for (; it != stack.end(); ++it) {
+    // --- Align each subsequent image ---------------------------------------
+    for (int i = 1; i < images.size(); ++i) {
+
+        // ✅ NEW: allow user abort mid-process
+        if (QThread::currentThread()->isInterruptionRequested()) {
+            emit updateStatus(false, "Alignment cancelled by user.", src);
+            break;
+        }
+
         ++count;
+        const QImage &curFull = *images[i];
         emit progress("Aligning image", count, total);
+        qDebug() << "StackAligner::align" << count << total;
         emit updateStatus(false,
                           QString("Aligning image %1 of %2").arg(count).arg(total),
                           src);
 
-        QImage imgGray = toGray(it.value());
+        QImage imgGray = toGray(curFull);
         if (downsample > 1)
             imgGray = imgGray.scaled(refGray.width(), refGray.height(),
                                      Qt::IgnoreAspectRatio,
@@ -72,6 +84,13 @@ QMap<int, QImage> StackAligner::align(const QMap<int, QImage> &stack)
 
             for (int dy = -searchRadius; dy <= searchRadius; ++dy) {
                 for (int dx = -searchRadius; dx <= searchRadius; ++dx) {
+
+                    // ✅ NEW: occasional interruption check inside inner loop
+                    if (QThread::currentThread()->isInterruptionRequested()) {
+                        emit updateStatus(false, "Alignment cancelled mid-loop.", src);
+                        return aligned;
+                    }
+
                     double score = ncc(refGray, rotated, dx, dy,
                                        useEdgeMaskWeighting ? &refWeights : nullptr);
                     if (score > bestScore) {
@@ -88,7 +107,7 @@ QMap<int, QImage> StackAligner::align(const QMap<int, QImage> &stack)
             emit updateStatus(false,
                               QString("⚠️ Alignment failed for image %1").arg(count),
                               src);
-            aligned.insert(it.key(), it.value());
+            aligned.append(curFull);
             continue;
         }
 
@@ -99,16 +118,20 @@ QMap<int, QImage> StackAligner::align(const QMap<int, QImage> &stack)
                               .arg(bestScore, 0, 'f', 4),
                           src);
 
-        QImage alignedImg = translate(it.value(), bestDx * downsample, bestDy * downsample);
+        QImage alignedImg = translate(curFull, bestDx * downsample, bestDy * downsample);
         if (!qFuzzyIsNull(bestAngle))
             alignedImg = rotate(alignedImg, bestAngle);
 
-        aligned.insert(it.key(), alignedImg);
+        aligned.append(alignedImg);
     }
 
     emit updateStatus(false, "✅ Alignment complete.", src);
     return aligned;
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 QImage StackAligner::toGray(const QImage &img)
 {

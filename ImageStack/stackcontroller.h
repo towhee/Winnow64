@@ -16,12 +16,10 @@ class StackController : public QObject
 public:
     explicit StackController(QObject *parent = nullptr);
 
-    // --- Configuration ---
-    void setSourceFolder(const QString &path);
-    void setInputFiles(const QStringList &filePaths);
-
-    // --- Run pipeline stages ---
-    bool runAlignment(bool saveAligned = true);
+    void stop();
+    void loadInputImages(const QStringList &paths, const QList<QImage*> &images);
+    bool runAlignment(bool saveAligned = true, bool useGpu = false);
+    void test();
 
 signals:
     void progress(QString stage, int current, int total);
@@ -29,18 +27,18 @@ signals:
     void updateStatus(bool keepBase, QString msg, QString src);
 
 private:
-    QDir srcFolder;
-    QDir projectFolder;
+    void prepareProjectFolders();
+
+    QStringList inputPaths;
+    QList<QImage*> inputImages;
+
+    QString projectRoot;
+    QString projectFolder;
     QDir alignedFolder;
-    QDir focusMapFolder;
-    QDir depthMapFolder;
-    QDir fusedFolder;
 
-    QStringList inputFiles;
-    QString projectBaseName;
 
-    bool prepareProjectFolders();
-    QMap<int, QImage> loadInputImages();
+    std::atomic<bool> isAborted{false};
+    QThread *workerThread = nullptr;
 };
 
 #endif // STACKCONTROLLER_H

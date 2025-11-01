@@ -621,6 +621,13 @@ void MW::createEditActions()
     meanStackAction->setShortcutVisibleInContextMenu(true);
     addAction(meanStackAction);
     connect(meanStackAction, &QAction::triggered, this, &MW::generateMeanStack);
+
+    focusStackAction = new QAction(tr("Focus stack"), this);
+    focusStackAction->setObjectName("focusStack");
+    focusStackAction->setShortcutVisibleInContextMenu(true);
+    addAction(focusStackAction);
+    connect(focusStackAction, &QAction::triggered, this, &MW::generateMeanStack);
+
     // End Utilities
 
     prefAction = new QAction(tr("Preferences"), this);

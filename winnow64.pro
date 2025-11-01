@@ -39,6 +39,11 @@ win32:QMAKE_CXXFLAGS += /wd4138             # supress "*/" found outside of comm
 
 TEMPLATE = app
 TARGET = Winnow
+
+# Precompiled header setup
+# CONFIG += precompile_header
+# PRECOMPILED_HEADER = $$PWD/global.h
+
 INCLUDEPATH += .
 INCLUDEPATH += Dialogs
 INCLUDEPATH += Utilities
