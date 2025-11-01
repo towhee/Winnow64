@@ -391,16 +391,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString path = "/Users/roryhill/Pictures/_test0/detail_layer_consensus_hist.png";
-    qDebug() << dm->proxyRowFromPath(path, "");
-    return;
-    sel->select(0);
-    return;
-    buildFilters->recount();
-    return;
-    QString msg = "View folder and image.";
-    G::popup->showPopup(msg, 0);
-
+    generateFocusStack();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

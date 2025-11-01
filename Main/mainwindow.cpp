@@ -5097,6 +5097,79 @@ void MW::generateMeanStack()
     }
 }
 
+void MW::generateFocusStack()
+{
+    if (G::isLogger) G::log("MW::generateFocusStack");
+
+    // --- 1. Create the StackController -------------------------------------
+    auto *focusStack = new StackController(this);
+
+    // Connect abort signal from MW → StackController
+    connect(this, &MW::abortStackOperation,
+            focusStack, &StackController::stop,
+            Qt::QueuedConnection);
+
+    // Forward live status updates from controller to MW
+    connect(focusStack, &StackController::updateStatus,
+            this, &MW::updateStatus,
+            Qt::QueuedConnection);
+
+    // Optional: progress updates for UI feedback (progress bar, etc.)
+    connect(focusStack, &StackController::progress,
+            this, [this](const QString &msg, int cur, int total) {
+                QString s = QString("%1 (%2/%3)").arg(msg).arg(cur).arg(total);
+                updateStatus(false, s, "StackController::progress");
+            }, Qt::QueuedConnection);
+
+    // Handle completion
+    connect(focusStack, &StackController::finished,
+            this, [this](const QString &projectFolder) {
+                updateStatus(false,
+                             QString("Focus stack alignment complete: %1").arg(projectFolder),
+                             "MW::generateFocusStack");
+            }, Qt::QueuedConnection);
+
+    // --- 2. Gather selected image paths ------------------------------------
+    QStringList selection;
+    if (!dm->getSelection(selection) || selection.isEmpty()) {
+        updateStatus(false,
+                     "No images selected for focus stacking.",
+                     "MW::generateFocusStack");
+        focusStack->deleteLater();
+        return;
+    }
+
+    // --- 3. Gather image pointers from cache -------------------------------
+    QList<QImage*> srcImages;
+    for (const QString &path : selection) {
+        if (icd->imCache.contains(path))
+            srcImages.append(&icd->imCache[path]);
+        else
+            updateStatus(false, QString("Missing from cache: %1").arg(path),
+                         "MW::generateFocusStack");
+    }
+
+    if (srcImages.isEmpty()) {
+        updateStatus(false,
+                     "No valid images found in cache for stacking.",
+                     "MW::generateFocusStack");
+        focusStack->deleteLater();
+        return;
+    }
+
+    // --- 4. Load inputs into controller ------------------------------------
+    focusStack->loadInputImages(selection, srcImages);
+
+    // --- 5. Run alignment asynchronously -----------------------------------
+    //     (returns immediately; work happens in background thread)
+    focusStack->runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
+
+    // At this point:
+    //   - MW remains fully responsive.
+    //   - updateStatus() will receive live updates via queued signals.
+    //   - User can call emit abortStackOperation() to cancel.
+}
+
 void MW::reportHueCount()
 {
     if (G::isLogger) G::log("MW::reportHueCount");

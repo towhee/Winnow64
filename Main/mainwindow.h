@@ -73,6 +73,7 @@
 #include "Utilities/coloranalysis.h"
 #include "Utilities/dirwatcher.h"
 #include "Image/stack.h"
+#include "ImageStack/stackcontroller.h"
 #include <QSoundEffect>
 
 #include "Utilities/performance.h"
@@ -770,6 +771,7 @@ private:
     QAction *mediaReadSpeedAction;
     QAction *reportHueCountAction;
     QAction *meanStackAction;
+    QAction *focusStackAction;
     QAction *exitAction;
 
     // Open with menu in File menu
@@ -1387,6 +1389,7 @@ private:
     void findDuplicates();
     void reportHueCount();
     void generateMeanStack();
+    void generateFocusStack();
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
     void traverseFolderStressTest(int msPerImage = 0, double secPerFolder = 0,

@@ -1,24 +1,47 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
+// --- Qt core + widgets (base includes) ------------------------
+#include <QtCore>
 #include <QtWidgets>
 #include <QtConcurrent/QtConcurrent>
+
+// --- Standard + Qt utilities ---------------------------------
 #include <QColor>
 #include <QModelIndexList>
 #include <QStringList>
 #include <QElapsedTimer>
-#include <QtCore/QMetaType>
-#include <type_traits>
 #include <QMetaEnum>
-#include <QtCore/qobjectdefs.h>
+#include <QMetaType>
+#include <QMutex>
+#include <type_traits>
 #include <iostream>
 #include <iomanip>
-#include <QMutex>
+
+// --- Project headers ------------------------------------------
 #include "popup.h"
 #include "Utilities/utilities.h"
-// #include "Main/logger.h"
 #include "Log/issue.h"
 #include "Log/log.h"
+
+// Before precompile header
+// #include <QtWidgets>
+// #include <QtConcurrent/QtConcurrent>
+// #include <QColor>
+// #include <QModelIndexList>
+// #include <QStringList>
+// #include <QElapsedTimer>
+// #include <QtCore/QMetaType>
+// #include <type_traits>
+// #include <QMetaEnum>
+// #include <QtCore/qobjectdefs.h> //
+// #include <iostream>
+// #include <iomanip>
+// #include <QMutex>
+// #include "popup.h"
+// #include "Utilities/utilities.h"
+// #include "Log/issue.h"
+// #include "Log/log.h"
 
 #define ICON_MIN	60
 #define ICON_MAX	480  // 256 is default
