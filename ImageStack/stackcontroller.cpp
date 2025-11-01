@@ -143,5 +143,90 @@ bool StackController::runAlignment(bool saveAligned, bool useGpu)
     isAborted = false;
     workerThread->start();
 
+    // --- Connect pipeline continuation -----------------------------------------
+    connect(this, &StackController::finished,
+            this, &StackController::computeFocusMaps,
+            Qt::QueuedConnection);
+
     return true;
+}
+
+bool StackController::runFocusMaps(const QString &alignedFolderPath)
+{
+    const QString src = "StackController::runFocusMaps";
+
+    // If no folder given, default to the last project
+    QString folder = alignedFolderPath;
+    if (folder.isEmpty())
+        folder = projectFolder + "/aligned";
+
+    QDir dir(folder);
+    if (!dir.exists()) {
+        emit updateStatus(false,
+                          QString("Aligned folder not found: %1").arg(folder),
+                          src);
+        return false;
+    }
+
+    emit updateStatus(false,
+                      QString("Running focus-map computation on existing aligned images (%1)")
+                          .arg(folder),
+                      src);
+
+    // Launch the same threaded focus-map computation used in pipeline
+    computeFocusMaps(projectFolder);
+    return true;
+}
+
+void StackController::computeFocusMaps(const QString &projectFolder)
+{
+    const QString src = "StackController::computeFocusMaps";
+    emit updateStatus(false, "Starting focus-map computation...", src);
+
+    // --- Create a worker thread for this stage ------------------------------
+    QThread *worker = new QThread(this);
+
+    // A simple worker object for now; you can later replace with a full FocusMapComputer class
+    QObject *workerObj = new QObject();
+    workerObj->moveToThread(worker);
+
+    connect(worker, &QThread::started, this, [=]() {
+        QElapsedTimer timer;
+        timer.start();
+
+        // --- Placeholder: implement your actual focus-map logic here --------
+        // e.g. load aligned images from projectFolder + "/aligned/"
+        QDir alignedDir(projectFolder + "/aligned");
+        QStringList files = alignedDir.entryList(QStringList() << "*.jpg" << "*.tif" << "*.png",
+                                                 QDir::Files, QDir::Name);
+        int total = files.size();
+        for (int i = 0; i < total; ++i) {
+            if (QThread::currentThread()->isInterruptionRequested())
+                break;
+            QString path = alignedDir.filePath(files[i]);
+            emit updateStatus(false,
+                              QString("Computing focus map for %1 (%2/%3)")
+                                  .arg(QFileInfo(path).fileName())
+                                  .arg(i + 1)
+                                  .arg(total),
+                              src);
+            emit progress("Focus map", i + 1, total);
+
+            // simulate computation delay (replace with real algorithm)
+            QThread::msleep(50);
+        }
+
+        emit updateStatus(false,
+                          QString("Focus-map computation complete in %1 s")
+                              .arg(timer.elapsed() / 1000.0, 0, 'f', 2),
+                          src);
+        emit finishedFocus(projectFolder);
+
+        worker->quit();
+    });
+
+    connect(worker, &QThread::finished, workerObj, &QObject::deleteLater);
+    connect(worker, &QThread::finished, worker, &QObject::deleteLater);
+
+    worker->start();
 }
