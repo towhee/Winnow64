@@ -9,6 +9,11 @@
 #include <QtMath>
 #include "main/global.h"
 
+// OpenCV
+#include <opencv2/opencv.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/video.hpp>   // for findTransformECC
+
 class StackAligner : public QObject
 {
     Q_OBJECT
@@ -17,6 +22,8 @@ public:
 
     // Align all images in list to the first image
     QList<QImage> align(const QList<QImage*> &images);
+    // Align using OpenCV
+    QList<QImage> alignECC(const QList<QImage*> &images);
 
     // Configuration
     void setSearchRadius(int px);
@@ -37,7 +44,18 @@ private:
     bool useGpu = false;
 
     // helpers
-    QImage toGray(const QImage &img);
+    // Measure best full-res shift around (0,0) with a small search, used for residual check
+    QPointF measureResidualShift(const QImage &refFullGray,
+                                 const QImage &testFullGray,
+                                 int search = 8,
+                                 const QVector<double> *w = nullptr);
+    // (optional) quickly grayify full-res for residual check
+    QImage toGrayFast(const QImage &img);  // alias of toGray or a faster path
+    double nccOverlap(const QImage &a, const QImage &b, int dx, int dy,
+                      const QVector<double> *w = nullptr);
+    QPointF refineSubpixelPeak(const QImage &a, const QImage &b, int dx, int dy,
+                               const QVector<double> *w = nullptr);
+    QImage translateF(const QImage &src, double dx, double dy);    QImage toGray(const QImage &img);
     double ncc(const QImage &a, const QImage &b, int dx, int dy,
                const QVector<double> *w = nullptr);
     QImage translate(const QImage &src, int dx, int dy);

@@ -73,9 +73,11 @@ QT += concurrent
 HEADERS += Cache/cachedata.h \
     ImageFormats/Base/rawbase.h \
     ImageFormats/Tiff/tiffdecoder.h \
+    ImageStack/depthmap.h \
     ImageStack/focusmeasure.h \
     ImageStack/stackaligner.h \
-    ImageStack/stackcontroller.h
+    ImageStack/stackcontroller.h \
+    ImageStack/stackfusion.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -223,9 +225,11 @@ HEADERS += Views/videowidget.h
 SOURCES += Cache/cachedata.cpp \
     ImageFormats/Base/rawbase.cpp \
     ImageFormats/Tiff/tiffdecoder.cpp \
+    ImageStack/depthmap.cpp \
     ImageStack/focusmeasure.cpp \
     ImageStack/stackaligner.cpp \
-    ImageStack/stackcontroller.cpp
+    ImageStack/stackcontroller.cpp \
+    ImageStack/stackfusion.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp
@@ -507,7 +511,10 @@ macx {
         LIBS += -L/opt/homebrew/lib \
                 -lopencv_core.411 \
                 -lopencv_imgproc.411 \
-                -lopencv_dnn.411
+                -lopencv_dnn.411 \
+                -lopencv_imgcodecs \    # req'd by focus stack depthmap
+                -lopencv_video \        # req'd by focus stack align
+                -lopencv_highgui        # req'd by focus stack align
         INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
 
         # libtiff
@@ -530,7 +537,9 @@ macx {
         LIBS += \
             $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_core.411.dylib \
             $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_imgproc.411.dylib \
-            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_dnn.411.dylib
+            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_dnn.411.dylib \
+            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_video.411.dylib \
+            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_highgui.411.dylib
         INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
 
         # libtiff
