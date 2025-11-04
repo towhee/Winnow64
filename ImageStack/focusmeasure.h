@@ -9,6 +9,7 @@
 #include <QDebug>
 #include <QPainter>
 #include <QMetaEnum>
+#include <QThread>
 
 class FocusMeasure : public QObject
 {
@@ -17,7 +18,8 @@ public:
     enum Method {
         LaplacianVariance,   // variance of Laplacian
         SobelEnergy,         // sum of squared gradients
-        Tenengrad            // Sobel magnitude thresholded
+        Tenengrad,           // Sobel magnitude thresholded
+        All                  // Save all methods
     };
     Q_ENUM(Method)
 
@@ -28,6 +30,7 @@ public:
     void setSaveResults(bool enabled);
     void setOutputFolder(const QString &path);
 
+public slots:
     // Compute focus maps for each image in stack (returns grayscale 0–255 QImages)
     QMap<int, QImage> computeFocusMaps(const QMap<int, QImage> &stack);
 

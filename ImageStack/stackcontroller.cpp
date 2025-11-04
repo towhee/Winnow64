@@ -13,16 +13,24 @@ void StackController::stop()
     if (workerThread && workerThread->isRunning()) {
         workerThread->requestInterruption();
     }
+    // Also interrupt any other workers (focus stage)
+    const auto threads = this->findChildren<QThread*>();
+    for (QThread* th : threads) if (th->isRunning()) th->requestInterruption();
+
     emit updateStatus(false, "Focus stack operation aborted.", "StackController::stop");
 }
 
 void StackController::test()
 {
-    emit updateStatus(false, "Focus stack operation test.", "StackController::stop");
-    runAlignment(false);
+    emit updateStatus(false, "Focus stack operation test.", "StackController::test");
+    qDebug() << "StackController::test";
+    // runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
+    runFocusMaps(alignedPath);
+    // runDepthMap(alignedDir.path());
+    // runFusion();
 }
 
-void StackController::prepareProjectFolders()
+void StackController::initialize()
 {
     if (inputPaths.isEmpty()) return;
 
@@ -31,6 +39,7 @@ void StackController::prepareProjectFolders()
 
     projectRoot = fi.dir().path();
     projectFolder = projectRoot + "/" + baseName;
+    projectDir = QDir(projectFolder);
 
     QDir dir;
     if (!dir.exists(projectFolder)) {
@@ -40,14 +49,30 @@ void StackController::prepareProjectFolders()
                           "StackController::prepareProjectFolders");
     }
 
-    // subfolders for intermediate results
-    QStringList subDirs = { "aligned", "depth", "masks", "output" };
+    // Define subfolder structure
+    alignedPath     = projectFolder + "/aligned";
+    masksPath       = projectFolder + "/masks";
+    depthPath       = projectFolder + "/depth";
+    depthFocusPath  = depthPath + "/focus";
+    outputPath      = projectFolder + "/output";
+
+    QStringList subDirs = { alignedPath, masksPath, depthPath, depthFocusPath, outputPath };
     for (const QString &sub : subDirs) {
-        QString path = projectFolder + "/" + sub;
-        if (!dir.exists(path)) dir.mkpath(path);
+        if (!dir.exists(sub)) dir.mkpath(sub);
     }
 
-    alignedFolder = QDir(projectFolder + "/aligned");
+    // Cache QDir handles
+    alignedDir     = QDir(alignedPath);
+    masksDir       = QDir(masksPath);
+    depthDir       = QDir(depthPath);
+    depthFocusDir  = QDir(depthFocusPath);
+    outputDir      = QDir(outputPath);
+
+    // Computation methods
+
+    emit updateStatus(false,
+                      QString("Project structure ready in %1").arg(projectFolder),
+                      "StackController::prepareProjectFolders");
 }
 
 void StackController::loadInputImages(const QStringList &paths, const QList<QImage*> &images)
@@ -55,7 +80,21 @@ void StackController::loadInputImages(const QStringList &paths, const QList<QIma
     inputPaths = paths;
     inputImages = images;
 
-    prepareProjectFolders();
+    if (inputPaths.isEmpty()) return;
+
+    QMap<int, QImage> stack;
+
+    int idx = 0;
+    for (const QString &filePath : inputPaths) {
+        QImage img(filePath);
+        if (img.isNull()) {
+            emit updateStatus(false, "Failed to load " + filePath, "StackController::loadInputImages");
+            continue;
+        }
+        stack.insert(idx++, img);
+    }
+
+    initialize();
 
     emit updateStatus(false,
           QString("Loaded %1 images for stacking.").arg(images.size()),
@@ -70,7 +109,7 @@ bool StackController::runAlignment(bool saveAligned, bool useGpu)
     }
 
     // Prepare folders (safe to call multiple times)
-    prepareProjectFolders();
+    initialize();
     emit updateStatus(false, "Starting threaded alignment...", "StackController::runAlignment");
 
     // --- Create a dedicated worker thread and aligner ----------------------
@@ -99,7 +138,8 @@ bool StackController::runAlignment(bool saveAligned, bool useGpu)
         QElapsedTimer timer;
         timer.start();
 
-        QList<QImage> aligned = aligner->align(inputImages);
+        QList<QImage> aligned = aligner->alignECC(inputImages);  // OpenCV
+        // QList<QImage> aligned = aligner->align(inputImages);
 
         if (isAborted) {
             emit updateStatus(false, "Alignment aborted.", "StackController::runAlignment");
@@ -114,7 +154,7 @@ bool StackController::runAlignment(bool saveAligned, bool useGpu)
             if (saveAligned && !aligned.isEmpty()) {
                 int idx = 0;
                 for (const QImage &img : aligned) {
-                    QString outPath = alignedFolder.filePath(
+                    QString outPath = alignedDir.filePath(
                         QString("aligned_%1.jpg").arg(idx++, 3, 10, QChar('0')));
                     if (!img.save(outPath, "JPEG", 95)) {
                         emit updateStatus(false,
@@ -123,7 +163,7 @@ bool StackController::runAlignment(bool saveAligned, bool useGpu)
                     }
                 }
                 emit updateStatus(false,
-                                  "Aligned images saved to " + alignedFolder.path(),
+                                  "Aligned images saved to " + alignedDir.path(),
                                   "StackController::runAlignment");
             }
         }
@@ -143,5 +183,165 @@ bool StackController::runAlignment(bool saveAligned, bool useGpu)
     isAborted = false;
     workerThread->start();
 
+    // --- Connect pipeline continuation -----------------------------------------
+    connect(this, &StackController::finished,
+            this, &StackController::runFocusMaps,
+            Qt::QueuedConnection);
+
     return true;
+}
+
+bool StackController::runFocusMaps(const QString &alignedFolderPath)
+{
+    const QString src = "StackController::runFocusMaps";
+    qDebug() << src << "starting";
+
+    const QString folder = alignedFolderPath.isEmpty() ? alignedPath : alignedFolderPath;
+    if (!QDir(folder).exists()) {
+        emit updateStatus(false, QString("Aligned folder not found: %1").arg(folder), src);
+        return false;
+    }
+
+    const QString pf = projectFolder.isEmpty() ? projectRoot : projectFolder;
+    if (pf.isEmpty()) {
+        emit updateStatus(false, "No project folder set for focus-map stage.", src);
+        return false;
+    }
+
+    emit updateStatus(false,
+                      QString("Preparing focus-map computation for: %1").arg(folder),
+                      src);
+
+    // --- Worker thread -----------------------------------------------------
+    QThread *worker = new QThread(this);
+    auto *fm = new FocusMeasure();
+    fm->moveToThread(worker);
+
+    // Signal forwarding
+    connect(fm, &FocusMeasure::updateStatus, this, &StackController::updateStatus, Qt::QueuedConnection);
+    connect(fm, &FocusMeasure::progress,     this, &StackController::progress,     Qt::QueuedConnection);
+
+    connect(worker, &QThread::finished, fm,     &QObject::deleteLater);
+    connect(worker, &QThread::finished, worker, &QObject::deleteLater);
+
+    // --- Prepare image stack (in main thread) ------------------------------
+    QDir alignedDir(folder);
+    QStringList filters{ "*.jpg", "*.jpeg", "*.png", "*.tif", "*.tiff", "*.bmp" };
+    QStringList files = alignedDir.entryList(filters, QDir::Files, QDir::Name);
+
+    if (files.isEmpty()) {
+        emit updateStatus(false, "No aligned images found.", src);
+        return false;
+    }
+
+    QMap<int, QImage> stack;
+    QImageReader reader;
+    reader.setAutoTransform(false);
+
+    for (int i = 0; i < files.size(); ++i) {
+        const QString fpath = alignedDir.filePath(files[i]);
+        reader.setFileName(fpath);
+        QImage img = reader.read();
+        if (img.isNull()) continue;
+        if (img.format() != QImage::Format_RGB32 &&
+            img.format() != QImage::Format_ARGB32 &&
+            img.format() != QImage::Format_RGB888)
+            img = img.convertToFormat(QImage::Format_RGB32);
+        stack.insert(i, std::move(img));
+    }
+
+    if (stack.isEmpty()) {
+        emit updateStatus(false, "No readable images for focus-map computation.", src);
+        return false;
+    }
+
+    // Configure before starting
+    fm->setMethod(FocusMeasure::SobelEnergy);
+    fm->setDownsample(1);
+    fm->setSaveResults(true);
+    fm->setOutputFolder(masksPath);
+
+    // --- Connect start signal properly to FocusMeasure ---------------------
+    connect(worker, &QThread::started, fm, [fm, stack, this, pf, src]() {
+            QElapsedTimer t; t.start();
+            fm->computeFocusMaps(stack);  // now runs in fm's own thread
+            emit updateStatus(false,
+                              QString("Focus-map computation complete in %1 s")
+                                  .arg(t.elapsed() / 1000.0, 0, 'f', 2),
+                              src);
+            emit finishedFocus(pf);
+            QThread::currentThread()->quit();
+        }, Qt::QueuedConnection);  // <--- key line
+
+    worker->start();
+    return true;
+}
+
+bool StackController::runDepthMap(const QString &alignedFolderPath)
+{
+    DepthMap dm;
+    emit updateStatus(false, "Generating depth map...", "StackController::runDepthMap");
+    bool ok = dm.generate(alignedFolderPath, true);
+    emit updateStatus(false, ok ? "Depth map complete." : "Depth map failed.", "StackController");
+    return ok;
+}
+
+bool StackController::runFusion()
+{
+    QString src = "StackController::runFusion";
+    emit updateStatus(false, "Starting fusion stage...", src);
+
+    // --- Sanity checks -------------------------------------------------------
+    if (alignedPath.isEmpty() || depthPath.isEmpty()) {
+        emit updateStatus(false, "Aligned or depth path not set.", src);
+        return false;
+    }
+
+    QString depthMapPath = depthPath + "/depth_index.png";
+    if (!QFile::exists(depthMapPath))
+        depthMapPath = depthPath + "/depth_preview.png";
+
+    if (!QFile::exists(depthMapPath)) {
+        emit updateStatus(false,
+                          QString("No depth map found in %1").arg(depthPath),
+                          src);
+        return false;
+    }
+
+    QDir dir;
+    if (!dir.exists(outputPath))
+        dir.mkpath(outputPath);
+
+    // --- Create fusion worker ------------------------------------------------
+    StackFusion *fusion = new StackFusion(this);
+
+    connect(fusion, &StackFusion::updateStatus,
+            this, &StackController::updateStatus);
+    connect(fusion, &StackFusion::progress,
+            this, &StackController::progress);
+    connect(fusion, &StackFusion::finished,
+            this, [this](QString resultPath) {
+                emit updateStatus(false,
+                                  QString("Fusion completed: %1").arg(resultPath),
+                                  "StackController::runFusion");
+                emit finishedFusion(resultPath);
+            });
+
+    // --- Run fusion methods sequentially ------------------------------------
+    bool ok1 = fusion->fuse(StackFusion::Naive,
+                            alignedPath,
+                            depthMapPath,
+                            outputPath);
+
+    bool ok2 = fusion->fuse(StackFusion::PMax,
+                            alignedPath,
+                            depthMapPath,
+                            outputPath);
+
+    bool success = ok1 && ok2;
+    emit updateStatus(false,
+                      success ? "Fusion stage complete." : "Fusion stage failed.",
+                      src);
+
+    return success;
 }

@@ -5139,7 +5139,7 @@ void MW::generateFocusStack()
         return;
     }
 
-    // --- 3. Gather image pointers from cache -------------------------------
+    // --- 3. Gather image pointers from image cache -------------------------------
     QList<QImage*> srcImages;
     for (const QString &path : selection) {
         if (icd->imCache.contains(path))
@@ -5162,7 +5162,8 @@ void MW::generateFocusStack()
 
     // --- 5. Run alignment asynchronously -----------------------------------
     //     (returns immediately; work happens in background thread)
-    focusStack->runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
+    focusStack->test();
+    // focusStack->runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
 
     // At this point:
     //   - MW remains fully responsive.
