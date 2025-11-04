@@ -33,7 +33,7 @@ signals:
     void progress(QString stage, int current, int total);
     void finished(QString resultPath);
     void finishedFocus(QString projectFolder);
-    void finishedDepthMap(QString projectFolder);
+    void finishedDepthMap(bool success);
     void finishedFusion(QString resultPath);
     void updateStatus(bool keepBase, QString msg, QString src);
 

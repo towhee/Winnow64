@@ -17,6 +17,9 @@ public:
 
     bool generate(const QString &alignedFolderPath, bool smooth = true);
 
+signals:
+    void updateStatus(bool keepBase, QString msg, QString src);
+
 private:
     cv::Mat computeFocusMeasure(const cv::Mat &img);
     cv::Mat anisotropicSmooth(const cv::Mat &depth, int iterations = 25, float k = 0.3f);

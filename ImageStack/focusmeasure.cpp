@@ -54,9 +54,10 @@ QMap<int, QImage> FocusMeasure::computeFocusMaps(const QMap<int, QImage> &stack)
 
         QImage map;
         switch (method) {
-        case LaplacianVariance: map = focusMapLaplacian(gray); break;
-        case SobelEnergy:       map = focusMapSobel(gray);     break;
-        case Tenengrad:         map = focusMapTenengrad(gray); break;
+            case LaplacianVariance: map = focusMapLaplacian(gray); break;
+            case SobelEnergy:       map = focusMapSobel(gray);     break;
+            case Tenengrad:         map = focusMapTenengrad(gray); break;
+            case EmulateZerene:     map = focusMapZerene(gray);    break;
         }
 
         maps.insert(it.key(), map);
@@ -159,6 +160,89 @@ QImage FocusMeasure::focusMapTenengrad(const QImage &gray)
                         : 0;
         }
     }
+    return out;
+}
+
+QImage FocusMeasure::focusMapZerene(const QImage &gray)
+{
+    const int w = gray.width();
+    const int h = gray.height();
+    QImage out(w, h, QImage::Format_Grayscale8);
+    out.fill(Qt::black);
+
+    // --- Step 1: Gaussian pre-blur (σ≈1.2) to suppress noise ---
+    QVector<QVector<float>> kernel = {
+        {0.075f, 0.124f, 0.075f},
+        {0.124f, 0.204f, 0.124f},
+        {0.075f, 0.124f, 0.075f}
+    };
+    QImage blur(w, h, QImage::Format_Grayscale8);
+    blur.fill(Qt::black);
+
+    for (int y = 1; y < h - 1; ++y) {
+        const uchar *p0 = gray.constScanLine(y - 1);
+        const uchar *p1 = gray.constScanLine(y);
+        const uchar *p2 = gray.constScanLine(y + 1);
+        uchar *pb = blur.scanLine(y);
+        for (int x = 1; x < w - 1; ++x) {
+            float v = kernel[0][0]*p0[x-1] + kernel[0][1]*p0[x] + kernel[0][2]*p0[x+1] +
+                      kernel[1][0]*p1[x-1] + kernel[1][1]*p1[x] + kernel[1][2]*p1[x+1] +
+                      kernel[2][0]*p2[x-1] + kernel[2][1]*p2[x] + kernel[2][2]*p2[x+1];
+            pb[x] = static_cast<uchar>(qBound(0, int(v + 0.5f), 255));
+        }
+    }
+
+    // --- Step 2: Sobel gradients (same as SobelEnergy) ---
+    QImage grad(w, h, QImage::Format_Grayscale8);
+    grad.fill(Qt::black);
+
+    for (int y = 1; y < h - 1; ++y) {
+        const uchar *p0 = blur.constScanLine(y - 1);
+        const uchar *p1 = blur.constScanLine(y);
+        const uchar *p2 = blur.constScanLine(y + 1);
+        uchar *pg = grad.scanLine(y);
+        for (int x = 1; x < w - 1; ++x) {
+            int gx = (-p0[x - 1] - 2 * p1[x - 1] - p2[x - 1]) +
+                     ( p0[x + 1] + 2 * p1[x + 1] + p2[x + 1]);
+            int gy = (-p0[x - 1] - 2 * p0[x]     - p0[x + 1]) +
+                     ( p2[x - 1] + 2 * p2[x]     + p2[x + 1]);
+            int mag2 = gx * gx + gy * gy;
+            pg[x] = static_cast<uchar>(qMin(255, mag2 >> 8));
+        }
+    }
+
+    // --- Step 3: Local average (5x5 box blur) for continuity ---
+    for (int y = 2; y < h - 2; ++y) {
+        uchar *po = out.scanLine(y);
+        for (int x = 2; x < w - 2; ++x) {
+            int sum = 0;
+            for (int dy = -2; dy <= 2; ++dy) {
+                const uchar *p = grad.constScanLine(y + dy);
+                for (int dx = -2; dx <= 2; ++dx)
+                    sum += p[x + dx];
+            }
+            po[x] = static_cast<uchar>(sum / 25);
+        }
+    }
+
+    // --- Step 4: Normalize to 0–255 ---
+    int minVal = 255, maxVal = 0;
+    for (int y = 0; y < h; ++y) {
+        const uchar *p = out.constScanLine(y);
+        for (int x = 0; x < w; ++x) {
+            int v = p[x];
+            if (v < minVal) minVal = v;
+            if (v > maxVal) maxVal = v;
+        }
+    }
+    if (maxVal > minVal) {
+        for (int y = 0; y < h; ++y) {
+            uchar *p = out.scanLine(y);
+            for (int x = 0; x < w; ++x)
+                p[x] = static_cast<uchar>((p[x] - minVal) * 255 / (maxVal - minVal));
+        }
+    }
+
     return out;
 }
 
