@@ -71,6 +71,10 @@ void StackController::initialize()
 
     // Computation methods
 
+    // Connections
+    // connect(this, &StackController::finishedDepthMap,
+    //         this, &StackController::runFusion);
+
     emit updateStatus(false,
                       QString("Project structure ready in %1").arg(projectFolder),
                       "StackController::prepareProjectFolders");
@@ -288,22 +292,28 @@ bool StackController::runDepthMap(const QString &alignedFolderPath)
 
     dm->moveToThread(thread);
 
-    connect(thread, &QThread::started, this, [this, dm, alignedFolderPath, src]() {
-        // emit updateStatus(false, "Generating depth map...", src);
+    // --- Real-time status forwarding ----------------------------------------
+    connect(dm, &DepthMap::updateStatus,
+            this, &StackController::updateStatus,
+            Qt::QueuedConnection);
+
+    // --- When the thread starts, invoke generate() *in that thread* ---------
+    connect(thread, &QThread::started, dm, [this, dm, alignedFolderPath, src]() {
+        emit updateStatus(false, "Generating depth map...", src);
         bool ok = dm->generate(alignedFolderPath, true);
-        emit updateStatus(false, ok ? "Depth map complete." : "Depth map failed.", src);
+        emit updateStatus(false,
+                          ok ? "Depth map complete." : "Depth map failed.",
+                          src);
         emit finishedDepthMap(ok);
     });
 
-    connect(dm, &DepthMap::updateStatus, this, &StackController::updateStatus);
-
-    // Cleanup after thread finishes
+    // --- Cleanup after finishing --------------------------------------------
     connect(this, &StackController::finishedDepthMap, thread, [dm, thread]() {
-        thread->quit();
-        thread->wait();
-        dm->deleteLater();
-        thread->deleteLater();
-    }, Qt::QueuedConnection);
+            thread->quit();
+            thread->wait();
+            dm->deleteLater();
+            thread->deleteLater();
+        }, Qt::QueuedConnection);
 
     thread->start();
     return true;
