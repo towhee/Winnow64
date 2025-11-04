@@ -24,9 +24,10 @@ void StackController::test()
 {
     emit updateStatus(false, "Focus stack operation test.", "StackController::test");
     qDebug() << "StackController::test";
+    initialize();
     // runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
-    runFocusMaps(alignedPath);
-    // runDepthMap(alignedDir.path());
+    // runFocusMaps(alignedPath);
+    runDepthMap(alignedDir.path());
     // runFusion();
 }
 
@@ -256,7 +257,7 @@ bool StackController::runFocusMaps(const QString &alignedFolderPath)
     }
 
     // Configure before starting
-    fm->setMethod(FocusMeasure::SobelEnergy);
+    fm->setMethod(FocusMeasure::EmulateZerene);
     fm->setDownsample(1);
     fm->setSaveResults(true);
     fm->setOutputFolder(masksPath);
@@ -279,19 +280,40 @@ bool StackController::runFocusMaps(const QString &alignedFolderPath)
 
 bool StackController::runDepthMap(const QString &alignedFolderPath)
 {
-    DepthMap dm;
-    emit updateStatus(false, "Generating depth map...", "StackController::runDepthMap");
-    bool ok = dm.generate(alignedFolderPath, true);
-    emit updateStatus(false, ok ? "Depth map complete." : "Depth map failed.", "StackController");
-    return ok;
+    QString src = "StackController::runDepthMap";
+    emit updateStatus(false, "Launching threaded depth-map generation...", src);
+
+    QThread *thread = new QThread;
+    DepthMap *dm = new DepthMap();
+
+    dm->moveToThread(thread);
+
+    connect(thread, &QThread::started, this, [this, dm, alignedFolderPath, src]() {
+        // emit updateStatus(false, "Generating depth map...", src);
+        bool ok = dm->generate(alignedFolderPath, true);
+        emit updateStatus(false, ok ? "Depth map complete." : "Depth map failed.", src);
+        emit finishedDepthMap(ok);
+    });
+
+    connect(dm, &DepthMap::updateStatus, this, &StackController::updateStatus);
+
+    // Cleanup after thread finishes
+    connect(this, &StackController::finishedDepthMap, thread, [dm, thread]() {
+        thread->quit();
+        thread->wait();
+        dm->deleteLater();
+        thread->deleteLater();
+    }, Qt::QueuedConnection);
+
+    thread->start();
+    return true;
 }
 
 bool StackController::runFusion()
 {
     QString src = "StackController::runFusion";
-    emit updateStatus(false, "Starting fusion stage...", src);
+    emit updateStatus(false, "Launching threaded fusion stage...", src);
 
-    // --- Sanity checks -------------------------------------------------------
     if (alignedPath.isEmpty() || depthPath.isEmpty()) {
         emit updateStatus(false, "Aligned or depth path not set.", src);
         return false;
@@ -312,36 +334,33 @@ bool StackController::runFusion()
     if (!dir.exists(outputPath))
         dir.mkpath(outputPath);
 
-    // --- Create fusion worker ------------------------------------------------
-    StackFusion *fusion = new StackFusion(this);
+    QThread *thread = new QThread;
+    StackFusion *fusion = new StackFusion();
+    fusion->moveToThread(thread);
 
-    connect(fusion, &StackFusion::updateStatus,
-            this, &StackController::updateStatus);
-    connect(fusion, &StackFusion::progress,
-            this, &StackController::progress);
-    connect(fusion, &StackFusion::finished,
-            this, [this](QString resultPath) {
-                emit updateStatus(false,
-                                  QString("Fusion completed: %1").arg(resultPath),
-                                  "StackController::runFusion");
-                emit finishedFusion(resultPath);
-            });
+    connect(fusion, &StackFusion::updateStatus, this, &StackController::updateStatus);
+    connect(fusion, &StackFusion::progress, this, &StackController::progress);
 
-    // --- Run fusion methods sequentially ------------------------------------
-    bool ok1 = fusion->fuse(StackFusion::Naive,
-                            alignedPath,
-                            depthMapPath,
-                            outputPath);
+    connect(thread, &QThread::started, this, [this, fusion, src]() {
+        emit updateStatus(false, "Starting fusion stage...", src);
 
-    bool ok2 = fusion->fuse(StackFusion::PMax,
-                            alignedPath,
-                            depthMapPath,
-                            outputPath);
+        bool ok1 = fusion->fuse(StackFusion::Naive, alignedPath, depthPath + "/depth_index.png", outputPath);
+        bool ok2 = fusion->fuse(StackFusion::PMax, alignedPath, depthPath + "/depth_index.png", outputPath);
+        bool success = ok1 && ok2;
 
-    bool success = ok1 && ok2;
-    emit updateStatus(false,
-                      success ? "Fusion stage complete." : "Fusion stage failed.",
-                      src);
+        emit updateStatus(false,
+                          success ? "Fusion stage complete." : "Fusion stage failed.",
+                          src);
+        emit finishedFusion(success ? outputPath : QString());
+    });
 
-    return success;
+    connect(this, &StackController::finishedFusion, thread, [fusion, thread]() {
+        thread->quit();
+        thread->wait();
+        fusion->deleteLater();
+        thread->deleteLater();
+    });
+
+    thread->start();
+    return true;
 }

@@ -45,6 +45,9 @@ bool DepthMap::generate(const QString &alignedFolderPath, bool smooth)
     QElapsedTimer timer;
     timer.start();
 
+    QString msg = "Generating depth map.";
+    emit updateStatus(false, msg, src);
+
     // --- Establish project structure -------------------------------------
     QDir alignDir(alignedFolderPath);
     if (!alignDir.exists()) {
@@ -95,6 +98,9 @@ bool DepthMap::generate(const QString &alignedFolderPath, bool smooth)
     int w = first.cols;
 
     for (int i = 0; i < n; ++i) {
+        QString msg = QString("Depth: processing focus map %1 of %2").arg(i).arg(n);
+        emit updateStatus(false, msg, src);
+
         cv::Mat img = cv::imread(files[i].absoluteFilePath().toStdString(),
                                  useFocusMaps ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
         if (img.empty()) continue;

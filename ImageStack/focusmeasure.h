@@ -19,6 +19,7 @@ public:
         LaplacianVariance,   // variance of Laplacian
         SobelEnergy,         // sum of squared gradients
         Tenengrad,           // Sobel magnitude thresholded
+        EmulateZerene,       // Zerene-style focus metric
         All                  // Save all methods
     };
     Q_ENUM(Method)
@@ -31,7 +32,6 @@ public:
     void setOutputFolder(const QString &path);
 
 public slots:
-    // Compute focus maps for each image in stack (returns grayscale 0–255 QImages)
     QMap<int, QImage> computeFocusMaps(const QMap<int, QImage> &stack);
 
 signals:
@@ -48,6 +48,7 @@ private:
     QImage focusMapLaplacian(const QImage &gray);
     QImage focusMapSobel(const QImage &gray);
     QImage focusMapTenengrad(const QImage &gray);
+    QImage focusMapZerene(const QImage &gray);
     void saveFocusImage(const QImage &map, const QString &path);
 };
 
