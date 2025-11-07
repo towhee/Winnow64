@@ -798,8 +798,8 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
 void Tiff::parseJpgTables(MetadataParameters &p, ImageMetadata &m)
 {
 /*
-    If the tiff file has been encoded with jpg compression then the tiff exif will contain
-    JPEGTables in IFD0.  Use the Jpeg class to parse this.
+    If the tiff file has been encoded with jpg compression then the tiff exif will
+    contain JPEGTables in IFD0. Use the Jpeg class to parse this.
 */
     Jpeg jpg;
     jpg.initSegCodeHash();
@@ -808,13 +808,13 @@ void Tiff::parseJpgTables(MetadataParameters &p, ImageMetadata &m)
 
 /*  DECODING is required to produce a QImage from the tiff file.
 
-    The QImage may be the full scale or a reduced scale for a thumbnail.  If the tiff is
-    uncompressed the thumbnail scale can be sampled directly, which is the fastest.  If the
-    tiff is compressed then the entire full scale QImage must be produced and then scaled
-    down to the thumbnail size.
+    The QImage may be the full scale or a reduced scale for a thumbnail. If the tiff
+    is uncompressed the thumbnail scale can be sampled directly, which is the
+    fastest. If the tiff is compressed then the entire full scale QImage must be
+    produced and then scaled down to the thumbnail size.
 
-    If the "add missing thumbnails" preference is set, then the scaled QImage is added to the
-    tiff to facilitate faster thumb loading in the future.
+    If the "add missing thumbnails" preference is set, then the scaled QImage is
+    added to the tiff to facilitate faster thumb loading in the future.
 */
 
 bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, int newSize)
@@ -946,9 +946,9 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
 bool Tiff::decodeBase(MetadataParameters &p)
 {
 /*
-    Decodes TIFF image data with no compression (compression type 1) and loads it into
-    the class QImage im. It operates by reading the image data strip by strip and copying
-    it into the QImage object row by row.
+    Decodes TIFF image data with no compression (compression type 1) and loads it
+    into the class QImage im. It operates by reading the image data strip by strip
+    and copying it into the QImage object row by row.
 */
     if (G::isLogger || isDebug) G::log("Tiff::decodeBase", p.fPath + " Source = " + source);
     // /*
@@ -1014,7 +1014,6 @@ bool Tiff::decodeBase(MetadataParameters &p)
 
 }
 
-//bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
 bool Tiff::decodeLZW(MetadataParameters &p)
 {
     if (G::isLogger || isDebug) G::log("Tiff::decodeLZW", p.fPath + " Source = " + source);
@@ -1121,7 +1120,7 @@ bool Tiff::decodeZip(MetadataParameters &p)
 
         //lzwDecompress(tiffStrip);   // no future
         // lzwDecompress2(tiffStrip, p);   // no future
-        zipDecompress(tiffStrip, p);   // no future  (ChatGPT tweaaks)
+        zipDecompress(tiffStrip, p);   // no future  (ChatGPT tweaks)
     }
     //    future = QtConcurrent::map(tiffStrips, lzwDecompress);
     //    future.waitForFinished();
@@ -1190,10 +1189,10 @@ bool Tiff::decodeJpg(MetadataParameters &p)
 bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
 {
 /*
-    Append existing datamodel thumb basic tif image to the EOF in an additional IFD. The
-    QImage thumb is the existing thumbnail created during the folder loading phase when
-    sent from MW::embedThumbnails(). See other Tiff::encodeThumbnail to create the thumb
-    by subsampling another IFD image in the tiff.
+    Append existing datamodel thumb basic tif image to the EOF in an additional IFD.
+    The QImage thumb is the existing thumbnail created during the folder loading
+    phase when sent from MW::embedThumbnails(). See other Tiff::encodeThumbnail to
+    create the thumb by subsampling another IFD image in the tiff.
 
     Steps:
         - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
