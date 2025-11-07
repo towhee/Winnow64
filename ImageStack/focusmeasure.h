@@ -10,6 +10,8 @@
 #include <QPainter>
 #include <QMetaEnum>
 #include <QThread>
+#include <opencv2/opencv.hpp>
+#include "focusstackutilities.h"
 
 class FocusMeasure : public QObject
 {
@@ -20,10 +22,15 @@ public:
         SobelEnergy,         // sum of squared gradients
         Tenengrad,           // Sobel magnitude thresholded
         EmulateZerene,       // Zerene-style focus metric
-        All                  // Save all methods
+        Petteri              // Petteri focus_stack
     };
     Q_ENUM(Method)
-    QStringList methods{"LaplacianVariance", "SobelEnergy", "Tenengrad", "EmulateZerene"};
+    QStringList methods{"LaplacianVariance",
+                        "SobelEnergy",
+                        "Tenengrad",
+                        "EmulateZerene",
+                        "Petteri"
+                        };
 
     explicit FocusMeasure(QObject *parent = nullptr);
 
@@ -45,11 +52,18 @@ private:
     bool saveResults = true;
     QString outputFolder;
 
+    bool computeFocusMaps_Petteri(const QString& alignedPath,
+                                  const QString& outFolder,
+                                  int downsample,
+                                  bool saveResults,
+                                  float gaussRadius,    // Petteri’s blur radius (sigma)
+                                  float energyThresh);  // Petteri’s pre-threshold
     QImage toGray(const QImage &img);
     QImage focusMapLaplacian(const QImage &gray);
     QImage focusMapSobel(const QImage &gray);
     QImage focusMapTenengrad(const QImage &gray);
     QImage focusMapZerene(const QImage &gray);
+    QImage focusMapPetteri(const QImage &gray);
     void saveFocusImage(const QImage &map, const QString &path);
 };
 

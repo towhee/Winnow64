@@ -10,6 +10,7 @@
 #include <QElapsedTimer>
 #include <QDebug>
 #include <QThread>
+#include "ImageStack/focusstackconstants.h"
 #include "ImageStack/stackaligner.h"
 #include "ImageStack/focusmeasure.h"
 #include "ImageStack/depthmap.h"
@@ -31,6 +32,9 @@ public:
     bool runHaloReduction(const QString &imagePath);
     void test();
 
+    void setPreset(const QString &presetName);
+    QString currentPresetName() const { return m_currentPreset; }
+
 signals:
     void progress(QString stage, int current, int total);
     void finishedAlign(QString resultPath);
@@ -45,6 +49,11 @@ public slots:
 
 private:
     void initialize();
+
+    QString m_currentPreset;
+    FSConst::FocusPreset  m_focusPreset;
+    FSConst::DepthPreset  m_depthPreset;
+    FSConst::FusionPreset m_fusionPreset;
 
     QStringList inputPaths;
     QList<QImage*>inputImages;

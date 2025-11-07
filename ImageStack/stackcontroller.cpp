@@ -5,6 +5,7 @@
 StackController::StackController(QObject *parent)
     : QObject(parent)
 {
+    setPreset(FSConst::Preset::kWinnow); // Default
 }
 
 void StackController::stop()
@@ -31,6 +32,29 @@ void StackController::test()
     // runFusion();
     QString imagePath = "/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0227/output/fused_pmax.png";
     runHaloReduction(imagePath);
+}
+
+void StackController::setPreset(const QString &presetName)
+{
+    m_currentPreset = presetName;
+
+    if (presetName == FSConst::Preset::kPetteri) {
+        m_focusPreset  = FSConst::presetFocusPetteri();
+        m_depthPreset  = FSConst::presetDepthPetteri();
+        m_fusionPreset = FSConst::presetFusionPetteri();
+    } else if (presetName == FSConst::Preset::kZerene) {
+        m_focusPreset  = FSConst::presetFocusZerene();
+        m_depthPreset  = FSConst::presetDepthZerene();
+        m_fusionPreset = FSConst::presetFusionZerene();
+    } else {
+        m_focusPreset  = FSConst::presetFocusWinnow();
+        m_depthPreset  = FSConst::presetDepthWinnow();
+        m_fusionPreset = FSConst::presetFusionWinnow();
+    }
+
+    emit updateStatus(false,
+                      QString("Focus-stack preset set to %1").arg(presetName),
+                      "StackController::setPreset");
 }
 
 void StackController::initialize()
@@ -280,10 +304,19 @@ bool StackController::runFocusMaps(const QString &alignedFolderPath)
     }
 
     // Configure before starting
-    fm->setMethod(FocusMeasure::Tenengrad);
-    fm->setDownsample(1);
-    fm->setSaveResults(true);
-    fm->setOutputFolder(masksPath);
+    FocusMeasure::Method method =
+        (m_currentPreset == FSConst::Preset::kPetteri)
+            ? FocusMeasure::Petteri
+            : FocusMeasure::EmulateZerene;
+
+    fm->setMethod(method);
+    fm->setDownsample(FSConst::kDefaultDownsample);
+    fm->setSaveResults(m_focusPreset.saveResults);
+    fm->setOutputFolder(projectFolder + "/focusmaps");
+    // fm->setMethod(FocusMeasure::Tenengrad);
+    // fm->setDownsample(1);
+    // fm->setSaveResults(true);
+    // fm->setOutputFolder(masksPath);
 
     // --- Connect start signal properly to FocusMeasure ---------------------
     connect(worker, &QThread::started, fm, [fm, stack, this, pf, src]() {
