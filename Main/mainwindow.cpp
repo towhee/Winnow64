@@ -5122,7 +5122,7 @@ void MW::generateFocusStack()
             }, Qt::QueuedConnection);
 
     // Handle completion
-    connect(focusStack, &StackController::finished,
+    connect(focusStack, &StackController::finishedAlign,
             this, [this](const QString &projectFolder) {
                 updateStatus(false,
                              QString("Focus stack alignment complete: %1").arg(projectFolder),
@@ -5139,7 +5139,7 @@ void MW::generateFocusStack()
         return;
     }
 
-    // --- 3. Gather image pointers from cache -------------------------------
+    // --- 3. Gather image pointers from image cache -------------------------------
     QList<QImage*> srcImages;
     for (const QString &path : selection) {
         if (icd->imCache.contains(path))
@@ -5158,11 +5158,12 @@ void MW::generateFocusStack()
     }
 
     // --- 4. Load inputs into controller ------------------------------------
-    focusStack->loadInputImages(selection, srcImages);
+    focusStack->loadInputImages(selection, srcImages);  // initialize
 
     // --- 5. Run alignment asynchronously -----------------------------------
     //     (returns immediately; work happens in background thread)
-    focusStack->runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
+    focusStack->test();
+    // focusStack->runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
 
     // At this point:
     //   - MW remains fully responsive.
