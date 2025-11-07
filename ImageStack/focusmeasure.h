@@ -23,6 +23,7 @@ public:
         All                  // Save all methods
     };
     Q_ENUM(Method)
+    QStringList methods{"LaplacianVariance", "SobelEnergy", "Tenengrad", "EmulateZerene"};
 
     explicit FocusMeasure(QObject *parent = nullptr);
 

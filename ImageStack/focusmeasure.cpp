@@ -43,7 +43,11 @@ QMap<int, QImage> FocusMeasure::computeFocusMaps(const QMap<int, QImage> &stack)
         ++count;
         emit progress("FocusMeasure", count, total);
         emit updateStatus(false,
-                          QString("Processing focus map %1 of %2").arg(count).arg(total),
+                          QString("Processing focus map %1 of %2 using method %3")
+                              .arg(count)
+                              .arg(total)
+                              .arg(methodName),
+                              // .arg(methods.at(method)),
                           src);
 
         QImage gray = toGray(it.value());
@@ -254,35 +258,39 @@ void FocusMeasure::saveFocusImage(const QImage &map, const QString &path)
     QImage raw = map;
     raw.save(path, "PNG", 0);   // no scaling or contrast adjustment
 
-    // Also save a normalized visualization for easy inspection
-    int minVal = 255, maxVal = 0;
-    const int w = raw.width(), h = raw.height();
+    // // Also save a normalized visualization for easy inspection
+    // int minVal = 255, maxVal = 0;
+    // const int w = raw.width(), h = raw.height();
 
-    for (int y = 0; y < h; ++y) {
-        const uchar *p = raw.constScanLine(y);
-        for (int x = 0; x < w; ++x) {
-            int v = p[x];
-            if (v < minVal) minVal = v;
-            if (v > maxVal) maxVal = v;
-        }
-    }
-    if (maxVal <= minVal) maxVal = minVal + 1;
+    // for (int y = 0; y < h; ++y) {
+    //     const uchar *p = raw.constScanLine(y);
+    //     for (int x = 0; x < w; ++x) {
+    //         int v = p[x];
+    //         if (v < minVal) minVal = v;
+    //         if (v > maxVal) maxVal = v;
+    //     }
+    // }
+    // if (maxVal <= minVal) maxVal = minVal + 1;
 
-    QImage vis(raw.size(), QImage::Format_Grayscale8);
-    for (int y = 0; y < h; ++y) {
-        const uchar *src = raw.constScanLine(y);
-        uchar *dst = vis.scanLine(y);
-        for (int x = 0; x < w; ++x)
-            dst[x] = static_cast<uchar>((src[x] - minVal) * 255 / (maxVal - minVal));
-    }
+    // QImage vis(raw.size(), QImage::Format_Grayscale8);
+    // for (int y = 0; y < h; ++y) {
+    //     const uchar *src = raw.constScanLine(y);
+    //     uchar *dst = vis.scanLine(y);
+    //     for (int x = 0; x < w; ++x)
+    //         dst[x] = static_cast<uchar>((src[x] - minVal) * 255 / (maxVal - minVal));
+    // }
 
-    QString visPath = path;
-    visPath.replace("focus_", "focus_vis_");
-    vis.save(visPath, "PNG", 0);
+    // QString visPath = path;
+    // visPath.replace("focus_", "focus_vis_");
+    // vis.save(visPath, "PNG", 0);
+
+    // emit updateStatus(false,
+    //                   QString("Saved focus maps: %1 (raw) and %2 (normalized)")
+    //                       .arg(QFileInfo(path).fileName())
+    //                       .arg(QFileInfo(visPath).fileName()),
+    //                   "FocusMeasure::saveFocusImage");
 
     emit updateStatus(false,
-                      QString("Saved focus maps: %1 (raw) and %2 (normalized)")
-                          .arg(QFileInfo(path).fileName())
-                          .arg(QFileInfo(visPath).fileName()),
+                      "Saved focus maps",
                       "FocusMeasure::saveFocusImage");
 }

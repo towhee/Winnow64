@@ -5122,7 +5122,7 @@ void MW::generateFocusStack()
             }, Qt::QueuedConnection);
 
     // Handle completion
-    connect(focusStack, &StackController::finished,
+    connect(focusStack, &StackController::finishedAlign,
             this, [this](const QString &projectFolder) {
                 updateStatus(false,
                              QString("Focus stack alignment complete: %1").arg(projectFolder),
@@ -5158,7 +5158,7 @@ void MW::generateFocusStack()
     }
 
     // --- 4. Load inputs into controller ------------------------------------
-    focusStack->loadInputImages(selection, srcImages);
+    focusStack->loadInputImages(selection, srcImages);  // initialize
 
     // --- 5. Run alignment asynchronously -----------------------------------
     //     (returns immediately; work happens in background thread)

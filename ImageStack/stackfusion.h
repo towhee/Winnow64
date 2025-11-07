@@ -13,7 +13,7 @@ class StackFusion : public QObject
 {
     Q_OBJECT
 public:
-    enum Method { Naive, PMax };
+    enum Method { Naive, PMax, PMax1, PMax2 };
     Q_ENUM(Method)
 
     explicit StackFusion(QObject *parent = nullptr);
@@ -32,9 +32,9 @@ private:
     bool fuseNaive(const QString &depthMapPath,
                    const QString &alignedFolderPath,
                    const QString &outputPath);
-    bool fusePMax(const QString &depthMapPath,
-                  const QString &alignedFolderPath,
-                  const QString &outputPath);
+    bool fusePMax(const QString &alignedFolderPath, const QString &outputPath);
+    bool fusePMax1(const QString &alignedFolderPath, const QString &outputPath);
+    bool fusePMax2(const QString &alignedFolderPath, const QString &outputPath);
 };
 
 #endif // STACKFUSION_H

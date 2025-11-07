@@ -22,7 +22,9 @@ signals:
 
 private:
     cv::Mat computeFocusMeasure(const cv::Mat &img);
-    cv::Mat anisotropicSmooth(const cv::Mat &depth, int iterations = 25, float k = 0.3f);
+    cv::Mat anisotropicSmooth(const cv::Mat &depth, int iterations = 25,
+                              float k = 0.3f);
+    void convertZereneDepthMap();
 };
 
 #endif // DEPTHMAP_H
