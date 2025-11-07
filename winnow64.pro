@@ -74,6 +74,7 @@ HEADERS += Cache/cachedata.h \
     ImageFormats/Base/rawbase.h \
     ImageFormats/Tiff/tiffdecoder.h \
     ImageStack/depthmap.h \
+    ImageStack/focushalo.h \
     ImageStack/focusmeasure.h \
     ImageStack/stackaligner.h \
     ImageStack/stackcontroller.h \
@@ -226,6 +227,7 @@ SOURCES += Cache/cachedata.cpp \
     ImageFormats/Base/rawbase.cpp \
     ImageFormats/Tiff/tiffdecoder.cpp \
     ImageStack/depthmap.cpp \
+    ImageStack/focushalo.cpp \
     ImageStack/focusmeasure.cpp \
     ImageStack/stackaligner.cpp \
     ImageStack/stackcontroller.cpp \

@@ -63,6 +63,7 @@ QList<QImage> StackAligner::alignECC(const QList<QImage*> &images)
             QImage alignedQ(im2Aligned.data, im2Aligned.cols, im2Aligned.rows,
                             im2Aligned.step, QImage::Format_BGR888);
             aligned.append(alignedQ.copy()); // copy so memory persists
+            qDebug() << "StackAligner::alignECC" << i;
 
         } catch (const cv::Exception &e) {
             qWarning() << "ECC alignment failed for image" << i
@@ -72,6 +73,7 @@ QList<QImage> StackAligner::alignECC(const QList<QImage*> &images)
     }
 
     emit updateStatus(false, "ECC alignment complete.", src);
+    qDebug() << "StackAligner::alignECC  aligned.count() =" << aligned.count();
     return aligned;
 }
 

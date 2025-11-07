@@ -24,11 +24,13 @@ void StackController::test()
 {
     emit updateStatus(false, "Focus stack operation test.", "StackController::test");
     qDebug() << "StackController::test";
-    initialize();
+    daisyChain = false;
     // runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
     // runFocusMaps(alignedPath);
-    runDepthMap(alignedDir.path());
+    // runDepthMap(alignedPath);
     // runFusion();
+    QString imagePath = "/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0227/output/fused_pmax.png";
+    runHaloReduction(imagePath);
 }
 
 void StackController::initialize()
@@ -54,10 +56,10 @@ void StackController::initialize()
     alignedPath     = projectFolder + "/aligned";
     masksPath       = projectFolder + "/masks";
     depthPath       = projectFolder + "/depth";
-    depthFocusPath  = depthPath + "/focus";
+    haloPath        = projectFolder + "/halo";
     outputPath      = projectFolder + "/output";
 
-    QStringList subDirs = { alignedPath, masksPath, depthPath, depthFocusPath, outputPath };
+    QStringList subDirs = { alignedPath, masksPath, depthPath, outputPath };
     for (const QString &sub : subDirs) {
         if (!dir.exists(sub)) dir.mkpath(sub);
     }
@@ -66,13 +68,28 @@ void StackController::initialize()
     alignedDir     = QDir(alignedPath);
     masksDir       = QDir(masksPath);
     depthDir       = QDir(depthPath);
-    depthFocusDir  = QDir(depthFocusPath);
+    haloDir        = QDir(haloPath);
     outputDir      = QDir(outputPath);
 
-    // Computation methods
+    // Files
+    depthMapPath    = depthPath + "/depth_index.png";
+    // depthMapPath    = depthPath + "/depth_idx_from_zerene.png.png";
+
+    // Halo parameters
+    haloStrength = 0.7;
+    haloRadius = 5;
 
     // Connections
-    // connect(this, &StackController::finishedDepthMap,
+    connect(this, &StackController::finishedAlign,
+            this, &StackController::runFocusMaps);
+
+    connect(this, &StackController::finishedFocus,
+            this, &StackController::runDepthMap);
+
+    connect(this, &StackController::finishedDepthMap,
+            this, &StackController::runFusion);
+
+    // connect(this, &StackController::finishedHaloReduction,
     //         this, &StackController::runFusion);
 
     emit updateStatus(false,
@@ -85,19 +102,21 @@ void StackController::loadInputImages(const QStringList &paths, const QList<QIma
     inputPaths = paths;
     inputImages = images;
 
-    if (inputPaths.isEmpty()) return;
+    qDebug() << "StackController::loadInputImages" << inputImages.count();
 
-    QMap<int, QImage> stack;
+    // if (inputPaths.isEmpty()) return;
 
-    int idx = 0;
-    for (const QString &filePath : inputPaths) {
-        QImage img(filePath);
-        if (img.isNull()) {
-            emit updateStatus(false, "Failed to load " + filePath, "StackController::loadInputImages");
-            continue;
-        }
-        stack.insert(idx++, img);
-    }
+    // QMap<int, QImage> stack;
+
+    // int idx = 0;
+    // for (const QString &filePath : inputPaths) {
+    //     QImage img(filePath);
+    //     if (img.isNull()) {
+    //         emit updateStatus(false, "Failed to load " + filePath, "StackController::loadInputImages");
+    //         continue;
+    //     }
+    //     stack.insert(idx++, img);
+    // }
 
     initialize();
 
@@ -113,8 +132,6 @@ bool StackController::runAlignment(bool saveAligned, bool useGpu)
         return false;
     }
 
-    // Prepare folders (safe to call multiple times)
-    initialize();
     emit updateStatus(false, "Starting threaded alignment...", "StackController::runAlignment");
 
     // --- Create a dedicated worker thread and aligner ----------------------
@@ -174,7 +191,7 @@ bool StackController::runAlignment(bool saveAligned, bool useGpu)
         }
 
         // --- Signal completion ---------------------------------------------
-        emit finished(projectFolder);
+        if (daisyChain) emit finishedAlign(projectFolder);
 
         // Cleanly exit thread
         workerThread->quit();
@@ -189,7 +206,7 @@ bool StackController::runAlignment(bool saveAligned, bool useGpu)
     workerThread->start();
 
     // --- Connect pipeline continuation -----------------------------------------
-    connect(this, &StackController::finished,
+    connect(this, &StackController::finishedAlign,
             this, &StackController::runFocusMaps,
             Qt::QueuedConnection);
 
@@ -234,6 +251,8 @@ bool StackController::runFocusMaps(const QString &alignedFolderPath)
     QStringList filters{ "*.jpg", "*.jpeg", "*.png", "*.tif", "*.tiff", "*.bmp" };
     QStringList files = alignedDir.entryList(filters, QDir::Files, QDir::Name);
 
+    qDebug() << "StackController::runFocusMaps  files.count() =" << files.count();
+
     if (files.isEmpty()) {
         emit updateStatus(false, "No aligned images found.", src);
         return false;
@@ -261,7 +280,7 @@ bool StackController::runFocusMaps(const QString &alignedFolderPath)
     }
 
     // Configure before starting
-    fm->setMethod(FocusMeasure::EmulateZerene);
+    fm->setMethod(FocusMeasure::Tenengrad);
     fm->setDownsample(1);
     fm->setSaveResults(true);
     fm->setOutputFolder(masksPath);
@@ -274,7 +293,7 @@ bool StackController::runFocusMaps(const QString &alignedFolderPath)
                               QString("Focus-map computation complete in %1 s")
                                   .arg(t.elapsed() / 1000.0, 0, 'f', 2),
                               src);
-            emit finishedFocus(pf);
+            if (daisyChain) emit finishedFocus(pf);
             QThread::currentThread()->quit();
         }, Qt::QueuedConnection);  // <--- key line
 
@@ -304,7 +323,7 @@ bool StackController::runDepthMap(const QString &alignedFolderPath)
         emit updateStatus(false,
                           ok ? "Depth map complete." : "Depth map failed.",
                           src);
-        emit finishedDepthMap(ok);
+        if (daisyChain) emit finishedDepthMap(ok);
     });
 
     // --- Cleanup after finishing --------------------------------------------
@@ -324,15 +343,13 @@ bool StackController::runFusion()
     QString src = "StackController::runFusion";
     emit updateStatus(false, "Launching threaded fusion stage...", src);
 
+    // --- Sanity checks -------------------------------------------------------
     if (alignedPath.isEmpty() || depthPath.isEmpty()) {
         emit updateStatus(false, "Aligned or depth path not set.", src);
         return false;
     }
 
-    QString depthMapPath = depthPath + "/depth_index.png";
-    if (!QFile::exists(depthMapPath))
-        depthMapPath = depthPath + "/depth_preview.png";
-
+    QString mDepthMapPath = depthMapPath;
     if (!QFile::exists(depthMapPath)) {
         emit updateStatus(false,
                           QString("No depth map found in %1").arg(depthPath),
@@ -344,18 +361,36 @@ bool StackController::runFusion()
     if (!dir.exists(outputPath))
         dir.mkpath(outputPath);
 
+    // --- Create and move worker to thread -----------------------------------
     QThread *thread = new QThread;
     StackFusion *fusion = new StackFusion();
     fusion->moveToThread(thread);
 
-    connect(fusion, &StackFusion::updateStatus, this, &StackController::updateStatus);
-    connect(fusion, &StackFusion::progress, this, &StackController::progress);
+    // --- Real-time updates (queued connections ensure main-thread delivery) --
+    connect(fusion, &StackFusion::updateStatus,
+            this, &StackController::updateStatus,
+            Qt::QueuedConnection);
+    connect(fusion, &StackFusion::progress,
+            this, &StackController::progress,
+            Qt::QueuedConnection);
 
-    connect(thread, &QThread::started, this, [this, fusion, src]() {
+    // --- Start threaded work -------------------------------------------------
+    connect(thread, &QThread::started, fusion, [this, fusion, src, mDepthMapPath]()
+    {
         emit updateStatus(false, "Starting fusion stage...", src);
 
-        bool ok1 = fusion->fuse(StackFusion::Naive, alignedPath, depthPath + "/depth_index.png", outputPath);
-        bool ok2 = fusion->fuse(StackFusion::PMax, alignedPath, depthPath + "/depth_index.png", outputPath);
+        // Do not run naive for now
+        // bool ok1 = fusion->fuse(StackFusion::Naive,
+        //                         alignedPath,
+        //                         depthMapPath,
+        //                         outputPath);
+        bool ok1 = true;
+
+        bool ok2 = fusion->fuse(StackFusion::PMax,
+                                alignedPath,
+                                depthMapPath,
+                                outputPath);
+
         bool success = ok1 && ok2;
 
         emit updateStatus(false,
@@ -364,12 +399,58 @@ bool StackController::runFusion()
         emit finishedFusion(success ? outputPath : QString());
     });
 
+    // --- Cleanup after completion -------------------------------------------
     connect(this, &StackController::finishedFusion, thread, [fusion, thread]() {
-        thread->quit();
-        thread->wait();
-        fusion->deleteLater();
-        thread->deleteLater();
+            thread->quit();
+            thread->wait();
+            fusion->deleteLater();
+            thread->deleteLater();
+        }, Qt::QueuedConnection);
+
+    thread->start();
+    return true;
+}
+
+bool StackController::runHaloReduction(const QString &imagePath)
+{
+    const QString src = "StackController::runHaloReduction";
+    emit updateStatus(false, QString("Launching threaded halo reduction..."), src);
+
+    if (imagePath.isEmpty() || !QFile::exists(imagePath)) {
+        emit updateStatus(false, QString("Input image not found: %1").arg(imagePath), src);
+        return false;
+    }
+
+    // Ensure halo output directory exists
+    QDir dir;
+    if (!dir.exists(haloPath))
+        dir.mkpath(haloPath);
+
+    // --- Thread setup --------------------------------------------------------
+    QThread *thread = new QThread;
+    FocusHalo *halo = new FocusHalo();
+    halo->setOutputDir(haloDir);
+    halo->setStrength(haloStrength);
+    halo->setRadius(haloRadius);
+    halo->moveToThread(thread);
+
+    // Connect signals for progress/status
+    connect(halo, &FocusHalo::updateStatus, this, &StackController::updateStatus);
+
+    // When thread starts, begin halo processing
+    connect(thread, &QThread::started, [this, halo, imagePath, src]() {
+        emit updateStatus(false, QString("Running halo reduction on %1").arg(imagePath), src);
+        bool ok = halo->removeHalos(imagePath, "halo_reduced.png");
+        emit updateStatus(false,
+                          ok ? "Halo reduction complete." : "Halo reduction failed.",
+                          src);
+        emit finishedHaloReduction(QString("Halo reduction done."));
+        halo->deleteLater();
+        QThread::currentThread()->quit();
     });
+
+    // Cleanup after thread finishes
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
 
     thread->start();
     return true;
