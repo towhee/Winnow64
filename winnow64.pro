@@ -73,9 +73,11 @@ QT += concurrent
 HEADERS += Cache/cachedata.h \
     ImageFormats/Base/rawbase.h \
     ImageFormats/Tiff/tiffdecoder.h \
+    ImageStack/FocusStackConstants.h \
     ImageStack/depthmap.h \
     ImageStack/focushalo.h \
     ImageStack/focusmeasure.h \
+    ImageStack/focusstackutilities.h \
     ImageStack/stackaligner.h \
     ImageStack/stackcontroller.h \
     ImageStack/stackfusion.h
@@ -229,6 +231,7 @@ SOURCES += Cache/cachedata.cpp \
     ImageStack/depthmap.cpp \
     ImageStack/focushalo.cpp \
     ImageStack/focusmeasure.cpp \
+    ImageStack/focusstackutilities.cpp \
     ImageStack/stackaligner.cpp \
     ImageStack/stackcontroller.cpp \
     ImageStack/stackfusion.cpp

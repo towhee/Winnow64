@@ -62,7 +62,9 @@ QMap<int, QImage> FocusMeasure::computeFocusMaps(const QMap<int, QImage> &stack)
             case SobelEnergy:       map = focusMapSobel(gray);     break;
             case Tenengrad:         map = focusMapTenengrad(gray); break;
             case EmulateZerene:     map = focusMapZerene(gray);    break;
+            case Petteri:           map = focusMapPetteri(gray);   break;
         }
+
 
         maps.insert(it.key(), map);
 
@@ -80,6 +82,61 @@ QMap<int, QImage> FocusMeasure::computeFocusMaps(const QMap<int, QImage> &stack)
     qDebug() << src + "3";
 
     return maps;
+}
+
+// FocusMeasure.cpp (excerpt)
+bool FocusMeasure::computeFocusMaps_Petteri(const QString& alignedPath,
+                                            const QString& outFolder,
+                                            int downsample,
+                                            bool saveResults,
+                                            float gaussRadius,
+                                            float energyThresh)
+{
+    /*
+    QDir(outFolder).mkpath(".");
+    QStringList imgs = listAlignedImages(alignedPath);    // your helper
+
+    const int N = imgs.size();
+    for (int i = 0; i < N; ++i) {
+        emit updateStatus(false, QString("Petteri FocusMeasure %1/%2").arg(i+1).arg(N), "FocusMeasure::Petteri");
+
+        cv::Mat color = cv::imread(imgs[i].toStdString(), cv::IMREAD_COLOR);
+        if (color.empty()) return false;
+        if (downsample > 1) cv::resize(color, color, {}, 1.0/downsample, 1.0/downsample, cv::INTER_AREA);
+
+        cv::Mat gray; cv::cvtColor(color, gray, cv::COLOR_BGR2GRAY);
+        gray.convertTo(gray, CV_32F, 1.0/255.0);
+
+        // Petteri: Sobel in x and y, accumulateSquare → magnitude^2
+        cv::Mat sx, sy, mag2;
+        cv::Sobel(gray, sx, CV_32F, 1, 0);
+        cv::Sobel(gray, sy, CV_32F, 0, 1);
+        cv::multiply(sx, sx, sx);
+        cv::multiply(sy, sy, sy);
+        cv::add(sx, sy, mag2);
+
+        // Threshold weak responses
+        if (energyThresh > 0.0f) mag2.setTo(0, mag2 < energyThresh);
+
+        // Optional Gaussian blur over magnitude (Petteri uses radius→window=4*radius+1)
+        if (gaussRadius > 0.0f) {
+            int w = int(gaussRadius * 4) + 1;
+            cv::GaussianBlur(mag2, mag2, cv::Size(w, w), gaussRadius, gaussRadius, cv::BORDER_REFLECT);
+        }
+
+        // Store as float32 .exr (great for later depth fitting), plus optional 8-bit preview
+        QString base = QFileInfo(imgs[i]).completeBaseName();
+        QString exrPath = outFolder + QString("/focus_petteri_%1.exr").arg(base);
+        cv::imwrite(exrPath.toStdString(), mag2);
+
+        if (saveResults) {
+            cv::Mat vis; cv::sqrt(mag2, vis);
+            cv::normalize(vis, vis, 0, 255, cv::NORM_MINMAX); vis.convertTo(vis, CV_8U);
+            cv::imwrite((outFolder + QString("/focus_petteri_%1.png").arg(base)).toStdString(), vis);
+        }
+    }
+    */
+    return true;
 }
 
 QImage FocusMeasure::toGray(const QImage &img)
@@ -248,6 +305,35 @@ QImage FocusMeasure::focusMapZerene(const QImage &gray)
     }
 
     return out;
+}
+
+QImage FocusMeasure::focusMapPetteri(const QImage &input)
+{
+    // Convert QImage → cv::Mat (float gray)
+    cv::Mat color = FSUtils::qimageToMat(input);
+    cv::Mat gray; cv::cvtColor(color, gray, cv::COLOR_BGR2GRAY);
+    gray.convertTo(gray, CV_32F, 1.0 / 255.0);
+
+    // Sobel X & Y gradients
+    cv::Mat sx, sy, mag2;
+    cv::Sobel(gray, sx, CV_32F, 1, 0);
+    cv::Sobel(gray, sy, CV_32F, 0, 1);
+    cv::multiply(sx, sx, sx);
+    cv::multiply(sy, sy, sy);
+    cv::add(sx, sy, mag2);
+
+    // Petteri’s soft Gaussian blur for stability
+    const float gaussRadius = 1.0f;
+    if (gaussRadius > 0.0f) {
+        int w = int(gaussRadius * 4) + 1;
+        cv::GaussianBlur(mag2, mag2, cv::Size(w, w), gaussRadius, gaussRadius, cv::BORDER_REFLECT);
+    }
+
+    // Normalize to 8-bit range for preview
+    cv::Mat norm; cv::normalize(mag2, norm, 0, 255, cv::NORM_MINMAX);
+    norm.convertTo(norm, CV_8U);
+
+    return FSUtils::matToQImage(FSUtils::normalizeTo8U(mag2));
 }
 
 void FocusMeasure::saveFocusImage(const QImage &map, const QString &path)

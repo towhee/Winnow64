@@ -251,6 +251,7 @@ bool DepthMap::generate(const QString &alignedFolderPath, bool smooth)
     return true;
 }
 
+/*
 void DepthMap::convertZereneDepthMap()
 {
     // one time convert Zerene depth map to depth_idx_from_zerene and vis version
@@ -350,3 +351,4 @@ void DepthMap::convertZereneDepthMap()
     cv::imwrite("/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0227/depth/depth_preview_from_zerene.png", combined);
     qDebug() << "Written: depth_preview_from_zerene.png";
 }
+*/
