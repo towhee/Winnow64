@@ -43,6 +43,7 @@ constexpr int  kSmoothZDefault     = 40;
 constexpr int  kHaloRadiusDefault  = 20;
 constexpr bool kSaveStepsDefault   = false;
 constexpr bool kUsePetteriDefault  = true;
+constexpr bool kSmooth             = true;
 } // namespace Depth
 
 // ----------------------------------------------------------------------------
@@ -88,6 +89,7 @@ struct FocusPreset {
 };
 
 struct DepthPreset {
+    bool smooth;
     int threshold;
     int smoothXY;
     int smoothZ;
@@ -114,7 +116,8 @@ inline FocusPreset presetFocusPetteri() {
 }
 
 inline DepthPreset presetDepthPetteri() {
-    return { Depth::kThresholdDefault,
+    return {Depth::kSmooth,
+            Depth::kThresholdDefault,
             Depth::kSmoothXYDefault,
             Depth::kSmoothZDefault,
             Depth::kHaloRadiusDefault,

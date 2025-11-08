@@ -1,4 +1,6 @@
 #include "depthmap.h"
+#include "ImageStack/focusstackutilities.h"
+#include "ImageStack/focusstackconstants.h"
 #include <QFileInfoList>
 #include <QElapsedTimer>
 #include <algorithm>    // std::clamp
@@ -40,7 +42,15 @@ cv::Mat DepthMap::anisotropicSmooth(const cv::Mat &depth, int iterations, float 
     return d;
 }
 
-bool DepthMap::generate(const QString &alignedFolderPath, bool smooth)
+bool DepthMap::generate(const QString &alignedFolderPath, const Options &opt)
+{
+    if (opt.method == Petteri)
+        return generatePetteri(alignedFolderPath, opt);
+    else
+        return generateWinnow(alignedFolderPath, opt);
+}
+
+bool DepthMap::generateWinnow(const QString &alignedFolderPath, const Options &opt)
 {
     const QString src = "DepthMap::generate";
     QElapsedTimer timer;
@@ -133,7 +143,7 @@ bool DepthMap::generate(const QString &alignedFolderPath, bool smooth)
     // --- Normalize (for file) & optional smoothing -----------------------
     cv::Mat depthFloat;
     depthIdx.convertTo(depthFloat, CV_32F, 1.0f / (n - 1));
-    if (smooth) depthFloat = anisotropicSmooth(depthFloat);
+    if (opt.smooth) depthFloat = anisotropicSmooth(depthFloat);
 
     // --- Save core outputs ------------------------------------------------
     QDir().mkpath(depthDir.absolutePath());
@@ -249,6 +259,186 @@ bool DepthMap::generate(const QString &alignedFolderPath, bool smooth)
                               .arg(depthDir.absolutePath())
                               .arg(timer.elapsed() / 1000.0);
     return true;
+}
+
+bool DepthMap::generatePetteri(const QString &alignedFolderPath, const Options &opt)
+{
+    const QString src = "DepthMap::generatePetteri";
+    QElapsedTimer timer; timer.start();
+
+    emit updateStatus(false, "Generating depth map (Petteri)...", src);
+
+    QDir alignDir(alignedFolderPath);
+    if (!alignDir.exists()) {
+        qWarning() << src << "aligned folder not found:" << alignedFolderPath;
+        return false;
+    }
+
+    // Load focus maps (float EXR or grayscale PNG)
+    QStringList filters = {"focus_petteri_*.exr", "focus_petteri_*.png"};
+    QFileInfoList files = alignDir.entryInfoList(filters, QDir::Files, QDir::Name);
+    if (files.isEmpty()) {
+        qWarning() << src << "no Petteri focus maps found";
+        return false;
+    }
+
+    int n = files.size();
+    cv::Mat first = cv::imread(files[0].absoluteFilePath().toStdString(), cv::IMREAD_UNCHANGED);
+    if (first.empty()) return false;
+    int h = first.rows, w = first.cols;
+
+    std::vector<cv::Mat> F; F.reserve(n);
+    for (int i = 0; i < n; ++i) {
+        cv::Mat f = cv::imread(files[i].absoluteFilePath().toStdString(), cv::IMREAD_UNCHANGED);
+        if (f.empty()) continue;
+        if (f.type() != CV_32F)
+            f.convertTo(f, CV_32F, 1.0 / 255.0);
+        F.push_back(f);
+    }
+
+    // Winner per pixel
+    cv::Mat idx(h, w, CV_32S, cv::Scalar(0));
+    cv::Mat best(h, w, CV_32F, cv::Scalar(-1));
+
+    for (int k = 0; k < n; ++k) {
+        cv::Mat mask = F[k] > best;
+        F[k].copyTo(best, mask);
+        idx.setTo(k, mask);
+    }
+
+    // Threshold weak pixels
+    if (opt.threshold > 0) {
+        cv::Mat low = best < float(opt.threshold) / 255.0f;
+        idx.setTo(0, low);
+    }
+
+    // Smooth XY
+    if (opt.smoothXY > 0) {
+        int ksize = std::max(3, (opt.smoothXY / 5) * 2 + 1);
+        cv::medianBlur(idx, idx, ksize);
+    }
+
+    // Smooth Z
+    for (int i = 0; i < opt.smoothZ / 10; ++i) {
+        cv::Mat low, high;
+        cv::erode(idx, low, cv::Mat());
+        cv::dilate(idx, high, cv::Mat());
+        idx = cv::min(cv::max(idx, low), high);
+    }
+
+    // Halo cleanup
+    if (opt.haloRadius > 0) {
+        cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE,
+                                               cv::Size(opt.haloRadius, opt.haloRadius));
+        cv::morphologyEx(idx, idx, cv::MORPH_CLOSE, se);
+    }
+
+    // Output directory
+    QDir depthDir(alignDir.filePath("../depth"));
+    QDir().mkpath(depthDir.absolutePath());
+
+    cv::Mat idx8; idx.convertTo(idx8, CV_8U);
+    const QString idxPath = depthDir.filePath("depth_index.png");
+    cv::imwrite(idxPath.toStdString(), idx8);
+
+    // Colorized preview
+    QImage preview = FSUtils::colorizeDepth(idx8);
+    const QString previewPath = depthDir.filePath("depth_preview.png");
+    preview.save(previewPath);
+
+    qDebug().noquote() << QString("%1 — depth map written to %2 (%.2f s)")
+                              .arg(src)
+                              .arg(depthDir.absolutePath())
+                              .arg(timer.elapsed() / 1000.0);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// DepthMap::fitGauss3points
+// ----------------------------------------------------------------------------
+// Fits a Gaussian curve y = A * exp(-(x - mu)^2 / (2*sigma^2))
+// through three consecutive focus values (f[k-1], f[k], f[k+1])
+// around the local maximum at slice index k = indexMap(y,x).
+// ----------------------------------------------------------------------------
+void DepthMap::fitGauss3points(const std::vector<cv::Mat> &focusMaps,
+                               const cv::Mat &indexMap,
+                               cv::Mat &mu,
+                               cv::Mat &sigma,
+                               cv::Mat &amp)
+{
+    const int n = static_cast<int>(focusMaps.size());
+    CV_Assert(!focusMaps.empty());
+    const int h = focusMaps[0].rows;
+    const int w = focusMaps[0].cols;
+
+    mu.create(h, w, CV_32F);
+    sigma.create(h, w, CV_32F);
+    amp.create(h, w, CV_32F);
+
+    // Pre-fill with defaults
+    mu.setTo(0);
+    sigma.setTo(0.5f);
+    amp.setTo(0);
+
+    for (int y = 0; y < h; ++y) {
+        const int *idxRow = indexMap.ptr<int>(y);
+        float *muRow  = mu.ptr<float>(y);
+        float *sigRow = sigma.ptr<float>(y);
+        float *ampRow = amp.ptr<float>(y);
+
+        for (int x = 0; x < w; ++x) {
+            int k = idxRow[x];
+            if (k <= 0 || k >= n - 1) {
+                // skip border slices
+                muRow[x]  = static_cast<float>(k);
+                sigRow[x] = 1.0f;
+                ampRow[x] = 0.0f;
+                continue;
+            }
+
+            float f1 = focusMaps[k - 1].at<float>(y, x);
+            float f2 = focusMaps[k].at<float>(y, x);
+            float f3 = focusMaps[k + 1].at<float>(y, x);
+
+            // Avoid invalid data
+            if (f1 <= 0 || f2 <= 0 || f3 <= 0) {
+                muRow[x]  = static_cast<float>(k);
+                sigRow[x] = 1.0f;
+                ampRow[x] = f2;
+                continue;
+            }
+
+            // log-domain parabolic fit:
+            // log(f) = log(A) - (x - mu)^2 / (2*sigma^2)
+            float L1 = std::log(f1);
+            float L2 = std::log(f2);
+            float L3 = std::log(f3);
+
+            float denom = 2 * (L1 - 2 * L2 + L3);
+            if (std::fabs(denom) < 1e-12f) {
+                muRow[x]  = static_cast<float>(k);
+                sigRow[x] = 1.0f;
+                ampRow[x] = f2;
+                continue;
+            }
+
+            // offset of the Gaussian peak relative to the center slice
+            float delta = (L1 - L3) / denom;
+            delta = std::clamp(delta, -1.0f, 1.0f); // restrict to local window
+
+            // variance estimation (sigma^2)
+            float var = -1.0f / denom;
+            var = std::max(var, 1e-4f);
+            float s = std::sqrt(var);
+
+            // amplitude from center value
+            float A = f2 * std::exp(delta * delta / (2 * var));
+
+            muRow[x]  = static_cast<float>(k) + delta; // sub-slice mean
+            sigRow[x] = s;
+            ampRow[x] = A;
+        }
+    }
 }
 
 /*

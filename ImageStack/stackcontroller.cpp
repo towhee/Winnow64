@@ -26,12 +26,13 @@ void StackController::test()
     emit updateStatus(false, "Focus stack operation test.", "StackController::test");
     qDebug() << "StackController::test";
     daisyChain = false;
+    setPreset(FSConst::Preset::kPetteri);
     // runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
     // runFocusMaps(alignedPath);
     // runDepthMap(alignedPath);
     // runFusion();
-    QString imagePath = "/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0227/output/fused_pmax.png";
-    runHaloReduction(imagePath);
+    // QString imagePath = "/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0227/output/fused_pmax.png";
+    // runHaloReduction(imagePath);
 }
 
 void StackController::setPreset(const QString &presetName)
@@ -339,6 +340,15 @@ bool StackController::runDepthMap(const QString &alignedFolderPath)
     QString src = "StackController::runDepthMap";
     emit updateStatus(false, "Launching threaded depth-map generation...", src);
 
+    // Choose preset options
+    FSConst::DepthPreset preset;
+    if (m_currentPreset == FSConst::Preset::kPetteri)
+        preset = FSConst::presetDepthPetteri();
+    else if (m_currentPreset == FSConst::Preset::kZerene)
+        preset = FSConst::presetDepthZerene();
+    else
+        preset = FSConst::presetDepthWinnow();
+
     QThread *thread = new QThread;
     DepthMap *dm = new DepthMap();
 
@@ -350,8 +360,23 @@ bool StackController::runDepthMap(const QString &alignedFolderPath)
             Qt::QueuedConnection);
 
     // --- When the thread starts, invoke generate() *in that thread* ---------
-    connect(thread, &QThread::started, dm, [this, dm, alignedFolderPath, src]() {
+    connect(thread, &QThread::started, dm,
+            [this, dm, alignedFolderPath, preset, src]()
+    {
         emit updateStatus(false, "Generating depth map...", src);
+
+        // Pass in preset parameters
+        DepthMap::Options opt;
+        opt.smooth     = preset.smooth;
+        opt.threshold  = preset.threshold;
+        opt.smoothXY   = preset.smoothXY;
+        opt.smoothZ    = preset.smoothZ;
+        opt.haloRadius = preset.haloRadius;
+        opt.saveSteps  = preset.saveSteps;
+        opt.method     = (m_currentPreset == FSConst::Preset::kPetteri)
+                         ? DepthMap::Petteri
+                         : DepthMap::Winnow;
+
         bool ok = dm->generate(alignedFolderPath, true);
         emit updateStatus(false,
                           ok ? "Depth map complete." : "Depth map failed.",
