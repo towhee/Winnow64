@@ -95,81 +95,88 @@ static void haarDown(const cv::Mat& in,
     highHV = Vh;  // HH
 }
 
-// Inverse Haar (upsample by 2)
-static cv::Mat haarUpAdd(const cv::Mat& low,
+// Exact inverse for your forward:
+// forward used: L = 0.5*(a+b), H = 0.5*(a-b)
+// inverse is:   a = L + H,     b = L - H
+inline cv::Mat haarUpAdd(const cv::Mat& low,
                          const cv::Mat& hl,
                          const cv::Mat& lh,
                          const cv::Mat& hh)
 {
-    CV_Assert(low.type() == hl.type() && low.type() == lh.type() && low.type() == hh.type());
-    int rows = low.rows;
-    int cols = low.cols;
-    int ch   = low.channels();
+    CV_Assert(low.size() == hl.size() &&
+              hl.size() == lh.size() &&
+              lh.size() == hh.size());
+    CV_Assert(low.type() == hl.type());
+    CV_Assert(low.type() == CV_32FC1 || low.type() == CV_32FC3);
 
-    cv::Mat Lh(rows * 2, cols, low.type());
-    cv::Mat Hh(rows * 2, cols, low.type());
-    Lh.setTo(0);
-    Hh.setTo(0);
+    const int rows = low.rows, cols = low.cols, ch = low.channels();
 
-    // Vertical inverse: reconstruct Lh, Hh pairs
-    for (int y = 0; y < rows; ++y)
-    {
-        const float* l = low.ptr<float>(y);
-        const float* v = lh.ptr<float>(y);  // LH
-        const float* h = hl.ptr<float>(y);  // HL
-        const float* d = hh.ptr<float>(y);  // HH
+    // First, undo the vertical step to get two row streams (l0/l1, h0/h1)
+    cv::Mat l0(rows, cols, low.type()),
+        l1(rows, cols, low.type()),
+        h0(rows, cols, low.type()),
+        h1(rows, cols, low.type());
 
-        float* Lh0 = Lh.ptr<float>(2 * y + 0);
-        float* Lh1 = Lh.ptr<float>(2 * y + 1);
-        float* Hh0 = Hh.ptr<float>(2 * y + 0);
-        float* Hh1 = Hh.ptr<float>(2 * y + 1);
+    for (int y = 0; y < rows; ++y) {
+        const float* L  = low.ptr<float>(y);
+        const float* LH = lh .ptr<float>(y);
+        const float* HL = hl .ptr<float>(y);
+        const float* HH = hh .ptr<float>(y);
 
-        for (int x = 0; x < cols; ++x)
-        {
-            for (int c = 0; c < ch; ++c)
-            {
-                float ll = l[x * ch + c];
-                float lh_ = v[x * ch + c];
-                float hl_ = h[x * ch + c];
-                float hh_ = d[x * ch + c];
+        float* L0 = l0.ptr<float>(y);
+        float* L1 = l1.ptr<float>(y);
+        float* H0 = h0.ptr<float>(y);
+        float* H1 = h1.ptr<float>(y);
 
-                Lh0[x * ch + c] = ll + lh_;
-                Lh1[x * ch + c] = ll - lh_;
-                Hh0[x * ch + c] = hl_ + hh_;
-                Hh1[x * ch + c] = hl_ - hh_;
-            }
+        for (int x = 0; x < cols * ch; ++x) {
+            const float ll = L [x], lh_= LH[x];
+            const float hl_= HL[x], hh_= HH[x];
+            // undo vertical (inverse of 0.5*(a±b) with our scaling)
+            L0[x] = ll + lh_;   // top row from low-band pair
+            L1[x] = ll - lh_;   // bottom row from low-band pair
+            H0[x] = hl_ + hh_;  // top row from high-band pair
+            H1[x] = hl_ - hh_;  // bottom row from high-band pair
         }
     }
 
-    // Horizontal inverse: combine to full res
+    // Now undo the horizontal step by interleaving columns
     cv::Mat out(rows * 2, cols * 2, low.type());
-    out.setTo(0);
+    for (int y = 0; y < rows; ++y) {
+        const float* L0 = l0.ptr<float>(y);
+        const float* L1 = l1.ptr<float>(y);
+        const float* H0 = h0.ptr<float>(y);
+        const float* H1 = h1.ptr<float>(y);
 
-    for (int y = 0; y < rows * 2; ++y)
-    {
-        const float* l = Lh.ptr<float>(y);
-        const float* h = Hh.ptr<float>(y);
-        float* o = out.ptr<float>(y);
-        for (int x = 0; x < cols; ++x)
-        {
-            for (int c = 0; c < ch; ++c)
-            {
-                float a = l[x * ch + c] + h[x * ch + c];
-                float b = l[x * ch + c] - h[x * ch + c];
-                o[(2 * x + 0) * ch + c] = a;
-                o[(2 * x + 1) * ch + c] = b;
+        float* o0 = out.ptr<float>(2 * y + 0); // top output row
+        float* o1 = out.ptr<float>(2 * y + 1); // bottom output row
+
+        for (int x = 0; x < cols; ++x) {
+            for (int c = 0; c < ch; ++c) {
+                const int si = x * ch + c;
+                const int di0 = (2 * x + 0) * ch + c;
+                const int di1 = (2 * x + 1) * ch + c;
+
+                const float a0 = L0[si] + H0[si]; // even column
+                const float b0 = L0[si] - H0[si]; // odd column
+                const float a1 = L1[si] + H1[si];
+                const float b1 = L1[si] - H1[si];
+
+                o0[di0] = a0;
+                o0[di1] = b0;
+                o1[di0] = a1;
+                o1[di1] = b1;
             }
         }
     }
 
-    // Crop if we padded earlier (so size matches original expectations)
-    return out;
+    return out; // contiguous, no internal tiles, full detail preserved
 }
 
 static cv::Mat mag2(const cv::Mat& a, const cv::Mat& b, const cv::Mat& c)
 {
     cv::Mat s; cv::add(a.mul(a), b.mul(b), s); cv::add(s, c.mul(c), s); return s;
 }
+
 } // anon
 
 namespace FSWavelet {
@@ -194,10 +201,23 @@ cv::Mat reconstruct(const Pyramid& pyr)
 {
     CV_Assert(!pyr.empty());
     cv::Mat cur = pyr.back().low.clone();
-    for (int i=(int)pyr.size()-1; i>=0; --i) {
+
+    for (int i = (int)pyr.size() - 1; i >= 0; --i) {
         const Level& L = pyr[i];
-        cur = haarUpAdd(cur, L.hl, L.lh, L.hh);
+
+        cv::Mat up;
+        cv::resize(cur, up, L.low.size(), 0, 0, cv::INTER_LINEAR);
+        cv::Mat recon = haarUpAdd(up, L.hl, L.lh, L.hh);
+
+        // Debug tile visibility
+        cv::Mat dbg;
+        cv::normalize(recon, dbg, 0, 1, cv::NORM_MINMAX);
+        QString path = QString("/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0227/output/fusion_debug/recon_L%1.png").arg(i);
+        FSUtils::debugSaveMat(dbg, path);
+
+        cur = recon.clone();
     }
+
     return cur;
 }
 
