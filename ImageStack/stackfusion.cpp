@@ -454,182 +454,137 @@ bool StackFusion::fusePetteri(const QString &alignedFolderPath,
                               const QString &depthMapPath,
                               const QString &outputPath)
 {
-    QString src = "StackFusion::fusePetteri";
+    const QString src = "StackFusion::fusePetteri";
     emit updateStatus(false, "Running full Petteri wavelet fusion...", src);
     qDebug() << src;
 
     // --- Load aligned stack ------------------------------------------------
     QStringList alignedFiles = QDir(alignedFolderPath)
-                                   .entryList(QStringList() << "*.png" << "*.jpg" << "*.tif", QDir::Files);
+                                   .entryList(QStringList() << "*.png" << "*.jpg" << "*.tif",
+                                              QDir::Files | QDir::Readable, QDir::Name);
     if (alignedFiles.isEmpty()) {
         emit updateStatus(false, "No aligned images found.", src);
         return false;
     }
 
-    qDebug() << src << "a";
-    int count = 0;
-    // Convert aligned images to CV_32F
+    // Convert aligned images to linear CV_32F in [0,1]
     std::vector<cv::Mat> stack32f;
+    stack32f.reserve(alignedFiles.size());
     for (const QString &f : alignedFiles) {
-        cv::Mat img = cv::imread(QDir(alignedFolderPath).filePath(f).toStdString(),
-                                 cv::IMREAD_COLOR);
-        img.convertTo(img, CV_32F, 1.0/255.0);
-        cv::pow(img, 2.2, img);    // convert sRGB→linear
-        stack32f.push_back(img);
-
-        // // debug visual chk
-        // QDir debugDir(QFileInfo(outputPath).dir());
-        // debugDir.mkdir("fusion_debug");
-        // QString c = QString("%1").arg(count++, 3, 10, QChar('0'));
-        // QString fPath = "fusion_debug/aligned_sRGB→linear_" + c + ".png";
-        // FSUtils::debugSaveMat(img, debugDir.filePath(fPath));
+        cv::Mat img8 = cv::imread(QDir(alignedFolderPath).filePath(f).toStdString(),
+                                  cv::IMREAD_COLOR);                 // BGR 8U
+        if (img8.empty()) continue;
+        cv::Mat img32;  img8.convertTo(img32, CV_32F, 1.0/255.0);    // [0,1] sRGB
+        cv::pow(img32, 2.2, img32);                                  // sRGB → linear
+        stack32f.push_back(std::move(img32));
     }
-
     const int n = (int)stack32f.size();
     if (n == 0) return false;
 
-    // Build validity masks: 1.0 where pixel is real, 0.0 where warp padding
-    std::vector<cv::Mat> validFull;
-    validFull.reserve(n);
+    // --- Validity masks (1.0 valid, 0.0 padded) ---------------------------
+    std::vector<cv::Mat> validFull; validFull.reserve(n);
     for (const cv::Mat& im : stack32f) {
         cv::Mat gray, v;
-        if (im.channels() == 3) {
-            cv::cvtColor(im, gray, cv::COLOR_BGR2GRAY);
-        } else {
-            gray = im;
-        }
-        // Treat exact/near-zero as invalid (border). Use tiny epsilon; real dark pixels aren’t exact 0.
-        cv::compare(gray, 1e-8, v, cv::CMP_GT);   // v is 0/255 (8U)
-        v.convertTo(v, CV_32F, 1.0/255.0);        // 0.0 / 1.0
-        // Optional: erode a touch to avoid fringe pixels from interpolation
+        if (im.channels() == 3) cv::cvtColor(im, gray, cv::COLOR_BGR2GRAY);
+        else                    gray = im;
+        cv::compare(gray, 1e-8, v, cv::CMP_GT);  // 0/255
+        v.convertTo(v, CV_32F, 1.0/255.0);       // 0.0 / 1.0
         cv::erode(v, v, cv::Mat(), cv::Point(-1,-1), 1);
-        validFull.push_back(v);                   // CV_32F, same size as stack32f[i]
+        validFull.push_back(std::move(v));
     }
 
-    qDebug() << src << "b";
-    // --- Load Gaussian-fit maps (μ, σ, A) ---------------------------------
+    // --- Load μ/σ/A (gaussian fit) ---------------------------------------
     QFileInfo depthInfo(depthMapPath);
     QDir depthDir = depthInfo.dir();
     cv::Mat mu  = FSUtils::loadFloatEXR(depthDir.filePath("gauss_mean.exr"));
     cv::Mat sig = FSUtils::loadFloatEXR(depthDir.filePath("gauss_dev.exr"));
     cv::Mat amp = FSUtils::loadFloatEXR(depthDir.filePath("gauss_amp.exr"));
 
-    // Fallback if EXR missing: derive something reasonable so we never get holes
     if (mu.empty()) {
-        // Use depth_index if needed: 0..(n-1)
-        cv::Mat idx8 = cv::imread(depthDir.filePath("depth_index.png").toStdString(), cv::IMREAD_GRAYSCALE);
+        cv::Mat idx8 = cv::imread(depthDir.filePath("depth_index.png").toStdString(),
+                                  cv::IMREAD_GRAYSCALE);
         if (!idx8.empty()) idx8.convertTo(mu, CV_32F, float(n-1)/255.0f);
     }
-    if (sig.empty()) { sig = cv::Mat(mu.size(), CV_32F, cv::Scalar(1.0f)); } // broad default
-    if (amp.empty()) { amp = cv::Mat(mu.size(), CV_32F, cv::Scalar(1.0f)); } // neutral confidence
-
+    if (sig.empty()) sig = cv::Mat(mu.size(), CV_32F, cv::Scalar(1.0f));
+    if (amp.empty()) amp = cv::Mat(mu.size(), CV_32F, cv::Scalar(1.0f));
     if (mu.empty() || sig.empty()) {
         emit updateStatus(false, "Missing μ/σ maps, aborting fusion.", src);
         return false;
     }
 
-    qDebug() << src << "c";
-
-    // --- Ensure all guidance maps match the stack resolution -----------------
-    // cv::Size fullSize = stack32f[0].size();
-
-    auto ensureSameSize = [&](cv::Mat &m, const cv::Size &target) {
+    // --- Ensure μ/σ/A match stack size & are 32F single-channel ----------
+    const cv::Size fullSize = stack32f[0].size();
+    auto ensureSameSize = [&](cv::Mat &m) {
         if (m.empty()) return;
-        if (m.channels() > 1)
-            cv::cvtColor(m, m, cv::COLOR_BGR2GRAY);
-        if (m.size() != target)
-            cv::resize(m, m, target, 0, 0, cv::INTER_LINEAR);
-        if (m.type() != CV_32F)
-            m.convertTo(m, CV_32F, 1.0 / 255.0);
+        if (m.channels() > 1) cv::cvtColor(m, m, cv::COLOR_BGR2GRAY);
+        if (m.size() != fullSize) cv::resize(m, m, fullSize, 0, 0, cv::INTER_LINEAR);
+        if (m.type() != CV_32F)   m.convertTo(m, CV_32F, 1.0/255.0);
     };
+    ensureSameSize(mu);
+    ensureSameSize(sig);
+    ensureSameSize(amp);
 
-    cv::Size fullSize = stack32f[0].size();
-    ensureSameSize(mu,  fullSize);
-    ensureSameSize(sig, fullSize);
-    ensureSameSize(amp, fullSize);
+    // --- Fuse in linear space --------------------------------------------
+    cv::Mat fused_linear = FSWavelet::fuseWavelet(stack32f, mu, sig, amp, 4);
 
-    qDebug() << src << "c1";
-    // temp debugging:
-    double muMin,muMax, sMin,sMax, aMin,aMax;
-    qDebug() << src << "c2";
-    cv::minMaxLoc(mu,  &muMin,&muMax);
-    qDebug() << src << "c3";
-    cv::minMaxLoc(sig, &sMin, &sMax);
-    qDebug() << src << "c4";
-    cv::minMaxLoc(amp, &aMin, &aMax);
-    qDebug() << "mu range:" << muMin << muMax << "sigma range:" << sMin << sMax << "amp range:" << aMin << aMax << "n:" << n;
+    // Safety clamp (still linear)
+    cv::patchNaNs(fused_linear, 0.0);
+    cv::max(fused_linear, 0.0f, fused_linear);
+    cv::min(fused_linear, 1.0f, fused_linear);
 
-    qDebug() << "stack image size:" << stack32f[0].cols << "x" << stack32f[0].rows;
-    qDebug() << "mu size:" << mu.cols << "x" << mu.rows;
-    qDebug() << "sig size:" << sig.cols << "x" << sig.rows;
-    qDebug() << "amp size:" << amp.cols << "x" << amp.rows;
-    qDebug() << "mu channels:" << mu.channels()
-             << "sig channels:" << sig.channels()
-             << "amp channels:" << amp.channels();
+    // --- Display conversion: linear → sRGB (fixes the “too dark” look) ---
+    cv::Mat fused_srgb;
+    cv::pow(fused_linear, 1.0/2.2, fused_srgb);
 
-    // --- Wavelet fusion ----------------------------------------------------
-    cv::Mat fused32f = FSWavelet::fuseWavelet(stack32f, mu, sig, amp, 4);
-    cv::Mat out8u; fused32f.convertTo(out8u, CV_8U, 255.0);
+    // (Optional) tiny guard for numeric drift
+    cv::max(fused_srgb, 0.0f, fused_srgb);
+    cv::min(fused_srgb, 1.0f, fused_srgb);
 
-    qDebug() << src << "d";
-    // show for debugging
-    bool debugFusedStack = true;
-    if (debugFusedStack) {
-        QDir debugDir(QFileInfo(outputPath).dir());
-        debugDir.mkdir("fusion_debug");
+    // --- Debug saves ------------------------------------------------------
+    {
+        QDir outDir(QFileInfo(outputPath).dir());
+        outDir.mkdir("fusion_debug");
 
-        qDebug() << src << "e";
-        // Save weight maps and per-level detail magnitudes
-        FSUtils::debugSaveMat(mu,  debugDir.filePath("fusion_debug/mu.png"));
-        FSUtils::debugSaveMat(sig, debugDir.filePath("fusion_debug/sigma.png"));
-        if (!amp.empty())
-            FSUtils::debugSaveMat(amp, debugDir.filePath("fusion_debug/amp.png"));
+        FSUtils::debugSaveMat(mu,  outDir.filePath("fusion_debug/mu.png"));
+        FSUtils::debugSaveMat(sig, outDir.filePath("fusion_debug/sigma.png"));
+        FSUtils::debugSaveMat(amp, outDir.filePath("fusion_debug/amp.png"));
 
-        qDebug() << src << "f";
-        // Optional: per-level energy or coefficient magnitudes
-        auto pyrs = FSWavelet::decompose(stack32f.front(), 4);
-        for (int i = 0; i < (int)pyrs.size(); ++i) {
-            cv::Mat mag = cv::abs(pyrs[i].lh) + cv::abs(pyrs[i].hl) + cv::abs(pyrs[i].hh);
-            FSUtils::debugSaveMat(mag, debugDir.filePath(QString("fusion_debug/level_%1_mag.png").arg(i)));
+        // Save a pyramid energy preview (from the first slice) just as before
+        auto pyrs0 = FSWavelet::decompose(stack32f.front(), 4);
+        for (int i = 0; i < (int)pyrs0.size(); ++i) {
+            cv::Mat mag = cv::abs(pyrs0[i].lh) + cv::abs(pyrs0[i].hl) + cv::abs(pyrs0[i].hh);
+            FSUtils::debugSaveMat(mag, outDir.filePath(QString("fusion_debug/level_%1_mag.png").arg(i)));
         }
 
-        FSUtils::debugSaveMat(fused32f, debugDir.filePath("fusion_debug/fused32f.png"));
+        // Save both linear EXR and display PNG for inspection
+        FSUtils::saveFloatEXR(outDir.filePath("fusion_debug/fused_linear.exr"), fused_linear);
+        FSUtils::debugSaveMat(fused_srgb, outDir.filePath("fusion_debug/fused_display.png"));
     }
 
-    qDebug() << src << "g";
-
-    // --- Convert to 8-bit for saving --------------------------------------
-    double minVal, maxVal;
-    cv::minMaxLoc(fused32f, &minVal, &maxVal);
-    if (!cv::checkRange(fused32f, true, nullptr, 0.0, 1.0))
-        qWarning() << "⚠️ fused32f contains invalid values: " << minVal << maxVal;
-    cv::Mat out8U;
-    fused32f.convertTo(out8U, CV_8U, 255.0);
-
-    // --- Save --------------------------------------------------------------
+    // --- Save final result -------------------------------------------------
+    // Auto-increment filename if exists
     QDir outDir = QFileInfo(outputPath).dir();
     QDir().mkpath(outDir.absolutePath());
-
-    // Auto-increment filename if already exists
     QString base = QFileInfo(outputPath).completeBaseName();
     QString ext  = QFileInfo(outputPath).suffix();
     QString path = outputPath;
     int version = 1;
-
     while (QFile::exists(path)) {
-        path = outDir.filePath(QString("%1_%2.%3")
-                                   .arg(base)
-                                   .arg(version++)
-                                   .arg(ext));
+        path = outDir.filePath(QString("%1_%2.%3").arg(base).arg(version++).arg(ext));
     }
 
+    // Write the visually-correct (sRGB) PNG/JPG/TIF
+    cv::Mat out8U; fused_srgb.convertTo(out8U, CV_8U, 255.0);
     bool saved = cv::imwrite(path.toStdString(), out8U);
 
-    emit updateStatus(false,
-                      QString("Petteri fusion complete — saved %1").arg(path),
-                      src);
-    qDebug() << src << QString("Petteri fusion complete — saved %1").arg(path);
+    // Also drop a linear EXR with the same base name (nice to keep around)
+    {
+        QString exrPath = QFileInfo(path).dir().filePath(QFileInfo(path).completeBaseName() + "_linear.exr");
+        FSUtils::saveFloatEXR(exrPath, fused_linear);
+    }
 
+    emit updateStatus(false, QString("Petteri fusion complete — saved %1").arg(path), src);
+    qDebug() << src << QString("Petteri fusion complete — saved %1").arg(path);
     return saved;
 }
 
