@@ -68,13 +68,15 @@ QMap<int, QImage> FocusMeasure::computeFocusMaps(const QMap<int, QImage> &stack)
 
         maps.insert(it.key(), map);
 
+        qDebug() << src << saveResults << !outputFolder.isEmpty();
+
         if (saveResults && !outputFolder.isEmpty()) {
             QDir dir(outputFolder);
             if (!dir.exists()) dir.mkpath(outputFolder);
-            const QString outPath =
-                dir.filePath(QString("focus_raw_%1.png").
-                             arg(count, 3, 10, QChar('0'))); // PNG avoids JPEG artifacts on masks
+            QString fName = QString("focus_raw_%1.png").arg(count, 3, 10, QChar('0'));
+            const QString outPath = dir.filePath(fName); // PNG avoids JPEG artifacts on masks
             saveFocusImage(map, outPath);
+            qDebug() << src << "Saved" << fName << outPath;
         }
     }
 
@@ -309,31 +311,59 @@ QImage FocusMeasure::focusMapZerene(const QImage &gray)
 
 QImage FocusMeasure::focusMapPetteri(const QImage &input)
 {
-    // Convert QImage → cv::Mat (float gray)
+    QString src = "FocusMeasure::focusMapPetteri";
+
     cv::Mat color = FSUtils::qimageToMat(input);
-    cv::Mat gray; cv::cvtColor(color, gray, cv::COLOR_BGR2GRAY);
-    gray.convertTo(gray, CV_32F, 1.0 / 255.0);
+    color.convertTo(color, CV_32F, 1.0 / 255.0);
 
-    // Sobel X & Y gradients
-    cv::Mat sx, sy, mag2;
-    cv::Sobel(gray, sx, CV_32F, 1, 0);
-    cv::Sobel(gray, sy, CV_32F, 0, 1);
-    cv::multiply(sx, sx, sx);
-    cv::multiply(sy, sy, sy);
-    cv::add(sx, sy, mag2);
+    // --- Wavelet focus energy -------------------------------------------
+    auto pyr = FSWavelet::decompose(color, 4);
+    cv::Mat fm = FSWavelet::focusEnergy(pyr);
 
-    // Petteri’s soft Gaussian blur for stability
-    const float gaussRadius = 1.0f;
-    if (gaussRadius > 0.0f) {
-        int w = int(gaussRadius * 4) + 1;
-        cv::GaussianBlur(mag2, mag2, cv::Size(w, w), gaussRadius, gaussRadius, cv::BORDER_REFLECT);
+    // show for debugging
+    bool debugFocusStack = true;
+    if (debugFocusStack) {
+        QDir debugDir(QFileInfo(outputFolder).dir());
+        debugDir.mkdir("focus_debug");
+        QString base = debugDir.filePath("focus_debug/focus_wavelet");
+
+        for (int i = 0; i < (int)pyr.size(); ++i) {
+            FSUtils::debugSaveMat(pyr[i].lh, QString("%1_L%2_lh.png").arg(base).arg(i));
+            FSUtils::debugSaveMat(pyr[i].hl, QString("%1_L%2_hl.png").arg(base).arg(i));
+            FSUtils::debugSaveMat(pyr[i].hh, QString("%1_L%2_hh.png").arg(base).arg(i));
+        }
+        FSUtils::debugSaveMat(fm, base + "_energy.png");
     }
 
-    // Normalize to 8-bit range for preview
-    cv::Mat norm; cv::normalize(mag2, norm, 0, 255, cv::NORM_MINMAX);
-    norm.convertTo(norm, CV_8U);
+    // --- Normalize and return -------------------------------------------
+    cv::Mat fm8 = FSUtils::normalizeTo8U(fm);
+    return FSUtils::matToQImage(fm8);
 
-    return FSUtils::matToQImage(FSUtils::normalizeTo8U(mag2));
+    // // Convert QImage → cv::Mat (float gray)
+    // cv::Mat color = FSUtils::qimageToMat(input);
+    // cv::Mat gray; cv::cvtColor(color, gray, cv::COLOR_BGR2GRAY);
+    // gray.convertTo(gray, CV_32F, 1.0 / 255.0);
+
+    // // Sobel X & Y gradients
+    // cv::Mat sx, sy, mag2;
+    // cv::Sobel(gray, sx, CV_32F, 1, 0);
+    // cv::Sobel(gray, sy, CV_32F, 0, 1);
+    // cv::multiply(sx, sx, sx);
+    // cv::multiply(sy, sy, sy);
+    // cv::add(sx, sy, mag2);
+
+    // // Petteri’s soft Gaussian blur for stability
+    // const float gaussRadius = 1.0f;
+    // if (gaussRadius > 0.0f) {
+    //     int w = int(gaussRadius * 4) + 1;
+    //     cv::GaussianBlur(mag2, mag2, cv::Size(w, w), gaussRadius, gaussRadius, cv::BORDER_REFLECT);
+    // }
+
+    // // Normalize to 8-bit range for preview
+    // cv::Mat norm; cv::normalize(mag2, norm, 0, 255, cv::NORM_MINMAX);
+    // norm.convertTo(norm, CV_8U);
+
+    // return FSUtils::matToQImage(FSUtils::normalizeTo8U(mag2));
 }
 
 void FocusMeasure::saveFocusImage(const QImage &map, const QString &path)

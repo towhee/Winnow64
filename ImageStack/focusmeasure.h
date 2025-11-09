@@ -11,7 +11,11 @@
 #include <QMetaEnum>
 #include <QThread>
 #include <opencv2/opencv.hpp>
-#include "focusstackutilities.h"
+#include <opencv2/imgproc.hpp>
+
+#include "ImageStack/focusstackutilities.h"
+#include "ImageStack/focusstackconstants.h"
+#include "ImageStack/focuswavelet.h"
 
 class FocusMeasure : public QObject
 {

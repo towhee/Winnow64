@@ -1781,7 +1781,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         if (h > iconRect.height()) h = iconRect.height();
 
         QString whichScale = hScale < vScale ? "hScale" : "vScale";
-        // /*
+        /*
         qDebug() << "IconView::zoomCursor"
                  << whichScale
                  << "ivW =" << ivW

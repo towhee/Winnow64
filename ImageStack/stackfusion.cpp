@@ -3,6 +3,7 @@
 StackFusion::StackFusion(QObject *parent)
     : QObject(parent)
 {
+    // cv::setNumThreads(1);
 }
 
 bool StackFusion::fuse(Method method,
@@ -11,38 +12,48 @@ bool StackFusion::fuse(Method method,
                        const QString &outputFolderPath)
 {
     QString src = "StackFusion::fuse";
+    const QString methodName =
+        QMetaEnum::fromType<Method>().valueToKey(method);
+
     emit updateStatus(false,
-                      QString("Starting fusion (%1)...")
-                          .arg(QMetaEnum::fromType<Method>().valueToKey(method)),
+                      QString("Starting fusion (%1)...").arg(methodName),
                       src);
 
     QDir().mkpath(outputFolderPath);
     QString outFile;
-
     bool ok = false;
+
     switch (method) {
     case Naive:
         outFile = outputFolderPath + "/fused_naive.png";
         ok = fuseNaive(depthMapPath, alignedFolderPath, outFile);
         break;
+
     case PMax:
         outFile = outputFolderPath + "/fused_pmax.png";
         ok = fusePMax(alignedFolderPath, outFile);
         break;
+
     case PMax1:
         outFile = outputFolderPath + "/fused_pmax1.png";
         ok = fusePMax(alignedFolderPath, outFile);
         break;
+
     case PMax2:
         outFile = outputFolderPath + "/fused_pmax2.png";
         ok = fusePMax(alignedFolderPath, outFile);
         break;
+
+    case Petteri:
+        outFile = outputFolderPath + "/fused_petteri.png";
+        ok = fusePetteri(alignedFolderPath, depthMapPath, outFile);
+        break;
     }
 
-    if (ok)
-        emit updateStatus(false, QString("Fusion complete: %1").arg(outFile), src);
-    else
-        emit updateStatus(false, QString("Fusion failed (%1)").arg(outFile), src);
+    emit updateStatus(false,
+                      ok ? QString("Fusion complete: %1").arg(outFile)
+                         : QString("Fusion failed: %1").arg(outFile),
+                      src);
 
     emit finished(outputFolderPath);
     return ok;
@@ -434,3 +445,442 @@ bool StackFusion::fusePMax2(const QString &alignedFolderPath,
                       src);
     return saved;
 }
+
+// ---------------------------------------------------------------------------
+// Petteri fusion — wavelet blend
+// ---------------------------------------------------------------------------
+
+bool StackFusion::fusePetteri(const QString &alignedFolderPath,
+                              const QString &depthMapPath,
+                              const QString &outputPath)
+{
+    QString src = "StackFusion::fusePetteri";
+    emit updateStatus(false, "Running full Petteri wavelet fusion...", src);
+    qDebug() << src;
+
+    // --- Load aligned stack ------------------------------------------------
+    QStringList alignedFiles = QDir(alignedFolderPath)
+                                   .entryList(QStringList() << "*.png" << "*.jpg" << "*.tif", QDir::Files);
+    if (alignedFiles.isEmpty()) {
+        emit updateStatus(false, "No aligned images found.", src);
+        return false;
+    }
+
+    qDebug() << src << "a";
+    int count = 0;
+    // Convert aligned images to CV_32F
+    std::vector<cv::Mat> stack32f;
+    for (const QString &f : alignedFiles) {
+        cv::Mat img = cv::imread(QDir(alignedFolderPath).filePath(f).toStdString(),
+                                 cv::IMREAD_COLOR);
+        img.convertTo(img, CV_32F, 1.0/255.0);
+        cv::pow(img, 2.2, img);    // convert sRGB→linear
+        stack32f.push_back(img);
+
+        // // debug visual chk
+        // QDir debugDir(QFileInfo(outputPath).dir());
+        // debugDir.mkdir("fusion_debug");
+        // QString c = QString("%1").arg(count++, 3, 10, QChar('0'));
+        // QString fPath = "fusion_debug/aligned_sRGB→linear_" + c + ".png";
+        // FSUtils::debugSaveMat(img, debugDir.filePath(fPath));
+    }
+
+    const int n = (int)stack32f.size();
+    if (n == 0) return false;
+
+    // Build validity masks: 1.0 where pixel is real, 0.0 where warp padding
+    std::vector<cv::Mat> validFull;
+    validFull.reserve(n);
+    for (const cv::Mat& im : stack32f) {
+        cv::Mat gray, v;
+        if (im.channels() == 3) {
+            cv::cvtColor(im, gray, cv::COLOR_BGR2GRAY);
+        } else {
+            gray = im;
+        }
+        // Treat exact/near-zero as invalid (border). Use tiny epsilon; real dark pixels aren’t exact 0.
+        cv::compare(gray, 1e-8, v, cv::CMP_GT);   // v is 0/255 (8U)
+        v.convertTo(v, CV_32F, 1.0/255.0);        // 0.0 / 1.0
+        // Optional: erode a touch to avoid fringe pixels from interpolation
+        cv::erode(v, v, cv::Mat(), cv::Point(-1,-1), 1);
+        validFull.push_back(v);                   // CV_32F, same size as stack32f[i]
+    }
+
+    qDebug() << src << "b";
+    // --- Load Gaussian-fit maps (μ, σ, A) ---------------------------------
+    QFileInfo depthInfo(depthMapPath);
+    QDir depthDir = depthInfo.dir();
+    cv::Mat mu  = FSUtils::loadFloatEXR(depthDir.filePath("gauss_mean.exr"));
+    cv::Mat sig = FSUtils::loadFloatEXR(depthDir.filePath("gauss_dev.exr"));
+    cv::Mat amp = FSUtils::loadFloatEXR(depthDir.filePath("gauss_amp.exr"));
+
+    // Fallback if EXR missing: derive something reasonable so we never get holes
+    if (mu.empty()) {
+        // Use depth_index if needed: 0..(n-1)
+        cv::Mat idx8 = cv::imread(depthDir.filePath("depth_index.png").toStdString(), cv::IMREAD_GRAYSCALE);
+        if (!idx8.empty()) idx8.convertTo(mu, CV_32F, float(n-1)/255.0f);
+    }
+    if (sig.empty()) { sig = cv::Mat(mu.size(), CV_32F, cv::Scalar(1.0f)); } // broad default
+    if (amp.empty()) { amp = cv::Mat(mu.size(), CV_32F, cv::Scalar(1.0f)); } // neutral confidence
+
+    if (mu.empty() || sig.empty()) {
+        emit updateStatus(false, "Missing μ/σ maps, aborting fusion.", src);
+        return false;
+    }
+
+    qDebug() << src << "c";
+
+    // --- Ensure all guidance maps match the stack resolution -----------------
+    // cv::Size fullSize = stack32f[0].size();
+
+    auto ensureSameSize = [&](cv::Mat &m, const cv::Size &target) {
+        if (m.empty()) return;
+        if (m.channels() > 1)
+            cv::cvtColor(m, m, cv::COLOR_BGR2GRAY);
+        if (m.size() != target)
+            cv::resize(m, m, target, 0, 0, cv::INTER_LINEAR);
+        if (m.type() != CV_32F)
+            m.convertTo(m, CV_32F, 1.0 / 255.0);
+    };
+
+    cv::Size fullSize = stack32f[0].size();
+    ensureSameSize(mu,  fullSize);
+    ensureSameSize(sig, fullSize);
+    ensureSameSize(amp, fullSize);
+
+    qDebug() << src << "c1";
+    // temp debugging:
+    double muMin,muMax, sMin,sMax, aMin,aMax;
+    qDebug() << src << "c2";
+    cv::minMaxLoc(mu,  &muMin,&muMax);
+    qDebug() << src << "c3";
+    cv::minMaxLoc(sig, &sMin, &sMax);
+    qDebug() << src << "c4";
+    cv::minMaxLoc(amp, &aMin, &aMax);
+    qDebug() << "mu range:" << muMin << muMax << "sigma range:" << sMin << sMax << "amp range:" << aMin << aMax << "n:" << n;
+
+    qDebug() << "stack image size:" << stack32f[0].cols << "x" << stack32f[0].rows;
+    qDebug() << "mu size:" << mu.cols << "x" << mu.rows;
+    qDebug() << "sig size:" << sig.cols << "x" << sig.rows;
+    qDebug() << "amp size:" << amp.cols << "x" << amp.rows;
+    qDebug() << "mu channels:" << mu.channels()
+             << "sig channels:" << sig.channels()
+             << "amp channels:" << amp.channels();
+
+    // --- Wavelet fusion ----------------------------------------------------
+    cv::Mat fused32f = FSWavelet::fuseWavelet(stack32f, mu, sig, amp, 4);
+    cv::Mat out8u; fused32f.convertTo(out8u, CV_8U, 255.0);
+
+    qDebug() << src << "d";
+    // show for debugging
+    bool debugFusedStack = true;
+    if (debugFusedStack) {
+        QDir debugDir(QFileInfo(outputPath).dir());
+        debugDir.mkdir("fusion_debug");
+
+        qDebug() << src << "e";
+        // Save weight maps and per-level detail magnitudes
+        FSUtils::debugSaveMat(mu,  debugDir.filePath("fusion_debug/mu.png"));
+        FSUtils::debugSaveMat(sig, debugDir.filePath("fusion_debug/sigma.png"));
+        if (!amp.empty())
+            FSUtils::debugSaveMat(amp, debugDir.filePath("fusion_debug/amp.png"));
+
+        qDebug() << src << "f";
+        // Optional: per-level energy or coefficient magnitudes
+        auto pyrs = FSWavelet::decompose(stack32f.front(), 4);
+        for (int i = 0; i < (int)pyrs.size(); ++i) {
+            cv::Mat mag = cv::abs(pyrs[i].lh) + cv::abs(pyrs[i].hl) + cv::abs(pyrs[i].hh);
+            FSUtils::debugSaveMat(mag, debugDir.filePath(QString("fusion_debug/level_%1_mag.png").arg(i)));
+        }
+
+        FSUtils::debugSaveMat(fused32f, debugDir.filePath("fusion_debug/fused32f.png"));
+    }
+
+    qDebug() << src << "g";
+
+    // --- Convert to 8-bit for saving --------------------------------------
+    double minVal, maxVal;
+    cv::minMaxLoc(fused32f, &minVal, &maxVal);
+    if (!cv::checkRange(fused32f, true, nullptr, 0.0, 1.0))
+        qWarning() << "⚠️ fused32f contains invalid values: " << minVal << maxVal;
+    cv::Mat out8U;
+    fused32f.convertTo(out8U, CV_8U, 255.0);
+
+    // --- Save --------------------------------------------------------------
+    QDir outDir = QFileInfo(outputPath).dir();
+    QDir().mkpath(outDir.absolutePath());
+
+    // Auto-increment filename if already exists
+    QString base = QFileInfo(outputPath).completeBaseName();
+    QString ext  = QFileInfo(outputPath).suffix();
+    QString path = outputPath;
+    int version = 1;
+
+    while (QFile::exists(path)) {
+        path = outDir.filePath(QString("%1_%2.%3")
+                                   .arg(base)
+                                   .arg(version++)
+                                   .arg(ext));
+    }
+
+    bool saved = cv::imwrite(path.toStdString(), out8U);
+
+    emit updateStatus(false,
+                      QString("Petteri fusion complete — saved %1").arg(path),
+                      src);
+    qDebug() << src << QString("Petteri fusion complete — saved %1").arg(path);
+
+    return saved;
+}
+
+/* Pre focuswavelet addition
+bool StackFusion::fusePetteri(const QString &alignedFolderPath,
+                              const QString &depthMapPath,
+                              const QString &outputPath)
+{
+    QString src = "StackFusion::fusePetteri";
+    emit updateStatus(false, "Running Petteri multi-scale fusion...", src);
+
+    // --- Load auxiliary maps ------------------------------------------------
+    QFileInfo di(depthMapPath);  QDir dd = di.dir();
+    cv::Mat amp = cv::imread(dd.filePath("gauss_amp.png").toStdString(),  cv::IMREAD_GRAYSCALE);
+    cv::Mat dev = cv::imread(dd.filePath("gauss_dev.png").toStdString(),  cv::IMREAD_GRAYSCALE);
+    cv::Mat mu  = cv::imread(dd.filePath("gauss_mean.png").toStdString(), cv::IMREAD_GRAYSCALE);
+
+    // --- Load stack ---------------------------------------------------------
+    QStringList fns = QDir(alignedFolderPath).entryList(QStringList() << "*.tif" << "*.png" << "*.jpg", QDir::Files);
+    if (fns.isEmpty()) return false;
+
+    std::vector<cv::Mat> stack;
+    for (auto &fn : fns) {
+        cv::Mat img = cv::imread(QDir(alignedFolderPath).filePath(fn).toStdString());
+        if (!img.empty()) {
+            img.convertTo(img, CV_32F, 1.0 / 255.0);
+            stack.push_back(img);
+        }
+    }
+    const int n = (int)stack.size(), h = stack[0].rows, w = stack[0].cols;
+
+    // --- Normalize aux maps -------------------------------------------------
+    if (!amp.empty()) amp.convertTo(amp, CV_32F, 1.0 / 255.0);
+    if (!dev.empty()) dev.convertTo(dev, CV_32F, 1.0 / 255.0);
+    if (!mu.empty())  mu.convertTo(mu,  CV_32F, (float)n / 255.0f);
+
+    cv::Mat weightBase(h, w, CV_32F, cv::Scalar(1));
+    if (!amp.empty() && !dev.empty()) {
+        weightBase = amp / (dev.mul(dev) + 1e-3f);              // stronger σ penalty
+        cv::normalize(weightBase, weightBase, 0, 1, cv::NORM_MINMAX);
+    }
+    cv::GaussianBlur(weightBase, weightBase, cv::Size(5,5), 0.8);
+
+    // --- Accumulators -------------------------------------------------------
+    cv::Mat fused(h, w, CV_32FC3, cv::Scalar(0,0,0));
+    cv::Mat sumW(h, w, CV_32F, cv::Scalar(0));
+
+    // --- Multi-scale fusion -------------------------------------------------
+    for (int i = 0; i < n; ++i) {
+        emit progress("Petteri fusion", i + 1, n);
+
+        cv::Mat gray; cv::cvtColor(stack[i], gray, cv::COLOR_BGR2GRAY);
+
+        // Base gradient energy
+        cv::Mat gx, gy, gradE;
+        cv::Sobel(gray, gx, CV_32F, 1, 0, 3);
+        cv::Sobel(gray, gy, CV_32F, 0, 1, 3);
+        cv::magnitude(gx, gy, gradE);
+        double maxE; cv::minMaxLoc(gradE, nullptr, &maxE);
+        if (maxE > 0) gradE /= maxE;
+
+        // Fine-scale Laplacian energy
+        cv::Mat lap, fineE;
+        cv::Laplacian(gray, lap, CV_32F, 3);
+        cv::pow(lap, 2, fineE);
+        cv::normalize(fineE, fineE, 0, 1, cv::NORM_MINMAX);
+
+        // Medium band (Gaussian-down→up)
+        cv::Mat small, medE;
+        cv::pyrDown(gray, small);
+        cv::pyrUp(small, medE, gray.size());
+        medE = cv::abs(gray - medE);
+        cv::normalize(medE, medE, 0, 1, cv::NORM_MINMAX);
+
+        // Combine energy bands (Petteri-like weights)
+        cv::Mat energy = 0.5f*gradE + 0.3f*fineE + 0.2f*medE;
+
+        // Depth-consistency gate
+        cv::Mat gate(h, w, CV_32F, cv::Scalar(1.0f));
+        if (!mu.empty() && !dev.empty()) {
+            cv::Mat diff = cv::abs(mu - float(i));
+            cv::exp(- (diff.mul(diff)) / (2.0 * (dev + 1e-3f).mul(dev + 1e-3f)), gate);
+        }
+
+        // Total weight
+        cv::Mat wgt = energy.mul(weightBase).mul(gate);
+        cv::threshold(wgt, wgt, 0, 0, cv::THRESH_TOZERO);
+        cv::patchNaNs(wgt, 0.0f);
+        wgt += 1e-3f;
+
+        // Accumulate
+        std::vector<cv::Mat> ch(3);
+        cv::split(stack[i], ch);
+        for (int c = 0; c < 3; ++c) ch[c] = ch[c].mul(wgt);
+        cv::Mat merged; cv::merge(ch, merged);
+
+        fused += merged;
+        sumW += wgt;
+    }
+
+    // --- Fill small holes (morph fallback) ----------------------------------
+    cv::Mat holes = (sumW <= 1e-6f);
+    if (cv::countNonZero(holes))
+    {
+        cv::Mat filled = sumW.clone();
+        cv::dilate(filled, filled, cv::Mat(), cv::Point(-1,-1), 3);
+        cv::GaussianBlur(filled, filled, cv::Size(5,5), 0);
+        sumW = cv::max(sumW, filled);
+    }
+
+    // --- Normalize & save ---------------------------------------------------
+    cv::Mat denom; cv::max(sumW, 1e-6f, denom);
+    cv::Mat denom3; cv::merge(std::vector<cv::Mat>{denom,denom,denom}, denom3);
+    cv::divide(fused, denom3, fused);
+
+    cv::Mat out8U; fused.convertTo(out8U, CV_8U, 255.0);
+    cv::imwrite(outputPath.toStdString(), out8U);
+
+    // optional debug
+    cv::imwrite(dd.filePath("sumW.png").toStdString(), sumW*255);
+    return true;
+}
+*/
+
+/* Before debugging patch
+bool StackFusion::fusePetteri(const QString &alignedFolderPath,
+                              const QString &depthMapPath,
+                              const QString &outputPath)
+{
+    QString src = "StackFusion::fusePetteri";
+    emit updateStatus(false, "Running Petteri fusion (wavelet/consistency)...", src);
+    qDebug() << src << outputPath;
+
+    // --- Locate auxiliary maps --------------------------------------------
+    QFileInfo depthInfo(depthMapPath);
+    QDir depthDir = depthInfo.dir();
+    QString confPath   = depthDir.filePath("confidence_mask.png");
+    QString ampPath    = depthDir.filePath("gauss_amp.png");
+    QString devPath    = depthDir.filePath("gauss_dev.png");
+
+    cv::Mat conf, amp, dev;
+    if (QFile::exists(confPath)) conf = cv::imread(confPath.toStdString(), cv::IMREAD_GRAYSCALE);
+    if (QFile::exists(ampPath))  amp  = cv::imread(ampPath.toStdString(),  cv::IMREAD_GRAYSCALE);
+    if (QFile::exists(devPath))  dev  = cv::imread(devPath.toStdString(),  cv::IMREAD_GRAYSCALE);
+
+    // --- Load aligned stack -----------------------------------------------
+    QStringList alignedFiles =
+        QDir(alignedFolderPath).entryList(QStringList() << "*.png" << "*.jpg" << "*.tif", QDir::Files);
+    if (alignedFiles.isEmpty()) {
+        emit updateStatus(false, "No aligned images found.", src);
+        return false;
+    }
+
+    std::vector<cv::Mat> stack;
+    for (const QString &f : alignedFiles) {
+        cv::Mat img = cv::imread(QDir(alignedFolderPath).filePath(f).toStdString());
+        if (img.empty()) continue;
+        img.convertTo(img, CV_32F, 1.0 / 255.0);
+        stack.push_back(img);
+    }
+
+    const int n = (int)stack.size();
+    if (n == 0) return false;
+
+    int h = stack[0].rows;
+    int w = stack[0].cols;
+
+    // --- Normalize auxiliary maps to float [0..1] --------------------------
+    if (!conf.empty()) conf.convertTo(conf, CV_32F, 1.0 / 255.0);
+    if (!amp.empty())  amp.convertTo(amp,  CV_32F, 1.0 / 255.0);
+    if (!dev.empty())  dev.convertTo(dev,  CV_32F, 1.0 / 255.0);
+
+    // --- Build combined confidence weight map ------------------------------
+    cv::Mat weightBase;
+    if (!conf.empty()) {
+        weightBase = conf.clone();
+    } else if (!amp.empty() && !dev.empty()) {
+        // Petteri-style: high amplitude, low deviation → strong confidence
+        weightBase = amp / (dev + 1e-3f);
+        cv::normalize(weightBase, weightBase, 0, 1, cv::NORM_MINMAX);
+    } else {
+        weightBase = cv::Mat(h, w, CV_32F, cv::Scalar(1.0f));
+    }
+
+    // Optional gentle blur for continuity
+    cv::GaussianBlur(weightBase, weightBase, cv::Size(5,5), 0.8);
+
+    // --- Prepare output accumulation buffers -------------------------------
+    cv::Mat fused(h, w, CV_32FC3, cv::Scalar(0,0,0));
+    cv::Mat sumW(h, w, CV_32F, cv::Scalar(0));
+
+    // --- Main consistency-weighted blending -------------------------------
+    for (int i = 0; i < n; ++i) {
+        emit progress("Petteri fusion", i + 1, n);
+        qDebug() << src << i;
+        cv::Mat gray;
+        cv::cvtColor(stack[i], gray, cv::COLOR_BGR2GRAY);
+
+        // Compute local energy as focus consistency term
+        cv::Mat gx, gy, energy;
+        cv::Sobel(gray, gx, CV_32F, 1, 0, 3);
+        cv::Sobel(gray, gy, CV_32F, 0, 1, 3);
+        cv::magnitude(gx, gy, energy);
+
+        // Normalize energy per slice
+        double maxE;
+        cv::minMaxLoc(energy, nullptr, &maxE);
+        if (maxE > 0) energy /= maxE;
+
+        // Combine with global weight base
+        cv::Mat w = energy.mul(weightBase);
+
+        // Accumulate weighted color
+        std::vector<cv::Mat> channels(3);
+        cv::split(stack[i], channels);
+        for (int c = 0; c < 3; ++c)
+            channels[c] = channels[c].mul(w);
+
+        cv::Mat merged;
+        cv::merge(channels, merged);
+        fused += merged;
+        sumW += w;
+    }
+
+    qDebug() << src << "a";
+    // --- Normalize final output -------------------------------------------
+    cv::Mat denom;
+    cv::max(sumW, 1e-6f, denom); // prevent division by zero
+
+    if (denom.channels() == 1 && fused.channels() == 3)
+    {
+        cv::Mat denom3;
+        cv::merge(std::vector<cv::Mat>{denom, denom, denom}, denom3);
+        cv::divide(fused, denom3, fused);
+    }
+    else
+    {
+        cv::divide(fused, denom, fused);
+    }    cv::Mat out8U;
+    fused.convertTo(out8U, CV_8U, 255.0);
+
+    qDebug() << src << "b";
+    // --- Save & log --------------------------------------------------------
+    QDir().mkpath(QFileInfo(outputPath).dir().absolutePath());
+    bool saved = cv::imwrite(outputPath.toStdString(), out8U);
+
+    emit updateStatus(false,
+                      QString("Petteri fusion complete — saved %1").arg(outputPath),
+                      src);
+    return saved;
+}
+*/
+
+
