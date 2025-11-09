@@ -8,12 +8,15 @@
 #include <QtMath>
 #include <QDebug>
 #include "main/global.h"
+#include <opencv2/opencv.hpp>
+#include "ImageStack/focusstackutilities.h"
+#include "ImageStack/focuswavelet.h"
 
 class StackFusion : public QObject
 {
     Q_OBJECT
 public:
-    enum Method { Naive, PMax, PMax1, PMax2 };
+    enum Method { Naive, PMax, PMax1, PMax2, Petteri };
     Q_ENUM(Method)
 
     explicit StackFusion(QObject *parent = nullptr);
@@ -35,6 +38,9 @@ private:
     bool fusePMax(const QString &alignedFolderPath, const QString &outputPath);
     bool fusePMax1(const QString &alignedFolderPath, const QString &outputPath);
     bool fusePMax2(const QString &alignedFolderPath, const QString &outputPath);
+    bool fusePetteri(const QString &alignedFolderPath,
+                     const QString &depthMapPath,
+                     const QString &outputPath);
 };
 
 #endif // STACKFUSION_H

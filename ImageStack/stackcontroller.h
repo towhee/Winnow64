@@ -26,7 +26,7 @@ public:
     void stop();
     void loadInputImages(const QStringList &paths, const QList<QImage*> &images);
     bool runAlignment(bool saveAligned = true, bool useGpu = false);
-    bool runFocusMaps(const QString &alignedFolderPath);
+    bool runFocusMaps(const QString &focusFolderPath);
     bool runDepthMap(const QString &alignedFolderPath);
     bool runFusion();
     bool runHaloReduction(const QString &imagePath);
@@ -62,7 +62,7 @@ private:
     QString projectFolder;
 
     QString alignedPath;
-    QString masksPath;
+    QString focusPath;
     QString depthPath;
     QString depthMapPath;
     QString depthFocusPath;
@@ -71,7 +71,7 @@ private:
 
     QDir projectDir;
     QDir alignedDir;
-    QDir masksDir;
+    QDir focusDir;
     QDir depthDir;
     QDir depthFocusDir;
     QDir haloDir;

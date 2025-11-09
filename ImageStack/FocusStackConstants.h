@@ -41,7 +41,7 @@ constexpr int  kThresholdDefault   = 10;
 constexpr int  kSmoothXYDefault    = 20;
 constexpr int  kSmoothZDefault     = 40;
 constexpr int  kHaloRadiusDefault  = 20;
-constexpr bool kSaveStepsDefault   = false;
+constexpr bool kSaveStepsDefault   = true;
 constexpr bool kUsePetteriDefault  = true;
 constexpr bool kSmooth             = true;
 } // namespace Depth
@@ -109,7 +109,7 @@ struct FusionPreset {
 // Predefined tuning sets for A/B comparison
 // ----------------------------------------------------------------------------
 inline FocusPreset presetFocusPetteri() {
-    return { Focus::kPetteriGaussRadius,
+    return {Focus::kPetteriGaussRadius,
             Focus::kPetteriEnergyThreshold,
             Focus::kDefaultLevels,
             Focus::kSaveResultsDefault };
@@ -137,7 +137,7 @@ inline FocusPreset presetFocusZerene() {
     return { 0.8f, 0.0f, 1, true };
 }
 inline DepthPreset presetDepthZerene() {
-    return { 15, 15, 35, 10, false };
+    return { true, 15, 15, 35, 10, false };
 }
 inline FusionPreset presetFusionZerene() {
     return { 1, 0.8, -1, false, false };
@@ -148,7 +148,7 @@ inline FocusPreset presetFocusWinnow() {
     return { 0.0f, 0.0f, 1, true };
 }
 inline DepthPreset presetDepthWinnow() {
-    return { 10, 10, 20, 10, false };
+    return { true, 10, 10, 20, 10, false };
 }
 inline FusionPreset presetFusionWinnow() {
     return { 0, 0.0, -1, false, false };

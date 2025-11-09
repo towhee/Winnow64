@@ -25,12 +25,12 @@ void StackController::test()
 {
     emit updateStatus(false, "Focus stack operation test.", "StackController::test");
     qDebug() << "StackController::test";
-    daisyChain = false;
+    daisyChain = true;
     setPreset(FSConst::Preset::kPetteri);
     // runAlignment(/*saveAligned=*/true, /*useGpu=*/false);
     // runFocusMaps(alignedPath);
     // runDepthMap(alignedPath);
-    // runFusion();
+    runFusion();
     // QString imagePath = "/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0227/output/fused_pmax.png";
     // runHaloReduction(imagePath);
 }
@@ -79,19 +79,19 @@ void StackController::initialize()
 
     // Define subfolder structure
     alignedPath     = projectFolder + "/aligned";
-    masksPath       = projectFolder + "/masks";
+    focusPath       = projectFolder + "/focusmaps";
     depthPath       = projectFolder + "/depth";
     haloPath        = projectFolder + "/halo";
     outputPath      = projectFolder + "/output";
 
-    QStringList subDirs = { alignedPath, masksPath, depthPath, outputPath };
+    QStringList subDirs = { alignedPath, focusPath, depthPath, outputPath };
     for (const QString &sub : subDirs) {
         if (!dir.exists(sub)) dir.mkpath(sub);
     }
 
     // Cache QDir handles
     alignedDir     = QDir(alignedPath);
-    masksDir       = QDir(masksPath);
+    focusDir       = QDir(focusPath);
     depthDir       = QDir(depthPath);
     haloDir        = QDir(haloPath);
     outputDir      = QDir(outputPath);
@@ -377,7 +377,7 @@ bool StackController::runDepthMap(const QString &alignedFolderPath)
                          ? DepthMap::Petteri
                          : DepthMap::Winnow;
 
-        bool ok = dm->generate(alignedFolderPath, true);
+        bool ok = dm->generate(focusPath, opt);
         emit updateStatus(false,
                           ok ? "Depth map complete." : "Depth map failed.",
                           src);
@@ -396,6 +396,85 @@ bool StackController::runDepthMap(const QString &alignedFolderPath)
     return true;
 }
 
+bool StackController::runFusion()
+{
+    QString src = "StackController::runFusion";
+    emit updateStatus(false, "Launching threaded fusion stage...", src);
+    qDebug() << src;
+
+    // --- Sanity checks -----------------------------------------------------
+    if (alignedPath.isEmpty() || depthPath.isEmpty()) {
+        emit updateStatus(false, "Aligned or depth path not set.", src);
+        return false;
+    }
+
+    QString depthMapPath = depthPath + "/depth_index.png";
+    if (!QFile::exists(depthMapPath)) {
+        emit updateStatus(false,
+                          QString("No depth map found in %1").arg(depthPath),
+                          src);
+        return false;
+    }
+
+    QDir dir;
+    if (!dir.exists(outputPath))
+        dir.mkpath(outputPath);
+
+    // --- Determine selected fusion method based on preset ------------------
+    StackFusion::Method selectedMethod = StackFusion::PMax; // default
+    if (m_currentPreset == FSConst::Preset::kPetteri)
+        selectedMethod = StackFusion::Petteri;
+    else if (m_currentPreset == FSConst::Preset::kZerene)
+        selectedMethod = StackFusion::PMax2;
+    else
+        selectedMethod = StackFusion::Naive;
+
+    // --- Prepare thread + worker ------------------------------------------
+    QThread *thread = new QThread;
+    StackFusion *fusion = new StackFusion();
+    fusion->moveToThread(thread);
+
+    // Forward signals to main thread
+    connect(fusion, &StackFusion::updateStatus,
+            this, &StackController::updateStatus, Qt::QueuedConnection);
+    connect(fusion, &StackFusion::progress,
+            this, &StackController::progress, Qt::QueuedConnection);
+
+    // --- Start threaded work ----------------------------------------------
+    connect(thread, &QThread::started, fusion,
+            [this, fusion, src, depthMapPath, selectedMethod]() {
+                QString methodName =
+                    QMetaEnum::fromType<StackFusion::Method>().valueToKey(selectedMethod);
+
+                emit updateStatus(false,
+                                  QString("Running fusion using %1 method...").arg(methodName),
+                                  src);
+
+                bool ok = fusion->fuse(selectedMethod,
+                                       alignedPath,
+                                       depthMapPath,
+                                       outputPath);
+
+                emit updateStatus(false,
+                                  ok ? QString("%1 fusion complete.").arg(methodName)
+                                     : QString("%1 fusion failed.").arg(methodName),
+                                  src);
+                emit finishedFusion(ok ? outputPath : QString());
+            });
+
+    // --- Cleanup -----------------------------------------------------------
+    connect(this, &StackController::finishedFusion, thread, [fusion, thread]() {
+        thread->quit();
+        thread->wait();
+        fusion->deleteLater();
+        thread->deleteLater();
+    }, Qt::QueuedConnection);
+
+    thread->start();
+    return true;
+}
+
+/*
 bool StackController::runFusion()
 {
     QString src = "StackController::runFusion";
@@ -438,11 +517,10 @@ bool StackController::runFusion()
         emit updateStatus(false, "Starting fusion stage...", src);
 
         // Do not run naive for now
-        // bool ok1 = fusion->fuse(StackFusion::Naive,
-        //                         alignedPath,
-        //                         depthMapPath,
-        //                         outputPath);
-        bool ok1 = true;
+        bool ok1 = fusion->fuse(StackFusion::Naive,
+                                alignedPath,
+                                depthMapPath,
+                                outputPath);
 
         bool ok2 = fusion->fuse(StackFusion::PMax,
                                 alignedPath,
@@ -468,6 +546,7 @@ bool StackController::runFusion()
     thread->start();
     return true;
 }
+*/
 
 bool StackController::runHaloReduction(const QString &imagePath)
 {

@@ -42,15 +42,15 @@ cv::Mat DepthMap::anisotropicSmooth(const cv::Mat &depth, int iterations, float 
     return d;
 }
 
-bool DepthMap::generate(const QString &alignedFolderPath, const Options &opt)
+bool DepthMap::generate(const QString &focusFolderPath, const Options &opt)
 {
     if (opt.method == Petteri)
-        return generatePetteri(alignedFolderPath, opt);
+        return generatePetteri(focusFolderPath, opt);
     else
-        return generateWinnow(alignedFolderPath, opt);
+        return generateWinnow(focusFolderPath, opt);
 }
 
-bool DepthMap::generateWinnow(const QString &alignedFolderPath, const Options &opt)
+bool DepthMap::generateWinnow(const QString &focusFolderPath, const Options &opt)
 {
     const QString src = "DepthMap::generate";
     QElapsedTimer timer;
@@ -59,9 +59,9 @@ bool DepthMap::generateWinnow(const QString &alignedFolderPath, const Options &o
     emit updateStatus(false, "Generating depth map.", src);
 
     // --- Project structure ------------------------------------------------
-    QDir alignDir(alignedFolderPath);
+    QDir alignDir(focusFolderPath);
     if (!alignDir.exists()) {
-        qWarning() << src << "aligned folder not found:" << alignedFolderPath;
+        qWarning() << src << "aligned folder not found:" << focusFolderPath;
         return false;
     }
 
@@ -261,22 +261,25 @@ bool DepthMap::generateWinnow(const QString &alignedFolderPath, const Options &o
     return true;
 }
 
-bool DepthMap::generatePetteri(const QString &alignedFolderPath, const Options &opt)
+bool DepthMap::generatePetteri(const QString &focusFolderPath, const Options &opt)
 {
     const QString src = "DepthMap::generatePetteri";
+    qDebug() << src << focusFolderPath;
+
     QElapsedTimer timer; timer.start();
 
     emit updateStatus(false, "Generating depth map (Petteri)...", src);
 
-    QDir alignDir(alignedFolderPath);
-    if (!alignDir.exists()) {
-        qWarning() << src << "aligned folder not found:" << alignedFolderPath;
+    QDir focusDir(focusFolderPath);
+    if (!focusDir.exists()) {
+        qWarning() << src << "focusmaps folder not found:" << focusFolderPath;
         return false;
     }
 
     // Load focus maps (float EXR or grayscale PNG)
-    QStringList filters = {"focus_petteri_*.exr", "focus_petteri_*.png"};
-    QFileInfoList files = alignDir.entryInfoList(filters, QDir::Files, QDir::Name);
+    QStringList filters = {"focus_raw_*.exr", "focus_raw_*.png"};
+    // QStringList filters = {"focus_petteri_*.exr", "focus_petteri_*.png"};
+    QFileInfoList files = focusDir.entryInfoList(filters, QDir::Files, QDir::Name);
     if (files.isEmpty()) {
         qWarning() << src << "no Petteri focus maps found";
         return false;
@@ -306,25 +309,78 @@ bool DepthMap::generatePetteri(const QString &alignedFolderPath, const Options &
         idx.setTo(k, mask);
     }
 
+    // guassian fit debug
+    if (opt.saveSteps) {
+        emit updateStatus(false, "Computing Gaussian-fit maps...", src);
+
+        cv::Mat mu, sigma, amp;
+        fitGauss3points(F, idx, mu, sigma, amp);
+
+        QDir depthDir(focusDir.filePath("../depth"));
+        QDir().mkpath(depthDir.absolutePath());
+
+        // Save true 32F data (no min-max). Also save PNG *previews* for eyeballing.
+        FSUtils::saveFloatEXR(depthDir.filePath("gauss_mean.exr"),  mu);
+        FSUtils::saveFloatEXR(depthDir.filePath("gauss_dev.exr"),   sigma);
+        FSUtils::saveFloatEXR(depthDir.filePath("gauss_amp.exr"),   amp);
+
+        // Optional previews (safe to keep for visualization only)
+        FSUtils::debugSaveMat(mu,    depthDir.filePath("gauss_mean_viz.png"));
+        FSUtils::debugSaveMat(sigma, depthDir.filePath("gauss_dev_viz.png"));
+        FSUtils::debugSaveMat(amp,   depthDir.filePath("gauss_amp_viz.png"));
+
+        // Optional: also build a confidence mask based on amp & sigma
+        cv::Mat conf = amp / (sigma + 1e-6f);
+        double maxVal;
+        cv::minMaxLoc(conf, nullptr, &maxVal);
+        conf.convertTo(conf, CV_8U, 255.0 / maxVal);
+        FSUtils::debugSaveMat(conf, depthDir.filePath("confidence_mask.png"));
+    }
+
     // Threshold weak pixels
     if (opt.threshold > 0) {
         cv::Mat low = best < float(opt.threshold) / 255.0f;
         idx.setTo(0, low);
     }
 
-    // Smooth XY
+    qDebug() << src << "a  n =" << n;
+
+    // --- Smooth XY (median) -----------------------------------------------------
     if (opt.smoothXY > 0) {
-        int ksize = std::max(3, (opt.smoothXY / 5) * 2 + 1);
-        cv::medianBlur(idx, idx, ksize);
+        int ksize = std::max(3, std::min(31, ((opt.smoothXY / 5) * 2 + 1) | 1)); // odd, <= 31
+
+        cv::Mat idx8u;
+        if (idx.depth() != CV_8U) {
+            idx.convertTo(idx8u, CV_8U, 255.0 / std::max(1, n - 1));
+        } else {
+            idx8u = idx.clone();
+        }
+
+        if (!idx8u.empty())
+            cv::medianBlur(idx8u, idx8u, ksize);
+
+        // Convert back to original depth
+        if (idx.depth() != CV_8U)
+            idx8u.convertTo(idx, CV_32F);  // keep discrete indices in float
+        else
+            idx = idx8u;
     }
 
-    // Smooth Z
-    for (int i = 0; i < opt.smoothZ / 10; ++i) {
-        cv::Mat low, high;
-        cv::erode(idx, low, cv::Mat());
-        cv::dilate(idx, high, cv::Mat());
-        idx = cv::min(cv::max(idx, low), high);
+    qDebug() << src << "b";
+
+    // --- Smooth Z (morphological relax) ----------------------------------------
+    if (opt.smoothZ > 0) {
+        int iterations = std::clamp(opt.smoothZ / 10, 1, 10);
+        for (int i = 0; i < iterations; ++i) {
+            cv::Mat low, high;
+            cv::erode(idx, low, cv::Mat(), cv::Point(-1,-1), 1, cv::BORDER_REPLICATE);
+            cv::dilate(idx, high, cv::Mat(), cv::Point(-1,-1), 1, cv::BORDER_REPLICATE);
+            cv::Mat tmp;
+            cv::max(idx, low, tmp);
+            cv::min(tmp, high, idx);
+        }
     }
+    qDebug() << src << "c";
 
     // Halo cleanup
     if (opt.haloRadius > 0) {
@@ -333,13 +389,19 @@ bool DepthMap::generatePetteri(const QString &alignedFolderPath, const Options &
         cv::morphologyEx(idx, idx, cv::MORPH_CLOSE, se);
     }
 
+    qDebug() << src << "d";
     // Output directory
-    QDir depthDir(alignDir.filePath("../depth"));
+    QDir depthDir(focusDir.filePath("../depth"));
     QDir().mkpath(depthDir.absolutePath());
 
     cv::Mat idx8; idx.convertTo(idx8, CV_8U);
     const QString idxPath = depthDir.filePath("depth_index.png");
     cv::imwrite(idxPath.toStdString(), idx8);
+
+    qDebug() << src << "e";
+    double mn, mx;
+    cv::minMaxLoc(idx8, &mn, &mx);
+    qDebug() << "Depth range:" << mn << mx;
 
     // Colorized preview
     QImage preview = FSUtils::colorizeDepth(idx8);

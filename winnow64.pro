@@ -78,6 +78,7 @@ HEADERS += Cache/cachedata.h \
     ImageStack/focushalo.h \
     ImageStack/focusmeasure.h \
     ImageStack/focusstackutilities.h \
+    ImageStack/focuswavelet.h \
     ImageStack/stackaligner.h \
     ImageStack/stackcontroller.h \
     ImageStack/stackfusion.h
@@ -232,6 +233,7 @@ SOURCES += Cache/cachedata.cpp \
     ImageStack/focushalo.cpp \
     ImageStack/focusmeasure.cpp \
     ImageStack/focusstackutilities.cpp \
+    ImageStack/focuswavelet.cpp \
     ImageStack/stackaligner.cpp \
     ImageStack/stackcontroller.cpp \
     ImageStack/stackfusion.cpp
@@ -519,7 +521,8 @@ macx {
                 -lopencv_dnn.411 \
                 -lopencv_imgcodecs \    # req'd by focus stack depthmap
                 -lopencv_video \        # req'd by focus stack align
-                -lopencv_highgui        # req'd by focus stack align
+                -lopencv_highgui \      # req'd by focus stack align
+                -lopencv_photo          # req'd by focus stack fusion
         INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
 
         # libtiff

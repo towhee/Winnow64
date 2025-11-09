@@ -3,6 +3,8 @@
 
 #include <QImage>
 #include <QString>
+#include <QDir>
+#include <QFileInfo>
 #include <opencv2/opencv.hpp>
 
 //
@@ -37,6 +39,7 @@ cv::Mat safeDivide(const cv::Mat &num, const cv::Mat &den, double eps = 1e-6);
 cv::Mat applyGamma(const cv::Mat &src, double gamma);
 cv::Mat blendByMask(const cv::Mat &a, const cv::Mat &b, const cv::Mat &mask);
 cv::Mat autoLevels(const cv::Mat &src, double clipLow = 1.0, double clipHigh = 99.0);
+bool hasNaNs(const cv::Mat &m, const QString &label = QString());
 
 // ----------------------------------------------------------------------------
 // EXR helpers (optional)
