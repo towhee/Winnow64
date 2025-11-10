@@ -70,18 +70,7 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h \
-    ImageFormats/Base/rawbase.h \
-    ImageFormats/Tiff/tiffdecoder.h \
-    ImageStack/FocusStackConstants.h \
-    ImageStack/depthmap.h \
-    ImageStack/focushalo.h \
-    ImageStack/focusmeasure.h \
-    ImageStack/focusstackutilities.h \
-    ImageStack/focuswavelet.h \
-    ImageStack/stackaligner.h \
-    ImageStack/stackcontroller.h \
-    ImageStack/stackfusion.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -161,6 +150,17 @@ HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
 macx:HEADERS += ImageFormats/Tiff/libtiff.h
 HEADERS += ImageFormats/Tiff/rorytiff.h
+HEADERS += ImageFormats/Base/rawbase.h
+HEADERS += ImageFormats/Tiff/tiffdecoder.h
+HEADERS += ImageStack/FocusStackConstants.h
+HEADERS += ImageStack/depthmap.h
+HEADERS += ImageStack/focushalo.h
+HEADERS += ImageStack/focusmeasure.h
+HEADERS += ImageStack/focusstackutilities.h
+HEADERS += ImageStack/focuswavelet.h
+HEADERS += ImageStack/stackaligner.h
+HEADERS += ImageStack/stackcontroller.h
+HEADERS += ImageStack/stackfusion.h
 HEADERS += Lcms2/lcms2.h
 HEADERS += Lcms2/lcms2_plugin.h
 HEADERS += Log/issue.h
@@ -226,17 +226,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    ImageFormats/Base/rawbase.cpp \
-    ImageFormats/Tiff/tiffdecoder.cpp \
-    ImageStack/depthmap.cpp \
-    ImageStack/focushalo.cpp \
-    ImageStack/focusmeasure.cpp \
-    ImageStack/focusstackutilities.cpp \
-    ImageStack/focuswavelet.cpp \
-    ImageStack/stackaligner.cpp \
-    ImageStack/stackcontroller.cpp \
-    ImageStack/stackfusion.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp
@@ -310,6 +300,16 @@ SOURCES += ImageFormats/Sony/sony.cpp
 SOURCES += ImageFormats/Tiff/tiff.cpp               # For parsing
 macx:SOURCES += ImageFormats/Tiff/libtiff.cpp       # use library directly
 SOURCES += ImageFormats/Tiff/rorytiff.cpp           # Rory decoder
+SOURCES += ImageFormats/Base/rawbase.cpp
+SOURCES += ImageFormats/Tiff/tiffdecoder.cpp
+SOURCES += ImageStack/depthmap.cpp
+SOURCES += ImageStack/focushalo.cpp
+SOURCES += ImageStack/focusmeasure.cpp
+SOURCES += ImageStack/focusstackutilities.cpp
+SOURCES += ImageStack/focuswavelet.cpp
+SOURCES += ImageStack/stackaligner.cpp
+SOURCES += ImageStack/stackcontroller.cpp
+SOURCES += ImageStack/stackfusion.cpp
 SOURCES += Lcms2/cmsalpha.c
 SOURCES += Lcms2/cmscam02.c
 SOURCES += Lcms2/cmscgats.c

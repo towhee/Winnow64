@@ -458,6 +458,9 @@ bool StackFusion::fusePetteri(const QString &alignedFolderPath,
     emit updateStatus(false, "Running full Petteri wavelet fusion...", src);
     qDebug() << src;
 
+    cv::setNumThreads(1);
+    cv::setUseOptimized(false);
+
     // --- Load aligned stack ------------------------------------------------
     QStringList alignedFiles = QDir(alignedFolderPath)
                                    .entryList(QStringList() << "*.png" << "*.jpg" << "*.tif",
@@ -480,6 +483,9 @@ bool StackFusion::fusePetteri(const QString &alignedFolderPath,
     }
     const int n = (int)stack32f.size();
     if (n == 0) return false;
+
+    // ✅ Run one-time verification on the first image
+    FSWavelet::testHaarRoundTrip(stack32f.front());
 
     // --- Validity masks (1.0 valid, 0.0 padded) ---------------------------
     std::vector<cv::Mat> validFull; validFull.reserve(n);
