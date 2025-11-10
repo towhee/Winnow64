@@ -25,6 +25,8 @@ Pyramid decompose(const cv::Mat& img32f, int levels = 4);
 // Reconstruct image from a pyramid (inverse Haar), returns CV_32F (same chans as input).
 cv::Mat reconstruct(const Pyramid& pyr);
 
+void testHaarRoundTrip(const cv::Mat& img32f);
+
 // Focus energy map (CV_32F, full-res): sum of |detail|^2 over all levels, upsampled.
 cv::Mat focusEnergy(const Pyramid& pyr);
 
