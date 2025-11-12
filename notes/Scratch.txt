@@ -1,30 +1,429 @@
-QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=1630.74,225.652 scn=1630.74,225.652 gbl=6043.74,572.652 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) QWidgetWindow(0x6000002d9b60, name = "MWWindow") QPoint(6044,573)
-QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=133.742,175.652 scn=1630.74,225.652 gbl=6044,573 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) QWidget(0x6000029cffc0, name = "FiltersViewport") QPoint(6044,573)
-QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=135,196 scn=1630.74,225.652 gbl=6044,573 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) Filters(0x123e8ffd0, name = "Filters") QPoint(6044,573)
-QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=135,196 scn=1630.74,225.652 gbl=6044,573 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) QFrame(0x6000028cfd80) QPoint(6044,573)
-QMouseEvent(MouseButtonPress ts=498620976 LeftButton pos=135,226 scn=1630.74,225.652 gbl=6044,573 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3)) DockWidget(0x60000047e170, name = "FilterDock") QPoint(6044,573)
+Focus-Stack
+
+Order:
+    FocusStack::run
+    FocusStack::start
+    FocusStack::schedule_queue_processing
 
 
-DataModel Proxy for sort column 2:
-    0  _source_input.jpg
-    1  depth_map_v01.tif
-    2  depth_map_v34.tif
-    3  depth_map_zerene.tif
-    4  detail_layer_consensus_bright_region_map.png
-    5  detail_layer_consensus_hist.png
-    6  foreground_mask_overlay_v18.jpg
-    7  foreground_mask_v18.tif
-    8  s_depth_v15.tif
-    9  s_mask_v36.tif
-   10  s_masked_v22.tif
-   11  s_masked_v23.tif
-   12  s_masked_v24.tif
-   13  s_pmax_v33.tif
-   14  s_simple_v20.tif
-   15  s_simple_v35.tif
-   16  Zerene_dmap.tif
-   17  Zerene_pmax.tif
+open -a focus-stack --depthmap --3dview --save-steps --verbose
+open -a focus-stack -depthmap -3dview -save-steps -verbose
+/Users/roryhill/Downloads/focus-stack/focus-stack.app/Contents/MacOS/focus-stack --depthmap=petteridepthmap.png --3dview=petteri3dview.png --save-steps --verbose /Users/roryhill/Projects/Stack/Mouse/*.tif
 
-MW::filterChange dm->currentSfIdx = QModelIndex(0,0,0x6000014bc2d0,SortFilter(0x6000028706c0))
-newSfIdx =                          QModelIndex(0,0,0x6000014bc2d0,SortFilter(0x6000028706c0))
-dm->currentSfIdx.isValid() = true newSfIdx = true
+
+roryhill@Quark petteri % /Users/roryhill/Downloads/focus-stack/focus-stack.app/Contents/MacOS/focus-stack --depthmap=petteridepthmap.png --3dview=petteri3dview.png --save-steps --verbose /Users/roryhill/Projects/Stack/Mouse/*.tif
+
+OpenCL device: Apple Apple M1 Ultra OpenCL 1.2
+ 0.063 [  1/  7] T14 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0233.tif
+ 0.064 [  2/ 11] T10 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0232.tif
+ 0.064 [  3/ 27] T15 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0234.tif
+ 0.065 [  4/ 32] T19 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0231.tif
+ 0.066 [  5/ 41] T4 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0235.tif
+ 0.067 [  6/ 64] T8 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0236.tif
+ 0.067 [  7/ 64] T7 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0230.tif
+ 0.067 [  8/ 73] T6 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0229.tif
+ 0.068 [  9/ 83] T11 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0237.tif
+ 0.068 [ 10/ 97] T1 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0228.tif
+ 0.068 [ 11/103] T16 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0238.tif
+ 0.069 [ 12/115] T2 Starting task: Load /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0227.tif
+2025-11-01_0236.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0230.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0237.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0232.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0238.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0234.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0231.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0229.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0233.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0235.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0227.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+2025-11-01_0228.tif has resolution 5184x3888, using 10 wavelet levels and expanding to 6144x4096
+ 0.404           T8 Finished task 6 in 0.337 s.
+ 0.453           T1 Finished task 10 in 0.385 s.
+ 0.458           T7 Finished task 7 in 0.392 s.
+ 0.464           T11 Finished task 9 in 0.396 s.
+ 0.465           T10 Finished task 2 in 0.401 s.
+ 0.466           T16 Finished task 11 in 0.398 s.
+ 0.466           T19 Finished task 4 in 0.401 s.
+ 0.467           T6 Finished task 8 in 0.400 s.
+ 0.467           T4 Finished task 5 in 0.401 s.
+ 0.468           T14 Finished task 1 in 0.405 s.
+ 0.468           T15 Finished task 3 in 0.404 s.
+ 0.468 [ 13/134] T20 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0233.tif
+Using grayscale weights R:0.370, G:0.328, B:0.302
+ 0.470           T2 Finished task 12 in 0.401 s.
+ 0.522           T20 Finished task 13 in 0.054 s.
+ 0.523 [ 14/134] T13 Starting task: Align 2025-11-01_0233.tif to 2025-11-01_0233.tif
+aligned_2025-11-01_0233.tif transformed corners TL (480.0,104.0), TR (5664.0,104.0), BL (480.0,3992.0), BR (5664.0,3992.0)
+aligned_2025-11-01_0233.tif valid area X 480, Y 104, W 5184, H 3888
+ 0.523 [ 15/134] T3 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0232.tif
+ 0.523 [ 16/134] T20 Starting task: Save aligned_2025-11-01_0233.tif
+ 0.523 [ 17/134] T11 Starting task: Grayscale aligned_2025-11-01_0233.tif
+ 0.523 [ 18/134] T8 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0234.tif
+ 0.523 [ 19/134] T2 Starting task: Save grayscale_2025-11-01_0233.tif
+ 0.523 [ 20/134] T0 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0231.tif
+ 0.523 [ 21/134] T15 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0235.tif
+ 0.523 [ 22/134] T12 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0230.tif
+ 0.523 [ 23/134] T9 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0236.tif
+ 0.523           T13 Finished task 14 in 0.000 s.
+ 0.523 [ 24/134] T13 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0237.tif
+ 0.523 [ 25/134] T5 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0227.tif
+ 0.523 [ 26/134] T6 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0229.tif
+ 0.523 [ 27/134] T7 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0238.tif
+ 0.523 [ 28/134] T4 Starting task: Grayscale /Users/roryhill/Projects/Stack/Mouse/2025-11-01_0228.tif
+ 0.691           T3 Finished task 15 in 0.168 s.
+ 0.691 [ 29/134] T3 Starting task: Save grayscale_2025-11-01_0232.tif
+ 0.691 [ 30/134] T17 Starting task: Align 2025-11-01_0232.tif to 2025-11-01_0233.tif
+ 0.746           T15 Finished task 21 in 0.223 s.
+ 0.746 [ 31/134] T15 Starting task: Save grayscale_2025-11-01_0235.tif
+ 0.746 [ 32/134] T16 Starting task: Save grayscale_2025-11-01_0229.tif
+ 0.746           T6 Finished task 26 in 0.223 s.
+ 0.748           T11 Finished task 17 in 0.225 s.
+ 0.748 [ 33/134] T11 Starting task: Forward-wavelet aligned_2025-11-01_0233.tif
+ 0.748 [ 34/134] T18 Starting task: Focus measure for aligned_2025-11-01_0233.tif
+ 0.750           T5 Finished task 25 in 0.227 s.
+ 0.750 [ 35/134] T5 Starting task: Save grayscale_2025-11-01_0238.tif
+ 0.750           T7 Finished task 27 in 0.227 s.
+ 0.751 [ 36/134] T7 Starting task: Save grayscale_2025-11-01_0227.tif
+ 0.757           T0 Finished task 20 in 0.234 s.
+ 0.757 [ 37/134] T0 Starting task: Save grayscale_2025-11-01_0231.tif
+ 0.757 [ 38/134] T1 Starting task: Align 2025-11-01_0231.tif to 2025-11-01_0232.tif
+ 0.758           T9 Finished task 23 in 0.235 s.
+ 0.758 [ 39/134] T9 Starting task: Save grayscale_2025-11-01_0236.tif
+ 0.758 [ 40/134] T14 Starting task: Align 2025-11-01_0236.tif to 2025-11-01_0235.tif
+ 0.758           T12 Finished task 22 in 0.235 s.
+ 0.758 [ 41/134] T12 Starting task: Save grayscale_2025-11-01_0230.tif
+ 0.758 [ 42/134] T6 Starting task: Align 2025-11-01_0230.tif to 2025-11-01_0231.tif
+ 0.758 [ 43/134] T19 Starting task: Align 2025-11-01_0229.tif to 2025-11-01_0230.tif
+ 0.759           T13 Finished task 24 in 0.236 s.
+ 0.759 [ 44/134] T13 Starting task: Save grayscale_2025-11-01_0237.tif
+ 0.759 [ 45/134] T10 Starting task: Align 2025-11-01_0237.tif to 2025-11-01_0236.tif
+ 0.773           T8 Finished task 18 in 0.250 s.
+ 0.773 [ 46/134] T8 Starting task: Save grayscale_2025-11-01_0234.tif
+ 0.775           T4 Finished task 28 in 0.252 s.
+ 0.775 [ 47/134] T4 Starting task: Align 2025-11-01_0234.tif to 2025-11-01_0233.tif
+ 0.894           T2 Finished task 19 in 0.371 s.
+ 0.894 [ 48/134] T2 Starting task: Align 2025-11-01_0235.tif to 2025-11-01_0234.tif
+ 0.919           T18 Finished task 34 in 0.171 s.
+ 0.920 [ 49/134] T18 Starting task: Save focusmeasure_aligned_2025-11-01_0233.tif
+ 1.040           T18 Finished task 49 in 0.120 s.
+ 1.040 [ 50/134] T18 Starting task: Construct depthmap layer 6
+ 1.137           T8 Finished task 46 in 0.364 s.
+ 1.137 [ 51/134] T8 Starting task: Save grayscale_2025-11-01_0228.tif
+ 1.149           T3 Finished task 29 in 0.458 s.
+ 1.149 [ 52/134] T3 Starting task: Align 2025-11-01_0228.tif to 2025-11-01_0229.tif
+ 1.163           T12 Finished task 41 in 0.405 s.
+ 1.163 [ 53/134] T12 Starting task: Align 2025-11-01_0238.tif to 2025-11-01_0237.tif
+ 1.171           T9 Finished task 39 in 0.413 s.
+ 1.171 [ 54/134] T9 Starting task: Align 2025-11-01_0227.tif to 2025-11-01_0228.tif
+ 1.172           T16 Finished task 32 in 0.426 s.
+ 1.184           T7 Finished task 36 in 0.433 s.
+ 1.188           T13 Finished task 44 in 0.429 s.
+ 1.192           T0 Finished task 37 in 0.435 s.
+ 1.205           T5 Finished task 35 in 0.455 s.
+ 1.228           T11 Finished task 33 in 0.480 s.
+ 1.251           T15 Finished task 31 in 0.505 s.
+ 1.419           T20 Finished task 16 in 0.896 s.
+ 1.440           T8 Finished task 51 in 0.303 s.
+ 1.486           T18 Finished task 50 in 0.446 s.
+aligned_2025-11-01_0232.tif transform: [0.999 -0.000 5.903; -0.000 0.999 2.457]
+aligned_2025-11-01_0234.tif transform: [1.001 0.000 -3.188; 0.000 1.001 -2.415]
+aligned_2025-11-01_0232.tif contrast map: C:1.006, X:-0.001, X2:-0.007, Y:-0.002, Y2:-0.002
+aligned_2025-11-01_0232.tif whitebalance: R:x0.995+0.0, G:x0.995+0.0, B:x0.993+0.3
+aligned_2025-11-01_0232.tif transformed corners TL (485.4,106.3), TR (5664.5,105.9), BL (485.4,3990.5), BR (5664.5,3990.1)
+aligned_2025-11-01_0232.tif valid area X 486, Y 107, W 5178, H 3883
+ 3.453           T17 Finished task 30 in 2.762 s.
+ 3.453 [ 55/134] T17 Starting task: Save aligned_2025-11-01_0232.tif
+aligned_2025-11-01_0231.tif transform: [0.998 0.000 9.613; -0.000 0.998 4.060]
+ 3.453 [ 56/134] T8 Starting task: Grayscale aligned_2025-11-01_0232.tif
+ 3.502           T8 Finished task 56 in 0.049 s.
+ 3.502 [ 57/134] T8 Starting task: Forward-wavelet aligned_2025-11-01_0232.tif
+ 3.502 [ 58/134] T0 Starting task: Focus measure for aligned_2025-11-01_0232.tif
+ 3.617           T0 Finished task 58 in 0.115 s.
+ 3.617 [ 59/134] T0 Starting task: Save focusmeasure_aligned_2025-11-01_0232.tif
+ 3.617 [ 60/134] T5 Starting task: Construct depthmap layer 5
+ 3.668           T0 Finished task 59 in 0.051 s.
+aligned_2025-11-01_0234.tif contrast map: C:0.999, X:0.000, X2:0.005, Y:-0.005, Y2:-0.004
+aligned_2025-11-01_0234.tif whitebalance: R:x1.001-0.0, G:x1.001-0.0, B:x1.001-0.0
+ 3.717           T5 Finished task 60 in 0.100 s.
+ 3.722           T8 Finished task 57 in 0.220 s.
+aligned_2025-11-01_0234.tif transformed corners TL (477.3,101.7), TR (5666.1,101.7), BL (477.7,3993.5), BR (5666.6,3993.5)
+aligned_2025-11-01_0234.tif valid area X 480, Y 104, W 5184, H 3888
+ 3.968           T4 Finished task 47 in 3.193 s.
+ 3.968 [ 61/134] T4 Starting task: Save aligned_2025-11-01_0234.tif
+aligned_2025-11-01_0235.tif transform: [1.002 0.000 -5.392; 0.000 1.002 -3.693]
+ 3.968 [ 62/134] T16 Starting task: Grayscale aligned_2025-11-01_0234.tif
+ 3.995           T16 Finished task 62 in 0.027 s.
+ 3.995 [ 63/134] T16 Starting task: Forward-wavelet aligned_2025-11-01_0234.tif
+ 3.995 [ 64/134] T5 Starting task: Focus measure for aligned_2025-11-01_0234.tif
+aligned_2025-11-01_0231.tif contrast map: C:1.056, X:0.011, X2:-0.058, Y:-0.016, Y2:0.020
+aligned_2025-11-01_0231.tif whitebalance: R:x0.942+0.9, G:x0.950-0.3, B:x0.934+3.4
+ 4.079           T5 Finished task 64 in 0.084 s.
+ 4.079 [ 65/134] T5 Starting task: Save focusmeasure_aligned_2025-11-01_0234.tif
+ 4.080 [ 66/134] T11 Starting task: Construct depthmap layer 7
+ 4.141           T5 Finished task 65 in 0.062 s.
+ 4.156           T16 Finished task 63 in 0.161 s.
+ 4.175           T11 Finished task 66 in 0.096 s.
+ 4.278           T17 Finished task 55 in 0.825 s.
+aligned_2025-11-01_0231.tif transformed corners TL (488.7,107.8), TR (5663.2,107.1), BL (489.3,3988.4), BR (5663.8,3987.7)
+aligned_2025-11-01_0231.tif valid area X 490, Y 108, W 5173, H 3879
+ 4.328           T1 Finished task 38 in 3.571 s.
+ 4.328 [ 67/134] T1 Starting task: Save aligned_2025-11-01_0231.tif
+aligned_2025-11-01_0230.tif transform: [0.997 0.000 12.567; -0.000 0.997 5.126]
+ 4.328 [ 68/134] T20 Starting task: Grayscale aligned_2025-11-01_0231.tif
+ 4.347           T20 Finished task 68 in 0.019 s.
+ 4.347 [ 69/134] T20 Starting task: Forward-wavelet aligned_2025-11-01_0231.tif
+ 4.347 [ 70/134] T15 Starting task: Focus measure for aligned_2025-11-01_0231.tif
+ 4.397           T15 Finished task 70 in 0.050 s.
+ 4.397 [ 71/134] T15 Starting task: Save focusmeasure_aligned_2025-11-01_0231.tif
+ 4.397 [ 72/134] T7 Starting task: Construct depthmap layer 4
+ 4.455           T15 Finished task 71 in 0.058 s.
+ 4.496           T20 Finished task 69 in 0.149 s.
+ 4.507           T7 Finished task 72 in 0.110 s.
+aligned_2025-11-01_0235.tif contrast map: C:0.999, X:-0.000, X2:0.010, Y:-0.007, Y2:-0.015
+aligned_2025-11-01_0235.tif whitebalance: R:x1.001-0.0, G:x1.001-0.0, B:x1.001-0.0
+ 4.786           T4 Finished task 61 in 0.818 s.
+aligned_2025-11-01_0235.tif transformed corners TL (475.5,100.5), TR (5668.7,100.7), BL (476.0,3995.5), BR (5669.1,3995.7)
+aligned_2025-11-01_0235.tif valid area X 480, Y 104, W 5184, H 3888
+ 4.829           T2 Finished task 48 in 3.935 s.
+ 4.829 [ 73/134] T2 Starting task: Save aligned_2025-11-01_0235.tif
+ 4.829 [ 74/134] T0 Starting task: Grayscale aligned_2025-11-01_0235.tif
+aligned_2025-11-01_0236.tif transform: [1.003 0.000 -7.087; 0.000 1.003 -6.169]
+ 4.846           T0 Finished task 74 in 0.017 s.
+ 4.846 [ 75/134] T4 Starting task: Forward-wavelet aligned_2025-11-01_0235.tif
+ 4.846 [ 76/134] T7 Starting task: Focus measure for aligned_2025-11-01_0235.tif
+ 4.894           T7 Finished task 76 in 0.048 s.
+ 4.894 [ 77/134] T7 Starting task: Save focusmeasure_aligned_2025-11-01_0235.tif
+ 4.894 [ 78/134] T18 Starting task: Construct depthmap layer 8
+aligned_2025-11-01_0230.tif contrast map: C:1.008, X:-0.001, X2:0.012, Y:0.008, Y2:-0.045
+aligned_2025-11-01_0230.tif whitebalance: R:x0.996+0.1, G:x0.996+0.0, B:x0.996+0.2
+ 4.965           T7 Finished task 77 in 0.071 s.
+ 4.985           T4 Finished task 75 in 0.139 s.
+ 5.005           T18 Finished task 78 in 0.111 s.
+ 5.165           T1 Finished task 67 in 0.837 s.
+aligned_2025-11-01_0230.tif transformed corners TL (491.2,108.8), TR (5660.8,108.0), BL (491.9,3986.2), BR (5661.4,3985.5)
+aligned_2025-11-01_0230.tif valid area X 492, Y 109, W 5168, H 3876
+ 5.193           T6 Finished task 42 in 4.435 s.
+aligned_2025-11-01_0229.tif transform: [0.996 0.000 14.930; -0.000 0.996 6.851]
+ 5.193 [ 79/134] T6 Starting task: Grayscale aligned_2025-11-01_0230.tif
+ 5.193 [ 80/134] T1 Starting task: Save aligned_2025-11-01_0230.tif
+ 5.212           T6 Finished task 79 in 0.019 s.
+ 5.212 [ 81/134] T6 Starting task: Forward-wavelet aligned_2025-11-01_0230.tif
+ 5.212 [ 82/134] T17 Starting task: Focus measure for aligned_2025-11-01_0230.tif
+ 5.262           T17 Finished task 82 in 0.050 s.
+ 5.262 [ 83/134] T17 Starting task: Save focusmeasure_aligned_2025-11-01_0230.tif
+ 5.262 [ 84/134] T0 Starting task: Construct depthmap layer 3
+ 5.326           T17 Finished task 83 in 0.064 s.
+ 5.357           T0 Finished task 84 in 0.095 s.
+ 5.360           T6 Finished task 81 in 0.148 s.
+aligned_2025-11-01_0236.tif contrast map: C:0.995, X:-0.001, X2:0.013, Y:-0.006, Y2:-0.027
+aligned_2025-11-01_0236.tif whitebalance: R:x1.005-0.1, G:x1.005-0.1, B:x1.005-0.1
+ 5.660           T2 Finished task 73 in 0.831 s.
+aligned_2025-11-01_0236.tif transformed corners TL (474.2,98.2), TR (5671.9,98.9), BL (474.6,3996.8), BR (5672.4,3997.5)
+aligned_2025-11-01_0236.tif valid area X 480, Y 104, W 5184, H 3888
+ 5.696           T14 Finished task 40 in 4.938 s.
+aligned_2025-11-01_0237.tif transform: [1.003 0.000 -10.733; 0.000 1.003 -7.217]
+ 5.696 [ 85/134] T6 Starting task: Save aligned_2025-11-01_0236.tif
+ 5.696 [ 86/134] T20 Starting task: Grayscale aligned_2025-11-01_0236.tif
+ 5.714           T20 Finished task 86 in 0.018 s.
+ 5.714 [ 87/134] T20 Starting task: Forward-wavelet aligned_2025-11-01_0236.tif
+ 5.714 [ 88/134] T15 Starting task: Focus measure for aligned_2025-11-01_0236.tif
+ 5.762           T15 Finished task 88 in 0.048 s.
+ 5.762 [ 89/134] T15 Starting task: Save focusmeasure_aligned_2025-11-01_0236.tif
+ 5.762 [ 90/134] T2 Starting task: Construct depthmap layer 9
+aligned_2025-11-01_0229.tif contrast map: C:1.016, X:0.005, X2:0.016, Y:0.006, Y2:-0.032
+aligned_2025-11-01_0229.tif whitebalance: R:x0.988+0.1, G:x0.988+0.1, B:x0.986+0.6
+ 5.825           T15 Finished task 89 in 0.063 s.
+ 5.858           T2 Finished task 90 in 0.096 s.
+ 5.864           T20 Finished task 87 in 0.150 s.
+ 6.018           T1 Finished task 80 in 0.825 s.
+aligned_2025-11-01_0229.tif transformed corners TL (493.1,110.4), TR (5657.6,109.6), BL (493.6,3984.0), BR (5658.1,3983.2)
+aligned_2025-11-01_0229.tif valid area X 494, Y 111, W 5163, H 3872
+ 6.064           T19 Finished task 43 in 5.306 s.
+aligned_2025-11-01_0228.tif transform: [0.995 0.000 18.018; -0.000 0.995 7.947]
+ 6.064 [ 91/134] T14 Starting task: Save aligned_2025-11-01_0229.tif
+ 6.064 [ 92/134] T11 Starting task: Grayscale aligned_2025-11-01_0229.tif
+ 6.081           T11 Finished task 92 in 0.017 s.
+ 6.081 [ 93/134] T11 Starting task: Focus measure for aligned_2025-11-01_0229.tif
+ 6.082 [ 94/134] T15 Starting task: Forward-wavelet aligned_2025-11-01_0229.tif
+ 6.082 [ 95/134] T19 Starting task: Build color reassignment map from 8 images
+ 6.132           T11 Finished task 93 in 0.051 s.
+ 6.132 [ 96/134] T11 Starting task: Save focusmeasure_aligned_2025-11-01_0229.tif
+ 6.132 [ 97/134] T16 Starting task: Construct depthmap layer 2
+ 6.200           T11 Finished task 96 in 0.068 s.
+ 6.223           T15 Finished task 94 in 0.141 s.
+ 6.223 [ 98/134] T15 Starting task: Merge 8 images
+ 6.228           T16 Finished task 97 in 0.096 s.
+aligned_2025-11-01_0237.tif contrast map: C:0.992, X:-0.002, X2:0.037, Y:-0.008, Y2:-0.031
+aligned_2025-11-01_0237.tif whitebalance: R:x1.008-0.3, G:x1.005+0.2, B:x1.008-0.3
+ 6.517           T6 Finished task 85 in 0.821 s.
+aligned_2025-11-01_0237.tif transformed corners TL (470.9,97.2), TR (5672.7,97.8), BL (471.4,3998.8), BR (5673.2,3999.4)
+aligned_2025-11-01_0237.tif valid area X 480, Y 104, W 5184, H 3888
+ 6.559           T10 Finished task 45 in 5.800 s.
+ 6.559 [ 99/134] T10 Starting task: Save aligned_2025-11-01_0237.tif
+aligned_2025-11-01_0238.tif transform: [1.004 0.000 -14.583; 0.000 1.004 -8.349]
+ 6.559 [100/134] T17 Starting task: Grayscale aligned_2025-11-01_0237.tif
+ 6.586           T17 Finished task 100 in 0.027 s.
+ 6.586 [101/134] T17 Starting task: Forward-wavelet aligned_2025-11-01_0237.tif
+ 6.586 [102/134] T7 Starting task: Focus measure for aligned_2025-11-01_0237.tif
+ 6.644           T7 Finished task 102 in 0.058 s.
+ 6.644 [103/134] T7 Starting task: Save focusmeasure_aligned_2025-11-01_0237.tif
+ 6.644 [104/134] T20 Starting task: Construct depthmap layer 10
+aligned_2025-11-01_0228.tif contrast map: C:1.026, X:0.009, X2:0.031, Y:-0.002, Y2:-0.035
+aligned_2025-11-01_0228.tif whitebalance: R:x0.976+1.1, G:x0.980-0.1, B:x0.978+0.1
+ 6.702           T7 Finished task 103 in 0.058 s.
+ 6.811           T20 Finished task 104 in 0.167 s.
+ 6.887           T17 Finished task 101 in 0.301 s.
+ 6.893           T14 Finished task 91 in 0.829 s.
+aligned_2025-11-01_0228.tif transformed corners TL (495.7,111.4), TR (5655.0,111.2), BL (496.4,3981.5), BR (5655.7,3981.3)
+aligned_2025-11-01_0228.tif valid area X 497, Y 112, W 5158, H 3869
+ 6.939           T3 Finished task 52 in 5.790 s.
+aligned_2025-11-01_0227.tif transform: [0.994 0.000 16.846; -0.000 0.994 10.475]
+ 6.939 [105/134] T6 Starting task: Save aligned_2025-11-01_0228.tif
+ 6.939 [106/134] T18 Starting task: Grayscale aligned_2025-11-01_0228.tif
+ 6.958           T18 Finished task 106 in 0.019 s.
+ 6.958 [107/134] T18 Starting task: Forward-wavelet aligned_2025-11-01_0228.tif
+ 6.958 [108/134] T14 Starting task: Focus measure for aligned_2025-11-01_0228.tif
+ 7.063           T14 Finished task 108 in 0.105 s.
+ 7.063 [109/134] T14 Starting task: Save focusmeasure_aligned_2025-11-01_0228.tif
+ 7.063 [110/134] T7 Starting task: Construct depthmap layer 1
+ 7.122           T18 Finished task 107 in 0.164 s.
+ 7.128           T14 Finished task 109 in 0.065 s.
+aligned_2025-11-01_0238.tif contrast map: C:1.040, X:0.006, X2:-0.001, Y:-0.020, Y2:0.014
+aligned_2025-11-01_0238.tif whitebalance: R:x0.953+0.7, G:x0.959-0.5, B:x0.944+3.2
+ 7.181           T7 Finished task 110 in 0.118 s.
+aligned_2025-11-01_0238.tif transformed corners TL (467.5,96.2), TR (5673.7,96.9), BL (468.0,4000.9), BR (5674.2,4001.7)
+aligned_2025-11-01_0238.tif valid area X 480, Y 104, W 5184, H 3888
+ 7.424           T12 Finished task 53 in 6.261 s.
+ 7.424 [111/134] T12 Starting task: Save aligned_2025-11-01_0238.tif
+ 7.424 [112/134] T7 Starting task: Grayscale aligned_2025-11-01_0238.tif
+ 7.424           T10 Finished task 99 in 0.865 s.
+ 7.441           T7 Finished task 112 in 0.017 s.
+ 7.441 [113/134] T7 Starting task: Forward-wavelet aligned_2025-11-01_0238.tif
+ 7.441 [114/134] T13 Starting task: Focus measure for aligned_2025-11-01_0238.tif
+ 7.492           T13 Finished task 114 in 0.051 s.
+ 7.492 [115/134] T13 Starting task: Save focusmeasure_aligned_2025-11-01_0238.tif
+ 7.492 [116/134] T14 Starting task: Construct depthmap layer 11
+ 7.514           T19 Finished task 95 in 1.432 s.
+ 7.555           T13 Finished task 115 in 0.063 s.
+aligned_2025-11-01_0227.tif contrast map: C:1.014, X:0.013, X2:0.042, Y:0.001, Y2:-0.024
+aligned_2025-11-01_0227.tif whitebalance: R:x0.990+0.1, G:x0.990+0.0, B:x0.987+0.6
+ 7.595           T7 Finished task 113 in 0.154 s.
+ 7.597           T14 Finished task 116 in 0.105 s.
+ 7.774           T6 Finished task 105 in 0.835 s.
+aligned_2025-11-01_0227.tif transformed corners TL (494.1,113.8), TR (5648.1,112.8), BL (495.0,3980.1), BR (5649.0,3979.1)
+aligned_2025-11-01_0227.tif valid area X 496, Y 114, W 5152, H 3865
+ 7.824           T9 Finished task 54 in 6.653 s.
+ 7.824 [117/134] T20 Starting task: Grayscale aligned_2025-11-01_0227.tif
+ 7.824 [118/134] T9 Starting task: Save aligned_2025-11-01_0227.tif
+ 7.844           T20 Finished task 117 in 0.020 s.
+ 7.844 [119/134] T13 Starting task: Forward-wavelet aligned_2025-11-01_0227.tif
+ 7.845 [120/134] T2 Starting task: Build color reassignment map from 4 images
+ 7.845 [121/134] T17 Starting task: Focus measure for aligned_2025-11-01_0227.tif
+ 7.894           T17 Finished task 121 in 0.050 s.
+ 7.894 [122/134] T17 Starting task: Save focusmeasure_aligned_2025-11-01_0227.tif
+ 7.894 [123/134] T4 Starting task: Construct depthmap layer 0
+ 7.963           T17 Finished task 122 in 0.069 s.
+ 7.993           T4 Finished task 123 in 0.099 s.
+ 7.993 [124/134] T4 Starting task: Construct depthmap layer -1
+ 8.000           T13 Finished task 119 in 0.156 s.
+ 8.139           T15 Finished task 98 in 1.916 s.
+ 8.139 [125/134] T7 Starting task: Merge 4 images
+ 8.267           T12 Finished task 111 in 0.843 s.
+ 8.638           T9 Finished task 118 in 0.814 s.
+ 8.678           T2 Finished task 120 in 0.833 s.
+ 9.279           T7 Finished task 125 in 1.140 s.
+ 9.280 [126/134] T7 Starting task: Denoise merge_result.jpg
+ 9.499           T7 Finished task 126 in 0.219 s.
+ 9.499 [127/134] T7 Starting task: Inverse-wavelet denoised_merge_result.jpg
+ 9.659           T7 Finished task 127 in 0.160 s.
+ 9.659 [128/134] T11 Starting task: Save denoised_merge_result.jpg
+ 9.659 [129/134] T18 Starting task: Reassign pixel values
+denoised_merge_result.jpg cropped from (6144, 4096) to (5151, 3865)
+ 9.927           T11 Finished task 128 in 0.268 s.
+10.127           T18 Finished task 129 in 0.468 s.
+10.127 [130/134] T1 Starting task: Save output.jpg
+output.jpg cropped from (6144, 4096) to (5151, 3865)
+10.529           T1 Finished task 130 in 0.402 s.
+16.916           T4 Finished task 124 in 8.923 s.
+16.916 [131/134] T9 Starting task: Inpaint depthmap
+49.835           T9 Finished task 131 in 32.919 s.
+49.836 [132/134] T17 Starting task: Save petteridepthmap.png
+49.836 [133/134] T16 Starting task: Render 3D preview image
+petteridepthmap.png cropped from (6144, 4096) to (5151, 3865)
+49.907           T17 Finished task 132 in 0.071 s.
+49.997           T16 Finished task 133 in 0.161 s.
+49.997 [134/134] T11 Starting task: Save petteri3dview.png
+50.546           T11 Finished task 134 in 0.549 s.
+Saved to output.jpg
+Saved depthmap to petteridepthmap.png
+Saved 3D preview to petteri3dview.png
+
+output.jpg
+aligned_2025-11-01_0227.tif
+aligned_2025-11-01_0228.tif
+aligned_2025-11-01_0229.tif
+aligned_2025-11-01_0230.tif
+aligned_2025-11-01_0231.tif
+aligned_2025-11-01_0232.tif
+aligned_2025-11-01_0233.tif
+aligned_2025-11-01_0234.tif
+aligned_2025-11-01_0235.tif
+aligned_2025-11-01_0236.tif
+aligned_2025-11-01_0237.tif
+aligned_2025-11-01_0238.tif
+denoised_merge_result.jpg
+depth_inpaint_filled.png
+depth_inpaint_lines.png
+depth_inpaint_lr_out.png
+depth_inpaint_lr_points.png
+depth_inpaint_mask.png
+depth_inpaint_masked.png
+depth_inpaint_points.png
+focusmeasure_aligned_2025-11-01_0227.tif
+focusmeasure_aligned_2025-11-01_0228.tif
+focusmeasure_aligned_2025-11-01_0229.tif
+focusmeasure_aligned_2025-11-01_0230.tif
+focusmeasure_aligned_2025-11-01_0231.tif
+focusmeasure_aligned_2025-11-01_0232.tif
+focusmeasure_aligned_2025-11-01_0233.tif
+focusmeasure_aligned_2025-11-01_0234.tif
+focusmeasure_aligned_2025-11-01_0235.tif
+focusmeasure_aligned_2025-11-01_0236.tif
+focusmeasure_aligned_2025-11-01_0237.tif
+focusmeasure_aligned_2025-11-01_0238.tif
+gauss_amp.png
+gauss_dev.png
+gauss_mean.png
+grayscale_2025-11-01_0227.tif
+grayscale_2025-11-01_0228.tif
+grayscale_2025-11-01_0229.tif
+grayscale_2025-11-01_0230.tif
+grayscale_2025-11-01_0231.tif
+grayscale_2025-11-01_0232.tif
+grayscale_2025-11-01_0233.tif
+grayscale_2025-11-01_0234.tif
+grayscale_2025-11-01_0235.tif
+grayscale_2025-11-01_0236.tif
+grayscale_2025-11-01_0237.tif
+grayscale_2025-11-01_0238.tif
+petteri3dview.png
+petteridepthmap.png
+
+
+0.279 [ 40/ 73] T8 Starting task: Align Stack_0010.tif to Stack_0009.tif
+
+Start progress: m_total_progress = m_total_tasks - m_tasks_started
+
+
+focusstackworker.cpp:72:19: Member access into incomplete type 'Worker'
+focusstack.h:20:7: forward declaration of 'focusstack::Worker'
+
+
+
+
+
+
+
+
+

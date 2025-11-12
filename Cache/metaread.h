@@ -57,7 +57,8 @@ signals:
     void okToSelect(bool ok);
     void select(QModelIndex sfIdx, bool clearSelection);
     void updateProgressInFilter(int progress);
-    void updateProgressInStatusbar(int progress, int total);
+    void updateProgressInStatusbar(int progress, int total, QColor);
+    // void updateProgressInStatusbar(int progress, int total, QColor darkRed);
 
     void setValSf(int sfRow, int sfCol, QVariant value,
                   int instance, QString src = "",
@@ -125,6 +126,13 @@ private:
     int redoCount = 0;
     int redoMax = 5;
     bool imageCacheTriggered;
+
+    // cache progress color
+    int mBrightness = 100;
+    int mr = mBrightness * 0.87;
+    int mg = mBrightness * 0.17;
+    int mb = mBrightness * 0.44;
+    QColor darkRed = QColor(mr,mg,mb);
     
     // bool isDispatching;
     bool success;

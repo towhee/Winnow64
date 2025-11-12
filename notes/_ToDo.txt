@@ -6,6 +6,8 @@ WHAT'S NEW
 - Selections are now cleared after a filtration change
 
 BUGS / TO DO
+- Delete folder crash
+- Delete all files in filter not always working properly
 - Rename files
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background

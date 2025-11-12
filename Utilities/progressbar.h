@@ -16,14 +16,13 @@ public:
     void clearImageCacheProgress();
     void setBackgroundColor(const QColor &bg);
     void updateImageCacheProgress(int fromItem, int toItem, int items, QLinearGradient gradient);
-    // void updateDoneItem(bool isDone, int item, int items, QColor doneColor);
     void updateCursor(int item, int items);
 
     QColor cursorColor;
     QColor bgColor;
     QColor targetColor;
     QColor imageCacheColor;
-    QColor metaReadCacheColor;
+    QColor metaReadCacheColor;  // moved to MetaRead
 
     QLinearGradient getGradient(QColor c1);
     QLinearGradient bgGradient;
@@ -33,8 +32,8 @@ public:
     QLinearGradient targetColorGradient;
 
 public slots:
-    void clearMetadataProgress(QColor bgColor);
-    void updateMetadataCacheProgress(int item, int items);
+    void clearUpperProgress();
+    void updateUpperProgress(int item, int items, QColor color = Qt::blue);
 
 private:
     QPixmap state;

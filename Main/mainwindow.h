@@ -85,6 +85,10 @@
 
 #include "Metadata/ExifTool.h"
 
+#include "FocusStack/focusstackworker.h"
+#include "FocusStack/focusstack.h"
+#include "FocusStack/options.h"
+
 #include "Utilities/focuspointtrainer.h"
 // #include "Utilities/focuspredictor.h"
 
