@@ -70,7 +70,8 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    FocusStack/focusstackworker.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -153,14 +154,36 @@ HEADERS += ImageFormats/Tiff/rorytiff.h
 HEADERS += ImageFormats/Base/rawbase.h
 HEADERS += ImageFormats/Tiff/tiffdecoder.h
 HEADERS += ImageStack/FocusStackConstants.h
-HEADERS += ImageStack/depthmap.h
+HEADERS += ImageStack/stackdepthmap.h
 HEADERS += ImageStack/focushalo.h
-HEADERS += ImageStack/focusmeasure.h
+HEADERS += ImageStack/stackfocusmeasure.h
 HEADERS += ImageStack/focusstackutilities.h
 HEADERS += ImageStack/focuswavelet.h
 HEADERS += ImageStack/stackaligner.h
 HEADERS += ImageStack/stackcontroller.h
 HEADERS += ImageStack/stackfusion.h
+HEADERS += FocusStack/3dpreview.h
+HEADERS += FocusStack/align.h
+HEADERS += FocusStack/background_removal.h
+HEADERS += FocusStack/denoise.h
+HEADERS += FocusStack/depthmap.h
+HEADERS += FocusStack/depthmap_inpaint.h
+HEADERS += FocusStack/fast_bilateral.h
+HEADERS += FocusStack/focusmeasure.h
+HEADERS += FocusStack/focusstack.h
+HEADERS += FocusStack/grayscale.h
+HEADERS += FocusStack/histogrampercentile.h
+HEADERS += FocusStack/loadimg.h
+HEADERS += FocusStack/logger.h
+HEADERS += FocusStack/merge.h
+HEADERS += FocusStack/options.h
+HEADERS += FocusStack/radialfilter.h
+HEADERS += FocusStack/reassign.h
+HEADERS += FocusStack/saveimg.h
+HEADERS += FocusStack/wavelet.h
+HEADERS += FocusStack/wavelet_opencl.h
+HEADERS += FocusStack/wavelet_templates.h
+HEADERS += FocusStack/worker.h
 HEADERS += Lcms2/lcms2.h
 HEADERS += Lcms2/lcms2_plugin.h
 HEADERS += Log/issue.h
@@ -226,7 +249,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    FocusStack/focusstackworker.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp
@@ -302,14 +326,34 @@ macx:SOURCES += ImageFormats/Tiff/libtiff.cpp       # use library directly
 SOURCES += ImageFormats/Tiff/rorytiff.cpp           # Rory decoder
 SOURCES += ImageFormats/Base/rawbase.cpp
 SOURCES += ImageFormats/Tiff/tiffdecoder.cpp
-SOURCES += ImageStack/depthmap.cpp
+SOURCES += ImageStack/stackdepthmap.cpp
 SOURCES += ImageStack/focushalo.cpp
-SOURCES += ImageStack/focusmeasure.cpp
+SOURCES += ImageStack/stackfocusmeasure.cpp
 SOURCES += ImageStack/focusstackutilities.cpp
 SOURCES += ImageStack/focuswavelet.cpp
 SOURCES += ImageStack/stackaligner.cpp
 SOURCES += ImageStack/stackcontroller.cpp
 SOURCES += ImageStack/stackfusion.cpp
+SOURCES += FocusStack/3dpreview.cpp
+SOURCES += FocusStack/align.cpp
+SOURCES += FocusStack/background_removal.cpp
+SOURCES += FocusStack/denoise.cpp
+SOURCES += FocusStack/depthmap.cpp
+SOURCES += FocusStack/depthmap_inpaint.cpp
+SOURCES += FocusStack/focusmeasure.cpp
+SOURCES += FocusStack/focusstack.cpp
+SOURCES += FocusStack/grayscale.cpp
+SOURCES += FocusStack/histogrampercentile.cpp
+SOURCES += FocusStack/loadimg.cpp
+SOURCES += FocusStack/logger.cpp
+SOURCES += FocusStack/merge.cpp
+SOURCES += FocusStack/options.cpp
+SOURCES += FocusStack/radialfilter.cpp
+SOURCES += FocusStack/reassign.cpp
+SOURCES += FocusStack/saveimg.cpp
+SOURCES += FocusStack/wavelet.cpp
+SOURCES += FocusStack/wavelet_opencl.cpp
+SOURCES += FocusStack/worker.cpp
 SOURCES += Lcms2/cmsalpha.c
 SOURCES += Lcms2/cmscam02.c
 SOURCES += Lcms2/cmscgats.c
@@ -400,8 +444,7 @@ SOURCES += Utilities/progressbar.cpp
 SOURCES += Utilities/renamefile.cpp
 SOURCES += Utilities/showhelp.cpp
 SOURCES += Utilities/stresstest.cpp
-SOURCES += \
-    Utilities/usbutil.cpp
+SOURCES += Utilities/usbutil.cpp
 SOURCES += Utilities/utilities.cpp
 win32:SOURCES += Utilities/win.cpp
 SOURCES += Views/compareImages.cpp
@@ -415,8 +458,7 @@ SOURCES += Views/infostring.cpp
 SOURCES += Views/videoview.cpp
 SOURCES += Views/videowidget.cpp
 
-FORMS += Dialogs/aboutdlg.ui \
-    Help/helppixeldelta.ui
+FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/loupeinfodlg.ui
 FORMS += Dialogs/addthumbnailsdlg.ui
 FORMS += Dialogs/aligndlg.ui
@@ -465,6 +507,7 @@ ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
 DISTFILES += $$files(Lib/*, true) \
+    FocusStack/wavelet_opencl_kernels.cl \
     notes/Documentation.txt
 DISTFILES += Docs/ingestautopath
 DISTFILES += notes/InstallMediaPipe.txt
@@ -518,11 +561,11 @@ macx {
         LIBS += -L/opt/homebrew/lib \
                 -lopencv_core.411 \
                 -lopencv_imgproc.411 \
-                -lopencv_dnn.411 \
                 -lopencv_imgcodecs \    # req'd by focus stack depthmap
                 -lopencv_video \        # req'd by focus stack align
                 -lopencv_highgui \      # req'd by focus stack align
-                -lopencv_photo          # req'd by focus stack fusion
+                -lopencv_photo \        # req'd by focus stack fusion
+                -lopencv_dnn.411
         INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
 
         # libtiff
@@ -545,9 +588,9 @@ macx {
         LIBS += \
             $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_core.411.dylib \
             $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_imgproc.411.dylib \
-            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_dnn.411.dylib \
             $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_video.411.dylib \
-            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_highgui.411.dylib
+            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_highgui.411.dylib \
+            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_dnn.411.dylib
         INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
 
         # libtiff

@@ -626,7 +626,7 @@ void MW::createEditActions()
     focusStackAction->setObjectName("focusStack");
     focusStackAction->setShortcutVisibleInContextMenu(true);
     addAction(focusStackAction);
-    connect(focusStackAction, &QAction::triggered, this, &MW::generateMeanStack);
+    connect(focusStackAction, &QAction::triggered, this, &MW::generateFocusStack);
 
     // End Utilities
 
@@ -1863,6 +1863,7 @@ void MW::createEditMenu()
     if (G::useMyTiff) utilitiesMenu->addAction(embedThumbnailsAction);
     // utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);
+    utilitiesMenu->addAction(focusStackAction);
     editMenu->addSeparator();
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
 }
@@ -2302,6 +2303,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(embelExportGroupAct);
+    thumbViewActions->append(focusStackAction);
     thumbViewActions->append(separatorAction9);
     thumbViewActions->append(ratingBadgeVisibleAction);
     thumbViewActions->append(iconNumberVisibleAction);
@@ -2790,6 +2792,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
         nextPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Right"));
         prevPickAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+Left"));
         randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
+
+        // Utilities
+        focusStackAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+F"));
 
         // Filters
         // filterUpdateAction->setShortcut(QKeySequence("Shift+F"));

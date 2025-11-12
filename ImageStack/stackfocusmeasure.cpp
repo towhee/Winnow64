@@ -1,4 +1,4 @@
-#include "focusmeasure.h"
+#include "stackfocusmeasure.h"
 #include <QFileInfo>
 #include <QDir>
 
