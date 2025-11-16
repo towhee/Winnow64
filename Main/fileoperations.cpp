@@ -335,17 +335,33 @@ void MW::deleteSelectedFiles()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     if (selection.isEmpty()) return;
 
-    // convert selection to stringlist
     QStringList paths;
-    for (int i = 0; i < selection.count(); ++i) {
-        QString fPath = selection.at(i).data(G::PathRole).toString();
-        paths.append(fPath);
+    paths.reserve(selection.size());
+
+    for (const QModelIndex &sfIdx : selection) {
+        QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
+        QString fPath = dmIdx.data(G::PathRole).toString();
+        if (!fPath.isEmpty())
+            paths << fPath;
     }
 
+    paths.removeDuplicates();
     deleteFiles(paths);
+
+    // QModelIndexList selection = dm->selectionModel->selectedRows();
+    // if (selection.isEmpty()) return;
+
+    // // convert selection to stringlist
+    // QStringList paths;
+    // for (int i = 0; i < selection.count(); ++i) {
+    //     QString fPath = selection.at(i).data(G::PathRole).toString();
+    //     paths.append(fPath);
+    // }
+
+    // deleteFiles(paths);
 }
 
 void MW::dmRemove(QStringList pathList)

@@ -70,8 +70,7 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h \
-    FocusStack/focusstackworker.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -122,6 +121,29 @@ HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
 HEADERS += File/hoverdelegate.h
 HEADERS += File/ingest.h
+HEADERS += FocusStack/3dpreview.h
+HEADERS += FocusStack/align.h
+HEADERS += FocusStack/background_removal.h
+HEADERS += FocusStack/denoise.h
+HEADERS += FocusStack/depthmap.h
+HEADERS += FocusStack/depthmap_inpaint.h
+HEADERS += FocusStack/fast_bilateral.h
+HEADERS += FocusStack/focusmeasure.h
+HEADERS += FocusStack/focusstack.h
+HEADERS += FocusStack/focusstackworker.h
+HEADERS += FocusStack/grayscale.h
+HEADERS += FocusStack/histogrampercentile.h
+HEADERS += FocusStack/loadimg.h
+HEADERS += FocusStack/logger.h
+HEADERS += FocusStack/merge.h
+HEADERS += FocusStack/options.h
+HEADERS += FocusStack/radialfilter.h
+HEADERS += FocusStack/reassign.h
+HEADERS += FocusStack/saveimg.h
+HEADERS += FocusStack/wavelet.h
+HEADERS += FocusStack/wavelet_opencl.h
+HEADERS += FocusStack/wavelet_templates.h
+HEADERS += FocusStack/worker.h
 HEADERS += Image/autonomousimage.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
@@ -162,28 +184,6 @@ HEADERS += ImageStack/focuswavelet.h
 HEADERS += ImageStack/stackaligner.h
 HEADERS += ImageStack/stackcontroller.h
 HEADERS += ImageStack/stackfusion.h
-HEADERS += FocusStack/3dpreview.h
-HEADERS += FocusStack/align.h
-HEADERS += FocusStack/background_removal.h
-HEADERS += FocusStack/denoise.h
-HEADERS += FocusStack/depthmap.h
-HEADERS += FocusStack/depthmap_inpaint.h
-HEADERS += FocusStack/fast_bilateral.h
-HEADERS += FocusStack/focusmeasure.h
-HEADERS += FocusStack/focusstack.h
-HEADERS += FocusStack/grayscale.h
-HEADERS += FocusStack/histogrampercentile.h
-HEADERS += FocusStack/loadimg.h
-HEADERS += FocusStack/logger.h
-HEADERS += FocusStack/merge.h
-HEADERS += FocusStack/options.h
-HEADERS += FocusStack/radialfilter.h
-HEADERS += FocusStack/reassign.h
-HEADERS += FocusStack/saveimg.h
-HEADERS += FocusStack/wavelet.h
-HEADERS += FocusStack/wavelet_opencl.h
-HEADERS += FocusStack/wavelet_templates.h
-HEADERS += FocusStack/worker.h
 HEADERS += Lcms2/lcms2.h
 HEADERS += Lcms2/lcms2_plugin.h
 HEADERS += Log/issue.h
@@ -249,8 +249,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    FocusStack/focusstackworker.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp
@@ -301,6 +300,27 @@ SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
 SOURCES += File/hoverdelegate.cpp
 SOURCES += File/ingest.cpp
+SOURCES += FocusStack/3dpreview.cpp
+SOURCES += FocusStack/align.cpp
+SOURCES += FocusStack/background_removal.cpp
+SOURCES += FocusStack/denoise.cpp
+SOURCES += FocusStack/depthmap.cpp
+SOURCES += FocusStack/depthmap_inpaint.cpp
+SOURCES += FocusStack/focusmeasure.cpp
+SOURCES += FocusStack/focusstack.cpp
+SOURCES += FocusStack/focusstackworker.cpp
+SOURCES += FocusStack/grayscale.cpp
+SOURCES += FocusStack/histogrampercentile.cpp
+SOURCES += FocusStack/loadimg.cpp
+SOURCES += FocusStack/logger.cpp
+SOURCES += FocusStack/merge.cpp
+SOURCES += FocusStack/options.cpp
+SOURCES += FocusStack/radialfilter.cpp
+SOURCES += FocusStack/reassign.cpp
+SOURCES += FocusStack/saveimg.cpp
+SOURCES += FocusStack/wavelet.cpp
+SOURCES += FocusStack/wavelet_opencl.cpp
+SOURCES += FocusStack/worker.cpp
 SOURCES += Image/autonomousimage.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
@@ -334,26 +354,6 @@ SOURCES += ImageStack/focuswavelet.cpp
 SOURCES += ImageStack/stackaligner.cpp
 SOURCES += ImageStack/stackcontroller.cpp
 SOURCES += ImageStack/stackfusion.cpp
-SOURCES += FocusStack/3dpreview.cpp
-SOURCES += FocusStack/align.cpp
-SOURCES += FocusStack/background_removal.cpp
-SOURCES += FocusStack/denoise.cpp
-SOURCES += FocusStack/depthmap.cpp
-SOURCES += FocusStack/depthmap_inpaint.cpp
-SOURCES += FocusStack/focusmeasure.cpp
-SOURCES += FocusStack/focusstack.cpp
-SOURCES += FocusStack/grayscale.cpp
-SOURCES += FocusStack/histogrampercentile.cpp
-SOURCES += FocusStack/loadimg.cpp
-SOURCES += FocusStack/logger.cpp
-SOURCES += FocusStack/merge.cpp
-SOURCES += FocusStack/options.cpp
-SOURCES += FocusStack/radialfilter.cpp
-SOURCES += FocusStack/reassign.cpp
-SOURCES += FocusStack/saveimg.cpp
-SOURCES += FocusStack/wavelet.cpp
-SOURCES += FocusStack/wavelet_opencl.cpp
-SOURCES += FocusStack/worker.cpp
 SOURCES += Lcms2/cmsalpha.c
 SOURCES += Lcms2/cmscam02.c
 SOURCES += Lcms2/cmscgats.c
@@ -506,9 +506,8 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += $$files(Lib/*, true) \
-    FocusStack/wavelet_opencl_kernels.cl \
-    notes/Documentation.txt
+DISTFILES += $$files(Lib/*, true)
+DISTFILES += notes/Documentation.txt
 DISTFILES += Docs/ingestautopath
 DISTFILES += notes/InstallMediaPipe.txt
 DISTFILES += CMakeLists.txt
@@ -553,58 +552,41 @@ macx {
     LIBS += -framework CoreFoundation
     LIBS += -framework Foundation
 
-    # --- Conditional linking paths ---
-    CONFIG(debug, debug|release) {
-        # Debug build - using Homebrew libraries
+    # opencv
+    LIBS += -L/opt/homebrew/lib
+    LIBS += -lopencv_core.411
+    LIBS += -lopencv_imgproc.411
+    LIBS += -lopencv_imgcodecs
+    LIBS += -lopencv_video
+    LIBS += -lopencv_dnn.411
+    INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
 
-        # opencv
-        LIBS += -L/opt/homebrew/lib \
-                -lopencv_core.411 \
-                -lopencv_imgproc.411 \
-                -lopencv_imgcodecs \    # req'd by focus stack depthmap
-                -lopencv_video \        # req'd by focus stack align
-                -lopencv_highgui \      # req'd by focus stack align
-                -lopencv_photo \        # req'd by focus stack fusion
-                -lopencv_dnn.411
-        INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
+    # libtiff
+    LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
+    INCLUDEPATH += /opt/homebrew/opt/libtiff/include
 
-        # libtiff
-        LIBS += -L/opt/homebrew/opt/libtiff/lib -ltiff
-        INCLUDEPATH += /opt/homebrew/opt/libtiff/include
+    # libjpeg-turbo
+    LIBS += -L/opt/homebrew/opt/jpeg-turbo/lib -lturbojpeg
+    INCLUDEPATH += /opt/homebrew/opt/jpeg-turbo/include
 
-        # libjpeg-turbo
-        LIBS += -L/opt/homebrew/opt/jpeg-turbo/lib -lturbojpeg
-        INCLUDEPATH += /opt/homebrew/opt/jpeg-turbo/include
+    # zLib
+    LIBS += -lz
+    INCLUDEPATH += /usr/include
 
-        # zlib (system)
-        LIBS += -lz
-        INCLUDEPATH += /usr/include
-        QMAKE_RPATHDIR += /opt/homebrew/lib
+    # ExifTool folder (recursive)
+    QMAKE_BUNDLE_DATA += exiftool_data
+    exiftool_data.files = $$files($$PWD/ReleaseExtras/ExifTool, true)
+    exiftool_data.path  = Contents/MacOS
 
-    } else {
-        # Release build - using bundled dylibs
+    # Winnets folder (recursive)
+    QMAKE_BUNDLE_DATA += winnets_data
+    winnets_data.files = $$files($$PWD/ReleaseExtras/Winnets, true)
+    winnets_data.path  = Contents/MacOS
 
-        # opencv
-        LIBS += \
-            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_core.411.dylib \
-            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_imgproc.411.dylib \
-            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_video.411.dylib \
-            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_highgui.411.dylib \
-            $$OUT_PWD/Winnow.app/Contents/Frameworks/libopencv_dnn.411.dylib
-        INCLUDEPATH += /opt/homebrew/opt/opencv/include/opencv4
-
-        # libtiff
-        LIBS += $$OUT_PWD/Winnow.app/Contents/Frameworks/libtiff.6.dylib
-        INCLUDEPATH += /opt/homebrew/opt/libtiff/include
-
-        # libjpeg-turbo
-        LIBS += $$OUT_PWD/Winnow.app/Contents/Frameworks/libturbojpeg.0.dylib
-        INCLUDEPATH += /opt/homebrew/opt/jpeg-turbo/include
-
-        # zLib
-        LIBS += -lz
-        INCLUDEPATH += /usr/include
-    }
+    # ONNX model file
+    QMAKE_BUNDLE_DATA += model_data
+    model_data.files = $$PWD/ReleaseExtras/focus_point_model.onnx
+    model_data.path  = Contents/MacOS
 }
 
 # *** WIN Libraries ***

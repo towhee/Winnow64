@@ -275,7 +275,7 @@ void Worker::worker(int thread_idx)
         std::unique_lock<std::mutex> lock(m_mutex);
         taskidx = ++m_tasks_started;
 
-        // Initiate progress updates after a 0.5 second delay
+        // Initiate progress updates after a 0.5 second delay..
         if (!m_total_progress && seconds_passed() > 0.5) {
             m_progress = -1;
             m_total_progress = m_total_tasks - m_tasks_started;

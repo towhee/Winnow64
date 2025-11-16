@@ -421,9 +421,67 @@ focusstack.h:20:7: forward declaration of 'focusstack::Worker'
 
 
 
+echo "WINNOW_VERSION          = "$WINNOW_VERSION
+echo "WINNOW_DATE             = "$WINNOW_DATE
+echo "WINNOW_VERSION_NAME     = "$WINNOW_VERSION_NAME
+echo "WINNOW_VERSION_APP      = "$WINNOW_VERSION_APP
+echo "WINNOW_VERSION_DATE_APP = "$WINNOW_VERSION_DATE_APP
+echo "APP_NAME = "$APP_NAME
+echo "APP_BUNDLE = "$APP_BUNDLE
+echo "QT_VERSION = "$QT_VERSION
+echo "QT_RELEASE_VERSION = "$QT_RELEASE_VERSION
+echo "QT_DIR = "$QT_DIR
+echo "RELEASE_PATH = "$RELEASE_PATH
+echo "RELEASE_APP_PATH = "$RELEASE_APP_PATH
+echo "NOTARIZED_PATH          = "$NOTARIZED_PATH
+echo "DEPLOY_BASE = "$DEPLOY_BASE
+
+echo "VERSIONED_APP           = "$VERSIONED_APP
+echo "ZIP_PATH                = "$ZIP_PATH
 
 
+/Users/roryhill/Projects/WinnowInstall/Staging/Winnow.app
+/Users/roryhill/Projects/WinnowInstall/Deploy/Staging/Winnow.app
 
+✓ Qt frameworks deployed
+🛠 Fixing dylibs…
+find: : No such file or directory
+🧹 Removing Qt’s old WebP libraries…
+dependencies:68: no matches found: /libwebp*.dylib
 
+WINNOW_VERSION            = 2.04
+WINNOW_DATE               = 2025-11-15
+WINNOW_VERSION_NAME       = Winnow2.04
+WINNOW_VERSION_APP        = Winnow2.04.app
+WINNOW_VERSION_DATE_APP   = Winnow2.04_2025-11-15.app
+APP_NAME                  = Winnow
+APP_BUNDLE                = Winnow.app
 
+DEVELOPER_ID              = Developer ID Application: Robert Hill (2663CS489R)
+DEVELOPER_CERT            = Developer ID Application: Robert Hill (2663CS489R)
+APPLE_ID                  = hillrg@gmail.com
+TEAM_ID                   = 2663CS489R
+ENTITLEMENTS              = /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/Winnow.app/Contents/entitlements.plist
+NOTARY_KEYCHAIN_PROFILE   = AC_PASSWORD
+
+QT_VERSION                = 6.9.2
+QT_RELEASE_VERSION        = 6_9_2
+QT_DIR =                  = /Users/roryhill/Qt/6.9.2/macos
+
+RELEASE_DIR               = /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release
+RELEASE_APP_PATH          = /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/Winnow.app
+DEPLOY_DIR                = /Users/roryhill/Projects/WinnowInstall/Deploy
+STAGING_DIR               = /Users/roryhill/Projects/WinnowInstall/Deploy/Staging
+STAGING_APP_PATH          = /Users/roryhill/Projects/WinnowInstall/Deploy/Staging/Winnow.app
+STAGE_FRAMEWORKS_DIR      = /Users/roryhill/Projects/WinnowInstall/Deploy/Staging/Winnow.app/Contents/Frameworks
+STAGE_MACOS_DIR           = /Users/roryhill/Projects/WinnowInstall/Deploy/Staging/Winnow.app/Contents/MacOS
+STAGE_RESOURCES_DIR       = /Users/roryhill/Projects/WinnowInstall/Deploy/Staging/Winnow.app/Contents/Resources
+NOTARIZED_DIR             = /Users/roryhill/Projects/WinnowInstall/Deploy/Notarized
+NOTARIZED_APP_PATH        = /Users/roryhill/Projects/WinnowInstall/Deploy/Notarized/Winnow2.04.app
+NOTARIZED_ZIP_PATH        = /Users/roryhill/Projects/WinnowInstall/Deploy/Notarized/Winnow2.04.zip
+DMG_DIR                   = /Users/roryhill/Projects/WinnowInstall/DMG
+DMG_PATH                  = /Users/roryhill/Projects/WinnowInstall/Winnow2.04.dmg
+
+ARCHIVE_APPS_DIR          = /Users/roryhill/Applications/Winnow2.04
+ARCHIVE_APP_PATH          = /Users/roryhill/Applications/Winnow2.04/Winnow2.04_2025-11-15.app
 
