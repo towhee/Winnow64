@@ -650,31 +650,3 @@ win32 {
         DEPENDPATH  += $$PWD/Lib/libtiff/build/libtiff/Release
     }
 }
-
-# # opencv
-# win32:LIBS += -L$$PWD/Lib/opencv/windows/build/x64/vc16/lib -lopencv_world4110
-# win32:INCLUDEPATH += $$PWD/Lib/opencv/windows/build/include
-
-# # libde265 (frame parallel)
-# win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
-# else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
-# win32:INCLUDEPATH += $$PWD/Lib/libde265/include
-# win32:DEPENDPATH  += $$PWD/Lib/libde265/release
-
-# # zLib
-# win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/build/Release/ -lzlib
-# win32:INCLUDEPATH += $$PWD/Lib/zlib
-# win32:INCLUDEPATH += $$PWD/Lib/zlib/build
-# win32:DEPENDPATH += $$PWD/Lib/zlib/build/Release
-
-# # libheif
-# win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
-# else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
-# win32:INCLUDEPATH += $$PWD/Lib/libheif/include
-# win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
-
-# # libtiff
-# win32:LIBS += -L$$PWD/Lib/libtiff/build/libtiff/Release -ltiff
-# win32:INCLUDEPATH += $$PWD/Lib/libtiff/libtiff
-# win32:INCLUDEPATH += $$PWD/Lib/libtiff/build/libtiff
-# win32:DEPENDPATH +=  $$PWD/Lib/libtiff/build/libtiff/Release

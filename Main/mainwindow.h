@@ -1324,7 +1324,6 @@ private:
     void renameSelectedFiles();
     void dmInsert(QStringList pathList);
     void insertFiles(QStringList fPaths);
-    void dmRemove(QStringList pathList);
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);
     void deleteFolder();
@@ -1393,7 +1392,8 @@ private:
     void findDuplicates();
     void reportHueCount();
     void generateMeanStack();
-    void generateFocusStack();
+    void generateFocusStackFromSelection();
+    void generateFocusStack(const QStringList paths, const QString method, const QString source);
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
     void traverseFolderStressTest(int msPerImage = 0, double secPerFolder = 0,

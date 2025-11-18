@@ -22,7 +22,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // check args to see if program was started by another process (winnet)
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
-    if (argList.length() > 1) isStartupArgs = true;
+    if (argList.length() > 1)
+        isStartupArgs = true;
 
     /* TESTING / DEBUGGING FLAGS
        Note G::isLogger is in globals.cpp */
@@ -50,7 +51,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadSettings();     // except settings with dependencies ie for actions not created yet
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
-    settings->setValue("appPath", qApp->applicationDirPath());
+    settings->setValue("appPath", qApp->applicationFilePath());
+    // settings->setValue("appPath", qApp->applicationDirPath());
 
     // Loggers
     /*
@@ -1478,15 +1480,12 @@ void MW::handleStartupArgs(const QString &args)
 /*
     Argument options:
 
-    arg[0]     = system parameter - usually path to executing program (Winnow)
+    arg[0]  = srcProgram - usually path to launching program (Winnet)
+            = <Module><Method/Template>
+              "EmbellishZen2048" then "Zen2048" = Method
 
-    if arg[1]  = "Embellish" then
-       arg[2]  = templateName (also name on Winnet used to send to Winnow)
-       arg[3+] = path to each image being exported to be embellished
-
-    else
-       arg[1+] = path to each image to view in Winnow. Only arg[1] is used to
-       determine the directory to open in Winnow.
+    arg[1+] = path to each image to view in Winnow. Only arg[1] is used to
+              determine the source directory.
 
     Winnets are small executables that act like photoshop droplets. They reside in
     QStandardPaths::AppDataLocation (Windows: user/AppData/Roaming/Winnow/Winnets
@@ -1501,20 +1500,49 @@ void MW::handleStartupArgs(const QString &args)
 */
     if (G::isLogger) G::log("MW::handleStartupArgs", args);
 
-    if (args.length() < 2) return;
+    // if (args.length() < 2) return;
 
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
 
+    // Utilities::log("MW::handleStartupArgs test", argList.join(" | "));
+
     // qDebug() << "MW::handleStartupArgs" << argList;
     if (argList.length() > 1) {
         // if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
-        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", argList.join(" | "));
+        if (G::isFileLogger)
+            Utilities::log("MW::handleStartupArgs", argList.join(" | "));
     }
 
+    QString srcProgram = argList.at(0);
     QStringList pathList;
     QString templateName;
-    if (argList.at(1) == "Embellish") {
+
+    // FOCUSSTACK
+    if (srcProgram.startsWith("FocusStack")) {
+
+        // check if at least 2 image paths sent, if not, close Winnow
+        if (argList.length() < 3) close();
+
+        // QString msg = "MW::handleStartupArgs " + argList.at(0);
+        // Utilities::log("MW::handleStartupArgs", msg);
+
+        show();
+        raise();
+
+        QString method = srcProgram.mid(QString("FocusStack").length());
+
+        QStringList paths;
+        for (int i = 1; i < argList.count(); i++) {
+            paths << argList.at(i);
+        }
+        paths.sort();
+
+        generateFocusStack(paths, method, "MW::handleStartupArgs");
+    }
+
+    // EMBELLISH
+    else if (srcProgram.startsWith("Embellish")) {
         /* This means a remote embellish has been invoked.
                 arg 1 = "Embellish"
                 arg 2 = Embellish template name ie "Zen2048"
@@ -1535,17 +1563,17 @@ void MW::handleStartupArgs(const QString &args)
         G::mode = "Loupe";
 
         // check if any image path sent, if not, return
-        if (argList.length() < 4) return;
+        if (argList.length() < 2) return;
 
         // get the embellish template to use
-        templateName = argList.at(2);
+        templateName = srcProgram.mid(QString("Embellish").length());
 
         /* log
         if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
         //*/
 
         // get the folder where the files to embellish are located
-        QFileInfo info(argList.at(3));
+        QFileInfo info(argList.at(1));
         QString folderPath = info.dir().absolutePath();
 
         // list of all supported files in the folder
@@ -5098,24 +5126,33 @@ void MW::generateMeanStack()
     }
 }
 
-void MW::generateFocusStack()
+void MW::generateFocusStackFromSelection()
 {
-    if (G::isLogger) G::log("MW::generateFocusStack");
-
 
     if (G::isLogger) G::log("MW::generateFocusStack");
+    QString src = "MW::generateFocusStack";
 
-    QStringList selection;
-    if (!dm->getSelection(selection) || selection.isEmpty()) {
-        updateStatus(false,
-                     "No images selected for focus stacking.",
-                     "MW::generateFocusStack");
+    QStringList paths;
+    if (!dm->getSelection(paths) || paths.isEmpty()) {
+        QString msg = "No images selected for focus stacking.";
+        updateStatus(false, msg, src);
         return;
     }
 
+    generateFocusStack(paths, "Default", "MW::generateFocusStackFromSelection");
+}
+
+void MW::generateFocusStack(const QStringList paths,
+                            const QString method,
+                            const QString source)
+{
+    if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
+
+    bool isLocal = source == "MW::generateFocusStackFromSelection";
+
     // Create the worker and thread
     QThread *thread = new QThread;
-    FocusStackWorker *worker = new FocusStackWorker(selection);
+    FocusStackWorker *worker = new FocusStackWorker(paths);
     worker->moveToThread(thread);
 
     // --- Connect signals and slots -------------------------------------
@@ -5133,11 +5170,37 @@ void MW::generateFocusStack()
     connect(worker, &FocusStackWorker::finished, this,
             [=](bool ok, const QString &output, const QString &depthmap) {
                 QString msg = ok
-                                  ? QString("FocusStack finished successfully.\nOutput: %1\nDepthMap: %2")
-                                        .arg(output, depthmap)
-                                  : "FocusStack failed.";
+                    ? QString("FocusStack finished successfully.  "
+                              "Output: %1  DepthMap: %2")
+                        .arg(output, depthmap)
+                    : "FocusStack failed.";
 
                 updateStatus(false, msg, "MW::generateFocusStack");
+
+                if (ok) {
+                    dm->insert(output);
+                    if (!isLocal) {
+                        // Delete temp source files to stack
+                        for (const QString &path : paths) {
+                            QFile(path).moveToTrash();
+                        }
+
+                        folderAndFileSelectionChange(output, "MW::generateFocusStack");
+
+                        // Wait for metadata to finish loading OR timeout after 3000 ms
+                        const int timeoutMs = 3000;
+                        QElapsedTimer timer;
+                        timer.start();
+
+                        while (!G::allMetadataLoaded && timer.elapsed() < timeoutMs) {
+                            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                            QThread::msleep(50);
+                        }
+
+                        // deleteFiles(paths);
+                    }
+                    sel->select(output);
+                }
 
                 // cleanup
                 thread->quit();
@@ -5147,193 +5210,11 @@ void MW::generateFocusStack()
             });
 
     // --- Start background task ----------------------------------------
-    updateStatus(false,
-                 QString("Starting FocusStack background task (%1 images)...")
-                     .arg(selection.size()),
-                 "MW::generateFocusStack");
+    QString msg = "Starting FocusStack background task (%1 images)...";
+    QString src = "MW::generateFocusStack";
+    updateStatus(false, msg, src);
 
     thread->start();
-
-/*
-    QStringList selection;
-    if (!dm->getSelection(selection) || selection.isEmpty()) {
-        updateStatus(false,
-                     "No images selected for focus stacking.",
-                     "MW::generateFocusStack");
-        return;
-    }
-
-
-    using namespace focusstack;
-
-    // -----------------------------------------------------------------
-    // Build simulated command-line arguments from selection
-    // -----------------------------------------------------------------
-    std::vector<std::string> args;
-    args.emplace_back("focus-stack");  // argv[0] dummy program name
-
-    // Add all selected image paths
-    for (const QString &path : selection)
-        args.emplace_back(path.toStdString());
-
-    // Add default output/depthmap/flags
-    QString outputDir = QDir(selection.first()).absolutePath() + "/focusstack_test";
-    QDir().mkpath(outputDir);
-
-    // -----------------------------------------------------------------
-    // Build output and depthmap filenames based on first selection
-    // -----------------------------------------------------------------
-    QString firstPath = selection.first();
-    QFileInfo fi(firstPath);
-    QString basePath = fi.path() + "/" + fi.completeBaseName();
-    QString outputPath = basePath + "_FocusStack.png";
-    QString depthmapPath = basePath + "_DepthMap.png";
-
-    // -----------------------------------------------------------------
-    // If output file exists, add incremental suffix (_01, _02, …)
-    // -----------------------------------------------------------------
-    int counter = 1;
-    while (QFile::exists(outputPath)) {
-        outputPath = QString("%1_FocusStack_%2.png")
-        .arg(basePath)
-            .arg(counter, 2, 10, QLatin1Char('0'));
-        ++counter;
-    }
-
-    counter = 1;
-    while (QFile::exists(depthmapPath)) {
-        depthmapPath = QString("%1_DepthMap_%2.png")
-        .arg(basePath)
-            .arg(counter, 2, 10, QLatin1Char('0'));
-        ++counter;
-    }
-
-    // Append CLI-style arguments
-    args.emplace_back("--output=" + outputPath.toStdString());
-    args.emplace_back("--depthmap=" + depthmapPath.toStdString());
-    args.emplace_back("--verbose");
-
-    // -----------------------------------------------------------------
-    // Convert to argc/argv for Petteri’s Options interface
-    // -----------------------------------------------------------------
-    int argc = static_cast<int>(args.size());
-    std::vector<const char *> argv(argc);
-    for (int i = 0; i < argc; ++i)
-        argv[i] = args[i].c_str();
-
-    // -----------------------------------------------------------------
-    // Run FocusStack with simulated CLI args
-    // -----------------------------------------------------------------
-    Options options(argc, argv.data());
-    FocusStack stack;
-
-    stack.set_inputs(options.get_filenames());
-    stack.set_output(options.get_arg("--output", "output.jpg"));
-    // stack.set_depthmap(options.get_arg("--depthmap", ""));
-    stack.set_verbose(options.has_flag("--verbose"));
-
-    // Example: you can add more defaults or settings here
-    stack.set_consistency(2);
-    stack.set_denoise(1.0f);
-    stack.set_disable_opencl(false);
-
-    updateStatus(false,
-                 QString("Running FocusStack on %1 images...").arg(selection.size()),
-                 "MW::generateFocusStack");
-
-    bool ok = stack.run();
-
-    if (ok)
-        updateStatus(false,
-                     QString("Focus stack complete. Output: %1")
-                         .arg(QString::fromStdString(stack.get_output())),
-                     "MW::generateFocusStack");
-    else
-        updateStatus(false,
-                     "Focus stack failed.",
-                     "MW::generateFocusStack");
-
-    //*/
-
-
-
-
-
-
-
-
-
-    /*
-    // --- 1. Create the StackController -------------------------------------
-    auto *focusStack = new StackController(this);
-
-    // Connect abort signal from MW → StackController
-    connect(this, &MW::abortStackOperation,
-            focusStack, &StackController::stop,
-            Qt::QueuedConnection);
-
-    // Forward live status updates from controller to MW
-    connect(focusStack, &StackController::updateStatus,
-            this, &MW::updateStatus,
-            Qt::QueuedConnection);
-
-    // Optional: progress updates for UI feedback (progress bar, etc.)
-    connect(focusStack, &StackController::progress,
-            this, [this](const QString &msg, int cur, int total) {
-                QString s = QString("%1 (%2/%3)").arg(msg).arg(cur).arg(total);
-                updateStatus(false, s, "StackController::progress");
-            }, Qt::QueuedConnection);
-
-    // Handle completion
-    connect(focusStack, &StackController::finishedAlign,
-            this, [this](const QString &projectFolder) {
-                updateStatus(false,
-                             QString("Focus stack alignment complete: %1").arg(projectFolder),
-                             "MW::generateFocusStack");
-            }, Qt::QueuedConnection);
-
-    // --- 2. Gather selected image paths ------------------------------------
-    QStringList selection;
-    if (!dm->getSelection(selection) || selection.isEmpty()) {
-        updateStatus(false,
-                     "No images selected for focus stacking.",
-                     "MW::generateFocusStack");
-        focusStack->deleteLater();
-        return;
-    }
-
-    // --- 3. Gather image pointers from image cache -------------------------------
-    QList<QImage*> srcImages;
-    for (const QString &path : selection) {
-        if (icd->imCache.contains(path))
-            srcImages.append(&icd->imCache[path]);
-        else
-            updateStatus(false, QString("Missing from cache: %1").arg(path),
-                         "MW::generateFocusStack");
-    }
-
-    if (srcImages.isEmpty()) {
-        updateStatus(false,
-                     "No valid images found in cache for stacking.",
-                     "MW::generateFocusStack");
-        focusStack->deleteLater();
-        return;
-    }
-
-    // --- 4. Load inputs into controller ------------------------------------
-    focusStack->loadInputImages(selection, srcImages);  // initialize
-
-    // --- 5. Run alignment asynchronously -----------------------------------
-    //     (returns immediately; work happens in background thread)
-    focusStack->test();
-    // focusStack->runAlignment(true, false); // saveAligned, useGpu
-
-    // At this point:
-    //   - MW remains fully responsive.
-    //   - updateStatus() will receive live updates via queued signals.
-    //   - User can call emit abortStackOperation() to cancel.
-
-    //*/
 }
 
 void MW::reportHueCount()

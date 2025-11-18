@@ -485,3 +485,7 @@ DMG_PATH                  = /Users/roryhill/Projects/WinnowInstall/Winnow2.04.dm
 ARCHIVE_APPS_DIR          = /Users/roryhill/Applications/Winnow2.04
 ARCHIVE_APP_PATH          = /Users/roryhill/Applications/Winnow2.04/Winnow2.04_2025-11-15.app
 
+/Users/roryhill/Pictures/FocusStacks
+
+/Users/roryhill/Library/Application Support/Winnow/Winnets/EmbellishAndreas
+/Users/roryhill/Library/Application Support/Winnow/Winnets/EmbellishAndreasb 4k version 1_1

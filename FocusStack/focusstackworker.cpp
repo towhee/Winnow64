@@ -9,12 +9,25 @@ void FocusStackWorker::process()
     emit updateStatus(false, "Preparing FocusStack...", src);
 
     // --- Build simulated CLI arguments --------------------------------
+    // for (const QString &path : m_selection)
+    //     args.emplace_back(path.toStdString());
+
+    // --- Convert selection to fPaths and sort them ---
+    QStringList sortedPaths = m_selection;
+    std::sort(sortedPaths.begin(), sortedPaths.end(),
+              [](const QString &a, const QString &b) {
+                  return a < b;   // lexicographic path order
+              });
+
+    // --- Build CLI args in the sorted order ---
     std::vector<std::string> args;
     args.emplace_back("focus-stack"); // dummy argv[0]
-    for (const QString &path : m_selection)
+    for (const QString &path : sortedPaths) {
         args.emplace_back(path.toStdString());
+        qDebug() << "FocusStackWorker::process" << path;
+    }
 
-    QFileInfo fi(m_selection.first());
+    QFileInfo fi(sortedPaths.first());
     QString basePath = fi.path() + "/" + fi.completeBaseName();
     QString outputPath = basePath + "_FocusStack.png";
     QString depthmapPath = basePath + "_DepthMap.png";

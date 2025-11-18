@@ -335,7 +335,7 @@ void MW::deleteSelectedFiles()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.isEmpty()) return;
 
     QStringList paths;
@@ -350,50 +350,6 @@ void MW::deleteSelectedFiles()
 
     paths.removeDuplicates();
     deleteFiles(paths);
-
-    // QModelIndexList selection = dm->selectionModel->selectedRows();
-    // if (selection.isEmpty()) return;
-
-    // // convert selection to stringlist
-    // QStringList paths;
-    // for (int i = 0; i < selection.count(); ++i) {
-    //     QString fPath = selection.at(i).data(G::PathRole).toString();
-    //     paths.append(fPath);
-    // }
-
-    // deleteFiles(paths);
-}
-
-void MW::dmRemove(QStringList pathList)
-{
-/*
-    Remove the images from the datamodel.  This must be done while the proxymodel dm->sf
-    is the same as dm: no filtering.  We save the filter, clear filters, remove all the
-    datamodel rows matching the image fPaths and restore the filter.  dm->remove deletes
-    the rows, updates dm->fPathRow.
-*/
-    qDebug() << "MW::dmRemove(QStringList pathList)" << pathList;
-
-    filters->save();
-    clearAllFilters();
-
-    for (int i = 0; i < pathList.count(); ++i) {
-        QString fPath = pathList.at(i);
-        qDebug() << "MW::dmRemove" << pathList.at(i);
-        dm->remove(fPath);
-    }
-
-    // cleanup G::rowsWithIcon
-    metaRead->cleanupIcons();
-
-    // remove deleted files from imageCache
-    imageCache->removeFromCache(pathList);
-
-    G::ignoreScrollSignal = false;
-
-    // rebuild filters
-    buildFilters->rebuild();
-    filters->restore();
 }
 
 void MW::deleteFiles(QStringList paths)
@@ -418,7 +374,6 @@ void MW::deleteFiles(QStringList paths)
     G::ignoreScrollSignal = true;
 
     // delete file(s) in folder on disk, including any xmp sidecars
-    QStringList sldm;       // paths of successfully deleted files to remove in datamodel
     bool fileWasLocked = false;
     for (int i = 0; i < paths.count(); ++i) {
         QString fPath = paths.at(i);
@@ -431,7 +386,6 @@ void MW::deleteFiles(QStringList paths)
                 G::issue("Warning", msg, "MW::deleteFiles", -1, fPath);
             }
             if (QFile(fPath).moveToTrash()) {
-                sldm.append(fPath);
                 QStringList srcSidecarPaths = Utilities::getSidecarPaths(fPath);
                 foreach (QString sidecarPath, srcSidecarPaths) {
                     if (QFile(sidecarPath).exists()) {

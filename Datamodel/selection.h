@@ -12,7 +12,7 @@ class Selection : public QObject
 public:
     Selection(QWidget *parent, DataModel *dm, IconView *thumbView,
               IconView *gridView, TableView *tableView);
-    void select(QString &fPath, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void select(const QString &fPath, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void select(int sfRow, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void select(QModelIndex sfIdx,
                 Qt::KeyboardModifiers modifiers = Qt::NoModifier,
