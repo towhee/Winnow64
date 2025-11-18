@@ -129,7 +129,7 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
     shiftExtendIndex = sfIdx;
 }
 
-void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
+void Selection::select(const QString &fPath, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || G::isFlowLogger || isDebug) G::log("Selection::select(QString)", fPath);
     //qDebug() << "Selection::select QString" << fPath;

@@ -391,7 +391,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // generateFocusStack();
+    QString msg = "This is a test";
+    Utilities::log("MW::test", msg);
+
 
 
 }
