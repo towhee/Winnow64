@@ -628,7 +628,25 @@ duplicate symbol 'focusstack::Task_Depthmap::compute_result()' in:
     /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
     /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
 
+Winnow/ImageStack/
+    Fusion/
+        fusionbase.h
+        fusionbase.cpp
+        fusionpmaxbasic.h
+        fusionpmaxbasic.cpp
+        fusionwavepmax.h
+        fusionwavepmax.cpp
+        fusionfactory.h
+        fusionfactory.cpp
 
+    Mask/
+        maskoptions.h
+        maskgenerator.h
+        maskgenerator.cpp
+        maskrefiner.h
+        maskrefiner.cpp
+        maskassessor.h
+        maskassessor.cpp
 
 
 
