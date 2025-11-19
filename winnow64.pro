@@ -72,7 +72,15 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    FocusStack/Fusion/fusionbase.h \
+    FocusStack/Fusion/fusionfactory.h \
+    FocusStack/Fusion/fusionpmaxbasic.h \
+    FocusStack/Fusion/fusionwavepmax.h \
+    FocusStack/Mask/maskassessor.h \
+    FocusStack/Mask/maskgenerator.h \
+    FocusStack/Mask/maskoptions.h \
+    FocusStack/Mask/maskrefiner.h
 HEADERS += FocusStack/Petteri/worker.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
@@ -251,7 +259,14 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    FocusStack/Fusion/fusionbase.cpp \
+    FocusStack/Fusion/fusionfactory.cpp \
+    FocusStack/Fusion/fusionpmaxbasic.cpp \
+    FocusStack/Fusion/fusionwavepmax.cpp \
+    FocusStack/Mask/maskassessor.cpp \
+    FocusStack/Mask/maskgenerator.cpp \
+    FocusStack/Mask/maskrefiner.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp
