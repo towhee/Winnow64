@@ -5,8 +5,8 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QColor>
-#include "FocusStack/focusstack.h"
-#include "FocusStack/options.h"
+#include "FocusStack/Petteri/focusstack.h"
+#include "FocusStack/Petteri/options.h"
 
 
 class FocusStackWorker : public QObject

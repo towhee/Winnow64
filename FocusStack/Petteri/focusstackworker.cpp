@@ -1,5 +1,5 @@
 #include "focusstackworker.h"
-#include "FocusStack/worker.h"
+#include "FocusStack/Petteri/worker.h"
 
 void FocusStackWorker::process()
 {

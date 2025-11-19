@@ -1,4 +1,4 @@
-#include "stackdepthmap.h"
+#include "stack_depth_map.h"
 #include "ImageStack/focusstackutilities.h"
 #include "ImageStack/focusstackconstants.h"
 #include <QFileInfoList>

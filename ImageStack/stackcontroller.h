@@ -12,8 +12,8 @@
 #include <QThread>
 #include "ImageStack/focusstackconstants.h"
 #include "ImageStack/stackaligner.h"
-#include "ImageStack/stackfocusmeasure.h"
-#include "ImageStack/stackdepthmap.h"
+#include "ImageStack/stack_focus_measure.h"
+#include "ImageStack/stack_depth_map.h"
 #include "ImageStack/stackfusion.h"
 #include "ImageStack/focushalo.h"
 
