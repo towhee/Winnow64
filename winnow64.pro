@@ -72,16 +72,7 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h \
-    FocusStack/Fusion/fusionbase.h \
-    FocusStack/Fusion/fusionfactory.h \
-    FocusStack/Fusion/fusionpmaxbasic.h \
-    FocusStack/Fusion/fusionwavepmax.h \
-    FocusStack/Mask/maskassessor.h \
-    FocusStack/Mask/maskgenerator.h \
-    FocusStack/Mask/maskoptions.h \
-    FocusStack/Mask/maskrefiner.h
-HEADERS += FocusStack/Petteri/worker.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -132,6 +123,19 @@ HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
 HEADERS += File/hoverdelegate.h
 HEADERS += File/ingest.h
+HEADERS += FocusStack/Fusion/fusionbase.h
+HEADERS += FocusStack/Fusion/fusionfactory.h
+HEADERS += FocusStack/Fusion/fusionpmaxbasic.h
+HEADERS += FocusStack/Fusion/fusionwavepmax.h
+HEADERS += FocusStack/Mask/maskassessor.h
+HEADERS += FocusStack/Mask/maskgenerator.h
+HEADERS += FocusStack/Mask/maskoptions.h
+HEADERS += FocusStack/Mask/maskrefiner.h
+HEADERS += FocusStack/PetteriAdapter/petterialign.h
+HEADERS += FocusStack/PetteriAdapter/petteridepthmap.h
+HEADERS += FocusStack/PetteriAdapter/petterifocusmaps.h
+HEADERS += FocusStack/PetteriAdapter/petteripipeline.h
+HEADERS += FocusStack/PetteriAdapter/petteripmaxfusion.h
 HEADERS += FocusStack/Petteri/3dpreview.h
 HEADERS += FocusStack/Petteri/align.h
 HEADERS += FocusStack/Petteri/background_removal.h
@@ -154,6 +158,7 @@ HEADERS += FocusStack/Petteri/saveimg.h
 HEADERS += FocusStack/Petteri/wavelet.h
 HEADERS += FocusStack/Petteri/wavelet_opencl.h
 HEADERS += FocusStack/Petteri/wavelet_templates.h
+HEADERS += FocusStack/Petteri/worker.h
 HEADERS += Image/autonomousimage.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
@@ -259,14 +264,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    FocusStack/Fusion/fusionbase.cpp \
-    FocusStack/Fusion/fusionfactory.cpp \
-    FocusStack/Fusion/fusionpmaxbasic.cpp \
-    FocusStack/Fusion/fusionwavepmax.cpp \
-    FocusStack/Mask/maskassessor.cpp \
-    FocusStack/Mask/maskgenerator.cpp \
-    FocusStack/Mask/maskrefiner.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp
@@ -317,6 +315,7 @@ SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
 SOURCES += File/hoverdelegate.cpp
 SOURCES += File/ingest.cpp
+SOURCES += FocusStack/generatefocusstack.cpp
 SOURCES += FocusStack/Petteri/3dpreview.cpp
 SOURCES += FocusStack/Petteri/align.cpp
 SOURCES += FocusStack/Petteri/background_removal.cpp
@@ -338,6 +337,18 @@ SOURCES += FocusStack/Petteri/saveimg.cpp
 SOURCES += FocusStack/Petteri/wavelet.cpp
 SOURCES += FocusStack/Petteri/wavelet_opencl.cpp
 SOURCES += FocusStack/Petteri/worker.cpp
+SOURCES += FocusStack/Fusion/fusionbase.cpp
+SOURCES += FocusStack/Fusion/fusionfactory.cpp
+SOURCES += FocusStack/Fusion/fusionpmaxbasic.cpp
+SOURCES += FocusStack/Fusion/fusionwavepmax.cpp
+SOURCES += FocusStack/Mask/maskassessor.cpp
+SOURCES += FocusStack/Mask/maskgenerator.cpp
+SOURCES += FocusStack/Mask/maskrefiner.cpp
+SOURCES += FocusStack/PetteriAdapter/petterialign.cpp
+SOURCES += FocusStack/PetteriAdapter/petteridepthmap.cpp
+SOURCES += FocusStack/PetteriAdapter/petterifocusmaps.cpp
+SOURCES += FocusStack/PetteriAdapter/petteripipeline.cpp
+SOURCES += FocusStack/PetteriAdapter/petteripmaxfusion.cpp
 SOURCES += Image/autonomousimage.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp

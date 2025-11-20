@@ -709,6 +709,28 @@ void MW::updateRatingLog(QString fPath, QString rating)
     settings->endGroup();
 }
 
+void MW::setColorClassForRow(int sfRow, QString colorClass) {
+    QString srcFun = "MW::setColorClassForRow";
+    qDebug() << srcFun << sfRow;
+    emit setValSf(sfRow, G::LabelColumn, colorClass,
+                  dm->instance, "",
+                  Qt::EditRole, Qt::AlignCenter);
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+    dm->sf->suspend(true, "MW::setColorClass");
+    buildFilters->updateCategory(BuildFilters::LabelEdit);
+    filterChange("MW::setColorClass");
+    // update ImageView classification badge
+    updateClassification();
+    // write to sidecar
+    QString fPath = dm->pathFromProxyRow(sfRow);
+    dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+    metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
+    // update _Label (used to check what metadata has changed in metadata->writeXMP)
+    emit setValSf(sfRow, G::_LabelColumn, colorClass, dm->instance, srcFun,
+                  Qt::EditRole);
+}
+
 void MW::setColorClass()
 {
 /*

@@ -1,12 +1,15 @@
 #include "fusionpmaxbasic.h"
-// #include "Petteri/..."   // when you wire it in
+#include "FocusStack/PetteriAdapter/petteripipeline.h"
+
+#include <QDir>
+#include <QDebug>
 
 FusionPMaxBasic::FusionPMaxBasic(QObject *parent)
     : FusionBase(parent)
 {
 }
 
-bool FusionPMaxBasic::fuse(const QStringList &imagePaths,
+bool FusionPMaxBasic::fuse(const QStringList &paths,
                            const QString &outputFolder,
                            QString &outputImagePath,
                            QString &generatedMaskPath)
@@ -14,59 +17,28 @@ bool FusionPMaxBasic::fuse(const QStringList &imagePaths,
     const QString src = name();
     emit updateStatus(false, "Starting FusionPMaxBasic...", src);
 
-    QString alignedFolder;
-    QString focusFolder;
-    QString depthFolder;
+    if (paths.isEmpty()) {
+        emit updateStatus(false, "FusionPMaxBasic: No input images.", src);
+        return false;
+    }
 
-    // TODO: ensure outputFolder exists (QDir::mkpath)
+    QDir out(outputFolder);
+    if (!out.exists() && !out.mkpath(".")) {
+        emit updateStatus(false, "FusionPMaxBasic: Could not create output folder.", src);
+        return false;
+    }
 
-    // TODO: call runAlignment(imagePaths, alignedFolder)
-    // TODO: call runFocusMaps(alignedFolder, focusFolder)
-    // TODO: call runDepthMap(alignedFolder, focusFolder, depthFolder)
-    // TODO: call runFusion(alignedFolder, depthFolder, outputFolder, outputImagePath)
+    PetteriPipeline pipeline;
+    bool ok = pipeline.runFull(paths,
+                               outputFolder,
+                               outputImagePath,
+                               generatedMaskPath);
 
-    // For now, FusionPMaxBasic does not generate a mask explicitly.
-    generatedMaskPath.clear();
+    if (!ok) {
+        emit updateStatus(false, "FusionPMaxBasic FAILED", src);
+        return false;
+    }
 
-    return true;
-}
-
-bool FusionPMaxBasic::runAlignment(const QStringList &imagePaths, QString &alignedFolder)
-{
-    Q_UNUSED(imagePaths)
-    Q_UNUSED(alignedFolder)
-    // TODO: bridge to Petteri alignment with paths
-    return true;
-}
-
-bool FusionPMaxBasic::runFocusMaps(const QString &alignedFolder, QString &focusFolder)
-{
-    Q_UNUSED(alignedFolder)
-    Q_UNUSED(focusFolder)
-    // TODO: bridge to Petteri focus map computation
-    return true;
-}
-
-bool FusionPMaxBasic::runDepthMap(const QString &alignedFolder,
-                                  const QString &focusFolder,
-                                  QString &depthFolder)
-{
-    Q_UNUSED(alignedFolder)
-    Q_UNUSED(focusFolder)
-    Q_UNUSED(depthFolder)
-    // TODO: bridge to Petteri depth map
-    return true;
-}
-
-bool FusionPMaxBasic::runFusion(const QString &alignedFolder,
-                                const QString &depthFolder,
-                                const QString &outputFolder,
-                                QString &outputImagePath)
-{
-    Q_UNUSED(alignedFolder)
-    Q_UNUSED(depthFolder)
-    Q_UNUSED(outputFolder)
-    Q_UNUSED(outputImagePath)
-    // TODO: bridge to Petteri PMax fusion
+    emit updateStatus(false, "FusionPMaxBasic finished.", src);
     return true;
 }

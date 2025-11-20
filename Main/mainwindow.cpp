@@ -5126,96 +5126,96 @@ void MW::generateMeanStack()
     }
 }
 
-void MW::generateFocusStackFromSelection()
-{
+// void MW::generateFocusStackFromSelection()
+// {
 
-    if (G::isLogger) G::log("MW::generateFocusStack");
-    QString src = "MW::generateFocusStack";
+//     if (G::isLogger) G::log("MW::generateFocusStack");
+//     QString src = "MW::generateFocusStack";
 
-    QStringList paths;
-    if (!dm->getSelection(paths) || paths.isEmpty()) {
-        QString msg = "No images selected for focus stacking.";
-        updateStatus(false, msg, src);
-        return;
-    }
+//     QStringList paths;
+//     if (!dm->getSelection(paths) || paths.isEmpty()) {
+//         QString msg = "No images selected for focus stacking.";
+//         updateStatus(false, msg, src);
+//         return;
+//     }
 
-    generateFocusStack(paths, "Default", "MW::generateFocusStackFromSelection");
-}
+//     generateFocusStack(paths, "Default", "MW::generateFocusStackFromSelection");
+// }
 
-void MW::generateFocusStack(const QStringList paths,
-                            const QString method,
-                            const QString source)
-{
-    if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
+// void MW::generateFocusStack(const QStringList paths,
+//                             const QString method,
+//                             const QString source)
+// {
+//     if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
 
-    bool isLocal = source == "MW::generateFocusStackFromSelection";
+//     bool isLocal = source == "MW::generateFocusStackFromSelection";
 
-    // Create the worker and thread
-    QThread *thread = new QThread;
-    FocusStackWorker *worker = new FocusStackWorker(paths);
-    worker->moveToThread(thread);
+//     // Create the worker and thread
+//     QThread *thread = new QThread;
+//     FocusStackWorker *worker = new FocusStackWorker(paths);
+//     worker->moveToThread(thread);
 
-    // --- Connect signals and slots -------------------------------------
-    connect(worker, &FocusStackWorker::updateStatus,
-            this, &MW::updateStatus, Qt::QueuedConnection);
+//     // --- Connect signals and slots -------------------------------------
+//     connect(worker, &FocusStackWorker::updateStatus,
+//             this, &MW::updateStatus, Qt::QueuedConnection);
 
-    connect(worker, &FocusStackWorker::updateProgress,
-            cacheProgressBar, &ProgressBar::updateUpperProgress, Qt::QueuedConnection);
+//     connect(worker, &FocusStackWorker::updateProgress,
+//             cacheProgressBar, &ProgressBar::updateUpperProgress, Qt::QueuedConnection);
 
-    connect(worker, &FocusStackWorker::clearProgress,
-            cacheProgressBar, &ProgressBar::clearUpperProgress, Qt::QueuedConnection);
+//     connect(worker, &FocusStackWorker::clearProgress,
+//             cacheProgressBar, &ProgressBar::clearUpperProgress, Qt::QueuedConnection);
 
-    connect(thread, &QThread::started, worker, &FocusStackWorker::process);
+//     connect(thread, &QThread::started, worker, &FocusStackWorker::process);
 
-    connect(worker, &FocusStackWorker::finished, this,
-            [=](bool ok, const QString &output, const QString &depthmap) {
-                QString msg = ok
-                    ? QString("FocusStack finished successfully.  "
-                              "Output: %1  DepthMap: %2")
-                        .arg(output, depthmap)
-                    : "FocusStack failed.";
+//     connect(worker, &FocusStackWorker::finished, this,
+//             [=](bool ok, const QString &output, const QString &depthmap) {
+//                 QString msg = ok
+//                     ? QString("FocusStack finished successfully.  "
+//                               "Output: %1  DepthMap: %2")
+//                         .arg(output, depthmap)
+//                     : "FocusStack failed.";
 
-                updateStatus(false, msg, "MW::generateFocusStack");
+//                 updateStatus(false, msg, "MW::generateFocusStack");
 
-                if (ok) {
-                    dm->insert(output);
-                    if (!isLocal) {
-                        // Delete temp source files to stack
-                        for (const QString &path : paths) {
-                            QFile(path).moveToTrash();
-                        }
+//                 if (ok) {
+//                     dm->insert(output);
+//                     if (!isLocal) {
+//                         // Delete temp source files to stack
+//                         for (const QString &path : paths) {
+//                             QFile(path).moveToTrash();
+//                         }
 
-                        folderAndFileSelectionChange(output, "MW::generateFocusStack");
+//                         folderAndFileSelectionChange(output, "MW::generateFocusStack");
 
-                        // Wait for metadata to finish loading OR timeout after 3000 ms
-                        const int timeoutMs = 3000;
-                        QElapsedTimer timer;
-                        timer.start();
+//                         // Wait for metadata to finish loading OR timeout after 3000 ms
+//                         const int timeoutMs = 3000;
+//                         QElapsedTimer timer;
+//                         timer.start();
 
-                        while (!G::allMetadataLoaded && timer.elapsed() < timeoutMs) {
-                            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-                            QThread::msleep(50);
-                        }
+//                         while (!G::allMetadataLoaded && timer.elapsed() < timeoutMs) {
+//                             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+//                             QThread::msleep(50);
+//                         }
 
-                        // deleteFiles(paths);
-                    }
-                    sel->select(output);
-                }
+//                         // deleteFiles(paths);
+//                     }
+//                     sel->select(output);
+//                 }
 
-                // cleanup
-                thread->quit();
-                thread->wait();
-                worker->deleteLater();
-                thread->deleteLater();
-            });
+//                 // cleanup
+//                 thread->quit();
+//                 thread->wait();
+//                 worker->deleteLater();
+//                 thread->deleteLater();
+//             });
 
-    // --- Start background task ----------------------------------------
-    QString msg = "Starting FocusStack background task (%1 images)...";
-    QString src = "MW::generateFocusStack";
-    updateStatus(false, msg, src);
+//     // --- Start background task ----------------------------------------
+//     QString msg = "Starting FocusStack background task (%1 images)...";
+//     QString src = "MW::generateFocusStack";
+//     updateStatus(false, msg, src);
 
-    thread->start();
-}
+//     thread->start();
+// }
 
 void MW::reportHueCount()
 {

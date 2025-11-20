@@ -391,11 +391,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString msg = "This is a test";
-    Utilities::log("MW::test", msg);
-
-
-
+    QTimer::singleShot(50, this, [=]() {
+        setColorClassForRow(dm->currentSfRow, "Red");
+    });
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

@@ -408,6 +408,8 @@ signals:
     void abortHueReport();
     void abortStackOperation();
     void testAddToDM(ImageMetadata m, QString src); // not being used
+    void fusionFinished(bool ok, const QString &outputImagePath,
+                        const QString &depthMapPath);
 
 public slots:
 //    void prevSessionWindowLocation(QWindow::Visibility visibility);
@@ -507,6 +509,7 @@ private slots:
     void clearColorClassLog();
     void updateColorClassLog(QString fPath, QString pickStatus);
     void setColorClass();
+    void setColorClassForRow(int sfRow, QString colorClass);
 
     void setRotation(int degrees);
     void infoViewChanged(QStandardItem* item);

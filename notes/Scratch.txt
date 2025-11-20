@@ -491,143 +491,6 @@ ARCHIVE_APP_PATH          = /Users/roryhill/Applications/Winnow2.04/Winnow2.04_2
 /Users/roryhill/Library/Application Support/Winnow/Winnets/EmbellishAndreasb 4k version 1_1
 
 
-
-
-duplicate symbol 'FocusMeasure::computeFocusMaps(QMap<int, QImage> const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'DepthMap::generatePetteri(QString const&, DepthMap::Options const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'FocusMeasure::FocusMeasure(QObject*)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'FocusMeasure::computeFocusMaps_Petteri(QString const&, QString const&, int, bool, float, float)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'FocusMeasure::focusMapPetteri(QImage const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'FocusMeasure::focusMapSobel(QImage const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'FocusMeasure::focusMapLaplacian(QImage const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'DepthMap::DepthMap(QObject*)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'FocusMeasure::setDownsample(int)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'DepthMap::computeFocusMeasure(cv::Mat const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'FocusMeasure::focusMapZerene(QImage const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'FocusMeasure::setMethod(FocusMeasure::Method)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'FocusMeasure::FocusMeasure(QObject*)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'DepthMap::DepthMap(QObject*)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'DepthMap::fitGauss3points(std::__1::vector<cv::Mat, std::__1::allocator<cv::Mat>> const&, cv::Mat const&, cv::Mat&, cv::Mat&, cv::Mat&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'DepthMap::generateWinnow(QString const&, DepthMap::Options const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'FocusMeasure::setOutputFolder(QString const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'FocusMeasure::setSaveResults(bool)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'FocusMeasure::focusMapTenengrad(QImage const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'DepthMap::anisotropicSmooth(cv::Mat const&, int, float)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'DepthMap::generate(QString const&, DepthMap::Options const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'FocusMeasure::toGray(QImage const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'FocusMeasure::saveFocusImage(QImage const&, QString const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-ld: 23 duplicate symbols
-
-duplicate symbol 'focusstack::Task_FocusMeasure::task()' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/focusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'vtable for focusstack::Task_FocusMeasure' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/focusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'DepthMap::generatePetteri(QString const&, DepthMap::Options const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'focusstack::Task_FocusMeasure::Task_FocusMeasure(std::__1::shared_ptr<focusstack::ImgTask>, float, float)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/focusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-
-
-
-duplicate symbol 'vtable for focusstack::Task_FocusMeasure' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/focusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'focusstack::Task_FocusMeasure::task()' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/focusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'focusstack::Task_Depthmap::task()' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'focusstack::Task_FocusMeasure::Task_FocusMeasure(std::__1::shared_ptr<focusstack::ImgTask>, float, float)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/focusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'typeinfo for focusstack::Task_FocusMeasure' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/focusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'focusstack::Task_Depthmap::mask(int) const' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'typeinfo name for focusstack::Task_FocusMeasure' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/focusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'typeinfo for focusstack::Task_Depthmap' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'focusstack::Task_Depthmap::estimate_noise_level(cv::Mat const&)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'focusstack::Task_Depthmap::Task_Depthmap(std::__1::shared_ptr<focusstack::ImgTask>, int, bool, std::__1::shared_ptr<focusstack::Task_Depthmap>, bool)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'focusstack::Task_Depthmap::Task_Depthmap(std::__1::shared_ptr<focusstack::ImgTask>, int, bool, std::__1::shared_ptr<focusstack::Task_Depthmap>, bool)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'typeinfo name for focusstack::Task_Depthmap' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'focusstack::Task_FocusMeasure::Task_FocusMeasure(std::__1::shared_ptr<focusstack::ImgTask>, float, float)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/focusmeasure.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackfocusmeasure.o
-duplicate symbol 'vtable for focusstack::Task_Depthmap' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'focusstack::Task_Depthmap::add_to_guo(cv::Mat const&, float)' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-duplicate symbol 'focusstack::Task_Depthmap::compute_result()' in:
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/depthmap.o
-    /Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/stackdepthmap.o
-
 Winnow/ImageStack/
     Fusion/
         fusionbase.h
@@ -648,10 +511,14 @@ Winnow/ImageStack/
         maskassessor.h
         maskassessor.cpp
 
-
-
-
-
+"PetteriPipeline::runDepthMap(QString const&, QString const&, QString&)", referenced from:
+    PetteriPipeline::runFull(QList<QString> const&, QString const&, QString&, QString&) in petteripipeline.o
+"PetteriPipeline::runAlignment(QList<QString> const&, QString&)", referenced from:
+    PetteriPipeline::runFull(QList<QString> const&, QString const&, QString&, QString&) in petteripipeline.o
+"PetteriPipeline::runFocusMaps(QString const&, QString&)", referenced from:
+    PetteriPipeline::runFull(QList<QString> const&, QString const&, QString&, QString&) in petteripipeline.o
+"PetteriPipeline::runFusion(QString const&, QString const&, QString&)", referenced from:
+    PetteriPipeline::runFull(QList<QString> const&, QString const&, QString&, QString&) in petteripipeline.o
 
 
 
