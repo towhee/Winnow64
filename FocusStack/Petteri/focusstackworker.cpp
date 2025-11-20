@@ -27,7 +27,7 @@ void FocusStackWorker::process()
         qDebug() << "FocusStackWorker::process" << path;
     }
 
-    QFileInfo fi(sortedPaths.first());
+    QFileInfo fi(sortedPaths.last());
     QString basePath = fi.path() + "/" + fi.completeBaseName();
     QString outputPath = basePath + "_FocusStack.png";
     QString depthmapPath = basePath + "_DepthMap.png";
