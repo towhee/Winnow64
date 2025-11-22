@@ -8,9 +8,16 @@ class PetteriPMaxFusion
 public:
     PetteriPMaxFusion() = default;
 
-    bool run(const QString &alignedFolder,
-             const QString &depthFolder,
-             const QString &outputImagePath);
+    bool run(const QString &alignedDir,
+             const QString &fusedFolder,
+             const QString &fusedImagePath
+             );
+
+private:
+    bool collectAlignedImages(const QString &alignedDir,
+                              std::vector<std::string> &files);
+
+
 };
 
 #endif

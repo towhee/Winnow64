@@ -8,10 +8,6 @@ void FocusStackWorker::process()
     const QString src = "FocusStackWorker::process";
     emit updateStatus(false, "Preparing FocusStack...", src);
 
-    // --- Build simulated CLI arguments --------------------------------
-    // for (const QString &path : m_selection)
-    //     args.emplace_back(path.toStdString());
-
     // --- Convert selection to fPaths and sort them ---
     QStringList sortedPaths = m_selection;
     std::sort(sortedPaths.begin(), sortedPaths.end(),

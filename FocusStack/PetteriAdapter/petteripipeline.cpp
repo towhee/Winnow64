@@ -3,6 +3,7 @@
 #include "petterialign.h"
 #include "petterifocusmaps.h"
 #include "petteridepthmap.h"
+#include "petterialignfuse.h"
 #include "petteripmaxfusion.h"
 
 #include <QDir>
@@ -10,51 +11,58 @@
 #include <QDebug>
 
 bool PetteriPipeline::runFull(const QStringList &paths,
-                              const QString &outputFolder,
-                              QString &outputImagePath,
+                              const QString &projDir,
+                              QString &fusedImagePath,
                               QString &depthMapPath)
 {
+    QString srcFun = "PetteriPipeline::runFull";
+
+
     if (paths.isEmpty()) {
         qWarning() << "PetteriPipeline::runFull: No input paths.";
         return false;
     }
 
     // Ensure base output folder exists
-    QDir out(outputFolder);
+    QDir out(projDir);
     if (!out.exists() && !out.mkpath(".")) {
-        qWarning() << "PetteriPipeline::runFull: Could not create output folder:" << outputFolder;
+        qWarning() << "PetteriPipeline::runFull: Could not create output folder:" << projDir;
         return false;
     }
 
     // Stage folders
-    QString alignedFolder = outputFolder + "/Aligned";
-    QString focusFolder   = outputFolder + "/Focus";
-    QString depthFolder   = outputFolder + "/Depth";
+    QString alignedDir = projDir + "/Aligned/";
+    QString focusDir   = projDir + "/Focus/";
+    QString depthDir   = projDir + "/Depth/";
+    QString fusedDir   = projDir + "/Fused";
+    qDebug() << srcFun << "projDir        =" << projDir;
+    qDebug() << srcFun << "depthMapPath   =" << depthMapPath;
+    qDebug() << srcFun << "fusedImagePath =" << fusedImagePath;
 
-    // Final outputs
-    outputImagePath = outputFolder + "/Fused.png";
-    depthMapPath    = depthFolder + "/depth_index.png";
+    qDebug() << srcFun << "alignedDir    =" << alignedDir;
+    qDebug() << srcFun << "depthDir      =" << depthDir;
+    qDebug() << srcFun << "focusDir      =" << focusDir;
 
     // --- Stage 1: Alignment ---
-    if (!runAlignment(paths, alignedFolder)) {
+    if (!runAlignment(paths, alignedDir)) {
         qWarning() << "PetteriPipeline::runFull: Alignment failed.";
         return false;
     }
 
-    // --- Stage 2: Focus maps ---
-    if (!runFocusMaps(alignedFolder, focusFolder)) {
-        qWarning() << "PetteriPipeline::runFull: Focus-map stage failed.";
-        return false;
-    }
+    // // --- Stage 2: Focus maps ---
+    // if (!runFocusMaps(alignedFolder, focusFolder)) {
+    //     qWarning() << "PetteriPipeline::runFull: Focus-map stage failed.";
+    //     return false;
+    // }
 
-    // --- Stage 3: Depth map ---
-    if (!runDepthMap(alignedFolder, focusFolder, depthFolder)) {
-        qWarning() << "PetteriPipeline::runFull: Depth-map stage failed.";
-        return false;
-    }
+    // // --- Stage 3: Depth map ---
+    // if (!runDepthMap(alignedFolder, focusFolder, depthFolder)) {
+    //     qWarning() << "PetteriPipeline::runFull: Depth-map stage failed.";
+    //     return false;
+    // }
 
     // --- Stage 4: Fusion ---
-    if (!runFusion(alignedFolder, depthFolder, outputImagePath)) {
+    if (!runFusion(alignedDir, fusedDir, fusedImagePath)) {
         qWarning() << "PetteriPipeline::runFull: Fusion stage failed.";
         return false;
     }
@@ -64,21 +72,19 @@ bool PetteriPipeline::runFull(const QStringList &paths,
 }
 
 bool PetteriPipeline::runAlignment(const QStringList &paths,
-                                   QString &alignedFolder)
+                                   const QString &alignedDir)
 {
-    if (alignedFolder.isEmpty()) {
-        qWarning() << "PetteriPipeline::runAlignment: alignedFolder is empty.";
-        return false;
-    }
+    QString srcFun = "PetteriPipeline::runAlignment";
+    qDebug() << srcFun << "alignedDir         =" << alignedDir;
 
-    QDir dir(alignedFolder);
+    QDir dir(alignedDir);
     if (!dir.exists() && !dir.mkpath(".")) {
-        qWarning() << "PetteriPipeline::runAlignment: Could not create aligned folder:" << alignedFolder;
+        qWarning() << "PetteriPipeline::runAlignment: Could not create aligned folder:" << alignedDir;
         return false;
     }
 
     PetteriAlign align;
-    return align.run(paths, alignedFolder);
+    return align.run(paths, alignedDir);
 }
 
 bool PetteriPipeline::runFocusMaps(const QString &alignedFolder,
@@ -130,23 +136,34 @@ bool PetteriPipeline::runDepthMap(const QString &alignedFolder,
     return dm.run(alignedFolder, focusFolder, depthFolder);
 }
 
-bool PetteriPipeline::runFusion(const QString &alignedFolder,
-                                const QString &depthFolder,
-                                QString &outputImagePath)
+bool PetteriPipeline::runFusion(const QString &alignedDir,
+                                const QString &fusedDir,
+                                const QString &fusedImagePath)
 {
-    if (alignedFolder.isEmpty()) {
+    QString srcFun = "PetteriPipeline::runFusion";
+
+    qDebug() << srcFun << "alignedDir     =" << alignedDir;
+    qDebug() << srcFun << "fusedDir       =" << fusedDir;
+    qDebug() << srcFun << "fusedImagePath =" << fusedImagePath;
+
+    if (alignedDir.isEmpty()) {
         qWarning() << "PetteriPipeline::runFusion: alignedFolder is empty.";
         return false;
     }
-    if (depthFolder.isEmpty()) {
-        qWarning() << "PetteriPipeline::runFusion: depthFolder is empty.";
+
+    QDir dir(fusedDir);
+    if (!dir.exists() && !dir.mkpath(".")) {
+        qWarning() << "PetteriPipeline::runFusion: Could not create Fused folder:" << alignedDir;
         return false;
     }
-    if (outputImagePath.isEmpty()) {
-        qWarning() << "PetteriPipeline::runFusion: outputImagePath is empty.";
+
+    qDebug() << srcFun << "Folder exists:" << fusedDir;
+
+    if (fusedImagePath.isEmpty()) {
+        qWarning() << "PetteriPipeline::runFusion: fusedImagePath is empty.";
         return false;
     }
 
     PetteriPMaxFusion fusion;
-    return fusion.run(alignedFolder, depthFolder, outputImagePath);
+    return fusion.run(alignedDir, fusedDir, fusedImagePath);
 }

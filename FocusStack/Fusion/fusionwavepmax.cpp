@@ -7,7 +7,7 @@ FusionWavePMax::FusionWavePMax(QObject *parent)
 
 bool FusionWavePMax::fuse(const QStringList &imagePaths,
                           const QString &outputFolder,
-                          QString &outputImagePath,
+                          const Options &options,
                           QString &generatedMaskPath)
 {
     const QString src = name();

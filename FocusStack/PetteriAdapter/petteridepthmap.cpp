@@ -57,7 +57,8 @@ bool PetteriDepthMap::run(const QString &alignedFolder,
     fs.set_save_steps(true);   // ensures depthmap files are written
 
     // Force depthmap output
-    fs.set_depthmap((depthOutputFolder + "/depth_index.png").toStdString());
+    fs.set_depthmap((depthOutputFolder + "depth_").toStdString());
+    // fs.set_depthmap((depthOutputFolder + "/depth_index.png").toStdString());
 
     // Avoid cropping
     fs.set_nocrop(true);

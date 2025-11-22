@@ -12,10 +12,10 @@ public:
 
     // Run alignment stage of Petteri pipeline.
     // paths: input image paths (TIFF, JPG, etc)
-    // alignedOutputFolder: directory where aligned images should be written.
+    // alignedDir: directory where aligned images should be written.
     // Returns true on success, false on failure.
     bool run(const QStringList &paths,
-             const QString &alignedOutputFolder);
+             const QString &alignedDir);
 };
 
 #endif // PETTERI_ALIGN_H

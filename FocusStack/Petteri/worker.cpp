@@ -138,14 +138,10 @@ void Worker::add(std::shared_ptr<Task> task)
   m_tasks.emplace_back(task);
   m_total_tasks++;
   m_wakeup.notify_all();
-  // if (task->name().rfind("Save", 0) == 0) {
-  //     m_progress = -1;
-  //     m_total_progress = m_total_tasks - m_tasks_started;
-  // }
-  // qDebug() << "Worker::add  task = "
-  //          << "m_total_tasks =" << m_total_tasks
-  //          << task->name()
-  //     ;
+  qDebug() << "Worker::add  task = "
+           << "m_total_tasks =" << m_total_tasks
+           << task->name()
+      ;
 }
 
 void Worker::prepend(std::shared_ptr<Task> task)

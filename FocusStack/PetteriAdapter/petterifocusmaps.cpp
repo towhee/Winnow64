@@ -8,8 +8,6 @@
 
 using namespace focusstack;
 
-// PetteriFocusMaps::PetteriFocusMaps() = default;
-
 bool PetteriFocusMaps::run(const QString &alignedFolder,
                            const QString &focusOutputFolder)
 {
@@ -41,7 +39,8 @@ bool PetteriFocusMaps::run(const QString &alignedFolder,
     std::vector<std::string> inputs;
     inputs.reserve(files.size());
     for (const QString &f : files) {
-        inputs.emplace_back((alignedFolder + "/" + f).toStdString());
+        inputs.emplace_back((alignedFolder + f).toStdString());
+        // inputs.emplace_back((alignedFolder + "/" + f).toStdString());
     }
 
     // --- Configure Petteri ---
@@ -49,7 +48,10 @@ bool PetteriFocusMaps::run(const QString &alignedFolder,
     fs.set_inputs(inputs);
 
     // Output location is where focus maps should go
-    fs.set_output(focusOutputFolder.toStdString());
+    QString prefix = focusOutputFolder;
+    if (!prefix.endsWith('/')) prefix += '/';
+    prefix += "focus_";
+    fs.set_output(prefix.toStdString());
 
     // Critical flags
     fs.set_align_only(false);    // This triggers focusmap generation
