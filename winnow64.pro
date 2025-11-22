@@ -51,6 +51,11 @@ INCLUDEPATH += Utilities
 INCLUDEPATH += FocusStack
 INCLUDEPATH += FocusStack/Petteri
 
+# Petteri Modular engine
+# include($$PWD/FocusStack/PetteriModular/petteri_modular.pri)
+# DISTFILES += FocusStack/PetteriModular/petteri_modular.pri
+
+
 DEPENDPATH += $$PWD
 
 Release:DESTDIR = release
@@ -72,7 +77,13 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    FocusStack/Contracts/IAlign.h \
+    FocusStack/Contracts/IDepth.h \
+    FocusStack/Contracts/IFocus.h \
+    FocusStack/Contracts/IFusion.h \
+    FocusStack/Contracts/IStage.h \
+    FocusStack/PetteriAdapter/petterialignfuse.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -264,7 +275,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    FocusStack/PetteriAdapter/petterialignfuse.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp

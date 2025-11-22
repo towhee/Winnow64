@@ -12,21 +12,20 @@ public:
     QString name() const override { return "FusionPMaxBasic"; }
 
     bool fuse(const QStringList &imagePaths,
-              const QString &outputFolder,
-              QString &outputImagePath,
-              QString &generatedMaskPath) override;
+              const QString &projDir,
+              const Options &options) override;
 
 private:
     // These helpers will call into the Petteri-based pipeline, using paths.
-    bool runAlignment(const QStringList &imagePaths, QString &alignedFolder);
-    bool runFocusMaps(const QString &alignedFolder, QString &focusFolder);
-    bool runDepthMap(const QString &alignedFolder,
-                     const QString &focusFolder,
-                     QString &depthFolder);
-    bool runFusion(const QString &alignedFolder,
-                   const QString &depthFolder,
-                   const QString &outputFolder,
-                   QString &outputImagePath);
+    // bool runAlignment(const QStringList &imagePaths, const QString &alignedFolder);
+    // bool runFocusMaps(const QString &alignedFolder, QString &focusFolder);
+    // bool runDepthMap(const QString &alignedFolder,
+    //                  const QString &focusFolder,
+    //                  QString &depthFolder);
+    // bool runFusion(const QString &alignedFolder,
+    //                const QString &depthFolder,
+    //                const QString &outputFolder,
+    //                QString &outputImagePath);
 };
 
 #endif // FUSIONPMAXBASIC_H

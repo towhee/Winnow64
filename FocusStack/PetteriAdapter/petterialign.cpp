@@ -12,17 +12,20 @@ using namespace focusstack;
 // no constructor because header uses default
 
 bool PetteriAlign::run(const QStringList &paths,
-                       const QString &alignedOutputFolder)
+                       const QString &alignedDir)
 {
+    QString srcFun = "PetteriAlign::ru";
+    qDebug() << srcFun << "alignedDir         =" << alignedDir;
+
     if (paths.isEmpty()) {
         qWarning() << "PetteriAlign::run: No input paths.";
         return false;
     }
 
     // Ensure output directory exists
-    QDir dir(alignedOutputFolder);
+    QDir dir(alignedDir);
     if (!dir.exists() && !dir.mkpath(".")) {
-        qWarning() << "PetteriAlign::run: Failed to create output folder:" << alignedOutputFolder;
+        qWarning() << "PetteriAlign::run: Failed to create output folder:" << alignedDir;
         return false;
     }
 
@@ -36,7 +39,7 @@ bool PetteriAlign::run(const QStringList &paths,
     FocusStack fs;
 
     fs.set_inputs(inputFiles);
-    fs.set_output(alignedOutputFolder.toStdString());
+    fs.set_output(alignedDir.toStdString());
     fs.set_align_only(true);
     fs.set_save_steps(true);   // ensures intermediate imgs get saved
 

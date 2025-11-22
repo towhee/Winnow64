@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QDebug>
+#include <QFileInfoList>
 
 // Petteri code
 #include "focusstack.h"
@@ -10,31 +11,31 @@ using namespace focusstack;
 
 // PetteriPMaxFusion::PetteriPMaxFusion() {}   // NOT = default
 
-bool PetteriPMaxFusion::run(const QString &alignedFolder,
-                            const QString &depthFolder,
-                            const QString &outputImagePath)
+bool PetteriPMaxFusion::run(const QString &alignedDir,
+                            const QString &fusedDir,
+                            const QString &fusedImagePath)
 {
+    QString srcFun = "PetteriPMaxFusion::run";
+
     // --- Validate inputs --------------------------------------------------
-    if (!QDir(alignedFolder).exists()) {
-        qWarning() << "PetteriPMaxFusion::run: Aligned folder does not exist:" << alignedFolder;
+    if (!QDir(alignedDir).exists()) {
+        qWarning() << "PetteriPMaxFusion::run: Aligned folder does not exist:" << alignedDir;
         return false;
     }
 
-    QString depthIdx = depthFolder + "/depth_index.png";
-    if (!QFileInfo::exists(depthIdx)) {
-        qWarning() << "PetteriPMaxFusion::run: depth_index.png not found in" << depthFolder;
-        return false;
-    }
+    qDebug() << srcFun << "alignedDir =" << alignedDir;
+    qDebug() << srcFun << "fusedDir =" << fusedDir;
+    qDebug() << srcFun << "fusedImagePath =" << fusedImagePath;
 
     // Ensure output dir exists
-    QDir out(QFileInfo(outputImagePath).absolutePath());
+    QDir out(QFileInfo(fusedDir).absolutePath());
     if (!out.exists() && !out.mkpath(".")) {
         qWarning() << "PetteriPMaxFusion::run: Could not create output folder.";
         return false;
     }
 
     // --- Collect aligned images ------------------------------------------
-    QDir dir(alignedFolder);
+    QDir dir(alignedDir);
     QStringList files = dir.entryList(
         QStringList() << "*.tif" << "*.tiff" << "*.png" << "*.jpg" << "*.jpeg",
         QDir::Files, QDir::Name);
@@ -47,20 +48,21 @@ bool PetteriPMaxFusion::run(const QString &alignedFolder,
     std::vector<std::string> inputFiles;
     inputFiles.reserve(files.size());
     for (const QString &f : files)
-        inputFiles.emplace_back((alignedFolder + "/" + f).toStdString());
+        inputFiles.emplace_back((alignedDir + "/" + f).toStdString());
 
     // --- Configure Petteri ------------------------------------------------
     FocusStack fs;
     fs.set_inputs(inputFiles);
 
     // Output fused image
-    fs.set_output(outputImagePath.toStdString());
+    fs.set_output(fusedImagePath.toStdString());
 
     // Use existing depth map
-    fs.set_depthmap(depthIdx.toStdString());
+    // fs.set_depthmap(depthIdx.toStdString());
 
     // Prevent alignment
     fs.set_align_only(false);
+    // fs.set_fixed_reference(true);
 
     // Preserve geometry
     fs.set_nocrop(true);
@@ -78,11 +80,11 @@ bool PetteriPMaxFusion::run(const QString &alignedFolder,
         return false;
     }
 
-    if (!QFileInfo::exists(outputImagePath)) {
+    if (!QFileInfo::exists(fusedDir)) {
         qWarning() << "PetteriPMaxFusion::run: Output image not created:";
         return false;
     }
 
-    qDebug() << "PetteriPMaxFusion::run: Final fused image written to:" << outputImagePath;
+    qDebug() << "PetteriPMaxFusion::run: Final fused image written to:" << fusedDir;
     return true;
 }

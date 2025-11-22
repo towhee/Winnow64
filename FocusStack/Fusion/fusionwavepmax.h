@@ -12,9 +12,9 @@ public:
     QString name() const override { return "FusionWavePMax"; }
 
     bool fuse(const QStringList &imagePaths,
-              const QString &outputFolder,
-              QString &outputImagePath,
-              QString &generatedMaskPath) override;
+              const QString &projDir,
+              const Options &options,
+              QString &generatedMaskPath);
 
 private:
     // High-level pipeline for this fusion method

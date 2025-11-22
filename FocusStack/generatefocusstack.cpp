@@ -1,6 +1,64 @@
 #include "Main/mainwindow.h"
 #include "FocusStack/Fusion/fusionpmaxbasic.h"
 
+/*
+Winnow64/FocusStack/
+
+    Petteri/
+        (untouched original sources)
+
+    PetteriModular/
+        Core/
+        Tasks/
+        IO/
+        Wrappers/
+        Namespace: petteri_mod
+
+    Contracts/
+        IAlign.h
+        IFocus.h
+        IDepth.h
+        IFusion.h
+
+    Stages/
+        Align/
+            PetteriAlign.h/.cpp
+            ECCAlign.h/.cpp
+            NoOpAlign.h/.cpp
+        Fusion/
+            PetteriPMaxFusion.h/.cpp
+            WeightedPMax.h/.cpp
+            DepthAwareFusion.h/.cpp
+        Depth/
+            PetteriDepthMap.h/.cpp
+            ContrastDepthMap.h/.cpp
+        Focus/
+            PetteriFocusMaps.h/.cpp
+            GradientFocusMaps.h/.cpp
+
+    Pipeline/
+        PipelineBase.h/.cpp
+        PipelinePMax.h/.cpp
+        PipelineWavePMax.h/.cpp
+        PipelineDepthAware.h/.cpp
+        PipelineLegacyPetteri.h/.cpp
+
+    Mask/
+        maskoptions.h/.cpp
+        maskgenerator.h/.cpp
+        maskrefiner.h/.cpp
+        maskassessor.h/.cpp
+
+    Utils/
+        pyramid.h/.cpp
+        blend.h/.cpp
+        filehelpers.h/.cpp
+
+    Cache/
+        PyramidCache.h/.cpp
+        ImageCache.h/.cpp
+*/
+
 void MW::generateFocusStackFromSelection()
 {
 
@@ -28,10 +86,11 @@ void MW::generateFocusStack(const QStringList paths,
 
         Source images
             First source image base name
-                Aligned
-                Focus
-                Depth
-                Fusion
+                Method (Project path)
+                    Aligned
+                    Focus
+                    Depth
+                    Fusion
 
     Pipeline:
 
@@ -53,6 +112,7 @@ void MW::generateFocusStack(const QStringList paths,
     QString srcFolder = srcInfo.dir().absolutePath();
     QString base = srcInfo.baseName();
 
+
     // PIPELINE: FusionPMaxBasic
     if (method == "FusionPMaxBasic")
     {
@@ -66,17 +126,30 @@ void MW::generateFocusStack(const QStringList paths,
 
         connect(thread, &QThread::started, this, [=]() {
 
-            QString projectFolder = srcFolder + "/" + method + "/" + base;
-            QString outputImagePath = srcFolder + "/" + base + "_" + method + ".png";
-            QString depthMapPath = "";
+            QString ext = ".png";
+            QString projDir = srcFolder + "/" + base + "/" + method;
+            QString depthDir = projDir + "/Depth";
+            QString depthName = "Depth_" + method + "_" + base + ext;
+            QString depthMapPath = depthDir + "/" + depthName;
+            QString fusedDir = projDir + "/Fused";
+            QString fusedName = "Fused_" + method + "_" + base + ext;
+            QString fusedImagePath = fusedDir + "/" + fusedName;
+
+            qDebug() << srcFun << "projDir        =" << projDir;
+
+            FusionPMaxBasic::Options options;
+            options.align = false;
+            options.alignFuse = true;
+            options.focusMeasure = false;
+            options.depthMap = false;
+            options.fuse = false;
 
             bool ok = fusion->fuse(paths,
-                                   projectFolder,
-                                   outputImagePath,
-                                   depthMapPath);
+                                   projDir,
+                                   options);
 
             // Emit manually since FusionBase doesn't do it
-            emit fusionFinished(ok, outputImagePath, depthMapPath);
+            emit fusionFinished(ok, fusedImagePath, depthMapPath);
         });
 
         connect(fusion, &FusionBase::updateStatus,
@@ -126,7 +199,9 @@ void MW::generateFocusStack(const QStringList paths,
         return;
     }
 
+
     // PIPELINE: Petteri PMax Original (Default)
+    {
     qDebug() << "Using legacy Petteri FocusStackWorker";
     QThread *thread = new QThread;
     FocusStackWorker *worker = new FocusStackWorker(paths);
@@ -189,85 +264,5 @@ void MW::generateFocusStack(const QStringList paths,
     updateStatus(false, msg, src);
 
     thread->start();
+    }
 }
-
-// void MW::generateFocusStack(const QStringList paths,
-//                             const QString method,
-//                             const QString source)
-// {
-// /*
-//     ** METHODS **
-//     "FusionPMaxBasic"   → call FusionPMaxBasic
-//     "LegacyPetteri"     → original worker
-//     "FusionWavePMax"    → new wavelet method (later)
-// */
-//     if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
-
-//     bool isLocal = source == "MW::generateFocusStackFromSelection";
-
-//     // Create the worker and thread
-//     QThread *thread = new QThread;
-//     FocusStackWorker *worker = new FocusStackWorker(paths);
-//     worker->moveToThread(thread);
-
-//     // --- Connect signals and slots -------------------------------------
-//     connect(worker, &FocusStackWorker::updateStatus,
-//             this, &MW::updateStatus, Qt::QueuedConnection);
-
-//     connect(worker, &FocusStackWorker::updateProgress,
-//             cacheProgressBar, &ProgressBar::updateUpperProgress, Qt::QueuedConnection);
-
-//     connect(worker, &FocusStackWorker::clearProgress,
-//             cacheProgressBar, &ProgressBar::clearUpperProgress, Qt::QueuedConnection);
-
-//     connect(thread, &QThread::started, worker, &FocusStackWorker::process);
-
-//     connect(worker, &FocusStackWorker::finished, this,
-//             [=](bool ok, const QString &output, const QString &depthmap) {
-//                 QString msg = ok
-//                                   ? QString("FocusStack finished successfully.  "
-//                                             "Output: %1  DepthMap: %2")
-//                                         .arg(output, depthmap)
-//                                   : "FocusStack failed.";
-
-//                 updateStatus(false, msg, "MW::generateFocusStack");
-
-//                 if (ok) {
-//                     dm->insert(output);
-//                     if (!isLocal) {
-//                         // Delete temp source files to stack
-//                         for (const QString &path : paths) {
-//                             QFile(path).moveToTrash();
-//                         }
-
-//                         folderAndFileSelectionChange(output, "MW::generateFocusStack");
-
-//                         // Wait for metadata to finish loading OR timeout after 3000 ms
-//                         const int timeoutMs = 3000;
-//                         QElapsedTimer timer;
-//                         timer.start();
-
-//                         while (!G::allMetadataLoaded && timer.elapsed() < timeoutMs) {
-//                             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-//                             QThread::msleep(50);
-//                         }
-
-//                         // deleteFiles(paths);
-//                     }
-//                     sel->select(output);
-//                 }
-
-//                 // cleanup
-//                 thread->quit();
-//                 thread->wait();
-//                 worker->deleteLater();
-//                 thread->deleteLater();
-//             });
-
-//     // --- Start background task ----------------------------------------
-//     QString msg = "Starting FocusStack background task (%1 images)...";
-//     QString src = "MW::generateFocusStack";
-//     updateStatus(false, msg, src);
-
-//     thread->start();
-// }
