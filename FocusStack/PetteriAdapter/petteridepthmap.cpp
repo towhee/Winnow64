@@ -6,7 +6,7 @@
 // Petteri pipeline
 #include "focusstack.h"
 
-using namespace focusstack;
+using namespace Petteri;
 
 // PetteriDepthMap::PetteriDepthMap() {}   // default set in header
 

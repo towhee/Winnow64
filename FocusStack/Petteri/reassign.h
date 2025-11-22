@@ -5,7 +5,7 @@
 #pragma once
 #include "worker.h"
 
-namespace focusstack {
+namespace Petteri {
 
 // Task_Reassign_Map builds a map between grayscale and color values.
 // The map can be built incrementally, so that source images can be

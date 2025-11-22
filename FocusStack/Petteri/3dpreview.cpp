@@ -1,7 +1,7 @@
 #include "3dpreview.h"
 #include <opencv2/imgproc.hpp>
 
-using namespace focusstack;
+using namespace Petteri;
 
 Task_3DPreview::Task_3DPreview(std::shared_ptr<ImgTask> depthmap,
                                std::shared_ptr<ImgTask> depthmap_mask,

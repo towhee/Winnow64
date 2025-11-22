@@ -6,7 +6,7 @@
 #include <malloc.h>
 #endif
 
-using namespace focusstack;
+using namespace Petteri;
 
 Task::Task(): m_filename("unknown"), m_index(0), m_name("Base task"), m_running(false), m_done(false)
 {

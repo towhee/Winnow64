@@ -7,7 +7,7 @@
 // If you have a namespace for the Petteri code, include it here.
 // For example:
 #include "FocusStack/petteri/focusstack.h"
-using namespace focusstack;
+using namespace Petteri;
 
 // no constructor because header uses default
 

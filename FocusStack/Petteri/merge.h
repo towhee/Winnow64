@@ -6,7 +6,7 @@
 #include "worker.h"
 #include <unordered_map>
 
-namespace focusstack {
+namespace Petteri {
 
 class Task_Merge: public ImgTask
 {

@@ -18,7 +18,7 @@
 #include <thread>
 #include <opencv2/core/ocl.hpp>
 
-using namespace focusstack;
+using namespace Petteri;
 
 FocusStack::FocusStack():
   m_output(""),

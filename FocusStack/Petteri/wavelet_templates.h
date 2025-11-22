@@ -9,7 +9,7 @@
 #include <mutex>
 #include "wavelet_opencl_kernels.cl"
 
-namespace focusstack {
+namespace Petteri {
 
 template <typename M>
 class Wavelet {

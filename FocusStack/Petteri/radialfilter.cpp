@@ -1,7 +1,7 @@
 #include "radialfilter.h"
 #include <opencv2/imgproc.hpp>
 
-using namespace focusstack;
+using namespace Petteri;
 
 static inline float sq(float x) { return x * x; }
 

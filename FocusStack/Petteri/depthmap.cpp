@@ -6,7 +6,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <stdio.h>
 
-using namespace focusstack;
+using namespace Petteri;
 
 Task_Depthmap::Task_Depthmap(std::shared_ptr<ImgTask> input,
                 int depth, bool last,

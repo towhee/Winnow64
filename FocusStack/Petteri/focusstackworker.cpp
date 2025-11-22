@@ -3,7 +3,7 @@
 
 void FocusStackWorker::process()
 {
-    using namespace focusstack;
+    using namespace Petteri;
 
     const QString src = "FocusStackWorker::process";
     emit updateStatus(false, "Preparing FocusStack...", src);

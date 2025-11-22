@@ -2,7 +2,7 @@
 #include "radialfilter.h"
 #include <opencv2/imgproc.hpp>
 
-using namespace focusstack;
+using namespace Petteri;
 
 Task_BackgroundRemoval::Task_BackgroundRemoval(std::shared_ptr<ImgTask> input, int threshold, int gapsize):
   m_input(input), m_threshold(threshold), m_gapsize(gapsize)

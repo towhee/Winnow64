@@ -4,7 +4,7 @@
 #include "worker.h"
 #include "merge.h"
 
-namespace focusstack {
+namespace Petteri {
 
 // This task works incrementally, updating the depthmap array for each new image.
 // The focus measure for each layer is compared against its neighbours.

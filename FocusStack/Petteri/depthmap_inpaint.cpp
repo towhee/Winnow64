@@ -4,7 +4,7 @@
 #include "fast_bilateral.h"
 #include "radialfilter.h"
 
-using namespace focusstack;
+using namespace Petteri;
 
 Task_Depthmap_Inpaint::Task_Depthmap_Inpaint(std::shared_ptr<Task_Depthmap> depthmap,
     int threshold, int smooth_xy, int smooth_z, int halo_radius, bool save_steps):

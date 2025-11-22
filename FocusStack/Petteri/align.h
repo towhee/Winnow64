@@ -8,7 +8,7 @@
 #include "loadimg.h"
 #include "focusstack.h"
 
-namespace focusstack {
+namespace Petteri {
 
 class Task_Align: public ImgTask
 {
