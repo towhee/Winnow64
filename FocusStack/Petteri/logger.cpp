@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <iostream>
 
-using namespace focusstack;
+using namespace Petteri;
 
 Logger::Logger():
     m_callback(default_callback), m_level(LOG_VERBOSE)

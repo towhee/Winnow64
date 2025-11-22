@@ -3,7 +3,7 @@
 #pragma once
 #include "worker.h"
 
-namespace focusstack {
+namespace Petteri {
 
 class Task_3DPreview: public ImgTask
 {

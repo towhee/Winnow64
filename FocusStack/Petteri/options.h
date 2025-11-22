@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace focusstack {
+namespace Petteri {
 
 class Options
 {

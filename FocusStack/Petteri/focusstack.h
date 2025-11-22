@@ -12,7 +12,7 @@
 
 #include <opencv2/core/core.hpp>
 
-namespace focusstack {
+namespace Petteri {
 
 class Task_LoadImg;
 class Task_Grayscale;

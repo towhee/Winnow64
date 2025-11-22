@@ -4,7 +4,7 @@
 #pragma once
 #include "worker.h"
 
-namespace focusstack {
+namespace Petteri {
 
 class Task_Grayscale: public ImgTask
 {

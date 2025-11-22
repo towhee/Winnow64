@@ -14,7 +14,7 @@
 #include <opencv2/core/core.hpp>
 #include "logger.h"
 
-namespace focusstack {
+namespace Petteri {
 
 // Generic runnable task, optionally with some dependencies on other tasks
 class Task

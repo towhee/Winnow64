@@ -1,7 +1,7 @@
 #include "denoise.h"
 #include "wavelet.h"
 
-using namespace focusstack;
+using namespace Petteri;
 
 Task_Denoise::Task_Denoise(std::shared_ptr<ImgTask> input, float level)
 {

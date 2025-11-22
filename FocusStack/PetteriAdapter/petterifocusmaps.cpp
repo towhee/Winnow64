@@ -6,7 +6,7 @@
 // Petteri
 #include "focusstack.h"    // Adjust path as needed
 
-using namespace focusstack;
+using namespace Petteri;
 
 bool PetteriFocusMaps::run(const QString &alignedFolder,
                            const QString &focusOutputFolder)

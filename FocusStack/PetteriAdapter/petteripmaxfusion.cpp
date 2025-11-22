@@ -7,7 +7,7 @@
 // Petteri code
 #include "focusstack.h"
 
-using namespace focusstack;
+using namespace Petteri;
 
 // PetteriPMaxFusion::PetteriPMaxFusion() {}   // NOT = default
 

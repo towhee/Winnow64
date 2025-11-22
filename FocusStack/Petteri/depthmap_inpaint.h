@@ -5,7 +5,7 @@
 #include "worker.h"
 #include "depthmap.h"
 
-namespace focusstack {
+namespace Petteri {
 
 class Task_Depthmap_Inpaint: public ImgTask
 {

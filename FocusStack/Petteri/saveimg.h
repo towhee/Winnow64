@@ -4,7 +4,7 @@
 #include "worker.h"
 #include "loadimg.h"
 
-namespace focusstack {
+namespace Petteri {
 
 class Task_SaveImg: public ImgTask
 {

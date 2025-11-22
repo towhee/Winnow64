@@ -1,6 +1,6 @@
 #include "options.h"
 
-using namespace focusstack;
+using namespace Petteri;
 
 Options::Options(int argc, const char *argv[])
 {

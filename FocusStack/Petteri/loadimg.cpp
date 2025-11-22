@@ -4,7 +4,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <fstream>
 
-using namespace focusstack;
+using namespace Petteri;
 
 Task_LoadImg::Task_LoadImg(std::string filename, float wait_images)
 {

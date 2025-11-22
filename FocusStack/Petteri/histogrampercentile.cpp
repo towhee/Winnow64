@@ -1,7 +1,7 @@
 #include "histogrampercentile.h"
 #include <opencv2/imgproc.hpp>
 
-using namespace focusstack;
+using namespace Petteri;
 
 HistogramPercentile::HistogramPercentile(const cv::Mat &image, int histogram_size)
 {

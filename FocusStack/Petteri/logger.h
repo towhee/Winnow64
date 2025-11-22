@@ -8,7 +8,7 @@
 #include <cstdarg>
 #include "focusstack.h"
 
-namespace focusstack {
+namespace Petteri {
 
 class Logger {
 public:
