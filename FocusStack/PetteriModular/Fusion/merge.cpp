@@ -1,7 +1,7 @@
 #include "merge.h"
-#include "wavelet.h"
+#include "PetteriModular/Wave/wavelet.h"
 
-using namespace focusstack;
+using namespace FStack;
 
 Task_Merge::Task_Merge(std::shared_ptr<Task_Merge> prev_merge,
                        const std::vector<std::shared_ptr<ImgTask> > &images,

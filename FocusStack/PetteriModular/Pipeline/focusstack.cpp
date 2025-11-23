@@ -1,24 +1,24 @@
 #include "focusstack.h"
-#include "worker.h"
-#include "logger.h"
-#include "loadimg.h"
-#include "grayscale.h"
-#include "align.h"
-#include "wavelet.h"
-#include "wavelet_opencl.h"
-#include "merge.h"
-#include "denoise.h"
-#include "reassign.h"
-#include "saveimg.h"
-#include "focusmeasure.h"
-#include "depthmap.h"
-#include "depthmap_inpaint.h"
-#include "background_removal.h"
-#include "3dpreview.h"
+#include "PetteriModular/Core/worker.h"
+#include "PetteriModular/Core/logger.h"
+#include "PetteriModular/IO/loadimg.h"
+#include "PetteriModular/Core/grayscale.h"
+#include "PetteriModular/Align/align.h"
+#include "PetteriModular/Wave/wavelet.h"
+#include "PetteriModular/Wave/wavelet_opencl.h"
+#include "PetteriModular/Fusion/merge.h"
+#include "PetteriModular/Denoise/denoise.h"
+#include "PetteriModular/Fusion/reassign.h"
+#include "PetteriModular/IO/saveimg.h"
+#include "PetteriModular/Focus/focusmeasure.h"
+#include "PetteriModular/Depth/depthmap.h"
+#include "PetteriModular/Depth/depthmap_inpaint.h"
+#include "PetteriModular/Align/background_removal.h"
+#include "PetteriModular/View/3dpreview.h"
 #include <thread>
 #include <opencv2/core/ocl.hpp>
 
-using namespace focusstack;
+using namespace FStack;
 
 FocusStack::FocusStack():
   m_output(""),

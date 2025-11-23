@@ -3898,7 +3898,7 @@ void MW::toggleZoomDlg()
     connect(app, &QGuiApplication::applicationStateChanged, this, &MW::appStateChange);
 
     // if view change other than loupe then close zoomDlg
-    connect(this, &MW::closeZoomDlg, zoomDlg, &ZoomDlg::closeZoomDlg);
+    // connect(this, &MW::closeZoomDlg, zoomDlg, &ZoomDlg::closeZoomDlg);
 
     // reset focus to main window if the mouse cursor leaves the zoom dialog
     connect(zoomDlg, &ZoomDlg::leaveZoom, this, &MW::resetFocus);

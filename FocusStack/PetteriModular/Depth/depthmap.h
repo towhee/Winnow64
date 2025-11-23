@@ -1,10 +1,10 @@
 // Construct spatial depthmap from the focus measures for individual layers.
 
 #pragma once
-#include "worker.h"
-#include "merge.h"
+#include "PetteriModular/Core/worker.h"
+#include "PetteriModular/Fusion/merge.h"
 
-namespace focusstack {
+namespace FStack {
 
 // This task works incrementally, updating the depthmap array for each new image.
 // The focus measure for each layer is compared against its neighbours.

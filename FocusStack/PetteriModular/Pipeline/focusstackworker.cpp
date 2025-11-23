@@ -1,9 +1,9 @@
 #include "focusstackworker.h"
-#include "FocusStack/Petteri/worker.h"
+#include "PetteriModular/Core/worker.h"
 
 void FocusStackWorker::process()
 {
-    using namespace focusstack;
+    using namespace FStack;
 
     const QString src = "FocusStackWorker::process";
     emit updateStatus(false, "Preparing FocusStack...", src);

@@ -1,9 +1,9 @@
 // Handles loading of images
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_LoadImg: public ImgTask
 {

@@ -1,9 +1,9 @@
 // Render a 3-dimensional preview image of the generated depthmap.
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_3DPreview: public ImgTask
 {

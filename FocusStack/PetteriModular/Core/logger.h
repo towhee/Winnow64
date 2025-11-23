@@ -6,9 +6,9 @@
 #include <mutex>
 #include <atomic>
 #include <cstdarg>
-#include "focusstack.h"
+#include "PetteriModular/Pipeline/focusstack.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Logger {
 public:

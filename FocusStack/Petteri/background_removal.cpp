@@ -1,5 +1,5 @@
-#include "background_removal.h"
-#include "radialfilter.h"
+#include "FocusStack/Petteri/background_removal.h"
+#include "FocusStack/Petteri/radialfilter.h"
 #include <opencv2/imgproc.hpp>
 
 using namespace Petteri;

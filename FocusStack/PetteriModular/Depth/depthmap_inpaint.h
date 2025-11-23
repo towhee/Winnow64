@@ -2,10 +2,10 @@
 // This uses both the partial depthmap data and the merged grayscale image data.
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 #include "depthmap.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_Depthmap_Inpaint: public ImgTask
 {

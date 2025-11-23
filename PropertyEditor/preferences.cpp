@@ -195,12 +195,13 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "imageCacheSize") {
         QString size = v.toString();
 
+        ImageCache::AutoStrategy as = ImageCache::AutoStrategy::Ignore;
+
         // auto mode?
         bool isAuto = size.startsWith("Auto");
         mw->settings->setValue("autoMaxMB", isAuto);
 
         if (isAuto) {
-            ImageCache::AutoStrategy as = ImageCache::AutoStrategy::Ignore;
             if (size == "Auto Frugal") {
                 as = ImageCache::AutoStrategy::Frugal;
                 setItemValue("iconChunkSize", 100);
@@ -220,6 +221,7 @@ void Preferences::itemChange(QModelIndex idx)
                 mw->settings->setValue("iconChunkSize", 25000);
             }
             mw->imageCache->setAutoMaxMB(true, as);
+            // emit mw->setAutoMaxMB(true, as);
             QString strategy = mw->imageCache->autoStrategyStr.at(as);
             mw->settings->setValue("autoMaxMBStrategy", strategy);
         }
@@ -239,10 +241,10 @@ void Preferences::itemChange(QModelIndex idx)
             else if (size == "32 GB") mb = 32000;
             else if (size == "48 GB") mb = 48000;
             else if (size == "64 GB") mb = 64000;
-            mw->imageCache->setAutoMaxMB(false);
+            mw->imageCache->setAutoMaxMB(false, as);
             qDebug() << "mw->imageCache->setMaxMB(mb)";
             // mw->imageCache->setMaxMB(mb);
-            emit mw->setAutoMaxMB(false, ImageCache::AutoStrategy::Ignore);
+            // emit mw->setAutoMaxMB(false, as);
             emit mw->setMaxMB(mb);
             mw->settings->setValue("cacheMaxMB", mb);
         }

@@ -2,7 +2,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <cstdio>
 
-using namespace focusstack;
+using namespace FStack;
 
 Task_Grayscale::Task_Grayscale(std::shared_ptr<ImgTask> input, std::shared_ptr<Task_Grayscale> reference)
 {

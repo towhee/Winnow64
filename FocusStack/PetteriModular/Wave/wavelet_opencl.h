@@ -3,7 +3,7 @@
 #pragma once
 #include "wavelet.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_Wavelet_OpenCL: public Task_Wavelet
 {

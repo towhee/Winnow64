@@ -6,7 +6,7 @@
 #pragma once
 #include <opencv2/core.hpp>
 
-namespace focusstack {
+namespace FStack {
 
 // Find the closest valid point in each radial direction and
 // average them together to fill in any points with 0 value.

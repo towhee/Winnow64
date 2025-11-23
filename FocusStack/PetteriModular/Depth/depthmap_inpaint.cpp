@@ -1,10 +1,10 @@
 #include "depthmap_inpaint.h"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include "fast_bilateral.h"
-#include "radialfilter.h"
+#include "PetteriModular/Denoise/fast_bilateral.h"
+#include "PetteriModular/Align/radialfilter.h"
 
-using namespace focusstack;
+using namespace FStack;
 
 Task_Depthmap_Inpaint::Task_Depthmap_Inpaint(std::shared_ptr<Task_Depthmap> depthmap,
     int threshold, int smooth_xy, int smooth_z, int halo_radius, bool save_steps):

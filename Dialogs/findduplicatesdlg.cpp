@@ -2,6 +2,7 @@
 #include "ui_findduplicatesdlg.h"
 #include "Main/global.h"
 #include "Effects/effects.h"
+#include "ui_metadatareport.h"
 
 /*******************************************************************************************/
 

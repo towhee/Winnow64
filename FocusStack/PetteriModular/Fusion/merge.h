@@ -3,10 +3,10 @@
 //          by B. Forster, D. Van De Ville, J. Berent, D. Sage, M. Unser, September 2004
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 #include <unordered_map>
 
-namespace focusstack {
+namespace FStack {
 
 class Task_Merge: public ImgTask
 {

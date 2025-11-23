@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace focusstack {
+namespace FStack {
 
 class Options
 {

@@ -2,9 +2,9 @@
 // Used for depth map estimation.
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_FocusMeasure: public ImgTask
 {

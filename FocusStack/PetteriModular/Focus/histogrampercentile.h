@@ -4,7 +4,7 @@
 #include <opencv2/core.hpp>
 #include <vector>
 
-namespace focusstack {
+namespace FStack {
 
 class HistogramPercentile
 {
