@@ -2,9 +2,9 @@
 // This provides best contrast for alignment tasks.
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_Grayscale: public ImgTask
 {

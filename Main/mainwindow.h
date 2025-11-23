@@ -89,6 +89,9 @@
 #include "FocusStack/Petteri/focusstack.h"
 #include "FocusStack/Petteri/options.h"
 
+#include "FocusStack/PetteriModular/Pipeline/focusstack.h"
+#include "FocusStack/PetteriModular/Pipeline/focusstackworker.h".h"
+
 #include "Utilities/focuspointtrainer.h"
 // #include "Utilities/focuspredictor.h"
 
@@ -395,7 +398,7 @@ signals:
     void imageCacheFilterChange(QString, QString);
     void imageCacheColorManageChange();
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
-    void closeZoomDlg();        // not being used
+    // void closeZoomDlg();        // not being used
     void aSyncGo(int);          // rgh req'd?
     void needToShow();          // not being used
     void abortMDCache();        // not being used
@@ -407,7 +410,6 @@ signals:
     void abortEmbelExport();
     void abortHueReport();
     void abortStackOperation();
-    void testAddToDM(ImageMetadata m, QString src); // not being used
     void fusionFinished(bool ok, const QString &outputImagePath,
                         const QString &depthMapPath);
 

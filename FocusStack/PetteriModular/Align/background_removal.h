@@ -2,9 +2,9 @@
 // This can be used for background removal when there is a clear brightness difference.
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_BackgroundRemoval: public ImgTask
 {

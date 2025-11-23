@@ -1,10 +1,10 @@
 #include "loadimg.h"
-#include "wavelet.h"
+#include "PetteriModular/Wave/wavelet.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <fstream>
 
-using namespace focusstack;
+using namespace FStack;
 
 Task_LoadImg::Task_LoadImg(std::string filename, float wait_images)
 {

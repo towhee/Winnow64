@@ -12,9 +12,9 @@
 #include <exception>
 // #include <opencv2/core/core.hpp>
 #include <opencv2/core/core.hpp>
-#include "logger.h"
+#include "PetteriModular/Core/logger.h"
 
-namespace focusstack {
+namespace FStack {
 
 // Generic runnable task, optionally with some dependencies on other tasks
 class Task

@@ -1,12 +1,12 @@
 #include "depthmap.h"
-#include "wavelet.h"
-#include "wavelet_templates.h"
-#include "merge.h"
-#include "histogrampercentile.h"
+#include "PetteriModular/Wave/wavelet.h"
+#include "PetteriModular/Wave/wavelet_templates.h"
+#include "PetteriModular/Fusion/merge.h"
+#include "PetteriModular/Focus/histogrampercentile.h"
 #include <opencv2/imgcodecs.hpp>
 #include <stdio.h>
 
-using namespace focusstack;
+using namespace FStack;
 
 Task_Depthmap::Task_Depthmap(std::shared_ptr<ImgTask> input,
                 int depth, bool last,

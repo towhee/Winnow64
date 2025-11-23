@@ -1,7 +1,7 @@
 #include "denoise.h"
-#include "wavelet.h"
+#include "PetteriModular/Wave/wavelet.h"
 
-using namespace focusstack;
+using namespace FStack;
 
 Task_Denoise::Task_Denoise(std::shared_ptr<ImgTask> input, float level)
 {

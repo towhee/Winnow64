@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "ui_metadatareport.h"
 
 void MW::fitDiagnostics(QDialog *dlg, QTextBrowser *textBrowser)
 {

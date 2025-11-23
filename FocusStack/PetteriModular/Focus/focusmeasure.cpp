@@ -1,7 +1,7 @@
 #include "focusmeasure.h"
 #include <opencv2/imgproc.hpp>
 
-using namespace focusstack;
+using namespace FStack;
 
 Task_FocusMeasure::Task_FocusMeasure(std::shared_ptr<ImgTask> input, float radius, float threshold)
 {

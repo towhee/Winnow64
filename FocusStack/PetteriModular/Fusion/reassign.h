@@ -3,9 +3,9 @@
 //          by B. Forster, D. Van De Ville, J. Berent, D. Sage, M. Unser, September 2004
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 
-namespace focusstack {
+namespace FStack {
 
 // Task_Reassign_Map builds a map between grayscale and color values.
 // The map can be built incrementally, so that source images can be

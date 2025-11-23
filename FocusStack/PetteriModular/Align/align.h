@@ -4,11 +4,11 @@
 // Alignment is calculated on grayscale image, but final transformation is applied to the color image.
 
 #pragma once
-#include "worker.h"
-#include "loadimg.h"
-#include "focusstack.h"
+#include "PetteriModular/Pipeline/focusstack.h"
+#include "PetteriModular/Core/worker.h"
+#include "PetteriModular/IO/loadimg.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_Align: public ImgTask
 {

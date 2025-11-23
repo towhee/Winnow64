@@ -1,7 +1,7 @@
 #include "wavelet.h"
 #include "wavelet_templates.h"
 
-using namespace focusstack;
+using namespace FStack;
 
 Task_Wavelet::Task_Wavelet(std::shared_ptr<ImgTask> input, bool inverse)
 {

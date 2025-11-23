@@ -9,7 +9,7 @@
 #include <mutex>
 #include "wavelet_opencl_kernels.cl"
 
-namespace focusstack {
+namespace FStack {
 
 template <typename M>
 class Wavelet {

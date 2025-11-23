@@ -4,7 +4,7 @@
 
 #define REASSIGN_MAX_BATCH 32
 
-using namespace focusstack;
+using namespace FStack;
 
 Task_Reassign_Map::Task_Reassign_Map(const std::vector<std::shared_ptr<ImgTask> > &grayscale_imgs,
                                      const std::vector<std::shared_ptr<ImgTask> > &color_imgs, std::shared_ptr<Task_Reassign_Map> old_map):

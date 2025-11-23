@@ -1,10 +1,10 @@
 // Handles cropping and conversion of images for saving
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 #include "loadimg.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_SaveImg: public ImgTask
 {

@@ -20,7 +20,7 @@
 #include "Metadata/ExifTool.h"
 #include "xmp.h"
 
-#include "ui_metadatareport.h"
+// #include "ui_metadatareport.h"
 
 //#ifdef Q_OS_WIN
 // rgh remove heic

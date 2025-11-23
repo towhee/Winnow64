@@ -271,9 +271,6 @@ void MW::createDataModel()
     connect(buildFilters, &BuildFilters::filterLastDay, this, &MW::filterLastDay);
     connect(buildFilters, &BuildFilters::searchTextEdit, this, &MW::searchTextEdit);
     connect(buildFilters, &BuildFilters::filterChange, this, &MW::filterChange);
-
-    // test how to add to datamodel from another thread
-    connect(this, &MW::testAddToDM, dm, &DataModel::addMetadataForItem);
 }
 
 void MW::createSelectionModel()
@@ -377,17 +374,17 @@ void MW::createImageCache()
         setMaxMB(mb)
     */
 
+    ImageCache::AutoStrategy as = ImageCache::AutoStrategy::Ignore;  // default
     // load settings
     if (!isSettings || simulateJustInstalled) {
-        imageCache->setAutoMaxMB(true, ImageCache::AutoStrategy::Moderate);
+        as = ImageCache::AutoStrategy::Moderate;
+        imageCache->setAutoMaxMB(true, as);
         imageCache->setShowCacheStatus(true);
     }
     else {
         bool isAuto = false;
-        ImageCache::AutoStrategy as = ImageCache::AutoStrategy::Ignore; // default
         if (settings->contains("autoMaxMB")) {
             isAuto = settings->value("autoMaxMB").toBool();
-            as = ImageCache::AutoStrategy::Moderate; // new default
         }
 
         if (settings->contains("autoMaxMBStrategy")) {
@@ -449,8 +446,8 @@ void MW::createImageCache()
     //         imageCache, &ImageCache::updateImageCacheParam);
 
     // Signal to update imageCache auto cache size
-    connect(this, &MW::setAutoMaxMB,
-            imageCache, &ImageCache::setAutoMaxMB, Qt::BlockingQueuedConnection);
+    // connect(this, &MW::setAutoMaxMB,
+    //         imageCache, &ImageCache::setAutoMaxMB, Qt::BlockingQueuedConnection);
 
     // Signal to update imageCache maxMB
     connect(this, &MW::setMaxMB,

@@ -5,9 +5,9 @@
 // Similar algorithm is available at https://github.com/fiji-BIG/wavelets/
 
 #pragma once
-#include "worker.h"
+#include "PetteriModular/Core/worker.h"
 
-namespace focusstack {
+namespace FStack {
 
 class Task_Wavelet: public ImgTask
 {
