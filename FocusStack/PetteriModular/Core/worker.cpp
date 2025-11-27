@@ -6,7 +6,7 @@
 #include <malloc.h>
 #endif
 
-using namespace FStack;
+namespace FStack {
 
 Task::Task(): m_filename("unknown"), m_index(0), m_name("Base task"), m_running(false), m_done(false)
 {
@@ -138,10 +138,11 @@ void Worker::add(std::shared_ptr<Task> task)
   m_tasks.emplace_back(task);
   m_total_tasks++;
   m_wakeup.notify_all();
-  qDebug() << "Worker::add  task = "
-           << "m_total_tasks =" << m_total_tasks
-           << task->name()
-      ;
+  // qDebug() << QString::number(seconds_passed(), 'g', 3).rightJustified(8)
+  //          << "Worker::add  task = "
+  //          << "m_total_tasks =" << m_total_tasks
+  //          << task->name()
+  //     ;
 }
 
 void Worker::prepend(std::shared_ptr<Task> task)
@@ -385,3 +386,5 @@ void Worker::worker(int thread_idx)
     }
   }
 }
+
+} // namespace FStack

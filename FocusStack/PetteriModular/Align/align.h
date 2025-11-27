@@ -52,4 +52,4 @@ private:
   cv::Mat m_whitebalance;
 };
 
-}
+} // namespace FStack

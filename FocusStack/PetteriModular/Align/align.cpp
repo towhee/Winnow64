@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstdio>
 
-using namespace FStack;
+namespace FStack {
 
 static inline float sq(float x) { return x * x; }
 
@@ -432,3 +432,5 @@ void Task_Align::compute_valid_area()
       m_filename.c_str(), m_valid_area.x, m_valid_area.y, m_valid_area.width, m_valid_area.height);
   }
 }
+
+} // namespace FStack

@@ -1,18 +1,30 @@
-#ifndef IALIGN_H
-#define IALIGN_H
-
-#include "IStage.h"
+#pragma once
 #include <QStringList>
+#include <QObject>
 
-class IAlign : public IStage
+/*
+   IAlign
+   ------
+   Input:  raw source image paths
+   Output: alignedFolderOut (folder that now contains aligned images)
+*/
+
+class IAlign: public QObject
 {
+    Q_OBJECT
+
 public:
+    explicit IAlign(QObject *parent = nullptr)
+        : QObject(parent) {}
+
     virtual ~IAlign() = default;
 
-    // Input: raw source file paths
-    // Output: directory containing aligned images
-    virtual bool run(const QStringList &inputPaths,
-                     QString &alignedFolder) = 0;
-};
+    virtual QString name() const = 0;
 
-#endif
+    virtual bool run(const QStringList &imagePaths,
+                     QString &alignedFolderOut) = 0;
+
+signals:
+    void updateStatus(bool isError, const QString &msg, const QString &src);
+    void updateProgress(int current, int total);
+};

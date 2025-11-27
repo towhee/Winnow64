@@ -1,19 +1,35 @@
-#ifndef IFUSION_H
-#define IFUSION_H
-
-#include "IStage.h"
+#pragma once
 #include <QString>
+#include <QStringList>
+#include <QObject>
 
-class IFusion : public IStage
+/*
+   IFusion
+   -------
+   Input:  alignedFolder + depthFolder
+   Output: outputImagePath and optional generatedMaskPath
+*/
+
+class IFusion : public QObject
 {
+    Q_OBJECT
+
 public:
+    explicit IFusion(QObject *parent = nullptr)
+        : QObject(parent) {}
+
+
     virtual ~IFusion() = default;
 
-    // Input: aligned images + optional depth map
-    // Output: final fused image path
+    virtual QString name() const = 0;
+
     virtual bool run(const QString &alignedFolder,
                      const QString &depthFolder,
-                     QString &outputImagePath) = 0;
-};
+                     const QString &outputFolder,
+                     QString &outputImagePath,
+                     QString &generatedMaskPath) = 0;
 
-#endif
+signals:
+    void updateStatus(bool isError, const QString &msg, const QString &src);
+    void updateProgress(int current, int total);
+};

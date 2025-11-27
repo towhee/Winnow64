@@ -66,4 +66,5 @@ private:
   bool m_save_steps;
 };
 
-}
+} // namespace FStack
+

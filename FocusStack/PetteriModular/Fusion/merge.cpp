@@ -1,7 +1,7 @@
 #include "merge.h"
 #include "PetteriModular/Wave/wavelet.h"
 
-using namespace FStack;
+namespace FStack {
 
 Task_Merge::Task_Merge(std::shared_ptr<Task_Merge> prev_merge,
                        const std::vector<std::shared_ptr<ImgTask> > &images,
@@ -180,3 +180,5 @@ void Task_Merge::denoise_neighbours()
     }
   }
 }
+
+} // namespace FStack

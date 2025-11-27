@@ -18,7 +18,7 @@
 #include <thread>
 #include <opencv2/core/ocl.hpp>
 
-using namespace FStack;
+namespace FStack {
 
 FocusStack::FocusStack():
   m_output(""),
@@ -603,3 +603,5 @@ void FocusStack::regenerate_3dview()
     m_worker->add(m_result_3dview);
   }
 }
+
+} // namespace FStack

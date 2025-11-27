@@ -34,4 +34,4 @@ protected:
   bool m_inverse;
 };
 
-}
+} // namespace FStack

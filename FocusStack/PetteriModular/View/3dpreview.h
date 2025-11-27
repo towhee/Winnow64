@@ -26,4 +26,5 @@ private:
   float m_z_scale;
 };
 
-}
+} // namespace FStack
+

@@ -16,5 +16,4 @@ private:
   virtual void task();
 };
 
-
-}
+} // namespace FStack

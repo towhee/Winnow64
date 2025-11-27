@@ -18,5 +18,5 @@ private:
     float m_threshold;
 };
 
+} // namespace FStack
 
-}

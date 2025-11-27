@@ -85,13 +85,6 @@
 
 #include "Metadata/ExifTool.h"
 
-#include "FocusStack/Petteri/focusstackworker.h"
-#include "FocusStack/Petteri/focusstack.h"
-#include "FocusStack/Petteri/options.h"
-
-#include "FocusStack/PetteriModular/Pipeline/focusstack.h"
-#include "FocusStack/PetteriModular/Pipeline/focusstackworker.h".h"
-
 #include "Utilities/focuspointtrainer.h"
 // #include "Utilities/focuspredictor.h"
 

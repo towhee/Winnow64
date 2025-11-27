@@ -25,4 +25,4 @@ private:
   cv::Mat m_weights;
 };
 
-}
+} // namespace FStack

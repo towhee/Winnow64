@@ -2,7 +2,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 
-using namespace FStack;
+namespace FStack {
 
 Task_SaveImg::Task_SaveImg(std::string filename, std::shared_ptr<ImgTask> input, std::shared_ptr<ImgTask> alphamask,
   int jpgquality, bool nocrop)
@@ -101,4 +101,5 @@ void Task_SaveImg::task()
   }
 }
 
+} // namespace FStack
 

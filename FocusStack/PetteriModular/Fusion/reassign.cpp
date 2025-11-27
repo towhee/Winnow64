@@ -4,11 +4,14 @@
 
 #define REASSIGN_MAX_BATCH 32
 
-using namespace FStack;
+namespace FStack {
 
 Task_Reassign_Map::Task_Reassign_Map(const std::vector<std::shared_ptr<ImgTask> > &grayscale_imgs,
-                                     const std::vector<std::shared_ptr<ImgTask> > &color_imgs, std::shared_ptr<Task_Reassign_Map> old_map):
-  m_grayscale_imgs(grayscale_imgs), m_color_imgs(color_imgs), m_old_map(old_map)
+                                     const std::vector<std::shared_ptr<ImgTask> > &color_imgs,
+                                     std::shared_ptr<Task_Reassign_Map> old_map):
+                                     m_grayscale_imgs(grayscale_imgs),
+                                     m_color_imgs(color_imgs),
+                                     m_old_map(old_map)
 {
   m_filename = "reassign_map";
   m_name = "Build color reassignment map from " + std::to_string(m_color_imgs.size()) + " images";
@@ -229,3 +232,5 @@ void Task_Reassign::reassign_gray()
   cv::min(m_result, m_map->m_gray_max, m_result);
   cv::max(m_result, m_map->m_gray_min, m_result);
 }
+
+} // namespace FStack

@@ -35,4 +35,4 @@ private:
   int m_total_pixels;
 };
 
-}
+} // namespace FStack

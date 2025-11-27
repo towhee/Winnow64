@@ -94,6 +94,8 @@ Nikon::Nikon()
     nikonMakerHash[3613] = "ICC profile";
     nikonMakerHash[3614] = "Capture output";
 
+    // https://exiftool.org/TagNames/Nikon.html#LensData00
+    // at bottom of page
     nikonLensHash.clear();
     nikonLensHash["0000000000000001"] = "Manual Lens No CPU";
     nikonLensHash["000000000000E112"] = "TC-17E II";
@@ -965,6 +967,12 @@ bool Nikon::parse(MetadataParameters &p,
         m.nikonLensCode = lensInfo.toHex().toUpper();
 //        QByteArray nikonLensCode = lensInfo.toHex().toUpper();
         m.lens = nikonLensHash.value(m.nikonLensCode);
+        // new lenses not in nikonLensHash
+        if (m.lens.isEmpty()) {
+            ExifTool et;
+            m.lens = et.readTag(m.fPath, "LensModel");
+            qDebug() << "Nikon lens =" << m.lens;
+        }
         /*
         or could go with nikonLensHash<QString, QString>
         and use lensInfo.toHex().toUpper() as the key  */

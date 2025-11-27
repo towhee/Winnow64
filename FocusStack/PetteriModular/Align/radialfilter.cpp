@@ -1,7 +1,7 @@
 #include "radialfilter.h"
 #include <opencv2/imgproc.hpp>
 
-using namespace FStack;
+namespace FStack {
 
 static inline float sq(float x) { return x * x; }
 
@@ -356,3 +356,5 @@ void RadialFilter::bresenham_walk_direction(F callback, int x0, int y0, int dx, 
     }
   }
 }
+
+} // namespace FStack

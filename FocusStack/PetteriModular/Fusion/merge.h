@@ -34,4 +34,5 @@ private:
   int m_consistency;
 };
 
-}
+} // namespace FStack
+

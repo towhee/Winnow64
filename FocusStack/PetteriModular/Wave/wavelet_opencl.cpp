@@ -1,7 +1,7 @@
 #include "wavelet_opencl.h"
 #include "wavelet_templates.h"
 
-using namespace FStack;
+namespace FStack {
 
 Task_Wavelet_OpenCL::Task_Wavelet_OpenCL(std::shared_ptr<ImgTask> input, bool inverse):
   Task_Wavelet(input, inverse)
@@ -61,3 +61,5 @@ void Task_Wavelet_OpenCL::task()
   m_valid_area = m_input->valid_area();
   m_input.reset();
 }
+
+} // namespace FStack

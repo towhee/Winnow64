@@ -30,4 +30,5 @@ private:
   std::vector<bool> m_parsed;
 };
 
-}
+} // namespace FStack
+

@@ -1,6 +1,6 @@
 #include "options.h"
 
-using namespace FStack;
+namespace FStack {
 
 Options::Options(int argc, const char *argv[])
 {
@@ -88,3 +88,4 @@ std::vector<std::string> Options::get_unparsed()
   return result;
 }
 
+} // namespace FStack
