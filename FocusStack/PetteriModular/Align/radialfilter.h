@@ -34,4 +34,4 @@ public:
   static inline void bresenham_walk_direction(F callback, int x0, int y0, int dx, int dy);
 };
 
-}
+} // namespace FStack

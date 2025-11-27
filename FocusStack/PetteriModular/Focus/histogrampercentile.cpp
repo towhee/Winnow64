@@ -1,7 +1,7 @@
 #include "histogrampercentile.h"
 #include <opencv2/imgproc.hpp>
 
-using namespace FStack;
+namespace FStack {
 
 HistogramPercentile::HistogramPercentile(const cv::Mat &image, int histogram_size)
 {
@@ -86,3 +86,5 @@ std::vector<int> HistogramPercentile::local_minimums() const
 
   return result;
 }
+
+} // namespace FStack

@@ -40,4 +40,4 @@ private:
     std::atomic<log_level_t> m_level;
 };
 
-}
+} // namespace FStack

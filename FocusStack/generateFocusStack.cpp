@@ -1,5 +1,5 @@
 #include "Main/mainwindow.h"
-// #include "FocusStack/Fusion/fusionpmaxbasic.h"
+#include "FocusStack/Pipeline/pipelinepmax.h"
 
 
 /*
@@ -13,7 +13,7 @@ Winnow64/FocusStack/
         Tasks/
         IO/
         Wrappers/
-        Namespace: petteri_mod
+        Namespace: FStack
 
     Contracts/
         IAlign.h
@@ -31,11 +31,11 @@ Winnow64/FocusStack/
             WeightedPMax.h/.cpp
             DepthAwareFusion.h/.cpp
         Depth/
-            PetteriDepthMap.h/.cpp
-            ContrastDepthMap.h/.cpp
+            PetteriDepth.h/.cpp
+            ContrastDepth.h/.cpp
         Focus/
-            PetteriFocusMaps.h/.cpp
-            GradientFocusMaps.h/.cpp
+            PetteriFocus.h/.cpp
+            GradientFocus.h/.cpp
 
     Pipeline/
         PipelineBase.h/.cpp
@@ -82,127 +82,186 @@ void MW::generateFocusStack(const QStringList paths,
                             const QString method,
                             const QString source)
 {
-    /*
-    Folder structure:
-
-        Source images
-            First source image base name
-                Method (Project path)
-                    Aligned
-                    Focus
-                    Depth
-                    Fusion
-
-    Pipeline:
-
-        Method
-            Method::Fuse
-                PetteriAdapterAlign
-                    Petteri set options
-                    Execute Petteri pipeline
-                PetteriAdapterFocusMap
-                PetteriAdapterDepthMap
-                PetteriAdapterFusion
-*/
     if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
     QString srcFun = "MW::generateFocusStack";
 
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
 
-    QFileInfo srcInfo(paths.last());
-    QString srcFolder = srcInfo.dir().absolutePath();
-    QString base = srcInfo.baseName();
+    // ---------------------------------------------------------------------
+    //   Create Thread + Pipeline
+    // ---------------------------------------------------------------------
+    QThread *thread = new QThread(this);
+    PipelinePMax *pipeline = new PipelinePMax();   // no parent; lives in thread
+    pipeline->moveToThread(thread);
 
+    // ---------------------------------------------------------------------
+    //   Start pipeline when thread begins
+    // ---------------------------------------------------------------------
+    connect(thread, &QThread::started, pipeline, [pipeline, paths]() {
+        pipeline->setInput(paths);
+        pipeline->run();      // executes inside worker thread – OK
+    });
 
-    // PIPELINE: FusionPMaxBasic
-    /*
-    if (method == "FusionPMaxBasic")
-    {
-        qDebug() << "Using FusionPMaxBasic pipeline";
+    // ---------------------------------------------------------------------
+    //   Pipeline status → UI
+    // ---------------------------------------------------------------------
+    connect(pipeline, &PipelinePMax::updateStatus,
+            this, &MW::updateStatus,
+            Qt::QueuedConnection);
 
-        // FusionPMaxBasic *fusion = new FusionPMaxBasic();
+    connect(pipeline, &PipelinePMax::progress,
+        this,
+        [this](int current, int total)
+        {
+            this->cacheProgressBar->updateUpperProgress(
+                current, total, Qt::darkYellow);
+        },
+        Qt::QueuedConnection);
 
-        // Run in background thread (similar structure to FocusStackWorker)
-        QThread *thread = new QThread;
-        fusion->moveToThread(thread);
+    // ---------------------------------------------------------------------
+    //   Pipeline finished → Handle output
+    // ---------------------------------------------------------------------
+    connect(pipeline, &PipelinePMax::finished,
+        this,
+        [=](bool ok, const QString &outputFolder)
+        {
+            QString msg = ok
+                              ? QString("PMax pipeline finished.\nOutput folder: %1").arg(outputFolder)
+                              : QString("PMax pipeline failed.");
 
-        connect(thread, &QThread::started, this, [=]() {
+            updateStatus(!ok, msg, srcFun);
 
-            QString ext = ".png";
-            QString projDir = srcFolder + "/" + base + "/" + method;
-            QString depthDir = projDir + "/Depth";
-            QString depthName = "Depth_" + method + "_" + base + ext;
-            QString depthMapPath = depthDir + "/" + depthName;
-            QString fusedDir = projDir + "/Fused";
-            QString fusedName = "Fused_" + method + "_" + base + ext;
-            QString fusedImagePath = fusedDir + "/" + fusedName;
+            if (ok)
+            {
+                // The resulting fused image file
+                QString fused = pipeline->fusionOutputPath();
+                dm->insert(fused);
 
-            qDebug() << srcFun << "projDir        =" << projDir;
-
-            FusionPMaxBasic::Options options;
-            options.align = false;
-            options.alignFuse = true;
-            options.focusMeasure = false;
-            options.depthMap = false;
-            options.fuse = false;
-
-            bool ok = fusion->fuse(paths,
-                                   projDir,
-                                   options);
-
-            // Emit manually since FusionBase doesn't do it
-            emit fusionFinished(ok, fusedImagePath, depthMapPath);
-        });
-
-        connect(fusion, &FusionBase::updateStatus,
-                this, &MW::updateStatus, Qt::QueuedConnection);
-
-        // When done
-        connect(this, &MW::fusionFinished, this,
-                [=](bool ok, const QString &output, const QString &depthmap)
+                if (!isLocal)
                 {
-                    QString success = QString("FusionPMaxBasic finished. Output: %1 Depth: %2").arg(output, depthmap);
-                    QString failure = "FusionPMaxBasic failed.";
-                    QString msg = ok ? success : failure;
+                    //
+                    //  Delete source images
+                    //
+                    for (const QString &p : paths)
+                        QFile(p).moveToTrash();
 
-                    updateStatus(false, msg, "MW::generateFocusStack");
+                    folderAndFileSelectionChange(fused, srcFun);
 
-                    if (ok) {
-                        dm->insert(output);
+                    //
+                    //  Wait for metadata to finish loading (max 3000ms)
+                    //
+                    const int timeoutMs = 3000;
+                    QElapsedTimer t;
+                    t.start();
 
-                        if (!isLocal) {
-                            for (const QString &path : paths)
-                                QFile(path).moveToTrash();
-
-                            folderAndFileSelectionChange(output,
-                                                         "MW::generateFocusStack");
-
-                            // Wait for metadata to finish loading OR timeout
-                            const int timeoutMs = 3000;
-                            QElapsedTimer timer;
-                            timer.start();
-                            while (!G::allMetadataLoaded && timer.elapsed() < timeoutMs) {
-                                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-                                QThread::msleep(50);
-                            }
-                        }
-
-                        sel->select(output);
+                    while (!G::allMetadataLoaded &&
+                           t.elapsed() < timeoutMs)
+                    {
+                        QCoreApplication::processEvents(
+                            QEventLoop::AllEvents, 50);
+                        QThread::msleep(50);
                     }
+                }
 
-                    // Cleanup
-                    thread->quit();
-                    thread->wait();
-                    fusion->deleteLater();
-                    thread->deleteLater();
-                });
-        // Start processing
-        thread->start();
-        return;
-    }
+                // Select fused image in UI
+                sel->select(fused);
+            }
 
+            // -----------------------------------------------------------------
+            //   Cleanup after pipeline ends
+            // -----------------------------------------------------------------
+            thread->quit();
+            thread->wait();
+            pipeline->deleteLater();
+            thread->deleteLater();
+        },
+        Qt::QueuedConnection);
 
-    // PIPELINE: Petteri PMax Original (Default)
+    // ---------------------------------------------------------------------
+    //   Start the worker thread
+    // ---------------------------------------------------------------------
+    thread->start();
+}
+// {
+//     if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
+//     QString srcFun = "MW::generateFocusStack";
+
+//     bool isLocal = (source == "MW::generateFocusStackFromSelection");
+
+//     // Thread + Pipeline object
+//     QThread *thread = new QThread;
+//     PipelinePMax *pipeline = new PipelinePMax();
+//     pipeline->moveToThread(thread);
+
+//     // Start pipeline when thread starts
+//     connect(thread, &QThread::started, this, [=]() {
+//         pipeline->setInput(paths);
+//         pipeline->run();       // synchronous inside worker thread
+//     });
+
+//     // Pipeline status → MW status
+//     connect(pipeline, &PipelinePMax::updateStatus,
+//             this, &MW::updateStatus,
+//             Qt::QueuedConnection);
+
+//     connect(pipeline, &PipelinePMax::progress,
+//         this, [this](int current, int total) {
+//             this->cacheProgressBar->updateUpperProgress(current, total, Qt::blue);
+//         }, Qt::QueuedConnection);
+
+//     // Pipeline finished → handle result
+//     connect(pipeline, &PipelinePMax::finished,
+//             this,
+//             [=](bool ok, const QString &outputFolder)
+//             {
+//                 QString msg = ok
+//                                   ? QString("PMax pipeline finished.\nOutput folder: %1")
+//                                         .arg(outputFolder)
+//                                   : QString("PMax pipeline failed.");
+
+//                 updateStatus(!ok, msg, srcFun);
+
+//                 if (ok) {
+//                     // Fusion output file is in: pipeline->fusionOutputPath()
+//                     QString fused = pipeline->fusionOutputPath();
+
+//                     dm->insert(fused);
+
+//                     if (!isLocal) {
+//                         // Delete originals
+//                         for (const QString &p : paths)
+//                             QFile(p).moveToTrash();
+
+//                         folderAndFileSelectionChange(fused, srcFun);
+
+//                         // Wait for metadata (3000ms max)
+//                         const int timeoutMs = 3000;
+//                         QElapsedTimer t;
+//                         t.start();
+//                         while (!G::allMetadataLoaded &&
+//                                t.elapsed() < timeoutMs) {
+//                             QCoreApplication::processEvents(
+//                                 QEventLoop::AllEvents, 50);
+//                             QThread::msleep(50);
+//                         }
+//                     }
+
+//                     sel->select(fused);
+//                 }
+
+//                 // Cleanup thread safely
+//                 thread->quit();
+//                 thread->wait();
+//                 pipeline->deleteLater();
+//                 thread->deleteLater();
+//             });
+
+//     // Start the thread
+//     thread->start();
+// }
+    //*/
+
+    /* PIPELINE: Petteri PMax Original (Default)
     {
         qDebug() << "Using legacy Petteri FocusStackWorker";
         QThread *thread = new QThread;
@@ -268,4 +327,4 @@ void MW::generateFocusStack(const QStringList paths,
         thread->start();
     }
     */
-}
+// }

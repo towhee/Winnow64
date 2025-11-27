@@ -85,4 +85,5 @@ private:
   std::shared_ptr<ImgTask> m_merged;
 };
 
-}
+} // namespace FStack
+

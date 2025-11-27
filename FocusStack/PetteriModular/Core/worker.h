@@ -152,5 +152,5 @@ private:
   void worker(int thread_idx);
 };
 
+} // namespace FStack
 
-}

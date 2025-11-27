@@ -17,5 +17,5 @@ private:
   float m_level;
 };
 
+} // namespace FStack
 
-}

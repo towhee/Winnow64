@@ -24,5 +24,5 @@ private:
   cv::Size m_orig_size;
 };
 
+} // namespace FStack
 
-}

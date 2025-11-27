@@ -19,5 +19,4 @@ private:
   int m_gapsize;
 };
 
-
-}
+} // namespace FStack

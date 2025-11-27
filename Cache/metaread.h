@@ -31,7 +31,6 @@ public:
 
     void stop();
     void stopReaders();
-    void abortProcessing();
     void syncInstance();
     QString reportMetaCache();
     // void cleanupIcons();
@@ -79,6 +78,7 @@ public slots:
     void dispatch(int id, bool isReturning);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
     void dispatchFinished(QString src);
+    void abortProcessing();
 
 private:
     void read(int startRow = 0, QString src = "");// decoder

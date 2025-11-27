@@ -4,7 +4,7 @@
 #include "PetteriModular/Denoise/fast_bilateral.h"
 #include "PetteriModular/Align/radialfilter.h"
 
-using namespace FStack;
+namespace FStack {
 
 Task_Depthmap_Inpaint::Task_Depthmap_Inpaint(std::shared_ptr<Task_Depthmap> depthmap,
     int threshold, int smooth_xy, int smooth_z, int halo_radius, bool save_steps):
@@ -132,3 +132,5 @@ void Task_Depthmap_Inpaint::task()
     cv::medianBlur(m_result, m_result, medsize);
   }
 }
+
+} // namespace FStack

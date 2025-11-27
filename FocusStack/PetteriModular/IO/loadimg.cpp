@@ -4,7 +4,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <fstream>
 
-using namespace FStack;
+namespace FStack {
 
 Task_LoadImg::Task_LoadImg(std::string filename, float wait_images)
 {
@@ -90,3 +90,5 @@ void Task_LoadImg::task()
     m_valid_area = cv::Rect(cv::Point(expand_x / 2, expand_y / 2), m_orig_size);
   }
 }
+
+} // namespace FStack

@@ -1,33 +1,30 @@
-#ifndef FOCUSSTACKWORKER_H
-#define FOCUSSTACKWORKER_H
-
+// FocusStackWorker.h
+#pragma once
 #include <QObject>
-#include <QFileInfo>
-#include <QFile>
-#include <QColor>
-#include "focusstack.h"
-#include "PetteriModular/Options/options.h"
+#include <QStringList>
+#include "Pipeline/PipelineBase.h"
 
+namespace FStack {
 
 class FocusStackWorker : public QObject
 {
     Q_OBJECT
 public:
-    FocusStackWorker(QStringList selection)
-        : m_selection(std::move(selection)) {}
-
-signals:
-    void updateStatus(bool keepBase, QString msg, QString src);
-    void updateProgress(int value, int total, QColor color = Qt::blue);
-    void clearProgress();
-    void finished(bool success, QString outputPath, QString depthmapPath);
+    FocusStackWorker(const QStringList &paths,
+                     PipelineBase *pipeline,
+                     QObject *parent = nullptr);
 
 public slots:
     void process();
 
+signals:
+    void updateStatus(bool isError, const QString &msg, const QString &src);
+    void updateProgress(int current, int total);
+    void finished(bool ok, const QString &output, const QString &depthmap);
 
 private:
-    QStringList m_selection;
+    QStringList m_paths;
+    PipelineBase *m_pipeline;
 };
 
-#endif // FOCUSSTACKWORKER_H
+} // namespace FStack

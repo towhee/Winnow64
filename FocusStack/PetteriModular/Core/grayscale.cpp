@@ -2,7 +2,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <cstdio>
 
-using namespace FStack;
+namespace FStack {
 
 Task_Grayscale::Task_Grayscale(std::shared_ptr<ImgTask> input, std::shared_ptr<Task_Grayscale> reference)
 {
@@ -95,3 +95,4 @@ void Task_Grayscale::do_pca()
            m_weights.at<float>(2), m_weights.at<float>(1), m_weights.at<float>(0));
 }
 
+} // namespace FStack

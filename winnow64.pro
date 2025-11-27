@@ -132,37 +132,38 @@ HEADERS += File/hoverdelegate.h
 HEADERS += File/ingest.h
 
 HEADERS += FocusStack/Contracts/IAlign.h
-HEADERS += FocusStack/Contracts/IDepth.h
-HEADERS += FocusStack/Contracts/IFocus.h
+HEADERS += FocusStack/Contracts/IDepthMap.h
+HEADERS += FocusStack/Contracts/IFocusmaps.h
 HEADERS += FocusStack/Contracts/IFusion.h
-HEADERS += FocusStack/Contracts/IStage.h
+
 HEADERS += FocusStack/Mask/maskassessor.h
 HEADERS += FocusStack/Mask/maskgenerator.h
 HEADERS += FocusStack/Mask/maskoptions.h
 HEADERS += FocusStack/Mask/maskrefiner.h
-HEADERS += FocusStack/Petteri/3dpreview.h
-HEADERS += FocusStack/Petteri/align.h
-HEADERS += FocusStack/Petteri/background_removal.h
-HEADERS += FocusStack/Petteri/denoise.h
-HEADERS += FocusStack/Petteri/depthmap.h
-HEADERS += FocusStack/Petteri/depthmap_inpaint.h
-HEADERS += FocusStack/Petteri/fast_bilateral.h
-HEADERS += FocusStack/Petteri/focusmeasure.h
-HEADERS += FocusStack/Petteri/focusstack.h
-HEADERS += FocusStack/Petteri/focusstackworker.h
-HEADERS += FocusStack/Petteri/grayscale.h
-HEADERS += FocusStack/Petteri/histogrampercentile.h
-HEADERS += FocusStack/Petteri/loadimg.h
-HEADERS += FocusStack/Petteri/logger.h
-HEADERS += FocusStack/Petteri/merge.h
-HEADERS += FocusStack/Petteri/options.h
-HEADERS += FocusStack/Petteri/radialfilter.h
-HEADERS += FocusStack/Petteri/reassign.h
-HEADERS += FocusStack/Petteri/saveimg.h
-HEADERS += FocusStack/Petteri/wavelet.h
-HEADERS += FocusStack/Petteri/wavelet_opencl.h
-HEADERS += FocusStack/Petteri/wavelet_templates.h
-HEADERS += FocusStack/Petteri/worker.h
+
+# HEADERS += FocusStack/Petteri/3dpreview.h
+# HEADERS += FocusStack/Petteri/align.h
+# HEADERS += FocusStack/Petteri/background_removal.h
+# HEADERS += FocusStack/Petteri/denoise.h
+# HEADERS += FocusStack/Petteri/depthmap.h
+# HEADERS += FocusStack/Petteri/depthmap_inpaint.h
+# HEADERS += FocusStack/Petteri/fast_bilateral.h
+# HEADERS += FocusStack/Petteri/focusmeasure.h
+# HEADERS += FocusStack/Petteri/focusstack.h
+# HEADERS += FocusStack/Petteri/focusstackworker.h
+# HEADERS += FocusStack/Petteri/grayscale.h
+# HEADERS += FocusStack/Petteri/histogrampercentile.h
+# HEADERS += FocusStack/Petteri/loadimg.h
+# HEADERS += FocusStack/Petteri/logger.h
+# HEADERS += FocusStack/Petteri/merge.h
+# HEADERS += FocusStack/Petteri/options.h
+# HEADERS += FocusStack/Petteri/radialfilter.h
+# HEADERS += FocusStack/Petteri/reassign.h
+# HEADERS += FocusStack/Petteri/saveimg.h
+# HEADERS += FocusStack/Petteri/wavelet.h
+# HEADERS += FocusStack/Petteri/wavelet_opencl.h
+# HEADERS += FocusStack/Petteri/wavelet_templates.h
+# HEADERS += FocusStack/Petteri/worker.h
 
 HEADERS += FocusStack/PetteriModular/Align/align.h
 HEADERS += FocusStack/PetteriModular/Align/background_removal.h
@@ -182,12 +183,24 @@ HEADERS += FocusStack/PetteriModular/IO/loadimg.h
 HEADERS += FocusStack/PetteriModular/IO/saveimg.h
 HEADERS += FocusStack/PetteriModular/Options/options.h
 HEADERS += FocusStack/PetteriModular/Pipeline/focusstack.h
-HEADERS += FocusStack/PetteriModular/Pipeline/focusstackworker.h
+# HEADERS += FocusStack/PetteriModular/Pipeline/focusstackworker.h
 HEADERS += FocusStack/PetteriModular/View/3dpreview.h
 HEADERS += FocusStack/PetteriModular/Wave/wavelet.h
 HEADERS += FocusStack/PetteriModular/Wave/wavelet_opencl.h
 HEADERS += FocusStack/PetteriModular/Wave/wavelet_opencl_kernels.cl
 HEADERS += FocusStack/PetteriModular/Wave/wavelet_templates.h
+HEADERS += FocusStack/PetteriModular/Wrappers/petterialignworker.h
+HEADERS += FocusStack/PetteriModular/Wrappers/petteridepthmapworker.h
+HEADERS += FocusStack/PetteriModular/Wrappers/petterifocusmapsworker.h
+HEADERS += FocusStack/PetteriModular/Wrappers/petteripmaxfusionworker.h
+
+HEADERS += FocusStack/Pipeline/PipelineBase.h
+HEADERS += FocusStack/Pipeline/pipelinepmax.h
+
+HEADERS += FocusStack/Stages/Align/petterialign.h
+HEADERS += FocusStack/Stages/Depth/petteridepthmap.h
+HEADERS += FocusStack/Stages/Focus/petterifocusmaps.h
+HEADERS += FocusStack/Stages/Fusion/petteripmaxfusion.h
 
 HEADERS += Image/autonomousimage.h
 HEADERS += Image/imagealign.h
@@ -345,10 +358,13 @@ SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
 SOURCES += File/hoverdelegate.cpp
 SOURCES += File/ingest.cpp
+
 SOURCES += FocusStack/generateFocusStack.cpp
+
 SOURCES += FocusStack/Mask/maskassessor.cpp
 SOURCES += FocusStack/Mask/maskgenerator.cpp
 SOURCES += FocusStack/Mask/maskrefiner.cpp
+
 # Temp comment out while working on PetteriModular
 # SOURCES += FocusStack/Petteri/3dpreview.cpp
 # SOURCES += FocusStack/Petteri/align.cpp
@@ -389,10 +405,23 @@ SOURCES += FocusStack/PetteriModular/IO/loadimg.cpp
 SOURCES += FocusStack/PetteriModular/IO/saveimg.cpp
 SOURCES += FocusStack/PetteriModular/Options/options.cpp
 SOURCES += FocusStack/PetteriModular/Pipeline/focusstack.cpp
-SOURCES += FocusStack/PetteriModular/Pipeline/focusstackworker.cpp
+# SOURCES += FocusStack/PetteriModular/Pipeline/focusstackworker.cpp
 SOURCES += FocusStack/PetteriModular/View/3dpreview.cpp
 SOURCES += FocusStack/PetteriModular/Wave/wavelet.cpp
 SOURCES += FocusStack/PetteriModular/Wave/wavelet_opencl.cpp
+SOURCES += FocusStack/PetteriModular/Wrappers/petterialignworker.cpp
+SOURCES += FocusStack/PetteriModular/Wrappers/petteridepthmapworker.cpp
+SOURCES += FocusStack/PetteriModular/Wrappers/petterifocusmapsworker.cpp
+SOURCES += FocusStack/PetteriModular/Wrappers/petteripmaxfusionworker.cpp
+
+SOURCES += FocusStack/Pipeline/PipelineBase.cpp
+SOURCES += FocusStack/Pipeline/pipelinepmax.cpp
+
+SOURCES += FocusStack/Stages/Align/petterialign.cpp
+SOURCES += FocusStack/Stages/Depth/petteridepthmap.cpp
+SOURCES += FocusStack/Stages/Focus/petterifocusmaps.cpp
+SOURCES += FocusStack/Stages/Fusion/petteripmaxfusion.cpp
+S
 SOURCES += Image/autonomousimage.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp

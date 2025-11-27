@@ -23,4 +23,5 @@ private:
   bool m_nocrop;
 };
 
-}
+} // namespace FStack
+

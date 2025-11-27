@@ -6,7 +6,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <stdio.h>
 
-using namespace FStack;
+namespace FStack {
 
 Task_Depthmap::Task_Depthmap(std::shared_ptr<ImgTask> input,
                 int depth, bool last,
@@ -213,3 +213,5 @@ void Task_Depthmap::compute_result()
     cv::imwrite("gauss_amp.png", tmp);
   }
 }
+
+} // namespace FStack

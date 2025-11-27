@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <iostream>
 
-using namespace FStack;
+namespace FStack {
 
 Logger::Logger():
     m_callback(default_callback), m_level(LOG_VERBOSE)
@@ -84,3 +84,5 @@ void Logger::default_callback(log_level_t level, std::string message)
         std::cout.flush();
     }
 }
+
+} // namespace FStack

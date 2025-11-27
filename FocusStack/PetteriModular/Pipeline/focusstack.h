@@ -200,4 +200,5 @@ private:
   void schedule_final_merge();
 };
 
-}
+} // namespace FStack
+
