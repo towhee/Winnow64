@@ -89,7 +89,7 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Options
     // clean (send all project folders to the trash)
-    bool isClean = true;
+    bool isClean = false;
 
     // Source images folder
     QFileInfo info(paths.first());
