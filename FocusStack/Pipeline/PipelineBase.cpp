@@ -116,7 +116,7 @@ void PipelineBase::prepareDepthPaths()
 
 void PipelineBase::prepareFusionPath()
 {
-    QString fusionBase = QString("%1_pmax").arg(m_srcBase);
+    QString fusionBase = QString("%1_pmax_FocusStack").arg(m_srcBase);
     QString extDot     = QString(".%1").arg(m_srcExt);
     m_fusionOutputPath = uniqueBaseName(m_fusionDir, fusionBase, extDot);
 }
@@ -139,6 +139,11 @@ QString PipelineBase::uniqueBaseName(const QString &folder,
             return numbered;
         ++idx;
     }
+}
+
+void PipelineBase::clean()
+{
+    QFile(m_projFolderPath).moveToTrash();
 }
 
 void PipelineBase::incrementProgress() {
