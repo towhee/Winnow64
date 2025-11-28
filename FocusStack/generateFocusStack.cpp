@@ -87,6 +87,10 @@ void MW::generateFocusStack(const QStringList paths,
 
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
 
+    // Options
+    // clean (send all project folders to the trash)
+    bool isClean = true;
+
     // Source images folder
     QFileInfo info(paths.first());
     const QString srcFolder = info.absolutePath();
@@ -163,6 +167,7 @@ void MW::generateFocusStack(const QStringList paths,
             }
 
             // Cleanup after pipeline ends
+            if (isClean) pipeline->clean();
             thread->quit();
             thread->wait();
             pipeline->deleteLater();

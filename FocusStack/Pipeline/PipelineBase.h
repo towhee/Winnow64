@@ -18,9 +18,9 @@ public:
     // Initialize from source images and pipeline name (“PMax”, etc.)
     void setInput(const QStringList &paths, const QString &pipelineName);
 
-    //
+    void clean();
+
     // Public Accessors (READ-ONLY)
-    //
     const QStringList &sourcePaths()      const { return m_sourcePaths; }
     const QStringList &alignedPaths()     const { return m_alignedPaths; }
     const QStringList &alignedGrayPaths() const { return m_alignedGrayPaths; }
