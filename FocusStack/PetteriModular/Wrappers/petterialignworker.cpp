@@ -1,5 +1,5 @@
 #include "PetteriAlignWorker.h"
-
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QDebug>
@@ -78,30 +78,49 @@ bool PetteriAlignWorker::run(const std::function<bool()> &abortFn)
     alignTasks.reserve(total);
     G::log(src, "alignTasks");
 
-    msg = "Loading images...";
+    msg = "Creating gray-scale images...";
     emit updateStatus(false, msg, src);
     G::log(src, msg);
 
     std::shared_ptr<Task_Grayscale> prevGray = nullptr;
 
+    // ---- Build load + grayscale tasks ------------------------------------
     for (int i = 0; i < total; ++i) {
+        // Color load
         auto colorTask = std::make_shared<Task_LoadImg>(m_sourcePaths[i].toStdString());
+
+        // per-task progress callback
+        colorTask->setProgressCallback([this]() {
+            G::log("PetteriAlignWorker::run 1", "colorTask");
+            // step(); // PipelinePMax::incrementProgress via m_stepFn
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+        });
+
         loadColor.push_back(colorTask);
         worker.add(colorTask);
 
+        // Grayscale
         auto grayTask = std::make_shared<Task_Grayscale>(colorTask, prevGray);
+
+        grayTask->setProgressCallback([this]() {
+            G::log("PetteriAlignWorker::run 2", "grayTask");
+            // step();
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+        });
+
         loadGray.push_back(grayTask);
         worker.add(grayTask);
 
         prevGray = grayTask;
     }
 
-    msg = "Building alignment tasks...";
+    msg = "Aligning images...";
     emit updateStatus(false, msg, src);
     G::log(src, msg);
 
     std::shared_ptr<Task_Align> prevAlign = nullptr;
 
+    // ---- Build alignment tasks -------------------------------------------
     for (int i = 0; i < total; ++i) {
         std::shared_ptr<Task_Align> stacked = nullptr;
         if (i > 0)
@@ -120,6 +139,14 @@ bool PetteriAlignWorker::run(const std::function<bool()> &abortFn)
             FocusStack::ALIGN_DEFAULT
             );
 
+        // per-task progress callback for the *heavy* ECC alignment
+        task->setProgressCallback([this, task]() {
+            const QString msg = QString::fromStdString(task->name());
+            G::log("PetteriAlignWorker::run 3", msg);
+            step();
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+        });
+
         alignTasks.push_back(task);
         worker.add(task);
 
@@ -128,20 +155,24 @@ bool PetteriAlignWorker::run(const std::function<bool()> &abortFn)
         G::log(src, msg);
     }
 
-    worker.progress_callback = [this](int p, int t) {
-        step();  // emit progress(p);
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+    // Optional: keep or simplify worker-level progress
+    worker.progress_callback = [this](int /*p*/, int /*t*/) {
+        // We *already* get finer-grain progress via Task::step(),
+        // so this can be a no-op or used for coarse milestones.
+        // step();
+        // QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
     };
 
-    msg = "Running alignment...";
-    emit updateStatus(false, msg, src);
+    msg = "Completing alignment...";
+    // emit updateStatus(false, msg, src);
     G::log(src, msg);
 
     QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+
     if (!worker.wait_all(-1)) {
         emit updateStatus(false, QString("Alignment failed: %1")
-                  .arg(QString::fromStdString(worker.error())),
-                  src);
+                                     .arg(QString::fromStdString(worker.error())),
+                          src);
         return false;
     }
 
@@ -174,6 +205,7 @@ bool PetteriAlignWorker::run(const std::function<bool()> &abortFn)
 
         cv::imwrite(m_alignedGrayPaths[i].toStdString(), g8);
 
+        G::log(src, "Finished alignment");
         step();  // emit progress(++current);
         if (abortFn && abortFn()) {
             msg = "Abort requested during alignment saving";
@@ -188,131 +220,155 @@ bool PetteriAlignWorker::run(const std::function<bool()> &abortFn)
     return true;
 }
 
-
-
-// #include "petterialignworker.h"
-
-// PetteriAlignWorker::PetteriAlignWorker(QObject *parent)
-//     : QObject(parent)
-// {
-// }
-
-// void PetteriAlignWorker::setInput(const QStringList &paths, const QString &outputFolder)
-// {
-//     m_paths = paths;
-//     m_outputFolder = outputFolder;
-// }
-
 // bool PetteriAlignWorker::run(const std::function<bool()> &abortFn)
 // {
-//     if (!abortFn) {
-//         qWarning() << "Abort function missing";
-//         return false;
-//     }
-
 //     const QString src = "PetteriAlignWorker::run";
 
-//     if (m_paths.isEmpty()) {
-//         emit updateStatus(true, "No images provided for alignment", src);
+//     if (m_sourcePaths.isEmpty()) {
+//         emit updateStatus(false,
+//                           "No images provided for alignment",
+//                           src);
 //         return false;
 //     }
 
-//     QDir().mkpath(m_outputFolder);
+//     if (m_alignedPaths.size() != m_sourcePaths.size() ||
+//         m_alignedGrayPaths.size() != m_sourcePaths.size()) {
+//         qWarning() << src << "path lists not sized correctly";
+//         return false;
+//     }
 
-//     // Create Petteri logger
+//     QDir().mkpath(m_alignDir);
+//     QDir().mkpath(m_grayDir);
+
 //     auto logger = std::make_shared<FStack::Logger>();
 //     logger->set_level(FStack::Logger::LOG_INFO);
 
-//     // Create Petteri worker
+//     G::log(src, "logger->set_level");
+
 //     FStack::Worker worker(std::thread::hardware_concurrency(), logger);
 
-//     const int total = m_paths.size();
-//     int current = 0;
+//     const int total = m_sourcePaths.size();
 
-//     // Petteri tasks
-//     std::vector<std::shared_ptr<FStack::Task_LoadImg>> loadColor;
-//     std::vector<std::shared_ptr<FStack::Task_Grayscale>> loadGray;
-//     std::vector<std::shared_ptr<FStack::Task_Align>> alignTasks;
+//     std::vector<std::shared_ptr<Task_LoadImg>>   loadColor;
+//     std::vector<std::shared_ptr<Task_Grayscale>> loadGray;
+//     std::vector<std::shared_ptr<Task_Align>>     alignTasks;
+
+//     G::log(src, "loadColor, loadGray, alignTasks");
 
 //     loadColor.reserve(total);
+//     G::log(src, "loadColor");
 //     loadGray.reserve(total);
+//     G::log(src, "loadGray");
 //     alignTasks.reserve(total);
+//     G::log(src, "alignTasks");
 
-//     // 1. Load each color image + create grayscale task
-//     emit updateStatus(false, "Loading images...", src);
+//     msg = "Loading images...";
+//     emit updateStatus(false, msg, src);
+//     G::log(src, msg);
 
-//     std::shared_ptr<FStack::Task_Grayscale> prevGray = nullptr;
+//     std::shared_ptr<Task_Grayscale> prevGray = nullptr;
 
 //     for (int i = 0; i < total; ++i) {
-
-//         auto colorTask = std::make_shared<FStack::Task_LoadImg>(m_paths[i].toStdString());
+//         auto colorTask = std::make_shared<Task_LoadImg>(m_sourcePaths[i].toStdString());
 //         loadColor.push_back(colorTask);
 //         worker.add(colorTask);
 
-//         auto grayTask = std::make_shared<FStack::Task_Grayscale>(colorTask, prevGray);
+//         auto grayTask = std::make_shared<Task_Grayscale>(colorTask, prevGray);
 //         loadGray.push_back(grayTask);
 //         worker.add(grayTask);
 
 //         prevGray = grayTask;
 //     }
 
-//     // 2. Build align tasks
-//     emit updateStatus(false, "Building alignment tasks...", src);
+//     msg = "Building alignment tasks...";
+//     emit updateStatus(false, msg, src);
+//     G::log(src, msg);
 
-//     std::shared_ptr<FStack::Task_Align> prevAlign = nullptr;
+//     std::shared_ptr<Task_Align> prevAlign = nullptr;
 
 //     for (int i = 0; i < total; ++i) {
-
-//         std::shared_ptr<FStack::Task_Align> stacked = nullptr;
+//         std::shared_ptr<Task_Align> stacked = nullptr;
 //         if (i > 0)
 //             stacked = prevAlign;
 
-//         // ref = previous frame, or first frame aligned to itself
 //         auto refGray  = (i == 0 ? loadGray[i]  : loadGray[i - 1]);
 //         auto refColor = (i == 0 ? loadColor[i] : loadColor[i - 1]);
 
-//         auto task = std::make_shared<FStack::Task_Align>(
-//             refGray, refColor,
-//             loadGray[i], loadColor[i],
-//             nullptr,  // initial guess
-//             stacked,  // stacked transform
-//             FStack::FocusStack::ALIGN_DEFAULT
+//         auto task = std::make_shared<Task_Align>(
+//             refGray,
+//             refColor,
+//             loadGray[i],
+//             loadColor[i],
+//             nullptr,    // initial guess
+//             stacked,    // stacked transform
+//             FocusStack::ALIGN_DEFAULT
 //             );
 
 //         alignTasks.push_back(task);
 //         worker.add(task);
 
 //         prevAlign = task;
+//         msg = "Built alignment tasks for image #" + QString::number(i);
+//         G::log(src, msg);
 //     }
 
-//     // Track progress
-//     worker.progress_callback = [&](int p, int t){
-//         emit progress(p, t);
+//     worker.progress_callback = [this](int p, int t) {
+//         step();  // emit progress(p);
+//         QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
 //     };
 
-//     emit updateStatus(false, "Running alignment...", src);
+//     msg = "Running alignment...";
+//     emit updateStatus(false, msg, src);
+//     G::log(src, msg);
 
-//     // Wait until Petteri finishes alignment
+//     QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
 //     if (!worker.wait_all(-1)) {
-//         emit updateStatus(true, QString("Alignment failed: %1")
-//                                     .arg(QString::fromStdString(worker.error())), src);
+//         emit updateStatus(false, QString("Alignment failed: %1")
+//                   .arg(QString::fromStdString(worker.error())),
+//                   src);
 //         return false;
 //     }
 
-//     // Save aligned results
-//     emit updateStatus(false, "Saving aligned images...", src);
+//     msg = "Saving aligned and grayscale images...";
+//     emit updateStatus(false, msg, src);
+//     G::log(src, msg);
+
+//     int current = 0;
 
 //     for (int i = 0; i < total; ++i) {
-//         QString out = QString("%1/aligned_%2.png")
-//                           .arg(m_outputFolder)
-//                           .arg(QFileInfo(m_paths[i]).completeBaseName());
+//         // Save aligned color image
+//         cv::Mat alignedColor = alignTasks[i]->img();
+//         if (alignedColor.empty()) {
+//             qWarning() << "Empty aligned image at index" << i;
+//             return false;
+//         }
+//         cv::imwrite(m_alignedPaths[i].toStdString(), alignedColor);
 
-//         cv::imwrite(out.toStdString(), alignTasks[i]->img());
-//         emit progress(++current, total);
+//         // Save grayscale image (convert to 8-bit)
+//         cv::Mat g = loadGray[i]->img();
+//         if (g.empty()) {
+//             qWarning() << "Empty grayscale image at index" << i;
+//             return false;
+//         }
+//         cv::Mat g8;
+//         if (g.type() != CV_8U)
+//             g.convertTo(g8, CV_8U);
+//         else
+//             g8 = g;
+
+//         cv::imwrite(m_alignedGrayPaths[i].toStdString(), g8);
+
+//         step();  // emit progress(++current);
+//         if (abortFn && abortFn()) {
+//             msg = "Abort requested during alignment saving";
+//             emit updateStatus(false, msg, src);
+//             return false;
+//         }
 //     }
 
-//     emit updateStatus(false, "Alignment complete", src);
-//     emit finished(m_outputFolder);
-
+//     msg = "Alignment complete";
+//     emit updateStatus(false, msg, src);
+//     G::log(src, msg);
 //     return true;
 // }
+

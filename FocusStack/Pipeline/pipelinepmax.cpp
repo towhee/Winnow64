@@ -43,10 +43,13 @@ void PipelinePMax::run()
     emit updateStatus(false, msg, src);
     G::log(src, msg);
 
-    // Progress total
+    /* Progress total
+        Align 24 = graytask + 11 Align + 12 save
+        Fuse  15 = 12 wavelet + reassign color + merge + finish
+    */
     int n = sourcePaths().count();
-    m_total = 2 * n + 3;
-    incrementProgress();
+    m_total = 3 * n + 3;
+    incrementProgress();    // start progress
 
     if (!runAlignment()) {
         if (abortRequested())
