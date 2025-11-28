@@ -2,7 +2,7 @@
 #include "PetteriModular/Core/worker.h"
 #include "PetteriModular/Core/logger.h"
 #include "PetteriModular/IO/loadimg.h"
-#include "PetteriModular/Core/grayscale.h"
+#include "PetteriModular/GrayScale/grayscale.h"
 #include "PetteriModular/Align/align.h"
 #include "PetteriModular/Wave/wavelet.h"
 #include "PetteriModular/Wave/wavelet_opencl.h"

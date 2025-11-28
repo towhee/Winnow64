@@ -1,5 +1,5 @@
 #include "FocusStack/Stages/Depth/PetteriDepthMap.h"
-#include "FocusStack/PetteriModular/Pipeline/focusstack.h"
+#include "FocusStack/PetteriModular/Core/focusstack.h"
 
 #include <QDir>
 #include <QFileInfo>
