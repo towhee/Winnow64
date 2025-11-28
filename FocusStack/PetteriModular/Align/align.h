@@ -4,7 +4,7 @@
 // Alignment is calculated on grayscale image, but final transformation is applied to the color image.
 
 #pragma once
-#include "PetteriModular/Pipeline/focusstack.h"
+#include "PetteriModular/Core/focusstack.h"
 #include "PetteriModular/Core/worker.h"
 #include "PetteriModular/IO/loadimg.h"
 

@@ -6,7 +6,7 @@
 #include <mutex>
 #include <atomic>
 #include <cstdarg>
-#include "PetteriModular/Pipeline/focusstack.h"
+#include "PetteriModular/Core/focusstack.h"
 
 namespace FStack {
 
