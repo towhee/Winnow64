@@ -23,6 +23,11 @@ public:
   Task();
   virtual ~Task();
 
+  void setProgressCallback(const std::function<void()> &cb)
+  {
+      progressCallback = cb;
+  }
+
   virtual bool ready_to_run();
   virtual bool uses_opencl() { return false; }
   bool is_running() const { return m_running; }
@@ -37,8 +42,16 @@ public:
 
   void wait();
 
+  std::function<void()> progressCallback;
+
 protected:
-  virtual void task() { };
+  virtual void task() { }
+
+  inline void step()
+  {
+      if (progressCallback)
+          progressCallback();
+  }
 
   std::shared_ptr<Logger> m_logger;
   std::string m_filename;
@@ -51,13 +64,16 @@ protected:
   std::condition_variable m_wakeup;
   bool m_running;
   bool m_done;
+
+  private:
+
 };
 
 // Task that has image as a result.
 class ImgTask: public Task
 {
 public:
-  ImgTask() {};
+  ImgTask() {}
   ImgTask(cv::Mat result): m_result(result) {}
   virtual const cv::Mat &img() const { return m_result; }
 

@@ -1,6 +1,7 @@
 #include "PetteriModular/Core/worker.h"
 #include <cstdio>
 #include <QDebug>
+#include "Main/global.h"
 
 #ifdef USE_MALLINFO
 #include <malloc.h>
@@ -67,6 +68,10 @@ void Task::run(std::shared_ptr<Logger> logger)
     m_done = true;
     m_running = false;
     m_wakeup.notify_all();
+
+    // callback progress
+    G::log("Task::run", QString::fromStdString(m_name));
+    step();
   }
   catch (...)
   {
@@ -77,6 +82,7 @@ void Task::run(std::shared_ptr<Logger> logger)
 
     throw;
   }
+
 }
 
 std::string Task::basename() const

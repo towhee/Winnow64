@@ -87,40 +87,32 @@ void MW::generateFocusStack(const QStringList paths,
 
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
 
-    // ---------------------------------------------------------------------
-    //   Create Thread + Pipeline
-    // ---------------------------------------------------------------------
+    // Source images folder
+    QFileInfo info(paths.first());
+    const QString srcFolder = info.absolutePath();
+
+    // Create Thread + Pipeline
     QThread *thread = new QThread(this);
     PipelinePMax *pipeline = new PipelinePMax();   // no parent; lives in thread
     pipeline->moveToThread(thread);
 
-    // ---------------------------------------------------------------------
-    //   Start pipeline when thread begins
-    // ---------------------------------------------------------------------
+    // Start pipeline when thread begins
     connect(thread, &QThread::started, pipeline, [pipeline, paths]() {
         pipeline->setInput(paths);
-        pipeline->run();      // executes inside worker thread – OK
+        pipeline->run();      // executes inside worker thread
     });
 
-    // ---------------------------------------------------------------------
-    //   Pipeline status → UI
-    // ---------------------------------------------------------------------
+    // Pipeline status → UI
     connect(pipeline, &PipelinePMax::updateStatus,
-            this, &MW::updateStatus,
-            Qt::QueuedConnection);
+            this, &MW::updateStatus, Qt::QueuedConnection);
 
     connect(pipeline, &PipelinePMax::progress,
-        this,
-        [this](int current, int total)
+        this, [this](int current, int total)
         {
-            this->cacheProgressBar->updateUpperProgress(
-                current, total, Qt::darkYellow);
-        },
-        Qt::QueuedConnection);
+            this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
+        }, Qt::QueuedConnection);
 
-    // ---------------------------------------------------------------------
     //   Pipeline finished → Handle output
-    // ---------------------------------------------------------------------
     connect(pipeline, &PipelinePMax::finished,
         this,
         [=](bool ok, const QString &outputFolder)
@@ -137,39 +129,40 @@ void MW::generateFocusStack(const QStringList paths,
                 QString fused = pipeline->fusionOutputPath();
                 dm->insert(fused);
 
+                // Copy fused to source images folder
+                QFileInfo fi(fused);
+                QString destPath = srcFolder + "/" + fi.fileName();
+                QFile::copy(fused, destPath);
+
+                // Update source folder image counts, filters ...
+                // refresh();
+
                 if (!isLocal)
                 {
-                    //
                     //  Delete source images
-                    //
                     for (const QString &p : paths)
                         QFile(p).moveToTrash();
 
                     folderAndFileSelectionChange(fused, srcFun);
 
-                    //
-                    //  Wait for metadata to finish loading (max 3000ms)
-                    //
+                    // Wait for metadata to finish loading (max 3000ms)
                     const int timeoutMs = 3000;
                     QElapsedTimer t;
                     t.start();
 
-                    while (!G::allMetadataLoaded &&
-                           t.elapsed() < timeoutMs)
+                    while (!G::allMetadataLoaded && t.elapsed() < timeoutMs)
                     {
-                        QCoreApplication::processEvents(
-                            QEventLoop::AllEvents, 50);
+                        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
                         QThread::msleep(50);
                     }
                 }
 
                 // Select fused image in UI
                 sel->select(fused);
+                refresh();
             }
 
-            // -----------------------------------------------------------------
-            //   Cleanup after pipeline ends
-            // -----------------------------------------------------------------
+            // Cleanup after pipeline ends
             thread->quit();
             thread->wait();
             pipeline->deleteLater();
@@ -177,9 +170,7 @@ void MW::generateFocusStack(const QStringList paths,
         },
         Qt::QueuedConnection);
 
-    // ---------------------------------------------------------------------
-    //   Start the worker thread
-    // ---------------------------------------------------------------------
+    // Start the worker thread
     thread->start();
 }
 // {
