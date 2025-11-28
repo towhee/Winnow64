@@ -1,5 +1,5 @@
 #include "FocusStack/Stages/Align/PetteriAlign.h"
-#include "FocusStack/PetteriModular/Pipeline/focusstack.h"   // FStack::FocusStack
+#include "FocusStack/PetteriModular/Core/focusstack.h"   // FStack::FocusStack
 
 #include <QDir>
 #include <QFileInfo>

@@ -11,7 +11,7 @@
 #include "PetteriModular/Core/logger.h"
 #include "PetteriModular/Core/worker.h"
 #include "PetteriModular/Align/align.h"
-#include "PetteriModular/Core/grayscale.h"
+#include "PetteriModular/GrayScale/grayscale.h"
 #include "PetteriModular/IO/loadimg.h"
 
 using namespace FStack;
