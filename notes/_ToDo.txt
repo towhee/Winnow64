@@ -6,7 +6,6 @@ WHAT'S NEW
 - Selections are now cleared after a filtration change
 
 BUGS / TO DO
-- Update Nikon Lenses
 - Delete folder crash
 - Rename files
 - Windows ingest "how this works" has a white titlebar.
@@ -137,6 +136,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Update Nikon Lenses
 - Delete all files in filter not always working properly
 - Fix sort for case sensitivity
 - Fix refresh when filtered and delete all

@@ -11,7 +11,7 @@ PipelinePMax::PipelinePMax(QObject *parent)
 void PipelinePMax::setInput(const QStringList &paths, bool isRedo)
 {
     // Fixed pipeline name for this pipeline
-    PipelineBase::setInput(paths, "PMax", isRedo);
+    PipelineBase::setInput(paths, "PMax");
 
     // Prepare directories and path plans for THIS run
     prepareProjectStructure();
@@ -19,6 +19,8 @@ void PipelinePMax::setInput(const QStringList &paths, bool isRedo)
     prepareFocusMapPaths();
     prepareDepthPaths();
     prepareFusionPath();
+
+    if (!isRedo) PipelineBase::detectExistingAligned();
 }
 
 void PipelinePMax::abort()

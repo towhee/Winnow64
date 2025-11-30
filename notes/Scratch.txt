@@ -2194,7 +2194,7 @@ SOURCES += Main/widgetcss.cpp
 
 
 
+/Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/Winnow.app
+/Users/roryhill/Projects/build-winnow64-Qt_6_9_2_for_macOS-Release/Winnow.app
 
-
-
-
+https://sourceforge.net/projects/exiftool/files/Image-ExifTool-13.42.tar.gz/download

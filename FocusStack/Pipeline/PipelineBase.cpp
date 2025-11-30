@@ -11,8 +11,7 @@ PipelineBase::PipelineBase(QObject *parent)
 }
 
 void PipelineBase::setInput(const QStringList &paths,
-                            const QString &pipelineName,
-                            bool isRedo)
+                            const QString &pipelineName)
 {
     m_sourcePaths  = paths;
     m_pipelineName = pipelineName;
@@ -51,8 +50,6 @@ void PipelineBase::setInput(const QStringList &paths,
     m_depthRawPath.clear();
     m_depthFilteredPath.clear();
     m_fusionOutputPath.clear();
-
-    if (!isRedo && detectExistingAligned()) m_skipAlign = true;
 }
 
 void PipelineBase::prepareProjectStructure()

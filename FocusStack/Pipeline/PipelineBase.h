@@ -17,8 +17,7 @@ public:
 
     // Initialize from source images and pipeline name (“PMax”, etc.)
     void setInput(const QStringList &paths,
-                  const QString &pipelineName,
-                  bool isRedo);
+                  const QString &pipelineName);
 
     void clean();
 
