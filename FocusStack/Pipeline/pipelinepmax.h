@@ -17,7 +17,7 @@ public:
     explicit PipelinePMax(QObject *parent = nullptr);
 
     // pipelineName is fixed to "PMax" in the implementation
-    void setInput(const QStringList &paths);
+    void setInput(const QStringList &paths, bool isRedo);
 
     // synchronous run
     void run();

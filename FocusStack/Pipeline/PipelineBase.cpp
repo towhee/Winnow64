@@ -10,7 +10,9 @@ PipelineBase::PipelineBase(QObject *parent)
 {
 }
 
-void PipelineBase::setInput(const QStringList &paths, const QString &pipelineName)
+void PipelineBase::setInput(const QStringList &paths,
+                            const QString &pipelineName,
+                            bool isRedo)
 {
     m_sourcePaths  = paths;
     m_pipelineName = pipelineName;
@@ -49,6 +51,8 @@ void PipelineBase::setInput(const QStringList &paths, const QString &pipelineNam
     m_depthRawPath.clear();
     m_depthFilteredPath.clear();
     m_fusionOutputPath.clear();
+
+    if (!isRedo && detectExistingAligned()) m_skipAlign = true;
 }
 
 void PipelineBase::prepareProjectStructure()
@@ -139,6 +143,30 @@ QString PipelineBase::uniqueBaseName(const QString &folder,
             return numbered;
         ++idx;
     }
+}
+
+bool PipelineBase::detectExistingAligned()
+{
+    m_skipAlign = false;
+
+    if (m_alignedPaths.isEmpty() || m_alignedGrayPaths.isEmpty())
+        return false;
+
+    // Check all aligned color images
+    for (const QString &p : m_alignedPaths) {
+        if (!QFileInfo::exists(p))
+            return false;
+    }
+
+    // Check all aligned grayscale images
+    for (const QString &p : m_alignedGrayPaths) {
+        if (!QFileInfo::exists(p))
+            return false;
+    }
+
+    // ALL FOUND
+    m_skipAlign = true;
+    return true;
 }
 
 void PipelineBase::clean()

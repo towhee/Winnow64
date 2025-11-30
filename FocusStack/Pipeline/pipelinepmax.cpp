@@ -8,10 +8,10 @@ PipelinePMax::PipelinePMax(QObject *parent)
     m_abort.store(false, std::memory_order_relaxed);
 }
 
-void PipelinePMax::setInput(const QStringList &paths)
+void PipelinePMax::setInput(const QStringList &paths, bool isRedo)
 {
     // Fixed pipeline name for this pipeline
-    PipelineBase::setInput(paths, "PMax");
+    PipelineBase::setInput(paths, "PMax", isRedo);
 
     // Prepare directories and path plans for THIS run
     prepareProjectStructure();
@@ -19,9 +19,6 @@ void PipelinePMax::setInput(const QStringList &paths)
     prepareFocusMapPaths();
     prepareDepthPaths();
     prepareFusionPath();
-
-    // set total progress points
-
 }
 
 void PipelinePMax::abort()
@@ -48,15 +45,19 @@ void PipelinePMax::run()
         Fuse  15 = 12 wavelet + reassign color + merge + finish
     */
     int n = sourcePaths().count();
-    m_total = 3 * n + 3;
+    int alignSteps = m_skipAlign ? 0 : 2 * n;
+    int mergeSteps = n + 3;
+    m_total = alignSteps + mergeSteps;
     incrementProgress();    // start progress
 
-    if (!runAlignment()) {
-        if (abortRequested())
-            emit finished(false, "Aborted during alignment");
-        else
-            emit finished(false, "Alignment failed");
-        return;
+    if (!m_skipAlign) {
+        if (!runAlignment()) {
+            if (abortRequested())
+                emit finished(false, "Aborted during alignment");
+            else
+                emit finished(false, "Alignment failed");
+            return;
+        }
     }
 
     /* Not req'd for basic Petteri PMax

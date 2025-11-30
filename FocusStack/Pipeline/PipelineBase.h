@@ -16,7 +16,9 @@ public:
     explicit PipelineBase(QObject *parent = nullptr);
 
     // Initialize from source images and pipeline name (“PMax”, etc.)
-    void setInput(const QStringList &paths, const QString &pipelineName);
+    void setInput(const QStringList &paths,
+                  const QString &pipelineName,
+                  bool isRedo);
 
     void clean();
 
@@ -62,6 +64,8 @@ protected:
     void prepareDepthPaths();
     void prepareFusionPath();
 
+    bool detectExistingAligned();
+
     void incrementProgress();
 
     static QString uniqueBaseName(const QString &folder,
@@ -91,6 +95,8 @@ protected:
     QString     m_depthDir;
     QString     m_fusionDir;
     QString     m_srcExt;
+
+    bool m_skipAlign = false;
 
 private:
     //
