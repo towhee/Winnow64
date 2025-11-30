@@ -2086,6 +2086,15 @@ metadata.h:23:10: error occurred here
 
 
 
+QString fused = pipeline->fusionOutputPath();
+QString src = paths.first();
+ExifTool et;
+et.setOverWrite(true);
+// copy all metadata tags from src to dst
+et.copyAllTags(src, fused);
+// copy ICC from src to dst
+et.copyICC(src, fused);
+et.close();
 
 
 

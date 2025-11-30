@@ -8,8 +8,12 @@ ExifTool::ExifTool()
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
     #endif
     #ifdef Q_OS_MAC
-    // exifToolPath = "/usr/local/bin/exiftool";
-    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
+    QString appPath = qApp->applicationFilePath();
+    QFileInfo fi(appPath);
+    QString macOSDir = fi.dir().path();
+    // QString contentsDir = macOSDir + "/..";
+    // exifToolPath = contentsDir + "/Resources/ExifTool/exiftool";
+    exifToolPath = macOSDir + "/exiftool_wrapper";
     #endif
     // confirm exifToolPath exists
     if (!QFile(exifToolPath).exists()) {
@@ -87,16 +91,49 @@ void ExifTool::copyICC(QString src, QString dst)
 
 QString ExifTool::readTag(QString src, QString tag)
 {
-    // Prepare the arguments
-    QStringList args;
-    // args += "-T";
-    // args += "-" + tag;            // tag
-    // args += src;                    // src file
-    execute(args);
-    process.waitForFinished(1);
-    QString output = process.readAllStandardOutput();
-    qDebug() << "ExifTool::readTag" << output;
-    return output; //output.trimmed();
+    // Construct -stay_open compatible ExifTool command
+    QByteArray args;
+    args += "-" + tag.toUtf8() + "\n";   // the tag, e.g. -LensModel
+    args += "-s3\n";                     // raw value only
+    args += src.toUtf8() + "\n";         // file path
+    args += "-execute\n";
+
+    // Send to ExifTool's stdin
+    process.write(args);
+    if (!process.waitForBytesWritten(30000)) {
+        qWarning() << "ExifTool::readTag write timeout";
+        return "";
+    }
+
+    // Read response until ExifTool completes this -execute block
+    // ExifTool outputs "{ready}" when done
+    QByteArray buffer;
+    QByteArray chunk;
+
+    while (true) {
+        if (!process.waitForReadyRead(30000))
+            break;
+
+        chunk = process.readAllStandardOutput();
+        buffer += chunk;
+
+        // ExifTool terminates each -execute with "{ready}\n"
+        if (buffer.contains("{ready}"))
+            break;
+    }
+
+    // Remove "{ready}" marker
+    QList<QByteArray> parts = buffer.split('\n');
+    parts.removeAll("{ready}");
+    buffer = parts.join("\n");
+
+    // Trim whitespace
+    QString result = QString::fromUtf8(buffer).trimmed();
+
+    // Debug (optional)
+    // qDebug() << "ExifTool::readTag:" << tag << "=" << result;
+
+    return result;
 }
 
 // not used
@@ -165,6 +202,7 @@ int ExifTool::copyAll(QString src, QString dst)
     args << src;
     args << "-all:all";
     args << dst;
+    qDebug() << "ExifTool::copyAll" << src << dst;
     return execute(args);
 }
 

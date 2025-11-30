@@ -971,7 +971,8 @@ bool Nikon::parse(MetadataParameters &p,
         if (m.lens.isEmpty()) {
             ExifTool et;
             m.lens = et.readTag(m.fPath, "LensModel");
-            qDebug() << "Nikon lens =" << m.lens;
+            qDebug() << "Nikon lens =" << m.lens << m.fPath;
+            et.close();
         }
         /*
         or could go with nikonLensHash<QString, QString>

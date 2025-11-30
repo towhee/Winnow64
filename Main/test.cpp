@@ -391,9 +391,21 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // QTimer::singleShot(50, this, [=]() {
-    //     setColorClassForRow(dm->currentSfRow, "Red");
-    // });
+    QString src = "/Users/roryhill/Downloads/DSC_1049.NEF";
+    ExifTool et;
+
+    QString output = et.readTag(src, "LensModel");   // wrapper-dependent
+    qDebug() << "LensModel =" << output.trimmed();
+
+    et.close();
+
+    // QStringList args;
+    // args << "-T"
+    //      << "-" + "LensModel"
+    //      // << "-s3"
+    //      << src.toUtf8() + "\n"
+    //      << "-execute\n";
+
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
