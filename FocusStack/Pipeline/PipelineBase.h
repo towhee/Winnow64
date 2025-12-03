@@ -63,6 +63,9 @@ protected:
     void prepareDepthPaths();
     void prepareFusionPath();
 
+    bool m_is16bit = false;
+    bool detectBitDepth(const QString &path);
+    bool m_skipAlign = false;
     bool detectExistingAligned();
 
     void incrementProgress();
@@ -94,8 +97,6 @@ protected:
     QString     m_depthDir;
     QString     m_fusionDir;
     QString     m_srcExt;
-
-    bool m_skipAlign = false;
 
 private:
     //

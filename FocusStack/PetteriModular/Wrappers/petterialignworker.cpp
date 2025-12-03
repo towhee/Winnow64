@@ -7,6 +7,7 @@
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "PetteriModular/Core/logger.h"
 #include "PetteriModular/Core/worker.h"
@@ -184,12 +185,35 @@ bool PetteriAlignWorker::run(const std::function<bool()> &abortFn)
 
     for (int i = 0; i < total; ++i) {
         // Save aligned color image
-        cv::Mat alignedColor = alignTasks[i]->img();
-        if (alignedColor.empty()) {
-            qWarning() << "Empty aligned image at index" << i;
-            return false;
+        // 16 bit pipeline: re-warp ORIGINAL source image using Petteri transform
+        if (m_is16bit) {
+            cv::Mat transform = alignTasks[i]->transformation().clone();   // Add accessor
+            cv::Mat src16 = cv::imread(m_sourcePaths[i].toStdString(),
+                                       cv::IMREAD_ANYDEPTH | cv::IMREAD_ANYCOLOR);
+            if (src16.empty()) {
+                qWarning() << "Failed to reload 16-bit original" << m_sourcePaths[i];
+                return false;
+            }
+
+            cv::Mat aligned16;
+            cv::warpAffine(src16,
+                           aligned16,
+                           transform,
+                           cv::Size(src16.cols, src16.rows),
+                           cv::INTER_CUBIC,
+                           cv::BORDER_REFLECT);
+
+            cv::imwrite(m_alignedPaths[i].toStdString(), aligned16);
         }
-        cv::imwrite(m_alignedPaths[i].toStdString(), alignedColor);
+        // 8-bit pipeline
+        else {
+            cv::Mat alignedColor = alignTasks[i]->img();
+            if (alignedColor.empty()) {
+                qWarning() << "Empty aligned image at index" << i;
+                return false;
+            }
+            cv::imwrite(m_alignedPaths[i].toStdString(), alignedColor);
+        }
 
         // Save grayscale image (convert to 8-bit)
         cv::Mat g = loadGray[i]->img();

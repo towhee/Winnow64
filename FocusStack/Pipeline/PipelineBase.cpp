@@ -5,6 +5,9 @@
 #include <QDebug>
 #include "Main/global.h"
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+
 PipelineBase::PipelineBase(QObject *parent)
     : QObject(parent)
 {
@@ -163,6 +166,18 @@ bool PipelineBase::detectExistingAligned()
 
     // ALL FOUND
     m_skipAlign = true;
+    return true;
+}
+
+bool PipelineBase::detectBitDepth(const QString &path)
+{
+    cv::Mat img = cv::imread(path.toStdString(), cv::IMREAD_UNCHANGED);
+    if (img.empty()) return false;
+
+    // OpenCV depth:
+    // CV_8U  = 0
+    // CV_16U = 2
+    m_is16bit = (img.depth() == CV_16U);
     return true;
 }
 

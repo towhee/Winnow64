@@ -13,6 +13,8 @@ void PipelinePMax::setInput(const QStringList &paths, bool isRedo)
     // Fixed pipeline name for this pipeline
     PipelineBase::setInput(paths, "PMax");
 
+    detectBitDepth(paths.first());
+
     // Prepare directories and path plans for THIS run
     prepareProjectStructure();
     prepareAlignmentPaths();
@@ -114,6 +116,8 @@ bool PipelinePMax::runAlignment()
     QObject::connect(&worker, &PetteriAlignWorker::updateStatus,
                      this, &PipelinePMax::updateStatus);
 
+    worker.setIs16bit(m_is16bit);
+
     // progress callback
     worker.setStepCallback([this]() {
         msg = "PipelinePMax::runAlignment worker.setStepCallback";
@@ -135,6 +139,8 @@ bool PipelinePMax::runFocusMaps()
     worker.setInput(m_alignedPaths,
                     m_focusMapPaths,
                     m_focusDir);
+
+    worker.setIs16bit(m_is16bit);
 
     QObject::connect(&worker, &PetteriFocusMapsWorker::updateStatus,
                      this, &PipelinePMax::updateStatus);
@@ -166,6 +172,7 @@ bool PipelinePMax::runDepthMap()
                     /*smoothZ*/  64,
                     /*haloRadius*/ 30);
 
+
     QObject::connect(&worker, &PetteriDepthMapWorker::updateStatus,
                      this, &PipelinePMax::updateStatus);
     // QObject::connect(&worker, &PetteriDepthMapWorker::progress,
@@ -194,10 +201,11 @@ bool PipelinePMax::runFusion()
                     /*useOpenCL*/ true,
                     /*consistency*/ 1);
 
+    // worker.setIs16bit(m_is16bit);
+
     QObject::connect(&worker, &PetteriPMaxFusionWorker::updateStatus,
                      this, &PipelinePMax::updateStatus);
-    // QObject::connect(&worker, &PetteriPMaxFusionWorker::progress,
-    //                  this, &PipelinePMax::progress);
+
     // progress callback
     worker.setStepCallback([this]() {
         msg = "PipelinePMax::runFusion worker.setStepCallback";

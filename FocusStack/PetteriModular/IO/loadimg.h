@@ -14,6 +14,7 @@ public:
   virtual bool ready_to_run();
 
   cv::Size orig_size() const { return m_orig_size; }
+  void overrideImage(const cv::Mat &m) { m_result = m.clone(); }
 
 private:
   virtual void task();

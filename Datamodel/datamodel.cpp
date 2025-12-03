@@ -2019,6 +2019,7 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
         G::issue("Comment", errMsg, "DataModel::setValueSF", sfRow);
+        qWarning() << errMsg;
         return ;
     }
 
@@ -2027,6 +2028,7 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     if (!sfIdx.isValid()) {
         errMsg = "Invalid sfIdx.  Src: " + src;
         G::issue("Warning", errMsg, "DataModel::setValueSF", sfRow);
+        qWarning() << errMsg;
         return;
     }
 
@@ -2662,6 +2664,7 @@ int DataModel::proxyRowFromPath(QString fPath, QString src)
     QMutexLocker locker(&mutex);
     int dmRow;
     int sfRow = -1;
+    // sf->filterChange("DataModel::proxyRowFromPath");
     if (fPathRowContains(fPath)) {
         dmRow = fPathRowValue(fPath);
         QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));

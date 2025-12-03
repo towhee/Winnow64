@@ -26,6 +26,8 @@ public:
              FocusStack::align_flags_t flags = FocusStack::ALIGN_DEFAULT
             );
 
+  const cv::Mat& transformation() const { return m_transformation; }
+
 private:
   virtual void task();
 

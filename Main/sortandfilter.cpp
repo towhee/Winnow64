@@ -711,15 +711,17 @@ void MW::updateRatingLog(QString fPath, QString rating)
 
 void MW::setColorClassForRow(int sfRow, QString colorClass) {
     QString srcFun = "MW::setColorClassForRow";
-    qDebug() << srcFun << sfRow;
+    qDebug() << srcFun << sfRow << colorClass;
     emit setValSf(sfRow, G::LabelColumn, colorClass,
-                  dm->instance, "",
+                  dm->instance, "MW::setColorClassForRow",
                   Qt::EditRole, Qt::AlignCenter);
+    QString color = dm->sf->index(sfRow, G::LabelColumn).data().toString();
+    qDebug() << srcFun << "color =" << color;
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
     dm->sf->suspend(true, "MW::setColorClass");
     buildFilters->updateCategory(BuildFilters::LabelEdit);
-    filterChange("MW::setColorClass");
+    filterChange("MW::setColorClass"); // sets dm->sf->suspend = false
     // update ImageView classification badge
     updateClassification();
     // write to sidecar

@@ -89,8 +89,8 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Options
     // clean (send all project folders to the trash)
-    bool isClean = false;
-    bool isRedo = false;
+    bool isClean = false;       // send all project folders to the trash
+    bool isRedoAlign = false;        //
 
     // Source images folder (used after pipeline finishes)
     QFileInfo info(paths.first());
@@ -102,8 +102,8 @@ void MW::generateFocusStack(const QStringList paths,
     pipeline->moveToThread(thread);
 
     // Start pipeline when thread begins
-    connect(thread, &QThread::started, pipeline, [pipeline, paths, isRedo]() {
-        pipeline->setInput(paths, isRedo);
+    connect(thread, &QThread::started, pipeline, [pipeline, paths, isRedoAlign]() {
+        pipeline->setInput(paths, isRedoAlign);
         pipeline->run();      // executes inside worker thread
     });
 
@@ -117,72 +117,72 @@ void MW::generateFocusStack(const QStringList paths,
                 this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
             }, Qt::QueuedConnection);
 
-    //   Pipeline finished → Handle output
+    // Pipeline finished → Handle output
     connect(pipeline, &PipelinePMax::finished,
-            this,
-            [=](bool ok, const QString &outputFolder)
+        this, [=](bool ok, const QString &outputFolder)
+        {
+            QString msg = ok
+                ? QString("PMax pipeline finished.\nOutput folder: %1").arg(outputFolder)
+                : QString("PMax pipeline failed.");
+            updateStatus(!ok, msg, srcFun);
+
+            if (ok)
             {
-                QString msg = ok
-                                  ? QString("PMax pipeline finished.\nOutput folder: %1").arg(outputFolder)
-                                  : QString("PMax pipeline failed.");
+                // The resulting fused image file
+                QString fusedPath = pipeline->fusionOutputPath();
 
-                updateStatus(!ok, msg, srcFun);
+                // Copy metadata from first source image file
+                ExifTool et;
+                et.setOverWrite(true);
+                et.copyAll(paths.first(), fusedPath);
+                et.close();
 
-                if (ok)
+                // Copy fused to source images folder
+                QFileInfo fi(fusedPath);
+                QString destPath = srcFolder + "/" + fi.fileName();
+                QFile::copy(fusedPath, destPath);
+
+                // Insert into datamodel
+                dm->insert(destPath);
+
+                if (!isLocal)
                 {
-                    // The resulting fused image file
-                    QString fused = pipeline->fusionOutputPath();
+                    //  Delete source images
+                    for (const QString &p : paths)
+                        QFile(p).moveToTrash();
 
-                    // Copy metadata from first source image file
-                    ExifTool et;
-                    et.setOverWrite(true);
-                    et.copyAll(paths.first(), fused);
-                    et.close();
+                    folderAndFileSelectionChange(fusedPath, srcFun);
 
-                    // Insert into datamodel
-                    dm->insert(fused);
+                    // Wait for metadata to finish loading (max 3000ms)
+                    const int timeoutMs = 3000;
+                    QElapsedTimer t;
+                    t.start();
 
-                    // Copy fused to source images folder
-                    QFileInfo fi(fused);
-                    QString destPath = srcFolder + "/" + fi.fileName();
-                    QFile::copy(fused, destPath);
-
-                    // Update source folder image counts, filters ...
-                    // refresh();
-
-                    if (!isLocal)
+                    while (!G::allMetadataLoaded && t.elapsed() < timeoutMs)
                     {
-                        //  Delete source images
-                        for (const QString &p : paths)
-                            QFile(p).moveToTrash();
-
-                        folderAndFileSelectionChange(fused, srcFun);
-
-                        // Wait for metadata to finish loading (max 3000ms)
-                        const int timeoutMs = 3000;
-                        QElapsedTimer t;
-                        t.start();
-
-                        while (!G::allMetadataLoaded && t.elapsed() < timeoutMs)
-                        {
-                            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-                            QThread::msleep(50);
-                        }
+                        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+                        QThread::msleep(50);
                     }
-
-                    // Select fused image in UI
-                    sel->select(fused);
-                    refresh();
                 }
 
-                // Cleanup after pipeline ends
-                if (isClean) pipeline->clean();
-                thread->quit();
-                thread->wait();
-                pipeline->deleteLater();
-                thread->deleteLater();
-            },
-            Qt::QueuedConnection);
+                sel->select(destPath);
+                waitUntilMetadataLoaded(5000, srcFun);
+                setColorClassForRow(dm->currentSfRow, "Red");
+                embedThumbnails();
+
+                // Update source folder image counts, filters ...
+                // refresh();
+            }
+
+            // Cleanup after pipeline ends
+            if (isClean) pipeline->clean();
+
+            thread->quit();
+            thread->wait();
+            pipeline->deleteLater();
+            thread->deleteLater();
+        },
+        Qt::QueuedConnection);
 
     // Start the worker thread
     thread->start();

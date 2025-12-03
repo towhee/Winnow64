@@ -1864,7 +1864,7 @@ void MW::createEditMenu()
     if (G::useMyTiff) utilitiesMenu->addAction(embedThumbnailsAction);
     // utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);
-    utilitiesMenu->addAction(focusStackAction);
+    if (G::isRory) utilitiesMenu->addAction(focusStackAction);
     editMenu->addSeparator();
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
 }
@@ -2304,7 +2304,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(embelExportGroupAct);
-    thumbViewActions->append(focusStackAction);
+    if (G::isRory) thumbViewActions->append(focusStackAction);
     thumbViewActions->append(separatorAction9);
     thumbViewActions->append(ratingBadgeVisibleAction);
     thumbViewActions->append(iconNumberVisibleAction);
@@ -2795,7 +2795,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
 
         // Utilities
-        focusStackAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+F"));
+        if (G::isRory)
+            focusStackAction->setShortcut(QKeySequence("Alt+F"));
 
         // Filters
         // filterUpdateAction->setShortcut(QKeySequence("Shift+F"));
