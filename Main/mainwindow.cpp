@@ -2313,6 +2313,36 @@ bool MW::reset(QString src)
     return true;
 }
 
+void MW::waitUntilMetadataLoaded(int ms, QString src)
+{
+/*
+    Wait until metadata has been loaded or ms milliseconds have elapsed
+*/
+    QString srcFun = "MW::waitUntilMetadataLoaded";
+    QEventLoop loop;
+    QTimer timeout;
+
+    qDebug() << srcFun << "G::allMetadataLoaded =" << G::allMetadataLoaded;
+
+    if (G::allMetadataLoaded) return;
+
+    timeout.setSingleShot(true);
+    timeout.setInterval(ms);     // millisecond timeout
+
+    // When metadata fully loads, exit the loop
+    connect(this, &MW::metadataLoaded, &loop, &QEventLoop::quit);
+    // Also quit on timeout
+    connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+    timeout.start();
+    loop.exec();
+
+    int t = timeout.remainingTime();
+    if (t < 0) t = ms; else t = ms - t;
+    qDebug() << srcFun << "elapsed ms =" << t
+             << "G::allMetadataLoaded =" << G::allMetadataLoaded;
+}
+
 void MW::nullFiltration()
 {
 /*
@@ -2638,7 +2668,7 @@ void MW::folderChangeCompleted()
         G::log("MW::folderChangeCompleted", msg);
     }
     QString fun = "MW::folderChangeCompleted";
-    // qDebug() << fun;
+    qDebug() << fun;
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
@@ -2718,6 +2748,10 @@ void MW::folderChangeCompleted()
     tableView->showOrHide();
 
     G::isModifyingDatamodel = false;
+
+    /* signal anything waiting for the metadata update to finish, including
+       dm->insert() */
+    emit metadataLoaded();
 
     /* test if any null thumbnails
     bool isNullIcon = false;

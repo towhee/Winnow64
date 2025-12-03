@@ -79,6 +79,32 @@ bool PetteriPMaxFusionWorker::run(const std::function<bool()> &abortFn)
         worker.add(g);
     }
 
+    // ---------------------------------------------------------------------
+    // DOWNCONVERT ANY 16-BIT COLOR IMAGES TO 8-BIT FOR PETTERI PIPELINE
+    // Temp fix - longterm make Petteri Task_Reassign_Map 16-bit
+    // ---------------------------------------------------------------------
+    for (auto &c : colorLoads)
+    {
+        cv::Mat img = c->img();    // Task_LoadImg -> loaded Mat
+
+        if (img.empty()) continue;
+
+        // Only downconvert when color is 16-bit
+        if (img.depth() == CV_16U)
+        {
+            cv::Mat img8;
+
+            // Convert 16-bit RGB to 8-bit RGB
+            // (Preserve tonal shape; correct scale for full-range TIFF)
+            img.convertTo(img8, CV_8U, 255.0 / 65535.0);
+
+            // Replace the internal m_result of Task_LoadImg
+            // NOTE: Task_LoadImg stores its output in m_result.
+            // We override it here.
+            c->overrideImage(img8);   // <-- you add this tiny helper
+        }
+    }
+
     msg = "Building wavelet decomposition tasks...";
     // emit updateStatus(false, msg, src);
 
@@ -159,7 +185,13 @@ bool PetteriPMaxFusionWorker::run(const std::function<bool()> &abortFn)
         return false;
     }
 
-    cv::imwrite(m_fusionOutputPath.toStdString(), fused);
+    // cv::imwrite(m_fusionOutputPath.toStdString(), fused);
+    cv::Mat out;
+
+    if (m_is16bit) fused.convertTo(out, CV_16UC3, 65535.0 / 255.0);
+    else out = fused;
+
+    cv::imwrite(m_fusionOutputPath.toStdString(), out);
 
     emit updateStatus(false, "Finished fusion", src);
     return true;

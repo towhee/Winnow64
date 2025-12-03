@@ -386,25 +386,59 @@ void MW::ingestTest(QWidget* target)
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
 
-    thumbView->sortThumbs(G::PathColumn, false);
+    QString fusedPath = "/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0238_PMax/fusion/2025-11-01_0238_pmax_FocusStack.tif";
+    QFileInfo fi(fusedPath);
+    QString destPath = dm->primaryFolderPath() + "/" + fi.fileName();
+    qDebug() << destPath;
+    QFile::copy(fusedPath, destPath);
+    dm->insert(destPath);
+    sel->select(destPath);
+    qDebug() << "G::allMetadataLoaded =" << G::allMetadataLoaded;
+    waitUntilMetadataLoaded(3000);
+    setColorClassForRow(dm->currentSfRow, "Red");
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString src = "/Users/roryhill/Downloads/DSC_1049.NEF";
-    ExifTool et;
+    QString fusedPath = "/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0238_PMax/fusion/2025-11-01_0238_pmax_FocusStack.tif";
+    QFileInfo fi(fusedPath);
+    QString destPath = dm->primaryFolderPath() + "/" + fi.fileName();
+    qDebug() << destPath;
+    QFile::copy(fusedPath, destPath);
+    dm->insert(destPath);
+    sel->select(destPath);
+    qDebug() << "G::allMetadataLoaded =" << G::allMetadataLoaded;
 
-    QString output = et.readTag(src, "LensModel");   // wrapper-dependent
-    qDebug() << "LensModel =" << output.trimmed();
+    // waitUntilMetadataLoaded(3000);
+    QEventLoop loop;
+    QTimer timeout;
 
-    et.close();
+    timeout.setSingleShot(true);
+    timeout.setInterval(3000);     // 3-second timeout
 
-    // QStringList args;
-    // args << "-T"
-    //      << "-" + "LensModel"
-    //      // << "-s3"
-    //      << src.toUtf8() + "\n"
-    //      << "-execute\n";
+    // When metadata fully loads, exit the loop
+    connect(this, &MW::metadataLoaded, &loop, &QEventLoop::quit);
+    // Also quit on timeout
+    connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+    timeout.start();
+    loop.exec();                   // <-- does NOT freeze UI
+
+    // int sfRow = dm->currentSfRow;
+    // qDebug() << sfRow;
+    // QVariant colorClass = "Red";
+    // QModelIndex sfIdx = dm->sf->index(sfRow, G::LabelColumn);
+    // dm->sf->setData(sfIdx, colorClass, Qt::EditRole);
+
+    // dm->setValSf(sfRow, G::LabelColumn, colorClass,
+    //              dm->instance, "MW::setColorClassForRow",
+    //              Qt::EditRole, Qt::AlignCenter);
+    // thumbView->refreshThumbs();
+    // refresh();
+    // QString color = dm->sf->index(sfRow, G::LabelColumn).data().toString();
+    // qDebug() << "color =" << color;
+
+    setColorClassForRow(dm->currentSfRow, "Red");
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

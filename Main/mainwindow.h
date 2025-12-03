@@ -392,6 +392,7 @@ signals:
     void imageCacheColorManageChange();
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     // void closeZoomDlg();        // not being used
+    void metadataLoaded();
     void aSyncGo(int);          // rgh req'd?
     void needToShow();          // not being used
     void abortMDCache();        // not being used
@@ -425,6 +426,7 @@ public slots:
     void updateImageCount();
     void stop(QString src = "");
     bool reset(QString src = "");
+    void waitUntilMetadataLoaded(int ms, QString src = "");
     void nullFiltration();
     void updateFilterMenu(QString source = "");
     void filterLastDay();

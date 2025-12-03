@@ -51,13 +51,45 @@ void Task_Reassign_Map::task()
 
 void Task_Reassign_Map::build_color()
 {
-  // Check that all input images are in correct format
+  // // Check that all input images are in correct format
+  // int imgcount = m_grayscale_imgs.size();
+  // assert(imgcount < REASSIGN_MAX_BATCH);
+  // for (int i = 0; i < imgcount; i++)
+  // {
+  //   assert(m_grayscale_imgs.at(i)->img().type() == CV_8U);
+  //   assert(m_color_imgs.at(i)->img().type() == CV_8UC3);
+  // }
+
+  // Check that all input images are in correct format (gray) and
+  // normalize color to 8-bit RGB even if source is 16-bit.
   int imgcount = m_grayscale_imgs.size();
   assert(imgcount < REASSIGN_MAX_BATCH);
+
+  std::vector<cv::Mat> color8(imgcount);
+
   for (int i = 0; i < imgcount; i++)
   {
-    assert(m_grayscale_imgs.at(i)->img().type() == CV_8U);
-    assert(m_color_imgs.at(i)->img().type() == CV_8UC3);
+      cv::Mat gray  = m_grayscale_imgs.at(i)->img();
+      cv::Mat color = m_color_imgs.at(i)->img();
+
+      // Grayscale must be 8-bit
+      assert(gray.type() == CV_8U);
+
+      if (color.type() == CV_8UC3)
+      {
+          // Already in expected format
+          color8[i] = color;
+      }
+      else if (color.type() == CV_16UC3)
+      {
+          // Convert 16-bit RGB to 8-bit RGB for Petteri’s map logic
+          color.convertTo(color8[i], CV_8UC3, 255.0 / 65535.0);
+      }
+      else
+      {
+          // Unexpected type – keep assert so we notice
+          assert(false && "Unsupported color image type in Task_Reassign_Map::build_color");
+      }
   }
 
   // Calculate how much space we may need for the data
@@ -87,7 +119,8 @@ void Task_Reassign_Map::build_color()
     for (int i = 0; i < imgcount; i++)
     {
       grayscale_row_ptrs[i] = m_grayscale_imgs.at(i)->img().ptr<uint8_t>(y);
-      color_row_ptrs[i] = m_color_imgs.at(i)->img().ptr<cv::Vec3b>(y);
+      // color_row_ptrs[i] = m_color_imgs.at(i)->img().ptr<cv::Vec3b>(y);
+      color_row_ptrs[i]     = color8[i].ptr<cv::Vec3b>(y);
     }
 
     for (int x = 0; x < width; x++)

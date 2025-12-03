@@ -50,13 +50,15 @@ void Task_LoadImg::task()
 {
   if (!m_result.data)
   {
-    m_result = cv::imread(m_filename, cv::IMREAD_ANYCOLOR);
+    m_result = cv::imread(m_filename, cv::IMREAD_ANYDEPTH | cv::IMREAD_ANYCOLOR);  // rgh incl 16-bit
+      // m_result = cv::imread(m_filename, cv::IMREAD_ANYCOLOR);
   }
 
   while (!m_result.data && std::chrono::system_clock::now() < m_wait_images_until)
   {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    m_result = cv::imread(m_filename, cv::IMREAD_ANYCOLOR);
+    m_result = cv::imread(m_filename, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH); // rgh keep 16 bit
+    // m_result = cv::imread(m_filename, cv::IMREAD_ANYCOLOR); // convert to 8 bit
   }
 
   if (!m_result.data)

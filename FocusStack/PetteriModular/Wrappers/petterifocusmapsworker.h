@@ -23,7 +23,7 @@ public:
                   const QString &focusDir);
 
     void setStepCallback(const std::function<void()> &fn) { m_stepFn = fn; }
-
+    void setIs16bit(bool v) { m_is16bit = v; }
     bool run(const std::function<bool()> &abortFn);
 
 signals:
@@ -37,6 +37,8 @@ private:
 
     std::function<void()> m_stepFn;
     inline void step() { if (m_stepFn) m_stepFn(); }
+
+    bool m_is16bit = false;
 };
 
 #endif // PETTERIFOCUSMAPSWORKER_H

@@ -23,7 +23,7 @@ QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
 QStringList issueList;
 
 
-// Rory version (expanded cache pref)
+// Rory version (expanded cache pref, focus stack)
 bool isRory = false;
 
 // mutex

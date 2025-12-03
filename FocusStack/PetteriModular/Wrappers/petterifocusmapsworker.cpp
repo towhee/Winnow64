@@ -51,7 +51,7 @@ bool PetteriFocusMapsWorker::run(const std::function<bool()> &abortFn)
 
     const int total = m_alignedPaths.size();
 
-    std::vector<std::shared_ptr<Task_LoadImg>>     loads;
+    std::vector<std::shared_ptr<ImgTask>>     loads;
     std::vector<std::shared_ptr<Task_FocusMeasure>> focusTasks;
 
     loads.reserve(total);
@@ -60,12 +60,65 @@ bool PetteriFocusMapsWorker::run(const std::function<bool()> &abortFn)
     emit updateStatus(false, "Loading aligned images for focus measure...", src);
 
     for (int i = 0; i < total; ++i) {
-        auto load = std::make_shared<Task_LoadImg>(m_alignedPaths[i].toStdString());
+
+        // auto load = std::make_shared<Task_LoadImg>(m_alignedPaths[i].toStdString());
+        std::shared_ptr<ImgTask> load;
+
+        if (!m_is16bit) {
+            // original 8-bit behavior
+            load = std::make_shared<Task_LoadImg>(m_alignedPaths[i].toStdString());
+        }
+        else {
+            // Force IMREAD_ANYDEPTH for 16-bit aligned files
+            cv::Mat img16 = cv::imread(
+                m_alignedPaths[i].toStdString(),
+                cv::IMREAD_ANYDEPTH | cv::IMREAD_ANYCOLOR
+                );
+            if (img16.empty()) {
+                emit updateStatus(false,
+                                  QString("Could not load 16-bit aligned image: %1")
+                                      .arg(m_alignedPaths[i]),
+                                  src);
+                return false;
+            }
+
+            // Create a simple loader that wraps a preloaded Mat
+            class Task_LoadImg_FromMat : public FStack::ImgTask {
+            public:
+                Task_LoadImg_FromMat(const cv::Mat &m) { m_result = m.clone(); }
+                void task() override {} // already loaded
+            };
+
+            load = std::make_shared<Task_LoadImg_FromMat>(img16);
+        }
         loads.push_back(load);
         worker.add(load);
 
         // Default radius/threshold from Petteri's Task_FocusMeasure
-        auto fm = std::make_shared<Task_FocusMeasure>(load, 0.0f, 0.0f);
+        // auto fm = std::make_shared<Task_FocusMeasure>(load, 0.0f, 0.0f); // 8-bit only
+        std::shared_ptr<Task_FocusMeasure> fm;
+
+        if (!m_is16bit) {
+            // original
+            fm = std::make_shared<Task_FocusMeasure>(load, 0.0f, 0.0f);
+        }
+        else {
+            // wrap into grayscale float conversion
+            class Task_ConvertToFloat : public FStack::ImgTask {
+            public:
+                Task_ConvertToFloat(std::shared_ptr<FStack::ImgTask> in) : m_in(in) {}
+                void task() override {
+                    cv::Mat src = m_in->img();
+                    src.convertTo(m_result, CV_32F, 1.0 / 65535.0);
+                }
+                std::shared_ptr<FStack::ImgTask> m_in;
+            };
+
+            auto floatTask = std::make_shared<Task_ConvertToFloat>(load);
+            worker.add(floatTask);
+
+            fm = std::make_shared<Task_FocusMeasure>(floatTask, 0.0f, 0.0f);
+        }
         focusTasks.push_back(fm);
         worker.add(fm);
     }

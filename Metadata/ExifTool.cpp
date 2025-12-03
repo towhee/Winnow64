@@ -202,6 +202,7 @@ int ExifTool::copyAll(QString src, QString dst)
     args << src;
     args << "-all:all";
     args << dst;
+    args << "-overwrite_original";
     qDebug() << "ExifTool::copyAll" << src << dst;
     return execute(args);
 }
