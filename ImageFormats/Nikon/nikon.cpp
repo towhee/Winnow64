@@ -1,6 +1,8 @@
 #include "nikon.h"
 #include "Main/global.h"
 
+// ExifTool documentation: https://exiftool.org/TagNames/Nikon.html
+
 Nikon::Nikon()
 {
     nikonMakerHash[1] = "Nikon Makernote version";
@@ -898,6 +900,8 @@ bool Nikon::parse(MetadataParameters &p,
         m.focalLength = "";
         m.focalLengthNum = 0;
     }
+    // Exif: lens model (try here first for Z lenses, then maker, then exiftool)
+    m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue, ifd->ifdDataHash.value(42036).tagCount);
 
     // Exif: read makernoteIFD
     quint32 makerOffset = ifd->ifdDataHash.value(37500).tagValue;
@@ -965,14 +969,16 @@ bool Nikon::parse(MetadataParameters &p,
         lensInfo.remove(7, lensInfo.size() - 7);
         lensInfo.append(static_cast<char>(lensType));
         m.nikonLensCode = lensInfo.toHex().toUpper();
-//        QByteArray nikonLensCode = lensInfo.toHex().toUpper();
-        m.lens = nikonLensHash.value(m.nikonLensCode);
-        // new lenses not in nikonLensHash
         if (m.lens.isEmpty()) {
-            ExifTool et;
-            m.lens = et.readTag(m.fPath, "LensModel");
-            qDebug() << "Nikon lens =" << m.lens << m.fPath;
-            et.close();
+            // Pre Z lenses were encrypted
+            m.lens = nikonLensHash.value(m.nikonLensCode);
+            // no luck? Try exiftool as last resort
+            if (m.lens.isEmpty()) {
+                ExifTool et;
+                m.lens = et.readTag(m.fPath, "LensModel");
+                qDebug() << "Nikon lens =" << m.lens << m.fPath;
+                et.close();
+            }
         }
         /*
         or could go with nikonLensHash<QString, QString>
