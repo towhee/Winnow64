@@ -115,7 +115,7 @@ ADD NEW DLL ON WINDOWS
 	Update and save the releaseDate and version in
 	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
 
-EXIFTOOL UPDATE
+EXIFTOOL UPDATE FOR MAC
 
         - go to https://exiftool.org/
 	- download tar.gz and expand
