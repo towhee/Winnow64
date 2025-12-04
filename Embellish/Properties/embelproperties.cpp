@@ -1621,7 +1621,7 @@ void EmbelProperties::syncWinnets(QString src)
         #ifdef Q_OS_WIN
         // On Windows, real executables end with .exe
         if (name.endsWith(".exe", Qt::CaseInsensitive))
-            okToChange << name;
+            existingExecutables << name;
 
         #else
         // On macOS/Linux: check UNIX executable permission
