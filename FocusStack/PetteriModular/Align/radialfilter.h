@@ -6,6 +6,10 @@
 #pragma once
 #include <opencv2/core.hpp>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 namespace FStack {
 
 // Find the closest valid point in each radial direction and
