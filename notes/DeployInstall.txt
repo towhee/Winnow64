@@ -15,7 +15,7 @@ NORMAL DEPLOYMENT
         - Update version in mainwindow.h.
         - In global.cpp set isLogger and isFlowLogger = false.
         - Update ExifTool if necessary.  Make sure a copy of /Users/roryhill/Projects/ExifTool is in
-          Winnow.app/Contents/MacOS.
+	  Winnow.app/Contents/Resources/ExifTool.
 	- Make sure entitlements.plist is in Winnow.app/Contents.
         - Make sure Winnets is also embedded in Winnow.app/Contents/MacOS.
 	- Make sure focus_point_model.onnx is in Winnow.app/Contents/MacOS.

@@ -2456,3 +2456,11 @@ void Task_Reassign::reassign_gray()
 }
 
 } // namespace FStack
+
+Thread 117 Crashed:: QThread
+0   QtCore                        	       0x104365e10 QString::toUtf8_helper(QString const&) + 0
+1   Winnow                        	       0x10003a2b0 QString::toUtf8() const & + 32 (qstring.h:710)
+2   Winnow                        	       0x100038f5c QString::toStdString() const + 40 (qstring.h:1543)
+3   Winnow                        	       0x100037770 FS::runAlign() + 1504 (fs.cpp:264)
+4   Winnow                        	       0x100036554 FS::run() + 400 (fs.cpp:74)
+5   Winnow                        	       0x100292f48 MW::generateFocusStack(QList<QString>, QString, QString)::$_0::operator()() const + 28 (generateFocusStack.cpp:123)

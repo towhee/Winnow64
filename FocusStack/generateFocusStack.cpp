@@ -1,5 +1,7 @@
 #include "Main/mainwindow.h"
-#include "FocusStack/Pipeline/pipelinepmax.h"
+#include "FocusStack/fs.h"
+// #include "FocusStack/Pipeline/PipelineBase.h"
+// #include "FocusStack/Pipeline/pipelinepmax.h"
 
 
 /*
@@ -90,12 +92,149 @@ void MW::generateFocusStack(const QStringList paths,
     // Options
     // clean (send all project folders to the trash)
     bool isClean = false;       // send all project folders to the trash
-    bool isRedoAlign = false;        //
+    bool isRedoAlign = true;    //
 
     // Source images folder (used after pipeline finishes)
     QFileInfo info(paths.first());
     const QString srcFolder = info.absolutePath();
 
+    // --------------------------------------------------------------------
+    // Create worker thread + FS pipeline object
+    // --------------------------------------------------------------------
+    QThread *thread = new QThread(this);
+    FS *pipeline = new FS();           // new unified pipeline
+    pipeline->moveToThread(thread);
+
+    // Set input + project root *before* thread runs
+    QString projectRoot = srcFolder + "/" + info.completeBaseName() + "_FS";
+    pipeline->setProjectRoot(projectRoot);
+    pipeline->setInput(paths);
+
+    FS::Options opt;
+    opt.enableAlign         = true;
+    opt.enableFocusMaps     = false;   // until wired
+    opt.enableDepthMap      = false;
+    opt.enableFusion        = false;
+    opt.overwriteExisting   = true;
+    pipeline->setOptions(opt);
+
+    // When the thread starts → run the FS pipeline
+    connect(thread, &QThread::started, pipeline, [pipeline, thread]()
+            {
+                pipeline->run();     // runs synchronously inside worker thread
+                QMetaObject::invokeMethod(thread, "quit", Qt::QueuedConnection);
+            });
+
+    // Status / progress → UI
+    connect(pipeline, &FS::updateStatus,
+            this, &MW::updateStatus,
+            Qt::QueuedConnection);
+
+    connect(pipeline, &FS::progress, this, [this](int current, int total)
+        {
+            this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
+        },
+        Qt::QueuedConnection);
+
+    // cleanup when finished
+    connect(thread, &QThread::finished, pipeline, &QObject::deleteLater);
+    connect(thread, &QThread::finished, thread,   &QObject::deleteLater);
+
+    // When FS finishes (thread quits)
+    // We detect success by checking filesystem or pipeline signals (later)
+    connect(thread, &QThread::finished, this, [=]()
+    {
+        // THIS IS NOT RUNNING AFTER FS::run() returns.
+        qDebug() << "FINISHED!!!!!!!!";
+        // Clear progress
+        cacheProgressBar->clearUpperProgress();
+
+        // Example: pick the last aligned color image as “fusedPath”
+        // (temporary until focus/depth/fusion implemented)
+        QString alignedDir = projectRoot + "/align";
+        QDir ad(alignedDir);
+        QStringList files = ad.entryList(QStringList() << "*.png",
+                                         QDir::Files,
+                                         QDir::Name);
+
+        QString fusedPath;
+        if (!files.isEmpty())
+            fusedPath = alignedDir + "/" + files.last();   // temporarily treat as result
+
+        if (!fusedPath.isEmpty())
+        {
+            // Copy metadata from first source using your existing logic
+            ExifTool et;
+            et.setOverWrite(true);
+            et.copyAll(paths.first(), fusedPath);
+            et.close();
+
+            // Copy into source folder
+            QFileInfo fi(fusedPath);
+            QString destPath = srcFolder + "/" + fi.fileName();
+            QFile::copy(fusedPath, destPath);
+
+            dm->insert(destPath);
+            if (isLocal)
+                sel->select(destPath);
+            else
+                folderAndFileSelectionChange(destPath, srcFun);
+
+            waitUntilMetadataLoaded(5000, srcFun);
+
+            setColorClassForRow(dm->currentSfRow, "Red");
+            embedThumbnails();
+        }
+
+        // thread->quit();
+        // pipeline->deleteLater();
+    });
+
+    // Start
+    thread->start();
+
+    /*
+    // --- Create Thread + FSRunner -------------------------------------
+    QThread *thread = new QThread(this);
+    FSRunner *pipeline = new FSRunner(nullptr);   // temporary test runner
+    pipeline->moveToThread(thread);
+
+    // Build output paths for aligned images (minimal testing only)
+    std::vector<QString> alignedColor;
+    std::vector<QString> alignedGray;
+    alignedColor.reserve(paths.size());
+    alignedGray.reserve(paths.size());
+
+    for (const QString &p : paths)
+    {
+        QFileInfo fi(p);
+        QString base = fi.completeBaseName();
+        QString ext  = fi.suffix();
+
+        QString colorOut = fi.absolutePath() + "/aligned_" + base + "." + ext;
+        QString grayOut  = fi.absolutePath() + "/aligned_gray_" + base + "." + ext;
+
+        alignedColor.push_back(colorOut);
+        alignedGray.push_back(grayOut);
+    }
+
+    // Start pipeline when thread begins
+    connect(thread, &QThread::started,
+            pipeline,
+            [pipeline, paths, alignedColor, alignedGray]()
+            {
+                pipeline->runAlign(paths, alignedColor, alignedGray, true);
+                QMetaObject::invokeMethod(pipeline->thread(), "quit", Qt::QueuedConnection);
+            });
+
+    // Cleanup
+    connect(thread, &QThread::finished, pipeline, &QObject::deleteLater);
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+
+    thread->start();
+    */
+
+    /*
     // Create Thread + Pipeline
     QThread *thread = new QThread(this);
     PipelinePMax *pipeline = new PipelinePMax();   // no parent; lives in thread
@@ -145,30 +284,29 @@ void MW::generateFocusStack(const QStringList paths,
                 // Insert into datamodel
                 dm->insert(destPath);
 
-                if (!isLocal)
-                {
+                if (isClean) {
                     //  Delete source images
                     for (const QString &p : paths)
                         QFile(p).moveToTrash();
 
-                    folderAndFileSelectionChange(fusedPath, srcFun);
-
-                    // Wait for metadata to finish loading (max 3000ms)
-                    const int timeoutMs = 3000;
-                    QElapsedTimer t;
-                    t.start();
-
-                    while (!G::allMetadataLoaded && t.elapsed() < timeoutMs)
-                    {
-                        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-                        QThread::msleep(50);
-                    }
                 }
 
-                sel->select(destPath);
+                // Lightroom etc
+                if (isLocal)
+                {
+                    sel->select(destPath);
+                }
+                else {
+
+                    folderAndFileSelectionChange(fusedPath, srcFun);
+                 }
+
                 waitUntilMetadataLoaded(5000, srcFun);
+
+                // set color and update filters, image counts
                 setColorClassForRow(dm->currentSfRow, "Red");
-                embedThumbnails();
+
+                embedThumbnails();      // on the current selection
 
                 // Update source folder image counts, filters ...
                 // refresh();
@@ -186,6 +324,7 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Start the worker thread
     thread->start();
+*/
 }
 
 

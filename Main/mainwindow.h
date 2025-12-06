@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QtConcurrent>
+// #include <QThread>
 //#include <QDesktopWidget>         // qt6.2
 #include "sstream"
 #include "stresstest.h"
@@ -72,8 +73,11 @@
 
 #include "Utilities/coloranalysis.h"
 #include "Utilities/dirwatcher.h"
-#include "Image/stack.h"
+#include "Image/stack.h"        // used by meanStack
 #include "ImageStack/stackcontroller.h"
+
+#include "FocusStack/fsrunner.h"    // temp class
+
 #include <QSoundEffect>
 
 #include "Utilities/performance.h"

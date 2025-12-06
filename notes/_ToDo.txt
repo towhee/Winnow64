@@ -136,7 +136,8 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
-- Update Nikon Lenses
+- Release 2.04
+- Update Nikon Lense mpdel info
 - Delete all files in filter not always working properly
 - Fix sort for case sensitivity
 - Fix refresh when filtered and delete all

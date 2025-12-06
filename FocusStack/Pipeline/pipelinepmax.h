@@ -1,7 +1,7 @@
 #ifndef PIPELINEPMAX_H
 #define PIPELINEPMAX_H
 
-#include "PipelineBase.h"
+#include "FocusStack/Pipeline/PipelineBase.h"
 
 #include <atomic>
 
