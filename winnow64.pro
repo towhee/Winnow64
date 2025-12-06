@@ -79,7 +79,15 @@ QT += multimedia
 QT += multimediawidgets
 QT += concurrent
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    FocusStack/fs.h \
+    FocusStack/fsalign.h \
+    FocusStack/fsdepth.h \
+    FocusStack/fsfocus.h \
+    FocusStack/fsfusion.h \
+    FocusStack/fsgray.h \
+    FocusStack/fsloader.h \
+    FocusStack/fsrunner.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -306,7 +314,15 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    FocusStack/fs.cpp \
+    FocusStack/fsalign.cpp \
+    FocusStack/fsdepth.cpp \
+    FocusStack/fsfocus.cpp \
+    FocusStack/fsfusion.cpp \
+    FocusStack/fsgray.cpp \
+    FocusStack/fsloader.cpp \
+    FocusStack/fsrunner.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp
