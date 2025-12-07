@@ -21,6 +21,10 @@ FS::FS(QObject *parent)
 void FS::setInput(const QStringList &paths)
 {
     m_inputPaths = paths;
+
+    // Clear any in-memory aligned images from previous run
+    m_alignedColorMats.clear();
+    m_alignedGrayMats.clear();
 }
 
 void FS::setProjectRoot(const QString &rootPath)
@@ -70,11 +74,73 @@ bool FS::prepareFolders()
     return true;
 }
 
-//
-// ─────────────────────────────────────────────
-//   detectSkips() — checks for existing outputs
-// ─────────────────────────────────────────────
-//
+// detectSkips() — checks for existing outputs
+bool FS::detectSkips()
+/*
+    - Determine which stages can be skipped based on existing outputs
+    - If keepIntermediates == false, do not skip based on files and remove stale intermediates
+*/
+{
+    m_skipAlign     = false;
+    m_skipFocusMaps = false;
+    m_skipDepthMap  = false;
+    m_skipFusion    = false;
+
+    m_alignedColor.clear();
+    m_alignedGray.clear();
+
+    const bool keep = m_options.keepIntermediates;
+
+    bool allAlignedExist = true;
+
+    for (const QString &src : m_inputPaths)
+    {
+        QFileInfo fi(src);
+        QString base = fi.completeBaseName();
+        QString ext  = fi.suffix();
+
+        QString col = m_alignFolder + "/aligned_" + base + "." + ext;
+        QString gry = m_alignFolder + "/gray_" + base + "." + ext;
+
+        m_alignedColor.push_back(col);
+        m_alignedGray.push_back(gry);
+
+        if (keep)
+        {
+            if (!QFileInfo::exists(col) || !QFileInfo::exists(gry))
+                allAlignedExist = false;
+        }
+        else
+        {
+            QFile::remove(col);
+            QFile::remove(gry);
+        }
+    }
+
+    if (keep && !m_options.overwriteExisting && allAlignedExist)
+        m_skipAlign = true;
+
+    if (keep && !m_options.overwriteExisting)
+    {
+        if (QFileInfo::exists(m_focusFolder + "/focus_done.txt"))
+            m_skipFocusMaps = true;
+        if (QFileInfo::exists(m_depthFolder + "/depth_done.txt"))
+            m_skipDepthMap = true;
+        if (QFileInfo::exists(m_fusionFolder + "/fusion_done.txt"))
+            m_skipFusion = true;
+    }
+
+    if (!keep)
+    {
+        QFile::remove(m_focusFolder + "/focus_done.txt");
+        QFile::remove(m_depthFolder + "/depth_done.txt");
+        QFile::remove(m_fusionFolder + "/fusion_done.txt");
+    }
+
+    return true;
+}
+
+/*
 bool FS::detectSkips()
 {
     // Reset
@@ -121,6 +187,28 @@ bool FS::detectSkips()
     }
 
     return true;
+}*/
+
+bool FS::canUseInMemoryAligned(int count) const
+/*
+    - Validate that in-memory aligned color and gray Mats exist
+    - Validate the vector sizes match 'count'
+    - Validate that no Mat is empty
+*/
+{
+    if (m_alignedGrayMats.size()  != static_cast<size_t>(count) ||
+        m_alignedColorMats.size() != static_cast<size_t>(count))
+    {
+        return false;
+    }
+
+    for (int i = 0; i < count; ++i)
+    {
+        if (m_alignedGrayMats[i].empty() || m_alignedColorMats[i].empty())
+            return false;
+    }
+
+    return true;
 }
 
 void FS::setTotalProgress()
@@ -129,8 +217,10 @@ void FS::setTotalProgress()
     m_total = 0;
     if (m_options.enableAlign && !m_skipAlign)
         m_total += ((n - 1) * 2 + 1);
-    if (m_options.enableFusion && !m_skipFusion)
+    if (m_options.enableFusion && !m_skipFusion) {
         m_total += ((n * 2) + 4);
+        if (canUseInMemoryAligned(n)) m_total --;
+    }
 }
 
 void FS::incrementProgress()
@@ -142,6 +232,7 @@ void FS::incrementProgress()
 
 bool FS::run()
 {
+    QString srcFun = "";
     m_abortRequested = false;
 
     if (m_inputPaths.isEmpty())
@@ -150,17 +241,20 @@ bool FS::run()
         return false;
     }
 
-    // 1. Create stage folders
+    // Create stage folders
     if (!prepareFolders())
         return false;
 
-    // 2. Decide which stages to skip
+    // Decide which stages to skip
     if (!detectSkips())
         return false;
 
     setTotalProgress();
 
-    // 3. Run ALIGN
+    QElapsedTimer t;
+    t.start();
+
+    // RUN ALIGN
     if (m_options.enableAlign && !m_skipAlign)
     {
         if (!runAlign())
@@ -170,7 +264,7 @@ bool FS::run()
         emitStageStatus("Align", "Skipped");
     }
 
-    // 4. RUN FOCUS MAPS
+    // RUN FOCUS MAPS
     if (m_options.enableFocusMaps && !m_skipFocusMaps)
     {
         if (!runFocusMaps())
@@ -180,7 +274,7 @@ bool FS::run()
         emitStageStatus("FocusMaps", "Skipped");
     }
 
-    // 5. RUN DEPTH MAP
+    // RUN DEPTH MAP
     if (m_options.enableDepthMap && !m_skipDepthMap)
     {
         if (!runDepthMap())
@@ -190,7 +284,7 @@ bool FS::run()
         emitStageStatus("DepthMap", "Skipped");
     }
 
-    // 6. RUN FUSION
+    // RUN FUSION
     if (m_options.enableFusion && !m_skipFusion)
     {
         if (!runFusion())
@@ -201,10 +295,22 @@ bool FS::run()
     }
 
     emitStageStatus("FS", "Pipeline complete.");
+
+    QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
+    G::log(srcFun, "Focus Stack completed in " + timeToRun);
+    G::log(srcFun, "");
+    qDebug() << srcFun << "Done" << timeToRun;
+
     return true;
 }
 
 bool FS::runAlign()
+/*
+    - Load images using FSLoader
+    - Compute Petteri-style global transforms
+    - Apply transforms to color + gray
+    - Save aligned images and cache them in memory
+*/
 {
     QString srcFun = "FS::runAlign";
     QString msg;
@@ -217,6 +323,9 @@ bool FS::runAlign()
         return false;
     }
 
+    QElapsedTimer t;
+    t.start();
+
     const int N = m_inputPaths.size();
     if (N < 2)
     {
@@ -224,9 +333,10 @@ bool FS::runAlign()
         return false;
     }
 
-    // -----------------------------------------------------------
+    m_alignedColorMats.resize(N);
+    m_alignedGrayMats.resize(N);
+
     // Load images using Petteri-compatible padding + validArea
-    // -----------------------------------------------------------
     std::vector<FSLoader::Image> imgs(N);
 
     for (int i = 0; i < N; ++i)
@@ -248,9 +358,7 @@ bool FS::runAlign()
         G::log(srcFun, "Load image " + QString::number(i));
     }
 
-    // -----------------------------------------------------------
     // Prepare FSAlign global chain (Petteri-style)
-    // -----------------------------------------------------------
     using namespace FSAlign;
 
     std::vector<Result> globals(N);
@@ -263,20 +371,19 @@ bool FS::runAlign()
     opt.maxRes            = 2048;
     opt.fullResolution    = false;
 
-    // -----------------------------------------------------------
     // Reference frame: write unmodified aligned color + gray
-    // -----------------------------------------------------------
+    if (m_options.keepIntermediates)
     {
         cv::imwrite(m_alignedColor[0].toStdString(), imgs[0].color);
         cv::imwrite(m_alignedGray[0].toStdString(),  imgs[0].gray);
     }
 
+    m_alignedColorMats[0] = imgs[0].color.clone();
+    m_alignedGrayMats[0]  = imgs[0].gray.clone();
     G::log(srcFun, "Write unmodified aligned color + gray");
     incrementProgress();
 
-    // -----------------------------------------------------------
     // Alignment loop: image i aligned to image (i - 1)
-    // -----------------------------------------------------------
     for (int i = 1; i < N; ++i)
     {
         if (m_abortRequested)
@@ -319,14 +426,20 @@ bool FS::runAlign()
         cv::Mat alignedColor, alignedGray;
         G::log(srcFun, "cv::Mat alignedColor, alignedGray");
         applyTransform(imgs[i].color, globals[i].transform, alignedColor);
-        G::log(srcFun, "applyTransform alignedColor");
         applyTransform(imgs[i].gray,  globals[i].transform, alignedGray);
         G::log(srcFun, "applyTransform alignedGray");
         incrementProgress();
 
         // Write outputs
-        cv::imwrite(m_alignedColor[i].toStdString(), alignedColor);
-        cv::imwrite(m_alignedGray[i].toStdString(),  alignedGray);
+        if (m_options.keepIntermediates)
+        {
+            cv::imwrite(m_alignedColor[i].toStdString(), alignedColor);
+            cv::imwrite(m_alignedGray[i].toStdString(),  alignedGray);
+        }
+
+        // Cache in memory for fast fusion
+        m_alignedColorMats[i] = alignedColor.clone();
+        m_alignedGrayMats[i]  = alignedGray.clone();
 
         msg = "Write outputs";
         G::log(srcFun, msg);
@@ -334,6 +447,11 @@ bool FS::runAlign()
 
     incrementProgress();
     emitStageStatus(stage, "Alignment complete.");
+
+    QString timeToFuse = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
+    G::log(srcFun, "Alignment completed in " + timeToFuse);
+    G::log(srcFun, "");
+
     return true;
 }
 
@@ -374,6 +492,7 @@ bool FS::runDepthMap()
 bool FS::runFusion()
 /*
     - Load the aligned grayscale and color images
+      (prefer in-memory Mats from runAlign, fall back to disk if needed)
     - Run FSFusion::fuseStack
     - Save fused image
 */
@@ -382,12 +501,63 @@ bool FS::runFusion()
     const QString stage = "Fusion";
     G::log(srcFun, "Starting fusion…");
 
+    QElapsedTimer t;
+    t.start();
+
     if (m_alignedGray.empty() || m_alignedColor.empty())
     {
         emitStageStatus(stage, "No aligned images available", true);
         return false;
     }
 
+    const int N = m_alignedGray.size();
+
+    // Get Aligned grayscale and color images
+    std::vector<cv::Mat> grayImgs;
+    std::vector<cv::Mat> colorImgs;
+    grayImgs.reserve(N);
+    colorImgs.reserve(N);
+
+    bool useInMemory = canUseInMemoryAligned(N);   // NEW
+    if (useInMemory)
+    {
+        G::log(srcFun, "Using in-memory aligned images");
+        for (int i = 0; i < N; ++i)
+        {
+            grayImgs.push_back(m_alignedGrayMats[i]);
+            colorImgs.push_back(m_alignedColorMats[i]);
+        }
+    }
+    else
+    {
+        G::log(srcFun, "Load aligned images from disk");
+
+        for (int i = 0; i < N; ++i)
+        {
+            const QString &grayPath  = m_alignedGray[i];
+            const QString &colorPath = m_alignedColor[i];
+
+            G::log(srcFun, "Load aligned images from disk " + QString::number(i));
+
+            cv::Mat gray  = cv::imread(grayPath.toStdString(),  cv::IMREAD_GRAYSCALE);
+            cv::Mat color = cv::imread(colorPath.toStdString(), cv::IMREAD_UNCHANGED);
+
+            if (gray.empty() || color.empty())
+            {
+                emitStageStatus("Fusion",
+                                QString("Failed to load aligned image %1").arg(i),
+                                true);
+                return false;
+            }
+
+            grayImgs.push_back(gray);
+            colorImgs.push_back(color);
+
+            incrementProgress();
+        }
+    }
+
+    /*
     const int N = static_cast<int>(m_alignedGray.size());
     if (N != static_cast<int>(m_alignedColor.size()))
     {
@@ -415,9 +585,9 @@ bool FS::runFusion()
         G::log(srcFun, "Load aligned images from disk " + QString::number(i));
         incrementProgress();
     }
+    */
 
     // Call FSFusion
-    G::log(srcFun, "Call FSFusion");
     FSFusion::Options opt;
     opt.useOpenCL   = true;  // or true if you want GPU & have OCL configured
     opt.consistency = 2;      // Petteri full consistency
@@ -455,8 +625,11 @@ bool FS::runFusion()
     cv::imwrite(fusedPath.toStdString(), fusedColor8);
 
     emitStageStatus(stage, "Fusion complete.");
+
+    QString timeToFuse = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
+    G::log(srcFun, "Fusion completed in " + timeToFuse);
     G::log(srcFun, "Fusion complete.");
-    G::log(srcFun, "Fusion complete.");
+
     return true;
 }
 
