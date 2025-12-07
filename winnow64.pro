@@ -80,11 +80,15 @@ QT += multimediawidgets
 QT += concurrent
 
 HEADERS += Cache/cachedata.h \
+    FocusStack/FSFusionWaveletTemplates.h \
     FocusStack/fs.h \
     FocusStack/fsalign.h \
     FocusStack/fsdepth.h \
     FocusStack/fsfocus.h \
     FocusStack/fsfusion.h \
+    FocusStack/fsfusionmerge.h \
+    FocusStack/fsfusionreassign.h \
+    FocusStack/fsfusionwavelet.h \
     FocusStack/fsgray.h \
     FocusStack/fsloader.h \
     FocusStack/fsrunner.h
@@ -138,6 +142,8 @@ HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
 HEADERS += File/hoverdelegate.h
 HEADERS += File/ingest.h
+
+HEADERS += FocusStack/wavelet_opencl_kernels.cl
 
 HEADERS += FocusStack/Contracts/IAlign.h
 HEADERS += FocusStack/Contracts/IDepthMap.h
@@ -194,7 +200,6 @@ HEADERS += FocusStack/PetteriModular/Options/options.h
 HEADERS += FocusStack/PetteriModular/View/3dpreview.h
 HEADERS += FocusStack/PetteriModular/Wave/wavelet.h
 HEADERS += FocusStack/PetteriModular/Wave/wavelet_opencl.h
-HEADERS += FocusStack/PetteriModular/Wave/wavelet_opencl_kernels.cl
 HEADERS += FocusStack/PetteriModular/Wave/wavelet_templates.h
 HEADERS += FocusStack/PetteriModular/Wrappers/petterialignworker.h
 HEADERS += FocusStack/PetteriModular/Wrappers/petteridepthmapworker.h
@@ -320,6 +325,9 @@ SOURCES += Cache/cachedata.cpp \
     FocusStack/fsdepth.cpp \
     FocusStack/fsfocus.cpp \
     FocusStack/fsfusion.cpp \
+    FocusStack/fsfusionmerge.cpp \
+    FocusStack/fsfusionreassign.cpp \
+    FocusStack/fsfusionwavelet.cpp \
     FocusStack/fsgray.cpp \
     FocusStack/fsloader.cpp \
     FocusStack/fsrunner.cpp

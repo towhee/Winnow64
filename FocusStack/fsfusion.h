@@ -1,33 +1,34 @@
+// FSFusion.h
 #ifndef FSFUSION_H
 #define FSFUSION_H
 
-#include <QString>
-#include <atomic>
-#include <functional>
+#include <opencv2/core.hpp>
+#include <vector>
 
-namespace FSFusion {
-
-struct Options
+class FSFusion
 {
-    bool write16Bit      = true;
-    bool saveDebug       = false;
-    int  numThreads      = 0;
-    // future: enum Method { PMax, DMap, PMax2, EmulateZerene, ... }
+public:
+    struct Options
+    {
+        bool useOpenCL  = true; // GPU wavelet acceleration via cv::UMat
+        int  consistency = 1;    // 0 = off, 1 = subband denoise, 2 = +neighbour denoise
+    };
+
+    /*
+     * Petteri-style PMax fusion:
+     *  - grayImgs  : aligned grayscale 8U (one per slice, all same size)
+     *  - colorImgs : aligned color 8UC3 or 16UC3 (same count/size as gray)
+     *  - opt       : see above
+     *  - outputColor8 : final fused RGB 8-bit
+     *  - depthIndex16 : (optional) 16U index map (0..N-1) indicating which slice won
+     *
+     * Returns false on any error (size/type mismatch, empty input, etc).
+     */
+    static bool fuseStack(const std::vector<cv::Mat> &grayImgs,
+                          const std::vector<cv::Mat> &colorImgs,
+                          const Options &opt,
+                          cv::Mat &outputColor8,
+                          cv::Mat &depthIndex16);
 };
-
-using ProgressCallback = std::function<void(int)>;
-using StatusCallback   = std::function<void(const QString &message, bool isError)>;
-
-// Input:  alignedFolder (images), depthFolder (depth_index/preview)
-// Output: fused result(s) in fusionFolder
-bool run(const QString    &alignedFolder,
-         const QString    &depthFolder,
-         const QString    &fusionFolder,
-         const Options    &opt,
-         std::atomic_bool *abortFlag,
-         ProgressCallback  progressCb,
-         StatusCallback    statusCb);
-
-} // namespace FSFusion
 
 #endif // FSFUSION_H

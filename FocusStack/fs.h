@@ -8,6 +8,9 @@
 #include <functional>
 #include <vector>
 
+// Forward declarations
+namespace cv { class Mat; }
+
 class FS : public QObject
 {
     Q_OBJECT
@@ -21,6 +24,8 @@ public:
         bool enableFocusMaps  = true;
         bool enableDepthMap   = true;
         bool enableFusion     = true;
+
+        bool enableOpenCL     = true;
 
         // You can extend these later (contrast, WB flags, etc.)
     };
@@ -83,7 +88,7 @@ private:
     void incrementProgress();
 
     // Callback function passed to stages
-    std::function<void(const QString &stage)> m_progressCallback;
+    // std::function<void(const QString &stage)> m_progressCallback;
 };
 
 #endif // FS_H
