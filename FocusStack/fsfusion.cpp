@@ -52,10 +52,16 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
                          const std::vector<cv::Mat> &colorImgs,
                          const Options &opt,
                          cv::Mat &outputColor8,
-                         cv::Mat &depthIndex16)
+                         cv::Mat &depthIndex16,
+                         ProgressCallback progressCallback)
 {
     QString srcFun = "FSFusion::fuseStack";
     G::log(srcFun, "Start, validate gray and color images");
+
+    auto tick = [&]() {
+        if (progressCallback) progressCallback();
+    };
+
     const int N = static_cast<int>(grayImgs.size());
     if (N == 0 || N != static_cast<int>(colorImgs.size()))
         return false;
@@ -99,7 +105,8 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
 
     for (int i = 0; i < N; ++i)
     {
-        qDebug() << "Forward wavelet per slice" << i;
+        G::log(srcFun, "Forward wavelet per slice " + QString::number(i));
+        tick();
         if (!FSFusionWavelet::forward(grayP[i], opt.useOpenCL, wavelets[i]))
             return false;
     }
@@ -108,6 +115,7 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
     // 2. Merge wavelet stacks → mergedWavelet + depthIndex16
     // --------------------------------------------------------------------
     G::log(srcFun, "Merge wavelet stacks");
+    tick();
     cv::Mat mergedWavelet;
 
     if (!FSFusionMerge::merge(wavelets,
@@ -122,6 +130,7 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
     // 3. Inverse wavelet → fusedGray8 (still padded size)
     // --------------------------------------------------------------------
     G::log(srcFun, "Inverse wavelet");
+    tick();
     cv::Mat fusedGray8;
 
     if (!FSFusionWavelet::inverse(mergedWavelet,
@@ -135,6 +144,7 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
     // 4. Build color map using *padded* grayscale + padded RGB images
     // --------------------------------------------------------------------
     G::log(srcFun, "Build color map");
+    tick();
     std::vector<FSFusionReassign::ColorEntry> colorEntries;
     std::vector<uint8_t> counts;
 
@@ -150,6 +160,7 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
     // 5. Apply color reassignment to padded fused grayscale
     // --------------------------------------------------------------------
     G::log(srcFun, "Apply color reasignment");
+    tick();
     cv::Mat paddedColorOut;
 
     if (!FSFusionReassign::applyColorMap(fusedGray8,

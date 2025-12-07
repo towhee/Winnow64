@@ -84,7 +84,7 @@ bool forward(const cv::Mat &inputGray8,
 
     if (!useOpenCL)
     {
-        qDebug() << "FSFusionWavelet Processing forward using CPU";
+        // qDebug() << "FSFusionWavelet Processing forward using CPU";
         // CPU path: Wavelet<cv::Mat>
         cv::Mat tmp(gray8.rows, gray8.cols, CV_32FC2);
         waveletOut.create(gray8.rows, gray8.cols, CV_32FC2);
@@ -102,7 +102,7 @@ bool forward(const cv::Mat &inputGray8,
     }
     else
     {
-        qDebug() << "FSFusionWavelet Processing forward using OpenCL";
+        // qDebug() << "FSFusionWavelet Processing forward using OpenCL";
         // OpenCL path: Wavelet<cv::UMat>
         cv::Mat tmp(gray8.rows, gray8.cols, CV_32FC2);
 

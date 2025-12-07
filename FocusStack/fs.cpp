@@ -123,21 +123,26 @@ bool FS::detectSkips()
     return true;
 }
 
+void FS::setTotalProgress()
+{
+    int n = m_inputPaths.count();
+    m_total = 0;
+    if (m_options.enableAlign && !m_skipAlign)
+        m_total += ((n - 1) * 2 + 1);
+    if (m_options.enableFusion && !m_skipFusion)
+        m_total += ((n * 2) + 5);
+}
+
 void FS::incrementProgress()
 {
-    // int current = ++m_progress;
+    QString srcFun = "FS::incrementProgress";
     emit progress(++m_progress, m_total);
-    qDebug() << "" << m_progress;
+    // G::log(srcFun, QString::number(m_progress));
 }
 
 bool FS::run()
 {
     m_abortRequested = false;
-
-    int n = m_inputPaths.count();
-    m_progress = -1;
-    int alignTotal = (n - 1) * 2 + 1;
-    m_total = alignTotal;
 
     if (m_inputPaths.isEmpty())
     {
@@ -152,6 +157,8 @@ bool FS::run()
     // 2. Decide which stages to skip
     if (!detectSkips())
         return false;
+
+    setTotalProgress();
 
     // 3. Run ALIGN
     if (m_options.enableAlign && !m_skipAlign)
@@ -384,6 +391,7 @@ bool FS::runFusion()
     }
 
     G::log(srcFun, "Load aligned images from disk");
+    // incrementProgress();
     // Load aligned images from disk
     std::vector<cv::Mat> grayImgs(N);
     std::vector<cv::Mat> colorImgs(N);
@@ -401,6 +409,7 @@ bool FS::runFusion()
             return false;
         }
 
+        G::log(srcFun, "Load aligned images from disk " + QString::number(i));
         incrementProgress();
     }
 
@@ -413,12 +422,18 @@ bool FS::runFusion()
     cv::Mat fusedColor8;
     cv::Mat depthIndex16;
 
+    // Lambda that bumps the FS progress
+    auto progressCb = [this]() {
+        this->incrementProgress();
+    };
+
     G::log(srcFun, "Call FSFusion::fuseStack");
     if (!FSFusion::fuseStack(grayImgs,
                              colorImgs,
                              opt,
                              fusedColor8,
-                             depthIndex16))
+                             depthIndex16,
+                             progressCb))
     {
         emitStageStatus(stage, "Fusion failed", true);
         qDebug() << srcFun << "FSFusion::fuseStack failed";
@@ -426,16 +441,20 @@ bool FS::runFusion()
     }
 
     G::log(srcFun, "Save depth_index.png");
+    incrementProgress();
     // Save depth index (optional – or move to runDepthMap)
     QString depthPath = m_depthFolder + "/depth_index.png";
     cv::imwrite(depthPath.toStdString(), depthIndex16);
 
     G::log(srcFun, "Save fused image");
+    incrementProgress();
     // Save fused color result (8-bit; you can later adapt to 16-bit output)
     QString fusedPath = m_fusionFolder + "/fused.tif";
     cv::imwrite(fusedPath.toStdString(), fusedColor8);
 
     emitStageStatus(stage, "Fusion complete.");
+    G::log(srcFun, "Fusion complete.");
+    G::log(srcFun, "Fusion complete.");
     return true;
 }
 
