@@ -86,6 +86,7 @@ private:
     int m_progress = -1;
     int m_total = 0;
     void incrementProgress();
+    void setTotalProgress();
 
     // Callback function passed to stages
     // std::function<void(const QString &stage)> m_progressCallback;

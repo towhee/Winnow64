@@ -4,10 +4,14 @@
 
 #include <opencv2/core.hpp>
 #include <vector>
+#include <functional>
 
 class FSFusion
 {
 public:
+
+    using ProgressCallback = std::function<void()>;
+
     struct Options
     {
         bool useOpenCL  = true; // GPU wavelet acceleration via cv::UMat
@@ -28,7 +32,8 @@ public:
                           const std::vector<cv::Mat> &colorImgs,
                           const Options &opt,
                           cv::Mat &outputColor8,
-                          cv::Mat &depthIndex16);
+                          cv::Mat &depthIndex16,
+                          ProgressCallback progressCallback = ProgressCallback());
 };
 
 #endif // FSFUSION_H
