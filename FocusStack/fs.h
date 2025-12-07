@@ -8,6 +8,8 @@
 #include <functional>
 #include <vector>
 
+#include <opencv2/core.hpp>
+
 // Forward declarations
 namespace cv { class Mat; }
 
@@ -18,7 +20,7 @@ public:
     struct Options
     {
         bool overwriteExisting = false;
-        bool keepIntermediates = true;
+        bool keepIntermediates = false;
 
         bool enableAlign      = true;
         bool enableFocusMaps  = true;
@@ -49,6 +51,7 @@ private:
     // Folder creation and skip detection
     bool prepareFolders();
     bool detectSkips();
+    bool canUseInMemoryAligned(int count) const;
 
     // Pipeline stages
     bool runAlign();
@@ -78,11 +81,15 @@ private:
 
     std::atomic_bool m_abortRequested = false;
 
-    // --- Alignment output paths (needed for the new FSAlignStage) ---
+    // Alignment output paths (needed for the new FSAlignStage)
     std::vector<QString> m_alignedColor;
     std::vector<QString> m_alignedGray;
 
-    // progress
+    // In-memory aligned images (optional fast path for runFusion)
+    std::vector<cv::Mat> m_alignedColorMats;
+    std::vector<cv::Mat> m_alignedGrayMats;
+
+    // Progress
     int m_progress = -1;
     int m_total = 0;
     void incrementProgress();

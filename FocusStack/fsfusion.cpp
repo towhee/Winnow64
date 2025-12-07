@@ -89,18 +89,14 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
         G::log(srcFun, "Padding " + QString::number(i));
         grayP[i]  = padForWavelet(grayImgs[i]);
         colorP[i] = padForWavelet(colorImgs[i]);  // Must match grayscale geometry
-        G::log(srcFun, "Padded " + QString::number(i));
     }
 
-    G::log(srcFun, "paddedSize = grayP[0].size()");
     const cv::Size paddedSize = grayP[0].size();
-    G::log(srcFun, "padded done");
 
     // --------------------------------------------------------------------
     // 1. Forward wavelet per slice
     // --------------------------------------------------------------------
     G::log(srcFun, "Forward wavelet per slice");
-    qDebug() << "Forward wavelet per slice";
     std::vector<cv::Mat> wavelets(N);
 
     for (int i = 0; i < N; ++i)
