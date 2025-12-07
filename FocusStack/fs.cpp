@@ -130,7 +130,7 @@ void FS::setTotalProgress()
     if (m_options.enableAlign && !m_skipAlign)
         m_total += ((n - 1) * 2 + 1);
     if (m_options.enableFusion && !m_skipFusion)
-        m_total += ((n * 2) + 5);
+        m_total += ((n * 2) + 4);
 }
 
 void FS::incrementProgress()
@@ -372,6 +372,11 @@ bool FS::runDepthMap()
 }
 
 bool FS::runFusion()
+/*
+    - Load the aligned grayscale and color images
+    - Run FSFusion::fuseStack
+    - Save fused image
+*/
 {
     QString srcFun = "FS::runFusion";
     const QString stage = "Fusion";
@@ -390,12 +395,10 @@ bool FS::runFusion()
         return false;
     }
 
-    G::log(srcFun, "Load aligned images from disk");
-    // incrementProgress();
     // Load aligned images from disk
+    G::log(srcFun, "Load aligned images from disk");
     std::vector<cv::Mat> grayImgs(N);
     std::vector<cv::Mat> colorImgs(N);
-
     for (int i = 0; i < N; ++i)
     {
         grayImgs[i]  = cv::imread(m_alignedGray[i].toStdString(),  cv::IMREAD_GRAYSCALE);
@@ -413,8 +416,8 @@ bool FS::runFusion()
         incrementProgress();
     }
 
-    G::log(srcFun, "Call FSFusion");
     // Call FSFusion
+    G::log(srcFun, "Call FSFusion");
     FSFusion::Options opt;
     opt.useOpenCL   = true;  // or true if you want GPU & have OCL configured
     opt.consistency = 2;      // Petteri full consistency
@@ -422,12 +425,11 @@ bool FS::runFusion()
     cv::Mat fusedColor8;
     cv::Mat depthIndex16;
 
-    // Lambda that bumps the FS progress
+    // Lambda that increments progress
     auto progressCb = [this]() {
         this->incrementProgress();
     };
 
-    G::log(srcFun, "Call FSFusion::fuseStack");
     if (!FSFusion::fuseStack(grayImgs,
                              colorImgs,
                              opt,
@@ -440,11 +442,11 @@ bool FS::runFusion()
         return false;
     }
 
-    G::log(srcFun, "Save depth_index.png");
-    incrementProgress();
-    // Save depth index (optional – or move to runDepthMap)
-    QString depthPath = m_depthFolder + "/depth_index.png";
-    cv::imwrite(depthPath.toStdString(), depthIndex16);
+    // G::log(srcFun, "Save depth_index.png");
+    // incrementProgress();
+    // // Save depth index (optional – or move to runDepthMap)
+    // QString depthPath = m_depthFolder + "/depth_index.png";
+    // cv::imwrite(depthPath.toStdString(), depthIndex16);
 
     G::log(srcFun, "Save fused image");
     incrementProgress();

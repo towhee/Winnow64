@@ -87,9 +87,6 @@ private:
     int m_total = 0;
     void incrementProgress();
     void setTotalProgress();
-
-    // Callback function passed to stages
-    // std::function<void(const QString &stage)> m_progressCallback;
 };
 
 #endif // FS_H
