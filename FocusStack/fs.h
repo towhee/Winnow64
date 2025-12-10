@@ -111,8 +111,8 @@ private:
     std::vector<cv::Mat> alignedGrayMats;
 
     // Focus maps and depth map
-    std::vector<cv::Mat> focusMaps;    // CV_32F per slice
-    cv::Mat              depthIndex16Mat; // CV_16U depth indices
+    std::vector<cv::Mat> focusMaps;         // CV_32F per slice
+    cv::Mat              depthIndex16Mat;   // CV_16U depth indices
 
     // Progress
     int progressCount = -1;
