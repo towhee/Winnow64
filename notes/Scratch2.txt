@@ -1,11 +1,296 @@
-namespace FStack {
+to do
+- abort
+- flags (incl useDepthMap in runFusion)
 
-} // namespace FStack
+enableAlign             Only run Align if true
+existsAlign             Align graysale and color files exist
+overwriteAlign          Overwrite existing files
+skipAlign               Skip if Align graysale and color files exist
 
-If you want, I can now generate:
 
-✅ PetteriFocusMaps complete wiring
-✅ PetteriDepthMap complete wiring
-✅ PetteriPMaxFusion complete wiring
-✅ PipelineWavePMax template
-✅ Or help convert your old MW::generateFocusStack to use pipelines cleanly
+
+
+
+
+
+bool FS::runFocusMaps()
+/*
+    - Use aligned grayscale images (in memory if available, otherwise from disk)
+    - Compute multi-level wavelet energy focus maps for each slice
+    - Cache focus maps in memory and optionally save them when keepIntermediates == true
+*/
+{
+    QString srcFun = "FS::runFocusMaps";
+    const QString stage = "FocusMaps";
+    G::log(srcFun, "Starting focus maps…");
+
+    if (m_inputPaths.isEmpty())
+    {
+        status("No input images");
+        return false;
+    }
+
+    const int N = m_inputPaths.size();
+    if (N < 2)
+    {
+        status( "Need at least 2 images for focus maps");
+        return false;
+    }
+
+    m_focusMaps.clear();
+    m_focusMaps.resize(N);
+
+    auto getAlignedGray = [&](int i) -> cv::Mat
+    {
+        if (i >= 0 &&
+            i < m_alignedGrayMats.size() &&
+            !m_alignedGrayMats[i].empty())
+        {
+            return m_alignedGrayMats[i];
+        }
+
+        if (i >= 0 && i < m_alignedGray.size())
+        {
+            cv::Mat gray = cv::imread(m_alignedGray[i].toStdString(),
+                                      cv::IMREAD_GRAYSCALE);
+            return gray;
+        }
+
+        return cv::Mat();
+    };
+
+    for (int i = 0; i < N; ++i)
+    {
+        if (m_abortRequested)
+            return false;
+
+        cv::Mat gray = getAlignedGray(i);
+        if (gray.empty())
+        {
+            status(QString("Missing aligned gray for slice %1").arg(i));
+            return false;
+        }
+
+        G::log(srcFun, "Forward wavelet for slice " + QString::number(i));
+
+        cv::Mat wavelet;
+        if (!FSFusionWavelet::forward(gray,
+                                      o.enableOpenCL,
+                                      wavelet))
+        {
+            status(QString("Wavelet decomposition failed for slice %1").arg(i));
+            return false;
+        }
+
+        if (wavelet.type() != CV_32FC2)
+        {
+            status(QString("Unexpected wavelet type for slice %1").arg(i));
+            return false;
+        }
+
+        cv::Mat focus(wavelet.rows, wavelet.cols, CV_32F);
+
+        for (int y = 0; y < wavelet.rows; ++y)
+        {
+            const cv::Vec2f *wRow = wavelet.ptr<cv::Vec2f>(y);
+            float *fRow = focus.ptr<float>(y);
+
+            for (int x = 0; x < wavelet.cols; ++x)
+            {
+                const cv::Vec2f v = wRow[x];
+                fRow[x] = v[0] * v[0] + v[1] * v[1];
+            }
+        }
+
+        // Compress dynamic range for visualization and 16-bit export
+        cv::sqrt(focus, focus);
+
+        m_focusMaps[i] = focus;
+
+        double minF, maxF;
+        cv::minMaxLoc(focus, &minF, &maxF);
+        G::log("FS::runFocusMaps",
+               QString("Slice %1 focus min=%2 max=%3")
+                   .arg(i).arg(minF).arg(maxF));
+
+        if (o.keepIntermediates)
+        {
+            double minVal = 0.0;
+            double maxVal = 0.0;
+            cv::minMaxLoc(focus, &minVal, &maxVal);
+
+            cv::Mat focus16;
+            if (maxVal <= minVal)
+            {
+                focus16 = cv::Mat(focus.rows, focus.cols, CV_16U, cv::Scalar(0));
+            }
+            else
+            {
+                double scale = 65535.0 / (maxVal - minVal);
+                double shift = -minVal * scale;
+                focus.convertTo(focus16, CV_16U, scale, shift);
+            }
+
+            QFileInfo fi(m_inputPaths[i]);
+            QString base = fi.completeBaseName();
+            QString outPath = m_focusFolder + "/focus_" + base + ".tif";
+            cv::imwrite(outPath.toStdString(), focus16);
+        }
+
+        incrementProgress();
+    }
+
+    QFile f(m_focusFolder + "/focus_done.txt");
+    if (f.open(QIODevice::WriteOnly))
+    {
+        f.write("ok");
+        f.close();
+    }
+
+    status("Focus maps complete.");
+    return true;
+}
+
+bool FS::runFusion()
+/*
+    - Load the aligned grayscale and color images
+      (prefer in-memory Mats from runAlign, fall back to disk if needed)
+    - Run FSFusion::fuseStack
+    - Save fused image
+*/
+{
+    QString srcFun = "FS::runFusion";
+    const QString stage = "Fusion";
+    G::log(srcFun, "Starting fusion…");
+    status("Starting fusion...");
+
+    QElapsedTimer t;
+    t.start();
+
+    if (m_alignedGray.empty() || m_alignedColor.empty())
+    {
+        status("No aligned images available");
+        return false;
+    }
+
+    const int N = m_alignedGray.size();
+
+    // Get Aligned grayscale and color images
+    std::vector<cv::Mat> grayImgs;
+    std::vector<cv::Mat> colorImgs;
+    grayImgs.reserve(N);
+    colorImgs.reserve(N);
+
+    bool useInMemory = canUseInMemoryAligned(N);
+    if (useInMemory)
+    {
+        G::log(srcFun, "Using in-memory aligned images");
+        for (int i = 0; i < N; ++i)
+        {
+            grayImgs.push_back(m_alignedGrayMats[i]);
+            colorImgs.push_back(m_alignedColorMats[i]);
+        }
+    }
+    else
+    {
+        G::log(srcFun, "Load aligned images from disk");
+
+        for (int i = 0; i < N; ++i)
+        {
+            const QString &grayPath  = m_alignedGray[i];
+            const QString &colorPath = m_alignedColor[i];
+
+            G::log(srcFun, "Load aligned images from disk " + QString::number(i));
+
+            cv::Mat gray  = cv::imread(grayPath.toStdString(),  cv::IMREAD_GRAYSCALE);
+            cv::Mat color = cv::imread(colorPath.toStdString(), cv::IMREAD_UNCHANGED);
+
+            if (gray.empty() || color.empty())
+            {
+                status(QString("Failed to load aligned image %1").arg(i));
+                return false;
+            }
+
+            grayImgs.push_back(gray);
+            colorImgs.push_back(color);
+
+            incrementProgress();
+        }
+    }
+
+    /*
+    const int N = static_cast<int>(m_alignedGray.size());
+    if (N != static_cast<int>(m_alignedColor.size()))
+    {
+        emitStageStatus(stage, "Aligned gray/color count mismatch", true);
+        return false;
+    }
+
+    // Load aligned images from disk
+    G::log(srcFun, "Load aligned images from disk");
+    std::vector<cv::Mat> grayImgs(N);
+    std::vector<cv::Mat> colorImgs(N);
+    for (int i = 0; i < N; ++i)
+    {
+        grayImgs[i]  = cv::imread(m_alignedGray[i].toStdString(),  cv::IMREAD_GRAYSCALE);
+        colorImgs[i] = cv::imread(m_alignedColor[i].toStdString(), cv::IMREAD_UNCHANGED);
+
+        if (grayImgs[i].empty() || colorImgs[i].empty())
+        {
+            emitStageStatus(stage,
+                            QString("Failed to load aligned image %1").arg(i),
+                            true);
+            return false;
+        }
+
+        G::log(srcFun, "Load aligned images from disk " + QString::number(i));
+        incrementProgress();
+    }
+    */
+
+    // Call FSFusion
+    FSFusion::Options opt;
+    opt.useOpenCL   = true;  // or true if you want GPU & have OCL configured
+    opt.consistency = 2;      // Petteri full consistency
+
+    cv::Mat fusedColor8;
+    cv::Mat depthIndex16;
+
+    // Lambda that increments progress
+    auto progressCb = [this]() {
+        this->incrementProgress();
+    };
+
+    if (!FSFusion::fuseStack(grayImgs,
+                             colorImgs,
+                             opt,
+                             fusedColor8,
+                             depthIndex16,
+                             progressCb))
+    {
+        status("Fusion failed");
+        qDebug() << srcFun << "FSFusion::fuseStack failed";
+        return false;
+    }
+
+    // G::log(srcFun, "Save depth_index.png");
+    // incrementProgress();
+    // // Save depth index (optional – or move to runDepthMap)
+    // QString depthPath = m_depthFolder + "/depth_index.png";
+    // cv::imwrite(depthPath.toStdString(), depthIndex16);
+
+    G::log(srcFun, "Save fused image");
+    incrementProgress();
+    // Save fused color result (8-bit; you can later adapt to 16-bit output)
+    QString fusedPath = m_fusionFolder + "/fused.tif";
+    cv::imwrite(fusedPath.toStdString(), fusedColor8);
+
+    status("Fusion complete.");
+
+    QString timeToFuse = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
+    G::log(srcFun, "Fusion completed in " + timeToFuse);
+    G::log(srcFun, "Fusion complete.");
+
+    return true;
+}
+

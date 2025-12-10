@@ -10,24 +10,35 @@
 
 #include <opencv2/core.hpp>
 
-// Forward declarations
-namespace cv { class Mat; }
-
 class FS : public QObject
 {
     Q_OBJECT
 public:
+    /*
+        enable      Run the stage
+        preview     Make preview files
+        overwrite   Overwrite previews
+    */
     struct Options
     {
-        bool overwriteExisting = false;
-        bool keepIntermediates = false;
+        QString method         = "";
+        bool overwriteExisting  = false;
+        bool keepIntermediates  = true;
 
-        bool enableAlign      = true;
-        bool enableFocusMaps  = true;
-        bool enableDepthMap   = true;
-        bool enableFusion     = true;
+        bool enableAlign        = true;
+        bool previewAlign       = true;
+        bool overwriteAlign     = true;
+        bool enableFocusMaps    = true;
+        bool previewFocusMaps   = true;
+        bool overwriteFocusMaps = true;
+        bool enableDepthMap     = true;
+        bool previewDepthMap    = true;
+        bool overwriteDepthMap  = true;
+        bool enableFusion       = true;
+        bool previewFusion      = true;
+        bool overWriteFusion    = true;
 
-        bool enableOpenCL     = true;
+        bool enableOpenCL       = true;
 
         // You can extend these later (contrast, WB flags, etc.)
     };
@@ -38,6 +49,7 @@ public:
     void setInput(const QStringList &paths);            // source paths
     void setProjectRoot(const QString &rootPath);       // folder containing align/focus/depth/fusion
     void setOptions(const Options &opt);
+    void diagnostics();
 
     // Main pipeline API
     bool run();     // synchronous
@@ -48,10 +60,13 @@ signals:
     void progress(int current, int total);
 
 private:
+    std::atomic_bool abortRequested = false;
+
     // Folder creation and skip detection
     bool prepareFolders();
-    bool detectSkips();
-    bool canUseInMemoryAligned(int count) const;
+    void setExistance();
+    bool setParameters();
+    bool validAlignMatsAvailable(int count) const;
 
     // Pipeline stages
     bool runAlign();
@@ -60,38 +75,48 @@ private:
     bool runFusion();
 
     // helpers for UI
-    void emitStageStatus(const QString &stage, const QString &msg, bool isError = false);
+    void status(const QString &msg);
 
-    QStringList m_inputPaths;
-    QString     m_projectRoot;
+    QStringList inputPaths;
+    QString     projectRoot;
 
     // Stage folders (automatically set from projectRoot)
-    QString m_alignFolder;
-    QString m_focusFolder;
-    QString m_depthFolder;
-    QString m_fusionFolder;
+    QString alignFolder;
+    QString focusFolder;
+    QString depthFolder;
+    QString fusionFolder;
 
-    Options m_options;
+    Options o;
 
     // Skip flags
-    bool m_skipAlign     = false;
-    bool m_skipFocusMaps = false;
-    bool m_skipDepthMap  = false;
-    bool m_skipFusion    = false;
+    bool skipAlign     = false;
+    bool skipFocusMaps = false;
+    bool skipDepthMap  = false;
+    bool skipFusion    = false;
 
-    std::atomic_bool m_abortRequested = false;
+    // Exist flags
+    // bool alignGrayscaleExists = false;
+    // bool alignColorExists     = false;
+    bool alignExists          = false;
+    bool focusMapsExist       = false;
+    bool depthMapExists       = false;
+    bool fusionExists         = false;
 
-    // Alignment output paths (needed for the new FSAlignStage)
-    std::vector<QString> m_alignedColor;
-    std::vector<QString> m_alignedGray;
+    // Alignment output paths
+    std::vector<QString> alignedColorPaths;
+    std::vector<QString> alignedGrayPaths;
 
     // In-memory aligned images (optional fast path for runFusion)
-    std::vector<cv::Mat> m_alignedColorMats;
-    std::vector<cv::Mat> m_alignedGrayMats;
+    std::vector<cv::Mat> alignedColorMats;
+    std::vector<cv::Mat> alignedGrayMats;
+
+    // Focus maps and depth map
+    std::vector<cv::Mat> focusMaps;    // CV_32F per slice
+    cv::Mat              depthIndex16Mat; // CV_16U depth indices
 
     // Progress
-    int m_progress = -1;
-    int m_total = 0;
+    int progressCount = -1;
+    int progressTotal = 0;
     void incrementProgress();
     void setTotalProgress();
 };

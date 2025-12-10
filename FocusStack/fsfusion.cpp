@@ -53,7 +53,8 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
                          const Options &opt,
                          cv::Mat &outputColor8,
                          cv::Mat &depthIndex16,
-                         ProgressCallback progressCallback)
+                         ProgressCallback progressCallback,
+                         const cv::Mat *reuseDepth)
 {
     QString srcFun = "FSFusion::fuseStack";
     G::log(srcFun, "Start, validate gray and color images");
@@ -62,6 +63,7 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
         if (progressCallback) progressCallback();
     };
 
+    // Validation
     const int N = static_cast<int>(grayImgs.size());
     if (N == 0 || N != static_cast<int>(colorImgs.size()))
         return false;
@@ -75,6 +77,13 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
         if (grayImgs[i].size() != orig || colorImgs[i].size() != orig)
             return false;
     }
+
+    bool haveExternalDepth = (reuseDepth && !reuseDepth->empty());
+
+    if (haveExternalDepth)
+        G::log("FSFusion::fuseStack", "Using supplied depth map");
+    else
+        G::log("FSFusion::fuseStack", "Computing depth internally");
 
     // --------------------------------------------------------------------
     // 0. Pad all grayscale + color images BEFORE processing

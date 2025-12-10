@@ -10,17 +10,18 @@ namespace FSFocus {
 
 struct Options
 {
-    int  downsampleFactor = 1;
-    bool saveDebug        = false;
-    int  numThreads       = 0; // 0 = auto
-    // future: enum Method { Laplacian, EmulateZerene, ... }
+    int  downsampleFactor   = 1;
+    int  numThreads         = 0;   // 0 = auto
+    bool useOpenCL          = true;
+
+    bool preview            = false;      // write numeric logs
+    bool saveWaveletPreview = false;      // old mosaic visualization
+
 };
 
 using ProgressCallback = std::function<void(int)>;
-using StatusCallback   = std::function<void(const QString &message, bool isError)>;
+using StatusCallback   = std::function<void(const QString &msg, bool isError)>;
 
-// Input:  aligned images in alignFolder
-// Output: per-slice focus maps in focusFolder
 bool run(const QString    &alignFolder,
          const QString    &focusFolder,
          const Options    &opt,

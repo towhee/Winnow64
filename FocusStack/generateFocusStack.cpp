@@ -75,7 +75,7 @@ void MW::generateFocusStackFromSelection()
         return;
     }
 
-    QString method = "FusionPMaxBasic";
+    QString method = "PMax";
     // QString method = "LegacyPetteri";
     generateFocusStack(paths, method, src);
 }
@@ -106,17 +106,30 @@ void MW::generateFocusStack(const QStringList paths,
     pipeline->moveToThread(thread);
 
     // Set input + project root *before* thread runs
-    QString projectRoot = srcFolder + "/" + info.completeBaseName() + "_FS";
+    QString projectRoot = srcFolder + "/" + info.completeBaseName() + "_" + method;
     pipeline->setProjectRoot(projectRoot);
     pipeline->setInput(paths);
 
     FS::Options opt;
+    opt.method              = method;
+
     opt.enableAlign         = true;
-    opt.enableFocusMaps     = false;   // until wired
+    opt.previewAlign        = false;
+    opt.overwriteAlign      = false;
+
+    opt.enableFocusMaps     = false;
+    opt.previewFocusMaps    = true;
+    opt.overwriteFocusMaps  = true;
+
     opt.enableDepthMap      = false;
+    opt.previewDepthMap     = true;
+    opt.overwriteDepthMap   = true;
+
     opt.enableFusion        = true;
+    opt.previewFusion       = true;
+    opt.overWriteFusion     = false;
+
     opt.enableOpenCL        = true;
-    opt.overwriteExisting   = false;
     pipeline->setOptions(opt);
 
     // When the thread starts → run the FS pipeline
