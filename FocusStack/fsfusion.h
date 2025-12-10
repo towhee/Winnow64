@@ -33,7 +33,8 @@ public:
                           const Options &opt,
                           cv::Mat &outputColor8,
                           cv::Mat &depthIndex16,
-                          ProgressCallback progressCallback = ProgressCallback());
+                          ProgressCallback progressCallback = ProgressCallback(),
+                          const cv::Mat *reuseDepth = nullptr);
 };
 
 #endif // FSFUSION_H

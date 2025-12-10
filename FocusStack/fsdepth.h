@@ -9,7 +9,7 @@ namespace FSDepth {
 
 struct Options
 {
-    bool savePreview = true;
+    bool preview = true;
     int  numThreads  = 0;
 };
 

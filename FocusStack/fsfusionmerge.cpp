@@ -162,6 +162,7 @@ bool merge(const std::vector<cv::Mat> &wavelets,
     const int N = static_cast<int>(wavelets.size());
     const cv::Size size = wavelets[0].size();
 
+    // Validate wavelets
     for (int i = 0; i < N; ++i)
     {
         if (wavelets[i].empty() ||
