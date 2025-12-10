@@ -442,16 +442,16 @@ bool FS::runFocusMaps()
     fopt.preview            = o.overwriteFocusMaps;
     fopt.numThreads         = 0;
     fopt.useOpenCL          = o.enableOpenCL;
+    fopt.keepIntermediates  = o.keepIntermediates;
+    fopt.preview            = o.previewFocusMaps;
 
     auto progressCb = [this](int)
     {
-        Q_UNUSED(this);
         incrementProgress();
     };
 
-    auto statusCb = [this](const QString &message, bool isError)
+    auto statusCb = [this](const QString &message, bool /*isError*/)
     {
-        Q_UNUSED(isError);
         status(message);
     };
 
@@ -460,7 +460,8 @@ bool FS::runFocusMaps()
                       fopt,
                       &abortRequested,
                       progressCb,
-                      statusCb))
+                      statusCb,
+                      &focusMaps))
     {
         status("Focus maps failed.");
         return false;
@@ -493,9 +494,8 @@ bool FS::runDepthMap()
         incrementProgress();
     };
 
-    auto statusCb = [this](const QString &message, bool isError)
+    auto statusCb = [this](const QString &message, bool /*isError*/)
     {
-        Q_UNUSED(isError);
         status(message);
     };
 
@@ -504,7 +504,9 @@ bool FS::runDepthMap()
                       dopt,
                       &abortRequested,
                       progressCb,
-                      statusCb))
+                      statusCb,
+                      &depthIndex16Mat,                  // <- filled in memory
+                      focusMaps.empty() ? nullptr: &focusMaps))
     {
         status("Depth map failed.");
         return false;

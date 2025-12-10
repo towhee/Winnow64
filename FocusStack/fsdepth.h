@@ -5,6 +5,8 @@
 #include <atomic>
 #include <functional>
 
+#include <opencv2/core.hpp>
+
 namespace FSDepth {
 
 struct Options
@@ -23,7 +25,9 @@ bool run(const QString    &focusFolder,
          const Options    &opt,
          std::atomic_bool *abortFlag,
          ProgressCallback  progressCb,
-         StatusCallback    statusCb);
+         StatusCallback    statusCb,
+         cv::Mat          *depthIndexOut,
+         const std::vector<cv::Mat> *focusMaps = nullptr);
 
 } // namespace FSDepth
 

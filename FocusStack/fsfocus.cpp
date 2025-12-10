@@ -114,102 +114,191 @@ bool run(const QString &alignFolder,
          const Options &opt,
          std::atomic_bool *abortFlag,
          ProgressCallback progressCb,
-         StatusCallback statusCb)
+         StatusCallback statusCb,
+         std::vector<cv::Mat> *focusMapsOut)
 {
     QString srcFun = "FSFocus::run";
 
+    // ------------------------------------------------------------
+    // Validate input / output folders
+    // ------------------------------------------------------------
     QDir inDir(alignFolder);
-    QDir outDir(focusFolder);
-
     if (!inDir.exists()) {
         if (statusCb) statusCb("FSFocus: Align folder missing: " + alignFolder, true);
         return false;
     }
+
+    QDir outDir(focusFolder);
     if (!outDir.exists() && !outDir.mkpath(".")) {
         if (statusCb) statusCb("FSFocus: Cannot create focus folder: " + focusFolder, true);
         return false;
     }
 
+    // Enumerate aligned grayscale images
     QFileInfoList files = inDir.entryInfoList(
-        {"gray_*.tif","gray_*.tiff","gray_*.png","gray_*.jpg","gray_*.jpeg"},
-        QDir::Files, QDir::Name);
+        {"gray_*.tif", "gray_*.tiff",
+         "gray_*.png", "gray_*.jpg", "gray_*.jpeg"},
+        QDir::Files,
+        QDir::Name);
 
-    int total = files.size();
+    const int total = files.size();
     if (total == 0) {
         if (statusCb) statusCb("FSFocus: No grayscale aligned images found.", true);
         return false;
     }
 
-    if (statusCb)
+    if (statusCb) {
         statusCb(QString("FSFocus: %1 slices detected.").arg(total), false);
+    }
 
-    //--------------------------------------------------------
+    // For future use (downsampling / threading), but not used yet:
+    const int numThreads = (opt.numThreads > 0
+                                ? opt.numThreads
+                                : std::max(1, QThread::idealThreadCount()));
+    Q_UNUSED(numThreads);
+    Q_UNUSED(opt.downsampleFactor);
+
+    // If caller wants in-memory focus maps, size the vector up front
+    if (focusMapsOut) {
+        focusMapsOut->clear();
+        focusMapsOut->resize(total);
+    }
+
+    // ------------------------------------------------------------
     // Process each slice
-    //--------------------------------------------------------
-    for (int i = 0; i < total; i++)
+    // ------------------------------------------------------------
+    for (int i = 0; i < total; ++i)
     {
-        if (abortFlag && abortFlag->load()) {
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) {
             if (statusCb) statusCb("FSFocus: Aborted.", true);
             return false;
         }
 
-        G::log(srcFun, "Slice " + QString::number(i));
+        const QFileInfo fi = files[i];
+        const QString base    = fi.completeBaseName();
+        const QString srcPath = fi.absoluteFilePath();
 
-        QFileInfo fi = files[i];
-        QString base = fi.completeBaseName();
-        QString srcPath = fi.absoluteFilePath();
+        G::log(srcFun, "Slice " + QString::number(i) + " (" + base + ")");
 
+        // --------------------------------------------------------
+        // 1. Load grayscale aligned image
+        // --------------------------------------------------------
         cv::Mat gray = cv::imread(srcPath.toStdString(), cv::IMREAD_GRAYSCALE);
         if (gray.empty()) {
             if (statusCb) statusCb("FSFocus: Cannot load " + srcPath, true);
             return false;
         }
 
-        //--------------------------------------------------------
-        // Wavelet transform
-        //--------------------------------------------------------
+        // (Optional future: apply downsampleFactor here)
+
+        // --------------------------------------------------------
+        // 2. Wavelet transform → complex CV_32FC2
+        // --------------------------------------------------------
         cv::Mat wavelet;
         if (!FSFusionWavelet::forward(gray, opt.useOpenCL, wavelet)) {
             if (statusCb) statusCb("FSFocus: Wavelet failed for " + base, true);
             return false;
         }
 
+        if (wavelet.type() != CV_32FC2) {
+            if (statusCb) statusCb("FSFocus: Wavelet output type mismatch (expected CV_32FC2).", true);
+            return false;
+        }
+
+        // --------------------------------------------------------
+        // 3. Focus metric: magnitude of complex wavelet coefficients
+        //    mag32 = sqrt(real^2 + imag^2)  (CV_32F)
+        // --------------------------------------------------------
         std::vector<cv::Mat> ch(2);
         cv::split(wavelet, ch);
 
         cv::Mat mag32;
-        cv::magnitude(ch[0], ch[1], mag32);
+        cv::magnitude(ch[0], ch[1], mag32);   // CV_32F
 
-        //--------------------------------------------------------
-        // Build numeric 16U focus metric
-        //--------------------------------------------------------
-        double mn, mx;
+        double mn = 0.0, mx = 0.0;
         cv::minMaxLoc(mag32, &mn, &mx);
+        cv::Scalar meanVal = cv::mean(mag32);
 
-        cv::Mat focus16;
-        double scale = (mx > mn) ? (65535.0 / (mx - mn)) : 0.0;
-        double shift = -mn * scale;
-        mag32.convertTo(focus16, CV_16U, scale, shift);
+        G::log(srcFun,
+               QString("Slice %1 mag32 min=%2 max=%3 mean=%4")
+                   .arg(i)
+                   .arg(mn)
+                   .arg(mx)
+                   .arg(meanVal[0]));
 
-        cv::imwrite(outDir.absoluteFilePath("focus_" + base + ".tif").toStdString(),
-                    focus16);
-
-        // Preview
-        if (opt.preview) {
-            QString p;
-            p = outDir.absoluteFilePath("focus_loggray_" + base + ".png");
-            cv::imwrite(p.toStdString(), makeLogGrayPreview(mag32));
-            // p = outDir.absoluteFilePath("focus_heatmap_" + base + ".png");
-            // cv::imwrite(p.toStdString(), makeHeatPreview(mag32));
-            // p = outDir.absoluteFilePath("focus_colorslice_" + base + ".png");
-            // cv::imwrite(p.toStdString(), makeSliceColorPreview(mag32, i, total));
+        // Keep this metric in memory if requested (for FSDepth or other uses)
+        if (focusMapsOut) {
+            // Ensure correct size (defensive if caller modified it mid-run)
+            if (static_cast<int>(focusMapsOut->size()) != total)
+                focusMapsOut->resize(total);
+            (*focusMapsOut)[i] = mag32.clone();   // CV_32F per slice
         }
 
+        // --------------------------------------------------------
+        // 4. Optional: write focus_*.tif + previews if keepIntermediates
+        // --------------------------------------------------------
+        if (opt.keepIntermediates)
+        {
+            // Numeric 16U metric (normalized per slice to 0..65535)
+            cv::Mat focus16;
+            if (mx > mn) {
+                double scale = 65535.0 / (mx - mn);
+                double shift = -mn * scale;
+                mag32.convertTo(focus16, CV_16U, scale, shift);
+            }
+            else {
+                focus16 = cv::Mat(mag32.rows, mag32.cols, CV_16U, cv::Scalar(0));
+            }
+
+            {
+                double fMin = 0.0, fMax = 0.0;
+                cv::minMaxLoc(focus16, &fMin, &fMax);
+                G::log(srcFun,
+                       QString("Slice %1 focus16 min=%2 max=%3")
+                           .arg(i)
+                           .arg(fMin)
+                           .arg(fMax));
+            }
+
+            const QString dstMetricPath =
+                outDir.absoluteFilePath("focus_" + base + ".tif");
+
+            if (!cv::imwrite(dstMetricPath.toStdString(), focus16)) {
+                if (statusCb) statusCb("FSFocus: Failed to write " + dstMetricPath, true);
+                return false;
+            }
+
+            // ----------------------------------------------------
+            // Previews (only if preview flag is enabled)
+            // ----------------------------------------------------
+            if (opt.preview)
+            {
+                QString p;
+
+                // Log-compressed grayscale preview
+                p = outDir.absoluteFilePath("focus_loggray_" + base + ".png");
+                cv::imwrite(p.toStdString(), makeLogGrayPreview(mag32));
+
+                // Heatmap preview (warmer = sharper)
+                p = outDir.absoluteFilePath("focus_heatmap_" + base + ".png");
+                cv::imwrite(p.toStdString(), makeHeatPreview(mag32));
+
+                // Pseudo-color by slice index (depth cue)
+                p = outDir.absoluteFilePath("focus_colorslice_" + base + ".png");
+                cv::imwrite(p.toStdString(), makeSliceColorPreview(mag32, i, total));
+            }
+        }
+
+        // --------------------------------------------------------
+        // 5. Progress callback
+        // --------------------------------------------------------
         if (progressCb)
             progressCb(i + 1);
     }
 
-    if (statusCb) statusCb("FSFocus: Completed.", false);
+    if (statusCb)
+        statusCb("FSFocus: Completed.", false);
+
     return true;
 }
 

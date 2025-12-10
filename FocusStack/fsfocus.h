@@ -6,6 +6,8 @@
 #include <atomic>
 #include <functional>
 
+#include <opencv2/core.hpp>
+
 namespace FSFocus {
 
 struct Options
@@ -15,8 +17,7 @@ struct Options
     bool useOpenCL          = true;
 
     bool preview            = false;      // write numeric logs
-    bool saveWaveletPreview = false;      // old mosaic visualization
-
+    bool keepIntermediates  = true;       // write focus_*.tif + previews
 };
 
 using ProgressCallback = std::function<void(int)>;
@@ -27,7 +28,8 @@ bool run(const QString    &alignFolder,
          const Options    &opt,
          std::atomic_bool *abortFlag,
          ProgressCallback  progressCb,
-         StatusCallback    statusCb);
+         StatusCallback    statusCb,
+         std::vector<cv::Mat> *focusMapsOut = nullptr);
 
 } // namespace FSFocus
 
