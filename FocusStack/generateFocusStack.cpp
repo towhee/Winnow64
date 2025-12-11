@@ -87,6 +87,8 @@ void MW::generateFocusStack(const QStringList paths,
     if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
     QString srcFun = "MW::generateFocusStack";
 
+    G::isRunningFocusStack = true;
+
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
 
     // Options
@@ -121,13 +123,13 @@ void MW::generateFocusStack(const QStringList paths,
     opt.previewFocusMaps    = true;
     opt.overwriteFocusMaps  = true;
 
-    opt.enableDepthMap      = false;
+    opt.enableDepthMap      = true;
     opt.previewDepthMap     = true;
     opt.overwriteDepthMap   = true;
 
     opt.enableFusion        = true;
     opt.previewFusion       = true;
-    opt.overWriteFusion     = false;
+    opt.overWriteFusion     = true;
 
     opt.enableOpenCL        = true;
     pipeline->setOptions(opt);
@@ -139,10 +141,11 @@ void MW::generateFocusStack(const QStringList paths,
                 QMetaObject::invokeMethod(thread, "quit", Qt::QueuedConnection);
             });
 
+    // abort
+    connect(this, &MW::abortFocusStack, pipeline, &FS::abort);
+
     // Status / progress → UI
-    connect(pipeline, &FS::updateStatus,
-            this, &MW::updateStatus,
-            Qt::QueuedConnection);
+    connect(pipeline, &FS::updateStatus, this, &MW::updateStatus, Qt::QueuedConnection);
 
     connect(pipeline, &FS::progress, this, [this](int current, int total)
         {
@@ -160,6 +163,9 @@ void MW::generateFocusStack(const QStringList paths,
     {
         // Clear progress
         cacheProgressBar->clearUpperProgress();
+
+        // If aborted
+
 
         // Example: pick the last aligned color image as “fusedPath”
         // (temporary until focus/depth/fusion implemented)
@@ -186,16 +192,21 @@ void MW::generateFocusStack(const QStringList paths,
             QString destPath = srcFolder + "/" + fi.fileName();
             QFile::copy(fusedPath, destPath);
 
+            // update datamodel
             dm->insert(destPath);
-            if (isLocal)
-                sel->select(destPath);
-            else
-                folderAndFileSelectionChange(destPath, srcFun);
+
+            // select fused image
+            if (isLocal) sel->select(destPath);
+            else folderAndFileSelectionChange(destPath, srcFun);
 
             waitUntilMetadataLoaded(5000, srcFun);
 
+            // highlight
             setColorClassForRow(dm->currentSfRow, "Red");
+
             embedThumbnails();
+
+            G::isRunningFocusStack = false;
         }
     });
 

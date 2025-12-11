@@ -332,6 +332,7 @@ Q_NAMESPACE
     extern bool isSlideShow;
     extern bool isRunningColorAnalysis;
     extern bool isRunningStackOperation;
+    extern bool isRunningFocusStack;
     extern bool isProcessingExportedImages;
     extern bool isEmbellish;
     extern bool includeSidecars;

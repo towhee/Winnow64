@@ -9,6 +9,7 @@
 #include "FocusStack/fsfusionreassign.h"
 #include "FocusStack/fsfusionwavelet.h"
 #include "FocusStack/fsloader.h"
+#include "FocusStack/fsutilities.h"
 
 #include <opencv2/imgcodecs.hpp>
 
@@ -24,6 +25,7 @@ FS::FS(QObject *parent)
 void FS::abort()
 {
     abortRequested = true;
+    qDebug() << "FS::abort";
 }
 
 void FS::setInput(const QStringList &paths)
@@ -192,6 +194,50 @@ void FS::incrementProgress()
     // G::log(srcFun, QString::number(progressCount));
 }
 
+void FS::previewOverview(cv::Mat &fusedColor8Mat)
+{
+/*
+    depth + fused + two sample slices
+    requires depth_preview.png, alignedGrayMats
+*/
+    QString srcFun = "FS::previewOverview";
+    if (o.previewFusion)        // or add a new option `o.debugFusionOverview`
+    {
+        // Load depth preview image written by FSDepth
+        QString depthPrevPath = depthFolder + "/depth_preview.png";
+        cv::Mat depthPrev = cv::imread(depthPrevPath.toStdString(), cv::IMREAD_COLOR);
+
+        // Select representative grayscale slices
+        cv::Mat slice0, sliceMid;
+
+        if (!alignedGrayMats.empty()) {
+            slice0 = alignedGrayMats.front();
+            sliceMid = alignedGrayMats[alignedGrayMats.size() / 2];
+        }
+        else {
+            // fallback: load from disk
+            slice0 = cv::imread(alignedGrayPaths.front().toStdString(), cv::IMREAD_GRAYSCALE);
+            sliceMid = cv::imread(
+                alignedGrayPaths[alignedGrayPaths.size() / 2].toStdString(),
+                cv::IMREAD_GRAYSCALE
+                );
+        }
+
+        // Output path
+        QString dbgPath = fusionFolder + "/debug_overview.png";
+
+        FSUtilities::makeDebugOverview(
+            depthPrev,         // depth_preview.png
+            fusedColor8Mat,    // fused RGB result
+            slice0,            // grayscale slice 0
+            sliceMid,          // mid grayscale slice
+            dbgPath            // output path
+            );
+
+        G::log(srcFun, "Wrote fusion debug overview -> " + dbgPath);
+    }
+}
+
 bool FS::run()
 {
     QString srcFun = "FS::run";
@@ -231,29 +277,37 @@ bool FS::run()
     // RUN ALIGN
     if (o.enableAlign && !skipAlign)
     {
-        if (!runAlign())
+        if (!runAlign()) {
+            if (abortRequested) status("Focus Stack was aborted.");
             return false;
+        }
     }
 
     // RUN FOCUS MAPS
     if (o.enableFocusMaps && !skipFocusMaps)
     {
-        if (!runFocusMaps())
+        if (!runFocusMaps()) {
+            if (abortRequested) status("Focus Stack was aborted.");
             return false;
+        }
     }
 
     // RUN DEPTH MAP
     if (o.enableDepthMap && !skipDepthMap)
     {
-        if (!runDepthMap())
+        if (!runDepthMap()) {
+            if (abortRequested) status("Focus Stack was aborted.");
             return false;
+        }
     }
 
     // RUN FUSION
     if (o.enableFusion && !skipFusion)
     {
-        if (!runFusion())
+        if (!runFusion()) {
+            if (abortRequested) status("Focus Stack was aborted.");
             return false;
+        }
     }
 
 
@@ -307,8 +361,7 @@ bool FS::runAlign()
 
     for (int i = 0; i < N; ++i)
     {
-        if (abortRequested)
-            return false;
+        if (abortRequested) return false;
 
         try {
             imgs[i] = FSLoader::load(inputPaths[i].toStdString());
@@ -352,8 +405,8 @@ bool FS::runAlign()
     // Alignment loop: image i aligned to image (i - 1)
     for (int i = 1; i < N; ++i)
     {
-        if (abortRequested)
-            return false;
+        qApp->processEvents();
+        if (abortRequested) return false;
 
         msg = QString("Aligning slice " + QString::number(i));
         G::log(srcFun, msg);
@@ -473,9 +526,10 @@ bool FS::runFocusMaps()
 
 bool FS::runDepthMap()
 /*
-    - Use focus maps in m_focusFolder
+    - Use focus maps in focusFolder (Simple)
+    - OR aligned grayscale in alignFolder (MultiScale)
     - Build depth index and preview using FSDepth
-    - Cache depth_index.png in m_depthIndex16
+    - Cache depth_index.png into depthIndex16Mat
 */
 {
     QString srcFun = "FS::runDepthMap";
@@ -486,8 +540,22 @@ bool FS::runDepthMap()
         return false;
 
     FSDepth::Options dopt;
-    dopt.preview = o.overwriteDepthMap;
-    dopt.numThreads  = 0;
+
+    // Map FS::Options.method to FSDepth method
+    if (o.method == "PMax") {
+        dopt.method = "MultiScale";
+        dopt.alignFolder = alignFolder;
+        dopt.preview = o.previewDepthMap;
+        dopt.saveWaveletDebug = true;       // per your "Save wavelet debug = yes"
+    }
+    else {
+        dopt.method = "Simple";
+        dopt.alignFolder.clear();
+        dopt.preview = o.previewDepthMap;
+        dopt.saveWaveletDebug = false;
+    }
+
+    dopt.numThreads = 0;  // (reserved, not used inside yet)
 
     auto progressCb = [this](int)
     {
@@ -499,21 +567,27 @@ bool FS::runDepthMap()
         status(message);
     };
 
+    if (abortRequested) return false;
+
     if (!FSDepth::run(focusFolder,
                       depthFolder,
                       dopt,
                       &abortRequested,
                       progressCb,
-                      statusCb,
-                      &depthIndex16Mat,                  // <- filled in memory
-                      focusMaps.empty() ? nullptr: &focusMaps))
+                      statusCb))
     {
         status("Depth map failed.");
         return false;
     }
 
+    // Load final depth_index.png produced by FSDepth (cropped to original size)
     QString depthIdxPath = depthFolder + "/depth_index.png";
     depthIndex16Mat = cv::imread(depthIdxPath.toStdString(), cv::IMREAD_UNCHANGED);
+
+    if (depthIndex16Mat.empty()) {
+        status("Depth map complete, but failed to load depth_index.png.");
+        return false;
+    }
 
     status("Depth map complete.");
     return true;
@@ -523,13 +597,12 @@ bool FS::runFusion()
 /*
     - Load the aligned grayscale and color images
       (prefer in-memory Mats from runAlign, fall back to disk if needed)
-    - Optionally reuse m_depthIndex16 (avoids recomputing depth in FSFusion)
-    - Run FSFusion::fuseStack
+    - REQUIRE a depth map from FSDepth (depthIndex16Mat)
+    - Run FSFusion::fuseStack using the selected method
     - Save fused image
 */
 {
     QString srcFun = "FS::runFusion";
-    const QString stage = "Fusion";
     G::log(srcFun, "Starting fusion…");
     status("Starting fusion...");
 
@@ -544,32 +617,38 @@ bool FS::runFusion()
 
     const int N = alignedGrayPaths.size();
 
+    if (depthIndex16Mat.empty())
+    {
+        status("Depth map not available. Run Depth stage first.");
+        return false;
+    }
+
+    // Build grayscale + color stacks
     std::vector<cv::Mat> grayImgs;
     std::vector<cv::Mat> colorImgs;
     grayImgs.reserve(N);
     colorImgs.reserve(N);
 
-    // Use AlignMats in memory (faster)
+    // Prefer in-memory Mats (fast path)
     if (validAlignMatsAvailable(N))
     {
         G::log(srcFun, "Using in-memory aligned images");
         for (int i = 0; i < N; ++i)
         {
+            if (abortRequested) return false;
             grayImgs.push_back(alignedGrayMats[i]);
             colorImgs.push_back(alignedColorMats[i]);
         }
     }
-    // Use aligned images (slower)
     else
     {
-        G::log(srcFun, "Load aligned images from disk");
+        G::log(srcFun, "Loading aligned images from disk");
 
         for (int i = 0; i < N; ++i)
         {
+            if (abortRequested) return false;
             const QString &grayPath  = alignedGrayPaths[i];
             const QString &colorPath = alignedColorPaths[i];
-
-            G::log(srcFun, "Load aligned images from disk " + QString::number(i));
 
             cv::Mat gray  = cv::imread(grayPath.toStdString(),  cv::IMREAD_GRAYSCALE);
             cv::Mat color = cv::imread(colorPath.toStdString(), cv::IMREAD_UNCHANGED);
@@ -587,46 +666,47 @@ bool FS::runFusion()
         }
     }
 
-    FSFusion::Options opt;
-    opt.useOpenCL   = o.enableOpenCL;
-    opt.consistency = 2;
+    // Fusion options
+    FSFusion::Options fopt;
+    fopt.useOpenCL   = o.enableOpenCL;
+    fopt.consistency = 2;
+
+    // Match depth method to fusion method:
+    //  - If you used FSDepth::method == "Simple", you can set fopt.method = "Simple"
+    //  - If you used FSDepth::method == "MultiScale", set "PMax" to reproduce
+    //    the full PMax pipeline.
+    if (o.method.compare("Simple", Qt::CaseInsensitive) == 0)
+        fopt.method = "Simple";
+    else
+        fopt.method = "PMax";   // default: current successful PMax pipeline
 
     cv::Mat fusedColor8Mat;
-    cv::Mat depthIndex16_outMat;
 
     auto progressCb = [this]()
     {
         this->incrementProgress();
     };
 
-    bool haveDepth = (!depthIndex16Mat.empty());
-
-    if (haveDepth)
-        G::log(srcFun, "Reusing existing m_depthIndex16 for fusion.");
-    else
-        G::log(srcFun, "No precomputed depth, fusion will compute depth internally.");
-
     if (!FSFusion::fuseStack(grayImgs,
                              colorImgs,
-                             opt,
+                             fopt,
+                             depthIndex16Mat,
                              fusedColor8Mat,
-                             depthIndex16_outMat,
-                             progressCb,
-                             haveDepth ? &depthIndex16Mat : nullptr))
+                             &abortRequested,
+                             progressCb))
     {
         status("Fusion failed");
         return false;
     }
 
-    if (!haveDepth)
-        depthIndex16Mat = depthIndex16_outMat;
-
+    // -------------------------------------------------------
+    // Save fused image with incrementing suffix
+    // -------------------------------------------------------
     QFileInfo lastFi(inputPaths.last());
     QString base = lastFi.completeBaseName();
     QString ext  = "." + lastFi.suffix();
 
     QString prefix = base + "_fused_";
-
     int nextIndex = 1;
 
     while (true)
@@ -646,6 +726,9 @@ bool FS::runFusion()
 
             cv::imwrite(fusedPath.toStdString(), fusedColor8Mat);
 
+            // visually debug
+            if (o.previewFusion) previewOverview(fusedColor8Mat);
+
             status("Fusion complete.");
             QString timeToFuse = QString::number(t.elapsed() / 1000.0, 'f', 1) + " sec";
             G::log(srcFun, "Fusion completed in " + timeToFuse);
@@ -662,6 +745,7 @@ bool FS::runFusion()
 
     return true;
 }
+
 void FS::diagnostics()
 {
 

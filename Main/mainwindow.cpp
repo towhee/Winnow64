@@ -509,6 +509,11 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (G::isRunningColorAnalysis) emit abortHueReport();
         // abort stack operation
         else if (G::isRunningStackOperation) emit abortStackOperation();
+        // abort focus stacking
+        else if (G::isRunningFocusStack) {
+            emit abortFocusStack();
+            qDebug() << "MW::keyReleaseEvent emitted abortFocusStack";
+        }
         // stop building filters
         // else if (filters->buildingFilters) buildFilters->stop();
         // exit full screen mode
