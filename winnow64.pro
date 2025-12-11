@@ -91,7 +91,8 @@ HEADERS += Cache/cachedata.h \
     FocusStack/fsfusionwavelet.h \
     FocusStack/fsgray.h \
     FocusStack/fsloader.h \
-    FocusStack/fsrunner.h
+    FocusStack/fsrunner.h \
+    FocusStack/fsutilities.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += ImageFormats/Video/mov.h
 HEADERS += ImageFormats/Video/mp4.h
@@ -330,7 +331,8 @@ SOURCES += Cache/cachedata.cpp \
     FocusStack/fsfusionwavelet.cpp \
     FocusStack/fsgray.cpp \
     FocusStack/fsloader.cpp \
-    FocusStack/fsrunner.cpp
+    FocusStack/fsrunner.cpp \
+    FocusStack/fsutilities.cpp
 SOURCES += Utilities/focuspointtrainer.cpp
 SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp

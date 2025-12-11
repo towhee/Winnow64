@@ -19,6 +19,7 @@ namespace FSFusionMerge
      */
 bool merge(const std::vector<cv::Mat> &wavelets,
            int consistency,
+           std::atomic_bool *abortFlag,
            cv::Mat &mergedOut,
            cv::Mat &depthIndex16);
 }

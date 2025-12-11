@@ -408,6 +408,7 @@ signals:
     void abortEmbelExport();
     void abortHueReport();
     void abortStackOperation();
+    void abortFocusStack();
     void fusionFinished(bool ok, const QString &outputImagePath,
                         const QString &depthMapPath);
 

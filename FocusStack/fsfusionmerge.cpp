@@ -1,5 +1,6 @@
 // FSFusionMerge.cpp
 #include "FSFusionMerge.h"
+#include "Main/global.h"
 
 #include <opencv2/core.hpp>
 #include <cassert>
@@ -153,6 +154,7 @@ namespace FSFusionMerge
 
 bool merge(const std::vector<cv::Mat> &wavelets,
            int consistency,
+           std::atomic_bool *abortFlag,
            cv::Mat &mergedOut,
            cv::Mat &depthIndex16)
 {
@@ -165,6 +167,7 @@ bool merge(const std::vector<cv::Mat> &wavelets,
     // Validate wavelets
     for (int i = 0; i < N; ++i)
     {
+        qApp->processEvents(); if (abortFlag) return false;
         if (wavelets[i].empty() ||
             wavelets[i].type() != CV_32FC2 ||
             wavelets[i].size() != size)
@@ -186,6 +189,7 @@ bool merge(const std::vector<cv::Mat> &wavelets,
     // PMax: for each pixel, choose wavelet with max |v|^2
     for (int i = 0; i < N; ++i)
     {
+        qApp->processEvents(); if (abortFlag) return false;
         cv::Mat absval(rows, cols, CV_32F);
         getSqAbsval(wavelets[i], absval);
 
@@ -194,6 +198,8 @@ bool merge(const std::vector<cv::Mat> &wavelets,
         wavelets[i].copyTo(mergedOut, mask);
         depthIndex16.setTo(static_cast<uint16_t>(i), mask);
     }
+
+    qApp->processEvents(); if (abortFlag) return false;
 
     if (consistency >= 1)
     {

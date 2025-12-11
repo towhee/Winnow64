@@ -141,6 +141,7 @@ bool resizingIcons;
 bool isSlideShow;
 bool isRunningColorAnalysis;
 bool isRunningStackOperation;
+bool isRunningFocusStack;
 bool isProcessingExportedImages;
 bool isEmbellish;
 bool includeSidecars;

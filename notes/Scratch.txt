@@ -176,3 +176,119 @@ Then later we enhance:
         •	Depth smoothing
         •	Depth confidence
         •	Depth-aware halo reduction
+
+NOTES AFTER RE-ARCHITECT: (2025-12-10)
+
+2. Depth becomes a FIRST-CLASS citizen
+
+Before:
+Fusion also secretly computed its own depth (wavelet merges).
+That meant artifacts could originate from either stage, and diagnosing them was hard.
+
+Now:
+        •	Depth is a single, authoritative product of FSDepth.
+        •	Fusion must consume it.
+        •	MultiScale depth = exactly the wavelet-based PMax logic.
+        •	Simple depth = fast, standard scalar-metric argmax.
+
+This makes it trivial to compare or introduce new depth estimators:
+        •	Bilateral-smoothed depth
+        •	Multi-scale confidence maps
+        •	Machine-learning focus measure
+        •	Hybrid depth (blend wavelet + local contrast)
+        •	Depth consistency refinement
+
+The architecture supports them without touching Fusion.
+
+⸻
+
+3. Fusion stage becomes pluggable with no cross-dependencies
+
+Fusion now takes only:
+        •	aligned gray stack
+        •	aligned color stack
+        •	canonical depth map
+        •	method choice (“PMax”, “Simple”, future methods)
+
+This is perfect for adding:
+
+🔹 PMax2 (your improved PMax)
+        •	Multi-scale soft blending
+        •	Contrast-weighted correction
+        •	Edge-aware halo suppression
+        •	Wavelet residual correction
+
+🔹 DMap Fusion (depth-only selection)
+        •	Already implemented (“Simple”)
+
+🔹 Hybrid fusion
+        •	Use depth to pick “blocks”, then use wavelets within blocks
+
+🔹 Full GPU fusion
+        •	Depth unchanged
+        •	Only wavelet transforms move to GPU
+
+Since depth is fixed and external, fusion methods can be swapped freely.
+
+⸻
+
+4. Performance improvements become easy
+
+Because stages are modular, you can independently optimize:
+
+Alignment
+
+GPU transforms via OpenCL, NEON, or Vulkan
+Parallel align of subregions
+
+Focus
+
+Parallel wavelet metrics
+SIMD focus measure
+
+Depth
+
+GPU-accelerated FSFusionMerge
+Multi-threaded depth refinement
+Confidence map generation
+
+Fusion
+
+Reuse wavelet forward transforms
+Avoid recomputing padded images
+GPU inverse wavelet & color reassignment
+
+All optimizations are local to their stage.
+
+⸻
+
+5. Debugging becomes dramatically easier
+
+You now have canonical artifacts at each stage:
+        •	gray_*.tif
+        •	focus_*.tif
+        •	wavelet debug images
+        •	depth_index.png
+        •	fusion result
+
+If an artifact appears:
+        •	Is the chosen depth too shallow? → depth stage
+        •	Is fusion causing halos? → fusion stage
+        •	Are focus maps flat? → focus stage
+        •	Are aligned frames drifting? → align stage
+
+If you’re ready, the next step I recommend is:
+
+✨ Add a confidence map to the MultiScale depth
+
+(which will drastically reduce halo issues)
+
+Or—
+
+✨ Add a PMax2 fusion method
+
+which will use:
+        •	depth edges
+        •	slice local contrast
+        •	multi-level blending
+        •	artifact suppression

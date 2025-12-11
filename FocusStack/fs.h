@@ -53,6 +53,8 @@ public:
 
     // Main pipeline API
     bool run();     // synchronous
+
+public slots:
     void abort();   // request abort (checked inside stages)
 
 signals:
@@ -67,6 +69,7 @@ private:
     void setExistance();
     bool setParameters();
     bool validAlignMatsAvailable(int count) const;
+    void previewOverview(cv::Mat &fusedColor8Mat);
 
     // Pipeline stages
     bool runAlign();
