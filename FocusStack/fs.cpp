@@ -300,6 +300,9 @@ bool FS::run()
             return false;
         }
     }
+    else {
+        qWarning() << "DepthMap not run skipDepthMap =" << skipDepthMap;
+    }
 
     // RUN FUSION
     if (o.enableFusion && !skipFusion)

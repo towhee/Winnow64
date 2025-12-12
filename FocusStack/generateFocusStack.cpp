@@ -116,8 +116,8 @@ void MW::generateFocusStack(const QStringList paths,
     opt.method              = method;
 
     opt.enableAlign         = true;
-    opt.previewAlign        = false;
-    opt.overwriteAlign      = false;
+    opt.previewAlign        = true;
+    opt.overwriteAlign      = true;
 
     opt.enableFocusMaps     = false;
     opt.previewFocusMaps    = true;
@@ -176,8 +176,8 @@ void MW::generateFocusStack(const QStringList paths,
                                          QDir::Name);
 
         QString fusedPath;
-        if (!files.isEmpty())
-            fusedPath = alignedDir + "/" + files.last();   // temporarily treat as result
+        // if (!files.isEmpty())
+        //     fusedPath = alignedDir + "/" + files.last();   // temporarily treat as result
 
         if (!fusedPath.isEmpty())
         {
@@ -205,9 +205,8 @@ void MW::generateFocusStack(const QStringList paths,
             setColorClassForRow(dm->currentSfRow, "Red");
 
             embedThumbnails();
-
-            G::isRunningFocusStack = false;
         }
+        G::isRunningFocusStack = false;
     });
 
     // Start

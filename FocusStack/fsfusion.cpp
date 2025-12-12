@@ -190,7 +190,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
 
     for (int i = 0; i < N; ++i)
     {
-        qApp->processEvents(); if (abortFlag) return false;
+        // qApp->processEvents(); if (abortFlag) return false;
         grayP[i]  = padForWavelet(grayImgs[i], paddedSize);
         colorP[i] = padForWavelet(colorImgs[i], paddedSize);
     }
@@ -204,7 +204,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     G::log(srcFun, "Forward wavelet per slice");
     for (int i = 0; i < N; ++i)
     {
-        qApp->processEvents(); if (abortFlag) return false;
+        // qApp->processEvents(); if (abortFlag) return false;
         G::log(srcFun, "Forward wavelet slice " + QString::number(i));
         tick(cb);
 
@@ -247,7 +247,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
         return false;
     }
 
-    qApp->processEvents(); if (abortFlag) return false;
+    // qApp->processEvents(); if (abortFlag) return false;
 
     // --------------------------------------------------------------------
     // 4. Build color map using padded grayscale + padded RGB images
@@ -267,7 +267,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
         return false;
     }
 
-    qApp->processEvents(); if (abortFlag) return false;
+    // qApp->processEvents(); if (abortFlag) return false;
 
     // --------------------------------------------------------------------
     // 5. Apply color reassignment to padded fused grayscale
@@ -285,7 +285,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
         return false;
     }
 
-    qApp->processEvents(); if (abortFlag) return false;
+    // qApp->processEvents(); if (abortFlag) return false;
 
     // --------------------------------------------------------------------
     // 6. Crop back to original (non-padded) size
