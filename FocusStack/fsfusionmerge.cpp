@@ -158,8 +158,11 @@ bool merge(const std::vector<cv::Mat> &wavelets,
            cv::Mat &mergedOut,
            cv::Mat &depthIndex16)
 {
-    if (wavelets.empty())
+    if (wavelets.empty()) {
+        QString msg = "FSFusionMerge: wavelets are empty.";
+        qWarning() << msg;
         return false;
+    }
 
     const int N = static_cast<int>(wavelets.size());
     const cv::Size size = wavelets[0].size();
@@ -167,11 +170,18 @@ bool merge(const std::vector<cv::Mat> &wavelets,
     // Validate wavelets
     for (int i = 0; i < N; ++i)
     {
-        qApp->processEvents(); if (abortFlag) return false;
+        // qApp->processEvents(); if (abortFlag) return false;
+
         if (wavelets[i].empty() ||
             wavelets[i].type() != CV_32FC2 ||
             wavelets[i].size() != size)
         {
+            QString idx = QString::number(i);
+            QString msg = "FSFusionMerge: wavelets " + idx;
+            if (wavelets[i].empty()) msg += " is empty.";
+            if (wavelets[i].type() != CV_32FC2) msg += " type != CV_32FC2.";
+            if (wavelets[i].size() != size) msg += " != wavelets[0].size.";
+            qWarning() << msg;
             return false;
         }
     }
@@ -189,7 +199,7 @@ bool merge(const std::vector<cv::Mat> &wavelets,
     // PMax: for each pixel, choose wavelet with max |v|^2
     for (int i = 0; i < N; ++i)
     {
-        qApp->processEvents(); if (abortFlag) return false;
+        // qApp->processEvents(); if (abortFlag) return false;
         cv::Mat absval(rows, cols, CV_32F);
         getSqAbsval(wavelets[i], absval);
 
@@ -199,7 +209,7 @@ bool merge(const std::vector<cv::Mat> &wavelets,
         depthIndex16.setTo(static_cast<uint16_t>(i), mask);
     }
 
-    qApp->processEvents(); if (abortFlag) return false;
+    // qApp->processEvents(); if (abortFlag) return false;
 
     if (consistency >= 1)
     {

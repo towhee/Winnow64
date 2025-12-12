@@ -125,7 +125,7 @@ public:
     alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa, lambda, mu, nu,
     xi, omicron, pi, rho, sigma, tau, upsilon, phi, chi, psi, and omega.
     */
-    QString versionNumber = "2.04" ;
+    QString versionNumber = "2.05" ;
     QString compileDate = "Compiled: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;

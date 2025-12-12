@@ -240,19 +240,24 @@ bool runMultiScale(const QString    &focusFolder,
                    FSDepth::StatusCallback    statusCb)
 {
     QString srcFun = "FSDepth::runMultiScale";
+    G::log(srcFun, "Creating depth map");
 
     // Source of grayscale slices: alignFolder if provided, else focusFolder
     QString grayRoot = opt.alignFolder.isEmpty() ? focusFolder : opt.alignFolder;
 
     QDir inDir(grayRoot);
     if (!inDir.exists()) {
-        if (statusCb) statusCb("FSDepth(MultiScale): Gray root does not exist: " + grayRoot, true);
+        QString msg = "FSDepth(MultiScale): Gray root does not exist: " + grayRoot;
+        if (statusCb) statusCb(msg, true);
+        qWarning() << msg;
         return false;
     }
 
     QDir outDir(depthFolder);
     if (!outDir.exists() && !outDir.mkpath(".")) {
-        if (statusCb) statusCb("FSDepth(MultiScale): Unable to create depth folder: " + depthFolder, true);
+        QString msg = "FSDepth(MultiScale): Unable to create depth folder: " + depthFolder;
+        if (statusCb) statusCb(msg, true);
+        qWarning() << msg;
         return false;
     }
 
@@ -264,7 +269,10 @@ bool runMultiScale(const QString    &focusFolder,
 
     int total = files.size();
     if (total == 0) {
-        if (statusCb) statusCb("FSDepth(MultiScale): No grayscale aligned slices found in " + grayRoot, true);
+        QString msg = "FSDepth(MultiScale): No grayscale aligned slices found in " + grayRoot;
+        if (statusCb) statusCb(msg, true);
+        qWarning() << msg;
+        return false;
         return false;
     }
 
@@ -275,7 +283,9 @@ bool runMultiScale(const QString    &focusFolder,
     cv::Mat firstGray = cv::imread(files.first().absoluteFilePath().toStdString(),
                                    cv::IMREAD_GRAYSCALE);
     if (firstGray.empty()) {
-        if (statusCb) statusCb("FSDepth(MultiScale): Failed to load first gray slice.", true);
+        QString msg = "FSDepth(MultiScale): Failed to load first gray slice.";
+        if (statusCb) statusCb(msg, true);
+        qWarning() << msg;
         return false;
     }
 
@@ -297,7 +307,9 @@ bool runMultiScale(const QString    &focusFolder,
     {
         qApp->processEvents();
         if (abortFlag && abortFlag->load(std::memory_order_relaxed)) {
-            if (statusCb) statusCb("FSDepth(MultiScale): Aborted by user.", true);
+            QString msg = "FSDepth(MultiScale): Aborted by user.";
+            if (statusCb) statusCb(msg, true);
+            qWarning() << msg;
             return false;
         }
 
@@ -306,12 +318,16 @@ bool runMultiScale(const QString    &focusFolder,
 
         cv::Mat gray = cv::imread(srcPath.toStdString(), cv::IMREAD_GRAYSCALE);
         if (gray.empty()) {
-            if (statusCb) statusCb("FSDepth(MultiScale): Cannot load " + srcPath, true);
+            QString msg = "FSDepth(MultiScale): Cannot load " + srcPath;
+            if (statusCb) statusCb(msg, true);
+            qWarning() << msg;
             return false;
         }
 
         if (gray.size() != origSize) {
-            if (statusCb) statusCb("FSDepth(MultiScale): Gray size mismatch in " + srcPath, true);
+            QString msg = "FSDepth(MultiScale): Gray size mismatch in " + srcPath;
+            if (statusCb) statusCb(msg, true);
+            qWarning() << msg;
             return false;
         }
 
@@ -329,7 +345,9 @@ bool runMultiScale(const QString    &focusFolder,
 
         // Wavelet transform using same logic as FSFusionWavelet::forward
         if (!FSFusionWavelet::forward(grayPadded, opt.numThreads > 0 ? true : true, wavelets[s])) {
-            if (statusCb) statusCb("FSDepth(MultiScale): Wavelet forward failed for " + srcPath, true);
+            QString msg = "FSDepth(MultiScale): Wavelet forward failed for " + srcPath;
+            if (statusCb) statusCb(msg, true);
+            qWarning() << msg;
             return false;
         }
 
@@ -374,14 +392,17 @@ bool runMultiScale(const QString    &focusFolder,
                               mergedWavelet,
                               depthIndexPadded16))
     {
-        if (statusCb) statusCb("FSDepth(MultiScale): FSFusionMerge::merge failed.", true);
+        QString msg = "FSDepth(MultiScale): FSFusionMerge::merge failed.";
+        if (statusCb) statusCb(msg, true);
+        qWarning() << msg;
         return false;
     }
 
-    qApp->processEvents(); if (abortFlag) return false;
+    // qApp->processEvents(); if (abortFlag) return false;
 
     // Optional merged wavelet debug
     if (opt.saveWaveletDebug) {
+        G::log(srcFun, "Writing merged wavelet merge");
         cv::Mat magMergedColor;
         {
             std::vector<cv::Mat> ch(2);
@@ -406,7 +427,7 @@ bool runMultiScale(const QString    &focusFolder,
         cv::imwrite(dbgMerged.toStdString(), magMergedColor);
     }
 
-    qApp->processEvents(); if (abortFlag) return false;
+    // qApp->processEvents(); if (abortFlag) return false;
 
     // --- Crop depthIndex to original size (per Q1 = 1) ---
     cv::Mat depthIndex16;
@@ -419,18 +440,22 @@ bool runMultiScale(const QString    &focusFolder,
 
     const QString depthIdxPath = outDir.absoluteFilePath("depth_index.png");
     if (!cv::imwrite(depthIdxPath.toStdString(), depthIndex16)) {
-        if (statusCb) statusCb("FSDepth(MultiScale): Failed to write depth_index.png", true);
+        QString msg = "FSDepth(MultiScale): Failed to write depth_index.png";
+        if (statusCb) statusCb(msg, true);
+        qWarning() << msg;
         return false;
     }
 
-    qApp->processEvents(); if (abortFlag) return false;
+    // qApp->processEvents(); if (abortFlag) return false;
 
     if (opt.preview)
     {
         cv::Mat preview = makeDepthPreviewEnhanced(depthIndex16, total);
         const QString depthPreviewPath = outDir.absoluteFilePath("depth_preview.png");
         if (!cv::imwrite(depthPreviewPath.toStdString(), preview)) {
-            if (statusCb) statusCb("FSDepth(MultiScale): Failed to write depth_preview.png", true);
+            QString msg = "FSDepth(MultiScale): Failed to write depth_preview.png";
+            if (statusCb) statusCb(msg, true);
+            qWarning() << msg;
             return false;
         }
     }

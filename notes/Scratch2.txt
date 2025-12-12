@@ -1,5 +1,5 @@
 to do
-- abort
+- manage abort in MW::generateFocusStack
 - flags (incl useDepthMap in runFusion)
 
 enableAlign             Only run Align if true
