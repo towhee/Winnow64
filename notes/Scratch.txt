@@ -292,3 +292,111 @@ which will use:
         •	slice local contrast
         •	multi-level blending
         •	artifact suppression
+
+-------------------------------------------------------------------------------------
+
+GEMINI:
+
+I am writing a focus stack program using OpenCV and c++. The attached image shows
+the edge of a flower petal with artifacts in the out of focus background. Can you
+suggest methods to avoid edge artifacts, including tools other than OpenCV.
+
+This is a classic problem in focus stacking, often referred to as "haloing" or "edge
+bleeding." It typically occurs at the boundary between a sharp foreground object and
+a blurred background because the focus measure algorithm gets confused by the
+contrast at the edge, or because the images aren't perfectly aligned.
+
+Here are methods to mitigate these artifacts, ranging from improvements to your current C++/OpenCV pipeline to external tools.
+
+### 1\. Diagnosis: Why is this happening?
+
+Based on the image provided, you are likely facing one (or a combination) of these
+three issues:
+
+  * **Hard Masking:** Your algorithm is likely making a binary decision per pixel (e.g., "Image A is sharpest here, take pixel A"). This creates jagged transitions.
+  * **Focus Breathing (Scale Misalignment):** As a lens changes focus, the focal length changes slightly, effectively zooming in or out. If your stack isn't corrected for scale, the "sharp" petal in one frame is slightly larger/smaller than the "blurred" petal in the next, creating a ghosting edge.
+  * **Mask Spillover:** The high contrast of the petal edge looks like "high focus" to algorithms (like Laplacian), causing the "sharp" mask to extend slightly into the background pixels.
+
+-----
+
+### 2\. OpenCV / C++ Solutions
+
+To fix this within your own code, you need to move from "Hard Selection" to "Soft Blending" and refine your depth map.
+
+#### A. Correct for Focus Breathing (Alignment)
+
+Before stacking, you must align the images, specifically accounting for scale changes (affine or homography), not just translation.
+
+  * **Tool:** `cv::findTransformECC` (Enhanced Correlation Coefficient).
+  * **Method:** Use `cv::MOTION_AFFINE` or `cv::MOTION_HOMOGRAPHY`. This ensures the petal edge overlaps perfectly in every slice, reducing the "ghost" halo.
+
+#### B. Refine the Depth Map (The "Guided Filter" Technique)
+
+This is the most effective modern technique for cleaning up edges in focus stacking.
+
+1.  **Compute a noisy depth map:** Calculate your focus metric (e.g., Variance of Laplacian) for each pixel.
+2.  **Filter the map:** Instead of just blurring the map (which destroys edge precision), use a **Guided Filter**.
+      * **Tool:** `cv::ximgproc::guidedFilter` (part of `opencv_contrib` module).
+      * **Logic:** Use the original sharp image as the "guide" and your noisy focus map as the "source." The filter smooths the noise in the background but preserves the sharp edge of the petal because the "guide" image has an edge there.
+      * **Result:** A clean, sharp mask that hugs the petal edge perfectly without spilling into the background.
+
+#### C. Laplacian Pyramid Blending
+
+If you are simply taking the maximum sharpness pixel (`max_val`), you will always get artifacts. You should implement Pyramid Blending.
+
+  * **Concept:** Deconstruct the images into different frequency bands (Gaussian/Laplacian pyramids).
+  * **Method:**
+    1.  Create a mask based on your focus metric (softened/feathered).
+    2.  Build a **Laplacian Pyramid** for each source image.
+    3.  Build a **Gaussian Pyramid** for the mask.
+    4.  Blend the pyramid levels: `Result_Level_i = (ImageA_Level_i * Mask_Level_i) + (ImageB_Level_i * (1 - Mask_Level_i))`.
+    5.  Collapse the pyramid (`cv::pyrUp`) to get the final image.
+  * **Why it works:** It blends low frequencies (color/tone) smoothly while keeping high frequencies (edges/texture) sharp.
+
+#### D. Morphological Operations
+
+If implementing a full Guided Filter or Pyramid is too heavy, a simpler fix is morphological cleanup on your focus mask.
+
+  * **Dilate:** Expand the "sharp" region slightly to ensure the full edge is included.
+  * **Erode:** Trim back noisy speckles in the background.
+  * **Gaussian Blur:** Feather the mask edges so the transition isn't binary.
+
+-----
+
+### 3\. Alternative Tools (Non-OpenCV)
+
+If you want to integrate an existing robust solver rather than writing the math from scratch, these are the industry standards.
+
+#### Enfuse (Open Source / CLI)
+
+Enfuse is the engine behind Hugin. It is arguably the best open-source focus stacker available and works on "Exposure Fusion" principles that apply perfectly to focus stacking.
+
+  * **Why use it:** It uses multi-resolution spline blending (Pyramids) by default, which specifically eliminates the artifacts shown in your image.
+  * **Usage:** You can call `enfuse` via `system()` in C++.
+    ```bash
+    enfuse --exposure-weight=0 --saturation-weight=0 --contrast-weight=1 --hard-mask --output=result.tif input_*.tif
+    ```
+      * `--contrast-weight=1`: Tells it to prioritize sharpness.
+
+#### Helicon Focus / Zerene Stacker (Reference)
+
+These are commercial tools, but understanding their methods helps.
+
+  * **PMax (Pyramid Maximum):** Good for overlapping details but can increase noise (halos).
+  * **DMap (Depth Map):** Similar to the "Guided Filter" approach above. It calculates a depth map and then retouches the edges. If your current output looks like "PMax," try moving toward a "DMap" approach.
+
+### Summary Comparison
+
+| Method | Complexity | Effectiveness on Artifacts |
+| :--- | :--- | :--- |
+| **Simple Max-Pixel** | Low | Low (Creates artifacts) |
+| **Mask Morph + Blur** | Medium | Medium (Softens edges) |
+| **Guided Filter** | High | **Very High** (Snaps mask to edges) |
+| **Pyramid Blending** | High | **Very High** (Seamless transition) |
+| **Enfuse (External)** | Low (Integration) | **Very High** |
+
+### Recommended Next Step
+
+Since you are already in C++, I recommend implementing **`cv::ximgproc::guidedFilter`** on your focus mask. It is usually the "magic bullet" for the specific edge-spill artifact shown in your image.
+
+Would you like a C++ code snippet showing how to apply the Guided Filter to a focus map?
