@@ -74,9 +74,10 @@
 #include "Utilities/coloranalysis.h"
 #include "Utilities/dirwatcher.h"
 #include "Image/stack.h"        // used by meanStack
-#include "ImageStack/stackcontroller.h"
+// #include "ImageStack/stackcontroller.h"
 
-#include "FocusStack/fsrunner.h"    // temp class
+// #include "FocusStack/fsrunner.h"    // temp class
+#include "FocusStack/fs.h"
 
 #include <QSoundEffect>
 
@@ -1148,6 +1149,9 @@ private:
         QString status;
     } pick;
     QStack<Pick> *pickStack;
+
+    // focus stack
+    QPointer<FS> fsPipeline;   // current running pipeline (null when inactive)
 
     // slideShow counter
     int slideCount = 0;

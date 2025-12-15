@@ -508,7 +508,11 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // abort color analysis
         else if (G::isRunningColorAnalysis) emit abortHueReport();
         // abort stack operation
-        else if (G::isRunningStackOperation) emit abortStackOperation();
+        else if (fsPipeline) {
+            fsPipeline->requestAbort();
+            qDebug() << "keyReleaseEvent fsPipeline->requestAbort()";
+        }
+        // else if (G::isRunningStackOperation) fsPipeline->requestAbort();
         // abort focus stacking
         else if (G::isRunningFocusStack) {
             emit abortFocusStack();

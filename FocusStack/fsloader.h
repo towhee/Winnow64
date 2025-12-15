@@ -17,10 +17,12 @@ struct Image
     bool is16bit = false;   // original color depth
 };
 
-// Load one image from file:
-//  - preserves bit depth (8 or 16)
-//  - converts grayscale to 8-bit
-//  - pads via BORDER_REFLECT to wavelet-friendly size
+/*
+    Load one image from file:
+     - preserves bit depth (8 or 16)
+     - converts grayscale to 8-bit
+     - pads via BORDER_REFLECT to wavelet-friendly size
+*/
 Image load(const std::string &filename);
 
 // Load from an existing Mat (for testing):

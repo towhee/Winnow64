@@ -6,6 +6,12 @@
 
 namespace FSUtilities {
 
+// not being used
+inline bool abort(const std::atomic_bool *f)
+{
+    return f && f->load(std::memory_order_relaxed);
+}
+
 /*
  * Create a diagnostic composite:
  *   ┌──────────────────────┐
@@ -43,6 +49,22 @@ cv::Mat hstack(const cv::Mat &a, const cv::Mat &b);
  */
 cv::Mat vstack(const cv::Mat &a, const cv::Mat &b);
 
+// Overlay mask/heatmap on a grayscale base image
+// baseGray: CV_8U or CV_32F grayscale
+// maskBGR: CV_8UC3 (already colorized)
+// alpha: blend strength of mask
+cv::Mat showWithMask(const cv::Mat &baseGray,
+                     const cv::Mat &maskBGR,
+                     float alpha = 0.6f);
+
+// Convenience: load, overlay, and save
+bool showWithMask(const cv::Mat &baseGray,
+                  const cv::Mat &maskBGR,
+                  const QString &outputPath,
+                  float alpha = 0.6f);
+
 } // namespace FSUtilities
+
+
 
 #endif // FSUTILITIES_H

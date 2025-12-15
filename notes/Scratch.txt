@@ -248,7 +248,7 @@ SIMD focus measure
 
 Depth
 
-GPU-accelerated FSFusionMerge
+GPU-accelerated FSMerge
 Multi-threaded depth refinement
 Confidence map generation
 

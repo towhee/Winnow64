@@ -158,4 +158,37 @@ bool makeDebugOverview(const cv::Mat &depthPreview,
     return cv::imwrite(outputPath.toStdString(), final);
 }
 
+cv::Mat showWithMask(const cv::Mat &baseGray,
+                     const cv::Mat &maskBGR,
+                     float alpha)
+{
+    CV_Assert(maskBGR.type() == CV_8UC3);
+    CV_Assert(alpha >= 0.0f && alpha <= 1.0f);
+
+    cv::Mat base8;
+    if (baseGray.type() == CV_8U)
+        base8 = baseGray;
+    else
+        baseGray.convertTo(base8, CV_8U, 255.0);
+
+    cv::Mat baseBGR;
+    cv::cvtColor(base8, baseBGR, cv::COLOR_GRAY2BGR);
+
+    cv::Mat out;
+    cv::addWeighted(baseBGR, 1.0f - alpha,
+                    maskBGR, alpha,
+                    0.0, out);
+
+    return out;
+}
+
+bool showWithMask(const cv::Mat &baseGray,
+                  const cv::Mat &maskBGR,
+                  const QString &outputPath,
+                  float alpha)
+{
+    cv::Mat out = showWithMask(baseGray, maskBGR, alpha);
+    return cv::imwrite(outputPath.toStdString(), out);
+}
+
 } // namespace FSUtilities

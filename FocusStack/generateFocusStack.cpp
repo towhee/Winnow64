@@ -104,8 +104,10 @@ void MW::generateFocusStack(const QStringList paths,
     // Create worker thread + FS pipeline object
     // --------------------------------------------------------------------
     QThread *thread = new QThread(this);
-    FS *pipeline = new FS();           // new unified pipeline
-    pipeline->moveToThread(thread);
+    fsPipeline = new FS();
+    fsPipeline->moveToThread(thread);
+    // local req'd for lamda
+    FS *pipeline = fsPipeline.data();
 
     // Set input + project root *before* thread runs
     QString projectRoot = srcFolder + "/" + info.completeBaseName() + "_" + method;
@@ -114,8 +116,9 @@ void MW::generateFocusStack(const QStringList paths,
 
     FS::Options opt;
     opt.method              = method;
+    opt.useMemory           = true;
 
-    opt.enableAlign         = true;
+    opt.enableAlign         = false;
     opt.previewAlign        = true;
     opt.overwriteAlign      = true;
 
@@ -123,35 +126,36 @@ void MW::generateFocusStack(const QStringList paths,
     opt.previewFocusMaps    = true;
     opt.overwriteFocusMaps  = true;
 
-    opt.enableDepthMap      = true;
+    opt.enableDepthMap      = false;
     opt.previewDepthMap     = true;
     opt.overwriteDepthMap   = true;
 
-    opt.enableFusion        = true;
+    opt.enableFusion        = false;
     opt.previewFusion       = true;
     opt.overWriteFusion     = true;
+
+    opt.enableArtifactDetect = true;
 
     opt.enableOpenCL        = true;
     pipeline->setOptions(opt);
 
     // When the thread starts → run the FS pipeline
     connect(thread, &QThread::started, pipeline, [pipeline, thread]()
-            {
-                pipeline->run();     // runs synchronously inside worker thread
-                QMetaObject::invokeMethod(thread, "quit", Qt::QueuedConnection);
-            });
-
-    // abort
-    connect(this, &MW::abortFocusStack, pipeline, &FS::abort);
+    {
+        pipeline->run();     // runs synchronously inside worker thread
+        QMetaObject::invokeMethod(thread, "quit", Qt::QueuedConnection);
+    });
 
     // Status / progress → UI
-    connect(pipeline, &FS::updateStatus, this, &MW::updateStatus, Qt::QueuedConnection);
+    connect(pipeline, &FS::updateStatus,
+            this, &MW::updateStatus, Qt::QueuedConnection);
 
-    connect(pipeline, &FS::progress, this, [this](int current, int total)
-        {
-            this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
-        },
-        Qt::QueuedConnection);
+    connect(pipeline, &FS::progress,
+            this, [this](int current, int total)
+    {
+        this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
+    },
+    Qt::QueuedConnection);
 
     // cleanup when finished
     connect(thread, &QThread::finished, pipeline, &QObject::deleteLater);

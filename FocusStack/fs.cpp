@@ -5,9 +5,10 @@
 #include "FocusStack/fsfocus.h"
 #include "FocusStack/fsdepth.h"
 #include "FocusStack/fsfusion.h"
-#include "FocusStack/fsfusionmerge.h"
+#include "FocusStack/fsmerge.h"
 #include "FocusStack/fsfusionreassign.h"
 #include "FocusStack/fsfusionwavelet.h"
+#include "FocusStack/fsartifact.h"
 #include "FocusStack/fsloader.h"
 #include "FocusStack/fsutilities.h"
 
@@ -22,29 +23,32 @@ FS::FS(QObject *parent)
 {
 }
 
-void FS::abort()
-{
-    abortRequested = true;
-    qDebug() << "FS::abort";
-}
+// void FS::setAbort()
+// {
+//     abortRequested = true;
+//     qDebug() << "FS::abort";
+// }
 
 void FS::setInput(const QStringList &paths)
 {
     inputPaths = paths;
+    slices = paths.count();
+    lastSlice = slices - 1;
 
     // Clear any in-memory aligned images from previous run
-    alignedColorMats.clear();
-    alignedGrayMats.clear();
+    alignedColorSlices.clear();
+    alignedGraySlices.clear();
 }
 
 void FS::setProjectRoot(const QString &rootPath)
 {
     projectRoot = rootPath;
 
-    alignFolder = projectRoot + "/align";
-    focusFolder = projectRoot + "/focus";
-    depthFolder = projectRoot + "/depth";
-    fusionFolder = projectRoot + "/fusion";
+    alignFolder     = projectRoot + "/align";
+    focusFolder     = projectRoot + "/focus";
+    depthFolder     = projectRoot + "/depth";
+    fusionFolder    = projectRoot + "/fusion";
+    artifactsFolder = projectRoot + "/artifacts";
 }
 
 void FS::setOptions(const Options &opt)
@@ -79,6 +83,25 @@ bool FS::prepareFolders()
     return true;
 }
 
+QString FS::latestFusedPath() const
+{
+    QFileInfo lastFi(inputPaths.last());
+    QString base = lastFi.completeBaseName();
+    QString ext  = "." + lastFi.suffix();
+    QString prefix = base + "_fused_";
+    QDir dir(fusionFolder);
+    QStringList files = dir.entryList(
+        QStringList() << (prefix + "*" + ext),
+        QDir::Files,
+        QDir::Name    // lexicographic works with zero-padded index
+        );
+
+    if (files.isEmpty())
+        return QString();
+
+    return dir.absoluteFilePath(files.last());
+}
+
 void FS::setExistance()
 {
     for (const QString &src : inputPaths)
@@ -86,24 +109,23 @@ void FS::setExistance()
         QFileInfo fi(src);
         QString base = fi.completeBaseName();
         QString ext  = fi.suffix();
+        QString path;
 
-        QString col = alignFolder + "/aligned_" + base + "." + ext;
-        QString gry = alignFolder + "/gray_" + base + "." + ext;
+        // Align
+        path = alignFolder + "/aligned_" + base + "." + ext;
+        alignedColorPaths.push_back(path);
+        if (!QFileInfo::exists(path)) alignExists = false;
+        path = alignFolder + "/gray_" + base + "." + ext;
+        alignedGrayPaths.push_back(path);
+        if (!QFileInfo::exists(path)) alignExists = false;
 
-        alignedColorPaths.push_back(col);
-        alignedGrayPaths.push_back(gry);
+        // Depth
+        path = depthFolder + "/depth_index.png";
+        if (!QFileInfo::exists(path)) depthExists = false;
 
-        // // set allAlignedExist
-        // {
-        //     if (!QFileInfo::exists(col) || !QFileInfo::exists(gry))
-        //         allAlignedExist = false;
-        // }
-        // else
-        // {
-        //     QFile::remove(col);
-        //     QFile::remove(gry);
-        // }
-    }
+        // Fusion
+
+   }
 }
 
 // setParameters() — checks for existing outputs
@@ -118,6 +140,7 @@ bool FS::setParameters()
     skipFocusMaps = false;
     skipDepthMap  = false;
     skipFusion    = false;
+    skipArtifacts = false;
 
     alignedColorPaths.clear();
     alignedGrayPaths.clear();
@@ -142,11 +165,41 @@ bool FS::setParameters()
     }
 
     if (!o.overwriteAlign && alignExists) skipAlign = true;
-    if (!o.overwriteFocusMaps && focusMapsExist) skipFocusMaps = true;
-    if (!o.overwriteDepthMap && depthMapExists) skipDepthMap = true;
+    if (!o.overwriteFocusMaps && focusExists) skipFocusMaps = true;
+    if (!o.overwriteDepthMap && depthExists) skipDepthMap = true;
     if (!o.overWriteFusion && fusionExists) skipFusion = true;
 
     return true;
+}
+
+void FS::setAlignedColorPaths()
+{
+
+}
+
+void FS::setAlignedColorSlices()
+{
+    QDir alignDir(projectRoot + "/align");
+    QStringList files = alignDir.entryList
+    (
+        QStringList() << "aligned*.png" << "aligned*.tif" << "aligned*.jpg",
+        QDir::Files, QDir::Name
+    );
+
+    for (const QString &f : files)
+    {
+        cv::Mat img = cv::imread
+        (
+            (alignDir.absoluteFilePath(f)).toStdString(),
+            cv::IMREAD_COLOR)
+        ;
+
+        if (img.empty()) continue;
+
+        cv::Mat g32;
+        img.convertTo(g32, CV_32F, 1.0 / 255.0);
+        alignedColorSlices.push_back(g32);
+    }
 }
 
 bool FS::validAlignMatsAvailable(int count) const
@@ -156,15 +209,15 @@ bool FS::validAlignMatsAvailable(int count) const
     - Validate that no Mat is empty
 */
 {
-    if (alignedGrayMats.size()  != static_cast<size_t>(count) ||
-        alignedColorMats.size() != static_cast<size_t>(count))
+    if (alignedGraySlices.size()  != static_cast<size_t>(count) ||
+        alignedColorSlices.size() != static_cast<size_t>(count))
     {
         return false;
     }
 
     for (int i = 0; i < count; ++i)
     {
-        if (alignedGrayMats[i].empty() || alignedColorMats[i].empty())
+        if (alignedGraySlices[i].empty() || alignedColorSlices[i].empty())
             return false;
     }
 
@@ -210,9 +263,9 @@ void FS::previewOverview(cv::Mat &fusedColor8Mat)
         // Select representative grayscale slices
         cv::Mat slice0, sliceMid;
 
-        if (!alignedGrayMats.empty()) {
-            slice0 = alignedGrayMats.front();
-            sliceMid = alignedGrayMats[alignedGrayMats.size() / 2];
+        if (!alignedGraySlices.empty()) {
+            slice0 = alignedGraySlices.front();
+            sliceMid = alignedGraySlices[alignedGraySlices.size() / 2];
         }
         else {
             // fallback: load from disk
@@ -234,14 +287,13 @@ void FS::previewOverview(cv::Mat &fusedColor8Mat)
             dbgPath            // output path
             );
 
-        G::log(srcFun, "Wrote fusion debug overview -> " + dbgPath);
+        if (G::FSLog) G::log(srcFun, "Wrote fusion debug overview -> " + dbgPath);
     }
 }
 
 bool FS::run()
 {
     QString srcFun = "FS::run";
-    abortRequested = false;
 
     if (inputPaths.isEmpty())
     {
@@ -253,23 +305,14 @@ bool FS::run()
     if (!prepareFolders())
         return false;
 
+    // Existance
+    setExistance();
+
     // Decide which stages to skip
     if (!setParameters())
         return false;
 
     setTotalProgress();
-
-    // temp while debugging
-    // skipFocusMaps = false;
-
-    qDebug() << srcFun<< "\n"
-             << "o.enableAlign       =" << o.enableAlign << "\n"
-             << "m_skipAlign         =" << skipAlign << "\n"
-             << "o.enableFocusMaps   =" << o.enableFocusMaps << "\n"
-             << "m_skipFocusMaps     =" << skipFocusMaps << "\n"
-             << "m_total             =" << progressTotal
-                ;
-    // return false;
 
     QElapsedTimer t;
     t.start();
@@ -278,7 +321,7 @@ bool FS::run()
     if (o.enableAlign && !skipAlign)
     {
         if (!runAlign()) {
-            if (abortRequested) status("Focus Stack was aborted.");
+            if (abort) status("Focus Stack was aborted.");
             return false;
         }
     }
@@ -287,7 +330,7 @@ bool FS::run()
     if (o.enableFocusMaps && !skipFocusMaps)
     {
         if (!runFocusMaps()) {
-            if (abortRequested) status("Focus Stack was aborted.");
+            if (abort) status("Focus Stack was aborted.");
             return false;
         }
     }
@@ -296,33 +339,39 @@ bool FS::run()
     if (o.enableDepthMap && !skipDepthMap)
     {
         if (!runDepthMap()) {
-            if (abortRequested) status("Focus Stack was aborted.");
+            if (abort) status("Focus Stack was aborted.");
             return false;
         }
-    }
-    else {
-        qWarning() << "DepthMap not run skipDepthMap =" << skipDepthMap;
     }
 
     // RUN FUSION
     if (o.enableFusion && !skipFusion)
     {
         if (!runFusion()) {
-            if (abortRequested) status("Focus Stack was aborted.");
+            if (abort) status("Focus Stack was aborted.");
             return false;
         }
     }
 
+    // RUN ARTIFACT DETECTION
+    if (o.enableArtifactDetect)
+    {
+        if (!runArtifact()) {
+            if (abort) status("Focus Stack was aborted.");
+            return false;
+        }
+    }
 
     QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
     QString progressSteps = " Progress step count = " + QString::number(progressCount);
     QString progressTot = " Progress step total = " + QString::number(progressTotal);
-    G::log(srcFun, "Focus Stack completed in " + timeToRun + progressSteps + progressTot);
-    G::log(srcFun, "");
+    if (G::FSLog) G::log(srcFun, "Focus Stack completed in " + timeToRun + progressSteps + progressTot);
+    if (G::FSLog) G::log(srcFun, "");
     qDebug() << srcFun << "Done" << timeToRun;
 
     status("Focus Stack completed in " + timeToRun);
 
+    qApp->processEvents();  // complete any waiting log msgs
     return true;
 }
 
@@ -337,7 +386,7 @@ bool FS::runAlign()
     QString srcFun = "FS::runAlign";
     QString msg;
     const QString stage = "Align";
-    G::log(srcFun, "Starting alignment…");
+    if (G::FSLog) G::log(srcFun, "Starting alignment…");
     status("Aligning input images");
 
     if (inputPaths.isEmpty())
@@ -349,22 +398,22 @@ bool FS::runAlign()
     QElapsedTimer t;
     t.start();
 
-    const int N = inputPaths.size();
-    if (N < 2)
+    const int n = inputPaths.size();
+    if (n < 2)
     {
         status("Need at least 2 images to align.");
         return false;
     }
 
-    alignedColorMats.resize(N);
-    alignedGrayMats.resize(N);
+    alignedColorSlices.resize(n);
+    alignedGraySlices.resize(n);
 
     // Load images using Petteri-compatible padding + validArea
-    std::vector<FSLoader::Image> imgs(N);
+    std::vector<FSLoader::Image> imgs(n);
 
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < n; ++i)
     {
-        if (abortRequested) return false;
+        if (abort) return false;
 
         try {
             imgs[i] = FSLoader::load(inputPaths[i].toStdString());
@@ -376,14 +425,13 @@ bool FS::runAlign()
             return false;
         }
 
-        G::log(srcFun, "Load image " + QString::number(i));
-        // incrementProgress();
+        if (G::FSLog) G::log(srcFun, "Load image " + QString::number(i));
     }
 
-    // Prepare FSAlign global chain (Petteri-style)
+    // Prepare FSAlign
     using namespace FSAlign;
 
-    std::vector<Result> globals(N);
+    std::vector<Result> globals(n);
     globals[0] = makeIdentity(imgs[0].validArea);
 
     FSAlign::Options opt;
@@ -400,21 +448,20 @@ bool FS::runAlign()
         cv::imwrite(alignedGrayPaths[0].toStdString(),  imgs[0].gray);
     }
 
-    alignedColorMats[0] = imgs[0].color.clone();
-    alignedGrayMats[0]  = imgs[0].gray.clone();
-    G::log(srcFun, "Write unmodified aligned color + gray");
+    alignedColorSlices[0] = imgs[0].color.clone();
+    alignedGraySlices[0]  = imgs[0].gray.clone();
+    if (G::FSLog) G::log(srcFun, "Write unmodified aligned color + gray");
     incrementProgress();
 
     // Alignment loop: image i aligned to image (i - 1)
-    for (int i = 1; i < N; ++i)
+    for (int i = 1; i < n; ++i)
     {
         qApp->processEvents();
-        if (abortRequested) return false;
+        if (abort) return false;
 
         msg = QString("Aligning slice " + QString::number(i));
-        G::log(srcFun, msg);
+        if (G::FSLog) G::log(srcFun, msg);
         status(msg);
-        // incrementProgress();
 
         Result local;
 
@@ -435,9 +482,9 @@ bool FS::runAlign()
             status(msg);
             return false;
         }
-        G::log(srcFun, "computeLocal");
+        if (G::FSLog) G::log(srcFun, "computeLocal");
 
-        // Stack transforms (Petteri-style)
+        // Stack transforms
         globals[i] = accumulate(
             globals[i - 1],
             local,
@@ -446,10 +493,10 @@ bool FS::runAlign()
 
         // Apply transform to color + gray
         cv::Mat alignedColorMat, alignedGrayMat;
-        G::log(srcFun, "cv::Mat alignedColor, alignedGray");
+        if (G::FSLog) G::log(srcFun, "cv::Mat alignedColor, alignedGray");
         applyTransform(imgs[i].color, globals[i].transform, alignedColorMat);
         applyTransform(imgs[i].gray,  globals[i].transform, alignedGrayMat);
-        G::log(srcFun, "applyTransform alignedGray");
+        if (G::FSLog) G::log(srcFun, "applyTransform alignedGray");
 
         // Write outputs
         if (o.overwriteAlign)
@@ -459,11 +506,11 @@ bool FS::runAlign()
         }
 
         // Cache in memory for fast fusion
-        alignedColorMats[i] = alignedColorMat.clone();
-        alignedGrayMats[i]  = alignedGrayMat.clone();
+        alignedColorSlices[i] = alignedColorMat.clone();
+        alignedGraySlices[i]  = alignedGrayMat.clone();
 
         msg = "Write outputs";
-        G::log(srcFun, msg);
+        if (G::FSLog) G::log(srcFun, msg);
         incrementProgress();
     }
 
@@ -471,8 +518,8 @@ bool FS::runAlign()
     status("Alignment complete.");
 
     QString timeToFuse = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
-    G::log(srcFun, "Alignment completed in " + timeToFuse);
-    G::log(srcFun, "");
+    if (G::FSLog) G::log(srcFun, "Alignment completed in " + timeToFuse);
+    if (G::FSLog) G::log(srcFun, "");
 
     return true;
 }
@@ -485,7 +532,7 @@ bool FS::runFocusMaps()
 */
 {
     QString srcFun = "FS::runFocusMaps";
-    G::log(srcFun, "Starting focus maps…");
+    if (G::FSLog) G::log(srcFun, "Starting focus maps…");
 
     if (inputPaths.isEmpty())
     {
@@ -514,10 +561,10 @@ bool FS::runFocusMaps()
     if (!FSFocus::run(alignFolder,
                       focusFolder,
                       fopt,
-                      &abortRequested,
+                      &abort,
                       progressCb,
                       statusCb,
-                      &focusMaps))
+                      &focusSlices))
     {
         status("Focus maps failed.");
         return false;
@@ -536,10 +583,10 @@ bool FS::runDepthMap()
 */
 {
     QString srcFun = "FS::runDepthMap";
-    G::log(srcFun, "Starting depth map.");
+    if (G::FSLog) G::log(srcFun, "Starting depth map.");
     status("Building depth map.");
 
-    if (abortRequested)
+    if (abort)
         return false;
 
     FSDepth::Options dopt;
@@ -565,17 +612,17 @@ bool FS::runDepthMap()
         incrementProgress();
     };
 
-    auto statusCb = [this](const QString &message, bool /*isError*/)
+    FSDepth::StatusCallback statusCb = [this](const QString &message)
     {
         status(message);
     };
 
-    if (abortRequested) return false;
-
+    if (abort) return false;
+    qDebug() << "FS::runDepthMap building statusCb";
     if (!FSDepth::run(focusFolder,
                       depthFolder,
                       dopt,
-                      &abortRequested,
+                      &abort,
                       progressCb,
                       statusCb))
     {
@@ -606,7 +653,7 @@ bool FS::runFusion()
 */
 {
     QString srcFun = "FS::runFusion";
-    G::log(srcFun, "Starting fusion…");
+    if (G::FSLog) G::log(srcFun, "Starting fusion…");
     status("Starting fusion...");
 
     QElapsedTimer t;
@@ -635,21 +682,21 @@ bool FS::runFusion()
     // Prefer in-memory Mats (fast path)
     if (validAlignMatsAvailable(N))
     {
-        G::log(srcFun, "Using in-memory aligned images");
+        if (G::FSLog) G::log(srcFun, "Using in-memory aligned images");
         for (int i = 0; i < N; ++i)
         {
-            if (abortRequested) return false;
-            grayImgs.push_back(alignedGrayMats[i]);
-            colorImgs.push_back(alignedColorMats[i]);
+            if (abort.load(std::memory_order_relaxed)) return false;
+            grayImgs.push_back(alignedGraySlices[i]);
+            colorImgs.push_back(alignedColorSlices[i]);
         }
     }
     else
     {
-        G::log(srcFun, "Loading aligned images from disk");
+        if (G::FSLog) G::log(srcFun, "Loading aligned images from disk");
 
         for (int i = 0; i < N; ++i)
         {
-            if (abortRequested) return false;
+            if (abort) return false;
             const QString &grayPath  = alignedGrayPaths[i];
             const QString &colorPath = alignedColorPaths[i];
 
@@ -695,7 +742,7 @@ bool FS::runFusion()
                              fopt,
                              depthIndex16Mat,
                              fusedColor8Mat,
-                             &abortRequested,
+                             &abort,
                              progressCb))
     {
         status("Fusion failed");
@@ -724,7 +771,7 @@ bool FS::runFusion()
         {
             QString fusedPath = fullCandidatePath;
 
-            G::log(srcFun, "Saving fused image to " + fusedPath);
+            if (G::FSLog) G::log(srcFun, "Saving fused image to " + fusedPath);
             incrementProgress();
 
             cv::imwrite(fusedPath.toStdString(), fusedColor8Mat);
@@ -734,7 +781,7 @@ bool FS::runFusion()
 
             status("Fusion complete.");
             QString timeToFuse = QString::number(t.elapsed() / 1000.0, 'f', 1) + " sec";
-            G::log(srcFun, "Fusion completed in " + timeToFuse);
+            if (G::FSLog) G::log(srcFun, "Fusion completed in " + timeToFuse);
             return true;
         }
 
@@ -749,7 +796,231 @@ bool FS::runFusion()
     return true;
 }
 
+bool FS::runArtifact()
+{
+    const QString srcFun = "FS::runArtifactDetection";
+
+    if (abort) return false;
+
+    emit updateStatus(false, "Detecting fusion artifacts...", srcFun);
+
+    // Load fused image (grayscale, aligned space)
+    QString fusedPath = latestFusedPath(); // adjust if needed
+    if (fusedPath.isEmpty())
+    {
+        QString msg = "No fused images found in " + fusionFolder;
+        G::log(srcFun, msg);
+        return false;
+    }
+
+    cv::Mat grayFused = cv::imread(fusedPath.toStdString(), cv::IMREAD_GRAYSCALE);
+
+    if (grayFused.empty())
+    {
+        G::log(srcFun, "Failed to load fused image");
+        return false;
+    }
+
+    cv::Mat fusedGray32;
+    grayFused.convertTo(fusedGray32, CV_32F, 1.0 / 255.0);
+
+    // Load aligned slices (grayscale, aligned space)
+    std::vector<cv::Mat> slicesGray32;
+
+    QDir alignDir(projectRoot + "/align");
+    QStringList files = alignDir.entryList
+    (
+        QStringList() << "aligned*.png" << "aligned*.tif" << "aligned*.jpg",
+        QDir::Files, QDir::Name
+    );
+
+    for (const QString &f : files)
+    {
+        if (abort) return false;
+
+        cv::Mat img = cv::imread(
+            (alignDir.absoluteFilePath(f)).toStdString(),
+            cv::IMREAD_GRAYSCALE);
+
+        if (img.empty())
+            continue;
+
+        cv::Mat g32;
+        img.convertTo(g32, CV_32F, 1.0 / 255.0);
+        slicesGray32.push_back(g32);
+    }
+
+    if (slicesGray32.empty())
+    {
+        G::log(srcFun, "No aligned slices for artifact detection");
+        return false;
+    }
+
+    // Optional depth map
+    cv::Mat depth32;
+    cv::Mat *depthPtr = nullptr;
+
+    QString depthPath = projectRoot + "/depth/depth_idx.exr"; // adjust
+    if (QFile::exists(depthPath))
+    {
+        cv::Mat d = cv::imread(depthPath.toStdString(), cv::IMREAD_UNCHANGED);
+        if (!d.empty())
+        {
+            d.convertTo(depth32, CV_32F);
+            depthPtr = &depth32;
+        }
+    }
+
+    // Optional include mask
+    cv::Mat includeMask8;
+    cv::Mat *maskPtr = nullptr;
+
+    QString maskPath = projectRoot + "/masks/include_mask.png";
+    if (QFile::exists(maskPath))
+    {
+        includeMask8 = cv::imread(maskPath.toStdString(), cv::IMREAD_GRAYSCALE);
+        if (!includeMask8.empty())
+            maskPtr = &includeMask8;
+    }
+
+    // Artifact detection options
+    FSArtifact::Options opt;
+    opt.debugFolder = artifactsFolder;
+
+    cv::Mat artifact01;
+
+    // Progress and Status
+    auto progressCb = [this]()
+    {
+        this->incrementProgress();
+    };
+
+    auto statusCb = [this, srcFun](const QString &msg)
+    {
+        emit updateStatus(false, msg, srcFun);
+    };
+
+    // Run artifact detector
+    bool ok = FSArtifact::detect
+    (
+        fusedGray32,
+        slicesGray32,
+        depthPtr,
+        maskPtr,
+        artifact01,
+        opt,
+        &abort,
+        progressCb,
+        statusCb
+    );
+
+    if (!ok || abort) return false;
+
+    CV_Assert(artifact01.type() == CV_32F);
+
+    cv::Mat conf;
+    artifact01.copyTo(conf);
+    cv::min(conf, 1.0f, conf);
+    cv::max(conf, 0.0f, conf);
+
+    // Heat map
+    cv::Mat heat(conf.size(), CV_8UC3, cv::Scalar(0,0,0));
+
+    for (int y = 0; y < conf.rows; ++y)
+    {
+        const float *cptr = conf.ptr<float>(y);
+        cv::Vec3b *hptr   = heat.ptr<cv::Vec3b>(y);
+
+        for (int x = 0; x < conf.cols; ++x)
+        {
+            float v = cptr[x];
+
+            if (v < 0.02f)
+            {
+                // Black (background)
+                hptr[x] = {0, 0, 0};
+            }
+            else if (v < 0.05f)
+            {
+                // Yellow
+                hptr[x] = {0, 255, 255};
+            }
+            else if (v < 0.10f)
+            {
+                // Orange
+                hptr[x] = {0, 165, 255};
+            }
+            else
+            {
+                // Bright red
+                hptr[x] = {0, 0, 255};
+            }
+        }
+    }
+    // Ensure artifact folder exists
+    QString artifactFolder = projectRoot + "/artifact";
+    QDir().mkpath(artifactFolder);
+
+    // Overwrite artifact_confidence.png with COLOR heatmap
+    QString confidencePath =
+        artifactFolder + "/artifact_confidence.png";
+
+    cv::imwrite(confidencePath.toStdString(), heat);
+
+    // Overlay heatmap on fused grayscale
+    QString overlayPath =
+        artifactFolder + "/artifact_overlay.png";
+
+    cv::Mat overlay =
+        FSUtilities::showWithMask(fusedGray32, heat, 0.6f);
+
+    // Optional labeling (recommended for debug clarity)
+    FSUtilities::addLabel(
+        overlay,
+        "Artifact confidence overlay"
+        );
+
+    // Repair
+    if (o.enableArtifactRepair)
+    {
+        emit updateStatus(false, "Repairing artifacts...", srcFun);
+
+        setAlignedColorSlices();
+
+        cv::Mat colorFused8 =
+            cv::imread(fusedPath.toStdString(), cv::IMREAD_COLOR);
+        cv::Mat colorFused32;
+        colorFused8.convertTo(colorFused32, CV_32F, 1.0 / 255.0);
+
+        FSArtifact::repair(
+            colorFused32,
+            artifact01,
+            alignedColorSlices,
+            lastSlice,
+            0.02f,
+            &abort
+            );
+
+        // Save repair
+        QString repairedPath = artifactFolder + "/artifact_repaired.png";
+
+        cv::Mat repaired8;
+        colorFused32.convertTo(repaired8, CV_8U, 255.0);
+        cv::imwrite(repairedPath.toStdString(), repaired8);
+    }
+
+    emit updateStatus(false, "Artifact detection complete", srcFun);
+    return true;
+}
+
 void FS::diagnostics()
 {
+    qDebug()
+             << "o.enableAlign       =" << o.enableAlign << "\n"
+             << "m_skipAlign         =" << skipAlign << "\n"
+             << "o.enableFocusMaps   =" << o.enableFocusMaps << "\n"
+             << "m_skipFocusMaps     =" << skipFocusMaps << "\n"
+             << "m_total             =" << progressTotal
+        ;
 
 }
