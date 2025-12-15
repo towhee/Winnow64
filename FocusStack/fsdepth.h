@@ -10,7 +10,7 @@ namespace FSDepth {
 struct Options
 {
     // "Simple"    = original scalar max over focus_*.tif
-    // "MultiScale"= wavelet-based depth using FSFusionWavelet + FSFusionMerge
+    // "MultiScale"= wavelet-based depth using FSFusionWavelet + FSMerge
     QString method = "Simple";
 
     // For MultiScale: where to find gray_*.tif (aligned grayscale)
@@ -29,7 +29,7 @@ struct Options
 };
 
 using ProgressCallback = std::function<void(int)>;
-using StatusCallback   = std::function<void(const QString &message, bool isError)>;
+using StatusCallback   = std::function<void(const QString &message)>;
 
 // Input:  focus maps in focusFolder (Simple)
 //         OR aligned gray_*.tif in opt.alignFolder (MultiScale)

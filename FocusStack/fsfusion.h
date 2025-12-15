@@ -30,6 +30,11 @@ public:
         int  consistency    = 2;     // 0 = off, 1 = subband denoise, 2 = +neighbour
     };
 
+    inline bool isAbort(const std::atomic_bool *f)
+    {
+        return f && f->load(std::memory_order_relaxed);
+    }
+
     /*
     PMax / Simple fusion:
      *

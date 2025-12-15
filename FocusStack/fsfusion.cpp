@@ -2,7 +2,7 @@
 #include "Main/global.h"
 
 #include "FSFusionWavelet.h"
-#include "FSFusionMerge.h"
+#include "FSMerge.h"
 #include "FSFusionReassign.h"
 
 #include <opencv2/imgproc.hpp>
@@ -91,7 +91,7 @@ bool fuseSimple(const std::vector<cv::Mat> &grayImgs,
 
     if (depthIndex16.size() != size)
     {
-        G::log(srcFun, "Depth index size mismatch vs input images");
+        if (G::FSLog) G::log(srcFun, "Depth index size mismatch vs input images");
         return false;
     }
 
@@ -109,7 +109,7 @@ bool fuseSimple(const std::vector<cv::Mat> &grayImgs,
         }
         else
         {
-            G::log(srcFun, "Unsupported color type in slice " + QString::number(i));
+            if (G::FSLog) G::log(srcFun, "Unsupported color type in slice " + QString::number(i));
             return false;
         }
     }
@@ -153,7 +153,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
               ProgressCallback            cb)
 {
     QString srcFun = "FSFusion::fusePMax";
-    G::log(srcFun, "Start PMax fusion");
+    if (G::FSLog) G::log(srcFun, "Start PMax fusion");
 
     const int N = static_cast<int>(grayImgs.size());
     if (N == 0 || N != static_cast<int>(colorImgs.size()))
@@ -161,7 +161,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
 
     if (depthIndex16.empty() || depthIndex16.type() != CV_16U)
     {
-        G::log(srcFun, "Depth index missing or wrong type");
+        if (G::FSLog) G::log(srcFun, "Depth index missing or wrong type");
         return false;
     }
 
@@ -177,7 +177,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
 
     if (depthIndex16.size() != orig)
     {
-        G::log(srcFun, "Depth index size mismatch vs input images");
+        if (G::FSLog) G::log(srcFun, "Depth index size mismatch vs input images");
         return false;
     }
 
@@ -190,7 +190,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
 
     for (int i = 0; i < N; ++i)
     {
-        // qApp->processEvents(); if (abortFlag) return false;
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
         grayP[i]  = padForWavelet(grayImgs[i], paddedSize);
         colorP[i] = padForWavelet(colorImgs[i], paddedSize);
     }
@@ -201,16 +201,16 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     std::vector<cv::Mat> wavelets(N);
 
-    G::log(srcFun, "Forward wavelet per slice");
+    if (G::FSLog) G::log(srcFun, "Forward wavelet per slice");
     for (int i = 0; i < N; ++i)
     {
-        // qApp->processEvents(); if (abortFlag) return false;
-        G::log(srcFun, "Forward wavelet slice " + QString::number(i));
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+        if (G::FSLog) G::log(srcFun, "Forward wavelet slice " + QString::number(i));
         tick(cb);
 
         if (!FSFusionWavelet::forward(grayP[i], opt.useOpenCL, wavelets[i]))
         {
-            G::log(srcFun, "Wavelet forward failed");
+            if (G::FSLog) G::log(srcFun, "Wavelet forward failed");
             return false;
         }
     }
@@ -218,41 +218,41 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     // 2. Merge wavelet stacks → mergedWavelet (we ignore depthIndex here)
     // --------------------------------------------------------------------
-    G::log(srcFun, "Merge wavelet stacks");
+    if (G::FSLog) G::log(srcFun, "Merge wavelet stacks");
     tick(cb);
 
     cv::Mat mergedWavelet;
     cv::Mat dummyDepthIndex16;
 
-    if (!FSFusionMerge::merge(wavelets,
+    if (!FSMerge::merge(wavelets,
                               opt.consistency,
                               abortFlag,
                               mergedWavelet,
                               dummyDepthIndex16))
     {
-        G::log(srcFun, "FSFusionMerge::merge failed");
+        if (G::FSLog) G::log(srcFun, "FSMerge::merge failed");
         return false;
     }
 
     // --------------------------------------------------------------------
     // 3. Inverse wavelet → fusedGray8 (still padded size)
     // --------------------------------------------------------------------
-    G::log(srcFun, "Inverse wavelet");
+    if (G::FSLog) G::log(srcFun, "Inverse wavelet");
     tick(cb);
 
     cv::Mat fusedGray8;
     if (!FSFusionWavelet::inverse(mergedWavelet, opt.useOpenCL, fusedGray8))
     {
-        G::log(srcFun, "FSFusionWavelet::inverse failed");
+        if (G::FSLog) G::log(srcFun, "FSFusionWavelet::inverse failed");
         return false;
     }
 
-    // qApp->processEvents(); if (abortFlag) return false;
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
     // --------------------------------------------------------------------
     // 4. Build color map using padded grayscale + padded RGB images
     // --------------------------------------------------------------------
-    G::log(srcFun, "Build color map");
+    if (G::FSLog) G::log(srcFun, "Build color map");
     tick(cb);
 
     std::vector<FSFusionReassign::ColorEntry> colorEntries;
@@ -263,16 +263,16 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
                                          colorEntries,
                                          counts))
     {
-        G::log(srcFun, "FSFusionReassign::buildColorMap failed");
+        if (G::FSLog) G::log(srcFun, "FSFusionReassign::buildColorMap failed");
         return false;
     }
 
-    // qApp->processEvents(); if (abortFlag) return false;
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
     // --------------------------------------------------------------------
     // 5. Apply color reassignment to padded fused grayscale
     // --------------------------------------------------------------------
-    G::log(srcFun, "Apply color reassignment");
+    if (G::FSLog) G::log(srcFun, "Apply color reassignment");
     tick(cb);
 
     cv::Mat paddedColorOut;
@@ -281,16 +281,16 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
                                          counts,
                                          paddedColorOut))
     {
-        G::log(srcFun, "FSFusionReassign::applyColorMap failed");
+        if (G::FSLog) G::log(srcFun, "FSFusionReassign::applyColorMap failed");
         return false;
     }
 
-    // qApp->processEvents(); if (abortFlag) return false;
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
     // --------------------------------------------------------------------
     // 6. Crop back to original (non-padded) size
     // --------------------------------------------------------------------
-    G::log(srcFun, "Crop back to original size");
+    if (G::FSLog) G::log(srcFun, "Crop back to original size");
 
     if (ps == orig)
     {

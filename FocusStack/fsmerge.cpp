@@ -1,5 +1,5 @@
-// FSFusionMerge.cpp
-#include "FSFusionMerge.h"
+// FSMerge.cpp
+#include "FSMerge.h"
 #include "Main/global.h"
 
 #include <opencv2/core.hpp>
@@ -149,7 +149,7 @@ void denoiseNeighbours(cv::Mat &mergedWavelet,
 
 } // anonymous namespace
 
-namespace FSFusionMerge
+namespace FSMerge
 {
 
 bool merge(const std::vector<cv::Mat> &wavelets,
@@ -158,11 +158,17 @@ bool merge(const std::vector<cv::Mat> &wavelets,
            cv::Mat &mergedOut,
            cv::Mat &depthIndex16)
 {
+    QString srcFun = "FSMerge::merge";
+    // qDebug() << "merge: abortFlag =" << abortFlag;
+    // qDebug() << "merge: *abortFlag =" << *abortFlag;
+
     if (wavelets.empty()) {
-        QString msg = "FSFusionMerge: wavelets are empty.";
+        QString msg = "WARNING: FSMerge: wavelets are empty.";
         qWarning() << msg;
         return false;
     }
+
+    if (G::FSLog) G::log(srcFun, "Validating wavelets");
 
     const int N = static_cast<int>(wavelets.size());
     const cv::Size size = wavelets[0].size();
@@ -170,14 +176,16 @@ bool merge(const std::vector<cv::Mat> &wavelets,
     // Validate wavelets
     for (int i = 0; i < N; ++i)
     {
-        // qApp->processEvents(); if (abortFlag) return false;
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+        if (G::FSLog) G::log(srcFun, "Slice " + QString::number(i));
 
         if (wavelets[i].empty() ||
             wavelets[i].type() != CV_32FC2 ||
             wavelets[i].size() != size)
         {
             QString idx = QString::number(i);
-            QString msg = "FSFusionMerge: wavelets " + idx;
+            QString msg = "WARNING: FSMerge: wavelets " + idx;
             if (wavelets[i].empty()) msg += " is empty.";
             if (wavelets[i].type() != CV_32FC2) msg += " type != CV_32FC2.";
             if (wavelets[i].size() != size) msg += " != wavelets[0].size.";
@@ -197,9 +205,12 @@ bool merge(const std::vector<cv::Mat> &wavelets,
     depthIndex16 = 0;
 
     // PMax: for each pixel, choose wavelet with max |v|^2
+    if (G::FSLog) G::log(srcFun, "PMax: for each pixel, choose wavelet with max |v|^2");
     for (int i = 0; i < N; ++i)
     {
-        // qApp->processEvents(); if (abortFlag) return false;
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+        if (G::FSLog) G::log(srcFun, "Slice " + QString::number(i));
+
         cv::Mat absval(rows, cols, CV_32F);
         getSqAbsval(wavelets[i], absval);
 
@@ -209,7 +220,7 @@ bool merge(const std::vector<cv::Mat> &wavelets,
         depthIndex16.setTo(static_cast<uint16_t>(i), mask);
     }
 
-    // qApp->processEvents(); if (abortFlag) return false;
+    // if (*abortFlag) return false;
 
     if (consistency >= 1)
     {
@@ -221,7 +232,9 @@ bool merge(const std::vector<cv::Mat> &wavelets,
         denoiseNeighbours(mergedOut, depthIndex16, wavelets);
     }
 
+    if (G::FSLog) G::log(srcFun, "Done.");
+
     return true;
 }
 
-} // namespace FSFusionMerge
+} // namespace FSMerge

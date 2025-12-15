@@ -1,11 +1,11 @@
 #ifndef FS_H
 #define FS_H
 
+#include "QtCore/qdebug.h"
 #include <QObject>
 #include <QStringList>
 #include <QString>
 #include <atomic>
-#include <functional>
 #include <vector>
 
 #include <opencv2/core.hpp>
@@ -22,25 +22,30 @@ public:
     struct Options
     {
         QString method         = "";
-        bool overwriteExisting  = false;
         bool keepIntermediates  = true;
+        bool useMemory          = true;     // use disk if false
 
         bool enableAlign        = true;
         bool previewAlign       = true;
         bool overwriteAlign     = true;
+
         bool enableFocusMaps    = true;
         bool previewFocusMaps   = true;
         bool overwriteFocusMaps = true;
+
         bool enableDepthMap     = true;
         bool previewDepthMap    = true;
         bool overwriteDepthMap  = true;
+
         bool enableFusion       = true;
         bool previewFusion      = true;
         bool overWriteFusion    = true;
 
-        bool enableOpenCL       = true;
+        bool enableArtifactDetect = true;
+        bool enableArtifactRepair = true;
+        QString artifactMethod    = "MultiScale";
 
-        // You can extend these later (contrast, WB flags, etc.)
+        bool enableOpenCL       = true;
     };
 
     explicit FS(QObject *parent = nullptr);
@@ -49,20 +54,31 @@ public:
     void setInput(const QStringList &paths);            // source paths
     void setProjectRoot(const QString &rootPath);       // folder containing align/focus/depth/fusion
     void setOptions(const Options &opt);
+    QString latestFusedPath() const;
     void diagnostics();
+
+    void requestAbort()
+    {
+        abort.store(true, std::memory_order_relaxed);
+    }
 
     // Main pipeline API
     bool run();     // synchronous
-
-public slots:
-    void abort();   // request abort (checked inside stages)
 
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
     void progress(int current, int total);
 
+protected:
+    bool abortRequested() const
+    {
+        // qDebug() << "FS::abortRequested";
+        return abort.load(std::memory_order_relaxed);
+    }
+
 private:
-    std::atomic_bool abortRequested = false;
+    // std::atomic_bool abortRequested;
+    std::atomic_bool abort{false};
 
     // Folder creation and skip detection
     bool prepareFolders();
@@ -76,18 +92,22 @@ private:
     bool runFocusMaps();
     bool runDepthMap();
     bool runFusion();
+    bool runArtifact();
 
     // helpers for UI
     void status(const QString &msg);
 
     QStringList inputPaths;
     QString     projectRoot;
+    int slices = 0;
+    int lastSlice = 0;
 
     // Stage folders (automatically set from projectRoot)
     QString alignFolder;
     QString focusFolder;
     QString depthFolder;
     QString fusionFolder;
+    QString artifactsFolder;
 
     Options o;
 
@@ -96,25 +116,27 @@ private:
     bool skipFocusMaps = false;
     bool skipDepthMap  = false;
     bool skipFusion    = false;
+    bool skipArtifacts = false;
 
     // Exist flags
-    // bool alignGrayscaleExists = false;
-    // bool alignColorExists     = false;
-    bool alignExists          = false;
-    bool focusMapsExist       = false;
-    bool depthMapExists       = false;
-    bool fusionExists         = false;
+    bool alignExists  = true;
+    bool focusExists  = true;
+    bool depthExists  = true;
+    bool fusionExists = true;
 
     // Alignment output paths
     std::vector<QString> alignedColorPaths;
     std::vector<QString> alignedGrayPaths;
+    void setAlignedColorPaths();
 
     // In-memory aligned images (optional fast path for runFusion)
-    std::vector<cv::Mat> alignedColorMats;
-    std::vector<cv::Mat> alignedGrayMats;
+    std::vector<cv::Mat> alignedColorSlices;
+    std::vector<cv::Mat> alignedGraySlices;
+    void setAlignedColorSlices();
+    void setAlignedCGraySlices();
 
     // Focus maps and depth map
-    std::vector<cv::Mat> focusMaps;         // CV_32F per slice
+    std::vector<cv::Mat> focusSlices;         // CV_32F per slice
     cv::Mat              depthIndex16Mat;   // CV_16U depth indices
 
     // Progress

@@ -251,6 +251,7 @@ Q_NAMESPACE
     extern bool isFileLogger;
     extern bool isErrorLogger;
     extern bool isIssueLogger;
+    extern bool FSLog;
     extern bool sendLogToConsole;
     extern bool showAllEvents;
     extern QFile logFile;

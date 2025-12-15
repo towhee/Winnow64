@@ -178,7 +178,7 @@ bool run(const QString &alignFolder,
         const QString base    = fi.completeBaseName();
         const QString srcPath = fi.absoluteFilePath();
 
-        G::log(srcFun, "Slice " + QString::number(i) + " (" + base + ")");
+        if (G::FSLog) G::log(srcFun, "Slice " + QString::number(i) + " (" + base + ")");
 
         // --------------------------------------------------------
         // 1. Load grayscale aligned image
@@ -219,7 +219,7 @@ bool run(const QString &alignFolder,
         cv::minMaxLoc(mag32, &mn, &mx);
         cv::Scalar meanVal = cv::mean(mag32);
 
-        G::log(srcFun,
+        if (G::FSLog) G::log(srcFun,
                QString("Slice %1 mag32 min=%2 max=%3 mean=%4")
                    .arg(i)
                    .arg(mn)
@@ -253,7 +253,7 @@ bool run(const QString &alignFolder,
             {
                 double fMin = 0.0, fMax = 0.0;
                 cv::minMaxLoc(focus16, &fMin, &fMax);
-                G::log(srcFun,
+                if (G::FSLog) G::log(srcFun,
                        QString("Slice %1 focus16 min=%2 max=%3")
                            .arg(i)
                            .arg(fMin)
