@@ -5,6 +5,8 @@
 #include <atomic>
 #include <functional>
 
+#include <opencv2/imgcodecs.hpp>
+
 namespace FSDepth {
 
 struct Options
@@ -20,6 +22,9 @@ struct Options
     // Whether to write depth_preview.png (grayscale + heatmap + legend)
     bool preview = true;
 
+    // Write intermediates
+    bool keep = true;
+
     // When method == "MultiScale", save per-slice wavelet debug images:
     //   wavelet_mag_XXX.png
     //   wavelet_mag_merged.png
@@ -34,12 +39,13 @@ using StatusCallback   = std::function<void(const QString &message)>;
 // Input:  focus maps in focusFolder (Simple)
 //         OR aligned gray_*.tif in opt.alignFolder (MultiScale)
 // Output: depth_index.png (+ depth_preview.png) in depthFolder
-bool run(const QString    &focusFolder,
-         const QString    &depthFolder,
-         const Options    &opt,
+bool run(const QString &focusFolder,
+         const QString &depthFolder,
+         const Options &opt,
          std::atomic_bool *abortFlag,
-         ProgressCallback  progressCb,
-         StatusCallback    statusCb);
+         ProgressCallback progressCb,
+         StatusCallback statusCb,
+         cv::Mat *depthIndex16Out = nullptr);
 
 } // namespace FSDepth
 

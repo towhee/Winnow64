@@ -7,7 +7,7 @@ namespace FSLoader {
 
 // ------------------------------------------------------------------------------------
 // Compute wavelet-friendly expanded size
-// Petteri's wavelet code requires dimensions divisible by 2^levels.
+// Wavelet code requires dimensions divisible by 2^levels.
 // This reproduces Task_Wavelet::levels_for_size behavior closely.
 // ------------------------------------------------------------------------------------
 static bool divisible(int x, int p) { return (x % p) == 0; }
