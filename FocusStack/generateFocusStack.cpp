@@ -116,25 +116,25 @@ void MW::generateFocusStack(const QStringList paths,
 
     FS::Options opt;
     opt.method              = method;
+    opt.keepIntermediates   = false;
+    opt.useIntermediates    = false;
     opt.useMemory           = true;
 
-    opt.enableAlign         = false;
-    opt.previewAlign        = true;
-    opt.overwriteAlign      = true;
+    opt.enableAlign         = true;
+    opt.keepAlign           = false;
 
     opt.enableFocusMaps     = false;
-    opt.previewFocusMaps    = true;
-    opt.overwriteFocusMaps  = true;
+    opt.previewFocusMaps    = false;
+    opt.keepFocusMaps       = false;
 
-    opt.enableDepthMap      = false;
-    opt.previewDepthMap     = true;
-    opt.overwriteDepthMap   = true;
+    opt.enableDepthMap      = true;
+    opt.previewDepthMap     = false;
+    opt.keepDepthMap        = false;
 
-    opt.enableFusion        = false;
+    opt.enableFusion        = true;
     opt.previewFusion       = true;
-    opt.overWriteFusion     = true;
 
-    opt.enableArtifactDetect = true;
+    opt.enableArtifactDetect = false;
 
     opt.enableOpenCL        = true;
     pipeline->setOptions(opt);

@@ -23,23 +23,22 @@ public:
     {
         QString method         = "";
         bool keepIntermediates  = true;
+        bool useIntermediates   = true;
         bool useMemory          = true;     // use disk if false
 
         bool enableAlign        = true;
-        bool previewAlign       = true;
-        bool overwriteAlign     = true;
+        bool keepAlign          = true;     // intermediates
 
         bool enableFocusMaps    = true;
         bool previewFocusMaps   = true;
-        bool overwriteFocusMaps = true;
+        bool keepFocusMaps      = true;
 
         bool enableDepthMap     = true;
         bool previewDepthMap    = true;
-        bool overwriteDepthMap  = true;
+        bool keepDepthMap       = true;
 
         bool enableFusion       = true;
         bool previewFusion      = true;
-        bool overWriteFusion    = true;
 
         bool enableArtifactDetect = true;
         bool enableArtifactRepair = true;
@@ -54,7 +53,6 @@ public:
     void setInput(const QStringList &paths);            // source paths
     void setProjectRoot(const QString &rootPath);       // folder containing align/focus/depth/fusion
     void setOptions(const Options &opt);
-    QString latestFusedPath() const;
     void diagnostics();
 
     void requestAbort()
@@ -80,9 +78,10 @@ private:
     // std::atomic_bool abortRequested;
     std::atomic_bool abort{false};
 
-    // Folder creation and skip detection
+    bool isMemoryPipeline() const;
+    bool validateMemoryPipeline(const QString &stage) const;
     bool prepareFolders();
-    void setExistance();
+    void updateIntermediateStatus();
     bool setParameters();
     bool validAlignMatsAvailable(int count) const;
     void previewOverview(cv::Mat &fusedColor8Mat);
@@ -125,19 +124,25 @@ private:
     bool fusionExists = true;
 
     // Alignment output paths
-    std::vector<QString> alignedColorPaths;
-    std::vector<QString> alignedGrayPaths;
+    std::vector<QString> alignedColorPaths;     // intermediate
+    std::vector<QString> alignedGrayPaths;      // intermediate
     void setAlignedColorPaths();
+    // Depth output path
+    QString depthIdxPath;                       // intermediate
+    QString lastFusedPath;                      // intermediate
 
     // In-memory aligned images (optional fast path for runFusion)
     std::vector<cv::Mat> alignedColorSlices;
     std::vector<cv::Mat> alignedGraySlices;
     void setAlignedColorSlices();
-    void setAlignedCGraySlices();
+    void setAlignedGraySlices();
 
     // Focus maps and depth map
-    std::vector<cv::Mat> focusSlices;         // CV_32F per slice
-    cv::Mat              depthIndex16Mat;   // CV_16U depth indices
+    std::vector<cv::Mat> focusSlices;           // CV_32F per slice
+    cv::Mat              depthIndex16Mat;       // CV_16U depth indices
+
+    // Fusion Mat
+    cv::Mat fusedColor8Mat;
 
     // Progress
     int progressCount = -1;

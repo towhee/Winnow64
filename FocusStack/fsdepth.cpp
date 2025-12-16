@@ -104,12 +104,13 @@ cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16,
 //----------------------------------------------------------
 // Simple method: scalar max over focus_*.tif (current behavior)
 //----------------------------------------------------------
-bool runSimple(const QString    &focusFolder,
-               const QString    &depthFolder,
+bool runSimple(const QString &focusFolder,
+               const QString &depthFolder,
                const FSDepth::Options &opt,
                std::atomic_bool *abortFlag,
-               FSDepth::ProgressCallback  progressCb,
-               FSDepth::StatusCallback    statusCb)
+               FSDepth::ProgressCallback progressCb,
+               FSDepth::StatusCallback statusCb,
+               cv::Mat *depthIndex16Out)
 {
     QString srcFun = "FSDepth::runSimple";
 
@@ -236,7 +237,8 @@ bool runMultiScale(const QString    &focusFolder,
                    const FSDepth::Options &opt,
                    std::atomic_bool *abortFlag,
                    FSDepth::ProgressCallback  progressCb,
-                   FSDepth::StatusCallback    statusCb)
+                   FSDepth::StatusCallback    statusCb,
+                   cv::Mat *depthIndex16Out)
 {
     QString srcFun = "FSDepth::runMultiScale";
     if (G::FSLog) G::log(srcFun, "Creating depth map");
@@ -447,6 +449,12 @@ bool runMultiScale(const QString    &focusFolder,
         depthIndex16 = depthIndexPadded16(roi).clone();
     }
 
+    if (depthIndex16Out)
+        depthIndex16.copyTo(*depthIndex16Out);
+
+    if (opt.preview || opt.keep)
+        cv::imwrite((depthFolder + "/depth_index.png").toStdString(), depthIndex16);
+
     const QString depthIdxPath = outDir.absoluteFilePath("depth_index.png");
     if (!cv::imwrite(depthIdxPath.toStdString(), depthIndex16)) {
         QString msg = "WARNING: FSDepth(MultiScale): Failed to write depth_index.png";
@@ -485,7 +493,8 @@ bool run(const QString    &focusFolder,
          const Options    &opt,
          std::atomic_bool *abortFlag,
          ProgressCallback  progressCb,
-         StatusCallback    statusCb)
+         StatusCallback    statusCb,
+         cv::Mat *depthIndex16Out)
 {
     const QString method = opt.method.trimmed();
 
@@ -493,11 +502,11 @@ bool run(const QString    &focusFolder,
     qDebug() << "FSDepth::run statusCb valid?" << static_cast<bool>(statusCb);
 
     if (method.compare("MultiScale", Qt::CaseInsensitive) == 0)
-        return runMultiScale(focusFolder, depthFolder, opt,
-                             abortFlag, progressCb, statusCb);
+        return runMultiScale(focusFolder, depthFolder, opt, abortFlag,
+                             progressCb, statusCb, depthIndex16Out);
     else
-        return runSimple(focusFolder, depthFolder, opt,
-                         abortFlag, progressCb, statusCb);
+        return runSimple(focusFolder, depthFolder, opt, abortFlag,
+                         progressCb, statusCb, depthIndex16Out);
 }
 
 } // namespace FSDepth
