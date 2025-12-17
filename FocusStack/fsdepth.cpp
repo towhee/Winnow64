@@ -232,256 +232,230 @@ bool runSimple(const QString &focusFolder,
 //----------------------------------------------------------
 // MultiScale A: wavelet-based depth using FSFusionWavelet + FSMerge
 //----------------------------------------------------------
-bool runMultiScale(const QString    &focusFolder,
-                   const QString    &depthFolder,
-                   const FSDepth::Options &opt,
-                   std::atomic_bool *abortFlag,
-                   FSDepth::ProgressCallback  progressCb,
-                   FSDepth::StatusCallback    statusCb,
-                   cv::Mat *depthIndex16Out)
+
+bool runMultiScaleFromGrayMats(
+    const std::vector<cv::Mat> &graySlices,      // CV_8U or CV_32F
+    const QString              &depthFolder,
+    const FSDepth::Options     &opt,
+    std::atomic_bool           *abortFlag,
+    FSDepth::ProgressCallback   progressCb,
+    FSDepth::StatusCallback     statusCb,
+    cv::Mat                    *depthIndex16Out)
 {
-    QString srcFun = "FSDepth::runMultiScale";
-    if (G::FSLog) G::log(srcFun, "Creating depth map");
+    const QString srcFun = "FSDepth::runMultiScaleFromGrayMats";
 
-    if (statusCb) statusCb("This is a test");
+    qDebug() << "runMultiScaleFromGrayMats" << "1";
 
-    // Source of grayscale slices: alignFolder if provided, else focusFolder
-    QString grayRoot = opt.alignFolder.isEmpty() ? focusFolder : opt.alignFolder;
-
-    QDir inDir(grayRoot);
-    if (!inDir.exists()) {
-        QString msg = "WARNING: FSDepth(MultiScale): Gray root does not exist: " + grayRoot;
-        if (statusCb) statusCb(msg);
-        qWarning() << msg;
+    if (graySlices.empty())
+    {
+        if (statusCb) statusCb("FSDepth(MultiScale): No gray slices provided.");
         return false;
     }
 
-    QDir outDir(depthFolder);
-    if (!outDir.exists() && !outDir.mkpath(".")) {
-        QString msg = "WARNING: FSDepth(MultiScale): Unable to create depth folder: " + depthFolder;
-        if (statusCb) statusCb(msg);
-        qWarning() << msg;
-        return false;
+    const int total = static_cast<int>(graySlices.size());
+    const cv::Size origSize = graySlices.front().size();
+
+    // --- Validate input ---
+    for (int i = 0; i < total; ++i)
+    {
+        if (graySlices[i].empty() || graySlices[i].size() != origSize)
+        {
+            if (statusCb)
+                statusCb(QString("FSDepth(MultiScale): Invalid gray slice %1").arg(i));
+            return false;
+        }
     }
 
-    // We follow FSFocus naming: gray_*.tif etc.
-    QFileInfoList files = inDir.entryInfoList(
-        {"gray_*.tif", "gray_*.tiff", "gray_*.png", "gray_*.jpg", "gray_*.jpeg"},
-        QDir::Files,
-        QDir::Name);
+    if (statusCb)
+        statusCb(QString("FSDepth(MultiScale): %1 gray slices (memory)").arg(total));
 
-    int total = files.size();
-    if (total == 0) {
-        QString msg = "WARNING: FSDepth(MultiScale): No grayscale aligned slices found in " + grayRoot;
-        if (statusCb) statusCb(msg);
-        qWarning() << msg;
-        return false;
-    }
-
-    QString msg = QString("FSDepth(MultiScale): %1 gray slices detected.").arg(total);
-    if (statusCb) statusCb(msg);
-
-    // --- Load first image to determine size and padding ---
-    if (G::FSLog) G::log(srcFun, "Determining size and padding");
-    cv::Mat firstGray = cv::imread(files.first().absoluteFilePath().toStdString(),
-                                   cv::IMREAD_GRAYSCALE);
-    if (firstGray.empty()) {
-        QString msg = "WARNING: FSDepth(MultiScale): Failed to load first gray slice.";
-        if (statusCb) statusCb(msg);
-        qWarning() << msg;
-        return false;
-    }
-
-    cv::Size origSize = firstGray.size();
+    // --- Compute wavelet-friendly padded size ---
     cv::Size paddedSize;
     FSFusionWavelet::computeLevelsAndExpandedSize(origSize, paddedSize);
 
-    int padW = paddedSize.width  - origSize.width;
-    int padH = paddedSize.height - origSize.height;
-    int left   = padW / 2;
-    int right  = padW - left;
-    int top    = padH / 2;
-    int bottom = padH - top;
+    const int padW = paddedSize.width  - origSize.width;
+    const int padH = paddedSize.height - origSize.height;
+    const int left   = padW / 2;
+    const int right  = padW - left;
+    const int top    = padH / 2;
+    const int bottom = padH - top;
 
-    // --- Build padded gray stack and wavelets ---
-    if (G::FSLog) G::log(srcFun, "Building gray stack and wavelets");
+    // --- Build wavelet stack ---
     std::vector<cv::Mat> wavelets(total);
 
     for (int s = 0; s < total; ++s)
     {
-        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) {
-            QString msg = "WARNING: FSDepth(MultiScale): Aborted by user.";
-            if (statusCb) statusCb(msg);
-            qWarning() << msg;
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed))
             return false;
-        }
 
-        if (G::FSLog) G::log(srcFun, "Slice " + QString::number(s));
-        QString msg = "Building gray stack and wavelets.  Slice " + QString::number(s);
-        if (statusCb) statusCb(msg);
+        if (statusCb)
+            statusCb(QString("FSDepth(MultiScale): Wavelet slice %1").arg(s));
 
-        QFileInfo fi = files[s];
-        QString srcPath = fi.absoluteFilePath();
+        cv::Mat gray = graySlices[s];
+        cv::Mat gray8;
 
-        cv::Mat gray = cv::imread(srcPath.toStdString(), cv::IMREAD_GRAYSCALE);
-        if (gray.empty()) {
-            QString msg = "WARNING: FSDepth(MultiScale): Cannot load " + srcPath;
-            if (statusCb) statusCb(msg);
-            qWarning() << msg;
-            return false;
-        }
+        // Normalize to CV_8U for wavelet input
+        if (gray.type() == CV_32F)
+            gray.convertTo(gray8, CV_8U, 255.0);
+        else
+            gray8 = gray;
 
-        if (gray.size() != origSize) {
-            QString msg = "WARNING: FSDepth(MultiScale): Gray size mismatch in " + srcPath;
-            if (statusCb) statusCb(msg);
-            qWarning() << msg;
-            return false;
-        }
-
-        // Pad to wavelet-friendly size
         cv::Mat grayPadded;
-        if (paddedSize == origSize) {
-            grayPadded = gray;
-        } else {
-            cv::copyMakeBorder(gray,
-                               grayPadded,
-                               top, bottom,
-                               left, right,
+        if (paddedSize == origSize)
+        {
+            grayPadded = gray8;
+        }
+        else
+        {
+            cv::copyMakeBorder(gray8, grayPadded,
+                               top, bottom, left, right,
                                cv::BORDER_REFLECT);
         }
 
-        // Wavelet transform using same logic as FSFusionWavelet::forward
-        if (!FSFusionWavelet::forward(grayPadded, opt.numThreads > 0 ? true : true, wavelets[s])) {
-            QString msg = "WARNING: FSDepth(MultiScale): Wavelet forward failed for " + srcPath;
-            if (statusCb) statusCb(msg);
-            qWarning() << msg;
+        if (!FSFusionWavelet::forward(grayPadded,
+                                      /*useOpenCL=*/true,
+                                      wavelets[s]))
+        {
+            if (statusCb)
+                statusCb(QString("FSDepth(MultiScale): Wavelet failed at slice %1").arg(s));
             return false;
-        }
-
-        if (opt.saveWaveletDebug) {
-            // magnitude, log-compressed, colorized
-            cv::Mat complexMag;
-            {
-                cv::Mat mag32;
-                std::vector<cv::Mat> ch(2);
-                cv::split(wavelets[s], ch);
-                cv::magnitude(ch[0], ch[1], mag32);
-
-                mag32 += 1.0f;
-                cv::log(mag32, mag32);
-
-                double vmin, vmax;
-                cv::minMaxLoc(mag32, &vmin, &vmax);
-                cv::Mat mag8;
-                mag32.convertTo(mag8, CV_8U,
-                                255.0 / (vmax - vmin),
-                                -vmin * 255.0 / (vmax - vmin));
-
-                cv::applyColorMap(mag8, complexMag, cv::COLORMAP_VIRIDIS);
-            }
-
-            QString dbgPath = outDir.absoluteFilePath(
-                QString("wavelet_mag_%1.png").arg(s, 3, 10, QChar('0')));
-            cv::imwrite(dbgPath.toStdString(), complexMag);
         }
 
         if (progressCb)
             progressCb(s + 1);
     }
 
-    // --- Merge wavelet stack into mergedWavelet + depthIndex (padded size) ---
+    // --- Merge wavelets → depth index (padded) ---
     cv::Mat mergedWavelet;
     cv::Mat depthIndexPadded16;
 
     if (!FSMerge::merge(wavelets,
-                              /*consistency=*/2,
-                              abortFlag,
-                              mergedWavelet,
-                              depthIndexPadded16))
+                        /*consistency=*/2,
+                        abortFlag,
+                        mergedWavelet,
+                        depthIndexPadded16))
     {
-        QString msg = "WARNING: FSDepth::runMultiScale: FSMerge::merge failed.";
-        if (statusCb) statusCb(msg);
-        qWarning() << msg;
+        if (statusCb)
+            statusCb("FSDepth(MultiScale): FSMerge failed.");
         return false;
     }
-    qDebug() << srcFun << "1";
-    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-    qDebug() << srcFun << "2";
 
-    // Optional merged wavelet debug
-    if (opt.saveWaveletDebug) {
-        qDebug() << srcFun << "3";
-        if (G::FSLog) G::log(srcFun, "Writing merged wavelet merge");
-        cv::Mat magMergedColor;
-        {
-            std::vector<cv::Mat> ch(2);
-            cv::split(mergedWavelet, ch);
-            cv::Mat mag32;
-            cv::magnitude(ch[0], ch[1], mag32);
-
-            mag32 += 1.0f;
-            cv::log(mag32, mag32);
-            qDebug() << srcFun << "4";
-
-            double vmin, vmax;
-            cv::minMaxLoc(mag32, &vmin, &vmax);
-            cv::Mat mag8;
-            mag32.convertTo(mag8, CV_8U,
-                            255.0 / (vmax - vmin),
-                            -vmin * 255.0 / (vmax - vmin));
-            qDebug() << srcFun << "5";
-
-            cv::applyColorMap(mag8, magMergedColor, cv::COLORMAP_VIRIDIS);
-        }
-
-        QString dbgMerged = outDir.absoluteFilePath("wavelet_mag_merged.png");
-        cv::imwrite(dbgMerged.toStdString(), magMergedColor);
-    }
-
-    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-
-    // --- Crop depthIndex to original size (per Q1 = 1) ---
+    // --- Crop to original size ---
     cv::Mat depthIndex16;
-    if (paddedSize == origSize) {
+    if (paddedSize == origSize)
+    {
         depthIndex16 = depthIndexPadded16;
-    } else {
-        cv::Rect roi(left, top, origSize.width, origSize.height);
-        depthIndex16 = depthIndexPadded16(roi).clone();
+    }
+    else
+    {
+        depthIndex16 = depthIndexPadded16(
+                           cv::Rect(left, top, origSize.width, origSize.height)
+                           ).clone();
     }
 
+    // --- Output to caller ---
     if (depthIndex16Out)
         depthIndex16.copyTo(*depthIndex16Out);
 
+    // --- Optional disk outputs ---
+    QDir outDir(depthFolder);
+    if (!outDir.exists())
+        outDir.mkpath(".");
+
     if (opt.preview || opt.keep)
-        cv::imwrite((depthFolder + "/depth_index.png").toStdString(), depthIndex16);
-
-    const QString depthIdxPath = outDir.absoluteFilePath("depth_index.png");
-    if (!cv::imwrite(depthIdxPath.toStdString(), depthIndex16)) {
-        QString msg = "WARNING: FSDepth(MultiScale): Failed to write depth_index.png";
-        if (statusCb) statusCb(msg);
-        qWarning() << msg;
-        return false;
+    {
+        cv::imwrite(
+            outDir.absoluteFilePath("depth_index.png").toStdString(),
+            depthIndex16
+            );
     }
-
-    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
     if (opt.preview)
     {
         cv::Mat preview = makeDepthPreviewEnhanced(depthIndex16, total);
-        const QString depthPreviewPath = outDir.absoluteFilePath("depth_preview.png");
-        if (!cv::imwrite(depthPreviewPath.toStdString(), preview)) {
-            QString msg = "WARNING: FSDepth(MultiScale): Failed to write depth_preview.png";
-            if (statusCb) statusCb(msg);
-            qWarning() << msg;
-            return false;
-        }
+        cv::imwrite(
+            outDir.absoluteFilePath("depth_preview.png").toStdString(),
+            preview
+            );
     }
 
-    if (statusCb) statusCb("FSDepth(MultiScale): Depth map computation complete.");
+    if (statusCb)
+        statusCb("FSDepth(MultiScale): Depth map complete.");
+
     return true;
 }
 
+bool runMultiScale(const QString            &focusFolder,
+                   const QString            &depthFolder,
+                   const FSDepth::Options   &opt,
+                   std::atomic_bool         *abortFlag,
+                   FSDepth::ProgressCallback progressCb,
+                   FSDepth::StatusCallback   statusCb,
+                   cv::Mat                  *depthIndex16Out)
+{
+    const QString srcFun = "FSDepth::runMultiScale";
+
+    // Source of grayscale slices
+    const QString grayRoot =
+        opt.alignFolder.isEmpty() ? focusFolder : opt.alignFolder;
+
+    QDir inDir(grayRoot);
+    if (!inDir.exists())
+    {
+        if (statusCb)
+            statusCb("FSDepth(MultiScale): Gray source folder not found.");
+        return false;
+    }
+
+    QFileInfoList files = inDir.entryInfoList(
+        {"gray_*.tif", "gray_*.tiff", "gray_*.png", "gray_*.jpg", "gray_*.jpeg"},
+        QDir::Files,
+        QDir::Name
+        );
+
+    if (files.isEmpty())
+    {
+        if (statusCb)
+            statusCb("FSDepth(MultiScale): No grayscale slices found.");
+        return false;
+    }
+
+    std::vector<cv::Mat> graySlices;
+    graySlices.reserve(files.size());
+
+    for (const QFileInfo &fi : files)
+    {
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed))
+            return false;
+
+        cv::Mat g = cv::imread(fi.absoluteFilePath().toStdString(),
+                               cv::IMREAD_GRAYSCALE);
+        if (g.empty())
+        {
+            if (statusCb)
+                statusCb("FSDepth(MultiScale): Failed to load " + fi.fileName());
+            return false;
+        }
+
+        graySlices.push_back(g);
+    }
+
+    // return true;
+
+    // Delegate to the core implementation
+    return runMultiScaleFromGrayMats(
+        graySlices,
+        depthFolder,
+        opt,
+        abortFlag,
+        progressCb,
+        statusCb,
+        depthIndex16Out
+        );
+}
+
 } // anonymous namespace
+
 
 //----------------------------------------------------------------------
 // Public entry point
@@ -507,6 +481,51 @@ bool run(const QString    &focusFolder,
     else
         return runSimple(focusFolder, depthFolder, opt, abortFlag,
                          progressCb, statusCb, depthIndex16Out);
+}
+
+bool runFromGraySlices(
+    const std::vector<cv::Mat> &graySlices,
+    const QString              &depthFolder,
+    const Options              &opt,
+    std::atomic_bool           *abortFlag,
+    ProgressCallback            progressCb,
+    StatusCallback              statusCb,
+    cv::Mat                    *depthIndex16Out)
+{
+    if (graySlices.empty())
+    {
+        if (statusCb) {
+            QString msg = "FSDepth::runFromGraySlices No in-memory gray slices provided.";
+            statusCb(msg);
+            qWarning() << "WARNING:" << msg;
+        }
+        return false;
+    }
+
+    // Validate consistency
+    const cv::Size sz = graySlices.front().size();
+    for (const auto &m : graySlices)
+    {
+        if (m.empty() || m.size() != sz)
+        {
+            if (statusCb) {
+                QString msg = "FSDepth::runFromGraySlices Gray slice size mismatch.";
+                statusCb(msg);
+                qWarning() << "WARNING:" << msg;
+            }
+            return false;
+        }
+    }
+
+    return runMultiScaleFromGrayMats(
+        graySlices,
+        depthFolder,
+        opt,
+        abortFlag,
+        progressCb,
+        statusCb,
+        depthIndex16Out
+        );
 }
 
 } // namespace FSDepth

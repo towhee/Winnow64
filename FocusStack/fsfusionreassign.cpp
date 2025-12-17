@@ -1,5 +1,8 @@
 // FSFusionReassign.cpp
 #include "FSFusionReassign.h"
+#include "Main/global.h"
+
+#include <QString>
 
 #include <opencv2/imgproc.hpp>
 #include <cassert>
@@ -18,6 +21,8 @@ bool buildColorMap(const std::vector<cv::Mat> &grayImgs,
                    std::vector<ColorEntry> &colors,
                    std::vector<uint8_t> &counts)
 {
+    QString srcFun = "FSFusionReassign::buildColorMap";
+
     const int N = static_cast<int>(grayImgs.size());
     if (N == 0 || N != static_cast<int>(colorImgs.size()))
         return false;
@@ -29,14 +34,23 @@ bool buildColorMap(const std::vector<cv::Mat> &grayImgs,
     // Validate types
     for (int i = 0; i < N; ++i)
     {
-        if (grayImgs[i].empty() || colorImgs[i].empty())
+        if (grayImgs[i].empty() || colorImgs[i].empty()) {
+            QString msg = "grayImgs[i].empty() || colorImgs[i].empty()";
+            qWarning() << "WARNING:" << srcFun << msg;
             return false;
+        }
 
-        if (grayImgs[i].size() != size || colorImgs[i].size() != size)
+        if (grayImgs[i].size() != size || colorImgs[i].size() != size) {
+            QString msg = "grayImgs[i].size() != size || colorImgs[i].size() != size";
+            qWarning() << "WARNING:" << srcFun << msg;
             return false;
+        }
 
-        if (grayImgs[i].type() != CV_8U)
+        if (grayImgs[i].type() != CV_8U) {
+            QString msg = "grayImgs[i].type() != CV_8U";
+            qWarning() << "WARNING:" << srcFun << msg;
             return false;
+        }
     }
 
     // Normalize color to 8-bit
@@ -53,6 +67,8 @@ bool buildColorMap(const std::vector<cv::Mat> &grayImgs,
         }
         else
         {
+            QString msg = "invalid colorImgs[i].type()";
+            qWarning() << "WARNING:" << srcFun << msg;
             return false;
         }
     }

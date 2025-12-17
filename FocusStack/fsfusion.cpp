@@ -263,7 +263,9 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
                                          colorEntries,
                                          counts))
     {
-        if (G::FSLog) G::log(srcFun, "FSFusionReassign::buildColorMap failed");
+        QString msg ="FSFusionReassign::buildColorMap failed";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
         return false;
     }
 
@@ -281,7 +283,9 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
                                          counts,
                                          paddedColorOut))
     {
-        if (G::FSLog) G::log(srcFun, "FSFusionReassign::applyColorMap failed");
+        QString msg = "FSFusionReassign::applyColorMap failed";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
         return false;
     }
 
