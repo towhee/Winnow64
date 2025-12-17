@@ -39,6 +39,8 @@ using StatusCallback   = std::function<void(const QString &message)>;
 // Input:  focus maps in focusFolder (Simple)
 //         OR aligned gray_*.tif in opt.alignFolder (MultiScale)
 // Output: depth_index.png (+ depth_preview.png) in depthFolder
+
+// When reading from disk
 bool run(const QString &focusFolder,
          const QString &depthFolder,
          const Options &opt,
@@ -46,6 +48,28 @@ bool run(const QString &focusFolder,
          ProgressCallback progressCb,
          StatusCallback statusCb,
          cv::Mat *depthIndex16Out = nullptr);
+
+// When using cache
+bool runFromGraySlices(
+    const std::vector<cv::Mat> &graySlices,   // CV_8U or CV_32F
+    const QString              &depthFolder,
+    const Options              &opt,
+    std::atomic_bool           *abortFlag,
+    ProgressCallback            progressCb,
+    StatusCallback              statusCb,
+    cv::Mat                    *depthIndex16Out = nullptr
+    );
+
+// // internal helper
+// bool runMultiScaleFromGrayMats(
+//     const std::vector<cv::Mat> &graySlices,
+//     const QString              &depthFolder,
+//     const FSDepth::Options     &opt,
+//     std::atomic_bool           *abortFlag,
+//     FSDepth::ProgressCallback   progressCb,
+//     FSDepth::StatusCallback     statusCb,
+//     cv::Mat                    *depthIndex16Out
+//     );
 
 } // namespace FSDepth
 

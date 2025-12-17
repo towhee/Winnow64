@@ -237,6 +237,8 @@ bool run(const QString &alignFolder,
         // --------------------------------------------------------
         // 4. Optional: write focus_*.tif + previews if keepIntermediates
         // --------------------------------------------------------
+        qDebug() << srcFun
+                 << "base =" << base;
         if (opt.keepIntermediates)
         {
             // Numeric 16U metric (normalized per slice to 0..65535)
@@ -264,7 +266,9 @@ bool run(const QString &alignFolder,
                 outDir.absoluteFilePath("focus_" + base + ".tif");
 
             if (!cv::imwrite(dstMetricPath.toStdString(), focus16)) {
-                if (statusCb) statusCb("FSFocus: Failed to write " + dstMetricPath, true);
+                QString msg = srcFun + " Failed to write " + dstMetricPath;
+                if (statusCb) statusCb(msg, true);
+                qWarning() << "WARNING:" << srcFun << msg;
                 return false;
             }
 

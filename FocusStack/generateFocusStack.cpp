@@ -116,20 +116,20 @@ void MW::generateFocusStack(const QStringList paths,
 
     FS::Options opt;
     opt.method              = method;
-    opt.keepIntermediates   = false;
-    opt.useIntermediates    = false;
-    opt.useMemory           = true;
+    opt.keepIntermediates   = true;
+    opt.useIntermediates    = true;
+    opt.useCache            = true;
 
     opt.enableAlign         = true;
-    opt.keepAlign           = false;
+    opt.keepAlign           = true;
 
-    opt.enableFocusMaps     = false;
-    opt.previewFocusMaps    = false;
-    opt.keepFocusMaps       = false;
+    opt.enableFocusMaps     = true;
+    opt.previewFocusMaps    = true;
+    opt.keepFocusMaps       = true;
 
     opt.enableDepthMap      = true;
     opt.previewDepthMap     = false;
-    opt.keepDepthMap        = false;
+    opt.keepDepthMap        = true;
 
     opt.enableFusion        = true;
     opt.previewFusion       = true;

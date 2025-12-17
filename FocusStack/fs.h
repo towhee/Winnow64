@@ -21,10 +21,10 @@ public:
     */
     struct Options
     {
-        QString method         = "";
+        QString method          = "";
         bool keepIntermediates  = true;
         bool useIntermediates   = true;
-        bool useMemory          = true;     // use disk if false
+        bool useCache           = true;     // use disk if false
 
         bool enableAlign        = true;
         bool keepAlign          = true;     // intermediates
@@ -78,8 +78,6 @@ private:
     // std::atomic_bool abortRequested;
     std::atomic_bool abort{false};
 
-    bool isMemoryPipeline() const;
-    bool validateMemoryPipeline(const QString &stage) const;
     bool prepareFolders();
     void updateIntermediateStatus();
     bool setParameters();
