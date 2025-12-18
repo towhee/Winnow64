@@ -1,4 +1,5 @@
 to do
+- make sure selection is sorted by capture time
 - manage abort in MW::generateFocusStack
 - flags (incl useDepthMap in runFusion)
 - are focusSlices CV_32F if recover from disk?

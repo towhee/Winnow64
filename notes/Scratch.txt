@@ -400,3 +400,230 @@ These are commercial tools, but understanding their methods helps.
 Since you are already in C++, I recommend implementing **`cv::ximgproc::guidedFilter`** on your focus mask. It is usually the "magic bullet" for the specific edge-spill artifact shown in your image.
 
 Would you like a C++ code snippet showing how to apply the Guided Filter to a focus map?
+
+BACKGROUND --------------------------------------------------------------------
+
+Why two stages is the correct next step
+
+Stage 1 — High-confidence seeding (data-adaptive)
+
+Goal: identify pixels that are almost certainly background or subject.
+
+Examples of safe background seeds:
+        •	Very low max focus and
+        •	Low focus support and
+        •	Stable far depth relative to image statistics
+
+Key point:
+
+These thresholds must be percentile-based, not absolute numbers.
+
+E.g.
+        •	bottom 3–5% of focus energy
+        •	top 5–10% of normalized depth
+        •	low local gradient magnitude
+
+This immediately fixes your current failure where:
+        •	background confidence is “washed out”
+        •	subject interior leaks into background
+
+You should end Stage 1 with:
+        •	BG_SEED mask
+        •	SUBJECT_SEED mask
+        •	everything else = unknown
+
+No feathering, no morphology yet.
+
+⸻
+
+Stage 2 — Region grow / graph propagation
+
+Now enforce what thresholding cannot:
+        •	spatial continuity
+        •	edge respect
+        •	texture coherence
+
+Mechanically, this can be:
+        •	flood fill / BFS from seeds
+        •	or graph cut / random walker
+        •	or confidence diffusion constrained by gradients
+
+Cost function uses:
+        •	focus contrast
+        •	depth discontinuity
+        •	image gradients (from fused or mid-stack slice)
+
+This stage answers questions like:
+
+“Should this pixel belong with its neighbors?”
+
+That is impossible to answer correctly with per-pixel scoring alone.
+
+⸻
+
+Why this fits your “zero user adjustment” goal
+
+A seed + grow system can be:
+        •	self-normalizing (percentiles, image stats)
+        •	stack-size invariant
+        •	lens / magnification invariant
+        •	background-type invariant
+
+That is exactly what deterministic pipelines can do well — and ML is not strictly required yet.
+
+FSBackground
+  ├─ buildSeeds()
+  ├─ growRegions()
+  └─ optional edge feather
+
+Answer this: Which regions are certainly background, and how far can we safely expand from them?
+
+New FSBackground Architecture
+
+Stage 1 — Seed Detection (High-Confidence Background Only)
+
+Goal:
+
+Identify pixels that are almost certainly background, even if that set is small.
+
+These must be:
+        •	Extremely conservative
+        •	Near-zero false positives
+        •	Allowed to miss a lot (low recall is fine)
+
+Seed Criteria (Data-Adaptive)
+
+Instead of fixed thresholds, use relative statistics:
+
+1. Depth Extremes (Primary)
+        •	Compute depth histogram
+        •	Identify the last depth mode (far plane)
+        •	Seeds = pixels in top 1–2% depth quantile, and
+        •	Local depth variance is low
+
+This adapts automatically to stack length and subject depth.
+
+2. Focus Absence (Support)
+        •	Compute:
+        •	max focus per pixel
+        •	focus support ratio
+        •	Seeds only if:
+        •	pixel is in bottom 5–10% of focus energy, relative to image
+        •	AND support ratio is very low
+
+Important: these are percentiles, not fixed values.
+
+3. Color Stability (Optional, weak)
+        •	Very low temporal variance across sl
+
+Output from stage 1: cv::Mat bgSeedMask8;  // CV_8U, 255 = strong background seed
+
+Stage 2 — Region Growing (Context-Aware Expansion)
+
+Now we expand from seeds using consistency rules, not thresholds.
+
+Growth Rules (Pixel joins background if…)
+
+A pixel joins background if connected to a seed and:
+        1.	Depth Consistency
+        •	Depth index close to seed depth (±k slices)
+        •	OR depth gradient is shallow
+        2.	Focus Non-Dominance
+        •	Pixel does not have focus significantly higher than neighbors
+        •	Relative comparison, not absolute
+        3.	Edge Awareness
+        •	Do not cross strong image gradients
+        •	Do not cross strong focus gradients
+
+STEPS:
+1.	Refactor FSBackground
+•	Separate seed detection and region grow
+•	Remove global bgConfidence computation
+2.	Implement conservative seed logic
+•	Percentile-based depth + focus
+•	Expect sparse output
+3.	Implement spatial region growth
+•	BFS from seeds
+•	Stop at focus/depth edges
+
+This prevents bleeding into subject edges (your current failure mode).
+
+
+GEMINI FOCUS STACK APPROACH ---------------------------------------------------------
+
+Building an automated, artifact-free focus stacking app in C++ requires a
+multi-stage pipeline that transitions from geometric alignment to intelligent focus
+detection and multi-scale fusion. To achieve "zero-intervention," you should lean on
+Deep Learning for focus-map estimation and Laplacian Pyramids for blending, as these
+naturally adapt to different textures and stack depths without needing "sigma" or
+"radius" sliders.
+
+1. The Recommended Pipeline To proceed without user intervention, your architecture
+should follow this flow:
+
+Stage 1: Pre-processing & Alignment (Registration)Macro stacks often have "focus
+breathing" (slight magnification changes). You must align images before fusing.
+
+        Algorithm: Use ORB or SIFT features combined with RANSAC to find the
+        homography between frames. For higher precision, follow this with ECC
+        (Enhanced Correlation Coefficient) maximization.
+
+Stage 2: Adaptive Focus Map Generation (ML Layer)Instead of simple Laplacian
+variance (which requires thresholds), use a pre-trained Multi-Focus Image Fusion
+(MFIF) model.
+
+        SOTA Model (2025): SwinMFF or LightMFF. These models use Transformers or
+        specialized U-Nets to output a "decision map" (a probability map of which
+        pixels are in focus).
+
+        Adaptive Logic: The model treats the stack as a sequence, comparing local
+        patches to find the highest-frequency content.
+
+Stage 3: Multi-Scale Fusion (Artifact Reduction)Naive "pixel-picking" causes halos.
+You must blend in the frequency domain.
+
+        Algorithm: Laplacian Pyramid Blending. You decompose each image into a
+        pyramid of frequency bands. You then blend the pyramids using the decision
+        map as a weight at each level.
+
+Tools & LibrariesFor a high-performance C++ implementation, the following stack is
+standard for 2025:
+
+Component/Library
+Reason
+
+        Core VisionOpenCV 4.x / 5.x  Essential for image I/O, registration, and basic
+        pyramid functions (buildPyramid).
+
+        ML InferenceLibTorch (PyTorch C++)To run SOTA MFIF models (like SwinMFF)
+        directly in C++ with GPU acceleration.
+
+        ParallelismIntel TBB / OpenMPFocus stacking is "embarrassingly parallel."
+        You can process pyramid levels or alignment across all CPU cores.
+
+        Math/OptimizationEigenIf you need custom linear algebra for complex
+        registration or artifact correction.
+
+        PerformanceSIMD (Halide)If you need extreme speed, Halide can auto-generate
+        optimized assembly for your fusion loops.
+
+3. Confidence & Artifact Mitigation
+
+        Confidence Level: High. The combination of Deep Learning (for the "where")
+        and Pyramid Blending (for the "how") is extremely robust. Traditional
+        artifacts like "halos" or "ghosting" usually occur because of hard edges in
+        the weight map or poor alignment.
+
+How to fix remaining artifacts:
+
+        Haloing: This is usually caused by the weight map being too "sharp" at depth
+        boundaries. By using the Local Laplacian Pyramid approach, you can
+        adaptively smooth transitions based on the confidence score of the ML model.
+
+        Ghosting (Moving Objects): If a bug moves during the stack, the ML model
+        will see "multi-focus" in two different places. To fix this automatically,
+        implement a Consistency Check that penalizes pixels that appear in-focus in
+        wildly non-consecutive frames.
+
+        Color Fringing: Use a bilateral filter on the weight map before fusion to
+        ensure focus boundaries align with color boundaries (edges).

@@ -8,6 +8,7 @@
 #include "FocusStack/fsmerge.h"
 #include "FocusStack/fsfusionreassign.h"
 #include "FocusStack/fsfusionwavelet.h"
+#include "FocusStack/fsbackground.h"
 #include "FocusStack/fsartifact.h"
 #include "FocusStack/fsloader.h"
 #include "FocusStack/fsutilities.h"
@@ -100,6 +101,7 @@ void FS::updateIntermediateStatus()
     - Build a list of alignment files based on the source files.  Chk if exists.
     - Chk if depth and fusion intermediates exist.
 */
+    const QString srcFun = "FS::updateIntermediateStatus";
     // ALIGN
     alignedColorPaths.clear();
     alignedGrayPaths.clear();
@@ -117,8 +119,10 @@ void FS::updateIntermediateStatus()
     }
     // update memory
     if (alignExists && o.useCache) {
+        progressTotal += slices * 2;
         alignedColorSlices.clear();
         alignedGraySlices.clear();
+        int i = 0;
         for (const QString &f : alignedColorPaths) {
             cv::Mat img = cv::imread(f.toStdString(), cv::IMREAD_COLOR);
             if (img.empty()) continue;
@@ -126,7 +130,11 @@ void FS::updateIntermediateStatus()
             // img.convertTo(g32, CV_16UC3, 1.0 / 255.0);
             // alignedColorSlices.push_back(g32);
             alignedColorSlices.push_back(img);
+            incrementProgress();
+            QString msg = "alignedColorSlices " + QString::number(i++);
+            if (G::FSLog) G::log(srcFun, msg);
         }
+        i = 0;
         for (const QString &f : alignedGrayPaths) {
             cv::Mat img = cv::imread(f.toStdString(), cv::IMREAD_GRAYSCALE);
             if (img.empty()) continue;
@@ -134,6 +142,9 @@ void FS::updateIntermediateStatus()
             // img.convertTo(g32, CV_8U, 1.0 / 255.0);
             // alignedGraySlices.push_back(g32);
             alignedGraySlices.push_back(img);
+            incrementProgress();
+            QString msg = "alignedGraySlices " + QString::number(i++);
+            if (G::FSLog) G::log(srcFun, msg);
         }
     }
 
@@ -260,17 +271,15 @@ bool FS::validAlignMatsAvailable(int count) const
 
 void FS::setTotalProgress()
 {
-    int n = inputPaths.count();
-    progressTotal = 0;
     if (o.enableAlign && !skipAlign)
-        progressTotal += n;
+        progressTotal += slices * 2;
     if (o.enableFocusMaps && !skipFocusMaps)
-        progressTotal += n;
+        progressTotal += slices;
     if (o.enableDepthMap && !skipDepthMap)
-        progressTotal += n;
+        progressTotal += slices;
     if (o.enableFusion && !skipFusion) {
-        progressTotal += (n + 4);
-        if (validAlignMatsAvailable(n)) progressTotal --;
+        progressTotal += (slices + 4);
+        if (validAlignMatsAvailable(slices)) progressTotal --;
     }
 }
 
@@ -318,7 +327,8 @@ void FS::previewOverview(cv::Mat &fusedColor8Mat)
             fusedColor8Mat,    // fused RGB result
             slice0,            // grayscale slice 0
             sliceMid,          // mid grayscale slice
-            dbgPath            // output path
+            dbgPath,           // output path
+            10000              // max width
             );
 
         if (G::FSLog) G::log(srcFun, "Wrote fusion debug overview -> " + dbgPath);
@@ -335,11 +345,16 @@ bool FS::run()
         return false;
     }
 
+    slices = inputPaths.count();
+    lastSlice = slices - 1;
+    progressTotal = 0;
+
     QElapsedTimer t;
     t.start();
 
     status("Preparing to focus stack...");
-    progressTotal = inputPaths.count() * 2;     // temp until setParameters
+    setTotalProgress();
+
     incrementProgress();
 
     // Create stage folders
@@ -349,8 +364,6 @@ bool FS::run()
     // Decide which stages to skip
     if (!setParameters())
         return false;
-
-    setTotalProgress();
 
     // RUN ALIGN
     if (o.enableAlign && !skipAlign)
@@ -374,6 +387,15 @@ bool FS::run()
     if (o.enableDepthMap && !skipDepthMap)
     {
         if (!runDepthMap()) {
+            if (abort) status("Focus Stack was aborted.");
+            return false;
+        }
+    }
+
+    // RUN BACKGROUND
+    if (o.enableBackgroundMask)
+    {
+        if (!runBackground()) {
             if (abort) status("Focus Stack was aborted.");
             return false;
         }
@@ -676,7 +698,7 @@ bool FS::runDepthMap()
         dopt.method = "Simple";
         dopt.alignFolder.clear();
         dopt.preview = o.previewDepthMap;
-        dopt.saveWaveletDebug = false;
+        dopt.saveWaveletDebug = true;
     }
 
     dopt.numThreads = 0;  // (reserved, not used inside yet)
@@ -874,6 +896,73 @@ bool FS::runFusion()
     return true;
 }
 
+bool FS::runBackground()
+{
+    const QString srcFun = "FS::runBackground";
+    if (abort) return false;
+
+    status("Building background mask...");
+
+    FSBackground::Options bopt;
+    bopt.method = o.backgroundMethod;
+    bopt.writeDebug = true;
+    bopt.debugFolder = projectRoot + "/background";
+
+    // Ensure we have focusSlices and depthIndex16Mat (depending on method)
+    const int N = slices;
+
+    // alignedColor needed only if ColorVar enabled; pass empty otherwise
+    std::vector<cv::Mat> colorForVar;
+    if (bopt.enableColorVar)
+    {
+        // Prefer cache if available
+        if (o.useCache && !alignedColorSlices.empty()) colorForVar = alignedColorSlices;
+        else {
+            // fallback: load from disk using alignedColorPaths
+            colorForVar.reserve(N);
+            for (int i = 0; i < N; ++i)
+            {
+                cv::Mat c = cv::imread(alignedColorPaths[i].toStdString(), cv::IMREAD_COLOR);
+                if (c.empty()) return false;
+                colorForVar.push_back(c);
+            }
+        }
+    }
+
+    auto progressCb = [this](int c, int t){ Q_UNUSED(t); Q_UNUSED(c); incrementProgress(); };
+    auto statusCb   = [this, srcFun](const QString &m){ emit updateStatus(false, m, srcFun); };
+
+    cv::Mat subjectMask8;
+    cv::Mat bgConfidence01;
+
+    if (!FSBackground::run(depthIndex16Mat,
+                           focusSlices,
+                           colorForVar,
+                           N,
+                           bopt,
+                           &abort,
+                           progressCb,
+                           statusCb,
+                           bgConfidence01,
+                           subjectMask8))
+    {
+        status("Background mask failed.");
+        return false;
+    }
+
+    // Debug overlay needs fused gray. If fusion hasn’t run yet, you can
+    // overlay on any aligned gray slice (e.g., mid slice) for preview:
+    if (!alignedGraySlices.empty() && o.previewBackgroundMask)
+    {
+        cv::Mat base = alignedGraySlices[N / 2];
+        cv::Mat overlay = FSBackground::makeOverlayBGR(base, bgConfidence01, bopt);
+        cv::imwrite((bopt.debugFolder + "/bg_overlay.png").toStdString(), overlay);
+    }
+
+    status("Background mask complete.");
+    return true;
+}
+
 bool FS::runArtifact()
 {
     const QString srcFun = "FS::runArtifactDetection";
@@ -882,6 +971,7 @@ bool FS::runArtifact()
 
     emit updateStatus(false, "Detecting fusion artifacts...", srcFun);
 
+    qDebug() << srcFun << "1";
     // Load fused image (color, aligned space)
     if (lastFusedPath.isEmpty())
     {
@@ -891,6 +981,7 @@ bool FS::runArtifact()
     }
 
     cv::Mat grayFused = cv::imread(lastFusedPath.toStdString(), cv::IMREAD_GRAYSCALE);
+    qDebug() << srcFun << "2";
 
     if (grayFused.empty())
     {

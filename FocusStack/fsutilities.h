@@ -3,68 +3,75 @@
 
 #include <opencv2/core.hpp>
 #include <QString>
+#include <QDebug>
+#include <atomic>
+#include <vector>
 
 namespace FSUtilities {
 
-// not being used
-inline bool abort(const std::atomic_bool *f)
-{
-    return f && f->load(std::memory_order_relaxed);
+// Small helpers can be inline in the header
+inline QString sizeStr(const cv::Size& s) {
+    return QString("%1x%2").arg(s.width).arg(s.height);
+}
+inline QString matSizeStr(const cv::Mat& m) {
+    return sizeStr(m.size());
 }
 
-/*
- * Create a diagnostic composite:
- *   ┌──────────────────────┐
- *   │      Depth Preview    │
- *   ├──────────────────────┤
- *   │      Fused Image      │
- *   ├──────────────────────┤
- *   │ Slice A │  Slice B    │
- *   └──────────────────────┘
- */
+// Declarations (NO bodies here)
 bool makeDebugOverview(const cv::Mat &depthPreview,
                        const cv::Mat &fusedColor,
                        const cv::Mat &sliceA,
                        const cv::Mat &sliceB,
                        const QString &outputPath,
-                       int maxWidth = 2400);
+                       int   maxWidth);
 
-/*
- * Utility: ensure image is 3-channel BGR.
- */
 cv::Mat ensureColor(const cv::Mat &img);
-
-/*
- * Utility: draws a label text onto an image (top-left corner).
- */
 cv::Mat addLabel(const cv::Mat &img, const std::string &text);
-
-/*
- * Horizontal stack with automatic height matching + resizing.
- */
 cv::Mat hstack(const cv::Mat &a, const cv::Mat &b);
-
-/*
- * Vertical stack with automatic width matching + resizing.
- */
 cv::Mat vstack(const cv::Mat &a, const cv::Mat &b);
 
-// Overlay mask/heatmap on a grayscale base image
-// baseGray: CV_8U or CV_32F grayscale
-// maskBGR: CV_8UC3 (already colorized)
-// alpha: blend strength of mask
 cv::Mat showWithMask(const cv::Mat &baseGray,
                      const cv::Mat &maskBGR,
-                     float alpha = 0.6f);
+                     float alpha);
 
-// Convenience: load, overlay, and save
 bool showWithMask(const cv::Mat &baseGray,
                   const cv::Mat &maskBGR,
                   const QString &outputPath,
-                  float alpha = 0.6f);
+                  float alpha);
+
+void assertSameSize(const cv::Mat& a,
+                    const cv::Mat& b,
+                    const QString& context);
+
+void assertSameSize(const cv::Mat& a,
+                    const cv::Mat& b,
+                    const cv::Mat& c,
+                    const QString& context);
+
+cv::Mat canonicalizeGrayFloat01(const cv::Mat& in,
+                                const cv::Size& canonicalSize,
+                                int interp,
+                                const char* tag);
+
+cv::Mat canonicalizeDepthIndex16(const cv::Mat& depthIndex16,
+                                 const cv::Size& canonicalSize,
+                                 const char* tag);
+
+std::vector<cv::Mat> canonicalizeFocusSlices(const std::vector<cv::Mat>& focusSlices32,
+                                             const cv::Size& canonicalSize,
+                                             std::atomic_bool* abortFlag);
+
+std::vector<cv::Mat> canonicalizeAlignedColor(const std::vector<cv::Mat>& alignedColor,
+                                              const cv::Size& canonicalSize,
+                                              std::atomic_bool* abortFlag);
+
+// If you want canonicalizeToSize available to other modules, declare it here.
+// (Make it non-inline and implement in .cpp, OR inline it here.)
+cv::Mat canonicalizeToSize(const cv::Mat& src,
+                           const cv::Size& canonicalSize,
+                           int interp,
+                           const QString& context);
 
 } // namespace FSUtilities
-
-
 
 #endif // FSUTILITIES_H
