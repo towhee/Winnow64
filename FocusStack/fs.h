@@ -40,9 +40,15 @@ public:
         bool enableFusion       = true;
         bool previewFusion      = true;
 
-        bool enableArtifactDetect = true;
-        bool enableArtifactRepair = true;
-        QString artifactMethod    = "MultiScale";
+        bool enableBackgroundMask       = true;
+        bool enableBackgroundReplace    = true;
+        bool previewBackgroundMask      = true;
+        QString backgroundMethod        = "Depth+Focus";
+        int backgroundSourceIndex       = -1;      // -1 = lastSlice (macro default)
+
+        bool enableArtifactDetect       = true;
+        bool enableArtifactRepair       = true;
+        QString artifactMethod          = "MultiScale";
 
         bool enableOpenCL       = true;
     };
@@ -88,6 +94,7 @@ private:
     bool runAlign();
     bool runFocusMaps();
     bool runDepthMap();
+    bool runBackground();
     bool runFusion();
     bool runArtifact();
 
@@ -103,6 +110,7 @@ private:
     QString alignFolder;
     QString focusFolder;
     QString depthFolder;
+    QString backgroundFolder;
     QString fusionFolder;
     QString artifactsFolder;
 
@@ -138,6 +146,8 @@ private:
     // Focus maps and depth map
     std::vector<cv::Mat> focusSlices;           // CV_32F per slice
     cv::Mat              depthIndex16Mat;       // CV_16U depth indices
+
+    // Background
 
     // Fusion Mat
     cv::Mat fusedColor8Mat;

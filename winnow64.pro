@@ -84,6 +84,7 @@ HEADERS += Cache/cachedata.h \
     FocusStack/fs.h \
     FocusStack/fsalign.h \
     FocusStack/fsartifact.h \
+    FocusStack/fsbackground.h \
     FocusStack/fsdepth.h \
     FocusStack/fsfocus.h \
     FocusStack/fsfusion.h \
@@ -325,6 +326,7 @@ SOURCES += Cache/cachedata.cpp \
     FocusStack/fs.cpp \
     FocusStack/fsalign.cpp \
     FocusStack/fsartifact.cpp \
+    FocusStack/fsbackground.cpp \
     FocusStack/fsdepth.cpp \
     FocusStack/fsfocus.cpp \
     FocusStack/fsfusion.cpp \

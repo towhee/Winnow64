@@ -28,7 +28,7 @@ struct Options
     // When method == "MultiScale", save per-slice wavelet debug images:
     //   wavelet_mag_XXX.png
     //   wavelet_mag_merged.png
-    bool saveWaveletDebug = false;
+    bool saveWaveletDebug = true;
 
     int  numThreads  = 0;       // reserved (currently unused)
 };
