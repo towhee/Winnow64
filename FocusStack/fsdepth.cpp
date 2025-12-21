@@ -211,7 +211,7 @@ bool runSimple(const QString &focusFolder,
     cv::medianBlur(depthIndex, depthIndex, 3);
 
     const QString depthIdxPath = outDir.absoluteFilePath("depth_index.png");
-    if (!cv::imwrite(depthIdxPath.toStdString(), depthIndex)) {
+    if (!FSUtilities::writePngWithTitle(depthIdxPath, depthIndex)) {
         if (statusCb) statusCb("FSDepth(Simple): Failed to write depth_index.png");
         return false;
     }
@@ -219,12 +219,11 @@ bool runSimple(const QString &focusFolder,
     if (opt.preview) {
         cv::Mat preview = makeDepthPreviewEnhanced(depthIndex, slices);
         const QString depthPreviewPath = outDir.absoluteFilePath("depth_preview.png");
-        if (!cv::imwrite(depthPreviewPath.toStdString(), preview)) {
+        if (!FSUtilities::writePngWithTitle(depthPreviewPath, preview)) {
             if (statusCb) statusCb("FSDepth(Simple): Failed to write depth_preview.png");
             return false;
         }
     }
-
     if (statusCb) statusCb("FSDepth(Simple): Depth map computation complete.");
     return true;
 }
@@ -366,19 +365,17 @@ bool runMultiScale(
 
     if (opt.preview || opt.keep)
     {
-        cv::imwrite(
-            outDir.absoluteFilePath("depth_index.png").toStdString(),
-            depthIndex16
-            );
+        const QString p = outDir.absoluteFilePath("depth_index.png");
+        if (!FSUtilities::writePngWithTitle(p, depthIndex16))
+            return false;
     }
 
     if (opt.preview)
     {
         cv::Mat preview = makeDepthPreviewEnhanced(depthIndex16, total);
-        cv::imwrite(
-            outDir.absoluteFilePath("depth_preview.png").toStdString(),
-            preview
-            );
+        const QString p = outDir.absoluteFilePath("depth_preview.png");
+        if (!FSUtilities::writePngWithTitle(p, preview))
+            return false;
     }
 
     if (statusCb)

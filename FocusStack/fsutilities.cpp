@@ -1,5 +1,8 @@
 #include "FSUtilities.h"
 #include <QtCore/qdebug.h>
+#include <QFileInfo>
+#include <QImage>
+#include <QImageWriter>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 
@@ -323,6 +326,236 @@ cv::Mat canonicalizeToSize(const cv::Mat& src,
     return out;
 }
 
+static cv::Mat to8uViewable(const cv::Mat& img)
+{
+    CV_Assert(!img.empty());
 
+    if (img.depth() == CV_8U)
+        return img;
+
+    cv::Mat out8;
+
+    if (img.depth() == CV_16U)
+    {
+        // simple downscale (viewable)
+        img.convertTo(out8, CV_8U, 1.0 / 257.0);
+        return out8;
+    }
+
+    if (img.depth() == CV_32F || img.depth() == CV_64F)
+    {
+        cv::Mat f;
+        img.convertTo(f, CV_32F);
+
+        double mn=0, mx=0;
+        cv::minMaxLoc(f, &mn, &mx);
+        if (mx <= mn) {
+            out8 = cv::Mat(img.size(), CV_8U, cv::Scalar(0));
+        } else {
+            f.convertTo(out8, CV_8U, 255.0 / (mx - mn), -mn * 255.0 / (mx - mn));
+        }
+        return out8;
+    }
+
+    // fallback
+    img.convertTo(out8, CV_8U);
+    return out8;
+}
+
+static QImage matToQImage8(const cv::Mat& in)
+{
+    CV_Assert(!in.empty());
+    CV_Assert(in.depth() == CV_8U);
+
+    if (in.type() == CV_8UC1)
+    {
+        QImage q(in.data, in.cols, in.rows, (int)in.step, QImage::Format_Grayscale8);
+        return q.copy();
+    }
+    else if (in.type() == CV_8UC3)
+    {
+        // OpenCV is BGR; Qt expects RGB for Format_RGB888
+        cv::Mat rgb;
+        cv::cvtColor(in, rgb, cv::COLOR_BGR2RGB);
+        QImage q(rgb.data, rgb.cols, rgb.rows, (int)rgb.step, QImage::Format_RGB888);
+        return q.copy();
+    }
+    else if (in.type() == CV_8UC4)
+    {
+        // OpenCV is BGRA; Qt expects RGBA8888 or ARGB32
+        cv::Mat rgba;
+        cv::cvtColor(in, rgba, cv::COLOR_BGRA2RGBA);
+        QImage q(rgba.data, rgba.cols, rgba.rows, (int)rgba.step, QImage::Format_RGBA8888);
+        return q.copy();
+    }
+
+    // Unexpected
+    CV_Assert(false);
+    return {};
+}
+
+static QImage matToQImageForPng(const cv::Mat& m)
+{
+    if (m.empty()) return QImage();
+
+    // ---- 8-bit grayscale ----
+    if (m.type() == CV_8UC1)
+    {
+        QImage img(m.cols, m.rows, QImage::Format_Grayscale8);
+        for (int y = 0; y < m.rows; ++y)
+            memcpy(img.scanLine(y), m.ptr(y), size_t(m.cols));
+        return img;
+    }
+
+    // ---- 16-bit grayscale (preserve your depth_index.png!) ----
+    if (m.type() == CV_16UC1)
+    {
+        QImage img(m.cols, m.rows, QImage::Format_Grayscale16);
+        for (int y = 0; y < m.rows; ++y)
+            memcpy(img.scanLine(y), m.ptr(y), size_t(m.cols) * 2);
+        return img;
+    }
+
+    // ---- 8-bit BGR -> RGB ----
+    if (m.type() == CV_8UC3)
+    {
+        cv::Mat rgb;
+        cv::cvtColor(m, rgb, cv::COLOR_BGR2RGB);
+
+        QImage img(rgb.data, rgb.cols, rgb.rows, int(rgb.step), QImage::Format_RGB888);
+        return img.copy(); // deep copy so memory stays valid
+    }
+
+    // ---- 32F gray (any range) -> 8-bit gray preview ----
+    if (m.type() == CV_32FC1)
+    {
+        double mn=0, mx=0;
+        cv::minMaxLoc(m, &mn, &mx);
+
+        cv::Mat out8;
+        if (mx > mn)
+            m.convertTo(out8, CV_8U, 255.0 / (mx - mn), -mn * 255.0 / (mx - mn));
+        else
+            out8 = cv::Mat(m.size(), CV_8U, cv::Scalar(0));
+
+        return matToQImageForPng(out8);
+    }
+
+    // ---- 32F color -> 8-bit color preview ----
+    if (m.type() == CV_32FC3)
+    {
+        // assume 0..1-ish, clamp
+        cv::Mat clamped;
+        cv::min(m, 1.0, clamped);
+        cv::max(clamped, 0.0, clamped);
+
+        cv::Mat bgr8;
+        clamped.convertTo(bgr8, CV_8UC3, 255.0);
+        return matToQImageForPng(bgr8);
+    }
+
+    // ---- Anything else: convert to 8U and try again ----
+    cv::Mat tmp;
+    m.convertTo(tmp, CV_8U);
+    return matToQImageForPng(tmp);
+}
+
+bool writePngWithTitle(const QString& pngPath,
+                       const cv::Mat& img)
+{
+    QString srcFun = "FSUtilities::writePngWithTitle";
+
+
+    if (img.empty()) return false;
+
+    cv::Mat img8 = to8uViewable(img);
+    QImage q = matToQImage8(img8);
+
+    const QString t = QFileInfo(pngPath).fileName();
+
+    qDebug() << srcFun
+             << "t =" << t;
+
+    q.setText("Title", t);
+    q.setText("Author", "Winnow FocusStack");
+
+    QImageWriter writer(pngPath, "png");
+
+    const bool ok = writer.write(q);
+    if (!ok)
+        qWarning() << "writePngWithTitle failed:" << pngPath << writer.errorString();
+    return ok;
+}
+
+// small helper: quantile via histogram on 32F (fast enough for debug)
+static void robustMinMax32F(const cv::Mat& m32f, float loQ, float hiQ, float& outLo, float& outHi)
+{
+    CV_Assert(m32f.type() == CV_32F);
+    CV_Assert(loQ >= 0.f && loQ < hiQ && hiQ <= 1.f);
+
+    double mn=0, mx=0;
+    cv::minMaxLoc(m32f, &mn, &mx);
+    if (mx <= mn) { outLo = (float)mn; outHi = (float)mx; return; }
+
+    // 4096-bin histogram
+    const int bins = 4096;
+    std::vector<int> hist(bins, 0);
+
+    const float fmn = (float)mn;
+    const float fmx = (float)mx;
+    const float inv = (bins - 1) / (fmx - fmn);
+
+    const int total = m32f.rows * m32f.cols;
+    for (int y = 0; y < m32f.rows; ++y)
+    {
+        const float* p = m32f.ptr<float>(y);
+        for (int x = 0; x < m32f.cols; ++x)
+        {
+            float v = p[x];
+            int b = (int)((v - fmn) * inv);
+            b = std::max(0, std::min(bins - 1, b));
+            hist[b]++;
+        }
+    }
+
+    auto findQ = [&](float q)->float {
+        const int target = (int)std::round(q * (total - 1));
+        int acc = 0;
+        for (int i = 0; i < bins; ++i) {
+            acc += hist[i];
+            if (acc >= target) {
+                float t = (float)i / (bins - 1);
+                return fmn + t * (fmx - fmn);
+            }
+        }
+        return fmx;
+    };
+
+    outLo = findQ(loQ);
+    outHi = findQ(hiQ);
+    if (outHi <= outLo) { outLo = (float)mn; outHi = (float)mx; }
+}
+
+bool writePngFromFloatMapRobust(const QString& pngPath,
+                                const cv::Mat& map32f,
+                                float loQuantile,
+                                float hiQuantile)
+{
+    if (map32f.empty()) return false;
+    CV_Assert(map32f.type() == CV_32F);
+
+    float lo=0, hi=0;
+    robustMinMax32F(map32f, loQuantile, hiQuantile, lo, hi);
+
+    cv::Mat clipped = map32f.clone();
+    cv::min(clipped, hi, clipped);
+    cv::max(clipped, lo, clipped);
+
+    cv::Mat out8;
+    if (hi <= lo) out8 = cv::Mat(map32f.size(), CV_8U, cv::Scalar(0));
+    else clipped.convertTo(out8, CV_8U, 255.0 / (hi - lo), -lo * 255.0 / (hi - lo));
+
+    return writePngWithTitle(pngPath, out8);
+}
 
 } // namespace FSUtilities

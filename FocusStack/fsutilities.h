@@ -73,6 +73,14 @@ cv::Mat canonicalizeToSize(const cv::Mat& src,
                            int interp,
                            const QString& context);
 
+bool writePngWithTitle(const QString& pngPath,
+                       const cv::Mat& img);
+
+bool writePngFromFloatMapRobust(const QString& pngPath,
+                                const cv::Mat& map32f,
+                                float loQuantile,
+                                float hiQuantile);
+
 } // namespace FSUtilities
 
 #endif // FSUTILITIES_H

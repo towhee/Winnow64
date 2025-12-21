@@ -146,7 +146,9 @@ private:
     std::vector<cv::Mat> focusSlices;           // CV_32F per slice
     cv::Mat              depthIndex16Mat;       // CV_16U depth indices
 
-    // Background
+    // Background mask (computed in runBackground, applied in runFusion)
+    cv::Mat bgConfidence01Mat;   // CV_32F 0..1
+    cv::Mat subjectMask8Mat;     // CV_8U  0/255
 
     // Fusion Mat
     cv::Mat fusedColor8Mat;
