@@ -889,14 +889,59 @@ bool FS::runFusion()
             status("Fusion complete.");
             QString timeToFuse = QString::number(t.elapsed() / 1000.0, 'f', 1) + " sec";
             if (G::FSLog) G::log(srcFun, "Fusion completed in " + timeToFuse);
-            return true;
+
+            break;
         }
 
         nextIndex++;
         if (nextIndex > 999)
         {
             status("Unable to find available fused filename");
-            return false;
+            break;
+        }
+    }
+
+    // --- Optional: also write *_BBRepair.tif using the stored subject mask ---
+    if (o.enableBackgroundMask && !subjectMask8Mat.empty())
+    {
+        if (G::FSLog) G::log(srcFun, "Replacing background");
+
+        // Recreate same options used for mask generation (important if replace uses feather params)
+        FSBackground::Options bopt;
+        bopt.method        = o.backgroundMethod;
+        bopt.featherRadius = 6;
+        bopt.featherGamma  = 1.2f;
+
+        // Choose background source: last aligned color slice
+        cv::Mat bgSource;
+        if (o.useCache && !alignedColorSlices.empty())
+            bgSource = alignedColorSlices.back();
+        else
+            bgSource = cv::imread(alignedColorPaths.back().toStdString(), cv::IMREAD_COLOR);
+
+        if (!bgSource.empty())
+        {
+            // Ensure same size (mask is categorical => NEAREST)
+            cv::Mat mask = subjectMask8Mat;
+            if (mask.size() != fusedColor8Mat.size())
+                cv::resize(mask, mask, fusedColor8Mat.size(), 0, 0, cv::INTER_NEAREST);
+
+            if (bgSource.size() != fusedColor8Mat.size())
+                cv::resize(bgSource, bgSource, fusedColor8Mat.size(), 0, 0, cv::INTER_LINEAR);
+
+            // IMPORTANT: shrink foreground matte a bit to reduce edge spill
+            int edgeErodePx = 4; // tune 3..6
+            cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, {2*edgeErodePx+1, 2*edgeErodePx+1});
+            cv::erode(mask, mask, se);
+
+            cv::Mat repaired = fusedColor8Mat.clone();
+            if (FSBackground::replaceBackground(repaired, mask, bgSource, bopt, &abort))
+            {
+                QFileInfo fi(lastFusedPath); // lastFusedPath is set when you save the normal fused
+                QString repairedPath = fusionFolder + "/" + fi.completeBaseName() + "_BBRepair.tif";
+                cv::imwrite(repairedPath.toStdString(), repaired);
+                if (G::FSLog) G::log(srcFun, "Saving fused background repair to " + repairedPath);
+            }
         }
     }
 
@@ -940,8 +985,11 @@ bool FS::runBackground()
     auto progressCb = [this](int c, int t){ Q_UNUSED(t); Q_UNUSED(c); incrementProgress(); };
     auto statusCb   = [this, srcFun](const QString &m){ emit updateStatus(false, m, srcFun); };
 
-    cv::Mat subjectMask8;
-    cv::Mat bgConfidence01;
+    // cv::Mat subjectMask8;
+    // cv::Mat bgConfidence01;
+    // // store into members
+    subjectMask8Mat.release();
+    bgConfidence01Mat.release();
 
     if (!FSBackground::run(depthIndex16Mat,
                            focusSlices,
@@ -951,8 +999,8 @@ bool FS::runBackground()
                            &abort,
                            progressCb,
                            statusCb,
-                           bgConfidence01,
-                           subjectMask8))
+                           bgConfidence01Mat,
+                           subjectMask8Mat))
     {
         status("Background mask failed.");
         return false;
@@ -963,37 +1011,38 @@ bool FS::runBackground()
     if (!alignedGraySlices.empty() && o.previewBackgroundMask)
     {
         cv::Mat base = alignedGraySlices[N / 2];
-        cv::Mat overlay = FSBackground::makeOverlayBGR(base, bgConfidence01, bopt);
+        cv::Mat overlay = FSBackground::makeOverlayBGR(base, bgConfidence01Mat, bopt);
         cv::imwrite((bopt.debugFolder + "/bg_overlay.png").toStdString(), overlay);
     }
 
-    // return without running replaceBackground to remove chomatic aberation
     return true;
 
-    // IMPORTANT: shrink foreground matte a bit to remove defocus spill
-    int edgeErodePx = 4; // start 3..6 at full res
-    cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, {2*edgeErodePx+1, 2*edgeErodePx+1});
-    cv::erode(subjectMask8, subjectMask8, se);
+    // // Replace background to remove any halo
 
-    qDebug() << "FS::runBackground "
-             << "depth"   << depthIndex16Mat.cols << depthIndex16Mat.rows
-             << "mask"    << subjectMask8.cols << subjectMask8.rows
-             << "fused"   << fusedColor8Mat.cols << fusedColor8Mat.rows
-             << "bg"      << alignedColorSlices.back().cols << alignedColorSlices.back().rows;    // Composite fused over last slice
+    // // IMPORTANT: shrink foreground matte a bit to remove defocus spill
+    // int edgeErodePx = 4; // start 3..6 at full res
+    // cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, {2*edgeErodePx+1, 2*edgeErodePx+1});
+    // cv::erode(subjectMask8Mat, subjectMask8Mat, se);
 
-    cv::Mat bgSource = alignedColorSlices.back();   // last aligned color image (same size as outputColor8)
-    cv::Mat fusedColor8InOut = fusedColor8Mat;
-    FSBackground::replaceBackground(fusedColor8InOut, subjectMask8, bgSource, bopt, &abort);
+    // qDebug() << "FS::runBackground "
+    //          << "depth"   << depthIndex16Mat.cols << depthIndex16Mat.rows
+    //          << "mask"    << subjectMask8.cols << subjectMask8.rows
+    //          << "fused"   << fusedColor8Mat.cols << fusedColor8Mat.rows
+    //          << "bg"      << alignedColorSlices.back().cols << alignedColorSlices.back().rows;    // Composite fused over last slice
 
-    // Write fused with background repair
-    QFileInfo lastFused(lastFusedPath);
-    QString fusedbgRepairedPath = fusionFolder + "/" + lastFused.baseName() + "_BBRepair.tif";
-    if (G::FSLog) G::log(srcFun, "Saving fused image with background repair to "
-                           + fusedbgRepairedPath);
-    cv::imwrite(fusedbgRepairedPath.toStdString(), fusedColor8InOut);
+    // cv::Mat bgSource = alignedColorSlices.back();   // last aligned color image (same size as outputColor8)
+    // cv::Mat fusedColor8InOut = fusedColor8Mat;
+    // FSBackground::replaceBackground(fusedColor8InOut, subjectMask8, bgSource, bopt, &abort);
 
-    status("Background mask complete.");
-    return true;
+    // // Write fused with background repair
+    // QFileInfo lastFused(lastFusedPath);
+    // QString fusedbgRepairedPath = fusionFolder + "/" + lastFused.baseName() + "_BBRepair.tif";
+    // if (G::FSLog) G::log(srcFun, "Saving fused image with background repair to "
+    //                        + fusedbgRepairedPath);
+    // cv::imwrite(fusedbgRepairedPath.toStdString(), fusedColor8InOut);
+
+    // status("Background mask complete.");
+    // return true;
 }
 
 bool FS::runArtifact()

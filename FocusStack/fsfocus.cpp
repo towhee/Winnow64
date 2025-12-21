@@ -1,4 +1,5 @@
 #include "FSFocus.h"
+#include "fsutilities.h"
 #include "Main/global.h"
 
 #include <QDir>
@@ -291,15 +292,15 @@ bool run(const QString &alignFolder,
 
                 // Log-compressed grayscale preview
                 p = outDir.absoluteFilePath("focus_loggray_" + base + ".png");
-                cv::imwrite(p.toStdString(), makeLogGrayPreview(mag32));
+                if (!FSUtilities::writePngWithTitle(p, makeLogGrayPreview(mag32))) return false;
 
-                // Heatmap preview (warmer = sharper)
+                // Heatmap preview
                 p = outDir.absoluteFilePath("focus_heatmap_" + base + ".png");
-                cv::imwrite(p.toStdString(), makeHeatPreview(mag32));
+                if (!FSUtilities::writePngWithTitle(p, makeHeatPreview(mag32))) return false;
 
-                // Pseudo-color by slice index (depth cue)
+                // Pseudo-color by slice index
                 p = outDir.absoluteFilePath("focus_colorslice_" + base + ".png");
-                cv::imwrite(p.toStdString(), makeSliceColorPreview(mag32, i, total));
+                if (!FSUtilities::writePngWithTitle(p, makeSliceColorPreview(mag32, i, total))) return false;
             }
         }
 

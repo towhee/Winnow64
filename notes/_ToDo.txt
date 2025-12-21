@@ -8,6 +8,7 @@ WHAT'S NEW
 BUGS / TO DO
 - Delete folder crash
 - Rename files
+- Read/write png metadata
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
