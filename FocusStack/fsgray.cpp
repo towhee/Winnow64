@@ -18,13 +18,13 @@ bool run(const QStringList &alignedPaths,
          StatusCallback     statusCb)
 {
     if (alignedPaths.size() != grayPaths.size()) {
-        if (statusCb) statusCb("FSGray: alignedPaths and grayPaths size mismatch.", true);
+        if (statusCb) statusCb("FSGray: alignedPaths and grayPaths size mismatch.");
         return false;
     }
 
     int total = alignedPaths.size();
     if (total == 0) {
-        if (statusCb) statusCb("FSGray: No aligned images to convert.", true);
+        if (statusCb) statusCb("FSGray: No aligned images to convert.");
         return false;
     }
 
@@ -34,15 +34,14 @@ bool run(const QStringList &alignedPaths,
     if (statusCb) {
         statusCb(
             QString("FSGray: Converting %1 images to grayscale using %2 threads.")
-                .arg(total).arg(numThreads),
-            false
+                .arg(total).arg(numThreads)
             );
     }
 
     for (int i = 0; i < total; ++i) {
 
         if (abortFlag && abortFlag->load(std::memory_order_relaxed)) {
-            if (statusCb) statusCb("FSGray: Aborted by user.", true);
+            if (statusCb) statusCb("FSGray: Aborted by user.");
             return false;
         }
 
@@ -51,7 +50,7 @@ bool run(const QStringList &alignedPaths,
 
         cv::Mat img = cv::imread(srcPath.toStdString(), cv::IMREAD_UNCHANGED);
         if (img.empty()) {
-            if (statusCb) statusCb("FSGray: Failed to load " + srcPath, true);
+            if (statusCb) statusCb("FSGray: Failed to load " + srcPath);
             return false;
         }
 
@@ -70,7 +69,7 @@ bool run(const QStringList &alignedPaths,
         }
 
         if (!cv::imwrite(dstPath.toStdString(), gray)) {
-            if (statusCb) statusCb("FSGray: Failed to write " + dstPath, true);
+            if (statusCb) statusCb("FSGray: Failed to write " + dstPath);
             return false;
         }
 
@@ -80,7 +79,7 @@ bool run(const QStringList &alignedPaths,
         }
     }
 
-    if (statusCb) statusCb("FSGray: Grayscale conversion complete.", false);
+    if (statusCb) statusCb("FSGray: Grayscale conversion complete.");
     return true;
 }
 

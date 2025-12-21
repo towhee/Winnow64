@@ -16,7 +16,7 @@ struct Options
 };
 
 using ProgressCallback = std::function<void(int)>;
-using StatusCallback   = std::function<void(const QString &message, bool isError)>;
+using StatusCallback   = std::function<void(const QString &message)>;
 
 // Convert aligned color images to grayscale
 bool run(const QStringList &alignedPaths,

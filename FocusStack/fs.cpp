@@ -13,6 +13,7 @@
 #include "FocusStack/fsloader.h"
 #include "FocusStack/fsutilities.h"
 
+#include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 
 #include <QDir>
@@ -102,6 +103,8 @@ void FS::updateIntermediateStatus()
     - Chk if depth and fusion intermediates exist.
 */
     const QString srcFun = "FS::updateIntermediateStatus";
+    if (G::FSLog) G::log(srcFun);
+
     // ALIGN
     alignedColorPaths.clear();
     alignedGrayPaths.clear();
@@ -271,14 +274,17 @@ bool FS::validAlignMatsAvailable(int count) const
 
 void FS::setTotalProgress()
 {
+    progressTotal = 0;
     if (o.enableAlign && !skipAlign)
-        progressTotal += slices * 2;
+        progressTotal += slices;
     if (o.enableFocusMaps && !skipFocusMaps)
         progressTotal += slices;
     if (o.enableDepthMap && !skipDepthMap)
+        progressTotal += slices * 2;
+    if (o.enableBackgroundMask)
         progressTotal += slices;
     if (o.enableFusion && !skipFusion) {
-        progressTotal += (slices + 4);
+        progressTotal += (slices + 5);
         if (validAlignMatsAvailable(slices)) progressTotal --;
     }
 }
@@ -287,7 +293,8 @@ void FS::incrementProgress()
 {
     QString srcFun = "FS::incrementProgress";
     emit progress(++progressCount, progressTotal);
-    G::log(srcFun, QString::number(progressCount));
+    QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
+    G::log(srcFun, msg);
 }
 
 void FS::previewOverview(cv::Mat &fusedColor8Mat)
@@ -347,15 +354,12 @@ bool FS::run()
 
     slices = inputPaths.count();
     lastSlice = slices - 1;
-    progressTotal = 0;
+    setTotalProgress();
 
     QElapsedTimer t;
     t.start();
 
     status("Preparing to focus stack...");
-    setTotalProgress();
-
-    incrementProgress();
 
     // Create stage folders
     if (!prepareFolders())
@@ -364,6 +368,8 @@ bool FS::run()
     // Decide which stages to skip
     if (!setParameters())
         return false;
+
+    incrementProgress();
 
     // RUN ALIGN
     if (o.enableAlign && !skipAlign)
@@ -430,7 +436,7 @@ bool FS::run()
 
     qApp->processEvents();  // complete any waiting log msgs
 
-    diagnostics();
+    // diagnostics();
 
     return true;
 }
@@ -518,6 +524,7 @@ bool FS::runAlign()
             }
 
             if (G::FSLog) G::log(srcFun, "Load image " + QString::number(i));
+            incrementProgress();
         }
     }
 
@@ -640,7 +647,7 @@ bool FS::runFocusMaps()
     fopt.preview            = o.keepFocusMaps;
     fopt.numThreads         = 0;
     fopt.useOpenCL          = o.enableOpenCL;
-    fopt.keepIntermediates  = o.keepIntermediates;
+    fopt.keepIntermediates  = o.keepFocusMaps;
     fopt.preview            = o.previewFocusMaps;
 
     auto progressCb = [this](int)
@@ -648,7 +655,7 @@ bool FS::runFocusMaps()
         incrementProgress();
     };
 
-    auto statusCb = [this](const QString &message, bool /*isError*/)
+    auto statusCb = [this](const QString &message)
     {
         status(message);
     };
@@ -902,6 +909,7 @@ bool FS::runBackground()
     if (abort) return false;
 
     status("Building background mask...");
+    if (G::FSLog) G::log(srcFun, "Building background mask...");
 
     FSBackground::Options bopt;
     bopt.method = o.backgroundMethod;
@@ -958,6 +966,31 @@ bool FS::runBackground()
         cv::Mat overlay = FSBackground::makeOverlayBGR(base, bgConfidence01, bopt);
         cv::imwrite((bopt.debugFolder + "/bg_overlay.png").toStdString(), overlay);
     }
+
+    // return without running replaceBackground to remove chomatic aberation
+    return true;
+
+    // IMPORTANT: shrink foreground matte a bit to remove defocus spill
+    int edgeErodePx = 4; // start 3..6 at full res
+    cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, {2*edgeErodePx+1, 2*edgeErodePx+1});
+    cv::erode(subjectMask8, subjectMask8, se);
+
+    qDebug() << "FS::runBackground "
+             << "depth"   << depthIndex16Mat.cols << depthIndex16Mat.rows
+             << "mask"    << subjectMask8.cols << subjectMask8.rows
+             << "fused"   << fusedColor8Mat.cols << fusedColor8Mat.rows
+             << "bg"      << alignedColorSlices.back().cols << alignedColorSlices.back().rows;    // Composite fused over last slice
+
+    cv::Mat bgSource = alignedColorSlices.back();   // last aligned color image (same size as outputColor8)
+    cv::Mat fusedColor8InOut = fusedColor8Mat;
+    FSBackground::replaceBackground(fusedColor8InOut, subjectMask8, bgSource, bopt, &abort);
+
+    // Write fused with background repair
+    QFileInfo lastFused(lastFusedPath);
+    QString fusedbgRepairedPath = fusionFolder + "/" + lastFused.baseName() + "_BBRepair.tif";
+    if (G::FSLog) G::log(srcFun, "Saving fused image with background repair to "
+                           + fusedbgRepairedPath);
+    cv::imwrite(fusedbgRepairedPath.toStdString(), fusedColor8InOut);
 
     status("Background mask complete.");
     return true;
@@ -1197,7 +1230,6 @@ void FS::diagnostics()
     qDebug() << "Diagnostics:"
         << "\n"
         << "o.method                =" << o.method << "\n"
-        << "o.keepIntermediates     =" << o.keepIntermediates << "\n"
         << "o.useIntermediates      =" << o.useIntermediates << "\n"
         << "o.useCache              =" << o.useCache << "\n"
         << "o.enableOpenCL          =" << o.enableOpenCL << "\n"

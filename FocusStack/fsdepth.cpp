@@ -233,7 +233,7 @@ bool runSimple(const QString &focusFolder,
 // MultiScale A: wavelet-based depth using FSFusionWavelet + FSMerge
 //----------------------------------------------------------
 
-bool runMultiScaleFromGrayMats(
+bool runMultiScale(
     const std::vector<cv::Mat> &graySlices,      // CV_8U or CV_32F
     const QString              &depthFolder,
     const FSDepth::Options     &opt,
@@ -244,7 +244,7 @@ bool runMultiScaleFromGrayMats(
 {
     const QString srcFun = "FSDepth::runMultiScaleFromGrayMats";
 
-    qDebug() << "runMultiScaleFromGrayMats" << "1";
+    if (G::FSLog) G::log(srcFun);
 
     if (graySlices.empty())
     {
@@ -323,6 +323,8 @@ bool runMultiScaleFromGrayMats(
 
         if (progressCb)
             progressCb(s + 1);
+
+        if (G::FSLog) G::log(srcFun, "Slice " + QString::number(s));
     }
 
     // --- Merge wavelets → depth index (padded) ---
@@ -385,7 +387,7 @@ bool runMultiScaleFromGrayMats(
     return true;
 }
 
-bool runMultiScale(const QString            &focusFolder,
+bool runMultiScaleFromDisk(const QString            &focusFolder,
                    const QString            &depthFolder,
                    const FSDepth::Options   &opt,
                    std::atomic_bool         *abortFlag,
@@ -443,7 +445,7 @@ bool runMultiScale(const QString            &focusFolder,
     // return true;
 
     // Delegate to the core implementation
-    return runMultiScaleFromGrayMats(
+    return runMultiScale(
         graySlices,
         depthFolder,
         opt,
@@ -476,7 +478,7 @@ bool run(const QString    &focusFolder,
     qDebug() << "FSDepth::run statusCb valid?" << static_cast<bool>(statusCb);
 
     if (method.compare("MultiScale", Qt::CaseInsensitive) == 0)
-        return runMultiScale(focusFolder, depthFolder, opt, abortFlag,
+        return runMultiScaleFromDisk(focusFolder, depthFolder, opt, abortFlag,
                              progressCb, statusCb, depthIndex16Out);
     else
         return runSimple(focusFolder, depthFolder, opt, abortFlag,
@@ -517,7 +519,7 @@ bool runFromGraySlices(
         }
     }
 
-    return runMultiScaleFromGrayMats(
+    return runMultiScale(
         graySlices,
         depthFolder,
         opt,
