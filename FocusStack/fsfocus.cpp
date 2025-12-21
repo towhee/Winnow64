@@ -124,13 +124,13 @@ bool run(const QString &alignFolder,
     // ------------------------------------------------------------
     QDir inDir(alignFolder);
     if (!inDir.exists()) {
-        if (statusCb) statusCb("FSFocus: Align folder missing: " + alignFolder, true);
+        if (statusCb) statusCb("FSFocus: Align folder missing: " + alignFolder);
         return false;
     }
 
     QDir outDir(focusFolder);
     if (!outDir.exists() && !outDir.mkpath(".")) {
-        if (statusCb) statusCb("FSFocus: Cannot create focus folder: " + focusFolder, true);
+        if (statusCb) statusCb("FSFocus: Cannot create focus folder: " + focusFolder);
         return false;
     }
 
@@ -143,12 +143,12 @@ bool run(const QString &alignFolder,
 
     const int total = files.size();
     if (total == 0) {
-        if (statusCb) statusCb("FSFocus: No grayscale aligned images found.", true);
+        if (statusCb) statusCb("FSFocus: No grayscale aligned images found.");
         return false;
     }
 
     if (statusCb) {
-        statusCb(QString("FSFocus: %1 slices detected.").arg(total), false);
+        statusCb(QString("FSFocus: %1 slices detected.").arg(total));
     }
 
     // For future use (downsampling / threading), but not used yet:
@@ -170,7 +170,7 @@ bool run(const QString &alignFolder,
     for (int i = 0; i < total; ++i)
     {
         if (abortFlag && abortFlag->load(std::memory_order_relaxed)) {
-            if (statusCb) statusCb("FSFocus: Aborted.", true);
+            if (statusCb) statusCb("FSFocus: Aborted.");
             return false;
         }
 
@@ -178,14 +178,16 @@ bool run(const QString &alignFolder,
         const QString base    = fi.completeBaseName();
         const QString srcPath = fi.absoluteFilePath();
 
-        if (G::FSLog) G::log(srcFun, "Slice " + QString::number(i) + " (" + base + ")");
-
         // --------------------------------------------------------
         // 1. Load grayscale aligned image
         // --------------------------------------------------------
+        QString msg = "Loading grayscale slice " + QString::number(i);
+        if (G::FSLog) G::log(srcFun, msg);
+        if (statusCb) statusCb(srcFun + ": " + msg);
+
         cv::Mat gray = cv::imread(srcPath.toStdString(), cv::IMREAD_GRAYSCALE);
         if (gray.empty()) {
-            if (statusCb) statusCb("FSFocus: Cannot load " + srcPath, true);
+            if (statusCb) statusCb("FSFocus: Cannot load " + srcPath);
             return false;
         }
 
@@ -196,12 +198,12 @@ bool run(const QString &alignFolder,
         // --------------------------------------------------------
         cv::Mat wavelet;
         if (!FSFusionWavelet::forward(gray, opt.useOpenCL, wavelet)) {
-            if (statusCb) statusCb("FSFocus: Wavelet failed for " + base, true);
+            if (statusCb) statusCb("FSFocus: Wavelet failed for " + base);
             return false;
         }
 
         if (wavelet.type() != CV_32FC2) {
-            if (statusCb) statusCb("FSFocus: Wavelet output type mismatch (expected CV_32FC2).", true);
+            if (statusCb) statusCb("FSFocus: Wavelet output type mismatch (expected CV_32FC2).");
             return false;
         }
 
@@ -209,6 +211,10 @@ bool run(const QString &alignFolder,
         // 3. Focus metric: magnitude of complex wavelet coefficients
         //    mag32 = sqrt(real^2 + imag^2)  (CV_32F)
         // --------------------------------------------------------
+        msg = "Magnitude of complex wavelet coefficients slice " + QString::number(i);
+        if (G::FSLog) G::log(srcFun, msg);
+        if (statusCb) statusCb(srcFun + ": " + msg);
+
         std::vector<cv::Mat> ch(2);
         cv::split(wavelet, ch);
 
@@ -241,6 +247,10 @@ bool run(const QString &alignFolder,
                  << "base =" << base;
         if (opt.keepIntermediates)
         {
+            msg = "Write previews for slice " + QString::number(i);
+            if (G::FSLog) G::log(srcFun, msg);
+            if (statusCb) statusCb(srcFun + ": " + msg);
+
             // Numeric 16U metric (normalized per slice to 0..65535)
             cv::Mat focus16;
             if (mx > mn) {
@@ -267,7 +277,7 @@ bool run(const QString &alignFolder,
 
             if (!cv::imwrite(dstMetricPath.toStdString(), focus16)) {
                 QString msg = srcFun + " Failed to write " + dstMetricPath;
-                if (statusCb) statusCb(msg, true);
+                if (statusCb) statusCb(msg);
                 qWarning() << "WARNING:" << srcFun << msg;
                 return false;
             }
@@ -296,12 +306,11 @@ bool run(const QString &alignFolder,
         // --------------------------------------------------------
         // 5. Progress callback
         // --------------------------------------------------------
-        if (progressCb)
-            progressCb(i + 1);
+        if (progressCb) progressCb(i + 1);
     }
 
     if (statusCb)
-        statusCb("FSFocus: Completed.", false);
+        statusCb("FSFocus: Completed.");
 
     return true;
 }

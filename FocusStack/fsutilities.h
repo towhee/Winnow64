@@ -10,11 +10,12 @@
 namespace FSUtilities {
 
 // Small helpers can be inline in the header
-inline QString sizeStr(const cv::Size& s) {
+inline QString sizeToStr(const cv::Size& s) {
     return QString("%1x%2").arg(s.width).arg(s.height);
 }
-inline QString matSizeStr(const cv::Mat& m) {
-    return sizeStr(m.size());
+
+inline QString matSizeToStr(const cv::Mat& m) {
+    return sizeToStr(m.size());
 }
 
 // Declarations (NO bodies here)

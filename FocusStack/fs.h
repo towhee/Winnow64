@@ -22,7 +22,6 @@ public:
     struct Options
     {
         QString method          = "";
-        bool keepIntermediates  = true;
         bool useIntermediates   = true;
         bool useCache           = true;     // use disk if false
 

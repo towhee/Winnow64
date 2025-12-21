@@ -5,10 +5,10 @@
 
 namespace FSUtilities {
 
-    cv::Mat canonicalizeGrayFloat01(const cv::Mat& in,
-                                    const cv::Size& canonicalSize,
-                                    int interp,
-                                    const char* tag)
+cv::Mat canonicalizeGrayFloat01(const cv::Mat& in,
+                                const cv::Size& canonicalSize,
+                                int interp,
+                                const char* tag)
 {
     cv::Mat g32 = in;
     CV_Assert(!g32.empty());

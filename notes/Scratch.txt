@@ -1,3 +1,86 @@
+GEMINI FOCUS STACK APPROACH ---------------------------------------------------------
+
+Building an automated, artifact-free focus stacking app in C++ requires a
+multi-stage pipeline that transitions from geometric alignment to intelligent focus
+detection and multi-scale fusion. To achieve "zero-intervention," you should lean on
+Deep Learning for focus-map estimation and Laplacian Pyramids for blending, as these
+naturally adapt to different textures and stack depths without needing "sigma" or
+"radius" sliders.
+
+1. The Recommended Pipeline To proceed without user intervention, your architecture
+should follow this flow:
+
+Stage 1: Pre-processing & Alignment (Registration). Macro stacks often have "focus
+breathing" (slight magnification changes). You must align images before fusing.
+
+        Algorithm: Use ORB or SIFT features combined with RANSAC to find the
+        homography between frames. For higher precision, follow this with ECC
+        (Enhanced Correlation Coefficient) maximization.
+
+Stage 2: Adaptive Focus Map Generation (ML Layer). Instead of simple Laplacian
+variance (which requires thresholds), use a pre-trained Multi-Focus Image Fusion
+(MFIF) model.
+
+        SOTA Model (2025): SwinMFF or LightMFF. These models use Transformers or
+        specialized U-Nets to output a "decision map" (a probability map of which
+        pixels are in focus).
+
+        Adaptive Logic: The model treats the stack as a sequence, comparing local
+        patches to find the highest-frequency content.
+
+Stage 3: Multi-Scale Fusion (Artifact Reduction). Naive "pixel-picking" causes halos.
+You must blend in the frequency domain.
+
+        Algorithm: Laplacian Pyramid Blending. You decompose each image into a
+        pyramid of frequency bands. You then blend the pyramids using the decision
+        map as a weight at each level.
+
+Tools & LibrariesFor a high-performance C++ implementation, the following stack is
+standard for 2025:
+
+        Component/Library/Reason:
+
+        Core VisionOpenCV 4.x / 5.x  Essential for image I/O, registration, and basic
+        pyramid functions (buildPyramid).
+
+        ML Inference: LibTorch (PyTorch C++). To run SOTA MFIF models (like SwinMFF)
+        directly in C++ with GPU acceleration.
+
+        Parallelism: Intel TBB / OpenMP. Focus stacking is "embarrassingly parallel."
+        You can process pyramid levels or alignment across all CPU cores.
+
+        Math/Optimization: Eigen. If you need custom linear algebra for complex
+        registration or artifact correction.
+
+        Performance: SIMD (Halide). If you need extreme speed, Halide can
+        auto-generate optimized assembly for your fusion loops.
+
+3. Confidence & Artifact Mitigation
+
+        Confidence Level: High. The combination of Deep Learning (for the "where")
+        and Pyramid Blending (for the "how") is extremely robust. Traditional
+        artifacts like "halos" or "ghosting" usually occur because of hard edges in
+        the weight map or poor alignment.
+
+How to fix remaining artifacts:
+
+        Haloing: This is usually caused by the weight map being too "sharp" at depth
+        boundaries. By using the Local Laplacian Pyramid approach, you can
+        adaptively smooth transitions based on the confidence score of the ML model.
+
+        Ghosting (Moving Objects): If a bug moves during the stack, the ML model
+        will see "multi-focus" in two different places. To fix this automatically,
+        implement a Consistency Check that penalizes pixels that appear in-focus in
+        wildly non-consecutive frames.
+
+        Color Fringing: Use a bilateral filter on the weight map before fusion to
+        ensure focus boundaries align with color boundaries (edges).
+
+
+
+
+
+
 1. Alignment quality
 
 Goal: sharper fusion, fewer “double edges”.
@@ -549,81 +632,3 @@ STEPS:
 This prevents bleeding into subject edges (your current failure mode).
 
 
-GEMINI FOCUS STACK APPROACH ---------------------------------------------------------
-
-Building an automated, artifact-free focus stacking app in C++ requires a
-multi-stage pipeline that transitions from geometric alignment to intelligent focus
-detection and multi-scale fusion. To achieve "zero-intervention," you should lean on
-Deep Learning for focus-map estimation and Laplacian Pyramids for blending, as these
-naturally adapt to different textures and stack depths without needing "sigma" or
-"radius" sliders.
-
-1. The Recommended Pipeline To proceed without user intervention, your architecture
-should follow this flow:
-
-Stage 1: Pre-processing & Alignment (Registration)Macro stacks often have "focus
-breathing" (slight magnification changes). You must align images before fusing.
-
-        Algorithm: Use ORB or SIFT features combined with RANSAC to find the
-        homography between frames. For higher precision, follow this with ECC
-        (Enhanced Correlation Coefficient) maximization.
-
-Stage 2: Adaptive Focus Map Generation (ML Layer)Instead of simple Laplacian
-variance (which requires thresholds), use a pre-trained Multi-Focus Image Fusion
-(MFIF) model.
-
-        SOTA Model (2025): SwinMFF or LightMFF. These models use Transformers or
-        specialized U-Nets to output a "decision map" (a probability map of which
-        pixels are in focus).
-
-        Adaptive Logic: The model treats the stack as a sequence, comparing local
-        patches to find the highest-frequency content.
-
-Stage 3: Multi-Scale Fusion (Artifact Reduction)Naive "pixel-picking" causes halos.
-You must blend in the frequency domain.
-
-        Algorithm: Laplacian Pyramid Blending. You decompose each image into a
-        pyramid of frequency bands. You then blend the pyramids using the decision
-        map as a weight at each level.
-
-Tools & LibrariesFor a high-performance C++ implementation, the following stack is
-standard for 2025:
-
-Component/Library
-Reason
-
-        Core VisionOpenCV 4.x / 5.x  Essential for image I/O, registration, and basic
-        pyramid functions (buildPyramid).
-
-        ML InferenceLibTorch (PyTorch C++)To run SOTA MFIF models (like SwinMFF)
-        directly in C++ with GPU acceleration.
-
-        ParallelismIntel TBB / OpenMPFocus stacking is "embarrassingly parallel."
-        You can process pyramid levels or alignment across all CPU cores.
-
-        Math/OptimizationEigenIf you need custom linear algebra for complex
-        registration or artifact correction.
-
-        PerformanceSIMD (Halide)If you need extreme speed, Halide can auto-generate
-        optimized assembly for your fusion loops.
-
-3. Confidence & Artifact Mitigation
-
-        Confidence Level: High. The combination of Deep Learning (for the "where")
-        and Pyramid Blending (for the "how") is extremely robust. Traditional
-        artifacts like "halos" or "ghosting" usually occur because of hard edges in
-        the weight map or poor alignment.
-
-How to fix remaining artifacts:
-
-        Haloing: This is usually caused by the weight map being too "sharp" at depth
-        boundaries. By using the Local Laplacian Pyramid approach, you can
-        adaptively smooth transitions based on the confidence score of the ML model.
-
-        Ghosting (Moving Objects): If a bug moves during the stack, the ML model
-        will see "multi-focus" in two different places. To fix this automatically,
-        implement a Consistency Check that penalizes pixels that appear in-focus in
-        wildly non-consecutive frames.
-
-        Color Fringing: Use a bilateral filter on the weight map before fusion to
-        ensure focus boundaries align with color boundaries (edges).

@@ -81,9 +81,13 @@ void MW::generateFocusStackFromSelection()
 }
 
 void MW::generateFocusStack(const QStringList paths,
-                            const QString method,
+                            QString method,
                             const QString source)
 {
+/*
+    Called locally from MW::generateFocusStackFromSelection()
+    Called externally from MW::handleStartupArgs
+*/
     if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
     QString srcFun = "MW::generateFocusStack";
 
@@ -91,10 +95,11 @@ void MW::generateFocusStack(const QStringList paths,
 
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
 
+    if (method.isEmpty() || method == "Default") method = "PMax";
+
     // Options
     // clean (send all project folders to the trash)
     bool isClean = false;       // send all project folders to the trash
-    bool isRedoAlign = true;    //
 
     // Source images folder (used after pipeline finishes)
     QFileInfo info(paths.first());
@@ -117,7 +122,6 @@ void MW::generateFocusStack(const QStringList paths,
     // FOCUS STACK CONTROL:
     FS::Options opt;
     opt.method                  = method;
-    opt.keepIntermediates       = true;
     opt.useIntermediates        = true;
     opt.useCache                = true;
 
@@ -140,9 +144,9 @@ void MW::generateFocusStack(const QStringList paths,
     opt.enableFusion            = true;
     opt.previewFusion           = true;
 
-    opt.enableArtifactDetect = false;
+    opt.enableArtifactDetect    = false;
 
-    opt.enableOpenCL        = true;
+    opt.enableOpenCL            = true;
     pipeline->setOptions(opt);
 
     // When the thread starts → run the FS pipeline
@@ -188,6 +192,8 @@ void MW::generateFocusStack(const QStringList paths,
         QString fusedPath;
         // if (!files.isEmpty())
         //     fusedPath = alignedDir + "/" + files.last();   // temporarily treat as result
+
+        qDebug() << srcFun << "Finished" << fusedPath.isEmpty();
 
         if (!fusedPath.isEmpty())
         {

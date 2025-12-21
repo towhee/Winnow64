@@ -21,7 +21,7 @@ struct Options
 };
 
 using ProgressCallback = std::function<void(int)>;
-using StatusCallback   = std::function<void(const QString &msg, bool isError)>;
+using StatusCallback   = std::function<void(const QString &msg)>;
 
 bool run(const QString    &alignFolder,
          const QString    &focusFolder,
