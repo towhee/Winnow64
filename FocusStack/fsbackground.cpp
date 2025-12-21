@@ -1,84 +1,24 @@
-#include "FSBackground.h"
-#include "FocusStack/fsutilities.h"
-#include "Main/global.h"
+#include "FocusStack/fsbackground.h"
+#include "FocusStack/FSUtilities.h"
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
+
 #include <QDir>
+#include <QFileInfo>
 #include <QDebug>
-#include <queue>
+
+#include <atomic>
+#include <vector>
+#include <deque>
 #include <algorithm>
-#include <numeric>
 #include <cmath>
 
 namespace FSBackground {
 
-// ---- Debug writers --------------------------------------------------
-static void ensureDebugFolder(const QString& folder)
-{
-    QDir d(folder);
-    if (!d.exists())
-        QDir().mkpath(folder);
-}
-
-static bool writeU8(const QString& path, const cv::Mat& u8)
-{
-    if (u8.empty()) return false;
-    CV_Assert(u8.type() == CV_8U || u8.type() == CV_8UC3);
-    return cv::imwrite(path.toStdString(), u8);
-}
-
-// Writes CV_32F assumed 0..1 (clamps) -> PNG 8U
-static bool writeFloat01AsU8(const QString& path, cv::Mat f32)
-{
-    if (f32.empty()) return false;
-    CV_Assert(f32.type() == CV_32F);
-
-    cv::min(f32, 1.0f, f32);
-    cv::max(f32, 0.0f, f32);
-
-    cv::Mat u8;
-    f32.convertTo(u8, CV_8U, 255.0);
-    return cv::imwrite(path.toStdString(), u8);
-}
-
-// Writes CV_32F with auto min/max normalization (optionally log-compress)
-static bool writeFloatAutoU8(const QString& path, const cv::Mat& f32in, bool logCompress)
-{
-    if (f32in.empty()) return false;
-    CV_Assert(f32in.type() == CV_32F);
-
-    cv::Mat m = f32in.clone();
-
-    if (logCompress) {
-        // log(1 + x) for visualization
-        cv::max(m, 0.0f, m);
-        m += 1.0f;
-        cv::log(m, m);
-    }
-
-    double vmin = 0.0, vmax = 0.0;
-    cv::minMaxLoc(m, &vmin, &vmax);
-
-    cv::Mat u8;
-    if (vmax <= vmin + 1e-12) {
-        u8 = cv::Mat(m.size(), CV_8U, cv::Scalar(0));
-    } else {
-        m.convertTo(u8, CV_8U, 255.0 / (vmax - vmin), -vmin * 255.0 / (vmax - vmin));
-    }
-    return cv::imwrite(path.toStdString(), u8);
-}
-
-// Writes a binary mask (0/255) as-is
-static bool writeMask(const QString& path, const cv::Mat& mask8)
-{
-    if (mask8.empty()) return false;
-    CV_Assert(mask8.type() == CV_8U);
-    return cv::imwrite(path.toStdString(), mask8);
-}
-
-// -------------------- small local helpers --------------------
-
+// ------------------------------------------------------------
+// Small helpers
+// ------------------------------------------------------------
 static inline bool abortRequested(std::atomic_bool *a)
 {
     return a && a->load(std::memory_order_relaxed);
@@ -89,58 +29,86 @@ static inline int oddK(int k) { return (k % 2 == 1) ? k : (k + 1); }
 static void clamp01InPlace(cv::Mat &m)
 {
     if (m.empty()) return;
+    CV_Assert(m.type() == CV_32F || m.type() == CV_32FC1);
     cv::min(m, 1.0f, m);
     cv::max(m, 0.0f, m);
 }
 
-// robust percentile for CV_32F single-channel
-static float percentile32F(const cv::Mat& m32f, float q01)
+static void ensureDebugFolder(const QString &folder)
 {
-    CV_Assert(m32f.type() == CV_32F && m32f.channels() == 1);
-    CV_Assert(q01 >= 0.0f && q01 <= 1.0f);
+    if (folder.isEmpty()) return;
+    QDir().mkpath(folder);
+}
+
+static bool writeDbgPng(const QString &folder,
+                        const QString &fileName,
+                        const cv::Mat &img)
+{
+    if (folder.isEmpty()) return false;
+    ensureDebugFolder(folder);
+    const QString path = folder + "/" + fileName;
+    return FSUtilities::writePngWithTitle(path, img);
+}
+
+// ------------------------------------------------------------
+// Robust quantiles + normalization (scale-safe diagnostics)
+// ------------------------------------------------------------
+
+// Sample up to ~500k pixels for quantiles (fast enough, stable enough)
+static float quantile32f(const cv::Mat &m32f, float q)
+{
+    CV_Assert(m32f.type() == CV_32F);
+    CV_Assert(q >= 0.0f && q <= 1.0f);
+    if (m32f.empty()) return 0.0f;
+
+    const int64_t total = (int64_t)m32f.total();
+    const int64_t targetSamples = 500000;
+    const int step = (total > targetSamples) ? (int)std::max<int64_t>(1, total / targetSamples) : 1;
 
     std::vector<float> v;
-    v.reserve((size_t)m32f.total());
+    v.reserve((size_t)(total / step + 1));
 
-    for (int y = 0; y < m32f.rows; ++y)
+    const float *p = (const float*)m32f.ptr<float>(0);
+    for (int64_t i = 0; i < total; i += step)
     {
-        const float* p = m32f.ptr<float>(y);
-        for (int x = 0; x < m32f.cols; ++x)
-        {
-            float a = p[x];
-            if (std::isfinite(a)) v.push_back(a);
-        }
+        float x = p[i];
+        if (std::isfinite(x)) v.push_back(x);
     }
+
     if (v.empty()) return 0.0f;
 
-    const size_t k = (size_t)std::clamp<double>(q01 * (v.size() - 1), 0.0, double(v.size() - 1));
-    std::nth_element(v.begin(), v.begin() + (ptrdiff_t)k, v.end());
+    size_t k = (size_t)std::floor(q * (float)(v.size() - 1));
+    std::nth_element(v.begin(), v.begin() + k, v.end());
     return v[k];
 }
 
-// normalize m to 0..1 using robust low/high percentiles
-static cv::Mat normalizeRobust01(const cv::Mat& m32f, float qLo, float qHi)
+static cv::Mat normalizeRobust01(const cv::Mat &in32f,
+                                 float qLow,
+                                 float qHigh,
+                                 float eps = 1e-6f)
 {
-    CV_Assert(m32f.type() == CV_32F && m32f.channels() == 1);
-    float lo = percentile32F(m32f, qLo);
-    float hi = percentile32F(m32f, qHi);
-    if (hi <= lo + 1e-9f)
-        hi = lo + 1e-3f;
+    CV_Assert(in32f.type() == CV_32F);
+    CV_Assert(qLow >= 0.0f && qLow < qHigh && qHigh <= 1.0f);
 
-    cv::Mat out(m32f.size(), CV_32F);
-    for (int y = 0; y < m32f.rows; ++y)
-    {
-        const float* ip = m32f.ptr<float>(y);
-        float* op = out.ptr<float>(y);
-        for (int x = 0; x < m32f.cols; ++x)
-        {
-            float t = (ip[x] - lo) / (hi - lo);
-            t = std::min(1.0f, std::max(0.0f, t));
-            op[x] = t;
-        }
-    }
+    float lo = quantile32f(in32f, qLow);
+    float hi = quantile32f(in32f, qHigh);
+
+    if (!std::isfinite(lo)) lo = 0.0f;
+    if (!std::isfinite(hi)) hi = lo + 1.0f;
+
+    if (hi - lo < eps)
+        hi = lo + 1.0f;
+
+    cv::Mat out;
+    in32f.convertTo(out, CV_32F, 1.0, -lo);
+    out *= (1.0f / (hi - lo));
+    clamp01InPlace(out);
     return out;
 }
+
+// ------------------------------------------------------------
+// Feature builders
+// ------------------------------------------------------------
 
 static cv::Mat depthNorm01FromIndex16(const cv::Mat &depthIndex16, int sliceCount)
 {
@@ -148,8 +116,8 @@ static cv::Mat depthNorm01FromIndex16(const cv::Mat &depthIndex16, int sliceCoun
     CV_Assert(sliceCount >= 2);
 
     cv::Mat out(depthIndex16.size(), CV_32F);
-    const float denom = float(sliceCount - 1);
 
+    const float denom = float(sliceCount - 1);
     for (int y = 0; y < depthIndex16.rows; ++y)
     {
         const uint16_t *d = depthIndex16.ptr<uint16_t>(y);
@@ -157,7 +125,7 @@ static cv::Mat depthNorm01FromIndex16(const cv::Mat &depthIndex16, int sliceCoun
         for (int x = 0; x < depthIndex16.cols; ++x)
             o[x] = float(d[x]) / denom;
     }
-    return out;
+    return out; // 0..1
 }
 
 static cv::Mat localStdDevDepthIndex(const cv::Mat &depthIndex16, int radius)
@@ -175,10 +143,9 @@ static cv::Mat localStdDevDepthIndex(const cv::Mat &depthIndex16, int radius)
 
     cv::Mat var = mean2 - mean.mul(mean);
     cv::max(var, 0.0f, var);
-
     cv::Mat stdv;
     cv::sqrt(var, stdv);
-    return stdv;
+    return stdv; // slice-index units
 }
 
 static cv::Mat computeFocusMax(const std::vector<cv::Mat> &focusSlices32,
@@ -201,30 +168,59 @@ static cv::Mat computeFocusMax(const std::vector<cv::Mat> &focusSlices32,
     return maxF;
 }
 
-static cv::Mat computeFocusSupportRatio(const std::vector<cv::Mat> &focusSlices32,
-                                        float supportThresh,
-                                        std::atomic_bool *abortFlag,
-                                        ProgressCallback progressCb)
+// Scale-invariant support:
+// count slices where focus_i >= supportFrac * maxF(pixel)
+// AND maxF(pixel) must be “meaningful” (avoid tiny-max false support).
+static cv::Mat computeSupportRatioScaleInvariant(const std::vector<cv::Mat> &focusSlices32,
+                                                 const cv::Mat &maxF32,
+                                                 float supportFrac,          // e.g. 0.25..0.45
+                                                 float minMaxFNorm,          // e.g. 0.05 in normalized maxF space
+                                                 float maxFHiForNorm,        // global robust high for maxF normalization
+                                                 std::atomic_bool *abortFlag)
 {
     CV_Assert(!focusSlices32.empty());
-    const cv::Size sz = focusSlices32.front().size();
+    CV_Assert(maxF32.type() == CV_32F);
+    CV_Assert(maxF32.size() == focusSlices32.front().size());
+
+    supportFrac = std::max(0.01f, std::min(0.95f, supportFrac));
+    minMaxFNorm = std::max(0.0f, std::min(1.0f, minMaxFNorm));
+    maxFHiForNorm = std::max(1e-6f, maxFHiForNorm);
+
+    const cv::Size sz = maxF32.size();
     cv::Mat count = cv::Mat::zeros(sz, CV_32S);
 
     const int N = (int)focusSlices32.size();
     for (int i = 0; i < N; ++i)
     {
         if (abortRequested(abortFlag)) return {};
-        CV_Assert(focusSlices32[i].type() == CV_32F);
+        const cv::Mat &F = focusSlices32[i];
+        CV_Assert(F.type() == CV_32F);
+        CV_Assert(F.size() == sz);
 
-        cv::Mat m = (focusSlices32[i] > supportThresh); // CV_8U
-        count += m / 255;
+        for (int y = 0; y < sz.height; ++y)
+        {
+            const float *fp = F.ptr<float>(y);
+            const float *mp = maxF32.ptr<float>(y);
+            int *cp = count.ptr<int>(y);
 
-        if (progressCb) progressCb(i + 1, N);
+            for (int x = 0; x < sz.width; ++x)
+            {
+                const float m = mp[x];
+                const float mNorm = m / maxFHiForNorm;
+
+                if (mNorm < minMaxFNorm)
+                    continue; // treat as “no focus”; support stays low
+
+                const float thr = supportFrac * m;
+                if (fp[x] >= thr)
+                    cp[x] += 1;
+            }
+        }
     }
 
     cv::Mat ratio(sz, CV_32F);
     count.convertTo(ratio, CV_32F, 1.0 / float(N));
-    return ratio;
+    return ratio; // 0..1
 }
 
 static cv::Mat toFloat01_Gray(const cv::Mat &img)
@@ -244,14 +240,13 @@ static cv::Mat toFloat01_Gray(const cv::Mat &img)
 }
 
 static cv::Mat computeColorVariance01(const std::vector<cv::Mat> &alignedColor,
-                                      std::atomic_bool *abortFlag,
-                                      ProgressCallback progressCb)
+                                      std::atomic_bool *abortFlag)
 {
     CV_Assert(!alignedColor.empty());
     const int N = (int)alignedColor.size();
     const cv::Size sz = alignedColor.front().size();
 
-    cv::Mat mean  = cv::Mat::zeros(sz, CV_32F);
+    cv::Mat mean = cv::Mat::zeros(sz, CV_32F);
     cv::Mat mean2 = cv::Mat::zeros(sz, CV_32F);
 
     for (int i = 0; i < N; ++i)
@@ -259,11 +254,9 @@ static cv::Mat computeColorVariance01(const std::vector<cv::Mat> &alignedColor,
         if (abortRequested(abortFlag)) return {};
         CV_Assert(alignedColor[i].size() == sz);
 
-        cv::Mat g = toFloat01_Gray(alignedColor[i]); // 0..1 float
+        cv::Mat g = toFloat01_Gray(alignedColor[i]); // 0..1 float-ish
         mean  += g;
         mean2 += g.mul(g);
-
-        if (progressCb) progressCb(i + 1, N);
     }
 
     mean  *= (1.0f / float(N));
@@ -271,9 +264,12 @@ static cv::Mat computeColorVariance01(const std::vector<cv::Mat> &alignedColor,
 
     cv::Mat var = mean2 - mean.mul(mean);
     cv::max(var, 0.0f, var);
-    return var;
+    return var; // 0..~
 }
 
+// ------------------------------------------------------------
+// Mask cleanup + feathering
+// ------------------------------------------------------------
 static void cleanupMask(cv::Mat &mask8, const Options &opt)
 {
     if (mask8.empty()) return;
@@ -307,130 +303,167 @@ static void cleanupMask(cv::Mat &mask8, const Options &opt)
     }
 }
 
-// -------------------- Seed + Grow core --------------------
-
-// Build seed mask from bgScore01 using adaptive quantile thresholds.
-// Returns CV_8U 0/255.
-static cv::Mat buildBackgroundSeeds(const cv::Mat& bgScore01,
-                                    const Options& opt)
+static cv::Mat makeFeatherWeight01(const cv::Mat &subjectMask8,
+                                   const Options &opt)
 {
+    CV_Assert(subjectMask8.type() == CV_8U);
+
+    cv::Mat subj = (subjectMask8 > 0); // 0/255
+    cv::Mat distIn;
+
+    cv::distanceTransform(subj, distIn, cv::DIST_L2, 3);
+
+    const float R = float(std::max(1, opt.featherRadius));
+    cv::Mat w = cv::Mat::zeros(subjectMask8.size(), CV_32F);
+
+    for (int y = 0; y < w.rows; ++y)
+    {
+        const float *din  = distIn.ptr<float>(y);
+        const uchar *sm   = subj.ptr<uchar>(y);
+        float *wp = w.ptr<float>(y);
+
+        for (int x = 0; x < w.cols; ++x)
+        {
+            if (sm[x])
+            {
+                float t = std::min(1.0f, din[x] / R);
+                wp[x] = std::pow(t, opt.featherGamma);
+            }
+            else
+                wp[x] = 0.0f;
+        }
+    }
+
+    clamp01InPlace(w);
+    return w;
+}
+
+// ------------------------------------------------------------
+// Seed + grow (region from borders or strong BG scores)
+// ------------------------------------------------------------
+static cv::Mat buildBorderBandMask8(const cv::Size &sz, int band)
+{
+    band = std::max(1, band);
+    cv::Mat m(sz, CV_8U, cv::Scalar(0));
+    m.rowRange(0, std::min(band, sz.height)).setTo(255);
+    m.rowRange(std::max(0, sz.height - band), sz.height).setTo(255);
+    m.colRange(0, std::min(band, sz.width)).setTo(255);
+    m.colRange(std::max(0, sz.width - band), sz.width).setTo(255);
+    return m;
+}
+
+static cv::Mat buildBackgroundSeeds(const cv::Mat &bgScore01,
+                                    const Options &opt,
+                                    float seedQuantileUsedOut = 0.0f)
+{
+    Q_UNUSED(seedQuantileUsedOut);
     CV_Assert(bgScore01.type() == CV_32F);
 
-    // Auto seed quantile: default to strong seeds = top ~8% of score
-    float qHi = (opt.seedHighQuantile > 0.0f) ? opt.seedHighQuantile : 0.92f;
-    qHi = std::min(0.995f, std::max(0.50f, qHi));
+    float q = opt.seedHighQuantile;
+    if (q < 0.0f) q = 0.93f; // default top 7%
 
-    float tHi = percentile32F(bgScore01, qHi);
-
-    cv::Mat seeds = (bgScore01 >= tHi); // CV_8U 0/255
+    const float thr = quantile32f(bgScore01, q);
+    cv::Mat seed = (bgScore01 >= thr); // CV_8U 0/255
 
     if (opt.preferBorderSeeds)
     {
-        // Keep only seed pixels connected to borders (macro assumption: background touches edges).
-        // This eliminates “floating” interior seeds that often punch holes in subject.
-        cv::Mat keep = cv::Mat::zeros(seeds.size(), CV_8U);
+        cv::Mat border = buildBorderBandMask8(bgScore01.size(), /*band=*/6);
+        seed &= border;
 
-        std::queue<cv::Point> q;
-        auto pushIfSeed = [&](int x, int y){
-            if ((unsigned)x >= (unsigned)seeds.cols || (unsigned)y >= (unsigned)seeds.rows) return;
-            if (keep.at<uchar>(y,x)) return;
-            if (!seeds.at<uchar>(y,x)) return;
-            keep.at<uchar>(y,x) = 255;
-            q.push({x,y});
-        };
-
-        // initialize with border seed pixels
-        for (int x = 0; x < seeds.cols; ++x) { pushIfSeed(x, 0); pushIfSeed(x, seeds.rows-1); }
-        for (int y = 0; y < seeds.rows; ++y) { pushIfSeed(0, y); pushIfSeed(seeds.cols-1, y); }
-
-        const int dx[8] = {1,1,0,-1,-1,-1,0,1};
-        const int dy[8] = {0,1,1,1,0,-1,-1,-1};
-
-        while (!q.empty())
-        {
-            cv::Point p = q.front(); q.pop();
-            for (int k = 0; k < 8; ++k)
-                pushIfSeed(p.x + dx[k], p.y + dy[k]);
-        }
-
-        seeds = keep; // border-connected seeds only
+        // If border seeding is too sparse, fall back to global seeds
+        const double cnt = cv::countNonZero(seed);
+        const double area = (double)bgScore01.total();
+        if (area > 0.0 && cnt / area < 0.0005) // <0.05% pixels
+            seed = (bgScore01 >= thr);
     }
 
-    return seeds;
+    // Clean seeds slightly
+    cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5,5));
+    cv::morphologyEx(seed, seed, cv::MORPH_OPEN, se);
+
+    return seed;
 }
 
-// Grow background from seeds using hysteresis thresholds on bgScore01.
-// high seeds are already selected; grow into pixels above low threshold.
-// Returns CV_8U 0/255 background region.
-static cv::Mat growBackgroundRegion(const cv::Mat& bgScore01,
-                                    const cv::Mat& seedBg8,
-                                    const Options& opt)
+static cv::Mat growBackgroundRegion(const cv::Mat &bgScore01,
+                                    const cv::Mat &seedBg8,
+                                    const Options &opt,
+                                    cv::Mat *allowedMask8Out = nullptr)
 {
     CV_Assert(bgScore01.type() == CV_32F);
     CV_Assert(seedBg8.type() == CV_8U);
-    CV_Assert(bgScore01.size() == seedBg8.size());
+    CV_Assert(seedBg8.size() == bgScore01.size());
 
-    // Auto grow quantile: default to allow growth into top ~30% bg-score
-    float qLo = (opt.growLowQuantile > 0.0f) ? opt.growLowQuantile : 0.70f;
-    qLo = std::min(0.98f, std::max(0.05f, qLo));
+    float q = opt.growLowQuantile;
+    if (q < 0.0f) q = 0.70f; // default top 30% are allowed
 
-    float tLo = percentile32F(bgScore01, qLo);
+    const float thr = quantile32f(bgScore01, q);
+    cv::Mat allowed = (bgScore01 >= thr); // CV_8U 0/255
 
-    cv::Mat grown = cv::Mat::zeros(seedBg8.size(), CV_8U);
-    std::queue<cv::Point> q;
+    if (allowedMask8Out)
+        *allowedMask8Out = allowed.clone();
 
-    for (int y = 0; y < seedBg8.rows; ++y)
+    // Multi-source BFS over allowed region
+    const int W = bgScore01.cols;
+    const int H = bgScore01.rows;
+
+    cv::Mat grown(H, W, CV_8U, cv::Scalar(0));
+    std::deque<cv::Point> qpts;
+
+    // Initialize queue with seed pixels that are also allowed
+    for (int y = 0; y < H; ++y)
     {
-        const uchar* sp = seedBg8.ptr<uchar>(y);
-        for (int x = 0; x < seedBg8.cols; ++x)
+        const uchar *sp = seedBg8.ptr<uchar>(y);
+        const uchar *ap = allowed.ptr<uchar>(y);
+        uchar *gp = grown.ptr<uchar>(y);
+
+        for (int x = 0; x < W; ++x)
         {
-            if (sp[x])
+            if (sp[x] && ap[x])
             {
-                grown.at<uchar>(y,x) = 255;
-                q.push({x,y});
+                gp[x] = 255;
+                qpts.emplace_back(x, y);
             }
         }
     }
 
-    const int dx[8] = {1,1,0,-1,-1,-1,0,1};
-    const int dy[8] = {0,1,1,1,0,-1,-1,-1};
+    auto inside = [&](int x, int y){ return (unsigned)x < (unsigned)W && (unsigned)y < (unsigned)H; };
 
-    while (!q.empty())
+    const int dx[8] = {1,-1,0,0, 1,1,-1,-1};
+    const int dy[8] = {0,0,1,-1, 1,-1,1,-1};
+
+    while (!qpts.empty())
     {
-        cv::Point p = q.front(); q.pop();
+        const cv::Point p = qpts.front();
+        qpts.pop_front();
 
         for (int k = 0; k < 8; ++k)
         {
             int nx = p.x + dx[k];
             int ny = p.y + dy[k];
-            if ((unsigned)nx >= (unsigned)bgScore01.cols || (unsigned)ny >= (unsigned)bgScore01.rows)
-                continue;
+            if (!inside(nx, ny)) continue;
 
-            if (grown.at<uchar>(ny,nx))
-                continue;
+            if (grown.at<uchar>(ny, nx)) continue;          // already in region
+            if (!allowed.at<uchar>(ny, nx)) continue;       // not allowed
 
-            float s = bgScore01.at<float>(ny,nx);
-            if (s >= tLo)
-            {
-                grown.at<uchar>(ny,nx) = 255;
-                q.push({nx,ny});
-            }
+            grown.at<uchar>(ny, nx) = 255;
+            qpts.emplace_back(nx, ny);
         }
     }
+
+    // Smooth grown mask a bit
+    cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7,7));
+    cv::morphologyEx(grown, grown, cv::MORPH_CLOSE, se);
 
     return grown;
 }
 
-// -------------------- Your overlay (fixed to never crash on size mismatch) --------------------
-
+// ------------------------------------------------------------
+// Public: overlay
+// ------------------------------------------------------------
 cv::Mat makeOverlayBGR(const cv::Mat &baseGrayOrBGR,
                        const cv::Mat &bgConfidence01,
                        const Options &opt)
 {
-    const QString srcFun = "FSBackground::makeOverlayBGR";
-    if (baseGrayOrBGR.empty() || bgConfidence01.empty())
-        return {};
-
     CV_Assert(bgConfidence01.type() == CV_32F);
 
     cv::Mat baseBGR;
@@ -439,8 +472,9 @@ cv::Mat makeOverlayBGR(const cv::Mat &baseGrayOrBGR,
         cv::Mat g8;
         if (baseGrayOrBGR.type() == CV_8U) g8 = baseGrayOrBGR;
         else {
-            cv::Mat f01 = baseGrayOrBGR.clone();
-            clamp01InPlace(f01);
+            cv::Mat f = baseGrayOrBGR.clone();
+            if (f.type() != CV_32F) f.convertTo(f, CV_32F);
+            cv::Mat f01 = normalizeRobust01(f, 0.02f, 0.995f);
             f01.convertTo(g8, CV_8U, 255.0);
         }
         cv::cvtColor(g8, baseBGR, cv::COLOR_GRAY2BGR);
@@ -449,28 +483,23 @@ cv::Mat makeOverlayBGR(const cv::Mat &baseGrayOrBGR,
     {
         if (baseGrayOrBGR.type() == CV_8UC3) baseBGR = baseGrayOrBGR.clone();
         else {
-            cv::Mat f01 = baseGrayOrBGR.clone();
+            cv::Mat f = baseGrayOrBGR.clone();
+            if (f.depth() != CV_32F) f.convertTo(f, CV_32F);
+            cv::Mat f01 = f.clone();
             cv::min(f01, 1.0f, f01);
             cv::max(f01, 0.0f, f01);
-            f01.convertTo(baseBGR, CV_8UC3, 255.0);
+            cv::Mat b8;
+            f01.convertTo(b8, CV_8U, 255.0);
+            baseBGR = b8;
         }
     }
 
-    // Canonicalize conf to base size
-    cv::Mat conf = bgConfidence01;
+    cv::Mat conf = bgConfidence01.clone();
     if (conf.size() != baseBGR.size())
-    {
-        qWarning() << srcFun
-                   << ": resizing bgConfidence from"
-                   << conf.cols << "x" << conf.rows
-                   << "to"
-                   << baseBGR.cols << "x" << baseBGR.rows;
         cv::resize(conf, conf, baseBGR.size(), 0, 0, cv::INTER_LINEAR);
-    }
-    conf = conf.clone();
     clamp01InPlace(conf);
 
-    // Heat
+    // Simple heat: yellow->orange->red
     cv::Mat heat(baseBGR.size(), CV_8UC3, cv::Scalar(0,0,0));
     for (int y = 0; y < conf.rows; ++y)
     {
@@ -480,144 +509,26 @@ cv::Mat makeOverlayBGR(const cv::Mat &baseGrayOrBGR,
         {
             float v = c[x];
             if (v < 0.02f)      h[x] = {0,0,0};
-            else if (v < 0.08f) h[x] = {0,255,255};
-            else if (v < 0.18f) h[x] = {0,165,255};
-            else                h[x] = {0,0,255};
+            else if (v < 0.08f) h[x] = {0,255,255};   // yellow
+            else if (v < 0.18f) h[x] = {0,165,255};   // orange
+            else                h[x] = {0,0,255};     // red
         }
     }
 
-    cv::Mat mask = (conf >= opt.overlayThresh); // CV_8U same size as base
+    cv::Mat mask = (conf >= opt.overlayThresh); // CV_8U 0/255
+    CV_Assert(mask.type() == CV_8U);
 
     cv::Mat blend;
     cv::addWeighted(baseBGR, 1.0 - opt.overlayAlpha, heat, opt.overlayAlpha, 0.0, blend);
 
     cv::Mat out = baseBGR.clone();
-    CV_Assert(out.size() == mask.size());
     blend.copyTo(out, mask);
     return out;
 }
 
-// replaceBackground() unchanged from your version (kept as-is)
-static cv::Mat makeFeatherWeight01(const cv::Mat &subjectMask8, const Options &opt)
-{
-    CV_Assert(subjectMask8.type() == CV_8U);
-
-    cv::Mat subj = (subjectMask8 > 0);
-    cv::Mat distIn, distOut;
-
-    cv::distanceTransform(subj, distIn, cv::DIST_L2, 3);
-    cv::distanceTransform(255 - subj, distOut, cv::DIST_L2, 3);
-
-    const float R = float(std::max(1, opt.featherRadius));
-
-    cv::Mat w = cv::Mat::zeros(subjectMask8.size(), CV_32F);
-    for (int y = 0; y < w.rows; ++y)
-    {
-        const float *din = distIn.ptr<float>(y);
-        float *wp = w.ptr<float>(y);
-        for (int x = 0; x < w.cols; ++x)
-        {
-            if (subj.at<uchar>(y,x))
-            {
-                float t = std::min(1.0f, din[x] / R);
-                wp[x] = std::pow(t, opt.featherGamma);
-            }
-            else wp[x] = 0.0f;
-        }
-    }
-    clamp01InPlace(w);
-    return w;
-}
-
-// ---------- helpers for debug writing (PNG with Title) -----------------
-
-// Convert CV_8UC1/CV_8UC3 to QImage (copies data -> safe)
-static QImage mat8ToQImageCopy(const cv::Mat& m)
-{
-    CV_Assert(!m.empty());
-    if (m.type() == CV_8UC1)
-    {
-        QImage img(m.cols, m.rows, QImage::Format_Grayscale8);
-        for (int y = 0; y < m.rows; ++y)
-            memcpy(img.scanLine(y), m.ptr(y), size_t(m.cols));
-        return img;
-    }
-    if (m.type() == CV_8UC3)
-    {
-        // OpenCV is BGR; QImage wants RGB
-        cv::Mat rgb;
-        cv::cvtColor(m, rgb, cv::COLOR_BGR2RGB);
-        QImage img(rgb.data, rgb.cols, rgb.rows, int(rgb.step), QImage::Format_RGB888);
-        return img.copy(); // deep copy
-    }
-    CV_Assert(false && "mat8ToQImageCopy expects CV_8UC1 or CV_8UC3");
-    return {};
-}
-
-static bool writePngWithTitle(const QString& pathPng,
-                              const cv::Mat& img8u1_or_8u3,
-                              const QString& title)
-{
-    CV_Assert(!img8u1_or_8u3.empty());
-    CV_Assert(img8u1_or_8u3.type() == CV_8UC1 || img8u1_or_8u3.type() == CV_8UC3);
-
-    QImage qimg = mat8ToQImageCopy(img8u1_or_8u3);
-    if (qimg.isNull()) return false;
-
-    QImageWriter w(pathPng, "png");
-    w.setText("Title", title);
-    // Optional extra breadcrumbs (handy later):
-    w.setText("Software", "Winnow FocusStack");
-    w.setText("Description", title);
-
-    if (!w.write(qimg))
-    {
-        qWarning() << "writePngWithTitle failed:" << pathPng << w.errorString();
-        return false;
-    }
-    return true;
-}
-
-static inline bool writeDebugPNG8(const QString& folder,
-                                  const QString& fileName,
-                                  const cv::Mat& img8)
-{
-    if (folder.isEmpty() || fileName.isEmpty() || img8.empty()) return false;
-    ensureDebugFolder(folder);
-    const QString path = folder + "/" + fileName;
-    return FSUtilities::writePngWithTitle(path, img8);
-}
-
-static inline bool writeDebugPNG_Float01_As8(const QString& folder,
-                                             const QString& fileName,
-                                             const cv::Mat& f01)
-{
-    if (f01.empty()) return false;
-    CV_Assert(f01.type() == CV_32F);
-
-    cv::Mat c = f01.clone();
-    clamp01InPlace(c);
-
-    cv::Mat out8;
-    c.convertTo(out8, CV_8U, 255.0);
-    return writeDebugPNG8(folder, fileName, out8);
-}
-
-static inline bool writeDebugPNG_FloatRobust_As8(const QString& folder,
-                                                 const QString& fileName,
-                                                 const cv::Mat& fAny,
-                                                 float qLo,
-                                                 float qHi)
-{
-    if (fAny.empty()) return false;
-    CV_Assert(fAny.type() == CV_32F);
-
-    cv::Mat n = normalizeRobust01(fAny, qLo, qHi); // should output 0..1
-    return writeDebugPNG_Float01_As8(folder, fileName, n);
-}
-
-// ------------------------------------------
-
+// ------------------------------------------------------------
+// Public: replaceBackground
+// ------------------------------------------------------------
 bool replaceBackground(cv::Mat          &fusedInOut,
                        const cv::Mat    &subjectMask8,
                        const cv::Mat    &bgSource,
@@ -632,7 +543,7 @@ bool replaceBackground(cv::Mat          &fusedInOut,
     CV_Assert(subjectMask8.type() == CV_8U);
     CV_Assert(subjectMask8.size() == fusedInOut.size());
 
-    cv::Mat w = makeFeatherWeight01(subjectMask8, opt);
+    cv::Mat w = makeFeatherWeight01(subjectMask8, opt); // 1 subject, 0 bg
     if (w.empty()) return false;
 
     const int rows = fusedInOut.rows;
@@ -684,30 +595,32 @@ bool replaceBackground(cv::Mat          &fusedInOut,
             }
         }
     }
-    else return false;
+    else
+    {
+        return false;
+    }
 
     return true;
 }
 
-// -------------------- Main run() (seed + grow) --------------------
-
-// ---------- FSBackground::run() ----------------------------------------
-
-bool FSBackground::run(const cv::Mat                 &depthIndex16,
-                       const std::vector<cv::Mat>    &focusSlices32,
-                       const std::vector<cv::Mat>    &alignedColor,
-                       int                            sliceCount,
-                       const Options                 &opt,
-                       std::atomic_bool              *abortFlag,
-                       ProgressCallback               progressCb,
-                       StatusCallback                 statusCb,
-                       cv::Mat                       &bgConfidence01Out,
-                       cv::Mat                       &subjectMask8Out)
+// ------------------------------------------------------------
+// Public: run()
+// ------------------------------------------------------------
+bool run(const cv::Mat                 &depthIndex16,
+         const std::vector<cv::Mat>    &focusSlices32,
+         const std::vector<cv::Mat>    &alignedColor,
+         int                            sliceCount,
+         const Options                 &opt,
+         std::atomic_bool              *abortFlag,
+         ProgressCallback               progressCb,
+         StatusCallback                 statusCb,
+         cv::Mat                       &bgConfidence01Out,
+         cv::Mat                       &subjectMask8Out)
 {
     const QString srcFun = "FSBackground::run";
     const QString m = opt.method.trimmed();
 
-    if (statusCb) statusCb("FSBackground: Building background mask (seed + grow)...");
+    if (statusCb) statusCb("FSBackground: Building background mask (robust + scale-invariant support)...");
 
     const bool needDepth  = m.contains("Depth", Qt::CaseInsensitive);
     const bool needFocus  = m.contains("Focus", Qt::CaseInsensitive);
@@ -738,13 +651,17 @@ bool FSBackground::run(const cv::Mat                 &depthIndex16,
         return false;
     }
 
-    // Canonical size (prefer focus if used, else depth)
+    // Canonical size
     cv::Size canonicalSize;
     if (needFocus)      canonicalSize = focusSlices32.front().size();
     else if (needDepth) canonicalSize = depthIndex16.size();
-    else                return false;
+    else
+    {
+        if (statusCb) statusCb(srcFun + ": Method requires neither Depth nor Focus.");
+        return false;
+    }
 
-    // Canonicalize inputs ONCE
+    // Canonicalize ONCE
     cv::Mat depth16C;
     if (needDepth)
         depth16C = FSUtilities::canonicalizeDepthIndex16(depthIndex16, canonicalSize, "FSBackground depthIndex16");
@@ -758,142 +675,139 @@ bool FSBackground::run(const cv::Mat                 &depthIndex16,
         colorC = FSUtilities::canonicalizeAlignedColor(alignedColor, canonicalSize, abortFlag);
 
     if (needDepth && depth16C.empty()) return false;
-    if (needFocus && focusC.empty())   return false;
-    if (needColorV && colorC.empty())  return false;
+    if (needFocus && focusC.empty())  return false;
+    if (needColorV && colorC.empty()) return false;
 
-    // Debug folder + writer lambda
-    const bool doDbg = opt.writeDebug && !opt.debugFolder.isEmpty();
-    if (doDbg) QDir().mkpath(opt.debugFolder);
+    if (opt.writeDebug && !opt.debugFolder.isEmpty())
+        ensureDebugFolder(opt.debugFolder);
 
-    auto dbgPath = [&](const QString& file)->QString {
-        return opt.debugFolder + "/" + file;
-    };
-    auto dbgWriteU8 = [&](const QString& file, const cv::Mat& imgAnyType)->void {
-        if (!doDbg) return;
-        const QString p = dbgPath(file);
-        FSUtilities::writePngWithTitle(p, imgAnyType);
-    };
-    auto dbgWriteF32Robust = [&](const QString& file, const cv::Mat& f32,
-                                 float loQ=0.02f, float hiQ=0.98f)->void {
-        if (!doDbg) return;
-        const QString p = dbgPath(file);
-        FSUtilities::writePngFromFloatMapRobust(p, f32, loQ, hiQ);
-    };
-    auto dbgWriteF01 = [&](const QString& file, const cv::Mat& f01)->void {
-        if (!doDbg) return;
-        cv::Mat cl = f01.clone();
-        cv::min(cl, 1.0f, cl);
-        cv::max(cl, 0.0f, cl);
-        cv::Mat u8;
-        cl.convertTo(u8, CV_8U, 255.0);
-        dbgWriteU8(file, u8);
-    };
-
-    // --- Build component maps (all canonical CV_32F; some are 0..1) ---
+    // --- Build bgScore01 as max over features (all in 0..1) ---
     cv::Mat bgScore01 = cv::Mat::zeros(canonicalSize, CV_32F);
 
-    // Keep component diagnostics
-    cv::Mat d01, stdv, stdvN, dN, depthCombined;
-    cv::Mat maxF, strongF, focusWeak;
-    cv::Mat supportRatio, ratioN, ratioWeak, focusCombined;
-    cv::Mat colorVar, colorVarN;
-
-    // Depth components (data-adaptive ramps)
+    // ---------------- Depth features ----------------
+    cv::Mat d01, stdv, dN, stdvN, depthCombined;
     if (needDepth)
     {
         if (statusCb) statusCb("FSBackground: Depth features...");
 
-        d01   = depthNorm01FromIndex16(depth16C, sliceCount); // 0..1
-        stdv  = localStdDevDepthIndex(depth16C, 2);           // slice-units
+        d01  = depthNorm01FromIndex16(depth16C, sliceCount);     // 0..1
+        stdv = localStdDevDepthIndex(depth16C, /*radius=*/2);    // slice-units
 
-        // normalize instability into 0..1 robustly
-        stdvN = normalizeRobust01(stdv, 0.60f, 0.98f);
-
-        // far depth prior (robust, in case d01 is skewed)
-        dN    = normalizeRobust01(d01, 0.20f, 0.98f);
+        // Robust normalize (handles different stacks and slice counts)
+        dN    = normalizeRobust01(d01,  0.20f, 0.995f);
+        stdvN = normalizeRobust01(stdv, 0.60f, 0.995f);
 
         depthCombined = 0.70f * dN + 0.30f * stdvN;
-        bgScore01     = cv::max(bgScore01, depthCombined);
+        clamp01InPlace(depthCombined);
 
-        // Diagnostics
-        dbgWriteF01("depth_norm01.png", d01);
-        dbgWriteF32Robust("depth_stddev.png", stdv, 0.02f, 0.98f);
-        dbgWriteF01("depth_stddevN.png", stdvN);
-        dbgWriteF01("depth_priorN.png", dN);
-        dbgWriteF01("depth_combined.png", depthCombined);
+        bgScore01 = cv::max(bgScore01, depthCombined);
+
+        if (opt.writeDebug && !opt.debugFolder.isEmpty())
+        {
+            writeDbgPng(opt.debugFolder, "depthNorm01.png", d01);
+            writeDbgPng(opt.debugFolder, "depthStdDev.png", normalizeRobust01(stdv, 0.50f, 0.995f));
+            writeDbgPng(opt.debugFolder, "depthStdDevN.png", stdvN);
+            writeDbgPng(opt.debugFolder, "depthN.png", dN);
+            writeDbgPng(opt.debugFolder, "depthCombined.png", depthCombined);
+        }
     }
 
-    // Focus components (normalize robustly per run)
+    // ---------------- Focus features ----------------
+    cv::Mat maxF, maxFNorm01, strongF, focusWeak, supportRatio, supportRatioN, ratioWeak, focusCombined;
+    float maxF_hi = 1.0f;
+
     if (needFocus)
     {
-        if (statusCb) statusCb("FSBackground: Focus features...");
+        if (statusCb) statusCb("FSBackground: Focus features (robust + scale-invariant support)...");
 
         maxF = computeFocusMax(focusC, abortFlag, progressCb);
         if (maxF.empty()) return false;
 
-        // strongF in 0..1 (robust)
-        strongF   = normalizeRobust01(maxF, 0.50f, 0.995f);
+        // Robust global "high" for scale: treat this as ~1.0 for the stack
+        maxF_hi = std::max(1e-6f, quantile32f(maxF, 0.995f));
+        maxFNorm01 = maxF * (1.0f / maxF_hi);
+        clamp01InPlace(maxFNorm01);
+
+        // "Strong focus" map: robust normalize the normalized maxF
+        // (this makes it resilient when most of the image is background)
+        strongF = normalizeRobust01(maxFNorm01, 0.30f, 0.995f);
         focusWeak = 1.0f - strongF;
 
-        supportRatio = computeFocusSupportRatio(focusC, opt.supportFocusThresh, abortFlag, nullptr);
+        // Scale-invariant support fraction derived from your old absolute-ish knobs:
+        // default: 0.02 / 0.06 = 0.333 (a slice “supports” pixel if it has >= 33% of best focus at that pixel)
+        float supportFrac = opt.supportFocusThresh / std::max(1e-6f, opt.focusHighThresh);
+        supportFrac = std::max(0.10f, std::min(0.60f, supportFrac));
+
+        // Also require some minimal maxF to avoid “everything supports” when maxF is tiny.
+        // This is in normalized maxF space (0..1-ish).
+        const float minMaxFNorm = 0.05f;
+
+        supportRatio = computeSupportRatioScaleInvariant(
+            focusC, maxF, supportFrac, minMaxFNorm, maxF_hi, abortFlag);
         if (supportRatio.empty()) return false;
 
-        ratioN    = normalizeRobust01(supportRatio, 0.05f, 0.95f);
-        ratioWeak = 1.0f - ratioN;
+        // Normalize support a bit so it adapts to different stack sizes / subject sizes
+        supportRatioN = normalizeRobust01(supportRatio, 0.05f, 0.98f);
+        ratioWeak = 1.0f - supportRatioN;
 
         focusCombined = 0.65f * focusWeak + 0.35f * ratioWeak;
-        bgScore01     = cv::max(bgScore01, focusCombined);
+        clamp01InPlace(focusCombined);
 
-        // Diagnostics (these match the list you said you *don’t* have yet)
-        dbgWriteF32Robust("maxF.png", maxF, 0.02f, 0.995f);
-        dbgWriteF01("strongF.png", strongF);
-        dbgWriteF01("focusWeak.png", focusWeak);
+        bgScore01 = cv::max(bgScore01, focusCombined);
 
-        dbgWriteF01("supportRatio.png", supportRatio);
-        dbgWriteF01("ratioN.png", ratioN);
-        dbgWriteF01("ratioWeak.png", ratioWeak);
-
-        dbgWriteF01("focusCombined.png", focusCombined);
+        if (opt.writeDebug && !opt.debugFolder.isEmpty())
+        {
+            // For “raw maxF”, write a robust-normalized view for readability
+            writeDbgPng(opt.debugFolder, "maxF.png", normalizeRobust01(maxF, 0.50f, 0.995f));
+            writeDbgPng(opt.debugFolder, "maxFNorm01.png", maxFNorm01);
+            writeDbgPng(opt.debugFolder, "strongF.png", strongF);
+            writeDbgPng(opt.debugFolder, "focusWeak.png", focusWeak);
+            writeDbgPng(opt.debugFolder, "supportRatio.png", supportRatio);
+            writeDbgPng(opt.debugFolder, "supportRatioN.png", supportRatioN);
+            writeDbgPng(opt.debugFolder, "ratioWeak.png", ratioWeak);
+            writeDbgPng(opt.debugFolder, "focusCombined.png", focusCombined);
+        }
     }
 
-    // Optional color variance
+    // ---------------- Color variance feature ----------------
+    cv::Mat var, varN;
     if (needColorV)
     {
         if (statusCb) statusCb("FSBackground: Color variance feature...");
 
-        colorVar = computeColorVariance01(colorC, abortFlag, nullptr);
-        if (colorVar.empty()) return false;
+        var = computeColorVariance01(colorC, abortFlag);
+        if (var.empty()) return false;
 
-        colorVarN = normalizeRobust01(colorVar, 0.60f, 0.995f);
-        bgScore01 = cv::max(bgScore01, colorVarN);
+        // Robust normalize; variance scale differs across stacks
+        varN = normalizeRobust01(var, 0.60f, 0.995f);
+        bgScore01 = cv::max(bgScore01, varN);
 
-        dbgWriteF32Robust("colorVar.png", colorVar, 0.02f, 0.995f);
-        dbgWriteF01("colorVarN.png", colorVarN);
+        if (opt.writeDebug && !opt.debugFolder.isEmpty())
+        {
+            writeDbgPng(opt.debugFolder, "colorVar.png", normalizeRobust01(var, 0.50f, 0.995f));
+            writeDbgPng(opt.debugFolder, "colorVarN.png", varN);
+        }
     }
 
     clamp01InPlace(bgScore01);
-    dbgWriteF01("bgScore01.png", bgScore01);
 
-    // ---------------- Stage 1: SEEDS ----------------
+    // ---------------- Stage 1: Seeds ----------------
     if (statusCb) statusCb("FSBackground: Seeding background...");
-    cv::Mat seedBg8 = buildBackgroundSeeds(bgScore01, opt); // 255 where seed
+    cv::Mat seedBg8 = buildBackgroundSeeds(bgScore01, opt);
     if (seedBg8.empty()) return false;
-    dbgWriteU8("bg_seed.png", seedBg8);
 
-    // ---------------- Stage 2: REGION GROW ----------------
+    // ---------------- Stage 2: Grow ----------------
     if (statusCb) statusCb("FSBackground: Growing background region...");
-    cv::Mat grownBg8 = growBackgroundRegion(bgScore01, seedBg8, opt); // 255 where grown bg
+    cv::Mat allowedMask8;
+    cv::Mat grownBg8 = growBackgroundRegion(bgScore01, seedBg8, opt, &allowedMask8);
     if (grownBg8.empty()) return false;
-    dbgWriteU8("bg_grown.png", grownBg8);
 
-    // Convert grown background into subject mask (subject=255)
+    // Subject mask: subject=255, background=0
     cv::Mat subject8 = (grownBg8 == 0);
     subject8.convertTo(subject8, CV_8U, 255.0);
-
     cleanupMask(subject8, opt);
-    dbgWriteU8("subject_mask.png", subject8);
 
-    // Confidence output: use bgScore, but enforce grown region as strong background
+    // Confidence: bgScore, but grown region is enforced as confident background
     cv::Mat conf = bgScore01.clone();
     conf.setTo(1.0f, grownBg8);
     clamp01InPlace(conf);
@@ -901,11 +815,22 @@ bool FSBackground::run(const cv::Mat                 &depthIndex16,
     bgConfidence01Out = conf;
     subjectMask8Out   = subject8;
 
-    dbgWriteF01("bg_confidence01.png", conf);
+    // Debug
+    if (opt.writeDebug && !opt.debugFolder.isEmpty())
+    {
+        writeDbgPng(opt.debugFolder, "bg_score.png", bgScore01);
+        writeDbgPng(opt.debugFolder, "bg_seed.png", seedBg8);
+        writeDbgPng(opt.debugFolder, "bg_growAllowed.png", allowedMask8);
+        writeDbgPng(opt.debugFolder, "bg_grown.png", grownBg8);
+        writeDbgPng(opt.debugFolder, "bg_confidence.png", conf);
+        writeDbgPng(opt.debugFolder, "subject_mask.png", subject8);
+    }
 
     if (statusCb) statusCb("FSBackground: Background mask complete.");
     return true;
 }
+
+} // namespace FSBackground
 
 
 // bool run(const cv::Mat                 &depthIndex16,
@@ -1078,4 +1003,4 @@ bool FSBackground::run(const cv::Mat                 &depthIndex16,
 //     return true;
 // }
 
-} // namespace FSBackground
+// } // namespace FSBackground
