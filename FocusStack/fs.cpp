@@ -398,19 +398,19 @@ bool FS::run()
         }
     }
 
-    // RUN BACKGROUND
-    if (o.enableBackgroundMask)
+    // RUN FUSION
+    if (o.enableFusion && !skipFusion)
     {
-        if (!runBackground()) {
+        if (!runFusion()) {
             if (abort) status("Focus Stack was aborted.");
             return false;
         }
     }
 
-    // RUN FUSION
-    if (o.enableFusion && !skipFusion)
+    // RUN BACKGROUND
+    if (o.enableBackgroundMask)
     {
-        if (!runFusion()) {
+        if (!runBackground()) {
             if (abort) status("Focus Stack was aborted.");
             return false;
         }
@@ -1010,12 +1010,145 @@ bool FS::runBackground()
     // overlay on any aligned gray slice (e.g., mid slice) for preview:
     if (!alignedGraySlices.empty() && o.previewBackgroundMask)
     {
+        qDebug() << srcFun << "1";
         cv::Mat base = alignedGraySlices[N / 2];
+        qDebug() << srcFun << "2";
         cv::Mat overlay = FSBackground::makeOverlayBGR(base, bgConfidence01Mat, bopt);
+        qDebug() << srcFun << "3";
         cv::imwrite((bopt.debugFolder + "/bg_overlay.png").toStdString(), overlay);
     }
 
-    return true;
+    // return true; // return before repair
+
+    // Replace background to remove any halo
+    if (o.enableBackgroundMask && !subjectMask8Mat.empty() && !alignedColorSlices.empty())
+    {
+        FSBackground::Options bopt;
+        bopt.method = o.backgroundMethod;
+        bopt.featherRadius = 6;
+        bopt.featherGamma  = 1.2f;
+
+        cv::Mat repaired = fusedColor8Mat.clone();              // canonical size+type target
+        const cv::Size targetSize = repaired.size();
+        const int targetType = repaired.type();
+
+        auto ensure3ch = [](const cv::Mat& in) -> cv::Mat
+        {
+            if (in.empty()) return {};
+            if (in.channels() == 3) return in;
+            cv::Mat out;
+            if (in.channels() == 4) cv::cvtColor(in, out, cv::COLOR_BGRA2BGR);
+            else if (in.channels() == 1) cv::cvtColor(in, out, cv::COLOR_GRAY2BGR);
+            else CV_Assert(false);
+            return out;
+        };
+
+        auto canonicalizeMask8 = [&](const cv::Mat& inMask) -> cv::Mat
+        {
+            CV_Assert(!inMask.empty());
+            cv::Mat m = inMask;
+
+            // convert to 8U (0..255)
+            if (m.type() != CV_8U)
+            {
+                if (m.depth() == CV_32F || m.depth() == CV_64F)
+                {
+                    // assume 0..1-ish mask
+                    cv::Mat f; m.convertTo(f, CV_32F);
+                    cv::threshold(f, f, 0.5, 1.0, cv::THRESH_BINARY);
+                    f.convertTo(m, CV_8U, 255.0);
+                }
+                else
+                {
+                    // for 16U/other: treat >0 as on
+                    cv::Mat tmp = (m > 0);
+                    tmp.convertTo(m, CV_8U, 255.0);
+                }
+            }
+            else
+            {
+                // if it's 8U but not binary, binarize defensively
+                // (keeps your 0/255 masks as-is)
+                // NOTE: if your mask is already 0/255 this does nothing harmful
+                cv::threshold(m, m, 127, 255, cv::THRESH_BINARY);
+            }
+
+            // resize to target using NEAREST (categorical)
+            if (m.size() != targetSize)
+            {
+                cv::Mat r;
+                cv::resize(m, r, targetSize, 0, 0, cv::INTER_NEAREST);
+                m = r;
+            }
+
+            return m;
+        };
+
+        auto canonicalizeBgToRepaired = [&](const cv::Mat& inBg) -> cv::Mat
+        {
+            CV_Assert(!inBg.empty());
+            cv::Mat bg = ensure3ch(inBg);
+
+            // resize to target using LINEAR (color image)
+            if (bg.size() != targetSize)
+            {
+                cv::Mat r;
+                cv::resize(bg, r, targetSize, 0, 0, cv::INTER_LINEAR);
+                bg = r;
+            }
+
+            // convert type to match repaired
+            if (bg.type() != targetType)
+            {
+                cv::Mat converted;
+
+                const int targetDepth = CV_MAT_DEPTH(targetType);
+                const int bgDepth     = CV_MAT_DEPTH(bg.type());
+
+                if (targetDepth == CV_8U && (bgDepth == CV_32F || bgDepth == CV_64F))
+                {
+                    // assume float is 0..1-ish; clamp then scale
+                    cv::Mat f; bg.convertTo(f, CV_32F);
+                    cv::min(f, 1.0f, f);
+                    cv::max(f, 0.0f, f);
+                    f.convertTo(converted, targetType, 255.0);
+                }
+                else if ((targetDepth == CV_32F || targetDepth == CV_64F) && bgDepth == CV_8U)
+                {
+                    bg.convertTo(converted, targetType, 1.0 / 255.0);
+                }
+                else
+                {
+                    // generic conversion (no scaling guess)
+                    bg.convertTo(converted, targetType);
+                }
+
+                bg = converted;
+            }
+
+            return bg;
+        };
+
+        // --- make mask canonical ---
+        cv::Mat mask = canonicalizeMask8(subjectMask8Mat);
+
+        // optional: erode subject edge to kill defocus spill/halo (still safe after resize/type fix)
+        int edgeErodePx = 3;
+        cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, {2*edgeErodePx+1, 2*edgeErodePx+1});
+        cv::erode(mask, mask, se);
+
+        // --- make bgSource canonical ---
+        cv::Mat bgSource = canonicalizeBgToRepaired(alignedColorSlices.back());
+
+        // Now guaranteed compatible with replaceBackground:
+        // mask.size == repaired.size, mask.type==CV_8U
+        // bgSource.size == repaired.size, bgSource.type == repaired.type
+        FSBackground::replaceBackground(repaired, mask, bgSource, bopt, &abort);
+
+        QFileInfo fi(lastFusedPath);
+        QString repairedPath = fusionFolder + "/" + fi.baseName() + "_BBRepair.tif";
+        cv::imwrite(repairedPath.toStdString(), repaired);
+    }
 
     // // Replace background to remove any halo
 
