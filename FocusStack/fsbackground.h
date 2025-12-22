@@ -44,8 +44,10 @@ struct Options
     // --- Macro tuned thresholds (good starting point) ---
     // Focus maps / wavelet energy or any "focus score" normalized to ~0..1
     float focusLowThresh        = 0.018f;   // background if max focus below this
-    float focusHighThresh       = 0.060f;   // definitely subject if max focus above this
-    float supportFocusThresh    = 0.020f;   // slice "supports" pixel if focus > this
+    float focusHighThresh       = 0.010f;   // definitely subject if max focus above this
+    // float focusHighThresh       = 0.060f;   // definitely subject if max focus above this
+    float supportFocusThresh    = 0.080f;   // slice "supports" pixel if focus > this
+    // float supportFocusThresh    = 0.020f;   // slice "supports" pixel if focus > this
     float minSupportRatio       = 0.08f;    // background if supported by <8% of slices
 
     // Depth index rules (depthIndex16 is slice index 0..N-1):
@@ -75,8 +77,10 @@ struct Options
 
     // --- NEW (auto by default) ---
     // If < 0: computed from percentiles of score map each run.
-    float seedHighQuantile      = -1.0f;  // e.g. 0.92 means top 8% bg-score become seeds
-    float growLowQuantile       = -1.0f;  // e.g. 0.70 means grow into top 30%
+    float seedHighQuantile      = 0.80f;  // e.g. 0.92 means top 8% bg-score become seeds
+    // float seedHighQuantile      = -1.0f;  // e.g. 0.92 means top 8% bg-score become seeds
+    float growLowQuantile       = 0.50f;  // e.g. 0.70 means grow into top 30%
+    // float growLowQuantile       = -1.0f;  // e.g. 0.70 means grow into top 30%
     bool  preferBorderSeeds     = true;   // macro stacks: background usually touches borders
 
 };

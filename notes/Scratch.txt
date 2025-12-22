@@ -631,4 +631,74 @@ STEPS:
 
 This prevents bleeding into subject edges (your current failure mode).
 
+----------------------------------------------------
+
+FSBackground: What to tweak
+
+Variables to adjust (and what direction)
+
+1) seedHighQuantile  ✅ start here
+
+Controls how “elite” a pixel must be to become a seed.
+    •	If seeds are too few (your case): lower it
+    •	Try: 0.92 → 0.85 → 0.80 → 0.75
+    •	If seeds spill into the subject: raise it back up.
+
+2) growLowQuantile
+
+Controls where growth is allowed (the “allowed background” mask).
+    •	If growth is too small / stalls (your case): lower it
+    •	Try: 0.70 → 0.60 → 0.55 → 0.50
+    •	If growth eats into the subject: increase it.
+
+3) preferBorderSeeds
+
+Border-only seeding is great when the true background is connected to the border, but it can also kill seeding if the border happens to be “not background-like” under your scoring.
+    •	For debugging / your current failure: set to false temporarily
+    •	If that immediately fixes it, your scoring is OK but border connectivity is the limiter.
+    •	Then you can re-enable it later and tune seed/grow again.
+
+4) Morphology cleanup knobs (after seed/grow looks sane)
+
+These do not fix “no background found”; they polish a decent mask.
+    •	medianK: smooth salt-and-pepper (try 3 or 5)
+    •	morphRadius: fills holes / removes specks (try 2–5)
+    •	If you lose fine grass/whiskers: reduce it.
+    •	removeIslandsMinArea: removes tiny subject components
+    •	If you’re losing legitimate small subject bits: reduce it.
+
+
+If bg_score doesn’t separate background vs subject (what to tweak next)
+
+This is the second layer: you only go here if you lower seed/grow a lot and you still can’t get bg_grown to cover background.
+
+A) Support thresholding (your “support” term)
+
+In your current implementation, the important tunables are:
+    •	opt.supportFocusThresh (supportAbs)
+    •	supportRel (currently hard-coded in code)
+
+To make support more selective (so background gets lower supportRatio, which helps classify it as background):
+    •	Increase supportAbs (if it’s ~0.02 now, try 0.04–0.08)
+    •	Increase supportRel (if it’s 0.25, try 0.30–0.40)
+
+If the subject starts turning into background, back these off.
+
+B) Component weights (Depth vs Focus)
+
+If depth is making everything “background-like”, reduce the depth contribution:
+    •	depthCombined = 0.70*dN + 0.30*stdvN
+    •	try 0.50/0.50 or even 0.40/0.60 temporarily
+
+If focus is the problem, adjust the focus mix:
+    •	focusCombined = 0.65*focusWeak + 0.35*ratioWeak
+    •	try leaning more on ratioWeak (e.g. 0.45/0.55) if ratio is behaving better than maxF.
+
+
+One practical workflow (fast)
+    1.	Set preferBorderSeeds=false
+    2.	Lower seedHighQuantile until bg_seed clearly shows background regions.
+    3.	Lower growLowQuantile until bg_grown fills most of the true background.
+    4.	Turn preferBorderSeeds=true again and re-tune (if you still want that constraint).
+    5.	Only then touch medianK/morphRadius/removeIslandsMinArea.
 
