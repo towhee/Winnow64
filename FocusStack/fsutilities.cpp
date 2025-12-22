@@ -1,4 +1,5 @@
 #include "FSUtilities.h"
+#include "Main/global.h"
 #include <QtCore/qdebug.h>
 #include <QFileInfo>
 #include <QImage>
@@ -463,21 +464,34 @@ static QImage matToQImageForPng(const cv::Mat& m)
 bool writePngWithTitle(const QString& pngPath,
                        const cv::Mat& img)
 {
-    QString srcFun = "FSUtilities::writePngWithTitle";
+/*
+    Setting the title and author and writing using QImageWriter and then bundling
+    resulting file into a zip enables ChatGPT to extract the source file name,
+    which makes it much easier to analyse many files.
 
+    However, this is very slow, hence the embedTitle switch.
+*/
+    // return false;
+    QString srcFun = "FSUtilities::writePngWithTitle";
+    bool embedTitle = true;
 
     if (img.empty()) return false;
+
+    const QString t = QFileInfo(pngPath).fileName();
+
+    // use this
+    if (!embedTitle) {
+        cv::imwrite(pngPath.toStdString(), img);
+        return true;
+    }
 
     cv::Mat img8 = to8uViewable(img);
     QImage q = matToQImage8(img8);
 
-    const QString t = QFileInfo(pngPath).fileName();
-
-    qDebug() << srcFun
-             << "t =" << t;
-
     q.setText("Title", t);
     q.setText("Author", "Winnow FocusStack");
+
+    if (G::FSLog) G::log(srcFun, t);
 
     QImageWriter writer(pngPath, "png");
 

@@ -244,8 +244,6 @@ bool run(const QString &alignFolder,
         // --------------------------------------------------------
         // 4. Optional: write focus_*.tif + previews if keepIntermediates
         // --------------------------------------------------------
-        qDebug() << srcFun
-                 << "base =" << base;
         if (opt.keepIntermediates)
         {
             msg = "Write previews for slice " + QString::number(i);
