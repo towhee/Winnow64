@@ -473,7 +473,7 @@ bool writePngWithTitle(const QString& pngPath,
 */
     // return false;
     QString srcFun = "FSUtilities::writePngWithTitle";
-    bool embedTitle = true;
+    bool embedTitle = false;
 
     if (img.empty()) return false;
 
