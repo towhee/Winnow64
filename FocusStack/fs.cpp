@@ -42,15 +42,18 @@ void FS::setInput(const QStringList &paths)
     alignedGraySlices.clear();
 }
 
-void FS::setProjectRoot(const QString &rootPath)
+void FS::setProjectRoot(const QString &srcPath, const QString &root)
 {
-    projectRoot = rootPath;
+    QString srcFun = "FS::setProjectRoot";
+    projectRoot = srcPath;
+    rootPath = root;
 
-    alignFolder     = projectRoot + "/align";
-    focusFolder     = projectRoot + "/focus";
-    depthFolder     = projectRoot + "/depth";
-    fusionFolder    = projectRoot + "/fusion";
-    artifactsFolder = projectRoot + "/artifacts";
+    alignFolder      = projectRoot + "/align";
+    focusFolder      = projectRoot + "/focus";
+    depthFolder      = projectRoot + "/depth";
+    fusionFolder     = projectRoot + "/fusion";
+    backgroundFolder = projectRoot + "/background";
+    artifactsFolder  = projectRoot + "/artifacts";
 }
 
 void FS::setOptions(const Options &opt)
@@ -866,6 +869,10 @@ bool FS::runFusion()
     QString prefix = base + "_fused_";
     int nextIndex = 1;
 
+    // Root source (parent folder if from Lightroom - not local)
+    QString srcFusedPath = rootPath + "/" + base + "_FocusStack" + ext;
+    qDebug() << srcFun << "srcFusedPath =" << srcFusedPath;
+
     while (true)
     {
         QString candidate = QString("%1%2%3")
@@ -882,6 +889,7 @@ bool FS::runFusion()
             incrementProgress();
 
             cv::imwrite(lastFusedPath.toStdString(), fusedColor8Mat);
+            cv::imwrite(srcFusedPath.toStdString(), fusedColor8Mat);
 
             // visually debug
             if (o.previewFusion) previewOverview(fusedColor8Mat);
@@ -901,50 +909,6 @@ bool FS::runFusion()
         }
     }
 
-    // --- Optional: also write *_BBRepair.tif using the stored subject mask ---
-    if (o.enableBackgroundMask && !subjectMask8Mat.empty())
-    {
-        if (G::FSLog) G::log(srcFun, "Replacing background");
-
-        // Recreate same options used for mask generation (important if replace uses feather params)
-        FSBackground::Options bopt;
-        bopt.method        = o.backgroundMethod;
-        bopt.featherRadius = 6;
-        bopt.featherGamma  = 1.2f;
-
-        // Choose background source: last aligned color slice
-        cv::Mat bgSource;
-        if (o.useCache && !alignedColorSlices.empty())
-            bgSource = alignedColorSlices.back();
-        else
-            bgSource = cv::imread(alignedColorPaths.back().toStdString(), cv::IMREAD_COLOR);
-
-        if (!bgSource.empty())
-        {
-            // Ensure same size (mask is categorical => NEAREST)
-            cv::Mat mask = subjectMask8Mat;
-            if (mask.size() != fusedColor8Mat.size())
-                cv::resize(mask, mask, fusedColor8Mat.size(), 0, 0, cv::INTER_NEAREST);
-
-            if (bgSource.size() != fusedColor8Mat.size())
-                cv::resize(bgSource, bgSource, fusedColor8Mat.size(), 0, 0, cv::INTER_LINEAR);
-
-            // IMPORTANT: shrink foreground matte a bit to reduce edge spill
-            int edgeErodePx = 4; // tune 3..6
-            cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, {2*edgeErodePx+1, 2*edgeErodePx+1});
-            cv::erode(mask, mask, se);
-
-            cv::Mat repaired = fusedColor8Mat.clone();
-            if (FSBackground::replaceBackground(repaired, mask, bgSource, bopt, &abort))
-            {
-                QFileInfo fi(lastFusedPath); // lastFusedPath is set when you save the normal fused
-                QString repairedPath = fusionFolder + "/" + fi.completeBaseName() + "_BBRepair.tif";
-                cv::imwrite(repairedPath.toStdString(), repaired);
-                if (G::FSLog) G::log(srcFun, "Saving fused background repair to " + repairedPath);
-            }
-        }
-    }
-
     return true;
 }
 
@@ -959,7 +923,7 @@ bool FS::runBackground()
     FSBackground::Options bopt;
     bopt.method = o.backgroundMethod;
     bopt.writeDebug = true;
-    bopt.debugFolder = projectRoot + "/background";
+    bopt.backgroundFolder = backgroundFolder;
 
     // Ensure we have focusSlices and depthIndex16Mat (depending on method)
     const int N = slices;
@@ -1015,7 +979,7 @@ bool FS::runBackground()
         qDebug() << srcFun << "2";
         cv::Mat overlay = FSBackground::makeOverlayBGR(base, bgConfidence01Mat, bopt);
         qDebug() << srcFun << "3";
-        cv::imwrite((bopt.debugFolder + "/bg_overlay.png").toStdString(), overlay);
+        cv::imwrite((bopt.backgroundFolder + "/bg_overlay.png").toStdString(), overlay);
     }
 
     // return true; // return before repair

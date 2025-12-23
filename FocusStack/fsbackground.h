@@ -71,7 +71,7 @@ struct Options
 
     // Debug
     bool    writeDebug          = true;
-    QString debugFolder;
+    QString backgroundFolder;
     float   overlayAlpha        = 0.55f;    // for debug overlay
     float   overlayThresh       = 0.50f;    // show overlay where bgConfidence > thresh
 
