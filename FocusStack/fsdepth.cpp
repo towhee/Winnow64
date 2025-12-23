@@ -384,7 +384,7 @@ bool runMultiScale(
     return true;
 }
 
-bool runMultiScaleFromDisk(const QString            &focusFolder,
+bool runMultiScaleFromDisk(const QString    &focusFolder,
                    const QString            &depthFolder,
                    const FSDepth::Options   &opt,
                    std::atomic_bool         *abortFlag,

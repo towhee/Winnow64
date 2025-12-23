@@ -627,9 +627,9 @@ bool run(const cv::Mat                 &depthIndex16,
     if (needDepth && depth16C.empty()) return false;
     if (needFocus && focusC.empty())  return false;
     if (needColorV && colorC.empty()) return false;
-
-    if (opt.writeDebug && !opt.debugFolder.isEmpty())
-        ensureDebugFolder(opt.debugFolder);
+    
+    if (opt.writeDebug && !opt.backgroundFolder.isEmpty())
+        ensureDebugFolder(opt.backgroundFolder);
 
     // --- Component maps (canonical CV_32F) ---
     cv::Mat bgScore01 = cv::Mat::zeros(canonicalSize, CV_32F);
@@ -734,12 +734,12 @@ bool run(const cv::Mat                 &depthIndex16,
     subjectMask8Out   = subject8;
 
     // Debug dumps (WITH embedded PNG metadata via FSUtilities::writePngWithTitle)
-    if (opt.writeDebug && !opt.debugFolder.isEmpty())
+    if (opt.writeDebug && !opt.backgroundFolder.isEmpty())
     {
-        ensureDebugFolder(opt.debugFolder);
+        ensureDebugFolder(opt.backgroundFolder);
 
         auto P = [&](const QString& name) {
-            return opt.debugFolder + "/" + name;
+            return opt.backgroundFolder + "/" + name;
         };
 
         // Primary outputs

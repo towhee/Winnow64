@@ -1547,7 +1547,7 @@ void MW::handleStartupArgs(const QString &args)
         }
         paths.sort();
 
-        generateFocusStack(paths, method, "MW::handleStartupArgs");
+        focusStack(paths, method, "MW::handleStartupArgs");
     }
 
     // EMBELLISH

@@ -22,8 +22,11 @@ public:
     struct Options
     {
         QString method          = "";
+        bool isLocal            = true;
+
         bool useIntermediates   = true;
         bool useCache           = true;     // use disk if false
+        bool enableOpenCL       = true;
 
         bool enableAlign        = true;
         bool keepAlign          = true;     // intermediates
@@ -48,15 +51,13 @@ public:
         bool enableArtifactDetect       = true;
         bool enableArtifactRepair       = true;
         QString artifactMethod          = "MultiScale";
-
-        bool enableOpenCL       = true;
     };
 
     explicit FS(QObject *parent = nullptr);
 
     // Input configuration
     void setInput(const QStringList &paths);            // source paths
-    void setProjectRoot(const QString &rootPath);       // folder containing align/focus/depth/fusion
+    void setProjectRoot(const QString &srcPath, const QString &root);       // folder containing align/focus/depth/fusion
     void setOptions(const Options &opt);
     void diagnostics();
 
@@ -102,6 +103,7 @@ private:
 
     QStringList inputPaths;
     QString     projectRoot;
+    QString     rootPath;      // original source for input images (parent if lightroom)
     int slices = 0;
     int lastSlice = 0;
 

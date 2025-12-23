@@ -627,7 +627,7 @@ void MW::createEditActions()
     focusStackAction->setShortcutVisibleInContextMenu(true);
     addAction(focusStackAction);
     connect(focusStackAction, &QAction::triggered,
-            this, &MW::generateFocusStackFromSelection);
+            this, &MW::focusStackFromSelection);
 
     // End Utilities
 

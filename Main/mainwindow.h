@@ -1401,7 +1401,8 @@ private:
     void findDuplicates();
     void reportHueCount();
     void generateMeanStack();
-    void generateFocusStackFromSelection();
+    void focusStackFromSelection();
+    void focusStack(const QStringList paths, QString method, const QString source);
     void generateFocusStack(const QStringList paths, QString method, const QString source);
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
