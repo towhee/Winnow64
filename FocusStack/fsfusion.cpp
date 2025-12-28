@@ -10,6 +10,66 @@
 
 #include <QString>
 
+/*
+Purpose
+FSFusion implements the fusion stage of the focus stacking pipeline. It takes
+a set of aligned grayscale slices and aligned color slices and produces a
+single fused color image (CV_8UC3) using either a simple per-pixel slice pick
+(“Simple”) or the full Petteri-style wavelet PMax path (default).
+
+Key Inputs / Outputs
+Inputs
+- grayImgs      : vector of aligned grayscale images (1 channel)
+- colorImgs     : vector of aligned color images (3 channel)
+- depthIndex16  : CV_16U map with per-pixel slice indices (0..N-1)
+- opt           : FSFusion options (method, OpenCL, consistency, etc.)
+- abortFlag     : optional cancellation flag
+- callbacks     : optional status/progress callbacks
+
+Output
+- outputColor8  : fused result as CV_8UC3 at original (non-padded) size
+
+Two Fusion Modes
+    1.	Simple fusion (method == “Simple”)
+    •	Uses depthIndex16 directly: for each pixel, select the color from the
+“winning” slice index stored in depthIndex16.
+    •	Does NOT use wavelets.
+    •	Normalizes input color slices to CV_8UC3 (converts from 16UC3 if needed).
+    •	Produces outputColor8 by direct lookup per pixel.
+    2.	PMax fusion (default path)
+    •	Reproduces the current successful wavelet-based fusion workflow.
+    •	IMPORTANT: depthIndex16 is validated (type/size) but is not used to drive
+the wavelet merge decisions. The merge computes its own internal decisions.
+    •	Uses the following high-level stages:
+(a) Pad inputs to wavelet-friendly size (reflect border padding)
+(b) Forward wavelet transform per grayscale slice
+(c) Merge wavelet stacks with FSMerge::merge (consistency parameter)
+(d) Inverse wavelet to get fused grayscale (still padded)
+(e) Build a color reassignment map from padded gray+color slices
+(f) Apply color map to fused grayscale to produce padded color result
+(g) Crop padded result back to original size to produce outputColor8
+
+Padding Behavior
+Wavelet code requires dimensions compatible with its level structure. The
+helper padForWavelet() expands images via cv::BORDER_REFLECT using the same
+expanded-size logic as FSFusionWavelet::computeLevelsAndExpandedSize(). The
+result is cropped back to original size at the end of PMax fusion.
+
+Abort / Progress
+    •	abortFlag is checked at multiple points in the PMax path (between stages and
+per-slice wavelet forward).
+    •	progressCallback is invoked as a simple “tick” at key milestones and per
+slice during wavelet forward.
+    •	statusCallback is used to provide coarse stage messages in the PMax path.
+
+Role in the Pipeline:
+FSFusion is the stage that converts aligned slice stacks into the final fused
+image. In “Simple” mode it relies directly on FSDepth’s depthIndex16. In PMax
+mode it uses wavelet merge + color reassignment to produce the fused color
+image, while treating the FSDepth depthIndex16 primarily as a validated
+artifact rather than a control signal.
+*/
+
 //--------------------------------------------------------------
 // Helpers
 //--------------------------------------------------------------
@@ -150,7 +210,8 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
               const cv::Mat              &depthIndex16,
               cv::Mat                    &outputColor8,
               std::atomic_bool           *abortFlag,
-              ProgressCallback            cb)
+              FSFusion::StatusCallback    statusCallback,
+              ProgressCallback            progressCallback)
 {
     QString srcFun = "FSFusion::fusePMax";
     if (G::FSLog) G::log(srcFun, "Start PMax fusion");
@@ -159,11 +220,11 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     if (N == 0 || N != static_cast<int>(colorImgs.size()))
         return false;
 
-    if (depthIndex16.empty() || depthIndex16.type() != CV_16U)
-    {
-        if (G::FSLog) G::log(srcFun, "Depth index missing or wrong type");
-        return false;
-    }
+    // if (depthIndex16.empty() || depthIndex16.type() != CV_16U)
+    // {
+    //     if (G::FSLog) G::log(srcFun, "Depth index missing or wrong type");
+    //     return false;
+    // }
 
     // Validate sizes and types
     const cv::Size orig = grayImgs[0].size();
@@ -175,11 +236,11 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
             return false;
     }
 
-    if (depthIndex16.size() != orig)
-    {
-        if (G::FSLog) G::log(srcFun, "Depth index size mismatch vs input images");
-        return false;
-    }
+    // if (depthIndex16.size() != orig)
+    // {
+    //     if (G::FSLog) G::log(srcFun, "Depth index size mismatch vs input images");
+    //     return false;
+    // }
 
     // --------------------------------------------------------------------
     // 0. Pad grayscale + color images BEFORE processing (wavelet-friendly)
@@ -205,8 +266,10 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     for (int i = 0; i < N; ++i)
     {
         if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-        if (G::FSLog) G::log(srcFun, "Forward wavelet slice " + QString::number(i));
-        tick(cb);
+        QString msg = "Forward wavelet slice cb" + QString::number(i);
+        if (G::FSLog) G::log(srcFun, msg);
+        if (statusCallback) statusCallback(msg);
+        if (progressCallback) progressCallback();
 
         if (!FSFusionWavelet::forward(grayP[i], opt.useOpenCL, wavelets[i]))
         {
@@ -218,8 +281,10 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     // 2. Merge wavelet stacks → mergedWavelet (we ignore depthIndex here)
     // --------------------------------------------------------------------
-    if (G::FSLog) G::log(srcFun, "Merge wavelet stacks");
-    tick(cb);
+    QString msg = "Merge wavelet stacks cb";
+    if (G::FSLog) G::log(srcFun, msg);
+    if (statusCallback) statusCallback(msg);
+    if (progressCallback) progressCallback();
 
     cv::Mat mergedWavelet;
     cv::Mat dummyDepthIndex16;
@@ -237,8 +302,10 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     // 3. Inverse wavelet → fusedGray8 (still padded size)
     // --------------------------------------------------------------------
-    if (G::FSLog) G::log(srcFun, "Inverse wavelet");
-    tick(cb);
+    msg = "Inverse wavelet cb";
+    if (G::FSLog) G::log(srcFun, msg);
+    if (statusCallback) statusCallback(msg);
+    if (progressCallback) progressCallback();
 
     cv::Mat fusedGray8;
     if (!FSFusionWavelet::inverse(mergedWavelet, opt.useOpenCL, fusedGray8))
@@ -252,8 +319,10 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     // 4. Build color map using padded grayscale + padded RGB images
     // --------------------------------------------------------------------
-    if (G::FSLog) G::log(srcFun, "Build color map");
-    tick(cb);
+    msg = "Build color map cb";
+    if (G::FSLog) G::log(srcFun, msg);
+    if (statusCallback) statusCallback(msg);
+    if (progressCallback) progressCallback();
 
     std::vector<FSFusionReassign::ColorEntry> colorEntries;
     std::vector<uint8_t> counts;
@@ -274,8 +343,10 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     // 5. Apply color reassignment to padded fused grayscale
     // --------------------------------------------------------------------
-    if (G::FSLog) G::log(srcFun, "Apply color reassignment");
-    tick(cb);
+    msg = "Apply color reassignment cb";
+    if (G::FSLog) G::log(srcFun, msg);
+    if (statusCallback) statusCallback(msg);
+    if (progressCallback) progressCallback();
 
     cv::Mat paddedColorOut;
     if (!FSFusionReassign::applyColorMap(fusedGray8,
@@ -326,11 +397,16 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
                          const cv::Mat              &depthIndex16,
                          cv::Mat                    &outputColor8,
                          std::atomic_bool           *abortFlag,
+                         StatusCallback              statusCallback,
                          ProgressCallback            progressCallback)
 {
-    const QString method = opt.method.trimmed();
+    QString srcFun = "FSFusion::fuseStack";
 
-    if (method.compare("Simple", Qt::CaseInsensitive) == 0)
+
+    const QString method = opt.method.trimmed();
+    if (G::FSLog) G::log(srcFun, "Method = " + method);
+
+    if (method == "Simple")     // uses depthIndex16
     {
         return fuseSimple(grayImgs,
                           colorImgs,
@@ -341,11 +417,16 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
     }
 
     // Default: full PMax fusion
+    if (method == "FullWaveletMerge")       // full wavelet merge
     return fusePMax(grayImgs,
                     colorImgs,
                     opt,
                     depthIndex16,
                     outputColor8,
                     abortFlag,
+                    statusCallback,
                     progressCallback);
+
+    qWarning() << "WARNING:" << srcFun << "Invalid method =" << method;
+    return false;
 }

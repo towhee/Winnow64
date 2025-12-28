@@ -33,7 +33,7 @@ struct Options
     int  numThreads  = 0;       // reserved (currently unused)
 };
 
-using ProgressCallback = std::function<void(int)>;
+using ProgressCallback = std::function<void()>;
 using StatusCallback   = std::function<void(const QString &message)>;
 
 // Input:  focus maps in focusFolder (Simple)

@@ -1547,7 +1547,7 @@ void MW::handleStartupArgs(const QString &args)
         }
         paths.sort();
 
-        focusStack(paths, method, "MW::handleStartupArgs");
+        generateFocusStack(paths, method, "MW::handleStartupArgs");
     }
 
     // EMBELLISH
@@ -4678,10 +4678,10 @@ QString MW::embedThumbnails()
         In terminal cd path/with/jpg/to/remove/thumb
         exiftool -ifd1:all= -ext jpg Filename.jpg
 
-    Footnote: I tried creating a QImage from stored icon and save it in a buffer as a jpg
-    and then create IRB 1036 to save jpg thumb in tiff file. This is a bad idea, because
-    adding the jpg thumb in an IRB at EOF will not be contiguous with any existing IRB
-    and they will be stranded.
+    Footnote: I tried creating a QImage from stored icon and save it in a buffer as
+    a jpg and then create IRB 1036 to save jpg thumb in tiff file. This is a bad
+    idea, because adding the jpg thumb in an IRB at EOF will not be contiguous with
+    any existing IRB and they will be stranded.
 
 
 */

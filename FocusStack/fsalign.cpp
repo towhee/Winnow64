@@ -5,6 +5,103 @@
 #include <opencv2/video.hpp>
 #include <cmath>
 
+/*
+FSAlign implements the image alignment stage of the focus stacking pipeline.
+Its responsibility is to geometrically align each slice to a reference image
+and to normalize appearance differences (contrast and white balance) so that
+later focus fusion operates on consistent data.
+
+The design closely follows Petteri Aimonen’s Task_Align logic, translated into
+OpenCV-based C++ code with explicit separation of local alignment, global
+accumulation, and application steps.
+
+CORE RESPONSIBILITIES
+
+1. Geometric alignment
+   - Uses OpenCV’s ECC (Enhanced Correlation Coefficient) method.
+   - Estimates an affine transform between source and reference grayscale
+     images.
+   - Supports multi-resolution alignment:
+       * low-resolution “rough” pass
+       * high-resolution refinement pass
+   - Alignment is constrained to a valid image region (ROI) to avoid padded or
+     invalid areas.
+
+2. Photometric normalization
+   - Matches contrast across the image using a low-order polynomial model
+     (spatially varying contrast).
+   - Optionally matches per-channel white balance for color images.
+   - Ensures aligned images have consistent appearance before fusion.
+
+3. Transform accumulation
+   - Local transforms (between adjacent slices) are accumulated into a global
+     transform relative to the reference slice.
+   - Contrast and white balance parameters are also accumulated so each slice
+     can be corrected in a single step.
+
+4. Valid-area tracking
+   - Computes the region of each image that remains valid after applying
+     geometric transforms.
+   - Ensures later stages operate only on pixels that are meaningful across
+     the stack.
+
+INTERNAL STRUCTURE
+
+An anonymous namespace contains low-level helper functions:
+   - Math helpers (square, rounding with dithering).
+   - Contrast and white balance application routines.
+   - ECC-based transform estimation with scaling and masking.
+   - Solvers for contrast and white balance coefficients.
+   - Geometry helpers for transforming points and computing valid areas.
+
+These helpers are intentionally hidden to keep the public API focused and
+stable.
+
+PUBLIC API (FSAlign namespace)
+
+makeIdentity()
+   - Creates a trivial alignment result (identity transform) for the reference
+     image.
+
+computeLocal()
+   - Computes alignment of a source image to the reference:
+       * rough low-resolution alignment
+       * optional contrast fitting
+       * optional white balance fitting
+       * refined high-resolution alignment
+   - Produces a Result containing:
+       * affine transform
+       * contrast coefficients
+       * white balance coefficients
+       * valid image area
+
+accumulate()
+   - Combines a local Result with a previously accumulated global Result:
+       * stacks affine transforms
+       * stacks contrast coefficients
+       * stacks white balance coefficients
+       * updates the valid area
+   - Mirrors how Petteri’s original code builds global alignment incrementally.
+
+applyTransform()
+   - Applies an affine transform to an image using cubic interpolation and
+     reflected borders.
+
+applyContrastWhiteBalance()
+   - Applies the accumulated contrast and white balance correction to an image.
+
+ROLE IN THE FOCUS STACK PIPELINE
+
+FSAlign sits between image loading and focus analysis/fusion.
+Its output ensures that:
+   - all slices are geometrically aligned,
+   - brightness and color differences are minimized,
+   - each slice has a known valid region.
+
+This makes downstream focus metrics, depth estimation, and fusion more robust
+and predictable.
+*/
+
 namespace {
 
 inline float sq(float x) { return x * x; }

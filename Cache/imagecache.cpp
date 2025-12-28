@@ -746,6 +746,13 @@ void ImageCache::setTargetRange(int key)
             return;
         }
 
+        // Invalid image: mark cached; do not count toward sumMB.  This prevents
+        // endless looping in fillCache.
+        if (dm->valueSf(pos, G::DecoderReturnStatusColumn).toInt() == ImageDecoder::Status::Invalid) {
+            emit setCached(pos, true, instance);
+            return;
+        }
+
         const QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
         imgMB = dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
         sumMB += imgMB;
@@ -1876,6 +1883,20 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
         }
     }
 
+    // prior attempt to decode failed
+    QString decoderReturnStatus = dm->sf->index(sfRow, G::DecoderReturnStatusColumn).data().toString();
+    QStringList failures {
+         "Undefined",
+         "Invalid",
+         "Failed",
+         "Video",
+         "InstanceClash",
+         "NoDir",
+         "BlankFilePath",
+         "NoMetadata",
+    };
+    if (failures.contains(decoderReturnStatus)) return false;
+
     // make sure metadata has been loaded
     // if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
     if (!dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool()) {
@@ -2446,12 +2467,12 @@ void ImageCache::launchDecoders(QString src)
 void ImageCache::dispatch()
 {
 /*
-    Called by a new file selection, cache size change, sort, filter or color manage change.
-    The cache status is updated (current key, direction of travel, priorities and the target
-    range) by calling fillCache with a decoder id = -1. Then each ready decoder is sent to
-    fillCache. Decoders are assigned image files, which they decode into QImages, and then
-    added to imCache. More details are available in the fillCache comments and at the top of
-    this class.
+    Called by a new file selection, cache size change, sort, filter or color manage
+    change. The cache status is updated (current key, direction of travel,
+    priorities and the target range) by calling fillCache with a decoder id = -1.
+    Then each ready decoder is sent to fillCache. Decoders are assigned image files,
+    which they decode into QImages, and then added to imCache. More details are
+    available in the fillCache comments and at the top of this class.
 */
     if (debugCaching || G::isLogger || G::isFlowLogger)
         log("dispatch", "row = " + QVariant(currRow).toString());
