@@ -11,6 +11,7 @@ class FSFusion
 {
 public:
     using ProgressCallback = std::function<void()>;
+    using StatusCallback   = std::function<void(const QString &message)>;
 
     struct Options
     {
@@ -56,7 +57,8 @@ public:
                           const cv::Mat              &depthIndex16,
                           cv::Mat                    &outputColor8,
                           std::atomic_bool           *abortFlag,
-                          ProgressCallback            progressCallback = ProgressCallback());
+                          StatusCallback              statusCb,
+                          ProgressCallback            progressCallback);
 };
 
 #endif // FSFUSION_H

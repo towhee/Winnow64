@@ -1402,8 +1402,9 @@ private:
     void reportHueCount();
     void generateMeanStack();
     void focusStackFromSelection();
-    void focusStack(const QStringList paths, QString method, const QString source);
-    void generateFocusStack(const QStringList paths, QString method, const QString source);
+    void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
+    void generateFocusStack(const QStringList paths, QString method,
+                            const QString source);
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
     void traverseFolderStressTest(int msPerImage = 0, double secPerFolder = 0,

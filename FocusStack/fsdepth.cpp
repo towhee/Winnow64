@@ -13,6 +13,74 @@
 #include "FocusStack/fsmerge.h"
 #include "FocusStack/FSUtilities.h"
 
+/*
+FSDepth implements the “depth map” stage of the focus stacking pipeline.  It
+computes a per-pixel depth index (which slice is most in-focus) and writes a
+stable on-disk representation plus optional human-friendly previews.
+
+The module supports two depth-building methods:
+    1.	Simple:     derive depth from existing focus maps on disk (focus_*.tif).
+    2.	MultiScale: derive depth directly from aligned grayscale slices using the
+        wavelet pipeline (FSFusionWavelet + FSMerge), producing a depth index that
+        tends to be cleaner at multiple spatial scales.
+
+Key outputs (written via FSUtilities::writePngWithTitle):
+    •	depth_index.png   (CV_16U, pixel values are slice indices 0..N-1)
+    •	depth_preview.png (optional, enhanced visualization)
+
+CORE RESPONSIBILITIES
+    1.	Build a depth index (slice selector)
+        •	For every pixel, choose the slice with the strongest focus response.
+        •	Store the winning slice index as a 16-bit value (CV_16U).
+    2.	Provide two computation paths
+        •	runSimple():
+            •	Reads focus_*.tif files from focusFolder.
+            •	For each pixel, tracks the maximum focus value seen so far and the
+                corresponding slice index.
+            •	Applies a small median blur to reduce speckle in the index map.
+        •	runMultiScale():
+            •	Accepts in-memory grayscale slices (or loads them from disk via
+                runMultiScaleFromDisk()).
+            •	Pads slices to wavelet-friendly dimensions (divisible by 2^levels).
+            •	Runs FSFusionWavelet::forward on each padded slice.
+            •	Uses FSMerge::merge to produce:
+            •	mergedWavelet (not persisted here)
+            •	depthIndexPadded16 (CV_16U)
+            •	Crops the padded depth index back to original image size.
+    3.	Generate a readable preview (optional)
+        •	makeDepthPreviewEnhanced():
+        •	Produces a stacked visualization:
+            (a) grayscale depth map (0..255 view)
+            (b) JET heatmap version
+            (c) legend bar with slice tick labels
+        •	Intended for quick diagnosis of depth continuity and slice ordering.
+    4.	Handle I/O and validation
+        •	Verifies folder existence and creates output folders as needed.
+        •	Validates slice counts, image loads, and size consistency.
+        •	Supports abort via atomic_bool and reports progress/status via callbacks.
+        •	Writes PNGs through FSUtilities::writePngWithTitle so debug artifacts can
+            carry metadata (Title/Author) for later attribution.
+
+PUBLIC ENTRY POINTS (FSDepth namespace)
+    •	run(focusFolder, depthFolder, opt, …)
+        Dispatches to:
+            * MultiScale if opt.method == “MultiScale”
+            * Simple otherwise
+                •	runFromGraySlices(graySlices, depthFolder, opt, …)
+        Skips disk enumeration and runs the MultiScale path directly from memory.
+
+HOW TO EVALUATE RESULTS
+    •	depth_index.png:
+            The canonical “truth” output. View it as 16-bit grayscale to confirm the
+            index range and check for speckle/banding; it should be smooth within
+            continuous surfaces and change mostly at real depth boundaries.
+    •	depth_preview.png:
+            Best quick diagnostic.  Look for:
+            * smooth gradients where depth changes gradually
+            * sharp boundaries where subject edges exist
+            * legend labels matching expected slice order
+*/
+
 namespace {
 
 //----------------------------------------------------------
@@ -204,8 +272,7 @@ bool runSimple(const QString &focusFolder,
             }
         }
 
-        if (progressCb)
-            progressCb(s + 1);
+        if (progressCb) progressCb();
     }
 
     cv::medianBlur(depthIndex, depthIndex, 3);
@@ -320,8 +387,8 @@ bool runMultiScale(
             return false;
         }
 
-        if (progressCb)
-            progressCb(s + 1);
+        if (progressCb) progressCb();
+            // progressCb(s + 1);
 
         if (G::FSLog) G::log(srcFun, "Slice " + QString::number(s));
     }
@@ -472,7 +539,7 @@ bool run(const QString    &focusFolder,
     const QString method = opt.method.trimmed();
 
     qDebug() << "FSDepth::run method =" << opt.method;
-    qDebug() << "FSDepth::run statusCb valid?" << static_cast<bool>(statusCb);
+    qDebug() << "FSDepth::run statusCb valid =" << static_cast<bool>(statusCb);
 
     if (method.compare("MultiScale", Qt::CaseInsensitive) == 0)
         return runMultiScaleFromDisk(focusFolder, depthFolder, opt, abortFlag,

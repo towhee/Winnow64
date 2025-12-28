@@ -10,6 +10,67 @@
 
 #include "FSFusionWavelet.h"
 
+/*
+    FSFocus module overview
+    -----------------------
+
+    Purpose:
+    - Compute per-slice focus metrics ("focus maps") from aligned grayscale images.
+    - Optionally write per-slice numeric focus maps plus human-viewable previews
+      (log-gray, heatmap, and slice-index pseudo-color) for diagnostics.
+
+    Inputs:
+    - alignFolder: folder containing aligned grayscale images named gray_*.tif/png/jpg.
+    - focusFolder: output folder for focus_*.tif and preview PNGs.
+    - Options:
+      * useOpenCL: passed into FSFusionWavelet::forward().
+      * keepIntermediates: writes numeric focus_*.tif (16-bit).
+      * preview: writes PNG previews (loggray/heatmap/colorslice) per slice.
+      * downsampleFactor / numThreads: currently reserved (not used in code shown).
+    - abortFlag: allows early exit between slices.
+    - progressCb/statusCb: UI reporting.
+    - focusMapsOut (optional): returns CV_32F focus metric for each slice in memory.
+
+    Core algorithm:
+    1) Enumerate input slices in alignFolder using the "gray_*" naming convention.
+    2) For each slice:
+       - Load grayscale (IMREAD_GRAYSCALE).
+       - Run a wavelet forward transform:
+            FSFusionWavelet::forward(gray, useOpenCL, wavelet)
+            Output is expected to be complex CV_32FC2.
+       - Convert complex wavelet coefficients to a scalar focus metric:
+            mag32 = magnitude(real, imag)  // CV_32F
+            This mag32 is the per-pixel "focus energy" for the slice.
+       - Optionally store mag32 into focusMapsOut for later stages (e.g., FSDepth).
+
+    Disk outputs (when keepIntermediates is true):
+    - focus_<base>.tif:
+      * 16-bit scalar image derived from mag32 by per-slice min/max normalization
+        into 0..65535. (This is a per-slice normalization for storage/viewing,
+        not a cross-slice normalization.)
+
+    Diagnostic previews (when preview is true):
+    - focus_loggray_<base>.png:
+      * log(1 + mag32) then min/max normalize to 8-bit for visibility.
+    - focus_heatmap_<base>.png:
+      * high-frequency emphasis (mag32 - GaussianBlur), clamp negatives, log,
+        normalize to 8-bit, then apply COLORMAP_JET.
+    - focus_colorslice_<base>.png:
+      * log-gray preview modulated by a per-slice color tint (slice index cue).
+
+    Debug metadata:
+    - Preview PNGs are written through FSUtilities::writePngWithTitle(path, img),
+      which embeds PNG text metadata (Title/Author) so uploaded debug PNGs can
+      be traced back to their file name (Title uses the output file name).
+
+    Failure modes / assumptions:
+    - Expects wavelet output to be CV_32FC2; returns false if not.
+    - Expects at least one gray_* input file; returns false if none.
+    - Per-slice 16-bit focus_*.tif uses slice-local scaling, so direct numerical
+      comparison across slices should use mag32 (focusMapsOut) rather than the
+      stored 16-bit maps unless you re-normalize consistently.
+*/
+
 namespace {
 
 //--------------------------------------------------------

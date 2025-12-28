@@ -76,12 +76,10 @@ void MW::focusStackFromSelection()
 
     QString method = "PMax";
     // QString method = "LegacyPetteri";
-    focusStack(paths, method, src);
+    generateFocusStack(paths, method, src);
 }
 
-void MW::focusStack(const QStringList paths,
-                          QString method,
-                    const QString source)
+void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
 {
 /*
     Called locally from MW::focusStackFromSelection
@@ -92,7 +90,7 @@ void MW::focusStack(const QStringList paths,
 
     Generates a fused image for each stack group.
 */
-    const QString srcFun = "MW::focusStack";
+    const QString srcFun = "MW::groupFocusStacks";
     if (G::isLogger) G::log(srcFun);
 
     struct Item {
@@ -134,7 +132,7 @@ void MW::focusStack(const QStringList paths,
     // --- Group into stacks: new stack if gap >= 2000 ms ----------------------
     static constexpr qint64 kGroupGapMs = 2000;  // >= 2 seconds => new group
 
-    QList<QStringList> groups;
+    // QList<QStringList> groups;
     QStringList current;
     current.reserve(items.size());
 
@@ -160,7 +158,8 @@ void MW::focusStack(const QStringList paths,
     if (!current.isEmpty())
         groups.push_back(current);
 
-    // /* --- Debug dump with HH:mm:ss:zzz ---------------------------------------
+    //  --- Debug dump with HH:mm:ss:zzz ---------------------------------------
+    // /*
     qDebug().noquote() << srcFun
                        << "Grouped" << items.size() << "images into"
                        << groups.size() << "stack(s)."
@@ -183,17 +182,20 @@ void MW::focusStack(const QStringList paths,
     }
     //*/
 
-    // --- Run each group ------------------------------------------------------
+    /* --- Run each group ------------------------------------------------------
     qDebug() << srcFun << "groups.count() =" << groups.count();
+    int n = groups.count();
+    int i = 0;
     for (const QStringList &g : groups) {
         if (g.size() < 2) {
             qDebug().noquote() << srcFun << "Skipping group (need >=2 images):" << g;
             continue;
         }
+        i++;
         qDebug() << srcFun << "g.count() =" << g.count();
 
-        generateFocusStack(g, method, srcFun);
-    }
+        generateFocusStack(g, method, i, n, srcFun);
+    }   */
 }
 
 void MW::generateFocusStack(const QStringList paths,
@@ -211,22 +213,69 @@ void MW::generateFocusStack(const QStringList paths,
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
     isLocal = false;    // temp for debugging
 
+    // ----------- Req'd when pipeline is finished -----------
+
     // Source images folder (used after pipeline finishes)
     QFileInfo info(paths.first());
     const QString srcFolder = info.absolutePath();
     // Source images location (ie when sourced from lightroom)
     QString root = srcFolder;
     if (!isLocal) {
+        // get parent of srcFolder
         QFileInfo fi(srcFolder);
         root = fi.dir().absolutePath();
     }
 
-    if (method.isEmpty() || method == "Default") method = "PMax";
+    // fusedPath: must be the same as in FS
+    QFileInfo lastFi(paths.last());
+    QString base = lastFi.completeBaseName();
+    QString ext  = "." + lastFi.suffix();
+    QString rootFusedPath = root + "/" + base + "_FocusStack" + ext;
+
+    // ----------- End section when pipeline is finished -----------
+
+    // if (method.isEmpty() || method == "Default") method = "PMax";
+    // method = "PMax1";
+    method = "PMax2";
 
     // Options
     // clean (send all project folders to the trash)
     bool isClean = false;       // send all project folders to the trash
 
+
+    // FOCUS STACK CONTROL:
+    FS::Options opt;
+    {
+        opt.method                  = method;
+        opt.isLocal                 = false;    // pretend remote for testing
+
+        opt.useIntermediates        = true;
+        opt.useCache                = true;
+        opt.enableOpenCL            = true;
+
+        opt.enableAlign             = true;
+        opt.enableFocusMaps         = false;
+        opt.enableDepthMap          = true;
+        opt.enableFusion            = true;
+        opt.enableBackgroundMask    = false;
+        opt.enableBackgroundReplace = false;
+        opt.enableArtifactDetect    = false;
+
+        opt.keepAlign               = true;
+
+        opt.previewFocusMaps        = true;
+        opt.keepFocusMaps           = true;
+
+        opt.previewDepthMap         = true;
+        opt.keepDepthMap            = true;
+
+        opt.previewFusion           = true;
+
+        opt.previewBackgroundMask   = true;
+        opt.backgroundMethod        = "Depth+Focus";
+    }
+
+    // Provide a broad overview of this module, formatted for a code editor in a /*  */ comment with 80 char line width.
 
     // --------------------------------------------------------------------
     // Create worker thread + FS pipeline object
@@ -237,46 +286,13 @@ void MW::generateFocusStack(const QStringList paths,
     // local req'd for lamda
     FS *pipeline = fsPipeline.data();
 
-    // // Set input + project root *before* thread runs
-    // QString projectRoot = srcFolder + "/" + info.completeBaseName() + "_" + method;
-    // pipeline->setProjectRoot(projectRoot);
-    // pipeline->setInput(paths);
-
-    // FOCUS STACK CONTROL:
-    FS::Options opt;
-    opt.method                  = method;
-    opt.isLocal                 = false;    // pretend remote for testing
-
-    opt.useIntermediates        = true;
-    opt.useCache                = true;
-    opt.enableOpenCL            = true;
-
-    opt.enableAlign             = true;
-    opt.enableFocusMaps         = false;
-    opt.enableDepthMap          = true;
-    opt.enableFusion            = true;
-    opt.enableBackgroundMask    = false;
-    opt.enableBackgroundReplace = false;
-    opt.enableArtifactDetect    = false;
-
-    opt.keepAlign               = true;
-
-    opt.previewFocusMaps        = true;
-    opt.keepFocusMaps           = true;
-
-    opt.previewDepthMap         = true;
-    opt.keepDepthMap            = true;
-
-    opt.previewFusion           = true;
-
-    opt.previewBackgroundMask   = true;
-    opt.backgroundMethod        = "Depth+Focus";
-
-    // Set input + project root *before* thread runs
+    // Initialize pipeline before we run
     pipeline->setOptions(opt);
-    pipeline->setInput(paths);
-    QString projectRoot = srcFolder + "/" + info.completeBaseName() + "_" + method;
-    pipeline->setProjectRoot(projectRoot, root);
+    pipeline->initialize(root);
+    // Aggregate input paths into focus groups
+    groupFocusStacks(pipeline->groups, paths);
+
+    // -------------- Pipeline communications ----------------
 
     // When the thread starts → run the FS pipeline
     connect(thread, &QThread::started, pipeline, [pipeline, thread]()
@@ -285,71 +301,40 @@ void MW::generateFocusStack(const QStringList paths,
         QMetaObject::invokeMethod(thread, "quit", Qt::QueuedConnection);
     });
 
-    // Status / progress → UI
+    // Status update
     connect(pipeline, &FS::updateStatus,
             this, &MW::updateStatus, Qt::QueuedConnection);
 
-    connect(pipeline, &FS::progress,
-            this, [this](int current, int total)
-    {
+    // Progress update
+    connect(pipeline, &FS::progress, this, [this](int current, int total) {
         this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
-    },
-    Qt::QueuedConnection);
+        }, Qt::QueuedConnection);
 
     // cleanup when finished
     connect(thread, &QThread::finished, pipeline, &QObject::deleteLater);
     connect(thread, &QThread::finished, thread,   &QObject::deleteLater);
 
-    // When FS finishes (thread quits)
+    // --------------- When FS finishes (thread quits) ----------------
+
     // We detect success by checking filesystem or pipeline signals (later)
     connect(thread, &QThread::finished, this, [=]()
     {
         // Clear progress
         cacheProgressBar->clearUpperProgress();
 
-        // If aborted
+        // If aborted...
 
-
-        // Example: pick the last aligned color image as “fusedPath”
-        // (temporary until focus/depth/fusion implemented)
-        QString alignedDir = projectRoot + "/align";
-        QDir ad(alignedDir);
-        QStringList files = ad.entryList(QStringList() << "*.png",
-                                         QDir::Files,
-                                         QDir::Name);
-
-        QString fusedPath;
-        // if (!files.isEmpty())
-        //     fusedPath = alignedDir + "/" + files.last();   // temporarily treat as result
-
-        qDebug() << srcFun << "Finished" << fusedPath.isEmpty();
-
-        if (!fusedPath.isEmpty())
+        if (!rootFusedPath.isEmpty())
         {
-            // Copy metadata from first source using your existing logic
-            ExifTool et;
-            et.setOverWrite(true);
-            et.copyAll(paths.first(), fusedPath);
-            et.close();
-
-            // Copy into source folder
-            QFileInfo fi(fusedPath);
-            QString destPath = srcFolder + "/" + fi.fileName();
-            QFile::copy(fusedPath, destPath);
-
             // update datamodel
-            dm->insert(destPath);
+            if (isLocal) {
+                dm->insert(rootFusedPath);
+                // select fused image
+                sel->select(rootFusedPath);
+            }
+            else folderAndFileSelectionChange(rootFusedPath, srcFun);
 
-            // select fused image
-            if (isLocal) sel->select(destPath);
-            else folderAndFileSelectionChange(destPath, srcFun);
-
-            waitUntilMetadataLoaded(5000, srcFun);
-
-            // highlight
-            setColorClassForRow(dm->currentSfRow, "Red");
-
-            embedThumbnails();
+            // waitUntilMetadataLoaded(5000, srcFun);
         }
         G::isRunningFocusStack = false;
     });

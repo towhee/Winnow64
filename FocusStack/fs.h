@@ -1,6 +1,9 @@
 #ifndef FS_H
 #define FS_H
 
+#include "Metadata/ExifTool.h"
+#include "Metadata/xmp.h"
+
 #include "QtCore/qdebug.h"
 #include <QObject>
 #include <QStringList>
@@ -15,13 +18,25 @@ class FS : public QObject
     Q_OBJECT
 public:
     /*
-        enable      Run the stage
-        preview     Make preview files
-        overwrite   Overwrite previews
     */
+    explicit FS(QObject *parent = nullptr);
+
+    /*
+    Methods:
+        PMax1 - align, fuse using multiscale
+        PMax2 - align, depth, fuse using depth
+        PMax3 - align, focus, depth, fuse
+    */
+
     struct Options
     {
         QString method          = "";
+        QString methodAlign     = "";
+        QString methodFocus     = "";
+        QString methodDepth     = "";
+        QString methodFuse      = "";
+
+
         bool isLocal            = true;
 
         bool useIntermediates   = true;
@@ -53,12 +68,15 @@ public:
         QString artifactMethod          = "MultiScale";
     };
 
-    explicit FS(QObject *parent = nullptr);
+    QString statusGroupPrefix;
+    // Groups
+    QList<QStringList> groups;
 
     // Input configuration
-    void setInput(const QStringList &paths);            // source paths
-    void setProjectRoot(const QString &srcPath, const QString &root);       // folder containing align/focus/depth/fusion
+    void initialize(QString rootFolderPath);
+    void initializeGroup(int group);            // source groups
     void setOptions(const Options &opt);
+
     void diagnostics();
 
     void requestAbort()
@@ -89,21 +107,23 @@ private:
     bool setParameters();
     bool validAlignMatsAvailable(int count) const;
     void previewOverview(cv::Mat &fusedColor8Mat);
+    QImage thumbnail(const cv::Mat &mat);
 
     // Pipeline stages
     bool runAlign();
     bool runFocusMaps();
     bool runDepthMap();
-    bool runBackground();
     bool runFusion();
+    bool runBackground();
     bool runArtifact();
+    bool saveFused(QString folderPath);
 
     // helpers for UI
     void status(const QString &msg);
 
     QStringList inputPaths;
-    QString     projectRoot;
-    QString     rootPath;      // original source for input images (parent if lightroom)
+    QString     groupRoot;
+    QString     rootFolderPath;      // original source for input images (parent if lightroom)
     int slices = 0;
     int lastSlice = 0;
 
