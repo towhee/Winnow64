@@ -12,6 +12,7 @@ namespace FSFocus {
 
 struct Options
 {
+    QString method          = "";
     int  downsampleFactor   = 1;
     int  numThreads         = 0;   // 0 = auto
     bool useOpenCL          = true;

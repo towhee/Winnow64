@@ -978,10 +978,6 @@ bool FS::runFusion()
         return false;
     }
 
-    // temp save full size depthmap
-    QString pngPath = fusionFolder + "/depthmap.png";
-    FSUtilities::makeDepthHeatmapFullSize(pngPath, depthIndex16Mat, slices);
-
     saveFused(fusionFolder);
 
     return true;
