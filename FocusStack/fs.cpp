@@ -88,7 +88,7 @@ void FS::setOptions(const Options &opt)
     // Fuse using multiscale depthmap, focus module not used.
     if (o.method == "PMax2") {
         o.enableAlign = true;
-        o.enableFocusMaps = false;
+        o.enableFocusMaps = true;
         o.enableDepthMap = true;
         o.enableFusion = true;
         o.methodDepth = "MultiScale";
@@ -978,57 +978,11 @@ bool FS::runFusion()
         return false;
     }
 
-    // -------------------------------------------------------
-    // Save fused image with incrementing suffix
-    // -------------------------------------------------------
+    // temp save full size depthmap
+    QString pngPath = fusionFolder + "/depthmap.png";
+    FSUtilities::makeDepthHeatmapFullSize(pngPath, depthIndex16Mat, slices);
 
     saveFused(fusionFolder);
-    // QFileInfo lastFi(inputPaths.last());
-    // QString base = lastFi.completeBaseName();
-    // QString ext  = "." + lastFi.suffix();
-
-    // QString prefix = base + "_fused_";
-    // int nextIndex = 1;
-
-    // // Root source (parent folder if from Lightroom - not local)
-    // QString srcFusedPath = rootFolderPath + "/" + base + "_FocusStack" + ext;
-    // qDebug() << srcFun << "srcFusedPath =" << srcFusedPath;
-
-    // while (true)
-    // {
-    //     QString candidate = QString("%1%2%3")
-    //         .arg(prefix)
-    //         .arg(nextIndex, 2, 10, QChar('0'))
-    //         .arg(ext);
-    //     QString fullCandidatePath = fusionFolder + "/" + candidate;
-
-    //     if (!QFileInfo::exists(fullCandidatePath))
-    //     {
-    //         lastFusedPath = fullCandidatePath;
-
-    //         if (G::FSLog) G::log(srcFun, "Saving fused image to " + lastFusedPath);
-    //         incrementProgress();
-
-    //         cv::imwrite(lastFusedPath.toStdString(), fusedColor8Mat);
-    //         cv::imwrite(srcFusedPath.toStdString(), fusedColor8Mat);
-
-    //         // visually debug
-    //         if (o.previewFusion) previewOverview(fusedColor8Mat);
-
-    //         status("Fusion complete.");
-    //         QString timeToFuse = QString::number(t.elapsed() / 1000.0, 'f', 1) + " sec";
-    //         if (G::FSLog) G::log(srcFun, "Fusion completed in " + timeToFuse);
-
-    //         break;
-    //     }
-
-    //     nextIndex++;
-    //     if (nextIndex > 999)
-    //     {
-    //         status("Unable to find available fused filename");
-    //         break;
-    //     }
-    // }
 
     return true;
 }

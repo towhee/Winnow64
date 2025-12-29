@@ -2,6 +2,9 @@
 #define FSUTILITIES_H
 
 #include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+
 #include <QString>
 #include <QDebug>
 #include <atomic>
@@ -80,6 +83,12 @@ bool writePngFromFloatMapRobust(const QString& pngPath,
                                 const cv::Mat& map32f,
                                 float loQuantile,
                                 float hiQuantile);
+
+bool makeDepthHeatmapFullSize(const QString& pngPath,
+                              const cv::Mat& depthIndex16,
+                              int sliceCount,
+                              int colormap = cv::COLORMAP_JET);
+
 
 } // namespace FSUtilities
 

@@ -5,6 +5,89 @@
 #include <opencv2/core.hpp>
 #include <cassert>
 
+/*
+FSMerge.cpp merges a stack of wavelet transforms into a single “best of stack”
+wavelet image, while also producing a per-pixel depth index that records which
+input slice “won” at each pixel. It implements a PMax-style selection in
+wavelet space, with optional consistency cleanup passes.
+
+KEY IDEA
+For each pixel (x,y), each input slice provides a complex wavelet coefficient
+(CV_32FC2). The algorithm computes |v|^2 = real^2 + imag^2 for each slice at
+that pixel, picks the slice with the maximum value, copies that complex value
+into the merged output, and stores the winning slice index into depthIndex16.
+
+FILE STRUCTURE
+    •	Anonymous namespace:
+    •	levelsForSize(): chooses wavelet “levels” based on image size, ensuring
+        dimensions are divisible by 2^levels (used by subband denoise).
+    •	getSqAbsval(): computes per-pixel squared magnitude |v|^2 for a complex
+        wavelet image (CV_32FC2 -> CV_32F).
+    •	denoiseSubbands(): optional “two-out-of-three” voting in subbands to fix
+        inconsistent depth choices across wavelet subbands (consistency >= 1).
+    •	denoiseNeighbours(): optional neighborhood smoothing; fixes isolated local
+        extrema in depthIndex by averaging the 4-neighbors and then re-sampling the
+        merged wavelet coefficient from the newly chosen slice (consistency >= 2).
+
+PUBLIC API (namespace FSMerge)
+merge(wavelets, consistency, abortFlag, mergedOut, depthIndex16)
+    1.	Validation
+
+        •	Ensures wavelets is non-empty.
+        •	Ensures each wavelet:
+        •	is not empty
+        •	has type CV_32FC2
+        •	matches the size of wavelets[0]
+        •	Aborts early if abortFlag is set.
+
+    2.	PMax merge (core behavior)
+
+        •	Allocates:
+            •	maxAbs (CV_32F), initialized to -1
+            •	mergedOut (CV_32FC2)
+            •	depthIndex16 (CV_16U), initialized to 0
+        •	For each slice i:
+            •	absval = |wavelets[i]|^2 (CV_32F)
+            •	mask = absval > maxAbs
+            •	update maxAbs where mask is true
+            •	copy wavelets[i] into mergedOut where mask is true
+            •	set depthIndex16 to i where mask is true
+
+        This produces:
+            •	mergedOut: complex wavelet coefficients from the “sharpest” slice
+                per pixel
+            •	depthIndex16: index of the slice that contributed that coefficient
+
+    3.	Consistency cleanup (optional)
+
+        •	If consistency >= 1:
+        •	denoiseSubbands() applies subband voting on depthIndex to reduce
+            cross-subband disagreement, operating level-by-level on wavelet subregions.
+        •	If consistency >= 2:
+        •	denoiseNeighbours() fixes pixels that are strict local maxima/minima in the
+            depth index relative to 4-neighbors by averaging neighbors and then
+            re-sampling mergedOut at that pixel from the new winning slice.
+
+OUTPUTS AND THEIR USE
+    •	mergedOut (CV_32FC2):
+        Intended to be passed into the inverse wavelet transform to reconstruct a
+        fused grayscale result.
+    •	depthIndex16 (CV_16U):
+        A per-pixel “which slice won” map. It can be used for:
+        •	debug/visualization of depth ordering
+        •	driving simple color picking or later refinement stages
+
+NOTES / BEHAVIORAL DETAILS
+    •	The “PMax” selection uses squared magnitude (no sqrt) for speed.
+    •	denoiseNeighbours changes both depthIndex16 and mergedOut so they stay
+        consistent (if you change the index, the coefficient must match that slice).
+    •	denoiseSubbands only adjusts depthIndex16; it does not rewrite mergedOut for
+        those subband corrections (it assumes index consistency is the main goal
+        there).
+    •	The abortFlag is checked during validation and during the per-slice merge
+        loop, and also inside denoiseNeighbours via the outer merge caller checks.
+*/
+
 // We reuse the levels logic from FSFusionWavelet
 namespace
 {
@@ -196,6 +279,8 @@ bool merge(const std::vector<cv::Mat> &wavelets,
 
     int rows = size.height;
     int cols = size.width;
+
+    qDebug() << srcFun << "W =" << cols << "H =" << rows;
 
     cv::Mat maxAbs(rows, cols, CV_32F);
     mergedOut.create(rows, cols, CV_32FC2);
