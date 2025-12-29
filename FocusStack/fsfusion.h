@@ -54,7 +54,7 @@ public:
     static bool fuseStack(const std::vector<cv::Mat> &grayImgs,
                           const std::vector<cv::Mat> &colorImgs,
                           const Options              &opt,
-                          const cv::Mat              &depthIndex16,
+                          cv::Mat                    &depthIndex16,
                           cv::Mat                    &outputColor8,
                           std::atomic_bool           *abortFlag,
                           StatusCallback              statusCb,

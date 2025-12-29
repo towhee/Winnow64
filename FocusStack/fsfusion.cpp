@@ -207,7 +207,7 @@ bool fuseSimple(const std::vector<cv::Mat> &grayImgs,
 bool fusePMax(const std::vector<cv::Mat> &grayImgs,
               const std::vector<cv::Mat> &colorImgs,
               const FSFusion::Options    &opt,
-              const cv::Mat              &depthIndex16,
+              cv::Mat                    &depthIndex16,
               cv::Mat                    &outputColor8,
               std::atomic_bool           *abortFlag,
               FSFusion::StatusCallback    statusCallback,
@@ -293,7 +293,8 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
                               opt.consistency,
                               abortFlag,
                               mergedWavelet,
-                              dummyDepthIndex16))
+                              depthIndex16))
+                              // dummyDepthIndex16))
     {
         if (G::FSLog) G::log(srcFun, "FSMerge::merge failed");
         return false;
@@ -394,7 +395,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
 bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
                          const std::vector<cv::Mat> &colorImgs,
                          const Options              &opt,
-                         const cv::Mat              &depthIndex16,
+                         cv::Mat                    &depthIndex16,
                          cv::Mat                    &outputColor8,
                          std::atomic_bool           *abortFlag,
                          StatusCallback              statusCallback,

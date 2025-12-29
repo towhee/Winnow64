@@ -572,4 +572,71 @@ bool writePngFromFloatMapRobust(const QString& pngPath,
     return writePngWithTitle(pngPath, out8);
 }
 
+bool makeDepthHeatmapFullSize(const QString &pngPath,
+                              const cv::Mat& depthIndex16,
+                              int sliceCount,
+                              int colormap)
+{
+    CV_Assert(!depthIndex16.empty());
+    CV_Assert(depthIndex16.type() == CV_16U);
+    CV_Assert(sliceCount >= 2);
+
+    /*
+    // 1) Convert slice index -> 0..255 using sliceCount (NOT min/max normalize)
+    //    This makes coloring consistent across images and runs.
+    cv::Mat idx32;
+    depthIndex16.convertTo(idx32, CV_32F);
+
+    // Clamp to valid index range (defensive)
+    cv::min(idx32, float(sliceCount - 1), idx32);
+    cv::max(idx32, 0.0f, idx32);
+
+    const float inv = 255.0f / float(sliceCount - 1);
+
+    cv::Mat lut8;
+    idx32.convertTo(lut8, CV_8U, inv);  // 0..255, slice-count-accurate
+
+    // 2) Apply colormap
+    cv::Mat heatBGR;    // CV_8UC3 (BGR)
+    cv::applyColorMap(lut8, heatBGR, colormap);
+
+    return writePngWithTitle(pngPath, heatBGR);
+    */
+
+    const int rows = depthIndex16.rows;
+    const int cols = depthIndex16.cols;
+
+    // Build HSV image:
+    //   H: 0..179 (OpenCV hue range)
+    //   S: 255
+    //   V: 255
+    cv::Mat hsv(rows, cols, CV_8UC3);
+
+    for (int y = 0; y < rows; ++y)
+    {
+        const uint16_t* dRow = depthIndex16.ptr<uint16_t>(y);
+        cv::Vec3b*      hRow = hsv.ptr<cv::Vec3b>(y);
+
+        for (int x = 0; x < cols; ++x)
+        {
+            int idx = int(dRow[x]);
+            if (idx < 0) idx = 0;
+            if (idx >= sliceCount) idx = sliceCount - 1;
+
+            // Map idx -> hue in [0..179], evenly spaced by sliceCount.
+            // Use rounding so endpoints hit nicely.
+            int hue = int(std::lround(179.0 * double(idx) / double(sliceCount - 1)));
+
+            hRow[x][0] = (uchar)hue;   // H
+            hRow[x][1] = 255;          // S
+            hRow[x][2] = 255;          // V
+        }
+    }
+
+    cv::Mat heatBGR;
+    cv::cvtColor(hsv, heatBGR, cv::COLOR_HSV2BGR);
+
+    return writePngWithTitle(pngPath, heatBGR);
+}
+
 } // namespace FSUtilities
