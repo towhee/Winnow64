@@ -77,14 +77,15 @@ cv::Mat canonicalizeToSize(const cv::Mat& src,
                            const QString& context);
 
 bool writePngWithTitle(const QString& pngPath,
-                       const cv::Mat& img);
+                       const cv::Mat& img,
+                       bool writeMeta = false);
 
 bool writePngFromFloatMapRobust(const QString& pngPath,
                                 const cv::Mat& map32f,
                                 float loQuantile,
                                 float hiQuantile);
 
-bool makeDepthHeatmapFullSize(const QString& pngPath,
+bool heatMapPerSlice(const QString& pngPath,
                               const cv::Mat& depthIndex16,
                               int sliceCount,
                               int colormap = cv::COLORMAP_JET);

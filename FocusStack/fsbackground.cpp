@@ -742,40 +742,42 @@ bool run(const cv::Mat                 &depthIndex16,
             return opt.backgroundFolder + "/" + name;
         };
 
+        bool writeTitle = false;
+
         // Primary outputs
-        FSUtilities::writePngWithTitle(P("bg_score.png"),       bgScore01);
-        FSUtilities::writePngWithTitle(P("bg_seed.png"),        seedBg8);
-        FSUtilities::writePngWithTitle(P("bg_grown.png"),       grownBg8);
-        FSUtilities::writePngWithTitle(P("subject_mask.png"),   subject8);
-        FSUtilities::writePngWithTitle(P("bg_confidence.png"),  conf);
+        FSUtilities::writePngWithTitle(P("bg_score.png"), bgScore01, writeTitle);
+        FSUtilities::writePngWithTitle(P("bg_seed.png"), seedBg8, writeTitle);
+        FSUtilities::writePngWithTitle(P("bg_grown.png"), grownBg8, writeTitle);
+        FSUtilities::writePngWithTitle(P("subject_mask.png"), subject8, writeTitle);
+        FSUtilities::writePngWithTitle(P("bg_confidence.png"), conf, writeTitle);
 
         // Depth diagnostics
         if (needDepth)
         {
-            FSUtilities::writePngWithTitle(P("depthPrior.png"),    d01);
-            FSUtilities::writePngWithTitle(P("depthPriorN.png"),   dN);
-            FSUtilities::writePngWithTitle(P("depthStdDev.png"),   stdv);
-            FSUtilities::writePngWithTitle(P("depthStdDevN.png"),  stdvN);
-            FSUtilities::writePngWithTitle(P("depthCombined.png"), depthCombined);
+            FSUtilities::writePngWithTitle(P("depthPrior.png"), d01, writeTitle);
+            FSUtilities::writePngWithTitle(P("depthPriorN.png"), dN, writeTitle);
+            FSUtilities::writePngWithTitle(P("depthStdDev.png"), stdv, writeTitle);
+            FSUtilities::writePngWithTitle(P("depthStdDevN.png"), stdvN, writeTitle);
+            FSUtilities::writePngWithTitle(P("depthCombined.png"), depthCombined, writeTitle);
         }
 
         // Focus diagnostics
         if (needFocus)
         {
-            FSUtilities::writePngWithTitle(P("maxF.png"),           maxF);
-            FSUtilities::writePngWithTitle(P("strongF.png"),        strongF);
-            FSUtilities::writePngWithTitle(P("focusBG.png"),        focusWeak);       // "BG-ness" from focus
-            FSUtilities::writePngWithTitle(P("supportRatio.png"),   supportRatio);
-            FSUtilities::writePngWithTitle(P("ratioN.png"),         ratioN);
-            FSUtilities::writePngWithTitle(P("ratioBG.png"),        ratioWeak);
-            FSUtilities::writePngWithTitle(P("focusCombined.png"),  focusCombined);
+            FSUtilities::writePngWithTitle(P("maxF.png"), maxF, writeTitle);
+            FSUtilities::writePngWithTitle(P("strongF.png"), strongF, writeTitle);
+            FSUtilities::writePngWithTitle(P("focusBG.png"), focusWeak, writeTitle);       // "BG-ness" from focus
+            FSUtilities::writePngWithTitle(P("supportRatio.png"), supportRatio, writeTitle);
+            FSUtilities::writePngWithTitle(P("ratioN.png"), ratioN, writeTitle);
+            FSUtilities::writePngWithTitle(P("ratioBG.png"), ratioWeak, writeTitle);
+            FSUtilities::writePngWithTitle(P("focusCombined.png"), focusCombined, writeTitle);
         }
 
         // ColorVar diagnostics
         if (needColorV)
         {
-            FSUtilities::writePngWithTitle(P("colorVar.png"),  var);
-            FSUtilities::writePngWithTitle(P("colorVarN.png"), varN);
+            FSUtilities::writePngWithTitle(P("colorVar.png"), var, writeTitle);
+            FSUtilities::writePngWithTitle(P("colorVarN.png"), varN, writeTitle);
         }
     }
 

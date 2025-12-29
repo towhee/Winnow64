@@ -266,7 +266,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     for (int i = 0; i < N; ++i)
     {
         if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-        QString msg = "Forward wavelet slice cb" + QString::number(i);
+        QString msg = "Forward wavelet slice" + QString::number(i);
         if (G::FSLog) G::log(srcFun, msg);
         if (statusCallback) statusCallback(msg);
         if (progressCallback) progressCallback();
@@ -281,7 +281,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     // 2. Merge wavelet stacks → mergedWavelet (we ignore depthIndex here)
     // --------------------------------------------------------------------
-    QString msg = "Merge wavelet stacks cb";
+    QString msg = "Merge wavelet stacks";
     if (G::FSLog) G::log(srcFun, msg);
     if (statusCallback) statusCallback(msg);
     if (progressCallback) progressCallback();
@@ -303,7 +303,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     // 3. Inverse wavelet → fusedGray8 (still padded size)
     // --------------------------------------------------------------------
-    msg = "Inverse wavelet cb";
+    msg = "Inverse wavelet";
     if (G::FSLog) G::log(srcFun, msg);
     if (statusCallback) statusCallback(msg);
     if (progressCallback) progressCallback();
@@ -320,7 +320,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     // 4. Build color map using padded grayscale + padded RGB images
     // --------------------------------------------------------------------
-    msg = "Build color map cb";
+    msg = "Build color map";
     if (G::FSLog) G::log(srcFun, msg);
     if (statusCallback) statusCallback(msg);
     if (progressCallback) progressCallback();
@@ -344,7 +344,7 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     // --------------------------------------------------------------------
     // 5. Apply color reassignment to padded fused grayscale
     // --------------------------------------------------------------------
-    msg = "Apply color reassignment cb";
+    msg = "Apply color reassignment";
     if (G::FSLog) G::log(srcFun, msg);
     if (statusCallback) statusCallback(msg);
     if (progressCallback) progressCallback();

@@ -462,25 +462,25 @@ static QImage matToQImageForPng(const cv::Mat& m)
 }
 
 bool writePngWithTitle(const QString& pngPath,
-                       const cv::Mat& img)
+                       const cv::Mat& img,
+                       bool writeMeta)
 {
 /*
     Setting the title and author and writing using QImageWriter and then bundling
     resulting file into a zip enables ChatGPT to extract the source file name,
     which makes it much easier to analyse many files.
 
-    However, this is very slow, hence the embedTitle switch.
+    However, this is very slow, hence the writeMeta switch.
 */
     // return false;
     QString srcFun = "FSUtilities::writePngWithTitle";
-    bool embedTitle = false;
 
     if (img.empty()) return false;
 
     const QString t = QFileInfo(pngPath).fileName();
 
     // use this
-    if (!embedTitle) {
+    if (!writeMeta) {
         cv::imwrite(pngPath.toStdString(), img);
         return true;
     }
@@ -572,7 +572,7 @@ bool writePngFromFloatMapRobust(const QString& pngPath,
     return writePngWithTitle(pngPath, out8);
 }
 
-bool makeDepthHeatmapFullSize(const QString &pngPath,
+bool heatMapPerSlice(const QString &pngPath,
                               const cv::Mat& depthIndex16,
                               int sliceCount,
                               int colormap)
