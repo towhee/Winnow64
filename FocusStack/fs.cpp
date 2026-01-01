@@ -40,25 +40,19 @@ void FS::initialize(QString rootFolderPath)
     this->rootFolderPath = rootFolderPath;
 }
 
-void FS::initializeGroup(int group)
+bool FS::initializeGroup(int group)
 {
     QString srcFun = "FS::initializeGroup";
 
     inputPaths = groups.at(group);
+    slices = inputPaths.count();
+    lastSlice = slices - 1;
 
     QFileInfo info(inputPaths.first());
     const QString srcFolder = info.absolutePath();
     groupRoot = srcFolder + "/" + info.completeBaseName() + "_" + o.method;
 
-    alignFolder      = groupRoot + "/align";
-    focusFolder      = groupRoot + "/focus";
-    depthFolder      = groupRoot + "/depth";
-    fusionFolder     = groupRoot + "/fusion";
-    backgroundFolder = groupRoot + "/background";
-    artifactsFolder  = groupRoot + "/artifacts";
-
-    slices = inputPaths.count();
-    lastSlice = slices - 1;
+    prepareFolders();
 
     statusGroupPrefix = "Stack " + QString::number(group+1) + "/" +
                         QString::number(groups.count()) + " ";
@@ -69,6 +63,21 @@ void FS::initializeGroup(int group)
     alignedColorSlices.clear();
     alignedGraySlices.clear();
     focusSlices.clear();
+
+    skipAlign     = false;
+    skipFocusMaps = false;
+    skipDepthMap  = false;
+    skipFusion    = false;
+    skipArtifacts = false;
+
+    updateIntermediateStatus();
+
+    if (!o.enableAlign || (!o.useIntermediates && alignExists)) skipAlign = true;
+    if (!o.enableFocusMaps || (!o.useIntermediates && focusExists)) skipFocusMaps = true;
+    if (!o.enableDepthMap || (!o.useIntermediates && depthExists)) skipDepthMap = true;
+    if (!o.enableFusion || (!o.useIntermediates && fusionExists)) skipFusion = true;
+
+    return true;
 }
 
 void FS::setOptions(const Options &opt)
@@ -94,6 +103,16 @@ void FS::setOptions(const Options &opt)
         o.methodDepth = "MultiScale";
         o.methodFuse = "Simple";
     }
+
+    // Test tenengrad focus depthmap
+    if (o.method == "Ten") {
+        o.enableAlign = true;
+        o.enableFocusMaps = false;
+        o.enableDepthMap = true;
+        o.enableFusion = false;
+        o.methodDepth = "Tenengrad";
+        o.methodFuse = "Simple";
+    }
 }
 
 void FS::status(const QString &msg)
@@ -115,10 +134,19 @@ bool FS::prepareFolders()
         return false;
     }
 
+    alignFolder      = groupRoot + "/align";
+    focusFolder      = groupRoot + "/focus";
+    depthFolder      = groupRoot + "/depth";
+    fusionFolder     = groupRoot + "/fusion";
+    backgroundFolder = groupRoot + "/background";
+    artifactsFolder  = groupRoot + "/artifacts";
+
     dir.mkpath(alignFolder);
     dir.mkpath(focusFolder);
     dir.mkpath(depthFolder);
     dir.mkpath(fusionFolder);
+    dir.mkpath(backgroundFolder);
+    dir.mkpath(artifactsFolder);
 
     return true;
 }
@@ -144,9 +172,9 @@ void FS::updateIntermediateStatus()
     if (G::FSLog) G::log(srcFun);
 
     // ALIGN
-    alignedColorPaths.clear();
-    alignedGrayPaths.clear();
     QString path;
+    /* The inputPaths are the source images. Build the list of aligned paths
+       and check if they already exist */
     for (const QString &src : inputPaths) {
         QFileInfo fi(src);
         QString base = fi.completeBaseName();
@@ -158,18 +186,14 @@ void FS::updateIntermediateStatus()
         alignedGrayPaths.push_back(path);
         if (!QFileInfo::exists(path)) alignExists = false;
     }
-    // update memory
+    // if aligned images already exist update cached align Mat (grayscale and color)
     if (alignExists && o.useCache) {
-        progressTotal += slices * 2;
-        alignedColorSlices.clear();
-        alignedGraySlices.clear();
+        alignedColorSlices.resize(slices);
+        alignedGraySlices.resize(slices);
         int i = 0;
         for (const QString &f : alignedColorPaths) {
             cv::Mat img = cv::imread(f.toStdString(), cv::IMREAD_COLOR);
             if (img.empty()) continue;
-            // cv::Mat g32;
-            // img.convertTo(g32, CV_16UC3, 1.0 / 255.0);
-            // alignedColorSlices.push_back(g32);
             alignedColorSlices.push_back(img);
             incrementProgress();
             QString msg = "alignedColorSlices " + QString::number(i++);
@@ -179,9 +203,6 @@ void FS::updateIntermediateStatus()
         for (const QString &f : alignedGrayPaths) {
             cv::Mat img = cv::imread(f.toStdString(), cv::IMREAD_GRAYSCALE);
             if (img.empty()) continue;
-            // cv::Mat g32;
-            // img.convertTo(g32, CV_8U, 1.0 / 255.0);
-            // alignedGraySlices.push_back(g32);
             alignedGraySlices.push_back(img);
             incrementProgress();
             QString msg = "alignedGraySlices " + QString::number(i++);
@@ -232,30 +253,6 @@ void FS::updateIntermediateStatus()
         lastFusedPath = dir.absoluteFilePath(files.last());
         fusionExists = true;
     }
-}
-
-// setParameters() — checks for existing outputs
-bool FS::setParameters()
-/*
-    - Determine which stages can be skipped based on existing outputs.
-    - If keepIntermediates == false, do not skip based on files and remove
-      stale intermediates.
-*/
-{
-    skipAlign     = false;
-    skipFocusMaps = false;
-    skipDepthMap  = false;
-    skipFusion    = false;
-    skipArtifacts = false;
-
-    updateIntermediateStatus();
-
-    if (!o.enableAlign || (!o.useIntermediates && alignExists)) skipAlign = true;
-    if (!o.enableFocusMaps || (!o.useIntermediates && focusExists)) skipFocusMaps = true;
-    if (!o.enableDepthMap || (!o.useIntermediates && depthExists)) skipDepthMap = true;
-    if (!o.enableFusion || (!o.useIntermediates && fusionExists)) skipFusion = true;
-
-    return true;
 }
 
 void FS::setAlignedColorPaths()
@@ -317,13 +314,13 @@ void FS::setTotalProgress()
         int slices = g.count();
         if (slices < 2) continue;
         if (o.enableAlign && !skipAlign)
-            progressTotal += slices * 2;
+            progressTotal += slices * 2 - 1;
         if (o.enableFocusMaps && !skipFocusMaps)
             progressTotal += slices;
         if (o.enableDepthMap && !skipDepthMap)
             progressTotal += slices * 1;
         if (o.enableFusion && !skipFusion)
-            progressTotal += (slices * 2) + 2;
+            progressTotal += slices + 4;
         if (o.enableBackgroundMask)
             progressTotal += slices;
     }
@@ -463,9 +460,13 @@ bool FS::run()
     QString srcFun = "FS::run";
 
     setTotalProgress();
+    QString msg = "progressTotal = " + QString::number(progressTotal);
+    if (G::FSLog) G::log(srcFun, msg);
+
 
     int groupCounter = 0;
     for (const QStringList &g : groups) {
+
         slices = g.count();
         if (slices < 2) {
             groupCounter++;
@@ -476,19 +477,10 @@ bool FS::run()
         status(msg);
         if (G::FSLog) G::log(srcFun, msg);
 
-
-        initializeGroup(groupCounter++);
-
         QElapsedTimer t;
         t.start();
 
-        // Create stage folders
-        if (!prepareFolders())
-            return false;
-
-        // Decide which stages to skip
-        if (!setParameters())
-            return false;
+        if (!initializeGroup(groupCounter++)) return false;
 
         // RUN ALIGN
         if (o.enableAlign && !skipAlign)
@@ -551,7 +543,7 @@ bool FS::run()
         }
 
         // SAVE
-        saveFused(rootFolderPath);
+        if (o.enableFusion) saveFused(rootFolderPath);
 
         // STATS
         QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
@@ -600,6 +592,9 @@ bool FS::runAlign()
     if (G::FSLog) G::log(srcFun, "Starting alignment…");
     status("Aligning input images");
 
+    // Already aligned and cached?
+    if (!alignedGraySlices.empty() && !alignedColorSlices.empty()) return true;
+
     if (inputPaths.isEmpty())
     {
         status("No input images to align.");
@@ -614,14 +609,11 @@ bool FS::runAlign()
         return false;
     }
 
-    // We're good to go
-    if (alignExists && o.useCache) return true;
-
     // Resize cache (done in updateIntermediateStatus)
     alignedColorSlices.resize(n);
     alignedGraySlices.resize(n);
 
-    // Just cache if useCache = true and alignExists
+    // Just cache if o.useCache = true and alignExists
     if (alignExists && o.useCache) {
         for (quint32 i = 0; i < n; ++i) {
             alignedGraySlices[i] = cv::imread(
@@ -652,10 +644,16 @@ bool FS::runAlign()
                 return false;
             }
 
-            if (G::FSLog) G::log(srcFun, "Load image " + QString::number(i));
+            QString msg = "Load image " + QString::number(i);
+            status(msg);
+            if (G::FSLog) G::log(srcFun, msg);
             incrementProgress();
         }
     }
+
+    // Resize cache
+    alignedColorSlices.resize(n);
+    alignedGraySlices.resize(n);
 
     // Initalize FSAlign
     using namespace FSAlign;
@@ -739,13 +737,14 @@ bool FS::runAlign()
             alignedColorSlices[i] = alignedColorMat.clone();
             alignedGraySlices[i]  = alignedGrayMat.clone();
 
-            msg = "Write outputs";
+            msg = "Cached aligned slice " + QString::number(i);
             if (G::FSLog) G::log(srcFun, msg);
             incrementProgress();
         }
     }
 
     // incrementProgress();
+    alignExists = true;
     status("Alignment complete.");
 
     // QString timeToFuse = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
@@ -824,17 +823,15 @@ bool FS::runDepthMap()
 
     // Map FS::Options.method to FSDepth method
     dopt.method = o.methodDepth;
+    dopt.keep = o.keepDepthMap;
+    dopt.saveWaveletDebug = true;
+    dopt.preview = o.previewDepthMap;
     if (o.method == "MultiScale") {
         dopt.alignFolder = alignFolder;
-        dopt.preview = o.previewDepthMap;
-        dopt.keep = o.keepDepthMap;
-        dopt.saveWaveletDebug = true;       // per your "Save wavelet debug = yes"
     }
     // dopt.method = "Simple"
     else {
         dopt.alignFolder.clear();
-        dopt.preview = o.previewDepthMap;
-        dopt.saveWaveletDebug = true;
     }
 
     dopt.numThreads = 0;  // (reserved, not used inside yet)
@@ -887,7 +884,6 @@ bool FS::runFusion()
 /*
     - Load the aligned grayscale and color images
       (prefer in-memory Mats from runAlign, fall back to disk if needed)
-    - REQUIRE a depth map from FSDepth (depthIndex16Mat)
     - Run FSFusion::fuseStack using the selected method
     - Save fused image
 */
@@ -1440,6 +1436,20 @@ bool FS::runArtifact()
 
     emit updateStatus(false, "Artifact detection complete", srcFun);
     return true;
+}
+
+bool FS::runWaveletPMax()
+{
+/* slice by slice algorithm:
+    for each slice
+        - align (0 is special case) return graySlice, colorSlice
+        - merge slice - update mergedWavelet
+        - build color map
+    next slice
+    - invert mergedWavelet
+    - apply color map
+    - crop back to original
+*/
 }
 
 bool FS::saveFused(QString folderPath)

@@ -220,12 +220,6 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     if (N == 0 || N != static_cast<int>(colorImgs.size()))
         return false;
 
-    // if (depthIndex16.empty() || depthIndex16.type() != CV_16U)
-    // {
-    //     if (G::FSLog) G::log(srcFun, "Depth index missing or wrong type");
-    //     return false;
-    // }
-
     // Validate sizes and types
     const cv::Size orig = grayImgs[0].size();
     for (int i = 0; i < N; ++i)
@@ -235,12 +229,6 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
         if (grayImgs[i].size() != orig || colorImgs[i].size() != orig)
             return false;
     }
-
-    // if (depthIndex16.size() != orig)
-    // {
-    //     if (G::FSLog) G::log(srcFun, "Depth index size mismatch vs input images");
-    //     return false;
-    // }
 
     // --------------------------------------------------------------------
     // 0. Pad grayscale + color images BEFORE processing (wavelet-friendly)
@@ -287,14 +275,12 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     if (progressCallback) progressCallback();
 
     cv::Mat mergedWavelet;
-    cv::Mat dummyDepthIndex16;
 
     if (!FSMerge::merge(wavelets,
-                              opt.consistency,
-                              abortFlag,
-                              mergedWavelet,
-                              depthIndex16))
-                              // dummyDepthIndex16))
+                        opt.consistency,
+                        abortFlag,
+                        mergedWavelet,
+                        depthIndex16))
     {
         if (G::FSLog) G::log(srcFun, "FSMerge::merge failed");
         return false;

@@ -235,8 +235,9 @@ void MW::generateFocusStack(const QStringList paths,
     // ----------- End section when pipeline is finished -----------
 
     // if (method.isEmpty() || method == "Default") method = "PMax";
-    // method = "PMax1";       // align > fusePMax
-    method = "PMax2";       // align > focus > depth > fusePMax
+    method = "PMax1";       // align > fusePMax
+    // method = "PMax2";       // align > focus > depth > fusePMax
+    // method = "Ten";            // align > depth (Tenengrad focus)
 
     // Options
     // clean (send all project folders to the trash)
