@@ -144,8 +144,8 @@ Behavior:
     •	Stores padded color, padded gray, validArea, and sizes.
 
 Key idea:
-Alignment always operates on padded 8-bit grayscale, regardless of input
-format.
+    Alignment always operates on padded 8-bit grayscale, regardless of input
+    format.
 */
 Image load(const std::string &filename)
 {

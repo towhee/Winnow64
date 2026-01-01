@@ -32,6 +32,11 @@ bool run(const QString    &alignFolder,
          StatusCallback    statusCb,
          std::vector<cv::Mat> *focusMapsOut = nullptr);
 
+bool runTenengrad(const cv::Mat &alignedColorSlice,
+                  cv::Mat &result,
+                  float radius = 0,
+                  float thresholdEnergy = 0);
+
 } // namespace FSFocus
 
 #endif // FSFOCUS_H

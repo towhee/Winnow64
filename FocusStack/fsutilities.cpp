@@ -479,9 +479,10 @@ bool writePngWithTitle(const QString& pngPath,
 
     const QString t = QFileInfo(pngPath).fileName();
 
-    // use this
     if (!writeMeta) {
+        qDebug() << srcFun << "1";
         cv::imwrite(pngPath.toStdString(), img);
+        qDebug() << srcFun << "2";
         return true;
     }
 
@@ -577,6 +578,7 @@ bool heatMapPerSlice(const QString &pngPath,
                               int sliceCount,
                               int colormap)
 {
+    QString srcFun = "FSUtilities::heatMapPerSlice";
     CV_Assert(!depthIndex16.empty());
     CV_Assert(depthIndex16.type() == CV_16U);
     CV_Assert(sliceCount >= 2);
@@ -635,6 +637,8 @@ bool heatMapPerSlice(const QString &pngPath,
 
     cv::Mat heatBGR;
     cv::cvtColor(hsv, heatBGR, cv::COLOR_HSV2BGR);
+
+    qDebug() << srcFun << "1";
 
     return writePngWithTitle(pngPath, heatBGR);
 }

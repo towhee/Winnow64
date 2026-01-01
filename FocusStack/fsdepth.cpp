@@ -9,6 +9,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "FocusStack/fsfocus.h"
 #include "FocusStack/fsfusionwavelet.h"
 #include "FocusStack/fsmerge.h"
 #include "FocusStack/FSUtilities.h"
@@ -292,6 +293,120 @@ bool runSimple(const QString &focusFolder,
         }
     }
     if (statusCb) statusCb("FSDepth(Simple): Depth map computation complete.");
+    return true;
+}
+
+bool runTenengrad(
+    const std::vector<cv::Mat> &graySlices,      // CV_8U or CV_32F
+    const QString              &depthFolder,
+    const FSDepth::Options     &opt,
+    std::atomic_bool           *abortFlag,
+    FSDepth::ProgressCallback   progressCb,
+    FSDepth::StatusCallback     statusCb,
+    cv::Mat                    *depthIndex16Out)
+{
+    const QString srcFun = "FSDepth::runTenengrad";
+    if (G::FSLog) G::log(srcFun);
+
+    if (graySlices.empty())
+    {
+        if (statusCb) statusCb("FSDepth(Tenengrad): No gray slices provided.");
+        return false;
+    }
+
+    const int slices = int(graySlices.size());
+    const cv::Size sz = graySlices.front().size();
+
+    // check validity
+    for (int i = 0; i < slices; ++i)
+    {
+        if (graySlices[i].empty() || graySlices[i].size() != sz)
+        {
+            if (statusCb) statusCb("FSDepth(Tenengrad): Slice size mismatch.");
+            return false;
+        }
+    }
+
+    // Parameters (start simple; tune later)
+    const float r = 2.0f;    // blur radius
+    const float t = 6000.0f;    // threshold ENERGY (before sqrt). 0 disables.
+
+    std::vector<cv::Mat> focus(slices);
+
+    if (statusCb) statusCb(QString("FSDepth(Tenengrad): computing %1 focus maps...")
+                     .arg(slices));
+
+    for (int i = 0; i < slices; ++i)
+    {
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+        QString msg = "Tenengrad focus for slice " + QString::number(i+1);
+        if (G::FSLog) G::log(srcFun, msg);
+
+        // Ensure grayscale is single-channel (caller says graySlices, but be defensive)
+        if (!FSFocus::runTenengrad(graySlices[i], focus[i], r, t))
+            return false;
+
+        if (progressCb) progressCb();
+    }
+
+    // Build depthIndex16 = argmax focus across slices.
+    cv::Mat bestVal32(sz, CV_32F, cv::Scalar(-1.0f));
+    cv::Mat depthIndex16(sz, CV_16U, cv::Scalar(0));
+
+    for (int i = 0; i < slices; ++i)
+    {
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+        const cv::Mat &fm = focus[i];
+        CV_Assert(fm.type() == CV_32F && fm.size() == sz);
+
+        QString msg = "Tenengrad max for slice " + QString::number(i+1);
+        if (G::FSLog) G::log(srcFun, msg);
+
+        for (int y = 0; y < sz.height; ++y)
+        {
+            const float *fRow = fm.ptr<float>(y);
+            float       *bRow = bestVal32.ptr<float>(y);
+            uint16_t    *dRow = depthIndex16.ptr<uint16_t>(y);
+
+            for (int x = 0; x < sz.width; ++x)
+            {
+                float v = fRow[x];
+                if (v > bRow[x])
+                {
+                    bRow[x] = v;
+                    dRow[x] = static_cast<uint16_t>(i);
+                }
+            }
+        }
+    }
+
+    // Optional mild cleanup (keeps “source slice per pixel” intent)
+    if (opt.preview) {
+        cv::medianBlur(depthIndex16, depthIndex16, 3);
+    }
+
+    if (depthIndex16Out) {
+        depthIndex16.copyTo(*depthIndex16Out);
+    }
+
+    // Write only what you asked for: full-size heatmap preview (no pyramid stuff)
+    QDir outDir(depthFolder);
+    if (!outDir.exists()) outDir.mkpath(".");
+
+    if (opt.preview)
+    {
+        QString fName = "depth_heatmap_tenengrad.png";
+        const QString heatPath = outDir.absoluteFilePath(fName);
+        if (!FSUtilities::heatMapPerSlice(heatPath,
+                                          depthIndex16,
+                                          slices,
+                                          cv::COLORMAP_JET))
+            return false;
+    }
+
+    if (statusCb) statusCb("FSDepth(Tenengrad): complete.");
     return true;
 }
 
@@ -583,6 +698,7 @@ bool runFromGraySlices(
         }
     }
 
+    if (opt.method == "MultiScale")
     return runMultiScale(
         graySlices,
         depthFolder,
@@ -592,6 +708,19 @@ bool runFromGraySlices(
         statusCb,
         depthIndex16Out
         );
+
+    if (opt.method == "Tenengrad")
+        return runTenengrad(
+            graySlices,
+            depthFolder,
+            opt,
+            abortFlag,
+            progressCb,
+            statusCb,
+            depthIndex16Out
+            );
+
+    return false;
 }
 
 } // namespace FSDepth

@@ -5,6 +5,10 @@
 #include <opencv2/video.hpp>
 #include <cmath>
 
+// SliceBySlice
+#include "Main/global.h"
+#include "fsloader.h"
+
 /*
 FSAlign implements the image alignment stage of the focus stacking pipeline.
 Its responsibility is to geometrically align each slice to a reference image
@@ -556,6 +560,72 @@ void applyContrastWhiteBalance(cv::Mat &img,
                                const Result &r)
 {
     apply_contrast_whitebalance_internal(img, r.contrast, r.whitebalance);
+}
+
+bool alignSlice(
+    FSLoader::Image             prevImage,
+    FSLoader::Image             currImage,
+    Result                      prevGlobal,
+    Result                      currGlobal,
+    cv::Mat                     alignedGraySlice,
+    cv::Mat                     alignedColorSlice,
+    const Options              &opt,
+    std::atomic_bool           *abortFlag,
+    StatusCallback              status,
+    ProgressCallback            progressCallback
+    )
+{
+    QString srcFun = "FSAlign::alignSlice";
+    if (abort) return false;
+
+    QString msg = QString("Aligning slice " + QString::number(i));
+    if (G::FSLog) G::log(srcFun, msg);
+    status(msg);
+
+    Result local;
+
+    try {
+        local = computeLocal(
+            prevImage.gray,
+            prevImage.color,
+            currImage.gray,
+            currImage.color,
+            currImage.validArea,
+            opt
+            );
+    }
+    catch (const std::exception &e)
+    {
+        QString msg = "Alignment failed for ...";
+        status(msg);
+        return false;
+    }
+    if (G::FSLog) G::log(srcFun, "computeLocal");
+
+    // Stack transforms
+    currGlobal = accumulate(
+        prevGlobal,
+        local,
+        currImage.validArea
+        );
+
+    // Apply transform to color + gray
+    cv::Mat alignedColorMat, alignedGrayMat;
+    if (G::FSLog) G::log(srcFun, "cv::Mat alignedColor, alignedGray");
+    applyTransform(currImage.color, currGlobal.transform, alignedColorMat);
+    applyTransform(currImage.gray,  currGlobal.transform, alignedGrayMat);
+    if (G::FSLog) G::log(srcFun, "applyTransform alignedGray");
+
+    // Write outputs
+    // if (o.keepAlign)
+    // {
+    //     cv::imwrite(alignedColorPaths[i].toStdString(), alignedColorMat);
+    //     cv::imwrite(alignedGrayPaths[i].toStdString(),  alignedGrayMat);
+    // }
+
+    // Cache in memory for fast fusion
+    alignedColorSlices[i] = alignedColorMat.clone();
+    alignedGraySlices[i]  = alignedGrayMat.clone();
 }
 
 } // namespace FSAlign

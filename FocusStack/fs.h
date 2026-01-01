@@ -74,7 +74,6 @@ public:
 
     // Input configuration
     void initialize(QString rootFolderPath);
-    void initializeGroup(int group);            // source groups
     void setOptions(const Options &opt);
 
     void diagnostics();
@@ -102,9 +101,9 @@ private:
     // std::atomic_bool abortRequested;
     std::atomic_bool abort{false};
 
+    bool initializeGroup(int group);            // source groups
     bool prepareFolders();
     void updateIntermediateStatus();
-    bool setParameters();
     bool validAlignMatsAvailable(int count) const;
     void previewOverview(cv::Mat &fusedColor8Mat);
     QImage thumbnail(const cv::Mat &mat);
@@ -116,6 +115,7 @@ private:
     bool runFusion();
     bool runBackground();
     bool runArtifact();
+    bool runWaveletPMax();
     bool saveFused(QString folderPath);
 
     // helpers for UI

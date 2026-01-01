@@ -375,5 +375,84 @@ bool run(const QString &alignFolder,
     return true;
 }
 
+bool runTenengrad(const cv::Mat &input, //alignedColorSlice,
+                  cv::Mat &result,
+                  float radius,
+                  float thresholdEnergy)
+{
+    if (input.empty()) return false;
+
+    cv::Mat gray;
+    if (input.channels() == 1)
+    {
+        gray = input;
+    }
+    else if (input.channels() == 3)
+    {
+        cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
+    }
+    else if (input.channels() == 4)
+    {
+        cv::cvtColor(input, gray, cv::COLOR_BGRA2GRAY);
+    }
+    else
+    {
+        return false;
+    }
+
+    // Ensure we have a usable depth for Sobel.
+    // Petteri uses 8-bit input, Sobel outputs 32F.
+    cv::Mat g;
+    if (gray.depth() == CV_8U || gray.depth() == CV_32F)
+    {
+        g = gray;
+    }
+    else if (gray.depth() == CV_16U)
+    {
+        // If you ever feed 16U gray here, scale to 8U.
+        gray.convertTo(g, CV_8U, 1.0 / 256.0);
+    }
+    else
+    {
+        gray.convertTo(g, CV_32F);
+    }
+
+    const int rows = g.rows;
+    const int cols = g.cols;
+
+    cv::Mat sobel(rows, cols, CV_32F);
+    cv::Mat magnitude(rows, cols, CV_32F, cv::Scalar(0));
+
+    // dx
+    cv::Sobel(g, sobel, CV_32F, 1, 0, 3, 1.0, 0.0, cv::BORDER_DEFAULT);
+    cv::accumulateSquare(sobel, magnitude);
+
+    // dy
+    cv::Sobel(g, sobel, CV_32F, 0, 1, 3, 1.0, 0.0, cv::BORDER_DEFAULT);
+    cv::accumulateSquare(sobel, magnitude);
+
+    // Threshold in ENERGY space (matches Petteri: magnitude < m_threshold).
+    if (thresholdEnergy > 0.0f)
+    {
+        magnitude.setTo(0.0f, magnitude < thresholdEnergy);
+    }
+
+    if (radius > 0.0f)
+    {
+        int blurwindow = int(radius * 4.0f) + 1;
+        // make odd and >=3
+        if ((blurwindow % 2) == 0) blurwindow += 1;
+        blurwindow = std::max(3, blurwindow);
+
+        cv::GaussianBlur(magnitude, magnitude,
+                         cv::Size(blurwindow, blurwindow),
+                         radius, radius, cv::BORDER_REFLECT);
+    }
+
+    cv::sqrt(magnitude, result);   // CV_32F
+
+    return true;
+}
+
 } // namespace FSFocus
 

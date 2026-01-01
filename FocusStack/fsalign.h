@@ -3,6 +3,8 @@
 
 #include <opencv2/core.hpp>
 
+#include <QString>
+
 namespace FSAlign {
 
 struct Options
@@ -85,6 +87,17 @@ void applyContrastWhiteBalance(cv::Mat &img,
 
 // Convenience: identity global result with given validArea.
 Result makeIdentity(const cv::Rect &validArea);
+
+using ProgressCallback = std::function<void()>;
+using StatusCallback   = std::function<void(const QString &message)>;
+
+
+bool alignSlice(
+        const Options              &opt,
+        std::atomic_bool           *abortFlag,
+        StatusCallback              statusCb,
+        ProgressCallback            progressCallback
+        );
 
 } // namespace FSAlign
 

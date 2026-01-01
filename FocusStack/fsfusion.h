@@ -58,7 +58,8 @@ public:
                           cv::Mat                    &outputColor8,
                           std::atomic_bool           *abortFlag,
                           StatusCallback              statusCb,
-                          ProgressCallback            progressCallback);
+                          ProgressCallback            progressCallback
+                          );
 };
 
 #endif // FSFUSION_H

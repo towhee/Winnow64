@@ -242,8 +242,6 @@ bool merge(const std::vector<cv::Mat> &wavelets,
            cv::Mat &depthIndex16)
 {
     QString srcFun = "FSMerge::merge";
-    // qDebug() << "merge: abortFlag =" << abortFlag;
-    // qDebug() << "merge: *abortFlag =" << *abortFlag;
 
     if (wavelets.empty()) {
         QString msg = "WARNING: FSMerge: wavelets are empty.";
