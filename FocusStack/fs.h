@@ -36,10 +36,10 @@ public:
         QString methodDepth     = "";
         QString methodFuse      = "";
 
-
+        bool isStream           = false;
         bool isLocal            = true;
 
-        bool useIntermediates   = true;
+        bool useIntermediates   = false;
         bool useCache           = true;     // use disk if false
         bool enableOpenCL       = true;
 
@@ -73,7 +73,7 @@ public:
     QList<QStringList> groups;
 
     // Input configuration
-    void initialize(QString rootFolderPath);
+    void initialize(QString dstFolderPath, QString dstFusedPath);
     void setOptions(const Options &opt);
 
     void diagnostics();
@@ -115,25 +115,26 @@ private:
     bool runFusion();
     bool runBackground();
     bool runArtifact();
-    bool runWaveletPMax();
+    bool runStreamWaveletPMax();
     bool saveFused(QString folderPath);
 
     // helpers for UI
     void status(const QString &msg);
 
     QStringList inputPaths;
-    QString     groupRoot;
-    QString     rootFolderPath;      // original source for input images (parent if lightroom)
+    QString     grpFolderPath;
+    QString     dstFolderPath; // original source for input images (parent if lightroom)
+    QString     fusedBase; // assigned in MW:generateFocusStack
     int slices = 0;
     int lastSlice = 0;
 
     // Stage folders (automatically set from projectRoot)
-    QString alignFolder;
-    QString focusFolder;
-    QString depthFolder;
-    QString backgroundFolder;
-    QString fusionFolder;
-    QString artifactsFolder;
+    QString alignFolderPath;
+    QString focusFolderPath;
+    QString depthFolderPath;
+    QString backgroundFolderPath;
+    QString fusionFolderPath;
+    QString artifactsFolderPath;
 
     Options o;
 

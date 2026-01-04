@@ -1,10 +1,12 @@
 #include "FSLoader.h"
-#include <QDebug>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <cmath>
 
+#include <QDebug>
 #include <QString>
+
+#include "Main/global.h"
 
 /*
 FSLoader is responsible for loading images and preparing them for wavelet-
@@ -153,7 +155,6 @@ Image load(const std::string &filename)
     Image out;
 
     // Load any depth, any color.
-    qDebug() << srcFun << "1";
     cv::Mat raw = cv::imread(filename, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
     if (raw.empty()) {
         qDebug() << srcFun << "2";
@@ -162,7 +163,6 @@ Image load(const std::string &filename)
 
     out.origSize = raw.size();
     out.is16bit  = (raw.depth() == CV_16U);
-    qDebug() << srcFun << "3";
 
     // Color: keep as-is (8- or 16-bit)
     cv::Mat paddedColor;
@@ -200,6 +200,9 @@ Image load(const std::string &filename)
     out.validArea = padToWaveletSize(gray16, paddedGray, ex2, ey2);
 
     out.gray = paddedGray;
+
+    QString msg = "Loaded " + QString::fromStdString(filename);
+    if (G::FSLog) G::log(srcFun, msg);
 
     return out;
 }

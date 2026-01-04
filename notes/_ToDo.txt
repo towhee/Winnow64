@@ -6,6 +6,7 @@ WHAT'S NEW
 - Selections are now cleared after a filtration change
 
 BUGS / TO DO
+- Fused 16 bit out
 - FS inputSize vs waveletSize
 - Peterri background
 - Delete folder crash

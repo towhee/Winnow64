@@ -203,7 +203,24 @@ void MW::generateFocusStack(const QStringList paths,
                             const QString source)
 {
 /*
-    Called locally from MW::focusStack()
+    Called locally from MW::focusStackFromSelection()
+    Called remotely from MW::handleStartupArgs() from Lightroom
+
+    Folders:
+        Lightroom folder (only if remote)
+            srcFolder (focus stack input tiffs)
+                grpFolder ie 2025-11-07_0078_StreamPMax
+                    alignFolder
+                    focusFolder
+                    depthFolder
+                    fusionFolder
+                    backgroundFolder
+                    artifactsFolder
+
+    srcFolder contains the input focus stack images
+    dstFolder is where to save the fused result image
+        - if local, use srcFolder
+        - if remote, use srcFolder parent = Lightroom folder
 */
     QString srcFun = "MW::generateFocusStack";
     if (G::isLogger) G::log(srcFun, "paths " + method);
@@ -211,7 +228,13 @@ void MW::generateFocusStack(const QStringList paths,
     G::isRunningFocusStack = true;
 
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
-    isLocal = false;    // temp for debugging
+    // isLocal = false;    // temp for debugging
+
+    // if (method.isEmpty() || method == "Default") method = "PMax";
+    method = "StreamPMax";       // align > fusePMax
+    // method = "PMax1";       // align > fusePMax
+    // method = "PMax2";       // align > focus > depth > fusePMax
+    // method = "Ten";            // align > depth (Tenengrad focus)
 
     // ----------- Req'd when pipeline is finished -----------
 
@@ -219,25 +242,21 @@ void MW::generateFocusStack(const QStringList paths,
     QFileInfo info(paths.first());
     const QString srcFolder = info.absolutePath();
     // Source images location (ie when sourced from lightroom)
-    QString root = srcFolder;
-    if (!isLocal) {
+    QString dstFolderPath;
+    if (isLocal) dstFolderPath = srcFolder;
+    else {
         // get parent of srcFolder
         QFileInfo fi(srcFolder);
-        root = fi.dir().absolutePath();
+        dstFolderPath = fi.dir().absolutePath();
     }
 
-    // fusedPath: must be the same as in FS
+    // fusedPath: must be the same as in FS::saveFused
     QFileInfo lastFi(paths.last());
-    QString base = lastFi.completeBaseName();
+    QString fusedBase = lastFi.completeBaseName() + "_FocusStack_" + method;
     QString ext  = "." + lastFi.suffix();
-    QString rootFusedPath = root + "/" + base + "_FocusStack" + ext;
+    QString dstLastFusedPath = dstFolderPath + "/" + fusedBase + ext;
 
     // ----------- End section when pipeline is finished -----------
-
-    // if (method.isEmpty() || method == "Default") method = "PMax";
-    method = "PMax1";       // align > fusePMax
-    // method = "PMax2";       // align > focus > depth > fusePMax
-    // method = "Ten";            // align > depth (Tenengrad focus)
 
     // Options
     // clean (send all project folders to the trash)
@@ -248,9 +267,9 @@ void MW::generateFocusStack(const QStringList paths,
     FS::Options opt;
     {
         opt.method                  = method;
-        opt.isLocal                 = false;    // pretend remote for testing
+        opt.isLocal                 = isLocal;    // pretend remote for testing
 
-        opt.useIntermediates        = true;
+        opt.useIntermediates        = false;
         opt.useCache                = true;
         opt.enableOpenCL            = true;
 
@@ -289,7 +308,7 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Initialize pipeline before we run
     pipeline->setOptions(opt);
-    pipeline->initialize(root);
+    pipeline->initialize(dstFolderPath, fusedBase);
     // Aggregate input paths into focus groups
     groupFocusStacks(pipeline->groups, paths);
 
@@ -325,17 +344,15 @@ void MW::generateFocusStack(const QStringList paths,
 
         // If aborted...
 
-        if (!rootFusedPath.isEmpty())
+        if (!dstLastFusedPath.isEmpty())
         {
             // update datamodel
             if (isLocal) {
-                dm->insert(rootFusedPath);
+                dm->insert(dstLastFusedPath);
                 // select fused image
-                sel->select(rootFusedPath);
+                sel->select(dstLastFusedPath);
             }
-            else folderAndFileSelectionChange(rootFusedPath, srcFun);
-
-            // waitUntilMetadataLoaded(5000, srcFun);
+            else folderAndFileSelectionChange(dstLastFusedPath, srcFun);
         }
         G::isRunningFocusStack = false;
     });

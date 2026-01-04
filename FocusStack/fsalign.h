@@ -4,6 +4,7 @@
 #include <opencv2/core.hpp>
 
 #include <QString>
+#include "fsloader.h"
 
 namespace FSAlign {
 
@@ -91,13 +92,37 @@ Result makeIdentity(const cv::Rect &validArea);
 using ProgressCallback = std::function<void()>;
 using StatusCallback   = std::function<void(const QString &message)>;
 
+// struct AlignSliceArgs {
+//     FSLoader::Image            &prevImage;
+//     FSLoader::Image            &currImage;
+//     Result                     &prevGlobal;
+//     Result                     &currGlobal;
+//     cv::Mat                    &alignedGraySlice;
+//     cv::Mat                    &alignedColorSlice;
+//     const Options              &opt;
+//     std::atomic_bool           *abortFlag;
+//     StatusCallback              status;
+//     ProgressCallback            progressCallback;
 
-bool alignSlice(
+// };
+
+class Align
+{
+public:
+    bool alignSlice(
+        int                         slice,
+        FSLoader::Image            &prevImage,
+        FSLoader::Image            &currImage,
+        Result                     &prevGlobal,
+        Result                     &currGlobal,
+        cv::Mat                    &alignedGraySlice,
+        cv::Mat                    &alignedColorSlice,
         const Options              &opt,
         std::atomic_bool           *abortFlag,
-        StatusCallback              statusCb,
+        StatusCallback              status,
         ProgressCallback            progressCallback
         );
+};
 
 } // namespace FSAlign
 
