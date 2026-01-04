@@ -1849,13 +1849,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         }
     }
 
-    // // folder does not exist
-    // if (!currRootDir.exists()) {
-    //     if (G::isLogger || G::isFlowLogger) G::log(fun,
-    //         "Folder does not exist so exit");
-    //     refreshFolders();
-    //     return;
-    // }
+    /* folder does not exist
+    if (!currRootDir.exists()) {
+        if (G::isLogger || G::isFlowLogger) G::log(fun,
+            "Folder does not exist so exit");
+        refreshFolders();
+        return;
+    }
+    //*/
+
+    // if current is not first and !G::allMetadataLoaded
+    // waitUntilMetadataLoaded(5000, fun);
 
     // if new folder and 1st file is a video and mode == "Table"
     if (G::mode == "Table" && centralLayout->currentIndex() != TableTab) {

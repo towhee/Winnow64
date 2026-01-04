@@ -7,6 +7,9 @@
 
 #include <QString>
 
+#include "FSMerge.h"
+#include "FSFusionReassign.h"
+
 class FSFusion
 {
 public:
@@ -51,6 +54,7 @@ public:
       - FSFusion no longer computes or exposes any "canonical" depth map.
         The only depth map in the system is the one produced by FSDepth.
     */
+
     static bool fuseStack(const std::vector<cv::Mat> &grayImgs,
                           const std::vector<cv::Mat> &colorImgs,
                           const Options              &opt,
@@ -60,6 +64,42 @@ public:
                           StatusCallback              statusCb,
                           ProgressCallback            progressCallback
                           );
-};
+
+
+    // StreamPMax pipeline
+    // Merge
+    FSMerge::StreamState mergeState;
+    cv::Size orig;
+    cv::Mat wavelet;
+    cv::Mat mergedWavelet;
+    cv::Size waveletSize;
+    // Color reassign
+    FSFusionReassign::ColorMapBuilder colorBuilder;
+    std::vector<FSFusionReassign::ColorEntry> colorEntries;
+    std::vector<uint8_t> counts;
+    cv::Size ps;    // padded size
+    cv::Mat fusedGray8;
+
+    bool streamPMaxSlice(
+        int slice,
+        const cv::Mat &grayImg,
+        const cv::Mat &colorImg,
+        const Options &opt,
+        std::atomic_bool *abortFlag,
+        StatusCallback statusCb,
+        ProgressCallback progressCallback
+    );
+
+    bool streamPMaxFinish(
+        cv::Mat &outputColor8,
+        const Options &opt,
+        std::atomic_bool *abortFlag,
+        StatusCallback statusCallback,
+        ProgressCallback progressCallback
+    );
+
+    // end StreamPMax pipeline
+
+}; // end class FSFusion
 
 #endif // FSFUSION_H

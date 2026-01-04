@@ -89,8 +89,13 @@ NOTES / BEHAVIORAL DETAILS
 */
 
 // We reuse the levels logic from FSFusionWavelet
+
+namespace FSMerge
+{
+
 namespace
 {
+
 int levelsForSize(cv::Size size)
 {
     const int minLevels = 5;
@@ -194,7 +199,7 @@ void denoiseSubbands(cv::Mat &mergedWavelet, cv::Mat &depthIndex)
     }
 }
 
-// Neighbourhood denoise (adapted from Task_Merge::denoise_neighbours)
+// Neighbourhood denoise
 void denoiseNeighbours(cv::Mat &mergedWavelet,
                        cv::Mat &depthIndex,
                        const std::vector<cv::Mat> &wavelets)
@@ -230,10 +235,36 @@ void denoiseNeighbours(cv::Mat &mergedWavelet,
     }
 }
 
+// StreamPMax pipeline
+static bool ensureInit(StreamState &state,
+                       const cv::Size &size,
+                       int consistency,
+                       cv::Mat &mergedOut)
+{
+    state.size = size;
+    state.sliceIndex = 0;
+
+    const int rows = size.height;
+    const int cols = size.width;
+
+    state.maxAbs.create(rows, cols, CV_32F);
+    state.maxAbs.setTo(-1.0f);
+
+    state.depthIndex16.create(rows, cols, CV_16U);
+    state.depthIndex16.setTo(uint16_t(0));
+
+    mergedOut.create(rows, cols, CV_32FC2);
+    mergedOut.setTo(cv::Scalar(0, 0));
+
+    state.wavelets.clear();
+    if (consistency >= 2)
+        state.wavelets.reserve(64); // optional
+
+    return true;
+}
+
 } // anonymous namespace
 
-namespace FSMerge
-{
 
 bool merge(const std::vector<cv::Mat> &wavelets,
            int consistency,
@@ -317,6 +348,111 @@ bool merge(const std::vector<cv::Mat> &wavelets,
 
     if (G::FSLog) G::log(srcFun, "Done.");
 
+    return true;
+}
+
+// StreamPMax pipeline
+bool mergeSlice(StreamState &state,
+                const cv::Mat &wavelet,
+                const cv::Size &sizeIn,
+                int consistency,
+                std::atomic_bool *abortFlag,
+                cv::Mat &mergedOut)
+{
+    QString srcFun = "FSMerge::mergeSlice";
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    if (wavelet.empty())
+    {
+        qWarning() << "WARNING:" << srcFun << "wavelet is empty.";
+        return false;
+    }
+    if (wavelet.type() != CV_32FC2)
+    {
+        qWarning() << "WARNING:" << srcFun << "wavelet.type() != CV_32FC2";
+        return false;
+    }
+
+    cv::Size size = sizeIn;
+    if (size.width <= 0 || size.height <= 0)
+        size = wavelet.size();
+
+    if (wavelet.size() != size)
+    {
+        qWarning() << "WARNING:" << srcFun << "wavelet.size() != size";
+        return false;
+    }
+
+    // Init on first call or if size changed or output is not aligned with state
+    const bool needInit =
+        !state.initialized() ||
+        state.size != size ||
+        mergedOut.empty() ||
+        mergedOut.type() != CV_32FC2 ||
+        mergedOut.size() != size;
+
+    if (needInit)
+    {
+        if (G::FSLog) G::log(srcFun, "Initializing streaming merge state");
+        ensureInit(state, size, consistency, mergedOut);
+    }
+
+    // Cache wavelet for neighbour denoise (consistency==2)
+    // Must clone because caller reuses wavelet buffer each slice.
+    if (consistency >= 2)
+        state.wavelets.emplace_back(wavelet.clone());
+
+    // Compute |v|^2
+    cv::Mat absval(size.height, size.width, CV_32F);
+    getSqAbsval(wavelet, absval);
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // PMax: update where this slice is stronger than current max
+    cv::Mat mask = (absval > state.maxAbs);
+
+    absval.copyTo(state.maxAbs, mask);
+    wavelet.copyTo(mergedOut, mask);
+    state.depthIndex16.setTo(state.sliceIndex, mask);
+
+    ++state.sliceIndex;
+    return true;
+}
+
+// StreamPMax pipeline
+bool mergeSliceFinish(StreamState &state,
+                      int consistency,
+                      std::atomic_bool *abortFlag,
+                      cv::Mat &mergedOut,
+                      cv::Mat *depthIndex16Out)
+{
+    QString srcFun = "FSMerge::mergeSliceFinish";
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    if (!state.initialized() || mergedOut.empty() || mergedOut.type() != CV_32FC2)
+    {
+        qWarning() << "WARNING:" << srcFun << "called with empty merge state.";
+        return false;
+    }
+
+    if (consistency >= 1)
+    {
+        if (G::FSLog) G::log(srcFun, "denoiseSubbands");
+        denoiseSubbands(mergedOut, state.depthIndex16);
+    }
+
+    if (consistency >= 2)
+    {
+        if (G::FSLog) G::log(srcFun, "denoiseNeighbours");
+        denoiseNeighbours(mergedOut, state.depthIndex16, state.wavelets);
+    }
+
+    if (depthIndex16Out)
+        *depthIndex16Out = state.depthIndex16; // shallow copy OK
+
+    if (G::FSLog) G::log(srcFun, "Done.");
     return true;
 }
 

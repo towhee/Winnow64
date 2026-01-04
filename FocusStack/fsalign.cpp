@@ -7,7 +7,7 @@
 
 // SliceBySlice
 #include "Main/global.h"
-#include "fsloader.h"
+// #include "fsloader.h"
 
 /*
 FSAlign implements the image alignment stage of the focus stacking pipeline.
@@ -562,25 +562,39 @@ void applyContrastWhiteBalance(cv::Mat &img,
     apply_contrast_whitebalance_internal(img, r.contrast, r.whitebalance);
 }
 
-bool alignSlice(
-    FSLoader::Image             prevImage,
-    FSLoader::Image             currImage,
-    Result                      prevGlobal,
-    Result                      currGlobal,
-    cv::Mat                     alignedGraySlice,
-    cv::Mat                     alignedColorSlice,
-    const Options              &opt,
-    std::atomic_bool           *abortFlag,
-    StatusCallback              status,
-    ProgressCallback            progressCallback
-    )
+//-----------------------------------------------------------------------------------
+// StreamPMax pipeline
+//-----------------------------------------------------------------------------------
+
+bool Align::alignSlice(int                         slice,
+                       FSLoader::Image            &prevImage,
+                       FSLoader::Image            &currImage,
+                       Result                     &prevGlobal,
+                       Result                     &currGlobal,
+                       cv::Mat                    &alignedGraySlice,
+                       cv::Mat                    &alignedColorSlice,
+                       const Options              &opt,
+                       std::atomic_bool           *abortFlag,
+                       StatusCallback              status,
+                       ProgressCallback            progressCallback
+                       )
 {
     QString srcFun = "FSAlign::alignSlice";
-    if (abort) return false;
-
-    QString msg = QString("Aligning slice " + QString::number(i));
+    QString s = QString::number(slice);
+    QString msg = "Aligning slice " + s;
     if (G::FSLog) G::log(srcFun, msg);
-    status(msg);
+    if (status) status(msg);
+
+    // first slice is already "aligned"
+    if (prevImage.gray.empty())
+    {
+        alignedGraySlice  = currImage.gray.clone();
+        alignedColorSlice = currImage.color.clone();
+        return true;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
 
     Result local;
 
@@ -597,7 +611,7 @@ bool alignSlice(
     catch (const std::exception &e)
     {
         QString msg = "Alignment failed for ...";
-        status(msg);
+        if (status) status(msg);
         return false;
     }
     if (G::FSLog) G::log(srcFun, "computeLocal");
@@ -624,8 +638,12 @@ bool alignSlice(
     // }
 
     // Cache in memory for fast fusion
-    alignedColorSlices[i] = alignedColorMat.clone();
-    alignedGraySlices[i]  = alignedGrayMat.clone();
+    alignedColorSlice = alignedColorMat.clone();
+    alignedGraySlice  = alignedGrayMat.clone();
+
+    if (progressCallback) progressCallback();
+
+    return true;
 }
 
 } // namespace FSAlign

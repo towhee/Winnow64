@@ -2,8 +2,6 @@
 #include "Main/global.h"
 
 #include "FSFusionWavelet.h"
-#include "FSMerge.h"
-#include "FSFusionReassign.h"
 
 #include <opencv2/imgproc.hpp>
 #include <cassert>
@@ -77,11 +75,6 @@ namespace
 {
 
 using ProgressCallback = FSFusion::ProgressCallback;
-
-inline void tick(ProgressCallback cb)
-{
-    if (cb) cb();
-}
 
 /*
  * Padding helper
@@ -191,7 +184,7 @@ bool fuseSimple(const std::vector<cv::Mat> &grayImgs,
         }
     }
 
-    tick(cb);
+    if (cb) cb();
     return true;
 }
 
@@ -417,3 +410,347 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
     qWarning() << "WARNING:" << srcFun << "Invalid method =" << method;
     return false;
 }
+
+// StreamPMax pipeline
+bool FSFusion::streamPMaxSlice(int slice,
+                               const cv::Mat      &grayImg,
+                               const cv::Mat      &colorImg,
+                               const Options      &opt,
+                               std::atomic_bool   *abortFlag,
+                               StatusCallback     statusCallback,
+                               ProgressCallback   progressCallback
+                               )
+{
+    QString srcFun = "FSFusion::fusePMaxSlice";
+    QString s = QString::number(slice);
+    QString msg = "Fusing slice " + s;
+    if (G::FSLog) G::log(srcFun, "Start PMax fusion slice " + s);
+    if (statusCallback) statusCallback(msg);
+
+
+    // Validate sizes and types
+    if (grayImg.empty() || colorImg.empty()) {
+        QString msg = "Slice " + s + " grayImg.empty() || colorImg.empty()";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+    if (grayImg.size() != orig || colorImg.size() != orig) {
+        QString msg = "Slice " + s +
+                      " grayImg.size() != orig || colorImg.size() != orig";
+        qWarning() << "WARNING:" << srcFun << msg
+                   << "orig.width =" << orig.width << "grayImg.size ="
+                   << grayImg.size.dims();
+        return false;
+    }
+
+    if (slice == 0) {
+        orig = grayImg.size();
+    }
+    else if (grayImg.size() != orig) {
+        QString msg = "Slice " + s + " grayImg.size() != orig";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+    else if (colorImg.size() != orig) {
+        QString msg = "Slice " + s + " colorImg.size() != orig";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    // --------------------------------------------------------------------
+    // Pad grayscale + color images BEFORE processing (wavelet-friendly)
+    // --------------------------------------------------------------------
+    if (G::FSLog) G::log(srcFun, "Pad for wavelet");
+
+    cv::Mat grayP;
+    cv::Mat colorP;
+    cv::Size paddedSize;
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    grayP  = padForWavelet(grayImg, paddedSize);
+    colorP = padForWavelet(colorImg, paddedSize);
+
+    // Lock padded size on slice 0; enforce identical thereafter
+    if (slice == 0)
+        ps = paddedSize;
+    else if (paddedSize != ps)
+    {
+        QString msg = "Slice " + s + " paddedSize != ps";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    // Sanity Check
+    // /*
+    if (slice > 0 && paddedSize != ps)
+    {
+        QString m = QString("Sanity: slice %1 paddedSize %2x%3 != ps %4x%5")
+            .arg(slice)
+            .arg(paddedSize.width).arg(paddedSize.height)
+            .arg(ps.width).arg(ps.height);
+        if (G::FSLog) G::log(srcFun, m);
+        qWarning().noquote() << "WARNING:" << srcFun << m;
+        return false;
+    }
+    //*/
+
+    // Init builders/state on slice 0 (once)
+    if (slice == 0)
+    {
+        colorBuilder.begin(grayP.size(), /*fixedCapPerPixel=*/4);
+        mergeState.reset();
+        mergedWavelet.release();
+        wavelet.release();
+    }
+
+    // --------------------------------------------------------------------
+    // Forward wavelet per slice (grayscale only)
+    // --------------------------------------------------------------------
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    msg = "Forward wavelet slice " + s;
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    if (!FSFusionWavelet::forward(grayP, opt.useOpenCL, wavelet))
+    {
+        QString msg = "Slice " + s + " Wavelet forward failed";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    // Lock wavelet size on slice 0; enforce identical thereafter
+    if (slice == 0)
+        waveletSize = wavelet.size();
+    // Sanity Check
+    // /*
+    if (slice > 0 && wavelet.size() != waveletSize)
+    {
+        QString m = QString("Sanity: slice %1 wavelet.size %2x%3 != waveletSize %4x%5")
+        .arg(slice)
+            .arg(wavelet.cols).arg(wavelet.rows)
+            .arg(waveletSize.width).arg(waveletSize.height);
+        if (G::FSLog) G::log(srcFun, m);
+        qWarning().noquote() << "WARNING:" << srcFun << m;
+        return false;
+    }
+
+    auto matInfo = [](const cv::Mat& m) -> QString {
+        return QString("size=%1x%2 type=%3 channels=%4 step=%5")
+        .arg(m.cols).arg(m.rows)
+            .arg(m.type())
+            .arg(m.channels())
+            .arg(static_cast<qulonglong>(m.step));
+    };
+
+    if (slice == 0)
+    {
+        QString log =
+            "Sanity(slice0): "
+            "orig=" + QString("%1x%2").arg(orig.width).arg(orig.height) + " "
+            "ps="   + QString("%1x%2").arg(ps.width).arg(ps.height) + " "
+            "waveletSize=" +
+            QString("%1x%2").arg(waveletSize.width).arg(waveletSize.height) +
+            " | "
+            "colorImg(" + matInfo(colorImg) + ") "
+            "grayP("    + matInfo(grayP)    + ") "
+            "colorP("   + matInfo(colorP)   + ") "
+            "wavelet("  + matInfo(wavelet) + ")";
+
+        if (G::FSLog) G::log(srcFun, log);
+        // qDebug().noquote() << srcFun << log;
+    }
+    //*/
+
+    if (wavelet.size() != waveletSize)
+    {
+        QString msg = "Slice " + s + " wavelet.size() != waveletSize";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    // --------------------------------------------------------------------
+    // Merge wavelet stacks → mergedWavelet (we ignore depthIndex here)
+    // --------------------------------------------------------------------
+    msg = "Merge wavelet stacks";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    if (!FSMerge::mergeSlice(mergeState,
+                             wavelet,
+                             waveletSize,
+                             opt.consistency,
+                             abortFlag,
+                             mergedWavelet))
+    {
+        QString msg = "Slice " + s + " FSMerge::merge failed.";
+        qWarning() << "WARNING:" << srcFun << msg;
+        if (G::FSLog) G::log(srcFun, msg);
+        return false;
+    }
+
+    // --------------------------------------------------------------------
+    // Build color map using padded grayscale + padded RGB images
+    // --------------------------------------------------------------------
+    msg = "Build color map";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+
+    FSFusionReassign::ColorEntry colorEntry;
+    if (!colorBuilder.addSlice(grayP, colorP))
+    {
+        QString msg = "Slice " + s + "FSFusionReassign::addSlice failed.";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    if (progressCallback) progressCallback();
+    return true;
+}
+
+// StreamPMax pipeline
+bool FSFusion::streamPMaxFinish(cv::Mat &outputColor8,
+                                const Options &opt,
+                                std::atomic_bool *abortFlag,
+                                StatusCallback statusCallback,
+                                ProgressCallback progressCallback)
+{
+    QString srcFun = "FSFusion::fusePMaxFinish";
+    QString msg = "Finishing Fusion";
+    if (statusCallback) statusCallback(msg);
+
+    // --------------------------------------------------------------------
+    // Finish merge after all slices processed and before invert
+    // --------------------------------------------------------------------
+    msg = "Finish merge after last slice";
+    if (G::FSLog) G::log(srcFun, msg);
+    if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    if (!FSMerge::mergeSliceFinish(mergeState,
+                                   opt.consistency,
+                                   abortFlag,
+                                   mergedWavelet,
+                                   nullptr))
+    {
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // Inverse wavelet → fusedGray (still padded size)
+    // --------------------------------------------------------------------
+    msg = "Inverse wavelet";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    // cv::Mat fusedGray; // local, then ensure CV_8U
+    if (!FSFusionWavelet::inverse(mergedWavelet, opt.useOpenCL, fusedGray8))
+    {
+        if (G::FSLog) G::log(srcFun, "FSFusionWavelet::inverse failed");
+        return false;
+    }
+
+    if (fusedGray8.type() != CV_8U) {
+        msg = "Inverse wavelet: fusedGray8.type() != CV_8U";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+    if (fusedGray8.size() != ps) {
+        msg = "Inverse wavelet: fusedGray8.size() != ps";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // Finish color builder after all slices processed
+    // --------------------------------------------------------------------
+    msg = "Finish color builder";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    colorBuilder.finish(colorEntries, counts);
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // Apply color reassignment to padded fused grayscale → paddedColorOut
+    // --------------------------------------------------------------------
+    msg = "Apply color reassignment";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    cv::Mat paddedColorOut;
+    if (!FSFusionReassign::applyColorMap(fusedGray8, colorEntries,
+                                         counts, paddedColorOut))
+    {
+        msg = "FSFusionReassign::applyColorMap failed";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    if (paddedColorOut.size() != ps) {
+        msg = "Apply color map: paddedColorOut.size() != ps";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+    if (paddedColorOut.type() != CV_8UC3) {
+        msg = "Apply color map: paddedColorOut.type() != CV_8UC3";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // Crop back to original (non-padded) size
+    // --------------------------------------------------------------------
+    if (G::FSLog) G::log(srcFun, "Crop back to original size");
+
+    if (ps == orig)
+    {
+        outputColor8 = paddedColorOut; // shallow copy ok
+    }
+    else
+    {
+        const int padW = ps.width  - orig.width;
+        const int padH = ps.height - orig.height;
+
+        const int left = padW / 2;
+        const int top  = padH / 2;
+
+        cv::Rect roi(left, top, orig.width, orig.height);
+        outputColor8 = paddedColorOut(roi).clone(); // final fused image mat
+    }
+
+    // Housekeeping
+    colorEntries.clear();
+    counts.clear();
+    mergedWavelet.release();
+    wavelet.release();
+    mergeState.reset();         // also clears cached wavelets
+    colorBuilder.reset();
+
+    if (progressCallback) progressCallback();
+
+    return true;
+}
+
+// end StreamPMax pipeline
+

@@ -15,7 +15,7 @@ bool isFileLogger = false;          // Writes log messages to file (debug execut
 bool isErrorLogger = false;         // Writes error log messages to file or console
 bool isIssueLogger = true;         // Writes issue log messages to file or console
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
-bool FSLog = true;                  // Focus Stack log
+bool FSLog = false;                  // Focus Stack log
 bool showAllEvents = false;
 QFile logFile;                      // MW::openLog(), MW::closeLog()
 QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
@@ -270,35 +270,6 @@ void log(QString functionName, QString comment, bool zeroElapsedTime)
     if (functionName == "") qDebug();
     logger.log(functionName, comment);
     return;
-    /*
-    static QMutex mutex;
-    QMutexLocker locker(&mutex);
-    static QString prevFunctionName = "";
-    static QString prevComment = "";
-    QString stop = "";
-    if (zeroElapsedTime) {
-        t.restart();
-    }
-    if (functionName != "skipline") {
-        QString microSec = QString("%L1").arg(t.nsecsElapsed() / 1000);
-        QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
-        QString e = microSec.rightJustified(11, ' ') + " ";
-        QString f = prevFunctionName.leftJustified(50, ' ') + " ";
-        QString c = prevComment;
-        if (sendLogToConsole) {
-            QString msg = stop + e + f + c;
-            if (prevFunctionName == "skipline") qDebug().noquote() << " ";
-            else qDebug().noquote() << msg;
-        }
-        else {
-            QString msg = stop + d + e + f + c + "\n";
-            if (logFile.isOpen()) logFile.write(msg.toUtf8());
-        }
-    }
-    prevFunctionName = functionName;
-    prevComment = comment;
-    t.restart();
-    //*/
 }
 
 //*** ISSUES ******************************************************************************
