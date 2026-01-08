@@ -527,6 +527,8 @@ void DataModel::enqueueFolderSelection(const QString& folderPath,
     op = Add or Delete images in folderPath from datamodel
     recurse = recurse all subfolders of folderPath
 */
+    QString fun = "DataModel::enqueueFolderSelection";
+    qDebug() << fun << "1";
 
     if (recurse) {
         // Only iterate directories; skip "." and ".."
@@ -543,11 +545,13 @@ void DataModel::enqueueFolderSelection(const QString& folderPath,
             enqueueOp(p, op);
         }
     } else {
+        qDebug() << fun << "2";
         enqueueOp(folderPath, op);
     }
 
     // QCoreApplication::processEvents();
 
+    qDebug() << fun << "3";
     scheduleProcessing();
 }
 
@@ -641,12 +645,14 @@ void DataModel::addFolder(const QString &folderPath)
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
 
+    qDebug() << fun << "1";
     QString step = "Loading eligible image file information.<br>";
     step += folderPath + "<br>";
     QString escapeClause = "Press \"Esc\" to stop.";
     emit centralMsg(step + escapeClause);
-    qApp->processEvents();
+    // qApp->processEvents();
 
+    qDebug() << fun << "2";
     // test if raw file to match jpg when same file names and one is a jpg
     QString prevRawSuffix = "";
     QString prevRawBaseName = "";
@@ -730,6 +736,8 @@ void DataModel::addFolder(const QString &folderPath)
         }
         row++;
     }
+
+    qDebug() << fun << "3";
 
     if (abort) return;
 

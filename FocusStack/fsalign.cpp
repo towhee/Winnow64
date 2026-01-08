@@ -566,24 +566,24 @@ void applyContrastWhiteBalance(cv::Mat &img,
 // StreamPMax pipeline
 //-----------------------------------------------------------------------------------
 
-bool Align::alignSlice(int                         slice,
-                       FSLoader::Image            &prevImage,
-                       FSLoader::Image            &currImage,
-                       Result                     &prevGlobal,
-                       Result                     &currGlobal,
-                       cv::Mat                    &alignedGraySlice,
-                       cv::Mat                    &alignedColorSlice,
-                       const Options              &opt,
-                       std::atomic_bool           *abortFlag,
-                       StatusCallback              status,
-                       ProgressCallback            progressCallback
+bool Align::alignSlice(int              slice,
+                       FSLoader::Image  &prevImage,
+                       FSLoader::Image  &currImage,
+                       Result           &prevGlobal,
+                       Result           &currGlobal,
+                       cv::Mat          &alignedGraySlice,
+                       cv::Mat          &alignedColorSlice,
+                       const Options    &opt,
+                       std::atomic_bool *abortFlag,
+                       StatusCallback   status,
+                       ProgressCallback progressCallback
                        )
 {
     QString srcFun = "FSAlign::alignSlice";
     QString s = QString::number(slice);
-    QString msg = "Aligning slice " + s;
+    QString msg = "Slice: " + s + " Aligning";
     if (G::FSLog) G::log(srcFun, msg);
-    if (status) status(msg);
+    // if (status) status(msg);
 
     // first slice is already "aligned"
     if (prevImage.gray.empty())
@@ -641,7 +641,7 @@ bool Align::alignSlice(int                         slice,
     alignedColorSlice = alignedColorMat.clone();
     alignedGraySlice  = alignedGrayMat.clone();
 
-    if (progressCallback) progressCallback();
+    // if (progressCallback) progressCallback();
 
     return true;
 }

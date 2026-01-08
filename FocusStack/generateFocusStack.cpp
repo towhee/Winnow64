@@ -234,7 +234,7 @@ void MW::generateFocusStack(const QStringList paths,
     method = "StreamPMax";       // align > fusePMax
     // method = "PMax1";       // align > fusePMax
     // method = "PMax2";       // align > focus > depth > fusePMax
-    // method = "Ten";            // align > depth (Tenengrad focus)
+    // method = "Ten";         // align > depth (Tenengrad focus)
 
     // ----------- Req'd when pipeline is finished -----------
 
@@ -255,6 +255,10 @@ void MW::generateFocusStack(const QStringList paths,
     QString fusedBase = lastFi.completeBaseName() + "_FocusStack_" + method;
     QString ext  = "." + lastFi.suffix();
     QString dstLastFusedPath = dstFolderPath + "/" + fusedBase + ext;
+    // Make sure unique file name
+    Utilities::uniqueFilePath(dstLastFusedPath, "_");
+    QFileInfo fusedFi(dstLastFusedPath);
+    fusedBase = fusedFi.completeBaseName();
 
     // ----------- End section when pipeline is finished -----------
 
@@ -300,9 +304,9 @@ void MW::generateFocusStack(const QStringList paths,
     // --------------------------------------------------------------------
     // Create worker thread + FS pipeline object
     // --------------------------------------------------------------------
-    QThread *thread = new QThread(this);
+    QThread *fsThread = new QThread(this);
     fsPipeline = new FS();
-    fsPipeline->moveToThread(thread);
+    fsPipeline->moveToThread(fsThread);
     // local req'd for lamda
     FS *pipeline = fsPipeline.data();
 
@@ -315,10 +319,10 @@ void MW::generateFocusStack(const QStringList paths,
     // -------------- Pipeline communications ----------------
 
     // When the thread starts → run the FS pipeline
-    connect(thread, &QThread::started, pipeline, [pipeline, thread]()
+    connect(fsThread, &QThread::started, pipeline, [pipeline, fsThread]()
     {
         pipeline->run();     // runs synchronously inside worker thread
-        QMetaObject::invokeMethod(thread, "quit", Qt::QueuedConnection);
+        QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
     });
 
     // Status update
@@ -331,32 +335,68 @@ void MW::generateFocusStack(const QStringList paths,
         }, Qt::QueuedConnection);
 
     // cleanup when finished
-    connect(thread, &QThread::finished, pipeline, &QObject::deleteLater);
-    connect(thread, &QThread::finished, thread,   &QObject::deleteLater);
+    connect(fsThread, &QThread::finished, pipeline, &QObject::deleteLater);
+    connect(fsThread, &QThread::finished, fsThread,   &QObject::deleteLater);
 
     // --------------- When FS finishes (thread quits) ----------------
 
     // We detect success by checking filesystem or pipeline signals (later)
-    connect(thread, &QThread::finished, this, [=]()
+    connect(fsThread, &QThread::finished, this, [=]()
     {
+        G::isRunningFocusStack = false;
+
         // Clear progress
         cacheProgressBar->clearUpperProgress();
 
         // If aborted...
 
-        if (!dstLastFusedPath.isEmpty())
-        {
-            // update datamodel
-            if (isLocal) {
-                dm->insert(dstLastFusedPath);
-                // select fused image
-                sel->select(dstLastFusedPath);
-            }
-            else folderAndFileSelectionChange(dstLastFusedPath, srcFun);
+        qDebug() << srcFun << "dstLastFusedPath =" << dstLastFusedPath;
+
+        // Evaluate we have a result path
+        if (dstLastFusedPath.isEmpty())
+            return;
+
+        // folderAndFileSelectionChange(dstLastFusedPath, "FS::threadFinished");
+        // ---- DEFERRED: expensive model operations ----
+        // QTimer::singleShot(0, this, [=]() {
+
+        if (isLocal) {
+            qDebug() << srcFun << "isLocal = true";
+            dm->insert(dstLastFusedPath);
+
+            waitUntilMetadataLoaded(3000, srcFun);
+
+            // Selecting may trigger view/model refresh → still deferred
+            sel->select(dstLastFusedPath);
         }
-        G::isRunningFocusStack = false;
+        else {
+            folderAndFileSelectionChange(dstLastFusedPath, "FS::threadFinished");
+        }
+
+        // });
+
+        // if (!dstLastFusedPath.isEmpty())
+        // {
+            // update datamodel
+            // if (isLocal) {
+            //     dm->insert(dstLastFusedPath);
+            //     waitUntilMetadataLoaded(3000, srcFun);
+            //     // select fused image
+            //     sel->select(dstLastFusedPath);
+            // }
+            // else folderAndFileSelectionChange(dstLastFusedPath, srcFun);
+            // folderAndFileSelectionChange(dstLastFusedPath, srcFun);
+        // }
     });
 
+    qDebug() << srcFun << "xxx";
+    if (fsThread->isRunning()) return;
+
     // Start
-    thread->start();
+    fsThread->start();
+}
+
+void MW::finishFocusStack(QString dstFusedImagePath)
+{
+
 }

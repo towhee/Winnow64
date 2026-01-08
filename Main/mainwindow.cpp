@@ -1758,6 +1758,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     // folder selection cleared and new folder selected
     if (resetDataModel) {
         QString step = "Loading folders.\n";
+        qDebug() << fun << "0";
         QString escapeClause = "\nPress \"Esc\" to stop.";
         setCentralMessage(step + escapeClause);
         // qApp->processEvents();
@@ -1765,6 +1766,8 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
         stop(fun);
         // sync bookmarks if exists
         bookmarks->select(folderPath);
+        qDebug() << fun << "3";
+
     }
     else {
         // stop building but do not clear filters
@@ -2014,6 +2017,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     is req'd before the initial metadata has been cached and the image can be
     selected.
 */
+    QString fun = "MW::folderAndFileSelectionChange";
     if (G::isLogger || G::isFlowLogger) {
         QString msg = "src = " + src + " fPath = " + fPath;
         G::log("MW::folderAndFileSelectionChange", msg);
@@ -2043,8 +2047,8 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         }
     }
 
-    /*
-    qDebug() << "MW::folderAndFileSelectionChange"
+    // /*
+    qDebug() << fun
              << "isStartupArgs =" << isStartupArgs
              << "folder =" << folder
              << "fPath =" << fPath
@@ -2065,6 +2069,8 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         qWarning() << msg;
         return;
     }
+
+    qDebug() << fun << "4";
 
     if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     return;
@@ -2140,15 +2146,13 @@ void MW::stop(QString src)
     prior folder. See ImageCache::fillCache.
 
 */
-
+    QString fun = "MW::stop";
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::stop", "instance = " + QString::number(dm->instance) +
                " src = " + src);
 
     // ignore if already stopping
     if (G::stop) return;
-
-    // qDebug().noquote() << "MW::stop src =" << src;
 
     // stop flags
     G::stop = true;
@@ -2217,7 +2221,7 @@ void MW::stop(QString src)
         setCentralMessage("Image loading has been aborted.");
     }
 
-    qApp->processEvents();
+    // qApp->processEvents();
     G::stop = false;
     G::isModifyingDatamodel = false;
 
@@ -2500,7 +2504,6 @@ void MW::folderChanged(bool aborted)
     msg += " dm->rowCount = " + QString::number(dm->rowCount());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    // qDebug() << fun << msg << "G::stop =" << G::stop;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
@@ -2532,6 +2535,9 @@ void MW::folderChanged(bool aborted)
     if (folderAndFileChangePath != "") {
         dm->setCurrent(folderAndFileChangePath, instance);
         startRow = dm->rowFromPath(folderAndFileChangePath);
+        qDebug() << fun
+                 << "startRow =" << startRow
+                 << "folderAndFileChangePath =" << folderAndFileChangePath;
         folderAndFileChangePath = "";
     }
     // reset datamodel current index if it has been removed
@@ -2544,7 +2550,7 @@ void MW::folderChanged(bool aborted)
     qDebug()  << "MW::folderChanged"
               << "startRow =" << startRow
               << "folderAndFileChangePath =" << folderAndFileChangePath;
-              */
+              //*/
 
     // Only one folder selected
     if (dm->folderList.count() == 1) {
@@ -2572,7 +2578,6 @@ void MW::folderChanged(bool aborted)
         return;
     }
 
-    // no sorting or filtering until all metadata loaded
     reverseSortBtn->setEnabled(false);
     filters->setEnabled(false);
     // filters->loadingDataModel(false);   // isLoaded = false  rgh why not req'd?
@@ -2614,6 +2619,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
 {
     if (G::stop || dm->abort) return;
 
+    QString fun = "MW::updateChange";
     if (G::isLogger || G::isFlowLogger)
     {
         G::log("MW::updateChange", "row = " + QString::number(sfRow)
@@ -2681,7 +2687,6 @@ void MW::folderChangeCompleted()
         G::log("MW::folderChangeCompleted", msg);
     }
     QString fun = "MW::folderChangeCompleted";
-    qDebug() << fun;
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
@@ -4593,6 +4598,48 @@ void MW::ejectUsbFromContextMenu()
     ejectUsb(mouseOverFolderPath);
 }
 
+bool MW::embedThumbnail(int sfRow)
+{
+    if (G::isLogger) G::log("MW::embedThumbnail(int sfRow)");
+
+    QString fileType = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
+    if (!metadata->canEmbedThumb.contains(fileType)) return false;
+
+    QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::PathRole).toString();
+    QImage thumbnail = QImage();
+    if (fileType == "tif") {
+        Tiff tiff;
+        QModelIndex thumbIdx = dm->sf->index(sfRow, 0);
+        QIcon icon = qvariant_cast<QIcon>(thumbIdx.data(Qt::DecorationRole));
+        QSize maxSize = icon.actualSize(QSize(G::maxIconSize,G::maxIconSize));  // 256,256
+        thumbnail = icon.pixmap(maxSize).toImage();
+    }
+
+    if (!embedThumbnail(fPath, thumbnail)) return false;
+
+    return true;
+}
+
+bool MW::embedThumbnail(QString fPath, QImage thumbnail)
+{
+    if (G::isLogger) G::log("MW::embedThumbnail(int sfRow)");
+
+    QFileInfo fi(fPath);
+    QString fileType = fi.suffix().toLower();
+
+    if (fileType == "tif") {
+        Tiff tiff;
+        if (!tiff.embedIRBThumbnail(fPath, thumbnail)) return false;
+    }
+    else {
+        // must be a jpeg, use exiftool to add thumb
+        Jpeg jpeg;
+        if (!jpeg.embedThumbnail(fPath)) return false;
+    }
+
+    return true;
+}
+
 void MW::embedThumbnailsFromAction()
 {
     if (G::isLogger) G::log("MW::embedThumbnailsFromAction");
@@ -4638,8 +4685,8 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
 QString MW::embedThumbnails()
 {
 /*
-    This function embeds a thumbnail in jpeg and tiff files that do not have one.  This makes
-    the thumb loading much faster, especially for tiff files.
+    This function embeds a thumbnail in jpeg and tiff files that do not have one.
+    This makes the thumb loading much faster, especially for tiff files.
 
     This function will not be triggered if G::modifySourceFiles = false
 
@@ -4735,32 +4782,12 @@ QString MW::embedThumbnails()
         if (!isReadWrite) lockEncountered = true;
         if (isMissing && isReadWrite) {
             // Add a thumbnail
-            bool thumbEmbedded = false;
-            if (fileType == "tif") {
-                Tiff tiff;
-                /*
-                // encode by sampling main tiff image
-                // call tif->parse which calls tif->encodeThumbnail. No exiftool for tiff.
-                // ImageMetadata m;
-                // tiff.parse(m, fPath);
-                // thumbEmbedded = !m.isEmbeddedThumbMissing;*/
-                QModelIndex thumbIdx = dm->sf->index(sfRow, 0);
-                QIcon icon = qvariant_cast<QIcon>(thumbIdx.data(Qt::DecorationRole));
-                QSize maxSize = icon.actualSize(QSize(G::maxIconSize,G::maxIconSize));  // 256,256
-                QImage thumbnail = icon.pixmap(maxSize).toImage();
-                thumbEmbedded = tiff.encodeThumbnail(fPath, thumbnail);
-             }
-             else {
-                // must be a jpeg, use exiftool to add thumb
-                Jpeg jpeg;
-                thumbEmbedded = jpeg.embedThumbnail(fPath);
-            }
-            if (thumbEmbedded) {
+            if (embedThumbnail(sfRow)) {
                 emit setValSf(sfRow, G::MissingThumbColumn, false, dm->instance,
                               "MW::embedthumbnails");
                 dm->sf->filterChange("MW::embedThumbnails");
+                embeddingHappened = true;
             }
-            embeddingHappened = true;
         }
     }
     // reset flags

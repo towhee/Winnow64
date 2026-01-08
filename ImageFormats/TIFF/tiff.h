@@ -66,7 +66,7 @@ public:
     bool encodeThumbnail(QString fPath, QImage &thumb);
 
     // add a thumbnail jpg in IRB block
-    void embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail);
+    bool embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail);
 
     // // test libtiff
     // // #ifdef Q_OS_MAC

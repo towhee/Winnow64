@@ -56,7 +56,7 @@ bool FS::initializeGroup(int group)
 
     if (o.useIntermediates) prepareFolders();
 
-    statusGroupPrefix = "Stack " + QString::number(group+1) + "/" +
+    statusGroupPrefix = "Stack: " + QString::number(group+1) + "/" +
                         QString::number(groups.count()) + " ";
 
     // Clear any in-memory aligned images from previous run
@@ -342,7 +342,7 @@ void FS::setTotalProgress()
     for (const QStringList &g : groups) {
         int slices = g.count();
         if (o.isStream) {
-            progressTotal += (slices * 2);
+            progressTotal += (slices * 3);
         }
         else {
             if (slices < 2) continue;
@@ -365,7 +365,7 @@ void FS::incrementProgress()
     QString srcFun = "FS::incrementProgress";
     emit progress(++progressCount, progressTotal);
     QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
-    // G::log(srcFun, msg);
+    G::log(srcFun, msg);
 }
 
 void FS::previewOverview(cv::Mat &fusedColor8Mat)
@@ -593,7 +593,7 @@ bool FS::run()
         if (G::FSLog) G::log("");
         status("Focus Stack completed in " + timeToRun);
 
-        qApp->processEvents();  // complete any waiting log msgs
+        // qApp->processEvents();  // complete any waiting log msgs
     }
 
     // diagnostics();
@@ -1523,31 +1523,41 @@ bool FS::runStreamWaveletPMax()
     FSFusion fuse;
 
     for (int slice = 0; slice < slices; slice++) {
+        QString s = " Slice: " + QString::number(slice) + "/" +
+                    QString::number(slices) + " ";
         // Load input image slice
+        status(s + "Loading source input image...");
         currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+        incrementProgress();
 
         // Align slice
         currGlobal = FSAlign::makeIdentity(currImage.validArea);
         if (slice == 0) {
+            status(s + "Identifying for alignment");
             alignedGraySlice = currImage.gray.clone();
             alignedColorSlice = currImage.color.clone();
             fuse.orig = currImage.gray.size();
+            incrementProgress();
         }
         else {
+            status(s + "Aligning...");
             if (!align.alignSlice(slice, prevImage, currImage, prevGlobal, currGlobal,
                                   alignedGraySlice, alignedColorSlice,
                                   aopt, &abort, statusCb, progressCb)) {
                 qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
                 return false;
             }
+            incrementProgress();
         }
 
         // Fuse slice
+        status(s + "Fusing...");
         if (!fuse.streamPMaxSlice(slice, alignedGraySlice, alignedColorSlice,
                                   fopt, &abort, statusCb, progressCb)) {
             qWarning() << "WARNING:" << srcFun << "fuse.streamPMaxSlice failed.";
             return false;
         }
+        incrementProgress();
 
         prevImage = currImage;
         prevGlobal = currGlobal;
@@ -1558,8 +1568,10 @@ bool FS::runStreamWaveletPMax()
     if (G::FSLog) G::log(srcFun, msg);
 
     // finish merge, invert, recover color and crop padding
+    status("Finalizing fusion...");
     if (!fuse.streamPMaxFinish(fusedColor8Mat, fopt, &abort, statusCb, progressCb))
         return false;
+    incrementProgress();
 
     if (o.useIntermediates) saveFused(fusionFolderPath);
 
@@ -1603,8 +1615,9 @@ bool FS::saveFused(QString folderPath)
     if (ext == "tif") {
         Tiff tiff;
         QImage thumb = thumbnail(fusedColor8Mat);
+        qDebug() << srcFun << msg << thumb.width() << thumb.height();
         if (!thumb.isNull()) {
-            if (!tiff.encodeThumbnail(fusedPath, thumb)) {
+            if (!tiff.embedIRBThumbnail(fusedPath, thumb)) {
                 QString msg = "Failed to embed thumbnail in tif file " + fusedPath;
                 qWarning() << "WARNING" << srcFun << msg;
             }
@@ -1625,7 +1638,6 @@ bool FS::saveFused(QString folderPath)
     msg = "Write XMP color green";
     if (G::FSLog) G::log(srcFun, msg);
     QFile f(xmpPath);
-    if (f.isOpen()) return false;
     if (!f.open(QIODevice::ReadWrite)) return false;
 
     QString color = "Green";

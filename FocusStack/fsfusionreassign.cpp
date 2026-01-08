@@ -1,5 +1,5 @@
 // FSFusionReassign.cpp
-#include "FSFusionReassign.h"
+#include "fsfusionreassign.h"
 #include "Main/global.h"
 
 #include <QString>

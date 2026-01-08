@@ -400,46 +400,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fusedPath = "/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0238_PMax/fusion/2025-11-01_0238_pmax_FocusStack.tif";
-    QFileInfo fi(fusedPath);
-    QString destPath = dm->primaryFolderPath() + "/" + fi.fileName();
-    qDebug() << destPath;
-    QFile::copy(fusedPath, destPath);
-    dm->insert(destPath);
-    sel->select(destPath);
-    qDebug() << "G::allMetadataLoaded =" << G::allMetadataLoaded;
-
-    // waitUntilMetadataLoaded(3000);
-    QEventLoop loop;
-    QTimer timeout;
-
-    timeout.setSingleShot(true);
-    timeout.setInterval(3000);     // 3-second timeout
-
-    // When metadata fully loads, exit the loop
-    connect(this, &MW::metadataLoaded, &loop, &QEventLoop::quit);
-    // Also quit on timeout
-    connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-
-    timeout.start();
-    loop.exec();                   // <-- does NOT freeze UI
-
-    // int sfRow = dm->currentSfRow;
-    // qDebug() << sfRow;
-    // QVariant colorClass = "Red";
-    // QModelIndex sfIdx = dm->sf->index(sfRow, G::LabelColumn);
-    // dm->sf->setData(sfIdx, colorClass, Qt::EditRole);
-
-    // dm->setValSf(sfRow, G::LabelColumn, colorClass,
-    //              dm->instance, "MW::setColorClassForRow",
-    //              Qt::EditRole, Qt::AlignCenter);
-    // thumbView->refreshThumbs();
-    // refresh();
-    // QString color = dm->sf->index(sfRow, G::LabelColumn).data().toString();
-    // qDebug() << "color =" << color;
-
-    setColorClassForRow(dm->currentSfRow, "Red");
-
+    QString fPath = "/Users/roryhill/Pictures/Images/FocusStack/2025-11-07_0074.tif";
+    folderAndFileSelectionChange(fPath, "FS::test");
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
