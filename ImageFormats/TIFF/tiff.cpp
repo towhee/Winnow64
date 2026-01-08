@@ -18,17 +18,18 @@ LibTiff
     • https://libtiff.gitlab.io/libtiff/libtiff.html
     • /Users/roryhill/Qt/6.6.0/Src/qtimageformats/src/3rdparty/libtiff/libtiff
 
-    Copilot: How embed jpg thumbnail in existing till file?
+    Copilot: How embed jpg thumbnail in existing tiff file?
 
-    1. Open the Existing TIFF File: Begin by opening your existing TIFF file using the
-       TIFFOpen function in write mode.
+    1. Open the Existing TIFF File: Begin by opening your existing TIFF file using
+       the TIFFOpen function in write mode.
 
     2. Create the Thumbnail Data: Generate your JPEG thumbnail data. This thumbnail
        should be a valid JPEG image extracted from the main image. You can resize the
        main image or create a separate thumbnail image.
 
     3. Set the TIFFTAG_JPEGTABLES Field: Use the TIFFSetField function to set the
-       TIFFTAG_JPEGTABLES field. Pass the JPEG thumbnail data as the value for this field.
+       TIFFTAG_JPEGTABLES field. Pass the JPEG thumbnail data as the value for this
+       field.
 
     4. Write the Main IFD: Finally, write your main IFD (Image File Directory)
        using TIFFWriteDirectory. Here’s an updated example in C++:
@@ -39,16 +40,17 @@ LibTiff
     const unsigned char jpeg_thumbnail_data[] = { Your JPEG data here };
 
     // Set the TIFFTAG_JPEGTABLES field:
-    if (!TIFFSetField(existing_TIFF, TIFFTAG_JPEGTABLES, sizeof(jpeg_thumbnail_data), jpeg_thumbnail_data)) {
+    if (!TIFFSetField(existing_TIFF, TIFFTAG_JPEGTABLES, sizeof(jpeg_thumbnail_data),
+                      jpeg_thumbnail_data)) {
         // Handle the error if setting the field fails.
     }
 
     // Write the main IFD:
     TIFFWriteDirectory(existing_TIFF);
 
-    Remember to replace the placeholder jpeg_thumbnail_data with your actual JPEG thumbnail
-    data extracted from the main image. This approach will embed the thumbnail within your
-    existing TIFF file.
+    Remember to replace the placeholder jpeg_thumbnail_data with your actual JPEG
+    thumbnail data extracted from the main image. This approach will embed the
+    thumbnail within your existing TIFF file.
 
     End Copilot answer
 
@@ -59,11 +61,11 @@ bool showDebug = false;
 class parseInStream
 {
 /*
-    The incoming stream is read 8 bits at a time into a bit buffer called pending. The
-    buffer is consumed (most significant) n bits at a time (inCode), where n = codesize.
-    currCode starts at 258 and is incremented each time an inCode is consumed. codeSize
-    starts at 9 bits, and is incremented each time currCode exceeds the bit capacity.
-    codeSize maximum is 12 bits.
+    The incoming stream is read 8 bits at a time into a bit buffer called pending.
+    The buffer is consumed (most significant) n bits at a time (inCode), where
+    n = codesize. currCode starts at 258 and is incremented each time an inCode is
+    consumed. codeSize starts at 9 bits, and is incremented each time currCode
+    exceeds the bit capacity. codeSize maximum is 12 bits.
 
 */
 public :
@@ -79,11 +81,11 @@ public :
     bool operator>>(quint32 &inCode)
     {
         /*
-            pending = 32bit buffer                    00000000 00000000 0XXXXXXX XXXXXXXX
-            availBits ie 15                                              XXXXXXX XXXXXXXX
-            codeSize  ie 9 bits                                          XXXXXXX XX
-            availBits -= codeSize                                                  XXXXXX
-            mask (1 << availBits) - 1                                              111111
+            pending = 32bit buffer               00000000 00000000 0XXXXXXX XXXXXXXX
+            availBits ie 15                                         XXXXXXX XXXXXXXX
+            codeSize  ie 9 bits                                     XXXXXXX XX
+            availBits -= codeSize                                             XXXXXX
+            mask (1 << availBits) - 1                                         111111
         */
         /* debugging
         QDebug debug = qDebug();
@@ -91,8 +93,8 @@ public :
         //*/
         while (availBits < codeSize)
         {
-            char c;                                 // 00111011 (example)
-            if (!input.readRawData(&c, 1))          // 00000000 00000000 00000000 00XXXXXX
+            char c;                           // 00111011 (example)
+            if (!input.readRawData(&c, 1))    // 00000000 00000000 00000000 00XXXXXX
                 return false;
             /* debugging
             if (showDebug) {
@@ -1195,8 +1197,8 @@ bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
     create the thumb by subsampling another IFD image in the tiff.
 
     Steps:
-        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
-          will be appended.
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail
+          IFD will be appended.
         - add new IFD at end of chain, starting with the number of IFD items (15).
         - add IFD items:
             Num  tagId tagType  tagCount    tagValue   tagDescription
@@ -1311,14 +1313,15 @@ bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
 bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
 /*  NOT BEING USED
-    If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
-    thumbnail with a longside of G::maxIconSize to the tiff file. This involves appending
-    an IFD to the end of the IFD chain and sampling the smallest existing IFD preview
-    (source) to the new thumbnail.
+
+    If an image preview (thumbnail) with a longside <= 512px does not exist, then
+    add a thumbnail with a longside of G::maxIconSize to the tiff file. This
+    involves appending an IFD to the end of the IFD chain and sampling the smallest
+    existing IFD preview (source) to the new thumbnail.
 
     Steps:
-        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
-          will be appended.
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail
+          IFD will be appended.
         - add new IFD at end of chain, starting with the number of IFD items (15).
         - add IFD items:
             Num  tagId tagType  tagCount    tagValue   tagDescription
@@ -1441,14 +1444,15 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
     /* NOT BEING USED
-    If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
-    thumbnail with a longside of G::maxIconSize to the tiff file. This involves appending
-    an IFD to the end of the IFD chain and sampling the smallest existing IFD preview
-    (source) to the new thumbnail.
+
+    If an image preview (thumbnail) with a longside <= 512px does not exist, then
+    add a thumbnail with a longside of G::maxIconSize to the tiff file. This
+    involves appending an IFD to the end of the IFD chain and sampling the smallest
+    existing IFD preview (source) to the new thumbnail.
 
     Steps:
-        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
-          will be appended.
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail
+          IFD will be appended.
         - add new IFD at end of chain, starting with the number of IFD items (15).
         - add IFD items:
             Num  tagId tagType  tagCount    tagValue   tagDescription
@@ -1470,8 +1474,8 @@ bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         - subsample image down to thumbnail resolution
         - write strip pixels rgb at offset StripOffsets
 
-    p.offset must be set to ifdOffset that describes the source image to be sampled to
-    create the thumbnail before calling this function.
+    p.offset must be set to ifdOffset that describes the source image to be sampled
+    to create the thumbnail before calling this function.
 */
     if (G::isLogger || isDebug) G::log("Tiff::encodeThumbnail", p.fPath + " Source = " + source);
     // get decoding parameters from source IFD (p.offset must be preset)
@@ -1574,8 +1578,11 @@ bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     return true;
 }
 
-void Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
+bool Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
 {
+/*
+
+*/
     // convert QImage to QByteArray
     QByteArray jpegData;
     QBuffer buffer(&jpegData); // Create a buffer that writes to jpegData
@@ -1586,7 +1593,7 @@ void Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
     TIFF *tif = TIFFOpen(tiffPath.toUtf8().constData(), "r+");
     if (!tif) {
         qWarning() << "Failed to open TIFF file:" << tiffPath;
-        return;
+        return false;
     }
 
     qDebug() << "Tiff::embedIRBThumbnail" << tiffPath;
@@ -1597,22 +1604,12 @@ void Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
 
     // IRB ID (1036 for JPEG thumbnail, in big-endian)
     irbData.append(Utilities::put16(1036));
-    // irbData.append(char(0x04)); // High byte
-    // irbData.append(char(0x0C)); // Low byte
 
     // Empty name (Pascal string, length = 0)
     irbData.append(Utilities::put16(0));
-    // irbData.append(char(0x00));
-    // irbData.append(char(0x00));
-    // irbData.append(char(0x00));
-    // irbData.append(char(0x00));
 
     // Size of the JPEG data (4 bytes, big-endian)
     irbData.append(Utilities::put32(jpegData.size()));
-    // irbData.append((jpegData.size() >> 24) & 0xFF);
-    // irbData.append((jpegData.size() >> 16) & 0xFF);
-    // irbData.append((jpegData.size() >> 8) & 0xFF);
-    // irbData.append(jpegData.size() & 0xFF);
 
     // JPEG data
     irbData.append(jpegData);
@@ -1622,6 +1619,8 @@ void Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
 
     // Finalize and close
     TIFFClose(tif);
+
+    return true;
 }
 
 void Tiff::perChannelToInterleave(QImage *im1)
@@ -2429,7 +2428,8 @@ bool Tiff::jpgDecompress(TiffStrip &t, MetadataParameters &p)
 /*************************************************************************************************
 QTTIFFHANDLER SOURCE
 https://github.com/GarageGames/Qt/blob/master/qt-5/qtimageformats/src/plugins/imageformats/tiff/qtiffhandler.cpp
-Using this instead of QImage::load works for all types of TIFF files (incl jpeg compressed)
+Using this instead of QImage::load works for all types of TIFF files
+(incl jpeg compressed)
 *************************************************************************************************/
 
 QImageIOHandler::Transformations Tiff::exif2Qt(int exifOrientation)
@@ -2576,7 +2576,8 @@ bool Tiff::readHeaders(TIFF *tiff, QSize &size, QImage::Format &format,
                        QImageIOHandler::Transformations transformation)
 {
 /*
-    From QTiffHandler.cpp to assign key tiff fields and assign the right QImage format
+    From QTiffHandler.cpp to assign key tiff fields and assign the right QImage
+    format.
 */
     uint32_t width;
     uint32_t height;
@@ -2623,14 +2624,15 @@ bool Tiff::readHeaders(TIFF *tiff, QSize &size, QImage::Format &format,
     else {
         uint16_t count;
         uint16_t *extrasamples;
-        // If there is any definition of the alpha-channel, libtiff will return premultiplied
-        // data to us. If there is none, libtiff will not touch it and  we assume it to be
-        // non-premultiplied, matching behavior of tested image editors, and how older Qt
-        // versions used to save it.
-        bool premultiplied = true;
-        bool gotField = TIFFGetField(tiff, TIFFTAG_EXTRASAMPLES, &count, &extrasamples);
-        if (!gotField || !count || extrasamples[0] == EXTRASAMPLE_UNSPECIFIED)
-            premultiplied = false;
+
+        /* If there is any definition of the alpha-channel, libtiff will return
+        premultiplied data to us. If there is none, libtiff will not touch it and we
+        assume it to be non-premultiplied, matching behavior of tested image
+        editors, and how older Qt versions used to save it. */
+        bool premultiplied =
+        true; bool gotField = TIFFGetField(tiff, TIFFTAG_EXTRASAMPLES, &count,
+        &extrasamples); if (!gotField || !count || extrasamples[0] ==
+        EXTRASAMPLE_UNSPECIFIED) premultiplied = false;
 
         if (bitPerSample == 16 && photometric == PHOTOMETRIC_RGB) {
             // We read 64-bit raw, so unassoc remains unpremultiplied.
@@ -2660,6 +2662,10 @@ bool Tiff::readHeaders(TIFF *tiff, QSize &size, QImage::Format &format,
 
 bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 {
+/*
+    This is used by Winnow in ImageDecoder (decoderToUse == QtTiff).  It is the
+    only tiff decoder that works for jpg compression.
+*/
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
         qDebug() << "Tiff::read Failed to open TIFF file." << fPath;
@@ -2868,8 +2874,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
             image->setDotsPerMeterY(qRound(resY * (100 / 2.54)));
             break;
         default:
-            // do nothing as defaults have already
-            // been set within the QImage class
+            // do nothing as defaults have already been set within the QImage class
             break;
         }
     }

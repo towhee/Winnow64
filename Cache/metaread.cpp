@@ -140,7 +140,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // could be called by a scroll event, then no file selection change
     this->fileSelectionChanged = fileSelectionChanged;
 
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -154,7 +154,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
             ;
     }
 
-    QMutexLocker locker(&mutex);
+    // QMutexLocker locker(&mutex);  // freeze when FocusStack has just run
 
     // reset
     abort = false;
@@ -260,6 +260,7 @@ void MetaRead::stopReaders()
 
     // stop all readers
     for (int id = 0; id < readerCount; ++id) {
+        qDebug() << fun << "1 reader:" << id;
         QMetaObject::invokeMethod(readers[id], "stop", Qt::BlockingQueuedConnection);
     }
 }
@@ -293,19 +294,19 @@ void MetaRead::setIdle()
 
 void MetaRead::setBusy()
 {
-    QMutexLocker lock(&mutex);
+    // QMutexLocker lock(&mutex);
     idle = false;
 }
 
 bool MetaRead::isIdle()
 {
-    QMutexLocker lock(&mutex);
+    // QMutexLocker lock(&mutex);
     return idle;
 }
 
 bool MetaRead::isBusy()
 {
-    QMutexLocker lock(&mutex);
+    // QMutexLocker lock(&mutex);
     return !idle;
 }
 

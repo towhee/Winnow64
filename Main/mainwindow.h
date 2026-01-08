@@ -290,6 +290,7 @@ public:
     bool autoIngestFolderPath;
     bool autoEjectUsb;
     bool integrityCheck;
+
     bool isBackgroundIngest;
     bool isBackgroundIngestBeep;
     bool ingestIncludeXmpSidecar;
@@ -811,14 +812,14 @@ private:
     QAction *oldPrefAction;
 
     // Go Menu
-   QAction *keyRightAction;
-   QAction *keyLeftAction;
-   QAction *keyUpAction;
-   QAction *keyDownAction;
-   QAction *keyPageUpAction;
-   QAction *keyPageDownAction;
-   QAction *keyHomeAction;
-   QAction *keyEndAction;
+    QAction *keyRightAction;
+    QAction *keyLeftAction;
+    QAction *keyUpAction;
+    QAction *keyDownAction;
+    QAction *keyPageUpAction;
+    QAction *keyPageDownAction;
+    QAction *keyHomeAction;
+    QAction *keyEndAction;
 
     QAction *keyRightAddToSelectionAction;
     QAction *keyLeftAddToSelectionAction;
@@ -1355,6 +1356,8 @@ private:
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void addRecentFolder(QString fPath);
     QString embedThumbnails();
+    bool embedThumbnail(int sfRow);
+    bool embedThumbnail(QString fPath, QImage thumbnail = QImage());
     void embedThumbnailsFromAction();
     void chkMissingEmbeddedThumbnails(QString src = "FromLoading");
 
@@ -1405,6 +1408,7 @@ private:
     void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
     void generateFocusStack(const QStringList paths, QString method,
                             const QString source);
+    void finishFocusStack(QString dstFusedImagePath);
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
     void traverseFolderStressTest(int msPerImage = 0, double secPerFolder = 0,

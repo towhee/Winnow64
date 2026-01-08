@@ -425,7 +425,7 @@ bool FSFusion::streamPMaxSlice(int slice,
     QString s = QString::number(slice);
     QString msg = "Fusing slice " + s;
     if (G::FSLog) G::log(srcFun, "Start PMax fusion slice " + s);
-    if (statusCallback) statusCallback(msg);
+    // if (statusCallback) statusCallback(msg);
 
 
     // Validate sizes and types
@@ -612,7 +612,7 @@ bool FSFusion::streamPMaxSlice(int slice,
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
-    if (progressCallback) progressCallback();
+    // if (progressCallback) progressCallback();
     return true;
 }
 
@@ -632,7 +632,7 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor8,
     // --------------------------------------------------------------------
     msg = "Finish merge after last slice";
     if (G::FSLog) G::log(srcFun, msg);
-    if (statusCallback) statusCallback(msg);
+    // if (statusCallback) statusCallback(msg);
     // if (progressCallback) progressCallback();
 
     if (!FSMerge::mergeSliceFinish(mergeState,
@@ -747,7 +747,7 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor8,
     mergeState.reset();         // also clears cached wavelets
     colorBuilder.reset();
 
-    if (progressCallback) progressCallback();
+    // if (progressCallback) progressCallback();
 
     return true;
 }

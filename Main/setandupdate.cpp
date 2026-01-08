@@ -2,7 +2,8 @@
 
 void MW::setCentralMessage(QString message)
 {
-    if (G::isLogger) G::log("MW::setCentralMessage", message);
+    QString fun = "MW::setCentralMessage";
+    if (G::isLogger) G::log(fun, message);
     centralLayout->setCurrentIndex(MessageTab);
     msg.msgLabel->setText(message);
 }
@@ -535,7 +536,15 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
     If the image is the current one, then imageView is called.
 
 */
+    QString srcFun = "MW::refreshViewsOnCacheChange";
     int sfRow = dm->proxyRowFromPath(fPath, "MW::refreshViewsOnCacheChange");
+
+    if (sfRow == -1) {
+        QString msg = "No sfRow for fPath = " + fPath;
+        qWarning() << "WARNING:" << srcFun << msg;
+        return;
+    }
+
     bool isCurrent = sfRow == dm->currentSfRow;
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
