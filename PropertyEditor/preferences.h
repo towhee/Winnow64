@@ -16,7 +16,17 @@ public slots:
     void rory();
 
 private:
+    ItemInfo i;
     void addItems();
+    void addGeneral();
+    void addModify();
+    void addUserInterface();
+    void addCache();
+    void addSlideShow();
+    void addFullScreen();
+    void addMetadataPanel();
+    void addTableView();
+    void addUtilities();
 
     /* items we will want to modify dynamically in itemChange (returned from addItem)
        ie static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);    */

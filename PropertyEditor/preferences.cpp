@@ -429,7 +429,7 @@ void Preferences::itemChange(QModelIndex idx)
 
 void Preferences::addItems()
 {
-    ItemInfo i;
+    // ItemInfo i;
     /* template of ItemInfo
     i.name = "";
     i.parentName = "";
@@ -447,7 +447,19 @@ void Preferences::addItems()
     i.dropList = {"1", "2"};
     */
     clearItemInfo(i);
+    addGeneral();
+    addModify();
+    addUserInterface();
+    addCache();
+    addSlideShow();
+    addFullScreen();
+    addMetadataPanel();
+    addTableView();
+    addUtilities();
+}
 
+void Preferences::addGeneral()
+{
     // General header (Root)
     i.name = "GeneralHeader";
     i.parentName = "???";
@@ -461,7 +473,6 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);
 
-    {
     // Remember last folder
     i.name = "rememberLastDir";
     i.parentName = "GeneralHeader";
@@ -592,7 +603,10 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+}
 
+void Preferences::addModify()
+{
     // Modify Files header  > File modification header
     i.name = "ModifyHeader";
     i.parentName = "???";
@@ -696,6 +710,7 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+}
 
     /*
     // Loggers: on/off
@@ -736,6 +751,8 @@ void Preferences::addItems()
     addItem(i);
     */
 
+void Preferences::addUserInterface()
+{
     // UserInterfaceHeader Header (Root) ---------------------------------------------------------------
     i.name = "UserInterfaceHeader";
     i.parentName = "";
@@ -1040,9 +1057,10 @@ void Preferences::addItems()
     i.max = 100;
     i.fixedWidth = 50;
     addItem(i);
+}
 
-    }
-
+void Preferences::addCache()
+{
     // Cache Header (Root)
     i.name = "CacheHeader";
     i.parentName = "";
@@ -1056,7 +1074,6 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);
 
-    {
     // Show caching activity
     i.name = "showCacheProgressBar";
     i.parentName = "CacheHeader";
@@ -1198,7 +1215,10 @@ void Preferences::addItems()
     // i.type = "QString";
     // i.color = G::disabledColor.name();
     // availMBMsgWidget = addItem(i);
+}
 
+void Preferences::addSlideShow()
+{
     // Slideshow Header (Root)
     i.name = "SlideshowHeader";
     i.parentName = "";
@@ -1254,8 +1274,10 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
-    }
+}
 
+void Preferences::addFullScreen()
+{
     // Full Screen Header (Root)
     i.name = "FullScreenHeader";
     i.parentName = "";
@@ -1269,7 +1291,6 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);//return;
 
-    {
     // Full screen - show folders
     i.name = "fullScreenShowFolders";
     i.parentName = "FullScreenHeader";
@@ -1347,8 +1368,10 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
-    }
+}
 
+void Preferences::addMetadataPanel()
+{
     // Metadata InfoView Header (Root)
     i.name = "MetadataPanelHeader";
     i.parentName = "";
@@ -1362,45 +1385,47 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);
 
-    { // Metadata InfoView items
+    // Metadata InfoView items
 
     // InfoView fields to show
     if (G::useInfoView) {
-    QStandardItemModel *okInfo = mw->infoView->ok;
-    // iterate through infoView data, adding it to the property editor
-    for(int row = 0; row < okInfo->rowCount(); row++) {
-        QModelIndex parentIdx = okInfo->index(row, 0);
-        QString caption = okInfo->index(row, 0).data().toString();
-        i.parentName = "MetadataPanelHeader";
-        i.name = caption;
-        i.captionText = "Show " + caption;
-        i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
-        i.hasValue = true;
-        i.delegateType = DT_Checkbox;
-        i.type = "bool";
-        i.captionIsEditable = false;
-        i.key = "infoView->ok";
-        i.value = okInfo->index(row, 2).data().toBool();
-        i.index = okInfo->index(row, 2);
-        addItem(i);
-        for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
-            QString childCaption = okInfo->index(childRow, 0, parentIdx).data().toString();
-            i.parentName = caption;
-            i.captionText = "Show " + childCaption;
-            i.tooltip = "Show or hide the category " + childCaption + " in the metadata panel";
+        QStandardItemModel *okInfo = mw->infoView->ok;
+        // iterate through infoView data, adding it to the property editor
+        for(int row = 0; row < okInfo->rowCount(); row++) {
+            QModelIndex parentIdx = okInfo->index(row, 0);
+            QString caption = okInfo->index(row, 0).data().toString();
+            i.parentName = "MetadataPanelHeader";
+            i.name = caption;
+            i.captionText = "Show " + caption;
+            i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
             i.hasValue = true;
             i.delegateType = DT_Checkbox;
             i.type = "bool";
             i.captionIsEditable = false;
             i.key = "infoView->ok";
-            i.value = okInfo->index(childRow, 2, parentIdx).data().toBool();
-            i.index = okInfo->index(childRow, 2, parentIdx);
+            i.value = okInfo->index(row, 2).data().toBool();
+            i.index = okInfo->index(row, 2);
             addItem(i);
-        }
-    } // end Metadata InfoView items
+            for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
+                QString childCaption = okInfo->index(childRow, 0, parentIdx).data().toString();
+                i.parentName = caption;
+                i.captionText = "Show " + childCaption;
+                i.tooltip = "Show or hide the category " + childCaption + " in the metadata panel";
+                i.hasValue = true;
+                i.delegateType = DT_Checkbox;
+                i.type = "bool";
+                i.captionIsEditable = false;
+                i.key = "infoView->ok";
+                i.value = okInfo->index(childRow, 2, parentIdx).data().toBool();
+                i.index = okInfo->index(childRow, 2, parentIdx);
+                addItem(i);
+            }
+        } // end Metadata InfoView items
     } // end if (mw->G::useInfoView)
-    }
+}
 
+void Preferences::addTableView()
+{
     // TableView show/hide fields Header (Root)
     i.name = "TableViewColumnsHeader";
     i.parentName = "???";
@@ -1413,8 +1438,6 @@ void Preferences::addItems()
     i.captionIsEditable = false;
     i.delegateType = DT_None;
     addItem(i);
-
-    { // TableView show/hide field items
 
     // TableView conventional fields to show
     QStandardItemModel *tv = mw->tableView->ok;
@@ -1463,10 +1486,55 @@ void Preferences::addItems()
         addItem(i);
     }
     // end TableView show/hide field items
-    }
+}
+
+void Preferences::addUtilities()
+{
+    // Utilities Header (Root)
+    i.name = "UtilitiesHeader";
+    i.parentName = "???";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = true;
+    i.captionText = "Utilities";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+        // Utilities Header (Root)
+        i.name = "FocusStackHeader";
+        i.parentName = "UtilitiesHeader";
+        i.isHeader = true;
+        i.isDecoration = true;
+        i.decorateGradient = true;
+        i.captionText = "Focus Stack Utility";
+        i.tooltip = "";
+        i.hasValue = false;
+        i.captionIsEditable = false;
+        i.delegateType = DT_None;
+        addItem(i);
+
+            // Check for app update at startup
+            i.name = "deleteInputStackImages";
+            i.parentName = "FocusStackHeader";
+            i.captionText = "Delete all temporary folders";
+            i.tooltip =
+                "If Focus Stack was initiated remotely (ie from Lightroom)\n"
+                "then a subfolder called 'FocusStack' will have been created\n"
+                "with the temporary input images.  Also, working subfolders\n"
+                "will exist, and they will also be deleted.";
+            i.hasValue = true;
+            i.captionIsEditable = false;
+            i.value = mw->checkIfUpdate;
+            i.key = "deleteInputStackImages";
+            i.delegateType = DT_Checkbox;
+            i.type = "bool";
+            addItem(i);
+
+}
 
     // enable/disable rory items
     // rory();
 
-    return;
-}

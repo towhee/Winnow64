@@ -260,7 +260,6 @@ void MetaRead::stopReaders()
 
     // stop all readers
     for (int id = 0; id < readerCount; ++id) {
-        qDebug() << fun << "1 reader:" << id;
         QMetaObject::invokeMethod(readers[id], "stop", Qt::BlockingQueuedConnection);
     }
 }
