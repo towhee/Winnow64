@@ -596,7 +596,7 @@ bool FS::run()
         // qApp->processEvents();  // complete any waiting log msgs
     }
 
-    // diagnostics();
+    diagnostics();
 
     return true;
 }
@@ -1659,6 +1659,10 @@ void FS::diagnostics()
 {
     qDebug() << "Diagnostics:"
         << "\n"
+        << "dstFolderPath           =" << dstFolderPath << "\n"
+        << "fusedBase               =" << fusedBase << "\n"
+
+        << "\n"
         << "o.method                =" << o.method << "\n"
         << "o.useIntermediates      =" << o.useIntermediates << "\n"
         << "o.useCache              =" << o.useCache << "\n"
@@ -1692,5 +1696,13 @@ void FS::diagnostics()
         << "skipFusion              =" << skipFusion << "\n"
         << "skipArtifacts           =" << skipArtifacts << "\n"
         ;
+
+    for (int gi = 0; gi < groups.size(); ++gi) {
+        qDebug().noquote() << "FocusStack Group" << (gi + 1);
+        for (const QString &p : groups[gi]) {
+            qDebug().noquote() << " " << p;
+        }
+    }
+    qDebug() << "\n";
 
 }

@@ -102,14 +102,18 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
     QVector<Item> items;
     items.reserve(paths.size());
 
+    QDateTime t;
     for (const QString &path : paths) {
         const int r = dm->rowFromPath(path);
-        if (r < 0) {
-            qDebug().noquote() << srcFun << "Skipping (row not found):" << path;
-            continue;
+        // already in datamodel
+        if (r >= 0) {
+            t = dm->index(r, G::CreatedColumn).data().toDateTime();
         }
-
-        const QDateTime t = dm->index(r, G::CreatedColumn).data().toDateTime();
+        // not in datamodel, probably remote call (lightroom)
+        else {
+            QFileInfo fi(path);
+            t = fi.birthTime();
+        }
         if (!t.isValid()) {
             qDebug().noquote() << srcFun << "Skipping (invalid Created):" << path;
             continue;
@@ -155,11 +159,11 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
         current << it.path;
         prevT = it.created;
     }
-    if (!current.isEmpty())
-        groups.push_back(current);
+    if (!current.isEmpty()) groups.push_back(current);
+
 
     //  --- Debug dump with HH:mm:ss:zzz ---------------------------------------
-    // /*
+    /*
     qDebug().noquote() << srcFun
                        << "Grouped" << items.size() << "images into"
                        << groups.size() << "stack(s)."
@@ -181,21 +185,6 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
         }
     }
     //*/
-
-    /* --- Run each group ------------------------------------------------------
-    qDebug() << srcFun << "groups.count() =" << groups.count();
-    int n = groups.count();
-    int i = 0;
-    for (const QStringList &g : groups) {
-        if (g.size() < 2) {
-            qDebug().noquote() << srcFun << "Skipping group (need >=2 images):" << g;
-            continue;
-        }
-        i++;
-        qDebug() << srcFun << "g.count() =" << g.count();
-
-        generateFocusStack(g, method, i, n, srcFun);
-    }   */
 }
 
 void MW::generateFocusStack(const QStringList paths,
@@ -223,14 +212,13 @@ void MW::generateFocusStack(const QStringList paths,
         - if remote, use srcFolder parent = Lightroom folder
 */
     QString srcFun = "MW::generateFocusStack";
-    if (G::isLogger) G::log(srcFun, "paths " + method);
+    if (G::isLogger || G::FSLog) G::log(srcFun, "paths " + method);
 
     G::isRunningFocusStack = true;
 
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
     // isLocal = false;    // temp for debugging
 
-    // if (method.isEmpty() || method == "Default") method = "PMax";
     method = "StreamPMax";       // align > fusePMax
     // method = "PMax1";       // align > fusePMax
     // method = "PMax2";       // align > focus > depth > fusePMax
@@ -259,6 +247,9 @@ void MW::generateFocusStack(const QStringList paths,
     Utilities::uniqueFilePath(dstLastFusedPath, "_");
     QFileInfo fusedFi(dstLastFusedPath);
     fusedBase = fusedFi.completeBaseName();
+
+    if (G::FSLog) G::log(srcFun, "method =" + method);
+    if (G::FSLog) G::log(srcFun, "dstLastFusedPath =" + dstLastFusedPath);
 
     // ----------- End section when pipeline is finished -----------
 
@@ -298,8 +289,6 @@ void MW::generateFocusStack(const QStringList paths,
         opt.previewBackgroundMask   = true;
         opt.backgroundMethod        = "Depth+Focus";
     }
-
-    // Provide a broad overview of this module, formatted for a code editor in a /*  */ comment with 80 char line width.
 
     // --------------------------------------------------------------------
     // Create worker thread + FS pipeline object
@@ -350,15 +339,9 @@ void MW::generateFocusStack(const QStringList paths,
 
         // If aborted...
 
-        qDebug() << srcFun << "dstLastFusedPath =" << dstLastFusedPath;
-
         // Evaluate we have a result path
         if (dstLastFusedPath.isEmpty())
             return;
-
-        // folderAndFileSelectionChange(dstLastFusedPath, "FS::threadFinished");
-        // ---- DEFERRED: expensive model operations ----
-        // QTimer::singleShot(0, this, [=]() {
 
         if (isLocal) {
             qDebug() << srcFun << "isLocal = true";
@@ -373,20 +356,6 @@ void MW::generateFocusStack(const QStringList paths,
             folderAndFileSelectionChange(dstLastFusedPath, "FS::threadFinished");
         }
 
-        // });
-
-        // if (!dstLastFusedPath.isEmpty())
-        // {
-            // update datamodel
-            // if (isLocal) {
-            //     dm->insert(dstLastFusedPath);
-            //     waitUntilMetadataLoaded(3000, srcFun);
-            //     // select fused image
-            //     sel->select(dstLastFusedPath);
-            // }
-            // else folderAndFileSelectionChange(dstLastFusedPath, srcFun);
-            // folderAndFileSelectionChange(dstLastFusedPath, srcFun);
-        // }
     });
 
     qDebug() << srcFun << "xxx";

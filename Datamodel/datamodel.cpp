@@ -528,7 +528,6 @@ void DataModel::enqueueFolderSelection(const QString& folderPath,
     recurse = recurse all subfolders of folderPath
 */
     QString fun = "DataModel::enqueueFolderSelection";
-    qDebug() << fun << "1";
 
     if (recurse) {
         // Only iterate directories; skip "." and ".."
@@ -545,13 +544,11 @@ void DataModel::enqueueFolderSelection(const QString& folderPath,
             enqueueOp(p, op);
         }
     } else {
-        qDebug() << fun << "2";
         enqueueOp(folderPath, op);
     }
 
     // QCoreApplication::processEvents();
 
-    qDebug() << fun << "3";
     scheduleProcessing();
 }
 
@@ -645,14 +642,12 @@ void DataModel::addFolder(const QString &folderPath)
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
 
-    qDebug() << fun << "1";
     QString step = "Loading eligible image file information.<br>";
     step += folderPath + "<br>";
     QString escapeClause = "Press \"Esc\" to stop.";
     emit centralMsg(step + escapeClause);
     // qApp->processEvents();
 
-    qDebug() << fun << "2";
     // test if raw file to match jpg when same file names and one is a jpg
     QString prevRawSuffix = "";
     QString prevRawBaseName = "";
@@ -737,8 +732,6 @@ void DataModel::addFolder(const QString &folderPath)
         row++;
     }
 
-    qDebug() << fun << "3";
-
     if (abort) return;
 
     int folderRowCount = row - newRowCount;
@@ -761,139 +754,6 @@ void DataModel::addFolder(const QString &folderPath)
         endLoad(true);
     }
 }
-
-/*
-void DataModel::addFolder(const QString& folderPath)
-{
-    // All model mutations must happen on GUI thread.
-    Q_ASSERT(thread() == QThread::currentThread());
-
-    abort = false;                 // consider std::atomic_bool if other threads can set it
-    loadingModel = true;
-
-    // Track that this folder is active
-    folderList.append(folderPath);
-
-    // 1) Build file list (no sorting by QDir; we’ll sort ourselves)
-    QDir dir(folderPath);
-    dir.setNameFilters(*fileFilters);                  // assumed already set
-    dir.setFilter(QDir::Files | QDir::Readable | QDir::Hidden);
-    dir.setSorting(QDir::NoSort);
-    QList<QFileInfo> files = dir.entryInfoList();
-
-    // 2) Sort as required
-    if (combineRawJpg) {
-        std::sort(files.begin(), files.end(), lessThanCombineRawJpg);
-    } else {
-        std::sort(files.begin(), files.end(), lessThan);
-    }
-
-    // 3) Filter out zero-size and already-present, and prepare pairing
-    QVector<QFileInfo> toInsert;
-    toInsert.reserve(files.size());
-
-    // O(1) presence check
-    auto hasPath = [&](const QString& p) {
-        // Prefer a QHash<QString,int> pathToRow; fall back to your current function.
-        return fPathRowContains(p);
-    };
-
-    for (const QFileInfo& fi : files) {
-        if (abort) { loadingModel = false; return; }   // clean abort
-        if (fi.size() == 0) continue;
-        if (hasPath(fi.filePath())) continue;
-        toInsert.push_back(fi);
-    }
-    if (toInsert.isEmpty()) {
-        // Nothing new; possibly finish overall load if queue empty
-        if (folderQueue.isEmpty()) endLoad(true);
-        return;
-    }
-
-    // 4) Batch insert rows
-    const int firstRow = rowCount();
-    const int lastRow  = firstRow + toInsert.size() - 1;
-
-    if (columnCount() == 0) setColumnCount(G::TotalColumns);
-    beginInsertRows(QModelIndex(), firstRow, lastRow);
-    // Ensure your internal storage grows here if you keep custom vectors
-    setRowCount(rowCount() + toInsert.size());
-    endInsertRows();
-
-    // 5) Fill data for inserted rows (no signals storming if your setData emits dataChanged;
-    //    consider a final dataChanged over the inserted block if needed)
-    //    Build a RAW index for pairing: baseName -> row index of RAW
-    QHash<QString, int> rawRowByBase;
-
-    const auto isJpg = [](const QString& s) {
-        const QString t = s.toLower();
-        return (t == "jpg" || t == "jpeg");
-    };
-
-    int row = firstRow;
-    int progressCounter = 0;
-    constexpr int kProgressInterval = 100;
-
-    for (const QFileInfo& fi : toInsert) {
-        if (abort) { loadingModel = false; return; }   // clean abort
-
-        addFileDataForRow(row, fi);                    // your existing filler
-        // Ensure PathRole, TypeColumn, etc. are set in addFileDataForRow
-
-        const QString suffix   = fi.suffix().toLower();
-        const QString baseName = fi.completeBaseName();
-
-        // Pair RAW/JPG regardless of order
-        if (!isJpg(suffix)) {
-            // Candidate RAW; remember it for a possible JPG
-            rawRowByBase.insert(baseName, row);
-        } else {
-            // JPG; see if we already saw a RAW with this base name
-            if (int rawRow = rawRowByBase.value(baseName, -1); rawRow >= 0) {
-                // Mark duplicate roles on both rows
-                const QModelIndex jpgIdx = index(row, 0);
-                const QModelIndex rawIdx = index(rawRow, 0);
-
-                setData(rawIdx, true,                     G::DupHideRawRole);
-                setData(rawIdx, jpgIdx,                   G::DupOtherIdxRole);
-                setData(jpgIdx, rawIdx,                   G::DupOtherIdxRole);
-                setData(jpgIdx, true,                     G::DupIsJpgRole);
-                setData(jpgIdx, fi.suffix().toUpper(),    G::DupRawTypeRole);
-
-                if (combineRawJpg)
-                    setData(index(row, G::TypeColumn),     "JPG+" + fi.suffix().toUpper());
-                else
-                    setData(index(row, G::TypeColumn),     "JPG");
-            } else {
-                // JPG appeared before RAW; remember JPG position to link later if you want
-                // (optional: keep a jpgRowByBase and reconcile when RAW shows up)
-            }
-        }
-
-        if (++progressCounter % kProgressInterval == 0) {
-            updateLoadStatus(row + 1); // show progress using current count
-        }
-
-        ++row;
-    }
-
-    // 6) Initialize selection on the first added folder if this is the first batch
-    if (firstRow == 0 && row > 0) {
-        firstFolderPathWithImages = folderPath;
-        setCurrent(index(0, 0), instance);
-    }
-
-    // 7) Adjust icon chunking policy
-    if (rowCount() > hugeIconThreshold) {
-        iconChunkSize = 100;
-    }
-
-    // 8) Finish a “load session” when folder queue is empty
-    if (folderQueue.isEmpty()) {
-        endLoad(true);
-    }
-}
-//*/
 
 void DataModel::removeFolder(const QString &folderPath)
 {

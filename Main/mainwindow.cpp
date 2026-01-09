@@ -1507,7 +1507,8 @@ void MW::handleStartupArgs(const QString &args)
     the list of files, inserts the strings "Embellish" and the template name
     "Zen2048" and then resends to Winnow.
 */
-    if (G::isLogger) G::log("MW::handleStartupArgs", args);
+    QString fun = "MW::handleStartupArgs";
+    if (G::isLogger) G::log(fun, args);
 
     // if (args.length() < 2) return;
 
@@ -1530,8 +1531,13 @@ void MW::handleStartupArgs(const QString &args)
     // FOCUSSTACK
     if (srcProgram.startsWith("FocusStack")) {
 
+        qDebug() << fun << argList;
+
         // check if at least 2 image paths sent, if not, close Winnow
-        if (argList.length() < 3) close();
+        if (argList.length() < 3) {
+            close();
+            return;
+        }
 
         // QString msg = "MW::handleStartupArgs " + argList.at(0);
         // Utilities::log("MW::handleStartupArgs", msg);
