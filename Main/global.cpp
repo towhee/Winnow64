@@ -60,7 +60,7 @@ bool useInfoView = true;
 bool useMultimedia = true;
 bool useUpdateStatus = true;
 bool useFilterView = true;          // not finished
-bool useProcessEvents = true;
+bool useProcessEvents = false;
 
 // system display
 QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded

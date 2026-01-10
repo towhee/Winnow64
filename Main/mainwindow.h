@@ -1404,6 +1404,10 @@ private:
     void findDuplicates();
     void reportHueCount();
     void generateMeanStack();
+
+    // Focus Stack Utility
+    bool removeRemotelyGeneratedInputImages = true;
+    bool removeWorkingFiles = true;
     void focusStackFromSelection();
     void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
     void generateFocusStack(const QStringList paths, QString method,

@@ -1261,7 +1261,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         QString step = "Selecting folders.\n";
         QString escapeClause = "\nPress \"Esc\" to stop.";
         mw->setCentralMessage(step + escapeClause);
-        qApp->processEvents();
+        // qApp->processEvents();
         // fsModel->maxRecursedRoots.clear();
         clearFolderOverLimit();
         G::allMetadataLoaded = false;
@@ -1521,7 +1521,7 @@ void FSTree::dropEvent(QDropEvent *event)
     // iterate files
     for (int i = 0; i < count; i++) {
         G::popup->setProgress(i+1);
-        if (G::useProcessEvents) qApp->processEvents();        // processEvents is necessary
+        if (G::useProcessEvents) qApp->processEvents(); // processEvents is necessary
         if (G::stopCopyingFiles) {
             break;
         }

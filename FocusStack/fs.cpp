@@ -56,8 +56,9 @@ bool FS::initializeGroup(int group)
 
     if (o.useIntermediates) prepareFolders();
 
-    statusGroupPrefix = "Stack: " + QString::number(group+1) + "/" +
-                        QString::number(groups.count()) + " ";
+    statusGroupPrefix = "Focus Stacking:  "
+                        "Stack: " + QString::number(group+1) + " of " +
+                        QString::number(groups.count()) + "  ";
 
     // Clear any in-memory aligned images from previous run
     alignedColorPaths.clear();
@@ -1523,7 +1524,7 @@ bool FS::runStreamWaveletPMax()
     FSFusion fuse;
 
     for (int slice = 0; slice < slices; slice++) {
-        QString s = " Slice: " + QString::number(slice) + "/" +
+        QString s = " Slice: " + QString::number(slice) + " of " +
                     QString::number(slices) + " ";
         // Load input image slice
         status(s + "Loading source input image...");

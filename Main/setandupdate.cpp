@@ -6,6 +6,7 @@ void MW::setCentralMessage(QString message)
     if (G::isLogger) G::log(fun, message);
     centralLayout->setCurrentIndex(MessageTab);
     msg.msgLabel->setText(message);
+    centralLayout->currentWidget()->repaint();
 }
 
 /**********************************************************************************************
@@ -476,7 +477,7 @@ void MW::setCombineRawJpg()
     if (combineRawJpg) msg = "Combining Raw + Jpg pairs.  This could take a moment.";
     else msg = "Separating Raw + Jpg pairs.  This could take a moment.";
     G::popup->showPopup(msg);
-    qApp->processEvents();
+    if (G::useProcessEvents) qApp->processEvents();
 
     // prevent crash when there are videos (did not work)
     stop();

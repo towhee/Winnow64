@@ -92,7 +92,7 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
 
     // Block until G::isStressTest becomes false
     while (G::isStressTest || !bounceNextFolder) {
-        qApp->processEvents(); // Process events to keep the UI responsive
+        if (G::useProcessEvents) qApp->processEvents(); // Process events to keep the UI responsive
     }
 
     qDebug() << "MW::traverseFolderStressTest bounceNextFolder";
@@ -400,8 +400,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fPath = "/Users/roryhill/Pictures/Images/FocusStack/2025-11-07_0074.tif";
-    folderAndFileSelectionChange(fPath, "FS::test");
+    QString s = "2026:01:08 10:33:42";
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

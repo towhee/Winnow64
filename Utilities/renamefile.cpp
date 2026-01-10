@@ -303,7 +303,7 @@ void RenameFileDlg::rename()
         const QString base = inf.at(i).baseName();
         if (!baseNames.contains(base)) baseNames.append(base);
         ui->progressBar->setValue(++progress);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
     }
 
 
@@ -318,7 +318,7 @@ void RenameFileDlg::rename()
         QString path = dm->sf->data(dm->sf->index(row, G::PathColumn), G::PathRole).toString();
         appendAllSharingBaseName(path);
         ui->progressBar->setValue(++progress);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
     }
 
     if (isDebug) diagFiles();
@@ -491,10 +491,8 @@ void RenameFileDlg::rename()
         }
 
         ui->progressBar->setValue(++progress);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
     }
-
-//    ui->
 
     // update current image
     dm->currentFilePath = dm->currentSfIdx.data(G::PathRole).toString();

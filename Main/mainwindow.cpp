@@ -1531,7 +1531,7 @@ void MW::handleStartupArgs(const QString &args)
     // FOCUSSTACK
     if (srcProgram.startsWith("FocusStack")) {
 
-        qDebug() << fun << argList;
+        // qDebug() << fun << argList;
 
         // check if at least 2 image paths sent, if not, close Winnow
         if (argList.length() < 3) {

@@ -131,7 +131,7 @@ QString Stack::mean()
             }
         }
         G::popup->setProgress(i+1);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
     }
 
     QString newFilePath;

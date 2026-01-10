@@ -111,8 +111,15 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
         }
         // not in datamodel, probably remote call (lightroom)
         else {
-            QFileInfo fi(path);
-            t = fi.birthTime();
+            ExifTool et;
+            QString creation = et.readTag(path, "DateTimeOriginal");
+            et.close();
+            t = QDateTime::fromString(creation, "yyyy:MM:dd HH:mm:ss");
+
+            qDebug() << srcFun
+                     << creation
+                     << t
+                     << path;
         }
         if (!t.isValid()) {
             qDebug().noquote() << srcFun << "Skipping (invalid Created):" << path;
@@ -163,7 +170,7 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
 
 
     //  --- Debug dump with HH:mm:ss:zzz ---------------------------------------
-    /*
+    // /*
     qDebug().noquote() << srcFun
                        << "Grouped" << items.size() << "images into"
                        << groups.size() << "stack(s)."
@@ -228,13 +235,13 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Source images folder (used after pipeline finishes)
     QFileInfo info(paths.first());
-    const QString srcFolder = info.absolutePath();
+    const QString srcFolderPath = info.absolutePath();
     // Source images location (ie when sourced from lightroom)
     QString dstFolderPath;
-    if (isLocal) dstFolderPath = srcFolder;
+    if (isLocal) dstFolderPath = srcFolderPath;
     else {
         // get parent of srcFolder
-        QFileInfo fi(srcFolder);
+        QFileInfo fi(srcFolderPath);
         dstFolderPath = fi.dir().absolutePath();
     }
 
@@ -248,8 +255,9 @@ void MW::generateFocusStack(const QStringList paths,
     QFileInfo fusedFi(dstLastFusedPath);
     fusedBase = fusedFi.completeBaseName();
 
-    if (G::FSLog) G::log(srcFun, "method =" + method);
+    if (G::FSLog) G::log(srcFun, "srcFolder =" + srcFolderPath);
     if (G::FSLog) G::log(srcFun, "dstLastFusedPath =" + dstLastFusedPath);
+    if (G::FSLog) G::log(srcFun, "method =" + method);
 
     // ----------- End section when pipeline is finished -----------
 
@@ -353,7 +361,25 @@ void MW::generateFocusStack(const QStringList paths,
             sel->select(dstLastFusedPath);
         }
         else {
-            folderAndFileSelectionChange(dstLastFusedPath, "FS::threadFinished");
+            qDebug() << "scrFolder =" << srcFolderPath;
+            if (removeRemotelyGeneratedInputImages) {
+                for (const QString &path : paths) {
+                    if (!QFile::remove(path)) {
+                        QString msg = "Failed to remove file: " + path;
+                        qWarning() << "WARNING:" << srcFun << msg;
+                    }
+                }
+                QDir srcDir(srcFolderPath);
+                if (srcDir.exists() && srcDir.isEmpty()) {
+                    if (!srcDir.removeRecursively()) {
+                        QString msg = "Failed to remove folder: " + srcFolderPath;
+                        qWarning() << "WARNING:" << srcFun << msg;
+                    }
+                }
+            }
+            else {
+                folderAndFileSelectionChange(dstLastFusedPath, "FS::threadFinished");
+            }
         }
 
     });
