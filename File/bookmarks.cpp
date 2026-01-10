@@ -322,7 +322,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
                 "folder."
                 ;
         G::popup->showPopup(msg, 5000);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
         return;
     }
 
@@ -342,7 +342,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
             "only works in the Folder panel."
             ;
         G::popup->showPopup(msg, 2000);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
     }
 
     /* trigger itemPressed event, connected to MW::bookmarkClicked slot, which updates
