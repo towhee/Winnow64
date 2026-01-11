@@ -1516,19 +1516,34 @@ void Preferences::addUtilities()
         i.delegateType = DT_None;
         addItem(i);
 
-            // Check for app update at startup
+            // Cleanup working files after focus stacking
             i.name = "deleteInputStackImages";
             i.parentName = "FocusStackHeader";
-            i.captionText = "Delete all temporary folders";
+            i.captionText = "Remove all temporary folders";
             i.tooltip =
                 "If Focus Stack was initiated remotely (ie from Lightroom)\n"
                 "then a subfolder called 'FocusStack' will have been created\n"
                 "with the temporary input images.  Also, working subfolders\n"
-                "will exist, and they will also be deleted.";
+                "will exist, and they will also be removed.";
             i.hasValue = true;
             i.captionIsEditable = false;
             i.value = mw->checkIfUpdate;
             i.key = "deleteInputStackImages";
+            i.delegateType = DT_Checkbox;
+            i.type = "bool";
+            addItem(i);
+
+            // 8-bit pipeline
+            i.name = "8bitFSPipeline";
+            i.parentName = "FocusStackHeader";
+            i.captionText = "Limit to 8-bit pipeline";
+            i.tooltip =
+                "If the input images are 16-bit they will be converted to\n"
+                 "8-bit and the output fused image will be 8-bit.\n";
+            i.hasValue = true;
+            i.captionIsEditable = false;
+            i.value = mw->checkIfUpdate;
+            i.key = "8bitFSPipeline";
             i.delegateType = DT_Checkbox;
             i.type = "bool";
             addItem(i);

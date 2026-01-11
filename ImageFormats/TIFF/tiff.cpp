@@ -1583,6 +1583,7 @@ bool Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
 /*
 
 */
+    QString srcFun = "Tiff::embedIRBThumbnail";
     // convert QImage to QByteArray
     QByteArray jpegData;
     QBuffer buffer(&jpegData); // Create a buffer that writes to jpegData
@@ -1592,7 +1593,7 @@ bool Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
     // Open the TIFF file
     TIFF *tif = TIFFOpen(tiffPath.toUtf8().constData(), "r+");
     if (!tif) {
-        qWarning() << "Failed to open TIFF file:" << tiffPath;
+        qWarning() << srcFun << "Failed to open TIFF file:" << tiffPath;
         return false;
     }
 

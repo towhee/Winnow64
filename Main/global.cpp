@@ -142,6 +142,7 @@ bool isSlideShow;
 bool isRunningColorAnalysis;
 bool isRunningStackOperation;
 bool isRunningFocusStack;
+bool abortFocusStack;
 bool isProcessingExportedImages;
 bool isEmbellish;
 bool includeSidecars;

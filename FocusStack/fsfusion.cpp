@@ -209,6 +209,8 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     QString srcFun = "FSFusion::fusePMax";
     if (G::FSLog) G::log(srcFun, "Start PMax fusion");
 
+    int outDepth = colorImgs.at(0).depth();
+
     const int N = static_cast<int>(grayImgs.size());
     if (N == 0 || N != static_cast<int>(colorImgs.size()))
         return false;
@@ -329,10 +331,14 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
     if (progressCallback) progressCallback();
 
     cv::Mat paddedColorOut;
+    FSFusionReassign::ColorDepth cd = (outDepth == CV_16U)
+           ? FSFusionReassign::ColorDepth::U16
+           : FSFusionReassign::ColorDepth::U8;
     if (!FSFusionReassign::applyColorMap(fusedGray8,
                                          colorEntries,
                                          counts,
-                                         paddedColorOut))
+                                         paddedColorOut,
+                                         cd))
     {
         QString msg = "FSFusionReassign::applyColorMap failed";
         if (G::FSLog) G::log(srcFun, msg);
@@ -368,6 +374,13 @@ bool fusePMax(const std::vector<cv::Mat> &grayImgs,
 
 } // anonymous namespace
 
+static inline FSFusionReassign::ColorDepth reassignDepth(int depth)
+{
+    return (depth == CV_16U)
+        ? FSFusionReassign::ColorDepth::U16
+        : FSFusionReassign::ColorDepth::U8;
+}
+
 //--------------------------------------------------------------
 // Public entry point
 //--------------------------------------------------------------
@@ -381,7 +394,6 @@ bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
                          ProgressCallback            progressCallback)
 {
     QString srcFun = "FSFusion::fuseStack";
-
 
     const QString method = opt.method.trimmed();
     if (G::FSLog) G::log(srcFun, "Method = " + method);
@@ -434,26 +446,39 @@ bool FSFusion::streamPMaxSlice(int slice,
         qWarning() << "WARNING:" << srcFun << msg;
         return false;
     }
-    if (grayImg.size() != orig || colorImg.size() != orig) {
+    if (grayImg.size() != origSize || colorImg.size() != origSize) {
         QString msg = "Slice " + s +
                       " grayImg.size() != orig || colorImg.size() != orig";
         qWarning() << "WARNING:" << srcFun << msg
-                   << "orig.width =" << orig.width << "grayImg.size ="
+                   << "origSize.width =" << origSize.width << "grayImg.size ="
                    << grayImg.size.dims();
         return false;
     }
 
     if (slice == 0) {
-        orig = grayImg.size();
+        origSize = grayImg.size();
+        outDepth = colorImg.depth();
+        FSFusionReassign::ColorDepth cd = (outDepth == CV_16U)
+            ? FSFusionReassign::ColorDepth::U16
+            : FSFusionReassign::ColorDepth::U8;
+        if (!colorBuilder.begin(origSize, /*fixedCapPerPixel=*/4, cd)) {
+            msg = "colorBuilder.begin() failed";
+            qWarning() << "WARNING:" << srcFun << msg;
+            return false;
+        }
     }
-    else if (grayImg.size() != orig) {
+    else if (grayImg.size() != origSize) {
         QString msg = "Slice " + s + " grayImg.size() != orig";
         qWarning() << "WARNING:" << srcFun << msg;
         return false;
     }
-    else if (colorImg.size() != orig) {
+    else if (colorImg.size() != origSize) {
         QString msg = "Slice " + s + " colorImg.size() != orig";
         qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+    else if (colorImg.depth() != outDepth) {
+        qWarning() << "WARNING:" << srcFun << "Color depth changed across slices";
         return false;
     }
 
@@ -473,8 +498,8 @@ bool FSFusion::streamPMaxSlice(int slice,
 
     // Lock padded size on slice 0; enforce identical thereafter
     if (slice == 0)
-        ps = paddedSize;
-    else if (paddedSize != ps)
+        padSize = paddedSize;
+    else if (paddedSize != padSize)
     {
         QString msg = "Slice " + s + " paddedSize != ps";
         qWarning() << "WARNING:" << srcFun << msg;
@@ -483,12 +508,12 @@ bool FSFusion::streamPMaxSlice(int slice,
 
     // Sanity Check
     // /*
-    if (slice > 0 && paddedSize != ps)
+    if (slice > 0 && paddedSize != padSize)
     {
         QString m = QString("Sanity: slice %1 paddedSize %2x%3 != ps %4x%5")
             .arg(slice)
             .arg(paddedSize.width).arg(paddedSize.height)
-            .arg(ps.width).arg(ps.height);
+            .arg(padSize.width).arg(padSize.height);
         if (G::FSLog) G::log(srcFun, m);
         qWarning().noquote() << "WARNING:" << srcFun << m;
         return false;
@@ -551,8 +576,8 @@ bool FSFusion::streamPMaxSlice(int slice,
     {
         QString log =
             "Sanity(slice0): "
-            "orig=" + QString("%1x%2").arg(orig.width).arg(orig.height) + " "
-            "ps="   + QString("%1x%2").arg(ps.width).arg(ps.height) + " "
+            "orig=" + QString("%1x%2").arg(origSize.width).arg(origSize.height) + " "
+            "ps="   + QString("%1x%2").arg(padSize.width).arg(padSize.height) + " "
             "waveletSize=" +
             QString("%1x%2").arg(waveletSize.width).arg(waveletSize.height) +
             " | "
@@ -617,7 +642,7 @@ bool FSFusion::streamPMaxSlice(int slice,
 }
 
 // StreamPMax pipeline
-bool FSFusion::streamPMaxFinish(cv::Mat &outputColor8,
+bool FSFusion::streamPMaxFinish(cv::Mat &outputColor,
                                 const Options &opt,
                                 std::atomic_bool *abortFlag,
                                 StatusCallback statusCallback,
@@ -666,7 +691,7 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor8,
         qWarning() << "WARNING:" << srcFun << msg;
         return false;
     }
-    if (fusedGray8.size() != ps) {
+    if (fusedGray8.size() != padSize) {
         msg = "Inverse wavelet: fusedGray8.size() != ps";
         qWarning() << "WARNING:" << srcFun << msg;
         return false;
@@ -696,7 +721,8 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor8,
 
     cv::Mat paddedColorOut;
     if (!FSFusionReassign::applyColorMap(fusedGray8, colorEntries,
-                                         counts, paddedColorOut))
+                                         counts, paddedColorOut,
+                                         reassignDepth(outDepth)))
     {
         msg = "FSFusionReassign::applyColorMap failed";
         if (G::FSLog) G::log(srcFun, msg);
@@ -704,17 +730,20 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor8,
         return false;
     }
 
-    if (paddedColorOut.size() != ps) {
+    if (paddedColorOut.size() != padSize) {
         msg = "Apply color map: paddedColorOut.size() != ps";
         qWarning() << "WARNING:" << srcFun << msg;
         return false;
     }
-    if (paddedColorOut.type() != CV_8UC3) {
-        msg = "Apply color map: paddedColorOut.type() != CV_8UC3";
-        qWarning() << "WARNING:" << srcFun << msg;
+
+    const int expectedType = (outDepth == CV_16U) ? CV_16UC3 : CV_8UC3;
+    if (paddedColorOut.type() != expectedType) {
+        msg = "Apply color map: paddedColorOut.type() mismatch";
+        qWarning() << "WARNING:" << srcFun << msg
+                   << " got=" << paddedColorOut.type()
+                   << " expected=" << expectedType;
         return false;
     }
-
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
@@ -723,20 +752,20 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor8,
     // --------------------------------------------------------------------
     if (G::FSLog) G::log(srcFun, "Crop back to original size");
 
-    if (ps == orig)
+    if (padSize == origSize)
     {
-        outputColor8 = paddedColorOut; // shallow copy ok
+        outputColor = paddedColorOut; // shallow copy ok
     }
     else
     {
-        const int padW = ps.width  - orig.width;
-        const int padH = ps.height - orig.height;
+        const int padW = padSize.width  - origSize.width;
+        const int padH = padSize.height - origSize.height;
 
         const int left = padW / 2;
         const int top  = padH / 2;
 
-        cv::Rect roi(left, top, orig.width, orig.height);
-        outputColor8 = paddedColorOut(roi).clone(); // final fused image mat
+        cv::Rect roi(left, top, origSize.width, origSize.height);
+        outputColor = paddedColorOut(roi).clone(); // final fused image mat
     }
 
     // Housekeeping

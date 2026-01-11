@@ -46,20 +46,16 @@ public:
      - colorImgs    : aligned color 8UC3 or 16UC3 (same size/count as gray)
      - opt          : see Options above
      - depthIndex16 : REQUIRED depth index (0..N-1) from FSDepth
-     - outputColor8 : fused RGB 8-bit
+     - outputColor  : fused RGB 8-bit / 16-bit
 
     Returns false on any error (size/type mismatch, empty input, etc).
-
-    NOTE:
-      - FSFusion no longer computes or exposes any "canonical" depth map.
-        The only depth map in the system is the one produced by FSDepth.
     */
 
     static bool fuseStack(const std::vector<cv::Mat> &grayImgs,
                           const std::vector<cv::Mat> &colorImgs,
                           const Options              &opt,
                           cv::Mat                    &depthIndex16,
-                          cv::Mat                    &outputColor8,
+                          cv::Mat                    &outputColor,
                           std::atomic_bool           *abortFlag,
                           StatusCallback              statusCb,
                           ProgressCallback            progressCallback
@@ -69,7 +65,7 @@ public:
     // StreamPMax pipeline
     // Merge
     FSMerge::StreamState mergeState;
-    cv::Size orig;
+    cv::Size origSize;
     cv::Mat wavelet;
     cv::Mat mergedWavelet;
     cv::Size waveletSize;
@@ -77,8 +73,9 @@ public:
     FSFusionReassign::ColorMapBuilder colorBuilder;
     std::vector<FSFusionReassign::ColorEntry> colorEntries;
     std::vector<uint8_t> counts;
-    cv::Size ps;    // padded size
+    cv::Size padSize;
     cv::Mat fusedGray8;
+    int outDepth;
 
     bool streamPMaxSlice(
         int slice,
@@ -91,7 +88,7 @@ public:
     );
 
     bool streamPMaxFinish(
-        cv::Mat &outputColor8,
+        cv::Mat &outputColor,
         const Options &opt,
         std::atomic_bool *abortFlag,
         StatusCallback statusCallback,

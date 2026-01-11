@@ -89,6 +89,7 @@ public:
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
     void progress(int current, int total);
+    void finished(bool success);
 
 protected:
     bool abortRequested() const
@@ -174,7 +175,7 @@ private:
     cv::Mat subjectMask8Mat;     // CV_8U  0/255
 
     // Fusion Mat
-    cv::Mat fusedColor8Mat;
+    cv::Mat fusedColorMat;       // CU8 or CU16
 
     // Progress
     int progressCount = -1;

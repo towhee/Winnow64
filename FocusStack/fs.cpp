@@ -518,7 +518,10 @@ bool FS::run()
         if (!initializeGroup(groupCounter++)) return false;
 
         if (o.isStream) {
-            runStreamWaveletPMax();
+            if (!runStreamWaveletPMax()) {
+                emit finished(false);
+                return false;
+            }
         }
 
         else {
@@ -1006,7 +1009,7 @@ bool FS::runFusion()
                              colorImgs,
                              fopt,
                              depthIndex16Mat,
-                             fusedColor8Mat,
+                             fusedColorMat,
                              &abort,
                              statusCb,
                              progressCb))
@@ -1100,7 +1103,7 @@ bool FS::runBackground()
         bopt.featherRadius = 6;
         bopt.featherGamma  = 1.2f;
 
-        cv::Mat repaired = fusedColor8Mat.clone();              // canonical size+type target
+        cv::Mat repaired = fusedColorMat.clone();              // canonical size+type target
         const cv::Size targetSize = repaired.size();
         const int targetType = repaired.type();
 
@@ -1481,7 +1484,7 @@ bool FS::runArtifact()
 
 bool FS::runStreamWaveletPMax()
 {
-/*  Streaming Algorithm:
+    /*  Streaming Algorithm:
     for each slice
         - load input image
         - align (0 is special case) return graySlice, colorSlice
@@ -1537,7 +1540,7 @@ bool FS::runStreamWaveletPMax()
             status(s + "Identifying for alignment");
             alignedGraySlice = currImage.gray.clone();
             alignedColorSlice = currImage.color.clone();
-            fuse.orig = currImage.gray.size();
+            fuse.origSize = currImage.gray.size();
             incrementProgress();
         }
         else {
@@ -1550,6 +1553,11 @@ bool FS::runStreamWaveletPMax()
             }
             incrementProgress();
         }
+
+        // QString depth = "";
+        // if (alignedColorSlice.depth() == CV_16U) depth = "16bit";
+        // if (alignedColorSlice.depth() == CV_8U)  depth = "8bit";
+        // qDebug() << srcFun << "raw depth =" << depth;
 
         // Fuse slice
         status(s + "Fusing...");
@@ -1570,7 +1578,7 @@ bool FS::runStreamWaveletPMax()
 
     // finish merge, invert, recover color and crop padding
     status("Finalizing fusion...");
-    if (!fuse.streamPMaxFinish(fusedColor8Mat, fopt, &abort, statusCb, progressCb))
+    if (!fuse.streamPMaxFinish(fusedColorMat, fopt, &abort, statusCb, progressCb))
         return false;
     incrementProgress();
 
@@ -1600,7 +1608,7 @@ bool FS::saveFused(QString folderPath)
     // Write fused result
     msg = "Write to " + fusedPath;
     if (G::FSLog) G::log(srcFun, msg);
-    cv::imwrite(fusedPath.toStdString(), fusedColor8Mat);
+    cv::imwrite(fusedPath.toStdString(), fusedColorMat);
 
     // Copy metadata from first source using your existing logic
     msg = "Copy metadata using ExifTool from " + inputPaths.last();
@@ -1615,7 +1623,13 @@ bool FS::saveFused(QString folderPath)
     if (G::FSLog) G::log(srcFun, msg);
     if (ext == "tif") {
         Tiff tiff;
-        QImage thumb = thumbnail(fusedColor8Mat);
+        cv::Mat thumbSrc = fusedColorMat;
+        if (thumbSrc.depth() == CV_16U) {
+            cv::Mat tmp8;
+            thumbSrc.convertTo(tmp8, CV_8U, 1.0 / 257.0);
+            thumbSrc = tmp8;
+        }
+        QImage thumb = thumbnail(thumbSrc);
         qDebug() << srcFun << msg << thumb.width() << thumb.height();
         if (!thumb.isNull()) {
             if (!tiff.embedIRBThumbnail(fusedPath, thumb)) {
