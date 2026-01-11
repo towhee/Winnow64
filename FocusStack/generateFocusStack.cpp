@@ -329,13 +329,6 @@ void MW::generateFocusStack(const QStringList paths,
     connect(pipeline, &FS::updateStatus,
             this, &MW::updateStatus, Qt::QueuedConnection);
 
-    // Finish failure
-    // connect(pipeline, &FS::finished, this, [this](bool result) {
-    //     // success = result;
-    // }, Qt::QueuedConnection);
-
-
-
     // Progress update
     connect(pipeline, &FS::progress, this, [this](int current, int total) {
         this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
@@ -350,6 +343,9 @@ void MW::generateFocusStack(const QStringList paths,
     // We detect success by checking filesystem or pipeline signals (later)
     connect(fsThread, &QThread::finished, this, [=]()
     {
+        QString msg = "FS is finished.";
+        if (G::FSLog) G::log(srcFun, msg);
+
         G::isRunningFocusStack = false;
 
         // Clear progress
@@ -357,8 +353,9 @@ void MW::generateFocusStack(const QStringList paths,
 
         // If aborted...
         if (G::abortFocusStack) {
+            msg = "FS was aborted.";
+            if (G::FSLog) G::log(srcFun, msg);
             G::abortFocusStack = false;
-            QString msg = "Focus stacking failed";
             updateStatus(false, msg);
             G::popup->showPopup(msg);
             return;
@@ -366,7 +363,8 @@ void MW::generateFocusStack(const QStringList paths,
 
         // Evaluate we have a result path
         if (dstLastFusedPath.isEmpty() || QImage(dstLastFusedPath).isNull()) {
-            QString msg = "Focus stacking failed";
+            msg = "Focus stacking failed";
+            if (G::FSLog) G::log(srcFun, msg);
             updateStatus(false, msg);
             G::popup->showPopup(msg);
             return;
@@ -382,7 +380,7 @@ void MW::generateFocusStack(const QStringList paths,
             sel->select(dstLastFusedPath);
         }
         else {
-            qDebug() << "scrFolder =" << srcFolderPath;
+            // qDebug() << "scrFolder =" << srcFolderPath;
             if (removeRemotelyGeneratedInputImages) {
                 for (const QString &path : paths) {
                     if (!QFile::remove(path)) {
@@ -405,7 +403,6 @@ void MW::generateFocusStack(const QStringList paths,
 
     });
 
-    qDebug() << srcFun << "xxx";
     if (fsThread->isRunning()) return;
 
     // Start
