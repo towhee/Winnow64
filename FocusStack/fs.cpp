@@ -1532,6 +1532,7 @@ bool FS::runStreamWaveletPMax()
         // Load input image slice
         status(s + "Loading source input image...");
         currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+        if (G::abortFocusStack) return false;
         incrementProgress();
 
         // Align slice
@@ -1541,6 +1542,7 @@ bool FS::runStreamWaveletPMax()
             alignedGraySlice = currImage.gray.clone();
             alignedColorSlice = currImage.color.clone();
             fuse.origSize = currImage.gray.size();
+            if (G::abortFocusStack) return false;
             incrementProgress();
         }
         else {
@@ -1551,6 +1553,7 @@ bool FS::runStreamWaveletPMax()
                 qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
                 return false;
             }
+            if (G::abortFocusStack) return false;
             incrementProgress();
         }
 
@@ -1566,6 +1569,7 @@ bool FS::runStreamWaveletPMax()
             qWarning() << "WARNING:" << srcFun << "fuse.streamPMaxSlice failed.";
             return false;
         }
+        if (G::abortFocusStack) return false;
         incrementProgress();
 
         prevImage = currImage;
@@ -1580,6 +1584,7 @@ bool FS::runStreamWaveletPMax()
     status("Finalizing fusion...");
     if (!fuse.streamPMaxFinish(fusedColorMat, fopt, &abort, statusCb, progressCb))
         return false;
+    if (G::abortFocusStack) return false;
     incrementProgress();
 
     if (o.useIntermediates) saveFused(fusionFolderPath);
