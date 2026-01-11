@@ -16,32 +16,35 @@ constexpr int REASSIGN_MAX_BATCH = 32;
 namespace FSFusionReassign
 {
 
-bool ColorMapBuilder::normalizeColorTo8(const cv::Mat& colorImg, cv::Mat& color8)
+bool ColorMapBuilder::normalizeColorTo16(const cv::Mat& colorImg, cv::Mat& color16)
 {
-    if (colorImg.type() == CV_8UC3)
-    {
-        color8 = colorImg;                 // shallow
-        return true;
-    }
     if (colorImg.type() == CV_16UC3)
     {
-        colorImg.convertTo(color8, CV_8UC3, 255.0 / 65535.0);
+        color16 = colorImg;   // shallow ok
+        return true;
+    }
+    if (colorImg.type() == CV_8UC3)
+    {
+        // exact 8->16 mapping: 0..255 -> 0..65535
+        colorImg.convertTo(color16, CV_16UC3, 257.0);
         return true;
     }
     return false;
 }
 
 // StreamPMax pipeline
-bool ColorMapBuilder::begin(const cv::Size& size, int fixedCapPerPixel)
+bool ColorMapBuilder::begin(const cv::Size& size, int fixedCapPerPixel, ColorDepth depth)
 {
     m_size = size;
     m_cap = std::max(1, fixedCapPerPixel);
     m_pixels = m_size.width * m_size.height;
+    m_depth = depth; // Auto or forced
 
     m_counts.assign(m_pixels, 0);
     m_grays.assign(m_pixels * m_cap, 0);
-    m_colors.assign(m_pixels * m_cap, cv::Vec3b(0,0,0));
+    m_colors16.assign(m_pixels * m_cap, cv::Vec3w(0,0,0));
     m_overflow.clear();
+
     return (m_pixels > 0);
 }
 
@@ -50,39 +53,20 @@ bool ColorMapBuilder::addSlice(const cv::Mat& grayImg, const cv::Mat& colorImg)
 {
     QString srcFun = "FSFusionReassign::ColorMapBuilder::addSlice";
 
-    if (!isValid())
-    {
-        // Allow lazy init if you want:
-        // return begin(grayImg.size());
-        QString msg = "builder not initialized (call begin() first)";
-        qWarning() << "WARNING:" << srcFun << msg;
-        return false;
-    }
+    if (!isValid()) { qWarning() << "WARNING:" << srcFun << "not initialized"; return false; }
+    if (grayImg.empty() || colorImg.empty()) return false;
+    if (grayImg.size() != m_size || colorImg.size() != m_size) return false;
+    if (grayImg.type() != CV_8U) return false;
 
-    if (grayImg.empty() || colorImg.empty())
-    {
-        QString msg = "grayImg.empty() || colorImg.empty()";
-        qWarning() << "WARNING:" << srcFun << msg;
-        return false;
-    }
-    if (grayImg.size() != m_size || colorImg.size() != m_size)
-    {
-        QString msg = "slice size mismatch";
-        qWarning() << "WARNING:" << srcFun << msg;
-        return false;
-    }
-    if (grayImg.type() != CV_8U)
-    {
-        QString msg = "grayImg.type() != CV_8U";
-        qWarning() << "WARNING:" << srcFun << msg;
-        return false;
-    }
+    // Decide depth once (or respect forced)
+    if (m_depth == ColorDepth::Auto)
+        m_depth = (colorImg.depth() == CV_16U) ? ColorDepth::U16 : ColorDepth::U8;
 
-    cv::Mat color8;
-    if (!normalizeColorTo8(colorImg, color8))
+    // We ALWAYS normalize to 16-bit for storage
+    cv::Mat color16;
+    if (!normalizeColorTo16(colorImg, color16))
     {
-        QString msg = "invalid colorImg.type() (expected CV_8UC3 or CV_16UC3)";
-        qWarning() << "WARNING:" << srcFun << msg;
+        qWarning() << "WARNING:" << srcFun << "expected CV_8UC3 or CV_16UC3";
         return false;
     }
 
@@ -91,8 +75,8 @@ bool ColorMapBuilder::addSlice(const cv::Mat& grayImg, const cv::Mat& colorImg)
 
     for (int y = 0; y < H; ++y)
     {
-        const uint8_t* gRow = grayImg.ptr<uint8_t>(y);
-        const cv::Vec3b* cRow = color8.ptr<cv::Vec3b>(y);
+        const uint8_t*  gRow  = grayImg.ptr<uint8_t>(y);
+        const cv::Vec3w* cRow = color16.ptr<cv::Vec3w>(y);
 
         int basePix = y * W;
 
@@ -100,53 +84,42 @@ bool ColorMapBuilder::addSlice(const cv::Mat& grayImg, const cv::Mat& colorImg)
         {
             const int p = basePix + x;
             const uint8_t g = gRow[x];
-            const cv::Vec3b c = cRow[x];
+            const cv::Vec3w c16 = cRow[x];
 
-            // If pixel already overflowed, update overflow vector.
             auto it = m_overflow.find(p);
             if (it != m_overflow.end())
             {
                 auto& v = it->second;
                 bool exists = false;
-                for (const auto& e : v)
-                {
-                    if (e.gray == g) { exists = true; break; }
-                }
-                if (!exists && v.size() < 256)
-                    v.emplace_back(g, c);
+                for (const auto& e : v) { if (e.gray == g) { exists = true; break; } }
+                if (!exists && v.size() < 256) v.emplace_back(g, c16);
                 continue;
             }
 
-            // Fixed storage path
             uint8_t cnt = m_counts[p];
             const int slotBase = p * m_cap;
 
-            // Check for existing gray (keep FIRST color, matching your original buildColorMap behavior)
             bool exists = false;
             for (int k = 0; k < cnt; ++k)
             {
                 if (m_grays[slotBase + k] == g) { exists = true; break; }
             }
-            if (exists)
-                continue;
+            if (exists) continue;
 
             if (cnt < m_cap)
             {
                 m_grays[slotBase + cnt] = g;
-                m_colors[slotBase + cnt] = c;
+                m_colors16[slotBase + cnt] = c16;
                 m_counts[p] = uint8_t(cnt + 1);
             }
             else
             {
-                // Promote to overflow for this pixel
                 std::vector<ColorEntry> v;
                 v.reserve(16);
                 for (int k = 0; k < m_cap; ++k)
-                    v.emplace_back(m_grays[slotBase + k], m_colors[slotBase + k]);
+                    v.emplace_back(m_grays[slotBase + k], m_colors16[slotBase + k]);
 
-                // Add new one if still unique
-                v.emplace_back(g, c);
-
+                v.emplace_back(g, c16);
                 m_overflow.emplace(p, std::move(v));
             }
         }
@@ -185,7 +158,7 @@ void ColorMapBuilder::finish(std::vector<ColorEntry>& outColors,
             outCountsMinus1[p] = uint8_t(safeCnt - 1);
 
             for (int k = 0; k < safeCnt; ++k)
-                outColors.emplace_back(m_grays[slotBase + k], m_colors[slotBase + k]);
+                outColors.emplace_back(m_grays[slotBase + k], m_colors16[slotBase + k]);
         }
     }
 
@@ -200,13 +173,13 @@ void ColorMapBuilder::reset()
 
     m_counts.clear();
     m_grays.clear();
-    m_colors.clear();
+    m_colors16.clear();
     m_overflow.clear();
 
     // Optional: free capacity immediately
     m_counts.shrink_to_fit();
     m_grays.shrink_to_fit();
-    m_colors.shrink_to_fit();
+    m_colors16.shrink_to_fit();
     // m_overflow doesn't have shrink_to_fit; reassign if you want:
     // std::unordered_map<int, std::vector<ColorEntry>>().swap(m_overflow);
 }
@@ -323,25 +296,32 @@ bool buildColorMap(const std::vector<cv::Mat> &grayImgs,
     return true;
 }
 
+static inline uint8_t u16_to_u8(uint16_t v)
+{
+    // round to nearest: (v + 128) / 257
+    return uint8_t((uint32_t(v) + 128u) / 257u);
+}
+
 bool applyColorMap(const cv::Mat &grayMerged,
                    const std::vector<ColorEntry> &colors,
                    const std::vector<uint8_t> &counts,
-                   cv::Mat &colorOut)
+                   cv::Mat &colorOut,
+                   ColorDepth outDepth)
 {
-    if (grayMerged.empty())
-        return false;
-    if (grayMerged.type() != CV_8U)
-        return false;
+    if (grayMerged.empty() || grayMerged.type() != CV_8U) return false;
 
-    int width  = grayMerged.cols;
-    int height = grayMerged.rows;
+    const int width  = grayMerged.cols;
+    const int height = grayMerged.rows;
 
-    if (static_cast<int>(counts.size()) != width * height)
-        return false;
-    if (colors.empty())
-        return false;
+    if (int(counts.size()) != width * height) return false;
+    if (colors.empty()) return false;
 
-    colorOut.create(height, width, CV_8UC3);
+    if (outDepth == ColorDepth::Auto) outDepth = ColorDepth::U8; // be explicit
+
+    if (outDepth == ColorDepth::U16)
+        colorOut.create(height, width, CV_16UC3);
+    else
+        colorOut.create(height, width, CV_8UC3);
 
     const ColorEntry *colorsPtr = colors.data();
     const uint8_t *countsPtr    = counts.data();
@@ -349,30 +329,59 @@ bool applyColorMap(const cv::Mat &grayMerged,
     for (int y = 0; y < height; ++y)
     {
         const uint8_t *grayRow = grayMerged.ptr<uint8_t>(y);
-        cv::Vec3b *outRow      = colorOut.ptr<cv::Vec3b>(y);
 
-        for (int x = 0; x < width; ++x)
+        if (outDepth == ColorDepth::U16)
         {
-            int colorCount = *countsPtr++ + 1;
-            const ColorEntry *pos = colorsPtr;
-            colorsPtr += colorCount;
+            cv::Vec3w *outRow = colorOut.ptr<cv::Vec3w>(y);
 
-            uint8_t gray = grayRow[x];
-            ColorEntry closest = *pos++;
-            int error = std::abs(int(closest.gray) - int(gray));
-
-            while (error > 0 && pos != colorsPtr)
+            for (int x = 0; x < width; ++x)
             {
-                ColorEntry candidate = *pos++;
-                int distance = std::abs(int(candidate.gray) - int(gray));
-                if (distance < error)
-                {
-                    error = distance;
-                    closest = candidate;
-                }
-            }
+                int colorCount = *countsPtr++ + 1;
+                const ColorEntry *pos = colorsPtr;
+                colorsPtr += colorCount;
 
-            outRow[x] = closest.color;
+                uint8_t gray = grayRow[x];
+                const ColorEntry *best = pos;
+                int bestErr = std::abs(int(pos->gray) - int(gray));
+                ++pos;
+
+                while (bestErr > 0 && pos != colorsPtr)
+                {
+                    int err = std::abs(int(pos->gray) - int(gray));
+                    if (err < bestErr) { bestErr = err; best = pos; }
+                    ++pos;
+                }
+
+                outRow[x] = best->color16;
+            }
+        }
+        else // U8
+        {
+            cv::Vec3b *outRow = colorOut.ptr<cv::Vec3b>(y);
+
+            for (int x = 0; x < width; ++x)
+            {
+                int colorCount = *countsPtr++ + 1;
+                const ColorEntry *pos = colorsPtr;
+                colorsPtr += colorCount;
+
+                uint8_t gray = grayRow[x];
+                const ColorEntry *best = pos;
+                int bestErr = std::abs(int(pos->gray) - int(gray));
+                ++pos;
+
+                while (bestErr > 0 && pos != colorsPtr)
+                {
+                    int err = std::abs(int(pos->gray) - int(gray));
+                    if (err < bestErr) { bestErr = err; best = pos; }
+                    ++pos;
+                }
+
+                const cv::Vec3w c16 = best->color16;
+                outRow[x] = cv::Vec3b(u16_to_u8(c16[0]),
+                                      u16_to_u8(c16[1]),
+                                      u16_to_u8(c16[2]));
+            }
         }
     }
 

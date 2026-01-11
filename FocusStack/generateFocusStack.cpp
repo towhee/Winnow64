@@ -222,6 +222,9 @@ void MW::generateFocusStack(const QStringList paths,
     if (G::isLogger || G::FSLog) G::log(srcFun, "paths " + method);
 
     G::isRunningFocusStack = true;
+    G::abortFocusStack = false;
+
+    bool success = true;
 
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
     // isLocal = false;    // temp for debugging
@@ -326,6 +329,13 @@ void MW::generateFocusStack(const QStringList paths,
     connect(pipeline, &FS::updateStatus,
             this, &MW::updateStatus, Qt::QueuedConnection);
 
+    // Finish failure
+    // connect(pipeline, &FS::finished, this, [this](bool result) {
+    //     // success = result;
+    // }, Qt::QueuedConnection);
+
+
+
     // Progress update
     connect(pipeline, &FS::progress, this, [this](int current, int total) {
         this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
@@ -346,10 +356,21 @@ void MW::generateFocusStack(const QStringList paths,
         cacheProgressBar->clearUpperProgress();
 
         // If aborted...
+        if (G::abortFocusStack) {
+            G::abortFocusStack = false;
+            QString msg = "Focus stacking failed";
+            updateStatus(false, msg);
+            G::popup->showPopup(msg);
+            return;
+        }
 
         // Evaluate we have a result path
-        if (dstLastFusedPath.isEmpty())
+        if (dstLastFusedPath.isEmpty() || QImage(dstLastFusedPath).isNull()) {
+            QString msg = "Focus stacking failed";
+            updateStatus(false, msg);
+            G::popup->showPopup(msg);
             return;
+        }
 
         if (isLocal) {
             qDebug() << srcFun << "isLocal = true";

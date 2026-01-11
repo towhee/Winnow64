@@ -8,14 +8,23 @@
 
 namespace FSFusionReassign
 {
+
+enum class ColorDepth
+{
+    Auto,   // infer from first slice
+    U8,
+    U16
+};
+
 struct ColorEntry
 {
-    uint8_t gray;
-    cv::Vec3b color;
+    uint8_t  gray = 0;
+    cv::Vec3w color16 = {0,0,0};   // ALWAYS store 16-bit BGR
 
     ColorEntry() = default;
-    ColorEntry(uint8_t g, const cv::Vec3b &c)
-        : gray(g), color(c[0], c[1], c[2]) {}
+
+    ColorEntry(uint8_t g, const cv::Vec3w &c16)
+        : gray(g), color16(c16) {}
 };
 
 // StreamPMax pipeline uses ColorMapBuilder instead of buildColorMap
@@ -23,7 +32,9 @@ class ColorMapBuilder
 {
 public:
     // Must call once per stack before addSlice
-    bool begin(const cv::Size& size, int fixedCapPerPixel = 4);
+    bool begin(const cv::Size& size,
+               int fixedCapPerPixel = 4,
+               ColorDepth depth = ColorDepth::U8);
 
     // Call once per slice (streaming)
     bool addSlice(const cv::Mat& grayImg, const cv::Mat& colorImg);
@@ -34,24 +45,28 @@ public:
 
     void reset();
 
+    ColorDepth colorDepth() const { return m_depth; }
+
     cv::Size size() const { return m_size; }
     bool isValid() const { return m_size.width > 0 && m_size.height > 0; }
 
 private:
+    // enum class ColorDepth { U8, U16 };
     cv::Size m_size {0,0};
     int m_cap = 0;                 // fixed capacity per pixel
     int m_pixels = 0;
+    FSFusionReassign::ColorDepth m_depth = FSFusionReassign::ColorDepth::U8;
 
     // For most pixels we store up to m_cap unique gray entries in fixed arrays.
     std::vector<uint8_t>  m_counts;      // number of unique entries stored in fixed arrays (0..m_cap)
-    std::vector<uint8_t>  m_grays;       // size = pixels * m_cap
-    std::vector<cv::Vec3b> m_colors;     // size = pixels * m_cap
+    std::vector<uint8_t>  m_grays;
+    std::vector<cv::Vec3w> m_colors16;
 
     // Rare overflow: pixelIndex -> vector of entries (includes the fixed ones once promoted)
     std::unordered_map<int, std::vector<ColorEntry>> m_overflow;
 
 private:
-    static bool normalizeColorTo8(const cv::Mat& colorImg, cv::Mat& color8);
+    static bool normalizeColorTo16(const cv::Mat& colorImg, cv::Mat& color16);
 };
 
 
@@ -79,7 +94,8 @@ bool buildColorMap(const std::vector<cv::Mat> &grayImgs,
 bool applyColorMap(const cv::Mat &grayMerged,
                    const std::vector<ColorEntry> &colors,
                    const std::vector<uint8_t> &counts,
-                   cv::Mat &colorOut);
+                   cv::Mat &colorOut,
+                   ColorDepth outDepth);   // U8 or U16
 
 } // end namespace FSFusionReassign
 

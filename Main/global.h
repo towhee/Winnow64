@@ -334,6 +334,7 @@ Q_NAMESPACE
     extern bool isRunningColorAnalysis;
     extern bool isRunningStackOperation;
     extern bool isRunningFocusStack;
+    extern bool abortFocusStack;
     extern bool isProcessingExportedImages;
     extern bool isEmbellish;
     extern bool includeSidecars;

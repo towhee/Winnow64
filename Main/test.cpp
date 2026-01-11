@@ -400,7 +400,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString s = "2026:01:08 10:33:42";
+    QString msg = "Focus stacking failed";
+    updateStatus(false, msg);
+
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

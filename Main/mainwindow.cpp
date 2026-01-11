@@ -509,6 +509,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (G::isRunningColorAnalysis) emit abortHueReport();
         // abort stack operation
         else if (fsPipeline) {
+            G::abortFocusStack = true;
             fsPipeline->requestAbort();
             qDebug() << "keyReleaseEvent fsPipeline->requestAbort()";
         }
