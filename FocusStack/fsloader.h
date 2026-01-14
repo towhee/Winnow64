@@ -9,12 +9,12 @@ namespace FSLoader {
 // Image loaded for alignment and wavelet stages
 struct Image
 {
-    cv::Mat color;          // padded color (8 or 16 bit)
-    cv::Mat gray;           // padded grayscale (8-bit)
-    cv::Rect validArea;     // original image region inside padded frame
-    cv::Size origSize;      // original file size
-    cv::Size paddedSize;    // after wavelet padding
-    bool is16bit = false;   // original color depth
+    cv::Mat color;                  // padded color (8 or 16 bit)
+    cv::Mat gray;                   // padded grayscale (8-bit)
+    cv::Rect validArea;             // original image region inside padded frame
+    cv::Size origSize;              // original image dim
+    cv::Size paddedSize;            // after wavelet padding
+    bool is16bit = false;           // original color depth
 };
 
 /*

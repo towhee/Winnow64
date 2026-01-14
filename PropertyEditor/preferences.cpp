@@ -425,6 +425,12 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "fullScreenShowStatusBar") {
         mw->fullScreenDocks.isStatusBar = v.toBool();
     }
+
+    if (source == "focusStackMethod") {
+        mw->fsMethod = v.toString();
+        mw->writeSetting("focusStackMethod", v.toString());  // also saved in MW::writeSettings
+    }
+
 }
 
 void Preferences::addItems()
@@ -1515,6 +1521,24 @@ void Preferences::addUtilities()
         i.captionIsEditable = false;
         i.delegateType = DT_None;
         addItem(i);
+
+            // Focus stack mdethod
+            i.name = "focusStackMethod";
+            i.parentName = "FocusStackHeader";
+            i.captionText = "Focus stack method";
+            i.tooltip =
+                "PMax:               Align and fuse using multiscale wavelets\n"
+                "StreamPMax:         Same as PMax but saves memory\n"
+                "TennengradVersions: Depths for various radius/thresholds\n"
+                ;
+            i.hasValue = true;
+            i.captionIsEditable = false;
+            i.value = mw->fsMethod;
+            i.key = "focusStackMethod";
+            i.delegateType = DT_Combo;
+            i.type = "QString";
+            i.dropList = FS::MethodsString;
+            addItem(i);
 
             // Cleanup working files after focus stacking
             i.name = "deleteInputStackImages";

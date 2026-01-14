@@ -414,7 +414,8 @@ bool mergeSlice(StreamState &state,
 
     absval.copyTo(state.maxAbs, mask);
     wavelet.copyTo(mergedOut, mask);
-    state.depthIndex16.setTo(state.sliceIndex, mask);
+    // state.depthIndex16.setTo(state.sliceIndex, mask);
+    state.depthIndex16.setTo(static_cast<uint16_t>(state.sliceIndex), mask);
 
     ++state.sliceIndex;
     return true;

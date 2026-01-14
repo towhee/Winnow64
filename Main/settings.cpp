@@ -120,6 +120,9 @@ void MW::writeSettings()
     /* Property Editor */
     settings->setValue("isSoloPrefDlg", isSoloPrefDlg);
 
+    /* Focus Stack */
+    settings->setValue("focusStackMethod", fsMethod);
+
     /* Docks are updated in DockWidget */
 
     /* InfoView okToShow fields */
@@ -321,6 +324,9 @@ bool MW::loadSettings()
 
         // cache (see MW::createImageCache in initialize.cpp)
 
+        // Focus Stack default method
+        fsMethod = FS::MethodsString.at(FS::Methods::StreamPMax);
+
         if (!isSettings || simulateJustInstalled) return true;
     }
     // end default settings
@@ -470,6 +476,8 @@ bool MW::loadSettings()
     if (settings->contains("isFullScreenThumbs")) fullScreenDocks.isThumbs = settings->value("isFullScreenThumbs").toBool();
     if (settings->contains("isFullScreenStatusBar")) fullScreenDocks.isStatusBar = settings->value("isFullScreenStatusBar").toBool();
 
+    // Focus Stack
+    if (settings->contains("focusStackMethod")) fsMethod = settings->value("focusStackMethod").toString();
 
     /* read external apps */
     /* moved to createActions as required to populate open with ... menu */
