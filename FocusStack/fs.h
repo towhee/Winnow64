@@ -19,14 +19,19 @@ class FS : public QObject
 public:
     /*
     */
+
     explicit FS(QObject *parent = nullptr);
 
-    /*
-    Methods:
-        PMax1 - align, fuse using multiscale
-        PMax2 - align, depth, fuse using depth
-        PMax3 - align, focus, depth, fuse
-    */
+    enum Methods {
+        StreamPMax,        // PMax1, but streamed
+        PMax,              // align, fuse using multiscale wavelets
+        TennengradVersions // multiple depth maps for diff radius/thresholds
+    };
+    static inline const QStringList MethodsString {
+        "StreamPMax",        // PMax1, but streamed
+        "PMax",              // align, fuse using multiscale wavelets
+        "TennengradVersions" // multiple depth maps for diff radius/thresholds
+    };
 
     struct Options
     {
@@ -117,7 +122,8 @@ private:
     bool runBackground();
     bool runArtifact();
     bool runStreamWaveletPMax();
-    bool saveFused(QString folderPath);
+    bool runStreamTennengradVersions();
+    bool save(QString fuseFolderPath);
 
     // helpers for UI
     void status(const QString &msg);

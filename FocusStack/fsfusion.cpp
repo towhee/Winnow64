@@ -2,6 +2,7 @@
 #include "Main/global.h"
 
 #include "FSFusionWavelet.h"
+#include "fsutilities.h"
 
 #include <opencv2/imgproc.hpp>
 #include <cassert>
@@ -446,33 +447,25 @@ bool FSFusion::streamPMaxSlice(int slice,
         qWarning() << "WARNING:" << srcFun << msg;
         return false;
     }
-    if (grayImg.size() != origSize || colorImg.size() != origSize) {
-        QString msg = "Slice " + s +
-                      " grayImg.size() != orig || colorImg.size() != orig";
-        qWarning() << "WARNING:" << srcFun << msg
-                   << "origSize.width =" << origSize.width << "grayImg.size ="
-                   << grayImg.size.dims();
-        return false;
-    }
 
     if (slice == 0) {
-        origSize = grayImg.size();
+        alignSize = grayImg.size();
         outDepth = colorImg.depth();
         FSFusionReassign::ColorDepth cd = (outDepth == CV_16U)
             ? FSFusionReassign::ColorDepth::U16
             : FSFusionReassign::ColorDepth::U8;
-        if (!colorBuilder.begin(origSize, /*fixedCapPerPixel=*/4, cd)) {
+        if (!colorBuilder.begin(alignSize, /*fixedCapPerPixel=*/4, cd)) {
             msg = "colorBuilder.begin() failed";
             qWarning() << "WARNING:" << srcFun << msg;
             return false;
         }
     }
-    else if (grayImg.size() != origSize) {
+    else if (grayImg.size() != alignSize) {
         QString msg = "Slice " + s + " grayImg.size() != orig";
         qWarning() << "WARNING:" << srcFun << msg;
         return false;
     }
-    else if (colorImg.size() != origSize) {
+    else if (colorImg.size() != alignSize) {
         QString msg = "Slice " + s + " colorImg.size() != orig";
         qWarning() << "WARNING:" << srcFun << msg;
         return false;
@@ -576,7 +569,7 @@ bool FSFusion::streamPMaxSlice(int slice,
     {
         QString log =
             "Sanity(slice0): "
-            "orig=" + QString("%1x%2").arg(origSize.width).arg(origSize.height) + " "
+            "orig=" + QString("%1x%2").arg(alignSize.width).arg(alignSize.height) + " "
             "ps="   + QString("%1x%2").arg(padSize.width).arg(padSize.height) + " "
             "waveletSize=" +
             QString("%1x%2").arg(waveletSize.width).arg(waveletSize.height) +
@@ -644,6 +637,7 @@ bool FSFusion::streamPMaxSlice(int slice,
 // StreamPMax pipeline
 bool FSFusion::streamPMaxFinish(cv::Mat &outputColor,
                                 const Options &opt,
+                                cv::Mat &depthIndex16,
                                 std::atomic_bool *abortFlag,
                                 StatusCallback statusCallback,
                                 ProgressCallback progressCallback)
@@ -664,7 +658,7 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor,
                                    opt.consistency,
                                    abortFlag,
                                    mergedWavelet,
-                                   nullptr))
+                                   &depthIndexPadded16))
     {
         return false;
     }
@@ -740,7 +734,7 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor,
     if (paddedColorOut.type() != expectedType) {
         msg = "Apply color map: paddedColorOut.type() mismatch";
         qWarning() << "WARNING:" << srcFun << msg
-                   << " got=" << paddedColorOut.type()
+                   << " got =" << paddedColorOut.type()
                    << " expected=" << expectedType;
         return false;
     }
@@ -750,11 +744,16 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor,
     // --------------------------------------------------------------------
     // Crop back to original (non-padded) size
     // --------------------------------------------------------------------
-    if (G::FSLog) G::log(srcFun, "Crop back to original size");
+    msg = "Crop back to original size";
+    msg +=  " origSize = " + FSUtilities::cvSizeToText(alignSize) +
+            " padSize = " + FSUtilities::cvSizeToText(padSize);
+    if (G::FSLog) G::log(srcFun, msg);
 
     if (padSize == origSize)
     {
-        outputColor = paddedColorOut; // shallow copy ok
+        // shallow copies ok
+        outputColor = paddedColorOut;
+        depthIndex16 = depthIndexPadded16;
     }
     else
     {
@@ -766,6 +765,7 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor,
 
         cv::Rect roi(left, top, origSize.width, origSize.height);
         outputColor = paddedColorOut(roi).clone(); // final fused image mat
+        depthIndex16 = depthIndexPadded16(roi).clone();
     }
 
     // Housekeeping

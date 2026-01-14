@@ -7,6 +7,12 @@
 
 #include <opencv2/imgcodecs.hpp>
 
+// namespace {
+
+// cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16, int sliceCount);
+
+// } // anonymous namespace
+
 namespace FSDepth {
 
 struct Options
@@ -31,6 +37,34 @@ struct Options
     bool saveWaveletDebug = true;
 
     int  numThreads  = 0;       // reserved (currently unused)
+};
+
+struct TenengradParams
+{
+    float radius    = 2.0f;     // Gaussian sigma
+    float threshold = 6000.0f;  // energy threshold (before sqrt), 0 disables
+};
+
+struct StreamState
+{
+    bool initialized = false;
+    cv::Size size {0,0};
+    int sliceIndex = 0;
+
+    cv::Mat bestVal32;      // CV_32F, per-pixel best focus energy so far
+    cv::Mat depthIndex16;   // CV_16U, per-pixel winning slice index
+
+    TenengradParams ten;    // parameters for Tenengrad
+
+    void reset()
+    {
+        initialized = false;
+        size = cv::Size(0,0);
+        sliceIndex = 0;
+        bestVal32.release();
+        depthIndex16.release();
+        ten = TenengradParams{};
+    }
 };
 
 using ProgressCallback = std::function<void()>;
@@ -60,16 +94,24 @@ bool runFromGraySlices(
     cv::Mat                    *depthIndex16Out = nullptr
     );
 
-// // internal helper
-// bool runMultiScaleFromGrayMats(
-//     const std::vector<cv::Mat> &graySlices,
-//     const QString              &depthFolder,
-//     const FSDepth::Options     &opt,
-//     std::atomic_bool           *abortFlag,
-//     FSDepth::ProgressCallback   progressCb,
-//     FSDepth::StatusCallback     statusCb,
-//     cv::Mat                    *depthIndex16Out
-//     );
+// Streaming entry point: call once per slice.
+// On the last slice, call finishStreamingTenengrad() to write outputs.
+bool streamGraySlice(const cv::Mat        &graySlice,
+                     int                  sliceIndex,
+                     const QString        &depthFolder,
+                     const Options        &opt,
+                     StreamState          &state,
+                     std::atomic_bool     *abortFlag,
+                     ProgressCallback      progressCb,
+                     StatusCallback        statusCb);
+
+// Finalize + write outputs (call after the last slice).
+bool finishStreaming(const QString    &depthFolder,
+                     const Options    &opt,
+                     int              sliceCount,
+                     StreamState      &state,
+                     StatusCallback    statusCb,
+                     cv::Mat          *depthIndex16Out = nullptr);
 
 } // namespace FSDepth
 

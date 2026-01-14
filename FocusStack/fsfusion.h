@@ -65,10 +65,14 @@ public:
     // StreamPMax pipeline
     // Merge
     FSMerge::StreamState mergeState;
-    cv::Size origSize;
+    cv::Size origSize;                   // focus stack input image dimensions
+    cv::Size alignSize;                  // aligned image dimensions
+    cv::Size firstAlignedSize;
     cv::Mat wavelet;
     cv::Mat mergedWavelet;
     cv::Size waveletSize;
+    cv::Mat depthIndexPadded16;   // CV_16U, size == padSize
+    // cv::Mat depthIndex16;         // CV_16U, size == alignSize (cropped)
     // Color reassign
     FSFusionReassign::ColorMapBuilder colorBuilder;
     std::vector<FSFusionReassign::ColorEntry> colorEntries;
@@ -90,6 +94,7 @@ public:
     bool streamPMaxFinish(
         cv::Mat &outputColor,
         const Options &opt,
+        cv::Mat &depthIndex16,
         std::atomic_bool *abortFlag,
         StatusCallback statusCallback,
         ProgressCallback progressCallback

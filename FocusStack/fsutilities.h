@@ -21,7 +21,8 @@ inline QString matSizeToStr(const cv::Mat& m) {
     return sizeToStr(m.size());
 }
 
-// Declarations (NO bodies here)
+cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16, int sliceCount);
+
 bool makeDebugOverview(const cv::Mat &depthPreview,
                        const cv::Mat &fusedColor,
                        const cv::Mat &sliceA,
@@ -42,6 +43,8 @@ bool showWithMask(const cv::Mat &baseGray,
                   const cv::Mat &maskBGR,
                   const QString &outputPath,
                   float alpha);
+
+QString cvSizeToText(cv::Size cvSize);
 
 void assertSameSize(const cv::Mat& a,
                     const cv::Mat& b,

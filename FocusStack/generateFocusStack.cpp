@@ -74,9 +74,8 @@ void MW::focusStackFromSelection()
         return;
     }
 
-    QString method = "PMax";
-    // QString method = "LegacyPetteri";
-    generateFocusStack(paths, method, src);
+    // fsMethod is from settings
+    generateFocusStack(paths, fsMethod, src);
 }
 
 void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
@@ -229,10 +228,11 @@ void MW::generateFocusStack(const QStringList paths,
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
     // isLocal = false;    // temp for debugging
 
-    method = "StreamPMax";       // align > fusePMax
-    // method = "PMax1";       // align > fusePMax
-    // method = "PMax2";       // align > focus > depth > fusePMax
-    // method = "Ten";         // align > depth (Tenengrad focus)
+    // method = "StreamPMax";       // align > fusePMax
+    method = "TennengradVersions";       // align > TenDepth for all versions
+    // method = "PMax";            // align > fusePMax
+    // method = "PMax2";            // align > focus > depth > fusePMax
+    // method = "Ten";              // align > depth (Tenengrad focus)
 
     // ----------- Req'd when pipeline is finished -----------
 
@@ -353,7 +353,7 @@ void MW::generateFocusStack(const QStringList paths,
 
         // If aborted...
         if (G::abortFocusStack) {
-            msg = "FS was aborted.";
+            msg = "Focus stacking was aborted.";
             if (G::FSLog) G::log(srcFun, msg);
             G::abortFocusStack = false;
             updateStatus(false, msg);

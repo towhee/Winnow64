@@ -6,9 +6,9 @@ WHAT'S NEW
 - Selections are now cleared after a filtration change
 
 BUGS / TO DO
+- DepthIndex
 - Eliminate processEvents and review G::popup usage
 - Fused 16 bit out
-- FS inputSize vs waveletSize
 - Peterri background
 - Delete folder crash
 - Rename files
@@ -141,6 +141,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Focus stack module
 - Release 2.04
 - Update Nikon Lense mpdel info
 - Delete all files in filter not always working properly

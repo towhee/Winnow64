@@ -209,9 +209,96 @@ cv::Mat vstack(const cv::Mat &a, const cv::Mat &b)
     return out;
 }
 
+//----------------------------------------------------------
+// Shared: build enhanced preview (grayscale + heatmap + legend)
+//----------------------------------------------------------
+cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16,
+                                 int sliceCount)
+{
+    CV_Assert(depthIndex16.type() == CV_16U);
+
+    int rows = depthIndex16.rows;
+    int cols = depthIndex16.cols;
+
+    // --- Base grayscale preview (0..255) ---
+    cv::Mat gray8;
+    cv::normalize(depthIndex16, gray8, 0, 255, cv::NORM_MINMAX);
+    gray8.convertTo(gray8, CV_8U);
+
+    // --- Heatmap preview (same depth, colored) ---
+    cv::Mat heatColor;
+    cv::applyColorMap(gray8, heatColor, cv::COLORMAP_JET);
+
+    // --- Legend bar ---
+    int legendHeight = 40;
+    cv::Mat legend(legendHeight, cols, CV_8UC3, cv::Scalar(255, 255, 255));
+
+    for (int s = 0; s < sliceCount; ++s)
+    {
+        float t0 = static_cast<float>(s) / static_cast<float>(sliceCount);
+        float t1 = static_cast<float>(s + 1) / static_cast<float>(sliceCount);
+
+        int x0 = static_cast<int>(t0 * cols);
+        int x1 = static_cast<int>(t1 * cols);
+        if (x1 <= x0) x1 = x0 + 1;
+
+        int gray = 0;
+        if (sliceCount > 1)
+            gray = static_cast<int>(255.0 * s / (sliceCount - 1));
+
+        uchar g = static_cast<uchar>(gray);
+        cv::Scalar col(g, g, g);
+
+        cv::rectangle(legend,
+                      cv::Point(x0, 0),
+                      cv::Point(x1 - 1, legendHeight - 1),
+                      col,
+                      cv::FILLED);
+
+        // Decide which ticks to label
+        bool drawLabel = false;
+        if (sliceCount <= 16) {
+            drawLabel = true;
+        }
+        else if (sliceCount <= 32 && (s % 2 == 0)) {
+            drawLabel = true;
+        }
+        else if (sliceCount > 32 && (s % 4 == 0)) {
+            drawLabel = true;
+        }
+
+        if (drawLabel)
+        {
+            QString label = QString::number(s);
+            int textGray  = (gray < 128 ? 255 : 0);
+
+            cv::putText(legend,
+                        label.toStdString(),
+                        cv::Point(x0 + 2, legendHeight - 10),
+                        cv::FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        cv::Scalar(textGray, textGray, textGray),
+                        1,
+                        cv::LINE_AA);
+        }
+    }
+
+    // Stack: [gray] [heat] [legend] vertically
+    cv::Mat grayColor;
+    cv::cvtColor(gray8, grayColor, cv::COLOR_GRAY2BGR);
+
+    cv::Mat out(gray8.rows + heatColor.rows + legendHeight, cols, CV_8UC3);
+    grayColor.copyTo(out(cv::Rect(0, 0, cols, rows)));
+    heatColor.copyTo(out(cv::Rect(0, rows, cols, heatColor.rows)));
+    legend.copyTo(out(cv::Rect(0, rows + heatColor.rows, cols, legendHeight)));
+
+    return out;
+}
+
 //-------------------------------------------------------------
 // Main Debug Composite Builder
 //-------------------------------------------------------------
+
 bool makeDebugOverview(const cv::Mat &depthPreview,
                        const cv::Mat &fusedColor,
                        const cv::Mat &sliceA,
@@ -285,6 +372,15 @@ bool showWithMask(const cv::Mat &baseGray,
 
 
 */
+
+QString cvSizeToText(cv::Size cvSize)
+{
+    return "(" +
+           QString::number(cvSize.width) +
+           ", " +
+           QString::number(cvSize.height) +
+           ")";
+}
 
 void assertSameSize(const cv::Mat& a,
                     const cv::Mat& b,
@@ -474,15 +570,14 @@ bool writePngWithTitle(const QString& pngPath,
 */
     // return false;
     QString srcFun = "FSUtilities::writePngWithTitle";
+    if (G::FSLog) G::log(srcFun, pngPath);
 
     if (img.empty()) return false;
 
     const QString t = QFileInfo(pngPath).fileName();
 
     if (!writeMeta) {
-        qDebug() << srcFun << "1";
         cv::imwrite(pngPath.toStdString(), img);
-        qDebug() << srcFun << "2";
         return true;
     }
 

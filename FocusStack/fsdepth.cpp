@@ -87,6 +87,161 @@ namespace {
 //----------------------------------------------------------
 // Shared: build enhanced preview (grayscale + heatmap + legend)
 //----------------------------------------------------------
+
+cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16,
+                                 int sliceCount,
+                                 std::string &title)
+{
+    CV_Assert(depthIndex16.type() == CV_16U);
+    CV_Assert(sliceCount > 0);
+
+    const int rows = depthIndex16.rows;
+    const int cols = depthIndex16.cols;
+
+    // --- Base grayscale preview (0..255) ---
+    cv::Mat gray8;
+    cv::normalize(depthIndex16, gray8, 0, 255, cv::NORM_MINMAX);
+    gray8.convertTo(gray8, CV_8U);
+
+    // --- Color heatmap preview (same depth, colored) ---
+    cv::Mat heatColor;
+    cv::applyColorMap(gray8, heatColor, cv::COLORMAP_JET);
+
+    // ----------------------------------------------------------
+    // Legend builders
+    // ----------------------------------------------------------
+    const int legendHeight = 40;
+
+    auto colorForSlice = [&](int s, bool colorLegend) -> cv::Scalar {
+        int g = 0;
+        if (sliceCount > 1)
+            g = static_cast<int>(255.0 * s / (sliceCount - 1));
+        g = std::clamp(g, 0, 255);
+
+        if (!colorLegend) {
+            return cv::Scalar(g, g, g); // grayscale BGR
+        }
+
+        // Jet legend: map this gray through the same colormap
+        cv::Mat one(1, 1, CV_8U, cv::Scalar(g));
+        cv::Mat oneColor(1, 1, CV_8UC3);
+        cv::applyColorMap(one, oneColor, cv::COLORMAP_JET);
+        const cv::Vec3b bgr = oneColor.at<cv::Vec3b>(0, 0);
+        return cv::Scalar(bgr[0], bgr[1], bgr[2]);
+    };
+
+    auto makeLegendBar = [&](bool colorLegend) -> cv::Mat {
+        cv::Mat legend(legendHeight, cols, CV_8UC3, cv::Scalar(255, 255, 255));
+
+        for (int s = 0; s < sliceCount; ++s)
+        {
+            float t0 = static_cast<float>(s)     / static_cast<float>(sliceCount);
+            float t1 = static_cast<float>(s + 1) / static_cast<float>(sliceCount);
+
+            int x0 = static_cast<int>(t0 * cols);
+            int x1 = static_cast<int>(t1 * cols);
+            if (x1 <= x0) x1 = x0 + 1;
+
+            const cv::Scalar col = colorForSlice(s, colorLegend);
+
+            cv::rectangle(legend,
+                          cv::Point(x0, 0),
+                          cv::Point(x1 - 1, legendHeight - 1),
+                          col,
+                          cv::FILLED);
+
+            // Decide which ticks to label
+            bool drawLabel = false;
+            if (sliceCount <= 16) {
+                drawLabel = true;
+            }
+            else if (sliceCount <= 32 && (s % 2 == 0)) {
+                drawLabel = true;
+            }
+            else if (sliceCount > 32 && (s % 4 == 0)) {
+                drawLabel = true;
+            }
+
+            if (drawLabel)
+            {
+                const int g = (sliceCount > 1)
+                ? static_cast<int>(255.0 * s / (sliceCount - 1))
+                : 0;
+
+                // Choose contrasting label color
+                const int textGray = (g < 128 ? 255 : 0);
+                const cv::Scalar textCol(textGray, textGray, textGray);
+
+                cv::putText(legend,
+                            std::to_string(s),
+                            cv::Point(x0 + 2, legendHeight - 10),
+                            cv::FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            textCol,
+                            1,
+                            cv::LINE_AA);
+            }
+        }
+
+        return legend;
+    };
+
+    // Grayscale panel (converted to 3-channel for stacking)
+    cv::Mat grayColor;
+    cv::cvtColor(gray8, grayColor, cv::COLOR_GRAY2BGR);
+
+    // Two legends: one under grayscale, one under color heatmap
+    cv::Mat legendGray  = makeLegendBar(/*colorLegend=*/false);
+    cv::Mat legendColor = makeLegendBar(/*colorLegend=*/true);
+
+    // ----------------------------------------------------------
+    // Stack layout:
+    //   [title band]
+    //   [gray image]
+    //   [gray legend]
+    //   [color heatmap]
+    //   [color legend]
+    // ----------------------------------------------------------
+    const int titleBandH = 100; // small band to keep title off the image
+    cv::Mat out(titleBandH + rows + legendHeight + rows + legendHeight,
+                cols,
+                CV_8UC3,
+                cv::Scalar(255, 255, 255));
+
+    int y = 0;
+
+    // Title band (top-left). "font size 5" interpreted as a small label.
+    // If you literally want huge text, increase titleScale (e.g. 5.0).
+    const double titleScale = 3.0;
+    const int    titleThick = 8;
+
+    cv::putText(out,
+                title,
+                cv::Point(6, titleBandH - 25),
+                cv::FONT_HERSHEY_SIMPLEX,
+                titleScale,
+                cv::Scalar(0, 0, 0),
+                titleThick,
+                cv::LINE_AA);
+
+    y += titleBandH;
+
+    grayColor.copyTo(out(cv::Rect(0, y, cols, rows)));
+    y += rows;
+
+    legendGray.copyTo(out(cv::Rect(0, y, cols, legendHeight)));
+    y += legendHeight;
+
+    heatColor.copyTo(out(cv::Rect(0, y, cols, rows)));
+    y += rows;
+
+    legendColor.copyTo(out(cv::Rect(0, y, cols, legendHeight)));
+
+    return out;
+}
+
+/*
+// makeDepthPreviewEnhanced duplicated in FSUtilities
 cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16,
                                  int sliceCount)
 {
@@ -169,6 +324,7 @@ cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16,
 
     return out;
 }
+//*/
 
 //----------------------------------------------------------
 // Simple method: scalar max over focus_*.tif (current behavior)
@@ -285,7 +441,8 @@ bool runSimple(const QString &focusFolder,
     }
 
     if (opt.preview) {
-        cv::Mat preview = makeDepthPreviewEnhanced(depthIndex, slices);
+        std::string title = "Simple";
+        cv::Mat preview = makeDepthPreviewEnhanced(depthIndex, slices, title);
         const QString depthPreviewPath = outDir.absoluteFilePath("depth_preview.png");
         if (!FSUtilities::writePngWithTitle(depthPreviewPath, preview)) {
             if (statusCb) statusCb("FSDepth(Simple): Failed to write depth_preview.png");
@@ -328,7 +485,7 @@ bool runTenengrad(
     }
 
     // Parameters (start simple; tune later)
-    const float r = 2.0f;    // blur radius
+    const float r = 2.0f;       // blur radius
     const float t = 6000.0f;    // threshold ENERGY (before sqrt). 0 disables.
 
     std::vector<cv::Mat> focus(slices);
@@ -408,6 +565,83 @@ bool runTenengrad(
 
     if (statusCb) statusCb("FSDepth(Tenengrad): complete.");
     return true;
+}
+
+bool runTenengradSlice(const cv::Mat &graySlice,
+                                cv::Mat &focus32,
+                                float radius,
+                                float threshold)
+{
+    QString srcFun = "runTenengradSlice";
+    QString msg = " radius = " + QString::number(radius) +
+                  " threshold = " + QString::number(threshold);
+    if (G::FSLog) G::log(srcFun, msg);
+
+    if (graySlice.empty()) {
+        QString msg = "grayslice is empty.";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    cv::Mat gray;
+    if (graySlice.channels() == 1)
+    {
+        gray = graySlice;
+    }
+    else
+    {
+        cv::cvtColor(graySlice, gray, cv::COLOR_BGR2GRAY);
+    }
+
+    if (gray.type() == CV_32F)
+    {
+        // ok
+    }
+    else if (gray.type() == CV_8U)
+    {
+        // ok
+    }
+    else
+    {
+        // normalize odd types to 8U
+        cv::Mat tmp;
+        gray.convertTo(tmp, CV_8U);
+        gray = tmp;
+    }
+
+    const int rows = gray.rows;
+    const int cols = gray.cols;
+
+    cv::Mat sobel(rows, cols, CV_32F);
+    cv::Mat magnitude(rows, cols, CV_32F, cv::Scalar(0));
+
+    // Sobel expects single-channel; gray is guaranteed 1ch now.
+    cv::Sobel(gray, sobel, CV_32F, 1, 0);
+    cv::accumulateSquare(sobel, magnitude);
+
+    cv::Sobel(gray, sobel, CV_32F, 0, 1);
+    cv::accumulateSquare(sobel, magnitude);
+
+    if (threshold > 0.0f)
+        magnitude.setTo(0, magnitude < threshold);
+
+    if (radius > 0.0f)
+    {
+        int blurwindow = int(radius * 4.0f) + 1;
+        if ((blurwindow & 1) == 0) blurwindow += 1; // force odd
+        cv::GaussianBlur(magnitude, magnitude,
+                         cv::Size(blurwindow, blurwindow),
+                         radius, radius, cv::BORDER_REFLECT);
+    }
+
+    cv::sqrt(magnitude, focus32); // CV_32F
+
+    if (focus32.type() != CV_32F) {
+        QString msg = "focus32.type() != CV_32F.";
+        qWarning() << "WARNING:" << srcFun << msg;
+    }
+
+    return (focus32.type() == CV_32F);
 }
 
 //----------------------------------------------------------
@@ -554,7 +788,8 @@ bool runMultiScale(
 
     if (opt.preview)
     {
-        cv::Mat preview = makeDepthPreviewEnhanced(depthIndex16, total);
+        std::string title = "MultiScale Wavelet Depth Map";
+        cv::Mat preview = makeDepthPreviewEnhanced(depthIndex16, total, title);
         const QString p = outDir.absoluteFilePath("depth_preview.png");
         if (!FSUtilities::writePngWithTitle(p, preview))
             return false;
@@ -721,6 +956,159 @@ bool runFromGraySlices(
             );
 
     return false;
+}
+
+bool FSDepth::streamGraySlice(const cv::Mat        &graySlice,
+                              int                  sliceIndex,
+                              const QString        &depthFolder,
+                              const Options        &opt,
+                              StreamState          &state,
+                              std::atomic_bool     *abortFlag,
+                              ProgressCallback      progressCb,
+                              StatusCallback        statusCb)
+{
+    const QString srcFun = "FSDepth::streamGraySlice";
+    QString s = QString::number(sliceIndex);
+    QString msg = " " + s;
+    if (G::FSLog) G::log(srcFun, msg);
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed))
+        return false;
+
+    if (graySlice.empty())
+    {
+        QString msg = "FSDepth(TenengradStream): graySlice empty.";
+        if (statusCb) statusCb(msg);
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    const cv::Size sz = graySlice.size();
+
+    if (!state.initialized)
+    {
+        state.initialized = true;
+        state.size = sz;
+        state.sliceIndex = 0;
+
+        state.bestVal32.create(sz, CV_32F);
+        state.bestVal32.setTo(-1.0f);
+
+        state.depthIndex16.create(sz, CV_16U);
+        state.depthIndex16.setTo(uint16_t(0));
+    }
+    else
+    {
+        if (sz != state.size)
+        {
+            if (statusCb) statusCb("FSDepth(TenengradStream): size mismatch.");
+            QString msg = "Size mismatch.";
+            qWarning() << "WARNING:" << srcFun << msg;
+            return false;
+        }
+    }
+
+    if (sliceIndex != state.sliceIndex)
+    {
+        // Keeps you honest in streaming callers
+        if (statusCb) statusCb("FSDepth(TenengradStream): sliceIndex out of order.");
+        QString msg = "sliceindex out of order.";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    cv::Mat focus32;
+    if (!runTenengradSlice(graySlice, focus32,
+                           state.ten.radius, state.ten.threshold))
+    {
+        if (statusCb) statusCb("FSDepth(TenengradStream): runTenengradSlice failed.");
+        return false;
+    }
+
+    CV_Assert(focus32.type() == CV_32F);
+    CV_Assert(focus32.size() == state.size);
+
+    // Argmax update: if focus32 > bestVal32, set bestVal32 and depthIndex16.
+    for (int y = 0; y < state.size.height; ++y)
+    {
+        const float *fRow = focus32.ptr<float>(y);
+        float       *bRow = state.bestVal32.ptr<float>(y);
+        uint16_t    *dRow = state.depthIndex16.ptr<uint16_t>(y);
+
+        for (int x = 0; x < state.size.width; ++x)
+        {
+            const float v = fRow[x];
+            if (v > bRow[x])
+            {
+                bRow[x] = v;
+                dRow[x] = static_cast<uint16_t>(sliceIndex);
+            }
+        }
+    }
+
+    ++state.sliceIndex;
+
+    if (progressCb) progressCb();
+
+    return true;
+}
+
+bool FSDepth::finishStreaming(const QString    &depthFolder,
+                              const Options    &opt,
+                              int              sliceCount,
+                              StreamState      &state,
+                              StatusCallback    statusCb,
+                              cv::Mat          *depthIndex16Out)
+{
+    QString srcFun = "FSDepth::finishStreaming";
+    if (G::FSLog) G::log(srcFun);
+
+    if (!state.initialized || state.depthIndex16.empty())
+        return false;
+
+    if (sliceCount <= 0 || state.sliceIndex != sliceCount)
+    {
+        if (statusCb) statusCb("FSDepth(TenengradStream): sliceCount mismatch.");
+        return false;
+    }
+
+    QDir outDir(depthFolder);
+    if (!outDir.exists())
+        outDir.mkpath(".");
+
+    // Optional cleanup (keep light; you said you want source slice per pixel).
+    // If you want NONE, remove this block.
+    cv::Mat depthOut = state.depthIndex16;
+    // cv::medianBlur(depthOut, depthOut, 3);
+
+    const QString idxPath = outDir.absoluteFilePath("depth_index.png");
+    if (!FSUtilities::writePngWithTitle(idxPath, depthOut)) {
+        QString msg = "Failed to write depth_index.png";
+        qWarning() << "WARNING:" << srcFun << msg;
+    }
+
+    if (opt.preview)
+    {
+        // If you want ONLY a full-size heatmap (no legend), swap to your
+        // heatmap-only helper instead of makeDepthPreviewEnhanced.
+        QString r = QString::number(state.ten.radius);
+        QString t = QString::number(state.ten.threshold);
+        QString f = "depth_preview_" + r + "_" + t + ".png";
+        const QString previewPath = outDir.absoluteFilePath(f);
+        QString msg = "Write preview " + previewPath;
+        if (G::FSLog) G::log(srcFun, msg);
+        QString s = "Tenengrad Depth Map  radius: " + r +"  threshold: " + t;
+        std::string title = s.toStdString();
+        cv::Mat preview = makeDepthPreviewEnhanced(depthOut, sliceCount, title);
+        if (!FSUtilities::writePngWithTitle(previewPath, preview))
+            return false;
+    }
+
+    if (depthIndex16Out)
+        depthOut.copyTo(*depthIndex16Out);
+
+    if (statusCb) statusCb("FSDepth(TenengradStream): complete.");
+    return true;
 }
 
 } // namespace FSDepth

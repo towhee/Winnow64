@@ -29,11 +29,12 @@ FS::FS(QObject *parent)
 {
 }
 
-// void FS::setAbort()
-// {
-//     abortRequested = true;
-//     qDebug() << "FS::abort";
-// }
+static QStringList methods {
+    "StreamPMax",         // PMax1, but streamed
+    "PMax",               // align, fuse using multiscale wavelets
+    "TennengradVersions"  // create multiple depth maps for diff radius/thresholds
+};
+
 
 void FS::initialize(QString dstFolderPath, QString fusedBase)
 {
@@ -89,7 +90,7 @@ void FS::setOptions(const Options &opt)
 
     // Fuse using grayscale wavelet merge and color map without using focus
     // or depth modules.
-    if (o.method == "PMax1") {
+    if (o.method == "PMax") {
         o.enableAlign = true;
         o.enableFocusMaps = false;
         o.enableDepthMap = false;
@@ -100,9 +101,22 @@ void FS::setOptions(const Options &opt)
     // Fuse by streaming using grayscale wavelet merge and color map.  Do not need
     // to hold all images and Mats in memory.
     if (o.method == "StreamPMax") {
+        o.useIntermediates = true;
         o.enableAlign = false;
         o.enableFocusMaps = false;
-        o.enableDepthMap = false;
+        o.enableDepthMap = true;
+        o.enableFusion = true;
+        o.methodFuse = "FullWaveletMerge";
+        o.isStream = true;
+    }
+
+    // Fuse by streaming using grayscale wavelet merge and color map.  Do not need
+    // to hold all images and Mats in memory.
+    if (o.method == "TennengradVersions") {
+        o.useIntermediates = true;
+        o.enableAlign = false;
+        o.enableFocusMaps = false;
+        o.enableDepthMap = true;
         o.enableFusion = true;
         o.methodFuse = "FullWaveletMerge";
         o.isStream = true;
@@ -124,7 +138,7 @@ void FS::setOptions(const Options &opt)
         o.enableFocusMaps = false;
         o.enableDepthMap = true;
         o.enableFusion = false;
-        o.methodDepth = "Tenengrad";
+        o.methodDepth = "TennengradVersions";
         o.methodFuse = "Simple";
     }
 }
@@ -343,7 +357,7 @@ void FS::setTotalProgress()
     for (const QStringList &g : groups) {
         int slices = g.count();
         if (o.isStream) {
-            progressTotal += (slices * 3);
+            progressTotal += (slices * 4 + 2);
         }
         else {
             if (slices < 2) continue;
@@ -366,7 +380,7 @@ void FS::incrementProgress()
     QString srcFun = "FS::incrementProgress";
     emit progress(++progressCount, progressTotal);
     QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
-    G::log(srcFun, msg);
+    // G::log(srcFun, msg);
 }
 
 void FS::previewOverview(cv::Mat &fusedColor8Mat)
@@ -518,10 +532,21 @@ bool FS::run()
         if (!initializeGroup(groupCounter++)) return false;
 
         if (o.isStream) {
-            if (!runStreamWaveletPMax()) {
-                emit finished(false);
-                return false;
+
+            if (o.method == "StreamPMax") {
+                if (!runStreamWaveletPMax()) {
+                    emit finished(false);
+                    return false;
+                }
             }
+
+            if (o.method == "TennengradVersions") {
+                if (!runStreamTennengradVersions()) {
+                    emit finished(false);
+                    return false;
+                }
+            }
+
         }
 
         else {
@@ -587,7 +612,7 @@ bool FS::run()
         }
 
         // SAVE
-        if (o.enableFusion) saveFused(dstFolderPath);
+        if (o.enableFusion) save(dstFolderPath);
 
         // STATS
         QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
@@ -1018,7 +1043,7 @@ bool FS::runFusion()
         return false;
     }
 
-    saveFused(fusionFolderPath);
+    save(fusionFolderPath);
 
     return true;
 }
@@ -1511,6 +1536,14 @@ bool FS::runStreamWaveletPMax()
     aopt.maxRes            = 2048;
     aopt.fullResolution    = false;
 
+    // Depth map options
+    FSDepth::Options dopt;
+
+    dopt.method = "Tenengrad";
+    FSDepth::StreamState depthState;
+    depthState.ten.radius = 5.0f;
+    depthState.ten.threshold = 10.0f;
+
     // Fusion options
     FSFusion::Options fopt;
     fopt.method = o.methodFuse;
@@ -1532,6 +1565,9 @@ bool FS::runStreamWaveletPMax()
         // Load input image slice
         status(s + "Loading source input image...");
         currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+        // if (slice == 0) {
+        //     fuse.origSize = currImage.origSize;
+        // }
         if (G::abortFocusStack) return false;
         incrementProgress();
 
@@ -1541,7 +1577,8 @@ bool FS::runStreamWaveletPMax()
             status(s + "Identifying for alignment");
             alignedGraySlice = currImage.gray.clone();
             alignedColorSlice = currImage.color.clone();
-            fuse.origSize = currImage.gray.size();
+            fuse.origSize = currImage.origSize;
+            fuse.alignSize = currImage.gray.size();
             if (G::abortFocusStack) return false;
             incrementProgress();
         }
@@ -1557,10 +1594,15 @@ bool FS::runStreamWaveletPMax()
             incrementProgress();
         }
 
-        // QString depth = "";
-        // if (alignedColorSlice.depth() == CV_16U) depth = "16bit";
-        // if (alignedColorSlice.depth() == CV_8U)  depth = "8bit";
-        // qDebug() << srcFun << "raw depth =" << depth;
+        // Depth map for slice
+        if (!FSDepth::streamGraySlice(alignedGraySlice, slice, depthFolderPath, dopt,
+                                      depthState, &abort, progressCb, statusCb)) {
+            qWarning() << "WARNING:" << srcFun << "FSDepth::streamGraySlice failed.";
+            return false;
+        }
+
+        if (G::abortFocusStack) return false;
+        incrementProgress();
 
         // Fuse slice
         status(s + "Fusing...");
@@ -1569,6 +1611,7 @@ bool FS::runStreamWaveletPMax()
             qWarning() << "WARNING:" << srcFun << "fuse.streamPMaxSlice failed.";
             return false;
         }
+
         if (G::abortFocusStack) return false;
         incrementProgress();
 
@@ -1580,34 +1623,161 @@ bool FS::runStreamWaveletPMax()
     msg = "Slice processing done.  Finish merge, invert, recover color and crop padding";
     if (G::FSLog) G::log(srcFun, msg);
 
+    // finish depth map
+    if (!FSDepth::finishStreaming(depthFolderPath, dopt, slices, depthState,
+                                  statusCb, &depthIndex16Mat)) {
+        qWarning() << "WARNING:" << srcFun << "FSDepth::finishStreaming failed.";
+    }
+
     // finish merge, invert, recover color and crop padding
     status("Finalizing fusion...");
-    if (!fuse.streamPMaxFinish(fusedColorMat, fopt, &abort, statusCb, progressCb))
+    if (!fuse.streamPMaxFinish(fusedColorMat, fopt, depthIndex16Mat,
+                               &abort, statusCb, progressCb)) {
+        qWarning() << "WARNING:" << srcFun << "fuse.streamPMaxFinish failed.";
         return false;
+    }
+
     if (G::abortFocusStack) return false;
     incrementProgress();
 
-    if (o.useIntermediates) saveFused(fusionFolderPath);
+    if (o.useIntermediates) save(fusionFolderPath);
 
     return true;
 }
 
-bool FS::saveFused(QString folderPath)
+bool FS::runStreamTennengradVersions()
 {
-    QString srcFun = "FS::saveFused";
+    QString srcFun = "FS::runStreamTennengradVersions";
+    QString msg = "Start";
+    if (G::FSLog) G::log(srcFun, msg);
+
+    auto progressCb = [this]{ incrementProgress(); };
+    auto statusCb   = [this](const QString &msg){ status(msg); };
+
+    // Align options
+    FSAlign::Options aopt;
+    aopt.matchContrast     = true;
+    aopt.matchWhiteBalance = true;
+    aopt.lowRes            = 256;
+    aopt.maxRes            = 2048;
+    aopt.fullResolution    = false;
+
+    // Depth map options
+    FSDepth::Options dopt;
+    dopt.method = "Tenengrad";
+    FSDepth::StreamState depthState;
+    QVector<float> radius{1};
+    QVector<float> threshold{4000,5000,6000};
+
+    FSLoader::Image prevImage;
+    FSLoader::Image currImage;
+    FSAlign::Result prevGlobal;
+    FSAlign::Result currGlobal;
+    cv::Mat alignedGraySlice;
+    cv::Mat alignedColorSlice;
+    FSAlign::Align align;
+
+    auto runVersion = [&]() {
+        for (int slice = 0; slice < slices; slice++) {
+            QString s = " Slice: " + QString::number(slice) + " of " +
+                        QString::number(slices) + " ";
+            // Load input image slice
+            status(s + "Loading source input image...");
+            currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+            if (G::abortFocusStack) return false;
+            incrementProgress();
+
+            // Align slice
+            currGlobal = FSAlign::makeIdentity(currImage.validArea);
+            if (slice == 0) {
+                status(s + "Identifying for alignment");
+                alignedGraySlice = currImage.gray.clone();
+                alignedColorSlice = currImage.color.clone();
+                if (G::abortFocusStack) return false;
+                incrementProgress();
+            }
+            else {
+                status(s + "Aligning...");
+                if (!align.alignSlice(slice, prevImage, currImage, prevGlobal, currGlobal,
+                                      alignedGraySlice, alignedColorSlice,
+                                      aopt, &abort, statusCb, progressCb)) {
+                    qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
+                    return false;
+                }
+                if (G::abortFocusStack) return false;
+                incrementProgress();
+            }
+
+            // Depth map for slice
+            if (!FSDepth::streamGraySlice(alignedGraySlice, slice, depthFolderPath, dopt,
+                                          depthState, &abort, progressCb, statusCb)) {
+                qWarning() << "WARNING:" << srcFun << "FSDepth::streamGraySlice failed.";
+                return false;
+            }
+
+            if (G::abortFocusStack) return false;
+            incrementProgress();
+
+            prevImage = currImage;
+            prevGlobal = currGlobal;
+
+        }
+
+        msg = "Slice processing done.  Finish merge, invert, recover color and crop padding";
+        if (G::FSLog) G::log(srcFun, msg);
+
+        // finish depth map
+        if (!FSDepth::finishStreaming(depthFolderPath, dopt, slices, depthState,
+                                      statusCb, &depthIndex16Mat)) {
+            qWarning() << "WARNING:" << srcFun << "FSDepth::finishStreaming failed.";
+        }
+
+        return true;
+    };
+
+
+    for (float r : radius) {
+        for (float t : threshold) {
+            depthState.reset();
+            depthState.ten.radius = r;
+            depthState.ten.threshold = t;
+            QString msg = "radius = " + QString::number(r) +
+                          " threshold = " + QString::number(t);
+            if (G::FSLog) G::log(srcFun, msg);
+            if (!runVersion()){
+                qWarning() << "WARNING:" << srcFun << "Failed.";
+            }
+        }
+    }
+
+    return true;
+}
+
+bool FS::save(QString fuseFolderPath)
+{
+    return false;
+    QString srcFun = "FS::save";
+
+    // // Save wavelet depth map
+    // qDebug() << srcFun << "depthFolderPath =" << depthFolderPath;
+    // QString depthPath = depthFolderPath + "/depth_index.png";
+    // FSUtilities::writePngWithTitle(depthPath, depthIndex16Mat);
+    // QString depthPreviewPath = depthFolderPath + "/depth_preview.png";
+    // cv::Mat preview = FSUtilities::makeDepthPreviewEnhanced(depthIndex16Mat, slices);
+    // FSUtilities::writePngWithTitle(depthPreviewPath, preview);
 
     // Make file name for fused image
     QFileInfo lastFi(inputPaths.last());
     QString base = lastFi.completeBaseName() + "_FocusStack_" + o.method;
     QString ext  = lastFi.suffix();
-    QString fusedPath = folderPath + "/" + base + "." + ext;
+    QString fusedPath = fuseFolderPath + "/" + base + "." + ext;
     // if exists add incrementing suffix
     Utilities::uniqueFilePath(fusedPath, "_");
     QFileInfo fusedFi(fusedPath);
     base = fusedFi.completeBaseName();
-    QString xmpPath   = folderPath + "/" + base + "." + "xmp";
-    QString msg = "Folder: " + folderPath + "  Last input image: " + lastFi.completeBaseName();
-    if (G::FSLog) G::log(srcFun, folderPath);
+    QString xmpPath   = fuseFolderPath + "/" + base + "." + "xmp";
+    QString msg = "Folder: " + fuseFolderPath + "  Last input image: " + lastFi.completeBaseName();
+    if (G::FSLog) G::log(srcFun, fuseFolderPath);
 
 
     // Write fused result

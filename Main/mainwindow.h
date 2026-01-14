@@ -1408,6 +1408,7 @@ private:
     // Focus Stack Utility
     bool removeRemotelyGeneratedInputImages = true;
     bool removeWorkingFiles = true;
+    QString fsMethod;
     void focusStackFromSelection();
     void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
     void generateFocusStack(const QStringList paths, QString method,
