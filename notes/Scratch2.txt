@@ -5,5 +5,27 @@ to do
 - flags (incl useDepthMap in runFusion)
 - are focusSlices CV_32F if recover from disk?
 
-QString msg = "";
-qWarning() << "WARNING:" << srcFun << msg;
+PMaxStream
+    Merge: PMax
+    Merge: Weighted
+
+PMaxStreamWeighted (WeightedPower, WeightedSigma0)
+Depth-biased erosion
+Edge-adaptive sigma
+
+Steps:
+1.  Stream PMax Fusion. (Done)
+2.  Add mergeMode Weighted (WeightedPower, WeightedSigma0). (Done)
+3.  Add Depth-biased erosion.  (Is this done?)
+4.  Add Edge-adaptive sigma.  (To do)
+
+StreamPMax
+StreamPMaxWeighted
+StreamPMaxWeightedErosion
+StreamPMaxWeightedErosionEdge
+
+
+
+
+
+

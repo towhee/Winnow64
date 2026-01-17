@@ -3,7 +3,10 @@
 #include "Main/global.h"
 
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <cassert>
+
+#include <cmath>   // std::isfinite
 
 /*
 FSMerge.cpp merges a stack of wavelet transforms into a single “best of stack”
@@ -235,12 +238,295 @@ void denoiseNeighbours(cv::Mat &mergedWavelet,
     }
 }
 
-// StreamPMax pipeline
+// StreamPMax pipeline Weighted
+
+// Part of PMax Wavelet Merge Weighted
+static inline int oddK(int v) { return (v % 2 == 1) ? v : (v + 1); }
+
+// Part of PMax Wavelet Merge Weighted
+static float sigmaForLevel(float sigma0, int level)
+{
+    // Scale-aware blur: coarser levels get larger blur.
+    // level 0 -> sigma0, level 1 -> 2*sigma0, level 2 -> 4*sigma0, ...
+    return sigma0 * float(1 << level);
+}
+
+// Part of PMax Wavelet Merge Weighted
+static void makeWeightsForROI(const cv::Mat &absROI32,
+                              cv::Mat &wROI32,
+                              const FSMerge::WeightedParams &wp)
+{
+    CV_Assert(absROI32.type() == CV_32F);
+
+    // Normalize energy within this ROI for stability.
+    double minV = 0.0, maxV = 0.0;
+    cv::minMaxLoc(absROI32, &minV, &maxV);
+    float denom = float(maxV) + wp.epsEnergy;
+
+    // w = pow( (abs/denom) + eps, power )
+    wROI32.create(absROI32.size(), CV_32F);
+    for (int y = 0; y < absROI32.rows; ++y)
+    {
+        const float *a = absROI32.ptr<float>(y);
+        float *w = wROI32.ptr<float>(y);
+        for (int x = 0; x < absROI32.cols; ++x)
+        {
+            float n = a[x] / denom;
+            float v = n + wp.epsWeight;
+            w[x] = std::pow(v, wp.power);
+        }
+    }
+}
+
+// Part of PMax Wavelet Merge Weighted
+static void blurROIInPlace(cv::Mat &roi32,
+                           float sigma)
+{
+    if (sigma <= 0.0f)
+        return;
+
+    int k = oddK(int(sigma * 4.0f) + 1);
+    if (k < 3) k = 3;
+
+    cv::GaussianBlur(roi32, roi32, cv::Size(k, k),
+                     sigma, sigma, cv::BORDER_REFLECT);
+}
+
+// Part of PMax Wavelet Merge Weighted
+static void accumulateWeightedROI(const cv::Mat &waveletROI32FC2,
+                                   const cv::Mat &wROI32F,
+                                   cv::Mat &sumWVROI32FC2,
+                                   cv::Mat &sumWROI32F)
+{
+    QString srcFun = "FSMerge::accumulateWeightedROI";
+    if (G::FSLog) G::log(srcFun);
+
+    CV_Assert(waveletROI32FC2.type() == CV_32FC2);
+    CV_Assert(wROI32F.type() == CV_32F);
+    CV_Assert(waveletROI32FC2.size() == wROI32F.size());
+    CV_Assert(sumWVROI32FC2.type() == CV_32FC2);
+    CV_Assert(sumWROI32F.type() == CV_32F);
+    CV_Assert(sumWVROI32FC2.size() == waveletROI32FC2.size());
+    CV_Assert(sumWROI32F.size() == wROI32F.size());
+
+    // weightedCoeff = wavelet * w (explicitly, no channel broadcasting)
+    cv::Mat weightedCoeff(waveletROI32FC2.size(), CV_32FC2);
+
+    // Split complex into real/imag (both CV_32F)
+    cv::Mat planes[2];
+    cv::split(waveletROI32FC2, planes);
+
+    // Multiply each plane by weights (CV_32F * CV_32F -> CV_32F)
+    cv::multiply(planes[0], wROI32F, planes[0], 1.0, CV_32F);
+    cv::multiply(planes[1], wROI32F, planes[1], 1.0, CV_32F);
+
+    // Merge back into complex (CV_32FC2)
+    cv::merge(planes, 2, weightedCoeff);
+
+    // Accumulate: sumWV += weightedCoeff, sumW += w
+    cv::add(sumWVROI32FC2, weightedCoeff, sumWVROI32FC2);
+    qDebug() << srcFun << "3";
+    cv::add(sumWROI32F, wROI32F, sumWROI32F);
+    qDebug() << srcFun << "4";
+}
+
+// Part of PMax Wavelet Merge Weighted
+static bool ensureInitWeighted(FSMerge::StreamState &state,
+                               const cv::Size &size,
+                               cv::Mat &mergedOut)
+{
+    QString srcFun = "FSMerge::ensureInitWeighted";
+    if (G::FSLog) G::log(srcFun);
+
+    state.size = size;
+    state.sliceIndex = 0;
+
+    const int rows = size.height;
+    const int cols = size.width;
+
+    state.maxAbs.create(rows, cols, CV_32F);
+    state.maxAbs.setTo(-1.0f);
+
+    state.depthIndex16.create(rows, cols, CV_16U);
+    state.depthIndex16.setTo(uint16_t(0));
+
+    state.maxWeightedScore.create(rows, cols, CV_32F);
+    state.maxWeightedScore.setTo(-1.0f);
+
+    state.weightedDepthIndex16.create(rows, cols, CV_16U);
+    state.weightedDepthIndex16.setTo(uint16_t(0));
+
+    state.sumW.create(rows, cols, CV_32F);
+    state.sumW.setTo(0.0f);
+
+    state.sumWV.create(rows, cols, CV_32FC2);
+    state.sumWV.setTo(cv::Scalar(0,0));
+
+    mergedOut.create(rows, cols, CV_32FC2);
+    mergedOut.setTo(cv::Scalar(0,0));
+
+    state.wavelets.clear(); // not used for weighted blending
+    return true;
+}
+
+// Part of PMax Wavelet Merge Weighted
+static void weightedAccumulateByLevel(const cv::Mat &wavelet32FC2,
+                                      cv::Mat &sumWV32FC2,
+                                      cv::Mat &sumW32F,
+                                      cv::Mat &maxWeighted32F,
+                                      cv::Mat &weightedDepthIndex16,
+                                      uint16_t sliceIndex,
+                                      const FSMerge::WeightedParams &wp)
+{
+    QString srcFun = "FSMerge::weightedAccumulateByLevel";
+    if (G::FSLog) G::log(srcFun);
+
+    CV_Assert(maxWeighted32F.type() == CV_32F);
+    CV_Assert(weightedDepthIndex16.type() == CV_16U);
+    CV_Assert(maxWeighted32F.size() == wavelet32FC2.size());
+    CV_Assert(weightedDepthIndex16.size() == wavelet32FC2.size());
+
+    CV_Assert(wavelet32FC2.type() == CV_32FC2);
+    CV_Assert(sumWV32FC2.type() == CV_32FC2);
+    CV_Assert(sumW32F.type() == CV_32F);
+    CV_Assert(wavelet32FC2.size() == sumWV32FC2.size());
+    CV_Assert(wavelet32FC2.size() == sumW32F.size());
+
+    const int levels = levelsForSize(wavelet32FC2.size());
+
+    // Temporary buffers reused
+    cv::Mat absROI, wROI, scoreROI;
+
+    for (int level = 0; level < levels; ++level)
+    {
+        int w  = wavelet32FC2.cols >> level;
+        int h  = wavelet32FC2.rows >> level;
+        int w2 = w / 2;
+        int h2 = h / 2;
+
+        // Subband layout matches your denoiseSubbands logic:
+        // TL: lowpass, TR: sub1, BR: sub2, BL: sub3
+        cv::Rect rLP(0,  0,  w2, h2);
+        cv::Rect rTR(w2, 0,  w2, h2);
+        cv::Rect rBR(w2, h2, w2, h2);
+        cv::Rect rBL(0,  h2, w2, h2);
+
+        float sigma = sigmaForLevel(wp.sigma0, level);
+
+        auto processRect = [&](const cv::Rect &r)
+        {
+            if (r.width <= 0 || r.height <= 0) return;
+
+            // Extract coeff ROI
+            cv::Mat vROI = wavelet32FC2(r);
+
+            // Compute |v|^2 into absROI
+            absROI.create(r.height, r.width, CV_32F);
+            for (int y = 0; y < r.height; ++y)
+            {
+                const cv::Vec2f *row = vROI.ptr<cv::Vec2f>(y);
+                float *out = absROI.ptr<float>(y);
+                for (int x = 0; x < r.width; ++x)
+                {
+                    const cv::Vec2f &c = row[x];
+                    out[x] = c[0]*c[0] + c[1]*c[1];
+                }
+            }
+
+            makeWeightsForROI(absROI, wROI, wp);
+            blurROIInPlace(wROI, sigma);
+
+            // Defensive: ensure weights are finite and non-negative
+            for (int y = 0; y < wROI.rows; ++y)
+            {
+                float *w = wROI.ptr<float>(y);
+                for (int x = 0; x < wROI.cols; ++x)
+                {
+                    float v = w[x];
+                    if (!std::isfinite(v) || v < 0.0f)
+                        v = 0.0f;
+                    w[x] = v;
+                }
+            }
+
+            // Weighted-energy winner update on this ROI
+            scoreROI.create(r.height, r.width, CV_32F);
+
+            for (int y = 0; y < r.height; ++y)
+            {
+                const float *aRow = absROI.ptr<float>(y);
+                const float *wRow = wROI.ptr<float>(y);
+                float *sRow       = scoreROI.ptr<float>(y);
+                for (int x = 0; x < r.width; ++x) {
+                    float a = aRow[x];
+                    float w = wRow[x];
+
+                    if (!std::isfinite(a) || a < 0.0f) a = 0.0f;
+                    if (!std::isfinite(w) || w < 0.0f) w = 0.0f;
+
+                    sRow[x] = a * w;                }
+            }
+
+            cv::Mat maxWROI = maxWeighted32F(r);
+            cv::Mat idxROI  = weightedDepthIndex16(r);
+
+            cv::Mat maskW = (scoreROI > maxWROI);
+            scoreROI.copyTo(maxWROI, maskW);
+            idxROI.setTo(sliceIndex, maskW);
+
+            // Accumulation
+            cv::Mat sum_WV32FC2 = sumWV32FC2(r);
+            cv::Mat sum_W32F = sumW32F(r);
+            accumulateWeightedROI(vROI,
+                                  wROI,
+                                  sum_WV32FC2,
+                                  sum_W32F);
+        };
+
+        /* Skip in weighted pipeline. Visually this tends to make the winner map hug
+           real edges better and avoid “fat” winners in smooth gradients. */
+        if (wp.includeLowpass) processRect(rLP);  // skip
+        processRect(rTR);
+        processRect(rBR);
+        processRect(rBL);
+    }
+}
+
+// Part of PMax Wavelet Merge Weighted
+static void finalizeWeightedBlend(const cv::Mat &sumWV32FC2,
+                                  const cv::Mat &sumW32F,
+                                  cv::Mat &mergedOut32FC2,
+                                  float eps)
+{
+    QString srcFun = "FSMerge::finalizeWeightedBlend";
+    if (G::FSLog) G::log(srcFun);
+
+    CV_Assert(sumWV32FC2.type() == CV_32FC2);
+    CV_Assert(sumW32F.type() == CV_32F);
+
+    mergedOut32FC2.create(sumWV32FC2.size(), CV_32FC2);
+
+    // Safe divide: split channels and divide by denom.
+    std::vector<cv::Mat> ch(2);
+    cv::split(sumWV32FC2, ch);
+
+    cv::Mat denom = sumW32F.clone();
+    denom.setTo(eps, denom < eps);
+
+    cv::divide(ch[0], denom, ch[0]);
+    cv::divide(ch[1], denom, ch[1]);
+
+    cv::merge(ch, mergedOut32FC2);
+}
+
 static bool ensureInit(StreamState &state,
                        const cv::Size &size,
                        int consistency,
                        cv::Mat &mergedOut)
 {
+    QString srcFun = "FSMerge::ensureInit";
+    if (G::FSLog) G::log(srcFun);
+
     state.size = size;
     state.sliceIndex = 0;
 
@@ -262,6 +548,8 @@ static bool ensureInit(StreamState &state,
 
     return true;
 }
+
+// end of Stream pipeline(s) req'd functions
 
 } // anonymous namespace
 
@@ -414,7 +702,6 @@ bool mergeSlice(StreamState &state,
 
     absval.copyTo(state.maxAbs, mask);
     wavelet.copyTo(mergedOut, mask);
-    // state.depthIndex16.setTo(state.sliceIndex, mask);
     state.depthIndex16.setTo(static_cast<uint16_t>(state.sliceIndex), mask);
 
     ++state.sliceIndex;
@@ -426,7 +713,7 @@ bool mergeSliceFinish(StreamState &state,
                       int consistency,
                       std::atomic_bool *abortFlag,
                       cv::Mat &mergedOut,
-                      cv::Mat *depthIndex16Out)
+                      cv::Mat &depthIndex16Out)
 {
     QString srcFun = "FSMerge::mergeSliceFinish";
 
@@ -450,8 +737,119 @@ bool mergeSliceFinish(StreamState &state,
         denoiseNeighbours(mergedOut, state.depthIndex16, state.wavelets);
     }
 
-    if (depthIndex16Out)
-        *depthIndex16Out = state.depthIndex16; // shallow copy OK
+    depthIndex16Out = state.depthIndex16; // shallow copy OK
+
+    if (G::FSLog) G::log(srcFun, "Done.");
+    return true;
+}
+
+bool mergeSliceWeighted(StreamState &state,
+                        const cv::Mat &wavelet,
+                        const cv::Size &sizeIn,
+                        const WeightedParams &wp,
+                        int /*consistency*/,
+                        std::atomic_bool *abortFlag,
+                        cv::Mat &mergedOut)
+{
+    QString srcFun = "FSMerge::mergeSliceWeighted";
+    if (G::FSLog) G::log(srcFun, "Start.");
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    if (wavelet.empty() || wavelet.type() != CV_32FC2)
+    {
+        qWarning() << "WARNING:" << srcFun << "invalid wavelet input";
+        return false;
+    }
+
+    cv::Size size = sizeIn;
+    if (size.width <= 0 || size.height <= 0)
+        size = wavelet.size();
+
+    if (wavelet.size() != size)
+    {
+        qWarning() << "WARNING:" << srcFun << "wavelet.size() != size";
+        return false;
+    }
+
+    const bool needInit =
+        !state.initialized() ||
+        state.size != size ||
+        state.sumW.empty() ||
+        state.sumWV.empty() ||
+        state.maxWeightedScore.empty() ||
+        state.weightedDepthIndex16.empty() ||
+        mergedOut.empty() ||
+        mergedOut.type() != CV_32FC2 ||
+        mergedOut.size() != size;
+
+    if (needInit)
+    {
+        if (G::FSLog) G::log(srcFun, "Initializing streaming WEIGHTED state");
+        ensureInitWeighted(state, size, mergedOut);
+    }
+
+    // 1) Update winner-map debug info (argmax energy), independent of blend.
+    cv::Mat absval(size.height, size.width, CV_32F);
+    getSqAbsval(wavelet, absval);
+
+    cv::Mat mask = (absval > state.maxAbs);
+    absval.copyTo(state.maxAbs, mask);
+    state.depthIndex16.setTo(static_cast<uint16_t>(state.sliceIndex), mask);
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // 2) Scale-aware weighted accumulation into sumWV/sumW.
+    weightedAccumulateByLevel(wavelet,
+                              state.sumWV,
+                              state.sumW,
+                              state.maxWeightedScore,
+                              state.weightedDepthIndex16,
+                              static_cast<uint16_t>(state.sliceIndex),
+                              wp);
+
+    ++state.sliceIndex;
+    return true;
+}
+
+bool mergeSliceFinishWeighted(StreamState &state,
+                              const WeightedParams &wp,
+                              int consistency,
+                              std::atomic_bool *abortFlag,
+                              cv::Mat &mergedOut,
+                              cv::Mat &weightedWinnerOut,
+                              cv::Mat &energyWinnerOut)
+{
+    QString srcFun = "FSMerge::mergeSliceFinishWeighted";
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    if (!state.initialized() || state.sumW.empty() || state.sumWV.empty())
+    {
+        qWarning() << "WARNING:" << srcFun << "called with empty weighted state";
+        return false;
+    }
+
+    // Produce blended mergedOut
+    finalizeWeightedBlend(state.sumWV, state.sumW, mergedOut, wp.epsWeight);
+
+    // Optional cleanup of the debug index map only.
+    if (consistency >= 1)
+    {
+        // This function asserts mergedWavelet/type/size but does not modify it.
+        denoiseSubbands(mergedOut, state.weightedDepthIndex16);
+        // Optional: if you want the energy map denoised too, add:
+        // denoiseSubbands(mergedOut, state.depthIndex16);
+    }
+
+    // IMPORTANT:
+    // Do NOT call your existing denoiseNeighbours() here; it re-samples coeffs
+    // from a single slice, which breaks weighted blending.
+    // If you want neighbor smoothing of the index map for display, implement an
+    // index-only version later.
+
+    weightedWinnerOut = state.weightedDepthIndex16;
+    energyWinnerOut   = state.depthIndex16;
 
     if (G::FSLog) G::log(srcFun, "Done.");
     return true;

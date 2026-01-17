@@ -451,14 +451,14 @@ bool FSFusion::streamPMaxSlice(int slice,
     if (slice == 0) {
         alignSize = grayImg.size();
         outDepth = colorImg.depth();
-        FSFusionReassign::ColorDepth cd = (outDepth == CV_16U)
-            ? FSFusionReassign::ColorDepth::U16
-            : FSFusionReassign::ColorDepth::U8;
-        if (!colorBuilder.begin(alignSize, /*fixedCapPerPixel=*/4, cd)) {
-            msg = "colorBuilder.begin() failed";
-            qWarning() << "WARNING:" << srcFun << msg;
-            return false;
-        }
+        // FSFusionReassign::ColorDepth cd = (outDepth == CV_16U)
+        //     ? FSFusionReassign::ColorDepth::U16
+        //     : FSFusionReassign::ColorDepth::U8;
+        // if (!colorBuilder.begin(alignSize, /*fixedCapPerPixel=*/4, cd)) {
+        //     msg = "colorBuilder.begin() failed";
+        //     qWarning() << "WARNING:" << srcFun << msg;
+        //     return false;
+        // }
     }
     else if (grayImg.size() != alignSize) {
         QString msg = "Slice " + s + " grayImg.size() != orig";
@@ -599,17 +599,40 @@ bool FSFusion::streamPMaxSlice(int slice,
     // if (statusCallback) statusCallback(msg);
     // if (progressCallback) progressCallback();
 
-    if (!FSMerge::mergeSlice(mergeState,
-                             wavelet,
-                             waveletSize,
-                             opt.consistency,
-                             abortFlag,
-                             mergedWavelet))
-    {
-        QString msg = "Slice " + s + " FSMerge::merge failed.";
-        qWarning() << "WARNING:" << srcFun << msg;
-        if (G::FSLog) G::log(srcFun, msg);
-        return false;
+    if (opt.mergeMode == "PMax") {
+        if (!FSMerge::mergeSlice(mergeState,
+                                 wavelet,
+                                 waveletSize,
+                                 opt.consistency,
+                                 abortFlag,
+                                 mergedWavelet))
+        {
+            QString msg = "Slice " + s + " FSMerge::mergeSlice failed.";
+            qWarning() << "WARNING:" << srcFun << msg;
+            if (G::FSLog) G::log(srcFun, msg);
+            return false;
+        }
+    }
+    else if (opt.mergeMode == "Weighted") {
+        FSMerge::WeightedParams wp;
+        wp.power = opt.weightedPower;
+        wp.sigma0 = opt.weightedSigma0;
+        wp.includeLowpass = opt.weightedIncludeLowpass;
+        wp.epsEnergy = opt.weightedEpsEnergy;
+        wp.epsWeight = opt.weightedEpsWeight;
+        if (!FSMerge::mergeSliceWeighted(mergeState,
+                                         wavelet,
+                                         waveletSize,
+                                         wp,
+                                         opt.consistency,
+                                         abortFlag,
+                                         mergedWavelet))
+        {
+            QString msg = "Slice " + s + " FSMerge::mergeSliceWeighted failed.";
+            qWarning() << "WARNING:" << srcFun << msg;
+            if (G::FSLog) G::log(srcFun, msg);
+            return false;
+        }
     }
 
     // --------------------------------------------------------------------
@@ -654,13 +677,43 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor,
     // if (statusCallback) statusCallback(msg);
     // if (progressCallback) progressCallback();
 
-    if (!FSMerge::mergeSliceFinish(mergeState,
-                                   opt.consistency,
-                                   abortFlag,
-                                   mergedWavelet,
-                                   &depthIndexPadded16))
-    {
-        return false;
+    if (opt.mergeMode == "PMax") {
+        if (!FSMerge::mergeSliceFinish(mergeState,
+                                       opt.consistency,
+                                       abortFlag,
+                                       mergedWavelet,
+                                       depthIndexPadded16))
+        {
+            return false;
+        }
+    }
+    else if (opt.mergeMode == "Weighted") {
+        FSMerge::WeightedParams wp;
+        wp.power = opt.weightedPower;
+        wp.sigma0 = opt.weightedSigma0;
+        wp.includeLowpass = opt.weightedIncludeLowpass;
+        wp.epsEnergy = opt.weightedEpsEnergy;
+        wp.epsWeight = opt.weightedEpsWeight;
+
+        cv::Mat weightedWinnerPadded16;
+        cv::Mat energyWinnerPadded16;
+
+        if (!FSMerge::mergeSliceFinishWeighted(mergeState,
+                                               wp,
+                                               opt.consistency,
+                                               abortFlag,
+                                               mergedWavelet,
+                                               weightedWinnerPadded16,
+                                               energyWinnerPadded16))
+        {
+            return false;
+        }
+
+        // Choose which map becomes "the" depthIndexPadded16 used downstream
+        if (opt.winnerMap == "Energy")
+            depthIndexPadded16 = energyWinnerPadded16;
+        else
+            depthIndexPadded16 = weightedWinnerPadded16;
     }
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
@@ -743,30 +796,87 @@ bool FSFusion::streamPMaxFinish(cv::Mat &outputColor,
 
     // --------------------------------------------------------------------
     // Crop back to original (non-padded) size
+    //   Step 1: padSize   -> alignSize
+    //   Step 2: alignSize -> origSize (validAreaAlign)
     // --------------------------------------------------------------------
     msg = "Crop back to original size";
-    msg +=  " origSize = " + FSUtilities::cvSizeToText(alignSize) +
-            " padSize = " + FSUtilities::cvSizeToText(padSize);
+    msg += " origSize=" + FSUtilities::cvSizeToText(origSize) +
+           " alignSize=" + FSUtilities::cvSizeToText(alignSize) +
+           " padSize=" + FSUtilities::cvSizeToText(padSize) +
+           " validAreaAlign=(" +
+           QString::number(validAreaAlign.x) + "," +
+           QString::number(validAreaAlign.y) + "," +
+           QString::number(validAreaAlign.width) + "," +
+           QString::number(validAreaAlign.height) + ")";
     if (G::FSLog) G::log(srcFun, msg);
 
-    if (padSize == origSize)
+    // Sanity: validAreaAlign must describe origSize inside alignSize
+    if (validAreaAlign.width  != origSize.width ||
+        validAreaAlign.height != origSize.height)
     {
-        // shallow copies ok
-        outputColor = paddedColorOut;
-        depthIndex16 = depthIndexPadded16;
+        qWarning() << "WARNING:" << srcFun
+                   << "validAreaAlign does not match origSize";
+        return false;
     }
-    else
+
+    // ------------------------------------------------------------
+    // 1) Undo FSFusion padding: padSize -> alignSize
+    // ------------------------------------------------------------
+    cv::Rect roiPadToAlign(0, 0, alignSize.width, alignSize.height);
+
+    if (padSize != alignSize)
     {
-        const int padW = padSize.width  - origSize.width;
-        const int padH = padSize.height - origSize.height;
+        const int padW = padSize.width  - alignSize.width;
+        const int padH = padSize.height - alignSize.height;
+
+        if (padW < 0 || padH < 0)
+        {
+            qWarning() << "WARNING:" << srcFun
+                       << "padSize smaller than alignSize";
+            return false;
+        }
 
         const int left = padW / 2;
         const int top  = padH / 2;
 
-        cv::Rect roi(left, top, origSize.width, origSize.height);
-        outputColor = paddedColorOut(roi).clone(); // final fused image mat
-        depthIndex16 = depthIndexPadded16(roi).clone();
+        roiPadToAlign = cv::Rect(left, top,
+                                 alignSize.width,
+                                 alignSize.height);
     }
+
+    // Bounds check
+    if (roiPadToAlign.x < 0 || roiPadToAlign.y < 0 ||
+        roiPadToAlign.x + roiPadToAlign.width  > paddedColorOut.cols ||
+        roiPadToAlign.y + roiPadToAlign.height > paddedColorOut.rows ||
+        roiPadToAlign.x + roiPadToAlign.width  > depthIndexPadded16.cols ||
+        roiPadToAlign.y + roiPadToAlign.height > depthIndexPadded16.rows)
+    {
+        qWarning() << "WARNING:" << srcFun
+                   << "roiPadToAlign out of bounds";
+        return false;
+    }
+
+    // Views at alignSize
+    cv::Mat colorAlign = paddedColorOut(roiPadToAlign);
+    cv::Mat depthAlign = depthIndexPadded16(roiPadToAlign);
+
+    // ------------------------------------------------------------
+    // 2) Undo FSLoader padding: alignSize -> origSize
+    // ------------------------------------------------------------
+    if (validAreaAlign.x < 0 || validAreaAlign.y < 0 ||
+        validAreaAlign.x + validAreaAlign.width  > colorAlign.cols ||
+        validAreaAlign.y + validAreaAlign.height > colorAlign.rows ||
+        validAreaAlign.x + validAreaAlign.width  > depthAlign.cols ||
+        validAreaAlign.y + validAreaAlign.height > depthAlign.rows)
+    {
+        qWarning() << "WARNING:" << srcFun
+                   << "validAreaAlign out of bounds";
+        return false;
+    }
+
+    // Final outputs (origSize)
+    outputColor  = colorAlign(validAreaAlign).clone();
+    depthIndex16 = depthAlign(validAreaAlign).clone();
 
     // Housekeeping
     colorEntries.clear();

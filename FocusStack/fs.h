@@ -23,44 +23,50 @@ public:
     explicit FS(QObject *parent = nullptr);
 
     enum Methods {
-        StreamPMax,        // PMax1, but streamed
-        PMax,              // align, fuse using multiscale wavelets
-        TennengradVersions // multiple depth maps for diff radius/thresholds
+        StreamPMax,           // PMax1, but streamed
+        StreamPMaxWeighted,   // PMax1, but streamed and weighted in merge
+        PMax,                 // align, fuse using multiscale wavelets
+        TennengradVersions    // multiple depth maps for diff radius/thresholds
     };
     static inline const QStringList MethodsString {
-        "StreamPMax",        // PMax1, but streamed
-        "PMax",              // align, fuse using multiscale wavelets
-        "TennengradVersions" // multiple depth maps for diff radius/thresholds
+        "StreamPMax",         // PMax1, but streamed
+        "StreamPMaxWeighted", // PMax1, but streamed and weighted in merge
+        "PMax",               // align, fuse using multiscale wavelets
+        "TennengradVersions"  // multiple depth maps for diff radius/thresholds
     };
 
     struct Options
     {
-        QString method          = "";
-        QString methodAlign     = "";
-        QString methodFocus     = "";
-        QString methodDepth     = "";
-        QString methodFuse      = "";
+        QString method                  = "";
+        QString methodAlign             = "";
+        QString methodFocus             = "";
+        QString methodDepth             = "";
+        QString methodFuse              = "";
+        QString methodMerge             = "PMax";
+        QString methodMergeWinnerMap    = "PMax";
 
-        bool isStream           = false;
-        bool isLocal            = true;
+        QString methodInfo              = "";
 
-        bool useIntermediates   = false;
-        bool useCache           = true;     // use disk if false
-        bool enableOpenCL       = true;
+        bool isStream                   = false;
+        bool isLocal                    = true;
 
-        bool enableAlign        = true;
-        bool keepAlign          = true;     // intermediates
+        bool useIntermediates           = false;
+        bool useCache                   = true;     // use disk if false
+        bool enableOpenCL               = true;
 
-        bool enableFocusMaps    = true;
-        bool previewFocusMaps   = true;
-        bool keepFocusMaps      = true;
+        bool enableAlign                = true;
+        bool keepAlign                  = true;     // intermediates
 
-        bool enableDepthMap     = true;
-        bool previewDepthMap    = true;
-        bool keepDepthMap       = true;
+        bool enableFocusMaps            = true;
+        bool previewFocusMaps           = true;
+        bool keepFocusMaps              = true;
 
-        bool enableFusion       = true;
-        bool previewFusion      = true;
+        bool enableDepthMap             = true;
+        bool previewDepthMap            = true;
+        bool keepDepthMap               = true;
+
+        bool enableFusion               = true;
+        bool previewFusion              = true;
 
         bool enableBackgroundMask       = true;
         bool enableBackgroundReplace    = true;
@@ -74,6 +80,7 @@ public:
     };
 
     QString statusGroupPrefix;
+    QString statusRunPrefix;
     // Groups
     QList<QStringList> groups;
 
@@ -88,8 +95,11 @@ public:
         abort.store(true, std::memory_order_relaxed);
     }
 
+
     // Main pipeline API
-    bool run();     // synchronous
+    bool run();             // run all testing deltas
+    // run all goups for all deltas
+    bool runGroups(QVariant aItem = {}, QVariant bItem = {});
 
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
@@ -106,6 +116,10 @@ protected:
 private:
     // std::atomic_bool abortRequested;
     std::atomic_bool abort{false};
+
+    // test parameters
+    QVariant aItem = {};
+    QVariant bItem = {};
 
     bool initializeGroup(int group);            // source groups
     bool prepareFolders();
@@ -184,10 +198,12 @@ private:
     cv::Mat fusedColorMat;       // CU8 or CU16
 
     // Progress
+    int runIdx;
+    int runTotal;
     int progressCount = -1;
     int progressTotal = 0;
     void incrementProgress();
-    void setTotalProgress();
+    void setTotalProgress(int runs = 1);
 };
 
 #endif // FS_H
