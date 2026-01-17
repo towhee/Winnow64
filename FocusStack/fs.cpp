@@ -107,6 +107,18 @@ void FS::setOptions(const Options &opt)
         o.enableDepthMap = true;
         o.enableFusion = true;
         o.methodFuse = "FullWaveletMerge";
+        o.methodMerge = "PMax";
+        o.isStream = true;
+    }
+
+    if (o.method == "StreamPMaxWeighted") {
+        o.useIntermediates = true;
+        o.enableAlign = false;
+        o.enableFocusMaps = false;
+        o.enableDepthMap = true;
+        o.enableFusion = true;
+        o.methodFuse = "FullWaveletMerge";
+        o.methodMerge = "Weighted";
         o.isStream = true;
     }
 
@@ -145,7 +157,8 @@ void FS::setOptions(const Options &opt)
 
 void FS::status(const QString &msg)
 {
-    emit updateStatus(false, statusGroupPrefix + msg, "");
+    QString statusMsg = statusRunPrefix + statusGroupPrefix + msg;
+    emit updateStatus(false, statusMsg, "");
 }
 
 bool FS::prepareFolders()
@@ -351,13 +364,13 @@ bool FS::validAlignMatsAvailable(int count) const
     return true;
 }
 
-void FS::setTotalProgress()
+void FS::setTotalProgress(int runs)
 {
     progressTotal = 0;
     for (const QStringList &g : groups) {
         int slices = g.count();
         if (o.isStream) {
-            progressTotal += (slices * 4 + 2);
+            progressTotal += (slices * 2 + 1) * runs;
         }
         else {
             if (slices < 2) continue;
@@ -380,7 +393,7 @@ void FS::incrementProgress()
     QString srcFun = "FS::incrementProgress";
     emit progress(++progressCount, progressTotal);
     QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
-    // G::log(srcFun, msg);
+    G::log(srcFun, msg);
 }
 
 void FS::previewOverview(cv::Mat &fusedColor8Mat)
@@ -506,12 +519,63 @@ QImage FS::thumbnail(const cv::Mat &mat)
 
 bool FS::run()
 {
-    QString srcFun = "FS::run";
+/*
+    This is the entry point for the focus stacking pipeline.  Normally, this function
+    just calls run(), but it can also call run() multiple times for different settings
+    or parameters to test which ones work best.
 
-    setTotalProgress();
+    When testing, the values in A and B must be set in the appropriate run method
+    ie if A is fusion weightedPower method  uses runStreamWaveletPMax then you must
+*/
+    QString srcFun = "FS::runGroups";
+
+// Test Parameters in two vectors
+    // A: weightedPower     aItem in header
+    QVector<QVariant> A{};
+    // B: weightedSigma0    bItem in header
+    QVector<QVariant> B{};
+
+    runIdx = 0;
+    runTotal = A.count() * B.count();
+    setTotalProgress(runTotal);
+
+    // Just run existing settings
+    if (A.isEmpty() && B.isEmpty()) {
+        if (!runGroups()) return false;
+    }
+
+    // Iterate testing parameters
+    else {
+        for (const QVariant& a : A) {
+            for (const QVariant& b : B) {
+                runIdx++;
+                statusRunPrefix = "Run " + QString::number(runIdx) +
+                                  " of " + QString::number(runTotal) + "  ";
+                if (G::FSLog) G::log(srcFun, statusRunPrefix);
+                aItem = a;
+                bItem = b;
+                if (!runGroups()) return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool FS::runGroups(QVariant aItem, QVariant bItem)
+{
+/*
+    A group is a focus stack of images in a folder. The groups are converted into a
+    list of paths in MW::groupFocusStacks.  This function iterates through all the
+    groups that may have been selected.
+
+    This function is called from FS::run.  If testing multiple options they will be
+    passed as parameters, otherwise if null {} then they are ignored.
+*/
+    QString srcFun = "FS::runGroups";
+
     QString msg = "progressTotal = " + QString::number(progressTotal);
     if (G::FSLog) G::log(srcFun, msg);
-
 
     int groupCounter = 0;
     for (const QStringList &g : groups) {
@@ -534,6 +598,13 @@ bool FS::run()
         if (o.isStream) {
 
             if (o.method == "StreamPMax") {
+                if (!runStreamWaveletPMax()) {
+                    emit finished(false);
+                    return false;
+                }
+            }
+
+            if (o.method == "StreamPMaxWeighted") {
                 if (!runStreamWaveletPMax()) {
                     emit finished(false);
                     return false;
@@ -612,7 +683,7 @@ bool FS::run()
         }
 
         // SAVE
-        if (o.enableFusion) save(dstFolderPath);
+        // if (o.enableFusion) save(dstFolderPath);
 
         // STATS
         QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
@@ -625,7 +696,7 @@ bool FS::run()
         // qApp->processEvents();  // complete any waiting log msgs
     }
 
-    diagnostics();
+    // diagnostics();
 
     return true;
 }
@@ -1536,19 +1607,24 @@ bool FS::runStreamWaveletPMax()
     aopt.maxRes            = 2048;
     aopt.fullResolution    = false;
 
-    // Depth map options
-    FSDepth::Options dopt;
-
-    dopt.method = "Tenengrad";
-    FSDepth::StreamState depthState;
-    depthState.ten.radius = 5.0f;
-    depthState.ten.threshold = 10.0f;
-
     // Fusion options
     FSFusion::Options fopt;
     fopt.method = o.methodFuse;
+    fopt.mergeMode = o.methodMerge;
+    // fopt.validAreaAlign is set from first align image when iterating slices
     fopt.useOpenCL   = o.enableOpenCL;
     fopt.consistency = 2;
+
+    if (o.method == "StreamPMaxWeighted") {
+        fopt.winnerMap = o.methodMergeWinnerMap;
+        fopt.weightedPower = 7.0f;                      // 4.0f;
+        fopt.weightedSigma0 = 2;                        // 1.0f;
+        fopt.weightedIncludeLowpass = true;             // false sucks
+        fopt.weightedEpsEnergy = 1e-8f;
+        fopt.weightedEpsWeight = 1e-8f;
+        o.methodInfo = "_" + QVariant(fopt.weightedSigma0).toString() +
+                       "_" + QVariant(fopt.weightedIncludeLowpass).toString();
+    }
 
     FSLoader::Image prevImage;
     FSLoader::Image currImage;
@@ -1563,13 +1639,10 @@ bool FS::runStreamWaveletPMax()
         QString s = " Slice: " + QString::number(slice) + " of " +
                     QString::number(slices) + " ";
         // Load input image slice
-        status(s + "Loading source input image...");
+        // status(s + "Loading source input image...");
         currImage = FSLoader::load(inputPaths.at(slice).toStdString());
-        // if (slice == 0) {
-        //     fuse.origSize = currImage.origSize;
-        // }
         if (G::abortFocusStack) return false;
-        incrementProgress();
+        // incrementProgress();
 
         // Align slice
         currGlobal = FSAlign::makeIdentity(currImage.validArea);
@@ -1577,6 +1650,7 @@ bool FS::runStreamWaveletPMax()
             status(s + "Identifying for alignment");
             alignedGraySlice = currImage.gray.clone();
             alignedColorSlice = currImage.color.clone();
+            fuse.validAreaAlign = currImage.validArea;
             fuse.origSize = currImage.origSize;
             fuse.alignSize = currImage.gray.size();
             if (G::abortFocusStack) return false;
@@ -1593,16 +1667,6 @@ bool FS::runStreamWaveletPMax()
             if (G::abortFocusStack) return false;
             incrementProgress();
         }
-
-        // Depth map for slice
-        if (!FSDepth::streamGraySlice(alignedGraySlice, slice, depthFolderPath, dopt,
-                                      depthState, &abort, progressCb, statusCb)) {
-            qWarning() << "WARNING:" << srcFun << "FSDepth::streamGraySlice failed.";
-            return false;
-        }
-
-        if (G::abortFocusStack) return false;
-        incrementProgress();
 
         // Fuse slice
         status(s + "Fusing...");
@@ -1623,12 +1687,6 @@ bool FS::runStreamWaveletPMax()
     msg = "Slice processing done.  Finish merge, invert, recover color and crop padding";
     if (G::FSLog) G::log(srcFun, msg);
 
-    // finish depth map
-    if (!FSDepth::finishStreaming(depthFolderPath, dopt, slices, depthState,
-                                  statusCb, &depthIndex16Mat)) {
-        qWarning() << "WARNING:" << srcFun << "FSDepth::finishStreaming failed.";
-    }
-
     // finish merge, invert, recover color and crop padding
     status("Finalizing fusion...");
     if (!fuse.streamPMaxFinish(fusedColorMat, fopt, depthIndex16Mat,
@@ -1646,6 +1704,10 @@ bool FS::runStreamWaveletPMax()
 }
 
 bool FS::runStreamTennengradVersions()
+/*
+    Iterate radius and threshold values to produce different depth maps.  No fused
+    image is produced.
+*/
 {
     QString srcFun = "FS::runStreamTennengradVersions";
     QString msg = "Start";
@@ -1755,7 +1817,6 @@ bool FS::runStreamTennengradVersions()
 
 bool FS::save(QString fuseFolderPath)
 {
-    return false;
     QString srcFun = "FS::save";
 
     // // Save wavelet depth map
@@ -1768,7 +1829,7 @@ bool FS::save(QString fuseFolderPath)
 
     // Make file name for fused image
     QFileInfo lastFi(inputPaths.last());
-    QString base = lastFi.completeBaseName() + "_FocusStack_" + o.method;
+    QString base = lastFi.completeBaseName() + "_FocusStack_" + o.method + o.methodInfo;
     QString ext  = lastFi.suffix();
     QString fusedPath = fuseFolderPath + "/" + base + "." + ext;
     // if exists add incrementing suffix
@@ -1778,7 +1839,6 @@ bool FS::save(QString fuseFolderPath)
     QString xmpPath   = fuseFolderPath + "/" + base + "." + "xmp";
     QString msg = "Folder: " + fuseFolderPath + "  Last input image: " + lastFi.completeBaseName();
     if (G::FSLog) G::log(srcFun, fuseFolderPath);
-
 
     // Write fused result
     msg = "Write to " + fusedPath;
@@ -1854,6 +1914,12 @@ void FS::diagnostics()
 
         << "\n"
         << "o.method                =" << o.method << "\n"
+        << "o.methodAlign           =" << o.methodAlign << "\n"
+        << "o.methodFocus           =" << o.methodFocus << "\n"
+        << "o.methodDepth           =" << o.methodDepth << "\n"
+        << "o.methodFuse            =" << o.methodFuse << "\n"
+        << "o.methodMerge           =" << o.methodMerge << "\n"
+        << "\n"
         << "o.useIntermediates      =" << o.useIntermediates << "\n"
         << "o.useCache              =" << o.useCache << "\n"
         << "o.enableOpenCL          =" << o.enableOpenCL << "\n"

@@ -65,7 +65,7 @@ Winnow64/FocusStack/
 void MW::focusStackFromSelection()
 {
     QString src = "MW::generateFocusStackFromSelection";
-    if (G::isLogger) G::log(src);
+    if (G::isLogger || G::FSLog) G::log(src, fsMethod);
 
     QStringList paths;
     if (!dm->getSelection(paths) || paths.isEmpty()) {
@@ -75,6 +75,7 @@ void MW::focusStackFromSelection()
     }
 
     // fsMethod is from settings
+
     generateFocusStack(paths, fsMethod, src);
 }
 
@@ -218,7 +219,7 @@ void MW::generateFocusStack(const QStringList paths,
         - if remote, use srcFolder parent = Lightroom folder
 */
     QString srcFun = "MW::generateFocusStack";
-    if (G::isLogger || G::FSLog) G::log(srcFun, "paths " + method);
+    if (G::isLogger || G::FSLog) G::log(srcFun, "method = " + method);
 
     G::isRunningFocusStack = true;
     G::abortFocusStack = false;
@@ -229,7 +230,7 @@ void MW::generateFocusStack(const QStringList paths,
     // isLocal = false;    // temp for debugging
 
     // method = "StreamPMax";       // align > fusePMax
-    method = "TennengradVersions";       // align > TenDepth for all versions
+    // method = "TennengradVersions";       // align > TenDepth for all versions
     // method = "PMax";            // align > fusePMax
     // method = "PMax2";            // align > focus > depth > fusePMax
     // method = "Ten";              // align > depth (Tenengrad focus)
@@ -258,9 +259,8 @@ void MW::generateFocusStack(const QStringList paths,
     QFileInfo fusedFi(dstLastFusedPath);
     fusedBase = fusedFi.completeBaseName();
 
-    if (G::FSLog) G::log(srcFun, "srcFolder =" + srcFolderPath);
-    if (G::FSLog) G::log(srcFun, "dstLastFusedPath =" + dstLastFusedPath);
-    if (G::FSLog) G::log(srcFun, "method =" + method);
+    if (G::FSLog) G::log(srcFun, "srcFolder =v" + srcFolderPath);
+    if (G::FSLog) G::log(srcFun, "dstLastFusedPath =v" + dstLastFusedPath);
 
     // ----------- End section when pipeline is finished -----------
 

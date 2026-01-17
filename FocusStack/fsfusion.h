@@ -28,10 +28,21 @@ public:
                      naturally with FSDepth::method == "Simple".
         */
         QString method      = "PMax";
+        QString mergeMode   = "PMax";       // “PMax” or “Weighted”
+        QString winnerMap = "Weighted";     // "Energy" or "Weighted"
+        bool enableDepthBiasedErosion = false;
+        bool enableEdgeAdaptiveSigma  = false;
 
         // PMax-specific options
         bool useOpenCL      = true;  // GPU wavelet via cv::UMat
         int  consistency    = 2;     // 0 = off, 1 = subband denoise, 2 = +neighbour
+
+        // mergeMode = "Weighted"
+        float weightedPower = 4.0f;
+        float weightedSigma0 = 1.0f;
+        bool  weightedIncludeLowpass = true;
+        float weightedEpsEnergy = 1e-8f;
+        float weightedEpsWeight = 1e-8f;
     };
 
     inline bool isAbort(const std::atomic_bool *f)
@@ -65,6 +76,7 @@ public:
     // StreamPMax pipeline
     // Merge
     FSMerge::StreamState mergeState;
+    cv::Rect validAreaAlign;             // original image region inside padded frame
     cv::Size origSize;                   // focus stack input image dimensions
     cv::Size alignSize;                  // aligned image dimensions
     cv::Size firstAlignedSize;
