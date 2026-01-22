@@ -229,12 +229,6 @@ void MW::generateFocusStack(const QStringList paths,
     bool isLocal = (source == "MW::generateFocusStackFromSelection");
     // isLocal = false;    // temp for debugging
 
-    // method = "StreamPMax";       // align > fusePMax
-    // method = "TennengradVersions";       // align > TenDepth for all versions
-    // method = "PMax";            // align > fusePMax
-    // method = "PMax2";            // align > focus > depth > fusePMax
-    // method = "Ten";              // align > depth (Tenengrad focus)
-
     // ----------- Req'd when pipeline is finished -----------
 
     // Source images folder (used after pipeline finishes)

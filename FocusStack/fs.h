@@ -23,14 +23,18 @@ public:
     explicit FS(QObject *parent = nullptr);
 
     enum Methods {
-        StreamPMax,           // PMax1, but streamed
-        StreamPMaxWeighted,   // PMax1, but streamed and weighted in merge
+        StmPMax,           // PMax1, but streamed
+        StmPMaxWt,   // PMax1, but streamed and weighted in merge
+        StmPMaxWtDbe,   // PMax1, but streamed and weighted in merge
+        StmPMaxWtDbeEas,   // PMax1, but streamed and weighted in merge
         PMax,                 // align, fuse using multiscale wavelets
         TennengradVersions    // multiple depth maps for diff radius/thresholds
     };
     static inline const QStringList MethodsString {
-        "StreamPMax",         // PMax1, but streamed
-        "StreamPMaxWeighted", // PMax1, but streamed and weighted in merge
+        "StmPMax",            // PMax1, but streamed
+        "StmPMaxWt",          // PMax1, but streamed and weighted in merge
+        "StmPMaxWtDbe",       // PMax1, but streamed and weighted in merge
+        "StmPMaxWtDbeEas",    // PMax1, but streamed and weighted in merge
         "PMax",               // align, fuse using multiscale wavelets
         "TennengradVersions"  // multiple depth maps for diff radius/thresholds
     };
@@ -43,7 +47,9 @@ public:
         QString methodDepth             = "";
         QString methodFuse              = "";
         QString methodMerge             = "PMax";
-        QString methodMergeWinnerMap    = "PMax";
+
+        bool enableDepthBiasedErosion   = false;
+        bool enableEdgeAdaptiveSigma    = false;
 
         QString methodInfo              = "";
 
@@ -86,7 +92,7 @@ public:
 
     // Input configuration
     void initialize(QString dstFolderPath, QString dstFusedPath);
-    void setOptions(const Options &opt);
+    bool setOptions(const Options &opt);
 
     void diagnostics();
 

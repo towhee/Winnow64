@@ -123,6 +123,9 @@ void apply_contrast_whitebalance_internal(cv::Mat &img,
                                           const cv::Mat &contrast,
                                           const cv::Mat &whitebalance)
 {
+    // Defensive: this implementation is 8-bit only.
+    CV_Assert(img.depth() == CV_8U);
+
     if (img.channels() == 1)
     {
         // Grayscale: contrast only
@@ -434,6 +437,21 @@ namespace FSAlign {
 Result makeIdentity(const cv::Rect &validArea)
 {
     Result r;
+
+    // // added for Depth Biased Erosion
+    // r.contrast = cv::Mat(5, 1, CV_32F);
+    // r.contrast.at<float>(0) = 1.0f;
+    // r.contrast.at<float>(1) = 0.0f;
+    // r.contrast.at<float>(2) = 0.0f;
+    // r.contrast.at<float>(3) = 0.0f;
+    // r.contrast.at<float>(4) = 0.0f;
+
+    // r.whitebalance = cv::Mat(6, 1, CV_32F);
+    // r.whitebalance.at<float>(0) = 0.0f;  r.whitebalance.at<float>(1) = 1.0f; // B
+    // r.whitebalance.at<float>(2) = 0.0f;  r.whitebalance.at<float>(3) = 1.0f; // G
+    // r.whitebalance.at<float>(4) = 0.0f;  r.whitebalance.at<float>(5) = 1.0f; // R
+    // // end added for Depth Biased Erosion
+
     r.validArea = validArea;
     return r;
 }
@@ -445,10 +463,10 @@ Result computeLocal(const cv::Mat &refGray,
                     const cv::Rect &srcValidArea,
                     const Options &opt)
 {
-    Result r;
+    Result r = makeIdentity(srcValidArea);
 
     // Start with identity transform and default coeffs
-    r.validArea = srcValidArea;
+    // r.validArea = srcValidArea;
 
     // Low-resolution rough geometric alignment
     match_transform(refGray,

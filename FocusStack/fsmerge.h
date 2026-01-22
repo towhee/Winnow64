@@ -85,10 +85,17 @@ struct StreamState
         size = cv::Size(0,0);
     }
 
-    bool initialized() const
+    bool initializedPMax() const
     {
         return size.width > 0 && size.height > 0 &&
                !maxAbs.empty() && !depthIndex16.empty();
+    }
+
+    bool initializedWeighted() const
+    {
+        return initializedPMax() &&
+               !sumW.empty() && !sumWV.empty() &&
+               !maxWeightedScore.empty() && !weightedDepthIndex16.empty();
     }
 };
 
