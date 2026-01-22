@@ -268,7 +268,7 @@ Logger logger;
 
 void log(QString functionName, QString comment, bool zeroElapsedTime)
 {
-    if (functionName == "") qDebug();
+    if (functionName == "") qDebug() << " ";  // empty line
     logger.log(functionName, comment);
     return;
 }

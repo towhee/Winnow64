@@ -55,6 +55,9 @@ struct Result
     }
 };
 
+Result makeIdentity(const cv::Rect &validArea); // Depth Biased Erosion
+
+
 // Compute LOCAL alignment: srcGray/srcColor → refGray/refColor.
 // refGray/srcGray must be 8-bit single channel (CV_8UC1).
 // refColor/srcColor can be 8- or 16-bit, 3-channel.

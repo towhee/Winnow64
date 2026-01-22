@@ -9,6 +9,7 @@
 
 #include "FSMerge.h"
 #include "FSFusionReassign.h"
+#include "FSAlign.h"
 
 class FSFusion
 {
@@ -21,15 +22,15 @@ public:
         /*
         method:
           "PMax"   = full multiscale PMax fusion (wavelet-based)
-                     This reproduces the current successful pipeline.
 
           "Simple" = use depthIndex16 only to pick per-pixel color from
                      the corresponding slice (no wavelets). Fast, pairs
                      naturally with FSDepth::method == "Simple".
         */
-        QString method      = "PMax";
+        QString method      = "PMax";       // "Simple" or "PMax"
         QString mergeMode   = "PMax";       // “PMax” or “Weighted”
         QString winnerMap = "Weighted";     // "Energy" or "Weighted"
+
         bool enableDepthBiasedErosion = false;
         bool enableEdgeAdaptiveSigma  = false;
 
@@ -37,18 +38,47 @@ public:
         bool useOpenCL      = true;  // GPU wavelet via cv::UMat
         int  consistency    = 2;     // 0 = off, 1 = subband denoise, 2 = +neighbour
 
-        // mergeMode = "Weighted"
+        // mergeMode = "Weighted" (Stage 2)
         float weightedPower = 4.0f;
         float weightedSigma0 = 1.0f;
         bool  weightedIncludeLowpass = true;
         float weightedEpsEnergy = 1e-8f;
         float weightedEpsWeight = 1e-8f;
+
+        // Depth-biased erosion (Stage 3)
+        // Deeper = higher slice index
+
+        // Edge mask from fusedGray8:
+        float erosionEdgeSigma      = 1.0f;   // blur on gradient magnitude
+        float erosionEdgeThresh     = 0.06f;  // 0..1 fraction of max grad
+        int   erosionEdgeDilate     = 2;      // expands edge band
+
+        // Erosion itself:
+        int   erosionRadius         = 2;      // neighborhood radius (1..4)
+        int   erosionIters          = 1;      // 1..3 typical
+        int   erosionMaxDelta       = 6;      // clamp upward change per iter
+        float erosionMinEdgeDelta   = 2.0f;   // require local contrast to act
+
+        // depthmap path for debugging pngs
+        QString depthFolderPath;
     };
 
     inline bool isAbort(const std::atomic_bool *f)
     {
         return f && f->load(std::memory_order_relaxed);
     }
+
+    // Depth-Biased Erosion
+    bool applyDepthBiasedColorOverrideSecondPass(
+        cv::Mat &paddedColorOut,                 // in/out, size padSize
+        const cv::Mat &winnerBeforePadded16,     // CV_16U (padSize)  -- before DBE (NEW)
+        const cv::Mat &winnerPadded16,           // CV_16U, size padSize
+        const cv::Mat &edgeMask8U,               // CV_8U,  size padSize
+        const QStringList &inputPaths,           // original file paths
+        const std::vector<FSAlign::Result> &globals,
+        const Options &opt,
+        std::atomic_bool *abortFlag
+        );
 
     /*
     PMax / Simple fusion:
@@ -84,7 +114,6 @@ public:
     cv::Mat mergedWavelet;
     cv::Size waveletSize;
     cv::Mat depthIndexPadded16;   // CV_16U, size == padSize
-    // cv::Mat depthIndex16;         // CV_16U, size == alignSize (cropped)
     // Color reassign
     FSFusionReassign::ColorMapBuilder colorBuilder;
     std::vector<FSFusionReassign::ColorEntry> colorEntries;
@@ -107,6 +136,8 @@ public:
         cv::Mat &outputColor,
         const Options &opt,
         cv::Mat &depthIndex16,
+        const QStringList  &inputPaths,
+        const std::vector<FSAlign::Result> &globals,
         std::atomic_bool *abortFlag,
         StatusCallback statusCallback,
         ProgressCallback progressCallback
