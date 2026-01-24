@@ -400,9 +400,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    float a = 1.5;
-    QString s = QVariant(a).toString();
-    qDebug() << s;
+    qDebug() << fsMethod;
 
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist

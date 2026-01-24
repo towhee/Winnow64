@@ -1694,6 +1694,8 @@ bool FS::runStreamWaveletPMax()
         fopt.enableDepthBiasedErosion = o.enableDepthBiasedErosion; // stage 3
         fopt.enableEdgeAdaptiveSigma = o.enableEdgeAdaptiveSigma;   // stage 4
 
+        // Manually add to name special runs
+        o.methodInfo = "LL";
         // o.methodInfo = "_" + QVariant(fopt.weightedSigma0).toString() +
         //                "_" + QVariant(fopt.weightedSigma0).toString();
     }
@@ -1797,7 +1799,7 @@ bool FS::runStreamWaveletPMax()
         ;            // stage 4
 
 
-    if (o.useIntermediates) save(fusionFolderPath);
+    // if (o.useIntermediates) save(fusionFolderPath);
 
     return true;
 }
@@ -1928,7 +1930,7 @@ bool FS::save(QString fuseFolderPath)
 
     // Make file name for fused image
     QFileInfo lastFi(inputPaths.last());
-    QString base = lastFi.completeBaseName() + "_FocusStack_" + o.method;
+    QString base = lastFi.completeBaseName() + "_FocusStack_" + o.method + o.methodInfo;
     // QString base = lastFi.completeBaseName() + "_FocusStack_" + o.method + o.methodInfo;
     QString ext  = lastFi.suffix();
     QString fusedPath = fuseFolderPath + "/" + base + "." + ext;
