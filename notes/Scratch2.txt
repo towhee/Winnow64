@@ -29,3 +29,332 @@ StreamPMaxWeightedErosionEdge
 
 
 
+bool FSFusion::streamPMaxFinish(
+    cv::Mat &outputColor,
+    const Options &opt,
+    cv::Mat &depthIndex16,
+    const QStringList &inputPaths,
+    const std::vector<FSAlign::Result> &globals,
+    std::atomic_bool *abortFlag,
+    StatusCallback statusCallback,
+    ProgressCallback progressCallback)
+{
+    QString srcFun = "FSFusion::streamPMaxFinish";
+    QString msg = "Finishing Fusion";
+    msg = "DepthBiasedErosion: enableDepthBiasedErosion = " +
+          QVariant(opt.enableDepthBiasedErosion).toString();
+    if (statusCallback) statusCallback(msg);
+
+    // --------------------------------------------------------------------
+    // Finish merge after all slices processed and before invert
+    // --------------------------------------------------------------------
+    msg = "Finish merge after last slice";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    if (opt.mergeMode == "PMax") {
+        if (!FSMerge::mergeSliceFinish(mergeState,
+                                       opt.consistency,
+                                       abortFlag,
+                                       mergedWavelet,
+                                       depthIndexPadded16))
+        {
+            return false;
+        }
+    }
+    else if (opt.mergeMode == "Weighted") {
+        FSMerge::WeightedParams wp;
+        wp.power = opt.weightedPower;
+        wp.sigma0 = opt.weightedSigma0;
+        wp.includeLowpass = opt.weightedIncludeLowpass;
+        wp.epsEnergy = opt.weightedEpsEnergy;
+        wp.epsWeight = opt.weightedEpsWeight;
+
+        cv::Mat weightedWinnerPadded16;
+        cv::Mat energyWinnerPadded16;
+
+        if (!FSMerge::mergeSliceFinishWeighted(mergeState,
+                                               wp,
+                                               opt.consistency,
+                                               abortFlag,
+                                               mergedWavelet,
+                                               weightedWinnerPadded16,
+                                               energyWinnerPadded16))
+        {
+            return false;
+        }
+
+        // Choose which map becomes "the" depthIndexPadded16 used downstream
+        if (G::FSLog) G::log(srcFun, "winnerMap = " + opt.winnerMap);
+        if (opt.winnerMap == "Energy")
+            depthIndexPadded16 = energyWinnerPadded16;
+        else
+            depthIndexPadded16 = weightedWinnerPadded16;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // Inverse wavelet → fusedGray (still padded size)
+    // --------------------------------------------------------------------
+    msg = "Inverse wavelet";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    // cv::Mat fusedGray; // local, then ensure CV_8U
+    if (!FSFusionWavelet::inverse(mergedWavelet, opt.useOpenCL, fusedGray8))
+    {
+        if (G::FSLog) G::log(srcFun, "FSFusionWavelet::inverse failed");
+        return false;
+    }
+
+    if (fusedGray8.type() != CV_8U) {
+        msg = "Inverse wavelet: fusedGray8.type() != CV_8U";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+    if (fusedGray8.size() != padSize) {
+        msg = "Inverse wavelet: fusedGray8.size() != ps";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // Depth-Biased Erosion: refines the winner map
+    // --------------------------------------------------------------------
+    msg = "DepthBiasedErosion: enableDepthBiasedErosion = " +
+          QVariant(opt.enableDepthBiasedErosion).toString();
+
+    if (G::FSLog) G::log(srcFun, msg);
+    cv::Mat erodedWinnerPadded16;
+    cv::Mat winnerBefore;
+    cv::Mat winnerAfter;
+    cv::Mat edgeMask8U;
+
+    if (opt.enableDepthBiasedErosion)
+    {
+        msg = "DepthBiasedErosion:"
+            " erosionEdgeSigma = " + QVariant(opt.erosionEdgeSigma).toString() +
+            " erosionEdgeThresh = " + QVariant(opt.erosionEdgeThresh).toString() +
+            " erosionEdgeThresh = " + QVariant(opt.erosionEdgeDilate).toString()
+            ;
+        if (G::FSLog) G::log(srcFun, msg);
+        winnerBefore = depthIndexPadded16.clone();
+
+        edgeMask8U = makeEdgeMask8U(fusedGray8,
+                                            opt.erosionEdgeSigma,
+                                            opt.erosionEdgeThresh,
+                                            opt.erosionEdgeDilate);
+
+        winnerAfter = depthBiasedErode16(winnerBefore,
+                                                 edgeMask8U,
+                                                 opt.erosionRadius,
+                                                 opt.erosionIters,
+                                                 opt.erosionMaxDelta,
+                                                 opt.erosionMinEdgeDelta);
+
+        int changed = cv::countNonZero(winnerAfter != winnerBefore);
+        msg = "DepthBiasedErosion changed pixels = " + QString::number(changed);
+        if (G::FSLog) G::log(srcFun, msg);
+
+        /* Write debug pngs
+        dumpDepthErosionDebugCropped(
+            opt.depthFolderPath,
+            fusedGray8,                 // padded
+            edgeMask8U,                 // padded
+            winnerBefore,               // padded
+            winnerAfter,                // padded
+            roiPadToAlign,
+            validAreaAlign
+            );
+        //*/
+
+        depthIndexPadded16 = winnerAfter;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // Finish color builder after all slices processed
+    // --------------------------------------------------------------------
+    msg = "Finish color builder";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    colorBuilder.finish(colorEntries, counts);
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // Apply color reassignment to padded fused grayscale → paddedColorOut
+    // --------------------------------------------------------------------
+    msg = "Apply color reassignment";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    cv::Mat paddedColorOut;
+    if (!FSFusionReassign::applyColorMap(fusedGray8, colorEntries,
+                                         counts, paddedColorOut,
+                                         reassignDepth(outDepth)))
+    {
+        msg = "FSFusionReassign::applyColorMap failed";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    if (paddedColorOut.size() != padSize) {
+        msg = "Apply color map: paddedColorOut.size() != ps";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    const int expectedType = (outDepth == CV_16U) ? CV_16UC3 : CV_8UC3;
+    if (paddedColorOut.type() != expectedType) {
+        msg = "Apply color map: paddedColorOut.type() mismatch";
+        qWarning() << "WARNING:" << srcFun << msg
+                   << " got =" << paddedColorOut.type()
+                   << " expected=" << expectedType;
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // ------------------------------------------------------------
+    // Apply Depth-Biased Erosion
+    // ------------------------------------------------------------
+    if (opt.enableDepthBiasedErosion)
+    {
+        // Recompute edge mask (or reuse the one you already computed earlier)
+        cv::Mat edgeMask8U = makeEdgeMask8U(fusedGray8,
+                                            opt.erosionEdgeSigma,
+                                            opt.erosionEdgeThresh,
+                                            opt.erosionEdgeDilate);
+
+        // depthIndexPadded16 already replaced by winnerAfter earlier in your code
+        if (!applyDepthBiasedColorOverrideSecondPass(
+                paddedColorOut,
+                winnerBefore,          // <-- before DBE
+                depthIndexPadded16,    // <-- after DBE (you set it earlier)
+                edgeMask8U,
+                inputPaths,
+                globals,
+                opt,
+                abortFlag))
+        {
+            qWarning() << "WARNING:" << srcFun << "applyDepthBiasedColorOverrideSecondPass failed";
+            return false;
+        }
+    }
+
+    // --------------------------------------------------------------------
+    // Crop back to original (non-padded) size
+    //   Step 1: padSize   -> alignSize
+    //   Step 2: alignSize -> origSize (validAreaAlign)
+    // --------------------------------------------------------------------
+    msg = "Crop back to original size";
+    msg += " origSize=" + FSUtilities::cvSizeToText(origSize) +
+           " alignSize=" + FSUtilities::cvSizeToText(alignSize) +
+           " padSize=" + FSUtilities::cvSizeToText(padSize) +
+           " validAreaAlign=(" +
+           QString::number(validAreaAlign.x) + "," +
+           QString::number(validAreaAlign.y) + "," +
+           QString::number(validAreaAlign.width) + "," +
+           QString::number(validAreaAlign.height) + ")";
+    if (G::FSLog) G::log(srcFun, msg);
+
+    // Sanity: validAreaAlign must describe origSize inside alignSize
+    if (validAreaAlign.width  != origSize.width ||
+        validAreaAlign.height != origSize.height)
+    {
+        qWarning() << "WARNING:" << srcFun
+                   << "validAreaAlign does not match origSize";
+        return false;
+    }
+
+    // ------------------------------------------------------------
+    // 1) Undo FSFusion padding: padSize -> alignSize
+    // ------------------------------------------------------------
+    cv::Rect roiPadToAlign(0, 0, alignSize.width, alignSize.height);
+
+    if (padSize != alignSize)
+    {
+        const int padW = padSize.width  - alignSize.width;
+        const int padH = padSize.height - alignSize.height;
+
+        if (padW < 0 || padH < 0)
+        {
+            qWarning() << "WARNING:" << srcFun
+                       << "padSize smaller than alignSize";
+            return false;
+        }
+
+        const int left = padW / 2;
+        const int top  = padH / 2;
+
+        roiPadToAlign = cv::Rect(left, top,
+                                 alignSize.width,
+                                 alignSize.height);
+    }
+
+    // Bounds check
+    if (roiPadToAlign.x < 0 || roiPadToAlign.y < 0 ||
+        roiPadToAlign.x + roiPadToAlign.width  > paddedColorOut.cols ||
+        roiPadToAlign.y + roiPadToAlign.height > paddedColorOut.rows ||
+        roiPadToAlign.x + roiPadToAlign.width  > depthIndexPadded16.cols ||
+        roiPadToAlign.y + roiPadToAlign.height > depthIndexPadded16.rows)
+    {
+        qWarning() << "WARNING:" << srcFun
+                   << "roiPadToAlign out of bounds";
+        return false;
+    }
+
+    // Views at alignSize
+    cv::Mat colorAlign = paddedColorOut(roiPadToAlign);
+    cv::Mat depthAlign = depthIndexPadded16(roiPadToAlign);
+
+    // ------------------------------------------------------------
+    // 2) Undo FSLoader padding: alignSize -> origSize
+    // ------------------------------------------------------------
+    if (validAreaAlign.x < 0 || validAreaAlign.y < 0 ||
+        validAreaAlign.x + validAreaAlign.width  > colorAlign.cols ||
+        validAreaAlign.y + validAreaAlign.height > colorAlign.rows ||
+        validAreaAlign.x + validAreaAlign.width  > depthAlign.cols ||
+        validAreaAlign.y + validAreaAlign.height > depthAlign.rows)
+    {
+        qWarning() << "WARNING:" << srcFun
+                   << "validAreaAlign out of bounds";
+        return false;
+    }
+
+    // Final outputs (origSize)
+    outputColor  = colorAlign(validAreaAlign).clone();
+    depthIndex16 = depthAlign(validAreaAlign).clone();
+
+    // Write debug pngs (Wt)
+    dumpLowpassOnlyDebugOrigSize(opt.depthFolderPath,
+                                 mergedWavelet,
+                                 roiPadToAlign,
+                                 validAreaAlign,
+                                 opt.useOpenCL);
+
+    // ------------------------------------------------------------
+    // Housekeeping
+    // ------------------------------------------------------------
+    colorEntries.clear();
+    counts.clear();
+    mergedWavelet.release();
+    wavelet.release();
+    mergeState.reset();         // also clears cached wavelets
+    colorBuilder.reset();
+
+    // if (progressCallback) progressCallback();
+
+    return true;
+}

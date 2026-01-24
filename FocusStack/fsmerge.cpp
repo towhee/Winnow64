@@ -357,6 +357,14 @@ static bool ensureInitWeighted(FSMerge::StreamState &state,
     mergedOut.create(rows, cols, CV_32FC2);
     mergedOut.setTo(cv::Scalar(0,0));
 
+    // (LL): allocate protected LL buffers (always allocate; cheap + simplifies logic)
+    state.lpMaxAbs.create(rows, cols, CV_32F);
+    state.lpMaxAbs.setTo(-1.0f);
+
+    state.lpMerged.create(rows, cols, CV_32FC2);
+    state.lpMerged.setTo(cv::Scalar(0,0));
+    // end (LL)
+
     state.wavelets.clear(); // not used for weighted blending
     return true;
 }
@@ -553,7 +561,15 @@ static void weightedAccumulateByLevel(const cv::Mat &wavelet32FC2,
                                   sum_W32F);
         };
 
-        if (wp.includeLowpass) processRect(rLP);
+        // if (wp.includeLowpass) processRect(rLP); // not (LL)
+
+        // (LL)
+        if (wp.includeLowpass)
+        {
+            // (LL): if protecting level0 lowpass, do NOT weighted-accumulate rLP at level 0
+            if (!(wp.protectLowpassLevel0 && level == 0))
+                processRect(rLP);
+        }
         processRect(rTR);
         processRect(rBR);
         processRect(rBL);
@@ -615,6 +631,32 @@ static bool ensureInit(StreamState &state,
         state.wavelets.reserve(64); // optional
 
     return true;
+}
+
+// added for (LL)
+static void updateProtectedLowpassLevel0(StreamState &state,
+                                         const cv::Mat &wavelet32FC2)
+{
+    // level0 lowpass rect
+    const int w2 = wavelet32FC2.cols / 2;
+    const int h2 = wavelet32FC2.rows / 2;
+    if (w2 <= 0 || h2 <= 0) return;
+
+    const cv::Rect rLP(0, 0, w2, h2);
+
+    cv::Mat vROI = wavelet32FC2(rLP);
+
+    // absROI = |v|^2 (CV_32F)
+    cv::Mat absROI;
+    getSqAbsval(vROI, absROI);
+
+    cv::Mat maxROI = state.lpMaxAbs(rLP);
+    cv::Mat dstROI = state.lpMerged(rLP);
+
+    cv::Mat mask = (absROI > maxROI);
+
+    absROI.copyTo(maxROI, mask);
+    vROI.copyTo(dstROI, mask);
 }
 
 // end of Stream pipeline(s) req'd functions
@@ -870,6 +912,12 @@ bool mergeSliceWeighted(StreamState &state,
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
+    // (LL) protect LL at level0 (PMax on LL only)
+    if (wp.includeLowpass && wp.protectLowpassLevel0)
+    {
+        updateProtectedLowpassLevel0(state, wavelet);
+    }
+
     // 2) Scale-aware weighted accumulation into sumWV/sumW.
     weightedAccumulateByLevel(wavelet,
                               state.sumWV,
@@ -903,6 +951,20 @@ bool mergeSliceFinishWeighted(StreamState &state,
 
     // Produce blended mergedOut
     finalizeWeightedBlend(state.sumWV, state.sumW, mergedOut, wp.epsWeight);
+
+    // (LL): overwrite protected level0 lowpass (LL) after weighted blend
+    if (wp.includeLowpass && wp.protectLowpassLevel0 &&
+        !state.lpMerged.empty() && state.lpMerged.size() == mergedOut.size())
+    {
+        const int w2 = mergedOut.cols / 2;
+        const int h2 = mergedOut.rows / 2;
+        if (w2 > 0 && h2 > 0)
+        {
+            const cv::Rect rLP(0, 0, w2, h2);
+            state.lpMerged(rLP).copyTo(mergedOut(rLP));
+        }
+    }
+    // end (LL)
 
     // Optional cleanup of the debug index map only.
     if (consistency >= 1)

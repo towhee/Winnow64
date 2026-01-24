@@ -42,6 +42,10 @@ struct WeightedParams
     // If true, also blend the lowpass (top-left) region per level.
     // If false, lowpass is blended globally once (still weighted).
     bool includeLowpass = true;
+
+    // NEW: protect level0 lowpass from weighted blending (LL)
+    // Toggle this to run StmPMaxWt vs StmPMaxWtLL
+    bool protectLowpassLevel0 = true;
 };
 
 
@@ -68,6 +72,10 @@ struct StreamState
     // Weighted accumulators (used only in Weighted mode)
     cv::Mat sumW;                   // CV_32F
     cv::Mat sumWV;                  // CV_32FC2
+
+    // NEW: protected level0 lowpass (LL)
+    cv::Mat lpMaxAbs;     // CV_32F, size == wavelet
+    cv::Mat lpMerged;     // CV_32FC2, size == wavelet
 
     uint16_t sliceIndex = 0;
     cv::Size size {0,0};
@@ -96,6 +104,12 @@ struct StreamState
         return initializedPMax() &&
                !sumW.empty() && !sumWV.empty() &&
                !maxWeightedScore.empty() && !weightedDepthIndex16.empty();
+    }
+
+    // NEW helper (LL)
+    bool hasProtectedLP() const
+    {
+        return !lpMaxAbs.empty() && !lpMerged.empty();
     }
 };
 
