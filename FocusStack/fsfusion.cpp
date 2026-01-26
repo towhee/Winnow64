@@ -4,70 +4,11 @@
 #include "fsfusionwavelet.h"
 #include "fsutilities.h"
 
+#include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <cassert>
 
 #include <QString>
-
-/*
-Purpose
-FSFusion implements the fusion stage of the focus stacking pipeline. It takes
-a set of aligned grayscale slices and aligned color slices and produces a
-single fused color image (CV_8UC3) using either a simple per-pixel slice pick
-(“Simple”) or the full Petteri-style wavelet PMax path (default).
-
-Key Inputs / Outputs
-Inputs
-- grayImgs      : vector of aligned grayscale images (1 channel)
-- colorImgs     : vector of aligned color images (3 channel)
-- depthIndex16  : CV_16U map with per-pixel slice indices (0..N-1)
-- opt           : FSFusion options (method, OpenCL, consistency, etc.)
-- abortFlag     : optional cancellation flag
-- callbacks     : optional status/progress callbacks
-
-Output
-- outputColor8  : fused result as CV_8UC3 at original (non-padded) size
-
-Two Fusion Modes
-    1.	Simple fusion (method == “Simple”)
-    •	Uses depthIndex16 directly: for each pixel, select the color from the
-“winning” slice index stored in depthIndex16.
-    •	Does NOT use wavelets.
-    •	Normalizes input color slices to CV_8UC3 (converts from 16UC3 if needed).
-    •	Produces outputColor8 by direct lookup per pixel.
-    2.	PMax fusion (default path)
-    •	Reproduces the current successful wavelet-based fusion workflow.
-    •	IMPORTANT: depthIndex16 is validated (type/size) but is not used to drive
-the wavelet merge decisions. The merge computes its own internal decisions.
-    •	Uses the following high-level stages:
-(a) Pad inputs to wavelet-friendly size (reflect border padding)
-(b) Forward wavelet transform per grayscale slice
-(c) Merge wavelet stacks with FSMerge::merge (consistency parameter)
-(d) Inverse wavelet to get fused grayscale (still padded)
-(e) Build a color reassignment map from padded gray+color slices
-(f) Apply color map to fused grayscale to produce padded color result
-(g) Crop padded result back to original size to produce outputColor8
-
-Padding Behavior
-Wavelet code requires dimensions compatible with its level structure. The
-helper padForWavelet() expands images via cv::BORDER_REFLECT using the same
-expanded-size logic as FSFusionWavelet::computeLevelsAndExpandedSize(). The
-result is cropped back to original size at the end of PMax fusion.
-
-Abort / Progress
-    •	abortFlag is checked at multiple points in the PMax path (between stages and
-per-slice wavelet forward).
-    •	progressCallback is invoked as a simple “tick” at key milestones and per
-slice during wavelet forward.
-    •	statusCallback is used to provide coarse stage messages in the PMax path.
-
-Role in the Pipeline:
-FSFusion is the stage that converts aligned slice stacks into the final fused
-image. In “Simple” mode it relies directly on FSDepth’s depthIndex16. In PMax
-mode it uses wavelet merge + color reassignment to produce the fused color
-image, while treating the FSDepth depthIndex16 primarily as a validated
-artifact rather than a control signal.
-*/
 
 //--------------------------------------------------------------
 // Helpers
@@ -76,6 +17,28 @@ namespace
 {
 
 using ProgressCallback = FSFusion::ProgressCallback;
+
+static inline QString matInfo(const cv::Mat& m)
+{
+    return QString("size=%1x%2 type=%3 ch=%4 empty=%5")
+    .arg(m.cols).arg(m.rows)
+        .arg(m.type())
+        .arg(m.channels())
+        .arg(m.empty());
+}
+
+static inline void assertSameMat(const cv::Mat& a, const cv::Mat& b, const char* where)
+{
+    if (a.size() != b.size() || a.type() != b.type())
+    {
+        qWarning().noquote()
+        << "MAT MISMATCH at" << where
+        << "A:" << matInfo(a)
+        << "B:" << matInfo(b);
+        CV_Assert(a.size() == b.size());
+        CV_Assert(a.type() == b.type());
+    }
+}
 
 static cv::Mat cropPadToOrig(const cv::Mat &pad,
                              const cv::Rect &roiPadToAlign,
@@ -166,15 +129,296 @@ static cv::Mat makeObjectMask8U_Otsu(const cv::Mat &gray8)
     return obj; // 0/255
 }
 
-static cv::Mat dilateMaskPx(const cv::Mat &m8, int px)
+// -----------------------------------------------------------------------------
+// Foreground mask (authoritative)
+//
+// Goal: produce a "do not touch" mask for halo replacement.
+//   255 = FOREGROUND (protect)
+//   0   = BACKGROUND (eligible)
+//
+// Inputs:
+//   gray8Orig    : CV_8U 1-channel, original (cropped) fused grayscale
+//   edgeMask8Orig: CV_8U 0/255, same size; edges you always want to protect
+//
+// Output (ForegroundResult):
+//   fgMask8      : final 0/255 mask
+//   hfMask8      : high-frequency texture/bark/filaments
+//   thinMask8    : thin smooth twigs (small-scale gradient)
+//   darkMask8    : solid dark interiors (edge-gated) for main branch core
+// -----------------------------------------------------------------------------
+
+struct ForegroundParams
 {
-    CV_Assert(m8.type() == CV_8U);
-    if (px <= 0) return m8.clone();
+    // Pre-smoothing for gradient-based detectors (reduces noise-triggered edges)
+    float preBlurSigma   = 1.2f;   // 0.8..1.6
+
+    // (A) HF texture mask (Laplacian magnitude)
+    float hfFrac         = 0.015f;   // 0.010..0.030  (fraction of max |lap|)
+    float hfBlurSigma    = 1.0f;     // 0.6..1.4
+
+    // (B) Thin twigs mask (small-scale gradient magnitude)
+    float thinFrac       = 0.035f;   // fraction of max grad (0.02..0.06)
+    float thinMxClipFrac = 0.35f;    // clip max grad to reduce “hot pixel dominates” (0.2..0.6)
+    float thinBlurSigma  = 0.0f;     // extra blur for twigs only (0..1.5)
+
+    int   thinOpenPx     = 0;        // removes specks (0..1)
+    int   thinClosePx    = 1;        // connects along twig (0..1)  (NOTE: close fattens)
+    int   thinErodePx    = 1;        // **main thinning control** (0..2)
+    int   thinMinAreaPx  = 32;       // remove tiny islands (0..128)
+
+    // (C) Dark solid interiors (main branch core)
+    float darkFrac       = 0.55f;   // relative to Otsu threshold (0.45..0.70)
+    float darkBlurSigma  = 2.0f;    // blur for Otsu/dark detector (1.5..3.0)
+    int   darkClosePx    = 8;       // fill interior (6..12)
+    int   darkMinAreaPx  = 256;     // remove dark blobs (128..1024)
+    int   darkEdgeGatePx = 6;       // gate dark blobs near edges (4..10), 0 disables
+
+    // Edge protection (always OR’d in)
+    int   edgeDilatePx   = 0;       // 0..2 (usually 0)
+
+    // Final expansion of FG (usually 0; keep 0 to avoid fattening)
+    int   finalDilatePx  = 0;       // 0..1
+};
+
+struct ForegroundResult
+{
+    cv::Mat fgMask8;    // CV_8U 0/255 final
+    cv::Mat hfMask8;    // CV_8U 0/255
+    cv::Mat thinMask8;  // CV_8U 0/255
+    cv::Mat darkMask8;  // CV_8U 0/255
+    cv::Mat edgeMask8;  // CV_8U 0/255
+};
+
+static inline cv::Mat seEllipse(int px)
+{
     int k = 2 * px + 1;
-    cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k,k));
-    cv::Mat out;
-    cv::dilate(m8, out, se);
+    return cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k, k));
+}
+
+static cv::Mat filterMinArea8U(const cv::Mat& mask8, int minAreaPx)
+{
+    CV_Assert(mask8.type() == CV_8U);
+    if (minAreaPx <= 0) return mask8.clone();
+
+    cv::Mat labels, stats, cents;
+    int n = cv::connectedComponentsWithStats(mask8, labels, stats, cents, 8, CV_32S);
+
+    cv::Mat out = cv::Mat::zeros(mask8.size(), CV_8U);
+    for (int i = 1; i < n; ++i)
+    {
+        int area = stats.at<int>(i, cv::CC_STAT_AREA);
+        if (area >= minAreaPx)
+            out.setTo(255, labels == i);
+    }
     return out;
+}
+
+// Fill holes in a 0/255 mask: flood fill background, invert.
+static void fillHoles8U(cv::Mat& mask8)
+{
+    CV_Assert(mask8.type() == CV_8U);
+
+    cv::Mat ff = mask8.clone();
+    cv::copyMakeBorder(ff, ff, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(0));
+    cv::floodFill(ff, cv::Point(0, 0), cv::Scalar(255));
+
+    ff = ff(cv::Rect(1, 1, mask8.cols, mask8.rows));
+    cv::Mat holes = (ff == 0);         // holes become true
+    holes.convertTo(holes, CV_8U, 255.0);
+
+    cv::bitwise_or(mask8, holes, mask8);
+}
+
+static ForegroundResult buildForegroundMask(
+    const cv::Mat& gray8Orig,        // CV_8U
+    const cv::Mat& edgeMask8Orig,    // CV_8U 0/255
+    const ForegroundParams& fp)
+{
+    CV_Assert(gray8Orig.type() == CV_8U);
+    CV_Assert(edgeMask8Orig.type() == CV_8U);
+    CV_Assert(gray8Orig.size() == edgeMask8Orig.size());
+
+    ForegroundResult r;
+
+    // Convert to float [0..1]
+    cv::Mat g32;
+    gray8Orig.convertTo(g32, CV_32F, 1.0 / 255.0);
+
+    // Optional pre-blur for stable gradients/laplacian
+    if (fp.preBlurSigma > 0.0f)
+        cv::GaussianBlur(g32, g32, cv::Size(0, 0),
+                         fp.preBlurSigma, fp.preBlurSigma, cv::BORDER_REFLECT);
+
+    // Prepare edge mask (optionally dilated)
+    r.edgeMask8 = edgeMask8Orig.clone();
+    if (fp.edgeDilatePx > 0)
+        cv::dilate(r.edgeMask8, r.edgeMask8, seEllipse(fp.edgeDilatePx));
+
+    // -------------------------------------------------------------------------
+    // (A) High-frequency texture mask (abs Laplacian)
+    // -------------------------------------------------------------------------
+    {
+        cv::Mat lap32;
+        cv::Laplacian(g32, lap32, CV_32F, 3);
+
+        cv::Mat absLap32;
+        cv::absdiff(lap32, cv::Scalar::all(0), absLap32);
+
+        if (fp.hfBlurSigma > 0.0f)
+            cv::GaussianBlur(absLap32, absLap32, cv::Size(0, 0),
+                             fp.hfBlurSigma, fp.hfBlurSigma, cv::BORDER_REFLECT);
+
+        double mn = 0.0, mx = 0.0;
+        cv::minMaxLoc(absLap32, &mn, &mx);
+
+        float thr = float(mx) * fp.hfFrac;
+        cv::Mat hf = (absLap32 > thr);
+        hf.convertTo(r.hfMask8, CV_8U, 255.0);
+    }
+
+    // -------------------------------------------------------------------------
+    // (B) Thin smooth twigs mask (grad magnitude, with max clipping + thinning)
+    //   Key knobs to make it LESS FAT:
+    //     - thinClosePx = 0 or 1 (close fattens)
+    //     - thinErodePx >= 1 (this actually thins)
+    // -------------------------------------------------------------------------
+    {
+        cv::Mat gTw = g32;
+        if (fp.thinBlurSigma > 0.0f)
+            cv::GaussianBlur(gTw, gTw, cv::Size(0, 0),
+                             fp.thinBlurSigma, fp.thinBlurSigma, cv::BORDER_REFLECT);
+
+        cv::Mat gx, gy, mag32;
+        cv::Sobel(gTw, gx, CV_32F, 1, 0, 3);
+        cv::Sobel(gTw, gy, CV_32F, 0, 1, 3);
+        cv::magnitude(gx, gy, mag32);
+
+        // Clip extreme max so thinFrac actually responds
+        double mn = 0.0, mx = 0.0;
+        cv::minMaxLoc(mag32, &mn, &mx);
+        const float clip = float(mx) * fp.thinMxClipFrac;
+        if (clip > 0.0f)
+            cv::min(mag32, clip, mag32);
+
+        double mx2 = 0.0;
+        cv::minMaxLoc(mag32, nullptr, &mx2);
+
+        const float thr = float(mx2) * fp.thinFrac;
+        cv::Mat thin = (mag32 > thr);
+        thin.convertTo(r.thinMask8, CV_8U, 255.0);
+
+        if (fp.thinOpenPx > 0)
+            cv::morphologyEx(r.thinMask8, r.thinMask8, cv::MORPH_OPEN, seEllipse(fp.thinOpenPx));
+
+        if (fp.thinClosePx > 0)
+            cv::morphologyEx(r.thinMask8, r.thinMask8, cv::MORPH_CLOSE, seEllipse(fp.thinClosePx));
+
+        // This is the “make it less fat” step
+        if (fp.thinErodePx > 0)
+            cv::erode(r.thinMask8, r.thinMask8, seEllipse(fp.thinErodePx));
+
+        r.thinMask8 = filterMinArea8U(r.thinMask8, fp.thinMinAreaPx);
+    }
+
+    // -------------------------------------------------------------------------
+    // (C) Dark solid interiors (main branch core)
+    //   Otsu reference on blurred 8-bit, then "darker-than", close, hole-fill,
+    //   min-area, optional edge gating.
+    // -------------------------------------------------------------------------
+    {
+        cv::Mat blur8;
+        cv::GaussianBlur(gray8Orig, blur8, cv::Size(0, 0),
+                         fp.darkBlurSigma, fp.darkBlurSigma, cv::BORDER_REFLECT);
+
+        cv::Mat tmp; // IMPORTANT: do not use cv::Mat() placeholder
+        double t = cv::threshold(blur8, tmp, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+
+        double darkT = t * fp.darkFrac;
+        cv::Mat dark = (blur8 < darkT);
+        dark.convertTo(dark, CV_8U, 255.0);
+
+        if (fp.darkClosePx > 0)
+            cv::morphologyEx(dark, dark, cv::MORPH_CLOSE, seEllipse(fp.darkClosePx));
+
+        // Fill holes
+        {
+            cv::Mat ff = dark.clone();
+            cv::copyMakeBorder(ff, ff, 1,1,1,1, cv::BORDER_CONSTANT, cv::Scalar(0));
+            cv::floodFill(ff, cv::Point(0,0), cv::Scalar(255));
+            ff = ff(cv::Rect(1,1,dark.cols,dark.rows));
+            cv::Mat holes = (ff == 0);
+            holes.convertTo(holes, CV_8U, 255.0);
+            cv::bitwise_or(dark, holes, dark);
+        }
+
+        dark = filterMinArea8U(dark, fp.darkMinAreaPx);
+
+        if (fp.darkEdgeGatePx > 0)
+        {
+            cv::Mat gate = r.edgeMask8.clone();
+            cv::dilate(gate, gate, seEllipse(fp.darkEdgeGatePx));
+            cv::bitwise_and(dark, gate, dark);
+        }
+
+        r.darkMask8 = dark;
+    }
+
+    // -------------------------------------------------------------------------
+    // Combine (all CV_8U, same size)
+    // -------------------------------------------------------------------------
+    r.fgMask8 = cv::Mat::zeros(gray8Orig.size(), CV_8U);
+    cv::bitwise_or(r.fgMask8, r.hfMask8,   r.fgMask8);
+    cv::bitwise_or(r.fgMask8, r.thinMask8, r.fgMask8);
+    cv::bitwise_or(r.fgMask8, r.darkMask8, r.fgMask8);
+    cv::bitwise_or(r.fgMask8, r.edgeMask8, r.fgMask8);
+
+    if (fp.finalDilatePx > 0)
+        cv::dilate(r.fgMask8, r.fgMask8, seEllipse(fp.finalDilatePx));
+
+    return r;
+}
+
+// -----------------------------------------------------------------------------
+// Dump foreground debug outputs
+//   Writes:
+//     fg_hf.png      (0/255 mask)
+//     fg_thin.png    (0/255 mask)
+//     fg_dark.png    (0/255 mask)
+//     fg_mask.png    (0/255 final)
+//     fg_overlay.png (green overlay on grayscale)
+// -----------------------------------------------------------------------------
+static void dumpForegroundDebug(
+    const QString& basePath,
+    const cv::Mat& gray8Orig,
+    const ForegroundParams& /*fp*/,
+    const ForegroundResult& fr)
+{
+    cv::imwrite((basePath + "/fg_hf.png").toStdString(),   fr.hfMask8);
+    cv::imwrite((basePath + "/fg_thin.png").toStdString(), fr.thinMask8);
+    cv::imwrite((basePath + "/fg_dark.png").toStdString(), fr.darkMask8);
+    cv::imwrite((basePath + "/fg_mask.png").toStdString(), fr.fgMask8);
+
+    // overlay (green)
+    cv::Mat bgr;
+    cv::cvtColor(gray8Orig, bgr, cv::COLOR_GRAY2BGR);
+
+    const float alpha = 0.55f;
+    for (int y = 0; y < bgr.rows; ++y)
+    {
+        const uint8_t* m = fr.fgMask8.ptr<uint8_t>(y);
+        cv::Vec3b* p = bgr.ptr<cv::Vec3b>(y);
+        for (int x = 0; x < bgr.cols; ++x)
+        {
+            if (!m[x]) continue;
+            cv::Vec3b c = p[x];
+            c[0] = uint8_t((1 - alpha) * c[0] + alpha * 0);
+            c[1] = uint8_t((1 - alpha) * c[1] + alpha * 255);
+            c[2] = uint8_t((1 - alpha) * c[2] + alpha * 0);
+            p[x] = c;
+        }
+    }
+
+    cv::imwrite((basePath + "/fg_overlay.png").toStdString(), bgr);
 }
 
 // halo detection section
@@ -243,52 +487,62 @@ static cv::Mat dogBright32(const cv::Mat &img32_0to1, float sigmaSmall, float si
 static HaloDetectResult detectLowpassHalosOrig(const cv::Mat &fusedGray8Orig,
                                                const HaloDetectParams &hp)
 {
+    QString srcFun = "HaloDetectResult detectLowpassHalosOrig";
     CV_Assert(fusedGray8Orig.type() == CV_8U);
 
     HaloDetectResult r;
+    qDebug() << srcFun << "0";
 
     // 1) Edge mask (orig size)
     r.edgeMask8 = makeEdgeMask8U(fusedGray8Orig, hp.edgeSigma, hp.edgeThreshFrac, hp.edgeDilatePx);
 
+    CV_Assert(!r.edgeMask8.empty());
+    CV_Assert(r.edgeMask8.type() == CV_8U);
+    CV_Assert(r.edgeMask8.size() == fusedGray8Orig.size());
+
     // If no edges, no halo detection possible
     if (cv::countNonZero(r.edgeMask8) == 0)
     {
-        r.dogMax32 = cv::Mat::zeros(fusedGray8Orig.size(), CV_32F);
-        r.dist32   = cv::Mat::zeros(fusedGray8Orig.size(), CV_32F);
-        r.haloMask8= cv::Mat::zeros(fusedGray8Orig.size(), CV_8U);
+        r.dogMax32  = cv::Mat::zeros(fusedGray8Orig.size(), CV_32F);
+        r.dist32    = cv::Mat::zeros(fusedGray8Orig.size(), CV_32F);
+        r.haloMask8 = cv::Mat::zeros(fusedGray8Orig.size(), CV_8U);
         return r;
     }
 
-    // 2) Distance-to-edge gating
-    // distanceTransform expects non-zero as "free space", zero as "obstacle".
-    // We want distance to edge pixels, so treat edges as obstacles (0).
+    qDebug() << srcFun << "1";
+    // 2) Distance-to-edge gating (optional)
     cv::Mat edgeInv;
-    cv::bitwise_not(r.edgeMask8, edgeInv);              // edge pixels -> 0, else 255
-    cv::Mat edgeInvBin = (edgeInv != 0);                // 0/255 -> 0/1
-    edgeInvBin.convertTo(edgeInvBin, CV_8U, 255.0);     // ensure 0/255
-    cv::distanceTransform(edgeInvBin, r.dist32, cv::DIST_L2, 3); // CV_32F in pixels
+    cv::bitwise_not(r.edgeMask8, edgeInv);               // edge pixels -> 0, else 255
+    cv::Mat edgeInvBin = (edgeInv != 0);                 // 0/255 -> 0/1
+    edgeInvBin.convertTo(edgeInvBin, CV_8U, 255.0);      // ensure 0/255
+    cv::distanceTransform(edgeInvBin, r.dist32, cv::DIST_L2, 3);
 
     cv::Mat nearEdgeMask = (r.dist32 <= float(hp.maxEdgeDistPx));
     nearEdgeMask.convertTo(nearEdgeMask, CV_8U, 255.0);
 
+    qDebug() << srcFun << "2";
     // 3) Normalize grayscale to 0..1 float
     cv::Mat img32;
     fusedGray8Orig.convertTo(img32, CV_32F, 1.0/255.0);
 
+    qDebug() << srcFun << "3";
     // 4) Multi-scale max positive DoG
     r.dogMax32 = cv::Mat::zeros(fusedGray8Orig.size(), CV_32F);
-    for (auto &p : hp.dogScales)
+    for (const auto &p : hp.dogScales)
     {
         cv::Mat dog = dogBright32(img32, p.first, p.second);
         cv::max(r.dogMax32, dog, r.dogMax32);
     }
 
-    // 5) Threshold and gate to near-edge
+    qDebug() << srcFun << "4";
+    // 5) Threshold and (optionally) gate to near-edge
     cv::Mat halo = (r.dogMax32 > hp.dogThresh);
     halo.convertTo(halo, CV_8U, 255.0);
 
-    cv::bitwise_and(halo, nearEdgeMask, halo);
+    // If you want gating ON, use this (recommended once FG is solid):
+    // cv::bitwise_and(halo, nearEdgeMask, halo);
 
+    qDebug() << srcFun << "5";
     // 6) Optional cleanup: close + remove tiny components
     if (hp.closePx > 0)
     {
@@ -301,26 +555,63 @@ static HaloDetectResult detectLowpassHalosOrig(const cv::Mat &fusedGray8Orig,
     {
         cv::Mat labels, stats, cents;
         int n = cv::connectedComponentsWithStats(halo, labels, stats, cents, 8, CV_32S);
+
         cv::Mat cleaned = cv::Mat::zeros(halo.size(), CV_8U);
         for (int i = 1; i < n; ++i)
         {
             int area = stats.at<int>(i, cv::CC_STAT_AREA);
             if (area >= hp.minAreaPx)
-            {
                 cleaned.setTo(255, labels == i);
-            }
         }
         halo = cleaned;
     }
 
     r.haloMask8 = halo;
 
-    // 7) Score: mean DoG inside halo mask
+    qDebug() << srcFun << "6";
+    // ------------------------------------------------------------
+    // 7) Foreground + edge veto (do NOT bake edges into fgMask8)
+    // ------------------------------------------------------------
+    ForegroundParams fp;  // or pass in / use a shared tuned default
+    fp.preBlurSigma   = 1.2f;
+    fp.hfFrac         = 0.15f;
+    fp.hfBlurSigma    = 1.0f;
+    fp.thinFrac       = 0.050f;
+    fp.thinClosePx    = 1;
+    fp.thinOpenPx     = 0;
+    fp.thinMinAreaPx  = 32;
+    fp.darkFrac       = 0.55f;
+    fp.darkClosePx    = 8;
+    fp.darkMinAreaPx  = 256;
+    fp.darkEdgeGatePx = 6;
+    fp.edgeDilatePx   = 0;   // keep 0 here; hp.edgeDilatePx already handled r.edgeMask8
+    fp.finalDilatePx  = 0;
+
+    // IMPORTANT: use the edge mask we already computed for this halo run
+    auto fr = buildForegroundMask(fusedGray8Orig, r.edgeMask8, fp);
+    qDebug() << srcFun << "61";
+
+    CV_Assert(!fr.fgMask8.empty());
+    CV_Assert(fr.fgMask8.type() == CV_8U);
+    CV_Assert(fr.fgMask8.size() == fusedGray8Orig.size());
+
+    // veto = "true foreground" OR "edge safety band"
+    assertSameMat(fr.fgMask8, r.edgeMask8, "detectLowpassHalosOrig veto OR");
+    cv::Mat veto;
+    cv::bitwise_or(fr.fgMask8, r.edgeMask8, veto);
+    qDebug() << srcFun << "62";
+
+    CV_Assert(veto.type() == CV_8U);
+    CV_Assert(veto.size() == r.haloMask8.size());
+    r.haloMask8.setTo(0, veto);
+
+    qDebug() << srcFun << "7";
+    // 8) Score: mean DoG inside halo mask
     r.nHalo = cv::countNonZero(r.haloMask8);
     if (r.nHalo > 0)
     {
         cv::Scalar m = cv::mean(r.dogMax32, r.haloMask8);
-        r.scoreMean = m[0]; // 0..~0.1 typical
+        r.scoreMean = m[0];
     }
 
     return r;
@@ -383,124 +674,6 @@ static void dumpHaloDetectorDebugOrig(const QString &basePath,
     }
 }
 
-// (LL) testing
-struct HaloMetrics
-{
-    double meanNear = 0.0;
-    double meanFar  = 0.0;
-    double score    = 0.0;
-    int    nNear    = 0;
-    int    nFar     = 0;
-};
-
-static HaloMetrics computeLowpassHaloScoreOrig(const cv::Mat &fusedGray8Orig,   // CV_8U
-                                               float edgeSigma,
-                                               float edgeThreshFrac,
-                                               int   edgeDilatePx,  // your edge band width
-                                               float lowpassSigma,  // e.g. 8..20 (orig-size pixels)
-                                               int   nearGrowPx,    // e.g. 0..6
-                                               int   farGrowPx)     // e.g. 20..60
-{
-    CV_Assert(fusedGray8Orig.type() == CV_8U);
-
-    // Edge band (orig size)
-    cv::Mat edge8 = makeEdgeMask8U(fusedGray8Orig, edgeSigma, edgeThreshFrac, edgeDilatePx); // returns 0/255
-    cv::Mat edge = (edge8 != 0);
-    edge.convertTo(edge, CV_8U, 255.0);
-
-    HaloMetrics hm;
-
-    if (cv::countNonZero(edge) == 0)
-        return hm;
-
-    auto dilateMask = [&](const cv::Mat &m, int px)
-    {
-        if (px <= 0) return m.clone();
-        int k = 2 * px + 1;
-        cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k, k));
-        cv::Mat out;
-        cv::dilate(m, out, se);
-        return out;
-    };
-
-    // near ring: edge band grown a bit (optional)
-    cv::Mat nearMask = dilateMask(edge, nearGrowPx);
-
-    // far ring: [dilate(edge, farGrowPx) - dilate(edge, nearGrowPx)]
-    cv::Mat farOuter = dilateMask(edge, farGrowPx);
-    cv::Mat farInner = nearMask.clone();
-    cv::Mat farMask;
-    cv::subtract(farOuter, farInner, farMask);          // 0/255, but subtract can underflow; use logic:
-    farMask = (farOuter != 0) & (farInner == 0);
-    farMask.convertTo(farMask, CV_8U, 255.0);
-
-    hm.nNear = cv::countNonZero(nearMask);
-    hm.nFar  = cv::countNonZero(farMask);
-    if (hm.nNear == 0 || hm.nFar == 0)
-        return hm;
-
-    // Lowpass image (Gaussian blur)
-    cv::Mat lp32;
-    fusedGray8Orig.convertTo(lp32, CV_32F, 1.0 / 255.0);
-    if (lowpassSigma > 0.0f)
-    {
-        int k = int(lowpassSigma * 4.0f) + 1;
-        if ((k & 1) == 0) ++k;
-        if (k < 3) k = 3;
-        cv::GaussianBlur(lp32, lp32, cv::Size(k, k), lowpassSigma, lowpassSigma, cv::BORDER_REFLECT);
-    }
-
-    cv::Scalar meanNear = cv::mean(lp32, nearMask);
-    cv::Scalar meanFar  = cv::mean(lp32, farMask);
-
-    hm.meanNear = meanNear[0];
-    hm.meanFar  = meanFar[0];
-    hm.score    = hm.meanNear - hm.meanFar; // >0 means a bright lowpass “halo” near edges
-
-    return hm;
-}
-
-static void dumpHaloDiagnosticPNGs(const QString &basePath,
-                                   const cv::Mat &fusedGray8Orig,
-                                   float edgeSigma, float edgeThreshFrac, int edgeDilatePx,
-                                   float lowpassSigma, int nearGrowPx, int farGrowPx)
-{
-    cv::Mat edge8 = makeEdgeMask8U(fusedGray8Orig, edgeSigma, edgeThreshFrac, edgeDilatePx);
-
-    cv::Mat lp32;
-    fusedGray8Orig.convertTo(lp32, CV_32F, 1.0 / 255.0);
-    int k = int(lowpassSigma * 4.0f) + 1;
-    if ((k & 1) == 0) ++k;
-    if (k < 3) k = 3;
-    cv::GaussianBlur(lp32, lp32, cv::Size(k, k), lowpassSigma, lowpassSigma, cv::BORDER_REFLECT);
-
-    cv::Mat lp8;
-    lp32.convertTo(lp8, CV_8U, 255.0);
-
-    // Rebuild near/far masks (same logic as computeLowpassHaloScoreOrig)
-    cv::Mat edge = (edge8 != 0); edge.convertTo(edge, CV_8U, 255.0);
-
-    auto dilateMask = [&](const cv::Mat &m, int px)
-    {
-        if (px <= 0) return m.clone();
-        int k2 = 2 * px + 1;
-        cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k2, k2));
-        cv::Mat out;
-        cv::dilate(m, out, se);
-        return out;
-    };
-
-    cv::Mat nearMask = dilateMask(edge, nearGrowPx);
-    cv::Mat farOuter = dilateMask(edge, farGrowPx);
-    cv::Mat farMask  = (farOuter != 0) & (nearMask == 0);
-    farMask.convertTo(farMask, CV_8U, 255.0);
-
-    cv::imwrite((basePath + "/halo_edgeMask.png").toStdString(), edge8);
-    cv::imwrite((basePath + "/halo_lowpass.png").toStdString(), lp8);
-    cv::imwrite((basePath + "/halo_nearMask.png").toStdString(), nearMask);
-    cv::imwrite((basePath + "/halo_farMask.png").toStdString(), farMask);
-}
-
 // end (LL) testing
 
 int levelsForSize(cv::Size size)
@@ -536,652 +709,7 @@ int levelsForSize(cv::Size size)
     return levels;
 }
 
-static void zeroHighpassSubbandsInPlace(cv::Mat &wavelet32FC2)
-{
-    CV_Assert(wavelet32FC2.type() == CV_32FC2);
-
-    const int levels = levelsForSize(wavelet32FC2.size()); // if not accessible, copy levelsForSize here
-
-    for (int level = 0; level < levels; ++level)
-    {
-        const int w  = wavelet32FC2.cols >> level;
-        const int h  = wavelet32FC2.rows >> level;
-        const int w2 = w / 2;
-        const int h2 = h / 2;
-
-        // Subband layout you already use:
-        // TL = lowpass, TR/BR/BL = highpass bands
-        cv::Rect rTR(w2, 0,  w2, h2);
-        cv::Rect rBR(w2, h2, w2, h2);
-        cv::Rect rBL(0,  h2, w2, h2);
-
-        wavelet32FC2(rTR).setTo(cv::Scalar(0,0));
-        wavelet32FC2(rBR).setTo(cv::Scalar(0,0));
-        wavelet32FC2(rBL).setTo(cv::Scalar(0,0));
-    }
-}
-
-static bool inverseAndWriteOrig(const QString &path,
-                                const cv::Mat &wavelet32FC2,
-                                const cv::Rect &roiPadToAlign,
-                                const cv::Rect &validAreaAlign,
-                                bool useOpenCL)
-{
-    cv::Mat gray8;
-    if (!FSFusionWavelet::inverse(wavelet32FC2, useOpenCL, gray8))
-        return false;
-
-    if (gray8.type() != CV_8U)
-        return false;
-
-    cv::Mat align = gray8(roiPadToAlign);
-    cv::Mat orig  = align(validAreaAlign);
-    return cv::imwrite(path.toStdString(), orig);
-}
-
-static void keepLevel0LowpassOnly(cv::Mat &wavelet32FC2)
-{
-    CV_Assert(wavelet32FC2.type() == CV_32FC2);
-
-    const int w2 = wavelet32FC2.cols / 2;
-    const int h2 = wavelet32FC2.rows / 2;
-
-    // zero TR/BR/BL of the full image (level 0 only)
-    wavelet32FC2(cv::Rect(w2, 0,  w2, h2)).setTo(cv::Scalar(0,0)); // TR
-    wavelet32FC2(cv::Rect(w2, h2, w2, h2)).setTo(cv::Scalar(0,0)); // BR
-    wavelet32FC2(cv::Rect(0,  h2, w2, h2)).setTo(cv::Scalar(0,0)); // BL
-}
-
-static void keepLevel0HighpassOnly(cv::Mat &wavelet32FC2)
-{
-    CV_Assert(wavelet32FC2.type() == CV_32FC2);
-
-    const int w2 = wavelet32FC2.cols / 2;
-    const int h2 = wavelet32FC2.rows / 2;
-
-    // zero TL (level 0 lowpass), keep TR/BR/BL
-    wavelet32FC2(cv::Rect(0, 0, w2, h2)).setTo(cv::Scalar(0,0));
-}
-
-static void dumpWaveletBandDebugOrigSize(const QString &basePath,
-                                         const cv::Mat &mergedWavelet32FC2,
-                                         const cv::Rect &roiPadToAlign,
-                                         const cv::Rect &validAreaAlign,
-                                         bool useOpenCL)
-{
-    CV_Assert(mergedWavelet32FC2.type() == CV_32FC2);
-
-    // (1) Deepest-only approximation (your current behavior)
-    {
-        cv::Mat w = mergedWavelet32FC2.clone();
-        zeroHighpassSubbandsInPlace(w); // your recursive version
-        inverseAndWriteOrig(basePath + "/fused_deepestApproxOnly_orig.png",
-                            w, roiPadToAlign, validAreaAlign, useOpenCL);
-    }
-
-    // (2) Level-0 lowpass only (NON-recursive)
-    {
-        cv::Mat w = mergedWavelet32FC2.clone();
-        keepLevel0LowpassOnly(w);
-        inverseAndWriteOrig(basePath + "/fused_level0LowpassOnly_orig.png",
-                            w, roiPadToAlign, validAreaAlign, useOpenCL);
-    }
-
-    // (3) Level-0 highpass only
-    {
-        cv::Mat w = mergedWavelet32FC2.clone();
-        keepLevel0HighpassOnly(w);
-        inverseAndWriteOrig(basePath + "/fused_level0HighpassOnly_orig.png",
-                            w, roiPadToAlign, validAreaAlign, useOpenCL);
-    }
-}
-
-static void dumpLowpassOnlyDebugOrigSize(const QString &basePath,
-                                         const cv::Mat &mergedWavelet32FC2, // padSize
-                                         const cv::Rect &roiPadToAlign,     // pad -> align
-                                         const cv::Rect &validAreaAlign,    // align -> orig
-                                         bool useOpenCL)
-{
-    CV_Assert(mergedWavelet32FC2.type() == CV_32FC2);
-
-    // 1) Copy wavelet and kill all highpass bands
-    cv::Mat wLP = mergedWavelet32FC2.clone();
-    zeroHighpassSubbandsInPlace(wLP);
-
-    // 2) Inverse -> gray (padSize)
-    cv::Mat lpGray8;
-    if (!FSFusionWavelet::inverse(wLP, useOpenCL, lpGray8))
-        return;
-
-    CV_Assert(lpGray8.type() == CV_8U);
-
-    // 3) Crop to origSize
-    cv::Mat lpAlign = lpGray8(roiPadToAlign);
-    cv::Mat lpOrig  = lpAlign(validAreaAlign);
-
-    // 4) Write
-    cv::imwrite((basePath + "/fused_lowpassOnly_orig.png").toStdString(), lpOrig);
-}
 // ----- end temp debug section -----
-
-static void dumpDepthErosionDebugCropped(
-    const QString &basePath,
-    const cv::Mat &fusedGray8_padded,
-    const cv::Mat &edgeMask8U_padded,
-    const cv::Mat &winnerBefore16_padded,
-    const cv::Mat &winnerAfter16_padded,
-    const cv::Rect &roiPadToAlign,
-    const cv::Rect &validAreaAlign)
-{
-    QString srcFun = "FSFusion::dumpDepthErosionDebugCropped";
-    if (G::FSLog) G::log(srcFun, basePath);
-
-    CV_Assert(fusedGray8_padded.type() == CV_8U);
-    CV_Assert(edgeMask8U_padded.type() == CV_8U);
-    CV_Assert(winnerBefore16_padded.type() == CV_16U);
-    CV_Assert(winnerAfter16_padded.type() == CV_16U);
-
-    // ------------------------------------------------------------
-    // Crop EVERYTHING to origSize
-    // ------------------------------------------------------------
-    cv::Mat fusedGray8   = cropPadToOrig(fusedGray8_padded,   roiPadToAlign, validAreaAlign);
-    cv::Mat edgeMask8U   = cropPadToOrig(edgeMask8U_padded,   roiPadToAlign, validAreaAlign);
-    cv::Mat before16     = cropPadToOrig(winnerBefore16_padded, roiPadToAlign, validAreaAlign);
-    cv::Mat after16      = cropPadToOrig(winnerAfter16_padded,  roiPadToAlign, validAreaAlign);
-
-    // ------------------------------------------------------------
-    // Edge mask
-    // ------------------------------------------------------------
-    cv::imwrite((basePath + "/edgeMask.png").toStdString(), edgeMask8U);
-
-    // ------------------------------------------------------------
-    // Depth maps (normalized)
-    // ------------------------------------------------------------
-    double minV = 0.0, maxV = 0.0;
-    cv::minMaxLoc(before16, &minV, &maxV);
-    if (maxV <= minV) maxV = minV + 1.0;
-
-    cv::Mat before8, after8;
-    before16.convertTo(before8, CV_8U,
-                       255.0 / (maxV - minV),
-                       -minV * 255.0 / (maxV - minV));
-    after16.convertTo(after8, CV_8U,
-                      255.0 / (maxV - minV),
-                      -minV * 255.0 / (maxV - minV));
-
-    cv::imwrite((basePath + "/depthBefore.png").toStdString(), before8);
-    cv::imwrite((basePath + "/depthAfter.png").toStdString(),  after8);
-
-    // ------------------------------------------------------------
-    // Delta map
-    // ------------------------------------------------------------
-    cv::Mat delta32;
-    after16.convertTo(delta32, CV_32F);
-    cv::Mat before32;
-    before16.convertTo(before32, CV_32F);
-    delta32 -= before32;
-
-    cv::min(delta32,  10.0f, delta32);
-    cv::max(delta32, -10.0f, delta32);
-
-    cv::Mat delta8;
-    delta32.convertTo(delta8, CV_8U, 255.0 / 20.0, 128.0);
-    cv::imwrite((basePath + "/depthDelta.png").toStdString(), delta8);
-
-    // ------------------------------------------------------------
-    // Changed mask
-    // ------------------------------------------------------------
-    cv::Mat changedMask = (before16 != after16);
-    changedMask.convertTo(changedMask, CV_8U, 255.0);
-    cv::imwrite((basePath + "/changedMask.png").toStdString(), changedMask);
-
-    // ------------------------------------------------------------
-    // Overlays on fused grayscale
-    // ------------------------------------------------------------
-    cv::Mat fusedBGR;
-    cv::cvtColor(fusedGray8, fusedBGR, cv::COLOR_GRAY2BGR);
-
-    // Red = changed
-    {
-        cv::Mat overlay = fusedBGR.clone();
-        overlay.setTo(cv::Scalar(0,0,255), changedMask);
-        cv::Mat out;
-        cv::addWeighted(fusedBGR, 0.65, overlay, 0.35, 0.0, out);
-        cv::imwrite((basePath + "/fusedGray_overlayChanged.png").toStdString(), out);
-    }
-
-    // Yellow = edge band
-    {
-        cv::Mat overlay = fusedBGR.clone();
-        overlay.setTo(cv::Scalar(0,255,255), edgeMask8U);
-        cv::Mat out;
-        cv::addWeighted(fusedBGR, 0.70, overlay, 0.30, 0.0, out);
-        cv::imwrite((basePath + "/fusedGray_overlayEdge.png").toStdString(), out);
-    }
-
-    // Red = changed inside edge
-    {
-        cv::Mat changedInEdge;
-        cv::bitwise_and(changedMask, edgeMask8U, changedInEdge);
-
-        cv::Mat overlay = fusedBGR.clone();
-        overlay.setTo(cv::Scalar(0,0,255), changedInEdge);
-        cv::Mat out;
-        cv::addWeighted(fusedBGR, 0.65, overlay, 0.35, 0.0, out);
-        cv::imwrite((basePath + "/fusedGray_overlayChangedInsideEdge.png").toStdString(), out);
-    }
-}
-
-#include <opencv2/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-
-// Save: grayscale + red overlay where DBE changed pixels, at origSize.
-static void dumpDepthErosionOverlayDebugOrigSize(
-    const QString &basePath,
-    const cv::Mat &fusedGray8_padded,        // CV_8U padSize (same one used for color map)
-    const cv::Mat &edgeMask8U_padded,        // CV_8U padSize
-    const cv::Mat &winnerBefore16_padded,    // CV_16U padSize
-    const cv::Mat &winnerAfter16_padded,     // CV_16U padSize
-    const cv::Size &alignSize,               // alignSize
-    const cv::Size &padSize,                 // padSize
-    const cv::Rect &validAreaAlign,          // origSize inside alignSize
-    bool restrictChangedToEdge = false       // if true: changedMask &= edgeMask
-    )
-{
-    QString srcFun = "FSFusion::dumpDepthErosionOverlayDebugOrigSize";
-    if (G::FSLog) G::log(srcFun, basePath);
-
-    CV_Assert(fusedGray8_padded.type() == CV_8U);
-    CV_Assert(edgeMask8U_padded.type() == CV_8U);
-    CV_Assert(winnerBefore16_padded.type() == CV_16U);
-    CV_Assert(winnerAfter16_padded.type() == CV_16U);
-
-    CV_Assert(fusedGray8_padded.size() == padSize);
-    CV_Assert(edgeMask8U_padded.size() == padSize);
-    CV_Assert(winnerBefore16_padded.size() == padSize);
-    CV_Assert(winnerAfter16_padded.size() == padSize);
-
-    // ----------------------------
-    // Step 1: padSize -> alignSize crop
-    // ----------------------------
-    cv::Rect roiPadToAlign(0, 0, alignSize.width, alignSize.height);
-
-    if (padSize != alignSize)
-    {
-        const int padW = padSize.width  - alignSize.width;
-        const int padH = padSize.height - alignSize.height;
-
-        CV_Assert(padW >= 0 && padH >= 0);
-
-        const int left = padW / 2;
-        const int top  = padH / 2;
-
-        roiPadToAlign = cv::Rect(left, top, alignSize.width, alignSize.height);
-    }
-
-    // Bounds
-    CV_Assert(roiPadToAlign.x >= 0 && roiPadToAlign.y >= 0);
-    CV_Assert(roiPadToAlign.x + roiPadToAlign.width  <= fusedGray8_padded.cols);
-    CV_Assert(roiPadToAlign.y + roiPadToAlign.height <= fusedGray8_padded.rows);
-
-    cv::Mat fusedGray_align   = fusedGray8_padded(roiPadToAlign);
-    cv::Mat edgeMask_align    = edgeMask8U_padded(roiPadToAlign);
-    cv::Mat before_align      = winnerBefore16_padded(roiPadToAlign);
-    cv::Mat after_align       = winnerAfter16_padded(roiPadToAlign);
-
-    // ----------------------------
-    // Step 2: alignSize -> origSize crop
-    // ----------------------------
-    CV_Assert(validAreaAlign.x >= 0 && validAreaAlign.y >= 0);
-    CV_Assert(validAreaAlign.x + validAreaAlign.width  <= fusedGray_align.cols);
-    CV_Assert(validAreaAlign.y + validAreaAlign.height <= fusedGray_align.rows);
-
-    cv::Mat fusedGray_orig = fusedGray_align(validAreaAlign).clone();
-    cv::Mat edgeMask_orig  = edgeMask_align(validAreaAlign).clone();
-    cv::Mat before_orig    = before_align(validAreaAlign).clone();
-    cv::Mat after_orig     = after_align(validAreaAlign).clone();
-
-    // ----------------------------
-    // Build masks (origSize)
-    // ----------------------------
-    cv::Mat edgeMaskBin;
-    cv::compare(edgeMask_orig, 0, edgeMaskBin, cv::CMP_NE); // CV_8U 0/255
-
-    cv::Mat changedMask;
-    cv::compare(after_orig, before_orig, changedMask, cv::CMP_NE); // CV_8U 0/255
-
-    if (restrictChangedToEdge)
-        cv::bitwise_and(changedMask, edgeMaskBin, changedMask);
-
-    const int changedCount = cv::countNonZero(changedMask);
-    const int edgeCount    = cv::countNonZero(edgeMaskBin);
-
-    if (G::FSLog)
-    {
-        G::log(srcFun, "origSize edgeCount=" + QString::number(edgeCount) +
-                           " changedCount=" + QString::number(changedCount) +
-                           " restrictChangedToEdge=" + QString(restrictChangedToEdge ? "true" : "false"));
-    }
-
-    // ----------------------------
-    // Create overlays (origSize)
-    // ----------------------------
-    cv::Mat grayBgr;
-    cv::cvtColor(fusedGray_orig, grayBgr, cv::COLOR_GRAY2BGR);
-
-    // overlay_changed_red: set R=255 on changed pixels
-    cv::Mat overlayChanged = grayBgr.clone();
-    {
-        std::vector<cv::Mat> ch(3);
-        cv::split(overlayChanged, ch); // B,G,R
-        ch[2].setTo(255, changedMask); // red channel
-        cv::merge(ch, overlayChanged);
-    }
-
-    // overlay_edge_green: set G=255 on edge pixels
-    cv::Mat overlayEdge = grayBgr.clone();
-    {
-        std::vector<cv::Mat> ch(3);
-        cv::split(overlayEdge, ch); // B,G,R
-        ch[1].setTo(255, edgeMaskBin); // green channel
-        cv::merge(ch, overlayEdge);
-    }
-
-    // overlay_both: apply both in one image (yellow where both)
-    cv::Mat overlayBoth = grayBgr.clone();
-    {
-        std::vector<cv::Mat> ch(3);
-        cv::split(overlayBoth, ch); // B,G,R
-        ch[1].setTo(255, edgeMaskBin);  // green = edge
-        ch[2].setTo(255, changedMask);  // red   = changed
-        cv::merge(ch, overlayBoth);
-    }
-
-    // ----------------------------
-    // Write PNGs
-    // ----------------------------
-    const std::string base = basePath.toStdString();
-
-    cv::imwrite(base + "/fusedGray_orig.png", fusedGray_orig);
-    cv::imwrite(base + "/edgeMask_orig.png", edgeMaskBin);
-    cv::imwrite(base + "/changedMask_orig.png", changedMask);
-    cv::imwrite(base + "/overlay_changed_red_orig.png", overlayChanged);
-    cv::imwrite(base + "/overlay_edge_green_orig.png", overlayEdge);
-    cv::imwrite(base + "/overlay_both_orig.png", overlayBoth);
-}
-
-static cv::Mat toLuma32F(const cv::Mat& img)
-{
-    CV_Assert(!img.empty());
-    cv::Mat l32;
-
-    if (img.channels() == 1) {
-        img.convertTo(l32, CV_32F);
-        return l32;
-    }
-
-    CV_Assert(img.channels() == 3);
-    cv::Mat f; img.convertTo(f, CV_32F);
-    std::vector<cv::Mat> ch(3);
-    cv::split(f, ch); // B,G,R
-    l32 = 0.114f*ch[0] + 0.587f*ch[1] + 0.299f*ch[2];
-    return l32;
-}
-
-static float bilerp32F(const cv::Mat& m32, float x, float y)
-{
-    x = std::max(0.0f, std::min(x, float(m32.cols - 1)));
-    y = std::max(0.0f, std::min(y, float(m32.rows - 1)));
-
-    int x0 = int(std::floor(x));
-    int y0 = int(std::floor(y));
-    int x1 = std::min(x0 + 1, m32.cols - 1);
-    int y1 = std::min(y0 + 1, m32.rows - 1);
-
-    float fx = x - x0;
-    float fy = y - y0;
-
-    float v00 = m32.at<float>(y0, x0);
-    float v10 = m32.at<float>(y0, x1);
-    float v01 = m32.at<float>(y1, x0);
-    float v11 = m32.at<float>(y1, x1);
-
-    float v0 = v00 + fx*(v10 - v00);
-    float v1 = v01 + fx*(v11 - v01);
-    return v0 + fy*(v1 - v0);
-}
-
-static void dumpHaloOverlayOrigSize(const QString &basePath,
-                                    const cv::Mat &fusedGray8Orig, // CV_8U orig size
-                                    float lowpassSigma,
-                                    int nearPx,
-                                    int farPx,
-                                    float overlayDelta)
-{
-    QString srcFun = "FSFusion::dumpHaloOverlayOrigSize";
-    if (G::FSLog) G::log(srcFun, basePath);
-
-    CV_Assert(fusedGray8Orig.type() == CV_8U);
-
-    // 1) Object mask (branches)
-    cv::Mat obj = makeObjectMask8U_Otsu(fusedGray8Orig);
-    cv::imwrite((basePath + "/halo_objMask.png").toStdString(), obj);
-
-    // 2) Outside rings
-    cv::Mat dNear = dilateMaskPx(obj, nearPx);
-    cv::Mat dFar  = dilateMaskPx(obj, farPx);
-
-    cv::Mat nearOutside = (dNear != 0) & (obj == 0);
-    nearOutside.convertTo(nearOutside, CV_8U, 255.0);
-
-    cv::Mat farOutside  = (dFar != 0) & (dNear == 0);
-    farOutside.convertTo(farOutside, CV_8U, 255.0);
-
-    cv::imwrite((basePath + "/halo_nearOutside.png").toStdString(), nearOutside);
-    cv::imwrite((basePath + "/halo_farOutside.png").toStdString(),  farOutside);
-
-    const int nNear = cv::countNonZero(nearOutside);
-    const int nFar  = cv::countNonZero(farOutside);
-    if (G::FSLog) {
-        G::log(srcFun, "nNearOutside=" + QString::number(nNear) +
-                           " nFarOutside="  + QString::number(nFar));
-    }
-    if (nNear == 0 || nFar == 0) return;
-
-    // 3) Lowpass image
-    cv::Mat lp32;
-    fusedGray8Orig.convertTo(lp32, CV_32F, 1.0/255.0);
-
-    if (lowpassSigma > 0.0f) {
-        int k = int(lowpassSigma * 4.0f) + 1;
-        if ((k & 1) == 0) ++k;
-        if (k < 3) k = 3;
-        cv::GaussianBlur(lp32, lp32, cv::Size(k,k), lowpassSigma, lowpassSigma, cv::BORDER_REFLECT);
-    }
-
-    // Debug visualize lowpass
-    cv::Mat lp8;
-    lp32.convertTo(lp8, CV_8U, 255.0);
-    cv::imwrite((basePath + "/halo_lowpass.png").toStdString(), lp8);
-
-    // 4) Halo score (outside-only)
-    const double meanNear = cv::mean(lp32, nearOutside)[0];
-    const double meanFar  = cv::mean(lp32, farOutside)[0];
-    const double score    = meanNear - meanFar;
-
-    if (G::FSLog) {
-        G::log(srcFun, "HaloScore OUTSIDE: near=" + QString::number(meanNear, 'f', 6) +
-                           " far=" + QString::number(meanFar, 'f', 6) +
-                           " score=" + QString::number(score, 'f', 6));
-    }
-
-    // 5) Overlay: mark pixels in nearOutside where lowpass is "too bright"
-    // threshold = meanFar + overlayDelta
-    cv::Mat hot = (lp32 > float(meanFar + overlayDelta));
-    hot.convertTo(hot, CV_8U, 255.0);
-    cv::bitwise_and(hot, nearOutside, hot);
-
-    // base grayscale -> BGR
-    cv::Mat bgr;
-    cv::cvtColor(fusedGray8Orig, bgr, cv::COLOR_GRAY2BGR);
-
-    // red overlay
-    // set R=255 where hot
-    for (int y = 0; y < bgr.rows; ++y) {
-        cv::Vec3b *p = bgr.ptr<cv::Vec3b>(y);
-        const uint8_t *m = hot.ptr<uint8_t>(y);
-        for (int x = 0; x < bgr.cols; ++x) {
-            if (m[x]) p[x][2] = 255; // R
-        }
-    }
-
-    cv::imwrite((basePath + "/haloOverlay_outside.png").toStdString(), bgr);
-}
-
-static void dumpHaloDoGOverlayOrigSize(const QString &basePath,
-                                       const cv::Mat &fusedGray8Orig, // CV_8U
-                                       float sigmaNear,               // e.g. 4..8
-                                       float sigmaFar,                // e.g. 16..30
-                                       int outsidePx,                 // e.g. 12..30
-                                       float dogThresh)               // e.g. 0.01..0.05 (normalized)
-{
-    QString srcFun = "FSFusion::dumpHaloDoGOverlayOrigSize";
-    if (G::FSLog) G::log(srcFun, basePath);
-
-    CV_Assert(fusedGray8Orig.type() == CV_8U);
-    CV_Assert(sigmaFar > sigmaNear);
-
-    // 1) Build a "structure" mask for the branch using gradients (more robust than Otsu for your case)
-    cv::Mat gx, gy, mag;
-    cv::Sobel(fusedGray8Orig, gx, CV_32F, 1, 0, 3);
-    cv::Sobel(fusedGray8Orig, gy, CV_32F, 0, 1, 3);
-    cv::magnitude(gx, gy, mag);
-
-    double minV=0, maxV=0;
-    cv::minMaxLoc(mag, &minV, &maxV);
-
-    // Keep strongest gradients as "structure"
-    const float t = float(maxV) * 0.20f;  // try 0.10..0.30
-    cv::Mat structure = (mag > t);
-    structure.convertTo(structure, CV_8U, 255.0);
-
-    // Thicken & clean structure so we can define an outside band
-    cv::Mat se5 = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5,5));
-    cv::morphologyEx(structure, structure, cv::MORPH_CLOSE, se5);
-    cv::morphologyEx(structure, structure, cv::MORPH_OPEN,  se5);
-
-    // 2) Outside band around structure
-    int k = 2 * outsidePx + 1;
-    cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k,k));
-    cv::Mat dil;
-    cv::dilate(structure, dil, se);
-
-    cv::Mat outside = (dil != 0) & (structure == 0);
-    outside.convertTo(outside, CV_8U, 255.0);
-
-    // 3) DoG halo map (normalized float)
-    cv::Mat f32;
-    fusedGray8Orig.convertTo(f32, CV_32F, 1.0/255.0);
-
-    cv::Mat lpNear = f32.clone();
-    cv::Mat lpFar  = f32.clone();
-
-    cv::GaussianBlur(lpNear, lpNear, cv::Size(0,0), sigmaNear, sigmaNear, cv::BORDER_REFLECT);
-    cv::GaussianBlur(lpFar,  lpFar,  cv::Size(0,0), sigmaFar,  sigmaFar,  cv::BORDER_REFLECT);
-
-    cv::Mat dog = lpNear - lpFar;   // bright mid-scale "glow" pops positive
-
-    // Debug visualize dog as 8U (scaled)
-    cv::Mat dogVis;
-    {
-        cv::Mat clipped = cv::max(cv::min(dog, 0.10f), -0.10f);  // +/-0.1
-        clipped.convertTo(dogVis, CV_8U, 255.0 / 0.20, 128.0);
-        cv::imwrite((basePath + "/halo_DoG.png").toStdString(), dogVis);
-    }
-
-    // 4) Halo candidates: dog > threshold AND in outside band
-    cv::Mat hot = (dog > dogThresh);
-    hot.convertTo(hot, CV_8U, 255.0);
-    cv::bitwise_and(hot, outside, hot);
-
-    // 5) Overlay red on grayscale
-    cv::Mat bgr;
-    cv::cvtColor(fusedGray8Orig, bgr, cv::COLOR_GRAY2BGR);
-
-    for (int y = 0; y < bgr.rows; ++y) {
-        cv::Vec3b *p = bgr.ptr<cv::Vec3b>(y);
-        const uint8_t *m = hot.ptr<uint8_t>(y);
-        for (int x = 0; x < bgr.cols; ++x) {
-            if (m[x]) {
-                p[x][2] = 255; // R
-            }
-        }
-    }
-
-    cv::imwrite((basePath + "/haloOverlay_DoG.png").toStdString(), bgr);
-}
-
-static cv::Mat depthBiasedErode16(const cv::Mat &winner16,
-                                  const cv::Mat &edgeMask8U,
-                                  int radius,
-                                  int iters,
-                                  int maxDelta,
-                                  float minEdgeDelta)
-{
-/*
-    Used by DepthBiasedErosion
-*/
-    QString srcFun = "FSFusion::depthBiasedErode16";
-    if (G::FSLog) G::log(srcFun);
-
-    CV_Assert(winner16.type() == CV_16U);
-    CV_Assert(edgeMask8U.type() == CV_8U);
-    CV_Assert(winner16.size() == edgeMask8U.size());
-
-    cv::Mat cur = winner16.clone();
-
-    int k = 2 * radius + 1;
-    cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE,
-                                           cv::Size(k, k));
-
-    for (int i = 0; i < iters; ++i)
-    {
-        cv::Mat localMax, localMin;
-        cv::dilate(cur, localMax, se);
-        cv::erode(cur,  localMin, se);
-
-        // Only act where:
-        //  - in edge band
-        //  - there is meaningful local depth contrast
-        cv::Mat contrast32;
-        {
-            cv::Mat max32, min32;
-            localMax.convertTo(max32, CV_32F);
-            localMin.convertTo(min32, CV_32F);
-            contrast32 = max32 - min32;
-        }
-
-        cv::Mat actMask = (edgeMask8U != 0) & (contrast32 >= minEdgeDelta);
-        actMask.convertTo(actMask, CV_8U); // ensure 0/255
-        cv::bitwise_and(actMask, edgeMask8U, actMask);
-
-        // target = localMax (deeper)
-        // cur = min(cur + maxDelta, target) in actMask
-        cv::Mat cur32, tgt32;
-        cur.convertTo(cur32, CV_32F);
-        localMax.convertTo(tgt32, CV_32F);
-
-        cv::Mat raised = cur32 + float(maxDelta);
-        cv::min(raised, tgt32, raised);
-
-        // write back only in mask
-        cv::Mat raised16;
-        raised.convertTo(raised16, CV_16U);
-        raised16.copyTo(cur, actMask);
-    }
-
-    return cur;
-}
 
 /*
  * Padding helper
@@ -1486,281 +1014,6 @@ static inline FSFusionReassign::ColorDepth reassignDepth(int depth)
     return (depth == CV_16U)
         ? FSFusionReassign::ColorDepth::U16
         : FSFusionReassign::ColorDepth::U8;
-}
-
-// Depth-Biased Erosion
-// Purpose:
-//   Second-pass color override after Depth-Biased Erosion changed the winner map.
-//   Only override *edge-band* pixels whose winner index changed, and only when the
-//   replacement slice actually contains non-trivial content (to avoid “black branches”).
-//
-// Key safety guards added:
-//   1) Only operate on pixels where (edgeMask != 0) AND (winnerAfter != winnerBefore)
-//   2) Per-slice mask is restricted to those changed pixels.
-//   3) “Content check”: don’t override with a slice that is essentially background
-//      at those pixels (counts luminance > threshold within mask). If too few “valid”
-//      pixels, skip that slice’s override.
-//   4) Apply contrast/WB in 8-bit space (FSAlign implementation is 8U).
-//   5) Optional clamp of winner indices to [0, N-1] before comparing.
-//   6) Optional debug: log per-slice mask size and accepted pixels.
-//
-// Call signature stays compatible with your current call site, BUT you should pass
-// the winnerBefore and winnerAfter maps (recommended). If you can’t, see the overload
-// note at the bottom.
-
-bool FSFusion::applyDepthBiasedColorOverrideSecondPass(
-    cv::Mat &paddedColorOut,
-    const cv::Mat &winnerBeforePadded16,
-    const cv::Mat &winnerAfterPadded16,
-    const cv::Mat &edgeMask8U,
-    const QStringList &inputPaths,
-    const std::vector<FSAlign::Result> &globals,
-    const Options &opt,
-    std::atomic_bool *abortFlag
-    )
-{
-    QString srcFun = "FSFusion::applyDepthBiasedColorOverrideSecondPass";
-    if (G::FSLog) G::log(srcFun);
-
-    // -----------------------------
-    // Validate
-    // -----------------------------
-    CV_Assert(paddedColorOut.type() == CV_8UC3 || paddedColorOut.type() == CV_16UC3);
-    CV_Assert(winnerAfterPadded16.type() == CV_16U);
-    CV_Assert(edgeMask8U.type() == CV_8U);
-    CV_Assert(winnerBeforePadded16.empty() || winnerBeforePadded16.type() == CV_16U);
-
-    CV_Assert(paddedColorOut.size() == winnerAfterPadded16.size());
-    CV_Assert(paddedColorOut.size() == edgeMask8U.size());
-    if (!winnerBeforePadded16.empty())
-        CV_Assert(winnerBeforePadded16.size() == winnerAfterPadded16.size());
-
-    const int N = int(inputPaths.size());
-    if (N <= 0 || int(globals.size()) != N)
-        return false;
-
-    // -----------------------------
-    // Build act mask:
-    //   - Must be in edge band
-    //   - Must be a changed pixel (winnerAfter != winnerBefore)
-    // -----------------------------
-    cv::Mat edgeMask = (edgeMask8U != 0);
-    edgeMask.convertTo(edgeMask, CV_8U, 255.0);
-
-    if (cv::countNonZero(edgeMask) == 0) {
-        if (G::FSLog) G::log(srcFun, "No edge pixels; skipping override");
-        return true;
-    }
-
-    cv::Mat changedMask;
-    if (!winnerBeforePadded16.empty())
-    {
-        changedMask = (winnerAfterPadded16 != winnerBeforePadded16);
-        changedMask.convertTo(changedMask, CV_8U, 255.0);
-    }
-    else
-    {
-        // If you cannot supply winnerBefore, we can’t know what changed.
-        // Fallback: operate on all edge pixels (less safe; can cause black branches).
-        // Strongly recommended to pass winnerBeforePadded16.
-        changedMask = edgeMask.clone();
-        if (G::FSLog) G::log(srcFun, "WARNING: winnerBefore not provided; using edgeMask as changedMask");
-    }
-
-    cv::Mat actMask;
-    cv::bitwise_and(edgeMask, changedMask, actMask);
-
-    const int actCount = cv::countNonZero(actMask);
-    if (actCount == 0) {
-        if (G::FSLog) G::log(srcFun, "No changed edge pixels; skipping override");
-        return true;
-    }
-
-    if (G::FSLog) {
-        G::log(srcFun, "Act pixels (changed in edge band) = " + QString::number(actCount));
-    }
-
-    // -----------------------------
-    // Optional: clamp winners to [0..N-1] for safety
-    // (Rare, but protects against any out-of-range erosion artifacts.)
-    // -----------------------------
-    cv::Mat winnerClamped = winnerAfterPadded16;
-    {
-        // Only if we detect any out-of-range; keep fast path otherwise.
-        double mn=0, mx=0;
-        cv::minMaxLoc(winnerAfterPadded16, &mn, &mx);
-        if (mn < 0.0 || mx > double(N - 1))
-        {
-            winnerClamped = winnerAfterPadded16.clone();
-            for (int y = 0; y < winnerClamped.rows; ++y)
-            {
-                uint16_t *p = winnerClamped.ptr<uint16_t>(y);
-                for (int x = 0; x < winnerClamped.cols; ++x)
-                {
-                    int v = int(p[x]);
-                    if (v < 0) v = 0;
-                    if (v > N - 1) v = N - 1;
-                    p[x] = uint16_t(v);
-                }
-            }
-            if (G::FSLog) G::log(srcFun, "Clamped winner indices to [0..N-1]");
-        }
-    }
-
-    // -----------------------------
-    // Content check thresholds
-    // -----------------------------
-    // We will reject “background/black” overrides by checking luminance on the candidate slice.
-    //
-    // For 16U: threshold ~ 1% (655) is conservative.
-    // For 8U: threshold ~ 3 is conservative.
-    //
-    // You can expose these in Options later; for now keep fixed.
-    // const int    minValidPixels = 256; // minimum pixels that pass luminance check for a slice override to be applied
-    // const double lumThresh8  = 3.0;
-    // const double lumThresh16 = 655.0;
-    const int    minValidPixels = 1;   // instead of 256
-    const double lumThresh8  = 0.0;    // instead of 3.0
-    const double lumThresh16 = 0.0;    // instead of 655.0
-    // -----------------------------
-    // Helper: compute luminance (8U) for a BGR image
-    // -----------------------------
-    auto computeLuma8U = [&](const cv::Mat &bgr8, cv::Mat &luma8)
-    {
-        CV_Assert(bgr8.type() == CV_8UC3);
-        std::vector<cv::Mat> ch(3);
-        cv::split(bgr8, ch); // B,G,R
-
-        // Use integer-ish weights in float then convert back:
-        // Y ≈ 0.114B + 0.587G + 0.299R
-        cv::Mat y32 = 0.114f * ch[0] + 0.587f * ch[1] + 0.299f * ch[2];
-        y32.convertTo(luma8, CV_8U);
-    };
-
-    // -----------------------------
-    // For each slice, override only pixels that want that slice AND are “safe”
-    // -----------------------------
-    for (int i = 0; i < N; ++i)
-    {
-        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-
-        // maskI = (winner == i) & actMask
-        cv::Mat maskI = (winnerClamped == uint16_t(i));
-        maskI.convertTo(maskI, CV_8U, 255.0);
-        cv::bitwise_and(maskI, actMask, maskI);
-
-        const int wanted = cv::countNonZero(maskI);
-        if (wanted == 0)
-            continue;
-
-        if (G::FSLog) {
-            G::log(srcFun, "Slice " + QString::number(i) +
-                               " wanted pixels (pre-check) = " + QString::number(wanted));
-        }
-
-        // Load original slice
-        FSLoader::Image img = FSLoader::load(inputPaths[i].toStdString());
-
-        // Warp to aligned space using global transform
-        cv::Mat alignedColor;
-        FSAlign::applyTransform(img.color, globals[i].transform, alignedColor);
-
-        // Apply contrast/WB in 8-bit space
-        cv::Mat aligned8;
-        if (alignedColor.depth() == CV_16U)
-            alignedColor.convertTo(aligned8, CV_8UC3, 255.0 / 65535.0);
-        else
-            aligned8 = alignedColor; // view
-
-        FSAlign::applyContrastWhiteBalance(aligned8, globals[i]); // 8U safe
-
-        // Convert back to output depth (to match paddedColorOut)
-        cv::Mat alignedCorrected;
-        if (paddedColorOut.depth() == CV_16U)
-            aligned8.convertTo(alignedCorrected, CV_16UC3, 65535.0 / 255.0);
-        else
-            alignedCorrected = aligned8; // 8U
-
-        // Pad to wavelet padSize (must match pad used in fusion)
-        cv::Size paddedSizeDummy;
-        cv::Mat colorP = padForWavelet(alignedCorrected, paddedSizeDummy);
-
-        if (colorP.size() != paddedColorOut.size()) {
-            qWarning() << "WARNING:" << srcFun << "colorP.size != padSize for slice" << i
-                       << " got=" ;//<< colorP.size() << " expected=" << paddedColorOut.size();
-            return false;
-        }
-
-        // Ensure type matches output
-        if (colorP.type() != paddedColorOut.type())
-        {
-            if (paddedColorOut.type() == CV_8UC3 && colorP.type() == CV_16UC3)
-                colorP.convertTo(colorP, CV_8UC3, 255.0 / 65535.0);
-            else if (paddedColorOut.type() == CV_16UC3 && colorP.type() == CV_8UC3)
-                colorP.convertTo(colorP, CV_16UC3, 65535.0 / 255.0);
-            else {
-                qWarning() << "WARNING:" << srcFun << "unsupported color type conversion";
-                return false;
-            }
-        }
-
-        // -----------------------------
-        // Content check:
-        //   Keep only pixels where candidate slice is “not black”
-        // -----------------------------
-        cv::Mat validMask = maskI.clone(); // will be reduced
-
-        if (paddedColorOut.depth() == CV_16U)
-        {
-            // Compute simple luminance proxy: max(B,G,R) is cheap & robust in 16U
-            // valid if maxChan > lumThresh16
-            std::vector<cv::Mat> ch(3);
-            cv::split(colorP, ch);
-
-            cv::Mat max01, maxAll;
-            cv::max(ch[0], ch[1], max01);
-            cv::max(max01, ch[2], maxAll);           // CV_16U
-
-            cv::Mat bright = (maxAll > uint16_t(lumThresh16));
-            bright.convertTo(bright, CV_8U, 255.0);
-
-            cv::bitwise_and(validMask, bright, validMask);
-        }
-        else
-        {
-            // 8U: compute luma and require luma > lumThresh8
-            cv::Mat luma8;
-            computeLuma8U(colorP, luma8);
-            cv::Mat bright = (luma8 > uint8_t(lumThresh8));
-            bright.convertTo(bright, CV_8U, 255.0);
-
-            cv::bitwise_and(validMask, bright, validMask);
-        }
-
-        const int accepted = cv::countNonZero(validMask);
-        if (accepted < minValidPixels)
-        {
-            // Too few pixels look non-black in this slice; skip override.
-            if (G::FSLog) {
-                G::log(srcFun, "Slice " + QString::number(i) +
-                                   " skipped (accepted=" + QString::number(accepted) +
-                                   " < " + QString::number(minValidPixels) + ")");
-            }
-            continue;
-        }
-
-        // -----------------------------
-        // Apply override (only validMask pixels)
-        // -----------------------------
-        colorP.copyTo(paddedColorOut, validMask);
-
-        if (G::FSLog) {
-            G::log(srcFun, "Slice " + QString::number(i) +
-                               " override applied accepted=" + QString::number(accepted));
-        }
-    }
-
-    return true;
 }
 
 //--------------------------------------------------------------
@@ -2132,49 +1385,6 @@ bool FSFusion::streamPMaxFinish(
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
     // --------------------------------------------------------------------
-    // Depth-Biased Erosion: refines the winner map
-    // --------------------------------------------------------------------
-    msg = "DepthBiasedErosion: enableDepthBiasedErosion = " +
-          QVariant(opt.enableDepthBiasedErosion).toString();
-
-    if (G::FSLog) G::log(srcFun, msg);
-    cv::Mat erodedWinnerPadded16;
-    cv::Mat winnerBefore;
-    cv::Mat winnerAfter;
-    cv::Mat edgeMask8U;
-
-    if (opt.enableDepthBiasedErosion)
-    {
-        msg = "DepthBiasedErosion:"
-            " erosionEdgeSigma = " + QVariant(opt.erosionEdgeSigma).toString() +
-            " erosionEdgeThresh = " + QVariant(opt.erosionEdgeThresh).toString() +
-            " erosionEdgeThresh = " + QVariant(opt.erosionEdgeDilate).toString()
-            ;
-        if (G::FSLog) G::log(srcFun, msg);
-        winnerBefore = depthIndexPadded16.clone();
-
-        edgeMask8U = makeEdgeMask8U(fusedGray8,
-                                            opt.erosionEdgeSigma,
-                                            opt.erosionEdgeThresh,
-                                            opt.erosionEdgeDilate);
-
-        winnerAfter = depthBiasedErode16(winnerBefore,
-                                                 edgeMask8U,
-                                                 opt.erosionRadius,
-                                                 opt.erosionIters,
-                                                 opt.erosionMaxDelta,
-                                                 opt.erosionMinEdgeDelta);
-
-        int changed = cv::countNonZero(winnerAfter != winnerBefore);
-        msg = "DepthBiasedErosion changed pixels = " + QString::number(changed);
-        if (G::FSLog) G::log(srcFun, msg);
-
-        depthIndexPadded16 = winnerAfter;
-    }
-
-    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-
-    // --------------------------------------------------------------------
     // Finish color builder after all slices processed
     // --------------------------------------------------------------------
     msg = "Finish color builder";
@@ -2221,33 +1431,6 @@ bool FSFusion::streamPMaxFinish(
     }
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-
-    // ------------------------------------------------------------
-    // Apply Depth-Biased Erosion
-    // ------------------------------------------------------------
-    if (opt.enableDepthBiasedErosion)
-    {
-        // Recompute edge mask (or reuse the one you already computed earlier)
-        cv::Mat edgeMask8U = makeEdgeMask8U(fusedGray8,
-                                            opt.erosionEdgeSigma,
-                                            opt.erosionEdgeThresh,
-                                            opt.erosionEdgeDilate);
-
-        // depthIndexPadded16 already replaced by winnerAfter earlier in your code
-        if (!applyDepthBiasedColorOverrideSecondPass(
-                paddedColorOut,
-                winnerBefore,          // <-- before DBE
-                depthIndexPadded16,    // <-- after DBE (you set it earlier)
-                edgeMask8U,
-                inputPaths,
-                globals,
-                opt,
-                abortFlag))
-        {
-            qWarning() << "WARNING:" << srcFun << "applyDepthBiasedColorOverrideSecondPass failed";
-            return false;
-        }
-    }
 
     // --------------------------------------------------------------------
     // Crop back to original (non-padded) size
@@ -2345,25 +1528,25 @@ bool FSFusion::streamPMaxFinish(
     //halo detection tuning
     HaloDetectParams hp;
     hp.edgeSigma      = 1.0f;
-    hp.edgeThreshFrac = 0.05f;   // slightly more sensitive than 0.06
+    hp.edgeThreshFrac = 0.05f;
     hp.edgeDilatePx   = 2;
+    hp.maxEdgeDistPx  = 30;
+    hp.dogScales      = { {4.0f,8.0f}, {8.0f,16.0f}, {16.0f,32.0f} };
+    hp.dogThresh      = 0.015f;
+    hp.minAreaPx      = 128;
+    hp.closePx        = 3;
 
-    hp.maxEdgeDistPx  = 30;      // allow wider haze halos
+    cv::Mat fusedGrayAlign = fusedGray8(roiPadToAlign);
+    cv::Mat fusedGray8Orig = fusedGrayAlign(validAreaAlign).clone();
 
-    hp.dogScales = {
-        {4.0f,  8.0f},
-        {8.0f, 16.0f},
-        {16.0f, 32.0f}
-    };
-
-    hp.dogThresh  = 0.015f;      // start slightly lower
-    hp.minAreaPx  = 128;
-    hp.closePx    = 3;
-
-    cv::Mat fusedGray8Orig = fusedGray8(roiPadToAlign)(validAreaAlign).clone();
+    CV_Assert(!fusedGray8Orig.empty());
+    CV_Assert(fusedGray8Orig.type() == CV_8U);
+    CV_Assert(fusedGray8Orig.size() == outputColor.size());
 
     HaloDetectResult haloDetectResult;
+    qDebug() << srcFun << "0";
     haloDetectResult = detectLowpassHalosOrig(fusedGray8Orig, hp);
+    qDebug() << srcFun << "00";
 
     dumpHaloDetectorDebugOrig(opt.depthFolderPath,
                               fusedGray8Orig,
@@ -2371,12 +1554,36 @@ bool FSFusion::streamPMaxFinish(
                               haloDetectResult
                               );
 
-    // dumpHaloDoGOverlayOrigSize(opt.depthFolderPath,
-    //                            fusedGray8Orig,
-    //                            /*sigmaNear*/ 6.0f,
-    //                            /*sigmaFar */ 24.0f,
-    //                            /*outsidePx*/ 20,
-    //                            /*dogThresh*/ 0.02f);
+    // foreground
+    ForegroundParams fp;
+    // Pre-smoothing for gradient-based detectors (reduces noise-triggered edges)
+    fp.preBlurSigma   = 1.2f;
+    // High frequency texture mask
+    fp.hfFrac         = 0.15f;      // 0.10f;
+    fp.hfBlurSigma    = 1;
+    // Thin twigs mask (small-scale gradient magnitude)
+    fp.thinFrac       = 0.040f;   // 0.025..0.050  (fraction of max grad) 0.035
+    fp.thinClosePx    = 0;        // 0..2  (connect along twigs) 1
+    fp.thinOpenPx     = 1;        // 0..1  (optional speck cleanup) 0
+    fp.thinMinAreaPx  = 32;       // 0..128 (remove tiny islands)
+    fp.thinBlurSigma  = 0;        // 0..2   extra blur just for twigs (0 = none)
+    fp.thinErodePx    = 1;        // 0..2  (1 usually enough)
+    fp.thinMxClipFrac = 0.25f;    // 0.15..0.40 : ignore extreme mx so thinFrac works    // (C) Dark solid interiors (main branch core)
+    // Dark solid interiors (main branch core)
+    fp.darkFrac       = 0.55f;    // 0.45..0.70  (relative to Otsu threshold)
+    fp.darkClosePx    = 8;        // 6..12       (fill interior)
+    fp.darkMinAreaPx  = 256;      // 128..1024   (remove small dark blobs)
+    // Gate dark solids to be near edges (kills background blobs)
+    fp.darkEdgeGatePx = 6;        // 4..10
+    // Always protect edges; optionally expand edge band slightly
+    fp.edgeDilatePx   = 0;        // 0..2
+    // Final expansion of FG (usually 0; keep 0 to avoid fattening)
+    fp.finalDilatePx  = 0;        // 0..1
+
+    qDebug() << srcFun << "1";
+    auto fr = buildForegroundMask(fusedGray8Orig, haloDetectResult.edgeMask8, fp);
+    qDebug() << srcFun << "2";
+    dumpForegroundDebug(opt.depthFolderPath, fusedGray8Orig, fp, fr);
 
     // ------------------------------------------------------------
     // Housekeeping

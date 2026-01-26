@@ -48,16 +48,16 @@ public:
         // Depth-biased erosion (Stage 3)
         // Deeper = higher slice index
 
-        // Edge mask from fusedGray8:
-        float erosionEdgeSigma      = 1.0f;   // blur on gradient magnitude
-        float erosionEdgeThresh     = 0.06f;  // 0..1 fraction of max grad
-        int   erosionEdgeDilate     = 2;      // expands edge band
+        // // Edge mask from fusedGray8:
+        // float erosionEdgeSigma      = 1.0f;   // blur on gradient magnitude
+        // float erosionEdgeThresh     = 0.06f;  // 0..1 fraction of max grad
+        // int   erosionEdgeDilate     = 2;      // expands edge band
 
-        // Erosion itself:
-        int   erosionRadius         = 2;      // neighborhood radius (1..4)
-        int   erosionIters          = 1;      // 1..3 typical
-        int   erosionMaxDelta       = 6;      // clamp upward change per iter
-        float erosionMinEdgeDelta   = 2.0f;   // require local contrast to act
+        // // Erosion itself:
+        // int   erosionRadius         = 2;      // neighborhood radius (1..4)
+        // int   erosionIters          = 1;      // 1..3 typical
+        // int   erosionMaxDelta       = 6;      // clamp upward change per iter
+        // float erosionMinEdgeDelta   = 2.0f;   // require local contrast to act
 
         // depthmap path for debugging pngs
         QString depthFolderPath;
@@ -68,17 +68,6 @@ public:
         return f && f->load(std::memory_order_relaxed);
     }
 
-    // Depth-Biased Erosion
-    bool applyDepthBiasedColorOverrideSecondPass(
-        cv::Mat &paddedColorOut,                 // in/out, size padSize
-        const cv::Mat &winnerBeforePadded16,     // CV_16U (padSize)  -- before DBE (NEW)
-        const cv::Mat &winnerPadded16,           // CV_16U, size padSize
-        const cv::Mat &edgeMask8U,               // CV_8U,  size padSize
-        const QStringList &inputPaths,           // original file paths
-        const std::vector<FSAlign::Result> &globals,
-        const Options &opt,
-        std::atomic_bool *abortFlag
-        );
 
     /*
     PMax / Simple fusion:

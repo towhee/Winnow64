@@ -29,6 +29,936 @@ StreamPMaxWeightedErosionEdge
 
 
 
+#include "fsfusion.h"
+#include "Main/global.h"
+
+#include "fsfusionwavelet.h"
+#include "fsutilities.h"
+
+#include <opencv2/imgproc.hpp>
+#include <cassert>
+
+#include <QString>
+
+//--------------------------------------------------------------
+// Helpers
+//--------------------------------------------------------------
+namespace
+{
+
+using ProgressCallback = FSFusion::ProgressCallback;
+
+static cv::Mat cropPadToOrig(const cv::Mat &pad,
+                             const cv::Rect &roiPadToAlign,
+                             const cv::Rect &validAreaAlign)
+{
+    CV_Assert(!pad.empty());
+    CV_Assert(roiPadToAlign.width  > 0);
+    CV_Assert(validAreaAlign.width > 0);
+
+    cv::Mat align = pad(roiPadToAlign);
+    cv::Mat orig  = align(validAreaAlign);
+    return orig.clone();
+}
+
+// ----- temp debug section -----
+
+static cv::Mat makeEdgeMask8U(const cv::Mat &fusedGray8,
+                              float sigma,
+                              float threshFrac,
+                              int dilatePx)
+{
+/*
+    Used by DepthBiasedErosion and (LL) testing
+*/
+    QString srcFun = "FSFusion::makeEdgeMask8U";
+    if (G::FSLog) G::log(srcFun);
+
+    CV_Assert(fusedGray8.type() == CV_8U);
+
+    cv::Mat gx, gy;
+    cv::Sobel(fusedGray8, gx, CV_32F, 1, 0, 3);
+    cv::Sobel(fusedGray8, gy, CV_32F, 0, 1, 3);
+
+    cv::Mat mag;
+    cv::magnitude(gx, gy, mag);
+
+    if (sigma > 0.0f)
+    {
+        int k = int(sigma * 4.0f) + 1;
+        if ((k & 1) == 0) ++k;
+        if (k < 3) k = 3;
+        cv::GaussianBlur(mag, mag, cv::Size(k, k), sigma, sigma,
+                         cv::BORDER_REFLECT);
+    }
+
+    double minV = 0.0, maxV = 0.0;
+    cv::minMaxLoc(mag, &minV, &maxV);
+    float thr = float(maxV) * threshFrac;
+
+    cv::Mat mask;
+    cv::threshold(mag, mask, thr, 255.0, cv::THRESH_BINARY);
+    mask.convertTo(mask, CV_8U);
+
+    if (dilatePx > 0)
+    {
+        int k = 2 * dilatePx + 1;
+        cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE,
+                                               cv::Size(k, k));
+        cv::dilate(mask, mask, se);
+    }
+
+    return mask;
+}
+
+static cv::Mat makeObjectMask8U_Otsu(const cv::Mat &gray8)
+{
+    CV_Assert(gray8.type() == CV_8U);
+
+    cv::Mat blur;
+    cv::GaussianBlur(gray8, blur, cv::Size(0,0), 2.0, 2.0, cv::BORDER_REFLECT);
+
+    cv::Mat th;
+    cv::threshold(blur, th, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+
+    // Pick the smaller connected “class” as object (branches usually occupy less area).
+    // If branches are darker, invert.
+    int white = cv::countNonZero(th);
+    int total = th.rows * th.cols;
+    int black = total - white;
+
+    cv::Mat obj = (white < black) ? th : (255 - th);
+
+    // Clean specks
+    cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5,5));
+    cv::morphologyEx(obj, obj, cv::MORPH_OPEN, se);
+    cv::morphologyEx(obj, obj, cv::MORPH_CLOSE, se);
+
+    return obj; // 0/255
+}
+
+// halo detection section
+struct HaloDetectParams
+{
+    // Edge detection (to define where "near edges" is)
+    float edgeSigma      = 1.0f;   // blur mag before threshold
+    float edgeThreshFrac = 0.06f;  // fraction of max grad
+    int   edgeDilatePx   = 2;      // widen the edge band
+
+    // Distance gating (how far from edges we still allow halos)
+    int   maxEdgeDistPx  = 24;     // 12..40 typical (orig pixels)
+
+    // Multi-scale DoG (bright LL halos)
+    // Each pair is (sigmaSmall, sigmaLarge) in orig pixels
+    std::vector<std::pair<float,float>> dogScales = {
+        {3.0f,  6.0f},
+        {6.0f, 12.0f},
+        {12.0f, 24.0f}
+    };
+
+    // Thresholding & cleanup
+    float dogThresh      = 0.020f; // in 0..1 intensity units (after normalization)
+    int   minAreaPx      = 64;     // remove tiny speckles
+    int   closePx        = 2;      // close small gaps along edges (0 disables)
+
+    // Optional "one-sided" gating: require halo to be on background side of edge
+    // Keep this OFF for now; it depends on reliable FG/BG.
+    bool  useOneSidedGate = false;
+};
+
+struct HaloDetectResult
+{
+    cv::Mat edgeMask8;     // CV_8U 0/255 (orig)
+    cv::Mat dogMax32;      // CV_32F (orig) max positive DoG
+    cv::Mat dist32;        // CV_32F (orig) distance to edge (pixels)
+    cv::Mat haloMask8;     // CV_8U 0/255 (orig)
+    double  scoreMean = 0; // mean(dogMax | haloMask)
+    int     nHalo = 0;
+};
+
+static cv::Mat gaussianBlur32(const cv::Mat &src32, float sigma)
+{
+    CV_Assert(src32.type() == CV_32F);
+    if (sigma <= 0.0f) return src32.clone();
+
+    int k = int(sigma * 4.0f) + 1;
+    if ((k & 1) == 0) ++k;
+    if (k < 3) k = 3;
+
+    cv::Mat out;
+    cv::GaussianBlur(src32, out, cv::Size(k,k), sigma, sigma, cv::BORDER_REFLECT);
+    return out;
+}
+
+// Keep only "bright halo" signal: blurLarge - blurSmall, clamp at 0
+static cv::Mat dogBright32(const cv::Mat &img32_0to1, float sigmaSmall, float sigmaLarge)
+{
+    cv::Mat a = gaussianBlur32(img32_0to1, sigmaSmall);
+    cv::Mat b = gaussianBlur32(img32_0to1, sigmaLarge);
+    cv::Mat dog = b - a;                 // signed: positive = brighter at larger scale
+    cv::max(dog, 0.0f, dog);             // keep bright halos only
+    return dog;                          // CV_32F
+}
+
+static HaloDetectResult detectLowpassHalosOrig(const cv::Mat &fusedGray8Orig,
+                                               const HaloDetectParams &hp)
+{
+    CV_Assert(fusedGray8Orig.type() == CV_8U);
+
+    HaloDetectResult r;
+
+    // 1) Edge mask (orig size)
+    r.edgeMask8 = makeEdgeMask8U(fusedGray8Orig, hp.edgeSigma, hp.edgeThreshFrac, hp.edgeDilatePx);
+
+    // If no edges, no halo detection possible
+    if (cv::countNonZero(r.edgeMask8) == 0)
+    {
+        r.dogMax32 = cv::Mat::zeros(fusedGray8Orig.size(), CV_32F);
+        r.dist32   = cv::Mat::zeros(fusedGray8Orig.size(), CV_32F);
+        r.haloMask8= cv::Mat::zeros(fusedGray8Orig.size(), CV_8U);
+        return r;
+    }
+
+    // 2) Distance-to-edge gating
+    // distanceTransform expects non-zero as "free space", zero as "obstacle".
+    // We want distance to edge pixels, so treat edges as obstacles (0).
+    cv::Mat edgeInv;
+    cv::bitwise_not(r.edgeMask8, edgeInv);              // edge pixels -> 0, else 255
+    cv::Mat edgeInvBin = (edgeInv != 0);                // 0/255 -> 0/1
+    edgeInvBin.convertTo(edgeInvBin, CV_8U, 255.0);     // ensure 0/255
+    cv::distanceTransform(edgeInvBin, r.dist32, cv::DIST_L2, 3); // CV_32F in pixels
+
+    cv::Mat nearEdgeMask = (r.dist32 <= float(hp.maxEdgeDistPx));
+    nearEdgeMask.convertTo(nearEdgeMask, CV_8U, 255.0);
+
+    // 3) Normalize grayscale to 0..1 float
+    cv::Mat img32;
+    fusedGray8Orig.convertTo(img32, CV_32F, 1.0/255.0);
+
+    // 4) Multi-scale max positive DoG
+    r.dogMax32 = cv::Mat::zeros(fusedGray8Orig.size(), CV_32F);
+    for (auto &p : hp.dogScales)
+    {
+        cv::Mat dog = dogBright32(img32, p.first, p.second);
+        cv::max(r.dogMax32, dog, r.dogMax32);
+    }
+
+    // 5) Threshold and gate to near-edge
+    cv::Mat halo = (r.dogMax32 > hp.dogThresh);
+    halo.convertTo(halo, CV_8U, 255.0);
+
+    cv::bitwise_and(halo, nearEdgeMask, halo);
+
+    // 6) Optional cleanup: close + remove tiny components
+    if (hp.closePx > 0)
+    {
+        int k = 2 * hp.closePx + 1;
+        cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k,k));
+        cv::morphologyEx(halo, halo, cv::MORPH_CLOSE, se);
+    }
+
+    if (hp.minAreaPx > 0)
+    {
+        cv::Mat labels, stats, cents;
+        int n = cv::connectedComponentsWithStats(halo, labels, stats, cents, 8, CV_32S);
+        cv::Mat cleaned = cv::Mat::zeros(halo.size(), CV_8U);
+        for (int i = 1; i < n; ++i)
+        {
+            int area = stats.at<int>(i, cv::CC_STAT_AREA);
+            if (area >= hp.minAreaPx)
+            {
+                cleaned.setTo(255, labels == i);
+            }
+        }
+        halo = cleaned;
+    }
+
+    r.haloMask8 = halo;
+
+    // 7) Score: mean DoG inside halo mask
+    r.nHalo = cv::countNonZero(r.haloMask8);
+    if (r.nHalo > 0)
+    {
+        cv::Scalar m = cv::mean(r.dogMax32, r.haloMask8);
+        r.scoreMean = m[0]; // 0..~0.1 typical
+    }
+
+    return r;
+}
+
+static void dumpHaloDetectorDebugOrig(const QString &basePath,
+                                      const cv::Mat &fusedGray8Orig,
+                                      const HaloDetectParams &hp,
+                                      const HaloDetectResult &r)
+{
+    // 1) edge mask
+    cv::imwrite((basePath + "/halo_edgeMask.png").toStdString(), r.edgeMask8);
+
+    // 2) dist (visualize 0..maxEdgeDist)
+    {
+        cv::Mat distVis;
+        cv::Mat d = r.dist32.clone();
+        cv::min(d, float(hp.maxEdgeDistPx), d);
+        d.convertTo(distVis, CV_8U, 255.0 / double(hp.maxEdgeDistPx));
+        cv::imwrite((basePath + "/halo_edgeDist.png").toStdString(), distVis);
+    }
+
+    // 3) dogMax (visualize)
+    {
+        cv::Mat dogVis;
+        cv::Mat d = r.dogMax32.clone();
+        // map [0..dogThresh*4] to [0..255] for visibility
+        double scaleMax = std::max(1e-6, double(hp.dogThresh) * 4.0);
+        cv::min(d, float(scaleMax), d);
+        d.convertTo(dogVis, CV_8U, 255.0 / scaleMax);
+        cv::imwrite((basePath + "/halo_dogMax.png").toStdString(), dogVis);
+    }
+
+    // 4) halo mask
+    cv::imwrite((basePath + "/halo_mask.png").toStdString(), r.haloMask8);
+
+    // 5) Red overlay on grayscale
+    {
+        cv::Mat gray3;
+        cv::cvtColor(fusedGray8Orig, gray3, cv::COLOR_GRAY2BGR);
+
+        // paint mask pixels red (BGR: 0,0,255) with alpha blend
+        const float alpha = 0.55f;
+        for (int y = 0; y < gray3.rows; ++y)
+        {
+            const uint8_t *m = r.haloMask8.ptr<uint8_t>(y);
+            cv::Vec3b *p = gray3.ptr<cv::Vec3b>(y);
+            for (int x = 0; x < gray3.cols; ++x)
+            {
+                if (!m[x]) continue;
+                cv::Vec3b c = p[x];
+                // blend toward red
+                c[0] = uint8_t((1-alpha)*c[0] + alpha*0);
+                c[1] = uint8_t((1-alpha)*c[1] + alpha*0);
+                c[2] = uint8_t((1-alpha)*c[2] + alpha*255);
+                p[x] = c;
+            }
+        }
+        cv::imwrite((basePath + "/halo_overlay.png").toStdString(), gray3);
+    }
+}
+
+// end (LL) testing
+
+int levelsForSize(cv::Size size)
+{
+    const int minLevels = 5;
+    const int maxLevels = 10;
+
+    int dimension = std::max(size.width, size.height);
+
+    int levels = minLevels;
+    while ((dimension >> levels) > 8 && levels < maxLevels)
+    {
+        levels++;
+    }
+
+    int divider = (1 << levels);
+    cv::Size expanded = size;
+
+    if (expanded.width % divider != 0)
+    {
+        expanded.width += divider - expanded.width % divider;
+    }
+    if (expanded.height % divider != 0)
+    {
+        expanded.height += divider - expanded.height % divider;
+    }
+
+    if (levels < maxLevels && expanded != size)
+    {
+        levels = levelsForSize(expanded);
+    }
+
+    return levels;
+}
+
+// ----- end temp debug section -----
+
+/*
+ * Padding helper
+ * Ensures image is padded to a wavelet-friendly size using the same logic
+ * as FSFusionWavelet::computeLevelsAndExpandedSize().
+ */
+cv::Mat padForWavelet(const cv::Mat &img, cv::Size &paddedSizeOut)
+{
+    if (img.empty()) return img;
+
+    CV_Assert(img.channels() == 1 || img.channels() == 3);
+
+    cv::Size expanded;
+    FSFusionWavelet::computeLevelsAndExpandedSize(img.size(), expanded);
+    paddedSizeOut = expanded;
+
+    if (expanded == img.size())
+        return img;   // No padding required
+
+    int padW = expanded.width  - img.cols;
+    int padH = expanded.height - img.rows;
+
+    int left   = padW / 2;
+    int right  = padW - left;
+    int top    = padH / 2;
+    int bottom = padH - top;
+
+    cv::Mat padded;
+    cv::copyMakeBorder(img,
+                       padded,
+                       top, bottom,
+                       left, right,
+                       cv::BORDER_REFLECT);
+
+    return padded;
+}
+
+/*
+ * Simple fusion: use depthIndex16 to pick color from the winning slice.
+ * This does not use wavelets; it pairs naturally with FSDepth::method="Simple".
+ */
+bool fuseSimple(const std::vector<cv::Mat> &grayImgs,
+                const std::vector<cv::Mat> &colorImgs,
+                const cv::Mat              &depthIndex16,
+                cv::Mat                    &outputColor8,
+                std::atomic_bool           *abortFlag,
+                ProgressCallback            cb)
+{
+    QString srcFun = "FSFusion::fuseSimple";
+
+    const int N = static_cast<int>(grayImgs.size());
+    if (N == 0 || N != static_cast<int>(colorImgs.size()))
+        return false;
+
+    if (depthIndex16.empty() || depthIndex16.type() != CV_16U)
+        return false;
+
+    const cv::Size size = grayImgs[0].size();
+
+    for (int i = 0; i < N; ++i)
+    {
+        if (grayImgs[i].empty() || colorImgs[i].empty())
+            return false;
+        if (grayImgs[i].size() != size || colorImgs[i].size() != size)
+            return false;
+    }
+
+    if (depthIndex16.size() != size)
+    {
+        if (G::FSLog) G::log(srcFun, "Depth index size mismatch vs input images");
+        return false;
+    }
+
+    // Normalize all colors to 8UC3
+    std::vector<cv::Mat> color8(N);
+    for (int i = 0; i < N; ++i)
+    {
+        if (colorImgs[i].type() == CV_8UC3)
+        {
+            color8[i] = colorImgs[i];
+        }
+        else if (colorImgs[i].type() == CV_16UC3)
+        {
+            colorImgs[i].convertTo(color8[i], CV_8UC3, 255.0 / 65535.0);
+        }
+        else
+        {
+            if (G::FSLog) G::log(srcFun, "Unsupported color type in slice " + QString::number(i));
+            return false;
+        }
+    }
+
+    outputColor8.create(size.height, size.width, CV_8UC3);
+
+    for (int y = 0; y < size.height; ++y)
+    {
+        const uint16_t *dRow = depthIndex16.ptr<uint16_t>(y);
+        cv::Vec3b *outRow    = outputColor8.ptr<cv::Vec3b>(y);
+
+        for (int x = 0; x < size.width; ++x)
+        {
+            uint16_t s = dRow[x];
+            if (s >= static_cast<uint16_t>(N))
+                s = static_cast<uint16_t>(N - 1);
+
+            outRow[x] = color8[s].at<cv::Vec3b>(y, x);
+        }
+    }
+
+    if (cb) cb();
+    return true;
+}
+
+/*
+ * Full PMax fusion: this reproduces the current successful pipeline.
+ *
+ * IMPORTANT:
+ *  - DepthIndex16 from FSDepth is validated (size only) but not used to drive
+ *    the PMax decisions; the wavelet merge is self-contained.
+ *  - The canonical depth map in the system is the one from FSDepth. Any
+ *    implicit "depth" inside the PMax merge is internal and not exposed.
+ */
+bool fusePMax(const std::vector<cv::Mat> &grayImgs,
+              const std::vector<cv::Mat> &colorImgs,
+              const FSFusion::Options    &opt,
+              cv::Mat                    &depthIndex16,
+              cv::Mat                    &outputColor8,
+              std::atomic_bool           *abortFlag,
+              FSFusion::StatusCallback    statusCallback,
+              ProgressCallback            progressCallback)
+{
+    QString srcFun = "FSFusion::fusePMax";
+    if (G::FSLog) G::log(srcFun, "Start PMax fusion");
+
+    int outDepth = colorImgs.at(0).depth();
+
+    const int N = static_cast<int>(grayImgs.size());
+    if (N == 0 || N != static_cast<int>(colorImgs.size()))
+        return false;
+
+    // Validate sizes and types
+    const cv::Size orig = grayImgs[0].size();
+    for (int i = 0; i < N; ++i)
+    {
+        if (grayImgs[i].empty() || colorImgs[i].empty())
+            return false;
+        if (grayImgs[i].size() != orig || colorImgs[i].size() != orig)
+            return false;
+    }
+
+    // --------------------------------------------------------------------
+    // 0. Pad grayscale + color images BEFORE processing (wavelet-friendly)
+    // --------------------------------------------------------------------
+    std::vector<cv::Mat> grayP(N);
+    std::vector<cv::Mat> colorP(N);
+    cv::Size paddedSize;
+
+    for (int i = 0; i < N; ++i)
+    {
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+        grayP[i]  = padForWavelet(grayImgs[i], paddedSize);
+        colorP[i] = padForWavelet(colorImgs[i], paddedSize);
+    }
+
+    const cv::Size ps = paddedSize;
+    // --------------------------------------------------------------------
+    // 1. Forward wavelet per slice (grayscale only)
+    // --------------------------------------------------------------------
+    std::vector<cv::Mat> wavelets(N);
+
+    if (G::FSLog) G::log(srcFun, "Forward wavelet per slice");
+    for (int i = 0; i < N; ++i)
+    {
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+        QString msg = "Forward wavelet slice" + QString::number(i);
+        if (G::FSLog) G::log(srcFun, msg);
+        if (statusCallback) statusCallback(msg);
+        if (progressCallback) progressCallback();
+
+        if (!FSFusionWavelet::forward(grayP[i], opt.useOpenCL, wavelets[i]))
+        {
+            if (G::FSLog) G::log(srcFun, "Wavelet forward failed");
+            return false;
+        }
+    }
+
+    // --------------------------------------------------------------------
+    // 2. Merge wavelet stacks → mergedWavelet (we ignore depthIndex here)
+    // --------------------------------------------------------------------
+    QString msg = "Merge wavelet stacks";
+    if (G::FSLog) G::log(srcFun, msg);
+    if (statusCallback) statusCallback(msg);
+    if (progressCallback) progressCallback();
+
+    cv::Mat mergedWavelet;
+
+    if (!FSMerge::merge(wavelets,
+                        opt.consistency,
+                        abortFlag,
+                        mergedWavelet,
+                        depthIndex16))
+    {
+        if (G::FSLog) G::log(srcFun, "FSMerge::merge failed");
+        return false;
+    }
+
+    // --------------------------------------------------------------------
+    // 3. Inverse wavelet → fusedGray8 (still padded size)
+    // --------------------------------------------------------------------
+    msg = "Inverse wavelet";
+    if (G::FSLog) G::log(srcFun, msg);
+    if (statusCallback) statusCallback(msg);
+    if (progressCallback) progressCallback();
+
+    cv::Mat fusedGray8;
+    if (!FSFusionWavelet::inverse(mergedWavelet, opt.useOpenCL, fusedGray8))
+    {
+        if (G::FSLog) G::log(srcFun, "FSFusionWavelet::inverse failed");
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // 4. Build color map using padded grayscale + padded RGB images
+    // --------------------------------------------------------------------
+    msg = "Build color map";
+    if (G::FSLog) G::log(srcFun, msg);
+    if (statusCallback) statusCallback(msg);
+    if (progressCallback) progressCallback();
+
+    std::vector<FSFusionReassign::ColorEntry> colorEntries;
+    std::vector<uint8_t> counts;
+
+    if (!FSFusionReassign::buildColorMap(grayP,
+                                         colorP,
+                                         colorEntries,
+                                         counts))
+    {
+        QString msg ="FSFusionReassign::buildColorMap failed";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // 5. Apply color reassignment to padded fused grayscale
+    // --------------------------------------------------------------------
+    msg = "Apply color reassignment";
+    if (G::FSLog) G::log(srcFun, msg);
+    if (statusCallback) statusCallback(msg);
+    if (progressCallback) progressCallback();
+
+    cv::Mat paddedColorOut;
+    FSFusionReassign::ColorDepth cd = (outDepth == CV_16U)
+           ? FSFusionReassign::ColorDepth::U16
+           : FSFusionReassign::ColorDepth::U8;
+    if (!FSFusionReassign::applyColorMap(fusedGray8,
+                                         colorEntries,
+                                         counts,
+                                         paddedColorOut,
+                                         cd))
+    {
+        QString msg = "FSFusionReassign::applyColorMap failed";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // --------------------------------------------------------------------
+    // 6. Crop back to original (non-padded) size
+    // --------------------------------------------------------------------
+    if (G::FSLog) G::log(srcFun, "Crop back to original size");
+
+    if (ps == orig)
+    {
+        outputColor8 = paddedColorOut;
+    }
+    else
+    {
+        int padW = ps.width  - orig.width;
+        int padH = ps.height - orig.height;
+
+        int left = padW / 2;
+        int top  = padH / 2;
+
+        cv::Rect roi(left, top, orig.width, orig.height);
+        outputColor8 = paddedColorOut(roi).clone();
+    }
+
+    return true;
+}
+
+} // end anonymous namespace
+
+static inline FSFusionReassign::ColorDepth reassignDepth(int depth)
+{
+    return (depth == CV_16U)
+        ? FSFusionReassign::ColorDepth::U16
+        : FSFusionReassign::ColorDepth::U8;
+}
+
+//--------------------------------------------------------------
+// Public entry point
+//--------------------------------------------------------------
+bool FSFusion::fuseStack(const std::vector<cv::Mat> &grayImgs,
+                         const std::vector<cv::Mat> &colorImgs,
+                         const Options              &opt,
+                         cv::Mat                    &depthIndex16,
+                         cv::Mat                    &outputColor8,
+                         std::atomic_bool           *abortFlag,
+                         StatusCallback              statusCallback,
+                         ProgressCallback            progressCallback)
+{
+    QString srcFun = "FSFusion::fuseStack";
+
+    const QString method = opt.method.trimmed();
+    if (G::FSLog) G::log(srcFun, "Method = " + method);
+
+    if (method == "Simple")     // uses depthIndex16
+    {
+        return fuseSimple(grayImgs,
+                          colorImgs,
+                          depthIndex16,
+                          outputColor8,
+                          abortFlag,
+                          progressCallback);
+    }
+
+    // Default: full PMax fusion
+    if (method == "FullWaveletMerge")       // full wavelet merge
+    return fusePMax(grayImgs,
+                    colorImgs,
+                    opt,
+                    depthIndex16,
+                    outputColor8,
+                    abortFlag,
+                    statusCallback,
+                    progressCallback);
+
+    qWarning() << "WARNING:" << srcFun << "Invalid method =" << method;
+    return false;
+}
+
+// StreamPMax pipeline
+bool FSFusion::streamPMaxSlice(int slice,
+                               const cv::Mat      &grayImg,
+                               const cv::Mat      &colorImg,
+                               const Options      &opt,
+                               std::atomic_bool   *abortFlag,
+                               StatusCallback     statusCallback,
+                               ProgressCallback   progressCallback
+                               )
+{
+    QString srcFun = "FSFusion::fusePMaxSlice";
+    QString s = QString::number(slice);
+    QString msg = "Fusing slice " + s;
+    msg += "  method: " + opt.method;
+    msg += "  mergeMode: " + opt.mergeMode;
+    msg += "  winnerMap: " + opt.winnerMap;
+    if (G::FSLog) G::log(srcFun, msg);
+
+    msg = "DepthBiasedErosion: enableDepthBiasedErosion = " +
+          QVariant(opt.enableDepthBiasedErosion).toString();
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+
+    // Validate sizes and types
+    if (grayImg.empty() || colorImg.empty()) {
+        QString msg = "Slice " + s + " grayImg.empty() || colorImg.empty()";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    if (slice == 0) {
+        alignSize = grayImg.size();
+        outDepth = colorImg.depth();
+    }
+    else if (grayImg.size() != alignSize) {
+        QString msg = "Slice " + s + " grayImg.size() != orig";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+    else if (colorImg.size() != alignSize) {
+        QString msg = "Slice " + s + " colorImg.size() != orig";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+    else if (colorImg.depth() != outDepth) {
+        qWarning() << "WARNING:" << srcFun << "Color depth changed across slices";
+        return false;
+    }
+
+    // --------------------------------------------------------------------
+    // Pad grayscale + color images BEFORE processing (wavelet-friendly)
+    // --------------------------------------------------------------------
+    if (G::FSLog) G::log(srcFun, "Pad for wavelet");
+
+    cv::Mat grayP;
+    cv::Mat colorP;
+    cv::Size paddedSize;
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    grayP  = padForWavelet(grayImg, paddedSize);
+    colorP = padForWavelet(colorImg, paddedSize);
+
+    // Lock padded size on slice 0; enforce identical thereafter
+    if (slice == 0)
+        padSize = paddedSize;
+    else if (paddedSize != padSize)
+    {
+        QString msg = "Slice " + s + " paddedSize != ps";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    // Sanity Check
+    // /*
+    if (slice > 0 && paddedSize != padSize)
+    {
+        QString m = QString("Sanity: slice %1 paddedSize %2x%3 != ps %4x%5")
+            .arg(slice)
+            .arg(paddedSize.width).arg(paddedSize.height)
+            .arg(padSize.width).arg(padSize.height);
+        if (G::FSLog) G::log(srcFun, m);
+        qWarning().noquote() << "WARNING:" << srcFun << m;
+        return false;
+    }
+    //*/
+
+    // Init builders/state on slice 0 (once)
+    if (slice == 0)
+    {
+        colorBuilder.begin(grayP.size(), /*fixedCapPerPixel=*/4);
+        mergeState.reset();
+        mergedWavelet.release();
+        wavelet.release();
+    }
+
+    // --------------------------------------------------------------------
+    // Forward wavelet per slice (grayscale only)
+    // --------------------------------------------------------------------
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    msg = "Forward wavelet slice " + s;
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    if (!FSFusionWavelet::forward(grayP, opt.useOpenCL, wavelet))
+    {
+        QString msg = "Slice " + s + " Wavelet forward failed";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    // Lock wavelet size on slice 0; enforce identical thereafter
+    if (slice == 0)
+        waveletSize = wavelet.size();
+    // Sanity Check
+    // /*
+    if (slice > 0 && wavelet.size() != waveletSize)
+    {
+        QString m = QString("Sanity: slice %1 wavelet.size %2x%3 != waveletSize %4x%5")
+        .arg(slice)
+            .arg(wavelet.cols).arg(wavelet.rows)
+            .arg(waveletSize.width).arg(waveletSize.height);
+        if (G::FSLog) G::log(srcFun, m);
+        qWarning().noquote() << "WARNING:" << srcFun << m;
+        return false;
+    }
+
+    auto matInfo = [](const cv::Mat& m) -> QString {
+        return QString("size=%1x%2 type=%3 channels=%4 step=%5")
+        .arg(m.cols).arg(m.rows)
+            .arg(m.type())
+            .arg(m.channels())
+            .arg(static_cast<qulonglong>(m.step));
+    };
+
+    if (slice == 0)
+    {
+        QString msg =
+            "Sanity(slice0): "
+            "orig=" + QString("%1x%2").arg(alignSize.width).arg(alignSize.height) + " "
+            "ps="   + QString("%1x%2").arg(padSize.width).arg(padSize.height) + " "
+            "waveletSize=" +
+            QString("%1x%2").arg(waveletSize.width).arg(waveletSize.height) +
+            " | "
+            "colorImg(" + matInfo(colorImg) + ") "
+            "grayP("    + matInfo(grayP)    + ") "
+            "colorP("   + matInfo(colorP)   + ") "
+            "wavelet("  + matInfo(wavelet) + ")";
+
+        if (G::FSLog) G::log(srcFun, msg);
+        // qDebug().noquote() << srcFun << log;
+    }
+    //*/
+
+    if (wavelet.size() != waveletSize)
+    {
+        QString msg = "Slice " + s + " wavelet.size() != waveletSize";
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    // --------------------------------------------------------------------
+    // Merge wavelet stacks → mergedWavelet (we ignore depthIndex here)
+    // --------------------------------------------------------------------
+    msg = "Merge wavelet stacks.  mergeMode: " + opt.mergeMode;
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+    // if (progressCallback) progressCallback();
+
+    if (opt.mergeMode == "PMax") {
+        if (!FSMerge::mergeSlice(mergeState,
+                                 wavelet,
+                                 waveletSize,
+                                 opt.consistency,
+                                 abortFlag,
+                                 mergedWavelet))
+        {
+            QString msg = "Slice " + s + " FSMerge::mergeSlice PMax failed.";
+            qWarning() << "WARNING:" << srcFun << msg;
+            if (G::FSLog) G::log(srcFun, msg);
+            return false;
+        }
+    }
+    else if (opt.mergeMode == "Weighted") {
+        FSMerge::WeightedParams wp;
+        wp.power = opt.weightedPower;
+        wp.sigma0 = opt.weightedSigma0;
+        wp.includeLowpass = opt.weightedIncludeLowpass;
+        wp.epsEnergy = opt.weightedEpsEnergy;
+        wp.epsWeight = opt.weightedEpsWeight;
+        if (!FSMerge::mergeSliceWeighted(mergeState,
+                                         wavelet,
+                                         waveletSize,
+                                         wp,
+                                         opt.consistency,
+                                         abortFlag,
+                                         mergedWavelet))
+        {
+            QString msg = "Slice " + s + " FSMerge::mergeSliceWeighted Weighted failed.";
+            qWarning() << "WARNING:" << srcFun << msg;
+            if (G::FSLog) G::log(srcFun, msg);
+            return false;
+        }
+    }
+
+    // --------------------------------------------------------------------
+    // Build color map using padded grayscale + padded RGB images
+    // --------------------------------------------------------------------
+    msg = "Build color map";
+    if (G::FSLog) G::log(srcFun, msg);
+    // if (statusCallback) statusCallback(msg);
+
+    FSFusionReassign::ColorEntry colorEntry;
+    if (!colorBuilder.addSlice(grayP, colorP))
+    {
+        QString msg = "Slice " + s + "FSFusionReassign::addSlice failed.";
+        if (G::FSLog) G::log(srcFun, msg);
+        qWarning() << "WARNING:" << srcFun << msg;
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // if (progressCallback) progressCallback();
+    return true;
+}
+
+// StreamPMax pipeline
 bool FSFusion::streamPMaxFinish(
     cv::Mat &outputColor,
     const Options &opt,
@@ -124,61 +1054,6 @@ bool FSFusion::streamPMaxFinish(
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
     // --------------------------------------------------------------------
-    // Depth-Biased Erosion: refines the winner map
-    // --------------------------------------------------------------------
-    msg = "DepthBiasedErosion: enableDepthBiasedErosion = " +
-          QVariant(opt.enableDepthBiasedErosion).toString();
-
-    if (G::FSLog) G::log(srcFun, msg);
-    cv::Mat erodedWinnerPadded16;
-    cv::Mat winnerBefore;
-    cv::Mat winnerAfter;
-    cv::Mat edgeMask8U;
-
-    if (opt.enableDepthBiasedErosion)
-    {
-        msg = "DepthBiasedErosion:"
-            " erosionEdgeSigma = " + QVariant(opt.erosionEdgeSigma).toString() +
-            " erosionEdgeThresh = " + QVariant(opt.erosionEdgeThresh).toString() +
-            " erosionEdgeThresh = " + QVariant(opt.erosionEdgeDilate).toString()
-            ;
-        if (G::FSLog) G::log(srcFun, msg);
-        winnerBefore = depthIndexPadded16.clone();
-
-        edgeMask8U = makeEdgeMask8U(fusedGray8,
-                                            opt.erosionEdgeSigma,
-                                            opt.erosionEdgeThresh,
-                                            opt.erosionEdgeDilate);
-
-        winnerAfter = depthBiasedErode16(winnerBefore,
-                                                 edgeMask8U,
-                                                 opt.erosionRadius,
-                                                 opt.erosionIters,
-                                                 opt.erosionMaxDelta,
-                                                 opt.erosionMinEdgeDelta);
-
-        int changed = cv::countNonZero(winnerAfter != winnerBefore);
-        msg = "DepthBiasedErosion changed pixels = " + QString::number(changed);
-        if (G::FSLog) G::log(srcFun, msg);
-
-        /* Write debug pngs
-        dumpDepthErosionDebugCropped(
-            opt.depthFolderPath,
-            fusedGray8,                 // padded
-            edgeMask8U,                 // padded
-            winnerBefore,               // padded
-            winnerAfter,                // padded
-            roiPadToAlign,
-            validAreaAlign
-            );
-        //*/
-
-        depthIndexPadded16 = winnerAfter;
-    }
-
-    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-
-    // --------------------------------------------------------------------
     // Finish color builder after all slices processed
     // --------------------------------------------------------------------
     msg = "Finish color builder";
@@ -225,33 +1100,6 @@ bool FSFusion::streamPMaxFinish(
     }
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-
-    // ------------------------------------------------------------
-    // Apply Depth-Biased Erosion
-    // ------------------------------------------------------------
-    if (opt.enableDepthBiasedErosion)
-    {
-        // Recompute edge mask (or reuse the one you already computed earlier)
-        cv::Mat edgeMask8U = makeEdgeMask8U(fusedGray8,
-                                            opt.erosionEdgeSigma,
-                                            opt.erosionEdgeThresh,
-                                            opt.erosionEdgeDilate);
-
-        // depthIndexPadded16 already replaced by winnerAfter earlier in your code
-        if (!applyDepthBiasedColorOverrideSecondPass(
-                paddedColorOut,
-                winnerBefore,          // <-- before DBE
-                depthIndexPadded16,    // <-- after DBE (you set it earlier)
-                edgeMask8U,
-                inputPaths,
-                globals,
-                opt,
-                abortFlag))
-        {
-            qWarning() << "WARNING:" << srcFun << "applyDepthBiasedColorOverrideSecondPass failed";
-            return false;
-        }
-    }
 
     // --------------------------------------------------------------------
     // Crop back to original (non-padded) size
@@ -337,12 +1185,36 @@ bool FSFusion::streamPMaxFinish(
     outputColor  = colorAlign(validAreaAlign).clone();
     depthIndex16 = depthAlign(validAreaAlign).clone();
 
-    // Write debug pngs (Wt)
-    dumpLowpassOnlyDebugOrigSize(opt.depthFolderPath,
-                                 mergedWavelet,
-                                 roiPadToAlign,
-                                 validAreaAlign,
-                                 opt.useOpenCL);
+    // debug log the min/max of the merged wavelet magnitude to chk not empty
+    std::vector<cv::Mat> ch(2);
+    cv::split(mergedWavelet, ch);
+    cv::Mat mag;
+    cv::magnitude(ch[0], ch[1], mag);
+    double mn=0, mx=0;
+    cv::minMaxLoc(mag, &mn, &mx);
+    qDebug() << "mergedWavelet mag min/max =" << mn << mx;
+
+    //halo detection tuning
+    HaloDetectParams hp;
+    hp.edgeSigma      = 1.0f;
+    hp.edgeThreshFrac = 0.05f;
+    hp.edgeDilatePx   = 2;
+    hp.maxEdgeDistPx  = 30;
+    hp.dogScales      = { {4.0f,8.0f}, {8.0f,16.0f}, {16.0f,32.0f} };
+    hp.dogThresh      = 0.015f;
+    hp.minAreaPx      = 128;
+    hp.closePx        = 3;
+
+    cv::Mat fusedGray8Orig = fusedGray8(roiPadToAlign)(validAreaAlign).clone();
+
+    HaloDetectResult haloDetectResult;
+    haloDetectResult = detectLowpassHalosOrig(fusedGray8Orig, hp);
+
+    dumpHaloDetectorDebugOrig(opt.depthFolderPath,
+                              fusedGray8Orig,
+                              hp,
+                              haloDetectResult
+                              );
 
     // ------------------------------------------------------------
     // Housekeeping
@@ -358,3 +1230,12 @@ bool FSFusion::streamPMaxFinish(
 
     return true;
 }
+
+// end StreamPMax pipeline
+
+The thinking game
+Anti-gravity code IDE
+
+
+
+

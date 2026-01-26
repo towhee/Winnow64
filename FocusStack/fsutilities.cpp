@@ -423,6 +423,34 @@ cv::Mat canonicalizeToSize(const cv::Mat& src,
     return out;
 }
 
+cv::Mat FSUtilities::alignToOrigSize(const cv::Mat& img, cv::Size origSize)
+{
+    CV_Assert(!img.empty());
+    CV_Assert(origSize.width  > 0);
+    CV_Assert(origSize.height > 0);
+    CV_Assert(img.cols >= origSize.width);
+    CV_Assert(img.rows >= origSize.height);
+
+    // If already correct size, return a clone
+    if (img.size() == origSize)
+        return img.clone();
+
+    const int padW = img.cols - origSize.width;
+    const int padH = img.rows - origSize.height;
+
+    // Padding must be symmetric (as produced by padForWavelet / FSLoader)
+    CV_Assert(padW >= 0 && padH >= 0);
+
+    const int left = padW / 2;
+    const int top  = padH / 2;
+
+    CV_Assert(left + origSize.width  <= img.cols);
+    CV_Assert(top  + origSize.height <= img.rows);
+
+    cv::Rect roi(left, top, origSize.width, origSize.height);
+    return img(roi).clone();
+}
+
 static cv::Mat to8uViewable(const cv::Mat& img)
 {
     CV_Assert(!img.empty());
