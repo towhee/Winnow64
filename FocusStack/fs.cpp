@@ -114,7 +114,7 @@ bool FS::setOptions(const Options &opt)
     if (o.method == "StmPMax") {
         if (G::FSLog) G::log(srcFun, msg + "StmPMax");
         o.useIntermediates = true;
-        o.enableAlign = false;
+        o.enableAlign = true;
         o.enableFocusMaps = false;
         o.enableDepthMap = true;
         o.enableFusion = true;
@@ -1686,10 +1686,10 @@ bool FS::runStreamWaveletPMax()
         fopt.weightedEpsEnergy = 1e-8f;
         fopt.weightedEpsWeight = 1e-8f;
 
-        fopt.erosionEdgeThresh = 0.06f;
-        fopt.erosionEdgeDilate = 20;
-        fopt.erosionRadius = 1;
-        fopt.erosionIters = 1;
+        // fopt.erosionEdgeThresh = 0.06f;
+        // fopt.erosionEdgeDilate = 20;
+        // fopt.erosionRadius = 1;
+        // fopt.erosionIters = 1;
 
         fopt.enableDepthBiasedErosion = o.enableDepthBiasedErosion; // stage 3
         fopt.enableEdgeAdaptiveSigma = o.enableEdgeAdaptiveSigma;   // stage 4
@@ -1729,6 +1729,7 @@ bool FS::runStreamWaveletPMax()
             fuse.validAreaAlign = currImage.validArea;
             fuse.origSize = currImage.origSize;
             fuse.alignSize = currImage.gray.size();
+            /*
             if (o.method == "StmPMaxWtDbe")
                 globals.push_back(currGlobal);   // Depth-Biased Erosion
             // Should be: T 2x3, C 5x1, WB 6x1.
@@ -1737,7 +1738,7 @@ bool FS::runStreamWaveletPMax()
                      << "C" << currGlobal.contrast.rows  << "x" << currGlobal.contrast.cols
                      << "WB" << currGlobal.whitebalance.rows << "x" << currGlobal.whitebalance.cols
                      << "valid" << currGlobal.validArea.x << currGlobal.validArea.y
-                     << currGlobal.validArea.width << currGlobal.validArea.height;
+                     << currGlobal.validArea.width << currGlobal.validArea.height; */
         }
         else {
             if (!align.alignSlice(slice, prevImage, currImage, prevGlobal, currGlobal,
@@ -1746,9 +1747,12 @@ bool FS::runStreamWaveletPMax()
                 qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
                 return false;
             }
-            if (o.method == "StmPMaxWtDbe")
-                globals.push_back(currGlobal);   // Depth-Biased Erosion
+            /* if (o.method == "StmPMaxWtDbe")
+                globals.push_back(currGlobal);   // Depth-Biased Erosion */
         }
+        // debug/test write aligned slices
+        cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
+        cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
         if (G::abortFocusStack) return false;
         incrementProgress();
 
@@ -1790,9 +1794,9 @@ bool FS::runStreamWaveletPMax()
         << "\n weightedIncludeLowpass   =" << fopt.weightedIncludeLowpass
         << "\n weightedEpsEnergy        =" << fopt.weightedEpsEnergy
         << "\n weightedEpsWeight        =" << fopt.weightedEpsWeight
-        << "\n erosionEdgeThresh        =" << fopt.erosionEdgeThresh
-        << "\n erosionRadius            =" << fopt.erosionRadius
-        << "\n erosionIters             =" << fopt.erosionIters
+        // << "\n erosionEdgeThresh        =" << fopt.erosionEdgeThresh
+        // << "\n erosionRadius            =" << fopt.erosionRadius
+        // << "\n erosionIters             =" << fopt.erosionIters
         << "\n enableDepthBiasedErosion =" << fopt.enableDepthBiasedErosion
         << "\n enableEdgeAdaptiveSigma  =" << fopt.enableEdgeAdaptiveSigma
         << "\n"

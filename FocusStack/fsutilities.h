@@ -79,6 +79,8 @@ cv::Mat canonicalizeToSize(const cv::Mat& src,
                            int interp,
                            const QString& context);
 
+cv::Mat alignToOrigSize(const cv::Mat& img, cv::Size origSize);
+
 bool writePngWithTitle(const QString& pngPath,
                        const cv::Mat& img,
                        bool writeMeta = false);
