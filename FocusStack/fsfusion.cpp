@@ -589,9 +589,14 @@ static void buildDMapWeightsFromTopK(const FSFusion::TopKMaps& topk,
     const int bandDilatePx = std::max(0, p.weightBlurPx);
     buildBoundaryAndBand(topk.idx16[0], bandDilatePx, weightsOut.boundary8, weightsOut.band8);
 
-    // 3) smooth in band + renorm
-    if (cv::countNonZero(weightsOut.band8) > 0 && p.weightBlurSigma > 0.0f)
+    // 3) OLD Gaussian smoothing path is now optional and OFF by default.
+    // Keep it callable for A/B, but do NOT run it unless explicitly enabled.
+    if (p.enableGaussianBandSmoothing &&
+        cv::countNonZero(weightsOut.band8) > 0 &&
+        p.weightBlurSigma > 0.0f)
+    {
         smoothWeightsInBandAndRenormalize(weightsOut, weightsOut.band8, p);
+    }
 }
 
 // ==============================
@@ -643,6 +648,172 @@ static cv::Mat focusMetric32(const cv::Mat& gray8, float preBlurSigma)
     // Light blur to reduce “hot pixel” domination
     cv::GaussianBlur(absLap32, absLap32, cv::Size(0,0), 0.8, 0.8, cv::BORDER_REFLECT);
     return absLap32; // CV_32F, 0..small
+}
+
+static cv::Mat computeConfidence01(const FSFusion::TopKMaps& topk, float eps)
+{
+    CV_Assert(topk.K >= 2);
+    cv::Mat s0 = topk.score32[0];
+    cv::Mat s1 = topk.score32[1];
+
+    // conf = (s0 - s1) / (abs(s0) + eps)  -> clamp 0..1
+    cv::Mat denom;
+    cv::absdiff(s0, cv::Scalar::all(0), denom);
+    denom = denom + eps;
+
+    cv::Mat conf = (s0 - s1) / denom;
+    cv::max(conf, 0.0f, conf);
+    cv::min(conf, 1.0f, conf);
+    return conf; // CV_32F 0..1
+}
+
+static cv::Mat computeConfidence01_Top2(const FSFusion::TopKMaps& topk, float eps)
+{
+    CV_Assert(topk.valid());
+    if (topk.K < 2)
+        return cv::Mat(topk.sz, CV_32F, cv::Scalar(1.0f)); // fully confident fallback
+
+    const cv::Mat& s0 = topk.score32[0];
+    const cv::Mat& s1 = topk.score32[1];
+    CV_Assert(s0.type() == CV_32F && s1.type() == CV_32F);
+    CV_Assert(s0.size() == topk.sz && s1.size() == topk.sz);
+
+    cv::Mat denom;
+    cv::absdiff(s0, cv::Scalar::all(0), denom);
+    denom = denom + std::max(1e-12f, eps);
+
+    cv::Mat conf = (s0 - s1) / denom;   // larger gap => higher confidence
+    cv::max(conf, 0.0f, conf);
+    cv::min(conf, 1.0f, conf);
+    return conf; // CV_32F 0..1
+}
+
+static void smoothWeightsEdgeAwareInBand(
+    std::vector<cv::Mat>& wK,         // K weight maps, CV_32F
+    const cv::Mat& band8,             // CV_8U 0/255 (boundary band)
+    const cv::Mat& guide01,           // CV_32F 0..1 guide image (orig size)
+    const cv::Mat& conf01,            // CV_32F 0..1 confidence (orig size)
+    const FSFusion::DMapParams& p)
+{
+    CV_Assert(!band8.empty() && band8.type() == CV_8U);
+    CV_Assert(guide01.type() == CV_32F);
+    CV_Assert(conf01.type() == CV_32F);
+    CV_Assert(guide01.size() == band8.size());
+    CV_Assert(conf01.size() == band8.size());
+
+    const int K = (int)wK.size();
+    CV_Assert(K >= 1);
+    for (int k = 0; k < K; ++k)
+    {
+        CV_Assert(wK[k].type() == CV_32F);
+        CV_Assert(wK[k].size() == band8.size());
+    }
+
+    // Build mask = band && (conf < confLow) if confidence gating is enabled
+    cv::Mat workMask8;
+    if (p.enableConfidenceGating)
+    {
+        cv::Mat low = (conf01 < p.confLow);
+        low.convertTo(low, CV_8U, 255.0);
+        cv::bitwise_and(low, band8, workMask8);
+    }
+    else
+    {
+        workMask8 = band8.clone();
+    }
+
+    if (cv::countNonZero(workMask8) == 0)
+        return;
+
+    const int   R    = std::max(1, p.eaRadius);
+    const float sigS = std::max(1e-6f, p.eaSigmaSpatial);
+    const float sigR = std::max(1e-6f, p.eaSigmaRange01);
+
+    const float inv2SigS2 = 1.0f / (2.0f * sigS * sigS);
+    const float inv2SigR2 = 1.0f / (2.0f * sigR * sigR);
+
+    // Precompute spatial weights
+    const int W = 2 * R + 1;
+    std::vector<float> wSpatial(W * W);
+    for (int dy = -R; dy <= R; ++dy)
+        for (int dx = -R; dx <= R; ++dx)
+            wSpatial[(dy + R) * W + (dx + R)] =
+                std::exp(-(dx*dx + dy*dy) * inv2SigS2);
+
+    const int iters = std::max(1, p.eaIters);
+    for (int it = 0; it < iters; ++it)
+    {
+        std::vector<cv::Mat> nextK(K);
+        for (int k = 0; k < K; ++k)
+            nextK[k] = wK[k].clone();
+
+        for (int y = 0; y < band8.rows; ++y)
+        {
+            const uint8_t* mRow = workMask8.ptr<uint8_t>(y);
+            for (int x = 0; x < band8.cols; ++x)
+            {
+                if (!mRow[x]) continue;
+
+                const float g0 = guide01.at<float>(y, x);
+
+                float acc[16] = {0};
+                CV_Assert(K <= 16);
+
+                float norm = 0.0f;
+
+                for (int dy = -R; dy <= R; ++dy)
+                {
+                    int yy = y + dy;
+                    if ((unsigned)yy >= (unsigned)band8.rows) continue;
+
+                    for (int dx = -R; dx <= R; ++dx)
+                    {
+                        int xx = x + dx;
+                        if ((unsigned)xx >= (unsigned)band8.cols) continue;
+
+                        const float g1 = guide01.at<float>(yy, xx);
+                        const float dg = g1 - g0;
+                        const float wRange = std::exp(-(dg*dg) * inv2SigR2);
+
+                        const float ws = wSpatial[(dy + R) * W + (dx + R)] * wRange;
+                        norm += ws;
+
+                        for (int k = 0; k < K; ++k)
+                            acc[k] += ws * wK[k].at<float>(yy, xx);
+                    }
+                }
+
+                if (norm <= 1e-12f)
+                    continue;
+
+                // write smoothed weights
+                float sumW = 0.0f;
+                for (int k = 0; k < K; ++k)
+                {
+                    float v = acc[k] / norm;
+                    v = std::max(0.0f, v);
+                    nextK[k].at<float>(y, x) = v;
+                    sumW += v;
+                }
+
+                // renormalize at pixel
+                if (sumW > 1e-12f)
+                {
+                    const float inv = 1.0f / sumW;
+                    for (int k = 0; k < K; ++k)
+                        nextK[k].at<float>(y, x) *= inv;
+                }
+                else
+                {
+                    nextK[0].at<float>(y, x) = 1.0f;
+                    for (int k = 1; k < K; ++k)
+                        nextK[k].at<float>(y, x) = 0.0f;
+                }
+            }
+        }
+
+        wK.swap(nextK);
+    }
 }
 
 // Insert (score, idx) into topK at pixel (x,y) using small insertion sort.
@@ -791,10 +962,31 @@ struct PyrAccum
     }
 };
 
+static void buildIndexPyrNearest(const cv::Mat& idx16Level0, int levels, std::vector<cv::Mat>& idxPyr)
+{
+    CV_Assert(idx16Level0.type() == CV_16U);
+    idxPyr.clear();
+    idxPyr.reserve(levels);
+    idxPyr.push_back(idx16Level0);
+
+    for (int i = 1; i < levels; ++i)
+    {
+        cv::Size prev = idxPyr.back().size();
+        cv::Size next((prev.width + 1) / 2, (prev.height + 1) / 2);
+
+        cv::Mat down;
+        cv::resize(idxPyr.back(), down, next, 0, 0, cv::INTER_NEAREST);
+        idxPyr.push_back(down);
+    }
+}
+
 // Accumulate one slice into pyramids: num += lap(color)*gw, den += gw
 static void accumulateSlicePyr(PyrAccum& A,
                                const cv::Mat& color32FC3,
                                const cv::Mat& weight32F,
+                               const std::vector<cv::Mat>& idxPyr16,
+                               int sliceIdx,
+                               const FSFusion::DMapParams& p,
                                int levels,
                                float weightBlurSigma)
 {
@@ -806,19 +998,41 @@ static void accumulateSlicePyr(PyrAccum& A,
     if (weightBlurSigma > 0.0f)
         cv::GaussianBlur(w, w, cv::Size(0,0), weightBlurSigma, weightBlurSigma, cv::BORDER_REFLECT);
 
-    // Build pyramids
+    // Color Laplacian pyramid (unchanged)
     std::vector<cv::Mat> lpColor;
     buildLaplacianPyr(color32FC3, levels, lpColor);
 
+    // Weight Gaussian pyramid (DEFAULT behavior)
     std::vector<cv::Mat> gpW;
     buildGaussianPyr(w, levels, gpW);
+
+    // ---- NEW: optionally replace coarse gpW with HARD winner mask to stop lowpass bleeding
+    if (p.enableHardWeightsOnLowpass)
+    {
+        CV_Assert((int)idxPyr16.size() == levels);
+
+        int start = p.hardFromLevel;
+        if (start < 0) start = levels - 1;            // only residual by default
+        start = std::max(0, std::min(levels - 1, start));
+
+        const uint16_t s = (uint16_t)std::max(0, sliceIdx);
+
+        for (int i = start; i < levels; ++i)
+        {
+            CV_Assert(idxPyr16[i].type() == CV_16U);
+            CV_Assert(idxPyr16[i].size() == gpW[i].size());
+
+            cv::Mat hard = (idxPyr16[i] == s);   // CV_8U 0/255
+            hard.convertTo(gpW[i], CV_32F, 1.0 / 255.0); // 0 or 1
+        }
+    }
 
     // Accumulate
     for (int i = 0; i < levels; ++i)
     {
         cv::Mat w3;
         cv::Mat ch[] = { gpW[i], gpW[i], gpW[i] };
-        cv::merge(ch, 3, w3); // CV_32FC3
+        cv::merge(ch, 3, w3);
 
         A.num3[i] += lpColor[i].mul(w3);
         A.den1[i] += gpW[i];
@@ -2422,6 +2636,8 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
     TopKMaps topkOrig;
     topkOrig.create(origSz, dmapTopKPad.K);
 
+    // cv::Mat topKConf = computeConfidence01(topkOrig, dmapParams.scoreEps);
+
     for (int k = 0; k < dmapTopKPad.K; ++k)
     {
         cv::Mat idxAlign = dmapTopKPad.idx16[k](roiPadToAlign);
@@ -2433,6 +2649,22 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
 
     // Depth map = top-1 index in ORIG space
     depthIndex16 = topkOrig.idx16[0].clone(); // CV_16U
+
+    // ----------------------------
+    // Build a guide image in ORIG space for edge-aware weight smoothing.
+    // Use slice 0 gray (already aligned + photometrically normalized in FSLoader).
+    // ----------------------------
+    cv::Mat guideGray8Orig, guideColorOrig;
+    if (!FSLoader::loadAlignedSliceOrig(0, inputPaths, globals,
+                                        roiPadToAlign, validAreaAlign,
+                                        guideGray8Orig, guideColorOrig))
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "failed to load guide slice 0";
+        return false;
+    }
+
+    cv::Mat guide01;
+    guideGray8Orig.convertTo(guide01, CV_32F, 1.0 / 255.0);
 
     // ----------------------------
     // Build weights from TopK (orig size)
@@ -2455,11 +2687,29 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
     }
 
     // ----------------------------
+    // NEW: Edge-aware smoothing in boundary band, gated by confidence
+    // ----------------------------
+    if (dmapParams.enableEdgeAwareBandSmoothing && cv::countNonZero(W.band8) > 0)
+    {
+        cv::Mat conf01 = computeConfidence01_Top2(topkOrig, dmapParams.confEps);
+
+        // Safety: sizes must match
+        CV_Assert(conf01.size() == W.band8.size());
+        CV_Assert(guide01.size() == W.band8.size());
+
+        smoothWeightsEdgeAwareInBand(W.w32, W.band8, guide01, conf01, dmapParams);
+    }
+
+    // ----------------------------
     // Choose pyramid levels
     // ----------------------------
     int levels = dmapParams.pyrLevels;
     if (levels <= 0) levels = levelsForSize(origSz);
     levels = std::max(3, std::min(10, levels));
+
+    // Build winner index pyramid (orig space) for hard lowpass weighting
+    std::vector<cv::Mat> idxPyr;
+    buildIndexPyrNearest(topkOrig.idx16[0], levels, idxPyr);
 
     PyrAccum A;
     A.reset(origSz, levels);
@@ -2530,7 +2780,8 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
         }
 
         // accumulateSlicePyr(A, color32, w32, levels, dmapParams.weightBlurSigma);
-        accumulateSlicePyr(A, color32, w32, levels, /*weightBlurSigma=*/0.0f);
+        accumulateSlicePyr(A, color32, w32, idxPyr, s, dmapParams, levels,
+                           /*weightBlurSigma=*/0.0f);
 
         if (progressCallback) progressCallback();
     }

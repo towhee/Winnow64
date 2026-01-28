@@ -148,7 +148,35 @@ public:
 
         // Soft weights from top-K scores (Pass-2)
         float softTemp = 0.15f;         // smaller = harder assignment
-        float wMin     = 0.02f;         // per-slot weight floor (avoid zeros)
+        float wMin     = 0.00f;         // per-slot weight floor (avoid zeros)
+
+        // --- Pyramid halo controls ---
+        bool enableHardWeightsOnLowpass = false; // main switch
+        int  hardFromLevel = -1;            // -1 = only last (residual) level
+                                            //  0 = hard everywhere (diagnostic)
+                                            // e.g. levels-2 = hard on last 2 levels
+
+        // --- Halo control modules ---
+        bool  enableGaussianBandSmoothing = false; // OLD path (turn OFF)
+        bool  enableEdgeAwareBandSmoothing = true; // NEW path (turn ON)
+        bool  enableConfidenceGating = true;      // Module A
+        bool  enableEdgeAwareWeights = true;      // Module B (replaces Gaussian blur in band)
+        bool  enableLevelDependentWeights = false;// Module D (optional later)
+
+        // Confidence (K=2 assumed for now)
+        float confEps     = 1e-6f;
+        float confLow     = 0.10f;  // below this = uncertain
+        float confHigh    = 0.30f;  // above this = confident
+
+        // Weight floor strategy
+        float wMinOutsideBand = 0.0f;   // recommended 0
+        float wMinInBand      = 0.0f;   // recommended 0 (use gating instead)
+
+        // Edge-aware smoothing (cross-bilateral / guided-like)
+        int   eaIters     = 2;      // 1..4
+        int   eaRadius    = 2;      // 1..3
+        float eaSigmaSpatial = 1.2f;
+        float eaSigmaRange01 = 0.06f; // guide range in 0..1 intensity
 
         // Weight smoothing (halo killer)
         int   weightBlurPx    = 3;      // boundary band dilation in pixels (orig)

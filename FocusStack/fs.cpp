@@ -1734,7 +1734,7 @@ bool FS::runStreamDMap()
         if (G::FSLog) G::log("");  // skip line
 
         // Align slice
-        status(s + "Aligning...");
+        status("Aligning and depth mapping" + s);
         currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
         currGlobal = FSAlign::makeIdentity(currImage.validArea);
 
@@ -1775,7 +1775,7 @@ bool FS::runStreamDMap()
         if (G::abortFocusStack) return false;
 
         // Pass-1 DMap update (Top-K focus candidates)
-        status(s + "Building DMap...");
+        // status(s + "Building DMap...");
         if (!fuse.streamDMapSlice(slice,
                                   alignedGraySlice,
                                   alignedColorSlice,
