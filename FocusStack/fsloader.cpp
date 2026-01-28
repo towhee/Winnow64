@@ -1,4 +1,7 @@
-#include "FSLoader.h"
+#include "fsloader.h"
+#include "fsphotometric.h"
+#include "fsutilities.h"
+
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <cmath>
@@ -126,6 +129,24 @@ cv::Rect padToWaveletSize(const cv::Mat &src,
                        cv::BORDER_REFLECT);
 
     return cv::Rect(left, top, origW, origH);
+}
+
+// Build 1xW float row of normalized x and x^2 in [-1..1]
+static void buildXRow(int w, cv::Mat& xRow32, cv::Mat& x2Row32)
+{
+    xRow32.create(1, w, CV_32F);
+    x2Row32.create(1, w, CV_32F);
+
+    const float denom = (w > 1) ? float(w - 1) : 1.0f;
+    float* x  = xRow32.ptr<float>(0);
+    float* x2 = x2Row32.ptr<float>(0);
+
+    for (int ix = 0; ix < w; ++ix)
+    {
+        float xn = (2.0f * float(ix) / denom) - 1.0f; // [-1..1]
+        x[ix]  = xn;
+        x2[ix] = xn * xn;
+    }
 }
 
 // ------------------------------------------------------------------------------------
@@ -267,6 +288,254 @@ Image loadFromMat(const cv::Mat &source)
     out.gray = paddedGray;
 
     return out;
+}
+
+// -----------------------------------------------------------------------------
+// Apply alignment transform stored in FSAlign::Result
+//
+// FSAlign::Result::transform is 2x3 CV_32F mapping source -> reference/global.
+// We warp the padded gray+color into "align space" using warpAffine.
+// -----------------------------------------------------------------------------
+static bool warpAlignedToAlignSpace(const FSLoader::Image& in,
+                                    const Result& ar,
+                                    cv::Mat& grayAlign8,
+                                    cv::Mat& colorAlign)
+{
+    if (in.gray.empty() || in.color.empty())
+        return false;
+
+    // Validate transform
+    if (ar.transform.empty() ||
+        ar.transform.rows != 2 || ar.transform.cols != 3 ||
+        ar.transform.type() != CV_32F)
+    {
+        qWarning().noquote() << "WARNING: warpAlignedToAlignSpace invalid affine:"
+                             << "empty=" << ar.transform.empty()
+                             << " size=" << ar.transform.cols << "x" << ar.transform.rows
+                             << " type=" << ar.transform.type();
+        return false;
+    }
+
+    // Normalize color to 3 channels (preserve depth)
+    cv::Mat colorP = in.color;
+    if (colorP.channels() == 1)
+        cv::cvtColor(colorP, colorP, cv::COLOR_GRAY2BGR);
+    else if (colorP.channels() == 4)
+        cv::cvtColor(colorP, colorP, cv::COLOR_BGRA2BGR);
+
+    // Allocate outputs: same size as padded inputs
+    grayAlign8.create(in.gray.size(), CV_8U);
+    colorAlign.create(colorP.size(), colorP.type());
+
+    // Warp padded -> padded (align space)
+    // Note: output size MUST match your align-space expectation;
+    // we keep it identical to padded input size (same as your PMax path).
+    cv::warpAffine(in.gray, grayAlign8,
+                   ar.transform, in.gray.size(),
+                   cv::INTER_LINEAR,
+                   cv::BORDER_REFLECT);
+
+    cv::warpAffine(colorP, colorAlign,
+                   ar.transform, colorP.size(),
+                   cv::INTER_LINEAR,
+                   cv::BORDER_REFLECT);
+
+    return true;
+}
+
+static inline bool rectInside(const cv::Rect& r, const cv::Size& s)
+{
+    return r.x >= 0 && r.y >= 0 &&
+           r.width > 0 && r.height > 0 &&
+           r.x + r.width  <= s.width &&
+           r.y + r.height <= s.height;
+}
+
+bool FSLoader::loadAlignedSliceOrig(int sliceIdx,
+                                    const QStringList& inputPaths,
+                                    const std::vector<Result>& globals,
+                                    cv::Rect roiPadToAlign,
+                                    cv::Rect validAreaAlign,
+                                    cv::Mat& gray8Orig,
+                                    cv::Mat& colorOrig)
+{
+    QString srcFun = "FSLoader::loadAlignedSliceOrig";
+    QString s = QString::number(sliceIdx);
+    QString msg = "Slice " + s;
+    if (G::FSLog) G::log(srcFun, msg);
+
+    gray8Orig.release();
+    colorOrig.release();
+
+    if (sliceIdx < 0 || sliceIdx >= inputPaths.size())
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "sliceIdx out of range:" << sliceIdx;
+        return false;
+    }
+    if (sliceIdx < 0 || sliceIdx >= (int)globals.size())
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "globals size mismatch for sliceIdx:" << sliceIdx;
+        return false;
+    }
+
+    // Load padded image (wavelet friendly) + padded gray (8-bit)
+    const std::string filename = inputPaths[sliceIdx].toStdString();
+
+    FSLoader::Image im;
+    try
+    {
+        im = FSLoader::load(filename);
+    }
+    catch (const std::exception& e)
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "load failed:" << inputPaths[sliceIdx]
+                             << "err:" << e.what();
+        return false;
+    }
+
+    // Warp padded -> padded (align space)
+    cv::Mat grayAlign8, colorAlign;
+    if (!warpAlignedToAlignSpace(im, globals[sliceIdx], grayAlign8, colorAlign))
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "warpAlignedToAlignSpace failed slice" << sliceIdx;
+        return false;
+    }
+
+    if (grayAlign8.size() != colorAlign.size())
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "grayAlign8.size != colorAlign.size";
+        return false;
+    }
+
+    // Crop pad -> align
+    if (!rectInside(roiPadToAlign, grayAlign8.size()))
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "roiPadToAlign out of bounds:"
+                             << roiPadToAlign.x << roiPadToAlign.y
+                             << roiPadToAlign.width << roiPadToAlign.height
+                             << " padSize=" << grayAlign8.cols << "x" << grayAlign8.rows;
+        return false;
+    }
+
+    cv::Mat grayAlignView  = grayAlign8(roiPadToAlign);
+    cv::Mat colorAlignView = colorAlign(roiPadToAlign);
+
+    // Crop align -> orig
+    if (!rectInside(validAreaAlign, grayAlignView.size()))
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "validAreaAlign out of bounds:"
+                             << validAreaAlign.x << validAreaAlign.y
+                             << validAreaAlign.width << validAreaAlign.height
+                             << " alignSize=" << grayAlignView.cols << "x" << grayAlignView.rows;
+        return false;
+    }
+
+    gray8Orig = grayAlignView(validAreaAlign).clone();
+    colorOrig = colorAlignView(validAreaAlign).clone();
+
+    // Normalize guarantees
+    if (gray8Orig.empty() || gray8Orig.type() != CV_8U)
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "gray8Orig not CV_8U or empty; type=" << gray8Orig.type();
+        return false;
+    }
+
+    if (colorOrig.empty())
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "colorOrig empty";
+        return false;
+    }
+
+    if (colorOrig.channels() == 1)
+        cv::cvtColor(colorOrig, colorOrig, cv::COLOR_GRAY2BGR);
+    else if (colorOrig.channels() == 4)
+        cv::cvtColor(colorOrig, colorOrig, cv::COLOR_BGRA2BGR);
+
+    if (gray8Orig.size() != colorOrig.size())
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "final size mismatch:"
+                             << "gray=" << gray8Orig.cols << "x" << gray8Orig.rows
+                             << "color=" << colorOrig.cols << "x" << colorOrig.rows;
+        return false;
+    }
+
+    // Photometric normalization in orig space (implemented outside FSLoader to avoid coupling)
+    {
+        const cv::Mat& C  = globals[sliceIdx].contrast;      // 5x1 CV_32F
+        const cv::Mat& WB = globals[sliceIdx].whitebalance;  // 6x1 CV_32F
+
+        // Make inputs usable regardless of source format
+        if (colorOrig.empty() || gray8Orig.empty())
+            return false;
+
+        // Ensure gray is single channel; if not, make a gray
+        if (gray8Orig.channels() != 1)
+        {
+            cv::Mat tmp;
+            if (gray8Orig.channels() == 3)
+                cv::cvtColor(gray8Orig, tmp, cv::COLOR_BGR2GRAY);
+            else if (gray8Orig.channels() == 4)
+                cv::cvtColor(gray8Orig, tmp, cv::COLOR_BGRA2GRAY);
+            else
+                return false;
+            gray8Orig = tmp;
+        }
+
+        // If gray isn’t 8U/16U, convert to 8U (safe fallback)
+        if (!(gray8Orig.depth() == CV_8U || gray8Orig.depth() == CV_16U))
+        {
+            cv::Mat tmp;
+            gray8Orig.convertTo(tmp, CV_8U);
+            gray8Orig = tmp;
+        }
+
+        // Ensure color is BGR 3ch, keep depth
+        if (colorOrig.channels() == 1)
+            cv::cvtColor(colorOrig, colorOrig, cv::COLOR_GRAY2BGR);
+        else if (colorOrig.channels() == 4)
+            cv::cvtColor(colorOrig, colorOrig, cv::COLOR_BGRA2BGR);
+
+        if (colorOrig.channels() != 3 || colorOrig.size() != gray8Orig.size())
+            return false;
+
+        // Debug (optional): pre-stats
+        if (sliceIdx == 1)
+        {
+            FSUtilities::dumpMatStats("C", C);
+            FSUtilities::dumpMatFirstN("C", C);
+            FSUtilities::dumpMatStats("WB", WB);
+            FSUtilities::dumpMatFirstN("WB", WB);
+
+            std::vector<cv::Mat> ch;
+            cv::split(colorOrig, ch);
+            double mn=0,mx=0;
+            cv::minMaxLoc(ch[0], &mn, &mx);
+            qDebug() << "pre norm B min/max" << mn << mx;
+        }
+
+        // Apply photometric; if coefficients are invalid, FSPhotometric will no-op.
+        FSPhotometric::applyPhotometricNormalizationOrig(
+            gray8Orig,
+            colorOrig,
+            C,
+            WB,
+            /*wbOffsetsAre8bitUnits=*/true,
+            /*gainLo=*/0.25f,
+            /*gainHi=*/4.0f
+            );
+
+        // Debug (optional): post-stats
+        if (sliceIdx == 1)
+        {
+            std::vector<cv::Mat> ch;
+            cv::split(colorOrig, ch);
+            double mn=0,mx=0;
+            cv::minMaxLoc(ch[0], &mn, &mx);
+            qDebug() << "post norm B min/max" << mn << mx;
+        }
+    }
+
+    return true;
 }
 
 } // namespace FSLoader

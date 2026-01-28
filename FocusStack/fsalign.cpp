@@ -118,7 +118,28 @@ inline int round_and_dither(float value, float &delta)
     return std::min(255, std::max(0, intval));
 }
 
-// Apply contrast + whitebalance like Task_Align::apply_contrast_whitebalance.
+static inline void ensureIdentityContrast(cv::Mat& c)
+{
+    if (c.rows != 5 || c.cols != 1 || c.type() != CV_32F)
+    {
+        c.create(5, 1, CV_32F);
+        c = 0.0f;
+        c.at<float>(0,0) = 1.0f;
+    }
+}
+
+static inline void ensureIdentityWB(cv::Mat& wb)
+{
+    if (wb.rows != 6 || wb.cols != 1 || wb.type() != CV_32F)
+    {
+        wb.create(6, 1, CV_32F);
+        wb = 0.0f;
+        wb.at<float>(1,0) = 1.0f;
+        wb.at<float>(3,0) = 1.0f;
+        wb.at<float>(5,0) = 1.0f;
+    }
+}
+
 void apply_contrast_whitebalance_internal(cv::Mat &img,
                                           const cv::Mat &contrast,
                                           const cv::Mat &whitebalance)
@@ -251,32 +272,100 @@ void match_transform(const cv::Mat &refGray,
     transform.at<float>(1, 2) /= scale_ratio;
 }
 
-// Contrast fitting as in Task_Align::match_contrast
-void match_contrast(const cv::Mat &refGray,
-                    const cv::Mat &srcGray,
-                    const cv::Rect &roi,
-                    cv::Mat &contrast,
-                    const cv::Mat &transform)
+static void toGray8(const cv::Mat& in, cv::Mat& outGray8)
 {
-    cv::Mat ref, src;
+    outGray8.release();
+    if (in.empty()) return;
 
-    int xsamples = 64;
-    int ysamples = 64;
-    int total = xsamples * ysamples;
+    cv::Mat gray;
 
+    // Ensure 1ch grayscale
+    if (in.channels() == 1)
+    {
+        gray = in;
+    }
+    else if (in.channels() == 3)
+    {
+        cv::cvtColor(in, gray, cv::COLOR_BGR2GRAY);
+    }
+    else if (in.channels() == 4)
+    {
+        cv::cvtColor(in, gray, cv::COLOR_BGRA2GRAY);
+    }
+    else
+    {
+        // Unusual channel count; best effort: reshape to 1 channel and convert
+        gray = in.reshape(1);
+    }
+
+    // Convert depth -> 8U with sane scaling
+    if (gray.depth() == CV_8U)
+    {
+        outGray8 = gray;
+        return;
+    }
+    else if (gray.depth() == CV_16U)
+    {
+        // Assume full-range 16U (0..65535) -> 0..255
+        gray.convertTo(outGray8, CV_8U, 255.0 / 65535.0);
+        return;
+    }
+    else if (gray.depth() == CV_32F)
+    {
+        // Could be 0..1, 0..255, or 0..65535. Infer from max.
+        double mn=0, mx=0;
+        cv::minMaxLoc(gray, &mn, &mx);
+
+        double scale = 1.0;
+        if (mx <= 1.5)          scale = 255.0;           // 0..1
+        else if (mx <= 300.0)   scale = 1.0;             // ~0..255
+        else                    scale = 255.0 / 65535.0; // ~0..65535
+
+        gray.convertTo(outGray8, CV_8U, scale);
+        return;
+    }
+
+    // Fallback: best effort
+    gray.convertTo(outGray8, CV_8U);
+}
+
+static void match_contrast(const cv::Mat &refGray,
+                           const cv::Mat &srcGray,
+                           const cv::Rect &roi,
+                           cv::Mat &contrast,
+                           const cv::Mat &transform)
+{
+    // Convert both to 8-bit grayscale for fitting
+    cv::Mat ref8, src8;
+    toGray8(refGray, ref8);
+    toGray8(srcGray, src8);
+
+    if (ref8.empty() || src8.empty() || ref8.type() != CV_8UC1 || src8.type() != CV_8UC1)
+        throw std::runtime_error("match_contrast: failed to convert inputs to CV_8UC1");
+
+    // Clamp ROI to bounds (avoid crashes on odd validArea)
+    cv::Rect roiClamped = roi & cv::Rect(0, 0, ref8.cols, ref8.rows) & cv::Rect(0, 0, src8.cols, src8.rows);
+    if (roiClamped.width <= 1 || roiClamped.height <= 1)
+        throw std::runtime_error("match_contrast: ROI empty");
+
+    // Warp src into ref space using current transform
     cv::Mat tmp;
-    // Apply current transform to src
-    int invflag = 0;
-    cv::warpAffine(srcGray, tmp, transform,
-                   cv::Size(srcGray.cols, srcGray.rows),
-                   cv::INTER_CUBIC | invflag,
+    cv::warpAffine(src8, tmp, transform,
+                   cv::Size(src8.cols, src8.rows),
+                   cv::INTER_CUBIC,
                    cv::BORDER_REFLECT);
 
-    cv::resize(refGray(roi), ref,
-               cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
-    cv::resize(tmp(roi), src,
-               cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
+    // Downsample ROI for stable solve
+    const int xsamples = 64;
+    const int ysamples = 64;
+    const int total = xsamples * ysamples;
 
+    cv::Mat refS, srcS;
+    cv::resize(ref8(roiClamped), refS, cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
+    cv::resize(tmp(roiClamped),  srcS, cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
+
+    // Solve: c(x,y) = C0 + Cx*xd + Cx2*xd^2 + Cy*yd + Cy2*yd^2
+    // where xd,yd are normalized like your existing code.
     cv::Mat contrastVals(total, 1, CV_32F);
     cv::Mat positions(total, 5, CV_32F);
 
@@ -284,21 +373,26 @@ void match_contrast(const cv::Mat &refGray,
     {
         for (int x = 0; x < xsamples; ++x)
         {
-            int idx = y * xsamples + x;
+            const int idx = y * xsamples + x;
 
-            float yd = (y - ref.rows / 2.0f) / static_cast<float>(ref.rows);
-            float xd = (x - ref.cols / 2.0f) / static_cast<float>(ref.cols);
+            const float yd = (y - refS.rows / 2.0f) / float(refS.rows);
+            const float xd = (x - refS.cols / 2.0f) / float(refS.cols);
 
-            float refpix = static_cast<float>(ref.at<uint8_t>(y, x));
-            float srcpix = static_cast<float>(src.at<uint8_t>(y, x));
+            const float refpix = float(refS.at<uint8_t>(y, x));
+            const float srcpix = float(srcS.at<uint8_t>(y, x));
 
             float c = 1.0f;
+            // Keep your original “avoid dividing dark noise” logic,
+            // but tighten slightly to reduce pathological values.
             if (refpix > 4.0f && srcpix > 4.0f)
-            {
                 c = refpix / srcpix;
-            }
+
+            // If srcpix is tiny but refpix isn’t, c can explode.
+            // Clamp the sample contribution (still allow solve to vary spatially).
+            c = std::min(4.0f, std::max(0.25f, c));
 
             contrastVals.at<float>(idx, 0) = c;
+
             positions.at<float>(idx, 0) = 1.0f;
             positions.at<float>(idx, 1) = xd;
             positions.at<float>(idx, 2) = sq(xd);
@@ -309,83 +403,241 @@ void match_contrast(const cv::Mat &refGray,
 
     cv::solve(positions, contrastVals, contrast, cv::DECOMP_SVD);
 
-    if (!cv::checkRange(contrast, true, nullptr, -2.0f, 2.0f))
-    {
+    // Sanity checks / guardrails
+    // (Your earlier checkRange -2..2 is very strict for the higher-order terms
+    // but can be OK. Keep it, and also check finiteness.)
+    if (!cv::checkRange(contrast, true, nullptr, -2.0, 2.0))
         throw std::runtime_error("Contrast match result out of range, try disabling contrast.");
+
+    for (int i = 0; i < contrast.rows; ++i)
+    {
+        float v = contrast.at<float>(i,0);
+        if (!std::isfinite(v))
+            throw std::runtime_error("Contrast match produced NaN/Inf.");
     }
+
+    // Optional: prevent blackout if C0 goes near-zero.
+    // (FSPhotometric will clamp gain anyway, but keep coefficients sane upstream.)
+    const float minC0 = 0.05f;
+    if (std::abs(contrast.at<float>(0,0)) < minC0)
+        throw std::runtime_error("Contrast match produced near-zero C0 (unstable).");
 }
 
-// White balance matching as in Task_Align::match_whitebalance
-void match_whitebalance(const cv::Mat &refColor,
-                        const cv::Mat &srcColor,
-                        const cv::Rect &roi,
-                        const cv::Mat &contrast,
-                        cv::Mat &whitebalance,
-                        const cv::Mat &transform)
+// Contrast fitting as in Task_Align::match_contrast
+// void match_contrast(const cv::Mat &refGray,
+//                     const cv::Mat &srcGray,
+//                     const cv::Rect &roi,
+//                     cv::Mat &contrast,
+//                     const cv::Mat &transform)
+// {
+//     cv::Mat ref, src;
+
+//     int xsamples = 64;
+//     int ysamples = 64;
+//     int total = xsamples * ysamples;
+
+//     cv::Mat tmp;
+//     // Apply current transform to src
+//     int invflag = 0;
+//     cv::warpAffine(srcGray, tmp, transform,
+//                    cv::Size(srcGray.cols, srcGray.rows),
+//                    cv::INTER_CUBIC | invflag,
+//                    cv::BORDER_REFLECT);
+
+//     cv::resize(refGray(roi), ref,
+//                cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
+//     cv::resize(tmp(roi), src,
+//                cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
+
+//     cv::Mat contrastVals(total, 1, CV_32F);
+//     cv::Mat positions(total, 5, CV_32F);
+
+//     for (int y = 0; y < ysamples; ++y)
+//     {
+//         for (int x = 0; x < xsamples; ++x)
+//         {
+//             int idx = y * xsamples + x;
+
+//             float yd = (y - ref.rows / 2.0f) / static_cast<float>(ref.rows);
+//             float xd = (x - ref.cols / 2.0f) / static_cast<float>(ref.cols);
+
+//             float refpix = static_cast<float>(ref.at<uint8_t>(y, x));
+//             float srcpix = static_cast<float>(src.at<uint8_t>(y, x));
+
+//             float c = 1.0f;
+//             if (refpix > 4.0f && srcpix > 4.0f)
+//             {
+//                 c = refpix / srcpix;
+//             }
+
+//             contrastVals.at<float>(idx, 0) = c;
+//             positions.at<float>(idx, 0) = 1.0f;
+//             positions.at<float>(idx, 1) = xd;
+//             positions.at<float>(idx, 2) = sq(xd);
+//             positions.at<float>(idx, 3) = yd;
+//             positions.at<float>(idx, 4) = sq(yd);
+//         }
+//     }
+
+//     cv::solve(positions, contrastVals, contrast, cv::DECOMP_SVD);
+
+//     if (!cv::checkRange(contrast, true, nullptr, -2.0f, 2.0f))
+//     {
+//         throw std::runtime_error("Contrast match result out of range, try disabling contrast.");
+//     }
+// }
+
+static void toBGR8(const cv::Mat& in, cv::Mat& outBgr8)
 {
-    cv::Mat ref, src;
+    outBgr8.release();
+    if (in.empty()) return;
 
-    int xsamples = 64;
-    int ysamples = 64;
-    int total = xsamples * ysamples;
+    cv::Mat bgr;
 
+    // Ensure BGR 3ch
+    if (in.channels() == 1)
+        cv::cvtColor(in, bgr, cv::COLOR_GRAY2BGR);
+    else if (in.channels() == 4)
+        cv::cvtColor(in, bgr, cv::COLOR_BGRA2BGR);
+    else
+        bgr = in;
+
+    // Convert depth -> 8U with sane scaling
+    if (bgr.depth() == CV_8U)
+    {
+        outBgr8 = bgr;
+        return;
+    }
+    else if (bgr.depth() == CV_16U)
+    {
+        // Assume full-range 16U (0..65535) -> 0..255
+        bgr.convertTo(outBgr8, CV_8U, 255.0 / 65535.0);
+        return;
+    }
+    else if (bgr.depth() == CV_32F)
+    {
+        // Could be 0..1, 0..255, or 0..65535. Try to infer from max.
+        double mn=0, mx=0;
+        cv::minMaxLoc(bgr.reshape(1), &mn, &mx);
+
+        double scale = 1.0;
+        if (mx <= 1.5)          scale = 255.0;           // 0..1
+        else if (mx <= 300.0)   scale = 1.0;             // ~0..255
+        else                    scale = 255.0 / 65535.0; // ~0..65535
+
+        bgr.convertTo(outBgr8, CV_8U, scale);
+        return;
+    }
+
+    // Fallback: best effort
+    bgr.convertTo(outBgr8, CV_8U);
+}
+
+static void match_whitebalance(const cv::Mat &refColor,
+                               const cv::Mat &srcColor,
+                               const cv::Rect &roi,
+                               const cv::Mat &contrast,
+                               cv::Mat &whitebalance,
+                               const cv::Mat &transform)
+{
+    // --- Convert inputs to 8-bit BGR for robust fitting ---
+    cv::Mat ref8, src8;
+    toBGR8(refColor, ref8);
+    toBGR8(srcColor, src8);
+
+    if (ref8.empty() || src8.empty() || ref8.type() != CV_8UC3 || src8.type() != CV_8UC3)
+        throw std::runtime_error("match_whitebalance: failed to convert inputs to CV_8UC3");
+
+    // Clamp ROI to bounds (avoid crashes on odd validArea)
+    cv::Rect roiClamped = roi & cv::Rect(0, 0, ref8.cols, ref8.rows) & cv::Rect(0, 0, src8.cols, src8.rows);
+    if (roiClamped.width <= 1 || roiClamped.height <= 1)
+        throw std::runtime_error("match_whitebalance: ROI empty");
+
+    // --- Warp src into ref space using current transform ---
     cv::Mat tmp;
-    // Apply transform to color
-    int invflag = 0;
-    cv::warpAffine(srcColor, tmp, transform,
-                   cv::Size(srcColor.cols, srcColor.rows),
-                   cv::INTER_CUBIC | invflag,
+    cv::warpAffine(src8, tmp, transform,
+                   cv::Size(src8.cols, src8.rows),
+                   cv::INTER_CUBIC,
                    cv::BORDER_REFLECT);
 
-    // Identity whitebalance: no per-channel change yet, just contrast.
+    // Identity WB: only contrast gets applied before fitting WB
     cv::Mat identityWB(6, 1, CV_32F);
-    identityWB.at<float>(0, 0) = 0.0f;  // bb
-    identityWB.at<float>(1, 0) = 1.0f;  // bc
-    identityWB.at<float>(2, 0) = 0.0f;  // gb
-    identityWB.at<float>(3, 0) = 1.0f;  // gc
-    identityWB.at<float>(4, 0) = 0.0f;  // rb
-    identityWB.at<float>(5, 0) = 1.0f;  // rc
+    identityWB.at<float>(0, 0) = 0.0f;  identityWB.at<float>(1, 0) = 1.0f; // B
+    identityWB.at<float>(2, 0) = 0.0f;  identityWB.at<float>(3, 0) = 1.0f; // G
+    identityWB.at<float>(4, 0) = 0.0f;  identityWB.at<float>(5, 0) = 1.0f; // R
 
+    // Apply contrast (and identity WB) to warped src before sampling
+    // (apply_contrast_whitebalance_internal expects 8-bit, which we guarantee here)
     apply_contrast_whitebalance_internal(tmp, contrast, identityWB);
 
-    cv::resize(refColor(roi), ref,
-               cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
-    cv::resize(tmp(roi), src,
-               cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
+    // --- Downsample ROI for stable linear solve ---
+    const int xsamples = 64;
+    const int ysamples = 64;
+    const int total = xsamples * ysamples;
 
+    cv::Mat refS, srcS;
+    cv::resize(ref8(roiClamped), refS, cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
+    cv::resize(tmp(roiClamped), srcS, cv::Size(xsamples, ysamples), 0, 0, cv::INTER_AREA);
+
+    // Build linear system:
+    // For each channel independently: out = gain * in + offset
+    // B: targets = refB, factors columns [B_off, B_gain] use [1, srcB]
+    // G: columns [G_off, G_gain] use [1, srcG]
+    // R: columns [R_off, R_gain] use [1, srcR]
     cv::Mat targets(total * 3, 1, CV_32F);
-    cv::Mat factors(total * 3, 6, CV_32F);
-    factors = 0.0f;
+    cv::Mat factors(total * 3, 6, CV_32F, cv::Scalar(0));
 
     for (int y = 0; y < ysamples; ++y)
     {
         for (int x = 0; x < xsamples; ++x)
         {
-            int idx = y * xsamples + x;
+            const int idx = y * xsamples + x;
 
-            cv::Vec3b srcpixel = src.at<cv::Vec3b>(y, x);
-            cv::Vec3b refpixel = ref.at<cv::Vec3b>(y, x);
+            const cv::Vec3b s = srcS.at<cv::Vec3b>(y, x);
+            const cv::Vec3b r = refS.at<cv::Vec3b>(y, x);
 
-            targets.at<float>(idx * 3 + 0, 0) = refpixel[0];
-            targets.at<float>(idx * 3 + 1, 0) = refpixel[1];
-            targets.at<float>(idx * 3 + 2, 0) = refpixel[2];
+            // Targets
+            targets.at<float>(idx * 3 + 0, 0) = float(r[0]); // B
+            targets.at<float>(idx * 3 + 1, 0) = float(r[1]); // G
+            targets.at<float>(idx * 3 + 2, 0) = float(r[2]); // R
 
+            // Factors (B)
             factors.at<float>(idx * 3 + 0, 0) = 1.0f;
-            factors.at<float>(idx * 3 + 0, 1) = srcpixel[0];
+            factors.at<float>(idx * 3 + 0, 1) = float(s[0]);
 
+            // Factors (G)
             factors.at<float>(idx * 3 + 1, 2) = 1.0f;
-            factors.at<float>(idx * 3 + 1, 3) = srcpixel[1];
+            factors.at<float>(idx * 3 + 1, 3) = float(s[1]);
 
+            // Factors (R)
             factors.at<float>(idx * 3 + 2, 4) = 1.0f;
-            factors.at<float>(idx * 3 + 2, 5) = srcpixel[2];
+            factors.at<float>(idx * 3 + 2, 5) = float(s[2]);
         }
     }
 
     cv::solve(factors, targets, whitebalance, cv::DECOMP_SVD);
 
-    if (!cv::checkRange(whitebalance, true, nullptr, -128.0f, 128.0f))
-    {
+    // --- Sanity checks / guardrails ---
+    // Offsets in 8-bit domain, gains around ~1 typically.
+    // Keep your original range, but also reject NaN/Inf.
+    if (!cv::checkRange(whitebalance, true, nullptr, -128.0, 128.0))
         throw std::runtime_error("Whitebalance match result out of range, try disabling WB.");
+
+    for (int i = 0; i < whitebalance.rows; ++i)
+    {
+        float v = whitebalance.at<float>(i,0);
+        if (!std::isfinite(v))
+            throw std::runtime_error("Whitebalance match produced NaN/Inf.");
+    }
+
+    // Optional: prevent “blackout” if gains go near-zero.
+    // (FSPhotometric also defends, but better to keep coefficients sane at the source.)
+    const float minGain = 0.05f;
+    if (std::abs(whitebalance.at<float>(1,0)) < minGain ||
+        std::abs(whitebalance.at<float>(3,0)) < minGain ||
+        std::abs(whitebalance.at<float>(5,0)) < minGain)
+    {
+        throw std::runtime_error("Whitebalance match produced near-zero gain (unstable).");
     }
 }
 
@@ -438,21 +690,28 @@ Result makeIdentity(const cv::Rect &validArea)
 {
     Result r;
 
-    // // added for Depth Biased Erosion
-    // r.contrast = cv::Mat(5, 1, CV_32F);
-    // r.contrast.at<float>(0) = 1.0f;
-    // r.contrast.at<float>(1) = 0.0f;
-    // r.contrast.at<float>(2) = 0.0f;
-    // r.contrast.at<float>(3) = 0.0f;
-    // r.contrast.at<float>(4) = 0.0f;
+    r.transform = cv::Mat::eye(2, 3, CV_32F);
 
-    // r.whitebalance = cv::Mat(6, 1, CV_32F);
-    // r.whitebalance.at<float>(0) = 0.0f;  r.whitebalance.at<float>(1) = 1.0f; // B
-    // r.whitebalance.at<float>(2) = 0.0f;  r.whitebalance.at<float>(3) = 1.0f; // G
-    // r.whitebalance.at<float>(4) = 0.0f;  r.whitebalance.at<float>(5) = 1.0f; // R
-    // // end added for Depth Biased Erosion
+    r.contrast = cv::Mat(5, 1, CV_32F);
+    r.contrast.at<float>(0) = 1.0f;
+    r.contrast.at<float>(1) = 0.0f;
+    r.contrast.at<float>(2) = 0.0f;
+    r.contrast.at<float>(3) = 0.0f;
+    r.contrast.at<float>(4) = 0.0f;
+
+    r.whitebalance = cv::Mat(6, 1, CV_32F);
+    r.whitebalance.at<float>(0) = 0.0f;  r.whitebalance.at<float>(1) = 1.0f; // B
+    r.whitebalance.at<float>(2) = 0.0f;  r.whitebalance.at<float>(3) = 1.0f; // G
+    r.whitebalance.at<float>(4) = 0.0f;  r.whitebalance.at<float>(5) = 1.0f; // R
 
     r.validArea = validArea;
+
+    // Redundant but bullet-proof
+    ensureIdentityContrast(r.contrast);
+    ensureIdentityWB(r.whitebalance);
+    if (r.transform.rows != 2 || r.transform.cols != 3 || r.transform.type() != CV_32F)
+        r = Result();         // reset everything if transform is wrong
+
     return r;
 }
 
@@ -522,6 +781,14 @@ Result accumulate(const Result &prevGlobal,
 {
     Result g = local; // will become global
 
+    // Prevent empty/invalid mats from crashing or corrupting results
+    ensureIdentityContrast(g.contrast);
+    ensureIdentityWB(g.whitebalance);
+    cv::Mat sC = prevGlobal.contrast;
+    cv::Mat sW = prevGlobal.whitebalance;
+    ensureIdentityContrast(sC);
+    ensureIdentityWB(sW);
+
     // --- Transform stacking (like Task_Align with m_stacked_transform) ----
     cv::Mat prev3 = cv::Mat::eye(3, 3, CV_32F);
     prevGlobal.transform.copyTo(prev3(cv::Rect(0, 0, 3, 2)));
@@ -532,28 +799,41 @@ Result accumulate(const Result &prevGlobal,
     cv::Mat combined3 = local3 * prev3;
     g.transform = combined3(cv::Rect(0, 0, 3, 2)).clone();
 
-    // --- Contrast stacking (copied logic from Task_Align::task) -----------
-    cv::Mat c = g.contrast.clone();
-    const cv::Mat &s = prevGlobal.contrast;
+    // --- Contrast stacking ---------------------------------
+    {
+        CV_Assert(prevGlobal.contrast.rows == 5 && prevGlobal.contrast.cols == 1);
+        CV_Assert(g.contrast.rows == 5 && g.contrast.cols == 1);
 
-    g.contrast *= s.at<float>(0);
-    g.contrast.at<float>(1) += s.at<float>(1) * c.at<float>(0);
-    g.contrast.at<float>(2) += s.at<float>(2) * c.at<float>(0);
-    g.contrast.at<float>(2) += s.at<float>(1) * c.at<float>(1);
-    g.contrast.at<float>(3) += s.at<float>(3) * c.at<float>(0);
-    g.contrast.at<float>(4) += s.at<float>(4) * c.at<float>(0);
-    g.contrast.at<float>(4) += s.at<float>(3) * c.at<float>(3);
+        cv::Mat c = g.contrast.clone();
+        const cv::Mat &sC = prevGlobal.contrast;
 
-    // --- Whitebalance stacking --------------------------------------------
-    g.whitebalance.at<float>(0) += s.at<float>(0) * g.whitebalance.at<float>(1);
-    g.whitebalance.at<float>(1) *= s.at<float>(1);
+        g.contrast *= sC.at<float>(0);
+        g.contrast.at<float>(1) += sC.at<float>(1) * c.at<float>(0);
+        g.contrast.at<float>(2) += sC.at<float>(2) * c.at<float>(0);
+        g.contrast.at<float>(2) += sC.at<float>(1) * c.at<float>(1);
+        g.contrast.at<float>(3) += sC.at<float>(3) * c.at<float>(0);
+        g.contrast.at<float>(4) += sC.at<float>(4) * c.at<float>(0);
+        g.contrast.at<float>(4) += sC.at<float>(3) * c.at<float>(3);
+    }
 
-    g.whitebalance.at<float>(2) += s.at<float>(2) * g.whitebalance.at<float>(3);
-    g.whitebalance.at<float>(3) *= s.at<float>(3);
+    // --- Whitebalance stacking ------------------------------
+    {
+        CV_Assert(prevGlobal.whitebalance.rows == 6 && prevGlobal.whitebalance.cols == 1);
+        CV_Assert(g.whitebalance.rows == 6 && g.whitebalance.cols == 1);
 
-    g.whitebalance.at<float>(4) += s.at<float>(4) * g.whitebalance.at<float>(5);
-    g.whitebalance.at<float>(5) *= s.at<float>(5);
+        const cv::Mat &sWB = prevGlobal.whitebalance;
 
+        // Compose: (gain2*(gain1*x + off1) + off2) -> (gain2*gain1)*x + (gain2*off1 + off2)
+        // In your parameterization: out = gain*in + offset
+        g.whitebalance.at<float>(0) = sWB.at<float>(1) * g.whitebalance.at<float>(0) + sWB.at<float>(0);
+        g.whitebalance.at<float>(1) = sWB.at<float>(1) * g.whitebalance.at<float>(1);
+
+        g.whitebalance.at<float>(2) = sWB.at<float>(3) * g.whitebalance.at<float>(2) + sWB.at<float>(2);
+        g.whitebalance.at<float>(3) = sWB.at<float>(3) * g.whitebalance.at<float>(3);
+
+        g.whitebalance.at<float>(4) = sWB.at<float>(5) * g.whitebalance.at<float>(4) + sWB.at<float>(4);
+        g.whitebalance.at<float>(5) = sWB.at<float>(5) * g.whitebalance.at<float>(5);
+    }
     // --- Valid area stacking ----------------------------------------------
     // Compute valid area for this image in global space
     g.validArea = compute_valid_area(srcValid, g.transform, false);

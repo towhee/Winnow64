@@ -95,6 +95,9 @@ bool heatMapPerSlice(const QString& pngPath,
                               int sliceCount,
                               int colormap = cv::COLORMAP_JET);
 
+QString cvTypeToStr(int type);
+void dumpMatStats(const char* name, const cv::Mat& m);
+void dumpMatFirstN(const char* name, const cv::Mat& m, int N = 12);
 
 } // namespace FSUtilities
 

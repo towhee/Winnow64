@@ -109,6 +109,20 @@ bool FS::setOptions(const Options &opt)
         return true;
     }
 
+    if (o.method == "StmDMap") {
+        if (G::FSLog) G::log(srcFun, msg + "StmDMap");
+        o.useIntermediates = true;
+        o.enableAlign = true;
+        o.enableFocusMaps = false;
+        o.enableDepthMap = true;
+        o.enableFusion = true;
+        o.methodFuse = "FullWaveletMerge";
+        o.methodMerge = "PMax";
+        o.isStream = true;
+        return true;
+    }
+
+
     // Fuse by streaming using grayscale wavelet merge and color map.  Do not need
     // to hold all images and Mats in memory.
     if (o.method == "StmPMax") {
@@ -437,8 +451,8 @@ void FS::incrementProgress()
 {
     QString srcFun = "FS::incrementProgress";
     emit progress(++progressCount, progressTotal);
-    // QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
-    // G::log(srcFun, msg);
+    QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
+    G::log(srcFun, msg);
 }
 
 void FS::previewOverview(cv::Mat &fusedColor8Mat)
@@ -643,6 +657,13 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
         if (!initializeGroup(groupCounter++)) return false;
 
         if (o.isStream) {
+
+            if (o.method == "StmDMap") {
+                if (!runStreamDMap()) {
+                    emit finished(false);
+                    return false;
+                }
+            }
 
             if (o.method == "StmPMax") {
                 if (!runStreamWaveletPMax()) {
@@ -1632,6 +1653,188 @@ bool FS::runArtifact()
     return true;
 }
 
+bool FS::runStreamDMap()
+{
+    /*
+      Streaming Algorithm (DMap 2-pass):
+
+      Pass-1 (single sweep over slices):
+        for each slice
+          - load input image
+          - align (0 is special case) -> alignedGraySlice, alignedColorSlice (ALIGN space)
+          - streamDMapSlice: update Top-K focus candidates per pixel (PAD space)
+
+      Pass-2 (inside streamDMapFinish):
+        - crop Top-K maps PAD->ALIGN->ORIG
+        - build weights from Top-K
+        - for each slice:
+            loadAlignedSliceOrig(slice, inputPaths, globals, ...)  // streamed
+            accumulate pyramids using slice weight map
+        - finalize pyramid blend -> outputColor (ORIG)
+        - set depthIndex16 from top-1 indices (ORIG)
+    */
+
+    QString srcFun = "FS::runStreamDMap";
+    QString msg = "Start using method: " + o.method;
+    if (G::FSLog) G::log(srcFun, msg);
+
+    auto progressCb = [this]{ incrementProgress(); };
+    auto statusCb   = [this](const QString &m){ status(m); };
+
+    // -----------------------------
+    // Align options (same as PMax)
+    // -----------------------------
+    FSAlign::Options aopt;
+    aopt.matchContrast     = true;
+    aopt.matchWhiteBalance = true;
+    aopt.lowRes            = 256;
+    aopt.maxRes            = 2048;
+    aopt.fullResolution    = false;
+
+    // -----------------------------
+    // Fusion options (DMap)
+    // -----------------------------
+    FSFusion::Options fopt;
+    fopt.method         = "DMap";          // <-- critical
+    fopt.mergeMode      = o.methodMerge;   // not used by DMap, but keep for consistency/logging
+    fopt.useOpenCL      = o.enableOpenCL;  // not used by DMap currently, but keep
+    fopt.consistency    = 2;               // not used by DMap, but keep
+    fopt.depthFolderPath = depthFolderPath;
+
+    // DMap does NOT use these stages, but keep them deterministic
+    fopt.enableDepthBiasedErosion = false;
+    fopt.enableEdgeAdaptiveSigma  = false;
+
+    // -----------------------------
+    // Working state (same layout)
+    // -----------------------------
+    FSLoader::Image prevImage;
+    FSLoader::Image currImage;
+
+    Result prevGlobal;
+    Result currGlobal;
+
+    cv::Mat alignedGraySlice;
+    cv::Mat alignedColorSlice;
+
+    // DMap finish needs globals for loadAlignedSliceOrig(...)
+    std::vector<Result> globals;
+    globals.reserve(slices);
+
+    FSAlign::Align align;
+    FSFusion fuse;
+
+    // -----------------------------
+    // Pass-1: slice loop
+    // -----------------------------
+    for (int slice = 0; slice < slices; slice++)
+    {
+        QString s = " Slice: " + QString::number(slice) + " of " +
+                    QString::number(slices) + " ";
+        if (G::FSLog) G::log("");  // skip line
+
+        // Align slice
+        status(s + "Aligning...");
+        currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
+        currGlobal = FSAlign::makeIdentity(currImage.validArea);
+
+        if (G::abortFocusStack) return false;
+
+        if (slice == 0)
+        {
+            alignedGraySlice  = currImage.gray.clone();
+            alignedColorSlice = currImage.color.clone();
+
+            // Required for PAD->ALIGN->ORIG cropping in finish
+            fuse.validAreaAlign = currImage.validArea;
+            fuse.origSize       = currImage.origSize;
+            fuse.alignSize      = currImage.gray.size();
+
+            // For DMap, globals MUST include slice 0 too
+            globals.push_back(currGlobal);
+        }
+        else
+        {
+            if (!align.alignSlice(slice,
+                                  prevImage, currImage,
+                                  prevGlobal, currGlobal,
+                                  alignedGraySlice, alignedColorSlice,
+                                  aopt, &abort, statusCb, progressCb))
+            {
+                qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
+                return false;
+            }
+
+            globals.push_back(currGlobal);
+        }
+
+        // debug/test write aligned slices (kept exactly like your PMax)
+        cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
+        cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
+
+        if (G::abortFocusStack) return false;
+
+        // Pass-1 DMap update (Top-K focus candidates)
+        status(s + "Building DMap...");
+        if (!fuse.streamDMapSlice(slice,
+                                  alignedGraySlice,
+                                  alignedColorSlice,
+                                  fopt,
+                                  &abort,
+                                  statusCb,
+                                  progressCb))
+        {
+            qWarning() << "WARNING:" << srcFun << "fuse.streamDMapSlice failed.";
+            return false;
+        }
+
+        if (G::abortFocusStack) return false;
+        incrementProgress();
+
+        prevImage  = currImage;
+        prevGlobal = currGlobal;
+    }
+
+    msg = "Slice processing done.  DMap finish: build weights, stream slices, blend, crop.";
+    if (G::FSLog) G::log(srcFun, msg);
+
+    // -----------------------------
+    // Pass-2: finish (streams slices again internally)
+    // -----------------------------
+    status("Finalizing DMap fusion...");
+    if (!fuse.streamDMapFinish(fusedColorMat,
+                               fopt,
+                               depthIndex16Mat,
+                               inputPaths,
+                               globals,
+                               &abort,
+                               statusCb,
+                               progressCb))
+    {
+        qWarning() << "WARNING:" << srcFun << "FSFusion::streamDMapFinish failed.";
+        return false;
+    }
+
+    if (G::abortFocusStack) return false;
+    incrementProgress();
+
+    // Optional: dump DMap knobs if you want (similar to your weighted dump)
+    qDebug().noquote()
+        << "\n DMap topK                =" << fuse.dmapParams.topK
+        << "\n DMap scoreSigma           =" << fuse.dmapParams.scoreSigma
+        << "\n DMap scoreKSize           =" << fuse.dmapParams.scoreKSize
+        << "\n DMap softTemp             =" << fuse.dmapParams.softTemp
+        << "\n DMap wMin                 =" << fuse.dmapParams.wMin
+        << "\n DMap weightBlurPx         =" << fuse.dmapParams.weightBlurPx
+        << "\n DMap weightBlurSigma      =" << fuse.dmapParams.weightBlurSigma
+        << "\n DMap pyrLevels            =" << fuse.dmapParams.pyrLevels
+        << "\n";
+
+    if (o.useIntermediates) save(fusionFolderPath);
+
+    return true;
+}
+
 bool FS::runStreamWaveletPMax()
 {
     /*  Streaming Algorithm:
@@ -1704,11 +1907,11 @@ bool FS::runStreamWaveletPMax()
 
     FSLoader::Image prevImage;
     FSLoader::Image currImage;
-    FSAlign::Result prevGlobal;
-    FSAlign::Result currGlobal;
+    Result prevGlobal;
+    Result currGlobal;
     cv::Mat alignedGraySlice;
     cv::Mat alignedColorSlice;
-    std::vector<FSAlign::Result> globals;   // for Depth-Biased Erosion
+    std::vector<Result> globals;   // for Depth-Biased Erosion
     globals.reserve(slices);                // for Depth-Biased Erosion
     FSAlign::Align align;
     FSFusion fuse;
@@ -1838,8 +2041,8 @@ bool FS::runStreamTennengradVersions()
 
     FSLoader::Image prevImage;
     FSLoader::Image currImage;
-    FSAlign::Result prevGlobal;
-    FSAlign::Result currGlobal;
+    Result prevGlobal;
+    Result currGlobal;
     cv::Mat alignedGraySlice;
     cv::Mat alignedColorSlice;
     FSAlign::Align align;

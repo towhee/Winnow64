@@ -23,6 +23,7 @@ public:
     explicit FS(QObject *parent = nullptr);
 
     enum Methods {
+        StmDMap,
         StmPMax,           // PMax1, but streamed
         StmPMaxWt,   // PMax1, but streamed and weighted in merge
         StmPMaxWtDbe,   // PMax1, but streamed and weighted in merge
@@ -31,6 +32,7 @@ public:
         TennengradVersions    // multiple depth maps for diff radius/thresholds
     };
     static inline const QStringList MethodsString {
+        "StmDMap",            // DMap, streamed
         "StmPMax",            // PMax1, but streamed
         "StmPMaxWt",          // PMax1, but streamed and weighted in merge
         "StmPMaxWtDbe",       // PMax1, but streamed and weighted in merge
@@ -141,6 +143,7 @@ private:
     bool runFusion();
     bool runBackground();
     bool runArtifact();
+    bool runStreamDMap();
     bool runStreamWaveletPMax();
     bool runStreamTennengradVersions();
     bool save(QString fuseFolderPath);
