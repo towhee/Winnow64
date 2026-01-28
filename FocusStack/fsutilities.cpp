@@ -766,4 +766,71 @@ bool heatMapPerSlice(const QString &pngPath,
     return writePngWithTitle(pngPath, heatBGR);
 }
 
+QString cvTypeToStr(int type)
+{
+    const int depth = type & CV_MAT_DEPTH_MASK;
+    const int chans = 1 + (type >> CV_CN_SHIFT);
+
+    QString d;
+    switch (depth) {
+    case CV_8U:  d = "8U"; break;
+    case CV_8S:  d = "8S"; break;
+    case CV_16U: d = "16U"; break;
+    case CV_16S: d = "16S"; break;
+    case CV_32S: d = "32S"; break;
+    case CV_32F: d = "32F"; break;
+    case CV_64F: d = "64F"; break;
+    default:     d = "?"; break;
+    }
+    return QString("CV_%1C%2").arg(d).arg(chans);
+}
+
+void dumpMatStats(const char* name, const cv::Mat& m)
+{
+    if (m.empty()) {
+        qDebug().noquote() << name << ": EMPTY";
+        return;
+    }
+    double mn=0, mx=0;
+    cv::minMaxLoc(m.reshape(1), &mn, &mx); // flatten channels
+    qDebug().noquote() << QString("%1: %2x%3 %4 min=%5 max=%6")
+                              .arg(name)
+                              .arg(m.rows).arg(m.cols)
+                              .arg(cvTypeToStr(m.type()))
+                              .arg(mn, 0, 'g', 8)
+                              .arg(mx, 0, 'g', 8);
+}
+
+void dumpMatFirstN(const char* name, const cv::Mat& m, int N)
+{
+    if (m.empty()) {
+        qDebug().noquote() << name << ": EMPTY";
+        return;
+    }
+    CV_Assert(m.cols == 1 || m.rows == 1); // assume vector-like for your 5x1 / 6x1
+
+    cv::Mat v = m.reshape(1, (int)m.total()); // Nx1, single channel view
+    QStringList parts;
+    const int n = std::min(N, v.rows);
+
+    for (int i = 0; i < n; ++i)
+    {
+        double val = 0.0;
+        int t = v.type();
+        switch (t) {
+        case CV_32F: val = v.at<float>(i,0); break;
+        case CV_64F: val = v.at<double>(i,0); break;
+        case CV_16S: val = v.at<int16_t>(i,0); break;
+        case CV_16U: val = v.at<uint16_t>(i,0); break;
+        case CV_32S: val = v.at<int>(i,0); break;
+        case CV_8U:  val = v.at<uint8_t>(i,0); break;
+        default:
+            parts << "<?>"; continue;
+        }
+        parts << QString::number(val, 'g', 10);
+    }
+
+    qDebug().noquote() << QString("%1 first=%2").arg(name).arg(parts.join(", "));
+}
+
 } // namespace FSUtilities

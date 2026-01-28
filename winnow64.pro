@@ -83,6 +83,7 @@ HEADERS += Cache/cachedata.h \
     FocusStack/FSFusionWaveletTemplates.h \
     FocusStack/fs.h \
     FocusStack/fsalign.h \
+    FocusStack/fsalign_types.h \
     FocusStack/fsartifact.h \
     FocusStack/fsbackground.h \
     FocusStack/fsdepth.h \
@@ -93,6 +94,7 @@ HEADERS += Cache/cachedata.h \
     FocusStack/fsgray.h \
     FocusStack/fsloader.h \
     FocusStack/fsmerge.h \
+    FocusStack/fsphotometric.h \
     FocusStack/fsrunner.h \
     FocusStack/fsutilities.h
 HEADERS += Cache/tiffthumbdecoder.h
@@ -335,6 +337,7 @@ SOURCES += Cache/cachedata.cpp \
     FocusStack/fsgray.cpp \
     FocusStack/fsloader.cpp \
     FocusStack/fsmerge.cpp \
+    FocusStack/fsphotometric.cpp \
     FocusStack/fsrunner.cpp \
     FocusStack/fsutilities.cpp
 SOURCES += Utilities/focuspointtrainer.cpp

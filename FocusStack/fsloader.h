@@ -1,8 +1,12 @@
 #ifndef FSLOADER_H
 #define FSLOADER_H
 
+#include "fsalign_types.h"
+
 #include <opencv2/core.hpp>
 #include <string>
+
+#include <QStringList>
 
 namespace FSLoader {
 
@@ -27,6 +31,14 @@ Image load(const std::string &filename);
 
 // Load from an existing Mat (for testing):
 Image loadFromMat(const cv::Mat &source);
+
+bool loadAlignedSliceOrig(int sliceIdx,
+                          const QStringList& inputPaths,
+                          const std::vector<Result>& globals,
+                          cv::Rect roiPadToAlign,
+                          cv::Rect validAreaAlign,
+                          cv::Mat& gray8Orig,
+                          cv::Mat& colorOrig);
 
 // Pad to wavelet-friendly dimensions via BORDER_REFLECT
 cv::Rect padToWaveletSize(const cv::Mat &src,

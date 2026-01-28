@@ -27,7 +27,7 @@ public:
                      the corresponding slice (no wavelets). Fast, pairs
                      naturally with FSDepth::method == "Simple".
         */
-        QString method      = "PMax";       // "Simple" or "PMax"
+        QString method      = "PMax";       // "Simple", "PMax", "DMap"
         QString mergeMode   = "PMax";       // “PMax” or “Weighted”
         QString winnerMap = "Weighted";     // "Energy" or "Weighted"
 
@@ -126,13 +126,149 @@ public:
         const Options &opt,
         cv::Mat &depthIndex16,
         const QStringList  &inputPaths,
-        const std::vector<FSAlign::Result> &globals,
+        const std::vector<Result> &globals,
         std::atomic_bool *abortFlag,
         StatusCallback statusCallback,
         ProgressCallback progressCallback
     );
 
     // end StreamPMax pipeline
+
+    // --------------- DMAP -----------------
+
+    struct DMapParams
+    {
+        // Pass-1: keep top-K focus candidates per pixel
+        int   topK = 2;                 // 1 = hard winner; 2 is typical
+
+        // Focus score (Pass-1)
+        float scoreSigma = 1.0f;        // pre-blur on gray before Laplacian (stability)
+        int   scoreKSize  = 3;          // Laplacian kernel (3 or 5)
+        float scoreEps    = 1e-6f;      // small epsilon (future-proofing)
+
+        // Soft weights from top-K scores (Pass-2)
+        float softTemp = 0.15f;         // smaller = harder assignment
+        float wMin     = 0.02f;         // per-slot weight floor (avoid zeros)
+
+        // Weight smoothing (halo killer)
+        int   weightBlurPx    = 3;      // boundary band dilation in pixels (orig)
+        float weightBlurSigma = 1.2f;   // Gaussian sigma for weight smoothing
+
+        // Optional tiling (future)
+        bool  useTiling = false;
+        int   tilePx = 512;
+        int   tileOverlapPx = 32;
+
+        // Pyramid blend (Pass-2)
+        int   pyrLevels = 5;            // 4..7 typical; 0 = auto
+    };
+    DMapParams dmapParams;
+
+    struct TopKMaps
+    {
+        int K = 0;
+        cv::Size sz;
+
+        // K mats, each size=sz:
+        //  idx16[k]   : CV_16U slice index for kth best score at each pixel
+        //  score32[k] : CV_32F kth best score at each pixel (descending)
+        std::vector<cv::Mat> idx16;
+        std::vector<cv::Mat> score32;
+
+        void create(cv::Size s, int k)
+        {
+            reset();
+            sz = s;
+            K  = k;
+
+            idx16.resize(K);
+            score32.resize(K);
+
+            for (int i = 0; i < K; ++i)
+            {
+                idx16[i]   = cv::Mat(sz, CV_16U, cv::Scalar(0));
+                score32[i] = cv::Mat(sz, CV_32F, cv::Scalar(-1e30f)); // very low
+            }
+        }
+
+        void reset()
+        {
+            K = 0;
+            sz = {};
+            idx16.clear();
+            score32.clear();
+        }
+
+        bool valid() const
+        {
+            if (K <= 0) return false;
+            if (sz.width <= 0 || sz.height <= 0) return false;
+            if ((int)idx16.size() != K) return false;
+            if ((int)score32.size() != K) return false;
+
+            for (int k = 0; k < K; ++k)
+            {
+                if (idx16[k].empty() || score32[k].empty()) return false;
+                if (idx16[k].size() != sz || score32[k].size() != sz) return false;
+                if (idx16[k].type() != CV_16U) return false;
+                if (score32[k].type() != CV_32F) return false;
+            }
+            return true;
+        }
+    };
+    TopKMaps   dmapTopKPad;  // pass-1 maps in PAD size
+
+    struct DMapPass1
+    {
+        bool initialized = false;
+        int  sliceCount = 0;
+        cv::Size origSize;
+
+        TopKMaps topk;          // (idx, score)
+        cv::Mat  edgeMask8;     // optional: computed from fusedGray later, or from last slice
+        // You can also store a running “bestScore” convenience ref to topk.score32[0].
+
+        void begin(cv::Size orig, int K)
+        {
+            initialized = true;
+            sliceCount = 0;
+            origSize = orig;
+            topk.create(orig, K);
+            edgeMask8.release();
+        }
+
+        void reset()
+        {
+            initialized = false;
+            sliceCount = 0;
+            origSize = {};
+            topk.reset();
+            edgeMask8.release();
+        }
+    };
+
+    // struct DMapStreamState;
+    // std::unique_ptr<DMapStreamState> dmap;   // allocated on first slice, reset after finish
+
+    bool      dmapActive = false;
+    int       dmapSliceCount = 0;
+
+    bool streamDMapSlice(int slice,
+                         const cv::Mat& grayImg,
+                         const cv::Mat& colorImg,
+                         const Options& opt,
+                         std::atomic_bool* abortFlag,
+                         StatusCallback statusCallback,
+                         ProgressCallback progressCallback);
+
+    bool streamDMapFinish(cv::Mat& outputColor,
+                          const Options& opt,
+                          cv::Mat& depthIndex16,
+                          const QStringList& inputPaths,
+                          const std::vector<Result>& globals,
+                          std::atomic_bool* abortFlag,
+                          StatusCallback statusCallback,
+                          ProgressCallback progressCallback);
 
 }; // end class FSFusion
 

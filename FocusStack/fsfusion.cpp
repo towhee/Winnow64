@@ -1,6 +1,6 @@
 #include "fsfusion.h"
 #include "Main/global.h"
-
+#include "fsloader.h"
 #include "fsfusionwavelet.h"
 #include "fsutilities.h"
 
@@ -17,6 +17,41 @@ namespace
 {
 
 using ProgressCallback = FSFusion::ProgressCallback;
+
+struct DMapPass2
+{
+    bool initialized = false;
+    int  sliceCount = 0;
+    cv::Size origSize;
+
+    // Final result (orig size)
+    cv::Mat outColor;       // CV_8UC3 or CV_16UC3 depending on your pipeline choice
+
+    // If you want: keep a float accumulation buffer for simple weighted blend
+    // (useful as an intermediate before pyramid blending is implemented)
+    cv::Mat accum32;        // CV_32FC3
+    cv::Mat accumW32;       // CV_32F
+
+    void begin(cv::Size orig, int outType)
+    {
+        initialized = true;
+        sliceCount = 0;
+        origSize = orig;
+        outColor = cv::Mat(orig, outType, cv::Scalar::all(0));
+        accum32.release();
+        accumW32.release();
+    }
+
+    void reset()
+    {
+        initialized = false;
+        sliceCount = 0;
+        origSize = {};
+        outColor.release();
+        accum32.release();
+        accumW32.release();
+    }
+};
 
 static inline QString matInfo(const cv::Mat& m)
 {
@@ -195,6 +230,13 @@ static inline cv::Mat seEllipse(int px)
     return cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k, k));
 }
 
+// Gaussian blur with "px or sigma" convenience
+static inline void gaussianBlurInPlace(cv::Mat& m32, float sigma)
+{
+    if (sigma <= 0.0f) return;
+    cv::GaussianBlur(m32, m32, cv::Size(0,0), sigma, sigma, cv::BORDER_REFLECT);
+}
+
 static cv::Mat filterMinArea8U(const cv::Mat& mask8, int minAreaPx)
 {
     CV_Assert(mask8.type() == CV_8U);
@@ -228,6 +270,581 @@ static void fillHoles8U(cv::Mat& mask8)
 
     cv::bitwise_or(mask8, holes, mask8);
 }
+
+// --------- Start DMAP functions ----------
+
+// -----------------------------------------------------------------------------
+// updateTopKPerSlice
+//   Updates TopKMaps in-place given per-pixel score for the current slice.
+//   - topk.idx16[k]   : CV_16U, orig size
+//   - topk.score32[k] : CV_32F, orig size
+//   - score32This     : CV_32F, orig size
+//   - sliceIndex      : current slice id (0..N-1)
+//
+// TopK is maintained as descending score: k=0 is best.
+// -----------------------------------------------------------------------------
+static void updateTopKPerSlice(FSFusion::TopKMaps& topk,
+                               const cv::Mat& score32This,
+                               uint16_t sliceIndex)
+{
+    CV_Assert(topk.K > 0);
+    CV_Assert(!score32This.empty());
+    CV_Assert(score32This.type() == CV_32F);
+    CV_Assert(score32This.size() == topk.sz);
+
+    const int K = topk.K;
+    const int rows = topk.sz.height;
+    const int cols = topk.sz.width;
+
+    // Per-row pointers to each K layer for speed
+    std::vector<float*>   sPtr(K);
+    std::vector<uint16_t*> iPtr(K);
+
+    for (int y = 0; y < rows; ++y)
+    {
+        const float* sNew = score32This.ptr<float>(y);
+
+        for (int k = 0; k < K; ++k)
+        {
+            sPtr[k] = topk.score32[k].ptr<float>(y);
+            iPtr[k] = topk.idx16[k].ptr<uint16_t>(y);
+        }
+
+        for (int x = 0; x < cols; ++x)
+        {
+            const float s = sNew[x];
+
+            // Find insertion position in descending score list
+            int ins = -1;
+            for (int k = 0; k < K; ++k)
+            {
+                if (s > sPtr[k][x])
+                {
+                    ins = k;
+                    break;
+                }
+            }
+
+            if (ins < 0) continue; // not in top-K
+
+            // Shift down [K-1 .. ins+1]
+            for (int k = K - 1; k > ins; --k)
+            {
+                sPtr[k][x] = sPtr[k-1][x];
+                iPtr[k][x] = iPtr[k-1][x];
+            }
+
+            // Insert new
+            sPtr[ins][x] = s;
+            iPtr[ins][x] = sliceIndex;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// buildBoundaryAndBand
+//   boundary8 = 255 where top-1 idx differs from neighbor (right/down).
+//   band8     = dilated boundary8 (band around depth transitions).
+// -----------------------------------------------------------------------------
+static void buildBoundaryAndBand(const cv::Mat& top1Idx16,
+                                 int bandDilatePx,
+                                 cv::Mat& boundary8,
+                                 cv::Mat& band8)
+{
+    CV_Assert(top1Idx16.type() == CV_16U);
+    CV_Assert(!top1Idx16.empty());
+
+    boundary8 = cv::Mat::zeros(top1Idx16.size(), CV_8U);
+
+    const int rows = top1Idx16.rows;
+    const int cols = top1Idx16.cols;
+
+    for (int y = 0; y < rows; ++y)
+    {
+        const uint16_t* row = top1Idx16.ptr<uint16_t>(y);
+        uint8_t* out = boundary8.ptr<uint8_t>(y);
+
+        for (int x = 0; x < cols; ++x)
+        {
+            const uint16_t v = row[x];
+
+            bool diff = false;
+            if (x + 1 < cols) diff |= (v != row[x + 1]);
+            if (y + 1 < rows)
+            {
+                const uint16_t* row2 = top1Idx16.ptr<uint16_t>(y + 1);
+                diff |= (v != row2[x]);
+            }
+
+            if (diff) out[x] = 255;
+        }
+    }
+
+    band8 = boundary8.clone();
+    if (bandDilatePx > 0)
+        cv::dilate(band8, band8, seEllipse(bandDilatePx));
+}
+
+struct DMapWeights
+{
+    // For K candidates, we store K float weights (CV_32F) over orig size.
+    // These correspond to the indices stored in TopKMaps.idx16[k] (per pixel).
+    std::vector<cv::Mat> w32;       // K mats, CV_32F, size=orig
+
+    // Debug visuals
+    cv::Mat boundary8;              // 0/255 where top-1 index changes
+    cv::Mat band8;                  // dilated boundary band (halo zone)
+
+    void create(cv::Size sz, int K)
+    {
+        w32.resize(K);
+        for (int i = 0; i < K; ++i)
+            w32[i] = cv::Mat(sz, CV_32F, cv::Scalar(0));
+        boundary8.release();
+        band8.release();
+    }
+
+    void reset()
+    {
+        w32.clear();
+        boundary8.release();
+        band8.release();
+    }
+};
+
+
+// -----------------------------------------------------------------------------
+// buildTopKWeightsSoftmax
+//   Builds weights for topK candidates from topK scores.
+//   weights.w32[k] corresponds to topk.score32[k]/idx16[k] *at each pixel*.
+// -----------------------------------------------------------------------------
+static void buildTopKWeightsSoftmax(const FSFusion::TopKMaps& topk,
+                                    const FSFusion::DMapParams& p,
+                                    DMapWeights& weightsOut)
+{
+    CV_Assert(topk.K > 0);
+    CV_Assert(!topk.score32.empty());
+    CV_Assert((int)topk.score32.size() == topk.K);
+    CV_Assert((int)topk.idx16.size() == topk.K);
+
+    const int K = topk.K;
+    const cv::Size sz = topk.sz;
+
+    weightsOut.create(sz, K);
+
+    const float temp = std::max(1e-6f, p.softTemp);
+    const float wMin = std::max(0.0f, p.wMin);
+
+    std::vector<const float*> sPtr(K);
+    std::vector<float*> wPtr(K);
+
+    for (int y = 0; y < sz.height; ++y)
+    {
+        for (int k = 0; k < K; ++k)
+        {
+            sPtr[k] = topk.score32[k].ptr<float>(y);
+            wPtr[k] = weightsOut.w32[k].ptr<float>(y);
+        }
+
+        for (int x = 0; x < sz.width; ++x)
+        {
+            // find max score for stability
+            float sMax = sPtr[0][x];
+            for (int k = 1; k < K; ++k)
+                sMax = std::max(sMax, sPtr[k][x]);
+
+            // exp scores
+            float sum = 0.0f;
+            float e[16]; // K is small; if you might exceed 16, change this.
+            CV_Assert(K <= 16);
+
+            for (int k = 0; k < K; ++k)
+            {
+                float z = (sPtr[k][x] - sMax) / temp;
+                // clamp z to avoid inf; exp(-80) is ~1e-35 (effectively zero)
+                z = std::max(-80.0f, std::min(80.0f, z));
+                e[k] = std::exp(z);
+                sum += e[k];
+            }
+
+            if (sum <= 0.0f)
+            {
+                // fallback: hard assign to top-1
+                for (int k = 0; k < K; ++k) wPtr[k][x] = 0.0f;
+                wPtr[0][x] = 1.0f;
+                continue;
+            }
+
+            // normalize + floor + renormalize
+            float sum2 = 0.0f;
+            for (int k = 0; k < K; ++k)
+            {
+                float w = e[k] / sum;
+                if (wMin > 0.0f) w = std::max(w, wMin);
+                wPtr[k][x] = w;
+                sum2 += w;
+            }
+
+            const float inv = (sum2 > 0.0f) ? (1.0f / sum2) : 1.0f;
+            for (int k = 0; k < K; ++k)
+                wPtr[k][x] *= inv;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// smoothWeightsInBandAndRenormalize
+//   - Blurs each weight map (Gaussian).
+//   - Replaces weights only where band8 != 0.
+//   - Renormalizes across K per pixel (in band).
+// -----------------------------------------------------------------------------
+static void smoothWeightsInBandAndRenormalize(DMapWeights& w,
+                                              const cv::Mat& band8,
+                                              const FSFusion::DMapParams& p)
+{
+    CV_Assert(!band8.empty());
+    CV_Assert(band8.type() == CV_8U);
+    CV_Assert((int)w.w32.size() > 0);
+    CV_Assert(w.w32[0].type() == CV_32F);
+    CV_Assert(w.w32[0].size() == band8.size());
+
+    const int K = (int)w.w32.size();
+    const float wMin = std::max(0.0f, p.wMin);
+
+    // Blur each weight map and write back only in the band.
+    for (int k = 0; k < K; ++k)
+    {
+        cv::Mat blur = w.w32[k].clone();
+        gaussianBlurInPlace(blur, p.weightBlurSigma);
+
+        // replace inside band only
+        blur.copyTo(w.w32[k], band8);
+    }
+
+    // Renormalize in the band region
+    const int rows = band8.rows;
+    const int cols = band8.cols;
+
+    std::vector<float*> wPtr(K);
+
+    for (int y = 0; y < rows; ++y)
+    {
+        const uint8_t* b = band8.ptr<uint8_t>(y);
+        for (int k = 0; k < K; ++k)
+            wPtr[k] = w.w32[k].ptr<float>(y);
+
+        for (int x = 0; x < cols; ++x)
+        {
+            if (!b[x]) continue;
+
+            float sum = 0.0f;
+            for (int k = 0; k < K; ++k)
+            {
+                float v = wPtr[k][x];
+                if (wMin > 0.0f) v = std::max(v, wMin);
+                wPtr[k][x] = v;
+                sum += v;
+            }
+
+            if (sum <= 0.0f)
+            {
+                // fallback: hard assign
+                for (int k = 0; k < K; ++k) wPtr[k][x] = 0.0f;
+                wPtr[0][x] = 1.0f;
+                continue;
+            }
+
+            const float inv = 1.0f / sum;
+            for (int k = 0; k < K; ++k)
+                wPtr[k][x] *= inv;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// buildDMapWeightsFromTopK
+//   Produces:
+//     weights.w32[k]  : CV_32F weights for topK candidates
+//     weights.boundary8, weights.band8
+//   Steps:
+//     (1) soft weights from scores
+//     (2) boundary/band from top-1 index map
+//     (3) smooth weights in band and renormalize
+// -----------------------------------------------------------------------------
+static void buildDMapWeightsFromTopK(const FSFusion::TopKMaps& topk,
+                                     const FSFusion::DMapParams& p,
+                                     DMapWeights& weightsOut)
+{
+    QString srcFun = "FSFusion::buildDMapWeightsFromTopK";
+    G::log(srcFun);
+
+    CV_Assert(topk.K == p.topK);
+    CV_Assert(topk.K >= 1);
+
+    // 1) base weights
+    buildTopKWeightsSoftmax(topk, p, weightsOut);
+
+    // 2) boundary & band
+    // band width: use weightBlurPx (or define a separate param)
+    const int bandDilatePx = std::max(0, p.weightBlurPx);
+    buildBoundaryAndBand(topk.idx16[0], bandDilatePx, weightsOut.boundary8, weightsOut.band8);
+
+    // 3) smooth in band + renorm
+    if (cv::countNonZero(weightsOut.band8) > 0 && p.weightBlurSigma > 0.0f)
+        smoothWeightsInBandAndRenormalize(weightsOut, weightsOut.band8, p);
+}
+
+// ==============================
+// Streamed DMap fusion (2-pass)
+// ==============================
+
+// -----------------------------
+// Small helpers
+// -----------------------------
+static inline float clampf(float v, float lo, float hi)
+{
+    return std::max(lo, std::min(hi, v));
+}
+
+static inline bool rectInside(const cv::Rect& r, const cv::Size& s)
+{
+    return r.x >= 0 && r.y >= 0 &&
+           r.width > 0 && r.height > 0 &&
+           r.x + r.width  <= s.width &&
+           r.y + r.height <= s.height;
+}
+
+static cv::Mat toFloat01(const cv::Mat& gray8)
+{
+    CV_Assert(gray8.type() == CV_8U);
+    cv::Mat f;
+    gray8.convertTo(f, CV_32F, 1.0 / 255.0);
+    return f;
+}
+
+// Focus metric for DMap:
+// Laplacian magnitude of preblurred gray (stable, cheap).
+static cv::Mat focusMetric32(const cv::Mat& gray8, float preBlurSigma)
+{
+    CV_Assert(gray8.type() == CV_8U);
+
+    cv::Mat g32 = toFloat01(gray8);
+    if (preBlurSigma > 0.0f)
+        cv::GaussianBlur(g32, g32, cv::Size(0,0),
+                         preBlurSigma, preBlurSigma,
+                         cv::BORDER_REFLECT);
+
+    cv::Mat lap32;
+    cv::Laplacian(g32, lap32, CV_32F, 3);
+
+    cv::Mat absLap32;
+    cv::absdiff(lap32, cv::Scalar::all(0), absLap32); // |lap|
+
+    // Light blur to reduce “hot pixel” domination
+    cv::GaussianBlur(absLap32, absLap32, cv::Size(0,0), 0.8, 0.8, cv::BORDER_REFLECT);
+    return absLap32; // CV_32F, 0..small
+}
+
+// Insert (score, idx) into topK at pixel (x,y) using small insertion sort.
+// Highest score is best.
+static inline void topKInsertAt(FSFusion::TopKMaps& t,
+                                int x, int y,
+                                float score,
+                                uint16_t idx)
+{
+    // Fast path: if score <= worst, do nothing
+    float worst = t.score32[t.K - 1].at<float>(y, x);
+    if (score <= worst) return;
+
+    // Find insert position
+    int pos = t.K - 1;
+    while (pos > 0)
+    {
+        float prev = t.score32[pos - 1].at<float>(y, x);
+        if (score <= prev) break;
+        pos--;
+    }
+
+    // Shift down [pos..K-2] -> [pos+1..K-1]
+    for (int k = t.K - 1; k > pos; --k)
+    {
+        t.score32[k].at<float>(y, x) = t.score32[k - 1].at<float>(y, x);
+        t.idx16[k].at<uint16_t>(y, x) = t.idx16[k - 1].at<uint16_t>(y, x);
+    }
+
+    // Insert
+    t.score32[pos].at<float>(y, x) = score;
+    t.idx16[pos].at<uint16_t>(y, x) = idx;
+}
+
+// Update Top-K for the whole image using the new focus metric map.
+static void updateTopKForSlice(FSFusion::TopKMaps& t,
+                               const cv::Mat& focus32,
+                               int sliceIdx)
+{
+    CV_Assert(t.valid());
+    CV_Assert(focus32.type() == CV_32F);
+    CV_Assert(focus32.size() == t.sz);
+
+    const int w = t.sz.width;
+    const int h = t.sz.height;
+    const uint16_t s = (uint16_t)std::max(0, sliceIdx);
+
+    for (int y = 0; y < h; ++y)
+    {
+        const float* f = focus32.ptr<float>(y);
+        for (int x = 0; x < w; ++x)
+        {
+            topKInsertAt(t, x, y, f[x], s);
+        }
+    }
+}
+
+// Build per-slice weight map from Top-K (only K contributors per pixel).
+// For slice s, w(x)=sum_k (idx_k==s)*w_k.
+static cv::Mat buildSliceWeightMap32(const FSFusion::TopKMaps& topk,
+                                     const DMapWeights& W,
+                                     int sliceIdx)
+{
+    CV_Assert(topk.valid());
+    CV_Assert((int)W.w32.size() == topk.K);
+
+    cv::Mat w = cv::Mat::zeros(topk.sz, CV_32F);
+    const uint16_t s = (uint16_t)std::max(0, sliceIdx);
+
+    for (int k = 0; k < topk.K; ++k)
+    {
+        // mask where idx==s
+        cv::Mat mask = (topk.idx16[k] == s); // CV_8U 0/255
+        cv::Mat tmp;
+        W.w32[k].copyTo(tmp, mask);          // tmp is CV_32F where mask, 0 elsewhere
+        w += tmp;
+    }
+
+    return w;
+}
+
+// -----------------------------
+// Pyramid blending (Pass-2)
+// -----------------------------
+static void buildGaussianPyr(const cv::Mat& img32, int levels, std::vector<cv::Mat>& gp)
+{
+    gp.clear();
+    gp.reserve(levels);
+    gp.push_back(img32);
+    for (int i = 1; i < levels; ++i)
+    {
+        cv::Mat down;
+        cv::pyrDown(gp.back(), down);
+        gp.push_back(down);
+    }
+}
+
+static void buildLaplacianPyr(const cv::Mat& img32, int levels, std::vector<cv::Mat>& lp)
+{
+    std::vector<cv::Mat> gp;
+    buildGaussianPyr(img32, levels, gp);
+
+    lp.resize(levels);
+    for (int i = 0; i < levels - 1; ++i)
+    {
+        cv::Mat up;
+        cv::pyrUp(gp[i + 1], up, gp[i].size());
+        lp[i] = gp[i] - up;
+    }
+    lp[levels - 1] = gp[levels - 1]; // residual
+}
+
+static cv::Mat collapseLaplacianPyr(const std::vector<cv::Mat>& lp)
+{
+    CV_Assert(!lp.empty());
+    cv::Mat cur = lp.back().clone();
+    for (int i = (int)lp.size() - 2; i >= 0; --i)
+    {
+        cv::Mat up;
+        cv::pyrUp(cur, up, lp[i].size());
+        cur = up + lp[i];
+    }
+    return cur;
+}
+
+// Accumulator pyramids (numerator + denom) for weighted blending
+struct PyrAccum
+{
+    int levels = 0;
+    std::vector<cv::Mat> num3; // CV_32FC3
+    std::vector<cv::Mat> den1; // CV_32F
+
+    void reset(const cv::Size& sz, int levels_)
+    {
+        levels = levels_;
+        num3.resize(levels);
+        den1.resize(levels);
+
+        cv::Size s = sz;
+        for (int i = 0; i < levels; ++i)
+        {
+            num3[i] = cv::Mat::zeros(s, CV_32FC3);
+            den1[i] = cv::Mat::zeros(s, CV_32F);
+            if (i < levels - 1) s = cv::Size((s.width + 1)/2, (s.height + 1)/2);
+        }
+    }
+};
+
+// Accumulate one slice into pyramids: num += lap(color)*gw, den += gw
+static void accumulateSlicePyr(PyrAccum& A,
+                               const cv::Mat& color32FC3,
+                               const cv::Mat& weight32F,
+                               int levels,
+                               float weightBlurSigma)
+{
+    CV_Assert(color32FC3.type() == CV_32FC3);
+    CV_Assert(weight32F.type() == CV_32F);
+    CV_Assert(color32FC3.size() == weight32F.size());
+
+    cv::Mat w = weight32F;
+    if (weightBlurSigma > 0.0f)
+        cv::GaussianBlur(w, w, cv::Size(0,0), weightBlurSigma, weightBlurSigma, cv::BORDER_REFLECT);
+
+    // Build pyramids
+    std::vector<cv::Mat> lpColor;
+    buildLaplacianPyr(color32FC3, levels, lpColor);
+
+    std::vector<cv::Mat> gpW;
+    buildGaussianPyr(w, levels, gpW);
+
+    // Accumulate
+    for (int i = 0; i < levels; ++i)
+    {
+        cv::Mat w3;
+        cv::Mat ch[] = { gpW[i], gpW[i], gpW[i] };
+        cv::merge(ch, 3, w3); // CV_32FC3
+
+        A.num3[i] += lpColor[i].mul(w3);
+        A.den1[i] += gpW[i];
+    }
+}
+
+static cv::Mat finalizeBlend(const PyrAccum& A, float eps)
+{
+    std::vector<cv::Mat> lpOut(A.levels);
+
+    for (int i = 0; i < A.levels; ++i)
+    {
+        cv::Mat den = A.den1[i] + eps;
+
+        cv::Mat den3;
+        cv::Mat ch[] = { den, den, den };
+        cv::merge(ch, 3, den3);
+
+        lpOut[i] = A.num3[i] / den3;
+    }
+
+    return collapseLaplacianPyr(lpOut);
+}
+
+// --------- End DMAP functions ----------
+
 
 static ForegroundResult buildForegroundMask(
     const cv::Mat& gray8Orig,        // CV_8U
@@ -1295,7 +1912,7 @@ bool FSFusion::streamPMaxFinish(
     const Options &opt,
     cv::Mat &depthIndex16,
     const QStringList &inputPaths,
-    const std::vector<FSAlign::Result> &globals,
+    const std::vector<Result> &globals,
     std::atomic_bool *abortFlag,
     StatusCallback statusCallback,
     ProgressCallback progressCallback)
@@ -1596,6 +2213,371 @@ bool FSFusion::streamPMaxFinish(
     colorBuilder.reset();
 
     // if (progressCallback) progressCallback();
+
+    return true;
+}
+
+// ------------------------------------------------------------
+// streamDMapSlice  (Pass-1 streamed)
+// ------------------------------------------------------------
+bool FSFusion::streamDMapSlice(int slice,
+                               const cv::Mat& grayAlignPad8,   // CV_8U padded
+                               const cv::Mat& colorAlignPad,   // used for outDepth + sanity
+                               const Options& /*opt*/,
+                               std::atomic_bool* abortFlag,
+                               StatusCallback /*statusCallback*/,
+                               ProgressCallback progressCallback)
+{
+    QString srcFun = "FSFusion::streamDMapSlice";
+    QString s = QString::number(slice);
+    QString msg = "Slice " + s;
+    if (G::FSLog) G::log(srcFun, msg);
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    CV_Assert(!grayAlignPad8.empty());
+    CV_Assert(grayAlignPad8.type() == CV_8U);
+
+    if (!colorAlignPad.empty())
+    {
+        CV_Assert(colorAlignPad.size() == grayAlignPad8.size());
+        CV_Assert(colorAlignPad.channels() == 1 || colorAlignPad.channels() == 3 || colorAlignPad.channels() == 4);
+        CV_Assert(colorAlignPad.depth() == CV_8U || colorAlignPad.depth() == CV_16U);
+    }
+
+    // Slice-0 init
+    if (slice == 0)
+    {
+        padSize  = grayAlignPad8.size();
+
+        // If your pipeline already sets alignSize elsewhere, keep it.
+        // If not, assume alignSize==padSize for DMap path.
+        if (alignSize.width <= 0 || alignSize.height <= 0)
+            alignSize = padSize;
+
+        // Track output depth (used by finish conversion)
+        if (!colorAlignPad.empty())
+            outDepth = colorAlignPad.depth();
+        else if (outDepth != CV_8U && outDepth != CV_16U)
+            outDepth = CV_8U;
+
+        // Clamp topK to sane range
+        dmapParams.topK = std::max(1, std::min(8, dmapParams.topK));
+
+        // Allocate TopK maps in PAD space
+        dmapTopKPad.create(padSize, dmapParams.topK);
+
+        dmapActive = true;
+        dmapSliceCount = 0;
+    }
+    else
+    {
+        if (!dmapActive || !dmapTopKPad.valid())
+        {
+            qWarning().noquote() << "WARNING:" << srcFun << "called without active DMap state.";
+            return false;
+        }
+        if (grayAlignPad8.size() != padSize)
+        {
+            qWarning().noquote() << "WARNING:" << srcFun << "padSize mismatch.";
+            return false;
+        }
+    }
+
+    // ---- Focus metric (CV_32F) ----
+    auto focusMetric32 = [&](const cv::Mat& gray8) -> cv::Mat
+    {
+        // 0..1 float
+        cv::Mat g32;
+        gray8.convertTo(g32, CV_32F, 1.0 / 255.0);
+
+        // pre-blur for stability
+        if (dmapParams.scoreSigma > 0.0f)
+            cv::GaussianBlur(g32, g32, cv::Size(0,0),
+                             dmapParams.scoreSigma, dmapParams.scoreSigma,
+                             cv::BORDER_REFLECT);
+
+        // Laplacian magnitude
+        int ksz = dmapParams.scoreKSize;
+        if (ksz != 3 && ksz != 5) ksz = 3;
+
+        cv::Mat lap32;
+        cv::Laplacian(g32, lap32, CV_32F, ksz);
+
+        cv::Mat absLap32;
+        cv::absdiff(lap32, cv::Scalar::all(0), absLap32);
+
+        // light blur to reduce hot pixels
+        cv::GaussianBlur(absLap32, absLap32, cv::Size(0,0),
+                         0.8, 0.8, cv::BORDER_REFLECT);
+
+        return absLap32; // CV_32F
+    };
+
+    cv::Mat score32 = focusMetric32(grayAlignPad8);
+
+    // Update top-K with current slice score
+    updateTopKPerSlice(dmapTopKPad, score32, (uint16_t)std::max(0, slice));
+
+    dmapSliceCount++;
+
+    // if (progressCallback) progressCallback();
+    return true;
+}
+
+
+// ------------------------------------------------------------
+// streamDMapFinish (Pass-2 pyramid blend)
+// ------------------------------------------------------------
+bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
+                                const Options& /*opt*/,
+                                cv::Mat& depthIndex16,
+                                const QStringList& inputPaths,
+                                const std::vector<Result>& globals,
+                                std::atomic_bool* abortFlag,
+                                StatusCallback /*statusCallback*/,
+                                ProgressCallback progressCallback)
+{
+    QString srcFun = "FSFusion::streamDMapFinish";
+    if (G::FSLog) G::log(srcFun);
+
+    if (!dmapActive || !dmapTopKPad.valid())
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "DMap state not initialized.";
+        return false;
+    }
+
+    const int N = inputPaths.size();
+    if (N <= 0 || (int)globals.size() != N)
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "inputPaths/globals size mismatch.";
+        return false;
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // We require these to be valid before finishing:
+    //   alignSize      : aligned image size (before wavelet padding)
+    //   padSize        : wavelet padded size (TopK is stored in this space)
+    //   validAreaAlign : orig region inside alignSize
+    //   origSize       : expected final output size
+    if (alignSize.width <= 0 || alignSize.height <= 0 ||
+        padSize.width   <= 0 || padSize.height   <= 0 ||
+        validAreaAlign.width <= 0 || validAreaAlign.height <= 0 ||
+        origSize.width <= 0 || origSize.height <= 0)
+    {
+        qWarning().noquote() << "WARNING:" << srcFun
+                             << "Missing geometry state (alignSize/padSize/validAreaAlign/origSize).";
+        return false;
+    }
+
+    // ----------------------------
+    // Compute roiPadToAlign (same logic as streamPMaxFinish)
+    //   Step 1: PAD -> ALIGN
+    //   Step 2: ALIGN -> ORIG via validAreaAlign
+    // ----------------------------
+    cv::Rect roiPadToAlign(0, 0, alignSize.width, alignSize.height);
+
+    if (padSize != alignSize)
+    {
+        const int padW = padSize.width  - alignSize.width;
+        const int padH = padSize.height - alignSize.height;
+
+        if (padW < 0 || padH < 0)
+        {
+            qWarning().noquote() << "WARNING:" << srcFun << "padSize smaller than alignSize.";
+            return false;
+        }
+
+        const int left = padW / 2;
+        const int top  = padH / 2;
+
+        roiPadToAlign = cv::Rect(left, top, alignSize.width, alignSize.height);
+    }
+
+    if (!rectInside(roiPadToAlign, dmapTopKPad.sz))
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "roiPadToAlign out of bounds for TopK PAD maps.";
+        return false;
+    }
+
+    cv::Size alignSz(roiPadToAlign.width, roiPadToAlign.height);
+    if (!rectInside(validAreaAlign, alignSz))
+    {
+        qWarning().noquote() << "WARNING:" << srcFun << "validAreaAlign out of bounds for ALIGN crop.";
+        return false;
+    }
+
+    cv::Size origSz(validAreaAlign.width, validAreaAlign.height);
+    if (origSz != origSize)
+    {
+        // Not fatal, but indicates mismatch in your pipeline state.
+        // Prefer to enforce the actual crop.
+        origSize = origSz;
+    }
+
+    // ----------------------------
+    // Crop TopK: PAD -> ALIGN -> ORIG
+    // ----------------------------
+    TopKMaps topkOrig;
+    topkOrig.create(origSz, dmapTopKPad.K);
+
+    for (int k = 0; k < dmapTopKPad.K; ++k)
+    {
+        cv::Mat idxAlign = dmapTopKPad.idx16[k](roiPadToAlign);
+        cv::Mat scAlign  = dmapTopKPad.score32[k](roiPadToAlign);
+
+        topkOrig.idx16[k]   = idxAlign(validAreaAlign).clone();
+        topkOrig.score32[k] = scAlign(validAreaAlign).clone();
+    }
+
+    // Depth map = top-1 index in ORIG space
+    depthIndex16 = topkOrig.idx16[0].clone(); // CV_16U
+
+    // ----------------------------
+    // Build weights from TopK (orig size)
+    // ----------------------------
+    DMapWeights W;
+    buildDMapWeightsFromTopK(topkOrig, dmapParams, W);
+
+    // debug
+    {
+    // verify slot weights sum to ~1
+    cv::Mat sumW = cv::Mat::zeros(W.w32[0].size(), CV_32F);
+    for (auto &wk : W.w32) sumW += wk;
+
+    double mn, mx; cv::minMaxLoc(sumW, &mn, &mx);
+    qDebug() << "DMap sum slot weights min/max =" << mn << mx;
+
+    // how many pixels are “dead”
+    cv::Mat dead = (sumW < 0.5f);  // should be basically none
+    qDebug() << "DMap dead pixels =" << cv::countNonZero(dead);
+    }
+
+    // ----------------------------
+    // Choose pyramid levels
+    // ----------------------------
+    int levels = dmapParams.pyrLevels;
+    if (levels <= 0) levels = levelsForSize(origSz);
+    levels = std::max(3, std::min(10, levels));
+
+    PyrAccum A;
+    A.reset(origSz, levels);
+
+    // ----------------------------
+    // Pass-2: stream slices
+    //   - load aligned slice in ORIG space
+    //   - build per-slice weight map
+    //   - accumulate pyramids
+    // ----------------------------
+    for (int s = 0; s < N; ++s)
+    {
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+        // per-slice weight map (orig)
+        cv::Mat w32 = buildSliceWeightMap32(topkOrig, W, s);
+
+        // skip near-zero contributors
+        double wsum = cv::sum(w32)[0];
+        if (s == 0 || s == N-1) qDebug() << "slice" << s << "wsum =" << wsum;
+        if (wsum <= 1e-6)
+        {
+            // if (progressCallback) progressCallback();
+            continue;
+        }
+
+        // Load aligned slice in ORIG space (must exist in your FSLoader)
+        cv::Mat gray8Orig, colorOrig;
+        if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
+                                            roiPadToAlign, validAreaAlign,
+                                            gray8Orig, colorOrig))
+        {
+            qWarning().noquote() << "WARNING:" << srcFun << "loadAlignedSliceOrig failed slice" << s;
+            return false;
+        }
+
+        // Ensure BGR 3ch
+        if (colorOrig.channels() == 1)
+            cv::cvtColor(colorOrig, colorOrig, cv::COLOR_GRAY2BGR);
+        else if (colorOrig.channels() == 4)
+            cv::cvtColor(colorOrig, colorOrig, cv::COLOR_BGRA2BGR);
+
+        if (colorOrig.channels() != 3 || colorOrig.size() != origSz)
+        {
+            qWarning().noquote() << "WARNING:" << srcFun << "colorOrig shape mismatch slice" << s;
+            return false;
+        }
+
+
+        double mn=0, mx=0;
+        std::vector<cv::Mat> ch;
+        cv::split(colorOrig, ch);
+        cv::minMaxLoc(ch[0], &mn, &mx);
+        qDebug() << "slice" << s << "colorOrig depth/type =" << colorOrig.depth() << colorOrig.type()
+                 << "B channel min/max =" << mn << mx;
+
+
+        // Convert to float32 in the SAME numeric domain as input
+        cv::Mat color32;
+        if (colorOrig.depth() == CV_8U)
+            colorOrig.convertTo(color32, CV_32FC3, 1.0);
+        else if (colorOrig.depth() == CV_16U)
+            colorOrig.convertTo(color32, CV_32FC3, 1.0);
+        else
+        {
+            qWarning().noquote() << "WARNING:" << srcFun << "unsupported color depth" << colorOrig.depth();
+            return false;
+        }
+
+        // accumulateSlicePyr(A, color32, w32, levels, dmapParams.weightBlurSigma);
+        accumulateSlicePyr(A, color32, w32, levels, /*weightBlurSigma=*/0.0f);
+
+        if (progressCallback) progressCallback();
+    }
+
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+    // ----------------------------
+    // Finalize blend -> output
+    // ----------------------------
+
+    // debug
+    {
+        for (int i = 0; i < A.levels; ++i) {
+            double mn, mx;
+            cv::minMaxLoc(A.den1[i], &mn, &mx);
+            qDebug() << "DMap den level" << i << "min/max =" << mn << mx;
+        }
+    }
+
+    cv::Mat out32 = finalizeBlend(A, 1e-10f); // CV_32FC3
+
+    // Clamp before convert (important if weights/blur cause slight overshoot)
+    if (outDepth == CV_16U)
+    {
+        cv::max(out32, 0.0f, out32);
+        cv::min(out32, 65535.0f, out32);
+
+        cv::Mat out16;
+        out32.convertTo(out16, CV_16UC3, 1.0);
+        outputColor = out16;
+    }
+    else
+    {
+        cv::max(out32, 0.0f, out32);
+        cv::min(out32, 255.0f, out32);
+
+        cv::Mat out8;
+        out32.convertTo(out8, CV_8UC3, 1.0);
+        outputColor = out8;
+    }
+
+    // ----------------------------
+    // Housekeeping
+    // ----------------------------
+    dmapTopKPad.reset();
+    dmapActive = false;
+    dmapSliceCount = 0;
 
     return true;
 }
