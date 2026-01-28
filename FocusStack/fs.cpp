@@ -1815,6 +1815,10 @@ bool FS::runStreamDMap()
         return false;
     }
 
+    cv::Mat preview = FSUtilities::makeDepthPreviewEnhanced(depthIndex16Mat, slices);
+    QString depthPreviewPath = depthFolderPath + "/depth_preview.png";
+    FSUtilities::writePngWithTitle(depthPreviewPath, preview);
+
     if (G::abortFocusStack) return false;
     incrementProgress();
 
