@@ -25,19 +25,19 @@ StreamPMaxWeightedErosion
 StreamPMaxWeightedErosionEdge
 
 
+StmDMap
+StmDMap_01  Splotchy background
+    enableHardWeightsOnLowpass = true
+    enableLowpassEqualization  = false
+StmDMap_02  Same as StmDMap_01
+    enableHardWeightsOnLowpass = true
+    enableLowpassEqualization  = true
+    StmDMap_02  Same as StmDMap_01
+    enableHardWeightsOnLowpass = false
+    enableLowpassEqualization  = true
 
 
 
-
-1) FSLoader.h declaration
-
-C: 5x1 CV_32FC1 min=-0.034991596 max=1.0015349
-C first=1.001534939, 0.001703750459, -0.03499159589, -0.009199846536, -0.02147758752
-WB: 6x1 CV_32FC1 min=-0.45912787 max=1.0045836
-WB first=-0.4591278732, 1.004583597, -0.09398322552, 1.001614332, -0.1519848555, 1.002635121
-pre norm B min/max 0 255
-post norm B min/max 0 255
-slice 1 colorOrig depth/type = 0 16 B channel min/max = 0 255
 
 
 

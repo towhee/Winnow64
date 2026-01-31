@@ -164,6 +164,82 @@ static cv::Mat makeObjectMask8U_Otsu(const cv::Mat &gray8)
     return obj; // 0/255
 }
 
+static cv::Mat modeFilterIdx16(
+    const cv::Mat& idx16,
+    const cv::Mat& mask8,
+    int radius)
+{
+    CV_Assert(idx16.type() == CV_16U);
+    CV_Assert(mask8.type() == CV_8U);
+    CV_Assert(idx16.size() == mask8.size());
+
+    cv::Mat out = idx16.clone();
+    const int R = radius;
+
+    for (int y = 0; y < idx16.rows; ++y)
+    {
+        for (int x = 0; x < idx16.cols; ++x)
+        {
+            if (!mask8.at<uint8_t>(y, x))
+                continue;
+
+            std::unordered_map<uint16_t, int> hist;
+
+            for (int dy = -R; dy <= R; ++dy)
+            {
+                int yy = y + dy;
+                if ((unsigned)yy >= (unsigned)idx16.rows) continue;
+
+                for (int dx = -R; dx <= R; ++dx)
+                {
+                    int xx = x + dx;
+                    if ((unsigned)xx >= (unsigned)idx16.cols) continue;
+
+                    uint16_t v = idx16.at<uint16_t>(yy, xx);
+                    hist[v]++;
+                }
+            }
+
+            uint16_t best = idx16.at<uint16_t>(y, x);
+            int bestCount = 0;
+
+            for (auto& kv : hist)
+            {
+                if (kv.second > bestCount)
+                {
+                    best = kv.first;
+                    bestCount = kv.second;
+                }
+            }
+
+            out.at<uint16_t>(y, x) = best;
+        }
+    }
+
+    return out;
+}
+
+static cv::Mat boundaryThinFromIdx16(const cv::Mat& idx16)
+{
+    CV_Assert(idx16.type() == CV_16U);
+    cv::Mat boundary(idx16.size(), CV_8U, cv::Scalar(0));
+
+    // horizontal diffs
+    cv::Mat a = idx16.colRange(0, idx16.cols - 1);
+    cv::Mat b = idx16.colRange(1, idx16.cols);
+    cv::Mat h = (a != b);
+    h.copyTo(boundary.colRange(1, idx16.cols));
+
+    // vertical diffs (OR in)
+    cv::Mat c = idx16.rowRange(0, idx16.rows - 1);
+    cv::Mat d = idx16.rowRange(1, idx16.rows);
+    cv::Mat v = (c != d);
+    cv::Mat dst = boundary.rowRange(1, idx16.rows);
+    cv::bitwise_or(dst, v, dst);
+
+    return boundary; // CV_8U 0/255
+}
+
 // -----------------------------------------------------------------------------
 // Foreground mask (authoritative)
 //
@@ -354,14 +430,17 @@ static void buildBoundaryAndBand(const cv::Mat& top1Idx16,
     CV_Assert(top1Idx16.type() == CV_16U);
     CV_Assert(!top1Idx16.empty());
 
-    boundary8 = cv::Mat::zeros(top1Idx16.size(), CV_8U);
-
     const int rows = top1Idx16.rows;
     const int cols = top1Idx16.cols;
+
+    boundary8 = cv::Mat::zeros(top1Idx16.size(), CV_8U);
 
     for (int y = 0; y < rows; ++y)
     {
         const uint16_t* row = top1Idx16.ptr<uint16_t>(y);
+        const uint16_t* rowUp = (y > 0) ? top1Idx16.ptr<uint16_t>(y - 1) : nullptr;
+        const uint16_t* rowDn = (y + 1 < rows) ? top1Idx16.ptr<uint16_t>(y + 1) : nullptr;
+
         uint8_t* out = boundary8.ptr<uint8_t>(y);
 
         for (int x = 0; x < cols; ++x)
@@ -369,12 +448,69 @@ static void buildBoundaryAndBand(const cv::Mat& top1Idx16,
             const uint16_t v = row[x];
 
             bool diff = false;
+            if (x > 0)        diff |= (v != row[x - 1]);
             if (x + 1 < cols) diff |= (v != row[x + 1]);
-            if (y + 1 < rows)
+            if (rowUp)        diff |= (v != rowUp[x]);
+            if (rowDn)        diff |= (v != rowDn[x]);
+
+            if (diff) out[x] = 255;
+        }
+    }
+
+    band8 = boundary8;
+    if (bandDilatePx > 0)
+        cv::dilate(band8, band8, seEllipse(bandDilatePx));
+}
+
+static void buildBoundaryAndBandGated(const cv::Mat& top1Idx16,
+                                      const cv::Mat& reliable8,   // CV_8U 0/255, may be empty
+                                      int bandDilatePx,
+                                      cv::Mat& boundary8,
+                                      cv::Mat& band8)
+{
+    CV_Assert(top1Idx16.type() == CV_16U);
+    CV_Assert(reliable8.empty() || (reliable8.type() == CV_8U && reliable8.size() == top1Idx16.size()));
+
+    const int rows = top1Idx16.rows;
+    const int cols = top1Idx16.cols;
+
+    boundary8 = cv::Mat::zeros(top1Idx16.size(), CV_8U);
+
+    for (int y = 0; y < rows; ++y)
+    {
+        const uint16_t* row   = top1Idx16.ptr<uint16_t>(y);
+        const uint16_t* rowUp = (y > 0) ? top1Idx16.ptr<uint16_t>(y - 1) : nullptr;
+        const uint16_t* rowDn = (y + 1 < rows) ? top1Idx16.ptr<uint16_t>(y + 1) : nullptr;
+
+        const uint8_t* rel   = reliable8.empty() ? nullptr : reliable8.ptr<uint8_t>(y);
+        const uint8_t* relUp = (reliable8.empty() || y == 0) ? nullptr : reliable8.ptr<uint8_t>(y - 1);
+        const uint8_t* relDn = (reliable8.empty() || y + 1 >= rows) ? nullptr : reliable8.ptr<uint8_t>(y + 1);
+
+        uint8_t* out = boundary8.ptr<uint8_t>(y);
+
+        for (int x = 0; x < cols; ++x)
+        {
+            // If anything around here is “reliable”, we SKIP boundary marking.
+            // We only want boundaries in UNCERTAIN areas.
+            if (rel)
             {
-                const uint16_t* row2 = top1Idx16.ptr<uint16_t>(y + 1);
-                diff |= (v != row2[x]);
+                bool anyReliable =
+                    (rel[x] != 0) ||
+                    (x > 0        && rel[x - 1] != 0) ||
+                    (x + 1 < cols && rel[x + 1] != 0) ||
+                    (relUp && relUp[x] != 0) ||
+                    (relDn && relDn[x] != 0);
+
+                if (anyReliable) continue;   // <-- INVERTED (this is the key fix)
             }
+
+            const uint16_t v = row[x];
+
+            bool diff = false;
+            if (x > 0)        diff |= (v != row[x - 1]);
+            if (x + 1 < cols) diff |= (v != row[x + 1]);
+            if (rowUp)        diff |= (v != rowUp[x]);
+            if (rowDn)        diff |= (v != rowDn[x]);
 
             if (diff) out[x] = 255;
         }
@@ -383,6 +519,96 @@ static void buildBoundaryAndBand(const cv::Mat& top1Idx16,
     band8 = boundary8.clone();
     if (bandDilatePx > 0)
         cv::dilate(band8, band8, seEllipse(bandDilatePx));
+}
+
+static bool maskedMeanStdBGR(const cv::Mat& bgr32, const cv::Mat& mask8,
+                             cv::Vec3f& mean, cv::Vec3f& stdev)
+{
+    CV_Assert(bgr32.type() == CV_32FC3);
+    CV_Assert(mask8.type() == CV_8U);
+    CV_Assert(bgr32.size() == mask8.size());
+
+    cv::Scalar m, s;
+    cv::meanStdDev(bgr32, m, s, mask8);
+
+    mean  = cv::Vec3f((float)m[0], (float)m[1], (float)m[2]);
+    stdev = cv::Vec3f((float)s[0], (float)s[1], (float)s[2]);
+
+    // Avoid degenerate fits
+    const float eps = 1e-3f;
+    return (stdev[0] > eps && stdev[1] > eps && stdev[2] > eps);
+}
+
+static void applyGainOffsetBGR(cv::Mat& bgr32, const cv::Vec3f& gain, const cv::Vec3f& off, float alpha)
+{
+    CV_Assert(bgr32.type() == CV_32FC3);
+    alpha = std::max(0.0f, std::min(1.0f, alpha));
+
+    for (int y = 0; y < bgr32.rows; ++y)
+    {
+        cv::Vec3f* p = bgr32.ptr<cv::Vec3f>(y);
+        for (int x = 0; x < bgr32.cols; ++x)
+        {
+            cv::Vec3f v = p[x];
+            cv::Vec3f v2;
+            v2[0] = v[0] * gain[0] + off[0];
+            v2[1] = v[1] * gain[1] + off[1];
+            v2[2] = v[2] * gain[2] + off[2];
+            p[x] = v * (1.0f - alpha) + v2 * alpha;
+        }
+    }
+}
+
+static cv::Mat stabilizeTop1IndexMedian3(const cv::Mat& idx16)
+{
+    CV_Assert(idx16.type() == CV_16U);
+    cv::Mat out;
+    cv::medianBlur(idx16, out, 3);   // 3x3 “mode-ish” for label maps
+    return out;
+}
+
+struct LowpassRefStats
+{
+    bool   valid = false;
+    cv::Vec3f mean, stdev;
+};
+
+static bool fitLowpassEq(const cv::Mat& bgr32, const cv::Mat& mask8,
+                         LowpassRefStats& ref,
+                         cv::Vec3f& gainOut, cv::Vec3f& offOut)
+{
+    cv::Vec3f m, sd;
+    if (!maskedMeanStdBGR(bgr32, mask8, m, sd))
+        return false;
+
+    const float sdFloor = 1e-6f;
+    sd[0] = std::max(sd[0], sdFloor);
+    sd[1] = std::max(sd[1], sdFloor);
+    sd[2] = std::max(sd[2], sdFloor);
+
+    if (!ref.valid)
+    {
+        ref.valid = true;
+        ref.mean = m;
+        ref.stdev = sd;
+        gainOut = cv::Vec3f(1,1,1);
+        offOut  = cv::Vec3f(0,0,0);
+        return true;
+    }
+
+    ref.stdev[0] = std::max(ref.stdev[0], sdFloor);
+    ref.stdev[1] = std::max(ref.stdev[1], sdFloor);
+    ref.stdev[2] = std::max(ref.stdev[2], sdFloor);
+
+    gainOut[0] = ref.stdev[0] / sd[0];
+    gainOut[1] = ref.stdev[1] / sd[1];
+    gainOut[2] = ref.stdev[2] / sd[2];
+
+    offOut[0] = ref.mean[0] - m[0] * gainOut[0];
+    offOut[1] = ref.mean[1] - m[1] * gainOut[1];
+    offOut[2] = ref.mean[2] - m[2] * gainOut[2];
+
+    return true;
 }
 
 struct DMapWeights
@@ -394,6 +620,8 @@ struct DMapWeights
     // Debug visuals
     cv::Mat boundary8;              // 0/255 where top-1 index changes
     cv::Mat band8;                  // dilated boundary band (halo zone)
+    cv::Mat overrideMask8;          // CV_8U 0/255
+    cv::Mat overrideWinner16;       // CV_16U slice index
 
     void create(cv::Size sz, int K)
     {
@@ -409,9 +637,53 @@ struct DMapWeights
         w32.clear();
         boundary8.release();
         band8.release();
+        overrideMask8.release();
+        overrideWinner16.release();
     }
 };
 
+static cv::Mat computeConfidence01(const FSFusion::TopKMaps& topk, float eps)
+{
+    CV_Assert(topk.K >= 2);
+    cv::Mat s0 = topk.score32[0];
+    cv::Mat s1 = topk.score32[1];
+
+    // conf = (s0 - s1) / (abs(s0) + eps)  -> clamp 0..1
+    cv::Mat denom;
+    cv::absdiff(s0, cv::Scalar::all(0), denom);
+    denom = denom + eps;
+
+    cv::Mat conf = (s0 - s1) / denom;
+    cv::max(conf, 0.0f, conf);
+    cv::min(conf, 1.0f, conf);
+    return conf; // CV_32F 0..1
+}
+
+static cv::Mat computeConfidence01_Top2(const FSFusion::TopKMaps& topk, float eps)
+{
+    CV_Assert(topk.valid());
+    if (topk.K < 2)
+        return cv::Mat(topk.sz, CV_32F, cv::Scalar(1.0f));
+
+    const cv::Mat& s0 = topk.score32[0];
+    const cv::Mat& s1 = topk.score32[1];
+    CV_Assert(s0.type() == CV_32F && s1.type() == CV_32F);
+    CV_Assert(s0.size() == topk.sz && s1.size() == topk.sz);
+
+    cv::Mat abs0, abs1, diff;
+    cv::absdiff(s0, cv::Scalar::all(0), abs0);
+    cv::absdiff(s1, cv::Scalar::all(0), abs1);
+    cv::absdiff(s0, s1, diff);
+
+    const float e = std::max(1e-12f, eps);
+    cv::Mat denom = abs0 + abs1 + e;
+
+    cv::Mat conf = diff / denom;
+
+    cv::max(conf, 0.0f, conf);
+    cv::min(conf, 1.0f, conf);
+    return conf;
+}
 
 // -----------------------------------------------------------------------------
 // buildTopKWeightsSoftmax
@@ -576,22 +848,108 @@ static void buildDMapWeightsFromTopK(const FSFusion::TopKMaps& topk,
                                      DMapWeights& weightsOut)
 {
     QString srcFun = "FSFusion::buildDMapWeightsFromTopK";
-    G::log(srcFun);
+    if (G::FSLog) G::log(srcFun);
 
-    CV_Assert(topk.K == p.topK);
     CV_Assert(topk.K >= 1);
+    CV_Assert(p.topK >= 1);
+    CV_Assert(topk.K == p.topK);
 
-    // 1) base weights
+    // Always size/clear outputs here (single source of truth)
+    weightsOut.create(topk.sz, topk.K);
+
+    // ------------------------------------------------------------
+    // 1) Base K-plane weights from scores (softmax over topK ranks)
+    //    (This must fill weightsOut.w32[k], k=0..K-1)
+    // ------------------------------------------------------------
     buildTopKWeightsSoftmax(topk, p, weightsOut);
 
-    // 2) boundary & band
-    // band width: use weightBlurPx (or define a separate param)
-    const int bandDilatePx = std::max(0, p.weightBlurPx);
-    buildBoundaryAndBand(topk.idx16[0], bandDilatePx, weightsOut.boundary8, weightsOut.band8);
+    // ------------------------------------------------------------
+    // 2) Reliability mask: reliable8 = strong focus OR confident top1-vs-top2
+    // ------------------------------------------------------------
+    cv::Mat reliable8; // 0/255
+    {
+        cv::Mat conf01 = computeConfidence01_Top2(topk, p.confEps); // CV_32F 0..1
+        CV_Assert(conf01.type() == CV_32F);
+        CV_Assert(conf01.size() == topk.sz);
 
-    // 3) OLD Gaussian smoothing path is now optional and OFF by default.
-    // Keep it callable for A/B, but do NOT run it unless explicitly enabled.
+        // "strong focus" gate from top1 score, robust-ish threshold
+        double smn = 0, smx = 0;
+        cv::minMaxLoc(topk.score32[0], &smn, &smx);
+
+        const float scoreThr = float(smx) * 0.02f;  // try 0.01..0.05
+        cv::Mat strong = (topk.score32[0] > scoreThr);
+        strong.convertTo(strong, CV_8U, 255.0);
+
+        cv::Mat confident = (conf01 > p.confHigh);
+        confident.convertTo(confident, CV_8U, 255.0);
+
+        cv::bitwise_or(strong, confident, reliable8);
+    }
+
+    // ------------------------------------------------------------
+    // 3) Boundary: where top-1 index changes (thin edge map)
+    // ------------------------------------------------------------
+    cv::Mat boundary8(topk.sz, CV_8U, cv::Scalar(0));
+    {
+        const cv::Mat& idx = topk.idx16[0];
+        CV_Assert(idx.type() == CV_16U);
+        CV_Assert(idx.size() == topk.sz);
+
+        // horizontal changes
+        cv::Mat a = idx.colRange(0, idx.cols - 1);
+        cv::Mat b = idx.colRange(1, idx.cols);
+        cv::Mat h = (a != b); // CV_8U 0/255
+        h.copyTo(boundary8.colRange(1, idx.cols));   // shift right
+
+        // vertical changes (OR in)
+        cv::Mat c = idx.rowRange(0, idx.rows - 1);
+        cv::Mat d = idx.rowRange(1, idx.rows);
+        cv::Mat v = (c != d); // CV_8U 0/255
+        cv::Mat dst = boundary8.rowRange(1, idx.rows);
+        cv::bitwise_or(dst, v, dst);
+    }
+
+    qDebug() << "boundary thin px =" << cv::countNonZero(boundary8);
+
+    // ------------------------------------------------------------
+    // 4) Gate boundary to *UNreliable* areas (THIS is likely flipped in your code)
+    //    We only want a halo-band where boundaries are uncertain / weak.
+    // ------------------------------------------------------------
+    cv::Mat unreliable8;
+    cv::bitwise_not(reliable8, unreliable8); // 0/255, reliable->0, unreliable->255
+
+    // boundary_gated = boundary & unreliable
+    cv::bitwise_and(boundary8, unreliable8, weightsOut.boundary8);
+
+    // ------------------------------------------------------------
+    // 5) Build band by dilating the (thin) gated boundary
+    // ------------------------------------------------------------
+    const int bandDilatePx = std::max(0, p.bandDilatePx);
+    if (bandDilatePx > 0)
+        cv::dilate(weightsOut.boundary8, weightsOut.band8, seEllipse(bandDilatePx));
+    else
+        weightsOut.band8 = weightsOut.boundary8.clone();
+
+    // DEBUG
+    if (G::FSLog)
+    {
+        cv::Mat conf01 = computeConfidence01_Top2(topk, p.confEps);
+        cv::Mat low = (conf01 < p.confLow);
+        low.convertTo(low, CV_8U, 255.0);
+
+        cv::Mat inter;
+        cv::bitwise_and(low, weightsOut.band8, inter);
+
+        qDebug() << "band px =" << cv::countNonZero(weightsOut.band8);
+        qDebug() << "lowConf px =" << cv::countNonZero(low)
+                 << "intersect px =" << cv::countNonZero(inter);
+    }
+
+    // ------------------------------------------------------------
+    // 6) Optional OLD Gaussian smoothing path
+    // ------------------------------------------------------------
     if (p.enableGaussianBandSmoothing &&
+        !weightsOut.band8.empty() &&
         cv::countNonZero(weightsOut.band8) > 0 &&
         p.weightBlurSigma > 0.0f)
     {
@@ -646,46 +1004,9 @@ static cv::Mat focusMetric32(const cv::Mat& gray8, float preBlurSigma)
     cv::absdiff(lap32, cv::Scalar::all(0), absLap32); // |lap|
 
     // Light blur to reduce “hot pixel” domination
-    cv::GaussianBlur(absLap32, absLap32, cv::Size(0,0), 0.8, 0.8, cv::BORDER_REFLECT);
+    cv::GaussianBlur(absLap32, absLap32, cv::Size(0,0), 4, 4, cv::BORDER_REFLECT);
+    // cv::GaussianBlur(absLap32, absLap32, cv::Size(0,0), 0.8, 0.8, cv::BORDER_REFLECT);
     return absLap32; // CV_32F, 0..small
-}
-
-static cv::Mat computeConfidence01(const FSFusion::TopKMaps& topk, float eps)
-{
-    CV_Assert(topk.K >= 2);
-    cv::Mat s0 = topk.score32[0];
-    cv::Mat s1 = topk.score32[1];
-
-    // conf = (s0 - s1) / (abs(s0) + eps)  -> clamp 0..1
-    cv::Mat denom;
-    cv::absdiff(s0, cv::Scalar::all(0), denom);
-    denom = denom + eps;
-
-    cv::Mat conf = (s0 - s1) / denom;
-    cv::max(conf, 0.0f, conf);
-    cv::min(conf, 1.0f, conf);
-    return conf; // CV_32F 0..1
-}
-
-static cv::Mat computeConfidence01_Top2(const FSFusion::TopKMaps& topk, float eps)
-{
-    CV_Assert(topk.valid());
-    if (topk.K < 2)
-        return cv::Mat(topk.sz, CV_32F, cv::Scalar(1.0f)); // fully confident fallback
-
-    const cv::Mat& s0 = topk.score32[0];
-    const cv::Mat& s1 = topk.score32[1];
-    CV_Assert(s0.type() == CV_32F && s1.type() == CV_32F);
-    CV_Assert(s0.size() == topk.sz && s1.size() == topk.sz);
-
-    cv::Mat denom;
-    cv::absdiff(s0, cv::Scalar::all(0), denom);
-    denom = denom + std::max(1e-12f, eps);
-
-    cv::Mat conf = (s0 - s1) / denom;   // larger gap => higher confidence
-    cv::max(conf, 0.0f, conf);
-    cv::min(conf, 1.0f, conf);
-    return conf; // CV_32F 0..1
 }
 
 static void smoothWeightsEdgeAwareInBand(
@@ -877,22 +1198,46 @@ static cv::Mat buildSliceWeightMap32(const FSFusion::TopKMaps& topk,
                                      const DMapWeights& W,
                                      int sliceIdx)
 {
-    CV_Assert(topk.valid());
+    CV_Assert(topk.K >= 1);
     CV_Assert((int)W.w32.size() == topk.K);
+    CV_Assert((int)topk.idx16.size() == topk.K);
 
-    cv::Mat w = cv::Mat::zeros(topk.sz, CV_32F);
-    const uint16_t s = (uint16_t)std::max(0, sliceIdx);
+    cv::Mat w32(topk.sz, CV_32F, cv::Scalar(0));
 
+    // Base: sum per-rank weights where candidate index equals this slice
     for (int k = 0; k < topk.K; ++k)
     {
-        // mask where idx==s
-        cv::Mat mask = (topk.idx16[k] == s); // CV_8U 0/255
+        cv::Mat m = (topk.idx16[k] == (uint16_t)sliceIdx); // CV_8U 0/255
+        cv::Mat mk;
+        m.convertTo(mk, CV_32F, 1.0 / 255.0);
+
         cv::Mat tmp;
-        W.w32[k].copyTo(tmp, mask);          // tmp is CV_32F where mask, 0 elsewhere
-        w += tmp;
+        cv::multiply(W.w32[k], mk, tmp);
+        w32 += tmp;
     }
 
-    return w;
+    // Overrides: one-hot in overrideMask8, driven by overrideWinner16
+    if (!W.overrideMask8.empty())
+    {
+        CV_Assert(W.overrideMask8.type() == CV_8U);
+        CV_Assert(W.overrideMask8.size() == topk.sz);
+        CV_Assert(!W.overrideWinner16.empty());
+        CV_Assert(W.overrideWinner16.type() == CV_16U);
+        CV_Assert(W.overrideWinner16.size() == topk.sz);
+
+        // inside overrideMask: w = 1 if winner==sliceIdx else 0
+        cv::Mat eq = (W.overrideWinner16 == (uint16_t)sliceIdx); // CV_8U 0/255
+
+        // clear inside override mask
+        w32.setTo(0.0f, W.overrideMask8);
+
+        // set ones where both (overrideMask && eq)
+        cv::Mat both;
+        cv::bitwise_and(W.overrideMask8, eq, both);
+        w32.setTo(1.0f, both);
+    }
+
+    return w32;
 }
 
 // -----------------------------
@@ -962,6 +1307,37 @@ struct PyrAccum
     }
 };
 
+static void buildDepthEdgeVetoPyr(const std::vector<cv::Mat>& idxPyr16,
+                                  int levels,
+                                  const FSFusion::DMapParams& p,
+                                  std::vector<cv::Mat>& vetoPyr8)
+{
+    CV_Assert((int)idxPyr16.size() == levels);
+    vetoPyr8.resize(levels);
+
+    for (int i = 0; i < levels; ++i)
+    {
+        CV_Assert(idxPyr16[i].type() == CV_16U);
+
+        cv::Mat depthF;
+        idxPyr16[i].convertTo(depthF, CV_32F); // slice indices as float
+
+        cv::Mat dx, dy;
+        cv::Sobel(depthF, dx, CV_32F, 1, 0, 3);
+        cv::Sobel(depthF, dy, CV_32F, 0, 1, 3);
+
+        cv::Mat grad = cv::abs(dx) + cv::abs(dy);
+
+        // strong depth changes => veto blending
+        cv::Mat veto = (grad > p.depthGradThresh); // CV_8U 0/255
+
+        if (p.vetoDilatePx > 0)
+            cv::dilate(veto, veto, seEllipse(p.vetoDilatePx));
+
+        vetoPyr8[i] = veto;
+    }
+}
+
 static void buildIndexPyrNearest(const cv::Mat& idx16Level0, int levels, std::vector<cv::Mat>& idxPyr)
 {
     CV_Assert(idx16Level0.type() == CV_16U);
@@ -985,6 +1361,7 @@ static void accumulateSlicePyr(PyrAccum& A,
                                const cv::Mat& color32FC3,
                                const cv::Mat& weight32F,
                                const std::vector<cv::Mat>& idxPyr16,
+                               const std::vector<cv::Mat>* vetoPyr8,
                                int sliceIdx,
                                const FSFusion::DMapParams& p,
                                int levels,
@@ -1006,7 +1383,51 @@ static void accumulateSlicePyr(PyrAccum& A,
     std::vector<cv::Mat> gpW;
     buildGaussianPyr(w, levels, gpW);
 
-    // ---- NEW: optionally replace coarse gpW with HARD winner mask to stop lowpass bleeding
+    // ---- Module E: depth-gradient lowpass veto (SAFE version)
+    // Instead of zeroing weights (can collapse denominator), force HARD winner only in veto pixels.
+    if (p.enableDepthGradLowpassVeto && vetoPyr8 && !vetoPyr8->empty())
+    {
+        CV_Assert((int)vetoPyr8->size() == levels);
+        CV_Assert((int)idxPyr16.size() == levels);
+
+        int start = p.vetoFromLevel;
+        if (start < 0) start = levels - 1;                 // default residual only
+        start = std::max(0, std::min(levels - 1, start));
+
+        const float s = std::max(0.0f, std::min(1.0f, p.vetoStrength));
+        const uint16_t slice = (uint16_t)std::max(0, sliceIdx);
+
+        for (int i = start; i < levels; ++i)
+        {
+            const cv::Mat& veto = (*vetoPyr8)[i];
+            CV_Assert(veto.type() == CV_8U);
+            CV_Assert(veto.size() == gpW[i].size());
+            CV_Assert(idxPyr16[i].type() == CV_16U);
+            CV_Assert(idxPyr16[i].size() == gpW[i].size());
+
+            // hard winner mask for THIS slice at THIS level
+            cv::Mat hard8 = (idxPyr16[i] == slice);           // 0/255
+            cv::Mat hardF;
+            hard8.convertTo(hardF, CV_32F, 1.0 / 255.0);      // 0/1
+
+            if (s >= 0.999f)
+            {
+                // Full strength: replace weights with hard winner inside veto pixels
+                hardF.copyTo(gpW[i], veto);
+            }
+            else if (s > 0.0f)
+            {
+                // Partial: gpW = lerp(gpW, hardF, s) inside veto pixels
+                cv::Mat out = gpW[i].clone();
+
+                cv::Mat mix = (1.0f - s) * gpW[i] + s * hardF;
+                mix.copyTo(out, veto);
+                gpW[i] = out;
+            }
+        }
+    }
+
+    // Optionally replace coarse gpW with HARD winner mask to stop lowpass bleeding
     if (p.enableHardWeightsOnLowpass)
     {
         CV_Assert((int)idxPyr16.size() == levels);
@@ -2541,7 +2962,23 @@ bool FSFusion::streamDMapSlice(int slice,
 
 
 // ------------------------------------------------------------
-// streamDMapFinish (Pass-2 pyramid blend)
+// streamDMapFinish (Pass-2 pyramid blend, halo suppression hooks)
+//
+// Key ideas:
+//   1) Crop TopK maps PAD -> ALIGN -> ORIG
+//   2) Build soft TopK weights W (orig space)
+//   3) OPTIONAL: edge-aware smoothing of weights *only inside boundary band*,
+//      gated by confidence (prevents bleeding across real edges)
+//   4) Pass-2 pyramid accumulation:
+//        - per-slice weight map w32 from TopK+W
+//        - OPTIONAL: lowpass equalization per slice using a SAFE interior mask
+//          (fit on *lowpass-blurred* color, apply to full color)
+//        - accumulate pyramids (optionally with hard lowpass behavior if you have it)
+//
+// Notes:
+//   - This version avoids using "guide slice 0" (single slice is unreliable).
+//     The guide for edge-aware smoothing is derived from top-1 focus score.
+//   - SAFE mask uses W.band8 (already a boundary band), not boundary8.
 // ------------------------------------------------------------
 bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
                                 const Options& /*opt*/,
@@ -2555,6 +2992,9 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
     QString srcFun = "FSFusion::streamDMapFinish";
     if (G::FSLog) G::log(srcFun);
 
+    // ----------------------------
+    // State checks
+    // ----------------------------
     if (!dmapActive || !dmapTopKPad.valid())
     {
         qWarning().noquote() << "WARNING:" << srcFun << "DMap state not initialized.";
@@ -2570,11 +3010,6 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
-    // We require these to be valid before finishing:
-    //   alignSize      : aligned image size (before wavelet padding)
-    //   padSize        : wavelet padded size (TopK is stored in this space)
-    //   validAreaAlign : orig region inside alignSize
-    //   origSize       : expected final output size
     if (alignSize.width <= 0 || alignSize.height <= 0 ||
         padSize.width   <= 0 || padSize.height   <= 0 ||
         validAreaAlign.width <= 0 || validAreaAlign.height <= 0 ||
@@ -2586,27 +3021,22 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
     }
 
     // ----------------------------
-    // Compute roiPadToAlign (same logic as streamPMaxFinish)
-    //   Step 1: PAD -> ALIGN
-    //   Step 2: ALIGN -> ORIG via validAreaAlign
+    // PAD -> ALIGN crop rect
     // ----------------------------
     cv::Rect roiPadToAlign(0, 0, alignSize.width, alignSize.height);
-
     if (padSize != alignSize)
     {
         const int padW = padSize.width  - alignSize.width;
         const int padH = padSize.height - alignSize.height;
-
         if (padW < 0 || padH < 0)
         {
             qWarning().noquote() << "WARNING:" << srcFun << "padSize smaller than alignSize.";
             return false;
         }
-
-        const int left = padW / 2;
-        const int top  = padH / 2;
-
-        roiPadToAlign = cv::Rect(left, top, alignSize.width, alignSize.height);
+        roiPadToAlign.x = padW / 2;
+        roiPadToAlign.y = padH / 2;
+        roiPadToAlign.width  = alignSize.width;
+        roiPadToAlign.height = alignSize.height;
     }
 
     if (!rectInside(roiPadToAlign, dmapTopKPad.sz))
@@ -2622,121 +3052,279 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
         return false;
     }
 
-    cv::Size origSz(validAreaAlign.width, validAreaAlign.height);
-    if (origSz != origSize)
+    const cv::Size origSz(validAreaAlign.width, validAreaAlign.height);
+    if (origSz != origSize) origSize = origSz;
+
+    auto countHorizontalDiffs16 = [](const cv::Mat& m16) -> long long
     {
-        // Not fatal, but indicates mismatch in your pipeline state.
-        // Prefer to enforce the actual crop.
-        origSize = origSz;
-    }
+        CV_Assert(m16.type() == CV_16U);
+        long long diffCount = 0;
+        for (int y = 0; y < m16.rows; ++y)
+        {
+            const uint16_t* r = m16.ptr<uint16_t>(y);
+            for (int x = 0; x < m16.cols - 1; ++x)
+                diffCount += (r[x] != r[x + 1]);
+        }
+        return diffCount;
+    };
 
     // ----------------------------
-    // Crop TopK: PAD -> ALIGN -> ORIG
+    // Crop TopK maps: PAD -> ALIGN -> ORIG
+    // Keep TopK consistent.
     // ----------------------------
     TopKMaps topkOrig;
     topkOrig.create(origSz, dmapTopKPad.K);
-
-    // cv::Mat topKConf = computeConfidence01(topkOrig, dmapParams.scoreEps);
 
     for (int k = 0; k < dmapTopKPad.K; ++k)
     {
         cv::Mat idxAlign = dmapTopKPad.idx16[k](roiPadToAlign);
         cv::Mat scAlign  = dmapTopKPad.score32[k](roiPadToAlign);
-
         topkOrig.idx16[k]   = idxAlign(validAreaAlign).clone();
         topkOrig.score32[k] = scAlign(validAreaAlign).clone();
     }
 
-    // Depth map = top-1 index in ORIG space
-    depthIndex16 = topkOrig.idx16[0].clone(); // CV_16U
-
-    // ----------------------------
-    // Build a guide image in ORIG space for edge-aware weight smoothing.
-    // Use slice 0 gray (already aligned + photometrically normalized in FSLoader).
-    // ----------------------------
-    cv::Mat guideGray8Orig, guideColorOrig;
-    if (!FSLoader::loadAlignedSliceOrig(0, inputPaths, globals,
-                                        roiPadToAlign, validAreaAlign,
-                                        guideGray8Orig, guideColorOrig))
     {
-        qWarning().noquote() << "WARNING:" << srcFun << "failed to load guide slice 0";
-        return false;
+        const cv::Mat& d = topkOrig.idx16[0];
+        const long long diffCount = countHorizontalDiffs16(d);
+        const long long total = (long long)d.rows * (d.cols - 1);
+        qDebug() << "top1 diffs (ORIG, pre-weight) =" << diffCount << "/" << total
+                 << " frac=" << (double)diffCount / (double)total;
     }
 
-    cv::Mat guide01;
-    guideGray8Orig.convertTo(guide01, CV_32F, 1.0 / 255.0);
-
     // ----------------------------
-    // Build weights from TopK (orig size)
+    // Build weights from TopK
     // ----------------------------
     DMapWeights W;
     buildDMapWeightsFromTopK(topkOrig, dmapParams, W);
 
-    // debug
+    // ----------------------------
+    // Confidence map (Top-2)
+    // ----------------------------
+    cv::Mat conf01 = computeConfidence01_Top2(topkOrig, dmapParams.confEps); // CV_32F [0..1]
     {
-    // verify slot weights sum to ~1
-    cv::Mat sumW = cv::Mat::zeros(W.w32[0].size(), CV_32F);
-    for (auto &wk : W.w32) sumW += wk;
+        double cmin, cmax;
+        cv::minMaxLoc(conf01, &cmin, &cmax);
+        const cv::Scalar mean = cv::mean(conf01);
+        qDebug() << "DMap conf01 min/max/mean =" << cmin << cmax << mean[0];
 
-    double mn, mx; cv::minMaxLoc(sumW, &mn, &mx);
-    qDebug() << "DMap sum slot weights min/max =" << mn << mx;
-
-    // how many pixels are “dead”
-    cv::Mat dead = (sumW < 0.5f);  // should be basically none
-    qDebug() << "DMap dead pixels =" << cv::countNonZero(dead);
+        cv::Mat low = (conf01 < dmapParams.confLow);
+        low.convertTo(low, CV_8U, 255.0);
+        qDebug() << "DMap lowConf px =" << cv::countNonZero(low)
+                 << " / total =" << conf01.total();
     }
 
     // ----------------------------
-    // NEW: Edge-aware smoothing in boundary band, gated by confidence
+    // Optional: edge-aware smoothing inside W.band8
     // ----------------------------
-    if (dmapParams.enableEdgeAwareBandSmoothing && cv::countNonZero(W.band8) > 0)
+    if (dmapParams.enableEdgeAwareBandSmoothing &&
+        topkOrig.K >= 2 &&
+        !W.band8.empty() &&
+        cv::countNonZero(W.band8) > 0)
     {
-        cv::Mat conf01 = computeConfidence01_Top2(topkOrig, dmapParams.confEps);
+        qDebug() << "boundary px =" << (W.boundary8.empty() ? 0 : cv::countNonZero(W.boundary8))
+                 << "band px =" << cv::countNonZero(W.band8);
 
-        // Safety: sizes must match
-        CV_Assert(conf01.size() == W.band8.size());
-        CV_Assert(guide01.size() == W.band8.size());
+        cv::Mat guide01 = topkOrig.score32[0].clone();
+        double mn = 0, mx = 0;
+        cv::minMaxLoc(guide01, &mn, &mx);
+        const float inv = (float)(1.0 / std::max(1e-6, mx - mn));
+        guide01 = (guide01 - (float)mn) * inv;
 
         smoothWeightsEdgeAwareInBand(W.w32, W.band8, guide01, conf01, dmapParams);
     }
 
     // ----------------------------
-    // Choose pyramid levels
+    // Winner index map + stabilize ONLY uncertain pixels
+    // ----------------------------
+    cv::Mat win16 = topkOrig.idx16[0].clone(); // CV_16U slice indices
+
+    cv::Mat lowConf8 = (conf01 < dmapParams.confLow);
+    lowConf8.convertTo(lowConf8, CV_8U, 255.0);
+
+    if (!W.boundary8.empty())
+        lowConf8.setTo(0, W.boundary8); // protect boundary pixels
+
+    if (dmapParams.uncertaintyDilatePx > 0)
+        cv::dilate(lowConf8, lowConf8, seEllipse(dmapParams.uncertaintyDilatePx));
+
+    const long long before = countHorizontalDiffs16(win16);
+    win16 = modeFilterIdx16(win16, lowConf8, /*radius=*/2);
+    const long long after  = countHorizontalDiffs16(win16);
+    const long long total  = (long long)win16.rows * (win16.cols - 1);
+    qDebug() << "win16 diffs AFTER mode (masked) =" << after << "/" << total
+             << " (before=" << before << ")";
+
+    // Rebuild boundary/band from STABILIZED winners (win16), not raw top1
+    {
+        cv::Mat boundaryThin = boundaryThinFromIdx16(win16);
+
+        // Build a normalized top1 score 0..1 (robust enough)
+        double sMin=0, sMax=0;
+        cv::minMaxLoc(topkOrig.score32[0], &sMin, &sMax);
+        const float invS = (float)(1.0 / std::max(1e-6, sMax - sMin));
+        cv::Mat score01 = (topkOrig.score32[0] - (float)sMin) * invS;
+
+        // "Strong / trustworthy" boundary pixels:
+        // only protect edges where confidence OR score is strong.
+        cv::Mat strong8 = (conf01 > dmapParams.confHigh) | (score01 > 0.20f);
+        strong8.convertTo(strong8, CV_8U, 255.0);
+
+        cv::Mat protect8;
+        cv::bitwise_and(boundaryThin, strong8, protect8);
+
+        // Use protect8 (NOT full boundary) for protection
+        // (we’ll use protect8 below when creating lowConf override mask)
+        W.boundary8 = protect8;
+
+        // Band should be based on the same protect8 and be SMALL
+        const int bandPx = std::max(0, dmapParams.bandDilatePx); // try 2..4
+        if (bandPx > 0) cv::dilate(protect8, W.band8, seEllipse(bandPx));
+        else            W.band8 = protect8.clone();
+
+        qDebug() << "boundary strong px =" << cv::countNonZero(W.boundary8)
+                 << "band px =" << cv::countNonZero(W.band8);
+    }
+
+    // ----------------------------
+    // Flat/background mask (low score + low confidence)
+    // ----------------------------
+    cv::Mat flat8;
+    {
+        double sMin=0, sMax=0;
+        cv::minMaxLoc(topkOrig.score32[0], &sMin, &sMax);
+        const float invS = (float)(1.0 / std::max(1e-6, sMax - sMin));
+        cv::Mat score01 = (topkOrig.score32[0] - (float)sMin) * invS;
+
+        // Much more aggressive to actually catch background
+        const float flatScore01Thr = 0.08f;             // try 0.06..0.12
+        const float flatConfThr    = dmapParams.confLow; // ok
+
+        flat8 = (score01 < flatScore01Thr) & (conf01 < flatConfThr);
+        flat8.convertTo(flat8, CV_8U, 255.0);
+
+        // cleanup
+        cv::erode(flat8, flat8, seEllipse(1));
+        cv::dilate(flat8, flat8, seEllipse(3));
+
+        qDebug() << "flat px =" << cv::countNonZero(flat8)
+                 << " / total =" << flat8.total();
+    }
+
+    // ----------------------------
+    // Choose bgSlice BEFORE streaming:
+    // pick slice with maximum total soft weight over the image
+    // (IMPORTANT: do this BEFORE overrides so it reflects your base weights)
+    // ----------------------------
+    int bgSlice = 0;
+    double bestSum = -1.0;
+    {
+        // temporarily disable overrides while measuring
+        cv::Mat savedMask, savedWinner;
+        if (!W.overrideMask8.empty()) savedMask = W.overrideMask8.clone();
+        if (!W.overrideWinner16.empty()) savedWinner = W.overrideWinner16.clone();
+        W.overrideMask8.release();
+        W.overrideWinner16.release();
+
+        for (int s = 0; s < N; ++s)
+        {
+            cv::Mat ws = buildSliceWeightMap32(topkOrig, W, s);
+            const double sum = cv::sum(ws)[0];
+            if (sum > bestSum) { bestSum = sum; bgSlice = s; }
+        }
+
+        // restore (we’ll set them properly next)
+        if (!savedMask.empty()) W.overrideMask8 = savedMask;
+        if (!savedWinner.empty()) W.overrideWinner16 = savedWinner;
+
+        qDebug() << "bgSlice =" << bgSlice << " bestSum =" << bestSum;
+    }
+
+    // ----------------------------
+    // Build FINAL overrides:
+    // - overrideMask8 = lowConf OR flat
+    // - protect boundaries
+    // - overrideWinner16 = win16, but force bgSlice in flat areas
+    // ----------------------------
+    {
+        cv::Mat override8;
+        cv::bitwise_or(lowConf8, flat8, override8);
+
+        if (!W.boundary8.empty())
+            override8.setTo(0, W.boundary8);
+
+        cv::Mat winForced16 = win16.clone();
+        winForced16.setTo((uint16_t)bgSlice, flat8);
+
+        W.overrideMask8 = override8;
+        W.overrideWinner16 = winForced16;
+
+        qDebug() << "override px =" << cv::countNonZero(W.overrideMask8);
+    }
+
+    // Depth preview matches stabilized winners (and bg forced in flat)
+    depthIndex16 = W.overrideWinner16.clone();
+
+    // ----------------------------
+    // Pyramid setup
     // ----------------------------
     int levels = dmapParams.pyrLevels;
     if (levels <= 0) levels = levelsForSize(origSz);
     levels = std::max(3, std::min(10, levels));
 
-    // Build winner index pyramid (orig space) for hard lowpass weighting
-    std::vector<cv::Mat> idxPyr;
-    buildIndexPyrNearest(topkOrig.idx16[0], levels, idxPyr);
+    if (dmapParams.hardFromLevel < 0)
+        dmapParams.hardFromLevel = std::max(0, levels - 2);
+    if (dmapParams.vetoFromLevel < 0)
+        dmapParams.vetoFromLevel = std::max(0, levels - 2);
+
+    // Use final winners for index pyramid (important!)
+    std::vector<cv::Mat> idxPyr16;
+    buildIndexPyrNearest(W.overrideWinner16, levels, idxPyr16);
+
+    std::vector<cv::Mat> vetoPyr8;
+    if (dmapParams.enableDepthGradLowpassVeto)
+        buildDepthEdgeVetoPyr(idxPyr16, levels, dmapParams, vetoPyr8);
+
+    if (!vetoPyr8.empty())
+    {
+        for (int i = 0; i < levels; ++i)
+            qDebug() << "veto level" << i << "px =" << cv::countNonZero(vetoPyr8[i]);
+    }
 
     PyrAccum A;
     A.reset(origSz, levels);
 
+    LowpassRefStats lpRef;
+
     // ----------------------------
     // Pass-2: stream slices
-    //   - load aligned slice in ORIG space
-    //   - build per-slice weight map
-    //   - accumulate pyramids
     // ----------------------------
     for (int s = 0; s < N; ++s)
     {
         if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
-        // per-slice weight map (orig)
         cv::Mat w32 = buildSliceWeightMap32(topkOrig, W, s);
-
-        // skip near-zero contributors
-        double wsum = cv::sum(w32)[0];
-        if (s == 0 || s == N-1) qDebug() << "slice" << s << "wsum =" << wsum;
+        const double wsum = cv::sum(w32)[0];
         if (wsum <= 1e-6)
         {
-            // if (progressCallback) progressCallback();
+            if (progressCallback) progressCallback();
             continue;
         }
 
-        // Load aligned slice in ORIG space (must exist in your FSLoader)
+        // SAFE mask for lowpass equalization fitting
+        cv::Mat safe = (w32 > 0.95f);
+        safe.convertTo(safe, CV_8U, 255.0);
+
+        if (!W.band8.empty())
+        {
+            cv::Mat veto = W.band8.clone();
+            if (dmapParams.lowpassEqBandVetoPx > 0)
+                cv::dilate(veto, veto, seEllipse(dmapParams.lowpassEqBandVetoPx));
+            safe.setTo(0, veto);
+        }
+
+        cv::erode(safe, safe, seEllipse(2));
+        const int nSafe = cv::countNonZero(safe);
+
         cv::Mat gray8Orig, colorOrig;
         if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
                                             roiPadToAlign, validAreaAlign,
@@ -2746,7 +3334,6 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
             return false;
         }
 
-        // Ensure BGR 3ch
         if (colorOrig.channels() == 1)
             cv::cvtColor(colorOrig, colorOrig, cv::COLOR_GRAY2BGR);
         else if (colorOrig.channels() == 4)
@@ -2758,16 +3345,6 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
             return false;
         }
 
-
-        double mn=0, mx=0;
-        std::vector<cv::Mat> ch;
-        cv::split(colorOrig, ch);
-        cv::minMaxLoc(ch[0], &mn, &mx);
-        qDebug() << "slice" << s << "colorOrig depth/type =" << colorOrig.depth() << colorOrig.type()
-                 << "B channel min/max =" << mn << mx;
-
-
-        // Convert to float32 in the SAME numeric domain as input
         cv::Mat color32;
         if (colorOrig.depth() == CV_8U)
             colorOrig.convertTo(color32, CV_32FC3, 1.0);
@@ -2779,8 +3356,23 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
             return false;
         }
 
-        // accumulateSlicePyr(A, color32, w32, levels, dmapParams.weightBlurSigma);
-        accumulateSlicePyr(A, color32, w32, idxPyr, s, dmapParams, levels,
+        if (dmapParams.enableLowpassEqualization &&
+            nSafe >= dmapParams.lowpassEqMinPixels)
+        {
+            cv::Mat lowpass32 = color32.clone();
+            cv::GaussianBlur(lowpass32, lowpass32, cv::Size(0, 0),
+                             dmapParams.lowpassEqSigma,
+                             dmapParams.lowpassEqSigma,
+                             cv::BORDER_REFLECT);
+
+            cv::Vec3f gain, off;
+            if (fitLowpassEq(lowpass32, safe, lpRef, gain, off))
+                applyGainOffsetBGR(color32, gain, off, dmapParams.lowpassEqStrength);
+        }
+
+        accumulateSlicePyr(A, color32, w32, idxPyr16,
+                           dmapParams.enableDepthGradLowpassVeto ? &vetoPyr8 : nullptr,
+                           s, dmapParams, levels,
                            /*weightBlurSigma=*/0.0f);
 
         if (progressCallback) progressCallback();
@@ -2789,26 +3381,14 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
     // ----------------------------
-    // Finalize blend -> output
+    // Finalize blend
     // ----------------------------
+    cv::Mat out32 = finalizeBlend(A, 1e-10f);
 
-    // debug
-    {
-        for (int i = 0; i < A.levels; ++i) {
-            double mn, mx;
-            cv::minMaxLoc(A.den1[i], &mn, &mx);
-            qDebug() << "DMap den level" << i << "min/max =" << mn << mx;
-        }
-    }
-
-    cv::Mat out32 = finalizeBlend(A, 1e-10f); // CV_32FC3
-
-    // Clamp before convert (important if weights/blur cause slight overshoot)
     if (outDepth == CV_16U)
     {
         cv::max(out32, 0.0f, out32);
         cv::min(out32, 65535.0f, out32);
-
         cv::Mat out16;
         out32.convertTo(out16, CV_16UC3, 1.0);
         outputColor = out16;
@@ -2817,7 +3397,6 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
     {
         cv::max(out32, 0.0f, out32);
         cv::min(out32, 255.0f, out32);
-
         cv::Mat out8;
         out32.convertTo(out8, CV_8UC3, 1.0);
         outputColor = out8;
@@ -2832,6 +3411,407 @@ bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
 
     return true;
 }
+
+
+// bool FSFusion::streamDMapFinish(cv::Mat& outputColor,
+//                                 const Options& /*opt*/,
+//                                 cv::Mat& depthIndex16,
+//                                 const QStringList& inputPaths,
+//                                 const std::vector<Result>& globals,
+//                                 std::atomic_bool* abortFlag,
+//                                 StatusCallback /*statusCallback*/,
+//                                 ProgressCallback progressCallback)
+// {
+//     QString srcFun = "FSFusion::streamDMapFinish";
+//     if (G::FSLog) G::log(srcFun);
+
+//     // ----------------------------
+//     // State checks
+//     // ----------------------------
+//     if (!dmapActive || !dmapTopKPad.valid())
+//     {
+//         qWarning().noquote() << "WARNING:" << srcFun << "DMap state not initialized.";
+//         return false;
+//     }
+
+//     const int N = inputPaths.size();
+//     if (N <= 0 || (int)globals.size() != N)
+//     {
+//         qWarning().noquote() << "WARNING:" << srcFun << "inputPaths/globals size mismatch.";
+//         return false;
+//     }
+
+//     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+//     if (alignSize.width <= 0 || alignSize.height <= 0 ||
+//         padSize.width   <= 0 || padSize.height   <= 0 ||
+//         validAreaAlign.width <= 0 || validAreaAlign.height <= 0 ||
+//         origSize.width <= 0 || origSize.height <= 0)
+//     {
+//         qWarning().noquote() << "WARNING:" << srcFun
+//                              << "Missing geometry state (alignSize/padSize/validAreaAlign/origSize).";
+//         return false;
+//     }
+
+//     // ----------------------------
+//     // PAD -> ALIGN crop rect
+//     // ----------------------------
+//     cv::Rect roiPadToAlign(0, 0, alignSize.width, alignSize.height);
+
+//     if (padSize != alignSize)
+//     {
+//         const int padW = padSize.width  - alignSize.width;
+//         const int padH = padSize.height - alignSize.height;
+
+//         if (padW < 0 || padH < 0)
+//         {
+//             qWarning().noquote() << "WARNING:" << srcFun << "padSize smaller than alignSize.";
+//             return false;
+//         }
+
+//         roiPadToAlign.x = padW / 2;
+//         roiPadToAlign.y = padH / 2;
+//         roiPadToAlign.width  = alignSize.width;
+//         roiPadToAlign.height = alignSize.height;
+//     }
+
+//     if (!rectInside(roiPadToAlign, dmapTopKPad.sz))
+//     {
+//         qWarning().noquote() << "WARNING:" << srcFun << "roiPadToAlign out of bounds for TopK PAD maps.";
+//         return false;
+//     }
+
+//     cv::Size alignSz(roiPadToAlign.width, roiPadToAlign.height);
+//     if (!rectInside(validAreaAlign, alignSz))
+//     {
+//         qWarning().noquote() << "WARNING:" << srcFun << "validAreaAlign out of bounds for ALIGN crop.";
+//         return false;
+//     }
+
+//     const cv::Size origSz(validAreaAlign.width, validAreaAlign.height);
+//     if (origSz != origSize)
+//         origSize = origSz;
+
+//     // ----------------------------
+//     // Crop TopK maps: PAD -> ALIGN -> ORIG
+//     // ----------------------------
+//     TopKMaps topkOrig;
+//     topkOrig.create(origSz, dmapTopKPad.K);
+
+//     for (int k = 0; k < dmapTopKPad.K; ++k)
+//     {
+//         cv::Mat idxAlign = dmapTopKPad.idx16[k](roiPadToAlign);
+//         cv::Mat scAlign  = dmapTopKPad.score32[k](roiPadToAlign);
+
+//         topkOrig.idx16[k]   = idxAlign(validAreaAlign).clone();
+//         topkOrig.score32[k] = scAlign(validAreaAlign).clone();
+//     }
+
+//     // --- after cropping TopK PAD->ALIGN->ORIG ---
+//     topkOrig.idx16[0] = stabilizeTop1IndexMedian3(topkOrig.idx16[0]);
+
+//     {
+//         const cv::Mat& d = topkOrig.idx16[0];
+//         long long diffCount = 0;
+//         for (int y = 0; y < d.rows; ++y)
+//         {
+//             const uint16_t* r = d.ptr<uint16_t>(y);
+//             for (int x = 0; x < d.cols - 1; ++x)
+//                 diffCount += (r[x] != r[x+1]);
+//         }
+//         const long long total = (long long)d.rows * (d.cols - 1);
+//         qDebug() << "top1 diffs AFTER stabilize =" << diffCount << "/" << total
+//                  << " frac=" << (double)diffCount / (double)total;
+//     }
+
+//     // Depth preview = top-1 index in ORIG space
+//     depthIndex16 = topkOrig.idx16[0].clone();
+
+//     // ----------------------------
+//     // DEBUG: confidence statistics (Top-2)
+//     // ----------------------------
+//     {
+//         cv::Mat conf01 = computeConfidence01_Top2(topkOrig, dmapParams.confEps);
+
+//         double cmin, cmax;
+//         cv::minMaxLoc(conf01, &cmin, &cmax);
+
+//         cv::Scalar mean = cv::mean(conf01);
+
+//         qDebug() << "DMap conf01 min/max/mean ="
+//                  << cmin << cmax << mean[0];
+
+//         cv::Mat low = (conf01 < dmapParams.confLow);
+//         low.convertTo(low, CV_8U, 255.0);
+
+//         qDebug() << "DMap lowConf px ="
+//                  << cv::countNonZero(low)
+//                  << " / total =" << conf01.total();
+//     }
+
+//     // // median blur experiment
+//     // {
+//     //     cv::Mat tmp16;
+//     //     cv::medianBlur(topkOrig.idx16[0], tmp16, 5);
+//     //     topkOrig.idx16[0] = tmp16;
+//     // }
+
+
+//     // ----------------------------
+//     // Build slot weights & boundary band (orig space)
+//     // ----------------------------
+//     DMapWeights W;
+
+//     // Confidence-gated mode filter on topkOrig.idx16[0]
+//     if (true) // keep as a block you can toggle
+//     {
+//         cv::Mat conf01 = computeConfidence01_Top2(topkOrig, dmapParams.confEps);
+
+//         cv::Mat lowConf = (conf01 < dmapParams.confLow);
+//         lowConf.convertTo(lowConf, CV_8U, 255);
+
+//         // Do NOT touch confident or edge pixels
+//         if (!W.boundary8.empty())
+//             lowConf.setTo(0, W.boundary8);
+
+//         topkOrig.idx16[0] =
+//             modeFilterIdx16(topkOrig.idx16[0], lowConf, /*radius=*/2);
+//     }
+
+//     buildDMapWeightsFromTopK(topkOrig, dmapParams, W); // fills W.w32, W.band8, etc.
+
+//     // ----------------------------
+//     // Optional: edge-aware smoothing in the boundary band
+//     //   - conf gating chooses which boundary pixels get smoothed
+//     //   - guide comes from normalized top-1 score (not slice 0)
+//     // ----------------------------
+//     if (dmapParams.enableEdgeAwareBandSmoothing &&
+//         topkOrig.K >= 2 &&
+//         !W.band8.empty() &&
+//         cv::countNonZero(W.band8) > 0)
+//     {
+//         qDebug() << "boundary px =" << cv::countNonZero(W.boundary8)
+//                  << "band px =" << cv::countNonZero(W.band8);
+
+//         cv::Mat conf01 = computeConfidence01_Top2(topkOrig, dmapParams.confEps);
+//         CV_Assert(conf01.type() == CV_32F);
+//         CV_Assert(conf01.size() == origSz);
+
+//         // make "uncertain mask"
+//         cv::Mat low = (conf01 < dmapParams.confLow);
+//         low.convertTo(low, CV_8U, 255.0);
+
+//         // Debug
+//         cv::Mat inter;
+//         cv::bitwise_and(low, W.band8, inter);
+//         qDebug() << "lowConf px =" << cv::countNonZero(low)
+//                  << "band∩lowConf px =" << cv::countNonZero(inter);
+
+//         // optionally dilate uncertainty a bit (small!)
+//         if (dmapParams.uncertaintyDilatePx > 0)
+//             cv::dilate(low, low, seEllipse(dmapParams.uncertaintyDilatePx));
+
+//         // final band = winner-edge band OR uncertainty band
+//         // This is killing you because your logs show lowConf ~15M pixels. OR’ing
+//         // that into the band guarantees band≈whole image, even if boundaries are
+//         // fine.
+//         // cv::bitwise_or(W.band8, low, W.band8);
+
+
+
+//         // Normalize top-1 score to 0..1 robustly
+//         cv::Mat guide01 = topkOrig.score32[0].clone();
+//         double mn=0, mx=0;
+//         cv::minMaxLoc(guide01, &mn, &mx);
+//         const float inv = (float)(1.0 / std::max(1e-6, mx - mn));
+//         guide01 = (guide01 - (float)mn) * inv;
+
+//         smoothWeightsEdgeAwareInBand(W.w32, W.band8, guide01, conf01, dmapParams);
+//     }
+
+//     // ----------------------------
+//     // Pyramid setup
+//     // ----------------------------
+//     int levels = dmapParams.pyrLevels;
+//     if (levels <= 0) levels = levelsForSize(origSz);
+//     levels = std::max(3, std::min(10, levels));
+
+//     // If caller didn't explicitly set hardFromLevel, choose a good default now
+//     if (dmapParams.hardFromLevel < 0)
+//         dmapParams.hardFromLevel = std::max(0, levels - 2);
+
+//     if (dmapParams.vetoFromLevel < 0)
+//         dmapParams.vetoFromLevel = std::max(0, levels - 2);
+
+//     // Your accumulateSlicePyr signature always needs idxPyr16.
+//     std::vector<cv::Mat> idxPyr16;
+//     buildIndexPyrNearest(topkOrig.idx16[0], levels, idxPyr16);
+
+//     // --- NEW: build a depth-edge veto pyramid (same sizes as idxPyr / gpW levels)
+//     std::vector<cv::Mat> vetoPyr8;
+//     if (dmapParams.enableDepthGradLowpassVeto)
+//     {
+//         buildDepthEdgeVetoPyr(idxPyr16, levels, dmapParams, vetoPyr8);
+//     }
+
+//     PyrAccum A;
+//     A.reset(origSz, levels);
+
+//     {
+//         cv::Mat d = topkOrig.idx16[0];
+//         int rows = d.rows, cols = d.cols;
+//         int diffCount = 0;
+//         for (int y=0;y<rows;y++){
+//             const uint16_t* r = d.ptr<uint16_t>(y);
+//             for (int x=0;x<cols-1;x++)
+//                 diffCount += (r[x] != r[x+1]);
+//         }
+//         qDebug() << "top1 horizontal diffs =" << diffCount
+//                  << " / " << (rows*(cols-1));
+
+//         if (!vetoPyr8.empty())
+//         {
+//             for (int i = 0; i < levels; ++i)
+//                 qDebug() << "veto level" << i << "px =" << cv::countNonZero(vetoPyr8[i]);
+//         }
+//     }
+
+//     LowpassRefStats lpRef; // established by first successful slice fit
+
+//     // ----------------------------
+//     // Pass-2: stream slices
+//     // ----------------------------
+//     for (int s = 0; s < N; ++s)
+//     {
+//         if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+//         // Per-slice final weight (orig)
+//         cv::Mat w32 = buildSliceWeightMap32(topkOrig, W, s);
+//         const double wsum = cv::sum(w32)[0];
+//         if (wsum <= 1e-6)
+//         {
+//             if (progressCallback) progressCallback();
+//             continue;
+//         }
+
+//         // SAFE mask for lowpass equalization fitting:
+//         //   - strong ownership
+//         //   - explicitly veto boundary band (expanded)
+//         cv::Mat safe = (w32 > 0.95f);
+//         safe.convertTo(safe, CV_8U, 255.0);
+
+//         if (!W.band8.empty())
+//         {
+//             cv::Mat veto = W.band8.clone();
+//             if (dmapParams.lowpassEqBandVetoPx > 0)
+//                 cv::dilate(veto, veto, seEllipse(dmapParams.lowpassEqBandVetoPx));
+//             safe.setTo(0, veto);
+//         }
+
+//         // erode to avoid “almost boundary” pixels contaminating stats
+//         cv::erode(safe, safe, seEllipse(2));
+//         const int nSafe = cv::countNonZero(safe);
+
+//         // Load aligned slice in ORIG space (your FSLoader version)
+//         cv::Mat gray8Orig, colorOrig;
+//         if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
+//                                             roiPadToAlign, validAreaAlign,
+//                                             gray8Orig, colorOrig))
+//         {
+//             qWarning().noquote() << "WARNING:" << srcFun << "loadAlignedSliceOrig failed slice" << s;
+//             return false;
+//         }
+
+//         // Ensure BGR 3ch
+//         if (colorOrig.channels() == 1)
+//             cv::cvtColor(colorOrig, colorOrig, cv::COLOR_GRAY2BGR);
+//         else if (colorOrig.channels() == 4)
+//             cv::cvtColor(colorOrig, colorOrig, cv::COLOR_BGRA2BGR);
+
+//         if (colorOrig.channels() != 3 || colorOrig.size() != origSz)
+//         {
+//             qWarning().noquote() << "WARNING:" << srcFun << "colorOrig shape mismatch slice" << s;
+//             return false;
+//         }
+
+//         // Convert to float32 in same numeric domain as input
+//         cv::Mat color32;
+//         if (colorOrig.depth() == CV_8U)
+//             colorOrig.convertTo(color32, CV_32FC3, 1.0);
+//         else if (colorOrig.depth() == CV_16U)
+//             colorOrig.convertTo(color32, CV_32FC3, 1.0);
+//         else
+//         {
+//             qWarning().noquote() << "WARNING:" << srcFun << "unsupported color depth" << colorOrig.depth();
+//             return false;
+//         }
+
+//         // Optional lowpass equalization:
+//         //   Fit on lowpass-blurred copy so texture doesn't dominate;
+//         //   Apply correction to full-res color32.
+//         if (dmapParams.enableLowpassEqualization &&
+//             nSafe >= dmapParams.lowpassEqMinPixels)
+//         {
+//             cv::Mat lowpass32 = color32.clone();
+//             cv::GaussianBlur(lowpass32, lowpass32, cv::Size(0,0),
+//                              dmapParams.lowpassEqSigma,
+//                              dmapParams.lowpassEqSigma,
+//                              cv::BORDER_REFLECT);
+
+//             cv::Vec3f gain, off;
+//             if (fitLowpassEq(lowpass32, safe, lpRef, gain, off))
+//             {
+//                 applyGainOffsetBGR(color32, gain, off, dmapParams.lowpassEqStrength);
+//             }
+//         }
+
+//         // Accumulate pyramids
+//         // accumulateSlicePyr(A, color32, w32, idxPyr16, s, dmapParams, levels,
+//         //                    /*weightBlurSigma=*/0.0f);
+//         accumulateSlicePyr(A, color32, w32, idxPyr16,
+//                            dmapParams.enableDepthGradLowpassVeto ? &vetoPyr8 : nullptr,
+//                            s, dmapParams, levels,
+//                            /*weightBlurSigma=*/0.0f);
+
+//         if (progressCallback) progressCallback();
+//     }
+
+//     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
+//     // ----------------------------
+//     // Finalize blend
+//     // ----------------------------
+//     cv::Mat out32 = finalizeBlend(A, 1e-10f); // CV_32FC3
+
+//     // Clamp + convert to desired output depth
+//     if (outDepth == CV_16U)
+//     {
+//         cv::max(out32, 0.0f, out32);
+//         cv::min(out32, 65535.0f, out32);
+
+//         cv::Mat out16;
+//         out32.convertTo(out16, CV_16UC3, 1.0);
+//         outputColor = out16;
+//     }
+//     else
+//     {
+//         cv::max(out32, 0.0f, out32);
+//         cv::min(out32, 255.0f, out32);
+
+//         cv::Mat out8;
+//         out32.convertTo(out8, CV_8UC3, 1.0);
+//         outputColor = out8;
+//     }
+
+//     // ----------------------------
+//     // Housekeeping
+//     // ----------------------------
+//     dmapTopKPad.reset();
+//     dmapActive = false;
+//     dmapSliceCount = 0;
+
+//     return true;
+// }
 
 // end StreamPMax pipeline
 
