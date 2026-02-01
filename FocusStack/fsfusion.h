@@ -138,6 +138,17 @@ public:
 
     struct DMapParams
     {
+        bool enableHardWeightsOnLowpass = true; // main switch
+
+        bool enableGaussianBandSmoothing = false; // OLD path (turn OFF)
+        bool enableEdgeAwareBandSmoothing = true; // NEW path (turn ON)
+
+        bool enableLowpassEqualization = false;
+        bool enableConfidenceGating = true;      // Module A
+        bool enableDepthGradLowpassVeto = false;
+        // bool enableEdgeAwareWeights = true;      // Module B (replaces Gaussian blur in band)
+        // bool enableLevelDependentWeights = false;// Module D (optional later)
+
         // Pass-1: keep top-K focus candidates per pixel
         int   topK = 2;                 // 1 = hard winner; 2 is typical
 
@@ -150,28 +161,21 @@ public:
         float softTemp = 0.15f;         // smaller = harder assignment
         float wMin     = 0.00f;         // per-slot weight floor (avoid zeros)
 
+        // Background mask bg
+        const float bgConfThr = 0.10f;   // try 0.10..0.16
+        const float bgScoreThr = 0.06f;  // try 0.04..0.10
+
         // --- Pyramid halo controls ---
-        bool enableHardWeightsOnLowpass = true; // main switch
         int  hardFromLevel = -1;            // -1 = only last (residual) level
                                             //  0 = hard everywhere (diagnostic)
                                             // e.g. levels-2 = hard on last 2 levels
 
         // Lowpass equalization
-        bool  enableLowpassEqualization = false;
         int   lowpassEqMinPixels = 5000;     // start 2k..20k depending on image size
         int   lowpassEqBandVetoPx = 6;       // additional expansion on top of W.band8
         float lowpassEqSigma = 8.0f;         // LOWPASS blur sigma for fitting (6..12 typical)
         float lowpassEqStrength = 0.6f;      // 0..1 (blend between original and corrected)
 
-        // --- Halo control modules ---
-        bool  enableGaussianBandSmoothing = false; // OLD path (turn OFF)
-        bool  enableEdgeAwareBandSmoothing = true; // NEW path (turn ON)
-        bool  enableConfidenceGating = true;      // Module A
-        // bool  enableEdgeAwareWeights = true;      // Module B (replaces Gaussian blur in band)
-        // bool  enableLevelDependentWeights = false;// Module D (optional later)
-
-        // --- Module E: depth-gradient lowpass veto (halo killer)
-        bool  enableDepthGradLowpassVeto = true;
         // pyramid levels >= vetoFromLevel will be gated (lowpass & residual)
         int   vetoFromLevel = -1;        // -1 => residual only; try levels-2 if needed
         // how much to gate: 1.0 = full veto at strong depth edges
@@ -183,8 +187,8 @@ public:
 
         // Confidence (K=2 assumed for now)
         float confEps     = 1e-6f;
-        float confLow     = 0.12f;  // below this = uncertain
-        float confHigh    = 0.30f;  // above this = confident
+        float confLow     = 0.08f;  // below this = uncertain
+        float confHigh    = 0.25f;  // above this = confident
 
         // Weight floor strategy
         float wMinOutsideBand = 0.0f;   // recommended 0
