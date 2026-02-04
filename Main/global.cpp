@@ -15,7 +15,7 @@ bool isFileLogger = false;          // Writes log messages to file (debug execut
 bool isErrorLogger = false;         // Writes error log messages to file or console
 bool isIssueLogger = true;         // Writes issue log messages to file or console
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
-bool FSLog = true;                  // Focus Stack log
+bool FSLog = false;                  // Focus Stack log
 bool showAllEvents = false;
 QFile logFile;                      // MW::openLog(), MW::closeLog()
 QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()

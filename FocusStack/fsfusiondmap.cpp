@@ -355,40 +355,6 @@ static cv::Mat majorityFilterLabels16_3x3(const cv::Mat& in16)
     return out16;
 }
 
-static inline cv::Mat toColor32SameAsFusion(cv::Mat cTmp) // copy on purpose
-{
-    CV_Assert(!cTmp.empty());
-
-    // match your fusion path: only handle 1ch and 4ch explicitly
-    if (cTmp.channels() == 1)
-    {
-        cv::Mat bgr;
-        cv::cvtColor(cTmp, bgr, cv::COLOR_GRAY2BGR);
-        cTmp = bgr;
-    }
-    else if (cTmp.channels() == 4)
-    {
-        cv::Mat bgr;
-        cv::cvtColor(cTmp, bgr, cv::COLOR_BGRA2BGR);
-        cTmp = bgr;
-    }
-    else
-    {
-        CV_Assert(cTmp.channels() == 3);
-        // IMPORTANT: do NOT swap here unless you also swap in main fusion
-    }
-
-    cv::Mat color32;
-    if (cTmp.depth() == CV_8U)
-        cTmp.convertTo(color32, CV_32FC3, 1.0 / 255.0);
-    else if (cTmp.depth() == CV_16U)
-        cTmp.convertTo(color32, CV_32FC3, 1.0 / 65535.0);
-    else
-        return cv::Mat();
-
-    return color32; // same channel order as the main fusion used
-}
-
 static inline bool toColor32_01_FromLoaded(cv::Mat colorTmp,   // pass-by-value on purpose
                                            cv::Mat& color32,
                                            const QString& where,
@@ -441,34 +407,6 @@ static inline bool toColor32_01_FromLoaded(cv::Mat colorTmp,   // pass-by-value 
 
     CV_Assert(color32.type() == CV_32FC3);
     return true;
-}
-
-static inline cv::Mat toBgr32_01(const cv::Mat& src, const char* tag)
-{
-    CV_Assert(!src.empty());
-
-    cv::Mat bgr;
-
-    if (src.channels() == 3) bgr = src;
-    else if (src.channels() == 1) cv::cvtColor(src, bgr, cv::COLOR_GRAY2BGR);
-    else if (src.channels() == 4) cv::cvtColor(src, bgr, cv::COLOR_BGRA2BGR);
-    else
-    {
-        qWarning().noquote() << "WARNING: toBgr32_01 unsupported channels" << src.channels() << tag;
-        return cv::Mat();
-    }
-
-    cv::Mat out32;
-    if (bgr.depth() == CV_8U)      bgr.convertTo(out32, CV_32FC3, 1.0 / 255.0);
-    else if (bgr.depth() == CV_16U) bgr.convertTo(out32, CV_32FC3, 1.0 / 65535.0);
-    else
-    {
-        qWarning().noquote() << "WARNING: toBgr32_01 unsupported depth" << bgr.depth() << tag;
-        return cv::Mat();
-    }
-
-    CV_Assert(out32.type() == CV_32FC3);
-    return out32;
 }
 
 // ------------------------------------------------------------
@@ -1217,6 +1155,7 @@ static void applyHaloRingFix(cv::Mat& out32,                 // CV_32FC3 0..1
     cv::Mat ch[] = { alpha, alpha, alpha };
     cv::merge(ch, 3, alpha3);
 
+    // Avoid blue tint
     cv::Mat invA3;
     cv::subtract(cv::Scalar::all(1.0f), alpha3, invA3);
     out32 = out32.mul(invA3) + fgColor32.mul(alpha3);
