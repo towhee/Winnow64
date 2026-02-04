@@ -588,7 +588,7 @@ bool FS::run()
     When testing, the values in A and B must be set in the appropriate run method
     ie if A is fusion weightedPower method  uses runStreamWaveletPMax then you must
 */
-    QString srcFun = "FS::runGroups";
+    QString srcFun = "FS::run";
 
 // Test Parameters in two vectors
     // A: weightedPower     aItem in header
@@ -766,7 +766,7 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
         QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
         QString progressSteps = " Progress step count = " + QString::number(progressCount);
         QString progressTot = " Progress step total = " + QString::number(progressTotal);
-        G::log(srcFun, "Focus Stack completed in " + timeToRun + progressSteps + progressTot);
+        if (G::FSLog) G::log(srcFun, "Focus Stack completed in " + timeToRun + progressSteps + progressTot);
         if (G::FSLog) G::log("");
         status("Focus Stack completed in " + timeToRun);
 

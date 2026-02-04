@@ -1371,7 +1371,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     }
 
     const cv::Size origSz(validAreaAlign.width, validAreaAlign.height);
-    origSize = origSz; // keep consistent (some callers set this already)
+    origSize = origSz;
 
     // ---- Crop TopK maps: PAD -> ALIGN -> ORIG ----
     TopKMaps topkOrig;
@@ -1426,12 +1426,8 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         cv::Mat lowConf8 = (conf01 < params.confLow);
         lowConf8.convertTo(lowConf8, CV_8U, 255.0);
 
-        // if (!W.boundary8.empty())
-        //     lowConf8.setTo(0, W.boundary8);
-
         if (params.uncertaintyDilatePx > 0)
-            cv::dilate(lowConf8, lowConf8,
-                       FSFusion::seEllipse(params.uncertaintyDilatePx));
+            cv::dilate(lowConf8, lowConf8, FSFusion::seEllipse(params.uncertaintyDilatePx));
 
         if (win16.cols >= 5 && win16.rows >= 5 && cv::countNonZero(lowConf8) > 0)
         {
@@ -1442,8 +1438,8 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     }
 
     {
-        const long long after  = countHorizontalDiffs16(win16);
-        const long long total  = (long long)win16.rows * (win16.cols - 1);
+        const long long after = countHorizontalDiffs16(win16);
+        const long long total = (long long)win16.rows * (win16.cols - 1);
         qDebug() << "win16 diffs AFTER mode (masked) =" << after << "/" << total
                  << " (before=" << before << ")";
     }
@@ -1508,14 +1504,12 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
             return false;
         }
 
-        // convert color -> CV_32FC3 0..1
         cv::Mat color32;
         if (!toColor32_01_FromLoaded(colorTmp, color32, srcFun, s))
             return false;
 
         CV_Assert(color32.size() == origSz);
 
-        // weight map for this slice
         cv::Mat w32 = buildSliceWeightMap32(topkOrig, W, s);
         CV_Assert(w32.type() == CV_32F && w32.size() == origSz);
 
@@ -1540,14 +1534,14 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
                                       params.weightBlurSigma);
     }
 
-    // finalize
     cv::Mat out32 = FusionPyr::finalizeBlend(A, /*eps=*/1e-8f);
 
-    // clamp 0..1
     cv::max(out32, 0.0f, out32);
     cv::min(out32, 1.0f, out32);
 
-    dbgMat3Stats("DBG out32 BEFORE haloFix", out32);
+    // ---- Keep: halo-relevant inputs (NOT blue debugging) ----
+    // If you want to reduce further, keep only conf01 + top1Score32.
+    dbgMat3Stats("DBG out32 preHalo clamp", out32);
     dbgMat3Stats("DBG top1Score32", topkOrig.score32[0]);
     dbgMat3Stats("DBG conf01", conf01);
 
@@ -1565,70 +1559,50 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
 
     // ---------------------------------------------------------------------
     // Halo fix (LOCAL donor slice follows depth map)
-    // IMPORTANT: must happen BEFORE converting out32 -> outputColor
     // ---------------------------------------------------------------------
-    do { // Start HaloFix
+    do {
         if (!params.enableHaloRingFix) break;
 
-        // ----------------------------
-        // 0) Quick sanity logs
-        // ----------------------------
-        {
-            const long long diffs = countHorizontalDiffs16(depthIndex16);
-            const long long total = (long long)depthIndex16.rows * (depthIndex16.cols - 1);
-            qDebug() << "HaloFix: win16 horiz diffs frac =" << (double)diffs / (double)total;
-        }
-        {
-            const long long diffs = countHorizontalDiffs16(winStable16);
-            const long long total = (long long)winStable16.rows * (winStable16.cols - 1);
-            qDebug() << "HaloFix: winStable16 horiz diffs frac =" << (double)diffs / (double)total;
-        }
+        const int ringPx = std::max(2, params.haloRingPx);
 
-        const int ringPx = std::max(2, params.haloRingPx);   // ring width + BFS maxSteps
-
-        // ----------------------------
-        // 1) Define FOREGROUND slice and build FG mask
-        //    (This replaces boundaryFromLabels8(winStable16) which can explode.)
-        // ----------------------------
+        // Foreground slice (near->far => max index)
         int sFg = 0;
         {
             double mn=0, mx=0;
             cv::minMaxLoc(winStable16, &mn, &mx);
-            sFg = (int)mx;                     // near->far ordering => max is foreground
-            sFg = std::max(0, std::min(sFg, N - 1));
+            sFg = std::max(0, std::min((int)mx, N - 1));
         }
-        qDebug() << "HaloFix: sFg =" << sFg;
+        qDebug() << "HaloFix: sFg =" << sFg << " ringPx=" << ringPx
+                 << " confMax=" << params.haloConfMax
+                 << " texMax=" << params.haloTexMax
+                 << " featherSigma=" << params.haloFeatherSigma;
 
-        // FG = pixels whose winner label is sFg
-        cv::Mat fg8 = (winStable16 == (uint16_t)sFg);
+        // FG mask
+        // cv::Mat fg8 = (winStable16 == (uint16_t)sFg);
+        cv::Mat fg8 = (conf01 > params.confHigh);
         fg8.convertTo(fg8, CV_8U, 255.0);
-
-        // optional: remove speckle in fg8 so the band isn't noisy
         cv::morphologyEx(fg8, fg8, cv::MORPH_OPEN, FSFusion::seEllipse(2));
 
-        // Thin FG boundary for debug / seed zone
+        // boundary for seeding
         cv::Mat boundary8;
         cv::morphologyEx(fg8, boundary8, cv::MORPH_GRADIENT, FSFusion::seEllipse(1));
 
-        // Band = outside ring of FG (domain where halo replacement happens)
+        // band (ring outside FG)
         cv::Mat fgDil, band8;
         cv::dilate(fg8, fgDil, FSFusion::seEllipse(ringPx));
-        cv::bitwise_and(fgDil, ~fg8, band8); // ring OUTSIDE FG only
+        cv::bitwise_and(fgDil, ~fg8, band8);
 
-        // If the band is empty, nothing to do
-        if (cv::countNonZero(band8) == 0)
+        const int bandPx = cv::countNonZero(band8);
+        if (bandPx == 0)
         {
             qDebug() << "HaloFix: band empty; skipping.";
             break;
         }
 
-        // ----------------------------
-        // 2) Candidate mask = band AND low-conf AND low-texture
-        // ----------------------------
+        // candidate = band & low-conf & low-tex
         cv::Mat lowConf8 = (conf01 < params.haloConfMax);
         lowConf8.convertTo(lowConf8, CV_8U, 255.0);
 
-        // low texture from top1 score (scaled to 8U)
         double smn=0.0, smx=0.0;
         cv::minMaxLoc(topkOrig.score32[0], &smn, &smx);
         const float scale = (smx > 1e-12) ? (255.0f / (float)smx) : 1.0f;
@@ -1639,22 +1613,29 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         cv::Mat lowTex8 = (tex8 <= params.haloTexMax);
         lowTex8.convertTo(lowTex8, CV_8U, 255.0);
 
-        // halo candidates inside the ring
         cv::Mat haloCand8;
         cv::bitwise_and(band8, lowConf8, haloCand8);
         cv::bitwise_and(haloCand8, lowTex8, haloCand8);
 
-        // (Optional) never touch very-confident pixels even if they landed in the band
+        // never touch very-confident pixels
         cv::Mat veryConf8 = (conf01 > params.confHigh);
         veryConf8.convertTo(veryConf8, CV_8U, 255.0);
         cv::bitwise_and(haloCand8, ~veryConf8, haloCand8);
 
-        // ----------------------------
-        // 2b) Visual debug (band + cand) — BEFORE donor map
-        // ----------------------------
+        const int candPx = cv::countNonZero(haloCand8);
+        qDebug() << "HaloFix: bandPx=" << bandPx
+                 << " candPx=" << candPx
+                 << " cand/band=" << (double)candPx / (double)std::max(1, bandPx);
+
+        if (candPx == 0)
+        {
+            qDebug() << "HaloFix: no candidates; skipping.";
+            break;
+        }
+
+        // Visual debug (masks)
         {
             const QString folder = opt.depthFolderPath;
-
             cv::imwrite((folder + "/halo_fg.png").toStdString(), fg8);
             cv::imwrite((folder + "/halo_boundary.png").toStdString(), boundary8);
             cv::imwrite((folder + "/halo_band.png").toStdString(), band8);
@@ -1666,87 +1647,36 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
             cv::imwrite((folder + "/halo_overlay_band.png").toStdString(), overlay0);
         }
 
-        // logs
-        dbgMaskStats("DBG fg8", fg8);
-        dbgMaskStats("DBG boundary8", boundary8);
-        dbgMaskStats("DBG band8", band8);
-        dbgMaskStats("DBG lowConf8", lowConf8);
-        dbgMaskStats("DBG lowTex8", lowTex8);
-        dbgMaskStats("DBG haloCand8", haloCand8);
-
-        qDebug() << "HaloFix: fg px =" << cv::countNonZero(fg8)
-                 << "band px =" << cv::countNonZero(band8)
-                 << "cand px =" << cv::countNonZero(haloCand8);
-
-        if (cv::countNonZero(haloCand8) == 0)
-        {
-            qDebug() << "HaloFix: no candidates; skipping.";
-            break;
-        }
-
-        // ----------------------------
-        // 3) Seeds on the FG side of boundary, labelled with local FG label
-        //    IMPORTANT: use boundary8 from fg8, not label-change boundary.
-        // ----------------------------
+        // Seeds + donors
         cv::Mat seeds8, seedLabel16;
         buildForegroundBoundarySeeds(winStable16, boundary8, seeds8, seedLabel16);
 
-        // Optional: thicken seeds but keep labels consistent
-        const int seedThickenPx = 1; // 0..2
-        if (seedThickenPx > 0 && cv::countNonZero(seeds8) > 0)
-        {
-            cv::Mat seedDomain8 = seeds8.clone();
-            cv::dilate(seedDomain8, seedDomain8, FSFusion::seEllipse(seedThickenPx));
-
-            const int seedFillSteps = std::max(1, seedThickenPx * 2);
-            cv::Mat thickSeedLabels16 = propagateDonorLabels16(seeds8, seedLabel16,
-                                                               seedDomain8, seedFillSteps);
-
-            cv::Mat have = (thickSeedLabels16 != (uint16_t)0xFFFF);
-            have.convertTo(seeds8, CV_8U, 255.0);
-            seedLabel16 = thickSeedLabels16;
-        }
-
-        dbgMaskStats("DBG seeds8", seeds8);
-        qDebug() << "HaloFix: seeds px =" << cv::countNonZero(seeds8);
-
-        if (cv::countNonZero(seeds8) == 0)
+        const int seedsPx = cv::countNonZero(seeds8);
+        qDebug() << "HaloFix: seedsPx=" << seedsPx;
+        if (seedsPx == 0)
         {
             qDebug() << "HaloFix: no seeds; skipping.";
             break;
         }
 
-        // ----------------------------
-        // 4) Propagate donor labels into candidate pixels
-        // ----------------------------
-        cv::Mat donor16 = propagateDonorLabels16(seeds8, seedLabel16,
-                                                 haloCand8, ringPx);
+        cv::Mat donor16 = propagateDonorLabels16(seeds8, seedLabel16, haloCand8, ringPx);
 
         cv::Mat hasDonor8 = (donor16 != (uint16_t)0xFFFF);
         hasDonor8.convertTo(hasDonor8, CV_8U, 255.0);
+        const int donorPx = cv::countNonZero(hasDonor8);
 
-        qDebug() << "HaloFix: donor px =" << cv::countNonZero(hasDonor8);
+        qDebug() << "HaloFix: donorPx=" << donorPx
+                 << " donor/cand=" << (double)donorPx / (double)std::max(1, candPx);
 
-        {
-            double dmn=0, dmx=0;
-            cv::minMaxLoc(donor16, &dmn, &dmx, nullptr, nullptr,
-                          (donor16 != (uint16_t)0xFFFF));
-            qDebug() << "DBG donor16 min/max (valid only) =" << dmn << dmx;
-            dbgMaskStats("DBG hasDonor8", hasDonor8);
-        }
-
-        if (cv::countNonZero(hasDonor8) == 0)
+        if (donorPx == 0)
         {
             qDebug() << "HaloFix: no donor labels; skipping.";
             break;
         }
 
-        // ----------------------------
-        // 4b) Visual debug (donor overlay + legend)
-        // ----------------------------
+        // Visual debug (donor overlay)
         {
             const QString folder = opt.depthFolderPath;
-
             cv::Mat baseGray8 = toGray8_fromOut32(out32);
 
             cv::Mat donorColor = colorizeDonorLabelsBGR8(donor16, N);
@@ -1760,9 +1690,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
             cv::imwrite((folder + "/halo_overlay.png").toStdString(), overlay);
         }
 
-        // ----------------------------
-        // 5) Feather alpha over candidate domain, then blend donor slices
-        // ----------------------------
+        // Alpha feather
         cv::Mat alphaBand01;
         haloCand8.convertTo(alphaBand01, CV_32F, 1.0 / 255.0);
 
@@ -1773,22 +1701,31 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         cv::max(alphaBand01, 0.0f, alphaBand01);
         cv::min(alphaBand01, 1.0f, alphaBand01);
 
-        // One-time donor diagnostics flag
-        bool dumpedFirstDonor = false;
-        bool dumpedPostFirst  = false;
+        // halo-focused alpha stats
+        {
+            double amn=0, amx=0;
+            cv::minMaxLoc(alphaBand01, &amn, &amx);
+            const cv::Scalar am = cv::mean(alphaBand01);
+            qDebug() << "HaloFix: alphaBand01 mean=" << am[0] << " min/max=" << amn << amx;
+        }
 
+        // Optional: write alpha image (very useful to see feather width)
+        {
+            const QString folder = opt.depthFolderPath;
+            cv::Mat a8;
+            alphaBand01.convertTo(a8, CV_8U, 255.0);
+            cv::imwrite((folder + "/halo_alphaBand.png").toStdString(), a8);
+        }
+
+        // Blend donor slices (no per-donor debug)
         for (int s = 0; s < N; ++s)
         {
             cv::Mat ms = (donor16 == (uint16_t)s);
             ms.convertTo(ms, CV_32F, 1.0 / 255.0);
 
             cv::Mat alpha = alphaBand01.mul(ms);
-
-            const int alphaPx = cv::countNonZero(alpha > 1e-6f);
-            if (alphaPx == 0)
+            if (cv::countNonZero(alpha > 1e-6f) == 0)
                 continue;
-
-            qDebug() << "HaloFix: donor slice" << s << "alphaPx =" << alphaPx;
 
             cv::Mat gTmp, cTmp;
             if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
@@ -1803,76 +1740,32 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
             if (!toColor32_01_FromLoaded(cTmp, col32, "HaloFix donor", s))
                 continue;
 
-            if (!dumpedFirstDonor) {
-                cv::Scalar m = cv::mean(col32);
-                qDebug() << "HaloFix donor mean B,G,R =" << m[0] << m[1] << m[2];
-            }
-
-            CV_Assert(col32.type() == CV_32FC3);
-            CV_Assert(out32.type() == CV_32FC3);
-            CV_Assert(out32.size() == col32.size());
-
             cv::Mat a3;
             { cv::Mat ch[] = { alpha, alpha, alpha }; cv::merge(ch, 3, a3); }
-            CV_Assert(a3.type() == CV_32FC3);
 
-            if (!dumpedFirstDonor)
-            {
-                qDebug() << "========== HaloFix FIRST DONOR DEBUG ==========";
-                qDebug() << "first donor slice =" << s << "alphaPx =" << alphaPx;
-
-                dbgType("DBG cTmp RAW", cTmp);
-                dbgMat3Stats("DBG col32 donor", col32);
-                dbgMat3Stats("DBG alpha (1ch)", alpha);
-                dbgMat3Stats("DBG out32 BEFORE donor blend", out32);
-                dbgMat3Stats("DBG a3 (3ch)", a3);
-
-                dumpedFirstDonor = true;
-            }
-
-            // Blend
             cv::Mat invA3;
-            cv::subtract(cv::Scalar::all(1.0f), a3, invA3);   // invA3 = (1,1,1) - a3
+            cv::subtract(cv::Scalar::all(1.0f), a3, invA3);
             out32 = out32.mul(invA3) + col32.mul(a3);
-
-            if (dumpedFirstDonor && !dumpedPostFirst)
-            {
-                dbgMat3Stats("DBG out32 AFTER first donor blend", out32);
-                qDebug() << "==============================================";
-                dumpedPostFirst = true;
-            }
         }
 
-        // final clamp after blending
         cv::max(out32, 0.0f, out32);
         cv::min(out32, 1.0f, out32);
 
-    } while(false); // End HaloFix
+    } while(false);
 
-    dbgMat3Stats("DBG out32 AFTER haloFix", out32);
+    // ---- Keep: halo-result stats (NOT blue-related) ----
+    dbgMat3Stats("DBG out32 postHalo clamp", out32);
 
-    // Clamp AFTER halo fix (important!)
+    // Clamp AFTER halo fix
     cv::max(out32, 0.0f, out32);
     cv::min(out32, 1.0f, out32);
 
-    // ---------------------------------------------------------------------
-    // NOW convert to output depth (after halo fix)
-    // ---------------------------------------------------------------------
+    // Convert to output depth
     if (outDepth == CV_16U)
         out32.convertTo(outputColor, CV_16UC3, 65535.0);
     else
         out32.convertTo(outputColor, CV_8UC3, 255.0);
 
-    auto mean3 = [](const cv::Mat& bgr32, const char* tag){
-        CV_Assert(bgr32.type() == CV_32FC3);
-        cv::Scalar m = cv::mean(bgr32);
-        qDebug().noquote() << tag
-                           << "mean B,G,R =" << m[0] << m[1] << m[2];
-    };
-
-    mean3(out32, "out32 after haloFix");
-
-    // housekeeping
     reset();
     return true;
 }
