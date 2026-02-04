@@ -25,58 +25,39 @@ public:
 
     struct DMapParams
     {
-        bool enableHardWeightsOnLowpass = true;
-
-        bool enableGaussianBandSmoothing = false; // legacy
-        bool enableEdgeAwareBandSmoothing = true; // new
-
-        bool enableLowpassEqualization = false;
-        bool enableConfidenceGating = true;
-        bool enableDepthGradLowpassVeto = false;
-
-        bool enableHaloRingFix = true;
+        bool enableHardWeightsOnLowpass = true;  // used in FusionPyr::accumulateSlicePyr
 
         int   topK = 2;
 
         float scoreSigma = 1.5f;
         int   scoreKSize  = 3;
-        float scoreEps    = 1e-6f;
 
         float softTemp = 0.25f;
         float wMin     = 0.01f;
 
-        const float bgConfThr  = 0.10f;
-        const float bgScoreThr = 0.06f;
-
+        // Veto pyramid
+        bool  enableDepthGradLowpassVeto = false;
         int   hardFromLevel = 4;  // -1
         int   vetoFromLevel = -1;
         float vetoStrength = 1.0f;
         float depthGradThresh = 1.25f;
         int   vetoDilatePx = 2;
 
-        float confEps  = 1e-6f;
+        float confEps  = 1e-6f;             // confidence map energy
         float confLow  = 0.08f;
         float confHigh = 0.25f;
-
-        float wMinOutsideBand = 0.0f;
-        float wMinInBand      = 0.0f;
-
-        int   eaIters     = 2;
-        int   eaRadius    = 2;
-        float eaSigmaSpatial = 1.2f;
-        float eaSigmaRange01 = 0.10f;
 
         int   bandDilatePx = 12;
         int   uncertaintyDilatePx = 6;
 
-        int   weightBlurPx    = 0;
         float weightBlurSigma = 1.2f;
 
         // --- Halo fix near foreground edges ---
-        int  haloRingPx        = 50;     // 40–60 width of ring outside foreground
-        float haloFeatherSigma = 10.0f;  // 8–14 feather smoothness (in px-ish)
-        float haloConfMax      = 0.22f;  // 0.20–0.25 only touch low-confidence pixels
-        int   haloTexMax       = 12;     // 10–14 only touch low-texture pixels (8U scale)
+        bool  enableHaloRingFix = true;
+        int   haloRingPx        = 50;     // 40–60 width of ring outside foreground
+        float haloFeatherSigma  = 10.0f;  // 8–14 feather smoothness (in px-ish)
+        float haloConfMax       = 0.22f;  // 0.20–0.25 only touch low-confidence pixels
+        int   haloTexMax        = 12;     // 10–14 only touch low-texture pixels (8U scale)
         bool  haloUseMaxIndexAsForeground = true; // assumes near->far ordering
 
         bool  useTiling = false;

@@ -454,7 +454,7 @@ void FS::incrementProgress()
     QString srcFun = "FS::incrementProgress";
     emit progress(++progressCount, progressTotal);
     QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
-    G::log(srcFun, msg);
+    // if (G::FSLog) G::log(srcFun, msg);
 }
 
 void FS::previewOverview(cv::Mat &fusedColor8Mat)
