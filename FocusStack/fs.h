@@ -144,7 +144,7 @@ private:
     bool runBackground();
     bool runArtifact();
     bool runStreamDMap();
-    bool runStreamWaveletPMax();
+    bool runStreamPMax();
     bool runStreamTennengradVersions();
     bool save(QString fuseFolderPath);
 

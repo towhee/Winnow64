@@ -5,6 +5,8 @@
 #include "FocusStack/fsfocus.h"
 #include "FocusStack/fsdepth.h"
 #include "FocusStack/fsfusion.h"
+#include "FocusStack/fsfusiondmap.h"
+#include "FocusStack/fsfusionpmax.h"
 #include "FocusStack/fsmerge.h"
 #include "FocusStack/fsfusionreassign.h"
 #include "FocusStack/fsfusionwavelet.h"
@@ -666,21 +668,21 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
             }
 
             if (o.method == "StmPMax") {
-                if (!runStreamWaveletPMax()) {
+                if (!runStreamPMax()) {
                     emit finished(false);
                     return false;
                 }
             }
 
             if (o.method == "StmPMaxWt") {
-                if (!runStreamWaveletPMax()) {
+                if (!runStreamPMax()) {
                     emit finished(false);
                     return false;
                 }
             }
 
             if (o.method == "StmPMaxWtDbe") {
-                if (!runStreamWaveletPMax()) {
+                if (!runStreamPMax()) {
                     emit finished(false);
                     return false;
                 }
@@ -1176,18 +1178,18 @@ bool FS::runFusion()
     auto statusCb   = [this](const QString &msg){ status(msg); };
 
 
-    if (!FSFusion::fuseStack(grayImgs,
-                             colorImgs,
-                             fopt,
-                             depthIndex16Mat,
-                             fusedColorMat,
-                             &abort,
-                             statusCb,
-                             progressCb))
-    {
-        status("Fusion failed");
-        return false;
-    }
+    // if (!FSFusion::fuseStack(grayImgs,
+    //                          colorImgs,
+    //                          fopt,
+    //                          depthIndex16Mat,
+    //                          fusedColorMat,
+    //                          &abort,
+    //                          statusCb,
+    //                          progressCb))
+    // {
+    //     status("Fusion failed");
+    //     return false;
+    // }
 
     save(fusionFolderPath);
 
@@ -1655,25 +1657,6 @@ bool FS::runArtifact()
 
 bool FS::runStreamDMap()
 {
-    /*
-      Streaming Algorithm (DMap 2-pass):
-
-      Pass-1 (single sweep over slices):
-        for each slice
-          - load input image
-          - align (0 is special case) -> alignedGraySlice, alignedColorSlice (ALIGN space)
-          - streamDMapSlice: update Top-K focus candidates per pixel (PAD space)
-
-      Pass-2 (inside streamDMapFinish):
-        - crop Top-K maps PAD->ALIGN->ORIG
-        - build weights from Top-K
-        - for each slice:
-            loadAlignedSliceOrig(slice, inputPaths, globals, ...)  // streamed
-            accumulate pyramids using slice weight map
-        - finalize pyramid blend -> outputColor (ORIG)
-        - set depthIndex16 from top-1 indices (ORIG)
-    */
-
     QString srcFun = "FS::runStreamDMap";
     QString msg = "Start using method: " + o.method;
     if (G::FSLog) G::log(srcFun, msg);
@@ -1682,7 +1665,7 @@ bool FS::runStreamDMap()
     auto statusCb   = [this](const QString &m){ status(m); };
 
     // -----------------------------
-    // Align options (same as PMax)
+    // align options (same as pmax)
     // -----------------------------
     FSAlign::Options aopt;
     aopt.matchContrast     = true;
@@ -1692,21 +1675,19 @@ bool FS::runStreamDMap()
     aopt.fullResolution    = false;
 
     // -----------------------------
-    // Fusion options (DMap)
+    // fusion options (dmap)
     // -----------------------------
     FSFusion::Options fopt;
-    fopt.method         = "DMap";          // <-- critical
-    fopt.mergeMode      = o.methodMerge;   // not used by DMap, but keep for consistency/logging
-    fopt.useOpenCL      = o.enableOpenCL;  // not used by DMap currently, but keep
-    fopt.consistency    = 2;               // not used by DMap, but keep
+    fopt.method          = "DMap";
+    fopt.mergeMode       = o.methodMerge;
+    fopt.useOpenCL       = o.enableOpenCL;
+    fopt.consistency     = 2;
     fopt.depthFolderPath = depthFolderPath;
-
-    // DMap does NOT use these stages, but keep them deterministic
     fopt.enableDepthBiasedErosion = false;
     fopt.enableEdgeAdaptiveSigma  = false;
 
     // -----------------------------
-    // Working state (same layout)
+    // working state
     // -----------------------------
     FSLoader::Image prevImage;
     FSLoader::Image currImage;
@@ -1714,27 +1695,25 @@ bool FS::runStreamDMap()
     Result prevGlobal;
     Result currGlobal;
 
-    cv::Mat alignedGraySlice;
-    cv::Mat alignedColorSlice;
+    cv::Mat alignedGraySlice;   // align space
+    cv::Mat alignedColorSlice;  // align space
 
-    // DMap finish needs globals for loadAlignedSliceOrig(...)
     std::vector<Result> globals;
     globals.reserve(slices);
 
     FSAlign::Align align;
-    FSFusion fuse;
+    FSFusionDMap fuse;
 
     // -----------------------------
-    // Pass-1: slice loop
+    // pass-1: slice loop
     // -----------------------------
-    for (int slice = 0; slice < slices; slice++)
+    for (int slice = 0; slice < slices; ++slice)
     {
-        QString s = " Slice: " + QString::number(slice) + " of " +
-                    QString::number(slices) + " ";
-        if (G::FSLog) G::log("");  // skip line
+        QString s = " Slice: " + QString::number(slice) + " of " + QString::number(slices) + " ";
+        if (G::FSLog) G::log("");
 
-        // Align slice
         status("Aligning and depth mapping" + s);
+
         currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
         currGlobal = FSAlign::makeIdentity(currImage.validArea);
 
@@ -1745,12 +1724,12 @@ bool FS::runStreamDMap()
             alignedGraySlice  = currImage.gray.clone();
             alignedColorSlice = currImage.color.clone();
 
-            // Required for PAD->ALIGN->ORIG cropping in finish
-            fuse.validAreaAlign = currImage.validArea;
-            fuse.origSize       = currImage.origSize;
-            fuse.alignSize      = currImage.gray.size();
+            // base geometry that dmap requires
+            fuse.validAreaAlign = currImage.validArea;               // align -> orig crop
+            fuse.alignSize      = alignedGraySlice.size();           // align size
+            fuse.origSize       = cv::Size(currImage.validArea.width, currImage.validArea.height); // optional but ok
+            fuse.outDepth       = alignedColorSlice.depth();         // 8u/16u output depth
 
-            // For DMap, globals MUST include slice 0 too
             globals.push_back(currGlobal);
         }
         else
@@ -1768,23 +1747,30 @@ bool FS::runStreamDMap()
             globals.push_back(currGlobal);
         }
 
-        // debug/test write aligned slices (kept exactly like your PMax)
+        // enforce gray is 8-bit for dmap
+        if (alignedGraySlice.type() != CV_8U)
+        {
+            cv::Mat tmp;
+            alignedGraySlice.convertTo(tmp, CV_8U);
+            alignedGraySlice = tmp;
+        }
+
+        // debug write aligned slices
         cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
         cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
 
         if (G::abortFocusStack) return false;
 
-        // Pass-1 DMap update (Top-K focus candidates)
-        // status(s + "Building DMap...");
-        if (!fuse.streamDMapSlice(slice,
-                                  alignedGraySlice,
-                                  alignedColorSlice,
-                                  fopt,
-                                  &abort,
-                                  statusCb,
-                                  progressCb))
+        // pass-1 dmap update (pads internally)
+        if (!fuse.streamSlice(slice,
+                              alignedGraySlice,
+                              alignedColorSlice,
+                              fopt,
+                              &abort,
+                              statusCb,
+                              progressCb))
         {
-            qWarning() << "WARNING:" << srcFun << "fuse.streamDMapSlice failed.";
+            qWarning() << "WARNING:" << srcFun << "fuse.streamSlice failed.";
             return false;
         }
 
@@ -1799,19 +1785,19 @@ bool FS::runStreamDMap()
     if (G::FSLog) G::log(srcFun, msg);
 
     // -----------------------------
-    // Pass-2: finish (streams slices again internally)
+    // pass-2: finish
     // -----------------------------
     status("Finalizing DMap fusion...");
-    if (!fuse.streamDMapFinish(fusedColorMat,
-                               fopt,
-                               depthIndex16Mat,
-                               inputPaths,
-                               globals,
-                               &abort,
-                               statusCb,
-                               progressCb))
+    if (!fuse.streamFinish(fusedColorMat,
+                           fopt,
+                           depthIndex16Mat,
+                           inputPaths,
+                           globals,
+                           &abort,
+                           statusCb,
+                           progressCb))
     {
-        qWarning() << "WARNING:" << srcFun << "FSFusion::streamDMapFinish failed.";
+        qWarning() << "WARNING:" << srcFun << "FSFusionDMap::streamFinish failed.";
         return false;
     }
 
@@ -1822,51 +1808,22 @@ bool FS::runStreamDMap()
     if (G::abortFocusStack) return false;
     incrementProgress();
 
-    // Optional: dump DMap knobs if you want (similar to your weighted dump)
-    qDebug().noquote()
-        << "\n DMap topK                =" << fuse.dmapParams.topK
-        << "\n DMap scoreSigma           =" << fuse.dmapParams.scoreSigma
-        << "\n DMap scoreKSize           =" << fuse.dmapParams.scoreKSize
-        << "\n DMap softTemp             =" << fuse.dmapParams.softTemp
-        << "\n DMap wMin                 =" << fuse.dmapParams.wMin
-        << "\n DMap weightBlurPx         =" << fuse.dmapParams.weightBlurPx
-        << "\n DMap weightBlurSigma      =" << fuse.dmapParams.weightBlurSigma
-        << "\n DMap pyrLevels            =" << fuse.dmapParams.pyrLevels
-        << "\n";
-
     if (o.useIntermediates) save(fusionFolderPath);
 
     return true;
 }
-
-bool FS::runStreamWaveletPMax()
+bool FS::runStreamPMax()
 {
-    /*  Streaming Algorithm:
-    for each slice
-        - load input image
-        - align (0 is special case) return graySlice, colorSlice
-        - merge slice - update mergedWavelet
-        - build color map
-    next slice
-    - finish merge
-    - invert mergedWavelet
-    - apply color map
-    - crop back to original
-
-    Fusion Stages:
-    1. PMax fusion              StmPMax
-    2. PMax Weighted fusion     StmPmaxWt
-    3. Depth-Biased Erosion     StmPMaxWtDbe
-    4. Edge-Adaptive Sigma      StmPMaxWtDbeEas
-*/
-    QString srcFun = "FS::runStreamWaveletPMax";
+    QString srcFun = "FS::runStreamPMax";
     QString msg = "Start using method: " + o.method;
     if (G::FSLog) G::log(srcFun, msg);
 
-    auto progressCb = [this]{ incrementProgress(); };
-    auto statusCb   = [this](const QString &msg){ status(msg); };
+    FSFusion::ProgressCallback progressCb = [this]{ incrementProgress(); };
+    FSFusion::StatusCallback   statusCb   = [this](const QString &m){ status(m); };
 
-    // Align options
+    // -----------------------------
+    // Align options (same as DMap)
+    // -----------------------------
     FSAlign::Options aopt;
     aopt.matchContrast     = true;
     aopt.matchWhiteBalance = true;
@@ -1874,144 +1831,184 @@ bool FS::runStreamWaveletPMax()
     aopt.maxRes            = 2048;
     aopt.fullResolution    = false;
 
-    // Fusion options
+    // -----------------------------
+    // Fusion options (PMax)
+    // -----------------------------
     FSFusion::Options fopt;
-    fopt.method = o.methodFuse;
-    fopt.mergeMode = o.methodMerge;
-    // fopt.validAreaAlign is set from first align image when iterating slices
-    fopt.useOpenCL = o.enableOpenCL;
-    fopt.consistency = 2;
+    fopt.method          = o.methodFuse;     // e.g. "PMax"
+    fopt.mergeMode       = o.methodMerge;    // "PMax" or "Weighted"
+    fopt.useOpenCL       = o.enableOpenCL;
+    fopt.consistency     = 2;
     fopt.depthFolderPath = depthFolderPath;
 
-    if (o.method == "StmPMaxWt" || o.method == "StmPMaxWtDbe") {
-        if (o.enableDepthBiasedErosion) fopt.winnerMap = "Energy";
-        else fopt.winnerMap = "Weighted";
+    // Weighted / staged pipeline toggles
+    const bool wantsWeighted =
+        (o.method == "StmPMaxWt" || o.method == "StmPMaxWtDbe" || o.method == "StmPMaxWtDbeEas");
 
-        fopt.weightedPower = 7.0f;                      // 4.0f default
-        fopt.weightedSigma0 = 2;                        // 1.0f default
-        fopt.weightedIncludeLowpass = true;             // false sucks
-        fopt.weightedEpsEnergy = 1e-8f;
-        fopt.weightedEpsWeight = 1e-8f;
+    if (wantsWeighted)
+    {
+        // winner map selection for stage-2/3/4
+        fopt.winnerMap = (o.enableDepthBiasedErosion ? "Energy" : "Weighted");
 
-        // fopt.erosionEdgeThresh = 0.06f;
-        // fopt.erosionEdgeDilate = 20;
-        // fopt.erosionRadius = 1;
-        // fopt.erosionIters = 1;
+        // weighted params (your tuned defaults)
+        fopt.weightedPower          = 7.0f;     // 4.0f default
+        fopt.weightedSigma0         = 2.0f;     // 1.0f default
+        fopt.weightedIncludeLowpass = true;     // false looks bad
+        fopt.weightedEpsEnergy      = 1e-8f;
+        fopt.weightedEpsWeight      = 1e-8f;
 
-        fopt.enableDepthBiasedErosion = o.enableDepthBiasedErosion; // stage 3
-        fopt.enableEdgeAdaptiveSigma = o.enableEdgeAdaptiveSigma;   // stage 4
+        // stage 3/4 toggles
+        fopt.enableDepthBiasedErosion = o.enableDepthBiasedErosion;
+        fopt.enableEdgeAdaptiveSigma  = o.enableEdgeAdaptiveSigma;
 
-        // Manually add to name special runs
+        // optional: tag special runs
         o.methodInfo = "LL";
-        // o.methodInfo = "_" + QVariant(fopt.weightedSigma0).toString() +
-        //                "_" + QVariant(fopt.weightedSigma0).toString();
     }
-    qDebug() << "o.enableDepthBiasedErosion = " << o.enableDepthBiasedErosion
-             << "fopt.enableDepthBiasedErosion = " << fopt.enableDepthBiasedErosion;
+    else
+    {
+        // keep deterministic defaults
+        fopt.winnerMap = "Weighted";
+        fopt.enableDepthBiasedErosion = false;
+        fopt.enableEdgeAdaptiveSigma  = false;
+    }
 
+    qDebug() << "o.enableDepthBiasedErosion =" << o.enableDepthBiasedErosion
+             << "fopt.enableDepthBiasedErosion =" << fopt.enableDepthBiasedErosion;
+
+    // -----------------------------
+    // Working state
+    // -----------------------------
     FSLoader::Image prevImage;
     FSLoader::Image currImage;
+
     Result prevGlobal;
     Result currGlobal;
-    cv::Mat alignedGraySlice;
-    cv::Mat alignedColorSlice;
-    std::vector<Result> globals;   // for Depth-Biased Erosion
-    globals.reserve(slices);                // for Depth-Biased Erosion
+
+    cv::Mat alignedGraySlice;   // ALIGN space
+    cv::Mat alignedColorSlice;  // ALIGN space
+
+    // Used by streamFinish for reloads / erosion stage
+    std::vector<Result> globals;
+    globals.reserve(slices);
+
     FSAlign::Align align;
-    FSFusion fuse;
+    FSFusionPMax   fuse;    // engine (inherits FSFusion base)
 
-    for (int slice = 0; slice < slices; slice++) {
-        QString s = " Slice: " + QString::number(slice) + " of " +
-                    QString::number(slices) + " ";
-        if (G::FSLog) G::log("");  // skip line
+    // -----------------------------
+    // Pass-1: slice loop
+    // -----------------------------
+    for (int slice = 0; slice < slices; ++slice)
+    {
+        QString s = " Slice: " + QString::number(slice) + " of " + QString::number(slices) + " ";
+        if (G::FSLog) G::log("");
 
-        // Align slice
         status(s + "Aligning...");
-        currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+
+        currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
         currGlobal = FSAlign::makeIdentity(currImage.validArea);
+
         if (G::abortFocusStack) return false;
-        if (slice == 0) {
-            alignedGraySlice = currImage.gray.clone();
+
+        if (slice == 0)
+        {
+            alignedGraySlice  = currImage.gray.clone();
             alignedColorSlice = currImage.color.clone();
+
+            // Geometry required by streaming engines (base-class fields)
             fuse.validAreaAlign = currImage.validArea;
-            fuse.origSize = currImage.origSize;
-            fuse.alignSize = currImage.gray.size();
-            /*
-            if (o.method == "StmPMaxWtDbe")
-                globals.push_back(currGlobal);   // Depth-Biased Erosion
-            // Should be: T 2x3, C 5x1, WB 6x1.
-            qDebug() << "makeIdentity sanity slice 0:"
-                     << "T" << currGlobal.transform.rows << "x" << currGlobal.transform.cols
-                     << "C" << currGlobal.contrast.rows  << "x" << currGlobal.contrast.cols
-                     << "WB" << currGlobal.whitebalance.rows << "x" << currGlobal.whitebalance.cols
-                     << "valid" << currGlobal.validArea.x << currGlobal.validArea.y
-                     << currGlobal.validArea.width << currGlobal.validArea.height; */
+            fuse.origSize       = currImage.origSize;         // informational; ORIG is validAreaAlign dims
+            fuse.alignSize      = alignedGraySlice.size();
+            fuse.outDepth       = alignedColorSlice.depth();
+
+            globals.push_back(currGlobal);
         }
-        else {
-            if (!align.alignSlice(slice, prevImage, currImage, prevGlobal, currGlobal,
+        else
+        {
+            if (!align.alignSlice(slice,
+                                  prevImage, currImage,
+                                  prevGlobal, currGlobal,
                                   alignedGraySlice, alignedColorSlice,
-                                  aopt, &abort, statusCb, progressCb)) {
+                                  aopt, &abort, statusCb, progressCb))
+            {
                 qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
                 return false;
             }
-            /* if (o.method == "StmPMaxWtDbe")
-                globals.push_back(currGlobal);   // Depth-Biased Erosion */
+
+            globals.push_back(currGlobal);
         }
-        // debug/test write aligned slices
-        cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
-        cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
+
+        // Debug/test write aligned slices
+        {
+            cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
+            cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
+        }
+
         if (G::abortFocusStack) return false;
         incrementProgress();
 
-        // Fuse slice
-        qDebug() << "o.enableDepthBiasedErosion = " << o.enableDepthBiasedErosion
-                 << "fopt.enableDepthBiasedErosion = " << fopt.enableDepthBiasedErosion;
+        // -----------------------------
+        // Fuse slice (PMax streaming)
+        // -----------------------------
         status(s + "Fusing...");
-        if (!fuse.streamPMaxSlice(slice, alignedGraySlice, alignedColorSlice,
-                                  fopt, &abort, statusCb, progressCb)) {
-            qWarning() << "WARNING:" << srcFun << "fuse.streamPMaxSlice failed.";
+
+        if (!fuse.streamSlice(slice,
+                              alignedGraySlice,
+                              alignedColorSlice,
+                              fopt,
+                              &abort,
+                              statusCb,
+                              progressCb))
+        {
+            qWarning() << "WARNING:" << srcFun << "fuse.streamSlice failed.";
             return false;
         }
+
         if (G::abortFocusStack) return false;
         incrementProgress();
 
-        prevImage = currImage;
+        prevImage  = currImage;
         prevGlobal = currGlobal;
     }
 
-    msg = "Slice processing done.  Finish merge, invert, recover color and crop padding";
+    msg = "Slice processing done. Finish merge, invert, recover color and crop padding.";
     if (G::FSLog) G::log(srcFun, msg);
 
-    // finish merge, invert, recover color and crop padding
+    // -----------------------------
+    // Pass-2: finish
+    // -----------------------------
     status("Finalizing fusion...");
-    if (!fuse.streamPMaxFinish(fusedColorMat, fopt, depthIndex16Mat,
-                               inputPaths, globals,
-                               &abort, statusCb, progressCb)) {
-        qWarning() << "WARNING:" << srcFun << "FSFusion::streamPMaxFinish failed.";
+
+    if (!fuse.streamFinish(fusedColorMat,
+                           fopt,
+                           depthIndex16Mat,
+                           inputPaths,
+                           globals,
+                           &abort,
+                           statusCb,
+                           progressCb))
+    {
+        qWarning() << "WARNING:" << srcFun << "FSFusionPMax::streamFinish failed.";
         return false;
     }
 
     if (G::abortFocusStack) return false;
     incrementProgress();
 
-
-    qDebug().noquote()
-        << "\n weightedPower            =" << fopt.weightedPower
-        << "\n weightedSigma0           =" << fopt.weightedSigma0
-        << "\n weightedIncludeLowpass   =" << fopt.weightedIncludeLowpass
-        << "\n weightedEpsEnergy        =" << fopt.weightedEpsEnergy
-        << "\n weightedEpsWeight        =" << fopt.weightedEpsWeight
-        // << "\n erosionEdgeThresh        =" << fopt.erosionEdgeThresh
-        // << "\n erosionRadius            =" << fopt.erosionRadius
-        // << "\n erosionIters             =" << fopt.erosionIters
-        << "\n enableDepthBiasedErosion =" << fopt.enableDepthBiasedErosion
-        << "\n enableEdgeAdaptiveSigma  =" << fopt.enableEdgeAdaptiveSigma
-        << "\n"
-        ;            // stage 4
-
+    // Optional parameter dump (keep if useful)
+    if (wantsWeighted)
+    {
+        qDebug().noquote()
+            << "\n weightedPower            =" << fopt.weightedPower
+            << "\n weightedSigma0           =" << fopt.weightedSigma0
+            << "\n weightedIncludeLowpass   =" << fopt.weightedIncludeLowpass
+            << "\n weightedEpsEnergy        =" << fopt.weightedEpsEnergy
+            << "\n weightedEpsWeight        =" << fopt.weightedEpsWeight
+            << "\n enableDepthBiasedErosion =" << fopt.enableDepthBiasedErosion
+            << "\n enableEdgeAdaptiveSigma  =" << fopt.enableEdgeAdaptiveSigma
+            << "\n";
+    }
 
     // if (o.useIntermediates) save(fusionFolderPath);
-
     return true;
 }
 

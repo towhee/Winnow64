@@ -1,5 +1,5 @@
 #include "FSRunner.h"
-#include "FocusStack/Pipeline/PipelineBase.h"
+// #include "FocusStack/Pipeline/PipelineBase.h"
 
 #include <QDebug>
 #include <opencv2/imgcodecs.hpp>

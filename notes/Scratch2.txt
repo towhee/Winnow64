@@ -36,8 +36,35 @@ StmDMap_02  Same as StmDMap_01
     enableHardWeightsOnLowpass = false
     enableLowpassEqualization  = true
 
+•	FSFusion.h / FSFusion.cpp (facade + shared helpers + dispatch)
+•	FSFusionPMax.h / FSFusionPMax.cpp (PMax only, including streaming PMax)
+•	FSFusionDMap.h / FSFusionDMap.cpp (DMap only, including streaming DMap)
+•	FusionPyr.h / FusionPyr.cpp (pyramid accumulator + accumulate/finalize + a few pyramid helpers used by DMap)
+•	FusionUtils.h (small inline helpers: seEllipse, rectInside, clamp helpers, etc.)
+
+1.	This expects FSFusionDMap to have these members (as in your old FSFusion state):
+        •	bool active; int sliceCount;
+        •	cv::Size padSize, alignSize, origSize;
+        •	cv::Rect validAreaAlign;
+        •	int outDepth;
+        •	TopKMaps topKPad;
+        •	DMapParams params;
+        •	reset(), streamSlice(...), finish(...)
 
 
+2.	It also expects your FSLoader::loadAlignedSliceOrig(...) signature to match what you used in the old code.
 
+3.	FusionPyr.h must provide:
+        •	struct PyrAccum { void reset(cv::Size,int); ... }
+        •	void buildIndexPyrNearest(const cv::Mat&, int, std::vector<cv::Mat>&);
+        •	void buildDepthEdgeVetoPyr(const std::vector<cv::Mat>&, int, const FSFusionDMap::DMapParams&, std::vector<cv::Mat>&);
+        •	void accumulateSlicePyr(PyrAccum&, const cv::Mat&, const cv::Mat&, const std::vector<cv::Mat>&, const std::vector<cv::Mat>*, int sliceIdx, const FSFusionDMap::DMapParams&, int levels, float weightBlurSigma);
+        •	cv::Mat finalizeBlend(const PyrAccum&, float eps);
+
+4.	FusionUtils.h must provide:
+        •	cv::Mat seEllipse(int px);
+        •	bool rectInside(const cv::Rect&, const cv::Size&);
+        •	float clampf(float,float,float);
+        •	cv::Mat toFloat01(const cv::Mat& gray8);
 
 
