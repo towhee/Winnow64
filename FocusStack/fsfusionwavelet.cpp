@@ -1,5 +1,5 @@
 // FSFusionWavelet.cpp
-#include "FSFusionWavelet.h"
+#include "fsfusionwavelet.h"
 
 // Petteri wavelet templates (no Task/worker usage here)
 #include "FocusStack/FSFusionWaveletTemplates.h"
