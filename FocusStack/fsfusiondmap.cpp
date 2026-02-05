@@ -537,6 +537,34 @@ static void updateTopKPerSlice(FSFusionDMap::TopKMaps& topk,
     }
 }
 
+// Keep only the largest connected component from a binary 8-bit mask (0/255).
+// Returns a CV_8U 0/255 mask. If empty or no foreground, returns zeros.
+static cv::Mat keepLargestCC(const cv::Mat& bin8, int connectivity = 8)
+{
+    CV_Assert(bin8.empty() || bin8.type() == CV_8U);
+    if (bin8.empty()) return cv::Mat();
+
+    cv::Mat src;
+    cv::compare(bin8, 0, src, cv::CMP_GT); // 0/255
+    if (cv::countNonZero(src) == 0)
+        return cv::Mat::zeros(src.size(), CV_8U);
+
+    cv::Mat labels, stats, centroids;
+    int n = cv::connectedComponentsWithStats(src, labels, stats, centroids, connectivity, CV_32S);
+    if (n <= 1) return cv::Mat::zeros(src.size(), CV_8U);
+
+    int best = 1, bestArea = stats.at<int>(1, cv::CC_STAT_AREA);
+    for (int i = 2; i < n; ++i)
+    {
+        int area = stats.at<int>(i, cv::CC_STAT_AREA);
+        if (area > bestArea) { bestArea = area; best = i; }
+    }
+
+    cv::Mat out;
+    cv::compare(labels, best, out, cv::CMP_EQ); // 0/255
+    return out;
+}
+
 // ------------------------------------------------------------
 // confidence from top-2
 // ------------------------------------------------------------
@@ -612,7 +640,8 @@ static int pickForegroundSlice(const cv::Mat& win16,
 // Choose sFg as the most common winner label inside confident pixels.
 // This is MUCH more stable than "max label".
 int pickForegroundSliceByConf(const cv::Mat& win16, const cv::Mat& conf01,
-                              int N, float confThr, const QString& tag)
+                              int N, float confThr, const QString& tag,
+                              std::vector<int>* outHist /*=nullptr*/)
 {
     CV_Assert(win16.type() == CV_16U);
     CV_Assert(conf01.type() == CV_32F);
@@ -642,7 +671,6 @@ int pickForegroundSliceByConf(const cv::Mat& win16, const cv::Mat& conf01,
     qDebug() << tag << "pick sFg by confThr=" << confThr
              << " usedPx=" << used << " bestS=" << bestS << " bestCnt=" << bestCnt;
 
-    // (Optional) print top 5 labels for sanity
     std::vector<std::pair<int,int>> pairs;
     pairs.reserve(N);
     for (int s = 0; s < N; ++s) pairs.push_back({hist[s], s});
@@ -651,6 +679,7 @@ int pickForegroundSliceByConf(const cv::Mat& win16, const cv::Mat& conf01,
     for (int i = 0; i < std::min(5, (int)pairs.size()); ++i)
         qDebug() << "  s" << pairs[i].second << "cnt" << pairs[i].first;
 
+    if (outHist) *outHist = hist;
     return bestS;
 }
 
@@ -1610,37 +1639,68 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
 
         const int ringPx = std::max(2, params.haloRingPx);
 
-        // Foreground slice (near->far => max index)
-        int sFg = pickForegroundSliceByConf(winStable16, conf01, N, params.confHigh, "HaloFix");
-        // FG Build
-        // 1) Start from label = sFg (no conf gate yet)
-        cv::Mat fgLabel = (winStable16 == (uint16_t)sFg);
-        fgLabel.convertTo(fgLabel, CV_8U, 255.0);
+        // Foreground slice pick (and get histogram of confident winner labels)
+        std::vector<int> hist;
+        int bestS = pickForegroundSliceByConf(winStable16, conf01, N,
+                                              params.confHigh, "HaloFix", &hist);
 
-        // 2) Keep only the largest connected component (removes speckle islands)
-        cv::Mat ccLabels, stats, centroids;
-        int ncc = cv::connectedComponentsWithStats(fgLabel, ccLabels, stats, centroids, 8, CV_32S);
+        // pick among the top M histogram labels, but prefer the highest slice index
+        const int M = 5;
+        std::vector<std::pair<int,int>> pairs;
+        pairs.reserve(N);
+        for (int s = 0; s < N; ++s) pairs.push_back({hist[s], s});
+        std::sort(pairs.rbegin(), pairs.rend());
 
-        int best = -1, bestArea = 0;
-        for (int i = 1; i < ncc; ++i) { // 0 is background
-            int area = stats.at<int>(i, cv::CC_STAT_AREA);
-            if (area > bestArea) { bestArea = area; bestArea = area; best = i; }
+        bestS = pairs[0].second;
+        int bestCnt = pairs[0].first;
+
+        // Prefer nearer slice (higher s) if it's "close enough" in count
+        const float nearPreferenceFrac = 0.80f; // allow 80% of best count
+        for (int i = 0; i < std::min(M, (int)pairs.size()); ++i)
+        {
+            if (pairs[i].first >= (int)(nearPreferenceFrac * bestCnt))
+                bestS = std::max(bestS, pairs[i].second);
         }
 
-        cv::Mat fg8 = cv::Mat::zeros(fgLabel.size(), CV_8U);
-        if (best > 0) fg8.setTo(255, (ccLabels == best));
+        // Build a label range around bestS (because the subject often spans 11..14 etc)
+        auto getCnt = [&](int s)->int { return (s >= 0 && s < N) ? hist[s] : 0; };
 
-        // 3) Optional: light confidence gate (use confLow, NOT confHigh)
+        int lo = bestS, hi = bestS;
+        const int base = std::max(1, getCnt(bestS));
+        const float keepFrac = 0.55f;   // include neighbor if >=55% of best label count
+        const int maxExpand  = 3;       // allow up to +/-3 slices
+
+        for (int step = 1; step <= maxExpand; ++step)
+        {
+            const int L = bestS - step;
+            const int R = bestS + step;
+            if (L >= 0 && getCnt(L) >= (int)(keepFrac * base)) lo = L;
+            if (R <  N && getCnt(R) >= (int)(keepFrac * base)) hi = R;
+        }
+
+        // FG Build (tight + reliable)
+        // 1) Start from UNION of labels in [lo..hi]
+        cv::Mat fg8 = (winStable16 >= (uint16_t)lo) & (winStable16 <= (uint16_t)hi);
+        fg8.convertTo(fg8, CV_8U, 255.0);
+
+        // 2) Gate by *light* confidence (use confLow, NOT confHigh)
+        //    This prevents huge background regions with the same label from entering FG.
         cv::Mat confOK = (conf01 > params.confLow);
         confOK.convertTo(confOK, CV_8U, 255.0);
         cv::bitwise_and(fg8, confOK, fg8);
 
-        // 4) Gentle closing (fill small gaps). Avoid OPEN here.
+        // 3) Gentle close only (fill tiny gaps). Avoid OPEN: it kills thin twigs.
         cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(3));
+
+        // 4) Keep only largest CC (removes islands / background blobs)
+        fg8 = keepLargestCC(fg8, 8);
+
+        // 5) Optional small close to smooth
+        cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(2));
 
         qDebug() << "HaloFix: fgPx=" << cv::countNonZero(fg8)
                  << " frac=" << (double)cv::countNonZero(fg8) / (double)fg8.total()
-                 << " sFg=" << sFg
+                 << " bestS=" << bestS << " lo=" << lo << " hi=" << hi
                  << " confLow=" << params.confLow
                  << " confHigh=" << params.confHigh
                  << " confMax=" << params.haloConfMax
@@ -1701,6 +1761,11 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         {
             const QString folder = opt.depthFolderPath;
             cv::imwrite((folder + "/halo_fg.png").toStdString(), fg8);
+
+            cv::Mat fgInv;
+            cv::bitwise_not(fg8, fgInv);
+            cv::imwrite((folder + "/halo_fg_INV.png").toStdString(), fgInv);
+
             cv::imwrite((folder + "/halo_boundary.png").toStdString(), boundary8);
             cv::imwrite((folder + "/halo_band.png").toStdString(), band8);
             cv::imwrite((folder + "/halo_cand.png").toStdString(), haloCand8);

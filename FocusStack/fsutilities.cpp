@@ -295,6 +295,134 @@ cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16,
     return out;
 }
 
+//----------------------------------------------------------
+// Shared: build enhanced preview (heatmap + legend)
+//----------------------------------------------------------
+
+cv::Mat makeDepthHeatmap(const cv::Mat &depthIndex16,
+                                 int sliceCount)
+{
+    CV_Assert(depthIndex16.type() == CV_16U);
+    CV_Assert(sliceCount > 0);
+
+    const int rows = depthIndex16.rows;
+    const int cols = depthIndex16.cols;
+
+    // --- Map slice index -> 0..255 for colormap ---
+    cv::Mat idx8(rows, cols, CV_8U, cv::Scalar(0));
+    for (int y = 0; y < rows; ++y)
+    {
+        const uint16_t* d = depthIndex16.ptr<uint16_t>(y);
+        uint8_t* o        = idx8.ptr<uint8_t>(y);
+        for (int x = 0; x < cols; ++x)
+        {
+            int s = (int)d[x];
+            s = std::max(0, std::min(s, sliceCount - 1));
+            if (sliceCount > 1)
+                o[x] = (uint8_t)std::lround(255.0 * (double)s / (double)(sliceCount - 1));
+            else
+                o[x] = 0;
+        }
+    }
+
+    // --- Heatmap (orig size) ---
+    cv::Mat heat;
+    cv::applyColorMap(idx8, heat, cv::COLORMAP_TURBO); // CV_8UC3, rows x cols
+
+    // --- Draw legend OVERLAY at bottom (does NOT change image size) ---
+    const int legendH = std::max(24, std::min(140, rows / 6)); // safe, readable
+    const int y0 = rows - legendH;
+    if (y0 < 0) return heat;
+
+    // Slight darkening of bottom strip for readability (blend with black)
+    {
+        cv::Mat roi = heat(cv::Rect(0, y0, cols, legendH));
+        cv::Mat tmp;
+        cv::addWeighted(roi, 0.35, cv::Mat(roi.size(), roi.type(), cv::Scalar(0,0,0)), 0.65, 0.0, tmp);
+        tmp.copyTo(roi);
+    }
+
+    // Title (top-left inside legend strip)
+    {
+        const std::string title = "Depth index -> color (TURBO)";
+        double fontScale = std::max(0.6, legendH / 40.0);
+        int thick = std::max(1, (int)std::lround(fontScale * 2.0));
+
+        cv::putText(heat, title, cv::Point(10, y0 + std::max(22, legendH / 4)),
+                    cv::FONT_HERSHEY_SIMPLEX, fontScale,
+                    cv::Scalar(0,0,0), thick + 2, cv::LINE_AA);
+        cv::putText(heat, title, cv::Point(10, y0 + std::max(22, legendH / 4)),
+                    cv::FONT_HERSHEY_SIMPLEX, fontScale,
+                    cv::Scalar(255,255,255), thick, cv::LINE_AA);
+    }
+
+    // Color bar occupies the lower ~2/3 of the strip
+    const int barY0 = y0 + std::max(18, legendH / 3);
+    const int barY1 = rows - 6;
+
+    // Draw bar segments + labels
+    for (int s = 0; s < sliceCount; ++s)
+    {
+        float t0 = (float)s / (float)sliceCount;
+        float t1 = (float)(s + 1) / (float)sliceCount;
+
+        int x0 = (int)std::lround(t0 * cols);
+        int x1 = (int)std::lround(t1 * cols);
+        if (x1 <= x0) x1 = x0 + 1;
+        x0 = std::max(0, std::min(cols - 1, x0));
+        x1 = std::max(1, std::min(cols, x1));
+
+        // exact swatch color for slice s
+        int v = 0;
+        if (sliceCount > 1)
+            v = (int)std::lround(255.0 * (double)s / (double)(sliceCount - 1));
+        v = std::max(0, std::min(255, v));
+
+        cv::Mat one(1, 1, CV_8U, cv::Scalar(v));
+        cv::Mat oneCol;
+        cv::applyColorMap(one, oneCol, cv::COLORMAP_TURBO);
+        cv::Vec3b c = oneCol.at<cv::Vec3b>(0,0);
+
+        cv::rectangle(heat,
+                      cv::Rect(x0, barY0, x1 - x0, barY1 - barY0),
+                      cv::Scalar(c[0], c[1], c[2]),
+                      cv::FILLED);
+
+        // Label cadence (same logic you had)
+        bool drawLabel = false;
+        if (sliceCount <= 16) drawLabel = true;
+        else if (sliceCount <= 32 && (s % 2 == 0)) drawLabel = true;
+        else if (sliceCount > 32 && (s % 4 == 0)) drawLabel = true;
+
+        if (drawLabel)
+        {
+            const std::string label = std::to_string(s);
+
+            // text color based on swatch luminance
+            int lum = (int)(0.114 * c[0] + 0.587 * c[1] + 0.299 * c[2]);
+            cv::Scalar textCol = (lum < 128) ? cv::Scalar(255,255,255) : cv::Scalar(0,0,0);
+
+            double fontScale = std::max(0.5, legendH / 55.0);
+            int thick = std::max(1, (int)std::lround(fontScale * 2.0));
+
+            int tx = std::min(x0 + 2, cols - 20);
+            int ty = std::min(rows - 10, barY1 - 4);
+
+            cv::putText(heat, label, cv::Point(tx, ty),
+                        cv::FONT_HERSHEY_SIMPLEX, fontScale,
+                        cv::Scalar(0,0,0), thick + 2, cv::LINE_AA);
+            cv::putText(heat, label, cv::Point(tx, ty),
+                        cv::FONT_HERSHEY_SIMPLEX, fontScale,
+                        textCol, thick, cv::LINE_AA);
+        }
+    }
+
+    // Optional border around legend strip (helps visually)
+    cv::rectangle(heat, cv::Rect(0, y0, cols, legendH), cv::Scalar(255,255,255), 1);
+
+    return heat; // SAME SIZE AS depthIndex16 (orig)
+}
+
 //-------------------------------------------------------------
 // Main Debug Composite Builder
 //-------------------------------------------------------------
