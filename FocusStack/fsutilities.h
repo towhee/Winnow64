@@ -22,6 +22,7 @@ inline QString matSizeToStr(const cv::Mat& m) {
 }
 
 cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16, int sliceCount);
+cv::Mat makeDepthHeatmap(const cv::Mat &depthIndex16, int sliceCount);
 
 bool makeDebugOverview(const cv::Mat &depthPreview,
                        const cv::Mat &fusedColor,

@@ -1801,8 +1801,9 @@ bool FS::runStreamDMap()
         return false;
     }
 
-    cv::Mat preview = FSUtilities::makeDepthPreviewEnhanced(depthIndex16Mat, slices);
-    QString depthPreviewPath = depthFolderPath + "/depth_preview.png";
+    cv::Mat preview = FSUtilities::makeDepthHeatmap(depthIndex16Mat, slices);
+    // cv::Mat preview = FSUtilities::makeDepthPreviewEnhanced(depthIndex16Mat, slices);
+    QString depthPreviewPath = depthFolderPath + "/depth_heatmap.png";
     FSUtilities::writePngWithTitle(depthPreviewPath, preview);
 
     if (G::abortFocusStack) return false;
