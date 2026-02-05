@@ -67,4 +67,10 @@ StmDMap_02  Same as StmDMap_01
         •	float clampf(float,float,float);
         •	cv::Mat toFloat01(const cv::Mat& gray8);
 
-
+halo_alphaBand.png
+halo_band.png
+halo_boundary.png
+halo_cand.png
+halo_donor_labels.png
+halo_fg.png
+halo_overlay.png

@@ -609,6 +609,51 @@ static int pickForegroundSlice(const cv::Mat& win16,
     return best;
 }
 
+// Choose sFg as the most common winner label inside confident pixels.
+// This is MUCH more stable than "max label".
+int pickForegroundSliceByConf(const cv::Mat& win16, const cv::Mat& conf01,
+                              int N, float confThr, const QString& tag)
+{
+    CV_Assert(win16.type() == CV_16U);
+    CV_Assert(conf01.type() == CV_32F);
+    CV_Assert(win16.size() == conf01.size());
+
+    std::vector<int> hist(N, 0);
+    int used = 0;
+
+    for (int y = 0; y < win16.rows; ++y)
+    {
+        const uint16_t* w = win16.ptr<uint16_t>(y);
+        const float*    c = conf01.ptr<float>(y);
+        for (int x = 0; x < win16.cols; ++x)
+        {
+            if (c[x] > confThr)
+            {
+                const int s = (int)w[x];
+                if (0 <= s && s < N) { hist[s]++; used++; }
+            }
+        }
+    }
+
+    int bestS = 0, bestCnt = -1;
+    for (int s = 0; s < N; ++s)
+        if (hist[s] > bestCnt) { bestCnt = hist[s]; bestS = s; }
+
+    qDebug() << tag << "pick sFg by confThr=" << confThr
+             << " usedPx=" << used << " bestS=" << bestS << " bestCnt=" << bestCnt;
+
+    // (Optional) print top 5 labels for sanity
+    std::vector<std::pair<int,int>> pairs;
+    pairs.reserve(N);
+    for (int s = 0; s < N; ++s) pairs.push_back({hist[s], s});
+    std::sort(pairs.rbegin(), pairs.rend());
+    qDebug() << tag << "top labels:";
+    for (int i = 0; i < std::min(5, (int)pairs.size()); ++i)
+        qDebug() << "  s" << pairs[i].second << "cnt" << pairs[i].first;
+
+    return bestS;
+}
+
 // ------------------------------------------------------------
 // weights containers
 // ------------------------------------------------------------
@@ -1566,22 +1611,41 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         const int ringPx = std::max(2, params.haloRingPx);
 
         // Foreground slice (near->far => max index)
-        int sFg = 0;
-        {
-            double mn=0, mx=0;
-            cv::minMaxLoc(winStable16, &mn, &mx);
-            sFg = std::max(0, std::min((int)mx, N - 1));
+        int sFg = pickForegroundSliceByConf(winStable16, conf01, N, params.confHigh, "HaloFix");
+        // FG Build
+        // 1) Start from label = sFg (no conf gate yet)
+        cv::Mat fgLabel = (winStable16 == (uint16_t)sFg);
+        fgLabel.convertTo(fgLabel, CV_8U, 255.0);
+
+        // 2) Keep only the largest connected component (removes speckle islands)
+        cv::Mat ccLabels, stats, centroids;
+        int ncc = cv::connectedComponentsWithStats(fgLabel, ccLabels, stats, centroids, 8, CV_32S);
+
+        int best = -1, bestArea = 0;
+        for (int i = 1; i < ncc; ++i) { // 0 is background
+            int area = stats.at<int>(i, cv::CC_STAT_AREA);
+            if (area > bestArea) { bestArea = area; bestArea = area; best = i; }
         }
-        qDebug() << "HaloFix: sFg =" << sFg << " ringPx=" << ringPx
+
+        cv::Mat fg8 = cv::Mat::zeros(fgLabel.size(), CV_8U);
+        if (best > 0) fg8.setTo(255, (ccLabels == best));
+
+        // 3) Optional: light confidence gate (use confLow, NOT confHigh)
+        cv::Mat confOK = (conf01 > params.confLow);
+        confOK.convertTo(confOK, CV_8U, 255.0);
+        cv::bitwise_and(fg8, confOK, fg8);
+
+        // 4) Gentle closing (fill small gaps). Avoid OPEN here.
+        cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(3));
+
+        qDebug() << "HaloFix: fgPx=" << cv::countNonZero(fg8)
+                 << " frac=" << (double)cv::countNonZero(fg8) / (double)fg8.total()
+                 << " sFg=" << sFg
+                 << " confLow=" << params.confLow
+                 << " confHigh=" << params.confHigh
                  << " confMax=" << params.haloConfMax
                  << " texMax=" << params.haloTexMax
                  << " featherSigma=" << params.haloFeatherSigma;
-
-        // FG mask
-        // cv::Mat fg8 = (winStable16 == (uint16_t)sFg);
-        cv::Mat fg8 = (conf01 > params.confHigh);
-        fg8.convertTo(fg8, CV_8U, 255.0);
-        cv::morphologyEx(fg8, fg8, cv::MORPH_OPEN, FSFusion::seEllipse(2));
 
         // boundary for seeding
         cv::Mat boundary8;
