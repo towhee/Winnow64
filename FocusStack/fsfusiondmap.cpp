@@ -1699,7 +1699,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     cv::max(out32, 0.0f, out32);
     cv::min(out32, 1.0f, out32);
 
-    // ---- Keep: halo-relevant inputs (NOT blue debugging) ----
+    // ---- Keep: halo-relevant inputs ----
     // If you want to reduce further, keep only conf01 + top1Score32.
     dbgMat3Stats("DBG out32 preHalo clamp", out32);
     dbgMat3Stats("DBG top1Score32", topkOrig.score32[0]);
@@ -1848,7 +1848,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         // HOLE-SAFE mask for boundary/band
         // -------------------------------
 
-        // Fill holes in fg8 ONLY to keep the halo ring outside the subject silhouette.
+        /* Fill holes in fg8 ONLY to keep the halo ring outside the subject silhouette.
         // fg8 is CV_8U 0/255.
         auto fillHoles8 = [](const cv::Mat& bin8)->cv::Mat
         {
@@ -1868,6 +1868,36 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
             cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where ff > 0 (holes)
 
             // 4) Add holes into original FG
+            cv::Mat filled = bin8.clone();
+            filled.setTo(255, holesMask);
+            return filled;
+        };
+        //*/
+
+        // Fill holes in a binary mask (CV_8U 0/255) robustly, even if FG touches image border.
+        auto fillHoles8 = [](const cv::Mat& bin8)->cv::Mat
+        {
+            CV_Assert(bin8.type() == CV_8U);
+
+            // Invert: background -> 255, foreground -> 0
+            cv::Mat inv;
+            cv::bitwise_not(bin8, inv);
+
+            // Pad with a 1-pixel 255 border so (0,0) is guaranteed to be "outside background" in inv-space.
+            cv::Mat invPad;
+            cv::copyMakeBorder(inv, invPad, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(255));
+
+            // Flood fill from the guaranteed-outside corner, turning outside background to 0
+            cv::floodFill(invPad, cv::Point(0, 0), cv::Scalar(0));
+
+            // Crop back to original size
+            cv::Mat ff = invPad(cv::Rect(1, 1, bin8.cols, bin8.rows)).clone();
+
+            // Holes are the remaining 255 regions in ff (not connected to outside)
+            cv::Mat holesMask;
+            cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where holes
+
+            // Fill holes into the foreground
             cv::Mat filled = bin8.clone();
             filled.setTo(255, holesMask);
             return filled;
@@ -1928,6 +1958,10 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
             qDebug() << "HaloFix: no candidates; skipping.";
             break;
         }
+
+        double mn=0, mx=0;
+        cv::minMaxLoc(fg8, &mn, &mx);
+        qDebug() << "HaloFix: fg8 min/max =" << mn << mx;
 
         // Visual debug (masks)
         {
