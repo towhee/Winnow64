@@ -1065,6 +1065,47 @@ static cv::Mat buildSliceWeightMap32(const FSFusionDMap::TopKMaps& topk,
     return w32;
 }
 
+static cv::Mat buildDepthJumpEdges8(const cv::Mat& win16, int jumpThr, int dilatePx = 1)
+{
+    CV_Assert(win16.type() == CV_16U);
+    jumpThr = std::max(1, jumpThr);
+
+    cv::Mat edges = cv::Mat::zeros(win16.size(), CV_8U);
+
+    for (int y = 0; y < win16.rows; ++y)
+    {
+        const uint16_t* r = win16.ptr<uint16_t>(y);
+        uint8_t* e = edges.ptr<uint8_t>(y);
+
+        for (int x = 0; x < win16.cols; ++x)
+        {
+            const uint16_t v = r[x];
+            bool jump = false;
+
+            if (x > 0)             jump |= (std::abs((int)v - (int)r[x-1]) >= jumpThr);
+            if (x+1 < win16.cols)  jump |= (std::abs((int)v - (int)r[x+1]) >= jumpThr);
+
+            if (y > 0)
+            {
+                const uint16_t* ru = win16.ptr<uint16_t>(y-1);
+                jump |= (std::abs((int)v - (int)ru[x]) >= jumpThr);
+            }
+            if (y+1 < win16.rows)
+            {
+                const uint16_t* rd = win16.ptr<uint16_t>(y+1);
+                jump |= (std::abs((int)v - (int)rd[x]) >= jumpThr);
+            }
+
+            if (jump) e[x] = 255;
+        }
+    }
+
+    if (dilatePx > 0)
+        cv::dilate(edges, edges, FSFusion::seEllipse(dilatePx));
+
+    return edges;
+}
+
 static void buildForegroundBoundarySeeds(const cv::Mat& win16,       // CV_16U
                                          const cv::Mat& boundary8,   // CV_8U 0/255
                                          cv::Mat& seeds8,            // CV_8U 0/255 out
@@ -1641,62 +1682,109 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
 
         // Foreground slice pick (and get histogram of confident winner labels)
         std::vector<int> hist;
-        int bestS = pickForegroundSliceByConf(winStable16, conf01, N,
+        int seedS = pickForegroundSliceByConf(winStable16, conf01, N,
                                               params.confHigh, "HaloFix", &hist);
 
-        // pick among the top M histogram labels, but prefer the highest slice index
-        const int M = 5;
+        // Sort labels by histogram count (desc)
         std::vector<std::pair<int,int>> pairs;
         pairs.reserve(N);
         for (int s = 0; s < N; ++s) pairs.push_back({hist[s], s});
         std::sort(pairs.rbegin(), pairs.rend());
 
-        bestS = pairs[0].second;
-        int bestCnt = pairs[0].first;
-
-        // Prefer nearer slice (higher s) if it's "close enough" in count
-        const float nearPreferenceFrac = 0.80f; // allow 80% of best count
-        for (int i = 0; i < std::min(M, (int)pairs.size()); ++i)
-        {
-            if (pairs[i].first >= (int)(nearPreferenceFrac * bestCnt))
-                bestS = std::max(bestS, pairs[i].second);
-        }
-
-        // Build a label range around bestS (because the subject often spans 11..14 etc)
         auto getCnt = [&](int s)->int { return (s >= 0 && s < N) ? hist[s] : 0; };
 
-        int lo = bestS, hi = bestS;
-        const int base = std::max(1, getCnt(bestS));
-        const float keepFrac = 0.55f;   // include neighbor if >=55% of best label count
-        const int maxExpand  = 3;       // allow up to +/-3 slices
+        // Evaluate top M candidates by resulting FG area after the SAME early gates
+        // (prevents “reversed order” and “wrong slice chosen” from collapsing fg8)
+        const int M = 6;
 
-        for (int step = 1; step <= maxExpand; ++step)
+        int bestS = pairs.empty() ? 0 : pairs[0].second;
+        int bestLo = bestS, bestHi = bestS;
+        int bestArea = -1;
+
+        for (int i = 0; i < std::min(M, (int)pairs.size()); ++i)
         {
-            const int L = bestS - step;
-            const int R = bestS + step;
-            if (L >= 0 && getCnt(L) >= (int)(keepFrac * base)) lo = L;
-            if (R <  N && getCnt(R) >= (int)(keepFrac * base)) hi = R;
+            const int sCand = pairs[i].second;
+
+            // Build a label range around sCand (same neighbor-expansion idea)
+            int loCand = sCand, hiCand = sCand;
+            const int base = std::max(1, getCnt(sCand));
+            const float keepFrac = 0.55f;
+            const int maxExpand  = 3;
+
+            for (int step = 1; step <= maxExpand; ++step)
+            {
+                const int L = sCand - step;
+                const int R = sCand + step;
+                if (L >= 0 && getCnt(L) >= (int)(keepFrac * base)) loCand = L;
+                if (R <  N && getCnt(R) >= (int)(keepFrac * base)) hiCand = R;
+            }
+
+            // Quick FG candidate scored the same way your real FG will start:
+            // range -> confLow gate -> largest CC
+            cv::Mat fgCand8 = (winStable16 >= (uint16_t)loCand) & (winStable16 <= (uint16_t)hiCand);
+            fgCand8.convertTo(fgCand8, CV_8U, 255.0);
+
+            cv::Mat confOK = (conf01 > params.confLow);
+            confOK.convertTo(confOK, CV_8U, 255.0);
+            cv::bitwise_and(fgCand8, confOK, fgCand8);
+
+            fgCand8 = keepLargestCC(fgCand8, 8);
+            const int area = cv::countNonZero(fgCand8);
+
+            qDebug() << "HaloFix cand:"
+                     << " s=" << sCand
+                     << " lo/hi=" << loCand << hiCand
+                     << " area=" << area;
+
+            if (area > bestArea)
+            {
+                bestArea = area;
+                bestS = sCand;
+                bestLo = loCand;
+                bestHi = hiCand;
+            }
         }
+
+        int lo = bestLo;
+        int hi = bestHi;
+
+        qDebug() << "HaloFix chosen by area:"
+                 << " seedS=" << seedS
+                 << " bestS=" << bestS
+                 << " lo=" << lo << " hi=" << hi
+                 << " bestArea=" << bestArea;
 
         // FG Build (tight + reliable)
         // 1) Start from UNION of labels in [lo..hi]
         cv::Mat fg8 = (winStable16 >= (uint16_t)lo) & (winStable16 <= (uint16_t)hi);
         fg8.convertTo(fg8, CV_8U, 255.0);
 
-        // 2) Gate by *light* confidence (use confLow, NOT confHigh)
-        //    This prevents huge background regions with the same label from entering FG.
+        // 2) Light confidence gate (use confLow, NOT confHigh)
         cv::Mat confOK = (conf01 > params.confLow);
         confOK.convertTo(confOK, CV_8U, 255.0);
         cv::bitwise_and(fg8, confOK, fg8);
 
-        // 3) Gentle close only (fill tiny gaps). Avoid OPEN: it kills thin twigs.
-        cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(3));
-
-        // 4) Keep only largest CC (removes islands / background blobs)
+        // 3) Keep largest CC EARLY (before any big closing)
         fg8 = keepLargestCC(fg8, 8);
 
-        // 5) Optional small close to smooth
-        cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(2));
+        // 4) DO NOT open/close/erode the FG mask itself.
+        // The open(2) is what is nuking fine branches/twigs and collapsing fg8 to tiny islands.
+
+        // Keep a "display/seed FG" that preserves thin structures
+        cv::Mat fgFull8 = fg8.clone();            // <-- this is what halo_fg.png should show
+
+        // Make a *separate* small "core" for the ring/band so the band is truly outside
+        cv::Mat fgCore8 = fgFull8.clone();
+        const int fgCoreErodePx = 1;              // 0 or 1 only
+        if (fgCoreErodePx > 0)
+            cv::erode(fgCore8, fgCore8, FSFusion::seEllipse(fgCoreErodePx));
+
+        // Use fgCore8 for subsequent boundary/band, but keep fg8 as the full mask for writing/debug
+        fg8 = fgFull8;
+
+        // Optional sanity prints (remove later)
+        qDebug() << "HaloFix: fgFullPx=" << cv::countNonZero(fgFull8)
+                 << " fgCorePx=" << cv::countNonZero(fgCore8);
 
         qDebug() << "HaloFix: fgPx=" << cv::countNonZero(fg8)
                  << " frac=" << (double)cv::countNonZero(fg8) / (double)fg8.total()
@@ -1707,14 +1795,49 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
                  << " texMax=" << params.haloTexMax
                  << " featherSigma=" << params.haloFeatherSigma;
 
-        // boundary for seeding
-        cv::Mat boundary8;
-        cv::morphologyEx(fg8, boundary8, cv::MORPH_GRADIENT, FSFusion::seEllipse(1));
+        // -------------------------------
+        // HOLE-SAFE mask for boundary/band
+        // -------------------------------
 
-        // band (ring outside FG)
+        // Fill holes in fg8 ONLY to keep the halo ring outside the subject silhouette.
+        // fg8 is CV_8U 0/255.
+        auto fillHoles8 = [](const cv::Mat& bin8)->cv::Mat
+        {
+            CV_Assert(bin8.type() == CV_8U);
+
+            // 1) Invert: holes become 255 regions inside foreground
+            cv::Mat inv;
+            cv::bitwise_not(bin8, inv);
+
+            // 2) Flood fill from the border on inv => marks true "outside background"
+            cv::Mat ff = inv.clone();
+            cv::floodFill(ff, cv::Point(0, 0), cv::Scalar(0)); // outside background set to 0
+
+            // 3) Remaining 255 in ff are holes (NOT connected to border). Turn them into FG.
+            // holesMask: 255 where holes
+            cv::Mat holesMask;
+            cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where ff > 0 (holes)
+
+            // 4) Add holes into original FG
+            cv::Mat filled = bin8.clone();
+            filled.setTo(255, holesMask);
+            return filled;
+        };
+
+        cv::Mat fgFilled8 = fillHoles8(fg8);
+
+        qDebug() << "HaloFix: fgPx=" << cv::countNonZero(fg8)
+                 << " fgFilledPx=" << cv::countNonZero(fgFilled8)
+                 << " delta=" << (cv::countNonZero(fgFilled8) - cv::countNonZero(fg8));
+
+        // boundary for seeding: use filled silhouette (outer boundary only)
+        cv::Mat boundary8;
+        cv::morphologyEx(fgFilled8, boundary8, cv::MORPH_GRADIENT, FSFusion::seEllipse(1));
+
+        // band (ring outside FG): use filled silhouette so ring does NOT enter holes
         cv::Mat fgDil, band8;
-        cv::dilate(fg8, fgDil, FSFusion::seEllipse(ringPx));
-        cv::bitwise_and(fgDil, ~fg8, band8);
+        cv::dilate(fgFilled8, fgDil, FSFusion::seEllipse(ringPx));
+        cv::bitwise_and(fgDil, ~fgFilled8, band8);
 
         const int bandPx = cv::countNonZero(band8);
         if (bandPx == 0)
@@ -1761,11 +1884,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         {
             const QString folder = opt.depthFolderPath;
             cv::imwrite((folder + "/halo_fg.png").toStdString(), fg8);
-
-            cv::Mat fgInv;
-            cv::bitwise_not(fg8, fgInv);
-            cv::imwrite((folder + "/halo_fg_INV.png").toStdString(), fgInv);
-
+            cv::imwrite((folder + "/halo_fg_filled.png").toStdString(), fgFilled8);
             cv::imwrite((folder + "/halo_boundary.png").toStdString(), boundary8);
             cv::imwrite((folder + "/halo_band.png").toStdString(), band8);
             cv::imwrite((folder + "/halo_cand.png").toStdString(), haloCand8);
