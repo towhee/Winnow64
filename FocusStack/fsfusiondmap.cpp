@@ -537,6 +537,51 @@ static void updateTopKPerSlice(FSFusionDMap::TopKMaps& topk,
     }
 }
 
+// Keep all connected components in bin8 that intersect touch8 (both CV_8U 0/255)
+static cv::Mat keepCCsTouchingMask(const cv::Mat& bin8, const cv::Mat& touch8, int connectivity = 8)
+{
+    CV_Assert(bin8.type() == CV_8U);
+    CV_Assert(touch8.type() == CV_8U);
+    CV_Assert(bin8.size() == touch8.size());
+
+    cv::Mat src;
+    cv::compare(bin8, 0, src, cv::CMP_GT); // 0/255
+    if (cv::countNonZero(src) == 0)
+        return cv::Mat::zeros(src.size(), CV_8U);
+
+    cv::Mat labels, stats, centroids;
+    int n = cv::connectedComponentsWithStats(src, labels, stats, centroids, connectivity, CV_32S);
+    if (n <= 1)
+        return cv::Mat::zeros(src.size(), CV_8U);
+
+    // Which labels intersect touch8?
+    std::vector<uint8_t> keep(n, 0);
+    for (int y = 0; y < labels.rows; ++y)
+    {
+        const int* L = labels.ptr<int>(y);
+        const uint8_t* T = touch8.ptr<uint8_t>(y);
+        for (int x = 0; x < labels.cols; ++x)
+        {
+            if (!T[x]) continue;
+            int id = L[x];
+            if (id > 0 && id < n) keep[id] = 1;
+        }
+    }
+
+    cv::Mat out = cv::Mat::zeros(src.size(), CV_8U);
+    for (int y = 0; y < labels.rows; ++y)
+    {
+        const int* L = labels.ptr<int>(y);
+        uint8_t* O = out.ptr<uint8_t>(y);
+        for (int x = 0; x < labels.cols; ++x)
+        {
+            int id = L[x];
+            if (id > 0 && id < n && keep[id]) O[x] = 255;
+        }
+    }
+    return out;
+}
+
 // Keep only the largest connected component from a binary 8-bit mask (0/255).
 // Returns a CV_8U 0/255 mask. If empty or no foreground, returns zeros.
 static cv::Mat keepLargestCC(const cv::Mat& bin8, int connectivity = 8)
@@ -1764,18 +1809,22 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         confOK.convertTo(confOK, CV_8U, 255.0);
         cv::bitwise_and(fg8, confOK, fg8);
 
-        // 3) Keep largest CC EARLY (before any big closing)
-        fg8 = keepLargestCC(fg8, 8);
+        // 3) Keep CCs that touch a confident “core” (prevents throwing away disconnected branches)
+        cv::Mat fgTouchCore8 = (conf01 > params.confHigh);
+        fgTouchCore8.convertTo(fgTouchCore8, CV_8U, 255.0);
+        cv::bitwise_and(fg8, fgTouchCore8, fgTouchCore8); // fgTouchCore8 now = fg8 ∩ highConf
 
-        // 4) DO NOT open/close/erode the FG mask itself.
-        // The open(2) is what is nuking fine branches/twigs and collapsing fg8 to tiny islands.
+        if (cv::countNonZero(fgTouchCore8) > 0)
+            fg8 = keepCCsTouchingMask(fg8, fgTouchCore8, 8);
+        // else: leave fg8 as-is
 
-        // Keep a "display/seed FG" that preserves thin structures
-        cv::Mat fgFull8 = fg8.clone();            // <-- this is what halo_fg.png should show
+        // 4) DO NOT open/close/erode the FG mask itself (keep thin branches)
+        // This is what halo_fg.png should show:
+        cv::Mat fgFull8 = fg8.clone();
 
-        // Make a *separate* small "core" for the ring/band so the band is truly outside
+        // 5) Make a *separate* small "core" for the ring/band so the band is truly outside
         cv::Mat fgCore8 = fgFull8.clone();
-        const int fgCoreErodePx = 1;              // 0 or 1 only
+        const int fgCoreErodePx = 1;   // 0 or 1 only
         if (fgCoreErodePx > 0)
             cv::erode(fgCore8, fgCore8, FSFusion::seEllipse(fgCoreErodePx));
 
