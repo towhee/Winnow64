@@ -14,9 +14,9 @@
 
 namespace
 {
-// ------------------------------------------------------------
+// ============================================================
 // debug helpers
-// ------------------------------------------------------------
+// ============================================================
 
 static inline cv::Scalar turboColorForSliceBGR(int s, int N)
 {
@@ -307,6 +307,10 @@ static inline void dbgType(const char* tag, const cv::Mat& m)
                        << "empty=" << m.empty();
 }
 
+// ============================================================
+// Small generic image helpers (pad/geometry/label filters)
+// ============================================================
+
 static cv::Mat majorityFilterLabels16_3x3(const cv::Mat& in16)
 {
     CV_Assert(in16.type() == CV_16U);
@@ -408,9 +412,6 @@ static inline bool toColor32_01_FromLoaded(cv::Mat colorTmp,   // pass-by-value 
     return true;
 }
 
-// ------------------------------------------------------------
-// pad helpers (engine-owned)
-// ------------------------------------------------------------
 static inline cv::Size computePadSizeForPyr(const cv::Size& s, int levels)
 {
     const int lv = std::max(1, levels);
@@ -455,9 +456,10 @@ static inline long long countHorizontalDiffs16(const cv::Mat& idx16)
     return diff;
 }
 
-// ------------------------------------------------------------
-// focus metric (dmap)
-// ------------------------------------------------------------
+// ============================================================
+// Top-K / metric / confidence / slice selection
+// ============================================================
+
 static cv::Mat focusMetric32_dmap(const cv::Mat& gray8, float preBlurSigma, int lapKSize)
 {
     CV_Assert(gray8.type() == CV_8U);
@@ -484,9 +486,6 @@ static cv::Mat focusMetric32_dmap(const cv::Mat& gray8, float preBlurSigma, int 
     return absLap32;
 }
 
-// ------------------------------------------------------------
-// top-k maintenance
-// ------------------------------------------------------------
 static void updateTopKPerSlice(FSFusionDMap::TopKMaps& topk,
                                const cv::Mat& score32This,
                                uint16_t sliceIndex)
@@ -536,82 +535,6 @@ static void updateTopKPerSlice(FSFusionDMap::TopKMaps& topk,
     }
 }
 
-// Keep all connected components in bin8 that intersect touch8 (both CV_8U 0/255)
-static cv::Mat keepCCsTouchingMask(const cv::Mat& bin8, const cv::Mat& touch8, int connectivity = 8)
-{
-    CV_Assert(bin8.type() == CV_8U);
-    CV_Assert(touch8.type() == CV_8U);
-    CV_Assert(bin8.size() == touch8.size());
-
-    cv::Mat src;
-    cv::compare(bin8, 0, src, cv::CMP_GT); // 0/255
-    if (cv::countNonZero(src) == 0)
-        return cv::Mat::zeros(src.size(), CV_8U);
-
-    cv::Mat labels, stats, centroids;
-    int n = cv::connectedComponentsWithStats(src, labels, stats, centroids, connectivity, CV_32S);
-    if (n <= 1)
-        return cv::Mat::zeros(src.size(), CV_8U);
-
-    // Which labels intersect touch8?
-    std::vector<uint8_t> keep(n, 0);
-    for (int y = 0; y < labels.rows; ++y)
-    {
-        const int* L = labels.ptr<int>(y);
-        const uint8_t* T = touch8.ptr<uint8_t>(y);
-        for (int x = 0; x < labels.cols; ++x)
-        {
-            if (!T[x]) continue;
-            int id = L[x];
-            if (id > 0 && id < n) keep[id] = 1;
-        }
-    }
-
-    cv::Mat out = cv::Mat::zeros(src.size(), CV_8U);
-    for (int y = 0; y < labels.rows; ++y)
-    {
-        const int* L = labels.ptr<int>(y);
-        uint8_t* O = out.ptr<uint8_t>(y);
-        for (int x = 0; x < labels.cols; ++x)
-        {
-            int id = L[x];
-            if (id > 0 && id < n && keep[id]) O[x] = 255;
-        }
-    }
-    return out;
-}
-
-// Keep only the largest connected component from a binary 8-bit mask (0/255).
-// Returns a CV_8U 0/255 mask. If empty or no foreground, returns zeros.
-static cv::Mat keepLargestCC(const cv::Mat& bin8, int connectivity = 8)
-{
-    CV_Assert(bin8.empty() || bin8.type() == CV_8U);
-    if (bin8.empty()) return cv::Mat();
-
-    cv::Mat src;
-    cv::compare(bin8, 0, src, cv::CMP_GT); // 0/255
-    if (cv::countNonZero(src) == 0)
-        return cv::Mat::zeros(src.size(), CV_8U);
-
-    cv::Mat labels, stats, centroids;
-    int n = cv::connectedComponentsWithStats(src, labels, stats, centroids, connectivity, CV_32S);
-    if (n <= 1) return cv::Mat::zeros(src.size(), CV_8U);
-
-    int best = 1, bestArea = stats.at<int>(1, cv::CC_STAT_AREA);
-    for (int i = 2; i < n; ++i)
-    {
-        int area = stats.at<int>(i, cv::CC_STAT_AREA);
-        if (area > bestArea) { bestArea = area; best = i; }
-    }
-
-    cv::Mat out;
-    cv::compare(labels, best, out, cv::CMP_EQ); // 0/255
-    return out;
-}
-
-// ------------------------------------------------------------
-// confidence from top-2
-// ------------------------------------------------------------
 static cv::Mat computeConfidence01_Top2(const FSFusionDMap::TopKMaps& topk, float eps)
 {
     CV_Assert(topk.valid());
@@ -753,94 +676,122 @@ static cv::Mat boundaryFromLabels8(const cv::Mat& lab16)
     return b;
 }
 
-static cv::Mat propagateDonorLabels16(const cv::Mat& seedMask8,
-                                      const cv::Mat& seedLabel16,
-                                      const cv::Mat& haloCand8,
-                                      int maxSteps)
+static cv::Mat buildDepthJumpEdges8(const cv::Mat& win16, int jumpThr, int dilatePx = 1)
 {
-    CV_Assert(seedMask8.type() == CV_8U);
-    CV_Assert(seedLabel16.type() == CV_16U);
-    CV_Assert(haloCand8.type() == CV_8U);
-    CV_Assert(seedMask8.size() == seedLabel16.size());
-    CV_Assert(seedMask8.size() == haloCand8.size());
+    CV_Assert(win16.type() == CV_16U);
+    jumpThr = std::max(1, jumpThr);
 
-    maxSteps = std::max(1, maxSteps);
+    cv::Mat edges = cv::Mat::zeros(win16.size(), CV_8U);
 
-    const int H = seedMask8.rows;
-    const int W = seedMask8.cols;
-
-    // Donor slice id for each pixel (0xFFFF = unset)
-    cv::Mat donor16(H, W, CV_16U, cv::Scalar(0xFFFF));
-    // BFS distance (0xFFFF = unvisited)
-    cv::Mat dist16(H, W, CV_16U, cv::Scalar(0xFFFF));
-
-    std::deque<cv::Point> q;
-    q.clear();
-
-    // ------------------------------------------------------------
-    // Seed initialization:
-    // - only accept seeds that have a real donor label
-    // - donor label is taken from seedLabel16 (NOT from win16)
-    // ------------------------------------------------------------
-    for (int y = 0; y < H; ++y)
+    for (int y = 0; y < win16.rows; ++y)
     {
-        const uint8_t* sm = seedMask8.ptr<uint8_t>(y);
-        const uint16_t* sl = seedLabel16.ptr<uint16_t>(y);
+        const uint16_t* r = win16.ptr<uint16_t>(y);
+        uint8_t* e = edges.ptr<uint8_t>(y);
 
-        uint16_t* drow = donor16.ptr<uint16_t>(y);
-        uint16_t* trow = dist16.ptr<uint16_t>(y);
-
-        for (int x = 0; x < W; ++x)
+        for (int x = 0; x < win16.cols; ++x)
         {
-            if (!sm[x]) continue;
+            const uint16_t v = r[x];
+            bool jump = false;
 
-            const uint16_t lbl = sl[x];
-            if (lbl == (uint16_t)0xFFFF) continue; // ignore "unknown" seeds
+            if (x > 0)             jump |= (std::abs((int)v - (int)r[x-1]) >= jumpThr);
+            if (x+1 < win16.cols)  jump |= (std::abs((int)v - (int)r[x+1]) >= jumpThr);
 
-            drow[x] = lbl;
-            trow[x] = 0;
-            q.emplace_back(x, y);
+            if (y > 0)
+            {
+                const uint16_t* ru = win16.ptr<uint16_t>(y-1);
+                jump |= (std::abs((int)v - (int)ru[x]) >= jumpThr);
+            }
+            if (y+1 < win16.rows)
+            {
+                const uint16_t* rd = win16.ptr<uint16_t>(y+1);
+                jump |= (std::abs((int)v - (int)rd[x]) >= jumpThr);
+            }
+
+            if (jump) e[x] = 255;
         }
     }
 
-    const int dx4[4] = { 1, -1, 0, 0 };
-    const int dy4[4] = { 0, 0, 1, -1 };
+    if (dilatePx > 0)
+        cv::dilate(edges, edges, FSFusion::seEllipse(dilatePx));
 
-    // ------------------------------------------------------------
-    // BFS flood: only fill pixels that are in haloCand8
-    // ------------------------------------------------------------
-    while (!q.empty())
+    return edges;
+}
+
+// ============================================================
+// Weight building (softmax + boundary/band + per-slice weights)
+// ============================================================
+
+// Keep all connected components in bin8 that intersect touch8 (both CV_8U 0/255)
+static cv::Mat keepCCsTouchingMask(const cv::Mat& bin8, const cv::Mat& touch8, int connectivity = 8)
+{
+    CV_Assert(bin8.type() == CV_8U);
+    CV_Assert(touch8.type() == CV_8U);
+    CV_Assert(bin8.size() == touch8.size());
+
+    cv::Mat src;
+    cv::compare(bin8, 0, src, cv::CMP_GT); // 0/255
+    if (cv::countNonZero(src) == 0)
+        return cv::Mat::zeros(src.size(), CV_8U);
+
+    cv::Mat labels, stats, centroids;
+    int n = cv::connectedComponentsWithStats(src, labels, stats, centroids, connectivity, CV_32S);
+    if (n <= 1)
+        return cv::Mat::zeros(src.size(), CV_8U);
+
+    // Which labels intersect touch8?
+    std::vector<uint8_t> keep(n, 0);
+    for (int y = 0; y < labels.rows; ++y)
     {
-        const cv::Point p = q.front();
-        q.pop_front();
-
-        const int x = p.x;
-        const int y = p.y;
-
-        const uint16_t d = donor16.at<uint16_t>(y, x);
-        const uint16_t t = dist16.at<uint16_t>(y, x);
-
-        if (t >= (uint16_t)maxSteps) continue;
-
-        for (int k = 0; k < 4; ++k)
+        const int* L = labels.ptr<int>(y);
+        const uint8_t* T = touch8.ptr<uint8_t>(y);
+        for (int x = 0; x < labels.cols; ++x)
         {
-            const int xx = x + dx4[k];
-            const int yy = y + dy4[k];
-            if ((unsigned)xx >= (unsigned)W || (unsigned)yy >= (unsigned)H) continue;
-
-            // Only fill halo candidate pixels (this is your "domain")
-            if (!haloCand8.at<uint8_t>(yy, xx)) continue;
-
-            uint16_t& dstT = dist16.at<uint16_t>(yy, xx);
-            if (dstT != (uint16_t)0xFFFF) continue; // visited already
-
-            donor16.at<uint16_t>(yy, xx) = d;
-            dstT = (uint16_t)(t + 1);
-            q.emplace_back(xx, yy);
+            if (!T[x]) continue;
+            int id = L[x];
+            if (id > 0 && id < n) keep[id] = 1;
         }
     }
 
-    return donor16;
+    cv::Mat out = cv::Mat::zeros(src.size(), CV_8U);
+    for (int y = 0; y < labels.rows; ++y)
+    {
+        const int* L = labels.ptr<int>(y);
+        uint8_t* O = out.ptr<uint8_t>(y);
+        for (int x = 0; x < labels.cols; ++x)
+        {
+            int id = L[x];
+            if (id > 0 && id < n && keep[id]) O[x] = 255;
+        }
+    }
+    return out;
+}
+
+// Keep only the largest connected component from a binary 8-bit mask (0/255).
+// Returns a CV_8U 0/255 mask. If empty or no foreground, returns zeros.
+static cv::Mat keepLargestCC(const cv::Mat& bin8, int connectivity = 8)
+{
+    CV_Assert(bin8.empty() || bin8.type() == CV_8U);
+    if (bin8.empty()) return cv::Mat();
+
+    cv::Mat src;
+    cv::compare(bin8, 0, src, cv::CMP_GT); // 0/255
+    if (cv::countNonZero(src) == 0)
+        return cv::Mat::zeros(src.size(), CV_8U);
+
+    cv::Mat labels, stats, centroids;
+    int n = cv::connectedComponentsWithStats(src, labels, stats, centroids, connectivity, CV_32S);
+    if (n <= 1) return cv::Mat::zeros(src.size(), CV_8U);
+
+    int best = 1, bestArea = stats.at<int>(1, cv::CC_STAT_AREA);
+    for (int i = 2; i < n; ++i)
+    {
+        int area = stats.at<int>(i, cv::CC_STAT_AREA);
+        if (area > bestArea) { bestArea = area; best = i; }
+    }
+
+    cv::Mat out;
+    cv::compare(labels, best, out, cv::CMP_EQ); // 0/255
+    return out;
 }
 
 // softmax weights from topk scores
@@ -1086,46 +1037,11 @@ static cv::Mat buildSliceWeightMap32(const FSFusionDMap::TopKMaps& topk,
     return w32;
 }
 
-static cv::Mat buildDepthJumpEdges8(const cv::Mat& win16, int jumpThr, int dilatePx = 1)
-{
-    CV_Assert(win16.type() == CV_16U);
-    jumpThr = std::max(1, jumpThr);
+// ============================================================
+// Halo utilities (donor/seed/alpha helpers)
+// ============================================================
 
-    cv::Mat edges = cv::Mat::zeros(win16.size(), CV_8U);
 
-    for (int y = 0; y < win16.rows; ++y)
-    {
-        const uint16_t* r = win16.ptr<uint16_t>(y);
-        uint8_t* e = edges.ptr<uint8_t>(y);
-
-        for (int x = 0; x < win16.cols; ++x)
-        {
-            const uint16_t v = r[x];
-            bool jump = false;
-
-            if (x > 0)             jump |= (std::abs((int)v - (int)r[x-1]) >= jumpThr);
-            if (x+1 < win16.cols)  jump |= (std::abs((int)v - (int)r[x+1]) >= jumpThr);
-
-            if (y > 0)
-            {
-                const uint16_t* ru = win16.ptr<uint16_t>(y-1);
-                jump |= (std::abs((int)v - (int)ru[x]) >= jumpThr);
-            }
-            if (y+1 < win16.rows)
-            {
-                const uint16_t* rd = win16.ptr<uint16_t>(y+1);
-                jump |= (std::abs((int)v - (int)rd[x]) >= jumpThr);
-            }
-
-            if (jump) e[x] = 255;
-        }
-    }
-
-    if (dilatePx > 0)
-        cv::dilate(edges, edges, FSFusion::seEllipse(dilatePx));
-
-    return edges;
-}
 
 static void buildForegroundBoundarySeeds(const cv::Mat& win16,       // CV_16U
                                          const cv::Mat& boundary8,   // CV_8U 0/255
@@ -1185,6 +1101,97 @@ static void buildForegroundBoundarySeeds(const cv::Mat& win16,       // CV_16U
     }
 }
 
+static cv::Mat propagateDonorLabels16(const cv::Mat& seedMask8,
+                                      const cv::Mat& seedLabel16,
+                                      const cv::Mat& haloCand8,
+                                      int maxSteps)
+{
+    CV_Assert(seedMask8.type() == CV_8U);
+    CV_Assert(seedLabel16.type() == CV_16U);
+    CV_Assert(haloCand8.type() == CV_8U);
+    CV_Assert(seedMask8.size() == seedLabel16.size());
+    CV_Assert(seedMask8.size() == haloCand8.size());
+
+    maxSteps = std::max(1, maxSteps);
+
+    const int H = seedMask8.rows;
+    const int W = seedMask8.cols;
+
+    // Donor slice id for each pixel (0xFFFF = unset)
+    cv::Mat donor16(H, W, CV_16U, cv::Scalar(0xFFFF));
+    // BFS distance (0xFFFF = unvisited)
+    cv::Mat dist16(H, W, CV_16U, cv::Scalar(0xFFFF));
+
+    std::deque<cv::Point> q;
+    q.clear();
+
+    // ------------------------------------------------------------
+    // Seed initialization:
+    // - only accept seeds that have a real donor label
+    // - donor label is taken from seedLabel16 (NOT from win16)
+    // ------------------------------------------------------------
+    for (int y = 0; y < H; ++y)
+    {
+        const uint8_t* sm = seedMask8.ptr<uint8_t>(y);
+        const uint16_t* sl = seedLabel16.ptr<uint16_t>(y);
+
+        uint16_t* drow = donor16.ptr<uint16_t>(y);
+        uint16_t* trow = dist16.ptr<uint16_t>(y);
+
+        for (int x = 0; x < W; ++x)
+        {
+            if (!sm[x]) continue;
+
+            const uint16_t lbl = sl[x];
+            if (lbl == (uint16_t)0xFFFF) continue; // ignore "unknown" seeds
+
+            drow[x] = lbl;
+            trow[x] = 0;
+            q.emplace_back(x, y);
+        }
+    }
+
+    const int dx4[4] = { 1, -1, 0, 0 };
+    const int dy4[4] = { 0, 0, 1, -1 };
+
+    // ------------------------------------------------------------
+    // BFS flood: only fill pixels that are in haloCand8
+    // ------------------------------------------------------------
+    while (!q.empty())
+    {
+        const cv::Point p = q.front();
+        q.pop_front();
+
+        const int x = p.x;
+        const int y = p.y;
+
+        const uint16_t d = donor16.at<uint16_t>(y, x);
+        const uint16_t t = dist16.at<uint16_t>(y, x);
+
+        if (t >= (uint16_t)maxSteps) continue;
+
+        for (int k = 0; k < 4; ++k)
+        {
+            const int xx = x + dx4[k];
+            const int yy = y + dy4[k];
+            if ((unsigned)xx >= (unsigned)W || (unsigned)yy >= (unsigned)H) continue;
+
+            // Only fill halo candidate pixels (this is your "domain")
+            if (!haloCand8.at<uint8_t>(yy, xx)) continue;
+
+            uint16_t& dstT = dist16.at<uint16_t>(yy, xx);
+            if (dstT != (uint16_t)0xFFFF) continue; // visited already
+
+            donor16.at<uint16_t>(yy, xx) = d;
+            dstT = (uint16_t)(t + 1);
+            q.emplace_back(xx, yy);
+        }
+    }
+
+    return donor16;
+}
+
+// Older/alternate halo-ring path helpers (looks unused in current donor method)
 static cv::Mat buildHaloRingAlpha01(const cv::Mat& win16,
                                     int sFg,
                                     int ringPx,
@@ -1300,7 +1307,7 @@ static void applyHaloRingFix(cv::Mat& out32,                 // CV_32FC3 0..1
 } // namespace
 
 // =============================================================================
-// toponly helpers (member impls)
+// top only helpers (member impls)
 // =============================================================================
 
 void FSFusionDMap::TopKMaps::reset()
@@ -1702,19 +1709,18 @@ void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
     // Score each region by total high-confidence mass
     std::vector<double> regionScore(ncc, 0.0);
 
-    // Works, but it’s expensive. Later, optimize by using cv::Mat iterators or
-    // accumulate via masks per region (or compute per-label sum via stats + cv::mean
-    // with mask). Not urgent if it runs fast enough.
-    for (int y=0; y<conf01.rows; ++y)
-        for (int x=0; x<conf01.cols; ++x)
-        {
-            int lab = ccLabels.at<int>(y,x);
-            if (lab > 0)
-                regionScore[lab] += conf01.at<float>(y,x);
+    for (int y = 0; y < conf01.rows; ++y) {
+        const float* c = conf01.ptr<float>(y);
+        const int*   L = ccLabels.ptr<int>(y);
+        for (int x = 0; x < conf01.cols; ++x) {
+            int lab = L[x];
+            if (lab > 0) regionScore[lab] += c[x];
         }
+    }
 
     // Pick region with highest score
     int bestRegion = std::max_element(regionScore.begin()+1, regionScore.end()) - regionScore.begin();
+    if (bestRegion <= 0 || bestRegion >= ncc) return;
 
     cv::Mat fg8 = (ccLabels == bestRegion);
     fg8.convertTo(fg8, CV_8U, 255.0);
