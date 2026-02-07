@@ -1,6 +1,5 @@
 #include "fsfusiondmap.h"
 
-#include "fusionpyr.h"
 
 #include "Main/global.h"
 #include "fsloader.h"
@@ -728,29 +727,6 @@ int pickForegroundSliceByConf(const cv::Mat& win16, const cv::Mat& conf01,
     return bestS;
 }
 
-// ------------------------------------------------------------
-// weights containers
-// ------------------------------------------------------------
-struct DMapWeights
-{
-    std::vector<cv::Mat> w32; // K x CV_32F (orig size)
-
-    cv::Mat boundary8;
-    cv::Mat band8;
-
-    cv::Mat overrideMask8;
-    cv::Mat overrideWinner16;
-
-    void create(cv::Size sz, int K)
-    {
-        w32.assign(K, cv::Mat(sz, CV_32F, cv::Scalar(0)));
-        boundary8.release();
-        band8.release();
-        overrideMask8.release();
-        overrideWinner16.release();
-    }
-};
-
 static cv::Mat boundaryFromLabels8(const cv::Mat& lab16)
 {
     CV_Assert(lab16.type() == CV_16U);
@@ -870,7 +846,7 @@ static cv::Mat propagateDonorLabels16(const cv::Mat& seedMask8,
 // softmax weights from topk scores
 static void buildTopKWeightsSoftmax(const FSFusionDMap::TopKMaps& topk,
                                     const FSFusionDMap::DMapParams& p,
-                                    DMapWeights& weightsOut)
+                                    FSFusionDMap::DMapWeights& weightsOut)
 {
     CV_Assert(topk.valid());
     const int K = topk.K;
@@ -1033,7 +1009,7 @@ static void buildBoundaryAndBandGated(const cv::Mat& top1Idx16,
 
 static void buildDMapWeightsFromTopK(const FSFusionDMap::TopKMaps& topk,
                                      const FSFusionDMap::DMapParams& p,
-                                     DMapWeights& W)
+                                     FSFusionDMap::DMapWeights& W)
 {
     CV_Assert(topk.valid());
     buildTopKWeightsSoftmax(topk, p, W);
@@ -1071,7 +1047,7 @@ static void buildDMapWeightsFromTopK(const FSFusionDMap::TopKMaps& topk,
 }
 
 static cv::Mat buildSliceWeightMap32(const FSFusionDMap::TopKMaps& topk,
-                                     const DMapWeights& W,
+                                     const FSFusionDMap::DMapWeights& W,
                                      int sliceIdx)
 {
     CV_Assert(topk.valid());
@@ -1387,6 +1363,587 @@ void FSFusionDMap::reset()
     topk_pad_.reset();
 }
 
+bool FSFusionDMap::validateStreamFinishState(const QString& srcFun,
+                                             const QStringList& inputPaths,
+                                             const std::vector<Result>& globals,
+                                             std::atomic_bool* abortFlag,
+                                             int& N) const
+{
+    if (!active_ || !topk_pad_.valid()) {
+        qWarning().noquote() << "WARNING:" << srcFun << "state not initialized.";
+        return false;
+    }
+
+    N = inputPaths.size();
+    if (N <= 0 || (int)globals.size() != N) {
+        qWarning().noquote() << "WARNING:" << srcFun << "inputPaths/globals size mismatch.";
+        return false;
+    }
+
+    if (FSFusion::isAbort(abortFlag)) return false;
+
+    if (!hasValidGeometry()) {
+        qWarning().noquote() << "WARNING:" << srcFun
+                             << "missing/invalid geometry:" << geometryText();
+        return false;
+    }
+
+    return true;
+}
+
+bool FSFusionDMap::computeCropGeometry(const QString& srcFun,
+                                       cv::Rect& roiPadToAlign,
+                                       cv::Size& origSz)
+{
+    roiPadToAlign = cv::Rect(0, 0, alignSize.width, alignSize.height);
+
+    if (padSize != alignSize) {
+        const int padW = padSize.width  - alignSize.width;
+        const int padH = padSize.height - alignSize.height;
+        if (padW < 0 || padH < 0) {
+            qWarning().noquote() << "WARNING:" << srcFun << "padSize smaller than alignSize.";
+            return false;
+        }
+        roiPadToAlign.x = padW / 2;
+        roiPadToAlign.y = padH / 2;
+    }
+
+    if (!FSFusion::rectInside(roiPadToAlign, topk_pad_.sz)) {
+        qWarning().noquote() << "WARNING:" << srcFun << "roiPadToAlign out of bounds for PAD maps.";
+        return false;
+    }
+
+    const cv::Size alignSz(roiPadToAlign.width, roiPadToAlign.height);
+    if (!FSFusion::rectInside(validAreaAlign, alignSz)) {
+        qWarning().noquote() << "WARNING:" << srcFun << "validAreaAlign out of bounds for ALIGN crop.";
+        return false;
+    }
+
+    origSz = cv::Size(validAreaAlign.width, validAreaAlign.height);
+    origSize = origSz;
+    return true;
+}
+
+// Crop TopK maps PAD→ALIGN→ORIG
+bool FSFusionDMap::cropTopKToOrig(const QString& srcFun,
+                                  const cv::Rect& roiPadToAlign,
+                                  const cv::Size& origSz,
+                                  TopKMaps& topkOrig) const
+{
+    topkOrig.create(origSz, topk_pad_.K);
+
+    for (int k = 0; k < topk_pad_.K; ++k) {
+        cv::Mat idxAlign = topk_pad_.idx16[k](roiPadToAlign);
+        cv::Mat scAlign  = topk_pad_.score32[k](roiPadToAlign);
+
+        topkOrig.idx16[k]   = idxAlign(validAreaAlign).clone();
+        topkOrig.score32[k] = scAlign(validAreaAlign).clone();
+    }
+    return true;
+}
+
+bool FSFusionDMap::sanityCheckTop1(const QString& srcFun,
+                                   const TopKMaps& topkOrig,
+                                   int N) const
+{
+    // diffs
+    {
+        const cv::Mat& d = topkOrig.idx16[0];
+        const long long diffCount = countHorizontalDiffs16(d);
+        const long long total = (long long)d.rows * (d.cols - 1);
+        qDebug() << "top1 diffs (ORIG, pre-weight) =" << diffCount << "/" << total
+                 << " frac=" << (double)diffCount / (double)total;
+    }
+
+    // range
+    {
+        double idxMin = 0, idxMax = 0;
+        cv::minMaxLoc(topkOrig.idx16[0], &idxMin, &idxMax);
+        qDebug() << "Top1 idx min/max =" << idxMin << idxMax << " N=" << N;
+
+        if (idxMin < 0 || idxMax >= N) {
+            qWarning().noquote() << "WARNING:" << srcFun
+                                 << "Top1 idx out of range: min/max="
+                                 << idxMin << idxMax << " N=" << N;
+            return false;
+        }
+    }
+    return true;
+}
+
+//  Weights + confidence + winner stabilization (+ “stable” labels for halo)
+bool FSFusionDMap::buildMapsAndStabilize(const QString& srcFun,
+                                         const TopKMaps& topkOrig,
+                                         int N,
+                                         std::atomic_bool* abortFlag,
+                                         DMapWeights& W,
+                                         cv::Mat& conf01,
+                                         cv::Mat& depthIndex16,
+                                         cv::Mat& winStable16) const
+{
+    buildDMapWeightsFromTopK(topkOrig, params, W);
+    conf01 = computeConfidence01_Top2(topkOrig, params.confEps);
+
+    // winner + light stabilization (your median-on-lowConf)
+    cv::Mat win16 = topkOrig.idx16[0].clone();
+    const long long before = countHorizontalDiffs16(win16);
+
+    if (topkOrig.K >= 2) {
+        cv::Mat lowConf8 = (conf01 < params.confLow);
+        lowConf8.convertTo(lowConf8, CV_8U, 255.0);
+
+        if (params.uncertaintyDilatePx > 0)
+            cv::dilate(lowConf8, lowConf8, FSFusion::seEllipse(params.uncertaintyDilatePx));
+
+        if (win16.cols >= 5 && win16.rows >= 5 && cv::countNonZero(lowConf8) > 0) {
+            cv::Mat med;
+            cv::medianBlur(win16, med, 5);
+            med.copyTo(win16, lowConf8);
+        }
+    }
+
+    {
+        const long long after = countHorizontalDiffs16(win16);
+        const long long total = (long long)win16.rows * (win16.cols - 1);
+        qDebug() << "win16 diffs AFTER mode (masked) =" << after << "/" << total
+                 << " (before=" << before << ")";
+    }
+
+    depthIndex16 = win16.clone();
+    if (FSFusion::isAbort(abortFlag)) return false;
+
+    // Stable labels for halo boundary detection
+    winStable16 = depthIndex16.clone();
+    cv::Mat unreliable8 = (conf01 < params.confHigh);
+    unreliable8.convertTo(unreliable8, CV_8U, 255.0);
+
+    if (cv::countNonZero(unreliable8) > 0) {
+        cv::Mat filt16 = majorityFilterLabels16_3x3(winStable16);
+        filt16.copyTo(winStable16, unreliable8);
+    }
+
+    return true;
+}
+
+// Pyramid prep
+int FSFusionDMap::computePyrLevels(const cv::Size& origSz) const
+{
+    int levels = params.pyrLevels;
+    if (levels <= 0) {
+        int dim = std::max(origSz.width, origSz.height);
+        levels = 5;
+        while ((dim >> levels) > 8 && levels < 8) levels++;
+    }
+    return std::max(3, std::min(10, levels));
+}
+
+void FSFusionDMap::buildPyramids(const cv::Mat& depthIndex16,
+                                 int levels,
+                                 std::vector<cv::Mat>& idxPyr16,
+                                 std::vector<cv::Mat>& vetoPyr8) const
+{
+    FusionPyr::buildIndexPyrNearest(depthIndex16, levels, idxPyr16);
+
+    vetoPyr8.clear();
+    if (params.enableDepthGradLowpassVeto) {
+        FusionPyr::DepthEdgeVetoParams vp;
+        vp.vetoFromLevel   = params.vetoFromLevel;
+        vp.depthGradThresh = params.depthGradThresh;
+        vp.vetoDilatePx    = params.vetoDilatePx;
+        FusionPyr::buildDepthEdgeVetoPyr(idxPyr16, vetoPyr8, vp);
+    }
+}
+
+void FSFusionDMap::initAccumulator(const cv::Size& origSz,
+                                   int levels,
+                                   FusionPyr::PyrAccum& A,
+                                   cv::Mat& sumW) const
+{
+    A.reset(origSz, levels);
+    sumW = cv::Mat(origSz, CV_32F, cv::Scalar(0));
+}
+
+// Streaming accumulation loop
+bool FSFusionDMap::accumulateAllSlices(const QString& srcFun,
+                                       const QStringList& inputPaths,
+                                       const std::vector<Result>& globals,
+                                       const cv::Rect& roiPadToAlign,
+                                       const cv::Rect& validAreaAlign,
+                                       const TopKMaps& topkOrig,
+                                       const DMapWeights& W,
+                                       const std::vector<cv::Mat>& idxPyr16,
+                                       const std::vector<cv::Mat>& vetoPyr8,
+                                       int levels,
+                                       std::atomic_bool* abortFlag,
+                                       FSFusion::StatusCallback statusCb,
+                                       FSFusion::ProgressCallback progressCb,
+                                       FusionPyr::PyrAccum& A,
+                                       cv::Mat& sumW) const
+{
+    const int N = inputPaths.size();
+    const cv::Size origSz = topkOrig.idx16[0].size();
+
+    for (int s = 0; s < N; ++s)
+    {
+        progressCb();
+        statusCb("Fusing Slice: " + QString::number(s) + " of " + QString::number(N) + " ");
+
+        if (FSFusion::isAbort(abortFlag)) return false;
+
+        cv::Mat grayTmp, colorTmp;
+        if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
+                                            roiPadToAlign, validAreaAlign,
+                                            grayTmp, colorTmp))
+        {
+            qWarning().noquote() << "WARNING:" << srcFun
+                                 << "loadAlignedSliceOrig failed for slice" << s;
+            return false;
+        }
+
+        if (colorTmp.empty())
+        {
+            qWarning().noquote() << "WARNING:" << srcFun << "colorTmp empty for slice" << s;
+            return false;
+        }
+
+        cv::Mat color32;
+        if (!toColor32_01_FromLoaded(colorTmp, color32, srcFun, s))
+            return false;
+
+        CV_Assert(color32.size() == origSz);
+
+        cv::Mat w32 = buildSliceWeightMap32(topkOrig, W, s);
+        CV_Assert(w32.type() == CV_32F && w32.size() == origSz);
+
+        sumW += w32;
+
+        FusionPyr::AccumDMapParams ap;
+        ap.enableHardWeightsOnLowpass = params.enableHardWeightsOnLowpass;
+        ap.enableDepthGradLowpassVeto = params.enableDepthGradLowpassVeto;
+        ap.hardFromLevel = params.hardFromLevel;
+        ap.vetoFromLevel = params.vetoFromLevel;
+        ap.vetoStrength  = params.vetoStrength;
+        ap.wMin          = params.wMin;
+
+        FusionPyr::accumulateSlicePyr(A,
+                                      color32,
+                                      w32,
+                                      idxPyr16,
+                                      params.enableDepthGradLowpassVeto ? &vetoPyr8 : nullptr,
+                                      s,
+                                      ap,
+                                      levels,
+                                      params.weightBlurSigma);
+    }
+    return true;
+}
+
+// Finalize + clamp
+cv::Mat FSFusionDMap::finalizeOut32(const FusionPyr::PyrAccum& A) const
+{
+    cv::Mat out32 = FusionPyr::finalizeBlend(A, /*eps=*/1e-8f);
+    cv::max(out32, 0.0f, out32);
+    cv::min(out32, 1.0f, out32);
+    return out32;
+}
+
+// Halo debug helpers
+void FSFusionDMap::debugHaloInputs(const cv::Mat& out32,
+                                   const TopKMaps& topkOrig,
+                                   const cv::Mat& conf01) const
+{
+    dbgMat3Stats("DBG out32 preHalo clamp", out32);
+    dbgMat3Stats("DBG top1Score32", topkOrig.score32[0]);
+    dbgMat3Stats("DBG conf01", conf01);
+}
+
+void FSFusionDMap::debugHaloOutput(const cv::Mat& out32) const
+{
+    dbgMat3Stats("DBG out32 postHalo clamp", out32);
+}
+
+// HaloFix
+void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
+                                         const QString& srcFun,
+                                         int N,
+                                         const TopKMaps& topkOrig,
+                                         const cv::Mat& conf01,
+                                         const cv::Mat& winStable16,
+                                         const QStringList& inputPaths,
+                                         const std::vector<Result>& globals,
+                                         const cv::Rect& roiPadToAlign,
+                                         const cv::Rect& validAreaAlign,
+                                         std::atomic_bool* abortFlag,
+                                         cv::Mat& out32)
+{
+    if (!params.enableHaloRingFix) return;
+    if (FSFusion::isAbort(abortFlag)) return;
+
+    const int ringPx = std::max(2, params.haloRingPx);
+
+
+
+    // EXPERIMENTAL FG: based purely on depth discontinuities
+
+    cv::Mat jumpEdges8 = buildDepthJumpEdges8(winStable16, 3, 1);
+
+    // Invert edges to get smooth regions
+    cv::Mat regionMask;
+    cv::bitwise_not(jumpEdges8, regionMask);
+
+    // Label connected regions
+    cv::Mat ccLabels, stats, centroids;
+    int ncc = cv::connectedComponentsWithStats(regionMask, ccLabels, stats, centroids, 8, CV_32S);
+    if (ncc <= 1) {
+        qDebug() << "HaloFix: no CC regions found; skipping.";
+        return;
+    }
+
+    // Score each region by total high-confidence mass
+    std::vector<double> regionScore(ncc, 0.0);
+
+    // Works, but it’s expensive. Later, optimize by using cv::Mat iterators or
+    // accumulate via masks per region (or compute per-label sum via stats + cv::mean
+    // with mask). Not urgent if it runs fast enough.
+    for (int y=0; y<conf01.rows; ++y)
+        for (int x=0; x<conf01.cols; ++x)
+        {
+            int lab = ccLabels.at<int>(y,x);
+            if (lab > 0)
+                regionScore[lab] += conf01.at<float>(y,x);
+        }
+
+    // Pick region with highest score
+    int bestRegion = std::max_element(regionScore.begin()+1, regionScore.end()) - regionScore.begin();
+
+    cv::Mat fg8 = (ccLabels == bestRegion);
+    fg8.convertTo(fg8, CV_8U, 255.0);
+
+    // -------------------------------
+    // HOLE-SAFE mask for boundary/band
+    // -------------------------------
+
+    // Fill holes in a binary mask (CV_8U 0/255) robustly, even if FG touches image border.
+    auto fillHoles8 = [](const cv::Mat& bin8)->cv::Mat
+    {
+        CV_Assert(bin8.type() == CV_8U);
+
+        // Invert: background -> 255, foreground -> 0
+        cv::Mat inv;
+        cv::bitwise_not(bin8, inv);
+
+        // Pad with a 1-pixel 255 border so (0,0) is guaranteed to be "outside background" in inv-space.
+        cv::Mat invPad;
+        cv::copyMakeBorder(inv, invPad, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(255));
+
+        // Flood fill from the guaranteed-outside corner, turning outside background to 0
+        cv::floodFill(invPad, cv::Point(0, 0), cv::Scalar(0));
+
+        // Crop back to original size
+        cv::Mat ff = invPad(cv::Rect(1, 1, bin8.cols, bin8.rows)).clone();
+
+        // Holes are the remaining 255 regions in ff (not connected to outside)
+        cv::Mat holesMask;
+        cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where holes
+
+        // Fill holes into the foreground
+        cv::Mat filled = bin8.clone();
+        filled.setTo(255, holesMask);
+        return filled;
+    };
+
+    cv::Mat fgFilled8 = fillHoles8(fg8);
+
+    qDebug() << "HaloFix: fgPx=" << cv::countNonZero(fg8)
+             << " fgFilledPx=" << cv::countNonZero(fgFilled8)
+             << " delta=" << (cv::countNonZero(fgFilled8) - cv::countNonZero(fg8));
+
+    // boundary for seeding: use filled silhouette (outer boundary only)
+    cv::Mat boundary8;
+    cv::morphologyEx(fgFilled8, boundary8, cv::MORPH_GRADIENT, FSFusion::seEllipse(1));
+
+    // band (ring outside FG): use filled silhouette so ring does NOT enter holes
+    cv::Mat fgDil, band8;
+    cv::dilate(fgFilled8, fgDil, FSFusion::seEllipse(ringPx));
+    cv::bitwise_and(fgDil, ~fgFilled8, band8);
+
+    const int bandPx = cv::countNonZero(band8);
+    if (bandPx == 0)
+    {
+        qDebug() << "HaloFix: band empty; skipping.";
+        return;
+    }
+
+    // candidate = band & low-conf & low-tex
+    cv::Mat lowConf8 = (conf01 < params.haloConfMax);
+    lowConf8.convertTo(lowConf8, CV_8U, 255.0);
+
+    double smn=0.0, smx=0.0;
+    cv::minMaxLoc(topkOrig.score32[0], &smn, &smx);
+    const float scale = (smx > 1e-12) ? (255.0f / (float)smx) : 1.0f;
+
+    cv::Mat tex8;
+    topkOrig.score32[0].convertTo(tex8, CV_8U, scale);
+
+    cv::Mat lowTex8 = (tex8 <= params.haloTexMax);
+    lowTex8.convertTo(lowTex8, CV_8U, 255.0);
+
+    cv::Mat haloCand8;
+    cv::bitwise_and(band8, lowConf8, haloCand8);
+    cv::bitwise_and(haloCand8, lowTex8, haloCand8);
+
+    // never touch very-confident pixels
+    cv::Mat veryConf8 = (conf01 > params.confHigh);
+    veryConf8.convertTo(veryConf8, CV_8U, 255.0);
+    cv::bitwise_and(haloCand8, ~veryConf8, haloCand8);
+
+    const int candPx = cv::countNonZero(haloCand8);
+    qDebug() << "HaloFix: bandPx=" << bandPx
+             << " candPx=" << candPx
+             << " cand/band=" << (double)candPx / (double)std::max(1, bandPx);
+
+    if (candPx == 0)
+    {
+        qDebug() << "HaloFix: no candidates; skipping.";
+        return;
+    }
+
+    double mn=0, mx=0;
+    cv::minMaxLoc(fg8, &mn, &mx);
+    qDebug() << "HaloFix: fg8 min/max =" << mn << mx;
+
+    // Visual debug (masks)
+    {
+        const QString folder = opt.depthFolderPath;
+        cv::imwrite((folder + "/halo_fg.png").toStdString(), fg8);
+        cv::imwrite((folder + "/halo_fg_filled.png").toStdString(), fgFilled8);
+        cv::imwrite((folder + "/halo_boundary.png").toStdString(), boundary8);
+        cv::imwrite((folder + "/halo_band.png").toStdString(), band8);
+        cv::imwrite((folder + "/halo_cand.png").toStdString(), haloCand8);
+
+        cv::Mat baseGray8 = toGray8_fromOut32(out32);
+        cv::Mat overlay0  = makeHaloDebugOverlayBGR8(baseGray8, band8, cv::Mat(), 0.45f, 0.0f);
+        addSliceLegendStripBottomBGR8(overlay0, N, 140, 8);
+        cv::imwrite((folder + "/halo_overlay_band.png").toStdString(), overlay0);
+    }
+
+    // Seeds + donors
+    cv::Mat seeds8, seedLabel16;
+    buildForegroundBoundarySeeds(winStable16, boundary8, seeds8, seedLabel16);
+
+    const int seedsPx = cv::countNonZero(seeds8);
+    qDebug() << "HaloFix: seedsPx=" << seedsPx;
+    if (seedsPx == 0)
+    {
+        qDebug() << "HaloFix: no seeds; skipping.";
+        return;
+    }
+
+    cv::Mat donor16 = propagateDonorLabels16(seeds8, seedLabel16, haloCand8, ringPx);
+
+    cv::Mat hasDonor8 = (donor16 != (uint16_t)0xFFFF);
+    hasDonor8.convertTo(hasDonor8, CV_8U, 255.0);
+    const int donorPx = cv::countNonZero(hasDonor8);
+
+    qDebug() << "HaloFix: donorPx=" << donorPx
+             << " donor/cand=" << (double)donorPx / (double)std::max(1, candPx);
+
+    if (donorPx == 0)
+    {
+        qDebug() << "HaloFix: no donor labels; skipping.";
+        return;
+    }
+
+    // Visual debug (donor overlay)
+    {
+        const QString folder = opt.depthFolderPath;
+        cv::Mat baseGray8 = toGray8_fromOut32(out32);
+
+        cv::Mat donorColor = colorizeDonorLabelsBGR8(donor16, N);
+
+        cv::Mat donorColorForFile = donorColor.clone();
+        addSliceLegendStripBottomBGR8(donorColorForFile, N, 140, 8);
+        cv::imwrite((folder + "/halo_donor_labels.png").toStdString(), donorColorForFile);
+
+        cv::Mat overlay = makeHaloDebugOverlayBGR8(baseGray8, band8, donorColor, 0.35f, 0.60f);
+        addSliceLegendStripBottomBGR8(overlay, N, 140, 8);
+        cv::imwrite((folder + "/halo_overlay.png").toStdString(), overlay);
+    }
+
+    // Alpha feather
+    cv::Mat alphaBand01;
+    haloCand8.convertTo(alphaBand01, CV_32F, 1.0 / 255.0);
+
+    const float sig = std::max(0.0f, params.haloFeatherSigma);
+    if (sig > 0.0f)
+        cv::GaussianBlur(alphaBand01, alphaBand01, cv::Size(0, 0), sig, sig, cv::BORDER_REFLECT);
+
+    cv::max(alphaBand01, 0.0f, alphaBand01);
+    cv::min(alphaBand01, 1.0f, alphaBand01);
+
+    // halo-focused alpha stats
+    {
+        double amn=0, amx=0;
+        cv::minMaxLoc(alphaBand01, &amn, &amx);
+        const cv::Scalar am = cv::mean(alphaBand01);
+        qDebug() << "HaloFix: alphaBand01 mean=" << am[0] << " min/max=" << amn << amx;
+    }
+
+    // Optional: write alpha image (very useful to see feather width)
+    {
+        const QString folder = opt.depthFolderPath;
+        cv::Mat a8;
+        alphaBand01.convertTo(a8, CV_8U, 255.0);
+        cv::imwrite((folder + "/halo_alphaBand.png").toStdString(), a8);
+    }
+
+    // Blend donor slices (no per-donor debug)
+    for (int s = 0; s < N; ++s)
+    {
+        cv::Mat ms = (donor16 == (uint16_t)s);
+        ms.convertTo(ms, CV_32F, 1.0 / 255.0);
+
+        cv::Mat alpha = alphaBand01.mul(ms);
+        if (cv::countNonZero(alpha > 1e-6f) == 0)
+            continue;
+
+        cv::Mat gTmp, cTmp;
+        if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
+                                            roiPadToAlign, validAreaAlign,
+                                            gTmp, cTmp) || cTmp.empty())
+        {
+            qWarning().noquote() << "WARNING: HaloFix loadAlignedSliceOrig failed for slice" << s;
+            continue;
+        }
+
+        cv::Mat col32;
+        if (!toColor32_01_FromLoaded(cTmp, col32, "HaloFix donor", s))
+            continue;
+
+        cv::Mat a3;
+        { cv::Mat ch[] = { alpha, alpha, alpha }; cv::merge(ch, 3, a3); }
+
+        cv::Mat invA3;
+        cv::subtract(cv::Scalar::all(1.0f), a3, invA3);
+        out32 = out32.mul(invA3) + col32.mul(a3);
+    }
+
+    cv::max(out32, 0.0f, out32);
+    cv::min(out32, 1.0f, out32);
+}
+
+void FSFusionDMap::convertOut32ToOutput(const cv::Mat& out32, cv::Mat& outputColor) const
+{
+    cv::Mat clamped = out32.clone();
+    cv::max(clamped, 0.0f, clamped);
+    cv::min(clamped, 1.0f, clamped);
+
+    if (outDepth == CV_16U)
+        clamped.convertTo(outputColor, CV_16UC3, 65535.0);
+    else
+        clamped.convertTo(outputColor, CV_8UC3, 255.0);
+}
+
 // -----------------------------------------------------------------------------
 // streamSlice (pass-1)
 // -----------------------------------------------------------------------------
@@ -1417,9 +1974,14 @@ bool FSFusionDMap::streamSlice(int slice,
             return false;
         }
 
-        // decide pad size from align + pyrLevels
+        // decide pad size from align using SAME logic as streamFinish
         params.topK = std::max(1, std::min(8, params.topK));
-        const int levelsForPad = std::max(1, params.pyrLevels);
+
+        // Use identical pyramid-level computation as streamFinish
+        const int levelsForPad = computePyrLevels(alignSize);
+
+        // Optionally lock it so both passes agree explicitly
+        params.pyrLevels = levelsForPad;
 
         padSize = computePadSizeForPyr(alignSize, levelsForPad);
 
@@ -1476,626 +2038,61 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
                                 FSFusion::StatusCallback statusCb,
                                 FSFusion::ProgressCallback progressCb)
 {
-    const QString srcFun = "fsfusiondmap::streamFinish";
+    const QString srcFun = "FSFusionDMap::streamFinish";
     if (G::FSLog) G::log(srcFun);
 
-    if (!active_ || !topk_pad_.valid())
-    {
-        qWarning().noquote() << "WARNING:" << srcFun << "state not initialized.";
+    int N = 0;
+    if (!validateStreamFinishState(srcFun, inputPaths, globals, abortFlag, N))
         return false;
-    }
 
-    const int N = inputPaths.size();
-    if (N <= 0 || (int)globals.size() != N)
-    {
-        qWarning().noquote() << "WARNING:" << srcFun << "inputPaths/globals size mismatch.";
+    cv::Rect roiPadToAlign;
+    cv::Size origSz;
+    if (!computeCropGeometry(srcFun, roiPadToAlign, origSz))
         return false;
-    }
 
-    if (FSFusion::isAbort(abortFlag)) return false;
-
-    if (!hasValidGeometry())
-    {
-        qWarning().noquote() << "WARNING:" << srcFun
-                             << "missing/invalid geometry:" << geometryText();
-        return false;
-    }
-
-    // ---- PAD -> ALIGN crop rect ----
-    cv::Rect roiPadToAlign(0, 0, alignSize.width, alignSize.height);
-    if (padSize != alignSize)
-    {
-        const int padW = padSize.width  - alignSize.width;
-        const int padH = padSize.height - alignSize.height;
-        if (padW < 0 || padH < 0)
-        {
-            qWarning().noquote() << "WARNING:" << srcFun << "padSize smaller than alignSize.";
-            return false;
-        }
-
-        roiPadToAlign.x = padW / 2;
-        roiPadToAlign.y = padH / 2;
-    }
-
-    if (!FSFusion::rectInside(roiPadToAlign, topk_pad_.sz))
-    {
-        qWarning().noquote() << "WARNING:" << srcFun << "roiPadToAlign out of bounds for PAD maps.";
-        return false;
-    }
-
-    const cv::Size alignSz(roiPadToAlign.width, roiPadToAlign.height);
-    if (!FSFusion::rectInside(validAreaAlign, alignSz))
-    {
-        qWarning().noquote() << "WARNING:" << srcFun << "validAreaAlign out of bounds for ALIGN crop.";
-        return false;
-    }
-
-    const cv::Size origSz(validAreaAlign.width, validAreaAlign.height);
-    origSize = origSz;
-
-    // ---- Crop TopK maps: PAD -> ALIGN -> ORIG ----
     TopKMaps topkOrig;
-    topkOrig.create(origSz, topk_pad_.K);
+    if (!cropTopKToOrig(srcFun, roiPadToAlign, origSz, topkOrig))
+        return false;
 
-    for (int k = 0; k < topk_pad_.K; ++k)
-    {
-        cv::Mat idxAlign = topk_pad_.idx16[k](roiPadToAlign);
-        cv::Mat scAlign  = topk_pad_.score32[k](roiPadToAlign);
+    if (!sanityCheckTop1(srcFun, topkOrig, N))
+        return false;
 
-        topkOrig.idx16[k]   = idxAlign(validAreaAlign).clone();
-        topkOrig.score32[k] = scAlign(validAreaAlign).clone();
-    }
-
-    // sanity: top-1 diffs
-    {
-        const cv::Mat& d = topkOrig.idx16[0];
-        const long long diffCount = countHorizontalDiffs16(d);
-        const long long total = (long long)d.rows * (d.cols - 1);
-        qDebug() << "top1 diffs (ORIG, pre-weight) =" << diffCount << "/" << total
-                 << " frac=" << (double)diffCount / (double)total;
-    }
-
-    // sanity: top-1 index range
-    {
-        double idxMin = 0, idxMax = 0;
-        cv::minMaxLoc(topkOrig.idx16[0], &idxMin, &idxMax);
-        qDebug() << "Top1 idx min/max =" << idxMin << idxMax << " N=" << N;
-
-        if (idxMin < 0 || idxMax >= N)
-        {
-            qWarning().noquote() << "WARNING:" << srcFun
-                                 << "Top1 idx out of range: min/max="
-                                 << idxMin << idxMax << " N=" << N;
-            return false;
-        }
-    }
-
-    // ---- build weights ----
     DMapWeights W;
-    buildDMapWeightsFromTopK(topkOrig, params, W);
+    cv::Mat conf01, depthIndexStable16;
+    if (!buildMapsAndStabilize(srcFun, topkOrig, N, abortFlag,
+                               W, conf01, depthIndex16, depthIndexStable16))
+        return false;
 
-    // ---- confidence map ----
-    cv::Mat conf01 = computeConfidence01_Top2(topkOrig, params.confEps);
+    int levels = computePyrLevels(origSz);
 
-    // ---- winner map + light stabilization ----
-    cv::Mat win16 = topkOrig.idx16[0].clone();
-    const long long before = countHorizontalDiffs16(win16);
-
-    if (topkOrig.K >= 2)
-    {
-        cv::Mat lowConf8 = (conf01 < params.confLow);
-        lowConf8.convertTo(lowConf8, CV_8U, 255.0);
-
-        if (params.uncertaintyDilatePx > 0)
-            cv::dilate(lowConf8, lowConf8, FSFusion::seEllipse(params.uncertaintyDilatePx));
-
-        if (win16.cols >= 5 && win16.rows >= 5 && cv::countNonZero(lowConf8) > 0)
-        {
-            cv::Mat med;
-            cv::medianBlur(win16, med, 5);
-            med.copyTo(win16, lowConf8);
-        }
-    }
-
-    {
-        const long long after = countHorizontalDiffs16(win16);
-        const long long total = (long long)win16.rows * (win16.cols - 1);
-        qDebug() << "win16 diffs AFTER mode (masked) =" << after << "/" << total
-                 << " (before=" << before << ")";
-    }
-
-    depthIndex16 = win16.clone();
-    if (FSFusion::isAbort(abortFlag)) return false;
-
-    // ---- pyramid levels ----
-    int levels = params.pyrLevels;
-    if (levels <= 0)
-    {
-        int dim = std::max(origSz.width, origSz.height);
-        levels = 5;
-        while ((dim >> levels) > 8 && levels < 8) levels++;
-    }
-    levels = std::max(3, std::min(10, levels));
-
-    // ---- build index pyramid ----
     std::vector<cv::Mat> idxPyr16;
-    FusionPyr::buildIndexPyrNearest(depthIndex16, levels, idxPyr16);
-
-    // ---- optional veto pyramid ----
     std::vector<cv::Mat> vetoPyr8;
-    if (params.enableDepthGradLowpassVeto)
-    {
-        FusionPyr::DepthEdgeVetoParams vp;
-        vp.vetoFromLevel   = params.vetoFromLevel;
-        vp.depthGradThresh = params.depthGradThresh;
-        vp.vetoDilatePx    = params.vetoDilatePx;
+    buildPyramids(depthIndex16, levels, idxPyr16, vetoPyr8);
 
-        FusionPyr::buildDepthEdgeVetoPyr(idxPyr16, vetoPyr8, vp);
-    }
-
-    // ---- accumulator ----
     FusionPyr::PyrAccum A;
-    A.reset(origSz, levels);
+    cv::Mat sumW;
+    initAccumulator(origSz, levels, A, sumW);
 
-    cv::Mat sumW(origSz, CV_32F, cv::Scalar(0));
+    if (!accumulateAllSlices(srcFun, inputPaths, globals,
+                             roiPadToAlign, validAreaAlign,
+                             topkOrig, W, idxPyr16, vetoPyr8,
+                             levels, abortFlag, statusCb, progressCb,
+                             A, sumW))
+        return false;
 
-    // ---- pass-2: stream slices ----
-    for (int s = 0; s < N; ++s)
-    {
-        progressCb();
-        QString ss = " Slice: " + QString::number(s) + " of " + QString::number(N) + " ";
-        statusCb("Fusing" + ss);
+    cv::Mat out32 = finalizeOut32(A);
 
-        if (FSFusion::isAbort(abortFlag)) return false;
+    // Optional debug
+    debugHaloInputs(out32, topkOrig, conf01);
 
-        cv::Mat grayTmp, colorTmp;
-        if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
-                                            roiPadToAlign, validAreaAlign,
-                                            grayTmp, colorTmp))
-        {
-            qWarning().noquote() << "WARNING:" << srcFun
-                                 << "loadAlignedSliceOrig failed for slice" << s;
-            return false;
-        }
+    // Halo fix
+    applyHaloFixIfEnabled(opt, srcFun, N, topkOrig, conf01, depthIndexStable16,
+                          inputPaths, globals, roiPadToAlign, validAreaAlign,
+                          abortFlag, out32);
 
-        if (colorTmp.empty())
-        {
-            qWarning().noquote() << "WARNING:" << srcFun << "colorTmp empty for slice" << s;
-            return false;
-        }
+    debugHaloOutput(out32);
 
-        cv::Mat color32;
-        if (!toColor32_01_FromLoaded(colorTmp, color32, srcFun, s))
-            return false;
-
-        CV_Assert(color32.size() == origSz);
-
-        cv::Mat w32 = buildSliceWeightMap32(topkOrig, W, s);
-        CV_Assert(w32.type() == CV_32F && w32.size() == origSz);
-
-        sumW += w32;
-
-        FusionPyr::AccumDMapParams ap;
-        ap.enableHardWeightsOnLowpass = params.enableHardWeightsOnLowpass;
-        ap.enableDepthGradLowpassVeto = params.enableDepthGradLowpassVeto;
-        ap.hardFromLevel = params.hardFromLevel;
-        ap.vetoFromLevel = params.vetoFromLevel;
-        ap.vetoStrength  = params.vetoStrength;
-        ap.wMin          = params.wMin;
-
-        FusionPyr::accumulateSlicePyr(A,
-                                      color32,
-                                      w32,
-                                      idxPyr16,
-                                      params.enableDepthGradLowpassVeto ? &vetoPyr8 : nullptr,
-                                      s,
-                                      ap,
-                                      levels,
-                                      params.weightBlurSigma);
-    }
-
-    cv::Mat out32 = FusionPyr::finalizeBlend(A, /*eps=*/1e-8f);
-
-    cv::max(out32, 0.0f, out32);
-    cv::min(out32, 1.0f, out32);
-
-    // ---- Keep: halo-relevant inputs ----
-    // If you want to reduce further, keep only conf01 + top1Score32.
-    dbgMat3Stats("DBG out32 preHalo clamp", out32);
-    dbgMat3Stats("DBG top1Score32", topkOrig.score32[0]);
-    dbgMat3Stats("DBG conf01", conf01);
-
-    // --- Build a stable label map for boundary detection ---
-    cv::Mat winStable16 = depthIndex16.clone();
-
-    cv::Mat unreliable8 = (conf01 < params.confHigh);
-    unreliable8.convertTo(unreliable8, CV_8U, 255.0);
-
-    if (cv::countNonZero(unreliable8) > 0)
-    {
-        cv::Mat filt16 = majorityFilterLabels16_3x3(winStable16);
-        filt16.copyTo(winStable16, unreliable8);
-    }
-
-    // ---------------------------------------------------------------------
-    // Halo fix (LOCAL donor slice follows depth map)
-    // ---------------------------------------------------------------------
-    do {
-        if (!params.enableHaloRingFix) break;
-
-        const int ringPx = std::max(2, params.haloRingPx);
-
-        // Foreground slice pick (and get histogram of confident winner labels)
-        std::vector<int> hist;
-        int seedS = pickForegroundSliceByConf(winStable16, conf01, N,
-                                              params.confHigh, "HaloFix", &hist);
-
-        // Sort labels by histogram count (desc)
-        std::vector<std::pair<int,int>> pairs;
-        pairs.reserve(N);
-        for (int s = 0; s < N; ++s) pairs.push_back({hist[s], s});
-        std::sort(pairs.rbegin(), pairs.rend());
-
-        auto getCnt = [&](int s)->int { return (s >= 0 && s < N) ? hist[s] : 0; };
-
-        // Evaluate top M candidates by resulting FG area after the SAME early gates
-        // (prevents “reversed order” and “wrong slice chosen” from collapsing fg8)
-        const int M = 6;
-
-        int bestS = pairs.empty() ? 0 : pairs[0].second;
-        int bestLo = bestS, bestHi = bestS;
-        int bestArea = -1;
-
-        for (int i = 0; i < std::min(M, (int)pairs.size()); ++i)
-        {
-            const int sCand = pairs[i].second;
-
-            // Build a label range around sCand (same neighbor-expansion idea)
-            int loCand = sCand, hiCand = sCand;
-            const int base = std::max(1, getCnt(sCand));
-            const float keepFrac = 0.55f;
-            const int maxExpand  = 3;
-
-            for (int step = 1; step <= maxExpand; ++step)
-            {
-                const int L = sCand - step;
-                const int R = sCand + step;
-                if (L >= 0 && getCnt(L) >= (int)(keepFrac * base)) loCand = L;
-                if (R <  N && getCnt(R) >= (int)(keepFrac * base)) hiCand = R;
-            }
-
-            // Quick FG candidate scored the same way your real FG will start:
-            // range -> confLow gate -> largest CC
-            cv::Mat fgCand8 = (winStable16 >= (uint16_t)loCand) & (winStable16 <= (uint16_t)hiCand);
-            fgCand8.convertTo(fgCand8, CV_8U, 255.0);
-
-            cv::Mat confOK = (conf01 > params.confLow);
-            confOK.convertTo(confOK, CV_8U, 255.0);
-            cv::bitwise_and(fgCand8, confOK, fgCand8);
-
-            fgCand8 = keepLargestCC(fgCand8, 8);
-            const int area = cv::countNonZero(fgCand8);
-
-            qDebug() << "HaloFix cand:"
-                     << " s=" << sCand
-                     << " lo/hi=" << loCand << hiCand
-                     << " area=" << area;
-
-            if (area > bestArea)
-            {
-                bestArea = area;
-                bestS = sCand;
-                bestLo = loCand;
-                bestHi = hiCand;
-            }
-        }
-
-        int lo = bestLo;
-        int hi = bestHi;
-
-        qDebug() << "HaloFix chosen by area:"
-                 << " seedS=" << seedS
-                 << " bestS=" << bestS
-                 << " lo=" << lo << " hi=" << hi
-                 << " bestArea=" << bestArea;
-
-        // FG Build (tight + reliable)
-        // 1) Start from UNION of labels in [lo..hi]
-        cv::Mat fg8 = (winStable16 >= (uint16_t)lo) & (winStable16 <= (uint16_t)hi);
-        fg8.convertTo(fg8, CV_8U, 255.0);
-
-        // 2) Light confidence gate (use confLow, NOT confHigh)
-        cv::Mat confOK = (conf01 > params.confLow);
-        confOK.convertTo(confOK, CV_8U, 255.0);
-        cv::bitwise_and(fg8, confOK, fg8);
-
-        // 3) Keep CCs that touch a confident “core” (prevents throwing away disconnected branches)
-        cv::Mat fgTouchCore8 = (conf01 > params.confHigh);
-        fgTouchCore8.convertTo(fgTouchCore8, CV_8U, 255.0);
-        cv::bitwise_and(fg8, fgTouchCore8, fgTouchCore8); // fgTouchCore8 now = fg8 ∩ highConf
-
-        if (cv::countNonZero(fgTouchCore8) > 0)
-            fg8 = keepCCsTouchingMask(fg8, fgTouchCore8, 8);
-        // else: leave fg8 as-is
-
-        // 4) DO NOT open/close/erode the FG mask itself (keep thin branches)
-        // This is what halo_fg.png should show:
-        cv::Mat fgFull8 = fg8.clone();
-
-        // 5) Make a *separate* small "core" for the ring/band so the band is truly outside
-        cv::Mat fgCore8 = fgFull8.clone();
-        const int fgCoreErodePx = 1;   // 0 or 1 only
-        if (fgCoreErodePx > 0)
-            cv::erode(fgCore8, fgCore8, FSFusion::seEllipse(fgCoreErodePx));
-
-        // Use fgCore8 for subsequent boundary/band, but keep fg8 as the full mask for writing/debug
-        fg8 = fgFull8;
-
-        // Optional sanity prints (remove later)
-        qDebug() << "HaloFix: fgFullPx=" << cv::countNonZero(fgFull8)
-                 << " fgCorePx=" << cv::countNonZero(fgCore8);
-
-        qDebug() << "HaloFix: fgPx=" << cv::countNonZero(fg8)
-                 << " frac=" << (double)cv::countNonZero(fg8) / (double)fg8.total()
-                 << " bestS=" << bestS << " lo=" << lo << " hi=" << hi
-                 << " confLow=" << params.confLow
-                 << " confHigh=" << params.confHigh
-                 << " confMax=" << params.haloConfMax
-                 << " texMax=" << params.haloTexMax
-                 << " featherSigma=" << params.haloFeatherSigma;
-
-        // -------------------------------
-        // HOLE-SAFE mask for boundary/band
-        // -------------------------------
-
-        /* Fill holes in fg8 ONLY to keep the halo ring outside the subject silhouette.
-        // fg8 is CV_8U 0/255.
-        auto fillHoles8 = [](const cv::Mat& bin8)->cv::Mat
-        {
-            CV_Assert(bin8.type() == CV_8U);
-
-            // 1) Invert: holes become 255 regions inside foreground
-            cv::Mat inv;
-            cv::bitwise_not(bin8, inv);
-
-            // 2) Flood fill from the border on inv => marks true "outside background"
-            cv::Mat ff = inv.clone();
-            cv::floodFill(ff, cv::Point(0, 0), cv::Scalar(0)); // outside background set to 0
-
-            // 3) Remaining 255 in ff are holes (NOT connected to border). Turn them into FG.
-            // holesMask: 255 where holes
-            cv::Mat holesMask;
-            cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where ff > 0 (holes)
-
-            // 4) Add holes into original FG
-            cv::Mat filled = bin8.clone();
-            filled.setTo(255, holesMask);
-            return filled;
-        };
-        //*/
-
-        // Fill holes in a binary mask (CV_8U 0/255) robustly, even if FG touches image border.
-        auto fillHoles8 = [](const cv::Mat& bin8)->cv::Mat
-        {
-            CV_Assert(bin8.type() == CV_8U);
-
-            // Invert: background -> 255, foreground -> 0
-            cv::Mat inv;
-            cv::bitwise_not(bin8, inv);
-
-            // Pad with a 1-pixel 255 border so (0,0) is guaranteed to be "outside background" in inv-space.
-            cv::Mat invPad;
-            cv::copyMakeBorder(inv, invPad, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(255));
-
-            // Flood fill from the guaranteed-outside corner, turning outside background to 0
-            cv::floodFill(invPad, cv::Point(0, 0), cv::Scalar(0));
-
-            // Crop back to original size
-            cv::Mat ff = invPad(cv::Rect(1, 1, bin8.cols, bin8.rows)).clone();
-
-            // Holes are the remaining 255 regions in ff (not connected to outside)
-            cv::Mat holesMask;
-            cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where holes
-
-            // Fill holes into the foreground
-            cv::Mat filled = bin8.clone();
-            filled.setTo(255, holesMask);
-            return filled;
-        };
-
-        cv::Mat fgFilled8 = fillHoles8(fg8);
-
-        qDebug() << "HaloFix: fgPx=" << cv::countNonZero(fg8)
-                 << " fgFilledPx=" << cv::countNonZero(fgFilled8)
-                 << " delta=" << (cv::countNonZero(fgFilled8) - cv::countNonZero(fg8));
-
-        // boundary for seeding: use filled silhouette (outer boundary only)
-        cv::Mat boundary8;
-        cv::morphologyEx(fgFilled8, boundary8, cv::MORPH_GRADIENT, FSFusion::seEllipse(1));
-
-        // band (ring outside FG): use filled silhouette so ring does NOT enter holes
-        cv::Mat fgDil, band8;
-        cv::dilate(fgFilled8, fgDil, FSFusion::seEllipse(ringPx));
-        cv::bitwise_and(fgDil, ~fgFilled8, band8);
-
-        const int bandPx = cv::countNonZero(band8);
-        if (bandPx == 0)
-        {
-            qDebug() << "HaloFix: band empty; skipping.";
-            break;
-        }
-
-        // candidate = band & low-conf & low-tex
-        cv::Mat lowConf8 = (conf01 < params.haloConfMax);
-        lowConf8.convertTo(lowConf8, CV_8U, 255.0);
-
-        double smn=0.0, smx=0.0;
-        cv::minMaxLoc(topkOrig.score32[0], &smn, &smx);
-        const float scale = (smx > 1e-12) ? (255.0f / (float)smx) : 1.0f;
-
-        cv::Mat tex8;
-        topkOrig.score32[0].convertTo(tex8, CV_8U, scale);
-
-        cv::Mat lowTex8 = (tex8 <= params.haloTexMax);
-        lowTex8.convertTo(lowTex8, CV_8U, 255.0);
-
-        cv::Mat haloCand8;
-        cv::bitwise_and(band8, lowConf8, haloCand8);
-        cv::bitwise_and(haloCand8, lowTex8, haloCand8);
-
-        // never touch very-confident pixels
-        cv::Mat veryConf8 = (conf01 > params.confHigh);
-        veryConf8.convertTo(veryConf8, CV_8U, 255.0);
-        cv::bitwise_and(haloCand8, ~veryConf8, haloCand8);
-
-        const int candPx = cv::countNonZero(haloCand8);
-        qDebug() << "HaloFix: bandPx=" << bandPx
-                 << " candPx=" << candPx
-                 << " cand/band=" << (double)candPx / (double)std::max(1, bandPx);
-
-        if (candPx == 0)
-        {
-            qDebug() << "HaloFix: no candidates; skipping.";
-            break;
-        }
-
-        double mn=0, mx=0;
-        cv::minMaxLoc(fg8, &mn, &mx);
-        qDebug() << "HaloFix: fg8 min/max =" << mn << mx;
-
-        // Visual debug (masks)
-        {
-            const QString folder = opt.depthFolderPath;
-            cv::imwrite((folder + "/halo_fg.png").toStdString(), fg8);
-            cv::imwrite((folder + "/halo_fg_filled.png").toStdString(), fgFilled8);
-            cv::imwrite((folder + "/halo_boundary.png").toStdString(), boundary8);
-            cv::imwrite((folder + "/halo_band.png").toStdString(), band8);
-            cv::imwrite((folder + "/halo_cand.png").toStdString(), haloCand8);
-
-            cv::Mat baseGray8 = toGray8_fromOut32(out32);
-            cv::Mat overlay0  = makeHaloDebugOverlayBGR8(baseGray8, band8, cv::Mat(), 0.45f, 0.0f);
-            addSliceLegendStripBottomBGR8(overlay0, N, 140, 8);
-            cv::imwrite((folder + "/halo_overlay_band.png").toStdString(), overlay0);
-        }
-
-        // Seeds + donors
-        cv::Mat seeds8, seedLabel16;
-        buildForegroundBoundarySeeds(winStable16, boundary8, seeds8, seedLabel16);
-
-        const int seedsPx = cv::countNonZero(seeds8);
-        qDebug() << "HaloFix: seedsPx=" << seedsPx;
-        if (seedsPx == 0)
-        {
-            qDebug() << "HaloFix: no seeds; skipping.";
-            break;
-        }
-
-        cv::Mat donor16 = propagateDonorLabels16(seeds8, seedLabel16, haloCand8, ringPx);
-
-        cv::Mat hasDonor8 = (donor16 != (uint16_t)0xFFFF);
-        hasDonor8.convertTo(hasDonor8, CV_8U, 255.0);
-        const int donorPx = cv::countNonZero(hasDonor8);
-
-        qDebug() << "HaloFix: donorPx=" << donorPx
-                 << " donor/cand=" << (double)donorPx / (double)std::max(1, candPx);
-
-        if (donorPx == 0)
-        {
-            qDebug() << "HaloFix: no donor labels; skipping.";
-            break;
-        }
-
-        // Visual debug (donor overlay)
-        {
-            const QString folder = opt.depthFolderPath;
-            cv::Mat baseGray8 = toGray8_fromOut32(out32);
-
-            cv::Mat donorColor = colorizeDonorLabelsBGR8(donor16, N);
-
-            cv::Mat donorColorForFile = donorColor.clone();
-            addSliceLegendStripBottomBGR8(donorColorForFile, N, 140, 8);
-            cv::imwrite((folder + "/halo_donor_labels.png").toStdString(), donorColorForFile);
-
-            cv::Mat overlay = makeHaloDebugOverlayBGR8(baseGray8, band8, donorColor, 0.35f, 0.60f);
-            addSliceLegendStripBottomBGR8(overlay, N, 140, 8);
-            cv::imwrite((folder + "/halo_overlay.png").toStdString(), overlay);
-        }
-
-        // Alpha feather
-        cv::Mat alphaBand01;
-        haloCand8.convertTo(alphaBand01, CV_32F, 1.0 / 255.0);
-
-        const float sig = std::max(0.0f, params.haloFeatherSigma);
-        if (sig > 0.0f)
-            cv::GaussianBlur(alphaBand01, alphaBand01, cv::Size(0, 0), sig, sig, cv::BORDER_REFLECT);
-
-        cv::max(alphaBand01, 0.0f, alphaBand01);
-        cv::min(alphaBand01, 1.0f, alphaBand01);
-
-        // halo-focused alpha stats
-        {
-            double amn=0, amx=0;
-            cv::minMaxLoc(alphaBand01, &amn, &amx);
-            const cv::Scalar am = cv::mean(alphaBand01);
-            qDebug() << "HaloFix: alphaBand01 mean=" << am[0] << " min/max=" << amn << amx;
-        }
-
-        // Optional: write alpha image (very useful to see feather width)
-        {
-            const QString folder = opt.depthFolderPath;
-            cv::Mat a8;
-            alphaBand01.convertTo(a8, CV_8U, 255.0);
-            cv::imwrite((folder + "/halo_alphaBand.png").toStdString(), a8);
-        }
-
-        // Blend donor slices (no per-donor debug)
-        for (int s = 0; s < N; ++s)
-        {
-            cv::Mat ms = (donor16 == (uint16_t)s);
-            ms.convertTo(ms, CV_32F, 1.0 / 255.0);
-
-            cv::Mat alpha = alphaBand01.mul(ms);
-            if (cv::countNonZero(alpha > 1e-6f) == 0)
-                continue;
-
-            cv::Mat gTmp, cTmp;
-            if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
-                                                roiPadToAlign, validAreaAlign,
-                                                gTmp, cTmp) || cTmp.empty())
-            {
-                qWarning().noquote() << "WARNING: HaloFix loadAlignedSliceOrig failed for slice" << s;
-                continue;
-            }
-
-            cv::Mat col32;
-            if (!toColor32_01_FromLoaded(cTmp, col32, "HaloFix donor", s))
-                continue;
-
-            cv::Mat a3;
-            { cv::Mat ch[] = { alpha, alpha, alpha }; cv::merge(ch, 3, a3); }
-
-            cv::Mat invA3;
-            cv::subtract(cv::Scalar::all(1.0f), a3, invA3);
-            out32 = out32.mul(invA3) + col32.mul(a3);
-        }
-
-        cv::max(out32, 0.0f, out32);
-        cv::min(out32, 1.0f, out32);
-
-    } while(false);
-
-    // ---- Keep: halo-result stats (NOT blue-related) ----
-    dbgMat3Stats("DBG out32 postHalo clamp", out32);
-
-    // Clamp AFTER halo fix
-    cv::max(out32, 0.0f, out32);
-    cv::min(out32, 1.0f, out32);
-
-    // Convert to output depth
-    if (outDepth == CV_16U)
-        out32.convertTo(outputColor, CV_16UC3, 65535.0);
-    else
-        out32.convertTo(outputColor, CV_8UC3, 255.0);
+    convertOut32ToOutput(out32, outputColor);
 
     reset();
     return true;

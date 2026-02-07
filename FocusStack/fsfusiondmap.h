@@ -2,6 +2,7 @@
 
 #include "fsalign_types.h"
 #include "fsfusion.h"
+#include "fusionpyr.h"
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -79,6 +80,29 @@ public:
         bool valid() const;
     };
 
+    // ------------------------------------------------------------
+    // weights containers
+    // ------------------------------------------------------------
+    struct DMapWeights
+    {
+        std::vector<cv::Mat> w32; // K x CV_32F (orig size)
+
+        cv::Mat boundary8;
+        cv::Mat band8;
+
+        cv::Mat overrideMask8;
+        cv::Mat overrideWinner16;
+
+        void create(cv::Size sz, int K)
+        {
+            w32.assign(K, cv::Mat(sz, CV_32F, cv::Scalar(0)));
+            boundary8.release();
+            band8.release();
+            overrideMask8.release();
+            overrideWinner16.release();
+        }
+    };
+
 public:
     DMapParams params;
 
@@ -109,4 +133,70 @@ private:
     int  sliceCount_ = 0;
 
     TopKMaps topk_pad_;
+
+    bool validateStreamFinishState(const QString& srcFun,
+                                   const QStringList& inputPaths,
+                                   const std::vector<Result>& globals,
+                                   std::atomic_bool* abortFlag,
+                                   int& N) const;
+    bool computeCropGeometry(const QString& srcFun,
+                             cv::Rect& roiPadToAlign,
+                             cv::Size& origSz);
+    bool cropTopKToOrig(const QString& srcFun,
+                        const cv::Rect& roiPadToAlign,
+                        const cv::Size& origSz,
+                        TopKMaps& topkOrig) const;
+    bool sanityCheckTop1(const QString& srcFun,
+                         const TopKMaps& topkOrig,
+                         int N) const;
+    bool buildMapsAndStabilize(const QString& srcFun,
+                               const TopKMaps& topkOrig,
+                               int N,
+                               std::atomic_bool* abortFlag,
+                               DMapWeights& W,
+                               cv::Mat& conf01,
+                               cv::Mat& depthIndex16,
+                               cv::Mat& winStable16) const;
+    int computePyrLevels(const cv::Size& origSz) const;
+    void buildPyramids(const cv::Mat& depthIndex16,
+                       int levels,
+                       std::vector<cv::Mat>& idxPyr16,
+                       std::vector<cv::Mat>& vetoPyr8) const;
+    void initAccumulator(const cv::Size& origSz,
+                         int levels,
+                         FusionPyr::PyrAccum& A,
+                         cv::Mat& sumW) const;
+    bool accumulateAllSlices(const QString& srcFun,
+                             const QStringList& inputPaths,
+                             const std::vector<Result>& globals,
+                             const cv::Rect& roiPadToAlign,
+                             const cv::Rect& validAreaAlign,
+                             const TopKMaps& topkOrig,
+                             const DMapWeights& W,
+                             const std::vector<cv::Mat>& idxPyr16,
+                             const std::vector<cv::Mat>& vetoPyr8,
+                             int levels,
+                             std::atomic_bool* abortFlag,
+                             FSFusion::StatusCallback statusCb,
+                             FSFusion::ProgressCallback progressCb,
+                             FusionPyr::PyrAccum& A,
+                             cv::Mat& sumW) const;
+    cv::Mat finalizeOut32(const FusionPyr::PyrAccum& A) const;
+    void debugHaloInputs(const cv::Mat& out32,
+                         const TopKMaps& topkOrig,
+                         const cv::Mat& conf01) const;
+    void debugHaloOutput(const cv::Mat& out32) const;
+    void applyHaloFixIfEnabled(const FSFusion::Options& opt,
+                               const QString& srcFun,
+                               int N,
+                               const TopKMaps& topkOrig,
+                               const cv::Mat& conf01,
+                               const cv::Mat& winStable16,
+                               const QStringList& inputPaths,
+                               const std::vector<Result>& globals,
+                               const cv::Rect& roiPadToAlign,
+                               const cv::Rect& validAreaAlign,
+                               std::atomic_bool* abortFlag,
+                               cv::Mat& out32);
+    void convertOut32ToOutput(const cv::Mat& out32, cv::Mat& outputColor) const;
 };
