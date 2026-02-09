@@ -210,6 +210,50 @@ cv::Mat vstack(const cv::Mat &a, const cv::Mat &b)
 }
 
 //----------------------------------------------------------
+// Shared: add a title to a Mat
+//----------------------------------------------------------
+
+static inline void drawTitleOverlay(cv::Mat& imgBGR8,
+                                    const std::string& title,
+                                    int x = 10, int y = 10)
+{
+    CV_Assert(imgBGR8.type() == CV_8UC3);
+    if (title.empty()) return;
+
+    const int fontFace = cv::FONT_HERSHEY_SIMPLEX;
+    const double fontScale = 0.9;                 // tweak if you want
+    const int thickness = 2;
+
+    int baseline = 0;
+    cv::Size ts = cv::getTextSize(title, fontFace, fontScale, thickness, &baseline);
+
+    const int pad = 8;
+    const int boxW = ts.width + 2 * pad;
+    const int boxH = ts.height + baseline + 2 * pad;
+
+    // clamp within image
+    int x0 = std::max(0, std::min(x, imgBGR8.cols - boxW - 1));
+    int y0 = std::max(0, std::min(y, imgBGR8.rows - boxH - 1));
+
+    cv::Rect r(x0, y0, std::min(boxW, imgBGR8.cols - x0), std::min(boxH, imgBGR8.rows - y0));
+    if (r.width <= 0 || r.height <= 0) return;
+
+    // darken patch for readability
+    cv::Mat roi = imgBGR8(r);
+    cv::Mat tmp;
+    cv::addWeighted(roi, 0.30, cv::Mat(roi.size(), roi.type(), cv::Scalar(0,0,0)), 0.70, 0.0, tmp);
+    tmp.copyTo(roi);
+
+    // outlined text
+    const int tx = r.x + pad;
+    const int ty = r.y + pad + ts.height;
+    cv::putText(imgBGR8, title, cv::Point(tx, ty),
+                fontFace, fontScale, cv::Scalar(0,0,0), thickness + 2, cv::LINE_AA);
+    cv::putText(imgBGR8, title, cv::Point(tx, ty),
+                fontFace, fontScale, cv::Scalar(255,255,255), thickness, cv::LINE_AA);
+}
+
+//----------------------------------------------------------
 // Shared: build enhanced preview (grayscale + heatmap + legend)
 //----------------------------------------------------------
 cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16,
@@ -299,8 +343,9 @@ cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16,
 // Shared: build enhanced preview (heatmap + legend)
 //----------------------------------------------------------
 
-cv::Mat makeDepthHeatmap(const cv::Mat &depthIndex16,
-                                 int sliceCount)
+cv::Mat depthHeatmap(const cv::Mat& depthIndex16,
+                     int sliceCount,
+                     const std::string& title)
 {
     CV_Assert(depthIndex16.type() == CV_16U);
     CV_Assert(sliceCount > 0);
@@ -327,14 +372,17 @@ cv::Mat makeDepthHeatmap(const cv::Mat &depthIndex16,
 
     // --- Heatmap (orig size) ---
     cv::Mat heat;
-    cv::applyColorMap(idx8, heat, cv::COLORMAP_TURBO); // CV_8UC3, rows x cols
+    cv::applyColorMap(idx8, heat, cv::COLORMAP_TURBO); // CV_8UC3
+
+    // --- Top-left title overlay for A/B comparisons (no resize) ---
+    drawTitleOverlay(heat, title);
 
     // --- Draw legend OVERLAY at bottom (does NOT change image size) ---
-    const int legendH = std::max(24, std::min(140, rows / 6)); // safe, readable
+    const int legendH = std::max(24, std::min(140, rows / 6));
     const int y0 = rows - legendH;
     if (y0 < 0) return heat;
 
-    // Slight darkening of bottom strip for readability (blend with black)
+    // Slight darkening of bottom strip for readability
     {
         cv::Mat roi = heat(cv::Rect(0, y0, cols, legendH));
         cv::Mat tmp;
@@ -342,25 +390,23 @@ cv::Mat makeDepthHeatmap(const cv::Mat &depthIndex16,
         tmp.copyTo(roi);
     }
 
-    // Title (top-left inside legend strip)
+    // Title inside legend strip (kept)
     {
-        const std::string title = "Depth index -> color (TURBO)";
+        const std::string legendTitle = "Depth index -> color (TURBO)";
         double fontScale = std::max(0.6, legendH / 40.0);
         int thick = std::max(1, (int)std::lround(fontScale * 2.0));
 
-        cv::putText(heat, title, cv::Point(10, y0 + std::max(22, legendH / 4)),
+        cv::putText(heat, legendTitle, cv::Point(10, y0 + std::max(22, legendH / 4)),
                     cv::FONT_HERSHEY_SIMPLEX, fontScale,
                     cv::Scalar(0,0,0), thick + 2, cv::LINE_AA);
-        cv::putText(heat, title, cv::Point(10, y0 + std::max(22, legendH / 4)),
+        cv::putText(heat, legendTitle, cv::Point(10, y0 + std::max(22, legendH / 4)),
                     cv::FONT_HERSHEY_SIMPLEX, fontScale,
                     cv::Scalar(255,255,255), thick, cv::LINE_AA);
     }
 
-    // Color bar occupies the lower ~2/3 of the strip
     const int barY0 = y0 + std::max(18, legendH / 3);
     const int barY1 = rows - 6;
 
-    // Draw bar segments + labels
     for (int s = 0; s < sliceCount; ++s)
     {
         float t0 = (float)s / (float)sliceCount;
@@ -372,7 +418,6 @@ cv::Mat makeDepthHeatmap(const cv::Mat &depthIndex16,
         x0 = std::max(0, std::min(cols - 1, x0));
         x1 = std::max(1, std::min(cols, x1));
 
-        // exact swatch color for slice s
         int v = 0;
         if (sliceCount > 1)
             v = (int)std::lround(255.0 * (double)s / (double)(sliceCount - 1));
@@ -388,7 +433,6 @@ cv::Mat makeDepthHeatmap(const cv::Mat &depthIndex16,
                       cv::Scalar(c[0], c[1], c[2]),
                       cv::FILLED);
 
-        // Label cadence (same logic you had)
         bool drawLabel = false;
         if (sliceCount <= 16) drawLabel = true;
         else if (sliceCount <= 32 && (s % 2 == 0)) drawLabel = true;
@@ -398,7 +442,6 @@ cv::Mat makeDepthHeatmap(const cv::Mat &depthIndex16,
         {
             const std::string label = std::to_string(s);
 
-            // text color based on swatch luminance
             int lum = (int)(0.114 * c[0] + 0.587 * c[1] + 0.299 * c[2]);
             cv::Scalar textCol = (lum < 128) ? cv::Scalar(255,255,255) : cv::Scalar(0,0,0);
 
@@ -417,10 +460,8 @@ cv::Mat makeDepthHeatmap(const cv::Mat &depthIndex16,
         }
     }
 
-    // Optional border around legend strip (helps visually)
     cv::rectangle(heat, cv::Rect(0, y0, cols, legendH), cv::Scalar(255,255,255), 1);
-
-    return heat; // SAME SIZE AS depthIndex16 (orig)
+    return heat;
 }
 
 //-------------------------------------------------------------

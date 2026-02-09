@@ -10,6 +10,7 @@
 #include <QString>
 #include <atomic>
 #include <vector>
+#include <functional>
 
 // ============================================================
 // fsfusiondmap.h
@@ -24,8 +25,47 @@ public:
     FSFusionDMap();
     ~FSFusionDMap() override = default;
 
+    struct TopKMaps
+    {
+        int K = 0;
+        cv::Size sz;
+        std::vector<cv::Mat> idx16;   // K x CV_16U
+        std::vector<cv::Mat> score32; // K x CV_32F
+
+        void reset();
+        void create(cv::Size s, int k);
+        bool valid() const;
+    };
+
+    enum class DepthMode {
+        Baseline,       // current win16
+        Experimental     // use hook result
+    };
+
+    using DepthHookFn = std::function<bool(
+        const cv::Mat& baselineDepth16,   // CV_16U, orig size
+        const cv::Mat& conf01,            // CV_32F, orig size
+        const TopKMaps& topkOrig,         // scores/idx, orig size
+        int N,
+        cv::Mat& outDepth16               // CV_16U, orig size (must be filled)
+        )>;
+
+
     struct DMapParams
     {
+        // Experiment start
+        DepthMode depthMode = DepthMode::Baseline;
+        DepthHookFn depthHook;  // optional experiment hook (if nullptr => do nothing)
+        // Optional “tighten” knobs:
+        float depthConfSmoothMax = 0.08f;   // 0.12 only smooth when conf is low
+        float depthConfStableMax = 0.18f;   // 0.25 only majority-filter when conf is low-ish
+        int   depthBoundaryDilateSmoothPx = 0;  // 1
+        int   depthBoundaryDilateStablePx = 0;  // 1
+        int   depthTexMax = 12;             // 8U texture gate (like your haloTexMax)
+        bool  depthUseTextureGate = true;
+        bool  writeDepthDiagnostics = true;   // write heatmaps for baseline/experimental
+        // Experiment end
+
         bool enableHardWeightsOnLowpass = true;  // used in FusionPyr::accumulateSlicePyr
 
         int   topK = 2;
@@ -68,18 +108,6 @@ public:
         int   pyrLevels = 5;
     };
 
-    struct TopKMaps
-    {
-        int K = 0;
-        cv::Size sz;
-        std::vector<cv::Mat> idx16;   // K x CV_16U
-        std::vector<cv::Mat> score32; // K x CV_32F
-
-        void reset();
-        void create(cv::Size s, int k);
-        bool valid() const;
-    };
-
     // ------------------------------------------------------------
     // weights containers
     // ------------------------------------------------------------
@@ -103,10 +131,10 @@ public:
         }
     };
 
-public:
     DMapParams params;
 
-public:
+
+
     void reset();
 
     // pass-1: caller provides ALIGN-space mats; engine pads internally to PAD-space
@@ -157,6 +185,14 @@ private:
                                cv::Mat& conf01,
                                cv::Mat& depthIndex16,
                                cv::Mat& winStable16) const;
+    bool depthExperiment(const QString& srcFun,
+                         const FSFusion::Options& opt,
+                         const TopKMaps& topkOrig,
+                         int N,
+                         const cv::Mat& conf01,
+                         std::atomic_bool* abortFlag,
+                         cv::Mat& depthIndex16,   // OUT: depth used for pyramids/fusion
+                         cv::Mat& winStable16);   // OUT: stable labels for halo boundary work
     int computePyrLevels(const cv::Size& origSz) const;
     void buildPyramids(const cv::Mat& depthIndex16,
                        int levels,

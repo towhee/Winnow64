@@ -1801,10 +1801,11 @@ bool FS::runStreamDMap()
         return false;
     }
 
-    cv::Mat preview = FSUtilities::makeDepthHeatmap(depthIndex16Mat, slices);
-    // cv::Mat preview = FSUtilities::makeDepthPreviewEnhanced(depthIndex16Mat, slices);
-    QString depthPreviewPath = depthFolderPath + "/depth_heatmap.png";
-    FSUtilities::writePngWithTitle(depthPreviewPath, preview);
+    // const std::string& title = "depthIndex16 2026-02-07";
+    // cv::Mat preview = FSUtilities::depthHeatmap(depthIndex16Mat, slices, title);
+    // // cv::Mat preview = FSUtilities::makeDepthPreviewEnhanced(depthIndex16Mat, slices);
+    // QString depthPreviewPath = depthFolderPath + "/depth_heatmap.png";
+    // FSUtilities::writePngWithTitle(depthPreviewPath, preview);
 
     if (G::abortFocusStack) return false;
     incrementProgress();
