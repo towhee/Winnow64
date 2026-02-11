@@ -238,49 +238,6 @@ static inline bool hasNaNInf(const cv::Mat& m)
     return false;
 }
 
-static inline cv::Mat overlayBwoDebugBGR8(const cv::Mat& baseBGR8,
-                                          const cv::Mat& band8,   // CV_8U 0/255
-                                          const cv::Mat& mask8)   // CV_8U 0/255
-{
-    CV_Assert(baseBGR8.type() == CV_8UC3);
-    CV_Assert(band8.empty() || band8.type() == CV_8U);
-    CV_Assert(mask8.empty() || mask8.type() == CV_8U);
-    CV_Assert(band8.empty() || band8.size() == baseBGR8.size());
-    CV_Assert(mask8.empty() || mask8.size() == baseBGR8.size());
-
-    cv::Mat out = baseBGR8.clone();
-
-    // band = yellow tint
-    if (!band8.empty())
-    {
-        cv::Mat m;
-        cv::compare(band8, 0, m, cv::CMP_GT);
-        if (cv::countNonZero(m) > 0)
-        {
-            cv::Mat yellow(out.size(), CV_8UC3, cv::Scalar(0,255,255));
-            cv::Mat tmp;
-            cv::addWeighted(out, 1.0, yellow, 0.35, 0.0, tmp);
-            tmp.copyTo(out, m);
-        }
-    }
-
-    // mask = red tint (stronger so it pops)
-    if (!mask8.empty())
-    {
-        cv::Mat m;
-        cv::compare(mask8, 0, m, cv::CMP_GT);
-        if (cv::countNonZero(m) > 0)
-        {
-            cv::Mat red(out.size(), CV_8UC3, cv::Scalar(0,0,255));
-            cv::Mat tmp;
-            cv::addWeighted(out, 1.0, red, 0.55, 0.0, tmp);
-            tmp.copyTo(out, m);
-        }
-    }
-
-    return out;
-}
-
 static inline void dbgMat3Stats(const char* tag, const cv::Mat& m)
 {
     qDebug().noquote() << tag
@@ -501,6 +458,63 @@ static inline long long countHorizontalDiffs16(const cv::Mat& idx16)
     return diff;
 }
 
+// --- FOREGROUND Binary mask helpers (CV_8U 0/255) ---
+
+// Robust hole fill for binary masks (CV_8U 0/255)
+// Works even if foreground touches the image border.
+
+static cv::Mat fillHoles8(const cv::Mat& bin8)
+{
+    CV_Assert(bin8.type() == CV_8U);
+
+    // Invert: background -> 255, foreground -> 0
+    cv::Mat inv;
+    cv::bitwise_not(bin8, inv);
+
+    // Pad with a 1px 255 border so (0,0) is guaranteed “outside” in inv-space.
+    cv::Mat invPad;
+    cv::copyMakeBorder(inv, invPad, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(255));
+
+    // Flood fill outside background to 0
+    cv::floodFill(invPad, cv::Point(0, 0), cv::Scalar(0));
+
+    // Crop back
+    cv::Mat ff = invPad(cv::Rect(1, 1, bin8.cols, bin8.rows)).clone();
+
+    // Holes are remaining 255 regions in ff (not connected to outside)
+    cv::Mat holesMask;
+    cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where holes
+
+    cv::Mat filled = bin8.clone();
+    filled.setTo(255, holesMask);
+    return filled;
+}
+
+// Simple iterative “geodesic” growth: grow seed inside allowed mask.
+static cv::Mat geodesicGrow8(const cv::Mat& seed8, const cv::Mat& allowed8, int iters, int connectivity = 8)
+{
+    CV_Assert(seed8.type() == CV_8U);
+    CV_Assert(allowed8.type() == CV_8U);
+    CV_Assert(seed8.size() == allowed8.size());
+
+    iters = std::max(0, iters);
+    if (iters == 0) return seed8.clone();
+
+    cv::Mat cur = seed8.clone();
+    cv::Mat se = (connectivity == 4) ? cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3,3))
+                                     : FSFusion::seEllipse(1);
+
+    for (int i = 0; i < iters; ++i)
+    {
+        cv::Mat dil;
+        cv::dilate(cur, dil, se);
+
+        // constrain to allowed
+        cv::bitwise_and(dil, allowed8, cur);
+    }
+    return cur;
+}
+
 // ============================================================
 // Top-K / metric / confidence / slice selection
 // ============================================================
@@ -649,52 +663,6 @@ static int pickForegroundSlice(const cv::Mat& win16,
     return best;
 }
 
-// Choose sFg as the most common winner label inside confident pixels.
-// This is MUCH more stable than "max label".
-int pickForegroundSliceByConf(const cv::Mat& win16, const cv::Mat& conf01,
-                              int N, float confThr, const QString& tag,
-                              std::vector<int>* outHist /*=nullptr*/)
-{
-    CV_Assert(win16.type() == CV_16U);
-    CV_Assert(conf01.type() == CV_32F);
-    CV_Assert(win16.size() == conf01.size());
-
-    std::vector<int> hist(N, 0);
-    int used = 0;
-
-    for (int y = 0; y < win16.rows; ++y)
-    {
-        const uint16_t* w = win16.ptr<uint16_t>(y);
-        const float*    c = conf01.ptr<float>(y);
-        for (int x = 0; x < win16.cols; ++x)
-        {
-            if (c[x] > confThr)
-            {
-                const int s = (int)w[x];
-                if (0 <= s && s < N) { hist[s]++; used++; }
-            }
-        }
-    }
-
-    int bestS = 0, bestCnt = -1;
-    for (int s = 0; s < N; ++s)
-        if (hist[s] > bestCnt) { bestCnt = hist[s]; bestS = s; }
-
-    qDebug() << tag << "pick sFg by confThr=" << confThr
-             << " usedPx=" << used << " bestS=" << bestS << " bestCnt=" << bestCnt;
-
-    std::vector<std::pair<int,int>> pairs;
-    pairs.reserve(N);
-    for (int s = 0; s < N; ++s) pairs.push_back({hist[s], s});
-    std::sort(pairs.rbegin(), pairs.rend());
-    qDebug() << tag << "top labels:";
-    for (int i = 0; i < std::min(5, (int)pairs.size()); ++i)
-        qDebug() << "  s" << pairs[i].second << "cnt" << pairs[i].first;
-
-    if (outHist) *outHist = hist;
-    return bestS;
-}
-
 static cv::Mat boundaryFromLabels8(const cv::Mat& lab16)
 {
     CV_Assert(lab16.type() == CV_16U);
@@ -837,160 +805,6 @@ static cv::Mat keepLargestCC(const cv::Mat& bin8, int connectivity = 8)
     cv::Mat out;
     cv::compare(labels, best, out, cv::CMP_EQ); // 0/255
     return out;
-}
-
-// Build an override mask in ORIG space: a ring *outside* a coherent FG silhouette,
-// then gate it by low-confidence + low-texture, and never override very-confident pixels.
-//
-//   - fg8 from (win==sFg) is usually speckly (many tiny islands).
-//   - We MUST collapse it to a single coherent subject silhouette before dilation,
-//     otherwise the dilated “ring” covers most of the image.
-//
-// Notes:
-//   - Requires keepLargestCC(...)
-//   - Uses FSFusion::seEllipse(...).
-static cv::Mat buildBoundaryOverrideMask8_RingOutsideFG(
-    const cv::Mat& winTop1_16,     // CV_16U, orig
-    int sFg,
-    const cv::Mat& conf01,         // CV_32F 0..1, orig
-    const cv::Mat& top1Score32,    // CV_32F, orig
-    int ringPx,
-    float confMax,
-    int texMax8u,
-    float veryConfMin,
-    int extraDilatePx,
-    int* outBandPx /*=nullptr*/,
-    int* outCandPx /*=nullptr*/,
-    cv::Mat* outFg8 = nullptr,         // NEW (0/255)
-    cv::Mat* outFgFilled8 = nullptr,   // NEW (0/255)
-    cv::Mat* outBand8 = nullptr        // NEW (0/255)
-    )
-{
-    CV_Assert(winTop1_16.type() == CV_16U);
-    CV_Assert(conf01.type() == CV_32F);
-    CV_Assert(top1Score32.type() == CV_32F);
-    CV_Assert(winTop1_16.size() == conf01.size());
-    CV_Assert(winTop1_16.size() == top1Score32.size());
-
-    ringPx        = std::max(2, ringPx);
-    extraDilatePx = std::max(0, extraDilatePx);
-    confMax       = std::max(0.0f, std::min(1.0f, confMax));
-    veryConfMin   = std::max(0.0f, std::min(1.0f, veryConfMin));
-    texMax8u      = std::max(0, std::min(255, texMax8u));
-
-    // ------------------------------------------------------------
-    // 1) Build a crude FG mask from top1 labels == sFg
-    // ------------------------------------------------------------
-    cv::Mat fg8 = (winTop1_16 == (uint16_t)sFg);
-    fg8.convertTo(fg8, CV_8U, 255.0);
-
-    if (outFg8) *outFg8 = fg8.clone();
-
-    // ------------------------------------------------------------
-    // 2) Collapse speckles into a coherent subject silhouette
-    // ------------------------------------------------------------
-    // Light close to connect thin structures / micro-gaps (twigs)
-    cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(2));
-
-    // Keep only the main connected component (prevents global “ring” explosion)
-    fg8 = keepLargestCC(fg8, /*connectivity=*/8);
-
-    // If FG is empty, nothing to do
-    if (fg8.empty() || cv::countNonZero(fg8) == 0)
-    {
-        if (outBandPx) *outBandPx = 0;
-        if (outCandPx) *outCandPx = 0;
-        if (outFg8) *outFg8 = fg8.clone();
-        if (outFgFilled8) outFgFilled8->release();
-        if (outBand8) outBand8->release();
-        return cv::Mat::zeros(winTop1_16.size(), CV_8U);
-    }
-
-    // Fill holes robustly (even if FG touches border)
-    auto fillHoles8 = [](const cv::Mat& bin8)->cv::Mat
-    {
-        CV_Assert(bin8.type() == CV_8U);
-
-        cv::Mat inv;
-        cv::bitwise_not(bin8, inv);
-
-        // Pad with a 1px 255 border so floodFill seed is guaranteed “outside” in inv-space.
-        cv::Mat invPad;
-        cv::copyMakeBorder(inv, invPad, 1, 1, 1, 1,
-                           cv::BORDER_CONSTANT, cv::Scalar(255));
-
-        cv::floodFill(invPad, cv::Point(0, 0), cv::Scalar(0));
-
-        cv::Mat ff = invPad(cv::Rect(1, 1, bin8.cols, bin8.rows)).clone();
-
-        cv::Mat holesMask;
-        cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where holes
-
-        cv::Mat filled = bin8.clone();
-        filled.setTo(255, holesMask);
-        return filled;
-    };
-
-    cv::Mat fgFilled8 = fillHoles8(fg8);
-
-    if (outFgFilled8) *outFgFilled8 = fgFilled8.clone();
-
-    // ------------------------------------------------------------
-    // 3) Build the OUTSIDE ring band: dilate(fg) & ~fg
-    // ------------------------------------------------------------
-    cv::Mat fgDil8;
-    cv::dilate(fgFilled8, fgDil8, FSFusion::seEllipse(ringPx));
-
-    cv::Mat band8;
-    cv::bitwise_and(fgDil8, ~fgFilled8, band8); // outside-only ring (0/255)
-
-    if (extraDilatePx > 0)
-        cv::dilate(band8, band8, FSFusion::seEllipse(extraDilatePx));
-
-    if (outBand8) *outBand8 = band8.clone();
-
-    const int bandPx = cv::countNonZero(band8);
-    if (outBandPx) *outBandPx = bandPx;
-
-    if (bandPx == 0)
-    {
-        if (outCandPx) *outCandPx = 0;
-        return cv::Mat::zeros(winTop1_16.size(), CV_8U);
-    }
-
-    // ------------------------------------------------------------
-    // 4) Gate inside the band: low-conf & low-tex & NOT very-conf
-    // ------------------------------------------------------------
-
-    // low confidence
-    cv::Mat lowConf8 = (conf01 < confMax);
-    lowConf8.convertTo(lowConf8, CV_8U, 255.0);
-
-    // low texture: scale top1Score32 to 8U using max-based scale (consistent with your code)
-    double smn = 0.0, smx = 0.0;
-    cv::minMaxLoc(top1Score32, &smn, &smx);
-    const float scale = (smx > 1e-12) ? (255.0f / (float)smx) : 1.0f;
-
-    cv::Mat tex8;
-    top1Score32.convertTo(tex8, CV_8U, scale);
-
-    cv::Mat lowTex8 = (tex8 <= texMax8u);
-    lowTex8.convertTo(lowTex8, CV_8U, 255.0);
-
-    // never override very-confident pixels
-    cv::Mat veryConf8 = (conf01 > veryConfMin);
-    veryConf8.convertTo(veryConf8, CV_8U, 255.0);
-
-    // mask = band & lowConf & lowTex & ~veryConf
-    cv::Mat mask8;
-    cv::bitwise_and(band8, lowConf8, mask8);
-    cv::bitwise_and(mask8, lowTex8, mask8);
-    cv::bitwise_and(mask8, ~veryConf8, mask8);
-
-    const int candPx = cv::countNonZero(mask8);
-    if (outCandPx) *outCandPx = candPx;
-
-    return mask8; // CV_8U 0/255
 }
 
 // softmax weights from topk scores
@@ -1186,9 +1000,6 @@ static void buildDMapWeightsFromTopK(const FSFusionDMap::TopKMaps& topk,
 
     cv::Mat confident = (conf01 > p.confHigh);
     confident.convertTo(confident, CV_8U, 255.0);
-
-    cv::Mat reliable8;
-    cv::bitwise_or(strong, confident, reliable8);
 }
 
 static cv::Mat buildSliceWeightMap32(const FSFusionDMap::TopKMaps& topk,
@@ -1211,24 +1022,262 @@ static cv::Mat buildSliceWeightMap32(const FSFusionDMap::TopKMaps& topk,
         w32 += tmp;
     }
 
-    if (!W.overrideMask8.empty() && !W.overrideWinner16.empty())
+    return w32;
+}
+
+// ============================================================
+// Build foreground mask
+// ============================================================
+
+// Build the best-available foreground mask used for halo work.
+// Returns fg8 (0/255). Also optionally returns fgFilled8 (0/255).
+// NOTE: This matches your current halo_fg.png generation (from CC over regionMask).
+static inline cv::Mat foregroundMask8_fromStableDepth(
+    const cv::Mat& winStable16,  // CV_16U
+    const cv::Mat& conf01,       // CV_32F 0..1
+    int jumpThr = 3,
+    int jumpDilatePx = 1,
+    cv::Mat* outFgFilled8 = nullptr)
+{
+    CV_Assert(winStable16.type() == CV_16U);
+    CV_Assert(conf01.type() == CV_32F);
+    CV_Assert(winStable16.size() == conf01.size());
+
+    // 1) Find depth jump edges, dilated a bit so regions separate more cleanly
+    cv::Mat jumpEdges8 = buildDepthJumpEdges8(winStable16, jumpThr, jumpDilatePx);
+
+    // 2) Invert edges to get candidate regions
+    cv::Mat regionMask;
+    cv::bitwise_not(jumpEdges8, regionMask);   // still CV_8U
+
+    // Ensure binary 0/255 (distanceTransform/CC expects clean)
+    cv::compare(regionMask, 0, regionMask, cv::CMP_GT); // 0/255
+
+    // 3) Connected components on regions
+    cv::Mat ccLabels, stats, centroids;
+    int ncc = cv::connectedComponentsWithStats(regionMask, ccLabels, stats, centroids, 8, CV_32S);
+    if (ncc <= 1)
     {
-        cv::Mat overrideBin;
-        cv::compare(W.overrideMask8, 0, overrideBin, cv::CMP_GT);
-
-        cv::Mat isMe = (W.overrideWinner16 == (uint16_t)sliceIdx);
-
-        cv::Mat m;
-        cv::bitwise_and(isMe, overrideBin, m);
-        w32.setTo(1.0f, m);
-
-        cv::Mat notIsMe, notMe;
-        cv::bitwise_not(isMe, notIsMe);
-        cv::bitwise_and(overrideBin, notIsMe, notMe);
-        w32.setTo(0.0f, notMe);
+        if (outFgFilled8) outFgFilled8->release();
+        return cv::Mat::zeros(winStable16.size(), CV_8U);
     }
 
-    return w32;
+    // 4) Score each region by total confidence mass
+    std::vector<double> regionScore(ncc, 0.0);
+    for (int y = 0; y < conf01.rows; ++y)
+    {
+        const float* c = conf01.ptr<float>(y);
+        const int*   L = ccLabels.ptr<int>(y);
+        for (int x = 0; x < conf01.cols; ++x)
+        {
+            int lab = L[x];
+            if (lab > 0) regionScore[lab] += (double)c[x];
+        }
+    }
+
+    // 5) Pick region with highest confidence mass
+    int bestRegion = 1;
+    for (int i = 2; i < ncc; ++i)
+        if (regionScore[i] > regionScore[bestRegion]) bestRegion = i;
+
+    cv::Mat fg8 = (ccLabels == bestRegion);
+    fg8.convertTo(fg8, CV_8U, 255.0);
+
+    // Optional: fill holes so the ring does not enter holes
+    cv::Mat fgFilled8 = fillHoles8(fg8);
+
+    if (outFgFilled8)
+        *outFgFilled8 = fgFilled8;
+
+    return fg8;
+}
+
+// Foreground mask v2: union-of-top-regions + hole fill + core+geodesic growth
+//
+// NOTE: near->far ordering where LOWER index is closer.
+// We bias FG selection toward smaller indices.
+static cv::Mat foregroundMask8_v2(
+    const cv::Mat& winStable16,      // CV_16U (orig)
+    const cv::Mat& conf01,           // CV_32F 0..1 (orig)
+    const cv::Mat& top1Score32,      // CV_32F (orig)
+    int jumpThr = 3,                 // depth jump threshold used in buildDepthJumpEdges8
+    int edgeDilatePx = 1,            // dilate jump edges a bit before region CC
+    int maxRegions = 6,              // how many top regions to union
+    double keepRelToBest = 0.25,     // keep regions whose score >= bestScore*keepRelToBest
+    int maxDistToBestPx = 0,         // 0 disables; else keep only regions near best centroid
+    float coreConfMin = 0.55f,       // reliable core conf
+    float growConfMin = 0.18f,       // allowed domain conf
+    float texFrac = 0.15f,           // texture threshold as fraction of max top1Score
+    int growPx = 10,                 // geodesic growth iterations
+    // optional debug outputs (all CV_8U 0/255)
+    cv::Mat* outEdges8 = nullptr,
+    cv::Mat* outRegionUnion8 = nullptr,
+    cv::Mat* outFilled8 = nullptr,
+    cv::Mat* outCore8 = nullptr
+    )
+{
+    CV_Assert(winStable16.type() == CV_16U);
+    CV_Assert(conf01.type() == CV_32F);
+    CV_Assert(top1Score32.type() == CV_32F);
+    CV_Assert(winStable16.size() == conf01.size());
+    CV_Assert(winStable16.size() == top1Score32.size());
+
+    jumpThr = std::max(1, jumpThr);
+    edgeDilatePx = std::max(0, edgeDilatePx);
+    maxRegions = std::max(1, maxRegions);
+    keepRelToBest = std::max(0.0, std::min(1.0, keepRelToBest));
+    coreConfMin = std::max(0.0f, std::min(1.0f, coreConfMin));
+    growConfMin = std::max(0.0f, std::min(1.0f, growConfMin));
+    texFrac = std::max(0.0f, std::min(1.0f, texFrac));
+    growPx = std::max(0, growPx);
+
+    // 1) Region partition from depth-jump edges
+    cv::Mat edges8 = buildDepthJumpEdges8(winStable16, jumpThr, edgeDilatePx); // 0/255
+    cv::Mat regionMask8;
+    cv::bitwise_not(edges8, regionMask8); // 255 in smooth regions
+
+    if (outEdges8) *outEdges8 = edges8.clone();
+
+    // connectedComponents wants 0/255; ensure it's binary “>0”
+    cv::Mat regionBin;
+    cv::compare(regionMask8, 0, regionBin, cv::CMP_GT); // 0/255
+
+    cv::Mat ccLabels, stats, centroids;
+    const int ncc = cv::connectedComponentsWithStats(regionBin, ccLabels, stats, centroids, 8, CV_32S);
+    if (ncc <= 1)
+        return cv::Mat::zeros(winStable16.size(), CV_8U);
+
+    // Label range for near-bias normalization
+    double idxMinD=0.0, idxMaxD=0.0;
+    cv::minMaxLoc(winStable16, &idxMinD, &idxMaxD);
+    const double idxMax = std::max(1.0, idxMaxD); // avoid div0
+
+    // 2) Score regions: confidence mass * near-bias
+    //    near-bias: smaller labels -> higher weight
+    std::vector<double> score(ncc, 0.0);
+    std::vector<double> minLabel(ncc, 1e30);
+
+    for (int y = 0; y < winStable16.rows; ++y)
+    {
+        const int*   L = ccLabels.ptr<int>(y);
+        const float* C = conf01.ptr<float>(y);
+        const uint16_t* W = winStable16.ptr<uint16_t>(y);
+
+        for (int x = 0; x < winStable16.cols; ++x)
+        {
+            const int id = L[x];
+            if (id <= 0) continue;
+
+            // conf mass
+            const double c = (double)C[x];
+            score[id] += c;
+
+            // track region's minimum label (closer)
+            const double lbl = (double)W[x];
+            if (lbl < minLabel[id]) minLabel[id] = lbl;
+        }
+    }
+
+    // apply near bias: weight = 1 + k*(1 - minLabel/idxMax)
+    // (k around 0.5 is a gentle bias; not too aggressive)
+    const double kNear = 0.5;
+    for (int id = 1; id < ncc; ++id)
+    {
+        if (minLabel[id] > 1e20) continue;
+        const double near01 = 1.0 - (minLabel[id] / idxMax); // closer => larger
+        score[id] *= (1.0 + kNear * std::max(0.0, std::min(1.0, near01)));
+    }
+
+    // 3) Pick best region, then union top regions near that score
+    int best = 1;
+    for (int id = 2; id < ncc; ++id)
+        if (score[id] > score[best]) best = id;
+
+    const double bestScore = std::max(1e-12, score[best]);
+
+    // collect candidates sorted by score
+    struct Cand { int id; double s; };
+    std::vector<Cand> cands;
+    cands.reserve(ncc-1);
+    for (int id = 1; id < ncc; ++id)
+    {
+        if (score[id] >= bestScore * keepRelToBest)
+            cands.push_back({id, score[id]});
+    }
+    std::sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b){ return a.s > b.s; });
+
+    // optional distance gate to best centroid
+    const double bx = centroids.at<double>(best, 0);
+    const double by = centroids.at<double>(best, 1);
+    const double maxDist2 = (maxDistToBestPx > 0) ? (double)maxDistToBestPx * (double)maxDistToBestPx : -1.0;
+
+    cv::Mat fgUnion8 = cv::Mat::zeros(winStable16.size(), CV_8U);
+    int kept = 0;
+
+    for (const auto& c : cands)
+    {
+        if (kept >= maxRegions) break;
+
+        if (maxDist2 > 0.0)
+        {
+            const double cx = centroids.at<double>(c.id, 0);
+            const double cy = centroids.at<double>(c.id, 1);
+            const double dx = cx - bx;
+            const double dy = cy - by;
+            const double d2 = dx*dx + dy*dy;
+            if (d2 > maxDist2) continue;
+        }
+
+        cv::Mat m = (ccLabels == c.id);
+        m.convertTo(m, CV_8U, 255.0);
+        cv::bitwise_or(fgUnion8, m, fgUnion8);
+        kept++;
+    }
+
+    if (outRegionUnion8) *outRegionUnion8 = fgUnion8.clone();
+
+    if (cv::countNonZero(fgUnion8) == 0)
+        return cv::Mat::zeros(winStable16.size(), CV_8U);
+
+    // 4) Hole fill (prevents ring entering holes)
+    cv::Mat fgFilled8 = fillHoles8(fgUnion8);
+    if (outFilled8) *outFilled8 = fgFilled8.clone();
+
+    // 5) Reliable core: inside FG, high confidence + textured
+    double smn=0.0, smx=0.0;
+    cv::minMaxLoc(top1Score32, &smn, &smx);
+    const float thr = (float)smx * texFrac;
+
+    cv::Mat hiConf8 = (conf01 > coreConfMin);
+    hiConf8.convertTo(hiConf8, CV_8U, 255.0);
+
+    cv::Mat hiTex8 = (top1Score32 > thr);
+    hiTex8.convertTo(hiTex8, CV_8U, 255.0);
+
+    cv::Mat core8;
+    cv::bitwise_and(fgFilled8, hiConf8, core8);
+    cv::bitwise_and(core8, hiTex8, core8);
+
+    // If core is empty, fall back to “high conf inside FG”
+    if (cv::countNonZero(core8) == 0)
+    {
+        cv::bitwise_and(fgFilled8, hiConf8, core8);
+    }
+
+    if (outCore8) *outCore8 = core8.clone();
+
+    // 6) Allowed growth domain: inside filled FG & not-too-low confidence
+    cv::Mat allow8 = (conf01 > growConfMin);
+    allow8.convertTo(allow8, CV_8U, 255.0);
+    cv::bitwise_and(allow8, fgFilled8, allow8);
+
+    // 7) Geodesic growth (reduces speckle without “closing” fattening)
+    cv::Mat fgGrown8 = geodesicGrow8(core8, allow8, growPx, 8);
+
+    // Ensure core always included
+    cv::bitwise_or(fgGrown8, core8, fgGrown8);
+
+    return fgGrown8; // CV_8U 0/255
 }
 
 // ============================================================
@@ -1302,7 +1351,8 @@ static void buildForegroundBoundarySeeds(const cv::Mat& win16,       // CV_16U
             const uint16_t u  = win16.at<uint16_t>(y - 1, x);
             const uint16_t d  = win16.at<uint16_t>(y + 1, x);
 
-            const uint16_t fg = std::max(std::max(c, l), std::max(r, std::max(u, d)));
+            // FG = closer = smaller index
+            const uint16_t fg = std::min(std::min(c, l), std::min(r, std::min(u, d)));
 
             // mark seed pixels on the FG side (pixels whose label == fg)
             auto trySeed = [&](int yy, int xx)
@@ -2085,65 +2135,6 @@ bool FSFusionDMap::accumulateAllSlices(const QString& srcFun,
     const int N = inputPaths.size();
     const cv::Size origSz = topkOrig.idx16[0].size();
 
-    // ------------------------------------------------------------
-    // Experimental: hard boundary weight override (pre-blend)
-    // ring-only band outside an estimated foreground silhouette
-    // ------------------------------------------------------------
-    int sFg = 0;
-    cv::Mat bwoMask8;     // CV_8U 0/255
-    int bwoBandPx = 0;
-    int bwoCandPx = 0;
-    cv::Mat bwoFg8, bwoFgFilled8, bwoBand8;   // NEW debug mats
-
-    if (params.enableBoundaryWeightOverride)
-    {
-        // pick a stable FG slice index from confident pixels (orig-size!)
-        sFg = pickForegroundSliceByConf(topkOrig.idx16[0], conf01, N,
-                                        params.bwoPickFgConfThr,
-                                        "BoundaryWeightOverride:", nullptr);
-
-        // build the override mask in ORIG space (ring-only outside FG)
-        bwoMask8 = buildBoundaryOverrideMask8_RingOutsideFG(
-            /*winTop1_16=*/topkOrig.idx16[0],
-            /*sFg=*/sFg,
-            /*conf01=*/conf01,
-            /*top1Score32=*/topkOrig.score32[0],
-            /*ringPx=*/params.bwoRingPx,
-            /*confMax=*/params.bwoConfMax,
-            /*texMax8u=*/params.bwoTexMax,
-            /*veryConfMin=*/params.bwoVeryConfMin,
-            /*extraDilatePx=*/params.bwoBandDilatePx,
-            /*outBandPx=*/&bwoBandPx,
-            /*outCandPx=*/&bwoCandPx,
-            /*outFg8=*/&bwoFg8,                 // NEW
-            /*outFgFilled8=*/&bwoFgFilled8,     // NEW
-            /*outBand8=*/&bwoBand8              // NEW
-            );
-
-        qDebug() << "BoundaryWeightOverride: sFg=" << sFg
-                 << " bandPx=" << bwoBandPx
-                 << " candPx=" << bwoCandPx
-                 << " maskPx=" << cv::countNonZero(bwoMask8);
-
-        // ------------------------------------------------------------
-        // Debug: write BWO masks (orig-size) to depth folder
-        // ------------------------------------------------------------
-        if (params.writeDepthDiagnostics)
-        {
-            qDebug() << "depthFolderPath =" << depthFolderPath;
-            const QString folder = depthFolderPath;
-            if (!folder.isEmpty())
-            {
-                cv::imwrite((folder + "/bwo_fg8.png").toStdString(), bwoFg8);
-                cv::imwrite((folder + "/bwo_fgFilled8.png").toStdString(), bwoFgFilled8);
-                cv::imwrite((folder + "/bwo_band8.png").toStdString(), bwoBand8);
-                cv::imwrite((folder + "/bwo_mask8.png").toStdString(), bwoMask8);
-            }
-        }
-
-    }
-
-
     for (int s = 0; s < N; ++s)
     {
         progressCb();
@@ -2176,26 +2167,7 @@ bool FSFusionDMap::accumulateAllSlices(const QString& srcFun,
         cv::Mat w32 = buildSliceWeightMap32(topkOrig, W, s);
         CV_Assert(w32.type() == CV_32F && w32.size() == origSz);
 
-        // Apply experimental hard override in ring-only boundary band
-        if (params.enableBoundaryWeightOverride && !bwoMask8.empty())
-        {
-            if (s == sFg)
-                w32.setTo(1.0f, bwoMask8);  // force FG slice to win inside mask
-            else
-                w32.setTo(0.0f, bwoMask8);  // suppress all other slices inside mask
-        }
-
         sumW += w32;
-
-        if (params.enableBoundaryWeightOverride && !bwoMask8.empty() && s == sFg)
-        {
-            // report how many pixels are being forced for FG slice
-            cv::Mat forced;
-            cv::compare(w32, 1.0f, forced, cv::CMP_EQ);  // 0/255
-            forced.convertTo(forced, CV_8U);
-            cv::bitwise_and(forced, bwoMask8, forced);
-            qDebug() << "BoundaryWeightOverride: forcedFgPx=" << cv::countNonZero(forced);
-        }
 
         FusionPyr::AccumDMapParams ap;
         ap.enableHardWeightsOnLowpass = params.enableHardWeightsOnLowpass;
@@ -2261,90 +2233,68 @@ void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
 
     const int ringPx = std::max(2, params.haloRingPx);
 
+    // ------------------------------------------------------------
+    // FG mask (shared helper)
+    // ------------------------------------------------------------
 
+    // using foregroundMask8_fromStableDepth
+    cv::Mat fgFilled8;
+    // cv::Mat fg8 = foregroundMask8_fromStableDepth(
+    //     winStable16, conf01,
+    //     /*jumpThr=*/3,
+    //     /*jumpDilatePx=*/1,
+    //     /*outFgFilled8=*/&fgFilled8
+    //     );
 
-    // EXPERIMENTAL FG: based purely on depth discontinuities
+    // using foregroundMask8_v2
+    cv::Mat dbgEdges, dbgUnion, dbgFilled, dbgCore;
+    cv::Mat fg8 = foregroundMask8_v2(
+        /*winStable16=*/winStable16,
+        /*conf01=*/conf01,
+        /*top1Score32=*/topkOrig.score32[0],
+        /*jumpThr=*/3,
+        /*edgeDilatePx=*/1,
+        /*maxRegions=*/6,
+        /*keepRelToBest=*/0.25,
+        /*maxDistToBestPx=*/0,     // try 0 first; if subject splits far apart, set e.g. 800
+        /*coreConfMin=*/0.55f,
+        /*growConfMin=*/0.18f,
+        /*texFrac=*/0.15f,
+        /*growPx=*/10,
+        &dbgEdges, &dbgUnion, &dbgFilled, &dbgCore
+        );
 
-    cv::Mat jumpEdges8 = buildDepthJumpEdges8(winStable16, 3, 1);
+    {
+        const QString folder = opt.depthFolderPath;
+        cv::imwrite((folder + "/fg_edges.png").toStdString(), dbgEdges);
+        cv::imwrite((folder + "/fg_union.png").toStdString(), dbgUnion);
+        cv::imwrite((folder + "/fg_filled.png").toStdString(), dbgFilled);
+        cv::imwrite((folder + "/fg_core.png").toStdString(), dbgCore);
+        cv::imwrite((folder + "/halo_fg.png").toStdString(), fg8); // keep same filename for continuity
+    }
 
-    // Invert edges to get smooth regions
-    cv::Mat regionMask;
-    cv::bitwise_not(jumpEdges8, regionMask);
+    return;
 
-    // Label connected regions
-    cv::Mat ccLabels, stats, centroids;
-    int ncc = cv::connectedComponentsWithStats(regionMask, ccLabels, stats, centroids, 8, CV_32S);
-    if (ncc <= 1) {
-        qDebug() << "HaloFix: no CC regions found; skipping.";
+    const int fgPx = cv::countNonZero(fg8);
+    if (fgPx == 0)
+    {
+        qDebug() << "HaloFix: fg empty; skipping.";
         return;
     }
 
-    // Score each region by total high-confidence mass
-    std::vector<double> regionScore(ncc, 0.0);
-
-    for (int y = 0; y < conf01.rows; ++y) {
-        const float* c = conf01.ptr<float>(y);
-        const int*   L = ccLabels.ptr<int>(y);
-        for (int x = 0; x < conf01.cols; ++x) {
-            int lab = L[x];
-            if (lab > 0) regionScore[lab] += c[x];
-        }
-    }
-
-    // Pick region with highest score
-    int bestRegion = std::max_element(regionScore.begin()+1, regionScore.end()) - regionScore.begin();
-    if (bestRegion <= 0 || bestRegion >= ncc) return;
-
-    cv::Mat fg8 = (ccLabels == bestRegion);
-    fg8.convertTo(fg8, CV_8U, 255.0);
-
-    // -------------------------------
-    // HOLE-SAFE mask for boundary/band
-    // -------------------------------
-
-    // Fill holes in a binary mask (CV_8U 0/255) robustly, even if FG touches image border.
-    auto fillHoles8 = [](const cv::Mat& bin8)->cv::Mat
-    {
-        CV_Assert(bin8.type() == CV_8U);
-
-        // Invert: background -> 255, foreground -> 0
-        cv::Mat inv;
-        cv::bitwise_not(bin8, inv);
-
-        // Pad with a 1-pixel 255 border so (0,0) is guaranteed to be "outside background" in inv-space.
-        cv::Mat invPad;
-        cv::copyMakeBorder(inv, invPad, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(255));
-
-        // Flood fill from the guaranteed-outside corner, turning outside background to 0
-        cv::floodFill(invPad, cv::Point(0, 0), cv::Scalar(0));
-
-        // Crop back to original size
-        cv::Mat ff = invPad(cv::Rect(1, 1, bin8.cols, bin8.rows)).clone();
-
-        // Holes are the remaining 255 regions in ff (not connected to outside)
-        cv::Mat holesMask;
-        cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where holes
-
-        // Fill holes into the foreground
-        cv::Mat filled = bin8.clone();
-        filled.setTo(255, holesMask);
-        return filled;
-    };
-
-    cv::Mat fgFilled8 = fillHoles8(fg8);
-
-    qDebug() << "HaloFix: fgPx=" << cv::countNonZero(fg8)
+    qDebug() << "HaloFix: fgPx=" << fgPx
              << " fgFilledPx=" << cv::countNonZero(fgFilled8)
-             << " delta=" << (cv::countNonZero(fgFilled8) - cv::countNonZero(fg8));
+             << " delta=" << (cv::countNonZero(fgFilled8) - fgPx);
 
-    // boundary for seeding: use filled silhouette (outer boundary only)
+    // ------------------------------------------------------------
+    // Boundary + ring band OUTSIDE FG (use filled silhouette)
+    // ------------------------------------------------------------
     cv::Mat boundary8;
     cv::morphologyEx(fgFilled8, boundary8, cv::MORPH_GRADIENT, FSFusion::seEllipse(1));
 
-    // band (ring outside FG): use filled silhouette so ring does NOT enter holes
     cv::Mat fgDil, band8;
     cv::dilate(fgFilled8, fgDil, FSFusion::seEllipse(ringPx));
-    cv::bitwise_and(fgDil, ~fgFilled8, band8);
+    cv::bitwise_and(fgDil, ~fgFilled8, band8);  // outside-only ring
 
     const int bandPx = cv::countNonZero(band8);
     if (bandPx == 0)
@@ -2353,7 +2303,9 @@ void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
         return;
     }
 
-    // candidate = band & low-conf & low-tex
+    // ------------------------------------------------------------
+    // Candidate gating: band & low-conf & low-tex & ~very-conf
+    // ------------------------------------------------------------
     cv::Mat lowConf8 = (conf01 < params.haloConfMax);
     lowConf8.convertTo(lowConf8, CV_8U, 255.0);
 
@@ -2371,7 +2323,6 @@ void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
     cv::bitwise_and(band8, lowConf8, haloCand8);
     cv::bitwise_and(haloCand8, lowTex8, haloCand8);
 
-    // never touch very-confident pixels
     cv::Mat veryConf8 = (conf01 > params.confHigh);
     veryConf8.convertTo(veryConf8, CV_8U, 255.0);
     cv::bitwise_and(haloCand8, ~veryConf8, haloCand8);
@@ -2387,11 +2338,10 @@ void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
         return;
     }
 
-    double mn=0, mx=0;
-    cv::minMaxLoc(fg8, &mn, &mx);
-    qDebug() << "HaloFix: fg8 min/max =" << mn << mx;
-
-    // Visual debug (masks)
+    // ------------------------------------------------------------
+    // Debug masks (these are your halo_fg.png, etc.)
+    // ------------------------------------------------------------
+    if (!opt.depthFolderPath.isEmpty())
     {
         const QString folder = opt.depthFolderPath;
         cv::imwrite((folder + "/halo_fg.png").toStdString(), fg8);
@@ -2406,7 +2356,9 @@ void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
         cv::imwrite((folder + "/halo_overlay_band.png").toStdString(), overlay0);
     }
 
-    // Seeds + donors
+    // ------------------------------------------------------------
+    // Seeds + donor propagation (your current method)
+    // ------------------------------------------------------------
     cv::Mat seeds8, seedLabel16;
     buildForegroundBoundarySeeds(winStable16, boundary8, seeds8, seedLabel16);
 
@@ -2433,23 +2385,25 @@ void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
         return;
     }
 
-    // Visual debug (donor overlay)
+    // Visual donor overlay
+    if (!opt.depthFolderPath.isEmpty())
     {
         const QString folder = opt.depthFolderPath;
-        cv::Mat baseGray8 = toGray8_fromOut32(out32);
 
         cv::Mat donorColor = colorizeDonorLabelsBGR8(donor16, N);
-
         cv::Mat donorColorForFile = donorColor.clone();
         addSliceLegendStripBottomBGR8(donorColorForFile, N, 140, 8);
         cv::imwrite((folder + "/halo_donor_labels.png").toStdString(), donorColorForFile);
 
+        cv::Mat baseGray8 = toGray8_fromOut32(out32);
         cv::Mat overlay = makeHaloDebugOverlayBGR8(baseGray8, band8, donorColor, 0.35f, 0.60f);
         addSliceLegendStripBottomBGR8(overlay, N, 140, 8);
         cv::imwrite((folder + "/halo_overlay.png").toStdString(), overlay);
     }
 
-    // Alpha feather
+    // ------------------------------------------------------------
+    // Alpha feather + blend donors into out32
+    // ------------------------------------------------------------
     cv::Mat alphaBand01;
     haloCand8.convertTo(alphaBand01, CV_32F, 1.0 / 255.0);
 
@@ -2460,15 +2414,8 @@ void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
     cv::max(alphaBand01, 0.0f, alphaBand01);
     cv::min(alphaBand01, 1.0f, alphaBand01);
 
-    // halo-focused alpha stats
-    {
-        double amn=0, amx=0;
-        cv::minMaxLoc(alphaBand01, &amn, &amx);
-        const cv::Scalar am = cv::mean(alphaBand01);
-        qDebug() << "HaloFix: alphaBand01 mean=" << am[0] << " min/max=" << amn << amx;
-    }
-
-    // Optional: write alpha image (very useful to see feather width)
+    // Optional write alpha
+    if (!opt.depthFolderPath.isEmpty())
     {
         const QString folder = opt.depthFolderPath;
         cv::Mat a8;
@@ -2476,7 +2423,6 @@ void FSFusionDMap::applyHaloFixIfEnabled(const FSFusion::Options& opt,
         cv::imwrite((folder + "/halo_alphaBand.png").toStdString(), a8);
     }
 
-    // Blend donor slices (no per-donor debug)
     for (int s = 0; s < N; ++s)
     {
         cv::Mat ms = (donor16 == (uint16_t)s);
@@ -2646,9 +2592,9 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         return false;
 
     // Optional experimental depth
-    if (!depthExperiment(srcFun, opt, topkOrig, N, conf01, abortFlag,
-                         depthIndex16, depthIndexStable16))
-        return false;
+    // if (!depthExperiment(srcFun, opt, topkOrig, N, conf01, abortFlag,
+    //                      depthIndex16, depthIndexStable16))
+    //     return false;
 
     qDebug() << "DepthIndex16 min/max after depthExperiment:";
     double mn=0,mx=0;

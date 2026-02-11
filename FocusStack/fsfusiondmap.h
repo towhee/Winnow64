@@ -56,28 +56,24 @@ public:
         // Experiment start
         DepthMode depthMode = DepthMode::Baseline;
         DepthHookFn depthHook;  // optional experiment hook (if nullptr => do nothing)
-        // Optional “tighten” knobs:
-        float depthConfSmoothMax = 0.08f;   // 0.12 only smooth when conf is low
-        float depthConfStableMax = 0.18f;   // 0.25 only majority-filter when conf is low-ish
-        int   depthBoundaryDilateSmoothPx = 0;  // 1
-        int   depthBoundaryDilateStablePx = 0;  // 1
-        int   depthTexMax = 12;             // 8U texture gate (like your haloTexMax)
-        bool  depthUseTextureGate = true;
-        bool  writeDepthDiagnostics = true;   // write heatmaps for baseline/experimental
 
-        // --- hard boundary weight override (pre-blend) ---
-        bool  enableBoundaryWeightOverride = true;
-        // mask gates (same philosophy as halo fix)
-        int   bwoRingPx = 40;       // 30–60
-        float bwoConfMax = 0.22f;   // only override low-confidence pixels
-        int   bwoTexMax  = 12;      // only override low-texture pixels (8U scale)
-        int   bwoBandDilatePx = 0;  // optionally thicken W.band8 by a couple px (0..3)
-        float bwoVeryConfMin = 0.25f; // never override very-confident pixels
-        // foreground selection (pick a single “foreground donor slice”)
-        float bwoPickFgConfThr = 0.35f; // use confident pixels to pick fg slice
+        // Optional “tighten” knobs:
+        float depthConfSmoothMax = 0.08f;
+        float depthConfStableMax = 0.18f;
+        int   depthBoundaryDilateSmoothPx = 0;
+        int   depthBoundaryDilateStablePx = 0;
+        int   depthTexMax = 12;
+        bool  depthUseTextureGate = true;
+        bool  writeDepthDiagnostics = true;
+
+        // --- boundary override knobs (used by BWO earlier; ADO will reuse gates) ---
+        int   bwoRingPx = 40;        // 30–60
+        float bwoConfMax = 0.22f;    // low-confidence only
+        int   bwoTexMax  = 12;       // low-texture only (8U scale)
+        int   bwoBandDilatePx = 0;   // thicken band slightly (0..3)
         // Experiment end
 
-        bool enableHardWeightsOnLowpass = true;  // used in FusionPyr::accumulateSlicePyr
+        bool enableHardWeightsOnLowpass = true;
 
         int   topK = 2;
 
@@ -89,13 +85,13 @@ public:
 
         // Veto pyramid
         bool  enableDepthGradLowpassVeto = true;
-        int   hardFromLevel = 4;  // -1
+        int   hardFromLevel = 4;
         int   vetoFromLevel = -1;
         float vetoStrength = 1.0f;
         float depthGradThresh = 1.25f;
         int   vetoDilatePx = 2;
 
-        float confEps  = 1e-6f;             // confidence map energy
+        float confEps  = 1e-6f;
         float confLow  = 0.08f;
         float confHigh = 0.25f;
 
@@ -105,12 +101,12 @@ public:
         float weightBlurSigma = 1.2f;
 
         // --- Halo fix near foreground edges ---
-        bool  enableHaloRingFix = false;
-        int   haloRingPx        = 50;     // 40–60 width of ring outside foreground
-        float haloFeatherSigma  = 10.0f;  // 8–14 feather smoothness (in px-ish)
-        float haloConfMax       = 0.22f;  // 0.20–0.25 only touch low-confidence pixels
-        int   haloTexMax        = 12;     // 10–14 only touch low-texture pixels (8U scale)
-        bool  haloUseMaxIndexAsForeground = true; // assumes near->far ordering
+        bool  enableHaloRingFix = true;
+        int   haloRingPx        = 50;
+        float haloFeatherSigma  = 10.0f;
+        float haloConfMax       = 0.22f;
+        int   haloTexMax        = 12;
+        bool  haloUseMaxIndexAsForeground = true;
 
         bool  useTiling = false;
         int   tilePx = 512;
@@ -129,6 +125,9 @@ public:
         cv::Mat boundary8;
         cv::Mat band8;
 
+        // Donor override channel (ADO will populate these):
+        // overrideMask8:   CV_8U 0/255 domain where override applies
+        // overrideWinner16 CV_16U donor slice id per pixel (same size)
         cv::Mat overrideMask8;
         cv::Mat overrideWinner16;
 
