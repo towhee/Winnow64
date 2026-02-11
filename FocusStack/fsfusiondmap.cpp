@@ -238,6 +238,49 @@ static inline bool hasNaNInf(const cv::Mat& m)
     return false;
 }
 
+static inline cv::Mat overlayBwoDebugBGR8(const cv::Mat& baseBGR8,
+                                          const cv::Mat& band8,   // CV_8U 0/255
+                                          const cv::Mat& mask8)   // CV_8U 0/255
+{
+    CV_Assert(baseBGR8.type() == CV_8UC3);
+    CV_Assert(band8.empty() || band8.type() == CV_8U);
+    CV_Assert(mask8.empty() || mask8.type() == CV_8U);
+    CV_Assert(band8.empty() || band8.size() == baseBGR8.size());
+    CV_Assert(mask8.empty() || mask8.size() == baseBGR8.size());
+
+    cv::Mat out = baseBGR8.clone();
+
+    // band = yellow tint
+    if (!band8.empty())
+    {
+        cv::Mat m;
+        cv::compare(band8, 0, m, cv::CMP_GT);
+        if (cv::countNonZero(m) > 0)
+        {
+            cv::Mat yellow(out.size(), CV_8UC3, cv::Scalar(0,255,255));
+            cv::Mat tmp;
+            cv::addWeighted(out, 1.0, yellow, 0.35, 0.0, tmp);
+            tmp.copyTo(out, m);
+        }
+    }
+
+    // mask = red tint (stronger so it pops)
+    if (!mask8.empty())
+    {
+        cv::Mat m;
+        cv::compare(mask8, 0, m, cv::CMP_GT);
+        if (cv::countNonZero(m) > 0)
+        {
+            cv::Mat red(out.size(), CV_8UC3, cv::Scalar(0,0,255));
+            cv::Mat tmp;
+            cv::addWeighted(out, 1.0, red, 0.55, 0.0, tmp);
+            tmp.copyTo(out, m);
+        }
+    }
+
+    return out;
+}
+
 static inline void dbgMat3Stats(const char* tag, const cv::Mat& m)
 {
     qDebug().noquote() << tag
@@ -794,6 +837,160 @@ static cv::Mat keepLargestCC(const cv::Mat& bin8, int connectivity = 8)
     cv::Mat out;
     cv::compare(labels, best, out, cv::CMP_EQ); // 0/255
     return out;
+}
+
+// Build an override mask in ORIG space: a ring *outside* a coherent FG silhouette,
+// then gate it by low-confidence + low-texture, and never override very-confident pixels.
+//
+//   - fg8 from (win==sFg) is usually speckly (many tiny islands).
+//   - We MUST collapse it to a single coherent subject silhouette before dilation,
+//     otherwise the dilated “ring” covers most of the image.
+//
+// Notes:
+//   - Requires keepLargestCC(...)
+//   - Uses FSFusion::seEllipse(...).
+static cv::Mat buildBoundaryOverrideMask8_RingOutsideFG(
+    const cv::Mat& winTop1_16,     // CV_16U, orig
+    int sFg,
+    const cv::Mat& conf01,         // CV_32F 0..1, orig
+    const cv::Mat& top1Score32,    // CV_32F, orig
+    int ringPx,
+    float confMax,
+    int texMax8u,
+    float veryConfMin,
+    int extraDilatePx,
+    int* outBandPx /*=nullptr*/,
+    int* outCandPx /*=nullptr*/,
+    cv::Mat* outFg8 = nullptr,         // NEW (0/255)
+    cv::Mat* outFgFilled8 = nullptr,   // NEW (0/255)
+    cv::Mat* outBand8 = nullptr        // NEW (0/255)
+    )
+{
+    CV_Assert(winTop1_16.type() == CV_16U);
+    CV_Assert(conf01.type() == CV_32F);
+    CV_Assert(top1Score32.type() == CV_32F);
+    CV_Assert(winTop1_16.size() == conf01.size());
+    CV_Assert(winTop1_16.size() == top1Score32.size());
+
+    ringPx        = std::max(2, ringPx);
+    extraDilatePx = std::max(0, extraDilatePx);
+    confMax       = std::max(0.0f, std::min(1.0f, confMax));
+    veryConfMin   = std::max(0.0f, std::min(1.0f, veryConfMin));
+    texMax8u      = std::max(0, std::min(255, texMax8u));
+
+    // ------------------------------------------------------------
+    // 1) Build a crude FG mask from top1 labels == sFg
+    // ------------------------------------------------------------
+    cv::Mat fg8 = (winTop1_16 == (uint16_t)sFg);
+    fg8.convertTo(fg8, CV_8U, 255.0);
+
+    if (outFg8) *outFg8 = fg8.clone();
+
+    // ------------------------------------------------------------
+    // 2) Collapse speckles into a coherent subject silhouette
+    // ------------------------------------------------------------
+    // Light close to connect thin structures / micro-gaps (twigs)
+    cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(2));
+
+    // Keep only the main connected component (prevents global “ring” explosion)
+    fg8 = keepLargestCC(fg8, /*connectivity=*/8);
+
+    // If FG is empty, nothing to do
+    if (fg8.empty() || cv::countNonZero(fg8) == 0)
+    {
+        if (outBandPx) *outBandPx = 0;
+        if (outCandPx) *outCandPx = 0;
+        if (outFg8) *outFg8 = fg8.clone();
+        if (outFgFilled8) outFgFilled8->release();
+        if (outBand8) outBand8->release();
+        return cv::Mat::zeros(winTop1_16.size(), CV_8U);
+    }
+
+    // Fill holes robustly (even if FG touches border)
+    auto fillHoles8 = [](const cv::Mat& bin8)->cv::Mat
+    {
+        CV_Assert(bin8.type() == CV_8U);
+
+        cv::Mat inv;
+        cv::bitwise_not(bin8, inv);
+
+        // Pad with a 1px 255 border so floodFill seed is guaranteed “outside” in inv-space.
+        cv::Mat invPad;
+        cv::copyMakeBorder(inv, invPad, 1, 1, 1, 1,
+                           cv::BORDER_CONSTANT, cv::Scalar(255));
+
+        cv::floodFill(invPad, cv::Point(0, 0), cv::Scalar(0));
+
+        cv::Mat ff = invPad(cv::Rect(1, 1, bin8.cols, bin8.rows)).clone();
+
+        cv::Mat holesMask;
+        cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where holes
+
+        cv::Mat filled = bin8.clone();
+        filled.setTo(255, holesMask);
+        return filled;
+    };
+
+    cv::Mat fgFilled8 = fillHoles8(fg8);
+
+    if (outFgFilled8) *outFgFilled8 = fgFilled8.clone();
+
+    // ------------------------------------------------------------
+    // 3) Build the OUTSIDE ring band: dilate(fg) & ~fg
+    // ------------------------------------------------------------
+    cv::Mat fgDil8;
+    cv::dilate(fgFilled8, fgDil8, FSFusion::seEllipse(ringPx));
+
+    cv::Mat band8;
+    cv::bitwise_and(fgDil8, ~fgFilled8, band8); // outside-only ring (0/255)
+
+    if (extraDilatePx > 0)
+        cv::dilate(band8, band8, FSFusion::seEllipse(extraDilatePx));
+
+    if (outBand8) *outBand8 = band8.clone();
+
+    const int bandPx = cv::countNonZero(band8);
+    if (outBandPx) *outBandPx = bandPx;
+
+    if (bandPx == 0)
+    {
+        if (outCandPx) *outCandPx = 0;
+        return cv::Mat::zeros(winTop1_16.size(), CV_8U);
+    }
+
+    // ------------------------------------------------------------
+    // 4) Gate inside the band: low-conf & low-tex & NOT very-conf
+    // ------------------------------------------------------------
+
+    // low confidence
+    cv::Mat lowConf8 = (conf01 < confMax);
+    lowConf8.convertTo(lowConf8, CV_8U, 255.0);
+
+    // low texture: scale top1Score32 to 8U using max-based scale (consistent with your code)
+    double smn = 0.0, smx = 0.0;
+    cv::minMaxLoc(top1Score32, &smn, &smx);
+    const float scale = (smx > 1e-12) ? (255.0f / (float)smx) : 1.0f;
+
+    cv::Mat tex8;
+    top1Score32.convertTo(tex8, CV_8U, scale);
+
+    cv::Mat lowTex8 = (tex8 <= texMax8u);
+    lowTex8.convertTo(lowTex8, CV_8U, 255.0);
+
+    // never override very-confident pixels
+    cv::Mat veryConf8 = (conf01 > veryConfMin);
+    veryConf8.convertTo(veryConf8, CV_8U, 255.0);
+
+    // mask = band & lowConf & lowTex & ~veryConf
+    cv::Mat mask8;
+    cv::bitwise_and(band8, lowConf8, mask8);
+    cv::bitwise_and(mask8, lowTex8, mask8);
+    cv::bitwise_and(mask8, ~veryConf8, mask8);
+
+    const int candPx = cv::countNonZero(mask8);
+    if (outCandPx) *outCandPx = candPx;
+
+    return mask8; // CV_8U 0/255
 }
 
 // softmax weights from topk scores
@@ -1578,7 +1775,6 @@ bool FSFusionDMap::depthExperiment(const QString& srcFun,
                                    cv::Mat& depthIndex16,
                                    cv::Mat& winStable16)
 {
-
     if (FSFusion::isAbort(abortFlag)) return false;
 
     CV_Assert(topkOrig.valid());
@@ -1586,789 +1782,189 @@ bool FSFusionDMap::depthExperiment(const QString& srcFun,
     CV_Assert(conf01.type() == CV_32F);
     CV_Assert(conf01.size() == topkOrig.sz);
 
+    qDebug() << "DepthExperiment: entering, base diffs =" << countHorizontalDiffs16(topkOrig.idx16[0]);
+
+    // If not in experiment mode, leave what buildMapsAndStabilize produced.
+    if (params.depthMode != DepthMode::Experimental)
+        return true;
+
     // ---------------------------------------------------------------------
-    // Baseline depth = top-1 winner labels (orig size)
+    // Baseline (current winner labels)
     // ---------------------------------------------------------------------
-    cv::Mat depthBaseline16 = topkOrig.idx16[0].clone();
+    cv::Mat depthBaseline16 = depthIndex16.clone();
     CV_Assert(depthBaseline16.type() == CV_16U);
+    CV_Assert(depthBaseline16.size() == topkOrig.sz);
 
-    // Clamp indices defensively (should already be ok)
+    const int K = std::max(1, topkOrig.K);
+    CV_Assert((int)topkOrig.score32.size() == K);
+    CV_Assert((int)topkOrig.idx16.size() == K);
+
+    // ---------------------------------------------------------------------
+    // Mode B: continuous expected depth from Top-K posterior
+    // p_k(x) = softmax(score_k / temp) over the Top-K candidates at that pixel
+    // d(x)   = sum_k p_k(x) * idx_k(x)
+    // u(x)   = 1 - max_k p_k(x)   (uncertainty)
+    // ---------------------------------------------------------------------
+    const float temp = std::max(1e-6f, params.softTemp);
+
+    cv::Mat d32(topkOrig.sz, CV_32F, cv::Scalar(0));
+    cv::Mat u32(topkOrig.sz, CV_32F, cv::Scalar(0));
+
+    std::vector<const float*> sPtr(K);
+    std::vector<const uint16_t*> iPtr(K);
+
+    for (int y = 0; y < topkOrig.sz.height; ++y)
     {
-        double mn=0, mx=0;
-        cv::minMaxLoc(depthBaseline16, &mn, &mx);
-        if (mn < 0 || mx >= N)
+        for (int k = 0; k < K; ++k)
         {
-            qWarning().noquote() << "WARNING:" << srcFun
-                                 << "depthBaseline16 out of range mn/mx="
-                                 << mn << mx << " N=" << N;
-            // Clamp in-place
-            for (int y=0; y<depthBaseline16.rows; ++y)
-            {
-                uint16_t* d = depthBaseline16.ptr<uint16_t>(y);
-                for (int x=0; x<depthBaseline16.cols; ++x)
-                {
-                    int v = (int)d[x];
-                    v = std::max(0, std::min(v, N-1));
-                    d[x] = (uint16_t)v;
-                }
-            }
+            sPtr[k] = topkOrig.score32[k].ptr<float>(y);
+            iPtr[k] = topkOrig.idx16[k].ptr<uint16_t>(y);
         }
-    }
 
-    // ---------------------------------------------------------------------
-    // Build helper masks: boundary, low-conf, optional low-tex
-    // Tighten expansion by ONLY smoothing where:
-    //    low conf  AND near a label boundary AND (optional) low texture.
-    // ---------------------------------------------------------------------
+        float* dRow = d32.ptr<float>(y);
+        float* uRow = u32.ptr<float>(y);
 
-    auto boundaryFromLabels8_local = [](const cv::Mat& lab16)->cv::Mat
-    {
-        CV_Assert(lab16.type() == CV_16U);
-        cv::Mat b = cv::Mat::zeros(lab16.size(), CV_8U);
-
-        for (int y = 0; y < lab16.rows; ++y)
+        for (int x = 0; x < topkOrig.sz.width; ++x)
         {
-            const uint16_t* r  = lab16.ptr<uint16_t>(y);
-            const uint16_t* ru = (y > 0) ? lab16.ptr<uint16_t>(y-1) : nullptr;
-            const uint16_t* rd = (y+1 < lab16.rows) ? lab16.ptr<uint16_t>(y+1) : nullptr;
-            uint8_t* out = b.ptr<uint8_t>(y);
+            float sMax = sPtr[0][x];
+            for (int k = 1; k < K; ++k) sMax = std::max(sMax, sPtr[k][x]);
 
-            for (int x = 0; x < lab16.cols; ++x)
+            float e[16];
+            float sum = 0.0f;
+            for (int k = 0; k < K; ++k)
             {
-                const uint16_t v = r[x];
-                bool diff = false;
-                if (x > 0) diff |= (v != r[x-1]);
-                if (x+1 < lab16.cols) diff |= (v != r[x+1]);
-                if (ru) diff |= (v != ru[x]);
-                if (rd) diff |= (v != rd[x]);
-                if (diff) out[x] = 255;
-            }
-        }
-        return b;
-    };
-
-    // Boundary (raw) then slightly dilated for masks
-    cv::Mat boundary8 = boundaryFromLabels8_local(depthBaseline16);
-
-    cv::Mat boundarySmooth8 = boundary8.clone();
-    if (params.depthBoundaryDilateSmoothPx > 0)
-        cv::dilate(boundarySmooth8, boundarySmooth8,
-                   FSFusion::seEllipse(params.depthBoundaryDilateSmoothPx));
-
-    cv::Mat boundaryStable8 = boundary8.clone();
-    if (params.depthBoundaryDilateStablePx > 0)
-        cv::dilate(boundaryStable8, boundaryStable8,
-                   FSFusion::seEllipse(params.depthBoundaryDilateStablePx));
-
-    // Low confidence masks (0/255)
-    cv::Mat lowConfSmooth8 = (conf01 < params.depthConfSmoothMax);
-    lowConfSmooth8.convertTo(lowConfSmooth8, CV_8U, 255.0);
-
-    cv::Mat lowConfStable8 = (conf01 < params.depthConfStableMax);
-    lowConfStable8.convertTo(lowConfStable8, CV_8U, 255.0);
-
-    // Optional texture gate (from top1 score, scaled to 8U like halo uses)
-    cv::Mat lowTex8; // 0/255 (255 means "LOW texture")
-    if (params.depthUseTextureGate)
-    {
-        double smn=0.0, smx=0.0;
-        cv::minMaxLoc(topkOrig.score32[0], &smn, &smx);
-        const float scale = (smx > 1e-12) ? (255.0f / (float)smx) : 1.0f;
-
-        cv::Mat tex8;
-        topkOrig.score32[0].convertTo(tex8, CV_8U, scale);
-
-        lowTex8 = (tex8 <= params.depthTexMax);
-        lowTex8.convertTo(lowTex8, CV_8U, 255.0);
-    }
-    else
-    {
-        lowTex8 = cv::Mat(depthBaseline16.size(), CV_8U, cv::Scalar(255));
-    }
-
-    // // ---------------------------------------------------------------------
-    // // 1) “Tighten” pass: ONLY allow idx0 <-> idx1 flips when ambiguity is high
-    // // This is safer than medianBlur on label images (which tends to expand regions).
-    // // ---------------------------------------------------------------------
-    // cv::Mat depthTight16 = depthBaseline16.clone();
-    // {
-    //     CV_Assert(topkOrig.K >= 1);
-    //     const cv::Mat& idx0 = topkOrig.idx16[0];
-    //     const cv::Mat& idx1 = (topkOrig.K >= 2) ? topkOrig.idx16[1] : topkOrig.idx16[0];
-    //     const cv::Mat& s0   = topkOrig.score32[0];
-    //     const cv::Mat& s1   = (topkOrig.K >= 2) ? topkOrig.score32[1] : topkOrig.score32[0];
-
-    //     // margin01 ~ “how much better is top1 than top2”
-    //     cv::Mat margin01 = (s0 - s1) / (s0 + std::max(1e-12f, params.confEps));
-    //     cv::max(margin01, 0.0f, margin01);
-    //     cv::min(margin01, 1.0f, margin01);
-
-    //     // Build mask: boundary & lowConf & lowTex
-    //     cv::Mat m8;
-    //     cv::bitwise_and(boundarySmooth8, lowConfSmooth8, m8);
-    //     cv::bitwise_and(m8, lowTex8, m8);
-
-    //     // Only touch pixels that are truly ambiguous
-    //     const float ambMax = 0.15f; // start 0.10–0.18
-    //     cv::Mat amb8 = (margin01 < ambMax);
-    //     amb8.convertTo(amb8, CV_8U, 255.0);
-    //     cv::bitwise_and(m8, amb8, m8);
-
-
-    //     // =====================================================================
-    //     // SUBJECT-FOCUSED ROI DIAGNOSTICS (slice 5 by default)
-    //     // Writes CROPPED images + ROI-only stats, so you can see twig behavior.
-    //     // =====================================================================
-    //     const int dbgSlice = 5;                     // <- twig slice id
-    //     const int roiPadPx = 40;                    // <- expand ROI a bit
-    //     const int ccMinArea = 2000;                 // <- ignore tiny specks
-
-    //     auto clampRectToImage = [](cv::Rect r, const cv::Size& sz)->cv::Rect
-    //     {
-    //         int x0 = std::max(0, r.x);
-    //         int y0 = std::max(0, r.y);
-    //         int x1 = std::min(sz.width,  r.x + r.width);
-    //         int y1 = std::min(sz.height, r.y + r.height);
-    //         return cv::Rect(x0, y0, std::max(0, x1 - x0), std::max(0, y1 - y0));
-    //     };
-
-    //     auto boundingRectOfLargestCC = [&](const cv::Mat& bin8, int minArea)->cv::Rect
-    //     {
-    //         CV_Assert(bin8.type() == CV_8U);
-
-    //         cv::Mat src;
-    //         cv::compare(bin8, 0, src, cv::CMP_GT); // 0/255
-    //         if (cv::countNonZero(src) == 0) return cv::Rect();
-
-    //         cv::Mat labels, stats, centroids;
-    //         int n = cv::connectedComponentsWithStats(src, labels, stats, centroids, 8, CV_32S);
-    //         if (n <= 1) return cv::Rect();
-
-    //         int best = -1;
-    //         int bestArea = 0;
-    //         for (int i = 1; i < n; ++i)
-    //         {
-    //             int area = stats.at<int>(i, cv::CC_STAT_AREA);
-    //             if (area >= minArea && area > bestArea) { bestArea = area; best = i; }
-    //         }
-    //         if (best < 0) return cv::Rect();
-
-    //         int x = stats.at<int>(best, cv::CC_STAT_LEFT);
-    //         int y = stats.at<int>(best, cv::CC_STAT_TOP);
-    //         int w = stats.at<int>(best, cv::CC_STAT_WIDTH);
-    //         int h = stats.at<int>(best, cv::CC_STAT_HEIGHT);
-    //         return cv::Rect(x, y, w, h);
-    //     };
-
-    //     // Build mask for dbgSlice in baseline depth
-    //     cv::Mat mSlice8 = (depthBaseline16 == (uint16_t)dbgSlice);
-    //     mSlice8.convertTo(mSlice8, CV_8U, 255.0);
-
-    //     cv::Rect roi = boundingRectOfLargestCC(mSlice8, ccMinArea);
-    //     if (roi.area() > 0)
-    //     {
-    //         // Expand ROI
-    //         roi.x -= roiPadPx; roi.y -= roiPadPx;
-    //         roi.width  += 2 * roiPadPx;
-    //         roi.height += 2 * roiPadPx;
-    //         roi = clampRectToImage(roi, depthBaseline16.size());
-
-    //         // ROI-only stats helper
-    //         auto roiMean = [&](const cv::Mat& m32)->double {
-    //             CV_Assert(m32.type() == CV_32F);
-    //             cv::Scalar mu = cv::mean(m32(roi));
-    //             return mu[0];
-    //         };
-
-    //         // conf + margin ROI means
-    //         const double confMeanROI   = roiMean(conf01);
-    //         const double marginMeanROI = roiMean(margin01);
-
-    //         // How much of ROI is labeled dbgSlice in baseline?
-    //         int roiPx = roi.width * roi.height;
-    //         int slicePxBase = cv::countNonZero(mSlice8(roi));
-    //         qDebug().noquote()
-    //             << "DepthROI(slice" << dbgSlice << "): roi=" << roi.x << roi.y << roi.width << roi.height
-    //             << " roiPx=" << roiPx
-    //             << " baseSlicePx=" << slicePxBase
-    //             << " frac=" << (roiPx > 0 ? (double)slicePxBase / (double)roiPx : 0.0)
-    //             << " confMean=" << confMeanROI
-    //             << " marginMean=" << marginMeanROI;
-
-    //         if (params.writeDepthDiagnostics)
-    //         {
-    //             const QString folder = opt.depthFolderPath;
-
-    //             // Write CROPPED masks/maps (orig size crop, no resize)
-    //             cv::imwrite((folder + "/roi_mask_slice6_base.png").toStdString(), mSlice8(roi));
-
-    //             // canFlip in ROI (idx0!=idx1)
-    //             cv::Mat canFlip = (idx0 != idx1);
-    //             canFlip.convertTo(canFlip, CV_8U, 255.0);
-    //             cv::imwrite((folder + "/roi_canFlip_idx0neqidx1.png").toStdString(), canFlip(roi));
-
-    //             // idx1==6 in ROI (does top2 even offer 6?)
-    //             if (topkOrig.K >= 2)
-    //             {
-    //                 cv::Mat idx1is6 = (idx1 == (uint16_t)dbgSlice);
-    //                 idx1is6.convertTo(idx1is6, CV_8U, 255.0);
-    //                 cv::imwrite((folder + "/roi_idx1_is6.png").toStdString(), idx1is6(roi));
-    //             }
-
-    //             // conf ROI (0..255)
-    //             cv::Mat conf8;
-    //             conf01(roi).convertTo(conf8, CV_8U, 255.0);
-    //             cv::imwrite((folder + "/roi_conf.png").toStdString(), conf8);
-
-    //             // margin ROI (0..255)
-    //             cv::Mat mar8;
-    //             margin01(roi).convertTo(mar8, CV_8U, 255.0);
-    //             cv::imwrite((folder + "/roi_margin.png").toStdString(), mar8);
-
-    //             // texture ROI from top1Score32 (scaled like you do)
-    //             {
-    //                 double smn=0.0, smx=0.0;
-    //                 cv::minMaxLoc(topkOrig.score32[0], &smn, &smx);
-    //                 float scale = (smx > 1e-12) ? (255.0f / (float)smx) : 1.0f;
-
-    //                 cv::Mat tex8;
-    //                 topkOrig.score32[0](roi).convertTo(tex8, CV_8U, scale);
-    //                 cv::imwrite((folder + "/roi_tex8.png").toStdString(), tex8);
-    //             }
-
-    //             // Depth heatmap crop (baseline only)
-    //             {
-    //                 cv::Mat heat = FSUtilities::depthHeatmap(depthBaseline16, N, "Depth (baseline)");
-    //                 cv::imwrite((folder + "/roi_depth_baseline.png").toStdString(), heat(roi));
-    //             }
-    //         }
-    //     }
-    //     else
-    //     {
-    //         qDebug() << "DepthROI: no sufficiently large CC found for slice" << dbgSlice;
-    //     }
-
-    //     // END  SUBJECT-FOCUSED ROI DIAGNOSTICS (slice 5 by default)
-    //     // -----------------------------------------------------------------------
-
-    //     if (params.writeDepthDiagnostics)
-    //     {
-    //         const QString folder = opt.depthFolderPath;
-
-    //         const int twigSlice = 5;
-
-    //         cv::Mat m0 = (topkOrig.idx16[0] == (uint16_t)twigSlice);
-    //         cv::Mat m1 = (topkOrig.K >= 2) ? (topkOrig.idx16[1] == (uint16_t)twigSlice) : cv::Mat();
-
-    //         m0.convertTo(m0, CV_8U, 255);
-    //         cv::imwrite((folder + "/dbg_idx0_is6.png").toStdString(), m0);
-
-    //         if (!m1.empty()) {
-    //             m1.convertTo(m1, CV_8U, 255);
-    //             cv::imwrite((folder + "/dbg_idx1_is6.png").toStdString(), m1);
-    //         }
-
-    //         // where idx0 != idx1 (places where your flip logic could ever act)
-    //         cv::Mat canFlip = (topkOrig.idx16[0] != topkOrig.idx16[1]);
-    //         canFlip.convertTo(canFlip, CV_8U, 255);
-    //         cv::imwrite((folder + "/dbg_canFlip_idx0neqidx1.png").toStdString(), canFlip);
-
-    //         // optional: ambiguous pixels mask you actually used (m8)
-    //         // write m8 too, so you can see if twig boundary is even covered
-    //         cv::imwrite((folder + "/dbg_tight_mask.png").toStdString(), m8);
-    //     }
-
-    //     qDebug() << "DepthTight: maskPx=" << cv::countNonZero(m8);
-
-    //     auto majority3x3 = [&](const cv::Mat& lab16, int y, int x, int& outCount)->uint16_t
-    //     {
-    //         uint16_t a[9];
-    //         int k=0;
-    //         for (int yy=y-1; yy<=y+1; ++yy)
-    //             for (int xx=x-1; xx<=x+1; ++xx)
-    //                 a[k++] = lab16.at<uint16_t>(yy,xx);
-
-    //         uint16_t best = a[0];
-    //         int bestCnt = 1;
-    //         for (int i=0;i<9;++i){
-    //             int c=0;
-    //             for (int j=0;j<9;++j) c += (a[j]==a[i]);
-    //             if (c>bestCnt){ bestCnt=c; best=a[i]; }
-    //         }
-    //         outCount = bestCnt;
-    //         return best;
-    //     };
-
-    //     int flips = 0;
-
-    //     // Only allow idx0 -> idx1 flip when the local neighborhood “votes” for idx1
-    //     for (int y=1; y<depthTight16.rows-1; ++y)
-    //     {
-    //         const uint8_t* mm = m8.ptr<uint8_t>(y);
-    //         for (int x=1; x<depthTight16.cols-1; ++x)
-    //         {
-    //             if (!mm[x]) continue;
-
-    //             const uint16_t a0 = idx0.at<uint16_t>(y,x);
-    //             const uint16_t a1 = idx1.at<uint16_t>(y,x);
-    //             if (a0 == a1) continue;
-
-    //             int cnt=0;
-    //             const uint16_t maj = majority3x3(depthTight16, y, x, cnt);
-
-    //             // Flip ONLY if majority == this pixel’s own top2 alternative
-    //             if (maj == a1 && cnt >= 5)
-    //             {
-    //                 depthTight16.at<uint16_t>(y,x) = a1;
-    //                 flips++;
-    //             }
-    //         }
-    //     }
-
-    //     qDebug() << "DepthTight: flips=" << flips;
-    //     {
-    //         cv::Mat d = (depthTight16 != depthBaseline16);
-    //         d.convertTo(d, CV_8U, 255);
-    //         const int changed = cv::countNonZero(d);
-    //         qDebug() << "DepthTight: changedPx=" << changed;
-
-    //         if (params.writeDepthDiagnostics) {
-    //             const QString folder = opt.depthFolderPath;
-    //             cv::imwrite((folder + "/depth_diff_tight.png").toStdString(), d); // orig size
-    //         }
-    //     }
-    // }
-
-
-    // ---------------------------------------------------------------------
-    // 1) Tighten by "confident core" + nearest-label fill on ambiguous pixels
-    // This actually moves boundaries inward (shrinks fat regions).
-    // ---------------------------------------------------------------------
-    cv::Mat depthTight16 = depthBaseline16.clone();
-
-    auto makeTex8 = [&]()->cv::Mat {
-        // Convert top1Score32 to 8U (0..255) like you do elsewhere
-        double smn=0.0, smx=0.0;
-        cv::minMaxLoc(topkOrig.score32[0], &smn, &smx);
-        const float scale = (smx > 1e-12) ? (255.0f / (float)smx) : 1.0f;
-
-        cv::Mat tex8;
-        topkOrig.score32[0].convertTo(tex8, CV_8U, scale);
-        return tex8;
-    };
-
-    cv::Mat tex8 = makeTex8();
-
-
-    // ---------------------------------------------------------------------
-    // SUBJECT SCOPE MASK (optional): load fg.png and constrain depth tightening
-    // - If fg.png exists and matches size => scope8 is 0/255 (255 = in-scope)
-    // - If missing or invalid => scope8 = all 255 (full frame, no constraint)
-    // ---------------------------------------------------------------------
-    cv::Mat scope8(depthBaseline16.size(), CV_8U, cv::Scalar(255)); // default: whole frame
-
-    {
-        const QString fgPath = opt.depthFolderPath + "/fg.png"; // <-- adjust if needed
-
-        cv::Mat fg = cv::imread(fgPath.toStdString(), cv::IMREAD_UNCHANGED);
-
-        if (fg.empty())
-        {
-            qDebug().noquote() << "DepthScope: fg.png not found; using full-frame scope:" << fgPath;
-        }
-        else
-        {
-            cv::Mat fg8;
-
-            // Convert to 8U single-channel mask-ish image
-            if (fg.channels() == 4)
-            {
-                // If RGBA, use alpha as mask
-                std::vector<cv::Mat> ch;
-                cv::split(fg, ch);
-                fg8 = ch[3];
-            }
-            else if (fg.channels() == 3)
-            {
-                cv::cvtColor(fg, fg8, cv::COLOR_BGR2GRAY);
-            }
-            else
-            {
-                fg8 = fg;
+                float z = (sPtr[k][x] - sMax) / temp;
+                z = std::max(-80.0f, std::min(80.0f, z));
+                e[k] = std::exp(z);
+                sum += e[k];
             }
 
-            if (fg8.type() != CV_8U)
-                fg8.convertTo(fg8, CV_8U);
-
-            if (fg8.size() != depthBaseline16.size())
+            if (sum <= 0.0f)
             {
-                qWarning().noquote()
-                << "WARNING:" << srcFun
-                << "fg.png size mismatch. fg=" << fg8.cols << "x" << fg8.rows
-                << " expected=" << depthBaseline16.cols << "x" << depthBaseline16.rows
-                << " -> ignoring fg.png (full-frame scope).";
+                dRow[x] = (float)iPtr[0][x];
+                uRow[x] = 0.0f;
+                continue;
             }
-            else
+
+            float inv = 1.0f / sum;
+
+            float d = 0.0f;
+            float pMax = 0.0f;
+            for (int k = 0; k < K; ++k)
             {
-                // Binary scope: any non-zero pixel is "foreground/in-scope"
-                scope8 = (fg8 > 0);
-                scope8.convertTo(scope8, CV_8U, 255.0);
-
-                // Optional: slightly dilate the scope so tightening can act right on edges.
-                // Keep small so you don't overreach.
-                const int scopeDilatePx = 4; // try 2..8
-                if (scopeDilatePx > 0)
-                    cv::dilate(scope8, scope8, FSFusion::seEllipse(scopeDilatePx));
-
-                qDebug() << "DepthScope: scopePx=" << cv::countNonZero(scope8);
-
-                if (params.writeDepthDiagnostics)
-                {
-                    const QString folder = opt.depthFolderPath;
-                    cv::imwrite((folder + "/dbg_scope8.png").toStdString(), scope8); // orig size
-                }
+                float p = e[k] * inv;
+                pMax = std::max(pMax, p);
+                d += p * (float)iPtr[k][x];
             }
-        }
-    }
 
-
-
-    // --- core criteria (tune these) ---
-    const float confCoreMin   = std::max(params.confHigh, 0.25f);   // core must be confident
-    const int   texCoreMin8   = std::max(20, params.depthTexMax + 6); // core must be textured
-    const float confAmbMax    = params.depthConfStableMax;          // ambiguous zone max conf
-    const int   texAmbMax8    = params.depthTexMax;                 // ambiguous zone max texture
-
-    // Core mask: pixels we "trust" (seeds)
-    cv::Mat core8 = (conf01 > confCoreMin);
-    core8.convertTo(core8, CV_8U, 255.0);
-
-    cv::Mat texCore8 = (tex8 >= texCoreMin8);
-    texCore8.convertTo(texCore8, CV_8U, 255.0);
-
-    cv::bitwise_and(core8, texCore8, core8);
-
-    qDebug() << "DepthCore: corePx=" << cv::countNonZero(core8);
-
-    // Ambiguous mask: pixels we are allowed to reassign (where twig fatness lives)
-    cv::Mat amb8 = (conf01 < confAmbMax);
-    amb8.convertTo(amb8, CV_8U, 255.0);
-
-    cv::Mat texAmb8 = (tex8 <= texAmbMax8);
-    texAmb8.convertTo(texAmb8, CV_8U, 255.0);
-
-    cv::bitwise_and(amb8, texAmb8, amb8);
-
-    // Constrain ambiguous zone to subject scope
-    cv::bitwise_and(amb8, scope8, amb8);
-
-    // Constrain core to subject scope
-    cv::bitwise_and(core8, scope8, core8);
-
-    qDebug() << "DepthCore: ambPx=" << cv::countNonZero(amb8);
-
-    if (params.writeDepthDiagnostics)
-    {
-        const QString folder = opt.depthFolderPath;
-        cv::imwrite((folder + "/dbg_core8.png").toStdString(), core8);
-        cv::imwrite((folder + "/dbg_amb8.png").toStdString(), amb8);
-        cv::imwrite((folder + "/dbg_tex8.png").toStdString(), tex8);
-    }
-
-    // (Optional) limit ambiguous only near boundaries so we don't disturb big flat regions
-    if (params.depthBoundaryDilateStablePx >= 0)
-    {
-        cv::Mat boundaryGate8 = boundary8.clone();   // <-- use outer boundary8
-        if (params.depthBoundaryDilateStablePx > 0)
-            cv::dilate(boundaryGate8, boundaryGate8, FSFusion::seEllipse(params.depthBoundaryDilateStablePx));
-
-        cv::bitwise_and(amb8, boundaryGate8, amb8);
-        qDebug() << "DepthCore: ambPx(boundary-gated)=" << cv::countNonZero(amb8);
-    }
-
-    // BFS/Voronoi fill:
-    // - keep labels on core pixels
-    // - for amb pixels, assign nearest core label
-    const uint16_t UNK = 0xFFFF;
-    cv::Mat out16(depthBaseline16.size(), CV_16U, cv::Scalar(UNK));
-    cv::Mat dist16(depthBaseline16.size(), CV_16U, cv::Scalar(0xFFFF));
-    std::deque<cv::Point> q;
-
-    // seed queue from core pixels
-    for (int y = 0; y < out16.rows; ++y)
-    {
-        const uint8_t* c = core8.ptr<uint8_t>(y);
-        const uint16_t* b = depthBaseline16.ptr<uint16_t>(y);
-        uint16_t* o = out16.ptr<uint16_t>(y);
-        uint16_t* d = dist16.ptr<uint16_t>(y);
-
-        for (int x = 0; x < out16.cols; ++x)
-        {
-            if (!c[x]) continue;
-            o[x] = b[x];
-            d[x] = 0;
-            q.emplace_back(x, y);
-        }
-    }
-
-    if (q.empty())
-    {
-        qDebug() << "DepthCore: no core seeds; leaving depthTight as baseline.";
-    }
-    else
-    {
-        const int dx4[4] = { 1,-1,0,0 };
-        const int dy4[4] = { 0,0,1,-1 };
-
-        int filled = 0;
-        const int maxSteps = 4096; // safety; usually not hit
-
-        while (!q.empty())
-        {
-            cv::Point p = q.front(); q.pop_front();
-            const int x = p.x, y = p.y;
-
-            const uint16_t lab = out16.at<uint16_t>(y,x);
-            const uint16_t dd  = dist16.at<uint16_t>(y,x);
-            if (dd >= (uint16_t)maxSteps) continue;
-
-            for (int k=0;k<4;++k)
-            {
-                int xx = x + dx4[k];
-                int yy = y + dy4[k];
-                if ((unsigned)xx >= (unsigned)out16.cols || (unsigned)yy >= (unsigned)out16.rows) continue;
-
-                // only fill ambiguous pixels; leave non-ambiguous as baseline
-                if (!amb8.at<uint8_t>(yy,xx)) continue;
-
-                uint16_t& dstD = dist16.at<uint16_t>(yy,xx);
-                if (dstD != (uint16_t)0xFFFF) continue; // visited
-
-                out16.at<uint16_t>(yy,xx) = lab;
-                dstD = (uint16_t)(dd + 1);
-                q.emplace_back(xx, yy);
-                filled++;
-            }
-        }
-
-        qDebug() << "DepthCore: filledAmbPx=" << filled;
-
-        // Build tightened depth:
-        // - start with baseline
-        // - overwrite only ambiguous pixels we successfully filled
-        depthTight16 = depthBaseline16.clone();
-        cv::Mat hasFill8 = (out16 != UNK);
-        hasFill8.convertTo(hasFill8, CV_8U, 255.0);
-
-        cv::Mat useFill8;
-        cv::bitwise_and(hasFill8, amb8, useFill8);
-
-        out16.copyTo(depthTight16, useFill8);
-
-        if (params.writeDepthDiagnostics)
-        {
-            const QString folder = opt.depthFolderPath;
-
-            // 0/255 map of where depth changed (tight vs baseline)
-            cv::Mat delta8 = (depthTight16 != depthBaseline16);
-            delta8.convertTo(delta8, CV_8U, 255.0);
-
-            // also scope overlay so you can see if changes are inside the FG
-            cv::imwrite((folder + "/dbg_depth_tight_delta.png").toStdString(), delta8);
-        }
-
-        qDebug() << "DepthCore: appliedFillPx=" << cv::countNonZero(useFill8);
-
-        if (params.writeDepthDiagnostics)
-        {
-            const QString folder = opt.depthFolderPath;
-            cv::imwrite((folder + "/dbg_useFill8.png").toStdString(), useFill8);
-        }
-
-        // ------------------------------------------------------------
-        // FULL-SIZE subject-specific diagnostics: per-slice area + diff
-        // (No ROI; these are easy to compare with baseline/fused)
-        // ------------------------------------------------------------
-        if (params.writeDepthDiagnostics)
-        {
-            const QString folder = opt.depthFolderPath;
-
-            auto writeSliceMasks = [&](int slice)
-            {
-                cv::Mat mBase = (depthBaseline16 == (uint16_t)slice);
-                cv::Mat mTight = (depthTight16 == (uint16_t)slice);
-
-                mBase.convertTo(mBase, CV_8U, 255.0);
-                mTight.convertTo(mTight, CV_8U, 255.0);
-
-                cv::Mat mDiff;
-                cv::bitwise_xor(mBase, mTight, mDiff);      // pixels that changed membership
-
-                const int basePx  = cv::countNonZero(mBase);
-                const int tightPx = cv::countNonZero(mTight);
-                const int diffPx  = cv::countNonZero(mDiff);
-
-                qDebug().noquote()
-                    << "DepthSlice" << slice
-                    << " basePx=" << basePx
-                    << " tightPx=" << tightPx
-                    << " delta=" << (tightPx - basePx)
-                    << " diffPx=" << diffPx;
-
-                cv::imwrite((folder + QString("/dbg_slice%1_base.png").arg(slice)).toStdString(),  mBase);
-                cv::imwrite((folder + QString("/dbg_slice%1_tight.png").arg(slice)).toStdString(), mTight);
-                cv::imwrite((folder + QString("/dbg_slice%1_diff.png").arg(slice)).toStdString(),  mDiff);
-            };
-
-            // You have some confusion in the thread between slice 5 vs 6.
-            // Write BOTH so we stop guessing.
-            writeSliceMasks(5);
-            writeSliceMasks(6);
-
-            // ---------------------------------------------------------------------
-            // OPTIONAL: Use manual foreground mask (fg.png) to judge "fatness"
-            // Writes full-size overlays + prints inside/outside-band stats.
-            // Put this INSIDE: if (params.writeDepthDiagnostics) { ... }  (near the end)
-            // ---------------------------------------------------------------------
-            {
-                const QString folder = opt.depthFolderPath;
-                const QString fgPath = folder + "/fg.png";
-
-                cv::Mat fg;
-                fg = cv::imread(fgPath.toStdString(), cv::IMREAD_UNCHANGED);
-
-                if (!fg.empty())
-                {
-                    // Make fg8: 0/255, same size
-                    cv::Mat fg8;
-                    if (fg.channels() == 4)
-                    {
-                        std::vector<cv::Mat> ch;
-                        cv::split(fg, ch);
-                        fg8 = ch[3]; // alpha
-                    }
-                    else if (fg.channels() == 3)
-                    {
-                        cv::cvtColor(fg, fg8, cv::COLOR_BGR2GRAY);
-                    }
-                    else
-                    {
-                        fg8 = fg;
-                    }
-
-                    if (fg8.size() != depthBaseline16.size())
-                    {
-                        qWarning().noquote() << "WARNING:" << srcFun
-                                             << "fg.png size mismatch. fg="
-                                             << fg8.cols << "x" << fg8.rows
-                                             << " depth=" << depthBaseline16.cols << "x" << depthBaseline16.rows;
-                    }
-                    else
-                    {
-                        // Ensure binary 0/255
-                        cv::threshold(fg8, fg8, 0, 255, cv::THRESH_BINARY);
-
-                        // Build full-size heatmaps (already doing elsewhere; reuse here if you want)
-                        cv::Mat heatBase = FSUtilities::depthHeatmap(depthBaseline16, N, "Depth (baseline)");
-                        cv::Mat heatTight = FSUtilities::depthHeatmap(depthTight16, N, "Depth (tightened)");
-
-                        // Draw FG outline (contours) on heatmaps
-                        std::vector<std::vector<cv::Point>> contours;
-                        cv::findContours(fg8.clone(), contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-                        // Thick black then thin white = visible on any color
-                        cv::drawContours(heatBase,  contours, -1, cv::Scalar(0,0,0), 3, cv::LINE_AA);
-                        cv::drawContours(heatBase,  contours, -1, cv::Scalar(255,255,255), 1, cv::LINE_AA);
-                        cv::drawContours(heatTight, contours, -1, cv::Scalar(0,0,0), 3, cv::LINE_AA);
-                        cv::drawContours(heatTight, contours, -1, cv::Scalar(255,255,255), 1, cv::LINE_AA);
-
-                        cv::imwrite((folder + "/depth_baseline_fgOutline.png").toStdString(), heatBase);
-                        cv::imwrite((folder + "/depth_tight_fgOutline.png").toStdString(), heatTight);
-
-                        // Build a thin outside band around FG for "spill" measurement
-                        const int bandPx = 8; // start 6..12
-                        cv::Mat fgDil;
-                        cv::dilate(fg8, fgDil, FSFusion::seEllipse(bandPx));
-                        cv::Mat band8;
-                        cv::subtract(fgDil, fg8, band8); // outside ring only (0/255)
-
-                        // Helper: count pixels for a slice inside fg and in outside band
-                        auto countInMask = [&](const cv::Mat& depth16, int slice, const cv::Mat& mask8)->int {
-                            cv::Mat m = (depth16 == (uint16_t)slice);
-                            m.convertTo(m, CV_8U, 255.0);
-                            cv::bitwise_and(m, mask8, m);
-                            return cv::countNonZero(m);
-                        };
-
-                        // Report for slices you care about (5/6 here; adjust as needed)
-                        for (int s : {5, 6})
-                        {
-                            const int baseIn  = countInMask(depthBaseline16, s, fg8);
-                            const int tightIn = countInMask(depthTight16,    s, fg8);
-
-                            const int baseOut  = countInMask(depthBaseline16, s, band8);
-                            const int tightOut = countInMask(depthTight16,    s, band8);
-
-                            qDebug().noquote()
-                                << "FGStats slice" << s
-                                << " IN(base/tight)=" << baseIn  << "/" << tightIn
-                                << " OUTband(base/tight)=" << baseOut << "/" << tightOut;
-                        }
-
-                        // Optional: write spill masks (full size) for a slice
-                        const int s = 6; // pick twig slice
-                        cv::Mat spillBase = (depthBaseline16 == (uint16_t)s);
-                        spillBase.convertTo(spillBase, CV_8U, 255.0);
-                        cv::bitwise_and(spillBase, band8, spillBase);
-                        cv::imwrite((folder + "/spill_slice6_baseline.png").toStdString(), spillBase);
-
-                        cv::Mat spillTight = (depthTight16 == (uint16_t)s);
-                        spillTight.convertTo(spillTight, CV_8U, 255.0);
-                        cv::bitwise_and(spillTight, band8, spillTight);
-                        cv::imwrite((folder + "/spill_slice6_tight.png").toStdString(), spillTight);
-                    }
-                }
-                else
-                {
-                    qDebug() << "FGStats: fg.png not found at" << fgPath;
-                }
-            }
+            dRow[x] = d;
+            uRow[x] = 1.0f - pMax; // 0 = confident, 1 = very uncertain
         }
     }
 
     // ---------------------------------------------------------------------
-    // 2) “Stable labels” pass: majority filter only in boundary zones
-    // Again boundary-limited to prevent outward growth.
+    // Build texture gate (8U) from top1Score32 (same scaling style you use)
+    // lowTex8 = 255 where texture is LOW
     // ---------------------------------------------------------------------
-    cv::Mat depthStable16 = depthTight16.clone();
+    double smn = 0.0, smx = 0.0;
+    cv::minMaxLoc(topkOrig.score32[0], &smn, &smx);
+    const float texScale = (smx > 1e-12) ? (255.0f / (float)smx) : 1.0f;
+
+    cv::Mat tex8;
+    topkOrig.score32[0].convertTo(tex8, CV_8U, texScale);
+
+    cv::Mat lowTex8 = (tex8 <= params.depthTexMax);
+    lowTex8.convertTo(lowTex8, CV_8U, 255.0);
+
+    // ---------------------------------------------------------------------
+    // Smoothing scope mask:
+    // smooth only where:
+    //   - uncertainty is high OR conf is low
+    //   - and texture is low
+    //   - and near a label boundary (prevents global mush)
+    // ---------------------------------------------------------------------
+    // boundary: NO dilation at first
+    cv::Mat boundary8 = boundaryFromLabels8(depthBaseline16);
+
+    // uncertainty gate: make stricter
+    const float uThr = 0.45f;               // was 0.30
+    cv::Mat highU8 = (u32 > uThr);
+    highU8.convertTo(highU8, CV_8U, 255.0);
+
+    // low conf: use a higher gate than depthConfSmoothMax
+    cv::Mat lowConf8 = (conf01 < params.depthConfStableMax);  // was depthConfSmoothMax
+    lowConf8.convertTo(lowConf8, CV_8U, 255.0);
+
+    // smoothMask = boundary & highU & lowTex & lowConf
+    cv::Mat smoothMask8;
+    cv::bitwise_and(boundary8, highU8, smoothMask8);
+    cv::bitwise_and(smoothMask8, lowTex8, smoothMask8);
+    cv::bitwise_and(smoothMask8, lowConf8, smoothMask8);
+
+    qDebug() << "DepthB: smoothMaskPx=" << cv::countNonZero(smoothMask8);
+
+    // ---------------------------------------------------------------------
+    // Uncertainty-aware smoothing on continuous depth:
+    // simple masked diffusion (doesn't require extra guidance images)
+    // ---------------------------------------------------------------------
+    cv::Mat dSmooth = d32.clone();
+    const int iters = 1;       // try 1..4
+    const float a   = 0.55f;   // blend strength per iter (0.4..0.8)
+
+    for (int i = 0; i < iters; ++i)
     {
-        cv::Mat stableMask8;
-        cv::bitwise_and(lowConfStable8, boundaryStable8, stableMask8);
-        cv::bitwise_and(stableMask8, lowTex8, stableMask8);
+        if (FSFusion::isAbort(abortFlag)) return false;
+        if (cv::countNonZero(smoothMask8) == 0) break;
 
-        const int px = cv::countNonZero(stableMask8);
-        qDebug() << "DepthTight: stableMaskPx=" << px;
+        cv::Mat blur;
+        cv::GaussianBlur(dSmooth, blur, cv::Size(0,0), 1.0, 1.0, cv::BORDER_REFLECT);
 
-        if (px > 0)
+        // d = (1-a)*d + a*blur within mask
+        cv::Mat blended = dSmooth * (1.0f - a) + blur * a;
+        blended.copyTo(dSmooth, smoothMask8);
+    }
+
+    // ---------------------------------------------------------------------
+    // Quantize to labels (CV_16U) for your existing pyramid logic
+    // ---------------------------------------------------------------------
+    cv::Mat depthB16(topkOrig.sz, CV_16U, cv::Scalar(0));
+    for (int y = 0; y < depthB16.rows; ++y)
+    {
+        const float* d = dSmooth.ptr<float>(y);
+        uint16_t* o = depthB16.ptr<uint16_t>(y);
+
+        for (int x = 0; x < depthB16.cols; ++x)
         {
-            cv::Mat filt16 = majorityFilterLabels16_3x3(depthStable16);
-            filt16.copyTo(depthStable16, stableMask8);
+            int v = (int)std::lround((double)d[x]);
+            v = std::max(0, std::min(v, N - 1));
+            o[x] = (uint16_t)v;
         }
     }
 
-    if (FSFusion::isAbort(abortFlag)) return false;
+    // ---------------------------------------------------------------------
+    // Stable labels for halo boundary: same idea as your existing pass
+    // ---------------------------------------------------------------------
+    cv::Mat stable16 = depthB16.clone();
+    {
+        cv::Mat unreliable8 = (conf01 < params.confHigh);
+        unreliable8.convertTo(unreliable8, CV_8U, 255.0);
+
+        if (cv::countNonZero(unreliable8) > 0)
+        {
+            cv::Mat filt16 = majorityFilterLabels16_3x3(stable16);
+            filt16.copyTo(stable16, unreliable8);
+        }
+    }
 
     // ---------------------------------------------------------------------
-    // Optional experimental hook
-    // (Uses baseline OR tightened baseline? I recommend baseline input + conf + topk.)
+    // Optional hook (if you still want to experiment further)
+    // If your hook outputs a CV_16U map, it overrides Mode B result.
     // ---------------------------------------------------------------------
-    // cv::Mat depthUsed16 = depthStable16; // default: tightened depth for fusion
-    cv::Mat depthUsed16 = depthTight16; // default: tightened depth for fusion
-    if (params.depthMode == DepthMode::Experimental && params.depthHook)
+    cv::Mat depthUsed16 = depthB16;
+    if (params.depthHook)
     {
         cv::Mat depthExp16;
         bool ok = params.depthHook(depthBaseline16, conf01, topkOrig, N, depthExp16);
-
         if (ok && !depthExp16.empty())
         {
             CV_Assert(depthExp16.type() == CV_16U);
@@ -2378,61 +1974,51 @@ bool FSFusionDMap::depthExperiment(const QString& srcFun,
         else
         {
             qWarning().noquote() << "WARNING:" << srcFun
-                                 << "depthHook failed; falling back to tightened baseline.";
-            depthUsed16 = depthTight16;
-        }
-    }
-    {
-        cv::Mat d = (depthUsed16 != depthBaseline16);
-        d.convertTo(d, CV_8U, 255);
-        const int changed = cv::countNonZero(d);
-        qDebug() << "DepthUsed: changedPx=" << changed;
-
-        if (params.writeDepthDiagnostics) {
-            const QString folder = opt.depthFolderPath;
-            cv::imwrite((folder + "/depth_diff_used.png").toStdString(), d); // orig size
+                                 << "depthHook failed; using Mode-B quantized depth.";
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Diagnostics (orig size only)
-    // IMPORTANT: your FSUtilities::depthHeatmap should draw a title (top/left)
-    // ---------------------------------------------------------------------
-    if (params.writeDepthDiagnostics)
-    {
-        const QString folder = opt.depthFolderPath;
-
-        cv::imwrite((folder + "/depth_baseline.png").toStdString(),
-                    FSUtilities::depthHeatmap(depthBaseline16, N, "Depth (baseline)"));
-
-        cv::imwrite((folder + "/depth_tight.png").toStdString(),
-                    FSUtilities::depthHeatmap(depthTight16, N, "Depth (tightened)"));
-
-        cv::imwrite((folder + "/depth_stable.png").toStdString(),
-                    FSUtilities::depthHeatmap(depthStable16, N, "Depth (stable labels)"));
-
-        if (params.depthMode == DepthMode::Experimental)
-            cv::imwrite((folder + "/depth_experimental.png").toStdString(),
-                        FSUtilities::depthHeatmap(depthUsed16, N, "Depth (experimental)"));
-    }
-
-    // ---------------------------------------------------------------------
-    // Outputs
-    // depthIndex16: depth used for pyramids/fusion
-    // winStable16 : stable labels for halo boundary detection
-    // ---------------------------------------------------------------------
+    // Apply outputs
     depthIndex16 = depthUsed16.clone();
-    winStable16  = depthStable16.clone();
+    winStable16  = stable16.clone();
 
-    // quick sanity logging
+    // ---------------------------------------------------------------------
+    // Diagnostics
+    // ---------------------------------------------------------------------
     {
-        const long long diffBase  = countHorizontalDiffs16(depthBaseline16);
-        const long long diffTight = countHorizontalDiffs16(depthTight16);
-        const long long diffUsed  = countHorizontalDiffs16(depthIndex16);
-        qDebug() << "Depth diffs: base=" << diffBase
-                 << " tight=" << diffTight
-                 << " used="  << diffUsed;
+        cv::Mat d = (depthIndex16 != depthBaseline16);
+        d.convertTo(d, CV_8U, 255);
+        qDebug() << "DepthB: changedPx=" << cv::countNonZero(d);
+
+        qDebug() << "Depth diffs: base=" << countHorizontalDiffs16(depthBaseline16)
+                 << " used=" << countHorizontalDiffs16(depthIndex16);
+
+        if (params.writeDepthDiagnostics)
+        {
+            const QString folder = opt.depthFolderPath;
+
+            cv::imwrite((folder + "/depth_baseline.png").toStdString(),
+                        FSUtilities::depthHeatmap(depthBaseline16, N, "Depth (baseline)"));
+
+            cv::imwrite((folder + "/depth_modeB_used.png").toStdString(),
+                        FSUtilities::depthHeatmap(depthIndex16, N, "Depth (Mode B used)"));
+
+            // continuous depth visualization (0..1 mapped)
+            cv::Mat d01 = dSmooth / std::max(1.0f, (float)(N - 1));
+            cv::max(d01, 0.0f, d01);
+            cv::min(d01, 1.0f, d01);
+            cv::Mat d8; d01.convertTo(d8, CV_8U, 255.0);
+            cv::imwrite((folder + "/depth_modeB_expected.png").toStdString(), d8);
+
+            // uncertainty map
+            cv::Mat u8; u32.convertTo(u8, CV_8U, 255.0);
+            cv::imwrite((folder + "/depth_modeB_uncertainty.png").toStdString(), u8);
+
+            cv::imwrite((folder + "/depth_modeB_smoothMask.png").toStdString(), smoothMask8);
+        }
     }
+
+    qDebug() << "DepthExperiment: leaving, used diffs =" << countHorizontalDiffs16(depthIndex16);
 
     return true;
 }
@@ -2475,7 +2061,10 @@ void FSFusionDMap::initAccumulator(const cv::Size& origSz,
     sumW = cv::Mat(origSz, CV_32F, cv::Scalar(0));
 }
 
-// Streaming accumulation loop
+// ------------------------------------------------------------
+// Replacement: accumulateAllSlices with *ring-only* boundary override
+// (does NOT use W.band8; builds a true FG-outside ring band)
+// ------------------------------------------------------------
 bool FSFusionDMap::accumulateAllSlices(const QString& srcFun,
                                        const QStringList& inputPaths,
                                        const std::vector<Result>& globals,
@@ -2486,6 +2075,7 @@ bool FSFusionDMap::accumulateAllSlices(const QString& srcFun,
                                        const std::vector<cv::Mat>& idxPyr16,
                                        const std::vector<cv::Mat>& vetoPyr8,
                                        int levels,
+                                       const cv::Mat& conf01,
                                        std::atomic_bool* abortFlag,
                                        FSFusion::StatusCallback statusCb,
                                        FSFusion::ProgressCallback progressCb,
@@ -2494,6 +2084,65 @@ bool FSFusionDMap::accumulateAllSlices(const QString& srcFun,
 {
     const int N = inputPaths.size();
     const cv::Size origSz = topkOrig.idx16[0].size();
+
+    // ------------------------------------------------------------
+    // Experimental: hard boundary weight override (pre-blend)
+    // ring-only band outside an estimated foreground silhouette
+    // ------------------------------------------------------------
+    int sFg = 0;
+    cv::Mat bwoMask8;     // CV_8U 0/255
+    int bwoBandPx = 0;
+    int bwoCandPx = 0;
+    cv::Mat bwoFg8, bwoFgFilled8, bwoBand8;   // NEW debug mats
+
+    if (params.enableBoundaryWeightOverride)
+    {
+        // pick a stable FG slice index from confident pixels (orig-size!)
+        sFg = pickForegroundSliceByConf(topkOrig.idx16[0], conf01, N,
+                                        params.bwoPickFgConfThr,
+                                        "BoundaryWeightOverride:", nullptr);
+
+        // build the override mask in ORIG space (ring-only outside FG)
+        bwoMask8 = buildBoundaryOverrideMask8_RingOutsideFG(
+            /*winTop1_16=*/topkOrig.idx16[0],
+            /*sFg=*/sFg,
+            /*conf01=*/conf01,
+            /*top1Score32=*/topkOrig.score32[0],
+            /*ringPx=*/params.bwoRingPx,
+            /*confMax=*/params.bwoConfMax,
+            /*texMax8u=*/params.bwoTexMax,
+            /*veryConfMin=*/params.bwoVeryConfMin,
+            /*extraDilatePx=*/params.bwoBandDilatePx,
+            /*outBandPx=*/&bwoBandPx,
+            /*outCandPx=*/&bwoCandPx,
+            /*outFg8=*/&bwoFg8,                 // NEW
+            /*outFgFilled8=*/&bwoFgFilled8,     // NEW
+            /*outBand8=*/&bwoBand8              // NEW
+            );
+
+        qDebug() << "BoundaryWeightOverride: sFg=" << sFg
+                 << " bandPx=" << bwoBandPx
+                 << " candPx=" << bwoCandPx
+                 << " maskPx=" << cv::countNonZero(bwoMask8);
+
+        // ------------------------------------------------------------
+        // Debug: write BWO masks (orig-size) to depth folder
+        // ------------------------------------------------------------
+        if (params.writeDepthDiagnostics)
+        {
+            qDebug() << "depthFolderPath =" << depthFolderPath;
+            const QString folder = depthFolderPath;
+            if (!folder.isEmpty())
+            {
+                cv::imwrite((folder + "/bwo_fg8.png").toStdString(), bwoFg8);
+                cv::imwrite((folder + "/bwo_fgFilled8.png").toStdString(), bwoFgFilled8);
+                cv::imwrite((folder + "/bwo_band8.png").toStdString(), bwoBand8);
+                cv::imwrite((folder + "/bwo_mask8.png").toStdString(), bwoMask8);
+            }
+        }
+
+    }
+
 
     for (int s = 0; s < N; ++s)
     {
@@ -2527,7 +2176,26 @@ bool FSFusionDMap::accumulateAllSlices(const QString& srcFun,
         cv::Mat w32 = buildSliceWeightMap32(topkOrig, W, s);
         CV_Assert(w32.type() == CV_32F && w32.size() == origSz);
 
+        // Apply experimental hard override in ring-only boundary band
+        if (params.enableBoundaryWeightOverride && !bwoMask8.empty())
+        {
+            if (s == sFg)
+                w32.setTo(1.0f, bwoMask8);  // force FG slice to win inside mask
+            else
+                w32.setTo(0.0f, bwoMask8);  // suppress all other slices inside mask
+        }
+
         sumW += w32;
+
+        if (params.enableBoundaryWeightOverride && !bwoMask8.empty() && s == sFg)
+        {
+            // report how many pixels are being forced for FG slice
+            cv::Mat forced;
+            cv::compare(w32, 1.0f, forced, cv::CMP_EQ);  // 0/255
+            forced.convertTo(forced, CV_8U);
+            cv::bitwise_and(forced, bwoMask8, forced);
+            qDebug() << "BoundaryWeightOverride: forcedFgPx=" << cv::countNonZero(forced);
+        }
 
         FusionPyr::AccumDMapParams ap;
         ap.enableHardWeightsOnLowpass = params.enableHardWeightsOnLowpass;
@@ -2952,6 +2620,9 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     const QString srcFun = "FSFusionDMap::streamFinish";
     if (G::FSLog) G::log(srcFun);
 
+    // when opt is req'd outside this function
+    depthFolderPath = opt.depthFolderPath;
+
     int N = 0;
     if (!validateStreamFinishState(srcFun, inputPaths, globals, abortFlag, N))
         return false;
@@ -2979,6 +2650,11 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
                          depthIndex16, depthIndexStable16))
         return false;
 
+    qDebug() << "DepthIndex16 min/max after depthExperiment:";
+    double mn=0,mx=0;
+    cv::minMaxLoc(depthIndex16, &mn, &mx);
+    qDebug() << "  " << mn << mx;
+
     int levels = computePyrLevels(origSz);
 
     std::vector<cv::Mat> idxPyr16;
@@ -2992,7 +2668,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     if (!accumulateAllSlices(srcFun, inputPaths, globals,
                              roiPadToAlign, validAreaAlign,
                              topkOrig, W, idxPyr16, vetoPyr8,
-                             levels, abortFlag, statusCb, progressCb,
+                             levels, conf01,abortFlag, statusCb, progressCb,
                              A, sumW))
         return false;
 
