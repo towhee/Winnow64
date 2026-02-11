@@ -64,6 +64,17 @@ public:
         int   depthTexMax = 12;             // 8U texture gate (like your haloTexMax)
         bool  depthUseTextureGate = true;
         bool  writeDepthDiagnostics = true;   // write heatmaps for baseline/experimental
+
+        // --- hard boundary weight override (pre-blend) ---
+        bool  enableBoundaryWeightOverride = true;
+        // mask gates (same philosophy as halo fix)
+        int   bwoRingPx = 40;       // 30–60
+        float bwoConfMax = 0.22f;   // only override low-confidence pixels
+        int   bwoTexMax  = 12;      // only override low-texture pixels (8U scale)
+        int   bwoBandDilatePx = 0;  // optionally thicken W.band8 by a couple px (0..3)
+        float bwoVeryConfMin = 0.25f; // never override very-confident pixels
+        // foreground selection (pick a single “foreground donor slice”)
+        float bwoPickFgConfThr = 0.35f; // use confident pixels to pick fg slice
         // Experiment end
 
         bool enableHardWeightsOnLowpass = true;  // used in FusionPyr::accumulateSlicePyr
@@ -77,7 +88,7 @@ public:
         float wMin     = 0.01f;
 
         // Veto pyramid
-        bool  enableDepthGradLowpassVeto = false;
+        bool  enableDepthGradLowpassVeto = true;
         int   hardFromLevel = 4;  // -1
         int   vetoFromLevel = -1;
         float vetoStrength = 1.0f;
@@ -94,7 +105,7 @@ public:
         float weightBlurSigma = 1.2f;
 
         // --- Halo fix near foreground edges ---
-        bool  enableHaloRingFix = true;
+        bool  enableHaloRingFix = false;
         int   haloRingPx        = 50;     // 40–60 width of ring outside foreground
         float haloFeatherSigma  = 10.0f;  // 8–14 feather smoothness (in px-ish)
         float haloConfMax       = 0.22f;  // 0.20–0.25 only touch low-confidence pixels
@@ -159,7 +170,7 @@ public:
 private:
     bool active_ = false;
     int  sliceCount_ = 0;
-
+    QString depthFolderPath;
     TopKMaps topk_pad_;
 
     bool validateStreamFinishState(const QString& srcFun,
@@ -212,6 +223,7 @@ private:
                              const std::vector<cv::Mat>& idxPyr16,
                              const std::vector<cv::Mat>& vetoPyr8,
                              int levels,
+                             const cv::Mat& conf01,
                              std::atomic_bool* abortFlag,
                              FSFusion::StatusCallback statusCb,
                              FSFusion::ProgressCallback progressCb,
