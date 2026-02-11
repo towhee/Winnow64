@@ -1810,7 +1810,7 @@ bool FS::runStreamDMap()
     if (G::abortFocusStack) return false;
     incrementProgress();
 
-    if (o.useIntermediates) save(fusionFolderPath);
+    // if (o.useIntermediates) save(fusionFolderPath);
 
     return true;
 }
