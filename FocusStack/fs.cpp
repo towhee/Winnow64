@@ -6,6 +6,7 @@
 #include "FocusStack/fsdepth.h"
 #include "FocusStack/fsfusion.h"
 #include "FocusStack/fsfusiondmap.h"
+#include "FocusStack/fsfusiondmapbasic.h"
 #include "FocusStack/fsfusionpmax.h"
 #include "FocusStack/fsmerge.h"
 #include "FocusStack/fsfusionreassign.h"
@@ -120,6 +121,19 @@ bool FS::setOptions(const Options &opt)
         o.enableFusion = true;
         o.methodFuse = "FullWaveletMerge";
         o.methodMerge = "PMax";
+        o.isStream = true;
+        return true;
+    }
+
+    if (o.method == "StmDMapBasic") {
+        if (G::FSLog) G::log(srcFun, msg + "StmDMapBasic");
+        o.useIntermediates = true;
+        o.enableAlign = true;
+        o.enableFocusMaps = false;
+        o.enableDepthMap = true;
+        o.enableFusion = true;
+        // o.methodFuse = "FullWaveletMerge";
+        // o.methodMerge = "PMax";
         o.isStream = true;
         return true;
     }
@@ -662,6 +676,13 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
 
             if (o.method == "StmDMap") {
                 if (!runStreamDMap()) {
+                    emit finished(false);
+                    return false;
+                }
+            }
+
+            if (o.method == "StmDMapBasic") {
+                if (!runStreamDMapBasic()) {
                     emit finished(false);
                     return false;
                 }
@@ -1810,10 +1831,167 @@ bool FS::runStreamDMap()
     if (G::abortFocusStack) return false;
     incrementProgress();
 
-    // if (o.useIntermediates) save(fusionFolderPath);
+    if (o.useIntermediates) save(fusionFolderPath);
 
     return true;
 }
+
+bool FS::runStreamDMapBasic()
+{
+    QString srcFun = "FS::runStreamDMapBasic";
+    QString msg = "Start using method: " + o.method;
+    if (G::FSLog) G::log(srcFun, msg);
+
+    auto progressCb = [this]{ incrementProgress(); };
+    auto statusCb   = [this](const QString &m){ status(m); };
+
+    // -----------------------------
+    // align options (same as pmax)
+    // -----------------------------
+    FSAlign::Options aopt;
+    aopt.matchContrast     = true;
+    aopt.matchWhiteBalance = true;
+    aopt.lowRes            = 256;
+    aopt.maxRes            = 2048;
+    aopt.fullResolution    = false;
+
+    // -----------------------------
+    // fusion options (dmap basic)
+    // -----------------------------
+    FSFusion::Options fopt;
+    fopt.method          = "DMapBasic";
+    fopt.mergeMode       = o.methodMerge;
+    fopt.useOpenCL       = o.enableOpenCL;
+    fopt.consistency     = 2;
+    fopt.depthFolderPath = depthFolderPath;
+    fopt.enableDepthBiasedErosion = false;
+    fopt.enableEdgeAdaptiveSigma  = false;
+
+    // -----------------------------
+    // working state
+    // -----------------------------
+    FSLoader::Image prevImage;
+    FSLoader::Image currImage;
+
+    Result prevGlobal;
+    Result currGlobal;
+
+    cv::Mat alignedGraySlice;   // ALIGN space
+    cv::Mat alignedColorSlice;  // ALIGN space
+
+    std::vector<Result> globals;
+    globals.reserve(slices);
+
+    FSAlign::Align align;
+
+    // New basic engine
+    FSFusionDMapBasic fuse;
+
+    // -----------------------------
+    // pass-1: slice loopr
+    // -----------------------------
+    for (int slice = 0; slice < slices; ++slice)
+    {
+        QString s = " Slice: " + QString::number(slice) + " of " + QString::number(slices) + " ";
+        if (G::FSLog) G::log("");
+
+        status("Aligning and depth mapping (basic)" + s);
+
+        currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
+        currGlobal = FSAlign::makeIdentity(currImage.validArea);
+
+        if (G::abortFocusStack) return false;
+
+        if (slice == 0)
+        {
+            alignedGraySlice  = currImage.gray.clone();
+            alignedColorSlice = currImage.color.clone();
+
+            // base geometry that dmap requires (same pattern as DMapAdvanced)
+            fuse.validAreaAlign = currImage.validArea; // ALIGN -> ORIG crop
+            fuse.alignSize      = alignedGraySlice.size();
+            fuse.origSize       = cv::Size(currImage.validArea.width, currImage.validArea.height); // optional but ok
+            fuse.outDepth       = alignedColorSlice.depth(); // 8u/16u output depth
+
+            globals.push_back(currGlobal);
+        }
+        else
+        {
+            if (!align.alignSlice(slice,
+                                  prevImage, currImage,
+                                  prevGlobal, currGlobal,
+                                  alignedGraySlice, alignedColorSlice,
+                                  aopt, &abort, statusCb, progressCb))
+            {
+                qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
+                return false;
+            }
+
+            globals.push_back(currGlobal);
+        }
+
+        // enforce gray is 8-bit for dmap basic (focus metric expects CV_8U)
+        if (alignedGraySlice.type() != CV_8U)
+        {
+            cv::Mat tmp;
+            alignedGraySlice.convertTo(tmp, CV_8U);
+            alignedGraySlice = tmp;
+        }
+
+        // debug write aligned slices (optional, matches your current workflow)
+        cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
+        cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
+
+        if (G::abortFocusStack) return false;
+
+        // pass-1 update (pads internally)
+        if (!fuse.streamSlice(slice,
+                              alignedGraySlice,
+                              alignedColorSlice,
+                              fopt,
+                              &abort,
+                              statusCb,
+                              progressCb))
+        {
+            qWarning() << "WARNING:" << srcFun << "fuse.streamSlice failed.";
+            return false;
+        }
+
+        if (G::abortFocusStack) return false;
+        incrementProgress();
+
+        prevImage  = currImage;
+        prevGlobal = currGlobal;
+    }
+
+    msg = "Slice processing done. DMapBasic finish: build maps, stream slices, blend, crop.";
+    if (G::FSLog) G::log(srcFun, msg);
+
+    // -----------------------------
+    // pass-2: finish
+    // -----------------------------
+    status("Finalizing DMapBasic fusion...");
+    if (!fuse.streamFinish(fusedColorMat,
+                           fopt,
+                           depthIndex16Mat,
+                           inputPaths,
+                           globals,
+                           &abort,
+                           statusCb,
+                           progressCb))
+    {
+        qWarning() << "WARNING:" << srcFun << "FSFusionDMapBasic::streamFinish failed.";
+        return false;
+    }
+
+    if (G::abortFocusStack) return false;
+    incrementProgress();
+
+    if (o.useIntermediates) save(fusionFolderPath);
+
+    return true;
+}
+
 bool FS::runStreamPMax()
 {
     QString srcFun = "FS::runStreamPMax";
