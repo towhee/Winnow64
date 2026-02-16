@@ -74,3 +74,7 @@ halo_cand.png
 halo_donor_labels.png
 halo_fg.png
 halo_overlay.png
+
+Tests:
+
+

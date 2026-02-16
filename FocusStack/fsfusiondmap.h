@@ -2,6 +2,7 @@
 
 #include "fsalign_types.h"
 #include "fsfusion.h"
+#include "fsfusiondmapshared.h"
 #include "fusionpyr.h"
 
 #include <opencv2/core.hpp>

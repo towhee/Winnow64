@@ -519,32 +519,6 @@ static cv::Mat geodesicGrow8(const cv::Mat& seed8, const cv::Mat& allowed8, int 
 // Top-K / metric / confidence / slice selection
 // ============================================================
 
-static cv::Mat focusMetric32_dmap(const cv::Mat& gray8, float preBlurSigma, int lapKSize)
-{
-    CV_Assert(gray8.type() == CV_8U);
-    cv::Mat g32 = FSFusion::toFloat01(gray8); // 0..1 CV_32F
-
-    if (preBlurSigma > 0.0f)
-        cv::GaussianBlur(g32, g32, cv::Size(0, 0),
-                         preBlurSigma, preBlurSigma,
-                         cv::BORDER_REFLECT);
-
-    if (lapKSize != 3 && lapKSize != 5)
-        lapKSize = 3;
-
-    cv::Mat lap32;
-    cv::Laplacian(g32, lap32, CV_32F, lapKSize);
-
-    cv::Mat absLap32;
-    cv::absdiff(lap32, cv::Scalar::all(0), absLap32);
-
-    cv::GaussianBlur(absLap32, absLap32, cv::Size(0, 0),
-                     0.8, 0.8,
-                     cv::BORDER_REFLECT);
-
-    return absLap32;
-}
-
 static void updateTopKPerSlice(FSFusionDMap::TopKMaps& topk,
                                const cv::Mat& score32This,
                                uint16_t sliceIndex)
@@ -776,34 +750,6 @@ static cv::Mat keepCCsTouchingMask(const cv::Mat& bin8, const cv::Mat& touch8, i
             if (id > 0 && id < n && keep[id]) O[x] = 255;
         }
     }
-    return out;
-}
-
-// Keep only the largest connected component from a binary 8-bit mask (0/255).
-// Returns a CV_8U 0/255 mask. If empty or no foreground, returns zeros.
-static cv::Mat keepLargestCC(const cv::Mat& bin8, int connectivity = 8)
-{
-    CV_Assert(bin8.empty() || bin8.type() == CV_8U);
-    if (bin8.empty()) return cv::Mat();
-
-    cv::Mat src;
-    cv::compare(bin8, 0, src, cv::CMP_GT); // 0/255
-    if (cv::countNonZero(src) == 0)
-        return cv::Mat::zeros(src.size(), CV_8U);
-
-    cv::Mat labels, stats, centroids;
-    int n = cv::connectedComponentsWithStats(src, labels, stats, centroids, connectivity, CV_32S);
-    if (n <= 1) return cv::Mat::zeros(src.size(), CV_8U);
-
-    int best = 1, bestArea = stats.at<int>(1, cv::CC_STAT_AREA);
-    for (int i = 2; i < n; ++i)
-    {
-        int area = stats.at<int>(i, cv::CC_STAT_AREA);
-        if (area > bestArea) { bestArea = area; best = i; }
-    }
-
-    cv::Mat out;
-    cv::compare(labels, best, out, cv::CMP_EQ); // 0/255
     return out;
 }
 
@@ -2542,7 +2488,8 @@ bool FSFusionDMap::streamSlice(int slice,
     CV_Assert(grayPad8.type() == CV_8U && grayPad8.size() == padSize);
 
     // focus metric in PAD space
-    cv::Mat score32 = focusMetric32_dmap(grayPad8, params.scoreSigma, params.scoreKSize);
+    cv::Mat score32 = FSFusionDMapShared::focusMetric32_dmap(
+        grayPad8, params.scoreSigma, params.scoreKSize);
 
     // update top-k in PAD space
     updateTopKPerSlice(topk_pad_, score32, (uint16_t)std::max(0, slice));
