@@ -33,6 +33,14 @@ public:
         float scoreSigma = 1.5f;
         int   scoreKSize = 3;
 
+        // --- Boundary Ownership / Halo elimination (Two-pass ownership propagation) ---
+        bool enableOwnership = true;
+        int  ownershipRingPx = 50;      // ring width outside FG where halos live
+                                        // make deterministic later ???
+        int  ownershipClosePx = 0;      // close FG gaps a bit before building ring (0..3)
+        int  seedBandPx       = 1;
+        // int  ownershipErodePx = 1;      // boundary = FG - erode(FG)
+
         // Low-contrast suppression (Zerene-style)
         bool  enableContrastThreshold = true;
         float contrastMinFrac = 0.010f;   // 0.3%..3% typical; start 1% (fraction of max top1Score)

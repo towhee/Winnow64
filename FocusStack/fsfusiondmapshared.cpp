@@ -1,6 +1,8 @@
 #include "fsfusiondmapshared.h"
 #include "fsfusion.h"   // for FSFusion::seEllipse (or forward-declare it if you prefer)
+#include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <limits>
 
 namespace FSFusionDMapShared
 {
@@ -60,6 +62,295 @@ namespace FSFusionDMapShared
         return filled;
     }
 
+
+    // If you don't have conf01, this gives a decent proxy from top2 scores:
+    // conf ~= margin between best and runner-up.
+    // Output: CV_32F 0..1 (roughly)
+    cv::Mat confidence01_fromTop2Scores(const cv::Mat& s0_32,
+                                        const cv::Mat& s1_32,
+                                        float eps )
+    {
+        CV_Assert(s0_32.type() == CV_32F && s1_32.type() == CV_32F);
+        CV_Assert(s0_32.size() == s1_32.size());
+
+        cv::Mat den = s0_32 + s1_32 + eps;
+        cv::Mat conf = (s0_32 - s1_32) / den;          // ~0..1 for s0>=s1
+        cv::max(conf, 0.0f, conf);
+        cv::min(conf, 1.0f, conf);
+        return conf;
+    }
+
+    // Depth stability idea (robust + simple):
+    // stable if depth is close to a median filtered depth AND close to runner-up.
+    // Output: CV_8U 0/255
+    cv::Mat depthStabilityMask8(const cv::Mat& idx0_16,
+                                const cv::Mat& idx1_16,
+                                int medianK,
+                                int tolSlices)
+    {
+        CV_Assert(idx0_16.type() == CV_16U);
+        CV_Assert(idx1_16.type() == CV_16U);
+        CV_Assert(idx0_16.size() == idx1_16.size());
+
+        medianK = (medianK == 3) ? 3 : 5;
+
+        cv::Mat med16;
+        cv::medianBlur(idx0_16, med16, medianK);
+
+        // |idx0 - med| <= tol
+        cv::Mat diffMed16;
+        cv::absdiff(idx0_16, med16, diffMed16);
+        cv::Mat mMed = (diffMed16 <= (uint16_t)tolSlices); // CV_8U 0/255
+
+        // |idx0 - idx1| <= tol  (winner not wildly ambiguous)
+        cv::Mat diffTop16;
+        cv::absdiff(idx0_16, idx1_16, diffTop16);
+        cv::Mat mTop = (diffTop16 <= (uint16_t)tolSlices); // CV_8U 0/255
+
+        cv::Mat stable;
+        cv::bitwise_and(mMed, mTop, stable);
+        stable.convertTo(stable, CV_8U, 255.0);
+        return stable;
+    }
+
+    // Halo-risk ring: pixels outside FG but within ringPx of FG boundary.
+    // fg8 must be 0/255.
+    cv::Mat haloRiskRing8(const cv::Mat& fg8, int ringPx)
+    {
+        CV_Assert(fg8.type() == CV_8U);
+        ringPx = std::max(1, ringPx);
+
+        cv::Mat fgBin;
+        cv::compare(fg8, 0, fgBin, cv::CMP_GT); // 0/255
+
+        cv::Mat dil;
+        cv::dilate(fgBin, dil, cv::getStructuringElement(cv::MORPH_ELLIPSE,
+                                                         cv::Size(2*ringPx+1, 2*ringPx+1)));
+
+        // ring = dilated - fg
+        cv::Mat ring;
+        cv::subtract(dil, fgBin, ring); // 0/255
+        return ring;
+    }
+
+    cv::Mat dmapDiagnosticBGR(const cv::Mat& idx0_16,
+                              const cv::Mat& idx1_16,
+                              const cv::Mat& fg8,        // 0/255 foreground silhouette (your best FG)
+                              const cv::Mat& conf01_opt, // CV_32F 0..1, may be empty
+                              const cv::Mat& s0_32_opt,   // CV_32F, may be empty if conf01 provided
+                              const cv::Mat& s1_32_opt,   // CV_32F
+                              int ringPx,
+                              float ringConfMax,  // only show ring risk where confidence is low
+                              int stabilityMedianK,
+                              int stabilityTolSlices)
+    {
+    // /*
+    // Blue = FG confidence (0..255)
+    // Green = Depth stability (0..255)
+    // Red = Halo-risk ring (0/255, optionally gated)
+    // */
+        CV_Assert(idx0_16.type() == CV_16U);
+        CV_Assert(idx1_16.type() == CV_16U);
+        CV_Assert(fg8.type() == CV_8U);
+        CV_Assert(idx0_16.size() == idx1_16.size());
+        CV_Assert(idx0_16.size() == fg8.size());
+
+        // --- confidence map ---
+        cv::Mat conf01;
+        if (!conf01_opt.empty()) {
+            CV_Assert(conf01_opt.type() == CV_32F);
+            CV_Assert(conf01_opt.size() == idx0_16.size());
+            conf01 = conf01_opt;
+        } else {
+            CV_Assert(!s0_32_opt.empty() && !s1_32_opt.empty());
+            CV_Assert(s0_32_opt.type() == CV_32F && s1_32_opt.type() == CV_32F);
+            CV_Assert(s0_32_opt.size() == idx0_16.size());
+            conf01 = confidence01_fromTop2Scores(s0_32_opt, s1_32_opt);
+        }
+
+        // --- stability mask (0/255) ---
+        cv::Mat stable8 = depthStabilityMask8(idx0_16, idx1_16, stabilityMedianK, stabilityTolSlices);
+
+        // --- ring mask (0/255) ---
+        cv::Mat ring8 = haloRiskRing8(fg8, ringPx);
+
+        // gate ring to low confidence (optional but super informative)
+        if (ringConfMax > 0.0f) {
+            cv::Mat lowConf8 = (conf01 < ringConfMax); // 0/255
+            lowConf8.convertTo(lowConf8, CV_8U, 255.0);
+            cv::bitwise_and(ring8, lowConf8, ring8);
+        }
+
+        // --- pack into BGR ---
+        cv::Mat B, G, R;
+
+        conf01.convertTo(B, CV_8U, 255.0); // Blue = confidence
+        G = stable8;                       // Green = stability
+        R = ring8;                         // Red = halo-risk ring
+
+        std::vector<cv::Mat> ch{B, G, R};
+        cv::Mat out;
+        cv::merge(ch, out);                // CV_8UC3
+        return out;
+    }
+
+    cv::Mat morphClose8(const cv::Mat& bin8, int px)
+    {
+        CV_Assert(bin8.type() == CV_8U);
+        if (bin8.empty() || px <= 0) return bin8.clone();
+        cv::Mat out = bin8.clone();
+        cv::morphologyEx(out, out, cv::MORPH_CLOSE, FSFusion::seEllipse(px));
+        return out;
+    }
+
+    cv::Mat ringOutsideFg8(const cv::Mat& fg8, int ringPx)
+    {
+        CV_Assert(fg8.type() == CV_8U);
+        if (fg8.empty() || ringPx <= 0) return cv::Mat::zeros(fg8.size(), CV_8U);
+
+        cv::Mat dil;
+        cv::dilate(fg8, dil, FSFusion::seEllipse(ringPx));
+
+        cv::Mat ring = dil.clone();
+        ring.setTo(0, fg8); // ring = dilate - fg
+        return ring;
+    }
+
+    bool ownershipPropagateTwoPass_Outward(
+        const cv::Mat& fg8,
+        const cv::Mat& depthIndex16,
+        int ringPx,
+        int seedBandPx,          // NEW: thickness of seed band outside FG (use 1 or 2)
+        cv::Mat& overrideMask8,
+        cv::Mat& overrideWinner16)
+    {
+        CV_Assert(!fg8.empty() && fg8.type() == CV_8U);
+        CV_Assert(!depthIndex16.empty() && depthIndex16.type() == CV_16U);
+        CV_Assert(fg8.size() == depthIndex16.size());
+
+        const cv::Size sz = fg8.size();
+
+        // Ring where we will override (outside FG only)
+        overrideMask8 = ringOutsideFg8(fg8, ringPx);
+        if (cv::countNonZero(overrideMask8) == 0) {
+            overrideWinner16.release();
+            return true;
+        }
+
+        // --- Background-side seeds: a thin band just OUTSIDE FG ---
+        seedBandPx = std::max(1, seedBandPx);
+
+        cv::Mat fgDil;
+        cv::dilate(fg8, fgDil, FSFusion::seEllipse(seedBandPx));
+
+        cv::Mat seed8 = fgDil.clone();
+        seed8.setTo(0, fg8);                 // seed = dilate(FG) - FG  (outside FG)
+
+        // Optional: only seeds inside the ring (keeps it local)
+        seed8.setTo(0, overrideMask8 == 0);
+
+        if (cv::countNonZero(seed8) == 0) {
+            // No seeds -> nothing we can propagate; don't override.
+            overrideWinner16.release();
+            overrideMask8.setTo(0);
+            return true;
+        }
+
+        // Chamfer 2-pass
+        const uint16_t INF = (uint16_t)60000;
+        cv::Mat dist16(sz, CV_16U, cv::Scalar(INF));
+        overrideWinner16 = cv::Mat(sz, CV_16U, cv::Scalar(0));
+
+        // Init seeds: distance=0, donor = depthIndex16 at seed (BACKGROUND owners!)
+        for (int y = 0; y < sz.height; ++y) {
+            const uint8_t* s = seed8.ptr<uint8_t>(y);
+            const uint16_t* d = depthIndex16.ptr<uint16_t>(y);
+            uint16_t* dist = dist16.ptr<uint16_t>(y);
+            uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
+            for (int x = 0; x < sz.width; ++x) {
+                if (s[x]) { dist[x] = 0; donor[x] = d[x]; }
+            }
+        }
+
+        const uint16_t C1 = 3, C2 = 4;
+
+        // Pass 1
+        for (int y = 0; y < sz.height; ++y) {
+            uint16_t* dist = dist16.ptr<uint16_t>(y);
+            uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
+            for (int x = 0; x < sz.width; ++x) {
+                uint16_t bestD = dist[x], bestS = donor[x];
+
+                if (x > 0) {
+                    uint16_t cand = (uint16_t)std::min<int>(INF, dist[x-1] + C1);
+                    if (cand < bestD) { bestD = cand; bestS = donor[x-1]; }
+                }
+                if (y > 0) {
+                    const uint16_t* distUp = dist16.ptr<uint16_t>(y-1);
+                    const uint16_t* donorUp = overrideWinner16.ptr<uint16_t>(y-1);
+
+                    uint16_t cand = (uint16_t)std::min<int>(INF, distUp[x] + C1);
+                    if (cand < bestD) { bestD = cand; bestS = donorUp[x]; }
+
+                    if (x > 0) {
+                        cand = (uint16_t)std::min<int>(INF, distUp[x-1] + C2);
+                        if (cand < bestD) { bestD = cand; bestS = donorUp[x-1]; }
+                    }
+                    if (x + 1 < sz.width) {
+                        cand = (uint16_t)std::min<int>(INF, distUp[x+1] + C2);
+                        if (cand < bestD) { bestD = cand; bestS = donorUp[x+1]; }
+                    }
+                }
+                dist[x] = bestD;
+                donor[x] = bestS;
+            }
+        }
+
+        // Pass 2
+        for (int y = sz.height - 1; y >= 0; --y) {
+            uint16_t* dist = dist16.ptr<uint16_t>(y);
+            uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
+            for (int x = sz.width - 1; x >= 0; --x) {
+                uint16_t bestD = dist[x], bestS = donor[x];
+
+                if (x + 1 < sz.width) {
+                    uint16_t cand = (uint16_t)std::min<int>(INF, dist[x+1] + C1);
+                    if (cand < bestD) { bestD = cand; bestS = donor[x+1]; }
+                }
+                if (y + 1 < sz.height) {
+                    const uint16_t* distDn = dist16.ptr<uint16_t>(y+1);
+                    const uint16_t* donorDn = overrideWinner16.ptr<uint16_t>(y+1);
+
+                    uint16_t cand = (uint16_t)std::min<int>(INF, distDn[x] + C1);
+                    if (cand < bestD) { bestD = cand; bestS = donorDn[x]; }
+
+                    if (x > 0) {
+                        cand = (uint16_t)std::min<int>(INF, distDn[x-1] + C2);
+                        if (cand < bestD) { bestD = cand; bestS = donorDn[x-1]; }
+                    }
+                    if (x + 1 < sz.width) {
+                        cand = (uint16_t)std::min<int>(INF, distDn[x+1] + C2);
+                        if (cand < bestD) { bestD = cand; bestS = donorDn[x+1]; }
+                    }
+                }
+                dist[x] = bestD;
+                donor[x] = bestS;
+            }
+        }
+
+        // IMPORTANT: clear overrideMask where no seed was reachable
+        for (int y = 0; y < sz.height; ++y) {
+            uint8_t* ring = overrideMask8.ptr<uint8_t>(y);
+            uint16_t* dist = dist16.ptr<uint16_t>(y);
+            for (int x = 0; x < sz.width; ++x) {
+                if (!ring[x]) continue;
+                if (dist[x] >= INF) ring[x] = 0;
+            }
+        }
+
+        return true;
+    }
+
     cv::Mat hysteresisMask8_fromTop1Score(const cv::Mat& top1Score32,
                                           float strongFrac,
                                           float weakFrac,
@@ -78,7 +369,7 @@ namespace FSFusionDMapShared
 
         // Keep only weak components that touch strong components (hysteresis)
         // (You’ll add keepCCsTouchingMask to shared; code below.)
-        cv::Mat out = FSFusionDMapShared::keepCCsTouchingMask(weak, strong, 8);
+        cv::Mat out = keepCCsTouchingMask(weak, strong, 8);
         return out; // 0/255
     }
 
@@ -287,14 +578,14 @@ namespace FSFusionDMapShared
         cv::Mat stable8 = stableDepthMask8_rangeLe(depthIndex16, depthStableRadiusPx, depthMaxRangeSlices);
 
         // 3) keep stable regions connected to seed
-        cv::Mat fg8 = FSFusionDMapShared::keepCCsTouchingMask(stable8, seed8, 8);
+        cv::Mat fg8 = keepCCsTouchingMask(stable8, seed8, 8);
 
         // 4) cleanup
         cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(3));
-        cv::Mat filled = FSFusionDMapShared::fillHoles8(fg8);
+        cv::Mat filled = fillHoles8(fg8);
 
         // If you want ONE subject blob:
-        // filled = FSFusionDMapShared::keepLargestCC(filled);
+        // filled = keepLargestCC(filled);
 
         return filled; // 0/255
     }

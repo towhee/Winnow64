@@ -75,6 +75,34 @@ halo_donor_labels.png
 halo_fg.png
 halo_overlay.png
 
+
+namespace FSFusionDMapShared
+{
+static inline uint16_t clampU16(int v) {
+    if (v < 0) return 0;
+    if (v > 65535) return 65535;
+    return (uint16_t)v;
+}
+
+cv::Mat morphClose8(const cv::Mat& bin8, int px)
+{
+    CV_Assert(bin8.type() == CV_8U);
+    if (bin8.empty() || px <= 0) return bin8.clone();
+    cv::Mat out = bin8.clone();
+    cv::morphologyEx(out, out, cv::MORPH_CLOSE, FSFusion::seEllipse(px));
+    return out;
+}
+
+
+
+
+
+
+
 Tests:
 
+Is this correct:
 
+1.  Accumulate measures in streamSlice.
+2. In streamFinish generate foreground mask.
+3.
