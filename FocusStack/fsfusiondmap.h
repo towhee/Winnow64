@@ -68,6 +68,7 @@ public:
         bool  writeDepthDiagnostics = true;
 
         // --- boundary override knobs (used by BWO earlier; ADO will reuse gates) ---
+        // ADO: Adaptive Donor Override
         int   bwoRingPx = 40;        // 30–60
         float bwoConfMax = 0.22f;    // low-confidence only
         int   bwoTexMax  = 12;       // low-texture only (8U scale)

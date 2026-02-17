@@ -314,9 +314,13 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     if (!computeCropGeometry(srcFun, roiPadToAlign, origSz))
         return false;
 
+    // MEASURES
+
     cv::Mat idx0_16, idx1_16, s0_32, s1_32, top1_32;
     // assign accumulated values and crop to original size
     cropPadToOrig(roiPadToAlign, origSz, idx0_16, idx1_16, s0_32, s1_32, top1_32);
+
+    // MASKS
 
     // Depth output for inspection (best slice index)
     depthIndex16 = idx0_16.clone();
@@ -328,12 +332,88 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     cv::Mat topRatio32 = s0_32 / (s1_32 + 1e-6f);
 
     // Foreground mask
-    cv::Mat fg8 = FSFusionDMapShared::buildFgFromTop1AndDepth(
-        top1_32, depthIndex16,
-        /*depthStableRadiusPx*/ 4,
-        /*depthMaxRangeSlices*/ 1,
-        /*strongFrac*/ 0.10f,
-        /*weakFrac*/   0.04f);
+    // Substitute ground truth fg mask to test.  This is crashing.  Please fix.
+    std::string fgPath =  "/Users/roryhill/Temp/Photos_to_be_curated/2026/202601/2026-01-08_FocusStack/FocusStack/2026-01-08_0048_StmDMapBasic/depth/fg.png";
+    cv::Mat fg8 = cv::imread(fgPath, cv::IMREAD_GRAYSCALE);
+    if (fg8.size() != origSz) {
+        cv::Mat r;
+        // For masks: INTER_NEAREST only
+        cv::resize(fg8, r, origSz, 0, 0, cv::INTER_NEAREST);
+        fg8 = r;
+    }
+    // Binarize to strict 0/255
+    // If your fg.png is already binary, this is harmless.
+    cv::threshold(fg8, fg8, 127, 255, cv::THRESH_BINARY);
+    // Ensure type exactly CV_8U
+    if (fg8.type() != CV_8U) {
+        fg8.convertTo(fg8, CV_8U);
+    }
+    qDebug() << "fg.png size:" << fg8.cols << fg8.rows
+             << "origSz:" << origSz.width << origSz.height;
+
+    // cv::Mat fg8 = FSFusionDMapShared::buildFgFromTop1AndDepth(
+    //     top1_32, depthIndex16,
+    //     /*depthStableRadiusPx*/ 4,
+    //     /*depthMaxRangeSlices*/ 1,
+    //     /*strongFrac*/ 0.10f,
+    //     /*weakFrac*/   0.04f);
+
+    //
+    cv::Mat diagBGR = FSFusionDMapShared::dmapDiagnosticBGR(
+        idx0_16, idx1_16, fg8,
+        /*conf01_opt*/ cv::Mat(),
+        /*s0_32_opt*/ s0_32,
+        /*s1_32_opt*/ s1_32,
+        /*ringPx*/ 50,
+        /*ringConfMax*/ 0.22f);
+
+    cv::imwrite((opt.depthFolderPath + "/dmap_diag_BGR.png").toStdString(), diagBGR);
+
+    // ------------------------------------------------------------
+    // Ownership propagation (halo elimination): override depth in ring
+    // ------------------------------------------------------------
+    cv::Mat overrideMask8, overrideWinner16;
+
+    if (params.enableOwnership)
+    {
+        // optional: close small fg gaps before ring (helps twigs)
+        cv::Mat fgClean = FSFusionDMapShared::morphClose8(fg8, params.ownershipClosePx);
+
+        if (!FSFusionDMapShared::ownershipPropagateTwoPass_Outward(
+                fgClean,
+                depthIndex16,
+                params.ownershipRingPx,
+                params.seedBandPx,
+                overrideMask8,
+                overrideWinner16))
+        {
+            return false;
+        }
+
+        if (!overrideMask8.empty() && cv::countNonZero(overrideMask8) > 0)
+        {
+            // Deterministic “ownership”: replace depthIndex16 in ring with donor slice id
+            overrideWinner16.copyTo(depthIndex16, overrideMask8);
+
+            // Keep your working copies consistent (since you use idx0_16 for weights)
+            overrideWinner16.copyTo(idx0_16, overrideMask8);
+            overrideWinner16.copyTo(idx1_16, overrideMask8);
+
+            // Force hard selection in ring (no blending)
+            s0_32.setTo(1.0f, overrideMask8);
+            s1_32.setTo(0.0f, overrideMask8);
+        }
+
+        // Diagnostics (optional)
+        if (!opt.depthFolderPath.isEmpty())
+        {
+            cv::imwrite((opt.depthFolderPath + "/dmapbasic_ownership_ring.png").toStdString(),
+                        overrideMask8);
+
+            cv::imwrite((opt.depthFolderPath + "/dmapbasic_ownership_winner.png").toStdString(),
+                        FSUtilities::depthHeatmap(overrideWinner16, N, "Ownership winner"));
+        }
+    }
 
      // Contrast Threshold
     cv::Mat lowC8;
