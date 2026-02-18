@@ -594,7 +594,7 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     qDebug().noquote() << "scoreKSize               =" << o.scoreKSize;
     qDebug().noquote() << "ownershipClosePx         =" << o.ownershipClosePx;
     qDebug().noquote() << "seedBandPx               =" << o.seedBandPx;
-    qDebug().noquote() << "pyrLevels                =" << o.seedBandPx;
+    qDebug().noquote() << "pyrLevels                =" << o.pyrLevels;
 
     if (!opt.depthFolderPath.isEmpty() && o.enableDiagnostics)
     {
