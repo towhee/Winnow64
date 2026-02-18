@@ -1,9 +1,8 @@
 to do
-- make sure selection is sorted by capture time
-- FS cleared between runs
-- manage abort in MW::generateFocusStack
-- flags (incl useDepthMap in runFusion)
-- are focusSlices CV_32F if recover from disk?
+- robustMax99() sorts the entire image every time (expensive at 5k×4k).
+  Not a correctness issue, but if you want it faster later, switch to histogram/binning or nth_element.
+
+
 
 PMaxStream
     Merge: PMax
@@ -265,7 +264,7 @@ pyrLevels                = 1
 
 
 
-
+CONCLUSIONS:
 depthStableRadiusPx      = 3    // < 3 focus halos
 depthMaxRangeSlicesCore  = 1    // > 1 focus halos
 depthMaxRangeSlicesLoose = 1    // > 1 focus halos
@@ -273,11 +272,11 @@ strongFrac               = 0.03
 weakFrac                 = 0.01
 seedDilatePx             = 1    // 1..2 no visual impact
 closePx                  = 5
-openPx                   = 1
+openPx                   = 1    // 0 = focus halos
 interiorPx               = 3    // 3..10 no visual impact
 scoreSigma               = 1.5
 scoreKSize               = 3
-ownershipClosePx         = 0
+ownershipClosePx         = 0    // 0..4 no visual impact
 seedBandPx               = 1
 pyrLevels                = 1
 

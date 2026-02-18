@@ -53,7 +53,7 @@ public:
         // bool enableOwnership = true;
         // int  ownershipRingPx = 50;      // ring width outside FG where halos live
                                         // make deterministic later ???
-        int  ownershipClosePx = 0;      // close FG gaps a bit before building ring (0..3)
+        int  ownershipClosePx = 5;      // close FG gaps a bit before building ring (0..3)
         int  seedBandPx       = 1;
         // int  ownershipErodePx = 1;      // boundary = FG - erode(FG)
 
