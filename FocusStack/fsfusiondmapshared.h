@@ -115,12 +115,14 @@ namespace FSFusionDMapShared
     cv::Mat buildFgFromTop1AndDepth(const cv::Mat& top1Score32,
                                     const cv::Mat& depthIndex16,
                                     int depthStableRadiusPx,
-                                    int depthMaxRangeSlices,
+                                    int depthMaxRangeSlicesCore,
+                                    int depthMaxRangeSlicesLoose,
                                     float strongFrac,
                                     float weakFrac,
                                     int seedDilatePx,
                                     int closePx,
-                                    int openPx);
+                                    int openPx,
+                                    int interiorPx);
 
     // Stack ordering: near -> far, so "foreground" is the MIN slice index.
     // win16 is CV_16U winner labels.

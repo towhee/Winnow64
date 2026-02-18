@@ -328,7 +328,6 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
 
     cv::Mat topRatio32 = s0_32 / (s1_32 + 1e-6f);
 
-    /*
     // Foreground mask
     // std::string fgPath =  "/Users/roryhill/Temp/Photos_to_be_curated/2026/202601/2026-01-08_FocusStack/FocusStack/2026-01-08_0048_StmDMapBasic/depth/fg.png";
     // cv::Mat fg8 = cv::imread(fgPath, cv::IMREAD_GRAYSCALE);
@@ -346,18 +345,20 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     //     fg8.convertTo(fg8, CV_8U);
     // }
     // qDebug() << "fg.png size:" << fg8.cols << fg8.rows
-    //          << "origSz:" << origSz.width << origSz.height; */
+    //          << "origSz:" << origSz.width << origSz.height;
 
     cv::Mat fg8 = FSFusionDMapShared::buildFgFromTop1AndDepth(
         top1_32,
         depthIndex16,
         o.depthStableRadiusPx,
-        o.depthMaxRangeSlices,
+        o.depthMaxRangeSlicesCore,
+        o.depthMaxRangeSlicesLoose,
         o.strongFrac,
         o.weakFrac,
         o.seedDilatePx,
         o.closePx,
-        o.openPx
+        o.openPx,
+        o.interiorPx
         );
 
     /*
@@ -580,18 +581,20 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     // Diagnostics
     // ------------------------------------------------------------
     qDebug().noquote() << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    qDebug().noquote() << "depthStableRadiusPx =" << o.depthStableRadiusPx;
-    qDebug().noquote() << "depthMaxRangeSlices =" << o.depthMaxRangeSlices;
-    qDebug().noquote() << "strongFrac          =" << o.strongFrac;
-    qDebug().noquote() << "weakFrac            =" << o.weakFrac;
-    qDebug().noquote() << "seedDilatePx        =" << o.seedDilatePx;
-    qDebug().noquote() << "closePx             =" << o.closePx;
-    qDebug().noquote() << "openPx              =" << o.openPx;
-    qDebug().noquote() << "scoreSigma          =" << o.scoreSigma;
-    qDebug().noquote() << "scoreKSize          =" << o.scoreKSize;
-    qDebug().noquote() << "ownershipClosePx    =" << o.ownershipClosePx;
-    qDebug().noquote() << "seedBandPx          =" << o.seedBandPx;
-    qDebug().noquote() << "pyrLevels           =" << o.seedBandPx;
+    qDebug().noquote() << "depthStableRadiusPx      =" << o.depthStableRadiusPx;
+    qDebug().noquote() << "depthMaxRangeSlicesCore  =" << o.depthMaxRangeSlicesCore;
+    qDebug().noquote() << "depthMaxRangeSlicesLoose =" << o.depthMaxRangeSlicesLoose;
+    qDebug().noquote() << "strongFrac               =" << o.strongFrac;
+    qDebug().noquote() << "weakFrac                 =" << o.weakFrac;
+    qDebug().noquote() << "seedDilatePx             =" << o.seedDilatePx;
+    qDebug().noquote() << "closePx                  =" << o.closePx;
+    qDebug().noquote() << "openPx                   =" << o.openPx;
+    qDebug().noquote() << "interiorPx               =" << o.interiorPx;
+    qDebug().noquote() << "scoreSigma               =" << o.scoreSigma;
+    qDebug().noquote() << "scoreKSize               =" << o.scoreKSize;
+    qDebug().noquote() << "ownershipClosePx         =" << o.ownershipClosePx;
+    qDebug().noquote() << "seedBandPx               =" << o.seedBandPx;
+    qDebug().noquote() << "pyrLevels                =" << o.seedBandPx;
 
     if (!opt.depthFolderPath.isEmpty() && o.enableDiagnostics)
     {

@@ -129,7 +129,8 @@ ownershipClosePx    = 0
 seedBandPx          = 1
 pyrLevels           = 1
 
-2026-02-17 17:10:40 Fused no halo except FG overlap (twig in front of branch),
+RUN A
+2026-02-17 17:10:40 Fused no halo, minor FG transition blur (twig in front of branch),
                     salt/pepper blobs in FG
 depthStableRadiusPx = 3
 depthMaxRangeSlices = 1
@@ -143,3 +144,140 @@ scoreKSize          = 3
 ownershipClosePx    = 0
 seedBandPx          = 1
 pyrLevels           = 1
+
+2026-02-18 06:22:31 Fused scattered halo, FG good, incl overlap
+depthStableRadiusPx = 3
+depthMaxRangeSlices = 2
+strongFrac          = 0.01
+weakFrac            = 0.03
+seedDilatePx        = 2
+closePx             = 5
+openPx              = 1
+scoreSigma          = 1.5
+scoreKSize          = 3
+ownershipClosePx    = 0
+seedBandPx          = 1
+pyrLevels           = 1
+
+RUN B
+2026-02-18 07:42:22 Same as RUN A with slightly better FG edges BUT minor halos.
+depthStableRadiusPx      = 3
+depthMaxRangeSlicesCore  = 1        // > 1 adds slight focus halo
+depthMaxRangeSlicesLoose = 2
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 2
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 3
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 0
+seedBandPx               = 1
+pyrLevels                = 1
+
+2026-02-18 07:50:51 Improved FG transition but added slight focus halo
+depthStableRadiusPx      = 3
+depthMaxRangeSlicesCore  = 1
+depthMaxRangeSlicesLoose = 3        // > 2 adds slight focus halo
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 2
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 3
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 0
+seedBandPx               = 1
+pyrLevels                = 1
+
+2026-02-18 08:10:57 Fixes FG transition but adds slight focus halo blur
+depthStableRadiusPx      = 2 // < 3 Fixes FG transition but adds slight focus halo blur
+depthMaxRangeSlicesCore  = 1
+depthMaxRangeSlicesLoose = 2
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 2
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 3
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 0
+seedBandPx               = 1
+pyrLevels                = 1
+
+2026-02-18 08:18:59
+depthStableRadiusPx      = 3
+depthMaxRangeSlicesCore  = 1
+depthMaxRangeSlicesLoose = 2
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 2
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 10   // no change to FG transition blur
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 0
+seedBandPx               = 1
+pyrLevels                = 1
+
+RUN C
+2026-02-18 08:27:04 Same as run B
+depthStableRadiusPx      = 3    // < 3 focus halos
+depthMaxRangeSlicesCore  = 1    // > 1 focus halos
+depthMaxRangeSlicesLoose = 2    // > 2 focus halos
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 1    // 1..2 no visual impact
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 3    // increase no visual impact
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 0
+seedBandPx               = 1
+pyrLevels                = 1
+
+RUN D
+2026-02-18 08:43:26
+depthStableRadiusPx      = 3
+depthMaxRangeSlicesCore  = 1
+depthMaxRangeSlicesLoose = 1
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 1
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 3
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 0
+seedBandPx               = 1
+pyrLevels                = 1
+
+
+
+
+
+
+
+
+
+depthStableRadiusPx      = 3    // < 3 focus halos
+depthMaxRangeSlicesCore  = 1    // > 1 focus halos
+depthMaxRangeSlicesLoose = 1    // > 1 focus halos
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 1    // 1..2 no visual impact
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 3    // 3..10 no visual impact
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 0
+seedBandPx               = 1
+pyrLevels                = 1
+

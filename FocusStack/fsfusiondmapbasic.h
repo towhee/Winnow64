@@ -31,15 +31,19 @@ public:
 
         // Foreground
         int depthStableRadiusPx = 3;  // ↑ more strict
-        int depthMaxRangeSlices = 2;  // ↓ more strict
-        // int depthStableRadiusPx = 2;  // ↑ more strict
-        // int depthMaxRangeSlices = 2;  // ↓ more strict
-        float strongFrac = 0.010f;    // ↓ interior / holes
-        float weakFrac = 0.03f;       // ↓ interior / holes (subtle)
-        int seedDilatePx = 2;         // ↓ finer items (ie twigs)
+        int depthMaxRangeSlicesCore = 1;   // ↓ more strict (>1 = halos)
+        int depthMaxRangeSlicesLoose = 1;  // ↓ more strict (>1 = halos)
+        float expandTexFrac = 0.03f;  //   FG Must be connected to interior and
+                                      //   must have enough texture
+        // strongFrac must be > weakFrac
+        float strongFrac = 0.030f;    // ↓ interior / holes
+        float weakFrac = 0.01f;       // ↓ interior / holes (subtle)
+        // float strongFrac = 0.010f;    // ↓ interior / holes
+        // float weakFrac = 0.03f;       // ↓ interior / holes (subtle)
+        int seedDilatePx = 1;         // ↓ finer items (ie twigs)
         int closePx = 5;
         int openPx  = 1;
-
+        int interiorPx = 3;  // default 3
 
         // focus metric
         float scoreSigma = 1.5f;

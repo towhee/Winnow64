@@ -574,12 +574,14 @@ namespace FSFusionDMapShared
     cv::Mat buildFgFromTop1AndDepth(const cv::Mat& top1Score32,
                                     const cv::Mat& depthIndex16,
                                     int depthStableRadiusPx,
-                                    int depthMaxRangeSlices,
+                                    int depthMaxRangeSlicesCore,
+                                    int depthMaxRangeSlicesLoose,
                                     float strongFrac,
                                     float weakFrac,
                                     int seedDilatePx,
                                     int closePx,
-                                    int openPx)
+                                    int openPx,
+                                    int interiorPx)
     {
     /*
     Return a foreground mask based on a silhouette from top1Score32 combined with
@@ -589,78 +591,71 @@ namespace FSFusionDMapShared
         CV_Assert(depthIndex16.type() == CV_16U);
         CV_Assert(top1Score32.size() == depthIndex16.size());
 
-        // --- robust scaling (critical) ---
-        const float mx = robustMax99(top1Score32);
-        const float strongThr = std::max(1e-12f, mx * strongFrac);
-        const float weakThr   = std::max(1e-12f, mx * weakFrac);
+        // Ensure strong >= weak (strong threshold must be stricter)
+        float sFrac = strongFrac, wFrac = weakFrac;
+        if (sFrac < wFrac) std::swap(sFrac, wFrac);
 
-        // 1) Strong seeds (edges)
+        const float mx = robustMax99(top1Score32);
+        const float strongThr = std::max(1e-12f, mx * sFrac);
+        const float weakThr   = std::max(1e-12f, mx * wFrac);
+
+        // 1) Strong seeds
         cv::Mat seed8 = (top1Score32 >= strongThr);
         seed8.convertTo(seed8, CV_8U, 255.0);
-        if (seedDilatePx > 0) cv::dilate(seed8, seed8, FSFusion::seEllipse(seedDilatePx));
+        if (seedDilatePx > 0)
+            cv::dilate(seed8, seed8, FSFusion::seEllipse(seedDilatePx));
 
-        // 2) Weak silhouette (connects outline + fills interior later)
+        // 2) Weak silhouette (don’t keepLargestCC here)
         cv::Mat weak8 = (top1Score32 >= weakThr);
         weak8.convertTo(weak8, CV_8U, 255.0);
 
-        if (closePx > 0) cv::morphologyEx(weak8, weak8, cv::MORPH_CLOSE, FSFusion::seEllipse(closePx));
+        if (closePx > 0)
+            cv::morphologyEx(weak8, weak8, cv::MORPH_CLOSE, FSFusion::seEllipse(closePx));
         weak8 = FSFusionDMapShared::fillHoles8(weak8);
-        weak8 = FSFusionDMapShared::keepLargestCC(weak8); // optional but usually helps
 
-        // 3) Stable depth interior
-        cv::Mat stable8 = stableDepthMask8_rangeLe(depthIndex16, depthStableRadiusPx, depthMaxRangeSlices);
+        // Keep weak silhouette parts that are connected to strong seeds
+        weak8 = keepCCsTouchingMask(weak8, seed8, 8);
 
-        // 4) Combine: keep stable pixels that are inside the weak silhouette,
-        //    and ensure connection to strong seeds (prevents swallowing background)
-        cv::Mat insideStable8;
-        cv::bitwise_and(stable8, weak8, insideStable8);
+        // 3) Core stable depth (halo-safe)
+        cv::Mat stableCore8  = stableDepthMask8_rangeLe(depthIndex16,
+                                                       depthStableRadiusPx,
+                                                       depthMaxRangeSlicesCore);
 
-        cv::Mat fg8 = keepCCsTouchingMask(insideStable8, seed8, 8);
+        cv::Mat insideCore8;
+        cv::bitwise_and(stableCore8, weak8, insideCore8);
 
-        // 5) cleanup
-        if (openPx > 0) cv::morphologyEx(fg8, fg8, cv::MORPH_OPEN,  FSFusion::seEllipse(openPx));
-        if (closePx > 0) cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(closePx));
+        cv::Mat fgCore8 = keepCCsTouchingMask(insideCore8, seed8, 8);
+
+        // 4) Loose stable depth candidate (to fix “blue arrow” transitions)
+        cv::Mat stableLoose8 = stableDepthMask8_rangeLe(depthIndex16,
+                                                        depthStableRadiusPx,
+                                                        depthMaxRangeSlicesLoose);
+
+        cv::Mat insideLoose8;
+        cv::bitwise_and(stableLoose8, weak8, insideLoose8);
+
+        cv::Mat fgLoose8 = keepCCsTouchingMask(insideLoose8, seed8, 8);
+
+        // 5) Interior-only expansion: only add loose pixels well inside core
+        cv::Mat fgCoreE8;
+        if (interiorPx > 0)
+            cv::erode(fgCore8, fgCoreE8, FSFusion::seEllipse(interiorPx));
+        else
+            fgCoreE8 = fgCore8;
+
+        cv::Mat fgAdd8 = keepCCsTouchingMask(fgLoose8, fgCoreE8, 8);
+
+        cv::Mat fg8 = fgCore8 | fgAdd8;
+
+        // 6) cleanup
+        if (openPx > 0)
+            cv::morphologyEx(fg8, fg8, cv::MORPH_OPEN,  FSFusion::seEllipse(openPx));
+        if (closePx > 0)
+            cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(closePx));
+
         fg8 = FSFusionDMapShared::fillHoles8(fg8);
-
         cv::threshold(fg8, fg8, 127, 255, cv::THRESH_BINARY);
         return fg8;
-
-        // CV_Assert(top1Score32.type() == CV_32F);
-        // CV_Assert(depthIndex16.type() == CV_16U);
-        // CV_Assert(top1Score32.size() == depthIndex16.size());
-
-        // // 1) seed from top1Score hysteresis
-        // cv::Mat seed8 = hysteresisMask8_fromTop1Score(top1Score32, strongFrac, weakFrac);
-        // if (seed8.type() != CV_8U) seed8.convertTo(seed8, CV_8U);
-        // cv::compare(seed8, 0, seed8, cv::CMP_GT); // 0/255
-
-        // if (seedDilatePx > 0)
-        //     cv::dilate(seed8, seed8, FSFusion::seEllipse(seedDilatePx));
-
-        // // 2) stable depth interior
-        // cv::Mat stable8 = stableDepthMask8_rangeLe(depthIndex16, depthStableRadiusPx, depthMaxRangeSlices);
-        // if (stable8.type() != CV_8U) stable8.convertTo(stable8, CV_8U);
-        // cv::compare(stable8, 0, stable8, cv::CMP_GT); // 0/255
-
-        // // 3) keep stable regions connected to seed
-        // cv::Mat fg8 = keepCCsTouchingMask(stable8, seed8, 8);
-        // cv::compare(fg8, 0, fg8, cv::CMP_GT); // 0/255
-
-        // // 4) cleanup
-        // if (closePx > 0)
-        //     cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(closePx));
-        // if (openPx > 0)
-        //     cv::morphologyEx(fg8, fg8, cv::MORPH_OPEN, FSFusion::seEllipse(openPx));
-
-        // cv::Mat filled = fillHoles8(fg8);
-
-        // // (optional) filled = keepLargestCC(filled);
-
-        // // final binarize
-        // if (filled.type() != CV_8U) filled.convertTo(filled, CV_8U); // FIXED
-        // cv::threshold(filled, filled, 127, 255, cv::THRESH_BINARY);
-
-        // return filled; // 0/255
     }
 
     cv::Mat focusMetric32_dmap(const cv::Mat& gray8, float preBlurSigma, int lapKSize)
