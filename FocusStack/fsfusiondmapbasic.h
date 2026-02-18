@@ -29,23 +29,35 @@ public:
     {
         QString method = "Pyramid";  // Simple or Pyramid
 
+        // Foreground
+        int depthStableRadiusPx = 3;  // ↑ more strict
+        int depthMaxRangeSlices = 2;  // ↓ more strict
+        // int depthStableRadiusPx = 2;  // ↑ more strict
+        // int depthMaxRangeSlices = 2;  // ↓ more strict
+        float strongFrac = 0.010f;    // ↓ interior / holes
+        float weakFrac = 0.03f;       // ↓ interior / holes (subtle)
+        int seedDilatePx = 2;         // ↓ finer items (ie twigs)
+        int closePx = 5;
+        int openPx  = 1;
+
+
         // focus metric
         float scoreSigma = 1.5f;
         int   scoreKSize = 3;
 
         // --- Boundary Ownership / Halo elimination (Two-pass ownership propagation) ---
-        bool enableOwnership = true;
-        int  ownershipRingPx = 50;      // ring width outside FG where halos live
+        // bool enableOwnership = true;
+        // int  ownershipRingPx = 50;      // ring width outside FG where halos live
                                         // make deterministic later ???
         int  ownershipClosePx = 0;      // close FG gaps a bit before building ring (0..3)
         int  seedBandPx       = 1;
         // int  ownershipErodePx = 1;      // boundary = FG - erode(FG)
 
-        // Low-contrast suppression (Zerene-style)
-        bool  enableContrastThreshold = true;
-        float contrastMinFrac = 0.010f;   // 0.3%..3% typical; start 1% (fraction of max top1Score)
-        int   lowContrastMedianK = 5;     // 3 or 5
-        int   lowContrastDilatePx = 0;    // optional (0..4)
+        // // Low-contrast suppression (Zerene-style)
+        // bool  enableContrastThreshold = false;
+        // float contrastMinFrac = 0.010f;   // 0.3%..3% typical; start 1% (fraction of max top1Score)
+        // int   lowContrastMedianK = 5;     // 3 or 5
+        // int   lowContrastDilatePx = 0;    // optional (0..4)
 
         // continuous mixing
         float mixEps = 1e-6f;        // for score0+score1 denominator
@@ -60,9 +72,11 @@ public:
         float weightBlurSigma = 0.0f; // 1.2f;
 
         int   pyrLevels = 5;
+
+        bool enableDiagnostics = true;
     };
 
-    Params params;
+    Params o;
 
     void reset();
 

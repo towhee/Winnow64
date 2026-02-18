@@ -45,6 +45,9 @@ namespace FSFusionDMapShared
     // FG cleanup (small utility)
     cv::Mat morphClose8(const cv::Mat& bin8, int px); // 0/255 -> 0/255
 
+    // Deterministic ring px default width (input src image size)
+    int defaultRingPx(const cv::Size& sz);
+
     // Build ring just outside FG: ring = dilate(FG, ringPx) - FG
     cv::Mat ringOutsideFg8(const cv::Mat& fg8, int ringPx);
 
@@ -107,12 +110,17 @@ namespace FSFusionDMapShared
                                const cv::Mat& touch8,
                                int connectivity);
 
+    float robustMax99(const cv::Mat& m32f);
+
     cv::Mat buildFgFromTop1AndDepth(const cv::Mat& top1Score32,
                                     const cv::Mat& depthIndex16,
                                     int depthStableRadiusPx,
                                     int depthMaxRangeSlices,
                                     float strongFrac,
-                                    float weakFrac);
+                                    float weakFrac,
+                                    int seedDilatePx,
+                                    int closePx,
+                                    int openPx);
 
     // Stack ordering: near -> far, so "foreground" is the MIN slice index.
     // win16 is CV_16U winner labels.
