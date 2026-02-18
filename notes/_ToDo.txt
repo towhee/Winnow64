@@ -6,10 +6,8 @@ WHAT'S NEW
 - Selections are now cleared after a filtration change
 
 BUGS / TO DO
-- DepthIndex
+- Edit title if already exists
 - Eliminate processEvents and review G::popup usage
-- Fused 16 bit out
-- Peterri background
 - Delete folder crash
 - Rename files
 - Read/write png metadata

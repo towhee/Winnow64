@@ -101,8 +101,45 @@ cv::Mat morphClose8(const cv::Mat& bin8, int px)
 
 Tests:
 
-Is this correct:
+2026-02-17 12:45:06 Fused faint, scattered halo; less than full FG
+depthStableRadiusPx = 2
+depthMaxRangeSlices = 1
+strongFrac          = 0.01
+weakFrac            = 0.03
+seedDilatePx        = 2
+closePx             = 5
+openPx              = 1
+scoreSigma          = 1.5
+scoreKSize          = 3
+ownershipClosePx    = 0
+seedBandPx          = 1
+pyrLevels           = 1
 
-1.  Accumulate measures in streamSlice.
-2. In streamFinish generate foreground mask.
-3.
+2026-02-17 16:55:46 Fused Muddled BG, Fat FG
+depthStableRadiusPx = 1
+depthMaxRangeSlices = 1
+strongFrac          = 0.01
+weakFrac            = 0.03
+seedDilatePx        = 2
+closePx             = 5
+openPx              = 1
+scoreSigma          = 1.5
+scoreKSize          = 3
+ownershipClosePx    = 0
+seedBandPx          = 1
+pyrLevels           = 1
+
+2026-02-17 17:10:40 Fused no halo except FG overlap (twig in front of branch),
+                    salt/pepper blobs in FG
+depthStableRadiusPx = 3
+depthMaxRangeSlices = 1
+strongFrac          = 0.01
+weakFrac            = 0.03
+seedDilatePx        = 2
+closePx             = 5
+openPx              = 1
+scoreSigma          = 1.5
+scoreKSize          = 3
+ownershipClosePx    = 0
+seedBandPx          = 1
+pyrLevels           = 1

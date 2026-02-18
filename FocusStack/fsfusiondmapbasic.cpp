@@ -43,7 +43,7 @@ int FSFusionDMapBasic::computePyrLevels(const cv::Size& origSz) const
 Ensure dimensions are friendly for pyramid/downsampling
 (powers of 2 / divisible sizes).
 */
-    int levels = params.pyrLevels;
+    int levels = o.pyrLevels;
     if (levels <= 0) {
         int dim = std::max(origSz.width, origSz.height);
         levels = 5;
@@ -243,7 +243,7 @@ index is most in-focus (and its score), and also the 2nd-best.
         }
 
         const int levelsForPad = computePyrLevels(alignSize);
-        params.pyrLevels = levelsForPad;
+        o.pyrLevels = levelsForPad;
 
         padSize = FSFusionDMapShared::computePadSizeForPyr(alignSize, levelsForPad);
 
@@ -282,7 +282,7 @@ index is most in-focus (and its score), and also the 2nd-best.
     cv::Mat grayPad8 = FSFusionDMapShared::padCenterReflect(grayAlign8, padSize);
 
     // focus metric
-    cv::Mat score32 = FSFusionDMapShared::focusMetric32_dmap(grayPad8, params.scoreSigma, params.scoreKSize);
+    cv::Mat score32 = FSFusionDMapShared::focusMetric32_dmap(grayPad8, o.scoreSigma, o.scoreKSize);
 
     // update accumulated best and 2nd best score and slice index
     updateTop2(score32, (uint16_t)std::max(0, slice));
@@ -304,6 +304,7 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     if (G::FSLog) G::log(srcFun);
 
     const int N = inputPaths.size();
+
     if (!active_ || s0_pad32.empty() || N <= 0 || (int)globals.size() != N)
         return false;
     if (FSFusion::isAbort(abortFlag)) return false;
@@ -314,140 +315,143 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     if (!computeCropGeometry(srcFun, roiPadToAlign, origSz))
         return false;
 
-    // MEASURES
+    // ------------------------------------------------------------
+    // Measures and depth index
+    // ------------------------------------------------------------
 
     cv::Mat idx0_16, idx1_16, s0_32, s1_32, top1_32;
     // assign accumulated values and crop to original size
     cropPadToOrig(roiPadToAlign, origSz, idx0_16, idx1_16, s0_32, s1_32, top1_32);
 
-    // MASKS
-
     // Depth output for inspection (best slice index)
     depthIndex16 = idx0_16.clone();
 
-    // cv::Mat m0 = (s0_32 > 1e-12f);
-    // cv::Mat m1 = (s1_32 > 1e-12f);
-    // cv::Mat s12;
-    // cv::bitwise_or(m0, m1, s12);   // CV_8U 0/255
     cv::Mat topRatio32 = s0_32 / (s1_32 + 1e-6f);
 
+    /*
     // Foreground mask
-    // Substitute ground truth fg mask to test.  This is crashing.  Please fix.
-    std::string fgPath =  "/Users/roryhill/Temp/Photos_to_be_curated/2026/202601/2026-01-08_FocusStack/FocusStack/2026-01-08_0048_StmDMapBasic/depth/fg.png";
-    cv::Mat fg8 = cv::imread(fgPath, cv::IMREAD_GRAYSCALE);
-    if (fg8.size() != origSz) {
-        cv::Mat r;
-        // For masks: INTER_NEAREST only
-        cv::resize(fg8, r, origSz, 0, 0, cv::INTER_NEAREST);
-        fg8 = r;
-    }
-    // Binarize to strict 0/255
-    // If your fg.png is already binary, this is harmless.
-    cv::threshold(fg8, fg8, 127, 255, cv::THRESH_BINARY);
-    // Ensure type exactly CV_8U
-    if (fg8.type() != CV_8U) {
-        fg8.convertTo(fg8, CV_8U);
-    }
-    qDebug() << "fg.png size:" << fg8.cols << fg8.rows
-             << "origSz:" << origSz.width << origSz.height;
+    // std::string fgPath =  "/Users/roryhill/Temp/Photos_to_be_curated/2026/202601/2026-01-08_FocusStack/FocusStack/2026-01-08_0048_StmDMapBasic/depth/fg.png";
+    // cv::Mat fg8 = cv::imread(fgPath, cv::IMREAD_GRAYSCALE);
+    // if (fg8.size() != origSz) {
+    //     cv::Mat r;
+    //     // For masks: INTER_NEAREST only
+    //     cv::resize(fg8, r, origSz, 0, 0, cv::INTER_NEAREST);
+    //     fg8 = r;
+    // }
+    // // Binarize to strict 0/255
+    // // If your fg.png is already binary, this is harmless.
+    // cv::threshold(fg8, fg8, 127, 255, cv::THRESH_BINARY);
+    // // Ensure type exactly CV_8U
+    // if (fg8.type() != CV_8U) {
+    //     fg8.convertTo(fg8, CV_8U);
+    // }
+    // qDebug() << "fg.png size:" << fg8.cols << fg8.rows
+    //          << "origSz:" << origSz.width << origSz.height; */
 
-    // cv::Mat fg8 = FSFusionDMapShared::buildFgFromTop1AndDepth(
-    //     top1_32, depthIndex16,
-    //     /*depthStableRadiusPx*/ 4,
-    //     /*depthMaxRangeSlices*/ 1,
-    //     /*strongFrac*/ 0.10f,
-    //     /*weakFrac*/   0.04f);
+    cv::Mat fg8 = FSFusionDMapShared::buildFgFromTop1AndDepth(
+        top1_32,
+        depthIndex16,
+        o.depthStableRadiusPx,
+        o.depthMaxRangeSlices,
+        o.strongFrac,
+        o.weakFrac,
+        o.seedDilatePx,
+        o.closePx,
+        o.openPx
+        );
 
-    //
+    /*
     cv::Mat diagBGR = FSFusionDMapShared::dmapDiagnosticBGR(
         idx0_16, idx1_16, fg8,
-        /*conf01_opt*/ cv::Mat(),
-        /*s0_32_opt*/ s0_32,
-        /*s1_32_opt*/ s1_32,
-        /*ringPx*/ 50,
-        /*ringConfMax*/ 0.22f);
-
+        cv::Mat(),   // conf01_opt
+        s0_32,       // s0_32_opt
+        s1_32,       // s1_32_opt
+        50,          // ringPx
+        0.22f);      // ringConfMax
     cv::imwrite((opt.depthFolderPath + "/dmap_diag_BGR.png").toStdString(), diagBGR);
+        */
 
     // ------------------------------------------------------------
     // Ownership propagation (halo elimination): override depth in ring
     // ------------------------------------------------------------
+
     cv::Mat overrideMask8, overrideWinner16;
 
-    if (params.enableOwnership)
+    // optional: close small fg gaps before ring (helps twigs)
+    cv::Mat fgClean = FSFusionDMapShared::morphClose8(fg8, o.ownershipClosePx);
+
+    if (!FSFusionDMapShared::ownershipPropagateTwoPass_Outward(
+            fgClean,
+            depthIndex16,
+            FSFusionDMapShared::defaultRingPx(origSz),
+            o.seedBandPx,
+            overrideMask8,
+            overrideWinner16))
     {
-        // optional: close small fg gaps before ring (helps twigs)
-        cv::Mat fgClean = FSFusionDMapShared::morphClose8(fg8, params.ownershipClosePx);
-
-        if (!FSFusionDMapShared::ownershipPropagateTwoPass_Outward(
-                fgClean,
-                depthIndex16,
-                params.ownershipRingPx,
-                params.seedBandPx,
-                overrideMask8,
-                overrideWinner16))
-        {
-            return false;
-        }
-
-        if (!overrideMask8.empty() && cv::countNonZero(overrideMask8) > 0)
-        {
-            // Deterministic “ownership”: replace depthIndex16 in ring with donor slice id
-            overrideWinner16.copyTo(depthIndex16, overrideMask8);
-
-            // Keep your working copies consistent (since you use idx0_16 for weights)
-            overrideWinner16.copyTo(idx0_16, overrideMask8);
-            overrideWinner16.copyTo(idx1_16, overrideMask8);
-
-            // Force hard selection in ring (no blending)
-            s0_32.setTo(1.0f, overrideMask8);
-            s1_32.setTo(0.0f, overrideMask8);
-        }
-
-        // Diagnostics (optional)
-        if (!opt.depthFolderPath.isEmpty())
-        {
-            cv::imwrite((opt.depthFolderPath + "/dmapbasic_ownership_ring.png").toStdString(),
-                        overrideMask8);
-
-            cv::imwrite((opt.depthFolderPath + "/dmapbasic_ownership_winner.png").toStdString(),
-                        FSUtilities::depthHeatmap(overrideWinner16, N, "Ownership winner"));
-        }
+        return false;
     }
 
-     // Contrast Threshold
-    cv::Mat lowC8;
-    if (params.enableContrastThreshold)
+    if (!overrideMask8.empty() && cv::countNonZero(overrideMask8) > 0)
     {
-        lowC8 = FSFusionDMapShared::lowContrastMask8_fromTop1Score(
-            top1_32, params.contrastMinFrac);
-
-        if (params.lowContrastDilatePx > 0)
-            cv::dilate(lowC8, lowC8, FSFusion::seEllipse(params.lowContrastDilatePx));
-
-        if (cv::countNonZero(lowC8) > 0)
-        {
-            // 1) Stabilize depth labels in low-contrast regions (kills confetti/noise winners)
-            const int k = (params.lowContrastMedianK == 3) ? 3 : 5;
-            cv::Mat med16;
-            cv::medianBlur(depthIndex16, med16, k);
-            med16.copyTo(depthIndex16, lowC8);
-
-            // Keep idx0 consistent with the stabilized depth map
-            depthIndex16.copyTo(idx0_16, lowC8);
-
-            // 2) FORCE HARD SELECTION (NO BLEND) in low-contrast pixels:
-            // make idx1 == idx0 and make (s0,s1) = (1,0) so w32 becomes 1.0 for idx0 slice
-            idx0_16.copyTo(idx1_16, lowC8);
-
-            s0_32.setTo(1.0f, lowC8);
-            s1_32.setTo(0.0f, lowC8);
+        // Clamp overrideWinner16 to [0, N-1] before copying
+        // Just in case donor values can ever be junk from uninitialized areas
+        if (!overrideWinner16.empty()) {
+            cv::min(overrideWinner16, (uint16_t)(N - 1), overrideWinner16);
         }
+
+        // prevent any chance accidentally touch FG due to ring math
+        overrideMask8.setTo(0, fg8); // never override inside FG
+
+        // Deterministic “ownership”: replace depthIndex16 in ring with donor slice id
+        overrideWinner16.copyTo(depthIndex16, overrideMask8);
+
+        // Keep your working copies consistent (since you use idx0_16 for weights)
+        overrideWinner16.copyTo(idx0_16, overrideMask8);
+        overrideWinner16.copyTo(idx1_16, overrideMask8);
+
+        // Force hard selection in ring (no blending)
+        s0_32.setTo(1.0f, overrideMask8);
+        s1_32.setTo(0.0f, overrideMask8);
     }
+
+    /* // Contrast Threshold (not used)
+    // cv::Mat lowC8;
+    // if (params.enableContrastThreshold)
+    // {
+    //     lowC8 = FSFusionDMapShared::lowContrastMask8_fromTop1Score(
+    //         top1_32, params.contrastMinFrac);
+
+    //     if (params.lowContrastDilatePx > 0)
+    //         cv::dilate(lowC8, lowC8, FSFusion::seEllipse(params.lowContrastDilatePx));
+
+    //     if (cv::countNonZero(lowC8) > 0)
+    //     {
+    //         // 1) Stabilize depth labels in low-contrast regions (kills confetti/noise winners)
+    //         const int k = (params.lowContrastMedianK == 3) ? 3 : 5;
+    //         cv::Mat med16;
+    //         cv::medianBlur(depthIndex16, med16, k);
+    //         med16.copyTo(depthIndex16, lowC8);
+
+    //         // Keep idx0 consistent with the stabilized depth map
+    //         depthIndex16.copyTo(idx0_16, lowC8);
+
+    //         // 2) FORCE HARD SELECTION (NO BLEND) in low-contrast pixels:
+    //         // make idx1 == idx0 and make (s0,s1) = (1,0) so w32 becomes 1.0 for idx0 slice
+    //         idx0_16.copyTo(idx1_16, lowC8);
+
+    //         s0_32.setTo(1.0f, lowC8);
+    //         s1_32.setTo(0.0f, lowC8);
+    //     }
+    // } */
+
+    // ------------------------------------------------------------
+    // Final fusion
+    // ------------------------------------------------------------
+    {
 
     cv::Mat out32(origSz, CV_32FC3, cv::Scalar(0,0,0));
 
-    if (params.method == "Simple") {
+    if (o.method == "Simple") {
         for (int s = 0; s < N; ++s)
         {
             cv::Mat grayTmp, colorTmp;
@@ -465,7 +469,7 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
         }
     }
 
-    if (params.method == "Pyramid") {
+    if (o.method == "Pyramid") {
 
         // Build pyramids from depthIndex16 (same as advanced path)
         const int levels = computePyrLevels(origSz);
@@ -500,7 +504,7 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
             // w32 from continuous top2 mix
             cv::Mat w32(origSz, CV_32F, cv::Scalar(0));
 
-            const float eps = std::max(1e-12f, params.mixEps);
+            const float eps = std::max(1e-12f, o.mixEps);
             for (int y = 0; y < origSz.height; ++y)
             {
                 const uint16_t* i0 = idx0_16.ptr<uint16_t>(y);
@@ -524,9 +528,9 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
                     float w0 = s0 / den;
                     float w1 = 1.0f - w0;
 
-                    if (params.wMin > 0.0f) {
-                        w0 = std::max(w0, params.wMin);
-                        w1 = std::max(w1, params.wMin);
+                    if (o.wMin > 0.0f) {
+                        w0 = std::max(w0, o.wMin);
+                        w1 = std::max(w1, o.wMin);
                         const float inv = 1.0f / (w0 + w1);
                         w0 *= inv; w1 *= inv;
                     }
@@ -541,11 +545,11 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
             sumW += w32;
 
             FusionPyr::AccumDMapParams ap;
-            ap.enableHardWeightsOnLowpass = params.enableHardWeightsOnLowpass;
-            ap.enableDepthGradLowpassVeto = params.enableDepthGradLowpassVeto;
-            ap.hardFromLevel = params.hardFromLevel;
-            ap.vetoFromLevel = params.vetoFromLevel;
-            ap.vetoStrength  = params.vetoStrength;
+            ap.enableHardWeightsOnLowpass = o.enableHardWeightsOnLowpass;
+            ap.enableDepthGradLowpassVeto = o.enableDepthGradLowpassVeto;
+            ap.hardFromLevel = o.hardFromLevel;
+            ap.vetoFromLevel = o.vetoFromLevel;
+            ap.vetoStrength  = o.vetoStrength;
             ap.wMin          = 0.0f; // wMin already handled above
 
             FusionPyr::accumulateSlicePyr(A,
@@ -556,7 +560,7 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
                                           s,
                                           ap,
                                           levels,
-                                          params.weightBlurSigma);
+                                          o.weightBlurSigma);
         }
 
         // cv::Mat32 out32 = FusionPyr::finalizeBlend(A, 1e-8f);
@@ -570,29 +574,52 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     else
         out32.convertTo(outputColor, CV_8UC3, 255.0);
 
+    } // end final fusion
 
-    std::string s = (opt.depthFolderPath + "/dmapbasic_fg.png").toStdString();
-    cv::imwrite(s, fg8);
+    // ------------------------------------------------------------
+    // Diagnostics
+    // ------------------------------------------------------------
+    qDebug().noquote() << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    qDebug().noquote() << "depthStableRadiusPx =" << o.depthStableRadiusPx;
+    qDebug().noquote() << "depthMaxRangeSlices =" << o.depthMaxRangeSlices;
+    qDebug().noquote() << "strongFrac          =" << o.strongFrac;
+    qDebug().noquote() << "weakFrac            =" << o.weakFrac;
+    qDebug().noquote() << "seedDilatePx        =" << o.seedDilatePx;
+    qDebug().noquote() << "closePx             =" << o.closePx;
+    qDebug().noquote() << "openPx              =" << o.openPx;
+    qDebug().noquote() << "scoreSigma          =" << o.scoreSigma;
+    qDebug().noquote() << "scoreKSize          =" << o.scoreKSize;
+    qDebug().noquote() << "ownershipClosePx    =" << o.ownershipClosePx;
+    qDebug().noquote() << "seedBandPx          =" << o.seedBandPx;
+    qDebug().noquote() << "pyrLevels           =" << o.seedBandPx;
 
-    s = (opt.depthFolderPath + "/dmapbasic_topRatio32.png").toStdString();
-    cv::imwrite(s, topRatio32);
-
-    // optional diagnostics
-    if (!opt.depthFolderPath.isEmpty())
+    if (!opt.depthFolderPath.isEmpty() && o.enableDiagnostics)
     {
+        std::string s;
+        s = (opt.depthFolderPath + "/dmapbasic_fg.png").toStdString();
+        cv::imwrite(s, fg8);
+
+        s = (opt.depthFolderPath + "/dmapbasic_ownership_ring.png").toStdString();
+        cv::imwrite(s, overrideMask8);
+
+        s = (opt.depthFolderPath + "/dmapbasic_ownership_winner.png").toStdString();
+        cv::imwrite(s, FSUtilities::depthHeatmap(overrideWinner16, N, "Ownership winner"));
+
+        s = (opt.depthFolderPath + "/dmapbasic_topRatio32.png").toStdString();
+        cv::imwrite(s, topRatio32);
+
         s = (opt.depthFolderPath + "/dmapbasic_depth_idx0.png").toStdString();
         cv::imwrite(s, FSUtilities::depthHeatmap(depthIndex16, N, "DMapBasic idx0"));
 
-    }
-    if (!opt.depthFolderPath.isEmpty() && params.enableContrastThreshold)
-    {
-        s = (opt.depthFolderPath + "/dmapbasic_lowContrastMask.png").toStdString();
-        cv::imwrite(s, lowC8);
+        // this looks like a good fg ??
         double mn=0,mx=0; cv::minMaxLoc(top1_32, &mn, &mx);
         cv::Mat top18;
         top1_32.convertTo(top18, CV_8U, (mx > 1e-12) ? (255.0 / mx) : 1.0);
         s = (opt.depthFolderPath + "/dmapbasic_top1Score8.png").toStdString();
         cv::imwrite(s, top18);
+
+        // s = (opt.depthFolderPath + "/dmapbasic_lowContrastMask.png").toStdString();
+        // cv::imwrite(s, lowC8);
     }
 
     reset();
