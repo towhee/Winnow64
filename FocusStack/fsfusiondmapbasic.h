@@ -32,8 +32,8 @@ public:
         // Foreground
         int depthStableRadiusPx = 3;  // ↑ more strict
         int depthMaxRangeSlicesCore = 1;   // ↓ more strict (>1 = halos)
-        int depthMaxRangeSlicesLoose = 1;  // ↓ more strict (>1 = halos)
-        float expandTexFrac = 0.03f;  //   FG Must be connected to interior and
+        int depthMaxRangeSlicesLoose = 5;  // ↓ more strict (>1 = halos)
+        float expandTexFrac = 0.05f;  //   FG Must be connected to interior and
                                       //   must have enough texture
         // strongFrac must be > weakFrac
         float strongFrac = 0.030f;    // ↓ interior / holes
@@ -53,7 +53,7 @@ public:
         // bool enableOwnership = true;
         // int  ownershipRingPx = 50;      // ring width outside FG where halos live
                                         // make deterministic later ???
-        int  ownershipClosePx = 5;      // close FG gaps a bit before building ring (0..3)
+        int  ownershipClosePx = 3;      // close FG gaps a bit before building ring (0..3)
         int  seedBandPx       = 1;
         // int  ownershipErodePx = 1;      // boundary = FG - erode(FG)
 

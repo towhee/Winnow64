@@ -112,7 +112,7 @@ scoreSigma          = 1.5
 scoreKSize          = 3
 ownershipClosePx    = 0
 seedBandPx          = 1
-pyrLevels           = 1
+pyrLevels           = 5
 
 2026-02-17 16:55:46 Fused Muddled BG, Fat FG
 depthStableRadiusPx = 1
@@ -126,7 +126,7 @@ scoreSigma          = 1.5
 scoreKSize          = 3
 ownershipClosePx    = 0
 seedBandPx          = 1
-pyrLevels           = 1
+pyrLevels           = 5
 
 RUN A
 2026-02-17 17:10:40 Fused no halo, minor FG transition blur (twig in front of branch),
@@ -142,7 +142,7 @@ scoreSigma          = 1.5
 scoreKSize          = 3
 ownershipClosePx    = 0
 seedBandPx          = 1
-pyrLevels           = 1
+pyrLevels           = 5
 
 2026-02-18 06:22:31 Fused scattered halo, FG good, incl overlap
 depthStableRadiusPx = 3
@@ -156,7 +156,7 @@ scoreSigma          = 1.5
 scoreKSize          = 3
 ownershipClosePx    = 0
 seedBandPx          = 1
-pyrLevels           = 1
+pyrLevels           = 5
 
 RUN B
 2026-02-18 07:42:22 Same as RUN A with slightly better FG edges BUT minor halos.
@@ -173,7 +173,7 @@ scoreSigma               = 1.5
 scoreKSize               = 3
 ownershipClosePx         = 0
 seedBandPx               = 1
-pyrLevels                = 1
+pyrLevels                = 5
 
 2026-02-18 07:50:51 Improved FG transition but added slight focus halo
 depthStableRadiusPx      = 3
@@ -189,7 +189,7 @@ scoreSigma               = 1.5
 scoreKSize               = 3
 ownershipClosePx         = 0
 seedBandPx               = 1
-pyrLevels                = 1
+pyrLevels                = 5
 
 2026-02-18 08:10:57 Fixes FG transition but adds slight focus halo blur
 depthStableRadiusPx      = 2 // < 3 Fixes FG transition but adds slight focus halo blur
@@ -205,7 +205,7 @@ scoreSigma               = 1.5
 scoreKSize               = 3
 ownershipClosePx         = 0
 seedBandPx               = 1
-pyrLevels                = 1
+pyrLevels                = 5
 
 2026-02-18 08:18:59
 depthStableRadiusPx      = 3
@@ -221,7 +221,7 @@ scoreSigma               = 1.5
 scoreKSize               = 3
 ownershipClosePx         = 0
 seedBandPx               = 1
-pyrLevels                = 1
+pyrLevels                = 5
 
 RUN C
 2026-02-18 08:27:04 Same as run B
@@ -238,7 +238,7 @@ scoreSigma               = 1.5
 scoreKSize               = 3
 ownershipClosePx         = 0
 seedBandPx               = 1
-pyrLevels                = 1
+pyrLevels                = 5
 
 RUN D
 2026-02-18 08:43:26
@@ -255,7 +255,61 @@ scoreSigma               = 1.5
 scoreKSize               = 3
 ownershipClosePx         = 0
 seedBandPx               = 1
-pyrLevels                = 1
+pyrLevels                = 5
+
+026-02-18 12:02:36 No focus halos, improved FG edge
+depthStableRadiusPx      = 3
+depthMaxRangeSlicesCore  = 1
+depthMaxRangeSlicesLoose = 5    // improved FG edge (sweet spot?)
+expandTexFrac            = 0.02
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 1
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 3
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 3
+seedBandPx               = 1
+pyrLevels                = 5
+
+2026-02-18 12:04:36 Better than 12:02:36
+depthStableRadiusPx      = 3
+depthMaxRangeSlicesCore  = 1
+depthMaxRangeSlicesLoose = 1
+expandTexFrac            = 0.02
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 1
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 3
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 3
+seedBandPx               = 1
+pyrLevels                = 5
+
+2026-02-18 12:14:20
+depthStableRadiusPx      = 3
+depthMaxRangeSlicesCore  = 1
+depthMaxRangeSlicesLoose = 5
+expandTexFrac            = 0.05
+strongFrac               = 0.03
+weakFrac                 = 0.01
+seedDilatePx             = 1
+closePx                  = 5
+openPx                   = 1
+interiorPx               = 3
+scoreSigma               = 1.5
+scoreKSize               = 3
+ownershipClosePx         = 3
+seedBandPx               = 1
+pyrLevels                = 5
+
+
+
 
 
 
@@ -267,7 +321,8 @@ pyrLevels                = 1
 CONCLUSIONS:
 depthStableRadiusPx      = 3    // < 3 focus halos
 depthMaxRangeSlicesCore  = 1    // > 1 focus halos
-depthMaxRangeSlicesLoose = 1    // > 1 focus halos
+depthMaxRangeSlicesLoose = 5    // 1 = better FG edges 10 = minor halos
+expandTexFrac            = 0.02
 strongFrac               = 0.03
 weakFrac                 = 0.01
 seedDilatePx             = 1    // 1..2 no visual impact
@@ -278,5 +333,5 @@ scoreSigma               = 1.5
 scoreKSize               = 3
 ownershipClosePx         = 0    // 0..4 no visual impact
 seedBandPx               = 1
-pyrLevels                = 1
+pyrLevels                = 5
 

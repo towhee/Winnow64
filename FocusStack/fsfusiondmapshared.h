@@ -122,7 +122,8 @@ namespace FSFusionDMapShared
                                     int seedDilatePx,
                                     int closePx,
                                     int openPx,
-                                    int interiorPx);
+                                    int interiorPx,
+                                    float expandTexFrac);
 
     // Stack ordering: near -> far, so "foreground" is the MIN slice index.
     // win16 is CV_16U winner labels.
