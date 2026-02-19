@@ -571,27 +571,39 @@ namespace FSFusionDMapShared
         return v.at<float>(0, std::max(0, std::min(idx, v.cols-1)));
     }
 
-    cv::Mat buildFgFromTop1AndDepth(const cv::Mat& top1Score32,
-                                    const cv::Mat& depthIndex16,
-                                    int depthStableRadiusPx,
-                                    int depthMaxRangeSlicesCore,
-                                    int depthMaxRangeSlicesLoose,
-                                    float strongFrac,
-                                    float weakFrac,
-                                    int seedDilatePx,
-                                    int closePx,
-                                    int openPx,
-                                    int interiorPx)
+    // FSFusionDMapShared::buildFgFromTop1AndDepth
+    // - Conservative FG core (halo-safe) + controlled interior expansion (fixes “blue arrow”)
+    // - Key idea: NEVER let maxRange>1 define the boundary. Use it only as an *interior grow* candidate,
+    //   gated by (a) weak silhouette from top1Score, (b) texture threshold, and (c) geodesic growth
+    //   from the eroded FG core.
+
+    cv::Mat FSFusionDMapShared::buildFgFromTop1AndDepth(const cv::Mat& top1Score32,
+                                                        const cv::Mat& depthIndex16,
+                                                        int depthStableRadiusPx,
+                                                        int depthMaxRangeSlicesCore,
+                                                        int depthMaxRangeSlicesLoose,
+                                                        float strongFrac,
+                                                        float weakFrac,
+                                                        int seedDilatePx,
+                                                        int closePx,
+                                                        int openPx,
+                                                        int interiorPx,
+                                                        float expandTexFrac /* NEW: e.g. 0.02f */)
     {
-    /*
-    Return a foreground mask based on a silhouette from top1Score32 combined with
-    contiguous slices in depthIndex16.
-    */
         CV_Assert(top1Score32.type() == CV_32F);
         CV_Assert(depthIndex16.type() == CV_16U);
         CV_Assert(top1Score32.size() == depthIndex16.size());
 
-        // Ensure strong >= weak (strong threshold must be stricter)
+        depthStableRadiusPx = std::max(1, depthStableRadiusPx);
+        depthMaxRangeSlicesCore  = std::max(0, depthMaxRangeSlicesCore);
+        depthMaxRangeSlicesLoose = std::max(0, depthMaxRangeSlicesLoose);
+        seedDilatePx = std::max(0, seedDilatePx);
+        closePx = std::max(0, closePx);
+        openPx  = std::max(0, openPx);
+        interiorPx = std::max(0, interiorPx);
+        expandTexFrac = std::max(0.0f, expandTexFrac);
+
+        // Ensure strong is stricter than weak
         float sFrac = strongFrac, wFrac = weakFrac;
         if (sFrac < wFrac) std::swap(sFrac, wFrac);
 
@@ -599,25 +611,32 @@ namespace FSFusionDMapShared
         const float strongThr = std::max(1e-12f, mx * sFrac);
         const float weakThr   = std::max(1e-12f, mx * wFrac);
 
-        // 1) Strong seeds
+        // -----------------------------
+        // 1) Seeds (strong texture)
+        // -----------------------------
         cv::Mat seed8 = (top1Score32 >= strongThr);
         seed8.convertTo(seed8, CV_8U, 255.0);
         if (seedDilatePx > 0)
             cv::dilate(seed8, seed8, FSFusion::seEllipse(seedDilatePx));
 
-        // 2) Weak silhouette (don’t keepLargestCC here)
+        // -----------------------------
+        // 2) Weak silhouette from top1Score (connects outline)
+        // -----------------------------
         cv::Mat weak8 = (top1Score32 >= weakThr);
         weak8.convertTo(weak8, CV_8U, 255.0);
 
         if (closePx > 0)
             cv::morphologyEx(weak8, weak8, cv::MORPH_CLOSE, FSFusion::seEllipse(closePx));
+
         weak8 = FSFusionDMapShared::fillHoles8(weak8);
 
-        // Keep weak silhouette parts that are connected to strong seeds
+        // Keep only weak regions that are connected to seeds (hysteresis)
         weak8 = keepCCsTouchingMask(weak8, seed8, 8);
 
-        // 3) Core stable depth (halo-safe)
-        cv::Mat stableCore8  = stableDepthMask8_rangeLe(depthIndex16,
+        // -----------------------------
+        // 3) Halo-safe stable depth core
+        // -----------------------------
+        cv::Mat stableCore8 = stableDepthMask8_rangeLe(depthIndex16,
                                                        depthStableRadiusPx,
                                                        depthMaxRangeSlicesCore);
 
@@ -626,35 +645,86 @@ namespace FSFusionDMapShared
 
         cv::Mat fgCore8 = keepCCsTouchingMask(insideCore8, seed8, 8);
 
-        // 4) Loose stable depth candidate (to fix “blue arrow” transitions)
-        cv::Mat stableLoose8 = stableDepthMask8_rangeLe(depthIndex16,
-                                                        depthStableRadiusPx,
-                                                        depthMaxRangeSlicesLoose);
+        // If nothing, return early
+        if (cv::countNonZero(fgCore8) == 0) {
+            return cv::Mat::zeros(top1Score32.size(), CV_8U);
+        }
 
-        cv::Mat insideLoose8;
-        cv::bitwise_and(stableLoose8, weak8, insideLoose8);
+        // Optional gentle close on the core only (connect tiny twigs)
+        if (closePx > 0)
+            cv::morphologyEx(fgCore8, fgCore8, cv::MORPH_CLOSE, FSFusion::seEllipse(std::min(2, closePx)));
 
-        cv::Mat fgLoose8 = keepCCsTouchingMask(insideLoose8, seed8, 8);
+        // -----------------------------
+        // 4) Controlled interior expansion (fix “blue arrow”)
+        //     - allow maxRangeLoose > core, but only:
+        //       (a) inside weak silhouette
+        //       (b) enough texture (expandTexFrac)
+        //       (c) reachable by geodesic growth from eroded fgCore
+        // -----------------------------
+        cv::Mat fg8 = fgCore8.clone();
 
-        // 5) Interior-only expansion: only add loose pixels well inside core
-        cv::Mat fgCoreE8;
-        if (interiorPx > 0)
-            cv::erode(fgCore8, fgCoreE8, FSFusion::seEllipse(interiorPx));
-        else
-            fgCoreE8 = fgCore8;
+        if (depthMaxRangeSlicesLoose > depthMaxRangeSlicesCore && expandTexFrac > 0.0f)
+        {
+            cv::Mat stableLoose8 = stableDepthMask8_rangeLe(depthIndex16,
+                                                            depthStableRadiusPx,
+                                                            depthMaxRangeSlicesLoose);
 
-        cv::Mat fgAdd8 = keepCCsTouchingMask(fgLoose8, fgCoreE8, 8);
+            // texture gate (prevents halos entering)
+            const float texThr = std::max(1e-12f, mx * expandTexFrac);
+            cv::Mat tex8 = (top1Score32 >= texThr);
+            tex8.convertTo(tex8, CV_8U, 255.0);
 
-        cv::Mat fg8 = fgCore8 | fgAdd8;
+            // allowed region to grow into
+            cv::Mat allow8;
+            {
+                cv::Mat t;
+                cv::bitwise_and(stableLoose8, weak8, t);
+                cv::bitwise_and(t, tex8, allow8);
+            }
 
-        // 6) cleanup
+            // growth seed = interior of fgCore8
+            cv::Mat seedGrow8;
+            if (interiorPx > 0)
+                cv::erode(fgCore8, seedGrow8, FSFusion::seEllipse(interiorPx));
+            else
+                seedGrow8 = fgCore8.clone();
+
+            // If erosion killed it, fall back to fgCore
+            if (cv::countNonZero(seedGrow8) == 0)
+                seedGrow8 = fgCore8.clone();
+
+            // geodesic dilation: grow inside allow8
+            cv::Mat grow = seedGrow8.clone();
+            const int itMax = std::max(6, interiorPx * 4); // good default growth budget
+            for (int it = 0; it < itMax; ++it)
+            {
+                cv::Mat d;
+                cv::dilate(grow, d, FSFusion::seEllipse(1));
+                cv::bitwise_and(d, allow8, d);
+
+                // stop if converged
+                cv::Mat diff;
+                cv::bitwise_xor(d, grow, diff);
+                if (cv::countNonZero(diff) == 0) break;
+
+                grow = d;
+            }
+
+            fg8 = fgCore8 | grow;
+        }
+
+        // -----------------------------
+        // 5) Cleanup (IMPORTANT: keep conservative edge)
+        // -----------------------------
         if (openPx > 0)
-            cv::morphologyEx(fg8, fg8, cv::MORPH_OPEN,  FSFusion::seEllipse(openPx));
+            cv::morphologyEx(fg8, fg8, cv::MORPH_OPEN, FSFusion::seEllipse(openPx));
+
         if (closePx > 0)
             cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(closePx));
 
         fg8 = FSFusionDMapShared::fillHoles8(fg8);
         cv::threshold(fg8, fg8, 127, 255, cv::THRESH_BINARY);
+
         return fg8;
     }
 

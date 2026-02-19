@@ -329,6 +329,9 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     cv::Mat topRatio32 = s0_32 / (s1_32 + 1e-6f);
 
     // Foreground mask
+    // fgOwn8 = current fg8 (min fg to prevent focus halos)
+    //fgFill8 = larger fg mask for fill fg
+
     // std::string fgPath =  "/Users/roryhill/Temp/Photos_to_be_curated/2026/202601/2026-01-08_FocusStack/FocusStack/2026-01-08_0048_StmDMapBasic/depth/fg.png";
     // cv::Mat fg8 = cv::imread(fgPath, cv::IMREAD_GRAYSCALE);
     // if (fg8.size() != origSz) {
@@ -347,9 +350,9 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     // qDebug() << "fg.png size:" << fg8.cols << fg8.rows
     //          << "origSz:" << origSz.width << origSz.height;
 
+    // --- after you compute fg8 (your diagnostic FG) ---
     cv::Mat fg8 = FSFusionDMapShared::buildFgFromTop1AndDepth(
-        top1_32,
-        depthIndex16,
+        top1_32, depthIndex16,
         o.depthStableRadiusPx,
         o.depthMaxRangeSlicesCore,
         o.depthMaxRangeSlicesLoose,
@@ -358,33 +361,40 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
         o.seedDilatePx,
         o.closePx,
         o.openPx,
-        o.interiorPx
-        );
+        o.interiorPx,
+        o.expandTexFrac);
 
-    /*
-    cv::Mat diagBGR = FSFusionDMapShared::dmapDiagnosticBGR(
-        idx0_16, idx1_16, fg8,
-        cv::Mat(),   // conf01_opt
-        s0_32,       // s0_32_opt
-        s1_32,       // s1_32_opt
-        50,          // ringPx
-        0.22f);      // ringConfMax
-    cv::imwrite((opt.depthFolderPath + "/dmap_diag_BGR.png").toStdString(), diagBGR);
-        */
+    // ------------------------------------------------------------
+    // Ownership FG: use a *filled/closed* version ONLY for ownership,
+    // so the ring can’t leak into tiny pinholes / gaps.
+    // Keep fg8 unchanged for diagnostics.
+    // ------------------------------------------------------------
+    cv::Mat fgOwn8 = fg8.clone();
+
+    // 1) close small gaps (twigs, pinholes along boundary)
+    if (o.ownershipClosePx > 0)
+        fgOwn8 = FSFusionDMapShared::morphClose8(fgOwn8, o.ownershipClosePx);
+
+    // 2) fill holes (critical to prevent ring sneaking into interior)
+    fgOwn8 = FSFusionDMapShared::fillHoles8(fgOwn8);
+
+    // Optional: if you still see “ring leaks” through hairline slits,
+    // do a *very small* extra close+fill (keep it tiny!)
+    //
+    // fgOwn8 = FSFusionDMapShared::morphClose8(fgOwn8, 1);
+    // fgOwn8 = FSFusionDMapShared::fillHoles8(fgOwn8);
 
     // ------------------------------------------------------------
     // Ownership propagation (halo elimination): override depth in ring
     // ------------------------------------------------------------
-
     cv::Mat overrideMask8, overrideWinner16;
 
-    // optional: close small fg gaps before ring (helps twigs)
-    cv::Mat fgClean = FSFusionDMapShared::morphClose8(fg8, o.ownershipClosePx);
+    const int ringPx = FSFusionDMapShared::defaultRingPx(origSz);
 
     if (!FSFusionDMapShared::ownershipPropagateTwoPass_Outward(
-            fgClean,
+            fgOwn8,              // <-- NOTE: ownership FG, not diagnostic FG
             depthIndex16,
-            FSFusionDMapShared::defaultRingPx(origSz),
+            ringPx,
             o.seedBandPx,
             overrideMask8,
             overrideWinner16))
@@ -394,21 +404,18 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
 
     if (!overrideMask8.empty() && cv::countNonZero(overrideMask8) > 0)
     {
-        // Clamp overrideWinner16 to [0, N-1] before copying
-        // Just in case donor values can ever be junk from uninitialized areas
-        if (!overrideWinner16.empty()) {
+        // Safety: never override inside your *diagnostic* FG (conservative)
+        // (and also never override inside fgOwn8 by construction, but keep this anyway)
+        overrideMask8.setTo(0, fg8);
+
+        // Clamp donor values (paranoia)
+        if (!overrideWinner16.empty())
             cv::min(overrideWinner16, (uint16_t)(N - 1), overrideWinner16);
-        }
 
-        // prevent any chance accidentally touch FG due to ring math
-        overrideMask8.setTo(0, fg8); // never override inside FG
-
-        // Deterministic “ownership”: replace depthIndex16 in ring with donor slice id
+        // Apply deterministic “ownership” in the ring
         overrideWinner16.copyTo(depthIndex16, overrideMask8);
-
-        // Keep your working copies consistent (since you use idx0_16 for weights)
-        overrideWinner16.copyTo(idx0_16, overrideMask8);
-        overrideWinner16.copyTo(idx1_16, overrideMask8);
+        overrideWinner16.copyTo(idx0_16,      overrideMask8);
+        overrideWinner16.copyTo(idx1_16,      overrideMask8);
 
         // Force hard selection in ring (no blending)
         s0_32.setTo(1.0f, overrideMask8);
@@ -584,6 +591,7 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
     qDebug().noquote() << "depthStableRadiusPx      =" << o.depthStableRadiusPx;
     qDebug().noquote() << "depthMaxRangeSlicesCore  =" << o.depthMaxRangeSlicesCore;
     qDebug().noquote() << "depthMaxRangeSlicesLoose =" << o.depthMaxRangeSlicesLoose;
+    qDebug().noquote() << "expandTexFrac            =" << o.expandTexFrac;
     qDebug().noquote() << "strongFrac               =" << o.strongFrac;
     qDebug().noquote() << "weakFrac                 =" << o.weakFrac;
     qDebug().noquote() << "seedDilatePx             =" << o.seedDilatePx;
@@ -601,6 +609,12 @@ bool FSFusionDMapBasic::streamFinish(cv::Mat& outputColor,
         std::string s;
         s = (opt.depthFolderPath + "/dmapbasic_fg.png").toStdString();
         cv::imwrite(s, fg8);
+
+        s = (opt.depthFolderPath + "/dmapbasic_fg_own.png").toStdString();
+        cv::imwrite(s, fgOwn8);
+
+        s = (opt.depthFolderPath + "/dmapbasic_ownership_ring.png").toStdString();
+        cv::imwrite(s, overrideMask8);
 
         s = (opt.depthFolderPath + "/dmapbasic_ownership_ring.png").toStdString();
         cv::imwrite(s, overrideMask8);
