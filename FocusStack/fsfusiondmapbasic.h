@@ -28,7 +28,7 @@ public:
     struct Params
     {
         QString method = "Pyramid";  // Simple or Pyramid
-
+        // ADO: Adaptive Donor Override
         // Foreground
         int depthStableRadiusPx = 3;  // ↑ more strict
         int depthMaxRangeSlicesCore = 1;   // ↓ more strict (>1 = halos)

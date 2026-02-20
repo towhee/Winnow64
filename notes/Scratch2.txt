@@ -308,7 +308,40 @@ ownershipClosePx         = 3
 seedBandPx               = 1
 pyrLevels                = 5
 
-
+2026-02-19 10:23:13
+Method                       = DMap
+FOCUS METRIC:
+scoreSigma                   = 1.5
+scoreKSize                   = 3
+FOREGROUND:
+depthStableRadiusPx          = 3
+depthMaxRangeSlicesCore      = 1
+depthMaxRangeSlicesLoose     = 5
+expandTexFrac                = 0.05
+strongFrac                   = 0.03
+weakFrac                     = 0.01
+seedDilatePx                 = 1
+closePx                      = 5
+openPx                       = 1
+interiorPx                   = 3
+OWNERSHIP PROPOGATION:
+ownershipClosePx             = 3
+seedBandPx                   = 1
+Contrast Threshold:
+enableContrastThreshold      = true
+contrastMinFrac              = 0.01
+lowContrastMedianK           = 5
+lowContrastDilatePx          = 0
+PYRAMID FUSION:
+pyrLevels                    = 5
+enableHardWeightsOnLowpass   = false
+enableDepthGradLowpassVeto   = false
+hardFromLevel                = 4
+vetoFromLevel                = -1
+vetoStrength                 = 1
+weightBlurSigma              = 0
+mixEps                       = 1e-06
+wMin                         = 0
 
 
 
@@ -319,19 +352,38 @@ pyrLevels                = 5
 
 
 CONCLUSIONS:
-depthStableRadiusPx      = 3    // < 3 focus halos
-depthMaxRangeSlicesCore  = 1    // > 1 focus halos
-depthMaxRangeSlicesLoose = 5    // 1 = better FG edges 10 = minor halos
-expandTexFrac            = 0.02
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 1    // 1..2 no visual impact
-closePx                  = 5
-openPx                   = 1    // 0 = focus halos
-interiorPx               = 3    // 3..10 no visual impact
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 0    // 0..4 no visual impact
-seedBandPx               = 1
-pyrLevels                = 5
+
+Method                        = DMap
+FOCUS METRIC:
+scoreSigma                    = 1.5      // 1.5 not as good as 1.0
+scoreKSize                    = 3        // 1..3 no visual impact
+FOREGROUND:
+depthStableRadiusPx           = 3        // < 3 focus halos
+depthMaxRangeSlicesCore       = 1        // > 1 focus halos
+depthMaxRangeSlicesLoose      = 5        // 1 = better FG edges 10 = minor halos
+expandTexFrac                 = 0.05     // 0.01..0.05 no visual impact
+strongFrac                    = 0.03
+weakFrac                      = 0.01
+seedDilatePx                  = 1        // 1..2 no visual impact
+closePx                       = 5
+openPx                        = 1        // 0 = focus halo
+interiorPx                    = 3        // 3..10 no visual impact
+OWNERSHIP PROPOGATION:
+ownershipClosePx              = 3        // 0..4 no visual impact
+seedBandPx                    = 1
+Contrast Threshold:
+enableContrastThreshold       = true
+contrastMinFrac               = 0.01
+lowContrastMedianK            = 5
+lowContrastDilatePx           = 0
+PYRAMID FUSION:
+pyrLevels                     = 5
+enableHardWeightsOnLowpass    = false
+enableDepthGradLowpassVeto    = false
+hardFromLevel                 = 4
+vetoFromLevel                 = -1
+vetoStrength                  = 1
+weightBlurSigma               = 0
+mixEps                        = 1e-06
+wMin                          = 0
 

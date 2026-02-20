@@ -170,7 +170,7 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
 
 
     //  --- Debug dump with HH:mm:ss:zzz ---------------------------------------
-    // /*
+    /*
     qDebug().noquote() << srcFun
                        << "Grouped" << items.size() << "images into"
                        << groups.size() << "stack(s)."

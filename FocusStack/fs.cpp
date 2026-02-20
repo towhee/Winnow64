@@ -6,7 +6,7 @@
 #include "FocusStack/fsdepth.h"
 #include "FocusStack/fsfusion.h"
 #include "FocusStack/fsfusiondmap.h"
-#include "FocusStack/fsfusiondmapbasic.h"
+// #include "FocusStack/fsfusiondmapbasic.h"
 #include "FocusStack/fsfusionpmax.h"
 #include "FocusStack/fsmerge.h"
 #include "FocusStack/fsfusionreassign.h"
@@ -112,21 +112,21 @@ bool FS::setOptions(const Options &opt)
         return true;
     }
 
+    // if (o.method == "StmDMap") {
+    //     if (G::FSLog) G::log(srcFun, msg + "StmDMap");
+    //     o.useIntermediates = true;
+    //     o.enableAlign = true;
+    //     o.enableFocusMaps = false;
+    //     o.enableDepthMap = true;
+    //     o.enableFusion = true;
+    //     o.methodFuse = "FullWaveletMerge";
+    //     o.methodMerge = "PMax";
+    //     o.isStream = true;
+    //     return true;
+    // }
+
     if (o.method == "StmDMap") {
         if (G::FSLog) G::log(srcFun, msg + "StmDMap");
-        o.useIntermediates = true;
-        o.enableAlign = true;
-        o.enableFocusMaps = false;
-        o.enableDepthMap = true;
-        o.enableFusion = true;
-        o.methodFuse = "FullWaveletMerge";
-        o.methodMerge = "PMax";
-        o.isStream = true;
-        return true;
-    }
-
-    if (o.method == "StmDMapBasic") {
-        if (G::FSLog) G::log(srcFun, msg + "StmDMapBasic");
         o.useIntermediates = true;
         o.enableAlign = true;
         o.enableFocusMaps = false;
@@ -681,12 +681,12 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
                 }
             }
 
-            if (o.method == "StmDMapBasic") {
-                if (!runStreamDMapBasic()) {
-                    emit finished(false);
-                    return false;
-                }
-            }
+            // if (o.method == "StmDMapBasic") {
+            //     if (!runStreamDMapBasic()) {
+            //         emit finished(false);
+            //         return false;
+            //     }
+            // }
 
             if (o.method == "StmPMax") {
                 if (!runStreamPMax()) {
@@ -759,25 +759,6 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
                 if (G::FSLog) G::log(""); // skip line
             }
 
-            // RUN BACKGROUND
-            if (o.enableBackgroundMask)
-            {
-                if (!runBackground()) {
-                    if (abort) status("Focus Stack was aborted.");
-                    return false;
-                }
-                if (G::FSLog) G::log(""); // skip line
-            }
-
-            // RUN ARTIFACT DETECTION
-            if (o.enableArtifactDetect)
-            {
-                if (!runArtifact()) {
-                    if (abort) status("Focus Stack was aborted.");
-                    return false;
-                }
-                if (G::FSLog) G::log(""); // skip line
-            }
         }
 
         // SAVE
@@ -1217,465 +1198,6 @@ bool FS::runFusion()
     return true;
 }
 
-bool FS::runBackground()
-{
-    const QString srcFun = "FS::runBackground";
-    if (abort) return false;
-
-    status("Building background mask...");
-    if (G::FSLog) G::log(srcFun, "Building background mask...");
-
-    FSBackground::Options bopt;
-    bopt.method = o.backgroundMethod;
-    bopt.writeDebug = true;
-    bopt.backgroundFolder = backgroundFolderPath;
-
-    // Ensure we have focusSlices and depthIndex16Mat (depending on method)
-    const int N = slices;
-
-    // alignedColor needed only if ColorVar enabled; pass empty otherwise
-    std::vector<cv::Mat> colorForVar;
-    if (bopt.enableColorVar)
-    {
-        // Prefer cache if available
-        if (o.useCache && !alignedColorSlices.empty()) colorForVar = alignedColorSlices;
-        else {
-            // fallback: load from disk using alignedColorPaths
-            colorForVar.reserve(N);
-            for (int i = 0; i < N; ++i)
-            {
-                cv::Mat c = cv::imread(alignedColorPaths[i].toStdString(), cv::IMREAD_COLOR);
-                if (c.empty()) return false;
-                colorForVar.push_back(c);
-            }
-        }
-    }
-
-    auto progressCb = [this](int c, int t){ Q_UNUSED(t); Q_UNUSED(c); incrementProgress(); };
-    auto statusCb   = [this, srcFun](const QString &m){ emit updateStatus(false, m, srcFun); };
-
-    // cv::Mat subjectMask8;
-    // cv::Mat bgConfidence01;
-    // // store into members
-    subjectMask8Mat.release();
-    bgConfidence01Mat.release();
-
-    if (!FSBackground::run(depthIndex16Mat,
-                           focusSlices,
-                           colorForVar,
-                           N,
-                           bopt,
-                           &abort,
-                           progressCb,
-                           statusCb,
-                           bgConfidence01Mat,
-                           subjectMask8Mat))
-    {
-        status("Background mask failed.");
-        return false;
-    }
-
-    // Debug overlay needs fused gray. If fusion hasn’t run yet, you can
-    // overlay on any aligned gray slice (e.g., mid slice) for preview:
-    if (!alignedGraySlices.empty() && o.previewBackgroundMask)
-    {
-        qDebug() << srcFun << "1";
-        cv::Mat base = alignedGraySlices[N / 2];
-        qDebug() << srcFun << "2";
-        cv::Mat overlay = FSBackground::makeOverlayBGR(base, bgConfidence01Mat, bopt);
-        qDebug() << srcFun << "3";
-        cv::imwrite((bopt.backgroundFolder + "/bg_overlay.png").toStdString(), overlay);
-    }
-
-    // return true; // return before repair
-
-    // Replace background to remove any halo
-    if (o.enableBackgroundMask && !subjectMask8Mat.empty() && !alignedColorSlices.empty())
-    {
-        FSBackground::Options bopt;
-        bopt.method = o.backgroundMethod;
-        bopt.featherRadius = 6;
-        bopt.featherGamma  = 1.2f;
-
-        cv::Mat repaired = fusedColorMat.clone();              // canonical size+type target
-        const cv::Size targetSize = repaired.size();
-        const int targetType = repaired.type();
-
-        auto ensure3ch = [](const cv::Mat& in) -> cv::Mat
-        {
-            if (in.empty()) return {};
-            if (in.channels() == 3) return in;
-            cv::Mat out;
-            if (in.channels() == 4) cv::cvtColor(in, out, cv::COLOR_BGRA2BGR);
-            else if (in.channels() == 1) cv::cvtColor(in, out, cv::COLOR_GRAY2BGR);
-            else CV_Assert(false);
-            return out;
-        };
-
-        auto canonicalizeMask8 = [&](const cv::Mat& inMask) -> cv::Mat
-        {
-            CV_Assert(!inMask.empty());
-            cv::Mat m = inMask;
-
-            // convert to 8U (0..255)
-            if (m.type() != CV_8U)
-            {
-                if (m.depth() == CV_32F || m.depth() == CV_64F)
-                {
-                    // assume 0..1-ish mask
-                    cv::Mat f; m.convertTo(f, CV_32F);
-                    cv::threshold(f, f, 0.5, 1.0, cv::THRESH_BINARY);
-                    f.convertTo(m, CV_8U, 255.0);
-                }
-                else
-                {
-                    // for 16U/other: treat >0 as on
-                    cv::Mat tmp = (m > 0);
-                    tmp.convertTo(m, CV_8U, 255.0);
-                }
-            }
-            else
-            {
-                // if it's 8U but not binary, binarize defensively
-                // (keeps your 0/255 masks as-is)
-                // NOTE: if your mask is already 0/255 this does nothing harmful
-                cv::threshold(m, m, 127, 255, cv::THRESH_BINARY);
-            }
-
-            // resize to target using NEAREST (categorical)
-            if (m.size() != targetSize)
-            {
-                cv::Mat r;
-                cv::resize(m, r, targetSize, 0, 0, cv::INTER_NEAREST);
-                m = r;
-            }
-
-            return m;
-        };
-
-        auto canonicalizeBgToRepaired = [&](const cv::Mat& inBg) -> cv::Mat
-        {
-            CV_Assert(!inBg.empty());
-            cv::Mat bg = ensure3ch(inBg);
-
-            // resize to target using LINEAR (color image)
-            if (bg.size() != targetSize)
-            {
-                cv::Mat r;
-                cv::resize(bg, r, targetSize, 0, 0, cv::INTER_LINEAR);
-                bg = r;
-            }
-
-            // convert type to match repaired
-            if (bg.type() != targetType)
-            {
-                cv::Mat converted;
-
-                const int targetDepth = CV_MAT_DEPTH(targetType);
-                const int bgDepth     = CV_MAT_DEPTH(bg.type());
-
-                if (targetDepth == CV_8U && (bgDepth == CV_32F || bgDepth == CV_64F))
-                {
-                    // assume float is 0..1-ish; clamp then scale
-                    cv::Mat f; bg.convertTo(f, CV_32F);
-                    cv::min(f, 1.0f, f);
-                    cv::max(f, 0.0f, f);
-                    f.convertTo(converted, targetType, 255.0);
-                }
-                else if ((targetDepth == CV_32F || targetDepth == CV_64F) && bgDepth == CV_8U)
-                {
-                    bg.convertTo(converted, targetType, 1.0 / 255.0);
-                }
-                else
-                {
-                    // generic conversion (no scaling guess)
-                    bg.convertTo(converted, targetType);
-                }
-
-                bg = converted;
-            }
-
-            return bg;
-        };
-
-        // --- make mask canonical ---
-        cv::Mat mask = canonicalizeMask8(subjectMask8Mat);
-
-        // optional: erode subject edge to kill defocus spill/halo (still safe after resize/type fix)
-        int edgeErodePx = 3;
-        cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, {2*edgeErodePx+1, 2*edgeErodePx+1});
-        cv::erode(mask, mask, se);
-
-        // --- make bgSource canonical ---
-        cv::Mat bgSource = canonicalizeBgToRepaired(alignedColorSlices.back());
-
-        // Now guaranteed compatible with replaceBackground:
-        // mask.size == repaired.size, mask.type==CV_8U
-        // bgSource.size == repaired.size, bgSource.type == repaired.type
-        FSBackground::replaceBackground(repaired, mask, bgSource, bopt, &abort);
-
-        QFileInfo fi(lastFusedPath);
-        QString repairedPath = fusionFolderPath + "/" + fi.baseName() + "_BBRepair.tif";
-        cv::imwrite(repairedPath.toStdString(), repaired);
-    }
-
-    // // Replace background to remove any halo
-
-    // // IMPORTANT: shrink foreground matte a bit to remove defocus spill
-    // int edgeErodePx = 4; // start 3..6 at full res
-    // cv::Mat se = cv::getStructuringElement(cv::MORPH_ELLIPSE, {2*edgeErodePx+1, 2*edgeErodePx+1});
-    // cv::erode(subjectMask8Mat, subjectMask8Mat, se);
-
-    // qDebug() << "FS::runBackground "
-    //          << "depth"   << depthIndex16Mat.cols << depthIndex16Mat.rows
-    //          << "mask"    << subjectMask8.cols << subjectMask8.rows
-    //          << "fused"   << fusedColor8Mat.cols << fusedColor8Mat.rows
-    //          << "bg"      << alignedColorSlices.back().cols << alignedColorSlices.back().rows;    // Composite fused over last slice
-
-    // cv::Mat bgSource = alignedColorSlices.back();   // last aligned color image (same size as outputColor8)
-    // cv::Mat fusedColor8InOut = fusedColor8Mat;
-    // FSBackground::replaceBackground(fusedColor8InOut, subjectMask8, bgSource, bopt, &abort);
-
-    // // Write fused with background repair
-    // QFileInfo lastFused(lastFusedPath);
-    // QString fusedbgRepairedPath = fusionFolder + "/" + lastFused.baseName() + "_BBRepair.tif";
-    // if (G::FSLog) G::log(srcFun, "Saving fused image with background repair to "
-    //                        + fusedbgRepairedPath);
-    // cv::imwrite(fusedbgRepairedPath.toStdString(), fusedColor8InOut);
-
-    // status("Background mask complete.");
-    // return true;
-}
-
-bool FS::runArtifact()
-{
-    const QString srcFun = "FS::runArtifactDetection";
-
-    if (abort) return false;
-
-    emit updateStatus(false, "Detecting fusion artifacts...", srcFun);
-
-    qDebug() << srcFun << "1";
-    // Load fused image (color, aligned space)
-    if (lastFusedPath.isEmpty())
-    {
-        QString msg = "No fused images found in " + fusionFolderPath;
-        G::log(srcFun, msg);
-        return false;
-    }
-
-    cv::Mat grayFused = cv::imread(lastFusedPath.toStdString(), cv::IMREAD_GRAYSCALE);
-    qDebug() << srcFun << "2";
-
-    if (grayFused.empty())
-    {
-        G::log(srcFun, "Failed to load fused image");
-        return false;
-    }
-
-    cv::Mat fusedGray32;
-    grayFused.convertTo(fusedGray32, CV_32F, 1.0 / 255.0);
-
-    /*
-    // Load aligned slices (grayscale, aligned space)
-    std::vector<cv::Mat> slicesGray32;
-
-    QDir alignDir(projectRoot + "/align");
-    QStringList files = alignDir.entryList
-    (
-        QStringList() << "aligned*.png" << "aligned*.tif" << "aligned*.jpg",
-        QDir::Files, QDir::Name
-    );
-
-    for (const QString &f : files)
-    {
-        if (abort) return false;
-
-        cv::Mat img = cv::imread(
-            (alignDir.absoluteFilePath(f)).toStdString(),
-            cv::IMREAD_GRAYSCALE);
-
-        if (img.empty())
-            continue;
-
-        cv::Mat g32;
-        img.convertTo(g32, CV_32F, 1.0 / 255.0);
-        slicesGray32.push_back(g32);
-    }
-
-    if (slicesGray32.empty())
-    {
-        G::log(srcFun, "No aligned slices for artifact detection");
-        return false;
-    }
-    */
-
-    if (alignedGraySlices.empty())
-    {
-        G::log(srcFun, "No aligned slices for artifact detection");
-        return false;
-    }
-
-    // Optional depth map
-    cv::Mat depth32;
-    cv::Mat *depthPtr = nullptr;
-
-    QString depthPath = grpFolderPath + "/depth/depth_idx.exr"; // adjust
-    if (QFile::exists(depthPath))
-    {
-        cv::Mat d = cv::imread(depthPath.toStdString(), cv::IMREAD_UNCHANGED);
-        if (!d.empty())
-        {
-            d.convertTo(depth32, CV_32F);
-            depthPtr = &depth32;
-        }
-    }
-
-    // Optional include mask
-    cv::Mat includeMask8;
-    cv::Mat *maskPtr = nullptr;
-
-    QString maskPath = grpFolderPath + "/masks/include_mask.png";
-    if (QFile::exists(maskPath))
-    {
-        includeMask8 = cv::imread(maskPath.toStdString(), cv::IMREAD_GRAYSCALE);
-        if (!includeMask8.empty())
-            maskPtr = &includeMask8;
-    }
-
-    // Artifact detection options
-    FSArtifact::Options opt;
-    opt.debugFolder = artifactsFolderPath;
-
-    cv::Mat artifact01;
-
-    // Progress and Status
-    auto progressCb = [this]()
-    {
-        this->incrementProgress();
-    };
-
-    auto statusCb = [this, srcFun](const QString &msg)
-    {
-        emit updateStatus(false, msg, srcFun);
-    };
-
-    // Run artifact detector
-    bool ok = FSArtifact::detect
-    (
-        fusedGray32,
-        alignedGraySlices, //slicesGray32,
-        depthPtr,
-        maskPtr,
-        artifact01,
-        opt,
-        &abort,
-        progressCb,
-        statusCb
-    );
-
-    if (!ok || abort) return false;
-
-    // Build heat map
-
-    CV_Assert(artifact01.type() == CV_32F);
-
-    cv::Mat conf;
-    artifact01.copyTo(conf);
-    cv::min(conf, 1.0f, conf);
-    cv::max(conf, 0.0f, conf);
-
-    // Heat map
-    cv::Mat heat(conf.size(), CV_8UC3, cv::Scalar(0,0,0));
-
-    // Set thresholds
-    for (int y = 0; y < conf.rows; ++y)
-    {
-        const float *cptr = conf.ptr<float>(y);
-        cv::Vec3b *hptr   = heat.ptr<cv::Vec3b>(y);
-
-        for (int x = 0; x < conf.cols; ++x)
-        {
-            float v = cptr[x];
-
-            if (v < 0.02f)
-            {
-                // Black (background)
-                hptr[x] = {0, 0, 0};
-            }
-            else if (v < 0.05f)
-            {
-                // Yellow
-                hptr[x] = {0, 255, 255};
-            }
-            else if (v < 0.10f)
-            {
-                // Orange
-                hptr[x] = {0, 165, 255};
-            }
-            else
-            {
-                // Bright red
-                hptr[x] = {0, 0, 255};
-            }
-        }
-    }
-    // Ensure artifact folder exists
-    QString artifactFolder = grpFolderPath + "/artifact";
-    QDir().mkpath(artifactFolder);
-
-    // Overwrite artifact_confidence.png with COLOR heatmap
-    QString confidencePath =
-        artifactFolder + "/artifact_confidence.png";
-
-    cv::imwrite(confidencePath.toStdString(), heat);
-
-    // Overlay heatmap on fused grayscale
-    QString overlayPath =
-        artifactFolder + "/artifact_overlay.png";
-
-    cv::Mat overlay =
-        FSUtilities::showWithMask(fusedGray32, heat, 0.6f);
-
-    // Optional labeling (recommended for debug clarity)
-    FSUtilities::addLabel(
-        overlay,
-        "Artifact confidence overlay"
-        );
-
-    // Repair
-    if (o.enableArtifactRepair)
-    {
-        emit updateStatus(false, "Repairing artifacts...", srcFun);
-
-        // setAlignedColorSlices();
-
-        cv::Mat colorFused8 =
-            cv::imread(lastFusedPath.toStdString(), cv::IMREAD_COLOR);
-        cv::Mat colorFused32;
-        colorFused8.convertTo(colorFused32, CV_32F, 1.0 / 255.0);
-
-        FSArtifact::repair(
-            colorFused32,
-            artifact01,
-            alignedColorSlices,
-            lastSlice,
-            0.02f,
-            &abort
-            );
-
-        // Save repair
-        QString repairedPath = artifactFolder + "/artifact_repaired.png";
-
-        cv::Mat repaired8;
-        colorFused32.convertTo(repaired8, CV_8U, 255.0);
-        cv::imwrite(repairedPath.toStdString(), repaired8);
-    }
-
-    emit updateStatus(false, "Artifact detection complete", srcFun);
-    return true;
-}
-
 bool FS::runStreamDMap()
 {
     QString srcFun = "FS::runStreamDMap";
@@ -1696,170 +1218,10 @@ bool FS::runStreamDMap()
     aopt.fullResolution    = false;
 
     // -----------------------------
-    // fusion options (dmap)
-    // -----------------------------
-    FSFusion::Options fopt;
-    fopt.method          = "DMap";
-    fopt.mergeMode       = o.methodMerge;
-    fopt.useOpenCL       = o.enableOpenCL;
-    fopt.consistency     = 2;
-    fopt.depthFolderPath = depthFolderPath;
-    fopt.enableDepthBiasedErosion = false;
-    fopt.enableEdgeAdaptiveSigma  = false;
-
-    // -----------------------------
-    // working state
-    // -----------------------------
-    FSLoader::Image prevImage;
-    FSLoader::Image currImage;
-
-    Result prevGlobal;
-    Result currGlobal;
-
-    cv::Mat alignedGraySlice;   // align space
-    cv::Mat alignedColorSlice;  // align space
-
-    std::vector<Result> globals;
-    globals.reserve(slices);
-
-    FSAlign::Align align;
-    FSFusionDMap fuse;
-
-    // -----------------------------
-    // pass-1: slice loop
-    // -----------------------------
-    for (int slice = 0; slice < slices; ++slice)
-    {
-        QString s = " Slice: " + QString::number(slice) + " of " + QString::number(slices) + " ";
-        if (G::FSLog) G::log("");
-
-        status("Aligning and depth mapping" + s);
-
-        currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
-        currGlobal = FSAlign::makeIdentity(currImage.validArea);
-
-        if (G::abortFocusStack) return false;
-
-        if (slice == 0)
-        {
-            alignedGraySlice  = currImage.gray.clone();
-            alignedColorSlice = currImage.color.clone();
-
-            // base geometry that dmap requires
-            fuse.validAreaAlign = currImage.validArea;               // align -> orig crop
-            fuse.alignSize      = alignedGraySlice.size();           // align size
-            fuse.origSize       = cv::Size(currImage.validArea.width, currImage.validArea.height); // optional but ok
-            fuse.outDepth       = alignedColorSlice.depth();         // 8u/16u output depth
-
-            globals.push_back(currGlobal);
-        }
-        else
-        {
-            if (!align.alignSlice(slice,
-                                  prevImage, currImage,
-                                  prevGlobal, currGlobal,
-                                  alignedGraySlice, alignedColorSlice,
-                                  aopt, &abort, statusCb, progressCb))
-            {
-                qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
-                return false;
-            }
-
-            globals.push_back(currGlobal);
-        }
-
-        // enforce gray is 8-bit for dmap
-        if (alignedGraySlice.type() != CV_8U)
-        {
-            cv::Mat tmp;
-            alignedGraySlice.convertTo(tmp, CV_8U);
-            alignedGraySlice = tmp;
-        }
-
-        // debug write aligned slices
-        cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
-        cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
-
-        if (G::abortFocusStack) return false;
-
-        // pass-1 dmap update (pads internally)
-        if (!fuse.streamSlice(slice,
-                              alignedGraySlice,
-                              alignedColorSlice,
-                              fopt,
-                              &abort,
-                              statusCb,
-                              progressCb))
-        {
-            qWarning() << "WARNING:" << srcFun << "fuse.streamSlice failed.";
-            return false;
-        }
-
-        if (G::abortFocusStack) return false;
-        incrementProgress();
-
-        prevImage  = currImage;
-        prevGlobal = currGlobal;
-    }
-
-    msg = "Slice processing done.  DMap finish: build weights, stream slices, blend, crop.";
-    if (G::FSLog) G::log(srcFun, msg);
-
-    // -----------------------------
-    // pass-2: finish
-    // -----------------------------
-    status("Finalizing DMap fusion...");
-    if (!fuse.streamFinish(fusedColorMat,
-                           fopt,
-                           depthIndex16Mat,
-                           inputPaths,
-                           globals,
-                           &abort,
-                           statusCb,
-                           progressCb))
-    {
-        qWarning() << "WARNING:" << srcFun << "FSFusionDMap::streamFinish failed.";
-        return false;
-    }
-
-    // const std::string& title = "depthIndex16 2026-02-07";
-    // cv::Mat preview = FSUtilities::depthHeatmap(depthIndex16Mat, slices, title);
-    // // cv::Mat preview = FSUtilities::makeDepthPreviewEnhanced(depthIndex16Mat, slices);
-    // QString depthPreviewPath = depthFolderPath + "/depth_heatmap.png";
-    // FSUtilities::writePngWithTitle(depthPreviewPath, preview);
-
-    if (G::abortFocusStack) return false;
-    incrementProgress();
-
-    if (o.useIntermediates) save(fusionFolderPath);
-
-    return true;
-}
-
-bool FS::runStreamDMapBasic()
-{
-    QString srcFun = "FS::runStreamDMapBasic";
-    QString msg = "Start using method: " + o.method;
-    if (G::FSLog) G::log(srcFun, msg);
-
-    auto progressCb = [this]{ incrementProgress(); };
-    auto statusCb   = [this](const QString &m){ status(m); };
-
-    // -----------------------------
-    // align options (same as pmax)
-    // -----------------------------
-    FSAlign::Options aopt;
-    aopt.matchContrast     = true;
-    aopt.matchWhiteBalance = true;
-    aopt.lowRes            = 256;
-    aopt.maxRes            = 2048;
-    aopt.fullResolution    = false;
-
-    // -----------------------------
     // fusion options (dmap basic)
     // -----------------------------
     FSFusion::Options fopt;
-    fopt.method          = "DMapBasic";
+    fopt.method          = "DMap";
     fopt.mergeMode       = o.methodMerge;
     fopt.useOpenCL       = o.enableOpenCL;
     fopt.consistency     = 2;
@@ -1885,7 +1247,7 @@ bool FS::runStreamDMapBasic()
     FSAlign::Align align;
 
     // New basic engine
-    FSFusionDMapBasic fuse;
+    FSFusionDMap fuse;
 
     // -----------------------------
     // pass-1: slice loopr
@@ -1895,7 +1257,7 @@ bool FS::runStreamDMapBasic()
         QString s = " Slice: " + QString::number(slice) + " of " + QString::number(slices) + " ";
         if (G::FSLog) G::log("");
 
-        status("Aligning and depth mapping (basic)" + s);
+        status("Aligning and depth mapping" + s);
 
         currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
         currGlobal = FSAlign::makeIdentity(currImage.validArea);
@@ -2188,7 +1550,7 @@ bool FS::runStreamPMax()
             << "\n";
     }
 
-    // if (o.useIntermediates) save(fusionFolderPath);
+    if (o.useIntermediates) save(fusionFolderPath);
     return true;
 }
 
