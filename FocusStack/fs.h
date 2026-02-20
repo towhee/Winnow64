@@ -33,7 +33,6 @@ public:
     };
     static inline const QStringList MethodsString {
         "StmDMap",            // DMap, streamed
-        "StmDMapBasic",       // DMap, streamed. Classic dmap algorithm.
         "StmPMax",            // PMax1, but streamed
         "StmPMaxWt",          // PMax1, but streamed and weighted in merge
         "StmPMaxWtDbe",       // PMax1, but streamed and weighted in merge
@@ -142,10 +141,7 @@ private:
     bool runFocusMaps();
     bool runDepthMap();
     bool runFusion();
-    bool runBackground();
-    bool runArtifact();
     bool runStreamDMap();
-    bool runStreamDMapBasic();
     bool runStreamPMax();
     bool runStreamTennengradVersions();
     bool save(QString fuseFolderPath);

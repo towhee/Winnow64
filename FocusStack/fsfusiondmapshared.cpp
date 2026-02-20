@@ -2,6 +2,7 @@
 #include "fsfusion.h"   // for FSFusion::seEllipse (or forward-declare it if you prefer)
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <limits>
 
 namespace FSFusionDMapShared
@@ -203,7 +204,7 @@ namespace FSFusionDMapShared
         return out;
     }
 
-    int FSFusionDMapShared::defaultRingPx(const cv::Size& sz)
+    int defaultRingPx(const cv::Size& sz)
     {
         // ~0.6% of max dimension, clamped
         int m = std::max(sz.width, sz.height);
@@ -577,18 +578,18 @@ namespace FSFusionDMapShared
     //   gated by (a) weak silhouette from top1Score, (b) texture threshold, and (c) geodesic growth
     //   from the eroded FG core.
 
-    cv::Mat FSFusionDMapShared::buildFgFromTop1AndDepth(const cv::Mat& top1Score32,
-                                                        const cv::Mat& depthIndex16,
-                                                        int depthStableRadiusPx,
-                                                        int depthMaxRangeSlicesCore,
-                                                        int depthMaxRangeSlicesLoose,
-                                                        float strongFrac,
-                                                        float weakFrac,
-                                                        int seedDilatePx,
-                                                        int closePx,
-                                                        int openPx,
-                                                        int interiorPx,
-                                                        float expandTexFrac /* NEW: e.g. 0.02f */)
+    cv::Mat buildFgFromTop1AndDepth(const cv::Mat& top1Score32,
+                                    const cv::Mat& depthIndex16,
+                                    int depthStableRadiusPx,
+                                    int depthMaxRangeSlicesCore,
+                                    int depthMaxRangeSlicesLoose,
+                                    float strongFrac,
+                                    float weakFrac,
+                                    int seedDilatePx,
+                                    int closePx,
+                                    int openPx,
+                                    int interiorPx,
+                                    float expandTexFrac /* NEW: e.g. 0.02f */)
     {
         CV_Assert(top1Score32.type() == CV_32F);
         CV_Assert(depthIndex16.type() == CV_16U);
@@ -722,8 +723,34 @@ namespace FSFusionDMapShared
         if (closePx > 0)
             cv::morphologyEx(fg8, fg8, cv::MORPH_CLOSE, FSFusion::seEllipse(closePx));
 
-        fg8 = FSFusionDMapShared::fillHoles8(fg8);
+        fg8 = fillHoles8(fg8);
         cv::threshold(fg8, fg8, 127, 255, cv::THRESH_BINARY);
+
+        return fg8;
+    }
+
+    cv::Mat buildFgFromGroundTruth(cv::Size origSz)
+    {
+    /*
+
+    */
+        std::string fgPath =  "/Users/roryhill/Temp/Photos_to_be_curated/2026/202601/2026-01-08_FocusStack/FocusStack/2026-01-08_0048_StmDMapBasic/depth/fg.png";
+        cv::Mat fg8 = cv::imread(fgPath, cv::IMREAD_GRAYSCALE);
+        if (fg8.size() != origSz) {
+            cv::Mat r;
+            // For masks: INTER_NEAREST only
+            cv::resize(fg8, r, origSz, 0, 0, cv::INTER_NEAREST);
+            fg8 = r;
+        }
+        // Binarize to strict 0/255
+        // If your fg.png is already binary, this is harmless.
+        cv::threshold(fg8, fg8, 127, 255, cv::THRESH_BINARY);
+        // Ensure type exactly CV_8U
+        if (fg8.type() != CV_8U) {
+            fg8.convertTo(fg8, CV_8U);
+        }
+        qDebug() << "fg.png size:" << fg8.cols << fg8.rows
+                 << "origSz:" << origSz.width << origSz.height;
 
         return fg8;
     }

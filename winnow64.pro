@@ -90,7 +90,7 @@ HEADERS += Cache/cachedata.h \
     FocusStack/fsfocus.h \
     FocusStack/fsfusion.h \
     FocusStack/fsfusiondmap.h \
-    FocusStack/fsfusiondmapbasic.h \
+    # FocusStack/fsfusiondmapbasic.h \
     FocusStack/fsfusiondmapshared.h \
     FocusStack/fsfusionpmax.h \
     FocusStack/fsfusionreassign.h \
@@ -358,7 +358,7 @@ SOURCES += Cache/cachedata.cpp \
     FocusStack/fsfocus.cpp \
     FocusStack/fsfusion.cpp \
     FocusStack/fsfusiondmap.cpp \
-    FocusStack/fsfusiondmapbasic.cpp \
+    # FocusStack/fsfusiondmapbasic.cpp \
     FocusStack/fsfusiondmapshared.cpp \
     FocusStack/fsfusionpmax.cpp \
     FocusStack/fsfusionreassign.cpp \

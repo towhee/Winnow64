@@ -2,7 +2,6 @@
 
 #include "fsalign_types.h"
 #include "fsfusion.h"
-#include "fsfusiondmapshared.h"
 #include "fusionpyr.h"
 
 #include <opencv2/core.hpp>
@@ -11,13 +10,13 @@
 #include <QString>
 #include <atomic>
 #include <vector>
-#include <functional>
 
 // ============================================================
-// fsfusiondmap.h
-// dmap (decision map) implementation: streamed 2-pass.
-// pass-1: build top-k focus score maps (stored in PAD space)
-// pass-2: compute weights + pyramid blend (in ORIG space)
+// FSFusionDMap
+// "continuous-depth" DMap using Top-2 winners only (streamed 2-pass)
+//
+// pass-1: compute focus metric, maintain top2 (idx0/idx1 + scores) in PAD
+// pass-2: crop to ORIG, build per-slice weights from top2 mix, pyramid blend
 // ============================================================
 
 class FSFusionDMap : public FSFusion
@@ -26,226 +25,537 @@ public:
     FSFusionDMap();
     ~FSFusionDMap() override = default;
 
-    struct TopKMaps
+    struct Params
     {
-        int K = 0;
-        cv::Size sz;
-        std::vector<cv::Mat> idx16;   // K x CV_16U
-        std::vector<cv::Mat> score32; // K x CV_32F
+        // focus metric
+        float scoreSigma = 0.75;    // 1.5
+        int   scoreKSize = 3;       // 3
 
-        void reset();
-        void create(cv::Size s, int k);
-        bool valid() const;
-    };
-
-    enum class DepthMode {
-        Baseline,       // current win16
-        Experimental     // use hook result
-    };
-
-    using DepthHookFn = std::function<bool(
-        const cv::Mat& baselineDepth16,   // CV_16U, orig size
-        const cv::Mat& conf01,            // CV_32F, orig size
-        const TopKMaps& topkOrig,         // scores/idx, orig size
-        int N,
-        cv::Mat& outDepth16               // CV_16U, orig size (must be filled)
-        )>;
-
-
-    struct DMapParams
-    {
-        // Experiment start
-        DepthMode depthMode = DepthMode::Baseline;
-        DepthHookFn depthHook;  // optional experiment hook (if nullptr => do nothing)
-
-        // Optional “tighten” knobs:
-        float depthConfSmoothMax = 0.08f;
-        float depthConfStableMax = 0.18f;
-        int   depthBoundaryDilateSmoothPx = 0;
-        int   depthBoundaryDilateStablePx = 0;
-        int   depthTexMax = 12;
-        bool  depthUseTextureGate = true;
-        bool  writeDepthDiagnostics = true;
-
-        // --- boundary override knobs (used by BWO earlier; ADO will reuse gates) ---
         // ADO: Adaptive Donor Override
-        int   bwoRingPx = 40;        // 30–60
-        float bwoConfMax = 0.22f;    // low-confidence only
-        int   bwoTexMax  = 12;       // low-texture only (8U scale)
-        int   bwoBandDilatePx = 0;   // thicken band slightly (0..3)
-        // Experiment end
+        // Foreground
+        int depthStableRadiusPx = 3;  // ↑ more strict
+        int depthMaxRangeSlicesCore = 1;   // ↓ more strict (>1 = halos)
+        int depthMaxRangeSlicesLoose = 5;  // ↓ more strict (>1 = halos)
+        float expandTexFrac = 0.05f;  //   FG Must be connected to interior and
+        //   must have enough texture
+        // strongFrac must be > weakFrac
+        float strongFrac = 0.030f;    // ↓ interior / holes
+        float weakFrac = 0.01f;       // ↓ interior / holes (subtle)
+        // float strongFrac = 0.010f;    // ↓ interior / holes
+        // float weakFrac = 0.03f;       // ↓ interior / holes (subtle)
+        int seedDilatePx = 1;         // ↓ finer items (ie twigs)
+        int closePx = 5;
+        int openPx  = 1;
+        int interiorPx = 3;  // default 3
 
-        bool enableHardWeightsOnLowpass = true;
+        // --- Boundary Ownership / Halo elimination (Two-pass ownership propagation) ---
+        // bool enableOwnership = true;
+        // int  ownershipRingPx = 50;      // ring width outside FG where halos live
+        // make deterministic later ???
+        int  ownershipClosePx = 3;      // close FG gaps a bit before building ring (0..3)
+        int  seedBandPx       = 1;
+        // int  ownershipErodePx = 1;      // boundary = FG - erode(FG)
 
-        int   topK = 2;
+        // // Low-contrast suppression (Zerene-style)
+        bool  enableContrastThreshold = true;
+        float contrastMinFrac = 0.010f;   // 0.3%..3% typical; start 1% (fraction of max top1Score)
+        int   lowContrastMedianK = 5;     // 3 or 5
+        int   lowContrastDilatePx = 0;    // optional (0..4)
 
-        float scoreSigma = 1.5f;
-        int   scoreKSize  = 3;
-
-        float softTemp = 0.25f;
-        float wMin     = 0.01f;
-
-        // Veto pyramid
-        bool  enableDepthGradLowpassVeto = true;
+        // pyramid / blend
+        bool  enableHardWeightsOnLowpass = false;
+        bool  enableDepthGradLowpassVeto = false;
         int   hardFromLevel = 4;
         int   vetoFromLevel = -1;
-        float vetoStrength = 1.0f;
-        float depthGradThresh = 1.25f;
-        int   vetoDilatePx = 2;
-
-        float confEps  = 1e-6f;
-        float confLow  = 0.08f;
-        float confHigh = 0.25f;
-
-        int   bandDilatePx = 12;
-        int   uncertaintyDilatePx = 6;
-
-        float weightBlurSigma = 1.2f;
-
-        // --- Halo fix near foreground edges ---
-        bool  enableHaloRingFix = true;
-        int   haloRingPx        = 50;
-        float haloFeatherSigma  = 10.0f;
-        float haloConfMax       = 0.22f;
-        int   haloTexMax        = 12;
-        bool  haloUseMaxIndexAsForeground = true;
-
-        bool  useTiling = false;
-        int   tilePx = 512;
-        int   tileOverlapPx = 32;
+        float vetoStrength  = 1.0f;
+        float weightBlurSigma = 0.0f; // 1.2f;
+        float mixEps = 1e-6f;        // for score0+score1 denominator
+        float wMin   = 0.0f;         // optional floor (0..0.02), usually 0
 
         int   pyrLevels = 5;
+
+        bool enableDiagnostics = true;
     };
 
-    // ------------------------------------------------------------
-    // weights containers
-    // ------------------------------------------------------------
-    struct DMapWeights
-    {
-        std::vector<cv::Mat> w32; // K x CV_32F (orig size)
-
-        cv::Mat boundary8;
-        cv::Mat band8;
-
-        // Donor override channel (ADO will populate these):
-        // overrideMask8:   CV_8U 0/255 domain where override applies
-        // overrideWinner16 CV_16U donor slice id per pixel (same size)
-        cv::Mat overrideMask8;
-        cv::Mat overrideWinner16;
-
-        void create(cv::Size sz, int K)
-        {
-            w32.assign(K, cv::Mat(sz, CV_32F, cv::Scalar(0)));
-            boundary8.release();
-            band8.release();
-            overrideMask8.release();
-            overrideWinner16.release();
-        }
-    };
-
-    DMapParams params;
-
-
+    Params o;
 
     void reset();
 
-    // pass-1: caller provides ALIGN-space mats; engine pads internally to PAD-space
     bool streamSlice(int slice,
-                     const cv::Mat& grayAlign8,     // CV_8U ALIGN
-                     const cv::Mat& colorAlign,     // ALIGN (optional for depth sanity)
+                     const cv::Mat& grayAlign8,      // CV_8U ALIGN
+                     const cv::Mat& colorAlign,      // optional
                      const FSFusion::Options& opt,
                      std::atomic_bool* abortFlag,
                      FSFusion::StatusCallback statusCb,
                      FSFusion::ProgressCallback progressCb);
 
-    // pass-2: reloads slices internally via FSLoader
     bool streamFinish(cv::Mat& outputColor,
                       const FSFusion::Options& opt,
-                      cv::Mat& depthIndex16,
+                      cv::Mat& depthIndex16,          // OUT: idx0 (best) ORIG
                       const QStringList& inputPaths,
                       const std::vector<Result>& globals,
                       std::atomic_bool* abortFlag,
                       FSFusion::StatusCallback statusCb,
                       FSFusion::ProgressCallback progressCb);
 
-private:
+    // private:
     bool active_ = false;
     int  sliceCount_ = 0;
-    QString depthFolderPath;
-    TopKMaps topk_pad_;
 
-    bool validateStreamFinishState(const QString& srcFun,
-                                   const QStringList& inputPaths,
-                                   const std::vector<Result>& globals,
-                                   std::atomic_bool* abortFlag,
-                                   int& N) const;
+    // PAD-space top2
+    cv::Size padSize;
+    cv::Mat  idx0_pad16;   // CV_16U
+    cv::Mat  idx1_pad16;   // CV_16U
+    cv::Mat  s0_pad32;     // CV_32F
+    cv::Mat  s1_pad32;     // CV_32F
+
+    cv::Mat winIdx16_;     // CV_16U
+    cv::Mat top1Score32_;  // CV_32F
+
+    // geometry set by caller
+    cv::Size alignSize;
+    cv::Rect validAreaAlign;
+    cv::Size origSize;
+
+    int outDepth = CV_8U;
+
+    // helpers
+    int computePyrLevels(const cv::Size& origSz) const;
+
+    bool toColor32_01_FromLoaded(cv::Mat colorTmp,
+                                 cv::Mat& color32,
+                                 const QString& where,
+                                 int sliceIdx);
+
+    void updateTop2(const cv::Mat& score32This, uint16_t sliceIndex);
+
     bool computeCropGeometry(const QString& srcFun,
                              cv::Rect& roiPadToAlign,
-                             cv::Size& origSz);
-    bool cropTopKToOrig(const QString& srcFun,
-                        const cv::Rect& roiPadToAlign,
-                        const cv::Size& origSz,
-                        TopKMaps& topkOrig) const;
-    bool sanityCheckTop1(const QString& srcFun,
-                         const TopKMaps& topkOrig,
-                         int N) const;
-    bool buildMapsAndStabilize(const QString& srcFun,
-                               const TopKMaps& topkOrig,
-                               int N,
-                               std::atomic_bool* abortFlag,
-                               DMapWeights& W,
-                               cv::Mat& conf01,
-                               cv::Mat& depthIndex16,
-                               cv::Mat& winStable16) const;
-    bool depthExperiment(const QString& srcFun,
-                         const FSFusion::Options& opt,
-                         const TopKMaps& topkOrig,
-                         int N,
-                         const cv::Mat& conf01,
-                         std::atomic_bool* abortFlag,
-                         cv::Mat& depthIndex16,   // OUT: depth used for pyramids/fusion
-                         cv::Mat& winStable16);   // OUT: stable labels for halo boundary work
-    int computePyrLevels(const cv::Size& origSz) const;
-    void buildPyramids(const cv::Mat& depthIndex16,
-                       int levels,
-                       std::vector<cv::Mat>& idxPyr16,
-                       std::vector<cv::Mat>& vetoPyr8) const;
-    void initAccumulator(const cv::Size& origSz,
-                         int levels,
-                         FusionPyr::PyrAccum& A,
-                         cv::Mat& sumW) const;
-    bool accumulateAllSlices(const QString& srcFun,
-                             const QStringList& inputPaths,
-                             const std::vector<Result>& globals,
-                             const cv::Rect& roiPadToAlign,
-                             const cv::Rect& validAreaAlign,
-                             const TopKMaps& topkOrig,
-                             const DMapWeights& W,
-                             const std::vector<cv::Mat>& idxPyr16,
-                             const std::vector<cv::Mat>& vetoPyr8,
-                             int levels,
-                             const cv::Mat& conf01,
-                             std::atomic_bool* abortFlag,
-                             FSFusion::StatusCallback statusCb,
-                             FSFusion::ProgressCallback progressCb,
-                             FusionPyr::PyrAccum& A,
-                             cv::Mat& sumW) const;
-    cv::Mat finalizeOut32(const FusionPyr::PyrAccum& A) const;
-    void debugHaloInputs(const cv::Mat& out32,
-                         const TopKMaps& topkOrig,
-                         const cv::Mat& conf01) const;
-    void debugHaloOutput(const cv::Mat& out32) const;
-    void applyHaloFixIfEnabled(const FSFusion::Options& opt,
-                               const QString& srcFun,
-                               int N,
-                               const TopKMaps& topkOrig,
-                               const cv::Mat& conf01,
-                               const cv::Mat& winStable16,
-                               const QStringList& inputPaths,
-                               const std::vector<Result>& globals,
-                               const cv::Rect& roiPadToAlign,
-                               const cv::Rect& validAreaAlign,
-                               std::atomic_bool* abortFlag,
-                               cv::Mat& out32);
-    void convertOut32ToOutput(const cv::Mat& out32, cv::Mat& outputColor) const;
+                             cv::Size& origSz) const;
+
+    void cropPadToOrig(const cv::Rect& roiPadToAlign,
+                       const cv::Size& origSz,
+                       cv::Mat& idx0_16,
+                       cv::Mat& idx1_16,
+                       cv::Mat& s0_32,
+                       cv::Mat& s1_32,
+                       cv::Mat& top1Score32) const;
 };
+
+/*
+
+🔎 Focus Metric
+
+scoreSigma = 1.5
+
+Purpose
+Gaussian pre-blur before Laplacian focus metric.
+
+Impact
+Controls noise sensitivity vs fine-detail sensitivity.
+
+Increase
+    •	More robust to noise
+    •	Less sensitive to micro detail
+    •	Slightly softer depth transitions
+    •	Halos slightly less likely
+
+Decrease
+    •	More sensitive to fine edges
+    •	More noise-triggered winners
+    •	More halo risk
+    •	Can increase “confetti” depth noise
+
+⸻
+
+scoreKSize = 3
+
+Purpose
+Laplacian kernel size.
+
+Impact
+Controls edge scale sensitivity.
+
+Increase (5)
+    •	Favors broader edges
+    •	Less sensitive to fine twigs
+    •	More stable depth map
+
+Decrease (3)
+    •	Captures fine twig detail
+    •	More sensitive to micro halos
+    •	Slightly noisier depth
+
+⸻
+
+🌿 Foreground Parameters
+
+depthStableRadiusPx = 3
+
+Purpose
+Neighborhood radius for depth stability test.
+
+Impact
+Main halo suppressor.
+
+Increase
+    •	Stricter stability
+    •	Fewer halos
+    •	May lose thin foreground
+    •	Can create transition blur (blue-arrow case)
+
+Decrease
+    •	More FG coverage
+    •	More halo risk
+    •	More slice bleeding
+
+⸻
+
+depthMaxRangeSlicesCore = 1
+
+Purpose
+Max slice variation allowed for stable FG core.
+
+Impact
+Boundary safety.
+
+Increase
+    •	More FG accepted
+    •	Halos reappear quickly
+
+Decrease
+    •	Very halo safe
+    •	More conservative FG
+    •	More reliance on expansion logic
+
+⸻
+
+depthMaxRangeSlicesLoose = 5
+
+Purpose
+Max slice variation allowed for interior expansion.
+
+Impact
+Bridges large slice transitions inside subject.
+
+Increase
+    •	Fixes multi-slice FG transitions
+    •	Risk of halo swallowing if texture gating weak
+
+Decrease
+    •	Less transition blur
+    •	May fail to bridge real FG depth jumps
+
+⸻
+
+expandTexFrac = 0.05
+
+Purpose
+Minimum texture strength required for loose expansion.
+
+Impact
+Prevents halos entering via low-contrast regions.
+
+Increase
+    •	Safer from halos
+    •	May fail to expand real low-texture subject regions
+
+Decrease
+    •	Better FG coverage
+    •	More halo risk
+
+⸻
+
+strongFrac = 0.03
+
+Purpose
+High threshold for strong edge seeds.
+
+Impact
+Determines how much confident edge area exists.
+
+Increase
+    •	Stronger, tighter seeds
+    •	More conservative FG
+    •	May fragment thin structures
+
+Decrease
+    •	More seeds
+    •	More aggressive FG growth
+    •	Higher halo risk
+
+⸻
+
+weakFrac = 0.01
+
+Purpose
+Lower threshold for weak silhouette mask.
+
+Impact
+Defines potential subject region.
+
+Increase
+    •	Smaller silhouette
+    •	More holes in FG
+
+Decrease
+    •	Larger silhouette
+    •	Risk of including background texture
+
+⸻
+
+seedDilatePx = 1
+
+Purpose
+Expands strong seeds slightly.
+
+Impact
+Helps thin twig continuity.
+
+Increase
+    •	Stronger connectivity
+    •	Slightly more aggressive FG
+
+Decrease
+    •	Finer structure preservation
+    •	May fragment twigs
+
+⸻
+
+closePx = 5
+
+Purpose
+Morph close on weak silhouette and final FG.
+
+Impact
+Fills small gaps.
+
+Increase
+    •	Fewer pinholes
+    •	Smoother FG boundary
+    •	May over-smooth thin details
+
+Decrease
+    •	More natural shape
+    •	Possible ring leaks
+
+⸻
+
+openPx = 1
+
+Purpose
+Removes tiny noise specks from FG.
+
+Impact
+Small cleanup.
+
+Increase
+    •	Cleaner FG
+    •	Can erode fine detail
+
+Decrease
+    •	Keeps tiny features
+    •	Slightly noisier mask
+
+⸻
+
+interiorPx = 3
+
+Purpose
+Erode core before geodesic growth.
+
+Impact
+Controls how deep interior expansion must start.
+
+Increase
+    •	Safer (less boundary creep)
+    •	Harder to bridge narrow FG transitions
+
+Decrease
+    •	More aggressive expansion
+    •	Slight halo risk
+
+⸻
+
+🧭 Ownership Propagation
+
+ownershipClosePx = 3
+
+Purpose
+Close FG before building ownership ring.
+
+Impact
+Prevents ring leaking into pinholes.
+
+Increase
+    •	Safer halo suppression
+    •	Slightly expands FG for ownership
+
+Decrease
+    •	More ring leakage risk
+
+⸻
+
+seedBandPx = 1
+
+Purpose
+Thickness of seed band outside FG for ownership.
+
+Impact
+Determines how ownership spreads.
+
+Increase
+    •	Smoother background correction
+    •	Slight risk of overreach
+
+Decrease
+    •	Tighter halo removal
+    •	May leave thin halo remnants
+
+⸻
+
+🎚 Contrast Threshold
+
+enableContrastThreshold = true
+
+Purpose
+Stabilize depth in low-contrast regions.
+
+Impact
+    •	Reduces confetti depth noise
+    •	Can slightly flatten soft background transitions
+
+⸻
+
+contrastMinFrac = 0.01
+
+Purpose
+Defines low-contrast threshold.
+
+Increase
+    •	More area stabilized
+    •	More aggressive flattening
+
+Decrease
+    •	Less stabilization
+    •	More depth noise
+
+⸻
+
+lowContrastMedianK = 5
+
+Purpose
+Median filter size for depth stabilization.
+
+Increase
+    •	Stronger smoothing
+    •	May smear subtle transitions
+
+Decrease
+    •	Finer preservation
+    •	Less noise removal
+
+⸻
+
+lowContrastDilatePx = 0
+
+Purpose
+Expand low-contrast mask.
+
+Increase
+    •	Larger stabilized areas
+    •	Risk of flattening real detail
+
+Decrease
+    •	Minimal impact area
+
+⸻
+
+🏗 Pyramid Fusion
+
+pyrLevels = 5
+
+Purpose
+Number of Laplacian pyramid levels.
+
+Impact
+    •	More levels = smoother blending
+    •	Fewer levels = sharper but harsher transitions
+
+⸻
+
+enableHardWeightsOnLowpass = false
+
+Purpose
+Force hard selection at coarse pyramid levels.
+
+Impact
+    •	True: sharper boundaries
+    •	False: smoother large-scale transitions
+
+⸻
+
+enableDepthGradLowpassVeto = false
+
+Purpose
+Prevent coarse blending across depth gradients.
+
+Impact
+    •	True: protects hard depth edges
+    •	False: smoother blend across depth slopes
+
+⸻
+
+hardFromLevel = 4
+
+Used only if hardWeights enabled.
+
+⸻
+
+vetoFromLevel = -1
+
+Disabled (since veto disabled).
+
+⸻
+
+vetoStrength = 1
+
+Full veto strength (only matters if enabled).
+
+⸻
+
+weightBlurSigma = 0
+
+Purpose
+Blur weight maps before pyramid.
+
+Increase
+    •	Smoother blends
+    •	Softer edges
+
+Decrease
+    •	Harder transitions
+
+⸻
+
+mixEps = 1e-6
+
+Numerical stability for division.
+No visual effect.
+
+⸻
+
+wMin = 0
+
+Minimum blending weight.
+
+Increase
+    •	More blending
+    •	Smoother transitions
+    •	Potential softness
+
+Decrease
+    •	Harder slice selection
+    •	Sharper transitions
+
+*/

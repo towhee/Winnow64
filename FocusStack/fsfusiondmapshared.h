@@ -125,6 +125,8 @@ namespace FSFusionDMapShared
                                     int interiorPx,
                                     float expandTexFrac);
 
+    cv::Mat buildFgFromGroundTruth(cv::Size origSz);
+
     // Stack ordering: near -> far, so "foreground" is the MIN slice index.
     // win16 is CV_16U winner labels.
     inline int foregroundSliceNearIsMinIndex(const cv::Mat& win16, int N)
