@@ -98,7 +98,8 @@ namespace FSFusionDMapShared
 
     // stable8: 0/255, seed8: 0/255
     // returns only stable components that touch seed
-    cv::Mat focusMetric32_dmap(const cv::Mat& gray8, float preBlurSigma, int lapKSize);
+    cv::Mat focusMetric32Laplacian(const cv::Mat& gray8, float preBlurSigma, int lapKSize);
+    cv::Mat focusMetric32Tenengrad(const cv::Mat& gray8, float preBlurSigma, int lapKSize);
 
     // --- Small inline helpers ---
 

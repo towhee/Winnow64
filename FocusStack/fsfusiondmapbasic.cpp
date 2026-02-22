@@ -282,7 +282,7 @@ index is most in-focus (and its score), and also the 2nd-best.
     cv::Mat grayPad8 = FSFusionDMapShared::padCenterReflect(grayAlign8, padSize);
 
     // focus metric
-    cv::Mat score32 = FSFusionDMapShared::focusMetric32_dmap(grayPad8, o.scoreSigma, o.scoreKSize);
+    cv::Mat score32 = FSFusionDMapShared::focusMetric32Laplacian(grayPad8, o.scoreSigma, o.scoreKSize);
 
     // update accumulated best and 2nd best score and slice index
     updateTop2(score32, (uint16_t)std::max(0, slice));

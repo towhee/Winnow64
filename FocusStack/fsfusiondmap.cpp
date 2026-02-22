@@ -171,7 +171,7 @@ bool FSFusionDMap::computeCropGeometry(const QString& srcFun,
     return true;
 }
 
-void FSFusionDMap::cropPadToOrig(const cv::Rect& roiPadToAlign,
+void FSFusionDMap::accumulatedMeasures(const cv::Rect& roiPadToAlign,
                                       const cv::Size& origSz,
                                       cv::Mat& idx0_16,
                                       cv::Mat& idx1_16,
@@ -201,12 +201,12 @@ void FSFusionDMap::cropPadToOrig(const cv::Rect& roiPadToAlign,
 bool FSFusionDMap::streamSlice(int slice,
                                     const cv::Mat& grayAlign8,
                                     const cv::Mat& colorAlign,
-                                    const FSFusion::Options& /*opt*/,
+                                    const FSFusion::Options& opt,
                                     std::atomic_bool* abortFlag,
                                     FSFusion::StatusCallback /*statusCb*/,
                                     FSFusion::ProgressCallback /*progressCb*/)
 {
-    /*
+/*
 This function streams one aligned grayscale slice into a running “depth-map by
 best-focus” accumulator. In other words: for every pixel, it’s tracking which slice
 index is most in-focus (and its score), and also the 2nd-best.
@@ -273,10 +273,50 @@ index is most in-focus (and its score), and also the 2nd-best.
     cv::Mat grayPad8 = FSFusionDMapShared::padCenterReflect(grayAlign8, padSize);
 
     // focus metric
-    cv::Mat score32 = FSFusionDMapShared::focusMetric32_dmap(grayPad8, o.scoreSigma, o.scoreKSize);
+    cv::Mat score32;
+    if (o.focusMetricMethod == "Laplacian")
+        score32 = FSFusionDMapShared::focusMetric32Laplacian(
+            grayPad8, o.scoreSigma, o.scoreKSize);
+    if (o.focusMetricMethod == "Tennengrad")
+        score32 = FSFusionDMapShared::focusMetric32Tenengrad(
+            grayPad8, o.scoreSigma, o.scoreKSize);
+
+    // Soft highlight weighting (keep some score even in highlights)
+    cv::Mat g = grayPad8;                // CV_8U
+    cv::Mat g32; g.convertTo(g32, CV_32F, 1.0f/255.0f);
+
+    // start fading at ~0.92, fully faded by ~0.99 (tweak)
+    const float t0 = 0.92f;
+    const float t1 = 0.99f;
+
+    // w = 1 in midtones, down to wMin near clip
+    const float wMin = 0.25f; // never fully kill
+    cv::Mat w = (g32 - t0) / (t1 - t0);
+    cv::max(w, 0.0f, w);
+    cv::min(w, 1.0f, w);
+    // smoothstep
+    w = w.mul(w).mul(3.0f - 2.0f*w);
+    w = 1.0f - w;                 // 1 -> 0 near highlights
+    w = wMin + (1.0f - wMin)*w;    // clamp floor
+
+    score32 = score32.mul(w);
+    // end highlight weighting (keep some score even in highlights)
 
     // update accumulated best and 2nd best score and slice index
     updateTop2(score32, (uint16_t)std::max(0, slice));
+
+    // Diagnostics for slice
+    if (!opt.depthFolderPath.isEmpty()) {
+        double mn=0,mx=0; cv::minMaxLoc(score32, &mn, &mx);
+        cv::Mat s8u;
+        score32.convertTo(s8u, CV_8U, (mx > 1e-12) ? (255.0/mx) : 1.0);
+        std::string f = opt.depthFolderPath.toStdString();
+        std::string s = QString::number(slice).toStdString();
+        std::string t = o.focusMetricMethod.toStdString();
+        std::string name = f + "/score_" + s + "_" + t + ".png";
+        cv::imwrite(name, s8u);
+    }
+
 
     sliceCount_++;
     return true;
@@ -312,7 +352,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
 
     cv::Mat idx0_16, idx1_16, s0_32, s1_32, top1_32;
     // assign accumulated values and crop to original size
-    cropPadToOrig(roiPadToAlign, origSz, idx0_16, idx1_16, s0_32, s1_32, top1_32);
+    accumulatedMeasures(roiPadToAlign, origSz, idx0_16, idx1_16, s0_32, s1_32, top1_32);
 
     // Depth output for inspection (best slice index)
     depthIndex16 = idx0_16.clone();
@@ -416,7 +456,10 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         if (cv::countNonZero(lowC8) > 0)
         {
             // 1) Stabilize depth labels in low-contrast regions (kills confetti/noise winners)
-            const int k = (o.lowContrastMedianK == 3) ? 3 : 5;
+            int k = o.lowContrastMedianK;
+            if (k < 3) k = 3;
+            if ((k & 1) == 0) k += 1;          // make odd
+            k = std::min(k, 51);               // sanity cap
             cv::Mat med16;
             cv::medianBlur(depthIndex16, med16, k);
             med16.copyTo(depthIndex16, lowC8);
@@ -436,109 +479,142 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     // ------------------------------------------------------------
     // Final fusion using Pyramids
     // ------------------------------------------------------------
+    cv::Mat out32(origSz, CV_32FC3, cv::Scalar(0,0,0));
 
-    // Build pyramids from depthIndex16 (same as advanced path)
-    const int levels = computePyrLevels(origSz);
+    if(o.enablePyramidBlend) {
+        // Build pyramids from depthIndex16 (same as advanced path)
+        const int levels = computePyrLevels(origSz);
 
-    std::vector<cv::Mat> idxPyr16;
-    FusionPyr::buildIndexPyrNearest(depthIndex16, levels, idxPyr16);
+        std::vector<cv::Mat> idxPyr16;
+        FusionPyr::buildIndexPyrNearest(depthIndex16, levels, idxPyr16);
 
-    // accumulator
-    FusionPyr::PyrAccum A;
-    A.reset(origSz, levels);
+        // accumulator
+        FusionPyr::PyrAccum A;
+        A.reset(origSz, levels);
 
-    // Per-slice accumulation
-    for (int s = 0; s < N; ++s)
-    {
-        progressCb();
-        statusCb("Fusing Slice: " + QString::number(s) + " of " + QString::number(N) + " ");
+        // Check for varied illumination
+        cv::Mat sumW(origSz, CV_32F, cv::Scalar(0));
 
-        if (FSFusion::isAbort(abortFlag)) return false;
-
-        cv::Mat grayTmp, colorTmp;
-        if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
-                                            roiPadToAlign, validAreaAlign,
-                                            grayTmp, colorTmp) || colorTmp.empty())
-            return false;
-
-        cv::Mat color32;
-        if (!toColor32_01_FromLoaded(colorTmp, color32, srcFun, s))
-            return false;
-
-        // w32 from continuous top2 mix
-        cv::Mat w32(origSz, CV_32F, cv::Scalar(0));
-
-        const float eps = std::max(1e-12f, o.mixEps);
-        for (int y = 0; y < origSz.height; ++y)
+        qDebug() << "N =" << N;
+        // Per-slice accumulation
+        for (int s = 0; s < N; ++s)
         {
-            const uint16_t* i0 = idx0_16.ptr<uint16_t>(y);
-            const uint16_t* i1 = idx1_16.ptr<uint16_t>(y);
-            const float*    a0 = s0_32.ptr<float>(y);
-            const float*    a1 = s1_32.ptr<float>(y);
+            progressCb();
+            statusCb("Fusing Slice: " + QString::number(s) + " of " + QString::number(N) + " ");
 
-            float* w = w32.ptr<float>(y);
+            if (FSFusion::isAbort(abortFlag)) return false;
 
-            for (int x = 0; x < origSz.width; ++x)
+            // cv::Mat grayTmp, colorTmp;
+            // if (!FSLoader::loadAlignedSliceOrig(s, inputPaths, globals,
+            //                                     roiPadToAlign, validAreaAlign,
+            //                                     grayTmp, colorTmp) || colorTmp.empty())
+            //     return false;
+            cv::Mat colorSliceAligned = cv::imread(
+                alignedColorPaths[s].toStdString(), cv::IMREAD_UNCHANGED);
+            if (colorSliceAligned.empty()) return false;
+
+            cv::Mat color32;
+            if (!toColor32_01_FromLoaded(colorSliceAligned, color32, srcFun, s))
+                return false;
+
+            // w32 from continuous top2 mix
+            cv::Mat w32(origSz, CV_32F, cv::Scalar(0));
+
+            const float eps = std::max(1e-12f, o.mixEps);
+            for (int y = 0; y < origSz.height; ++y)
             {
-                const int d0 = (int)i0[x];
-                const int d1 = (int)i1[x];
+                const uint16_t* i0 = idx0_16.ptr<uint16_t>(y);
+                const uint16_t* i1 = idx1_16.ptr<uint16_t>(y);
+                const float*    a0 = s0_32.ptr<float>(y);
+                const float*    a1 = s1_32.ptr<float>(y);
 
-                if (d0 != s && d1 != s) continue;
+                float* w = w32.ptr<float>(y);
 
-                const float s0 = std::max(0.0f, a0[x]);
-                const float s1 = std::max(0.0f, a1[x]);
-                const float den = s0 + s1 + eps;
+                for (int x = 0; x < origSz.width; ++x)
+                {
+                    const int d0 = (int)i0[x];
+                    const int d1 = (int)i1[x];
 
-                float w0 = s0 / den;
-                float w1 = 1.0f - w0;
+                    if (d0 != s && d1 != s) continue;
 
-                if (o.wMin > 0.0f) {
-                    w0 = std::max(w0, o.wMin);
-                    w1 = std::max(w1, o.wMin);
-                    const float inv = 1.0f / (w0 + w1);
-                    w0 *= inv; w1 *= inv;
+                    const float s0 = std::max(0.0f, a0[x]);
+                    const float s1 = std::max(0.0f, a1[x]);
+                    const float den = s0 + s1 + eps;
+
+                    float w0 = s0 / den;
+                    float w1 = 1.0f - w0;
+
+                    if (o.wMin > 0.0f) {
+                        w0 = std::max(w0, o.wMin);
+                        w1 = std::max(w1, o.wMin);
+                        const float inv = 1.0f / (w0 + w1);
+                        w0 *= inv; w1 *= inv;
+                    }
+
+                    if (d0 == s) w[x] = 1.0f;  // ignore top2 blend entirely
+                    else         w[x] = 0.0f;
                 }
-
-                if (d0 == s) w[x] = 1.0f;  // ignore top2 blend entirely
-                else         w[x] = 0.0f;
             }
+
+            sumW += w32;
+            double mn, mx;
+            cv::minMaxLoc(sumW, &mn, &mx);
+            qDebug() << "slice" << s << "sumW min/max =" << mn << mx;
+
+            FusionPyr::AccumDMapParams ap;
+            ap.enableHardWeightsOnLowpass = o.enableHardWeightsOnLowpass;
+            ap.enableDepthGradLowpassVeto = o.enableDepthGradLowpassVeto;
+            ap.hardFromLevel = o.hardFromLevel;
+            ap.vetoFromLevel = o.vetoFromLevel;
+            ap.vetoStrength  = o.vetoStrength;
+            ap.wMin          = 0.0f; // wMin already handled above
+
+            FusionPyr::accumulateSlicePyr(A,
+                                          color32,
+                                          w32,
+                                          idxPyr16,
+                                          nullptr,
+                                          s,
+                                          ap,
+                                          levels,
+                                          o.weightBlurSigma);
         }
+        out32 = FusionPyr::finalizeBlend(A, 1e-8f);
+    }
+    // ------------------------------------------------------------
+    // Final fusion directly from depthIndex16 (Simple)
+    // ------------------------------------------------------------
+    else {
+        for (int s = 0; s < N; ++s)
+        {
+            cv::Mat colorSliceAligned = cv::imread(
+                alignedColorPaths[s].toStdString(), cv::IMREAD_UNCHANGED);
+            if (colorSliceAligned.empty()) return false;
 
-        FusionPyr::AccumDMapParams ap;
-        ap.enableHardWeightsOnLowpass = o.enableHardWeightsOnLowpass;
-        ap.enableDepthGradLowpassVeto = o.enableDepthGradLowpassVeto;
-        ap.hardFromLevel = o.hardFromLevel;
-        ap.vetoFromLevel = o.vetoFromLevel;
-        ap.vetoStrength  = o.vetoStrength;
-        ap.wMin          = 0.0f; // wMin already handled above
+            cv::Mat color32;
+            if (!toColor32_01_FromLoaded(colorSliceAligned, color32, srcFun, s))
+                return false;
 
-        FusionPyr::accumulateSlicePyr(A,
-                                      color32,
-                                      w32,
-                                      idxPyr16,
-                                      nullptr,
-                                      s,
-                                      ap,
-                                      levels,
-                                      o.weightBlurSigma);
+            cv::Mat mask8 = (depthIndex16 == (uint16_t)s);  // CV_8U 0/255
+            color32.copyTo(out32, mask8);
+        }
     }
 
-    cv::Mat out32 = FusionPyr::finalizeBlend(A, 1e-8f);
+    // cv::Mat out32 = FusionPyr::finalizeBlend(A, 1e-8f);
     cv::max(out32, 0.0f, out32);
     cv::min(out32, 1.0f, out32);
 
     if (outDepth == CV_16U) out32.convertTo(outputColor, CV_16UC3, 65535.0);
     else out32.convertTo(outputColor, CV_8UC3, 255.0);
 
-
-
     // ------------------------------------------------------------
     // Diagnostics
     // ------------------------------------------------------------
     {
     qDebug().noquote() << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    qDebug().noquote() << "Method                        =" << "DMap";
+    qDebug().noquote() << "Fusion                        =" << "DMap";
     qDebug().noquote() << "FOCUS METRIC:";
+    qDebug().noquote() << " focusMetricMethod            =" << o.focusMetricMethod;
     qDebug().noquote() << " scoreSigma                   =" << o.scoreSigma;
     qDebug().noquote() << " scoreKSize                   =" << o.scoreKSize;
     qDebug().noquote() << "FOREGROUND:";
@@ -561,6 +637,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     qDebug().noquote() << " lowContrastMedianK           =" << o.lowContrastMedianK;
     qDebug().noquote() << " lowContrastDilatePx          =" << o.lowContrastDilatePx;
     qDebug().noquote() << "PYRAMID FUSION:";
+    qDebug().noquote() << " enablePyramidBlend           =" << o.enablePyramidBlend;
     qDebug().noquote() << " pyrLevels                    =" << o.pyrLevels;
     qDebug().noquote() << " enableHardWeightsOnLowpass   =" << o.enableHardWeightsOnLowpass;
     qDebug().noquote() << " enableDepthGradLowpassVeto   =" << o.enableDepthGradLowpassVeto;
@@ -574,34 +651,35 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     if (!opt.depthFolderPath.isEmpty() && o.enableDiagnostics)
     {
         std::string s;
-        s = (opt.depthFolderPath + "/dmap_fg.png").toStdString();
+        QString t = "_" + o.focusMetricMethod;
+        s = (opt.depthFolderPath + "/dmap_fg" + t + ".png").toStdString();
         cv::imwrite(s, fg8);
 
-        s = (opt.depthFolderPath + "/dmap_fg_own.png").toStdString();
+        s = (opt.depthFolderPath + "/dmap_fg_own" + t + ".png").toStdString();
         cv::imwrite(s, fgOwn8);
 
-        s = (opt.depthFolderPath + "/dmap_ownership_ring.png").toStdString();
+        s = (opt.depthFolderPath + "/dmap_ownership_ring" + t + ".png").toStdString();
         cv::imwrite(s, overrideMask8);
 
         s = (opt.depthFolderPath + "/dmap_ownership_winner.png").toStdString();
         cv::imwrite(s, FSUtilities::depthHeatmap(overrideWinner16, N, "Ownership winner"));
 
         cv::Mat topRatio32 = s0_32 / (s1_32 + 1e-6f);
-        s = (opt.depthFolderPath + "/dmap_topRatio32.png").toStdString();
+        s = (opt.depthFolderPath + "/dmap_topRatio32" + t + ".png").toStdString();
         cv::imwrite(s, topRatio32);
 
-        s = (opt.depthFolderPath + "/dmap_depth_idx0.png").toStdString();
-        cv::imwrite(s, FSUtilities::depthHeatmap(depthIndex16, N, "DMapBasic idx0"));
+        s = (opt.depthFolderPath + "/dmap_depthIndex16" + t + ".png").toStdString();
+        cv::imwrite(s, FSUtilities::depthHeatmap(depthIndex16, N, "DMap depthIndex16"));
 
         // this looks like a good fg ??
         double mn=0,mx=0; cv::minMaxLoc(top1_32, &mn, &mx);
         cv::Mat top18;
         top1_32.convertTo(top18, CV_8U, (mx > 1e-12) ? (255.0 / mx) : 1.0);
-        s = (opt.depthFolderPath + "/dmap_top1Score8.png").toStdString();
+        s = (opt.depthFolderPath + "/dmap_top1Score8" + t + ".png").toStdString();
         cv::imwrite(s, top18);
 
         if (o.enableContrastThreshold) {
-            s = (opt.depthFolderPath + "/dmap_lowContrastMask.png").toStdString();
+            s = (opt.depthFolderPath + "/dmap_lowContrastMask" + t + ".png").toStdString();
             cv::imwrite(s, lowC8);
         }
     }

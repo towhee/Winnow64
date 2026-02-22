@@ -28,6 +28,8 @@ public:
     struct Params
     {
         // focus metric
+        QString focusMetricMethod = "Laplacian";  // Laplacian or Tennengrad
+        // QString focusMetricMethod = "Tennengrad";  // Laplacian or Tennengrad
         float scoreSigma = 0.75;    // 1.5
         int   scoreKSize = 3;       // 3
 
@@ -37,35 +39,30 @@ public:
         int depthMaxRangeSlicesCore = 1;   // ↓ more strict (>1 = halos)
         int depthMaxRangeSlicesLoose = 5;  // ↓ more strict (>1 = halos)
         float expandTexFrac = 0.05f;  //   FG Must be connected to interior and
-        //   must have enough texture
         // strongFrac must be > weakFrac
         float strongFrac = 0.030f;    // ↓ interior / holes
         float weakFrac = 0.01f;       // ↓ interior / holes (subtle)
-        // float strongFrac = 0.010f;    // ↓ interior / holes
-        // float weakFrac = 0.03f;       // ↓ interior / holes (subtle)
         int seedDilatePx = 1;         // ↓ finer items (ie twigs)
         int closePx = 5;
         int openPx  = 1;
         int interiorPx = 3;  // default 3
 
         // --- Boundary Ownership / Halo elimination (Two-pass ownership propagation) ---
-        // bool enableOwnership = true;
-        // int  ownershipRingPx = 50;      // ring width outside FG where halos live
-        // make deterministic later ???
         int  ownershipClosePx = 3;      // close FG gaps a bit before building ring (0..3)
         int  seedBandPx       = 1;
         // int  ownershipErodePx = 1;      // boundary = FG - erode(FG)
 
         // // Low-contrast suppression (Zerene-style)
         bool  enableContrastThreshold = true;
-        float contrastMinFrac = 0.010f;   // 0.3%..3% typical; start 1% (fraction of max top1Score)
+        float contrastMinFrac = 0.20f;   // 0.3%..3% typical; start 1% (fraction of max top1Score)
         int   lowContrastMedianK = 5;     // 3 or 5
-        int   lowContrastDilatePx = 0;    // optional (0..4)
+        int   lowContrastDilatePx = 1;    // optional (0..4)
 
         // pyramid / blend
-        bool  enableHardWeightsOnLowpass = false;
+        bool  enablePyramidBlend = true;
+        bool  enableHardWeightsOnLowpass = false;    // false
         bool  enableDepthGradLowpassVeto = false;
-        int   hardFromLevel = 4;
+        int   hardFromLevel = 0;    // 4
         int   vetoFromLevel = -1;
         float vetoStrength  = 1.0f;
         float weightBlurSigma = 0.0f; // 1.2f;
@@ -78,6 +75,11 @@ public:
     };
 
     Params o;
+
+    // tmp debugging
+    std::vector<QString> alignedColorPaths;     // intermediate
+    std::vector<QString> alignedGrayPaths;      // intermediate
+
 
     void reset();
 
@@ -133,7 +135,7 @@ public:
                              cv::Rect& roiPadToAlign,
                              cv::Size& origSz) const;
 
-    void cropPadToOrig(const cv::Rect& roiPadToAlign,
+    void accumulatedMeasures(const cv::Rect& roiPadToAlign,
                        const cv::Size& origSz,
                        cv::Mat& idx0_16,
                        cv::Mat& idx1_16,
