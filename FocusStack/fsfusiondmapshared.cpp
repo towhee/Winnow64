@@ -406,14 +406,14 @@ namespace FSFusionDMapShared
                                                   float contrastMinFrac,
                                                   float minAbs)
     {
+        qDebug() << "10";
+
         CV_Assert(top1Score32.type() == CV_32F);
 
-        double mn=0.0, mx=0.0;
-        cv::minMaxLoc(top1Score32, &mn, &mx);
+        const float p99 = FSFusionDMapShared::robustMax99(top1Score32);
+        const float thr = std::max(p99 * std::max(0.0f, contrastMinFrac), minAbs);
 
-        const float thr = std::max((float)mx * std::max(0.0f, contrastMinFrac), minAbs);
-
-        cv::Mat low = (top1Score32 < thr);  // CV_8U 0/255
+        cv::Mat low = (top1Score32 < thr);
         low.convertTo(low, CV_8U, 255.0);
         return low;
     }
@@ -755,7 +755,7 @@ namespace FSFusionDMapShared
         return fg8;
     }
 
-    cv::Mat focusMetric32_dmap(const cv::Mat& gray8, float preBlurSigma, int lapKSize)
+    cv::Mat focusMetric32Laplacian(const cv::Mat& gray8, float preBlurSigma, int lapKSize)
     {
     /*
     This computes a per-pixel focus/sharpness score from a grayscale 8-bit image
@@ -790,6 +790,29 @@ namespace FSFusionDMapShared
                          cv::BORDER_REFLECT);
 
         return absLap32;
+    }
+
+    cv::Mat focusMetric32Tenengrad(const cv::Mat& gray8, float preBlurSigma, int lapKSize)
+    {
+        /*
+        This computes a per-pixel focus/sharpness score from a grayscale 8-bit image
+        then lightly smooths the result.
+
+        Tenengrad is typically less scale-fussy and often less “weird” on foliage.
+        */
+        CV_Assert(gray8.type() == CV_8U);
+        cv::Mat g32 = FSFusion::toFloat01(gray8); // 0..1 CV_32F
+
+        if (preBlurSigma > 0.0f)
+            cv::GaussianBlur(g32, g32, cv::Size(0, 0),
+                             preBlurSigma, preBlurSigma,
+                             cv::BORDER_REFLECT);
+        cv::Mat gx, gy;
+        cv::Sobel(g32, gx, CV_32F, 1, 0, 3);
+        cv::Sobel(g32, gy, CV_32F, 0, 1, 3);
+        cv::Mat score32 = gx.mul(gx) + gy.mul(gy);
+        cv::GaussianBlur(score32, score32, cv::Size(0,0), 0.8, 0.8, cv::BORDER_REFLECT);
+        return score32;
     }
 
 

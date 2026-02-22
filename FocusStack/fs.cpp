@@ -6,13 +6,12 @@
 #include "FocusStack/fsdepth.h"
 #include "FocusStack/fsfusion.h"
 #include "FocusStack/fsfusiondmap.h"
-// #include "FocusStack/fsfusiondmapbasic.h"
 #include "FocusStack/fsfusionpmax.h"
 #include "FocusStack/fsmerge.h"
 #include "FocusStack/fsfusionreassign.h"
 #include "FocusStack/fsfusionwavelet.h"
-#include "FocusStack/fsbackground.h"
-#include "FocusStack/fsartifact.h"
+// #include "FocusStack/fsbackground.h"
+// #include "FocusStack/fsartifact.h"
 #include "FocusStack/fsloader.h"
 #include "FocusStack/fsutilities.h"
 
@@ -681,13 +680,6 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
                 }
             }
 
-            // if (o.method == "StmDMapBasic") {
-            //     if (!runStreamDMapBasic()) {
-            //         emit finished(false);
-            //         return false;
-            //     }
-            // }
-
             if (o.method == "StmPMax") {
                 if (!runStreamPMax()) {
                     emit finished(false);
@@ -696,13 +688,6 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
             }
 
             if (o.method == "StmPMaxWt") {
-                if (!runStreamPMax()) {
-                    emit finished(false);
-                    return false;
-                }
-            }
-
-            if (o.method == "StmPMaxWtDbe") {
                 if (!runStreamPMax()) {
                     emit finished(false);
                     return false;
@@ -1303,6 +1288,8 @@ bool FS::runStreamDMap()
         // debug write aligned slices (optional, matches your current workflow)
         cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
         cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
+        cv::Mat alignedGrayImg = FSUtilities::alignToOrigSize(alignedGraySlice, currImage.origSize);
+        cv::imwrite(alignedGrayPaths[slice].toStdString(), alignedGrayImg);
 
         if (G::abortFocusStack) return false;
 
@@ -1325,6 +1312,10 @@ bool FS::runStreamDMap()
         prevImage  = currImage;
         prevGlobal = currGlobal;
     }
+
+    // tmp debugging
+    fuse.alignedColorPaths = alignedColorPaths;
+    fuse.alignedGrayPaths = alignedGrayPaths;
 
     msg = "Slice processing done. DMapBasic finish: build maps, stream slices, blend, crop.";
     if (G::FSLog) G::log(srcFun, msg);
