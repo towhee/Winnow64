@@ -207,11 +207,8 @@ void MW::generateFocusStack(const QStringList paths,
             srcFolder (focus stack input tiffs)
                 grpFolder ie 2025-11-07_0078_StreamPMax
                     alignFolder
-                    focusFolder
                     depthFolder
                     fusionFolder
-                    backgroundFolder
-                    artifactsFolder
 
     srcFolder contains the input focus stack images
     dstFolder is where to save the fused result image
