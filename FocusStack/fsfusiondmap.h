@@ -28,7 +28,7 @@ public:
     struct Params
     {
         // focus metric
-        QString focusMetricMethod = "Laplacian";  // Laplacian or Tennengrad
+        // QString focusMetricMethod = "Laplacian";  // Laplacian or Tennengrad
         // QString focusMetricMethod = "Tennengrad";  // Laplacian or Tennengrad
         float scoreSigma = 0.75;    // 1.5
         int   scoreKSize = 3;       // 3
@@ -100,9 +100,11 @@ public:
                       FSFusion::StatusCallback statusCb,
                       FSFusion::ProgressCallback progressCb);
 
-    // private:
+
+
     bool active_ = false;
     int  sliceCount_ = 0;
+    int N = 0;
 
     // PAD-space top2
     cv::Size padSize;
@@ -110,6 +112,8 @@ public:
     cv::Mat  idx1_pad16;   // CV_16U
     cv::Mat  s0_pad32;     // CV_32F
     cv::Mat  s1_pad32;     // CV_32F
+
+    cv::Mat idx0_16, idx1_16, s0_32, s1_32, top1_32;
 
     cv::Mat winIdx16_;     // CV_16U
     cv::Mat top1Score32_;  // CV_32F
@@ -120,6 +124,13 @@ public:
     cv::Size origSize;
 
     int outDepth = CV_8U;
+
+    private:
+    cv::Mat fg8;
+    cv::Mat fgOwn8;
+    cv::Mat overrideMask8;
+    cv::Mat overrideWinner16;
+    cv::Mat lowC8;
 
     // helpers
     int computePyrLevels(const cv::Size& origSz) const;
@@ -142,422 +153,6 @@ public:
                        cv::Mat& s0_32,
                        cv::Mat& s1_32,
                        cv::Mat& top1Score32) const;
+
+    void diagnostics(QString path, cv::Mat &depthIndex16);
 };
-
-/*
-
-🔎 Focus Metric
-
-scoreSigma = 1.5
-
-Purpose
-Gaussian pre-blur before Laplacian focus metric.
-
-Impact
-Controls noise sensitivity vs fine-detail sensitivity.
-
-Increase
-    •	More robust to noise
-    •	Less sensitive to micro detail
-    •	Slightly softer depth transitions
-    •	Halos slightly less likely
-
-Decrease
-    •	More sensitive to fine edges
-    •	More noise-triggered winners
-    •	More halo risk
-    •	Can increase “confetti” depth noise
-
-⸻
-
-scoreKSize = 3
-
-Purpose
-Laplacian kernel size.
-
-Impact
-Controls edge scale sensitivity.
-
-Increase (5)
-    •	Favors broader edges
-    •	Less sensitive to fine twigs
-    •	More stable depth map
-
-Decrease (3)
-    •	Captures fine twig detail
-    •	More sensitive to micro halos
-    •	Slightly noisier depth
-
-⸻
-
-🌿 Foreground Parameters
-
-depthStableRadiusPx = 3
-
-Purpose
-Neighborhood radius for depth stability test.
-
-Impact
-Main halo suppressor.
-
-Increase
-    •	Stricter stability
-    •	Fewer halos
-    •	May lose thin foreground
-    •	Can create transition blur (blue-arrow case)
-
-Decrease
-    •	More FG coverage
-    •	More halo risk
-    •	More slice bleeding
-
-⸻
-
-depthMaxRangeSlicesCore = 1
-
-Purpose
-Max slice variation allowed for stable FG core.
-
-Impact
-Boundary safety.
-
-Increase
-    •	More FG accepted
-    •	Halos reappear quickly
-
-Decrease
-    •	Very halo safe
-    •	More conservative FG
-    •	More reliance on expansion logic
-
-⸻
-
-depthMaxRangeSlicesLoose = 5
-
-Purpose
-Max slice variation allowed for interior expansion.
-
-Impact
-Bridges large slice transitions inside subject.
-
-Increase
-    •	Fixes multi-slice FG transitions
-    •	Risk of halo swallowing if texture gating weak
-
-Decrease
-    •	Less transition blur
-    •	May fail to bridge real FG depth jumps
-
-⸻
-
-expandTexFrac = 0.05
-
-Purpose
-Minimum texture strength required for loose expansion.
-
-Impact
-Prevents halos entering via low-contrast regions.
-
-Increase
-    •	Safer from halos
-    •	May fail to expand real low-texture subject regions
-
-Decrease
-    •	Better FG coverage
-    •	More halo risk
-
-⸻
-
-strongFrac = 0.03
-
-Purpose
-High threshold for strong edge seeds.
-
-Impact
-Determines how much confident edge area exists.
-
-Increase
-    •	Stronger, tighter seeds
-    •	More conservative FG
-    •	May fragment thin structures
-
-Decrease
-    •	More seeds
-    •	More aggressive FG growth
-    •	Higher halo risk
-
-⸻
-
-weakFrac = 0.01
-
-Purpose
-Lower threshold for weak silhouette mask.
-
-Impact
-Defines potential subject region.
-
-Increase
-    •	Smaller silhouette
-    •	More holes in FG
-
-Decrease
-    •	Larger silhouette
-    •	Risk of including background texture
-
-⸻
-
-seedDilatePx = 1
-
-Purpose
-Expands strong seeds slightly.
-
-Impact
-Helps thin twig continuity.
-
-Increase
-    •	Stronger connectivity
-    •	Slightly more aggressive FG
-
-Decrease
-    •	Finer structure preservation
-    •	May fragment twigs
-
-⸻
-
-closePx = 5
-
-Purpose
-Morph close on weak silhouette and final FG.
-
-Impact
-Fills small gaps.
-
-Increase
-    •	Fewer pinholes
-    •	Smoother FG boundary
-    •	May over-smooth thin details
-
-Decrease
-    •	More natural shape
-    •	Possible ring leaks
-
-⸻
-
-openPx = 1
-
-Purpose
-Removes tiny noise specks from FG.
-
-Impact
-Small cleanup.
-
-Increase
-    •	Cleaner FG
-    •	Can erode fine detail
-
-Decrease
-    •	Keeps tiny features
-    •	Slightly noisier mask
-
-⸻
-
-interiorPx = 3
-
-Purpose
-Erode core before geodesic growth.
-
-Impact
-Controls how deep interior expansion must start.
-
-Increase
-    •	Safer (less boundary creep)
-    •	Harder to bridge narrow FG transitions
-
-Decrease
-    •	More aggressive expansion
-    •	Slight halo risk
-
-⸻
-
-🧭 Ownership Propagation
-
-ownershipClosePx = 3
-
-Purpose
-Close FG before building ownership ring.
-
-Impact
-Prevents ring leaking into pinholes.
-
-Increase
-    •	Safer halo suppression
-    •	Slightly expands FG for ownership
-
-Decrease
-    •	More ring leakage risk
-
-⸻
-
-seedBandPx = 1
-
-Purpose
-Thickness of seed band outside FG for ownership.
-
-Impact
-Determines how ownership spreads.
-
-Increase
-    •	Smoother background correction
-    •	Slight risk of overreach
-
-Decrease
-    •	Tighter halo removal
-    •	May leave thin halo remnants
-
-⸻
-
-🎚 Contrast Threshold
-
-enableContrastThreshold = true
-
-Purpose
-Stabilize depth in low-contrast regions.
-
-Impact
-    •	Reduces confetti depth noise
-    •	Can slightly flatten soft background transitions
-
-⸻
-
-contrastMinFrac = 0.01
-
-Purpose
-Defines low-contrast threshold.
-
-Increase
-    •	More area stabilized
-    •	More aggressive flattening
-
-Decrease
-    •	Less stabilization
-    •	More depth noise
-
-⸻
-
-lowContrastMedianK = 5
-
-Purpose
-Median filter size for depth stabilization.
-
-Increase
-    •	Stronger smoothing
-    •	May smear subtle transitions
-
-Decrease
-    •	Finer preservation
-    •	Less noise removal
-
-⸻
-
-lowContrastDilatePx = 0
-
-Purpose
-Expand low-contrast mask.
-
-Increase
-    •	Larger stabilized areas
-    •	Risk of flattening real detail
-
-Decrease
-    •	Minimal impact area
-
-⸻
-
-🏗 Pyramid Fusion
-
-pyrLevels = 5
-
-Purpose
-Number of Laplacian pyramid levels.
-
-Impact
-    •	More levels = smoother blending
-    •	Fewer levels = sharper but harsher transitions
-
-⸻
-
-enableHardWeightsOnLowpass = false
-
-Purpose
-Force hard selection at coarse pyramid levels.
-
-Impact
-    •	True: sharper boundaries
-    •	False: smoother large-scale transitions
-
-⸻
-
-enableDepthGradLowpassVeto = false
-
-Purpose
-Prevent coarse blending across depth gradients.
-
-Impact
-    •	True: protects hard depth edges
-    •	False: smoother blend across depth slopes
-
-⸻
-
-hardFromLevel = 4
-
-Used only if hardWeights enabled.
-
-⸻
-
-vetoFromLevel = -1
-
-Disabled (since veto disabled).
-
-⸻
-
-vetoStrength = 1
-
-Full veto strength (only matters if enabled).
-
-⸻
-
-weightBlurSigma = 0
-
-Purpose
-Blur weight maps before pyramid.
-
-Increase
-    •	Smoother blends
-    •	Softer edges
-
-Decrease
-    •	Harder transitions
-
-⸻
-
-mixEps = 1e-6
-
-Numerical stability for division.
-No visual effect.
-
-⸻
-
-wMin = 0
-
-Minimum blending weight.
-
-Increase
-    •	More blending
-    •	Smoother transitions
-    •	Potential softness
-
-Decrease
-    •	Harder slice selection
-    •	Sharper transitions
-
-*/

@@ -305,7 +305,8 @@ void FS::updateIntermediateStatus()
     for (const QString &src : inputPaths) {
         QFileInfo fi(src);
         QString base = fi.completeBaseName();
-        QString ext  = fi.suffix();
+        QString ext  = "png";
+        // QString ext  = fi.suffix();
         path = alignFolderPath + "/aligned_" + base + "." + ext;
         alignedColorPaths.push_back(path);
         if (!QFileInfo::exists(path)) alignExists = false;
@@ -322,7 +323,7 @@ void FS::updateIntermediateStatus()
             cv::Mat img = cv::imread(f.toStdString(), cv::IMREAD_COLOR);
             if (img.empty()) continue;
             alignedColorSlices.push_back(img);
-            incrementProgress();
+            // incrementProgress();
             QString msg = "alignedColorSlices " + QString::number(i++);
             if (G::FSLog) G::log(srcFun, msg);
         }
@@ -331,7 +332,7 @@ void FS::updateIntermediateStatus()
             cv::Mat img = cv::imread(f.toStdString(), cv::IMREAD_GRAYSCALE);
             if (img.empty()) continue;
             alignedGraySlices.push_back(img);
-            incrementProgress();
+            // incrementProgress();
             QString msg = "alignedGraySlices " + QString::number(i++);
             if (G::FSLog) G::log(srcFun, msg);
         }
@@ -434,28 +435,13 @@ bool FS::validAlignMatsAvailable(int count) const
     return true;
 }
 
-void FS::setTotalProgress(int runs)
+void FS::initializeProgress()
 {
     QString srcFun = "FS::setTotalProgress";
     progressTotal = 0;
     for (const QStringList &g : groups) {
         int slices = g.count();
-        if (o.isStream) {
-            progressTotal += (slices * 2 + 1) * runs;
-        }
-        else {
-            if (slices < 2) continue;
-            if (o.enableAlign && !skipAlign)
-                progressTotal += (slices - 1);
-            if (o.enableFocusMaps && !skipFocusMaps)
-                progressTotal += slices;
-            if (o.enableDepthMap && !skipDepthMap)
-                progressTotal += slices;
-            if (o.enableFusion && !skipFusion)
-                progressTotal += (slices + 4);
-            if (o.enableBackgroundMask)
-                progressTotal += slices;
-        }
+            progressTotal += (slices * 2 + 2);
     }
     QString msg = "progressTotal = " + QString::number(progressTotal);
     if (G::FSLog) G::log(srcFun, msg);
@@ -467,7 +453,7 @@ void FS::incrementProgress()
     QString srcFun = "FS::incrementProgress";
     emit progress(++progressCount, progressTotal);
     QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
-    // if (G::FSLog) G::log(srcFun, msg);
+    if (G::FSLog) G::log(srcFun, msg);
 }
 
 void FS::previewOverview(cv::Mat &fusedColor8Mat)
@@ -594,45 +580,78 @@ QImage FS::thumbnail(const cv::Mat &mat)
 bool FS::run()
 {
 /*
-    This is the entry point for the focus stacking pipeline.  Normally, this function
-    just calls run(), but it can also call run() multiple times for different settings
-    or parameters to test which ones work best.
-
-    When testing, the values in A and B must be set in the appropriate run method
-    ie if A is fusion weightedPower method  uses runStreamWaveletPMax then you must
+    This is the entry point for the focus stacking pipeline.
 */
     QString srcFun = "FS::run";
 
-// Test Parameters in two vectors
-    // A: weightedPower     aItem in header
-    QVector<QVariant> A{};
-    // B: weightedSigma0    bItem in header
-    QVector<QVariant> B{};
+    initializeProgress();
+    incrementProgress();
 
-    runIdx = 0;
-    runTotal = A.count() * B.count();
-    if (runTotal == 0) runTotal = 1;
-    setTotalProgress(runTotal);
+    // iterate groups
+    int groupCounter = 0;
+    for (const QStringList &g : groups) {
 
-    // Just run existing settings
-    if (A.isEmpty() && B.isEmpty()) {
-        if (!runGroups()) return false;
-    }
+        slices = g.count();
+        if (slices < 2) {
+            groupCounter++;
+            continue;
+        }
 
-    // Iterate testing parameters
-    else {
-        for (const QVariant& a : A) {
-            for (const QVariant& b : B) {
-                runIdx++;
-                statusRunPrefix = "Run " + QString::number(runIdx) +
-                                  " of " + QString::number(runTotal) + "  ";
-                if (G::FSLog) G::log(srcFun, statusRunPrefix);
-                aItem = a;
-                bItem = b;
-                if (!runGroups()) return false;
+        QString msg = "Preparing to focus stack group " + QString::number(groupCounter);
+        status(msg);
+        if (G::FSLog) G::log(srcFun, msg);
+
+        QElapsedTimer t;
+        t.start();
+
+        if (!initializeGroup(groupCounter++)) return false;
+
+
+        if (o.method == "StmDMap") {
+            if (!runStreamDMap()) {
+                emit finished(false);
+                return false;
             }
         }
+
+        if (o.method == "StmPMax") {
+            if (!runStreamPMax()) {
+                emit finished(false);
+                return false;
+            }
+        }
+
+        if (o.method == "StmPMaxWt") {
+            if (!runStreamPMax()) {
+                emit finished(false);
+                return false;
+            }
+        }
+
+        if (o.method == "TennengradVersions") {
+            if (!runStreamTennengradVersions()) {
+                emit finished(false);
+                return false;
+            }
+        }
+
+
+
+        // SAVE
+        if (o.writeFusedBackToSource) save(dstFolderPath);
+
+        // STATS
+        QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
+        QString progressSteps = " Progress step count = " + QString::number(progressCount);
+        QString progressTot = " Progress step total = " + QString::number(progressTotal);
+        if (G::FSLog) G::log(srcFun, "Focus Stack completed in " + timeToRun + progressSteps + progressTot);
+        if (G::FSLog) G::log("");
+        status("Focus Stack completed in " + timeToRun);
+
+        // qApp->processEvents();  // complete any waiting log msgs
     }
+
+    // diagnostics();
 
     return true;
 }
@@ -671,83 +690,39 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
 
         if (!initializeGroup(groupCounter++)) return false;
 
-        if (o.isStream) {
 
-            if (o.method == "StmDMap") {
-                if (!runStreamDMap()) {
-                    emit finished(false);
-                    return false;
-                }
+        if (o.method == "StmDMap") {
+            if (!runStreamDMap()) {
+                emit finished(false);
+                return false;
             }
-
-            if (o.method == "StmPMax") {
-                if (!runStreamPMax()) {
-                    emit finished(false);
-                    return false;
-                }
-            }
-
-            if (o.method == "StmPMaxWt") {
-                if (!runStreamPMax()) {
-                    emit finished(false);
-                    return false;
-                }
-            }
-
-            if (o.method == "TennengradVersions") {
-                if (!runStreamTennengradVersions()) {
-                    emit finished(false);
-                    return false;
-                }
-            }
-
         }
 
-        else {
-            // RUN ALIGN
-            if (o.enableAlign && !skipAlign)
-            {
-                if (!runAlign()) {
-                    if (abort) status("Focus Stack was aborted.");
-                    return false;
-                }
-                if (G::FSLog) G::log(""); // skip line
+        if (o.method == "StmPMax") {
+            if (!runStreamPMax()) {
+                emit finished(false);
+                return false;
             }
-
-            // RUN FOCUS MAPS
-            if (o.enableFocusMaps && !skipFocusMaps)
-            {
-                if (!runFocusMaps()) {
-                    if (abort) status("Focus Stack was aborted.");
-                    return false;
-                }
-                if (G::FSLog) G::log(""); // skip line
-            }
-
-            // RUN DEPTH MAP
-            if (o.enableDepthMap && !skipDepthMap)
-            {
-                if (!runDepthMap()) {
-                    if (abort) status("Focus Stack was aborted.");
-                    return false;
-                }
-                if (G::FSLog) G::log(""); // skip line
-            }
-
-            // RUN FUSION
-            if (o.enableFusion && !skipFusion)
-            {
-                if (!runFusion()) {
-                    if (abort) status("Focus Stack was aborted.");
-                    return false;
-                }
-                if (G::FSLog) G::log(""); // skip line
-            }
-
         }
+
+        if (o.method == "StmPMaxWt") {
+            if (!runStreamPMax()) {
+                emit finished(false);
+                return false;
+            }
+        }
+
+        if (o.method == "TennengradVersions") {
+            if (!runStreamTennengradVersions()) {
+                emit finished(false);
+                return false;
+            }
+        }
+
+
 
         // SAVE
-        // if (o.enableFusion) save(dstFolderPath);
+        if (o.writeFusedBackToSource) save(dstFolderPath);
 
         // STATS
         QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
@@ -761,424 +736,6 @@ bool FS::runGroups(QVariant aItem, QVariant bItem)
     }
 
     // diagnostics();
-
-    return true;
-}
-
-bool FS::runAlign()
-/*
-    if (alignExists && useCache)
-        for each slice
-            read saved image
-            cache
-        return
-    if (!alignExists)
-        for each slice
-            Load images using FSLoader
-    Initalize FSAlign
-    if (keepAlign)
-        Save first (reference) image
-        if useCache
-            cache first
-    if (!alignExists && !useIntermediates)
-        for each slice (2 to n)
-            Compute global transforms
-            Apply transforms to color + gray
-    if (keepIntermediates)
-        Save aligned images
-    if (useCache)
-        cache
-*/
-{
-    QString srcFun = "FS::runAlign";
-    QString msg;
-    const QString stage = "Align";
-    if (G::FSLog) G::log(srcFun, "Starting alignment…");
-    status("Aligning input images");
-
-    // Already aligned and cached?
-    if (!alignedGraySlices.empty() && !alignedColorSlices.empty()) return true;
-
-    if (inputPaths.isEmpty())
-    {
-        status("No input images to align.");
-        return false;
-    }
-
-    // Number of source stacked images = slices
-    const int n = inputPaths.size();
-    if (n < 2)
-    {
-        status("Need at least 2 images to align.");
-        return false;
-    }
-
-    // Resize cache (done in updateIntermediateStatus)
-    alignedColorSlices.resize(n);
-    alignedGraySlices.resize(n);
-
-    // Just cache if o.useCache = true and alignExists
-    if (alignExists && o.useCache) {
-        for (quint32 i = 0; i < n; ++i) {
-            alignedGraySlices[i] = cv::imread(
-                alignedGrayPaths.at(i).toStdString(), cv::IMREAD_GRAYSCALE);
-            alignedColorSlices[i] = cv::imread(
-                alignedColorPaths.at(i).toStdString(), cv::IMREAD_UNCHANGED);
-        }
-        return true;
-    }
-
-    std::vector<FSLoader::Image> imgs(n);
-
-    if (!alignExists) {
-        // Load images using Petteri-compatible padding + validArea
-
-        for (int i = 0; i < n; ++i)
-        {
-            if (abort) return false;
-
-            try {
-                imgs[i] = FSLoader::load(inputPaths[i].toStdString());
-            }
-            catch (const std::exception &e)
-            {
-                QString msg = QString("Error loading %1: %2").arg(inputPaths[i]).arg(e.what());
-                status(msg);
-                qWarning() << "WARNING:" << srcFun << msg;
-                return false;
-            }
-
-            QString msg = "Load image " + QString::number(i);
-            status(msg);
-            if (G::FSLog) G::log(srcFun, msg);
-            incrementProgress();
-        }
-    }
-
-    // Resize cache
-    alignedColorSlices.resize(n);
-    alignedGraySlices.resize(n);
-
-    // Initalize FSAlign
-    using namespace FSAlign;
-
-    std::vector<Result> globals(n);
-    globals[0] = makeIdentity(imgs[0].validArea);
-
-    FSAlign::Options opt;
-    opt.matchContrast     = true;
-    opt.matchWhiteBalance = true;
-    opt.lowRes            = 256;
-    opt.maxRes            = 2048;
-    opt.fullResolution    = false;
-
-    // Reference slice: write unmodified aligned color + gray
-    if (o.keepAlign)
-    {
-        cv::imwrite(alignedColorPaths[0].toStdString(), imgs[0].color);
-        cv::imwrite(alignedGrayPaths[0].toStdString(),  imgs[0].gray);
-    }
-    // Cache reference slice
-    alignedColorSlices[0] = imgs[0].color.clone();
-    alignedGraySlices[0]  = imgs[0].gray.clone();
-    if (G::FSLog) G::log(srcFun, "Write unmodified aligned color + gray");
-    incrementProgress();
-
-    // Alignment loop: image i aligned to image (i - 1)
-    if (!alignExists) {
-        for (int i = 1; i < n; ++i)
-        {
-            // qApp->processEvents();
-            if (abort) return false;
-
-            msg = QString("Aligning slice " + QString::number(i));
-            if (G::FSLog) G::log(srcFun, msg);
-            status(msg);
-
-            Result local;
-
-            try {
-                local = computeLocal(
-                    imgs[i - 1].gray,
-                    imgs[i - 1].color,
-                    imgs[i].gray,
-                    imgs[i].color,
-                    imgs[i].validArea,
-                    opt
-                    );
-            }
-            catch (const std::exception &e)
-            {
-                QString msg = QString("Alignment failed for %1: %2")
-                                  .arg(inputPaths[i]).arg(e.what());
-                status(msg);
-                return false;
-            }
-            if (G::FSLog) G::log(srcFun, "computeLocal");
-
-            // Stack transforms
-            globals[i] = accumulate(
-                globals[i - 1],
-                local,
-                imgs[i].validArea
-                );
-
-            // Apply transform to color + gray
-            cv::Mat alignedColorMat, alignedGrayMat;
-            if (G::FSLog) G::log(srcFun, "cv::Mat alignedColor, alignedGray");
-            applyTransform(imgs[i].color, globals[i].transform, alignedColorMat);
-            applyTransform(imgs[i].gray,  globals[i].transform, alignedGrayMat);
-            if (G::FSLog) G::log(srcFun, "applyTransform alignedGray");
-
-            // Write outputs
-            if (o.keepAlign)
-            {
-                cv::imwrite(alignedColorPaths[i].toStdString(), alignedColorMat);
-                cv::imwrite(alignedGrayPaths[i].toStdString(),  alignedGrayMat);
-            }
-
-            // Cache in memory for fast fusion
-            alignedColorSlices[i] = alignedColorMat.clone();
-            alignedGraySlices[i]  = alignedGrayMat.clone();
-
-            msg = "Cached aligned slice " + QString::number(i);
-            if (G::FSLog) G::log(srcFun, msg);
-            incrementProgress();
-        }
-    }
-
-    // incrementProgress();
-    alignExists = true;
-    status("Alignment complete.");
-
-    // QString timeToFuse = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
-    // if (G::FSLog) G::log(srcFun, "Alignment completed in " + timeToFuse);
-    // if (G::FSLog) G::log(srcFun, "");
-
-    return true;
-}
-
-bool FS::runFocusMaps()
-/*
-    - Use aligned grayscale images in m_alignFolder (gray_*.tif)
-    - Delegate focus-map computation to FSFocus (wavelet-based, weighted multilevel energy)
-    - Progress is reported through incrementProgress
-*/
-{
-    QString srcFun = "FS::runFocusMaps";
-    if (G::FSLog) G::log(srcFun, "Starting focus maps…");
-
-    if (inputPaths.isEmpty())
-    {
-        status("No input images");
-        return false;
-    }
-
-    FSFocus::Options fopt;
-    fopt.downsampleFactor   = 1;
-    fopt.preview            = o.keepFocusMaps;
-    fopt.numThreads         = 0;
-    fopt.useOpenCL          = o.enableOpenCL;
-    fopt.keepIntermediates  = o.keepFocusMaps;
-    fopt.preview            = o.previewFocusMaps;
-
-    auto progressCb = [this](int)
-    {
-        incrementProgress();
-    };
-
-    auto statusCb = [this](const QString &message)
-    {
-        status(message);
-    };
-
-    if (!FSFocus::run(alignFolderPath,
-                      focusFolderPath,
-                      fopt,
-                      &abort,
-                      progressCb,
-                      statusCb,
-                      &focusSlices))
-    {
-        status("Focus maps failed.");
-        return false;
-    }
-
-    status("Focus maps complete.");
-    return true;
-}
-
-bool FS::runDepthMap()
-/*
-    - Use focus maps in focusFolder (Simple)
-    - OR aligned grayscale in alignFolder (MultiScale)
-    - Build depth index and preview using FSDepth
-    - Cache depth_index.png into depthIndex16Mat
-*/
-{
-    QString srcFun = "FS::runDepthMap";
-    if (G::FSLog) G::log(srcFun, "Starting depth map.");
-    status("Building depth map.");
-
-    if (abort)
-        return false;
-
-    FSDepth::Options dopt;
-
-    // Map FS::Options.method to FSDepth method
-    dopt.method = o.methodDepth;
-    dopt.keep = o.keepDepthMap;
-    dopt.saveWaveletDebug = true;
-    dopt.preview = o.previewDepthMap;
-    if (o.method == "MultiScale") {
-        dopt.alignFolder = alignFolderPath;
-    }
-    // dopt.method = "Simple"
-    else {
-        dopt.alignFolder.clear();
-    }
-
-    dopt.numThreads = 0;  // (reserved, not used inside yet)
-
-    auto progressCb = [this]{ incrementProgress(); };
-    // auto progressCb = [this](int){ incrementProgress(); };
-    auto statusCb   = [this](const QString &msg){ status(msg); };
-
-    if (abort) return false;
-
-    bool ok = false;
-    qDebug() << srcFun << "o.useCache" << o.useCache << "alignExists" <<alignExists;
-    if (o.useCache && alignExists)
-    {
-        ok = FSDepth::runFromGraySlices(
-            alignedGraySlices,
-            depthFolderPath,
-            dopt,
-            &abort,
-            progressCb,
-            statusCb,
-            &depthIndex16Mat
-            );
-    }
-    else
-    {
-        ok = FSDepth::run(
-            focusFolderPath,
-            depthFolderPath,
-            dopt,
-            &abort,
-            progressCb,
-            statusCb,
-            &depthIndex16Mat
-            );
-    }
-
-    if (!ok || depthIndex16Mat.empty())
-
-    {
-        status("Depth map failed: no depthIndex16Mat produced.");
-        return false;
-    }
-
-    status("Depth map complete.");
-    return true;
-}
-
-bool FS::runFusion()
-/*
-    - Load the aligned grayscale and color images
-      (prefer in-memory Mats from runAlign, fall back to disk if needed)
-    - Run FSFusion::fuseStack using the selected method
-    - Save fused image
-*/
-{
-    QString srcFun = "FS::runFusion";
-    if (G::FSLog) G::log(srcFun, "Starting fusion…");
-    status("Starting fusion...");
-
-    QElapsedTimer t;
-    t.start();
-
-    if (o.useCache) {
-        if (!validAlignMatsAvailable(slices)) return false;
-    }
-
-    const int N = alignedGrayPaths.size();
-
-    if (depthIndex16Mat.empty()) {
-        QString msg = "Depth map not available. Run Depth stage first.";
-        status(msg);
-        if (G::FSLog) G::log(srcFun, msg);
-        // return false;
-    }
-
-    // Build grayscale + color stacks
-    std::vector<cv::Mat> grayImgs;
-    std::vector<cv::Mat> colorImgs;
-    grayImgs.reserve(N);
-    colorImgs.reserve(N);
-
-    // Prefer in-memory Mats
-    if (validAlignMatsAvailable(N))
-    {
-        if (G::FSLog) G::log(srcFun, "Using in-memory aligned images");
-        for (int i = 0; i < N; ++i)
-        {
-            if (abort.load(std::memory_order_relaxed)) return false;
-            grayImgs.push_back(alignedGraySlices[i]);
-            colorImgs.push_back(alignedColorSlices[i]);
-        }
-    }
-    else
-    {
-        if (G::FSLog) G::log(srcFun, "Loading aligned images from disk");
-
-        for (int i = 0; i < N; ++i)
-        {
-            if (abort) return false;
-            const QString &grayPath  = alignedGrayPaths[i];
-            const QString &colorPath = alignedColorPaths[i];
-
-            cv::Mat gray  = cv::imread(grayPath.toStdString(),  cv::IMREAD_GRAYSCALE);
-            cv::Mat color = cv::imread(colorPath.toStdString(), cv::IMREAD_UNCHANGED);
-
-            if (gray.empty() || color.empty())
-            {
-                status(QString("Failed to load aligned image %1").arg(i));
-                return false;
-            }
-
-            grayImgs.push_back(gray);
-            colorImgs.push_back(color);
-
-            incrementProgress();
-        }
-    }
-
-    // Fusion options
-    FSFusion::Options fopt;
-    fopt.method = o.methodFuse;
-    fopt.useOpenCL   = o.enableOpenCL;
-    fopt.consistency = 2;
-
-    auto progressCb = [this]{ incrementProgress(); };
-    auto statusCb   = [this](const QString &msg){ status(msg); };
-
-
-    // if (!FSFusion::fuseStack(grayImgs,
-    //                          colorImgs,
-    //                          fopt,
-    //                          depthIndex16Mat,
-    //                          fusedColorMat,
-    //                          &abort,
-    //                          statusCb,
-    //                          progressCb))
-    // {
-    //     status("Fusion failed");
-    //     return false;
-    // }
-
-    save(fusionFolderPath);
 
     return true;
 }
@@ -1239,7 +796,7 @@ bool FS::runStreamDMap()
     // -----------------------------
     for (int slice = 0; slice < slices; ++slice)
     {
-        QString s = " Slice: " + QString::number(slice) + " of " + QString::number(slices) + " ";
+        QString s = " Slice: " + QString::number(slice+1) + " of " + QString::number(slices) + " ";
         if (G::FSLog) G::log("");
 
         status("Aligning and depth mapping" + s);
@@ -1285,11 +842,11 @@ bool FS::runStreamDMap()
             alignedGraySlice = tmp;
         }
 
-        // debug write aligned slices (optional, matches your current workflow)
+        // write aligned for reuse in fuse.streamFinish blending
         cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
         cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
-        cv::Mat alignedGrayImg = FSUtilities::alignToOrigSize(alignedGraySlice, currImage.origSize);
-        cv::imwrite(alignedGrayPaths[slice].toStdString(), alignedGrayImg);
+        // cv::Mat alignedGrayImg = FSUtilities::alignToOrigSize(alignedGraySlice, currImage.origSize);
+        // cv::imwrite(alignedGrayPaths[slice].toStdString(), alignedGrayImg);
 
         if (G::abortFocusStack) return false;
 
@@ -1333,7 +890,7 @@ bool FS::runStreamDMap()
                            statusCb,
                            progressCb))
     {
-        qWarning() << "WARNING:" << srcFun << "FSFusionDMapBasic::streamFinish failed.";
+        qWarning() << "WARNING:" << srcFun << "FSFusionDMap::streamFinish failed.";
         return false;
     }
 

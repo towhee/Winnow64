@@ -62,6 +62,8 @@ public:
         bool useCache                   = true;     // use disk if false
         bool enableOpenCL               = true;
 
+        bool writeFusedBackToSource     = false;
+
         bool enableAlign                = true;
         bool keepAlign                  = true;     // intermediates
 
@@ -137,10 +139,6 @@ private:
     QImage thumbnail(const cv::Mat &mat);
 
     // Pipeline stages
-    bool runAlign();
-    bool runFocusMaps();
-    bool runDepthMap();
-    bool runFusion();
     bool runStreamDMap();
     bool runStreamPMax();
     bool runStreamTennengradVersions();
@@ -205,12 +203,10 @@ private:
     cv::Mat fusedColorMat;       // CU8 or CU16
 
     // Progress
-    int runIdx;
-    int runTotal;
     int progressCount = -1;
     int progressTotal = 0;
     void incrementProgress();
-    void setTotalProgress(int runs = 1);
+    void initializeProgress();
 };
 
 #endif // FS_H

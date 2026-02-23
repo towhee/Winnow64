@@ -418,7 +418,42 @@ PYRAMID FUSION:
  mixEps                       = 1e-06
  wMin                         = 0
 
-
+2026-02-22 05:50:33
+Fusion                        = DMap
+FOCUS METRIC:
+ focusMetricMethod            = Laplacian
+ scoreSigma                   = 0.75
+ scoreKSize                   = 3
+FOREGROUND:
+ depthStableRadiusPx          = 3
+ depthMaxRangeSlicesCore      = 1
+ depthMaxRangeSlicesLoose     = 5
+ expandTexFrac                = 0.05
+ strongFrac                   = 0.03
+ weakFrac                     = 0.01
+ seedDilatePx                 = 1
+ closePx                      = 5
+ openPx                       = 1
+ interiorPx                   = 3
+OWNERSHIP PROPOGATION:
+ ownershipClosePx             = 3
+ seedBandPx                   = 1
+CONTRAST THRESHOLD:
+ enableContrastThreshold      = true
+ contrastMinFrac              = 0.2
+ lowContrastMedianK           = 5
+ lowContrastDilatePx          = 1
+PYRAMID FUSION:
+ enablePyramidBlend           = true
+ pyrLevels                    = 5
+ enableHardWeightsOnLowpass   = false
+ enableDepthGradLowpassVeto   = false
+ hardFromLevel                = 0
+ vetoFromLevel                = -1
+ vetoStrength                 = 1
+ weightBlurSigma              = 0
+ mixEps                       = 1e-06
+ wMin                         = 0
 
 
 
@@ -446,7 +481,7 @@ OWNERSHIP PROPOGATION:
  seedBandPx                    = 1
 CONTRAST THRESHOLD:
  enableContrastThreshold       = true
- contrastMinFrac               = 0.01
+ contrastMinFrac               = 0.02
  lowContrastMedianK            = 5
  lowContrastDilatePx           = 0
 PYRAMID FUSION:
