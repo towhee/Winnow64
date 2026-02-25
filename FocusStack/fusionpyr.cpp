@@ -1,5 +1,5 @@
 #include "FusionPyr.h"
-#include "fusionutils.h"
+#include "fsutilities.h"
 
 #include <opencv2/imgproc.hpp>
 
@@ -234,7 +234,7 @@ void buildDepthEdgeVetoPyr(const std::vector<cv::Mat>& idxPyr16,
         cv::Mat veto = (grad > p.depthGradThresh); // CV_8U 0/255
 
         if (p.vetoDilatePx > 0) {
-            cv::dilate(veto, veto, FusionUtils::seEllipse(p.vetoDilatePx));
+            cv::dilate(veto, veto, FSUtilities::seEllipse(p.vetoDilatePx));
         }
 
         vetoPyr8[i] = veto;

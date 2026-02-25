@@ -103,14 +103,14 @@ bool FS::setOptions(const Options &opt)
 
     msg = "Setting options: ";
     if (o.method == "PMax") {
-        if (G::FSLog) G::log(srcFun, msg + "StmPMax");
-        o.methodFuse = "FullWaveletMerge";
+        if (G::FSLog) G::log(srcFun, msg + o.method);
+        // o.methodFuse = "FullWaveletMerge";
         o.methodMerge = "PMax";
         return true;
     }
 
     if (o.method == "PMaxWt") {
-        if (G::FSLog) G::log(srcFun, msg + "StrPMaxWt");
+        if (G::FSLog) G::log(srcFun, msg + o.method);
         o.methodMerge = "Weighted";
         o.enableDepthBiasedErosion = false;
         o.enableEdgeAdaptiveSigma = false;
@@ -305,15 +305,15 @@ bool FS::run()
             }
         }
 
-        if (o.method == "Max") {
-            if (!runStreamPMax()) {
+        if (o.method == "PMax") {
+            if (!runPMax()) {
                 emit finished(false);
                 return false;
             }
         }
 
         if (o.method == "PMaxWt") {
-            if (!runStreamPMax()) {
+            if (!runPMax()) {
                 emit finished(false);
                 return false;
             }
@@ -500,9 +500,9 @@ bool FS::runDMap()
     return true;
 }
 
-bool FS::runStreamPMax()
+bool FS::runPMax()
 {
-    QString srcFun = "FS::runStreamPMax";
+    QString srcFun = "FS::runPMax";
     QString msg = "Start using method: " + o.method;
     if (G::FSLog) G::log(srcFun, msg);
 
@@ -523,11 +523,15 @@ bool FS::runStreamPMax()
     // Fusion options (PMax)
     // -----------------------------
     FSFusion::Options fopt;
-    fopt.method          = o.methodFuse;     // e.g. "PMax"
-    fopt.mergeMode       = o.methodMerge;    // "PMax" or "Weighted"
+    fopt.method          = o.methodFuse;     // "DMap" or "PMax"
+    // fopt.mergeMode       = "Weighted";       // "PMax" or "Weighted"
+    fopt.mergeMode       = "PMax";           // "PMax" or "Weighted"
+    // fopt.mergeMode       = o.methodMerge;    // "PMax" or "Weighted"
     fopt.useOpenCL       = o.enableOpenCL;
     fopt.consistency     = 2;
     fopt.depthFolderPath = depthFolderPath;
+
+    qDebug() << "o.methodMerge =" << o.methodMerge;
 
     // Weighted / staged pipeline toggles
     const bool wantsWeighted =

@@ -281,10 +281,10 @@ void MW::generateFocusStack(const QStringList paths,
 
         // Evaluate we have a result path
         if (dstLastFusedPath.isEmpty() || QImage(dstLastFusedPath).isNull()) {
-            msg = "Focus stacking failed";
-            if (G::FSLog) G::log(srcFun, msg);
-            updateStatus(false, msg);
-            G::popup->showPopup(msg);
+            // msg = "Focus stacking failed";
+            // if (G::FSLog) G::log(srcFun, msg);
+            // updateStatus(false, msg);
+            // G::popup->showPopup(msg);
             return;
         }
 
