@@ -325,7 +325,7 @@ bool MW::loadSettings()
         // cache (see MW::createImageCache in initialize.cpp)
 
         // Focus Stack default method
-        fsMethod = FS::MethodsString.at(FS::Methods::StmPMax);
+        fsMethod = FS::MethodsString.at(FS::Methods::DMap);
 
         if (!isSettings || simulateJustInstalled) return true;
     }

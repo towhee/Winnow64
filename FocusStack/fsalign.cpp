@@ -15,10 +15,6 @@ Its responsibility is to geometrically align each slice to a reference image
 and to normalize appearance differences (contrast and white balance) so that
 later focus fusion operates on consistent data.
 
-The design closely follows Petteri Aimonen’s Task_Align logic, translated into
-OpenCV-based C++ code with explicit separation of local alignment, global
-accumulation, and application steps.
-
 CORE RESPONSIBILITIES
 
 1. Geometric alignment
@@ -85,7 +81,6 @@ accumulate()
        * stacks contrast coefficients
        * stacks white balance coefficients
        * updates the valid area
-   - Mirrors how Petteri’s original code builds global alignment incrementally.
 
 applyTransform()
    - Applies an affine transform to an image using cubic interpolation and
@@ -110,7 +105,7 @@ namespace {
 
 inline float sq(float x) { return x * x; }
 
-// Round and dither as in Petteri
+// Round and dither
 inline int round_and_dither(float value, float &delta)
 {
     int intval = static_cast<int>(value + delta);

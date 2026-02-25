@@ -23,75 +23,35 @@ public:
     explicit FS(QObject *parent = nullptr);
 
     enum Methods {
-        StmDMap,
-        StmPMax,           // PMax1, but streamed
-        StmPMaxWt,   // PMax1, but streamed and weighted in merge
-        StmPMaxWtDbe,   // PMax1, but streamed and weighted in merge
-        StmPMaxWtDbeEas,   // PMax1, but streamed and weighted in merge
-        PMax,                 // align, fuse using multiscale wavelets
-        TennengradVersions    // multiple depth maps for diff radius/thresholds
+        DMap,            // DMap, streamed
+        PMax,            // PMax1, but streamed
+        PMaxWt,          // PMax1, but streamed and weighted in merge
     };
     static inline const QStringList MethodsString {
-        "StmDMap",            // DMap, streamed
-        "StmPMax",            // PMax1, but streamed
-        "StmPMaxWt",          // PMax1, but streamed and weighted in merge
-        "StmPMaxWtDbe",       // PMax1, but streamed and weighted in merge
-        "StmPMaxWtDbeEas",    // PMax1, but streamed and weighted in merge
-        "PMax",               // align, fuse using multiscale wavelets
-        "TennengradVersions"  // multiple depth maps for diff radius/thresholds
-    };
+        "DMap",          // DMap, streamed
+        "PMax",          // PMax1, but streamed
+        "PMaxWt",        // PMax1, but streamed and weighted in merge
+     };
 
     struct Options
     {
-        QString method                  = "";
-        QString methodAlign             = "";
-        QString methodFocus             = "";
-        QString methodDepth             = "";
+        QString method                  = "DMap";
         QString methodFuse              = "";
-        QString methodMerge             = "PMax";
+        QString methodMerge             = "DMap";
+        QString methodInfo              = "";
+        bool isLocal                    = true;
+        bool saveDiagnostics            = true;
+        bool enableOpenCL               = true;
+        bool writeFusedBackToSource     = false;    // false for debugging
+        bool removeTempFiles            = false;
 
         bool enableDepthBiasedErosion   = false;
         bool enableEdgeAdaptiveSigma    = false;
 
-        QString methodInfo              = "";
-
-        bool isStream                   = false;
-        bool isLocal                    = true;
-
-        bool useIntermediates           = false;
-        bool useCache                   = true;     // use disk if false
-        bool enableOpenCL               = true;
-
-        bool writeFusedBackToSource     = false;
-
-        bool enableAlign                = true;
-        bool keepAlign                  = true;     // intermediates
-
-        bool enableFocusMaps            = true;
-        bool previewFocusMaps           = true;
-        bool keepFocusMaps              = true;
-
-        bool enableDepthMap             = true;
-        bool previewDepthMap            = true;
-        bool keepDepthMap               = true;
-
-        bool enableFusion               = true;
-        bool previewFusion              = true;
-
-        bool enableBackgroundMask       = true;
-        bool enableBackgroundReplace    = true;
-        bool previewBackgroundMask      = true;
-        QString backgroundMethod        = "Depth+Focus";
-        int backgroundSourceIndex       = -1;      // -1 = lastSlice (macro default)
-
-        bool enableArtifactDetect       = true;
-        bool enableArtifactRepair       = true;
-        QString artifactMethod          = "MultiScale";
     };
 
     QString statusGroupPrefix;
     QString statusRunPrefix;
-    // Groups
     QList<QStringList> groups;
 
     // Input configuration
@@ -105,11 +65,8 @@ public:
         abort.store(true, std::memory_order_relaxed);
     }
 
-
     // Main pipeline API
     bool run();             // run all testing deltas
-    // run all goups for all deltas
-    bool runGroups(QVariant aItem = {}, QVariant bItem = {});
 
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
@@ -119,36 +76,29 @@ signals:
 protected:
     bool abortRequested() const
     {
-        // qDebug() << "FS::abortRequested";
         return abort.load(std::memory_order_relaxed);
     }
 
 private:
-    // std::atomic_bool abortRequested;
     std::atomic_bool abort{false};
-
-    // test parameters
-    QVariant aItem = {};
-    QVariant bItem = {};
 
     bool initializeGroup(int group);            // source groups
     bool prepareFolders();
-    void updateIntermediateStatus();
     bool validAlignMatsAvailable(int count) const;
-    void previewOverview(cv::Mat &fusedColor8Mat);
     QImage thumbnail(const cv::Mat &mat);
 
     // Pipeline stages
-    bool runStreamDMap();
+    bool runDMap();
     bool runStreamPMax();
-    bool runStreamTennengradVersions();
     bool save(QString fuseFolderPath);
+    bool cleanup();
 
     // helpers for UI
     void status(const QString &msg);
 
     QStringList inputPaths;
     QString     grpFolderPath;
+    QStringList grpFolderPaths;
     QString     dstFolderPath; // original source for input images (parent if lightroom)
     QString     fusedBase; // assigned in MW:generateFocusStack
     int slices = 0;
@@ -156,26 +106,10 @@ private:
 
     // Stage folders (automatically set from projectRoot)
     QString alignFolderPath;
-    QString focusFolderPath;
     QString depthFolderPath;
-    QString backgroundFolderPath;
     QString fusionFolderPath;
-    QString artifactsFolderPath;
 
     Options o;
-
-    // Skip flags
-    bool skipAlign     = false;
-    bool skipFocusMaps = false;
-    bool skipDepthMap  = false;
-    bool skipFusion    = false;
-    bool skipArtifacts = false;
-
-    // Exist flags
-    bool alignExists  = true;
-    bool focusExists  = true;
-    bool depthExists  = true;
-    bool fusionExists = true;
 
     // Alignment output paths
     std::vector<QString> alignedColorPaths;     // intermediate
@@ -188,16 +122,9 @@ private:
     // In-memory aligned images (optional fast path for runFusion)
     std::vector<cv::Mat> alignedColorSlices;
     std::vector<cv::Mat> alignedGraySlices;
-    void setAlignedColorSlices();
-    void setAlignedGraySlices();
 
-    // Focus maps and depth map
-    std::vector<cv::Mat> focusSlices;           // CV_32F per slice
-    cv::Mat              depthIndex16Mat;       // CV_16U depth indices
-
-    // Background mask (computed in runBackground, applied in runFusion)
-    cv::Mat bgConfidence01Mat;   // CV_32F 0..1
-    cv::Mat subjectMask8Mat;     // CV_8U  0/255
+    // Depth map
+    cv::Mat depthIndex16Mat;       // CV_16U depth indices
 
     // Fusion Mat
     cv::Mat fusedColorMat;       // CU8 or CU16

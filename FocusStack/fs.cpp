@@ -42,6 +42,7 @@ void FS::initialize(QString dstFolderPath, QString fusedBase)
 {
     this->dstFolderPath = dstFolderPath;
     this->fusedBase = fusedBase;
+    grpFolderPaths.clear();
 }
 
 bool FS::initializeGroup(int group)
@@ -58,8 +59,10 @@ bool FS::initializeGroup(int group)
     QFileInfo info(inputPaths.first());
     const QString srcFolder = info.absolutePath();
     grpFolderPath = srcFolder + "/" + info.completeBaseName() + "_" + o.method;
+    grpFolderPaths << grpFolderPath;
+    qDebug() << "group" << group << "grpFolderPaths =" << grpFolderPaths;
 
-    if (o.useIntermediates) prepareFolders();
+    prepareFolders();
 
     statusGroupPrefix = "Focus Stacking:  "
                         "Stack: " + QString::number(group+1) + " of " +
@@ -70,20 +73,20 @@ bool FS::initializeGroup(int group)
     alignedGrayPaths.clear();
     alignedColorSlices.clear();
     alignedGraySlices.clear();
-    focusSlices.clear();
 
-    skipAlign     = false;
-    skipFocusMaps = false;
-    skipDepthMap  = false;
-    skipFusion    = false;
-    skipArtifacts = false;
+    // populate alignedColorPaths, alignedGrayPaths
+    for (const QString &src : inputPaths) {
+        QFileInfo fi(src);
+        QString base = fi.completeBaseName();
+        QString ext  = "png";
+        QString path = alignFolderPath + "/aligned_" + base + "." + ext;
+        alignedColorPaths.push_back(path);
+        path = alignFolderPath + "/gray_" + base + "." + ext;
+        alignedGrayPaths.push_back(path);
+    }
 
-    updateIntermediateStatus();
-
-    if (!o.enableAlign || (!o.useIntermediates && alignExists)) skipAlign = true;
-    if (!o.enableFocusMaps || (!o.useIntermediates && focusExists)) skipFocusMaps = true;
-    if (!o.enableDepthMap || (!o.useIntermediates && depthExists)) skipDepthMap = true;
-    if (!o.enableFusion || (!o.useIntermediates && fusionExists)) skipFusion = true;
+    for (const QString &s : alignedColorPaths)  qDebug().noquote() << s;
+    for (const QString &s : alignedGrayPaths)  qDebug().noquote() << s;
 
     return true;
 }
@@ -99,125 +102,19 @@ bool FS::setOptions(const Options &opt)
     }
 
     msg = "Setting options: ";
-    // Fuse using grayscale wavelet merge and color map without using focus
-    // or depth modules.
     if (o.method == "PMax") {
-        if (G::FSLog) G::log(srcFun, msg + "PMax");
-        o.enableAlign = true;
-        o.enableFocusMaps = false;
-        o.enableDepthMap = false;
-        o.enableFusion = true;
-        o.methodFuse = "FullWaveletMerge";
-        return true;
-    }
-
-    // if (o.method == "StmDMap") {
-    //     if (G::FSLog) G::log(srcFun, msg + "StmDMap");
-    //     o.useIntermediates = true;
-    //     o.enableAlign = true;
-    //     o.enableFocusMaps = false;
-    //     o.enableDepthMap = true;
-    //     o.enableFusion = true;
-    //     o.methodFuse = "FullWaveletMerge";
-    //     o.methodMerge = "PMax";
-    //     o.isStream = true;
-    //     return true;
-    // }
-
-    if (o.method == "StmDMap") {
-        if (G::FSLog) G::log(srcFun, msg + "StmDMap");
-        o.useIntermediates = true;
-        o.enableAlign = true;
-        o.enableFocusMaps = false;
-        o.enableDepthMap = true;
-        o.enableFusion = true;
-        // o.methodFuse = "FullWaveletMerge";
-        // o.methodMerge = "PMax";
-        o.isStream = true;
-        return true;
-    }
-
-
-    // Fuse by streaming using grayscale wavelet merge and color map.  Do not need
-    // to hold all images and Mats in memory.
-    if (o.method == "StmPMax") {
         if (G::FSLog) G::log(srcFun, msg + "StmPMax");
-        o.useIntermediates = true;
-        o.enableAlign = true;
-        o.enableFocusMaps = false;
-        o.enableDepthMap = true;
-        o.enableFusion = true;
         o.methodFuse = "FullWaveletMerge";
         o.methodMerge = "PMax";
-        o.isStream = true;
         return true;
     }
 
-    if (o.method == "StmPMaxWt") {
+    if (o.method == "PMaxWt") {
         if (G::FSLog) G::log(srcFun, msg + "StrPMaxWt");
-        o.useIntermediates = true;
-        o.enableAlign = false;
-        o.enableFocusMaps = false;
-        o.enableDepthMap = true;
-        o.enableFusion = true;
-        o.methodFuse = "FullWaveletMerge";
         o.methodMerge = "Weighted";
         o.enableDepthBiasedErosion = false;
         o.enableEdgeAdaptiveSigma = false;
-        o.isStream = true;
-        return true;
-    }
-
-    if (o.method == "StmPMaxWtDbe") {
-        if (G::FSLog) G::log(srcFun, msg + "StmPMaxWtDbe");
-        o.useIntermediates = true;
-        o.enableAlign = false;
-        o.enableFocusMaps = false;
-        o.enableDepthMap = true;
-        o.enableFusion = true;
-        o.methodFuse = "FullWaveletMerge";
-        o.methodMerge = "Weighted";
-        o.enableDepthBiasedErosion = true;
-        o.enableEdgeAdaptiveSigma = false;
-        o.isStream = true;
-        return true;
-    }
-
-    // Fuse by streaming using grayscale wavelet merge and color map.  Do not need
-    // to hold all images and Mats in memory.
-    if (o.method == "TennengradVersions") {
-        if (G::FSLog) G::log(srcFun, msg + "TennengradVersions");
-        o.useIntermediates = true;
-        o.enableAlign = false;
-        o.enableFocusMaps = false;
-        o.enableDepthMap = true;
-        o.enableFusion = true;
-        o.methodFuse = "FullWaveletMerge";
-        o.isStream = true;
-        return true;
-    }
-
-    // Fuse using multiscale depthmap, focus module not used.
-    if (o.method == "PMax2") {
-        if (G::FSLog) G::log(srcFun, msg + "PMax2");
-        o.enableAlign = true;
-        o.enableFocusMaps = true;
-        o.enableDepthMap = true;
-        o.enableFusion = true;
-        o.methodDepth = "MultiScale";
-        o.methodFuse = "Simple";
-        return true;
-    }
-
-    // Test tenengrad focus depthmap
-    if (o.method == "Ten") {
-        if (G::FSLog) G::log(srcFun, msg + "Ten");
-        o.enableAlign = true;
-        o.enableFocusMaps = false;
-        o.enableDepthMap = true;
-        o.enableFusion = false;
-        o.methodDepth = "TennengradVersions";
-        o.methodFuse = "Simple";
+        // o.isStream = true;
         return true;
     }
 
@@ -262,178 +159,17 @@ bool FS::prepareFolders()
     }
 
     alignFolderPath      = grpFolderPath + "/align";
-    focusFolderPath      = grpFolderPath + "/focus";
     depthFolderPath      = grpFolderPath + "/depth";
     fusionFolderPath     = grpFolderPath + "/fusion";
-    backgroundFolderPath = grpFolderPath + "/background";
-    artifactsFolderPath  = grpFolderPath + "/artifacts";
 
-    if (o.enableAlign)          dir.mkpath(alignFolderPath);
-    if (o.enableFocusMaps)      dir.mkpath(focusFolderPath);
-    if (o.enableDepthMap)       dir.mkpath(depthFolderPath);
-    if (o.enableFusion)         dir.mkpath(fusionFolderPath);
-    if (o.enableBackgroundMask) dir.mkpath(backgroundFolderPath);
-    if (o.enableArtifactDetect) dir.mkpath(artifactsFolderPath);
+    dir.mkpath(alignFolderPath);
+    dir.mkpath(depthFolderPath);
+    dir.mkpath(fusionFolderPath);
 
     return true;
 }
 
-void FS::updateIntermediateStatus()
-{
-/*
-    If o.keepIntermediates == true then intermediate files are saved
-    and can be used in successive runs without rerunning the stage.
 
-    The intermediate files are:
-
-    STAGE       DISK                    MEMORY                  EXISTS
-    Align       alignedColorPaths       alignedColorSlices      alignExists
-    Align       alignedGrayPaths        alignedGraySlices       alignExists
-    Depth       depthIdxPath            depthIndex16Mat         depthExists
-    Fusion      lastFusedPath           fusedColor8Mat          fusionExists
-
-    - Build a list of alignment files based on the source files.  Chk if exists.
-    - Chk if depth and fusion intermediates exist.
-*/
-    const QString srcFun = "FS::updateIntermediateStatus";
-    if (G::FSLog) G::log(srcFun);
-
-    // ALIGN
-    QString path;
-    /* The inputPaths are the source images. Build the list of aligned paths
-       and check if they already exist */
-    for (const QString &src : inputPaths) {
-        QFileInfo fi(src);
-        QString base = fi.completeBaseName();
-        QString ext  = "png";
-        // QString ext  = fi.suffix();
-        path = alignFolderPath + "/aligned_" + base + "." + ext;
-        alignedColorPaths.push_back(path);
-        if (!QFileInfo::exists(path)) alignExists = false;
-        path = alignFolderPath + "/gray_" + base + "." + ext;
-        alignedGrayPaths.push_back(path);
-        if (!QFileInfo::exists(path)) alignExists = false;
-    }
-    // if aligned images already exist update cached align Mat (grayscale and color)
-    if (alignExists && o.useCache) {
-        alignedColorSlices.resize(slices);
-        alignedGraySlices.resize(slices);
-        int i = 0;
-        for (const QString &f : alignedColorPaths) {
-            cv::Mat img = cv::imread(f.toStdString(), cv::IMREAD_COLOR);
-            if (img.empty()) continue;
-            alignedColorSlices.push_back(img);
-            // incrementProgress();
-            QString msg = "alignedColorSlices " + QString::number(i++);
-            if (G::FSLog) G::log(srcFun, msg);
-        }
-        i = 0;
-        for (const QString &f : alignedGrayPaths) {
-            cv::Mat img = cv::imread(f.toStdString(), cv::IMREAD_GRAYSCALE);
-            if (img.empty()) continue;
-            alignedGraySlices.push_back(img);
-            // incrementProgress();
-            QString msg = "alignedGraySlices " + QString::number(i++);
-            if (G::FSLog) G::log(srcFun, msg);
-        }
-    }
-
-    // Focus TO DO
-
-
-    // Depth
-    path = depthFolderPath + "/depth_index.png";
-    if (!QFileInfo::exists(path)) depthExists = false;
-    else {
-        depthExists = true;
-        cv::Mat d = cv::imread(path.toStdString(), cv::IMREAD_UNCHANGED);
-        if (d.empty()) {
-            qWarning() << "FS::updateIntermediateStatus: depth_index.png exists but failed to load";
-            depthExists = false;
-            depthIndex16Mat.release();
-        }
-        else if (d.type() != CV_16U) {
-            qWarning() << "FS::updateIntermediateStatus: depth_index.png has wrong type"
-                       << d.type() << "(expected CV_16U)";
-            depthExists = false;
-            depthIndex16Mat.release();
-        }
-        else depthIndex16Mat = d;
-    }
-
-    // Fusion
-    QFileInfo lastFi(inputPaths.last());
-    QString base = lastFi.completeBaseName();
-    QString ext  = "." + lastFi.suffix();
-    QString prefix = base + "_fused_";
-    QDir dir(fusionFolderPath);
-    QStringList files = dir.entryList(
-        QStringList() << (prefix + "*" + ext),
-        QDir::Files,
-        QDir::Name    // lexicographic works with zero-padded index
-        );
-
-    if (files.isEmpty()) {
-        lastFusedPath = "";
-        fusionExists = false;
-    }
-    else {
-        lastFusedPath = dir.absoluteFilePath(files.last());
-        fusionExists = true;
-    }
-}
-
-void FS::setAlignedColorPaths()
-{
-
-}
-
-void FS::setAlignedColorSlices()
-{
-    QDir alignDir(grpFolderPath + "/align");
-    QStringList files = alignDir.entryList
-    (
-        QStringList() << "aligned*.png" << "aligned*.tif" << "aligned*.jpg",
-        QDir::Files, QDir::Name
-    );
-
-    for (const QString &f : files)
-    {
-        cv::Mat img = cv::imread
-        (
-            (alignDir.absoluteFilePath(f)).toStdString(),
-            cv::IMREAD_COLOR)
-        ;
-
-        if (img.empty()) continue;
-
-        cv::Mat g32;
-        img.convertTo(g32, CV_32F, 1.0 / 255.0);
-        alignedColorSlices.push_back(g32);
-    }
-}
-
-bool FS::validAlignMatsAvailable(int count) const
-/*
-    - Validate that in-memory aligned color and gray Mats exist
-    - Validate the vector sizes match 'count'
-    - Validate that no Mat is empty
-*/
-{
-    if (alignedGraySlices.size()  != static_cast<size_t>(count) ||
-        alignedColorSlices.size() != static_cast<size_t>(count))
-    {
-        return false;
-    }
-
-    for (int i = 0; i < count; ++i)
-    {
-        if (alignedGraySlices[i].empty() || alignedColorSlices[i].empty())
-            return false;
-    }
-
-    return true;
-}
 
 void FS::initializeProgress()
 {
@@ -454,51 +190,6 @@ void FS::incrementProgress()
     emit progress(++progressCount, progressTotal);
     QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
     if (G::FSLog) G::log(srcFun, msg);
-}
-
-void FS::previewOverview(cv::Mat &fusedColor8Mat)
-{
-/*
-    depth + fused + two sample slices
-    requires depth_preview.png, alignedGrayMats
-*/
-    QString srcFun = "FS::previewOverview";
-    if (o.previewFusion)        // or add a new option `o.debugFusionOverview`
-    {
-        // Load depth preview image written by FSDepth
-        QString depthPrevPath = depthFolderPath + "/depth_preview.png";
-        cv::Mat depthPrev = cv::imread(depthPrevPath.toStdString(), cv::IMREAD_COLOR);
-
-        // Select representative grayscale slices
-        cv::Mat slice0, sliceMid;
-
-        if (!alignedGraySlices.empty()) {
-            slice0 = alignedGraySlices.front();
-            sliceMid = alignedGraySlices[alignedGraySlices.size() / 2];
-        }
-        else {
-            // fallback: load from disk
-            slice0 = cv::imread(alignedGrayPaths.front().toStdString(), cv::IMREAD_GRAYSCALE);
-            sliceMid = cv::imread(
-                alignedGrayPaths[alignedGrayPaths.size() / 2].toStdString(),
-                cv::IMREAD_GRAYSCALE
-                );
-        }
-
-        // Output path
-        QString dbgPath = fusionFolderPath + "/debug_overview.png";
-
-        FSUtilities::makeDebugOverview(
-            depthPrev,         // depth_preview.png
-            fusedColor8Mat,    // fused RGB result
-            slice0,            // grayscale slice 0
-            sliceMid,          // mid grayscale slice
-            dbgPath,           // output path
-            10000              // max width
-            );
-
-        if (G::FSLog) G::log(srcFun, "Wrote fusion debug overview -> " + dbgPath);
-    }
 }
 
 QImage FS::thumbnail(const cv::Mat &mat)
@@ -607,37 +298,28 @@ bool FS::run()
         if (!initializeGroup(groupCounter++)) return false;
 
 
-        if (o.method == "StmDMap") {
-            if (!runStreamDMap()) {
+        if (o.method == "DMap") {
+            if (!runDMap()) {
                 emit finished(false);
                 return false;
             }
         }
 
-        if (o.method == "StmPMax") {
+        if (o.method == "Max") {
             if (!runStreamPMax()) {
                 emit finished(false);
                 return false;
             }
         }
 
-        if (o.method == "StmPMaxWt") {
+        if (o.method == "PMaxWt") {
             if (!runStreamPMax()) {
                 emit finished(false);
                 return false;
             }
         }
 
-        if (o.method == "TennengradVersions") {
-            if (!runStreamTennengradVersions()) {
-                emit finished(false);
-                return false;
-            }
-        }
-
-
-
-        // SAVE
+       // SAVE
         if (o.writeFusedBackToSource) save(dstFolderPath);
 
         // STATS
@@ -651,96 +333,12 @@ bool FS::run()
         // qApp->processEvents();  // complete any waiting log msgs
     }
 
-    // diagnostics();
+    if (o.removeTempFiles) cleanup();
 
     return true;
 }
 
-bool FS::runGroups(QVariant aItem, QVariant bItem)
-{
-/*
-    A group is a focus stack of images in a folder. The groups are converted into a
-    list of paths in MW::groupFocusStacks.  This function iterates through all the
-    groups that may have been selected.
-
-    This function is called from FS::run.  If testing multiple options they will be
-    passed as parameters, otherwise if null {} then they are ignored.
-*/
-    QString srcFun = "FS::runGroups";
-
-    QString msg = "method = " + o.method +
-                  "  stream = " + QVariant(o.isStream).toString();
-    if (G::FSLog) G::log(srcFun, msg);
-
-    int groupCounter = 0;
-    for (const QStringList &g : groups) {
-
-        slices = g.count();
-        if (slices < 2) {
-            groupCounter++;
-            continue;
-        }
-
-        QString msg = "Preparing to focus stack group " + QString::number(groupCounter);
-        status(msg);
-        if (G::FSLog) G::log(srcFun, msg);
-
-        QElapsedTimer t;
-        t.start();
-
-        if (!initializeGroup(groupCounter++)) return false;
-
-
-        if (o.method == "StmDMap") {
-            if (!runStreamDMap()) {
-                emit finished(false);
-                return false;
-            }
-        }
-
-        if (o.method == "StmPMax") {
-            if (!runStreamPMax()) {
-                emit finished(false);
-                return false;
-            }
-        }
-
-        if (o.method == "StmPMaxWt") {
-            if (!runStreamPMax()) {
-                emit finished(false);
-                return false;
-            }
-        }
-
-        if (o.method == "TennengradVersions") {
-            if (!runStreamTennengradVersions()) {
-                emit finished(false);
-                return false;
-            }
-        }
-
-
-
-        // SAVE
-        if (o.writeFusedBackToSource) save(dstFolderPath);
-
-        // STATS
-        QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
-        QString progressSteps = " Progress step count = " + QString::number(progressCount);
-        QString progressTot = " Progress step total = " + QString::number(progressTotal);
-        if (G::FSLog) G::log(srcFun, "Focus Stack completed in " + timeToRun + progressSteps + progressTot);
-        if (G::FSLog) G::log("");
-        status("Focus Stack completed in " + timeToRun);
-
-        // qApp->processEvents();  // complete any waiting log msgs
-    }
-
-    // diagnostics();
-
-    return true;
-}
-
-bool FS::runStreamDMap()
+bool FS::runDMap()
 {
     QString srcFun = "FS::runStreamDMap";
     QString msg = "Start using method: " + o.method;
@@ -874,7 +472,7 @@ bool FS::runStreamDMap()
     fuse.alignedColorPaths = alignedColorPaths;
     fuse.alignedGrayPaths = alignedGrayPaths;
 
-    msg = "Slice processing done. DMapBasic finish: build maps, stream slices, blend, crop.";
+    msg = "Slice processing done. DMap finish: build maps, stream slices, blend, crop.";
     if (G::FSLog) G::log(srcFun, msg);
 
     // -----------------------------
@@ -897,7 +495,7 @@ bool FS::runStreamDMap()
     if (G::abortFocusStack) return false;
     incrementProgress();
 
-    if (o.useIntermediates) save(fusionFolderPath);
+    if (o.isLocal && o.saveDiagnostics) save(fusionFolderPath);
 
     return true;
 }
@@ -1098,119 +696,7 @@ bool FS::runStreamPMax()
             << "\n";
     }
 
-    if (o.useIntermediates) save(fusionFolderPath);
-    return true;
-}
-
-bool FS::runStreamTennengradVersions()
-/*
-    Iterate radius and threshold values to produce different depth maps.  No fused
-    image is produced.
-*/
-{
-    QString srcFun = "FS::runStreamTennengradVersions";
-    QString msg = "Start";
-    if (G::FSLog) G::log(srcFun, msg);
-
-    auto progressCb = [this]{ incrementProgress(); };
-    auto statusCb   = [this](const QString &msg){ status(msg); };
-
-    // Align options
-    FSAlign::Options aopt;
-    aopt.matchContrast     = true;
-    aopt.matchWhiteBalance = true;
-    aopt.lowRes            = 256;
-    aopt.maxRes            = 2048;
-    aopt.fullResolution    = false;
-
-    // Depth map options
-    FSDepth::Options dopt;
-    dopt.method = "Tenengrad";
-    FSDepth::StreamState depthState;
-    QVector<float> radius{1};
-    QVector<float> threshold{4000,5000,6000};
-
-    FSLoader::Image prevImage;
-    FSLoader::Image currImage;
-    Result prevGlobal;
-    Result currGlobal;
-    cv::Mat alignedGraySlice;
-    cv::Mat alignedColorSlice;
-    FSAlign::Align align;
-
-    auto runVersion = [&]() {
-        for (int slice = 0; slice < slices; slice++) {
-            QString s = " Slice: " + QString::number(slice) + " of " +
-                        QString::number(slices) + " ";
-            // Load input image slice
-            status(s + "Loading source input image...");
-            currImage = FSLoader::load(inputPaths.at(slice).toStdString());
-            if (G::abortFocusStack) return false;
-            incrementProgress();
-
-            // Align slice
-            currGlobal = FSAlign::makeIdentity(currImage.validArea);
-            if (slice == 0) {
-                status(s + "Identifying for alignment");
-                alignedGraySlice = currImage.gray.clone();
-                alignedColorSlice = currImage.color.clone();
-                if (G::abortFocusStack) return false;
-                incrementProgress();
-            }
-            else {
-                status(s + "Aligning...");
-                if (!align.alignSlice(slice, prevImage, currImage, prevGlobal, currGlobal,
-                                      alignedGraySlice, alignedColorSlice,
-                                      aopt, &abort, statusCb, progressCb)) {
-                    qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
-                    return false;
-                }
-                if (G::abortFocusStack) return false;
-                incrementProgress();
-            }
-
-            // Depth map for slice
-            if (!FSDepth::streamGraySlice(alignedGraySlice, slice, depthFolderPath, dopt,
-                                          depthState, &abort, progressCb, statusCb)) {
-                qWarning() << "WARNING:" << srcFun << "FSDepth::streamGraySlice failed.";
-                return false;
-            }
-
-            if (G::abortFocusStack) return false;
-            incrementProgress();
-
-            prevImage = currImage;
-            prevGlobal = currGlobal;
-
-        }
-
-        msg = "Slice processing done.  Finish merge, invert, recover color and crop padding";
-        if (G::FSLog) G::log(srcFun, msg);
-
-        // finish depth map
-        if (!FSDepth::finishStreaming(depthFolderPath, dopt, slices, depthState,
-                                      statusCb, &depthIndex16Mat)) {
-            qWarning() << "WARNING:" << srcFun << "FSDepth::finishStreaming failed.";
-        }
-
-        return true;
-    };
-
-
-    for (float r : radius) {
-        for (float t : threshold) {
-            depthState.reset();
-            depthState.ten.radius = r;
-            depthState.ten.threshold = t;
-            QString msg = "radius = " + QString::number(r) +
-                          " threshold = " + QString::number(t);
-            if (G::FSLog) G::log(srcFun, msg);
-            if (!runVersion()){
-                qWarning() << "WARNING:" << srcFun << "Failed.";
-            }
-        }
-    }
-
+    if (o.saveDiagnostics) save(fusionFolderPath);
     return true;
 }
 
@@ -1228,8 +714,8 @@ bool FS::save(QString fuseFolderPath)
 
     // Make file name for fused image
     QFileInfo lastFi(inputPaths.last());
-    QString base = lastFi.completeBaseName() + "_FocusStack_" + o.method + o.methodInfo;
-    // QString base = lastFi.completeBaseName() + "_FocusStack_" + o.method + o.methodInfo;
+    QString base = lastFi.completeBaseName() + "_FocusStack";
+    if (o.isLocal) base = base + "_" + o.method + o.methodInfo;
     QString ext  = lastFi.suffix();
     QString fusedPath = fuseFolderPath + "/" + base + "." + ext;
     // if exists add incrementing suffix
@@ -1305,6 +791,57 @@ bool FS::save(QString fuseFolderPath)
     return true;
 }
 
+bool FS::cleanup()
+{
+    QString srcFun = "FS::cleanup";
+    if (G::FSLog) G::log(srcFun);
+
+    QString msg;
+
+    // remove the temp working folders (align, depth, fusion)
+    for (QString subFolder : grpFolderPaths) {
+        qDebug() << "Remove work folder: " << subFolder;
+        msg = "Remove work folder: " + subFolder;
+        if (G::isFileLogger) Utilities::log(srcFun, msg);
+
+        QDir(subFolder).removeRecursively();
+    }
+
+    if (o.isLocal) return true;
+
+    // remove the temp focus stack src tiffs
+    QStringList srcFolders;
+    for (QStringList gList : groups) {
+        // files in group
+        for (QString s : gList) {
+            QString srcFolder = QFileInfo(s).absolutePath();
+            if (!srcFolders.contains(srcFolder)) srcFolders << srcFolder;
+            // qDebug() << "SrcFolder =" << srcFolder << "SrcFolders =" << srcFolders;
+            qDebug() << "Remove src file: " << s;
+            msg = "Remove src file: " + s;
+            if (G::isFileLogger) Utilities::log(srcFun, msg);
+
+            if (!o.isLocal) QFile::remove(s);
+        }
+    }
+
+    // remove source folder(s) if empty
+    for (QString d : srcFolders) {
+        qDebug() << "src folder isEmpty: " << QDir(d).isEmpty();
+        msg = "src folder: " + d + "  isEmpty: " + QVariant(QDir(d).isEmpty()).toString();
+        if (G::isFileLogger) Utilities::log(srcFun, msg);
+        if (QDir(d).isEmpty()) {
+            qDebug() << "Remove src folder: " << d;
+            msg = "Remove src folder: " + d;
+            if (G::isFileLogger) Utilities::log(srcFun, msg);
+
+            QDir(d).removeRecursively();
+        }
+    }
+
+    return true;
+}
+
 void FS::diagnostics()
 {
     qDebug() << "Diagnostics:"
@@ -1314,43 +851,12 @@ void FS::diagnostics()
 
         << "\n"
         << "o.method                =" << o.method << "\n"
-        << "o.methodAlign           =" << o.methodAlign << "\n"
-        << "o.methodFocus           =" << o.methodFocus << "\n"
-        << "o.methodDepth           =" << o.methodDepth << "\n"
         << "o.methodFuse            =" << o.methodFuse << "\n"
         << "o.methodMerge           =" << o.methodMerge << "\n"
         << "\n"
-        << "o.useIntermediates      =" << o.useIntermediates << "\n"
-        << "o.useCache              =" << o.useCache << "\n"
+        << "o.saveDiagnostics       =" << o.saveDiagnostics << "\n"
         << "o.enableOpenCL          =" << o.enableOpenCL << "\n"
-        << "\n"
-        << "o.enableAlign           =" << o.enableAlign << "\n"
-        << "o.keepAlign             =" << o.keepAlign << "\n"
-        << "\n"
-        << "o.enableFocusMaps       =" << o.enableFocusMaps << "\n"
-        << "o.previewFocusMaps      =" << o.previewFocusMaps << "\n"
-        << "o.keepFocusMaps         =" << o.keepFocusMaps << "\n"
-        << "\n"
-        << "o.enableDepthMap        =" << o.enableDepthMap << "\n"
-        << "o.previewDepthMap       =" << o.previewDepthMap << "\n"
-        << "o.keepDepthMap          =" << o.keepDepthMap << "\n"
-        << "\n"
-        << "o.enableFusion          =" << o.enableFusion << "\n"
-        << "o.previewFusion         =" << o.previewFusion << "\n"
-        << "\n"
-        << "o.enableArtifactDetect  =" << o.enableArtifactDetect << "\n"
-        << "o.enableArtifactRepair  =" << o.enableArtifactRepair << "\n"
-        << "\n"
-        << "alignExists             =" << alignExists << "\n"
-        << "focusExists             =" << focusExists << "\n"
-        << "depthExists             =" << depthExists << "\n"
-        << "fusionExists            =" << fusionExists << "\n"
-        << "\n"
-        << "skipAlign               =" << skipAlign << "\n"
-        << "skipFocusMaps           =" << skipFocusMaps << "\n"
-        << "skipDepthMap            =" << skipDepthMap << "\n"
-        << "skipFusion              =" << skipFusion << "\n"
-        << "skipArtifacts           =" << skipArtifacts << "\n"
+
         << "\n"
         << "Fusion parameters:"
         ;

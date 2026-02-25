@@ -4,9 +4,6 @@
 #include "fsloader.h"
 #include "fsutilities.h"
 
-// your shared helpers:
-// #include "fsfusiondmapshared.h"
-
 #include <opencv2/imgcodecs.hpp>
 #include <cmath>
 #include <algorithm>
@@ -23,7 +20,7 @@ static cv::Size computePadSizeForPyr(const cv::Size& s, int levels)
     return cv::Size(w, h);
 }
 
-static     cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize)
+static cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize)
 {
     /*
     This pads the aligned image to padSize, using reflection at the borders,
@@ -1198,13 +1195,13 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     if (outDepth == CV_16U) out32.convertTo(outputColor, CV_16UC3, 65535.0);
     else out32.convertTo(outputColor, CV_8UC3, 255.0);
 
-    // // ------------------------------------------------------------
-    // // Diagnostics
-    // // ------------------------------------------------------------
+    // ------------------------------------------------------------
+    // Diagnostics
+    // ------------------------------------------------------------
     if (o.enableDiagnostics) diagnostics(opt.depthFolderPath, depthIndex16);
-    std::string s;
-    s = (opt.depthFolderPath + "/dmap_depthIndex16.png").toStdString();
-    cv::imwrite(s, FSUtilities::depthHeatmap(depthIndex16, N, "DMap depthIndex16"));
+    // std::string s;
+    // s = (opt.depthFolderPath + "/dmap_depthIndex16.png").toStdString();
+    // cv::imwrite(s, FSUtilities::depthHeatmap(depthIndex16, N, "DMap depthIndex16"));
 
     reset();
     return true;

@@ -1540,13 +1540,14 @@ void MW::handleStartupArgs(const QString &args)
             return;
         }
 
-        // QString msg = "MW::handleStartupArgs " + argList.at(0);
-        // Utilities::log("MW::handleStartupArgs", msg);
+        QString msg = "MW::handleStartupArgs " + argList.at(0);
+        Utilities::log("MW::handleStartupArgs", msg);
 
         show();
         raise();
 
-        QString method = srcProgram.mid(QString("FocusStack").length());
+        QString method = fsMethod;
+        // QString method = srcProgram.mid(QString("FocusStack").length());
 
         QStringList paths;
         for (int i = 1; i < argList.count(); i++) {
