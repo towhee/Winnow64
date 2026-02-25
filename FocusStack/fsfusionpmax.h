@@ -2,12 +2,11 @@
 
 #include "fsalign_types.h"
 #include "fsfusion.h"
+#include "FSMerge.h"
+#include "FSFusionReassign.h"
 
 #include <opencv2/core.hpp>
 #include <atomic>
-
-#include "FSMerge.h"
-#include "FSFusionReassign.h"
 
 class FSFusion;
 
@@ -21,16 +20,6 @@ class FSFusionPMax : public FSFusion
 public:
     FSFusionPMax();
     ~FSFusionPMax() override;
-
-    // One-shot in-memory PMax
-    bool fusePMax(const std::vector<cv::Mat>& grayImgs,
-                  const std::vector<cv::Mat>& colorImgs,
-                  const FSFusion::Options&     opt,
-                  cv::Mat&                     depthIndex16,
-                  cv::Mat&                     outputColor,
-                  std::atomic_bool*            abortFlag,
-                  FSFusion::StatusCallback     statusCb,
-                  FSFusion::ProgressCallback   progressCb);
 
     // Streaming PMax
     bool streamSlice(int slice,

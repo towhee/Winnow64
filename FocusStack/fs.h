@@ -37,7 +37,7 @@ public:
     {
         QString method                  = "DMap";
         QString methodFuse              = "";
-        QString methodMerge             = "DMap";
+        QString methodMerge             = "";
         QString methodInfo              = "";
         bool isLocal                    = true;
         bool saveDiagnostics            = true;
@@ -89,7 +89,7 @@ private:
 
     // Pipeline stages
     bool runDMap();
-    bool runStreamPMax();
+    bool runPMax();
     bool save(QString fuseFolderPath);
     bool cleanup();
 

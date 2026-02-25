@@ -49,6 +49,7 @@ merge(wavelets, consistency, abortFlag, mergedOut, depthIndex16)
             •	maxAbs (CV_32F), initialized to -1
             •	mergedOut (CV_32FC2)
             •	depthIndex16 (CV_16U), initialized to 0
+
         •	For each slice i:
             •	absval = |wavelets[i]|^2 (CV_32F)
             •	mask = absval > maxAbs
@@ -368,78 +369,6 @@ static bool ensureInitWeighted(FSMerge::StreamState &state,
     state.wavelets.clear(); // not used for weighted blending
     return true;
 }
-
-/*  Before Depth-Biased Erosion modifications
-static void weightedAccumulateByLevel(const cv::Mat &wavelet32FC2,
-                                      cv::Mat &sumWV32FC2,
-                                      cv::Mat &sumW32F,
-                                      const FSMerge::WeightedParams &wp)
-{
-    CV_Assert(wavelet32FC2.type() == CV_32FC2);
-    CV_Assert(sumWV32FC2.type() == CV_32FC2);
-    CV_Assert(sumW32F.type() == CV_32F);
-    CV_Assert(wavelet32FC2.size() == sumWV32FC2.size());
-    CV_Assert(wavelet32FC2.size() == sumW32F.size());
-
-    const int levels = levelsForSize(wavelet32FC2.size());
-
-    // Temporary buffers reused
-    cv::Mat absROI, wROI;
-
-    for (int level = 0; level < levels; ++level)
-    {
-        int w  = wavelet32FC2.cols >> level;
-        int h  = wavelet32FC2.rows >> level;
-        int w2 = w / 2;
-        int h2 = h / 2;
-
-        // Subband layout matches your denoiseSubbands logic:
-        // TL: lowpass, TR: sub1, BR: sub2, BL: sub3
-        cv::Rect rLP(0,  0,  w2, h2);
-        cv::Rect rTR(w2, 0,  w2, h2);
-        cv::Rect rBR(w2, h2, w2, h2);
-        cv::Rect rBL(0,  h2, w2, h2);
-
-        float sigma = sigmaForLevel(wp.sigma0, level);
-
-        auto processRect = [&](const cv::Rect &r)
-        {
-            if (r.width <= 0 || r.height <= 0) return;
-
-            // Extract coeff ROI
-            cv::Mat vROI = wavelet32FC2(r);
-
-            // Compute |v|^2 into absROI
-            absROI.create(r.height, r.width, CV_32F);
-            for (int y = 0; y < r.height; ++y)
-            {
-                const cv::Vec2f *row = vROI.ptr<cv::Vec2f>(y);
-                float *out = absROI.ptr<float>(y);
-                for (int x = 0; x < r.width; ++x)
-                {
-                    const cv::Vec2f &c = row[x];
-                    out[x] = c[0]*c[0] + c[1]*c[1];
-                }
-            }
-
-            makeWeightsForROI(absROI, wROI, wp);
-            blurROIInPlace(wROI, sigma);
-
-            accumulateWeightedROI(vROI,
-                                  wROI,
-                                  sumWV32FC2(r),
-                                  sumW32F(r));
-        };
-
-        if (wp.includeLowpass)
-            processRect(rLP);
-
-        processRect(rTR);
-        processRect(rBR);
-        processRect(rBL);
-    }
-}
-*/
 
 // Part of PMax Wavelet Merge Weighted
 static void weightedAccumulateByLevel(const cv::Mat &wavelet32FC2,
