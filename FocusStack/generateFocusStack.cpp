@@ -1,65 +1,10 @@
 #include "Main/mainwindow.h"
 #include "FocusStack/fs.h"
-// #include "FocusStack/Pipeline/PipelineBase.h"
-// #include "FocusStack/Pipeline/pipelinepmax.h"
 
 
 /*
 Winnow64/FocusStack/
 
-    Petteri/
-        (untouched original sources)
-
-    PetteriModular/
-        Core/
-        Tasks/
-        IO/
-        Wrappers/
-        Namespace: FStack
-
-    Contracts/
-        IAlign.h
-        IFocus.h
-        IDepth.h
-        IFusion.h
-
-    Stages/
-        Align/
-            PetteriAlign.h/.cpp
-            ECCAlign.h/.cpp
-            NoOpAlign.h/.cpp
-        Fusion/
-            PetteriPMaxFusion.h/.cpp
-            WeightedPMax.h/.cpp
-            DepthAwareFusion.h/.cpp
-        Depth/
-            PetteriDepth.h/.cpp
-            ContrastDepth.h/.cpp
-        Focus/
-            PetteriFocus.h/.cpp
-            GradientFocus.h/.cpp
-
-    Pipeline/
-        PipelineBase.h/.cpp
-        PipelinePMax.h/.cpp
-        PipelineWavePMax.h/.cpp
-        PipelineDepthAware.h/.cpp
-        PipelineLegacyPetteri.h/.cpp
-
-    Mask/
-        maskoptions.h/.cpp
-        maskgenerator.h/.cpp
-        maskrefiner.h/.cpp
-        maskassessor.h/.cpp
-
-    Utils/
-        pyramid.h/.cpp
-        blend.h/.cpp
-        filehelpers.h/.cpp
-
-    Cache/
-        PyramidCache.h/.cpp
-        ImageCache.h/.cpp
 */
 
 void MW::focusStackFromSelection()
@@ -205,7 +150,7 @@ void MW::generateFocusStack(const QStringList paths,
     Folders:
         Lightroom folder (only if remote)
             srcFolder (focus stack input tiffs)
-                grpFolder ie 2025-11-07_0078_StreamPMax
+                grpFolder ie 2025-11-07_0078_DMap
                     alignFolder
                     depthFolder
                     fusionFolder
@@ -265,31 +210,7 @@ void MW::generateFocusStack(const QStringList paths,
     {
         opt.method                  = method;
         opt.isLocal                 = isLocal;    // pretend remote for testing
-
-        opt.useIntermediates        = false;
-        opt.useCache                = true;
         opt.enableOpenCL            = true;
-
-        opt.enableAlign             = true;
-        opt.enableFocusMaps         = false;
-        opt.enableDepthMap          = true;
-        opt.enableFusion            = true;
-        opt.enableBackgroundMask    = false;
-        opt.enableBackgroundReplace = false;
-        opt.enableArtifactDetect    = false;
-
-        opt.keepAlign               = true;
-
-        opt.previewFocusMaps        = true;
-        opt.keepFocusMaps           = true;
-
-        opt.previewDepthMap         = true;
-        opt.keepDepthMap            = true;
-
-        opt.previewFusion           = true;
-
-        opt.previewBackgroundMask   = true;
-        opt.backgroundMethod        = "Depth+Focus";
     }
 
     // --------------------------------------------------------------------
@@ -352,6 +273,12 @@ void MW::generateFocusStack(const QStringList paths,
             return;
         }
 
+        msg = "Focus stacking completed";
+        if (G::FSLog) G::log(srcFun, msg);
+        updateStatus(false, msg);
+        G::popup->showPopup(msg);
+
+
         // Evaluate we have a result path
         if (dstLastFusedPath.isEmpty() || QImage(dstLastFusedPath).isNull()) {
             msg = "Focus stacking failed";
@@ -370,8 +297,8 @@ void MW::generateFocusStack(const QStringList paths,
             // Selecting may trigger view/model refresh → still deferred
             sel->select(dstLastFusedPath);
         }
-        else {
-            // qDebug() << "scrFolder =" << srcFolderPath;
+        else { // from Lightroom
+            qDebug() << "scrFolder =" << srcFolderPath;
             if (removeRemotelyGeneratedInputImages) {
                 for (const QString &path : paths) {
                     if (!QFile::remove(path)) {

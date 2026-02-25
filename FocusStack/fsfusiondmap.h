@@ -28,8 +28,6 @@ public:
     struct Params
     {
         // focus metric
-        // QString focusMetricMethod = "Laplacian";  // Laplacian or Tennengrad
-        // QString focusMetricMethod = "Tennengrad";  // Laplacian or Tennengrad
         float scoreSigma = 0.75;    // 1.5
         int   scoreKSize = 3;       // 3
 
