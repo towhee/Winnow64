@@ -156,6 +156,9 @@ bool combineRawJpg;
 bool isFilter;
 bool isRemote;
 
+// focus stack
+QString fsFusedPath;
+
 // training
 bool isTraining = false;
 

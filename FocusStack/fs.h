@@ -40,15 +40,17 @@ public:
         bool saveDiagnostics            = true;
         bool enableOpenCL               = true;
         bool writeFusedBackToSource     = false;    // false for debugging
-        bool removeTemp            = false;
-    };
+        bool removeTemp                 = false;
+    } o;
+
+    QString dstFolderPath; // original source for input images (parent if lightroom)
 
     QString statusGroupPrefix;
     QString statusRunPrefix;
     QList<QStringList> groups;
 
     // Input configuration
-    void initialize(QString dstFolderPath, QString dstFusedPath);
+    void initialize();
     bool setOptions(const Options &opt);
 
     void diagnostics();
@@ -91,8 +93,6 @@ private:
     QStringList inputPaths;
     QString     grpFolderPath;
     QStringList grpFolderPaths;
-    QString     dstFolderPath; // original source for input images (parent if lightroom)
-    QString     fusedBase; // assigned in MW:generateFocusStack
     int slices = 0;
     int lastSlice = 0;
 
@@ -101,7 +101,7 @@ private:
     QString depthFolderPath;
     QString fusionFolderPath;
 
-    Options o;
+    // Options o;
 
     // Alignment output paths
     std::vector<QString> alignedColorPaths;     // intermediate

@@ -38,10 +38,8 @@ static QStringList methods {
 };
 
 
-void FS::initialize(QString dstFolderPath, QString fusedBase)
+void FS::initialize()
 {
-    this->dstFolderPath = dstFolderPath;
-    this->fusedBase = fusedBase;
     grpFolderPaths.clear();
 }
 
@@ -309,7 +307,7 @@ bool FS::run()
         // qApp->processEvents();  // complete any waiting log msgs
     }
 
-    if (o.removeTempFiles) cleanup();
+    if (o.removeTemp) cleanup();
 
     return true;
 }
@@ -654,14 +652,6 @@ bool FS::save(QString fuseFolderPath)
 {
     QString srcFun = "FS::save";
 
-    // // Save wavelet depth map
-    // qDebug() << srcFun << "depthFolderPath =" << depthFolderPath;
-    // QString depthPath = depthFolderPath + "/depth_index.png";
-    // FSUtilities::writePngWithTitle(depthPath, depthIndex16Mat);
-    // QString depthPreviewPath = depthFolderPath + "/depth_preview.png";
-    // cv::Mat preview = FSUtilities::makeDepthPreviewEnhanced(depthIndex16Mat, slices);
-    // FSUtilities::writePngWithTitle(depthPreviewPath, preview);
-
     // Make file name for fused image
     QFileInfo lastFi(inputPaths.last());
     QString base = lastFi.completeBaseName() + "_FocusStack";
@@ -675,6 +665,9 @@ bool FS::save(QString fuseFolderPath)
     QString xmpPath   = fuseFolderPath + "/" + base + "." + "xmp";
     QString msg = "Folder: " + fuseFolderPath + "  Last input image: " + lastFi.completeBaseName();
     if (G::FSLog) G::log(srcFun, fuseFolderPath);
+
+    // Save path in global for MW::generateFocusStack when finished
+    G::fsFusedPath = fusedPath;
 
     // Write fused result
     msg = "Write to " + fusedPath;
@@ -797,10 +790,10 @@ void FS::diagnostics()
     qDebug() << "Diagnostics:"
         << "\n"
         << "dstFolderPath           =" << dstFolderPath << "\n"
-        << "fusedBase               =" << fusedBase << "\n"
 
         << "\n"
         << "o.method                =" << o.method << "\n"
+        << "o.methodInfo            =" << o.methodInfo << "\n"
         << "\n"
         << "o.saveDiagnostics       =" << o.saveDiagnostics << "\n"
         << "o.enableOpenCL          =" << o.enableOpenCL << "\n"

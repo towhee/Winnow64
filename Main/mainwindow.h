@@ -1406,9 +1406,9 @@ private:
     void generateMeanStack();
 
     // Focus Stack Utility
-    bool removeTempFiles = true;
-    bool removeWorkingFiles = true;
     QString fsMethod;
+    bool fsRemoveTemp = true;
+    bool fs8bit = true;
     void focusStackFromSelection();
     void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
     void generateFocusStack(const QStringList paths, QString method,
