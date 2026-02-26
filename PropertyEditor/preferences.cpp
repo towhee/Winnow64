@@ -431,6 +431,16 @@ void Preferences::itemChange(QModelIndex idx)
         mw->writeSetting("focusStackMethod", v.toString());  // also saved in MW::writeSettings
     }
 
+    if (source == "focusStackRemoveTemp") {
+        mw->fsRemoveTemp = v.toBool();
+        mw->writeSetting("focusStackRemoveTemp", v.toBool());  // also saved in MW::writeSettings
+    }
+
+    if (source == "focusStack8bit") {
+        mw->fs8bit = v.toBool();
+        mw->writeSetting("focusStack8bit", v.toBool());  // also saved in MW::writeSettings
+    }
+
 }
 
 void Preferences::addItems()
@@ -461,7 +471,7 @@ void Preferences::addItems()
     addFullScreen();
     addMetadataPanel();
     addTableView();
-    addUtilities();
+    if (G::isRory) addUtilities();
 }
 
 void Preferences::addGeneral()
@@ -1541,7 +1551,7 @@ void Preferences::addUtilities()
             addItem(i);
 
             // Cleanup working files after focus stacking
-            i.name = "deleteInputStackImages";
+            i.name = "focusStackRemoveTemp";
             i.parentName = "FocusStackHeader";
             i.captionText = "Remove all temporary folders";
             i.tooltip =
@@ -1551,14 +1561,14 @@ void Preferences::addUtilities()
                 "will exist, and they will also be removed.";
             i.hasValue = true;
             i.captionIsEditable = false;
-            i.value = mw->checkIfUpdate;
-            i.key = "deleteInputStackImages";
+            i.value = mw->fsRemoveTemp;
+            i.key = "focusStackRemoveTemp";
             i.delegateType = DT_Checkbox;
             i.type = "bool";
             addItem(i);
 
             // 8-bit pipeline
-            i.name = "8bitFSPipeline";
+            i.name = "focusStack8bit";
             i.parentName = "FocusStackHeader";
             i.captionText = "Limit to 8-bit pipeline";
             i.tooltip =
@@ -1566,8 +1576,8 @@ void Preferences::addUtilities()
                  "8-bit and the output fused image will be 8-bit.\n";
             i.hasValue = true;
             i.captionIsEditable = false;
-            i.value = mw->checkIfUpdate;
-            i.key = "8bitFSPipeline";
+            i.value = mw->fs8bit;
+            i.key = "focusStack8bit";
             i.delegateType = DT_Checkbox;
             i.type = "bool";
             addItem(i);
