@@ -21,6 +21,16 @@ public:
     FSFusionPMax();
     ~FSFusionPMax() override;
 
+    struct Options
+    {
+        QString energyMode           = "Max";     // "Max" or "Weighted"
+        float weightedPower          = 4.0f;
+        float weightedSigma0         = 1.0f;
+        bool  weightedIncludeLowpass = true;
+        float weightedEpsEnergy      = 1e-6f;
+        float weightedEpsWeight      = 1e-6f;
+    } popt;
+
     // Streaming PMax
     bool streamSlice(int slice,
                      const cv::Mat& grayAlign,

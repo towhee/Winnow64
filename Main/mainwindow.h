@@ -1406,7 +1406,7 @@ private:
     void generateMeanStack();
 
     // Focus Stack Utility
-    bool removeRemotelyGeneratedInputImages = true;
+    bool removeTempFiles = true;
     bool removeWorkingFiles = true;
     QString fsMethod;
     void focusStackFromSelection();
@@ -1414,6 +1414,7 @@ private:
     void generateFocusStack(const QStringList paths, QString method,
                             const QString source);
     void finishFocusStack(QString dstFusedImagePath);
+
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
     void traverseFolderStressTest(int msPerImage = 0, double secPerFolder = 0,

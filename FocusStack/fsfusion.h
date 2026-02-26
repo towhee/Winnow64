@@ -28,28 +28,9 @@ public:
     struct Options
     {
         QString method        = "PMax";     // "PMax" or "DMap"
-
-        // pmax merge controls
-        QString mergeMode     = "PMax";     // "PMax" or "Weighted"
-        QString winnerMap     = "Weighted"; // "Weighted" or "Energy"
-
-        // shared toggles
         bool    useOpenCL     = false;
         int     consistency   = 2;
-
-        // output / debug folders
         QString depthFolderPath;
-
-        // legacy flags kept for compatibility
-        bool enableDepthBiasedErosion = false;
-        bool enableEdgeAdaptiveSigma  = false;
-
-        // weighted merge params
-        float weightedPower          = 4.0f;
-        float weightedSigma0         = 1.0f;
-        bool  weightedIncludeLowpass = true;
-        float weightedEpsEnergy      = 1e-6f;
-        float weightedEpsWeight      = 1e-6f;
     };
 
     // ------------------------------------------------------------

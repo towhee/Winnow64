@@ -99,27 +99,9 @@ bool FS::setOptions(const Options &opt)
     if (G::FSLog) G::log(srcFun, msg);
     if (o.method.isEmpty()) {
         qWarning() << "WARNING:" << srcFun << "No method.";
+        return false;
     }
-
-    msg = "Setting options: ";
-    if (o.method == "PMax") {
-        if (G::FSLog) G::log(srcFun, msg + o.method);
-        // o.methodFuse = "FullWaveletMerge";
-        o.methodMerge = "PMax";
-        return true;
-    }
-
-    if (o.method == "PMaxWt") {
-        if (G::FSLog) G::log(srcFun, msg + o.method);
-        o.methodMerge = "Weighted";
-        o.enableDepthBiasedErosion = false;
-        o.enableEdgeAdaptiveSigma = false;
-        // o.isStream = true;
-        return true;
-    }
-
-    if (G::FSLog) G::log(srcFun, "WARNING: METHOD NOT RECOGNIZED");
-    return false;
+    return true;
 }
 
 void FS::status(const QString &msg)
@@ -274,6 +256,7 @@ bool FS::run()
     This is the entry point for the focus stacking pipeline.
 */
     QString srcFun = "FS::run";
+    if (G::FSLog) G::log(srcFun, o.method);
 
     initializeProgress();
     incrementProgress();
@@ -306,13 +289,6 @@ bool FS::run()
         }
 
         if (o.method == "PMax") {
-            if (!runPMax()) {
-                emit finished(false);
-                return false;
-            }
-        }
-
-        if (o.method == "PMaxWt") {
             if (!runPMax()) {
                 emit finished(false);
                 return false;
@@ -362,12 +338,9 @@ bool FS::runDMap()
     // -----------------------------
     FSFusion::Options fopt;
     fopt.method          = "DMap";
-    fopt.mergeMode       = o.methodMerge;
     fopt.useOpenCL       = o.enableOpenCL;
     fopt.consistency     = 2;
     fopt.depthFolderPath = depthFolderPath;
-    fopt.enableDepthBiasedErosion = false;
-    fopt.enableEdgeAdaptiveSigma  = false;
 
     // -----------------------------
     // working state
@@ -520,52 +493,27 @@ bool FS::runPMax()
     aopt.fullResolution    = false;
 
     // -----------------------------
-    // Fusion options (PMax)
+    // Fusion options
     // -----------------------------
     FSFusion::Options fopt;
-    fopt.method          = o.methodFuse;     // "DMap" or "PMax"
-    // fopt.mergeMode       = "Weighted";       // "PMax" or "Weighted"
-    fopt.mergeMode       = "PMax";           // "PMax" or "Weighted"
-    // fopt.mergeMode       = o.methodMerge;    // "PMax" or "Weighted"
+    fopt.method          = o.method;     // "DMap" or "PMax"
     fopt.useOpenCL       = o.enableOpenCL;
     fopt.consistency     = 2;
     fopt.depthFolderPath = depthFolderPath;
 
-    qDebug() << "o.methodMerge =" << o.methodMerge;
+    // -----------------------------
+    // PMax Fusion options
+    // -----------------------------
+    FSFusionPMax::Options popt;
+    popt.energyMode             = "Max";    // "Max" or "Weighted"
+    popt.weightedPower          = 7.0f;     // 4.0f default
+    popt.weightedSigma0         = 2.0f;     // 1.0f default
+    popt.weightedIncludeLowpass = true;     // false looks bad
+    popt.weightedEpsEnergy      = 1e-8f;
+    popt.weightedEpsWeight      = 1e-8f;
 
-    // Weighted / staged pipeline toggles
-    const bool wantsWeighted =
-        (o.method == "StmPMaxWt" || o.method == "StmPMaxWtDbe" || o.method == "StmPMaxWtDbeEas");
-
-    if (wantsWeighted)
-    {
-        // winner map selection for stage-2/3/4
-        fopt.winnerMap = (o.enableDepthBiasedErosion ? "Energy" : "Weighted");
-
-        // weighted params (your tuned defaults)
-        fopt.weightedPower          = 7.0f;     // 4.0f default
-        fopt.weightedSigma0         = 2.0f;     // 1.0f default
-        fopt.weightedIncludeLowpass = true;     // false looks bad
-        fopt.weightedEpsEnergy      = 1e-8f;
-        fopt.weightedEpsWeight      = 1e-8f;
-
-        // stage 3/4 toggles
-        fopt.enableDepthBiasedErosion = o.enableDepthBiasedErosion;
-        fopt.enableEdgeAdaptiveSigma  = o.enableEdgeAdaptiveSigma;
-
-        // optional: tag special runs
-        o.methodInfo = "LL";
-    }
-    else
-    {
-        // keep deterministic defaults
-        fopt.winnerMap = "Weighted";
-        fopt.enableDepthBiasedErosion = false;
-        fopt.enableEdgeAdaptiveSigma  = false;
-    }
-
-    qDebug() << "o.enableDepthBiasedErosion =" << o.enableDepthBiasedErosion
-             << "fopt.enableDepthBiasedErosion =" << fopt.enableDepthBiasedErosion;
+    // optional: tag special runs
+    o.methodInfo = "LL";  // LL = Low-frequency / Low-pass band
 
     // -----------------------------
     // Working state
@@ -687,16 +635,14 @@ bool FS::runPMax()
     incrementProgress();
 
     // Optional parameter dump (keep if useful)
-    if (wantsWeighted)
+    if (false)
     {
         qDebug().noquote()
-            << "\n weightedPower            =" << fopt.weightedPower
-            << "\n weightedSigma0           =" << fopt.weightedSigma0
-            << "\n weightedIncludeLowpass   =" << fopt.weightedIncludeLowpass
-            << "\n weightedEpsEnergy        =" << fopt.weightedEpsEnergy
-            << "\n weightedEpsWeight        =" << fopt.weightedEpsWeight
-            << "\n enableDepthBiasedErosion =" << fopt.enableDepthBiasedErosion
-            << "\n enableEdgeAdaptiveSigma  =" << fopt.enableEdgeAdaptiveSigma
+            << "\n weightedPower            =" << popt.weightedPower
+            << "\n weightedSigma0           =" << popt.weightedSigma0
+            << "\n weightedIncludeLowpass   =" << popt.weightedIncludeLowpass
+            << "\n weightedEpsEnergy        =" << popt.weightedEpsEnergy
+            << "\n weightedEpsWeight        =" << popt.weightedEpsWeight
             << "\n";
     }
 
@@ -719,7 +665,7 @@ bool FS::save(QString fuseFolderPath)
     // Make file name for fused image
     QFileInfo lastFi(inputPaths.last());
     QString base = lastFi.completeBaseName() + "_FocusStack";
-    if (o.isLocal) base = base + "_" + o.method + o.methodInfo;
+    if (o.isLocal) base = base + "_" + o.method; // + o.methodInfo;
     QString ext  = lastFi.suffix();
     QString fusedPath = fuseFolderPath + "/" + base + "." + ext;
     // if exists add incrementing suffix
@@ -855,8 +801,6 @@ void FS::diagnostics()
 
         << "\n"
         << "o.method                =" << o.method << "\n"
-        << "o.methodFuse            =" << o.methodFuse << "\n"
-        << "o.methodMerge           =" << o.methodMerge << "\n"
         << "\n"
         << "o.saveDiagnostics       =" << o.saveDiagnostics << "\n"
         << "o.enableOpenCL          =" << o.enableOpenCL << "\n"
