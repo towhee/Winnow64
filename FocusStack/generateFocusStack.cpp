@@ -20,7 +20,6 @@ void MW::focusStackFromSelection()
     }
 
     // fsMethod is from settings
-
     generateFocusStack(paths, fsMethod, src);
 }
 

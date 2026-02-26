@@ -24,30 +24,23 @@ public:
 
     enum Methods {
         DMap,            // DMap, streamed
-        PMax,            // PMax1, but streamed
-        PMaxWt,          // PMax1, but streamed and weighted in merge
+        PMax             // PMax1, but streamed
     };
     static inline const QStringList MethodsString {
-        "DMap",          // DMap, streamed
-        "PMax",          // PMax1, but streamed
-        "PMaxWt",        // PMax1, but streamed and weighted in merge
+        "DMap",
+        "PMax",
      };
 
     struct Options
     {
         QString method                  = "DMap";
-        QString methodFuse              = "";
-        QString methodMerge             = "";
+        // QString methodMerge             = "";
         QString methodInfo              = "";
         bool isLocal                    = true;
         bool saveDiagnostics            = true;
         bool enableOpenCL               = true;
         bool writeFusedBackToSource     = false;    // false for debugging
-        bool removeTempFiles            = false;
-
-        bool enableDepthBiasedErosion   = false;
-        bool enableEdgeAdaptiveSigma    = false;
-
+        bool removeTemp            = false;
     };
 
     QString statusGroupPrefix;
@@ -59,7 +52,6 @@ public:
     bool setOptions(const Options &opt);
 
     void diagnostics();
-
     void requestAbort()
     {
         abort.store(true, std::memory_order_relaxed);
@@ -124,10 +116,10 @@ private:
     std::vector<cv::Mat> alignedGraySlices;
 
     // Depth map
-    cv::Mat depthIndex16Mat;       // CV_16U depth indices
+    cv::Mat depthIndex16Mat;        // CV_16U depth indices
 
     // Fusion Mat
-    cv::Mat fusedColorMat;       // CU8 or CU16
+    cv::Mat fusedColorMat;          // CU8 or CU16
 
     // Progress
     int progressCount = -1;

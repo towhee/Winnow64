@@ -127,7 +127,7 @@ bool FSFusionPMax::streamSlice(int slice,
         return false;
 
     // Merge slice
-    if (opt.mergeMode == "PMax")
+    if (popt.energyMode == "Max")
     {
         if (!FSMerge::mergeSlice(mergeState_,
                                  wavelet_,
@@ -137,14 +137,14 @@ bool FSFusionPMax::streamSlice(int slice,
                                  mergedWavelet_))
             return false;
     }
-    else if (opt.mergeMode == "Weighted")
+    else if (popt.energyMode == "Weighted")
     {
         FSMerge::WeightedParams wp;
-        wp.power          = opt.weightedPower;
-        wp.sigma0         = opt.weightedSigma0;
-        wp.includeLowpass = opt.weightedIncludeLowpass;
-        wp.epsEnergy      = opt.weightedEpsEnergy;
-        wp.epsWeight      = opt.weightedEpsWeight;
+        wp.power          = popt.weightedPower;
+        wp.sigma0         = popt.weightedSigma0;
+        wp.includeLowpass = popt.weightedIncludeLowpass;
+        wp.epsEnergy      = popt.weightedEpsEnergy;
+        wp.epsWeight      = popt.weightedEpsWeight;
 
         if (!FSMerge::mergeSliceWeighted(mergeState_,
                                          wavelet_,
@@ -157,7 +157,7 @@ bool FSFusionPMax::streamSlice(int slice,
     }
     else
     {
-        qWarning().noquote() << "WARNING:" << srcFun << "Unknown mergeMode:" << opt.mergeMode;
+        qWarning().noquote() << "WARNING:" << srcFun << "Unknown mergeMode:" << popt.energyMode;
         return false;
     }
 
@@ -182,7 +182,7 @@ bool FSFusionPMax::streamFinish(cv::Mat& outputColor,
     if (FSFusion::isAbort(abortFlag)) return false;
 
     // Finish merge
-    if (opt.mergeMode == "PMax")
+    if (popt.energyMode == "Max")
     {
         if (!FSMerge::mergeSliceFinish(mergeState_,
                                        opt.consistency,
@@ -191,14 +191,14 @@ bool FSFusionPMax::streamFinish(cv::Mat& outputColor,
                                        depthIndexPadded16_))
             return false;
     }
-    else if (opt.mergeMode == "Weighted")
+    else if (popt.energyMode == "Weighted")
     {
         FSMerge::WeightedParams wp;
-        wp.power          = opt.weightedPower;
-        wp.sigma0         = opt.weightedSigma0;
-        wp.includeLowpass = opt.weightedIncludeLowpass;
-        wp.epsEnergy      = opt.weightedEpsEnergy;
-        wp.epsWeight      = opt.weightedEpsWeight;
+        wp.power          = popt.weightedPower;
+        wp.sigma0         = popt.weightedSigma0;
+        wp.includeLowpass = popt.weightedIncludeLowpass;
+        wp.epsEnergy      = popt.weightedEpsEnergy;
+        wp.epsWeight      = popt.weightedEpsWeight;
 
         cv::Mat weightedWinnerPadded16;
         cv::Mat energyWinnerPadded16;
@@ -212,7 +212,7 @@ bool FSFusionPMax::streamFinish(cv::Mat& outputColor,
                                                energyWinnerPadded16))
             return false;
 
-        depthIndexPadded16_ = (opt.winnerMap == "Energy") ? energyWinnerPadded16
+        depthIndexPadded16_ = (popt.energyMode == "Max") ? energyWinnerPadded16
                                                           : weightedWinnerPadded16;
     }
 

@@ -347,6 +347,9 @@ Q_NAMESPACE
     extern bool combineRawJpg;
     extern bool isFilter;
 
+    // focus stack
+    extern QString fsFusedPath;
+
     // training
     extern bool isTraining;
 
