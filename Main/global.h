@@ -348,7 +348,7 @@ Q_NAMESPACE
     extern bool isFilter;
 
     // focus stack
-    extern QString fsFusedPath;
+    extern QStringList fsFusedPaths;
 
     // training
     extern bool isTraining;

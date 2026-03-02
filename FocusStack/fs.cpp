@@ -31,18 +31,6 @@ FS::FS(QObject *parent)
 {
 }
 
-static QStringList methods {
-    "StreamPMax",         // PMax1, but streamed
-    "PMax",               // align, fuse using multiscale wavelets
-    "TennengradVersions"  // create multiple depth maps for diff radius/thresholds
-};
-
-
-void FS::initialize()
-{
-    grpFolderPaths.clear();
-}
-
 bool FS::initializeGroup(int group)
 {
     QString srcFun = "FS::initializeGroup";
@@ -293,8 +281,8 @@ bool FS::run()
             }
         }
 
-       // SAVE
-        if (o.writeFusedBackToSource) save(dstFolderPath);
+        // SAVE
+        if (o.writeFusedBackToSource) save(srcFolderPath);
 
         // STATS
         QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
@@ -652,10 +640,10 @@ bool FS::save(QString fuseFolderPath)
 {
     QString srcFun = "FS::save";
 
-    // Make file name for fused image
+    // Make file name for fused image based on last input image in stack
     QFileInfo lastFi(inputPaths.last());
     QString base = lastFi.completeBaseName() + "_FocusStack";
-    if (o.isLocal) base = base + "_" + o.method; // + o.methodInfo;
+    if (o.isLocal) base += "_" + o.method; // + o.methodInfo;
     QString ext  = lastFi.suffix();
     QString fusedPath = fuseFolderPath + "/" + base + "." + ext;
     // if exists add incrementing suffix
@@ -664,10 +652,11 @@ bool FS::save(QString fuseFolderPath)
     base = fusedFi.completeBaseName();
     QString xmpPath   = fuseFolderPath + "/" + base + "." + "xmp";
     QString msg = "Folder: " + fuseFolderPath + "  Last input image: " + lastFi.completeBaseName();
+
     if (G::FSLog) G::log(srcFun, fuseFolderPath);
 
     // Save path in global for MW::generateFocusStack when finished
-    G::fsFusedPath = fusedPath;
+    G::fsFusedPaths << fusedPath;
 
     // Write fused result
     msg = "Write to " + fusedPath;
@@ -736,12 +725,20 @@ bool FS::save(QString fuseFolderPath)
 
 bool FS::cleanup()
 {
+    /* Folder structure:
+    inputFolder         "FocusStack" if remote, srcFolder if local
+        grpFolder       Working folder for each group
+            align       Aligned color pngs
+            depth       Depth map and diagnostics
+            fusion      Fused results when testing
+
+    */
     QString srcFun = "FS::cleanup";
     if (G::FSLog) G::log(srcFun);
 
     QString msg;
 
-    // remove the temp working folders (align, depth, fusion)
+    // remove the group working folders (align, depth, fusion)
     for (QString subFolder : grpFolderPaths) {
         qDebug() << "Remove work folder: " << subFolder;
         msg = "Remove work folder: " + subFolder;
@@ -752,30 +749,34 @@ bool FS::cleanup()
 
     if (o.isLocal) return true;
 
-    // remove the temp focus stack src tiffs
-    QStringList srcFolders;
-    for (QStringList gList : groups) {
-        // files in group
-        for (QString s : gList) {
-            QString srcFolder = QFileInfo(s).absolutePath();
-            if (!srcFolders.contains(srcFolder)) srcFolders << srcFolder;
-            // qDebug() << "SrcFolder =" << srcFolder << "SrcFolders =" << srcFolders;
-            qDebug() << "Remove src file: " << s;
-            msg = "Remove src file: " + s;
-            if (G::isFileLogger) Utilities::log(srcFun, msg);
+    /*
+    When remote (ie Lightroom), the inputFolder(s) ("FocusStack") may contain files
+    other than the input images, so we need to remove the input images, and then if
+    the inputFolder is empty it can be removed too.
+    */
 
-            if (!o.isLocal) QFile::remove(s);
-        }
+    // remove the temp focus stack source tiffs
+    QStringList inputFolderPaths;
+    // all input files
+    for (QString s : inputPaths) {
+        QString srcFolderPath = QFileInfo(s).absolutePath();
+        if (!inputFolderPaths.contains(srcFolderPath)) inputFolderPaths << srcFolderPath;
+        // qDebug() << "SrcFolder =" << srcFolder << "SrcFolders =" << srcFolders;
+        qDebug() << "Remove input file: " << s;
+        msg = "Remove input file: " + s;
+        if (G::isFileLogger) Utilities::log(srcFun, msg);
+
+        QFile::remove(s);
     }
 
-    // remove source folder(s) if empty
-    for (QString d : srcFolders) {
-        qDebug() << "src folder isEmpty: " << QDir(d).isEmpty();
-        msg = "src folder: " + d + "  isEmpty: " + QVariant(QDir(d).isEmpty()).toString();
+    // remove input folder if empty
+    for (QString d : inputFolderPaths) {
+        qDebug() << "input folder isEmpty: " << QDir(d).isEmpty();
+        msg = "input folder: " + d + "  isEmpty: " + QVariant(QDir(d).isEmpty()).toString();
         if (G::isFileLogger) Utilities::log(srcFun, msg);
         if (QDir(d).isEmpty()) {
-            qDebug() << "Remove src folder: " << d;
-            msg = "Remove src folder: " + d;
+            qDebug() << "Remove input folder: " << d;
+            msg = "Remove input folder: " + d;
             if (G::isFileLogger) Utilities::log(srcFun, msg);
 
             QDir(d).removeRecursively();
@@ -789,7 +790,7 @@ void FS::diagnostics()
 {
     qDebug() << "Diagnostics:"
         << "\n"
-        << "dstFolderPath           =" << dstFolderPath << "\n"
+        << "dstFolderPath           =" << srcFolderPath << "\n"
 
         << "\n"
         << "o.method                =" << o.method << "\n"

@@ -34,23 +34,21 @@ public:
     struct Options
     {
         QString method                  = "DMap";
-        // QString methodMerge             = "";
         QString methodInfo              = "";
         bool isLocal                    = true;
         bool saveDiagnostics            = true;
         bool enableOpenCL               = true;
-        bool writeFusedBackToSource     = false;    // false for debugging
+        bool writeFusedBackToSource     = true;    // false for debugging
         bool removeTemp                 = false;
     } o;
 
-    QString dstFolderPath; // original source for input images (parent if lightroom)
+    QString srcFolderPath; // original source for input images (parent if lightroom)
 
     QString statusGroupPrefix;
     QString statusRunPrefix;
     QList<QStringList> groups;
 
     // Input configuration
-    void initialize();
     bool setOptions(const Options &opt);
 
     void diagnostics();
