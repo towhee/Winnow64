@@ -157,7 +157,7 @@ bool isFilter;
 bool isRemote;
 
 // focus stack
-QString fsFusedPath;
+QString fsFusedPaths;
 
 // training
 bool isTraining = false;

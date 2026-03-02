@@ -3,7 +3,7 @@
 
 ExifTool::ExifTool()
 {
-    if (G::isFileLogger) Utilities::log("ExifTool::ExifTool", exifToolPath);
+    // if (G::isFileLogger) Utilities::log("ExifTool::ExifTool", exifToolPath);
     #ifdef Q_OS_WIN
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
     #endif

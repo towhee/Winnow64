@@ -1,6 +1,8 @@
 #include "Main/mainwindow.h"
 #include "FocusStack/fs.h"
 
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 /*
 Winnow64/FocusStack/
@@ -9,31 +11,31 @@ Winnow64/FocusStack/
 
 void MW::focusStackFromSelection()
 {
-    QString src = "MW::generateFocusStackFromSelection";
-    if (G::isLogger || G::FSLog) G::log(src, fsMethod);
+    QString srcFun = "MW::generateFocusStackFromSelection";
+    if (G::isLogger || G::FSLog) G::log(srcFun, fsMethod);
 
-    QStringList paths;
-    if (!dm->getSelection(paths) || paths.isEmpty()) {
+    QStringList inputPaths;
+    if (!dm->getSelection(inputPaths) || inputPaths.isEmpty()) {
         QString msg = "No images selected for focus stacking.";
-        updateStatus(false, msg, src);
+        updateStatus(false, msg, srcFun);
         return;
     }
 
-    // fsMethod is from settings
-    generateFocusStack(paths, fsMethod, src);
+    generateFocusStack(inputPaths, fsMethod, /*isLocal*/true);
 }
 
 void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
 {
-/*
-    Called locally from MW::focusStackFromSelection
-    Called externally from MW::handleStartupArgs
+    // Called locally from MW::focusStackFromSelection
+    // Called externally from MW::handleStartupArgs
+    //
+    // Rules:
+    // - Build time-contiguous groups (gap >= 2000ms starts a new group)
+    // - Only keep groups with 2+ items
+    // - If a group has only 1 item:
+    //     * do NOT add it to groups
+    //     * remove that item from the FocusStack input folder (delete file)
 
-    Aggregates paths into focus stack groups, as there might be multiple
-    focus stacks in the paths list.
-
-    Generates a fused image for each stack group.
-*/
     const QString srcFun = "MW::groupFocusStacks";
     if (G::isLogger) G::log(srcFun);
 
@@ -46,25 +48,20 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
     QVector<Item> items;
     items.reserve(paths.size());
 
-    QDateTime t;
-    for (const QString &path : paths) {
+    for (const QString &path : paths)
+    {
+        QDateTime t;
+
         const int r = dm->rowFromPath(path);
-        // already in datamodel
         if (r >= 0) {
             t = dm->index(r, G::CreatedColumn).data().toDateTime();
-        }
-        // not in datamodel, probably remote call (lightroom)
-        else {
+        } else {
             ExifTool et;
-            QString creation = et.readTag(path, "DateTimeOriginal");
+            const QString creation = et.readTag(path, "DateTimeOriginal");
             et.close();
             t = QDateTime::fromString(creation, "yyyy:MM:dd HH:mm:ss");
-
-            qDebug() << srcFun
-                     << creation
-                     << t
-                     << path;
         }
+
         if (!t.isValid()) {
             qDebug().noquote() << srcFun << "Skipping (invalid Created):" << path;
             continue;
@@ -85,9 +82,16 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
     });
 
     // --- Group into stacks: new stack if gap >= 2000 ms ----------------------
-    static constexpr qint64 kGroupGapMs = 2000;  // >= 2 seconds => new group
+    static constexpr qint64 groupGapMs = 2000;  // >= 2 seconds => new group
 
-    // QList<QStringList> groups;
+    auto finalizeCurrent = [&](QStringList &current)
+    {
+        if (current.size() >= 2) {
+            groups.push_back(current);
+        }
+        current.clear();
+    };
+
     QStringList current;
     current.reserve(items.size());
 
@@ -101,27 +105,24 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
         }
 
         const qint64 gapMs = prevT.msecsTo(it.created);
-        if (gapMs >= kGroupGapMs) {
-            if (!current.isEmpty())
-                groups.push_back(current);
-            current.clear();
+        if (gapMs >= groupGapMs) {
+            finalizeCurrent(current);
         }
 
         current << it.path;
         prevT = it.created;
     }
-    if (!current.isEmpty()) groups.push_back(current);
 
+    // finalize last group
+    finalizeCurrent(current);
 
-    //  --- Debug dump with HH:mm:ss:zzz ---------------------------------------
-    /*
-    qDebug().noquote() << srcFun
-                       << "Grouped" << items.size() << "images into"
-                       << groups.size() << "stack(s)."
-                       << "gapThresholdMs=" << kGroupGapMs;
+    if(false) return;
 
+    QString msg;
     for (int gi = 0; gi < groups.size(); ++gi) {
-        qDebug().noquote() << "---- FocusStack Group" << (gi + 1) << "----";
+        msg = "FocusStack Group " + QString::number(gi + 1);
+        if (G::isFileLogger) Utilities::log(srcFun, msg);
+        // qDebug().noquote() << "---- FocusStack Group" << (gi + 1) << "----";
         for (const QString &p : groups[gi]) {
             const int r = dm->rowFromPath(p);
             const QDateTime t = (r >= 0)
@@ -132,15 +133,17 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
                                           ? t.time().toString("HH:mm:ss:zzz")
                                           : QString("??:??:??:???");
 
-            qDebug().noquote() << " " << p << " [" << hhmmsszzz << "]";
+            // qDebug().noquote() << " " << p << " [" << hhmmsszzz << "]";
+            msg = hhmmsszzz + " " + p;
         }
     }
-    //*/
+    // */
+    // }
 }
 
 void MW::generateFocusStack(const QStringList paths,
                             QString method,
-                            const QString source)
+                            const bool isLocal)
 {
 /*
     - Create worker thread with class instantiation fs.
@@ -152,23 +155,26 @@ void MW::generateFocusStack(const QStringList paths,
     Called remotely from MW::handleStartupArgs() from Lightroom
 
     Folder structure:
-        Lightroom folder (only if remote)
-            srcFolder (focus stack input tiffs)
-                grpFolder ie 2025-11-07_0078_DMap
-                    alignFolder
-                    depthFolder
-                    fusionFolder
 
-    srcFolder contains the input focus stack images
-    dstFolder is where to save the fused result image
-        - if local, use srcFolder
-        - if remote, use srcFolder parent = Lightroom folder
+    remoteFolder            Source stack images (any file format), srcFolder
+        inputFolder         "FocusStack" if remote, srcFolder if local
+            grpFolder       Working folder for each group
+                align       Aligned color pngs
+                depth       Depth map and diagnostics
+                fusion      Fused results when testing
+
+    inputFolder contains the input focus stack images (tiff or png)
+    srcFolder is where to save the fused result image
+        - if local, srcFolder = inputFolder
+        - if remote, srcFolder = inputFolder parent = Lightroom folder
 */
     QString srcFun = "MW::generateFocusStack";
     if (G::isLogger || G::FSLog) G::log(srcFun, "method = " + method);
 
     G::isRunningFocusStack = true;
     G::abortFocusStack = false;
+
+    G::popup->showPopup("Focus stacking initiated", 5000);
 
     // --------------------------------------------------------------------
     // Create worker thread + FS fs object
@@ -202,21 +208,19 @@ void MW::generateFocusStack(const QStringList paths,
     // Initialize fs
     // --------------------------------------------------------------------
 
-    bool isLocal = (source == "MW::generateFocusStackFromSelection");
-
     // Source images folder (used after pipeline finishes)
     QFileInfo info(paths.first());
-    const QString srcFolderPath = info.absolutePath();
+    const QString inputFolderPath = info.absolutePath();
+    QString srcFolderPath;
     // Source images location (ie when sourced from lightroom)
-    QString dstFolderPath;
-    if (isLocal) dstFolderPath = srcFolderPath;
+    if (isLocal) srcFolderPath = inputFolderPath;
     else {
-        // get parent of srcFolder
-        QFileInfo fi(srcFolderPath);
-        dstFolderPath = fi.dir().absolutePath();
+        // get parent of inputFolder
+        QFileInfo fi(inputFolderPath);
+        srcFolderPath = fi.dir().absolutePath();
     }
 
-    if (G::FSLog) G::log(srcFun, "srcFolder =v" + srcFolderPath);
+    if (G::FSLog) G::log(srcFun, "srcFolder = " + srcFolderPath);
 
     if (!G::isRory) method = "DMap";
     if (!G::isRory) fsRemoveTemp = true;
@@ -226,12 +230,10 @@ void MW::generateFocusStack(const QStringList paths,
     fs->o.enableOpenCL = true;
     fs->o.removeTemp = fsRemoveTemp;
 
-    fs->dstFolderPath = dstFolderPath;
-    fs->initialize();
+    fs->srcFolderPath = srcFolderPath;
 
-    // Initialize fs
+    // Group multiple stacks
     groupFocusStacks(fs->groups, paths);
-
 
     // --------------------------------------------------------------------
     // Finished
@@ -262,8 +264,10 @@ void MW::generateFocusStack(const QStringList paths,
         updateStatus(false, msg);
         G::popup->showPopup(msg);
 
+        // TO DO: Change fsFusedPath to QStringList as there could be more than one
+
         // Evaluate we have a result path
-        if (G::fsFusedPath.isEmpty() || QImage(G::fsFusedPath).isNull()) {
+        if (G::fsFusedPaths.isEmpty() || QImage(G::fsFusedPaths).isNull()) {
             // msg = "Focus stacking failed";
             // if (G::FSLog) G::log(srcFun, msg);
             // updateStatus(false, msg);
@@ -273,16 +277,19 @@ void MW::generateFocusStack(const QStringList paths,
 
         if (isLocal) {
             qDebug() << srcFun << "isLocal = true";
-            dm->insert(G::fsFusedPath);
+            dm->insert(G::fsFusedPaths);
 
             waitUntilMetadataLoaded(3000, srcFun);
 
             // Selecting may trigger view/model refresh → still deferred
-            sel->select(G::fsFusedPath);
+            sel->select(G::fsFusedPaths);
         }
         else { // from Lightroom
-            folderAndFileSelectionChange(G::fsFusedPath, "FS::threadFinished");
+            folderAndFileSelectionChange(G::fsFusedPaths, "FS::threadFinished");
         }
+
+        fsTree->updateCount();
+        bookmarks->updateCount();
 
     });
 

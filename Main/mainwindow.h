@@ -1412,7 +1412,7 @@ private:
     void focusStackFromSelection();
     void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
     void generateFocusStack(const QStringList paths, QString method,
-                            const QString source);
+                            const bool isLocal);
     void finishFocusStack(QString dstFusedImagePath);
 
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
