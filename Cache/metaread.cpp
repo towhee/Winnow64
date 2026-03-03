@@ -1154,7 +1154,7 @@ void MetaRead::dispatchFinished(QString src)
     QString fun = "MetaRead::dispatchFinished";
     if (debugLog && (G::isLogger || G::isFlowLogger))
         G::log(fun, src);
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
