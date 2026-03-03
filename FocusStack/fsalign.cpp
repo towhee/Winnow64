@@ -870,67 +870,6 @@ Result accumulate(const Result &prevGlobal,
     g.validArea = compute_valid_area(srcValid, g.transform, false);
 
     return g;
-
-    // Result g = local; // will become global
-
-    // // Prevent empty/invalid mats from crashing or corrupting results
-    // ensureIdentityContrast(g.contrast);
-    // ensureIdentityWB(g.whitebalance);
-    // cv::Mat sC = prevGlobal.contrast;
-    // cv::Mat sW = prevGlobal.whitebalance;
-    // ensureIdentityContrast(sC);
-    // ensureIdentityWB(sW);
-
-    // // --- Transform stacking (like Task_Align with m_stacked_transform) ----
-    // cv::Mat prev3 = cv::Mat::eye(3, 3, CV_32F);
-    // prevGlobal.transform.copyTo(prev3(cv::Rect(0, 0, 3, 2)));
-
-    // cv::Mat local3 = cv::Mat::eye(3, 3, CV_32F);
-    // local.transform.copyTo(local3(cv::Rect(0, 0, 3, 2)));
-
-    // cv::Mat combined3 = local3 * prev3;
-    // g.transform = combined3(cv::Rect(0, 0, 3, 2)).clone();
-
-    // // --- Contrast stacking ---------------------------------
-    // {
-    //     CV_Assert(prevGlobal.contrast.rows == 5 && prevGlobal.contrast.cols == 1);
-    //     CV_Assert(g.contrast.rows == 5 && g.contrast.cols == 1);
-
-    //     cv::Mat c = g.contrast.clone();
-    //     const cv::Mat &sC = prevGlobal.contrast;
-
-    //     g.contrast *= sC.at<float>(0);
-    //     g.contrast.at<float>(1) += sC.at<float>(1) * c.at<float>(0);
-    //     g.contrast.at<float>(2) += sC.at<float>(2) * c.at<float>(0);
-    //     g.contrast.at<float>(2) += sC.at<float>(1) * c.at<float>(1);
-    //     g.contrast.at<float>(3) += sC.at<float>(3) * c.at<float>(0);
-    //     g.contrast.at<float>(4) += sC.at<float>(4) * c.at<float>(0);
-    //     g.contrast.at<float>(4) += sC.at<float>(3) * c.at<float>(3);
-    // }
-
-    // // --- Whitebalance stacking ------------------------------
-    // {
-    //     CV_Assert(prevGlobal.whitebalance.rows == 6 && prevGlobal.whitebalance.cols == 1);
-    //     CV_Assert(g.whitebalance.rows == 6 && g.whitebalance.cols == 1);
-
-    //     const cv::Mat &sWB = prevGlobal.whitebalance;
-
-    //     // Compose: (gain2*(gain1*x + off1) + off2) -> (gain2*gain1)*x + (gain2*off1 + off2)
-    //     // In your parameterization: out = gain*in + offset
-    //     g.whitebalance.at<float>(0) = sWB.at<float>(1) * g.whitebalance.at<float>(0) + sWB.at<float>(0);
-    //     g.whitebalance.at<float>(1) = sWB.at<float>(1) * g.whitebalance.at<float>(1);
-
-    //     g.whitebalance.at<float>(2) = sWB.at<float>(3) * g.whitebalance.at<float>(2) + sWB.at<float>(2);
-    //     g.whitebalance.at<float>(3) = sWB.at<float>(3) * g.whitebalance.at<float>(3);
-
-    //     g.whitebalance.at<float>(4) = sWB.at<float>(5) * g.whitebalance.at<float>(4) + sWB.at<float>(4);
-    //     g.whitebalance.at<float>(5) = sWB.at<float>(5) * g.whitebalance.at<float>(5);
-    // }
-    // // --- Valid area stacking ----------------------------------------------
-    // // Compute valid area for this image in global space
-    // g.validArea = compute_valid_area(srcValid, g.transform, false);
-
-    // return g;
 }
 
 void applyTransform(const cv::Mat &src,
