@@ -36,10 +36,11 @@ public:
         QString method                  = "DMap";
         QString methodInfo              = "";
         bool isLocal                    = true;
-        bool saveDiagnostics            = true;
         bool enableOpenCL               = true;
         bool writeFusedBackToSource     = true;    // false for debugging
         bool removeTemp                 = false;
+        bool isDebugging                = true;
+        bool saveDiagnostics            = true;
     } o;
 
     QString srcFolderPath; // original source for input images (parent if lightroom)
@@ -82,7 +83,7 @@ private:
     // Pipeline stages
     bool runDMap();
     bool runPMax();
-    bool save(QString fuseFolderPath);
+    QString save(QString fuseFolderPath);
     bool cleanup();
 
     // helpers for UI

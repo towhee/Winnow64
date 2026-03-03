@@ -2342,14 +2342,13 @@ void MW::waitUntilMetadataLoaded(int ms, QString src)
 {
 /*
     Wait until metadata has been loaded or ms milliseconds have elapsed
+    Not being used
 */
     QString srcFun = "MW::waitUntilMetadataLoaded";
     QEventLoop loop;
     QTimer timeout;
 
     qDebug() << srcFun << "G::allMetadataLoaded =" << G::allMetadataLoaded;
-
-    if (G::allMetadataLoaded) return;
 
     timeout.setSingleShot(true);
     timeout.setInterval(ms);     // millisecond timeout
@@ -2364,8 +2363,6 @@ void MW::waitUntilMetadataLoaded(int ms, QString src)
 
     int t = timeout.remainingTime();
     if (t < 0) t = ms; else t = ms - t;
-    qDebug() << srcFun << "elapsed ms =" << t
-             << "G::allMetadataLoaded =" << G::allMetadataLoaded;
 }
 
 void MW::nullFiltration()
@@ -2733,7 +2730,7 @@ void MW::folderChangeCompleted()
     cacheProgressBar->clearUpperProgress();
 
     // build filters if filter dock is visible
-    /*
+    // /*
     qDebug() << "MW::folderChangecompleted"
              << "dm->folderList.count() =" << dm->folderList.count()
              << "dm->isQueueEmpty() =" << dm->isQueueEmpty()

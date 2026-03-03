@@ -246,6 +246,11 @@ void MW::generateFocusStack(const QStringList paths,
 
         G::isRunningFocusStack = false;
 
+        msg = "Focus stacking completed";
+        if (G::FSLog) G::log(srcFun, msg);
+        updateStatus(false, msg);
+        G::popup->showPopup(msg);
+
         // Clear progress
         cacheProgressBar->clearUpperProgress();
 
@@ -259,33 +264,23 @@ void MW::generateFocusStack(const QStringList paths,
             return;
         }
 
-        msg = "Focus stacking completed";
-        if (G::FSLog) G::log(srcFun, msg);
-        updateStatus(false, msg);
-        G::popup->showPopup(msg);
-
-        // TO DO: Change fsFusedPath to QStringList as there could be more than one
-
         // Evaluate we have a result path
-        if (G::fsFusedPaths.isEmpty() || QImage(G::fsFusedPaths).isNull()) {
-            // msg = "Focus stacking failed";
-            // if (G::FSLog) G::log(srcFun, msg);
-            // updateStatus(false, msg);
-            // G::popup->showPopup(msg);
+        if (G::fsFusedPaths.isEmpty()) {
+            msg = "Focus stacking failed";
+            if (G::FSLog) G::log(srcFun, msg);
+            updateStatus(false, msg);
+            G::popup->showPopup(msg);
             return;
         }
 
         if (isLocal) {
-            qDebug() << srcFun << "isLocal = true";
-            dm->insert(G::fsFusedPaths);
-
-            waitUntilMetadataLoaded(3000, srcFun);
-
-            // Selecting may trigger view/model refresh → still deferred
-            sel->select(G::fsFusedPaths);
+            dm->insert(G::fsFusedPaths.first());
+            if (dm->contains(G::fsFusedPaths.first())) {
+                sel->select(G::fsFusedPaths.first());
+            }
         }
         else { // from Lightroom
-            folderAndFileSelectionChange(G::fsFusedPaths, "FS::threadFinished");
+            folderAndFileSelectionChange(G::fsFusedPaths.first(), "FS::threadFinished");
         }
 
         fsTree->updateCount();
@@ -302,190 +297,4 @@ void MW::generateFocusStack(const QStringList paths,
 
     fsThread->start();
 }
-// void MW::generateFocusStack(const QStringList paths,
-//                             QString method,
-//                             const QString source)
-// {
-//     /*
-//     Called locally from MW::focusStackFromSelection()
-//     Called remotely from MW::handleStartupArgs() from Lightroom
 
-//     Folders:
-//         Lightroom folder (only if remote)
-//             srcFolder (focus stack input tiffs)
-//                 grpFolder ie 2025-11-07_0078_DMap
-//                     alignFolder
-//                     depthFolder
-//                     fusionFolder
-
-//     srcFolder contains the input focus stack images
-//     dstFolder is where to save the fused result image
-//         - if local, use srcFolder
-//         - if remote, use srcFolder parent = Lightroom folder
-// */
-//     QString srcFun = "MW::generateFocusStack";
-//     if (G::isLogger || G::FSLog) G::log(srcFun, "method = " + method);
-
-//     G::isRunningFocusStack = true;
-//     G::abortFocusStack = false;
-
-//     bool isLocal = (source == "MW::generateFocusStackFromSelection");
-
-//     // ----------- Req'd when pipeline is finished -----------
-
-//     // Source images folder (used after pipeline finishes)
-//     QFileInfo info(paths.first());
-//     const QString srcFolderPath = info.absolutePath();
-//     // Source images location (ie when sourced from lightroom)
-//     QString dstFolderPath;
-//     if (isLocal) dstFolderPath = srcFolderPath;
-//     else {
-//         // get parent of srcFolder
-//         QFileInfo fi(srcFolderPath);
-//         dstFolderPath = fi.dir().absolutePath();
-//     }
-
-//     QFileInfo lastFi(paths.last());
-//     QString fusedBase = lastFi.completeBaseName() + "_FocusStack_" + method;
-
-//     QString ext  = "." + lastFi.suffix();
-//     QString dstLastFusedPath = dstFolderPath + "/" + fusedBase + ext;
-//     // Make sure unique file name
-//     Utilities::uniqueFilePath(dstLastFusedPath, "_");
-//     QFileInfo fusedFi(dstLastFusedPath);
-//     fusedBase = fusedFi.completeBaseName();
-
-//     if (G::FSLog) G::log(srcFun, "srcFolder =v" + srcFolderPath);
-//     // if (G::FSLog) G::log(srcFun, "dstLastFusedPath = " + dstLastFusedPath);
-
-//     // ----------- End section when pipeline is finished -----------
-
-//     // FOCUS STACK CONTROL:
-//     if (!G::isRory) method = "DMap";
-//     if (!G::isRory) fsRemoveTemp = true;
-//     FS::Options opt;
-//     {
-//         opt.method                  = method;
-//         opt.isLocal                 = isLocal;    // pretend remote for testing
-//         opt.enableOpenCL            = true;
-//         opt.removeTemp              = fsRemoveTemp;
-//     }
-
-//     // --------------------------------------------------------------------
-//     // Create worker thread + FS pipeline object
-//     // --------------------------------------------------------------------
-//     QThread *fsThread = new QThread(this);
-//     fsPipeline = new FS();
-//     fsPipeline->moveToThread(fsThread);
-//     // local req'd for lamda
-//     FS *pipeline = fsPipeline.data();
-
-//     // Initialize pipeline before we run
-//     pipeline->setOptions(opt);
-//     pipeline->initialize(dstFolderPath, fusedBase);
-//     // Aggregate input paths into focus groups
-//     groupFocusStacks(pipeline->groups, paths);
-
-//     // -------------- Pipeline communications ----------------
-
-//     // When the thread starts → run the FS pipeline
-//     connect(fsThread, &QThread::started, pipeline, [pipeline, fsThread]()
-//             {
-//                 pipeline->run();     // runs synchronously inside worker thread
-//                 QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
-//             });
-
-//     // Status update
-//     connect(pipeline, &FS::updateStatus,
-//             this, &MW::updateStatus, Qt::QueuedConnection);
-
-//     // Progress update
-//     connect(pipeline, &FS::progress, this, [this](int current, int total) {
-//         this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
-//     }, Qt::QueuedConnection);
-
-//     // cleanup when finished
-//     connect(fsThread, &QThread::finished, pipeline, &QObject::deleteLater);
-//     connect(fsThread, &QThread::finished, fsThread,   &QObject::deleteLater);
-
-//     // --------------- When FS finishes (thread quits) ----------------
-
-//     // We detect success by checking filesystem or pipeline signals (later)
-//     connect(fsThread, &QThread::finished, this, [=]()
-//             {
-//                 QString msg = "FS is finished.";
-//                 if (G::FSLog) G::log(srcFun, msg);
-
-//                 G::isRunningFocusStack = false;
-
-//                 // Clear progress
-//                 cacheProgressBar->clearUpperProgress();
-
-//                 // If aborted...
-//                 if (G::abortFocusStack) {
-//                     msg = "Focus stacking was aborted.";
-//                     if (G::FSLog) G::log(srcFun, msg);
-//                     G::abortFocusStack = false;
-//                     updateStatus(false, msg);
-//                     G::popup->showPopup(msg);
-//                     return;
-//                 }
-
-//                 msg = "Focus stacking completed";
-//                 if (G::FSLog) G::log(srcFun, msg);
-//                 updateStatus(false, msg);
-//                 G::popup->showPopup(msg);
-
-//                 // Evaluate we have a result path
-//                 if (dstLastFusedPath.isEmpty() || QImage(dstLastFusedPath).isNull()) {
-//                     // msg = "Focus stacking failed";
-//                     // if (G::FSLog) G::log(srcFun, msg);
-//                     // updateStatus(false, msg);
-//                     // G::popup->showPopup(msg);
-//                     return;
-//                 }
-
-//                 if (isLocal) {
-//                     qDebug() << srcFun << "isLocal = true";
-//                     dm->insert(dstLastFusedPath);
-
-//                     waitUntilMetadataLoaded(3000, srcFun);
-
-//                     // Selecting may trigger view/model refresh → still deferred
-//                     sel->select(dstLastFusedPath);
-//                 }
-//                 else { // from Lightroom
-//                     // qDebug() << "scrFolder =" << srcFolderPath;
-//                     // if (fsRemoveTemp) {
-//                     //     for (const QString &path : paths) {
-//                     //         if (!QFile::remove(path)) {
-//                     //             QString msg = "Failed to remove file: " + path;
-//                     //             qWarning() << "WARNING:" << srcFun << msg;
-//                     //         }
-//                     //     }
-//                     //     QDir srcDir(srcFolderPath);
-//                     //     if (srcDir.exists() && srcDir.isEmpty()) {
-//                     //         if (!srcDir.removeRecursively()) {
-//                     //             QString msg = "Failed to remove folder: " + srcFolderPath;
-//                     //             qWarning() << "WARNING:" << srcFun << msg;
-//                     //         }
-//                     //     }
-//                     // }
-//                     // else {
-//                     //     folderAndFileSelectionChange(dstLastFusedPath, "FS::threadFinished");
-//                     // }
-//                     folderAndFileSelectionChange(dstLastFusedPath, "FS::threadFinished");
-//                 }
-
-//             });
-
-//     if (fsThread->isRunning()) return;
-
-//     // Start
-//     fsThread->start();
-// }
-
-void MW::finishFocusStack(QString dstFusedImagePath)
-{
-
-}

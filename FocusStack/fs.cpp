@@ -244,6 +244,8 @@ bool FS::run()
     QString srcFun = "FS::run";
     if (G::FSLog) G::log(srcFun, o.method);
 
+    G::fsFusedPaths.clear();
+
     initializeProgress();
     incrementProgress();
 
@@ -282,7 +284,13 @@ bool FS::run()
         }
 
         // SAVE
-        if (o.writeFusedBackToSource) save(srcFolderPath);
+        if (o.writeFusedBackToSource) {
+            QString fusedPath = save(srcFolderPath);
+            // Save path in global for MW::generateFocusStack when finished
+            if (!fusedPath.isEmpty()) {
+                G::fsFusedPaths << fusedPath;
+            }
+        }
 
         // STATS
         QString timeToRun = QString::number(t.elapsed() / 1000, 'f', 1) + " sec";
@@ -636,7 +644,7 @@ bool FS::runPMax()
     return true;
 }
 
-bool FS::save(QString fuseFolderPath)
+QString FS::save(QString fuseFolderPath)
 {
     QString srcFun = "FS::save";
 
@@ -655,8 +663,8 @@ bool FS::save(QString fuseFolderPath)
 
     if (G::FSLog) G::log(srcFun, fuseFolderPath);
 
-    // Save path in global for MW::generateFocusStack when finished
-    G::fsFusedPaths << fusedPath;
+    // // Save path in global for MW::generateFocusStack when finished
+    // G::fsFusedPaths << fusedPath;
 
     // Write fused result
     msg = "Write to " + fusedPath;
@@ -706,7 +714,7 @@ bool FS::save(QString fuseFolderPath)
     msg = "Write XMP color green";
     if (G::FSLog) G::log(srcFun, msg);
     QFile f(xmpPath);
-    if (!f.open(QIODevice::ReadWrite)) return false;
+    if (!f.open(QIODevice::ReadWrite)) return "";
 
     QString color = "Green";
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
@@ -720,7 +728,7 @@ bool FS::save(QString fuseFolderPath)
     msg = "Save completed";
     if (G::FSLog) G::log(srcFun, msg);
 
-    return true;
+    return fusedPath;
 }
 
 bool FS::cleanup()

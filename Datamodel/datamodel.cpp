@@ -434,6 +434,8 @@ int DataModel::insert(QString fPath)
     // add the file data to datamodel
     addFileDataForRow(dmRow, insertFileInfo);
 
+    refresh();
+
     // reset loaded flags so MetaRead knows to load
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;

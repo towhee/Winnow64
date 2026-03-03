@@ -191,6 +191,7 @@ void ImageDecoder::decode(int row, int instance)
                      << "row =" << sfRow
                      << "status =" << statusText.at(status)
                      << "errMsg =" << errMsg
+                     << fPath
                 ; //*/
         }
     }
