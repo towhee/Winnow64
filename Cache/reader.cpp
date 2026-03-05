@@ -36,10 +36,18 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
 
 Reader::~Reader()
 {
-    frameDecoderthread->quit();
-    frameDecoderthread->wait();
-    tiffThumbDecoderThread->quit();
-    tiffThumbDecoderThread->wait();
+    if (frameDecoderthread) {
+        frameDecoderthread->quit();
+        frameDecoderthread->wait();
+        delete frameDecoder;
+        delete frameDecoderthread;
+    }
+    if (tiffThumbDecoderThread) {
+        tiffThumbDecoderThread->quit();
+        tiffThumbDecoderThread->wait();
+        delete tiffThumbDecoder;
+        delete tiffThumbDecoderThread;
+    }
 }
 
 void Reader::stop()
@@ -71,6 +79,9 @@ void Reader::abortProcessing()
     // qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
 
     thumb->abortProcessing();
+    if (frameDecoder) {
+        QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
+    }
 
     // Tell worker to stop accepting new work
     QMutexLocker lock(&mutex);
@@ -207,7 +218,7 @@ void Reader::readIcon()
     // video
     if (isVideo) {
         if (G::renderVideoThumb) {
-            // /*
+            /*
             qDebug() << "Reader::readIcon"
                      << fPath
                      << " instance =" << instance

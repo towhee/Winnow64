@@ -328,7 +328,7 @@ void MW::createMetaRead()
     connect(metaRead, &MetaRead::okToSelect, sel, &Selection::okToSelect);
 
     // selectCurrentIndex from MetaRead
-    connect(metaRead, &MetaRead::select, sel, &Selection::setCurrentIndex);
+    connect(metaRead, &MetaRead::select, sel, &Selection::setCurrentIndex, Qt::QueuedConnection);
 
     // MetaRead thread abort (when MW::stop)
     connect(this, &MW::abortMetaRead, metaRead, &MetaRead::abortProcessing);
@@ -340,7 +340,7 @@ void MW::createMetaRead()
     connect(metaRead, &MetaRead::done, this, &MW::folderChangeCompleted);
 
     // Signal to change selection, fileSelectionChange, update ImageCache
-    connect(metaRead, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
+    connect(metaRead, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange, Qt::QueuedConnection);
 
     // update statusbar metadata active light
     connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);

@@ -36,8 +36,12 @@ Thumb::Thumb(DataModel *dm)
 
 Thumb::~Thumb()
 {
-    frameDecoderthread->quit();
-    frameDecoderthread->wait();
+    if (frameDecoderthread) {
+        frameDecoderthread->quit();
+        frameDecoderthread->wait();
+        delete frameDecoder;
+        delete frameDecoderthread;
+    }
 }
 
 void Thumb::abortProcessing()
@@ -47,7 +51,9 @@ void Thumb::abortProcessing()
     {
         qDebug() << fun;
     }
-    if (frameDecoder) frameDecoder->stop();
+    if (frameDecoder) {
+        QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
+    }
 
     // Now wait until idle or timeout
     QDeadlineTimer deadline(500);

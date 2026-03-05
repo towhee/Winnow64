@@ -225,8 +225,7 @@ bool VideoView::event(QEvent *event)
         emit mouseSideKeyPress(direction);
         return true;
     }
-    QWidget::event(event);
-    return true;
+    return QWidget::event(event);
 }
 
 void VideoView::relayDrop(QString fPath)

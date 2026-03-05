@@ -117,39 +117,6 @@ bool MOV::findAtom(QFile &file, const char *targetAtomType, quint32 &atomSize, q
 }
 
 QDateTime MOV::createDate(const QString &filePath) {
-    // QFile file(filePath);
-    // if (!file.open(QIODevice::ReadOnly)) {
-    //     qWarning() << "Failed to open file" << filePath;
-    //     return QDateTime();
-    // }
-
-    // quint32 moovSize;
-
-    // if (!findAtom(file, "moov", moovSize)) {
-    //     qWarning() << "moov atom not found!";
-    //     return QDateTime();
-    // }
-
-    // // Look for mvhd atom inside moov
-    // quint32 mvhdSize;
-    // if (!findAtom(file, "mvhd", mvhdSize)) {
-    //     qWarning() << "mvhd atom not found!";
-    //     return QDateTime();
-    // }
-
-    // // Seek to creation time (offset 12 bytes from start of mvhd atom)
-    // file.seek(file.pos() + 4);
-    // // file.seek(file.pos() + 12);
-    // quint32 creationTime = readUInt32(file);
-
-    // // Convert to QDateTime
-    // QDateTime baseDate(QDate(1904, 1, 1), QTime(0, 0), Qt::UTC);
-    // QDateTime createDate = baseDate.addSecs(creationTime);
-
-    // // qDebug() << "Mov::extractCreateDate" << createDate;
-
-    // return createDate;
-
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "Failed to open file" << filePath;

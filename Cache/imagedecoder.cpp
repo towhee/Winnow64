@@ -40,7 +40,7 @@ ImageDecoder::ImageDecoder(int id,
     isDebug = false;
     isLog = false;
 
-    connect(this, &ImageDecoder::setValSf, dm, &DataModel::setValSf);
+    connect(this, &ImageDecoder::setValSf, dm, &DataModel::setValSf, Qt::QueuedConnection);
 }
 
 ImageDecoder::~ImageDecoder()
@@ -117,6 +117,9 @@ bool ImageDecoder::isRunning() const
 void ImageDecoder::decode(int row, int instance)
 {
     abort = false;
+
+    // check if proxy model is suspended during filtering changes
+    if (dm->sf->isSuspended()) return;
 
     // range check
     if (row >= dm->sf->rowCount()) return;

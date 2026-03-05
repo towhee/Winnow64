@@ -85,7 +85,7 @@ VideoWidget::PlayState VideoWidget::playOrPause()
     return PlayState::Unavailable;
 }
 
-void::VideoWidget::firstFrame(QPixmap &pm)
+void VideoWidget::firstFrame(QPixmap &pm)
 {
     if (G::isLogger || isDebug) qDebug() << "VideoWidget::firstFrame";
 //    this->

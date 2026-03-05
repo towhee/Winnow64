@@ -155,6 +155,8 @@ ImageCache::ImageCache(QObject *parent,
 
         decoder->moveToThread(thread);
         connect(decoder, &ImageDecoder::done, this, &ImageCache::fillCache);
+        connect(thread, &QThread::finished, decoder, &QObject::deleteLater);
+        connect(thread, &QThread::finished, thread, &QObject::deleteLater);
         // connect(this, &ImageCache::decode, decoder, &ImageDecoder::decode);
 
         thread->start();
