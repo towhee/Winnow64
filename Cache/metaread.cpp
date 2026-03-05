@@ -295,19 +295,19 @@ void MetaRead::setIdle()
 
 void MetaRead::setBusy()
 {
-    // QMutexLocker lock(&mutex);
+    // QMutexLocker lock(&mutex); //
     idle = false;
 }
 
 bool MetaRead::isIdle()
 {
-    // QMutexLocker lock(&mutex);
+    // QMutexLocker lock(&mutex); //
     return idle;
 }
 
 bool MetaRead::isBusy()
 {
-    // QMutexLocker lock(&mutex);
+    // QMutexLocker lock(&mutex); //
     return !idle;
 }
 

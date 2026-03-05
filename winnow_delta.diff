@@ -1,0 +1,1292 @@
+diff --git a/Cache/framedecoder.cpp b/Cache/framedecoder.cpp
+index 6395d658..f5450aae 100644
+--- a/Cache/framedecoder.cpp
++++ b/Cache/framedecoder.cpp
+@@ -270,6 +270,7 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
+ void FrameDecoder::cleanupPlayer()
+ {
+     if (mediaPlayer) {
++        mediaPlayer->setVideoOutput(nullptr); // Detach sink to prevent AVFoundation SIGSEGV
+         mediaPlayer->stop();
+         mediaPlayer->deleteLater();
+         mediaPlayer = nullptr;
+diff --git a/Cache/imagecache.cpp b/Cache/imagecache.cpp
+index c28a8a9d..01b24c84 100755
+--- a/Cache/imagecache.cpp
++++ b/Cache/imagecache.cpp
+@@ -155,6 +155,8 @@ ImageCache::ImageCache(QObject *parent,
+ 
+         decoder->moveToThread(thread);
+         connect(decoder, &ImageDecoder::done, this, &ImageCache::fillCache);
++        connect(thread, &QThread::finished, decoder, &QObject::deleteLater);
++        connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+         // connect(this, &ImageCache::decode, decoder, &ImageDecoder::decode);
+ 
+         thread->start();
+@@ -746,6 +748,13 @@ void ImageCache::setTargetRange(int key)
+             return;
+         }
+ 
++        // Invalid image: mark cached; do not count toward sumMB.  This prevents
++        // endless looping in fillCache.
++        if (dm->valueSf(pos, G::DecoderReturnStatusColumn).toInt() == ImageDecoder::Status::Invalid) {
++            emit setCached(pos, true, instance);
++            return;
++        }
++
+         const QString fPath = dm->valueSf(pos, 0, G::PathRole).toString();
+         imgMB = dm->sf->index(pos, G::CacheSizeColumn).data().toFloat();
+         sumMB += imgMB;
+@@ -1705,20 +1714,23 @@ void ImageCache::setShowCacheStatus(bool isShowCacheStatus)
+ void ImageCache::filterChange(QString currentImageFullPath, QString src)
+ {
+ /*
+-    When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
+-    rebuilt for the filtered dataset and isCached updated, the current image is set, and any
+-    surplus cached images (not in the filtered dataset) are removed from imCache.
+-    The image cache is now ready to run by calling setCachePosition().
++    When the datamodel is filtered the image cache needs to be updated. The current
++    image is set and setCachePosition() is called.
+ */
+     QString fun = "ImageCache::filterChange";
+-    // if (debugLog || G::isLogger || G::isFlowLogger)
+-        G::log("filterChange", "src = " + src);
++    if (debugLog || G::isLogger || G::isFlowLogger)
++        log("filterChange", "src = " + src);
+     if (debugCaching)
+     {
+         qDebug().noquote()
+             << fun.leftJustified(col0Width, ' ')
+             << "dm->sf->rowCount() =" << dm->sf->rowCount()
++            << "icd->imCache.count() =" << icd->imCache.count()
+             << "currentImageFullPath =" << currentImageFullPath
++            << "dm->fPathRowContains =" << dm->fPathRowContains(currentImageFullPath)
++            << "currentImageFullPath =" << currentImageFullPath
++            << "dm->proxyRowFromPath(currentImageFullPath, fun) ="
++            << dm->proxyRowFromPath(currentImageFullPath, fun)
+             ;
+     }
+     if (dm->sf->rowCount() == 0) return;
+@@ -1729,12 +1741,6 @@ void ImageCache::filterChange(QString currentImageFullPath, QString src)
+     // update instance
+     instance = dm->instance;
+ 
+-    // reset the image cache
+-    icd->clear();
+-    toCache.clear();
+-    toCacheStatus.clear();
+-    updateStatus(StatusAction::Clear, "filterChange");
+-
+     setCurrentPosition(currentImageFullPath, fun);
+ }
+ 
+@@ -1814,8 +1820,10 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
+ 
+     currRow = dm->proxyRowFromPath(fPath, fun);
+ 
+-    if (debugLog || G::isLogger || G::isFlowLogger)
+-        log("setCurrentPosition", "row = " + QString::number(currRow));
++    if (debugLog || G::isLogger || G::isFlowLogger) {
++        QString msg = "row = " + QString::number(currRow) + " " + fPath;
++        log("setCurrentPosition", msg);
++    }
+     if (debugCaching)
+     {
+         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
+@@ -1877,6 +1885,20 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
+         }
+     }
+ 
++    // prior attempt to decode failed
++    QString decoderReturnStatus = dm->sf->index(sfRow, G::DecoderReturnStatusColumn).data().toString();
++    QStringList failures {
++         "Undefined",
++         "Invalid",
++         "Failed",
++         "Video",
++         "InstanceClash",
++         "NoDir",
++         "BlankFilePath",
++         "NoMetadata",
++    };
++    if (failures.contains(decoderReturnStatus)) return false;
++
+     // make sure metadata has been loaded
+     // if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
+     if (!dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool()) {
+@@ -2447,12 +2469,12 @@ void ImageCache::launchDecoders(QString src)
+ void ImageCache::dispatch()
+ {
+ /*
+-    Called by a new file selection, cache size change, sort, filter or color manage change.
+-    The cache status is updated (current key, direction of travel, priorities and the target
+-    range) by calling fillCache with a decoder id = -1. Then each ready decoder is sent to
+-    fillCache. Decoders are assigned image files, which they decode into QImages, and then
+-    added to imCache. More details are available in the fillCache comments and at the top of
+-    this class.
++    Called by a new file selection, cache size change, sort, filter or color manage
++    change. The cache status is updated (current key, direction of travel,
++    priorities and the target range) by calling fillCache with a decoder id = -1.
++    Then each ready decoder is sent to fillCache. Decoders are assigned image files,
++    which they decode into QImages, and then added to imCache. More details are
++    available in the fillCache comments and at the top of this class.
+ */
+     if (debugCaching || G::isLogger || G::isFlowLogger)
+         log("dispatch", "row = " + QVariant(currRow).toString());
+diff --git a/Cache/imagedecoder.cpp b/Cache/imagedecoder.cpp
+index 43d35cfa..c51e9b23 100644
+--- a/Cache/imagedecoder.cpp
++++ b/Cache/imagedecoder.cpp
+@@ -40,7 +40,7 @@ ImageDecoder::ImageDecoder(int id,
+     isDebug = false;
+     isLog = false;
+ 
+-    connect(this, &ImageDecoder::setValSf, dm, &DataModel::setValSf);
++    connect(this, &ImageDecoder::setValSf, dm, &DataModel::setValSf, Qt::QueuedConnection);
+ }
+ 
+ ImageDecoder::~ImageDecoder()
+@@ -118,6 +118,9 @@ void ImageDecoder::decode(int row, int instance)
+ {
+     abort = false;
+ 
++    // check if proxy model is suspended during filtering changes
++    if (dm->sf->isSuspended()) return;
++
+     // range check
+     if (row >= dm->sf->rowCount()) return;
+ 
+@@ -191,6 +194,7 @@ void ImageDecoder::decode(int row, int instance)
+                      << "row =" << sfRow
+                      << "status =" << statusText.at(status)
+                      << "errMsg =" << errMsg
++                     << fPath
+                 ; //*/
+         }
+     }
+diff --git a/Cache/metaread.cpp b/Cache/metaread.cpp
+index b12e2aca..c729eec9 100644
+--- a/Cache/metaread.cpp
++++ b/Cache/metaread.cpp
+@@ -93,6 +93,8 @@ MetaRead::MetaRead(QObject *parent,
+         reader->readerThread = thread;
+         reader->moveToThread(thread);
+         connect(reader, &Reader::done, this, &MetaRead::dispatch);
++        connect(thread, &QThread::finished, reader, &QObject::deleteLater);
++        connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+         thread->start();
+         readers.append(reader);
+         readerThreads.append(thread);
+@@ -154,7 +156,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
+             ;
+     }
+ 
+-    QMutexLocker locker(&mutex);
++    // QMutexLocker locker(&mutex);  // freeze when FocusStack has just run
+ 
+     // reset
+     abort = false;
+@@ -293,19 +295,19 @@ void MetaRead::setIdle()
+ 
+ void MetaRead::setBusy()
+ {
+-    QMutexLocker lock(&mutex);
++    // QMutexLocker lock(&mutex);
+     idle = false;
+ }
+ 
+ bool MetaRead::isIdle()
+ {
+-    QMutexLocker lock(&mutex);
++    // QMutexLocker lock(&mutex);
+     return idle;
+ }
+ 
+ bool MetaRead::isBusy()
+ {
+-    QMutexLocker lock(&mutex);
++    // QMutexLocker lock(&mutex);
+     return !idle;
+ }
+ 
+@@ -830,7 +832,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
+ 
+     // report progress in statusbar and top of filter dock
+     if (showProgressInStatusbar && !G::allMetadataLoaded) {
+-        emit updateProgressInStatusbar(dmRow, dm->rowCount());
++        emit updateProgressInStatusbar(dmRow, dm->rowCount(), darkRed);
+         int progress = 1.0 * metaReadCount / dm->rowCount() * 100;
+         emit updateProgressInFilter(progress);
+     }
+@@ -921,7 +923,7 @@ void MetaRead::dispatch(int id, bool isReturning)
+     r = readers[id];
+     // r->pending = false;
+ 
+-    if (abort) {
++    if (abort || dm->sf->isSuspended()) {
+         r->status = Reader::Status::Ready;
+         return;
+     }
+diff --git a/Cache/metaread.h b/Cache/metaread.h
+index e402bec7..ab5adb22 100644
+--- a/Cache/metaread.h
++++ b/Cache/metaread.h
+@@ -31,7 +31,6 @@ public:
+ 
+     void stop();
+     void stopReaders();
+-    void abortProcessing();
+     void syncInstance();
+     QString reportMetaCache();
+     // void cleanupIcons();
+@@ -57,7 +56,8 @@ signals:
+     void okToSelect(bool ok);
+     void select(QModelIndex sfIdx, bool clearSelection);
+     void updateProgressInFilter(int progress);
+-    void updateProgressInStatusbar(int progress, int total);
++    void updateProgressInStatusbar(int progress, int total, QColor);
++    // void updateProgressInStatusbar(int progress, int total, QColor darkRed);
+ 
+     void setValSf(int sfRow, int sfCol, QVariant value,
+                   int instance, QString src = "",
+@@ -78,6 +78,7 @@ public slots:
+     void dispatch(int id, bool isReturning);
+     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
+     void dispatchFinished(QString src);
++    void abortProcessing();
+ 
+ private:
+     void read(int startRow = 0, QString src = "");// decoder
+@@ -125,6 +126,13 @@ private:
+     int redoCount = 0;
+     int redoMax = 5;
+     bool imageCacheTriggered;
++
++    // cache progress color
++    int mBrightness = 100;
++    int mr = mBrightness * 0.87;
++    int mg = mBrightness * 0.17;
++    int mb = mBrightness * 0.44;
++    QColor darkRed = QColor(mr,mg,mb);
+     
+     // bool isDispatching;
+     bool success;
+diff --git a/Cache/reader.cpp b/Cache/reader.cpp
+index 4792b2ee..a2b1d76d 100644
+--- a/Cache/reader.cpp
++++ b/Cache/reader.cpp
+@@ -36,10 +36,18 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
+ 
+ Reader::~Reader()
+ {
+-    frameDecoderthread->quit();
+-    frameDecoderthread->wait();
+-    tiffThumbDecoderThread->quit();
+-    tiffThumbDecoderThread->wait();
++    if (frameDecoderthread) {
++        frameDecoderthread->quit();
++        frameDecoderthread->wait();
++        delete frameDecoder;
++        delete frameDecoderthread;
++    }
++    if (tiffThumbDecoderThread) {
++        tiffThumbDecoderThread->quit();
++        tiffThumbDecoderThread->wait();
++        delete tiffThumbDecoder;
++        delete tiffThumbDecoderThread;
++    }
+ }
+ 
+ void Reader::stop()
+@@ -71,6 +79,9 @@ void Reader::abortProcessing()
+     // qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
+ 
+     thumb->abortProcessing();
++    if (frameDecoder) {
++        QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
++    }
+ 
+     // Tell worker to stop accepting new work
+     QMutexLocker lock(&mutex);
+@@ -207,7 +218,7 @@ void Reader::readIcon()
+     // video
+     if (isVideo) {
+         if (G::renderVideoThumb) {
+-            // /*
++            /*
+             qDebug() << "Reader::readIcon"
+                      << fPath
+                      << " instance =" << instance
+diff --git a/Datamodel/buildfilters.cpp b/Datamodel/buildfilters.cpp
+index fb68c537..4bf24311 100644
+--- a/Datamodel/buildfilters.cpp
++++ b/Datamodel/buildfilters.cpp
+@@ -181,14 +181,9 @@ bool BuildFilters::isBusy()
+ void BuildFilters::rebuild()
+ {
+     if (G::isLogger || G::isFlowLogger)
+-        G::log("BuildFilters::build");
+-    filters->filtersBuilt = false;
+-    filters->save();
++        G::log("BuildFilters::rebuild");
+     reset(false);
+-    dm->sf->suspend(false, "MW::filterChange");
+-    dm->sf->filterChange("MW::filterChange");
+     build();
+-    filters->restore();
+ }
+ 
+ void BuildFilters::build(AfterAction newAction)
+@@ -274,7 +269,7 @@ void BuildFilters::update()
+                ;
+     abortProcessing();
+     if (filters->filtersBuilt) {
+-        action = Action::Update;
++        action = Action::UpdateCounts;
+         if (G::allMetadataLoaded) start(NormalPriority);
+     }
+     else build();
+@@ -390,16 +385,16 @@ void BuildFilters::updateUnfilteredSearchCount()
+ void BuildFilters::updateUnfilteredCounts()
+ {
+ /*
+-    Update the DataModel item counts in Filters.  A QMap is used to count all the unique
+-    items for each DataModel column that can be filtered and updates the unique item counts by
+-    calling filters->addFilteredCountPerItem.
++    Update the DataModel item counts in Filters. A QMap is used to count all the
++    unique items for each DataModel column that can be filtered and updates the
++    unique item counts by calling filters->addFilteredCountPerItem.
+ 
+     This is used when images are deleted from a filtered dataset.
+ */
+     if (debugBuildFilters)
+     {
+         qDebug()
+-            << "BuildFilters::countMapFiltered"
++            << "BuildFilters::updateUnfilteredCounts"
+             ;
+     }
+ 
+@@ -555,7 +550,6 @@ void BuildFilters::updateFilteredCounts()
+     filters->updateFilteredCountPerItem(map, filters->picks);
+     map.clear();
+ 
+-    qDebug() << "BuildFilters::updateFilteredCounts 1";
+     for (int row = 0; row < rows; row++) {
+         if (abort) return;
+         map[dm->sf->index(row, G::RatingColumn).data().toString().trimmed()]++;
+@@ -657,7 +651,6 @@ void BuildFilters::updateFilteredCounts()
+ 
+     filters->update();
+ 
+-    qDebug() << "BuildFilters::updateFilterCounts emit updateFilterMenu";
+     emit updateFilterMenu("BuildFilters::updateFilterCounts");
+ }
+ 
+@@ -1017,7 +1010,7 @@ void BuildFilters::run()
+     case Action::Reset:
+         if (!abort) appendUniqueItems();
+         [[fallthrough]]; // deliberate fall-through
+-    case Action::Update:
++    case Action::UpdateCounts:
+         if (!abort) {
+             updateFilteredCounts();
+             updateUnfilteredSearchCount();
+diff --git a/Datamodel/buildfilters.h b/Datamodel/buildfilters.h
+index ae5ef395..eebe6176 100644
+--- a/Datamodel/buildfilters.h
++++ b/Datamodel/buildfilters.h
+@@ -18,7 +18,7 @@ public:
+ 
+     enum Action {
+         Reset,
+-        Update,
++        UpdateCounts,
+         UpdateCategory
+     } action;
+ 
+diff --git a/Datamodel/datamodel.cpp b/Datamodel/datamodel.cpp
+index d88d283a..f6f3a57e 100644
+--- a/Datamodel/datamodel.cpp
++++ b/Datamodel/datamodel.cpp
+@@ -173,6 +173,9 @@ DataModel::DataModel(QObject *parent,
+ 
+     sf = new SortFilter(this, filters, combineRawJpg);
+     sf->setSourceModel(this);
++    sf->setDynamicSortFilter(true);
++    sf->setSortCaseSensitivity(Qt::CaseInsensitive);
++    sf->setFilterCaseSensitivity(Qt::CaseInsensitive);
+     selectionModel = new QItemSelectionModel(sf);
+ 
+      // eligible image file types
+@@ -431,6 +434,8 @@ int DataModel::insert(QString fPath)
+     // add the file data to datamodel
+     addFileDataForRow(dmRow, insertFileInfo);
+ 
++    refresh();
++
+     // reset loaded flags so MetaRead knows to load
+     G::allMetadataLoaded = false;
+     G::iconChunkLoaded = false;
+@@ -447,15 +452,16 @@ void DataModel::remove(QString fPath)
+     if (isDebug)
+         qDebug() << "DataModel::remove" << "instance =" << instance << fPath;
+ 
+-    // do not use a mutex here  rgh 2025-04-10
++    // do not use a mutex here because functions called from here
++    // use a mutex ie removeRow, fPathRowRemove    rgh 2025-04-10
+ 
+     // remove row from datamodel
+     int row;
+     for (row = 0; row < rowCount(); ++row) {
+         QString rowPath = index(row, 0).data(G::PathRole).toString();
+         if (rowPath == fPath) {
+-            QModelIndex par = QModelIndex();
+             removeRow(row);
++            fPathRowRemove(fPath);
+             break;
+         }
+     }
+@@ -464,7 +470,7 @@ void DataModel::remove(QString fPath)
+     rebuildRowFromPathHash();
+ 
+     // update current index
+-    int last = sf->rowCount() - 1;;
++    int last = sf->rowCount() - 1;
+     currentSfRow <= last ? row = currentSfRow : row = last;
+     QModelIndex sfIdx = sf->index(row,0);
+     setCurrentSF(sfIdx, instance);
+@@ -523,6 +529,7 @@ void DataModel::enqueueFolderSelection(const QString& folderPath,
+     op = Add or Delete images in folderPath from datamodel
+     recurse = recurse all subfolders of folderPath
+ */
++    QString fun = "DataModel::enqueueFolderSelection";
+ 
+     if (recurse) {
+         // Only iterate directories; skip "." and ".."
+@@ -641,7 +648,7 @@ void DataModel::addFolder(const QString &folderPath)
+     step += folderPath + "<br>";
+     QString escapeClause = "Press \"Esc\" to stop.";
+     emit centralMsg(step + escapeClause);
+-    qApp->processEvents();
++    // qApp->processEvents();
+ 
+     // test if raw file to match jpg when same file names and one is a jpg
+     QString prevRawSuffix = "";
+@@ -750,139 +757,6 @@ void DataModel::addFolder(const QString &folderPath)
+     }
+ }
+ 
+-/*
+-void DataModel::addFolder(const QString& folderPath)
+-{
+-    // All model mutations must happen on GUI thread.
+-    Q_ASSERT(thread() == QThread::currentThread());
+-
+-    abort = false;                 // consider std::atomic_bool if other threads can set it
+-    loadingModel = true;
+-
+-    // Track that this folder is active
+-    folderList.append(folderPath);
+-
+-    // 1) Build file list (no sorting by QDir; we’ll sort ourselves)
+-    QDir dir(folderPath);
+-    dir.setNameFilters(*fileFilters);                  // assumed already set
+-    dir.setFilter(QDir::Files | QDir::Readable | QDir::Hidden);
+-    dir.setSorting(QDir::NoSort);
+-    QList<QFileInfo> files = dir.entryInfoList();
+-
+-    // 2) Sort as required
+-    if (combineRawJpg) {
+-        std::sort(files.begin(), files.end(), lessThanCombineRawJpg);
+-    } else {
+-        std::sort(files.begin(), files.end(), lessThan);
+-    }
+-
+-    // 3) Filter out zero-size and already-present, and prepare pairing
+-    QVector<QFileInfo> toInsert;
+-    toInsert.reserve(files.size());
+-
+-    // O(1) presence check
+-    auto hasPath = [&](const QString& p) {
+-        // Prefer a QHash<QString,int> pathToRow; fall back to your current function.
+-        return fPathRowContains(p);
+-    };
+-
+-    for (const QFileInfo& fi : files) {
+-        if (abort) { loadingModel = false; return; }   // clean abort
+-        if (fi.size() == 0) continue;
+-        if (hasPath(fi.filePath())) continue;
+-        toInsert.push_back(fi);
+-    }
+-    if (toInsert.isEmpty()) {
+-        // Nothing new; possibly finish overall load if queue empty
+-        if (folderQueue.isEmpty()) endLoad(true);
+-        return;
+-    }
+-
+-    // 4) Batch insert rows
+-    const int firstRow = rowCount();
+-    const int lastRow  = firstRow + toInsert.size() - 1;
+-
+-    if (columnCount() == 0) setColumnCount(G::TotalColumns);
+-    beginInsertRows(QModelIndex(), firstRow, lastRow);
+-    // Ensure your internal storage grows here if you keep custom vectors
+-    setRowCount(rowCount() + toInsert.size());
+-    endInsertRows();
+-
+-    // 5) Fill data for inserted rows (no signals storming if your setData emits dataChanged;
+-    //    consider a final dataChanged over the inserted block if needed)
+-    //    Build a RAW index for pairing: baseName -> row index of RAW
+-    QHash<QString, int> rawRowByBase;
+-
+-    const auto isJpg = [](const QString& s) {
+-        const QString t = s.toLower();
+-        return (t == "jpg" || t == "jpeg");
+-    };
+-
+-    int row = firstRow;
+-    int progressCounter = 0;
+-    constexpr int kProgressInterval = 100;
+-
+-    for (const QFileInfo& fi : toInsert) {
+-        if (abort) { loadingModel = false; return; }   // clean abort
+-
+-        addFileDataForRow(row, fi);                    // your existing filler
+-        // Ensure PathRole, TypeColumn, etc. are set in addFileDataForRow
+-
+-        const QString suffix   = fi.suffix().toLower();
+-        const QString baseName = fi.completeBaseName();
+-
+-        // Pair RAW/JPG regardless of order
+-        if (!isJpg(suffix)) {
+-            // Candidate RAW; remember it for a possible JPG
+-            rawRowByBase.insert(baseName, row);
+-        } else {
+-            // JPG; see if we already saw a RAW with this base name
+-            if (int rawRow = rawRowByBase.value(baseName, -1); rawRow >= 0) {
+-                // Mark duplicate roles on both rows
+-                const QModelIndex jpgIdx = index(row, 0);
+-                const QModelIndex rawIdx = index(rawRow, 0);
+-
+-                setData(rawIdx, true,                     G::DupHideRawRole);
+-                setData(rawIdx, jpgIdx,                   G::DupOtherIdxRole);
+-                setData(jpgIdx, rawIdx,                   G::DupOtherIdxRole);
+-                setData(jpgIdx, true,                     G::DupIsJpgRole);
+-                setData(jpgIdx, fi.suffix().toUpper(),    G::DupRawTypeRole);
+-
+-                if (combineRawJpg)
+-                    setData(index(row, G::TypeColumn),     "JPG+" + fi.suffix().toUpper());
+-                else
+-                    setData(index(row, G::TypeColumn),     "JPG");
+-            } else {
+-                // JPG appeared before RAW; remember JPG position to link later if you want
+-                // (optional: keep a jpgRowByBase and reconcile when RAW shows up)
+-            }
+-        }
+-
+-        if (++progressCounter % kProgressInterval == 0) {
+-            updateLoadStatus(row + 1); // show progress using current count
+-        }
+-
+-        ++row;
+-    }
+-
+-    // 6) Initialize selection on the first added folder if this is the first batch
+-    if (firstRow == 0 && row > 0) {
+-        firstFolderPathWithImages = folderPath;
+-        setCurrent(index(0, 0), instance);
+-    }
+-
+-    // 7) Adjust icon chunking policy
+-    if (rowCount() > hugeIconThreshold) {
+-        iconChunkSize = 100;
+-    }
+-
+-    // 8) Finish a “load session” when folder queue is empty
+-    if (folderQueue.isEmpty()) {
+-        endLoad(true);
+-    }
+-}
+-//*/
+-
+ void DataModel::removeFolder(const QString &folderPath)
+ {
+     QString fun = "DataModel::removeFolder";
+@@ -916,21 +790,26 @@ void DataModel::removeFolder(const QString &folderPath)
+ 
+ void DataModel::refresh()
+ {
++/*
++    The images in the datamodel are compared to the files in the source folders and
++    the datamodel is updated to match where there are differences (additions,
++    removals or modifications).
++*/
+     if (G::isLogger) G::log("DataModel::refresh");
++    qDebug() << "DataModel::refresh";
+ 
+     QStringList added;
+     QStringList removed;
+     QStringList modified;
+-    qDebug() << "DataModel::refresh instance =" << instance;
+ 
+     if (!sourceModified(added, removed, modified)) {
+-        qDebug() << "DataModel::refresh source was not modified";
++        qDebug() << "DataModel::refresh nothing modified";
+         return;
+     }
+ 
+     // additions
+     for (const QString &fPath : added) {
+-        qDebug() << "DataModel::refresh add" << fPath;
++        qDebug() << "DataModel::refresh additions";
+         insert(fPath);
+     }
+ 
+@@ -947,9 +826,6 @@ void DataModel::refresh()
+         setData(index(row, G::MetadataAttemptedColumn), false);
+         setData(index(row, G::IconLoadedColumn), false);
+     }
+-
+-    // qDebug() << "DataModel::refresh call newInstance";
+-    // newInstance();
+ }
+ 
+ QString DataModel::primaryFolderPath()
+@@ -2013,6 +1889,7 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
+     if (instance != this->instance) {
+         errMsg = "Instance clash from " + src;
+         G::issue("Comment", errMsg, "DataModel::setValueSF", sfRow);
++        qWarning() << errMsg;
+         return ;
+     }
+ 
+@@ -2021,6 +1898,7 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
+     if (!sfIdx.isValid()) {
+         errMsg = "Invalid sfIdx.  Src: " + src;
+         G::issue("Warning", errMsg, "DataModel::setValueSF", sfRow);
++        qWarning() << errMsg;
+         return;
+     }
+ 
+@@ -2028,12 +1906,17 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
+     sf->setData(sfIdx, align, Qt::TextAlignmentRole);
+ }
+ 
+-void DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
++bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
+ {
++    if (!sfIdx.isValid()) {
++        errMsg = "Invalid index.";
++        G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
++        return false;
++    }
+     if (instance != this->instance) {
+         errMsg = "Instance clash.";
+         G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
+-        return;
++        return false;
+     }
+ 
+     // update current index parameters
+@@ -2052,6 +1935,7 @@ void DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
+                  << "currentFilePath =" << currentFilePath
+             ;
+     }
++    return true;
+ }
+ 
+ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
+@@ -2521,7 +2405,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
+     if (!sfIdx.isValid()) {
+         errMsg = "Invalid sfIdx.  Src: " + src;
+         G::issue("Warning", errMsg, src, sfIdx.row());
+-        qDebug() << sfRow << "isCached =" << isCached << errMsg;
++        // qDebug() << sfRow << "isCached =" << isCached << errMsg;
+         return;
+     }
+     sf->setData(sfIdx, isCached);
+@@ -2650,6 +2534,7 @@ int DataModel::proxyRowFromPath(QString fPath, QString src)
+     QMutexLocker locker(&mutex);
+     int dmRow;
+     int sfRow = -1;
++    // sf->filterChange("DataModel::proxyRowFromPath");
+     if (fPathRowContains(fPath)) {
+         dmRow = fPathRowValue(fPath);
+         QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
+@@ -2695,17 +2580,19 @@ void DataModel::rebuildRowFromPathHash()
+ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QStringList &modified)
+ {
+ /*
+-    Determine if the eligible file count has changed
+-    and/or any images have been modified. If a file has been modified since the datamodel
+-    was loaded then it is added to the modifiedFiles list.
++    Determine if the eligible file count has changed and/or any images have been
++    modified. If a file has been modified since the datamodel was loaded then it is
++    added to the modifiedFiles list.
+ 
+     Called from MW::refreshDataModel.
+ */
+     if (G::isLogger) G::log("DataModel::sourceModified");
+-    if (isDebug)
++    // if (isDebug)
++    {
+         qDebug() << "DataModel::sourceModified"
+                  << "instance =" << instance
+                  << folderList;
++    }
+ 
+     bool hasChanged = false;
+     QStringList srcImageFiles;
+@@ -2722,6 +2609,7 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
+             srcImageFiles << fPath;
+             // in datamodel?
+             if (!fPathRowContains(fPath)) {
++                qDebug() << "DataModel::sourceModified added" << fPath;
+                 added << fPath;
+             }
+         }
+@@ -2731,6 +2619,7 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
+     for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i) {
+         QString fPath = i.key();
+         if (!srcImageFiles.contains(fPath)) {
++            qDebug() << "DataModel::sourceModified removed" << fPath;
+             removed << fPath;
+         }
+     }
+@@ -2744,6 +2633,7 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
+         QDateTime t2 = info.lastModified();
+         // many file formats to not include ms in datetime
+         if (t1.msecsTo(t2) > 1000) {
++            qDebug() << "DataModel::sourceModified modified" << fPath;
+             modified << fPath;
+         }
+     }
+@@ -2761,7 +2651,7 @@ void DataModel::searchStringChange(QString searchString)
+     filtered and unfiltered counts.
+ */
+     if (G::isLogger) G::log("DataModel::searchStringChange");
+-    if (isDebug)
++    // if (isDebug)
+          qDebug() << "DataModel::searchStringChange" << "instance =" << instance
+                   << "searchString =" << searchString;
+     // update datamodel search string match
+@@ -3219,19 +3109,19 @@ QString DataModel::diagnostics()
+     rpt << "\n";
+     rpt << "\n" << G::sj("abort", dots) << G::s(abort);
+     rpt << "\n" << G::sj("instance", dots) << G::s(instance);
++    rpt << "\n";
+     rpt << "\n" << G::sj("primaryFolderPath", dots) << G::s(primaryFolderPath());
+     rpt << "\n" << G::sj("firstFolderPathWithImages", dots) << G::s(firstFolderPathWithImages);
++    rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
++    rpt << "\n";
++    rpt << "\n" << G::sj("combineRawJpg", dots) << G::s(combineRawJpg);
+     rpt << "\n";
+     rpt << "\n" << G::sj("dmRowCount", dots) << G::s(rowCount());
+     rpt << "\n" << G::sj("sfRowCount", dots) << G::s(sf->rowCount());
+     rpt << "\n";
+-    rpt << "\n" << G::sj("combineRawJpg", dots) << G::s(combineRawJpg);
+-    rpt << "\n";
+-    rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
+-    rpt << "\n" << G::sj("countInterval", dots) << G::s(countInterval);
+     rpt << "\n" << G::sj("currentDMRow", dots) << G::s(currentDmRow);
+-    rpt << "\n";
+     rpt << "\n" << G::sj("currentSFRow", dots) << G::s(currentSfRow);
++    rpt << "\n";
+     rpt << "\n" << G::sj("firstVisibleIcon", dots) << G::s(firstVisibleIcon);
+     rpt << "\n" << G::sj("lastVisibleIcon", dots) << G::s(lastVisibleIcon);
+     rpt << "\n" << G::sj("startIconRange", dots) << G::s(startIconRange);
+@@ -3279,6 +3169,19 @@ QString DataModel::diagnostics()
+         rpt << iStr << "  " << rowMap[i]<< "\n";
+     }
+ 
++    rpt << "\n";
++
++    // list sort field in order
++    int sortColumn = G::NameColumn;
++    rpt << "DataModel Proxy for sort column " + G::s(sortColumn) + ":\n";
++    for (int sfRow = 0; sfRow < sf->rowCount(); sfRow++) {
++        rpt << G::s(sfRow).rightJustified(5) << "  ";
++        // rpt << QVariant(sfRow).toString().rightJustified(5);
++        rpt << G::s(index(sfRow, sortColumn).data());
++        rpt << "\n";
++    }
++
++
+     return reportString;
+ }
+ 
+@@ -3452,6 +3355,7 @@ SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
+     finished(true), suspendFiltering(false)
+ {
+     if (G::isLogger) G::log("SortFilter::SortFilter");
++    // qDebug() << "SortFilter::SortFilter";
+     this->filters = filters;
+ }
+ 
+@@ -3644,7 +3548,7 @@ void SortFilter::suspend(bool suspendFiltering, QString src)
+     When false the filtering is refreshed.
+ */
+     QString msg = "suspendFiltering = " + QVariant(suspendFiltering).toString() +
+-              " src = " + src;
++                  " src = " + src;
+     if (G::isLogger) G::log("SortFilter::suspend", msg);
+     // qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
+     this->suspendFiltering = suspendFiltering;
+diff --git a/Datamodel/datamodel.h b/Datamodel/datamodel.h
+index b3b23653..5ce069fc 100644
+--- a/Datamodel/datamodel.h
++++ b/Datamodel/datamodel.h
+@@ -205,7 +205,7 @@ public slots:
+     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
+     void setCurrent(QModelIndex dmIdx, int instance);
+     void setCurrent(QString fPath, int instance);
+-    void setCurrentSF(QModelIndex sfIdx, int instance);
++    bool setCurrentSF(QModelIndex sfIdx, int instance);
+     void setCached(int sfRow, bool isCached, int instance);
+     void issue(const QSharedPointer<Issue>& issue);
+     QStringList rptIssues(int sfRow);
+@@ -267,8 +267,6 @@ private:
+     double aspectRatio(int w, int h, int orientation);
+     void processErr(Error e);
+ 
+-    int countInterval = 0;
+-
+     bool isDebug = false;
+ 
+     int imageCacheWaitingForRow = -1;
+diff --git a/Datamodel/filters.cpp b/Datamodel/filters.cpp
+index 304e8e41..1eb76eed 100644
+--- a/Datamodel/filters.cpp
++++ b/Datamodel/filters.cpp
+@@ -537,6 +537,8 @@ void Filters::setCategoryFilterStatus(QTreeWidgetItem *item)
+         qDebug() << "Filters::setCategoryFilterStatus"
+                     ;
+ 
++    if (!item->parent()) return;
++
+     // is this category filtering after itemCheckStateHasChanged
+     if (isCatFiltering(item->parent())) {
+         item->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
+@@ -550,18 +552,11 @@ bool Filters::isPredefinedNonZeroCount(QString itemName)
+ {
+     if (G::isLogger) G::log("Filters::isPredefinedZeroCount");
+ 
+-    qDebug() << "\nFilters::isPredefinedNonZeroCount Seeking:" << itemName;
+     bool isNonZero = false;
+-
+     QList<QTreeWidgetItem*> items {picks, ratings, labels};
+     for (QTreeWidgetItem *item : items) {
+         for (int i = 0; i < item->childCount(); i++) {
+-            qDebug() << "Filters::isPredefinedNonZeroCount"
+-                     << item->text(0)
+-                     << item->child(i)->text(0)
+-                     << item->child(i)->text(2);
+             if (item->child(i)->text(0) == itemName) {
+-                return item->child(i)->text(2) != "0";
+                 if (item->child(i)->text(2) != "0") {
+                     isNonZero = true;
+                     break;
+@@ -569,8 +564,6 @@ bool Filters::isPredefinedNonZeroCount(QString itemName)
+             }
+         }
+     }
+-    // not found
+-    qDebug() << "Filters::isPredefinedNonZeroCount isNonZero:" << itemName << isNonZero;
+     return isNonZero;
+ }
+ 
+@@ -599,17 +592,18 @@ void Filters::disableAllItems(bool disable)
+     // not used
+     if (G::isLogger) G::log("Filters::disableAllItems");
+     if (debugFilters)
+-        qDebug() << "Filters::disableAllItems"
+-                    ;
+-    QMutexLocker locker(&mutex);
++    qDebug() << "Filters::disableAllItems" << disable;
++    // QMutexLocker locker(&mutex);
++    mutex.lock();
+ 
+     QTreeWidgetItemIterator it(this);
+     while (*it) {
+-        if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
+-            (*it)->setDisabled(disable);
+-         }
+-        ++it;
++        if (disable) (*it)->setForeground(0, QBrush(G::disabledColor));
++        else (*it)->setForeground(0, QBrush(G::textColor));
++         ++it;
+     }
++    mutex.unlock();
++    if (!disable) setEachCatTextColor();
+ }
+ 
+ void Filters::disableAllHeaders(bool disable)
+@@ -624,7 +618,12 @@ void Filters::disableAllHeaders(bool disable)
+     while (*it) {
+         if (!(*it)->parent()) {
+             if (disable) (*it)->setForeground(0, QBrush(G::disabledColor));
+-            else (*it)->setForeground(0, QBrush(G::textColor));
++            else {
++                if (isCatFiltering(*it))
++                    (*it)->setForeground(0, QBrush(G::disabledColor));
++                else
++                    (*it)->setForeground(0, QBrush(G::textColor));
++            }
+         }
+         ++it;
+     }
+@@ -669,9 +668,9 @@ void Filters::setEachCatTextColor()
+ /*
+     Update all categories 'is filtering' status
+ */
+-    if (G::isLogger) G::log("Filters::setCatFiltering");
++    if (G::isLogger) G::log("Filters::setEachCatTextColor");
+     if (debugFilters)
+-        qDebug() << "Filters::setCatFiltering"
++        qDebug() << "Filters::setEachCatTextColor"
+                     ;
+ 
+     QMutexLocker locker(&mutex);
+@@ -765,6 +764,19 @@ void Filters::disableEmptyCat()
+     }
+ }
+ 
++void Filters::enable() {
++    if (G::isLogger) G::log("Filters::enable");
++    setEnabled(true);
++    disableAllItems(false);
++    setEachCatTextColor();
++}
++
++void Filters::disable() {
++    if (G::isLogger) G::log("Filters::disable");
++    setEnabled(false);
++    disableAllItems(true);
++}
++
+ void Filters::invertFilters()
+ {
+     if (G::isLogger) G::log("Filters::invertFilters");
+@@ -1040,7 +1052,7 @@ void Filters::restore()
+         for (QTreeWidgetItem* child : children) {
+             if (child->text(0) == state.item) {
+                 child->setCheckState(0, Qt::Checked);
+-                // /*
++                /*
+                 qDebug().noquote() << state.parent.leftJustified(15)
+                                    << child->text(0); //*/
+                 break;
+@@ -1398,25 +1410,25 @@ void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidg
+ {
+     /*
+     All the unique values for a category are collected into a QMap object in
+-    BuildFilters. The list is passed here, where unique values are extracted and added to
+-    the category. For example, there could be multiple file types in the folder like JPG
+-    and NEF. A QMap object is used so the items can be sorted by key in the same order as
+-    the tableView. This function should only be used for dynamic categories - see
+-    createDynamicFilters;
++    BuildFilters. The list is passed here, where unique values are extracted and
++    added to the category. For example, there could be multiple file types in the
++    folder like JPG and NEF. A QMap object is used so the items can be sorted by key
++    in the same order as the tableView. This function should only be used for
++    dynamic categories - see createDynamicFilters;
+ 
+-    If a category item was just checked (activeCategory) then it is ignored, as the user
+-    may want to check another item in the same category.
++    If a category item was just checked (activeCategory) then it is ignored, as the
++    user may want to check another item in the same category.
+ */
+     //    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
+-    if (debugFilters /*|| G::isLogger || G::isFlowLogger*/)
++    if (debugFilters)
+         qDebug() << "Filters::updateUnfilteredCountPerItem"
+                  << "category =" << category->text(0)
++                 << "itemMap =" << itemMap
+             ;
+ 
+     QMutexLocker locker(&mutex);
+ 
+     for (int i = 0; i < category->childCount(); i++) {
+-        if (abort) return;
+         category->child(i)->setData(3, Qt::EditRole, 0);
+         QString key = category->child(i)->text(0);
+         if (itemMap.contains(key))
+@@ -1440,8 +1452,8 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
+     If a category item was just checked (activeCategory) then it is ignored, as the
+     user may want to check another item in the same category.
+ */
+-//    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
+-    // if (debugFilters)
++    // if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
++    if (debugFilters)
+         qDebug() << "Filters::updateFilteredCountPerItem"
+                  << "category =" << category->text(0)
+                     ;
+@@ -1452,13 +1464,10 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
+         if (G::stop) return;
+         category->child(i)->setData(2, Qt::EditRole, 0);
+         QString key = category->child(i)->text(0);
+-        qDebug() << "Filters::updateFilteredCountPerItem  key =" << key << itemMap.value(key);
+         if (itemMap.contains(key))
+             category->child(i)->setData(2, Qt::EditRole, itemMap.value(key));
+     }
+ 
+-    qDebug() << " ";
+-
+     // sort the result
+     //category->sortChildren(0, Qt::AscendingOrder);
+ }
+@@ -1688,6 +1697,9 @@ void Filters::mousePressEvent(QMouseEvent *event)
+     support solo mode.
+ */
+     if (G::isLogger) G::log("Filters::mousePressEvent");
++    if (G::mode == "Compare") {
++        G::popup->showPopup("Filters are unavailable while in Compare Mode", 3000);
++    }
+     if (buildingFilters) return;
+     QPoint p = event->pos();
+     QModelIndex idx = indexAt(p);
+@@ -1763,3 +1775,57 @@ void Filters::howThisWorks()
+     dlg->setStyleSheet(G::css);
+     dlg->exec();
+ }
++
++QString Filters::diagnostics()
++{
++    if (G::isLogger) G::log("Filters::diagnostics");
++
++    QString reportString;
++    QTextStream rpt;
++    rpt.setString(&reportString);
++    rpt << Utilities::centeredRptHdr('=', "Filters Diagnostics");
++
++    rpt << "\n\n";
++    rpt << "Filters:\n";
++    int catWidth = 30;
++    int itemWidth = 40;
++    int chkWidth = 9;
++    int countWidth = 17;
++    // column headers
++    rpt.setFieldAlignment(QTextStream::AlignLeft);
++    rpt.setFieldWidth(catWidth);
++    rpt << "Category";
++    rpt.setFieldWidth(itemWidth);
++    rpt << "Item";
++    rpt.setFieldWidth(chkWidth);
++    rpt << "Checked";
++    rpt.setFieldWidth(countWidth);
++    rpt.setFieldAlignment(QTextStream::AlignRight);
++    rpt << "Filtered Count" << "Unfiltered Count";
++    rpt << "\n";
++    rpt.reset();
++    // data
++    QTreeWidgetItemIterator it(this);
++    while (*it) {
++        if ((*it)->parent() /*&& (*it) != searchTrue*/) {
++            rpt.setFieldAlignment(QTextStream::AlignLeft);
++            rpt.setFieldWidth(catWidth);
++            rpt << (*it)->parent()->text(0);
++            rpt.setFieldWidth(itemWidth);
++            rpt << (*it)->text(0);
++            rpt.setFieldWidth(chkWidth);
++            rpt << QVariant((*it)->checkState(0) == Qt::Checked).toString();
++            rpt.setFieldAlignment(QTextStream::AlignRight);
++            rpt.setFieldWidth(countWidth);
++            rpt << (*it)->data(2, Qt::EditRole).toString();
++            rpt << (*it)->data(3, Qt::EditRole).toString();
++            rpt << "\n";
++        }
++        ++it;
++    }
++
++
++
++
++    return reportString;
++}
+diff --git a/Datamodel/filters.h b/Datamodel/filters.h
+index e580d12f..22c9b90e 100644
+--- a/Datamodel/filters.h
++++ b/Datamodel/filters.h
+@@ -78,6 +78,8 @@ public:
+     void setProgressBarStyle();
+     bool isOnlyMostRecentDayChecked();
+ 
++    QString diagnostics();
++
+     bool combineRawJpg;
+     bool buildingFilters = false;
+     bool filtersBuilt = false;
+@@ -104,6 +106,8 @@ public slots:
+     void save();
+     void restore();
+     void reportSaved();
++    void disable();
++    void enable();
+     void disableEmptyCat();
+     void invertFilters();
+     void clearAll();
+@@ -139,7 +143,6 @@ protected:
+     void paintEvent(QPaintEvent *event) override;
+     void mousePressEvent(QMouseEvent *event) override;
+     void mouseReleaseEvent(QMouseEvent *event) override;
+-//    bool eventFilter(QObject *obj, QEvent *event) override;
+ 
+ private:
+     QMutex mutex;
+diff --git a/Datamodel/selection.cpp b/Datamodel/selection.cpp
+index 57fbfd8d..9c5e8aa9 100644
+--- a/Datamodel/selection.cpp
++++ b/Datamodel/selection.cpp
+@@ -71,7 +71,7 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
+     if (dm->loadingModel) {
+         QString msg = "Collecting image files in folder(s), please wait a sec.";
+         G::popup->showPopup(msg);
+-        qApp->processEvents();
++        // qApp->processEvents();
+         return;
+ 
+     }
+@@ -129,7 +129,7 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
+     shiftExtendIndex = sfIdx;
+ }
+ 
+-void Selection::select(QString &fPath, Qt::KeyboardModifiers modifiers)
++void Selection::select(const QString &fPath, Qt::KeyboardModifiers modifiers)
+ {
+     if (G::isLogger || G::isFlowLogger || isDebug) G::log("Selection::select(QString)", fPath);
+     //qDebug() << "Selection::select QString" << fPath;
+diff --git a/Datamodel/selection.h b/Datamodel/selection.h
+index 135dbb30..0bed0e29 100644
+--- a/Datamodel/selection.h
++++ b/Datamodel/selection.h
+@@ -12,7 +12,7 @@ class Selection : public QObject
+ public:
+     Selection(QWidget *parent, DataModel *dm, IconView *thumbView,
+               IconView *gridView, TableView *tableView);
+-    void select(QString &fPath, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
++    void select(const QString &fPath, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+     void select(int sfRow, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+     void select(QModelIndex sfIdx,
+                 Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+diff --git a/Metadata/ExifTool.cpp b/Metadata/ExifTool.cpp
+index f25dcd29..8dcfb95e 100644
+--- a/Metadata/ExifTool.cpp
++++ b/Metadata/ExifTool.cpp
+@@ -3,13 +3,17 @@
+ 
+ ExifTool::ExifTool()
+ {
+-    if (G::isFileLogger) Utilities::log("ExifTool::ExifTool", exifToolPath);
++    // if (G::isFileLogger) Utilities::log("ExifTool::ExifTool", exifToolPath);
+     #ifdef Q_OS_WIN
+     exifToolPath = qApp->applicationDirPath() + "/et.exe";
+     #endif
+     #ifdef Q_OS_MAC
+-    // exifToolPath = "/usr/local/bin/exiftool";
+-    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
++    QString appPath = qApp->applicationFilePath();
++    QFileInfo fi(appPath);
++    QString macOSDir = fi.dir().path();
++    // QString contentsDir = macOSDir + "/..";
++    // exifToolPath = contentsDir + "/Resources/ExifTool/exiftool";
++    exifToolPath = macOSDir + "/exiftool_wrapper";
+     #endif
+     // confirm exifToolPath exists
+     if (!QFile(exifToolPath).exists()) {
+@@ -87,16 +91,49 @@ void ExifTool::copyICC(QString src, QString dst)
+ 
+ QString ExifTool::readTag(QString src, QString tag)
+ {
+-    // Prepare the arguments
+-    QStringList args;
+-    // args += "-T";
+-    // args += "-" + tag;            // tag
+-    // args += src;                    // src file
+-    execute(args);
+-    process.waitForFinished(1);
+-    QString output = process.readAllStandardOutput();
+-    qDebug() << "ExifTool::readTag" << output;
+-    return output; //output.trimmed();
++    // Construct -stay_open compatible ExifTool command
++    QByteArray args;
++    args += "-" + tag.toUtf8() + "\n";   // the tag, e.g. -LensModel
++    args += "-s3\n";                     // raw value only
++    args += src.toUtf8() + "\n";         // file path
++    args += "-execute\n";
++
++    // Send to ExifTool's stdin
++    process.write(args);
++    if (!process.waitForBytesWritten(30000)) {
++        qWarning() << "ExifTool::readTag write timeout";
++        return "";
++    }
++
++    // Read response until ExifTool completes this -execute block
++    // ExifTool outputs "{ready}" when done
++    QByteArray buffer;
++    QByteArray chunk;
++
++    while (true) {
++        if (!process.waitForReadyRead(30000))
++            break;
++
++        chunk = process.readAllStandardOutput();
++        buffer += chunk;
++
++        // ExifTool terminates each -execute with "{ready}\n"
++        if (buffer.contains("{ready}"))
++            break;
++    }
++
++    // Remove "{ready}" marker
++    QList<QByteArray> parts = buffer.split('\n');
++    parts.removeAll("{ready}");
++    buffer = parts.join("\n");
++
++    // Trim whitespace
++    QString result = QString::fromUtf8(buffer).trimmed();
++
++    // Debug (optional)
++    // qDebug() << "ExifTool::readTag:" << tag << "=" << result;
++
++    return result;
+ }
+ 
+ // not used
+@@ -165,6 +202,8 @@ int ExifTool::copyAll(QString src, QString dst)
+     args << src;
+     args << "-all:all";
+     args << dst;
++    args << "-overwrite_original";
++    // qDebug() << "ExifTool::copyAll" << src << dst;
+     return execute(args);
+ }
+ 
+diff --git a/Metadata/imagemetadata.h b/Metadata/imagemetadata.h
+index e42c2fea..555c5ca9 100644
+--- a/Metadata/imagemetadata.h
++++ b/Metadata/imagemetadata.h
+@@ -30,7 +30,7 @@ public:
+     bool pick = false;
+     bool ingested = false;
+     bool video = false;
+-    bool metadataReading = false;         // all metadata except thumb
++    bool metadataReading = false;           // all metadata except thumb
+     bool metadataAttempted = false;         // all metadata except thumb
+     bool metadataLoaded = false;            // all metadata except thumb
+     bool isEmbeddedThumbMissing = true;
+diff --git a/Metadata/metadata.h b/Metadata/metadata.h
+index 4c24410c..acf12535 100644
+--- a/Metadata/metadata.h
++++ b/Metadata/metadata.h
+@@ -20,7 +20,7 @@
+ #include "Metadata/ExifTool.h"
+ #include "xmp.h"
+ 
+-#include "ui_metadatareport.h"
++// #include "ui_metadatareport.h"
+ 
+ //#ifdef Q_OS_WIN
+ // rgh remove heic
