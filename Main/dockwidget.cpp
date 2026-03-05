@@ -142,7 +142,7 @@ DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : 
 {
     setStyle();
     setLayout(titleBarLayout);
-    titleLabel = new QLabel;
+    titleLabel = new QLabel(this);
     titleLabel->setTextFormat(Qt::RichText);
     setTitle(title);
     titleLabel->setText(title);
@@ -273,8 +273,7 @@ bool DockWidget::event(QEvent *event)
         return true;
     }
 
-    QDockWidget::event(event);
-    return true;
+    return QDockWidget::event(event);
 }
 
 void DockWidget::closeEvent(QCloseEvent *event)

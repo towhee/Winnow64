@@ -21,7 +21,6 @@ private:
     };
 
     static quint32 readUInt32(QFile &file);
-    // static bool findAtom(QFile &file, const char *targetAtomType, quint32 &atomSize);
     static bool findAtom(QFile &file, const char *targetAtomType, quint32 &atomSize, qint64 limit = -1);
     static bool readAtomHeader(QFile &file, quint32 &size, char (&type)[4]);
     static void readAtomTree(QFile &file, quint32 maxOffset, QList<Atom> &atomList);

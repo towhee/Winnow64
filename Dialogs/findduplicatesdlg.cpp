@@ -148,6 +148,9 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *m
 FindDuplicatesDlg::~FindDuplicatesDlg()
 {
     delete ui;
+    if (frameDecoder) delete frameDecoder;
+    if (autonomousImage) delete autonomousImage;
+    if (imageDecoder) delete imageDecoder;
 }
 
 void FindDuplicatesDlg::setupModel()

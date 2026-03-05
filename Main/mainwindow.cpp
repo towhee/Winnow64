@@ -1766,7 +1766,6 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     // folder selection cleared and new folder selected
     if (resetDataModel) {
         QString step = "Loading folders.\n";
-        qDebug() << fun << "0";
         QString escapeClause = "\nPress \"Esc\" to stop.";
         setCentralMessage(step + escapeClause);
         // qApp->processEvents();
@@ -1774,7 +1773,6 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
         stop(fun);
         // sync bookmarks if exists
         bookmarks->select(folderPath);
-        qDebug() << fun << "3";
 
     }
     else {
@@ -2730,7 +2728,7 @@ void MW::folderChangeCompleted()
     cacheProgressBar->clearUpperProgress();
 
     // build filters if filter dock is visible
-    // /*
+    /*
     qDebug() << "MW::folderChangecompleted"
              << "dm->folderList.count() =" << dm->folderList.count()
              << "dm->isQueueEmpty() =" << dm->isQueueEmpty()

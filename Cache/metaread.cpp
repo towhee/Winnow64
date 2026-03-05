@@ -93,6 +93,8 @@ MetaRead::MetaRead(QObject *parent,
         reader->readerThread = thread;
         reader->moveToThread(thread);
         connect(reader, &Reader::done, this, &MetaRead::dispatch);
+        connect(thread, &QThread::finished, reader, &QObject::deleteLater);
+        connect(thread, &QThread::finished, thread, &QObject::deleteLater);
         thread->start();
         readers.append(reader);
         readerThreads.append(thread);
@@ -140,7 +142,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // could be called by a scroll event, then no file selection change
     this->fileSelectionChanged = fileSelectionChanged;
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -921,7 +923,7 @@ void MetaRead::dispatch(int id, bool isReturning)
     r = readers[id];
     // r->pending = false;
 
-    if (abort) {
+    if (abort || dm->sf->isSuspended()) {
         r->status = Reader::Status::Ready;
         return;
     }
@@ -1154,7 +1156,7 @@ void MetaRead::dispatchFinished(QString src)
     QString fun = "MetaRead::dispatchFinished";
     if (debugLog && (G::isLogger || G::isFlowLogger))
         G::log(fun, src);
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
             << fun.leftJustified(col0Width)
