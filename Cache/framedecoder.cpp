@@ -270,8 +270,8 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
 void FrameDecoder::cleanupPlayer()
 {
     if (mediaPlayer) {
-        mediaPlayer->setVideoOutput(nullptr); // Detach sink to prevent AVFoundation SIGSEGV
         mediaPlayer->stop();
+        mediaPlayer->setVideoOutput(nullptr); // Detach sink to prevent AVFoundation SIGSEGV
         mediaPlayer->deleteLater();
         mediaPlayer = nullptr;
     }
