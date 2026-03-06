@@ -148,6 +148,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     currOffset.setY(currentOffsetWidth);
 
     combineRawJpgSymbol.load(":/images/icon16/link.png");
+    lockRenderer = new QSvgRenderer(QString(":/images/lock.svg"), this);
 }
 
 void IconViewDelegate::setThumbDimensions(int thumbWidth,
@@ -650,6 +651,7 @@ void IconViewDelegate::paint(QPainter *painter,
         ;
             // */
 
+    // duration
     int videoDurationHt = 0;
     if (isVideo || showAllSymbols) {
         QFont videoFont = painter->font();
@@ -720,12 +722,7 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // show lock if file does not have read/write permissions
     if (!isReadWrite || showAllSymbols) {
-        QFont lockFont = painter->font();
-        int pxSize = 10;
-        lockFont.setPixelSize(pxSize);
-        painter->setFont(lockFont);
-        painter->setPen(G::textColor);  // any pen
-        painter->drawText(lockRect, Qt::AlignBottom, "🔒");
+        lockRenderer->render(painter, lockRect);
     }
 
     // draw the cache circle

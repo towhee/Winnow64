@@ -4,9 +4,11 @@
 #include <QtGui>
 #include <QtWidgets>
 #include <QStyleOptionViewItem>
+#include <QSvgRenderer>
 #include <QFont>
 #include "Datamodel/datamodel.h"
 #include "Cache/cachedata.h"
+#include "Utilities/utilities.h"
 
 class IconViewDelegate : public QStyledItemDelegate
 {
@@ -86,6 +88,7 @@ private:
     QString labelChoice;
     QFont font;
     QString badFile = "🚫";
+    QSvgRenderer *lockRenderer;
 
     // define colors
     QColor defaultBorderColor;

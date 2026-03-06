@@ -6,7 +6,9 @@
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #endif
-//#include <bitset>
+#ifdef Q_OS_MAC
+#include <sys/stat.h>
+#endif
 
 class Utilities
 {
@@ -26,6 +28,9 @@ public:
     static QString replaceFileName(QString srcPath, QString newName);
     static QString replaceSuffix(QString srcPath, QString newSuffix);
     static QStringList getSidecarPaths(QString srcPath);
+
+    // File status
+    static bool isLocked(const QString& fPath);
 
     // Get unique
     static void uniqueFolderPath(QString &path, QString delimiter = "_");
