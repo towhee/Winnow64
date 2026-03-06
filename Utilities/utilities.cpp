@@ -165,6 +165,19 @@ void Utilities::uniqueInList(QString &name, const QStringList &list, QString del
     } while (list.contains(name));
 }
 
+// File status
+bool Utilities::isLocked(const QString& fPath)
+{
+#ifdef Q_OS_MAC
+    struct stat st;
+    if (stat(fPath.toLocal8Bit().constData(), &st) == 0) {
+        return (st.st_flags & (UF_IMMUTABLE | SF_IMMUTABLE));
+    }
+    return false;
+#endif
+}
+
+
 void Utilities::uniqueFolderPath(QString &path, QString delimiter)
 {
 /*
