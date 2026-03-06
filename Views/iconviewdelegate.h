@@ -82,11 +82,16 @@ private:
     QObject parent;
     DataModel *dm;
     QItemSelectionModel *selectionModel;
+
+    QRect getSymbolRect(const QString &symbol, const QRect &optionRect,
+                        const QModelIndex &index) const;
+
     bool &isRatingBadgeVisible;
     bool &isIconNumberVisible;
     bool delegateShowThumbLabels;
     QString labelChoice;
     QFont font;
+    QFont starFont;
     QString badFile = "🚫";
     QSvgRenderer *lockRenderer;
 
@@ -129,6 +134,7 @@ private:
     int ratingTextSize;
     int alignVertPad;
     int alignHorPad;
+    int starsWidth;
 
     QPoint fPadOffset;
     QPoint tPadOffset;
@@ -149,6 +155,8 @@ private:
     QSize cellSize;
     QSize cellSpace;
 
+    QRect cacheRect;
+    QRect missingThumbRect;
     QRectF vpRect;
     qreal imA;
     bool vpRectIsVisible;

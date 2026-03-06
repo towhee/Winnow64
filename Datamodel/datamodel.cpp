@@ -173,9 +173,6 @@ DataModel::DataModel(QObject *parent,
 
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
-    sf->setDynamicSortFilter(true);
-    sf->setSortCaseSensitivity(Qt::CaseInsensitive);
-    sf->setFilterCaseSensitivity(Qt::CaseInsensitive);
     selectionModel = new QItemSelectionModel(sf);
 
      // eligible image file types
@@ -288,7 +285,6 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::DecoderErrMsgColumn, new QStandardItem("Decoder Err Msg")); horizontalHeaderItem(G::DecoderErrMsgColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationOffsetColumn, new QStandardItem("OrientationOffset")); horizontalHeaderItem(G::OrientationOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::IconSymbolColumn, new QStandardItem("IconSymbolColumn")); //horizontalHeaderItem(G::IconSymbolColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Load Metadata Errors")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
@@ -434,8 +430,6 @@ int DataModel::insert(QString fPath)
     // add the file data to datamodel
     addFileDataForRow(dmRow, insertFileInfo);
 
-    refresh();
-
     // reset loaded flags so MetaRead knows to load
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
@@ -452,16 +446,15 @@ void DataModel::remove(QString fPath)
     if (isDebug)
         qDebug() << "DataModel::remove" << "instance =" << instance << fPath;
 
-    // do not use a mutex here because functions called from here
-    // use a mutex ie removeRow, fPathRowRemove    rgh 2025-04-10
+    // do not use a mutex here  rgh 2025-04-10
 
     // remove row from datamodel
     int row;
     for (row = 0; row < rowCount(); ++row) {
         QString rowPath = index(row, 0).data(G::PathRole).toString();
         if (rowPath == fPath) {
+            QModelIndex par = QModelIndex();
             removeRow(row);
-            fPathRowRemove(fPath);
             break;
         }
     }
@@ -470,7 +463,7 @@ void DataModel::remove(QString fPath)
     rebuildRowFromPathHash();
 
     // update current index
-    int last = sf->rowCount() - 1;
+    int last = sf->rowCount() - 1;;
     currentSfRow <= last ? row = currentSfRow : row = last;
     QModelIndex sfIdx = sf->index(row,0);
     setCurrentSF(sfIdx, instance);
@@ -529,7 +522,6 @@ void DataModel::enqueueFolderSelection(const QString& folderPath,
     op = Add or Delete images in folderPath from datamodel
     recurse = recurse all subfolders of folderPath
 */
-    QString fun = "DataModel::enqueueFolderSelection";
 
     if (recurse) {
         // Only iterate directories; skip "." and ".."
@@ -648,7 +640,7 @@ void DataModel::addFolder(const QString &folderPath)
     step += folderPath + "<br>";
     QString escapeClause = "Press \"Esc\" to stop.";
     emit centralMsg(step + escapeClause);
-    // qApp->processEvents();
+    qApp->processEvents();
 
     // test if raw file to match jpg when same file names and one is a jpg
     QString prevRawSuffix = "";
@@ -757,6 +749,139 @@ void DataModel::addFolder(const QString &folderPath)
     }
 }
 
+/*
+void DataModel::addFolder(const QString& folderPath)
+{
+    // All model mutations must happen on GUI thread.
+    Q_ASSERT(thread() == QThread::currentThread());
+
+    abort = false;                 // consider std::atomic_bool if other threads can set it
+    loadingModel = true;
+
+    // Track that this folder is active
+    folderList.append(folderPath);
+
+    // 1) Build file list (no sorting by QDir; we’ll sort ourselves)
+    QDir dir(folderPath);
+    dir.setNameFilters(*fileFilters);                  // assumed already set
+    dir.setFilter(QDir::Files | QDir::Readable | QDir::Hidden);
+    dir.setSorting(QDir::NoSort);
+    QList<QFileInfo> files = dir.entryInfoList();
+
+    // 2) Sort as required
+    if (combineRawJpg) {
+        std::sort(files.begin(), files.end(), lessThanCombineRawJpg);
+    } else {
+        std::sort(files.begin(), files.end(), lessThan);
+    }
+
+    // 3) Filter out zero-size and already-present, and prepare pairing
+    QVector<QFileInfo> toInsert;
+    toInsert.reserve(files.size());
+
+    // O(1) presence check
+    auto hasPath = [&](const QString& p) {
+        // Prefer a QHash<QString,int> pathToRow; fall back to your current function.
+        return fPathRowContains(p);
+    };
+
+    for (const QFileInfo& fi : files) {
+        if (abort) { loadingModel = false; return; }   // clean abort
+        if (fi.size() == 0) continue;
+        if (hasPath(fi.filePath())) continue;
+        toInsert.push_back(fi);
+    }
+    if (toInsert.isEmpty()) {
+        // Nothing new; possibly finish overall load if queue empty
+        if (folderQueue.isEmpty()) endLoad(true);
+        return;
+    }
+
+    // 4) Batch insert rows
+    const int firstRow = rowCount();
+    const int lastRow  = firstRow + toInsert.size() - 1;
+
+    if (columnCount() == 0) setColumnCount(G::TotalColumns);
+    beginInsertRows(QModelIndex(), firstRow, lastRow);
+    // Ensure your internal storage grows here if you keep custom vectors
+    setRowCount(rowCount() + toInsert.size());
+    endInsertRows();
+
+    // 5) Fill data for inserted rows (no signals storming if your setData emits dataChanged;
+    //    consider a final dataChanged over the inserted block if needed)
+    //    Build a RAW index for pairing: baseName -> row index of RAW
+    QHash<QString, int> rawRowByBase;
+
+    const auto isJpg = [](const QString& s) {
+        const QString t = s.toLower();
+        return (t == "jpg" || t == "jpeg");
+    };
+
+    int row = firstRow;
+    int progressCounter = 0;
+    constexpr int kProgressInterval = 100;
+
+    for (const QFileInfo& fi : toInsert) {
+        if (abort) { loadingModel = false; return; }   // clean abort
+
+        addFileDataForRow(row, fi);                    // your existing filler
+        // Ensure PathRole, TypeColumn, etc. are set in addFileDataForRow
+
+        const QString suffix   = fi.suffix().toLower();
+        const QString baseName = fi.completeBaseName();
+
+        // Pair RAW/JPG regardless of order
+        if (!isJpg(suffix)) {
+            // Candidate RAW; remember it for a possible JPG
+            rawRowByBase.insert(baseName, row);
+        } else {
+            // JPG; see if we already saw a RAW with this base name
+            if (int rawRow = rawRowByBase.value(baseName, -1); rawRow >= 0) {
+                // Mark duplicate roles on both rows
+                const QModelIndex jpgIdx = index(row, 0);
+                const QModelIndex rawIdx = index(rawRow, 0);
+
+                setData(rawIdx, true,                     G::DupHideRawRole);
+                setData(rawIdx, jpgIdx,                   G::DupOtherIdxRole);
+                setData(jpgIdx, rawIdx,                   G::DupOtherIdxRole);
+                setData(jpgIdx, true,                     G::DupIsJpgRole);
+                setData(jpgIdx, fi.suffix().toUpper(),    G::DupRawTypeRole);
+
+                if (combineRawJpg)
+                    setData(index(row, G::TypeColumn),     "JPG+" + fi.suffix().toUpper());
+                else
+                    setData(index(row, G::TypeColumn),     "JPG");
+            } else {
+                // JPG appeared before RAW; remember JPG position to link later if you want
+                // (optional: keep a jpgRowByBase and reconcile when RAW shows up)
+            }
+        }
+
+        if (++progressCounter % kProgressInterval == 0) {
+            updateLoadStatus(row + 1); // show progress using current count
+        }
+
+        ++row;
+    }
+
+    // 6) Initialize selection on the first added folder if this is the first batch
+    if (firstRow == 0 && row > 0) {
+        firstFolderPathWithImages = folderPath;
+        setCurrent(index(0, 0), instance);
+    }
+
+    // 7) Adjust icon chunking policy
+    if (rowCount() > hugeIconThreshold) {
+        iconChunkSize = 100;
+    }
+
+    // 8) Finish a “load session” when folder queue is empty
+    if (folderQueue.isEmpty()) {
+        endLoad(true);
+    }
+}
+//*/
+
 void DataModel::removeFolder(const QString &folderPath)
 {
     QString fun = "DataModel::removeFolder";
@@ -790,26 +915,21 @@ void DataModel::removeFolder(const QString &folderPath)
 
 void DataModel::refresh()
 {
-/*
-    The images in the datamodel are compared to the files in the source folders and
-    the datamodel is updated to match where there are differences (additions,
-    removals or modifications).
-*/
     if (G::isLogger) G::log("DataModel::refresh");
-    qDebug() << "DataModel::refresh";
 
     QStringList added;
     QStringList removed;
     QStringList modified;
+    qDebug() << "DataModel::refresh instance =" << instance;
 
     if (!sourceModified(added, removed, modified)) {
-        qDebug() << "DataModel::refresh nothing modified";
+        qDebug() << "DataModel::refresh source was not modified";
         return;
     }
 
     // additions
     for (const QString &fPath : added) {
-        qDebug() << "DataModel::refresh additions";
+        qDebug() << "DataModel::refresh add" << fPath;
         insert(fPath);
     }
 
@@ -826,6 +946,9 @@ void DataModel::refresh()
         setData(index(row, G::MetadataAttemptedColumn), false);
         setData(index(row, G::IconLoadedColumn), false);
     }
+
+    // qDebug() << "DataModel::refresh call newInstance";
+    // newInstance();
 }
 
 QString DataModel::primaryFolderPath()
@@ -1889,7 +2012,6 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
         G::issue("Comment", errMsg, "DataModel::setValueSF", sfRow);
-        qWarning() << errMsg;
         return ;
     }
 
@@ -1898,7 +2020,6 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     if (!sfIdx.isValid()) {
         errMsg = "Invalid sfIdx.  Src: " + src;
         G::issue("Warning", errMsg, "DataModel::setValueSF", sfRow);
-        qWarning() << errMsg;
         return;
     }
 
@@ -1908,11 +2029,6 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
 
 bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
 {
-    if (!sfIdx.isValid()) {
-        errMsg = "Invalid index.";
-        G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
-        return false;
-    }
     if (instance != this->instance) {
         errMsg = "Instance clash.";
         G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
@@ -2405,7 +2521,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     if (!sfIdx.isValid()) {
         errMsg = "Invalid sfIdx.  Src: " + src;
         G::issue("Warning", errMsg, src, sfIdx.row());
-        // qDebug() << sfRow << "isCached =" << isCached << errMsg;
+        qDebug() << sfRow << "isCached =" << isCached << errMsg;
         return;
     }
     sf->setData(sfIdx, isCached);
@@ -2534,7 +2650,6 @@ int DataModel::proxyRowFromPath(QString fPath, QString src)
     QMutexLocker locker(&mutex);
     int dmRow;
     int sfRow = -1;
-    // sf->filterChange("DataModel::proxyRowFromPath");
     if (fPathRowContains(fPath)) {
         dmRow = fPathRowValue(fPath);
         QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
@@ -2580,19 +2695,17 @@ void DataModel::rebuildRowFromPathHash()
 bool DataModel::sourceModified(QStringList &added, QStringList &removed, QStringList &modified)
 {
 /*
-    Determine if the eligible file count has changed and/or any images have been
-    modified. If a file has been modified since the datamodel was loaded then it is
-    added to the modifiedFiles list.
+    Determine if the eligible file count has changed
+    and/or any images have been modified. If a file has been modified since the datamodel
+    was loaded then it is added to the modifiedFiles list.
 
     Called from MW::refreshDataModel.
 */
     if (G::isLogger) G::log("DataModel::sourceModified");
-    // if (isDebug)
-    {
+    if (isDebug)
         qDebug() << "DataModel::sourceModified"
                  << "instance =" << instance
                  << folderList;
-    }
 
     bool hasChanged = false;
     QStringList srcImageFiles;
@@ -2609,7 +2722,6 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
             srcImageFiles << fPath;
             // in datamodel?
             if (!fPathRowContains(fPath)) {
-                qDebug() << "DataModel::sourceModified added" << fPath;
                 added << fPath;
             }
         }
@@ -2619,7 +2731,6 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
     for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i) {
         QString fPath = i.key();
         if (!srcImageFiles.contains(fPath)) {
-            qDebug() << "DataModel::sourceModified removed" << fPath;
             removed << fPath;
         }
     }
@@ -2633,7 +2744,6 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
         QDateTime t2 = info.lastModified();
         // many file formats to not include ms in datetime
         if (t1.msecsTo(t2) > 1000) {
-            qDebug() << "DataModel::sourceModified modified" << fPath;
             modified << fPath;
         }
     }
@@ -2651,7 +2761,7 @@ void DataModel::searchStringChange(QString searchString)
     filtered and unfiltered counts.
 */
     if (G::isLogger) G::log("DataModel::searchStringChange");
-    // if (isDebug)
+    if (isDebug)
          qDebug() << "DataModel::searchStringChange" << "instance =" << instance
                   << "searchString =" << searchString;
     // update datamodel search string match
@@ -3109,19 +3219,19 @@ QString DataModel::diagnostics()
     rpt << "\n";
     rpt << "\n" << G::sj("abort", dots) << G::s(abort);
     rpt << "\n" << G::sj("instance", dots) << G::s(instance);
-    rpt << "\n";
     rpt << "\n" << G::sj("primaryFolderPath", dots) << G::s(primaryFolderPath());
     rpt << "\n" << G::sj("firstFolderPathWithImages", dots) << G::s(firstFolderPathWithImages);
-    rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
-    rpt << "\n";
-    rpt << "\n" << G::sj("combineRawJpg", dots) << G::s(combineRawJpg);
     rpt << "\n";
     rpt << "\n" << G::sj("dmRowCount", dots) << G::s(rowCount());
     rpt << "\n" << G::sj("sfRowCount", dots) << G::s(sf->rowCount());
     rpt << "\n";
-    rpt << "\n" << G::sj("currentDMRow", dots) << G::s(currentDmRow);
-    rpt << "\n" << G::sj("currentSFRow", dots) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("combineRawJpg", dots) << G::s(combineRawJpg);
     rpt << "\n";
+    rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
+    // rpt << "\n" << G::sj("countInterval", dots) << G::s(countInterval);
+    rpt << "\n" << G::sj("currentDMRow", dots) << G::s(currentDmRow);
+    rpt << "\n";
+    rpt << "\n" << G::sj("currentSFRow", dots) << G::s(currentSfRow);
     rpt << "\n" << G::sj("firstVisibleIcon", dots) << G::s(firstVisibleIcon);
     rpt << "\n" << G::sj("lastVisibleIcon", dots) << G::s(lastVisibleIcon);
     rpt << "\n" << G::sj("startIconRange", dots) << G::s(startIconRange);
@@ -3168,19 +3278,6 @@ QString DataModel::diagnostics()
         QString iStr = QVariant(i).toString().rightJustified(5);
         rpt << iStr << "  " << rowMap[i]<< "\n";
     }
-
-    rpt << "\n";
-
-    // list sort field in order
-    int sortColumn = G::NameColumn;
-    rpt << "DataModel Proxy for sort column " + G::s(sortColumn) + ":\n";
-    for (int sfRow = 0; sfRow < sf->rowCount(); sfRow++) {
-        rpt << G::s(sfRow).rightJustified(5) << "  ";
-        // rpt << QVariant(sfRow).toString().rightJustified(5);
-        rpt << G::s(index(sfRow, sortColumn).data());
-        rpt << "\n";
-    }
-
 
     return reportString;
 }
@@ -3313,18 +3410,6 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("IsCached", dots) << G::s(index(row, G::IsCachedColumn).data());
     rpt << "\n  " << G::sj("Attempts", dots) << G::s(index(row, G::AttemptsColumn).data());
     rpt << "\n  " << G::sj("DecoderId", dots) << G::s(index(row, G::DecoderIdColumn).data());
-
-    using SymbolRectMap = QHash<QString, QRect>;
-    QVariant v = index(row, G::IconSymbolColumn).data();
-    QHash<QString, QRect> rects = v.value<SymbolRectMap>();
-    rpt << "\n  " << G::sj("Thumb rect", dots) << G::s(rects["Thumb"]);
-    rpt << "\n  " << G::sj("MissingThumb rect", dots) << G::s(rects["MissingThumb"]);
-    rpt << "\n  " << G::sj("Lock rect", dots) << G::s(rects["Lock"]);
-    rpt << "\n  " << G::sj("Rating rect", dots) << G::s(rects["Rating"]);
-    rpt << "\n  " << G::sj("CombineRawJpg rect", dots) << G::s(rects["CombineRawJpg"]);
-    rpt << "\n  " << G::sj("Cache rect", dots) << G::s(rects["Cache"]);
-    rpt << "\n  " << G::sj("Duration rect", dots) << G::s(rects["Duration"]);
-
     rpt << "\n  " << G::sj("DecoderReturnStatus", dots) << G::s(index(row, G::DecoderReturnStatusColumn).data());
     rpt << "\n  " << G::sj("DecoderErrMsg", dots) << G::s(index(row, G::DecoderErrMsgColumn).data());
 
@@ -3355,7 +3440,6 @@ SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
     finished(true), suspendFiltering(false)
 {
     if (G::isLogger) G::log("SortFilter::SortFilter");
-    // qDebug() << "SortFilter::SortFilter";
     this->filters = filters;
 }
 
@@ -3548,7 +3632,7 @@ void SortFilter::suspend(bool suspendFiltering, QString src)
     When false the filtering is refreshed.
 */
     QString msg = "suspendFiltering = " + QVariant(suspendFiltering).toString() +
-                  " src = " + src;
+              " src = " + src;
     if (G::isLogger) G::log("SortFilter::suspend", msg);
     // qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
     this->suspendFiltering = suspendFiltering;

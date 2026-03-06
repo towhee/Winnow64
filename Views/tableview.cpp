@@ -257,7 +257,6 @@ void TableView::setDefaultColumnWidths()
 
         else if (column == G::OrientationOffsetColumn) defaultColumnWidth[column] = fm.boundingRect("=OrientationOffsetColumn=").width();
         else if (column == G::RotationDegreesColumn) defaultColumnWidth[column] = fm.boundingRect("=RotationDegreesColumn=").width();
-        else if (column == G::IconSymbolColumn) defaultColumnWidth[column] = fm.boundingRect("=IconSymbolColumn=").width();
         else if (column == G::ShootingInfoColumn) defaultColumnWidth[column] = fm.boundingRect("=ShootingInfoColumn======================").width();
         else if (column == G::SearchTextColumn) defaultColumnWidth[column] = fm.boundingRect("=SearchText=====================================================================================").width();
         else if (column == G::ErrColumn) defaultColumnWidth[column] = fm.boundingRect("==ErrText=========================================================").width();

@@ -166,7 +166,6 @@ Q_NAMESPACE
 
         OrientationOffsetColumn,
         RotationDegreesColumn,
-        IconSymbolColumn,
         ShootingInfoColumn,
         SearchTextColumn,
         ErrColumn,
