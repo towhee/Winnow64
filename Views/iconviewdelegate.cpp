@@ -193,6 +193,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     this->iconNumberSize = iconNumberSize;
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
     if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
+    starsWidth = fm.boundingRect("*******").width();
 
     // define everything we can here so not doing every time delegate is painted
 
@@ -226,6 +227,33 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
              << "thumbSize =" << thumbSize
                 ;
                 //*/
+
+    // Pre-calculate symbol rectangles relative to a zero-based thumbRect
+    int dotDiam = 6;
+    int dotOffset = 1; //3;
+
+    // Cache Circle (Bottom Right)
+    cacheRect.setRect(thumbSize.width() - dotDiam - dotOffset,
+                      thumbSize.height() - dotDiam - dotOffset /*+ 2*/,
+                      dotDiam, dotDiam);
+
+    // Missing Thumb Circle (Bottom Left)
+    missingThumbRect.setRect(dotDiam - dotOffset,
+                             thumbSize.height() - dotDiam - dotOffset /*+ 2*/,
+                             dotDiam, dotDiam);
+
+    // Lock Icon (To the right of Missing Thumb)
+    int lockSize = 12; // Adjusted for SVG
+    lockRect.setRect(missingThumbRect.right() + 2,
+                     thumbSize.height() - lockSize,
+                     lockSize, lockSize);
+
+    // Combine RAW+JPG (To the left of Cache)
+    int linkW = 14;
+    int linkH = 14;
+    combineRawJpgRect.setRect(cacheRect.left() - linkW - 2,
+                              thumbSize.height() - 0.8 * linkH,
+                              linkW, linkH);
 }
 
 QString IconViewDelegate::diagnostics()
@@ -329,6 +357,58 @@ void IconViewDelegate::setVpRect(QRectF vp, qreal imA)
                 ; //*/
 }
 
+QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &optionRect, const QModelIndex &index) const
+{
+    // Common geometry bases
+    QRect frameRect(optionRect.topLeft() + fPadOffset, frameSize);
+    QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
+    QPoint origin = thumbRect.topLeft();
+
+    // 1. Static Symbols (Pre-calculated in setThumbDimensions)
+    if (symbol == "Thumb") return thumbRect;
+    if (symbol == "MissingThumb") return missingThumbRect.translated(origin);
+    if (symbol == "Lock") return lockRect.translated(origin);
+    if (symbol == "CombineRawJpg") return combineRawJpgRect.translated(origin);
+    if (symbol == "Cache") return cacheRect.translated(origin);
+
+    // 2. Dynamic Symbols (Calculated based on Row Data)
+    if (symbol == "Duration" || symbol == "Rating") {
+        bool isVideo = index.model()->index(index.row(), G::VideoColumn).data().toBool();
+        int videoDurationHt = 0;
+
+        // Calculate Duration Rect first as it offsets the Rating
+        if (isVideo) {
+            // Replicate the bRect logic from paint()
+            QFont videoFont = QApplication::font();
+            videoFont.setPixelSize(G::fontSize);
+            QFontMetrics fm(videoFont);
+            QRect bRect = fm.boundingRect("00:00:00"); // Standard duration width
+            // Center at bottom of thumbRect
+            int x = thumbRect.left() + (thumbRect.width() - bRect.width()) / 2;
+            int y = thumbRect.bottom() - bRect.height();
+            QRect durationRect(x, y, bRect.width(), bRect.height());
+
+            if (symbol == "Duration") return durationRect;
+            videoDurationHt = bRect.height();
+        }
+
+        if (symbol == "Rating") {
+            int infoHt = thumbRect.height() / 6;
+            if (infoHt > 14) {
+                // Star-based rating rect
+                int h = fontHt * 0.8;
+                int b = (thumbRect.width() - starsWidth) / 2;
+                return QRect(thumbRect.left() + b, thumbRect.bottom() - videoDurationHt - h, starsWidth, h);
+            } else {
+                // Single number rating rect
+                int h = infoHt;
+                return QRect(thumbRect.center().x() - h/2, thumbRect.bottom() - videoDurationHt - h + 3, h, h);
+            }
+        }
+    }
+    return QRect();
+}
+
 void IconViewDelegate::setCurrentIndex(QModelIndex current)
 {
 //    qDebug() << "IconViewDelegate::setCurrentIndex" << current << current.row();
@@ -352,68 +432,37 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
                                  const QStyleOptionViewItem &option,
                                  const QModelIndex &index)
 {
-    // if (event->type() == QEvent::ToolTip)
-    // {
-    //     // QString toolTipData = view->model()->data(index, Qt::ToolTipRole).toString();
-    //     if (!tooltip.isEmpty())
-    //     {
-    //         QPoint pos = event->globalPos() - QPoint(20, 20);
-    //         QToolTip::showText(pos, tooltip, view, QRect(), 5000);
-    //         return true;
-    //     }
-    // }
-
-    // return QStyledItemDelegate::helpEvent(event, view, option, index);
-
     if (event->type() != QEvent::ToolTip || !index.isValid())
         return QStyledItemDelegate::helpEvent(event, view, option, index);
 
     // Extract useful data from model
     QAbstractProxyModel *proxy = qobject_cast<QAbstractProxyModel*>(view->model());
     QModelIndex sourceIndex = proxy ? proxy->mapToSource(index) : index;
-    QVariant v = sourceIndex.model()->data(sourceIndex.siblingAtColumn(G::IconSymbolColumn));
-
-    using SymbolRectMap = QHash<QString, QRect>;
-    QHash<QString, QRect> rects;
-    if (v.canConvert<SymbolRectMap>())
-        rects = v.value<SymbolRectMap>();
-
-    QPoint viewPos = view->viewport()->mapFromGlobal(event->globalPos());
     int row = sourceIndex.row();
-
     auto sf = proxy ? proxy->sourceModel() : view->model();
+    QPoint viewPos = view->viewport()->mapFromGlobal(event->globalPos());
 
-    bool isMissing = sf->index(row, G::MissingThumbColumn).data().toBool();
-    bool isLock = !sf->index(row, G::ReadWriteColumn).data().toBool();
-    bool isRating = sf->index(row, G::RatingColumn).data().toBool();
-    bool isCombineRawJpg = sf->index(row, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
-    bool isCached = sf->index(row, G::IsCachedColumn).data().toBool();
-    bool isVideo = sf->index(row, G::VideoColumn).data().toBool();
-
-    QString tooltip;
-
-    if (!rects.value("Thumb").contains(viewPos))
-        tooltip = "Borders:\n  Yellow:\t Current \n  White:\t Selected \n  Green:\t Picked\n  Blue:\t Ingested\n  Red:\t Rejected";
-    else if (isMissing && rects.value("MissingThumb").contains(viewPos))
+    if (getSymbolRect("MissingThumb", option.rect, index).contains(viewPos))
         tooltip = "Image does not have an embedded thumbnail";
-    else if (isLock && rects.value("Lock").contains(viewPos))
+    else if (getSymbolRect("Lock", option.rect, index).contains(viewPos))
         tooltip = "Image file is locked";
-    else if (isRating && rects.value("Rating").contains(viewPos))
-        tooltip = "Rating";
-    else if (isCombineRawJpg && rects.value("CombineRawJpg").contains(viewPos))
+    else if (getSymbolRect("CombineRawJpg", option.rect, index).contains(viewPos))
         tooltip = "Image is JPG version of a RAW+JPG pair";
-    else if (!isCached && rects.value("Cache").contains(viewPos))
-        tooltip = "This image is not cached";
-    else if (isVideo && rects.value("Duration").contains(viewPos))
-        tooltip = "Duration";
-    else
+    else if (getSymbolRect("Cache", option.rect, index).contains(viewPos))
+        tooltip = "Image file is not cached";
+    else if (getSymbolRect("Rating", option.rect, index).contains(viewPos))
+        tooltip = "Rating";
+    else if (getSymbolRect("Duration", option.rect, index).contains(viewPos))
+        tooltip = "Video Duration";
+    else if (getSymbolRect("Thumb", option.rect, index).contains(viewPos))
         tooltip = sf->index(row, 0).data(G::PathRole).toString();
+    else
+        tooltip = "Borders:\n  Yellow:\t Current \n  White:\t Selected \n  Green:\t Picked\n  Blue:\t Ingested\n  Red:\t Rejected";
 
     if (!tooltip.isEmpty()) {
-        QToolTip::showText(event->globalPos(), tooltip, view, option.rect, 10000);
+        QToolTip::showText(event->globalPos(), tooltip, view);
         return true;
     }
-
     return false;
 }
 
@@ -508,11 +557,8 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
     QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
 
-    // save info row symbol rects in datamodel so can show tooltips later
-    QHash<QString, QRect>iconSymbolRects;
-
-    iconSymbolRects["Thumb"] = QRect(thumbRect.topLeft() + QPoint(1,1),
-                                     thumbRect.bottomRight() - QPoint(1,1));
+    // Cell origin
+    QPoint origin = thumbRect.topLeft();
 
     // get icon (thumbnail) from the datamodel and scale
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
@@ -559,50 +605,7 @@ void IconViewDelegate::paint(QPainter *painter,
             ;
     //             */
 
-    // cached rect located bottom right as containment for circle
-    int dotDiam = 6;
-    int dotOffset = 3;
-    QPoint cacheTopLeft(thumbRect.right() - dotDiam - dotOffset,
-                        thumbRect.bottom() - dotDiam - dotOffset);
-    QPoint cacheBottomRight(thumbRect.right() - dotOffset, thumbRect.bottom() - dotOffset);
-    QRect cacheRect(cacheTopLeft, cacheBottomRight);
-    iconSymbolRects["Cache"] = cacheRect;
-
-    // combine raw/jpg rect to left of cached rect
-    {
-        int pxSize = 14;
-        int h = pxSize;
-        int w = h * 1.2;
-        int x = cacheRect.left() - w - 2;
-        int y = thumbRect.bottom() - h + 3;
-        combineRawJpgRect.setRect(x, y, w, h);
-        iconSymbolRects["CombineRawJpg"] = combineRawJpgRect;
-    }
-
-    // missing thumb rect located bottom left as containment for circle
-    const QPoint missingThumbTopLeft(thumbRect.left() + dotDiam - dotOffset,
-                        thumbRect.bottom() - dotDiam - dotOffset);
-    const QPoint missingThumbBottomRight(thumbRect.left() + dotDiam + dotOffset,
-                                         thumbRect.bottom() - dotOffset);
-    QRect missingThumbRect(missingThumbTopLeft, missingThumbBottomRight);
-    iconSymbolRects["MissingThumb"] = missingThumbRect;
-    int missingThumbX = fPad + tPad + dotDiam - dotOffset;
-    int missingThumbY = fPad + tPad + thumbRect.height() - dotDiam - dotOffset;
-    missingIconRect.setRect(missingThumbX, missingThumbY, dotDiam, dotDiam);
-
-    // locked file rect
-    {
-        int pxSize = 10;
-        int x = missingThumbRect.right() + 2;
-        int y = thumbRect.bottom() - pxSize;
-        int w = pxSize + 2;
-        int h = w;
-        lockRect.setRect(x, y, w, h);
-        iconSymbolRects["Lock"] = lockRect;
-    }
-
-    QPainterPath iconPath;
-    iconPath.addRoundedRect(iconRect, 6, 6);
+    painter->drawRoundedRect(iconRect, 6, 6);
 
     QRect textRect(frameRect.bottomLeft() - textHtOffset, frameRect.bottomRight());
     QPainterPath textPath;
@@ -637,7 +640,8 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // icon/thumbnail image
     painter->setClipping(true);
-    painter->setClipPath(iconPath);
+    painter->setClipRect(iconRect);
+    // painter->setClipPath(iconPath);
     painter->drawPixmap(iconRect, pm);
     painter->setClipping(false);
 
@@ -666,7 +670,6 @@ void IconViewDelegate::paint(QPainter *painter,
         if (G::renderVideoThumb)
             painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
         videoDurationHt = bRect.height();
-        iconSymbolRects["Duration"] = bRect;
     }
 
     // rating badge (color filled circle with rating number in center)
@@ -680,24 +683,19 @@ void IconViewDelegate::paint(QPainter *painter,
             QFont starFont = painter->font();
             QString stars;
             int pxSize;
+
             if (infoHt > 14) {
                 stars.fill('*', ratingNumber);
-                pxSize = 20;
-                starFont.setPixelSize(pxSize);
-                painter->setFont(starFont);
-                QFontMetrics fm(starFont);
-                QRect bRect = fm.boundingRect("*******");
-                int w = bRect.width();
-                int b = (thumbRect.width() - w) / 2;
-                int h = pxSize * 0.8;
-                int t = h / 5;      // translate to center * in ratingRect
+                // Use the cached starsWidth and fontHt instead of fm.boundingRect()
+                int b = (thumbRect.width() - starsWidth) / 2;
+                int h = fontHt * 0.8;
+
                 QPoint ratingTopLeft(thumbRect.left() + b, thumbRect.bottom() - videoDurationHt - h);
                 QPoint ratingBottomRight(thumbRect.right() - b, thumbRect.bottom() - videoDurationHt);
                 QRect ratingRect(ratingTopLeft, ratingBottomRight);
-                iconSymbolRects["Rating"] = ratingRect;
-                ratingTextPen.setWidth(1);
+
                 painter->setPen(ratingTextPen);
-                painter->drawText(ratingRect.adjusted(0,t,0,t), Qt::AlignHCenter | Qt::AlignTop, stars);
+                painter->drawText(ratingRect, Qt::AlignHCenter | Qt::AlignTop, stars);
             }
             else {
                 stars = QString::number(ratingNumber);
@@ -717,19 +715,19 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // show if combine raw/jpg for this image
     if (isCombineRawJpg) {
-        painter->drawImage(combineRawJpgRect, combineRawJpgSymbol);
+        painter->drawImage(combineRawJpgRect.translated(origin), combineRawJpgSymbol);
     }
 
     // show lock if file does not have read/write permissions
     if (!isReadWrite || showAllSymbols) {
-        lockRenderer->render(painter, lockRect);
+        lockRenderer->render(painter, lockRect.translated(origin));
     }
 
     // draw the cache circle
     if ((!isCached && !isVideo && metaLoaded && !G::isSlideShow) || showAllSymbols) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
-        painter->drawEllipse(cacheRect);
+        painter->drawEllipse(cacheRect.translated(origin));
     }
 
     // draw the missing thumb circle
@@ -737,7 +735,7 @@ void IconViewDelegate::paint(QPainter *painter,
     if ((G::useMissingThumbs && isMissingThumb) || showAllSymbols /*&& !G::isSlideShow*/) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(missingThumbColor);
-        painter->drawEllipse(missingThumbRect);
+        painter->drawEllipse(missingThumbRect.translated(origin));
     }
 
     painter->setPen(border);
@@ -746,15 +744,18 @@ void IconViewDelegate::paint(QPainter *painter,
     // pick status
     if (isPicked) {
         painter->setPen(pickedPen);
-        painter->drawPath(iconPath);
+        // painter->drawPath(iconPath);
+        painter->drawRoundedRect(iconRect, 6, 6);
     }
     if (isIngested) {
         painter->setPen(ingestedPen);
-        painter->drawPath(iconPath);
+        // painter->drawPath(iconPath);
+        painter->drawRoundedRect(iconRect, 6, 6);
     }
     if (isRejected) {
         painter->setPen(rejectedPen);
-        painter->drawPath(iconPath);
+        // painter->drawPath(iconPath);
+        painter->drawRoundedRect(iconRect, 6, 6);
     }
 
     // draw icon number
@@ -839,10 +840,6 @@ void IconViewDelegate::paint(QPainter *painter,
     /* provide rect data to calc thumb mouse click position that is then sent to imageView to
     zoom to the same spot */
     emit update(index, iconRect);
-
-    // save the locations of the symbols so can show tooltips
-    dm->sf->setData(dm->sf->index(sfRow, G::IconSymbolColumn), QVariant::fromValue(iconSymbolRects));
-
     /*
     qDebug() << "IconViewDelegate::paint"
              << "row =" << index.row()
