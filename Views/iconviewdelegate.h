@@ -158,6 +158,7 @@ private:
     QRect cacheRect;
     QRect missingThumbRect;
     QRectF vpRect;
+    QRect targetVpRect;
     qreal imA;
     bool vpRectIsVisible;
 

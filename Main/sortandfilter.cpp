@@ -364,7 +364,7 @@ void MW::sortChangeFromAction()
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;        // core
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;        // core
-    if (sortFileSizeAction->isChecked()) sortColumn = G::SizeColumn;        // core
+    if (sortFileSizeAction->isChecked()) sortColumn = G::ByteSizeColumn;        // core
     if (sortCreateAction->isChecked()) sortColumn = G::CreatedColumn;       // core
     if (sortModifyAction->isChecked()) sortColumn = G::ModifiedColumn;      // core
     if (sortPickAction->isChecked()) sortColumn = G::PickColumn;            // core
@@ -470,7 +470,7 @@ void MW::updateSortColumn(int sortColumn)
 
     if (sortColumn == G::NameColumn) sortFileNameAction->setChecked(true);
     if (sortColumn == G::TypeColumn) sortFileTypeAction->setChecked(true);
-    if (sortColumn == G::SizeColumn) sortFileSizeAction->setChecked(true);
+    if (sortColumn == G::ByteSizeColumn) sortFileSizeAction->setChecked(true);
     if (sortColumn == G::CreatedColumn) sortCreateAction->setChecked(true);
     if (sortColumn == G::ModifiedColumn) sortModifyAction->setChecked(true);
     if (sortColumn == G::PickColumn) sortPickAction->setChecked(true);

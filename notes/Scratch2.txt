@@ -1,497 +1,217 @@
-to do
-- robustMax99() sorts the entire image every time (expensive at 5k×4k).
-  Not a correctness issue, but if you want it faster later, switch to histogram/binning or nth_element.
-
-
-
-PMaxStream
-    Merge: PMax
-    Merge: Weighted
-
-PMaxStreamWeighted (WeightedPower, WeightedSigma0)
-Depth-biased erosion
-Edge-adaptive sigma
-
-Steps:
-1.  Stream PMax Fusion. (Done)
-2.  Add mergeMode Weighted (WeightedPower, WeightedSigma0). (Done)
-3.  Add Depth-biased erosion.  (Is this done?)
-4.  Add Edge-adaptive sigma.  (To do)
-
-StreamPMax
-StreamPMaxWeighted
-StreamPMaxWeightedErosion
-StreamPMaxWeightedErosionEdge
-
-
-StmDMap
-StmDMap_01  Splotchy background
-    enableHardWeightsOnLowpass = true
-    enableLowpassEqualization  = false
-StmDMap_02  Same as StmDMap_01
-    enableHardWeightsOnLowpass = true
-    enableLowpassEqualization  = true
-    StmDMap_02  Same as StmDMap_01
-    enableHardWeightsOnLowpass = false
-    enableLowpassEqualization  = true
-
-•	FSFusion.h / FSFusion.cpp (facade + shared helpers + dispatch)
-•	FSFusionPMax.h / FSFusionPMax.cpp (PMax only, including streaming PMax)
-•	FSFusionDMap.h / FSFusionDMap.cpp (DMap only, including streaming DMap)
-•	FusionPyr.h / FusionPyr.cpp (pyramid accumulator + accumulate/finalize + a few pyramid helpers used by DMap)
-•	FusionUtils.h (small inline helpers: seEllipse, rectInside, clamp helpers, etc.)
-
-1.	This expects FSFusionDMap to have these members (as in your old FSFusion state):
-        •	bool active; int sliceCount;
-        •	cv::Size padSize, alignSize, origSize;
-        •	cv::Rect validAreaAlign;
-        •	int outDepth;
-        •	TopKMaps topKPad;
-        •	DMapParams params;
-        •	reset(), streamSlice(...), finish(...)
-
-
-2.	It also expects your FSLoader::loadAlignedSliceOrig(...) signature to match what you used in the old code.
-
-3.	FusionPyr.h must provide:
-        •	struct PyrAccum { void reset(cv::Size,int); ... }
-        •	void buildIndexPyrNearest(const cv::Mat&, int, std::vector<cv::Mat>&);
-        •	void buildDepthEdgeVetoPyr(const std::vector<cv::Mat>&, int, const FSFusionDMap::DMapParams&, std::vector<cv::Mat>&);
-        •	void accumulateSlicePyr(PyrAccum&, const cv::Mat&, const cv::Mat&, const std::vector<cv::Mat>&, const std::vector<cv::Mat>*, int sliceIdx, const FSFusionDMap::DMapParams&, int levels, float weightBlurSigma);
-        •	cv::Mat finalizeBlend(const PyrAccum&, float eps);
-
-4.	FusionUtils.h must provide:
-        •	cv::Mat seEllipse(int px);
-        •	bool rectInside(const cv::Rect&, const cv::Size&);
-        •	float clampf(float,float,float);
-        •	cv::Mat toFloat01(const cv::Mat& gray8);
-
-halo_alphaBand.png
-halo_band.png
-halo_boundary.png
-halo_cand.png
-halo_donor_labels.png
-halo_fg.png
-halo_overlay.png
-
-
-namespace FSFusionDMapShared
+void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
 {
-static inline uint16_t clampU16(int v) {
-    if (v < 0) return 0;
-    if (v > 65535) return 65535;
-    return (uint16_t)v;
+/*
+    Turns the cursor into a frame showing the cropped ImageView zoom window in the
+    thumbnail. This is handy for the user to see where a click on thumbnail to instantly
+    pan to in same spot in the imageView zoomed window.
+
+    This is predicated on the zoom > zoomFit and the mouse position pointing to a valid
+    thumbnail. This function is called from MW::eventFilter when there is mouse movement
+    in the thumbView viewport. It is also called from MW::thumbHasScrolled as the mouse
+    pointer might be on a different thumbnail after the thumbnails scroll. Finally it is
+    called when there is a window resize MW::resizeEvent that will change the
+    centralWidget geometry.
+*/
+    if (isDebug) G::log("IconView::zoomCursor", objectName());
+    /*
+    qDebug() << "IconView::zoomCursor"
+             << "src =" << src
+             << idx
+             << "forceUpdate =" << forceUpdate
+             << "isFit =" << m2->imageView->isFit
+             << mousePos;
+             //*/
+    QString failReason = "";
+    if (G::isEmbellish) failReason = "G::isEmbellish";
+    if (G::isInitializing) failReason = "G::isInitializing";
+    if (G::stop) failReason = "G::stop";
+    bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+    if (isVideo) failReason = "isVideo";
+
+    if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
+        setCursor(Qt::ArrowCursor);
+        prevIdx = model()->index(-1, -1);
+        failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
+    }
+
+    if (QGuiApplication::queryKeyboardModifiers()) {
+        setCursor(Qt::ArrowCursor);
+        failReason = "Key modifier pressed";
+    }
+
+//    if (idx == prevIdx && !forceUpdate) reason = "idx == prevIdx && !forceUpdate";
+    if (!showZoomFrame) failReason = "!showZoomFrame";
+    if (!idx.isValid()) failReason = "!idx.isValid()";
+    if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
+
+    // preview dimensions
+    int imW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toInt();
+    int imH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toInt();
+    if (imW == 0 || imH == 0) failReason = "Zero width or height";
+
+    qreal zoom = m2->imageView->zoom;
+    imW = static_cast<int>(imW * zoom);
+    imH = static_cast<int>(imH + zoom);
+    qreal imA = static_cast<qreal>(imW) / imH;
+
+    QRect centralRect = m2->centralWidget->rect();
+    int cW = centralRect.width();
+    int cH = centralRect.height();
+    /*
+    qDebug() << "IconView::zoomCursor" << idx
+             << "cW =" << cW << "cH =" << cH
+             << "imW =" << imW << "imH =" << imH;
+//        */
+    if (imW < cW && imH < cH) {
+        setCursor(Qt::ArrowCursor);
+        prevIdx = model()->index(-1, -1);
+        failReason = "imW < cW && imH < cH";
+    }
+
+    /* // debugging
+    if (failReason.length()) {
+        qDebug() << "WARNING IconView::zoomCursor Failed because" << failReason;
+        QString msg = "Failed because " + failReason + ".";
+        G::issue("Warning", msg, "IconView::zoomCursor");
+    }
+    else {
+        qDebug() << "IconView::zoomCursor" << "Succeeded";
+    }
+    //*/
+
+    if (failReason.length()) return;
+
+    prevIdx = idx;
+
+    qreal hScale = static_cast<qreal>(cW) / imW;
+    qreal vScale = static_cast<qreal>(cH) / imH;
+
+    iconRect = idx.data(G::IconRectRole).toRect();
+    /*
+    qDebug() << "IconView::zoomCursor"
+             << "idx =" << idx
+             << "idx.data(G::IconRectRole) =" << idx.data(G::IconRectRole)
+             << "iconRect =" << iconRect;
+    //*/
+    int w, h;       // zoom frame width and height in pixels
+
+    if (hScale < 1 || vScale <= 1 ) {
+        // imageView is zoomed in at least one axis
+
+        // scale is for the side that needs to be reduced the most to fit
+        qreal zoomFit = (hScale < vScale) ? hScale : vScale;
+        qreal scale = zoomFit / zoom;
+
+        // iv = the cropped image visible in centralRect - the ImageView viewport
+        int ivW = (imW > cW) ? cW : imW;
+        int ivH = (imH > cH) ? cH : imH;
+        // aspect of iv
+        qreal ivA = static_cast<qreal>(ivW) / ivH;
+        /*
+        qDebug() << "IconView::zoomCursor" << "cW =" << cW << "cH =" << cH
+                                 << "ivW =" << ivW << "ivH =" << ivH << "ivA =" << ivA
+                                 << "hScale =" << hScale << "vScale =" << vScale;
+        //*/
+
+        /* some brands create thumbnails with black borders, which are not part of the
+        image, and should be excluded. The long side (ie width if landscape, height if
+        portrait, will not have a black border. Using that side and the aspect of the
+        original image can give the correct length for the other side of the thumbnail.
+        */
+        int iconW, iconH;
+        if (imA > 1) {
+            iconW = iconRect.width();
+            iconH = static_cast<int>(iconW / imA);
+        }
+        else {
+            iconH = iconRect.height();
+            iconW = static_cast<int>(iconH * imA);
+        }
+
+        // determine cursor frame dimensions: w, h
+        if (hScale < vScale) {
+            w = static_cast<int>(iconW * scale);
+            h = static_cast<int>(w / ivA);
+        }
+        else {
+            h = static_cast<int>(iconH * scale);
+            w = static_cast<int>(h * ivA);
+        }
+
+        if (w > iconRect.width()) w = iconRect.width();
+        if (h > iconRect.height()) h = iconRect.height();
+
+        QString whichScale = hScale < vScale ? "hScale" : "vScale";
+        /*
+        qDebug() << "IconView::zoomCursor"
+                 << whichScale
+                 << "ivW =" << ivW
+                 << "ivH =" << ivH
+                 << "w =" << w
+                 << "h =" << h
+                 << "ivA =" << ivA;
+            */
+        /*
+            qDebug() << "IconView::zoomCursor"
+                     << "zoom =" << zoom
+                     << "zoomFit =" << zoomFit
+                     << "iconRect =" << iconRect
+                     << "imW =" << imW
+                     << "imH =" << imH
+                     << "imA =" << imA
+                     << "ivW =" << ivW
+                     << "ivH =" << ivH
+                     << "cW =" << cW
+                     << "cH =" << cH
+                     << "hScale =" << hScale
+                     << "vScale =" << vScale
+                     << "scale =" << scale
+                     << "iconW =" << iconW
+                     << "iconH =" << iconH
+                     << "w =" << w
+                     << "h =" << h
+                     << "ivA =" << ivA;
+        //            */
+    }
+    else {
+        // imageView smaller than central widget so no cropping
+        w = iconRect.width();
+        h = iconRect.height();
+    }
+
+    // draw the new cursor as a frame
+
+    // check if mac Accessibility has scaled pointer size
+    float scale = 1.0;
+    #ifdef Q_OS_MAC
+        scale = Mac::getMouseCursorMagnification();
+        if (scale == 0) scale = 1;
+    #endif
+    w /= scale;
+    h /= scale;
+
+    // make room for border
+    int pw = 1;                                     // pen width
+    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
+    h += (pw * 8);
+    cursorRect = QRect(0, 0, w, h);
+    /*
+    qDebug() << "IconView::zoomCursor" << cursorRect << G::actDevicePixelRatio << G::sysDevicePixelRatio;
+    //*/
+    auto frame = QImage(w, h, QImage::Format_ARGB32);
+    int opacity = 0;                                // Set this between 0 and 255
+    frame.fill(QColor(0,0,0,opacity));
+    QPen oPen, iPen;
+    oPen.setWidth(pw);
+    iPen.setWidth(pw);
+    oPen.setColor(Qt::white);
+    iPen.setColor(Qt::black);
+    QRect oBorder(0, 0, w-pw-1, h-pw-1);            // outer border
+    QRect iBorder(pw, pw, w-3*pw-1, h-3*pw-1);      // inner border
+    QPainter p(&frame);
+    p.setPen(oPen);
+    p.drawRect(oBorder);
+    p.setPen(iPen);
+    p.drawRect(iBorder);
+    setCursor(QCursor(QPixmap::fromImage(frame)));
 }
-
-cv::Mat morphClose8(const cv::Mat& bin8, int px)
-{
-    CV_Assert(bin8.type() == CV_8U);
-    if (bin8.empty() || px <= 0) return bin8.clone();
-    cv::Mat out = bin8.clone();
-    cv::morphologyEx(out, out, cv::MORPH_CLOSE, FSFusion::seEllipse(px));
-    return out;
-}
-
-
-
-
-
-
-
-Tests:
-
-2026-02-17 12:45:06 Fused faint, scattered halo; less than full FG
-depthStableRadiusPx = 2
-depthMaxRangeSlices = 1
-strongFrac          = 0.01
-weakFrac            = 0.03
-seedDilatePx        = 2
-closePx             = 5
-openPx              = 1
-scoreSigma          = 1.5
-scoreKSize          = 3
-ownershipClosePx    = 0
-seedBandPx          = 1
-pyrLevels           = 5
-
-2026-02-17 16:55:46 Fused Muddled BG, Fat FG
-depthStableRadiusPx = 1
-depthMaxRangeSlices = 1
-strongFrac          = 0.01
-weakFrac            = 0.03
-seedDilatePx        = 2
-closePx             = 5
-openPx              = 1
-scoreSigma          = 1.5
-scoreKSize          = 3
-ownershipClosePx    = 0
-seedBandPx          = 1
-pyrLevels           = 5
-
-RUN A
-2026-02-17 17:10:40 Fused no halo, minor FG transition blur (twig in front of branch),
-                    salt/pepper blobs in FG
-depthStableRadiusPx = 3
-depthMaxRangeSlices = 1
-strongFrac          = 0.01
-weakFrac            = 0.03
-seedDilatePx        = 2
-closePx             = 5
-openPx              = 1
-scoreSigma          = 1.5
-scoreKSize          = 3
-ownershipClosePx    = 0
-seedBandPx          = 1
-pyrLevels           = 5
-
-2026-02-18 06:22:31 Fused scattered halo, FG good, incl overlap
-depthStableRadiusPx = 3
-depthMaxRangeSlices = 2
-strongFrac          = 0.01
-weakFrac            = 0.03
-seedDilatePx        = 2
-closePx             = 5
-openPx              = 1
-scoreSigma          = 1.5
-scoreKSize          = 3
-ownershipClosePx    = 0
-seedBandPx          = 1
-pyrLevels           = 5
-
-RUN B
-2026-02-18 07:42:22 Same as RUN A with slightly better FG edges BUT minor halos.
-depthStableRadiusPx      = 3
-depthMaxRangeSlicesCore  = 1        // > 1 adds slight focus halo
-depthMaxRangeSlicesLoose = 2
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 2
-closePx                  = 5
-openPx                   = 1
-interiorPx               = 3
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 0
-seedBandPx               = 1
-pyrLevels                = 5
-
-2026-02-18 07:50:51 Improved FG transition but added slight focus halo
-depthStableRadiusPx      = 3
-depthMaxRangeSlicesCore  = 1
-depthMaxRangeSlicesLoose = 3        // > 2 adds slight focus halo
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 2
-closePx                  = 5
-openPx                   = 1
-interiorPx               = 3
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 0
-seedBandPx               = 1
-pyrLevels                = 5
-
-2026-02-18 08:10:57 Fixes FG transition but adds slight focus halo blur
-depthStableRadiusPx      = 2 // < 3 Fixes FG transition but adds slight focus halo blur
-depthMaxRangeSlicesCore  = 1
-depthMaxRangeSlicesLoose = 2
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 2
-closePx                  = 5
-openPx                   = 1
-interiorPx               = 3
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 0
-seedBandPx               = 1
-pyrLevels                = 5
-
-2026-02-18 08:18:59
-depthStableRadiusPx      = 3
-depthMaxRangeSlicesCore  = 1
-depthMaxRangeSlicesLoose = 2
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 2
-closePx                  = 5
-openPx                   = 1
-interiorPx               = 10   // no change to FG transition blur
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 0
-seedBandPx               = 1
-pyrLevels                = 5
-
-RUN C
-2026-02-18 08:27:04 Same as run B
-depthStableRadiusPx      = 3    // < 3 focus halos
-depthMaxRangeSlicesCore  = 1    // > 1 focus halos
-depthMaxRangeSlicesLoose = 2    // > 2 focus halos
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 1    // 1..2 no visual impact
-closePx                  = 5
-openPx                   = 1
-interiorPx               = 3    // increase no visual impact
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 0
-seedBandPx               = 1
-pyrLevels                = 5
-
-RUN D
-2026-02-18 08:43:26
-depthStableRadiusPx      = 3
-depthMaxRangeSlicesCore  = 1
-depthMaxRangeSlicesLoose = 1
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 1
-closePx                  = 5
-openPx                   = 1
-interiorPx               = 3
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 0
-seedBandPx               = 1
-pyrLevels                = 5
-
-026-02-18 12:02:36 No focus halos, improved FG edge
-depthStableRadiusPx      = 3
-depthMaxRangeSlicesCore  = 1
-depthMaxRangeSlicesLoose = 5    // improved FG edge (sweet spot?)
-expandTexFrac            = 0.02
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 1
-closePx                  = 5
-openPx                   = 1
-interiorPx               = 3
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 3
-seedBandPx               = 1
-pyrLevels                = 5
-
-2026-02-18 12:04:36 Better than 12:02:36
-depthStableRadiusPx      = 3
-depthMaxRangeSlicesCore  = 1
-depthMaxRangeSlicesLoose = 1
-expandTexFrac            = 0.02
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 1
-closePx                  = 5
-openPx                   = 1
-interiorPx               = 3
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 3
-seedBandPx               = 1
-pyrLevels                = 5
-
-2026-02-18 12:14:20
-depthStableRadiusPx      = 3
-depthMaxRangeSlicesCore  = 1
-depthMaxRangeSlicesLoose = 5
-expandTexFrac            = 0.05
-strongFrac               = 0.03
-weakFrac                 = 0.01
-seedDilatePx             = 1
-closePx                  = 5
-openPx                   = 1
-interiorPx               = 3
-scoreSigma               = 1.5
-scoreKSize               = 3
-ownershipClosePx         = 3
-seedBandPx               = 1
-pyrLevels                = 5
-
-2026-02-19 10:23:13
-Method                       = DMap
-FOCUS METRIC:
-scoreSigma                   = 1.5
-scoreKSize                   = 3
-FOREGROUND:
-depthStableRadiusPx          = 3
-depthMaxRangeSlicesCore      = 1
-depthMaxRangeSlicesLoose     = 5
-expandTexFrac                = 0.05
-strongFrac                   = 0.03
-weakFrac                     = 0.01
-seedDilatePx                 = 1
-closePx                      = 5
-openPx                       = 1
-interiorPx                   = 3
-OWNERSHIP PROPOGATION:
-ownershipClosePx             = 3
-seedBandPx                   = 1
-Contrast Threshold:
-enableContrastThreshold      = true
-contrastMinFrac              = 0.01
-lowContrastMedianK           = 5
-lowContrastDilatePx          = 0
-PYRAMID FUSION:
-pyrLevels                    = 5
-enableHardWeightsOnLowpass   = false
-enableDepthGradLowpassVeto   = false
-hardFromLevel                = 4
-vetoFromLevel                = -1
-vetoStrength                 = 1
-weightBlurSigma              = 0
-mixEps                       = 1e-06
-wMin                         = 0
-
-2026-02-21 07:06:07 Blotchy background
-Method                        = DMap
-FOCUS METRIC:
- scoreSigma                   = 0.75
- scoreKSize                   = 3
-FOREGROUND:
- depthStableRadiusPx          = 3
- depthMaxRangeSlicesCore      = 1
- depthMaxRangeSlicesLoose     = 5
- expandTexFrac                = 0.05
- strongFrac                   = 0.03
- weakFrac                     = 0.01
- seedDilatePx                 = 1
- closePx                      = 5
- openPx                       = 1
- interiorPx                   = 3
-OWNERSHIP PROPOGATION:
- ownershipClosePx             = 3
- seedBandPx                   = 1
-CONTRAST THRESHOLD:
- enableContrastThreshold      = false
- contrastMinFrac              = 0.2
- lowContrastMedianK           = 5
- lowContrastDilatePx          = 1
-PYRAMID FUSION:
- enablePyramidBlend           = true
- pyrLevels                    = 5
- enableHardWeightsOnLowpass   = true
- enableDepthGradLowpassVeto   = false
- hardFromLevel                = 0
- vetoFromLevel                = -1
- vetoStrength                 = 1
- weightBlurSigma              = 0
- mixEps                       = 1e-06
- wMin                         = 0
-
-2026-02-21 10:27:25
-Ligth leaf areas in upper are blowing out in final fused image,
-depthIndex16 mostly slice 8
-Fusion                        = DMap
-FOCUS METRIC:
- focusMetricMethod            = Laplacian
- scoreSigma                   = 0.75
- scoreKSize                   = 3
-FOREGROUND:
- depthStableRadiusPx          = 3
- depthMaxRangeSlicesCore      = 1
- depthMaxRangeSlicesLoose     = 5
- expandTexFrac                = 0.05
- strongFrac                   = 0.03
- weakFrac                     = 0.01
- seedDilatePx                 = 1
- closePx                      = 5
- openPx                       = 1
- interiorPx                   = 3
-OWNERSHIP PROPOGATION:
- ownershipClosePx             = 3
- seedBandPx                   = 1
-CONTRAST THRESHOLD:
- enableContrastThreshold      = true
- contrastMinFrac              = 0.2
- lowContrastMedianK           = 5
- lowContrastDilatePx          = 1
-PYRAMID FUSION:
- enablePyramidBlend           = false
- pyrLevels                    = 5
- enableHardWeightsOnLowpass   = false
- enableDepthGradLowpassVeto   = false
- hardFromLevel                = 0
- vetoFromLevel                = -1
- vetoStrength                 = 1
- weightBlurSigma              = 0
- mixEps                       = 1e-06
- wMin                         = 0
-
-2026-02-22 05:50:33
-Fusion                        = DMap
-FOCUS METRIC:
- focusMetricMethod            = Laplacian
- scoreSigma                   = 0.75
- scoreKSize                   = 3
-FOREGROUND:
- depthStableRadiusPx          = 3
- depthMaxRangeSlicesCore      = 1
- depthMaxRangeSlicesLoose     = 5
- expandTexFrac                = 0.05
- strongFrac                   = 0.03
- weakFrac                     = 0.01
- seedDilatePx                 = 1
- closePx                      = 5
- openPx                       = 1
- interiorPx                   = 3
-OWNERSHIP PROPOGATION:
- ownershipClosePx             = 3
- seedBandPx                   = 1
-CONTRAST THRESHOLD:
- enableContrastThreshold      = true
- contrastMinFrac              = 0.2
- lowContrastMedianK           = 5
- lowContrastDilatePx          = 1
-PYRAMID FUSION:
- enablePyramidBlend           = true
- pyrLevels                    = 5
- enableHardWeightsOnLowpass   = false
- enableDepthGradLowpassVeto   = false
- hardFromLevel                = 0
- vetoFromLevel                = -1
- vetoStrength                 = 1
- weightBlurSigma              = 0
- mixEps                       = 1e-06
- wMin                         = 0
-
-
-
-
-CONCLUSIONS:
-
-Method                         = DMap
-FOCUS METRIC:
- focusMetricMethod             = Laplacian // Tennengrad false detail
- scoreSigma                    = 0.75     // Higher 1.0..1.5 = FG transition blur
- scoreKSize                    = 3        // 1..3 no visual impact
-FOREGROUND:
- depthStableRadiusPx           = 3        // < 3 focus halos
- depthMaxRangeSlicesCore       = 1        // > 1 focus halos
- depthMaxRangeSlicesLoose      = 5        // 1 = better FG edges 10 = minor halos
- expandTexFrac                 = 0.05     // 0.01..0.05 no visual impact
- strongFrac                    = 0.03
- weakFrac                      = 0.01
- seedDilatePx                  = 1        // 1..2 no visual impact
- closePx                       = 5
- openPx                        = 1        // 0 = focus halo
- interiorPx                    = 3        // 3..10 no visual impact
-OWNERSHIP PROPOGATION:
- ownershipClosePx              = 3        // 0..4 no visual impact
- seedBandPx                    = 1
-CONTRAST THRESHOLD:
- enableContrastThreshold       = true
- contrastMinFrac               = 0.02
- lowContrastMedianK            = 5
- lowContrastDilatePx           = 0
-PYRAMID FUSION:
- pyrLevels                     = 5
- enableHardWeightsOnLowpass    = false  // true = blotchy background
- enableDepthGradLowpassVeto    = false
- hardFromLevel                 = 4
- vetoFromLevel                 = -1
- vetoStrength                  = 1
- weightBlurSigma               = 0
- mixEps                        = 1e-06
- wMin                          = 0
-

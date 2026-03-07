@@ -67,7 +67,7 @@ TableView::TableView(QWidget *parent, DataModel *dm)
     setItemDelegateForColumn(G::FocalLengthColumn, focalLengthItemDelegate);
 
     FileSizeItemDelegate *fileSizeItemDelegate = new FileSizeItemDelegate;
-    setItemDelegateForColumn(G::SizeColumn, fileSizeItemDelegate);
+    setItemDelegateForColumn(G::ByteSizeColumn, fileSizeItemDelegate);
 
     createOkToShow();
 
@@ -195,7 +195,7 @@ void TableView::setDefaultColumnWidths()
         else if (column == G::FocusXColumn) defaultColumnWidth[column] = fm.boundingRect("=FocusX==").width();
         else if (column == G::FocusYColumn) defaultColumnWidth[column] = fm.boundingRect("=FocusY==").width();
         else if (column == G::GPSCoordColumn) defaultColumnWidth[column] = fm.boundingRect("=49°13'13.477  N 123°57'22.22 W=").width();
-        else if (column == G::SizeColumn) defaultColumnWidth[column] = fm.boundingRect("=999,999,999=").width();
+        else if (column == G::ByteSizeColumn) defaultColumnWidth[column] = fm.boundingRect("=999,999,999=").width();
         else if (column == G::WidthColumn) defaultColumnWidth[column] = fm.boundingRect("=Width=").width();
         else if (column == G::HeightColumn) defaultColumnWidth[column] = fm.boundingRect("=Height=").width();
         else if (column == G::ModifiedColumn) defaultColumnWidth[column] = fm.boundingRect("=2019-09-09 09:09:09=").width();

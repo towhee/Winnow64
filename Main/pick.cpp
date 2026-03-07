@@ -385,7 +385,7 @@ qulonglong MW::memoryReqdForPicks()
     for(int row = 0; row < dm->sf->rowCount(); row++) {
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
         if(qvariant_cast<QString>(idx.data(Qt::EditRole)) == "Picked") {
-            idx = dm->sf->index(row, G::SizeColumn);
+            idx = dm->sf->index(row, G::ByteSizeColumn);
             memTot += idx.data(Qt::EditRole).toULongLong();
         }
     }
@@ -398,7 +398,7 @@ qulonglong MW::memoryReqdForSelection()
     qulonglong memTot = 0;
     QModelIndexList selection = dm->selectionModel->selectedRows();
     for(int row = 0; row < selection.count(); row++) {
-        QModelIndex idx = dm->sf->index(row, G::SizeColumn);
+        QModelIndex idx = dm->sf->index(row, G::ByteSizeColumn);
         memTot += idx.data(Qt::EditRole).toULongLong();
     }
     return memTot;

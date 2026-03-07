@@ -901,6 +901,44 @@ Views/videoview.cpp
 Views/videowidget.cpp
 
 
+CONCLUSIONS:
+
+Method                         = DMap
+FOCUS METRIC:
+ focusMetricMethod             = Laplacian // Tennengrad false detail
+ scoreSigma                    = 0.75     // Higher 1.0..1.5 = FG transition blur
+ scoreKSize                    = 3        // 1..3 no visual impact
+FOREGROUND:
+ depthStableRadiusPx           = 3        // < 3 focus halos
+ depthMaxRangeSlicesCore       = 1        // > 1 focus halos
+ depthMaxRangeSlicesLoose      = 5        // 1 = better FG edges 10 = minor halos
+ expandTexFrac                 = 0.05     // 0.01..0.05 no visual impact
+ strongFrac                    = 0.03
+ weakFrac                      = 0.01
+ seedDilatePx                  = 1        // 1..2 no visual impact
+ closePx                       = 5
+ openPx                        = 1        // 0 = focus halo
+ interiorPx                    = 3        // 3..10 no visual impact
+OWNERSHIP PROPOGATION:
+ ownershipClosePx              = 3        // 0..4 no visual impact
+ seedBandPx                    = 1
+CONTRAST THRESHOLD:
+ enableContrastThreshold       = true
+ contrastMinFrac               = 0.02
+ lowContrastMedianK            = 5
+ lowContrastDilatePx           = 0
+PYRAMID FUSION:
+ pyrLevels                     = 5
+ enableHardWeightsOnLowpass    = false  // true = blotchy background
+ enableDepthGradLowpassVeto    = false
+ hardFromLevel                 = 4
+ vetoFromLevel                 = -1
+ vetoStrength                  = 1
+ weightBlurSigma               = 0
+ mixEps                        = 1e-06
+ wMin                          = 0
+
+
 Invalid atom size 1
 moov atom not found!
 Invalid frame after retries: "/Users/roryhill/Pictures/2025/202507/2025-07-22_Parksville/2025-07-22_0001.mp4"
