@@ -96,7 +96,7 @@ Q_NAMESPACE
         FocusXColumn,
         FocusYColumn,
         GPSCoordColumn,
-        SizeColumn,
+        ByteSizeColumn,
         WidthColumn,
         HeightColumn,
         ModifiedColumn,

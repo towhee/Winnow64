@@ -398,7 +398,7 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     case G::LabelColumn: sortLabelAction->setChecked(true); break;
     case G::RatingColumn: sortRatingAction->setChecked(true); break;
     case G::TypeColumn: sortFileTypeAction->setChecked(true); break;
-    case G::SizeColumn: sortFileSizeAction->setChecked(true); break;
+    case G::ByteSizeColumn: sortFileSizeAction->setChecked(true); break;
     case G::CreatedColumn: sortCreateAction->setChecked(true); break;
     case G::ModifiedColumn: sortModifyAction->setChecked(true); break;
     case G::CreatorColumn: sortCreatorAction->setChecked(true); break;

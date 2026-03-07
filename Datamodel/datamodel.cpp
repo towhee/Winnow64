@@ -224,7 +224,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::FocusXColumn, new QStandardItem("FocusX")); horizontalHeaderItem(G::FocusXColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::FocusYColumn, new QStandardItem("FocusY")); horizontalHeaderItem(G::FocusYColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::GPSCoordColumn, new QStandardItem("GPS Coord")); horizontalHeaderItem(G::GPSCoordColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::SizeColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::ByteSizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::ByteSizeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width")); horizontalHeaderItem(G::WidthColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height")); horizontalHeaderItem(G::HeightColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified")); horizontalHeaderItem(G::ModifiedColumn)->setData(false, G::GeekRole);
@@ -1115,8 +1115,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::ReadWriteColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     // size
     quint32 bytes = fileInfo.size();
-    setData(index(row, G::SizeColumn), bytes);
-    setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::ByteSizeColumn), bytes);
+    setData(index(row, G::ByteSizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
 
     // estimate cacheSize until read metadata and calc size for QImage
     float mb = static_cast<double>(bytes) / (1 << 20);
@@ -1159,8 +1159,8 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     if (!index(row,0).isValid()) return false;
 
     QMutexLocker locker(&mutex);
-    setData(index(row, G::SizeColumn), fileInfo.size());
-    setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::ByteSizeColumn), fileInfo.size());
+    setData(index(row, G::ByteSizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     QString s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     setData(index(row, G::ModifiedColumn), s);
 
@@ -1214,7 +1214,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.fPath = fPath;
     m.fName = index(row, G::NameColumn).data().toString();
     m.type = index(row, G::TypeColumn).data().toString();
-    m.size = index(row, G::SizeColumn).data().toInt();
+    m.size = index(row, G::ByteSizeColumn).data().toInt();
     m.video = index(row, G::VideoColumn).data().toInt();
     m.label = index(row, G::LabelColumn).data().toString();
     m._label = index(row, G::_LabelColumn).data().toString();
@@ -3346,7 +3346,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("type", dots) << G::s(index(row, G::TypeColumn).data());
     rpt << "\n  " << G::sj("video", dots) << G::s(index(row, G::VideoColumn).data());
     rpt << "\n  " << G::sj("duration", dots) << G::s(index(row, G::DurationColumn).data());
-    rpt << "\n  " << G::sj("bytes", dots) << G::s(index(row, G::SizeColumn).data());
+    rpt << "\n  " << G::sj("bytes", dots) << G::s(index(row, G::ByteSizeColumn).data());
     rpt << "\n  " << G::sj("pick", dots) << G::s(index(row, G::PickColumn).data());
     rpt << "\n  " << G::sj("ingested", dots) << G::s(index(row, G::IngestedColumn).data());
     rpt << "\n  " << G::sj("label", dots) << G::s(index(row, G::LabelColumn).data());

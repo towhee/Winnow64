@@ -350,11 +350,30 @@ void IconViewDelegate::setVpRect(QRectF vp, qreal imA)
 {
     vpRect = vp;
     this->imA = imA;
-    // /*
-    qDebug() << "IconViewDelegate::setVpRect"
-             << "vpRect =" << vpRect
-             << "imA =" << imA
-                ; //*/
+
+    // Pre-calculate the draw coordinates relative to a zero-origin icon
+    qreal wIcon, hIcon;
+    int wBlack = 0;
+    int hBlack = 0;
+
+    // Calculate icon dimensions based on image aspect ratio
+    if (imA > 1) {
+        wIcon = thumbSize.width();
+        hIcon = wIcon / imA;
+        hBlack = (thumbSize.height() - hIcon) / 2;
+    } else {
+        hIcon = thumbSize.height();
+        wIcon = hIcon * imA;
+        wBlack = (thumbSize.width() - wIcon) / 2;
+    }
+
+    // Map the normalized vpRect (0.0 - 1.0) to actual pixel coordinates
+    int x1 = static_cast<int>(vpRect.topLeft().x() * wIcon) + wBlack;
+    int y1 = static_cast<int>(vpRect.topLeft().y() * hIcon) + hBlack;
+    int x2 = static_cast<int>(vpRect.bottomRight().x() * wIcon) + wBlack;
+    int y2 = static_cast<int>(vpRect.bottomRight().y() * hIcon) + hBlack;
+
+    targetVpRect = QRect(QPoint(x1, y1), QPoint(x2, y2));
 }
 
 QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &optionRect, const QModelIndex &index) const
@@ -798,43 +817,55 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // imageView viewport rect when zoomed
     if (isCurrentIndex && vpRectIsVisible) {
-        // imA is original image aspect (in case thumbnail has black borders)
-        // qDebug() << "IconViewDelegate::paint  imA =" << imA;
-        qreal wIcon, hIcon;
-        int wBlack = 0;     // black border
-        int hBlack = 0;     // black border
-        if (imA > 1) {
-            wIcon = iconRect.width();
-            hIcon = static_cast<int>(wIcon / imA);
-            hBlack = (iconRect.height() - hIcon) / 2;
+        if (isCurrentIndex && vpRectIsVisible) {
+            // Translate the pre-calculated rect to the current icon's screen position
+            QRect drawRect = targetVpRect.translated(iconRect.topLeft());
+
+            painter->setPen(vp1Pen);
+            painter->drawRect(drawRect);
+
+            painter->setPen(vp2Pen);
+            painter->drawRect(drawRect.adjusted(1, 1, -1, -1));
         }
-        else {
-            hIcon = iconRect.height();
-            wIcon = static_cast<int>(hIcon * imA);
-            wBlack = (iconRect.width() - wIcon) / 2;
-        }
-        int xIconTL = iconRect.x() + wBlack;
-        int yIconTL = iconRect.y() + hBlack;
-        int x1Vp = static_cast<int>(vpRect.topLeft().x() * wIcon);
-        int y1Vp = static_cast<int>(vpRect.topLeft().y() * hIcon);
-        int x2Vp = static_cast<int>(vpRect.bottomRight().x() * wIcon);
-        int y2Vp = static_cast<int>(vpRect.bottomRight().y() * hIcon);
-        int x1 = x1Vp + xIconTL;
-        int y1 = y1Vp + yIconTL;
-        int x2 = x2Vp + xIconTL;
-        int y2 = y2Vp + yIconTL;
-        /*
-        qDebug() << "IconViewDelegate::paint"
-                 << "cellRect =" << cellRect
-                 << "thumbRect =" << thumbRect
-                 << "iconRect =" << iconRect
-                 << "vpRect =" << vpRect
-                 << QRect(QPoint(x1,y1), QPoint(x2,y2))
-                    ; // */
-        painter->setPen(vp1Pen);
-        painter->drawRect(QRect(QPoint(x1,y1), QPoint(x2,y2)));
-        painter->setPen(vp2Pen);
-        painter->drawRect(QRect(QPoint(x1+1,y1+1), QPoint(x2-1,y2-1)));
+
+
+        // // imA is original image aspect (in case thumbnail has black borders)
+        // // qDebug() << "IconViewDelegate::paint  imA =" << imA;
+        // qreal wIcon, hIcon;
+        // int wBlack = 0;     // black border
+        // int hBlack = 0;     // black border
+        // if (imA > 1) {
+        //     wIcon = iconRect.width();
+        //     hIcon = static_cast<int>(wIcon / imA);
+        //     hBlack = (iconRect.height() - hIcon) / 2;
+        // }
+        // else {
+        //     hIcon = iconRect.height();
+        //     wIcon = static_cast<int>(hIcon * imA);
+        //     wBlack = (iconRect.width() - wIcon) / 2;
+        // }
+        // int xIconTL = iconRect.x() + wBlack;
+        // int yIconTL = iconRect.y() + hBlack;
+        // int x1Vp = static_cast<int>(vpRect.topLeft().x() * wIcon);
+        // int y1Vp = static_cast<int>(vpRect.topLeft().y() * hIcon);
+        // int x2Vp = static_cast<int>(vpRect.bottomRight().x() * wIcon);
+        // int y2Vp = static_cast<int>(vpRect.bottomRight().y() * hIcon);
+        // int x1 = x1Vp + xIconTL;
+        // int y1 = y1Vp + yIconTL;
+        // int x2 = x2Vp + xIconTL;
+        // int y2 = y2Vp + yIconTL;
+        // /*
+        // qDebug() << "IconViewDelegate::paint"
+        //          << "cellRect =" << cellRect
+        //          << "thumbRect =" << thumbRect
+        //          << "iconRect =" << iconRect
+        //          << "vpRect =" << vpRect
+        //          << QRect(QPoint(x1,y1), QPoint(x2,y2))
+        //             ; // */
+        // painter->setPen(vp1Pen);
+        // painter->drawRect(QRect(QPoint(x1,y1), QPoint(x2,y2)));
+        // painter->setPen(vp2Pen);
+        // painter->drawRect(QRect(QPoint(x1+1,y1+1), QPoint(x2-1,y2-1)));
     }
 
     /* provide rect data to calc thumb mouse click position that is then sent to imageView to
