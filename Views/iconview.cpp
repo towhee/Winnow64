@@ -371,6 +371,10 @@ void IconView::setThumbParameters()
     }
     setSpacing(0);
     if (labelFontSize == 0) labelFontSize = 10;
+
+    // Clear the delegate icon cache because the pixmaps are now the wrong size
+    iconViewDelegate->clearAllCache();
+
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
                                          showIconLabels, labelChoice,
                                          badgeSize, iconNumberSize);
@@ -550,7 +554,8 @@ QModelIndex IconView::pageUpIndex(int fromRow)
 
 void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
-    if (isDebug || G::isFlowLogger) qDebug() << "IconView::sortThumbs" << objectName();
+    // if (isDebug || G::isFlowLogger)
+        qDebug() << "IconView::sortThumbs" << objectName();
     if (isReverse) dm->sf->sort(sortColumn, Qt::DescendingOrder);
     else dm->sf->sort(sortColumn, Qt::AscendingOrder);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
@@ -567,13 +572,21 @@ void IconView::setThumbSize()
     if (isDebug)
         qDebug() << src << objectName();
 
+    // Capture the cell at the center of the current viewport before resizing
+    QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
+    QModelIndex centerIdx = indexAt(centerPoint);
+    int centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
+
     G::ignoreScrollSignal = true;
     setThumbParameters();
 
-    // G::ignoreScrollSignal = false;
-    m2->updateIconRange(true, "IconView::setThumbSize");
+    // Re-synchronize the visible range for metadata/caching
+    m2->updateIconRange(true, src);
 
-    // scrollToCurrent(src);
+    // Recenters the anchor cell
+    if (centerRow >= 0) {
+        scrollToRow(centerRow, src);
+    }
 
     /* debug
     qDebug() << "IconView::setThumbSize"
@@ -665,48 +678,91 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
     increased or decreased in the justify() function, and used to maintain the
     cell size during the resize and preference adjustment operations.
 */
-    QString src = "IconView::rejustify";
-    if (isDebug || G::isLogger)
-        G::log(src, objectName());
-    /*
-    qDebug() << objectName() << "::rejustify   "
-             << "isWrapping" << isWrapping();
-    //*/
-
+    // Skip if wrapping is disabled as justification only applies to grid-style layouts
     if (!isWrapping()) return;
 
-    // get
-    int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
-    if (assignedIconWidth < 40 || assignedIconWidth > 480) assignedIconWidth = iconWidth;
+    QString src = "IconView::rejustify";
+    if (isDebug || G::isLogger) G::log(src, objectName());
+
+    // Capture the cell at the center of the viewport before the layout changes
+    QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
+    QModelIndex centerIdx = indexAt(centerPoint);
+    int centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
+
+    // Calculate available row width, accounting for scrollbars and a small margin
+    int wRow = width() - G::scrollBarThickness - 8;
+
+    // Ensure assignedIconWidth is within safe bounds to prevent division by zero or huge cells
+    if (assignedIconWidth < ICON_MIN || assignedIconWidth > G::maxIconSize) {
+        assignedIconWidth = iconWidth;
+    }
+
+    // Determine cell width based on the assigned reference width
     int wCell = iconViewDelegate->getCellWidthFromThumbWidth(assignedIconWidth);
+    if (wCell <= 0) return;
 
-    if (wCell == 0) return;
+    // Calculate how many thumbs fit per row
     int tpr = wRow / wCell;
+    if (tpr <= 0) tpr = 1;
 
-    if (tpr == 0) return;
+    // Recalculate cell width to perfectly fill the available row width (justification)
     wCell = wRow / tpr;
 
+    // Update icon dimensions to match the new justified cell width
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
-    /*
-    qDebug().noquote() << src << objectName()
-             << "assignedIconWidth =" << assignedIconWidth
-             << "wRow =" << wRow
-             << "wCell =" << wCell
-             << "tpr =" << tpr
-             << "iconWidth =" << iconWidth
-             << "iconHeight =" << iconHeight
-             << "midVisibleCell =" << midVisibleCell
-        ;
-    //*/
 
-    skipResize = true;      // prevent feedback loop
+    // Prevent a feedback loop by flagging that we are already handling the resize
+    skipResize = true;
 
-
+    // Update the delegate with new dimensions and clear the QCache
     setThumbParameters();
-    scrollToRow(dm->scrollToIcon, src);
 
+    // Maintain the user's position by scrolling back to the mid-visible cell
+    if (centerRow >= 0) {
+        scrollToRow(centerRow, src);
+    }
+
+    // scrollToRow(dm->scrollToIcon, src);
+
+    // Synchronize visibility ranges for caching and metadata reading
     m2->updateIconRange(true, src);
+
+
+
+
+    // // get
+    // int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
+    // if (assignedIconWidth < 40 || assignedIconWidth > 480) assignedIconWidth = iconWidth;
+    // int wCell = iconViewDelegate->getCellWidthFromThumbWidth(assignedIconWidth);
+
+    // if (wCell == 0) return;
+    // int tpr = wRow / wCell;
+
+    // if (tpr == 0) return;
+    // wCell = wRow / tpr;
+
+    // iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
+    // iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
+    // /*
+    // qDebug().noquote() << src << objectName()
+    //          << "assignedIconWidth =" << assignedIconWidth
+    //          << "wRow =" << wRow
+    //          << "wCell =" << wCell
+    //          << "tpr =" << tpr
+    //          << "iconWidth =" << iconWidth
+    //          << "iconHeight =" << iconHeight
+    //          << "midVisibleCell =" << midVisibleCell
+    //     ;
+    // //*/
+
+    // skipResize = true;      // prevent feedback loop
+
+
+    // setThumbParameters();
+    // scrollToRow(dm->scrollToIcon, src);
+
+    // m2->updateIconRange(true, src);
 }
 
 void IconView::justify(JustifyAction action)
@@ -804,7 +860,6 @@ void IconView::resizeEvent(QResizeEvent *)
     }
     //*/
 
-    static int prevWidth = 0;
     // int prevMidVisibleCell = midVisibleCell;
 
     /*
@@ -829,22 +884,19 @@ void IconView::resizeEvent(QResizeEvent *)
 
     G::resizingIcons = true;
 
+    static int prevWidth = 0;
     // Rejustify icons
     bool widthChange = width() != prevWidth;
     bool needToRejustify = isWrapping() && widthChange;
+
     if (needToRejustify) {
-        // QTimer::singleShot(500, this, [this, prevMidVisibleCell]() {
-        //     rejustify(prevMidVisibleCell);
-        // });
+        // We call rejustify, which now uses the visual center as the anchor
         QTimer::singleShot(500, this, SLOT(rejustify()));   // calls calcViewportParameters
     }
     prevWidth = width();
 
     // req'd to show/hide scrollbar in thumb dock
     setThumbParameters();
-
-    // return if grid view has not been opened yet
-    //if (m2->gridDisplayFirstOpen) return;
 
     QString src = "IconView::resizeEvent";
     if (!needToRejustify) m2->updateIconRange(true, src);
@@ -856,34 +908,34 @@ void IconView::resizeEvent(QResizeEvent *)
                 ;
                 //*/
 
-    // create flag resizeJustDone, and scollToCurrent when mouse release
-    if (isLeftMouseBtnPressed) {
-        if (!isCellVisible(dm->currentSfRow)) {
-            scrollToCurrent(src);
-        }
-        resizeJustDone = true;
-    }
+    // // create flag resizeJustDone, and scollToCurrent when mouse release
+    // if (isLeftMouseBtnPressed) {
+    //     if (!isCellVisible(dm->currentSfRow)) {
+    //         scrollToCurrent(src);
+    //     }
+    //     resizeJustDone = true;
+    // }
+
+    resizeJustDone = true;
+
 }
 
 void IconView::thumbsFitTopOrBottom(QString src)
 {
-/*
-    The thumbnail size is adjusted to fit the thumbDock height and scrolled to
-    keep the midVisibleThumb in the middle. Other objects visible (docks and
-    central widget) are resized.
-
-    Called by MW::eventFilter when a thumbDock resize event occurs triggered by
-    the user resizing the thumbDock.
-
-    Called when thumbViewShowLabel is changed.
-
-    For icon cell anatomy see diagram at top of iconviewdelegate.cpp.
-*/
-    QString fun = "IconView::thumbsFitTopOrBottom";
-    if (isDebug || G::isLogger) G::log(fun, objectName());
     /*
-    qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName()
-                ; //*/
+        The thumbnail size is adjusted to fit the thumbDock height and scrolled to
+        keep the midVisibleThumb in the middle. Other objects visible (docks and
+        central widget) are resized.
+
+        Called by MW::eventFilter when a thumbDock resize event occurs triggered by
+        the user resizing the thumbDock.
+
+        Called when thumbViewShowLabel is changed.
+
+        For icon cell anatomy see diagram at top of iconviewdelegate.cpp.
+    */
+    QString fun = "IconView::thumbsFitTopOrBottom";
+    if (isDebug || G::isLogger) G::log(fun, objectName() + " src: " + src);
 
     // viewport available height
     int newViewportHt = height() - G::scrollBarThickness;
@@ -901,23 +953,15 @@ void IconView::thumbsFitTopOrBottom(QString src)
     int minCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMin);
 
     bool exceedsLimits = newViewportHt > maxCellHeight || newViewportHt < minCellHeight;
-    /*
-    qDebug() << "IconView::thumbsFitTopOrBottom"
-             << "newViewportHt =" << newViewportHt
-             << "maxCellHeight =" << maxCellHeight
-             << "minCellHeight =" << minCellHeight
-             << "exceedsLimits =" << exceedsLimits
-                ;
-                //*/
 
     // do nothing if exceed limits
     if (exceedsLimits) {
-        /*
-        qDebug() << "IconView::thumbsFitTopOrBottom  exceedsLimits"
-                 << "newViewportHt =" << newViewportHt
-                 << "maxCellHeight =" << maxCellHeight
-                 << "minCellHeight =" << minCellHeight
-            ;//*/
+        if (isDebug) {
+            qDebug() << "IconView::thumbsFitTopOrBottom exceedsLimits"
+                     << "newViewportHt =" << newViewportHt
+                     << "maxCellHeight =" << maxCellHeight
+                     << "minCellHeight =" << minCellHeight;
+        }
         return;
     }
 
@@ -925,22 +969,99 @@ void IconView::thumbsFitTopOrBottom(QString src)
     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
     iconWidth = static_cast<int>(iconHeight * bestAspectRatio);
 
-    /*
-    qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
-             << "newViewportHt =" << newViewportHt
-             << "maxCellHeight =" << maxCellHeight
-             << "minCellHeight =" << minCellHeight
-             << "bestAspectRatio =" << bestAspectRatio
-             << "iconHeight =" << iconHeight
-             << "iconWidth =" << iconWidth
-             << "hMax =" << hMax
-             << "hMin =" << hMin
-             << "G::maxIconSize =" << G::maxIconSize
-                ;
-    //    */
+    if (isDebug) {
+        qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
+                 << "newViewportHt =" << newViewportHt
+                 << "maxCellHeight =" << maxCellHeight
+                 << "minCellHeight =" << minCellHeight
+                 << "bestAspectRatio =" << bestAspectRatio
+                 << "iconHeight =" << iconHeight
+                 << "iconWidth =" << iconWidth
+                 << "hMax =" << hMax
+                 << "hMin =" << hMin
+                 << "G::maxIconSize =" << G::maxIconSize;
+    }
 
+    // This calls setThumbParameters, which now clears the iconCache
     setThumbSize();
 }
+
+// void IconView::thumbsFitTopOrBottom(QString src)
+// {
+// /*
+//     The thumbnail size is adjusted to fit the thumbDock height and scrolled to
+//     keep the midVisibleThumb in the middle. Other objects visible (docks and
+//     central widget) are resized.
+
+//     Called by MW::eventFilter when a thumbDock resize event occurs triggered by
+//     the user resizing the thumbDock.
+
+//     Called when thumbViewShowLabel is changed.
+
+//     For icon cell anatomy see diagram at top of iconviewdelegate.cpp.
+// */
+//     QString fun = "IconView::thumbsFitTopOrBottom";
+//     if (isDebug || G::isLogger) G::log(fun, objectName());
+//     /*
+//     qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName()
+//                 ; //*/
+
+//     // viewport available height
+//     int newViewportHt = height() - G::scrollBarThickness;
+
+//     // best aspect ratio to use
+//     double ba = bestAspectRatio;
+//     if (ba > 1.0) ba = 1.0;
+
+//     // max/min viewport height adjusted for best aspect ratio to use
+//     int hMax = static_cast<int>(G::maxIconSize * ba);
+//     int hMin = static_cast<int>(G::minIconSize * ba);
+
+//     // max/min cell size
+//     int maxCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMax);
+//     int minCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMin);
+
+//     bool exceedsLimits = newViewportHt > maxCellHeight || newViewportHt < minCellHeight;
+//     /*
+//     qDebug() << "IconView::thumbsFitTopOrBottom"
+//              << "newViewportHt =" << newViewportHt
+//              << "maxCellHeight =" << maxCellHeight
+//              << "minCellHeight =" << minCellHeight
+//              << "exceedsLimits =" << exceedsLimits
+//                 ;
+//                 //*/
+
+//     // do nothing if exceed limits
+//     if (exceedsLimits) {
+//         /*
+//         qDebug() << "IconView::thumbsFitTopOrBottom  exceedsLimits"
+//                  << "newViewportHt =" << newViewportHt
+//                  << "maxCellHeight =" << maxCellHeight
+//                  << "minCellHeight =" << minCellHeight
+//             ;//*/
+//         return;
+//     }
+
+//     // newViewportHt is okay, set icon size
+//     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
+//     iconWidth = static_cast<int>(iconHeight * bestAspectRatio);
+
+//     /*
+//     qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
+//              << "newViewportHt =" << newViewportHt
+//              << "maxCellHeight =" << maxCellHeight
+//              << "minCellHeight =" << minCellHeight
+//              << "bestAspectRatio =" << bestAspectRatio
+//              << "iconHeight =" << iconHeight
+//              << "iconWidth =" << iconWidth
+//              << "hMax =" << hMax
+//              << "hMin =" << hMin
+//              << "G::maxIconSize =" << G::maxIconSize
+//                 ;
+//     //    */
+
+//     setThumbSize();
+// }
 
 void IconView::repaintView()
 {
@@ -1025,7 +1146,7 @@ void IconView::scrollToRow(int row, QString source)
     source is the calling function and is used for debugging.
 */
     QString src = "IconView::scrollToRow";
-    if (isDebug || G::isLogger)
+    // if (isDebug || G::isLogger)
     {
         QString msg = " row = " + QVariant(row).toString()
                       + " src = " + source;
@@ -1037,10 +1158,8 @@ void IconView::scrollToRow(int row, QString source)
              << "src =" << source;
                 // */
     QModelIndex idx = dm->sf->index(row, 0);
-    if (!idx.isValid()) {
-        // qDebug() << "IconView::scrollToRow inValid row =" << row;
-        return;
-    }
+    if (!idx.isValid()) return;
+
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
@@ -1050,8 +1169,8 @@ void IconView::scrollToCurrent(QString source)
 */
 {
     QString src = "IconView::scrollToCurrent";
-    if (isDebug || G::isLogger)
-        G::log(src, objectName());
+    // if (isDebug || G::isLogger)
+        G::log(src, objectName() + " from " + source);
     // if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
     /*
     qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx

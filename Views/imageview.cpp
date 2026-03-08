@@ -885,6 +885,14 @@ void ImageView::rotateImage(int degrees)
         zoom = zoomFit;
         scale();
     }
+
+    // Invalidate the IconViewDelegate cache for this specific image
+    if (thumbView) {
+        // You'll need to call the clear method on the delegate
+        thumbView->iconViewDelegate->clearCacheItem(dm->currentSfRow);
+        // Then tell the view to redraw that specific thumb
+        thumbView->refreshThumb(dm->currentSfIdx);
+    }
 }
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)

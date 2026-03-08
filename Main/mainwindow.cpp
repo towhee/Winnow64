@@ -439,11 +439,6 @@ void MW::resizeEvent(QResizeEvent *event)
 
     // update current workspace
     ws.isMaximised = isMaximized();
-
-    // scroll to current
-    if (!thumbView->isCellVisible(dm->currentSfRow)) {
-        keyScrollCurrent();
-    }
 }
 
 void MW::changeEvent(QEvent *event) {
