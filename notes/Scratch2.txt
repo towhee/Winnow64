@@ -1,50 +1,142 @@
-// GEOMETRY
-    QRect cellRect(option.rect);
-    QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
-    QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
-    QPoint origin = thumbRect.topLeft();
+void IconView::setThumbSize()
+{
+    QString src = "IconView::setThumbSize";
+    if (isDebug || G::isLogger) G::log(src, objectName());
 
-    // PIXMAP CACHING LOGIC
-    // Check if we already have the scaled pixmap for this row
-    QPixmap *cachedPm = iconCache.object(sfRow);
-    QPixmap pm;
-    QRect iconRect;
+    // Capture the cell at the center of the current viewport before resizing
+    QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
+    QModelIndex centerIdx = indexAt(centerPoint);
+    int centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
 
-    if (cachedPm) {
-        pm = *cachedPm;
-    } else {
-        // Cache miss: Perform the expensive scaling once
-        QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-        QSize maxSize = icon.actualSize(QSize(G::maxIconSize, G::maxIconSize));
-        pm = icon.pixmap(maxSize);
+    G::ignoreScrollSignal = true;
 
-        if (!pm.isNull()) {
-            int pmMargin = 8;
-            bool isSquare = (qAbs(pm.width() - pm.height()) < pmMargin);
+    // This updates delegate dimensions and clears the QCache
+    setThumbParameters();
 
-            if (isSquare) {
-                pm = pm.scaled(thumbSize - QSize(pmMargin, pmMargin), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            } else {
-                pm = pm.scaled(thumbSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            }
-            // Insert into cache so we don't do this again for this row
-            iconCache.insert(sfRow, new QPixmap(pm));
-        }
+    // Re-synchronize the visible range for metadata/caching
+    m2->updateIconRange(true, src);
+
+    // Recenters the anchor cell
+    if (centerRow >= 0) {
+        scrollToRow(centerRow, src);
+    }
+}
+
+void IconView::scrollToRow(int row, QString source)
+{
+    QString src = "IconView::scrollToRow";
+    if (isDebug || G::isLogger)
+    {
+        QString msg = " row = " + QString::number(row) + " src = " + source;
+        G::log(src, objectName() + msg);
     }
 
-    // Calculate iconRect based on the (now potentially cached) pixmap dimensions
-    if (!pm.isNull()) {
-        int alignVert = (thumbRect.height() - pm.height()) / 2;
-        int alignHor = (thumbRect.width() - pm.width()) / 2;
-        iconRect = QRect(thumbRect.left() + alignHor, thumbRect.top() + alignVert, pm.width(), pm.height());
+    QModelIndex idx = dm->sf->index(row, 0);
+    if (!idx.isValid()) return;
+
+    // PositionAtCenter will respect the beginning/end of the list automatically,
+    // as it cannot scroll past the scrollbar's min/max bounds.
+    scrollTo(idx, QAbstractItemView::PositionAtCenter);
+}
+
+void IconView::rejustify()
+{
+    // Skip if wrapping is disabled as justification only applies to grid-style layouts
+    if (!isWrapping()) return;
+
+    QString src = "IconView::rejustify";
+    if (isDebug || G::isLogger)
+        G::log(src, objectName());
+
+    // Capture the cell at the center of the viewport before the layout changes
+    QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
+    QModelIndex centerIdx = indexAt(centerPoint);
+    int centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
+
+    // Calculate available row width, accounting for scrollbars and your specific 8px margin
+    int wRow = width() - G::scrollBarThickness - 8;
+
+    // Safety check for assignedIconWidth to prevent division by zero
+    if (assignedIconWidth < 40 || assignedIconWidth > 480) assignedIconWidth = iconWidth;
+    int wCell = iconViewDelegate->getCellWidthFromThumbWidth(assignedIconWidth);
+
+    if (wCell == 0) return;
+    int tpr = wRow / wCell;
+
+    if (tpr == 0) return;
+    wCell = wRow / tpr;
+
+    // Apply the new justified width while maintaining the best aspect ratio
+    iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
+    iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
+
+    skipResize = true;      // prevent feedback loop
+
+    // This call now clears the iconCache via setThumbParameters
+    setThumbParameters();
+
+    // Restore the scroll position to the captured center anchor
+    if (centerRow >= 0) {
+        scrollToRow(centerRow, src);
     }
 
-    // ... [Rest of the painting logic: Background, Labels, Overlays] ...
+    m2->updateIconRange(true, src);
+}
 
-// DRAW PIXMAP
-    if (!pm.isNull()) {
-        painter->setClipping(true);
-        painter->setClipRect(iconRect);
-        painter->drawPixmap(iconRect, pm);
-        painter->setClipping(false);
+
+void IconView::resizeEvent(QResizeEvent *event)
+{
+    if (isDebug || G::isLogger) G::log("IconView::resizeEvent", objectName());
+
+    if (thumbSplitDrag) return;
+
+    G::resizingIcons = true;
+
+    static int prevWidth = 0;
+    bool widthChange = width() != prevWidth;
+    bool needToRejustify = isWrapping() && widthChange;
+
+    if (needToRejustify) {
+        // We call rejustify, which now uses the visual center as the anchor
+        QTimer::singleShot(500, this, SLOT(rejustify()));
     }
+    prevWidth = width();
+
+    setThumbParameters();
+
+    QString src = "IconView::resizeEvent";
+    if (!needToRejustify) m2->updateIconRange(true, src);
+
+    // REMOVED: The logic that forced a scroll to dm->currentSfRow
+    // This prevents the jump to the selected icon during resize.
+    resizeJustDone = true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

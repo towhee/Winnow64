@@ -187,6 +187,7 @@ void MW::scrollToCurrentRowIfNotVisible()
     the current row.
 
 */
+    qDebug() << "";
     if (G::isLogger) G::log("MW::scrollToCurrentRow");
     dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     int sfRow = dm->currentSfRow;

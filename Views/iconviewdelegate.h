@@ -40,7 +40,8 @@ public:
     int getCellWidthFromThumbWidth(int width);
     int getCellHeightFromThumbHeight(int height);
     void resetFirstLastVisible();
-
+    void clearCacheItem(int sfRow) { iconCache.remove(sfRow); }
+    void clearAllCache() { iconCache.clear(); }
     QString diagnostics();
 
     QModelIndex currentIndex;
