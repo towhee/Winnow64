@@ -254,6 +254,9 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     combineRawJpgRect.setRect(cacheRect.left() - linkW - 2,
                               thumbSize.height() - 0.8 * linkH,
                               linkW, linkH);
+
+    // When dimensions change, all cached pixmaps are the wrong size
+    iconCache.clear();
 }
 
 QString IconViewDelegate::diagnostics()
@@ -502,10 +505,24 @@ void IconViewDelegate::paint(QPainter *painter,
                              const QStyleOptionViewItem &option,
                              const QModelIndex &index) const
 {
+/*
+The delegate cell size is defined in setThumbDimensions and assigned in sizeHint.
+The thumbSize cell contains a number of cells or rectangles:
+
+Outer dimensions = cellRect or option.rect (QListView icon spacing is set to zero)
+frameRect        = cellRect - cBrdT - fPad
+thumbRect        = itemRect - thumbBorderGap - padding - thumbBorderThickness
+iconRect         = thumbRect - icon (icon has different aspect so either the
+                   width or height will have to be centered inside the thumbRect
+textRect         = a rectangle below itemRect
+*/
+
     // Quick exit if the icon has not been loaded into the DataModel
     if (index.data(Qt::DecorationRole).isNull()) return;
 
     painter->save();
+
+    // --- DATA AND GEOMETRY ---
 
     // Pull model data once to avoid repeated indexing during the paint loop
     int sfRow = index.row();
@@ -540,28 +557,43 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
     QPoint origin = thumbRect.topLeft();
 
-    // Retrieve and scale the icon pixmap to fit the thumbRect
-    QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-    QSize maxSize = icon.actualSize(QSize(G::maxIconSize, G::maxIconSize));
-    QPixmap pm = icon.pixmap(maxSize);
-
+    // --- ICON CACHE ---
+    // Check if we already have the scaled pixmap for this row
+    QPixmap *cachedPm = iconCache.object(sfRow);
+    QPixmap pm;
     QRect iconRect;
-    if (!pm.isNull()) {
-        // Apply square-ish scaling adjustment for color class border visibility
-        int pmMargin = 8;
-        bool isSquare = (qAbs(pm.width() - pm.height()) < pmMargin);
 
-        if (isSquare) {
-            pm = pm.scaled(thumbSize - QSize(pmMargin, pmMargin), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        } else {
-            pm = pm.scaled(thumbSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    if (cachedPm) {
+        pm = *cachedPm;
+    } else {
+        // Expensive retrieve and scale the datamodel icon pixmap to fit in thumbRect
+        QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
+        QSize maxSize = icon.actualSize(QSize(G::maxIconSize, G::maxIconSize));
+        pm = icon.pixmap(maxSize);
+
+        if (!pm.isNull()) {
+            // Apply square-ish scaling adjustment for color class border visibility
+            int pmMargin = 8;
+            bool isSquare = (qAbs(pm.width() - pm.height()) < pmMargin);
+
+            if (isSquare) {
+                pm = pm.scaled(thumbSize - QSize(pmMargin, pmMargin), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            } else {
+                pm = pm.scaled(thumbSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            }
+
+            // Insert into cache so we don't do this again for this row
+            iconCache.insert(sfRow, new QPixmap(pm));
         }
+    }
 
-        // Center the scaled pixmap within the thumbRect
+    // Calculate iconRect based on the (now potentially cached) pixmap dimensions
+    if (!pm.isNull()) {
         int alignVert = (thumbRect.height() - pm.height()) / 2;
         int alignHor = (thumbRect.width() - pm.width()) / 2;
         iconRect = QRect(thumbRect.left() + alignHor, thumbRect.top() + alignVert, pm.width(), pm.height());
     }
+
 
     // Determine frame background color based on rating labels
     QColor labelColorToUse = G::backgroundColor;
@@ -572,6 +604,8 @@ void IconViewDelegate::paint(QPainter *painter,
         else if (colorClass == "Blue") labelColorToUse = G::labelBlueColor;
         else if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
     }
+
+    // --- PAINTING ---
 
     // Paint the frame background and main border
     painter->setRenderHint(QPainter::Antialiasing, true);
@@ -618,6 +652,9 @@ void IconViewDelegate::paint(QPainter *painter,
             painter->drawText(QRect(thumbRect.left() + b, thumbRect.bottom() - videoDurationHt - h, starsWidth, h),
                               Qt::AlignHCenter | Qt::AlignTop, stars);
         } else {
+            QFont starFont = painter->font();
+            starFont.setPixelSize(infoHt);
+            painter->setFont(starFont);
             painter->drawText(QRect(thumbRect.center().x() - infoHt/2, thumbRect.bottom() - videoDurationHt - infoHt + 3, infoHt, infoHt),
                               Qt::AlignBottom, QString::number(ratingNumber));
         }
@@ -647,19 +684,17 @@ void IconViewDelegate::paint(QPainter *painter,
         numberFont.setPixelSize(pxSize);
         numberFont.setBold(true);
         painter->setFont(numberFont);
-
         QFontMetrics fm(numberFont);
         QString labelNumber = QString::number(sfRow + 1);
         int numberWidth = fm.boundingRect(labelNumber).width() + 4;
         QRect numberRect(frameRect.left(), frameRect.top(), numberWidth + 4, iconNumberSize);
-
         painter->setPen(Qt::transparent);
         painter->drawRoundedRect(numberRect, 8, 8);
         painter->setPen(numberTextColor);
         painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
     }
 
-    // Draw status borders for Picked, Ingested, or Rejected states
+    // Draw status borders for Picked / Ingested / Rejected states
     painter->setBrush(Qt::transparent);
     if (isPicked) painter->setPen(pickedPen);
     else if (isIngested) painter->setPen(ingestedPen);
@@ -888,7 +923,7 @@ void IconViewDelegate::paint(QPainter *painter,
 //         videoDurationHt = bRect.height();
 //     }
 
-//     // rating badge (color filled circle with rating number in center)
+//     // rating badge
 //     isRatingBadgeVisible = true;
 //     if (isRatingBadgeVisible || showAllSymbols) {
 //         // label/rating rect located top-right as containment for circle
