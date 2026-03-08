@@ -1,217 +1,50 @@
-void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
-{
-/*
-    Turns the cursor into a frame showing the cropped ImageView zoom window in the
-    thumbnail. This is handy for the user to see where a click on thumbnail to instantly
-    pan to in same spot in the imageView zoomed window.
+// GEOMETRY
+    QRect cellRect(option.rect);
+    QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
+    QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
+    QPoint origin = thumbRect.topLeft();
 
-    This is predicated on the zoom > zoomFit and the mouse position pointing to a valid
-    thumbnail. This function is called from MW::eventFilter when there is mouse movement
-    in the thumbView viewport. It is also called from MW::thumbHasScrolled as the mouse
-    pointer might be on a different thumbnail after the thumbnails scroll. Finally it is
-    called when there is a window resize MW::resizeEvent that will change the
-    centralWidget geometry.
-*/
-    if (isDebug) G::log("IconView::zoomCursor", objectName());
-    /*
-    qDebug() << "IconView::zoomCursor"
-             << "src =" << src
-             << idx
-             << "forceUpdate =" << forceUpdate
-             << "isFit =" << m2->imageView->isFit
-             << mousePos;
-             //*/
-    QString failReason = "";
-    if (G::isEmbellish) failReason = "G::isEmbellish";
-    if (G::isInitializing) failReason = "G::isInitializing";
-    if (G::stop) failReason = "G::stop";
-    bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-    if (isVideo) failReason = "isVideo";
+    // PIXMAP CACHING LOGIC
+    // Check if we already have the scaled pixmap for this row
+    QPixmap *cachedPm = iconCache.object(sfRow);
+    QPixmap pm;
+    QRect iconRect;
 
-    if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
-        setCursor(Qt::ArrowCursor);
-        prevIdx = model()->index(-1, -1);
-        failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
-    }
+    if (cachedPm) {
+        pm = *cachedPm;
+    } else {
+        // Cache miss: Perform the expensive scaling once
+        QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
+        QSize maxSize = icon.actualSize(QSize(G::maxIconSize, G::maxIconSize));
+        pm = icon.pixmap(maxSize);
 
-    if (QGuiApplication::queryKeyboardModifiers()) {
-        setCursor(Qt::ArrowCursor);
-        failReason = "Key modifier pressed";
-    }
+        if (!pm.isNull()) {
+            int pmMargin = 8;
+            bool isSquare = (qAbs(pm.width() - pm.height()) < pmMargin);
 
-//    if (idx == prevIdx && !forceUpdate) reason = "idx == prevIdx && !forceUpdate";
-    if (!showZoomFrame) failReason = "!showZoomFrame";
-    if (!idx.isValid()) failReason = "!idx.isValid()";
-    if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
-
-    // preview dimensions
-    int imW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toInt();
-    int imH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toInt();
-    if (imW == 0 || imH == 0) failReason = "Zero width or height";
-
-    qreal zoom = m2->imageView->zoom;
-    imW = static_cast<int>(imW * zoom);
-    imH = static_cast<int>(imH + zoom);
-    qreal imA = static_cast<qreal>(imW) / imH;
-
-    QRect centralRect = m2->centralWidget->rect();
-    int cW = centralRect.width();
-    int cH = centralRect.height();
-    /*
-    qDebug() << "IconView::zoomCursor" << idx
-             << "cW =" << cW << "cH =" << cH
-             << "imW =" << imW << "imH =" << imH;
-//        */
-    if (imW < cW && imH < cH) {
-        setCursor(Qt::ArrowCursor);
-        prevIdx = model()->index(-1, -1);
-        failReason = "imW < cW && imH < cH";
-    }
-
-    /* // debugging
-    if (failReason.length()) {
-        qDebug() << "WARNING IconView::zoomCursor Failed because" << failReason;
-        QString msg = "Failed because " + failReason + ".";
-        G::issue("Warning", msg, "IconView::zoomCursor");
-    }
-    else {
-        qDebug() << "IconView::zoomCursor" << "Succeeded";
-    }
-    //*/
-
-    if (failReason.length()) return;
-
-    prevIdx = idx;
-
-    qreal hScale = static_cast<qreal>(cW) / imW;
-    qreal vScale = static_cast<qreal>(cH) / imH;
-
-    iconRect = idx.data(G::IconRectRole).toRect();
-    /*
-    qDebug() << "IconView::zoomCursor"
-             << "idx =" << idx
-             << "idx.data(G::IconRectRole) =" << idx.data(G::IconRectRole)
-             << "iconRect =" << iconRect;
-    //*/
-    int w, h;       // zoom frame width and height in pixels
-
-    if (hScale < 1 || vScale <= 1 ) {
-        // imageView is zoomed in at least one axis
-
-        // scale is for the side that needs to be reduced the most to fit
-        qreal zoomFit = (hScale < vScale) ? hScale : vScale;
-        qreal scale = zoomFit / zoom;
-
-        // iv = the cropped image visible in centralRect - the ImageView viewport
-        int ivW = (imW > cW) ? cW : imW;
-        int ivH = (imH > cH) ? cH : imH;
-        // aspect of iv
-        qreal ivA = static_cast<qreal>(ivW) / ivH;
-        /*
-        qDebug() << "IconView::zoomCursor" << "cW =" << cW << "cH =" << cH
-                                 << "ivW =" << ivW << "ivH =" << ivH << "ivA =" << ivA
-                                 << "hScale =" << hScale << "vScale =" << vScale;
-        //*/
-
-        /* some brands create thumbnails with black borders, which are not part of the
-        image, and should be excluded. The long side (ie width if landscape, height if
-        portrait, will not have a black border. Using that side and the aspect of the
-        original image can give the correct length for the other side of the thumbnail.
-        */
-        int iconW, iconH;
-        if (imA > 1) {
-            iconW = iconRect.width();
-            iconH = static_cast<int>(iconW / imA);
+            if (isSquare) {
+                pm = pm.scaled(thumbSize - QSize(pmMargin, pmMargin), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            } else {
+                pm = pm.scaled(thumbSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            }
+            // Insert into cache so we don't do this again for this row
+            iconCache.insert(sfRow, new QPixmap(pm));
         }
-        else {
-            iconH = iconRect.height();
-            iconW = static_cast<int>(iconH * imA);
-        }
-
-        // determine cursor frame dimensions: w, h
-        if (hScale < vScale) {
-            w = static_cast<int>(iconW * scale);
-            h = static_cast<int>(w / ivA);
-        }
-        else {
-            h = static_cast<int>(iconH * scale);
-            w = static_cast<int>(h * ivA);
-        }
-
-        if (w > iconRect.width()) w = iconRect.width();
-        if (h > iconRect.height()) h = iconRect.height();
-
-        QString whichScale = hScale < vScale ? "hScale" : "vScale";
-        /*
-        qDebug() << "IconView::zoomCursor"
-                 << whichScale
-                 << "ivW =" << ivW
-                 << "ivH =" << ivH
-                 << "w =" << w
-                 << "h =" << h
-                 << "ivA =" << ivA;
-            */
-        /*
-            qDebug() << "IconView::zoomCursor"
-                     << "zoom =" << zoom
-                     << "zoomFit =" << zoomFit
-                     << "iconRect =" << iconRect
-                     << "imW =" << imW
-                     << "imH =" << imH
-                     << "imA =" << imA
-                     << "ivW =" << ivW
-                     << "ivH =" << ivH
-                     << "cW =" << cW
-                     << "cH =" << cH
-                     << "hScale =" << hScale
-                     << "vScale =" << vScale
-                     << "scale =" << scale
-                     << "iconW =" << iconW
-                     << "iconH =" << iconH
-                     << "w =" << w
-                     << "h =" << h
-                     << "ivA =" << ivA;
-        //            */
-    }
-    else {
-        // imageView smaller than central widget so no cropping
-        w = iconRect.width();
-        h = iconRect.height();
     }
 
-    // draw the new cursor as a frame
+    // Calculate iconRect based on the (now potentially cached) pixmap dimensions
+    if (!pm.isNull()) {
+        int alignVert = (thumbRect.height() - pm.height()) / 2;
+        int alignHor = (thumbRect.width() - pm.width()) / 2;
+        iconRect = QRect(thumbRect.left() + alignHor, thumbRect.top() + alignVert, pm.width(), pm.height());
+    }
 
-    // check if mac Accessibility has scaled pointer size
-    float scale = 1.0;
-    #ifdef Q_OS_MAC
-        scale = Mac::getMouseCursorMagnification();
-        if (scale == 0) scale = 1;
-    #endif
-    w /= scale;
-    h /= scale;
+    // ... [Rest of the painting logic: Background, Labels, Overlays] ...
 
-    // make room for border
-    int pw = 1;                                     // pen width
-    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
-    h += (pw * 8);
-    cursorRect = QRect(0, 0, w, h);
-    /*
-    qDebug() << "IconView::zoomCursor" << cursorRect << G::actDevicePixelRatio << G::sysDevicePixelRatio;
-    //*/
-    auto frame = QImage(w, h, QImage::Format_ARGB32);
-    int opacity = 0;                                // Set this between 0 and 255
-    frame.fill(QColor(0,0,0,opacity));
-    QPen oPen, iPen;
-    oPen.setWidth(pw);
-    iPen.setWidth(pw);
-    oPen.setColor(Qt::white);
-    iPen.setColor(Qt::black);
-    QRect oBorder(0, 0, w-pw-1, h-pw-1);            // outer border
-    QRect iBorder(pw, pw, w-3*pw-1, h-3*pw-1);      // inner border
-    QPainter p(&frame);
-    p.setPen(oPen);
-    p.drawRect(oBorder);
-    p.setPen(iPen);
-    p.drawRect(iBorder);
-    setCursor(QCursor(QPixmap::fromImage(frame)));
-}
+// DRAW PIXMAP
+    if (!pm.isNull()) {
+        painter->setClipping(true);
+        painter->setClipRect(iconRect);
+        painter->drawPixmap(iconRect, pm);
+        painter->setClipping(false);
+    }
