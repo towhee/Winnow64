@@ -83,6 +83,10 @@ private:
     DataModel *dm;
     QItemSelectionModel *selectionModel;
 
+    // The key is the model row, the value is the scaled QPixmap
+    mutable QCache<int, QPixmap> iconCache;
+    int maxCacheSize = 10000;
+
     QRect getSymbolRect(const QString &symbol, const QRect &optionRect,
                         const QModelIndex &index) const;
 

@@ -272,23 +272,16 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             qDebug() << "ImageView::loadImage isCached = false";
     }
 
-    /* When the program is opening or resizing it is possible this function could be called
-    before the central widget has been fully defined, and has a small default size. If that is
-    the case, ignore, as the function will be called again. Also ignore if the image failed to
-    be loaded into the graphics scene. */
-    /*
-    qDebug() << "ImageView::loadImage:"
-             << "isFirstImageNewInstance =" << isFirstImageNewInstance
-             << "row =" << sfRow
-             << "isLoaded =" << isLoaded
-             << "rect().height() > 50 =" << QVariant(rect().height() > 50).toString();
-    //*/
+    /* When the program is opening or resizing it is possible this function could be
+    called before the central widget has been fully defined, and has a small default
+    size. If that is the case, ignore, as the function will be called again. Also
+    ignore if the image failed to be loaded into the graphics scene. */
     if (isLoaded) {
-        /* important to keep currentImagePath. It is used to check if there isn't an image (when
-        currentImagePath.isEmpty() == true) - for example when no folder has been chosen or the
-        same image is being reloaded. It is also used by Embellish.  */
+        /* important to keep currentImagePath. It is used to check if there isn't an
+        image (when currentImagePath.isEmpty() == true) - for example when no folder
+        has been chosen or the same image is being reloaded. It is also used by
+        Embellish. */
         currentImagePath = fPath;
-        pmItem->setVisible(true);
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
@@ -1567,111 +1560,4 @@ void ImageView::copyImage()
     QApplication::clipboard()->setPixmap(pm, QClipboard::Clipboard);
     QString msg = "Copied current image to the clipboard";
     G::popup->showPopup(msg, 1500);
-}
-
-// not being used, but maybe in the future
-//static inline int bound0To255(int val)
-//{
-//    if (G::isLogger) G::log("ImageView::copyImage");
-//    return ((val > 255) ? 255 : (val < 0) ? 0 : val);
-//}
-
-static inline int hslValue(double n1, double n2, double hue)
-{
-    if (G::isLogger) G::log("ImageView  hslValue");
-    double value;
-
-    if (hue > 255) {
-        hue -= 255;
-    } else if (hue < 0) {
-        hue += 255;
-    }
-
-    if (hue < 42.5) {
-        value = n1 + (n2 - n1) * (hue / 42.5);
-    } else if (hue < 127.5) {
-        value = n2;
-    } else if (hue < 170) {
-        value = n1 + (n2 - n1) * ((170 - hue) / 42.5);
-    } else {
-        value = n1;
-    }
-
-    return ROUND(value * 255.0);
-}
-
-void rgbToHsl(int r, int g, int b, unsigned char *hue, unsigned char *sat, unsigned char *light)
-{
-    if (G::isLogger) G::log("ImageView  rgbToHsl");
-    double h, s, l;
-    int		min, max;
-    int		delta;
-
-    if (r > g) {
-        max = MAX(r, b);
-        min = MIN(g, b);
-    } else {
-        max = MAX(g, b);
-        min = MIN(r, b);
-    }
-
-    l = (max + min) / 2.0;
-
-    if (max == min) {
-        s = 0.0;
-        h = 0.0;
-    } else {
-        delta = (max - min);
-
-        if (l < 128) {
-            s = 255 * (double) delta / (double) (max + min);
-        } else {
-            s = 255 * (double) delta / (double) (511 - max - min);
-        }
-
-        if (r == max) {
-            h = (g - b) / (double) delta;
-        } else if (g == max) {
-            h = 2 + (b - r) / (double) delta;
-        } else {
-            h = 4 + (r - g) / (double) delta;
-        }
-
-        h = h * 42.5;
-        if (h < 0) {
-            h += 255;
-        } else if (h > 255) {
-            h -= 255;
-        }
-    }
-
-    *hue = ROUND(h);
-    *sat = ROUND(s);
-    *light = ROUND(l);
-}
-
-void hslToRgb(double h, double s, double l,
-                    unsigned char *red, unsigned char *green, unsigned char *blue)
-{
-    if (G::isLogger) G::log("ImageView  hslToRgb");
-    if (s == 0) {
-        /* achromatic case */
-        *red = l;
-        *green = l;
-        *blue = l;
-    } else {
-        double m1, m2;
-
-        if (l < 128)
-            m2 = (l * (255 + s)) / 65025.0;
-        else
-            m2 = (l + s - (l * s) / 255.0) / 255.0;
-
-        m1 = (l / 127.5) - m2;
-
-        /* chromatic case */
-        *red = hslValue(m1, m2, h + 85);
-        *green = hslValue(m1, m2, h);
-        *blue = hslValue(m1, m2, h - 85);
-    }
 }
