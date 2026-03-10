@@ -59,7 +59,6 @@ public:
 
     int updateMidVisibleCell(QString src);
     void updateVisible(QString src);
-    QSize loupeVPinScene(QSizeF vp, QSizeF scene, QSize icon);
     QPixmap drawLoupeVPRect(int w, int h);
     void zoomCursor(const QModelIndex &idx,
                     QString src,
@@ -105,7 +104,7 @@ public slots:
                             int _badgeSize, int _iconNumberSize);
 
     void sortThumbs(int sortColumn, bool isReverse);
-    void loupeRect(QRectF vp, qreal imA);
+    void loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN);
     void showLoupeRect(bool isVisible);
 
 private slots:
@@ -139,6 +138,8 @@ signals:
     void updateThumbDockHeight();
 
 private:
+    QPointF blackBorderOffset(QModelIndex &sfIdx);
+
     DataModel *dm;
 
     QList<int> dragQueue;

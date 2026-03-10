@@ -76,6 +76,7 @@ protected:
 public slots:
     void setCurrentIndex(QModelIndex current);
     void setCurrentRow(int row);
+    void setNormVpRect(QSizeF vpSizeN, QPointF vpCntrN, QPointF bbo);
     void setVpRect(QRectF vp, qreal imA);
     void setVpRectVisibility(bool isVisible);
 

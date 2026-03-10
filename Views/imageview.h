@@ -50,6 +50,8 @@ public:
     int wheelDeltaThreshold = 20;
     bool currentImageHasChanged = false;
 
+
+
     DropShadowLabel *infoOverlay;
     DropShadowLabel *titleDropShadow;
 
@@ -69,6 +71,7 @@ public:
     void setShootingInfo(QString infoString = "");
     void updateShootingInfo();
     QPoint scene2CW(QPointF pctPt);
+    QSizeF vpNormSizeInScene();
     void focus();
     void sceneGeometry(QPoint &sceneOrigin, QRectF &sceneR, QRect &centralWidgetRect);
     void setBullseyeVisible(bool isVisible);
@@ -117,7 +120,7 @@ signals:
     void keyPress(QKeyEvent *event);
     void mouseSideKeyPress(int direction);  // logitech mouse NativeGesture event
     void zoomChange(qreal zoomValue, QString src);
-    void loupeRect(QRectF vp, qreal imA);
+    void loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN);
     void showLoupeRect(bool isVisible);
 
     void handleDrop(QString fPath);

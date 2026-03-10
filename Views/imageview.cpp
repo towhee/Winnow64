@@ -373,61 +373,111 @@ void ImageView::scale(bool isNewImage)
 
     If isSlideshow then hide mouse cursor unless is moves.
 */
+
     if (G::isLogger) G::log("ImageView::scale");
-    /*
-    qDebug() << "ImageView::scale"
-             << "isScrollable =" << isScrollable
-             << "isFit =" << isFit
-             << "zoom =" << zoom
-             << "highDpiZoom =" << zoom / G::actDevicePixelRatio
-             << "zoomFit =" << zoomFit
-             << "rect().width() =" << rect().width()
-             << "sceneRect().width() =" << sceneRect().width();
-    //  */
-    transform.reset();
-    if (G::isSlideShow) {
-        setFitZoom();
+
+    if (isFit || G::isSlideShow) {
+        // fitInView handles the optimized math for scaling and centering
+        // the pmItem within the current viewport.
+        fitInView(pmItem, Qt::KeepAspectRatio);
+
+        // Synchronize the internal zoom variable with the scale calculated by fitInView
+        zoom = viewportTransform().m11();
+    }
+    else {
+        // Manual zoom mode
+        transform.reset();
+        double highDpiZoom = zoom / G::actDevicePixelRatio;
+        transform.scale(highDpiZoom, highDpiZoom);
+        setTransform(transform);
     }
 
-    if (isFit) setFitZoom();
-    double highDpiZoom = zoom / G::actDevicePixelRatio;
-    transform.scale(highDpiZoom, highDpiZoom);
-    // when resize before first image zoom == inf
-    if (zoom > 10) return;
-    setTransform(transform);
     emit zoomChange(zoom, "ImageView::scale");
 
+    // The rest of your functional logic remains identical
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();
-    if (panToFocus) emit showLoupeRect(isScrollable);
 
-    // pan to predicted focus point of interest
+    // Maintain predictive focus and panning logic
     int i = dm->currentSfRow;
     float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
     float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
-    /*
-        qDebug() << "ImageView::scale"
-                 << "x =" << x
-                 << "y =" << y;//*/
-    bool isFocus = (x >= 0 && y >= 0);
-    // placeTarget(x, y);
-    if (isFocus && isScrollable && panToFocus && isNewImage) {
+
+    if (x >= 0 && y >= 0 && isScrollable && panToFocus && isNewImage) {
         panTo(x, y);
     }
 
+    // Update cursor and overlays
     if (!G::isSlideShow) {
         if (isScrollable) setCursor(Qt::OpenHandCursor);
-        else {
-            if (isFit) setCursor(Qt::ArrowCursor);
-            else setCursor(Qt::PointingHandCursor);
-        }
+        else setCursor(isFit ? Qt::ArrowCursor : Qt::PointingHandCursor);
     }
 
     placeClassificationBadge();
     setShootingInfo(infoText);
     emit updateStatus(true, "", "ImageView::scale");
+    // showPredictedFocus();
 
-    isMouseDoubleClick = false;
+
+
+
+
+
+    // if (G::isLogger) G::log("ImageView::scale");
+    // /*
+    // qDebug() << "ImageView::scale"
+    //          << "isScrollable =" << isScrollable
+    //          << "isFit =" << isFit
+    //          << "zoom =" << zoom
+    //          << "highDpiZoom =" << zoom / G::actDevicePixelRatio
+    //          << "zoomFit =" << zoomFit
+    //          << "rect().width() =" << rect().width()
+    //          << "sceneRect().width() =" << sceneRect().width();
+    // //  */
+    // transform.reset();
+    // if (G::isSlideShow) {
+    //     setFitZoom();
+    // }
+
+    // if (isFit) setFitZoom();
+    // double highDpiZoom = zoom / G::actDevicePixelRatio;
+    // transform.scale(highDpiZoom, highDpiZoom);
+    // // when resize before first image zoom == inf
+    // if (zoom > 10) return;
+    // setTransform(transform);
+    // emit zoomChange(zoom, "ImageView::scale");
+
+    // isScrollable = (zoom > zoomFit);
+    // if (isScrollable) scrollPct = getScrollPct();
+    // if (panToFocus) emit showLoupeRect(isScrollable);
+
+    // // pan to predicted focus point of interest
+    // int i = dm->currentSfRow;
+    // float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
+    // float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
+    // /*
+    //     qDebug() << "ImageView::scale"
+    //              << "x =" << x
+    //              << "y =" << y;//*/
+    // bool isFocus = (x >= 0 && y >= 0);
+    // // placeTarget(x, y);
+    // if (isFocus && isScrollable && panToFocus && isNewImage) {
+    //     panTo(x, y);
+    // }
+
+    // if (!G::isSlideShow) {
+    //     if (isScrollable) setCursor(Qt::OpenHandCursor);
+    //     else {
+    //         if (isFit) setCursor(Qt::ArrowCursor);
+    //         else setCursor(Qt::PointingHandCursor);
+    //     }
+    // }
+
+    // placeClassificationBadge();
+    // setShootingInfo(infoText);
+    // emit updateStatus(true, "", "ImageView::scale");
+
+    // isMouseDoubleClick = false;
 
     /* debug
     qDebug() << "ImageView::scale"
@@ -614,55 +664,94 @@ void ImageView::resizeEvent(QResizeEvent *event)
     ● show predictive focus change
 */
     if (G::isLogger) G::log("ImageView::resizeEvent");
-    /*
-    qDebug() << "ImageView::resizeEvent"
-             << "G::isInitializing =" << G::isInitializing
-             << "G::isLinearLoadDone =" << G::isLinearLoadDone
-             << "isFirstImageNewInstance =" << isFirstImageNewInstance;
-    //    */
+
+    // Do not process resize events during initial application startup
     if (G::isInitializing) return;
+
+    // Call the base class implementation
     QGraphicsView::resizeEvent(event);
+
+    // Recalculate the factor required to fit the image in the new window size
     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
-//    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+
     if (isFit) {
-        setFitZoom();
+        // Optimized scaling: Automatically fits and centers the image
+        fitInView(pmItem, Qt::KeepAspectRatio);
+
+        // Synchronize the zoom member with the new viewport scale
+        zoom = viewportTransform().m11();
+
+        // Apply secondary logic (status updates, badges)
         scale();
+    } else {
+        // If not in Fit mode, we still need to update the prediction overlays
+        showPredictedFocus();
     }
+
+    // Maintain UI element positions relative to the new window boundaries
     placeClassificationBadge();
     setShootingInfo(infoText);
-    showPredictedFocus();
+
+
+
+
+
+
+//     if (G::isLogger) G::log("ImageView::resizeEvent");
+//     /*
+//     qDebug() << "ImageView::resizeEvent"
+//              << "G::isInitializing =" << G::isInitializing
+//              << "G::isLinearLoadDone =" << G::isLinearLoadDone
+//              << "isFirstImageNewInstance =" << isFirstImageNewInstance;
+//     //    */
+//     if (G::isInitializing) return;
+//     QGraphicsView::resizeEvent(event);
+//     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+// //    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+//     if (isFit) {
+//         setFitZoom();
+//         scale();
+//     }
+//     placeClassificationBadge();
+//     setShootingInfo(infoText);
+//     showPredictedFocus();
 }
 
 void ImageView::showPredictedFocus()
 {
 /*
-    Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
+    Documentation: see FOCUS PREDICTOR in notes/Documentation.txt
 */
     if (!panToFocus || zoom <= zoomFit) return;
 
+
+
     // generate normalized coordinates for viewport in scene
-    qreal w = pmItem->pixmap().width();
-    qreal h = pmItem->pixmap().height();
+    qreal imW = pmItem->pixmap().width();
+    qreal imH = pmItem->pixmap().height();
     // qreal w = scene->width();
     // qreal h = scene->height();
     QPolygonF p = mapToScene(viewport()->rect());
-    qreal x1 = p.at(0).x() / w;
-    qreal y1 = p.at(0).y() / h;
-    qreal x2 = p.at(2).x() / w;
-    qreal y2 = p.at(2).y() / h;
-    QRectF vp = QRectF(QPointF(x1, y1), QPointF(x2, y2));
-    qreal imA = w * 1.0 / h;
+    qreal x1 = p.at(0).x() / imW;
+    qreal y1 = p.at(0).y() / imH;
+    qreal x2 = p.at(2).x() / imW;
+    qreal y2 = p.at(2).y() / imH;
+    // qreal imA = w * 1.0 / h;
+    qreal vpW = x2 - x1;
+    qreal vpH = y2 - y1;
+    QSizeF vpSize(vpW, vpH);
+    qreal vpA = vpW / vpH;
     qDebug() << "ImageView::showPredictedFocus"
-             << "vp =" << vp
-             << "imA =" << imA
+             << "vpSize =" << vpSize
+             << "focusPrediction =" << focusPrediction
                 ;
-    emit loupeRect(vp, imA);
+    emit loupeRect(vpNormSizeInScene(), vpA, focusPrediction);
 }
 
 void ImageView::predictPanToFocus()
 {
 /*
-    Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
+    Documentation: see FOCUS PREDICTOR in documentation.txt
 */
     if (G::isLogger) G::log("ImageView::focusPrediction");
 
@@ -972,6 +1061,24 @@ QPoint ImageView::scene2CW(QPointF pctPt)
              << "y =" << y
                 ;
     return QPoint(x, y);
+}
+
+QSizeF ImageView::vpNormSizeInScene()
+{
+    QString srcFun = "ImageView::vpMidInScene";
+    qreal sceneW = scene->width();
+    qreal sceneH = scene->height();
+    qreal vpW = viewport()->width();
+    qreal vpH = viewport()->height();
+    qreal vpNormW = vpW / sceneW;
+    qreal vpNormH = vpH / sceneH;
+    /*
+    QSizeF vpNormSize(vpNormW, vpNormH);
+    qDebug() << "Scene      =" << scene->sceneRect();
+    qDebug() << "Viewport   =" << viewport()->rect();
+    qDebug() << "vpNormSize =" << vpNormSize;
+    */
+    return QSizeF(vpNormW, vpNormH);
 }
 
 void ImageView::focus()

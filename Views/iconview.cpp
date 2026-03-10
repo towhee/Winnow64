@@ -1569,6 +1569,38 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
     }
 }
 
+QPointF IconView::blackBorderOffset(QModelIndex &sfIdx)
+{
+    /* some brands create thumbnails with black borders, which are not part of the
+    image, and should be excluded. The long side (ie width if landscape, height if
+    portrait, will not have a black border. Using that side and the aspect of the
+    original image can give the correct length for the other side of the thumbnail.
+    Returns offset in normalized coordinates.
+    */
+    QRect iconRect = sfIdx.data(G::IconRectRole).toRect();
+    int iconW = iconRect.width();
+    int iconH = iconRect.height();
+    qreal imA = dm->sf->index(sfIdx.row(), G::AspectRatioColumn).data().toReal();
+    qreal iconA = static_cast<qreal>(iconRect.width()) / iconRect.height();
+    qreal xOff = 0;
+    qreal yOff = 0;
+    if (imA > 1) {
+        // landscape, top/bottom black border
+        yOff = (iconH - iconW /imA) / 2 / iconH;
+    }
+    else {
+        // portrait, left/right black border
+        xOff = (iconW - iconH *imA / 2) / iconW;
+    }
+    qDebug() << "IconView::blackBorderOffset"
+             << "imA =" << imA
+             << "iconA =" << iconA
+             << "xOff =" << xOff
+             << "yOff =" << yOff
+        ;
+    return QPointF(xOff, yOff);
+}
+
 void IconView::showLoupeRect(bool isVisible)
 {
     if (isDebug || G::isLogger) G::log("IconView::showLoupeRect", objectName());
@@ -1578,120 +1610,22 @@ void IconView::showLoupeRect(bool isVisible)
 
 }
 
-void IconView::loupeRect(QRectF vp, qreal imA)
+void IconView::loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN)
 {
 /*
     Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
 */
     if (isDebug || G::isLogger) G::log("IconView::loupeRect", objectName());
-    /*
-    qDebug() << "IconView::loupeRect"
-             << "vp =" << vp
-             << "imA =" << imA
-        ;//*/
     iconViewDelegate->setVpRectVisibility(true);
-    iconViewDelegate->setVpRect(vp, imA);
+    QPointF bbo = blackBorderOffset(dm->currentSfIdx);
+    qDebug() << "IconView::loupeRect"
+             << "vpSizeN =" << vpSizeN
+             << "vpCntrN =" << vpCntrN
+             << "bbo =" << bbo
+             << "vpCntrN - bbo =" << vpCntrN - bbo
+        ;
+    iconViewDelegate->setNormVpRect(vpSizeN, vpCntrN, bbo);
     refreshThumb(dm->currentSfIdx);
-}
-
-QSize IconView::loupeVPinScene(QSizeF vp, QSizeF scene, QSize icon)
-{
-    // int w, h;       // zoom frame width and height in pixels
-    // int vpW = vp.width();
-    // int vpH = vp.height();
-    // int imW = scene.width();
-    // int imH = scene.height();
-    // int iconW = icon.width();
-    // int iconH = icon.height();
-    // qreal normW = vp.width() / scene.width();
-    // qreal normH = vp.height();
-
-    // if (normW < 1 || normH <= 1 ) {
-    //     // imageView is zoomed in at least one axis
-
-    //     // scale is for the side that needs to be reduced the most to fit
-    //     qreal scale = (normW < normH) ? normW : normH;
-    //     // qreal zoomFit = (normW < normH) ? normW : normH;
-    //     // qreal scale = zoomFit / zoom;
-
-    //     // iv = the cropped image visible in centralRect - the ImageView viewport
-    //     int ivW = (imW > vpW) ? vpW : imW;
-    //     int ivH = (imH > vpH) ? vpH : imH;
-    //     // aspect of iv
-    //     qreal ivA = static_cast<qreal>(vpW) / ivH;
-    //     /*
-    //     qDebug() << "IconView::zoomCursor" << "cW =" << cW << "cH =" << cH
-    //                              << "ivW =" << ivW << "ivH =" << ivH << "ivA =" << ivA
-    //                              << "hScale =" << hScale << "vScale =" << vScale;
-    //     //*/
-
-    //     /* some brands create thumbnails with black borders, which are not part of the
-    //     image, and should be excluded. The long side (ie width if landscape, height if
-    //     portrait, will not have a black border. Using that side and the aspect of the
-    //     original image can give the correct length for the other side of the thumbnail.
-    //     */
-    //     int iconW, iconH;
-    //     if (imA > 1) {
-    //         iconW = iconRect.width();
-    //         iconH = static_cast<int>(iconW / imA);
-    //     }
-    //     else {
-    //         iconH = iconRect.height();
-    //         iconW = static_cast<int>(iconH * imA);
-    //     }
-
-    //     // determine cursor frame dimensions: w, h
-    //     if (normW < normH) {
-    //         w = static_cast<int>(iconW * scale);
-    //         h = static_cast<int>(w / ivA);
-    //     }
-    //     else {
-    //         h = static_cast<int>(iconH * scale);
-    //         w = static_cast<int>(h * ivA);
-    //     }
-
-    //     if (w > iconRect.width()) w = iconRect.width();
-    //     if (h > iconRect.height()) h = iconRect.height();
-
-    //     QString whichScale = normW < normH ? "hScale" : "vScale";
-    //     /*
-    //     qDebug() << "IconView::zoomCursor"
-    //              << whichScale
-    //              << "ivW =" << ivW
-    //              << "ivH =" << ivH
-    //              << "w =" << w
-    //              << "h =" << h
-    //              << "ivA =" << ivA;
-    //     */
-    //     /*
-    //         qDebug() << "IconView::zoomCursor"
-    //                  << "zoom =" << zoom
-    //                  << "zoomFit =" << zoomFit
-    //                  << "iconRect =" << iconRect
-    //                  << "imW =" << imW
-    //                  << "imH =" << imH
-    //                  << "imA =" << imA
-    //                  << "ivW =" << ivW
-    //                  << "ivH =" << ivH
-    //                  << "cW =" << cW
-    //                  << "cH =" << cH
-    //                  << "hScale =" << hScale
-    //                  << "vScale =" << vScale
-    //                  << "scale =" << scale
-    //                  << "iconW =" << iconW
-    //                  << "iconH =" << iconH
-    //                  << "w =" << w
-    //                  << "h =" << h
-    //                  << "ivA =" << ivA;
-    //     //            */
-    // }
-    // else {
-    //     // imageView smaller than central widget so no cropping
-    //     w = iconRect.width();
-    //     h = iconRect.height();
-    // }
-
-     return QSize(1, 1);
 }
 
 QPixmap IconView::drawLoupeVPRect(int w, int h)

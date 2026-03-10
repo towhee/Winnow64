@@ -3,7 +3,7 @@
 #include <QMetaEnum>
 
 /*
-   Program notes / ducumentation: see notes/Documentation.txt
+   Program notes / documentation: see notes/Documentation.txt
 */
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)

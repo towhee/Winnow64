@@ -349,6 +349,37 @@ void IconViewDelegate::setVpRectVisibility(bool isVisible)
     vpRectIsVisible = isVisible;
 }
 
+void IconViewDelegate::setNormVpRect(QSizeF vpSizeN, QPointF vpCntrN,
+                                     QPointF bbo)
+{
+    // zc = zoom cursor
+    qreal dpr = G::sysDevicePixelRatio;
+    // thumb including black border
+    int thumbW = thumbSize.width();
+    int thumbH = thumbSize.height();
+    // black border offset in local px
+    int bboX = thumbW * bbo.x();
+    int bboY = thumbH * bbo.y();
+    // thumb inside black border
+    int tW = thumbW - bboX * 2;
+    int tH = thumbH - bboY * 2;
+    // zoom cursor showing viewport
+    int zcW = vpSizeN.width() * thumbW * dpr;
+    int zcH = vpSizeN.height() * thumbH * dpr;
+    QPoint zcCntr(vpCntrN.x()*tW - bboX, vpCntrN.y()*tH - bboY);
+    int zcX = zcCntr.x() - zcW / 2;
+    if (zcX < 0) zcX = 0;
+    int zcY = zcCntr.y() - zcH / 2;
+    if (zcY < 0) zcY = 0;
+    // if ((vpX + vpW) > thumbW) vpX = thumbW - vpW;
+    // if ((vpY + vpH) > thumbH) vpY = thumbH - vpH;
+    // vpX *= dpr;
+    // vpY *= dpr;
+    // vpW *= dpr;
+    // vpH *= dpr;
+    targetVpRect = QRect(zcX, zcY, zcW, zcH);
+}
+
 void IconViewDelegate::setVpRect(QRectF vp, qreal imA)
 {
     vpRect = vp;
