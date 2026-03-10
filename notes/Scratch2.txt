@@ -112,17 +112,188 @@ void IconView::resizeEvent(QResizeEvent *event)
     resizeJustDone = true;
 }
 
+QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &optionRect, const QModelIndex &index) const
+{
+    // Define the origin once for the cell being queried
+    QRect frameRect(optionRect.topLeft() + fPadOffset, frameSize);
+    QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
+    QPoint origin = thumbRect.topLeft();
 
+    // Use the pre-calculated lockRect and just translate it to the current cell
+    if (symbol == "Lock") {
+        return lockRect.translated(origin);
+    }
 
+    // ... rest of the symbol logic ...
+}
 
+* Static Geometry: In IconViewDelegate::setVpRect, you are pre-calculating
+targetVpRect. This is excellent. However, imA (Image Aspect) should be passed via
+the DataModel rather than calculated from the thumbSize on every frame, as
+thumbnails might have metadata-based cropping or rotation that thumbSize doesn't
+reflect.
 
+void ImageView::scale(bool isNewImage)
+{
+    if (G::isLogger) G::log("ImageView::scale");
 
+    if (isFit || G::isSlideShow) {
+        // fitInView handles the optimized math for scaling and centering
+        // the pmItem within the current viewport.
+        fitInView(pmItem, Qt::KeepAspectRatio);
 
+        // Synchronize the internal zoom variable with the scale calculated by fitInView
+        zoom = viewportTransform().m11();
+    }
+    else {
+        // Manual zoom mode
+        transform.reset();
+        double highDpiZoom = zoom / G::actDevicePixelRatio;
+        transform.scale(highDpiZoom, highDpiZoom);
+        setTransform(transform);
+    }
 
+    emit zoomChange(zoom, "ImageView::scale");
 
+    // The rest of your functional logic remains identical
+    isScrollable = (zoom > zoomFit);
+    if (isScrollable) scrollPct = getScrollPct();
 
+    // Maintain predictive focus and panning logic
+    int i = dm->currentSfRow;
+    float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
+    float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
 
+    if (x >= 0 && y >= 0 && isScrollable && panToFocus && isNewImage) {
+        panTo(x, y);
+    }
 
+    // Update cursor and overlays
+    if (!G::isSlideShow) {
+        if (isScrollable) setCursor(Qt::OpenHandCursor);
+        else setCursor(isFit ? Qt::ArrowCursor : Qt::PointingHandCursor);
+    }
+
+    placeClassificationBadge();
+    setShootingInfo(infoText);
+    emit updateStatus(true, "", "ImageView::scale");
+    showPredictedFocus();
+}
+
+void ImageView::resizeEvent(QResizeEvent *event)
+{
+    if (G::isLogger) G::log("ImageView::resizeEvent");
+
+    // Do not process resize events during initial application startup
+    if (G::isInitializing) return;
+
+    // Call the base class implementation
+    QGraphicsView::resizeEvent(event);
+
+    // Recalculate the factor required to fit the image in the new window size
+    zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+
+    if (isFit) {
+        // Optimized scaling: Automatically fits and centers the image
+        fitInView(pmItem, Qt::KeepAspectRatio);
+
+        // Synchronize the zoom member with the new viewport scale
+        zoom = viewportTransform().m11();
+
+        // Apply secondary logic (status updates, badges)
+        scale();
+    } else {
+        // If not in Fit mode, we still need to update the prediction overlays
+        showPredictedFocus();
+    }
+
+    // Maintain UI element positions relative to the new window boundaries
+    placeClassificationBadge();
+    setShootingInfo(infoText);
+}
+
+void IconView::loupeRect(QRectF vp, qreal imA)
+{
+    if (isDebug || G::isLogger) G::log("IconView::loupeRect", objectName());
+
+    // Ensure the delegate has the fresh aspect ratio and viewport rect
+    iconViewDelegate->setVpRectVisibility(true);
+    iconViewDelegate->setVpRect(vp, imA);
+
+    // Explicitly refresh the current thumbnail to trigger the new paint
+    refreshThumb(dm->currentSfIdx);
+}
+
+void IconViewDelegate::setVpRect(QRectF vp, qreal imA)
+{
+    vpRect = vp;
+    this->imA = imA;
+
+    qreal wIcon, hIcon;
+    int wBlack = 0;
+    int hBlack = 0;
+
+    // RE-FIX: Ensure vertical offsets are recalculated for the new image aspect
+    if (imA > 1) { // Landscape
+        wIcon = thumbSize.width();
+        hIcon = wIcon / imA;
+        hBlack = static_cast<int>((thumbSize.height() - hIcon) / 2);
+    } else { // Portrait
+        hIcon = thumbSize.height();
+        wIcon = hIcon * imA;
+        wBlack = static_cast<int>((thumbSize.width() - wIcon) / 2);
+    }
+
+    // Map normalized coordinates (0.0-1.0) to the current icon's pixel space
+    int x1 = static_cast<int>(vpRect.topLeft().x() * wIcon) + wBlack;
+    int y1 = static_cast<int>(vpRect.topLeft().y() * hIcon) + hBlack;
+    int x2 = static_cast<int>(vpRect.bottomRight().x() * wIcon) + wBlack;
+    int y2 = static_cast<int>(vpRect.bottomRight().y() * hIcon) + hBlack;
+
+    targetVpRect = QRect(QPoint(x1, y1), QPoint(x2, y2));
+}
+
+void ImageView::showPredictedFocus(QPointF targetPos)
+{
+    if (!panToFocus || zoom <= zoomFit) return;
+
+    qreal w = pmItem->pixmap().width();
+    qreal h = pmItem->pixmap().height();
+
+    QRectF vpRect;
+    if (targetPos.isNull()) {
+        // Standard behavior: use current scroll positions
+        QPolygonF p = mapToScene(viewport()->rect());
+        vpRect = p.boundingRect();
+    } else {
+        // panTo behavior: calculate rect centered on targetPos
+        qreal vpW = viewport()->width() / (zoom / G::actDevicePixelRatio);
+        qreal vpH = viewport()->height() / (zoom / G::actDevicePixelRatio);
+        vpRect = QRectF(targetPos.x() - vpW/2, targetPos.y() - vpH/2, vpW, vpH);
+    }
+
+    qreal x1 = vpRect.left() / w;
+    qreal y1 = vpRect.top() / h;
+    qreal x2 = vpRect.right() / w;
+    qreal y2 = vpRect.bottom() / h;
+
+    QRectF vp = QRectF(QPointF(x1, y1), QPointF(x2, y2));
+    qreal imA = w / h;
+
+    emit loupeRect(vp, imA);
+}
+
+void ImageView::panTo(float xPct, float yPct)
+{
+    if (G::isLogger) G::log("ImageView::thumbClick");
+    if (zoom > zoomFit) {
+        QPointF scenePos(xPct * sceneRect().width(), yPct * sceneRect().height());
+        centerOn(scenePos);
+
+        // Force the LoupeRect to update using the target position immediately
+        showPredictedFocus(scenePos);
+    }
+}
 
 
 

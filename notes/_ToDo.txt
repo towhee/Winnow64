@@ -6,7 +6,8 @@ WHAT'S NEW
 - Selections are now cleared after a filtration change
 
 BUGS / TO DO
-- Refresh Bookmarks and Folders after focus stack
+- MOV::findAtom qWarning() << "Invalid atom size" << size;
+- IconView smooth scroll on swipe
 - Info display: if EC is null then do not display EV
 - Edit title if already exists
 - Eliminate processEvents and review G::popup usage
@@ -141,6 +142,8 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Redo IconViewDelegate
+- Refresh Bookmarks and Folders after focus stack
 - Focus stack module
 - Release 2.04
 - Update Nikon Lense mpdel info

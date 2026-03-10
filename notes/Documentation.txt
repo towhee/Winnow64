@@ -472,7 +472,7 @@ Resizing icons or the icon viewport
     This allows the three datamodel views to be synced using dm->scrollToIcon.
 
 
-FOCUS PREDICTOR
+--- FOCUS PREDICTOR ---
 
     Focus predictor uses a machine learning model to predict where in the image
     the user will want to review the image focus - for example, the eye of the
