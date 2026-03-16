@@ -976,7 +976,7 @@ bool Nikon::parse(MetadataParameters &p,
             if (m.lens.isEmpty()) {
                 ExifTool et;
                 m.lens = et.readTag(m.fPath, "LensModel");
-                qDebug() << "Nikon lens =" << m.lens << m.fPath;
+                // qDebug() << "Nikon lens =" << m.lens << m.fPath;
                 et.close();
             }
         }

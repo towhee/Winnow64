@@ -44,6 +44,11 @@ public:
     void clearAllCache() { iconCache.clear(); }
     QString diagnostics();
 
+    // The key is the model row, the value is the scaled QPixmap
+    mutable QCache<int, QPixmap> iconCache;
+    mutable QCache<int, QRect> iconRectCache;
+    int maxCacheSize = 10000;
+
     QModelIndex currentIndex;
     int currentRow;
     mutable int firstVisible;
@@ -56,6 +61,7 @@ public:
     const QRect r;
 
     int thumbSpacing;
+    QSize thumbSize;    // req'd by IconView::loupeRect
 
     int fPad;
     int tPad;
@@ -65,9 +71,9 @@ public:
     int tPad2;
 
     QString tooltip;
+    QString objName;
 
 signals:
-    void update(const QModelIndex index, QRect iconRect) const;
 
 protected:
     bool helpEvent(QHelpEvent *event, QAbstractItemView *view,
@@ -76,8 +82,7 @@ protected:
 public slots:
     void setCurrentIndex(QModelIndex current);
     void setCurrentRow(int row);
-    void setNormVpRect(QSizeF vpSizeN, QPointF vpCntrN, QPointF bbo);
-    void setVpRect(QRectF vp, qreal imA);
+    void setNormVpRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntr);
     void setVpRectVisibility(bool isVisible);
 
 private:
@@ -85,12 +90,9 @@ private:
     DataModel *dm;
     QItemSelectionModel *selectionModel;
 
-    // The key is the model row, the value is the scaled QPixmap
-    mutable QCache<int, QPixmap> iconCache;
-    int maxCacheSize = 10000;
-
     QRect getSymbolRect(const QString &symbol, const QRect &optionRect,
                         const QModelIndex &index) const;
+    QPoint blackBorderOffset(const QModelIndex &sfIdx) const;
 
     bool &isRatingBadgeVisible;
     bool &isIconNumberVisible;
@@ -155,7 +157,7 @@ private:
     QPoint cacheTopLeft;
     QPoint cacheBottomRight;
 
-    QSize thumbSize;
+    // QSize thumbSize;  // moved to public, req'd by parent
     QSize frameSize;
     QSize selectedSize;
     QSize cellSize;
@@ -163,9 +165,11 @@ private:
 
     QRect cacheRect;
     QRect missingThumbRect;
-    QRectF vpRect;
-    QRect targetVpRect;
-    qreal imA;
+
+    QPointF vpCntrN;
+    QSizeF vpSizeN;
+    qreal vpA;
+
     bool vpRectIsVisible;
 
     QImage combineRawJpgSymbol;

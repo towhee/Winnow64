@@ -97,14 +97,14 @@ public slots:
     QModelIndex pageDownIndex(int fromRow);
 
     bool isCellVisible(int row);
-    void refreshThumb(QModelIndex idx, int role = Qt::EditRole);
-    void refreshThumbs();
+    void refreshThumb(QModelIndex idx, QString src);
+    void refreshThumbs(QString src);
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
                             int _labelFontSize, bool _showThumbLabels,
                             int _badgeSize, int _iconNumberSize);
 
     void sortThumbs(int sortColumn, bool isReverse);
-    void loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN);
+    void loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN, bool refresh);
     void showLoupeRect(bool isVisible);
 
 private slots:
@@ -128,6 +128,8 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     bool viewportEvent(QEvent *event) override;
 
+    // void scrollContentsBy(int dx, int dy) override;
+
 signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
@@ -138,8 +140,6 @@ signals:
     void updateThumbDockHeight();
 
 private:
-    QPointF blackBorderOffset(QModelIndex &sfIdx);
-
     DataModel *dm;
 
     QList<int> dragQueue;

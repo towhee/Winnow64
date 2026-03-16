@@ -236,6 +236,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::LoadMsecPerMpColumn, new QStandardItem("Msec/Mp")); horizontalHeaderItem(G::LoadMsecPerMpColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions")); horizontalHeaderItem(G::DimensionsColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::AspectRatioColumn, new QStandardItem("Aspect Ratio")); horizontalHeaderItem(G::AspectRatioColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::IconAspectRatioColumn, new QStandardItem("Icon Aspect Ratio")); horizontalHeaderItem(G::IconAspectRatioColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationColumn, new QStandardItem("Orientation")); horizontalHeaderItem(G::OrientationColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RotationColumn, new QStandardItem("Rot")); horizontalHeaderItem(G::RotationColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright")); horizontalHeaderItem(G::CopyrightColumn)->setData(false, G::GeekRole);
@@ -1271,6 +1272,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.megapixels = index(row, G::MegaPixelsColumn).data().toFloat();
     m.loadMsecPerMp = index(row, G::LoadMsecPerMpColumn).data().toInt();
     m.aspectRatio = index(row, G::AspectRatioColumn).data().toFloat();
+    // m.iconAspectRatio = index(row, G::IconAspectRatioColumn).data().toFloat();
     m.orientation = index(row, G::OrientationColumn).data().toInt();
     m.orientationOffset = index(row, G::OrientationOffsetColumn).data().toUInt();
     m.rotationDegrees = index(row, G::RotationColumn).data().toInt();
@@ -1533,13 +1535,14 @@ void DataModel::imageCacheWaiting(int sfRow)
 bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 {
 /*
-    This function is called after the metadata for each eligible image in the selected
-    folder(s) has been cached or when addAllMetadata is called prior of filtering or sorting.
-    The metadata is displayed in tableView and InfoView.
+    This function is called after the metadata for each eligible image in the
+    selected folder(s) has been cached or when addAllMetadata is called prior of
+    filtering or sorting. The metadata is displayed in tableView and InfoView.
 
-    If a folder is opened with combineRawJpg all the metadata for the raw file may not have
-    been loaded, but editable data, (such as rating, label, title, email, url) may have been
-    edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
+    If a folder is opened with combineRawJpg all the metadata for the raw file may
+    not have been loaded, but editable data, (such as rating, label, title, email,
+    url) may have been edited in the jpg file of the raw+jpg pair. If so, we do not
+    want to overwrite this data.
 */
     if (G::isLogger) {
         QString msg = "row = " + QString::number(m.row);
@@ -2237,7 +2240,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         G::issue("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
         return;
     }
-    if (isDebug)
+    // if (isDebug)
     {
         // must come after instance check
         qDebug() << "DataModel::setIcon"
@@ -2277,18 +2280,18 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString src)
 {
     /*
-    setIcon is a slot that can be signalled from another thread.  If the user is rapidly
-    changing folders it is possible to receive a delayed signal from the previous folder.
-    To prevent this, the datamodel instance is incremented every time a new folder is
-    loaded, and this is checked against the signal instance.
+    setIcon is a slot that can be signalled from another thread. If the user is
+    rapidly changing folders it is possible to receive a delayed signal from the
+    previous folder. To prevent this, the datamodel instance is incremented every
+    time a new folder is loaded, and this is checked against the signal instance.
 
     In addition, the signal queue from MetaRead is cleared in MW::stop to prevent
-    lagging calls when the folder has been changed.  This probably makes the instance
-    checking, which was not totally reliable, to no longer be required.  Keeping it for
-    now.
+    lagging calls when the folder has been changed. This probably makes the instance
+    checking, which was not totally reliable, to no longer be required. Keeping it
+    for now.
 
-    This function is subject to potential race conditions, so it is critical that it only
-    be called via a connection with Qt::BlockingQueuedConnection.
+    This function is subject to potential race conditions, so it is critical that it
+    only be called via a connection with Qt::BlockingQueuedConnection.
 
     Do not use QMutexLocker.
 */
@@ -2332,6 +2335,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     setData(dmIdx, vIcon, Qt::DecorationRole);
     setData(index(dmRow, G::IconLoadedColumn), true);
     setData(index(dmRow, G::MetadataReadingColumn), false);
+    setData(index(dmRow, G::IconAspectRatioColumn), (qreal)im.width()/im.height());
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)

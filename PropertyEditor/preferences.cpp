@@ -1178,7 +1178,7 @@ void Preferences::addCache()
         {48000, "48 GB"},
         {64000, "64 GB"}
     };
-    qDebug() << "pref maxMB =" << mw->imageCache->getMaxMB();
+    // qDebug() << "pref maxMB =" << mw->imageCache->getMaxMB();
     if (mw->imageCache->getAutoMaxMB())
         i.value = "Auto " + mw->imageCache->getAutoStrategy();
     else

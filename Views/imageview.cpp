@@ -166,13 +166,15 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
 
     Slideshow: The image cache is not used.  Each image in the slideshow is loaded here.
 */
-
+    isLoadingImage = true;
+    QString srcFun = "ImageView::loadImage";
     bool isDebug = false;
     bool isCurrent = (fPath == currentImagePath);
 
     if (isDebug)
     {
-        qDebug() << "\nImageView::loadImage:"
+        qDebug() << srcFun
+         << "sfRow =" << dm->proxyRowFromPath(fPath, srcFun)
          << "isFirstImageNewInstance =" << isFirstImageNewInstance
          << "isCurrent =" << isCurrent
          << "replace =" << replace
@@ -184,21 +186,26 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     if (G::isLogger || G::isFlowLogger)
     {
         QString row = "row = " + QString::number(dm->proxyRowFromPath(fPath));
-        G::log("ImageView::loadImage", row + " Src:" + src +
+        G::log(srcFun, row + " Src:" + src +
                " isFirstImageNewInstance = " + QVariant(isFirstImageNewInstance).toString() +
                " " + fPath);
     }
 
     // ignore if result of remote operation
-    if (G::isRemote) return false;
+    if (G::isRemote) {
+        isLoadingImage = false;
+        return false;
+    }
 
     // No folder selected yet
     if (!fPath.length()) {
+        isLoadingImage = false;
         return false;
     }
 
     // Already displayed
     if (isCurrent && replace == false) {
+        isLoadingImage = false;
         return true;
     }
 
@@ -206,13 +213,13 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     if (G::isProcessingExportedImages) {
         // qDebug() << "WARNING" << "ImageView::loadImage" << "Processing exported images";
         QString msg = "Processing exported images.  Canceled loadImage.";
-        G::issue("Warning", msg, "ImageView::loadImage");
+        G::issue("Warning", msg, srcFun);
+        isLoadingImage = false;
         return false;
     }
 
     // set busy in case tryAgain attempt after already moved on to another image
     isBusy = true;
-
     bool isLoaded = false;
 
     // SLIDESHOW
@@ -220,18 +227,21 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         // load image without waiting for cache
         // check metadata loaded for image (might not be if random slideshow)
         int dmRow = dm->rowFromPath(fPath);
-        if (dmRow == -1) return false;
+        if (dmRow == -1) {
+            isLoadingImage = false;
+            return false;
+        }
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, dmRow, dm->instance, true, true, false, true, "ImageView::loadImage")) {
                 // metadata->m.row = dmRow;
                 // metadata->m.instance = dm->instance;
-                dm->addMetadataForItem(metadata->m, "ImageView::loadImage"); // rgh investigate warning (QVariant issue probably)
+                dm->addMetadataForItem(metadata->m, srcFun); // rgh investigate warning (QVariant issue probably)
             }
         }
 
         QPixmap displayPixmap;
-        isLoaded = pixmap->load(fPath, displayPixmap, "ImageView::loadImage");
+        isLoaded = pixmap->load(fPath, displayPixmap, srcFun);
 
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
@@ -241,6 +251,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             // set null pixmap
             QPixmap nullPm;
             pmItem->setPixmap(nullPm);
+            isLoadingImage = false;
             return false;
         }
     }
@@ -250,18 +261,21 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     image in icd->imCache hash table. Also must check in case where an ejected drive has
     resulted in clearing icd->cacheItemList. */
 
-    int sfRow = dm->proxyRowFromPath(fPath, "ImageView::loadImage");
-    if (sfRow == -1 || sfRow >= dm->sf->rowCount()) return false;
+    int sfRow = dm->proxyRowFromPath(fPath, srcFun);
+    if (sfRow == -1 || sfRow >= dm->sf->rowCount()) {
+        isLoadingImage = false;
+        return false;
+    }
 
     if (icd->contains(fPath)) {
         QImage image; // confirm the cached image is in the image cache
         if (isDebug)
-            qDebug() << "ImageView::loadImage  row =" << sfRow << fPath;
+            qDebug() << srcFun + "  row =" << sfRow << fPath;
 
         pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
         isLoaded = true;
         if (isDebug)
-            qDebug() << "ImageView::loadImage"
+            qDebug() << srcFun
                      << "w =" << pmItem->pixmap().width()
                      << "h =" << pmItem->pixmap().height()
                      << "isNull =" << pmItem->pixmap().isNull()
@@ -269,7 +283,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     }
     else {
         if (isDebug)
-            qDebug() << "ImageView::loadImage isCached = false";
+            qDebug() << srcFun << "isCached = false";
     }
 
     /* When the program is opening or resizing it is possible this function could be
@@ -285,6 +299,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
+        // setSceneRect(pmItem->boundingRect());
 
         updateShootingInfo();
 
@@ -300,7 +315,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             setFitZoom();
         }
         if (isDebug) {
-        qDebug() << "ImageView::loadImage:"
+        qDebug() << srcFun
                  << "isFirstImageNewInstance =" << isFirstImageNewInstance
                  << "row =" << sfRow
                  << "isFit =" << isFit
@@ -317,15 +332,25 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         if (G::isEmbellish) emit embellish("", "ImageView::loadImage");
         else pmItem->setGraphicsEffect(nullptr);
 
+        // qDebug() << "ImageView::loadImage panToFocus =" << panToFocus;
+
         // focus prediction
         if (panToFocus) {
             predictPanToFocus();
         }
+
+        // update viewpoint box in IconViewDelegate
+        bool adjustCenter = panToFocus;
+        bool refresh = false;
+        showNormalizedViewport(adjustCenter, refresh, srcFun);
     }
 
     isBusy = false;
 
-    if (isLoaded) return true;
+    if (isLoaded) {
+        isLoadingImage = false;
+        return true;
+    }
     else {
         if (isDebug)
             qDebug() << "ImageView::loadImage isLoaded = false";
@@ -336,6 +361,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         qDebug() << "ImageView::loadImage failed"
                  << "isFirstImageNewInstance =" << isFirstImageNewInstance
                  << "row =" << sfRow; //*/
+        isLoadingImage = false;
         return false;
     }
 }
@@ -376,13 +402,24 @@ void ImageView::scale(bool isNewImage)
 
     if (G::isLogger) G::log("ImageView::scale");
 
+    // /*
     if (isFit || G::isSlideShow) {
-        // fitInView handles the optimized math for scaling and centering
-        // the pmItem within the current viewport.
+        // 1. Initial fit calculation
         fitInView(pmItem, Qt::KeepAspectRatio);
+        zoom = viewportTransform().m11() * G::actDevicePixelRatio;
 
-        // Synchronize the internal zoom variable with the scale calculated by fitInView
-        zoom = viewportTransform().m11();
+        // 2. Constraint: Do not exceed 100% (G::actDevicePixelRatio)
+        if (zoom > 1.0) {
+            zoom = 1.0;
+            transform.reset();
+            // High DPI 100% is 1.0 / actDevicePixelRatio
+            double highDpiZoom = 1.0 / G::actDevicePixelRatio;
+            transform.scale(highDpiZoom, highDpiZoom);
+            setTransform(transform);
+
+            // Center the image manually since fitInView is overridden
+            centerOn(pmItem);
+        }
     }
     else {
         // Manual zoom mode
@@ -392,7 +429,7 @@ void ImageView::scale(bool isNewImage)
         setTransform(transform);
     }
 
-    emit zoomChange(zoom, "ImageView::scale");
+    // emit zoomChange(zoom, "ImageView::scale");
 
     // The rest of your functional logic remains identical
     isScrollable = (zoom > zoomFit);
@@ -415,79 +452,8 @@ void ImageView::scale(bool isNewImage)
 
     placeClassificationBadge();
     setShootingInfo(infoText);
-    emit updateStatus(true, "", "ImageView::scale");
-    // showPredictedFocus();
-
-
-
-
-
-
-    // if (G::isLogger) G::log("ImageView::scale");
-    // /*
-    // qDebug() << "ImageView::scale"
-    //          << "isScrollable =" << isScrollable
-    //          << "isFit =" << isFit
-    //          << "zoom =" << zoom
-    //          << "highDpiZoom =" << zoom / G::actDevicePixelRatio
-    //          << "zoomFit =" << zoomFit
-    //          << "rect().width() =" << rect().width()
-    //          << "sceneRect().width() =" << sceneRect().width();
-    // //  */
-    // transform.reset();
-    // if (G::isSlideShow) {
-    //     setFitZoom();
-    // }
-
-    // if (isFit) setFitZoom();
-    // double highDpiZoom = zoom / G::actDevicePixelRatio;
-    // transform.scale(highDpiZoom, highDpiZoom);
-    // // when resize before first image zoom == inf
-    // if (zoom > 10) return;
-    // setTransform(transform);
-    // emit zoomChange(zoom, "ImageView::scale");
-
-    // isScrollable = (zoom > zoomFit);
-    // if (isScrollable) scrollPct = getScrollPct();
-    // if (panToFocus) emit showLoupeRect(isScrollable);
-
-    // // pan to predicted focus point of interest
-    // int i = dm->currentSfRow;
-    // float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
-    // float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
-    // /*
-    //     qDebug() << "ImageView::scale"
-    //              << "x =" << x
-    //              << "y =" << y;//*/
-    // bool isFocus = (x >= 0 && y >= 0);
-    // // placeTarget(x, y);
-    // if (isFocus && isScrollable && panToFocus && isNewImage) {
-    //     panTo(x, y);
-    // }
-
-    // if (!G::isSlideShow) {
-    //     if (isScrollable) setCursor(Qt::OpenHandCursor);
-    //     else {
-    //         if (isFit) setCursor(Qt::ArrowCursor);
-    //         else setCursor(Qt::PointingHandCursor);
-    //     }
-    // }
-
-    // placeClassificationBadge();
-    // setShootingInfo(infoText);
     // emit updateStatus(true, "", "ImageView::scale");
-
-    // isMouseDoubleClick = false;
-
-    /* debug
-    qDebug() << "ImageView::scale"
-             << "isScrollable =" << isScrollable
-             << "isFit =" << isFit
-             << "zoom =" << zoom
-             << "zoomFit =" << zoomFit
-             << "rect().width() =" << rect().width()
-             << "sceneRect().width() =" << sceneRect().width();
-//    */
+    //*/
 }
 
 bool ImageView::sceneBiggerThanView()
@@ -685,7 +651,9 @@ void ImageView::resizeEvent(QResizeEvent *event)
         scale();
     } else {
         // If not in Fit mode, we still need to update the prediction overlays
-        showPredictedFocus();
+        bool adjustCenter = true;
+        bool refresh = true;
+        showNormalizedViewport(adjustCenter, refresh, "ImageView::resizeEvent");
     }
 
     // Maintain UI element positions relative to the new window boundaries
@@ -717,35 +685,81 @@ void ImageView::resizeEvent(QResizeEvent *event)
 //     showPredictedFocus();
 }
 
-void ImageView::showPredictedFocus()
+void ImageView::showNormalizedViewport(bool adjustCenter, bool refresh, QString src)
 {
 /*
     Documentation: see FOCUS PREDICTOR in notes/Documentation.txt
+
+    Generate normalized coordinates for viewport in scene
 */
-    if (!panToFocus || zoom <= zoomFit) return;
+    QString srcFun = "ImageView::showNormalizedViewport";
 
+    if (zoom <= zoomFit) {
+        /*
+        qDebug().noquote()
+             << srcFun.leftJustified(40)
+             << "sfRow =" << dm->currentSfRow
+             << "zoom <= zoomFit (no action req'd)"
+             << "src =" << src
+            ; //*/
+        emit showLoupeRect(false);
+        return;
+    }
 
+    static QSizeF prevVpSizeN = QSizeF();
+    static QPointF prevVpCntrN = QPointF();
+
+    // datamodel width/height unreliable (aspect ratio issue or missing)
+    int imW = pmItem->boundingRect().width();
+    int imH = pmItem->boundingRect().height();
+    QRect vpRect = viewport()->rect();
 
     // generate normalized coordinates for viewport in scene
-    qreal imW = pmItem->pixmap().width();
-    qreal imH = pmItem->pixmap().height();
-    // qreal w = scene->width();
-    // qreal h = scene->height();
     QPolygonF p = mapToScene(viewport()->rect());
     qreal x1 = p.at(0).x() / imW;
     qreal y1 = p.at(0).y() / imH;
     qreal x2 = p.at(2).x() / imW;
     qreal y2 = p.at(2).y() / imH;
-    // qreal imA = w * 1.0 / h;
-    qreal vpW = x2 - x1;
-    qreal vpH = y2 - y1;
-    QSizeF vpSize(vpW, vpH);
-    qreal vpA = vpW / vpH;
-    qDebug() << "ImageView::showPredictedFocus"
-             << "vpSize =" << vpSize
-             << "focusPrediction =" << focusPrediction
-                ;
-    emit loupeRect(vpNormSizeInScene(), vpA, focusPrediction);
+    qreal w = x2 - x1;
+    qreal h = y2 - y1;
+
+    QSizeF vpSizeN = QSizeF(w, h);
+    qreal vpA = static_cast<qreal>(vpRect.width()) / vpRect.height();
+    if (adjustCenter)
+        vpCntrN = QPointF(x1 + w/2, y1 + h/2);
+    else
+        panTo(vpCntrN.x(), vpCntrN.y());
+
+    // if repeat then return
+    if (vpSizeN == prevVpSizeN && vpCntrN == prevVpCntrN) {
+        qDebug().noquote()
+            << srcFun.leftJustified(40)
+            << "sfRow =" << dm->currentSfRow
+            << "vpSizeN =" << prevVpSizeN
+            << "vpSizeN =" << vpCntrN
+            << "REPEAT: DO NOT SIGNAL";
+            ;
+        return;
+    }
+
+    /*
+    qDebug().noquote()
+             << srcFun.leftJustified(40)
+             << "sfRow =" << dm->currentSfRow
+             << "imW =" << imW
+             << "imH =" << imH
+             << "vpSizeN =" << vpSizeN
+             << "vpCntrN =" << vpCntrN
+             << "vpA =" << vpA
+             << "src =" << src
+             << "refresh =" << refresh
+        ;//*/
+
+    emit loupeRect(vpSizeN, vpA, vpCntrN, refresh);
+
+    prevVpSizeN = vpSizeN;
+    prevVpCntrN = vpCntrN;
+
 }
 
 void ImageView::predictPanToFocus()
@@ -773,7 +787,9 @@ void ImageView::panTo(float xPct, float yPct)
    main image is panned to the same location as on the thumb. This makes it quick to check
    eyes and other details in many images.
 */
+    QString srcFun = "ImageView::thumbClick";
     if (G::isLogger) G::log("ImageView::thumbClick");
+    // qDebug().noquote() << srcFun.leftJustified(40);
     if (zoom > zoomFit) {
         centerOn(QPointF(xPct * sceneRect().width(), yPct * sceneRect().height()));
     }
@@ -924,6 +940,8 @@ void ImageView::zoomToggle()
     defaults to 1.0
 */
     if (G::isLogger) G::log("ImageView::zoomToggle");
+    QString srcFun = "ImageView::zoomToggle";
+    qDebug().noquote() << srcFun.leftJustified(40);
 
     if (isFit && zoomFit >= toggleZoom) {
         QString toggleZoomPct = QString::number(toggleZoom * 100) + "%";
@@ -980,7 +998,7 @@ void ImageView::rotateImage(int degrees)
         // You'll need to call the clear method on the delegate
         thumbView->iconViewDelegate->clearCacheItem(dm->currentSfRow);
         // Then tell the view to redraw that specific thumb
-        thumbView->refreshThumb(dm->currentSfIdx);
+        thumbView->refreshThumb(dm->currentSfIdx, "ImageView::rotateImage");
     }
 }
 
@@ -1245,12 +1263,15 @@ void ImageView::scrollChange(int /*value*/)
 {
     if (G::isLogger) G::log("ImageView::scrollChange");
 
-    showPredictedFocus();
     /*
     qDebug() << "ImageView::scrollChange"
              << "mapToScene(viewport()->rect()) =" << mapToScene(viewport()->rect())
-             << x1 << y1 << x2 << y2
         ;//*/
+    if (!isLoadingImage) {
+        bool adjustCenter = true;
+        bool refresh = true;
+        showNormalizedViewport(adjustCenter, refresh, "ImageView::scrollChange");
+    }
 }
 
 // MOUSE CONTROL
@@ -1274,7 +1295,7 @@ void ImageView::enterEvent(QEnterEvent *event)
 void ImageView::leaveEvent(QEvent *event)
 {
     wheelSpinningOnEntry = false;
-    emit showLoupeRect(false);
+    // emit showLoupeRect(false);
 }
 
 void ImageView::wheelEvent(QWheelEvent *event)

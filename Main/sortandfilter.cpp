@@ -159,8 +159,8 @@ void MW::filterChange(QString source)
         return;
     }
 
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshThumbs("MW::filterChange");
+    gridView->refreshThumbs("MW::filterChange");
 
     // sync the datamodel instance
     metaRead->initialize();
@@ -525,7 +525,7 @@ void MW::setRating()
     rating for all the selected thumbs.
 */
     if (G::isLogger) G::log("MW::setRating");
-    qDebug() << "MW::setRating";
+    // qDebug() << "MW::setRating";
     // do not set rating if slideshow is on
     if (G::isSlideShow) return;
 
@@ -533,8 +533,8 @@ void MW::setRating()
     if (!isRatingBadgeVisible) {
         ratingBadgeVisibleAction->setChecked(true);
         isRatingBadgeVisible = true;
-        thumbView->refreshThumbs();
-        gridView->refreshThumbs();
+        thumbView->refreshThumbs("MW::setRating");
+        gridView->refreshThumbs("MW::setRating");
     }
 
     QObject* obj = sender();
@@ -622,8 +622,8 @@ void MW::setRating()
     }
 
     // update thumbnail appearance to show classification
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshThumbs("MW::setRating");
+    gridView->refreshThumbs("MW::setRating");
 
     /* must execute in order:
        - suspend proxy updates
@@ -673,8 +673,8 @@ void MW::recoverRatingLog()
         }
     }
     settings->endGroup();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshThumbs("MW::recoverRatingLog");
+    gridView->refreshThumbs("MW::recoverRatingLog");
 }
 
 void MW::clearRatingLog()
@@ -717,8 +717,8 @@ void MW::setColorClassForRow(int sfRow, QString colorClass) {
                   Qt::EditRole, Qt::AlignCenter);
     QString color = dm->sf->index(sfRow, G::LabelColumn).data().toString();
     qDebug() << srcFun << "color =" << color;
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshThumbs("MW::setColorClassForRow");
+    gridView->refreshThumbs("MW::setColorClassForRow");
     dm->sf->suspend(true, "MW::setColorClass");
     buildFilters->updateCategory(BuildFilters::LabelEdit);
     filterChange("MW::setColorClass"); // sets dm->sf->suspend = false
@@ -748,8 +748,8 @@ void MW::setColorClass()
     if (!isRatingBadgeVisible) {
         ratingBadgeVisibleAction->setChecked(true);
         isRatingBadgeVisible = true;
-        thumbView->refreshThumbs();
-        gridView->refreshThumbs();
+        thumbView->refreshThumbs("MW::setColorClass");
+        gridView->refreshThumbs("MW::setColorClass");
     }
 
     QObject* obj = sender();
@@ -831,8 +831,8 @@ void MW::setColorClass()
     }
 
     // update thumbnail appearance to show classification
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshThumbs("MW::setColorClass");
+    gridView->refreshThumbs("MW::setColorClass");
 
     /* must execute in order:
        - suspend proxy updates
@@ -889,8 +889,8 @@ void MW::recoverColorClassLog()
         }
     }
     settings->endGroup();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshThumbs("MW::recoverColorClassLog");
+    gridView->refreshThumbs("MW::recoverColorClassLog");
 }
 
 void MW::clearColorClassLog()

@@ -3,10 +3,10 @@
 #include "Main/global.h"
 
 /*
+
 IconViewDelegate Anatomy:
 
-
-0-----cellRect = option.rect --------------------------------|
+0---- cellRect = option.rect --------------------------------|
 |                                                            |
 |           framePadding (fPad)                              |
 |                                                            |
@@ -15,23 +15,23 @@ IconViewDelegate Anatomy:
 |     |          thumbPadding (tPad)                   |     |
 |     |                                                |     |
 |     |     2----thumbRect-----------------------+  ^  |     |
-|     |     |     .                        .     |  :  |     |
-|     |     |     .                        .     |  :  |     |
-|     |     |     .                        .     |  :  |     |
-|     |     |....................................|  t  |     |
-|     |     |     .                        .     |  h  |     |
-|     |     |     .                        .     |  u  |     |
-|     |     |     .                        .     |  m  |     |
-|     |     |     .                        .     |  b  |     |
-|     |     |     .                        .     |  H  |     |
-|     |     |     .         icon           .     |  e  |     |
-|     |     |     .                        .     |  i  |     |
-|     |     |     .                        .     |  g  |     |
-|     |     |     .                        .     |  h  |     |
-|     |     4....................................|  t  |     |
-|     |     |     .                        .     |  :  |     |
-|     |     |     .                        .     |  :  |     |
-|     |     |     .        *****           .     |  :  |     |   info row at bottom of thumbRect
+|     |     |                                    |  :  |     |
+|     |     5----outerIcon-----------------------|  :  |     |
+|     |     |    horizontal black border         |  :  |     |
+|     |     6----iconRect------------------------|  t  |     |
+|     |     |                                    |  h  |     |
+|     |     |                                    |  u  |     |
+|     |     |                                    |  m  |     |
+|     |     |                                    |  b  |     |
+|     |     |                                    |  e  |     |
+|     |     |                                    |  H  |     |
+|     |     |                                    |  i  |     |
+|     |     |----------------------------------- |  g  |     |
+|     |     |     horizontal black border        |  h  |     |
+|     |     4 -----------------------------------|  t  |     |
+|     |     |                                    |  :  |     |
+|     |     |                                    |  :  |     |
+|     |     |               *****                |  :  |     |
 |     3----textRect -----------------------------+--˅--|     |
 |     |                                                |     |
 |     |     <---------- thumbWidth -------------->     |     |
@@ -42,16 +42,18 @@ IconViewDelegate Anatomy:
 |                                                            |
 +------------------------------------------------------------+
 
+Point coordinates:
 0 = option.rect.topLeft()
 1 = fPadOffset
 2 = fPadOffset + tPadOffset
 3 = frameRect.bottomLeft() - textHtOffset
 4 = info row (rating etc) = 1/6 thumbRect height
+5 = thumbRect.topleft() + alignOff (based on aspect ratio)
+6 = outerIconRect.topleft() + bboOff (black border offset)
 
-IconView thumbDock Anatomy
+IconView thumbDock Anatomy:
 
-
-+-----------------------------------------------------------------------^-------->   ^
++-----------------------------------------------------------------------^-------->
 |   |+------------------------------------------------------------+     |
 |   ||                                                            |
 | H ||                                                            |
@@ -349,65 +351,51 @@ void IconViewDelegate::setVpRectVisibility(bool isVisible)
     vpRectIsVisible = isVisible;
 }
 
-void IconViewDelegate::setNormVpRect(QSizeF vpSizeN, QPointF vpCntrN,
-                                     QPointF bbo)
+void IconViewDelegate::setNormVpRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN)
 {
-    // zc = zoom cursor
-    qreal dpr = G::sysDevicePixelRatio;
-    // thumb including black border
-    int thumbW = thumbSize.width();
-    int thumbH = thumbSize.height();
-    // black border offset in local px
-    int bboX = thumbW * bbo.x();
-    int bboY = thumbH * bbo.y();
-    // thumb inside black border
-    int tW = thumbW - bboX * 2;
-    int tH = thumbH - bboY * 2;
-    // zoom cursor showing viewport
-    int zcW = vpSizeN.width() * thumbW * dpr;
-    int zcH = vpSizeN.height() * thumbH * dpr;
-    QPoint zcCntr(vpCntrN.x()*tW - bboX, vpCntrN.y()*tH - bboY);
-    int zcX = zcCntr.x() - zcW / 2;
-    if (zcX < 0) zcX = 0;
-    int zcY = zcCntr.y() - zcH / 2;
-    if (zcY < 0) zcY = 0;
-    // if ((vpX + vpW) > thumbW) vpX = thumbW - vpW;
-    // if ((vpY + vpH) > thumbH) vpY = thumbH - vpH;
-    // vpX *= dpr;
-    // vpY *= dpr;
-    // vpW *= dpr;
-    // vpH *= dpr;
-    targetVpRect = QRect(zcX, zcY, zcW, zcH);
+    this->vpSizeN = vpSizeN;
+    this->vpCntrN = vpCntrN;
+    this->vpA = vpA;
 }
 
-void IconViewDelegate::setVpRect(QRectF vp, qreal imA)
+QPoint IconViewDelegate::blackBorderOffset(const QModelIndex &sfIdx) const
 {
-    vpRect = vp;
-    this->imA = imA;
-
-    // Pre-calculate the draw coordinates relative to a zero-origin icon
-    qreal wIcon, hIcon;
-    int wBlack = 0;
-    int hBlack = 0;
-
-    // Calculate icon dimensions based on image aspect ratio
-    if (imA > 1) {
-        wIcon = thumbSize.width();
-        hIcon = wIcon / imA;
-        hBlack = (thumbSize.height() - hIcon) / 2;
-    } else {
-        hIcon = thumbSize.height();
-        wIcon = hIcon * imA;
-        wBlack = (thumbSize.width() - wIcon) / 2;
+    /* Some brands create thumbnails with black borders, which are not part of the
+    image, and should be excluded. The long side (ie width if landscape, height if
+    portrait, will not have a black border. Using that side and the aspect of the
+    original image can give the correct length for the other side of the thumbnail.
+    Returns offset in normalized coordinates.
+    */
+    QRect iconRect = sfIdx.data(G::IconRectRole).toRect();
+    int iconW = iconRect.width();
+    int iconH = iconRect.height();
+    qreal imA = dm->sf->index(sfIdx.row(), G::AspectRatioColumn).data().toReal();
+    qreal iconA = static_cast<qreal>(iconRect.width()) / iconRect.height();
+    qreal xOff = 0;
+    qreal yOff = 0;
+    if (!qFuzzyCompare(imA, iconA)) {
+        if (imA > 1) {
+            // landscape, top/bottom black border
+            yOff = (iconH - iconW / imA) / 2;
+        }
+        else {
+            // portrait, left/right black border
+            xOff = (iconW - iconH * imA) / 2;
+        }
     }
-
-    // Map the normalized vpRect (0.0 - 1.0) to actual pixel coordinates
-    int x1 = static_cast<int>(vpRect.topLeft().x() * wIcon) + wBlack;
-    int y1 = static_cast<int>(vpRect.topLeft().y() * hIcon) + hBlack;
-    int x2 = static_cast<int>(vpRect.bottomRight().x() * wIcon) + wBlack;
-    int y2 = static_cast<int>(vpRect.bottomRight().y() * hIcon) + hBlack;
-
-    targetVpRect = QRect(QPoint(x1, y1), QPoint(x2, y2));
+    /*
+    QString srcFun = "IconViewDelegate::blackBorderOffset";
+    qDebug().noquote()
+             << srcFun.leftJustified(40)
+             << "sfRow =" << sfIdx.row()
+             << "imA =" << imA
+             << "iconA =" << iconA
+             << "iconW =" << iconW
+             << "iconH =" << iconH
+             << "xOff =" << xOff
+             << "yOff =" << yOff
+                ; //*/
+    return QPoint(xOff, yOff);
 }
 
 QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &optionRect, const QModelIndex &index) const
@@ -547,18 +535,34 @@ iconRect         = thumbRect - icon (icon has different aspect so either the
                    width or height will have to be centered inside the thumbRect
 textRect         = a rectangle below itemRect
 */
-
     // Quick exit if the icon has not been loaded into the DataModel
     if (index.data(Qt::DecorationRole).isNull()) return;
 
+    QString srcFun = "IconViewDelegate::Paint";
+    // qDebug().noquote()
+    //     << srcFun.leftJustified(40)
+    //     << "sfRow =" << index.row()
+    //     << "option.state =" << option.state;
+
+
     painter->save();
 
-    // --- DATA AND GEOMETRY ---
+    // --- DATA ---
 
     // Pull model data once to avoid repeated indexing during the paint loop
     int sfRow = index.row();
     bool isSelected = dm->isSelected(sfRow);
     bool isCurrentIndex = (sfRow == dm->currentSfRow);
+
+    /*
+    if (isCurrentIndex)
+    qDebug() << "IconViewDelegate::paint"
+             << "sfRow =" << sfRow
+             << "dm->currentSfRow =" << dm->currentSfRow
+             << "isCurrentIndex =" << isCurrentIndex
+             << "vpRectIsVisible =" << vpRectIsVisible
+             << "option.state =" << option.state
+        ;//*/
 
     // Determine label text based on user preference
     QString labelText = (labelChoice == "Title")
@@ -582,17 +586,11 @@ textRect         = a rectangle below itemRect
     bool isReadWrite = index.model()->index(sfRow, G::ReadWriteColumn).data().toBool();
     bool isCombineRawJpg = index.model()->index(sfRow, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
 
-    // Calculate the standard Winnow cell geometry
-    QRect cellRect(option.rect);
-    QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
-    QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
-    QPoint origin = thumbRect.topLeft();
+    // --- THUMBNAIL ---
 
-    // --- ICON CACHE ---
     // Check if we already have the scaled pixmap for this row
     QPixmap *cachedPm = iconCache.object(sfRow);
     QPixmap pm;
-    QRect iconRect;
 
     if (cachedPm) {
         pm = *cachedPm;
@@ -618,15 +616,42 @@ textRect         = a rectangle below itemRect
         }
     }
 
+    // --- CELL GEOMETRY ---
+
+    // Calculate the standard Winnow cell geometry
+    QRect cellRect(option.rect);
+    QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
+    QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
+    QRect outerIconRect;    // includes possible black border
+    QRect iconRect;         // inside black border
+    QPoint origin = thumbRect.topLeft();
+
     // Calculate iconRect based on the (now potentially cached) pixmap dimensions
-    if (!pm.isNull()) {
-        int alignVert = (thumbRect.height() - pm.height()) / 2;
-        int alignHor = (thumbRect.width() - pm.width()) / 2;
-        iconRect = QRect(thumbRect.left() + alignHor, thumbRect.top() + alignVert, pm.width(), pm.height());
-    }
+    int alignVert = (thumbRect.height() - pm.height()) / 2;
+    int alignHor = (thumbRect.width() - pm.width()) / 2;
+    QPoint alignOffset(alignHor, alignVert);
+    QSize outerIconSize(pm.width(), pm.height());
+    outerIconRect = QRect(thumbRect.topLeft() + alignOffset, outerIconSize);
+    // outerIconRect = QRect(thumbRect.left() + alignHor, thumbRect.top() + alignVert, pm.width(), pm.height());
 
+    // bbo = Black Border Offset (N normalized)
+    QPointF bboN = blackBorderOffset(index);
+    int bboX = bboN.x();
+    int bboY = bboN.y();
+    QPoint bboOffset(bboX, bboY);
 
-    // Determine frame background color based on rating labels
+    // icon = iconRect excluding black borders
+    int iconW = outerIconRect.width() - bboX * 2;
+    int iconH = outerIconRect.height() - bboY * 2;
+    QSize iconSize(iconW, iconH);
+
+    // iconRect (used in IconView::mouseReleaseEvent to emit thumbClick)
+    iconRect = QRect(outerIconRect.topLeft() + bboOffset, iconSize);
+    iconRectCache.insert(sfRow, new QRect(iconRect));
+
+    // --- PAINTING ---
+
+    // Determine frame background color based on colorClass labels
     QColor labelColorToUse = G::backgroundColor;
     if (isRatingBadgeVisible && G::labelColors.contains(colorClass)) {
         if (colorClass == "Red") labelColorToUse = G::labelRedColor;
@@ -635,8 +660,6 @@ textRect         = a rectangle below itemRect
         else if (colorClass == "Blue") labelColorToUse = G::labelBlueColor;
         else if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
     }
-
-    // --- PAINTING ---
 
     // Paint the frame background and main border
     painter->setRenderHint(QPainter::Antialiasing, true);
@@ -655,8 +678,8 @@ textRect         = a rectangle below itemRect
     // Draw the thumbnail image with appropriate clipping
     if (!pm.isNull()) {
         painter->setClipping(true);
-        painter->setClipRect(iconRect);
-        painter->drawPixmap(iconRect, pm);
+        painter->setClipRect(outerIconRect);
+        painter->drawPixmap(outerIconRect, pm);
         painter->setClipping(false);
     }
 
@@ -732,7 +755,7 @@ textRect         = a rectangle below itemRect
     else if (isRejected) painter->setPen(rejectedPen);
 
     if ((isPicked || isIngested || isRejected) && !pm.isNull()) {
-        painter->drawRoundedRect(iconRect, 6, 6);
+        painter->drawRoundedRect(outerIconRect, 6, 6);
     }
 
     // Draw selection and current index highlight borders
@@ -745,400 +768,59 @@ textRect         = a rectangle below itemRect
         painter->drawRoundedRect(QRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset), 8, 8);
     }
 
-    // Render the loupe viewport rectangle for focus stacking
+    // Render the loupe viewport rectangle
     if (isCurrentIndex && vpRectIsVisible) {
-        QRect drawRect = targetVpRect.translated(iconRect.topLeft());
-        painter->setPen(vp1Pen);
-        painter->drawRect(drawRect);
-        painter->setPen(vp2Pen);
-        painter->drawRect(drawRect.adjusted(1, 1, -1, -1));
-    }
 
-    // Notify the view of the updated iconRect for coordinate mapping
-    emit update(index, iconRect);
+        // vp = relative ImageView viewport
+        int vpW = vpSizeN.width() * iconW;      // convert normalized values
+        int vpH = vpSizeN.height() * iconW;     // convert normalized values
+
+        // apply aspect ratio
+        if (vpA > 1.0) vpH = vpW / vpA;
+        else vpW = vpH * vpA;
+
+        // center
+        int vpCntrX = vpCntrN.x() * iconW;      // convert normalized values
+        int vpCntrY = vpCntrN.y() * iconH;      // convert normalized values
+
+        // top left
+        int vpX = iconRect.x() + vpCntrX - vpW/2;
+        int vpY = iconRect.y() + vpCntrY - vpH/2;
+
+        /*
+        QString srcFun = "IconViewDelegate::Paint";
+        qDebug().noquote()
+                 << srcFun.leftJustified(40)
+                 << "sfRow =" << index.row()
+                 << "objName =" << objName
+                 << "bboX =" << bboX
+                 << "bboY =" << bboY
+                 << "iconW =" << iconW                 << "iconH =" << iconH
+                 << "nIconW =" << iconW
+                 << "nIconH =" << iconH
+                 << "vpCntrN =" << vpCntrN
+                 << "vpCntrX =" << vpCntrX
+                 << "vpCntrY =" << vpCntrY
+                 << "vpX =" << vpX
+                 << "vpY =" << vpY
+                 << "vpW =" << vpW
+                 << "vpH =" << vpH
+                 << "vpA =" << vpA
+                 << "option.state =" << option.state
+            ;  //*/
+
+        // viewport rectange with room for border
+        QRect vpRect(vpX-=2, vpY-=2, vpW+=4, vpH+=4);
+
+        painter->save();
+        painter->setClipping(true);
+        painter->setClipRect(outerIconRect);
+        painter->setPen(vp1Pen);
+        painter->drawRect(vpRect);
+        painter->setPen(vp2Pen);
+        painter->drawRect(vpRect.adjusted(1, 1, -1, -1));
+        painter->restore();
+    }
 
     painter->restore();
 }
-
-// void IconViewDelegate::paint(QPainter *painter,
-//                              const QStyleOptionViewItem &option,
-//                              const QModelIndex &index) const
-// {
-// /*
-//     The delegate cell size is defined in setThumbDimensions and assigned in sizeHint.
-//     The thumbSize cell contains a number of cells or rectangles:
-
-//     Outer dimensions = cellRect or option.rect (QListView icon spacing is set to zero)
-//     frameRect        = cellRect - cBrdT - fPad
-//     thumbRect        = itemRect - thumbBorderGap - padding - thumbBorderThickness
-//     iconRect         = thumbRect - icon (icon has different aspect so either the
-//                        width or height will have to be centered inside the thumbRect
-//     textRect         = a rectangle below itemRect
-// */
-//     // Ignore paint before icon has been loaded into DataModel
-//     if (index.data(Qt::DecorationRole).isNull()) return;
-
-//     painter->save();
-//     /* debug
-//     qDebug() << "IconViewDelegate::paint  "
-//              << "row =" << index.row()
-//              << "index =" << index
-//              << "option.state =" << option.state
-//              //<< "option.state just enabled =" << enabled
-//              //<< "option.type =" << option.type
-//              //<< "option.features =" << option.features
-//              //<< "option.index =" << option.index
-//                 ;
-//              //*/
-
-//     // show all symbols to document for help
-//     bool showAllSymbols = false;
-
-//     // make default border relative to background
-//     int l40 = G::backgroundShade + 40;
-//     QPen border;
-//     border.setWidth(1);
-//     border.setColor(QColor(l40,l40,l40));
-
-//     // get data from model
-//     int sfRow = index.row();
-
-//     // first/last visible (not being used at present)
-//     if (sfRow < firstVisible) firstVisible = sfRow;
-//     if (sfRow > lastVisible) lastVisible = sfRow;
-//     midVisible = firstVisible + ((lastVisible - firstVisible) / 2);
-
-//     QString labelText;
-//     if (labelChoice == "Title") {
-//         labelText = index.model()->index(sfRow, G::TitleColumn).data(Qt::DisplayRole).toString();
-//     }
-//     else {
-//         labelText = index.model()->index(sfRow, G::NameColumn).data(Qt::DisplayRole).toString();
-//     }
-//     QString colorClass = index.model()->index(sfRow, G::LabelColumn).data(Qt::EditRole).toString();
-//     int ratingNumber = index.model()->index(sfRow, G::RatingColumn).data(Qt::EditRole).toInt();
-//     QString rating = index.model()->index(sfRow, G::RatingColumn).data(Qt::EditRole).toString();
-//     QString duration = index.model()->index(sfRow, G::DurationColumn).data(Qt::DisplayRole).toString();
-//     if (duration.isNull()) duration = "XXX";
-//     bool isSelected = dm->isSelected(sfRow);
-//     bool isCurrentIndex = sfRow == dm->currentSfRow;
-//     QString pickStatus = index.model()->index(sfRow, G::PickColumn).data(Qt::EditRole).toString();
-//     bool isPicked = pickStatus == "Picked";
-//     bool isRejected = pickStatus == "Rejected";
-//     bool isIngested = index.model()->index(sfRow, G::IngestedColumn).data(Qt::EditRole).toBool();
-//     bool isCached = index.model()->index(sfRow, G::IsCachedColumn).data(Qt::EditRole).toBool();
-//     bool isMissingThumb = index.model()->index(sfRow, G::MissingThumbColumn).data().toBool();
-//     bool metaLoaded = index.model()->index(sfRow, G::MetadataLoadedColumn).data().toBool();
-//     bool isVideo = index.model()->index(sfRow, G::VideoColumn).data().toBool();
-//     bool isReadWrite = index.model()->index(sfRow, G::ReadWriteColumn).data().toBool();
-//     bool isCombineRawJpg = index.model()->index(sfRow, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
-
-//     // Cell structure (see IconViewDelegate Anatomy at top of file).
-//     QRect cellRect(option.rect);
-//     QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
-//     QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
-
-//     // Cell origin
-//     QPoint origin = thumbRect.topLeft();
-
-//     // get icon (thumbnail) from the datamodel and scale
-//     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-//     // get the icon dimensions to fit into G::maxIconSize.  Must start with largest size
-//     // to prevent scaling glitches.
-//     QSize maxSize = icon.actualSize(QSize(G::maxIconSize,G::maxIconSize));  // 256,256
-//     // convert to a QPixmap
-//     QPixmap pm = icon.pixmap(maxSize);
-//     if (!pm.isNull()) {
-//         // if the pm is nearly square, scale slightly smaller so border large enough
-//         // to show color class
-//         int pmMargin = 8;
-//         bool isSquare = (qAbs(pm.width() - pm.height()) < pmMargin);
-//         // scale the pixmap to fit in the thumbRect
-//         if (isSquare) pm = pm.scaled(thumbSize - QSize(pmMargin,pmMargin), Qt::KeepAspectRatio);
-//         else pm = pm.scaled(thumbSize, Qt::KeepAspectRatio);
-//     }
-//     // define iconSize for reporting
-//     QSize iconSize = QSize(pm.width(), pm.height());
-//     // center the iconRect in the thumbRect
-//     int alignVertPad = (thumbRect.height() - pm.height()) / 2;
-//     int alignHorPad = (thumbRect.width() - pm.width()) / 2;
-//     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
-//                    pm.width(), pm.height());
-
-//     // INFO ROW containment rects overlap bottom of thumbRect and
-//     // It is 1/6 or 0.17 of the thumbRect height
-
-//     int infoHt = thumbRect.height() / 6;
-
-//     /* debug
-//     if (row == 0)
-//         qDebug() << "IconViewDelegate::paint "
-//                  << "row =" << row
-//                  << "currentRow =" << currentRow
-//                  << "selected =" << isSelected
-//                  << "cellRect =" << cellRect
-//                  << "frameRect =" << frameRect
-//                  << "thumbRect =" << thumbRect
-//                  << "iconRect =" << iconRect
-//                  << "thumbSize =" << thumbSize
-//                  << "infoHt =" << infoHt
-//                  << "fontHt =" << fontHt
-//                  << "textHeight =" << textHeight
-//             ;
-//     //             */
-
-//     painter->drawRoundedRect(iconRect, 6, 6);
-
-//     QRect textRect(frameRect.bottomLeft() - textHtOffset, frameRect.bottomRight());
-//     QPainterPath textPath;
-//     textPath.addRoundedRect(textRect, 8, 8);
-
-//     QColor labelColorToUse;
-//     if (G::labelColors.contains(colorClass) && isRatingBadgeVisible) {
-//         if (colorClass == "Red") labelColorToUse = G::labelRedColor;
-//         if (colorClass == "Yellow") labelColorToUse = G::labelYellowColor;
-//         if (colorClass == "Green") labelColorToUse = G::labelGreenColor;
-//         if (colorClass == "Blue") labelColorToUse = G::labelBlueColor;
-//         if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
-//     }
-//     else labelColorToUse = G::backgroundColor;
-
-//     // START PAINTING (painters algorithm - last over first)
-
-//     // paint the background label color and border
-//     painter->setBrush(labelColorToUse);
-//     painter->setPen(border);
-//     painter->drawRoundedRect(frameRect, 8, 8);
-
-//     // label (file name or title)
-//     painter->setRenderHint(QPainter::Antialiasing, true);
-//     painter->setRenderHint(QPainter::TextAntialiasing, true);
-
-//     if (delegateShowThumbLabels) {
-//         painter->setPen(labelTextColor);
-//         painter->setFont(font);
-//         painter->drawText(textRect, Qt::AlignHCenter, labelText);
-//     }
-
-//     // icon/thumbnail image
-//     painter->setClipping(true);
-//     painter->setClipRect(iconRect);
-//     // painter->setClipPath(iconPath);
-//     painter->drawPixmap(iconRect, pm);
-//     painter->setClipping(false);
-
-//     /*
-//     qDebug() << "IconViewDelegate::paint"
-//              << "row =" << row
-//              << "currentRow =" << currentRow
-//              << "selected item =" << option.state.testFlag(QStyle::State_Selected)
-//              << "isVideo =" << isVideo
-//              << "labeltext =" << labelText
-//         ;
-//             // */
-
-//     // duration
-//     int videoDurationHt = 0;
-//     if (isVideo || showAllSymbols) {
-//         QFont videoFont = painter->font();
-//         videoFont.setPixelSize(G::fontSize);
-//         painter->setFont(videoFont);
-//         QRect bRect;
-//         painter->setPen(G::backgroundColor);
-//         painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "03:45:00", &bRect);
-//         painter->setBrush(G::backgroundColor);
-//         painter->drawRect(bRect);
-//         painter->setPen(videoTextColor);
-//         if (G::renderVideoThumb)
-//             painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
-//         videoDurationHt = bRect.height();
-//     }
-
-//     // rating badge
-//     isRatingBadgeVisible = true;
-//     if (isRatingBadgeVisible || showAllSymbols) {
-//         // label/rating rect located top-right as containment for circle
-//         if (G::ratings.contains(rating)) {
-//             QColor textColor(Qt::white);
-//             QPen ratingTextPen(textColor);
-//             painter->setBrush(ratingBackgoundColor);
-//             QFont starFont = painter->font();
-//             QString stars;
-//             int pxSize;
-
-//             if (infoHt > 14) {
-//                 stars.fill('*', ratingNumber);
-//                 // Use the cached starsWidth and fontHt instead of fm.boundingRect()
-//                 int b = (thumbRect.width() - starsWidth) / 2;
-//                 int h = fontHt * 0.8;
-
-//                 QPoint ratingTopLeft(thumbRect.left() + b, thumbRect.bottom() - videoDurationHt - h);
-//                 QPoint ratingBottomRight(thumbRect.right() - b, thumbRect.bottom() - videoDurationHt);
-//                 QRect ratingRect(ratingTopLeft, ratingBottomRight);
-
-//                 painter->setPen(ratingTextPen);
-//                 painter->drawText(ratingRect, Qt::AlignHCenter | Qt::AlignTop, stars);
-//             }
-//             else {
-//                 stars = QString::number(ratingNumber);
-//                 pxSize = infoHt;
-//                 starFont.setPixelSize(pxSize);
-//                 painter->setFont(starFont);
-//                 painter->setPen(ratingTextPen);
-//                 int w = pxSize;
-//                 int h = w;
-//                 int x = thumbRect.center().x() - w / 2;
-//                 int y = thumbRect.bottom() - videoDurationHt - h + 3;
-//                 QRect ratingRect(x, y, w, h);
-//                 painter->drawText(ratingRect, Qt::AlignBottom, stars);
-//             }
-//         }
-//     }
-
-//     // show if combine raw/jpg for this image
-//     if (isCombineRawJpg) {
-//         painter->drawImage(combineRawJpgRect.translated(origin), combineRawJpgSymbol);
-//     }
-
-//     // show lock if file does not have read/write permissions
-//     if (!isReadWrite || showAllSymbols) {
-//         lockRenderer->render(painter, lockRect.translated(origin));
-//     }
-
-//     // draw the cache circle
-//     if ((!isCached && !isVideo && metaLoaded && !G::isSlideShow) || showAllSymbols) {
-//         painter->setPen(cacheBorderColor);
-//         painter->setBrush(cacheColor);
-//         painter->drawEllipse(cacheRect.translated(origin));
-//     }
-
-//     // draw the missing thumb circle
-//     // qDebug() << "IconviewDeledate::paint" << index.row() << "isMissingThumb =" << isMissingThumb;
-//     if ((G::useMissingThumbs && isMissingThumb) || showAllSymbols /*&& !G::isSlideShow*/) {
-//         painter->setPen(cacheBorderColor);
-//         painter->setBrush(missingThumbColor);
-//         painter->drawEllipse(missingThumbRect.translated(origin));
-//     }
-
-//     painter->setPen(border);
-//     painter->setBrush(Qt::transparent);
-
-//     // pick status
-//     if (isPicked) {
-//         painter->setPen(pickedPen);
-//         // painter->drawPath(iconPath);
-//         painter->drawRoundedRect(iconRect, 6, 6);
-//     }
-//     if (isIngested) {
-//         painter->setPen(ingestedPen);
-//         // painter->drawPath(iconPath);
-//         painter->drawRoundedRect(iconRect, 6, 6);
-//     }
-//     if (isRejected) {
-//         painter->setPen(rejectedPen);
-//         // painter->drawPath(iconPath);
-//         painter->drawRoundedRect(iconRect, 6, 6);
-//     }
-
-//     // draw icon number
-//     if (isIconNumberVisible || showAllSymbols) {
-//         painter->setBrush(labelColorToUse);
-//         QFont numberFont = painter->font();
-//         int pxSize = iconNumberSize;
-//         if (pxSize < 6) pxSize = 6;
-//         numberFont.setPixelSize(pxSize);
-//         numberFont.setBold(true);
-//         painter->setFont(numberFont);
-//         QFontMetrics fm(numberFont);
-//         QString labelNumber = QString::number(sfRow + 1);
-//         int numberWidth = fm.boundingRect(labelNumber).width() + 4;
-//         QPoint numberTopLeft(frameRect.left(), frameRect.top());
-//         QPoint numberBottomRight(frameRect.left() + numberWidth + 4, frameRect.top() + iconNumberSize);
-//         QRect numberRect(numberTopLeft, numberBottomRight);
-//         painter->setPen(Qt::transparent);
-//         painter->drawRoundedRect(numberRect, 8, 8);
-//         QPen numberPen(numberTextColor);
-//         painter->setPen(numberPen);
-//         painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
-//     }
-
-//     painter->setBrush(Qt::transparent);
-
-//     // selected item
-//     if (isSelected) {
-//         painter->setPen(selectedPen);
-//         painter->drawRoundedRect(frameRect, 8, 8);
-//     }
-
-//     // current index item
-//     if (isCurrentIndex) {
-//         //if (row == currentRow) {
-//         QRect currRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset);
-//         painter->setPen(currentPen);
-//         painter->drawRoundedRect(currRect, 8, 8);
-//     }
-
-//     // imageView viewport rect when zoomed
-//     if (isCurrentIndex && vpRectIsVisible) {
-//         if (isCurrentIndex && vpRectIsVisible) {
-//             // Translate the pre-calculated rect to the current icon's screen position
-//             QRect drawRect = targetVpRect.translated(iconRect.topLeft());
-
-//             painter->setPen(vp1Pen);
-//             painter->drawRect(drawRect);
-
-//             painter->setPen(vp2Pen);
-//             painter->drawRect(drawRect.adjusted(1, 1, -1, -1));
-//         }
-
-
-//         // // imA is original image aspect (in case thumbnail has black borders)
-//         // // qDebug() << "IconViewDelegate::paint  imA =" << imA;
-//         // qreal wIcon, hIcon;
-//         // int wBlack = 0;     // black border
-//         // int hBlack = 0;     // black border
-//         // if (imA > 1) {
-//         //     wIcon = iconRect.width();
-//         //     hIcon = static_cast<int>(wIcon / imA);
-//         //     hBlack = (iconRect.height() - hIcon) / 2;
-//         // }
-//         // else {
-//         //     hIcon = iconRect.height();
-//         //     wIcon = static_cast<int>(hIcon * imA);
-//         //     wBlack = (iconRect.width() - wIcon) / 2;
-//         // }
-//         // int xIconTL = iconRect.x() + wBlack;
-//         // int yIconTL = iconRect.y() + hBlack;
-//         // int x1Vp = static_cast<int>(vpRect.topLeft().x() * wIcon);
-//         // int y1Vp = static_cast<int>(vpRect.topLeft().y() * hIcon);
-//         // int x2Vp = static_cast<int>(vpRect.bottomRight().x() * wIcon);
-//         // int y2Vp = static_cast<int>(vpRect.bottomRight().y() * hIcon);
-//         // int x1 = x1Vp + xIconTL;
-//         // int y1 = y1Vp + yIconTL;
-//         // int x2 = x2Vp + xIconTL;
-//         // int y2 = y2Vp + yIconTL;
-//         // /*
-//         // qDebug() << "IconViewDelegate::paint"
-//         //          << "cellRect =" << cellRect
-//         //          << "thumbRect =" << thumbRect
-//         //          << "iconRect =" << iconRect
-//         //          << "vpRect =" << vpRect
-//         //          << QRect(QPoint(x1,y1), QPoint(x2,y2))
-//         //             ; // */
-//         // painter->setPen(vp1Pen);
-//         // painter->drawRect(QRect(QPoint(x1,y1), QPoint(x2,y2)));
-//         // painter->setPen(vp2Pen);
-//         // painter->drawRect(QRect(QPoint(x1+1,y1+1), QPoint(x2-1,y2-1)));
-//     }
-
-//     /* provide rect data to calc thumb mouse click position that is then sent to imageView to
-//     zoom to the same spot */
-//     emit update(index, iconRect);
-//     /*
-//     qDebug() << "IconViewDelegate::paint"
-//              << "row =" << index.row()
-//              << "CombineRawJpg =" << iconSymbolRects["CombineRawJpg"]
-//         ; */
-
-//     painter->restore();
-// }
