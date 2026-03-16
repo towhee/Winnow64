@@ -109,6 +109,7 @@ Q_NAMESPACE
         LoadMsecPerMpColumn,
         DimensionsColumn,
         AspectRatioColumn,
+        IconAspectRatioColumn,
         OrientationColumn,
         RotationColumn,
 

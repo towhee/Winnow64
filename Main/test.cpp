@@ -400,8 +400,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageView->vpNormSizeInScene();
-
+    // qDebug() << "imageView->limitFit100Pct =" << imageView->limitFit100Pct;
+    QModelIndex sfIdx = dm->sf->index(1, 0);
+    sel->sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

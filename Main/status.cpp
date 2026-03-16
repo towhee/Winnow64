@@ -569,7 +569,7 @@ void MW::togglePanToFocus(Tog n)
         panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
         if (!imageView->pmItem->pixmap().isNull()) {
             imageView->predictPanToFocus();
-            imageView->showPredictedFocus();
+            imageView->showNormalizedViewport(true, true, "MW::togglePanToFocus");
         }
     }
     else {

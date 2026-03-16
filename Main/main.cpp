@@ -32,8 +32,15 @@ int main(int argc, char *argv[])
                 Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     //*/
 
+    // QLoggingCategory::setFilterRules("qt.text.font.db.debug=false");
     // silence multimedia reporting to console
-    qputenv("QT_LOGGING_RULES", "qt.multimedia.ffmpeg.*=false");
+    // qputenv("QT_LOGGING_RULES", "qt.multimedia.ffmpeg.*=false");
+    // qputenv("QT_LOGGING_RULES", "qt.multimedia.ffmpeg.*=false;qt.text.font.db=false");
+
+    QLoggingCategory::setFilterRules(
+        "qt.multimedia.ffmpeg.*=false\n"
+        "qt.text.font.db=false"
+    );
     qputenv("QT_FFMPEG_LOG", "0");
 
     // /*Single instance version

@@ -992,7 +992,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     /* DOCK TAB TOOLTIPS
        Call filterDockTabMousePress if filter tab.
-       Show a tooltip for docked widget tabs. // not used
+       // Show a tooltip for docked widget tabs. // not used
     */
     {
         static int prevTabIndex = -1;
@@ -3142,8 +3142,8 @@ void MW::embelTemplateChange(int id)
             loupeDisplay("MW::embelTemplateChange");
             embelRunBtn->setVisible(true);
             isRatingBadgeVisible = false;
-            thumbView->refreshThumbs();
-            gridView->refreshThumbs();
+            thumbView->refreshThumbs("MW::embelTemplateChange");
+            gridView->refreshThumbs("MW::embelTemplateChange");
             updateClassification();
             imageView->infoOverlay->setVisible(false);
         }
@@ -3175,8 +3175,8 @@ void MW::refreshAfterImageCacheSizeChange()
     if (G::isLogger) G::log("MW::setImageCacheParameters");
 
     // thumbnail cache status indicators
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshThumbs("MW::setImageCacheParameters");
+    gridView->refreshThumbs("MW::setImageCacheParameters");
 }
 
 void MW::showHiddenFiles()
@@ -4676,7 +4676,7 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
 
     QString result = embedThumbnails();
     if (src == "FromLoading") sel->select(dm->currentSfIdx, Qt::NoModifier,"MW::chkMissingEmbeddedThumbnails");
-    thumbView->refreshThumbs();
+    thumbView->refreshThumbs("MW::chkMissingEmbeddedThumbnails");
     G::popup->showPopup(result, 3000);
 }
 

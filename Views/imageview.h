@@ -97,7 +97,7 @@ public slots:
     void copyImage();
     void panTo(float xPct, float yPct);
     void predictPanToFocus();
-    void showPredictedFocus();
+    void showNormalizedViewport(bool adjustCenter, bool refresh, QString src);
     void updateToggleZoom(qreal toggleZoomValue);
     void zoomIn();
     void zoomOut();
@@ -120,7 +120,7 @@ signals:
     void keyPress(QKeyEvent *event);
     void mouseSideKeyPress(int direction);  // logitech mouse NativeGesture event
     void zoomChange(qreal zoomValue, QString src);
-    void loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN);
+    void loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntr, bool refresh);
     void showLoupeRect(bool isVisible);
 
     void handleDrop(QString fPath);
@@ -224,9 +224,10 @@ private:
         qreal vPct;
     } scrl;
 
-    QPointF scrollPct;          // current position
-    QPoint mousePressPt;        // for mouse scrolling and mouse drag
-    QPoint mouseDragPt;         // for mouse scrolling and mouse drag
+    QPointF scrollPct;                    // current position
+    QPoint mousePressPt;                  // for mouse scrolling and mouse drag
+    QPoint mouseDragPt;                   // for mouse scrolling and mouse drag
+    QPointF vpCntrN = QPointF(0.5,0.5);   // for vp box in IconView
 
 //    QPointF compareMouseRelLoc;
     QSize preview;
@@ -234,6 +235,7 @@ private:
 
     int classificationBadgeDiam;
 
+    bool isLoadingImage;        // suppress updates in showNormalizedViewport
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh
     bool moveImageLocked;       // control when con drag image around
     bool isScrollable;
