@@ -8,6 +8,24 @@
 
 static QString rory = "Rory";
 
+// Define the custom message handler
+void winnowMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    // Filter out the specific font warnings
+    if (
+        msg.contains("OpenType support missing") ||
+        msg.contains("qt.text.font.db")
+       )
+    {
+        return;
+    }
+
+    // Pass everything else to the default handler
+    QByteArray localMsg = msg.toLocal8Bit();
+    fprintf(stderr, "%s\n", localMsg.constData());
+    fflush(stderr);
+}
+
 int main(int argc, char *argv[])
 {
     /* Original multi instance version
@@ -36,6 +54,9 @@ int main(int argc, char *argv[])
     // silence multimedia reporting to console
     // qputenv("QT_LOGGING_RULES", "qt.multimedia.ffmpeg.*=false");
     // qputenv("QT_LOGGING_RULES", "qt.multimedia.ffmpeg.*=false;qt.text.font.db=false");
+
+    // Install the message handler at the very start of main
+    qInstallMessageHandler(winnowMessageHandler);
 
     QLoggingCategory::setFilterRules(
         "qt.multimedia.ffmpeg.*=false\n"
