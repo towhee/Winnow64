@@ -261,8 +261,8 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
 
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
-    connect(iconViewDelegate, SIGNAL(update(QModelIndex, QRect)),
-            this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
+    // connect(iconViewDelegate, SIGNAL(update(QModelIndex, QRect)),
+    //         this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
 
     connect(this, &IconView::setValSf, dm, &DataModel::setValSf);
 }

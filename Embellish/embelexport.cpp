@@ -216,9 +216,9 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
 void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
 {
 /*
-    Each image in the list is rendered to the assigned embellish template. The metadata is
-    copied from the source image file to the exported image file. Finally, the ICC color space
-    is updated.
+    Each image in the list is rendered to the assigned embellish template. The
+    metadata is copied from the source image file to the exported image file.
+    Finally, the ICC color space is updated.
 */
     if (G::isLogger) G::log("EmbelExport::exportImages");
 
@@ -264,6 +264,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
                   " embellished images to " + folderPath +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popup->showPopup(txt, 0, true, 1);
+    qApp->processEvents();
     exportingEmbellishedImages = true;
 
     // iterate list of files, embellish and transfer metadata, ICC and insert thumbnail
@@ -271,7 +272,8 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     et.setOverWrite(true);
     for (int i = 0; i < count; i++) {
         G::popup->setProgress(i+1);
-        if (G::useProcessEvents) qApp->processEvents();
+        if (G::useProcessEvents)
+            qApp->processEvents();
         if (abort) break;
         QString src = srcList.at(i);
         // embellish src image
@@ -290,7 +292,8 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
             dstPaths << dst;
 
             QString msg = "ExifTool copied tags, ICC and thumbnail to embellished image";
-            if (G::isFileLogger) Utilities::log("EmbelExport::exportImages", msg);
+            // if (G::isFileLogger)
+                Utilities::log("EmbelExport::exportImages", msg);
         }
     }
     et.close();
@@ -302,8 +305,13 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
         QFile::remove(thumbList.at(i));
     }
 
+    Utilities::log("EmbelExport::exportImages", "Resetting popup");
+
     G::popup->setProgressVisible(false);
+    qApp->processEvents();
     G::popup->reset();
+    // QTimer::singleShot(100, G::popup, &Popup::reset);
+
     G::isProcessingExportedImages = false;
     if (G::isFileLogger) Utilities::log("EmbelExport::exportImages", "Delete embellish");
     delete embellish;
