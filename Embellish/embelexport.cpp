@@ -264,7 +264,8 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
                   " embellished images to " + folderPath +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popup->showPopup(txt, 0, true, 1);
-    qApp->processEvents();
+    G::wait(50); // avoid qApp->processEvents()
+
     exportingEmbellishedImages = true;
 
     // iterate list of files, embellish and transfer metadata, ICC and insert thumbnail
@@ -272,8 +273,8 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     et.setOverWrite(true);
     for (int i = 0; i < count; i++) {
         G::popup->setProgress(i+1);
-        if (G::useProcessEvents)
-            qApp->processEvents();
+        G::wait(50); // avoid qApp->processEvents()
+
         if (abort) break;
         QString src = srcList.at(i);
         // embellish src image
@@ -308,9 +309,9 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     Utilities::log("EmbelExport::exportImages", "Resetting popup");
 
     G::popup->setProgressVisible(false);
-    qApp->processEvents();
     G::popup->reset();
-    // QTimer::singleShot(100, G::popup, &Popup::reset);
+    G::wait(50); // avoid qApp->processEvents()
+
 
     G::isProcessingExportedImages = false;
     if (G::isFileLogger) Utilities::log("EmbelExport::exportImages", "Delete embellish");

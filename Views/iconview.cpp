@@ -1721,36 +1721,34 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     int vpH = vpSize.height();
 
     { // FAIL CHECKS
-    QString failReason = "";
-    if (G::isEmbellish) failReason = "G::isEmbellish";
-    if (G::isInitializing) failReason = "G::isInitializing";
-    if (G::stop) failReason = "G::stop";
-    if (iW == 0 || iH == 0) failReason = "Zero width or height";
-    bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-    if (isVideo) failReason = "isVideo";
-    if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
-        setCursor(Qt::ArrowCursor);
-        prevIdx = model()->index(-1, -1);
-        failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
-    }
-    if (QGuiApplication::queryKeyboardModifiers()) {
-        setCursor(Qt::ArrowCursor);
-        failReason = "Key modifier pressed";
-    }
-    if (!showZoomFrame) failReason = "!showZoomFrame";
-    if (!idx.isValid()) failReason = "!idx.isValid()";
-    if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
-    if (iW < vpW && iH < vpH) {
-        setCursor(Qt::ArrowCursor);
-        prevIdx = model()->index(-1, -1);
-        failReason = "imW < cW && imH < cH";
-    }
-    if (failReason.length()) {
-        // qDebug() << "WARNING IconView::zoomCursor Failed because" << failReason;
-        QString msg = "Failed because " + failReason + ".";
-        G::issue("Warning", msg, "IconView::zoomCursor");
-    }
-    if (failReason.length()) return;
+        QString failReason = "";
+        if (G::isEmbellish) failReason = "G::isEmbellish";
+        if (G::isInitializing) failReason = "G::isInitializing";
+        if (G::stop) failReason = "G::stop";
+        if (iW == 0 || iH == 0) failReason = "Zero width or height";
+        bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+        if (isVideo) failReason = "isVideo";
+        if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
+            setCursor(Qt::ArrowCursor);
+            prevIdx = model()->index(-1, -1);
+            failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
+        }
+        if (QGuiApplication::queryKeyboardModifiers()) {
+            setCursor(Qt::ArrowCursor);
+            failReason = "Key modifier pressed";
+        }
+        if (!showZoomFrame) failReason = "!showZoomFrame";
+        if (!idx.isValid()) failReason = "!idx.isValid()";
+        if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
+        if (iW < vpW && iH < vpH) {
+            setCursor(Qt::ArrowCursor);
+            prevIdx = model()->index(-1, -1);
+            failReason = "imW < cW && imH < cH";
+        }
+        if (failReason.length()) {
+            // qDebug() << "WARNING IconView::zoomCursor Failed because" << failReason;
+            return;
+        }
     }
 
     int iA = dm->sf->index(idx.row(), G::AspectRatioColumn).data().toInt();

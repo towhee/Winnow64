@@ -103,7 +103,7 @@ void MW::gridDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(" MW::gridDisplay");
+    if (G::isLogger || G::isFlowLogger) G::log("MW::gridDisplay");
 
 
     // if (embelProperties->templateId > 0) {
@@ -140,6 +140,8 @@ void MW::gridDisplay()
     // show gridView in central widget
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
+
+    gridView->refreshThumbs("MW::gridDisplay");
 
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     gridView->setCurrentIndex(idx);

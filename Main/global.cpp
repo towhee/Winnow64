@@ -218,24 +218,15 @@ QString sj(QString s, int x)
     return s.leftJustified(x, '.') + " ";
 }
 
-int wait(int ms)
+void wait(int ms)
 /*
-    Reset duration by calling G::wait(0).
+    Use as an alternative to .
 */
 {
-    // return 0;
-
-    static int duration = 0;
-    if (ms == 0) {
-        duration = 0;
-        return 0;
-    }
-    QTime t = QTime::currentTime().addMSecs(ms);
-    while (QTime::currentTime() < t) {
-        // /*if (useProcessEvents)*/ qApp->processEvents(QEventLoop::AllEvents, 10);
-    }
-    duration += ms;
-    return duration;
+    if (ms <= 0) return;
+    QEventLoop loop;
+    QTimer::singleShot(ms, &loop, &QEventLoop::quit);
+    loop.exec();
 }
 
 void track(QString functionName, QString comment, bool hideTime)
