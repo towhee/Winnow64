@@ -405,7 +405,7 @@ Q_NAMESPACE
     extern void issue(QString type, QString msg = "", QString src = "",
                       int sfRow = -1, QString fPath = "");
 
-    extern int wait(int ms);
+    extern void wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);
     extern bool instanceClash(int instance, QString src);

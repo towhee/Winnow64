@@ -6,10 +6,11 @@ WHAT'S NEW
 - Selections are now cleared after a filtration change
 
 BUGS / TO DO
+- Delete imaes not working when in Grid Mode
+- _videos copy 2 wrong aspect
 - MOV::findAtom qWarning() << "Invalid atom size" << size;
 - IconView smooth scroll on swipe
 - Info display: if EC is null then do not display EV
-- Edit title if already exists
 - Eliminate processEvents and review G::popup usage
 - Delete folder crash
 - Rename files

@@ -400,9 +400,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // qDebug() << "imageView->limitFit100Pct =" << imageView->limitFit100Pct;
-    QModelIndex sfIdx = dm->sf->index(1, 0);
-    sel->sm->setCurrentIndex(sfIdx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    gridView->scrollToRow(0, "MW::deleteFiles");
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

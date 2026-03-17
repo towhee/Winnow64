@@ -2115,6 +2115,25 @@ void MW::refresh()
     buildFilters->recount();
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+
+    if (asGridAction->isChecked()) {
+        // 1. Force the IconView to clear its internal pixmap cache
+        gridView->iconViewDelegate->clearAllCache();
+
+        // 2. Force a recalculation of cell geometry and update the viewport
+        gridView->setThumbParameters();
+
+        // 3. Re-justify the grid to eliminate white space from missing rows
+        if (gridView->isWrapping()) {
+            gridView->rejustify();
+        }
+
+        // 4. Force a full repaint of all rows
+        gridView->refreshThumbs("MW::refresh");
+
+        // 5. Sync the scroll position to the model's preferred icon
+        gridView->scrollToRow(dm->currentSfRow, "MW::refresh");
+    }
 }
 
 bool MW::allIdle() const {

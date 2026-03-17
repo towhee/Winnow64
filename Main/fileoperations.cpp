@@ -335,8 +335,21 @@ void MW::deleteSelectedFiles()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    QModelIndexList selection = dm->selectionModel->selectedRows();
-    if (selection.isEmpty()) return;
+    // QModelIndexList selection = dm->selectionModel->selectedRows();
+    // if (selection.isEmpty()) return;
+    QModelIndexList selection;
+    if (G::mode == "Grid") {
+        selection = gridView->selectionModel()->selectedRows();
+    } else if (G::mode == "Table") {
+        selection = tableView->selectionModel()->selectedRows();
+    } else {
+        selection = dm->selectionModel->selectedRows();
+    }
+
+    if (selection.isEmpty()) {
+        G::popup->showPopup("No images selected to delete.", 1500);
+        return;
+    }
 
     QStringList paths;
     paths.reserve(selection.size());
