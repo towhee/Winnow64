@@ -129,16 +129,16 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 void MW::setRatingBadgeVisibility() {
     if (G::isLogger) G::log("MW::setRatingBadgeVisibility");
     isRatingBadgeVisible = ratingBadgeVisibleAction->isChecked();
-    thumbView->refreshThumbs("MW::setRatingBadgeVisibility");
-    gridView->refreshThumbs("MW::setRatingBadgeVisibility");
+    thumbView->refreshIcons("MW::setRatingBadgeVisibility");
+    gridView->refreshIcons("MW::setRatingBadgeVisibility");
     updateClassification();
 }
 
 void MW::setIconNumberVisibility() {
     if (G::isLogger) G::log("MW::setIconNumberVisibility");
     isIconNumberVisible = iconNumberVisibleAction->isChecked();
-    thumbView->refreshThumbs("MW::setIconNumberVisibility");
-    gridView->refreshThumbs("MW::setIconNumberVisibility");
+    thumbView->refreshIcons("MW::setIconNumberVisibility");
+    gridView->refreshIcons("MW::setIconNumberVisibility");
 }
 
 void MW::setShootingInfoVisibility() {

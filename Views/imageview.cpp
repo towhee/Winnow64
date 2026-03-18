@@ -998,7 +998,7 @@ void ImageView::rotateImage(int degrees)
         // You'll need to call the clear method on the delegate
         thumbView->iconViewDelegate->clearCacheItem(dm->currentSfRow);
         // Then tell the view to redraw that specific thumb
-        thumbView->refreshThumb(dm->currentSfIdx, "ImageView::rotateImage");
+        thumbView->refreshIcon(dm->currentSfIdx, "ImageView::rotateImage");
     }
 }
 

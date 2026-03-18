@@ -59,8 +59,8 @@ void MW::togglePickUnlessRejected()
         filterChange("MW::togglePick");
     }
     else {
-        thumbView->refreshThumbs("MW::togglePickUnlessRejected");
-        gridView->refreshThumbs("MW::togglePickUnlessRejected");
+        thumbView->refreshIcons("MW::togglePickUnlessRejected");
+        gridView->refreshIcons("MW::togglePickUnlessRejected");
     }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -84,8 +84,8 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     emit setValSf(sfRow, G::PickColumn, pickStatus, dm->instance, "MW::togglePickMouseOverItem", Qt::EditRole);
 
     updateClassification();
-    thumbView->refreshThumbs("MW::togglePickMouseOverItem");
-    gridView->refreshThumbs("MW::togglePickMouseOverItem");
+    thumbView->refreshIcons("MW::togglePickMouseOverItem");
+    gridView->refreshIcons("MW::togglePickMouseOverItem");
 
     if (settings->value("playPickAudio").toBool()) {
         qDebug() << "MW::togglePickMouseOverItem pickClick"
@@ -185,8 +185,8 @@ void MW::togglePick()
         filterChange("MW::togglePick");
     }
     else {
-        thumbView->refreshThumbs("MW::togglePick");
-        gridView->refreshThumbs("MW::togglePick");
+        thumbView->refreshIcons("MW::togglePick");
+        gridView->refreshIcons("MW::togglePick");
     }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -251,8 +251,8 @@ void MW::toggleReject()
         filterChange("MW::togglePick");
     }
     else {
-        thumbView->refreshThumbs("MW::toggleReject");
-        gridView->refreshThumbs("MW::toggleReject");
+        thumbView->refreshIcons("MW::toggleReject");
+        gridView->refreshIcons("MW::toggleReject");
     }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -296,8 +296,8 @@ void MW::recoverPickLog()
         }
     }
     settings->endGroup();
-    thumbView->refreshThumbs("MW::recoverPickLog");
-    gridView->refreshThumbs("MW::recoverPickLog");
+    thumbView->refreshIcons("MW::recoverPickLog");
+    gridView->refreshIcons("MW::recoverPickLog");
 }
 
 void MW::clearPickLog()
@@ -368,8 +368,8 @@ void MW::updatePickFromHistory(QString fPath, QString status)
     if (dmRow == -1) return;
 
     emit setValDm(dmRow, G::PickColumn, status, dm->instance, "MW::updatePickFromHistory", Qt::EditRole);
-    thumbView->refreshThumbs("MW::updatePickFromHistory");
-    gridView->refreshThumbs("MW::updatePickFromHistory");
+    thumbView->refreshIcons("MW::updatePickFromHistory");
+    gridView->refreshIcons("MW::updatePickFromHistory");
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updateStatus(true, "", "MW::updatePickFromHistory");

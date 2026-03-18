@@ -97,8 +97,9 @@ public slots:
     QModelIndex pageDownIndex(int fromRow);
 
     bool isCellVisible(int row);
-    void refreshThumb(QModelIndex idx, QString src);
-    void refreshThumbs(QString src);
+    void refreshIcon(QModelIndex idx, QString src);
+    void refreshIcons(QString src);
+    void forceFullRefresh(QString src);
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
                             int _labelFontSize, bool _showThumbLabels,
                             int _badgeSize, int _iconNumberSize);

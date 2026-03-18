@@ -80,7 +80,8 @@ QT += multimediawidgets
 QT += concurrent
 QT += svg
 
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Utilities/reportdialog.h
 HEADERS += Cache/tiffthumbdecoder.h
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
@@ -254,7 +255,8 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    Utilities/reportdialog.cpp
 SOURCES += Cache/tiffthumbdecoder.cpp
 SOURCES += ImageFormats/Video/mov.cpp
 SOURCES += ImageFormats/Video/mp4.cpp
