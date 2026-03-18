@@ -69,6 +69,7 @@
 #include "Utilities/usbutil.h"
 #include "Utilities/inputdlg.h"
 #include "Utilities/htmlwindow.h"
+#include "Utilities/reportdialog.h"
 #include "progressbar.h"
 
 #include "Utilities/coloranalysis.h"
@@ -1164,7 +1165,8 @@ private:
     QPoint prevScreenLoc = QPoint(-1,-1);   // the centroid of Winnow window in monitor
     qreal prevDevicePixelRatio = -1;
 
-    QList<QWidget*> openWindows;
+    // QList<QWidget*> openWindows;
+    QList<QPointer<QWidget>> openWindows;
 
     bool ignoreDockResize;
     bool wasThumbDockVisible;

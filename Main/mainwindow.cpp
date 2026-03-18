@@ -2099,40 +2099,31 @@ void MW::refresh()
               Menu File > Refresh
 
 */
-    if (G::isLogger) G::log("MW::refresh");
+    QString srcFun = "MW::refresh";
+    if (G::isLogger) G::log(srcFun);
     // update image counts
     fsTree->updateCount();
     bookmarks->updateCount();
     dm->refresh();
-    qDebug() << "MW::refresh" << dm->rowCount() << dm->sf->rowCount();
+    qDebug() << srcFun << dm->rowCount() << dm->sf->rowCount();
     if (dm->sf->rowCount()) {
         // buildFilters->recount();
     }
     else {
         buildFilters->rebuild();
     }
-    filterChange("MW::refresh");
+    filterChange(srcFun);
     buildFilters->recount();
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
 
-    if (asGridAction->isChecked()) {
-        // 1. Force the IconView to clear its internal pixmap cache
-        gridView->iconViewDelegate->clearAllCache();
+    // Grid view does not update automatically when insertion or deletion
+    if (gridView->isVisible()) {
+        // Force the IconView to clear its internal pixmap cache
+        gridView->forceFullRefresh(srcFun);
 
-        // 2. Force a recalculation of cell geometry and update the viewport
-        gridView->setThumbParameters();
-
-        // 3. Re-justify the grid to eliminate white space from missing rows
-        if (gridView->isWrapping()) {
-            gridView->rejustify();
-        }
-
-        // 4. Force a full repaint of all rows
-        gridView->refreshThumbs("MW::refresh");
-
-        // 5. Sync the scroll position to the model's preferred icon
-        gridView->scrollToRow(dm->currentSfRow, "MW::refresh");
+        // Sync the scroll position to the model's preferred icon
+        gridView->scrollToRow(dm->currentSfRow, srcFun);
     }
 }
 
@@ -3161,8 +3152,8 @@ void MW::embelTemplateChange(int id)
             loupeDisplay("MW::embelTemplateChange");
             embelRunBtn->setVisible(true);
             isRatingBadgeVisible = false;
-            thumbView->refreshThumbs("MW::embelTemplateChange");
-            gridView->refreshThumbs("MW::embelTemplateChange");
+            thumbView->refreshIcons("MW::embelTemplateChange");
+            gridView->refreshIcons("MW::embelTemplateChange");
             updateClassification();
             imageView->infoOverlay->setVisible(false);
         }
@@ -3194,8 +3185,8 @@ void MW::refreshAfterImageCacheSizeChange()
     if (G::isLogger) G::log("MW::setImageCacheParameters");
 
     // thumbnail cache status indicators
-    thumbView->refreshThumbs("MW::setImageCacheParameters");
-    gridView->refreshThumbs("MW::setImageCacheParameters");
+    thumbView->refreshIcons("MW::setImageCacheParameters");
+    gridView->refreshIcons("MW::setImageCacheParameters");
 }
 
 void MW::showHiddenFiles()
@@ -4695,7 +4686,7 @@ void MW::chkMissingEmbeddedThumbnails(QString src)
 
     QString result = embedThumbnails();
     if (src == "FromLoading") sel->select(dm->currentSfIdx, Qt::NoModifier,"MW::chkMissingEmbeddedThumbnails");
-    thumbView->refreshThumbs("MW::chkMissingEmbeddedThumbnails");
+    thumbView->refreshIcons("MW::chkMissingEmbeddedThumbnails");
     G::popup->showPopup(result, 3000);
 }
 

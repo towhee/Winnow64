@@ -440,8 +440,8 @@ int DataModel::insert(QString fPath)
 void DataModel::remove(QString fPath)
 {
 /*
-    Delete a row from the data model matching the absolute path.  This is used when an image
-    file has been deleted by Winnow.  Also update fPathRow.
+    Delete a row from the data model matching the absolute path. This is used when
+    an image file has been deleted by Winnow. Also update fPathRow.
 */
     if (G::isLogger) G::log("DataModel::remove");
     if (isDebug)

@@ -307,11 +307,11 @@ QString IconView::diagnostics()
     return reportString;
 }
 
-void IconView::refreshThumb(QModelIndex idx, QString src)
+void IconView::refreshIcon(QModelIndex idx, QString src)
 {
     if (!isVisible()) return;
     if (isDebug) G::log("IconView::refreshThumb", objectName());
-    // qDebug() << "IconView::refreshThumb" << objectName() <<  "src =" << src;
+
     if (!idx.isValid()) {
         qDebug() << "WARNING"
                    << "IconView::refreshThumb"
@@ -321,19 +321,40 @@ void IconView::refreshThumb(QModelIndex idx, QString src)
         G::issue("Warning", msg, "IconView::refreshThumb");
         return;
     }
+
     QVector<int> roles;
     roles.append(Qt::EditRole);
     dataChanged(idx, idx, roles);
 }
 
-void IconView::refreshThumbs(QString src)
+void IconView::refreshIcons(QString src)
 {
     if (isDebug) G::log("IconView::refreshThumbs", objectName());
-    // qDebug() << "IconView::refreshThumbs  src =" << src;
+
+    // Force a full repaint of all rows
     int last = dm->sf->rowCount() - 1;
     QVector<int> roles;
     roles.append(Qt::EditRole);
     dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0), roles);
+}
+
+void IconView::forceFullRefresh(QString src)
+{
+
+    /* Clear the delegate icon cache and update dimensions. Calling rejustify() if
+    wrapping is enabled is sufficient as it internally calls setThumbParameters()
+    which clears the cache. Call refreshIcons ti repaint all the icons.  */
+
+    QString srcFun = "IconView::forceFullRefresh";
+    if (isDebug) G::log(srcFun, objectName());
+
+    if (isWrapping()) {
+        rejustify();
+    } else {
+        setThumbParameters();
+    }
+
+    refreshIcons(srcFun);
 }
 
 void IconView::setThumbParameters()
@@ -1589,7 +1610,7 @@ void IconView::showLoupeRect(bool isVisible)
     if (isDebug || G::isLogger) G::log("IconView::showLoupeRect", objectName());
 
     iconViewDelegate->setVpRectVisibility(isVisible);
-    refreshThumb(dm->currentSfIdx, "IconView::loupeRect");
+    refreshIcon(dm->currentSfIdx, "IconView::loupeRect");
 }
 
 void IconView::loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN, bool refresh)
@@ -1602,7 +1623,7 @@ void IconView::loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN, bool refres
 
     iconViewDelegate->setVpRectVisibility(true);
     iconViewDelegate->setNormVpRect(vpSizeN, vpA, vpCntrN);
-    if (refresh) refreshThumb(dm->currentSfIdx, "IconView::loupeRect");
+    if (refresh) refreshIcon(dm->currentSfIdx, "IconView::loupeRect");
 }
 
 QPixmap IconView::drawLoupeVPRect(int w, int h)

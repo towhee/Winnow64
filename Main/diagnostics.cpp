@@ -409,25 +409,15 @@ void MW::diagnosticsZoom() {} // dummy for now
 
 void MW::diagnosticsReport(QString reportString, QString title)
 {
-    if (G::isLogger) G::log("MW::diagnosticsReport");
-    QDialog *dlg = new QDialog;
-    dlg->setStyleSheet(G::css);
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
-    Ui::metadataReporttDlg md;
-    md.setupUi(dlg);
-    md.textBrowser->setStyleSheet(G::css);
-    QFont courier("Courier", 12);
-    md.textBrowser->setFont(courier);
-    md.textBrowser->setText(reportString);
-    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    QFontMetrics metrics(md.textBrowser->font());
-    md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
-    fitDiagnostics(dlg, md.textBrowser);
-    dlg->setWindowTitle(title);
+    ReportDialog *dlg = new ReportDialog(this);
+    dlg->setReport(title, reportString);
+
+    // fitDiagnostics still works because we provided a browser() getter
+    fitDiagnostics(dlg, dlg->browser());
+
     openWindows.append(dlg);
     dlg->show();
+    dlg->setFocus();
 }
 
 void MW::allIssuesReport()
@@ -435,22 +425,7 @@ void MW::allIssuesReport()
 /*
     Show the issue log, which is stored in the file G::issueLogFile
 */
-    if (G::isLogger) G::log("MW::allIssuesReport");
-    QDialog *dlg = new QDialog;
-    dlg->setStyleSheet(G::css);
-    Ui::metadataReporttDlg md;
-    md.setupUi(dlg);
-    dlg->setWindowTitle("Winnow Issue Log");
-    md.textBrowser->setStyleSheet(G::css);
-    md.textBrowser->setFontFamily("Monaco");
-    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    md.textBrowser->setText(G::issueLog->logText());
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
-    fitDiagnostics(dlg, md.textBrowser);
-    openWindows.append(dlg);
-    dlg->show();
+    diagnosticsReport(G::issueLog->logText(), "Winnow Issues");
 }
 
 void MW::SessionIssuesReport()
@@ -459,22 +434,5 @@ void MW::SessionIssuesReport()
     Show the issues from the current session (from when Winnow was opened)
 */
     if (G::isLogger) G::log("MW::SessionIssuesReport");
-    QDialog *dlg = new QDialog;
-    dlg->setStyleSheet(G::css);
-    Ui::metadataReporttDlg md;
-    md.setupUi(dlg);
-    dlg->setWindowTitle("Winnow Session Issues");
-    md.textBrowser->setStyleSheet(G::css);
-    md.textBrowser->setFontFamily("Monaco");
-    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    QString content = G::issueList.join("\n");
-    md.textBrowser->setText(content);
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
-
-    fitDiagnostics(dlg, md.textBrowser);
-    openWindows.append(dlg);
-    dlg->show();
 }
 
