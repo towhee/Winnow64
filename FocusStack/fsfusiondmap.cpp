@@ -804,7 +804,7 @@ index is most in-focus (and its score), and also the 2nd-best.
     top1Score32_:   top score buffer (often same as s0, depending on later code).
 */
     const QString srcFun = "FSFusionDMap::streamSlice";
-    if (FSFusion::isAbort(abortFlag)) return false;
+    if (isAbort(abortFlag)) return false;
 
     if (grayAlign8.empty() || grayAlign8.type() != CV_8U) {
         qWarning().noquote() << "WARNING:" << srcFun << "grayAlign8 empty or not CV_8U.";
@@ -915,7 +915,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
 
     if (!active_ || s0_pad32.empty() || N <= 0 || (int)globals.size() != N)
         return false;
-    if (FSFusion::isAbort(abortFlag)) return false;
+    if (isAbort(abortFlag)) return false;
 
     // PAD→ALIGN→ORIG crop
     cv::Rect roiPadToAlign;
@@ -1086,7 +1086,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
             progressCb();
             statusCb("Fusing Slice: " + ss + " of " + QString::number(N) + " ");
 
-            if (FSFusion::isAbort(abortFlag)) return false;
+            if (isAbort(abortFlag)) return false;
 
             cv::Mat colorSliceAligned = cv::imread(
                 alignedColorPaths[s].toStdString(), cv::IMREAD_UNCHANGED);

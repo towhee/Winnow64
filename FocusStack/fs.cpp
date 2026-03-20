@@ -236,7 +236,7 @@ QImage FS::thumbnail(const cv::Mat &mat)
     }
 }
 
-bool FS::run()
+void FS::run()
 {
 /*
     This is the entry point for the focus stacking pipeline.
@@ -269,19 +269,11 @@ bool FS::run()
         if (!initializeGroup(groupCounter++)) return false;
 
 
-        if (o.method == "DMap") {
-            if (!runDMap()) {
-                emit finished(false);
-                return false;
-            }
-        }
+        if (o.method == "DMap" && !abortRequested()) runDMap();
 
-        if (o.method == "PMax") {
-            if (!runPMax()) {
-                emit finished(false);
-                return false;
-            }
-        }
+        if (o.method == "PMax" && !abortRequested()) runPMax();
+
+        if (abortRequested()) break;
 
         // SAVE
         if (o.writeFusedBackToSource) {
@@ -303,7 +295,11 @@ bool FS::run()
         // qApp->processEvents();  // complete any waiting log msgs
     }
 
+    // cleanup even if aborted
     if (o.removeTemp) cleanup();
+
+    bool success = !abortRequested();
+    emit finished(success);
 
     return true;
 }
@@ -363,15 +359,14 @@ bool FS::runDMap()
     {
         QString s = " Slice: " + QString::number(slice+1) + " of " + QString::number(slices) + " ";
         if (G::FSLog) G::log("");
+        qDebug() << s;
 
         status("Aligning and depth mapping" + s);
 
         currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
         currGlobal = FSAlign::makeIdentity(currImage.validArea);
 
-        if (G::abortFocusStack) return false;
-
-        if (slice == 0)
+       if (slice == 0)
         {
             alignedGraySlice  = currImage.gray.clone();
             alignedColorSlice = currImage.color.clone();
@@ -413,8 +408,6 @@ bool FS::runDMap()
         // cv::Mat alignedGrayImg = FSUtilities::alignToOrigSize(alignedGraySlice, currImage.origSize);
         // cv::imwrite(alignedGrayPaths[slice].toStdString(), alignedGrayImg);
 
-        if (G::abortFocusStack) return false;
-
         // pass-1 update (pads internally)
         if (!fuse.streamSlice(slice,
                               alignedGraySlice,
@@ -428,7 +421,7 @@ bool FS::runDMap()
             return false;
         }
 
-        if (G::abortFocusStack) return false;
+        if (abortRequested()) return false;
         incrementProgress();
 
         prevImage  = currImage;
@@ -459,7 +452,7 @@ bool FS::runDMap()
         return false;
     }
 
-    if (G::abortFocusStack) return false;
+    if (abortRequested()) return false;
     incrementProgress();
 
     if (o.isLocal && o.saveDiagnostics) save(fusionFolderPath);
@@ -541,7 +534,7 @@ bool FS::runPMax()
         currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
         currGlobal = FSAlign::makeIdentity(currImage.validArea);
 
-        if (G::abortFocusStack) return false;
+        if (abortRequested()) return false;
 
         if (slice == 0)
         {
@@ -577,7 +570,7 @@ bool FS::runPMax()
             cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
         }
 
-        if (G::abortFocusStack) return false;
+        if (abortRequested()) return false;
         incrementProgress();
 
         // -----------------------------
@@ -597,7 +590,7 @@ bool FS::runPMax()
             return false;
         }
 
-        if (G::abortFocusStack) return false;
+        if (abortRequested()) return false;
         incrementProgress();
 
         prevImage  = currImage;
@@ -625,7 +618,7 @@ bool FS::runPMax()
         return false;
     }
 
-    if (G::abortFocusStack) return false;
+    if (abortRequested()) return false;
     incrementProgress();
 
     // Optional parameter dump (keep if useful)
@@ -762,6 +755,8 @@ bool FS::cleanup()
     other than the input images, so we need to remove the input images, and then if
     the inputFolder is empty it can be removed too.
     */
+
+    // aborted();
 
     // remove the temp focus stack source tiffs
     QStringList inputFolderPaths;

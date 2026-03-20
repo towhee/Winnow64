@@ -975,6 +975,8 @@ private:
     QAction *diagnosticsWorkspacesAction;
     QAction *diagnosticsLogIssuesAction;
     QAction *diagnosticsSessionIssuesAction;
+    QAction *showLogAction;
+    QAction *clearLogAction;
     QAction *diagnosticsGridViewAction;
     QAction *diagnosticsFSTreeAction;
     QAction *diagnosticsThumbViewAction;
@@ -1154,6 +1156,7 @@ private:
 
     // focus stack
     QPointer<FS> fsPipeline;   // current running pipeline (null when inactive)
+    QThread *fsThread;
 
     // slideShow counter
     int slideCount = 0;
@@ -1400,7 +1403,8 @@ private:
     void diagnosticsZoom();
     void diagnosticsReport(QString reportString, QString title = "Winnow Diagnostics");
     void allIssuesReport();
-    void SessionIssuesReport();
+    void sessionIssuesReport();
+    void logReport();
 
     void mediaReadSpeed();
     void findDuplicates();

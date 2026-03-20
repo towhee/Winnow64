@@ -428,11 +428,40 @@ void MW::allIssuesReport()
     diagnosticsReport(G::issueLog->logText(), "Winnow Issues");
 }
 
-void MW::SessionIssuesReport()
+void MW::sessionIssuesReport()
 {
 /*
     Show the issues from the current session (from when Winnow was opened)
 */
     if (G::isLogger) G::log("MW::SessionIssuesReport");
+    diagnosticsReport(G::issueList.join("\n"), "Winnow Session Issues");
+}
+
+void MW::logReport()
+{
+    /*
+    Show the issues from the current session (from when Winnow was opened)
+*/
+    if (G::isLogger) G::log("MW::logReport");
+
+    QString content;
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log/WinnowLog.txt";
+    QFile logFile(path);
+
+    qDebug() << "MW::logReport  file.exists =" << logFile.exists() << logFile.isOpen();
+    if (logFile.isOpen()) logFile.close();
+
+    if (logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&logFile);
+        content = in.readAll();
+        logFile.close();
+        if (content.length())
+            diagnosticsReport(content, "Winnow Log");
+        else
+            G::popup->showPopup("The log is empty.", 2000);
+    } else {
+        G::popup->showPopup("Failed to open log.", 2000);
+    }
+
 }
 

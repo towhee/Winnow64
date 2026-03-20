@@ -1538,7 +1538,19 @@ void MW::createHelpActions()
     diagnosticsSessionIssuesAction->setObjectName("diagnosticsSessionIssuesAction");
     diagnosticsSessionIssuesAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsSessionIssuesAction);
-    connect(diagnosticsSessionIssuesAction, &QAction::triggered, this, &MW::SessionIssuesReport);
+    connect(diagnosticsSessionIssuesAction, &QAction::triggered, this, &MW::sessionIssuesReport);
+
+    showLogAction = new QAction(tr("Log"), this);
+    showLogAction->setObjectName("showLogAction");
+    showLogAction->setShortcutVisibleInContextMenu(true);
+    addAction(showLogAction);
+    connect(showLogAction, &QAction::triggered, this, &MW::logReport);
+
+    clearLogAction = new QAction(tr("Clear Log"), this);
+    clearLogAction->setObjectName("clearLogAction");
+    clearLogAction->setShortcutVisibleInContextMenu(true);
+    addAction(clearLogAction);
+    connect(clearLogAction, &QAction::triggered, this, &Utilities::clearLog);
 
     diagnosticsMainAction = new QAction(tr("Main diagnostics"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
@@ -2080,6 +2092,9 @@ void MW::createHelpMenu()
     helpMenu->addAction(helpWelcomeAction);
     helpMenu->addAction(helpFilmStripAction);
     helpMenu->addSeparator();
+    helpMenu->addAction(showLogAction);
+    helpMenu->addAction(clearLogAction);
+    helpMenu->addSeparator();
     helpMenu->addAction(diagnosticsLogIssuesAction);
     helpMenu->addAction(diagnosticsSessionIssuesAction);
     //    helpMenu->addSeparator();
@@ -2334,6 +2349,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(separatorAction7);
     thumbViewActions->append(reportMetadataAction);
     thumbViewActions->append(diagnosticsCurrentAction);
+    thumbViewActions->append(showLogAction);
     thumbViewActions->append(diagnosticsDataModelAction);
     thumbViewActions->append(diagnosticsSelectionAction);
     thumbViewActions->append(diagnosticsMetadataCacheAction);

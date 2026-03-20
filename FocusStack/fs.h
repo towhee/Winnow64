@@ -59,7 +59,7 @@ public:
     }
 
     // Main pipeline API
-    bool run();             // run all testing deltas
+    void run();             // run all testing deltas
 
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);

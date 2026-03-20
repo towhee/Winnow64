@@ -115,7 +115,7 @@ bool FSFusionPMax::streamSlice(int slice,
         if (paddedSize != padSize_) return false;
     }
 
-    if (FSFusion::isAbort(abortFlag)) return false;
+    if (isAbort(abortFlag)) return false;
 
     // Forward wavelet
     if (!FSFusionWavelet::forward(grayP, opt.useOpenCL, wavelet_))
@@ -179,7 +179,7 @@ bool FSFusionPMax::streamFinish(cv::Mat& outputColor,
 {
     const QString srcFun = "FSFusionPMax::streamFinish";
 
-    if (FSFusion::isAbort(abortFlag)) return false;
+    if (isAbort(abortFlag)) return false;
 
     // Finish merge
     if (popt.energyMode == "Max")
@@ -216,7 +216,7 @@ bool FSFusionPMax::streamFinish(cv::Mat& outputColor,
                                                           : weightedWinnerPadded16;
     }
 
-    if (FSFusion::isAbort(abortFlag)) return false;
+    if (isAbort(abortFlag)) return false;
 
     // Inverse wavelet -> fusedGray8 (padded)
     if (!FSFusionWavelet::inverse(mergedWavelet_, opt.useOpenCL, fusedGray8_))
