@@ -4,10 +4,6 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
-/*
-Winnow64/FocusStack/
-
-*/
 
 void MW::focusStackFromSelection()
 {
@@ -171,9 +167,6 @@ void MW::generateFocusStack(const QStringList paths,
     QString srcFun = "MW::generateFocusStack";
     if (G::isLogger || G::FSLog) G::log(srcFun, "method = " + method);
 
-    G::isRunningFocusStack = true;
-    G::abortFocusStack = false;
-
     G::popup->showPopup("Focus stacking initiated", 5000);
 
     // --------------------------------------------------------------------
@@ -191,6 +184,9 @@ void MW::generateFocusStack(const QStringList paths,
                 fs->run();     // runs synchronously inside worker thread
                 QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
             });
+
+    // Abort
+    connect(this, &MW::abortFocusStack, fs, &FS::requestAbort, Qt::DirectConnection);
 
     // Status update
     connect(fs, &FS::updateStatus, this, &MW::updateStatus);
@@ -239,54 +235,47 @@ void MW::generateFocusStack(const QStringList paths,
     // Finished
     // --------------------------------------------------------------------
 
-    connect(fsThread, &QThread::finished, this, [=]()
-    {
-        QString msg = "FS is finished.";
-        if (G::FSLog) G::log(srcFun, msg);
+    connect(fs, &FS::finished, this, [=](bool success) {
+        QString msg;
+        cacheProgressBar->clearUpperProgress();
 
-        G::isRunningFocusStack = false;
+        if (!success) {
+            // Handle Abort or Failure
+            msg = "Focus stacking was aborted or failed.";
+            if (G::FSLog) G::log(srcFun, msg);
+            updateStatus(false, msg);
+            G::popup->showPopup(msg, 5000);
+            return;
+        }
 
+        // Handle Success
         msg = "Focus stacking completed";
         if (G::FSLog) G::log(srcFun, msg);
         updateStatus(false, msg);
-        G::popup->showPopup(msg);
-
-        // Clear progress
-        cacheProgressBar->clearUpperProgress();
-
-        // If aborted...
-        if (G::abortFocusStack) {
-            msg = "Focus stacking was aborted.";
-            if (G::FSLog) G::log(srcFun, msg);
-            G::abortFocusStack = false;
-            updateStatus(false, msg);
-            G::popup->showPopup(msg);
-            return;
-        }
+        G::popup->showPopup(msg, 5000);
 
         // Evaluate we have a result path
         if (G::fsFusedPaths.isEmpty()) {
-            msg = "Focus stacking failed";
+            msg = "Focus stacking failed: No output path found.";
             if (G::FSLog) G::log(srcFun, msg);
             updateStatus(false, msg);
-            G::popup->showPopup(msg);
             return;
         }
 
+        // Update UI with the new file
+        QString resultPath = G::fsFusedPaths.first();
         if (isLocal) {
-            dm->insert(G::fsFusedPaths.first());
-            if (dm->contains(G::fsFusedPaths.first())) {
-                sel->select(G::fsFusedPaths.first());
+            dm->insert(resultPath);
+            if (dm->contains(resultPath)) {
+                sel->select(resultPath);
             }
-        }
-        else { // from Lightroom
-            folderAndFileSelectionChange(G::fsFusedPaths.first(), "FS::threadFinished");
+        } else {
+            folderAndFileSelectionChange(resultPath, "FS::threadFinished");
         }
 
         fsTree->updateCount();
         bookmarks->updateCount();
-
-    });
+    }, Qt::QueuedConnection);
 
     if (fsThread->isRunning()) return;
 

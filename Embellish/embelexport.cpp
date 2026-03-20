@@ -293,7 +293,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
             dstPaths << dst;
 
             QString msg = "ExifTool copied tags, ICC and thumbnail to embellished image";
-            // if (G::isFileLogger)
+            if (G::isFileLogger)
                 Utilities::log("EmbelExport::exportImages", msg);
         }
     }

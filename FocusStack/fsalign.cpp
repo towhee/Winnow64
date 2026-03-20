@@ -924,7 +924,6 @@ bool Align::alignSlice(int              slice,
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
-
     Result local;
 
     try {
@@ -943,6 +942,8 @@ bool Align::alignSlice(int              slice,
         if (status) status(msg);
         return false;
     }
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
     if (G::FSLog) G::log(srcFun, "computeLocal");
 
     // Stack transforms
@@ -956,7 +957,9 @@ bool Align::alignSlice(int              slice,
     cv::Mat alignedColorMat, alignedGrayMat;
     if (G::FSLog) G::log(srcFun, "cv::Mat alignedColor, alignedGray");
     applyTransform(currImage.color, currGlobal.transform, alignedColorMat);
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
     applyTransform(currImage.gray,  currGlobal.transform, alignedGrayMat);
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
     if (G::FSLog) G::log(srcFun, "applyTransform alignedGray");
 
     // Write outputs

@@ -143,6 +143,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Cmd + C works in diagnostic reports
 - Redo IconViewDelegate
 - Refresh Bookmarks and Folders after focus stack
 - Focus stack module

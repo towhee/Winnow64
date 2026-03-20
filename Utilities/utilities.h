@@ -44,6 +44,8 @@ public:
     static QString inputText(QString title, QString description,
                              QStringList doNotUse, QString input = "");
     static void log(QString function, QString msg);
+    static void clearLog();
+
     static void setOpacity(QWidget *widget, qreal opacity);
 
     // Format

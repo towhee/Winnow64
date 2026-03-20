@@ -270,15 +270,36 @@ void Utilities::log(QString function, QString msg)
 {
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
     QDir dir(path);
-    if (!dir.exists()) dir.mkdir(path);
+    if (!dir.exists()) dir.mkpath(path);
     QFile fLog(path + "/WinnowLog.txt");
-    if (fLog.isOpen()) fLog.close();
-    if (fLog.open(QIODevice::ReadWrite)) {
-        fLog.readAll();
+    // if (fLog.isOpen()) fLog.close();
+
+    // Use Append instead of ReadWrite + readAll()
+    if (fLog.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
-        QString f = function;
-        QString txt = t + "  " + f + "  " + msg + "\n";
+        QString txt = QString("%1  %2  %3\n").arg(t, function, msg);
+
         fLog.write(txt.toUtf8());
+        fLog.close();
+    }
+
+    // if (fLog.open(QIODevice::ReadWrite)) {
+    //     fLog.readAll();
+    //     QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+    //     QString f = function;
+    //     QString txt = t + "  " + f + "  " + msg + "\n";
+    //     fLog.write(txt.toUtf8());
+    //     fLog.close();
+    // }
+}
+
+void Utilities::clearLog()
+{
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log/WinnowLog.txt";
+    QFile fLog(path);
+
+    // Opening with WriteOnly and Truncate clears the file instantly
+    if (fLog.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         fLog.close();
     }
 }

@@ -488,10 +488,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         //     return;
         // }
         // stop loading a new folder
-        else if (!G::allMetadataLoaded) {
-            // qDebug() << "event->key() == Qt::Key_Escape !G::allMetadataLoaded";
-            stop("Escape key");
-        }
+        else if (!G::allMetadataLoaded) stop("Escape key");
         // stop background ingest
         // else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
@@ -502,25 +499,15 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (G::isProcessingExportedImages) emit abortEmbelExport();
         // abort color analysis
         else if (G::isRunningColorAnalysis) emit abortHueReport();
-        // abort stack operation
-        else if (fsPipeline) {
-            G::abortFocusStack = true;
-            fsPipeline->requestAbort();
-            qDebug() << "keyReleaseEvent fsPipeline->requestAbort()";
-        }
-        // else if (G::isRunningStackOperation) fsPipeline->requestAbort();
         // abort focus stacking
-        else if (G::isRunningFocusStack) {
-            emit abortFocusStack();
-            qDebug() << "MW::keyReleaseEvent emitted abortFocusStack";
-        }
-        // stop building filters
-        // else if (filters->buildingFilters) buildFilters->stop();
+        else if (fsPipeline) emit abortFocusStack();
         // exit full screen mode
         else if (fullScreenAction->isChecked()) escapeFullScreen();
         // FSTree or Bookmarks disabled
         else if (!fsTree->isEnabled()) fsTree->setEnabled(true);
         else if (!bookmarks->isEnabled()) bookmarks->setEnabled(true);
+        // stop building filters
+        // else if (filters->buildingFilters) buildFilters->stop();
     }
 
     if (G::isSlideShow) {
@@ -1516,8 +1503,8 @@ void MW::handleStartupArgs(const QString &args)
     // qDebug() << "MW::handleStartupArgs" << argList;
     if (argList.length() > 1) {
         // if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
-        if (G::isFileLogger)
-            Utilities::log("MW::handleStartupArgs", argList.join(" | "));
+        // if (G::isFileLogger)
+        //     Utilities::log("MW::handleStartupArgs", argList.join(" | "));
     }
 
     QString srcProgram = argList.at(0);
