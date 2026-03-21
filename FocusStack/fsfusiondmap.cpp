@@ -65,24 +65,32 @@ static cv::Mat morphClose8(const cv::Mat& bin8, int px)
 
 static cv::Mat fillHoles8(const cv::Mat& bin8)
 {
-    CV_Assert(bin8.type() == CV_8U);
+     CV_Assert(bin8.type() == CV_8U);
+    if (bin8.empty()) return bin8.clone();
 
-    cv::Mat inv;
-    cv::bitwise_not(bin8, inv);
-
-    cv::Mat invPad;
-    cv::copyMakeBorder(inv, invPad, 1, 1, 1, 1,
-                       cv::BORDER_CONSTANT, cv::Scalar(255));
-
-    cv::floodFill(invPad, cv::Point(0, 0), cv::Scalar(0));
-
-    cv::Mat ff = invPad(cv::Rect(1, 1, bin8.cols, bin8.rows)).clone();
-
-    cv::Mat holesMask;
-    cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where holes
+    // 1. Find all contours in the binary mask.
+    // RETR_CCOMP retrieves a two-level hierarchy: external boundaries and holes.
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
 
     cv::Mat filled = bin8.clone();
-    filled.setTo(255, holesMask);
+
+    // 2. Find contours. This is generally more efficient than floodFill
+    // for high-res images as it only iterates over edge pixels.
+    cv::findContours(filled, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+
+    if (contours.empty()) return filled;
+
+    // 3. Iterate through hierarchy.
+    // hierarchy[i][3] is the index of the parent contour.
+    // If a contour has a parent (hierarchy[i][3] >= 0), it is a hole.
+    for (int i = 0; i < (int)contours.size(); i++) {
+        if (hierarchy[i][3] >= 0) {
+            // Fill the hole with the foreground color (255)
+            cv::drawContours(filled, contours, i, cv::Scalar(255), cv::FILLED, 8, hierarchy);
+        }
+    }
+
     return filled;
 }
 
@@ -172,142 +180,194 @@ static cv::Mat lowContrastMask8_fromTop1Score(const cv::Mat& top1Score32,
     return low;
 }
 
-static bool ownershipPropagateTwoPass_Outward(
-    const cv::Mat& fg8,
-    const cv::Mat& depthIndex16,
-    int ringPx,
-    int seedBandPx,          // NEW: thickness of seed band outside FG (use 1 or 2)
-    cv::Mat& overrideMask8,
-    cv::Mat& overrideWinner16)
+// static bool ownershipPropagateTwoPass_Outward(
+//     const cv::Mat& fg8,
+//     const cv::Mat& depthIndex16,
+//     int ringPx,
+//     int seedBandPx,          // NEW: thickness of seed band outside FG (use 1 or 2)
+//     cv::Mat& overrideMask8,
+//     cv::Mat& overrideWinner16)
+// {
+//     CV_Assert(!fg8.empty() && fg8.type() == CV_8U);
+//     CV_Assert(!depthIndex16.empty() && depthIndex16.type() == CV_16U);
+//     CV_Assert(fg8.size() == depthIndex16.size());
+
+//     const cv::Size sz = fg8.size();
+
+//     // Ring where we will override (outside FG only)
+//     overrideMask8 = ringOutsideFg8(fg8, ringPx);
+//     if (cv::countNonZero(overrideMask8) == 0) {
+//         overrideWinner16.release();
+//         return true;
+//     }
+
+//     // --- Background-side seeds: a thin band just OUTSIDE FG ---
+//     seedBandPx = std::max(1, seedBandPx);
+
+//     cv::Mat fgDil;
+//     cv::dilate(fg8, fgDil, FSFusion::seEllipse(seedBandPx));
+
+//     cv::Mat seed8 = fgDil.clone();
+//     seed8.setTo(0, fg8);                 // seed = dilate(FG) - FG  (outside FG)
+
+//     // Optional: only seeds inside the ring (keeps it local)
+//     seed8.setTo(0, overrideMask8 == 0);
+
+//     if (cv::countNonZero(seed8) == 0) {
+//         // No seeds -> nothing we can propagate; don't override.
+//         overrideWinner16.release();
+//         overrideMask8.setTo(0);
+//         return true;
+//     }
+
+//     // Chamfer 2-pass
+//     const uint16_t INF = (uint16_t)60000;
+//     cv::Mat dist16(sz, CV_16U, cv::Scalar(INF));
+//     overrideWinner16 = cv::Mat(sz, CV_16U, cv::Scalar(0));
+
+//     // Init seeds: distance=0, donor = depthIndex16 at seed (BACKGROUND owners!)
+//     for (int y = 0; y < sz.height; ++y) {
+//         const uint8_t* s = seed8.ptr<uint8_t>(y);
+//         const uint16_t* d = depthIndex16.ptr<uint16_t>(y);
+//         uint16_t* dist = dist16.ptr<uint16_t>(y);
+//         uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
+//         for (int x = 0; x < sz.width; ++x) {
+//             if (s[x]) { dist[x] = 0; donor[x] = d[x]; }
+//         }
+//     }
+
+//     const uint16_t C1 = 3, C2 = 4;
+
+//     // Pass 1
+//     for (int y = 0; y < sz.height; ++y) {
+//         uint16_t* dist = dist16.ptr<uint16_t>(y);
+//         uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
+//         for (int x = 0; x < sz.width; ++x) {
+//             uint16_t bestD = dist[x], bestS = donor[x];
+
+//             if (x > 0) {
+//                 uint16_t cand = (uint16_t)std::min<int>(INF, dist[x-1] + C1);
+//                 if (cand < bestD) { bestD = cand; bestS = donor[x-1]; }
+//             }
+//             if (y > 0) {
+//                 const uint16_t* distUp = dist16.ptr<uint16_t>(y-1);
+//                 const uint16_t* donorUp = overrideWinner16.ptr<uint16_t>(y-1);
+
+//                 uint16_t cand = (uint16_t)std::min<int>(INF, distUp[x] + C1);
+//                 if (cand < bestD) { bestD = cand; bestS = donorUp[x]; }
+
+//                 if (x > 0) {
+//                     cand = (uint16_t)std::min<int>(INF, distUp[x-1] + C2);
+//                     if (cand < bestD) { bestD = cand; bestS = donorUp[x-1]; }
+//                 }
+//                 if (x + 1 < sz.width) {
+//                     cand = (uint16_t)std::min<int>(INF, distUp[x+1] + C2);
+//                     if (cand < bestD) { bestD = cand; bestS = donorUp[x+1]; }
+//                 }
+//             }
+//             dist[x] = bestD;
+//             donor[x] = bestS;
+//         }
+//     }
+
+//     // Pass 2
+//     for (int y = sz.height - 1; y >= 0; --y) {
+//         uint16_t* dist = dist16.ptr<uint16_t>(y);
+//         uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
+//         for (int x = sz.width - 1; x >= 0; --x) {
+//             uint16_t bestD = dist[x], bestS = donor[x];
+
+//             if (x + 1 < sz.width) {
+//                 uint16_t cand = (uint16_t)std::min<int>(INF, dist[x+1] + C1);
+//                 if (cand < bestD) { bestD = cand; bestS = donor[x+1]; }
+//             }
+//             if (y + 1 < sz.height) {
+//                 const uint16_t* distDn = dist16.ptr<uint16_t>(y+1);
+//                 const uint16_t* donorDn = overrideWinner16.ptr<uint16_t>(y+1);
+
+//                 uint16_t cand = (uint16_t)std::min<int>(INF, distDn[x] + C1);
+//                 if (cand < bestD) { bestD = cand; bestS = donorDn[x]; }
+
+//                 if (x > 0) {
+//                     cand = (uint16_t)std::min<int>(INF, distDn[x-1] + C2);
+//                     if (cand < bestD) { bestD = cand; bestS = donorDn[x-1]; }
+//                 }
+//                 if (x + 1 < sz.width) {
+//                     cand = (uint16_t)std::min<int>(INF, distDn[x+1] + C2);
+//                     if (cand < bestD) { bestD = cand; bestS = donorDn[x+1]; }
+//                 }
+//             }
+//             dist[x] = bestD;
+//             donor[x] = bestS;
+//         }
+//     }
+
+//     // IMPORTANT: clear overrideMask where no seed was reachable
+//     for (int y = 0; y < sz.height; ++y) {
+//         uint8_t* ring = overrideMask8.ptr<uint8_t>(y);
+//         uint16_t* dist = dist16.ptr<uint16_t>(y);
+//         for (int x = 0; x < sz.width; ++x) {
+//             if (!ring[x]) continue;
+//             if (dist[x] >= INF) ring[x] = 0;
+//         }
+//     }
+
+//     return true;
+// }
+
+static void ownershipPropagateTwoPass_Outward(
+    const cv::Mat& depthMap, const cv::Mat& mask)
 {
-    CV_Assert(!fg8.empty() && fg8.type() == CV_8U);
-    CV_Assert(!depthIndex16.empty() && depthIndex16.type() == CV_16U);
-    CV_Assert(fg8.size() == depthIndex16.size());
+    // Ensure mask is 8-bit single channel (0 and 255)
+    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(depthMap.type() == CV_16U);
 
-    const cv::Size sz = fg8.size();
+    // 1. Compute Distance Transform and Labels.
+    // DIST_LABEL_PIXEL creates a map where each pixel contains the
+    // index of the closest connected component (the 'donor' pixel).
+    cv::Mat dists;
+    cv::Mat labels;
 
-    // Ring where we will override (outside FG only)
-    overrideMask8 = ringOutsideFg8(fg8, ringPx);
-    if (cv::countNonZero(overrideMask8) == 0) {
-        overrideWinner16.release();
-        return true;
-    }
+    // We invert the mask because distanceTransform calculates distance to zero pixels.
+    // We want distance to the "reliable" pixels (255).
+    cv::Mat invMask;
+    cv::bitwise_not(mask, invMask);
 
-    // --- Background-side seeds: a thin band just OUTSIDE FG ---
-    seedBandPx = std::max(1, seedBandPx);
+    // This call is multi-threaded and highly optimized in OpenCV.
+    cv::distanceTransform(invMask, dists, labels, cv::DIST_L2, 5, cv::DIST_LABEL_PIXEL);
 
-    cv::Mat fgDil;
-    cv::dilate(fg8, fgDil, FSFusion::seEllipse(seedBandPx));
+    // 2. Build a Lookup Table for the labels.
+    // The labels map identifies which "source" pixel is the closest.
+    // We need to map those label IDs back to the actual depth values.
 
-    cv::Mat seed8 = fgDil.clone();
-    seed8.setTo(0, fg8);                 // seed = dilate(FG) - FG  (outside FG)
+    // First, find all foreground (reliable) pixels and their depths.
+    std::vector<cv::Point> foregroundPixels;
+    cv::findNonZero(mask, foregroundPixels);
 
-    // Optional: only seeds inside the ring (keeps it local)
-    seed8.setTo(0, overrideMask8 == 0);
+    if (foregroundPixels.empty()) return;
 
-    if (cv::countNonZero(seed8) == 0) {
-        // No seeds -> nothing we can propagate; don't override.
-        overrideWinner16.release();
-        overrideMask8.setTo(0);
-        return true;
-    }
+    // 3. Apply the donor depths to the holes.
+    // distanceTransform labels start at 1 and correspond to the points found.
+    int rows = depthMap.rows;
+    int cols = depthMap.cols;
 
-    // Chamfer 2-pass
-    const uint16_t INF = (uint16_t)60000;
-    cv::Mat dist16(sz, CV_16U, cv::Scalar(INF));
-    overrideWinner16 = cv::Mat(sz, CV_16U, cv::Scalar(0));
+    // Parallelize the mapping process for high-res performance
+    depthMap.forEach<uint16_t>([&](uint16_t &pixel, const int *position) {
+        int y = position[0];
+        int x = position[1];
 
-    // Init seeds: distance=0, donor = depthIndex16 at seed (BACKGROUND owners!)
-    for (int y = 0; y < sz.height; ++y) {
-        const uint8_t* s = seed8.ptr<uint8_t>(y);
-        const uint16_t* d = depthIndex16.ptr<uint16_t>(y);
-        uint16_t* dist = dist16.ptr<uint16_t>(y);
-        uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
-        for (int x = 0; x < sz.width; ++x) {
-            if (s[x]) { dist[x] = 0; donor[x] = d[x]; }
-        }
-    }
-
-    const uint16_t C1 = 3, C2 = 4;
-
-    // Pass 1
-    for (int y = 0; y < sz.height; ++y) {
-        uint16_t* dist = dist16.ptr<uint16_t>(y);
-        uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
-        for (int x = 0; x < sz.width; ++x) {
-            uint16_t bestD = dist[x], bestS = donor[x];
-
-            if (x > 0) {
-                uint16_t cand = (uint16_t)std::min<int>(INF, dist[x-1] + C1);
-                if (cand < bestD) { bestD = cand; bestS = donor[x-1]; }
+        // If this was a hole (mask == 0)
+        if (mask.at<uchar>(y, x) == 0) {
+            int labelIdx = labels.at<int>(y, x);
+            if (labelIdx > 0 && labelIdx <= (int)foregroundPixels.size()) {
+                // Get the coordinates of the nearest reliable pixel
+                cv::Point donorPt = foregroundPixels[labelIdx - 1];
+                // Assign the donor's depth to the current hole
+                pixel = depthMap.at<uint16_t>(donorPt);
             }
-            if (y > 0) {
-                const uint16_t* distUp = dist16.ptr<uint16_t>(y-1);
-                const uint16_t* donorUp = overrideWinner16.ptr<uint16_t>(y-1);
-
-                uint16_t cand = (uint16_t)std::min<int>(INF, distUp[x] + C1);
-                if (cand < bestD) { bestD = cand; bestS = donorUp[x]; }
-
-                if (x > 0) {
-                    cand = (uint16_t)std::min<int>(INF, distUp[x-1] + C2);
-                    if (cand < bestD) { bestD = cand; bestS = donorUp[x-1]; }
-                }
-                if (x + 1 < sz.width) {
-                    cand = (uint16_t)std::min<int>(INF, distUp[x+1] + C2);
-                    if (cand < bestD) { bestD = cand; bestS = donorUp[x+1]; }
-                }
-            }
-            dist[x] = bestD;
-            donor[x] = bestS;
         }
-    }
-
-    // Pass 2
-    for (int y = sz.height - 1; y >= 0; --y) {
-        uint16_t* dist = dist16.ptr<uint16_t>(y);
-        uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
-        for (int x = sz.width - 1; x >= 0; --x) {
-            uint16_t bestD = dist[x], bestS = donor[x];
-
-            if (x + 1 < sz.width) {
-                uint16_t cand = (uint16_t)std::min<int>(INF, dist[x+1] + C1);
-                if (cand < bestD) { bestD = cand; bestS = donor[x+1]; }
-            }
-            if (y + 1 < sz.height) {
-                const uint16_t* distDn = dist16.ptr<uint16_t>(y+1);
-                const uint16_t* donorDn = overrideWinner16.ptr<uint16_t>(y+1);
-
-                uint16_t cand = (uint16_t)std::min<int>(INF, distDn[x] + C1);
-                if (cand < bestD) { bestD = cand; bestS = donorDn[x]; }
-
-                if (x > 0) {
-                    cand = (uint16_t)std::min<int>(INF, distDn[x-1] + C2);
-                    if (cand < bestD) { bestD = cand; bestS = donorDn[x-1]; }
-                }
-                if (x + 1 < sz.width) {
-                    cand = (uint16_t)std::min<int>(INF, distDn[x+1] + C2);
-                    if (cand < bestD) { bestD = cand; bestS = donorDn[x+1]; }
-                }
-            }
-            dist[x] = bestD;
-            donor[x] = bestS;
-        }
-    }
-
-    // IMPORTANT: clear overrideMask where no seed was reachable
-    for (int y = 0; y < sz.height; ++y) {
-        uint8_t* ring = overrideMask8.ptr<uint8_t>(y);
-        uint16_t* dist = dist16.ptr<uint16_t>(y);
-        for (int x = 0; x < sz.width; ++x) {
-            if (!ring[x]) continue;
-            if (dist[x] >= INF) ring[x] = 0;
-        }
-    }
-
-    return true;
+    });
 }
-
-
 
 static cv::Mat stableDepthMask8_rangeLe(const cv::Mat& depth16, int r, int maxRange)
 {
@@ -757,11 +817,9 @@ void FSFusionDMap::diagnostics(QString path, cv::Mat& depthIndex16)
     s = (path + "/dmap_fg_own.png").toStdString();
     cv::imwrite(s, fgOwn8);
 
+    cv::Mat overrideMask8 = (prePropDepth != depthIndex16);
     s = (path + "/dmap_ownership_ring.png").toStdString();
     cv::imwrite(s, overrideMask8);
-
-    s = (path + "/dmap_ownership_winner.png").toStdString();
-    cv::imwrite(s, FSUtilities::depthHeatmap(overrideWinner16, N, "Ownership winner"));
 
     cv::Mat topRatio32 = s0_32 / (s1_32 + 1e-6f);
     s = (path + "/dmap_topRatio32.png").toStdString();
@@ -988,16 +1046,12 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     // ------------------------------------------------------------
     const int ringPx = defaultRingPx(origSz);
 
-    if (!ownershipPropagateTwoPass_Outward(
-            fgOwn8,
-            depthIndex16,
-            ringPx,
-            o.seedBandPx,
-            overrideMask8,
-            overrideWinner16))
-    {
-        return false;
+    // Save a copy of the depth map before propagation
+    if (o.enableDiagnostics) {
+        prePropDepth = depthIndex16.clone();
     }
+
+    ownershipPropagateTwoPass_Outward(depthIndex16, fgOwn8);
 
     if (!overrideMask8.empty() && cv::countNonZero(overrideMask8) > 0)
     {

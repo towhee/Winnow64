@@ -391,6 +391,13 @@ void MW::closeEvent(QCloseEvent *event)
         }
     }
 
+    // check and delete focus stack
+    if (fsPipeline) {
+        fsPipeline->requestAbort();
+        fsThread->quit();
+        fsThread->wait();
+    }
+
     if (!simulateJustInstalled) {
         writeSettings();
     }

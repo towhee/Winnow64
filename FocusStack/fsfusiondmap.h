@@ -69,7 +69,7 @@ public:
 
         int   pyrLevels = 5;
 
-        bool enableDiagnostics = true;
+        bool enableDiagnostics = false;
     };
 
     Params o;
@@ -129,6 +129,7 @@ public:
     cv::Mat overrideMask8;
     cv::Mat overrideWinner16;
     cv::Mat lowC8;
+    cv::Mat prePropDepth;
 
     // helpers
     int computePyrLevels(const cv::Size& origSz) const;
