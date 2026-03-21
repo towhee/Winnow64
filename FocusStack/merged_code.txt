@@ -63,7 +63,7 @@ public:
     }
 
     // Main pipeline API
-    bool run();             // run all testing deltas
+    void run();             // run all testing deltas
 
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
@@ -89,7 +89,6 @@ private:
     bool runPMax();
     QString save(QString fuseFolderPath);
     bool cleanup();
-    // void aborted();
 
     // helpers for UI
     void status(const QString &msg);
@@ -128,6 +127,8 @@ private:
     // Progress
     int progressCount = -1;
     int progressTotal = 0;
+    QElapsedTimer t;
+    int msToGo;
     void incrementProgress();
     void initializeProgress();
 };
@@ -674,7 +675,7 @@ public:
 
         int   pyrLevels = 5;
 
-        bool enableDiagnostics = true;
+        bool enableDiagnostics = false;
     };
 
     Params o;
@@ -734,6 +735,7 @@ public:
     cv::Mat overrideMask8;
     cv::Mat overrideWinner16;
     cv::Mat lowC8;
+    cv::Mat prePropDepth;
 
     // helpers
     int computePyrLevels(const cv::Size& origSz) const;
@@ -1994,7 +1996,7 @@ bool FS::initializeGroup(int group)
     const QString srcFolder = info.absolutePath();
     grpFolderPath = srcFolder + "/" + info.completeBaseName() + "_" + o.method;
     grpFolderPaths << grpFolderPath;
-    qDebug() << "group" << group << "grpFolderPaths =" << grpFolderPaths;
+    // qDebug() << "group" << group << "grpFolderPaths =" << grpFolderPaths;
 
     prepareFolders();
 
@@ -2019,8 +2021,8 @@ bool FS::initializeGroup(int group)
         alignedGrayPaths.push_back(path);
     }
 
-    for (const QString &s : alignedColorPaths)  qDebug().noquote() << s;
-    for (const QString &s : alignedGrayPaths)  qDebug().noquote() << s;
+    // for (const QString &s : alignedColorPaths)  qDebug().noquote() << s;
+    // for (const QString &s : alignedGrayPaths)  qDebug().noquote() << s;
 
     return true;
 }
@@ -2040,7 +2042,10 @@ bool FS::setOptions(const Options &opt)
 
 void FS::status(const QString &msg)
 {
-    QString statusMsg = statusRunPrefix + statusGroupPrefix + msg;
+    QString remaining = "Time remaining: " +
+                        QTime(0, 0).addMSecs(msToGo).toString("hh:mm:ss") +
+                        "  ";
+    QString statusMsg = remaining + statusRunPrefix + statusGroupPrefix + msg;
     emit updateStatus(false, statusMsg, "");
 }
 
@@ -2103,6 +2108,8 @@ void FS::initializeProgress()
 void FS::incrementProgress()
 {
     QString srcFun = "FS::incrementProgress";
+    qint64 msPerStep = t.elapsed() / progressCount;
+    msToGo = msPerStep * (progressTotal - progressCount);
     emit progress(++progressCount, progressTotal);
     QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
     if (G::FSLog) G::log(srcFun, msg);
@@ -2184,7 +2191,7 @@ QImage FS::thumbnail(const cv::Mat &mat)
     }
 }
 
-bool FS::run()
+void FS::run()
 {
 /*
     This is the entry point for the focus stacking pipeline.
@@ -2194,6 +2201,7 @@ bool FS::run()
 
     G::fsFusedPaths.clear();
 
+    t.start();
     initializeProgress();
     incrementProgress();
 
@@ -2214,22 +2222,12 @@ bool FS::run()
         QElapsedTimer t;
         t.start();
 
-        if (!initializeGroup(groupCounter++)) return false;
+        if (!initializeGroup(groupCounter++)) return;
 
 
-        if (o.method == "DMap" && !abortRequested()) {
-            if (!runDMap()) {
-                // emit finished(false);
-                // return false;
-            }
-        }
+        if (o.method == "DMap" && !abortRequested()) runDMap();
 
-        if (o.method == "PMax" && !abortRequested()) {
-            if (!runPMax()) {
-                // emit finished(false);
-                // return false;
-            }
-        }
+        if (o.method == "PMax" && !abortRequested()) runPMax();
 
         if (abortRequested()) break;
 
@@ -2249,6 +2247,7 @@ bool FS::run()
         if (G::FSLog) G::log(srcFun, "Focus Stack completed in " + timeToRun + progressSteps + progressTot);
         if (G::FSLog) G::log("");
         status("Focus Stack completed in " + timeToRun);
+        qDebug() << "Focus Stack completed in" << timeToRun;
 
         // qApp->processEvents();  // complete any waiting log msgs
     }
@@ -2258,8 +2257,6 @@ bool FS::run()
 
     bool success = !abortRequested();
     emit finished(success);
-
-    return true;
 }
 
 bool FS::runDMap()
@@ -2346,10 +2343,6 @@ bool FS::runDMap()
                                   aopt, &abort, statusCb, progressCb))
             {
                 qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
-                if (abortRequested()) {
-                    qDebug() << "1 invokeMethod aborted" << s;
-                    QMetaObject::invokeMethod(this, "aborted", Qt::QueuedConnection);
-                }
                 return false;
             }
 
@@ -2380,10 +2373,6 @@ bool FS::runDMap()
                               progressCb))
         {
             qWarning() << "WARNING:" << srcFun << "fuse.streamSlice failed.";
-            if (abortRequested()) {
-                qDebug() << "2 invokeMethod aborted" << s;
-                QMetaObject::invokeMethod(this, "aborted", Qt::QueuedConnection);
-            }
             return false;
         }
 
@@ -2415,10 +2404,6 @@ bool FS::runDMap()
                            progressCb))
     {
         qWarning() << "WARNING:" << srcFun << "FSFusionDMap::streamFinish failed.";
-        if (abortRequested()) {
-            qDebug() << "3 invokeMethod aborted";
-            QMetaObject::invokeMethod(this, "aborted", Qt::QueuedConnection);
-        }
         return false;
     }
 
@@ -2711,7 +2696,7 @@ bool FS::cleanup()
 
     // remove the group working folders (align, depth, fusion)
     for (QString subFolder : grpFolderPaths) {
-        qDebug() << "Remove work folder: " << subFolder;
+        // qDebug() << "Remove work folder: " << subFolder;
         msg = "Remove work folder: " + subFolder;
         if (G::isFileLogger) Utilities::log(srcFun, msg);
 
@@ -2734,8 +2719,7 @@ bool FS::cleanup()
     for (QString s : inputPaths) {
         QString srcFolderPath = QFileInfo(s).absolutePath();
         if (!inputFolderPaths.contains(srcFolderPath)) inputFolderPaths << srcFolderPath;
-        // qDebug() << "SrcFolder =" << srcFolder << "SrcFolders =" << srcFolders;
-        qDebug() << "Remove input file: " << s;
+        // qDebug() << "Remove input file: " << s;
         msg = "Remove input file: " + s;
         if (G::isFileLogger) Utilities::log(srcFun, msg);
 
@@ -2744,11 +2728,11 @@ bool FS::cleanup()
 
     // remove input folder if empty
     for (QString d : inputFolderPaths) {
-        qDebug() << "input folder isEmpty: " << QDir(d).isEmpty();
+        // qDebug() << "input folder isEmpty: " << QDir(d).isEmpty();
         msg = "input folder: " + d + "  isEmpty: " + QVariant(QDir(d).isEmpty()).toString();
         if (G::isFileLogger) Utilities::log(srcFun, msg);
         if (QDir(d).isEmpty()) {
-            qDebug() << "Remove input folder: " << d;
+            // qDebug() << "Remove input folder: " << d;
             msg = "Remove input folder: " + d;
             if (G::isFileLogger) Utilities::log(srcFun, msg);
 
@@ -2758,35 +2742,6 @@ bool FS::cleanup()
 
     return true;
 }
-
-// void FS::aborted()
-// {
-//     QString srcFun = "FS::aborted";
-//     qDebug() << srcFun;
-
-//     // Find the current active window to use as a parent
-//     QWidget *activeWin = qApp->activeWindow();
-//     QMessageBox msgBox(activeWin);
-
-//     msgBox.setWindowTitle("Focus Stacking Aborted");
-//     msgBox.setText("The focus stacking operation has been aborted.");
-//     msgBox.setInformativeText("Do you want to cleanup temporary files?");
-//     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-//     msgBox.setDefaultButton(QMessageBox::Yes);
-//     msgBox.setIcon(QMessageBox::Question);
-//     msgBox.setStyleSheet(G::css);
-
-//     // If an active window exists, center the message box over it
-//     if (activeWin) {
-//         msgBox.windowHandle(); // Ensure window is created
-//         msgBox.move(activeWin->frameGeometry().center() - msgBox.rect().center());
-//     }
-
-//     int ret = msgBox.exec();
-//     if (ret == QMessageBox::Yes) {
-//         cleanup(); // Perform the file deletions
-//     }
-// }
 
 void FS::diagnostics()
 {
@@ -3746,7 +3701,6 @@ bool Align::alignSlice(int              slice,
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
-
     Result local;
 
     try {
@@ -3765,6 +3719,8 @@ bool Align::alignSlice(int              slice,
         if (status) status(msg);
         return false;
     }
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+
     if (G::FSLog) G::log(srcFun, "computeLocal");
 
     // Stack transforms
@@ -3777,8 +3733,12 @@ bool Align::alignSlice(int              slice,
     // Apply transform to color + gray
     cv::Mat alignedColorMat, alignedGrayMat;
     if (G::FSLog) G::log(srcFun, "cv::Mat alignedColor, alignedGray");
-    applyTransform(currImage.color, currGlobal.transform, alignedColorMat);
-    applyTransform(currImage.gray,  currGlobal.transform, alignedGrayMat);
+    applyTransform(currImage.color, currGlobal.transform, alignedColorSlice);
+    // applyTransform(currImage.color, currGlobal.transform, alignedColorMat);
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+    applyTransform(currImage.gray,  currGlobal.transform, alignedGraySlice);
+    // applyTransform(currImage.gray,  currGlobal.transform, alignedGrayMat);
+    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
     if (G::FSLog) G::log(srcFun, "applyTransform alignedGray");
 
     // Write outputs
@@ -3789,8 +3749,8 @@ bool Align::alignSlice(int              slice,
     // }
 
     // Cache in memory for fast fusion
-    alignedColorSlice = alignedColorMat.clone();
-    alignedGraySlice  = alignedGrayMat.clone();
+    // alignedColorSlice = alignedColorMat.clone();
+    // alignedGraySlice  = alignedGrayMat.clone();
 
     // if (progressCallback) progressCallback();
 
@@ -5491,24 +5451,32 @@ static cv::Mat morphClose8(const cv::Mat& bin8, int px)
 
 static cv::Mat fillHoles8(const cv::Mat& bin8)
 {
-    CV_Assert(bin8.type() == CV_8U);
+     CV_Assert(bin8.type() == CV_8U);
+    if (bin8.empty()) return bin8.clone();
 
-    cv::Mat inv;
-    cv::bitwise_not(bin8, inv);
-
-    cv::Mat invPad;
-    cv::copyMakeBorder(inv, invPad, 1, 1, 1, 1,
-                       cv::BORDER_CONSTANT, cv::Scalar(255));
-
-    cv::floodFill(invPad, cv::Point(0, 0), cv::Scalar(0));
-
-    cv::Mat ff = invPad(cv::Rect(1, 1, bin8.cols, bin8.rows)).clone();
-
-    cv::Mat holesMask;
-    cv::compare(ff, 0, holesMask, cv::CMP_GT); // 255 where holes
+    // 1. Find all contours in the binary mask.
+    // RETR_CCOMP retrieves a two-level hierarchy: external boundaries and holes.
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
 
     cv::Mat filled = bin8.clone();
-    filled.setTo(255, holesMask);
+
+    // 2. Find contours. This is generally more efficient than floodFill
+    // for high-res images as it only iterates over edge pixels.
+    cv::findContours(filled, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+
+    if (contours.empty()) return filled;
+
+    // 3. Iterate through hierarchy.
+    // hierarchy[i][3] is the index of the parent contour.
+    // If a contour has a parent (hierarchy[i][3] >= 0), it is a hole.
+    for (int i = 0; i < (int)contours.size(); i++) {
+        if (hierarchy[i][3] >= 0) {
+            // Fill the hole with the foreground color (255)
+            cv::drawContours(filled, contours, i, cv::Scalar(255), cv::FILLED, 8, hierarchy);
+        }
+    }
+
     return filled;
 }
 
@@ -5598,142 +5566,194 @@ static cv::Mat lowContrastMask8_fromTop1Score(const cv::Mat& top1Score32,
     return low;
 }
 
-static bool ownershipPropagateTwoPass_Outward(
-    const cv::Mat& fg8,
-    const cv::Mat& depthIndex16,
-    int ringPx,
-    int seedBandPx,          // NEW: thickness of seed band outside FG (use 1 or 2)
-    cv::Mat& overrideMask8,
-    cv::Mat& overrideWinner16)
+// static bool ownershipPropagateTwoPass_Outward(
+//     const cv::Mat& fg8,
+//     const cv::Mat& depthIndex16,
+//     int ringPx,
+//     int seedBandPx,          // NEW: thickness of seed band outside FG (use 1 or 2)
+//     cv::Mat& overrideMask8,
+//     cv::Mat& overrideWinner16)
+// {
+//     CV_Assert(!fg8.empty() && fg8.type() == CV_8U);
+//     CV_Assert(!depthIndex16.empty() && depthIndex16.type() == CV_16U);
+//     CV_Assert(fg8.size() == depthIndex16.size());
+
+//     const cv::Size sz = fg8.size();
+
+//     // Ring where we will override (outside FG only)
+//     overrideMask8 = ringOutsideFg8(fg8, ringPx);
+//     if (cv::countNonZero(overrideMask8) == 0) {
+//         overrideWinner16.release();
+//         return true;
+//     }
+
+//     // --- Background-side seeds: a thin band just OUTSIDE FG ---
+//     seedBandPx = std::max(1, seedBandPx);
+
+//     cv::Mat fgDil;
+//     cv::dilate(fg8, fgDil, FSFusion::seEllipse(seedBandPx));
+
+//     cv::Mat seed8 = fgDil.clone();
+//     seed8.setTo(0, fg8);                 // seed = dilate(FG) - FG  (outside FG)
+
+//     // Optional: only seeds inside the ring (keeps it local)
+//     seed8.setTo(0, overrideMask8 == 0);
+
+//     if (cv::countNonZero(seed8) == 0) {
+//         // No seeds -> nothing we can propagate; don't override.
+//         overrideWinner16.release();
+//         overrideMask8.setTo(0);
+//         return true;
+//     }
+
+//     // Chamfer 2-pass
+//     const uint16_t INF = (uint16_t)60000;
+//     cv::Mat dist16(sz, CV_16U, cv::Scalar(INF));
+//     overrideWinner16 = cv::Mat(sz, CV_16U, cv::Scalar(0));
+
+//     // Init seeds: distance=0, donor = depthIndex16 at seed (BACKGROUND owners!)
+//     for (int y = 0; y < sz.height; ++y) {
+//         const uint8_t* s = seed8.ptr<uint8_t>(y);
+//         const uint16_t* d = depthIndex16.ptr<uint16_t>(y);
+//         uint16_t* dist = dist16.ptr<uint16_t>(y);
+//         uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
+//         for (int x = 0; x < sz.width; ++x) {
+//             if (s[x]) { dist[x] = 0; donor[x] = d[x]; }
+//         }
+//     }
+
+//     const uint16_t C1 = 3, C2 = 4;
+
+//     // Pass 1
+//     for (int y = 0; y < sz.height; ++y) {
+//         uint16_t* dist = dist16.ptr<uint16_t>(y);
+//         uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
+//         for (int x = 0; x < sz.width; ++x) {
+//             uint16_t bestD = dist[x], bestS = donor[x];
+
+//             if (x > 0) {
+//                 uint16_t cand = (uint16_t)std::min<int>(INF, dist[x-1] + C1);
+//                 if (cand < bestD) { bestD = cand; bestS = donor[x-1]; }
+//             }
+//             if (y > 0) {
+//                 const uint16_t* distUp = dist16.ptr<uint16_t>(y-1);
+//                 const uint16_t* donorUp = overrideWinner16.ptr<uint16_t>(y-1);
+
+//                 uint16_t cand = (uint16_t)std::min<int>(INF, distUp[x] + C1);
+//                 if (cand < bestD) { bestD = cand; bestS = donorUp[x]; }
+
+//                 if (x > 0) {
+//                     cand = (uint16_t)std::min<int>(INF, distUp[x-1] + C2);
+//                     if (cand < bestD) { bestD = cand; bestS = donorUp[x-1]; }
+//                 }
+//                 if (x + 1 < sz.width) {
+//                     cand = (uint16_t)std::min<int>(INF, distUp[x+1] + C2);
+//                     if (cand < bestD) { bestD = cand; bestS = donorUp[x+1]; }
+//                 }
+//             }
+//             dist[x] = bestD;
+//             donor[x] = bestS;
+//         }
+//     }
+
+//     // Pass 2
+//     for (int y = sz.height - 1; y >= 0; --y) {
+//         uint16_t* dist = dist16.ptr<uint16_t>(y);
+//         uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
+//         for (int x = sz.width - 1; x >= 0; --x) {
+//             uint16_t bestD = dist[x], bestS = donor[x];
+
+//             if (x + 1 < sz.width) {
+//                 uint16_t cand = (uint16_t)std::min<int>(INF, dist[x+1] + C1);
+//                 if (cand < bestD) { bestD = cand; bestS = donor[x+1]; }
+//             }
+//             if (y + 1 < sz.height) {
+//                 const uint16_t* distDn = dist16.ptr<uint16_t>(y+1);
+//                 const uint16_t* donorDn = overrideWinner16.ptr<uint16_t>(y+1);
+
+//                 uint16_t cand = (uint16_t)std::min<int>(INF, distDn[x] + C1);
+//                 if (cand < bestD) { bestD = cand; bestS = donorDn[x]; }
+
+//                 if (x > 0) {
+//                     cand = (uint16_t)std::min<int>(INF, distDn[x-1] + C2);
+//                     if (cand < bestD) { bestD = cand; bestS = donorDn[x-1]; }
+//                 }
+//                 if (x + 1 < sz.width) {
+//                     cand = (uint16_t)std::min<int>(INF, distDn[x+1] + C2);
+//                     if (cand < bestD) { bestD = cand; bestS = donorDn[x+1]; }
+//                 }
+//             }
+//             dist[x] = bestD;
+//             donor[x] = bestS;
+//         }
+//     }
+
+//     // IMPORTANT: clear overrideMask where no seed was reachable
+//     for (int y = 0; y < sz.height; ++y) {
+//         uint8_t* ring = overrideMask8.ptr<uint8_t>(y);
+//         uint16_t* dist = dist16.ptr<uint16_t>(y);
+//         for (int x = 0; x < sz.width; ++x) {
+//             if (!ring[x]) continue;
+//             if (dist[x] >= INF) ring[x] = 0;
+//         }
+//     }
+
+//     return true;
+// }
+
+static void ownershipPropagateTwoPass_Outward(
+    const cv::Mat& depthMap, const cv::Mat& mask)
 {
-    CV_Assert(!fg8.empty() && fg8.type() == CV_8U);
-    CV_Assert(!depthIndex16.empty() && depthIndex16.type() == CV_16U);
-    CV_Assert(fg8.size() == depthIndex16.size());
+    // Ensure mask is 8-bit single channel (0 and 255)
+    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(depthMap.type() == CV_16U);
 
-    const cv::Size sz = fg8.size();
+    // 1. Compute Distance Transform and Labels.
+    // DIST_LABEL_PIXEL creates a map where each pixel contains the
+    // index of the closest connected component (the 'donor' pixel).
+    cv::Mat dists;
+    cv::Mat labels;
 
-    // Ring where we will override (outside FG only)
-    overrideMask8 = ringOutsideFg8(fg8, ringPx);
-    if (cv::countNonZero(overrideMask8) == 0) {
-        overrideWinner16.release();
-        return true;
-    }
+    // We invert the mask because distanceTransform calculates distance to zero pixels.
+    // We want distance to the "reliable" pixels (255).
+    cv::Mat invMask;
+    cv::bitwise_not(mask, invMask);
 
-    // --- Background-side seeds: a thin band just OUTSIDE FG ---
-    seedBandPx = std::max(1, seedBandPx);
+    // This call is multi-threaded and highly optimized in OpenCV.
+    cv::distanceTransform(invMask, dists, labels, cv::DIST_L2, 5, cv::DIST_LABEL_PIXEL);
 
-    cv::Mat fgDil;
-    cv::dilate(fg8, fgDil, FSFusion::seEllipse(seedBandPx));
+    // 2. Build a Lookup Table for the labels.
+    // The labels map identifies which "source" pixel is the closest.
+    // We need to map those label IDs back to the actual depth values.
 
-    cv::Mat seed8 = fgDil.clone();
-    seed8.setTo(0, fg8);                 // seed = dilate(FG) - FG  (outside FG)
+    // First, find all foreground (reliable) pixels and their depths.
+    std::vector<cv::Point> foregroundPixels;
+    cv::findNonZero(mask, foregroundPixels);
 
-    // Optional: only seeds inside the ring (keeps it local)
-    seed8.setTo(0, overrideMask8 == 0);
+    if (foregroundPixels.empty()) return;
 
-    if (cv::countNonZero(seed8) == 0) {
-        // No seeds -> nothing we can propagate; don't override.
-        overrideWinner16.release();
-        overrideMask8.setTo(0);
-        return true;
-    }
+    // 3. Apply the donor depths to the holes.
+    // distanceTransform labels start at 1 and correspond to the points found.
+    int rows = depthMap.rows;
+    int cols = depthMap.cols;
 
-    // Chamfer 2-pass
-    const uint16_t INF = (uint16_t)60000;
-    cv::Mat dist16(sz, CV_16U, cv::Scalar(INF));
-    overrideWinner16 = cv::Mat(sz, CV_16U, cv::Scalar(0));
+    // Parallelize the mapping process for high-res performance
+    depthMap.forEach<uint16_t>([&](uint16_t &pixel, const int *position) {
+        int y = position[0];
+        int x = position[1];
 
-    // Init seeds: distance=0, donor = depthIndex16 at seed (BACKGROUND owners!)
-    for (int y = 0; y < sz.height; ++y) {
-        const uint8_t* s = seed8.ptr<uint8_t>(y);
-        const uint16_t* d = depthIndex16.ptr<uint16_t>(y);
-        uint16_t* dist = dist16.ptr<uint16_t>(y);
-        uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
-        for (int x = 0; x < sz.width; ++x) {
-            if (s[x]) { dist[x] = 0; donor[x] = d[x]; }
-        }
-    }
-
-    const uint16_t C1 = 3, C2 = 4;
-
-    // Pass 1
-    for (int y = 0; y < sz.height; ++y) {
-        uint16_t* dist = dist16.ptr<uint16_t>(y);
-        uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
-        for (int x = 0; x < sz.width; ++x) {
-            uint16_t bestD = dist[x], bestS = donor[x];
-
-            if (x > 0) {
-                uint16_t cand = (uint16_t)std::min<int>(INF, dist[x-1] + C1);
-                if (cand < bestD) { bestD = cand; bestS = donor[x-1]; }
+        // If this was a hole (mask == 0)
+        if (mask.at<uchar>(y, x) == 0) {
+            int labelIdx = labels.at<int>(y, x);
+            if (labelIdx > 0 && labelIdx <= (int)foregroundPixels.size()) {
+                // Get the coordinates of the nearest reliable pixel
+                cv::Point donorPt = foregroundPixels[labelIdx - 1];
+                // Assign the donor's depth to the current hole
+                pixel = depthMap.at<uint16_t>(donorPt);
             }
-            if (y > 0) {
-                const uint16_t* distUp = dist16.ptr<uint16_t>(y-1);
-                const uint16_t* donorUp = overrideWinner16.ptr<uint16_t>(y-1);
-
-                uint16_t cand = (uint16_t)std::min<int>(INF, distUp[x] + C1);
-                if (cand < bestD) { bestD = cand; bestS = donorUp[x]; }
-
-                if (x > 0) {
-                    cand = (uint16_t)std::min<int>(INF, distUp[x-1] + C2);
-                    if (cand < bestD) { bestD = cand; bestS = donorUp[x-1]; }
-                }
-                if (x + 1 < sz.width) {
-                    cand = (uint16_t)std::min<int>(INF, distUp[x+1] + C2);
-                    if (cand < bestD) { bestD = cand; bestS = donorUp[x+1]; }
-                }
-            }
-            dist[x] = bestD;
-            donor[x] = bestS;
         }
-    }
-
-    // Pass 2
-    for (int y = sz.height - 1; y >= 0; --y) {
-        uint16_t* dist = dist16.ptr<uint16_t>(y);
-        uint16_t* donor = overrideWinner16.ptr<uint16_t>(y);
-        for (int x = sz.width - 1; x >= 0; --x) {
-            uint16_t bestD = dist[x], bestS = donor[x];
-
-            if (x + 1 < sz.width) {
-                uint16_t cand = (uint16_t)std::min<int>(INF, dist[x+1] + C1);
-                if (cand < bestD) { bestD = cand; bestS = donor[x+1]; }
-            }
-            if (y + 1 < sz.height) {
-                const uint16_t* distDn = dist16.ptr<uint16_t>(y+1);
-                const uint16_t* donorDn = overrideWinner16.ptr<uint16_t>(y+1);
-
-                uint16_t cand = (uint16_t)std::min<int>(INF, distDn[x] + C1);
-                if (cand < bestD) { bestD = cand; bestS = donorDn[x]; }
-
-                if (x > 0) {
-                    cand = (uint16_t)std::min<int>(INF, distDn[x-1] + C2);
-                    if (cand < bestD) { bestD = cand; bestS = donorDn[x-1]; }
-                }
-                if (x + 1 < sz.width) {
-                    cand = (uint16_t)std::min<int>(INF, distDn[x+1] + C2);
-                    if (cand < bestD) { bestD = cand; bestS = donorDn[x+1]; }
-                }
-            }
-            dist[x] = bestD;
-            donor[x] = bestS;
-        }
-    }
-
-    // IMPORTANT: clear overrideMask where no seed was reachable
-    for (int y = 0; y < sz.height; ++y) {
-        uint8_t* ring = overrideMask8.ptr<uint8_t>(y);
-        uint16_t* dist = dist16.ptr<uint16_t>(y);
-        for (int x = 0; x < sz.width; ++x) {
-            if (!ring[x]) continue;
-            if (dist[x] >= INF) ring[x] = 0;
-        }
-    }
-
-    return true;
+    });
 }
-
-
 
 static cv::Mat stableDepthMask8_rangeLe(const cv::Mat& depth16, int r, int maxRange)
 {
@@ -6183,11 +6203,9 @@ void FSFusionDMap::diagnostics(QString path, cv::Mat& depthIndex16)
     s = (path + "/dmap_fg_own.png").toStdString();
     cv::imwrite(s, fgOwn8);
 
+    cv::Mat overrideMask8 = (prePropDepth != depthIndex16);
     s = (path + "/dmap_ownership_ring.png").toStdString();
     cv::imwrite(s, overrideMask8);
-
-    s = (path + "/dmap_ownership_winner.png").toStdString();
-    cv::imwrite(s, FSUtilities::depthHeatmap(overrideWinner16, N, "Ownership winner"));
 
     cv::Mat topRatio32 = s0_32 / (s1_32 + 1e-6f);
     s = (path + "/dmap_topRatio32.png").toStdString();
@@ -6414,16 +6432,12 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     // ------------------------------------------------------------
     const int ringPx = defaultRingPx(origSz);
 
-    if (!ownershipPropagateTwoPass_Outward(
-            fgOwn8,
-            depthIndex16,
-            ringPx,
-            o.seedBandPx,
-            overrideMask8,
-            overrideWinner16))
-    {
-        return false;
+    // Save a copy of the depth map before propagation
+    if (o.enableDiagnostics) {
+        prePropDepth = depthIndex16.clone();
     }
+
+    ownershipPropagateTwoPass_Outward(depthIndex16, fgOwn8);
 
     if (!overrideMask8.empty() && cv::countNonZero(overrideMask8) > 0)
     {
@@ -9351,20 +9365,58 @@ bool merge(const std::vector<cv::Mat> &wavelets,
     maxAbs = -1.0f;
     depthIndex16 = 0;
 
+    // // PMax: for each pixel, choose wavelet with max |v|^2
+    // if (G::FSLog) G::log(srcFun, "PMax: for each pixel, choose wavelet with max |v|^2");
+    // cv::Mat absval(rows, cols, CV_32F);
+    // for (int i = 0; i < N; ++i)
+    // {
+    //     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+    //     if (G::FSLog) G::log(srcFun, "Slice " + QString::number(i));
+
+    //     // cv::Mat absval(rows, cols, CV_32F);
+    //     getSqAbsval(wavelets[i], absval);
+
+    //     cv::Mat mask = (absval > maxAbs);
+    //     absval.copyTo(maxAbs, mask);
+    //     wavelets[i].copyTo(mergedOut, mask);
+    //     depthIndex16.setTo(static_cast<uint16_t>(i), mask);
+    // }
     // PMax: for each pixel, choose wavelet with max |v|^2
     if (G::FSLog) G::log(srcFun, "PMax: for each pixel, choose wavelet with max |v|^2");
+
+    // 1. Hoist the buffer allocation outside the loop
+    cv::Mat absval(rows, cols, CV_32F);
+
     for (int i = 0; i < N; ++i)
     {
         if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
         if (G::FSLog) G::log(srcFun, "Slice " + QString::number(i));
 
-        cv::Mat absval(rows, cols, CV_32F);
+        // 2. getSqAbsval will safely reuse the pre-allocated absval buffer
         getSqAbsval(wavelets[i], absval);
 
-        cv::Mat mask = (absval > maxAbs);
-        absval.copyTo(maxAbs, mask);
-        wavelets[i].copyTo(mergedOut, mask);
-        depthIndex16.setTo(static_cast<uint16_t>(i), mask);
+        uint16_t sliceIdx = static_cast<uint16_t>(i);
+
+        // 3. Single-pass manual memory loop replaces 4 masked OpenCV operations
+        for (int r = 0; r < rows; ++r)
+        {
+            // Acquire row pointers once per row
+            const float* pAbs    = absval.ptr<float>(r);
+            const cv::Vec2f* pWav    = wavelets[i].ptr<cv::Vec2f>(r);
+            float* pMaxAbs = maxAbs.ptr<float>(r);
+            cv::Vec2f* pMerged = mergedOut.ptr<cv::Vec2f>(r);
+            uint16_t* pDepth  = depthIndex16.ptr<uint16_t>(r);
+
+            for (int c = 0; c < cols; ++c)
+            {
+                if (pAbs[c] > pMaxAbs[c])
+                {
+                    pMaxAbs[c] = pAbs[c];
+                    pMerged[c] = pWav[c];
+                    pDepth[c]  = sliceIdx;
+                }
+            }
+        }
     }
 
     // if (*abortFlag) return false;
@@ -11537,16 +11589,23 @@ void MW::generateFocusStack(const QStringList paths,
     // --------------------------------------------------------------------
     // Create worker thread + FS fs object
     // --------------------------------------------------------------------
-    QThread *fsThread = new QThread(this);
+    fsThread = new QThread(this);
+    // QThread *fsThread = new QThread(this);
     fsPipeline = new FS();
     fsPipeline->moveToThread(fsThread);
     // local req'd for lamda
     FS *fs = fsPipeline.data();
 
     // When the thread starts → run the FS pipeline
-    connect(fsThread, &QThread::started, fs, [fs, fsThread]()
+    // connect(fsThread, &QThread::started, fs, [fs, fsThread]()
+    //         {
+    //             fs->run();     // runs synchronously inside worker thread
+    //             QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
+    //         });
+    connect(fsThread, &QThread::started, fs, [this, fs]() // Capture 'this' instead of 'fsThread'
             {
-                fs->run();     // runs synchronously inside worker thread
+                fs->run();
+                // Now you can access fsThread because 'this' is captured
                 QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
             });
 

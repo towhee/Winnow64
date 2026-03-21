@@ -942,3 +942,6 @@ PYRAMID FUSION:
 Invalid atom size 1
 moov atom not found!
 Invalid frame after retries: "/Users/roryhill/Pictures/2025/202507/2025-07-22_Parksville/2025-07-22_0001.mp4"
+
+Focus Stack completed in "40.0 sec"
+

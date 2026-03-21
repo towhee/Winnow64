@@ -172,16 +172,23 @@ void MW::generateFocusStack(const QStringList paths,
     // --------------------------------------------------------------------
     // Create worker thread + FS fs object
     // --------------------------------------------------------------------
-    QThread *fsThread = new QThread(this);
+    fsThread = new QThread(this);
+    // QThread *fsThread = new QThread(this);
     fsPipeline = new FS();
     fsPipeline->moveToThread(fsThread);
     // local req'd for lamda
     FS *fs = fsPipeline.data();
 
     // When the thread starts → run the FS pipeline
-    connect(fsThread, &QThread::started, fs, [fs, fsThread]()
+    // connect(fsThread, &QThread::started, fs, [fs, fsThread]()
+    //         {
+    //             fs->run();     // runs synchronously inside worker thread
+    //             QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
+    //         });
+    connect(fsThread, &QThread::started, fs, [this, fs]() // Capture 'this' instead of 'fsThread'
             {
-                fs->run();     // runs synchronously inside worker thread
+                fs->run();
+                // Now you can access fsThread because 'this' is captured
                 QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
             });
 

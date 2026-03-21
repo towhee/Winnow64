@@ -46,7 +46,7 @@ bool FS::initializeGroup(int group)
     const QString srcFolder = info.absolutePath();
     grpFolderPath = srcFolder + "/" + info.completeBaseName() + "_" + o.method;
     grpFolderPaths << grpFolderPath;
-    qDebug() << "group" << group << "grpFolderPaths =" << grpFolderPaths;
+    // qDebug() << "group" << group << "grpFolderPaths =" << grpFolderPaths;
 
     prepareFolders();
 
@@ -71,8 +71,8 @@ bool FS::initializeGroup(int group)
         alignedGrayPaths.push_back(path);
     }
 
-    for (const QString &s : alignedColorPaths)  qDebug().noquote() << s;
-    for (const QString &s : alignedGrayPaths)  qDebug().noquote() << s;
+    // for (const QString &s : alignedColorPaths)  qDebug().noquote() << s;
+    // for (const QString &s : alignedGrayPaths)  qDebug().noquote() << s;
 
     return true;
 }
@@ -92,7 +92,10 @@ bool FS::setOptions(const Options &opt)
 
 void FS::status(const QString &msg)
 {
-    QString statusMsg = statusRunPrefix + statusGroupPrefix + msg;
+    QString remaining = "Time remaining: " +
+                        QTime(0, 0).addMSecs(msToGo).toString("hh:mm:ss") +
+                        "  ";
+    QString statusMsg = remaining + statusRunPrefix + statusGroupPrefix + msg;
     emit updateStatus(false, statusMsg, "");
 }
 
@@ -155,6 +158,8 @@ void FS::initializeProgress()
 void FS::incrementProgress()
 {
     QString srcFun = "FS::incrementProgress";
+    qint64 msPerStep = t.elapsed() / progressCount;
+    msToGo = msPerStep * (progressTotal - progressCount);
     emit progress(++progressCount, progressTotal);
     QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
     if (G::FSLog) G::log(srcFun, msg);
@@ -246,6 +251,7 @@ void FS::run()
 
     G::fsFusedPaths.clear();
 
+    t.start();
     initializeProgress();
     incrementProgress();
 
@@ -266,7 +272,7 @@ void FS::run()
         QElapsedTimer t;
         t.start();
 
-        if (!initializeGroup(groupCounter++)) return false;
+        if (!initializeGroup(groupCounter++)) return;
 
 
         if (o.method == "DMap" && !abortRequested()) runDMap();
@@ -291,6 +297,7 @@ void FS::run()
         if (G::FSLog) G::log(srcFun, "Focus Stack completed in " + timeToRun + progressSteps + progressTot);
         if (G::FSLog) G::log("");
         status("Focus Stack completed in " + timeToRun);
+        qDebug() << "Focus Stack completed in" << timeToRun;
 
         // qApp->processEvents();  // complete any waiting log msgs
     }
@@ -300,8 +307,6 @@ void FS::run()
 
     bool success = !abortRequested();
     emit finished(success);
-
-    return true;
 }
 
 bool FS::runDMap()
@@ -741,7 +746,7 @@ bool FS::cleanup()
 
     // remove the group working folders (align, depth, fusion)
     for (QString subFolder : grpFolderPaths) {
-        qDebug() << "Remove work folder: " << subFolder;
+        // qDebug() << "Remove work folder: " << subFolder;
         msg = "Remove work folder: " + subFolder;
         if (G::isFileLogger) Utilities::log(srcFun, msg);
 
@@ -764,8 +769,7 @@ bool FS::cleanup()
     for (QString s : inputPaths) {
         QString srcFolderPath = QFileInfo(s).absolutePath();
         if (!inputFolderPaths.contains(srcFolderPath)) inputFolderPaths << srcFolderPath;
-        // qDebug() << "SrcFolder =" << srcFolder << "SrcFolders =" << srcFolders;
-        qDebug() << "Remove input file: " << s;
+        // qDebug() << "Remove input file: " << s;
         msg = "Remove input file: " + s;
         if (G::isFileLogger) Utilities::log(srcFun, msg);
 
@@ -774,11 +778,11 @@ bool FS::cleanup()
 
     // remove input folder if empty
     for (QString d : inputFolderPaths) {
-        qDebug() << "input folder isEmpty: " << QDir(d).isEmpty();
+        // qDebug() << "input folder isEmpty: " << QDir(d).isEmpty();
         msg = "input folder: " + d + "  isEmpty: " + QVariant(QDir(d).isEmpty()).toString();
         if (G::isFileLogger) Utilities::log(srcFun, msg);
         if (QDir(d).isEmpty()) {
-            qDebug() << "Remove input folder: " << d;
+            // qDebug() << "Remove input folder: " << d;
             msg = "Remove input folder: " + d;
             if (G::isFileLogger) Utilities::log(srcFun, msg);
 

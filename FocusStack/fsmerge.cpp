@@ -645,20 +645,58 @@ bool merge(const std::vector<cv::Mat> &wavelets,
     maxAbs = -1.0f;
     depthIndex16 = 0;
 
+    // // PMax: for each pixel, choose wavelet with max |v|^2
+    // if (G::FSLog) G::log(srcFun, "PMax: for each pixel, choose wavelet with max |v|^2");
+    // cv::Mat absval(rows, cols, CV_32F);
+    // for (int i = 0; i < N; ++i)
+    // {
+    //     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+    //     if (G::FSLog) G::log(srcFun, "Slice " + QString::number(i));
+
+    //     // cv::Mat absval(rows, cols, CV_32F);
+    //     getSqAbsval(wavelets[i], absval);
+
+    //     cv::Mat mask = (absval > maxAbs);
+    //     absval.copyTo(maxAbs, mask);
+    //     wavelets[i].copyTo(mergedOut, mask);
+    //     depthIndex16.setTo(static_cast<uint16_t>(i), mask);
+    // }
     // PMax: for each pixel, choose wavelet with max |v|^2
     if (G::FSLog) G::log(srcFun, "PMax: for each pixel, choose wavelet with max |v|^2");
+
+    // 1. Hoist the buffer allocation outside the loop
+    cv::Mat absval(rows, cols, CV_32F);
+
     for (int i = 0; i < N; ++i)
     {
         if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
         if (G::FSLog) G::log(srcFun, "Slice " + QString::number(i));
 
-        cv::Mat absval(rows, cols, CV_32F);
+        // 2. getSqAbsval will safely reuse the pre-allocated absval buffer
         getSqAbsval(wavelets[i], absval);
 
-        cv::Mat mask = (absval > maxAbs);
-        absval.copyTo(maxAbs, mask);
-        wavelets[i].copyTo(mergedOut, mask);
-        depthIndex16.setTo(static_cast<uint16_t>(i), mask);
+        uint16_t sliceIdx = static_cast<uint16_t>(i);
+
+        // 3. Single-pass manual memory loop replaces 4 masked OpenCV operations
+        for (int r = 0; r < rows; ++r)
+        {
+            // Acquire row pointers once per row
+            const float* pAbs    = absval.ptr<float>(r);
+            const cv::Vec2f* pWav    = wavelets[i].ptr<cv::Vec2f>(r);
+            float* pMaxAbs = maxAbs.ptr<float>(r);
+            cv::Vec2f* pMerged = mergedOut.ptr<cv::Vec2f>(r);
+            uint16_t* pDepth  = depthIndex16.ptr<uint16_t>(r);
+
+            for (int c = 0; c < cols; ++c)
+            {
+                if (pAbs[c] > pMaxAbs[c])
+                {
+                    pMaxAbs[c] = pAbs[c];
+                    pMerged[c] = pWav[c];
+                    pDepth[c]  = sliceIdx;
+                }
+            }
+        }
     }
 
     // if (*abortFlag) return false;

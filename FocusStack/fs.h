@@ -123,6 +123,8 @@ private:
     // Progress
     int progressCount = -1;
     int progressTotal = 0;
+    QElapsedTimer t;
+    int msToGo;
     void incrementProgress();
     void initializeProgress();
 };

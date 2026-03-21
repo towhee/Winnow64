@@ -956,9 +956,11 @@ bool Align::alignSlice(int              slice,
     // Apply transform to color + gray
     cv::Mat alignedColorMat, alignedGrayMat;
     if (G::FSLog) G::log(srcFun, "cv::Mat alignedColor, alignedGray");
-    applyTransform(currImage.color, currGlobal.transform, alignedColorMat);
+    applyTransform(currImage.color, currGlobal.transform, alignedColorSlice);
+    // applyTransform(currImage.color, currGlobal.transform, alignedColorMat);
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-    applyTransform(currImage.gray,  currGlobal.transform, alignedGrayMat);
+    applyTransform(currImage.gray,  currGlobal.transform, alignedGraySlice);
+    // applyTransform(currImage.gray,  currGlobal.transform, alignedGrayMat);
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
     if (G::FSLog) G::log(srcFun, "applyTransform alignedGray");
 
@@ -970,8 +972,8 @@ bool Align::alignSlice(int              slice,
     // }
 
     // Cache in memory for fast fusion
-    alignedColorSlice = alignedColorMat.clone();
-    alignedGraySlice  = alignedGrayMat.clone();
+    // alignedColorSlice = alignedColorMat.clone();
+    // alignedGraySlice  = alignedGrayMat.clone();
 
     // if (progressCallback) progressCallback();
 
