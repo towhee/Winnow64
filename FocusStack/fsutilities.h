@@ -50,7 +50,7 @@ static inline cv::Mat seEllipse(int px)
     return cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k, k));
 }
 
-
+cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize);
 
 cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16, int sliceCount);
 cv::Mat depthHeatmap(const cv::Mat &depthIndex16, int sliceCount,

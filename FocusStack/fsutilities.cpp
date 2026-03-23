@@ -9,6 +9,30 @@
 
 namespace FSUtilities {
 
+cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize)
+{
+    /*
+    This pads the aligned image to padSize, using reflection at the borders,
+    centered. This prevents edge artifacts in the focus metric and keeps all slices
+    the same padded size.
+    */
+    if (src.empty()) return cv::Mat();
+    if (src.size() == dstSize) return src;
+
+    const int padW = dstSize.width  - src.cols;
+    const int padH = dstSize.height - src.rows;
+    CV_Assert(padW >= 0 && padH >= 0);
+
+    const int left   = padW / 2;
+    const int right  = padW - left;
+    const int top    = padH / 2;
+    const int bottom = padH - top;
+
+    cv::Mat dst;
+    cv::copyMakeBorder(src, dst, top, bottom, left, right, cv::BORDER_REFLECT);
+    return dst;
+}
+
 cv::Mat canonicalizeGrayFloat01(const cv::Mat& in,
                                 const cv::Size& canonicalSize,
                                 int interp,
@@ -592,7 +616,7 @@ cv::Mat canonicalizeToSize(const cv::Mat& src,
     return out;
 }
 
-cv::Mat FSUtilities::alignToOrigSize(const cv::Mat& img, cv::Size origSize)
+cv::Mat alignToOrigSize(const cv::Mat& img, cv::Size origSize)
 {
     CV_Assert(!img.empty());
     CV_Assert(origSize.width  > 0);

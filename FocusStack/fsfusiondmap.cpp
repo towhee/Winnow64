@@ -20,29 +20,29 @@ static cv::Size computePadSizeForPyr(const cv::Size& s, int levels)
     return cv::Size(w, h);
 }
 
-static cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize)
-{
-    /*
-    This pads the aligned image to padSize, using reflection at the borders,
-    centered. This prevents edge artifacts in the focus metric and keeps all slices
-    the same padded size.
-    */
-    if (src.empty()) return cv::Mat();
-    if (src.size() == dstSize) return src;
+// static cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize)
+// {
+//     /*
+//     This pads the aligned image to padSize, using reflection at the borders,
+//     centered. This prevents edge artifacts in the focus metric and keeps all slices
+//     the same padded size.
+//     */
+//     if (src.empty()) return cv::Mat();
+//     if (src.size() == dstSize) return src;
 
-    const int padW = dstSize.width  - src.cols;
-    const int padH = dstSize.height - src.rows;
-    CV_Assert(padW >= 0 && padH >= 0);
+//     const int padW = dstSize.width  - src.cols;
+//     const int padH = dstSize.height - src.rows;
+//     CV_Assert(padW >= 0 && padH >= 0);
 
-    const int left   = padW / 2;
-    const int right  = padW - left;
-    const int top    = padH / 2;
-    const int bottom = padH - top;
+//     const int left   = padW / 2;
+//     const int right  = padW - left;
+//     const int top    = padH / 2;
+//     const int bottom = padH - top;
 
-    cv::Mat dst;
-    cv::copyMakeBorder(src, dst, top, bottom, left, right, cv::BORDER_REFLECT);
-    return dst;
-}
+//     cv::Mat dst;
+//     cv::copyMakeBorder(src, dst, top, bottom, left, right, cv::BORDER_REFLECT);
+//     return dst;
+// }
 
 // robust max: 99th percentile
 static float robustMax99(const cv::Mat& m32f)
@@ -862,6 +862,8 @@ index is most in-focus (and its score), and also the 2nd-best.
     top1Score32_:   top score buffer (often same as s0, depending on later code).
 */
     const QString srcFun = "FSFusionDMap::streamSlice";
+    if (G::FSLog) G::log(srcFun, "Slice " + QString::number(slice));
+
     if (isAbort(abortFlag)) return false;
 
     if (grayAlign8.empty() || grayAlign8.type() != CV_8U) {
@@ -870,9 +872,8 @@ index is most in-focus (and its score), and also the 2nd-best.
     }
     if (slice == 0)
     {
-        /* Caller must have set these before calling streamSlice (same as your
-           DMapAdvanced pattern).  alignSize / validAreaAlign should already be
-           valid. */
+        /* Caller must have set these before calling streamSlice.
+           alignSize / validAreaAlign should already be valid. */
         if (alignSize.width <= 0 || alignSize.height <= 0) {
             qWarning().noquote() << "WARNING:" << srcFun << "alignSize not set.";
             return false;
@@ -910,7 +911,7 @@ index is most in-focus (and its score), and also the 2nd-best.
     }
 
     // pad the aligned image to padSize, using reflection at the borders, centered
-    cv::Mat grayPad8 = padCenterReflect(grayAlign8, padSize);
+    cv::Mat grayPad8 = FSUtilities::padCenterReflect(grayAlign8, padSize);
 
     // focus metric
     cv::Mat score32;
@@ -970,6 +971,11 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     QString msg;
 
     N = inputPaths.size();
+
+    if (N == 0 || globals.size() != (size_t)N) {
+        if (statusCb) statusCb("Error: Mismatched path and transform counts.");
+        return false;
+    }
 
     if (!active_ || s0_pad32.empty() || N <= 0 || (int)globals.size() != N)
         return false;
@@ -1117,6 +1123,9 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     cv::Mat out32(origSz, CV_32FC3, cv::Scalar(0,0,0));
 
     if (o.enablePyramidBlend) {
+        msg = "Pyramid Blending";
+        if (G::FSLog) G::log(srcFun, msg);
+
         // Build pyramids from depthIndex16 (same as advanced path)
         const int levels = computePyrLevels(origSz);
 
@@ -1127,13 +1136,18 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         FusionPyr::PyrAccum A;
         A.reset(origSz, levels);
 
-        // Check for varied illumination
-        // cv::Mat sumW(origSz, CV_32F, cv::Scalar(0));
+        /* Initialize the accumulation buffer at the start of the
+           "Simple blending" block */
+        out32 = cv::Mat::zeros(origSz, CV_32FC3);
 
         // Per-slice accumulation
         for (int s = 0; s < N; ++s)
         {
             QString ss = QString::number(s+1);
+            qDebug() << msg << "s =" << s << "alignedColorPaths.size() =" << alignedColorPaths.size();
+
+            if (s >= alignedColorPaths.size()) break;
+
             msg = "Pyramid blending: slice " + ss;
             if (G::FSLog) G::log(srcFun, msg);
 
@@ -1142,8 +1156,8 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
 
             if (isAbort(abortFlag)) return false;
 
-            cv::Mat colorSliceAligned = cv::imread(
-                alignedColorPaths[s].toStdString(), cv::IMREAD_UNCHANGED);
+            std::string path = alignedColorPaths[s].toStdString();
+            cv::Mat colorSliceAligned = cv::imread(path, cv::IMREAD_UNCHANGED);
             if (colorSliceAligned.empty()) {
                 qWarning().noquote() << "WARNING:" << srcFun <<
                     "colorSliceAligned " + ss + " is empty";
@@ -1154,6 +1168,13 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
             if (!toColor32_01_FromLoaded(colorSliceAligned, color32, srcFun, s)) {
                 qWarning().noquote() << "WARNING:" << srcFun <<
                     "toColor32_01_FromLoaded " + ss + " failed";
+                return false;
+            }
+
+            if (color32.size() != origSz) {
+                qWarning() << "SIZE MISMATCH! Slice" << s
+                           << "Image:" << color32.cols << "x" << color32.rows
+                           << "Expected (origSz):" << origSz.width << "x" << origSz.height;
                 return false;
             }
 
@@ -1227,6 +1248,10 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     else {
         msg = "Simple blending";
         if (G::FSLog) G::log(srcFun, msg);
+
+        // cv::Mat out32 = cv::Mat::zeros(origSz, CV_32FC3);
+        out32 = cv::Mat::zeros(alignSize, CV_32FC3);
+
         for (int s = 0; s < N; ++s)
         {
             cv::Mat colorSliceAligned = cv::imread(

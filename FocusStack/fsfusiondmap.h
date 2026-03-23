@@ -3,6 +3,7 @@
 #include "fsalign_types.h"
 #include "fsfusion.h"
 #include "fusionpyr.h"
+#include "fsutilities.h"
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -81,6 +82,8 @@ public:
 
     void reset();
 
+    int computePyrLevels(const cv::Size& origSz) const;
+
     bool streamSlice(int slice,
                      const cv::Mat& grayAlign8,      // CV_8U ALIGN
                      const cv::Mat& colorAlign,      // optional
@@ -132,8 +135,6 @@ public:
     cv::Mat prePropDepth;
 
     // helpers
-    int computePyrLevels(const cv::Size& origSz) const;
-
     bool toColor32_01_FromLoaded(cv::Mat colorTmp,
                                  cv::Mat& color32,
                                  const QString& where,
