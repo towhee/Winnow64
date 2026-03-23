@@ -149,7 +149,8 @@ void FS::initializeProgress()
     progressTotal = 0;
     for (const QStringList &g : groups) {
         int slices = g.count();
-        progressTotal += (slices * 3 + 2);
+        if (o.method == "DMap") progressTotal += (slices * 3 + 2);
+        if (o.method == "PMax") progressTotal += (slices * 2 + 1);
     }
     QString msg = "progressTotal = " + QString::number(progressTotal);
     if (G::FSLog) G::log(srcFun, msg);
@@ -158,12 +159,23 @@ void FS::initializeProgress()
 
 void FS::incrementProgress()
 {
+    static int msPrevStep = 0;
+    qint64 msElapsed = t.elapsed();
+    int msStep = msElapsed - msPrevStep;
     QString srcFun = "FS::incrementProgress";
-    qint64 msPerStep = t.elapsed() / progressCount;
+    qint64 msPerStep = msElapsed / progressCount;
     msToGo = msPerStep * (progressTotal - progressCount);
     emit progress(++progressCount, progressTotal);
-    QString msg = QString::number(progressCount) + "/" + QString::number(progressTotal);
-    if (G::FSLog) G::log(srcFun, msg);
+
+    if (G::FSLog){
+        QString msg = QString::number(progressCount) + "/" +
+                      QString::number(progressTotal) +
+                      "  msStep = " + QString::number(msStep) +
+                      "  msPerStep = " + QString::number(msPerStep) +
+                      "  msToGo = " + QString::number(msToGo)
+            ;
+        G::log(srcFun, msg);
+    }
 }
 
 QImage FS::thumbnail(const cv::Mat &mat)
@@ -460,6 +472,7 @@ bool FS::runDMap()
         statusCb,
         progressCb
         );
+
     incrementProgress();
 
     return success;
@@ -467,179 +480,136 @@ bool FS::runDMap()
 
 bool FS::runPMax()
 {
-    // QString srcFun = "FS::runPMax";
-    // QString msg = "Start using method: " + o.method;
-    // if (G::FSLog) G::log(srcFun, msg);
+    QString srcFun = "FS::runPMax_Parallel";
+    auto progressCb = [this]{ incrementProgress(); };
+    auto statusCb   = [this](const QString &m){ status(m); };
 
-    // FSFusion::ProgressCallback progressCb = [this]{ incrementProgress(); };
-    // FSFusion::StatusCallback   statusCb   = [this](const QString &m){ status(m); };
+    // -----------------------------
+    // Align options
+    // -----------------------------
+    FSAlign::Options aopt;
+    aopt.matchContrast     = true;
+    aopt.matchWhiteBalance = true;
+    aopt.lowRes            = 256;
+    aopt.maxRes            = 2048;
+    aopt.fullResolution    = true;
 
-    // // -----------------------------
-    // // Align options (same as DMap)
-    // // -----------------------------
-    // FSAlign::Options aopt;
-    // aopt.matchContrast     = true;
-    // aopt.matchWhiteBalance = true;
-    // aopt.lowRes            = 256;
-    // aopt.maxRes            = 2048;
-    // aopt.fullResolution    = false;
+    // -----------------------------
+    // Fusion options
+    // -----------------------------
+    FSFusion::Options fopt;
+    fopt.method          = "PMax";
+    fopt.useOpenCL       = o.enableOpenCL;
+    fopt.consistency     = 2;
+    fopt.depthFolderPath = depthFolderPath;
 
-    // // -----------------------------
-    // // Fusion options
-    // // -----------------------------
-    // FSFusion::Options fopt;
-    // fopt.method          = o.method;     // "DMap" or "PMax"
-    // fopt.useOpenCL       = o.enableOpenCL;
-    // fopt.consistency     = 2;
-    // fopt.depthFolderPath = depthFolderPath;
+    FSFusionPMax::Options popt;
+    popt.energyMode             = "Max";
+    popt.weightedPower          = 7.0f;
+    popt.weightedSigma0         = 2.0f;
+    popt.weightedIncludeLowpass = true;
+    popt.weightedEpsEnergy      = 1e-8f;
+    popt.weightedEpsWeight      = 1e-8f;
 
-    // // -----------------------------
-    // // PMax Fusion options
-    // // -----------------------------
-    // FSFusionPMax::Options popt;
-    // popt.energyMode             = "Max";    // "Max" or "Weighted"
-    // popt.weightedPower          = 7.0f;     // 4.0f default
-    // popt.weightedSigma0         = 2.0f;     // 1.0f default
-    // popt.weightedIncludeLowpass = true;     // false looks bad
-    // popt.weightedEpsEnergy      = 1e-8f;
-    // popt.weightedEpsWeight      = 1e-8f;
+    FSLoader::Image prevImage, currImage;
+    Result prevGlobal;
+    std::vector<Result> globals;
+    globals.reserve(slices);
 
-    // // optional: tag special runs
-    // o.methodInfo = "LL";  // LL = Low-frequency / Low-pass band
+    FSAlign::Align align;
+    FSFusionPMax   fuse;
 
-    // // -----------------------------
-    // // Working state
-    // // -----------------------------
-    // FSLoader::Image prevImage;
-    // FSLoader::Image currImage;
+    struct WarpResult {
+        int slice;
+        cv::Mat gray;
+        cv::Mat color;
+    };
 
-    // Result prevGlobal;
-    // Result currGlobal;
+    QList<QFuture<WarpResult>> futures;
+    cv::Rect masterROI;
 
-    // cv::Mat alignedGraySlice;   // ALIGN space
-    // cv::Mat alignedColorSlice;  // ALIGN space
+    for (int slice = 0; slice < slices; ++slice)
+    {
+        if (abortRequested()) return false;
 
-    // // Used by streamFinish for reloads / erosion stage
-    // std::vector<Result> globals;
-    // globals.reserve(slices);
+        status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(slices));
 
-    // FSAlign::Align align;
-    // FSFusionPMax   fuse;    // engine (inherits FSFusion base)
+        currImage = FSLoader::load(inputPaths.at(slice).toStdString());
 
-    // // -----------------------------
-    // // Pass-1: slice loop
-    // // -----------------------------
-    // for (int slice = 0; slice < slices; ++slice)
-    // {
-    //     QString s = " Slice: " + QString::number(slice) + " of " + QString::number(slices) + " ";
-    //     if (G::FSLog) G::log("");
+        cv::Mat colorForThread = currImage.color.clone();
+        cv::Mat grayForThread = currImage.gray.clone();
 
-    //     status(s + "Aligning...");
+        Result currGlobal;
 
-    //     currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
-    //     currGlobal = FSAlign::makeIdentity(currImage.validArea);
+        if (slice == 0) {
+            masterROI = currImage.validArea;
+            currGlobal = FSAlign::makeIdentity(masterROI);
 
-    //     if (abortRequested()) return false;
+            fuse.alignSize      = masterROI.size();
+            fuse.validAreaAlign = cv::Rect(0, 0, masterROI.width, masterROI.height);
+            fuse.origSize       = masterROI.size();
+            fuse.outDepth       = currImage.color.depth();
+        }
+        else {
+            if (!align.alignSlice(slice, prevImage, currImage, prevGlobal,
+                                  currGlobal, nullptr, nullptr,
+                                  aopt, &abort, statusCb, progressCb))
+                return false;
+            incrementProgress();
+        }
+        globals.push_back(currGlobal);
 
-    //     if (slice == 0)
-    //     {
-    //         alignedGraySlice  = currImage.gray.clone();
-    //         alignedColorSlice = currImage.color.clone();
+        futures.append(QtConcurrent::run(QThreadPool::globalInstance(),
+            [slice, colorForThread, grayForThread, currGlobal, masterROI,
+            paths = alignedColorPaths[slice]]()
+            {
+             WarpResult res;
+             res.slice = slice;
 
-    //         // Geometry required by streaming engines (base-class fields)
-    //         fuse.validAreaAlign = currImage.validArea;
-    //         fuse.origSize       = currImage.origSize;         // informational; ORIG is validAreaAlign dims
-    //         fuse.alignSize      = alignedGraySlice.size();
-    //         fuse.outDepth       = alignedColorSlice.depth();
+             cv::Mat warpedColor, warpedGray;
+             FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
+             FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
 
-    //         globals.push_back(currGlobal);
-    //     }
-    //     else
-    //     {
-    //         if (!align.alignSlice(slice,
-    //                               prevImage, currImage,
-    //                               prevGlobal, currGlobal,
-    //                               alignedGraySlice, alignedColorSlice,
-    //                               aopt, &abort, statusCb, progressCb))
-    //         {
-    //             qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
-    //             return false;
-    //         }
+             res.color = warpedColor(masterROI).clone();
+             res.gray  = warpedGray(masterROI).clone();
 
-    //         globals.push_back(currGlobal);
-    //     }
+             if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
 
-    //     // Debug/test write aligned slices
-    //     {
-    //         cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
-    //         cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
-    //     }
+             cv::imwrite(paths.toStdString(), res.color);
 
-    //     if (abortRequested()) return false;
-    //     incrementProgress();
+             return res;
+            }));
 
-    //     // -----------------------------
-    //     // Fuse slice (PMax streaming)
-    //     // -----------------------------
-    //     status(s + "Fusing...");
+        prevImage = currImage;
+        prevGlobal = currGlobal;
+    }
 
-    //     if (!fuse.streamSlice(slice,
-    //                           alignedGraySlice,
-    //                           alignedColorSlice,
-    //                           fopt,
-    //                           &abort,
-    //                           statusCb,
-    //                           progressCb))
-    //     {
-    //         qWarning() << "WARNING:" << srcFun << "fuse.streamSlice failed.";
-    //         return false;
-    //     }
+    // Process results as they finish
+    for (auto &f : futures) {
+        WarpResult res = f.result();
+        fuse.streamSlice(res.slice, res.gray, res.color, fopt,
+                         &abort, statusCb, progressCb);
+        incrementProgress();
+    }
 
-    //     if (abortRequested()) return false;
-    //     incrementProgress();
+    if (abortRequested()) return false;
 
-    //     prevImage  = currImage;
-    //     prevGlobal = currGlobal;
-    // }
+    status("Finalizing PMax fusion...");
 
-    // msg = "Slice processing done. Finish merge, invert, recover color and crop padding.";
-    // if (G::FSLog) G::log(srcFun, msg);
+    bool success = fuse.streamFinish(
+        fusedColorMat,
+        fopt,
+        depthIndex16Mat,
+        inputPaths,
+        globals,
+        &abort,
+        statusCb,
+        progressCb
+        );
 
-    // // -----------------------------
-    // // Pass-2: finish
-    // // -----------------------------
-    // status("Finalizing fusion...");
+    incrementProgress();
 
-    // if (!fuse.streamFinish(fusedColorMat,
-    //                        fopt,
-    //                        depthIndex16Mat,
-    //                        inputPaths,
-    //                        globals,
-    //                        &abort,
-    //                        statusCb,
-    //                        progressCb))
-    // {
-    //     qWarning() << "WARNING:" << srcFun << "FSFusionPMax::streamFinish failed.";
-    //     return false;
-    // }
-
-    // if (abortRequested()) return false;
-    // incrementProgress();
-
-    // // Optional parameter dump (keep if useful)
-    // if (false)
-    // {
-    //     qDebug().noquote()
-    //         << "\n weightedPower            =" << popt.weightedPower
-    //         << "\n weightedSigma0           =" << popt.weightedSigma0
-    //         << "\n weightedIncludeLowpass   =" << popt.weightedIncludeLowpass
-    //         << "\n weightedEpsEnergy        =" << popt.weightedEpsEnergy
-    //         << "\n weightedEpsWeight        =" << popt.weightedEpsWeight
-    //         << "\n";
-    // }
-
-    // if (o.saveDiagnostics) save(fusionFolderPath);
-    return true;
+    return success;
 }
 
 QString FS::save(QString fuseFolderPath)
