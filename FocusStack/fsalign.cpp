@@ -895,16 +895,16 @@ void applyContrastWhiteBalance(cv::Mat &img,
 // StreamPMax pipeline
 //-----------------------------------------------------------------------------------
 
-bool Align::alignSlice(int              slice,
-                       FSLoader::Image  &prevImage,
-                       FSLoader::Image  &currImage,
-                       Result           &prevGlobal,
-                       Result           &currGlobal,
-                       cv::Mat          &alignedGraySlice,
-                       cv::Mat          &alignedColorSlice,
-                       const Options    &opt,
-                       std::atomic_bool *abortFlag,
-                       StatusCallback   status,
+bool Align::alignSlice(int slice,
+                       const FSLoader::Image& prevImage,
+                       const FSLoader::Image& currImage,
+                       const Result& prevGlobal,
+                       Result& currGlobal,
+                       cv::Mat* alignedGraySlice,
+                       cv::Mat* alignedColorSlice,
+                       const Options& opt,
+                       std::atomic<bool>* abortFlag,
+                       StatusCallback status,
                        ProgressCallback progressCallback
                        )
 {
@@ -917,8 +917,12 @@ bool Align::alignSlice(int              slice,
     // first slice is already "aligned"
     if (prevImage.gray.empty())
     {
-        alignedGraySlice  = currImage.gray.clone();
-        alignedColorSlice = currImage.color.clone();
+        if (alignedGraySlice) {
+            *alignedGraySlice  = currImage.gray.clone();
+        }
+        if (alignedColorSlice) {
+            *alignedColorSlice = currImage.color.clone();
+        }
         return true;
     }
 
@@ -955,12 +959,18 @@ bool Align::alignSlice(int              slice,
 
     // Apply transform to color + gray
     cv::Mat alignedColorMat, alignedGrayMat;
-    if (G::FSLog) G::log(srcFun, "cv::Mat alignedColor, alignedGray");
-    applyTransform(currImage.color, currGlobal.transform, alignedColorSlice);
-    // applyTransform(currImage.color, currGlobal.transform, alignedColorMat);
+    if (alignedColorSlice) {
+        applyTransform(currImage.color, currGlobal.transform, *alignedColorSlice);
+    }
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-    applyTransform(currImage.gray,  currGlobal.transform, alignedGraySlice);
-    // applyTransform(currImage.gray,  currGlobal.transform, alignedGrayMat);
+    if (alignedGraySlice) {
+        applyTransform(currImage.gray,  currGlobal.transform, *alignedGraySlice);
+
+        // Ensure gray is 8-bit
+        if (alignedGraySlice->type() != CV_8U) {
+            alignedGraySlice->convertTo(*alignedGraySlice, CV_8U);
+        }
+    }
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
     if (G::FSLog) G::log(srcFun, "applyTransform alignedGray");
 

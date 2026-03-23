@@ -61,19 +61,17 @@ using StatusCallback   = std::function<void(const QString &message)>;
 class Align
 {
 public:
-    bool alignSlice(
-        int                         slice,
-        FSLoader::Image            &prevImage,
-        FSLoader::Image            &currImage,
-        Result                     &prevGlobal,
-        Result                     &currGlobal,
-        cv::Mat                    &alignedGraySlice,
-        cv::Mat                    &alignedColorSlice,
-        const Options              &opt,
-        std::atomic_bool           *abortFlag,
-        StatusCallback              status,
-        ProgressCallback            progressCallback
-        );
+    bool alignSlice(int slice,
+                    const FSLoader::Image& prevImage,
+                    const FSLoader::Image& currImage,
+                    const Result& prevGlobal,
+                    Result& currGlobal,
+                    cv::Mat* alignedGraySlice,
+                    cv::Mat* alignedColorSlice,
+                    const Options& opt,
+                    std::atomic<bool>* abortFlag,
+                    StatusCallback status,
+                    ProgressCallback progressCallback);
 };
 
 } // namespace FSAlign

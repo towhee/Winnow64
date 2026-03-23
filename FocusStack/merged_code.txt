@@ -253,19 +253,17 @@ using StatusCallback   = std::function<void(const QString &message)>;
 class Align
 {
 public:
-    bool alignSlice(
-        int                         slice,
-        FSLoader::Image            &prevImage,
-        FSLoader::Image            &currImage,
-        Result                     &prevGlobal,
-        Result                     &currGlobal,
-        cv::Mat                    &alignedGraySlice,
-        cv::Mat                    &alignedColorSlice,
-        const Options              &opt,
-        std::atomic_bool           *abortFlag,
-        StatusCallback              status,
-        ProgressCallback            progressCallback
-        );
+    bool alignSlice(int slice,
+                    const FSLoader::Image& prevImage,
+                    const FSLoader::Image& currImage,
+                    const Result& prevGlobal,
+                    Result& currGlobal,
+                    cv::Mat* alignedGraySlice,
+                    cv::Mat* alignedColorSlice,
+                    const Options& opt,
+                    std::atomic<bool>* abortFlag,
+                    StatusCallback status,
+                    ProgressCallback progressCallback);
 };
 
 } // namespace FSAlign
@@ -609,6 +607,7 @@ public:
 #include "fsalign_types.h"
 #include "fsfusion.h"
 #include "fusionpyr.h"
+#include "fsutilities.h"
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -687,6 +686,8 @@ public:
 
     void reset();
 
+    int computePyrLevels(const cv::Size& origSz) const;
+
     bool streamSlice(int slice,
                      const cv::Mat& grayAlign8,      // CV_8U ALIGN
                      const cv::Mat& colorAlign,      // optional
@@ -738,8 +739,6 @@ public:
     cv::Mat prePropDepth;
 
     // helpers
-    int computePyrLevels(const cv::Size& origSz) const;
-
     bool toColor32_01_FromLoaded(cv::Mat colorTmp,
                                  cv::Mat& color32,
                                  const QString& where,
@@ -1772,7 +1771,7 @@ static inline cv::Mat seEllipse(int px)
     return cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k, k));
 }
 
-
+cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize);
 
 cv::Mat makeDepthPreviewEnhanced(const cv::Mat &depthIndex16, int sliceCount);
 cv::Mat depthHeatmap(const cv::Mat &depthIndex16, int sliceCount,
@@ -1974,6 +1973,7 @@ cv::Mat finalizeBlend(const PyrAccum& A, float eps);
 
 #include <QDir>
 #include <QFileInfo>
+#include <QtConcurrent>
 #include <QDebug>
 
 FS::FS(QObject *parent)
@@ -2261,10 +2261,7 @@ void FS::run()
 
 bool FS::runDMap()
 {
-    QString srcFun = "FS::runStreamDMap";
-    QString msg = "Start using method: " + o.method;
-    if (G::FSLog) G::log(srcFun, msg);
-
+    QString srcFun = "FS::runDMap_Parallel";
     auto progressCb = [this]{ incrementProgress(); };
     auto statusCb   = [this](const QString &m){ status(m); };
 
@@ -2276,7 +2273,7 @@ bool FS::runDMap()
     aopt.matchWhiteBalance = true;
     aopt.lowRes            = 256;
     aopt.maxRes            = 2048;
-    aopt.fullResolution    = false;
+    aopt.fullResolution    = true;
 
     // -----------------------------
     // fusion options (dmap basic)
@@ -2287,308 +2284,318 @@ bool FS::runDMap()
     fopt.consistency     = 2;
     fopt.depthFolderPath = depthFolderPath;
 
-    // -----------------------------
-    // working state
-    // -----------------------------
-    FSLoader::Image prevImage;
-    FSLoader::Image currImage;
-
+    FSLoader::Image prevImage, currImage;
     Result prevGlobal;
-    Result currGlobal;
-
-    cv::Mat alignedGraySlice;   // ALIGN space
-    cv::Mat alignedColorSlice;  // ALIGN space
-
     std::vector<Result> globals;
     globals.reserve(slices);
 
     FSAlign::Align align;
-
-    // New basic engine
     FSFusionDMap fuse;
 
-    // -----------------------------
-    // pass-1: slice loopr
-    // -----------------------------
+    // Create a struct to hold the warped result
+    struct WarpResult {
+        int slice;
+        cv::Mat gray;
+        cv::Mat color;
+    };
+
+    QList<QFuture<WarpResult>> futures;
+
+    // Identify the Master ROI on the main thread to anchor the stack
+    cv::Rect masterROI;
+
     for (int slice = 0; slice < slices; ++slice)
     {
-        QString s = " Slice: " + QString::number(slice+1) + " of " + QString::number(slices) + " ";
-        if (G::FSLog) G::log("");
-        qDebug() << s;
-
-        status("Aligning and depth mapping" + s);
-
-        currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
-        currGlobal = FSAlign::makeIdentity(currImage.validArea);
-
-       if (slice == 0)
-        {
-            alignedGraySlice  = currImage.gray.clone();
-            alignedColorSlice = currImage.color.clone();
-
-            // base geometry that dmap requires (same pattern as DMapAdvanced)
-            fuse.validAreaAlign = currImage.validArea; // ALIGN -> ORIG crop
-            fuse.alignSize      = alignedGraySlice.size();
-            fuse.origSize       = cv::Size(currImage.validArea.width, currImage.validArea.height); // optional but ok
-            fuse.outDepth       = alignedColorSlice.depth(); // 8u/16u output depth
-
-            globals.push_back(currGlobal);
-        }
-        else
-        {
-            if (!align.alignSlice(slice,
-                                  prevImage, currImage,
-                                  prevGlobal, currGlobal,
-                                  alignedGraySlice, alignedColorSlice,
-                                  aopt, &abort, statusCb, progressCb))
-            {
-                qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
-                return false;
-            }
-
-            globals.push_back(currGlobal);
-        }
-
-        // enforce gray is 8-bit for dmap basic (focus metric expects CV_8U)
-        if (alignedGraySlice.type() != CV_8U)
-        {
-            cv::Mat tmp;
-            alignedGraySlice.convertTo(tmp, CV_8U);
-            alignedGraySlice = tmp;
-        }
-
-        // write aligned for reuse in fuse.streamFinish blending
-        cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
-        cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
-        // cv::Mat alignedGrayImg = FSUtilities::alignToOrigSize(alignedGraySlice, currImage.origSize);
-        // cv::imwrite(alignedGrayPaths[slice].toStdString(), alignedGrayImg);
-
-        // pass-1 update (pads internally)
-        if (!fuse.streamSlice(slice,
-                              alignedGraySlice,
-                              alignedColorSlice,
-                              fopt,
-                              &abort,
-                              statusCb,
-                              progressCb))
-        {
-            qWarning() << "WARNING:" << srcFun << "fuse.streamSlice failed.";
-            return false;
-        }
-
         if (abortRequested()) return false;
-        incrementProgress();
 
-        prevImage  = currImage;
+        status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(slices));
+
+        // 1. Sequential Part: Load and ECC Align
+        currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+
+        // Deep copy matrices to ensure the main loop doesn't overwrite them
+        // while the background thread is still reading them
+        cv::Mat colorForThread = currImage.color.clone();
+        cv::Mat grayForThread = currImage.gray.clone();
+
+        Result currGlobal;
+
+        if (slice == 0) {
+            // Anchor everything to Slice 0
+            masterROI = currImage.validArea;
+            currGlobal = FSAlign::makeIdentity(masterROI);
+
+            // Initialize engine: tell it images are already cropped to ROI and zero-indexed
+            fuse.alignSize      = masterROI.size();
+            fuse.validAreaAlign = cv::Rect(0, 0, masterROI.width, masterROI.height);
+            fuse.origSize       = masterROI.size();
+            fuse.outDepth       = currImage.color.depth();
+        }
+        else {
+            // Align subsequent slices to the reference
+            if (!align.alignSlice(slice, prevImage, currImage, prevGlobal,
+                                  currGlobal, nullptr, nullptr,
+                                  aopt, &abort, statusCb, progressCb))
+                return false;
+        }
+        globals.push_back(currGlobal);
+
+        // 2. Parallel Part: Warping and I/O
+        futures.append(QtConcurrent::run(
+            QThreadPool::globalInstance(),
+            [slice, colorForThread, grayForThread, currGlobal, masterROI,
+             paths = alignedColorPaths[slice]]()
+            {
+                WarpResult res;
+                res.slice = slice;
+
+                // --- DEBUG: Log Transformation Matrix ---
+                if (currGlobal.transform.empty()) {
+                    qDebug() << "SLICE" << slice << "DEBUG: Transform Matrix is EMPTY!";
+                } else {
+                    qDebug() << "SLICE" << slice << "TRANSFORM:"
+                             << currGlobal.transform.at<double>(0,2)
+                             << currGlobal.transform.at<double>(1,2);
+                }
+
+                // Perform the Warp
+                cv::Mat warpedColor, warpedGray;
+                FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
+                FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
+
+                // CROP IMMEDIATELY: Sync the focus score and the disk image
+                // to the same 0,0-based coordinate system
+                res.color = warpedColor(masterROI).clone();
+                res.gray  = warpedGray(masterROI).clone();
+
+                if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
+
+                // Save the exact same sharp ROI to disk for the final fusion read
+                cv::imwrite(paths.toStdString(), res.color);
+
+                return res;
+            }));
+
+        // Update tracking for the next slice
+        prevImage = currImage;
         prevGlobal = currGlobal;
     }
 
-    // tmp debugging
-    fuse.alignedColorPaths = alignedColorPaths;
-    fuse.alignedGrayPaths = alignedGrayPaths;
+    // Diagnostic check for focus map range
+    double minV, maxV;
+    cv::minMaxLoc(depthIndex16Mat, &minV, &maxV);
+    qDebug() << "DEBUG0: depthIndex16 range:" << minV << "to" << maxV;
 
-    msg = "Slice processing done. DMap finish: build maps, stream slices, blend, crop.";
-    if (G::FSLog) G::log(srcFun, msg);
-
-    // -----------------------------
-    // pass-2: finish
-    // -----------------------------
-    status("Finalizing DMapBasic fusion...");
-    if (!fuse.streamFinish(fusedColorMat,
-                           fopt,
-                           depthIndex16Mat,
-                           inputPaths,
-                           globals,
-                           &abort,
-                           statusCb,
-                           progressCb))
-    {
-        qWarning() << "WARNING:" << srcFun << "FSFusionDMap::streamFinish failed.";
-        return false;
+    // 3. Sequential Part: Feed results back into the fusion engine
+    for (auto &f : futures) {
+        WarpResult res = f.result();
+        fuse.streamSlice(res.slice, res.gray, res.color, fopt,
+                         &abort, statusCb, progressCb);
     }
 
     if (abortRequested()) return false;
-    incrementProgress();
 
-    if (o.isLocal && o.saveDiagnostics) save(fusionFolderPath);
+    // 4. Finalization
+    status("Finalizing DMap fusion...");
 
-    return true;
+    // Link the temp file paths so streamFinish can read the warped slices
+    fuse.alignedColorPaths = alignedColorPaths;
+    fuse.alignedGrayPaths = alignedGrayPaths;
+
+    bool success = fuse.streamFinish(
+        fusedColorMat,
+        fopt,
+        depthIndex16Mat,
+        inputPaths,
+        globals,
+        &abort,
+        statusCb,
+        progressCb
+        );
+
+    if (success) {
+        double fMin, fMax;
+        cv::minMaxLoc(depthIndex16Mat, &fMin, &fMax);
+        qDebug() << "DEBUG: Final depthIndex16 range:" << fMin << "to" << fMax;
+    }
+
+    return success;
 }
 
 bool FS::runPMax()
 {
-    QString srcFun = "FS::runPMax";
-    QString msg = "Start using method: " + o.method;
-    if (G::FSLog) G::log(srcFun, msg);
+    // QString srcFun = "FS::runPMax";
+    // QString msg = "Start using method: " + o.method;
+    // if (G::FSLog) G::log(srcFun, msg);
 
-    FSFusion::ProgressCallback progressCb = [this]{ incrementProgress(); };
-    FSFusion::StatusCallback   statusCb   = [this](const QString &m){ status(m); };
+    // FSFusion::ProgressCallback progressCb = [this]{ incrementProgress(); };
+    // FSFusion::StatusCallback   statusCb   = [this](const QString &m){ status(m); };
 
-    // -----------------------------
-    // Align options (same as DMap)
-    // -----------------------------
-    FSAlign::Options aopt;
-    aopt.matchContrast     = true;
-    aopt.matchWhiteBalance = true;
-    aopt.lowRes            = 256;
-    aopt.maxRes            = 2048;
-    aopt.fullResolution    = false;
+    // // -----------------------------
+    // // Align options (same as DMap)
+    // // -----------------------------
+    // FSAlign::Options aopt;
+    // aopt.matchContrast     = true;
+    // aopt.matchWhiteBalance = true;
+    // aopt.lowRes            = 256;
+    // aopt.maxRes            = 2048;
+    // aopt.fullResolution    = false;
 
-    // -----------------------------
-    // Fusion options
-    // -----------------------------
-    FSFusion::Options fopt;
-    fopt.method          = o.method;     // "DMap" or "PMax"
-    fopt.useOpenCL       = o.enableOpenCL;
-    fopt.consistency     = 2;
-    fopt.depthFolderPath = depthFolderPath;
+    // // -----------------------------
+    // // Fusion options
+    // // -----------------------------
+    // FSFusion::Options fopt;
+    // fopt.method          = o.method;     // "DMap" or "PMax"
+    // fopt.useOpenCL       = o.enableOpenCL;
+    // fopt.consistency     = 2;
+    // fopt.depthFolderPath = depthFolderPath;
 
-    // -----------------------------
-    // PMax Fusion options
-    // -----------------------------
-    FSFusionPMax::Options popt;
-    popt.energyMode             = "Max";    // "Max" or "Weighted"
-    popt.weightedPower          = 7.0f;     // 4.0f default
-    popt.weightedSigma0         = 2.0f;     // 1.0f default
-    popt.weightedIncludeLowpass = true;     // false looks bad
-    popt.weightedEpsEnergy      = 1e-8f;
-    popt.weightedEpsWeight      = 1e-8f;
+    // // -----------------------------
+    // // PMax Fusion options
+    // // -----------------------------
+    // FSFusionPMax::Options popt;
+    // popt.energyMode             = "Max";    // "Max" or "Weighted"
+    // popt.weightedPower          = 7.0f;     // 4.0f default
+    // popt.weightedSigma0         = 2.0f;     // 1.0f default
+    // popt.weightedIncludeLowpass = true;     // false looks bad
+    // popt.weightedEpsEnergy      = 1e-8f;
+    // popt.weightedEpsWeight      = 1e-8f;
 
-    // optional: tag special runs
-    o.methodInfo = "LL";  // LL = Low-frequency / Low-pass band
+    // // optional: tag special runs
+    // o.methodInfo = "LL";  // LL = Low-frequency / Low-pass band
 
-    // -----------------------------
-    // Working state
-    // -----------------------------
-    FSLoader::Image prevImage;
-    FSLoader::Image currImage;
+    // // -----------------------------
+    // // Working state
+    // // -----------------------------
+    // FSLoader::Image prevImage;
+    // FSLoader::Image currImage;
 
-    Result prevGlobal;
-    Result currGlobal;
+    // Result prevGlobal;
+    // Result currGlobal;
 
-    cv::Mat alignedGraySlice;   // ALIGN space
-    cv::Mat alignedColorSlice;  // ALIGN space
+    // cv::Mat alignedGraySlice;   // ALIGN space
+    // cv::Mat alignedColorSlice;  // ALIGN space
 
-    // Used by streamFinish for reloads / erosion stage
-    std::vector<Result> globals;
-    globals.reserve(slices);
+    // // Used by streamFinish for reloads / erosion stage
+    // std::vector<Result> globals;
+    // globals.reserve(slices);
 
-    FSAlign::Align align;
-    FSFusionPMax   fuse;    // engine (inherits FSFusion base)
+    // FSAlign::Align align;
+    // FSFusionPMax   fuse;    // engine (inherits FSFusion base)
 
-    // -----------------------------
-    // Pass-1: slice loop
-    // -----------------------------
-    for (int slice = 0; slice < slices; ++slice)
-    {
-        QString s = " Slice: " + QString::number(slice) + " of " + QString::number(slices) + " ";
-        if (G::FSLog) G::log("");
+    // // -----------------------------
+    // // Pass-1: slice loop
+    // // -----------------------------
+    // for (int slice = 0; slice < slices; ++slice)
+    // {
+    //     QString s = " Slice: " + QString::number(slice) + " of " + QString::number(slices) + " ";
+    //     if (G::FSLog) G::log("");
 
-        status(s + "Aligning...");
+    //     status(s + "Aligning...");
 
-        currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
-        currGlobal = FSAlign::makeIdentity(currImage.validArea);
+    //     currImage  = FSLoader::load(inputPaths.at(slice).toStdString());
+    //     currGlobal = FSAlign::makeIdentity(currImage.validArea);
 
-        if (abortRequested()) return false;
+    //     if (abortRequested()) return false;
 
-        if (slice == 0)
-        {
-            alignedGraySlice  = currImage.gray.clone();
-            alignedColorSlice = currImage.color.clone();
+    //     if (slice == 0)
+    //     {
+    //         alignedGraySlice  = currImage.gray.clone();
+    //         alignedColorSlice = currImage.color.clone();
 
-            // Geometry required by streaming engines (base-class fields)
-            fuse.validAreaAlign = currImage.validArea;
-            fuse.origSize       = currImage.origSize;         // informational; ORIG is validAreaAlign dims
-            fuse.alignSize      = alignedGraySlice.size();
-            fuse.outDepth       = alignedColorSlice.depth();
+    //         // Geometry required by streaming engines (base-class fields)
+    //         fuse.validAreaAlign = currImage.validArea;
+    //         fuse.origSize       = currImage.origSize;         // informational; ORIG is validAreaAlign dims
+    //         fuse.alignSize      = alignedGraySlice.size();
+    //         fuse.outDepth       = alignedColorSlice.depth();
 
-            globals.push_back(currGlobal);
-        }
-        else
-        {
-            if (!align.alignSlice(slice,
-                                  prevImage, currImage,
-                                  prevGlobal, currGlobal,
-                                  alignedGraySlice, alignedColorSlice,
-                                  aopt, &abort, statusCb, progressCb))
-            {
-                qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
-                return false;
-            }
+    //         globals.push_back(currGlobal);
+    //     }
+    //     else
+    //     {
+    //         if (!align.alignSlice(slice,
+    //                               prevImage, currImage,
+    //                               prevGlobal, currGlobal,
+    //                               alignedGraySlice, alignedColorSlice,
+    //                               aopt, &abort, statusCb, progressCb))
+    //         {
+    //             qWarning() << "WARNING:" << srcFun << "align.alignSlice failed.";
+    //             return false;
+    //         }
 
-            globals.push_back(currGlobal);
-        }
+    //         globals.push_back(currGlobal);
+    //     }
 
-        // Debug/test write aligned slices
-        {
-            cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
-            cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
-        }
+    //     // Debug/test write aligned slices
+    //     {
+    //         cv::Mat alignedImg = FSUtilities::alignToOrigSize(alignedColorSlice, currImage.origSize);
+    //         cv::imwrite(alignedColorPaths[slice].toStdString(), alignedImg);
+    //     }
 
-        if (abortRequested()) return false;
-        incrementProgress();
+    //     if (abortRequested()) return false;
+    //     incrementProgress();
 
-        // -----------------------------
-        // Fuse slice (PMax streaming)
-        // -----------------------------
-        status(s + "Fusing...");
+    //     // -----------------------------
+    //     // Fuse slice (PMax streaming)
+    //     // -----------------------------
+    //     status(s + "Fusing...");
 
-        if (!fuse.streamSlice(slice,
-                              alignedGraySlice,
-                              alignedColorSlice,
-                              fopt,
-                              &abort,
-                              statusCb,
-                              progressCb))
-        {
-            qWarning() << "WARNING:" << srcFun << "fuse.streamSlice failed.";
-            return false;
-        }
+    //     if (!fuse.streamSlice(slice,
+    //                           alignedGraySlice,
+    //                           alignedColorSlice,
+    //                           fopt,
+    //                           &abort,
+    //                           statusCb,
+    //                           progressCb))
+    //     {
+    //         qWarning() << "WARNING:" << srcFun << "fuse.streamSlice failed.";
+    //         return false;
+    //     }
 
-        if (abortRequested()) return false;
-        incrementProgress();
+    //     if (abortRequested()) return false;
+    //     incrementProgress();
 
-        prevImage  = currImage;
-        prevGlobal = currGlobal;
-    }
+    //     prevImage  = currImage;
+    //     prevGlobal = currGlobal;
+    // }
 
-    msg = "Slice processing done. Finish merge, invert, recover color and crop padding.";
-    if (G::FSLog) G::log(srcFun, msg);
+    // msg = "Slice processing done. Finish merge, invert, recover color and crop padding.";
+    // if (G::FSLog) G::log(srcFun, msg);
 
-    // -----------------------------
-    // Pass-2: finish
-    // -----------------------------
-    status("Finalizing fusion...");
+    // // -----------------------------
+    // // Pass-2: finish
+    // // -----------------------------
+    // status("Finalizing fusion...");
 
-    if (!fuse.streamFinish(fusedColorMat,
-                           fopt,
-                           depthIndex16Mat,
-                           inputPaths,
-                           globals,
-                           &abort,
-                           statusCb,
-                           progressCb))
-    {
-        qWarning() << "WARNING:" << srcFun << "FSFusionPMax::streamFinish failed.";
-        return false;
-    }
+    // if (!fuse.streamFinish(fusedColorMat,
+    //                        fopt,
+    //                        depthIndex16Mat,
+    //                        inputPaths,
+    //                        globals,
+    //                        &abort,
+    //                        statusCb,
+    //                        progressCb))
+    // {
+    //     qWarning() << "WARNING:" << srcFun << "FSFusionPMax::streamFinish failed.";
+    //     return false;
+    // }
 
-    if (abortRequested()) return false;
-    incrementProgress();
+    // if (abortRequested()) return false;
+    // incrementProgress();
 
-    // Optional parameter dump (keep if useful)
-    if (false)
-    {
-        qDebug().noquote()
-            << "\n weightedPower            =" << popt.weightedPower
-            << "\n weightedSigma0           =" << popt.weightedSigma0
-            << "\n weightedIncludeLowpass   =" << popt.weightedIncludeLowpass
-            << "\n weightedEpsEnergy        =" << popt.weightedEpsEnergy
-            << "\n weightedEpsWeight        =" << popt.weightedEpsWeight
-            << "\n";
-    }
+    // // Optional parameter dump (keep if useful)
+    // if (false)
+    // {
+    //     qDebug().noquote()
+    //         << "\n weightedPower            =" << popt.weightedPower
+    //         << "\n weightedSigma0           =" << popt.weightedSigma0
+    //         << "\n weightedIncludeLowpass   =" << popt.weightedIncludeLowpass
+    //         << "\n weightedEpsEnergy        =" << popt.weightedEpsEnergy
+    //         << "\n weightedEpsWeight        =" << popt.weightedEpsWeight
+    //         << "\n";
+    // }
 
-    if (o.saveDiagnostics) save(fusionFolderPath);
+    // if (o.saveDiagnostics) save(fusionFolderPath);
     return true;
 }
 
@@ -3672,16 +3679,16 @@ void applyContrastWhiteBalance(cv::Mat &img,
 // StreamPMax pipeline
 //-----------------------------------------------------------------------------------
 
-bool Align::alignSlice(int              slice,
-                       FSLoader::Image  &prevImage,
-                       FSLoader::Image  &currImage,
-                       Result           &prevGlobal,
-                       Result           &currGlobal,
-                       cv::Mat          &alignedGraySlice,
-                       cv::Mat          &alignedColorSlice,
-                       const Options    &opt,
-                       std::atomic_bool *abortFlag,
-                       StatusCallback   status,
+bool Align::alignSlice(int slice,
+                       const FSLoader::Image& prevImage,
+                       const FSLoader::Image& currImage,
+                       const Result& prevGlobal,
+                       Result& currGlobal,
+                       cv::Mat* alignedGraySlice,
+                       cv::Mat* alignedColorSlice,
+                       const Options& opt,
+                       std::atomic<bool>* abortFlag,
+                       StatusCallback status,
                        ProgressCallback progressCallback
                        )
 {
@@ -3690,14 +3697,20 @@ bool Align::alignSlice(int              slice,
     QString msg = "Slice: " + s + " Aligning";
     if (G::FSLog) G::log(srcFun, msg);
     // if (status) status(msg);
+    qDebug() << srcFun << "0" << msg;
 
     // first slice is already "aligned"
     if (prevImage.gray.empty())
     {
-        alignedGraySlice  = currImage.gray.clone();
-        alignedColorSlice = currImage.color.clone();
+        if (alignedGraySlice) {
+            *alignedGraySlice  = currImage.gray.clone();
+        }
+        if (alignedColorSlice) {
+            *alignedColorSlice = currImage.color.clone();
+        }
         return true;
     }
+    qDebug() << srcFun << "1" << msg;
 
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
 
@@ -3732,12 +3745,18 @@ bool Align::alignSlice(int              slice,
 
     // Apply transform to color + gray
     cv::Mat alignedColorMat, alignedGrayMat;
-    if (G::FSLog) G::log(srcFun, "cv::Mat alignedColor, alignedGray");
-    applyTransform(currImage.color, currGlobal.transform, alignedColorSlice);
-    // applyTransform(currImage.color, currGlobal.transform, alignedColorMat);
+    if (alignedColorSlice) {
+        applyTransform(currImage.color, currGlobal.transform, *alignedColorSlice);
+    }
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-    applyTransform(currImage.gray,  currGlobal.transform, alignedGraySlice);
-    // applyTransform(currImage.gray,  currGlobal.transform, alignedGrayMat);
+    if (alignedGraySlice) {
+        applyTransform(currImage.gray,  currGlobal.transform, *alignedGraySlice);
+
+        // Ensure gray is 8-bit
+        if (alignedGraySlice->type() != CV_8U) {
+            alignedGraySlice->convertTo(*alignedGraySlice, CV_8U);
+        }
+    }
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
     if (G::FSLog) G::log(srcFun, "applyTransform alignedGray");
 
@@ -5406,29 +5425,29 @@ static cv::Size computePadSizeForPyr(const cv::Size& s, int levels)
     return cv::Size(w, h);
 }
 
-static cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize)
-{
-    /*
-    This pads the aligned image to padSize, using reflection at the borders,
-    centered. This prevents edge artifacts in the focus metric and keeps all slices
-    the same padded size.
-    */
-    if (src.empty()) return cv::Mat();
-    if (src.size() == dstSize) return src;
+// static cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize)
+// {
+//     /*
+//     This pads the aligned image to padSize, using reflection at the borders,
+//     centered. This prevents edge artifacts in the focus metric and keeps all slices
+//     the same padded size.
+//     */
+//     if (src.empty()) return cv::Mat();
+//     if (src.size() == dstSize) return src;
 
-    const int padW = dstSize.width  - src.cols;
-    const int padH = dstSize.height - src.rows;
-    CV_Assert(padW >= 0 && padH >= 0);
+//     const int padW = dstSize.width  - src.cols;
+//     const int padH = dstSize.height - src.rows;
+//     CV_Assert(padW >= 0 && padH >= 0);
 
-    const int left   = padW / 2;
-    const int right  = padW - left;
-    const int top    = padH / 2;
-    const int bottom = padH - top;
+//     const int left   = padW / 2;
+//     const int right  = padW - left;
+//     const int top    = padH / 2;
+//     const int bottom = padH - top;
 
-    cv::Mat dst;
-    cv::copyMakeBorder(src, dst, top, bottom, left, right, cv::BORDER_REFLECT);
-    return dst;
-}
+//     cv::Mat dst;
+//     cv::copyMakeBorder(src, dst, top, bottom, left, right, cv::BORDER_REFLECT);
+//     return dst;
+// }
 
 // robust max: 99th percentile
 static float robustMax99(const cv::Mat& m32f)
@@ -6248,6 +6267,8 @@ index is most in-focus (and its score), and also the 2nd-best.
     top1Score32_:   top score buffer (often same as s0, depending on later code).
 */
     const QString srcFun = "FSFusionDMap::streamSlice";
+    if (G::FSLog) G::log(srcFun, "Slice " + QString::number(slice));
+
     if (isAbort(abortFlag)) return false;
 
     if (grayAlign8.empty() || grayAlign8.type() != CV_8U) {
@@ -6256,9 +6277,8 @@ index is most in-focus (and its score), and also the 2nd-best.
     }
     if (slice == 0)
     {
-        /* Caller must have set these before calling streamSlice (same as your
-           DMapAdvanced pattern).  alignSize / validAreaAlign should already be
-           valid. */
+        /* Caller must have set these before calling streamSlice.
+           alignSize / validAreaAlign should already be valid. */
         if (alignSize.width <= 0 || alignSize.height <= 0) {
             qWarning().noquote() << "WARNING:" << srcFun << "alignSize not set.";
             return false;
@@ -6296,7 +6316,7 @@ index is most in-focus (and its score), and also the 2nd-best.
     }
 
     // pad the aligned image to padSize, using reflection at the borders, centered
-    cv::Mat grayPad8 = padCenterReflect(grayAlign8, padSize);
+    cv::Mat grayPad8 = FSUtilities::padCenterReflect(grayAlign8, padSize);
 
     // focus metric
     cv::Mat score32;
@@ -6356,6 +6376,11 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     QString msg;
 
     N = inputPaths.size();
+
+    if (N == 0 || globals.size() != (size_t)N) {
+        if (statusCb) statusCb("Error: Mismatched path and transform counts.");
+        return false;
+    }
 
     if (!active_ || s0_pad32.empty() || N <= 0 || (int)globals.size() != N)
         return false;
@@ -6503,6 +6528,9 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     cv::Mat out32(origSz, CV_32FC3, cv::Scalar(0,0,0));
 
     if (o.enablePyramidBlend) {
+        msg = "Pyramid Blending";
+        if (G::FSLog) G::log(srcFun, msg);
+
         // Build pyramids from depthIndex16 (same as advanced path)
         const int levels = computePyrLevels(origSz);
 
@@ -6513,13 +6541,18 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         FusionPyr::PyrAccum A;
         A.reset(origSz, levels);
 
-        // Check for varied illumination
-        // cv::Mat sumW(origSz, CV_32F, cv::Scalar(0));
+        /* Initialize the accumulation buffer at the start of the
+           "Simple blending" block */
+        out32 = cv::Mat::zeros(origSz, CV_32FC3);
 
         // Per-slice accumulation
         for (int s = 0; s < N; ++s)
         {
             QString ss = QString::number(s+1);
+            qDebug() << msg << "s =" << s << "alignedColorPaths.size() =" << alignedColorPaths.size();
+
+            if (s >= alignedColorPaths.size()) break;
+
             msg = "Pyramid blending: slice " + ss;
             if (G::FSLog) G::log(srcFun, msg);
 
@@ -6528,8 +6561,8 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
 
             if (isAbort(abortFlag)) return false;
 
-            cv::Mat colorSliceAligned = cv::imread(
-                alignedColorPaths[s].toStdString(), cv::IMREAD_UNCHANGED);
+            std::string path = alignedColorPaths[s].toStdString();
+            cv::Mat colorSliceAligned = cv::imread(path, cv::IMREAD_UNCHANGED);
             if (colorSliceAligned.empty()) {
                 qWarning().noquote() << "WARNING:" << srcFun <<
                     "colorSliceAligned " + ss + " is empty";
@@ -6540,6 +6573,28 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
             if (!toColor32_01_FromLoaded(colorSliceAligned, color32, srcFun, s)) {
                 qWarning().noquote() << "WARNING:" << srcFun <<
                     "toColor32_01_FromLoaded " + ss + " failed";
+                return false;
+            }
+
+            // --- NEW DEBUG BLOCK: Coordinate Verification ---
+            static bool firstSliceDebug = true;
+            if (firstSliceDebug || s == (N - 1)) {
+                qDebug() << "DEBUG: Coordinate Verification for Slice" << s;
+                qDebug() << "  -> Loaded Image (color32) size: " << color32.cols << "x" << color32.rows;
+                qDebug() << "  -> Internal Master (origSz) size:" << origSz.width << "x" << origSz.height;
+                qDebug() << "  -> Engine alignSize:             " << alignSize.width << "x" << alignSize.height;
+
+                if (color32.size() != origSz) {
+                    qWarning() << "CRITICAL MISMATCH: Image on disk does not match engine origSz!";
+                }
+                if (s == (N - 1)) firstSliceDebug = false;
+            }
+            // --- END DEBUG BLOCK ---
+
+            if (color32.size() != origSz) {
+                qWarning() << "SIZE MISMATCH! Slice" << s
+                           << "Image:" << color32.cols << "x" << color32.rows
+                           << "Expected (origSz):" << origSz.width << "x" << origSz.height;
                 return false;
             }
 
@@ -6613,6 +6668,10 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
     else {
         msg = "Simple blending";
         if (G::FSLog) G::log(srcFun, msg);
+
+        // cv::Mat out32 = cv::Mat::zeros(origSz, CV_32FC3);
+        out32 = cv::Mat::zeros(alignSize, CV_32FC3);
+
         for (int s = 0; s < N; ++s)
         {
             cv::Mat colorSliceAligned = cv::imread(
@@ -10003,6 +10062,30 @@ void applyPhotometricNormalizationOrig(cv::Mat& grayOrig,
 
 namespace FSUtilities {
 
+cv::Mat padCenterReflect(const cv::Mat& src, const cv::Size& dstSize)
+{
+    /*
+    This pads the aligned image to padSize, using reflection at the borders,
+    centered. This prevents edge artifacts in the focus metric and keeps all slices
+    the same padded size.
+    */
+    if (src.empty()) return cv::Mat();
+    if (src.size() == dstSize) return src;
+
+    const int padW = dstSize.width  - src.cols;
+    const int padH = dstSize.height - src.rows;
+    CV_Assert(padW >= 0 && padH >= 0);
+
+    const int left   = padW / 2;
+    const int right  = padW - left;
+    const int top    = padH / 2;
+    const int bottom = padH - top;
+
+    cv::Mat dst;
+    cv::copyMakeBorder(src, dst, top, bottom, left, right, cv::BORDER_REFLECT);
+    return dst;
+}
+
 cv::Mat canonicalizeGrayFloat01(const cv::Mat& in,
                                 const cv::Size& canonicalSize,
                                 int interp,
@@ -10586,7 +10669,7 @@ cv::Mat canonicalizeToSize(const cv::Mat& src,
     return out;
 }
 
-cv::Mat FSUtilities::alignToOrigSize(const cv::Mat& img, cv::Size origSize)
+cv::Mat alignToOrigSize(const cv::Mat& img, cv::Size origSize)
 {
     CV_Assert(!img.empty());
     CV_Assert(origSize.width  > 0);

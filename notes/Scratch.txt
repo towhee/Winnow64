@@ -945,3 +945,7 @@ Invalid frame after retries: "/Users/roryhill/Pictures/2025/202507/2025-07-22_Pa
 
 Focus Stack completed in "40.0 sec"
 
+Please perform a fresh analysis of the active code in the most recently uploaded
+merged_code.txt. Ignore all previous snippets and focus only on the current
+implementation of [Function Name] in [File Name].
+
