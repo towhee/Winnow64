@@ -958,13 +958,13 @@ index is most in-focus (and its score), and also the 2nd-best.
 }
 
 bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
-                                     const FSFusion::Options& opt,
-                                     cv::Mat& depthIndex16,
-                                     const QStringList& inputPaths,
-                                     const std::vector<Result>& globals,
-                                     std::atomic_bool* abortFlag,
-                                     FSFusion::StatusCallback statusCb,
-                                     FSFusion::ProgressCallback progressCb)
+                                 const FSFusion::Options& opt,
+                                 cv::Mat& depthIndex16,
+                                 const QStringList& inputPaths,
+                                 const std::vector<Result>& globals,
+                                 std::atomic_bool* abortFlag,
+                                 FSFusion::StatusCallback statusCb,
+                                 FSFusion::ProgressCallback progressCb)
 {
     const QString srcFun = "FSFusionDMap::streamFinish";
     if (G::FSLog) G::log(srcFun);
