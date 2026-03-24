@@ -53,10 +53,7 @@ public:
     bool setOptions(const Options &opt);
 
     void diagnostics();
-    void requestAbort()
-    {
-        abort.store(true, std::memory_order_relaxed);
-    }
+    void requestAbort() { abort.store(true, std::memory_order_relaxed); }
 
     // Main pipeline API
     void run();             // run all testing deltas
@@ -67,12 +64,15 @@ signals:
     void finished(bool success);
 
 protected:
-    bool abortRequested() const
-    {
-        return abort.load(std::memory_order_relaxed);
-    }
+    bool abortRequested() const { return abort.load(std::memory_order_relaxed); }
 
 private:
+    struct WarpResult {
+        int slice;
+        cv::Mat gray;
+        cv::Mat color;
+    };
+
     std::atomic_bool abort{false};
 
     bool initializeGroup(int group);            // source groups
