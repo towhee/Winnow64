@@ -218,7 +218,7 @@ QString sj(QString s, int x)
 
 void wait(int ms)
 /*
-    Use as an alternative to .
+    Use as an alternative to qApp->processEvents().
 */
 {
     if (ms <= 0) return;

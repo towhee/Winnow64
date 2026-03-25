@@ -274,6 +274,8 @@ QString MW::getImageCacheRunningTip(bool isAuto, quint64 maxMB)
 void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
                                        bool success, QString src)
 {
+    // if (G::instanceClash(instance, "MW::updateMetadataThreadRunStatus")) return;
+
     if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus", "src = " + src);
     /*
     qDebug() << "MW::updateMetadataThreadRunStatus"

@@ -168,7 +168,7 @@ ImageCache::ImageCache(QObject *parent,
     pressureHistory.reserve(50);    // avoid reallocations
 
     abort = false;
-    debugCaching = false;        // turn on local qDebug
+    debugCaching = true;        // turn on local qDebug
     debugLog = false;            // invoke log without G::isLogger or G::isFlowLogger
 }
 
@@ -190,11 +190,11 @@ void ImageCache::stop()
 /*
     Called when quitting Winnow.
 */
-    QString fun = "ImageCache::stop";
+    QString srcFun = "ImageCache::stop";
     if (debugCaching)
     {
         qDebug().noquote()
-            << fun.leftJustified(col0Width, ' ')
+            << srcFun.leftJustified(col0Width, ' ')
             << "isRunning =" << imageCacheThread.isRunning()
             ;
     }
@@ -212,6 +212,10 @@ void ImageCache::stop()
     if (imageCacheThread.isRunning()) {
         imageCacheThread.quit();
         imageCacheThread.wait();
+    }
+
+    if (isIdle()) {
+        emit stopped(srcFun);
     }
 
     // turn off caching activity lights on statusbar
@@ -2439,17 +2443,17 @@ void ImageCache::launchDecoders(QString src)
         if (abort) return;
         if (toCache.isEmpty()) break;
         if (id >= dm->sf->rowCount()) break;
-        if (cycling.at(id)) {
-            if (debugCaching)
-            {
-                qDebug().noquote()
-                    << fun.leftJustified(col0Width, ' ')
-                    << "Decoder" << QVariant(id).toString().leftJustified(3)
-                    << "skip because already cycling"
-                    ;
-            }
-            continue;
-        }
+        // if (cycling.at(id)) {
+        //     if (debugCaching)
+        //     {
+        //         qDebug().noquote()
+        //             << fun.leftJustified(col0Width, ' ')
+        //             << "Decoder" << QVariant(id).toString().leftJustified(3)
+        //             << "skip because already cycling"
+        //             ;
+        //     }
+        //     continue;
+        // }
         // int sfRow = id;
         int sfRow = nextToCache(id);
         if (sfRow == -1) break;

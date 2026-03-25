@@ -538,6 +538,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
 
 */
     QString srcFun = "MW::refreshViewsOnCacheChange";
+
     int sfRow = dm->proxyRowFromPath(fPath, "MW::refreshViewsOnCacheChange");
 
     if (sfRow == -1) {

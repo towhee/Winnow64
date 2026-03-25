@@ -235,14 +235,18 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
 
 void MetaRead::stop()
 {
-    QString fun = "MetaRead::stop";
-    if (G::isLogger || G::isFlowLogger) G::log(fun);
+    QString srcFun = "MetaRead::stop";
+    if (G::isLogger || G::isFlowLogger) G::log(srcFun);
 
     abort = true;
     stopReaders();
 
     metaReadThread.quit();
     metaReadThread.wait();
+
+    if (isIdle()) {
+        emit stopped(srcFun);
+    }
 }
 
 void MetaRead::stopReaders()
