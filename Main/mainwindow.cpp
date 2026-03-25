@@ -2151,9 +2151,9 @@ void MW::stop(QString src)
     prior folder. See ImageCache::fillCache.
 
 */
-    QString fun = "MW::stop";
+    QString srcFun = "MW::stop";
     if (G::isLogger || G::isFlowLogger)
-        G::log("MW::stop", "instance = " + QString::number(dm->instance) +
+        G::log(srcFun, "instance = " + QString::number(dm->instance) +
                " src = " + src);
 
     // ignore if already stopping
@@ -2164,6 +2164,7 @@ void MW::stop(QString src)
     dm->abort = true;
 
     // initialize stopped state for MetaRead, ImageCache, BuildFilters
+    stopped.clear();
     stopped["MetaRead"] = metaRead->isIdle();
     stopped["ImageCache"] = imageCache->isIdle();
     stopped["BuildFilters"] = buildFilters->isIdle();
@@ -2176,17 +2177,13 @@ void MW::stop(QString src)
     if (!stopped["BuildFilters"]) emit abortBuildFilters();
 
     // wait until abort done
-    QEventLoop loop;
-    QTimer to; to.setSingleShot(true); to.start(1000);
+    QTimer to; to.setSingleShot(true); to.start(2000);
 
-    // Update helper
+    // Use an indefinite loop (removed the timeout timer)
+    QEventLoop loop;
     auto setStopped = [&](const QString& name){
         stopped[name] = true;
-        // G::log("MW::stop  setStopped", name);
-        if (allIdle()) {
-            // G::log("MW::stop  setStopped", "allIdle = true");
-            loop.quit();
-        }
+        if (allIdle()) loop.quit();
     };
 
     // Connect subsystem idle/aborted signals (must be Queued across threads)
@@ -2200,14 +2197,11 @@ void MW::stop(QString src)
 
     // Timeout handler
     connect(&to, &QTimer::timeout, &loop, [&]{
-        if (G::isFlowLogger)
-            G::log("MW::stop", "timed out");
         loop.quit();
     });
 
     // If everything was already idle, skip waiting
     if (!allIdle()) {
-        // G::log("MW::stop", "start loop");
         // this blocks until all idle or timeout
         loop.exec();
     }
@@ -2226,11 +2220,11 @@ void MW::stop(QString src)
         setCentralMessage("Image loading has been aborted.");
     }
 
-    // qApp->processEvents();
     G::stop = false;
     G::isModifyingDatamodel = false;
 
-    if (G::isLogger || G::isFlowLogger) G::log("MW::stop", "done");
+    if (G::isLogger || G::isFlowLogger) G::log(srcFun, "done");
+
 }
 
 bool MW::reset(QString src)
@@ -2965,6 +2959,7 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
     info panel. All status info is passed by copy to prevent collisions on source data,
     which is being continuously updated by ImageCache
 */
+    // if (G::instanceClash(instance, "MW::updateImageCacheStatus")) return;
 
     if (G::isLogger) {
         QString strInstruction = imageCache->statusAction.at(instruction);

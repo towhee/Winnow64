@@ -131,11 +131,11 @@ void BuildFilters::stop()
 
 void BuildFilters::abortProcessing()
 {
+    QString srcFun = "BuildFilters::abortProcessing";
     if (G::isLogger || G::isFlowLogger)
     {
         QString isGUI = QVariant(G::isGuiThread()).toString();
-        G::log("Buildfilters::abortProcessing",
-               "starting, isGUI thread = " + isGUI);
+        G::log(srcFun, "starting, isGUI thread = " + isGUI);
     }
 
     if (isRunning()) {
@@ -148,9 +148,9 @@ void BuildFilters::abortProcessing()
     // abort = false;
 
     if (G::isLogger || G::isFlowLogger)
-        G::log("BuildFilters::abortProcessing", "emit stopped");
+        G::log(srcFun, "emit stopped");
 
-    emit stopped("BuildFilters");
+    emit stopped(srcFun);
 }
 
 void BuildFilters::setIdle()

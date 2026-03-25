@@ -383,6 +383,104 @@ void MW::ingestTest(QWidget* target)
     QApplication::sendEvent(target, &releaseEvent);
 }
 
+void MW::mergeProjectFiles() {
+
+    QString destinationDir = "/Users/roryhill/Temp";
+    QStringList files;
+
+    files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.h";
+    files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/global.h";
+    files << "/Users/roryhill/Projects/Winnow64/Main/global.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/initialize.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/navigate.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/status.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/viewmodes.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/widgetcss.h";
+    files << "/Users/roryhill/Projects/Winnow64/Main/widgetcss.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/workspaces.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/datamodel.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/datamodel.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/cachedata.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/cachedata.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/framedecoder.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/framedecoder.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/imagecache.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/imagecache.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/imagedecoder.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/imagedecoder.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/tiffthumbdecoder.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/tiffthumbdecoder.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/datamodel.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/datamodel.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/filters.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/filters.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/selection.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/selection.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconviewdelegate.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconviewdelegate.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/imageview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/imageview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infostring.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infostring.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infoview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infoview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/tableview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/tableview.cpp";
+
+    // 1. Ensure the destination directory exists
+    QDir dir(destinationDir);
+    if (!dir.exists()) {
+        dir.mkpath(".");
+    }
+
+    // 2. Setup the output file path
+    QString outputFilePath = dir.filePath("merged_code.txt");
+    QFile outputFile(outputFilePath);
+
+    if (!outputFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qDebug() << "Could not open output file for writing:" << outputFilePath;
+        return;
+    }
+
+    QTextStream out(&outputFile);
+
+    // 3. Iterate through each file path in the list
+    for (const QString &filePath : files) {
+        QFile inputFile(filePath);
+        QFileInfo fileInfo(filePath);
+
+        if (inputFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&inputFile);
+
+            // Add a clear header for the AI to identify the file
+            out << "\n/* =========================================\n";
+            out << "   File: " << fileInfo.fileName() << "\n";
+            out << "   Path: " << filePath << "\n";
+            out << "   ========================================= */\n\n";
+
+            // Stream the content
+            out << in.readAll();
+            out << "\n\n";
+
+            inputFile.close();
+        } else {
+            qDebug() << "Warning: Could not open file for reading:" << filePath;
+        }
+    }
+
+    outputFile.close();
+    qDebug() << "Successfully merged" << files.size() << "files into" << outputFilePath;
+}
+
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
 
@@ -400,7 +498,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    gridView->scrollToRow(0, "MW::deleteFiles");
+    mergeProjectFiles();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

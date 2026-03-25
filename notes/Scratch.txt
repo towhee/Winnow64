@@ -1,3 +1,8 @@
 Perform a line-by-line migration of all logic from the existing FS class to the new
 refactored version, ensuring that every internal variable, calculation, and log
 statement is preserved exactly.
+
+if (G::instanceClash(instance, "")) return;
+
+QString srcFun = "";
+if (G::instanceClash(instance, srcFun)) return;

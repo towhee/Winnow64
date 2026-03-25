@@ -366,7 +366,8 @@ public:
     QString css1;               // stylesheet text
     QString cssBase;            // stylesheet text
 
-    void test();                    // for debugging
+    void test();                // for debugging
+    void mergeProjectFiles();   // to send to Gemini
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
