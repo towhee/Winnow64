@@ -2955,9 +2955,9 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
                                 QString source)
 {
 /*
-    Displays a statusbar showing the image cache status. Also shows the cache size in the
-    info panel. All status info is passed by copy to prevent collisions on source data,
-    which is being continuously updated by ImageCache
+    Displays a statusbar showing the image cache status. Also shows the cache size
+    in the info panel. All status info is passed by copy to prevent collisions on
+    source data, which is being continuously updated by ImageCache
 */
     // if (G::instanceClash(instance, "MW::updateImageCacheStatus")) return;
 

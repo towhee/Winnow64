@@ -1,0 +1,5 @@
+{
+  "env": {
+    "ANTHROPIC_CUSTOM_HEADERS": "x-goog-api-key: AIza0881536510"
+  }
+}
