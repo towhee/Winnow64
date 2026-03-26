@@ -1030,9 +1030,9 @@ void ImageCache::memChk()
 
 void ImageCache::updateStatus(int instruction, QString source)
 /*
-    Displays a statusbar showing the image cache status. Also shows the cache size in the
-    info panel. All status info is passed by copy to prevent collisions on source data,
-    which is being continuously updated by ImageCache.
+    Displays a statusbar showing the image cache status. Also shows the cache size
+    in the info panel. All status info is passed by copy to prevent collisions on
+    source data, which is being continuously updated by ImageCache.
 */
 {
     quint64 currMB  = icd->sizeMB();
@@ -2443,17 +2443,17 @@ void ImageCache::launchDecoders(QString src)
         if (abort) return;
         if (toCache.isEmpty()) break;
         if (id >= dm->sf->rowCount()) break;
-        // if (cycling.at(id)) {
-        //     if (debugCaching)
-        //     {
-        //         qDebug().noquote()
-        //             << fun.leftJustified(col0Width, ' ')
-        //             << "Decoder" << QVariant(id).toString().leftJustified(3)
-        //             << "skip because already cycling"
-        //             ;
-        //     }
-        //     continue;
-        // }
+        if (cycling.at(id)) {
+            if (debugCaching)
+            {
+                qDebug().noquote()
+                    << fun.leftJustified(col0Width, ' ')
+                    << "Decoder" << QVariant(id).toString().leftJustified(3)
+                    << "skip because already cycling"
+                    ;
+            }
+            continue;
+        }
         // int sfRow = id;
         int sfRow = nextToCache(id);
         if (sfRow == -1) break;

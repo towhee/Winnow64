@@ -576,8 +576,8 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         updateClassification();
     }
 
-    // thumbView->refreshThumb(sfIdx, srcFun);
-    // gridView->refreshThumb(sfIdx, srcFun);
+    thumbView->refreshIcon(sfIdx, srcFun);
+    gridView->refreshIcon(sfIdx, srcFun);
 
     return;
 }

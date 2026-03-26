@@ -2,7 +2,21 @@ Perform a line-by-line migration of all logic from the existing FS class to the 
 refactored version, ensuring that every internal variable, calculation, and log
 statement is preserved exactly.
 
+<<<<<<< Updated upstream
 if (G::instanceClash(instance, "")) return;
 
 QString srcFun = "";
 if (G::instanceClash(instance, srcFun)) return;
+=======
+
+0881536510
+
+set -a; source .env; set +a; claude --model gemini-2.5-flash
+
+export $(grep -v '^#' .env | xargs) && claude --model gemini-2.5-flash
+
+export $(grep -v '^#' .env | xargs) && claude --theme dark --model gemini-2.5-flash --prompt "Hello! Confirm you are running on Gemini 2.5 Flash and can see the files in Winnow64."
+
+List Gemini models:
+bash-5.3$ curl -s 'https://generativelanguage.googleapis.com/v1beta/models?key=AIzaSyBDodhNTZmNm2_vJdOAL3QBvna4hdOSAI4' | grep '"name":'
+>>>>>>> Stashed changes

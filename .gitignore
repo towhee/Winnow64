@@ -31,6 +31,7 @@ UI/
 x64/
 release/
 debug/
+.env
 *.Debug
 *.Release
 *.obj
