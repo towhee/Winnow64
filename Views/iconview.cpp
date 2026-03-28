@@ -1661,6 +1661,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         G::log(srcFun, objectName() +
                " row " + QString::number(idx.row()));
 
+    if (m2->imageView->zoom <= m2->imageView->zoomFit) return;
     if (dm->index(dm->currentSfRow, G::VideoColumn).data().toBool()) return;
     if (!showZoomFrame) return;
     if (!idx.isValid()) return;
@@ -1680,9 +1681,6 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     // swap width / height if portrait
     if (iA < 1) {
         qSwap(iW, iH);
-        // qreal temp = iW;
-        // iW = iH;
-        // iH = temp;
     }
 
     // viewport
@@ -1766,18 +1764,18 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     #endif
 
     // make room for border
-    int pw = 1;                                     // pen width
-    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
-    h += (pw * 8);
+    int pw = 1;                             // pen width
+    w += (pw * 6);                          // 2 pens + 2 sides + 2 gaps
+    h += (pw * 6);
 
-    QPointF center(w / 2.0, h / 2.0);
+    QPointF cntr(w / 2.0, h / 2.0);
 
     // Create the clipping rectangle in pixmap-local coordinates
     QRectF clipRect;
-    clipRect.setLeft(   (thumbRect->left()   - mousePos.x()) / scale + center.x() );
-    clipRect.setTop(    (thumbRect->top()    - mousePos.y()) / scale + center.y() );
-    clipRect.setRight(  (thumbRect->right()  - mousePos.x()) / scale + center.x() );
-    clipRect.setBottom( (thumbRect->bottom() - mousePos.y()) / scale + center.y() );
+    clipRect.setLeft(   (thumbRect->left()   - mousePos.x()) / scale + cntr.x() );
+    clipRect.setTop(    (thumbRect->top()    - mousePos.y()) / scale + cntr.y() );
+    clipRect.setRight(  (thumbRect->right()  - mousePos.x()) / scale + cntr.x() );
+    clipRect.setBottom( (thumbRect->bottom() - mousePos.y()) / scale + cntr.y() );
 
     QPixmap frame(w, h);
     frame.fill(Qt::transparent);

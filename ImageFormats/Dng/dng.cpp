@@ -102,6 +102,11 @@ bool DNG::parse(MetadataParameters &p,
         ? m.height = ifd->ifdDataHash.value(257).tagValue
         : m.height = 0;
 
+    // IFD0: orientation
+    (ifd->ifdDataHash.contains(274))
+        ? m.orientation = ifd->ifdDataHash.value(274).tagValue
+        : m.orientation = 0;
+
     p.offset = 0;
     if (!m.width || !m.height) jpeg->getDimensions(p, m);
 

@@ -1635,9 +1635,8 @@ QString ImageView::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "ImageView Diagnostics");
     rpt << "\n";
-    rpt << "\n" << "path =" << dm->currentFilePath;
-    rpt << "\n" << "pmItem->pixmap().width() =" << pmItem->pixmap().width();
-    rpt << "\n" << "pmItem->pixmap().height() =" << pmItem->pixmap().height();
+    rpt << "\n" << "pmItem->pixmap().width() = " << pmItem->pixmap().width();
+    rpt << "\n" << "pmItem->pixmap().height() = " << pmItem->pixmap().height();
     rpt << "\n" << "isBusy = " << G::s(isBusy);
     rpt << "\n" << "shootingInfo = " << G::s(infoText);
     rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);
