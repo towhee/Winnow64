@@ -1626,70 +1626,6 @@ void IconView::loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN, bool refres
     if (refresh) refreshIcon(dm->currentSfIdx, "IconView::loupeRect");
 }
 
-QPixmap IconView::drawLoupeVPRect(int w, int h)
-{
-/*
-    Called by IconView::zoomCursor when executing setCursor()
-
-    w = width of box in cell
-    h = height of box in cell
-*/
-    // check if mac Accessibility has scaled pointer size
-    float scale = 1.0;
-#ifdef Q_OS_MAC
-    scale = Mac::getMouseCursorMagnification();
-    if (scale == 0) scale = 1;
-#endif
-    w /= scale;
-    h /= scale;
-
-    // make room for border
-    int pw = 1;                                     // pen width
-    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
-    h += (pw * 8);
-    w *= G::sysDevicePixelRatio;
-    h *= G::sysDevicePixelRatio;
-    cursorRect = QRect(0, 0, w, h);
-
-    auto frame = QImage(w, h, QImage::Format_ARGB32);
-    frame.fill(Qt::transparent);
-
-    QPen oPen, iPen;
-    oPen.setWidth(pw);
-    iPen.setWidth(pw);
-    oPen.setColor(Qt::white);
-    iPen.setColor(Qt::black);
-
-    QPainter p(&frame);
-
-    // --- Draw Borders ---
-    QRect oBorder(0, 0, w-pw-1, h-pw-1);            // outer border
-    QRect iBorder(pw, pw, w-3*pw-1, h-3*pw-1);      // inner border
-
-    p.setPen(oPen);
-    p.drawRect(oBorder);
-    p.setPen(iPen);
-    p.drawRect(iBorder);
-
-    // --- Draw Crosshair ---
-    int midX = w / 2;
-    int midY = h / 2;
-    int chLen = 8 * G::sysDevicePixelRatio;        // Length of crosshair arms
-
-    // Draw White horizontal and vertical base
-    p.setPen(oPen);
-    p.drawLine(midX - chLen, midY, midX + chLen, midY);
-    p.drawLine(midX, midY - chLen, midX, midY + chLen);
-
-    // Draw Black center lines to create the "sandwich" effect matching the border
-    p.setPen(iPen);
-    int p2 = pw * 2;
-    p.drawLine(midX - chLen + p2, midY, midX + chLen - p2, midY);
-    p.drawLine(midX, midY - chLen + p2, midX, midY + chLen - p2);
-
-    return QPixmap::fromImage(frame);
-}
-
 void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
 {
 /*
@@ -1722,98 +1658,167 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 */
     QString srcFun = "IconView::zoomCursor";
     if (isDebug)
-        G::log(srcFun, objectName()
-               + " row " + QString::number(idx.row()));
+        G::log(srcFun, objectName() +
+               " row " + QString::number(idx.row()));
+
+    if (dm->index(dm->currentSfRow, G::VideoColumn).data().toBool()) return;
+    if (!showZoomFrame) return;
+    if (!idx.isValid()) return;
+    // if (m2->imageView->isFit) return;
 
     // Only recalc if mouse over a different icon or cursor has changed
-    static QModelIndex prevIdx = QModelIndex();
-    static QSize zoomCursorSize = QSize(-1,-1);
-    QSize currentCursorSize = cursor().pixmap().size();
-    if (prevIdx == idx && currentCursorSize == zoomCursorSize) return;
-    prevIdx = idx;
+    // static QModelIndex prevIdx = QModelIndex();
+    // static QSize zoomCursorSize = QSize(-1,-1);
+    // QSize currentCursorSize = cursor().pixmap().size();
+    // if (prevIdx == idx && currentCursorSize == zoomCursorSize) return;
+    // prevIdx = idx;
 
     // preview scene dimensions
     qreal iW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toReal();
     qreal iH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toReal();
+    qreal iA = dm->sf->index(idx.row(), G::AspectRatioColumn).data().toReal();
+    // swap width / height if portrait
+    if (iA < 1) {
+        qSwap(iW, iH);
+        // qreal temp = iW;
+        // iW = iH;
+        // iH = temp;
+    }
 
     // viewport
-    QSize vpSize = m2->imageView->viewport()->size();
+    QSize vpSize = m2->imageView->viewportInScene();
     int vpW = vpSize.width();
     int vpH = vpSize.height();
 
-    { // FAIL CHECKS
-        QString failReason = "";
-        if (G::isEmbellish) failReason = "G::isEmbellish";
-        if (G::isInitializing) failReason = "G::isInitializing";
-        if (G::stop) failReason = "G::stop";
-        if (iW == 0 || iH == 0) failReason = "Zero width or height";
-        bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-        if (isVideo) failReason = "isVideo";
-        if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
-            setCursor(Qt::ArrowCursor);
-            prevIdx = model()->index(-1, -1);
-            failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
-        }
-        if (QGuiApplication::queryKeyboardModifiers()) {
-            setCursor(Qt::ArrowCursor);
-            failReason = "Key modifier pressed";
-        }
-        if (!showZoomFrame) failReason = "!showZoomFrame";
-        if (!idx.isValid()) failReason = "!idx.isValid()";
-        if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
-        if (iW < vpW && iH < vpH) {
-            setCursor(Qt::ArrowCursor);
-            prevIdx = model()->index(-1, -1);
-            failReason = "imW < cW && imH < cH";
-        }
-        if (failReason.length()) {
-            // qDebug() << "WARNING IconView::zoomCursor Failed because" << failReason;
-            return;
-        }
-    }
 
-    int iA = dm->sf->index(idx.row(), G::AspectRatioColumn).data().toInt();
+    { // FAIL CHECKS
+        // QString failReason = "";
+        // if (G::isEmbellish) failReason = "G::isEmbellish";
+        // if (G::isInitializing) failReason = "G::isInitializing";
+        // if (G::stop) failReason = "G::stop";
+        // if (iW == 0 || iH == 0) failReason = "Zero width or height";
+        // bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+        // if (isVideo) failReason = "isVideo";
+        // if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
+        //     setCursor(Qt::ArrowCursor);
+        //     prevIdx = model()->index(-1, -1);
+        //     failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
+        // }
+        // if (QGuiApplication::queryKeyboardModifiers()) {
+        //     setCursor(Qt::ArrowCursor);
+        //     failReason = "Key modifier pressed";
+        // }
+        // if (!showZoomFrame) failReason = "!showZoomFrame";
+        // if (!idx.isValid()) failReason = "!idx.isValid()";
+        // if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
+        // if (iW < vpW && iH < vpH) {
+        //     setCursor(Qt::ArrowCursor);
+        //     prevIdx = model()->index(-1, -1);
+        //     failReason = "imW < cW && imH < cH";
+        // }
+        // if (failReason.length()) {
+        //     // qDebug() << "WARNING IconView::zoomCursor Failed because" << failReason;
+        //     return;
+        // }
+    }
 
     // normalized viewport
     qreal vpWN = static_cast<qreal>(vpW) / iW;
     qreal vpHN = static_cast<qreal>(vpH) / iH;
-    qreal vpA = static_cast<qreal>(vpW) / vpH;
+    // qreal vpA = static_cast<qreal>(vpW) / vpH;
 
-    // icon size
-    int iconW = iconViewDelegate->thumbSize.width();
-    int iconH = iconViewDelegate->thumbSize.height();
+    // thumbnail excluding any black border
+    int sfRow = idx.row();
+    QRect *thumbRect = iconViewDelegate->iconRectCache.object(sfRow);
+    int tW = thumbRect->width();
+    int tH = thumbRect->height();
+    qreal tA = static_cast<qreal>(tW) / tH;
 
-    // zoom frame width and height in icon space pixels
-    int zcW = iconW;
-    int zcH = iconH;
-    // viewport is zoomed
-    if (vpWN < 1.0 || vpHN < 1.0) {
-        if (iA < vpA) {
-            zcW = iconW * vpWN;
-            zcH = zcW / vpA;
-        }
-        else {
-            zcH = iconH * vpHN;
-            zcW = zcH * vpA;
-        }
-    }
+    // zoom cursor size
+    int w = qRound(vpWN * tW);
+    int h = qRound(vpHN * tH);
 
+    // /*
     qDebug().noquote()
-        << srcFun.leftJustified(40)
-        << "sfRow =" << idx.row()
-        << "vpWN =" << vpWN
-        << "vpHN =" << vpHN
-        << "iconW =" << iconW
-        << "iconH =" << iconH
-        << "zcW =" << zcW
-        << "zcH =" << zcH
-        ;
+      << srcFun.leftJustified(40)
+      << "sfRow =" << idx.row()
+      << "iW =" << iW
+      << "iH =" << iH
+      << "vpW =" << vpW
+      << "vpH =" << vpH
+      << "vpWN =" << vpWN
+      << "vpHN =" << vpHN
+      << "tW =" << tW
+      << "tH =" << tH
+      << "iA =" << static_cast<qreal>(iW) / iH
+      // << "vpA =" << vpA
+      << "tA =" << tA
+      << "w =" << w
+      << "h =" << h
+      << "thumbRect =" << *thumbRect
+      ; //*/
 
+    #ifdef Q_OS_MAC
+        float scale = Mac::getMouseCursorMagnification();
+        if (scale < 0.001) scale = 1.0;
+        w /= scale;
+        h /= scale;
+    #endif
 
-    // draw the new cursor as a frame
-    setCursor(QCursor(drawLoupeVPRect(zcW, zcH)));
+    // make room for border
+    int pw = 1;                                     // pen width
+    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
+    h += (pw * 8);
 
-    zoomCursorSize = cursor().pixmap().size();
+    QPointF center(w / 2.0, h / 2.0);
+
+    // Create the clipping rectangle in pixmap-local coordinates
+    QRectF clipRect;
+    clipRect.setLeft(   (thumbRect->left()   - mousePos.x()) / scale + center.x() );
+    clipRect.setTop(    (thumbRect->top()    - mousePos.y()) / scale + center.y() );
+    clipRect.setRight(  (thumbRect->right()  - mousePos.x()) / scale + center.x() );
+    clipRect.setBottom( (thumbRect->bottom() - mousePos.y()) / scale + center.y() );
+
+    QPixmap frame(w, h);
+    frame.fill(Qt::transparent);
+
+    QPen oPen, iPen;
+    oPen.setWidth(pw);
+    iPen.setWidth(pw);
+    oPen.setColor(Qt::white);
+    iPen.setColor(Qt::black);
+
+    QPainter p(&frame);
+    p.setRenderHint(QPainter::Antialiasing, false); // Keep lines crisp
+    p.setClipping(true);
+    p.setClipRect(clipRect);
+
+    // --- Draw Borders ---
+    QRect oBorder(0, 0, w, h);            // outer border
+    p.setPen(oPen);
+    p.drawRect(oBorder.adjusted(1, 1, -1, -1));
+    p.setPen(iPen);
+    p.drawRect(oBorder.adjusted(2, 2, -2, -2));
+
+    // --- Draw Crosshair ---
+    int midX = w / 2;
+    int midY = h / 2;
+    int chLen = 8;
+    int limit = qMin(w, h);
+    if (chLen * 2 > limit) chLen = limit / 2;
+
+    // Draw White horizontal and vertical base
+    p.setPen(oPen);
+    p.drawLine(midX - chLen, midY, midX + chLen, midY);
+    p.drawLine(midX, midY - chLen, midX, midY + chLen);
+
+    // Draw Black center lines to create the "sandwich" effect matching the border
+    p.setPen(iPen);
+    int p2 = pw * 2;
+    p.drawLine(midX - chLen + p2, midY, midX + chLen - p2, midY);
+    p.drawLine(midX, midY - chLen + p2, midX, midY + chLen - p2);
+
+    setCursor(QCursor(frame));
 }
 
 void IconView::startDrag(Qt::DropActions)

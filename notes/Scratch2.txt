@@ -52,3 +52,141 @@ int main(int argc, char *argv[])
 
     return instance.exec();
 }
+
+
+
+
+
+8640x5760
+IconViewDelegate::Paint                  sfRow = 3 vpW = 60 vpH = 19 vpA = 3.0985
+IconView::zoomCursor                     sfRow = 3 vpWN = 0.167477 vpHN = 0.0810764 iconW = 182 iconH = 182 vpA = 3.0985 zcW = 43 zcH = 14
+
+
+3840x2160
+IconViewDelegate::Paint                  sfRow = 0 vpW = 137 vpH = 44 vpA = 3.0985
+IconView::zoomCursor                     sfRow = 0 vpWN = 0.376823 vpHN = 0.216204 iconW = 182 iconH = 182 vpA = 3.0985 zcW = 120 zcH = 39
+
+
+
+void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
+{
+    QString srcFun = "IconView::zoomCursor";
+    if (isDebug)
+        G::log(srcFun, objectName() +
+               " row " + QString::number(idx.row()));
+
+    if (dm->index(dm->currentSfRow, G::VideoColumn).data().toBool()) return;
+    if (!showZoomFrame) return;
+    if (!idx.isValid()) return;
+    // if (m2->imageView->isFit) return;
+
+    // Only recalc if mouse over a different icon or cursor has changed
+    static QModelIndex prevIdx = QModelIndex();
+    static QSize zoomCursorSize = QSize(-1,-1);
+    QSize currentCursorSize = cursor().pixmap().size();
+    if (prevIdx == idx && currentCursorSize == zoomCursorSize) return;
+    prevIdx = idx;
+
+    // preview scene dimensions
+    qreal iW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toReal();
+    qreal iH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toReal();
+    qreal iA = dm->sf->index(idx.row(), G::AspectRatioColumn).data().toReal();
+    // swap width / height if portrait
+    if (iA < 1) {
+        qreal temp = iW;
+        iW = iH;
+        iH = temp;
+    }
+
+    // viewport
+    QSize vpSize = m2->imageView->viewportInScene();
+    int vpW = vpSize.width();
+    int vpH = vpSize.height();
+
+    // normalized viewport
+    qreal vpWN = static_cast<qreal>(vpW) / iW;
+    qreal vpHN = static_cast<qreal>(vpH) / iH;
+
+    // thumbnail excluding any black border
+    int sfRow = idx.row();
+    QRect *thumbRect = iconViewDelegate->iconRectCache.object(sfRow);
+    int tW = thumbRect->width();
+    int tH = thumbRect->height();
+    qreal tA = static_cast<qreal>(tW) / tH;
+
+    // zoom cursor size
+    int w = qRound(vpWN * tW);
+    int h = qRound(vpHN * tH);
+
+    #ifdef Q_OS_MAC
+        float scale = Mac::getMouseCursorMagnification();
+        if (scale < 0.001) scale = 1.0;
+        w /= scale;
+        h /= scale;
+    #endif
+
+    // make room for border
+    int pw = 1;                                     // pen width
+    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
+    h += (pw * 8);
+
+    QPixmap frame(w, h);
+    frame.fill(Qt::transparent);
+
+    QPen oPen, iPen;
+    oPen.setWidth(pw);
+    iPen.setWidth(pw);
+    oPen.setColor(Qt::white);
+    iPen.setColor(Qt::black);
+
+    QPainter p(&frame);
+    p.setRenderHint(QPainter::Antialiasing, false); // Keep lines crisp
+    p.setClipping(true);
+    p.setClipRect(*thumbRect); // not working, no cursor visible
+
+    // --- Draw Borders ---
+    QRect oBorder(0, 0, w-pw-1, h-pw-1);            // outer border
+    QRect iBorder(pw, pw, w-3*pw-1, h-3*pw-1);      // inner border
+
+    p.setPen(oPen);
+    p.drawRect(oBorder);
+    p.setPen(iPen);
+    p.drawRect(iBorder);
+
+    // --- Draw Crosshair ---
+    int midX = w / 2;
+    int midY = h / 2;
+    int chLen = 4 * G::actDevicePixelRatio;        // Length of crosshair arms
+
+    // Draw White horizontal and vertical base
+    p.setPen(oPen);
+    p.drawLine(midX - chLen, midY, midX + chLen, midY);
+    p.drawLine(midX, midY - chLen, midX, midY + chLen);
+
+    // Draw Black center lines to create the "sandwich" effect matching the border
+    p.setPen(iPen);
+    int p2 = pw * 2;
+    p.drawLine(midX - chLen + p2, midY, midX + chLen - p2, midY);
+    p.drawLine(midX, midY - chLen + p2, midX, midY + chLen - p2);
+
+    setCursor(QCursor(frame));
+
+    // draw the new cursor as a frame
+    // setCursor(QCursor(drawLoupeVPRect(zcW, zcH)));
+
+    zoomCursorSize = cursor().pixmap().size();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

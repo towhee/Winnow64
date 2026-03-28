@@ -50,23 +50,6 @@ ImageView::ImageView(QWidget *parent,
     this->classificationBadgeDiam = classificationBadgeDiam;
     pixmap = new Pixmap(this, dm, metadata);
 
-    /*
-    // set QOpenGLWidget as QGraphicsView viewport
-    openGLFrame = new OpenGLFrame;
-    QSurfaceFormat format;
-    format.setSamples(4);
-    format.setDepthBufferSize(24);
-    format.setStencilBufferSize(8);
-    format.setVersion(3, 2);
-    format.setProfile(QSurfaceFormat::CoreProfile);
-    openGLFrame->setFormat(format);
-    this->setViewport(openGLFrame);
-    this->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
-
-    // set scene so can override drawForeground
-    scene = new ImageScene(openGLFrame);
-    */
-
     scene = new QGraphicsScene();
     scene->setObjectName("Scene");
 
@@ -78,14 +61,6 @@ ImageView::ImageView(QWidget *parent,
     setAcceptDrops(true);
     pmItem->setAcceptDrops(true);
     setAttribute(Qt::WA_TranslucentBackground);
-    /*
-    setOptimizationFlags(QGraphicsView::DontSavePainterState);
-    setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
-    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
-    setTransformationAnchor(QGraphicsView::AnchorViewCenter);
-    setAlignment(Qt::AlignCenter);
-    setDragMode(QGraphicsView::ScrollHandDrag);
-    */
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -683,6 +658,30 @@ void ImageView::resizeEvent(QResizeEvent *event)
 //     placeClassificationBadge();
 //     setShootingInfo(infoText);
 //     showPredictedFocus();
+}
+
+QSize ImageView::viewportInScene()
+{
+    QString srcFun = "ImageView::viewportInScene";
+    int imW = pmItem->boundingRect().width();
+    int imH = pmItem->boundingRect().height();
+    QPolygonF p = mapToScene(viewport()->rect());
+    qreal x1 = p.at(0).x();
+    qreal y1 = p.at(0).y();
+    qreal x2 = p.at(2).x();
+    qreal y2 = p.at(2).y();
+    qreal w = x2 - x1;
+    qreal h = y2 - y1;
+
+    qDebug().noquote()
+        << srcFun.leftJustified(40)
+        << "iW =" << imW
+        << "iH =" << imH
+        << "vpW =" << w
+        << "vpH =" << h
+        ;
+
+    return QSize(w, h);
 }
 
 void ImageView::showNormalizedViewport(bool adjustCenter, bool refresh, QString src)
@@ -1636,6 +1635,9 @@ QString ImageView::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "ImageView Diagnostics");
     rpt << "\n";
+    rpt << "\n" << "path =" << dm->currentFilePath;
+    rpt << "\n" << "pmItem->pixmap().width() =" << pmItem->pixmap().width();
+    rpt << "\n" << "pmItem->pixmap().height() =" << pmItem->pixmap().height();
     rpt << "\n" << "isBusy = " << G::s(isBusy);
     rpt << "\n" << "shootingInfo = " << G::s(infoText);
     rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);

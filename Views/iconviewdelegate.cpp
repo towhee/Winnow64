@@ -792,21 +792,22 @@ textRect         = a rectangle below itemRect
         qDebug().noquote()
                  << srcFun.leftJustified(40)
                  << "sfRow =" << index.row()
-                 << "objName =" << objName
-                 << "bboX =" << bboX
-                 << "bboY =" << bboY
-                 << "iconW =" << iconW                 << "iconH =" << iconH
-                 << "nIconW =" << iconW
-                 << "nIconH =" << iconH
-                 << "vpCntrN =" << vpCntrN
-                 << "vpCntrX =" << vpCntrX
-                 << "vpCntrY =" << vpCntrY
-                 << "vpX =" << vpX
-                 << "vpY =" << vpY
+                 // << "objName =" << objName
+                 // << "bboX =" << bboX
+                 // << "bboY =" << bboY
+                 // << "iconW =" << iconW
+                 // << "iconH =" << iconH
+                 // << "nIconW =" << iconW
+                 // << "nIconH =" << iconH
+                 // << "vpCntrN =" << vpCntrN
+                 // << "vpCntrX =" << vpCntrX
+                 // << "vpCntrY =" << vpCntrY
+                 // << "vpX =" << vpX
+                 // << "vpY =" << vpY
                  << "vpW =" << vpW
                  << "vpH =" << vpH
                  << "vpA =" << vpA
-                 << "option.state =" << option.state
+                 // << "option.state =" << option.state
             ;  //*/
 
         // viewport rectange with room for border
