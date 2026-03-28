@@ -39,6 +39,7 @@ public:
     int getThumbWidthFromCellWidth(int cellWidth);
     int getCellWidthFromThumbWidth(int width);
     int getCellHeightFromThumbHeight(int height);
+    QPoint blackBorderOffset(const QModelIndex &sfIdx) const;
     void resetFirstLastVisible();
     void clearCacheItem(int sfRow) { iconCache.remove(sfRow); }
     void clearAllCache() { iconCache.clear(); }
@@ -92,7 +93,7 @@ private:
 
     QRect getSymbolRect(const QString &symbol, const QRect &optionRect,
                         const QModelIndex &index) const;
-    QPoint blackBorderOffset(const QModelIndex &sfIdx) const;
+    // QPoint blackBorderOffset(const QModelIndex &sfIdx) const;
 
     bool &isRatingBadgeVisible;
     bool &isIconNumberVisible;

@@ -157,7 +157,6 @@ ImageCache::ImageCache(QObject *parent,
         connect(decoder, &ImageDecoder::done, this, &ImageCache::fillCache);
         connect(thread, &QThread::finished, decoder, &QObject::deleteLater);
         connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-        // connect(this, &ImageCache::decode, decoder, &ImageDecoder::decode);
 
         thread->start();
         decoders.append(decoder);
@@ -168,7 +167,7 @@ ImageCache::ImageCache(QObject *parent,
     pressureHistory.reserve(50);    // avoid reallocations
 
     abort = false;
-    debugCaching = true;        // turn on local qDebug
+    debugCaching = false;        // turn on local qDebug
     debugLog = false;            // invoke log without G::isLogger or G::isFlowLogger
 }
 

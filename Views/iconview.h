@@ -59,7 +59,6 @@ public:
 
     int updateMidVisibleCell(QString src);
     void updateVisible(QString src);
-    QPixmap drawLoupeVPRect(int w, int h);
     void zoomCursor(const QModelIndex &idx,
                     QString src,
                     bool forceUpdate = false,

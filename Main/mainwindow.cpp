@@ -3537,13 +3537,14 @@ void MW::updateDisplayResolution()
 void MW::setDisplayResolution()
 {
 /*
-    This is triggered by the mainwindow show event at startup, when the operating system
-    display scale is changed and when the app window is dragged to another monitor. The
-    loupe view always shows native pixel resolution (one image pixel = one physical
-    monitor pixel), therefore the zoom has to be factored by the device pixel ratio.
+    This is triggered by the mainwindow show event at startup, when the operating
+    system display scale is changed and when the app window is dragged to another
+    monitor. The loupe view always shows native pixel resolution (one image pixel =
+    one physical monitor pixel), therefore the zoom has to be factored by the device
+    pixel ratio.
 
-    However, on Mac the device pixel ratio is arbitrary, mostly = 2.0 no matter which
-    display scaling is selected, so there are two ratios defined here:
+    However, on Mac the device pixel ratio is arbitrary, mostly = 2.0 no matter
+    which display scaling is selected, so there are two ratios defined here:
 
     G::actDevicePixelRatio - the actual ratio from actual to vertual pixels
     G::sysDevicePixelRatio - the system reported device pixel ratio
@@ -3581,16 +3582,38 @@ void MW::setDisplayResolution()
     //*/
     prevScreenName = screen->name();
 
-    // Device Pixel Ratios
+    // START GEMINI
+    if (!screen) return;
+
+    // Standard Qt ratio (Logical 2x)
     G::sysDevicePixelRatio = screen->devicePixelRatio();
-    #ifdef Q_OS_WIN
-    G::actDevicePixelRatio = screen->devicePixelRatio();
-    #endif
-    #ifdef Q_OS_MAC
+
+#ifdef Q_OS_MAC
+    // This calculates the 'real' hardware-to-logical ratio
     G::actDevicePixelRatio = macActualDevicePixelRatio(loc, screen);
-    #endif
+#else
+    G::actDevicePixelRatio = screen->devicePixelRatio();
+#endif
+
+    // Update virtual and physical pixel counts based on the 'real' ratio
+    G::displayVirtualHorizontalPixels = screen->geometry().width();
+    G::displayVirtualVerticalPixels = screen->geometry().height();
+    G::displayPhysicalHorizontalPixels = qRound(screen->geometry().width() * G::actDevicePixelRatio);
+    G::displayPhysicalVerticalPixels = qRound(screen->geometry().height() * G::actDevicePixelRatio);
+    // END GEMINI
+
+
+
+    // // Device Pixel Ratios
+    // G::sysDevicePixelRatio = screen->devicePixelRatio();
+    // #ifdef Q_OS_WIN
+    // G::actDevicePixelRatio = screen->devicePixelRatio();
+    // #endif
+    // #ifdef Q_OS_MAC
+    // G::actDevicePixelRatio = macActualDevicePixelRatio(loc, screen);
+    // #endif
     devicePixelRatioChanged = !qFuzzyCompare(G::actDevicePixelRatio, prevDevicePixelRatio);
-    /*
+    // /*
     qDebug() << "MW::setDisplayResolution" << "2"
              << "G::isInitializing =" << G::isInitializing
              << "isVisible() =" << isVisible()

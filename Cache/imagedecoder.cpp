@@ -37,7 +37,7 @@ ImageDecoder::ImageDecoder(int id,
     instance = 0;
     this->dm = dm;
     this->metadata = metadata;
-    isDebug = true;
+    isDebug = false;
     isLog = false;
 
     connect(this, &ImageDecoder::setValSf, dm, &DataModel::setValSf, Qt::QueuedConnection);
