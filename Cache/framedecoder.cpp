@@ -232,6 +232,26 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
         return;
     }
 
+    // Check for rotation (Qt 6.7+ style)
+    int angle = 0;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    // Use the new Rotation enum
+    auto rotation = frame.rotation();
+    if (rotation == QtVideo::Rotation::Clockwise90) angle = 90;
+    else if (rotation == QtVideo::Rotation::Clockwise180) angle = 180;
+    else if (rotation == QtVideo::Rotation::Clockwise270) angle = 270;
+#else
+    // Fallback for older Qt 6 versions
+    angle = static_cast<int>(frame.rotationAngle());
+#endif
+
+    // Apply rotation if needed
+    if (angle != 0) {
+        QTransform tr;
+        tr.rotate(angle);
+        im = im.transformed(tr);
+    }
+
     QImage scaledIm = (item.longSide > 0)
                 ? im.scaled(item.longSide, item.longSide, Qt::KeepAspectRatio)
                 : im;
