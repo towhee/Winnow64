@@ -973,8 +973,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
                 bool noModifiers = e->modifiers() == 0;
                 const QModelIndex idx = thumbView->indexAt(e->pos());
-                if (idx.isValid() && noModifiers) {
-                    QString src = "MW::eventFilter: ";
+
+                // in thumb part of cell?
+                QRect *tRect = nullptr;
+                if (thumbView->iconViewDelegate->thumbRectCache.contains(idx.row()))
+                    tRect = thumbView->iconViewDelegate->thumbRectCache[idx.row()];
+                bool inThumb = false;
+                if (tRect && tRect->contains(e->pos())) inThumb = true;
+
+                // qDebug() << idx.isValid() << noModifiers << "In thumb =" << inThumb;
+                if (idx.isValid() && noModifiers && inThumb) {
+                    QString src = "MW::eventFilter";
                     thumbView->zoomCursor(idx, src, /*forceUpdate=*/false, e->pos());
                 }
                 else {

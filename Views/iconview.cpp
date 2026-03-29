@@ -1336,8 +1336,6 @@ bool IconView::event(QEvent *event) {
 void IconView::showEvent(QShowEvent *event)
 {
     if (G::isInitializing || G::stop) return;
-    // QString src = "IconView::showEvent";
-    // m2->updateIconRange(true, src);
     QListView::showEvent(event);
 }
 
@@ -1730,15 +1728,15 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     QRect *thumbRect = iconViewDelegate->thumbRectCache.object(sfRow);
     int tW = thumbRect->width();
     int tH = thumbRect->height();
-    qreal tA = static_cast<qreal>(tW) / tH;
 
     // zoom cursor size
     int w = qRound(vpWN * tW);
     int h = qRound(vpHN * tH);
 
-    // is zoom cursor larger than
+    // if zoom cursor larger than thumbRect then do not show
+    if (w > tW && h > tH) return;
 
-    // /*
+    /*
     qDebug().noquote()
       << srcFun.leftJustified(40)
       << "sfRow =" << idx.row()

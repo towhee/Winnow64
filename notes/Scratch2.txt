@@ -180,6 +180,14 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 
 
 
+MW::eventFilter event: QEvent(CursorChange, 0x16d7db4f0) 	 event->type: QEvent::CursorChange 	 obj: QWidgetWindow(0x6000031ee460, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
+MW::eventFilter event: QEvent(CursorChange, 0x16d7db4f0) 	 event->type: QEvent::CursorChange 	 obj: MW(0x16d7ddbd0, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
+MW::eventFilter event: QEvent(CursorChange, 0x16d7db588) 	 event->type: QEvent::CursorChange 	 obj: IconView(0x12ed0a510, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
+MW::eventFilter event: QEvent(CursorChange, 0x16d7db950) 	 event->type: QEvent::CursorChange 	 obj: QWidgetWindow(0x6000031ee460, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
+MW::eventFilter event: QEvent(CursorChange, 0x16d7db950) 	 event->type: QEvent::CursorChange 	 obj: MW(0x16d7ddbd0, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
+MW::eventFilter event: QEvent(CursorChange, 0x16d7db9e8) 	 event->type: QEvent::CursorChange 	 obj: IconView(0x12ed0a510, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
+MW::eventFilter event: QEvent(CursorChange, 0x16d7dcc38) 	 event->type: QEvent::CursorChange 	 obj: IconView(0x12ed0a510, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
+MW::eventFilter event: QEvent(CursorChange, 0x16d7dc968) 	 event->type: QEvent::CursorChange 	 obj: IconView(0x12ed0a510, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
 
 
 
