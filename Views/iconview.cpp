@@ -1497,7 +1497,7 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
 
             /* The cached rectangle defines the thumbnail coordinates inside the
              black border in the cell */
-            QRect *cachedRect = iconViewDelegate->iconRectCache.object(sfRow);
+            QRect *cachedRect = iconViewDelegate->thumbRectCache.object(sfRow);
             if (cachedRect) {
                 iconRect = *cachedRect;
                 QPoint iconPt = event->pos() - iconRect.topLeft();
@@ -1725,9 +1725,9 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     qreal vpHN = static_cast<qreal>(vpH) / iH;
     // qreal vpA = static_cast<qreal>(vpW) / vpH;
 
-    // thumbnail excluding any black border
+    // thumbnail excluding any black border (t)
     int sfRow = idx.row();
-    QRect *thumbRect = iconViewDelegate->iconRectCache.object(sfRow);
+    QRect *thumbRect = iconViewDelegate->thumbRectCache.object(sfRow);
     int tW = thumbRect->width();
     int tH = thumbRect->height();
     qreal tA = static_cast<qreal>(tW) / tH;
@@ -1735,6 +1735,8 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     // zoom cursor size
     int w = qRound(vpWN * tW);
     int h = qRound(vpHN * tH);
+
+    // is zoom cursor larger than
 
     // /*
     qDebug().noquote()
@@ -1763,7 +1765,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         h /= scale;
     #endif
 
-    // make room for border
+    // make room for white/black border
     int pw = 1;                             // pen width
     w += (pw * 6);                          // 2 pens + 2 sides + 2 gaps
     h += (pw * 6);

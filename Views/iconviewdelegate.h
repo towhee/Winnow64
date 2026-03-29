@@ -45,9 +45,9 @@ public:
     void clearAllCache() { iconCache.clear(); }
     QString diagnostics();
 
-    // The key is the model row, the value is the scaled QPixmap
-    mutable QCache<int, QPixmap> iconCache;
-    mutable QCache<int, QRect> iconRectCache;
+    // The key is the model proxy row
+    mutable QCache<int, QPixmap> iconCache;     // item pixmap (source icon or thumb)
+    mutable QCache<int, QRect> thumbRectCache;  // thumb rect (w/o black border)
     int maxCacheSize = 10000;
 
     QModelIndex currentIndex;
@@ -61,8 +61,8 @@ public:
 
     const QRect r;
 
-    int thumbSpacing;
-    QSize thumbSize;    // req'd by IconView::loupeRect
+    // int itemSpacing;
+    // QSize itemSize;
 
     int fPad;
     int tPad;
@@ -81,8 +81,6 @@ protected:
                    const QStyleOptionViewItem &option, const QModelIndex &index);
 
 public slots:
-    void setCurrentIndex(QModelIndex current);
-    void setCurrentRow(int row);
     void setNormVpRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntr);
     void setVpRectVisibility(bool isVisible);
 
@@ -158,11 +156,12 @@ private:
     QPoint cacheTopLeft;
     QPoint cacheBottomRight;
 
-    // QSize thumbSize;  // moved to public, req'd by parent
-    QSize frameSize;
-    QSize selectedSize;
     QSize cellSize;
     QSize cellSpace;
+    QSize frameSize;
+    QSize selectedSize;
+    QSize itemSize;
+    int itemSpacing;
 
     QRect cacheRect;
     QRect missingThumbRect;

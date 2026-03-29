@@ -253,8 +253,8 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
     }
 
     QImage scaledIm = (item.longSide > 0)
-                ? im.scaled(item.longSide, item.longSide, Qt::KeepAspectRatio)
-                : im;
+            ? im.scaled(item.longSide, item.longSide, Qt::KeepAspectRatio)
+            : im;
 
     if (item.source == "dmThumb" && item.dmRow >= 0) {
         qint64 duration = mediaPlayer ? mediaPlayer->duration() : 0;

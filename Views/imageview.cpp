@@ -317,7 +317,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         // update viewpoint box in IconViewDelegate
         bool adjustCenter = panToFocus;
         bool refresh = false;
-        showNormalizedViewport(adjustCenter, refresh, srcFun);
+        // showNormalizedViewport(adjustCenter, refresh, srcFun);
     }
 
     isBusy = false;
@@ -691,10 +691,16 @@ void ImageView::showNormalizedViewport(bool adjustCenter, bool refresh, QString 
 
     Generate normalized coordinates for viewport in scene
 */
+    return;
     QString srcFun = "ImageView::showNormalizedViewport";
+    qDebug().noquote()
+    << srcFun.leftJustified(40)
+    << "sfRow =" << dm->currentSfRow
+    << "src =" << src
+    ;
 
     if (zoom <= zoomFit) {
-        /*
+        // /*
         qDebug().noquote()
              << srcFun.leftJustified(40)
              << "sfRow =" << dm->currentSfRow
@@ -741,7 +747,7 @@ void ImageView::showNormalizedViewport(bool adjustCenter, bool refresh, QString 
         return;
     }
 
-    /*
+    // /*
     qDebug().noquote()
              << srcFun.leftJustified(40)
              << "sfRow =" << dm->currentSfRow
