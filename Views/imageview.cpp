@@ -662,6 +662,10 @@ void ImageView::resizeEvent(QResizeEvent *event)
 
 QSize ImageView::viewportInScene()
 {
+/*
+    Called by IconView::zoomCursor to draw the outline of the size of the viewport
+    relative to the scene as the cursor while hovering on the thumbView.
+*/
     QString srcFun = "ImageView::viewportInScene";
     int imW = pmItem->boundingRect().width();
     int imH = pmItem->boundingRect().height();
@@ -672,24 +676,20 @@ QSize ImageView::viewportInScene()
     qreal y2 = p.at(2).y();
     qreal w = x2 - x1;
     qreal h = y2 - y1;
-
-    qDebug().noquote()
-        << srcFun.leftJustified(40)
-        << "iW =" << imW
-        << "iH =" << imH
-        << "vpW =" << w
-        << "vpH =" << h
-        ;
-
     return QSize(w, h);
 }
 
 void ImageView::showNormalizedViewport(bool adjustCenter, bool refresh, QString src)
 {
 /*
+    Not being used.
+
+    Sends the normalized coordinates for viewport in scene to IconView delegate,
+    where they can be used to draw the viewport border inside the thumbnail. Can
+    crash if the preceding image was a video.
+
     Documentation: see FOCUS PREDICTOR in notes/Documentation.txt
 
-    Generate normalized coordinates for viewport in scene
 */
     return;
     QString srcFun = "ImageView::showNormalizedViewport";
@@ -776,12 +776,6 @@ void ImageView::predictPanToFocus()
 
     focusPrediction = focusPredictor->predict(pmItem->pixmap().toImage());
     panTo(focusPrediction.x(), focusPrediction.y());
-    /*
-    qDebug() << "ImageView::getFocusPrediction"
-             << "Predicted (normalized):" << focusPrediction
-             << "x =" << focusPrediction.x()
-             << "y =" << focusPrediction.y()
-        ; //*/
 }
 
 void ImageView::panTo(float xPct, float yPct)
