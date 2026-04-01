@@ -136,6 +136,7 @@ int maxIconChunk = 25000;
 
 // status
 bool isModifyingDatamodel;
+bool isFirstImageNewInstance;
 bool ignoreScrollSignal;
 bool resizingIcons;
 bool isSlideShow;

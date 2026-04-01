@@ -23,11 +23,11 @@ void MW::loupeDisplay(const QString src)
     currentindex.
 
     Note: When the thumbDock thumbView is displayed it needs to be scrolled to the
-    currentIndex since it has been "hidden". However, the scrollbars take a long time to paint
-    after the view show event, so the ThumbView::scrollToCurrent function must be delayed.
-    This is done by the eventFilter in MW, intercepting the scrollbar paint events. This is a
-    bit of a cludge to get around lack of notification when the QListView has finished
-    painting itself.
+    currentIndex since it has been "hidden". However, the scrollbars take a long
+    time to paint after the view show event, so the ThumbView::scrollToCurrent
+    function must be delayed. This is done by the eventFilter in MW, intercepting
+    the scrollbar paint events. This is a bit of a cludge to get around lack of
+    notification when the QListView has finished painting itself.
 */
     /*
     if (!G::isInitializing && G::isLogger)
@@ -54,6 +54,7 @@ void MW::loupeDisplay(const QString src)
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) {
         centralLayout->setCurrentIndex(VideoTab);
+        videoView->load(dm->currentFilePath);
     }
     else {
         centralLayout->setCurrentIndex(LoupeTab);
@@ -84,6 +85,8 @@ void MW::loupeDisplay(const QString src)
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
+
+    thumbView->scrollToCurrent("MW::loupeDisplay");
 
     // If the zoom dialog was active, but hidden by gridView or tableView, then show it
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
@@ -172,13 +175,11 @@ void MW::gridDisplay()
     // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
     G::wait(100);
+
+    // scrollRow = dm->scrollToIcon;
     // gridView->scrollToRow(scrollRow, "MW::gridDisplay");
-//    updateIconRange(-1, "MW::gridDisplay1");
+    gridView->scrollToCurrent("MW::loupeDisplay");
 
-    // if (gridView->justifyMargin() > 3) gridView->rejustify();
-
-    scrollRow = dm->scrollToIcon;
-    gridView->scrollToRow(scrollRow, "MW::gridDisplay");
 
     // if the zoom dialog was open then hide it as no image visible to zoom
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);

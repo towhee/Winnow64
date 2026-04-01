@@ -554,15 +554,9 @@ inline bool MetaRead::needToRead(int sfRow)
     bool isMeta = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
 
     // already reading this item?
-    // if (isReading || isIcon) {
-    //     return false;
-    // }
-    // }
-    // }
-    // else {
-    //     QModelIndex sfReadingIdx = dm->sf->index(sfRow, G::MetadataReadingColumn);
-    //     dm->sf->setData(sfReadingIdx, true);
-    // }
+    if (isReading || isIcon) {
+        return false;
+    }
 
     if (isMeta && isIcon) {
         return false;

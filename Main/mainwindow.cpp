@@ -1950,13 +1950,18 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     videoView->stop();
     if (G::mode == "Loupe" || G::mode == "Grid" || G::mode == "Table") {
         if (isVideo) {
+            G::isFirstImageNewInstance = false;
+            updateClassification();
             if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+                loupeDisplay(fun);
                 if (G::useMultimedia) {
                     centralLayout->setCurrentIndex(VideoTab);
                     videoView->load(fPath);
                     videoView->play();
                 }
             }
+            if (G::mode == "Grid") gridDisplay();
+            if (G::mode == "Table") tableDisplay();
         }
         else if (G::useImageView) {
             if (imageView->loadImage(fPath, false, fun)) {
@@ -2285,7 +2290,7 @@ bool MW::reset(QString src)
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
     imageView->clear();
-    imageView->isFirstImageNewInstance = true;
+    G::isFirstImageNewInstance = true;
 
     // dm->newInstance();       // newInstance moved to folderSelectionChange()
 
@@ -2548,7 +2553,7 @@ void MW::folderChanged(bool aborted)
     // reset datamodel current index if it has been removed
     else if (!dm->currentDmIdx.isValid()) {
         dm->setCurrent(dm->index(0,0), dm->instance);
-        imageView->isFirstImageNewInstance = true;
+        G::isFirstImageNewInstance = true;
     }
 
     /*
@@ -3622,7 +3627,7 @@ void MW::setDisplayResolution()
     // G::actDevicePixelRatio = macActualDevicePixelRatio(loc, screen);
     // #endif
     devicePixelRatioChanged = !qFuzzyCompare(G::actDevicePixelRatio, prevDevicePixelRatio);
-    // /*
+    /*
     qDebug() << "MW::setDisplayResolution" << "2"
              << "G::isInitializing =" << G::isInitializing
              << "isVisible() =" << isVisible()

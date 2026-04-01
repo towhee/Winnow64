@@ -118,7 +118,7 @@ ImageView::ImageView(QWidget *parent,
     isMouseDrag = false;
     isLeftMouseBtnPressed = false;
     isMouseDoubleClick = false;
-    isFirstImageNewInstance = true;
+    G::isFirstImageNewInstance = true;
     isBusy = false;
 }
 
@@ -150,7 +150,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     {
         qDebug() << srcFun
          << "sfRow =" << dm->proxyRowFromPath(fPath, srcFun)
-         << "isFirstImageNewInstance =" << isFirstImageNewInstance
+         << "G::isFirstImageNewInstance =" << G::isFirstImageNewInstance
          << "isCurrent =" << isCurrent
          << "replace =" << replace
          << "G::isEmbellish =" << G::isEmbellish
@@ -162,7 +162,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     {
         QString row = "row = " + QString::number(dm->proxyRowFromPath(fPath));
         G::log(srcFun, row + " Src:" + src +
-               " isFirstImageNewInstance = " + QVariant(isFirstImageNewInstance).toString() +
+               " G::isFirstImageNewInstance = " + QVariant(G::isFirstImageNewInstance).toString() +
                " " + fPath);
     }
 
@@ -282,16 +282,16 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         canvas (central widget window) set the scale to fit window, do not scale the
         image beyond 100% to fit the window.  */
         zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
-        if (isFirstImageNewInstance) {
+        if (G::isFirstImageNewInstance) {
             isFit = true;
-            isFirstImageNewInstance = false;
+            G::isFirstImageNewInstance = false;
         }
         if (isFit) {
             setFitZoom();
         }
         if (isDebug) {
         qDebug() << srcFun
-                 << "isFirstImageNewInstance =" << isFirstImageNewInstance
+                 << "G::isFirstImageNewInstance =" << G::isFirstImageNewInstance
                  << "row =" << sfRow
                  << "isFit =" << isFit
                  << "isFit =" << isFit
@@ -1641,7 +1641,7 @@ QString ImageView::diagnostics()
     rpt << "\n" << "shootingInfo = " << G::s(infoText);
     rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);
     rpt << "\n" << "currentImagePath = " << G::s(currentImagePath);
-    rpt << "\n" << "firstImageLoaded = " << G::s(isFirstImageNewInstance);
+    rpt << "\n" << "firstImageLoaded = " << G::s(G::isFirstImageNewInstance);
     rpt << "\n" << "classificationBadgeDiam = " << G::s(classificationBadgeDiam);
     rpt << "\n" << "cursorIsHidden = " << G::s(cursorIsHidden);
     rpt << "\n" << "moveImageLocked = " << G::s(moveImageLocked);

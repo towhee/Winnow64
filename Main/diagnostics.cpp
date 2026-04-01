@@ -51,7 +51,7 @@ void MW::reportState(QString title)
         << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
         << "\nG::iconChunkLoaded                        " << G::iconChunkLoaded
         << "\nG::stop                                " << G::stop
-        << "\nimageView->isFirstImageNewInstance     " << imageView->isFirstImageNewInstance
+        << "\nG::isFirstImageNewInstance     " << G::isFirstImageNewInstance
 
 //        << "\nisDragDrop                             " << isDragDrop
 //        << "\nG::ignoreScrollSignal                  " << G::ignoreScrollSignal
