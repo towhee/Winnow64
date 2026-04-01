@@ -40,8 +40,8 @@ bool FS::initializeGroup(int group)
 
     inputPaths.clear();
     inputPaths = groups.at(group);
-    slices = inputPaths.count();
-    lastSlice = slices - 1;
+    grpSlices = inputPaths.count();
+    grpLastSlice = grpSlices - 1;
 
     QFileInfo info(inputPaths.first());
     const QString srcFolder = info.absolutePath();
@@ -51,9 +51,8 @@ bool FS::initializeGroup(int group)
 
     prepareFolders();
 
-    statusGroupPrefix = "Focus Stacking:  "
-                        "Stack: " + QString::number(group+1) + " of " +
-                        QString::number(groups.count()) + "  ";
+    statusGroupPrefix = "Stack: " + QString::number(group+1) + " of " +
+                        QString::number(groups.count());
 
     // Clear any in-memory aligned images from previous run
     alignedColorPaths.clear();
@@ -94,9 +93,11 @@ bool FS::setOptions(const Options &opt)
 void FS::status(const QString &msg)
 {
     QString remaining = "Time remaining: " +
-                        QTime(0, 0).addMSecs(msToGo).toString("hh:mm:ss") +
-                        "  ";
-    QString statusMsg = remaining + statusRunPrefix + statusGroupPrefix + msg;
+                        QTime(0, 0).addMSecs(msToGo).toString("hh:mm:ss");
+    QString statusMsg = statusRunPrefix +
+                        remaining.leftJustified(28) +
+                        statusGroupPrefix.leftJustified(20) +
+                        msg;
     emit updateStatus(false, statusMsg, "");
 }
 
@@ -141,16 +142,15 @@ bool FS::prepareFolders()
     return true;
 }
 
-
-
 void FS::initializeProgress()
 {
     QString srcFun = "FS::setTotalProgress";
     progressTotal = 0;
     for (const QStringList &g : groups) {
-        int slices = g.count();
-        if (o.method == "DMap") progressTotal += (slices * 3 + 2);
-        if (o.method == "PMax") progressTotal += (slices * 2 + 1);
+        int gSlices = g.count();
+        if (o.method == "DMap") progressTotal += (gSlices * 3 + 2);
+        if (o.method == "PMax") progressTotal += (gSlices * 2 + 1);
+        totSlices += gSlices;
     }
     QString msg = "progressTotal = " + QString::number(progressTotal);
     if (G::FSLog) G::log(srcFun, msg);
@@ -277,8 +277,8 @@ void FS::run()
     int groupCounter = 0;
     for (const QStringList &g : groups) {
 
-        slices = g.count();
-        if (slices < 2) {
+        grpSlices = g.count();
+        if (grpSlices < 2) {
             groupCounter++;
             continue;
         }
@@ -352,7 +352,7 @@ bool FS::runDMap()
     FSLoader::Image prevImage, currImage;
     Result prevGlobal;
     std::vector<Result> globals;
-    globals.reserve(slices);
+    globals.reserve(grpSlices);
 
     FSAlign::Align align;
     FSFusionDMap fuse;
@@ -369,11 +369,11 @@ bool FS::runDMap()
     // Identify the Master ROI on the main thread to anchor the stack
     cv::Rect masterROI;
 
-    for (int slice = 0; slice < slices; ++slice)
+    for (int slice = 0; slice < grpSlices; ++slice)
     {
         if (abortRequested()) return false;
 
-        status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(slices));
+        status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(grpSlices));
 
         // 1. Sequential Part: Load and ECC Align
         currImage = FSLoader::load(inputPaths.at(slice).toStdString());
@@ -412,7 +412,7 @@ bool FS::runDMap()
         futures.append(QtConcurrent::run(
             QThreadPool::globalInstance(),
             [slice, colorForThread, grayForThread, currGlobal, masterROI,
-             paths = alignedColorPaths[slice]]()
+            paths = alignedColorPaths[slice]]()
             {
                 WarpResult res;
                 res.slice = slice;
@@ -451,6 +451,7 @@ bool FS::runDMap()
         fuse.streamSlice(res.slice, res.gray, res.color, fopt,
                          &abort, statusCb, progressCb);
         incrementProgress();
+        status("Building depth map");
     }
 
     if (abortRequested()) return false;
@@ -514,7 +515,7 @@ bool FS::runPMax()
     FSLoader::Image prevImage, currImage;
     Result prevGlobal;
     std::vector<Result> globals;
-    globals.reserve(slices);
+    globals.reserve(grpSlices);
 
     FSAlign::Align align;
     FSFusionPMax   fuse;
@@ -528,11 +529,11 @@ bool FS::runPMax()
     QList<QFuture<WarpResult>> futures;
     cv::Rect masterROI;
 
-    for (int slice = 0; slice < slices; ++slice)
+    for (int slice = 0; slice < grpSlices; ++slice)
     {
         if (abortRequested()) return false;
 
-        status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(slices));
+        status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(grpSlices));
 
         currImage = FSLoader::load(inputPaths.at(slice).toStdString());
 
