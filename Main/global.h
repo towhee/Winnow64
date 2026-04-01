@@ -328,6 +328,7 @@ Q_NAMESPACE
     extern QString css;
 
     extern bool isModifyingDatamodel;
+    extern bool isFirstImageNewInstance;
     extern bool ignoreScrollSignal;
     extern bool resizingIcons;
     extern bool isSlideShow;

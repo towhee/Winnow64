@@ -13,6 +13,10 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 #    win32:QT += core5compat   # huge performance hit without this
 }
 
+macx-clang {
+    QMAKE_CXXFLAGS += -include arm_acle.h
+}
+
 # QMAKE_BUNDLE_IDENTIFIER = com.winnow.Winnow
 
 # Compile without warnings

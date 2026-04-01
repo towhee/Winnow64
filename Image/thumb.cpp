@@ -191,6 +191,9 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 
     if (!abort)
         emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmRow, dm->instance);
+    // NEW: Tell MetaRead the icon is "loaded" so it doesn't get stuck in a redo loop
+    // and prematurely abort before calling folderChangeCompleted()
+    emit setValDm(dmRow, G::IconLoadedColumn, true, dm->instance, "Thumb::loadFromVideo");
 }
 
 Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)

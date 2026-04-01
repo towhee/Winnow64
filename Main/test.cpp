@@ -498,7 +498,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    mergeProjectFiles();
+    // mergeProjectFiles();
+    qDebug() << "test";
+    // qApp->processEvents();
+    // thumbView->doItemsLayout();
+    // thumbView->rejustify();
+    loupeDisplay();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

@@ -82,7 +82,7 @@ public:
     int infoOverlayFontSize;
 
     ClassificationLabel *classificationLabel;
-    bool isFirstImageNewInstance;              // new folder, first image, set zoom = fit
+    // bool isFirstImageNewInstance;              // new folder, first image, set zoom = fit
     bool limitFit100Pct = true;
 
     bool panToFocus = false;
