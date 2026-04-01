@@ -1815,11 +1815,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (G::isLogger || G::isFlowLogger)
     {
         G::log(fun,
-               "row = " + QString::number(current.row())
-               + " src = " + src);
-        // + " G::fileSelectionChangeSource = " + G::fileSelectionChangeSource);
-        // can crash here
-        // G::log("MW::fileSelectionChange", "Source: " + fun + " " + current.data(G::PathRole).toString());
+               "row = " + QString::number(current.row()) +
+               " src = " + src);
     }
 
     if (G::stop) {
@@ -1930,21 +1927,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheProgressBar);
 
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-
-    // // failsafe to load thumbnail if MetaRead failed
-    // if (!isVideo && !dm->iconLoaded(current.row(), dm->instance)) {
-    //     // qDebug() << source << "reloading thumb for row" << current.row();
-    //     QImage image;
-    //     Thumb *thumb = new Thumb(dm);
-    //     bool ok = thumb->loadThumb(fPath, image, dm->instance, source);
-    //     if (ok) {
-    //         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize,
-    //                                                      Qt::KeepAspectRatio));
-    //         QModelIndex dmIdx = dm->index(dm->rowFromPath(fPath), 0);
-    //         dm->setIcon(dmIdx, pm, ok, dm->instance, source);
-    //     }
-    //     delete thumb;
-    // }
 
     // update loupe/video view
     videoView->stop();

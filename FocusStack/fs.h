@@ -46,7 +46,7 @@ public:
     QString srcFolderPath; // original source for input images (parent if lightroom)
 
     QString statusGroupPrefix;
-    QString statusRunPrefix;
+    QString statusRunPrefix = "Focus Stacking:  ";
     QList<QStringList> groups;
 
     // Input configuration
@@ -92,8 +92,9 @@ private:
     QStringList inputPaths;
     QString     grpFolderPath;
     QStringList grpFolderPaths;
-    int slices = 0;
-    int lastSlice = 0;
+    int grpSlices = 0;
+    int grpLastSlice = 0;
+    int totSlices = 0;
 
     // Stage folders (automatically set from projectRoot)
     QString alignFolderPath;
@@ -121,6 +122,8 @@ private:
     cv::Mat fusedColorMat;          // CU8 or CU16
 
     // Progress
+    int sliceCount = 0;
+    int msAveSlice = 0;
     int progressCount = -1;
     int progressTotal = 0;
     QElapsedTimer t;
