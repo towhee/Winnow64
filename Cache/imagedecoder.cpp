@@ -235,6 +235,12 @@ bool ImageDecoder::load()
         return false;
     }
 
+    // confirm file exists (the file or folder could have been deleted externally)
+    if (!QFile(fPath).exists()) {
+        status = Status::NoFile;
+        return false;
+    }
+
     /* get image type (extension)
        can cause crash: QFileInfo fileInfo(fPath);  or
                         ext = fPath.section('.', -1).toLower(); */

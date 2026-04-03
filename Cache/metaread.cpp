@@ -1170,7 +1170,7 @@ void MetaRead::dispatchFinished(QString src)
     if (G::useUpdateStatus && !G::allMetadataLoaded) {
         emit runStatus(running, show, success, fun);
     }
-    emit cleanupIcons();
+    emit cleanupIcons(instance);
     isDispatching = false;
 
     G::iconChunkLoaded = dm->isIconRangeLoaded();

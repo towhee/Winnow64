@@ -261,8 +261,8 @@ void MW::createDataModel()
 
     // connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::stop);
     // connect(buildFilters, &BuildFilters::stopped, this, &MW::aborted);
-    connect(buildFilters, &BuildFilters::addToDatamodel, dm, &DataModel::addMetadataForItem,
-            Qt::BlockingQueuedConnection);
+    // connect(buildFilters, &BuildFilters::addToDatamodel, dm, &DataModel::addMetadataForItem,
+    //         Qt::BlockingQueuedConnection);
     connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::abortProcessing);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);

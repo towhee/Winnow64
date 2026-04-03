@@ -812,7 +812,7 @@ void Preferences::addUserInterface()
     i.key = "wheelSensitivity";
     i.delegateType = DT_Slider;
     i.type = "int";
-    i.min = 10;
+    i.min = 1;
     i.max = 210;
     i.fixedWidth = 50;
     addItem(i);

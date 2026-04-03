@@ -6,11 +6,9 @@ WHAT'S NEW
 - Selections are now cleared after a filtration change
 
 BUGS / TO DO
-- Delete imaes not working when in Grid Mode
-- _videos copy 2 wrong aspect
+- Update where log file is updated
 - MOV::findAtom qWarning() << "Invalid atom size" << size;
 - IconView smooth scroll on swipe
-- Info display: if EC is null then do not display EV
 - Eliminate processEvents and review G::popup usage
 - Delete folder crash
 - Rename files
@@ -143,6 +141,11 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Beef up instance checking in DataModel
+- Added QQ tip in ingest dialog
+- Info display: if EC is null then do not display EV
+- Delete images not working when in Grid Mode
+- Video aspect was broken by MacOS update
 - Cmd + C works in diagnostic reports
 - Redo IconViewDelegate
 - Refresh Bookmarks and Folders after focus stack

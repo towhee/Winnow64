@@ -56,13 +56,13 @@
       </size>
      </property>
      <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
+      <enum>QFrame::Shape::NoFrame</enum>
      </property>
      <property name="lineWidth">
       <number>0</number>
      </property>
      <property name="verticalScrollBarPolicy">
-      <enum>Qt::ScrollBarAsNeeded</enum>
+      <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
      </property>
      <property name="widgetResizable">
       <bool>true</bool>
@@ -254,7 +254,7 @@
              </colorrole>
              <colorrole role="PlaceholderText">
               <brush brushstyle="SolidPattern">
-               <color alpha="255">
+               <color alpha="128">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -292,7 +292,7 @@
              </colorrole>
              <colorrole role="PlaceholderText">
               <brush brushstyle="SolidPattern">
-               <color alpha="255">
+               <color alpha="128">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -330,7 +330,7 @@
              </colorrole>
              <colorrole role="PlaceholderText">
               <brush brushstyle="SolidPattern">
-               <color alpha="255">
+               <color alpha="128">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -353,7 +353,7 @@
            <string notr="true">color:rgb(180,180,120)</string>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::Shape::Box</enum>
           </property>
           <property name="text">
            <string/>
@@ -394,7 +394,7 @@
              </colorrole>
              <colorrole role="PlaceholderText">
               <brush brushstyle="SolidPattern">
-               <color alpha="255">
+               <color alpha="128">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -432,7 +432,7 @@
              </colorrole>
              <colorrole role="PlaceholderText">
               <brush brushstyle="SolidPattern">
-               <color alpha="255">
+               <color alpha="128">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -470,7 +470,7 @@
              </colorrole>
              <colorrole role="PlaceholderText">
               <brush brushstyle="SolidPattern">
-               <color alpha="255">
+               <color alpha="128">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -493,7 +493,7 @@
            <string notr="true">color:rgb(180,180,120)</string>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::Shape::Box</enum>
           </property>
           <property name="text">
            <string/>
@@ -576,7 +576,7 @@
            <string/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::Shape::Box</enum>
           </property>
           <property name="text">
            <string>...</string>
@@ -617,7 +617,7 @@
              </colorrole>
              <colorrole role="PlaceholderText">
               <brush brushstyle="SolidPattern">
-               <color alpha="255">
+               <color alpha="128">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -655,7 +655,7 @@
              </colorrole>
              <colorrole role="PlaceholderText">
               <brush brushstyle="SolidPattern">
-               <color alpha="255">
+               <color alpha="128">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -693,7 +693,7 @@
              </colorrole>
              <colorrole role="PlaceholderText">
               <brush brushstyle="SolidPattern">
-               <color alpha="255">
+               <color alpha="128">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -716,7 +716,7 @@
            <string notr="true">color:rgb(180,180,120)</string>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::Shape::Box</enum>
           </property>
           <property name="text">
            <string/>
@@ -849,7 +849,7 @@
          <string notr="true"/>
         </property>
         <property name="frameShape">
-         <enum>QFrame::Box</enum>
+         <enum>QFrame::Shape::Box</enum>
         </property>
         <property name="text">
          <string/>
@@ -899,7 +899,7 @@
            <string>Destination folder:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
          </widget>
          <widget class="QLabel" name="folderLabel">
@@ -924,7 +924,7 @@
            <string notr="true"/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::Shape::Box</enum>
           </property>
           <property name="text">
            <string/>
@@ -952,7 +952,7 @@
            <string>Template:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
          </widget>
          <widget class="QPushButton" name="selectRootFolderBtn">
@@ -1066,7 +1066,7 @@ margin-left =  5px</string>
            <string>Append Description:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
          </widget>
          <widget class="QLabel" name="rootFolderLabel">
@@ -1088,7 +1088,7 @@ margin-left =  5px</string>
            <string/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::Shape::Box</enum>
           </property>
           <property name="text">
            <string/>
@@ -1191,7 +1191,7 @@ margin-left =  5px</string>
            <string notr="true"/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::Shape::Box</enum>
           </property>
           <property name="text">
            <string/>
@@ -1219,7 +1219,7 @@ margin-left =  5px</string>
            <string>Template:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
          </widget>
          <widget class="QPushButton" name="selectRootFolderBtn_2">
@@ -1323,7 +1323,7 @@ margin-left =  5px</string>
            <string>Append Description:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
          </widget>
          <widget class="QLabel" name="destinationFolderLabel_2">
@@ -1348,7 +1348,7 @@ margin-left =  5px</string>
            <string>Destination folder:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
          </widget>
          <widget class="QLabel" name="rootFolderLabel_2">
@@ -1370,7 +1370,7 @@ margin-left =  5px</string>
            <string/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::Shape::Box</enum>
           </property>
           <property name="text">
            <string/>
@@ -1542,7 +1542,7 @@ margin-left =  5px</string>
          <string notr="true"/>
         </property>
         <property name="frameShape">
-         <enum>QFrame::Box</enum>
+         <enum>QFrame::Shape::Box</enum>
         </property>
         <property name="text">
          <string/>
@@ -1592,7 +1592,7 @@ margin-left =  5px</string>
          <string notr="true"/>
         </property>
         <property name="frameShape">
-         <enum>QFrame::Box</enum>
+         <enum>QFrame::Shape::Box</enum>
         </property>
         <property name="text">
          <string/>
@@ -1620,7 +1620,7 @@ margin-left =  5px</string>
          <string>Start sequence from:</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
        </widget>
        <widget class="QSpinBox" name="spinBoxStartNumber">
@@ -1670,7 +1670,7 @@ margin-left =  5px</string>
          <string>Template:</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
        </widget>
        <widget class="QComboBox" name="filenameTemplatesCB">
@@ -1816,7 +1816,7 @@ margin-left =  5px</string>
         <number>0</number>
        </property>
        <property name="alignment">
-        <set>Qt::AlignCenter</set>
+        <set>Qt::AlignmentFlag::AlignCenter</set>
        </property>
        <property name="textVisible">
         <bool>false</bool>
@@ -1897,10 +1897,10 @@ margin-left =  5px</string>
            </font>
           </property>
           <property name="focusPolicy">
-           <enum>Qt::StrongFocus</enum>
+           <enum>Qt::FocusPolicy::StrongFocus</enum>
           </property>
           <property name="toolTip">
-           <string/>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Shortcut is Q to ingest.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700; color:#63e4dd;&quot;&gt;Productivity tip&lt;/span&gt;&lt;span style=&quot; color:#63e4dd;&quot;&gt;:  &lt;/span&gt;While you are making your picks, you can rapidly ingest and continue to make additional picks by pressing &lt;span style=&quot; font-weight:700;&quot;&gt;QQ&lt;/span&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="text">
            <string>Ingest</string>
@@ -1928,7 +1928,7 @@ margin-left =  5px</string>
         <string>Drive space</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
        </property>
       </widget>
       <widget class="QCheckBox" name="backgroundIngestChk">
@@ -1970,10 +1970,10 @@ margin-left =  5px</string>
         <string notr="true"/>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Plain</enum>
+        <enum>QFrame::Shadow::Plain</enum>
        </property>
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
       </widget>
      </widget>

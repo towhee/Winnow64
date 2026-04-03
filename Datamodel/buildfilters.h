@@ -52,7 +52,7 @@ protected:
 signals:
     void stopped(QString src);
     void updateProgress(int progress);
-    void addToDatamodel(ImageMetadata m, QString src);
+    // void addToDatamodel(ImageMetadata m, QString src);
     void finishedBuildFilters();
     void quickFilter();
     void filterLastDay();

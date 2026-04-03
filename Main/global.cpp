@@ -24,7 +24,7 @@ QStringList issueList;
 
 
 // Rory version (expanded cache pref, focus stack)
-bool isRory = true;
+bool isRory = false;
 
 // mutex
 QWaitCondition waitCondition;
