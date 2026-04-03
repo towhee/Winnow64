@@ -1437,11 +1437,11 @@ bool DataModel::readMetadataForItem(int row, int instance)
     if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
 
-        // only read metadata from files that we know how to
+        // only read metadata from files that we understand
         QString ext = fileInfo.suffix().toLower();
         if (metadata->hasMetadataFormats.contains(ext)) {
-            //qDebug() << "DataModel::readMetadataForItem" << fPath;
             if (metadata->loadImageMetadata(fileInfo, row, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
+                // loadImageMetadata sets m.instance
                 addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
             }
             else {
@@ -1456,6 +1456,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
             G::issue("Warning", errMsg, fun, row, fPath);
             metadata->clearMetadata();
             metadata->m.row = row;
+            metadata->m.instance = instance;
             metadata->m.compare = false;
             addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
             return false;
@@ -1520,9 +1521,13 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     return true;
 }
 
-void DataModel::imageCacheWaiting(int sfRow)
+void DataModel::imageCacheWaiting(int sfRow, int instance)
 {
     // qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow;
+    if (instance != this->instance) {
+        return;
+    }
+
     int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
     imageCacheWaitingForRow = dmRow;
     if (metadataLoaded(dmRow)) {
@@ -1560,7 +1565,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (instance > -1 && m.instance != instance) {
         if (G::showIssueInConsole)
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::addMetadataForItem", m.row);        return false;
+        G::issue("Comment", errMsg, "DataModel::addMetadataForItem", m.row);
+        return false;
     }
 
     int row = m.row;
@@ -2131,7 +2137,6 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
                  << "fPathRowValue(fPath) =" << fPathRowValue(fPath)
                 ;
     }
-    // QModelIndex dmIdx = index(fPathRow[fPath], col);
     QModelIndex dmIdx = index(fPathRowValue(fPath), col);
     if (instance != this->instance) {
         errMsg = "Instance clash.";
@@ -2474,8 +2479,10 @@ void DataModel::clearAllIcons() // not being used
     }
 }
 
-void DataModel::clearIconsOutsideChunkRange()
+void DataModel::clearIconsOutsideChunkRange(int instance)
 {
+    if (instance != this->instance) return;
+
     if (isDebug)
     qDebug() << "DataModel::clearIconsOutsideChunkRange"
                  << "instance =" << instance

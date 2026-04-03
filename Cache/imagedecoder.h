@@ -44,6 +44,7 @@ public:
         Video,
         InstanceClash,
         NoDir,
+        NoFile,
         BlankFilePath,
         NoMetadata,
         FileOpen
@@ -58,6 +59,7 @@ public:
         "Video",
         "InstanceClash",
         "NoDir",
+        "NoFile",
         "BlankFilePath",
         "NoMetadata",
         "FileOpen"

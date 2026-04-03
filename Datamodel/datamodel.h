@@ -87,7 +87,7 @@ public:
     QList<int> metadataNotLoaded();
     int iconCount();
     void clearAllIcons();
-    void clearIconsOutsideChunkRange();
+    void clearIconsOutsideChunkRange(int instance);
     bool isAllIconsLoaded();
     // bool isAllIconChunkLoaded(int first, int last);
     bool iconLoaded(int sfRow, int instance);
@@ -211,7 +211,7 @@ public slots:
     QStringList rptIssues(int sfRow);
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
-    void imageCacheWaiting(int sfRow);
+    void imageCacheWaiting(int sfRow, int instance);
     bool isAllMetadataAttempted();
     bool isAllIconChunkLoaded(int first, int last);
     int rowFromPath(QString fPath);

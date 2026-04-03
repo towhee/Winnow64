@@ -62,7 +62,7 @@ signals:
     void setValSf(int sfRow, int sfCol, QVariant value,
                   int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void cleanupIcons();
+    void cleanupIcons(int instance);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void fileSelectionChange(QModelIndex sfIdx,
                              QModelIndex idx2 = QModelIndex(),

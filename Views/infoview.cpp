@@ -547,7 +547,7 @@ void InfoView::updateInfo(const int &row)
     if (s == "0") s = "";
     ok->setData(ok->index(ISORow, 1, imageInfoIdx), s);
     s = dm->sf->index(row, G::ExposureCompensationColumn).data().toString();
-    if (!s.endsWith("EV")) s += " EV";
+    if (!s.isEmpty() && !s.endsWith("EV")) s += " EV";
     ok->setData(ok->index(ExposureCompensationRow, 1, imageInfoIdx), s);
     s = dm->sf->index(row, G::FocalLengthColumn).data().toString() + "mm";
     if (s == "0mm") s = "";

@@ -327,7 +327,7 @@ bool ImageCache::waitForMetaRead(int sfRow, int ms)
     t.start();
 
     // signal DataModel::imageCacheWaiting
-    emit waitingForRow(sfRow);
+    emit waitingForRow(sfRow, instance);
 
     while(!isLoaded) {
         if (!condition.wait(&gMutex, ms - t.elapsed())) break;
