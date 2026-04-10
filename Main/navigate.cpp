@@ -42,7 +42,6 @@ void MW::mouseSideKeyPress(int direction)
 
 void MW::keyRight(/*Qt::KeyboardModifiers modifier*/)
 {
-    qDebug() << "\nKEY RIGHT\n";
     // qDebug() << "MW::keyRight";
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::keyRight", "ROW: " + QString::number(dm->currentSfRow));

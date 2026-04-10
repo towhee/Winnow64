@@ -61,6 +61,7 @@ public:
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
     void progress(int current, int total);
+    void requestImage(QString fPath, cv::Mat &mat);
     void finished(bool success);
 
 protected:

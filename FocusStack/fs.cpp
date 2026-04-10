@@ -375,8 +375,18 @@ bool FS::runDMap()
 
         status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(grpSlices));
 
+        QString path = inputPaths.at(slice);
+
+        auto decoder = [this](const QString& p) -> cv::Mat {
+            cv::Mat result;
+            // This triggers MW::matFromQImage on the GUI thread and WAITS
+            emit requestImage(p, result);
+            return result.clone(); // Ensure we own the data
+        };
+
         // 1. Sequential Part: Load and ECC Align
-        currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+        currImage = FSLoader::load(path.toStdString(), decoder);
+        // currImage = FSLoader::load(inputPaths.at(slice).toStdString());
 
         // Deep copy matrices to ensure the main loop doesn't overwrite them
         // while the background thread is still reading them
@@ -440,9 +450,9 @@ bool FS::runDMap()
         prevGlobal = currGlobal;
     }
 
-    // Diagnostic check for focus map range
-    double minV, maxV;
-    cv::minMaxLoc(depthIndex16Mat, &minV, &maxV);
+    // // Diagnostic check for focus map range
+    // double minV, maxV;
+    // cv::minMaxLoc(depthIndex16Mat, &minV, &maxV);
 
     // Sequential Part: Feed results back into the fusion engine
     for (auto &f : futures) {
@@ -473,6 +483,13 @@ bool FS::runDMap()
         statusCb,
         progressCb
         );
+
+    // Diagnostic check for focus map range
+    if (success && !depthIndex16Mat.empty()) {
+        double minV, maxV;
+        cv::minMaxLoc(depthIndex16Mat, &minV, &maxV);
+        // qDebug() << "DMap Depth Range:" << minV << "to" << maxV;
+    }
 
     incrementProgress();
 
@@ -622,6 +639,11 @@ QString FS::save(QString fuseFolderPath)
     QString base = lastFi.completeBaseName() + "_FocusStack";
     if (o.isLocal) base += "_" + o.method; // + o.methodInfo;
     QString ext  = lastFi.suffix();
+    // OpenCV cannot write RAW files. Force it to TIF if it's not a standard format.
+    QStringList cvWritable = {"tif", "tiff", "png", "jpg", "jpeg", "bmp"};
+    if (!cvWritable.contains(ext)) {
+        ext = "tif"; // Default to TIF to preserve quality/depth
+    }
     QString fusedPath = fuseFolderPath + "/" + base + "." + ext;
     // if exists add incrementing suffix
     Utilities::uniqueFilePath(fusedPath, "_");
@@ -636,9 +658,14 @@ QString FS::save(QString fuseFolderPath)
     // G::fsFusedPaths << fusedPath;
 
     // Write fused result
-    msg = "Write to " + fusedPath;
-    if (G::FSLog) G::log(srcFun, msg);
-    cv::imwrite(fusedPath.toStdString(), fusedColorMat);
+    try {
+        if (G::FSLog) G::log(srcFun, "Write to " + fusedPath);
+        cv::imwrite(fusedPath.toStdString(), fusedColorMat);
+    }
+    catch (const cv::Exception& e) {
+        qWarning() << "OpenCV failed to save image:" << e.what();
+        return ""; // Abort save
+    }
 
     // Copy metadata from first source using your existing logic
     msg = "Copy metadata using ExifTool from " + inputPaths.last();

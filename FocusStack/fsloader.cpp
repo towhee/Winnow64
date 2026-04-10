@@ -47,6 +47,8 @@ Behavior:
 Key idea:
 Choose the smallest possible padding that still satisfies wavelet constraints.
 */
+
+// Not being used.
 static bool divisible(int x, int p) { return (x % p) == 0; }
 
 // We choose max levels such that expanding minimally satisfies divisibility.
@@ -132,6 +134,7 @@ cv::Rect padToWaveletSize(const cv::Mat &src,
 }
 
 // Build 1xW float row of normalized x and x^2 in [-1..1]
+// not being used
 static void buildXRow(int w, cv::Mat& xRow32, cv::Mat& x2Row32)
 {
     xRow32.create(1, w, CV_32F);
@@ -170,47 +173,59 @@ Key idea:
     Alignment always operates on padded 8-bit grayscale, regardless of input
     format.
 */
-Image load(const std::string &filename)
+Image load(const std::string &filePath, ImageDecoderSync externalDecoder)
 {
     QString srcFun = "FSLoader::load";
     Image out;
+    cv::Mat src;
 
-    // Load any depth, any color.
-    cv::Mat raw = cv::imread(filename, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
-    if (raw.empty()) {
-        qDebug() << srcFun << "2";
-        throw std::runtime_error("FSLoader: Could not load: " + filename);
+    QFileInfo fileInfo(QString::fromStdString(filePath));
+    QString ext = fileInfo.suffix().toLower();
+    QStringList cvFileTypes = {"tiff", "jpg", "png"};
+
+    if (cvFileTypes.contains(ext)) {
+        // Load any depth, any color.
+        src = cv::imread(filePath, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+    }
+    else {
+        // Use the provided Qt-based decoder for unsupported types (RAW, HEIC, etc.)
+        src = externalDecoder(QString::fromStdString(filePath));
     }
 
-    out.origSize = raw.size();
-    out.is16bit  = (raw.depth() == CV_16U);
+    if (src.empty()) {
+        qDebug() << srcFun << "Failed to read";
+        throw std::runtime_error("FSLoader: Could not load: " + filePath);
+    }
+
+    out.origSize = src.size();
+    out.is16bit  = (src.depth() == CV_16U);
 
     // Color: keep as-is (8- or 16-bit)
     cv::Mat paddedColor;
     int ex, ey;
-    out.validArea = padToWaveletSize(raw, paddedColor, ex, ey);
+    out.validArea = padToWaveletSize(src, paddedColor, ex, ey);
     out.paddedSize = paddedColor.size();
     out.color = paddedColor;
 
     // Build grayscale (8-bit) for alignment
     cv::Mat gray16;
 
-    if (raw.channels() == 1)
+    if (src.channels() == 1)
     {
-        if (raw.depth() == CV_8U)
-            gray16 = raw;
+        if (src.depth() == CV_8U)
+            gray16 = src;
         else  // 16-bit → scale down
-            raw.convertTo(gray16, CV_8U, 1.0 / 256.0);
+            src.convertTo(gray16, CV_8U, 1.0 / 256.0);
     }
     else
     {
         // Use luminance conversion
-        if (raw.depth() == CV_8U)
-            cv::cvtColor(raw, gray16, cv::COLOR_BGR2GRAY);
+        if (src.depth() == CV_8U)
+            cv::cvtColor(src, gray16, cv::COLOR_BGR2GRAY);
         else
         {
             cv::Mat tmp8;
-            raw.convertTo(tmp8, CV_8U, 1.0 / 256.0);
+            src.convertTo(tmp8, CV_8U, 1.0 / 256.0);
             cv::cvtColor(tmp8, gray16, cv::COLOR_BGR2GRAY);
         }
     }
@@ -222,7 +237,7 @@ Image load(const std::string &filename)
 
     out.gray = paddedGray;
 
-    QString msg = "Loaded " + QString::fromStdString(filename);
+    QString msg = "Loaded " + QString::fromStdString(filePath);
     if (G::FSLog) G::log(srcFun, msg);
 
     return out;
@@ -250,6 +265,7 @@ FSLoader isolates all wavelet-specific preparation logic:
 
 This keeps wavelet, alignment, and fusion code simpler and more robust.
 */
+// not being used
 Image loadFromMat(const cv::Mat &source)
 {
     Image out;
@@ -296,6 +312,7 @@ Image loadFromMat(const cv::Mat &source)
 // FSAlign::Result::transform is 2x3 CV_32F mapping source -> reference/global.
 // We warp the padded gray+color into "align space" using warpAffine.
 // -----------------------------------------------------------------------------
+// used by loadAlignedSliceOrig which is not being used
 static bool warpAlignedToAlignSpace(const FSLoader::Image& in,
                                     const Result& ar,
                                     cv::Mat& grayAlign8,
@@ -343,6 +360,7 @@ static bool warpAlignedToAlignSpace(const FSLoader::Image& in,
     return true;
 }
 
+// used by loadAlignedSliceOrig which is not being used
 static inline bool rectInside(const cv::Rect& r, const cv::Size& s)
 {
     return r.x >= 0 && r.y >= 0 &&
@@ -351,6 +369,7 @@ static inline bool rectInside(const cv::Rect& r, const cv::Size& s)
            r.y + r.height <= s.height;
 }
 
+// not being used
 bool FSLoader::loadAlignedSliceOrig(int sliceIdx,
                                     const QStringList& inputPaths,
                                     const std::vector<Result>& globals,

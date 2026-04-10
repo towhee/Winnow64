@@ -215,7 +215,15 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     // setLayoutMode(QListView::Batched) causes delay that makes scrollTo a headache
     // so do not use!
 
-    setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
+    // setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
+
+    // Force smooth pixel-by-pixel scrolling instead of item snapping
+    setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    // Optional but recommended for trackpad smoothness:
+    verticalScrollBar()->setSingleStep(1);
+    horizontalScrollBar()->setSingleStep(1);
+
     horizontalScrollBar()->setObjectName("IconViewHorizontalScrollBar");
     verticalScrollBar()->setObjectName("IconViewVerticalScrollBar");
     setWordWrap(true);
@@ -256,8 +264,10 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     isDebug = false;
 
     // mouse wheel is spinning
-    wheelTimer.setSingleShot(true);
-    connect(&wheelTimer, &QTimer::timeout, this, &IconView::wheelStopped);
+    // wheelTimer.setSingleShot(true);
+    // connect(&wheelTimer, &QTimer::timeout, this, &IconView::wheelStopped);
+
+    connect(&kineticScrollTimer, &QTimer::timeout, this, &IconView::applyKineticScroll);
 
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
@@ -1244,46 +1254,120 @@ void IconView::leaveEvent(QEvent *event)
 void IconView::wheelEvent(QWheelEvent *event)
 {
     if (G::isInitializing) return;
-    if (isDebug)
-        qDebug() << "IconView::wheelEvent" << objectName() << event;
 
-    if (wheelSpinningOnEntry && G::wheelSpinning) {
-        //qDebug() << "IconView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
-        return;
+    if (event->source() == Qt::MouseEventSynthesizedBySystem || event->source() == Qt::MouseEventNotSynthesized) {
+
+        QPoint numPixels = event->pixelDelta();
+        QPoint numDegrees = event->angleDelta() / 8;
+
+        // --- UPDATED ASSASSIN SHIELD & TAP-TO-STOP ---
+        if (numPixels.isNull() && numDegrees.isNull()) {
+
+            // TAP-TO-STOP: When you plant your fingers on the glass, macOS sends
+            // a 0-delta event with the ScrollBegin phase. We must catch it here!
+            if (event->phase() == Qt::ScrollBegin) {
+                kineticScrollTimer.stop();
+                kineticVelocityX = 0;
+                kineticVelocityY = 0;
+            }
+
+            event->accept();
+            return;
+        }
+
+        // CRITICAL: We hijack the event and NEVER call QListView::wheelEvent.
+        event->accept();
+
+        qreal currentDx = 0;
+        qreal currentDy = 0;
+
+        if (!numPixels.isNull()) {
+            currentDx = numPixels.x();
+            currentDy = numPixels.y();
+        } else if (!numDegrees.isNull()) {
+            currentDx = (numDegrees.x() / 15.0) * 20.0;
+            currentDy = (numDegrees.y() / 15.0) * 20.0;
+        }
+
+        // Tap-to-Stop Fallback: In case your tap registered a tiny 1-pixel micro-movement
+        if (event->phase() == Qt::ScrollBegin) {
+            kineticScrollTimer.stop();
+            kineticVelocityX = 0;
+            kineticVelocityY = 0;
+        }
+
+        // Boost the raw OS input to give it massive launch speed
+        qreal flickMultiplier = 3.0; // Adjust this to hit your 200-icon goal
+        qreal targetVx = currentDx * flickMultiplier;
+        qreal targetVy = currentDy * flickMultiplier;
+
+        // The Hijack Engine: Only accept speeds that are FASTER than our current glide.
+        // This genius trick allows us to absorb and completely ignore the OS's
+        // short rapid-decay momentum events, keeping only the absolute peak velocity!
+        if ((targetVx > 0 && kineticVelocityX <= 0) || (targetVx < 0 && kineticVelocityX >= 0)) {
+            kineticVelocityX = targetVx; // Clean direction change
+        } else {
+            if (targetVx > 0) kineticVelocityX = qMax(kineticVelocityX, targetVx);
+            else if (targetVx < 0) kineticVelocityX = qMin(kineticVelocityX, targetVx);
+        }
+
+        if ((targetVy > 0 && kineticVelocityY <= 0) || (targetVy < 0 && kineticVelocityY >= 0)) {
+            kineticVelocityY = targetVy; // Clean direction change
+        } else {
+            if (targetVy > 0) kineticVelocityY = qMax(kineticVelocityY, targetVy);
+            else if (targetVy < 0) kineticVelocityY = qMin(kineticVelocityY, targetVy);
+        }
+
+        if (!kineticScrollTimer.isActive() && (qAbs(kineticVelocityX) > 0.1 || qAbs(kineticVelocityY) > 0.1)) {
+            kineticScrollTimer.start(16);
+        }
+
+        return; // Done.
     }
-    wheelSpinningOnEntry = false;
 
-    static int deltaSum = 0;
-    static int prevDelta = 0;
-    int delta = event->angleDelta().y();
-    // change direction?
-    if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
-        deltaSum = delta;
+    QListView::wheelEvent(event);
+}
+
+void IconView::applyKineticScroll()
+{
+    // 1. Base friction (Ensure kineticFriction in your header is ~0.99)
+    kineticVelocityX *= kineticFriction;
+    kineticVelocityY *= kineticFriction;
+
+    // 2. Linear Drag (Replaces the broken 'easingFactor')
+    // This forces a clean, smooth stop at the end of the glide.
+    qreal linearDrag = 0.5;
+
+    if (kineticVelocityX > 0) kineticVelocityX = qMax(0.0, kineticVelocityX - linearDrag);
+    else if (kineticVelocityX < 0) kineticVelocityX = qMin(0.0, kineticVelocityX + linearDrag);
+
+    if (kineticVelocityY > 0) kineticVelocityY = qMax(0.0, kineticVelocityY - linearDrag);
+    else if (kineticVelocityY < 0) kineticVelocityY = qMin(0.0, kineticVelocityY + linearDrag);
+
+    // 3. Accumulate fractional pixel movements
+    scrollAccumulatorX += kineticVelocityX;
+    scrollAccumulatorY += kineticVelocityY;
+
+    // 4. Extract integer pixels to move
+    int dx = static_cast<int>(scrollAccumulatorX);
+    int dy = static_cast<int>(scrollAccumulatorY);
+
+    if (dx != 0 || dy != 0) {
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value() - dx);
+        verticalScrollBar()->setValue(verticalScrollBar()->value() - dy);
+
+        scrollAccumulatorX -= dx;
+        scrollAccumulatorY -= dy;
     }
-    deltaSum += delta;
-    /*
-    qDebug() << "IconView::wheelEvent"
-             << "delta =" << delta
-             << "prevDelta =" << prevDelta
-             << "deltaSum =" << deltaSum
-             << "G::wheelSensitivity =" << G::wheelSensitivity
-                ;
-                //*/
 
-    if (qAbs(deltaSum) > G::wheelSensitivity) {
-        QListView::wheelEvent(event);
-        deltaSum = 0;
+    // 5. Clean Cutoff
+    if (qAbs(kineticVelocityX) < 1.0 && qAbs(kineticVelocityY) < 1.0) {
+        kineticScrollTimer.stop();
+        kineticVelocityX = 0;
+        kineticVelocityY = 0;
+        scrollAccumulatorX = 0;
+        scrollAccumulatorY = 0;
     }
-
-    // set spinning flag in case mouse moves to another object while still spinning
-    G::wheelSpinning = true;
-    // singleshot to flag when wheel has stopped spinning
-    wheelTimer.start(100);
-    /*
-    qDebug() << "IconView::wheelEvent"
-             << "G::wheelSpinning =" << G::wheelSpinning
-             << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
-        ; //*/
 }
 
 void IconView::wheelStopped()

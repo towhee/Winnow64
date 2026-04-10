@@ -109,6 +109,7 @@ public slots:
 
 private slots:
     void wheelStopped();
+    void applyKineticScroll();
 
 protected:
     void startDrag(Qt::DropActions) override;
@@ -167,6 +168,22 @@ private:
     // used when invert selection
     bool selectionInverted = false;
     QModelIndex newCurrentIndex;
+
+    // Custom kinetic scrolling
+    QTimer kineticScrollTimer;
+    qreal kineticVelocityX = 0;
+    qreal kineticVelocityY = 0;
+
+    // NEW: Track PEAK speed before liftoff
+    qreal peakVelocityX = 0;
+    qreal peakVelocityY = 0;
+    QElapsedTimer swipeRestTimer;
+
+    // 0.99 provides a long glide. (0.995 is massive)
+    qreal kineticFriction = 0.99;
+
+    qreal scrollAccumulatorX = 0;
+    qreal scrollAccumulatorY = 0;
 
     bool isDebug = false;     // set true/false in constructor
 };

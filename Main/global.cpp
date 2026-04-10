@@ -7,7 +7,7 @@ QSettings *settings;
 
 // system messaging
 bool isTestLogger = false;
-bool isLogger = false;              // Writes log messages to file or console
+bool isLogger = true;              // Writes log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
@@ -15,7 +15,7 @@ bool isFileLogger = true;          // Writes log messages to file (debug executa
 bool isErrorLogger = false;         // Writes error log messages to file or console
 bool isIssueLogger = true;         // Writes issue log messages to file or console
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
-bool FSLog = false;                  // Focus Stack log
+bool FSLog = true;                  // Focus Stack log
 bool showAllEvents = false;
 QFile logFile;                      // MW::openLog(), MW::closeLog()
 QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
@@ -24,7 +24,7 @@ QStringList issueList;
 
 
 // Rory version (expanded cache pref, focus stack)
-bool isRory = false;
+bool isRory = true;
 
 // mutex
 QWaitCondition waitCondition;
