@@ -6,9 +6,10 @@ WHAT'S NEW
 - Selections are now cleared after a filtration change
 
 BUGS / TO DO
+- Focus stack make sure all files are TIFF, png or JPG or add utility to use QImage
+- EmbelProperties::syncWinnets deal with missing winnets
 - Update where log file is updated
 - MOV::findAtom qWarning() << "Invalid atom size" << size;
-- IconView smooth scroll on swipe
 - Eliminate processEvents and review G::popup usage
 - Delete folder crash
 - Rename files
@@ -141,6 +142,8 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- IconView smooth scroll on swipe
+- Video plays when try to retreat/advance at first/last item.
 - Beef up instance checking in DataModel
 - Added QQ tip in ingest dialog
 - Info display: if EC is null then do not display EV

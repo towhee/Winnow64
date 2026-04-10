@@ -634,7 +634,6 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
     sfRow = dm->proxyRowFromPath(fPath);
 
     if (load()) {
-        //if (metadata->rotateFormats.contains(ext)) rotate();
         if (metadata->rotateFormats.contains(ext)) rotate();
         colorManage();
         img = image;

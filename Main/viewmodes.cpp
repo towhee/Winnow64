@@ -54,7 +54,7 @@ void MW::loupeDisplay(const QString src)
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) {
         centralLayout->setCurrentIndex(VideoTab);
-        videoView->load(dm->currentFilePath);
+        // videoView->load(dm->currentFilePath);
     }
     else {
         centralLayout->setCurrentIndex(LoupeTab);

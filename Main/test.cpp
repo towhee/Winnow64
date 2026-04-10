@@ -435,6 +435,8 @@ void MW::mergeProjectFiles() {
     files << "/Users/roryhill/Projects/Winnow64/Views/infoview.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Views/tableview.h";
     files << "/Users/roryhill/Projects/Winnow64/Views/tableview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/videoview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/videowidget.cpp";
 
     // 1. Ensure the destination directory exists
     QDir dir(destinationDir);

@@ -1897,6 +1897,7 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
          "Video",
          "InstanceClash",
          "NoDir",
+         "NoFile",
          "BlankFilePath",
          "NoMetadata",
     };

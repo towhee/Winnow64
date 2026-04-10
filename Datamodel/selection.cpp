@@ -217,7 +217,10 @@ void Selection::toggleSelect(QModelIndex sfIdx)
 void Selection::next(Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::next");
-    // qDebug() << "Selection::next";
+
+    // check if already at last item
+    if (dm->currentSfRow == (dm->sf->rowCount() - 1)) return;
+
     G::fileSelectionChangeSource = "Key_Right";
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         qDebug() << "Only shift key pressed";
@@ -237,6 +240,10 @@ void Selection::next(Qt::KeyboardModifiers modifiers)
 
 void Selection::prev(Qt::KeyboardModifiers modifiers)
 {
+
+    // check if already at last item
+    if (dm->currentSfRow == 0) return;
+
     G::fileSelectionChangeSource = "Key_Left";
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         // find prev unselected row

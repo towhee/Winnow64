@@ -1828,7 +1828,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     /* debug
     {
     qDebug() << fun
-             << "fun =" << fun
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
              << "G::mode =" << G::mode
              // << "current =" << current
@@ -1939,7 +1938,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 if (G::useMultimedia) {
                     centralLayout->setCurrentIndex(VideoTab);
                     videoView->load(fPath);
-                    videoView->play();
+                    // videoView->play();
                 }
             }
             if (G::mode == "Grid") gridDisplay();

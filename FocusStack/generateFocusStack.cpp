@@ -22,15 +22,17 @@ void MW::focusStackFromSelection()
 
 void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
 {
-    // Called locally from MW::focusStackFromSelection
-    // Called externally from MW::handleStartupArgs
-    //
-    // Rules:
-    // - Build time-contiguous groups (gap >= 2000ms starts a new group)
-    // - Only keep groups with 2+ items
-    // - If a group has only 1 item:
-    //     * do NOT add it to groups
-    //     * remove that item from the FocusStack input folder (delete file)
+/*
+    Called locally from MW::focusStackFromSelection
+    Called externally from MW::handleStartupArgs
+
+    Rules:
+    - Build time-contiguous groups (gap >= 2000ms starts a new group)
+    - Only keep groups with 2+ items
+    - If a group has only 1 item:
+        * do NOT add it to groups
+        * remove that item from the FocusStack input folder (delete file)
+*/
 
     const QString srcFun = "MW::groupFocusStacks";
     if (G::isLogger) G::log(srcFun);
@@ -133,8 +135,6 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
             msg = hhmmsszzz + " " + p;
         }
     }
-    // */
-    // }
 }
 
 void MW::generateFocusStack(const QStringList paths,
@@ -203,6 +203,8 @@ void MW::generateFocusStack(const QStringList paths,
         this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
     }, Qt::QueuedConnection);
 
+    connect(fs, &FS::requestImage, this, &MW::matFromQImage, Qt::BlockingQueuedConnection);
+
     // cleanup when finished
     connect(fsThread, &QThread::finished, fs, &QObject::deleteLater);
     connect(fsThread, &QThread::finished, fsThread,   &QObject::deleteLater);
@@ -224,9 +226,12 @@ void MW::generateFocusStack(const QStringList paths,
     }
 
     if (G::FSLog) G::log(srcFun, "srcFolder = " + srcFolderPath);
+    if (G::FSLog) G::log(srcFun, "isLocal = " + QVariant(isLocal).toString());
 
-    if (!G::isRory) method = "DMap";
-    if (!G::isRory) fsRemoveTemp = true;
+    // if (!G::isRory)
+        method = "DMap";
+    // if (!G::isRory)
+        fsRemoveTemp = true;
 
     fs->o.method = method;
     fs->o.isLocal = isLocal;
@@ -293,4 +298,32 @@ void MW::generateFocusStack(const QStringList paths,
 
     fsThread->start();
 }
+
+void MW::matFromQImage(QString fPath, cv::Mat &mat)
+{
+    G::log("MW::matFromQImage", fPath);
+
+    QFileInfo fileInfo(fPath);
+    ImageMetadata *m;
+
+    // get image metadata
+    int row = dm->proxyRowFromPath(fPath);
+    metadata->loadImageMetadata(fileInfo, row, dm->instance, true, true, false, true, "FindDuplicatesDlg::preview");
+    m = &metadata->m;
+    if (m->video) return;
+
+    // load QImage with QImage::Format_RGB32
+    ImageDecoder imageDecoder(0, dm, metadata);
+    QImage src;
+    imageDecoder.decodeIndependent(src, metadata, *m);
+
+    // Convert to Format_RGB888 for 3-channel or RGBA8888 for 4-channel
+    // Avoid RGB32 as OpenCV expects 3 or 4 channels specifically
+    QImage swapped = src.convertToFormat(QImage::Format_RGBA8888);
+
+    // Deep copy into the output Mat
+    mat = cv::Mat(swapped.height(), swapped.width(), CV_8UC4,
+                  (void*)swapped.bits(), swapped.bytesPerLine()).clone();
+}
+
 
