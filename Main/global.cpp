@@ -7,11 +7,13 @@ QSettings *settings;
 
 // system messaging
 bool isTestLogger = false;
-bool isLogger = true;              // Writes log messages to file or console
+
+bool isLogger = false;              // Writes log messages to file or console
+bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
+
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
-bool isFileLogger = true;          // Writes log messages to file (debug executable ie remote embellish ops)
 bool isErrorLogger = false;         // Writes error log messages to file or console
 bool isIssueLogger = true;         // Writes issue log messages to file or console
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
@@ -261,9 +263,28 @@ Logger logger;
 
 void log(QString functionName, QString comment, bool zeroElapsedTime)
 {
-    if (functionName == "") qDebug() << " ";  // empty line
-    logger.log(functionName, comment);
-    return;
+    if (!isFileLogger) {
+        if (functionName == "") qDebug() << " ";  // empty line
+        logger.log(functionName, comment);
+        return;
+    }
+
+    // save log as per Utilities::log
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+    QDir dir(path);
+    if (!dir.exists()) dir.mkpath(path);
+    QFile fLog(path + "/WinnowLog.txt");
+    // if (fLog.isOpen()) fLog.close();
+
+    // Use Append instead of ReadWrite + readAll()
+    if (fLog.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        QString txt = QString("%1  %2  %3\n").arg(t, functionName, comment);
+
+        fLog.write(txt.toUtf8());
+        fLog.close();
+    }
+
 }
 
 //*** ISSUES ******************************************************************************

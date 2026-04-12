@@ -144,7 +144,7 @@ void MW::gridDisplay()
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
 
-    gridView->forceFullRefresh("MW::gridDisplay");
+    gridView->refreshIcons("MW::gridDisplay");
 
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     gridView->setCurrentIndex(idx);

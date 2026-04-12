@@ -32,16 +32,20 @@ public:
     QLinearGradient targetColorGradient;
 
 public slots:
-    void clearUpperProgress();
-    void updateUpperProgress(int item, int items, QColor color = Qt::blue);
+    void clearFocusStackProgress();
+    void updateFocusStackProgress(int item, int items, QColor color = Qt::blue);
+    void clearMetaReadProgress();
+    void updateMetaReadProgress(int item, int items, QColor color = Qt::blue);
 
 private:
     QPixmap state;
     bool paintingActive = false;
 
     int counter = 0;
-    int icHtOffset;           // the offset from the top of pnt to the progress bar
-    int icHt;                 // the height of the progress bar
+    int icHtOffset;       // the offset from the top of pnt to the progress bar
+    int icHt;             // the height of the progress bar
+    int fsHtOffset;       // the offset from the top of pnt to the progress bar for focus stack progress
+    int fsHt;             // the height of the progress bar for focus stack progress
     int mrHtOffset;       // the offset from the top of pnt to the progress bar for meta progress
     int mrHt;             // the height of the progress bar for meta progress
     int minCursorWidth = 2; // the minimum width in pixels of the current file position on the bar

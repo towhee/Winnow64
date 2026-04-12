@@ -285,8 +285,8 @@ void MW::insertFiles(QStringList pathList)
     // fPaths.sort(Qt::CaseInsensitive);
     dmInsert(pathList);
 
-    fsTree->updateCount();
-    bookmarks->updateCount();
+    // updata datamodel, imagecache, image counts, selection
+    refresh();
 }
 
 void MW::deleteSelectedFiles()

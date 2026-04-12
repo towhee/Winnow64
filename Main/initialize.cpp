@@ -353,7 +353,7 @@ void MW::createMetaRead()
 
     // update loading metadata in statusbar
     connect(metaRead, &MetaRead::updateProgressInStatusbar,
-            cacheProgressBar, &ProgressBar::updateUpperProgress);
+            cacheProgressBar, &ProgressBar::updateMetaReadProgress);
 
     metaRead->metaReadThread.start();
 }

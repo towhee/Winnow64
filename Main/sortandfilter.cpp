@@ -109,6 +109,7 @@ void MW::filterChange(QString source)
     required for sorting operations.
 */
 
+    QString srcFun = "MW::filterChange";
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
     // qDebug() << "MW::filterChange" << "called from:" << source;
 
@@ -159,9 +160,14 @@ void MW::filterChange(QString source)
         return;
     }
 
-    thumbView->refreshIcons("MW::filterChange");
-    gridView->refreshIcons("MW::filterChange");
-
+    if (thumbView && thumbView->isVisible()) {
+        thumbView->refreshIcons(srcFun);
+        thumbView->scrollToRow(dm->currentSfRow, srcFun);
+    }
+    if (gridView && gridView->isVisible()) {
+        gridView->refreshIcons(srcFun);
+        gridView->scrollToRow(dm->currentSfRow, srcFun);
+    }
     // sync the datamodel instance
     metaRead->initialize();
 

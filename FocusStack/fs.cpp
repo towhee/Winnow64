@@ -371,7 +371,10 @@ bool FS::runDMap()
 
     for (int slice = 0; slice < grpSlices; ++slice)
     {
-        if (abortRequested()) return false;
+        if (abortRequested()) {
+            for (auto &f : futures) f.waitForFinished();
+            return false;
+        }
 
         status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(grpSlices));
 
@@ -384,9 +387,19 @@ bool FS::runDMap()
             return result.clone(); // Ensure we own the data
         };
 
-        // 1. Sequential Part: Load and ECC Align
-        currImage = FSLoader::load(path.toStdString(), decoder);
-        // currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+        // Sequential Part: Load and ECC Align
+        try {
+            // Use your updated lambda decoder here if applicable
+            currImage = FSLoader::load(inputPaths.at(slice).toStdString(), decoder);
+        } catch (const std::exception &e) {
+            QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
+            status(msg);
+            qWarning() << "FS Error:" << msg;
+
+            // Clean up threads on load failure
+            for (auto &f : futures) f.waitForFinished();
+            return false;
+        }
 
         // Deep copy matrices to ensure the main loop doesn't overwrite them
         // while the background thread is still reading them
@@ -405,47 +418,50 @@ bool FS::runDMap()
             fuse.validAreaAlign = cv::Rect(0, 0, masterROI.width, masterROI.height);
             fuse.origSize       = masterROI.size();
             fuse.outDepth       = currImage.color.depth();
-
-            // incrementProgress();
         }
-        else {
-            // Align subsequent slices to the reference
+
+        if (slice > 0) {
             if (!align.alignSlice(slice, prevImage, currImage, prevGlobal,
                                   currGlobal, nullptr, nullptr,
-                                  aopt, &abort, statusCb, progressCb))
+                                  aopt, &abort, statusCb, progressCb)) {
+                // Wait for existing background threads before aborting
+                for (auto &f : futures) f.waitForFinished();
                 return false;
+            }
             incrementProgress();
         }
+
         globals.push_back(currGlobal);
 
         // Parallel Part: Warping and I/O
         futures.append(QtConcurrent::run(
             QThreadPool::globalInstance(),
             [slice, colorForThread, grayForThread, currGlobal, masterROI,
-            paths = alignedColorPaths[slice]]()
+             paths = alignedColorPaths[slice], this]()
             {
                 WarpResult res;
                 res.slice = slice;
 
-                // Perform the Warp
+                // Exit immediately if aborted
+                if (abortRequested()) return res;
+
                 cv::Mat warpedColor, warpedGray;
                 FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
                 FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
 
-                // Sync the focus score and the disk image
-                // to the same 0,0-based coordinate system
+                // Exit before heavy allocations/disk writes if aborted
+                if (abortRequested()) return res;
+
                 res.color = warpedColor(masterROI).clone();
                 res.gray  = warpedGray(masterROI).clone();
 
                 if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
 
-                // Save the exact same sharp ROI to disk for the final fusion read
                 cv::imwrite(paths.toStdString(), res.color);
 
                 return res;
             }));
 
-        // Update tracking for the next slice
         prevImage = currImage;
         prevGlobal = currGlobal;
     }
@@ -462,6 +478,24 @@ bool FS::runDMap()
                          &abort, statusCb, progressCb);
         incrementProgress();
         status("Building depth map");
+    }
+
+    // DRAIN FUTURES QUICKLY ON ABORT DURING FUSION
+    for (auto &f : futures) {
+        if (abortRequested()) {
+            // If aborted, don't process. Just safely wait for the thread to exit.
+            f.waitForFinished();
+            continue;
+        }
+
+        WarpResult res = f.result();
+
+        // Optional safety check in case the thread returned early due to abort
+        if (res.color.empty() || res.gray.empty()) continue;
+
+        fuse.streamSlice(res.slice, res.gray, res.color, fopt,
+                         &abort, statusCb, progressCb);
+        incrementProgress();
     }
 
     if (abortRequested()) return false;
