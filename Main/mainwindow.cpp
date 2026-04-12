@@ -1939,7 +1939,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                     centralLayout->setCurrentIndex(VideoTab);
                     videoView->load(fPath);
                     // videoView->play();
-                }
+                }MW::generateMeanStack
             }
             if (G::mode == "Grid") gridDisplay();
             if (G::mode == "Table") tableDisplay();
@@ -2107,13 +2107,24 @@ void MW::refresh()
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
 
     // Grid view does not update automatically when insertion or deletion
+    if (thumbView->isVisible()) {
+        // Force the IconView to clear its internal pixmap cache
+        thumbView->refreshIcons(srcFun);
+        // Sync the scroll position to the model's preferred icon
+        thumbView->scrollToRow(dm->currentSfRow, srcFun);
+    }
     if (gridView->isVisible()) {
         // Force the IconView to clear its internal pixmap cache
-        gridView->forceFullRefresh(srcFun);
-
+        gridView->refreshIcons(srcFun);
         // Sync the scroll position to the model's preferred icon
         gridView->scrollToRow(dm->currentSfRow, srcFun);
     }
+
+    // // force thumbnail updates in views
+    // if (G::mode == "Loupe") loupeDisplay();
+    // if (G::mode == "Grid") gridDisplay();
+    // if (G::mode == "Table") tableDisplay();
+
 }
 
 bool MW::allIdle() const {
@@ -2257,7 +2268,7 @@ bool MW::reset(QString src)
     fsTree->setEnabled(true);
     bookmarks->setEnabled(true);
     cacheProgressBar->clearImageCacheProgress();
-    cacheProgressBar->clearUpperProgress();
+    cacheProgressBar->clearMetaReadProgress();
     progressLabel->setVisible(false);
     // updateImageCacheStatus();
     filterStatusLabel->setVisible(false);
@@ -2713,7 +2724,7 @@ void MW::folderChangeCompleted()
     }
 
     // hide metadata read progress
-    cacheProgressBar->clearUpperProgress();
+    cacheProgressBar->clearMetaReadProgress();
 
     // build filters if filter dock is visible
     /*
@@ -5212,6 +5223,15 @@ void MW::generateMeanStack()
         // update FSTree image count
         fsTree->refreshModel();
         bookmarks->updateCount();
+
+        if (thumbView && thumbView->isVisible()) {
+            thumbView->refreshIcons("MW::generateMeanStack");
+            thumbView->scrollToRow(dm->currentSfRow, "MW::generateMeanStack");
+        }
+        if (gridView && gridView->isVisible()) {
+            gridView->refreshIcons("MW::generateMeanStack");
+            gridView->scrollToRow(dm->currentSfRow, "MW::generateMeanStack");
+        }
     }
 }
 

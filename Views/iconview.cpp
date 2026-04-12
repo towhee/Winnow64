@@ -332,6 +332,8 @@ void IconView::refreshIcon(QModelIndex idx, QString src)
         return;
     }
 
+    refreshIcons("IconView::refreshThumb");
+
     QVector<int> roles;
     roles.append(Qt::EditRole);
     dataChanged(idx, idx, roles);
@@ -342,18 +344,23 @@ void IconView::refreshIcons(QString src)
     if (isDebug) G::log("IconView::refreshThumbs", objectName());
 
     // Force a full repaint of all rows
+    forceFullRefresh(src); // Ensure the delegate drops its cache
     int last = dm->sf->rowCount() - 1;
     QVector<int> roles;
     roles.append(Qt::EditRole);
     dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0), roles);
+
+    // int last = dm->sf->rowCount() - 1;
+    // QVector<int> roles;
+    // roles.append(Qt::EditRole);
+    // dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0), roles);
 }
 
 void IconView::forceFullRefresh(QString src)
 {
-
     /* Clear the delegate icon cache and update dimensions. Calling rejustify() if
     wrapping is enabled is sufficient as it internally calls setThumbParameters()
-    which clears the cache. Call refreshIcons ti repaint all the icons.  */
+    which clears the cache. Call refreshIcons to repaint all the icons. */
 
     QString srcFun = "IconView::forceFullRefresh";
     if (isDebug) G::log(srcFun, objectName());
@@ -364,7 +371,7 @@ void IconView::forceFullRefresh(QString src)
         setThumbParameters();
     }
 
-    refreshIcons(srcFun);
+    // refreshIcons(srcFun);
 }
 
 void IconView::setThumbParameters()

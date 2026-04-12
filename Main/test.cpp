@@ -388,6 +388,46 @@ void MW::mergeProjectFiles() {
     QString destinationDir = "/Users/roryhill/Temp";
     QStringList files;
 
+    // /*
+    // FOCUS STACK
+    // files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.h";
+    // files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/generateFocusStack.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fs.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fs.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fs.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsalign_types.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsalign.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsalign.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsdepth.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsdepth.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfocus.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfocus.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusion.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusion.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusiondmap.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusiondmap.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionpmax.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionpmax.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionreassign.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionreassign.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionwavelet.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionwavelet.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/FSFusionWaveletTemplates.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsloader.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsloader.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsmerge.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsmerge.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsphotometric.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsphotometric.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsutilities.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsutilities.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fusionpyr.h";
+    files << "/Users/roryhill/Projects/Winnow64/FocusStack/fusionpyr.cpp";
+    //*/
+
+    // /*
+    // WINNOW CORE
     files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.h";
     files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Main/global.h";
@@ -437,6 +477,7 @@ void MW::mergeProjectFiles() {
     files << "/Users/roryhill/Projects/Winnow64/Views/tableview.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Views/videoview.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Views/videowidget.cpp";
+    // */
 
     // 1. Ensure the destination directory exists
     QDir dir(destinationDir);

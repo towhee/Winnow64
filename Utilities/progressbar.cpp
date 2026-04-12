@@ -42,6 +42,8 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
     setObjectName("Status ProgressBar");
 
     // coordinates
+    fsHtOffset = 5;   // the offset from the top of pnt to the Focus Stack progress bar
+    fsHt = 2;         // the height of the Focus Stack progress bar
     mrHtOffset = 7;   // the offset from the top of pnt to the MetaRead progress bar
     mrHt = 2;         // the height of the MetaRead progress bar
     icHtOffset = 9;   // the offset from the top of pnt to the ImageCache progress bar
@@ -82,11 +84,21 @@ ProgressBar::ProgressBar(QWidget *parent) : QWidget(parent)
     imageCacheGradient = getGradient(imageCacheColor);
 }
 
-void ProgressBar::clearUpperProgress()
+void ProgressBar::clearMetaReadProgress()
 {
     QPainter pnt(m1->progressPixmap);
     int w = m1->progressLabel->pixmap().width();
     QRect mdRect(0, mrHtOffset, w, mrHt);
+    pnt.fillRect(mdRect, G::backgroundColor);
+    pnt.end();
+    m1->progressLabel->setPixmap(*(m1->progressPixmap));
+}
+
+void ProgressBar::clearFocusStackProgress()
+{
+    QPainter pnt(m1->progressPixmap);
+    int w = m1->progressLabel->pixmap().width();
+    QRect mdRect(0, fsHtOffset, w, fsHt);
     pnt.fillRect(mdRect, G::backgroundColor);
     pnt.end();
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
@@ -196,21 +208,42 @@ void ProgressBar::updateImageCacheProgress(int fromItem,
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 
-void ProgressBar::updateUpperProgress(int item, int items, QColor color)
+void ProgressBar::updateMetaReadProgress(int item, int items, QColor color)
 {
-    // same as updateMetadataCacheProgress
-    mrHt = 4;
-    mrHtOffset = icHtOffset - mrHt;
+    // // same as updateMetadataCacheProgress
+    // mrHt = 4;
+    // mrHtOffset = icHtOffset - mrHt - mrHt;
+    // // mrHtOffset = icHtOffset - mrHt;
 
     QPainter pnt(m1->progressPixmap);
     int barWidth = m1->cacheBarProgressWidth;
     float itemWidth = (float)barWidth / items;
-    int pxStart, pxWidth;
+    int pxStart, pxWidth, pxEnd;
     pxStart = qRound(item * itemWidth);
     pxWidth = itemWidth + 1;
+    pxEnd = pxStart + pxWidth;
 
     // Done range
-    QRect doneRect(pxStart, mrHtOffset, pxWidth, mrHt);
+    QRect doneRect(0, mrHtOffset, pxEnd, mrHt);
+    // QRect doneRect(pxStart, mrHtOffset, pxWidth, mrHt);
+    pnt.fillRect(doneRect, color);
+    pnt.end();
+    m1->progressLabel->setPixmap(*(m1->progressPixmap));
+}
+
+void ProgressBar::updateFocusStackProgress(int item, int items, QColor color)
+{
+    QPainter pnt(m1->progressPixmap);
+    int barWidth = m1->cacheBarProgressWidth;
+    float itemWidth = (float)barWidth / items;
+    int pxStart, pxWidth, pxEnd;
+    pxStart = qRound(item * itemWidth);
+    pxWidth = itemWidth + 1;
+    pxEnd = pxStart + pxWidth;
+
+    // Done range
+    QRect doneRect(0, fsHtOffset, pxEnd, fsHt);
+    // QRect doneRect(pxStart, mrHtOffset, pxWidth, mrHt);
     pnt.fillRect(doneRect, color);
     pnt.end();
     m1->progressLabel->setPixmap(*(m1->progressPixmap));

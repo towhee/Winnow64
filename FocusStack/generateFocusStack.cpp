@@ -200,9 +200,10 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Progress update
     connect(fs, &FS::progress, this, [this](int current, int total) {
-        this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
+            this->cacheProgressBar->updateFocusStackProgress(current, total, Qt::darkYellow);
     }, Qt::QueuedConnection);
 
+    // Use Winnow to decode and return a cv::Mat
     connect(fs, &FS::requestImage, this, &MW::matFromQImage, Qt::BlockingQueuedConnection);
 
     // cleanup when finished
@@ -249,7 +250,7 @@ void MW::generateFocusStack(const QStringList paths,
 
     connect(fs, &FS::finished, this, [=](bool success) {
         QString msg;
-        cacheProgressBar->clearUpperProgress();
+        cacheProgressBar->clearFocusStackProgress();
 
         if (!success) {
             // Handle Abort or Failure
@@ -280,6 +281,16 @@ void MW::generateFocusStack(const QStringList paths,
             dm->insert(resultPath);
             if (dm->contains(resultPath)) {
                 sel->select(resultPath);
+            }
+            // Clear the internal pixmap caches so the delegate is forced
+            // to fetch the newly generated icon from the DataModel.
+            if (thumbView) {
+                thumbView->refreshIcons("MW::generateFocusStack");
+                thumbView->scrollToRow(dm->currentSfRow, "MW::generateFocusStack");
+            }
+            if (gridView && gridView->isVisible()) {
+                gridView->refreshIcons("MW::generateFocusStack");
+                gridView->scrollToRow(dm->currentSfRow, "MW::generateFocusStack");
             }
         } else {
             folderAndFileSelectionChange(resultPath, "FS::threadFinished");
@@ -324,6 +335,9 @@ void MW::matFromQImage(QString fPath, cv::Mat &mat)
     // Deep copy into the output Mat
     mat = cv::Mat(swapped.height(), swapped.width(), CV_8UC4,
                   (void*)swapped.bits(), swapped.bytesPerLine()).clone();
+
+    // OpenCV expects BGRA, not RGBA. Swap the channels:
+    cv::cvtColor(mat, mat, cv::COLOR_RGBA2BGRA);
 }
 
 

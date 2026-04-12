@@ -1,200 +1,92 @@
-int main(int argc, char *argv[])
-{
-    QLoggingCategory::setFilterRules(
-        "qt.multimedia.ffmpeg.*=false\n"
-        "qt.text.font.db=false"
-    );
-    qputenv("QT_FFMPEG_LOG", "0");
+for (int slice = 0; slice < grpSlices; ++slice)
+    {
+        // 1. WAIT FOR FUTURES BEFORE RETURNING ON ABORT
+        if (abortRequested()) {
+            for (auto &f : futures) f.waitForFinished();
+            return false;
+        }
 
-    QtSingleApplication instance("Winnow", argc, argv);
+        status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(grpSlices));
 
-    QString args;
-    QString delimiter = "\n";
-    for (int i = 1; i < argc; ++i) {
-        args += argv[i];
-        if (i < argc - 1) args += delimiter;
+        try {
+            // Use your updated lambda decoder here if applicable
+            currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+        } catch (const std::exception &e) {
+            QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
+            status(msg);
+            qWarning() << "FS Error:" << msg;
+
+            // Clean up threads on load failure
+            for (auto &f : futures) f.waitForFinished();
+            return false;
+        }
+
+        // ... [existing alignment logic] ...
+
+        if (slice > 0) {
+            if (!align.alignSlice(slice, prevImage, currImage, prevGlobal,
+                                  currGlobal, nullptr, nullptr,
+                                  aopt, &abort, statusCb, progressCb)) {
+                // Wait for existing background threads before aborting
+                for (auto &f : futures) f.waitForFinished();
+                return false;
+            }
+            incrementProgress();
+        }
+
+        globals.push_back(currGlobal);
+
+        // 2. ADD ABORT CHECKS INSIDE THE LAMBDA
+        futures.append(QtConcurrent::run(
+            QThreadPool::globalInstance(),
+            [slice, colorForThread, grayForThread, currGlobal, masterROI,
+            paths = alignedColorPaths[slice], this]()
+            {
+                WarpResult res;
+                res.slice = slice;
+
+                // Exit immediately if aborted
+                if (abortRequested()) return res;
+
+                cv::Mat warpedColor, warpedGray;
+                FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
+                FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
+
+                // Exit before heavy allocations/disk writes if aborted
+                if (abortRequested()) return res;
+
+                res.color = warpedColor(masterROI).clone();
+                res.gray  = warpedGray(masterROI).clone();
+
+                if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
+
+                cv::imwrite(paths.toStdString(), res.color);
+
+                return res;
+            }));
+
+        prevImage = currImage;
+        prevGlobal = currGlobal;
     }
 
-    // terminate if Winnow already open and no arguments to pass
-    if (args == "" && instance.isRunning()) {
-        QString msg = "Winnow or a Winnow report is open.";
-        return 0;
+    // 3. DRAIN FUTURES QUICKLY ON ABORT DURING FUSION
+    for (auto &f : futures) {
+        if (abortRequested()) {
+            // If aborted, don't process. Just safely wait for the thread to exit.
+            f.waitForFinished();
+            continue;
+        }
+
+        WarpResult res = f.result();
+
+        // Optional safety check in case the thread returned early due to abort
+        if (res.color.empty() || res.gray.empty()) continue;
+
+        fuse.streamSlice(res.slice, res.gray, res.color, fopt,
+                         &abort, statusCb, progressCb);
+        incrementProgress();
     }
 
-    // instance already running
-    if (instance.sendMessage(args)) {
-        if (G::isFileLogger) Utilities::log("WinnowMain", "Instance already running");
-        QString msg = "Winnow or a Winnow report is open.";
-        // G::popUp->showPopup(msg);
-        return 0;
-    }
-    else {
-        if (G::isFileLogger) Utilities::log("WinnowMain", "New Instance");
-    }
+    if (abortRequested()) return false;
 
-#ifdef Q_OS_MAC
-    Mac::initializeAppDelegate();
-#endif
-
-    // start program
-    QCoreApplication::addLibraryPath("./");
-    MW mw(args);
-    mw.show();
-
-    // connect message when instance already running
-    QObject::connect(&instance, SIGNAL(messageReceived(const QString&)),
-             &mw, SLOT(handleStartupArgs(const QString&)));
-
-    instance.setActivationWindow(&mw, false);
-
-    // not being used
-    QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
-
-    return instance.exec();
-}
-
-
-
-
-
-8640x5760
-IconViewDelegate::Paint                  sfRow = 3 vpW = 60 vpH = 19 vpA = 3.0985
-IconView::zoomCursor                     sfRow = 3 vpWN = 0.167477 vpHN = 0.0810764 iconW = 182 iconH = 182 vpA = 3.0985 zcW = 43 zcH = 14
-
-
-3840x2160
-IconViewDelegate::Paint                  sfRow = 0 vpW = 137 vpH = 44 vpA = 3.0985
-IconView::zoomCursor                     sfRow = 0 vpWN = 0.376823 vpHN = 0.216204 iconW = 182 iconH = 182 vpA = 3.0985 zcW = 120 zcH = 39
-
-
-
-void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
-{
-    QString srcFun = "IconView::zoomCursor";
-    if (isDebug)
-        G::log(srcFun, objectName() +
-               " row " + QString::number(idx.row()));
-
-    if (dm->index(dm->currentSfRow, G::VideoColumn).data().toBool()) return;
-    if (!showZoomFrame) return;
-    if (!idx.isValid()) return;
-    // if (m2->imageView->isFit) return;
-
-    // Only recalc if mouse over a different icon or cursor has changed
-    static QModelIndex prevIdx = QModelIndex();
-    static QSize zoomCursorSize = QSize(-1,-1);
-    QSize currentCursorSize = cursor().pixmap().size();
-    if (prevIdx == idx && currentCursorSize == zoomCursorSize) return;
-    prevIdx = idx;
-
-    // preview scene dimensions
-    qreal iW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toReal();
-    qreal iH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toReal();
-    qreal iA = dm->sf->index(idx.row(), G::AspectRatioColumn).data().toReal();
-    // swap width / height if portrait
-    if (iA < 1) {
-        qreal temp = iW;
-        iW = iH;
-        iH = temp;
-    }
-
-    // viewport
-    QSize vpSize = m2->imageView->viewportInScene();
-    int vpW = vpSize.width();
-    int vpH = vpSize.height();
-
-    // normalized viewport
-    qreal vpWN = static_cast<qreal>(vpW) / iW;
-    qreal vpHN = static_cast<qreal>(vpH) / iH;
-
-    // thumbnail excluding any black border
-    int sfRow = idx.row();
-    QRect *thumbRect = iconViewDelegate->iconRectCache.object(sfRow);
-    int tW = thumbRect->width();
-    int tH = thumbRect->height();
-    qreal tA = static_cast<qreal>(tW) / tH;
-
-    // zoom cursor size
-    int w = qRound(vpWN * tW);
-    int h = qRound(vpHN * tH);
-
-    #ifdef Q_OS_MAC
-        float scale = Mac::getMouseCursorMagnification();
-        if (scale < 0.001) scale = 1.0;
-        w /= scale;
-        h /= scale;
-    #endif
-
-    // make room for border
-    int pw = 1;                                     // pen width
-    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
-    h += (pw * 8);
-
-    QPixmap frame(w, h);
-    frame.fill(Qt::transparent);
-
-    QPen oPen, iPen;
-    oPen.setWidth(pw);
-    iPen.setWidth(pw);
-    oPen.setColor(Qt::white);
-    iPen.setColor(Qt::black);
-
-    QPainter p(&frame);
-    p.setRenderHint(QPainter::Antialiasing, false); // Keep lines crisp
-    p.setClipping(true);
-    p.setClipRect(*thumbRect); // not working, no cursor visible
-
-    // --- Draw Borders ---
-    QRect oBorder(0, 0, w-pw-1, h-pw-1);            // outer border
-    QRect iBorder(pw, pw, w-3*pw-1, h-3*pw-1);      // inner border
-
-    p.setPen(oPen);
-    p.drawRect(oBorder);
-    p.setPen(iPen);
-    p.drawRect(iBorder);
-
-    // --- Draw Crosshair ---
-    int midX = w / 2;
-    int midY = h / 2;
-    int chLen = 4 * G::actDevicePixelRatio;        // Length of crosshair arms
-
-    // Draw White horizontal and vertical base
-    p.setPen(oPen);
-    p.drawLine(midX - chLen, midY, midX + chLen, midY);
-    p.drawLine(midX, midY - chLen, midX, midY + chLen);
-
-    // Draw Black center lines to create the "sandwich" effect matching the border
-    p.setPen(iPen);
-    int p2 = pw * 2;
-    p.drawLine(midX - chLen + p2, midY, midX + chLen - p2, midY);
-    p.drawLine(midX, midY - chLen + p2, midX, midY + chLen - p2);
-
-    setCursor(QCursor(frame));
-
-    // draw the new cursor as a frame
-    // setCursor(QCursor(drawLoupeVPRect(zcW, zcH)));
-
-    zoomCursorSize = cursor().pixmap().size();
-}
-
-
-
-
-MW::eventFilter event: QEvent(CursorChange, 0x16d7db4f0) 	 event->type: QEvent::CursorChange 	 obj: QWidgetWindow(0x6000031ee460, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-MW::eventFilter event: QEvent(CursorChange, 0x16d7db4f0) 	 event->type: QEvent::CursorChange 	 obj: MW(0x16d7ddbd0, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
-MW::eventFilter event: QEvent(CursorChange, 0x16d7db588) 	 event->type: QEvent::CursorChange 	 obj: IconView(0x12ed0a510, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
-MW::eventFilter event: QEvent(CursorChange, 0x16d7db950) 	 event->type: QEvent::CursorChange 	 obj: QWidgetWindow(0x6000031ee460, name = "MWWindow") 	 obj->objectName: "MWWindow" object->metaObject()->className: QWidgetWindow
-MW::eventFilter event: QEvent(CursorChange, 0x16d7db950) 	 event->type: QEvent::CursorChange 	 obj: MW(0x16d7ddbd0, name = "MW") 	 obj->objectName: "MW" object->metaObject()->className: MW
-MW::eventFilter event: QEvent(CursorChange, 0x16d7db9e8) 	 event->type: QEvent::CursorChange 	 obj: IconView(0x12ed0a510, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
-MW::eventFilter event: QEvent(CursorChange, 0x16d7dcc38) 	 event->type: QEvent::CursorChange 	 obj: IconView(0x12ed0a510, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
-MW::eventFilter event: QEvent(CursorChange, 0x16d7dc968) 	 event->type: QEvent::CursorChange 	 obj: IconView(0x12ed0a510, name = "Thumbnails") 	 obj->objectName: "Thumbnails" object->metaObject()->className: IconView
-
-
-
-
-
-
-
-
-
-
+    // ... [existing finalization and streamFinish logic] ...

@@ -1,17 +1,14 @@
 WHAT'S NEW
-- Auto cache size
-- TableView freeze first two columns when scroll horizontally
-- OS hanging when process large number of recursed folders
-- Ingest Dlg not showing manual paths correctly
-- Selections are now cleared after a filtration change
+- Focus Stacking
 
 BUGS / TO DO
-- Focus stack make sure all files are TIFF, png or JPG or add utility to use QImage
+- Refresh thumbs after Delete, Insert operations.
+- Send all warnings to console and issue log.
+- Add preference to toggle isFileLogger
 - EmbelProperties::syncWinnets deal with missing winnets
 - Update where log file is updated
 - MOV::findAtom qWarning() << "Invalid atom size" << size;
 - Eliminate processEvents and review G::popup usage
-- Delete folder crash
 - Rename files
 - Read/write png metadata
 - Windows ingest "how this works" has a white titlebar.
@@ -142,6 +139,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Focus stack all file types
 - IconView smooth scroll on swipe
 - Video plays when try to retreat/advance at first/last item.
 - Beef up instance checking in DataModel

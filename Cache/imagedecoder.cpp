@@ -629,9 +629,17 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
 
     It is used by FindDuplicatesDlg.
 */
+    QString srcFun = "  ImageDecoder::decodeIndependent";
+    if (G::isLogger) G::log(srcFun, m.fPath);
+
     this->metadata = metadata;
     fPath = m.fPath;
     sfRow = dm->proxyRowFromPath(fPath);
+
+    if (sfRow < 0) {
+        qWarning() << srcFun << "Invalid row for" << fPath;
+        return false;
+    }
 
     if (load()) {
         if (metadata->rotateFormats.contains(ext)) rotate();

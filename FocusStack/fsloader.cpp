@@ -176,25 +176,35 @@ Key idea:
 Image load(const std::string &filePath, ImageDecoderSync externalDecoder)
 {
     QString srcFun = "FSLoader::load";
+    G::log(srcFun, QString::fromStdString(filePath));
+
     Image out;
     cv::Mat src;
 
     QFileInfo fileInfo(QString::fromStdString(filePath));
     QString ext = fileInfo.suffix().toLower();
-    QStringList cvFileTypes = {"tiff", "jpg", "png"};
+    QStringList cvFileTypes = {"tiff", "tif", "jpg", "jpeg", "png"};
 
+    //Read using cv
     if (cvFileTypes.contains(ext)) {
         // Load any depth, any color.
-        src = cv::imread(filePath, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+        G::log(srcFun, "Load directly with imread");
+        // src = cv::imread(filePath, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+        src = cv::imread(filePath, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH |
+                         cv::IMREAD_IGNORE_ORIENTATION);
     }
-    else {
+
+    // Read using Winnow
+    if (src.empty() && externalDecoder) {
         // Use the provided Qt-based decoder for unsupported types (RAW, HEIC, etc.)
+        G::log(srcFun, "Load using externalDecoder");
         src = externalDecoder(QString::fromStdString(filePath));
     }
 
     if (src.empty()) {
-        qDebug() << srcFun << "Failed to read";
-        throw std::runtime_error("FSLoader: Could not load: " + filePath);
+        qWarning() << srcFun << "FSLoader: Could not load: " + filePath;
+        // throw std::runtime_error("FSLoader: Could not load: " + filePath);
+        return out;
     }
 
     out.origSize = src.size();
@@ -206,6 +216,12 @@ Image load(const std::string &filePath, ImageDecoderSync externalDecoder)
     out.validArea = padToWaveletSize(src, paddedColor, ex, ey);
     out.paddedSize = paddedColor.size();
     out.color = paddedColor;
+
+    qDebug() << srcFun
+             << "out.origSize =" << out.origSize.width << out.origSize.height
+             << "out.is16bit =" << out.is16bit
+             << "out.validArea =" << out.validArea.width << out.validArea.height
+        ;
 
     // Build grayscale (8-bit) for alignment
     cv::Mat gray16;
