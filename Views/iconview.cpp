@@ -332,7 +332,7 @@ void IconView::refreshIcon(QModelIndex idx, QString src)
         return;
     }
 
-    refreshIcons("IconView::refreshThumb");
+    forceFullRefresh("IconView::refreshThumb");
 
     QVector<int> roles;
     roles.append(Qt::EditRole);
