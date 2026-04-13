@@ -1934,15 +1934,16 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             G::isFirstImageNewInstance = false;
             updateClassification();
             if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
-                loupeDisplay(fun);
+                // loupeDisplay(fun);
                 if (G::useMultimedia) {
                     centralLayout->setCurrentIndex(VideoTab);
                     videoView->load(fPath);
                     // videoView->play();
-                }MW::generateMeanStack
+                }
             }
-            if (G::mode == "Grid") gridDisplay();
-            if (G::mode == "Table") tableDisplay();
+            if (G::mode == "Grid") gridView->refreshIcons(src);
+            // if (G::mode == "Grid") gridDisplay();
+            // if (G::mode == "Table") tableDisplay();
         }
         else if (G::useImageView) {
             if (imageView->loadImage(fPath, false, fun)) {
