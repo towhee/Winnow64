@@ -609,7 +609,7 @@ void IconView::setThumbSize()
 
 */
     QString src = "IconView::setThumbSize";
-    // if (isDebug || G::isLogger)
+    if (isDebug || G::isLogger)
         G::log(src, objectName());
     if (isDebug)
         qDebug() << src << objectName();
@@ -1750,18 +1750,15 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
         G::log(srcFun, objectName() +
                " row " + QString::number(idx.row()));
 
-    if (m2->imageView->zoom <= m2->imageView->zoomFit) return;
-    if (dm->index(dm->currentSfRow, G::VideoColumn).data().toBool()) return;
-    if (!showZoomFrame) return;
+    // Guards
     if (!idx.isValid()) return;
-    // if (m2->imageView->isFit) return;
-
-    // Only recalc if mouse over a different icon or cursor has changed
-    // static QModelIndex prevIdx = QModelIndex();
-    // static QSize zoomCursorSize = QSize(-1,-1);
-    // QSize currentCursorSize = cursor().pixmap().size();
-    // if (prevIdx == idx && currentCursorSize == zoomCursorSize) return;
-    // prevIdx = idx;
+    if (G::stop) return;
+    int sfRow = idx.row();
+    if (m2->imageView->zoom <= m2->imageView->zoomFit) return;
+    if (dm->sf->index(sfRow, G::VideoColumn).data().toBool()) return;
+    if (!showZoomFrame) return;
+    if (G::isEmbellish) return;
+    if (G::isInitializing) return;
 
     // preview scene dimensions
     qreal iW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toReal();
@@ -1777,45 +1774,12 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     int vpW = vpSize.width();
     int vpH = vpSize.height();
 
-
-    { // FAIL CHECKS
-        // QString failReason = "";
-        // if (G::isEmbellish) failReason = "G::isEmbellish";
-        // if (G::isInitializing) failReason = "G::isInitializing";
-        // if (G::stop) failReason = "G::stop";
-        // if (iW == 0 || iH == 0) failReason = "Zero width or height";
-        // bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-        // if (isVideo) failReason = "isVideo";
-        // if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
-        //     setCursor(Qt::ArrowCursor);
-        //     prevIdx = model()->index(-1, -1);
-        //     failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
-        // }
-        // if (QGuiApplication::queryKeyboardModifiers()) {
-        //     setCursor(Qt::ArrowCursor);
-        //     failReason = "Key modifier pressed";
-        // }
-        // if (!showZoomFrame) failReason = "!showZoomFrame";
-        // if (!idx.isValid()) failReason = "!idx.isValid()";
-        // if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
-        // if (iW < vpW && iH < vpH) {
-        //     setCursor(Qt::ArrowCursor);
-        //     prevIdx = model()->index(-1, -1);
-        //     failReason = "imW < cW && imH < cH";
-        // }
-        // if (failReason.length()) {
-        //     // qDebug() << "WARNING IconView::zoomCursor Failed because" << failReason;
-        //     return;
-        // }
-    }
-
     // normalized viewport
     qreal vpWN = static_cast<qreal>(vpW) / iW;
     qreal vpHN = static_cast<qreal>(vpH) / iH;
     // qreal vpA = static_cast<qreal>(vpW) / vpH;
 
     // thumbnail excluding any black border (t)
-    int sfRow = idx.row();
     QRect *thumbRect = iconViewDelegate->thumbRectCache.object(sfRow);
     int tW = thumbRect->width();
     int tH = thumbRect->height();
@@ -1916,7 +1880,7 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program or folder in FSTree.
 */
     if (isDebug) G::log("IconView::startDrag", objectName());
-    qDebug() << "IconView::startDrag" << objectName();
+    // qDebug() << "IconView::startDrag" << objectName();
 
     isMouseDrag = false;
 

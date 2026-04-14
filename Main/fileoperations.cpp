@@ -474,12 +474,13 @@ void MW::deleteFolder()
         #endif
         msgBox.setText("This operation will move the folder<br>"
                        + dirToDelete +
-                       "<br>to the " + trash);
+                       "<br>and all subfolders to the " + trash + ".");
         msgBox.setInformativeText("Do you want continue?");
         msgBox.setIcon(QMessageBox::Warning);
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Cancel);
-        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
+        QString s = "QWidget{font-size: 12px; "
+                    "background-color: rgb(85,85,85); color: rgb(229,229,229);}"
                     "QPushButton:default {background-color: rgb(68,95,118);}";
         msgBox.setStyleSheet(s);
         msgBox.setStyleSheet(css);

@@ -286,7 +286,7 @@ void MW::showEvent(QShowEvent *event)
 
     /* set thumbnail size to fit the thumbdock initial size
        canceled as dock height reduced every time a new session */
-    // thumbView->thumbsFitTopOrBottom();
+    thumbView->thumbsFitTopOrBottom();
 
     // initial status bar icon state
     updateStatusBar();
