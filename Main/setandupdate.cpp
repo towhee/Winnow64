@@ -480,8 +480,7 @@ void MW::setCombineRawJpg()
     if (G::useProcessEvents) qApp->processEvents();
 
     // prevent crash when there are videos (did not work)
-    stop();
-    // reset();
+    // stop();
 
     settings->setValue("combineRawJpg", combineRawJpg);
     updateStatusBar();
@@ -512,9 +511,6 @@ void MW::setCombineRawJpg()
            }
        }
    }
-
-   // // refresh the proxy sort/filter
-   // dm->sf->filterChange();
 
    // update elements available to sort and filter
    dm->rebuildTypeFilter();

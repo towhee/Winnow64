@@ -434,6 +434,7 @@ void MW::mergeProjectFiles() {
     files << "/Users/roryhill/Projects/Winnow64/Main/global.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Main/initialize.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Main/navigate.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/settings.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Main/status.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Main/viewmodes.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Main/widgetcss.h";

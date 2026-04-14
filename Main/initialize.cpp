@@ -499,6 +499,7 @@ void MW::createThumbView()
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
         if (settings->contains("thumbWidth")) thumbView->iconWidth = settings->value("thumbWidth").toInt();
+        else qDebug() << "settings does not contain thumbWidth";
         if (settings->contains("thumbHeight")) thumbView->iconHeight = settings->value("thumbHeight").toInt();
         if (settings->contains("labelFontSize")) thumbView->labelFontSize = settings->value("labelFontSize").toInt();
         if (settings->contains("showThumbLabels")) thumbView->showIconLabels = settings->value("showThumbLabels").toBool();
@@ -508,6 +509,7 @@ void MW::createThumbView()
         if (settings->contains("iconNumberSize")) thumbView->iconNumberSize = settings->value("iconNumberSize").toInt();
     }
     else {
+        qDebug() << "not isSettings";
         thumbView->iconWidth = 100;
         thumbView->iconHeight = 100;
         thumbView->labelFontSize = 12;

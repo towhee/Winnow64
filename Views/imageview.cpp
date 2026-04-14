@@ -247,9 +247,6 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         if (isDebug)
             qDebug() << srcFun + "  row =" << sfRow << fPath;
 
-        qDebug() << "sfRow =" << sfRow
-                 << "format =" << icd->imCache.value(fPath).format();
-
         pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
         isLoaded = true;
         if (isDebug)

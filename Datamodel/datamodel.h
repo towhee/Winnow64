@@ -237,6 +237,10 @@ private:
     QSet<QString> pendingPaths;
     QMutex queueMutex;
 
+    QString prevRawSuffix = "";
+    QString prevRawBaseName = "";
+    QModelIndex prevRawIdx;
+
     enum ErrorType {
         General,
         DM
@@ -263,7 +267,8 @@ private:
     bool endLoad(bool success);
     // bool addFileData();
     void addFileDataForRow(int row, QFileInfo fileInfo);
-    void rawPlusJpg();
+    // void rawPlusJpg();
+    void rawJpgPairing(int row, const QString &ext, const QString &baseName);
     double aspectRatio(int w, int h, int orientation);
     void processErr(Error e);
 

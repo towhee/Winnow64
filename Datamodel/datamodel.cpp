@@ -379,10 +379,17 @@ bool DataModel::lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2)
     QString s2 = i2.absoluteFilePath().toLower();
     // check if combined raw+jpg duplicates
     if (i1.completeBaseName() == i2.completeBaseName()) {
-        if (i1.suffix().toLower() == "jpg") s1.replace(".jpg", ".zzz");
-        if (i2.suffix().toLower() == "jpg") s2.replace(".jpg", ".zzz");
-        if (i1.suffix().toLower() == "jpeg") s1.replace(".jpeg", ".zzz");
-        if (i2.suffix().toLower() == "jpeg") s2.replace(".jpeg", ".zzz");
+        if (i1.suffix().toLower() == "jpg" || i1.suffix().toLower() == "jpeg") {
+            s1 = i1.absolutePath().toLower() + "/" + i1.completeBaseName().toLower() + ".zzz";
+        }
+        if (i2.suffix().toLower() == "jpg" || i2.suffix().toLower() == "jpeg") {
+            s2 = i2.absolutePath().toLower() + "/" + i2.completeBaseName().toLower() + ".zzz";
+        }
+
+        // if (i1.suffix().toLower() == "jpg") s1.replace(".jpg", ".zzz");
+        // if (i2.suffix().toLower() == "jpg") s2.replace(".jpg", ".zzz");
+        // if (i1.suffix().toLower() == "jpeg") s1.replace(".jpeg", ".zzz");
+        // if (i2.suffix().toLower() == "jpeg") s2.replace(".jpeg", ".zzz");
     }
     return s1 < s2;
 }
@@ -643,19 +650,14 @@ void DataModel::addFolder(const QString &folderPath)
     emit centralMsg(step + escapeClause);
     qApp->processEvents();
 
-    // test if raw file to match jpg when same file names and one is a jpg
-    QString prevRawSuffix = "";
-    QString prevRawBaseName = "";
-    QModelIndex prevRawIdx;
-
     // datamodel size
     int row = rowCount();
     int oldRowCount = rowCount();
     int newRowCount = oldRowCount;
 
-
     int counter = 0;
     int countInterval = 100;
+
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         // check for escape key release triggering abort
         // qApp->processEvents();
@@ -683,47 +685,10 @@ void DataModel::addFolder(const QString &folderPath)
 
         setRowCount(row + 1);
         if (!columnCount()) setColumnCount(G::TotalColumns);
+
+        // ALL RAW+JPG pairing logic is now encapsulated inside here
         addFileDataForRow(row, fileInfo);
 
-        /*
-        Save info for duplicated raw and jpg files, which generally are the result of
-        setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
-        with the same path precede jpg files with duplicate names. Two roles track duplicates:
-        G::DupHideRawRole flags jpg files with duplicate raws and G::DupOtherIdxRole points to
-        the duplicate other file of the pair. For example:
-
-        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(1,0)
-        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(0,0)  DupRawTypeRole = "ORF"
-        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(3,0)
-        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
-        */
-
-        QString suffix = fileInfo.suffix().toLower();
-        QString baseName = fileInfo.completeBaseName();
-        if (metadata->hasJpg.contains(suffix)) {
-            prevRawSuffix = suffix;
-            prevRawBaseName = fileInfo.completeBaseName();
-            prevRawIdx = index(row, 0);
-        }
-
-        QMutexLocker locker(&mutex);
-        // if row/jpg pair
-        if ((suffix == "jpg" || suffix == "jpeg") && baseName == prevRawBaseName) {
-            // hide raw version
-            setData(prevRawIdx, true, G::DupHideRawRole);
-            // set raw version other index to jpg pair
-            setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
-            // point to raw version
-            setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
-            // set flag to show combined JPG file for filtering when ingesting
-            setData(index(row, 0), true, G::DupIsJpgRole);
-            // build combined suffix to show in type column
-            setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
-            if (combineRawJpg)
-                setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
-            else
-                setData(index(row, G::TypeColumn), "JPG");
-        }
         row++;
     }
 
@@ -1042,6 +1007,79 @@ bool DataModel::okManyImagesWarning()
     return false;
 }
 
+void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseName)
+{
+    bool isRaw = metadata->hasJpg.contains(ext);
+    bool isJpg = (ext == "jpg" || ext == "jpeg");
+
+    // Only update the fast sequential trackers during the initial bulk folder load
+    if (isRaw && loadingModel) {
+        prevRawSuffix = ext;
+        prevRawBaseName = baseName;
+        prevRawIdx = index(row, 0);
+    }
+
+    QMutexLocker locker(&mutex); // Locks only for the pairing search and data updates
+
+    if (isJpg || isRaw) {
+
+        // --- PATH A: BULK LOAD (Fast Sequential Check) ---
+        if (loadingModel) {
+            if (isJpg && baseName == prevRawBaseName) {
+                setData(prevRawIdx, true, G::DupHideRawRole);
+                setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
+                setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
+                setData(index(row, 0), true, G::DupIsJpgRole);
+
+                setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
+                if (combineRawJpg)
+                    setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
+                else
+                    setData(index(row, G::TypeColumn), "JPG");
+            }
+        }
+
+        // --- PATH B: ISOLATED INSERT AFTER LOAD (Targeted Search) ---
+        else {
+            QModelIndexList matches = match(index(0, G::NameColumn), Qt::DisplayRole, baseName, 2, Qt::MatchExactly);
+
+            for (const QModelIndex &idx : matches) {
+                if (idx.row() == row) continue;
+
+                QString otherSuffix = index(idx.row(), G::TypeColumn).data().toString().toLower();
+                QModelIndex otherIdx = index(idx.row(), 0);
+
+                if (isJpg && metadata->hasJpg.contains(otherSuffix)) {
+                    setData(otherIdx, true, G::DupHideRawRole);
+                    setData(otherIdx, index(row, 0), G::DupOtherIdxRole);
+                    setData(index(row, 0), otherIdx, G::DupOtherIdxRole);
+                    setData(index(row, 0), true, G::DupIsJpgRole);
+
+                    setData(index(row, 0), otherSuffix.toUpper(), G::DupRawTypeRole);
+                    if (combineRawJpg)
+                        setData(index(row, G::TypeColumn), "JPG+" + otherSuffix.toUpper());
+                    else
+                        setData(index(row, G::TypeColumn), "JPG");
+                    break;
+                }
+                else if (isRaw && (otherSuffix == "jpg" || otherSuffix == "jpeg")) {
+                    setData(index(row, 0), true, G::DupHideRawRole);
+                    setData(index(row, 0), otherIdx, G::DupOtherIdxRole);
+                    setData(otherIdx, index(row, 0), G::DupOtherIdxRole);
+                    setData(otherIdx, true, G::DupIsJpgRole);
+
+                    setData(otherIdx, ext.toUpper(), G::DupRawTypeRole);
+                    if (combineRawJpg)
+                        setData(otherIdx, "JPG+" + ext.toUpper(), G::TypeColumn);
+                    else
+                        setData(otherIdx, "JPG", G::TypeColumn);
+                    break;
+                }
+            }
+        }
+    }
+}
+
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 {
 /*
@@ -1081,6 +1119,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     QString fPath = fileInfo.filePath();
     QString folderName = fileInfo.dir().dirName();
     QString ext = fileInfo.suffix().toLower();
+    QString baseName = fileInfo.completeBaseName();
 
     // build hash to quickly get dmRow from fPath (ie pixmap.cpp, imageCache...)
     if (fPathRow.contains(fPath)) return;
@@ -1089,10 +1128,10 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     // string to hold aggregated text for searching
     QString search = fPath;
 
-    // block signals while stuffing cells
+    // Do not lock mutex here, as this is all new data
+    // Block signals while stuffing data
     const QSignalBlocker b(this);
 
-    // QMutexLocker locker(&mutex);
     setData(index(row, G::RowNumberColumn), row + 1);
     setData(index(row, G::RowNumberColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::PathColumn), fPath, G::PathRole);
@@ -1143,6 +1182,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
     setData(index(row, G::SearchTextColumn), search);
     setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
+
+    rawJpgPairing(row, ext, baseName);
 
     // emit one compact notification (only if you need the view to refresh now)
     emit dataChanged(index(row, 0), index(row, columnCount()-1));
