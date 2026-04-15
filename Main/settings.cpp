@@ -72,14 +72,14 @@ void MW::writeSettings()
     /* ingest (moved to MW::ingest)
     */
 
-    // thumbs
+    // thumbs (loaded in MW::createThumbView)
     settings->setValue("thumbWidth", thumbView->iconWidth);
     settings->setValue("thumbHeight", thumbView->iconHeight);
     settings->setValue("labelFontSize", thumbView->labelFontSize);
     settings->setValue("showThumbLabels", thumbView->showIconLabels);
     settings->setValue("showZoomFrame", thumbView->showZoomFrame);
 
-    // grid
+    // grid (loaded in MW::createGridView)
     settings->setValue("thumbWidthGrid", gridView->iconWidth);
     settings->setValue("thumbHeightGrid", gridView->iconHeight);
     settings->setValue("labelFontSizeGrid", gridView->labelFontSize);

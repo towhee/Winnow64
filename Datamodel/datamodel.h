@@ -108,8 +108,8 @@ public:
 
     void removeFolder(const QString &folderPath);
 
-    QMutex mutex;
-    QReadWriteLock rwLock;
+    QMutex dmMutex;
+    QReadWriteLock fPathRowLock;
 
     bool isProcessingFolders = false;
 
