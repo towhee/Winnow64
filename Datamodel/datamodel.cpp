@@ -624,7 +624,7 @@ void DataModel::addFolder(const QString &folderPath)
         G::log(fun, folderPath);
     // qDebug() << fun << folderPath;
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     abort = false;
     folderList.append(folderPath);
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
@@ -947,7 +947,7 @@ void DataModel::find(QString text)
     if (G::isLogger) G::log("DataModel::find");
     if (isDebug) qDebug() << "DataModel::find" << "instance =" << instance << text;
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < sf->rowCount(); ++row) {
         QString searchableText = sf->index(row, G::SearchTextColumn).data().toString();
         qDebug() << "DataModel::find" << searchableText;
@@ -1019,7 +1019,7 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
         prevRawIdx = index(row, 0);
     }
 
-    QMutexLocker locker(&mutex); // Locks only for the pairing search and data updates
+    QMutexLocker locker(&dmMutex); // Locks only for the pairing search and data updates
 
     if (isJpg || isRaw) {
 
@@ -1200,7 +1200,7 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     int row = fPathRowValue(fPath);
     if (!index(row,0).isValid()) return false;
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     setData(index(row, G::ByteSizeColumn), fileInfo.size());
     setData(index(row, G::ByteSizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     QString s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
@@ -1546,7 +1546,7 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
         else {
             errMsg = "Failed to load metadata.";
             G::issue("Warning", errMsg, fun, sfRow, fPath);
-            mutex.unlock();
+            dmMutex.unlock();
             return false;
         }
     }
@@ -1627,7 +1627,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     QString search = index(row, G::SearchTextColumn).data().toString();
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     mLock = true;
     // block signals while stuffing cells
     const QSignalBlocker b(this);
@@ -2114,7 +2114,7 @@ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
     }
 
     // update current index parameters
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     QModelIndex sfIdx = sf->mapFromSource(dmIdx);
     currentSfIdx = sfIdx;
     currentSfRow = sfIdx.row();
@@ -2143,7 +2143,7 @@ void DataModel::setCurrent(QString fPath, int instance)
     }
 
     // update current index parameters
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     // if (fPathRow.contains(fPath)) {
     if (fPathRowContains(fPath)) {
         currentDmIdx = indexFromPath(fPath);
@@ -2190,7 +2190,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
         G::issue("Warning", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
         return;
     }
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     setData(dmIdx, value, role);
 }
 
@@ -2234,7 +2234,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
     }
 
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     QString modelDuration = index(dmRow, G::DurationColumn).data().toString();
     if (modelDuration == "") {
         duration /= 1000;
@@ -2386,7 +2386,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
 
 bool DataModel::iconLoaded(int sfRow, int instance)
 {
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     if (G::isLogger) G::log("DataModel::iconLoaded");
     if (isDebug) qDebug() << "DataModel::iconLoaded" << "instance =" << this->instance
                           << "fromInstance =" << instance
@@ -2413,7 +2413,7 @@ int DataModel::iconCount()
 */
     if (isDebug) qDebug() << "DataModel::iconCount" << "instance =" << instance;
     int count = 0;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < rowCount(); ++row) {
 //        qDebug() << "DataModel::iconCount  itemFromIndex  row =" << row;
         if (!itemFromIndex(index(row, 0))->icon().isNull()) count++;
@@ -2514,7 +2514,7 @@ void DataModel::setChunkSize(int chunkSize)
 void DataModel::clearAllIcons() // not being used
 {
     if (isDebug) qDebug() << "DataModel::clearAllIcons" << "instance =" << instance;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < rowCount(); ++row) {
         setData(index(row, 0), QVariant(), Qt::DecorationRole);
     }
@@ -2536,7 +2536,7 @@ void DataModel::clearIconsOutsideChunkRange(int instance)
         return;
     }
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
 
     for (int i = 0; i < startIconRange; i++) {
         if (abort) return;
@@ -2657,31 +2657,31 @@ bool DataModel::isPath(QString fPath)
 
 bool DataModel::fPathRowContains(const QString &path)
 {
-    QReadLocker locker(&rwLock);
+    QReadLocker locker(&fPathRowLock);
     return fPathRow.contains(path);
 }
 
 int DataModel::fPathRowValue(const QString &path)
 {
-    QReadLocker locker(&rwLock);
+    QReadLocker locker(&fPathRowLock);
     return fPathRow[path];
 }
 
 void DataModel::fPathRowSet(const QString &path, const int row)
 {
-    QWriteLocker locker(&rwLock);
+    QWriteLocker locker(&fPathRowLock);
     fPathRow[path] = row;
 }
 
 void DataModel::fPathRowRemove(const QString &path)
 {
-    QWriteLocker locker(&rwLock);
+    QWriteLocker locker(&fPathRowLock);
     fPathRow.remove(path);
 }
 
 void DataModel::fPathRowClear()
 {
-    QWriteLocker locker(&rwLock);
+    QWriteLocker locker(&fPathRowLock);
     fPathRow.clear();
 }
 
@@ -2699,7 +2699,7 @@ int DataModel::proxyRowFromPath(QString fPath, QString src)
     if (isDebug)
         qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance
                  << fPath;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     int dmRow;
     int sfRow = -1;
     if (fPathRowContains(fPath)) {
@@ -2734,7 +2734,7 @@ void DataModel::rebuildRowFromPathHash()
 {
     if (G::isLogger) G::log("DataModel::refreshRowFromPath");
     if (isDebug) qDebug() << "DataModel::refreshRowFromPath" << "instance =" << instance;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     // fPathRow.clear();
     fPathRowClear();
     for (int row = 0; row < rowCount(); ++row) {
@@ -2817,7 +2817,7 @@ void DataModel::searchStringChange(QString searchString)
          qDebug() << "DataModel::searchStringChange" << "instance =" << instance
                   << "searchString =" << searchString;
     // update datamodel search string match
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < rowCount(); ++row)  {
         // no search string
         if (filters->ignoreSearchStrings.contains(searchString)) {
@@ -2930,7 +2930,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 
 QModelIndex DataModel::proxyIndexFromModelIndex(QModelIndex dmIdx)
 {
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     if (dmIdx.isValid()) return sf->mapFromSource(dmIdx);
     else return QModelIndex();
 }
@@ -3172,7 +3172,7 @@ void DataModel::clearPicks()
 */
     if (G::isLogger) G::log("DataModel::clearPicks");
     if (isDebug) qDebug() << "DataModel::clearPicks" << "instance =" << instance;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < sf->rowCount(); row++) {
         setData(index(row, G::PickColumn), "false");
     }

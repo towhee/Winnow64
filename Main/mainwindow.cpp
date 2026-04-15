@@ -284,9 +284,13 @@ void MW::showEvent(QShowEvent *event)
         thumbDockVisibleAction->setChecked(true);
     }
 
-    /* set thumbnail size to fit the thumbdock initial size
-       canceled as dock height reduced every time a new session */
-    thumbView->thumbsFitTopOrBottom();
+    // qDebug() << "MW::showEvent thumbView->iconHeight =" << thumbView->iconHeight;
+
+    // /* set thumbnail size to fit the thumbdock initial size
+    //    canceled as dock height reduced every time a new session */
+    // // thumbView->thumbsFitTopOrBottom();
+
+    // thumbView->setThumbSize();
 
     // initial status bar icon state
     updateStatusBar();
@@ -305,7 +309,11 @@ void MW::showEvent(QShowEvent *event)
 
     QMainWindow::showEvent(event);
 
-    // qApp->processEvents();
+    // recover persistent thumb size that can be lost during initialization and show event
+    if (settings->contains("thumbWidth")) thumbView->iconWidth = settings->value("thumbWidth").toInt();
+    if (settings->contains("thumbHeight")) thumbView->iconHeight = settings->value("thumbHeight").toInt();
+    thumbView->setThumbSize();
+
     qApp->setStyleSheet(G::css);
 
     fsTree->setRootIndex(fsTree->model()->index(0,0));
