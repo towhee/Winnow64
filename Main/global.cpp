@@ -35,16 +35,23 @@ QMutex gMutex;
 QThread* guiThread;;            // use to check
 
 // flow
-bool isInitializing;            // flag program starting / initializing
-bool stop = false;              // flag to stop everything involving DM loading new dataset
-bool removingFolderFromDM;      // flag when datamodel folder rows are being deleted
-bool removingRowsFromDM;        // flag when datamodel rows are being deleted
+bool isInitializing = true;            // flag program starting / initializing
+// bool stop = false;              // flag to stop everything involving DM loading new dataset
+// bool removingFolderFromDM;      // flag when datamodel folder rows are being deleted
+// bool removingRowsFromDM;        // flag when datamodel rows are being deleted
+std::atomic<bool> stop{false};
+std::atomic<bool> removingFolderFromDM{false};
+std::atomic<bool> removingRowsFromDM{false};
 
 // datamodel status
-bool allMetadataLoaded;         // all metadata attempted
-bool iconChunkLoaded;           // all icon chunk loaded
+// bool allMetadataLoaded;         // all metadata attempted
+// bool iconChunkLoaded;           // all icon chunk loaded
+// int dmInstance;                 // DataModel instance
+std::atomic<bool> allMetadataLoaded{false};
+std::atomic<bool> iconChunkLoaded{false};
+std::atomic<int> dmInstance{0};
+std::atomic<bool> isModifyingDatamodel{false};
 
-int dmInstance;                 // DataModel instance
 
 // temp while resolving issues, set false to not use
 bool useMyTiff = true;
@@ -137,7 +144,7 @@ int minIconSize = 40;
 int maxIconChunk = 25000;
 
 // status
-bool isModifyingDatamodel;
+// bool isModifyingDatamodel;
 bool isFirstImageNewInstance;
 bool ignoreScrollSignal;
 bool resizingIcons;

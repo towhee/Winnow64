@@ -2116,9 +2116,19 @@ void ImageCache::cacheImage(int id, int sfRow)
         }
     }
 
-    // cache the image
-    if (!abort) icd->insert(decoders[id]->fPath, decoders[id]->image);
+    QString fPath = decoders[id]->fPath;
 
+    // cache the image
+    // if (!abort) icd->insert(fPath, decoders[id]->image);
+    if (!abort)
+    {
+        QWriteLocker locker(&icd->rwLock);
+        if (icd->imCache.contains(fPath)) {
+            // Already cached by another decoder
+            return;
+        }
+        icd->imCache.insert(fPath, decoders[id]->image);
+    }
     /*
     qDebug().noquote()
         << src.leftJustified(col0Width, ' ')
@@ -2138,7 +2148,7 @@ void ImageCache::cacheImage(int id, int sfRow)
         // scale to max icon size
         QImage im = decoders[id]->image.scaled(G::maxIconSize, Qt::KeepAspectRatio);
         im.convertTo(QImage::Format_RGB32);
-        int dmRow = dm->rowFromPath(decoders[id]->fPath);
+        int dmRow = dm->rowFromPath(fPath);
         emit setIcon(dmRow, im, instance, src);
     }
 

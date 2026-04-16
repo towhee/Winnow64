@@ -7,6 +7,7 @@ void MW::setCentralMessage(QString message)
     centralLayout->setCurrentIndex(MessageTab);
     msg.msgLabel->setText(message);
     centralLayout->currentWidget()->repaint();
+    G::wait(5);
 }
 
 /**********************************************************************************************

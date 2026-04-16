@@ -213,16 +213,22 @@ Q_NAMESPACE
     extern QThread* guiThread;
 
     // flow
-    extern bool stop;
-    extern bool removingFolderFromDM;
-    extern bool removingRowsFromDM;
+    // extern bool stop;
+    // extern bool removingFolderFromDM;
+    // extern bool removingRowsFromDM;
+    extern std::atomic<bool> stop;
+    extern std::atomic<bool> removingFolderFromDM;
+    extern std::atomic<bool> removingRowsFromDM;
     extern bool isInitializing;
 
     // datamodel
-    extern bool allMetadataLoaded;
-    extern bool iconChunkLoaded;
-
-    extern int dmInstance;
+    // extern bool allMetadataLoaded;
+    // extern bool iconChunkLoaded;
+    // extern int dmInstance;
+    extern std::atomic<bool> isModifyingDatamodel;
+    extern std::atomic<bool> allMetadataLoaded;
+    extern std::atomic<bool> iconChunkLoaded;
+    extern std::atomic<int> dmInstance;
 
     extern bool useMyTiff;
     extern bool useMissingThumbs;
@@ -327,7 +333,7 @@ Q_NAMESPACE
     extern int backgroundShade;
     extern QString css;
 
-    extern bool isModifyingDatamodel;
+    // extern bool isModifyingDatamodel;
     extern bool isFirstImageNewInstance;
     extern bool ignoreScrollSignal;
     extern bool resizingIcons;

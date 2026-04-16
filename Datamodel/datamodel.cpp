@@ -352,8 +352,8 @@ void DataModel::clearDataModel()
 void DataModel::newInstance()
 {
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::newInstance");
-    instance++;
-    G::dmInstance = instance;
+    int next = ++instance;
+    G::dmInstance = next;
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -1019,7 +1019,7 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
         prevRawIdx = index(row, 0);
     }
 
-    QMutexLocker locker(&dmMutex); // Locks only for the pairing search and data updates
+    QMutexLocker locker(&dmMutex);
 
     if (isJpg || isRaw) {
 
@@ -3270,7 +3270,7 @@ QString DataModel::diagnostics()
     rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
     rpt << "\n";
     rpt << "\n" << G::sj("abort", dots) << G::s(abort);
-    rpt << "\n" << G::sj("instance", dots) << G::s(instance);
+    rpt << "\n" << G::sj("instance", dots) << G::s((int)instance);
     rpt << "\n" << G::sj("primaryFolderPath", dots) << G::s(primaryFolderPath());
     rpt << "\n" << G::sj("firstFolderPathWithImages", dots) << G::s(firstFolderPathWithImages);
     rpt << "\n";

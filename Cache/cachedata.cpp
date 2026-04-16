@@ -11,18 +11,18 @@ bool ImageCacheData::contains(const QString &key)
 void ImageCacheData::insert(const QString &key, const QImage &image)
 {
     QWriteLocker locker(&rwLock);
-    imCache.insert(key, image);
 
-    // // subtract old if replacing
-    // if (auto it = imCache.find(key); it != imCache.end()) {
-    //     bytes.fetch_sub(static_cast<quint64>(it.value().sizeInBytes()),
-    //                     std::memory_order_relaxed);
-    //     it.value() = image; // replace in place to avoid rehash
-    // } else {
-    //     imCache.insert(key, image);
-    // }
-
-    // add new
+    // replace and subtract bytes from cache total bytes
+    if (auto it = imCache.find(key); it != imCache.end()) {
+        bytes.fetch_sub(static_cast<quint64>(it.value().sizeInBytes()),
+                        std::memory_order_relaxed);
+        it.value() = image; // replace in place to avoid rehash
+    }
+    // else add new image
+    else {
+        imCache.insert(key, image);
+    }
+    // add bytes to cache total bytes
     bytes.fetch_add(static_cast<quint64>(image.sizeInBytes()),
                     std::memory_order_relaxed);
 }
