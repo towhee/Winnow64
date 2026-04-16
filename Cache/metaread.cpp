@@ -242,7 +242,7 @@ void MetaRead::stop()
     stopReaders();
 
     metaReadThread.quit();
-    metaReadThread.wait();
+    // metaReadThread.wait();
 
     if (isIdle()) {
         emit stopped(srcFun);

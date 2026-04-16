@@ -284,14 +284,6 @@ void MW::showEvent(QShowEvent *event)
         thumbDockVisibleAction->setChecked(true);
     }
 
-    // qDebug() << "MW::showEvent thumbView->iconHeight =" << thumbView->iconHeight;
-
-    // /* set thumbnail size to fit the thumbdock initial size
-    //    canceled as dock height reduced every time a new session */
-    // // thumbView->thumbsFitTopOrBottom();
-
-    // thumbView->setThumbSize();
-
     // initial status bar icon state
     updateStatusBar();
 
@@ -2192,7 +2184,7 @@ void MW::stop(QString src)
     if (!stopped["BuildFilters"]) emit abortBuildFilters();
 
     // wait until abort done
-    QTimer to; to.setSingleShot(true); to.start(2000);
+    QTimer to; to.setSingleShot(true); to.start(1000);
 
     // Use an indefinite loop (removed the timeout timer)
     QEventLoop loop;
@@ -2218,8 +2210,10 @@ void MW::stop(QString src)
     // If everything was already idle, skip waiting
     if (!allIdle()) {
         // this blocks until all idle or timeout
-        loop.exec();
+        loop.exec(QEventLoop::ExcludeUserInputEvents);
     }
+
+    if (!allIdle()) qWarning() << "NOT ALLIDLE! STOP FAILED";
 
     // Clean up connections
     for (const auto& c : conns) QObject::disconnect(c);
@@ -2525,14 +2519,13 @@ void MW::folderChanged(bool aborted)
         fsTree->selectionModel()->clear();
     }
 
-    // G::isModifyingDatamodel = false;
     int startRow = 0;
 
     // datamodel has rows
     if (dm->rowCount()) {
         infoView->enable(true);  // not setEnabled() because infoView uses a delegate
     }
-    // datamodel is empty
+    // else datamodel is empty
     else {
         QString msg;
         if (aborted) msg = "Loading folder(s) was aborted";

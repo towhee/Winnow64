@@ -431,54 +431,62 @@ void MW::mergeProjectFiles() {
     // WINNOW CORE
     files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.h";
     files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Main/global.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Main/global.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Main/initialize.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Main/navigate.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Main/settings.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Main/status.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Main/viewmodes.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/global.h";
+    files << "/Users/roryhill/Projects/Winnow64/Main/global.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/initialize.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/navigate.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/settings.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/status.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/viewmodes.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Datamodel/datamodel.h";
     files << "/Users/roryhill/Projects/Winnow64/Datamodel/datamodel.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Cache/cachedata.h";
     files << "/Users/roryhill/Projects/Winnow64/Cache/cachedata.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Cache/framedecoder.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Cache/framedecoder.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/framedecoder.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/framedecoder.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Cache/imagecache.h";
     files << "/Users/roryhill/Projects/Winnow64/Cache/imagecache.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Cache/imagedecoder.h";
     files << "/Users/roryhill/Projects/Winnow64/Cache/imagedecoder.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Datamodel/filters.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Datamodel/filters.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Datamodel/selection.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Datamodel/selection.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/iconview.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/iconview.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/iconviewdelegate.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/iconviewdelegate.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/imageview.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/imageview.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/infostring.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/infostring.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/infoview.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/infoview.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/tableview.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/tableview.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/videoview.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Views/videowidget.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/filters.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/filters.cpp";
 
-    // files << "/Users/roryhill/Projects/Winnow64/Main/widgetcss.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Main/widgetcss.cpp";
-    // files << "/Users/roryhill/Projects/Winnow64/Main/workspaces.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/selection.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/selection.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconviewdelegate.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconviewdelegate.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/imageview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/imageview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infostring.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infostring.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infoview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infoview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/tableview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/tableview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/videoview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/videowidget.cpp";
 
-    // files << "/Users/roryhill/Projects/Winnow64/Cache/tiffthumbdecoder.h";
-    // files << "/Users/roryhill/Projects/Winnow64/Cache/tiffthumbdecoder.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/widgetcss.h";
+    files << "/Users/roryhill/Projects/Winnow64/Main/widgetcss.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/workspaces.cpp";
+
+    files << "/Users/roryhill/Projects/Winnow64/Cache/tiffthumbdecoder.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/tiffthumbdecoder.cpp";
+
+    files << "/Users/roryhill/Projects/Winnow64/File/fstree.h";
+    files << "/Users/roryhill/Projects/Winnow64/File/fstree.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/File/bookmarks.h";
+    files << "/Users/roryhill/Projects/Winnow64/File/bookmarks.cpp";
+
+
     // */
 
     // 1. Ensure the destination directory exists

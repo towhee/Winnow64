@@ -60,7 +60,7 @@ void ImageDecoder::stop()
     abort = true;
     if (decoderThread.isRunning()) {
         decoderThread.quit();
-        decoderThread.wait();
+        // decoderThread.wait();
     }
 }
 

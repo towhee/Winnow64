@@ -547,7 +547,7 @@ FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
     connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
             this->viewport()->update();});
 
-    isDebug = true;
+    isDebug = false;
 }
 
 FSTree::~FSTree() {}
@@ -1135,6 +1135,11 @@ void FSTree::wheelStopped()
     //qDebug() << "ImageView::wheelStopped";
 }
 
+void FSTree::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    // do not pass on
+}
+
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
 /*
@@ -1158,12 +1163,16 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     if (ms < 500) {
         event->ignore();
         qApp->beep();
-        G::popup->showPopup("Rapid clicks are verboten");
+        // G::popup->showPopup("Rapid clicks are verboten");
+        qDebug() << "FSTree::mousePressEvent" << "Rapid clicks are verboten"
+                    "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
         return;
     }
 
     if (G::stop || G::isModifyingDatamodel) {
-        G::popup->showPopup("Busy, try new folder in a sec.", 1000);
+        // G::popup->showPopup("Busy, try new folder in a sec.", 1000);
+        qDebug() << "FSTree::mousePressEvent" << "Busy, try new folder in a sec."
+                    "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
         return;
     }
 
@@ -1175,9 +1184,13 @@ void FSTree::mousePressEvent(QMouseEvent *event)
                 "the status bar will disappear and you can select another<br>"
                 "folder."
                 ;
-        G::popup->showPopup(msg, 5000);
+        // G::popup->showPopup(msg, 5000);
         return;
     }
+
+    qDebug() << "FSTree::mousePressEvent" << "Processing mouse click."
+                "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
+
 
     static QModelIndex prevIdx = QModelIndex();
 
@@ -1331,7 +1344,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         if (G::isLogger || G::isFlowLogger)
             G::log("FSTree::mousePressEvent", "Modifiers: Shift, Select All Between");
 
-        foreach(QString path, foldersToAdd) {
+        foreach (QString path, foldersToAdd) {
             resetDataModel = false;
             emit folderSelectionChange(path, G::FolderOp::Add, resetDataModel, isRecurse);
             QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));

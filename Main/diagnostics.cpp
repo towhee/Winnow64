@@ -198,14 +198,14 @@ QString MW::diagnostics()
     rpt << "\n";
 
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
-    rpt << "\n" << "G::stop = " << G::s(G::stop);
+    rpt << "\n" << "G::stop = " << G::s((bool)G::stop);
     rpt << "\n";
-    rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
-    rpt << "\n" << "G::iconChunkLoaded = " << G::s(G::iconChunkLoaded);
+    rpt << "\n" << "G::allMetadataLoaded = " << G::s((bool)G::allMetadataLoaded);
+    rpt << "\n" << "G::iconChunkLoaded = " << G::s((bool)G::iconChunkLoaded);
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abort);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);
-    rpt << "\n" << "dm->instance = " << G::s(dm->instance);
-    rpt << "\n" << "G::dmInstance = " << G::s(G::dmInstance);
+    rpt << "\n" << "dm->instance = " << G::s((int)dm->instance);
+    rpt << "\n" << "G::dmInstance = " << G::s((int)G::dmInstance);
     rpt << "\n";
 
     rpt << "\n" << "G::isRory = " << G::s(G::isRory);
@@ -257,7 +257,7 @@ QString MW::diagnostics()
     rpt << "\n" << "G::minIconSize = " << G::s(G::minIconSize);
     rpt << "\n" << "G::maxIconChunk = " << G::s(G::maxIconChunk);
     rpt << "\n";
-    rpt << "\n" << "G::isModifyingDatamodel = " << G::s(G::isModifyingDatamodel);
+    rpt << "\n" << "G::isModifyingDatamodel = " << G::s((bool)G::isModifyingDatamodel);
     rpt << "\n" << "G::ignoreScrollSignal = " << G::s(G::ignoreScrollSignal);
     rpt << "\n" << "G::resizingIcons = " << G::s(G::resizingIcons);
     rpt << "\n" << "G::isSlideShow = " << G::s(G::isSlideShow);

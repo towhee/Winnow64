@@ -123,7 +123,7 @@ void BuildFilters::stop()
         abort = true;
         condition.wakeOne();
         mutex.unlock();
-        wait();
+        // wait();
         abort = false;
     }
     if (!isReset) reset();
@@ -1028,6 +1028,8 @@ void BuildFilters::run()
 
     done();
 
+    setIdle();
+    emit stopped("BuildFilters");
 
     /* elapsed time
     qDebug() << "BuildFilters::run"

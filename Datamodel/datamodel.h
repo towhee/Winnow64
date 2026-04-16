@@ -129,7 +129,8 @@ public:
     void fPathRowClear();
 
     // current status
-    int instance = 0;                   // each new load of DataModel increments the instance
+    // int instance = 0;                   // each new load of DataModel increments the instance
+    std::atomic<int> instance;
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString firstFolderPathWithImages;
     QString currentFilePath;            // used in caching to update image cache

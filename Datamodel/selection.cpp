@@ -578,8 +578,8 @@ QString Selection::diagnostics()
     rpt << Utilities::centeredRptHdr('=', "Selection Diagnostics");
     rpt << "\n";
 
-    rpt << "\n" << "dm->instance = " << G::s(dm->instance);
-    rpt << "\n" << "G::dmInstance = " << G::s(G::dmInstance);
+    rpt << "\n" << "dm->instance = " << G::s((int)dm->instance);
+    rpt << "\n" << "G::dmInstance = " << G::s((int)G::dmInstance);
     rpt << "\n";
     rpt << "\n" << "currentDmRow = " << G::s(dm->currentDmRow);
     rpt << "\n" << "currentSfRow = " << G::s(dm->currentSfRow);
