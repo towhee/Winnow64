@@ -57,6 +57,7 @@ public:
     QString reportImCache();
     QString reportImCacheRows();
     QString reportToCacheRows();
+    void debugRunStatus();
 
     bool isIdle();
 
