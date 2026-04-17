@@ -180,6 +180,8 @@ private:
     };
     QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
     QElapsedTimer rapidClick;
+    QTimer *pendingClickTimer = nullptr;
+    QString pendingClickPath;
 
     QModelIndex dndOrigSelection;
     QModelIndex prevCurrentIndex;

@@ -280,9 +280,9 @@ void MetaRead::abortProcessing()
 
     abort = true;
 
-    // abort all readers
+    // Signal all readers to abort simultaneously (non-blocking)
     for (int id = 0; id < readerCount; ++id) {
-        if (readers[id]->pending) readers[id]->abortProcessing();
+        readers[id]->signalAbort();
     }
 
     if (G::isLogger || G::isFlowLogger)

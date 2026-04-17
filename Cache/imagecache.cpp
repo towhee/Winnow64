@@ -239,8 +239,6 @@ void ImageCache::abortProcessing()
     for (int id = 0; id < decoderCount; ++id) {
         cycling[id] = false;
         decoders[id]->abortProcessing();
-        // QMetaObject::invokeMethod(decoders[id], "abortProcessing", Qt::QueuedConnection);
-        // QMetaObject::invokeMethod(decoders[id], "abortProcessing", Qt::BlockingQueuedConnection);
     }
 
     if (G::isLogger || G::isFlowLogger)

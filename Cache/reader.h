@@ -65,6 +65,9 @@ public slots:
     void abortProcessing();
     void stop();
 
+    void signalAbort();   // non-blocking: sets abort flag without waiting
+    bool isPending();     // returns whether a read is currently in progress
+
 private:
     mutable QMutex mutex;
     QWaitCondition pendingCondition;

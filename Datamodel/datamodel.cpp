@@ -567,8 +567,6 @@ void DataModel::scheduleProcessing()
 
 void DataModel::processNextBatch()
 {
-    // qDebug() << "processNextBatch";// << pendingPaths;
-    // qDebug() << "processNextBatch invoked on thread =" << QThread::currentThread();     // Pump a reasonable number each tick to balance throughput/latency.
     constexpr int kMaxPerTick = 64;
 
     int processed = 0;
@@ -613,6 +611,7 @@ void DataModel::processNextBatch()
 
     // All done.
     isProcessingFolders = false;
+
     emit folderChange(abort);
 }
 // */
@@ -622,7 +621,6 @@ void DataModel::addFolder(const QString &folderPath)
     QString fun = "DataModel::addFolder";
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, folderPath);
-    // qDebug() << fun << folderPath;
 
     QMutexLocker locker(&dmMutex);
     abort = false;
@@ -660,9 +658,7 @@ void DataModel::addFolder(const QString &folderPath)
 
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         // check for escape key release triggering abort
-        // qApp->processEvents();
         if (abort) {
-            // qDebug() << "DataModel::addFolder aborting *************";
             endLoad(false);
             break;
         }

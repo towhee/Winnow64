@@ -1160,17 +1160,47 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
     // ignore rapid mouse press if still processing MW::stop
     qint64 ms = rapidClick.restart();
+
+    // Helper: resolve folder path from event position
+    auto getFolderPath = [&]() -> QString {
+        QModelIndex idx = indexAt(event->pos());
+        if (!idx.isValid()) return QString();
+        return idx.sibling(idx.row(), 0).data(QFileSystemModel::FilePathRole).toString();
+    };
+
     if (ms < 500) {
+        // Queue this click so the last-clicked folder always loads
+        QString dPath = getFolderPath();
+        if (!dPath.isEmpty()) {
+            pendingClickPath = dPath;
+            if (pendingClickTimer) {
+                pendingClickTimer->stop();
+                pendingClickTimer->deleteLater();
+            }
+            pendingClickTimer = new QTimer(this);
+            pendingClickTimer->setSingleShot(true);
+            connect(pendingClickTimer, &QTimer::timeout, this, [this]() {
+                if (!pendingClickPath.isEmpty() && !G::stop && !G::isModifyingDatamodel) {
+                    emit folderSelectionChange(pendingClickPath, G::FolderOp::Add, true, false);
+                }
+                pendingClickPath.clear();
+                pendingClickTimer = nullptr;
+            });
+            pendingClickTimer->start(500);
+        }
         event->ignore();
-        qApp->beep();
-        // G::popup->showPopup("Rapid clicks are verboten");
-        qDebug() << "FSTree::mousePressEvent" << "Rapid clicks are verboten"
-                    "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
         return;
     }
 
+    // Cancel any pending queued click — this real click supersedes it
+    if (pendingClickTimer) {
+        pendingClickTimer->stop();
+        pendingClickTimer->deleteLater();
+        pendingClickTimer = nullptr;
+        pendingClickPath.clear();
+    }
+
     if (G::stop || G::isModifyingDatamodel) {
-        // G::popup->showPopup("Busy, try new folder in a sec.", 1000);
         qDebug() << "FSTree::mousePressEvent" << "Busy, try new folder in a sec."
                     "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
         return;

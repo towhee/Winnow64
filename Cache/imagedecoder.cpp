@@ -80,7 +80,7 @@ void ImageDecoder::abortProcessing()
     QString fun = "ImageDecoder::abortProcessing";
     if (G::isLogger)
         G::log(fun, "id = " + QString::number(threadId));
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug().noquote()
         << fun.leftJustified(50);
