@@ -2183,34 +2183,24 @@ void MW::stop(QString src)
     if (!stopped["ImageCache"]) emit abortImageCache();
     if (!stopped["BuildFilters"]) emit abortBuildFilters();
 
-    // wait until abort done
-    QTimer to; to.setSingleShot(true); to.start(1000);
-
-    // Use an indefinite loop (removed the timeout timer)
-    QEventLoop loop;
-    auto setStopped = [&](const QString& name){
-        stopped[name] = true;
-        if (allIdle()) loop.quit();
-    };
-
-    // Connect subsystem idle/aborted signals (must be Queued across threads)
+    /* Wait until abort done,
+       Connect subsystem idle/aborted signals to update the stopped map */
     QList<QMetaObject::Connection> conns;
     conns << connect(metaRead, &MetaRead::stopped,
-                     &loop, [=]{ setStopped("MetaRead"); }, Qt::QueuedConnection);
+                     this, [this](QString){ stopped["MetaRead"] = true; }, Qt::QueuedConnection);
     conns << connect(imageCache, &ImageCache::stopped,
-                     &loop, [=]{ setStopped("ImageCache"); }, Qt::QueuedConnection);
+                     this, [this](QString){ stopped["ImageCache"] = true; }, Qt::QueuedConnection);
     conns << connect(buildFilters, &BuildFilters::stopped,
-                     &loop, [=]{ setStopped("BuildFilters"); }, Qt::QueuedConnection);
+                     this, [this](QString){ stopped["BuildFilters"] = true; }, Qt::QueuedConnection);
 
-    // Timeout handler
-    connect(&to, &QTimer::timeout, &loop, [&]{
-        loop.quit();
-    });
-
-    // If everything was already idle, skip waiting
+    // Process events rather than blocking with loop.exec() — keeps macOS run loop alive
     if (!allIdle()) {
-        // this blocks until all idle or timeout
-        loop.exec(QEventLoop::ExcludeUserInputEvents);
+        QElapsedTimer waitTimer;
+        waitTimer.start();
+        while (!allIdle() && waitTimer.elapsed() < 3000) {
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+            QThread::msleep(10);
+        }
     }
 
     if (!allIdle()) qWarning() << "NOT ALLIDLE! STOP FAILED";
@@ -2230,27 +2220,27 @@ void MW::stop(QString src)
     }
 
 
-    qDebug() << "RGH";
-    qDebug() << "MW::stop() Status Report | Source:" << src << "| Instance:" << (int)dm->instance;
+    // qDebug() << "RGH";
+    // qDebug() << "MW::stop() Status Report | Source:" << src << "| Instance:" << (int)dm->instance;
 
-    if (metaRead)
-        qDebug() << "  MetaRead:     " << (metaRead ? "RUNNING" : "Stopped")
-                 << " | isIdle:" << metaRead->isIdle();
+    // if (metaRead)
+    //     qDebug() << "  MetaRead:     " << (metaRead ? "RUNNING" : "Stopped")
+    //              << " | isIdle:" << metaRead->isIdle();
 
-    metaRead->debugRunStatus();
+    // metaRead->debugRunStatus();
 
-    if (buildFilters)
-        qDebug() << "  BuildFilters: " << (buildFilters->isRunning() ? "RUNNING" : "Stopped")
-                 << " | isIdle:" << buildFilters->isIdle();
+    // if (buildFilters)
+    //     qDebug() << "  BuildFilters: " << (buildFilters->isRunning() ? "RUNNING" : "Stopped")
+    //              << " | isIdle:" << buildFilters->isIdle();
 
-    if (imageCache) {
-        qDebug() << "  ImageCache:   " << (imageCache->isIdle() ? "IDLE   " : "BUSY   ")
-                 << " | (Main cache state)";
+    // if (imageCache) {
+    //     qDebug() << "  ImageCache:   " << (imageCache->isIdle() ? "IDLE   " : "BUSY   ")
+    //              << " | (Main cache state)";
 
-        imageCache->debugRunStatus();
-    }
+    //     imageCache->debugRunStatus();
+    // }
 
-    qDebug() << "  Global Flags:  G::stop:" << (bool)G::stop << " | dm->abort:" << (bool)dm->abort;
+    // qDebug() << "  Global Flags:  G::stop:" << (bool)G::stop << " | dm->abort:" << (bool)dm->abort;
 
 
 

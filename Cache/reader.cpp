@@ -9,10 +9,16 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     threadId = id;
     instance = 0;
 
+    // Switched from BlockingQueuedConnection to QueuedConnection:
+    // BQC forced every metadata/icon emission to wait on the UI thread, so with 14
+    // readers × 158 images rapid folder-clicks flooded the UI event queue and froze
+    // the beachball. Both slots already reject stale emissions via the instance
+    // guard (DataModel::addMetadataForItem line ~1658, DataModel::setIcon1 line ~2397),
+    // so non-blocking delivery is safe.
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem,
-            Qt::BlockingQueuedConnection);
+            Qt::QueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon1,
-            Qt::BlockingQueuedConnection);
+            Qt::QueuedConnection);
 
     thumb = new Thumb(dm);
 
@@ -92,16 +98,31 @@ void Reader::abortProcessing()
     while (pending) {
         const qint64 remaining = deadline.remainingTime();
         if (remaining <= 0) {
-            // timed out
+            // timed out — keep abort=true so the reader exits at next check
             break;
         }
         if (!pendingCondition.wait(&mutex, int(remaining))) {
-            abort = false;
-            break;                               // true if finished during wait
+            // wait returned false = deadline expired; keep abort=true
+            break;
         }
     }
 
     status = Status::Aborted;
+}
+
+void Reader::signalAbort()
+{
+    thumb->abortProcessing();
+    if (frameDecoder)
+        QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
+    QMutexLocker lock(&mutex);
+    abort = true;
+}
+
+bool Reader::isPending()
+{
+    QMutexLocker lock(&mutex);
+    return pending;
 }
 
 void Reader::setPending(bool v)
@@ -295,6 +316,11 @@ void Reader::read(int dmRow, QString filePath, int instance,
     if (G::isLogger) G::log(fun, need + filePath);
     if (filePath.isEmpty()) {
         qWarning().noquote() << fun << "EMPTY FILEPATH";
+    }
+    // If a folder change is in progress, don't start a new read
+    if (G::stop || dm->abort) {
+        setPending(false);
+        return;
     }
     abort = false;
     this->dmRow = dmRow;

@@ -437,9 +437,16 @@ void MW::createImageCache()
             imageCache, &ImageCache::colorManageChange);
 
     // Signal to initialize ImageCache
+    // Changed from BlockingQueuedConnection to QueuedConnection:
+    // BQC froze the UI thread whenever ImageCache's event loop was occupied by an
+    // in-flight fillCache for the prior folder instance — the UI waited for the
+    // ImageCache thread to return to its event loop, which can take many seconds
+    // with 14 parallel 8MP decoders. QueuedConnection preserves ordering against
+    // the subsequent (already-queued) setImageCachePosition emit in
+    // MW::folderChangeCompleted.
     connect(this, &MW::initializeImageCache,
             imageCache, &ImageCache::initialize,
-            Qt::BlockingQueuedConnection);
+            Qt::QueuedConnection);
 
     // // Signal to update imageCache parameters
     // connect(this, &MW::imageCacheChangeParam,
