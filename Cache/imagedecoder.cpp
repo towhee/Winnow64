@@ -80,7 +80,7 @@ void ImageDecoder::abortProcessing()
     QString fun = "ImageDecoder::abortProcessing";
     if (G::isLogger)
         G::log(fun, "id = " + QString::number(threadId));
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug().noquote()
         << fun.leftJustified(50);
@@ -92,7 +92,12 @@ void ImageDecoder::abortProcessing()
     abort = true;
     while (!idle) {
         const int ms = int(deadline.remainingTime());
-        if (!idleCondition.wait(&mutex, ms)) break; // break on timeout
+        if (!idleCondition.wait(&mutex, ms)) {
+            qDebug().noquote()
+                << fun.leftJustified(50) << "Aborting after timeout";
+
+            break; // break on timeout
+        }
     }
     // Don't reset abort here. Let the code that *restarts* work clear it.
 

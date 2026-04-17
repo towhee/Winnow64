@@ -271,6 +271,15 @@ bool ImageCache::anyDecoderCycling()
     return false;
 }
 
+void ImageCache::debugRunStatus()
+{
+    for (int id = 0; id < decoderCount; ++id) {
+        auto decoder = decoders.at(id);
+        qDebug() << "    - Decoder " << id << ":" << (decoder->isRunning() ? "RUNNING" : "Stopped")
+                 << " | isIdle:" << decoder->isIdle();
+    }
+}
+
 quint64 ImageCache::getImCacheSize()
 {
     // return the current size of the cache

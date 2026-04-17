@@ -2229,6 +2229,33 @@ void MW::stop(QString src)
         setCentralMessage("Image loading has been aborted.");
     }
 
+
+    qDebug() << "RGH";
+    qDebug() << "MW::stop() Status Report | Source:" << src << "| Instance:" << (int)dm->instance;
+
+    if (metaRead)
+        qDebug() << "  MetaRead:     " << (metaRead ? "RUNNING" : "Stopped")
+                 << " | isIdle:" << metaRead->isIdle();
+
+    metaRead->debugRunStatus();
+
+    if (buildFilters)
+        qDebug() << "  BuildFilters: " << (buildFilters->isRunning() ? "RUNNING" : "Stopped")
+                 << " | isIdle:" << buildFilters->isIdle();
+
+    if (imageCache) {
+        qDebug() << "  ImageCache:   " << (imageCache->isIdle() ? "IDLE   " : "BUSY   ")
+                 << " | (Main cache state)";
+
+        imageCache->debugRunStatus();
+    }
+
+    qDebug() << "  Global Flags:  G::stop:" << (bool)G::stop << " | dm->abort:" << (bool)dm->abort;
+
+
+
+
+
     G::stop = false;
     G::isModifyingDatamodel = false;
 

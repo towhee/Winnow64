@@ -35,6 +35,7 @@ public:
     QString reportMetaCache();
     // void cleanupIcons();
     QString diagnostics();
+    void debugRunStatus();
 
     bool isDispatching;
     bool isIdle();

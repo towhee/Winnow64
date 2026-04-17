@@ -331,6 +331,15 @@ bool MetaRead::noReadersCycling()
     return true;
 }
 
+void MetaRead::debugRunStatus()
+{
+    for (int id = 0; id < readerCount; ++id) {
+        auto reader = readers.at(id);
+        qDebug() << "    - Reader " << id << ":" << (reader->readerThread->isRunning() ? "RUNNING" : "Stopped");
+                 // << " | isIdle:" << reader->isIdle();
+    }
+}
+
 void MetaRead::initialize(QString src)
 /*
     Called when change folders.
