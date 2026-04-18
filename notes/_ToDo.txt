@@ -17,7 +17,6 @@ BUGS / TO DO
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Copy path(s) not always working
 - Undo delete
-- Try using std::atomic<bool> for flags used in threads
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
 - Universal help color = rgb(43, 85, 49) used in "How this works"
 - Resolve Pixmap vs ImageDecoder classes
