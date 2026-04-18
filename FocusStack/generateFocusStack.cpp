@@ -183,10 +183,8 @@ void MW::generateFocusStack(const QStringList paths,
     connect(fsThread, &QThread::started, fs, [this, fs]() // Capture 'this' instead of 'fsThread'
             {
                 fs->run();
-                // Now you can access fsThread because 'this' is captured
                 QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
             });
-            // }, Qt::UniqueConnection);
 
     // Abort
     connect(this, &MW::abortFocusStack, fs, &FS::requestAbort, Qt::DirectConnection);

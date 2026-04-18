@@ -139,8 +139,8 @@ void MW::updateStatusBar()
     filterStatusLabel->setVisible(G::isFilter);
     subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
 
-    // if (subFoldersAction->isChecked()) G::includeSubfolders = true;
-    rawJpgStatusLabel->setVisible(combineRawJpg);
+    if (combineRawJpg) rawJpgStatusLabel->setIcon(QIcon(":/images/icon16/link.png"));
+    else rawJpgStatusLabel->setIcon(QIcon(":/images/icon16/nolink.png"));
     slideShowStatusLabel->setVisible(G::isSlideShow);
 }
 
