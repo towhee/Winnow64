@@ -71,9 +71,9 @@ void MW::initialize()
     subfolderStatusLabel = new QLabel;
     subfolderStatusLabel->setToolTip("Showing contents of all subfolders");
 
-    rawJpgStatusLabel = new QLabel;
-    rawJpgStatusLabel->setToolTip("Raw and Jpg files are combined for viewing.  "
-                                  "Toggle shortcut: Opt/Alt + J");
+    rawJpgStatusLabel = new BarBtn();
+    rawJpgStatusLabel->setToolTip("Toggle \"Combine Raw+Jpg\" on/off.  Shortcut: Opt/Alt + J");
+    connect(rawJpgStatusLabel, &BarBtn::clicked, this, &MW::setCombineRawJpg);
     slideShowStatusLabel = new QLabel;
     slideShowStatusLabel->setToolTip("Slideshow is active");
     slideCount = 0;
@@ -1158,7 +1158,6 @@ void MW::createStatusBar()
     statusBar()->addWidget(filterStatusLabel);
     subfolderStatusLabel->setPixmap(QPixmap(":/images/icon16/subfolders.png"));
     statusBar()->addWidget(subfolderStatusLabel);
-    rawJpgStatusLabel->setPixmap(QPixmap(":/images/icon16/link.png"));
     statusBar()->addWidget(rawJpgStatusLabel);
     slideShowStatusLabel->setPixmap(QPixmap(":/images/icon16/slideshow.png"));
     statusBar()->addWidget(slideShowStatusLabel);
