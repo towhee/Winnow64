@@ -195,5 +195,6 @@
         <file>images/busy_spinner.gif</file>
         <file>DetectionModels/focus_point_model.onnx</file>
         <file>images/lock.svg</file>
+        <file>images/icon16/nolink.png</file>
     </qresource>
 </RCC>

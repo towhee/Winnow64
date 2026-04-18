@@ -180,17 +180,13 @@ void MW::generateFocusStack(const QStringList paths,
     FS *fs = fsPipeline.data();
 
     // When the thread starts → run the FS pipeline
-    // connect(fsThread, &QThread::started, fs, [fs, fsThread]()
-    //         {
-    //             fs->run();     // runs synchronously inside worker thread
-    //             QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
-    //         });
     connect(fsThread, &QThread::started, fs, [this, fs]() // Capture 'this' instead of 'fsThread'
             {
                 fs->run();
                 // Now you can access fsThread because 'this' is captured
                 QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
             });
+            // }, Qt::UniqueConnection);
 
     // Abort
     connect(this, &MW::abortFocusStack, fs, &FS::requestAbort, Qt::DirectConnection);
