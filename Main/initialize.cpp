@@ -1217,7 +1217,7 @@ void MW::createFolderDock()
     // question mark button
     BarBtn *folderQuestionBtn = new BarBtn();
     folderQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
-    folderQuestionBtn->setToolTip("How this works");
+    folderQuestionBtn->setToolTip("How this works: folder selection tips");
     connect(folderQuestionBtn, &BarBtn::clicked, fsTree, &FSTree::howThisWorks);
     folderTitleLayout->addWidget(folderQuestionBtn);
 

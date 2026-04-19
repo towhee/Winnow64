@@ -278,6 +278,11 @@ void ImageCache::debugRunStatus()
     }
 }
 
+void ImageCache::fixInstance()
+{
+    instance = dm->instance;
+}
+
 quint64 ImageCache::getImCacheSize()
 {
     // return the current size of the cache

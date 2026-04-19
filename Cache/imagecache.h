@@ -59,6 +59,8 @@ public:
     QString reportToCacheRows();
     void debugRunStatus();
 
+    void fixInstance();
+
     bool isIdle();
 
     int col0Width = 50;

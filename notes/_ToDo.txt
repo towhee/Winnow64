@@ -3,6 +3,7 @@ WHAT'S NEW
 
 BUGS / TO DO
 - Review FSTree selection / scrolling behavior (when select all subfolders)
+- Is subfolderStatusLabel deprecated?
 - If rotate image it is cleared in image cache.
 - Refresh thumbs after Delete, Insert operations.
 - Send all warnings to console and issue log.
