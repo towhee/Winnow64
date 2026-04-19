@@ -2,6 +2,7 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
+- Review FSTree selection / scrolling behavior (when select all subfolders)
 - If rotate image it is cleared in image cache.
 - Refresh thumbs after Delete, Insert operations.
 - Send all warnings to console and issue log.
@@ -14,7 +15,6 @@ BUGS / TO DO
 - Read/write png metadata
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
-- Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Copy path(s) not always working
 - Undo delete
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
@@ -139,6 +139,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Focus stack all file types
 - IconView smooth scroll on swipe
 - Video plays when try to retreat/advance at first/last item.

@@ -53,13 +53,13 @@ void MW::initialize()
 
     colorManageToggleBtn = new BarBtn();
     msg = "Toggle \"Color Manage\" on/off.";
-    colorManageToggleBtn->setToolTip(msg);
+    // colorManageToggleBtn->setToolTip(msg);
     connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManageClick);
 
     panToFocusToggleBtn = new BarBtn();
     msg = "Toggle \"Pan To Predicted Focus\" on/off.  Mouse click or shortcut B";
     panToFocusToggleBtn->setToolTip(msg);
-    connect(panToFocusToggleBtn, &BarBtn::clicked, this, &MW::togglePanToFocusClick);
+    connect(panToFocusToggleBtn, &BarBtn::clicked, this, [this]() { panFocusToggleAction->trigger(); });
 
     reverseSortBtn = new BarBtn();
     reverseSortBtn ->setToolTip("Toggle sort direction: Mouse click or shortcut Opt/Alt + S");
@@ -71,9 +71,12 @@ void MW::initialize()
     subfolderStatusLabel = new QLabel;
     subfolderStatusLabel->setToolTip("Showing contents of all subfolders");
 
-    rawJpgStatusLabel = new BarBtn();
-    rawJpgStatusLabel->setToolTip("Toggle \"Combine Raw+Jpg\" on/off.  Shortcut: Opt/Alt + J");
-    connect(rawJpgStatusLabel, &BarBtn::clicked, this, &MW::setCombineRawJpg);
+    rawJpgStatusBtn = new BarBtn();
+    rawJpgStatusBtn->setToolTip("Toggle \"Combine Raw+Jpg\" on/off.  Shortcut: Opt/Alt + J");
+    connect(rawJpgStatusBtn, &BarBtn::clicked, this, [this]() {
+        combineRawJpgAction->toggle();  // flip checked state without re-emitting triggered
+        setCombineRawJpg();
+    });
     slideShowStatusLabel = new QLabel;
     slideShowStatusLabel->setToolTip("Slideshow is active");
     slideCount = 0;
@@ -1158,7 +1161,7 @@ void MW::createStatusBar()
     statusBar()->addWidget(filterStatusLabel);
     subfolderStatusLabel->setPixmap(QPixmap(":/images/icon16/subfolders.png"));
     statusBar()->addWidget(subfolderStatusLabel);
-    statusBar()->addWidget(rawJpgStatusLabel);
+    statusBar()->addWidget(rawJpgStatusBtn);
     slideShowStatusLabel->setPixmap(QPixmap(":/images/icon16/slideshow.png"));
     statusBar()->addWidget(slideShowStatusLabel);
 
