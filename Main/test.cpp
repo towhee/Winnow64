@@ -553,7 +553,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // mergeProjectFiles();
 
-    imageCache->fixInstance();
+    imageCache->updateInstance();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

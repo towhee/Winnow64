@@ -241,6 +241,14 @@ void ImageCache::abortProcessing()
         decoders[id]->abortProcessing();
     }
 
+    // make sure caching status is up-to-date
+    for (auto it = toCacheStatus.begin(); it != toCacheStatus.end(); ++it) {
+        if (it.value().isCaching) {
+            emit setValSf(it.key(), G::IsCachingColumn, false, instance, "abort cleanup");
+            it.value().isCaching = false;
+        }
+    }
+
     if (G::isLogger || G::isFlowLogger)
     G::log("ImageCache::abortProcessing", "emit stopped");
 
@@ -276,11 +284,6 @@ void ImageCache::debugRunStatus()
         qDebug() << "    - Decoder " << id << ":" << (decoder->isRunning() ? "RUNNING" : "Stopped")
                  << " | isIdle:" << decoder->isIdle();
     }
-}
-
-void ImageCache::fixInstance()
-{
-    instance = dm->instance;
 }
 
 quint64 ImageCache::getImCacheSize()
@@ -390,6 +393,7 @@ void ImageCache::updateToCache()
     if (!abort) trimOutsideTargetRange();
 
     if (instance != dm->instance) instance = dm->instance;
+    resetStaleIsCaching();
 
     if (debugCaching)
     {
@@ -736,6 +740,7 @@ void ImageCache::setTargetRange(int key)
         toCache.clear();
         toCacheStatus.clear();
         instance = dm->instance;
+        resetStaleIsCaching();
     }
 
     // Direction helpers
@@ -966,6 +971,16 @@ bool ImageCache::cacheUpToDate()
     }
 
     return true;
+}
+
+void ImageCache::resetStaleIsCaching()
+{
+    for (int r = 0; r < dm->sf->rowCount(); ++r) {
+        if (dm->sf->index(r, G::IsCachingColumn).data().toBool()) {
+            emit setValSf(r, G::IsCachingColumn, false, instance,
+                          "ImageCache::resetStaleIsCaching");
+        }
+    }
 }
 
 void ImageCache::memChk()
@@ -1610,11 +1625,13 @@ void ImageCache::initialize()
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
 
-    // just in case stopImageCache not called before this
-    // if (imageCacheThread.isRunning()) stop("ImageCache::initImageCache");
-
-    // update folder change instance
+    // update folder change instance BEFORE the sweep, so the cleanup emits
+    // below carry the current instance and are not rejected by DataModel's
+    // instance guard.
     instance = dm->instance;
+
+    // sweep the DataModel for stale IsCaching=true rows and reset them
+    resetStaleIsCaching();
 
     // cache management parameters
     currRow = 0;
@@ -2096,6 +2113,14 @@ void ImageCache::decodeNextImage(int id, int sfRow)
             << "row =" << QString::number(sfRow).leftJustified(4)
             << "invokeMethod failed!"
             ;
+        // Clear the isCaching flag we just set, so the row isn't left stranded.
+        // okToCache normally does this via fillCache, but if we skip fillCache
+        // (abort == true), the DM row stays isCaching=true forever.
+        if (toCacheStatus.contains(sfRow)) {
+            toCacheStatus[sfRow].isCaching = false;
+        }
+        emit setValSf(sfRow, G::IsCachingColumn, false, instance, fun);
+
         if (!abort) fillCache(id);
     }
 }
