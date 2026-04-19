@@ -59,8 +59,6 @@ public:
     QString reportToCacheRows();
     void debugRunStatus();
 
-    void fixInstance();
-
     bool isIdle();
 
     int col0Width = 50;
@@ -237,6 +235,7 @@ private:
     bool nullInImCache();
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     bool cacheUpToDate();           // target range all cached
+    void resetStaleIsCaching();
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
     void trimOutsideTargetRange();// define start and end key in the target range to cache
     bool anyDecoderCycling();        // All decoder status is ready

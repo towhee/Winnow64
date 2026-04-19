@@ -122,20 +122,22 @@ bool ImageDecoder::isRunning() const
 void ImageDecoder::decode(int row, int instance)
 {
     abort = false;
+    sfRow = row;                   // set early so fillCache has valid row
+    this->instance = instance;
 
-    // check if proxy model is suspended during filtering changes
-    if (dm->sf->isSuspended()) return;
-
-    // range check
-    if (row >= dm->sf->rowCount()) return;
+    if (dm->sf->isSuspended() || row >= dm->sf->rowCount()) {
+        status = Status::Failed;
+        errMsg = dm->sf->isSuspended() ? "Proxy suspended." : "Row out of range.";
+        setIdle();
+        emit done(threadId);
+        return;
+    }
 
     QElapsedTimer t;
     t.start();
 
     setBusy();
-    this->instance = instance;
 
-    sfRow = row ;
     status = Status::Undefined;
     fPath = dm->sf->index(sfRow,0).data(G::PathRole).toString();
     image = QImage();
@@ -192,7 +194,7 @@ void ImageDecoder::decode(int row, int instance)
         if (image.isNull()) status = Status::Failed;
     }
     else {
-        // if (isDebug)
+        if (isDebug)
         {
             QString fun = "ImageDecoder::decode load failed";
             qDebug() << fun.left(50)
@@ -210,7 +212,7 @@ void ImageDecoder::decode(int row, int instance)
     emit setValSf(sfRow, G::MSToReadColumn, msToDecode, instance,
                   "ImageDecoder::decode", Qt::EditRole);
 
-    if (!abort) emit done(threadId);
+    emit done(threadId);
 }
 
 bool ImageDecoder::load()

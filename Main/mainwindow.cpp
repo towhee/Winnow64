@@ -2270,6 +2270,7 @@ bool MW::reset(QString src)
     dm->clearDataModel();
     // new instance: only done here and if sort/filter operation
     dm->newInstance();
+    emit initializeImageCache();    // may not be req'd
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
@@ -2596,6 +2597,7 @@ void MW::folderChanged(bool aborted)
         G::allMetadataLoaded = true;
         G::iconChunkLoaded = dm->isIconRangeLoaded();
         folderChangeCompleted();
+        emit initializeImageCache();    // may not be req'd
         return;
     }
 
@@ -2708,6 +2710,8 @@ void MW::folderChangeCompleted()
         G::log("MW::folderChangeCompleted", msg);
     }
     QString fun = "MW::folderChangeCompleted";
+
+    QMetaObject::invokeMethod(imageCache, "updateInstance", Qt::QueuedConnection);
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
