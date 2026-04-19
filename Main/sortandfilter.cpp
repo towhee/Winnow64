@@ -425,6 +425,10 @@ void MW::sortChange(QString source)
     // get the current selected item
     dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
 
+    // refresh icons in view
+    if (thumbView->isVisible()) thumbView->refreshIcons("MW::sortChange");
+    if (gridView->isVisible()) gridView->refreshIcons("MW::sortChange");
+
     // update view delegates
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
@@ -492,37 +496,37 @@ void MW::updateSortColumn(int sortColumn)
     if (sortColumn == G::TitleColumn) sortTitleAction->setChecked(true);
 }
 
-void MW::toggleSortDirectionClick()
-{
-/*
-    This is called by connect signals from the menu action and the reverse sort button.  The
-    call is redirected to toggleSortDirection, which has a parameter which is not supported
-    by the action and button signals.
-*/
-    if (G::isLogger) G::log("MW::toggleSortDirectionClick");
-    toggleSortDirection(Tog::toggle);
-    sortChange("MW::toggleSortDirectionClick");
-    // Experiment to reverse sort on the file name while a new folder is loading.
-    // sortReverse();
-}
+// void MW::toggleSortDirectionClick()
+// {
+// /*
+//     This is called by connect signals from the menu action and the reverse sort button.  The
+//     call is redirected to toggleSortDirection, which has a parameter which is not supported
+//     by the action and button signals.
+// */
+//     if (G::isLogger) G::log("MW::toggleSortDirectionClick");
+//     toggleSortDirection(Tog::toggle);
+//     sortChange("MW::toggleSortDirectionClick");
+//     // Experiment to reverse sort on the file name while a new folder is loading.
+//     // sortReverse();
+// }
 
-void MW::toggleSortDirection(Tog n)
-{
-    if (G::isLogger) G::log("MW::toggleSortDirection");
-    if (prevIsReverseSort == isReverseSort)
-    prevIsReverseSort = isReverseSort;
-    if (n == Tog::toggle) isReverseSort = !isReverseSort;
-    if (n == Tog::off) isReverseSort = false;
-    if (n == Tog::on) isReverseSort = true;
-    if (isReverseSort) {
-        sortReverseAction->setChecked(true);
-        reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
-    }
-    else {
-        sortReverseAction->setChecked(false);
-        reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
-    }
-}
+// void MW::toggleSortDirection(Tog n)
+// {
+//     if (G::isLogger) G::log("MW::toggleSortDirection");
+//     if (prevIsReverseSort == isReverseSort)
+//     prevIsReverseSort = isReverseSort;
+//     if (n == Tog::toggle) isReverseSort = !isReverseSort;
+//     if (n == Tog::off) isReverseSort = false;
+//     if (n == Tog::on) isReverseSort = true;
+//     if (isReverseSort) {
+//         sortReverseAction->setChecked(true);
+//         reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
+//     }
+//     else {
+//         sortReverseAction->setChecked(false);
+//         reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
+//     }
+// }
 
 void MW::setRating()
 {

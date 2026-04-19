@@ -119,28 +119,85 @@ void MW::clearStatus()
 void MW::updateStatusBar()
 {
     if (G::isLogger) G::log("MW::updateStatusBar");
+    qDebug() << "MW::updateStatusBar";
 
-    if (G::modifySourceFiles) modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_red_16.png"));
-    else modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_bw_16.png"));
+    if (G::modifySourceFiles) {
+        modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_red_16.png"));
+        modifyImagesBtn->setToolTip("Modify image files is On.  Click to toggle on/off");
+    }
+    else {
+        modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_bw_16.png"));
+        modifyImagesBtn->setToolTip("Modify image files is Off.  Click to toggle on/off");
+    }
 
-    if (G::includeSidecars) includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/sidecar.png"));
-    else includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/nosidecar.png"));
+    if (G::includeSidecars) {
+        includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/sidecar.png"));
+        includeSidecarsToggleBtn->setToolTip("Include sidecars when dragging is On.  Click to toggle on/off");
+    }
+    else {
+        includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/nosidecar.png"));
+        includeSidecarsToggleBtn->setToolTip("Include sidecars when dragging is Off.  Click to toggle on/off");
+    }
 
-    if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
-    else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
+    if (G::colorManage) {
+        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
+        colorManageToggleBtn->setToolTip("Color Manage is On.  Click to toggle on/off");
+    }
+    else {
+        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
+        colorManageToggleBtn->setToolTip("Color Manage is Off.  Click to toggle on/off");
+    }
 
-    if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
-    else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
+    if (panFocusToggleAction->isChecked()) {
+        panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
+        panToFocusToggleBtn->setToolTip(
+            "Pan to predicted focus point is On.  Click to toggle on/off.  "
+            "Shortcut is 'B'"
+        );
+    }
+    else {
+        panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target_bw.png"));
+        panToFocusToggleBtn->setToolTip(
+            "Pan to predicted focus point is Off.  Click to toggle on/off.  "
+            "Shortcut: B"
+        );
+    }
 
-    if (panFocusToggleAction->isChecked()) panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
-    else panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target_bw.png"));
+    if (sortReverseAction->isChecked()) {
+        reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
+        reverseSortBtn->setToolTip(
+            "Reverse sort is On.  Click to toggle on/off.  "
+            "Shortcut: Opt/Alt + S"
+        );
+    }
+    else {
+        reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
+        reverseSortBtn->setToolTip(
+            "Reverse sort is Off.  Click to toggle on/off.  "
+            "Shortcut: Opt/Alt + S"
+        );
+    }
+
+    if (combineRawJpg) {
+        rawJpgStatusBtn->setIcon(QIcon(":/images/icon16/link.png"));
+        rawJpgStatusBtn->setToolTip(
+            "Combine Raw/JPG is On.  Click to toggle on/off.  "
+            "Shortcut: Opt/Alt + J"
+        );
+    }
+    else {
+        rawJpgStatusBtn->setIcon(QIcon(":/images/icon16/nolink.png"));
+        rawJpgStatusBtn->setToolTip(
+            "Combine Raw/JPG is Off.  Click to toggle on/off.  "
+            "Shortcut: Opt/Alt + J"
+        );
+    }
 
     G::isFilter = filters->isAnyFilter();
     filterStatusLabel->setVisible(G::isFilter);
+
     subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
 
-    if (combineRawJpg) rawJpgStatusLabel->setIcon(QIcon(":/images/icon16/link.png"));
-    else rawJpgStatusLabel->setIcon(QIcon(":/images/icon16/nolink.png"));
     slideShowStatusLabel->setVisible(G::isSlideShow);
 }
 
@@ -154,7 +211,7 @@ int MW::availableSpaceForProgressBar()
     if (colorManageToggleBtn->isVisible()) w += s + colorManageToggleBtn->width();
     if (panToFocusToggleBtn->isVisible()) w += s + panToFocusToggleBtn->width();
     if (reverseSortBtn->isVisible()) w += s + reverseSortBtn->width();
-    if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
+    if (rawJpgStatusBtn->isVisible()) w += s + rawJpgStatusBtn->width();
     if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
     if (subfolderStatusLabel->isVisible()) w += s + subfolderStatusLabel->width();
     if (slideShowStatusLabel->isVisible()) w += s + slideShowStatusLabel->width();
@@ -378,6 +435,33 @@ void MW::enableStatusBarBtns()
     reverseSortBtn->setEnabled(enable);
 }
 
+void MW::toggleSortDirectionClick()
+{
+    /*
+    This is called by connect signals from the menu action and the reverse sort button.  The
+    call is redirected to toggleSortDirection, which has a parameter which is not supported
+    by the action and button signals.
+*/
+    if (G::isLogger) G::log("MW::toggleSortDirectionClick");
+    toggleSortDirection(Tog::toggle);
+    sortChange("MW::toggleSortDirectionClick");
+    // Experiment to reverse sort on the file name while a new folder is loading.
+    // sortReverse();
+}
+
+void MW::toggleSortDirection(Tog n)
+{
+    if (G::isLogger) G::log("MW::toggleSortDirection");
+    if (prevIsReverseSort == isReverseSort)
+        prevIsReverseSort = isReverseSort;
+    if (n == Tog::toggle) isReverseSort = !isReverseSort;
+    if (n == Tog::off) isReverseSort = false;
+    if (n == Tog::on) isReverseSort = true;
+
+    sortReverseAction->setChecked(isReverseSort);
+    updateStatusBar();  // updates btn image and tooltip
+}
+
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 {
 /*
@@ -388,7 +472,8 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     actions triggers a sort, which needs to be suppressed while syncing the menu actions with
     tableView.
 */
-    if (G::isLogger) G::log("MW::sortIndicatorChanged");
+    // if (G::isLogger)
+        G::log("MW::sortIndicatorChanged");
 //    QString columnName = tableView->model()->headerData(column, Qt::Horizontal).toString();
 //    qDebug() << "MW::sortIndicatorChanged" << column << columnName << sortOrder << sortColumn;
     if (!G::allMetadataLoaded && column > G::DimensionsColumn) loadEntireMetadataCache("SortChange");
@@ -442,6 +527,8 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
 
+    if (thumbView->isVisible()) thumbView->refreshIcons("MW::sortIndicatorChanged");
+    if (gridView->isVisible()) gridView->refreshIcons("MW::sortIndicatorChanged");
     scrollToCurrentRowIfNotVisible();
 
     resortImageCache();
@@ -464,12 +551,9 @@ void MW::toggleModifyImagesClick()
 void MW::toggleModifyImages()
 {
     if (G::isLogger) G::log("MW::setModifyImages");
-    if (G::modifySourceFiles) {
-        modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_red_16.png"));
-    }
-    else {
-        modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_bw_16.png"));
-    }
+
+    // No menu item / action to toggle
+    updateStatusBar();  // updates btn image and tooltip
 }
 
 void MW::toggleIncludeSidecarsClick()
@@ -479,7 +563,7 @@ void MW::toggleIncludeSidecarsClick()
     button. The call is redirected to toggleColorManage, which has a parameter which is
     not supported by the action and button signals.
 */
-    if (G::isLogger) G::log("MW::toggleColorManageClick");
+    if (G::isLogger) G::log("MW::toggleIncludeSidecarsClick");
     toggleIncludeSidecars(Tog::toggle);
 }
 
@@ -493,12 +577,8 @@ void MW::toggleIncludeSidecars(Tog n)
     if (n == Tog::off) G::includeSidecars = false;
     if (n == Tog::on) G::includeSidecars = true;
     includeSidecarsAction->setChecked(G::includeSidecars);
-    if (G::includeSidecars) {
-        includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/sidecar.png"));
-    }
-    else {
-        includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/nosidecar.png"));
-    }
+
+    updateStatusBar();  // updates btn image and tooltip
 }
 
 void MW::toggleColorManageClick()
@@ -522,16 +602,10 @@ void MW::toggleColorManage(Tog n)
     if (n == Tog::off) G::colorManage = false;
     if (n == Tog::on) G::colorManage = true;
     colorManageAction->setChecked(G::colorManage);
-    if (G::colorManage) {
-        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
-    }
-    else {
-        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
-    }
+
+    updateStatusBar();  // updates btn image and tooltip
 
     if (dm->rowCount() == 0) return;
-
-    //    imageView->loadImage(dm->currentFilePath, "MW::toggleColorManage", true/*refresh*/);
 
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -544,7 +618,6 @@ void MW::toggleColorManage(Tog n)
 
     // reload image cache
     emit imageCacheColorManageChange();
-    // imageCache->colorManageChange();
 }
 
 void MW::togglePanToFocusClick()
@@ -552,13 +625,15 @@ void MW::togglePanToFocusClick()
 /*
     This is called by connect signals from the menu action and the PanToFocus button.
 */
-    if (G::isLogger) G::log("MW::toggleSortDirectionClick");
+    // if (G::isLogger)
+        G::log("MW::togglePanToFocusClick");
     togglePanToFocus(Tog::toggle);
 }
 
 void MW::togglePanToFocus(Tog n)
 {
-    if (G::isLogger) G::log("MW::toggleSortDirection");
+    // if (G::isLogger)
+        G::log("MW::togglePanToFocus");
     if (n == Tog::toggle) imageView->panToFocus = !imageView->panToFocus;
     if (n == Tog::off) imageView->panToFocus = false;
     if (n == Tog::on) imageView->panToFocus = true;
@@ -566,23 +641,14 @@ void MW::togglePanToFocus(Tog n)
     // Hijack to create a training collection of thumbnails
     G::isTraining = imageView->panToFocus;
 
+    updateStatusBar();  // updates btn image and tooltip
+
     if (imageView->panToFocus) {
-        panFocusToggleAction->setChecked(true);
-        panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
         if (!imageView->pmItem->pixmap().isNull()) {
             imageView->predictPanToFocus();
             imageView->showNormalizedViewport(true, true, "MW::togglePanToFocus");
         }
     }
-    else {
-        panFocusToggleAction->setChecked(false);
-        panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target_bw.png"));
-    }
-    QString txt;
-    imageView->panToFocus ? txt = "Pan to predicted focus point is ON"
-                          : txt = "Pan to predicted focus point is OFF";
-    // G::popUp->showPopup(txt);
-
 }
 
 void MW::showPopUp(QString msg, int duration, bool isAutosize,

@@ -11,7 +11,7 @@ bool isTestLogger = false;
 bool isLogger = false;              // Writes log messages to file or console
 bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
 
-bool isFlowLogger = false;          // Writes key program flow points to file or console
+bool isFlowLogger = true;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
 bool isErrorLogger = false;         // Writes error log messages to file or console

@@ -1063,7 +1063,7 @@ private:
     BarBtn *cacheMethodBtn;
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
-    BarBtn *rawJpgStatusLabel;
+    BarBtn *rawJpgStatusBtn;
     QLabel *slideShowStatusLabel;
     QLabel *cacheStatusLabel;
     ProgressBar *cacheProgressBar;
