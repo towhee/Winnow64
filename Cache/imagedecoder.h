@@ -93,7 +93,11 @@ public slots:
 signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src = "MW",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void done(int threadId, bool positionChange = false);
+    // doneStatus / doneSfRow / doneImage / doneFPath snapshot the decoder state at emit time.
+    // Qt copies these into the queued event, so the consumer on imageCacheThread sees a
+    // stable view even if the decoder has already started the next decode() on its thread.
+    void done(int threadId, int doneStatus, int doneSfRow,
+              QImage doneImage, QString doneFPath, qint64 doneMsToDecode);
 
 private:
     QThread decoderThread;
@@ -109,7 +113,7 @@ private:
     void rotate();
     void colorManage();
     bool idle = true;
-    bool abort = false;
+    QAtomicInt abort {0};
     DataModel *dm;
     Metadata *metadata;
     // ImageCacheData::CacheItem n;

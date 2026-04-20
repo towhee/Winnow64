@@ -57,7 +57,7 @@ void ImageDecoder::stop()
             << fun.leftJustified(50);
     }
 
-    abort = true;
+    abort.storeRelease(1);
     if (decoderThread.isRunning()) {
         decoderThread.quit();
         // decoderThread.wait();
@@ -66,7 +66,7 @@ void ImageDecoder::stop()
 
 bool ImageDecoder::quit()
 {
-    abort = false;
+    abort.storeRelease(0);
     // status = Status::Abort;
     fPath = "";
     // QImage blank;
@@ -89,7 +89,7 @@ void ImageDecoder::abortProcessing()
     // Now wait until idle or timeout
     QDeadlineTimer deadline(500);
     QMutexLocker lock(&mutex);
-    abort = true;
+    abort.storeRelease(1);
     while (!idle) {
         const int ms = int(deadline.remainingTime());
         if (!idleCondition.wait(&mutex, ms)) {
@@ -121,7 +121,7 @@ bool ImageDecoder::isRunning() const
 
 void ImageDecoder::decode(int row, int instance)
 {
-    abort = false;
+    abort.storeRelease(0);
     sfRow = row;                   // set early so fillCache has valid row
     this->instance = instance;
 
@@ -129,7 +129,7 @@ void ImageDecoder::decode(int row, int instance)
         status = Status::Failed;
         errMsg = dm->sf->isSuspended() ? "Proxy suspended." : "Row out of range.";
         setIdle();
-        emit done(threadId);
+        emit done(threadId, int(status), sfRow, QImage(), QString(), 0);
         return;
     }
 
@@ -160,7 +160,7 @@ void ImageDecoder::decode(int row, int instance)
         errMsg = "Instance clash.  New folder selected, processing old folder.";
         G::issue("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
         setIdle();
-        emit done(threadId);
+        emit done(threadId, int(status), sfRow, QImage(), fPath, 0);
         if (isDebug)
         {
             QString fun = "ImageDecoder::decode instance clash";
@@ -176,7 +176,7 @@ void ImageDecoder::decode(int row, int instance)
     }
 
     // decode
-    if (!abort && load()) {
+    if (!abort.loadAcquire() && load()) {
         // if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
         if (isDebug)
         {
@@ -189,8 +189,8 @@ void ImageDecoder::decode(int row, int instance)
                 << "ms =" << t.elapsed()
                 << fPath;
         }
-        if (metadata->rotateFormats.contains(ext) && !abort) rotate();
-        if (G::colorManage && !abort) colorManage();
+        if (metadata->rotateFormats.contains(ext) && !abort.loadAcquire()) rotate();
+        if (G::colorManage && !abort.loadAcquire()) colorManage();
         if (image.isNull()) status = Status::Failed;
     }
     else {
@@ -202,7 +202,7 @@ void ImageDecoder::decode(int row, int instance)
                      << "status =" << statusText.at(status)
                      << "errMsg =" << errMsg
                      << fPath
-                ; //*/
+                ;
         }
     }
 
@@ -212,7 +212,7 @@ void ImageDecoder::decode(int row, int instance)
     emit setValSf(sfRow, G::MSToReadColumn, msToDecode, instance,
                   "ImageDecoder::decode", Qt::EditRole);
 
-    emit done(threadId);
+    emit done(threadId, int(status), sfRow, image, fPath, msToDecode);
 }
 
 bool ImageDecoder::load()
@@ -621,11 +621,20 @@ void ImageDecoder::colorManage()
     if (isDebug) {
         // G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
     }
-    if (metadata->iccFormats.contains(ext)) {
-        // QMutexLocker locker(&mutex);
-        QByteArray iccBuf = dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
-        ICC::transform(iccBuf, image);  // crash when mash next
+    if (!metadata->iccFormats.contains(ext)) return;
+    if (abort.loadAcquire()) return;
+    if (image.isNull()) return;
+
+    // ICC::transform assumes TYPE_BGRA_8 (4 bytes/pixel). Convert if needed so
+    // lcms2's packer does not walk past a narrower buffer (crash site).
+    if (image.format() != QImage::Format_ARGB32 &&
+        image.format() != QImage::Format_RGB32) {
+        image = image.convertToFormat(QImage::Format_ARGB32);
+        if (image.isNull()) return;
     }
+
+    QByteArray iccBuf = dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
+    ICC::transform(iccBuf, image);
 }
 
 bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m)
