@@ -2042,7 +2042,6 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     /*
     Only call via connection.   Example: emit setValSf(args)
 */
-    if (G::stop) return;
     if (isDebug)
     {
         qDebug() << "DataModel::setValSf"
@@ -2055,10 +2054,22 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
             ;
     }
 
+    // Instance guard.
+    //
+    // Exception: always allow IsCachingColumn=false to pass. A stranded
+    // isCaching=true blocks okToDecode forever (nextToCache will never pick
+    // the row again), while a stale false is idempotent and harmless — the
+    // row either gets re-decoded or stays cached. This closes the race where
+    // a cleanup emit (okToCache, abortProcessing, resetStaleIsCaching) carries
+    // an instance that has since been advanced by another rapid folder click.
     if (instance != this->instance) {
-        errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setValueSF", sfRow);
-        return ;
+        const bool isCachingCleanup =
+            (sfCol == G::IsCachingColumn) && !value.toBool();
+        if (!isCachingCleanup) {
+            errMsg = "Instance clash from " + src;
+            G::issue("Comment", errMsg, "DataModel::setValueSF", sfRow);
+            return;
+        }
     }
 
     QModelIndex sfIdx = sf->index(sfRow, sfCol);

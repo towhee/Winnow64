@@ -100,7 +100,14 @@ public slots:
     void setShowCacheStatus(bool isShowCacheStatus);
 
     void updateInstance();
-    void fillCache(int id);
+    // doneStatus/doneSfRow/doneImage/doneFPath/doneMsToDecode are the snapshot
+    // carried by ImageDecoder::done; defaulted so non-signal callers still work.
+    void fillCache(int id,
+                   int doneStatus = -1,
+                   int doneSfRow = -1,
+                   QImage doneImage = QImage(),
+                   QString doneFPath = QString(),
+                   qint64 doneMsToDecode = 0);
     void setCurrentPosition(QString path, QString src);
     void filterChange(QString currentImageFullPath, QString source = "");
     void cacheSizeChange();         // flag when cache size is changed in preferences
@@ -231,9 +238,11 @@ private:
     // --- End Cache pressure section ---
 
     void launchDecoders(QString src);
-    bool okToCache(int id, int sfRow);
+    bool okToCache(int id, int sfRow, int doneStatus);
     bool nullInImCache();
-    void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
+    void cacheImage(int id, int cacheKey,
+                    const QImage &doneImage,
+                    const QString &doneFPath);  // make room and add image to imageCache
     bool cacheUpToDate();           // target range all cached
     void resetStaleIsCaching();
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList

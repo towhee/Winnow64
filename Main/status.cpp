@@ -119,7 +119,6 @@ void MW::clearStatus()
 void MW::updateStatusBar()
 {
     if (G::isLogger) G::log("MW::updateStatusBar");
-    qDebug() << "MW::updateStatusBar";
 
     if (G::modifySourceFiles) {
         modifyImagesBtn->setIcon(QIcon(":/images/icon16/delta_red_16.png"));
