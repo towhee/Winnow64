@@ -25,6 +25,13 @@ public:
                            ImageCache *imageCache
                            );
 
+    // File-lock helpers (macOS Finder "Locked" / UF_IMMUTABLE). Exposed as
+    // statics so callers can pre-check before opening the dialog.
+    static bool isFileLocked(const QString &path);
+    static QStringList lockedFilesInSelection(const QString &folderPath,
+                                              const QStringList &selection);
+    static QString lockedFilesMsg(const QStringList &names);
+
 private:
     Ui::RenameFiles *ui;
     void renameFileBase(QString oldBase, QString newBase);
@@ -34,6 +41,7 @@ private:
     void appendAllSharingBaseName(QString path);
     void resolveNameConflicts();
     void rename();
+    bool renameSingleManual(const QString &newBase);
     void initTokenList();
     void initExampleMap();
     void updateExistingSequence();

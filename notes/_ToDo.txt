@@ -2,11 +2,8 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Double click on folder making folders panel float
 - Review FSTree selection / scrolling behavior (when select all subfolders)
-- Is subfolderStatusLabel deprecated?
 - If rotate image it is cleared in image cache.
-- Refresh thumbs after Delete, Insert operations.
 - Send all warnings to console and issue log.
 - Add preference to toggle isFileLogger
 - EmbelProperties::syncWinnets deal with missing winnets

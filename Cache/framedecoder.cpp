@@ -108,7 +108,11 @@ bool FrameDecoder::queueContains(const QString &fPath)
 void FrameDecoder::addToQueue(QString path, int longSide, QString source,
                               int dmRow, int dmInstance)
 {
-    if (abort) return;
+    // A prior stop() (e.g. from a folder-change abort) leaves abort=true.
+    // getNextThumbNail resets it, but addToQueue never gets there if we bail
+    // on abort here — so new folders' video thumbs silently drop. A fresh
+    // enqueue is new work; clear the stale flag instead of rejecting.
+    abort = false;
     // if (queueContains(path)) return;
 
     Item item;

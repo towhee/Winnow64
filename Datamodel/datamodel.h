@@ -79,7 +79,7 @@ public:
     bool metadataLoaded(int dmRow);
     bool missingThumbnails();
     bool isDimensions(int sfRow);
-    bool subFolderImagesLoaded = false;
+    bool subFolderImagesLoaded = true;
     bool isMetadataAttempted(int sfRow);
     bool isMetadataLoaded(int sfRow);
     // bool isAllMetadataAttempted();

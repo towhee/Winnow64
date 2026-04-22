@@ -1,11 +1,13 @@
-std::atomic<bool> stop{false};
-std::atomic<bool> removingFolderFromDM{false};
-std::atomic<bool> removingRowsFromDM{false};
-bool isInitializing = true;
-
-std::atomic<bool> allMetadataLoaded{false};
-std::atomic<bool> iconChunkLoaded{false};
-
-std::atomic<int> dmInstance{0};
-std::atomic<bool> isModifyingDatamodel{false};
-
+MW::renameSelectedFiles() calls RenameFileDlg() to rename selected files.  Revise the
+existing code as follows:
+- if only one file is selected, then the RenameFileDlg should show two rename options:
+1. A textedit control to enter a new file rename
+2. The existing template choice.
+- if multiple files are selected then the textedit control should be disabled.
+When using the textedit control, renaming a file cannot duplicate an existing file.
+When using the template, it is okay to duplicate an existing file as long as it is going
+to be renamed as well.  If the template is renaming the basename of selected files, and
+there are other unselected files with the same basename, then they should also be
+renamed using the same template.  For example, if there are files a.jpg (selected) and
+a.xmp (not selected), and the template renames a.jpg to 100.jpg then a.xmp should be
+renamed to 100.xmp even though it was not selected.

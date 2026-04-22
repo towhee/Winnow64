@@ -167,7 +167,18 @@ void MW::renameSelectedFiles()
         }
     }
 
-    RenameFileDlg rf(this, folderPath, selection, filenameTemplates, dm, metadata, imageCache);
+    // Pre-check for Finder-locked files (macOS UF_IMMUTABLE). rename() fails
+    // with EPERM on such files, so warn and bail before opening the dialog —
+    // the user has to unlock in Finder first.
+    QStringList lockedFiles = RenameFileDlg::lockedFilesInSelection(folderPath, selection);
+    if (!lockedFiles.isEmpty()) {
+        QMessageBox::warning(this, "File locked",
+                             RenameFileDlg::lockedFilesMsg(lockedFiles));
+        return;
+    }
+
+    RenameFileDlg rf(this, folderPath, selection, filenameTemplates,
+                     dm, metadata, imageCache);
     rf.exec();
     // may have renamed current image
     setWindowTitle(winnowWithVersion + "   " + dm->currentFilePath);

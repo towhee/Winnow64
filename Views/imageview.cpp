@@ -404,7 +404,7 @@ void ImageView::scale(bool isNewImage)
         setTransform(transform);
     }
 
-    // emit zoomChange(zoom, "ImageView::scale");
+    emit zoomChange(zoom, "ImageView::scale");
 
     // The rest of your functional logic remains identical
     isScrollable = (zoom > zoomFit);
@@ -427,7 +427,7 @@ void ImageView::scale(bool isNewImage)
 
     placeClassificationBadge();
     setShootingInfo(infoText);
-    // emit updateStatus(true, "", "ImageView::scale");
+    emit updateStatus(true, "", "ImageView::scale");
     //*/
 }
 
