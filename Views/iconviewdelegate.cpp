@@ -518,8 +518,14 @@ thumbRect        = itemRect - item (item has different aspect so either the
                    width or height will have to be centered inside the thumbRect
 textRect         = a rectangle below itemRect
 */
-    // Quick exit if the icon has not been loaded into the DataModel
-    if (index.data(Qt::DecorationRole).isNull()) return;
+    // Quick exit if the icon has not been loaded into the DataModel.
+    // Videos are exempt: with G::renderVideoThumb == false (the default)
+    // FrameDecoder never runs, so DecorationRole stays null — but the frame,
+    // label, and duration overlay should still paint.
+    if (index.data(Qt::DecorationRole).isNull()) {
+        bool isVideoRow = index.model()->index(index.row(), G::VideoColumn).data().toBool();
+        if (!isVideoRow) return;
+    }
 
     QString srcFun = "IconViewDelegate::Paint";
     // qDebug().noquote()

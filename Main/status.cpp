@@ -12,7 +12,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (G::isLogger)
         G::log(fun);
 
-    // qDebug() << fun << keepBase << s << source;
+    qDebug() << fun << keepBase << s << source;
 
     // check if null filter
     if (dm->sf->rowCount() == 0) {
@@ -25,7 +25,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
             k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
         }
         updateStatusBar();
-        // return;
+        return;
     }
 
     QString status;
@@ -195,7 +195,8 @@ void MW::updateStatusBar()
     G::isFilter = filters->isAnyFilter();
     filterStatusLabel->setVisible(G::isFilter);
 
-    subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
+    // deprecated when utilized opt + click on FSTree folder
+    // subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
 
     slideShowStatusLabel->setVisible(G::isSlideShow);
 }
@@ -248,13 +249,15 @@ QString MW::getZoom()
 /*
 
 */
-    if (G::isLogger) G::log("MW::getZoom");
+    if (G::isLogger)
+        G::log("MW::getZoom");
     if (G::mode != "Loupe" &&
         G::mode != "Compare") return "N/A";
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
-    if (zoom <= 0 || zoom > 10) return "";
+    // if (zoom <= 0 || zoom > 10) return "";
+    qDebug() << "MW::getZoom  zoom =" << zoom;
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 

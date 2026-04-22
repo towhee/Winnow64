@@ -1159,8 +1159,9 @@ void MW::createStatusBar()
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
     filterStatusLabel->setAlignment(Qt::AlignVCenter);
     statusBar()->addWidget(filterStatusLabel);
-    subfolderStatusLabel->setPixmap(QPixmap(":/images/icon16/subfolders.png"));
-    statusBar()->addWidget(subfolderStatusLabel);
+    // deprecated
+    // subfolderStatusLabel->setPixmap(QPixmap(":/images/icon16/subfolders.png"));
+    // statusBar()->addWidget(subfolderStatusLabel);
     statusBar()->addWidget(rawJpgStatusBtn);
     slideShowStatusLabel->setPixmap(QPixmap(":/images/icon16/slideshow.png"));
     statusBar()->addWidget(slideShowStatusLabel);

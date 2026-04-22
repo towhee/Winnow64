@@ -1,6 +1,68 @@
 #include "renamefile.h"
 #include "ui_renamefiledlg.h"
 #include "Main/global.h"
+#include <cerrno>
+#include <cstring>
+#ifdef Q_OS_MAC
+#include <sys/stat.h>
+#endif
+
+bool RenameFileDlg::isFileLocked(const QString &path)
+{
+/*
+    Returns true if the file has the macOS user-immutable (uchg) or
+    system-immutable (schg) flag set — i.e. it is "Locked" in Finder's
+    Get Info panel. rename() and unlink() both fail with EPERM on such
+    files. On non-mac platforms this is a no-op.
+*/
+#ifdef Q_OS_MAC
+    struct stat st;
+    if (::stat(path.toUtf8().constData(), &st) != 0) return false;
+    return (st.st_flags & (UF_IMMUTABLE | SF_IMMUTABLE)) != 0;
+#else
+    Q_UNUSED(path);
+    return false;
+#endif
+}
+
+QStringList RenameFileDlg::lockedFilesInSelection(const QString &folderPath,
+                                                  const QStringList &selection)
+{
+/*
+    Returns display names of any file in folderPath that (a) shares a base name
+    with any file in selection and (b) is locked in Finder. Sidecars count —
+    rename() would fail on them mid-operation just as it would on the image.
+*/
+    QSet<QString> bases;
+    for (const QString &p : selection) bases.insert(QFileInfo(p).baseName());
+
+    QStringList locked;
+    const QFileInfoList inf = QDir(folderPath).entryInfoList(QDir::Files);
+    for (const QFileInfo &fi : inf) {
+        if (!bases.contains(fi.baseName())) continue;
+        if (isFileLocked(fi.filePath())) locked << fi.fileName();
+    }
+    return locked;
+}
+
+// Format a list of file names for display, capping long lists with a summary
+// line so the dialog doesn't become unreadably tall.
+static QString formatNameList(const QStringList &names, int max = 20)
+{
+    if (names.size() <= max) return names.join("<br>");
+    QStringList head = names.mid(0, max);
+    return head.join("<br>") + "<br>+ " +
+           QString::number(names.size() - max) + " more";
+}
+
+QString RenameFileDlg::lockedFilesMsg(const QStringList &names)
+{
+    return
+        "The following file(s) are <b>locked in Finder</b> and cannot be renamed:"
+        "<br><br><b>" + formatNameList(names) + "</b><br><br>"
+        "To unlock, select the file in Finder, press <b>Cmd+I</b>, "
+        "and uncheck <b>Locked</b>. Then try again.";
+}
 
 RenameFileDlg::RenameFileDlg(QWidget *parent,
                              QString &folderPath,
@@ -37,6 +99,34 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
         selectionIndexes.append(dm->proxyIndexFromPath(selection.at(i)));
     }
 
+    // Manual rename is only meaningful for a single-file selection. For
+    // multi-selection, hide the checkbox and lineedit entirely — the user
+    // has no choice and only the template section applies.
+    if (selection.count() == 1) {
+        QFileInfo info(selection.at(0));
+        ui->manualRenameEdit->setText(info.baseName());
+        ui->useManualRenameChk->setChecked(false);
+        ui->manualRenameEdit->setEnabled(false);
+        // Toggling the checkbox flips which mode is active: when the user
+        // picks manual rename, the template controls gray out, and vice
+        // versa. This makes the mutual exclusion visually obvious.
+        connect(ui->useManualRenameChk, &QCheckBox::toggled, this,
+                [this](bool checked) {
+            ui->manualRenameEdit->setEnabled(checked);
+            ui->nameLbl->setEnabled(!checked);
+            ui->filenameTemplatesCB->setEnabled(!checked);
+            ui->filenameTemplatesBtn->setEnabled(!checked);
+            ui->startSeqLabel->setEnabled(!checked);
+            ui->spinBoxStartNumber->setEnabled(!checked);
+            ui->existingSequenceLabel->setEnabled(!checked);
+            ui->exampleLbl->setEnabled(!checked);
+            if (checked) ui->manualRenameEdit->setFocus();
+        });
+    } else {
+        ui->useManualRenameChk->setVisible(false);
+        ui->manualRenameEdit->setVisible(false);
+    }
+
     // initialize templates and tokens
     initTokenList();
     initExampleMap();
@@ -69,7 +159,6 @@ void RenameFileDlg::renameFileBase(QString oldBase, QString newBase)
             QString oldPath = inf.at(i).filePath();
             QString newPath = inf.at(i).dir().path() + "/" + newBase + "." + inf.at(i).suffix();
             QFile(oldPath).rename(newPath);
-            QFile(oldPath).close();
             if (isDebug) qDebug() << "RenameFileDlg::renameFileBase Renamed file oldPath ="
                                   << oldPath << "to newPath =" << newPath;
         }
@@ -313,12 +402,22 @@ void RenameFileDlg::rename()
     ui->progressMsg->setText("Step 2 of 3: Checking for name conflicts...");
     if (isDebug)  qDebug() << "FILE LIST TO RENAME:";
     filesToRename.clear();
+    QSet<QString> selectionPaths;
     for (int i = 0; i < selectionIndexes.size(); i++) {
         int row = selectionIndexes.at(i).row();
         QString path = dm->sf->data(dm->sf->index(row, G::PathColumn), G::PathRole).toString();
+        selectionPaths.insert(path);
         appendAllSharingBaseName(path);
         ui->progressBar->setValue(++progress);
         if (G::useProcessEvents) qApp->processEvents();
+    }
+
+    // Sidecars = files in filesToRename that weren't part of the user selection.
+    // Capture their original names now, before the rename loop mutates paths.
+    QStringList sidecars;
+    for (int i = 0; i < filesToRename.size(); i++) {
+        const QString &p = filesToRename.at(i).at(0);
+        if (!selectionPaths.contains(p)) sidecars << QFileInfo(p).fileName();
     }
 
     if (isDebug) diagFiles();
@@ -460,7 +559,6 @@ void RenameFileDlg::rename()
 
         // File rename oldPath to newPath
         QFile(oldPath).rename(newPath);
-        QFile(oldPath).close();
         /*
         // Update datamodel
 //        if (isDebug) debugShowDM("Check if dm->fPathRow contains " + oldPath);
@@ -499,6 +597,15 @@ void RenameFileDlg::rename()
 
     if (isDebug) {
         qDebug() << "Renaming completed";
+    }
+
+    if (!sidecars.isEmpty()) {
+        ui->progressMsg->setVisible(false);
+        ui->progressBar->setVisible(false);
+        QMessageBox::information(this, "Sidecar files renamed",
+            "In addition to the selected file(s), the following file(s) sharing "
+            "the same base name were also renamed:<br><br><b>" +
+            formatNameList(sidecars) + "</b>");
     }
 }
 
@@ -599,8 +706,89 @@ void RenameFileDlg::updateExample()
     ui->exampleLbl->setText(parseTokenString(info, tokenString));
 }
 
+bool RenameFileDlg::renameSingleManual(const QString &newBase)
+{
+/*
+    Manual rename path for a single-file selection. Renames the selected file and
+    any sidecars sharing its basename to newBase, preserving each extension.
+    Rejects the operation if newBase collides with an existing file that is NOT
+    part of the oldBase group (which is itself being renamed).
+*/
+    if (selection.isEmpty()) return false;
+
+    QFileInfo selInfo(selection.at(0));
+    QString oldBase = selInfo.baseName();
+    if (newBase == oldBase) return true;     // nothing to do
+
+    QFileInfoList inf = QDir(folderPath).entryInfoList(QDir::Files);
+
+    // Conflict check: any existing file with baseName == newBase is a duplicate
+    // unless its baseName also equals oldBase (impossible) — i.e. any hit is a
+    // real conflict.
+    for (const QFileInfo &fi : inf) {
+        if (fi.baseName() == newBase) {
+            QString msg = "A file named <b>" + fi.fileName() +
+                          "</b> already exists.<br><br>"
+                          "Choose a different name.";
+            QMessageBox::warning(this, "Name conflict", msg);
+            return false;
+        }
+    }
+
+    // Rename the selected file plus every sidecar sharing oldBase, on disk and
+    // in the datamodel.
+    const QString selectedFileName = selInfo.fileName();
+    QStringList sidecars;
+    for (const QFileInfo &fi : inf) {
+        if (fi.baseName() != oldBase) continue;
+        QString oldPath = fi.filePath();
+        QString newName = newBase + "." + fi.suffix();
+        QString newPath = fi.dir().path() + "/" + newName;
+        errno = 0;
+        if (std::rename(oldPath.toUtf8().constData(), newPath.toUtf8().constData()) != 0) {
+            QMessageBox::warning(this, "Rename failed",
+                "Could not rename <b>" + fi.fileName() + "</b>:<br><br>" +
+                QString::fromLocal8Bit(std::strerror(errno)));
+            return false;
+        }
+        if (dm->fPathRow.contains(oldPath)) {
+            renameDatamodel(oldPath, newPath, newName);
+        }
+        if (fi.fileName() != selectedFileName) sidecars << fi.fileName();
+    }
+
+    dm->currentFilePath = dm->currentSfIdx.data(G::PathRole).toString();
+
+    if (!sidecars.isEmpty()) {
+        QMessageBox::information(this, "Sidecar files renamed",
+            "In addition to the selected file, the following file(s) sharing "
+            "the same base name were also renamed:<br><br><b>" +
+            formatNameList(sidecars) + "</b>");
+    }
+
+    return true;
+}
+
 void RenameFileDlg::on_okBtn_clicked()
 {
+    // Manual rename is only chosen when a single file is selected AND the
+    // "Enter a new file name" checkbox is ticked. Otherwise use the template.
+    if (selection.count() == 1 && ui->useManualRenameChk->isChecked()) {
+        QString typed = ui->manualRenameEdit->text().trimmed();
+        if (typed.isEmpty()) {
+            QMessageBox::warning(this, "Empty name",
+                                 "Please enter a new file name.");
+            return;  // stay open so the user can fix it
+        }
+        QFileInfo info(selection.at(0));
+        if (typed == info.baseName()) {
+            accept();  // no-op: user didn't change the name
+            return;
+        }
+        if (!renameSingleManual(typed)) return;  // conflict, stay open
+        accept();
+        return;
+    }
     rename();
     accept();
 }
