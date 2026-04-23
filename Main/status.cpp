@@ -12,7 +12,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (G::isLogger)
         G::log(fun);
 
-    qDebug() << fun << keepBase << s << source;
+    // qDebug() << fun << keepBase << s << source;
 
     // check if null filter
     if (dm->sf->rowCount() == 0) {
@@ -257,7 +257,7 @@ QString MW::getZoom()
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
     // if (zoom <= 0 || zoom > 10) return "";
-    qDebug() << "MW::getZoom  zoom =" << zoom;
+    // qDebug() << "MW::getZoom  zoom =" << zoom;
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 

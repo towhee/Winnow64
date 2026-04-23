@@ -132,6 +132,9 @@ void MW::filterChange(QString source)
     // prevent unwanted fileSelectionChange()
     isFilterChange = true;
 
+    // save existing selection
+    sel->save("MW::filterChange");
+
     /* refresh the proxy sort/filter, which updates the selectionIndex, which
     triggers a scroll event and MetaRead updates the icons and thumbnails */
 
@@ -185,8 +188,16 @@ void MW::filterChange(QString source)
     if (!G::removingRowsFromDM)
         emit imageCacheFilterChange(fPath, "MW::filterChange");
 
-    // // clear selection and update datamodel current index
-    sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
+    // // // clear selection and update datamodel current index
+    // sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
+
+    // Recover full selection if filter didn't eliminate any rows; otherwise fall
+    // back to selecting the current single item.
+    if (dm->rowCount() == dm->sf->rowCount()) {
+        sel->recover("MW::filterChange");
+    } else {
+        sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
+    }
 
     // only scroll if filtration has changed visible cells in thumbView
     scrollToCurrentRowIfNotVisible();
@@ -621,7 +632,7 @@ void MW::setRating()
         }
         // write to sidecar
         if (G::useSidecar) {
-            // qDebug() << "MW::setRating";
+            qDebug() << "MW::setRating write sidecar" << dmRow << fPath;
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
             metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
             // update _Rating (used to check what metadata has changed in metadata->writeXMP)

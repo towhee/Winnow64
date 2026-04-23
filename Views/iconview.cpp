@@ -370,8 +370,6 @@ void IconView::forceFullRefresh(QString src)
     } else {
         setThumbParameters();
     }
-
-    // refreshIcons(srcFun);
 }
 
 void IconView::setThumbParameters()

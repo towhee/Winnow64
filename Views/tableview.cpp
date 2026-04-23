@@ -160,9 +160,16 @@ void TableView::scrollToRow(int row, QString source)
 void TableView::scrollToCurrent()
 {
     if (isDebug || G::isLogger) G::log("TableView::scrollToCurrent");
-    QModelIndex sfIdx = dm->sf->index(currentIndex().row(), 1);
+
+    // QModelIndex sfIdx = dm->sf->index(currentIndex().row(), 1);
+    // G::ignoreScrollSignal = true;
+    // scrollTo(sfIdx, ScrollHint::PositionAtCenter);
+
+    int hPos = horizontalScrollBar()->value();
+    QModelIndex sfIdx = dm->sf->index(currentIndex().row(), frozenColumns);
     G::ignoreScrollSignal = true;
     scrollTo(sfIdx, ScrollHint::PositionAtCenter);
+    horizontalScrollBar()->setValue(hPos);
 }
 
 void TableView::setDefaultColumnWidths()
