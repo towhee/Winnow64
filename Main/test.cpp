@@ -552,7 +552,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // mergeProjectFiles();
-    setThreadRunStatusInactive();
+    qDebug()
+        << "G::useSidecar =" << G::useSidecar
+        << "G::autoAdvance =" << G::autoAdvance
+        ;
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

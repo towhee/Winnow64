@@ -125,6 +125,24 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
     } else {
         ui->useManualRenameChk->setVisible(false);
         ui->manualRenameEdit->setVisible(false);
+
+        // Shift the template section up to fill the space the hidden
+        // manual-rename widgets occupied (checkbox y=18..42, lineedit y=46..78,
+        // gap to nameLbl at y=100 → total shift = 82px).
+        const int shift = 82;
+        auto moveUp = [shift](QWidget *w) {
+            w->move(w->x(), w->y() - shift);
+        };
+        moveUp(ui->nameLbl);
+        moveUp(ui->filenameTemplatesCB);
+        moveUp(ui->startSeqWidget);
+        moveUp(ui->existingSequenceLabel);
+        moveUp(ui->exampleWidget);
+        moveUp(ui->progressMsg);
+        moveUp(ui->progressBar);
+        moveUp(ui->layoutWidget);
+
+        setFixedHeight(height() - shift);
     }
 
     // initialize templates and tokens
