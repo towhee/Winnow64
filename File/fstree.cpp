@@ -694,7 +694,8 @@ void FSTree::scrollToCurrent()
 /*
 
 */
-    if (G::isLogger) G::log("FSTree::scrollToCurrent");
+    // if (G::isLogger)
+        G::log("FSTree::scrollToCurrent");
     QModelIndex idx = getCurrentIndex();
 
     if (!idx.isValid()) return;
@@ -1161,16 +1162,15 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     // ignore rapid mouse press if still processing MW::stop
     qint64 ms = rapidClick.restart();
 
-    // Helper: resolve folder path from event position
-    auto getFolderPath = [&]() -> QString {
-        QModelIndex idx = indexAt(event->pos());
-        if (!idx.isValid()) return QString();
-        return idx.sibling(idx.row(), 0).data(QFileSystemModel::FilePathRole).toString();
-    };
+    QModelIndex index = indexAt(event->pos());
+    if (!index.isValid()) return;
+
+    // Ignore if click in decoration/indentation area (left of the item's visual rect)
+    if (event->pos().x() < visualRect(index).left()) return;
 
     if (ms < 500) {
         // Queue this click so the last-clicked folder always loads
-        QString dPath = getFolderPath();
+        QString dPath = index.sibling(index.row(), 0).data(QFileSystemModel::FilePathRole).toString();
         if (!dPath.isEmpty()) {
             pendingClickPath = dPath;
             if (pendingClickTimer) {
@@ -1223,37 +1223,6 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
 
     static QModelIndex prevIdx = QModelIndex();
-
-    QModelIndex index = indexAt(event->pos());
-    if (!index.isValid()) return;
-
-    // decoration clicked
-    QRect rect = visualRect(index);
-    int level = 0;
-    QModelIndex current = index;
-    while (current.parent().isValid()) {
-        current = current.parent();
-        ++level;
-    }
-    int indentationOffset = level * indentation();
-    int decorationWidth = style()->pixelMetric(QStyle::PM_IndicatorWidth);
-    QRect decorationRect = QRect(indentationOffset, rect.top(), decorationWidth, rect.height());
-    /*
-    qDebug() << "FSTree::mousePressEvent"
-             << "level =" << level
-             << "rect =" << rect
-             << "decorationRect =" << decorationRect
-             << "pos =" << event->pos()
-             << "decorationRect.contains(event->pos()) ="
-             << decorationRect.contains(event->pos())
-             << "index.data(FSModel::OverLimitRole).toBool() ="
-             << index.data(FSModel::OverLimitRole).toBool()
-        ;
-    // */
-    if (decorationRect.contains(event->pos())) {
-        QTreeView::mousePressEvent(event);
-        return;
-    }
 
     // context menu is handled in MW::eventFilter
     if (event->button() == Qt::RightButton) {
