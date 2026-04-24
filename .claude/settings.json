@@ -1,5 +1,8 @@
 {
   "env": {
     "ANTHROPIC_CUSTOM_HEADERS": "x-goog-api-key: AIza0881536510"
-  }
+  },
+"statusLine": {
+    "type": "command",
+    "command": "jq -r '\"[Session: \\(.rate_limits.five_hour.used_percentage | floor)% (Resets: \\(.rate_limits.five_hour.resets_at | strftime(\"%H:%M\")))] [Week: \\(.rate_limits.seven_day.used_percentage | floor)% (Resets: \\(.rate_limits.seven_day.resets_at | strftime(\"%a %H:%M\")))]\"'"  }
 }

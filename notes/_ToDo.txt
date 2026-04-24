@@ -138,6 +138,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Stopped FSTree scrolling when expand/collapse tree
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn
 - Focus stack all file types
 - IconView smooth scroll on swipe
