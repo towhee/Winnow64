@@ -1782,6 +1782,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     if (recurse) {
         setCentralMessage("Determining subfolder tree count...");
         dm->subFolderTreeCount = Utilities::subFolderTreeCount(folderPath);
+        dm->subFolderTreeCounter = 0;
         setCentralMessage("Subfolder tree count = " +
                           QVariant(dm->subFolderTreeCount).toString());
     }

@@ -649,8 +649,14 @@ void DataModel::addFolder(const QString &folderPath)
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
 
+    QString count = QVariant(++subFolderTreeCounter).toString();
+    QString progress = "Searching for images in: " + count + " of " +
+                       QVariant(subFolderTreeCount).toString() +
+                       " subfolders";
+
     QString step = "Loading eligible image file information.<br>";
-    step += folderPath + "<br>";
+    step += progress + "<br>";
+    // step += folderPath + "<br>";
     QString escapeClause = "Press \"Esc\" to stop.";
     emit centralMsg(step + escapeClause);
     qApp->processEvents();

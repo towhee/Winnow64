@@ -1170,6 +1170,7 @@ void MW::createStatusBar()
 
     // general status on left side of status bar
     statusLabel = new QLabel;
+    statusLabel->setObjectName("statusLabel");
     statusBar()->addWidget(statusLabel);
 }
 

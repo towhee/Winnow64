@@ -75,10 +75,6 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (!keepBase) status = s;
 
     statusLabel->setText(status);
-    QFont sfMonoFont("SF Mono");
-    sfMonoFont.setStyleHint(QFont::Monospace);
-    // sfMonoFont.setPointSize(12);
-    statusLabel->setFont(sfMonoFont);
 
     // status label tooltip
     QString tip;
