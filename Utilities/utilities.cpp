@@ -114,7 +114,7 @@ QString Utilities::assocXmpPath(QString fPath)
 
 quint32 Utilities::subFolderTreeCount(QString rootFolderPath)
 {
-    const std::string rootPath = getenv("HOME");
+    const std::string rootPath = rootFolderPath.toStdString();
 
     QElapsedTimer timer;
     timer.start();

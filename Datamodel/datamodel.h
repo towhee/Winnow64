@@ -130,6 +130,7 @@ public:
 
     // track large recursive subfolder trees
     quint32 subFolderTreeCount = 0;
+    quint32 subFolderTreeCounter = 0;
 
     // current status
     // int instance = 0;                   // each new load of DataModel increments the instance

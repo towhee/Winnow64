@@ -240,6 +240,10 @@ QString WidgetCSS::label()
     "QLabel:disabled {"
         "color:" + disabledColor.name() + ";"
     "}"
+
+    "QLabel#statusLabel {"
+        "font-family: \"SF Mono\", Menlo, Consolas, monospace;"
+    "}"
     ;
 }
 
