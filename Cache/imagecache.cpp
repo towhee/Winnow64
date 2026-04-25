@@ -2227,7 +2227,7 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus)
     // no longer in target range to cache
     if (!toCache.contains(sfRow)) {
         msg += "Failed: " + sRow + " not in toCacheStatus. ";
-        qWarning() << src << msg;
+        // qWarning() << src << msg;
         success = false;
     }
 

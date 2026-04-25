@@ -940,7 +940,7 @@ void ImageView::zoomToggle()
 */
     if (G::isLogger) G::log("ImageView::zoomToggle");
     QString srcFun = "ImageView::zoomToggle";
-    qDebug().noquote() << srcFun.leftJustified(40);
+    // qDebug().noquote() << srcFun.leftJustified(40);
 
     if (isFit && zoomFit >= toggleZoom) {
         QString toggleZoomPct = QString::number(toggleZoom * 100) + "%";

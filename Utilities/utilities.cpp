@@ -1,5 +1,6 @@
 #include "utilities.h"
 #include "Main/global.h"
+#include <dirent.h>
 
 bool Utilities::integrityCheck(const QString &path1, const QString &path2)
 {
@@ -109,6 +110,93 @@ QString Utilities::assocXmpPath(QString fPath)
 {
     if (G::isLogger) G::log("Utilities::assocXmpPath");
     return QFileInfo((fPath)).dir().absolutePath() + "/" + QFileInfo((fPath)).baseName() + ".xmp";
+}
+
+quint32 Utilities::subFolderTreeCount(QString rootFolderPath)
+{
+    const std::string rootPath = getenv("HOME");
+
+    QElapsedTimer timer;
+    timer.start();
+
+    std::atomic<size_t> folderCount{0};
+    std::atomic<int> pending{1};   // root is the first pending unit of work
+    std::queue<std::string> workQueue;
+    std::mutex queueMutex;
+    std::condition_variable queueCV;
+    workQueue.push(rootPath);
+
+    auto worker = [&]() {
+        while (true) {
+            std::string path;
+            {
+                std::unique_lock<std::mutex> lock(queueMutex);
+                queueCV.wait(lock, [&]{ return !workQueue.empty() || pending.load() == 0; });
+                if (workQueue.empty()) return;
+                path = std::move(workQueue.front());
+                workQueue.pop();
+            }
+
+            DIR *dir = opendir(path.c_str());
+            if (dir) {
+                struct dirent *e;
+                while ((e = readdir(dir)) != nullptr) {
+                    // skip "." and ".."
+                    if (e->d_name[0] == '.' &&
+                        (e->d_name[1] == '\0' ||
+                         (e->d_name[1] == '.' && e->d_name[2] == '\0')))
+                        continue;
+
+                    bool isDir = false;
+                    if (e->d_type == DT_DIR) {
+                        isDir = true;
+                    } else if (e->d_type == DT_UNKNOWN) {
+                        // fallback for filesystems that don't fill d_type
+                        std::string sub = path + "/" + e->d_name;
+                        struct stat st;
+                        if (lstat(sub.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+                            isDir = true;
+                    }
+
+                    if (isDir) {
+                        folderCount.fetch_add(1, std::memory_order_relaxed);
+                        std::string sub = path + "/" + e->d_name;
+                        pending.fetch_add(1, std::memory_order_relaxed);
+                        {
+                            std::lock_guard<std::mutex> lock(queueMutex);
+                            workQueue.push(std::move(sub));
+                        }
+                        queueCV.notify_one();
+                    }
+                }
+                closedir(dir);
+            }
+
+            if (pending.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                // last pending unit completed — wake all workers so they can exit
+                std::lock_guard<std::mutex> lock(queueMutex);
+                queueCV.notify_all();
+            }
+        }
+    };
+
+    unsigned n = std::thread::hardware_concurrency();
+    if (n == 0) n = 4;
+    std::vector<std::thread> threads;
+    threads.reserve(n);
+    for (unsigned i = 0; i < n; ++i) threads.emplace_back(worker);
+    for (auto& t : threads) t.join();
+
+    quint32 count = folderCount.load();
+
+    qint64 ms = timer.elapsed();
+    qDebug() << "MW::test rapid recursive subdir count for"
+             << QString::fromStdString(rootPath)
+             << "=" << count
+             << "in" << ms << "ms"
+             << "(threads:" << n << ")";
+
+    return count;
 }
 
 QString Utilities::replaceFileName(QString srcPath, QString newName)

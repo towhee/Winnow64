@@ -534,15 +534,22 @@ void DataModel::enqueueFolderSelection(const QString& folderPath,
     if (recurse) {
         // Only iterate directories; skip "." and ".."
         // skip symlinks to avoid loops.
+        quint32 i = 0;
+        QString total = QVariant(subFolderTreeCount).toString();
         QDirIterator it(folderPath,
                         QDir::Dirs | QDir::NoDotAndDotDot | QDir::Readable | QDir::Hidden,
                         QDirIterator::Subdirectories);
         enqueueOp(folderPath, op);
         while (it.hasNext()) {
+            if (abort) return;
             const QString p = it.next();
             const QFileInfo fi = it.fileInfo();
             if (!fi.isDir()) continue;
             if (fi.isSymLink()) continue;
+            QString count = QVariant(++i).toString();
+            QString progress = "Progress: " + count + " of " + total + " subfolders";
+            emit updateStatus(false, progress, "");
+            qApp->processEvents();  // req'd for status update and abort
             enqueueOp(p, op);
         }
     } else {
@@ -2652,7 +2659,7 @@ QList<int> DataModel::metadataNotLoaded()
 
 bool DataModel::isPath(QString fPath)
 {
-    if (G::isLogger) G::log("DataModel::rowFromPath");
+    if (G::isLogger) G::log("DataModel::isPath");
     for (int row = 0; row < rowCount(); ++row) {
         if (fPath == index(row, 0).data(G::PathRole).toString())
             return true;

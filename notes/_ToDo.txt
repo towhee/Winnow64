@@ -43,20 +43,16 @@ BUGS / TO DO
 - Closing Winnow while folderSelectionChange can crash (addRecentFolder()) but could be anywhere
   May need a global wait for abort like used in threads
 - ARW file preview size is wrong ?
-- MW::setDisplayResolution() Dell SQ3223 Middle res size embellish Zen2048 wrong size
-  until move to another monitor and back
 - Rethink image file parse failure reporting
 - Use Exiftool to save image rotation change?
 - Check for updates for macos
 - Add tooltips to menus
 - GoogleDrive folder not showing all videos
 - Open with exiftool
-- qffmpegvideobuffer.cpp QFFmpegVideoBuffer::mapTextures "failed to get textures for frame"
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
 - Video thumbs and playback rotation wrong
 - MeanStack not updating embedded image thumbnail
-- G::isNewFileSelection req'd?
 - Make sure HEIC also works on PC including thumbs
 - Get thumbnail from HEIC.
 - folderAndFileSelectionChange does not show folder highlight change
@@ -83,7 +79,6 @@ BUGS / TO DO
 - Image metadata report does not show sidecar for PNG file
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - Unicode path heics not rendering
-- Include subfolders is wonky
 - E:/2020 √/202001 √/2020-01-25_Linley Valley √/2020-01-25_0024_Focus Stack.tif has bad thumb
   caused by Winnow adding thumbnail
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
@@ -124,7 +119,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
-- Activating bullseye crashes if no image in imageView
 - Show images that have sidecars (indicator in thumbnail and col in datamodel)
 - When add new workspace the menu shortcut is not updated until reopen app
 - Heic thumb rotation wrong

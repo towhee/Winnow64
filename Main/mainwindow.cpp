@@ -1778,6 +1778,14 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
         buildFilters->abortProcessing();
     }
 
+    // get subFolderTreeCount in case huge, so can so progress to user
+    if (recurse) {
+        setCentralMessage("Determining subfolder tree count...");
+        dm->subFolderTreeCount = Utilities::subFolderTreeCount(folderPath);
+        setCentralMessage("Subfolder tree count = " +
+                          QVariant(dm->subFolderTreeCount).toString());
+    }
+
     /* put folder in datamodel queue to add or remove if main thread
        is not blocking */
     dm->abort = false;
@@ -2285,7 +2293,7 @@ bool MW::reset(QString src)
     }
     isDragDrop = false;
 
-    // fsTree->clearFolderOverLimit();
+    fsTree->clearFolderOverLimit();
     fsTree->setEnabled(true);
     bookmarks->setEnabled(true);
     cacheProgressBar->clearImageCacheProgress();
@@ -2869,13 +2877,12 @@ void MW::gridHasScrolled()
     This function is triggered after a gridView scrollbar change signal. The visible
     thumbnails are determined and loaded if necessary.
 
-    If the change was caused by the user scrolling then we want to process it, as defined by
-    G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
-    another view then we do not want to process again and get into a loop.
+    If the change was caused by the user scrolling then we want to process it, as defined
+    by G::ignoreScrollSignal == false. However, if the scroll change was caused by
+    syncing with another view then we do not want to process again and get into a loop.
 
-    Also, we do not need to process scrolling if it was the result of a new selection, which
-    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewFileSelection is set true
-    in IconView when a selection is made, and set false in fileSelectionChange.
+    Also, we do not need to process scrolling if it was the result of a new selection,
+    which will trigger a thumbnail update in MW::fileSelectionChange.
 
     MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
     tableView) to assign the firstVisibleRow, midVisibleRow and lastVisibleRow in

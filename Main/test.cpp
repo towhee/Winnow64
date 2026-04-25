@@ -1,6 +1,14 @@
 #include "Main/mainwindow.h"
 #include "ImageFormats/Video/mov.h"
 
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <sys/stat.h>
+#include <thread>
+
 void MW::traverseFolderStressTestFromMenu()
 {
     qDebug() << "MW::traverseFolderStressTestFromMenu";
@@ -552,10 +560,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // mergeProjectFiles();
-    qDebug()
-        << "G::useSidecar =" << G::useSidecar
-        << "G::autoAdvance =" << G::autoAdvance
-        ;
+    updateStatus(false, "test1", "");
+    dm->isPath("");
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
