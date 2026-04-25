@@ -28,6 +28,7 @@ public:
     static QString replaceFileName(QString srcPath, QString newName);
     static QString replaceSuffix(QString srcPath, QString newSuffix);
     static QStringList getSidecarPaths(QString srcPath);
+    static quint32 subFolderTreeCount(QString rootFolderPath);
 
     // File status
     static bool isLocked(const QString& fPath);

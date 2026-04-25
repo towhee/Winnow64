@@ -128,6 +128,9 @@ public:
     void fPathRowRemove(const QString &path);
     void fPathRowClear();
 
+    // track large recursive subfolder trees
+    quint32 subFolderTreeCount = 0;
+
     // current status
     // int instance = 0;                   // each new load of DataModel increments the instance
     std::atomic<int> instance;

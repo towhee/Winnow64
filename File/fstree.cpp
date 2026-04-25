@@ -694,8 +694,9 @@ void FSTree::scrollToCurrent()
 /*
 
 */
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log("FSTree::scrollToCurrent");
+
     QModelIndex idx = getCurrentIndex();
 
     if (!idx.isValid()) return;
@@ -1201,8 +1202,8 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     }
 
     if (G::stop || G::isModifyingDatamodel) {
-        qDebug() << "FSTree::mousePressEvent" << "Busy, try new folder in a sec."
-                    "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
+        // qDebug() << "FSTree::mousePressEvent" << "Busy, try new folder in a sec."
+        //             "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
         return;
     }
 
@@ -1214,13 +1215,12 @@ void FSTree::mousePressEvent(QMouseEvent *event)
                 "the status bar will disappear and you can select another<br>"
                 "folder."
                 ;
-        // G::popup->showPopup(msg, 5000);
+        G::popup->showPopup(msg, 5000);
         return;
     }
 
-    qDebug() << "FSTree::mousePressEvent" << "Processing mouse click."
-                "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
-
+    // qDebug() << "FSTree::mousePressEvent" << "Processing mouse click."
+    //             "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
 
     static QModelIndex prevIdx = QModelIndex();
 

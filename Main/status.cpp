@@ -12,10 +12,10 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (G::isLogger)
         G::log(fun);
 
-    // qDebug() << fun << keepBase << s << source;
+    qDebug() << fun << keepBase << s << source;
 
     // check if null filter
-    if (dm->sf->rowCount() == 0) {
+    if (keepBase && dm->sf->rowCount() == 0) {
         statusLabel->setText("");
         if (G::useInfoView)  {
         QStandardItemModel *k = infoView->ok;
@@ -75,6 +75,10 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (!keepBase) status = s;
 
     statusLabel->setText(status);
+    QFont sfMonoFont("SF Mono");
+    sfMonoFont.setStyleHint(QFont::Monospace);
+    // sfMonoFont.setPointSize(12);
+    statusLabel->setFont(sfMonoFont);
 
     // status label tooltip
     QString tip;
