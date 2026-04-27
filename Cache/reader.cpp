@@ -36,7 +36,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
     tiffThumbDecoderThread->start();
 
-    isDebug = false;
+    isDebug = true;
     debugLog = false;
 }
 
@@ -314,6 +314,7 @@ void Reader::read(int dmRow, QString filePath, int instance,
     QString need = "needMeta = "  + QVariant(needMeta).toString() +
                    " needIcon = " + QVariant(needIcon).toString() + " ";
     if (G::isLogger) G::log(fun, need + filePath);
+    if (isDebug) qDebug() << fun << need;
     if (filePath.isEmpty()) {
         qWarning().noquote() << fun << "EMPTY FILEPATH";
     }

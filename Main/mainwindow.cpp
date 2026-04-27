@@ -156,7 +156,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
                     if (fsTree->select(lastDir)) {
                         folderSelectionChange(lastDir, G::FolderOp::Add);
                         // folderSelectionChange(lastDir, "Add");
-                        updateIconRange(false, "MW::MW rememberLastDir");
+                        updateIconRange("MW::MW rememberLastDir");
                     }
                 }
             }
@@ -1778,10 +1778,14 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
         buildFilters->abortProcessing();
     }
 
-    // get subFolderTreeCount in case huge, so can so progress to user
+    /*  Walk the tree once: get the subfolder count AND the list of
+        subfolder paths in a single multi-threaded pass, then pass the
+        list straight to enqueueFolderSelection so it doesn't redo the
+        walk with QDirIterator. */
+    QStringList subDirs;
     if (recurse) {
         setCentralMessage("Determining subfolder tree count...");
-        dm->subFolderTreeCount = Utilities::subFolderTreeCount(folderPath);
+        dm->subFolderTreeCount = Utilities::subFolderTree(folderPath, subDirs);
         dm->subFolderTreeCounter = 0;
         setCentralMessage("Subfolder tree count = " +
                           QVariant(dm->subFolderTreeCount).toString());
@@ -1790,8 +1794,8 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     /* put folder in datamodel queue to add or remove if main thread
        is not blocking */
     dm->abort = false;
-    QTimer::singleShot(0, this, [this, folderPath, op, recurse]{
-        dm->enqueueFolderSelection(folderPath, op, recurse);
+    QTimer::singleShot(0, this, [this, folderPath, op, recurse, subDirs]{
+        dm->enqueueFolderSelection(folderPath, op, recurse, subDirs);
     });
 
     // dm->enqueueFolderSelection(folderPath, op, recurse);
@@ -2426,7 +2430,7 @@ void MW::updateDefaultIconChunkSize(int size)
     updateChange(dm->currentSfRow, isFileSelectionChange, "MW::updateDefaultIconChunkSize");
 }
 
-bool MW::updateIconRange(bool sizeChange, QString src)
+void MW::updateIconRange(QString src)
 {
 /*
     Polls thumbView, gridView and tableView to determine the first and last thumbnail
@@ -2436,7 +2440,7 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     The number of thumbnails to cache in the DataModel (dm->iconChunkSize) is increased if
     it is less than the visible thumbnails.
 */
-    if (G::isInitializing) return false;
+    if (G::isInitializing) return;
 
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::updateIconRange", "src = " + src);
@@ -2452,7 +2456,6 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     // the chunk range floats within the DataModel range so recalc
     int firstVisible = dm->sf->rowCount();
     int lastVisible = 0;
-    static int chunkSize = dm->defaultIconChunkSize;
     bool chunkSizeChanged = false;
 
     // Grid might not be selected in CentralWidget
@@ -2481,9 +2484,8 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     int visibleIcons = lastVisible - firstVisible + 1;
 
     // chunk size
-    if (dm->iconChunkSize < visibleIcons) dm->setChunkSize(visibleIcons);
-    if (dm->iconChunkSize > chunkSize) {
-        chunkSize = dm->iconChunkSize;
+    if (dm->iconChunkSize < visibleIcons) {
+        dm->setChunkSize(visibleIcons);
         chunkSizeChanged = true;
     }
 
@@ -2494,6 +2496,13 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     dm->firstVisibleIcon = firstVisible;
     dm->lastVisibleIcon = lastVisible;
     dm->visibleIcons = visibleIcons;
+
+    // update icons cached only when the icon or viewport size changes
+    if (chunkSizeChanged) {
+        bool fileSelectionChange = false;
+        G::iconChunkLoaded = false;
+        updateChange(midVisible, fileSelectionChange, "MW::updateIconRange");
+    }
 
     /* debug
     qDebug().noquote()
@@ -2515,14 +2524,8 @@ bool MW::updateIconRange(bool sizeChange, QString src)
             ;
 //        */
 
-    // update icons cached only when the icon or viewport size changes
-    if (chunkSizeChanged) {
-        bool fileSelectionChange = false;
-        G::iconChunkLoaded = false;
-        updateChange(midVisible, fileSelectionChange, "MW::updateIconRange");
-    }
 
-    return chunkSizeChanged;
+    return;
 }
 
 void MW::folderChanged(bool aborted)
@@ -2665,7 +2668,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     dm->setIconRange(sfRow);
     bool metaLoaded = G::allMetadataLoaded && G::iconChunkLoaded;
 
-    /* debug
+    // /* debug
     {
         qDebug().noquote()
          << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)
@@ -2692,6 +2695,9 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
                                       );
         }
     }
+    // else {
+    //     dm->clearIconsOutsideChunkRange(instance);
+    // }
 
     /* No delay now, but leaving old comment just in case...
        Calling fileSelectionChange while imageView->isFirstImageNewInstance == true
@@ -2854,7 +2860,7 @@ void MW::thumbHasScrolled()
 
         if (G::ignoreScrollSignal == false) {
             G::ignoreScrollSignal = true;
-            updateIconRange(false, "MW::thumbHasScrolled");
+            updateIconRange("MW::thumbHasScrolled");
             if (gridView->isVisible()) {
                 gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
             }
@@ -2906,7 +2912,7 @@ void MW::gridHasScrolled()
 
         if (G::ignoreScrollSignal == false) {
             G::ignoreScrollSignal = true;
-            updateIconRange(false, "MW::gridHasScrolled");
+            updateIconRange("MW::gridHasScrolled");
             thumbView->scrollToRow(gridView->midVisibleCell, fun);
             tableView->scrollToRow(gridView->midVisibleCell, fun);
             updateChange(gridView->midVisibleCell, false, fun);
@@ -2944,7 +2950,7 @@ void MW::tableHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconRange(false, "MW::tableHasScrolled");
+        updateIconRange("MW::tableHasScrolled");
         /*
         qDebug() << "MW::tableHasScrolled"
                  << "tableView->midVisibleRow =" << tableView->midVisibleRow
@@ -2974,7 +2980,7 @@ void MW::loadEntireMetadataCache(QString source)
     if (G::isInitializing) return;
     if (dm->isAllMetadataAttempted()) return;
 
-    updateIconRange(false, "MW::loadEntireMetadataCache");
+    updateIconRange("MW::loadEntireMetadataCache");
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 

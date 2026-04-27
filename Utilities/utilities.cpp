@@ -112,8 +112,13 @@ QString Utilities::assocXmpPath(QString fPath)
     return QFileInfo((fPath)).dir().absolutePath() + "/" + QFileInfo((fPath)).baseName() + ".xmp";
 }
 
-quint32 Utilities::subFolderTreeCount(QString rootFolderPath)
+quint32 Utilities::subFolderTree(const QString &rootFolderPath, QStringList &outSubdirs)
 {
+/*
+    Multi-threaded recursive directory walk. Returns the count of subfolders
+    (not including the root) and fills outSubdirs with their absolute paths.
+    Symlinks are not followed.
+*/
     const std::string rootPath = rootFolderPath.toStdString();
 
     QElapsedTimer timer;
@@ -124,6 +129,8 @@ quint32 Utilities::subFolderTreeCount(QString rootFolderPath)
     std::queue<std::string> workQueue;
     std::mutex queueMutex;
     std::condition_variable queueCV;
+    std::vector<std::string> collected;
+    std::mutex collectedMutex;
     workQueue.push(rootPath);
 
     auto worker = [&]() {
@@ -161,6 +168,10 @@ quint32 Utilities::subFolderTreeCount(QString rootFolderPath)
                     if (isDir) {
                         folderCount.fetch_add(1, std::memory_order_relaxed);
                         std::string sub = path + "/" + e->d_name;
+                        {
+                            std::lock_guard<std::mutex> lock(collectedMutex);
+                            collected.push_back(sub);
+                        }
                         pending.fetch_add(1, std::memory_order_relaxed);
                         {
                             std::lock_guard<std::mutex> lock(queueMutex);
@@ -189,14 +200,25 @@ quint32 Utilities::subFolderTreeCount(QString rootFolderPath)
 
     quint32 count = folderCount.load();
 
+    outSubdirs.clear();
+    outSubdirs.reserve(static_cast<int>(collected.size()));
+    for (const auto &s : collected)
+        outSubdirs.append(QString::fromStdString(s));
+
     qint64 ms = timer.elapsed();
-    qDebug() << "MW::test rapid recursive subdir count for"
+    qDebug() << "Utilities::subFolderTree"
              << QString::fromStdString(rootPath)
              << "=" << count
              << "in" << ms << "ms"
              << "(threads:" << n << ")";
 
     return count;
+}
+
+quint32 Utilities::subFolderTreeCount(QString rootFolderPath)
+{
+    QStringList unused;
+    return subFolderTree(rootFolderPath, unused);
 }
 
 QString Utilities::replaceFileName(QString srcPath, QString newName)

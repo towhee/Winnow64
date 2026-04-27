@@ -115,8 +115,10 @@ public:
 
     SortFilter *sf;
     QItemSelectionModel *selectionModel;
-    // all folders in the datamodel
+    // all folders in the datamodel.  folderSet mirrors folderList for O(1)
+    // membership tests (folderList preserves insertion order).
     QStringList folderList;
+    QSet<QString> folderSet;
     QHash<QString, int> folderImageCount;
     QDir::SortFlags thumbsSortFlags;
 
@@ -193,7 +195,8 @@ signals:
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
 
 public slots:
-    void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false);
+    void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false,
+                                const QStringList &subDirs = QStringList());
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m, QString src);

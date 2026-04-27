@@ -110,7 +110,7 @@ MetaRead::MetaRead(QObject *parent,
     isDispatching = false;
     instance = 0;
     abort = false;
-    isDebug = false;
+    isDebug = true;
     debugLog = false;
 }
 
@@ -510,45 +510,6 @@ QString MetaRead::reportMetaCache()
     return reportString;
 }
 
-// void MetaRead::cleanupIcons() replaced by emit cleanupIcons() signals DataModel::clearIconsOutsideChunkRange
-// {
-// /*
-//     Remove icons not in icon range after start row change, iconChunkSize change or
-//     MW::deleteFiles.
-
-//     The icon range is the lesser of iconChunkSize and dm->sf->rowCount(), centered on
-//     the current datamodel row dm->currentSfRow.
-// */
-//     QString fun = "MetaRead::cleanupIcons";
-//     if (G::isLogger) G::log(fun);
-//     if (isDebug)
-//         qDebug().noquote()
-//             << fun.leftJustified(col0Width)
-//             << "firstIconRow =" << firstIconRow
-//             << "lastIconRow =" << lastIconRow
-//             ;
-
-//     // check if datamodel size is less than assigned icon cache chunk size
-//     if (dm->iconChunkSize >= sfRowCount) {
-//         return;
-//     }
-
-//     for (int i = 0; i < dm->startIconRange; i++) {
-//         if (abort) return;
-//         if (!dm->sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
-//             dm->sf->setData(dm->sf->index(i, 0), QVariant(), Qt::DecorationRole);
-//             dm->sf->setData(dm->sf->index(i, G::IconLoadedColumn), false);
-//         }
-//     }
-//     for (int i = dm->endIconRange + 1; i < sfRowCount; i++) {
-//         if (abort) return;
-//         if (!dm->sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
-//             dm->sf->setData(dm->sf->index(i, 0), QVariant(), Qt::DecorationRole);
-//             dm->sf->setData(dm->sf->index(i, G::IconLoadedColumn), false);
-//         }
-//     }
-// }
-
 inline bool MetaRead::needToRead(int sfRow)
 /*
     Returns true if either the metadata or icon (thumbnail) has not been loaded and
@@ -558,9 +519,19 @@ inline bool MetaRead::needToRead(int sfRow)
     needIcon = false;
     needMeta = false;
 
-    bool isReading = dm->sf->index(sfRow, G::MetadataReadingColumn).data().toBool();
+    QModelIndex sfReadingIdx = dm->sf->index(sfRow, G::MetadataReadingColumn);
+    bool isReading = sfReadingIdx.data().toBool();
+    // bool isReading = dm->sf->index(sfRow, G::MetadataReadingColumn).data().toBool();
     bool isIcon = dm->sf->index(sfRow, G::IconLoadedColumn).data().toBool();
     bool isMeta = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+
+    // if (isDebug)
+    //     qDebug() << "MetaRead::needToRead"
+    //              << "sfRow =" << sfRow
+    //              << "isReading =" << isReading
+    //              << "isIcon =" << isIcon
+    //              << "isMeta =" << isMeta
+    //         ;
 
     // already reading this item?
     if (isReading || isIcon) {
@@ -568,10 +539,10 @@ inline bool MetaRead::needToRead(int sfRow)
     }
 
     if (isMeta && isIcon) {
+        dm->sf->setData(sfReadingIdx, false);
         return false;
     }
     else {
-        QModelIndex sfReadingIdx = dm->sf->index(sfRow, G::MetadataReadingColumn);
         dm->sf->setData(sfReadingIdx, true);
     }
 
@@ -771,6 +742,9 @@ void MetaRead::processReturningReader(int id, Reader *r)
     QString fun = "MetaRead::processReturningReader";
     int dmRow = r->dmRow;
 
+    // update isReading flag
+    dm->sf->setData(dm->sf->index(dmRow, G::MetadataReadingColumn), false);
+
     // progress counter
     metaReadCount++;
 
@@ -960,6 +934,8 @@ void MetaRead::dispatch(int id, bool isReturning)
             << "r->instance =" << QString::number(r->instance).leftJustified(4, ' ')
             << "dm->instance =" << QString::number(dm->instance).leftJustified(4, ' ')
             << "isGUI =" << G::isGuiThread()
+            << "firstIconRow =" << firstIconRow
+            << "lastIconRow =" << lastIconRow
             ;
     }
 
@@ -1067,6 +1043,8 @@ void MetaRead::dispatch(int id, bool isReturning)
             << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
             << "a =" << QString::number(a).leftJustified(4, ' ')
             << "b =" << QString::number(b).leftJustified(4, ' ')
+            << "firstIconRow =" << firstIconRow
+            << "lastIconRow =" << lastIconRow
             ;
         }
             cycling[id] = false;
@@ -1151,6 +1129,8 @@ void MetaRead::quitAfterTimeout()
         }
         quitTimer->start(2000);
     }
+
+    dispatchFinished(fun);
 
     return;
 }

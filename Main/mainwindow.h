@@ -604,7 +604,7 @@ private slots:
     void updateChange(int sfRow, bool isCurrent = true, QString src = "");
 
     void updateDefaultIconChunkSize(int size);
-    bool updateIconRange(bool sizeChange, QString src = "");
+    void updateIconRange(QString src = "");
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();
