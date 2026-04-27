@@ -621,7 +621,7 @@ void IconView::setThumbSize()
     setThumbParameters();
 
     // Re-synchronize the visible range for metadata/caching
-    m2->updateIconRange(true, src);
+    m2->updateIconRange(src);
 
     // Recenters the anchor cell
     if (centerRow >= 0) {
@@ -766,7 +766,7 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
     // scrollToRow(dm->scrollToIcon, src);
 
     // Synchronize visibility ranges for caching and metadata reading
-    m2->updateIconRange(true, src);
+    m2->updateIconRange(src);
 
 
 
@@ -939,7 +939,7 @@ void IconView::resizeEvent(QResizeEvent *)
     setThumbParameters();
 
     QString src = "IconView::resizeEvent";
-    if (!needToRejustify) m2->updateIconRange(true, src);
+    if (!needToRejustify) m2->updateIconRange(src);
     /*
     qDebug().noquote() << src
              << "Object =" << objectName()

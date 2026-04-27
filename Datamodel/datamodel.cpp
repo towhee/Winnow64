@@ -333,6 +333,7 @@ void DataModel::clearDataModel()
     fPathRowClear();
     // clear the folder list
     folderList.clear();
+    folderSet.clear();
     pendingPaths.clear();
     folderQueue.clear();
     // clear the folder image count hash
@@ -503,7 +504,7 @@ bool DataModel::isQueueEmpty()
 void DataModel::enqueueOp(const QString& folderPath, G::FolderOp op)
 {
     // Toggle logic is handled by caller; here we only queue valid transitions.
-    const bool have = folderList.contains(folderPath);
+    const bool have = folderSet.contains(folderPath);
 
     if (op == G::FolderOp::Toggle) {
         have ? op = G::FolderOp::Remove : op = G::FolderOp::Add;
@@ -524,39 +525,42 @@ void DataModel::enqueueOp(const QString& folderPath, G::FolderOp op)
 }
 
 void DataModel::enqueueFolderSelection(const QString& folderPath,
-                                       G::FolderOp op, bool recurse)
+                                       G::FolderOp op, bool recurse,
+                                       const QStringList &subDirs)
 {
 /*
     op = Add or Delete images in folderPath from datamodel
     recurse = recurse all subfolders of folderPath
+    subDirs = subfolder paths discovered by Utilities::subFolderTree;
+              consumed directly so we don't re-walk the tree here.
 */
 
     if (recurse) {
-        // Only iterate directories; skip "." and ".."
-        // skip symlinks to avoid loops.
-        quint32 i = 0;
-        QString total = QVariant(subFolderTreeCount).toString();
-        QDirIterator it(folderPath,
-                        QDir::Dirs | QDir::NoDotAndDotDot | QDir::Readable | QDir::Hidden,
-                        QDirIterator::Subdirectories);
         enqueueOp(folderPath, op);
-        while (it.hasNext()) {
+
+        const QString total = QString::number(subFolderTreeCount);
+        QElapsedTimer lastEmit;
+        lastEmit.start();
+        constexpr qint64 kEmitIntervalMs = 50;
+        int i = 0;
+        const int n = subDirs.size();
+        for (const QString &p : subDirs) {
             if (abort) return;
-            const QString p = it.next();
-            const QFileInfo fi = it.fileInfo();
-            if (!fi.isDir()) continue;
-            if (fi.isSymLink()) continue;
-            QString count = QVariant(++i).toString();
-            QString progress = "Progress: " + count + " of " + total + " subfolders";
-            emit updateStatus(false, progress, "");
-            qApp->processEvents();  // req'd for status update and abort
+            ++i;
+            // Throttle UI updates: emit and process events at most every
+            // ~50 ms (and always for the final one).
+            if (lastEmit.elapsed() >= kEmitIntervalMs || i == n) {
+                emit updateStatus(false,
+                    "Progress: " + QString::number(i) + " of " + total + " subfolders",
+                    "");
+                qApp->processEvents();  // req'd for status update and abort
+                lastEmit.restart();
+            }
             enqueueOp(p, op);
         }
     } else {
         enqueueOp(folderPath, op);
     }
-
-    // QCoreApplication::processEvents();
 
     scheduleProcessing();
 }
@@ -632,6 +636,7 @@ void DataModel::addFolder(const QString &folderPath)
     QMutexLocker locker(&dmMutex);
     abort = false;
     folderList.append(folderPath);
+    folderSet.insert(folderPath);
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
     locker.unlock(); // Unlock the queue while processing
 
@@ -863,6 +868,7 @@ void DataModel::removeFolder(const QString &folderPath)
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
 
     folderList.removeAll(folderPath);
+    folderSet.remove(folderPath);
     folderImageCount.remove(folderPath);
     QModelIndex par = QModelIndex();
 
@@ -2544,7 +2550,7 @@ void DataModel::clearIconsOutsideChunkRange(int instance)
 {
     if (instance != this->instance) return;
 
-    if (isDebug)
+    // if (isDebug)
     qDebug() << "DataModel::clearIconsOutsideChunkRange"
                  << "instance =" << instance
                  << "startIconRange =" << startIconRange
@@ -2555,6 +2561,11 @@ void DataModel::clearIconsOutsideChunkRange(int instance)
     if (iconChunkSize >= sf->rowCount()) {
         return;
     }
+
+    qDebug() << "DataModel::clearIconsOutsideChunkRange  cleaning..."
+             << "startIconRange =" << startIconRange
+             << "endIconRange =" << endIconRange
+        ;
 
     QMutexLocker locker(&dmMutex);
 

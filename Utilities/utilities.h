@@ -29,6 +29,7 @@ public:
     static QString replaceSuffix(QString srcPath, QString newSuffix);
     static QStringList getSidecarPaths(QString srcPath);
     static quint32 subFolderTreeCount(QString rootFolderPath);
+    static quint32 subFolderTree(const QString &rootFolderPath, QStringList &outSubdirs);
 
     // File status
     static bool isLocked(const QString& fPath);

@@ -2165,7 +2165,7 @@ void ImageCache::cacheImage(int id, int sfRow,
 
     const QString &fPath = doneFPath;
 
-    if (fPath.isEmpty() || doneImage.isNull()) {
+    if (fPath.isEmpty() || doneImage.isNull() || !G::useImageCache) {
         // Nothing to insert — snapshot was empty or image failed ICC/rotate post-load.
         return;
     }
