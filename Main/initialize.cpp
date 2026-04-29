@@ -131,6 +131,19 @@ void MW::setupPlatform()
         // Mac::joinAllSpaces(window()->winId());
         G::trash = "Trash";
     #endif
+
+    // Scale memoryAbortMB to host RAM. Must run before MetaRead start and
+    // the GUI memory watchdog so the cap is correct on first read.
+    quint64 totalMB = 0;
+    #ifdef Q_OS_MAC
+        totalMB = static_cast<quint64>(Mac::totalMemoryMB());
+    #elif defined(Q_OS_WIN)
+        totalMB = Win::totalMemoryMB();
+    #endif
+    if (totalMB > 0) G::memoryAbortMB = G::computeMemoryAbortMB(totalMB);
+    qDebug().nospace() << "MW::setupPlatform Memory: total=" << totalMB
+                       << " MB, available=" << G::availableMemoryMB
+                       << " MB, abortMB=" << G::memoryAbortMB;
 }
 
 void MW::checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredGeometry,
@@ -357,6 +370,16 @@ void MW::createMetaRead()
     // update loading metadata in statusbar
     connect(metaRead, &MetaRead::updateProgressInStatusbar,
             cacheProgressBar, &ProgressBar::updateMetaReadProgress);
+
+    // memory overrun guardrail: surface a critical dialog and abort the
+    // in-flight folder load when MetaRead's footprint probe trips.
+    connect(metaRead, &MetaRead::memoryOverrun,
+            this, &MW::onMemoryOverrun, Qt::QueuedConnection);
+
+    // same path for the DataModel hot-path probe (fires from the GUI thread
+    // when buried processing queued addMetadataForItem events).
+    connect(dm, &DataModel::memoryOverrun,
+            this, &MW::onMemoryOverrun, Qt::QueuedConnection);
 
     metaRead->metaReadThread.start();
 }

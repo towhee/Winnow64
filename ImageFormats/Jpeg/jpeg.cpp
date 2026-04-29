@@ -103,7 +103,8 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
         marker = u.get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
             QString msg = "Failed, marker < 0xFFC0.";
-            G::issue("Warning", msg, "Jpeg::getDimensions", m.row, m.fPath);
+            // Memory pressure testing — disabled
+            // G::issue("Warning", msg, "Jpeg::getDimensions", m.row, m.fPath);
             return false;
         }
         p.offset = u.get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
@@ -137,12 +138,30 @@ bool Jpeg::parse(MetadataParameters &p,
     initSegCodeHash();
     m.iccSegmentOffset = 0;
 
+    /* Reset persistent Jpeg state between files. Jpeg is a per-Reader
+       member, reused across every JPG the reader processes. The maps
+       below are keyed by JPG-segment values (table id, dht type, etc.).
+       For well-formed JPGs the keys overwrite a small fixed set, but
+       malformed/atypical files (e.g. the Apple Photos
+       resources/derivatives that crashed parseQuantizationTable in the
+       std::map<int, QList<int>> destructor) can leave stale nodes whose
+       internal QVector data pointers are subsequently invalidated.
+       Clearing here makes each parse start from a clean slate. */
+    dqt.clear();
+    dhtMap.clear();
+    components.clear();
+    for (int i = 0; i < 4; ++i) huffTblToUse[i] = 0;
+    sosComponentCount = 0;
+    restartInterval = 0;
+    isXmp = false;
+
     //file.open happens in readMetadata
     bool isBigEnd = true;
 
     if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
         QString msg = "JPG does not start with 0xFFD8.";
-        G::issue("Error", msg, "Jpeg::parse", m.row, m.fPath);
+        // Memory pressure testing — disabled
+        // G::issue("Error", msg, "Jpeg::parse", m.row, m.fPath);
         return false;
     }
 
@@ -164,7 +183,8 @@ bool Jpeg::parse(MetadataParameters &p,
     }
     else {
         QString msg = "JPG does not contain EXIF information.";
-        G::issue("Warning", msg, "Jpeg::parse", m.row, m.fPath);
+        // Memory pressure testing — disabled
+        // G::issue("Warning", msg, "Jpeg::parse", m.row, m.fPath);
         return false;
     }
 
@@ -189,7 +209,8 @@ bool Jpeg::parse(MetadataParameters &p,
         count++;
         if (count > 100) {
             QString msg = "Endian order not found.";
-            G::issue("Error", msg, "Jpeg::parse", m.row, m.fPath);
+            // Memory pressure testing — disabled
+            // G::issue("Error", msg, "Jpeg::parse", m.row, m.fPath);
             return false;
         }
     }
@@ -351,7 +372,7 @@ bool Jpeg::parse(MetadataParameters &p,
     /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
     and it is sRGB then no point in saving the byte array of the profile since we already have
     it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
-    if (segmentHash.contains("ICC")) {
+    if (segmentHash.contains("ICC")/* && G::colorManage*/) {
         if (m.iccSegmentOffset && m.iccSegmentLength) {
             m.iccSpace = u.getString(p.file, m.iccSegmentOffset + 52, 4);
             if (m.iccSpace != "sRGB") {
@@ -875,7 +896,8 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
         bool isBigEnd = true;
         if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
             QString msg = "JPG does not start with 0xFFD8.";
-            G::issue("Error", msg, "Jpeg::decodeScan", -1, p.fPath);
+            // Memory pressure testing — disabled
+            // G::issue("Error", msg, "Jpeg::decodeScan", -1, p.fPath);
             p.file.close();
            // qDebug() << "Jpeg::decodeScan" << "Close" << p.file.fileName();
             return;

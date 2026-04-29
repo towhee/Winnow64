@@ -601,6 +601,7 @@ private slots:
     // caching
     void folderChanged(bool aborted);
     void folderChangeCompleted();
+    void onMemoryOverrun(quint64 footprintMB, quint64 capMB);
     void updateChange(int sfRow, bool isCurrent = true, QString src = "");
 
     void updateDefaultIconChunkSize(int size);
@@ -1132,6 +1133,9 @@ private:
     ZoomDlg *zoomDlg = nullptr;
     QTimer *slideShowTimer;
     QTimer *resetTimer;
+    QTimer *memoryWatchdog = nullptr;
+    void memoryWatchdogTick();
+    bool memoryDialogActive = false;
     QWidget *folderDockEmptyWidget;
     QWidget *favDockEmptyWidget;
     QWidget *filterDockEmptyWidget;

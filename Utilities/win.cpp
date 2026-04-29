@@ -37,6 +37,14 @@ void Win::availableMemory()
 //    qDebug() << "Win::availableMemory" << virtualMemUsedByMe;
 }
 
+quint64 Win::totalMemoryMB()
+{
+    MEMORYSTATUSEX statex{};
+    statex.dwLength = sizeof(statex);
+    if (!GlobalMemoryStatusEx(&statex)) return 0;
+    return static_cast<quint64>(statex.ullTotalPhys / (1024ull * 1024ull));
+}
+
 void Win::collectScreensInfo()
 {
     /*

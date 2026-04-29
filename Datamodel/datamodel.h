@@ -137,6 +137,15 @@ public:
     // current status
     // int instance = 0;                   // each new load of DataModel increments the instance
     std::atomic<int> instance;
+
+    /* Backpressure counter for queued Reader → DataModel events.
+       Reader increments before each emit of addToDatamodel/setIcon1/setIcon
+       (Cache/reader.cpp). DataModel decrements at the end of the matching
+       slot (addMetadataForItem, setIcon1, setIcon, setIconFromVideoFrame).
+       MetaRead::dispatch reads it to gate further reader dispatches when
+       the GUI thread is falling behind, avoiding unbounded queue growth
+       on folders that produce events faster than they can be consumed. */
+    std::atomic<int> queuedReaderEvents{0};
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString firstFolderPathWithImages;
     QString currentFilePath;            // used in caching to update image cache
@@ -193,6 +202,11 @@ signals:
     void rowLoaded();
     void updateStatus(bool keepBase, QString s, QString source);
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
+
+    /* Emitted when any DataModel hot path observes the process footprint
+       exceeding G::memoryAbortMB. Wired to MW::onMemoryOverrun in
+       Main/initialize.cpp. */
+    void memoryOverrun(quint64 footprintMB, quint64 capMB);
 
 public slots:
     void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false,
