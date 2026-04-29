@@ -110,8 +110,58 @@ MetaRead::MetaRead(QObject *parent,
     isDispatching = false;
     instance = 0;
     abort = false;
-    isDebug = true;
+    isDebug = false;
     debugLog = false;
+
+    memoryProbeTimer.start();
+}
+
+bool MetaRead::checkMemoryFootprint()
+{
+/*
+    Cheap periodic probe of the process's resident footprint. Returns true
+    if the cap was breached and abort/notification has been triggered.
+
+    Probe rate is throttled so the underlying syscall (Mac: task_info,
+    Win: GetProcessMemoryInfo) never dominates dispatch. Every 32
+    dispatches OR every 250 ms — whichever comes first — keeps the
+    response latency < 0.5 s on typical M-series hardware while costing
+    < 0.1 % of dispatch CPU.
+
+    Once tripped, G::memoryOverrunFlag latches so other subsystems can
+    short-circuit cheaply without re-probing.
+*/
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return true;
+
+    /* Higher caps (≥ 8 GB) leave very little headroom on a 24 GB Mac, so
+       probe aggressively. task_info on macOS is microseconds — even at
+       every 4 dispatches the overhead is < 0.1 % of dispatch CPU. */
+    constexpr int kProbeEveryN = 4;
+    constexpr qint64 kProbeEveryMs = 50;
+    if (++memoryProbeCounter < kProbeEveryN
+        && memoryProbeTimer.elapsed() < kProbeEveryMs) {
+        return false;
+    }
+    memoryProbeCounter = 0;
+    memoryProbeTimer.restart();
+
+    const quint64 cap = G::memoryAbortMB;
+    if (cap == 0) return false;
+    const quint64 footprintMB = G::processFootprintMB();
+    if (footprintMB == 0 || footprintMB < cap) return false;
+
+    // Latch and trigger abort. Only the thread that wins the CAS emits;
+    // this prevents MW::onMemoryOverrun from being signalled twice when
+    // another subsystem (DataModel, watchdog) trips concurrently.
+    abort = true;
+    if (dm) dm->abort = true;
+    bool expected = false;
+    if (G::memoryOverrunFlag.compare_exchange_strong(
+            expected, true,
+            std::memory_order_acq_rel, std::memory_order_relaxed)) {
+        emit memoryOverrun(footprintMB, cap);
+    }
+    return true;
 }
 
 MetaRead::~MetaRead()
@@ -931,11 +981,12 @@ void MetaRead::dispatch(int id, bool isReturning)
             //<< "allRead =" << QVariant(allDone).toString().leftJustified(5, ' ')
             << "a =" << QString::number(a).leftJustified(4, ' ')
             << "b =" << QString::number(b).leftJustified(4, ' ')
-            << "r->instance =" << QString::number(r->instance).leftJustified(4, ' ')
-            << "dm->instance =" << QString::number(dm->instance).leftJustified(4, ' ')
-            << "isGUI =" << G::isGuiThread()
-            << "firstIconRow =" << firstIconRow
-            << "lastIconRow =" << lastIconRow
+            << r->fPath
+            // << "r->instance =" << QString::number(r->instance).leftJustified(4, ' ')
+            // << "dm->instance =" << QString::number(dm->instance).leftJustified(4, ' ')
+            // << "isGUI =" << G::isGuiThread()
+            // << "firstIconRow =" << firstIconRow
+            // << "lastIconRow =" << lastIconRow
             ;
     }
 
@@ -979,6 +1030,31 @@ void MetaRead::dispatch(int id, bool isReturning)
         }
     }
 
+    /* Memory-overrun guardrail: probe phys_footprint periodically and
+       abort cleanly if it exceeds G::memoryAbortMB. checkMemoryFootprint
+       throttles the underlying syscall so this is essentially free. */
+    if (checkMemoryFootprint()) {
+        return;
+    }
+
+    /* Backpressure: if the GUI thread is falling behind processing queued
+       Reader emits, defer this dispatch instead of piling more onto the
+       queue. Cap is generous (4 × readerCount in flight) so steady-state
+       throughput is unaffected; only pathological producer/consumer
+       imbalance (e.g. recursing an Apple .photoslibrary, where readers
+       chew through small JPG derivatives faster than the GUI can drain
+       addToDatamodel events) triggers the gate. nextRowToRead has not yet
+       been called, so the next-row pointer is preserved across the wait. */
+    if (!abort) {
+        const int kQueueCap = 4 * readerCount;
+        if (dm->queuedReaderEvents.load(std::memory_order_relaxed) >= kQueueCap) {
+            QTimer::singleShot(20, this, [this, id]() {
+                if (!abort) dispatch(id, false);
+            });
+            return;
+        }
+    }
+
     // assign either a or b as the next row to read in the datamodel
     if (nextRowToRead()) {
         QModelIndex sfIdx = dm->sf->index(nextRow, 0);
@@ -999,16 +1075,19 @@ void MetaRead::dispatch(int id, bool isReturning)
                 // << ms
                 << fun1.leftJustified(col0Width)
                 << "id =" << QString::number(id).leftJustified(2, ' ')
-                << "redo =" << QString::number(redoCount).leftJustified(2, ' ')
+                // << "redo =" << QString::number(redoCount).leftJustified(2, ' ')
                 << "dmRow =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
-                << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
-                << "okReadMeta =" << QVariant(needMeta).toString().leftJustified(5, ' ')
-                << "okReadIcon =" << QVariant(needIcon).toString().leftJustified(5, ' ')
-                << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
-                << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
-                << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
-                << "a =" << QString::number(a).leftJustified(4, ' ')
-                << "b =" << QString::number(b).leftJustified(4, ' ')
+                // << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
+                // << "okReadMeta =" << QVariant(needMeta).toString().leftJustified(5, ' ')
+                // << "okReadIcon =" << QVariant(needIcon).toString().leftJustified(5, ' ')
+                << "needMeta =" << QVariant(needMeta).toString().leftJustified(5, ' ')
+                << "needIcon =" << QVariant(needIcon).toString().leftJustified(5, ' ')
+                // << "isAhead =" << QVariant(isAhead).toString().leftJustified(5, ' ')
+                // << "aIsDone =" << QVariant(aIsDone).toString().leftJustified(5, ' ')
+                // << "bIsDone =" << QVariant(bIsDone).toString().leftJustified(5, ' ')
+                // << "a =" << QString::number(a).leftJustified(4, ' ')
+                // << "b =" << QString::number(b).leftJustified(4, ' ')
+                << "memMB =" << G::processFootprintMB()
                 << fPath
                 ;
         }

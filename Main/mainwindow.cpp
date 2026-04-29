@@ -206,6 +206,19 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // crash log
     settings->setValue("hasCrashed", true);
 
+    // Memory-overrun watchdog: GUI-thread QTimer that polls phys_footprint
+    // independently of any subsystem. Runs continuously so it catches growth
+    // during folder enumeration and queue draining, not just MetaRead bursts.
+    // Interval is short (50 ms) because at high caps (e.g. 16 GB on a 24 GB
+    // Mac) we have very little headroom between detecting overrun and macOS
+    // killing the process — every extra millisecond risks the abort racing
+    // a SIGKILL or a heap-corruption crash inside PowerLog/CoreFoundation.
+    memoryWatchdog = new QTimer(this);
+    memoryWatchdog->setTimerType(Qt::PreciseTimer);
+    memoryWatchdog->setInterval(50);
+    connect(memoryWatchdog, &QTimer::timeout, this, &MW::memoryWatchdogTick);
+    memoryWatchdog->start();
+
     if (G::isLogger) G::log("MW::MW",  "(end of MW::MW)");
 }
 
@@ -2394,6 +2407,94 @@ void MW::waitUntilMetadataLoaded(int ms, QString src)
 
     int t = timeout.remainingTime();
     if (t < 0) t = ms; else t = ms - t;
+}
+
+void MW::memoryWatchdogTick()
+{
+/*
+    Periodic GUI-thread probe of the process's resident footprint. Runs
+    independently of any other subsystem so it catches runaway allocations
+    that happen outside MetaRead::dispatch (folder enumeration, queued
+    setData/setIcon events draining on the GUI thread, ImageCache idle
+    growth, etc).
+
+    Cheap on macOS (single task_info syscall, microseconds). The cap and
+    latch live in Main/global.h.
+*/
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
+    const quint64 cap = G::memoryAbortMB;
+    if (cap == 0) return;
+    const quint64 footprintMB = G::processFootprintMB();
+    if (footprintMB == 0 || footprintMB < cap) return;
+
+    // Atomic latch: if another subsystem already tripped between our load
+    // above and here, let its queued signal drive onMemoryOverrun — don't
+    // double-fire.
+    bool expected = false;
+    if (G::memoryOverrunFlag.compare_exchange_strong(
+            expected, true,
+            std::memory_order_acq_rel, std::memory_order_relaxed))
+    {
+        onMemoryOverrun(footprintMB, cap);
+    }
+}
+
+void MW::onMemoryOverrun(quint64 footprintMB, quint64 capMB)
+{
+/*
+    Either fired by MetaRead::memoryOverrun (queued from the metaRead
+    thread) or called directly from the GUI-thread watchdog tick. In both
+    cases we tear down in-flight async work and surface a critical dialog.
+*/
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::onMemoryOverrun",
+               "footprintMB = " + QString::number(footprintMB)
+               + " capMB = " + QString::number(capMB));
+
+    // Latch (idempotent if MetaRead already set it).
+    G::memoryOverrunFlag.store(true, std::memory_order_release);
+
+    // Suppress duplicate dialogs if multiple subsystems trip in close succession.
+    if (memoryDialogActive) return;
+    memoryDialogActive = true;
+
+    // Stop the watchdog while we tear down — no point re-firing during cleanup.
+    if (memoryWatchdog) memoryWatchdog->stop();
+
+    // Tear down all in-flight async work that could keep allocating.
+    G::stop = true;
+    if (dm) dm->abort = true;
+    emit abortMetaRead();
+    if (imageCache) {
+        QMetaObject::invokeMethod(imageCache, "abortProcessing", Qt::QueuedConnection);
+    }
+
+    /* Drain queued events first so slots that early-return on the latch
+       finish before we block on the dialog. Without this, the QMessageBox
+       can spin up while reader-thread emits are still piling onto the
+       queue, racing macOS's OOM/crash window. */
+    QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents, 50);
+
+    QString msg =
+        "<p><b>Winnow stopped loading the folder to avoid running out of memory.</b></p>"
+        "<p>Process footprint reached <b>" + QString::number(footprintMB)
+        + " MB</b>, exceeding the configured cap of <b>"
+        + QString::number(capMB) + " MB</b>.</p>"
+        "<p>This is most often triggered by recursing into folders that contain"
+        " huge numbers of small JPEG/HEIC files.</p>";
+
+    QMessageBox box(QMessageBox::Critical,
+                    "Winnow — memory limit reached",
+                    msg, QMessageBox::Ok, this);
+    box.setTextFormat(Qt::RichText);
+    box.exec();
+
+    memoryDialogActive = false;
+    // Clear the latch so a fresh folder load is not pre-tripped, and
+    // restart the watchdog so the next load is also protected.
+    G::memoryOverrunFlag.store(false, std::memory_order_release);
+    G::stop = false;
+    if (memoryWatchdog) memoryWatchdog->start();
 }
 
 void MW::nullFiltration()

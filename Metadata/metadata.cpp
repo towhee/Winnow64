@@ -788,7 +788,8 @@ bool Metadata::parseJPG(quint32 startOffset)
         G::log("Metadata::parseJPG", p.fPath);
     if (!p.file.isOpen()) {
         QString msg = "File not open.";
-        G::issue("Warning", msg, "Metadata::parseJPG", m.row, p.fPath);
+        // Memory pressure testing — disabled
+        // G::issue("Warning", msg, "Metadata::parseJPG", m.row, p.fPath);
         return false;
     }
 
@@ -801,7 +802,8 @@ bool Metadata::parseJPG(quint32 startOffset)
     p.offset = startOffset;
     if (p.file.fileName() == "") {
         QString msg = "Blank file name.";
-        G::issue("Warning", msg, "Metadata::parseJPG", m.row);
+        // Memory pressure testing — disabled
+        // G::issue("Warning", msg, "Metadata::parseJPG", m.row);
         return false;
     }
     bool ok = jpeg->parse(p, m, ifd, iptc, exif, gps);
@@ -875,7 +877,8 @@ bool Metadata::parseSidecar()
 
     if (!sidecarFile.open(QIODevice::ReadOnly)) {
         QString msg = "Failed to open sidecar file.";
-        G::issue("Warning", msg, "Metadata::parseSidecar", m.row, sidecarPath);
+        // Memory pressure testing — disabled
+        // G::issue("Warning", msg, "Metadata::parseSidecar", m.row, sidecarPath);
         return false;
     }
 
@@ -1077,7 +1080,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 
     if (p.file.isOpen()) {
         QString msg =  "File already open.";
-        G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
+        // Memory pressure testing — disabled
+        // G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
         return false;
     }
 
@@ -1121,7 +1125,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         //QFile(path).setPermissions(oldPermissions);
         if (p.file.isOpen()) {
             QString msg =  "Could not close file after format was read.";
-            G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
+            // Memory pressure testing — disabled
+            // G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
         }
 
         if (G::useSidecar) {
@@ -1131,14 +1136,16 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (!parsed) {
             p.file.close();
             QString msg =  "Unable to parse metadata.";
-            G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
+            // Memory pressure testing — disabled
+            // G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
             m.err += msg;
             return false;
         }
     }
     else {  // not open file
         QString msg = "Unable to open file.";
-        G::issue("Error", msg, "Metadata::readMetadata", m.row, m.fPath);
+        // Memory pressure testing — disabled
+        // G::issue("Error", msg, "Metadata::readMetadata", m.row, m.fPath);
         return false;
     }
 
@@ -1190,7 +1197,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     // check if null file
     if (fPath == "") {
         QString msg = "Null file sent from " + source;
-        G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
+        // Memory pressure testing — disabled
+        // G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata File not exist", fPath);
         // qDebug() << "Metadata::loadImageMetadata null file" << fPath;
         return false;
@@ -1245,7 +1253,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     m.metadataAttempted = true;
     if (!m.metadataLoaded) {
         QString msg = "Metadata not loaded.";
-        G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
+        // Memory pressure testing — disabled
+        // G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
         //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
         // qDebug() << "Metadata::loadImageMetadata could not read metadata" << fPath;

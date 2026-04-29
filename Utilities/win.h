@@ -20,6 +20,7 @@ class Win
 {
 public:
     static void availableMemory();
+    static quint64 totalMemoryMB();
     static void collectScreensInfo();
     static void setTitleBarColor(WId hWnd, QColor bgColor = QColor(50,50,50));
 };

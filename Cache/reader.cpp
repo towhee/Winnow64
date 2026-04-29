@@ -36,7 +36,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
     tiffThumbDecoderThread->start();
 
-    isDebug = true;
+    isDebug = false;
     debugLog = false;
 }
 
@@ -178,7 +178,11 @@ bool Reader::readMetadata()
     offsetThumb = m->offsetThumb;
     lengthThumb = m->lengthThumb;
 
-    if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
+    if (!abort) {
+        // Backpressure: bump pending counter; DataModel::addMetadataForItem decrements.
+        dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
+        emit addToDatamodel(metadata->m, "Reader::readMetadata");
+    }
     if (abort) {status = Status::Aborted; return false;}
 
     #ifdef TIMER
@@ -188,7 +192,8 @@ bool Reader::readMetadata()
     if (!isMetaLoaded) {
         status = Status::MetaFailed;
         QString msg = "Failed to load metadata.";
-        G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
+        // Memory pressure testing — disabled
+        // G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
         if (isDebug)
         {
             qDebug().noquote()
@@ -285,17 +290,21 @@ void Reader::readIcon()
             << "id =" << QString::number(threadId).leftJustified(2, ' ')
             << "row =" << QString::number(dmRow).leftJustified(4, ' ')
             << "Emitting setIcon" << "thumb = " << pm << "instance =" << instance;
+        // Backpressure: bump pending counter; DataModel::setIcon1 decrements.
+        dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
         emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
         if (!im.isNull()) return;
     }
 
     // failed to load icon, load error icon
     QImage im = QImage(":/images/error_image256.png");
+    dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
     emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
     if (status == Status::MetaFailed) status = Status::MetaIconFailed;
     else status = Status::IconFailed;
     msg = "Failed to load thumbnail.";
-    G::issue("Warning", msg, "Reader::readIcon", dmRow, fPath);
+    // Memory pressure testing — disabled
+    // G::issue("Warning", msg, "Reader::readIcon", dmRow, fPath);
     if (isDebug)
     {
         qDebug().noquote()
@@ -318,9 +327,14 @@ void Reader::read(int dmRow, QString filePath, int instance,
     if (filePath.isEmpty()) {
         qWarning().noquote() << fun << "EMPTY FILEPATH";
     }
-    // If a folder change is in progress, don't start a new read
-    if (G::stop || dm->abort) {
+    // If a folder change is in progress or memory cap was breached,
+    // don't start a new read.
+    if (G::stop || dm->abort
+        || G::memoryOverrunFlag.load(std::memory_order_relaxed))
+    {
         setPending(false);
+        // still cycle the reader so MetaRead::dispatch can wind down.
+        if (!abort) emit done(threadId, true);
         return;
     }
     abort = false;

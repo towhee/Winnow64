@@ -73,6 +73,13 @@ signals:
     void done();
     void dispatchIsFinished(QString src);
 
+    /* Emitted when the periodic memory probe in dispatch sees the
+       process footprint exceed G::memoryAbortMB. The receiving slot
+       (MW::onMemoryOverrun) shows a critical dialog and aborts the
+       in-flight folder load. footprintMB and capMB are reported only
+       so the dialog can show concrete numbers. */
+    void memoryOverrun(quint64 footprintMB, quint64 capMB);
+
 public slots:
     void initialize(QString src = "");
     void dispatchReaders();
@@ -163,6 +170,17 @@ private:
     QElapsedTimer tAbort;
     QTimer *quitTimer;
     quint32 ms;
+
+    /* Memory-overrun probe state.
+       memoryProbeCounter: bumped each time dispatch runs; the actual
+                            task_info syscall fires only every Nth
+                            dispatch to keep probing essentially free.
+       memoryProbeTimer:   wall-clock backstop so very long pauses
+                            (e.g. UI thread stalled) still trigger the
+                            check. */
+    int memoryProbeCounter = 0;
+    QElapsedTimer memoryProbeTimer;
+    bool checkMemoryFootprint();
 };
 
 #endif // METAREAD_H

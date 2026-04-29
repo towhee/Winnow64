@@ -1,4 +1,14 @@
 #include "Main/global.h"
+#include <algorithm>
+
+#ifdef Q_OS_MAC
+    #include <mach/mach.h>
+    #include <mach/task.h>
+#endif
+#ifdef Q_OS_WIN
+    #include <Windows.h>
+    #include <psapi.h>
+#endif
 
 namespace G
 {
@@ -132,6 +142,41 @@ bool loadOnlyVisibleIcons;          // not used
 quint64 availableMemoryMB;
 int winnowMemoryBeforeCacheMB;
 int metaCacheMB;
+
+// memory overrun guardrail
+quint64 memoryAbortMB = 6000;
+std::atomic<bool> memoryOverrunFlag{false};
+
+quint64 processFootprintMB()
+{
+#ifdef Q_OS_MAC
+    task_vm_info_data_t info{};
+    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+    if (task_info(mach_task_self(), TASK_VM_INFO,
+                  reinterpret_cast<task_info_t>(&info), &count) == KERN_SUCCESS) {
+        return static_cast<quint64>(info.phys_footprint / (1024ull * 1024ull));
+    }
+    return 0;
+#elif defined(Q_OS_WIN)
+    PROCESS_MEMORY_COUNTERS pmc{};
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        return static_cast<quint64>(pmc.WorkingSetSize / (1024ull * 1024ull));
+    }
+    return 0;
+#else
+    return 0;
+#endif
+}
+
+quint64 computeMemoryAbortMB(quint64 totalRamMB)
+{
+    if (totalRamMB == 0) return memoryAbortMB;
+    const quint64 reserve  = std::max<quint64>(4096, totalRamMB / 4);
+    const quint64 ceiling  = (totalRamMB * 85) / 100;
+    const quint64 floorMB  = std::min<quint64>(2048, totalRamMB / 2);
+    const quint64 candidate = (totalRamMB > reserve) ? totalRamMB - reserve : floorMB;
+    return std::clamp(candidate, floorMB, ceiling);
+}
 
 // view
 QString mode;                       // In MW: Loupe, Grid, Table or Compare

@@ -274,6 +274,20 @@ Q_NAMESPACE
     extern int winnowMemoryBeforeCacheMB;
     extern int metaCacheMB;
 
+    /* Memory-overrun guardrail.
+       memoryAbortMB: hard cap on the process's resident footprint (MB).
+                      When MetaRead's periodic check sees the footprint
+                      exceed this, it aborts the load and surfaces a
+                      dialog. Tunable; default 6000.
+       memoryOverrunFlag: latched true when the cap is breached so other
+                          subsystems (MetaRead readers, ImageCache,
+                          DataModel slots) can short-circuit cheaply
+                          without re-probing the OS. */
+    extern quint64 memoryAbortMB;
+    extern std::atomic<bool> memoryOverrunFlag;
+    quint64 processFootprintMB();
+    quint64 computeMemoryAbortMB(quint64 totalRamMB);
+
     struct WinScreen {
         QString adaptor;
         QString device;
