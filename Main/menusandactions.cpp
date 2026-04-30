@@ -1630,6 +1630,12 @@ void MW::createHelpActions()
     addAction(diagnosticsImageCacheAction);
     connect(diagnosticsImageCacheAction, &QAction::triggered, this, &MW::diagnosticsImageCache);
 
+    diagnosticsMemoryAction = new QAction(tr("Memory diagnostics"), this);
+    diagnosticsMemoryAction->setObjectName("diagnosticsMemory");
+    diagnosticsMemoryAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsMemoryAction);
+    connect(diagnosticsMemoryAction, &QAction::triggered, this, &MW::diagnosticsMemory);
+
     diagnosticsEmbellishAction = new QAction(tr("Embellish diagnostics"), this);
     diagnosticsEmbellishAction->setObjectName("diagnosticsEmbellish");
     diagnosticsEmbellishAction->setShortcutVisibleInContextMenu(true);
@@ -2118,6 +2124,7 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAllRowsAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
+    helpDiagnosticsMenu->addAction(diagnosticsMemoryAction);
     helpDiagnosticsMenu->addAction(diagnosticsFiltersAction);
     helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
 }
@@ -2354,6 +2361,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(diagnosticsSelectionAction);
     thumbViewActions->append(diagnosticsMetadataCacheAction);
     thumbViewActions->append(diagnosticsImageCacheAction);
+    thumbViewActions->append(diagnosticsMemoryAction);
     thumbViewActions->append(diagnosticsSessionIssuesAction);
     thumbViewActions->append(separatorAction0);
     thumbViewActions->append(helpFilmStripAction);
