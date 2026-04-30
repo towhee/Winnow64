@@ -991,6 +991,7 @@ private:
     QAction *diagnosticsXMPAction;
     QAction *diagnosticsMetadataCacheAction;
     QAction *diagnosticsImageCacheAction;
+    QAction *diagnosticsMemoryAction;
     QAction *diagnosticsDataModelAction;
     QAction *diagnosticsDataModelAllRowsAction;
     QAction *diagnosticsEmbellishAction;
@@ -1396,6 +1397,7 @@ private:
     void diagnosticsXMP();
     void diagnosticsMetadataCache();
     void diagnosticsImageCache();
+    void diagnosticsMemory();
     void diagnosticsDataModel();
     void diagnosticsDataModelAllRows();
     void diagnosticsEmbellish();

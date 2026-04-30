@@ -396,6 +396,136 @@ void MW::diagnosticsMetadata() {
 void MW::diagnosticsXMP() {} // dummy for now
 void MW::diagnosticsMetadataCache() {diagnosticsReport(metaRead->diagnostics(), "Winnow Diagnostics: MetaRead");}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCache->diagnostics(), "Winnow Diagnostics: ImageCache");}
+
+void MW::diagnosticsMemory()
+{
+    if (G::isLogger) G::log("MW::diagnosticsMemory");
+
+    // Walk the DataModel splitting icon bytes from the rest. Icons are stored
+    // as QIcon at column 0 with Qt::DecorationRole (DataModel::setIcon /
+    // setIcon1). All other roles and columns are treated as metadata.
+    qint64 iconBytes = 0;
+    qint64 metaBytes = 0;
+    int    iconRowCount = 0;
+    const int rows = dm->rowCount();
+    const int cols = dm->columnCount();
+    QHash<int, QByteArray> roles = dm->roleNames();
+    QList<int> roleKeys = roles.keys();
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            QModelIndex dmIdx = dm->index(row, col);
+            for (int role : roleKeys) {
+                QVariant data = dm->data(dmIdx, role);
+                if (data.isNull()) continue;
+                quint64 b = Utilities::qvariantBytes(data);
+                if (role == Qt::DecorationRole) {
+                    iconBytes += b;
+                    if (col == 0 && b > 0) ++iconRowCount;
+                } else {
+                    metaBytes += b;
+                }
+            }
+        }
+    }
+
+    // Refresh OS-side memory stats so the report is current, not from startup.
+#ifdef Q_OS_MAC
+    Mac::availableMemory();
+#elif defined(Q_OS_WIN)
+    Win::availableMemory();
+#endif
+
+    quint64 totalRamMB = 0;
+    int pressureLevel = -1;
+#ifdef Q_OS_MAC
+    totalRamMB = static_cast<quint64>(Mac::totalMemoryMB());
+    pressureLevel = Mac::memoryPressureLevel();
+#elif defined(Q_OS_WIN)
+    totalRamMB = Win::totalMemoryMB();
+#endif
+
+    const quint64 mb           = 1024ull * 1024ull;
+    const quint64 iconMB       = static_cast<quint64>(iconBytes) / mb;
+    const quint64 metaMB       = static_cast<quint64>(metaBytes) / mb;
+    const quint64 imageCacheMB = imageCache ? imageCache->getImCacheSize() : 0;
+    const quint64 footprintMB  = G::processFootprintMB();
+    const quint64 accountedMB  = iconMB + metaMB + imageCacheMB;
+    const qint64  otherMB      = static_cast<qint64>(footprintMB) - static_cast<qint64>(accountedMB);
+
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "Memory Diagnostics");
+    rpt << "\n";
+
+    rpt << "\n" << "Host";
+    rpt << "\n" << "  Total physical RAM      = " << totalRamMB << " MB";
+    rpt << "\n" << "  Available memory        = " << G::availableMemoryMB << " MB";
+    if (pressureLevel >= 0) {
+        const char *pStr = pressureLevel == 0 ? "Normal"
+                         : pressureLevel == 1 ? "Warning"
+                                              : "Critical";
+        rpt << "\n" << "  Memory pressure         = " << pStr
+            << " (" << pressureLevel << ")";
+    }
+
+    rpt << "\n";
+    rpt << "\n" << "Process";
+    rpt << "\n" << "  phys_footprint          = " << footprintMB << " MB";
+    rpt << "\n" << "  memoryAbortMB cap       = " << G::memoryAbortMB << " MB";
+    rpt << "\n" << "  memoryOverrunFlag       = "
+        << (G::memoryOverrunFlag.load(std::memory_order_relaxed) ? "TRUE" : "false");
+    if (G::memoryAbortMB > 0) {
+        const double pct = 100.0 * footprintMB / G::memoryAbortMB;
+        rpt << "\n" << "  Footprint vs cap        = "
+            << QString::number(pct, 'f', 1) << "%";
+    }
+    if (totalRamMB > 0) {
+        const double pct = 100.0 * footprintMB / totalRamMB;
+        rpt << "\n" << "  Footprint vs total RAM  = "
+            << QString::number(pct, 'f', 1) << "%";
+    }
+
+    rpt << "\n";
+    rpt << "\n" << "Breakdown (MB)";
+    rpt << "\n" << "  DataModel (excl. icons) = " << metaMB;
+    rpt << "\n" << "  DataModel icons         = " << iconMB
+        << "  (" << iconRowCount << " rows)";
+    rpt << "\n" << "  ImageCache              = " << imageCacheMB;
+    rpt << "\n" << "  Sum accounted           = " << accountedMB;
+    rpt << "\n" << "  Other (footprint - acc) = " << otherMB
+        << "   <- Qt widgets, decoders, OS overhead, etc.";
+
+    rpt << "\n";
+    rpt << "\n" << "DataModel";
+    rpt << "\n" << "  Rows                    = " << rows;
+    rpt << "\n" << "  Columns                 = " << cols;
+    rpt << "\n" << "  bytesUsed (running)     = " << dm->bytesUsed
+        << " (" << (dm->bytesUsed / mb) << " MB)";
+    rpt << "\n" << "  metaCacheMB estimate    = " << G::metaCacheMB << " MB";
+    rpt << "\n" << "  iconChunkSize           = " << dm->iconChunkSize;
+    rpt << "\n" << "  queuedReaderEvents      = "
+        << dm->queuedReaderEvents.load(std::memory_order_relaxed);
+
+    rpt << "\n";
+    rpt << "\n" << "ImageCache";
+    if (imageCache) {
+        rpt << "\n" << "  currMB                  = " << imageCacheMB << " MB";
+        rpt << "\n" << "  maxMB                   = " << imageCache->getMaxMB() << " MB";
+        rpt << "\n" << "  maxMBCeiling            = " << imageCache->getMaxMBCeiling() << " MB";
+        rpt << "\n" << "  autoMaxMB               = "
+            << (imageCache->getAutoMaxMB() ? "true" : "false");
+        rpt << "\n" << "  autoStrategy            = " << imageCache->getAutoStrategy();
+        rpt << "\n" << "  isRunning               = "
+            << (imageCache->isRunning() ? "true" : "false");
+    } else {
+        rpt << "\n" << "  (not constructed)";
+    }
+    rpt << "\n";
+
+    diagnosticsReport(reportString, "Winnow Diagnostics: Memory");
+}
+
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Diagnostics: Data Model");}
 void MW::diagnosticsDataModelAllRows() {diagnosticsReport(dm->diagnosticsAllRows(), "Winnow Diagnostics: Data Model All Rows");}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}
