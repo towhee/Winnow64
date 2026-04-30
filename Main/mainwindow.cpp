@@ -1972,6 +1972,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             // if (G::mode == "Table") tableDisplay();
         }
         else if (G::useImageView) {
+            // Mirror the unconditional centralLayout switch used in the video branch.
+            // imageView->loadImage can return false (cache miss, other early-returns),
+            // which would skip loupeDisplay and leave the central widget on VideoTab
+            // from a prior video selection.
+            if ((G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick")
+                && centralLayout->currentIndex() != LoupeTab)
+            {
+                centralLayout->setCurrentIndex(LoupeTab);
+            }
             if (imageView->loadImage(fPath, false, fun)) {
                 updateClassification();
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
@@ -2769,7 +2778,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     dm->setIconRange(sfRow);
     bool metaLoaded = G::allMetadataLoaded && G::iconChunkLoaded;
 
-    // /* debug
+    /* debug
     {
         qDebug().noquote()
          << "MW::updateChange  sfRow =" << QVariant(sfRow).toString().leftJustified(5)

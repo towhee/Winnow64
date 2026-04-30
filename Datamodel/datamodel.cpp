@@ -1501,17 +1501,17 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
     } qrEvGuard{queuedReaderEvents};
 
-    // [DIAG] sample memMB every 256 calls — surfaces queue-drain spikes.
-    {
-        static thread_local int probeTick = 0;
-        if ((++probeTick & 0xFF) == 0) {
-            qDebug() << "DataModel::addMetadataForItem"
-                     << "row =" << m.row
-                     << "memMB =" << G::processFootprintMB()
-                     << "queuedReaderEvents ="
-                     << queuedReaderEvents.load(std::memory_order_relaxed);
-        }
-    }
+    // // [DIAG] sample memMB every 256 calls — surfaces queue-drain spikes.
+    // {
+    //     static thread_local int probeTick = 0;
+    //     if ((++probeTick & 0xFF) == 0) {
+    //         qDebug() << "DataModel::addMetadataForItem"
+    //                  << "row =" << m.row
+    //                  << "memMB =" << G::processFootprintMB()
+    //                  << "queuedReaderEvents ="
+    //                  << queuedReaderEvents.load(std::memory_order_relaxed);
+    //     }
+    // }
 
     if (G::isLogger) {
         QString msg = "row = " + QString::number(m.row);
@@ -2313,17 +2313,17 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
         ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
     } qrEvGuard{queuedReaderEvents};
 
-    // [DIAG] sample memMB every 256 calls — rules pixmap cache growth in/out.
-    {
-        static thread_local int probeTick = 0;
-        if ((++probeTick & 0xFF) == 0) {
-            qDebug() << "DataModel::setIcon1"
-                     << "row =" << dmRow
-                     << "memMB =" << G::processFootprintMB()
-                     << "queuedReaderEvents ="
-                     << queuedReaderEvents.load(std::memory_order_relaxed);
-        }
-    }
+    // // [DIAG] sample memMB every 256 calls — rules pixmap cache growth in/out.
+    // {
+    //     static thread_local int probeTick = 0;
+    //     if ((++probeTick & 0xFF) == 0) {
+    //         qDebug() << "DataModel::setIcon1"
+    //                  << "row =" << dmRow
+    //                  << "memMB =" << G::processFootprintMB()
+    //                  << "queuedReaderEvents ="
+    //                  << queuedReaderEvents.load(std::memory_order_relaxed);
+    //     }
+    // }
 
     if (G::isLogger) G::log("DataModel::setIcon1", "src = " + src);
     if (fromInstance != instance) {
@@ -2508,7 +2508,7 @@ void DataModel::clearIconsOutsideChunkRange(int instance)
 {
     if (instance != this->instance) return;
 
-    // if (isDebug)
+    if (isDebug)
     qDebug() << "DataModel::clearIconsOutsideChunkRange"
                  << "instance =" << instance
                  << "startIconRange =" << startIconRange
@@ -2520,6 +2520,7 @@ void DataModel::clearIconsOutsideChunkRange(int instance)
         return;
     }
 
+    if (isDebug)
     qDebug() << "DataModel::clearIconsOutsideChunkRange  cleaning..."
              << "startIconRange =" << startIconRange
              << "endIconRange =" << endIconRange

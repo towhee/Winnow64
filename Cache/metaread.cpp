@@ -792,8 +792,14 @@ void MetaRead::processReturningReader(int id, Reader *r)
     QString fun = "MetaRead::processReturningReader";
     int dmRow = r->dmRow;
 
-    // update isReading flag
-    dm->sf->setData(dm->sf->index(dmRow, G::MetadataReadingColumn), false);
+    // For video rows, FrameDecoder finishes asynchronously and
+    // DataModel::setIconFromVideoFrame is what clears MetadataReadingColumn.
+    // Clearing it here would let dispatch re-pick the same video before its
+    // frame is decoded, spawning concurrent QMediaPlayers on the same file
+    // (AVFoundation heap corruption).
+    if (!dm->index(dmRow, G::VideoColumn).data().toBool()) {
+        dm->sf->setData(dm->sf->index(dmRow, G::MetadataReadingColumn), false);
+    }
 
     // progress counter
     metaReadCount++;

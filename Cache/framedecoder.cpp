@@ -295,37 +295,37 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
 
 void FrameDecoder::cleanupPlayer()
 {
-    if (mediaPlayer) {
-        mediaPlayer->stop();
-        mediaPlayer->deleteLater();
-        mediaPlayer = nullptr;
-    }
-
-    if (videoSink) {
-        videoSink->deleteLater();
-        videoSink = nullptr;
-    }
-    // /* Memory pressure testing — defensive guards.
-    //    Under sustained heap pressure (Photos library MetaRead) the
-    //    QMediaPlayer / QVideoSink the QPointers track can be freed by
-    //    macOS / AVFoundation without the QObject destructor running, so
-    //    QPointer's destroyed-signal cleanup never nulls our pointer.
-    //    deleteLater then dereferences a dangling object and crashes.
-    //    Snapshot the raw pointer first; if memoryOverrunFlag is latched
-    //    skip deleteLater entirely (we're tearing down anyway). */
-    // if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) {
+    // if (mediaPlayer) {
+    //     mediaPlayer->stop();
+    //     mediaPlayer->deleteLater();
     //     mediaPlayer = nullptr;
-    //     videoSink = nullptr;
-    //     return;
     // }
 
-    // if (QMediaPlayer *mp = mediaPlayer.data()) {
-    //     mediaPlayer = nullptr;     // null QPointer first so re-entry is a no-op
-    //     mp->stop();
-    //     mp->deleteLater();
-    // }
-    // if (QVideoSink *vs = videoSink.data()) {
+    // if (videoSink) {
+    //     videoSink->deleteLater();
     //     videoSink = nullptr;
-    //     vs->deleteLater();
     // }
+    /* Memory pressure testing — defensive guards.
+       Under sustained heap pressure (Photos library MetaRead) the
+       QMediaPlayer / QVideoSink the QPointers track can be freed by
+       macOS / AVFoundation without the QObject destructor running, so
+       QPointer's destroyed-signal cleanup never nulls our pointer.
+       deleteLater then dereferences a dangling object and crashes.
+       Snapshot the raw pointer first; if memoryOverrunFlag is latched
+       skip deleteLater entirely (we're tearing down anyway). */
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) {
+        mediaPlayer = nullptr;
+        videoSink = nullptr;
+        return;
+    }
+
+    if (QMediaPlayer *mp = mediaPlayer.data()) {
+        mediaPlayer = nullptr;     // null QPointer first so re-entry is a no-op
+        mp->stop();
+        mp->deleteLater();
+    }
+    if (QVideoSink *vs = videoSink.data()) {
+        videoSink = nullptr;
+        vs->deleteLater();
+    }
 }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk '/void MW::loupeDisplay/,/^}/' /Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp)",
+      "Bash(chmod +x /Users/roryhill/.claude/statusline.sh)",
+      "Read(//Users/roryhill/.claude/**)"
+    ]
+  }
+}
