@@ -169,18 +169,21 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     // ignore if result of remote operation
     if (G::isRemote) {
         isLoadingImage = false;
+        if (isDebug) qDebug() << srcFun << "quit because G::isRemote = true";
         return false;
     }
 
     // No folder selected yet
     if (!fPath.length()) {
         isLoadingImage = false;
+        if (isDebug) qDebug() << srcFun << "quit because !fPath.length()";
         return false;
     }
 
     // Already displayed
     if (isCurrent && replace == false) {
         isLoadingImage = false;
+        if (isDebug) qDebug() << srcFun << "quit because isCurrent && replace == false";
         return true;
     }
 
@@ -190,6 +193,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         QString msg = "Processing exported images.  Canceled loadImage.";
         G::issue("Warning", msg, srcFun);
         isLoadingImage = false;
+        if (isDebug) qDebug() << srcFun << "quit because G::isProcessingExportedImages";
         return false;
     }
 
@@ -282,7 +286,9 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         canvas (central widget window) set the scale to fit window, do not scale the
         image beyond 100% to fit the window.  */
         zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
-        if (G::isFirstImageNewInstance) {
+        /* If first item in DataModel is a video then zoom has not been set yet but
+           G::isFirstImageNewInstance may be false */
+        if (G::isFirstImageNewInstance || zoom < 0.1) {
             isFit = true;
             G::isFirstImageNewInstance = false;
         }

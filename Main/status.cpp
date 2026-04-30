@@ -12,7 +12,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (G::isLogger)
         G::log(fun);
 
-    qDebug() << fun << keepBase << s << source;
+    // qDebug() << fun << keepBase << s << source;
 
     // check if null filter
     if (keepBase && dm->sf->rowCount() == 0) {
