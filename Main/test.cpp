@@ -560,8 +560,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // mergeProjectFiles();
-    updateStatus(false, "test1", "");
-    dm->isPath("");
+    Utilities::log("MW::Test", "Testing");
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

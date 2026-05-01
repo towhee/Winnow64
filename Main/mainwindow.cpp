@@ -1531,9 +1531,9 @@ void MW::handleStartupArgs(const QString &args)
 
     // qDebug() << "MW::handleStartupArgs" << argList;
     if (argList.length() > 1) {
-        // if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
-        // if (G::isFileLogger)
-        //     Utilities::log("MW::handleStartupArgs", argList.join(" | "));
+        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
+        if (G::isFileLogger)
+            Utilities::log("MW::handleStartupArgs", argList.join(" | "));
     }
 
     QString srcProgram = argList.at(0);
@@ -1570,7 +1570,7 @@ void MW::handleStartupArgs(const QString &args)
     }
 
     // EMBELLISH
-    else if (srcProgram.startsWith("Embellish")) {
+    else if (argList.at(1).startsWith("Embellish")) {
         /* This means a remote embellish has been invoked.
                 arg 1 = "Embellish"
                 arg 2 = Embellish template name ie "Zen2048"
@@ -1591,17 +1591,20 @@ void MW::handleStartupArgs(const QString &args)
         G::mode = "Loupe";
 
         // check if any image path sent, if not, return
-        if (argList.length() < 2) return;
+        if (argList.length() < 3) return;
+        // if (argList.length() < 2) return;
 
         // get the embellish template to use
-        templateName = srcProgram.mid(QString("Embellish").length());
+        templateName = argList.at(2);
+        // templateName = srcProgram.mid(QString("Embellish").length());
 
-        /* log
+        // /* log
         if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
         //*/
 
         // get the folder where the files to embellish are located
-        QFileInfo info(argList.at(1));
+        QFileInfo info(argList.at(3));
+        // QFileInfo info(argList.at(1));
         QString folderPath = info.dir().absolutePath();
 
         // list of all supported files in the folder
