@@ -429,8 +429,11 @@ void MW::deleteFiles(QStringList paths)
     }
     if (fileWasLocked) G::popup->showPopup("Locked file(s) were not deleted", 3000);
 
-    // updata datamodel, imagecache, image counts, selection
+    // updata datamodel, imagecache, image counts
     refresh();
+
+    // update selection
+    sel->select(dm->currentSfRow);
 }
 
 void MW::currentFolderDeletedExternally(QString path)

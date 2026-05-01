@@ -1,16 +1,3 @@
-MW::updateChange  sfRow = 1     isFileSelectionChange = true  src = Selection::setCurrentIndex metaLoaded = true  G::allMetadataLoaded = true  G::iconChunkLoaded = true  dm->startIconRange = 0 dm->endIconRange = 3
-"ImageView::loadImage" sfRow = 1 G::isFirstImageNewInstance = false isCurrent = false replace = false G::isEmbellish = false  Src: "MW::fileSelectionChange" "/Users/roryhill/Pictures/Images/FocusStack/2026-01-08_0048_StmDMapBasic/depth/dmapbasic_fg.png"
-"ImageView::loadImage  row =" 1 "/Users/roryhill/Pictures/Images/FocusStack/2026-01-08_0048_StmDMapBasic/depth/dmapbasic_fg.png"
-"ImageView::loadImage" w = 5184 h = 3888 isNull = false "/Users/roryhill/Pictures/Images/FocusStack/2026-01-08_0048_StmDMapBasic/depth/dmapbasic_fg.png"
-"ImageView::loadImage" G::isFirstImageNewInstance = false row = 1 isFit = true isFit = true zoomFit = 0.269033 zoom = 0.269033 Src: "MW::fileSelectionChange"
-
-MW::updateChange  sfRow = 2     isFileSelectionChange = true  src = Selection::setCurrentIndex metaLoaded = true  G::allMetadataLoaded = true  G::iconChunkLoaded = true  dm->startIconRange = 0 dm->endIconRange = 226
-"MW::fileSelectionChange" 1
-"ImageView::loadImage" sfRow = 2 G::isFirstImageNewInstance = false isCurrent = false replace = false G::isEmbellish = false  Src: "MW::fileSelectionChange" "/Users/roryhill/Pictures/2025/202507/2025-07-22_Parksville/2025-07-22_0002.arw"
-"ImageView::loadImage  row =" 2 "/Users/roryhill/Pictures/2025/202507/2025-07-22_Parksville/2025-07-22_0002.arw"
-"ImageView::loadImage" w = 8640 h = 5760 isNull = false "/Users/roryhill/Pictures/2025/202507/2025-07-22_Parksville/2025-07-22_0002.arw"
-"ImageView::loadImage" G::isFirstImageNewInstance = false row = 2 isFit = false isFit = false zoomFit = 0.181597 zoom = 0 Src: "MW::fileSelectionChange"
-
 
 "statusLine": {
     "type": "command",
