@@ -2227,6 +2227,30 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
     }
 }
 
+void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
+{
+/*
+    Failure-path counterpart to setIconFromVideoFrame.  MetaRead skips clearing
+    MetadataReadingColumn for video rows (Cache/metaread.cpp processReturningReader)
+    so dispatch never spawns a second QMediaPlayer on the same file while one
+    is in flight.  setIconFromVideoFrame clears the flag on the success path;
+    this slot clears it on every failure path FrameDecoder reports
+    (invalid media, playback error, invalid frame, null image, exception).
+    Without it the row stays MetadataReadingColumn=true forever and the
+    dispatcher refuses to revisit it.
+*/
+    if (G::isLogger) G::log("DataModel::clearVideoReadingFlag");
+    if (G::stop) return;
+    if (fromInstance != instance) return;
+
+    QModelIndex dmIdx = index(dmRow, 0);
+    if (!dmIdx.isValid()) return;
+
+    QMutexLocker locker(&dmMutex);
+    setData(index(dmRow, G::MetadataReadingColumn), false);
+    setData(index(dmRow, G::MetadataAttemptedColumn), true);
+}
+
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)
 {
 /*

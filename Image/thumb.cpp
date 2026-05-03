@@ -20,6 +20,7 @@ Thumb::Thumb(DataModel *dm)
 
     frameDecoder = new FrameDecoder();
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    connect(frameDecoder, &FrameDecoder::videoFrameFailed, dm, &DataModel::clearVideoReadingFlag);
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
     frameDecoderthread = new QThread;
     frameDecoder->moveToThread(frameDecoderthread);

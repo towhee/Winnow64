@@ -24,6 +24,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
 
     frameDecoder = new FrameDecoder();
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    connect(frameDecoder, &FrameDecoder::videoFrameFailed, dm, &DataModel::clearVideoReadingFlag);
     connect(this, &Reader::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
     frameDecoderthread = new QThread;
     frameDecoder->moveToThread(frameDecoderthread);

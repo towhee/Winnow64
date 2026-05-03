@@ -169,6 +169,8 @@ void FrameDecoder::getNextThumbNail(QString src)
         if (status == QMediaPlayer::InvalidMedia) {
             qWarning() << "Invalid media:" << item.fPath;
             mediaPlayer->stop();
+            if (item.source == "dmThumb" && item.dmRow >= 0)
+                emit videoFrameFailed(item.dmRow, item.dmInstance);
             queue.removeFirst();
             getNextThumbNail("invalid media");
         }
@@ -181,6 +183,8 @@ void FrameDecoder::getNextThumbNail(QString src)
         if (status == QMediaPlayer::InvalidMedia) {
             qWarning() << "Invalid media:" << item.fPath;
             mediaPlayer->stop();
+            if (item.source == "dmThumb" && item.dmRow >= 0)
+                emit videoFrameFailed(item.dmRow, item.dmInstance);
             queue.removeFirst();
             getNextThumbNail("invalid media");
         }
@@ -192,6 +196,8 @@ void FrameDecoder::getNextThumbNail(QString src)
 
         qWarning() << "Playback error:" << errStr;
         mediaPlayer->stop();
+        if (item.source == "dmThumb" && item.dmRow >= 0)
+            emit videoFrameFailed(item.dmRow, item.dmInstance);
         queue.removeFirst();
         getNextThumbNail("error");
     });
@@ -201,6 +207,8 @@ void FrameDecoder::getNextThumbNail(QString src)
         mediaPlayer->play();
     } catch (...) {
         qWarning() << "Exception during play for" << item.fPath;
+        if (item.source == "dmThumb" && item.dmRow >= 0)
+            emit videoFrameFailed(item.dmRow, item.dmInstance);
         queue.removeFirst();
         getNextThumbNail("exception");
     }
@@ -222,6 +230,8 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
         }
 
         qWarning() << "Invalid frame after retries:" << path;
+        if (item.source == "dmThumb" && item.dmRow >= 0)
+            emit videoFrameFailed(item.dmRow, item.dmInstance);
         cleanupPlayer();
         attempts = 0;
         getNextThumbNail("invalid frame");
@@ -233,6 +243,8 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
     QImage im = frame.toImage();
     if (im.isNull()) {
         qWarning() << "Null image frame:" << path;
+        if (item.source == "dmThumb" && item.dmRow >= 0)
+            emit videoFrameFailed(item.dmRow, item.dmInstance);
         cleanupPlayer();
         getNextThumbNail("null image");
         return;
