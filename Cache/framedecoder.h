@@ -23,6 +23,11 @@ public:
 signals:
     void setFrameIcon(int dmRow, QImage im, int instance, qint64 duration, FrameDecoder *thisFrameDecoder);
     void frameImage(QString path, QImage image, QString source);
+    /* Emitted when a queued dmThumb job ends without a usable frame
+       (invalid media, playback error, invalid frame after retries, null image,
+       exception). Lets DataModel clear MetadataReadingColumn so MetaRead's
+       dispatcher can move on. */
+    void videoFrameFailed(int dmRow, int dmInstance);
 
 public slots:
     void stop();
