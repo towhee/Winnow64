@@ -336,10 +336,11 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
     // if (G::instanceClash(instance, "MW::updateMetadataThreadRunStatus")) return;
 
     if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus", "src = " + src);
-    /*
+    // /*
     qDebug() << "MW::updateMetadataThreadRunStatus"
              << "isRunning =" << isRunning
-             << "calledBy =" << calledBy
+             << "success =" << success
+             << "calledBy =" << src
                 ;
              //*/
 

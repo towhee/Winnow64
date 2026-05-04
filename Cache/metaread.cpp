@@ -730,7 +730,10 @@ bool MetaRead::allMetaIconLoaded()
         Q_ARG(int, dm->endIconRange)
         );
 
-    return metaAttempted && iconAttempted;
+    if (metaAttempted && iconAttempted) return true;
+    else return false;
+    // return (metaAttempted && iconAttempted);
+
 }
 
 void MetaRead::redo()
@@ -1239,11 +1242,12 @@ void MetaRead::dispatchFinished(QString src)
 
     bool running = false;
     setCycling(false);
-    bool show = true;
-    success = allMetaIconLoaded();
-    if (G::useUpdateStatus && !G::allMetadataLoaded) {
-        emit runStatus(running, show, success, fun);
-    }
+    // bool show = true;
+    // success = allMetaIconLoaded();
+    // if (G::useUpdateStatus && !G::allMetadataLoaded) {
+    //     emit runStatus(running, show, true, fun);
+    //     // emit runStatus(running, show, success, fun);
+    // }
     emit cleanupIcons(instance);
     isDispatching = false;
 
@@ -1252,6 +1256,7 @@ void MetaRead::dispatchFinished(QString src)
     // do not emit done if only updated icon loading
     if (!G::allMetadataLoaded) {
         G::allMetadataLoaded = true;
+        emit runStatus(false, true, true, fun); // running, show, success, src
         // signal MW::folderChangeCompleted
         emit done();
     }

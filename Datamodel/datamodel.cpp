@@ -2306,6 +2306,19 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         return;
     }
 
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
+
+    /* Idempotent: see setIcon1 for rationale.  Replacing a live decoration
+       runs ~QPixmapIconEngine on the old QIcon, which under memory pressure
+       can crash. */
+    if (QStandardItem *existing = itemFromIndex(dmIdx)) {
+        if (!existing->icon().isNull()) {
+            setData(index(dmIdx.row(), G::IconLoadedColumn), true);
+            setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+            return;
+        }
+    }
+
     const QVariant vIcon = QVariant(QIcon(pm));
     setData(dmIdx, vIcon, Qt::DecorationRole);
     setData(index(dmIdx.row(), G::IconLoadedColumn), true);
@@ -2337,32 +2350,20 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
         ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
     } qrEvGuard{queuedReaderEvents};
 
-    // // [DIAG] sample memMB every 256 calls — rules pixmap cache growth in/out.
-    // {
-    //     static thread_local int probeTick = 0;
-    //     if ((++probeTick & 0xFF) == 0) {
-    //         qDebug() << "DataModel::setIcon1"
-    //                  << "row =" << dmRow
-    //                  << "memMB =" << G::processFootprintMB()
-    //                  << "queuedReaderEvents ="
-    //                  << queuedReaderEvents.load(std::memory_order_relaxed);
-    //     }
-    // }
-
     if (G::isLogger) G::log("DataModel::setIcon1", "src = " + src);
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
         G::issue("Comment", errMsg, "DataModel::setIcon", dmRow);
         return;
     }
-    if (isDebug)
+    // if (isDebug)
     {
+        QModelIndex dmIdx = index(dmRow,0);
         // must come after instance check
         qDebug() << "DataModel::setIcon1"
-                 << "src =" << src
-                 << "instance =" << instance
-                 << "fromInstance =" << fromInstance
                  << "row =" << dmRow
+                 << "isAlreadyIcon =" << !dmIdx.data(Qt::DecorationRole).isNull()
+                 << "src =" << src
                  ;
     }
     if (loadingModel) {
@@ -2375,12 +2376,32 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
         return;
     }
 
+    /* Once the heap cap latches, libmalloc state is fragile; further QPixmap
+       allocation here can store/destroy buffers that crash later when freed
+       (mirrors addMetadataForItem's bail at line ~1532). */
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
+
     QModelIndex dmIdx = index(dmRow,0);
 
     if (!dmIdx.isValid()) {
         errMsg = "Invalid dmIdx.";
         G::issue("Warning", errMsg, "DataModel::setIcon");
         return;
+    }
+
+    /* Idempotent: skip if a thumb is already set. Multiple paths can deliver
+       a thumb for the same row (Reader::setIcon and TiffThumbDecoder::setIcon
+       both connect here, plus rapid scrolling can re-dispatch). Replacing a
+       live decoration runs ~QPixmapIconEngine on the old QIcon — which under
+       memory pressure can hit a freed/poisoned pointer and abort.  Mirrors
+       the guard in setIconFromVideoFrame:2214. */
+    if (QStandardItem *existing = itemFromIndex(dmIdx)) {
+        if (!existing->icon().isNull()) {
+            // ensure flags are correct even though the pixmap is unchanged
+            setData(index(dmRow, G::IconLoadedColumn), true);
+            setData(index(dmRow, G::MetadataReadingColumn), false);
+            return;
+        }
     }
 
     if (G::isLogger) G::log("DataModel::setIcon1 updating", "src = " + src);

@@ -2356,7 +2356,8 @@ bool MW::reset(QString src)
     // QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
 
     // update metadata read status light
-    updateMetadataThreadRunStatus(true, true, true, "MW::reset");
+    updateMetadataThreadRunStatus(false, true, true, "MW::reset");
+    // updateMetadataThreadRunStatus(true, true, true, "MW::reset");
 
     // stop slideshow if a new folder is selected
     if (G::isSlideShow && !G::isStressTest) slideShow();
