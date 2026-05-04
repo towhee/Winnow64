@@ -37,7 +37,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
     tiffThumbDecoderThread->start();
 
-    isDebug = false;
+    isDebug = true;
     debugLog = false;
 }
 

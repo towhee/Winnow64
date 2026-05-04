@@ -24,12 +24,27 @@
 
 TiffThumbDecoder::TiffThumbDecoder() {}
 
+bool TiffThumbDecoder::queueContains(int dmRow, int dmInstance)
+{
+    for (int i = 0; i < queue.size(); ++i) {
+        if (queue[i].dmRow == dmRow && queue[i].dmInstance == dmInstance)
+            return true;
+    }
+    return false;
+}
+
 void TiffThumbDecoder::addToQueue(QString fPath, int dmRow, int dmInstance,
                                   int offset)
 {
     if (G::isLogger) G::log("TiffThumbDecoder::addToQueue");
 
     if (abort) return;
+    /* Dedupe: Reader::readIcon can fire tiffMissingThumbDecode multiple times
+       for the same row (rapid scrolling re-dispatch, MetaRead retries).
+       Decoding the full TIFF twice is wasted work, and the duplicate
+       setIcon emit was the trigger for the QPixmap double-replace crash in
+       DataModel::setIcon1. Modeled on FrameDecoder::queueContains. */
+    if (queueContains(dmRow, dmInstance)) return;
     Item item;
     item.fPath = fPath;
     item.dmRow = dmRow;

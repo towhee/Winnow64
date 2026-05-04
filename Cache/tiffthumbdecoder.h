@@ -20,6 +20,7 @@ public slots:
 
 private:
     void processQueue();
+    bool queueContains(int dmRow, int dmInstance);
     enum Status {Idle, Busy} status;
     struct Item {
         QString fPath;
