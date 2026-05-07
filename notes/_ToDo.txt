@@ -9,7 +9,6 @@ BUGS / TO DO
 - EmbelProperties::syncWinnets deal with missing winnets
 - Update where log file is updated
 - MOV::findAtom qWarning() << "Invalid atom size" << size;
-- Eliminate processEvents and review G::popup usage
 - Rename files
 - Read/write png metadata
 - Windows ingest "how this works" has a white titlebar.

@@ -1493,25 +1493,20 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     not have been loaded, but editable data, (such as rating, label, title, email,
     url) may have been edited in the jpg file of the raw+jpg pair. If so, we do not
     want to overwrite this data.
+
+    dm->queuedReaderEvents is an std::atomic<int> on DataModel that counts Reader-thread
+    events emitted to the GUI but not yet drained. A producer/consumer imbalance — e.g.
+    recursing an Apple .photoslibrary where Readers race through tiny JPG derivatives
+    faster than the GUI can drain its event queue — would otherwise balloon Qt's queue
+    and memory. The cap (4× readers) is loose enough that steady-state throughput is
+    unaffected; it only engages when the GUI is genuinely falling behind.
 */
-    // Backpressure: matches Reader's fetch_add before emit addToDatamodel.
-    // RAII so every early-return path also decrements.
+    /* Backpressure: matches Reader's fetch_add before emit addToDatamodel.
+       RAII so every early-return path also decrements. */
     struct QrEvGuard {
         std::atomic<int> &c;
         ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
     } qrEvGuard{queuedReaderEvents};
-
-    // // [DIAG] sample memMB every 256 calls — surfaces queue-drain spikes.
-    // {
-    //     static thread_local int probeTick = 0;
-    //     if ((++probeTick & 0xFF) == 0) {
-    //         qDebug() << "DataModel::addMetadataForItem"
-    //                  << "row =" << m.row
-    //                  << "memMB =" << G::processFootprintMB()
-    //                  << "queuedReaderEvents ="
-    //                  << queuedReaderEvents.load(std::memory_order_relaxed);
-    //     }
-    // }
 
     if (G::isLogger) {
         QString msg = "row = " + QString::number(m.row);
@@ -2260,9 +2255,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     loaded, and this is checked against the signal instance.
 
     In addition, the signal queue from MetaRead is cleared in MW::stop to prevent
-    lagging calls when the folder has been changed.  This probably makes the instance
-    checking, which was not totally reliable, to no longer be required.  Keeping it for
-    now.
+    lagging calls when the folder has been changed.
 
     This function is subject to potential race conditions, so it is critical that it only
     be called via a connection with Qt::BlockingQueuedConnection.
@@ -2270,12 +2263,14 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     Do not use QMutexLocker.
 */
     if (G::isLogger) G::log("DataModel::setIcon");
+
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
         G::issue("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
         return;
     }
-    // if (isDebug)
+
+    if (isDebug)
     {
         // must come after instance check
         qDebug() << "DataModel::setIcon"
@@ -2334,29 +2329,38 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     time a new folder is loaded, and this is checked against the signal instance.
 
     In addition, the signal queue from MetaRead is cleared in MW::stop to prevent
-    lagging calls when the folder has been changed. This probably makes the instance
-    checking, which was not totally reliable, to no longer be required. Keeping it
-    for now.
+    lagging calls when the folder has been changed.
 
     This function is subject to potential race conditions, so it is critical that it
     only be called via a connection with Qt::BlockingQueuedConnection.
 
+    This is a duplicate of DataModel::setIcon, but with different call parameters, and it
+    has a backpressure counter is incremented by Reader. dm->queuedReaderEvents is an
+    std::atomic<int> on DataModel that counts Reader-thread events emitted to the GUI but
+    not yet drained. A producer/consumer imbalance — e.g. recursing an Apple
+    .photoslibrary where Readers race through tiny JPG derivatives faster than the GUI
+    can drain its event queue — would otherwise balloon Qt's queue and memory. The cap
+    (4× readers) is loose enough that steady-state throughput is unaffected; it only
+    engages when the GUI is genuinely falling behind.
+
     Do not use QMutexLocker.
 */
-    // Backpressure: matches Reader's fetch_add before emit setIcon.
-    // RAII so every early-return path also decrements.
+    /* Backpressure: matches Reader's fetch_add before emit setIcon.
+       RAII so every early-return path also decrements. */
     struct QrEvGuard {
         std::atomic<int> &c;
         ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
     } qrEvGuard{queuedReaderEvents};
 
     if (G::isLogger) G::log("DataModel::setIcon1", "src = " + src);
+
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
         G::issue("Comment", errMsg, "DataModel::setIcon", dmRow);
         return;
     }
-    // if (isDebug)
+
+    if (isDebug)
     {
         QModelIndex dmIdx = index(dmRow,0);
         // must come after instance check
