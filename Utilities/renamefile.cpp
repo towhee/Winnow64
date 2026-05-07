@@ -100,46 +100,36 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
     }
 
     // Manual rename is only meaningful for a single-file selection. For
-    // multi-selection, hide the checkbox and lineedit entirely — the user
+    // multi-selection, hide the simple-rename group entirely — the user
     // has no choice and only the template section applies.
     if (selection.count() == 1) {
         QFileInfo info(selection.at(0));
         ui->manualRenameEdit->setText(info.baseName());
         ui->useManualRenameChk->setChecked(false);
         ui->manualRenameEdit->setEnabled(false);
-        // Toggling the checkbox flips which mode is active: when the user
-        // picks manual rename, the template controls gray out, and vice
-        // versa. This makes the mutual exclusion visually obvious.
+        // Toggling the checkbox flips which group is active so the mutual
+        // exclusion is visually obvious.
         connect(ui->useManualRenameChk, &QCheckBox::toggled, this,
                 [this](bool checked) {
             ui->manualRenameEdit->setEnabled(checked);
-            ui->nameLbl->setEnabled(!checked);
-            ui->filenameTemplatesCB->setEnabled(!checked);
+            ui->templateGroupBox->setEnabled(!checked);
             ui->filenameTemplatesBtn->setEnabled(!checked);
-            ui->startSeqLabel->setEnabled(!checked);
-            ui->spinBoxStartNumber->setEnabled(!checked);
-            ui->existingSequenceLabel->setEnabled(!checked);
-            ui->exampleLbl->setEnabled(!checked);
             if (checked) ui->manualRenameEdit->setFocus();
         });
     } else {
-        ui->useManualRenameChk->setVisible(false);
-        ui->manualRenameEdit->setVisible(false);
+        ui->manualRenameGroupBox->setVisible(false);
 
-        // Shift the template section up to fill the space the hidden
-        // manual-rename widgets occupied (checkbox y=18..42, lineedit y=46..78,
-        // gap to nameLbl at y=100 → total shift = 82px).
-        const int shift = 82;
+        // Shift everything below the simple-rename group up to fill the gap
+        // (manualRenameGroupBox occupies y=10..105, templateGroupBox starts
+        // at y=115 → total shift = 105px).
+        const int shift = 105;
         auto moveUp = [shift](QWidget *w) {
             w->move(w->x(), w->y() - shift);
         };
-        moveUp(ui->nameLbl);
-        moveUp(ui->filenameTemplatesCB);
-        moveUp(ui->startSeqWidget);
-        moveUp(ui->existingSequenceLabel);
-        moveUp(ui->exampleWidget);
+        moveUp(ui->templateGroupBox);
         moveUp(ui->progressMsg);
         moveUp(ui->progressBar);
+        moveUp(ui->line);
         moveUp(ui->layoutWidget);
 
         setFixedHeight(height() - shift);
@@ -719,6 +709,10 @@ void RenameFileDlg::updateExistingSequence()
 
 void RenameFileDlg::updateExample()
 {
+    if (selection.isEmpty()) {
+        ui->exampleLbl->setText(QString());
+        return;
+    }
     QFileInfo info(selection.at(0));
     QString tokenString = filenameTemplatesMap[ui->filenameTemplatesCB->currentText()];
     ui->exampleLbl->setText(parseTokenString(info, tokenString));
