@@ -149,19 +149,13 @@ void MW::renameSelectedFiles()
     QString folderPath = dm->folderList.at(0);
     QStringList selection;
     if (!dm->getSelection(selection)) return;
+
     // Check all files are in the same folder
     for (int i = 0; i < selection.size(); i++) {
         QString thisFolder = QFileInfo(selection.at(i)).path();
         if (thisFolder != folderPath) {
-            QPixmap pixmap(":/images/icon16/subfolders.png");
-            QString includesubfoldersIcon = Utilities::pixmapToString(pixmap);
-            QString msg = "You can only rename images from a single folder.  If<br>"
-                          "'Include subfolders' was invoked you may have selected<br>"
-                          "images from multiple folders and there should be a<br>"
-                          + includesubfoldersIcon +
-                          " in the status bar.<p>"
-                          "Press <font color=\"red\"><b>Esc</b></font> to continue."
-                ;
+            QString msg = "You can only rename images from a single folder.<p>"
+                          "Press <font color=\"red\"><b>Esc</b></font> to continue.";
             G::popup->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
             return;
         }
@@ -180,6 +174,7 @@ void MW::renameSelectedFiles()
     RenameFileDlg rf(this, folderPath, selection, filenameTemplates,
                      dm, metadata, imageCache);
     rf.exec();
+
     // may have renamed current image
     setWindowTitle(winnowWithVersion + "   " + dm->currentFilePath);
 }
@@ -279,6 +274,9 @@ void MW::insertFiles(QStringList pathList)
 
     After insertion, the call function should select row: sel->select(fPath);
     This will invoke MetaRead which will load the metadata, icon and imageCache.
+
+    It is used by a remote embellish operation when the embellish folder is in the
+    datamodel.
 */
     if (G::isLogger) G::log("MW::insertFile", "dm->instance = " + QString::number(dm->instance));
 

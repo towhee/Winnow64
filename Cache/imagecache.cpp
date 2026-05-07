@@ -2187,14 +2187,15 @@ void ImageCache::cacheImage(int id, int sfRow,
     // update datamodel cache status
     if (!abort) emit setCached(sfRow, true, instance);
 
-    // add a thumbnail if missing in datamodel
-    if (dm->sf->index(sfRow,0).data(Qt::DecorationRole).isNull()) {
-        // scale to max icon size
-        QImage im = doneImage.scaled(G::maxIconSize, Qt::KeepAspectRatio);
-        im.convertTo(QImage::Format_RGB32);
-        int dmRow = dm->rowFromPath(fPath);
-        emit setIcon(dmRow, im, instance, src);
-    }
+    // // add a thumbnail if missing in datamodel (why?)
+    // if (dm->sf->index(sfRow,0).data(Qt::DecorationRole).isNull()) {
+    //     // scale to max icon size
+    //     QImage im = doneImage.scaled(G::maxIconSize, Qt::KeepAspectRatio);
+    //     im.convertTo(QImage::Format_RGB32);
+    //     int dmRow = dm->rowFromPath(fPath);
+    //     // no connect for setIcon
+    //     emit setIcon(dmRow, im, instance, src);
+    // }
 
     // update cache status in cache progress bar
     if (!abort)
