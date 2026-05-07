@@ -1,5 +1,10 @@
 
-"statusLine": {
-    "type": "command",
-    "command": "jq -r '\"[Session: \\(.rate_limits.five_hour.used_percentage | floor)% (Resets: \\(.rate_limits.five_hour.resets_at | strftime(\"%H:%M\")))] [Week: \\(.rate_limits.seven_day.used_percentage | floor)% (Resets: \\(.rate_limits.seven_day.resets_at | strftime(\"%a %H:%M\")))]\"'"  }
-}
+    o Simple rename (checkbox)
+
+    Simple rename inside a group box
+
+    o Template rename (checkbox)
+
+    Template rename inside a group box
+
+    Buttons (no sepating line required)
