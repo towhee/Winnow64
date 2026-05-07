@@ -99,40 +99,57 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
         selectionIndexes.append(dm->proxyIndexFromPath(selection.at(i)));
     }
 
-    // Manual rename is only meaningful for a single-file selection. For
-    // multi-selection, hide the simple-rename group entirely — the user
-    // has no choice and only the template section applies.
+    // Simple rename is only meaningful for a single-file selection. For a
+    // multi-selection, hide both checkboxes and the simple body — only the
+    // template path applies.
+    // The dialog has no top-level layout, so sizeHint() underestimates the
+    // geometry-rect height (Qt then opens shorter than the .ui declares).
+    // Pin the height explicitly in both branches.
+    const int fullHeight = 430;
+    const int shift = 125;  // templateGroupBox y=135 → 10 when simple is hidden
     if (selection.count() == 1) {
         QFileInfo info(selection.at(0));
         ui->manualRenameEdit->setText(info.baseName());
-        ui->useManualRenameChk->setChecked(false);
-        ui->manualRenameEdit->setEnabled(false);
-        // Toggling the checkbox flips which group is active so the mutual
-        // exclusion is visually obvious.
-        connect(ui->useManualRenameChk, &QCheckBox::toggled, this,
-                [this](bool checked) {
-            ui->manualRenameEdit->setEnabled(checked);
-            ui->templateGroupBox->setEnabled(!checked);
-            ui->filenameTemplatesBtn->setEnabled(!checked);
-            if (checked) ui->manualRenameEdit->setFocus();
-        });
-    } else {
-        ui->manualRenameGroupBox->setVisible(false);
+        // Default: template active, simple grayed out.
+        ui->simpleRenameChk->setChecked(false);
+        ui->templateRenameChk->setChecked(true);
+        ui->manualRenameGroupBox->setEnabled(false);
+        ui->templateGroupBox->setEnabled(true);
+        ui->filenameTemplatesBtn->setEnabled(true);
 
-        // Shift everything below the simple-rename group up to fill the gap
-        // (manualRenameGroupBox occupies y=10..105, templateGroupBox starts
-        // at y=115 → total shift = 105px).
-        const int shift = 105;
+        // Mutual exclusion: clicking either checkbox forces it on, the other
+        // off, and toggles the enabled state of both bodies.
+        connect(ui->simpleRenameChk, &QCheckBox::clicked, this, [this]() {
+            ui->simpleRenameChk->setChecked(true);
+            ui->templateRenameChk->setChecked(false);
+            ui->manualRenameGroupBox->setEnabled(true);
+            ui->templateGroupBox->setEnabled(false);
+            ui->filenameTemplatesBtn->setEnabled(false);
+            ui->manualRenameEdit->setFocus();
+        });
+        connect(ui->templateRenameChk, &QCheckBox::clicked, this, [this]() {
+            ui->simpleRenameChk->setChecked(false);
+            ui->templateRenameChk->setChecked(true);
+            ui->manualRenameGroupBox->setEnabled(false);
+            ui->templateGroupBox->setEnabled(true);
+            ui->filenameTemplatesBtn->setEnabled(true);
+        });
+
+        setFixedHeight(fullHeight);
+    } else {
+        ui->simpleRenameChk->setVisible(false);
+        ui->manualRenameGroupBox->setVisible(false);
+        ui->templateRenameChk->setVisible(false);
+
         auto moveUp = [shift](QWidget *w) {
             w->move(w->x(), w->y() - shift);
         };
         moveUp(ui->templateGroupBox);
         moveUp(ui->progressMsg);
         moveUp(ui->progressBar);
-        moveUp(ui->line);
         moveUp(ui->layoutWidget);
 
-        setFixedHeight(height() - shift);
+        setFixedHeight(fullHeight - shift);
     }
 
     // initialize templates and tokens
@@ -889,7 +906,7 @@ void RenameFileDlg::on_okBtn_clicked()
 {
     // Manual rename is only chosen when a single file is selected AND the
     // "Enter a new file name" checkbox is ticked. Otherwise use the template.
-    if (selection.count() == 1 && ui->useManualRenameChk->isChecked()) {
+    if (selection.count() == 1 && ui->simpleRenameChk->isChecked()) {
         QString typed = ui->manualRenameEdit->text().trimmed();
         if (typed.isEmpty()) {
             QMessageBox::warning(this, "Empty name",
