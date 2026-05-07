@@ -41,6 +41,9 @@ private:
     void appendAllSharingBaseName(QString path);
     void resolveNameConflicts();
     void rename();
+    bool isTemplateNoOp();
+    bool allFilesAlreadyConform();
+    QRegularExpression templateAsRegex(const QString &tokenString);
     bool renameSingleManual(const QString &newBase);
     void initTokenList();
     void initExampleMap();

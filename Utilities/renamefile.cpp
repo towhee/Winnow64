@@ -724,6 +724,110 @@ void RenameFileDlg::updateExample()
     ui->exampleLbl->setText(parseTokenString(info, tokenString));
 }
 
+bool RenameFileDlg::isTemplateNoOp()
+{
+/*
+    Returns true if applying the currently selected template to every file in
+    the selection would produce a base name identical to the file's existing
+    base name — i.e. clicking OK would rename nothing.
+*/
+    QString tokenString = filenameTemplatesMap.value(ui->filenameTemplatesCB->currentText());
+    if (tokenString.isEmpty()) return false;
+    if (selection.isEmpty()) return false;
+    seqNum = ui->spinBoxStartNumber->value();
+    for (const QString &path : std::as_const(selection)) {
+        QFileInfo info(path);
+        if (parseTokenString(info, tokenString) != info.baseName()) return false;
+    }
+    return true;
+}
+
+QRegularExpression RenameFileDlg::templateAsRegex(const QString &tokenString)
+{
+/*
+    Convert a template like "image{XXXX}" or "{YYYY}-{MM}-{DD}_{XXXX}" into an
+    anchored regex (^image\d{4}$, etc.) used to test whether a file's existing
+    base name already follows the template's structure. Free-form tokens
+    (TITLE, ORIGINAL FILENAME, etc.) collapse to ".+?" since their content is
+    arbitrary; date/sequence/numeric tokens collapse to character-class
+    patterns that match exactly what parseTokenString would emit.
+*/
+    static const QMap<QString, QString> tokenPattern = {
+        {"ORIGINAL FILENAME", ".+?"},
+        {"YYYY", "\\d{4}"},
+        {"YY", "\\d{2}"},
+        {"MONTH", "(?:JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)"},
+        {"Month", "(?:January|February|March|April|May|June|July|August|September|October|November|December)"},
+        {"MON", "(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)"},
+        {"Mon", "(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"},
+        {"MM", "\\d{2}"},
+        {"DAY", "(?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)"},
+        {"Day", "(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)"},
+        {"DDD", "(?:MON|TUE|WED|THU|FRI|SAT|SUN)"},
+        {"Ddd", "(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)"},
+        {"DD", "\\d{2}"},
+        {"HOUR", "\\d{2}"},
+        {"MINUTE", "\\d{2}"},
+        {"SECOND", "\\d{2}"},
+        {"MILLISECOND", "\\d{3}"},
+        {"TITLE", ".+?"},
+        {"CREATOR", ".+?"},
+        {"COPYRIGHT", ".+?"},
+        {"MAKE", ".+?"},
+        {"MODEL", ".+?"},
+        {"DIMENSIONS", "\\d+x\\d+"},
+        {"SHUTTER SPEED", ".+?"},
+        {"APERTURE", "f/[\\d.]+"},
+        {"ISO", "\\d+"},
+        {"FOCAL LENGTH", "\\d+\\s*mm"},
+        {"XX", "\\d{2}"},
+        {"XXX", "\\d{3}"},
+        {"XXXX", "\\d{4}"},
+        {"XXXXX", "\\d{5}"},
+        {"XXXXXX", "\\d{6}"},
+        {"XXXXXXX", "\\d{7}"},
+    };
+
+    QString pattern;
+    int i = 0;
+    while (i < tokenString.length()) {
+        if (tokenString.at(i) == '{') {
+            int end = tokenString.indexOf('}', i + 1);
+            if (end > i) {
+                QString token = tokenString.mid(i + 1, end - i - 1);
+                if (tokenPattern.contains(token)) {
+                    pattern += tokenPattern.value(token);
+                    i = end + 1;
+                    continue;
+                }
+            }
+        }
+        pattern += QRegularExpression::escape(QString(tokenString.at(i)));
+        i++;
+    }
+    return QRegularExpression("^" + pattern + "$");
+}
+
+bool RenameFileDlg::allFilesAlreadyConform()
+{
+/*
+    Returns true if every selected file's base name already matches the
+    selected template's structure. The motivating case: folder contains
+    image1.jpg, image2.jpg, image3.jpg and the user picks a template like
+    "image{XX}". Renaming would only shift sequence numbers, not impose a new
+    convention — likely not what the user intended.
+*/
+    if (selection.isEmpty()) return false;
+    QString tokenString = filenameTemplatesMap.value(ui->filenameTemplatesCB->currentText());
+    if (tokenString.isEmpty()) return false;
+    QRegularExpression rx = templateAsRegex(tokenString);
+    if (!rx.isValid()) return false;
+    for (const QString &path : std::as_const(selection)) {
+        if (!rx.match(QFileInfo(path).baseName()).hasMatch()) return false;
+    }
+    return true;
+}
+
 bool RenameFileDlg::renameSingleManual(const QString &newBase)
 {
 /*
@@ -806,6 +910,20 @@ void RenameFileDlg::on_okBtn_clicked()
         if (!renameSingleManual(typed)) return;  // conflict, stay open
         accept();
         return;
+    }
+    if (isTemplateNoOp()) {
+        G::popup->showPopup("Selected template will not change the file name(s).", 2000);
+        return;  // stay open so the user can pick a different template
+    }
+    if (allFilesAlreadyConform()) {
+        QString msg = QString(
+            "All %1 selected file(s) already follow the selected template's pattern.<br><br>"
+            "Renaming will assign new sequence numbers, which may not be what you want.<br><br>"
+            "Continue?").arg(selection.count());
+        auto choice = QMessageBox::question(this, "Files already match template", msg,
+                                            QMessageBox::Yes | QMessageBox::No,
+                                            QMessageBox::No);
+        if (choice != QMessageBox::Yes) return;  // stay open
     }
     rename();
     accept();
