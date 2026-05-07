@@ -149,6 +149,13 @@ void MW::renameSelectedFiles()
     QString folderPath = dm->folderList.at(0);
     QStringList selection;
     if (!dm->getSelection(selection)) return;
+    // getSelection can return true with an empty list (no picks, no selection);
+    // opening the dialog in that state crashes when updateExample touches
+    // selection.at(0) via the combobox's currentTextChanged signal.
+    if (selection.isEmpty()) {
+        G::popup->showPopup("No images selected to rename.", 2000);
+        return;
+    }
 
     // Check all files are in the same folder
     for (int i = 0; i < selection.size(); i++) {
