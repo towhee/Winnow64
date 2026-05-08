@@ -6,7 +6,7 @@
 /*
 This group of classes provides a tool to tokenize a string.
 
-For example a date:  2018-03-17 cab be deconstructed into
+For example a date:  2018-03-17 can be deconstructed into
 
 {YYYY}-{MM}-{DD} where the year, month and day will be substituted from file
 metadata.

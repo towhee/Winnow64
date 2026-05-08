@@ -230,6 +230,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Rename files</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + F2</string>
+        </property>
+        <property name="text">
+         <string>Rename selected files (template or single-file rename)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Report metadata</string>
         </property>
         <property name="text">
