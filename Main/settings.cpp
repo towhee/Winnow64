@@ -166,15 +166,15 @@ void MW::writeSettings()
     // }
     // settings->endGroup();
 
-    // // save filename templates
-    // settings->beginGroup("FileNameTokens");
-    // settings->remove("");
-    // QMapIterator<QString, QString> filenameIter(filenameTemplates);
-    // while (filenameIter.hasNext()) {
-    //     filenameIter.next();
-    //     settings->setValue(filenameIter.key(), filenameIter.value());
-    // }
-    // settings->endGroup();
+    // save filename templates
+    settings->beginGroup("FileNameTokens");
+    settings->remove("");
+    QMapIterator<QString, QString> filenameIter(filenameTemplates);
+    while (filenameIter.hasNext()) {
+        filenameIter.next();
+        settings->setValue(filenameIter.key(), filenameIter.value());
+    }
+    settings->endGroup();
 
     /* Token templates used for shooting information shown in ImageView*/
     settings->setValue("loupeInfoTemplate", infoString->loupeInfoTemplate);
