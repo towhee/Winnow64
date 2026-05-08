@@ -2653,6 +2653,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[pickAction->objectName()] = pickAction;
     actionKeys[filterPickAction->objectName()] = filterPickAction;
     actionKeys[ingestAction->objectName()] = ingestAction;
+    actionKeys[renameAction->objectName()] = renameAction;
     actionKeys[reportMetadataAction->objectName()] = reportMetadataAction;
     actionKeys[slideShowAction->objectName()] = slideShowAction;
 //    actionKeys[keyHomeAction->objectName()] = keyHomeAction;
@@ -2729,6 +2730,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         openAction->setShortcut(QKeySequence("O"));
         openUsbAction->setShortcut(QKeySequence("Ctrl+O"));
         ingestAction->setShortcut(QKeySequence("Q"));
+        renameAction->setShortcut(QKeySequence("Ctrl+F2"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
