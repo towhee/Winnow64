@@ -86,24 +86,16 @@ void ImageDecoder::abortProcessing()
         << fun.leftJustified(50);
     }
 
-    // Now wait until idle or timeout
-    QDeadlineTimer deadline(500);
-    QMutexLocker lock(&mutex);
+    // Non-blocking: set the atomic abort flag and return. The decoder thread
+    // checks this flag at its iteration points and will quiesce on its own.
+    // The previous wait-on-condition pattern held the decoder's mutex from a
+    // foreign thread (the imageCache thread), creating a double-lock hazard
+    // with this decoder's own setIdle/setBusy under load. Late results from
+    // an in-flight decode are filtered downstream by the instance check.
     abort.storeRelease(1);
-    while (!idle) {
-        const int ms = int(deadline.remainingTime());
-        if (!idleCondition.wait(&mutex, ms)) {
-            qDebug().noquote()
-                << fun.leftJustified(50) << "Aborting after timeout";
-
-            break; // break on timeout
-        }
-    }
-    // Don't reset abort here. Let the code that *restarts* work clear it.
 
     if (G::isLogger)
         G::log(fun, "id = " + QString::number(threadId) + " aborted.");
-
 }
 
 void ImageDecoder::setIdle(bool v)
