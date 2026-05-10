@@ -42,25 +42,29 @@ win32:QMAKE_CXXFLAGS += /std:c++17
 win32:QMAKE_CXXFLAGS += /Zc:__cplusplus
 win32:QMAKE_CXXFLAGS += /wd4138             # supress "*/" found outside of comment
 
+# # ASan: Enable with: qmake CONFIG+=sanitize_address && make
+# CONFIG(sanitize_address) {
+#     QMAKE_CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -g
+#     QMAKE_CFLAGS   += -fsanitize=address -fno-omit-frame-pointer -g
+#     QMAKE_LFLAGS   += -fsanitize=address
+# }
+
+# TSan: Enable with: qmake CONFIG+=sanitize_thread && make
+CONFIG(sanitize_thread) {
+    QMAKE_CXXFLAGS += -fsanitize=thread -fno-omit-frame-pointer -g
+    QMAKE_CFLAGS   += -fsanitize=thread -fno-omit-frame-pointer -g
+    QMAKE_LFLAGS   += -fsanitize=thread
+}
+
+
 TEMPLATE = app
 TARGET = Winnow
-
-# Precompiled header setup
-# CONFIG += precompile_header
-# PRECOMPILED_HEADER = $$PWD/global.h
 
 INCLUDEPATH += $$PWD
 INCLUDEPATH += .
 INCLUDEPATH += Dialogs
 INCLUDEPATH += Utilities
 INCLUDEPATH += FocusStack
-# INCLUDEPATH += FocusStack/Petteri
-# INCLUDEPATH += FocusStack/PetteriModular
-
-# Petteri Modular engine
-# include($$PWD/FocusStack/PetteriModular/petteri_modular.pri)
-# DISTFILES += FocusStack/PetteriModular/petteri_modular.pri
-
 
 DEPENDPATH += $$PWD
 

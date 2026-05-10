@@ -522,7 +522,7 @@ QString MetaRead::diagnostics()
         rpt.setFieldWidth(11);
         rpt << QVariant(cycling.at(id)).toString();
         rpt.setFieldWidth(10);
-        rpt << QVariant(readers[id]->pending).toString();
+        rpt << QVariant(readers[id]->isPending()).toString();
         rpt.setFieldWidth(5);
         rpt << " ";
         rpt.setFieldAlignment(QTextStream::AlignLeft);
@@ -690,7 +690,7 @@ int MetaRead::pending()
     QString fun = "MetaRead::pending";
     int pendingCount = 0;
     for (int id = 0; id < readerCount; ++id) {
-        if (readers[id]->pending) {
+        if (readers[id]->isPending()) {
             pendingCount ++;
         }
     }
@@ -708,32 +708,18 @@ bool MetaRead::allMetaIconLoaded()
 {
 /*
     Has the datamodel been fully loaded?
+
+    Reads atomic flags maintained by DataModel on the main thread:
+    - G::allMetadataLoaded — published in DataModel::addMetadataForItem
+    - G::iconChunkLoaded   — published in DataModel::setIcon, setIcon1, setIconRange
+
+    The previous implementation used Qt::BlockingQueuedConnection to dispatch
+    isAllMetadataAttempted/isAllIconChunkLoaded onto the main thread. That
+    blocked this worker for an event-loop turn each call and risked deadlock
+    if the main thread was waiting on us. The atomics are slightly behind the
+    truth (one queued-slot turn) but the dispatch redo loop catches up.
 */
-    // return dm->isAllMetadataAttempted() && dm->isIconRangeLoaded();
-
-    // all metadata attempted and icons loaded into datamodel?
-    bool metaAttempted;
-    QMetaObject::invokeMethod(
-        dm,
-        "isAllMetadataAttempted",
-        Qt::BlockingQueuedConnection,
-        Q_RETURN_ARG(bool, metaAttempted)
-        );
-
-    bool iconAttempted;
-    QMetaObject::invokeMethod(
-        dm,
-        "isAllIconChunkLoaded",
-        Qt::BlockingQueuedConnection,
-        Q_RETURN_ARG(bool, iconAttempted),
-        Q_ARG(int, dm->startIconRange),
-        Q_ARG(int, dm->endIconRange)
-        );
-
-    if (metaAttempted && iconAttempted) return true;
-    else return false;
-    // return (metaAttempted && iconAttempted);
-
+    return G::allMetadataLoaded && G::iconChunkLoaded;
 }
 
 void MetaRead::redo()
@@ -1251,7 +1237,9 @@ void MetaRead::dispatchFinished(QString src)
     emit cleanupIcons(instance);
     isDispatching = false;
 
-    G::iconChunkLoaded = dm->isIconRangeLoaded();
+    // G::iconChunkLoaded is maintained on the main thread by
+    // DataModel::setIcon/setIcon1/setIconRange. Recomputing here would
+    // iterate the model from a worker thread and race with main.
 
     // do not emit done if only updated icon loading
     if (!G::allMetadataLoaded) {

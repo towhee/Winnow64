@@ -170,7 +170,7 @@ private:
     int  countSubdirsFast(const QString& root, int hardCap) const;
     void selectRecursively(QString folderPath, bool toggle = false);
     int maxExpandLimit = 100;
-    QColor overLimitColor = QColor(68,95,118);   // orange
+    QColor overLimitColor = QColor(255,165,0);   // orange
 
     bool isSubDirsOverLimit(const QString &root, int hardCap);
 

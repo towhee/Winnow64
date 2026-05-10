@@ -257,6 +257,7 @@ void ImageCache::abortProcessing()
 
 bool ImageCache::isIdle()
 {
+    if (isInitializing) return false;
     for (int id = 0; id < decoderCount; ++id) {
         if (decoders[id]->isBusy()) return false;
     }

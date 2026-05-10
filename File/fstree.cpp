@@ -782,6 +782,7 @@ void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
     if (!src.isValid()) return;
 
     fsModel->setData(src, on, FSModel::OverLimitRole);  // highlight flag
+    delegate->setOverLimitTextColor(overLimitColor);
     const QModelIndex idx = fsFilter->mapFromSource(src);
     if (idx.isValid()) viewport()->update(visualRect(idx));
     fsModel->isMaxRecurse = true;
