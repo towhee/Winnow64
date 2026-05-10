@@ -2217,19 +2217,18 @@ void MW::stop(QString src)
     // stop slideshow
     if (G::isSlideShow && !G::isStressTest) slideShow();
 
+    /* Connect subsystem idle/aborted signals to update the stopped map */
+    QList<QMetaObject::Connection> conns;
+    conns << connect(metaRead, &MetaRead::stopped,
+        this, [this](QString){ stopped["MetaRead"] = true; }, Qt::QueuedConnection);
+    conns << connect(imageCache, &ImageCache::stopped,
+        this, [this](QString){ stopped["ImageCache"] = true; }, Qt::QueuedConnection);
+    conns << connect(buildFilters, &BuildFilters::stopped,
+        this, [this](QString){ stopped["BuildFilters"] = true; }, Qt::QueuedConnection);
+
     if (!stopped["MetaRead"]) emit abortMetaRead();
     if (!stopped["ImageCache"]) emit abortImageCache();
     if (!stopped["BuildFilters"]) emit abortBuildFilters();
-
-    /* Wait until abort done,
-       Connect subsystem idle/aborted signals to update the stopped map */
-    QList<QMetaObject::Connection> conns;
-    conns << connect(metaRead, &MetaRead::stopped,
-                     this, [this](QString){ stopped["MetaRead"] = true; }, Qt::QueuedConnection);
-    conns << connect(imageCache, &ImageCache::stopped,
-                     this, [this](QString){ stopped["ImageCache"] = true; }, Qt::QueuedConnection);
-    conns << connect(buildFilters, &BuildFilters::stopped,
-                     this, [this](QString){ stopped["BuildFilters"] = true; }, Qt::QueuedConnection);
 
     // Process events rather than blocking with loop.exec() — keeps macOS run loop alive
     if (!allIdle()) {
@@ -2323,7 +2322,6 @@ bool MW::reset(QString src)
     }
     isDragDrop = false;
 
-    fsTree->clearFolderOverLimit();
     fsTree->setEnabled(true);
     bookmarks->setEnabled(true);
     cacheProgressBar->clearImageCacheProgress();
@@ -2346,7 +2344,7 @@ bool MW::reset(QString src)
     // dm->newInstance();       // newInstance moved to folderSelectionChange()
 
     // Image cache
-    icd->clear();
+    // icd->clear();
 
     // used by updateStatus
     pickMemSize = "";

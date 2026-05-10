@@ -76,9 +76,9 @@ quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
         ifdData.tagCount = tagCount;
         ifdData.tagValue = tagValue;
 
-        mutex.lock(); // also crashed after adding mutex
+        // mutex.lock(); // also crashed after adding mutex
         ifdDataHash.insert(tagId, ifdData); // crashed here 2025-03-08
-        mutex.unlock();
+        // mutex.unlock();
 
         if (p.report) {
             (p.hash->contains(tagId)) ? tagDescription = p.hash->value(tagId)

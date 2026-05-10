@@ -81,7 +81,7 @@ void Thumb::setBusy()
     idle = false;
 }
 
-void Thumb::checkOrientation(QString &fPath, QImage &image)
+void Thumb::checkOrientation(QImage &image, int orientation, int rotationDegrees)
 {
     QString fun = "Thumb::checkOrientation";
     if (isDebug)
@@ -89,28 +89,10 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
             << fun.leftJustified(col0Width)
             << "isGuiThread =" << G::isGuiThread()
             ;
-    if (G::isLogger) G::log(fun, fPath);
     // check orientation and rotate if portrait
     QTransform trans;
-    int row = dm->rowFromPath(fPath);
-    QVariant orientation;
-    // Dead lock detected in BlockingQueuedConnection when invoke used from GUI thread
-    if (G::isGuiThread())
-        orientation = dm->index(row, G::OrientationColumn).data().toInt();  // crash 2025-03-11
-    else QMetaObject::invokeMethod(
-            dm,
-            "valueSf",
-            Qt::BlockingQueuedConnection,
-            Q_RETURN_ARG(QVariant, orientation),
-            Q_ARG(int, row),
-            Q_ARG(int, G::OrientationColumn)
-        );
     int degrees = 0;
-    int rotationDegrees = dm->index(row, G::RotationDegreesColumn).data().toInt();
-    /*
-    qDebug() << "Thumb::checkOrientation"
-             << "orientation =" << orientation << fPath; //*/
-    switch (orientation.toInt()) {
+    switch (orientation) {
         case 3:
             degrees = rotationDegrees + 180;
             if (degrees > 360) degrees = degrees - 360;
@@ -138,7 +120,6 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
              << "orientation =" << orientation
              << "rotationDegrees   =" << rotationDegrees
              << "degrees =" << QString::number(degrees).leftJustified(3, ' ')
-             << "fPath   =" << fPath
                 ;
     }
 }
@@ -465,7 +446,8 @@ void Thumb::presetOffset(uint offset, uint length)
     isPresetOffset = true;
 }
 
-bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, QString src)
+bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
+                      int orientation, int rotationDegrees, QString src)
 {
 /*
     Load a thumbnail preview as a decoration icon in the datamodel dm in column 0.
@@ -607,7 +589,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance, Q
 
         // rotate if there is orientation metadata
         if (!abort)
-            if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
+            if (metadata->rotateFormats.contains(ext)) checkOrientation(image, orientation, rotationDegrees);
     }
 
     setIdle();

@@ -811,13 +811,19 @@ QString Utilities::getString(T &io, quint32 offset, quint32 length)
 {
 /*
     In IFD type 2 = string
+
+    Clamp offset/length against the device size to defend against malformed
+    tag values (offset past EOF or absurd lengths like 0xFFFFFFFF) that would
+    otherwise force QIODevice::read() to allocate a huge QByteArray.
 */
-    io.seek(offset);
-//    return(io.read(length));
+    const qint64 size = io.size();
+    if (size <= 0 || offset >= static_cast<quint64>(size)) return QString();
+    const quint64 remaining = static_cast<quint64>(size) - offset;
+    if (length > remaining) length = static_cast<quint32>(remaining);
+    if (!io.seek(offset)) return QString();
     QString s = io.read(length);
     QChar z = '\0';
     if (s.endsWith(z)) s.remove(z);
-//    if (s.endsWith('\0')) s.remove('\0');
     return(s);
 }
 template QString Utilities::getString<QFile>(QFile&, quint32 offset, quint32 length);

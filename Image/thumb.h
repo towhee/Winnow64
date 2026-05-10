@@ -18,7 +18,8 @@ public:
     ~Thumb() override;
     void abortProcessing();
     bool loadThumb(QString &fPath, int dmRow, QImage &image,
-                   int instance, QString src);
+                   int instance, int orientation, int rotationDegrees,
+                   QString src);
     void presetOffset(uint offset, uint length);
     void insertThumbnailsInJpg(QModelIndexList &selection);
     bool insertingThumbnails = false;
@@ -63,7 +64,7 @@ private:
     Status loadFromHeic(QString &fPath, QImage &image);
     Status loadFromEntireFile(QString &fPath, QImage &image, int row);
     void loadFromVideo(QString &fPath, int dmRow);
-    void checkOrientation(QString &fPath, QImage &image);
+    void checkOrientation(QImage &image, int orientation, int rotationDegrees);
 
     // status flags
     bool isPresetOffset = false;

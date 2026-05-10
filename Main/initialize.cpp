@@ -141,9 +141,11 @@ void MW::setupPlatform()
         totalMB = Win::totalMemoryMB();
     #endif
     if (totalMB > 0) G::memoryAbortMB = G::computeMemoryAbortMB(totalMB);
+    /*
     qDebug().nospace() << "MW::setupPlatform Memory: total=" << totalMB
                        << " MB, available=" << G::availableMemoryMB
                        << " MB, abortMB=" << G::memoryAbortMB;
+                          // */
 }
 
 void MW::checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredGeometry,

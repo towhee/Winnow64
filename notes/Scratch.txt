@@ -1,3 +1,11 @@
 
 - shortcuts are assigned in menusandactions.cpp MW::loadShortcuts
 - shortcuts are documented in MW::helpShortcuts, add "Rename files" after "Delete files" in File Operations.
+
+Build with AddressSanitizer (-fsanitize=address -fno-omit-frame-pointer
+ in your QMake debug config)
+
+cd /Users/roryhill/Projects/
+mkdir -p build-winnow64-TSan_Qt_6_9_2_for_macOS-Release
+cd build-winnow64-TSan_Qt_6_9_2_for_macOS-Release
+/Users/roryhill/Qt/6.9.2/macos/bin/qmake CONFIG+=release CONFIG+=sanitize_thread ../Winnow64/Winnow64.pro

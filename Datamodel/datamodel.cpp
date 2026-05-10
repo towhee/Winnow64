@@ -1753,11 +1753,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     mLock = false;
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance << "DONE";
 
-    if (isAllMetadataAttempted()) {
-        // qDebug() << "DataModel::addMetadataForItem isAllMetadataAttempted = true";
-        // G::allMetadataLoaded = true;
-        // emit done();
-    }
+    // Publish so MetaRead worker can poll without a BlockingQueuedConnection.
+    G::allMetadataLoaded = isAllMetadataAttempted();
 
     // signal ImageCache that row is loaded
     // if (imageCacheWaitingForRow > -1)
@@ -2310,6 +2307,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         if (!existing->icon().isNull()) {
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
             setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+            G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
             return;
         }
     }
@@ -2318,6 +2316,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     setData(dmIdx, vIcon, Qt::DecorationRole);
     setData(index(dmIdx.row(), G::IconLoadedColumn), true);
     setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+    G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
 }
 
 void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString src)
@@ -2404,6 +2403,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
             // ensure flags are correct even though the pixmap is unchanged
             setData(index(dmRow, G::IconLoadedColumn), true);
             setData(index(dmRow, G::MetadataReadingColumn), false);
+            G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
             return;
         }
     }
@@ -2415,6 +2415,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     setData(index(dmRow, G::IconLoadedColumn), true);
     setData(index(dmRow, G::MetadataReadingColumn), false);
     setData(index(dmRow, G::IconAspectRatioColumn), (qreal)im.width()/im.height());
+    G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)
@@ -2612,7 +2613,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     if (!sfIdx.isValid()) {
         errMsg = "Invalid sfIdx.  Src: " + src;
         G::issue("Warning", errMsg, src, sfIdx.row());
-        qDebug() << sfRow << "isCached =" << isCached << errMsg;
+        // qDebug() << src << sfRow << "isCached =" << isCached << errMsg;
         return;
     }
     sf->setData(sfIdx, isCached);

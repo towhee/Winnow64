@@ -264,7 +264,9 @@ void Reader::readIcon()
     if (abort) {status = Status::Aborted; return;}
 
     // get thumbnail or err.png or generic video
-    loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance, "MetaRead::readIcon");
+    loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance,
+                                  m->orientation, m->rotationDegrees,
+                                  "MetaRead::readIcon");
 
     if (isDebug)
     {
@@ -328,6 +330,9 @@ void Reader::read(int dmRow, QString filePath, int instance,
     if (filePath.isEmpty()) {
         qWarning().noquote() << fun << "EMPTY FILEPATH";
     }
+
+    t.restart();
+
     // If a folder change is in progress or memory cap was breached,
     // don't start a new read.
     if (G::stop || dm->abort
@@ -381,7 +386,9 @@ void Reader::read(int dmRow, QString filePath, int instance,
         qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
-        << "row =" << QString::number(dmRow).leftJustified(4, ' ')
+        << "row =" << QString::number(dmRow).leftJustified(5, ' ')
+        << "ms =" << t.elapsed()
+        << fPath
             ;
     }
 }

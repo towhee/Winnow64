@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QObject>
+#include <atomic>
 #include "Cache/cachedata.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
@@ -135,7 +136,7 @@ private:
     int retry = 0;
     int maxAttemptsToCacheImage = 10;
 
-    bool isInitializing;
+    std::atomic<bool> isInitializing;
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;

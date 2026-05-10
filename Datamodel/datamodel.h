@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QMessageBox>
 #include <QWaitCondition>           // req'd for removeFolder process
+#include <atomic>
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
 #include "Cache/framedecoder.h"
@@ -36,7 +37,7 @@ signals:
 private:
     Filters *filters;
     mutable bool finished;
-    bool suspendFiltering;
+    std::atomic<bool> suspendFiltering;
 };
 
 class DataModel : public QStandardItemModel
