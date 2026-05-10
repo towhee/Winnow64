@@ -462,7 +462,7 @@ void ImageCache::trimOutsideTargetRange()
     QVector<QString> keysToRemove;
 
     {
-        QReadLocker locker(&icd->rwLock);
+        QMutexLocker locker(&icd->rwLock);
         for (auto it = icd->imCache.cbegin(); it != icd->imCache.cend(); ++it) {
             const QString &fPath = it.key();
             const int sfRow = dm->proxyRowFromPath(fPath, src);
@@ -2174,7 +2174,7 @@ void ImageCache::cacheImage(int id, int sfRow,
     // cache the image
     if (!abort)
     {
-        QWriteLocker locker(&icd->rwLock);
+        QMutexLocker locker(&icd->rwLock);
         if (icd->imCache.contains(fPath)) {
             // Already cached by another decoder
             return;
@@ -2285,14 +2285,14 @@ bool ImageCache::nullInImCache()
     // cannot rehash imCache mid-iteration (crash site).
     QList<QString> paths;
     {
-        QReadLocker locker(&icd->rwLock);
+        QMutexLocker locker(&icd->rwLock);
         paths = icd->imCache.keys();
     }
     for (const QString &path : paths) {
         // empty image in cache
         QImage img;
         {
-            QReadLocker locker(&icd->rwLock);
+            QMutexLocker locker(&icd->rwLock);
             img = icd->imCache.value(path);
         }
         if (img.width() == 0) {

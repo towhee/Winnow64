@@ -780,6 +780,9 @@ void MetaRead::processReturningReader(int id, Reader *r)
 
     QString fun = "MetaRead::processReturningReader";
     int dmRow = r->dmRow;
+    // Snapshot Reader's QString state under its mutex to avoid a race with a
+    // re-dispatched Reader::read() concurrently overwriting fPath.
+    QString rfPath = r->fPathSnapshot();
 
     // For video rows, FrameDecoder finishes asynchronously and
     // DataModel::setIconFromVideoFrame is what clears MetadataReadingColumn.
@@ -799,7 +802,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
     // report read failure
     if (!(r->status == r->Status::Success /*|| r->status == r->Status::Ready*/)) {
         QString error = "row " + QString::number(dmRow).rightJustified(5) + " " +
-                        r->statusText.at(r->status).leftJustified(10) + " " + r->fPath;
+                        r->statusText.at(r->status).leftJustified(10) + " " + rfPath;
         err.append(error);
         if (isDebug)
         {
@@ -809,7 +812,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
                 << "id =" << QString::number(id).leftJustified(2, ' ')
                 << "row =" << dmRow
                 << "status =" << r->statusText.at(r->status)
-                << r->fPath;
+                << rfPath;
         }
     }
 
@@ -959,10 +962,14 @@ void MetaRead::dispatch(int id, bool isReturning)
         return;
     }
 
-    if (isDebug)
+    if (isDebug || debugLog || (G::isLogger || G::isFlowLogger))
     {
+        // Snapshot Reader's QString state for this debug/log scope only.
+        QString rfPath = r->fPathSnapshot();
+        if (isDebug)
+        {
         QString  row;
-        r->fPath == "" ? row = "-1" : row = QString::number(r->dmRow);
+        rfPath == "" ? row = "-1" : row = QString::number(r->dmRow);
         QString fun1;
         if (isReturning) fun1 = fun + " reader returning";
         else fun1 = fun + " reader starting";
@@ -976,25 +983,26 @@ void MetaRead::dispatch(int id, bool isReturning)
             //<< "allRead =" << QVariant(allDone).toString().leftJustified(5, ' ')
             << "a =" << QString::number(a).leftJustified(4, ' ')
             << "b =" << QString::number(b).leftJustified(4, ' ')
-            << r->fPath
+            << rfPath
             // << "r->instance =" << QString::number(r->instance).leftJustified(4, ' ')
             // << "dm->instance =" << QString::number(dm->instance).leftJustified(4, ' ')
             // << "isGUI =" << G::isGuiThread()
             // << "firstIconRow =" << firstIconRow
             // << "lastIconRow =" << lastIconRow
             ;
-    }
+        }
 
     if (debugLog || (G::isLogger || G::isFlowLogger))
     {
         QString  row;
-        r->fPath == "" ? row = "-1" : row = QString::number(r->dmRow);
+        rfPath == "" ? row = "-1" : row = QString::number(r->dmRow);
         QString from;
-        r->fPath == "" ? from = "start reader" : from = "return from reader";
+        rfPath == "" ? from = "start reader" : from = "return from reader";
         QString s = "id = " + QString::number(id).rightJustified(2, ' ');
         s += " row = " + row.rightJustified(4, ' ');
         G::log("MetaRead::dispatch: " + from, s);
     }
+    } // end debug/log scope
 
     // RETURNING READER
     if (isReturning && r->instance == dm->instance) {

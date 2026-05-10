@@ -218,13 +218,12 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
 {
     if (abort || queue.isEmpty()) return;
 
-    static int attempts = 0;
     Item item = queue.takeFirst();
     const QString path = item.fPath;
 
     if (!frame.isValid() || frame.pixelFormat() == QVideoFrameFormat::Format_Invalid) {
-        attempts++;
-        if (attempts < 10) {
+        frameAttempts++;
+        if (frameAttempts < 10) {
             queue.prepend(item);  // retry
             return;
         }
@@ -233,12 +232,12 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
         if (item.source == "dmThumb" && item.dmRow >= 0)
             emit videoFrameFailed(item.dmRow, item.dmInstance);
         cleanupPlayer();
-        attempts = 0;
+        frameAttempts = 0;
         getNextThumbNail("invalid frame");
         return;
     }
 
-    attempts = 0;
+    frameAttempts = 0;
 
     QImage im = frame.toImage();
     if (im.isNull()) {

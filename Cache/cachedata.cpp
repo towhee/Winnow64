@@ -4,13 +4,13 @@ ImageCacheData::ImageCacheData(QObject *) {}
 
 bool ImageCacheData::contains(const QString &key)
 {
-    QReadLocker locker(&rwLock);
+    QMutexLocker locker(&rwLock);
     return imCache.contains(key);
 }
 
 void ImageCacheData::insert(const QString &key, const QImage &image)
 {
-    QWriteLocker locker(&rwLock);
+    QMutexLocker locker(&rwLock);
 
     // replace and subtract bytes from cache total bytes
     if (auto it = imCache.find(key); it != imCache.end()) {
@@ -29,7 +29,7 @@ void ImageCacheData::insert(const QString &key, const QImage &image)
 
 void ImageCacheData::remove(const QString &key)
 {
-    QWriteLocker locker(&rwLock);
+    QMutexLocker locker(&rwLock);
     // imCache.remove(key);
 
     // take() gives us the removed value so we can adjust bytes
@@ -43,7 +43,7 @@ void ImageCacheData::remove(const QString &key)
 
 void ImageCacheData::clear()
 {
-    QWriteLocker locker(&rwLock);
+    QMutexLocker locker(&rwLock);
     imCache.clear();
     bytes.store(0, std::memory_order_relaxed);
 }

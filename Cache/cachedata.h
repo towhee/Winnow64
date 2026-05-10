@@ -29,7 +29,11 @@ public:
     // image cache hash
     QHash<QString, QImage> imCache;
 
-    QReadWriteLock rwLock;
+    // Was QReadWriteLock; replaced with QMutex because ThreadSanitizer
+    // cannot track QReadWriteLock as a synchronization primitive (false-
+    // positive races on imCache). Reads are infrequent enough that the
+    // simpler primitive is fine.
+    mutable QMutex rwLock;
 
 private:
     std::atomic<quint64> bytes{0}; // total pixel bytes of images
