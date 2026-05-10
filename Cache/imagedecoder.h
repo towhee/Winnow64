@@ -5,6 +5,7 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
+#include <atomic>
 #include "Cache/cachedata.h"
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
@@ -29,7 +30,7 @@ public:
 
     int threadId;
     int sfRow;
-    int instance;
+    std::atomic<int> instance{0};
     QImage image;
     QString fPath;
     QString errMsg;
