@@ -139,7 +139,7 @@ bool wheelSpinning = false;
 
 // caching
 bool loadOnlyVisibleIcons;          // not used
-quint64 availableMemoryMB;
+std::atomic<quint64> availableMemoryMB{0};
 int winnowMemoryBeforeCacheMB;
 int metaCacheMB;
 

@@ -245,7 +245,7 @@ QString MW::diagnostics()
     rpt << "\n" << "G::wheelSpinning = " << G::s(G::wheelSpinning);
     rpt << "\n";
     rpt << "\n" << "G::loadOnlyVisibleIcons = " << G::s(G::loadOnlyVisibleIcons);
-    rpt << "\n" << "G::availableMemoryMB = " << G::s(G::availableMemoryMB);
+    rpt << "\n" << "G::availableMemoryMB = " << G::s(G::availableMemoryMB.load());
     rpt << "\n" << "G::winnowMemoryBeforeCacheMB = " << G::s(G::winnowMemoryBeforeCacheMB);
     rpt << "\n" << "G::metaCacheMB = " << G::s(G::metaCacheMB);
     rpt << "\n";

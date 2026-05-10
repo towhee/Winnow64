@@ -5,6 +5,7 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
+#include <atomic>
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
@@ -22,7 +23,7 @@ public:
 
     QThread *readerThread;  // use if currentThread() not working in stop()
     int threadId = -1;
-    int instance = 0;
+    std::atomic<int> instance{0};
     qint64 msToRead;
     QString fPath = "";
     QString errMsg = "";

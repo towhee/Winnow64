@@ -270,7 +270,7 @@ Q_NAMESPACE
 
 
     extern bool loadOnlyVisibleIcons;
-    extern quint64 availableMemoryMB;
+    extern std::atomic<quint64> availableMemoryMB;
     extern int winnowMemoryBeforeCacheMB;
     extern int metaCacheMB;
 
