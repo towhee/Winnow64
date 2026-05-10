@@ -6,6 +6,7 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
+#include <atomic>
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
@@ -105,7 +106,7 @@ private:
     QMutex mutex;
     QWaitCondition condition;
     bool abort = false;
-    bool idle = false;
+    std::atomic<bool> idle{false};
     void setIdle();
     void setBusy();
 
