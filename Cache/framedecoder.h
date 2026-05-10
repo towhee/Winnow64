@@ -53,6 +53,11 @@ private:
 
     QList<Item> queue;
 
+    // Retry counter for invalid-frame loops in handleFrameChanged. Was a
+    // function-local static, which made it shared across all FrameDecoder
+    // instances (one per Reader thread) and caused a TSan-flagged race.
+    int frameAttempts = 0;
+
     QPointer<QMediaPlayer> mediaPlayer;
     QPointer<QVideoSink> videoSink;
     int playerGeneration = 0;

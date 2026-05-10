@@ -126,6 +126,12 @@ bool Reader::isPending()
     return pending;
 }
 
+QString Reader::fPathSnapshot() const
+{
+    QMutexLocker lock(&mutex);
+    return fPath;
+}
+
 void Reader::setPending(bool v)
 {
     QMutexLocker lock(&mutex);
@@ -344,7 +350,10 @@ void Reader::read(int dmRow, QString filePath, int instance,
     }
     abort = false;
     this->dmRow = dmRow;
-    fPath = filePath;
+    {
+        QMutexLocker lock(&mutex);
+        fPath = filePath;
+    }
     this->instance = instance;
     isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
     status = Status::Success;

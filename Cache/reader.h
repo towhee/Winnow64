@@ -25,13 +25,14 @@ public:
     int threadId = -1;
     std::atomic<int> instance{0};
     qint64 msToRead;
-    QString fPath = "";
+    QString fPath = "";        // races with cross-thread reads from MetaRead;
+                                // see notes — not safely atomicizable
     QString errMsg = "";
-    int dmRow = -1;
+    std::atomic<int> dmRow{-1};
     Metadata *metadata;
     QPixmap pm;
-    bool pending = false;
-    bool loadedIcon = false;
+    bool pending = false;       // protected by mutex
+    std::atomic<bool> loadedIcon{false};
 
     enum Status {
         Ready,
@@ -40,7 +41,8 @@ public:
         MetaFailed,
         IconFailed,
         MetaIconFailed
-    } status;
+    };
+    std::atomic<Status> status{Ready};
     QStringList statusText {
         "Ready",
         "Success",
@@ -68,6 +70,11 @@ public slots:
 
     void signalAbort();   // non-blocking: sets abort flag without waiting
     bool isPending();     // returns whether a read is currently in progress
+
+    // Thread-safe snapshot of fPath. Reader::read() updates fPath under the
+    // same mutex; MetaRead reads via this accessor to avoid a cross-thread
+    // QString race (QString implicit-shared d-pointer).
+    QString fPathSnapshot() const;
 
 private:
     mutable QMutex mutex;
