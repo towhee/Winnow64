@@ -2732,7 +2732,11 @@ void MW::folderChanged(bool aborted)
     sortMenu->setEnabled(false);
 
     // initialize metaRead only when new instance and first folder loaded
-    metaRead->initialize(fun);
+    // Queued: MetaRead lives on metaReadThread; direct call would race with
+    // MetaRead::dispatch running on that thread.
+    QMetaObject::invokeMethod(metaRead, "initialize",
+                              Qt::QueuedConnection,
+                              Q_ARG(QString, fun));
 
     // initialize imageCache
     // guard for BlockingQueued connection
