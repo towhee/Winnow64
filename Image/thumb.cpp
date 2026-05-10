@@ -256,7 +256,7 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
 }
 
 Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
-                                  ImageMetadata &m)
+                                  const ImageMetadata &m)
 {
     QString fun = "Thumb::loadFromTiff";
     if (G::isLogger) G::log(fun, fPath);
@@ -293,8 +293,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
     image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
 
     // fix missing embedded thumbnail
-    QModelIndex sfIdx = dm->sf->index(dmRow, G::MissingThumbColumn);
-    bool isMissingThumb = sfIdx.data().toBool();
+    bool isMissingThumb = m.isEmbeddedThumbMissing;
     if (abort) return Status::Fail;
     if (isMissingThumb && G::modifySourceFiles && G::autoAddMissingThumbnails) {
         if (G::backupBeforeModifying) {
@@ -329,7 +328,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
 
     // deprecated code...
 
-    int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
+    int samplesPerPixel = m.samplesPerPixel;
     /*
     if (samplesPerPixel > 3) {
         QString msg = "Samples per pixel > 3.";
@@ -344,7 +343,8 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
     // Attempt to decode tiff thumbnail by decoding embedded tiff thumbnail
     if (abort) return Status::Fail;
     bool getThumb = true;
-    if (isEmbeddedThumb && tiff.decode(m, fPath, image, getThumb, G::maxIconSize)) {
+    ImageMetadata mCopy = m;  // Tiff::decode takes a non-const ref
+    if (isEmbeddedThumb && tiff.decode(mCopy, fPath, image, getThumb, G::maxIconSize)) {
         if (image.isNull()) {
             QString msg = "Tiff::decode returned a null image.";
             G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
@@ -447,7 +447,7 @@ void Thumb::presetOffset(uint offset, uint length)
 }
 
 bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
-                      int orientation, int rotationDegrees, QString src)
+                      const ImageMetadata &m, QString src)
 {
 /*
     Load a thumbnail preview as a decoration icon in the datamodel dm in column 0.
@@ -508,8 +508,8 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
     // get offset and length (both zero if not embedded thumb)
     if (!isPresetOffset) {
-        offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
-        lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
+        offsetThumb = m.offsetThumb;
+        lengthThumb = m.lengthThumb;
     }
     isPresetOffset = false;
     isEmbeddedThumb = offsetThumb && lengthThumb;
@@ -555,7 +555,6 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
         }
 
         if (ext == "tif" && G::useMyTiff) {
-            ImageMetadata m = dm->imMetadata(fPath);
             if (!abort) status = loadFromTiff(fPath, image, dmRow, m);
             if (status == Status::Success) break;
 
@@ -589,7 +588,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
         // rotate if there is orientation metadata
         if (!abort)
-            if (metadata->rotateFormats.contains(ext)) checkOrientation(image, orientation, rotationDegrees);
+            if (metadata->rotateFormats.contains(ext)) checkOrientation(image, m.orientation, m.rotationDegrees);
     }
 
     setIdle();

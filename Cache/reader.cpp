@@ -264,8 +264,7 @@ void Reader::readIcon()
     if (abort) {status = Status::Aborted; return;}
 
     // get thumbnail or err.png or generic video
-    loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance,
-                                  m->orientation, m->rotationDegrees,
+    loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance, *m,
                                   "MetaRead::readIcon");
 
     if (isDebug)
