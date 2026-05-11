@@ -2980,13 +2980,20 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
     bool format64bit = (format == QImage::Format_RGBX64 || format == QImage::Format_RGBA64 || format == QImage::Format_RGBA64_Premultiplied);
     bool format64fp = (format == QImage::Format_RGBX16FPx4 || format == QImage::Format_RGBA16FPx4 || format == QImage::Format_RGBA16FPx4_Premultiplied);
     bool format128fp = (format == QImage::Format_RGBX32FPx4 || format == QImage::Format_RGBA32FPx4 || format == QImage::Format_RGBA32FPx4_Premultiplied);
+    // 8-bit RGB lands in Format_RGB32 but only PHOTOMETRIC_RGB has a sane
+    // packed-RGB scanline layout from TIFFReadScanline; YCbCr etc. must go
+    // through the RGBA fallback for photometric conversion.
+    bool formatRGB24 = (format == QImage::Format_RGB32 && photometric == PHOTOMETRIC_RGB);
 
-    if (format8bit || format16bit || format64bit || format64fp || format128fp) {
+    if (format8bit || format16bit || format64bit || format64fp || format128fp || formatRGB24) {
         int bytesPerPixel = image->depth() / 8;
         if (format == QImage::Format_RGBX64 || format == QImage::Format_RGBX16FPx4)
             bytesPerPixel = photometric == PHOTOMETRIC_RGB ? 6 : 2;
         else if (format == QImage::Format_RGBX32FPx4)
             bytesPerPixel = photometric == PHOTOMETRIC_RGB ? 12 : 4;
+        // source-pixel byte size in the libtiff scanline/tile buffer (= dst
+        // size, except RGB24 where src is packed 3-byte RGB and dst is 4-byte).
+        const int srcBpp = formatRGB24 ? 3 : bytesPerPixel;
 
         if (TIFFIsTiled(tiff)) {
             quint32 tileWidth, tileLength;
@@ -2997,7 +3004,7 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
                 return false;
             }
             const quint32 byteTileWidth = (format == QImage::Format_Mono)
-                                          ? tileWidth/8 : tileWidth * bytesPerPixel;
+                                          ? tileWidth/8 : tileWidth * srcBpp;
             tmsize_t byteTileSize = TIFFTileSize(tiff);
             uchar *buf = (uchar *)_TIFFmalloc(byteTileSize);
             if (!buf) {
@@ -3034,6 +3041,12 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
                                 dstRow[outX >> 3] = (dstRow[outX >> 3] & ~(1 << (7 - (outX & 7))))
                                                   | (bit << (7 - (outX & 7)));
                             }
+                        } else if (formatRGB24) {
+                            for (quint32 outX = firstOutX; outX < lastOutXEx && outX < outW; ++outX) {
+                                const uchar *p = srcRow + (outX * nth - tx) * 3;
+                                uchar *d = dstRow + outX * 4;
+                                d[0] = p[2]; d[1] = p[1]; d[2] = p[0]; d[3] = 0xFF;
+                            }
                         } else {
                             for (quint32 outX = firstOutX; outX < lastOutXEx && outX < outW; ++outX) {
                                 const quint32 srcXInTile = outX * nth - tx;
@@ -3066,6 +3079,12 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
                         const quint8 bit = (src[sx >> 3] >> (7 - (sx & 7))) & 1;
                         dst[outX >> 3] = (dst[outX >> 3] & ~(1 << (7 - (outX & 7))))
                                        | (bit << (7 - (outX & 7)));
+                    }
+                } else if (formatRGB24) {
+                    for (quint32 outX = 0; outX < outW; ++outX) {
+                        const uchar *p = src + (outX * nth) * 3;
+                        uchar *d = dst + outX * 4;
+                        d[0] = p[2]; d[1] = p[1]; d[2] = p[0]; d[3] = 0xFF;
                     }
                 } else {
                     for (quint32 outX = 0; outX < outW; ++outX) {
