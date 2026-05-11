@@ -361,7 +361,6 @@ Q_NAMESPACE
     extern bool modifySourceFiles;
     extern bool backupBeforeModifying;
     extern bool autoAddMissingThumbnails;
-    extern bool useSidecar;
     extern bool renderVideoThumb;
     extern bool combineRawJpg;
     extern bool isFilter;

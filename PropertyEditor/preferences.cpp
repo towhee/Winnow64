@@ -324,10 +324,6 @@ void Preferences::itemChange(QModelIndex idx)
 
     }
 
-    if (source == "useSidecar") {
-        G::useSidecar = v.toBool();
-    }    
-
     if (source == "activityLog") {
         G::isLogger = v.toBool();
         G::isFileLogger = v.toBool();
@@ -705,27 +701,6 @@ void Preferences::addModify()
     i.type = "bool";
     if (G::useMissingThumbs) addItem(i);
     setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
-
-    // Write metadata edits to sidecar XMP file
-    i.name = "useSidecar";
-    i.parentName = "ModifyHeader";
-    i.captionText = "Use xmp sidecars";
-    i.tooltip = "This will NOT MODIFY your source image file.\n\n"
-                "If you edit metadata (rating, color class, title, creator,\n"
-                "copyright, email, url) the change will be written to\n"
-                "a XMP sidecar file.  This data can be read by Winnow and\n"
-                "other programs like Lightroom.\n\n"
-                "Note this could slightly impact performance, as it might\n"
-                "take longer to initially read all the metadata when a\n"
-                "folder is being loaded."
-                ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::useSidecar;
-    i.key = "useSidecar";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
 }
 
     /*

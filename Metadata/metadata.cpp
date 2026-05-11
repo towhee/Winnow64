@@ -492,14 +492,39 @@ int Metadata::getNewOrientation(int orientation, int rotation)
 
 void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 {
+/*
+    Persist the new orientation.  When G::modifySourceFiles is true the source file's
+    EXIF Orientation tag is updated via ExifTool.  Otherwise the orientation is written
+    to an XMP sidecar (created if absent) so the rotation survives a reload.
+*/
     if (G::isLogger) G::log("Metadata::writeOrientation");
-    qDebug() << "Metadata::writeOrientation" << fPath;
     if (G::modifySourceFiles) {
         ExifTool et;
         et.setOverWrite(true);
         et.writeOrientation(fPath, orientationNumber);
         et.close();
+        return;
     }
+
+    QFileInfo info(fPath);
+    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
+    QFile sidecarFile(sidecarPath);
+    if (!sidecarFile.open(QIODevice::ReadWrite)) {
+        QString msg = "Failed to open sidecar to write orientation.";
+        G::issue("Warning", msg, "Metadata::writeOrientation", -1, sidecarPath);
+        return;
+    }
+    Xmp xmp(sidecarFile, G::dmInstance);
+    if (!xmp.isValid) xmp.fix();
+    xmp.setItem("orientation", orientationNumber.toLatin1());
+    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
+        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
+    xmp.setItem("modifydate", modifyDate.toLatin1());
+    if (!xmp.writeSidecar(sidecarFile)) {
+        QString msg = "Failed to write orientation to sidecar.";
+        G::issue("Warning", msg, "Metadata::writeOrientation", -1, sidecarPath);
+    }
+    sidecarFile.close();
 }
 
 bool Metadata::writeXMP(const QString &fPath, QString src)
@@ -514,10 +539,10 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
        dm->imMetadata(fPath);
     because dm is not available from Metadata.
 
-    If it is a supported image type a copy of the image file is made and any metadata changes
-    are updated in buffer. If it is a raw file in the sidecarFormats hash then the xmp data
-    for existing and changed metadata is written to buffer and the original image file is
-    copied unchanged.
+    If it is a supported image type a copy of the image file is made and any metadata
+    changes are updated in buffer. If it is a raw file in the sidecarFormats hash then
+    the xmp data for existing and changed metadata is written to buffer and the original
+    image file is copied unchanged.
 */
     if (G::isLogger) G::log("Metadata::writeXMP");
     bool isDebug = false;
@@ -528,15 +553,6 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 
     // TEMP PREVENT WRITING TO ANYTHING BUT .XMP
     if (suffix != "xmp") return false;
-
-//    if (!sidecarFormats.contains(suffix)) {
-////        qDebug() << "Metadata::writeXMP" << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
-//        return false;
-//    }
-
-    // write to a sidecar file for all formats for now.  May write inside source image in the future
-//    bool useSidecar = true;
-//    useSidecar = sidecarFormats.contains(suffix);
 
     // new orientation
     int newOrientation = getNewOrientation(m.orientation, m.rotationDegrees);
@@ -596,14 +612,6 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     Xmp xmp(p.file, p.instance);
     if (!xmp.isValid) xmp.fix();
 
-    /*
-    // orientation is written to xmp sidecars only
-    if (orientationChanged && G::useSidecar) {
-        QString s = QString::number(newOrientation);
-        xmp.setItem("Orientation", s.toLatin1());
-    }
-    //*/
-
     // update xmp data
     if (urlChanged) xmp.setItem("url", m.url.toLatin1());
     if (emailChanged) xmp.setItem("email", m.email.toLatin1());
@@ -638,7 +646,6 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     }
     //*/
 
-    // if (G::useSidecar) xmp.writeSidecar();
     if (isDebug) qDebug() << "Metadata::writeXMP9";
     xmp.writeSidecar(p.file);
 
@@ -906,6 +913,15 @@ bool Metadata::parseSidecar()
         G::issue("Comment", msg, "Metadata::parseSidecar", m.row, sidecarPath);
     }
 
+    // newer-wins: if embedded XMP carries a ModifyDate that is later than the sidecar's,
+    // keep the embedded values already loaded by the format parser and skip the sidecar.
+    QDateTime sidecarModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
+    if (p.xmpModifyDate.isValid() && sidecarModifyDate.isValid()
+        && sidecarModifyDate < p.xmpModifyDate) {
+        sidecarFile.close();
+        return false;
+    }
+
     QString s;
     s = xmp.getItem("rating"); if (!s.isEmpty()) {m.rating = s; m._rating = s;}
     s = xmp.getItem("label"); if (!s.isEmpty()) {m.label = s; m._label = s;}
@@ -914,6 +930,7 @@ bool Metadata::parseSidecar()
     s = xmp.getItem("rights"); if (!s.isEmpty()) {m.copyright = s; m._copyright = s;}
     s = xmp.getItem("email"); if (!s.isEmpty()) {m.email = s; m._email = s;}
     s = xmp.getItem("url"); if (!s.isEmpty()) {m.url = s; m._url = s;}
+    s = xmp.getItem("orientation"); if (!s.isEmpty()) {m.orientation = s.toInt(); m._orientation = s.toInt();}
     /*
     qDebug() << "Metadata::parseSidecar" << s << sidecarPath;
     //*/
@@ -937,6 +954,7 @@ void Metadata::clearMetadata()
 {
     if (G::isLogger) G::log("Metadata::clearMetadata");
     p.fPath = "";
+    p.xmpModifyDate = QDateTime();
     m.fPath = "";
     m.fName = "";
     m.createdDate = QDateTime();
@@ -1129,9 +1147,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
             // G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
         }
 
-        if (G::useSidecar) {
-            parseSidecar();
-        }
+        parseSidecar();
 
         if (!parsed) {
             p.file.close();
@@ -1229,14 +1245,12 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
             // m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
         }
         m.metadataLoaded = true;
-        if (G::useSidecar) {
-            p.file.setFileName(fPath);
-            if (p.file.open(QIODevice::ReadOnly)) {
-                if (parseSidecar()) {
-                    parsedSidecar = true;
-                }
-                p.file.close();
+        p.file.setFileName(fPath);
+        if (p.file.open(QIODevice::ReadOnly)) {
+            if (parseSidecar()) {
+                parsedSidecar = true;
             }
+            p.file.close();
         }
         // qDebug() << "Metadata::loadImageMetadata non-meta file type" << fPath;
         return true;

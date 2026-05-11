@@ -387,25 +387,6 @@ bool Tiff::parse(MetadataParameters &p,
         parseIFDs(p, m, ifd, nextIFDOffset, thumbLongside, "subIFD");
     }
 
-    // // Create thumbnail if ok and missing
-    // if (G::modifySourceFiles &&
-    //     G::autoAddMissingThumbnails &&
-    //     m.offsetThumb == m.offsetFull &&
-    //     thumbLongside > 512)
-    // {
-    //     p.offset = m.offsetThumb;        // Smallest preview to use
-    //     encodeThumbnail(p, m, ifd);
-    //     // write thumbnail added to xmp sidecar if writing sidecars
-    //     if (G::useSidecar) {
-    //         Xmp xmp(p.file, p.instance);
-    //         if (xmp.isValid) {
-    //             QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
-    //             xmp.setItem("WinnowAddThumb", val);
-    //             // xmp.writeSidecar(p.file);
-    //         }
-    //     }
-    // }
-
     // EXIF: *******************************************************************
 
     p.hdr = "IFD Exif";
@@ -525,6 +506,7 @@ bool Tiff::parse(MetadataParameters &p,
     if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
+            p.xmpModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
             m.rating = xmp.getItem("Rating");
             m.label = xmp.getItem("Label");
             m.title = xmp.getItem("title");

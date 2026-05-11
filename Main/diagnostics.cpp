@@ -272,7 +272,6 @@ QString MW::diagnostics()
     rpt << "\n" << "G::modifySourceFiles = " << G::s(G::modifySourceFiles);
     rpt << "\n" << "G::backupBeforeModifying = " << G::s(G::backupBeforeModifying);
     rpt << "\n" << "G::autoAddMissingThumbnails = " << G::s(G::autoAddMissingThumbnails);
-    rpt << "\n" << "G::useSidecar = " << G::s(G::useSidecar);
     rpt << "\n" << "G::renderVideoThumb = " << G::s(G::renderVideoThumb);
     rpt << "\n" << "G::isFilter = " << G::s(G::isFilter);
     rpt << "\n" << "G::isRemote = " << G::s(G::isRemote);

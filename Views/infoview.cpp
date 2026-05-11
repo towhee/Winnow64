@@ -167,7 +167,6 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     items in the filter criterea tree (Filters).
 */
     if (ignoreDataChange || G::isInitializing) return;
-    bool usedPopUp = false;
     static int count = 0;
     QString src = "InfoView::dataChanged";
     if (count == 0) {
@@ -188,14 +187,8 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             QModelIndex idx0 = ok->index(idx1.row(), 0, idx1.parent());
             field = idx0.data().toString();
 
-            if (G::useSidecar) {
-                usedPopUp = true;
-                G::popup->setProgressVisible(true);
-                G::popup->setProgressMax(n + 1);
-                QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
-                              "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-                //G::popUp->showPopup(txt, 0, true, 1);
-            }
+            G::popup->setProgressVisible(true);
+            G::popup->setProgressMax(n + 1);
 
             for (int i = 0; i < n; i++) {
                 int dmRow = selection.at(i).row();
@@ -227,12 +220,10 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 }
 
                 // write to sidecar
-                if (G::useSidecar) {
-                    // qDebug() << "InfoView::dataChanged  field =" << field << "srcFuntion =" << srcFunction;
-                    dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-                    metadata->writeXMP(metadata->sidecarPath(fPath), "InfoView::dataChanged");
-                    G::popup->setProgress(i+1);
-                }
+                // qDebug() << "InfoView::dataChanged  field =" << field << "srcFuntion =" << srcFunction;
+                dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+                metadata->writeXMP(metadata->sidecarPath(fPath), "InfoView::dataChanged");
+                G::popup->setProgress(i+1);
             }
 
             // Update embellished text fields - Embel::refreshTexts
@@ -266,10 +257,8 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     }
     count++;
     if (count > 1) count = 0;
-    if (usedPopUp) {
-        G::popup->setProgressVisible(false);
-        G::popup->reset();
-    }
+    G::popup->setProgressVisible(false);
+    G::popup->reset();
 }
 
 void InfoView::refreshLayout()

@@ -394,6 +394,7 @@ bool Jpeg2::parse(MetadataParameters &p,
     if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
+            p.xmpModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
             m.rating = xmp.getItem("Rating");     // case is important "Rating"
             m.label = xmp.getItem("Label");       // case is important "Label"
             m.title = xmp.getItem("title");       // case is important "title"

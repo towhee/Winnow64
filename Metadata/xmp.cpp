@@ -505,6 +505,13 @@ void Xmp::initialize()
     e.schema = "winnow";
     definedElements["winnowaddthumb"] = e;
 
+    // orientation
+    e.name = "tiff:Orientation";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "tiff";
+    definedElements["orientation"] = e;
+
     // schema rdf:Description attributes to add if missing
     e.node = rdfDescriptionNode;
     e.parentName = "rdf:Description";
@@ -534,6 +541,11 @@ void Xmp::initialize()
     e.name = "xmlns:Iptc4xmpCore";
     e.value = "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/";
     definedElements["Iptc4xmpCore"] = e;
+
+    // tiff schema namespace
+    e.name = "xmlns:tiff";
+    e.value = "http://ns.adobe.com/tiff/1.0/";
+    definedElements["tiff"] = e;
 
     // winnow schema namespace
     e.name = "xmlns:winnow";

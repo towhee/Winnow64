@@ -152,6 +152,7 @@ public:
     QTextStream rpt;
     QString hdr;
     QString xmpString;
+    QDateTime xmpModifyDate;                // xmp:ModifyDate from embedded XMP (if any)
     bool inclNonEssential;
     QElapsedTimer t;
 };
