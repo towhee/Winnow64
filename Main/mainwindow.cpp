@@ -4262,9 +4262,6 @@ void MW::setRotation(int degrees)
         // rotate selected cached full size images
         QString fPath = thumbIdx.data(G::PathRole).toString();
         QImage image;
-        // CTSL::HashMap<QString, QImage> imCache
-        // if (icd->imCache.find(fPath, image)) {
-        // QHash<QString, QImage> imCache
         if (icd->contains(fPath)) {
             image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
             icd->insert(fPath, image);
@@ -4286,7 +4283,7 @@ void MW::setRotation(int degrees)
             qDebug() << "MW::setRotation showing popup";
             QString msg = "Please note that while the images have been rotated in Winnow,<br>"
                           "the EXIF in the image file has not been updated because file<br>"
-                          "modification is disabled in preferences (General section).<p>"
+                          "modification is disabled in preferences.<p>"
                           "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
                 ;
             G::popup->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
