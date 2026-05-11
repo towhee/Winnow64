@@ -1203,8 +1203,6 @@ private:
 
     bool sortMenuUpdateToMatchTable = false;
 
-    bool rotationAlertShown = false;
-
     QString imageCacheFilePath;
 
     bool newScrollSignal;           // used for scroll signal delay in case many/sec

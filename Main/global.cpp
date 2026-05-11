@@ -203,7 +203,6 @@ bool colorManage;
 bool modifySourceFiles;
 bool backupBeforeModifying;
 bool autoAddMissingThumbnails;
-bool useSidecar;
 bool renderVideoThumb;
 bool combineRawJpg;
 bool isFilter;

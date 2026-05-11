@@ -4209,8 +4209,9 @@ void MW::setRotation(int degrees)
     When there is a rotation action (rotateLeft or rotateRight) the current
     rotation amount (in degrees) is updated in the datamodel.
 
-    The rotation is updated in the image file EXIF using exifTool in separate threads
-    if G::modifySourceFiles == true.
+    If G::modifySourceFiles == true the rotation is updated in the image file EXIF using
+    exifTool in separate threads.  Otherwise it is written to an XMP sidecar so the
+    rotation survives a reload.
 */
     if (G::isLogger) G::log("MW::setRotation");
     qDebug() << "MW::setRotation degrees =" << degrees;
@@ -4275,19 +4276,10 @@ void MW::setRotation(int degrees)
             case 180: orient = "3"; break;
             case 270: orient = "8"; break;
         }
-        if (orient.length() && G::modifySourceFiles) {
+        if (orient.length()) {
             // note that Metadata::writeOrientation must be static!
+            // writes to source EXIF if G::modifySourceFiles, otherwise to xmp sidecar
             QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
-        }
-        else if (!rotationAlertShown) {
-            qDebug() << "MW::setRotation showing popup";
-            QString msg = "Please note that while the images have been rotated in Winnow,<br>"
-                          "the EXIF in the image file has not been updated because file<br>"
-                          "modification is disabled in preferences.<p>"
-                          "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
-                ;
-            G::popup->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
-            rotationAlertShown = true;
         }
     }
 }

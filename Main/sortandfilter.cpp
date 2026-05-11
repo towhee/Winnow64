@@ -588,15 +588,6 @@ void MW::setRating()
     if (isAlreadyRating) rating = "";     // invert the rating(s)
 
     int n = selection.count();
-    /*
-    if (G::useSidecar) {
-        G::popUp->setProgressVisible(true);
-        G::popUp->setProgressMax(n + 1);
-        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
-                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-        G::popUp->showPopup(txt, 0, true, 1);
-    }
-    //*/
 
     // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
     QList<int> rows;
@@ -631,15 +622,12 @@ void MW::setRating()
             }
         }
         // write to sidecar
-        if (G::useSidecar) {
-            qDebug() << "MW::setRating write sidecar" << dmRow << fPath;
-            dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-            metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
-            // update _Rating (used to check what metadata has changed in metadata->writeXMP)
-            QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
-            emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
-            G::popup->setProgress(i+1);
-        }
+        dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+        metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
+        // update _Rating (used to check what metadata has changed in metadata->writeXMP)
+        QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
+        emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
+        G::popup->setProgress(i+1);
     }
 
     // update thumbnail appearance to show classification
@@ -795,15 +783,6 @@ void MW::setColorClass()
     if (isAlreadyLabel) colorClass = "";     // invert the label
 
     int n = selection.count();
-    /*
-    if (G::useSidecar) {
-        G::popUp->setProgressVisible(true);
-        G::popUp->setProgressMax(n + 1);
-        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
-                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-        G::popUp->showPopup(txt, 0, true, 1);
-    }
-    //*/
 
     /* copy selection to list of dm rows (proxy filter changes during iteration when
        change datamodel)  */
@@ -841,14 +820,12 @@ void MW::setColorClass()
             }
         }
         // write to sidecar
-        if (G::useSidecar) {
-            dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-            metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
-            // update _Label (used to check what metadata has changed in metadata->writeXMP)
-            emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
-                          Qt::EditRole);
-            G::popup->setProgress(i+1);
-        }
+        dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+        metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
+        // update _Label (used to check what metadata has changed in metadata->writeXMP)
+        emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
+                      Qt::EditRole);
+        G::popup->setProgress(i+1);
     }
 
     // update thumbnail appearance to show classification

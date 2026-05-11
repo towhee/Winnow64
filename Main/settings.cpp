@@ -43,7 +43,6 @@ void MW::writeSettings()
     settings->setValue("backupBeforeModifying", G::backupBeforeModifying);
     settings->setValue("autoAddMissingThumbnails", G::autoAddMissingThumbnails);
     settings->setValue("ignoreAddThumbnailsDlg", ignoreAddThumbnailsDlg);
-    settings->setValue("useSidecar", G::useSidecar);
     //setting->setValue("embedTifThumb", G::embedTifJpgThumb);
     settings->setValue("renderVideoThumb", G::renderVideoThumb);
     settings->setValue("isLogger", G::isLogger);
@@ -295,8 +294,6 @@ bool MW::loadSettings()
         lastDir = "";
         deleteWarning = true;
         G::modifySourceFiles = false;
-        G::modifySourceFiles = false;
-        G::useSidecar = false;
         // G::embedTifJpgThumb = false;
 
         // ingest
@@ -377,11 +374,6 @@ bool MW::loadSettings()
         ignoreAddThumbnailsDlg = settings->value("ignoreAddThumbnailsDlg").toBool();
     else
         ignoreAddThumbnailsDlg = false;
-
-    if (settings->contains("useSidecar"))
-        G::useSidecar = settings->value("useSidecar").toBool();
-    else
-        G::useSidecar = false;
 
     if (settings->contains("renderVideoThumb"))
         G::renderVideoThumb = settings->value("renderVideoThumb").toBool();
