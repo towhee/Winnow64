@@ -512,6 +512,62 @@ void Xmp::initialize()
     e.schema = "tiff";
     definedElements["orientation"] = e;
 
+    // EXIF camera fields — used by formats that lack a native EXIF block
+    // (e.g. Lightroom-exported PNGs mirror EXIF into the exif: / tiff: namespaces).
+    e.name = "tiff:Make";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "tiff";
+    definedElements["make"] = e;
+
+    e.name = "tiff:Model";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "tiff";
+    definedElements["model"] = e;
+
+    e.name = "exif:FNumber";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["fnumber"] = e;
+
+    e.name = "exif:ExposureTime";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["exposuretime"] = e;
+
+    e.name = "exif:ISOSpeedRatings";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::List;
+    e.schema = "exif";
+    definedElements["isospeedratings"] = e;
+
+    e.name = "exif:FocalLength";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["focallength"] = e;
+
+    e.name = "exif:ExposureBiasValue";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["exposurebiasvalue"] = e;
+
+    e.name = "exif:DateTimeOriginal";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["datetimeoriginal"] = e;
+
+    e.name = "exifEX:LensModel";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exifEX";
+    definedElements["lensmodel"] = e;
+
     // schema rdf:Description attributes to add if missing
     e.node = rdfDescriptionNode;
     e.parentName = "rdf:Description";

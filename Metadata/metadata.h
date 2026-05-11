@@ -173,6 +173,7 @@ private:
     Panasonic *panasonic = nullptr;
     Sony *sony = nullptr;
     Tiff *tiff = nullptr;
+    PNG *png = nullptr;
 //#ifdef Q_OS_WIN
     // rgh remove heic
     Heic *heic = nullptr;
@@ -224,6 +225,7 @@ private:
     bool parsePanasonic();
     bool parseSony();
     bool parseTIF();
+    bool parsePNG();
 //    bool parseSidecar();
 
 signals:
