@@ -97,7 +97,7 @@ void Metadata::initSupportedFiles()
                         << "hif"
                         << "nef"
                         << "orf"
-                        //<< "png"
+                        << "png"
                         << "raf"
                         << "sr2"
                         << "rw2"
@@ -129,6 +129,7 @@ void Metadata::initSupportedFiles()
 
     embeddedICCFormats  << "jpg"
                         << "jpeg"
+                        << "png"
                            ;
 
     sidecarFormats      << "arw"
@@ -141,6 +142,7 @@ void Metadata::initSupportedFiles()
                         << "sr2"
                         << "jpg"
                         << "jpeg"
+                        << "png"
                         << "xmp"
                         << "tif"
                            ;
@@ -154,6 +156,7 @@ void Metadata::initSupportedFiles()
                         << "cr3"
                         << "nef"
                         << "orf"
+                        << "png"
                         << "raf"
                         << "rw2"
                         << "sr2"
@@ -172,7 +175,6 @@ void Metadata::initSupportedFiles()
                         << "mng"
                         << "pbm"
                         << "pgm"
-                        << "png"
                         << "ppm"
                         << "svg"
                         << "svgz"
@@ -779,6 +781,15 @@ bool Metadata::parseTIF()
     return true;
 }
 
+bool Metadata::parsePNG()
+{
+    if (G::isLogger) G::log("Metadata::parsePNG");
+    if (png == nullptr) png = new PNG;
+    bool ok = png->parse(p, m, ifd, exif, gps);
+    if (ok && p.report) reportMetadata();
+    return ok;
+}
+
 bool Metadata::parsePanasonic()
 {
     if (G::isLogger) G::log("Metadata::parsePanasonic");
@@ -1139,6 +1150,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "raf")  parsed = parseFuji();
         if (ext == "rw2")  parsed = parsePanasonic();
         if (ext == "tif")  parsed = parseTIF();
+        if (ext == "png")  parsed = parsePNG();
         p.file.close();
         //QFile(path).setPermissions(oldPermissions);
         if (p.file.isOpen()) {
@@ -1239,7 +1251,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
         if (ext == "mov") m.createdDate = MOV::createDate(fPath);
         if (ext == "mp4") m.createdDate = MOV::createDate(fPath);
         if (ext == "m4v") m.createdDate = MOV::createDate(fPath);
-        if (ext == "png") m.createdDate = PNG::createDate(fPath);
         if (!m.createdDate.isValid()) {
             // QString createdDate = readExifToolTag(m.fPath, "createdate");
             // m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");

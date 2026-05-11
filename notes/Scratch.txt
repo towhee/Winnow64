@@ -4,3 +4,4 @@
 
 Review MW::setRotation in mainwindow.cpp.  The requirement: "If G::modifySourceFiles == false and G::useSidecar = true the rotation is updated in
       the xmp sidecar file." needs to be added.
+/Users/roryhill/Pictures/PNG/2026-05-01_0204.png
