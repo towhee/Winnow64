@@ -91,7 +91,7 @@ bool MOV::findAtom(QFile &file, const char *targetAtomType, quint32 &atomSize, q
 
     while (readAtomHeader(file, size, type)) {
         if (size < 8) {
-            qWarning() << "Invalid atom size" << size;
+            // qWarning() << "Invalid atom size" << size;
             return false;
         }
 

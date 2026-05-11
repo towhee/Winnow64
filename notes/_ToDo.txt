@@ -2,14 +2,11 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Review FSTree selection / scrolling behavior (when select all subfolders)
 - If rotate image it is cleared in image cache.
 - Send all warnings to console and issue log.
 - Add preference to toggle isFileLogger
 - EmbelProperties::syncWinnets deal with missing winnets
 - Update where log file is updated
-- MOV::findAtom qWarning() << "Invalid atom size" << size;
-- Rename files
 - Read/write png metadata
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
