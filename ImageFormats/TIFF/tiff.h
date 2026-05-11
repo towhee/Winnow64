@@ -76,6 +76,8 @@ public:
 
     // // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
     bool read(QString fPath, QImage *image, quint32 ifdOffset = 0);
+    // produces a thumbnail-sized QImage directly via nearest-neighbor sampling
+    bool readSample(QString fPath, QImage *image, int longSide, quint32 ifdOffset = 0);
     // // #endif
 
 private:
