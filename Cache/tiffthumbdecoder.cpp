@@ -76,9 +76,8 @@ void TiffThumbDecoder::processQueue()
     int instance = queue.at(0).dmInstance;
     QString src = "TiffThumbDecoder::processQueue";
     Tiff tiff(src);
-    if (tiff.read(fPath, &image, offset)) {
-        QImage im(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        emit setIcon(dmRow, im, instance, src);
+    if (tiff.readSample(fPath, &image, G::maxIconSize, offset)) {
+        emit setIcon(dmRow, image, instance, src);
     }
 
     // recurse

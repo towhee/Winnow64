@@ -2876,3 +2876,268 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 
     return true;
 }
+
+bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOffset)
+{
+/*
+    Like read(), but allocates the QImage at thumbnail size and copies only every
+    nth source pixel into it (nearest-neighbor). libtiff's lazy strip/tile
+    decompression means most of the source pixels are never decoded for
+    compression types where libtiff can skip strips/tiles; for uncompressed
+    strip TIFFs, libtiff seeks directly to the requested scanline.
+*/
+    TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
+    if (!tiff) {
+        qDebug() << "Tiff::readSample Failed to open TIFF file." << fPath;
+        return false;
+    }
+
+    if (ifdOffset) {
+        TIFFSetSubDirectory(tiff, ifdOffset);
+    }
+
+    QSize size;
+    QImage::Format format;
+    QImageIOHandler::Transformations transformation;
+    uint16_t photometric;
+    bool grayscale;
+    bool floatingPoint;
+
+    if (!readHeaders(tiff, size, format, photometric, grayscale, floatingPoint, transformation)) {
+        TIFFClose(tiff); tiff = nullptr;
+        qDebug() << "Tiff::readSample Failed to read headers." << fPath;
+        return false;
+    }
+
+    const quint32 srcW = size.width();
+    const quint32 srcH = size.height();
+    const quint32 srcLong = qMax(srcW, srcH);
+    quint32 nth = 1;
+    if (longSide > 0 && quint32(longSide) < srcLong)
+        nth = srcLong / quint32(longSide);
+    const quint32 outW = qMax<quint32>(1, srcW / nth);
+    const quint32 outH = qMax<quint32>(1, srcH / nth);
+
+    if (!QImageIOHandler::allocateImage(QSize(outW, outH), format, image)) {
+        TIFFClose(tiff); tiff = nullptr;
+        qDebug() << "Tiff::readSample Failed to QImageIOHandler::allocateImage." << fPath;
+        return false;
+    }
+
+    if (TIFFIsTiled(tiff) && TIFFTileSize64(tiff) > uint64_t(srcW) * srcH * 16) {
+        // sanity check: tile size shouldn't exceed full-image upper bound
+        TIFFClose(tiff); tiff = nullptr;
+        qDebug() << "Tiff::readSample Corrupt image." << fPath;
+        return false;
+    }
+
+    // Setup color tables (same logic as read())
+    if (format == QImage::Format_Mono || format == QImage::Format_Indexed8) {
+        if (format == QImage::Format_Mono) {
+            QList<QRgb> colortable(2);
+            if (photometric == PHOTOMETRIC_MINISBLACK) {
+                colortable[0] = 0xff000000;
+                colortable[1] = 0xffffffff;
+            } else {
+                colortable[0] = 0xffffffff;
+                colortable[1] = 0xff000000;
+            }
+            image->setColorTable(colortable);
+        } else if (format == QImage::Format_Indexed8) {
+            const uint16_t tableSize = 256;
+            QList<QRgb> qtColorTable(tableSize);
+            if (grayscale) {
+                for (int i = 0; i<tableSize; ++i) {
+                    const int c = (photometric == PHOTOMETRIC_MINISBLACK) ? i : (255 - i);
+                    qtColorTable[i] = qRgb(c, c, c);
+                }
+            } else {
+                uint16_t *redTable = nullptr;
+                uint16_t *greenTable = nullptr;
+                uint16_t *blueTable = nullptr;
+                if (!TIFFGetField(tiff, TIFFTAG_COLORMAP, &redTable, &greenTable, &blueTable)) {
+                    TIFFClose(tiff); tiff = nullptr;
+                    qDebug() << "Tiff::readSample Failed to get field TIFFTAG_COLORMAP." << fPath;
+                    return false;
+                }
+                if (!redTable || !greenTable || !blueTable) {
+                    TIFFClose(tiff); tiff = nullptr;
+                    return false;
+                }
+                for (int i = 0; i < tableSize ;++i) {
+                    const int red = redTable[i] >> 8;
+                    const int green = greenTable[i] >> 8;
+                    const int blue = blueTable[i] >> 8;
+                    qtColorTable[i] = qRgb(red, green, blue);
+                }
+            }
+            image->setColorTable(qtColorTable);
+        }
+    }
+
+    bool format8bit = (format == QImage::Format_Mono || format == QImage::Format_Indexed8 || format == QImage::Format_Grayscale8);
+    bool format16bit = (format == QImage::Format_Grayscale16);
+    bool format64bit = (format == QImage::Format_RGBX64 || format == QImage::Format_RGBA64 || format == QImage::Format_RGBA64_Premultiplied);
+    bool format64fp = (format == QImage::Format_RGBX16FPx4 || format == QImage::Format_RGBA16FPx4 || format == QImage::Format_RGBA16FPx4_Premultiplied);
+    bool format128fp = (format == QImage::Format_RGBX32FPx4 || format == QImage::Format_RGBA32FPx4 || format == QImage::Format_RGBA32FPx4_Premultiplied);
+
+    if (format8bit || format16bit || format64bit || format64fp || format128fp) {
+        int bytesPerPixel = image->depth() / 8;
+        if (format == QImage::Format_RGBX64 || format == QImage::Format_RGBX16FPx4)
+            bytesPerPixel = photometric == PHOTOMETRIC_RGB ? 6 : 2;
+        else if (format == QImage::Format_RGBX32FPx4)
+            bytesPerPixel = photometric == PHOTOMETRIC_RGB ? 12 : 4;
+
+        if (TIFFIsTiled(tiff)) {
+            quint32 tileWidth, tileLength;
+            TIFFGetField(tiff, TIFFTAG_TILEWIDTH, &tileWidth);
+            TIFFGetField(tiff, TIFFTAG_TILELENGTH, &tileLength);
+            if (!tileWidth || !tileLength || tileWidth % 16 || tileLength % 16) {
+                TIFFClose(tiff); tiff = nullptr;
+                return false;
+            }
+            const quint32 byteTileWidth = (format == QImage::Format_Mono)
+                                          ? tileWidth/8 : tileWidth * bytesPerPixel;
+            tmsize_t byteTileSize = TIFFTileSize(tiff);
+            uchar *buf = (uchar *)_TIFFmalloc(byteTileSize);
+            if (!buf) {
+                TIFFClose(tiff); tiff = nullptr;
+                return false;
+            }
+
+            for (quint32 ty = 0; ty < srcH; ty += tileLength) {
+                const quint32 firstOutY  = (ty + nth - 1) / nth;
+                const quint32 lastSrcYEx = qMin(ty + tileLength, srcH);
+                const quint32 lastOutYEx = (lastSrcYEx + nth - 1) / nth;
+                if (firstOutY >= outH || firstOutY >= lastOutYEx) continue;
+
+                for (quint32 tx = 0; tx < srcW; tx += tileWidth) {
+                    const quint32 firstOutX  = (tx + nth - 1) / nth;
+                    const quint32 lastSrcXEx = qMin(tx + tileWidth, srcW);
+                    const quint32 lastOutXEx = (lastSrcXEx + nth - 1) / nth;
+                    if (firstOutX >= outW || firstOutX >= lastOutXEx) continue;
+
+                    if (TIFFReadTile(tiff, buf, tx, ty, 0, 0) < 0) {
+                        _TIFFfree(buf);
+                        TIFFClose(tiff); tiff = nullptr;
+                        return false;
+                    }
+
+                    for (quint32 outY = firstOutY; outY < lastOutYEx && outY < outH; ++outY) {
+                        const quint32 srcYInTile = outY * nth - ty;
+                        const uchar *srcRow = buf + srcYInTile * byteTileWidth;
+                        uchar *dstRow = image->scanLine(outY);
+                        if (format == QImage::Format_Mono) {
+                            for (quint32 outX = firstOutX; outX < lastOutXEx && outX < outW; ++outX) {
+                                quint32 sx = outX * nth - tx;
+                                quint8 bit = (srcRow[sx >> 3] >> (7 - (sx & 7))) & 1;
+                                dstRow[outX >> 3] = (dstRow[outX >> 3] & ~(1 << (7 - (outX & 7))))
+                                                  | (bit << (7 - (outX & 7)));
+                            }
+                        } else {
+                            for (quint32 outX = firstOutX; outX < lastOutXEx && outX < outW; ++outX) {
+                                const quint32 srcXInTile = outX * nth - tx;
+                                ::memcpy(dstRow + outX * bytesPerPixel,
+                                         srcRow + srcXInTile * bytesPerPixel,
+                                         bytesPerPixel);
+                            }
+                        }
+                    }
+                }
+            }
+            _TIFFfree(buf);
+        } else {
+            const tmsize_t srcScanBytes = TIFFScanlineSize(tiff);
+            QByteArray rowBuf(srcScanBytes, Qt::Uninitialized);
+            uchar *src = reinterpret_cast<uchar *>(rowBuf.data());
+
+            for (quint32 outY = 0; outY < outH; ++outY) {
+                const quint32 srcY = outY * nth;
+                if (srcY >= srcH) break;
+                if (TIFFReadScanline(tiff, src, srcY, 0) < 0) {
+                    TIFFClose(tiff); tiff = nullptr;
+                    qDebug() << "Tiff::readSample TIFFReadScanline failed" << fPath;
+                    return false;
+                }
+                uchar *dst = image->scanLine(outY);
+                if (format == QImage::Format_Mono) {
+                    for (quint32 outX = 0; outX < outW; ++outX) {
+                        const quint32 sx = outX * nth;
+                        const quint8 bit = (src[sx >> 3] >> (7 - (sx & 7))) & 1;
+                        dst[outX >> 3] = (dst[outX >> 3] & ~(1 << (7 - (outX & 7))))
+                                       | (bit << (7 - (outX & 7)));
+                    }
+                } else {
+                    for (quint32 outX = 0; outX < outW; ++outX) {
+                        ::memcpy(dst + outX * bytesPerPixel,
+                                 src + (outX * nth) * bytesPerPixel,
+                                 bytesPerPixel);
+                    }
+                }
+            }
+        }
+
+        if (format == QImage::Format_RGBX64 || format == QImage::Format_RGBX16FPx4) {
+            if (photometric == PHOTOMETRIC_RGB)
+                rgb48fixup(image, floatingPoint);
+            else if (floatingPoint) {
+                rgbFixup(image);
+            }
+        }
+        else if (format == QImage::Format_RGBX32FPx4) {
+            if (photometric == PHOTOMETRIC_RGB)
+                rgb96fixup(image);
+            else if (floatingPoint) {
+                rgbFixup(image);
+            }
+        }
+    }
+    else {
+        // RGBA fallback: libtiff decodes the whole raster atomically, so
+        // sample down after the fact. Preserves universal photometric coverage.
+        QImage full(srcW, srcH, QImage::Format_RGB32);
+        const int stopOnError = 1;
+        if (!TIFFReadRGBAImageOriented(tiff, srcW, srcH,
+                reinterpret_cast<uint32_t *>(full.bits()),
+                qt2Exif(transformation), stopOnError)) {
+            TIFFClose(tiff); tiff = nullptr;
+            return false;
+        }
+        for (quint32 y = 0; y < srcH; ++y)
+            convert32BitOrder(full.scanLine(y), srcW);
+        for (quint32 outY = 0; outY < outH; ++outY) {
+            const quint32 *s = reinterpret_cast<const quint32 *>(full.constScanLine(outY * nth));
+            quint32 *d = reinterpret_cast<quint32 *>(image->scanLine(outY));
+            for (quint32 outX = 0; outX < outW; ++outX)
+                d[outX] = s[outX * nth];
+        }
+    }
+
+    float resX = 0;
+    float resY = 0;
+    uint16_t resUnit;
+    if (!TIFFGetField(tiff, TIFFTAG_RESOLUTIONUNIT, &resUnit))
+        resUnit = RESUNIT_INCH;
+
+    if (TIFFGetField(tiff, TIFFTAG_XRESOLUTION, &resX)
+        && TIFFGetField(tiff, TIFFTAG_YRESOLUTION, &resY)) {
+        switch(resUnit) {
+        case RESUNIT_CENTIMETER:
+            image->setDotsPerMeterX(qRound(resX * 100));
+            image->setDotsPerMeterY(qRound(resY * 100));
+            break;
+        case RESUNIT_INCH:
+            image->setDotsPerMeterX(qRound(resX * (100 / 2.54)));
+            image->setDotsPerMeterY(qRound(resY * (100 / 2.54)));
+            break;
+        default:
+            break;
+        }
+    }
+
+    TIFFClose(tiff); tiff = nullptr;
+
+    image->convertTo(QImage::Format_RGB32);
+
+    return true;
+}
