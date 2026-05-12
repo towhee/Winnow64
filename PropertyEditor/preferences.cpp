@@ -485,7 +485,38 @@ void Preferences::addGeneral()
     i.delegateType = DT_None;
     addItem(i);
 
-    // Remember last folder
+    // Allow source files to be changed
+    i.name = "modifySourceFiles";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Permit image file modification";
+    i.tooltip = "Permit modification to the image file.  In some cases,\n"
+                "changes (ie orientation) may still be made to a\n"
+                "sidecar xmp file."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::modifySourceFiles;
+    i.key = "modifySourceFiles";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);       // cancel this for version 1.32 release
+
+
+    // Backup before modifying
+    i.name = "backupBeforeModify";
+    i.parentName = "modifySourceFiles";
+    i.captionText = "   Backup before modify files";
+    i.tooltip = "All image files about to be modified will be copied to a\n"
+                "subfolder called 'backup'"
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::backupBeforeModifying;
+    i.key = "backupBeforeModify";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+    setItemEnabled("backupBeforeModify", G::modifySourceFiles);    // Remember last folder
     i.name = "rememberLastDir";
     i.parentName = "GeneralHeader";
     i.captionText = "Remember folder";
@@ -496,7 +527,7 @@ void Preferences::addGeneral()
     i.key = "rememberLastDir";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    // addItem(i);
+    addItem(i);
 
     // Check for app update at startup
     i.name = "checkIfUpdate";
@@ -529,7 +560,7 @@ void Preferences::addGeneral()
     // Auto advance
     i.name = "autoAdvance";
     i.parentName = "GeneralHeader";
-    i.captionText = "Auto advance after pick, rating or label.";
+    i.captionText = "Auto advance after pick, rate or label.";
     i.tooltip = "Advance to next image after pick, rating or label change.\n"
                 "CAPS lock toggles state."
                 ;
@@ -630,14 +661,15 @@ void Preferences::addModify()
     i.hasValue = false;
     i.captionIsEditable = false;
     i.delegateType = DT_None;
-    addItem(i);
+    // addItem(i);
 
     // Allow source files to be changed
     i.name = "modifySourceFiles";
-    i.parentName = "ModifyHeader";
+    i.parentName = "GeneralHeader";
     i.captionText = "Permit image file modification";
-    i.tooltip = "Permit file modification to change image orientation\n"
-                "or embed thumbnails automatically without notification."
+    i.tooltip = "Permit file modification to the image file.  In some\n"
+                "cases, changes (ie orientation) may still be made to\n"
+                "a sidecar xmp file."
                 ;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -645,7 +677,7 @@ void Preferences::addModify()
     i.key = "modifySourceFiles";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);       // cancel this for version 1.32 release
+    // addItem(i);       // cancel this for version 1.32 release
 
     // Backup before modifying
     i.name = "backupBeforeModify";
@@ -660,7 +692,7 @@ void Preferences::addModify()
     i.key = "backupBeforeModify";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
     setItemEnabled("backupBeforeModify", G::modifySourceFiles);
 
     // Automatically and silently add missing thumbnails to TIFF and JPG files
@@ -682,7 +714,7 @@ void Preferences::addModify()
     i.key = "autoAddMissingThumbnails";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    if (G::useMissingThumbs) addItem(i);
+    // if (G::useMissingThumbs) addItem(i);
     // setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
 
     // Show missing thumbnails dialog
@@ -699,7 +731,7 @@ void Preferences::addModify()
     i.key = "ignoreAddThumbnailsDlg";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    if (G::useMissingThumbs) addItem(i);
+    // if (G::useMissingThumbs) addItem(i);
     setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
 }
 

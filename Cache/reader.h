@@ -18,7 +18,7 @@ class Reader : public QObject
 {
     Q_OBJECT
 public:
-    Reader(int id, DataModel *dm, ImageCache *imageCache);
+    Reader(int id, DataModel *dm, ImageCache *imageCache, FrameDecoder *frameDecoder);
     ~Reader() override;
 
     QThread *readerThread;  // use if currentThread() not working in stop()
@@ -87,8 +87,7 @@ private:
     DataModel *dm;
     ImageMetadata *m;
     ImageCache *imageCache;
-    FrameDecoder *frameDecoder;
-    QThread *frameDecoderthread;
+    FrameDecoder *frameDecoder;     // shared, owned by MetaRead
     TiffThumbDecoder *tiffThumbDecoder;
     QThread *tiffThumbDecoderThread;
     Thumb *thumb;
