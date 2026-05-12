@@ -1,11 +1,13 @@
 #include "reader.h"
 #include "Main/global.h"
 
-Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
+Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
+               FrameDecoder *frameDecoder): QObject(nullptr)
 {
     this->dm = dm;
     metadata = new Metadata;
     this->imageCache = imageCache;
+    this->frameDecoder = frameDecoder;  // shared instance owned by MetaRead
     threadId = id;
     instance = 0;
 
@@ -20,15 +22,11 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon1,
             Qt::QueuedConnection);
 
-    thumb = new Thumb(dm);
+    thumb = new Thumb(dm, frameDecoder);
 
-    frameDecoder = new FrameDecoder();
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-    connect(frameDecoder, &FrameDecoder::videoFrameFailed, dm, &DataModel::clearVideoReadingFlag);
+    // FrameDecoder→DataModel signals are connected once in MetaRead. Here we
+    // only wire this Reader's videoFrameDecode emission into the shared queue.
     connect(this, &Reader::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
-    frameDecoderthread = new QThread;
-    frameDecoder->moveToThread(frameDecoderthread);
-    frameDecoderthread->start();
 
     tiffThumbDecoder = new TiffThumbDecoder();
     connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon1);
@@ -43,12 +41,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
 
 Reader::~Reader()
 {
-    if (frameDecoderthread) {
-        frameDecoderthread->quit();
-        frameDecoderthread->wait();
-        delete frameDecoder;
-        delete frameDecoderthread;
-    }
+    // frameDecoder is shared and owned by MetaRead — do not delete here.
     if (tiffThumbDecoderThread) {
         tiffThumbDecoderThread->quit();
         tiffThumbDecoderThread->wait();
@@ -86,9 +79,9 @@ void Reader::abortProcessing()
     // qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
 
     thumb->abortProcessing();
-    if (frameDecoder) {
-        QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
-    }
+    // FrameDecoder is shared; flushing it from a single Reader would clobber
+    // other Readers' pending video work. MetaRead::abortProcessing handles
+    // the global FrameDecoder::stop.
 
     // Tell worker to stop accepting new work
     QMutexLocker lock(&mutex);
@@ -114,8 +107,7 @@ void Reader::abortProcessing()
 void Reader::signalAbort()
 {
     thumb->abortProcessing();
-    if (frameDecoder)
-        QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
+    // FrameDecoder::stop is driven globally by MetaRead — see abortProcessing.
     QMutexLocker lock(&mutex);
     abort = true;
 }

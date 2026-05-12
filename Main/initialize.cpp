@@ -326,7 +326,7 @@ void MW::createMetaRead()
     }
 
     // Runs multiple reader threads to load metadata and thumbnails
-    metaRead = new MetaRead(this, dm, metadata, /*frameDecoderInGui,*/ imageCache);
+    metaRead = new MetaRead(this, dm, metadata, imageCache);
 
     // set a value in dm->sf proxy
     connect(metaRead, &MetaRead::setValSf, dm, &DataModel::setValSf);

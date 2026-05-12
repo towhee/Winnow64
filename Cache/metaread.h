@@ -21,7 +21,6 @@ public:
     MetaRead(QObject *parent,
              DataModel *dm,
              Metadata *metadata,
-             // FrameDecoder *frameDecoder,
              ImageCache *imageCache);
     ~MetaRead() override;
 
@@ -120,7 +119,8 @@ private:
 
     DataModel *dm;
     Metadata *metadata;
-    FrameDecoder *frameDecoder;     // decoder requires this
+    FrameDecoder *frameDecoder;     // shared across all Readers; owned here
+    QThread *frameDecoderThread;
     ImageCache *imageCache;
     Thumb *thumb;                   // decoder requires this
     bool fileSelectionChanged;

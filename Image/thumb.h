@@ -14,7 +14,7 @@ class Thumb : public QObject
 {
     Q_OBJECT
 public:
-    explicit Thumb(DataModel *dm);
+    explicit Thumb(DataModel *dm, FrameDecoder *frameDecoder);
     ~Thumb() override;
     void abortProcessing();
     bool loadThumb(QString &fPath, int dmRow, QImage &image,
@@ -49,8 +49,7 @@ private:
 
     DataModel *dm;
     Metadata *metadata;
-    FrameDecoder *frameDecoder;
-    QThread *frameDecoderthread;
+    FrameDecoder *frameDecoder;     // shared, owned by MetaRead
     int dmRow;
     QString err;
     QSize thumbMax;

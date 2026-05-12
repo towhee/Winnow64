@@ -7,9 +7,10 @@
    then entire image is read and scaled to thumbMax.
 */
 
-Thumb::Thumb(DataModel *dm)
+Thumb::Thumb(DataModel *dm, FrameDecoder *frameDecoder)
 {
     this->dm = dm;
+    this->frameDecoder = frameDecoder;  // shared instance owned by MetaRead
     metadata = new Metadata;
 
     thumbMax.setWidth(G::maxIconSize);
@@ -18,31 +19,15 @@ Thumb::Thumb(DataModel *dm)
     connect(this, &Thumb::setValDm, dm, &DataModel::setValDm, Qt::QueuedConnection);
     connect(this, &Thumb::setValSf, dm, &DataModel::setValSf, Qt::QueuedConnection);
 
-    frameDecoder = new FrameDecoder();
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-    connect(frameDecoder, &FrameDecoder::videoFrameFailed, dm, &DataModel::clearVideoReadingFlag);
+    // FrameDecoder→DataModel signals are connected once in MetaRead.
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
-    frameDecoderthread = new QThread;
-    frameDecoder->moveToThread(frameDecoderthread);
-    frameDecoderthread->start();
-
-    // tiffThumbDecoder = new TiffThumbDecoder();
-    // connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon);
-    // tiffThumbDecoderThread = new QThread;
-    // tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);  // Move to MetaRead's thread
-    // tiffThumbDecoderThread->start();
 
     isDebug = false;
 }
 
 Thumb::~Thumb()
 {
-    if (frameDecoderthread) {
-        frameDecoderthread->quit();
-        frameDecoderthread->wait();
-        delete frameDecoder;
-        delete frameDecoderthread;
-    }
+    // frameDecoder is shared and owned by MetaRead — do not delete here.
 }
 
 void Thumb::abortProcessing()
@@ -52,9 +37,9 @@ void Thumb::abortProcessing()
     {
         qDebug() << fun;
     }
-    if (frameDecoder) {
-        QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
-    }
+    // FrameDecoder is shared across all Thumb/Reader instances; stopping it
+    // here would flush other Readers' pending video work. The global flush
+    // happens in MetaRead::abortProcessing.
 
     // Now wait until idle or timeout
     QDeadlineTimer deadline(500);

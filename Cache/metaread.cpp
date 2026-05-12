@@ -86,9 +86,23 @@ MetaRead::MetaRead(QObject *parent,
     this->metadata = metadata;
     this->imageCache = imageCache;
 
+    // Single shared FrameDecoder on a dedicated thread. Every Reader (and its
+    // Thumb) emits videoFrameDecode to this one instance, so at most one
+    // QMediaPlayer is alive at a time — eliminates the AVFoundation
+    // heap-pressure window that the memoryOverrunFlag path in
+    // FrameDecoder::cleanupPlayer was working around.
+    frameDecoder = new FrameDecoder();
+    frameDecoderThread = new QThread;
+    frameDecoder->moveToThread(frameDecoderThread);
+    frameDecoderThread->start();
+    connect(frameDecoder, &FrameDecoder::setFrameIcon,
+            dm, &DataModel::setIconFromVideoFrame);
+    connect(frameDecoder, &FrameDecoder::videoFrameFailed,
+            dm, &DataModel::clearVideoReadingFlag);
+
     readerCount = QThread::idealThreadCount();
     for (int id = 0; id < readerCount; ++id) {
-        Reader *reader = new Reader(id, dm, imageCache);
+        Reader *reader = new Reader(id, dm, imageCache, frameDecoder);
         QThread *thread = new QThread;
         reader->readerThread = thread;
         reader->moveToThread(thread);
@@ -167,6 +181,17 @@ bool MetaRead::checkMemoryFootprint()
 MetaRead::~MetaRead()
 {
     if (isDebug) qDebug() << "MetaRead::~MetaRead";
+    // Reader threads quit via their own stop() path; once they're done no
+    // Reader can emit videoFrameDecode, so it's safe to bring down the
+    // shared FrameDecoder thread next.
+    if (frameDecoderThread) {
+        frameDecoderThread->quit();
+        frameDecoderThread->wait();
+        delete frameDecoder;
+        delete frameDecoderThread;
+        frameDecoder = nullptr;
+        frameDecoderThread = nullptr;
+    }
     // delete thumb;
 }
 
@@ -289,6 +314,12 @@ void MetaRead::stop()
     if (G::isLogger || G::isFlowLogger) G::log(srcFun);
 
     abort = true;
+    // Flush any queued video work on the shared FrameDecoder. Per-Reader
+    // abort no longer touches FrameDecoder (would clobber other Readers'
+    // pending items), so the global flush happens here.
+    if (frameDecoder) {
+        QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
+    }
     stopReaders();
 
     metaReadThread.quit();
@@ -329,6 +360,13 @@ void MetaRead::abortProcessing()
         G::log("MetaRead::abortProcessing", "starting");
 
     abort = true;
+
+    // Flush the shared FrameDecoder's queue. Per-Reader signalAbort no
+    // longer touches FrameDecoder, so this is the single choke point for
+    // folder-change aborts.
+    if (frameDecoder) {
+        QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
+    }
 
     // Signal all readers to abort simultaneously (non-blocking)
     for (int id = 0; id < readerCount; ++id) {
