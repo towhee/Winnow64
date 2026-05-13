@@ -243,12 +243,28 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
 Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
                                   const ImageMetadata &m)
 {
+/*
+    From Tiff::parse set during DataModel::DataModel::addMetadataForItem
+        - m.offsetThumb
+        - m.lengthThumb
+        - m.thumbFormat
+        - m.isEmbeddedThumbMissing
+
+        Based on priority:
+            1. IRB Jpg thumb
+            2. else chained IFD tiff thumb
+            3. else subIFD tiff thumb
+            4. else m.isEmbeddedThumbMissing = true then sample main tiff
+
+*/
     QString fun = "Thumb::loadFromTiff";
     if (G::isLogger) G::log(fun, fPath);
-    if (isDebug)
+    // if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "row =" << dmRow
+            << "m.offsetThumb =" << m.offsetThumb
+            << "m.m.isEmbeddedThumbMissing =" << m.isEmbeddedThumbMissing
             << fPath
             ;
 
@@ -269,8 +285,9 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
     Tiff tiff("Thumb::loadFromTiff");
     if (abort) return Status::Fail;
     if (!tiff.read(fPath, &image, m.offsetThumb)) {
-        QString errMsg = "Could not read because QtTiff read failed.";
+        QString errMsg = "Could not read because Tiff::read failed.";
         G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
+        qDebug() << fun << errMsg;
         return Status::Fail;
     }
 
@@ -313,8 +330,8 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
 
     // deprecated code...
 
-    int samplesPerPixel = m.samplesPerPixel;
     /*
+    int samplesPerPixel = m.samplesPerPixel;
     if (samplesPerPixel > 3) {
         QString msg = "Samples per pixel > 3.";
         G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
@@ -441,6 +458,14 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
     resolution image just to get a thumbnail. This thumbnail is used by the grid and
     filmstrip views.
 
+    - if video then loadFromVideo
+    - set isEmbeddedThumb
+    - get thumb:
+        - if isEmbeddedThumb loadFromJpgData
+        - if heic loadFromHeic
+        - if tif loadFromTiff
+        - else loadFromEntireFile
+
     Called by Reader::readIcon.
 */
     QString fun = "Thumb::loadThumb";
@@ -526,6 +551,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
         if (abort) {idle = true; return false;}
 
         // raw image file or tiff with embedded jpg thumbnail
+        // rgh: what if the embedded thumb is not jpg format?
         if (isEmbeddedThumb) {
             status = loadFromJpgData(fPath, image);
             if (status == Status::Success) break;

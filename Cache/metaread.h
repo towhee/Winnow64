@@ -117,6 +117,13 @@ private:
     bool allReadersCycling();
     bool noReadersCycling();
 
+    /* Per-cycle set of sf rows a Reader returned Status::Success for.
+       Consulted in needToRead to short-circuit the post-redo race where
+       the proxy's IconLoadedColumn hasn't yet been published by the main
+       thread for a row whose Reader already completed. Cleared on
+       setStartRow and initialize. */
+    QSet<int> readSuccessThisCycle;
+
     DataModel *dm;
     Metadata *metadata;
     FrameDecoder *frameDecoder;     // shared across all Readers; owned here

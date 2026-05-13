@@ -249,6 +249,7 @@ bool Tiff::parse(MetadataParameters &p,
     if (ifd->ifdDataHash.contains(34853))
         offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
 
+    // probable embedded thumbnail
     quint32 ifdPhotoshopOffset = 0;
     if (ifd->ifdDataHash.contains(34377))
         ifdPhotoshopOffset = ifd->ifdDataHash.value(34377).tagValue;
@@ -365,6 +366,10 @@ bool Tiff::parse(MetadataParameters &p,
         irb->readThumb(p, m);    // rgh need to add IRB to dng.cpp
         if (m.lengthThumb) {
             // assign arbitrary value to thumbLongside less than 512
+            qDebug().noquote()
+                << "Tiff::parse  embedded jpg thumbnail"
+                << m.row
+                << m.fName;
             thumbLongside = 256;
             if (p.report) {
                 p.offset = m.offsetThumb;
@@ -376,12 +381,15 @@ bool Tiff::parse(MetadataParameters &p,
 
     // Chained IFDs ************************************************************
     // search for lastIFDOffset and existing thumbnail
-    parseIFDs(p, m, ifd, nextIFDOffset, thumbLongside, "IFD");
-    if (!lastIFDOffsetPosition) lastIFDOffsetPosition = p.file.pos() - 4;
+    if (!m.lengthThumb) {
+        parseIFDs(p, m, ifd, nextIFDOffset, thumbLongside, "IFD");
+        if (!lastIFDOffsetPosition) lastIFDOffsetPosition = p.file.pos() - 4;
+    }
+    // if (!m.lengthThumb) {
 
     // subIFDs: ****************************************************************
-    /* If save tiff with save pyramid in photoshop then subIFDs created. Iterate to report and
-       possibly read smallest for thumbnail. */
+    /* If save tiff with save pyramid in photoshop then subIFDs created. Iterate to report
+       and possibly read smallest for thumbnail. */
     if (ifdsubIFDOffset) {
         nextIFDOffset = ifdsubIFDOffset;
         parseIFDs(p, m, ifd, nextIFDOffset, thumbLongside, "subIFD");
@@ -2649,6 +2657,10 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
     This is used by Winnow in ImageDecoder (decoderToUse == QtTiff).  It is the
     only tiff decoder that works for jpg compression.
 */
+    QString fun = "Tiff::read";
+    if (G::isLogger) G::log(fun, fPath);
+    // qDebug().noquote() << fun << "ifdOffset =" << ifdOffset << fPath;
+
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
         qDebug() << "Tiff::read Failed to open TIFF file." << fPath;
@@ -2886,6 +2898,10 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
     compression types where libtiff can skip strips/tiles; for uncompressed
     strip TIFFs, libtiff seeks directly to the requested scanline.
 */
+    QString fun = "Tiff::readSample";
+    if (G::isLogger) G::log(fun, fPath);
+    qDebug().noquote() << fun << "ifdOffset =" << ifdOffset << fPath;
+
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
         qDebug() << "Tiff::readSample Failed to open TIFF file." << fPath;
