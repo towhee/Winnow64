@@ -284,34 +284,45 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
     if (abort) return Status::Fail;
     Tiff tiff("Thumb::loadFromTiff");
     if (abort) return Status::Fail;
-    if (!tiff.read(fPath, &image, m.offsetThumb)) {
-        QString errMsg = "Could not read because Tiff::read failed.";
-        G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
-        qDebug() << fun << errMsg;
-        return Status::Fail;
+
+    if (m.isEmbeddedThumbMissing) {
+        if (!tiff.readSample(fPath, &image, G::maxIconSize, m.offsetFull)) {
+            QString errMsg = "Could not read because Tiff::readSample failed.";
+            G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
+            qDebug() << fun << errMsg;
+            return Status::Fail;
+        }
+    }
+    else {
+        if (!tiff.read(fPath, &image, m.offsetThumb)) {
+            QString errMsg = "Could not read because Tiff::read failed.";
+            G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
+            qDebug() << fun << errMsg;
+            return Status::Fail;
+        }
     }
 
     // qDebug() << "Thumb::loadFromTiff" << image.width() << image.height();
     image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
 
-    // fix missing embedded thumbnail
-    bool isMissingThumb = m.isEmbeddedThumbMissing;
-    if (abort) return Status::Fail;
-    if (isMissingThumb && G::modifySourceFiles && G::autoAddMissingThumbnails) {
-        if (G::backupBeforeModifying) {
-            QString msg = "File(s) have been backed up before embedding thumbnail(s).<p>"
-                          "Press <font color=\"red\">ESC</font> to close";
-            // use relay because probably in non-gui thread
-            emit G::relay->showPopUp(msg, 10000, true, 0.75, Qt::AlignHCenter);
-            // emit G::relay->updateStatus(false, msg, "Thumb::loadFromTiff");  // this works
-            Utilities::backup(fPath, "backup");
-        }
-        if (abort) return Status::Fail;
-        if (tiff.encodeThumbnail(fPath, image)) {
-            emit setValDm(dmRow, G::MissingThumbColumn, false,
-                          dm->instance, "Thumb::loadFromTiff");
-        }
-    }
+    // // fix missing embedded thumbnail
+    // bool isMissingThumb = m.isEmbeddedThumbMissing;
+    // if (abort) return Status::Fail;
+    // if (isMissingThumb && G::modifySourceFiles && G::autoAddMissingThumbnails) {
+    //     if (G::backupBeforeModifying) {
+    //         QString msg = "File(s) have been backed up before embedding thumbnail(s).<p>"
+    //                       "Press <font color=\"red\">ESC</font> to close";
+    //         // use relay because probably in non-gui thread
+    //         emit G::relay->showPopUp(msg, 10000, true, 0.75, Qt::AlignHCenter);
+    //         // emit G::relay->updateStatus(false, msg, "Thumb::loadFromTiff");  // this works
+    //         Utilities::backup(fPath, "backup");
+    //     }
+    //     if (abort) return Status::Fail;
+    //     if (tiff.encodeThumbnail(fPath, image)) {
+    //         emit setValDm(dmRow, G::MissingThumbColumn, false,
+    //                       dm->instance, "Thumb::loadFromTiff");
+    //     }
+    // }
 
     return Status::Success;
 
