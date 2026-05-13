@@ -31,7 +31,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
 
     tiffThumbDecoder = new TiffThumbDecoder();
     connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon1);
-    connect(this, &Reader::tiffMissingThumbDecode, tiffThumbDecoder, &TiffThumbDecoder::addToQueue);
+    // connect(this, &Reader::tiffMissingThumbDecode, tiffThumbDecoder, &TiffThumbDecoder::addToQueue);
     tiffThumbDecoderThread = new QThread;
     tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
     tiffThumbDecoderThread->start();
