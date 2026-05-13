@@ -286,6 +286,12 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         isNewStartRowWhileDispatching = false;
         a = startRow;
         b = startRow - 1;
+        // Only clear the per-cycle set when the instance actually changes.
+        // Within-instance setStartRow calls (scroll, file selection) must
+        // preserve the set, otherwise rows already returned by readers
+        // become eligible for re-dispatch while their setIcon is still in
+        // flight on the main thread.
+        readSuccessThisCycle.clear();
         if (isDebug)
         {
             qDebug().noquote()
@@ -465,6 +471,7 @@ void MetaRead::initialize(QString src)
     redoMax = 5;
     err.clear();
     cycling.fill(false);
+    readSuccessThisCycle.clear();
 }
 
 void MetaRead::syncInstance()
@@ -623,6 +630,15 @@ inline bool MetaRead::needToRead(int sfRow)
 
     // already reading this item?
     if (isReading || isIcon) {
+        return false;
+    }
+
+    /* Already returned Success in this dispatch cycle.
+       Guards against the post-redo race where the proxy's
+       IconLoadedColumn for the last-completing row hasn't yet been
+       published by the main thread, so isIcon above looks false even
+       though the Reader successfully loaded the icon. */
+    if (readSuccessThisCycle.contains(sfRow)) {
         return false;
     }
 
@@ -829,6 +845,19 @@ void MetaRead::processReturningReader(int id, Reader *r)
     // (AVFoundation heap corruption).
     if (!dm->index(dmRow, G::VideoColumn).data().toBool()) {
         dm->sf->setData(dm->sf->index(dmRow, G::MetadataReadingColumn), false);
+    }
+
+    /* Record that this row has been processed in the current cycle so
+       needToRead won't pick it again before its setIcon has drained on
+       the main thread. Insert regardless of Reader::status — even a
+       failed read got far enough to emit an error-icon setIcon, which
+       will land IconLoadedColumn=true on the main thread eventually.
+       Aborted reads are handled by setStartRow/initialize clearing the
+       set when a new cycle begins. */
+    {
+        QModelIndex dmIdx = dm->index(dmRow, 0);
+        QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
+        if (sfIdx.isValid()) readSuccessThisCycle.insert(sfIdx.row());
     }
 
     // progress counter

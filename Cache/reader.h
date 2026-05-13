@@ -12,7 +12,7 @@
 #include "Image/thumb.h"
 #include "Cache/imagecache.h"
 
-// #define TIMER    // uncomment to time execution
+// #define TIMER    // uncomment for time execution
 
 class Reader : public QObject
 {
@@ -53,6 +53,8 @@ public:
     };
 
 signals:
+    void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src = "MW",
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
     void videoFrameDecode(QString fPath, int longSide, QString source,
                           int dmRow, int dmInstance);
     void tiffMissingThumbDecode(QString fPath, int dmRow, int instance, int offset);

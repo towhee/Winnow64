@@ -200,9 +200,10 @@ void ImageDecoder::decode(int row, int instance)
 
     setIdle();
 
-    msToDecode = t.elapsed();
-    emit setValSf(sfRow, G::MSToReadColumn, msToDecode, instance,
-                  "ImageDecoder::decode", Qt::EditRole);
+    msToDecode = t.nsecsElapsed();  // changed to nanosec (match thumb read times)
+    // comment out so Reader::readIcon ms read time can be recorded instead
+    // emit setValSf(sfRow, G::MSToReadColumn, msToDecode, instance,
+    //               "ImageDecoder::decode", Qt::EditRole);
 
     emit done(threadId, int(status), sfRow, image, fPath, msToDecode);
 }

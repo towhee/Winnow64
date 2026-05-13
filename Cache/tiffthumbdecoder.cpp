@@ -37,6 +37,7 @@ void TiffThumbDecoder::addToQueue(QString fPath, int dmRow, int dmInstance,
                                   int offset)
 {
     if (G::isLogger) G::log("TiffThumbDecoder::addToQueue");
+    qDebug() << "TiffThumbDecoder::addToQueue" << dmRow << fPath;
 
     if (abort) return;
     /* Dedupe: Reader::readIcon can fire tiffMissingThumbDecode multiple times
@@ -61,6 +62,7 @@ void TiffThumbDecoder::addToQueue(QString fPath, int dmRow, int dmInstance,
 void TiffThumbDecoder::processQueue()
 {
     if (G::isLogger) G::log("TiffThumbDecoder::processQueue");
+    qDebug().noquote() << "TiffThumbDecoder::processQueue";
 
     if (abort) {
         abort = false;

@@ -27,6 +27,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
     // FrameDecoder→DataModel signals are connected once in MetaRead. Here we
     // only wire this Reader's videoFrameDecode emission into the shared queue.
     connect(this, &Reader::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
+    connect(this, &Reader::setValDm, dm, &DataModel::setValDm);
 
     tiffThumbDecoder = new TiffThumbDecoder();
     connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon1);
@@ -209,6 +210,10 @@ bool Reader::readMetadata()
 
 void Reader::readIcon()
 {
+/*
+    if isVideo emit videoFrameDecode
+    else thumb->loadThumb
+*/
     QString fun = "Reader::readIcon";
     if (G::isLogger) G::log(fun, fPath);
     if (isDebug)
@@ -220,6 +225,9 @@ void Reader::readIcon()
         << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
             ;
     }
+
+    QElapsedTimer tIcon;
+    tIcon.start();
 
     if (fPath.isEmpty()) {
         qDebug().noquote()
@@ -234,11 +242,11 @@ void Reader::readIcon()
     QString msg;
     QImage image;
 
-    // tiff missing embedded thumbnail
+    /* tiff missing embedded thumbnail
     if (m->ext == "tif" && m->isEmbeddedThumbMissing) {
         emit tiffMissingThumbDecode(fPath, dmRow, instance, m->offsetFull);
         return;
-    }
+    } // */
 
     // video
     if (isVideo) {
@@ -276,10 +284,6 @@ void Reader::readIcon()
         ;
     }
 
-    #ifdef TIMER
-    t4 = t.restart();
-    #endif
-
     if (abort) {status = Status::Aborted; return;}
 
     if (loadedIcon) {
@@ -293,6 +297,13 @@ void Reader::readIcon()
         // Backpressure: bump pending counter; DataModel::setIcon1 decrements.
         dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
         emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
+
+        // qint64 msToDecode = tIcon.elapsed();
+        qint64 msToDecode = tIcon.nsecsElapsed()/1000;
+        // qDebug() << fun << "instance =" << instance << "dmRow =" << dmRow << "microsec =" << msToDecode;
+        emit setValDm(dmRow, G::MSToReadColumn, msToDecode, instance,
+                      "Reader::readIcon", Qt::EditRole);
+
         if (!im.isNull()) return;
     }
 
@@ -323,7 +334,8 @@ void Reader::read(int dmRow, QString filePath, int instance,
     QString need = "needMeta = "  + QVariant(needMeta).toString() +
                    " needIcon = " + QVariant(needIcon).toString() + " ";
     if (G::isLogger) G::log(fun, need + filePath);
-    if (isDebug) qDebug() << fun << need;
+    if (isDebug)
+        qDebug().noquote() << fun << "instance =" << instance << "dmRow =" << dmRow << need;
     if (filePath.isEmpty()) {
         qWarning().noquote() << fun << "EMPTY FILEPATH";
     }
