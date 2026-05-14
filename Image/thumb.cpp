@@ -109,7 +109,7 @@ void Thumb::checkOrientation(QImage &image, int orientation, int rotationDegrees
     }
 }
 
-void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
+void Thumb::setImageDimensions(QString &fPath, QSize size, int row)
 {
     QString fun = "Thumb::setImageDimensions";
     if (isDebug)
@@ -117,8 +117,8 @@ void Thumb::setImageDimensions(QString &fPath, QImage &image, int row)
             << fun.leftJustified(col0Width)
             << "row =" << row;
     if (G::isLogger) G::log(fun, "row = " + QString::number(row));
-    int w = image.width();
-    int h = image.height();
+    int w = size.width();
+    int h = size.height();
     if (h == 0) {
         QString msg = "Image width and/or height = 0.";
         G::issue("Warning", msg, "Thumb::setImageDimensions", dmRow, fPath);
@@ -182,13 +182,22 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         return Status::Open;
     }
 
-    if (!abort && !image.load(fPath)) {
-        QString msg = "Could not read thumb using QImage::load.";
+    QImageReader reader(fPath);
+    reader.setAutoTransform(false);
+    const QSize srcSize = reader.size();
+    if (srcSize.isValid()) {
+        const QSize target = srcSize.scaled(thumbMax, Qt::KeepAspectRatio);
+        reader.setScaledSize(target);
+    }
+
+    if (!abort && !reader.read(&image)) {
+        QString msg = "Could not read thumb using QImageReader::read: "
+                      + reader.errorString();
         G::issue("Warning", msg, "Thumb::loadFromEntireFile", dmRow, fPath);
         return Status::Fail;
     }
 
-    if (!abort) setImageDimensions(fPath, image, row);
+    if (!abort) setImageDimensions(fPath, srcSize.isValid() ? srcSize : image.size(), row);
 
     if (image.isNull()) {
         QString msg = "Null image returned from thumbReader.";
@@ -254,12 +263,12 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
             1. IRB Jpg thumb
             2. else chained IFD tiff thumb
             3. else subIFD tiff thumb
-            4. else m.isEmbeddedThumbMissing = true then sample main tiff
+            4. else m.isEmbeddedThumbMissing = true, then sample main tiff
 
 */
     QString fun = "Thumb::loadFromTiff";
     if (G::isLogger) G::log(fun, fPath);
-    // if (isDebug)
+    if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "row =" << dmRow
@@ -277,14 +286,11 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
         return Status::Open;
     }
 
-    // use QtTiff decoder
-    // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
-
-    // ImageMetadata m = dm->imMetadata(fPath);
     if (abort) return Status::Fail;
     Tiff tiff("Thumb::loadFromTiff");
     if (abort) return Status::Fail;
 
+    // if no thumbnail then sample full image
     if (m.isEmbeddedThumbMissing) {
         if (!tiff.readSample(fPath, &image, G::maxIconSize, m.offsetFull)) {
             QString errMsg = "Could not read because Tiff::readSample failed.";
@@ -293,6 +299,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
             return Status::Fail;
         }
     }
+    // read thumbnail
     else {
         if (!tiff.read(fPath, &image, m.offsetThumb)) {
             QString errMsg = "Could not read because Tiff::read failed.";
@@ -302,86 +309,8 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
         }
     }
 
-    // qDebug() << "Thumb::loadFromTiff" << image.width() << image.height();
     image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
-
-    // // fix missing embedded thumbnail
-    // bool isMissingThumb = m.isEmbeddedThumbMissing;
-    // if (abort) return Status::Fail;
-    // if (isMissingThumb && G::modifySourceFiles && G::autoAddMissingThumbnails) {
-    //     if (G::backupBeforeModifying) {
-    //         QString msg = "File(s) have been backed up before embedding thumbnail(s).<p>"
-    //                       "Press <font color=\"red\">ESC</font> to close";
-    //         // use relay because probably in non-gui thread
-    //         emit G::relay->showPopUp(msg, 10000, true, 0.75, Qt::AlignHCenter);
-    //         // emit G::relay->updateStatus(false, msg, "Thumb::loadFromTiff");  // this works
-    //         Utilities::backup(fPath, "backup");
-    //     }
-    //     if (abort) return Status::Fail;
-    //     if (tiff.encodeThumbnail(fPath, image)) {
-    //         emit setValDm(dmRow, G::MissingThumbColumn, false,
-    //                       dm->instance, "Thumb::loadFromTiff");
-    //     }
-    // }
-
     return Status::Success;
-
-    if (abort) return Status::Fail;
-
-    if (tiff.read(fPath, &image, m.offsetThumb)) {
-        // qDebug() << "Thumb::loadFromTiff" << image.width() << image.height();
-        image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
-        return Status::Success;
-    }
-    else {
-        QString errMsg = "Could not read because QtTiff read failed.";
-        G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
-        return Status::Fail;
-    }
-
-    // deprecated code...
-
-    /*
-    int samplesPerPixel = m.samplesPerPixel;
-    if (samplesPerPixel > 3) {
-        QString msg = "Samples per pixel > 3.";
-        G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
-        return Status::Fail;
-    }
-    //*/
-
-    // ImageMetadata m = dm->imMetadata(fPath);
-    // Tiff tiff("Thumb::loadFromTiff");
-
-    // Attempt to decode tiff thumbnail by decoding embedded tiff thumbnail
-    if (abort) return Status::Fail;
-    bool getThumb = true;
-    ImageMetadata mCopy = m;  // Tiff::decode takes a non-const ref
-    if (isEmbeddedThumb && tiff.decode(mCopy, fPath, image, getThumb, G::maxIconSize)) {
-        if (image.isNull()) {
-            QString msg = "Tiff::decode returned a null image.";
-            G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
-            return Status::Fail;
-        }
-        return Status::Success;
-    }
-
-     // try load entire tif using Winnow
-     // qDebug() << "Thumb::loadFromTiff" << fPath;
-    if (abort) return Status::Fail;
-     if (!tiff.decode(fPath, m.offsetFull, image)) {
-         if (image.isNull()) {
-             QString msg = "Could not read thumb using Tiff::decoder.";
-             G::issue("Warning", msg, "Thumb::loadFromTiff", dmRow, fPath);
-             return Status::Fail;
-         }
-         return Status::Success;
-     }
-
-    // use Qt tiff library to decode embedded thumbnail (does not work)
-    // image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
-
-    return Status::Fail;
 }
 
 Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
@@ -571,7 +500,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
         if (ext == "heic") {
             status = loadFromHeic(fPath, image);
             if (status == Status::Success) {
-                if (!abort) setImageDimensions(fPath, image, dmRow);
+                if (!abort) setImageDimensions(fPath, image.size(), dmRow);
                 break;
             }
         }

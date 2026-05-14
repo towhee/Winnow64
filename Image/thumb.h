@@ -56,7 +56,7 @@ private:
     int instance;
     QFileDevice::Permissions oldPermissions;
 
-    void setImageDimensions(QString &fPath, QImage &image, int row);
+    void setImageDimensions(QString &fPath, QSize size, int row);
     Status loadFromJpgData(QString &fPath, QImage &image);
     Status loadFromTiff(QString &fPath, QImage &image, int row, const ImageMetadata &m);
     Status loadFromHeic(QString &fPath, QImage &image);

@@ -1,6 +1,7 @@
 
 #include "framedecoder.h"
 #include "Main/global.h"
+#include <QTimer>
 
 /*
     Generates a thumbnail from the first video frame in a video file.
@@ -306,37 +307,47 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
 
 void FrameDecoder::cleanupPlayer()
 {
-    // if (mediaPlayer) {
-    //     mediaPlayer->stop();
-    //     mediaPlayer->deleteLater();
-    //     mediaPlayer = nullptr;
-    // }
+    /* Tear down the QMediaPlayer / QVideoSink safely against an in-flight
+       VTDecompressionSessionCreateWithOptions on CoreMedia's shared root
+       queue. The synchronous mp->stop() + ~QMediaPlayer path was racing
+       the format-description serialization (CFDictionary walk inside
+       sbufAtom_appendDictionaryAtom) and crashing in objc_msgSend on a
+       freed Obj-C object.
 
-    // if (videoSink) {
-    //     videoSink->deleteLater();
-    //     videoSink = nullptr;
-    // }
-    /* Memory pressure testing — defensive guards.
-       Under sustained heap pressure (Photos library MetaRead) the
-       QMediaPlayer / QVideoSink the QPointers track can be freed by
-       macOS / AVFoundation without the QObject destructor running, so
-       QPointer's destroyed-signal cleanup never nulls our pointer.
-       deleteLater then dereferences a dangling object and crashes.
-       Snapshot the raw pointer first; if memoryOverrunFlag is latched
-       skip deleteLater entirely (we're tearing down anyway). */
-    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) {
-        mediaPlayer = nullptr;
-        videoSink = nullptr;
-        return;
-    }
+       1. Detach the sink so no more frames land on it.
+       2. Skip stop() — ~QMediaPlayer drives the AVPlayer release path
+          itself, and an extra synchronous stop widens the race window.
+       3. Defer deleteLater until mediaStatus leaves the dangerous
+          setup window (LoadingMedia/BufferingMedia/StalledMedia).
+          3000 ms watchdog parented to mp guarantees no leak if the
+          status signal never fires. */
 
     if (QMediaPlayer *mp = mediaPlayer.data()) {
         mediaPlayer = nullptr;     // null QPointer first so re-entry is a no-op
-        mp->stop();
-        mp->deleteLater();
+        mp->setVideoOutput(nullptr);
+
+        const auto s = mp->mediaStatus();
+        const bool inSetupWindow =
+            s == QMediaPlayer::LoadingMedia   ||
+            s == QMediaPlayer::BufferingMedia ||
+            s == QMediaPlayer::StalledMedia;
+
+        if (!inSetupWindow) {
+            QTimer::singleShot(0, mp, [mp]{ mp->deleteLater(); });
+        } else {
+            QObject::connect(mp, &QMediaPlayer::mediaStatusChanged, mp,
+                [mp](QMediaPlayer::MediaStatus ns) {
+                    if (ns != QMediaPlayer::LoadingMedia   &&
+                        ns != QMediaPlayer::BufferingMedia &&
+                        ns != QMediaPlayer::StalledMedia) {
+                        mp->deleteLater();
+                    }
+                });
+            QTimer::singleShot(3000, mp, [mp]{ mp->deleteLater(); });
+        }
     }
     if (QVideoSink *vs = videoSink.data()) {
         videoSink = nullptr;
-        vs->deleteLater();
+        QTimer::singleShot(0, vs, [vs]{ vs->deleteLater(); });
     }
 }
