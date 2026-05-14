@@ -51,6 +51,8 @@ public:
     void updateStatus(int instruction, QString source); // update cached send signal
     QString reportToCache();
     QString diagnostics();
+    QString reportHealthChecks();
+    QString reportLifetimeCounters();
     QString reportCacheParameters();
     QString reportCacheDecoders();
     QString reportPressureItemList();
@@ -74,6 +76,8 @@ public:
 
     bool debugCaching = false;
     bool debugLog = false;
+    bool autoLogStalls = false;          // dump diagnostics() on stall (throttled)
+    qint64 lastStallSnapshotMs = 0;      // last time we wrote a stall snapshot
 
 signals:
     void stopped(QString src);
@@ -161,6 +165,7 @@ private:
         bool isRapidForward;
         bool isCooldown;
         qint64 elapsedMs;
+        qint64 tSinceMoveMs;    // ms since last forward step at the time of this check
         int cushion;
         bool highChk;
         bool lowChk;
@@ -218,11 +223,21 @@ private:
     quint64 minStepMB = 256;              // never resize by less than this
     quint64 maxStepMB = 1024;             // never resize by more than this
 
-    // decoder performance
-    int decoderMs = 250;                  // decode ms updated in decodeHistory()
-    int lastNDecoders = 10;               // number of times to calc average decode ms
+    // decoder performance.
+    // NOTE: ImageDecoder::msToDecode is actually nanoseconds (qint64 from
+    // QElapsedTimer::nsecsElapsed) — name is historical. We convert to ms at
+    // the boundary in decodeHistory() so decoderMs / decodeMsAvg are genuine ms.
+    int decoderMs = 250;                  // moving-average decode time, ms
+    int lastNDecoders = 10;               // window size for decodeMsAvg
     Winnow::Util::MovingAvg decodeMsAvg { lastNDecoders };
-    inline void decodeHistory(int msToDecode);
+    inline void decodeHistory(qint64 nsToDecode);
+
+    // lifetime counters since last initImageCache/instance reset.
+    // Used by diagnostics() to surface trim/discard races and health invariants.
+    std::atomic<quint64> cachedCount{0};            // successful icd->insert in cacheImage
+    std::atomic<quint64> trimmedCount{0};           // keys removed in trimOutsideTargetRange
+    std::atomic<quint64> lateDecodeCount{0};        // okToCache: decode finished after row trimmed from toCache
+    std::atomic<quint64> attemptCapHitCount{0};     // okToDecode: "Max attempts reached"
 
     // cache size ceiling with default start amount (MB) to prevent runaway growth
     qint64 maxMBCeiling = G::availableMemoryMB * 0.9;
@@ -233,8 +248,8 @@ private:
     inline void updateMotion(int key, bool isForwardNow);
     inline bool isRapidForward() const;
     inline quint64 calcResizeStepMB() const;
-
-    void releavePressure();
+    
+    void relievePressure();
 
     // --- End Cache pressure section ---
 
