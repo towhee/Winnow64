@@ -3296,31 +3296,52 @@ QString DataModel::diagnostics()
     int dots = 30;
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
-    rpt << "\n";
+    rpt << "\n\n";
+
+    // Health checks first so anomalies surface before the scalar block.
+    rpt << reportHealthChecks();
+
+    // Cache totals once where useful below.
+    const int     dmRows      = rowCount();
+    const int     sfRows      = sf->rowCount();
+    const int     fPathRowN   = fPathRow.size();
+    const int     queued      = queuedReaderEvents.load();
+    int           folderImgSum = 0;
+    for (auto it = folderImageCount.cbegin(); it != folderImageCount.cend(); ++it)
+        folderImgSum += it.value();
+
     rpt << "\n" << G::sj("abort", dots) << G::s(abort);
-    rpt << "\n" << G::sj("instance", dots) << G::s((int)instance);
+    rpt << "\n" << G::sj("instance", dots) << G::s(instance.load());
+    rpt << "\n" << G::sj("G::dmInstance", dots) << G::s(G::dmInstance.load());
+    rpt << "\n" << G::sj("instanceParent.isValid", dots) << G::s(instanceParent.isValid());
     rpt << "\n" << G::sj("primaryFolderPath", dots) << G::s(primaryFolderPath());
     rpt << "\n" << G::sj("firstFolderPathWithImages", dots) << G::s(firstFolderPathWithImages);
     rpt << "\n";
-    rpt << "\n" << G::sj("dmRowCount", dots) << G::s(rowCount());
-    rpt << "\n" << G::sj("sfRowCount", dots) << G::s(sf->rowCount());
+    rpt << "\n" << G::sj("dmRowCount", dots) << Utilities::fitNumber(static_cast<qint64>(dmRows), 14);
+    rpt << "\n" << G::sj("sfRowCount", dots) << Utilities::fitNumber(static_cast<qint64>(sfRows), 14);
+    rpt << "\n" << G::sj("fPathRow.size", dots) << Utilities::fitNumber(static_cast<qint64>(fPathRowN), 14);
+    rpt << "\n" << G::sj("iconCount", dots) << Utilities::fitNumber(static_cast<qint64>(iconCount()), 14);
+    rpt << "\n" << G::sj("queuedReaderEvents", dots) << Utilities::fitNumber(static_cast<qint64>(queued), 14);
     rpt << "\n";
     rpt << "\n" << G::sj("combineRawJpg", dots) << G::s(combineRawJpg);
     rpt << "\n";
     rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
-    // rpt << "\n" << G::sj("countInterval", dots) << G::s(countInterval);
-    rpt << "\n" << G::sj("currentDMRow", dots) << G::s(currentDmRow);
+    rpt << "\n" << G::sj("currentDmRow", dots) << G::s(currentDmRow);
+    rpt << "\n" << G::sj("currentSfRow", dots) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("currentDmIdx.row", dots) << G::s(currentDmIdx.row());
+    rpt << "\n" << G::sj("currentSfIdx.row", dots) << G::s(currentSfIdx.row());
     rpt << "\n";
-    rpt << "\n" << G::sj("currentSFRow", dots) << G::s(currentSfRow);
     rpt << "\n" << G::sj("firstVisibleIcon", dots) << G::s(firstVisibleIcon);
     rpt << "\n" << G::sj("lastVisibleIcon", dots) << G::s(lastVisibleIcon);
+    rpt << "\n" << G::sj("visibleIcons", dots) << G::s(visibleIcons);
     rpt << "\n" << G::sj("startIconRange", dots) << G::s(startIconRange);
     rpt << "\n" << G::sj("endIconRange", dots) << G::s(endIconRange);
-    rpt << "\n" << G::sj("iconChunkSize", dots) << G::s(iconChunkSize);
-    rpt << "\n" << G::sj("defaultIconChunkSize", dots) << G::s(defaultIconChunkSize);
-    rpt << "\n" << G::sj("hugeIconThreshold", dots) << G::s(hugeIconThreshold);
+    rpt << "\n" << G::sj("iconChunkSize", dots) << Utilities::fitNumber(static_cast<qint64>(iconChunkSize), 14);
+    rpt << "\n" << G::sj("defaultIconChunkSize", dots) << Utilities::fitNumber(static_cast<qint64>(defaultIconChunkSize), 14);
+    rpt << "\n" << G::sj("hugeIconThreshold", dots) << Utilities::fitNumber(static_cast<qint64>(hugeIconThreshold), 14);
     rpt << "\n" << G::sj("checkChunkSize", dots) << G::s(checkChunkSize);
     rpt << "\n" << G::sj("scrollToIcon", dots) << G::s(scrollToIcon);
+    rpt << "\n" << G::sj("iconSymbolRects.size", dots) << G::s(iconSymbolRects.size());
     rpt << "\n";
     rpt << "\n" << G::sj("hasDupRawJpg", dots) << G::s(hasDupRawJpg);
     rpt << "\n" << G::sj("loadingModel", dots) << G::s(loadingModel);
@@ -3328,20 +3349,19 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("imageCacheWaitingForRow", dots) << G::s(imageCacheWaitingForRow);
     rpt << "\n" << G::sj("folderHasMissingEmbeddedThumb", dots) << G::s(folderHasMissingEmbeddedThumb);
     rpt << "\n" << G::sj("filtersBuilt", dots) << G::s(filters->filtersBuilt);
-    rpt << "\n" << G::sj("timeToQuit", dots) << G::s(abort);
-    rpt << "\n" << G::sj("bytesUsed", dots) << G::s(bytesUsed);
+    rpt << "\n" << G::sj("bytesUsed", dots) << Utilities::fitNumber(bytesUsed, 18);
     rpt << "\n" << G::sj("showThumbNailSymbolHelp", dots) << G::s(showThumbNailSymbolHelp);
+    rpt << "\n";
+    rpt << "\n" << G::sj("subFolderTreeCount", dots) << Utilities::fitNumber(static_cast<quint64>(subFolderTreeCount), 14);
+    rpt << "\n" << G::sj("subFolderTreeCounter", dots) << Utilities::fitNumber(static_cast<quint64>(subFolderTreeCounter), 14);
     rpt << "\n";
     rpt << "\n" << G::sj("raw", dots) << G::s(raw);
     rpt << "\n" << G::sj("jpg", dots) << G::s(jpg);
-    // for (int row = 0; row < rowCount(); row++) {
-    //     rpt << "\n";
-    //     getDiagnosticsForRow(row, rpt);
-    // }
     rpt << "\n\n";
 
-    // list folderList
-    rpt << "folderList:\n";
+    // folderList / folderSet
+    rpt << "folderList: " << folderList.size() << " entries"
+        << "   (folderSet: " << folderSet.size() << ")\n";
     int i = 0;
     for (QString folder : folderList) {
         QString iStr = QVariant(++i).toString().rightJustified(5);
@@ -3349,16 +3369,143 @@ QString DataModel::diagnostics()
     }
     rpt << "\n";
 
-    // list fPathRow hash
+    // folderImageCount summary
+    rpt << "folderImageCount: " << folderImageCount.size() << " folders, "
+        << folderImgSum << " images total\n\n";
+
+    // fPathRow hash — cap at 1000 entries so a pathological folder can't run away.
     QMap<int,QString> rowMap;
-    rpt << "fPathRow hash:\n";
-    for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i)
-        rowMap.insert(i.value(), i.key());
-    for (int i = 0; i < rowMap.count(); i++) {
-        QString iStr = QVariant(i).toString().rightJustified(5);
-        rpt << iStr << "  " << rowMap[i]<< "\n";
+    rpt << "fPathRow hash: " << fPathRowN << " entries\n";
+    for (auto it = fPathRow.cbegin(), end = fPathRow.cend(); it != end; ++it)
+        rowMap.insert(it.value(), it.key());
+    const int cap = 1000;
+    const int shown = qMin(cap, rowMap.size());
+    int n = 0;
+    for (auto it = rowMap.cbegin(), end = rowMap.cend(); it != end && n < shown; ++it, ++n) {
+        QString iStr = QString::number(it.key()).rightJustified(5);
+        rpt << iStr << "  " << it.value() << "\n";
+    }
+    if (rowMap.size() > cap) {
+        rpt << "  (+" << (rowMap.size() - cap) << " more)\n";
     }
 
+    return reportString;
+}
+
+QString DataModel::reportHealthChecks()
+{
+/*
+    Invariant checks printed at the top of the diagnostic. Each line prints
+    [OK] or [WARN] so anomalies surface before the reader scrolls through the
+    scalar state. Mirrors the same pattern used in ImageCache and MetaRead.
+*/
+    if (G::isLogger) G::log("DataModel::reportHealthChecks");
+
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+
+    auto line = [&](const QString &ok, const QString &name, const QString &detail) {
+        rpt << "[" << ok.leftJustified(4, ' ') << "] "
+            << name.leftJustified(28, ' ') << ": " << detail << "\n";
+    };
+
+    rpt << "Health checks:\n";
+
+    // 1. rowCount() vs fPathRow.size() parity.
+    {
+        const int n = rowCount();
+        const int m = fPathRow.size();
+        if (n == m) {
+            line("OK", "rowCount vs fPathRow", QString("%1 rows").arg(n));
+        } else {
+            line("WARN", "rowCount vs fPathRow",
+                 QString("rowCount=%1, fPathRow.size=%2").arg(n).arg(m));
+        }
+    }
+
+    // 2. folderList vs folderSet parity.
+    {
+        const int n = folderList.size();
+        const int m = folderSet.size();
+        if (n == m) {
+            line("OK", "folderList vs folderSet", QString("%1 folders").arg(n));
+        } else {
+            line("WARN", "folderList vs folderSet",
+                 QString("folderList=%1, folderSet=%2").arg(n).arg(m));
+        }
+    }
+
+    // 3. queuedReaderEvents backpressure.
+    {
+        const int q = queuedReaderEvents.load();
+        const int threshold = 500;
+        if (q > threshold) {
+            line("WARN", "queuedReaderEvents",
+                 QString("%1 (above threshold %2)").arg(q).arg(threshold));
+        } else {
+            line("OK", "queuedReaderEvents", QString::number(q));
+        }
+    }
+
+    // 4. instance vs G::dmInstance.
+    {
+        const int dm  = instance.load();
+        const int gdm = G::dmInstance.load();
+        if (dm == gdm) {
+            line("OK", "instance vs G::dmInstance",
+                 QString("both = %1").arg(dm));
+        } else {
+            line("WARN", "instance vs G::dmInstance",
+                 QString("instance=%1, G::dmInstance=%2").arg(dm).arg(gdm));
+        }
+    }
+
+    // 5. Visible-range bounds.
+    {
+        const int first = firstVisibleIcon;
+        const int last  = lastVisibleIcon;
+        const int sfN   = sf->rowCount();
+        const bool ok = (first >= 0 && first <= last && last < sfN) || sfN == 0;
+        if (ok) {
+            line("OK", "visible range",
+                 QString("[%1..%2] of %3").arg(first).arg(last).arg(sfN));
+        } else {
+            line("WARN", "visible range",
+                 QString("[%1..%2] vs sf->rowCount=%3").arg(first).arg(last).arg(sfN));
+        }
+    }
+
+    // 6. iconChunkSize vs visibleIcons.
+    if (visibleIcons > iconChunkSize) {
+        line("WARN", "icon chunk vs visible",
+             QString("visibleIcons=%1 > iconChunkSize=%2 — cache will thrash")
+                 .arg(visibleIcons).arg(iconChunkSize));
+    } else {
+        line("OK", "icon chunk vs visible",
+             QString("visibleIcons=%1, iconChunkSize=%2")
+                 .arg(visibleIcons).arg(iconChunkSize));
+    }
+
+    // 7. bytesUsed sanity.
+    {
+        const qint64 b = bytesUsed;
+        const qint64 cap = static_cast<qint64>(G::memoryAbortMB) * 1024 * 1024;
+        if (b < 0) {
+            line("WARN", "bytesUsed",
+                 QString("negative (%1) — accounting drift").arg(b));
+        } else if (b > cap) {
+            line("WARN", "bytesUsed",
+                 QString("%1 exceeds memoryAbortMB cap (%2 bytes)")
+                     .arg(Utilities::fitNumber(b, 18))
+                     .arg(Utilities::fitNumber(cap, 18)));
+        } else {
+            line("OK", "bytesUsed",
+                 QString("%1 bytes").arg(Utilities::fitNumber(b, 18)));
+        }
+    }
+
+    rpt << "\n";
     return reportString;
 }
 
@@ -3441,7 +3588,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("width", dots) << G::s(index(row, G::WidthColumn).data());
     rpt << "\n  " << G::sj("height", dots) << G::s(index(row, G::HeightColumn).data());
     rpt << "\n  " << G::sj("dimensions", dots) << G::s(index(row, G::DimensionsColumn).data());
-    rpt << "\n  " << G::sj("aspectRatio", dots) << G::s(index(row, G::DimensionsColumn).data());
+    rpt << "\n  " << G::sj("aspectRatio", dots) << G::s(index(row, G::AspectRatioColumn).data());
     rpt << "\n  " << G::sj("rotation", dots) << G::s(index(row, G::RotationColumn).data());
 //    rpt << "\n  " << G::sj("_rotation", dots) << G::s(index(row, G::_RotationColumn).data());
     rpt << "\n  " << G::sj("apertureNum", dots) << G::s(index(row, G::ApertureColumn).data());
