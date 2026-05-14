@@ -2171,15 +2171,13 @@ void ImageCache::cacheImage(int id, int sfRow,
         return;
     }
 
-    // cache the image
-    if (!abort)
-    {
-        QMutexLocker locker(&icd->rwLock);
-        if (icd->imCache.contains(fPath)) {
+    // cache the image (icd->insert handles locking, duplicates, and bytes accounting)
+    if (!abort) {
+        if (icd->contains(fPath)) {
             // Already cached by another decoder
             return;
         }
-        icd->imCache.insert(fPath, doneImage);
+        icd->insert(fPath, doneImage);
     }
 
      // remove from toCache
@@ -2187,6 +2185,11 @@ void ImageCache::cacheImage(int id, int sfRow,
 
     // update datamodel cache status
     if (!abort) emit setCached(sfRow, true, instance);
+
+    // Reset attempts so a later trim/re-decode cycle gets a fresh retry budget.
+    // The maxAttemptsToCacheImage cap is meant to stop persistent decode failures,
+    // not to penalise rows that were cached, trimmed, and need re-caching.
+    if (!abort) emit setValSf(sfRow, G::AttemptsColumn, 0, instance, src);
 
     // // add a thumbnail if missing in datamodel (why?)
     // if (dm->sf->index(sfRow,0).data(Qt::DecorationRole).isNull()) {
@@ -2226,10 +2229,11 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus)
         success = false;
     }
 
-    // no longer in target range to cache
-    if (!toCache.contains(sfRow)) {
+    // Row trimmed from toCache mid-decode. If the decode succeeded the image
+    // is good — accept it (cacheImage's toCacheRemove is guarded by contains()).
+    // Only fail when the decode itself did not produce a usable image.
+    if (!toCache.contains(sfRow) && effectiveStatus != ImageDecoder::Status::Success) {
         msg += "Failed: " + sRow + " not in toCacheStatus. ";
-        // qWarning() << src << msg;
         success = false;
     }
 
@@ -2599,6 +2603,7 @@ void ImageCache::dispatch()
 
     // if cache is up-to-date our work is done
     if (cacheUpToDate()) {
+        emit updateIsRunning(false, true);   // (isRunning, showCacheLabel)
         return;
     }
 

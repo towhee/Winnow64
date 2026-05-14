@@ -136,7 +136,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catTitle] = G::TitleColumn;
     filterCategoryToDmColumn[catKeyword] = G::KeywordsColumn;
     filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
-    filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
+    // filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
     filterCategoryToDmColumn[catCompare] = G::CompareColumn;
 
     createPredefinedFilters();
@@ -255,7 +255,7 @@ void Filters::createDynamicFilters()
     createFilter(titles, catTitle);
     createFilter(keywords, catKeyword);
     createFilter(creators, catCreator);
-    createFilter(missingThumbs, catMissingThumbs);
+    // createFilter(missingThumbs, catMissingThumbs);
     createFilter(compare, catCompare);
 }
 

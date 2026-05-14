@@ -78,7 +78,6 @@ public:
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
-    bool missingThumbnails();
     bool isDimensions(int sfRow);
     bool subFolderImagesLoaded = true;
     bool isMetadataAttempted(int sfRow);

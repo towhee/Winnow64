@@ -90,7 +90,7 @@ QT += svg
 
 HEADERS += Cache/cachedata.h \
     Utilities/reportdialog.h
-HEADERS += Cache/tiffthumbdecoder.h
+HEADERS +=
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -265,7 +265,7 @@ HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp \
     Utilities/reportdialog.cpp
-SOURCES += Cache/tiffthumbdecoder.cpp
+SOURCES +=
 SOURCES += ImageFormats/Video/mov.cpp
 SOURCES += ImageFormats/Video/mp4.cpp
 SOURCES += ImageFormats/Png/png.cpp

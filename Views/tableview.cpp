@@ -226,7 +226,7 @@ void TableView::setDefaultColumnWidths()
         else if (column == G::MetadataAttemptedColumn) defaultColumnWidth[column] = fm.boundingRect("=Metadata Attempted=").width();
         else if (column == G::MetadataLoadedColumn) defaultColumnWidth[column] = fm.boundingRect("=Meta Loaded=").width();
         else if (column == G::IconLoadedColumn) defaultColumnWidth[column] = fm.boundingRect("=Icon Loaded=").width();
-        else if (column == G::MissingThumbColumn) defaultColumnWidth[column] = fm.boundingRect("=Missing Thumb=").width();
+        // else if (column == G::MissingThumbColumn) defaultColumnWidth[column] = fm.boundingRect("=Missing Thumb=").width();
         else if (column == G::CompareColumn) defaultColumnWidth[column] = fm.boundingRect("=Compare=").width();
         else if (column == G::_RatingColumn) defaultColumnWidth[column] = fm.boundingRect("=_Rating=").width();
         else if (column == G::_LabelColumn) defaultColumnWidth[column] = fm.boundingRect("=_Label=").width();

@@ -579,12 +579,6 @@ void MW::createEditActions()
     addAction(label5Action);
     connect(label5Action, &QAction::triggered, this, &MW::setColorClass);
 
-    embedThumbnailsAction = new QAction(tr("Embed missing thumbnails"), this);
-    embedThumbnailsAction->setObjectName("embedThumbnails");
-    embedThumbnailsAction->setShortcutVisibleInContextMenu(true);
-    addAction(embedThumbnailsAction);
-    connect(embedThumbnailsAction, &QAction::triggered, this, &MW::embedThumbnailsFromAction);
-
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
     rotateRightAction->setShortcutVisibleInContextMenu(true);
@@ -1712,9 +1706,6 @@ void MW::createMiscActions()
     // connect(pasteFilesAction, &QAction::triggered, this, &MW::pasteFiles);
     connect(pasteFilesAction, &QAction::triggered, this,
            [this](){pasteFiles(mouseOverFolderPath);});
-
-    // initially enable/disable actions
-    embedThumbnailsAction->setEnabled(G::modifySourceFiles);
 }
 
 void MW::createMenus()
@@ -1879,7 +1870,6 @@ void MW::createEditMenu()
     utilitiesMenu = editMenu->addMenu("Utilities");
     utilitiesMenu->addAction(mediaReadSpeedAction);
     utilitiesMenu->addAction(visCmpImagesAction);
-    if (G::useMyTiff) utilitiesMenu->addAction(embedThumbnailsAction);
     // utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);
     if (G::isRory) utilitiesMenu->addAction(focusStackAction);
@@ -2349,10 +2339,6 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(separatorAction5);
     thumbViewActions->append(renameAction);
     thumbViewActions->append(deleteImagesAction);
-    if (G::useMyTiff) {
-        thumbViewActions->append(separatorAction6);
-        thumbViewActions->append(embedThumbnailsAction);
-    }
     thumbViewActions->append(separatorAction7);
     thumbViewActions->append(reportMetadataAction);
     thumbViewActions->append(diagnosticsCurrentAction);
@@ -2483,49 +2469,6 @@ void MW::renameEraseMemCardFromContextMenu(QString path)
     eraseUsbActionFromContextMenu->setText(text);
 }
 
-void MW::renameEmbedThumbsContextMenu()
-{
-    QString embed = "Embed ";
-    if (G::backupBeforeModifying) embed = "Backup, then embed ";
-    if (!G::modifySourceFiles) {
-        QString txt = embed + "missing thumbnails";
-        embedThumbnailsAction->setText(txt);
-        embedThumbnailsAction->setEnabled(false);
-        return;
-    }
-
-    QModelIndexList selection = dm->selectionModel->selectedRows();
-    int missingCount = 0;
-    if (!selection.isEmpty()) {
-        for (int i = 0; i < selection.size(); i++) {
-            int sfRow = selection.at(i).row();
-            bool isMissing = dm->sf->index(sfRow, G::MissingThumbColumn).data().toBool();
-            if (isMissing) {
-                missingCount++;
-            }
-            /*
-            qDebug() << "MW::renameEmbedThumbsContextMenu"
-                     << "selection size =" << selection.size()
-                     << "row =" << sfRow
-                     << "missing count =" << missingCount
-                ; // */
-        }
-    }
-    if (missingCount) {
-        QString images = " images";
-        QString thumbnails = " thumbnails ";
-        QString count = QString::number(missingCount);
-        if (missingCount == 1) {
-            images = " image";
-            thumbnails = " thumbnail ";
-        }
-        QString txt = embed + "missing" + thumbnails + "for " + count + images;
-        embedThumbnailsAction->setText(txt);
-        embedThumbnailsAction->setEnabled(true);
-    }
-    else embedThumbnailsAction->setEnabled(false);
-}
-
 void MW::enableSelectionDependentMenus()
 {
 /*
@@ -2619,9 +2562,6 @@ void MW::enableSelectionDependentMenus()
     // diagnosticsMetadataCacheAction->setEnabled(dmHasRows);
     // diagnosticsImageCacheAction->setEnabled(dmHasRows);
     diagnosticsEmbellishAction->setEnabled(dmHasRows);
-
-    // Missing thumbnails: rename and set enabled state
-    renameEmbedThumbsContextMenu();
 }
 
 void MW::loadShortcuts(bool defaultShortcuts)

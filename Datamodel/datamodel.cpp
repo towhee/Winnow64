@@ -248,7 +248,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::MetadataAttemptedColumn, new QStandardItem("Meta Attempted")); horizontalHeaderItem(G::MetadataAttemptedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataLoadedColumn, new QStandardItem("Meta Loaded")); horizontalHeaderItem(G::MetadataLoadedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::MissingThumbColumn, new QStandardItem("Missing Thumb")); horizontalHeaderItem(G::MissingThumbColumn)->setData(true, G::GeekRole);
+    // setHorizontalHeaderItem(G::MissingThumbColumn, new QStandardItem("Missing Thumb")); horizontalHeaderItem(G::MissingThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating")); horizontalHeaderItem(G::_RatingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_LabelColumn, new QStandardItem("_Label")); horizontalHeaderItem(G::_LabelColumn)->setData(true, G::GeekRole);
@@ -1708,7 +1708,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     // setData(index(row, G::MetadataReadingColumn), m.metadataReading);
     setData(index(row, G::MetadataAttemptedColumn), m.metadataAttempted);
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
-    setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
+    // setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
     setData(index(row, G::CompareColumn), m.compare);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
@@ -1914,18 +1914,6 @@ QStringList DataModel::rptIssues(int sfRow)
 //     // v.setValue(issueList);
 //     // sf->setData(sfIdx, v);
 // }
-
-bool DataModel::missingThumbnails()
-{
-    for (int row = 0; row < sf->rowCount(); row++) {
-        if (index(row, G::MissingThumbColumn).data().toBool()) {
-            folderHasMissingEmbeddedThumb = true;
-            return true;
-        }
-    }
-    folderHasMissingEmbeddedThumb = false;
-    return false;
-}
 
 double DataModel::aspectRatio(int w, int h, int orientation)
 {
@@ -2647,7 +2635,7 @@ bool DataModel::isAllMetadataAttempted()
     for (int row = 0; row < rowCount(); ++row) {
         if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
             if (isDebug)
-            qDebug() << "DataModel::isAllMetadataAttempted" << "row =" << row << "is not loaded.";
+                qDebug() << "DataModel::isAllMetadataAttempted" << "row =" << row << "is not loaded.";
             return false;
         }
     }
@@ -3251,7 +3239,7 @@ void DataModel::setThumbnailLegend()
     QString rowd = "<tr><td align=\"right\">" + blue + "</td><td>border = Ingested</td></tr>";
     QString rowe = "<tr><td align=\"right\">" + red + "</td><td>border = Rejected</td></tr>";
     QString row1 = "<tr><td><center>" + redMedBullet    + "</center></td><td>Full size image not cached</td></tr>";
-    QString row2 = "<tr><td><center>" + yellowMedBullet + "</center></td><td>Missing embedded thumbnail</td></tr>";
+    // QString row2 = "<tr><td><center>" + yellowMedBullet + "</center></td><td>Missing embedded thumbnail</td></tr>";
     QString row3 = "<tr><td><center>" + lockSym         + "</center></td><td>File is locked</td></tr>";
     QString endTable = "</table>";
     QString footnote = "<p>Show/hide this tooltip legend in Preferences > User Interface";
@@ -3263,7 +3251,7 @@ void DataModel::setThumbnailLegend()
             rowd +
             rowe +
             row1 +
-            row2 +
+            // row2 +
             row3 +
             endTable +
             footnote
@@ -3427,7 +3415,6 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("isMetadataAttempted", dots) << G::s(index(row, G::MetadataAttemptedColumn).data());
     rpt << "\n  " << G::sj("isMetadataLoaded", dots) << G::s(index(row, G::MetadataLoadedColumn).data());
     rpt << "\n  " << G::sj("isIconLoaded", dots) << G::s(index(row, G::IconLoadedColumn).data());
-    rpt << "\n  " << G::sj("isMissingThumb", dots) << G::s(index(row, G::MissingThumbColumn).data());
     rpt << "\n  " << G::sj("isReadWrite", dots) << G::s(index(row, G::ReadWriteColumn).data());
     rpt << "\n  " << G::sj("dupHideRaw", dots) << G::s(index(row, 0).data(G::DupHideRawRole));
     rpt << "\n  " << G::sj("dupRawRow", dots) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
