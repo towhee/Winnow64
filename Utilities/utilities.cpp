@@ -456,6 +456,20 @@ QString Utilities::enquote(QString &s)
     return QChar('\"') + s + QChar('\"');
 }
 
+QString Utilities::fitNumber(qint64 v, int width)
+{
+    const QString s = QLocale::system().toString(v);
+    if (s.size() > width - 1) return QString(width - 1, QChar('*'));
+    return s;
+}
+
+QString Utilities::fitNumber(quint64 v, int width)
+{
+    const QString s = QLocale::system().toString(v);
+    if (s.size() > width - 1) return QString(width - 1, QChar('*'));
+    return s;
+}
+
 void Utilities::hideCursor()
 {
     QApplication::setOverrideCursor(Qt::BlankCursor);
