@@ -1147,19 +1147,24 @@ QString ImageCache::reportHealthChecks()
         if (overflowed || diff > 1024) {
             line("WARN", "byte accounting",
                  QString("reported=%1 bytes, sum of imCache=%2 bytes across %3 images (drift %4)")
-                     .arg(reported).arg(sumBytes).arg(n).arg(diff));
+                     .arg(Utilities::fitNumber(reported, 22))
+                     .arg(Utilities::fitNumber(sumBytes, 22))
+                     .arg(n)
+                     .arg(Utilities::fitNumber(diff, 22)));
         } else {
             line("OK", "byte accounting",
                  QString("%1 MB (%2 bytes across %3 images)")
                      .arg(reported / (1024.0 * 1024.0), 0, 'f', 1)
-                     .arg(reported).arg(n));
+                     .arg(Utilities::fitNumber(reported, 22))
+                     .arg(n));
         }
     }
 
     // 2. imCache empty vs currMB > 0
     if (icd->imCache.isEmpty() && icd->sizeBytes() > 0) {
         line("WARN", "imCache vs sizeBytes",
-             QString("imCache is empty but sizeBytes() = %1").arg(icd->sizeBytes()));
+             QString("imCache is empty but sizeBytes() = %1")
+                 .arg(Utilities::fitNumber(icd->sizeBytes(), 22)));
     } else {
         line("OK", "imCache vs sizeBytes", "consistent");
     }
@@ -1271,10 +1276,14 @@ QString ImageCache::reportLifetimeCounters()
     QTextStream rpt;
     rpt.setString(&reportString);
     rpt << "Lifetime counters (since folder load):\n";
-    rpt << "  cached successfully    : " << cachedCount.load() << "\n";
-    rpt << "  trimmed from cache     : " << trimmedCount.load() << "\n";
-    rpt << "  late decodes (raced)   : " << lateDecodeCount.load() << "\n";
-    rpt << "  hit attempt cap        : " << attemptCapHitCount.load() << "\n";
+    rpt << "  cached successfully    : "
+        << Utilities::fitNumber(cachedCount.load(),       12) << "\n";
+    rpt << "  trimmed from cache     : "
+        << Utilities::fitNumber(trimmedCount.load(),      12) << "\n";
+    rpt << "  late decodes (raced)   : "
+        << Utilities::fitNumber(lateDecodeCount.load(),   12) << "\n";
+    rpt << "  hit attempt cap        : "
+        << Utilities::fitNumber(attemptCapHitCount.load(),12) << "\n";
     rpt << "\n";
     return reportString;
 }
@@ -1305,11 +1314,11 @@ QString ImageCache::reportCacheParameters()
     rpt << "\n";
     rpt << "totFiles                 = " << dm->sf->rowCount() << "\n";
     rpt << "currMB                   = " << icd->sizeMB() << "\n";
-    rpt << "currBytes (raw)          = " << icd->sizeBytes() << "\n";
-    rpt << "maxMB                    = " << maxMB << "\n";
-    rpt << "minMB                    = " << minMB << "\n";
-    rpt << "maxMBCeiling             = " << maxMBCeiling << "\n";
-    rpt << "G::availableMemoryMB     = " << G::availableMemoryMB << "\n";
+    rpt << "currBytes (raw)          = " << Utilities::fitNumber(icd->sizeBytes(), 22) << "\n";
+    rpt << "maxMB                    = " << Utilities::fitNumber(maxMB, 14)            << "\n";
+    rpt << "minMB                    = " << Utilities::fitNumber(minMB, 14)            << "\n";
+    rpt << "maxMBCeiling             = " << Utilities::fitNumber(maxMBCeiling, 14)     << "\n";
+    rpt << "G::availableMemoryMB     = " << Utilities::fitNumber(G::availableMemoryMB.load(), 14) << "\n";
     rpt << "memThrottle              = " << memThrottle << "\n";
     rpt << "maxAttemptsToCacheImage  = " << maxAttemptsToCacheImage << "\n";
 
@@ -1791,7 +1800,7 @@ QString ImageCache::reportImCache()
     }
 
     rpt << "\n" << keys.length() << " images in image cache.";
-    rpt << "\n" << mem << " MB consumed";
+    rpt << "\n" << Utilities::fitNumber(static_cast<qint64>(mem), 14) << " MB consumed";
 
     return reportString;
 }

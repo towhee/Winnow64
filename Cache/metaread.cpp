@@ -472,6 +472,12 @@ void MetaRead::initialize(QString src)
     err.clear();
     cycling.fill(false);
     readSuccessThisCycle.clear();
+
+    // reset diagnostic lifetime counters
+    readsSuccessCount.store(0, std::memory_order_relaxed);
+    readsFailedCount.store(0, std::memory_order_relaxed);
+    redosTriggeredCount.store(0, std::memory_order_relaxed);
+    dispatchCycleCount.store(0, std::memory_order_relaxed);
 }
 
 void MetaRead::syncInstance()
@@ -504,103 +510,330 @@ QString MetaRead::diagnostics()
     QTextStream rpt;
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " MetaRead Diagnostics");
-    rpt << "\n" ;
-    rpt << "\n" << "instance:                   " << instance;
-    rpt << "\n";
-    rpt << "\n" << "expansionFactor:            " << expansionFactor;
-    rpt << "\n";
-    rpt << "\n" << "sfRowCount:                 " << sfRowCount;
-    rpt << "\n" << "dm->currentSfRow:           " << dm->currentSfRow;
-    rpt << "\n";
-    rpt << "\n" << "defaultIconChunkSize:       " << dm->defaultIconChunkSize;
-    rpt << "\n" << "iconChunkSize:              " << dm->iconChunkSize;
-    rpt << "\n" << "iconLimit:                  " << iconLimit;
-    rpt << "\n";
-    rpt << "\n" << "firstVisibleIcon:           " << dm->firstVisibleIcon;
-    rpt << "\n" << "lastVisibleIcon:            " << dm->lastVisibleIcon;
-    rpt << "\n" << "visibleIcons:               " << dm->visibleIcons;
-    rpt << "\n";
-    rpt << "\n" << "firstIconRow:               " << firstIconRow;
-    rpt << "\n" << "lastIconRow:                " << lastIconRow;
-    rpt << "\n" << "dm->startIconRange:         " << dm->startIconRange;
-    rpt << "\n" << "dm->endIconRange:           " << dm->endIconRange;
-    rpt << "\n" << "dm->iconCount:              " << dm->iconCount();
-    rpt << "\n";
-    QStringList s;
-    for (int i : dm->metadataNotLoaded()) s << QString::number(i);
-    rpt << "\n" << "dm->isAllMetadataAttempted: " << QVariant(dm->isAllMetadataAttempted()).toString();
-    if (s.size()) rpt << "  Rows not loaded: " << s.join(",");
-    rpt << "\n" << "G::allMetadataLoaded:       " << QVariant(G::allMetadataLoaded).toString();
-    rpt << "\n" << "G::iconChunkLoaded:         " << QVariant(G::iconChunkLoaded).toString();
-    rpt << "\n" << "G::maxIconChunk:            " << QVariant(G::maxIconChunk).toString();
-    rpt << "\n";
-    rpt << "\n" << "isDone:                     " << QVariant(isDone).toString();
-    rpt << "\n" << "aIsDone && bIsDone:         " << QVariant(aIsDone && bIsDone).toString();
-    rpt << "\n";
-    rpt << "\n" << "abort:                      " << QVariant(abort).toString();
-    rpt << "\n" << "isRunning:                  " << QVariant(metaReadThread.isRunning()).toString();
-    rpt << "\n" << "isRunloop:                  " << QVariant(runloop.isRunning()).toString();
-    rpt << "\n" << "isDispatching:              " << QVariant(isDispatching).toString();
-    rpt << "\n";
-    rpt << "\n" << "redoCount:                  " << QVariant(redoCount).toString();
-    rpt << "\n" << "redoMax:                    " << QVariant(redoMax).toString();
-    rpt << "\n";
+    rpt << "\n\n";
 
-    // errors
-    rpt << "\n";
-    rpt << "\n" << "Errors: " << err.length() << " items";
-    rpt.setFieldWidth(5);
-    for (int i = 0; i < err.length(); i++) {
-        rpt << "\n" << err.at(i);
-    }
+    // Health checks first, then lifetime counters, then state, then tables.
+    rpt << reportHealthChecks();
+    rpt << reportLifetimeCounters();
 
-    // readers
-    rpt << "\n";
-    rpt << "\n";
-    rpt << "Reader status:";
-    rpt << "\n";
-    rpt << "  ID    Cycling   Pending     Status";
-    for (int id = 0; id < readerCount; id++) {
-        rpt.setFieldAlignment(QTextStream::AlignRight);
-        rpt.setFieldWidth(4);
-        rpt << "\n" << id;
-        rpt.setFieldWidth(11);
-        rpt << QVariant(cycling.at(id)).toString();
-        rpt.setFieldWidth(10);
-        rpt << QVariant(readers[id]->isPending()).toString();
-        rpt.setFieldWidth(5);
-        rpt << " ";
+    const int dmInst = dm->instance.load();
+
+    // Key/value scalar block. Single 28-char label column for consistency.
+    auto kv = [&rpt](const QString &label, const QString &value) {
         rpt.setFieldAlignment(QTextStream::AlignLeft);
-        rpt.setFieldWidth(30);
-        rpt << readers[id]->statusText.at(readers[id]->status);
-    }
+        rpt.setFieldWidth(28);
+        rpt << label;
+        rpt.setFieldWidth(0);
+        rpt << value << "\n";
+    };
 
-    // rows with icons
-    rpt.setFieldWidth(0);
-    rpt << "\n";
-    rpt << "\n";
-    rpt.setFieldAlignment(QTextStream::AlignLeft);
-    rpt << "Empty icon rows in datamodel:";
+    rpt << "Instance / range:\n";
+    kv("instance",                   QString::number(instance));
+    kv("dm->instance",               QString::number(dmInst));
+    kv("readerCount",                QString::number(readerCount));
+    kv("expansionFactor",            QString::number(expansionFactor));
+    kv("sfRowCount",                 QString::number(sfRowCount));
+    kv("dmRowCount",                 QString::number(dmRowCount));
+    kv("dm->currentSfRow",           QString::number(dm->currentSfRow));
+
+    rpt << "\nIcon chunk:\n";
+    kv("defaultIconChunkSize",       QString::number(dm->defaultIconChunkSize));
+    kv("iconChunkSize",              QString::number(dm->iconChunkSize));
+    kv("iconLimit",                  QString::number(iconLimit));
+    kv("firstVisibleIcon",           QString::number(dm->firstVisibleIcon));
+    kv("lastVisibleIcon",            QString::number(dm->lastVisibleIcon));
+    kv("visibleIcons",               QString::number(dm->visibleIcons));
+    kv("firstIconRow",               QString::number(firstIconRow));
+    kv("lastIconRow",                QString::number(lastIconRow));
+    kv("dm->startIconRange",         QString::number(dm->startIconRange));
+    kv("dm->endIconRange",           QString::number(dm->endIconRange));
+    kv("dm->iconCount",              QString::number(dm->iconCount()));
+
+    rpt << "\nDispatch state:\n";
+    kv("isDispatching",              QVariant(isDispatching).toString());
+    kv("isDone",                     QVariant(isDone).toString());
+    kv("aIsDone",                    QVariant(aIsDone).toString());
+    kv("bIsDone",                    QVariant(bIsDone).toString());
+    kv("abort",                      QVariant(abort).toString());
+    kv("isRunning (thread)",         QVariant(metaReadThread.isRunning()).toString());
+    kv("isRunloop",                  QVariant(runloop.isRunning()).toString());
+    kv("startRow",                   QString::number(startRow));
+    kv("lastRow",                    QString::number(lastRow));
+    kv("nextRow",                    QString::number(nextRow));
+    kv("a (ahead)",                  QString::number(a));
+    kv("b (behind)",                 QString::number(b));
+    kv("isAhead",                    QVariant(isAhead).toString());
+    kv("fileSelectionChanged",       QVariant(fileSelectionChanged).toString());
+    kv("isNewStartRowWhileDisp.",    QVariant(isNewStartRowWhileDispatching).toString());
+    kv("imageCacheTriggered",        QVariant(imageCacheTriggered).toString());
+    kv("success",                    QVariant(success).toString());
+    kv("quitAfterTimeoutInitiated",  QVariant(quitAfterTimeoutInitiated).toString());
+    kv("readSuccessThisCycle (size)",QString::number(readSuccessThisCycle.size()));
+    kv("redoCount / redoMax",        QString::number(redoCount) + " / " + QString::number(redoMax));
+
+    rpt << "\nGlobals:\n";
+    kv("dm->isAllMetadataAttempted", QVariant(dm->isAllMetadataAttempted()).toString());
+    kv("G::allMetadataLoaded",       QVariant(G::allMetadataLoaded).toString());
+    kv("G::iconChunkLoaded",         QVariant(G::iconChunkLoaded).toString());
+    kv("G::maxIconChunk",            QString::number(G::maxIconChunk));
+    kv("G::memoryAbortMB",           QString::number(G::memoryAbortMB));
+
+    rpt << "\nTimers / probe:\n";
+    kv("memoryProbeCounter",         QString::number(memoryProbeCounter));
+    kv("memoryProbeTimer.elapsed",   QString::number(memoryProbeTimer.elapsed()) + " ms");
+    kv("t.elapsed (dispatch start)", QString::number(t.isValid() ? t.elapsed() : -1) + " ms");
+
+    // Reader status table — header and body use matching field widths so they
+    // actually align (the prior version had a spaced-string header that drifted
+    // out of sync with the body widths).
+    rpt << "\nReader status: (dm->instance = " << dmInst << ")\n";
+    auto rhdr = [&rpt](int w, const QString &s) {
+        rpt.setFieldWidth(w); rpt << s;
+    };
     rpt.setFieldAlignment(QTextStream::AlignRight);
-    rpt.setFieldWidth(6);
-    for (int i = 0; i < dm->sf->rowCount(); i++) {
-        if (dm->iconLoaded(i, instance)) continue;
-        rpt << "\nrow" << i;
+    rhdr(4,  "ID");
+    rhdr(10, "Cycling");
+    rhdr(10, "Pending");
+    rhdr(12, "decInst");
+    rhdr(8,  "dmRow");
+    rpt.setFieldAlignment(QTextStream::AlignLeft);
+    rhdr(2,  "  ");
+    rhdr(16, "Status");
+    rpt.setFieldWidth(0);
+    rpt << "errMsg\n";
+    for (int id = 0; id < readerCount; ++id) {
+        const int decInst = readers[id]->instance.load();
+        rpt.setFieldAlignment(QTextStream::AlignRight);
+        rpt.setFieldWidth(4);  rpt << id;
+        rpt.setFieldWidth(10); rpt << QVariant(cycling.at(id)).toString();
+        rpt.setFieldWidth(10); rpt << QVariant(readers[id]->isPending()).toString();
+        rpt.setFieldWidth(12);
+        rpt << (decInst == dmInst
+                ? QString::number(decInst)
+                : QString::number(decInst) + "!");
+        rpt.setFieldWidth(8);  rpt << readers[id]->dmRow.load();
+        rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt.setFieldWidth(2);  rpt << "  ";
+        rpt.setFieldWidth(16); rpt << readers[id]->statusText.at(readers[id]->status);
+        rpt.setFieldWidth(0);
+        rpt << readers[id]->errMsg << "\n";
     }
-    rpt << "\n\n" ;
 
+    // Errors. Keep the field width reset around the loop so it can't leak.
+    rpt.setFieldWidth(0);
+    rpt << "\nErrors: " << err.length() << " items\n";
+    for (int i = 0; i < err.length(); i++) {
+        rpt << "  " << err.at(i) << "\n";
+    }
+
+    // Row-list summaries. Both "metadata not loaded" and "icons not loaded"
+    // can be folder-wide huge; the user-visible failure is in the *visible*
+    // range. Lead with that, follow with a capped folder-wide count.
+    auto summariseRows = [&rpt](const QString &label, const QList<int> &rows,
+                                int firstVisible, int lastVisible) {
+        int visMiss = 0;
+        QList<int> visSample;
+        for (int r : rows) {
+            if (r >= firstVisible && r <= lastVisible) {
+                ++visMiss;
+                if (visSample.size() < 10) visSample.append(r);
+            }
+        }
+        rpt << label << ": " << rows.size() << " total";
+        if (lastVisible >= firstVisible) {
+            const int visCount = lastVisible - firstVisible + 1;
+            rpt << " (" << visMiss << " of " << visCount << " visible)";
+        }
+        rpt << "\n";
+        if (!visSample.isEmpty()) {
+            QStringList s;
+            for (int r : visSample) s << QString::number(r);
+            rpt << "  visible sample: " << s.join(", ");
+            if (visMiss > visSample.size()) rpt << "  (+" << (visMiss - visSample.size()) << " more)";
+            rpt << "\n";
+        }
+    };
+
+    rpt << "\n";
+    summariseRows("Metadata rows not loaded",
+                  dm->metadataNotLoaded(),
+                  dm->firstVisibleIcon, dm->lastVisibleIcon);
+
+    // Build the empty-icon list once, then summarise.
+    {
+        QList<int> emptyIcons;
+        const int nRows = dm->sf->rowCount();
+        for (int i = 0; i < nRows; ++i) {
+            if (!dm->iconLoaded(i, instance)) emptyIcons.append(i);
+        }
+        summariseRows("Icon rows not loaded",
+                      emptyIcons,
+                      dm->firstVisibleIcon, dm->lastVisibleIcon);
+    }
+
+    rpt << "\n";
     return reportString;
 }
 
-QString MetaRead::reportMetaCache()
+QString MetaRead::reportHealthChecks()
 {
-    if (isDebug || G::isLogger) G::log("MetaRead::reportMetaCache");
+/*
+    Invariant checks printed at the top of the diagnostic. Each check prints
+    [OK] or [WARN] so anomalies surface before the reader scrolls through
+    state and tables. Mirrors ImageCache::reportHealthChecks.
+*/
+    if (G::isLogger) G::log("MetaRead::reportHealthChecks");
+
     QString reportString;
     QTextStream rpt;
-    rpt.flush();
-    reportString = "MetaCache";
     rpt.setString(&reportString);
 
+    auto line = [&](const QString &ok, const QString &name, const QString &detail) {
+        rpt << "[" << ok.leftJustified(4, ' ') << "] "
+            << name.leftJustified(28, ' ') << ": " << detail << "\n";
+    };
+
+    rpt << "Health checks:\n";
+
+    // 1. Thread state.
+    if (metaReadThread.isRunning()) {
+        line("OK", "thread state",
+             QString("running, abort=%1").arg(abort ? "true" : "false"));
+    } else if (abort) {
+        line("OK", "thread state", "stopped (abort=true)");
+    } else {
+        line("WARN", "thread state", "thread not running but abort=false");
+    }
+
+    // 2. Dispatch / runloop coherence.
+    if (isDispatching && !runloop.isRunning()) {
+        line("WARN", "dispatch coherence",
+             "isDispatching=true but runloop not running");
+    } else {
+        line("OK", "dispatch coherence",
+             QString("isDispatching=%1 runloop=%2")
+                 .arg(isDispatching ? "true" : "false")
+                 .arg(runloop.isRunning() ? "true" : "false"));
+    }
+
+    // 3. Done flags coherence.
+    {
+        const bool both = aIsDone && bIsDone;
+        if (isDone != both) {
+            line("WARN", "done flags",
+                 QString("isDone=%1 but aIsDone && bIsDone=%2")
+                     .arg(isDone ? "true" : "false")
+                     .arg(both ? "true" : "false"));
+        } else {
+            line("OK", "done flags",
+                 QString("isDone=%1").arg(isDone ? "true" : "false"));
+        }
+    }
+
+    // 4. Per-reader DM instance.
+    {
+        const int dmInst = dm->instance.load();
+        QStringList stale;
+        for (int id = 0; id < readerCount; ++id) {
+            const int dec = readers[id]->instance.load();
+            if (dec != dmInst) stale << QString("%1(dec=%2)").arg(id).arg(dec);
+        }
+        if (stale.isEmpty()) {
+            line("OK", "reader DM instance",
+                 QString("all at dm->instance=%1").arg(dmInst));
+        } else {
+            line("WARN", "reader DM instance",
+                 QString("dm->instance=%1, stale: [%2]")
+                     .arg(dmInst).arg(stale.join(",")));
+        }
+    }
+
+    // 5. Visible-range starvation. Rows currently visible but icon not loaded
+    //    are the user-visible failure mode.
+    {
+        const int first = dm->firstVisibleIcon;
+        const int last  = dm->lastVisibleIcon;
+        int missing = 0;
+        QList<int> samples;
+        if (last >= first) {
+            const int nRows = dm->sf->rowCount();
+            const int hi = qMin(last, nRows - 1);
+            for (int r = qMax(0, first); r <= hi; ++r) {
+                if (!dm->iconLoaded(r, instance)) {
+                    ++missing;
+                    if (samples.size() < 5) samples.append(r);
+                }
+            }
+        }
+        if (missing == 0) {
+            line("OK", "visible icons", "all loaded");
+        } else {
+            QStringList s;
+            for (int r : samples) s << QString::number(r);
+            line("WARN", "visible icons",
+                 QString("%1 of %2 visible rows unloaded (e.g. %3)")
+                     .arg(missing)
+                     .arg(last - first + 1)
+                     .arg(s.join(", ")));
+        }
+    }
+
+    // 6. Post-redo race guard: rows in readSuccessThisCycle should not also
+    //    show !MetadataAttempted (the very window the set was added to bridge).
+    {
+        int overlap = 0;
+        for (int r : readSuccessThisCycle) {
+            if (!dm->sf->index(r, G::MetadataAttemptedColumn).data().toBool()) {
+                ++overlap;
+            }
+        }
+        if (overlap == 0) {
+            line("OK", "post-redo race guard",
+                 QString("%1 rows in set, no race window observed").arg(readSuccessThisCycle.size()));
+        } else {
+            line("WARN", "post-redo race guard",
+                 QString("%1 rows in set, %2 still flagged !MetadataAttempted")
+                     .arg(readSuccessThisCycle.size()).arg(overlap));
+        }
+    }
+
+    // 7. Probe activity.
+    if (isDispatching && memoryProbeTimer.isValid()
+            && memoryProbeTimer.elapsed() > 60000) {
+        line("WARN", "memory probe",
+             QString("last fire %1 ms ago (isDispatching=true)")
+                 .arg(memoryProbeTimer.elapsed()));
+    } else {
+        line("OK", "memory probe",
+             QString("counter=%1, last fire %2 ms ago")
+                 .arg(memoryProbeCounter)
+                 .arg(memoryProbeTimer.isValid() ? memoryProbeTimer.elapsed() : -1));
+    }
+
+    rpt << "\n";
+    return reportString;
+}
+
+QString MetaRead::reportLifetimeCounters()
+{
+/*
+    Counters reset on each initialize(). Useful for spotting trim/decode
+    races and unbounded retry loops that aren't visible in a single snapshot.
+*/
+    if (G::isLogger) G::log("MetaRead::reportLifetimeCounters");
+
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << "Lifetime counters (since folder load):\n";
+    rpt << "  reads successful       : "
+        << Utilities::fitNumber(readsSuccessCount.load(),  12) << "\n";
+    rpt << "  reads failed (terminal): "
+        << Utilities::fitNumber(readsFailedCount.load(),   12) << "\n";
+    rpt << "  redos triggered        : "
+        << Utilities::fitNumber(redosTriggeredCount.load(),12) << "\n";
+    rpt << "  dispatch cycles        : "
+        << Utilities::fitNumber(dispatchCycleCount.load(), 12) << "\n";
     rpt << "\n";
     return reportString;
 }
@@ -793,6 +1026,7 @@ void MetaRead::redo()
             << "count =" << redoCount;
     }
     redoCount++;
+    redosTriggeredCount.fetch_add(1, std::memory_order_relaxed);
     aIsDone = false;
     bIsDone = false;
     a = startRow;
@@ -865,6 +1099,19 @@ void MetaRead::processReturningReader(int id, Reader *r)
 
     // it is not ok to select while the datamodel is being built.
     if (metaReadCount == 1) emit okToSelect(true);
+
+    // lifetime counters: success vs terminal failure (Aborted/Ready are transient)
+    {
+        const Reader::Status st = r->status.load();
+        if (st == Reader::Status::Success) {
+            readsSuccessCount.fetch_add(1, std::memory_order_relaxed);
+        }
+        else if (st == Reader::Status::MetaFailed ||
+                 st == Reader::Status::IconFailed ||
+                 st == Reader::Status::MetaIconFailed) {
+            readsFailedCount.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
 
     // report read failure
     if (!(r->status == r->Status::Success /*|| r->status == r->Status::Ready*/)) {
@@ -1007,6 +1254,7 @@ void MetaRead::dispatch(int id, bool isReturning)
            - if last row then quit after delay
 */
     QString fun = "MetaRead::dispatch";
+    dispatchCycleCount.fetch_add(1, std::memory_order_relaxed);
     if (isDebug)
     {
         qDebug() << "MetaRead::dispatch id =" << id
@@ -1276,6 +1524,27 @@ void MetaRead::quitAfterTimeout()
         {
             G::log("MetaRead::dispatch", "aIsDone && bIsDone  quitAfterTimeoutInitiated in 1000 ms");
         }
+
+        // Stall snapshot: we're giving up on the dispatch cycle but the
+        // metadata/icon state isn't fully loaded. Throttled to once per 60s.
+        if (autoLogStalls && !allMetaIconLoaded()) {
+            const qint64 nowMsec = QDateTime::currentMSecsSinceEpoch();
+            if (nowMsec - lastStallSnapshotMs > 60000) {
+                lastStallSnapshotMs = nowMsec;
+                QString path = QStandardPaths::writableLocation(
+                                    QStandardPaths::AppDataLocation) + "/Log";
+                QDir().mkpath(path);
+                QFile f(path + "/metaread_stall.txt");
+                if (f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+                    QTextStream out(&f);
+                    out << "\n\n===== MetaRead stall snapshot @ "
+                        << QDateTime::currentDateTime().toString(Qt::ISODate)
+                        << " =====\n";
+                    out << diagnostics();
+                }
+            }
+        }
+
         quitTimer->start(2000);
     }
 

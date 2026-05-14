@@ -32,9 +32,10 @@ public:
     void stop();
     void stopReaders();
     void syncInstance();
-    QString reportMetaCache();
     // void cleanupIcons();
     QString diagnostics();
+    QString reportHealthChecks();
+    QString reportLifetimeCounters();
     void debugRunStatus();
 
     bool isDispatching;
@@ -46,6 +47,14 @@ public:
 
     bool showProgressInStatusbar = true;
     bool isDebug = false;
+    bool autoLogStalls = false;          // dump diagnostics() on stall (throttled)
+    qint64 lastStallSnapshotMs = 0;      // last time we wrote a stall snapshot
+
+    // Lifetime counters since last initialize(). Diagnostic-only.
+    std::atomic<quint64> readsSuccessCount{0};
+    std::atomic<quint64> readsFailedCount{0};      // terminal failure (Meta/Icon/MetaIconFailed)
+    std::atomic<quint64> redosTriggeredCount{0};
+    std::atomic<quint64> dispatchCycleCount{0};
 
     void test();
 
