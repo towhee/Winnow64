@@ -46,17 +46,11 @@ QThread* guiThread;;            // use to check
 
 // flow
 bool isInitializing = true;            // flag program starting / initializing
-// bool stop = false;              // flag to stop everything involving DM loading new dataset
-// bool removingFolderFromDM;      // flag when datamodel folder rows are being deleted
-// bool removingRowsFromDM;        // flag when datamodel rows are being deleted
 std::atomic<bool> stop{false};
 std::atomic<bool> removingFolderFromDM{false};
 std::atomic<bool> removingRowsFromDM{false};
 
 // datamodel status
-// bool allMetadataLoaded;         // all metadata attempted
-// bool iconChunkLoaded;           // all icon chunk loaded
-// int dmInstance;                 // DataModel instance
 std::atomic<bool> allMetadataLoaded{false};
 std::atomic<bool> iconChunkLoaded{false};
 std::atomic<int> dmInstance{0};

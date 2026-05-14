@@ -29,12 +29,6 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
     connect(this, &Reader::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
     connect(this, &Reader::setValDm, dm, &DataModel::setValDm);
 
-    // tiffThumbDecoder = new TiffThumbDecoder();
-    // connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon1);
-    // tiffThumbDecoderThread = new QThread;
-    // tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
-    // tiffThumbDecoderThread->start();
-
     isDebug = false;
     debugLog = false;
 }
@@ -42,12 +36,6 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
 Reader::~Reader()
 {
     // frameDecoder is shared and owned by MetaRead — do not delete here.
-    if (tiffThumbDecoderThread) {
-        tiffThumbDecoderThread->quit();
-        tiffThumbDecoderThread->wait();
-        delete tiffThumbDecoder;
-        delete tiffThumbDecoderThread;
-    }
 }
 
 void Reader::stop()

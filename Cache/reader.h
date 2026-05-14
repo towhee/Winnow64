@@ -90,8 +90,6 @@ private:
     ImageMetadata *m;
     ImageCache *imageCache;
     FrameDecoder *frameDecoder;     // shared, owned by MetaRead
-    TiffThumbDecoder *tiffThumbDecoder;
-    QThread *tiffThumbDecoderThread;
     Thumb *thumb;
 
     uint offsetThumb;

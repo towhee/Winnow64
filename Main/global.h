@@ -122,7 +122,7 @@ Q_NAMESPACE
         MetadataAttemptedColumn,
         MetadataLoadedColumn,
         IconLoadedColumn,
-        MissingThumbColumn,
+        // MissingThumbColumn,
         CompareColumn,
         // original values
         _RatingColumn,

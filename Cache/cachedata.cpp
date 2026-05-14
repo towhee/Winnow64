@@ -1,5 +1,20 @@
 #include "Cache/cachedata.h"
 
+namespace {
+// Subtract `sub` from `counter`, clamping at 0 to avoid quint64 underflow if
+// accounting ever drifts (e.g. a prior raw QHash::insert bypassed the API).
+inline void safeSubBytes(std::atomic<quint64> &counter, quint64 sub) {
+    quint64 cur = counter.load(std::memory_order_relaxed);
+    while (true) {
+        const quint64 next = (sub > cur) ? 0 : (cur - sub);
+        if (counter.compare_exchange_weak(cur, next,
+                                          std::memory_order_relaxed,
+                                          std::memory_order_relaxed))
+            break;
+    }
+}
+}
+
 ImageCacheData::ImageCacheData(QObject *) {}
 
 bool ImageCacheData::contains(const QString &key)
@@ -12,10 +27,9 @@ void ImageCacheData::insert(const QString &key, const QImage &image)
 {
     QMutexLocker locker(&rwLock);
 
-    // replace and subtract bytes from cache total bytes
+    // replace: subtract the old image's bytes before swapping
     if (auto it = imCache.find(key); it != imCache.end()) {
-        bytes.fetch_sub(static_cast<quint64>(it.value().sizeInBytes()),
-                        std::memory_order_relaxed);
+        safeSubBytes(bytes, static_cast<quint64>(it.value().sizeInBytes()));
         it.value() = image; // replace in place to avoid rehash
     }
     // else add new image
@@ -30,15 +44,10 @@ void ImageCacheData::insert(const QString &key, const QImage &image)
 void ImageCacheData::remove(const QString &key)
 {
     QMutexLocker locker(&rwLock);
-    // imCache.remove(key);
 
     // take() gives us the removed value so we can adjust bytes
     QImage img = imCache.take(key);
-    // if (img.isNull()) return false;
-    // qDebug() << "ImageCacheData::remove" << key << img.sizeInBytes();
-
-    bytes.fetch_sub(static_cast<quint64>(img.sizeInBytes()),
-                    std::memory_order_relaxed);
+    safeSubBytes(bytes, static_cast<quint64>(img.sizeInBytes()));
 }
 
 void ImageCacheData::clear()

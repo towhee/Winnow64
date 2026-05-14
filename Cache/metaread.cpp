@@ -1301,28 +1301,14 @@ void MetaRead::dispatchFinished(QString src)
             ;
     }
 
-    bool running = false;
     setCycling(false);
-    // bool show = true;
-    // success = allMetaIconLoaded();
-    // if (G::useUpdateStatus && !G::allMetadataLoaded) {
-    //     emit runStatus(running, show, true, fun);
-    //     // emit runStatus(running, show, success, fun);
-    // }
     emit cleanupIcons(instance);
     isDispatching = false;
 
-    // G::iconChunkLoaded is maintained on the main thread by
-    // DataModel::setIcon/setIcon1/setIconRange. Recomputing here would
-    // iterate the model from a worker thread and race with main.
-
-    // do not emit done if only updated icon loading
-    if (!G::allMetadataLoaded) {
-        G::allMetadataLoaded = true;
-        emit runStatus(false, true, true, fun); // running, show, success, src
-        // signal MW::folderChangeCompleted
-        emit done();
-    }
+    // bool success = dm->isAllMetadataLoaded();
+    G::allMetadataLoaded = true;
+    emit runStatus(false, true, true, fun); // running, show, success, src
+    emit done();                            // signal MW::folderChangeCompleted
 
     setIdle();
 }

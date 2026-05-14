@@ -500,7 +500,6 @@ private slots:
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
     void renameEraseMemCardFromContextMenu(QString path);
-    void renameEmbedThumbsContextMenu();
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
     void searchTextEdit2();
 //    void searchTextEdit();
@@ -808,7 +807,6 @@ private:
     QAction *popPickHistoryAction;
     QAction *pickUnlessRejectedAction;
     QAction *filterPickAction;
-    QAction *embedThumbnailsAction;
     QAction *rotateLeftAction;
     QAction *rotateRightAction;
     QAction *prefAction;
@@ -1365,11 +1363,6 @@ private:
     double macActualDevicePixelRatio(QPoint loc, QScreen *screen);
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void addRecentFolder(QString fPath);
-    QString embedThumbnails();
-    bool embedThumbnail(int sfRow);
-    bool embedThumbnail(QString fPath, QImage thumbnail = QImage());
-    void embedThumbnailsFromAction();
-    void chkMissingEmbeddedThumbnails(QString src = "FromLoading");
 
     QRect testR;
 

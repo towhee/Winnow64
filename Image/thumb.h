@@ -7,7 +7,6 @@
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
 #include "Cache/framedecoder.h"
-#include "Cache/tiffthumbdecoder.h"
 #include "ImageFormats/Tiff/tiff.h"
 
 class Thumb : public QObject

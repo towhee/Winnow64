@@ -569,7 +569,7 @@ textRect         = a rectangle below itemRect
     bool isRejected = (pickStatus == "Rejected");
     bool isIngested = index.model()->index(sfRow, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(sfRow, G::IsCachedColumn).data(Qt::EditRole).toBool();
-    bool isMissingThumb = index.model()->index(sfRow, G::MissingThumbColumn).data().toBool();
+    // bool isMissingThumb = index.model()->index(sfRow, G::MissingThumbColumn).data().toBool();
     bool metaLoaded = index.model()->index(sfRow, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(sfRow, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(sfRow, G::ReadWriteColumn).data().toBool();
@@ -713,11 +713,11 @@ textRect         = a rectangle below itemRect
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect.translated(origin));
     }
-    if (G::useMissingThumbs && isMissingThumb) {
-        painter->setPen(cacheBorderColor);
-        painter->setBrush(missingThumbColor);
-        painter->drawEllipse(missingThumbRect.translated(origin));
-    }
+    // if (G::useMissingThumbs && isMissingThumb) {
+    //     painter->setPen(cacheBorderColor);
+    //     painter->setBrush(missingThumbColor);
+    //     painter->drawEllipse(missingThumbRect.translated(origin));
+    // }
 
     // Render icon number overlay
     if (isIconNumberVisible) {

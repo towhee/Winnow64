@@ -494,12 +494,12 @@ void BuildFilters::updateUnfilteredCounts()
     filters->updateUnfilteredCountPerItem(map, filters->creators);
     map.clear();
 
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->missingThumbs);
-    map.clear();
+    // for (int row = 0; row < rows; row++) {
+    //     if (abort) return;
+    //     map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    // }
+    // filters->updateUnfilteredCountPerItem(map, filters->missingThumbs);
+    // map.clear();
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
@@ -627,12 +627,12 @@ void BuildFilters::updateFilteredCounts()
     filters->updateFilteredCountPerItem(map, filters->creators);
     map.clear();
 
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->missingThumbs);
-    map.clear();
+    // for (int row = 0; row < rows; row++) {
+    //     if (abort) return;
+    //     map[dm->sf->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    // }
+    // filters->updateFilteredCountPerItem(map, filters->missingThumbs);
+    // map.clear();
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
@@ -702,10 +702,10 @@ void BuildFilters::updateCategoryItems()
         col = G::CreatorColumn;
         cat = filters->creators;
         break;
-    case Category::MissingThumbEdit:
-        col = G::MissingThumbColumn;
-        cat = filters->missingThumbs;
-        break;
+    // case Category::MissingThumbEdit:
+    //     col = G::MissingThumbColumn;
+    //     cat = filters->missingThumbs;
+    //     break;
     case Category::CompareEdit:
         col = G::CompareColumn;
         cat = filters->compare;
@@ -940,15 +940,15 @@ void BuildFilters::appendUniqueItems()
     emit updateProgress(progress += progressInc);
     map.clear();
 
-    // missing thumbnails
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->missingThumbs);
-    time("Initialize missing thumbs");
-    emit updateProgress(progress += progressInc);
-    map.clear();
+    // // missing thumbnails
+    // for (int row = 0; row < rows; row++) {
+    //     if (abort) return;
+    //     map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    // }
+    // filters->addCategoryItems(map, filters->missingThumbs);
+    // time("Initialize missing thumbs");
+    // emit updateProgress(progress += progressInc);
+    // map.clear();
 
     // duplicate found (compare)
     for (int row = 0; row < rows; row++) {
