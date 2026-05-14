@@ -75,6 +75,7 @@ public:
     QString diagnostics();
     QString diagnosticsForCurrentRow();
     QString diagnosticsAllRows();
+    QString reportHealthChecks();
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
