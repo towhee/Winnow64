@@ -24,17 +24,16 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
 
     thumb = new Thumb(dm, frameDecoder);
 
-    // FrameDecoder→DataModel signals are connected once in MetaRead. Here we
-    // only wire this Reader's videoFrameDecode emission into the shared queue.
+    /* FrameDecoder→DataModel signals are connected once in MetaRead. Here we
+       only wire this Reader's videoFrameDecode emission into the shared queue. */
     connect(this, &Reader::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
     connect(this, &Reader::setValDm, dm, &DataModel::setValDm);
 
-    tiffThumbDecoder = new TiffThumbDecoder();
-    connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon1);
-    // connect(this, &Reader::tiffMissingThumbDecode, tiffThumbDecoder, &TiffThumbDecoder::addToQueue);
-    tiffThumbDecoderThread = new QThread;
-    tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
-    tiffThumbDecoderThread->start();
+    // tiffThumbDecoder = new TiffThumbDecoder();
+    // connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon1);
+    // tiffThumbDecoderThread = new QThread;
+    // tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
+    // tiffThumbDecoderThread->start();
 
     isDebug = false;
     debugLog = false;
