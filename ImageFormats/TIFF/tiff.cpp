@@ -366,10 +366,6 @@ bool Tiff::parse(MetadataParameters &p,
         irb->readThumb(p, m);    // rgh need to add IRB to dng.cpp
         if (m.lengthThumb) {
             // assign arbitrary value to thumbLongside less than 512
-            qDebug().noquote()
-                << "Tiff::parse  embedded jpg thumbnail"
-                << m.row
-                << m.fName;
             thumbLongside = 256;
             if (p.report) {
                 p.offset = m.offsetThumb;
@@ -2900,7 +2896,7 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
 */
     QString fun = "Tiff::readSample";
     if (G::isLogger) G::log(fun, fPath);
-    qDebug().noquote() << fun << "ifdOffset =" << ifdOffset << fPath;
+    // qDebug().noquote() << fun << "ifdOffset =" << ifdOffset << fPath;
 
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
