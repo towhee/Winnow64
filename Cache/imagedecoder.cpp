@@ -517,7 +517,7 @@ bool ImageDecoder::load()
     /**************************************************************************/
     // All other formats
     else {
-        // try to decode
+        // try to decode using Qt Image Library
         imFile.close();
         if (!image.load(fPath)) {
             imFile.close();
