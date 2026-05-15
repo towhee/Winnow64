@@ -49,11 +49,26 @@ win32:QMAKE_CXXFLAGS += /wd4138             # supress "*/" found outside of comm
 #     QMAKE_LFLAGS   += -fsanitize=address
 # }
 
-# TSan: Enable with: qmake CONFIG+=sanitize_thread && make
-CONFIG(sanitize_thread) {
-    QMAKE_CXXFLAGS += -fsanitize=thread -fno-omit-frame-pointer -g
-    QMAKE_CFLAGS   += -fsanitize=thread -fno-omit-frame-pointer -g
-    QMAKE_LFLAGS   += -fsanitize=thread
+# # TSan: Enable with: qmake CONFIG+=sanitize_thread && make
+# CONFIG(sanitize_thread) {
+#     QMAKE_CXXFLAGS += -fsanitize=thread -fno-omit-frame-pointer -g
+#     QMAKE_CFLAGS   += -fsanitize=thread -fno-omit-frame-pointer -g
+#     QMAKE_LFLAGS   += -fsanitize=thread
+# }
+
+# Binary hardening for release builds. Defence-in-depth when parsing untrusted files.
+# _FORTIFY_SOURCE needs optimisation to do anything, so debug builds are left alone.
+# Skipped deliberately: -fPIE (already default on modern macOS/clang) and MSVC /guard:cf
+# (requires every linked object — including OpenCV/libheif/libde265/libtiff — to be CFG-built).
+CONFIG(release, debug|release) {
+    macx-clang {
+        QMAKE_CXXFLAGS += -fstack-protector-strong -D_FORTIFY_SOURCE=2
+        QMAKE_CFLAGS   += -fstack-protector-strong -D_FORTIFY_SOURCE=2
+    }
+    win32-msvc* {
+        QMAKE_CXXFLAGS += /sdl
+        QMAKE_CFLAGS   += /sdl
+    }
 }
 
 
