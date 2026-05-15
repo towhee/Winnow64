@@ -144,7 +144,8 @@ private:
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;
-    Metadata *metadata;
+    // One Metadata per decoder: sharing one across threads raced on ifd->ifdDataHash (crashed 2025-03-08).
+    QVector<Metadata*> decoderMetadatas;
 
     QVector<ImageDecoder*> decoders;        // all the decoders
     QVector<QThread*> decoderThreads;       // all the decoder threads
