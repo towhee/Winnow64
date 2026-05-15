@@ -251,8 +251,6 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     firstIconRow = dm->startIconRange;
     lastIconRow = dm->endIconRange;
 
-    t.start();
-
     if (isDebug)
     {
         qDebug() << " ";
@@ -308,6 +306,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
                 // << "b =" << QString::number(b).leftJustified(4, ' ')
                 ;
         }
+        t.start();
     }
 
     dispatchReaders();
