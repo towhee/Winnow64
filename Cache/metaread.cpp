@@ -306,7 +306,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
                 // << "b =" << QString::number(b).leftJustified(4, ' ')
                 ;
         }
-        t.start();
+        // t.start();
     }
 
     dispatchReaders();
@@ -482,6 +482,8 @@ void MetaRead::initialize(QString src)
     readsFailedCount.store(0, std::memory_order_relaxed);
     redosTriggeredCount.store(0, std::memory_order_relaxed);
     dispatchCycleCount.store(0, std::memory_order_relaxed);
+
+    t.start();
 }
 
 void MetaRead::syncInstance()
@@ -1178,7 +1180,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
     }
 
     // report progress in statusbar and top of filter dock
-    if (showProgressInStatusbar && !G::allMetadataLoaded) {
+    if (!isDone && showProgressInStatusbar && !G::allMetadataLoaded) {
         emit updateProgressInStatusbar(dmRow, dm->rowCount(), darkRed);
         int progress = 1.0 * metaReadCount / dm->rowCount() * 100;
         emit updateProgressInFilter(progress);
