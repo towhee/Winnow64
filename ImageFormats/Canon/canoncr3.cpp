@@ -55,9 +55,13 @@ bool CanonCR3::parse(MetadataParameters *p,
 
     // iterate box structures
     while (offset < eof) {
+        quint32 prevOffset = offset;
         p->file.seek(offset);
-        nextHeifBox(length, type);
+        if (!nextHeifBox(length, type)) break;
         getHeifBox(type, offset, length);
+        // No-progress / wraparound guard: a malformed box with length == 0 or one whose
+        // length wraps offset past UINT32_MAX would otherwise loop forever.
+        if (offset <= prevOffset) break;
     }
 
     if (p->report) p->rpt << "\n";
@@ -75,6 +79,9 @@ bool CanonCR3::nextHeifBox(quint32 &length, QString &type)
     length = u.get32(p->file.read(4), true);
 //    if (length < 2) length = static_cast<quint32>(eof - offset);
     type = p->file.read(4);
+    // A box's length must cover at least its own 8-byte header; smaller values
+    // would make callers either spin (length == 0) or seek backwards (length < 8).
+    if (length < 8) return false;
     if (p->report) {
         p->rpt << "\n";
         p->rpt.setFieldWidth(6);

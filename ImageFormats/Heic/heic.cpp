@@ -454,9 +454,12 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
 
     // iterate box structures to find exif data offset
     while (offset < eof) {
+        quint32 prevOffset = offset;
         file->seek(offset);
-        nextHeifBox(length, type);
+        if (!nextHeifBox(length, type)) break;
         getHeifBox(type, offset, length);
+        // No-progress / wraparound guard against malformed box sizes.
+        if (offset <= prevOffset) break;
     }
 
     if (isDebug) qDebug() << "Heic::parseHeic"
@@ -666,7 +669,13 @@ bool Heic::nextHeifBox(quint32 &length, QString &type)
 {
     qint64 offset = file->pos();
     length = Utilities::get32(file->read(4));
-    if (length < 2) length = static_cast<quint32>(eof - offset);
+    // Spec lets size==0 mean "extends to EOF" and size==1 mean "extended 64-bit size
+    // follows". Winnow approximates by clamping tiny values to "rest of file" — but
+    // refuse outright if we're already past EOF, since (eof - offset) would wrap.
+    if (length < 2) {
+        if (offset >= static_cast<qint64>(eof)) return false;
+        length = static_cast<quint32>(eof - offset);
+    }
     type = file->read(4);
     if (isDebug) {
         qDebug() << " ";
