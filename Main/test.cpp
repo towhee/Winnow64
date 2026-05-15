@@ -188,7 +188,9 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     if (!secPerFolder) G::popup->showPopup(stopMsg, 0);
     G::isStressTest = true;
     bool isForward = true;
-    //slideCount = 0;
+    // Per-folder counter — must reset each call or the !uturn early-exit
+    // below trips immediately on the second folder when bouncing.
+    slideCount = 0;
     int uturnCounter = 0;
     int uturnMax;
     dm->sf->rowCount() < 300 ? uturnMax = dm->sf->rowCount() : uturnMax = 300;
@@ -239,17 +241,15 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     stressSecToGoInFolder = secPerFolder - seconds;
     double elapsedMsPerImage = msElapsed * 1.0 / slideCount;
     int imagePerSec = slideCount * 1.0 / seconds;
-    QString msg = "" + QString::number(slideCount) + " images.<br>" +
-                  QString::number(seconds) + " seconds elapsed.<br>" +
-                  // QString::number(secPerFolder) + " secPerFolder.<br>" +
-                  // QString::number(stressSecToGoInFolder) + " stressSecToGoInFolder.<br>" +
-                  // QString::number(msElapsed) + " ms elapsed.<br>" +
-                  // QString::number(elapsedMsPerImage) + " ms delay.<br>" +
-                  // QString::number(imagePerSec) + " images per second.<br>" +
-                  // QString::number(elapsedMsPerImage) + " ms per image."
-                  + "<br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup."
-                  ;
-    G::popup->showPopup(msg, 0);
+    // Skip the sticky end-of-folder popup when bouncing — it would overlay
+    // the UI after every folder switch and never auto-clear (msDuration=0).
+    if (!secPerFolder) {
+        QString msg = "" + QString::number(slideCount) + " images.<br>" +
+                      QString::number(seconds) + " seconds elapsed."
+                      + "<br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup."
+                      ;
+        G::popup->showPopup(msg, 0);
+    }
     /*
     qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
              << msElapsed << "ms elapsed  "
@@ -305,6 +305,11 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
     G::isStressTest = true;
     QList<QString>bookMarkPaths = bookmarks->bookmarkPaths.values();
     int n = bookMarkPaths.count();
+    if (n == 0) {
+        G::popup->showPopup("Stress test needs at least one bookmark.", 2000);
+        G::isStressTest = false;
+        return;
+    }
     while (G::isStressTest) {
         uint randomIdx = QRandomGenerator::global()->generate() % static_cast<uint>(n);
         if (isRandomSecPerFolder) {
@@ -325,8 +330,12 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
                  << path;
         bookmarks->select(path);
         fsTree->select(path);
+        // Folder load is async — wait until dm->sf is populated before
+        // navigating, otherwise traverseFolderStressTest races against
+        // the in-flight folder change and can crash.
+        waitUntilMetadataLoaded(30000, "bounceFoldersStressTest");
+        if (!G::isStressTest) break;
         traverseFolderStressTest(msPerImage, secPerFolder);
-        // qDebug() << "MW::bounceFoldersStressTest loop to next random folder";
     }
 }
 
@@ -559,8 +568,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // mergeProjectFiles();
-    qDebug() << (dm->isAllMetadataAttempted() && dm->isIconRangeLoaded());
+    // Bounce between random bookmarked folders, cycling images in each,
+    // until ESC is pressed or something crashes. Prompts for delay/duration.
+    bounceFoldersStressTest();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

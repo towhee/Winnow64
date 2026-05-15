@@ -22,7 +22,7 @@ Thumb::Thumb(DataModel *dm, FrameDecoder *frameDecoder)
     // FrameDecoder→DataModel signals are connected once in MetaRead.
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
-    isDebug = false;
+    isDebug = true;
 }
 
 Thumb::~Thumb()
@@ -182,22 +182,26 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         return Status::Open;
     }
 
-    QImageReader reader(fPath);
-    reader.setAutoTransform(false);
-    const QSize srcSize = reader.size();
-    if (srcSize.isValid()) {
-        const QSize target = srcSize.scaled(thumbMax, Qt::KeepAspectRatio);
-        reader.setScaledSize(target);
-    }
+    QImageReader qReader(fPath);
+    // qReader.setAutoTransform(false);
+    // const QSize srcSize = qReader.size();
+    // if (srcSize.isValid()) {
+    //     const QSize target = srcSize.scaled(thumbMax, Qt::KeepAspectRatio);
+    //     qReader.setScaledSize(target);
+    // }
 
-    if (!abort && !reader.read(&image)) {
+    if (!abort && !qReader.read(&image)) {
         QString msg = "Could not read thumb using QImageReader::read: "
-                      + reader.errorString();
+                      + qReader.errorString();
         G::issue("Warning", msg, "Thumb::loadFromEntireFile", dmRow, fPath);
         return Status::Fail;
     }
 
-    if (!abort) setImageDimensions(fPath, srcSize.isValid() ? srcSize : image.size(), row);
+    qDebug().noquote()
+        << fun.leftJustified(col0Width)
+        << "size =" << image.size();
+
+    // if (!abort) setImageDimensions(fPath, srcSize.isValid() ? srcSize : image.size(), row);
 
     if (image.isNull()) {
         QString msg = "Null image returned from thumbReader.";
@@ -463,7 +467,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
     }
     isPresetOffset = false;
     isEmbeddedThumb = offsetThumb && lengthThumb;
-    /*
+    if (isDebug)
     qDebug().noquote()
              << fun.leftJustified(col0Width)
              << "dmRow =" << dmRow
@@ -472,7 +476,6 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
              << "isEmbeddedThumb =" << isEmbeddedThumb
              << fPath
                 ;
-                //*/
 
     Status status = Status::None;
     int attempts = 0;

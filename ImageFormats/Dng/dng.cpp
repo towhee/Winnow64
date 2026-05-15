@@ -149,7 +149,6 @@ bool DNG::parse(MetadataParameters &p,
                 // is it a JPG
                 quint32 offset = ifd->ifdDataHash.value(273).tagValue;
                 p.file.seek(offset);
-//                quint32 x = get2(file.read(2));
                 if (u.get16(p.file.read(2), true) != 0xFFD8) break;  // order = 4949 so reverse
                 // yes it is a JPG
                 jpgInfo.offset = offset;
@@ -175,7 +174,7 @@ bool DNG::parse(MetadataParameters &p,
                 }
                 count++;
             }
-            // check embedded raw file to determine true imagea dimensions as the preview
+            // check embedded raw file to determine true image dimensions as the preview
             // might be smaller (for reporting only)
             else {
                 if (ifd->ifdDataHash.contains(256) && ifd->ifdDataHash.contains(257)) {
