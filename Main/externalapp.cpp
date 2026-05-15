@@ -88,12 +88,19 @@ void MW::runExternalApp()
     for (int i = 0; i < externalApps.length(); ++i) {
         if (externalApps.at(i).name == appName) {
             appPath = externalApps.at(i).path;
+            // QProcess::splitCommand honours quoting; .split(" ") would mangle paths with spaces.
             if (externalApps.at(i).args.length() > 0)
-                arguments << externalApps.at(i).args.split(" ");
+                arguments << QProcess::splitCommand(externalApps.at(i).args);
             break;
         }
     }
     if (appPath == "") return;      // add err handling
+    // Validate that the configured external-app path still exists before launching.
+    // Defence against a tampered/stale settings.ini pointing at an unintended binary.
+    if (!QFileInfo::exists(appPath)) {
+        G::popup->showPopup("External app not found: " + appPath, 3000);
+        return;
+    }
     QFileInfo appInfo;              // qt6.2
     appInfo.setFile(appPath);       // qt6.2
     QString appExecutable = appInfo.fileName();
