@@ -270,6 +270,7 @@ SOURCES += ImageFormats/Video/mov.cpp
 SOURCES += ImageFormats/Video/mp4.cpp
 SOURCES += ImageFormats/Png/png.cpp
 SOURCES += Cache/framedecoder.cpp
+macx:SOURCES += Cache/framedecoder_mac.mm           # AVFoundation fast video thumbnail
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/metaread.cpp
@@ -569,6 +570,8 @@ macx {
     LIBS += -framework Foundation
     LIBS += -framework ImageIO
     LIBS += -framework CoreGraphics
+    LIBS += -framework AVFoundation
+    LIBS += -framework CoreMedia
 
     # opencv
     LIBS += -L/opt/homebrew/lib

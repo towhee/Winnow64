@@ -3,6 +3,14 @@
 #include "Main/global.h"
 #include <QTimer>
 
+#ifdef Q_OS_MAC
+// Defined in Cache/framedecoder_mac.mm — synchronous AVFoundation thumbnail.
+// Returns false if the asset can't be opened, has no video track, or the
+// image generator fails; caller falls back to the QMediaPlayer pipeline.
+bool macAVFoundationVideoThumbnail(const QString &fPath, int longSide,
+                                   QImage &out, qint64 &outDurationMs);
+#endif
+
 /*
     Generates a thumbnail from the first video frame in a video file.
 
@@ -116,6 +124,32 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
     // enqueue is new work; clear the stale flag instead of rejecting.
     abort = false;
     // if (queueContains(path)) return;
+
+#ifdef Q_OS_MAC
+    // Fast path: AVAssetImageGenerator decodes a thumbnail directly without
+    // running the QMediaPlayer/QVideoSink playback pipeline. ~10–50ms per
+    // file vs. hundreds of ms through the player, and it sidesteps the
+    // CoreMedia VTDecompressionSession race that cleanupPlayer works
+    // around. Only used for dmThumb requests bound to a real datamodel row
+    // — the FindDuplicates "frameImage" path keeps using QMediaPlayer.
+    if (source == "dmThumb" && dmRow >= 0) {
+        QElapsedTimer t; t.start();
+        QImage im;
+        qint64 durationMs = 0;
+        if (macAVFoundationVideoThumbnail(path, longSide, im, durationMs)
+            && !im.isNull())
+        {
+            emit setFrameIcon(dmRow, im, dmInstance, durationMs, this);
+            qint64 usToDecode = t.nsecsElapsed() / 1000;
+            emit setValDm(dmRow, G::NSThumb, usToDecode, dmInstance,
+                          "FrameDecoder::addToQueue (AVFoundation)",
+                          Qt::EditRole,
+                          int(Qt::AlignRight | Qt::AlignVCenter));
+            return;
+        }
+        // Fall through to QMediaPlayer fallback on failure.
+    }
+#endif
 
     Item item;
     item.fPath = path;
