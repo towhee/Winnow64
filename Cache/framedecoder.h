@@ -11,6 +11,9 @@
 #include <QImage>
 #include <QModelIndex>
 #include <QList>
+#include <QElapsedTimer>
+#include <QString>
+#include <QVariant>
 
 class FrameDecoder : public QObject
 {
@@ -28,6 +31,10 @@ signals:
        exception). Lets DataModel clear MetadataReadingColumn so MetaRead's
        dispatcher can move on. */
     void videoFrameFailed(int dmRow, int dmInstance);
+    /* Mirrors Reader::setValDm so video thumb decode time can be recorded
+       in G::NSThumb the same way image thumb decode time is. */
+    void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src = "FrameDecoder",
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
 
 public slots:
     void stop();
@@ -57,6 +64,12 @@ private:
     // function-local static, which made it shared across all FrameDecoder
     // instances (one per Reader thread) and caused a TSan-flagged race.
     int frameAttempts = 0;
+
+    // Measures total decode time for the current item (started in
+    // getNextThumbNail, read in handleFrameChanged). Retries via
+    // queue.prepend keep accumulating — getNextThumbNail is not re-entered
+    // until the item resolves, so a single timer per item is correct.
+    QElapsedTimer tFrame;
 
     QPointer<QMediaPlayer> mediaPlayer;
     QPointer<QVideoSink> videoSink;

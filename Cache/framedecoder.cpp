@@ -204,6 +204,7 @@ void FrameDecoder::getNextThumbNail(QString src)
     });
 
     try {
+        tFrame.start();
         mediaPlayer->setSource(item.fPath);
         mediaPlayer->play();
     } catch (...) {
@@ -286,6 +287,11 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
                  << "duration =" << duration
             ; //*/
         emit setFrameIcon(item.dmRow, scaledIm, item.dmInstance, duration, this);
+
+        qint64 msToDecode = tFrame.isValid() ? tFrame.nsecsElapsed() / 1000 : 0;
+        emit setValDm(item.dmRow, G::NSThumb, msToDecode, item.dmInstance,
+                      "FrameDecoder::handleFrameChanged", Qt::EditRole,
+                      int(Qt::AlignRight | Qt::AlignVCenter));
     } else {
         // used in FindDuplicates
         /*

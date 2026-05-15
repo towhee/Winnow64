@@ -99,6 +99,8 @@ MetaRead::MetaRead(QObject *parent,
             dm, &DataModel::setIconFromVideoFrame);
     connect(frameDecoder, &FrameDecoder::videoFrameFailed,
             dm, &DataModel::clearVideoReadingFlag);
+    connect(frameDecoder, &FrameDecoder::setValDm,
+            dm, &DataModel::setValDm);
 
     readerCount = QThread::idealThreadCount();
     for (int id = 0; id < readerCount; ++id) {
