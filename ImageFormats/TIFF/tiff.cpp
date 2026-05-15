@@ -544,7 +544,12 @@ quint32 Tiff::parseIFDs(MetadataParameters &p, ImageMetadata &m, IFD *ifd,
                      quint32 &nextIFDOffset, int &thumbLongside, QString hdr)
 {
     int count = 0;
+    QSet<quint32> visited;
+    const int kMaxIFDs = 32;
     while (nextIFDOffset) {
+        // Guard against malformed IFD chains: bounded depth + cycle detection.
+        if (count >= kMaxIFDs || visited.contains(nextIFDOffset)) break;
+        visited.insert(nextIFDOffset);
         count ++;
         p.hdr = hdr + " " + QString::number(count);
         p.offset = nextIFDOffset;
@@ -626,9 +631,16 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
     p.report = isReport;
     err = "";
 
+    // Sanity bound on file-controlled strip counts to prevent gigabyte allocations.
+    const quint32 kMaxStrips = 100000;
+
     // strip offsets
     if (ifd->ifdDataHash.contains(273)) {
-        int offsetCount = ifd->ifdDataHash.value(273).tagCount;
+        quint32 offsetCount = ifd->ifdDataHash.value(273).tagCount;
+        if (offsetCount > kMaxStrips) {
+            err = "stripOffsets count " + QString::number(offsetCount) + " exceeds limit.  \n";
+            return false;
+        }
         stripOffsets.resize(offsetCount);
         if (offsetCount == 1) {
             stripOffsets[0] = static_cast<uint>(ifd->ifdDataHash.value(273).tagValue);
@@ -636,7 +648,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
         else {
             quint32 offset = ifd->ifdDataHash.value(273).tagValue;
             p.file.seek(offset);
-            for (int i = 0; i < offsetCount; ++i) {
+            for (quint32 i = 0; i < offsetCount; ++i) {
                 stripOffsets[i] = u.get32(p.file.read(4), isBigEnd);
             }
         }
@@ -647,23 +659,22 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
 
     // strip byte counts
     if (ifd->ifdDataHash.contains(279)) {
-        int stripCount = ifd->ifdDataHash.value(279).tagCount;
-//        if (stripCount < 100000) {
-            stripByteCounts.resize(stripCount);
-            if (stripCount == 1) {
-                stripByteCounts[0] = static_cast<uint>(ifd->ifdDataHash.value(279).tagValue);
+        quint32 stripCount = ifd->ifdDataHash.value(279).tagCount;
+        if (stripCount > kMaxStrips) {
+            err = "stripByteCounts count " + QString::number(stripCount) + " exceeds limit.  \n";
+            return false;
+        }
+        stripByteCounts.resize(stripCount);
+        if (stripCount == 1) {
+            stripByteCounts[0] = static_cast<uint>(ifd->ifdDataHash.value(279).tagValue);
+        }
+        else {
+            quint32 offset = ifd->ifdDataHash.value(279).tagValue;
+            p.file.seek(offset);
+            for (quint32 i = 0; i < stripCount; ++i) {
+                stripByteCounts[i] = u.get32(p.file.read(4), isBigEnd);
             }
-            else {
-                quint32 offset = ifd->ifdDataHash.value(279).tagValue;
-                p.file.seek(offset);
-                for (int i = 0; i < stripCount; ++i) {
-                    stripByteCounts[i] = u.get32(p.file.read(4), isBigEnd);
-                }
-            }
-//        }
-//        else {
-//            err = "stripCount > 100000.  \n";
-//        }
+        }
     }
     else {
         err = "No StripByteCounts.  \n";
@@ -949,7 +960,12 @@ bool Tiff::decodeBase(MetadataParameters &p)
     int strips = stripOffsets.count();
     int line = 0;
     quint32 scanBytes = 0;
-    const quint32 totalScanBytes = width * height * bytesPerPixel;
+    // Compute in 64-bit and cap at 1 GB to defuse width/height/bpp overflow attacks.
+    if (width <= 0 || height <= 0 || bytesPerPixel <= 0) return false;
+    const quint64 totalScanBytes64 =
+        static_cast<quint64>(width) * static_cast<quint64>(height) * static_cast<quint64>(bytesPerPixel);
+    if (totalScanBytes64 > (1ULL << 30)) return false;
+    const quint32 totalScanBytes = static_cast<quint32>(totalScanBytes64);
 
     // Ensure the file is open and ready for reading
     if (!p.file.isOpen()) {
