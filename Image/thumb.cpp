@@ -202,10 +202,6 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         return Status::Fail;
     }
 
-    qDebug().noquote()
-        << fun.leftJustified(col0Width)
-        << "size =" << image.size();
-
     if (!abort) setImageDimensions(fPath, srcSize.isValid() ? srcSize : image.size(), row);
 
     if (image.isNull()) {
@@ -304,7 +300,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
         if (!tiff.readSample(fPath, &image, G::maxIconSize, m.offsetFull)) {
             QString errMsg = "Could not read because Tiff::readSample failed.";
             G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
-            qDebug() << fun << errMsg;
+            // qDebug() << fun << errMsg;
             return Status::Fail;
         }
     }

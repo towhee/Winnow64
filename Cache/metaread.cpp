@@ -251,6 +251,8 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     firstIconRow = dm->startIconRange;
     lastIconRow = dm->endIconRange;
 
+    t.start();
+
     if (isDebug)
     {
         qDebug() << " ";
@@ -1581,5 +1583,11 @@ void MetaRead::dispatchFinished(QString src)
     emit runStatus(false, true, true, fun); // running, show, success, src
     emit done();                            // signal MW::folderChangeCompleted
 
+    qint64 ms = t.elapsed();
+    int n = dm->rowCount();
+    int msPerImage = ms / n;
+    qDebug() << fun << "Elapsed ms =" << ms
+             << "ms per image =" << msPerImage
+             << " for" << n << "images";
     setIdle();
 }

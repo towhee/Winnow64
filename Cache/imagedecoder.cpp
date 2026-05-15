@@ -207,11 +207,12 @@ void ImageDecoder::decode(int row, int instance)
 
     nsToDecode = t.nsecsElapsed();
 
+    /*
     qDebug() << fun.left(50)
              << "row =" << sfRow
              << "nsToDecode =" << nsToDecode
              << fPath
-        ;
+        ;//*/
 
     emit setValSf(sfRow, G::NSImage, nsToDecode, instance,
                   "ImageDecoder::decode", Qt::EditRole,
