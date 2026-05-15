@@ -1433,7 +1433,7 @@ QString ImageCache::reportCacheDecoders()
                 : QString::number(decInstance) + "!");  // mark stale
         rpt.setFieldWidth(9);  rpt << QVariant(decoders[id]->isIdle()).toString();
         rpt.setFieldWidth(11); rpt << QVariant(cycling.at(id)).toString();
-        rpt.setFieldWidth(9);  rpt << static_cast<qint64>(decoders[id]->msToDecode / 1000000);
+        rpt.setFieldWidth(9);  rpt << static_cast<qint64>(decoders[id]->nsToDecode / 1000000);
         rpt.setFieldWidth(2);  rpt << "  ";
         rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt.setFieldWidth(40); rpt << Utilities::getFileName(decoders[id]->fPath);
@@ -2679,7 +2679,7 @@ void ImageCache::fillCache(int id,
     int effectiveStatus= haveSnapshot ? doneStatus      : int(decoders[id]->status);
     QImage effectiveImage = haveSnapshot ? doneImage    : decoders[id]->image;
     QString effectiveFPath= haveSnapshot ? doneFPath    : decoders[id]->fPath;
-    qint64 effectiveMs    = haveSnapshot ? doneMsToDecode : decoders[id]->msToDecode;
+    qint64 effectiveMs    = haveSnapshot ? doneMsToDecode : decoders[id]->nsToDecode;
 
     if (debugCaching)
     {

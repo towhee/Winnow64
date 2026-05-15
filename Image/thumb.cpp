@@ -27,7 +27,7 @@ Thumb::Thumb(DataModel *dm, FrameDecoder *frameDecoder)
     // FrameDecoder→DataModel signals are connected once in MetaRead.
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 
-    isDebug = true;
+    isDebug = false;
 }
 
 Thumb::~Thumb()

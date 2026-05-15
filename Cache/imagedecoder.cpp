@@ -1,6 +1,11 @@
 #include "imagedecoder.h"
 #include "Main/global.h"
 
+#ifdef Q_OS_MAC
+// Defined in Image/thumb_mac.mm — fast HEIC primary-image decode via ImageIO.
+bool macImageIOImage(const QString &fPath, QImage &out);
+#endif
+
 /*
    This class decouples the asyncronous image reading (in CacheImage) from the synchronous
    image decoding, which is executed in multiple ImageDecoder threads.
@@ -200,12 +205,19 @@ void ImageDecoder::decode(int row, int instance)
 
     setIdle();
 
-    msToDecode = t.nsecsElapsed();  // changed to nanosec (match thumb read times)
-    emit setValSf(sfRow, G::NSImage, msToDecode, instance,
+    nsToDecode = t.nsecsElapsed();
+
+    qDebug() << fun.left(50)
+             << "row =" << sfRow
+             << "nsToDecode =" << nsToDecode
+             << fPath
+        ;
+
+    emit setValSf(sfRow, G::NSImage, nsToDecode, instance,
                   "ImageDecoder::decode", Qt::EditRole,
                   int(Qt::AlignRight | Qt::AlignVCenter));
 
-    emit done(threadId, int(status), sfRow, image, fPath, msToDecode);
+    emit done(threadId, int(status), sfRow, image, fPath, nsToDecode);
 }
 
 bool ImageDecoder::load()
@@ -373,20 +385,22 @@ bool ImageDecoder::load()
 
         #ifdef Q_OS_MAC
         imFile.close();
-        if (!image.load(fPath)) {
-            errMsg = "Could not read because QImage::load failed.";
+
+        // Fast path: Apple's ImageIO uses the platform's hardware HEVC
+        // decoder, faster than QImage::load() round-tripping through Qt's
+        // image plugin layer.
+        bool ok = false;
+        // ok = macImageIOImage(fPath, image) && image.width() > 0;
+
+        // Fallback: Qt's HEIF plugin.
+        if (!ok) ok = image.load(fPath) && image.width() > 0;
+
+        if (!ok) {
+            errMsg = "Could not read heic image (ImageIO and QImage::load failed).";
             G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
-            // imFile.close();
             status = Status::Invalid;
             return false;
         }
-        else if (image.width() == 0) {
-            errMsg = "Unable to read heic image";
-            G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
-            status = Status::Invalid;
-            return false;
-        }
-        imFile.close();
         if (isDebug)
         {
         qDebug() << "ImageDecoder::load" << "HEIC image"
@@ -517,11 +531,19 @@ bool ImageDecoder::load()
     /**************************************************************************/
     // All other formats
     else {
-        // try to decode using Qt Image Library
         imFile.close();
-        if (!image.load(fPath)) {
-            imFile.close();
-            errMsg = "Could not read because QImage::load failed.";
+
+        bool ok = false;
+        // Qt Image Library.
+        if (!ok) ok = image.load(fPath);
+
+        #ifdef Q_OS_MAC
+        // Fallback: Apple ImageIO
+        if (!ok) ok = macImageIOImage(fPath, image) && image.width() > 0;
+        #endif
+
+        if (!ok) {
+            errMsg = "Could not read image (decode failed).";
             G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             status = Status::Invalid;
             return false;

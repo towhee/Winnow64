@@ -34,7 +34,7 @@ public:
     QImage image;
     QString fPath;
     QString errMsg;
-    qint64 msToDecode;
+    qint64 nsToDecode;
 
     enum Status {
         Undefined,
