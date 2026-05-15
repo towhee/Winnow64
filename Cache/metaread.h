@@ -95,6 +95,7 @@ public slots:
     void dispatch(int id, bool isReturning);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
     void dispatchFinished(QString src);
+    void allFinished(QString src);
     void abortProcessing();
 
 private:
@@ -162,6 +163,7 @@ private:
     // bool isDispatching;
     bool success;
     bool isDone;
+    bool allFinishedFired;
     bool aIsDone;
     bool bIsDone;
     bool quitAfterTimeoutInitiated;

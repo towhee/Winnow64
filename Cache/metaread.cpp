@@ -468,6 +468,7 @@ void MetaRead::initialize(QString src)
     aIsDone = false;
     bIsDone = false;
     isDone = false;
+    allFinishedFired = false;
     success = false;
     quitAfterTimeoutInitiated = false;
     if (quitTimer->isActive()) quitTimer->stop();
@@ -1578,7 +1579,21 @@ void MetaRead::dispatchFinished(QString src)
     emit cleanupIcons(instance);
     isDispatching = false;
 
-    // bool success = dm->isAllMetadataLoaded();
+    allFinished(src);
+}
+
+void MetaRead::allFinished(QString src)
+{
+    // Runs once per folder load, after the last row has been read and saved
+    // into the DataModel. Reset in initialize() only — setStartRow is called
+    // for in-folder navigation and must not re-arm this guard.
+    if (allFinishedFired) return;
+    allFinishedFired = true;
+
+    QString fun = "MetaRead::allFinished";
+    if (debugLog && (G::isLogger || G::isFlowLogger))
+        G::log(fun, src);
+
     G::allMetadataLoaded = true;
     emit runStatus(false, true, true, fun); // running, show, success, src
     emit done();                            // signal MW::folderChangeCompleted
