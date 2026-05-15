@@ -239,7 +239,7 @@ void Filters::createDynamicFilters()
     titles = new QTreeWidgetItem(this);
     keywords = new QTreeWidgetItem(this);
     creators = new QTreeWidgetItem(this);
-    missingThumbs = new QTreeWidgetItem(this);
+    // missingThumbs = new QTreeWidgetItem(this);
     compare = new QTreeWidgetItem(this);
 
     createFilter(picks, catPick);
@@ -299,7 +299,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(titles);
     setCategoryBackground(keywords);
     setCategoryBackground(creators);
-    setCategoryBackground(missingThumbs);
+    // setCategoryBackground(missingThumbs);
     setCategoryBackground(compare);
 }
 
@@ -327,7 +327,7 @@ void Filters::removeChildrenDynamicFilters()
     titles->takeChildren();
     keywords->takeChildren();
     creators->takeChildren();
-    missingThumbs->takeChildren();
+    // missingThumbs->takeChildren();
     compare->takeChildren();
 }
 
@@ -1175,7 +1175,7 @@ void Filters::collapseAllFiltersExceptSearch()
     collapse(indexFromItem(titles));
     collapse(indexFromItem(keywords));
     collapse(indexFromItem(creators));
-    collapse(indexFromItem(missingThumbs));
+    // collapse(indexFromItem(missingThumbs));
     collapse(indexFromItem(compare));
 }
 
@@ -1337,8 +1337,8 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
         else item->setCheckState(0, Qt::Unchecked);
         item->setData(1, Qt::EditRole, i.key());
         item->setData(3, Qt::EditRole, i.value());
-        item->setTextAlignment(2, Qt::AlignRight);
-        item->setTextAlignment(3, Qt::AlignRight);
+        item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
     }
 
     // sort the result
@@ -1394,8 +1394,8 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         item->setData(1, Qt::EditRole, i.key());
         item->setData(2, Qt::EditRole, i.value());
         item->setData(3, Qt::EditRole, i.value());
-        item->setTextAlignment(2, Qt::AlignRight);
-        item->setTextAlignment(3, Qt::AlignRight);
+        item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
         /*
         qDebug() << "Filters::addCategoryItems  Category =" << category->text(0)
                  << "item =" << i.value();

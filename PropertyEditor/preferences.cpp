@@ -516,7 +516,9 @@ void Preferences::addGeneral()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
-    setItemEnabled("backupBeforeModify", G::modifySourceFiles);    // Remember last folder
+    setItemEnabled("backupBeforeModify", G::modifySourceFiles);
+
+    // Remember last folder
     i.name = "rememberLastDir";
     i.parentName = "GeneralHeader";
     i.captionText = "Remember folder";
@@ -527,7 +529,7 @@ void Preferences::addGeneral()
     i.key = "rememberLastDir";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Check for app update at startup
     i.name = "checkIfUpdate";
@@ -540,7 +542,7 @@ void Preferences::addGeneral()
     i.key = "checkIfUpdate";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Limit loupe fit zoom to 100%.
     i.name = "limitFit100Pct";
@@ -555,7 +557,7 @@ void Preferences::addGeneral()
     i.key = "limitFit100Pct";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Auto advance
     i.name = "autoAdvance";
@@ -615,7 +617,7 @@ void Preferences::addGeneral()
     i.key = "renderVideoThumb";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Logger
     i.name = "isLogger";
@@ -1063,8 +1065,7 @@ void Preferences::addUserInterface()
     // Pick audio volume
     i.name = "pickAudioVolume";
     i.parentName = "PickAudioHeader";
-    i.tooltip = "The image number is located in the top left corner.  This property\n"
-                "adjusts the size of the number.";
+    i.tooltip = "Adjust audio click volume.";
     i.captionText = "Pick audio volume";
     i.hasValue = true;
     i.captionIsEditable = false;
