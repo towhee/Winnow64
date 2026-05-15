@@ -743,6 +743,8 @@ QString FS::save(QString fuseFolderPath)
     // Write XMP to highlight with color
     msg = "Write XMP color green";
     if (G::FSLog) G::log(srcFun, msg);
+    // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
+    if (QFileInfo(xmpPath).isSymLink()) return "";
     QFile f(xmpPath);
     if (!f.open(QIODevice::ReadWrite)) return "";
 

@@ -142,15 +142,17 @@ ImageCache::ImageCache(QObject *parent,
     // data is kept in ImageCacheData icd, a hash table
     this->icd = icd;
     this->dm = dm;
-    // new metadata to avoid thread collisions?
-    metadata = new Metadata;
 
     maxMB = 1000;  // maxMB change
 
     // create n decoder threads
     decoderCount = QThread::idealThreadCount();
+    decoderMetadatas.reserve(decoderCount);
     for (int id = 0; id < decoderCount; ++id) {
-        ImageDecoder *decoder = new ImageDecoder(id, dm, metadata);
+        // Each decoder owns its Metadata: parser state (IFD hash, ImageMetadata, etc.) cannot be shared across threads.
+        Metadata *decoderMetadata = new Metadata;
+        decoderMetadatas.append(decoderMetadata);
+        ImageDecoder *decoder = new ImageDecoder(id, dm, decoderMetadata);
         QThread *thread = new QThread;
 
         decoder->moveToThread(thread);
@@ -174,6 +176,8 @@ ImageCache::ImageCache(QObject *parent,
 ImageCache::~ImageCache()
 {
     stop();
+    qDeleteAll(decoderMetadatas);
+    decoderMetadatas.clear();
 }
 
 void ImageCache::start()

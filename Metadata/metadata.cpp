@@ -510,6 +510,12 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 
     QFileInfo info(fPath);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
+    // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
+    if (QFileInfo(sidecarPath).isSymLink()) {
+        QString msg = "Refusing to write sidecar: path is a symlink.";
+        G::issue("Warning", msg, "Metadata::writeOrientation", -1, sidecarPath);
+        return;
+    }
     QFile sidecarFile(sidecarPath);
     if (!sidecarFile.open(QIODevice::ReadWrite)) {
         QString msg = "Failed to open sidecar to write orientation.";
@@ -608,6 +614,11 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     // data edited, open image file
     p.file.setFileName(fPath);
     if (p.file.isOpen()) return false;
+    // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
+    if (QFileInfo(fPath).isSymLink()) {
+        G::issue("Warning", "Refusing to write sidecar: path is a symlink.", "Metadata::writeXMP", -1, fPath);
+        return false;
+    }
     if (!p.file.open(QIODevice::ReadWrite)) return false;
 
     // if current xmp is invalid then fix
