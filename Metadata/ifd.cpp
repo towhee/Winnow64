@@ -118,7 +118,7 @@ quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
             p.rpt << "\n";
         }
         // quit if more than 200 tags - prob error
-        if (i>200) break;
+        if (i>2000) break;
     }
     quint32 offset = p.file.pos();
     quint32 nextIFDOffset = Utilities::get32(p.file.read(4), isBigEnd);
