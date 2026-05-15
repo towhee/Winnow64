@@ -154,6 +154,16 @@ public:
     QString fileCategory(QString &path, QStringList &paths);
 
 private:
+    // Magic-byte sniffing — route by content, not just by extension.
+    enum class FileFamily { Unknown, JPEG, TIFF, PNG, ISOBMFF, RAF, GIF, BMP, WEBP };
+    struct SniffResult {
+        FileFamily family = FileFamily::Unknown;
+        QByteArray isobmffBrand;   // 4 bytes when family == ISOBMFF
+    };
+    static SniffResult sniffFamily(QFile &file);
+    FileFamily extensionFamily(const QString &ext) const;
+    QString reconcileExt(const QString &ext, const SniffResult &sniff) const;
+
     QMutex mutex;
     // Exif
     Exif *exif = nullptr;
