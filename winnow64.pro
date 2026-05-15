@@ -337,6 +337,7 @@ SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/stack.cpp
 SOURCES += Image/thumb.cpp
+macx:SOURCES += Image/thumb_mac.mm                  # ImageIO fast thumbnail path
 #SOURCES += Image/tiffhandler.cpp
 SOURCES += ImageFormats/Canon/canon.cpp
 SOURCES += ImageFormats/Canon/canoncr3.cpp
@@ -566,6 +567,8 @@ macx {
     LIBS += -framework AppKit
     LIBS += -framework CoreFoundation
     LIBS += -framework Foundation
+    LIBS += -framework ImageIO
+    LIBS += -framework CoreGraphics
 
     # opencv
     LIBS += -L/opt/homebrew/lib

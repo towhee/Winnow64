@@ -1,6 +1,11 @@
 #include "Image/thumb.h"
 #include "Main/global.h"
 
+#ifdef Q_OS_MAC
+// Defined in Image/thumb_mac.mm — fast HEIC/JPEG/TIFF thumbnail via ImageIO.
+bool macImageIOThumbnail(const QString &fPath, int maxPixelSize, QImage &out);
+#endif
+
 /*
    Loads a thumbnail preview from a file based on metadata already extracted by
    mdCache. If the file contains a thumbnail jpg it is extracted. If not, then
@@ -183,12 +188,12 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     }
 
     QImageReader qReader(fPath);
-    // qReader.setAutoTransform(false);
-    // const QSize srcSize = qReader.size();
-    // if (srcSize.isValid()) {
-    //     const QSize target = srcSize.scaled(thumbMax, Qt::KeepAspectRatio);
-    //     qReader.setScaledSize(target);
-    // }
+    qReader.setAutoTransform(false);
+    const QSize srcSize = qReader.size();
+    if (srcSize.isValid()) {
+        const QSize target = srcSize.scaled(thumbMax, Qt::KeepAspectRatio);
+        qReader.setScaledSize(target);
+    }
 
     if (!abort && !qReader.read(&image)) {
         QString msg = "Could not read thumb using QImageReader::read: "
@@ -201,7 +206,7 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         << fun.leftJustified(col0Width)
         << "size =" << image.size();
 
-    // if (!abort) setImageDimensions(fPath, srcSize.isValid() ? srcSize : image.size(), row);
+    if (!abort) setImageDimensions(fPath, srcSize.isValid() ? srcSize : image.size(), row);
 
     if (image.isNull()) {
         QString msg = "Null image returned from thumbReader.";
@@ -360,7 +365,15 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
 
     #ifdef Q_OS_MAC
     if (abort) return Status::Fail;
-    // Heic natively supported on Mac
+
+    // Fast path: ImageIO returns the embedded thumbnail when present, or
+    // decodes at the requested size. Either is far cheaper than a full
+    // QImage::load() + scaled() of the primary image.
+    if (macImageIOThumbnail(fPath, G::maxIconSize, image) && !image.isNull()) {
+        return Status::Success;
+    }
+
+    // Fallback: Heic natively supported on Mac via Qt's image plugin.
     if (image.load(fPath)) {
         if (image.isNull()) {
             QString msg = "Could not read thumb using QImage::load.";
