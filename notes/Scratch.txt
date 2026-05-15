@@ -1,10 +1,6 @@
-
-- shortcuts are assigned in menusandactions.cpp MW::loadShortcuts
-- shortcuts are documented in MW::helpShortcuts, add "Rename files" after "Delete files" in File Operations.
-
-Review MW::setRotation in mainwindow.cpp.  The requirement: "If G::modifySourceFiles == false and G::useSidecar = true the rotation is updated in
-      the xmp sidecar file." needs to be added.
-/Users/roryhill/Pictures/PNG/2026-05-01_0204.png
-
-I want to use the mac-only option for mac platform, and the best second option for the windows
-  platform.
+macImageIOImage:
+"ImageDecoder::decode" row = 1 nsToDecode = 151,328,875 "/Users/roryhill/Pictures/_heic/IMG_5884.HEIC"
+"ImageDecoder::decode" row = 0 nsToDecode = 174,412,292 "/Users/roryhill/Pictures/_heic/IMG_5878.HEIC"
+Qt's HEIF plugin:
+"ImageDecoder::decode" row = 0 nsToDecode = 120,238,917 "/Users/roryhill/Pictures/_heic/IMG_5878.HEIC"
+"ImageDecoder::decode" row = 1 nsToDecode = 121,947,375 "/Users/roryhill/Pictures/_heic/IMG_5884.HEIC"
