@@ -27,7 +27,7 @@ public:
     QTreeWidgetItem *years;
     QTreeWidgetItem *days;
     QTreeWidgetItem *creators;
-    QTreeWidgetItem *missingThumbs;
+    // QTreeWidgetItem *missingThumbs;
     QTreeWidgetItem *compare;
 
     QTreeWidgetItem *activeCategory;   // category just filtered
