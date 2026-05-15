@@ -144,24 +144,15 @@ void MW::runExternalApp()
     connect(process, SIGNAL(error(QProcess::ProcessError)),
             this, SLOT(externalAppError(QProcess::ProcessError)));
 
-    // Photoshop exception on macOS
+    // Photoshop on macOS: invoke `open` via execve (no shell) so filenames or appName cannot inject commands.
     #ifdef Q_OS_MAC
     if (appName.contains("Photoshop")) {
-        // based on this working in terminal
-        // open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
-
-        // Build the file path argument string
-        QString fileArgs;
-        for (const QString& filePath : arguments) {
-            fileArgs += QString("\"%1\" ").arg(filePath);
-        }
-
-        // Construct the full command as a single string
-        QString command = QString("open %1 -a \"%2\"").arg(fileArgs.trimmed(), appName);
-
-        // Run the command using the shell
-        process->start("bash", QStringList() << "-c" << command);
-
+        QStringList openArgs;
+        openArgs << "-a" << appName;
+        openArgs << files;
+        process->setProgram("/usr/bin/open");
+        process->setArguments(openArgs);
+        process->start();
         return;
     }
     #endif

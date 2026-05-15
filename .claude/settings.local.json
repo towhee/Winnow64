@@ -5,7 +5,10 @@
       "Bash(chmod +x /Users/roryhill/.claude/statusline.sh)",
       "Read(//Users/roryhill/.claude/**)",
       "Bash(grep -E \"\\\\.\\(h|cpp\\)$\")",
-      "Bash(xargs ls *)"
+      "Bash(xargs ls *)",
+      "Bash(grep *)",
+      "Bash(awk '{print $NF}')",
+      "Bash(xargs -I {} basename {})"
     ]
   }
 }
