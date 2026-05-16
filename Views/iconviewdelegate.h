@@ -164,7 +164,7 @@ private:
     int itemSpacing;
 
     QRect cacheRect;
-    QRect missingThumbRect;
+    QRect sidecarRect;
 
     QPointF vpCntrN;
     QSizeF vpSizeN;

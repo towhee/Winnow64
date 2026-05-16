@@ -1,6 +1,4 @@
-macImageIOImage:
-"ImageDecoder::decode" row = 1 nsToDecode = 151,328,875 "/Users/roryhill/Pictures/_heic/IMG_5884.HEIC"
-"ImageDecoder::decode" row = 0 nsToDecode = 174,412,292 "/Users/roryhill/Pictures/_heic/IMG_5878.HEIC"
-Qt's HEIF plugin:
-"ImageDecoder::decode" row = 0 nsToDecode = 120,238,917 "/Users/roryhill/Pictures/_heic/IMG_5878.HEIC"
-"ImageDecoder::decode" row = 1 nsToDecode = 121,947,375 "/Users/roryhill/Pictures/_heic/IMG_5884.HEIC"
+Example - Replace each defaultColumnWidth line like:
+if (column == G::PathColumn) defaultColumnWidth[column] = fm.boundingRect("-Icon-").width();
+with:
+defaultColumnWidth[G::PathColumn] = fm.boundingRect("-Icon-").width();

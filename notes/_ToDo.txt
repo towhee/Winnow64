@@ -2,15 +2,14 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
+- Show images that have sidecars (indicator in thumbnail and col in datamodel)
 - Add IRB to dng.cpp (see Tiff::parse line 365) for faster thumbs
 - Send all warnings to console and issue log.
 - Add preference to toggle isFileLogger
 - EmbelProperties::syncWinnets deal with missing winnets
 - Update where log file is updated
-- Read/write png metadata
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
-- Copy path(s) not always working
 - Undo delete
 - "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
 - Universal help color = rgb(43, 85, 49) used in "How this works"
@@ -37,7 +36,6 @@ BUGS / TO DO
 - Check for updates for macos
 - Add tooltips to menus
 - GoogleDrive folder not showing all videos
-- Open with exiftool
 - ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
 - MeanStack not updating embedded image thumbnail
@@ -47,21 +45,15 @@ BUGS / TO DO
 - Cmd Del = delete all rejected
 - Cmd+Opt+R = reject all unpicked and unpick all picked
 - bool Usb::isUsb(QString path) not done for MacOS
-- Fast video thumbnail generation
-- Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
 - Read HEIC metadata (MAC issue only?)
 - Convert path to windows \ for copy path to clipboard
-- Extract frame from video
-- Update use of current image for video frame
-- Add G::showWarnings
 - Make ImageDecoder warnings context specific is hasMetadata
 - Save preview as PNG include color manage corrections
 - MW::enableSelectionDependentMenus needs updating for all situations
 
 - Painter not active, state will be reset by begin
 - Embellish not resetting properly
-- No image cached for D:/Pictures/_ThumbTest/2020-01-05_0005-denoise.dng
 - On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
 - Image metadata report does not show sidecar for PNG file
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
@@ -73,9 +65,7 @@ BUGS / TO DO
 - DNG without jpg preview: add one similar to TIFF
 - TIF with more than 3 samplesperpixel
 - TIF LZW and predictor = 2 (crashes)
-- Tiff with compression = 7, 8 not supported /Users/roryhill/Photos/_misc/_Calibration/TripleMoireTarget.tif
 - TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
-- Copy / paste files inside Winnow
 - Maintain count when switch folders during the same ingest
 - Cannot delete heic files on PC
 - Add hif file format
@@ -93,20 +83,16 @@ EMBELLISH
 - Eliminate shadow blur in sunward direction
 - Sharpen needs TLC
 MAC
-- Add HEIC files to Mac https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/ImageIOGuide/imageio_source/ikpg_source.html#//apple_ref/doc/uid/TP40005462-CH218-SW3
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Mac check for updates not done yet
 - Share https://developer.apple.com/documentation/appkit/nssharingservice?language=objc
 PERFORMANCE
-- HEIF files are slow
 CODE IMPROVEMENTS
 - Standardize use of G:css
 - Sort out i.name vs i.key in PropertyEditor
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
-- Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
-- Show images that have sidecars (indicator in thumbnail and col in datamodel)
 - When add new workspace the menu shortcut is not updated until reopen app
 - Heic thumb rotation wrong
 - Portrait aspect ratios wrong

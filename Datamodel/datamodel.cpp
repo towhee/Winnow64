@@ -213,6 +213,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type")); horizontalHeaderItem(G::TypeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::VideoColumn, new QStandardItem("Video")); horizontalHeaderItem(G::VideoColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::SidecarColumn, new QStandardItem("Sidecar")); horizontalHeaderItem(G::SidecarColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture")); horizontalHeaderItem(G::ApertureColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter")); horizontalHeaderItem(G::ShutterspeedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ISOColumn, new QStandardItem("ISO")); horizontalHeaderItem(G::ISOColumn)->setData(false, G::GeekRole);
@@ -249,7 +250,6 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::MetadataAttemptedColumn, new QStandardItem("Meta Attempted")); horizontalHeaderItem(G::MetadataAttemptedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataLoadedColumn, new QStandardItem("Meta Loaded")); horizontalHeaderItem(G::MetadataLoadedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
-    // setHorizontalHeaderItem(G::MissingThumbColumn, new QStandardItem("Missing Thumb")); horizontalHeaderItem(G::MissingThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating")); horizontalHeaderItem(G::_RatingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_LabelColumn, new QStandardItem("_Label")); horizontalHeaderItem(G::_LabelColumn)->setData(true, G::GeekRole);
@@ -1004,6 +1004,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     • PickColumn
     • IngestedColumn
     • VideoColumn
+    • SidecarColumn
     • MetadataAttemptedColumn
     • MetadataLoadedColumn
     • IconLoadedColumn
@@ -1025,6 +1026,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     QString folderName = fileInfo.dir().dirName();
     QString ext = fileInfo.suffix().toLower();
     QString baseName = fileInfo.completeBaseName();
+    QString sidecarPath = fileInfo.dir().path() + "/" + baseName + ".xmp";
 
     // build hash to quickly get dmRow from fPath (ie pixmap.cpp, imageCache...)
     if (fPathRow.contains(fPath)) return;
@@ -1052,6 +1054,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
     setData(index(row, G::VideoColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::SidecarColumn), QFile(sidecarPath).exists());
+    setData(index(row, G::SidecarColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     uint p = static_cast<uint>(fileInfo.permissions());
     setData(index(row, G::PermissionsColumn), p);
     setData(index(row, G::PermissionsColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
@@ -1163,6 +1167,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.type = index(row, G::TypeColumn).data().toString();
     m.size = index(row, G::ByteSizeColumn).data().toInt();
     m.video = index(row, G::VideoColumn).data().toInt();
+    m.sidecar = index(row, G::SidecarColumn).data().toInt();
     m.label = index(row, G::LabelColumn).data().toString();
     m._label = index(row, G::_LabelColumn).data().toString();
     m.rating = index(row, G::RatingColumn).data().toString();
