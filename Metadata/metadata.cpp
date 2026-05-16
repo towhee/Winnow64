@@ -353,6 +353,7 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("fName", n) << G::s(m.fName) << "\n";
     p.rpt << G::sj("type", n) << G::s(m.type) << "\n";
     p.rpt << G::sj("video", n) << G::s(m.video) << "\n";
+    p.rpt << G::sj("sidecar", n) << G::s(m.sidecar) << "\n";
     p.rpt << G::sj("size", n) << G::s(m.size) << "\n";
     p.rpt << G::sj("createdDate", n) << G::s(m.createdDate) << "\n";
     p.rpt << G::sj("modifiedDate", n) << G::s(m.modifiedDate) << "\n";
@@ -362,7 +363,7 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("pick", n) << G::s(m.pick) << "\n";
     p.rpt << G::sj("ingested", n) << G::s(m.ingested) << "\n";
     p.rpt << G::sj("metadataLoaded", n) << G::s(m.metadataLoaded) << "\n";
-    p.rpt << G::sj("missingEmbeddedThumb", n) << G::s(m.isEmbeddedThumbMissing) << "\n";
+    // p.rpt << G::sj("missingEmbeddedThumb", n) << G::s(m.isEmbeddedThumbMissing) << "\n";
     p.rpt << G::sj("isSearch", n) << G::s(m.isSearch) << "\n";
     p.rpt << "\n";
     p.rpt << G::sj("width", n) << G::s(m.width) << "\n";
@@ -428,13 +429,33 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("searchStr", n) << G::s(m.searchStr) << "\n";
 
     if (m.isXmp) {
-        // sidecar xmp
+        // embedded sidecar xmp
         MetaReport::header("Embedded XMP Extract", p.rpt);
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) p.rpt << xmp.docToQString();
         else {
             p.rpt << "ERROR: " << xmp.errMsg[xmp.err] << "\n";
             p.rpt << xmp.docToQString();
+        }
+    }
+
+    if (m.sidecar) {
+        // separate sidecar xmp file
+        QFileInfo info(m.fPath);
+        QString sidecarName = info.completeBaseName() + ".xmp";
+        QString sidecarPath = info.dir().path() + "/" + sidecarName;
+        qDebug() << "    m.fPath =" << m.fPath;
+        qDebug() << "sidecarPath =" << sidecarPath;
+        QFile sidecarFile(sidecarPath);
+        if (sidecarFile.open(QIODevice::ReadOnly)) {
+            QString hdr = "Sidecar: " + sidecarName;
+            MetaReport::header(hdr, p.rpt);
+            Xmp xmp(sidecarFile, 0, sidecarFile.size(), p.instance);
+            if (xmp.isValid) p.rpt << xmp.docToQString();
+            else {
+                p.rpt << "ERROR: " << xmp.errMsg[xmp.err] << "\n";
+                p.rpt << xmp.docToQString();
+            }
         }
     }
 }

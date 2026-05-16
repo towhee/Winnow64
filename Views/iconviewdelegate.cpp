@@ -246,13 +246,13 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
                       dotDiam, dotDiam);
 
     // Missing Thumb Circle (Bottom Left)
-    missingThumbRect.setRect(dotDiam - dotOffset,
+    sidecarRect.setRect(dotDiam - dotOffset,
                              itemSize.height() - dotDiam - dotOffset /*+ 2*/,
                              dotDiam, dotDiam);
 
     // Lock Icon (To the right of Missing Thumb)
     int lockSize = 12; // Adjusted for SVG
-    lockRect.setRect(missingThumbRect.right() + 2,
+    lockRect.setRect(sidecarRect.right() + 2,
                      itemSize.height() - lockSize,
                      lockSize, lockSize);
 
@@ -402,7 +402,7 @@ QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &option
 
     // 1. Static Symbols (Pre-calculated in setThumbDimensions)
     if (symbol == "Thumb") return thumbRect;
-    if (symbol == "MissingThumb") return missingThumbRect.translated(origin);
+    if (symbol == "Sidecar") return sidecarRect.translated(origin);
     if (symbol == "Lock") return lockRect.translated(origin);
     if (symbol == "CombineRawJpg") return combineRawJpgRect.translated(origin);
     if (symbol == "Cache") return cacheRect.translated(origin);
@@ -466,8 +466,8 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     auto sf = proxy ? proxy->sourceModel() : view->model();
     QPoint viewPos = view->viewport()->mapFromGlobal(event->globalPos());
 
-    if (getSymbolRect("MissingThumb", option.rect, index).contains(viewPos))
-        tooltip = "Image does not have an embedded thumbnail";
+    if (getSymbolRect("Sidecar", option.rect, index).contains(viewPos))
+        tooltip = "Image has a sidecar file";
     else if (getSymbolRect("Lock", option.rect, index).contains(viewPos))
         tooltip = "Image file is locked";
     else if (getSymbolRect("CombineRawJpg", option.rect, index).contains(viewPos))
@@ -570,6 +570,7 @@ textRect         = a rectangle below itemRect
     bool isIngested = index.model()->index(sfRow, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(sfRow, G::IsCachedColumn).data(Qt::EditRole).toBool();
     // bool isMissingThumb = index.model()->index(sfRow, G::MissingThumbColumn).data().toBool();
+    bool isSidecar = index.model()->index(sfRow, G::SidecarColumn).data().toBool();
     bool metaLoaded = index.model()->index(sfRow, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(sfRow, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(sfRow, G::ReadWriteColumn).data().toBool();
@@ -713,11 +714,11 @@ textRect         = a rectangle below itemRect
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect.translated(origin));
     }
-    // if (G::useMissingThumbs && isMissingThumb) {
-    //     painter->setPen(cacheBorderColor);
-    //     painter->setBrush(missingThumbColor);
-    //     painter->drawEllipse(missingThumbRect.translated(origin));
-    // }
+    if (isSidecar && !G::isSlideShow) {
+        painter->setPen(cacheBorderColor);
+        painter->setBrush(missingThumbColor);
+        painter->drawEllipse(sidecarRect.translated(origin));
+    }
 
     // Render icon number overlay
     if (isIconNumberVisible) {

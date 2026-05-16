@@ -85,6 +85,7 @@ Q_NAMESPACE
         SearchColumn,
         TypeColumn,
         VideoColumn,
+        SidecarColumn,
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,
@@ -123,7 +124,6 @@ Q_NAMESPACE
         MetadataAttemptedColumn,
         MetadataLoadedColumn,
         IconLoadedColumn,
-        // MissingThumbColumn,
         CompareColumn,
         // original values
         _RatingColumn,
