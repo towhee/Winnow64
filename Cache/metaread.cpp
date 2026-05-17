@@ -106,13 +106,12 @@ MetaRead::MetaRead(QObject *parent,
     for (int id = 0; id < readerCount; ++id) {
         Reader *reader = new Reader(id, dm, imageCache, frameDecoder);
         QThread *thread = new QThread;
-        thread->setPriority(QThread::LowPriority);
         reader->readerThread = thread;
         reader->moveToThread(thread);
         connect(reader, &Reader::done, this, &MetaRead::dispatch);
         connect(thread, &QThread::finished, reader, &QObject::deleteLater);
         connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-        thread->start();
+        thread->start(QThread::LowPriority);
         readers.append(reader);
         readerThreads.append(thread);
         cycling.append(false);
