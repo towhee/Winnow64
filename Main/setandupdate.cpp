@@ -618,6 +618,18 @@ void MW::updateClassification()
                                             thumbView->currentIndex());
 }
 
+void MW::updateSidecarStatus(QString fPath)
+{
+    QString srcFun = "MW::updateSidecarStatus";
+    if (G::isLogger) G::log(srcFun, fPath);
+    qDebug() << srcFun<< fPath;
+
+    QModelIndex sfIdx = dm->proxyIndexFromPath(fPath);
+    emit  setValSf(sfIdx.row(), G::SidecarColumn, true, G::dmInstance,
+                  srcFun, Qt::EditRole, Qt::AlignVCenter | Qt::AlignCenter);
+    thumbView->refreshIcon(sfIdx, srcFun);
+}
+
 void MW::setIgnoreAddThumbnailsDlg(bool ignore)
 {
     qDebug() << "MW::setIgnoreAddThumbnailsDlg";

@@ -239,6 +239,7 @@ private:
 //    bool parseSidecar();
 
 signals:
+    void updateSidecarStatus(QString fPath);
 
 public slots:
     bool loadImageMetadata(const QFileInfo &fileInfo,

@@ -447,6 +447,7 @@ public slots:
     void setProgress(int value);
     void setStatus(QString state);
     void updateStatus(bool keepBase = true, QString s = "", QString source = "");
+    void updateSidecarStatus(QString fPath);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void setThumbDockHeight();  // signal from thumbView
     void setThumbDockFeatures(Qt::DockWidgetArea area);
