@@ -3,8 +3,6 @@
 
 #include <QtWidgets>
 #include "Utilities/utilities.h"
-#include "ui_filtershelp.h"
-//#include "Datamodel/datamodel.h"
 
 class Filters : public QTreeWidget
 {

@@ -21,3 +21,19 @@ Three approaches, in order of leverage:
 
 I'd start with (1) alone and measure — if that's enough, (2) and (3) aren't worth the
 complexity.
+
+------------------------------------------------------------------------------------------
+
+HELP
+
+Other orphans I noticed but didn't touch (flag for your call):
+
+- Docs/ingesthelp.htm + Docs/ingesthelp_files/ (qrc:111 still references the .htm)
+
+- Docs/filtershelp.fld/ (Word sidecar dir; qrc:185-187 still references)
+
+- Docs/versions.html — 200 lines of content, zero C++ refs. Loaded dynamically somewhere
+or truly orphan?
+
+- Loose files in Docs/: Border shapes.xlsx, QPixmap performance.xlsx, winnow.png,
+debug.log — clearly not help assets.

@@ -1,5 +1,6 @@
 #include "ingestdlg.h"
 #include "ui_ingestdlg.h"
+#include "Utilities/htmlwindow.h"
 //#include "ui_copypickdlg.h"
 #include <QDebug>
 
@@ -1570,19 +1571,10 @@ void IngestDlg::on_backupChk_stateChanged(int arg1)
 void IngestDlg::on_helpBtn_clicked()
 {
     if (G::isLogger) G::log("IngestDlg::on_helpBtn_clicked");
-
-    // experiment to show dlg in another thread so modal
-//    DialogThread *thread = new DialogThread(this);
-//    thread->start();
-//    return;
-
-    QDialog *dlg = new QDialog;
-    Ui::IngestAutoPath *ui = new Ui::IngestAutoPath;
-    ui->setupUi(dlg);
-    ui->textBrowser->setOpenExternalLinks(true);
-    dlg->setWindowTitle("Ingest Automatic Path Help");
-    dlg->setStyleSheet(G::css);
-    dlg->exec();
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - Ingest Automatic Path",
+                   ":/Docs/ingestautopath.html",
+                   QSize(800, 700), r, this);
 }
 
 void IngestDlg::on_cancelBtn_clicked()

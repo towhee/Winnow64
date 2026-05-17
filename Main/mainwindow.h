@@ -83,7 +83,6 @@
 #include <QSoundEffect>
 
 #include "Utilities/performance.h"
-#include "ui_helpform.h"
 #include "ui_shortcutsform.h"
 #include "ui_welcome.h"
 #include "ui_message.h"
