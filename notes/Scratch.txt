@@ -1,4 +1,23 @@
-Example - Replace each defaultColumnWidth line like:
-if (column == G::PathColumn) defaultColumnWidth[column] = fm.boundingRect("-Icon-").width();
-with:
-defaultColumnWidth[G::PathColumn] = fm.boundingRect("-Icon-").width();
+RESPONSIVENESS
+
+Looked at the architecture. The bottleneck is CPU contention — MetaRead spawns one reader
+thread per core at default priority (metaread.cpp:105), so the ImageCache decoder (which
+actually produces the full-size pixmap you want to view) is competing with N readers for
+cores while you navigate. The backpressure valve at metaread.cpp:1364 only kicks in for
+the GUI event queue, not for decoder starvation.
+
+Three approaches, in order of leverage:
+
+  1. Prioritize ImageCache over MetaRead readers — set MetaRead readers to
+  QThread::LowPriority so the OS scheduler hands cores to the decoder thread when you
+  navigate. One-line change per reader; biggest win for least risk.
+
+  2. Cap MetaRead at idealThreadCount() - 2 — always reserve cores for the decoder + UI.
+  Steady cost (slower MetaRead) for guaranteed responsiveness.
+
+  3. Pause MetaRead on navigation — hook MW::fileSelectionChange to briefly suspend
+  dispatch until ImageCache reports the current row is decoded. Most surgical, but more
+  wiring.
+
+I'd start with (1) alone and measure — if that's enough, (2) and (3) aren't worth the
+complexity.
