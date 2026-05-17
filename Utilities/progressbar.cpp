@@ -224,8 +224,8 @@ void ProgressBar::updateMetaReadProgress(int item, int items, QColor color)
     pxEnd = pxStart + pxWidth;
 
     // Done range
-    QRect doneRect(0, mrHtOffset, pxEnd, mrHt);
-    // QRect doneRect(pxStart, mrHtOffset, pxWidth, mrHt);
+    // QRect doneRect(0, mrHtOffset, pxEnd, mrHt);
+    QRect doneRect(pxStart, mrHtOffset, pxWidth, mrHt);
     pnt.fillRect(doneRect, color);
     pnt.end();
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
