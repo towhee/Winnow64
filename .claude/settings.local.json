@@ -8,7 +8,8 @@
       "Bash(xargs ls *)",
       "Bash(grep *)",
       "Bash(awk '{print $NF}')",
-      "Bash(xargs -I {} basename {})"
+      "Bash(xargs -I {} basename {})",
+      "Bash(iconv -f UTF-16 -t UTF-8 /Users/roryhill/Projects/Winnow64/Docs/filtershelp.html)"
     ]
   }
 }

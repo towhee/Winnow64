@@ -31,6 +31,8 @@ HtmlWindow::HtmlWindow(const QString &title,
     text = new QTextBrowser;
     QFile f(htmlPath);
     f.open(QIODevice::ReadOnly);
+    // base URL lets <img src="images/foo.png"> resolve relative to the html file
+    text->document()->setBaseUrl(QUrl("qrc" + QFileInfo(htmlPath).path() + "/"));
     text->setHtml(f.readAll());
     f.close();
     text->setMinimumWidth(windowSize.width());
