@@ -1173,11 +1173,10 @@ void MetaRead::processReturningReader(int id, Reader *r)
         // model and proxy rows the same in metaRead
         QModelIndex sfIdx = dm->sf->index(r->dmRow,0);
         bool clearSelection = true;
-        QString src = "MetaRead::dispatch";
-        // select the current index row in thumbView, gridView and tableView
+        // Selection::setCurrentIndex routes through MW::updateChange which
+        // in turn invokes MW::fileSelectionChange, so do not emit
+        // fileSelectionChange here as well.
         emit select(sfIdx, clearSelection);
-        // notify file selection changed
-        emit fileSelectionChange(sfIdx, QModelIndex(), clearSelection, src);
     }
 
     if (isDebug)  // returning reader, row has been processed by reader
