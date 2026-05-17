@@ -97,6 +97,8 @@ public slots:
     void dispatchFinished(QString src);
     void allFinished(QString src);
     void abortProcessing();
+    void setAwaitingDecode(int sfRow);
+    void onRowCached(int sfRow, bool isCached, int instance);
 
 private:
     void read(int startRow = 0, QString src = "");// decoder
@@ -115,6 +117,8 @@ private:
     QMutex mutex;
     QWaitCondition condition;
     bool abort = false;
+    std::atomic<int> awaitingDecodeRow{-1};   // sfRow we're waiting on; -1 = no wait
+    QElapsedTimer awaitingDecodeTimer;        // wall-clock safety bound
     std::atomic<bool> idle{false};
     void setIdle();
     void setBusy();
