@@ -388,6 +388,32 @@ void MetaRead::abortProcessing()
     emit stopped("MetaRead");
 }
 
+void MetaRead::setAwaitingDecode(int sfRow)
+{
+/*
+    Arm the navigation gate in dispatch(). Called from
+    MW::fileSelectionChange just before the ImageCache position is set,
+    so the reader pool yields CPU to the decoder for the new selection.
+    Cleared by onRowCached when ImageCache reports the row decoded, or
+    by the 500 ms safety bound inside dispatch().
+*/
+    if (sfRow < 0) {
+        awaitingDecodeRow.store(-1, std::memory_order_relaxed);
+        return;
+    }
+    awaitingDecodeRow.store(sfRow, std::memory_order_relaxed);
+    awaitingDecodeTimer.restart();
+}
+
+void MetaRead::onRowCached(int sfRow, bool isCached, int /*instance*/)
+{
+    if (!isCached) return;
+    int awaiting = awaitingDecodeRow.load(std::memory_order_relaxed);
+    if (awaiting == sfRow) {
+        awaitingDecodeRow.store(-1, std::memory_order_relaxed);
+    }
+}
+
 void MetaRead::setIdle()
 {
     QMutexLocker lock(&mutex);
@@ -1376,6 +1402,25 @@ void MetaRead::dispatch(int id, bool isReturning)
                 if (!abort) dispatch(id, false);
             });
             return;
+        }
+    }
+
+    /* Navigation gate: while the user is navigating, yield CPU to the
+       ImageCache decoder so the just-selected row decodes promptly.
+       Cleared when ImageCache::setCached fires for the awaited row, or
+       after a 500 ms safety bound so a failed/missed decode can't stall
+       MetaRead forever. */
+    if (!abort) {
+        const int awaiting = awaitingDecodeRow.load(std::memory_order_relaxed);
+        if (awaiting >= 0) {
+            if (awaitingDecodeTimer.isValid() && awaitingDecodeTimer.elapsed() > 500) {
+                awaitingDecodeRow.store(-1, std::memory_order_relaxed);
+            } else {
+                QTimer::singleShot(15, this, [this, id]() {
+                    if (!abort) dispatch(id, false);
+                });
+                return;
+            }
         }
     }
 

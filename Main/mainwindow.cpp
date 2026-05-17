@@ -2007,6 +2007,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (!G::removingRowsFromDM)
        )
     {
+        // Arm MetaRead's navigation gate so its reader pool yields CPU
+        // to the ImageCache decoder for this selection.
+        QMetaObject::invokeMethod(metaRead, "setAwaitingDecode",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(int, dm->currentSfRow));
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
         // imageCache->setCurrentPosition(dm->currentFilePath, "MW::fileSelectionChange");
     }

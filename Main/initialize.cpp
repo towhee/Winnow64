@@ -505,6 +505,10 @@ void MW::createImageCache()
     connect(imageCache, &ImageCache::setCached,
             dm, &DataModel::setCached);
 
+    // Release MetaRead's navigation gate as soon as the awaited row decodes.
+    connect(imageCache, &ImageCache::setCached,
+            metaRead, &MetaRead::onRowCached, Qt::QueuedConnection);
+
     // Signal datamodel to signal back when some row is loaded
     connect(imageCache, &ImageCache::waitingForRow,
             dm, &DataModel::imageCacheWaiting);
