@@ -403,6 +403,10 @@ void MW::closeEvent(QCloseEvent *event)
             w->close();
         }
     }
+    // close any HtmlWindow help pages parented anywhere under MW
+    for (auto *hw : findChildren<HtmlWindow*>()) {
+        hw->close();
+    }
 
     // check and delete focus stack
     if (fsPipeline) {
@@ -5181,11 +5185,10 @@ void MW::findDuplicates()
 void MW::help()
 {
     if (G::isLogger) G::log("MW::help");
-    QWidget *helpDoc = new QWidget;
-    Ui::helpForm ui;
-    ui.setupUi(helpDoc);
-    openWindows.append(helpDoc);
-    helpDoc->show();
+    HtmlWindow *w = new HtmlWindow("Winnow - Help",
+                                   ":/Docs/winnowhelp.html",
+                                   QSize(900, 750), geometry(), this);
+    openWindows.append(w);
 }
 
 void MW::helpShortcuts()

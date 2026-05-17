@@ -5,8 +5,14 @@ HtmlWindow::HtmlWindow(const QString &title,
                        const QString &htmlPath,
                        const QSize &windowSize,
                        const QRect mwRect,
-                       QObject */*parent*/) : QScrollArea()
+                       QWidget *parent) : QScrollArea(parent)
 {
+    // parented so MW (or owning dialog) closing destroys this window too;
+    // Qt::Window keeps it free-floating with its own title bar despite parent;
+    // WA_DeleteOnClose frees memory when the user closes it.
+    setWindowFlag(Qt::Window);
+    setAttribute(Qt::WA_DeleteOnClose);
+
 /*
     This opens a modeless window containing the html document. The window will have
     a minimum size of size. The html and any other resources such as images need to
@@ -29,8 +35,15 @@ HtmlWindow::HtmlWindow(const QString &title,
 */
     setWindowTitle(title);
     text = new QTextBrowser;
+    text->setOpenExternalLinks(true);
     QFile f(htmlPath);
     f.open(QIODevice::ReadOnly);
+    // shared stylesheet for all help pages; per-page <style> blocks override
+    QFile cssFile(":/Docs/help.css");
+    if (cssFile.open(QIODevice::ReadOnly)) {
+        text->document()->setDefaultStyleSheet(cssFile.readAll());
+        cssFile.close();
+    }
     // base URL lets <img src="images/foo.png"> resolve relative to the html file
     text->document()->setBaseUrl(QUrl("qrc" + QFileInfo(htmlPath).path() + "/"));
     text->setHtml(f.readAll());
@@ -70,7 +83,4 @@ HtmlWindow::HtmlWindow(const QString &title,
     show();
 }
 
-HtmlWindow::~HtmlWindow()
-{
-    delete text;
-}
+HtmlWindow::~HtmlWindow() = default;

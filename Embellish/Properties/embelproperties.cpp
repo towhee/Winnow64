@@ -5588,7 +5588,7 @@ void EmbelProperties::coordHelp()
     qDebug() << "EmbelProperties::coordHelp  geometry() =" << r;
     HtmlWindow *w = new HtmlWindow("Winnow - Embel Container and Coordinate System",
                                    ":/Docs/embelcoordsystem.html",
-                                   QSize(939,736), r);
+                                   QSize(939,736), r, window());
 }
 
 void EmbelProperties::addBorder(int count, QString borderName)

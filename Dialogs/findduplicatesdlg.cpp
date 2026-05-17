@@ -1,6 +1,7 @@
 #include "Dialogs/FindDuplicatesDlg.h"
 #include "ui_findduplicatesdlg.h"
 #include "Main/global.h"
+#include "Utilities/htmlwindow.h"
 #include "Effects/effects.h"
 #include "ui_metadatareport.h"
 
@@ -1463,16 +1464,10 @@ void FindDuplicatesDlg::resizeEvent(QResizeEvent *event)
 
 void FindDuplicatesDlg::on_helpBtn_clicked()
 {
-    QDialog *dlg = new QDialog;
-    Ui::HelpFindDuplicatesDlg *ui = new Ui::HelpFindDuplicatesDlg;
-    ui->setupUi(dlg);
-    ui->textBrowser->setOpenExternalLinks(true);
-    dlg->setWindowTitle("Find Duplicates");
-    dlg->setStyleSheet(G::css);
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
-    dlg->exec();
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - Find Duplicates",
+                   ":/Docs/findduplicateshelp.html",
+                   QSize(800, 700), r, this);
 }
 
 void FindDuplicatesDlg::on_deltaThresholdToolBtn_clicked()
@@ -1484,16 +1479,10 @@ void FindDuplicatesDlg::on_deltaThresholdToolBtn_clicked()
     255, therefore the maximum pixel delta = 255 and two identical images would have a
     pixel delta = 0.
 */
-    QDialog *dlg = new QDialog;
-    Ui::HelpPixelDelta *ui = new Ui::HelpPixelDelta;
-    ui->setupUi(dlg);
-    ui->textBrowser->setOpenExternalLinks(true);
-    dlg->setWindowTitle("Pixel Delta");
-    dlg->setStyleSheet(G::css);
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
-    dlg->exec();
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - Pixel Delta",
+                   ":/Docs/pixeldeltahelp.html",
+                   QSize(600, 300), r, this);
 }
 
 void FindDuplicatesDlg::progressMsg(QString msg)

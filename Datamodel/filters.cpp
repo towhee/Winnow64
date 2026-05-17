@@ -1,5 +1,6 @@
 #include "Datamodel/filters.h"
 #include "Main/global.h"
+#include "Utilities/htmlwindow.h"
 
 /*
     OVERVIEW
@@ -1767,13 +1768,10 @@ void Filters::mouseReleaseEvent(QMouseEvent * event)
 void Filters::howThisWorks()
 {
     if (G::isLogger) G::log("Filters::howThisWorks");
-
-    QDialog *dlg = new QDialog;
-    Ui::FiltersHelpDlg *ui = new Ui::FiltersHelpDlg;
-    ui->setupUi(dlg);
-    dlg->setWindowTitle("Filters Help");
-    dlg->setStyleSheet(G::css);
-    dlg->exec();
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - How filters work",
+                   ":/Docs/filtershelp.html",
+                   QSize(600, 500), r, window());
 }
 
 QString Filters::diagnostics()

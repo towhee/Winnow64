@@ -14,37 +14,25 @@ Authoring workflow:
                                        ":/Docs/yourpage.html",
                                        QSize(900, 700), mwRect);
 
+Styling:
+  - All formatting (colors, fonts, headings, .highlight/.warn classes) comes
+    from Docs/help.css, applied to every help page via QTextDocument::
+    setDefaultStyleSheet in HtmlWindow. Edit help.css to restyle all pages.
+  - For VS Code preview to show the same styling, add ONE line in <head>:
+        <link rel="stylesheet" href="help.css">
+    Qt ignores it (it already loaded help.css as the default stylesheet),
+    so the file works identically in Winnow.
+  - For per-page overrides, add a <style> block in this file's <head>.
+
 Rendering notes:
   - QTextBrowser supports only the HTML 4 / CSS 2.1 subset documented at
     https://doc.qt.io/qt-6/richtext-html-subset.html. Avoid flexbox, grid,
     custom properties, and HTML5 semantic tags - Qt will silently ignore them.
-  - The <style> block below defines the standard dark-theme colors. Extend it
-    per-page only if you need something this template does not cover.
 -->
 <!DOCTYPE html>
 <html>
 <head>
-<style>
-body {
-    background-color: #222222;
-    color: silver;
-    font-family: sans-serif;
-}
-h1 { color: white; }
-h2 { color: #DDDDDD; }
-h3 { color: #BBBBBB; }
-a  { color: #88BBEE; }
-code, pre {
-    color: #E0C070;
-    background-color: #1A1A1A;
-    font-family: monospace;
-}
-pre {
-    padding: 8px;
-}
-.highlight { color: #E0C070; }
-.warn      { color: #E08070; }
-</style>
+<link rel="stylesheet" href="help.css">
 </head>
 <body>
 

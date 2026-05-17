@@ -1572,7 +1572,7 @@ void MW::createEmbelDock()
     // question mark button
     BarBtn *embelQuestionBtn = new BarBtn();
     embelQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    embelQuestionBtn->setToolTip("Embel coordinate and container system.");
+    embelQuestionBtn->setToolTip("Embel Overview.");
     connect(embelQuestionBtn, &BarBtn::clicked, embelProperties, &EmbelProperties::coordHelp);
     embelTitleLayout->addWidget(embelQuestionBtn);
 

@@ -1,5 +1,6 @@
 #include "File/fstree.h"
 #include "Main/global.h"
+#include "Utilities/htmlwindow.h"
 #include "Main/mainwindow.h"   // or whatever your MW header is actually called
 
 extern QStringList mountedDrives;
@@ -1814,11 +1815,8 @@ void FSTree::test()
 void FSTree::howThisWorks()
 {
     if (G::isLogger) G::log("FSTree::howThisWorks");
-
-    QDialog *dlg = new QDialog;
-    Ui::FoldersHelpDlg *ui = new Ui::FoldersHelpDlg;
-    ui->setupUi(dlg);
-    dlg->setWindowTitle("Folders Panel Help");
-    dlg->setStyleSheet(G::css);
-    dlg->exec();
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - How folders work",
+                   ":/Docs/foldershelp.html",
+                   QSize(700, 600), r, window());
 }

@@ -1,101 +1,100 @@
 <!DOCTYPE html>
 <html>
 <head>
-<!--<link rel="stylesheet" type="text/css" href=":/qss/winnow.css">-->
-<!--<link rel="stylesheet" type="text/css" href="/Users/roryhill/Projects/Winnow64/qss/winnow.css">-->
+<link rel="stylesheet" href="help.css">
+<style>
+.root { background-color: #0000ff; color: white; padding: 0 2px; }
+.tmpl { background-color: #008000; color: white; padding: 0 2px; }
+.desc { background-color: #800080; color: white; padding: 0 2px; }
+.indent { margin-left: 30px; }
+</style>
 </head>
-<!--<body style="background-color: rgb(85,85,85);color: silver">-->
-<body style="color:silver;margin-left:9px">
+<body>
 
+<h1>Ingest Automatic Path</h1>
 
-<h3 style="color: white">Overview</h3>
+<h2>Overview</h2>
+<p>This tool automates the process of creating a folder in a specific folder
+structure where the images will be copied. The folder structure comprises of
+a <span class="root">root</span>, a <span class="tmpl">template path</span>
+and a <span class="desc">description</span>. The files can also be renamed as
+they are copied.</p>
 
-<p>This tool automates the process of creating a folder in a specific
-folder structure where the images will be copied. The folder structure comprises of a
-<span style="background-color: blue">root</span>, a
-<span style="background-color: green">template path</span> and a
-<span style="background-color:purple">description</span>.
-The files can also be renamed as they are copied.</p>
-
-<h3 style="color: white">Creating a path to the destination folder</h3>
+<h2>Creating a path to the destination folder</h2>
 
 <p>Windows example:</p>
-   <p style="margin-left:25px">
-   <span style="background-color: blue">e:\</span>
-   <span style="background-color: green">2018\2018-02\2018-02-23</span>
-   <span style="background-color: purple">_Spring in Paris</span></p>
+<p class="indent"><span class="root">e:\</span> <span class="tmpl">2018\2018-02\2018-02-23</span> <span class="desc">_Spring in Paris</span></p>
 
 <p>Mac example:</p>
-<p style="margin-left:25px">
-<span style="background-color: blue">/users/pictures/</span>
-<span style="background-color: green">Feb/23</span>
-<span style="background-color: purple"> Paris<span></p>
+<p class="indent"><span class="root">/users/pictures/</span> <span class="tmpl">Feb/23</span> <span class="desc">Paris</span></p>
 
-<p><span style="background-color: blue">Root:</span>&nbsp;&nbsp;
-This is the base location where your images are stored.  The root is entered in the
-“Ingest Picks” dialog.</p>
+<p><span class="root">Root:</span> This is the base location where your images
+are stored. The root is entered in the &ldquo;Ingest Picks&rdquo; dialog.</p>
 
-<p><span style="background-color: green">Template path:</span>&nbsp;&nbsp;
-The path from the root to the destination folder that can be defined by metadata from
-an image.  It is based on a template in “Edit Template(s)” accessed from the
-“Ingest Picks” dialog.  The template for the windows example is {YYYY}/{YYYY}-{MM}-{DD}
-and the mac example is {MMM}/{DD}.  The templates are based on tokens inside curly
-brackets {}.
-</p>
+<p><span class="tmpl">Template path:</span> The path from the root to the
+destination folder that can be defined by metadata from an image. It is based
+on a template in &ldquo;Edit Template(s)&rdquo; accessed from the &ldquo;Ingest
+Picks&rdquo; dialog. The template for the Windows example is
+<code>{YYYY}/{YYYY}-{MM}-{DD}</code> and the Mac example is
+<code>{MMM}/{DD}</code>. The templates are based on tokens inside curly
+brackets <code>{}</code>.</p>
 
-<p><span style="background-color: purple">Description:</span>&nbsp;&nbsp;
-An optional description that is appended to the template path. It is entered in the
-“Ingest Picks” dialog.</p>
+<p><span class="desc">Description:</span> An optional description that is
+appended to the template path. It is entered in the &ldquo;Ingest Picks&rdquo;
+dialog.</p>
 
-<h3 style="color: white">Tokens</h3>
+<h2>Tokens</h2>
+<p>Tokens are place holders. The values for the tokens, extracted from each
+image file, are inserted from the metadata in the images. Tokens are surrounded
+with curly brackets like this: <code>{YYYY}</code>. In this case the year is
+found in the image metadata and formatted as <code>2019</code>. If the token
+<code>{YY}</code> was chosen then the result would be formatted as
+<code>19</code> if the year was 2019. Tokens are listed in the &ldquo;Token
+editor&rdquo;, which is accessed from the &ldquo;Ingest dialog&rdquo;. Some
+other examples of tokens include: <code>{TITLE}</code>
+<code>{ORIGINAL FILENAME}</code> <code>{HOUR}</code> <code>{SECOND}</code>
+<code>{CREATOR}</code> etc. Note that all date information is from the image
+file creation date.</p>
 
-<p>Tokens are place holders and the values for the tokens, extracted from each image file,
-are inserted from the metadata in the images. Tokens are surrounded with curly brackets
-like this: {YYYY}.  In this case the year is found in the image metadata and formatted
-as 2019.  If the token {YY} was chosen then the result would be formatted as 19 if the
-year was 2019.  Tokens are listed in the "Token editor", which is accessed from the
-"Ingest dialog".  Some other examples of tokens include: {TITLE} {ORIGINAL FILENAME}
-{HOUR} {SECOND} {CREATOR} etc.  Note that all date information is from the image file
-creation date.</p>
+<p>I have a video showing how to use the token editor
+<a href="https://www.youtube.com/watch?v=GA0RT8N6Byk">here</a>. It is from the
+embellish module but the principles are the same.</p>
 
-<h3 style="color: white">Templates</h3>
+<h2>Templates</h2>
+<p>A template is a structure used to build a file path or a file name. You
+create templates using tokens and text in the &ldquo;Template Editor&rdquo;.</p>
 
-<p>A template is a structure used to build a file path or a file name.  You create
-templates using tokens and text in the "Template Editor". For example, to build the
-folder structure</p>
+<p>For example, to build the folder structure:</p>
+<p class="indent"><code>Weddings/2019/Hill wedding/</code></p>
 
-<p style="margin-left:25px">Weddings/2019/Hill wedding/</p>
+<p>we would build the template:</p>
+<p class="indent"><code>Weddings{YYYY}/{TITLE}/</code></p>
 
-<p>we would build the template</p>
+<p>assuming we had put the description &ldquo;Hill wedding&rdquo; in the Title
+metadata for the images.</p>
 
-<p style="margin-left:25px">Weddings{2019}/{TITLE}/</p>
+<h2>File names</h2>
+<p>You can also create new file names using templates and tokens. For example,
+if you want file names in the format <code>2019-09-18_0187.NEF</code> you would
+build the template:</p>
+<p class="indent"><code>{YYYY}-{MM}-{DD}_{XXXX}</code></p>
 
-<p>assuming we had put the description "Hill wedding" in the Title metadata for the images.</p>
+<p>The <code>.NEF</code> will automatically be appended.</p>
 
-<h3 style="color: white">File names</h3>
+<h2>Slashes and back slashes</h2>
+<p>Do not use &ldquo;/&rdquo; or &ldquo;\&rdquo; in the template name. The
+template name is used as a key to save the templates between sessions. Slashes
+do terrible things to the Windows registry.</p>
 
-<p>You can also create new file names using templates and tokens.  For example, if you
-want file names in the format 2019-09-18_0187.NEF you would build the template</p>
-
-<p style="margin-left:25px">{YYYY}-{MM}-{DD}_{XXXX}</p>
-
-<p>The .NEF will automatically be appended.</p>
-
-<h3 style="color: white">Slashes and back slashes</h3>
-
-<p>Do not use “/” or “\” in the template name.  The template name is used as a key to save
-the templates between sessions.  Slashes do terrible things to the windows registry.</p>
-
-<p>In the template itself, Windows uses the “\” in file paths while MacOS and Linux use
-“/”.  Since the “\” is also used for escape sequences I suggest you use the “/”.  Winnow
-will automatically convert this to a “\” when creating the path to the destination folder
-in windows. </p>
+<p>In the template itself, Windows uses the &ldquo;\&rdquo; in file paths while
+MacOS and Linux use &ldquo;/&rdquo;. Since the &ldquo;\&rdquo; is also used for
+escape sequences I suggest you use the &ldquo;/&rdquo;. Winnow will automatically
+convert this to a &ldquo;\&rdquo; when creating the path to the destination
+folder in Windows.</p>
 
 <p>For example, if the image was taken on Feb 23, 2018:</p>
-
-<p style="margin-left:25px">Template = {YYYY}/{YYYY}-{MM}-{DD} will become
-“2018\2018-02\2018-02-23” in windows.</p>
+<p class="indent">Template = <code>{YYYY}/{YYYY}-{MM}-{DD}</code> will become
+&ldquo;<code>2018\2018-02-23</code>&rdquo; in Windows.</p>
 
 </body>
 </html>
-

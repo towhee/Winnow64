@@ -11,7 +11,7 @@ public:
                const QString &htmlPath,
                const QSize &size,
                const QRect mwRect = QRect(),
-               QObject *parent = nullptr);
+               QWidget *parent = nullptr);
     ~HtmlWindow() override;
 private:
     QTextBrowser *text;
