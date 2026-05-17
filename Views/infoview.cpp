@@ -222,7 +222,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 // write to sidecar
                 // qDebug() << "InfoView::dataChanged  field =" << field << "srcFuntion =" << srcFunction;
                 dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-                metadata->writeXMP(metadata->sidecarPath(fPath), "InfoView::dataChanged");
+                metadata->writeXMP(fPath, "InfoView::dataChanged");
                 G::popup->setProgress(i+1);
             }
 

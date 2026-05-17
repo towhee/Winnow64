@@ -573,11 +573,13 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     the xmp data for existing and changed metadata is written to buffer and the original
     image file is copied unchanged.
 */
-    if (G::isLogger) G::log("Metadata::writeXMP");
+    QString srcFun = "Metadata::writeXMP";
+    if (G::isLogger) G::log(srcFun);
     bool isDebug = false;
 
     // is xmp supported for this file
-    QFileInfo info(fPath);
+    QString sPath = sidecarPath(fPath);
+    QFileInfo info(sPath);
     QString suffix = info.suffix().toLower();
 
     // TEMP PREVENT WRITING TO ANYTHING BUT .XMP
@@ -621,19 +623,20 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         // && !rotationChanged
        )
     {
-        qWarning() << "Metadata::writeXMP" << "Unable to write xmp buffer. No metadata has been edited."
+        qWarning() << srcFun << "Unable to write xmp buffer. No metadata has been edited."
                  << "src =" << src;
         return false;
     }
 
-    if (isDebug) qDebug() << "Metadata::writeXMP1" << fPath;
-    // make sure file is available ie usb drive may have been ejected
-    QFileInfo fileInfo(fPath);
-    // if (!fileInfo.exists()) return false;
-    if (isDebug) qDebug() << "Metadata::writeXMP2";
+    // if no existing sidecar then need to update sidecar in DataModel and icon delegate
+    bool updateSidecar = false;
+    QFileInfo fileInfo(sPath);
+    if (!fileInfo.exists()) {
+        updateSidecar = true;
+    }
 
     // data edited, open image file
-    p.file.setFileName(fPath);
+    p.file.setFileName(sPath);
     if (p.file.isOpen()) return false;
     // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
     if (QFileInfo(fPath).isSymLink()) {
@@ -680,8 +683,11 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     }
     //*/
 
-    if (isDebug) qDebug() << "Metadata::writeXMP9";
     xmp.writeSidecar(p.file);
+
+    qDebug() << srcFun<< fPath;
+
+    if (updateSidecar) emit updateSidecarStatus(fPath);
 
     p.file.close();
     return true;

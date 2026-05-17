@@ -188,7 +188,7 @@ void TableView::setDefaultColumnWidths()
     defaultColumnWidth[G::NameColumn] = fm.boundingRect("2019-02-25_0001.jpg========").width();
     defaultColumnWidth[G::FolderNameColumn] = fm.boundingRect("This is the folder name========").width();
     defaultColumnWidth[G::NSThumb] = fm.boundingRect("=NS Thumb=").width();
-    defaultColumnWidth[G::NSImage] = fm.boundingRect("=NS Image=").width();
+    defaultColumnWidth[G::NSImage] = fm.boundingRect("==NS Image==").width();
     defaultColumnWidth[G::PickColumn] = fm.boundingRect("===Pick===").width();
     defaultColumnWidth[G::IngestedColumn] = fm.boundingRect("=Ingested=").width();
     defaultColumnWidth[G::LabelColumn] = fm.boundingRect("=Colour=").width();

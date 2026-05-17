@@ -623,7 +623,7 @@ void MW::setRating()
         }
         // write to sidecar
         dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-        metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
+        metadata->writeXMP(fPath, "MW::setRating");
         // update _Rating (used to check what metadata has changed in metadata->writeXMP)
         QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
         emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
@@ -736,7 +736,7 @@ void MW::setColorClassForRow(int sfRow, QString colorClass) {
     // write to sidecar
     QString fPath = dm->pathFromProxyRow(sfRow);
     dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-    metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
+    metadata->writeXMP(fPath, "MW::setColorClass");
     // update _Label (used to check what metadata has changed in metadata->writeXMP)
     emit setValSf(sfRow, G::_LabelColumn, colorClass, dm->instance, srcFun,
                   Qt::EditRole);
@@ -821,7 +821,7 @@ void MW::setColorClass()
         }
         // write to sidecar
         dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-        metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
+        metadata->writeXMP(fPath, "MW::setColorClass");
         // update _Label (used to check what metadata has changed in metadata->writeXMP)
         emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
                       Qt::EditRole);
