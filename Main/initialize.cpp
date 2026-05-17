@@ -331,6 +331,11 @@ void MW::createMetaRead()
     // Runs multiple reader threads to load metadata and thumbnails
     metaRead = new MetaRead(this, dm, metadata, imageCache);
 
+    // Release MetaRead's navigation gate as soon as the awaited row decodes.
+    // Wired here (not in createImageCache) because metaRead is created after imageCache.
+    connect(imageCache, &ImageCache::setCached,
+            metaRead, &MetaRead::onRowCached, Qt::QueuedConnection);
+
     // set a value in dm->sf proxy
     connect(metaRead, &MetaRead::setValSf, dm, &DataModel::setValSf);
 
@@ -504,10 +509,6 @@ void MW::createImageCache()
     // Signal datamodel to signal back when some row is loaded
     connect(imageCache, &ImageCache::setCached,
             dm, &DataModel::setCached);
-
-    // Release MetaRead's navigation gate as soon as the awaited row decodes.
-    connect(imageCache, &ImageCache::setCached,
-            metaRead, &MetaRead::onRowCached, Qt::QueuedConnection);
 
     // Signal datamodel to signal back when some row is loaded
     connect(imageCache, &ImageCache::waitingForRow,

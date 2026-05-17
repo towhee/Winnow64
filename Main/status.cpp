@@ -365,9 +365,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
         }
     }
     metadataThreadRunningLabel->setText("◉");
-    // if (isShowCacheProgressBar && !G::isSlideShow)
-    qDebug() << "showCacheLabel =" << showCacheLabel;
-        progressLabel->setVisible(showCacheLabel);
+    progressLabel->setVisible(showCacheLabel);
     src = "";  // suppress compiler warning
 }
 
