@@ -37,3 +37,8 @@ or truly orphan?
 
 - Loose files in Docs/: Border shapes.xlsx, QPixmap performance.xlsx, winnow.png,
 debug.log — clearly not help assets.
+
+
+
+
+
