@@ -1303,6 +1303,16 @@ void MW::createFavDock()
     // Spacer
     favTitleLayout->addSpacing(10);
 
+    // question mark button
+    BarBtn *favQuestionBtn = new BarBtn();
+    favQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    favQuestionBtn->setToolTip("How this works: bookmark tips");
+    connect(favQuestionBtn, &BarBtn::clicked, bookmarks, &BookMarks::howThisWorks);
+    favTitleLayout->addWidget(favQuestionBtn);
+
+    // Spacer
+    favTitleLayout->addSpacing(10);
+
     // close button
     BarBtn *favCloseBtn = new BarBtn();
     favCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
@@ -1433,6 +1443,16 @@ void MW::createMetadataDock()
     metaGearBtn->setToolTip("Edit preferences including which items to show in this panel");
     connect(metaGearBtn, &BarBtn::clicked, this, &MW::infoViewPreferences);
     metaTitleLayout->addWidget(metaGearBtn);
+
+    // Spacer
+    metaTitleLayout->addSpacing(10);
+
+    // question mark button
+    BarBtn *metaQuestionBtn = new BarBtn();
+    metaQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    metaQuestionBtn->setToolTip("How this works: metadata panel guide");
+    connect(metaQuestionBtn, &BarBtn::clicked, infoView, &InfoView::howThisWorks);
+    metaTitleLayout->addWidget(metaQuestionBtn);
 
     // Spacer
     metaTitleLayout->addSpacing(10);

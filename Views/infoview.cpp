@@ -1,5 +1,6 @@
 #include "Views/infoview.h"
 #include "Main/global.h"
+#include "Utilities/htmlwindow.h"
 
 InfoDelegate::InfoDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
 
@@ -630,4 +631,13 @@ void InfoView::mousePressEvent(QMouseEvent *event)
         }
     }
     QTreeView::mousePressEvent(event);
+}
+
+void InfoView::howThisWorks()
+{
+    if (G::isLogger) G::log("InfoView::howThisWorks");
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - How the metadata panel works",
+                   ":/Docs/metadatahelp.html",
+                   QSize(700, 600), r, window());
 }

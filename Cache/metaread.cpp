@@ -102,10 +102,11 @@ MetaRead::MetaRead(QObject *parent,
     connect(frameDecoder, &FrameDecoder::setValDm,
             dm, &DataModel::setValDm);
 
-    readerCount = QThread::idealThreadCount();
+    readerCount = QThread::idealThreadCount() - 2;
     for (int id = 0; id < readerCount; ++id) {
         Reader *reader = new Reader(id, dm, imageCache, frameDecoder);
         QThread *thread = new QThread;
+        thread->setPriority(QThread::LowPriority);
         reader->readerThread = thread;
         reader->moveToThread(thread);
         connect(reader, &Reader::done, this, &MetaRead::dispatch);

@@ -56,6 +56,13 @@ HtmlWindow::HtmlWindow(const QString &title,
     layout()->setContentsMargins(0,0,0,0);
     layout()->addWidget(text);
 
+    // Enable Cmd+C (Mac) / Ctrl+C (Win) — right-click Copy works without this,
+    // but the standard shortcut is otherwise swallowed by the main window.
+    QAction *copyAction = new QAction(this);
+    copyAction->setShortcut(QKeySequence::Copy);
+    addAction(copyAction);
+    connect(copyAction, &QAction::triggered, text, &QTextBrowser::copy);
+
     // Calculate the new position to center w over MW
     // if (mwRect.isEmpty()) mwRect = screenRect;
     int x = mwRect.x() + (mwRect.width() - windowSize.width()) / 2;
@@ -84,3 +91,14 @@ HtmlWindow::HtmlWindow(const QString &title,
 }
 
 HtmlWindow::~HtmlWindow() = default;
+
+bool HtmlWindow::event(QEvent *e)
+{
+    // Accept ShortcutOverride so Cmd+C / Ctrl+C is delivered as a key press here
+    // instead of being routed to MW's global shortcuts.
+    if (e->type() == QEvent::ShortcutOverride) {
+        e->accept();
+        return true;
+    }
+    return QScrollArea::event(e);
+}

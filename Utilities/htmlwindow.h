@@ -13,6 +13,8 @@ public:
                const QRect mwRect = QRect(),
                QWidget *parent = nullptr);
     ~HtmlWindow() override;
+protected:
+    bool event(QEvent *e) override;
 private:
     QTextBrowser *text;
 };
