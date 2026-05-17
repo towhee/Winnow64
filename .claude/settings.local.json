@@ -9,7 +9,8 @@
       "Bash(grep *)",
       "Bash(awk '{print $NF}')",
       "Bash(xargs -I {} basename {})",
-      "Bash(iconv -f UTF-16 -t UTF-8 /Users/roryhill/Projects/Winnow64/Docs/filtershelp.html)"
+      "Bash(iconv -f UTF-16 -t UTF-8 /Users/roryhill/Projects/Winnow64/Docs/filtershelp.html)",
+      "Bash(otool -l \"/Users/roryhill/Projects/Winnow64/ReleaseExtras/Winnets/Winnet.app/Contents/MacOS/Winnet\")"
     ]
   }
 }

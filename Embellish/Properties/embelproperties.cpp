@@ -1587,7 +1587,7 @@ void EmbelProperties::syncWinnets(QString src)
     #ifdef Q_OS_MAC
         ext = "";  // was ext = ".app";
         dirFilter << "*.app";
-        winnetPath = executableDirPath + "/Winnets/Winnet";
+        winnetPath = executableDirPath + "/Winnets/Winnet.app/Contents/MacOS/Winnet";
         // make sure Frameworks folder exists
         dir.setPath(appDataWinnetsPath + "/Frameworks");
         if (!dir.exists())

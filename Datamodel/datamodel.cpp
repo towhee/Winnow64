@@ -1986,7 +1986,7 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     /*
     Only call via connection.   Example: emit setValSf(args)
 */
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug() << "DataModel::setValSf"
                  << "sfRow =" << sfRow
