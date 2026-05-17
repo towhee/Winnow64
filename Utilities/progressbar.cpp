@@ -210,21 +210,14 @@ void ProgressBar::updateImageCacheProgress(int fromItem,
 
 void ProgressBar::updateMetaReadProgress(int item, int items, QColor color)
 {
-    // // same as updateMetadataCacheProgress
-    // mrHt = 4;
-    // mrHtOffset = icHtOffset - mrHt - mrHt;
-    // // mrHtOffset = icHtOffset - mrHt;
-
     QPainter pnt(m1->progressPixmap);
     int barWidth = m1->cacheBarProgressWidth;
     float itemWidth = (float)barWidth / items;
-    int pxStart, pxWidth, pxEnd;
+    int pxStart, pxWidth;
     pxStart = qRound(item * itemWidth);
     pxWidth = itemWidth + 1;
-    pxEnd = pxStart + pxWidth;
 
     // Done range
-    // QRect doneRect(0, mrHtOffset, pxEnd, mrHt);
     QRect doneRect(pxStart, mrHtOffset, pxWidth, mrHt);
     pnt.fillRect(doneRect, color);
     pnt.end();
