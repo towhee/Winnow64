@@ -1,8 +1,26 @@
-<!––
-Use https://html-online.com/editor/ to build table code
-If creating QString replace all " with \"
-––>
+<!--
+Winnow help page template.
 
+Authoring workflow:
+  1. Copy this file to Docs/<yourpage>.html and edit in VS Code
+     (install the Microsoft "Live Preview" extension for side-by-side preview).
+  2. Place images in Docs/images/ and reference them with a relative path,
+     e.g. <img src="images/MyDiagram.png">. The same path works in VS Code's
+     preview AND in Winnow (HtmlWindow sets a qrc base URL on the document).
+  3. Register the html file (and any new image files) in winnow.qrc under
+     the existing /Docs prefix.
+  4. Open it from C++ with:
+        HtmlWindow *w = new HtmlWindow("Winnow - My Topic",
+                                       ":/Docs/yourpage.html",
+                                       QSize(900, 700), mwRect);
+
+Rendering notes:
+  - QTextBrowser supports only the HTML 4 / CSS 2.1 subset documented at
+    https://doc.qt.io/qt-6/richtext-html-subset.html. Avoid flexbox, grid,
+    custom properties, and HTML5 semantic tags - Qt will silently ignore them.
+  - The <style> block below defines the standard dark-theme colors. Extend it
+    per-page only if you need something this template does not cover.
+-->
 <!DOCTYPE html>
 <html>
 <head>
@@ -10,30 +28,66 @@ If creating QString replace all " with \"
 body {
     background-color: #222222;
     color: silver;
+    font-family: sans-serif;
 }
-h1 {
-    color: white;
+h1 { color: white; }
+h2 { color: #DDDDDD; }
+h3 { color: #BBBBBB; }
+a  { color: #88BBEE; }
+code, pre {
+    color: #E0C070;
+    background-color: #1A1A1A;
+    font-family: monospace;
 }
+pre {
+    padding: 8px;
+}
+.highlight { color: #E0C070; }
+.warn      { color: #E08070; }
 </style>
 </head>
 <body>
 
-<h1>This is a heading 1</h1>
-<h2>This is a heading 2</h2>
-<h3>This is a heading 3</h3>
-<h4>This is a heading 4</h4>
-<h5>This is a heading 5</h5>
-<p>This is a paragraph.</p>
+<h1>Heading 1</h1>
+<h2>Heading 2</h2>
+<h3>Heading 3</h3>
 
+<p>This is a paragraph of body text. Inline emphasis can use a
+<span class="highlight">highlighted phrase</span> or a
+<span class="warn">warning phrase</span>, or any one-off
+<span style="color: #88EE88;">inline color</span> via a span style attribute.</p>
+
+<p>Link example: <a href="https://example.com">visit example.com</a>.</p>
+
+<h2>Image</h2>
+<p>Images live in <code>Docs/images/</code> and are referenced with a relative path:</p>
+<img src="images/EmbelCoordSystem.png">
+
+<h2>Lists</h2>
+<ul>
+    <li>Unordered item one</li>
+    <li>Unordered item two</li>
+</ul>
+<ol>
+    <li>Ordered item one</li>
+    <li>Ordered item two</li>
+</ol>
+
+<h2>Code block</h2>
+<pre><code>HtmlWindow *w = new HtmlWindow("Winnow - My Topic",
+                               ":/Docs/yourpage.html",
+                               QSize(900, 700), mwRect);</code></pre>
+
+<h2>Table</h2>
 <table style="background-color: gray; width: 600px; margin-left: auto; margin-right: auto;" border="silver">
 <tbody>
 <tr>
-<th style="text-align: center;">hdr 1</th>
-<th style="text-align: center;">hdr 2</td>
+    <th style="text-align: center;">hdr 1</th>
+    <th style="text-align: center;">hdr 2</th>
 </tr>
 <tr>
-<td>cell 1</td>
-<td>cell 2</td>
+    <td>cell 1</td>
+    <td>cell 2</td>
 </tr>
 </tbody>
 </table>
