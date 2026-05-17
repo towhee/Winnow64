@@ -242,7 +242,7 @@ QString WidgetCSS::label()
     "}"
 
     "QLabel#statusLabel {"
-        "font-family: \"SF Mono\", Menlo, Consolas, monospace;"
+        "font-family: Menlo, Consolas, monospace;"
     "}"
     ;
 }

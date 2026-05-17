@@ -2142,11 +2142,7 @@ void MW::refresh()
     fsTree->updateCount();
     bookmarks->updateCount();
     dm->refresh();
-    qDebug() << srcFun << dm->rowCount() << dm->sf->rowCount();
-    if (dm->sf->rowCount()) {
-        // buildFilters->recount();
-    }
-    else {
+    if (!dm->sf->rowCount()) {
         buildFilters->rebuild();
     }
     filterChange(srcFun);

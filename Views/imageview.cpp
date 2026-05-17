@@ -146,7 +146,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     bool isDebug = false;
     bool isCurrent = (fPath == currentImagePath);
 
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug() << srcFun
          << "sfRow =" << dm->proxyRowFromPath(fPath, srcFun)

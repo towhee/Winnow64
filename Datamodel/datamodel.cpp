@@ -791,7 +791,6 @@ void DataModel::refresh()
     QStringList added;
     QStringList removed;
     QStringList modified;
-    qDebug() << "DataModel::refresh instance =" << instance;
 
     if (!sourceModified(added, removed, modified)) {
         qDebug() << "DataModel::refresh source was not modified";
