@@ -518,9 +518,12 @@ void ImageView::placeClassificationBadge()
     The bright green thumbsUp pixmap shows the pick status for the current image.
     This function locates the pixmap in the bottom corner of the image label as the
     image is resized and zoomed, adjusting for the aspect ratio of the image and
-    size.
+    size.  NOT IN USE.
 */
     if (G::isLogger) G::log("ImageView::placeClassificationBadge");
+
+    return; // not used
+
     QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
     int x, y = 0;                       // bottom right coordinates of visible image

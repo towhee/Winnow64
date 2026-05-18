@@ -3624,6 +3624,8 @@ void MW::setInfoFontSize()
 void MW::setClassificationBadgeImageDiam(int d)
 {
     if (G::isLogger) G::log("MW::setClassificationBadgeImageDiam");
+    // this feature is no longer used
+    d = 0;
     classificationBadgeInImageDiameter = d;
     imageView->setClassificationBadgeImageDiam(d);
 }
