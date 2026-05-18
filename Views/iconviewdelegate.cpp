@@ -122,7 +122,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     ingestedColor = QColor(Qt::blue);
     cacheColor = QColor(200,0,0);
     cacheBorderColor = QColor(l20,l20,l20);
-    missingThumbColor = QColor(Qt::yellow);
+    sidecarColor = QColor(5,82,56);                 // dark teal
     ratingBackgoundColor = QColor(Qt::yellow);
     // ratingBackgoundColor = QColor(b,b,b,50);
     labelTextColor = G::textColor;
@@ -716,7 +716,7 @@ textRect         = a rectangle below itemRect
     }
     if (isSidecar && !G::isSlideShow) {
         painter->setPen(cacheBorderColor);
-        painter->setBrush(missingThumbColor);
+        painter->setBrush(sidecarColor);
         painter->drawEllipse(sidecarRect.translated(origin));
     }
 

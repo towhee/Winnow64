@@ -302,7 +302,7 @@ void MW::createFileActions()
     runDropletAction->setShortcut(QKeySequence("A"));
     addAction(runDropletAction);
 
-    reportMetadataAction = new QAction(tr("Report Metadata"), this);
+    reportMetadataAction = new QAction(tr("Diagnostics Metadata"), this);
     reportMetadataAction->setObjectName("reportMetadata");
     reportMetadataAction->setShortcutVisibleInContextMenu(true);
     addAction(reportMetadataAction);
@@ -2340,17 +2340,17 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(renameAction);
     thumbViewActions->append(deleteImagesAction);
     thumbViewActions->append(separatorAction7);
-    thumbViewActions->append(reportMetadataAction);
-    thumbViewActions->append(diagnosticsCurrentAction);
-    thumbViewActions->append(showLogAction);
-    thumbViewActions->append(diagnosticsDataModelAction);
     thumbViewActions->append(diagnosticsSelectionAction);
+    thumbViewActions->append(diagnosticsCurrentAction);
+    thumbViewActions->append(diagnosticsMetadataAction);
+    thumbViewActions->append(diagnosticsDataModelAction);
     thumbViewActions->append(diagnosticsMetadataCacheAction);
     thumbViewActions->append(diagnosticsImageCacheAction);
     thumbViewActions->append(diagnosticsMemoryAction);
-    thumbViewActions->append(diagnosticsSessionIssuesAction);
     thumbViewActions->append(separatorAction0);
-    thumbViewActions->append(helpFilmStripAction);
+    thumbViewActions->append(diagnosticsSessionIssuesAction);
+    thumbViewActions->append(showLogAction);
+    // thumbViewActions->append(helpFilmStripAction);
     // docking panels context menus
     thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);

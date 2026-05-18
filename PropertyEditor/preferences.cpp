@@ -586,7 +586,7 @@ void Preferences::addGeneral()
     i.key = "turnOffEmbellish";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Delete warning
     i.name = "deleteWarning";
@@ -872,6 +872,24 @@ void Preferences::addUserInterface()
     i.fixedWidth = 50;
     addItem(i);
 
+    // Thumbnail count number size
+    i.name = "iconNumberSize";
+    i.parentName = "FontSizeHeader";
+    i.tooltip = "The image number is located in the top left corner.  This property\n"
+                "adjusts the size of the number.";
+    i.captionText = "Image count size";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = 19;
+    i.value =mw->iconNumberSize;
+    i.key = "iconNumberSize";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 10;
+    i.max = 60;
+    i.fixedWidth = 50;
+    addItem(i);
+
     // General category::Badge size subcategory
     i.name = "BadgeSizeHeader";
     i.parentName = "UserInterfaceHeader";
@@ -898,7 +916,7 @@ void Preferences::addUserInterface()
     i.min = 0;
     i.max = 100;
     i.fixedWidth = 50;
-    addItem(i);
+    // addItem(i);
 
     // Thumbnail classification badge
     i.name = "classificationBadgeSizeFactor";
@@ -920,24 +938,6 @@ void Preferences::addUserInterface()
     i.max = 20;
     i.fixedWidth = 50;
     // addItem(i);
-
-    // Thumbnail count number size
-    i.name = "iconNumberSize";
-    i.parentName = "BadgeSizeHeader";
-    i.tooltip = "The image number is located in the top left corner.  This property\n"
-                "adjusts the size of the number.";
-    i.captionText = "Icon count size";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.defaultValue = 19;
-    i.value =mw->iconNumberSize;
-    i.key = "iconNumberSize";
-    i.delegateType = DT_Slider;
-    i.type = "int";
-    i.min = 10;
-    i.max = 60;
-    i.fixedWidth = 50;
-    addItem(i);
 
     // Label Header
     i.name = "LabelHeader";

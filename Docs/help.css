@@ -14,9 +14,9 @@ body {
     font-family: sans-serif;
     font-size: 14px;
 }
-h1 { color: white;   font-size: 22px; margin: 0.6em 0 0.3em; }
-h2 { color: #DDDDDD; font-size: 18px; margin: 0.6em 0 0.3em; }
-h3 { color: #BBBBBB; font-size: 15px; margin: 0.5em 0 0.2em; }
+h1 { color: #A74F06;    font-size: 22px; margin: 0.6em 0 0.3em; }
+h2 { color: #7c5004;    font-size: 18px; margin: 0.6em 0 0.3em; }
+h3 { color: #BBBBBB;    font-size: 15px; margin: 0.5em 0 0.2em; }
 a  { color: #88BBEE; }
 code, pre {
     color: #E0C070;

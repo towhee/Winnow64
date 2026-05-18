@@ -110,7 +110,7 @@ private:
     QColor rejectColor;
     QColor ingestedColor;
     QColor cacheColor;
-    QColor missingThumbColor;
+    QColor sidecarColor;
     QColor cacheBorderColor;
     QColor ratingBackgoundColor;
     QColor labelTextColor;
