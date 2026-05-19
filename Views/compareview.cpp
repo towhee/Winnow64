@@ -150,7 +150,13 @@ bool CompareView::loadImage(QModelIndex idx, QString fPath)
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
         }
-        else return false;
+        else {
+            G::issue("Error",
+                     "Failed to load pixmap for compare after 100k retries",
+                     "CompareView::loadImage",
+                     idx.isValid() ? idx.row() : -1, fPath);
+            return false;
+        }
     }
 
     setSceneRect(scene->itemsBoundingRect());

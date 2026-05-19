@@ -231,6 +231,9 @@ void BuildFilters::build(AfterAction newAction)
 
     if (!G::allMetadataLoaded) {
         G::popup->showPopup("Not all data required for filtering has been loaded yet.", 2000);
+        G::issueDedup("Info",
+                      "Filter build deferred — metadata still loading",
+                      "BuildFilters::build");
         return;
     }
 

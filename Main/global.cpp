@@ -20,12 +20,15 @@ bool isTestLogger = false;
 
 bool isLogger = false;              // Writes log messages to file or console
 bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
+bool isIssueLogger = true;         // Writes issue log messages to file or console
+int issueThreshold = Issue::Info;  // Drop issues below this severity
+bool isVerboseIssues = false;      // When true: threshold drops to Debug
+int issueListMaxSize = 5000;       // Ring-buffer cap for in-memory G::issueList
 
 bool isFlowLogger = false;          // Writes key program flow points to file or console
 bool isFlowLogger2 = false;         // QDebug key program flow points
 bool showIssueInConsole = false;    // Writes warnings to qDebug
 bool isErrorLogger = false;         // Writes error log messages to file or console
-bool isIssueLogger = false;         // Writes issue log messages to file or console
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
 bool FSLog = true;                  // Focus Stack log
 bool showAllEvents = false;
@@ -348,59 +351,112 @@ void setDM(QObject *dm)
 
 QMutex issueListMutex;
 
-void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
+// Per-(src, type, msg) repeat counter for issueDedup().
+static QHash<QString, int> issueDedupCounts;
+static QMutex issueDedupMutex;
+
+static int effectiveIssueThreshold()
+{
+    return isVerboseIssues ? Issue::Debug : issueThreshold;
+}
+
+void issue(QString type, QString msg, QString src, int sfRow, QString fPath)
 {
     if (!isIssueLogger) return;
-    QMutexLocker locker(&issueListMutex);
 
-    QSharedPointer<Issue> issue = QSharedPointer<Issue>::create();
-    if (issue->TypeDesc.contains(type)) {
-        if (type == "Comment") return;
-        issue->type = static_cast<Issue::Type>(issue->TypeDesc.indexOf(type));
-        issue->msg = msg;
+    // Resolve type up front so we can filter before any allocation.
+    Issue::Type resolvedType;
+    QString resolvedMsg;
+    int idx = Issue::typeDescList().indexOf(type);
+    if (idx >= 0) {
+        resolvedType = static_cast<Issue::Type>(idx);
+        resolvedMsg = msg;
     }
     else {
-        issue->type = issue->Type::Undefined;
-        issue->msg = type;
+        // Unknown type string — keep both pieces so the original message is not lost.
+        resolvedType = Issue::Undefined;
+        resolvedMsg = msg.isEmpty() ? type : (type + ": " + msg);
     }
 
-    issue->src = src;
-    issue->sfRow = sfRow;
-    issue->fPath = fPath;
-    issue->timeStamp =  QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
+    // Severity filter (Undefined is never filtered — it represents a caller bug).
+    if (resolvedType != Issue::Undefined && resolvedType < effectiveIssueThreshold()) return;
+
+    QMutexLocker locker(&issueListMutex);
+
+    QSharedPointer<Issue> ev = QSharedPointer<Issue>::create();
+    ev->type = resolvedType;
+    ev->msg = resolvedMsg;
+    ev->src = src;
+    ev->sfRow = sfRow;
+    ev->fPath = fPath;
+    ev->timeStamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
+
+    QString line = ev->toString();
 
     if (showIssueInConsole) {
-        qDebug().noquote() << issue->toString();
+        qDebug().noquote() << line;
     }
 
-    bool includeInDataModel = sfRow > -1;
-
-    /*
-    QString fun = "G::issue";
-    qDebug().noquote()
-        << fun.leftJustified(30)
-        << issue->TypeDesc.at(issue->type).leftJustified(10)
-        << QString::number(issue->sfRow).rightJustified(5)
-        << issue->msg.leftJustified(40)
-        << issue->src.leftJustified(30)
-        ;  //*/
-
-    if (modelInstance && includeInDataModel) {
+    if (modelInstance && sfRow > -1) {
         QMetaObject::invokeMethod(
             modelInstance,
             "issue",
-            // Qt::BlockingQueuedConnection,
-            Q_ARG(QSharedPointer<Issue>, issue)
+            Q_ARG(QSharedPointer<Issue>, ev)
         );
     }
 
-    // update current session issue list
-    issueList.append(issue->toString());
-
-    // write to issue log
-    issueLog->log(issue->toString());
-    if (isIssueLogger) {
+    // Ring-buffer: keep only the tail in memory. Full history is on disk.
+    issueList.append(line);
+    if (issueListMaxSize > 0 && issueList.size() > issueListMaxSize) {
+        issueList.removeFirst();
     }
+
+    if (issueLog) issueLog->log(line);
+}
+
+void issueDedup(QString type, QString msg, QString src, int sfRow, QString fPath)
+{
+    QString key = src + "\x1f" + type + "\x1f" + msg;
+    int count;
+    {
+        QMutexLocker dlock(&issueDedupMutex);
+        count = ++issueDedupCounts[key];
+    }
+    // Log first occurrence at full severity; subsequent occurrences silently counted.
+    if (count == 1) issue(type, msg, src, sfRow, fPath);
+}
+
+QStringList issueDedupReport()
+{
+    QMutexLocker dlock(&issueDedupMutex);
+    QStringList out;
+    for (auto it = issueDedupCounts.constBegin(); it != issueDedupCounts.constEnd(); ++it) {
+        if (it.value() > 1) {
+            out.append(QString("repeated %1x  %2").arg(it.value()).arg(it.key()));
+        }
+    }
+    return out;
+}
+
+void issueDedupReset()
+{
+    QMutexLocker dlock(&issueDedupMutex);
+    issueDedupCounts.clear();
+}
+
+void issueBeginSession()
+{
+    // Structural marker, not an issue. Bypasses severity gating and the
+    // datamodel route, writes a separator straight to the disk log.
+    QString ts = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
+    QString line = ts + "----- New Session -----";
+    if (showIssueInConsole) qDebug().noquote() << line;
+    QMutexLocker locker(&issueListMutex);
+    issueList.append(line);
+    if (issueListMaxSize > 0 && issueList.size() > issueListMaxSize) {
+        issueList.removeFirst();
+    }
+    if (issueLog) issueLog->log(line);
 }
 
 bool instanceClash(int instance, QString src)

@@ -749,8 +749,7 @@ QString Xmp::getItem(QByteArray item)
     //*/
     if (!definedElements.contains(item)) {
         QString msg = item + " not found in xmpObjs";
-        // Memory pressure testing — disabled
-        // G::issue("Warning", msg, "Xmp::getItem", -1, filePath);
+        G::issueDedup("Warning", msg, "Xmp::getItem", -1, filePath);
         return "";
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -796,8 +795,7 @@ QStringList Xmp::getItemList(QByteArray item)
     //*/
     if (!definedElements.contains(item)) {
         QString msg = item + " not found in xmpObj";
-        // Memory pressure testing — disabled
-        // G::issue("Warning", msg, "Xmp::getItemList", -1, filePath);
+        G::issueDedup("Warning", msg, "Xmp::getItemList", -1, filePath);
         return valList;
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -864,8 +862,7 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     item = item.toLower();
     if (!definedElements.contains(item)) {
         QString msg = "Failed for " + item + ".";
-        // Memory pressure testing — disabled
-        // G::issue("Warning", msg, "Xmp::setItem", -1, filePath);
+        G::issueDedup("Warning", msg, "Xmp::setItem", -1, filePath);
     }
 
     // check the item schema namespace has been defined in rdf:description

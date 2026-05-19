@@ -331,7 +331,7 @@ bool ImageCache::waitForMetaRead(int sfRow, int ms)
         }
         return true;
     }
-    if (dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool()) {
+    if (dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
         if (debugCaching)
         {
             qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -351,7 +351,7 @@ bool ImageCache::waitForMetaRead(int sfRow, int ms)
 
     while(!isLoaded) {
         if (!condition.wait(&gMutex, ms - t.elapsed())) break;
-        isLoaded = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+        isLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
         if (isLoaded) break;
     }
 
@@ -2166,7 +2166,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         // if (debugCaching)
         {
             QString msg = "Instance clash from " + src;
-            G::issue("Comment", msg, "ImageCache::setCurrentPosition", currRow, fPath);
+            G::issueDedup("Comment", msg, "ImageCache::setCurrentPosition", currRow, fPath);
             qWarning() << "ImageCache::setCurrentPosition cancelled instance change row =" << currRow;
         }
         return;
@@ -2237,10 +2237,24 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
         return false;
     }
 
-    // make sure metadata has been loaded
-    // if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
-    if (!dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool()) {
+    // Gate decoder on metadata fully loaded (offsets/lengths populated by
+    // DataModel::addMetadataForItem). MetadataAttempted alone is not enough:
+    // failure paths (unreadable type, video FrameDecoder error) set Attempted
+    // without populating offsets, which makes the decoder fail with
+    // "length = 0" / "offset is invalid" and burns AttemptsColumn.
+    bool loaded    = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+    bool attempted = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+    if (!loaded) {
+        if (attempted) {
+            // metadata read tried and failed — offsets are 0, decoder cannot succeed
+            msg = "Metadata read failed";
+            return false;
+        }
         if (!waitForMetaRead(sfRow, 50)) {
+            msg = "Metadata not loaded";
+            return false;
+        }
+        if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
             msg = "Metadata not loaded";
             return false;
         }
@@ -2316,7 +2330,22 @@ int ImageCache::nextToCache(int id)
             ;
     }
 
-    // iterate toCache
+    // Pass 1: pick a row whose metadata is already loaded — never blocks.
+    // Keeps all decoder threads busy while metaread is still catching up on
+    // the tail of toCache, instead of serializing every decoder behind a
+    // 50 ms waitForMetaRead on the first not-yet-loaded row.
+    for (int i = 0; i < toCache.count(); ++i) {
+        int sfRow = toCache.at(i);
+        if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) continue;
+        QString msg;
+        if (okToDecode(sfRow, id, msg)) {
+            toCacheStatus[sfRow].msg = msg;
+            return sfRow;
+        }
+        toCacheStatus[sfRow].msg = msg;
+    }
+
+    // Pass 2: nothing ready — allow okToDecode to wait briefly for in-flight metadata.
     for (int i = 0; i < toCache.count(); ++i) {
         int sfRow = toCache.at(i);
 

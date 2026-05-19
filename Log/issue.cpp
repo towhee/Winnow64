@@ -6,7 +6,7 @@ Issue::~Issue() {}
 QString Issue::toString(bool isOneLine, int newLineOffset)
 {
     QString t_delim = ": ";
-    if (type == Type::Undefined) t_delim = "";     // Undefined type = custom msg
+    if (type == Type::Undefined) t_delim = " ";    // Undefined type = type holds prefix, msg holds detail
     QString s_src = "Src: ";
     if (src == "") s_src = "";
 

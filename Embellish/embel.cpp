@@ -48,7 +48,12 @@ void Embel::exportImage()
 
     QPainter painter(&image);
     scene->render(&painter);
-    image.save("d:/pictures/test/out/test.tif");
+    QString outPath = "d:/pictures/test/out/test.tif";
+    if (!image.save(outPath)) {
+        G::issue("Error",
+                 "Embellish export image.save() failed",
+                 "Embel::exportImage", -1, outPath);
+    }
 }
 
 void Embel::test()
@@ -351,6 +356,10 @@ QPoint Embel::canvasCoord(double x, double y,
     // range check
     if (p->b.size() > b.size()) {
         qDebug() << "Embel::canvasCoord" << "$$$$$$$$$$$$$$$  p->b.size() > b.size())   $$$$$$$$$$$$$";
+        G::issueDedup("Warning",
+                      QString("Border config size mismatch p->b.size()=%1 b.size()=%2")
+                          .arg(p->b.size()).arg(b.size()),
+                      "Embel::canvasCoord");
     }
     int x0 = 0, y0 = 0;
     // put text in the Image object area

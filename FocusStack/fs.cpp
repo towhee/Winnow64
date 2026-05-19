@@ -395,6 +395,8 @@ bool FS::runDMap()
             QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
             status(msg);
             qWarning() << "FS Error:" << msg;
+            G::issue("Error", msg, "FS::runDMap",
+                     -1, inputPaths.at(slice));
 
             // Clean up threads on load failure
             for (auto &f : futures) f.waitForFinished();
@@ -424,6 +426,12 @@ bool FS::runDMap()
             if (!align.alignSlice(slice, prevImage, currImage, prevGlobal,
                                   currGlobal, nullptr, nullptr,
                                   aopt, &abort, statusCb, progressCb)) {
+                if (!abortRequested()) {
+                    G::issue("Error",
+                             QString("ECC alignment failed for slice %1").arg(slice),
+                             "FS::runDMap",
+                             -1, inputPaths.at(slice));
+                }
                 // Wait for existing background threads before aborting
                 for (auto &f : futures) f.waitForFinished();
                 return false;
@@ -518,6 +526,12 @@ bool FS::runDMap()
         progressCb
         );
 
+    if (!success && !abortRequested()) {
+        G::issue("Error",
+                 "DMap streamFinish failed — fusion did not complete",
+                 "FS::runDMap");
+    }
+
     // Diagnostic check for focus map range
     if (success && !depthIndex16Mat.empty()) {
         double minV, maxV;
@@ -586,7 +600,15 @@ bool FS::runPMax()
 
         status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(grpSlices));
 
-        currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+        try {
+            currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+        } catch (const std::exception &e) {
+            QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
+            status(msg);
+            G::issue("Error", msg, "FS::runPMax", -1, inputPaths.at(slice));
+            for (auto &f : futures) f.waitForFinished();
+            return false;
+        }
 
         cv::Mat colorForThread = currImage.color.clone();
         cv::Mat grayForThread = currImage.gray.clone();
@@ -605,8 +627,15 @@ bool FS::runPMax()
         else {
             if (!align.alignSlice(slice, prevImage, currImage, prevGlobal,
                                   currGlobal, nullptr, nullptr,
-                                  aopt, &abort, statusCb, progressCb))
+                                  aopt, &abort, statusCb, progressCb)) {
+                if (!abortRequested()) {
+                    G::issue("Error",
+                             QString("ECC alignment failed for slice %1").arg(slice),
+                             "FS::runPMax",
+                             -1, inputPaths.at(slice));
+                }
                 return false;
+            }
             incrementProgress();
         }
         globals.push_back(currGlobal);
@@ -659,6 +688,12 @@ bool FS::runPMax()
         progressCb
         );
 
+    if (!success && !abortRequested()) {
+        G::issue("Error",
+                 "PMax streamFinish failed — fusion did not complete",
+                 "FS::runPMax");
+    }
+
     incrementProgress();
 
     return success;
@@ -698,6 +733,9 @@ QString FS::save(QString fuseFolderPath)
     }
     catch (const cv::Exception& e) {
         qWarning() << "OpenCV failed to save image:" << e.what();
+        G::issue("Error",
+                 QString("OpenCV save failed: %1").arg(e.what()),
+                 "FS::save", -1, fusedPath);
         return ""; // Abort save
     }
 

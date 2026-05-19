@@ -103,8 +103,7 @@ bool Jpeg2::getDimensions(MetadataParameters &p, ImageMetadata &m)
         marker = u.get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
             QString msg = "Failed, marker < 0xFFC0.";
-            // Memory pressure testing — disabled
-            // G::issue("Warning", msg, "Jpeg2::getDimensions", m.row, m.fPath);
+            G::issueDedup("Warning", msg, "Jpeg2::getDimensions", m.row, m.fPath);
             return false;
         }
         p.offset = u.get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
@@ -153,8 +152,7 @@ bool Jpeg2::parse(MetadataParameters &p,
 
     if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
         QString msg = "JPG does not start with 0xFFD8.";
-        // Memory pressure testing — disabled
-        // G::issue("Error", msg, "Jpeg2::parse", m.row, m.fPath);
+        G::issueDedup("Error", msg, "Jpeg2::parse", m.row, m.fPath);
         return false;
     }
 
@@ -176,8 +174,7 @@ bool Jpeg2::parse(MetadataParameters &p,
     }
     else {
         QString msg = "JPG does not contain EXIF information.";
-        // Memory pressure testing — disabled
-        // G::issue("Warning", msg, "Jpeg2::parse", m.row, m.fPath);
+        G::issueDedup("Warning", msg, "Jpeg2::parse", m.row, m.fPath);
         return false;
     }
 
@@ -202,8 +199,7 @@ bool Jpeg2::parse(MetadataParameters &p,
         count++;
         if (count > 100) {
             QString msg = "Endian order not found.";
-            // Memory pressure testing — disabled
-            // G::issue("Error", msg, "Jpeg2::parse", m.row, m.fPath);
+            G::issueDedup("Error", msg, "Jpeg2::parse", m.row, m.fPath);
             return false;
         }
     }
@@ -861,8 +857,7 @@ void Jpeg2::decodeScan(QFile &file, QImage &image)
         bool isBigEnd = true;
         if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
             QString msg = "JPG does not start with 0xFFD8.";
-            // Memory pressure testing — disabled
-            // G::issue("Error", msg, "Jpeg2::decodeScan", -1, p.fPath);
+            G::issueDedup("Error", msg, "Jpeg2::decodeScan", -1, p.fPath);
             p.file.close();
             // qDebug() << "Jpeg2::decodeScan" << "Close" << p.file.fileName();
             return;

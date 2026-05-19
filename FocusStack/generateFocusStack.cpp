@@ -252,6 +252,7 @@ void MW::generateFocusStack(const QStringList paths,
             if (G::FSLog) G::log(srcFun, msg);
             updateStatus(false, msg);
             G::popup->showPopup(msg, 5000);
+            G::issue("Error", msg, "MW::generateFocusStack");
             return;
         }
 
@@ -266,6 +267,7 @@ void MW::generateFocusStack(const QStringList paths,
             msg = "Focus stacking failed: No output path found.";
             if (G::FSLog) G::log(srcFun, msg);
             updateStatus(false, msg);
+            G::issue("Error", msg, "MW::generateFocusStack");
             return;
         }
 

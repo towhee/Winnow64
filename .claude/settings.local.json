@@ -10,7 +10,12 @@
       "Bash(awk '{print $NF}')",
       "Bash(xargs -I {} basename {})",
       "Bash(iconv -f UTF-16 -t UTF-8 /Users/roryhill/Projects/Winnow64/Docs/filtershelp.html)",
-      "Bash(otool -l \"/Users/roryhill/Projects/Winnow64/ReleaseExtras/Winnets/Winnet.app/Contents/MacOS/Winnet\")"
+      "Bash(otool -l \"/Users/roryhill/Projects/Winnow64/ReleaseExtras/Winnets/Winnet.app/Contents/MacOS/Winnet\")",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(git *)",
+      "Bash(grep -rEn 'G::issue\\\\\\(' /Users/roryhill/Projects/Winnow64 --include=\"*.cpp\" --include=\"*.h\")",
+      "Read(//tmp/**)",
+      "Bash(python3 *)"
     ]
   }
 }

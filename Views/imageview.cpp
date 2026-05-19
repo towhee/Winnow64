@@ -146,7 +146,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     bool isDebug = false;
     bool isCurrent = (fPath == currentImagePath);
 
-    // if (isDebug)
+    if (isDebug)
     {
         qDebug() << srcFun
          << "sfRow =" << dm->proxyRowFromPath(fPath, srcFun)
@@ -217,6 +217,11 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
                 // metadata->m.instance = dm->instance;
                 dm->addMetadataForItem(metadata->m, srcFun); // rgh investigate warning (QVariant issue probably)
             }
+            else {
+                G::issueDedup("Warning",
+                              "Slideshow metadata load failed",
+                              srcFun, dmRow, fPath);
+            }
         }
 
         QPixmap displayPixmap;
@@ -227,6 +232,9 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             isBusy = false;
         }
         else {
+            G::issueDedup("Error",
+                          "Slideshow pixmap load failed",
+                          srcFun, dmRow, fPath);
             // set null pixmap
             QPixmap nullPm;
             pmItem->setPixmap(nullPm);

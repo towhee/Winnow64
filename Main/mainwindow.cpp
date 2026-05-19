@@ -325,7 +325,7 @@ void MW::showEvent(QShowEvent *event)
 
     G::isInitializing = false;
 
-    G::issue("New Session.");
+    G::issueBeginSession();
 
     if (G::issueLog->failedToOpen) {
         // QString popupMsg = "The issue log file failed to open, preventing Winnow<br>"
