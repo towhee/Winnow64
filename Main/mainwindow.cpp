@@ -4385,7 +4385,8 @@ void MW::exportEmbelFromAction(QAction *embelExportAction)
 */
     if (G::isLogger) G::log("MW::exportEmbelFromAction");
 
-    QStringList picks = dm->getSelectionOrPicks();
+    QStringList picks;
+    dm->getSelectionOrPicks(picks);
 
     if (picks.size() == 0)  {
         QMessageBox::information(this,
@@ -4415,7 +4416,8 @@ void MW::exportEmbel()
 */
     if (G::isLogger) G::log("MW::exportEmbel");
 
-    QStringList picks = dm->getSelectionOrPicks();
+    QStringList picks;
+    dm->getSelectionOrPicks(picks);
 
     if (picks.size() == 0)  {
         QMessageBox::information(this,
@@ -4521,7 +4523,7 @@ void MW::ingest()
     bool combinedIncludeJpg;   // req'd by backgroundIngest
     int seqStart = 1;          // req'd by backgroundIngest
 
-    if (dm->isPick()) {
+    if (dm->isAnyPick()) {
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
                                   combinedIncludeJpg,
@@ -5115,7 +5117,7 @@ void MW::generateMeanStack()
 {
     if (G::isLogger) G::log("MW::generateMeanStack");
     QStringList selection;
-    if (!dm->getSelection(selection)) return;
+    if (!dm->getSelectionOrPicks(selection)) return;
     meanStack = new Stack(selection, dm, metadata, icd);
     connect(this, &MW::abortStackOperation, meanStack, &Stack::stop);
     QString fPath = meanStack->mean();
@@ -5145,7 +5147,7 @@ void MW::reportHueCount()
     if (G::isLogger) G::log("MW::reportHueCount");
 
     QStringList selection;
-    if (!dm->getSelection(selection)) return;
+    if (!dm->getSelectionOrPicks(selection)) return;
     ColorAnalysis hueReport;
     connect(this, &MW::abortHueReport, &hueReport, &ColorAnalysis::abortHueReport);
     hueReport.process(selection);

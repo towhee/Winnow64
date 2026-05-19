@@ -11,7 +11,7 @@ void MW::focusStackFromSelection()
     if (G::isLogger || G::FSLog) G::log(srcFun, fsMethod);
 
     QStringList inputPaths;
-    if (!dm->getSelection(inputPaths) || inputPaths.isEmpty()) {
+    if (!dm->getSelectionOrPicks(inputPaths) || inputPaths.isEmpty()) {
         QString msg = "No images selected for focus stacking.";
         updateStatus(false, msg, srcFun);
         return;

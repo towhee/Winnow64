@@ -60,7 +60,7 @@ public:
     bool contains(QString &path);
     void find(QString text);
     ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
-    bool isPick();
+    bool isAnyPick();
     void clearPicks();
     void remove(QString fPath);
     int insert(QString fPath);
@@ -100,8 +100,7 @@ public:
     int nextPick();
     int prevPick();
     int nearestPick();
-    bool getSelection(QStringList &list);
-    QStringList getSelectionOrPicks();
+    bool getSelectionOrPicks(QStringList &list);
     bool isSelected(int row);
     void saveSelection();
     void restoreSelection();
