@@ -69,8 +69,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
         count++;
         if (count > 100) {
             QString msg = "Endian order not found.";
-            // Memory pressure testing — disabled
-            // G::issue("Error", msg, "Heic::parseLibHeif", m.row, fPath);
+            G::issueDedup("Error", msg, "Heic::parseLibHeif", m.row, fPath);
             p.buf.close();
             return false;
         }
@@ -334,15 +333,13 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
     const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
     if (!data) {
         QString msg = "No pixel data.";
-        // Memory pressure testing — disabled
-        // G::issue("Warning", msg, "Heic::heic", m->row, m->fPath);
+        G::issueDedup("Warning", msg, "Heic::heic", m->row, m->fPath);
         return false;
     }
 
     if (stride <= 0) {
         QString msg = "Invalid stride = " + QString::number(stride) + ".";
-        // Memory pressure testing — disabled
-        // G::issue("Warning", msg, "Heic::heic", m->row, m->fPath);
+        G::issueDedup("Warning", msg, "Heic::heic", m->row, m->fPath);
         return false;
     }
     /*
@@ -493,8 +490,7 @@ bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
         count++;
         if (count > 100) {
             QString msg = "Endian order not found.";
-            // Memory pressure testing — disabled
-            // G::issue("Error", msg, "Heic::parseExif", m.row, fPath);
+            G::issueDedup("Error", msg, "Heic::parseExif", m.row, fPath);
             p.file.close();
             return false;
         }
@@ -717,8 +713,7 @@ bool Heic::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     if (type == "pixi") return pixiBox(offset, length);
 
     QString msg = "Box type " + type + " is unknown";
-    // Memory pressure testing — disabled
-    // G::issue("Warning", msg, "Heic::getHeifBox", m->row, m->fPath);
+    G::issueDedup("Warning", msg, "Heic::getHeifBox", m->row, m->fPath);
     offset += length;
     return false;
 }
@@ -747,8 +742,7 @@ bool Heic::ftypBox(quint32 &offset, quint32 &length)
     }
     if (!isHeic) {
         QString msg = "Brand heic or HEIC not found.";
-        // Memory pressure testing — disabled
-        // G::issue("Error", msg, "Heic::ftypBox", m->row, fPath);
+        G::issueDedup("Error", msg, "Heic::ftypBox", m->row, fPath);
         return false;
     }
     offset += length;
@@ -965,8 +959,7 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
     }
     if (ilocItemCount > 100) {
         QString msg = "Failed, ilocItemCount > 100.";
-        // Memory pressure testing — disabled
-        // G::issue("Warning", msg, "Heic::ilocBox", m->row, m->fPath);
+        G::issueDedup("Warning", msg, "Heic::ilocBox", m->row, m->fPath);
         offset += length;
         return false;
     }
@@ -989,8 +982,7 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
         if (extent_count > 100) {
             QString msg = "Quitting because extent_count has reached " +
                           QString::number(extent_count);
-            // Memory pressure testing — disabled
-            // G::issue("Warning", msg, "Heic::ilocBox", m->row, fPath);
+            G::issueDedup("Warning", msg, "Heic::ilocBox", m->row, fPath);
             offset += length;
             return false;
         }
@@ -1102,8 +1094,7 @@ bool Heic::iinfBox(quint32 &offset, quint32 &length)
     if (entry_count == 0) {
         // err
         QString msg = "No iinf entries found.";
-        // Memory pressure testing — disabled
-        // G::issue("Warning", msg, "Heic::iinfBox", m->row, m->fPath);
+        G::issueDedup("Warning", msg, "Heic::iinfBox", m->row, m->fPath);
         offset += length;
         return false;
     }
@@ -1340,8 +1331,7 @@ bool Heic::iprpBox(quint32 &offset, quint32 &length)
         if (ipcoType != "ipco") {
             // err
             QString msg = "Type ipco not found in iprp box.";
-            // Memory pressure testing — disabled
-            // G::issue("Error", msg, "Heic::iprpBox", m->row, fPath);
+            G::issueDedup("Error", msg, "Heic::iprpBox", m->row, fPath);
             return false;
         }
 

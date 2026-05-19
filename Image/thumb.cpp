@@ -434,7 +434,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
         QString msg = "Instance clash.";
-        G::issue("Comment", msg, "Thumb::loadThumb", dmRow, fPath);
+        G::issueDedup("Comment", msg, "Thumb::loadThumb", dmRow, fPath);
         if (isDebug)
         {
         qDebug().noquote()

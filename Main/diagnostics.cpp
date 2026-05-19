@@ -454,7 +454,7 @@ void MW::diagnosticsMemory()
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
-    rpt << Utilities::centeredRptHdr('=', "Memory Diagnostics");
+    rpt << Utilities::centeredRptHdr('=', "Memory Diagnostics", 80);
     rpt << "\n";
 
     rpt << "\n" << "Host";
@@ -560,10 +560,17 @@ void MW::allIssuesReport()
 void MW::sessionIssuesReport()
 {
 /*
-    Show the issues from the current session (from when Winnow was opened)
+    Show the issues from the current session (from when Winnow was opened).
+    Appends a "repeated" summary from issueDedup so collapsed floods still surface.
 */
     if (G::isLogger) G::log("MW::SessionIssuesReport");
-    diagnosticsReport(G::issueList.join("\n"), "Winnow Session Issues");
+    QString body = G::issueList.join("\n");
+    QStringList dedup = G::issueDedupReport();
+    if (!dedup.isEmpty()) {
+        body += "\n\n----- Repeated (collapsed) issues -----\n";
+        body += dedup.join("\n");
+    }
+    diagnosticsReport(body, "Winnow Session Issues");
 }
 
 void MW::logReport()

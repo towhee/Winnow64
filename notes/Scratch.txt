@@ -38,7 +38,146 @@ or truly orphan?
 - Loose files in Docs/: Border shapes.xlsx, QPixmap performance.xlsx, winnow.png,
 debug.log — clearly not help assets.
 
+------------------------------------------------------------------------------------------
 
+ISSUES
+
+A. Fix structural issues in G::issue() itself
+
+ 1. Decide what "Comment" means and stop silently dropping it. Main/global.cpp:358 returns immediately for type == "Comment". Today the ~20 G::issue("Comment", …)
+ sites (mostly Datamodel/datamodel.cpp instance-clash and invalid-index checks) cost a QSharedPointer<Issue>::create() and a mutex acquisition for no log output.
+ Either (a) route "Comment" to the session log at a Debug/Trace tier gated by a runtime flag (e.g. G::isVerboseIssues) so they become useful when chasing instance
+ bugs, or (b) delete those call sites outright. Pick one — the current half-state is the worst case.
+ 2. Add an explicit severity enum and a verbosity threshold. The current string-typed API ("Warning", "Error", "Comment", "Info", "General", "Undefined") is matched
+ by contains(), so typos silently become Undefined with the typo as the message (the typo "matadata" at Datamodel/datamodel.cpp:1339 would benefit). Replace the
+ string type parameter with an enum and add G::issueThreshold so noisy sites can stay in source under a Debug level without being commented out. This subsumes
+ recommendation #1.
+ 3. Fix the silent Undefined fall-through for unknown type strings. Main/global.cpp:362-365 sets issue->msg = type when the type is unknown, discarding the caller's
+ actual message. With the enum (rec #2) this disappears. Without it, at minimum keep both: issue->msg = type + ": " + msg.
+ 4. Stop calling issueList.append() unboundedly. Main/global.cpp:398 grows a QStringList for the life of the session. On long sessions with noisy decoders this is a
+ slow leak. Cap at a few thousand entries (ring buffer) and rely on IssueLog::log() for the full record.
+ 5. Make the console-mirror debug block at Main/global.cpp:378-386 either deletable or gated by a flag. Right now it is a commented-out block of qDebug() calls.
+ Either remove it or guard it on G::isDebug so it's a real toggle.
+
+ B. Remove or downgrade low-value reports
+
+ 6. Delete (or convert to plain qDebug under isDebug) the 10 instance-clash Comment calls in Datamodel/datamodel.cpp at lines 1373, 1432, 2034, 2062, 2091, 2134,
+ 2259, 2351, 2425, 2597. Instance clashes happen routinely when the user switches folders during a load; logging each one produces a flood with no debugging value
+ beyond "the previous load was preempted." If you keep them, gate them on G::isVerboseIssues per rec #1.
+ 7. Re-evaluate the "Instance clash" Warning in Cache/imagedecoder.cpp:158 and Cache/imagecache.cpp:2169 — same rationale as rec #6. These are expected during folder
+ switches. Either downgrade to Debug or remove.
+ 8. Decide on the 36 commented-out call sites. Each is a maintenance smell: the code carries dead logging that contributors must re-evaluate. The largest clusters:
+   - ImageFormats/jpeg.cpp, ImageFormats/jpeg2.cpp (~15) — getDimensions/parse/decodeScan failures.
+   - ImageFormats/heic.cpp (~10) — HEIF box / EXIF parse failures.
+   - Metadata/metadata.cpp (~9) — metadata read failures.
+   - Metadata/xmp.cpp (3), Cache/reader.cpp (2).
+
+ For each cluster: either delete the commented lines, or restore them gated by a verbosity flag (rec #2). Do not leave commented-out logging in production code.
+ 9. Drop the "New Session." custom-type call in Main/mainwindow.cpp:328. It falls into the Undefined branch (since "New Session." isn't in TypeDesc), which means the
+ message becomes the type string and the actual message is empty. If the intent is a session boundary marker, add a dedicated IssueLog::beginSession() call instead —
+ it's a structural event, not an issue.
+ 10. Demote the mainwindow.cpp:2916 "Icon is null" Warning unless you can show it actually indicates a problem. Null icons are common during background population.
+
+ C. Add reporting where it is missing
+
+ 11. MetaRead/* — add Error reports for reader-thread failures. This subsystem has zero G::issue calls despite coordinating parallel I/O. Cover at minimum:
+ thread-start failure, abort timeout, dispatch-queue exhaustion, and reader.cpp lines 183/306 (currently commented out — restore as Warnings with sfRow+fPath).
+ 12. Image/fs.cpp and Image/generateFocusStack.cpp — add Error reports for focus-stack failures. Alignment failures, fusion failures, OOM, OpenCV exceptions. Focus
+ stacking is a core feature and currently fails silently from the issue log's point of view.
+ 13. Datamodel/buildfilters.cpp and Datamodel/filters.cpp — add Warnings for filter-build anomalies. Specifically: malformed search terms, predicates with zero
+ matches when matches were expected, and filter-rebuild failures during model resets.
+ 14. Views/compareview.cpp — add Warnings when image pairing or alignment for compare fails (e.g. mismatched dimensions, missing thumbnails). Users invoke compare
+ deliberately so a failure is worth surfacing.
+ 15. Image/imageview.cpp — extend coverage beyond the single call at line 194. Worth adding: pixmap load failure (currently swallowed), tile/zoom render failure, and
+ the load-twice path noted in the recent commit b9edcbd8 ("ImageView::loadImage happening twice when select a new primary folder") — guard against the second call
+ with an Info report so regressions surface.
+ 16. Datamodel/selection.cpp — extend beyond the one Warning at line 81. Add reports for selection-out-of-range and selection-after-model-reset, both of which have
+ caused silent UI desync in the past.
+ 17. Embellish/embel.cpp and ingest pipelines — report write/export failures consistently. Embellish/embelproperties.cpp covers template I/O (good) but the actual
+ export pipeline does not. Add Error reports when an embellished export fails to write to disk.
+ 18. Utilities/icc.cpp — confirm the 5 Warnings (lines 23, 31, 52, 68, 75) include sfRow+fPath where available. Currently the call sites don't pass them; when an ICC
+ transform fails it's important to know which image triggered it.
+
+ D. Improve diagnostic value of existing calls
+
+ 19. Standardize the src argument to Class::method form. Most calls already do this; a minority pass empty strings or srcFun variables. Audit so every call carries an
+  identifying source. (The srcFun pattern in Views/imageview.cpp:194 is fine — verified srcFun is defined at line 145.)
+ 20. Always pass sfRow and fPath when available. This is what enables DataModel::issue to annotate the row in the UI (Main/global.cpp:388-395). Audit
+ Image/Metadata/ImageFormats — many calls there have a row in scope but don't pass it. Without it the user sees the issue in the log but can't jump to the offending
+ file.
+ 21. Add a "first occurrence per session per (src, type)" de-dup option (or per file path). When a folder of 5000 NEFs has the same parse warning, the log gets one
+ line per file. A counter ("seen 4127 times") would compress this.
+ 22. Consider exposing a "send diagnostic report" action that emails / saves G::issueList + IssueLog file. The infrastructure is already there; this would make
+ recommendations 11–18 immediately useful for triaging user-reported bugs.
+
+ Critical files (no edits in plan mode)
+
+ - Main/global.h (line 424) — G::issue declaration
+ - Main/global.cpp (lines 351-404) — G::issue implementation; also IssueLog, issueList
+ - Datamodel/datamodel.cpp — largest cluster of Comment/Warning calls; instance-clash pattern
+ - Cache/imagedecoder.cpp — gold-standard example of good coverage to mirror elsewhere
+ - Cache/reader.cpp, MetaRead/*, Image/fs.cpp, Image/generateFocusStack.cpp, Datamodel/buildfilters.cpp, Datamodel/filters.cpp, Views/compareview.cpp — the gap areas
+ - ImageFormats/jpeg.cpp, ImageFormats/jpeg2.cpp, ImageFormats/heic.cpp, Metadata/metadata.cpp, Metadata/xmp.cpp — clusters of commented-out calls to resolve
+
+ Verification
+
+ This review is a recommendations document, not a code change, so verification is per-recommendation when each is acted on. Suggested approach when implementing:
+
+ 1. For each recommendation, run a focused session (load folder of mixed JPG/RAW/HEIC, browse, switch folders during load, ingest, embellish-export, focus-stack,
+ compare) and inspect IssueLog output.
+ 2. For rec #1–#4 (structural changes to G::issue), verify with a debug build that:
+   - Every G::issue("Comment", …) site is either logged at the chosen tier or removed.
+   - Unknown type strings no longer silently overwrite msg.
+   - The issueList size stays bounded across a long session (load 10+ folders).
+ 3. For rec #11–#18 (added coverage), intentionally trigger failures (rename a file mid-load to break MetaRead, point ICC at a corrupted profile, run focus stack on
+ misaligned inputs) and confirm the new reports appear with src, sfRow, and fPath populated.
+ 4. For rec #6–#10 (removals), switch folders rapidly during loads and confirm the log no longer contains the instance-clash flood.
+ 5. Per CLAUDE.md, the user compiles and runs Winnow; do not invoke qmake/make.
+
+
+
+
+All 22 recommendations are implemented. Summary of what changed:
+
+  Core API (recs #1-5) — Main/global.cpp, Main/global.h, Log/issue.h, Log/issue.cpp
+  - Issue::Type enum extended with Debug + Info, reordered by severity (Debug, Comment, Info, General, Warning, Error, Undefined). Issue::typeDescList() is the single
+  source of truth.
+  - G::issueThreshold (default Info) filters issues at-or-below severity before any allocation. G::isVerboseIssues drops threshold to Debug for diagnostic sessions.
+  - Unknown type strings no longer silently overwrite the message — preserved as type + ": " + msg.
+  - G::issueList capped at G::issueListMaxSize=5000 (ring buffer). Disk log keeps the full record.
+  - Dead commented-out console block removed.
+  - G::issueBeginSession() writes a structural session marker bypassing severity gating.
+
+  Comment / instance-clash sites (recs #1, #6, #7) — 18 sites in datamodel.cpp, imagedecoder.cpp, imagecache.cpp, thumb.cpp, metadata.cpp converted from
+  G::issue("Comment", …) → G::issueDedup("Comment", …). With default Info threshold these stay quiet; under verbose mode they collapse to first-occurrence-plus-counter
+   instead of flooding.
+
+  36 commented-out calls (rec #8) — restored as G::issueDedup(...) at their original severity in heic.cpp (10), jpeg.cpp (5), jpeg2.cpp (5), xmp.cpp (3), metadata.cpp
+  (9), reader.cpp (2). Stale "Memory pressure testing — disabled" comments stripped from all 29 affected lines. Two remaining commented-out lines in datamodel.cpp are
+  inside larger disabled code blocks (verified and left).
+
+  Removals (recs #9, #10) — "New Session." in mainwindow.cpp:328 now uses G::issueBeginSession(). The "Icon is null" call at mainwindow.cpp:2916 was already inside a
+  /* */ block — no action needed.
+
+  Gap-area additions (recs #11-18):
+  - metaread.cpp — Reader thread start failure, FrameDecoder shutdown timeout, memory cap breach Warning, redo-max-out Error.
+  - fs.cpp — Load exception (both DMap + PMax), ECC alignment failure, streamFinish failure, cv::imwrite save failure.
+  - generateFocusStack.cpp — failure/abort and missing-output-path Errors.
+  - compareview.cpp — 100k-retry pixmap load exhaustion Error.
+  - imageview.cpp — slideshow metadata-load Warning + slideshow pixmap-load Error (both dedup'd).
+  - selection.cpp — invalid-index Warning on Selection::select(QModelIndex).
+  - embel.cpp — export image.save() failure Error + canvas-coord border config mismatch Warning (dedup'd).
+  - icc.cpp — null hOutProfile Error.
+  - buildfilters.cpp — deferred-build-on-metadata-loading Info.
+
+  Diagnostic value (recs #19-22):
+  - G::issueDedup() infrastructure with issueDedupReport() and issueDedupReset() (rec #21).
+  - MW::sessionIssuesReport() in diagnostics.cpp now appends the dedup-collapsed counter summary so users see both unique issues and multiplicities (rec #22).
+  - No empty-src arguments found in audit (rec #19).
+  - All new gap-area calls pass sfRow and fPath when in scope (rec #20).
+
+  Diff: 28 files, +425/-118 lines. Compile and run when ready; the new threshold defaults to Info, so behavior is conservative — toggle G::isVerboseIssues = true to
+  see the Comment/Debug tier for triage.
 
 
 

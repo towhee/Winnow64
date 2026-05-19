@@ -179,8 +179,7 @@ bool Reader::readMetadata()
     if (!isMetaLoaded) {
         status = Status::MetaFailed;
         QString msg = "Failed to load metadata.";
-        // Memory pressure testing — disabled
-        // G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
+        G::issueDedup("Warning", msg, "Reader::readMetadata", dmRow, fPath);
         if (isDebug)
         {
             qDebug().noquote()
@@ -302,8 +301,7 @@ void Reader::readIcon()
     if (status == Status::MetaFailed) status = Status::MetaIconFailed;
     else status = Status::IconFailed;
     msg = "Failed to load thumbnail.";
-    // Memory pressure testing — disabled
-    // G::issue("Warning", msg, "Reader::readIcon", dmRow, fPath);
+    G::issueDedup("Warning", msg, "Reader::readIcon", dmRow, fPath);
     if (isDebug)
     {
         qDebug().noquote()

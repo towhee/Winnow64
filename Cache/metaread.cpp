@@ -112,6 +112,11 @@ MetaRead::MetaRead(QObject *parent,
         connect(thread, &QThread::finished, reader, &QObject::deleteLater);
         connect(thread, &QThread::finished, thread, &QObject::deleteLater);
         thread->start(QThread::LowPriority);
+        if (!thread->isRunning()) {
+            G::issue("Error",
+                     QString("Reader thread %1 failed to start").arg(id),
+                     "MetaRead::MetaRead");
+        }
         readers.append(reader);
         readerThreads.append(thread);
         cycling.append(false);
@@ -175,6 +180,10 @@ bool MetaRead::checkMemoryFootprint()
     if (G::memoryOverrunFlag.compare_exchange_strong(
             expected, true,
             std::memory_order_acq_rel, std::memory_order_relaxed)) {
+        G::issue("Warning",
+                 QString("Memory cap breached: %1 MB ≥ %2 MB — aborting load")
+                     .arg(footprintMB).arg(cap),
+                 "MetaRead::checkMemoryFootprint");
         emit memoryOverrun(footprintMB, cap);
     }
     return true;
@@ -188,7 +197,13 @@ MetaRead::~MetaRead()
     // shared FrameDecoder thread next.
     if (frameDecoderThread) {
         frameDecoderThread->quit();
-        frameDecoderThread->wait();
+        if (!frameDecoderThread->wait(5000)) {
+            G::issue("Error",
+                     "FrameDecoder thread did not quit within 5 s; terminating",
+                     "MetaRead::~MetaRead");
+            frameDecoderThread->terminate();
+            frameDecoderThread->wait(1000);
+        }
         delete frameDecoder;
         delete frameDecoderThread;
         frameDecoder = nullptr;
@@ -1226,6 +1241,10 @@ void MetaRead::processReturningReader(int id, Reader *r)
             }
             else {
                 qWarning() << "REDO MAXED OUT";
+                G::issue("Error",
+                         QString("Redo limit (%1) reached — some metadata/icons never loaded")
+                             .arg(redoMax),
+                         "MetaRead::dispatch");
             }
         }
         // Now we are done

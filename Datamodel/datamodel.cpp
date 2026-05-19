@@ -1370,7 +1370,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, fun, row);
+        G::issueDedup("Comment", errMsg, fun, row);
         return true;
     }
     if (G::stop) return false;
@@ -1429,7 +1429,7 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, fun, sfRow);
+        G::issueDedup("Comment", errMsg, fun, sfRow);
         return true;
     }
     if (G::stop) return false;
@@ -1560,7 +1560,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (instance > -1 && m.instance != instance) {
         if (G::showIssueInConsole)
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::addMetadataForItem", m.row);
+        G::issueDedup("Comment", errMsg, "DataModel::addMetadataForItem", m.row);
         return false;
     }
 
@@ -1963,7 +1963,7 @@ void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
 
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setValueDm", dmRow);
+        G::issueDedup("Comment", errMsg, "DataModel::setValueDm", dmRow);
         return ;
     }
 
@@ -2010,7 +2010,7 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
             (sfCol == G::IsCachingColumn) && !value.toBool();
         if (!isCachingCleanup) {
             errMsg = "Instance clash from " + src;
-            G::issue("Comment", errMsg, "DataModel::setValueSF", sfRow);
+            G::issueDedup("Comment", errMsg, "DataModel::setValueSF", sfRow);
             return;
         }
     }
@@ -2031,7 +2031,7 @@ bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
 {
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
+        G::issueDedup("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
         return false;
     }
 
@@ -2059,7 +2059,7 @@ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
     if (G::isLogger) G::log("DataModel::setCurrent (dmIdx)");
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setCurrent", dmIdx.row());
+        G::issueDedup("Comment", errMsg, "DataModel::setCurrent", dmIdx.row());
         return;
     }
 
@@ -2088,7 +2088,7 @@ void DataModel::setCurrent(QString fPath, int instance)
     if (G::isLogger) G::log("DataModel::setCurrent (fPath)");
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setCurrent");
+        G::issueDedup("Comment", errMsg, "DataModel::setCurrent");
         return;
     }
 
@@ -2131,7 +2131,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
     QModelIndex dmIdx = index(fPathRowValue(fPath), col);
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
+        G::issueDedup("Comment", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
         return;
     }
     if (G::stop) return;
@@ -2171,7 +2171,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
     if (G::stop) return;
     if (fromInstance != instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setIconFromVideoFrame", dmRow);
+        G::issueDedup("Comment", errMsg, "DataModel::setIconFromVideoFrame", dmRow);
         return;
     }
 
@@ -2256,7 +2256,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
+        G::issueDedup("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
         return;
     }
 
@@ -2348,7 +2348,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
 
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setIcon", dmRow);
+        G::issueDedup("Comment", errMsg, "DataModel::setIcon", dmRow);
         return;
     }
 
@@ -2422,7 +2422,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::iconLoaded", sfRow);
+        G::issueDedup("Comment", errMsg, "DataModel::iconLoaded", sfRow);
         return false;
     }
     if (sfRow >= sf->rowCount()) return false;
@@ -2594,7 +2594,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     QModelIndex sfIdx = sf->index(sfRow, G::IsCachedColumn);
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, src, sfIdx.row());
+        G::issueDedup("Comment", errMsg, src, sfIdx.row());
 
         /*
         qDebug() << src << sfRow << errMsg

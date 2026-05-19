@@ -150,6 +150,10 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
         qWarning() << "Selection::select(QModelIndex) sfIdx =" << sfIdx << "invalid.";
         G::popup->showPopup("Selection is invalid");
         qApp->beep();
+        G::issue("Warning",
+                 "Selection invalid (out of range or after model reset)",
+                 "Selection::select",
+                 sfIdx.isValid() ? sfIdx.row() : -1);
         return;
     }
     else {

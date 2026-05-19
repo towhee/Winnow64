@@ -1217,7 +1217,7 @@ void MW::createViewActions()
     addAction(ratingBadgeVisibleAction);
     connect(ratingBadgeVisibleAction, &QAction::triggered, this, &MW::setRatingBadgeVisibility);
 
-    iconNumberVisibleAction = new QAction(tr("Show Icon Number"), this);
+    iconNumberVisibleAction = new QAction(tr("Show Image Number"), this);
     iconNumberVisibleAction->setObjectName("toggleIconNumber");
     iconNumberVisibleAction->setShortcutVisibleInContextMenu(true);
     iconNumberVisibleAction->setCheckable(true);
@@ -2042,36 +2042,38 @@ void MW::createViewMenu()
 
 }
 
-// void MW::createWindowMenu()
-// {
-//     windowMenu = new QMenu(this);
-//     windowGroupAct = new QAction("Window", this);
-//     windowGroupAct->setMenu(windowMenu);
-//     workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
-//     workspaceMenu->addAction(defaultWorkspaceAction);
-//     workspaceMenu->addAction(newWorkspaceAction);
-//     workspaceMenu->addAction(manageWorkspaceAction);
-//     workspaceMenu->addSeparator();
-//     // add 10 dummy menu items for custom workspaces
-//     for (int i=0; i<10; i++) {
-//         workspaceMenu->addAction(workspaceActions.at(i));
-//     }
-//     connect(workspaceMenu, SIGNAL(triggered(QAction*)),
-//             SLOT(invokeWorkspaceFromAction(QAction*)));
-//     windowMenu->addSeparator();
-//     windowMenu->addAction(folderDockVisibleAction);
-//     windowMenu->addAction(favDockVisibleAction);
-//     windowMenu->addAction(filterDockVisibleAction);
-//     windowMenu->addAction(metadataDockVisibleAction);
-//     windowMenu->addAction(thumbDockVisibleAction);
-//     if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
-//     windowMenu->addSeparator();
-// //    windowMenu->addAction(windowTitleBarVisibleAction);
-//     #ifdef Q_OS_WIN
-//     //windowMenu->addAction(menuBarVisibleAction);
-//     #endif
-//     windowMenu->addAction(statusBarVisibleAction);  // crash
-// }
+/*
+void MW::createWindowMenu()
+{
+    windowMenu = new QMenu(this);
+    windowGroupAct = new QAction("Window", this);
+    windowGroupAct->setMenu(windowMenu);
+    workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
+    workspaceMenu->addAction(defaultWorkspaceAction);
+    workspaceMenu->addAction(newWorkspaceAction);
+    workspaceMenu->addAction(manageWorkspaceAction);
+    workspaceMenu->addSeparator();
+    // add 10 dummy menu items for custom workspaces
+    for (int i=0; i<10; i++) {
+        workspaceMenu->addAction(workspaceActions.at(i));
+    }
+    connect(workspaceMenu, SIGNAL(triggered(QAction*)),
+            SLOT(invokeWorkspaceFromAction(QAction*)));
+    windowMenu->addSeparator();
+    windowMenu->addAction(folderDockVisibleAction);
+    windowMenu->addAction(favDockVisibleAction);
+    windowMenu->addAction(filterDockVisibleAction);
+    windowMenu->addAction(metadataDockVisibleAction);
+    windowMenu->addAction(thumbDockVisibleAction);
+    if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
+    windowMenu->addSeparator();
+//    windowMenu->addAction(windowTitleBarVisibleAction);
+    #ifdef Q_OS_WIN
+    //windowMenu->addAction(menuBarVisibleAction);
+    #endif
+    windowMenu->addAction(statusBarVisibleAction);  // crash
+}
+*/
 
 void MW::createHelpMenu()
 {
@@ -2309,26 +2311,37 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(pickAction);
     thumbViewActions->append(rejectAction);
     thumbViewActions->append(pickUnlessRejectedAction);
-    thumbViewActions->append(separatorActionA);
+
+    thumbViewActions->append(separatorAction);
     thumbViewActions->append(ratingGroupAct);
     thumbViewActions->append(labelGroupAct);
-    thumbViewActions->append(separatorAction8);
+
+    thumbViewActions->append(separatorAction1);
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(embelExportGroupAct);
     if (G::isRory) thumbViewActions->append(focusStackAction);
-    thumbViewActions->append(separatorAction9);
+
+    thumbViewActions->append(separatorAction2);
     thumbViewActions->append(ratingBadgeVisibleAction);
     thumbViewActions->append(iconNumberVisibleAction);
-    thumbViewActions->append(separatorAction);
+
+    thumbViewActions->append(separatorAction3);
     thumbViewActions->append(selectAllAction);
     thumbViewActions->append(invertSelectionAction);
-    thumbViewActions->append(separatorAction1);
+
+    thumbViewActions->append(separatorAction4);
+    thumbViewActions->append(thumbsEnlargeAction);
+    thumbViewActions->append(thumbsShrinkAction);
+
+    thumbViewActions->append(separatorAction5);
     thumbViewActions->append(rotateRightAction);
     thumbViewActions->append(rotateLeftAction);
-    thumbViewActions->append(separatorAction3);
+
+    thumbViewActions->append(separatorAction6);
     thumbViewActions->append(sortReverseAction);
-    thumbViewActions->append(separatorAction4);
+
+    thumbViewActions->append(separatorAction7);
     #ifdef Q_OS_MAC
     thumbViewActions->append(shareFilesAction);
     #endif
@@ -2336,21 +2349,22 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(copyImageAction);
     thumbViewActions->append(copyImagePathFromContextAction);
     thumbViewActions->append(saveAsFileAction);
-    thumbViewActions->append(separatorAction5);
+
+    thumbViewActions->append(separatorAction8);
     thumbViewActions->append(renameAction);
     thumbViewActions->append(deleteImagesAction);
-    thumbViewActions->append(separatorAction7);
-    thumbViewActions->append(diagnosticsSelectionAction);
-    thumbViewActions->append(diagnosticsCurrentAction);
-    thumbViewActions->append(diagnosticsMetadataAction);
-    thumbViewActions->append(diagnosticsDataModelAction);
-    thumbViewActions->append(diagnosticsMetadataCacheAction);
-    thumbViewActions->append(diagnosticsImageCacheAction);
-    thumbViewActions->append(diagnosticsMemoryAction);
-    thumbViewActions->append(separatorAction0);
-    thumbViewActions->append(diagnosticsSessionIssuesAction);
-    thumbViewActions->append(showLogAction);
-    // thumbViewActions->append(helpFilmStripAction);
+    // thumbViewActions->append(separatorAction7);
+    // thumbViewActions->append(diagnosticsSelectionAction);
+    // thumbViewActions->append(diagnosticsCurrentAction);
+    // thumbViewActions->append(diagnosticsMetadataAction);
+    // thumbViewActions->append(diagnosticsDataModelAction);
+    // thumbViewActions->append(diagnosticsMetadataCacheAction);
+    // thumbViewActions->append(diagnosticsImageCacheAction);
+    // thumbViewActions->append(diagnosticsMemoryAction);
+    // thumbViewActions->append(separatorAction0);
+    // thumbViewActions->append(diagnosticsSessionIssuesAction);
+    // thumbViewActions->append(showLogAction);
+
     // docking panels context menus
     thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);

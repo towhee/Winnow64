@@ -421,8 +421,27 @@ Q_NAMESPACE
     extern IssueLog *issueLog;
     extern void newIssueLog();
     extern QMutex issueListMutex;
+
+    // Severity threshold — issues at or below this level are dropped before
+    // any allocation. Defaults to Info: Debug + Comment are filtered.
+    // Bumped temporarily via G::isVerboseIssues for diagnostic sessions.
+    extern int issueThreshold;
+    extern bool isVerboseIssues;
+
+    // Cap on G::issueList growth (ring buffer). The full record still goes
+    // to IssueLog::log() on disk; issueList is the in-memory tail.
+    extern int issueListMaxSize;
+
     extern void issue(QString type, QString msg = "", QString src = "",
                       int sfRow = -1, QString fPath = "");
+
+    // Coalesce duplicate issues per (src, type, msg) — caller passes a
+    // hint, the function counts repeats and logs only first + summary.
+    extern void issueDedup(QString type, QString msg, QString src,
+                           int sfRow = -1, QString fPath = "");
+    extern QStringList issueDedupReport();
+    extern void issueDedupReset();
+    extern void issueBeginSession();
 
     extern void wait(int ms);
     extern QString s(QVariant x);

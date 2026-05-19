@@ -155,7 +155,7 @@ void ImageDecoder::decode(int row, int instance)
     if (instance != dm->instance) {
         status = Status::InstanceClash;
         errMsg = "Instance clash.  New folder selected, processing old folder.";
-        G::issue("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
+        G::issueDedup("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
         setIdle();
         emit done(threadId, int(status), sfRow, QImage(), fPath, 0);
         if (isDebug)
@@ -254,12 +254,7 @@ bool ImageDecoder::load()
         return false;
     }
 
-    /* get image type (extension)
-       can cause crash: QFileInfo fileInfo(fPath);  or
-                        ext = fPath.section('.', -1).toLower(); */
-    // ext = n.ext;
     ext = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
-    // qDebug() << "ImageDecoder::load" << sfRow << ext << fPath;
 
     // do not cache video files
     if (metadata->videoFormats.contains(ext)) {
