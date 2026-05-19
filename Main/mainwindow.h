@@ -259,6 +259,7 @@ public:
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
     bool isStartingWhileUpdating = true;
+    bool isFirstImageSelected = true;
 
     // appearance
     bool isImageInfoVisible;

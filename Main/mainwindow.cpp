@@ -25,6 +25,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     if (argList.length() > 1)
         isStartupArgs = true;
 
+    //
+
     /* TESTING / DEBUGGING FLAGS
        Note G::isLogger is in globals.cpp */
     G::showAllTableColumns = false;     // show all table fields for debugging
@@ -1988,8 +1990,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             {
                 centralLayout->setCurrentIndex(LoupeTab);
             }
+            qDebug() << fun << "loadImage";
             if (imageView->loadImage(fPath, false, fun)) {
-                updateClassification();
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                     loupeDisplay(fun);
                 }
@@ -3271,7 +3273,7 @@ void MW::embelTemplateChange(int id)
     if (id == 0) {
         embelRunBtn->setVisible(false);
         setRatingBadgeVisibility();
-        setShootingInfoVisibility();
+        // setShootingInfoVisibility();
     }
     else {
         if (dm->rowCount()) {
@@ -4316,7 +4318,7 @@ void MW::updateState()
     setMetadataDockVisibility();
     setEmbelDockVisibility();
     setThumbDockVisibity();
-    setShootingInfoVisibility();
+    // setShootingInfoVisibility();
     updateStatusBar();
     //setActualDevicePixelRation();
     isUpdatingState = false;

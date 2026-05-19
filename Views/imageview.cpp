@@ -71,7 +71,8 @@ ImageView::ImageView(QWidget *parent,
     moveImageLocked = false;
     infoOverlay = new DropShadowLabel(this);
     infoOverlay->setStyleSheet("font-size: " + QString::number(infoOverlayFontSize) + "pt;");
-    infoOverlay->setVisible(isShootingInfoVisible);
+    infoOverlay->setVisible(false);
+    // infoOverlay->setVisible(isShootingInfoVisible);
     infoOverlay->setAttribute(Qt::WA_TranslucentBackground, true);
     infoOverlay->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
@@ -146,7 +147,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     bool isDebug = false;
     bool isCurrent = (fPath == currentImagePath);
 
-    if (isDebug)
+    // if (isDebug)
     {
         qDebug() << srcFun
          << "sfRow =" << dm->proxyRowFromPath(fPath, srcFun)
@@ -530,6 +531,7 @@ void ImageView::placeClassificationBadge()
 */
     if (G::isLogger) G::log("ImageView::placeClassificationBadge");
 
+    classificationLabel->setDiameter(0);  // hide, not being used
     return; // not used
 
     QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());

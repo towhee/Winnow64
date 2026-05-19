@@ -570,6 +570,13 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
         updateClassification();
+        /* Hide Info until first image shown.  If Winnow is interrupted by an OS
+           permission request then we do not want an info to show */
+        if (isFirstImageSelected) {
+            // qDebug() << fun << "isFirstImageSelected =" << isFirstImageSelected;
+            setShootingInfoVisibility();
+            isFirstImageSelected = false;
+        }
     }
 
     thumbView->refreshIcon(sfIdx, srcFun);
