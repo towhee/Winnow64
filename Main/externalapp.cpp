@@ -107,7 +107,7 @@ void MW::runExternalApp()
 
     // get list of selected or picked image files to send to external app
 //    if (!dm->getSelection(arguments)) return;
-    dm->getSelection(files);
+    dm->getSelectionOrPicks(files);
     int nFiles = files.size();
 
     if (nFiles < 1) {

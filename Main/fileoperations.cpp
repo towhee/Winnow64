@@ -148,7 +148,7 @@ void MW::renameSelectedFiles()
     // rgh redo to make folder agnostic (change RenameFileDlg?)
     QString folderPath = dm->folderList.at(0);
     QStringList selection;
-    if (!dm->getSelection(selection)) return;
+    if (!dm->getSelectionOrPicks(selection)) return;
     // getSelection can return true with an empty list (no picks, no selection);
     // opening the dialog in that state crashes when updateExample touches
     // selection.at(0) via the combobox's currentTextChanged signal.

@@ -3095,49 +3095,47 @@ int DataModel::nearestPick()    // not used
 //    return nullptr;
 //}
 
-bool DataModel::getSelection(QStringList &list)
+bool DataModel::getSelectionOrPicks(QStringList &list)
 {
 /*
     Adds each image that is selected or picked as a file path to list. If there
     are picks and a selection then a dialog offers the user a choice to use.
 */
     if (G::isLogger) G::log("DataModel::getSelection");
-    if (isDebug) qDebug() << "DataModel::getSelection" << "instance =" << instance;
+    // if (isDebug)
+        qDebug() << "DataModel::getSelection"
+                 << "instance =" << instance
+                 << "isAnyPick() =" << isAnyPick()
+                 << "selectionModel->selectedRows().size() =" << selectionModel->selectedRows().size()
+            ;
 
     bool usePicks = false;
 
-    // nothing picked or selected
-    if (isPick() && selectionModel->selectedRows().size() == 0) {
+    // nothing picked and nothing selected
+    if (!isAnyPick() && selectionModel->selectedRows().size() == 0) {
         G::popup->showPopup("Oops.  There are no picks or selected images.", 2000);
         return false;
     }
 
-    // picks = selection
-    bool picksEqualsSelection = true;
-    for (int row = 0; row < sf->rowCount(); row++) {
-        bool isPicked = sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
-        bool isSelected = selectionModel->isSelected(sf->index(row, 0));
-        if (isPicked != isSelected) {
-            picksEqualsSelection = false;
-            break;
+    // picked != selected then choose which to use
+    if (isAnyPick()) {
+        for (int row = 0; row < sf->rowCount(); row++) {
+            bool isPicked = sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "Picked";
+            bool isSelected = selectionModel->isSelected(sf->index(row, 0));
+            if (isPicked != isSelected) {
+                SelectionOrPicksDlg::Option option;
+                SelectionOrPicksDlg dlg(option);
+                dlg.exec();
+                if (option == SelectionOrPicksDlg::Option::Cancel) return false;
+                if (option == SelectionOrPicksDlg::Option::Picks) usePicks = true;
+                break;
+            }
         }
-    }
-
-    if (!picksEqualsSelection) {
-        // use picks or selected
-        if (isPick() && selectionModel->selectedRows().size() > 1) {
-            SelectionOrPicksDlg::Option option;
-            SelectionOrPicksDlg dlg(option);
-            dlg.exec();
-            if (option == SelectionOrPicksDlg::Option::Cancel) return false;
-            if (option == SelectionOrPicksDlg::Option::Picks) usePicks = true;
-        }
-        else if (isPick()) usePicks = true;
     }
 
     if (usePicks) {
         for (int row = 0; row < sf->rowCount(); row++) {
-            if (sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true") {
+            if (sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "Picked") {
                 QModelIndex idx = sf->index(row, 0);
                 list << idx.data(G::PathRole).toString();
             }
@@ -3155,40 +3153,11 @@ bool DataModel::getSelection(QStringList &list)
     return true;
 }
 
-QStringList DataModel::getSelectionOrPicks()
+bool DataModel::isAnyPick()
 {
-    if (G::isLogger) G::log("DataModel::getSelectionOrPicks");
-    if (isDebug) qDebug() << "DataModel::getSelectionOrPicks" << "instance =" << instance;
-
-    QStringList picks;
-
-    // build QStringList of picks
-    if (isPick()) {
-        for (int row = 0; row < sf->rowCount(); ++row) {
-            QModelIndex pickIdx = sf->index(row, G::PickColumn);
-            QModelIndex idx = sf->index(row, 0);
-            // only picks
-            if (pickIdx.data(Qt::EditRole).toString() == "true") {
-                picks << idx.data(G::PathRole).toString();
-            }
-        }
-    }
-
-    // build QStringList of selected images
-    else if (selectionModel->selectedRows().size() > 0) {
-        QModelIndexList idxList = selectionModel->selectedRows();
-        for (int i = 0; i < idxList.size(); ++i) {
-            int row = idxList.at(i).row();
-            QModelIndex idx = sf->index(row, 0);
-            picks << idx.data(G::PathRole).toString();
-        }
-    }
-
-    return picks;
-}
-
-bool DataModel::isPick()
-{
+/*
+    Returns true if any row is picked.
+*/
     if (G::isLogger) G::log("DataModel::isPick");
     if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance;
     for (int row = 0; row < rowCount(); ++row) {
