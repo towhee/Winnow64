@@ -33,7 +33,7 @@
     <number>9</number>
    </property>
    <property name="topMargin">
-    <number>9</number>
+    <number>0</number>
    </property>
    <property name="rightMargin">
     <number>0</number>
@@ -67,13 +67,16 @@
      <property name="widgetResizable">
       <bool>true</bool>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
      <widget class="QWidget" name="scrollAreaWidgetContents">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>0</y>
         <width>870</width>
-        <height>884</height>
+        <height>893</height>
        </rect>
       </property>
       <property name="minimumSize">
@@ -745,6 +748,9 @@
        </property>
        <property name="title">
         <string>Select destination folder</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
        </property>
        <widget class="QPushButton" name="selectFolderBtn">
         <property name="enabled">
