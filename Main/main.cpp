@@ -100,6 +100,7 @@ int main(int argc, char *argv[])
 
     // start program
     QCoreApplication::addLibraryPath("./");
+    // QApplication::setStyle(QStyleFactory::create("Fusion"));
     MW mw(args);
 
     // // hide root in FSTree after loaded
