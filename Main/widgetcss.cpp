@@ -637,10 +637,14 @@ QString WidgetCSS::pushButton()
     "}"
 
     "QPushButton:disabled {"
-        "background-color: " + QColor(d5,d5,d5).name() + ";"
-        "color:" + disabledColor.name() + ";"
-    "}";
-}
+    "background-color: " + QColor(d5,d5,d5).name() + ";"
+      "color:" + disabledColor.name() + ";"
+    "}"
+
+    "QDialogButtonBox QPushButton {"
+    "min-height: 24px;"
+    "min-width: 75px;"
+    "}";}
 
 QString WidgetCSS::comboBox()
 {
@@ -650,7 +654,7 @@ QString WidgetCSS::comboBox()
         "border-width: 1px;"
         "border-style: solid;"
         "border-color: " + borderColor.name() + ";"
-        "border-radius: 2px;"
+        "border-radius: 10px;"
         "padding: 0px 10px 1px 8px;"  /*text  top, right, bottom, left*/
         "min-width: 6em;"
     "}"

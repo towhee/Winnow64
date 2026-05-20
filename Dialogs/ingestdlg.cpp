@@ -1730,10 +1730,10 @@ void IngestDlg::showEvent(QShowEvent *event)
 {
     if (G::isLogger) G::log("IngestDlg::showEvent");
     QDialog::showEvent(event);
-    ui->autoIngestTab->setStyleSheet(
-        "QWidget {border-color:" + G::tabWidgetBorderColor.name() + ";border-radius: 0px;}"
-        "QPushButton, QComboBox, QLineEdit {border-color:" + G::borderColor.name() + ";}"
-    );
+    // ui->autoIngestTab->setStyleSheet(
+    //     "QWidget {border-color:" + G::tabWidgetBorderColor.name() + ";border-radius: 0px;}"
+    //     "QPushButton, QComboBox, QLineEdit {border-color:" + G::borderColor.name() + ";}"
+    // );
     updateEnabledState();
 }
 

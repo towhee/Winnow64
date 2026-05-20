@@ -56,13 +56,13 @@
       </size>
      </property>
      <property name="frameShape">
-      <enum>QFrame::Shape::NoFrame</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <property name="lineWidth">
       <number>0</number>
      </property>
      <property name="verticalScrollBarPolicy">
-      <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
+      <enum>Qt::ScrollBarAsNeeded</enum>
      </property>
      <property name="widgetResizable">
       <bool>true</bool>
@@ -353,7 +353,7 @@
            <string notr="true">color:rgb(180,180,120)</string>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="text">
            <string/>
@@ -493,7 +493,7 @@
            <string notr="true">color:rgb(180,180,120)</string>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="text">
            <string/>
@@ -576,7 +576,7 @@
            <string/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="text">
            <string>...</string>
@@ -716,7 +716,7 @@
            <string notr="true">color:rgb(180,180,120)</string>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="text">
            <string/>
@@ -753,10 +753,28 @@
         <property name="geometry">
          <rect>
           <x>120</x>
-          <y>320</y>
+          <y>315</y>
           <width>101</width>
-          <height>25</height>
+          <height>32</height>
          </rect>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>32</height>
+         </size>
         </property>
         <property name="font">
          <font>
@@ -849,7 +867,7 @@
          <string notr="true"/>
         </property>
         <property name="frameShape">
-         <enum>QFrame::Shape::Box</enum>
+         <enum>QFrame::NoFrame</enum>
         </property>
         <property name="text">
          <string/>
@@ -898,9 +916,6 @@
           <property name="text">
            <string>Destination folder:</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
          </widget>
          <widget class="QLabel" name="folderLabel">
           <property name="geometry">
@@ -924,7 +939,7 @@
            <string notr="true"/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="text">
            <string/>
@@ -951,9 +966,6 @@
           <property name="text">
            <string>Template:</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
          </widget>
          <widget class="QPushButton" name="selectRootFolderBtn">
           <property name="geometry">
@@ -961,14 +973,26 @@
             <x>61</x>
             <y>16</y>
             <width>120</width>
-            <height>25</height>
+            <height>32</height>
            </rect>
           </property>
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
           </property>
           <property name="font">
            <font>
@@ -1065,9 +1089,6 @@ margin-left =  5px</string>
           <property name="text">
            <string>Append Description:</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
          </widget>
          <widget class="QLabel" name="rootFolderLabel">
           <property name="geometry">
@@ -1088,7 +1109,7 @@ margin-left =  5px</string>
            <string/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="text">
            <string/>
@@ -1098,10 +1119,28 @@ margin-left =  5px</string>
           <property name="geometry">
            <rect>
             <x>600</x>
-            <y>50</y>
+            <y>47</y>
             <width>151</width>
-            <height>25</height>
+            <height>32</height>
            </rect>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
           </property>
           <property name="font">
            <font>
@@ -1133,10 +1172,28 @@ margin-left =  5px</string>
           <property name="geometry">
            <rect>
             <x>600</x>
-            <y>89</y>
+            <y>86</y>
             <width>151</width>
-            <height>25</height>
+            <height>32</height>
            </rect>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
           </property>
           <property name="font">
            <font>
@@ -1191,7 +1248,7 @@ margin-left =  5px</string>
            <string notr="true"/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="text">
            <string/>
@@ -1218,9 +1275,6 @@ margin-left =  5px</string>
           <property name="text">
            <string>Template:</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
          </widget>
          <widget class="QPushButton" name="selectRootFolderBtn_2">
           <property name="geometry">
@@ -1228,8 +1282,26 @@ margin-left =  5px</string>
             <x>61</x>
             <y>16</y>
             <width>120</width>
-            <height>25</height>
+            <height>32</height>
            </rect>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
           </property>
           <property name="font">
            <font>
@@ -1322,9 +1394,6 @@ margin-left =  5px</string>
           <property name="text">
            <string>Append Description:</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
          </widget>
          <widget class="QLabel" name="destinationFolderLabel_2">
           <property name="geometry">
@@ -1347,9 +1416,6 @@ margin-left =  5px</string>
           <property name="text">
            <string>Destination folder:</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-          </property>
          </widget>
          <widget class="QLabel" name="rootFolderLabel_2">
           <property name="geometry">
@@ -1370,7 +1436,7 @@ margin-left =  5px</string>
            <string/>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="text">
            <string/>
@@ -1380,16 +1446,28 @@ margin-left =  5px</string>
           <property name="geometry">
            <rect>
             <x>600</x>
-            <y>50</y>
+            <y>47</y>
             <width>151</width>
-            <height>25</height>
+            <height>32</height>
            </rect>
           </property>
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
           </property>
           <property name="font">
            <font>
@@ -1421,10 +1499,28 @@ margin-left =  5px</string>
           <property name="geometry">
            <rect>
             <x>600</x>
-            <y>89</y>
+            <y>86</y>
             <width>151</width>
-            <height>25</height>
+            <height>32</height>
            </rect>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
+           </size>
           </property>
           <property name="font">
            <font>
@@ -1460,14 +1556,26 @@ margin-left =  5px</string>
           <x>640</x>
           <y>36</y>
           <width>151</width>
-          <height>25</height>
+          <height>32</height>
          </rect>
         </property>
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>32</height>
+         </size>
         </property>
         <property name="font">
          <font>
@@ -1494,8 +1602,26 @@ margin-left =  5px</string>
           <x>120</x>
           <y>350</y>
           <width>101</width>
-          <height>25</height>
+          <height>32</height>
          </rect>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>32</height>
+         </size>
         </property>
         <property name="font">
          <font>
@@ -1524,7 +1650,7 @@ margin-left =  5px</string>
         <property name="geometry">
          <rect>
           <x>240</x>
-          <y>350</y>
+          <y>354</y>
           <width>561</width>
           <height>25</height>
          </rect>
@@ -1542,7 +1668,7 @@ margin-left =  5px</string>
          <string notr="true"/>
         </property>
         <property name="frameShape">
-         <enum>QFrame::Shape::Box</enum>
+         <enum>QFrame::NoFrame</enum>
         </property>
         <property name="text">
          <string/>
@@ -1592,7 +1718,7 @@ margin-left =  5px</string>
          <string notr="true"/>
         </property>
         <property name="frameShape">
-         <enum>QFrame::Shape::Box</enum>
+         <enum>QFrame::NoFrame</enum>
         </property>
         <property name="text">
          <string/>
@@ -1618,9 +1744,6 @@ margin-left =  5px</string>
         </property>
         <property name="text">
          <string>Start sequence from:</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
        </widget>
        <widget class="QSpinBox" name="spinBoxStartNumber">
@@ -1669,9 +1792,6 @@ margin-left =  5px</string>
         <property name="text">
          <string>Template:</string>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-        </property>
        </widget>
        <widget class="QComboBox" name="filenameTemplatesCB">
         <property name="geometry">
@@ -1696,16 +1816,28 @@ margin-left =  5px</string>
         <property name="geometry">
          <rect>
           <x>630</x>
-          <y>35</y>
+          <y>32</y>
           <width>161</width>
-          <height>25</height>
+          <height>32</height>
          </rect>
         </property>
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>32</height>
+         </size>
         </property>
         <property name="font">
          <font>
@@ -1815,9 +1947,6 @@ margin-left =  5px</string>
        <property name="value">
         <number>0</number>
        </property>
-       <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignCenter</set>
-       </property>
        <property name="textVisible">
         <bool>false</bool>
        </property>
@@ -1859,10 +1988,22 @@ margin-left =  5px</string>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
          <widget class="QPushButton" name="cancelBtn">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
             <width>93</width>
-            <height>0</height>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
            </size>
           </property>
           <property name="font">
@@ -1884,10 +2025,22 @@ margin-left =  5px</string>
         </item>
         <item>
          <widget class="QPushButton" name="okBtn">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
             <width>93</width>
-            <height>0</height>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
            </size>
           </property>
           <property name="font">
@@ -1897,7 +2050,7 @@ margin-left =  5px</string>
            </font>
           </property>
           <property name="focusPolicy">
-           <enum>Qt::FocusPolicy::StrongFocus</enum>
+           <enum>Qt::NoFocus</enum>
           </property>
           <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Shortcut is Q to ingest.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700; color:#63e4dd;&quot;&gt;Productivity tip&lt;/span&gt;&lt;span style=&quot; color:#63e4dd;&quot;&gt;:  &lt;/span&gt;While you are making your picks, you can rapidly ingest and continue to make additional picks by pressing &lt;span style=&quot; font-weight:700;&quot;&gt;QQ&lt;/span&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1926,9 +2079,6 @@ margin-left =  5px</string>
        </property>
        <property name="text">
         <string>Drive space</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
        </property>
       </widget>
       <widget class="QCheckBox" name="backgroundIngestChk">
@@ -1969,11 +2119,8 @@ margin-left =  5px</string>
        <property name="styleSheet">
         <string notr="true"/>
        </property>
-       <property name="frameShadow">
-        <enum>QFrame::Shadow::Plain</enum>
-       </property>
        <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
+        <enum>Qt::Vertical</enum>
        </property>
       </widget>
      </widget>

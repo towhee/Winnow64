@@ -105,7 +105,7 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
     // The dialog has no top-level layout, so sizeHint() underestimates the
     // geometry-rect height (Qt then opens shorter than the .ui declares).
     // Pin the height explicitly in both branches.
-    const int fullHeight = 430;
+    const int fullHeight = 440;
     const int shift = 125;  // templateGroupBox y=135 → 10 when simple is hidden
     if (selection.count() == 1) {
         QFileInfo info(selection.at(0));

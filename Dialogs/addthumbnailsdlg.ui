@@ -95,6 +95,12 @@
      </item>
      <item>
       <widget class="QPushButton" name="cancelBtn">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>32</height>
+        </size>
+       </property>
        <property name="text">
         <string>Close</string>
        </property>
@@ -102,6 +108,12 @@
      </item>
      <item>
       <widget class="QPushButton" name="addBtn">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>32</height>
+        </size>
+       </property>
        <property name="text">
         <string>Embed Thumbnails in Folder</string>
        </property>
