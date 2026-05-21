@@ -1166,6 +1166,7 @@ private:
 
     // slideShow counter
     int slideCount = 0;
+    bool prevUseImageCache = true;
 
     // used in visibility and focus setting for docks
     enum {SetFocus, SetVisible, SetInvisible} dockToggle;

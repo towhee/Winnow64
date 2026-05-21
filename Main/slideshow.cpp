@@ -8,7 +8,8 @@ void MW::slideShow()
         G::popup->showPopup("Slideshow has been terminated.", 2000);
         G::isSlideShow = false;
         slideCount = 0;
-        // not finisheduseImageCache = true;
+        G::useImageCache = prevUseImageCache;
+        QApplication::restoreOverrideCursor();
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
         updateStatus(true, "", "MW::slideShow");
@@ -27,6 +28,8 @@ void MW::slideShow()
     else {
         // start slideshow
         slideCount = 0;
+        prevUseImageCache = G::useImageCache;
+        QApplication::setOverrideCursor(Qt::BlankCursor);
         imageView->setCursor(Qt::BlankCursor);
         G::isSlideShow = true;
 //        isSlideshowPaused = false;
