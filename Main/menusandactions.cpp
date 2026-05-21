@@ -2839,15 +2839,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         filterDockVisibleAction->setShortcut(QKeySequence("F5"));
         metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
         thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
-        //menuBarVisibleAction->setShortcut(QKeySequence("Shift+F9"));
+        embelDockVisibleAction->setShortcut(QKeySequence("F8"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
-
-        //        folderDockLockAction->setShortcut(QKeySequence("Shift+Alt+F3"));
-        //        favDockLockAction->setShortcut(QKeySequence("Shift+Alt+F4"));
-        //        filterDockLockAction->setShortcut(QKeySequence("Shift+Alt+F5"));
-        //        metadataDockLockAction->setShortcut(QKeySequence("Shift+Alt+F6"));
-        //        thumbDockLockAction->setShortcut(QKeySequence("Shift+Alt+F7"));
-        //        allDocksLockAction->setShortcut(QKeySequence("Ctrl+L"));
 
         // Help
         helpAction->setShortcut(QKeySequence("?"));
