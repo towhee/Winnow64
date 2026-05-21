@@ -40,7 +40,7 @@ macx-clang {
 CONFIG += c++17
 win32:QMAKE_CXXFLAGS += /std:c++17
 win32:QMAKE_CXXFLAGS += /Zc:__cplusplus
-win32:QMAKE_CXXFLAGS += /wd4138             # supress "*/" found outside of comment
+win32:QMAKE_CXXFLAGS += /wd4138             # suppress "*/" found outside of comment
 
 # # ASan: Enable with: qmake CONFIG+=sanitize_address && make
 # CONFIG(sanitize_address) {

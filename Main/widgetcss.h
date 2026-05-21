@@ -40,6 +40,10 @@ public:
     QString h17;    // 1.7x font height
     QString h20;    // 2.0x font height
 
+    QString brInteractive;
+    QString brContainer;
+    QString brLargeObjects;
+
     int fontSize;
     int halfFontSize;
     int scrollBarWidth = 14;
@@ -64,8 +68,8 @@ public:
     QString menu();
     QString groupBox();
     QString label();
-//    QString dockTitleBar();
     QString dockWidget();
+    QString dockTabBar();
     QString toolButton();
     QString tabWidget();
     QString stackedWidget();

@@ -128,8 +128,6 @@ IngestDlg::IngestDlg(QWidget *parent,
     redText = "QLabel {color:red;}";
 
     ui->setupUi(this);
-    setStyleSheet(css);
-
 
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
@@ -1730,10 +1728,8 @@ void IngestDlg::showEvent(QShowEvent *event)
 {
     if (G::isLogger) G::log("IngestDlg::showEvent");
     QDialog::showEvent(event);
-    // ui->autoIngestTab->setStyleSheet(
-    //     "QWidget {border-color:" + G::tabWidgetBorderColor.name() + ";border-radius: 0px;}"
-    //     "QPushButton, QComboBox, QLineEdit {border-color:" + G::borderColor.name() + ";}"
-    // );
+    // fix formatting glitch (gap at top of dialog)
+    resize(width(), height() - 1);
     updateEnabledState();
 }
 

@@ -179,5 +179,8 @@ All 22 recommendations are implemented. Summary of what changed:
   Diff: 28 files, +425/-118 lines. Compile and run when ready; the new threshold defaults to Info, so behavior is conservative — toggle G::isVerboseIssues = true to
   see the Comment/Debug tier for triage.
 
-
+Folder tab tip = "Shortcut F3.<br>
+                 "  - Selects if not selected and visible.<br>"
+                 "  - Hides if currently selected"
+                 "  - Reveals if currently hidden"
 

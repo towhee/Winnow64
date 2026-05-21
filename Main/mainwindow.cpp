@@ -1041,6 +1041,30 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     filterDockTabMousePress();
                 }
             }
+
+            // dynamic tooltip on dock tabs (computed at hover time)
+            if (event->type() == QEvent::ToolTip) {
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
+                int i = tabBar->tabAt(helpEvent->pos());
+                if (i >= 0) {
+                    QString tip = dockTabToolTip(tabBar->tabText(i));
+                    if (!tip.isEmpty()) {
+                        QToolTip::showText(helpEvent->globalPos(), tip, tabBar);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // thumbDock uses Qt's default title bar (no DockTitleBar widget).
+        // ToolTip event only reaches thumbDock when cursor is on a non-child
+        // area — i.e. the title bar — so no geometry check needed.
+        if (obj == thumbDock && event->type() == QEvent::ToolTip) {
+            QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
+            QToolTip::showText(helpEvent->globalPos(),
+                               dockTabToolTip(thumbDockTabText), thumbDock);
+            return true;
         }
     }
     /*

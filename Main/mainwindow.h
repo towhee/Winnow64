@@ -1240,6 +1240,7 @@ private:
     void createEmbelDock();
     QTabBar* tabifiedBar();
     bool isDockTabified(QString tabText);
+    QString dockTabToolTip(const QString &tabText);
     void tabBarAssignRichText(QTabBar *richTextTabBar);
     bool tabBarContainsDocks(QTabBar *tabBar);
     bool isSelectedDockTab(QString tabText);
