@@ -1008,13 +1008,13 @@
        </item>
        <item>
         <property name="text">
-         <string>Application Menu</string>
+         <string>Embellish Panel</string>
         </property>
         <property name="text">
-         <string>F9</string>
+         <string>F8</string>
         </property>
         <property name="text">
-         <string>Toggles visibility</string>
+         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
         </property>
        </item>
        <item>
