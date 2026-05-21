@@ -1223,6 +1223,7 @@ void MW::createFolderDock()
     folderTitleLayout->setSpacing(0);
     folderTitleBar = new DockTitleBar("Folders", folderTitleLayout);
     folderDock->setTitleBarWidget(folderTitleBar);
+    folderTitleBar->setToolTip(dockTabToolTip(folderDockTabText));
 
     // add widgets to the right side of the title bar layout
     // toggle expansion button
@@ -1286,6 +1287,7 @@ void MW::createFavDock()
     favTitleLayout->setSpacing(0);
     favTitleBar = new DockTitleBar("Bookmarks", favTitleLayout);
     favDock->setTitleBarWidget(favTitleBar);
+    favTitleBar->setToolTip(dockTabToolTip(favDockTabText));
 
     // add widgets to the right side of the title bar layout
     // refresh button
@@ -1343,6 +1345,7 @@ void MW::createFilterDock()
     filterTitleLayout->setSpacing(0);
     filterTitleBar = new DockTitleBar("Filters", filterTitleLayout);
     filterDock->setTitleBarWidget(filterTitleBar);
+    filterTitleBar->setToolTip(dockTabToolTip(filterDockTabText));
     connect(filterDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     // add widgets to the right side of the title bar layout
@@ -1440,6 +1443,7 @@ void MW::createMetadataDock()
     metaTitleLayout->setSpacing(0);
     metaTitleBar = new DockTitleBar("Metadata", metaTitleLayout);
     metadataDock->setTitleBarWidget(metaTitleBar);
+    metaTitleBar->setToolTip(dockTabToolTip(metadataDockTabText));
 
     // add widgets to the right side of the title bar layout
     // preferences button
@@ -1537,6 +1541,7 @@ void MW::createEmbelDock()
     embelTitleBar = new DockTitleBar("Embellish Editor", embelTitleLayout);
 //    embelTitleBar = new DockTitleBar("Embellish                             ", embelTitleLayout);
     embelDock->setTitleBarWidget(embelTitleBar);
+    embelTitleBar->setToolTip(dockTabToolTip(embelDockTabText));
 
     // add widgets to the right side of the title bar layout
 

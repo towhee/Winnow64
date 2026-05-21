@@ -147,7 +147,7 @@ DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : 
     setTitle(title);
     titleLabel->setText(title);
     //titleLabel->setPixmap(QPixmap(":/images/icon16/anchor.png"));
-    titleLabel->setStyleSheet("border:none;");
+    titleLabel->setStyleSheet("border:none; color: #6CC1E8;");
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
 
@@ -163,7 +163,6 @@ void DockTitleBar::setStyle()
 {
     QString s = "padding-left: 2px;"
                 "border: none;"
-                "color: #6CC1E8;"
                 "font-size:" + G::strFontSize + "pt;";
     setStyleSheet(s);
 }
@@ -458,6 +457,26 @@ bool MW::isDockTabified(QString tabText)
         }
     }
     return found;
+}
+
+QString MW::dockTabToolTip(const QString &tabText)
+{
+    auto tip = [](const QString &shortcut) {
+        return QString(
+            "Shortcut %1.<br>"
+            "&nbsp;&nbsp;- Selects if not selected and visible.<br>"
+            "&nbsp;&nbsp;- Hides if currently selected.<br>"
+            "&nbsp;&nbsp;- Reveals if currently hidden."
+        ).arg(shortcut);
+    };
+
+    if (tabText == folderDockTabText)   return tip("F3");
+    if (tabText == favDockTabText)      return tip("F4");
+    if (tabText == filterDockTabText)   return tip("F5");
+    if (tabText == metadataDockTabText) return tip("F6");
+    if (tabText == thumbDockTabText)    return tip("F7");
+    if (tabText == embelDockTabText)    return tip("F8");
+    return QString();
 }
 
 bool MW::isSelectedDockTab(QString tabText)
