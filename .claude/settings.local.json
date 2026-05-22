@@ -21,7 +21,8 @@
       "Bash(xcode-select -p)",
       "Bash(/opt/homebrew/lib/QtCore.framework/Versions/A/QtCore)",
       "Bash(defaults read *)",
-      "Bash(brew list *)"
+      "Bash(brew list *)",
+      "Bash(awk -F/ '{print $1\"/\"$2}')"
     ]
   }
 }
