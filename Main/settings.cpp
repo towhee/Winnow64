@@ -235,6 +235,23 @@ void MW::writeSettings()
 //    setting->endGroup();
 
 //    saveWorkspaces();
+
+    // dock collapse state and per-area solo mode
+    settings->beginGroup("DockCollapsed");
+    if (folderDock)   settings->setValue("FolderDock", folderDock->isCollapsed());
+    if (favDock)      settings->setValue("BookmarkDock", favDock->isCollapsed());
+    if (filterDock)   settings->setValue("FilterDock", filterDock->isCollapsed());
+    if (metadataDock) settings->setValue("MetadataDock", metadataDock->isCollapsed());
+    if (thumbDock)    settings->setValue("ThumbDock", thumbDock->isCollapsed());
+    if (embelDock)    settings->setValue("EmbelDock", embelDock->isCollapsed());
+    settings->endGroup();
+
+    settings->beginGroup("DockSoloMode");
+    settings->setValue("Left",   m_dockSoloMode.value(Qt::LeftDockWidgetArea,   false));
+    settings->setValue("Right",  m_dockSoloMode.value(Qt::RightDockWidgetArea,  false));
+    settings->setValue("Top",    m_dockSoloMode.value(Qt::TopDockWidgetArea,    false));
+    settings->setValue("Bottom", m_dockSoloMode.value(Qt::BottomDockWidgetArea, false));
+    settings->endGroup();
 }
 
 bool MW::loadSettings()
@@ -515,6 +532,15 @@ bool MW::loadSettings()
     */
     settings->beginGroup("IngestDescriptionCompleter");
     ingestDescriptionCompleter = settings->childKeys();
+    settings->endGroup();
+
+    // dock solo-mode state per area (collapsed-state itself is applied
+    // post-restoreState in showEvent — see MW::applyDockCollapseState)
+    settings->beginGroup("DockSoloMode");
+    m_dockSoloMode.insert(Qt::LeftDockWidgetArea,   settings->value("Left",   false).toBool());
+    m_dockSoloMode.insert(Qt::RightDockWidgetArea,  settings->value("Right",  false).toBool());
+    m_dockSoloMode.insert(Qt::TopDockWidgetArea,    settings->value("Top",    false).toBool());
+    m_dockSoloMode.insert(Qt::BottomDockWidgetArea, settings->value("Bottom", false).toBool());
     settings->endGroup();
 
     loadWorkspaces();

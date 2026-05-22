@@ -293,6 +293,10 @@ void MW::showEvent(QShowEvent *event)
         defaultWorkspace();
     }
 
+    // Apply persisted per-dock collapsed flag. Deferred so the just-restored
+    // dock geometries have settled before setCollapsed() snapshots them.
+    QTimer::singleShot(0, this, &MW::applyDockCollapseState);
+
     if (G::mode == "Loupe" && !thumbDock->isVisible()) {
         thumbDock->setVisible(true);
         thumbDock->raise();
@@ -3630,6 +3634,7 @@ void MW::setBackgroundShade(int shade)
     favTitleBar->setStyle();
     filterTitleBar->setStyle();
     metaTitleBar->setStyle();
+    embelTitleBar->setStyle();
     statusBar()->setStyleSheet(css);
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
     #ifdef Q_OS_WIN
