@@ -1,16 +1,4 @@
-<<<<<<< Updated upstream
 *.user
-*.user
-=======
-<<<<<<< Updated upstream
-*.user
-=======
-
-*.user
->>>>>>> Stashed changes
-
-*.user
->>>>>>> Stashed changes
 Makefile
 Makefile.Debug
 Makefile.Release
@@ -1686,3 +1674,7 @@ Winnow_resource.rc
 Lib/libtiff
 /Lib
 Lib/.DS_Store
+
+# CMake
+build/
+CMakeUserPresets.json

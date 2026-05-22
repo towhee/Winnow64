@@ -434,8 +434,8 @@ void MW::enableStatusBarBtns()
 {
     if (G::isLogger) G::log("MW::enableStatusBarBtns");
     bool enable = dm->rowCount() > 0 && G::allMetadataLoaded;
-    colorManageToggleBtn->setEnabled(enable);
-    reverseSortBtn->setEnabled(enable);
+    // colorManageToggleBtn->setEnabled(enable);
+    // reverseSortBtn->setEnabled(enable);
 }
 
 void MW::toggleSortDirectionClick()

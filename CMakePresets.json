@@ -1,0 +1,81 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "_base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "$env{QT_DIR}"
+      }
+    },
+
+    {
+      "name": "mac-debug",
+      "displayName": "macOS Debug",
+      "inherits": "_base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "HOMEBREW_PREFIX": "/opt/homebrew"
+      }
+    },
+    {
+      "name": "mac-release",
+      "displayName": "macOS Release",
+      "inherits": "_base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "HOMEBREW_PREFIX": "/opt/homebrew"
+      }
+    },
+
+    {
+      "name": "win-debug",
+      "displayName": "Windows Debug (VS 2019, x64)",
+      "inherits": "_base",
+      "generator": "Visual Studio 16 2019",
+      "architecture": "x64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "win-release",
+      "displayName": "Windows Release (VS 2019, x64)",
+      "inherits": "_base",
+      "generator": "Visual Studio 16 2019",
+      "architecture": "x64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    { "name": "mac-debug",   "configurePreset": "mac-debug"   },
+    { "name": "mac-release", "configurePreset": "mac-release" },
+    { "name": "win-debug",   "configurePreset": "win-debug",   "configuration": "Debug"   },
+    { "name": "win-release", "configurePreset": "win-release", "configuration": "Release" }
+  ]
+}
