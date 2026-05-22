@@ -1257,6 +1257,20 @@ void MW::createFolderDock()
     // Spacer
     folderTitleLayout->addSpacing(10);
 
+    // collapse/expand body button
+    BarBtn *folderCollapseBtn = new BarBtn();
+    folderCollapseBtn->setIcon(QIcon(":/images/icon16/collapse.png"));
+    folderCollapseBtn->setToolTip("Collapse panel.");
+    connect(folderCollapseBtn, &BarBtn::clicked, folderDock, &DockWidget::toggleCollapsed);
+    connect(folderDock, &DockWidget::collapsedChanged, folderCollapseBtn, [folderCollapseBtn](bool c){
+        folderCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+        folderCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+    });
+    folderTitleLayout->addWidget(folderCollapseBtn);
+
+    // Spacer
+    folderTitleLayout->addSpacing(10);
+
     // close button
     BarBtn *folderCloseBtn = new BarBtn();
     folderCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
@@ -1320,6 +1334,20 @@ void MW::createFavDock()
     // Spacer
     favTitleLayout->addSpacing(10);
 
+    // collapse/expand body button
+    BarBtn *favCollapseBtn = new BarBtn();
+    favCollapseBtn->setIcon(QIcon(":/images/icon16/collapse.png"));
+    favCollapseBtn->setToolTip("Collapse panel.");
+    connect(favCollapseBtn, &BarBtn::clicked, favDock, &DockWidget::toggleCollapsed);
+    connect(favDock, &DockWidget::collapsedChanged, favCollapseBtn, [favCollapseBtn](bool c){
+        favCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+        favCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+    });
+    favTitleLayout->addWidget(favCollapseBtn);
+
+    // Spacer
+    favTitleLayout->addSpacing(10);
+
     // close button
     BarBtn *favCloseBtn = new BarBtn();
     favCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
@@ -1362,7 +1390,7 @@ void MW::createFilterDock()
     // toggle expansion button
     BarBtn *toggleExpansionBtn = new BarBtn();
     toggleExpansionBtn->setIcon(QIcon(":/images/icon16/foldertree.png"));
-    toggleExpansionBtn->setToolTip("Toggle expand all / collapse all");
+    toggleExpansionBtn->setToolTip("Toggle expand all / collapse all in the Filters panel.");
     connect(toggleExpansionBtn, &BarBtn::clicked, filters, &Filters::toggleExpansion);
     filterTitleLayout->addWidget(toggleExpansionBtn);
 
@@ -1385,6 +1413,20 @@ void MW::createFilterDock()
     filterQuestionBtn->setToolTip("How this works");
     connect(filterQuestionBtn, &BarBtn::clicked, filters, &Filters::howThisWorks);
     filterTitleLayout->addWidget(filterQuestionBtn);
+
+    // Spacer
+    filterTitleLayout->addSpacing(10);
+
+    // collapse/expand body button
+    BarBtn *filterCollapseBtn = new BarBtn();
+    filterCollapseBtn->setIcon(QIcon(":/images/icon16/collapse.png"));
+    filterCollapseBtn->setToolTip("Collapse panel.");
+    connect(filterCollapseBtn, &BarBtn::clicked, filterDock, &DockWidget::toggleCollapsed);
+    connect(filterDock, &DockWidget::collapsedChanged, filterCollapseBtn, [filterCollapseBtn](bool c){
+        filterCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+        filterCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+    });
+    filterTitleLayout->addWidget(filterCollapseBtn);
 
     // Spacer
     filterTitleLayout->addSpacing(10);
@@ -1462,6 +1504,20 @@ void MW::createMetadataDock()
     metaQuestionBtn->setToolTip("How this works: metadata panel guide");
     connect(metaQuestionBtn, &BarBtn::clicked, infoView, &InfoView::howThisWorks);
     metaTitleLayout->addWidget(metaQuestionBtn);
+
+    // Spacer
+    metaTitleLayout->addSpacing(10);
+
+    // collapse/expand body button
+    BarBtn *metaCollapseBtn = new BarBtn();
+    metaCollapseBtn->setIcon(QIcon(":/images/icon16/collapse.png"));
+    metaCollapseBtn->setToolTip("Collapse panel.");
+    connect(metaCollapseBtn, &BarBtn::clicked, metadataDock, &DockWidget::toggleCollapsed);
+    connect(metadataDock, &DockWidget::collapsedChanged, metaCollapseBtn, [metaCollapseBtn](bool c){
+        metaCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+        metaCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+    });
+    metaTitleLayout->addWidget(metaCollapseBtn);
 
     // Spacer
     metaTitleLayout->addSpacing(10);
@@ -1609,6 +1665,20 @@ void MW::createEmbelDock()
     // Spacer
     embelTitleLayout->addSpacing(5);
 
+    // collapse/expand body button
+    BarBtn *embelCollapseBtn = new BarBtn();
+    embelCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+    embelCollapseBtn->setToolTip("Collapse panel.");
+    connect(embelCollapseBtn, &BarBtn::clicked, embelDock, &DockWidget::toggleCollapsed);
+    connect(embelDock, &DockWidget::collapsedChanged, embelCollapseBtn, [embelCollapseBtn](bool c){
+        embelCollapseBtn->setIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png", G::iconOpacity);
+        embelCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+    });
+    embelTitleLayout->addWidget(embelCollapseBtn);
+
+    // Spacer
+    embelTitleLayout->addSpacing(10);
+
     // close button
     BarBtn *embelCloseBtn = new BarBtn();
     embelCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
@@ -1645,6 +1715,21 @@ void MW::createDocks()
     MW::tabifyDockWidget(favDock, filterDock);
     if (G::useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
     if (!hideEmbellish) if (G::useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
+
+    // Solo mode enforcement: when a dock is expanded and its area is in solo
+    // mode, collapse the other docks in the same area.
+    auto wireSolo = [this](DockWidget *d) {
+        if (!d) return;
+        connect(d, &DockWidget::collapsedChanged, this, [this, d](bool collapsed) {
+            if (!collapsed) enforceDockSoloMode(d);
+        });
+    };
+    wireSolo(folderDock);
+    wireSolo(favDock);
+    wireSolo(filterDock);
+    if (G::useInfoView) wireSolo(metadataDock);
+    wireSolo(thumbDock);
+    wireSolo(embelDock);
 }
 
 void MW::createMessageView()

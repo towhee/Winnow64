@@ -1248,6 +1248,18 @@ private:
     void folderDockVisibilityChange();
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
+
+public:
+    // dock collapse/expand area-scoped helpers (used by DockTitleBar context menu)
+    QList<DockWidget*> docksInArea(Qt::DockWidgetArea area) const;
+    void collapseDocksInArea(Qt::DockWidgetArea area);
+    void expandDocksInArea(Qt::DockWidgetArea area);
+    void setDockSoloModeForArea(Qt::DockWidgetArea area, bool on);
+    bool dockSoloModeForArea(Qt::DockWidgetArea area) const;
+    void enforceDockSoloMode(DockWidget *justExpanded);
+    void applyDockCollapseState();   // restores per-dock collapsed flag from QSettings
+private:
+    QHash<Qt::DockWidgetArea, bool> m_dockSoloMode;
     void updateState();
     // bool stop(QString src = "");
     // void stopAndClearAllAfterMetaReadStopped();

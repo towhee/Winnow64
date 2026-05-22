@@ -518,6 +518,7 @@ qt_add_executable(Winnow
     ${WINNOW_HEADERS}
     ${WINNOW_FORMS}
     ${WINNOW_RESOURCES}
+    images/icon16/collapse.png images/icon16/expand.png
 )
 
 target_compile_definitions(Winnow PRIVATE
