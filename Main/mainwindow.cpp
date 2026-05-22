@@ -2014,7 +2014,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             {
                 centralLayout->setCurrentIndex(LoupeTab);
             }
-            qDebug() << fun << "loadImage";
             if (imageView->loadImage(fPath, false, fun)) {
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                     loupeDisplay(fun);
@@ -2039,7 +2038,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                                   Qt::QueuedConnection,
                                   Q_ARG(int, dm->currentSfRow));
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
-        // imageCache->setCurrentPosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
     workspaceChanged = false;
@@ -2777,7 +2775,7 @@ void MW::folderChanged(bool aborted)
 
     // rev up metaRead
     if (G::useReadMeta) {
-        updateMetadataThreadRunStatus(true, true, "MW::updateChange");
+        updateMetadataThreadRunStatus(true, true, "MW::updateChange", fun);
         dm->setIconRange(startRow);
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, startRow),
@@ -2833,8 +2831,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
 
     if (!metaLoaded) {
         if (G::useReadMeta) {
-            updateMetadataThreadRunStatus(true, true, "MW::updateChange");
-            // metaRead->setStartRow(sfRow, isFileSelectionChange, src);
+            // updateMetadataThreadRunStatus(true, true, false, fun);
             QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                       Q_ARG(int, sfRow),
                                       Q_ARG(bool, isFileSelectionChange),
@@ -2883,9 +2880,10 @@ void MW::folderChangeCompleted()
 
     // hide metadata read progress
     cacheProgressBar->clearMetaReadProgress();
+    updateMetadataThreadRunStatus(false, true, true, fun);
 
     // build filters if filter dock is visible
-    /*
+    // /*
     qDebug() << "MW::folderChangecompleted"
              << "dm->folderList.count() =" << dm->folderList.count()
              << "dm->isQueueEmpty() =" << dm->isQueueEmpty()
