@@ -395,9 +395,6 @@ void MW::closeEvent(QCloseEvent *event)
     if (G::popup != nullptr) G::popup->close();
     if (zoomDlg != nullptr) zoomDlg->close();
     hide();
-    if (!QApplication::clipboard()->image().isNull()) {
-        QApplication::clipboard()->clear();
-    }
 
     // close all open dialogs
     if (preferencesDlg != nullptr) {

@@ -298,11 +298,11 @@ QString WidgetCSS::dockWidget()
     "}"
 
     "QDockWidget::title {"
+        "text-align: left center;"
         "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
             "stop: 0 " + QColor(g1,g1,g1).name() + ", "
             "stop: 1 " + QColor(g0,g0,g0).name() + ");"
-        "padding-left: -2px;"
-        "padding-bottom: 2px;"
+        "padding: 8px;"
     "}"
      ;
 }
