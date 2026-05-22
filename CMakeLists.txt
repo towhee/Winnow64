@@ -17,6 +17,16 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
+# Work around Qt's FindWrapOpenGL.cmake (Qt 6.x) unconditionally adding
+# `-framework AGL` on macOS. AGL was removed from macOS years ago and the
+# stub framework has no binary, so the linker fails. Pre-creating the
+# WrapOpenGL::WrapOpenGL target makes Qt's find module short-circuit
+# (see lines 6-9 of FindWrapOpenGL.cmake).
+if(APPLE AND NOT TARGET WrapOpenGL::WrapOpenGL)
+    add_library(WrapOpenGL::WrapOpenGL INTERFACE IMPORTED GLOBAL)
+    target_link_libraries(WrapOpenGL::WrapOpenGL INTERFACE "-framework OpenGL")
+endif()
+
 find_package(Qt6 REQUIRED COMPONENTS
     Core Widgets Multimedia MultimediaWidgets Concurrent Svg Test
 )
@@ -181,7 +191,7 @@ set(WINNOW_SOURCES
     Main/navigate.cpp
     Main/pick.cpp
     Main/qtlocalpeer.cpp
-    Main/qtlockedfile.cpp
+    # qtlockedfile.cpp is #included by qtlocalpeer.cpp — do not compile standalone
     Main/qtsingleapplication.cpp
     Main/setandupdate.cpp
     Main/settings.cpp
@@ -474,14 +484,14 @@ if(APPLE)
         ImageFormats/Jpeg/jpegturbo.cpp
         ImageFormats/Jpeg/jpgdecoder.cpp
         ImageFormats/Tiff/libtiff.cpp
-        Main/qtlockedfile_unix.cpp
+        # qtlockedfile_unix.cpp is #included by qtlocalpeer.cpp — do not compile standalone
         Utilities/mac.mm
     )
     list(APPEND WINNOW_HEADERS
         ImageFormats/Jpeg/decoderJpg.h
         ImageFormats/Jpeg/jpeg2.h
         ImageFormats/Jpeg/jpgdecoder.h
-        ImageFormats/jpeg/jpegturbo.h
+        ImageFormats/Jpeg/jpegturbo.h
         ImageFormats/Tiff/libtiff.h
         Utilities/mac.h
     )
@@ -519,6 +529,14 @@ target_include_directories(Winnow PRIVATE
     Dialogs
     Utilities
     FocusStack
+)
+
+# qmake puts all generated ui_*.h headers in a single UI_DIR, so any source
+# can include any of them. CMake AUTOUIC by default only searches alongside
+# the .h that includes ui_*.h. Add every directory containing .ui files.
+set_target_properties(Winnow PROPERTIES
+    AUTOUIC_SEARCH_PATHS
+        "${CMAKE_CURRENT_SOURCE_DIR}/Dialogs;${CMAKE_CURRENT_SOURCE_DIR}/Embellish;${CMAKE_CURRENT_SOURCE_DIR}/Help;${CMAKE_CURRENT_SOURCE_DIR}/Metadata;${CMAKE_CURRENT_SOURCE_DIR}/Utilities"
 )
 
 target_link_libraries(Winnow PRIVATE
@@ -566,11 +584,19 @@ if(APPLE)
         "-framework CoreMedia"
     )
 
-    # OpenCV (Homebrew). find_package gives versioned + imported targets.
-    set(OpenCV_DIR "${HOMEBREW_PREFIX}/opt/opencv/lib/cmake/opencv4")
-    find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs video dnn)
-    target_link_libraries(Winnow PRIVATE ${OpenCV_LIBS})
-    target_include_directories(Winnow PRIVATE ${OpenCV_INCLUDE_DIRS})
+    # OpenCV (Homebrew). Linked directly to avoid OpenCV's CMake config pulling
+    # in transitive deps like -framework AGL (Apple's removed OpenGL framework).
+    # Mirrors the explicit LIBS approach in winnow64.pro.
+    target_link_directories(Winnow PRIVATE ${HOMEBREW_PREFIX}/lib)
+    target_link_libraries(Winnow PRIVATE
+        opencv_core.411
+        opencv_imgproc.411
+        opencv_imgcodecs
+        opencv_video
+        opencv_dnn.411
+    )
+    target_include_directories(Winnow PRIVATE
+        ${HOMEBREW_PREFIX}/opt/opencv/include/opencv4)
 
     # libtiff (Homebrew keg-only)
     find_library(TIFF_LIB tiff
@@ -616,7 +642,8 @@ if(APPLE)
             target_sources(Winnow PRIVATE "${f}")
             set_source_files_properties("${f}" PROPERTIES
                 MACOSX_PACKAGE_LOCATION "MacOS/${rel_dir}"
-                HEADER_FILE_ONLY TRUE)
+                HEADER_FILE_ONLY TRUE
+                SKIP_AUTOGEN TRUE)
         endforeach()
     endfunction()
 
@@ -627,7 +654,8 @@ if(APPLE)
     target_sources(Winnow PRIVATE ReleaseExtras/focus_point_model.onnx)
     set_source_files_properties(ReleaseExtras/focus_point_model.onnx PROPERTIES
         MACOSX_PACKAGE_LOCATION "MacOS"
-        HEADER_FILE_ONLY TRUE)
+        HEADER_FILE_ONLY TRUE
+        SKIP_AUTOGEN TRUE)
 endif()
 
 # =============================================================================
