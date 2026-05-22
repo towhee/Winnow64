@@ -1,32 +1,7 @@
 #include "ingestdlg.h"
 #include "ui_ingestdlg.h"
 #include "Utilities/htmlwindow.h"
-//#include "ui_copypickdlg.h"
 #include <QDebug>
-
-/*
-class DialogThread : public QThread
-{
-    Q_OBJECT
-
-public:
-    DialogThread(QObject *parent = 0) : QThread(parent) { }
-
-protected:
-    void run() override {
-        QDialog *dlg = new QDialog;
-        Ui::IngestAutoPath *ui = new Ui::IngestAutoPath;
-        ui->setupUi(dlg);
-        dlg->exec();
-        delete ui;
-        delete dlg;
-    }
-};
-
-// Usage:
-    DialogThread *thread = new DialogThread(this);
-    thread->start();
-*/
 
 /*
 When this dialog is invoked the files that have been picked are copied to a primary

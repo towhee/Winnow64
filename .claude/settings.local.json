@@ -15,7 +15,13 @@
       "Bash(git *)",
       "Bash(grep -rEn 'G::issue\\\\\\(' /Users/roryhill/Projects/Winnow64 --include=\"*.cpp\" --include=\"*.h\")",
       "Read(//tmp/**)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(xcrun --find clang)",
+      "Bash(xcrun --find cc)",
+      "Bash(xcode-select -p)",
+      "Bash(/opt/homebrew/lib/QtCore.framework/Versions/A/QtCore)",
+      "Bash(defaults read *)",
+      "Bash(brew list *)"
     ]
   }
 }

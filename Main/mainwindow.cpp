@@ -1371,7 +1371,7 @@ need to adjust it to fit your specific needs.
 #include <QProcess>
 
 class Updater : public QObject {
-    Q_OBJECT
+    _Q_OBJECT // remove leading _ (cmake does not like)
 
 public:
     Updater(QObject *parent = nullptr) : QObject(parent) {
@@ -3900,19 +3900,7 @@ void MW::getDisplayProfile()
     ICC::setOutProfile();
     #endif
     #ifdef Q_OS_MAC
-    /* crash waking sleep
-Thread 0 Crashed::  Dispatch queue: com.apple.main-thread
-0   CoreFoundation                	       0x1872a96f0 CF_IS_OBJC + 24
-1   CoreFoundation                	       0x187168ba4 CFURLCopyFileSystemPath + 76
-2   Winnow                        	       0x100ed92b4 Mac::getDisplayProfileURL() + 224 (mac.mm:116)
-3   Winnow                        	       0x100da2f40 MW::getDisplayProfile() + 152 (mainwindow.cpp:4252)
-4   Winnow                        	       0x100da2494 MW::setDisplayResolution() + 1476 (mainwindow.cpp:4218)
-5   Winnow                        	       0x100da48cc MW::moveEvent(QMoveEvent*) + 256 (mainwindow.cpp:801)
-6   QtWidgets                     	       0x102699e54 QWidget::event(QEvent*) + 980
-7   QtWidgets                     	       0x1027b6344 QMainWindow::event(QEvent*) + 380 (qmainwindow.cpp:1321)
-8   QtWidgets                     	       0x1026509f0 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 272 (qapplication.cpp:3287)
-9   QtWidgets                     	       0x102652368 QApplication::notify(QObject*, QEvent*) + 3356
-    */
+
     G::winOutProfilePath = Mac::getDisplayProfileURL();
     ICC::setOutProfile();
     #endif
