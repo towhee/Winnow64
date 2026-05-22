@@ -2,7 +2,6 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Use css in dialogs with form ui
 - Add IRB to dng.cpp (see Tiff::parse line 365) for faster thumbs
 - Send all warnings to console and issue log.
 - Add preference to toggle isFileLogger
