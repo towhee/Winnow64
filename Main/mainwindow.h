@@ -676,12 +676,18 @@ private slots:
     void setMetadataDockFixedSize();    // rgh finish or remove
 
     void focusOnDock(DockWidget *dockWidget);
-    void toggleThumbDockVisibity();
-    void toggleEmbelDockVisibility();
-    void toggleFolderDockVisibility();
-    void toggleFavDockVisibility();
-    void toggleFilterDockVisibility();
-    void toggleMetadataDockVisibility();
+    void closeThumbDock();
+    void closeEmbelDock();
+    void closeFolderDock();
+    void closeFavDock();
+    void closeFilterDock();
+    void closeMetadataDock();
+    void showThumbDock();
+    void showEmbelDock();
+    void showFolderDock();
+    void showFavDock();
+    void showFilterDock();
+    void showMetadataDock();
 
     void setMenuBarVisibility();
     void setStatusBarVisibility();
@@ -1165,7 +1171,7 @@ private:
     bool prevUseImageCache = true;
 
     // used in visibility and focus setting for docks
-    enum {SetFocus, SetVisible, SetInvisible} dockToggle;
+    enum {SetFocus, SetVisible} dockOption;
 
     QString prevScreenName;                 // the monitor being used be winnow
     QPoint prevScreenLoc = QPoint(-1,-1);   // the centroid of Winnow window in monitor

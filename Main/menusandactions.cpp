@@ -1360,7 +1360,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isFolderDockVisible")) folderDockVisibleAction->setChecked(settings->value("isFolderDockVisible").toBool());
     else folderDockVisibleAction->setChecked(true);
     addAction(folderDockVisibleAction);
-    connect(folderDockVisibleAction, &QAction::triggered, this, &MW::toggleFolderDockVisibility);
+    connect(folderDockVisibleAction, &QAction::triggered, this, &MW::showFolderDock);
 
     favDockVisibleAction = new QAction(tr("Bookmarks Panel"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
@@ -1369,7 +1369,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isFavDockVisible")) favDockVisibleAction->setChecked(settings->value("isFavDockVisible").toBool());
     else favDockVisibleAction->setChecked(true);
     addAction(favDockVisibleAction);
-    connect(favDockVisibleAction, &QAction::triggered, this, &MW::toggleFavDockVisibility);
+    connect(favDockVisibleAction, &QAction::triggered, this, &MW::showFavDock);
 
     filterDockVisibleAction = new QAction(tr("Filters Panel"), this);
     filterDockVisibleAction->setObjectName("toggleFilters");
@@ -1378,7 +1378,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isFilterDockVisible")) filterDockVisibleAction->setChecked(settings->value("isFilterDockVisible").toBool());
     else filterDockVisibleAction->setChecked(true);
     addAction(filterDockVisibleAction);
-    connect(filterDockVisibleAction, &QAction::triggered, this, &MW::toggleFilterDockVisibility);
+    connect(filterDockVisibleAction, &QAction::triggered, this, &MW::showFilterDock);
 
     metadataDockVisibleAction = new QAction(tr("Metadata Panel"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
@@ -1387,7 +1387,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isMetadataDockVisible")) metadataDockVisibleAction->setChecked(settings->value("isMetadataDockVisible").toBool());
     else metadataDockVisibleAction->setChecked(true);
     addAction(metadataDockVisibleAction);
-    connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::toggleMetadataDockVisibility);
+    connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::showMetadataDock);
 
     thumbDockVisibleAction = new QAction(tr("Thumbnails Panel"), this);
     thumbDockVisibleAction->setObjectName("toggleThumbs");
@@ -1396,7 +1396,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isThumbDockVisible")) thumbDockVisibleAction->setChecked(settings->value("isThumbDockVisible").toBool());
     else thumbDockVisibleAction->setChecked(true);
     addAction(thumbDockVisibleAction);
-    connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
+    connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::showThumbDock);
 
     embelDockVisibleAction = new QAction(tr("Embellish Editor Panel"), this);
     embelDockVisibleAction->setObjectName("toggleEmbelDock");
@@ -1405,7 +1405,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isEmbelDockVisible")) embelDockVisibleAction->setChecked(settings->value("isEmbelDockVisible").toBool());
     else embelDockVisibleAction->setChecked(false);
     addAction(embelDockVisibleAction);
-    connect(embelDockVisibleAction, &QAction::triggered, this, &MW::toggleEmbelDockVisibility);
+    connect(embelDockVisibleAction, &QAction::triggered, this, &MW::showEmbelDock);
 
     // rgh delete this ?
     metadataFixedSizeAction = new QAction(tr("Metadata Panel Fix Size"), this);
