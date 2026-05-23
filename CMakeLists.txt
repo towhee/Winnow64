@@ -474,6 +474,19 @@ set(WINNOW_FORMS
 set(WINNOW_RESOURCES winnow.qrc)
 
 # -----------------------------------------------------------------------------
+# Notes folder — listed so it shows up in the IDE project tree.
+# Not compiled, not processed by AUTOMOC/AUTOUIC/AUTORCC.
+# -----------------------------------------------------------------------------
+file(GLOB_RECURSE WINNOW_NOTES
+    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+    CONFIGURE_DEPENDS
+    "notes/*")
+set_source_files_properties(${WINNOW_NOTES} PROPERTIES
+    HEADER_FILE_ONLY TRUE
+    SKIP_AUTOGEN TRUE)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/notes PREFIX "notes" FILES ${WINNOW_NOTES})
+
+# -----------------------------------------------------------------------------
 # Platform-specific sources / headers
 # -----------------------------------------------------------------------------
 if(APPLE)
@@ -518,6 +531,7 @@ qt_add_executable(Winnow
     ${WINNOW_HEADERS}
     ${WINNOW_FORMS}
     ${WINNOW_RESOURCES}
+    ${WINNOW_NOTES}
     images/icon16/collapse.png images/icon16/expand.png
 )
 
