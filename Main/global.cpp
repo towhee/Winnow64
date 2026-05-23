@@ -74,6 +74,7 @@ bool useImageCache = true;
 bool useImageView = true;
 bool useInfoView = true;
 bool useDWCollapse = false;         // master switch for dock collapse/expand/solo mode
+bool useDockTitleGraphic = true;    // master switch: show a graphic instead of text on dock tabs (TEST: on for folders tab)
 bool useMultimedia = true;
 bool useUpdateStatus = true;
 bool useFilterView = true;          // not finished

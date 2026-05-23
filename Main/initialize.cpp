@@ -1214,6 +1214,8 @@ void MW::createFolderDock()
     folderTitleBar = new DockTitleBar("Folders", folderTitleLayout);
     folderDock->setTitleBarWidget(folderTitleBar);
     folderTitleBar->setToolTip(dockTabToolTip(folderDockTabText));
+    // The folders tab starts with its text title; when G::useDockTitleGraphic
+    // is on, MW::updateDockTabGraphics swaps text<->graphic per available width.
 
     // add widgets to the right side of the title bar layout
     // toggle expansion button
@@ -1715,6 +1717,14 @@ void MW::createDocks()
     MW::tabifyDockWidget(favDock, filterDock);
     if (G::useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
     if (!hideEmbellish) if (G::useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
+
+    // Re-evaluate responsive dock tab titles when a dock is dragged between
+    // docks/areas or floated: dragging into a tab group changes the tab count
+    // without a reliable resize/show on the surviving docks.
+    for (DockWidget *d : {folderDock, favDock, filterDock, metadataDock, embelDock}) {
+        connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
+        connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
+    }
 
     // Solo mode enforcement: when a dock is expanded and its area is in solo
     // mode, collapse the other docks in the same area.

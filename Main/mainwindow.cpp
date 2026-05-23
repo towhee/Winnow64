@@ -6,6 +6,195 @@
    Program notes / documentation: see notes/Documentation.txt
 */
 
+void MW::updateDockTabGraphics(QTabBar *tabBar)
+{
+/*
+    Responsive dock tab titles (gated by G::useDockTitleGraphic).
+
+    When all the text titles in a dock tab bar fit, the tabs show text;
+    otherwise they switch to white graphics. QMainWindow does not paint a dock's
+    windowIcon on tabs, and on macOS the tab is painted natively (a QProxyStyle
+    drawControl override and setTabButton geometry are both bypassed), so each
+    graphic is a QLabel parented to the tab bar and positioned by hand over the
+    centre of its tab; an invisible spacer button gives a graphic tab a minimum
+    width of 150% of the graphic.
+
+    A tab is identified by its (unique) text title when shown, and by tabData
+    (set when the title is cleared) when in graphic mode, so identity survives
+    the switch. If both are lost - a full tab-bar rebuild while in graphic mode -
+    the titles are restored so identity can be re-established on the next pass.
+
+    setWindowTitle / setTabButton / new QLabel all post events back through the
+    application event filter, so a re-entrancy guard prevents recursion.
+*/
+    static bool busy = false;
+    if (busy || !tabBar) return;
+
+    // Is this one of the dock tab bars? (QMainWindowTabBar, or - on styles where
+    // dock tabs are plain QTabBars - any tab currently showing a dock title.)
+    bool isDockBar = QString(tabBar->metaObject()->className()) == "QMainWindowTabBar";
+    if (!isDockBar)
+        for (int i = 0; i < tabBar->count(); ++i)
+            if (dockTextNames.contains(tabBar->tabText(i))) { isDockBar = true; break; }
+    if (!isDockBar) return;
+
+    const QHash<QString, QString> graphicFor = {
+        {folderDockTabText,   ":/images/icon16/foldertree_white.png"},
+        {favDockTabText,      ":/images/icon16/bookmarks_white.png"},
+        {filterDockTabText,   ":/images/icon16/filters_white.png"},
+        {metadataDockTabText, ":/images/icon16/metadata_white.png"},
+        {embelDockTabText,    ":/images/icon16/embellish_white.png"},
+    };
+    const QHash<QString, QDockWidget*> dockFor = {
+        {folderDockTabText,   folderDock},
+        {favDockTabText,      favDock},
+        {filterDockTabText,   filterDock},
+        {metadataDockTabText, metadataDock},
+        {embelDockTabText,    embelDock},
+    };
+
+    busy = true;
+
+    // Identity per tab. QMainWindow stores its own stable per-tab key in
+    // tabData (a pointer); it overwrites anything we put there on a title
+    // change, so we must not use tabData as our own store. Instead learn
+    // key -> title while the text is visible, and look it up when titles are
+    // cleared (graphic mode).
+    QStringList id;
+    bool lostIdentity = false;
+    bool anyText = false;
+    for (int i = 0; i < tabBar->count(); ++i) {
+        QString t = tabBar->tabText(i);
+        quint64 key = tabBar->tabData(i).toULongLong();
+        if (!t.isEmpty()) {
+            anyText = true;
+            if (key) dockTabTitleByKey.insert(key, t);   // learn
+        }
+        else {
+            t = dockTabTitleByKey.value(key);            // recover learned title
+        }
+        if (t.isEmpty()) lostIdentity = true;
+        id << t;
+    }
+    // Recover after a rebuild that wiped empty-text/empty-data tabs: restore
+    // text titles so the next pass can identify and re-evaluate.
+    if (lostIdentity) {
+        for (auto it = dockFor.begin(); it != dockFor.end(); ++it)
+            if (it.value() && it.value()->windowTitle().isEmpty())
+                it.value()->setWindowTitle(it.key());
+        busy = false;
+        return;
+    }
+
+    // Width the text titles need vs. the width available. In text mode the tab
+    // bar's sizeHint is exact; remember it so graphic mode uses the *same*
+    // threshold (otherwise an under-estimate makes the two modes disagree and
+    // flip-flop at the boundary). Falls back to a font estimate only before the
+    // first text-mode pass / right after a rebuild.
+    int needTextWidth;
+    if (anyText) {
+        needTextWidth = tabBar->sizeHint().width();
+        tabBar->setProperty("dockTabTextWidth", needTextWidth);
+    }
+    else {
+        needTextWidth = tabBar->property("dockTabTextWidth").toInt();
+        if (needTextWidth <= 0) {
+            int pad = qMax(tabBar->style()->pixelMetric(QStyle::PM_TabBarTabHSpace, nullptr, tabBar), 16);
+            needTextWidth = 0;
+            for (const QString &t : id)
+                needTextWidth += tabBar->fontMetrics().horizontalAdvance(t) + pad;
+        }
+    }
+    // Available width is the dock AREA width, not tabBar->width() (the tab bar
+    // shrinks to fit its tabs). Use the FRONT (visible, un-occluded) dock: a
+    // background tabbed dock can keep a stale width, so a plain max() over the
+    // group may report an old, wider value and never switch when narrowed.
+    int avail = 0;
+    for (const QString &t : id) {
+        QDockWidget *d = dockFor.value(t, nullptr);
+        if (d && d->isVisible() && !d->visibleRegion().isEmpty())
+            avail = qMax(avail, d->width());
+    }
+    if (avail <= 0)   // none clearly visible: fall back to any group dock
+        for (const QString &t : id) {
+            QDockWidget *d = dockFor.value(t, nullptr);
+            if (d) avail = qMax(avail, d->width());
+        }
+    if (avail <= 0) avail = tabBar->width();
+    bool fits = needTextWidth <= avail;
+
+    // Hide every graphic up front; the loop re-shows only the tabs in graphic
+    // mode. A dock can leave this tab bar (e.g. re-tabified into another dock)
+    // yet its label stays parented here - without this, those stale labels
+    // would linger on top of the remaining tabs (and on text titles).
+    const QList<QLabel*> existingLabels =
+        tabBar->findChildren<QLabel*>(QString(), Qt::FindDirectChildrenOnly);
+    for (QLabel *lbl : existingLabels)
+        if (lbl->objectName().startsWith("dockTabGraphic_")) lbl->hide();
+
+    for (int i = 0; i < tabBar->count(); ++i) {
+        QDockWidget *dock = dockFor.value(id.at(i), nullptr);
+        if (!dock) continue;
+        dock->toggleViewAction()->setText(id.at(i));   // keep popup-menu label
+
+        QString labelName = "dockTabGraphic_" + id.at(i);
+        QLabel *graphic = tabBar->findChild<QLabel*>(labelName, Qt::FindDirectChildrenOnly);
+
+        if (fits) {
+            if (dock->windowTitle() != id.at(i)) dock->setWindowTitle(id.at(i));
+            if (tabBar->tabButton(i, QTabBar::LeftSide))
+                tabBar->setTabButton(i, QTabBar::LeftSide, nullptr);   // deletes spacer
+            // graphic already hidden by the bulk-hide above
+        }
+        else {
+            QPixmap pm(graphicFor.value(id.at(i)));
+            if (pm.isNull()) continue;   // missing resource: leave the text title
+            if (!dock->windowTitle().isEmpty()) dock->setWindowTitle(QString());
+            if (!graphic) {
+                graphic = new QLabel(tabBar);
+                graphic->setObjectName(labelName);
+                graphic->setPixmap(pm);
+                graphic->setAttribute(Qt::WA_TransparentForMouseEvents);
+                graphic->setAttribute(Qt::WA_TranslucentBackground);
+                graphic->setStyleSheet("background: transparent;");
+                graphic->resize(graphic->pixmap().size());
+            }
+            // Minimum tab width of 150% of the graphic, via an invisible spacer
+            // button (the tab has no text to size it).
+            if (tabBar->tabButton(i, QTabBar::LeftSide) == nullptr) {
+                QWidget *spacer = new QWidget;
+                spacer->setFixedSize(graphic->pixmap().width() * 3 / 2,
+                                     graphic->pixmap().height());
+                spacer->setAttribute(Qt::WA_TransparentForMouseEvents);
+                tabBar->setTabButton(i, QTabBar::LeftSide, spacer);
+            }
+            QRect g = graphic->rect();
+            g.moveCenter(tabBar->tabRect(i).center());
+            graphic->setGeometry(g);
+            graphic->raise();
+            graphic->show();
+        }
+    }
+    busy = false;
+}
+
+void MW::scheduleDockTabUpdate()
+{
+/*
+    Re-evaluate every dock tab bar after the layout settles. Connected to each
+    tabified dock's dockLocationChanged / topLevelChanged: dragging a dock into
+    a tab group adds a tab but fires no reliable resize/show on the surviving
+    docks, so the tab count can change without the event-filter path noticing.
+    Deferred with a zero timer so the new tab and final geometry exist when it
+    runs.
+*/
+    if (!G::useDockTitleGraphic) return;
+    QTimer::singleShot(0, this, [this]() {
+        const QList<QTabBar *> bars = findChildren<QTabBar *>();
+        for (QTabBar *b : bars) updateDockTabGraphics(b);
+    });
+}
+
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::MW", "START APPLICATION", true);
@@ -1030,13 +1219,24 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             qDebug() << "MW::eventFilter obj->metaObject()->className() ="
                      << obj->metaObject()->className();
             */
+            // Responsive dock tab titles: show text when the titles fit, else
+            // switch to white graphics (see MW::updateDockTabGraphics).
+            if (G::useDockTitleGraphic
+                    && event->type() != QEvent::Paint
+                    && event->type() != QEvent::UpdateRequest) {
+                updateDockTabGraphics(qobject_cast<QTabBar *>(obj));
+            }
+
             // build filters when filter tab mouse clicked
             if (event->type() == QEvent::MouseButtonPress) {
                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
                 int i = tabBar->tabAt(e->pos());
-                // qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
-                if (tabBar->tabText(i) == filterDockTabText) {
+                // A graphic-mode tab has empty text; resolve its identity from
+                // the learned QMainWindow tab key.
+                QString id = tabBar->tabText(i);
+                if (id.isEmpty()) id = dockTabTitleByKey.value(tabBar->tabData(i).toULongLong());
+                if (id == filterDockTabText) {
                     /*
                     qDebug() << "MW::eventFilter filterDock mouse press";*/
                     filterDockTabMousePress();
@@ -1049,13 +1249,29 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
                 int i = tabBar->tabAt(helpEvent->pos());
                 if (i >= 0) {
-                    QString tip = dockTabToolTip(tabBar->tabText(i));
+                    // A graphic-mode tab has empty text; resolve its identity
+                    // (for the tooltip) from the learned QMainWindow tab key.
+                    QString id = tabBar->tabText(i);
+                    if (id.isEmpty()) id = dockTabTitleByKey.value(tabBar->tabData(i).toULongLong());
+                    QString tip = dockTabToolTip(id);
                     if (!tip.isEmpty()) {
                         QToolTip::showText(helpEvent->globalPos(), tip, tabBar);
                         return true;
                     }
                 }
             }
+        }
+
+        // A dock resize/show changes the available width but may not resize the
+        // tab bar (which shrinks to its tabs), so the tab-bar events above can
+        // miss it - re-evaluate the dock tab graphics on dock resize/show too.
+        // This also covers workspace switches: invokeWorkspace's restoreState
+        // resizes and shows the docks, firing these events.
+        if (G::useDockTitleGraphic
+                && (event->type() == QEvent::Resize || event->type() == QEvent::Show)
+                && qobject_cast<QDockWidget *>(obj)) {
+            const QList<QTabBar *> bars = findChildren<QTabBar *>();
+            for (QTabBar *b : bars) updateDockTabGraphics(b);
         }
 
         // thumbDock uses Qt's default title bar (no DockTitleBar widget).
