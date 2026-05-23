@@ -241,6 +241,7 @@ Q_NAMESPACE
     extern bool useImageView;
     extern bool useInfoView;
     extern bool useDWCollapse;   // master switch for dock collapse/expand/solo mode
+    extern bool useDockTitleGraphic;   // master switch: show a graphic instead of text on dock tabs
     extern bool useMultimedia;
     extern bool useUpdateStatus ;
     extern bool useFilterView;      // not finished

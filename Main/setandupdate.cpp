@@ -210,7 +210,7 @@ void MW::toggleFolderDockVisibility()
     if (G::isLogger) G::log("MW::toggleFolderDockVisibility");
     qDebug() << "MW::toggleFolderDockVisibility";
     if (G::isInitializing) return;
-    QString dock = folderDockTabText;
+    QDockWidget *dock = folderDock;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (folderDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
@@ -235,7 +235,7 @@ void MW::toggleFavDockVisibility() {
     if (G::isLogger) G::log("MW::toggleFavDockVisibility");
     if (G::isInitializing) return;
     qDebug() << "MW::toggleFavDockVisibility";
-    QString dock = favDockTabText;
+    QDockWidget *dock = favDock;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (favDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
@@ -270,7 +270,7 @@ void MW::toggleFilterDockVisibility()
     if (G::isLogger) G::log("MW::toggleFilterDockVisibility");
     if (G::isInitializing) return;
 
-    QString dock = filterDockTabText;
+    QDockWidget *dock = filterDock;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (filterDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
@@ -302,7 +302,7 @@ void MW::toggleMetadataDockVisibility() {
     if (!G::useInfoView) return;
     if (G::isLogger) G::log("MW::toggleMetadataDockVisibility");
     if (G::isInitializing) return;
-    QString dock = metadataDockTabText;
+    QDockWidget *dock = metadataDock;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (metadataDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
@@ -332,7 +332,7 @@ void MW::toggleThumbDockVisibity()
         return;
     }
 
-    QString dock = thumbDockTabText;
+    QDockWidget *dock = thumbDock;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (thumbDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
@@ -368,7 +368,7 @@ void MW::toggleThumbDockVisibity()
 void MW::toggleEmbelDockVisibility() {
     if (G::isLogger) G::log("MW::toggleEmbelDockVisibility");
     if (G::isInitializing) return;
-    QString dock = embelDockTabText;
+    QDockWidget *dock = embelDock;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (embelDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;

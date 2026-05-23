@@ -593,20 +593,12 @@ bool MW::tabBarContainsDocks(QTabBar *tabBar)
     return false;
 }
 
-bool MW::isDockTabified(QString tabText)
+bool MW::isDockTabified(QDockWidget *dock)
 {
-    QTabBar* widgetTabBar = tabifiedBar();
-    bool found = false;
-    if (widgetTabBar != nullptr) {
-        int idx = widgetTabBar->currentIndex();
-        for (int i = 0; i < widgetTabBar->count(); i++) {
-            if (widgetTabBar->tabText(i) == tabText) {
-                found = true;
-                break;
-            }
-        }
-    }
-    return found;
+    // Identify the dock by the object itself (objectName), not by the tab's
+    // visible text, so a dock showing a graphic instead of text is still
+    // recognised. A dock is tabified if it shares a tab group with others.
+    return dock && !tabifiedDockWidgets(dock).isEmpty();
 }
 
 QString MW::dockTabToolTip(const QString &tabText)
@@ -629,22 +621,12 @@ QString MW::dockTabToolTip(const QString &tabText)
     return QString();
 }
 
-bool MW::isSelectedDockTab(QString tabText)
+bool MW::isSelectedDockTab(QDockWidget *dock)
 {
-    QTabBar* widgetTabBar = tabifiedBar();
-    bool selected = false;
-    if (widgetTabBar != nullptr) {
-        int idx = widgetTabBar->currentIndex();
-        for (int i = 0; i < widgetTabBar->count(); i++) {
-            if (widgetTabBar->tabText(i) == tabText) {
-                if (i == idx) {
-                    selected = true;
-                    break;
-                }
-            }
-        }
-    }
-    return selected;
+    // The front (selected) tab in a tabified group is the only one not
+    // occluded by its siblings, so its visible region is non-empty. This is
+    // determined from the dock object, independent of the tab's label.
+    return dock && dock->isVisible() && !dock->visibleRegion().isEmpty();
 }
 
 void MW::folderDockVisibilityChange()

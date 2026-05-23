@@ -1236,11 +1236,14 @@ private:
     void createThumbDock();
     void createEmbelDock();
     QTabBar* tabifiedBar();
-    bool isDockTabified(QString tabText);
+    bool isDockTabified(QDockWidget *dock);
     QString dockTabToolTip(const QString &tabText);
     void tabBarAssignRichText(QTabBar *richTextTabBar);
     bool tabBarContainsDocks(QTabBar *tabBar);
-    bool isSelectedDockTab(QString tabText);
+    bool isSelectedDockTab(QDockWidget *dock);
+    void updateDockTabGraphics(QTabBar *tabBar);   // responsive text/graphic dock tab titles
+    void scheduleDockTabUpdate();                  // deferred re-eval of all dock tab bars
+    QHash<quint64, QString> dockTabTitleByKey;     // QMainWindow tab key -> dock title (learned)
     void folderDockVisibilityChange();
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
