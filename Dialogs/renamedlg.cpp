@@ -66,12 +66,12 @@ RenameDlg::~RenameDlg()
 void RenameDlg::on_name_textChanged(const QString &text)
 {
     if (existingNames.contains(text)) {
-        ui->name->setStyleSheet("QLineEdit {color:red;}");
+        ui->name->setStyleSheet(G::cssError);
         ui->statusLbl->setText("Warning: duplicate name.  Please make unique.");
         isUnique = false;
     }
     else {
-        ui->name->setStyleSheet("QLineEdit {color:rgb(229,229,229);}");
+        ui->name->setStyleSheet("");
         ui->statusLbl->setText("");
         isUnique = true;
     }

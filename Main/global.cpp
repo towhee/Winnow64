@@ -114,6 +114,15 @@ QColor mouseOverColor = QColor(40,54,66);
 
 QString css;                        // app stylesheet;
 
+// Semantic state stylesheets - not theme-bound; used for status indicators,
+// error highlights, etc. Color, not font size: widgets that need a specific
+// size (e.g. status dots on Windows) should set it via setFont() so it
+// persists across setStyleSheet() calls.
+QString cssError    = "QLabel,QLineEdit,QComboBox {color:red;}";
+QString cssWarning  = "QLabel,QLineEdit,QComboBox {color:yellow;}";
+QString cssOk       = "QLabel,QLineEdit,QComboBox {color:green;}";
+QString cssInactive = "QLabel,QLineEdit,QComboBox {color:gray;}";
+
 static int transparency = 50;
 QColor labelNoneColor(85,85,85,transparency);                // Background Gray
 QColor labelRedColor(QColor(60,20,20));          // Dark red

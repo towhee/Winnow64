@@ -134,10 +134,6 @@ public:
     double availableMB;
     double availableMB2;
 
-    // text styles
-    QString normalText;
-    QString redText;
-
     // list of files not copied
     QStringList failedToCopy;
     QStringList integrityFailure;

@@ -1733,7 +1733,7 @@ void MW::createMenus()
 
     QLabel *label = new QLabel;
     label->setText(" TEST ");
-    label->setStyleSheet("QLabel{color:yellow;}");
+    label->setStyleSheet(G::cssWarning);
     QToolBar *toolBar = new QToolBar;
     toolBar->addWidget(label);
 

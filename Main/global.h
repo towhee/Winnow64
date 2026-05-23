@@ -347,6 +347,13 @@ Q_NAMESPACE
     extern int textShade;
     extern int backgroundShade;
     extern QString css;
+    // Semantic state stylesheets (not theme-bound). Set via setStyleSheet to
+    // signal widget state; for size-sensitive widgets use setFont() so size
+    // persists when the stylesheet is replaced.
+    extern QString cssError;        // red foreground - error / running / out-of-range
+    extern QString cssWarning;      // yellow foreground - warning
+    extern QString cssOk;           // green foreground - idle / success
+    extern QString cssInactive;     // gray foreground - inactive
 
     // extern bool isModifyingDatamodel;
     extern bool isFirstImageNewInstance;

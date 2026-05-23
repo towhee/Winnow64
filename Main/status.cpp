@@ -345,23 +345,14 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
              //*/
 
     if (isRunning) {
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:red;}");
-        #ifdef Q_OS_WIN
-        metadataThreadRunningLabel->setStyleSheet("QLabel {color:red;font-size: 24px;}");
-        #endif
+        metadataThreadRunningLabel->setStyleSheet(G::cssError);
     }
     else {
         if (success) {
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:green;}");
-            #ifdef Q_OS_WIN
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:green;font-size: 24px;}");
-            #endif
+            metadataThreadRunningLabel->setStyleSheet(G::cssOk);
         }
         else {
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;}");
-            #ifdef Q_OS_WIN
-            metadataThreadRunningLabel->setStyleSheet("QLabel {color:Yellow;font-size: 24px;}");
-            #endif
+            metadataThreadRunningLabel->setStyleSheet(G::cssWarning);
         }
     }
     metadataThreadRunningLabel->setText("◉");
@@ -374,10 +365,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
     if (G::isLogger) G::log("MW::updateImageCachingThreadRunStatus");
     if (isRunning) {
         if (G::isTest) testTime.restart();
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
-        #ifdef Q_OS_WIN
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Red; font-size: 24px;}");
-        #endif
+        imageThreadRunningLabel->setStyleSheet(G::cssError);
     }
     else {
         if (G::isTest) {
@@ -390,10 +378,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
                     << "   ms per image =" << ms / n
                        ;
         }
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
-        #ifdef Q_OS_WIN
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green; font-size: 24px;}");
-        #endif
+        imageThreadRunningLabel->setStyleSheet(G::cssOk);
     }
     imageThreadRunningLabel->setText("◉");
     if (isShowCacheProgressBar) {
@@ -408,12 +393,8 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
 void MW::setThreadRunStatusInactive()
 {
     if (G::isLogger) G::log("MW::setThreadRunStatusInactive");
-    metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
-    imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
-    #ifdef Q_OS_WIN
-    metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
-    imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
-    #endif
+    metadataThreadRunningLabel->setStyleSheet(G::cssInactive);
+    imageThreadRunningLabel->setStyleSheet(G::cssInactive);
     metadataThreadRunningLabel->setText("◉");
     imageThreadRunningLabel->setText("◉");
 }

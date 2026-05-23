@@ -99,8 +99,6 @@ IngestDlg::IngestDlg(QWidget *parent,
     if (G::isLogger) G::log("IngestDlg::IngestDlg");
     this->dm = dm;
     this->css = css;
-    normalText = "QLabel {color:" + G::textColor.name() + ";}";
-    redText = "QLabel {color:red;}";
 
     ui->setupUi(this);
 
@@ -905,7 +903,7 @@ void IngestDlg::updateFolderPaths()
 //        qDebug() << "IngestDlg::" << "pathDrive =" << drivePath;
         d.setPath(drivePath);
         autoDriveAvailable = d.isValid();
-        autoDriveAvailable ? ui->folderLabel->setStyleSheet(normalText) : ui->folderLabel->setStyleSheet(redText);
+        autoDriveAvailable ? ui->folderLabel->setStyleSheet("") : ui->folderLabel->setStyleSheet(G::cssError);
 
         baseFolderDescription2 = (ui->descriptionLineEdit_2->text().length() > 0)
                 ? ui->descriptionLineEdit_2->text() : "";
@@ -916,7 +914,7 @@ void IngestDlg::updateFolderPaths()
 //        qDebug() << "IngestDlg::" << "pathDrive2 =" << drive2Path;
         d.setPath(drive2Path);
         autoDrive2Available = d.isValid();
-        autoDrive2Available ? ui->folderLabel_2->setStyleSheet(normalText) : ui->folderLabel_2->setStyleSheet(redText);
+        autoDrive2Available ? ui->folderLabel_2->setStyleSheet("") : ui->folderLabel_2->setStyleSheet(G::cssError);
 
         // reset formating or disabling does not work
         ui->manualFolderLabel->setStyleSheet(G::css);
@@ -931,14 +929,14 @@ void IngestDlg::updateFolderPaths()
         drivePath = Utilities::getDrive(folderPath);
         d.setPath(drivePath);
         manualDriveAvailable = d.isValid();
-        manualDriveAvailable ? ui->manualFolderLabel->setStyleSheet(normalText) : ui->manualFolderLabel->setStyleSheet(redText);
+        manualDriveAvailable ? ui->manualFolderLabel->setStyleSheet("") : ui->manualFolderLabel->setStyleSheet(G::cssError);
 
         folderPath2 = ui->manualFolderLabel_2->text() + "/";
         ui->manualFolderLabel_2->setToolTip(ui->manualFolderLabel_2->text());
         drive2Path = Utilities::getDrive(folderPath2);
         d.setPath(drive2Path);
         manualDrive2Available = d.isValid();
-        manualDrive2Available ? ui->manualFolderLabel_2->setStyleSheet(normalText) : ui->manualFolderLabel_2->setStyleSheet(redText);
+        manualDrive2Available ? ui->manualFolderLabel_2->setStyleSheet("") : ui->manualFolderLabel_2->setStyleSheet(G::cssError);
 
         // reset formating or disabling does not work
         ui->folderLabel->setStyleSheet(G::css);
@@ -1155,12 +1153,12 @@ void IngestDlg::getAvailableStorageMB()
         qint64 bytes = info.bytesAvailable();
         availableMB = bytes / 1024 / 1024;
         QString s = drive + " " + Utilities::formatMemory(bytes);
-        if (picksMB > availableMB) ui->drive->setStyleSheet(redText);
-        else ui->drive->setStyleSheet(normalText);
+        if (picksMB > availableMB) ui->drive->setStyleSheet(G::cssError);
+        else ui->drive->setStyleSheet("");
         ui->drive->setText(s);
     }
     else {
-        ui->drive->setStyleSheet(redText);
+        ui->drive->setStyleSheet(G::cssError);
         ui->drive->setText("Primary drive " + drivePath + " is unavailable.");
     }
 
@@ -1190,12 +1188,12 @@ void IngestDlg::getAvailableStorageMB()
         qint64 bytes = info.bytesAvailable();
         availableMB2 = bytes / 1024 / 1024;
         QString s = drive2 + " " + Utilities::formatMemory(bytes);
-        if (picksMB > availableMB2) ui->drive_2->setStyleSheet(redText);
-        else ui->drive_2->setStyleSheet(normalText);
+        if (picksMB > availableMB2) ui->drive_2->setStyleSheet(G::cssError);
+        else ui->drive_2->setStyleSheet("");
         ui->drive_2->setText(s);
     }
     else {
-        ui->drive_2->setStyleSheet(redText);
+        ui->drive_2->setStyleSheet(G::cssError);
         ui->drive_2->setText("Backup drive " + drive2Path + " is unavailable.");
     }
     ui->drive_2->setVisible(isBackup);
@@ -1637,64 +1635,23 @@ void IngestDlg::fontSize()
     int fontPxSize = static_cast<int>(fontPtSize * G::ptToPx);
     QString titleShift = QString::number(fontPxSize * screenScaling / 2);
 
-    QString fs = "QWidget {font-size: " + G::strFontSize + "pt;}";
-//    QString fs = "QWidget {font-size: " + QString::number(fontPtSize) + "pt;}";
-    /*
-    qDebug() << "IngestDlg::"
-             << "G::fontSize" << G::fontSize
-             << "screenScaling" << screenScaling
-             << "adjustedFontPtSize" << adjustedFontPtSize
-             << "fs" << fs;  */
+    // Font size propagates to children via Qt font inheritance; no per-widget
+    // setStyleSheet needed.
+    QFont f = font();
+    f.setPointSize(G::strFontSize.toInt());
+    setFont(f);
 
+    // Title placement shift is QGroupBox geometry, not font, so it stays as CSS.
     QString titlePlacement =
          "QGroupBox {margin-top: " + titleShift + "px;}"
          "QGroupBox::title {top: -"  + titleShift + "px;}";
+    setStyleSheet(titlePlacement);
 
-    setStyleSheet(fs + titlePlacement);
-    ui->helpBtn->setStyleSheet(fs);
-    ui->autoRadio->setStyleSheet(fs);
-
-    ui->autoIngestTab->setStyleSheet(fs);
-    ui->descriptionLineEdit->setStyleSheet(fs);
-    ui->descriptionLineEdit_2->setStyleSheet(fs);
-    ui->destinationFolderLabel->setStyleSheet(fs);
-    ui->destinationFolderLabel_2->setStyleSheet(fs);
-    ui->folderDescription->setStyleSheet(fs);
-    ui->folderDescription_2->setStyleSheet(fs);
-    ui->folderLabel->setStyleSheet(fs);
-    autoDriveAvailable ? ui->folderLabel->setStyleSheet(normalText) : ui->folderLabel->setStyleSheet(redText);
-    ui->folderLabel_2->setStyleSheet(fs);
-    autoDrive2Available ? ui->folderLabel_2->setStyleSheet(normalText) : ui->folderLabel_2->setStyleSheet(redText);
-    ui->pathTemplatesCB->setStyleSheet(fs);
-    ui->pathTemplatesCB_2->setStyleSheet(fs);
-    ui->pathTemplatesBtn->setStyleSheet(fs);
-    ui->pathTemplatesBtn_2->setStyleSheet(fs);
-    ui->rootFolderLabel->setStyleSheet(fs);
-    ui->rootFolderLabel_2->setStyleSheet(fs);
-    ui->selectRootFolderBtn->setStyleSheet(fs);
-    ui->selectRootFolderBtn_2->setStyleSheet(fs);
-    ui->templateLabel1->setStyleSheet(fs);
-    ui->templateLabel1_2->setStyleSheet(fs);
-
-    ui->selectFolderBtn->setStyleSheet(fs);
-    ui->selectFolderBtn_2->setStyleSheet(fs);
-
-    ui->filenameGroupBox->setStyleSheet(fs);
-    ui->templateLabel2->setStyleSheet(fs);
-    ui->existingSequenceLabel->setStyleSheet(fs);
-    ui->filenameTemplatesBtn->setStyleSheet(fs);
-    ui->filenameTemplatesCB->setStyleSheet(fs);
-    ui->spinBoxStartNumber->setStyleSheet(fs);
-    ui->startSeqLabel->setStyleSheet(fs);
-
-    ui->seqGroupBox->setStyleSheet(fs);
-    ui->folderPathLabel->setStyleSheet(fs);
-    ui->folderPathLabel_2->setStyleSheet(fs);
-    ui->folderPathLabel_3->setStyleSheet(fs);
-    ui->folderPathLabel_4->setStyleSheet(fs);
-
-    ui->cancelBtn->setStyleSheet(fs);
-    ui->okBtn->setStyleSheet(fs);
+    // Reapply validation state on the folder labels (setFont above doesn't
+    // touch widget stylesheets, but adjustSize/font changes may invalidate
+    // the prior state-color application).
+    ui->folderLabel->setStyleSheet(autoDriveAvailable ? QString("") : G::cssError);
+    ui->folderLabel_2->setStyleSheet(autoDrive2Available ? QString("") : G::cssError);
 
     adjustSize();
 }

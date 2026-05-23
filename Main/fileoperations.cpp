@@ -218,7 +218,7 @@ void MW::saveAsFile()
         return;
     }
     saveAsDlg = new SaveAsDlg(selection, metadata, dm);
-    saveAsDlg->setStyleSheet(css);
+    saveAsDlg->setStyleSheet(G::css);
     if (saveAsDlg->exec() == QDialog::Accepted) {
         QString savedFolderPath = saveAsDlg->getFolderPath();
         qDebug() << "MW::saveAsFile"
@@ -338,9 +338,7 @@ void MW::deleteSelectedFiles()
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Yes);
         msgBox.setIcon(QMessageBox::Warning);
-        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                    "QPushButton:default {background-color: rgb(68,95,118);}";
-        msgBox.setStyleSheet(css);
+        msgBox.setStyleSheet(G::css);
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
@@ -498,11 +496,7 @@ void MW::deleteFolder()
         msgBox.setIcon(QMessageBox::Warning);
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Cancel);
-        QString s = "QWidget{font-size: 12px; "
-                    "background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                    "QPushButton:default {background-color: rgb(68,95,118);}";
-        msgBox.setStyleSheet(s);
-        msgBox.setStyleSheet(css);
+        msgBox.setStyleSheet(G::css);
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());

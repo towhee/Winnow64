@@ -372,8 +372,8 @@ QString MW::diagnostics()
     rpt << "\n\n" ;
     rpt << "\n" << "STYLESHEET css:";
     int n = 140;
-    for (int i = 0; i < css.length(); i += n) {
-        rpt << "\n" << css.mid(i, n);
+    for (int i = 0; i < G::css.length(); i += n) {
+        rpt << "\n" << G::css.mid(i, n);
     }
     rpt << "\n";
     return reportString;

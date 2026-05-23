@@ -94,16 +94,16 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *m
     imageDecoder = new ImageDecoder(id, dm, metadata);
 
     ui->setupUi(this);
-    setStyleSheet(G::css);
-
-    // set group box titles blue
-    ui->targetBox->setStyleSheet("QGroupBox::title { color: #6CC1E8; }");
-    ui->criteriaBox->setStyleSheet("QGroupBox::title { color: #6CC1E8; }");
-    ui->compareImagesBox->setStyleSheet("QGroupBox::title { color: #6CC1E8; }");
-    ui->candidateListBox->setStyleSheet("QGroupBox::title { color: #6CC1E8; }");
-    // reset children of  ui->candidateListBox
-    ui->AImageBox->setStyleSheet("QGroupBox::title { color: white; }");
-    ui->BImageBox->setStyleSheet("QGroupBox::title { color: white; }");
+    // Group-box title accents are dialog-specific: cyan for sections, white for
+    // the A/B image compare boxes. Layered on top of G::css via the cascade.
+    setStyleSheet(G::css +
+        "QGroupBox#targetBox::title,"
+        "QGroupBox#criteriaBox::title,"
+        "QGroupBox#compareImagesBox::title,"
+        "QGroupBox#candidateListBox::title { color: #6CC1E8; }"
+        "QGroupBox#AImageBox::title,"
+        "QGroupBox#BImageBox::title { color: white; }"
+    );
 
     // candidate images tableview
     ui->tv->setSelectionBehavior(QAbstractItemView::SelectRows);
