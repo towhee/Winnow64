@@ -194,16 +194,17 @@ void SliderEditor::updateSliderWhenLineEdited()
 
 void SliderEditor::fontSizeChanged(int fontSize)
 {
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void SliderEditor::paintEvent(QPaintEvent *event)
 {
-    QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
     if (outOfRange)
-        setStyleSheet("QLineEdit {color:red;}");
+        setStyleSheet(G::cssError);
     else
-        setStyleSheet("QLineEdit {color:" + textColor.name() + ";}");
+        setStyleSheet("");      // fall back to the app cascade (G::css)
     QWidget::paintEvent(event);
 }
 
@@ -258,7 +259,9 @@ void LabelEditor::setValue(QVariant value)
 
 void LabelEditor::fontSizeChanged(int fontSize)
 {
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void LabelEditor::paintEvent(QPaintEvent */*event*/)
@@ -331,7 +334,9 @@ void LineEditor::change(/*QString value*/)
 
 void LineEditor::fontSizeChanged(int fontSize)
 {
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void LineEditor::paintEvent(QPaintEvent */*event*/)
@@ -410,7 +415,9 @@ void SpinBoxEditor::fontSizeChanged(int fontSize)
 {
 //    setStyleSheet(G::css);
     qDebug() << "SpinBoxEditor::fontSizeChanged" << fontSize;
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void SpinBoxEditor::paintEvent(QPaintEvent */*event*/)
@@ -500,7 +507,9 @@ void DoubleSpinBoxEditor::setValue(QVariant value)
 
 void DoubleSpinBoxEditor::fontSizeChanged(int fontSize)
 {
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void DoubleSpinBoxEditor::paintEvent(QPaintEvent */*event*/)
@@ -567,7 +576,9 @@ void CheckBoxEditor::change()
 
 void CheckBoxEditor::fontSizeChanged(int fontSize)
 {
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void CheckBoxEditor::paintEvent(QPaintEvent */*event*/)
@@ -708,7 +719,9 @@ void ComboBoxEditor::change(int index)
 void ComboBoxEditor::fontSizeChanged(int fontSize)
 {
 //    setStyleSheet(G::css);
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void ComboBoxEditor::paintEvent(QPaintEvent */*event*/)
@@ -777,7 +790,9 @@ void PlusMinusEditor::plusChange()
 
 void PlusMinusEditor::fontSizeChanged(int fontSize)
 {
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void PlusMinusEditor::paintEvent(QPaintEvent *event)
@@ -924,7 +939,9 @@ void ColorEditor::updateLabelWhenLineEdited(QString value)
 
 void ColorEditor::fontSizeChanged(int fontSize)
 {
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void ColorEditor::paintEvent(QPaintEvent */*event*/)
@@ -994,7 +1011,9 @@ void SelectFolderEditor::setValueFromSaveFileDlg()
 
 void SelectFolderEditor::fontSizeChanged(int fontSize)
 {
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void SelectFolderEditor::paintEvent(QPaintEvent */*event*/)
@@ -1063,7 +1082,9 @@ void SelectFileEditor::setValueFromSaveFileDlg()
 
 void SelectFileEditor::fontSizeChanged(int fontSize)
 {
-    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+    QFont f = font();
+    f.setPointSize(fontSize);
+    setFont(f);
 }
 
 void SelectFileEditor::paintEvent(QPaintEvent */*event*/)

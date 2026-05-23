@@ -1079,9 +1079,8 @@ void MW::createAppStyle()
     widgetCSS.fontSize = G::strFontSize.toInt();
     int bg = G::backgroundShade;
     widgetCSS.widgetBackgroundColor = QColor(bg,bg,bg);
-    css = widgetCSS.css();
-    G::css = css;
-    this->setStyleSheet(css);
+    G::css = widgetCSS.css();
+    this->setStyleSheet(G::css);
 
     // fix tooltips for windows (still works in MacOS)
     #ifdef Q_OS_WIN
@@ -1097,17 +1096,12 @@ void MW::createStatusBar()
 {
     if (G::isLogger) G::log("MW::createStatusBar");
     statusBar()->setObjectName("WinnowStatusBar");
-    statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
     // cache status on right side of status bar
 
     // label to hold QPixmap showing progress
     progressLabel = new QLabel();
     progressLabel->setObjectName("StatusProgressLabel");
-    progressLabel->setStyleSheet("QToolTip {"
-                                 "opacity: 200;"         // nada windows
-                                 "color: #ffffff;"       // nada windows
-                                 "}");
 
     // progressBar is created in MW::createDataModel, where it is first req'd
 
@@ -1144,6 +1138,7 @@ void MW::createStatusBar()
     // int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 1.3;
     // qDebug() << "charWidth =" << charWidth;
     // metadataThreadRunningLabel->setFixedWidth(charWidth);
+    metadataThreadRunningLabel->setObjectName("MetadataCacheStatus");
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
     QString tip = "Metadata and Icon caching:\n";
     tip += "\n";
@@ -1167,11 +1162,6 @@ void MW::createStatusBar()
 
     // add process progress bar to left side of statusBar
     progressBar = new QProgressBar;
-    progressBar->setStyleSheet(
-                "QProgressBar {"
-                    "border: 1px solid gray;"
-                "}"
-                );
     progressBar->setFixedSize(50, 8);
     progressBar->setTextVisible(false);
     progressBar->setVisible(false);

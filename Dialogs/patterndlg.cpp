@@ -201,8 +201,8 @@ PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm)
     setWindowTitle("Tile Extractor");
     setMouseTracking(true);
 
-    saveBtn->setStyleSheet("QPushButton {min-width: 120px;}");
-    exitBtn->setStyleSheet("QPushButton {min-width: 120px;}");
+    saveBtn->setMinimumWidth(120);
+    exitBtn->setMinimumWidth(120);
 
     layout = new QVBoxLayout;
 

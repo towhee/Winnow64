@@ -3,6 +3,25 @@
 #include "Main/global.h"
 #include "QDebug"
 
+// ZoomDlg is a frameless stays-on-top HUD with a yellow signature that is
+// intentionally independent of the application theme (G::css). The yellow text
+// on dark gray is the visual identity of the zoom HUD, not theme-bound styling.
+namespace {
+    const QString zoomSpinBoxCss =
+        "QSpinBox {color: yellow; font-size: 18px;"
+        " background-color: rgb(111,111,111);"
+        " border: 1px solid gray; border-radius: 5px; padding-left: 4px;}"
+        "QSpinBox:hover, QSpinBox:focus {border-color: silver;}"
+        "QSpinBox:disabled {color: rgb(77,77,77); background-color: rgb(88,88,88);}"
+        "QSpinBox::up-button, QSpinBox::down-button {width: 0px; border-width: 0px;}";
+    const QString zoomLabelCss =
+        "QLabel {color: yellow; font-size: 18px; border:none;}";
+    const QString zoomBorderActiveCss =
+        "QFrame {border: 2px solid rgb(125,125,125); border-radius: 4px;}";
+    const QString zoomBorderInactiveCss =
+        "QFrame {border: 2px solid rgb(85,85,85); border-radius: 4px;}";
+}
+
 ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent),
     ui(new Ui::ZoomDlg)
 {
@@ -24,12 +43,9 @@ ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent
     // update controls to current zoom factor
     zoomChange(zoom, "ZoomDlg::ZoomDlg");
 
-    // do some formatting (color: yellow; font-size: 18px;) NOTE keep in sync with winnow.css
-    QString spinBoxStyle = "QSpinBox {color: yellow; font-size: 18px; background-color: rgb(111,111,111); border: 1px solid gray; border-radius: 5px; padding-left: 4px;}QSpinBox:hover, QSpinBox:focus {border-color: silver;}QSpinBox:disabled {color: rgb(77,77,77);background-color: rgb(88,88,88);}QSpinBox::up-button, QSpinBox::down-button  {width: 0px;border-width: 0px;}";
-    ui->zoomSB->setStyleSheet(spinBoxStyle);
-    QString labelStyle = "QLabel {color: yellow; font-size: 18px; border:none;}";
-    ui->pctLabel->setStyleSheet(labelStyle);
-    ui->border->setStyleSheet("QFrame {border: 2px solid rgb(125,125,125); border-radius: 4px;}");
+    ui->zoomSB->setStyleSheet(zoomSpinBoxCss);
+    ui->pctLabel->setStyleSheet(zoomLabelCss);
+    ui->border->setStyleSheet(zoomBorderActiveCss);
 
     // position in middle of main window and at the bottom of the central widget
     positionWindow(a, c);
@@ -230,13 +246,13 @@ void ZoomDlg::changeEvent(QEvent *event)
     {
         if(this->isActiveWindow())
         {
-            ui->border->setStyleSheet("QFrame {border: 2px solid rgb(125,125,125); border-radius: 4px;}");
+            ui->border->setStyleSheet(zoomBorderActiveCss);
             setWindowOpacity(0.85);
         }
         else
         {
             // widget is now inactive
-            ui->border->setStyleSheet("QFrame {border: 2px solid rgb(85,85,85); border-radius: 4px;}");
+            ui->border->setStyleSheet(zoomBorderInactiveCss);
             setWindowOpacity(0.50);
         }
     }

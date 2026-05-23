@@ -1501,7 +1501,7 @@ I hope this helps! Let me know if you have any questions.
         return;
     }
 
-    updateAppDlg = new UpdateApp(version, css);
+    updateAppDlg = new UpdateApp(version, G::css);
     int ret = updateAppDlg->exec();
     if (ret == QDialog::Rejected) {
         process.close();
@@ -3516,8 +3516,8 @@ void MW::preferences(QString text)
     if (preferencesDlg == nullptr) {
         // pref = new Preferences(this);
         if (text != "") pref->expandBranch(text);
-        // preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, css);
-        preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
+        // preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, G::css);
+        preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, G::css);
     }
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(preferencesDlg->winId(), G::backgroundColor);
@@ -3570,18 +3570,17 @@ void MW::setFontSize(int fontPixelSize)
     G::fontSize = fontPixelSize;
     G::strFontSize = QString::number(fontPixelSize);
     widgetCSS.fontSize = fontPixelSize;
-    css = widgetCSS.css();
-    G::css = css;
-    setStyleSheet(css);
+    G::css = widgetCSS.css();
+    setStyleSheet(G::css);
 
     if (G::useInfoView) infoView->refreshLayout();                   // triggers sizehint!
 //    infoView->updateInfo(currentRow);                           // triggers sizehint!
-    bookmarks->setStyleSheet(css);
-    fsTree->setStyleSheet(css);
-    filters->setStyleSheet(css);
-    infoView->setStyleSheet(css);
-    tableView->setStyleSheet(css);
-    statusLabel->setStyleSheet(css);
+    bookmarks->setStyleSheet(G::css);
+    fsTree->setStyleSheet(G::css);
+    filters->setStyleSheet(G::css);
+    infoView->setStyleSheet(G::css);
+    tableView->setStyleSheet(G::css);
+    statusLabel->setStyleSheet(G::css);
     folderTitleBar->setStyle();
     favTitleBar->setStyle();
     filterTitleBar->setStyle();
@@ -3599,41 +3598,38 @@ void MW::setBackgroundShade(int shade)
     G::backgroundColor = QColor(shade,shade,shade);
     int a = shade + 5;
     int b = shade - 15;
-//    css = "QWidget {font-size: " + G::fontSize + "px;}" + cssBase;
     widgetCSS.widgetBackgroundColor = QColor(shade,shade,shade);
-    css = widgetCSS.css();
-    G::css = css;
-    setStyleSheet(css);
+    G::css = widgetCSS.css();
+    setStyleSheet(G::css);
 
     if (G::useInfoView) {
         infoView->updateInfo(dm->currentSfRow);                           // triggers sizehint!
-        infoView->verticalScrollBar()->setStyleSheet(css);          // triggers sizehint!
+        infoView->verticalScrollBar()->setStyleSheet(G::css);          // triggers sizehint!
     }
-    bookmarks->setStyleSheet(css);
-    bookmarks->verticalScrollBar()->setStyleSheet(css);
-    fsTree->setStyleSheet(css);
-    fsTree->verticalScrollBar()->setStyleSheet(css);
-    filters->setStyleSheet(css);
-    filters->verticalScrollBar()->setStyleSheet(css);
+    bookmarks->setStyleSheet(G::css);
+    bookmarks->verticalScrollBar()->setStyleSheet(G::css);
+    fsTree->setStyleSheet(G::css);
+    fsTree->verticalScrollBar()->setStyleSheet(G::css);
+    filters->setStyleSheet(G::css);
+    filters->verticalScrollBar()->setStyleSheet(G::css);
     filters->setCategoryBackground(a, b);
-//    if (G::useInfoView) infoView->setStyleSheet(css);
+//    if (G::useInfoView) infoView->setStyleSheet(G::css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
-    thumbView->setStyleSheet(css);
-    thumbView->horizontalScrollBar()->setStyleSheet(css);
-    thumbView->verticalScrollBar()->setStyleSheet(css);
-    gridView->setStyleSheet(css);
-    tableView->setStyleSheet(css);
-    gridView->verticalScrollBar()->setStyleSheet(css);
-    messageView->setStyleSheet(css);
-    welcome->setStyleSheet(css);
+    thumbView->setStyleSheet(G::css);
+    thumbView->horizontalScrollBar()->setStyleSheet(G::css);
+    thumbView->verticalScrollBar()->setStyleSheet(G::css);
+    gridView->setStyleSheet(G::css);
+    tableView->setStyleSheet(G::css);
+    gridView->verticalScrollBar()->setStyleSheet(G::css);
+    messageView->setStyleSheet(G::css);
+    welcome->setStyleSheet(G::css);
     cacheProgressBar->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     folderTitleBar->setStyle();
     favTitleBar->setStyle();
     filterTitleBar->setStyle();
     metaTitleBar->setStyle();
     embelTitleBar->setStyle();
-    statusBar()->setStyleSheet(css);
-    statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
+    statusBar()->setStyleSheet(G::css);
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(winId(), G::backgroundColor);
     #endif
@@ -4565,7 +4561,7 @@ void MW::ingest()
                                   filenameTemplateSelected,
                                   ingestDescriptionCompleter,
                                   autoIngestFolderPath,
-                                  css);
+                                  G::css);
 
         bool okToIngest = ingestDlg->exec();
         // do not delete ingestDlg: scrambles QMap objects for some reason
@@ -4974,9 +4970,7 @@ void MW::revealLogFile()
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Cancel);
     msgBox.setIcon(QMessageBox::Warning);
-    QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                "QPushButton:default {background-color: rgb(68,95,118);}";
-    msgBox.setStyleSheet(css);
+    msgBox.setStyleSheet(G::css);
     QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
     QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
     layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
@@ -5220,7 +5214,7 @@ void MW::helpShortcuts()
     ui.treeWidget->setColumnWidth(1, 250);
     ui.treeWidget->setColumnWidth(2, 250);
     ui.treeWidget->expandAll();
-    ui.scrollAreaWidgetContents->setStyleSheet(css);
+    ui.scrollAreaWidgetContents->setStyleSheet(G::css);
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(helpShortcuts->winId(), G::backgroundColor);
     #endif

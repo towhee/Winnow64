@@ -69,9 +69,6 @@ MAC
 PERFORMANCE
 CODE IMPROVEMENTS
 - Standardize use of G:css
-- Sort out i.name vs i.key in PropertyEditor
-- When rebuildImageCacheParameters keep imCache images still in filtered target range
-- Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
 - When add new workspace the menu shortcut is not updated until reopen app
 - Heic thumb rotation wrong
@@ -85,6 +82,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Collapse DockWidgets and Solo mode
 - Show images that have sidecars (indicator in thumbnail and col in datamodel)
 - Stopped FSTree scrolling when expand/collapse tree
 - Convert rawJpgStatusLabel to a button like colorManageToggleBtn

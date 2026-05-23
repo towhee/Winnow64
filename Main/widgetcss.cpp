@@ -164,7 +164,7 @@ QString WidgetCSS::statusBar()
     "StatusBar::QLabel {"
         "color:" + textColor.name() + ";"
     "}"
-    "QStatusbar::item {"
+    "QStatusBar::item {"
         "border: none;"
     "}";
 }
@@ -251,6 +251,21 @@ QString WidgetCSS::label()
     "QLabel#statusLabel {"
         "font-family: Menlo, Consolas, monospace;"
     "}"
+
+    // Cyan accent for dock widget titles - intentionally not theme-tied.
+    "DockTitleBar > QLabel {"
+        "border: none;"
+        "background: transparent;"
+        "padding-left: 4px;"
+        "color: #6CC1E8;"
+    "}"
+
+    // Status dots need a larger glyph on Windows to be readable.
+    #ifdef Q_OS_WIN
+    "QLabel#MetadataCacheStatus, QLabel#ImageCacheStatus {"
+        "font-size: 24px;"
+    "}"
+    #endif
     ;
 }
 
@@ -838,6 +853,7 @@ QString WidgetCSS::progressBar()
     return
     "QProgressBar {"
         "background-color: " + QColor(bg,bg,bg).name() + ";"
+        "border: 1px solid gray;"
     "}"
 
     "QProgressBar::chunk {"

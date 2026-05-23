@@ -361,10 +361,6 @@ public:
     int maxThumbSpaceHeight;
     QString pickMemSize;
     WidgetCSS widgetCSS;
-    // rgh make css consistent with G::css
-    QString css;                // stylesheet text
-    QString css1;               // stylesheet text
-    QString cssBase;            // stylesheet text
 
     void test();                // for debugging
     void mergeProjectFiles();   // to send to Gemini

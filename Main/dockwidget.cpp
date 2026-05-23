@@ -147,7 +147,6 @@ DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : 
     setTitle(title);
     titleLabel->setText(title);
     //titleLabel->setPixmap(QPixmap(":/images/icon16/anchor.png"));
-    titleLabel->setStyleSheet("border:none; background: transparent; padding-left: 4px; color: #6CC1E8;");
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
 
