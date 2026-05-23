@@ -1269,7 +1269,7 @@ void MW::createFolderDock()
     BarBtn *folderCloseBtn = new BarBtn();
     folderCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     folderCloseBtn->setToolTip("Hide the Folders Panel");
-    connect(folderCloseBtn, &BarBtn::clicked, this, &MW::toggleFolderDockVisibility);
+    connect(folderCloseBtn, &BarBtn::clicked, this, &MW::closeFolderDock);
     folderTitleLayout->addWidget(folderCloseBtn);
 
     // Spacer
@@ -1348,7 +1348,7 @@ void MW::createFavDock()
     BarBtn *favCloseBtn = new BarBtn();
     favCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     favCloseBtn->setToolTip("Hide the Bookmarks Panel");
-    connect(favCloseBtn, &BarBtn::clicked, this, &MW::toggleFavDockVisibility);
+    connect(favCloseBtn, &BarBtn::clicked, this, &MW::closeFavDock);
     favTitleLayout->addWidget(favCloseBtn);
 
     // Spacer
@@ -1433,7 +1433,7 @@ void MW::createFilterDock()
     BarBtn *filterCloseBtn = new BarBtn();
     filterCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     filterCloseBtn->setToolTip("Hide the Filters Panel");
-    connect(filterCloseBtn, &BarBtn::clicked, this, &MW::toggleFilterDockVisibility);
+    connect(filterCloseBtn, &BarBtn::clicked, this, &MW::closeFilterDock);
     filterTitleLayout->addWidget(filterCloseBtn);
 
     // Spacer
@@ -1526,7 +1526,7 @@ void MW::createMetadataDock()
     BarBtn *metaCloseBtn = new BarBtn();
     metaCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     metaCloseBtn->setToolTip("Hide the Metadata Panel");
-    connect(metaCloseBtn, &BarBtn::clicked, this, &MW::toggleMetadataDockVisibility);
+    connect(metaCloseBtn, &BarBtn::clicked, this, &MW::closeMetadataDock);
     metaTitleLayout->addWidget(metaCloseBtn);
 
     // Spacer
@@ -1558,7 +1558,7 @@ void MW::createThumbDock()
     connect(thumbDock, &DockWidget::focus, this, &MW::focusOnDock);
     connect(thumbDock, &DockWidget::dockLocationChanged, this, &MW::setThumbDockFeatures);
     connect(thumbDock, &DockWidget::topLevelChanged, this, &MW::setThumbDockFloatFeatures);
-    connect(thumbDock, &DockWidget::closeFloatingDock, this, &MW::toggleThumbDockVisibity);
+    connect(thumbDock, &DockWidget::closeFloatingDock, this, &MW::closeThumbDock);
 
     // connect(thumbDock, &QDockWidget::dockLocationChanged, this, &MW::setThumbDockFeatures);
     // connect(thumbDock, &QDockWidget::topLevelChanged, this, &MW::setThumbDockFloatFeatures);
@@ -1685,7 +1685,7 @@ void MW::createEmbelDock()
     BarBtn *embelCloseBtn = new BarBtn();
     embelCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     embelCloseBtn->setToolTip("Hide the Embellish Panel");
-    connect(embelCloseBtn, &BarBtn::clicked, this, &MW::toggleEmbelDockVisibility);
+    connect(embelCloseBtn, &BarBtn::clicked, this, &MW::closeEmbelDock);
     embelTitleLayout->addWidget(embelCloseBtn);
 
     // Spacer

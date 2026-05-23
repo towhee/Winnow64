@@ -205,24 +205,51 @@ void MW::focusOnDock(DockWidget *dockWidget)
     dockWidget->setVisible(true);
 }
 
-void MW::toggleFolderDockVisibility()
+void MW::closeThumbDock()
+{
+    thumbDock->setVisible(false);
+    thumbDockVisibleAction->setChecked(false);
+}
+
+void MW::closeEmbelDock()
+{
+    embelDock->setVisible(false);
+    embelDockVisibleAction->setChecked(false);
+}
+void MW::closeFolderDock()
+{
+    folderDock->setVisible(false);
+    folderDockVisibleAction->setChecked(false);
+}
+void MW::closeFavDock()
+{
+    favDock->setVisible(false);
+    favDockVisibleAction->setChecked(false);
+}
+void MW::closeFilterDock()
+{
+    filterDock->setVisible(false);
+    filterDockVisibleAction->setChecked(false);
+}
+void MW::closeMetadataDock()
+{
+    metadataDock->setVisible(false);
+    metadataDockVisibleAction->setChecked(false);
+}
+
+void MW::showFolderDock()
 {
     if (G::isLogger) G::log("MW::toggleFolderDockVisibility");
     qDebug() << "MW::toggleFolderDockVisibility";
     if (G::isInitializing) return;
     QDockWidget *dock = folderDock;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (folderDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
-        break;
-    case SetInvisible:
-        folderDock->setVisible(false);
-        folderDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         folderDock->setVisible(true);
@@ -231,23 +258,18 @@ void MW::toggleFolderDockVisibility()
     }
 }
 
-void MW::toggleFavDockVisibility() {
+void MW::showFavDock() {
     if (G::isLogger) G::log("MW::toggleFavDockVisibility");
     if (G::isInitializing) return;
     qDebug() << "MW::toggleFavDockVisibility";
     QDockWidget *dock = favDock;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (favDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         favDock->raise();
         favDockVisibleAction->setChecked(true);
-        break;
-    case SetInvisible:
-        favDock->setVisible(false);
-        favDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         favDock->setVisible(true);
@@ -256,7 +278,7 @@ void MW::toggleFavDockVisibility() {
     }
 }
 
-void MW::toggleFilterDockVisibility()
+void MW::showFilterDock()
 /*
     Called from folterDockVisibleAction.
 
@@ -271,22 +293,17 @@ void MW::toggleFilterDockVisibility()
     if (G::isInitializing) return;
 
     QDockWidget *dock = filterDock;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (filterDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
-    qDebug() << "MW::toggleFilterDockVisibility dockToggle =" << dockToggle;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
+    qDebug() << "MW::toggleFilterDockVisibility dockToggle =" << dockOption;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
         if (!filters->filtersBuilt) {
             buildFilters->build();
         }
-        break;
-    case SetInvisible:
-        filterDock->setVisible(false);
-        filterDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         filterDock->setVisible(true);
@@ -298,23 +315,18 @@ void MW::toggleFilterDockVisibility()
     }
 }
 
-void MW::toggleMetadataDockVisibility() {
+void MW::showMetadataDock() {
     if (!G::useInfoView) return;
     if (G::isLogger) G::log("MW::toggleMetadataDockVisibility");
     if (G::isInitializing) return;
     QDockWidget *dock = metadataDock;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (metadataDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         metadataDock->raise();
         metadataDockVisibleAction->setChecked(true);
-        break;
-    case SetInvisible:
-        metadataDock->setVisible(false);
-        metadataDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         metadataDock->setVisible(true);
@@ -323,7 +335,7 @@ void MW::toggleMetadataDockVisibility() {
     }
 }
 
-void MW::toggleThumbDockVisibity()
+void MW::showThumbDock()
 {
     if (G::isLogger) G::log("MW::toggleThumbDockVisibity");
 
@@ -333,19 +345,15 @@ void MW::toggleThumbDockVisibity()
     }
 
     QDockWidget *dock = thumbDock;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (thumbDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
         break;
-    case SetInvisible:
-        thumbDock->setVisible(false);
-        thumbDockVisibleAction->setChecked(false);
-        break;
+
     case SetVisible:
         thumbDock->setVisible(true);
         thumbDock->raise();
@@ -365,22 +373,17 @@ void MW::toggleThumbDockVisibity()
     //*/
 }
 
-void MW::toggleEmbelDockVisibility() {
+void MW::showEmbelDock() {
     if (G::isLogger) G::log("MW::toggleEmbelDockVisibility");
     if (G::isInitializing) return;
     QDockWidget *dock = embelDock;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (embelDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         embelDock->raise();
         embelDockVisibleAction->setChecked(true);
-        break;
-    case SetInvisible:
-        embelDock->setVisible(false);
-        embelDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         embelDock->setVisible(true);
