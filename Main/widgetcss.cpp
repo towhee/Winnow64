@@ -562,9 +562,8 @@ QString WidgetCSS::scrollBar()
 
     "QScrollBar::handle:vertical {"
         "border: 1px solid " + QColor(l40,l40,l40).name() + ";"
-//        "border-right: 0px solid " + QColor(l10,l10,l10).name() + ";"
+        "border-radius: " + brInteractive + ";"
         "min-height: 20px;"
-        "border-radius: 2px;"  /*not working, border=0, maybe if pad*/
     "}"
 
     "QScrollBar::handle:hover {"
@@ -605,6 +604,7 @@ QString WidgetCSS::scrollBar()
 
     "QScrollBar::handle:horizontal {"
         "border: 1px solid " + QColor(l40,l40,l40).name() + ";"
+        "border-radius: " + brInteractive + ";"
         "min-width: 20px;"
     "}"
 

@@ -204,7 +204,7 @@ void DockTitleBar::mousePressEvent(QMouseEvent *event)
     not collapsed) the click falls through to default QWidget handling so
     Qt's title-bar drag-to-move behaviour is preserved.
 */
-    if (event->button() == Qt::LeftButton) {
+    if (G::useDWCollapse && event->button() == Qt::LeftButton) {
         DockWidget *dock = qobject_cast<DockWidget*>(parentWidget());
         if (dock && dock->isCollapsed() && !dock->isFloating()) {
             MW *mw = qobject_cast<MW*>(dock->parentWidget());
@@ -234,7 +234,7 @@ void DockTitleBar::contextMenuEvent(QContextMenuEvent *event)
     QMenu *menu = mw->createPopupMenu();
     if (!menu) menu = new QMenu(this);
 
-    if (!dock->isFloating()) {
+    if (G::useDWCollapse && !dock->isFloating()) {
         Qt::DockWidgetArea area = mw->dockWidgetArea(dock);
         menu->addSeparator();
         menu->addAction("Collapse all", mw, [mw, area](){ mw->collapseDocksInArea(area); });
@@ -310,6 +310,7 @@ void DockWidget::setCollapsed(bool collapse)
     No explicit width constraint is applied to the dock itself, so the user
     can still drag the dock-area splitter inward and outward while collapsed.
 */
+    if (!G::useDWCollapse) return;
     if (collapse == m_isCollapsed) return;
     QWidget *body = widget();
     QWidget *tb = titleBarWidget();
@@ -719,6 +720,7 @@ void MW::applyDockCollapseState()
     restoreState() so each dock has its restored size — that size is what
     setCollapsed(true) snapshots as m_uncollapsedSize for the next expand.
 */
+    if (!G::useDWCollapse) return;
     auto apply = [this](DockWidget *d, const QString &key) {
         if (!d) return;
         settings->beginGroup("DockCollapsed");

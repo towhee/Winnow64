@@ -909,7 +909,7 @@ void Preferences::addUserInterface()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 36;
-    i.value =mw->classificationBadgeInImageDiameter;
+    i.value = mw->classificationBadgeInImageDiameter;
     i.key = "classificationBadgeInImageDiameter";
     i.delegateType = DT_Slider;
     i.type = "int";

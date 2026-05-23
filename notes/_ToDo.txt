@@ -67,8 +67,6 @@ MAC
 - Mac check for updates not done yet
 - Share https://developer.apple.com/documentation/appkit/nssharingservice?language=objc
 PERFORMANCE
-CODE IMPROVEMENTS
-- Standardize use of G:css
 ENHANCEMENTS
 - When add new workspace the menu shortcut is not updated until reopen app
 - Heic thumb rotation wrong

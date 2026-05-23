@@ -1218,7 +1218,7 @@ void MW::createFolderDock()
     // add widgets to the right side of the title bar layout
     // toggle expansion button
     BarBtn *folderRefreshBtn = new BarBtn();
-    folderRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
+    folderRefreshBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
     folderRefreshBtn->setToolTip("Refresh folders and image counts");
     //folderRefreshBtn->setStyleSheet("QToolTip { color: red;}");
     connect(folderRefreshBtn, &BarBtn::clicked, this, &MW::refresh);
@@ -1229,7 +1229,7 @@ void MW::createFolderDock()
 
     // preferences button
     BarBtn *folderGearBtn = new BarBtn();
-    folderGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    folderGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
     folderGearBtn->setToolTip("Preferences");
     connect(folderGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     folderTitleLayout->addWidget(folderGearBtn);
@@ -1239,7 +1239,7 @@ void MW::createFolderDock()
 
     // question mark button
     BarBtn *folderQuestionBtn = new BarBtn();
-    folderQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    folderQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
     folderQuestionBtn->setToolTip("How this works: folder selection tips");
     connect(folderQuestionBtn, &BarBtn::clicked, fsTree, &FSTree::howThisWorks);
     folderTitleLayout->addWidget(folderQuestionBtn);
@@ -1248,22 +1248,24 @@ void MW::createFolderDock()
     folderTitleLayout->addSpacing(10);
 
     // collapse/expand body button
-    BarBtn *folderCollapseBtn = new BarBtn();
-    folderCollapseBtn->setIcon(QIcon(":/images/icon16/collapse.png"));
-    folderCollapseBtn->setToolTip("Collapse panel.");
-    connect(folderCollapseBtn, &BarBtn::clicked, folderDock, &DockWidget::toggleCollapsed);
-    connect(folderDock, &DockWidget::collapsedChanged, folderCollapseBtn, [folderCollapseBtn](bool c){
-        folderCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
-        folderCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
-    });
-    folderTitleLayout->addWidget(folderCollapseBtn);
+    if (G::useDWCollapse) {
+        BarBtn *folderCollapseBtn = new BarBtn();
+        folderCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        folderCollapseBtn->setToolTip("Collapse panel.");
+        connect(folderCollapseBtn, &BarBtn::clicked, folderDock, &DockWidget::toggleCollapsed);
+        connect(folderDock, &DockWidget::collapsedChanged, folderCollapseBtn, [folderCollapseBtn](bool c){
+            folderCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+            folderCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        folderTitleLayout->addWidget(folderCollapseBtn);
 
-    // Spacer
-    folderTitleLayout->addSpacing(10);
+        // Spacer
+        folderTitleLayout->addSpacing(10);
+    }
 
     // close button
     BarBtn *folderCloseBtn = new BarBtn();
-    folderCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    folderCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     folderCloseBtn->setToolTip("Hide the Folders Panel");
     connect(folderCloseBtn, &BarBtn::clicked, this, &MW::toggleFolderDockVisibility);
     folderTitleLayout->addWidget(folderCloseBtn);
@@ -1296,7 +1298,7 @@ void MW::createFavDock()
     // add widgets to the right side of the title bar layout
     // refresh button
     BarBtn *favRefreshBtn = new BarBtn();
-    favRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
+    favRefreshBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
     favRefreshBtn->setToolTip("Refresh bookmarks and image counts");
     connect(favRefreshBtn, &BarBtn::clicked, this, &MW::refresh);
     favTitleLayout->addWidget(favRefreshBtn);
@@ -1306,7 +1308,7 @@ void MW::createFavDock()
 
     // preferences button
     BarBtn *favGearBtn = new BarBtn();
-    favGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    favGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
     favGearBtn->setToolTip("Preferences");
     connect(favGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     favTitleLayout->addWidget(favGearBtn);
@@ -1316,7 +1318,7 @@ void MW::createFavDock()
 
     // question mark button
     BarBtn *favQuestionBtn = new BarBtn();
-    favQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    favQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
     favQuestionBtn->setToolTip("How this works: bookmark tips");
     connect(favQuestionBtn, &BarBtn::clicked, bookmarks, &BookMarks::howThisWorks);
     favTitleLayout->addWidget(favQuestionBtn);
@@ -1325,22 +1327,24 @@ void MW::createFavDock()
     favTitleLayout->addSpacing(10);
 
     // collapse/expand body button
-    BarBtn *favCollapseBtn = new BarBtn();
-    favCollapseBtn->setIcon(QIcon(":/images/icon16/collapse.png"));
-    favCollapseBtn->setToolTip("Collapse panel.");
-    connect(favCollapseBtn, &BarBtn::clicked, favDock, &DockWidget::toggleCollapsed);
-    connect(favDock, &DockWidget::collapsedChanged, favCollapseBtn, [favCollapseBtn](bool c){
-        favCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
-        favCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
-    });
-    favTitleLayout->addWidget(favCollapseBtn);
+    if (G::useDWCollapse) {
+        BarBtn *favCollapseBtn = new BarBtn();
+        favCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        favCollapseBtn->setToolTip("Collapse panel.");
+        connect(favCollapseBtn, &BarBtn::clicked, favDock, &DockWidget::toggleCollapsed);
+        connect(favDock, &DockWidget::collapsedChanged, favCollapseBtn, [favCollapseBtn](bool c){
+            favCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+            favCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        favTitleLayout->addWidget(favCollapseBtn);
 
-    // Spacer
-    favTitleLayout->addSpacing(10);
+        // Spacer
+        favTitleLayout->addSpacing(10);
+    }
 
     // close button
     BarBtn *favCloseBtn = new BarBtn();
-    favCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    favCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     favCloseBtn->setToolTip("Hide the Bookmarks Panel");
     connect(favCloseBtn, &BarBtn::clicked, this, &MW::toggleFavDockVisibility);
     favTitleLayout->addWidget(favCloseBtn);
@@ -1369,7 +1373,7 @@ void MW::createFilterDock()
     // add widgets to the right side of the title bar layout
     // toggle expansion button
     BarBtn *updateFiltersBtn = new BarBtn();
-    updateFiltersBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
+    updateFiltersBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
     updateFiltersBtn->setToolTip("Update filters");
     connect(updateFiltersBtn, &BarBtn::clicked, this, &MW::updateAllFilters);
     filterTitleLayout->addWidget(updateFiltersBtn);
@@ -1389,7 +1393,7 @@ void MW::createFilterDock()
 
     // preferences button
     BarBtn *filterGearBtn = new BarBtn();
-    filterGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    filterGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
     filterGearBtn->setToolTip("Preferences");
     connect(filterGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     filterTitleLayout->addWidget(filterGearBtn);
@@ -1399,7 +1403,7 @@ void MW::createFilterDock()
 
     // question mark button
     BarBtn *filterQuestionBtn = new BarBtn();
-    filterQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    filterQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
     filterQuestionBtn->setToolTip("How this works");
     connect(filterQuestionBtn, &BarBtn::clicked, filters, &Filters::howThisWorks);
     filterTitleLayout->addWidget(filterQuestionBtn);
@@ -1408,22 +1412,24 @@ void MW::createFilterDock()
     filterTitleLayout->addSpacing(10);
 
     // collapse/expand body button
-    BarBtn *filterCollapseBtn = new BarBtn();
-    filterCollapseBtn->setIcon(QIcon(":/images/icon16/collapse.png"));
-    filterCollapseBtn->setToolTip("Collapse panel.");
-    connect(filterCollapseBtn, &BarBtn::clicked, filterDock, &DockWidget::toggleCollapsed);
-    connect(filterDock, &DockWidget::collapsedChanged, filterCollapseBtn, [filterCollapseBtn](bool c){
-        filterCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
-        filterCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
-    });
-    filterTitleLayout->addWidget(filterCollapseBtn);
+    if (G::useDWCollapse) {
+        BarBtn *filterCollapseBtn = new BarBtn();
+        filterCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        filterCollapseBtn->setToolTip("Collapse panel.");
+        connect(filterCollapseBtn, &BarBtn::clicked, filterDock, &DockWidget::toggleCollapsed);
+        connect(filterDock, &DockWidget::collapsedChanged, filterCollapseBtn, [filterCollapseBtn](bool c){
+            filterCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+            filterCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        filterTitleLayout->addWidget(filterCollapseBtn);
 
-    // Spacer
-    filterTitleLayout->addSpacing(10);
+        // Spacer
+        filterTitleLayout->addSpacing(10);
+    }
 
     // close button
     BarBtn *filterCloseBtn = new BarBtn();
-    filterCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    filterCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     filterCloseBtn->setToolTip("Hide the Filters Panel");
     connect(filterCloseBtn, &BarBtn::clicked, this, &MW::toggleFilterDockVisibility);
     filterTitleLayout->addWidget(filterCloseBtn);
@@ -1480,7 +1486,7 @@ void MW::createMetadataDock()
     // add widgets to the right side of the title bar layout
     // preferences button
     BarBtn *metaGearBtn = new BarBtn();
-    metaGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    metaGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
     metaGearBtn->setToolTip("Edit preferences including which items to show in this panel");
     connect(metaGearBtn, &BarBtn::clicked, this, &MW::infoViewPreferences);
     metaTitleLayout->addWidget(metaGearBtn);
@@ -1490,7 +1496,7 @@ void MW::createMetadataDock()
 
     // question mark button
     BarBtn *metaQuestionBtn = new BarBtn();
-    metaQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    metaQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
     metaQuestionBtn->setToolTip("How this works: metadata panel guide");
     connect(metaQuestionBtn, &BarBtn::clicked, infoView, &InfoView::howThisWorks);
     metaTitleLayout->addWidget(metaQuestionBtn);
@@ -1499,22 +1505,24 @@ void MW::createMetadataDock()
     metaTitleLayout->addSpacing(10);
 
     // collapse/expand body button
-    BarBtn *metaCollapseBtn = new BarBtn();
-    metaCollapseBtn->setIcon(QIcon(":/images/icon16/collapse.png"));
-    metaCollapseBtn->setToolTip("Collapse panel.");
-    connect(metaCollapseBtn, &BarBtn::clicked, metadataDock, &DockWidget::toggleCollapsed);
-    connect(metadataDock, &DockWidget::collapsedChanged, metaCollapseBtn, [metaCollapseBtn](bool c){
-        metaCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
-        metaCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
-    });
-    metaTitleLayout->addWidget(metaCollapseBtn);
+    if (G::useDWCollapse) {
+        BarBtn *metaCollapseBtn = new BarBtn();
+        metaCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        metaCollapseBtn->setToolTip("Collapse panel.");
+        connect(metaCollapseBtn, &BarBtn::clicked, metadataDock, &DockWidget::toggleCollapsed);
+        connect(metadataDock, &DockWidget::collapsedChanged, metaCollapseBtn, [metaCollapseBtn](bool c){
+            metaCollapseBtn->setIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png", G::iconOpacity);
+            metaCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        metaTitleLayout->addWidget(metaCollapseBtn);
 
-    // Spacer
-    metaTitleLayout->addSpacing(10);
+        // Spacer
+        metaTitleLayout->addSpacing(10);
+    }
 
     // close button
     BarBtn *metaCloseBtn = new BarBtn();
-    metaCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    metaCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     metaCloseBtn->setToolTip("Hide the Metadata Panel");
     connect(metaCloseBtn, &BarBtn::clicked, this, &MW::toggleMetadataDockVisibility);
     metaTitleLayout->addWidget(metaCloseBtn);
@@ -1656,18 +1664,20 @@ void MW::createEmbelDock()
     embelTitleLayout->addSpacing(5);
 
     // collapse/expand body button
-    BarBtn *embelCollapseBtn = new BarBtn();
-    embelCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
-    embelCollapseBtn->setToolTip("Collapse panel.");
-    connect(embelCollapseBtn, &BarBtn::clicked, embelDock, &DockWidget::toggleCollapsed);
-    connect(embelDock, &DockWidget::collapsedChanged, embelCollapseBtn, [embelCollapseBtn](bool c){
-        embelCollapseBtn->setIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png", G::iconOpacity);
-        embelCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
-    });
-    embelTitleLayout->addWidget(embelCollapseBtn);
+    if (G::useDWCollapse) {
+        BarBtn *embelCollapseBtn = new BarBtn();
+        embelCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        embelCollapseBtn->setToolTip("Collapse panel.");
+        connect(embelCollapseBtn, &BarBtn::clicked, embelDock, &DockWidget::toggleCollapsed);
+        connect(embelDock, &DockWidget::collapsedChanged, embelCollapseBtn, [embelCollapseBtn](bool c){
+            embelCollapseBtn->setIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png", G::iconOpacity);
+            embelCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        embelTitleLayout->addWidget(embelCollapseBtn);
 
-    // Spacer
-    embelTitleLayout->addSpacing(10);
+        // Spacer
+        embelTitleLayout->addSpacing(10);
+    }
 
     // close button
     BarBtn *embelCloseBtn = new BarBtn();
