@@ -603,21 +603,22 @@ bool MW::isDockTabified(QDockWidget *dock)
 
 QString MW::dockTabToolTip(const QString &tabText)
 {
-    auto tip = [](const QString &shortcut) {
+    auto tip = [](const QString &title, const QString &shortcut) {
+        // Title in the dock-title blue (mirrors WidgetCSS "DockTitleBar > QLabel").
         return QString(
-            "Shortcut %1.<br>"
+            "<span style=\"color:#6CC1E8;\">%1</span>: shortcut %2.<br>"
             "&nbsp;&nbsp;- Selects if not selected and visible.<br>"
             "&nbsp;&nbsp;- Hides if currently selected.<br>"
             "&nbsp;&nbsp;- Reveals if currently hidden."
-        ).arg(shortcut);
+        ).arg(title, shortcut);
     };
 
-    if (tabText == folderDockTabText)   return tip("F3");
-    if (tabText == favDockTabText)      return tip("F4");
-    if (tabText == filterDockTabText)   return tip("F5");
-    if (tabText == metadataDockTabText) return tip("F6");
-    if (tabText == thumbDockTabText)    return tip("F7");
-    if (tabText == embelDockTabText)    return tip("F8");
+    if (tabText == folderDockTabText)   return tip(folderDockTabText,   "F3");
+    if (tabText == favDockTabText)      return tip(favDockTabText,      "F4");
+    if (tabText == filterDockTabText)   return tip(filterDockTabText,   "F5");
+    if (tabText == metadataDockTabText) return tip(metadataDockTabText, "F6");
+    if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
+    if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
     return QString();
 }
 
