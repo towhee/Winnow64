@@ -22,7 +22,8 @@
       "Bash(/opt/homebrew/lib/QtCore.framework/Versions/A/QtCore)",
       "Bash(defaults read *)",
       "Bash(brew list *)",
-      "Bash(awk -F/ '{print $1\"/\"$2}')"
+      "Bash(awk -F/ '{print $1\"/\"$2}')",
+      "Bash(/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake -S /Users/roryhill/Projects/Winnow64 -B /Users/roryhill/Projects/Winnow64/build/mac-debug)"
     ]
   }
 }
