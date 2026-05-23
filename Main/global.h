@@ -240,6 +240,7 @@ Q_NAMESPACE
     extern bool useImageCache;
     extern bool useImageView;
     extern bool useInfoView;
+    extern bool useDWCollapse;   // master switch for dock collapse/expand/solo mode
     extern bool useMultimedia;
     extern bool useUpdateStatus ;
     extern bool useFilterView;      // not finished

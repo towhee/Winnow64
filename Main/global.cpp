@@ -73,6 +73,7 @@ bool useReadIcons = true;
 bool useImageCache = true;
 bool useImageView = true;
 bool useInfoView = true;
+bool useDWCollapse = false;         // master switch for dock collapse/expand/solo mode
 bool useMultimedia = true;
 bool useUpdateStatus = true;
 bool useFilterView = true;          // not finished
@@ -137,7 +138,7 @@ QColor labelPurpleColor(QColor(50,30,70));     // Dark purple
 
 QStringList ratings, labelColors;
 
-double iconOpacity = 0.4;
+double iconOpacity = 0.5;           // 0.0 - 1.0 (higher is brighter)
 
 // ui
 int wheelSensitivity = 150;
