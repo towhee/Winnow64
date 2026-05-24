@@ -570,11 +570,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Bounce between random bookmarked folders, cycling images in each,
     // until ESC is pressed or something crashes. Prompts for delay/duration.
-    // bounceFoldersStressTest();
-    qDebug() << sel->sm->selectedRows().count();
-    qDebug() << dm->selectionModel->selectedRows().count();
-    qDebug() << dm->selectionModel->selectedRows().size();
-    qDebug() << dm->sf->index(0, G::PickColumn).data(Qt::EditRole).toString();
+    bounceFoldersStressTest();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

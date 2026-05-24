@@ -26,6 +26,7 @@ set(WINNOW_TEST_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/Utilities
     ${CMAKE_SOURCE_DIR}/FocusStack
     ${CMAKE_SOURCE_DIR}/Dialogs
+    ${CMAKE_SOURCE_DIR}/Metadata
 )
 
 # .ui files live alongside their classes; mirror the app's AUTOUIC search paths
@@ -59,6 +60,13 @@ endfunction()
 
 winnow_add_unit_test(tst_byteops   unit/tst_byteops.cpp)
 winnow_add_unit_test(tst_pathutils unit/tst_pathutils.cpp)
+winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
+# tst_exiftags also compiles Metadata/exif.cpp (its only dependency is exif.h).
+winnow_add_unit_test(tst_exiftags  unit/tst_exiftags.cpp ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp)
+# tst_ifd compiles Metadata/ifd.cpp + metareport.cpp (ifd's link closure).
+winnow_add_unit_test(tst_ifd       unit/tst_ifd.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/ifd.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/metareport.cpp)
 
 # -----------------------------------------------------------------------------
 # Smoke test — launch the real app against the fixture folder via the --selftest
@@ -76,5 +84,19 @@ if(TARGET Winnow)
         TIMEOUT 90
         ENVIRONMENT "WINNOW_SELFTEST_MS=4000"
         LABELS "smoke"
+    )
+
+    # End-to-end metadata read: the full Metadata pipeline parses a committed real
+    # camera JPEG via the --metatest flag. Expected make/model are passed by env so
+    # the fixture's identity lives here, not in app code. Exits 0 on a match.
+    add_test(
+        NAME metadata_read
+        COMMAND $<TARGET_FILE:Winnow> --metatest
+                ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images/sample_nikon_d700.jpg
+    )
+    set_tests_properties(metadata_read PROPERTIES
+        TIMEOUT 60
+        ENVIRONMENT "WINNOW_METATEST_MAKE=NIKON;WINNOW_METATEST_MODEL=D700"
+        LABELS "metadata"
     )
 endif()

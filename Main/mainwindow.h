@@ -126,6 +126,11 @@ public:
     // lets it load for settleMs, then exits the app 0 if images loaded, else 2.
     void runSelfTest(const QString &folderPath, int settleMs);
 
+    // End-to-end metadata read used by the metadata test layer (tests/). Reads
+    // filePath through the full Metadata pipeline and exits 0 if make/model and
+    // dimensions parsed (and match WINNOW_METATEST_MAKE/MODEL if set), else 2.
+    void runMetaTest(const QString &filePath);
+
     /*
     alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa, lambda, mu, nu,
     xi, omicron, pi, rho, sigma, tau, upsilon, phi, chi, psi, and omega.

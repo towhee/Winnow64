@@ -184,3 +184,61 @@ Folder tab tip = "Shortcut F3.<br>
                  "  - Hides if currently selected"
                  "  - Reveals if currently hidden"
 
+get16 guards against a too-short buffer (size() < 2), but get24/get32/get40/get48/get64 only guard the empty case — a
+non-empty-but-too-short QByteArray reads out of bounds (UB). Since these parse untrusted image metadata, a truncated file could trip it.
+The fix is a one-line size guard per function.
+
+Your Winnow64/CLAUDE.md still says Build System: QMake — it's CMake now. Worth updating so future sessions don't trip on it.
+
+Finagling… (23m 14s · ↑ 96.2k tokens)
+
+Done. The full suite is green — 3/3 passing (2 unit + 1 smoke) via a single ctest command, and the TSan layer is wired and configures
+  cleanly.
+
+  What you now have
+
+  A three-layer suite under tests/, all driven by CMake/CTest:
+
+  ┌───────┬─────────────────────────────────────────────┬───────────────────────┬────────────────────────┐
+  │ Layer │                   Checks                    │        Status         │          Run           │
+  ├───────┼─────────────────────────────────────────────┼───────────────────────┼────────────────────────┤
+  │ unit  │ byte parsers + path helpers (Qt Test)       │ ✅ verified           │ ctest -L unit          │
+  ├───────┼─────────────────────────────────────────────┼───────────────────────┼────────────────────────┤
+  │ smoke │ real app launches, loads a folder, no crash │ ✅ verified           │ ctest -L smoke         │
+  ├───────┼─────────────────────────────────────────────┼───────────────────────┼────────────────────────┤
+  │ tsan  │ data races during folder-load concurrency   │ ⚙️  wired, not yet run │ tests/tsan/run_tsan.sh │
+  └───────┴─────────────────────────────────────────────┴───────────────────────┴────────────────────────┘
+
+  To run after changes / before release:
+  cmake --build build/mac-debug --target Winnow tst_byteops tst_pathutils
+  ctest --test-dir build/mac-debug --output-on-failure
+
+  Files created
+
+  - tests/unit/tst_byteops.cpp (14 assertions), tests/unit/tst_pathutils.cpp
+  - tests/CMakeLists.txt, tests/README.md (the single reference)
+  - tests/fixtures/generate_fixtures.py + 3 tiny generated images (~11 KB)
+  - tests/tsan/run_tsan.sh
+
+  Files modified
+
+  - CMakeLists.txt — enable_testing() + add_subdirectory(tests) (gated by WINNOW_BUILD_TESTS), and a gated WINNOW_SANITIZE_THREAD option.
+  App target behavior unchanged.
+  - CMakePresets.json — added mac-tsan preset.
+  - Main/main.cpp + Main/mainwindow.{h,cpp} — hidden --selftest <folder> flag → MW::runSelfTest(). Uses QStandardPaths test mode so it never
+   touches your real settings.ini, and bypasses single-instance forwarding.
+  - CLAUDE.md — corrected Build System to CMake; added a tests pointer.
+
+  Two findings worth your attention
+
+  1. Latent OOB read — get24/get32/get40/get48/get64 only guard the empty case, not short buffers (unlike get16). A truncated metadata file
+  could read past the end (UB). One-line size guard each.
+  2. Teardown assert — forcing QCoreApplication::exit() after an async folder load trips "Called object is not of the correct type (class
+  destructor may have already run)" — an in-flight queued signal hitting MW during destruction. Only on abrupt exit (normal window-close
+  avoids it), which is why the self-test uses std::_Exit. May be a real shutdown lifetime bug.
+
+  Optional next steps
+
+  - Run the TSan layer end-to-end: tests/tsan/run_tsan.sh (full instrumented build, several minutes — want me to kick it off?).
+  - Fix the byte-op bounds guards (I can do this as a separate change).
+  - Expand units into Metadata/EXIF — they sit directly on the byte ops now under test.
