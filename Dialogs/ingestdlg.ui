@@ -895,7 +895,7 @@
          </font>
         </property>
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="primaryTab">
          <attribute name="title">
@@ -1028,7 +1028,7 @@
            <rect>
             <x>200</x>
             <y>50</y>
-            <width>320</width>
+            <width>350</width>
             <height>26</height>
            </rect>
           </property>
@@ -1050,7 +1050,7 @@
            <rect>
             <x>200</x>
             <y>89</y>
-            <width>391</width>
+            <width>350</width>
             <height>25</height>
            </rect>
           </property>
@@ -1337,7 +1337,7 @@ margin-left =  5px</string>
            <rect>
             <x>200</x>
             <y>50</y>
-            <width>320</width>
+            <width>350</width>
             <height>26</height>
            </rect>
           </property>
@@ -1359,7 +1359,7 @@ margin-left =  5px</string>
            <rect>
             <x>200</x>
             <y>89</y>
-            <width>391</width>
+            <width>350</width>
             <height>25</height>
            </rect>
           </property>
@@ -1804,7 +1804,7 @@ margin-left =  5px</string>
          <rect>
           <x>240</x>
           <y>35</y>
-          <width>351</width>
+          <width>350</width>
           <height>26</height>
          </rect>
         </property>
@@ -1821,9 +1821,9 @@ margin-left =  5px</string>
        <widget class="QPushButton" name="filenameTemplatesBtn">
         <property name="geometry">
          <rect>
-          <x>630</x>
+          <x>640</x>
           <y>32</y>
-          <width>161</width>
+          <width>151</width>
           <height>32</height>
          </rect>
         </property>

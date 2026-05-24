@@ -108,18 +108,18 @@ QColor borderColor;                 // define after app stylesheet defined
 QColor disabledColor;               // define after app stylesheet defined
 QColor tabWidgetBorderColor;        // define after app stylesheet defined
 QColor pushButtonBackgroundColor;   // define after app stylesheet defined
-QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
-QColor helpColor = QColor(68,95,118);
+QColor scrollBarHandleBackgroundColor; // = QColor(20,30,20);
+QColor helpColor = QColor(37,65,40);
 QColor appleBlue = QColor(21,113,211);      // #1571D3
 QColor selectionColor = QColor(68,95,118);
 QColor mouseOverColor = QColor(40,54,66);
 
 QString css;                        // app stylesheet;
 
-// Semantic state stylesheets - not theme-bound; used for status indicators,
-// error highlights, etc. Color, not font size: widgets that need a specific
-// size (e.g. status dots on Windows) should set it via setFont() so it
-// persists across setStyleSheet() calls.
+/*  Semantic state stylesheets - not theme-bound; used for status indicators,
+    error highlights, etc. Color, not font size: widgets that need a specific
+    size (e.g. status dots on Windows) should set it via setFont() so it
+    persists across setStyleSheet() calls. */
 QString cssError    = "QLabel,QLineEdit,QComboBox {color:red;}";
 QString cssWarning  = "QLabel,QLineEdit,QComboBox {color:yellow;}";
 QString cssOk       = "QLabel,QLineEdit,QComboBox {color:green;}";
