@@ -16,6 +16,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT" || exit 1   # `cmake --preset` must run from the dir with CMakePresets.json
 CMAKE="${CMAKE:-/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake}"
 BUILD="$ROOT/build/mac-tsan"
 APP="$BUILD/Winnow.app/Contents/MacOS/Winnow"
@@ -27,7 +28,9 @@ echo "==> Configuring + building the ThreadSanitizer app (full instrumented buil
 "$CMAKE" --build "$BUILD" --target Winnow || exit $?
 
 echo "==> Running --selftest under ThreadSanitizer (log: $LOG)…"
-TSAN_OPTIONS="suppressions=$ROOT/tsan.supp halt_on_error=0 history_size=4" \
+# report_thread_leaks=0: the self-test ends with std::_Exit (no orderly shutdown),
+# so worker threads are never joined — an expected "leak", not a concurrency bug.
+TSAN_OPTIONS="suppressions=$ROOT/tsan.supp halt_on_error=0 history_size=4 report_thread_leaks=0" \
 WINNOW_SELFTEST_MS="${WINNOW_SELFTEST_MS:-8000}" \
     "$APP" --selftest "$FIXTURES" > "$LOG" 2>&1
 echo "    app exit=$? (ignored; race detection is by log scan)"
