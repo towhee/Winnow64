@@ -3,8 +3,6 @@
 
 #include <QtCore>
 
-#include "Metadata/metareport.h"
-#include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
 
 struct IFDData

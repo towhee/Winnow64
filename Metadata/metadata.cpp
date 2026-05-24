@@ -2,6 +2,8 @@
 #include <QDebug>
 #include "ImageFormats/Heic/heic.h"
 #include "Main/global.h"
+#include "Metadata/metareport.h"
+#include "ImageFormats/Video/mov.h"
 
 Metadata::Metadata(QObject *parent) : QObject(parent)
 {

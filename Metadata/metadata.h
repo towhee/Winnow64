@@ -14,7 +14,6 @@
 #include "Metadata/irb.h"
 #include "Metadata/iptc.h"
 #include "Metadata/gps.h"
-#include "Metadata/metareport.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
 #include "Metadata/ExifTool.h"
@@ -42,9 +41,7 @@
 #include "ImageFormats/Panasonic/panasonic.h"
 #include "ImageFormats/Sony/sony.h"
 #include "ImageFormats/Tiff/tiff.h"
-#include "ImageFormats/Video/mov.h"
 #include "ImageFormats/Png/png.h"
-#include "ImageFormats/Video/mp4.h"
 
 class Metadata : public QObject
 {
