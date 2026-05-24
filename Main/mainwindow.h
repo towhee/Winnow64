@@ -122,6 +122,10 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
+    // Headless self-test used by the smoke test layer (tests/). Opens folderPath,
+    // lets it load for settleMs, then exits the app 0 if images loaded, else 2.
+    void runSelfTest(const QString &folderPath, int settleMs);
+
     /*
     alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa, lambda, mu, nu,
     xi, omicron, pi, rho, sigma, tau, upsilon, phi, chi, psi, and omega.

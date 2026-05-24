@@ -713,3 +713,26 @@ if(WIN32)
     # App icon for the .exe
     target_sources(Winnow PRIVATE images/winnow.ico)
 endif()
+
+# =============================================================================
+# ThreadSanitizer (TSan) build of the app — opt-in, used by the tsan test layer.
+#   Enabled via the mac-tsan preset (-DWINNOW_SANITIZE_THREAD=ON). OFF by default
+#   so normal debug/release builds are untouched. Run tests/tsan/run_tsan.sh.
+# =============================================================================
+option(WINNOW_SANITIZE_THREAD "Build the Winnow app with ThreadSanitizer" OFF)
+if(WINNOW_SANITIZE_THREAD)
+    target_compile_options(Winnow PRIVATE -fsanitize=thread -fno-omit-frame-pointer -g)
+    target_link_options(Winnow PRIVATE -fsanitize=thread)
+endif()
+
+# =============================================================================
+# Tests (Qt Test + CTest)
+#   Configure as usual, then:
+#     ctest --test-dir build/<preset> --output-on-failure
+#   Disable with -DWINNOW_BUILD_TESTS=OFF (does not affect the Winnow target).
+# =============================================================================
+option(WINNOW_BUILD_TESTS "Build the Winnow test suite" ON)
+if(WINNOW_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

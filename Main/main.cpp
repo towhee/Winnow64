@@ -2,6 +2,7 @@
 #include <QApplication>
 #include "qtsingleapplication.h"
 #include <QMediaPlayer>
+#include <QStandardPaths>
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
 #endif
@@ -64,6 +65,22 @@ int main(int argc, char *argv[])
     );
     qputenv("QT_FFMPEG_LOG", "0");
 
+    // Headless self-test mode (smoke test layer, see tests/):
+    //   Winnow --selftest <folder>
+    // Settle time defaults to 8s, override with WINNOW_SELFTEST_MS. Runs against
+    // an isolated settings location so it never touches the user's real config,
+    // and bypasses the single-instance forwarding so it always starts fresh.
+    bool isSelfTest = false;
+    QString selfTestFolder;
+    int selfTestMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_MS");
+    if (selfTestMs <= 0) selfTestMs = 8000;
+    for (int i = 1; i < argc; ++i) {
+        const QString arg = QString::fromLocal8Bit(argv[i]);
+        if (arg == "--selftest") isSelfTest = true;
+        else if (isSelfTest && selfTestFolder.isEmpty()) selfTestFolder = arg;
+    }
+    if (isSelfTest) QStandardPaths::setTestModeEnabled(true);
+
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
 
@@ -73,16 +90,18 @@ int main(int argc, char *argv[])
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }
+    // Self-test opens its folder explicitly via MW::runSelfTest, not via args.
+    if (isSelfTest) args.clear();
 
     // terminate if Winnow already open and no arguments to pass
-    if (args == "" && instance.isRunning()) {
+    if (!isSelfTest && args == "" && instance.isRunning()) {
         QString msg = "Winnow or a Winnow report is open.";
         // G::popUp->showPopup(msg);
         return 0;
     }
 
     // instance already running
-    if (instance.sendMessage(args)) {
+    if (!isSelfTest && instance.sendMessage(args)) {
         if (G::isFileLogger) Utilities::log("WinnowMain", "Instance already running");
         QString msg = "Winnow or a Winnow report is open.";
         // G::popUp->showPopup(msg);
@@ -108,6 +127,10 @@ int main(int argc, char *argv[])
     //                  &mw, &MW::whenActivated);
 
     mw.show();
+
+    if (isSelfTest) {
+        mw.runSelfTest(selfTestFolder, selfTestMs);
+    }
 
     // connect message when instance already running
     QObject::connect(&instance, SIGNAL(messageReceived(const QString&)),

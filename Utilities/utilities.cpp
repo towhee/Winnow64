@@ -638,7 +638,7 @@ QByteArray Utilities::put16(quint16 x, bool isBigEnd)
 
 quint32 Utilities::get24(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 3) return 0;
     if (isBigEnd) {
         quint32 x = c[0]&0xFF;
         x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
@@ -655,7 +655,7 @@ quint32 Utilities::get24(QByteArray c, bool isBigEnd)
 
 quint32 Utilities::get32(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 4) return 0;
     if (isBigEnd) {
         quint32 x = c[0]&0xFF;
         x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
@@ -693,7 +693,7 @@ QByteArray Utilities::put32(quint32 x, bool isBigEnd)
 
 quint64 Utilities::get40(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 5) return 0;
     if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
@@ -714,7 +714,7 @@ quint64 Utilities::get40(QByteArray c, bool isBigEnd)
 
 quint64 Utilities::get48(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 6) return 0;
     if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
@@ -737,7 +737,7 @@ quint64 Utilities::get48(QByteArray c, bool isBigEnd)
 
 quint64 Utilities::get64(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 8) return 0;
     if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
