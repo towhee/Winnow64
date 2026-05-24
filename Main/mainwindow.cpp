@@ -440,6 +440,41 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
     });
 }
 
+void MW::runMetaTest(const QString &filePath)
+{
+/*
+    End-to-end metadata read (see tests/metadata). Reads filePath through the full
+    Metadata pipeline (the same loadImageMetadata the Reader uses), prints the key
+    parsed fields, and exits 0 if make/model/dimensions came back (optionally
+    matching WINNOW_METATEST_MAKE/MODEL substrings), else 2. main.cpp enables
+    QStandardPaths test mode first, so this never touches real settings.
+*/
+    if (G::isLogger) G::log("MW::runMetaTest", filePath);
+    QFileInfo fi(filePath);
+    const bool ok = metadata->loadImageMetadata(fi, 0, 0, true, true, false, false,
+                                                "MW::runMetaTest");
+    const ImageMetadata &m = metadata->m;
+    fprintf(stderr, "METATEST: ok=%d make=[%s] model=[%s] w=%d h=%d\n",
+            ok ? 1 : 0,
+            m.make.toLocal8Bit().constData(),
+            m.model.toLocal8Bit().constData(),
+            m.width, m.height);
+    fflush(stderr);
+
+    // Expected make/model substrings are supplied by the test (env), so this code
+    // stays generic and the fixture's identity lives in the test registration.
+    const QByteArray expMake  = qgetenv("WINNOW_METATEST_MAKE");
+    const QByteArray expModel = qgetenv("WINNOW_METATEST_MODEL");
+    const bool pass = ok
+        && m.width > 0 && m.height > 0
+        && !m.make.isEmpty() && !m.model.isEmpty()
+        && (expMake.isEmpty()
+            || m.make.contains(QString::fromLocal8Bit(expMake), Qt::CaseInsensitive))
+        && (expModel.isEmpty()
+            || m.model.contains(QString::fromLocal8Bit(expModel), Qt::CaseInsensitive));
+    std::_Exit(pass ? 0 : 2);
+}
+
 void MW::whenActivated(Qt::ApplicationState state)
 {
     // NOT BEING USED (REMOVED FROM MAIN.CPP)

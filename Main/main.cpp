@@ -71,15 +71,19 @@ int main(int argc, char *argv[])
     // an isolated settings location so it never touches the user's real config,
     // and bypasses the single-instance forwarding so it always starts fresh.
     bool isSelfTest = false;
+    bool isMetaTest = false;
     QString selfTestFolder;
+    QString metaTestFile;
     int selfTestMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_MS");
     if (selfTestMs <= 0) selfTestMs = 8000;
     for (int i = 1; i < argc; ++i) {
         const QString arg = QString::fromLocal8Bit(argv[i]);
         if (arg == "--selftest") isSelfTest = true;
+        else if (arg == "--metatest") isMetaTest = true;
+        else if (isMetaTest && metaTestFile.isEmpty()) metaTestFile = arg;
         else if (isSelfTest && selfTestFolder.isEmpty()) selfTestFolder = arg;
     }
-    if (isSelfTest) QStandardPaths::setTestModeEnabled(true);
+    if (isSelfTest || isMetaTest) QStandardPaths::setTestModeEnabled(true);
 
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
@@ -90,18 +94,19 @@ int main(int argc, char *argv[])
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }
-    // Self-test opens its folder explicitly via MW::runSelfTest, not via args.
-    if (isSelfTest) args.clear();
+    // The test modes open their target explicitly (runSelfTest / runMetaTest),
+    // not via args, and must always start a fresh instance.
+    if (isSelfTest || isMetaTest) args.clear();
 
     // terminate if Winnow already open and no arguments to pass
-    if (!isSelfTest && args == "" && instance.isRunning()) {
+    if (!isSelfTest && !isMetaTest && args == "" && instance.isRunning()) {
         QString msg = "Winnow or a Winnow report is open.";
         // G::popUp->showPopup(msg);
         return 0;
     }
 
     // instance already running
-    if (!isSelfTest && instance.sendMessage(args)) {
+    if (!isSelfTest && !isMetaTest && instance.sendMessage(args)) {
         if (G::isFileLogger) Utilities::log("WinnowMain", "Instance already running");
         QString msg = "Winnow or a Winnow report is open.";
         // G::popUp->showPopup(msg);
@@ -130,6 +135,9 @@ int main(int argc, char *argv[])
 
     if (isSelfTest) {
         mw.runSelfTest(selfTestFolder, selfTestMs);
+    }
+    else if (isMetaTest) {
+        mw.runMetaTest(metaTestFile);
     }
 
     // connect message when instance already running
