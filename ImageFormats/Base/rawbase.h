@@ -22,15 +22,12 @@
 
 #include <QtWidgets>
 
-#include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
-#include "Metadata/exif.h"
 #include "Metadata/ifd.h"
 #include "Metadata/irb.h"
 #include "Metadata/iptc.h"
 #include "Metadata/xmp.h"
 #include "Metadata/gps.h"
-#include "Metadata/metareport.h"
 #include "ImageFormats/Tiff/tiff.h"
 
 // Forward declare to reduce build deps

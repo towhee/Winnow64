@@ -11,7 +11,6 @@
 #include "Metadata/xmp.h"
 #include "Metadata/gps.h"
 #include "ImageFormats/Jpeg/jpeg.h"
-#include "Metadata/metareport.h"
 #include <vector>
 #include <cstring>
 

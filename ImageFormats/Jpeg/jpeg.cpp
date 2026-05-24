@@ -1,5 +1,6 @@
 #include "jpeg.h"
 #include "Main/global.h"
+#include "Metadata/metareport.h"
 #include <QDebug>
 
 Jpeg::Jpeg()

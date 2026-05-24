@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QFile>
 #include <QDateTime>
-#include <QDebug>
 
 #include "Metadata/imagemetadata.h"
 #include "Metadata/exif.h"
