@@ -532,7 +532,6 @@ qt_add_executable(Winnow
     ${WINNOW_FORMS}
     ${WINNOW_RESOURCES}
     ${WINNOW_NOTES}
-    images/icon16/collapse.png images/icon16/expand.png
 )
 
 target_compile_definitions(Winnow PRIVATE
@@ -660,6 +659,12 @@ if(APPLE)
                 HEADER_FILE_ONLY TRUE
                 SKIP_AUTOGEN TRUE)
         endforeach()
+        # Keep these bundle files under one IDE tree node instead of letting
+        # CMake scatter them into "Resources"/"Header Files" by file extension
+        # (the embedded Winnet.app ships an Info.plist and a whole framework of
+        # headers). Display-only; mirrors the `notes` source_group above.
+        source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/${src_dir}
+            PREFIX "${src_dir}" FILES ${_files})
     endfunction()
 
     winnow_bundle_tree("ReleaseExtras/ExifTool" "ExifTool")
