@@ -1,4 +1,6 @@
 #include "ifd.h"
+#include "Metadata/metareport.h"
+#include "Utilities/utilities.h"
 #include <QDebug>
 
 /*

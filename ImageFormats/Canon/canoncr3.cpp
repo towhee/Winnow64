@@ -1,5 +1,6 @@
 #include "canoncr3.h"
 #include "Main/global.h"
+#include "Metadata/metareport.h"
 
 /*
 Canon CR3 files reside in a HEIF container.  The HEIF must start with the ftyp box. The first

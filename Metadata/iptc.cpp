@@ -1,4 +1,5 @@
 #include "iptc.h"
+#include "Utilities/utilities.h"
 
 IPTC::IPTC()
 {

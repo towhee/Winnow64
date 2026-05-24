@@ -3,7 +3,6 @@
 
 #include <QtCore>
 
-#include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
 
 class IPTC
