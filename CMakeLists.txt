@@ -471,6 +471,11 @@ set(WINNOW_FORMS
     Utilities/inputdlg.ui
 )
 
+# Gather all .ui files into a single flat "UI" node in the IDE tree (like
+# qmake's Forms node) instead of scattering them across their source folders.
+# Display-only; no TREE = flat list. Mirrors the `notes` source_group below.
+source_group("UI" FILES ${WINNOW_FORMS})
+
 set(WINNOW_RESOURCES winnow.qrc)
 
 # -----------------------------------------------------------------------------
