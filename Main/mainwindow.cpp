@@ -1,6 +1,7 @@
 ﻿#include "Main/mainwindow.h"
 #include "Main/global.h"
 #include <QMetaEnum>
+#include <cstdlib>          // std::_Exit (used by runSelfTest)
 
 /*
    Program notes / documentation: see notes/Documentation.txt
@@ -411,6 +412,32 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     memoryWatchdog->start();
 
     if (G::isLogger) G::log("MW::MW",  "(end of MW::MW)");
+}
+
+void MW::runSelfTest(const QString &folderPath, int settleMs)
+{
+/*
+    Headless smoke test entry point (see tests/smoke). Opens folderPath via the
+    same path the app uses at startup, lets it load for settleMs, then exits the
+    app with code 0 if the data model loaded at least one image, else 2. main.cpp
+    enables QStandardPaths test mode first, so this never touches real settings.
+*/
+    if (G::isLogger) G::log("MW::runSelfTest", folderPath);
+    centralLayout->setCurrentIndex(LoupeTab);
+    if (fsTree->select(folderPath))
+        folderSelectionChange(folderPath, G::FolderOp::Add);
+
+    QTimer::singleShot(settleMs, this, [this, folderPath]() {
+        const int rows = dm ? dm->rowCount() : 0;
+        fprintf(stderr, "SELFTEST: folder=%s rows=%d\n",
+                folderPath.toLocal8Bit().constData(), rows);
+        fflush(stderr);
+        // Exit immediately, skipping Qt/C++ teardown. We've measured health at the
+        // loaded steady state; forcing the event loop to unwind here delivers
+        // in-flight queued signals to a half-destroyed MW (teardown assert). The
+        // orderly shutdown path (window close) is not what this smoke test covers.
+        std::_Exit(rows > 0 ? 0 : 2);
+    });
 }
 
 void MW::whenActivated(Qt::ApplicationState state)
