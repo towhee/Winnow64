@@ -38,7 +38,7 @@ QString WidgetCSS::css()
     borderColor = QColor(l40,l40,l40);
     G::borderColor = borderColor;
 
-    scrollBarHandleBackgroundColor = G::scrollBarHandleBackgroundColor;
+    G::scrollBarHandleBackgroundColor = QColor(bg,l3,bg);
     selectionColor = G::selectionColor;
     mouseOverColor = G::mouseOverColor;  // not being used, matches what happens in treeview on windows
     progressBarBackgroundColor = QColor(d10,d10,d10);
@@ -567,7 +567,7 @@ QString WidgetCSS::scrollBar()
     "}"
 
     "QScrollBar::handle:hover {"
-        "background-color: " + scrollBarHandleBackgroundColor.name() + ";"
+    "background-color: " + G::scrollBarHandleBackgroundColor.name() + ";"
     "}"
 
     "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical{"

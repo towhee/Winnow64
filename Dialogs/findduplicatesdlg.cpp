@@ -105,6 +105,8 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *m
         "QGroupBox#BImageBox::title { color: white; }"
     );
 
+    ui->helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
+
     // candidate images tableview
     ui->tv->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tv->setEnabled(false);

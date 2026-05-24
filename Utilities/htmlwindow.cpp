@@ -8,9 +8,18 @@ HtmlWindow::HtmlWindow(const QString &title,
                        QWidget *parent) : QScrollArea(parent)
 {
     // parented so MW (or owning dialog) closing destroys this window too;
-    // Qt::Window keeps it free-floating with its own title bar despite parent;
     // WA_DeleteOnClose frees memory when the user closes it.
-    setWindowFlag(Qt::Window);
+    //
+    // Qt::Dialog (not Qt::Window) is deliberate: when opened from a dialog run
+    // with exec() (e.g. IngestDlg), macOS runs a native NSApp modal session that
+    // blocks every other window at the OS level — Qt's transient-parent exemption
+    // does not apply to it. A Qt::Dialog top-level is backed by an NSPanel, whose
+    // -worksWhenModal returns YES for a transient child of the modal window, so
+    // this help window stays interactive (focus/scroll/close) alongside the
+    // still-usable dialog. Qt::Window would create a plain NSWindow that the
+    // modal session blocks until the dialog closes. Do not change back to
+    // Qt::Window.
+    setWindowFlag(Qt::Dialog);
     setAttribute(Qt::WA_DeleteOnClose);
 
 /*
@@ -88,6 +97,10 @@ HtmlWindow::HtmlWindow(const QString &title,
     move(x, y);
 
     show();
+    // Bring it in front of the owning dialog and give it focus; show() alone
+    // leaves it stacked behind the active (modal) dialog.
+    raise();
+    activateWindow();
 }
 
 HtmlWindow::~HtmlWindow() = default;

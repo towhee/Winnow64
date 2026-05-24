@@ -102,6 +102,8 @@ IngestDlg::IngestDlg(QWidget *parent,
 
     ui->setupUi(this);
 
+    ui->helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
+
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
 

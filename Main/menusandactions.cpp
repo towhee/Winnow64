@@ -508,7 +508,8 @@ void MW::createEditActions()
     addAction(tokenTemplateEditorAction);
     connect(tokenTemplateEditorAction, &QAction::triggered, infoString, &InfoString::tokenEditor);
 
-    rate0Action = new QAction(tr("Clear rating              "), this);
+    QString blank = QString(20, QChar(0x00A0));
+    rate0Action = new QAction("Clear rating" + blank, this);
     rate0Action->setObjectName("Rate0");
     rate0Action->setShortcutVisibleInContextMenu(true);
     addAction(rate0Action);

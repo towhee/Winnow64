@@ -1515,9 +1515,6 @@
         <property name="toolTip">
          <string>How this works</string>
         </property>
-        <property name="styleSheet">
-         <string notr="true">background-color: rgb(43, 85, 49);</string>
-        </property>
         <property name="text">
          <string>How this works</string>
         </property>
