@@ -1,5 +1,7 @@
 #include "nikon.h"
 #include "Main/global.h"
+#include "Metadata/iptc.h"      // req'd to report embedded jpeg
+#include "Metadata/ExifTool.h"  // req'd for some Nikon lenses not in lookup
 
 // ExifTool documentation: https://exiftool.org/TagNames/Nikon.html
 

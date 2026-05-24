@@ -1,5 +1,6 @@
 #include "dng.h"
 #include "Main/global.h"
+#include "Metadata/xmp.h"
 
 DNG::DNG()
 {

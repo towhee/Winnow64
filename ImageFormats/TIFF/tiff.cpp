@@ -1,4 +1,5 @@
 #include "tiff.h"
+#include "Metadata/metareport.h"
 
 /*
 
