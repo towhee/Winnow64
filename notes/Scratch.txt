@@ -252,3 +252,6 @@ Logs
   - Run the TSan layer end-to-end: tests/tsan/run_tsan.sh (full instrumented build, several minutes — want me to kick it off?).
   - Fix the byte-op bounds guards (I can do this as a separate change).
   - Expand units into Metadata/EXIF — they sit directly on the byte ops now under test.
+
+
+/Users/roryhill/Projects/Winnow64/build/mac-debug:/Library/Developer/CommandLineTools/SDKs/MacOSX15.2.sdk/usr/lib

@@ -24,7 +24,22 @@
       "Bash(defaults read *)",
       "Bash(brew list *)",
       "Bash(awk -F/ '{print $1\"/\"$2}')",
-      "Bash(/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake -S /Users/roryhill/Projects/Winnow64 -B /Users/roryhill/Projects/Winnow64/build/mac-debug)"
+      "Bash(/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake -S /Users/roryhill/Projects/Winnow64 -B /Users/roryhill/Projects/Winnow64/build/mac-debug)",
+      "Bash(awk 'NR>=160 && NR<=210 && /void MW::|::.*\\\\\\(/' Main/fileoperations.cpp)",
+      "Bash(awk 'NR>=258 && NR<=279 {printf \"%d: %s\\\\n\", NR, $0}' Utilities/mac.mm)",
+      "Bash(awk 'NR>=490 && NR<=540 {printf \"%d: %s\\\\n\", NR, $0}' CMakeLists.txt)",
+      "Bash(awk 'NR>=726 && NR<=745 {printf \"%d: %s\\\\n\", NR, $0}' CMakeLists.txt)",
+      "Bash(awk 'NR>=14 && NR<=66 {printf \"%d: %s\\\\n\", NR, $0}' winnow64.pro)",
+      "Read(//Applications/**)",
+      "Read(//Library/Developer/CommandLineTools/SDKs/**)",
+      "Read(//Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/**)",
+      "Read(//opt/homebrew/lib/**)",
+      "Read(//opt/homebrew/opt/zlib/**)",
+      "Read(//usr/lib/**)",
+      "Bash(sw_vers)",
+      "Bash(xcodebuild -version)",
+      "Bash(/usr/libexec/PlistBuddy -c 'Print' /Applications/Xcode.app/Contents/version.plist)",
+      "Bash(xcodebuild -showsdks)"
     ]
   }
 }
