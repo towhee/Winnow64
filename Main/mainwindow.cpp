@@ -585,17 +585,18 @@ void MW::showEvent(QShowEvent *event)
     G::issueBeginSession();
 
     if (G::issueLog->failedToOpen) {
-        // QString popupMsg = "The issue log file failed to open, preventing Winnow<br>"
-        //                    "from writing issues to file.<p>"
-        //                    "File: " +
-        //                    QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
-        //                    "/Log/WinnowErrorLog.txt<p>"
-        //                    "Press ESC to continue."
-        //                     ;
-        // G::popUp->reset();
-        // G::popUp->showPopup(popupMsg, 0, true, 1.0, Qt::AlignCenter);
-        // qDebug() << "MW::showEvent" << popupMsg;
+        QString popupMsg = "The issue log file failed to open, preventing Winnow<br>"
+                           "from writing issues to file.<p>"
+                           "File: " +
+                           QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
+                           "/Log/WinnowIssueLog.txt<p>"
+                           "Press ESC to continue."
+                            ;
+        G::popup->reset();
+        G::popup->showPopup(popupMsg, 0, true, 1.0, Qt::AlignCenter);
+        qDebug() << "MW::showEvent" << popupMsg;
     }
+
 
 }
 

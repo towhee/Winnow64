@@ -1547,11 +1547,11 @@ void MW::createHelpActions()
     addAction(clearLogAction);
     connect(clearLogAction, &QAction::triggered, this, &Utilities::clearLog);
 
-    mailLogAction = new QAction(tr("Clear activity log"), this);
+    mailLogAction = new QAction(tr("Mail logs to Winnow for review"), this);
     mailLogAction->setObjectName("mailLogAction");
     mailLogAction->setShortcutVisibleInContextMenu(true);
     addAction(mailLogAction);
-    connect(mailLogAction, &QAction::triggered, this, &Utilities::clearLog);
+    connect(mailLogAction, &QAction::triggered, this, &MW::mailLogs);
 
     diagnosticsMainAction = new QAction(tr("Main diagnostics"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
@@ -2105,7 +2105,8 @@ void MW::createHelpMenu()
     logMenu->addSeparator();
     logMenu->addAction(viewLogIssuesAction);
     logMenu->addAction(viewSessionIssuesAction);
-    logMenu->addAction(clearIssuesAction);
+    logMenu->addSeparator();
+    logMenu->addAction(mailLogAction);
     //    helpMenu->addSeparator();
     //    helpMenu->addAction(helpRevealLogFileAction);
     helpMenu->addSeparator();
