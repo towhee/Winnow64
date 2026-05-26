@@ -1,5 +1,15 @@
 cmake_minimum_required(VERSION 3.21)
 
+# Pin the macOS deployment target (must be set before project()). If left unset
+# CMake defaults it to the host OS — e.g. minos 15.6 — which makes the app link
+# as a current-OS binary, so system frameworks take their newest code paths. One
+# such path (ShareKit's share-sheet image-preview writer) SIGBUSes. Matching
+# Qt's own build (minos 11.0) / the legacy qmake build avoids it. The CMake
+# preset sets the same value; this is the fallback for non-preset configures.
+if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
+endif()
+
 project(Winnow LANGUAGES C CXX)
 
 if(APPLE)
@@ -7,9 +17,41 @@ if(APPLE)
 endif()
 
 # -----------------------------------------------------------------------------
+# SDK sanity guard (macOS)
+#   Warn (never fail) when building against a macOS SDK newer than this Mac's
+#   OS. A too-new SDK makes Apple frameworks take newer "linked-on-or-after"
+#   code paths at runtime, which can misbehave on the older OS. This catches
+#   the common version-skew of a newer Xcode (one SDK only) on an older macOS.
+# -----------------------------------------------------------------------------
+if(APPLE)
+    if(CMAKE_OSX_SYSROOT)
+        set(_winnow_sdk_arg "${CMAKE_OSX_SYSROOT}")
+    else()
+        set(_winnow_sdk_arg "macosx")
+    endif()
+    execute_process(COMMAND xcrun --sdk "${_winnow_sdk_arg}" --show-sdk-version
+        OUTPUT_VARIABLE _winnow_sdk_version OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    execute_process(COMMAND sw_vers -productVersion
+        OUTPUT_VARIABLE _winnow_os_version OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(_winnow_sdk_version AND _winnow_os_version)
+        string(REGEX MATCH "^[0-9]+" _winnow_sdk_major "${_winnow_sdk_version}")
+        string(REGEX MATCH "^[0-9]+" _winnow_os_major  "${_winnow_os_version}")
+        if(_winnow_sdk_major GREATER _winnow_os_major)
+            message(WARNING
+                "macOS SDK ${_winnow_sdk_version} is newer than this Mac's OS "
+                "${_winnow_os_version}. System frameworks may take newer code paths at "
+                "runtime (this previously crashed ShareKit). To build against an SDK "
+                "matching the OS, switch the active toolchain "
+                "(`sudo xcode-select --switch /Library/Developer/CommandLineTools`) or set "
+                "-DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX${_winnow_os_major}.sdk")
+        endif()
+    endif()
+endif()
+
+# -----------------------------------------------------------------------------
 # Standards / Qt tooling
 # -----------------------------------------------------------------------------
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

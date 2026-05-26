@@ -11,7 +11,8 @@
       "hidden": true,
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "CMAKE_PREFIX_PATH": "$env{QT_DIR}"
+        "CMAKE_PREFIX_PATH": "$env{QT_DIR}",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "12.0"
       }
     },
 

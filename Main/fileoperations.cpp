@@ -189,10 +189,11 @@ void MW::renameSelectedFiles()
 void MW::shareFiles()
 {
 /*
-    Mac only.
+    Raise the OS share UI for the selected images: the macOS share sheet
+    (Mac::share) or the Windows Share flyout (Win::share).
 */
-#ifdef Q_OS_MAC
-    if (G::isLogger) G::log("MW::copy");
+#if defined(Q_OS_MAC) || defined(Q_OS_WIN)
+    if (G::isLogger) G::log("MW::shareFiles");
 
     QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.isEmpty()) return;
@@ -205,7 +206,11 @@ void MW::shareFiles()
 
     WId wId = window()->winId();
 
+  #if defined(Q_OS_MAC)
     Mac::share(urls, wId);
+  #else
+    Win::share(urls, wId);
+  #endif
 #endif
 }
 

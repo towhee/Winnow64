@@ -1836,7 +1836,7 @@ void MW::createEditMenu()
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || defined(Q_OS_WIN)
     editMenu->addAction(shareFilesAction);
 #endif
     editMenu->addAction(copyFilesAction);
@@ -2354,7 +2354,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(sortReverseAction);
 
     thumbViewActions->append(separatorAction7);
-    #ifdef Q_OS_MAC
+    #if defined(Q_OS_MAC) || defined(Q_OS_WIN)
     thumbViewActions->append(shareFilesAction);
     #endif
     thumbViewActions->append(copyFilesAction);

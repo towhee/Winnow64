@@ -257,24 +257,50 @@ float Mac::getMouseCursorMagnification()
     return cur_scale;
 }
 
+// The share sheet runs asynchronously: ShareKit generates item previews on a
+// later main-queue cycle (writing a PNG via ImageIO). These files compile under
+// MRC, so the items, picker and delegate must be retained beyond this function
+// or they are freed before that async work runs — ShareKit then reads freed
+// image data and crashes with a bus error inside its PNG preview writer.
+// Hold them at file scope and release the previous share's objects on reuse.
+static NSMutableArray *gSharingItems = nil;
+static NSSharingServicePicker *gSharingPicker = nil;
+static SharingDelegate *gSharingDelegate = nil;
+
 void Mac::share(QList<QUrl> &urls, WId wId)
 {
     if (G::isLogger) G::log("Mac::share");
     NSView *view = reinterpret_cast<NSView *>(wId);
+    if (!view) return;
     NSRect r = [view bounds];
     NSRect rect = NSMakeRect(r.origin.x + r.size.width / 2,
                              r.origin.y + r.size.height / 2,
                              10, 10);
-    NSMutableArray *nsFileUrls = [NSMutableArray array];
+
+    // Release the objects retained by the previous share before replacing them
+    // (the previous share sheet's async work has long since finished).
+    [gSharingPicker release];
+    [gSharingDelegate release];
+    [gSharingItems release];
+    gSharingPicker = nil;
+    gSharingDelegate = nil;
+
+    // Retained (not autoreleased) so the URLs survive until ShareKit is done.
+    gSharingItems = [[NSMutableArray alloc] init];
     for (const auto &url : urls) {
         NSURL *nsFileUrl = url.toNSURL();
-        [nsFileUrls addObject:nsFileUrl];
+        if (nsFileUrl) [gSharingItems addObject:nsFileUrl];
+    }
+    if ([gSharingItems count] == 0) {
+        [gSharingItems release];
+        gSharingItems = nil;
+        return;
     }
 
-    SharingDelegate *delegate = [[SharingDelegate alloc] init];
-    NSSharingServicePicker *picker = [[NSSharingServicePicker alloc] initWithItems:nsFileUrls];
-    [picker setDelegate:delegate];
-    [picker showRelativeToRect:rect ofView:view preferredEdge:NSMaxYEdge];
+    gSharingDelegate = [[SharingDelegate alloc] init];
+    gSharingPicker = [[NSSharingServicePicker alloc] initWithItems:gSharingItems];
+    [gSharingPicker setDelegate:gSharingDelegate];
+    [gSharingPicker showRelativeToRect:rect ofView:view preferredEdge:NSMaxYEdge];
 }
 
 // Helper function to check if a device is a USB storage device
