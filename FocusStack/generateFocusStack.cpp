@@ -119,7 +119,7 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
     QString msg;
     for (int gi = 0; gi < groups.size(); ++gi) {
         msg = "FocusStack Group " + QString::number(gi + 1);
-        if (G::isFileLogger) Utilities::log(srcFun, msg);
+        if (G::isRunByExtern) Utilities::log(srcFun, msg);
         // qDebug().noquote() << "---- FocusStack Group" << (gi + 1) << "----";
         for (const QString &p : groups[gi]) {
             const int r = dm->rowFromPath(p);

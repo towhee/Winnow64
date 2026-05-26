@@ -1840,8 +1840,8 @@ void MW::handleStartupArgs(const QString &args)
 
     // qDebug() << "MW::handleStartupArgs" << argList;
     if (argList.length() > 1) {
-        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
-        if (G::isFileLogger)
+        if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
+        if (G::isRunByExtern)
             Utilities::log("MW::handleStartupArgs", argList.join(" | "));
     }
 
@@ -1908,7 +1908,7 @@ void MW::handleStartupArgs(const QString &args)
         // templateName = srcProgram.mid(QString("Embellish").length());
 
         // /* log
-        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
+        if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
         //*/
 
         // get the folder where the files to embellish are located
@@ -2034,10 +2034,10 @@ void MW::handleStartupArgs(const QString &args)
         f.dir().path();
         fsTree->select(f.dir().path());
         // folderSelectionChange(); // not req'd after multi-select FSTree
-        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
+        if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
     }
 
-    if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "done");
+    if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs", "done");
     return;
 }
 
@@ -2413,7 +2413,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     qDebug() << fun << "4";
 
-    if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
+    if (G::isRunByExtern) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     return;
 }
 
@@ -3169,13 +3169,13 @@ void MW::folderChangeCompleted()
              << "filterDock->visibleRegion().isNull() =" << filterDock->visibleRegion().isNull()
                 ; //*/
     if (dm->folderList.count() > 0
-        && dm->isQueueEmpty()
-        && !filterDock->visibleRegion().isNull()
+        // && dm->isQueueEmpty()
+        // && !filterDock->visibleRegion().isNull()
        )
     {
         buildFilters->build();
         buildFilters->recount();
-        // filters->setEnabled(true);
+        filters->setEnabled(true);
     }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial

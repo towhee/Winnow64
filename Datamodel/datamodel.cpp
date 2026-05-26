@@ -2914,7 +2914,7 @@ QModelIndex DataModel::indexFromPath(QString fPath)
     if (!fPathRowContains(fPath)) {
         errMsg = "Not in fPathrow.";
         G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", -1, fPath);
-        if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
+        if (G::isRunByExtern) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
     // int dmRow = fPathRow[fPath];
@@ -2945,7 +2945,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
     if (!fPathRowContains(fPath)) {
         errMsg = "Not in fPathrow.";
         G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", -1, fPath);
-        if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
+        if (G::isRunByExtern) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
     // int dmRow = fPathRow[fPath];

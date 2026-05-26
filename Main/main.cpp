@@ -107,13 +107,13 @@ int main(int argc, char *argv[])
 
     // instance already running
     if (!isSelfTest && !isMetaTest && instance.sendMessage(args)) {
-        if (G::isFileLogger) Utilities::log("WinnowMain", "Instance already running");
+        if (G::isRunByExtern) Utilities::log("WinnowMain", "Instance already running");
         QString msg = "Winnow or a Winnow report is open.";
         // G::popUp->showPopup(msg);
         return 0;
     }
     else {
-        if (G::isFileLogger) Utilities::log("WinnowMain", "New Instance");
+        if (G::isRunByExtern) Utilities::log("WinnowMain", "New Instance");
     }
 
 #ifdef Q_OS_MAC

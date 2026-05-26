@@ -59,7 +59,7 @@ int ExifTool::execute(QStringList &args)
 {
     /* all args that are a path to an image should be converted to a url
        ie  QUrl("D:/Pictures/Zenfolio/2021-02-12_0006.jpg").path();  */
-    if (G::isFileLogger) Utilities::log("ExifTool::execute", exifToolPath);
+    if (G::isRunByExtern) Utilities::log("ExifTool::execute", exifToolPath);
     if (exifToolPath.isEmpty()) return -1;   // refused at construction time
     return QProcess::execute(exifToolPath, args);
 }

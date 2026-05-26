@@ -43,10 +43,8 @@ void MW::writeSettings()
     settings->setValue("backupBeforeModifying", G::backupBeforeModifying);
     settings->setValue("autoAddMissingThumbnails", G::autoAddMissingThumbnails);
     settings->setValue("ignoreAddThumbnailsDlg", ignoreAddThumbnailsDlg);
-    //setting->setValue("embedTifThumb", G::embedTifJpgThumb);
     settings->setValue("renderVideoThumb", G::renderVideoThumb);
-    settings->setValue("isLogger", G::isLogger);
-    settings->setValue("isErrorLogger", G::isErrorLogger);
+    settings->setValue("isLogAllToFileForDebugging", G::isLogger);
     settings->setValue("wheelSensitivity", G::wheelSensitivity);
 
     // datamodel
@@ -279,9 +277,10 @@ bool MW::loadSettings()
         G::combineRawJpg = false;
         prevMode = "Loupe";
         G::mode = "Loupe";
+        isLogAllToFileForDebugging = false;
         G::isLogger = false;
-        G::isFileLogger = false;
-        G::isErrorLogger = false;
+        G::isRunByExtern = false;
+        G::isIssueLogger = false;
         G::wheelSensitivity = 40;
         G::modifySourceFiles = false;
         G::backupBeforeModifying = false;
@@ -348,25 +347,10 @@ bool MW::loadSettings()
     // Get settings saved from last session
 
     // general
-    // sortColumn = setting->value("sortColumn").toInt();
-    // prevSortColumn = sortColumn;
-    // isReverseSort = setting->value("sortReverse").toBool();
     G::autoAdvance = settings->value("autoAdvance").toBool();
     turnOffEmbellish = settings->value("turnOffEmbellish").toBool();
-    /*
-    if (setting->contains("isFileLogger"))
-        G::isFileLogger = setting->value("isFileLogger").toBool();
-    else
-        G::isFileLogger = false;
-    if (setting->contains("isErrorLogger"))
-        G::isErrorLogger = setting->value("isErrorLogger").toBool();
-    else
-        G::isErrorLogger = false;
-    if (G::isFileLogger || G::isErrorLogger)
-        G::isLogger = true;
-    else
-        G::isLogger = false;
-    */
+    isLogAllToFileForDebugging = settings->value("isLogAllToFileForDebugging").toBool();
+
     if (settings->contains("deleteWarning"))
         deleteWarning = settings->value("deleteWarning").toBool();
     else

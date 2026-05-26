@@ -820,7 +820,7 @@ bool FS::cleanup()
     for (QString subFolder : grpFolderPaths) {
         // qDebug() << "Remove work folder: " << subFolder;
         msg = "Remove work folder: " + subFolder;
-        if (G::isFileLogger) Utilities::log(srcFun, msg);
+        if (G::isRunByExtern) Utilities::log(srcFun, msg);
 
         QDir(subFolder).removeRecursively();
     }
@@ -843,7 +843,7 @@ bool FS::cleanup()
         if (!inputFolderPaths.contains(srcFolderPath)) inputFolderPaths << srcFolderPath;
         // qDebug() << "Remove input file: " << s;
         msg = "Remove input file: " + s;
-        if (G::isFileLogger) Utilities::log(srcFun, msg);
+        if (G::isRunByExtern) Utilities::log(srcFun, msg);
 
         QFile::remove(s);
     }
@@ -852,11 +852,11 @@ bool FS::cleanup()
     for (QString d : inputFolderPaths) {
         // qDebug() << "input folder isEmpty: " << QDir(d).isEmpty();
         msg = "input folder: " + d + "  isEmpty: " + QVariant(QDir(d).isEmpty()).toString();
-        if (G::isFileLogger) Utilities::log(srcFun, msg);
+        if (G::isRunByExtern) Utilities::log(srcFun, msg);
         if (QDir(d).isEmpty()) {
             // qDebug() << "Remove input folder: " << d;
             msg = "Remove input folder: " + d;
-            if (G::isFileLogger) Utilities::log(srcFun, msg);
+            if (G::isRunByExtern) Utilities::log(srcFun, msg);
 
             QDir(d).removeRecursively();
         }

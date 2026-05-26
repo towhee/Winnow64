@@ -326,29 +326,18 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "activityLog") {
         G::isLogger = v.toBool();
-        G::isFileLogger = v.toBool();
         mw->settings->setValue("isFileLogger", v.toBool());
-    }
-
-    if (source == "errorLog") {
-        G::isLogger = v.toBool();
-        G::isErrorLogger = v.toBool();
-        G::isIssueLogger = v.toBool();
-        mw->settings->setValue("isErrorLogger", v.toBool());
     }
 
     if (source == "renderVideoThumb") {
         G::renderVideoThumb = v.toBool();
     }
 
-    if (source == "isLogger") {
+    if (source == "isLogAllToFileForDebugging") {
+        mw->isLogAllToFileForDebugging = v.toBool();
         G::isLogger = v.toBool();
-        // if (G::isLogger) mw->startLog();
-    }
-
-    if (source == "isErrorLogger") {
-        G::isErrorLogger = v.toBool();
-        G::showIssueInConsole = v.toBool();
+        G::isIssueLogger = v.toBool();
+        G::sendLogToFile = v.toBool();
         // if (G::isErrorLogger) mw->startLog();
     }
 
@@ -619,23 +608,8 @@ void Preferences::addGeneral()
     i.type = "bool";
     // addItem(i);
 
-    // Logger
-    i.name = "isLogger";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Turn log on";
-    i.tooltip = "Turn this on to write errors to a log file.\n"
-                "Warning: this will impact performance.  Use\n"
-                "to help resolve bugs and crashes.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::isLogger;
-    i.key = "isLogger";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-//    addItem(i);
-
-    // Error Logger
-    i.name = "isErrorLogger";
+    // Issue Logger
+    i.name = "isLogAllToFileForDebugging";
     i.parentName = "GeneralHeader";
     i.captionText = "Turn error logging on";
     i.tooltip = "Turn this on to write errors to a log file.\n"
@@ -643,8 +617,8 @@ void Preferences::addGeneral()
                 "to help resolve bugs and crashes.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = G::isErrorLogger;
-    i.key = "isErrorLogger";
+    i.value = mw->isLogAllToFileForDebugging;
+    i.key = "isLogAllToFileForDebugging";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
