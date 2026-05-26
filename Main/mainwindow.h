@@ -989,7 +989,7 @@ private:
     QAction *diagnosticsWorkspacesAction;
     QAction *viewLogIssuesAction;
     QAction *viewSessionIssuesAction;
-    QAction *clearIssuesAction;
+    // QAction *clearIssuesAction;
     QAction *viewLogAction;
     QAction *clearLogAction;
     QAction *mailLogAction;

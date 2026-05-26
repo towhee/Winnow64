@@ -1,6 +1,15 @@
 #include "Main/mainwindow.h"
 #include "ui_metadatareport.h"
 
+#if defined(Q_OS_WIN)
+#ifndef NOMINMAX
+#define NOMINMAX        // keep windows.h min/max macros from breaking std::min/max
+#endif
+#include <windows.h>
+#include <mapi.h>
+#include <vector>
+#endif
+
 void MW::fitDiagnostics(QDialog *dlg, QTextBrowser *textBrowser)
 {
     if (G::isLogger) G::log("MW::fitDiagnostics");
@@ -603,5 +612,124 @@ void MW::logReport()
 
 void MW::mailLogs()
 {
+/*
+    Compose an email to the Winnow developer with the two log files attached:
+    WinnowIssueLog.txt and WinnowLog.txt, both located in
+    QStandardPaths::AppDataLocation + "/Log".
 
+    A mailto: URL cannot attach files (clients ignore the attachment
+    parameter), so each platform uses a native mechanism for real attachments:
+        - macOS:   drive Mail.app via AppleScript.
+        - Windows: Simple MAPI (MAPISendMail) attaches to the default client.
+    On any other platform (or if MAPI is unavailable) we fall back to revealing
+    the log folder and opening a pre-filled mailto: that asks the user to attach
+    the files manually.
+*/
+    if (G::isLogger) G::log("MW::mailLogs");
+
+    const QString to = "winnowimageviewer@outlook.com";
+    const QString subject = "Winnow log files";
+    const QString logDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+
+    // Only attach logs that actually exist.
+    QStringList logPaths;
+    for (const QString &name : {QStringLiteral("WinnowIssueLog.txt"), QStringLiteral("WinnowLog.txt")}) {
+        QString path = logDir + "/" + name;
+        if (QFile::exists(path)) logPaths << path;
+    }
+    if (logPaths.isEmpty()) {
+        G::popup->showPopup("No log files were found in " + logDir, 3000);
+        return;
+    }
+
+#if defined(Q_OS_MAC)
+    QString body = "The Winnow log files are attached. Please add a note describing the issue. Thanks. Rory";
+    QStringList args;
+    args << "-e" << "tell application \"Mail\"";
+    args << "-e" << "set newMessage to make new outgoing message with properties "
+                    "{subject:\"" + subject + "\", content:\"" + body + "\", visible:true}";
+    args << "-e" << "tell newMessage";
+    args << "-e" << "make new to recipient at end of to recipients with properties "
+                    "{address:\"" + to + "\"}";
+    for (const QString &path : logPaths) {
+        args << "-e" << "make new attachment with properties {file name:(POSIX file \"" + path +
+                        "\")} at after the last paragraph of content";
+    }
+    args << "-e" << "end tell";
+    args << "-e" << "activate";
+    args << "-e" << "end tell";
+
+    if (QProcess::execute("/usr/bin/osascript", args) != 0)
+        G::popup->showPopup("Unable to open Mail to send the log files.", 3000);
+#else
+    // Reveal the log folder and open a pre-filled email asking the user to
+    // attach the files manually. Used as the fallback on platforms without a
+    // native attach path, or when MAPI is unavailable on Windows.
+    auto revealAndMailto = [&] {
+        revealInFileBrowser(logDir);
+        QString body = "Please attach the log files shown in the file browser ("
+                       + QStringList(logPaths).replaceInStrings(logDir + "/", "").join(" and ")
+                       + ") to this email, along with a note describing the issue. Thanks. Rory";
+        QDesktopServices::openUrl(QUrl("mailto:" + to + "?subject=" + subject + "&body=" + body,
+                                       QUrl::TolerantMode));
+    };
+
+  #if defined(Q_OS_WIN)
+    // Simple MAPI attaches the logs to a new message in the default mail
+    // client. mapi32.dll is loaded dynamically so the build needs no extra
+    // link dependency; if it is missing we fall back to the manual path.
+    typedef ULONG (PASCAL *LPMAPISENDMAIL)(LHANDLE, ULONG_PTR, lpMapiMessage, FLAGS, ULONG);
+    HMODULE hMapi = LoadLibraryA("MAPI32.DLL");
+    LPMAPISENDMAIL mapiSendMail = hMapi
+        ? reinterpret_cast<LPMAPISENDMAIL>(GetProcAddress(hMapi, "MAPISendMail"))
+        : nullptr;
+
+    if (!mapiSendMail) {
+        if (hMapi) FreeLibrary(hMapi);
+        revealAndMailto();
+        return;
+    }
+
+    // Simple MAPI is ANSI; keep every char buffer alive until the call returns.
+    QByteArray toAddrBuf = ("SMTP:" + to).toLocal8Bit();
+    QByteArray toNameBuf = to.toLocal8Bit();
+    QByteArray subjectBuf = subject.toLocal8Bit();
+    QByteArray bodyBuf = "The Winnow log files are attached. Please add a note "
+                         "describing the issue. Thanks. Rory";
+
+    MapiRecipDesc recip = {};
+    recip.ulRecipClass = MAPI_TO;
+    recip.lpszName = toNameBuf.data();
+    recip.lpszAddress = toAddrBuf.data();
+
+    std::vector<QByteArray> pathBufs, nameBufs;
+    pathBufs.reserve(logPaths.size());          // reserve so data() stays valid
+    nameBufs.reserve(logPaths.size());
+    std::vector<MapiFileDesc> files(logPaths.size());
+    for (int i = 0; i < logPaths.size(); ++i) {
+        pathBufs.push_back(QDir::toNativeSeparators(logPaths.at(i)).toLocal8Bit());
+        nameBufs.push_back(QFileInfo(logPaths.at(i)).fileName().toLocal8Bit());
+        files[i].nPosition = static_cast<ULONG>(-1);   // attach, not inline
+        files[i].lpszPathName = pathBufs.back().data();
+        files[i].lpszFileName = nameBufs.back().data();
+    }
+
+    MapiMessage msg = {};
+    msg.lpszSubject = subjectBuf.data();
+    msg.lpszNoteText = bodyBuf.data();
+    msg.nRecipCount = 1;
+    msg.lpRecips = &recip;
+    msg.nFileCount = static_cast<ULONG>(files.size());
+    msg.lpFiles = files.data();
+
+    ULONG rc = mapiSendMail(0, reinterpret_cast<ULONG_PTR>(winId()), &msg,
+                            MAPI_LOGON_UI | MAPI_DIALOG, 0);
+    FreeLibrary(hMapi);
+
+    if (rc != SUCCESS_SUCCESS && rc != MAPI_E_USER_ABORT)
+        G::popup->showPopup("Unable to open the mail client to send the log files.", 3000);
+  #else
+    revealAndMailto();
+  #endif
+#endif
 }
