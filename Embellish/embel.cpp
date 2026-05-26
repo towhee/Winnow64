@@ -212,14 +212,14 @@ void Embel::build(QString path, QString src)
     }
 
     QString msg = "src = " + src + "  fPath = " + fPath;
-    if (G::isFileLogger) Utilities::log("Embel::build", msg);
+    if (G::isRunByExtern) Utilities::log("Embel::build", msg);
 
     clear();
     createBorders();
     createTexts();
     createGraphics();
     borderImageCoordinates();
-    if (G::isFileLogger) Utilities::log("Embel::build", "w = " + QString::number(w));
+    if (G::isRunByExtern) Utilities::log("Embel::build", "w = " + QString::number(w));
     scene->setSceneRect(0, 0, w, h);
     addBordersToScene();
     addImageToScene();

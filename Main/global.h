@@ -252,19 +252,20 @@ Q_NAMESPACE
 
     extern QSettings *settings;
 
-    extern bool isTestLogger;
     extern bool isLogger;
     extern bool isFlowLogger;
-    extern bool isFlowLogger2;
-    extern bool showIssueInConsole;
-    extern bool isFileLogger;
-    extern bool isErrorLogger;
-    extern bool isIssueLogger;
-    extern bool FSLog;
-    extern bool sendLogToConsole;
-    extern bool showAllEvents;
+    extern bool sendLogToFile;
+    extern bool isRunByExtern;
     extern QFile logFile;
+
+    extern bool isIssueLogger;
+    extern bool showIssueInConsole;
     extern QFile issueLogFile;
+
+    extern bool sendLogToConsole;
+    extern bool FSLog;  // Focus Stack
+
+    extern bool showAllEvents;
     extern bool isDev;
     extern bool isRemote;
 

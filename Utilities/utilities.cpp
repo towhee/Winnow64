@@ -382,7 +382,6 @@ void Utilities::log(QString function, QString msg)
     QDir dir(path);
     if (!dir.exists()) dir.mkpath(path);
     QFile fLog(path + "/WinnowLog.txt");
-    // if (fLog.isOpen()) fLog.close();
 
     // Use Append instead of ReadWrite + readAll()
     if (fLog.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
@@ -392,15 +391,6 @@ void Utilities::log(QString function, QString msg)
         fLog.write(txt.toUtf8());
         fLog.close();
     }
-
-    // if (fLog.open(QIODevice::ReadWrite)) {
-    //     fLog.readAll();
-    //     QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
-    //     QString f = function;
-    //     QString txt = t + "  " + f + "  " + msg + "\n";
-    //     fLog.write(txt.toUtf8());
-    //     fLog.close();
-    // }
 }
 
 void Utilities::clearLog()

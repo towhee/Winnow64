@@ -1497,13 +1497,7 @@ void MW::createHelpActions()
     addAction(helpWelcomeAction);
     connect(helpWelcomeAction, &QAction::triggered, this, &MW::helpWelcome);
 
-    helpFilmStripAction = new QAction(tr("Film strip and status bar symbols"), this);
-    helpFilmStripAction->setObjectName("helpFilmStrip");
-    helpFilmStripAction->setShortcutVisibleInContextMenu(true);
-    addAction(helpFilmStripAction);
-    connect(helpFilmStripAction, &QAction::triggered, this, &MW::helpThumbViewStatusBarSymbols);
-
-    helpRevealLogFileAction = new QAction("Send log file to Rory", this);
+    helpRevealLogFileAction = new QAction("Send log files to Winnow", this);
     helpRevealLogFileAction->setObjectName("RevealLogFileAct");
     helpRevealLogFileAction->setShortcutVisibleInContextMenu(true);
     addAction(helpRevealLogFileAction);
@@ -1523,29 +1517,41 @@ void MW::createHelpActions()
     addAction(diagnosticsCurrentAction);
     connect(diagnosticsCurrentAction, &QAction::triggered, this, &MW::diagnosticsCurrent);
 
-    diagnosticsLogIssuesAction = new QAction(tr("All Issues"), this);
-    diagnosticsLogIssuesAction->setObjectName("diagnosticsLogIssuesAction");
-    diagnosticsLogIssuesAction->setShortcutVisibleInContextMenu(true);
-    addAction(diagnosticsLogIssuesAction);
-    connect(diagnosticsLogIssuesAction, &QAction::triggered, this, &MW::allIssuesReport);
+    viewLogIssuesAction = new QAction(tr("View all issues"), this);
+    viewLogIssuesAction->setObjectName("diagnosticsLogIssuesAction");
+    viewLogIssuesAction->setShortcutVisibleInContextMenu(true);
+    addAction(viewLogIssuesAction);
+    connect(viewLogIssuesAction, &QAction::triggered, this, &MW::allIssuesReport);
 
-    diagnosticsSessionIssuesAction = new QAction(tr("Session Issues"), this);
-    diagnosticsSessionIssuesAction->setObjectName("diagnosticsSessionIssuesAction");
-    diagnosticsSessionIssuesAction->setShortcutVisibleInContextMenu(true);
-    addAction(diagnosticsSessionIssuesAction);
-    connect(diagnosticsSessionIssuesAction, &QAction::triggered, this, &MW::sessionIssuesReport);
+    viewSessionIssuesAction = new QAction(tr("View session issues"), this);
+    viewSessionIssuesAction->setObjectName("diagnosticsSessionIssuesAction");
+    viewSessionIssuesAction->setShortcutVisibleInContextMenu(true);
+    addAction(viewSessionIssuesAction);
+    connect(viewSessionIssuesAction, &QAction::triggered, this, &MW::sessionIssuesReport);
 
-    showLogAction = new QAction(tr("Log"), this);
-    showLogAction->setObjectName("showLogAction");
-    showLogAction->setShortcutVisibleInContextMenu(true);
-    addAction(showLogAction);
-    connect(showLogAction, &QAction::triggered, this, &MW::logReport);
+    // clearIssuesAction = new QAction(tr("Clear session issues"), this);
+    // clearIssuesAction->setObjectName("diagnosticsClearIssuesAction");
+    // clearIssuesAction->setShortcutVisibleInContextMenu(true);
+    // addAction(clearIssuesAction);
+    // connect(clearIssuesAction, &QAction::triggered, this, &MW::sessionIssuesReport);
 
-    clearLogAction = new QAction(tr("Clear Log"), this);
+    viewLogAction = new QAction(tr("View activity log"), this);
+    viewLogAction->setObjectName("showLogAction");
+    viewLogAction->setShortcutVisibleInContextMenu(true);
+    addAction(viewLogAction);
+    connect(viewLogAction, &QAction::triggered, this, &MW::logReport);
+
+    clearLogAction = new QAction(tr("Clear activity log"), this);
     clearLogAction->setObjectName("clearLogAction");
     clearLogAction->setShortcutVisibleInContextMenu(true);
     addAction(clearLogAction);
     connect(clearLogAction, &QAction::triggered, this, &Utilities::clearLog);
+
+    mailLogAction = new QAction(tr("Clear activity log"), this);
+    mailLogAction->setObjectName("mailLogAction");
+    mailLogAction->setShortcutVisibleInContextMenu(true);
+    addAction(mailLogAction);
+    connect(mailLogAction, &QAction::triggered, this, &Utilities::clearLog);
 
     diagnosticsMainAction = new QAction(tr("Main diagnostics"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
@@ -2079,23 +2085,27 @@ void MW::createWindowMenu()
 void MW::createHelpMenu()
 {
     helpMenu = new QMenu(this);
+
     helpGroupAct = new QAction("Help", this);
     helpGroupAct->setMenu(helpMenu);
+
     #ifdef Q_OS_WIN
     helpMenu->addAction(checkForUpdateAction);
     helpMenu->addSeparator();
     #endif
+
     helpMenu->addAction(aboutAction);
     //    helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpWelcomeAction);
-    helpMenu->addAction(helpFilmStripAction);
     helpMenu->addSeparator();
-    helpMenu->addAction(showLogAction);
-    helpMenu->addAction(clearLogAction);
-    helpMenu->addSeparator();
-    helpMenu->addAction(diagnosticsLogIssuesAction);
-    helpMenu->addAction(diagnosticsSessionIssuesAction);
+    logMenu = helpMenu->addMenu(tr("&Logs"));
+    logMenu->addAction(viewLogAction);
+    logMenu->addAction(clearLogAction);
+    logMenu->addSeparator();
+    logMenu->addAction(viewLogIssuesAction);
+    logMenu->addAction(viewSessionIssuesAction);
+    logMenu->addAction(clearIssuesAction);
     //    helpMenu->addSeparator();
     //    helpMenu->addAction(helpRevealLogFileAction);
     helpMenu->addSeparator();

@@ -5501,7 +5501,7 @@ QString EmbelProperties::metaString(QString key, QString fPath)
 */
     if (G::isLogger) G::log("EmbelProperties::metaString");
     QString tokenString = mw3->infoString->infoTemplates[key];
-    if (G::isFileLogger) {
+    if (G::isRunByExtern) {
         Utilities::log("EmbelProperties::metaString fPath                            ", fPath);
         Utilities::log("EmbelProperties::metaString tokenString                      ", tokenString);
         QString meta = mw3->infoString->parseTokenString(tokenString, fPath);

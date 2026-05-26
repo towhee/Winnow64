@@ -740,7 +740,7 @@ QString Xmp::getItem(QByteArray item)
     if (G::isLogger) G::log("Xmp::getItem");
 
     if (!G::stop && !G::isEmbellish && G::instanceClash(instance, "Xmp::getItem")) {
-        if (G::isFileLogger) Utilities::log("Xmp::getItem Instance clash", item);
+        if (G::isRunByExtern) Utilities::log("Xmp::getItem Instance clash", item);
         return "";
     }
 

@@ -264,11 +264,11 @@ public:
     // int displayHorizontalPixels; // move to global
     // int displayVerticalPixels;   // move to global
     bool checkIfUpdate = true;
-    // bool autoAdvance = false;    // move to global
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
     bool isStartingWhileUpdating = true;
     bool isFirstImageSelected = true;
+    bool isLogAllToFileForDebugging = false;
 
     // appearance
     bool isImageInfoVisible;
@@ -749,6 +749,7 @@ private:
     QMenu *windowMenu;
         QMenu *workspaceMenu;
     QMenu *helpMenu;
+        QMenu *logMenu;
         QMenu *helpDiagnosticsMenu;
             QMenu *testMenu;
 
@@ -986,10 +987,12 @@ private:
     QAction *diagnosticsMainAction;
     QAction *diagnosticsSelectionAction;
     QAction *diagnosticsWorkspacesAction;
-    QAction *diagnosticsLogIssuesAction;
-    QAction *diagnosticsSessionIssuesAction;
-    QAction *showLogAction;
+    QAction *viewLogIssuesAction;
+    QAction *viewSessionIssuesAction;
+    QAction *clearIssuesAction;
+    QAction *viewLogAction;
     QAction *clearLogAction;
+    QAction *mailLogAction;
     QAction *diagnosticsGridViewAction;
     QAction *diagnosticsFSTreeAction;
     QAction *diagnosticsThumbViewAction;
@@ -1433,6 +1436,7 @@ private:
     void allIssuesReport();
     void sessionIssuesReport();
     void logReport();
+    void mailLogs();
 
     void mediaReadSpeed();
     void findDuplicates();

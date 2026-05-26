@@ -15,25 +15,25 @@ namespace G
 
 QSettings *settings;
 
-// system messaging
-bool isTestLogger = false;
-
-bool isLogger = false;              // Writes log messages to file or console
-bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
-bool isIssueLogger = true;         // Writes issue log messages to file or console
-int issueThreshold = Issue::Info;  // Drop issues below this severity
-bool isVerboseIssues = false;      // When true: threshold drops to Debug
-int issueListMaxSize = 5000;       // Ring-buffer cap for in-memory G::issueList
-
+// LOG
+bool isLogger = false;              // Writes all log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
-bool isFlowLogger2 = false;         // QDebug key program flow points
-bool showIssueInConsole = false;    // Writes warnings to qDebug
-bool isErrorLogger = false;         // Writes error log messages to file or console
+bool sendLogToFile = false;         // Writes log messages to file (isLogAllToFileForDebugging)
+bool isRunByExtern = false;         // Writes log messages to file (debug executable ie remote embellish ops)
+QFile logFile;                      // MW::openLog(), MW::closeLog()
+
+// ISSUES
+bool isIssueLogger = true;          // Writes issue log messages to file or console
+bool isVerboseIssues = false;       // When true: threshold drops to Debug
+bool showIssueInConsole = false;    // Writes issues to qDebug
+int issueThreshold = Issue::Info;   // Drop issues below this severity
+int issueListMaxSize = 5000;        // Ring-buffer cap for in-memory G::issueList
+QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
+
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
+
 bool FSLog = true;                  // Focus Stack log
 bool showAllEvents = false;
-QFile logFile;                      // MW::openLog(), MW::closeLog()
-QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
 // Errors
 QStringList issueList;
 
@@ -322,7 +322,7 @@ Logger logger;
 
 void log(QString functionName, QString comment, bool zeroElapsedTime)
 {
-    if (!isFileLogger) {
+    if (!sendLogToFile) {
         if (functionName == "") qDebug() << " ";  // empty line
         logger.log(functionName, comment);
         return;

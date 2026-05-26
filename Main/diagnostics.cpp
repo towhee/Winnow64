@@ -575,7 +575,7 @@ void MW::sessionIssuesReport()
 
 void MW::logReport()
 {
-    /*
+/*
     Show the issues from the current session (from when Winnow was opened)
 */
     if (G::isLogger) G::log("MW::logReport");
@@ -601,3 +601,7 @@ void MW::logReport()
 
 }
 
+void MW::mailLogs()
+{
+
+}

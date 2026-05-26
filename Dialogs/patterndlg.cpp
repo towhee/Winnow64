@@ -86,7 +86,7 @@ void PatternDlgView::debugPxArray(QImage &i, int originX, int originY, int size)
             QString pRgba = QString::number(i.pixel(originX + x, originY + y), 16) + " ";
             row += pRgba;
         }
-        if (G::isFileLogger) Utilities::log("", row);
+        if (G::isRunByExtern) Utilities::log("", row);
         qDebug().noquote() << row;
     }
 }

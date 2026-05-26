@@ -211,7 +211,7 @@ void BuildFilters::build(AfterAction newAction)
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::build", "afteraction = " + QString::number(afterAction));
-    if (debugBuildFilters)
+    // if (debugBuildFilters)
     {
         qDebug()
             << "BuildFilters::build"
@@ -229,13 +229,13 @@ void BuildFilters::build(AfterAction newAction)
     // ignore if filters are being built
     if (filters->buildingFilters) return;
 
-    if (!G::allMetadataLoaded) {
-        G::popup->showPopup("Not all data required for filtering has been loaded yet.", 2000);
-        G::issueDedup("Info",
-                      "Filter build deferred — metadata still loading",
-                      "BuildFilters::build");
-        return;
-    }
+    // if (!G::allMetadataLoaded) {
+    //     G::popup->showPopup("Not all data required for filtering has been loaded yet.", 2000);
+    //     G::issueDedup("Info",
+    //                   "Filter build deferred — metadata still loading",
+    //                   "BuildFilters::build");
+    //     return;
+    // }
 
     /* Update action to take after build filters. If build has been previously called
     while the DataModel metadata was being loaded then the previous afterAction will

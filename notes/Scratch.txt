@@ -220,6 +220,16 @@ Done. The full suite is green — 3/3 passing (2 unit + 1 smoke) via a single ct
   - tests/fixtures/generate_fixtures.py + 3 tiny generated images (~11 KB)
   - tests/tsan/run_tsan.sh
 
+Logs
+    Show activity log
+    Clear activity log
+    ---
+    Show session issues
+    Show all issues
+    Clear issues log
+    ---
+    Send logs to Winnow
+
   Files modified
 
   - CMakeLists.txt — enable_testing() + add_subdirectory(tests) (gated by WINNOW_BUILD_TESTS), and a gated WINNOW_SANITIZE_THREAD option.
