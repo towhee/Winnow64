@@ -352,6 +352,69 @@ void DataModel::clearDataModel()
     // clear memory-overrun latch and Reader→DataModel backpressure counter
     G::memoryOverrunFlag.store(false, std::memory_order_relaxed);
     queuedReaderEvents.store(0, std::memory_order_relaxed);
+    // model is now empty: reset the running load-flag counts
+    metadataAttemptedCount.store(0, std::memory_order_relaxed);
+    iconLoadedCount.store(0, std::memory_order_relaxed);
+    videoRowCount.store(0, std::memory_order_relaxed);
+}
+
+bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
+{
+/*
+    Intercept writes to the three columns whose totals drive load-completion
+    checks, maintaining a running count so isAllMetadataAttempted() and the
+    icon-chunk check don't have to rescan the model on every row.
+
+    QStandardItem stores Qt::EditRole and Qt::DisplayRole in the same slot, so
+    the bool flags (written with the default EditRole, read elsewhere with
+    DisplayRole) are tracked only for those two roles. Alignment/tooltip/etc.
+    writes on the same columns use other roles and are ignored. Counting only
+    false↔true transitions keeps each row's contribution at 0 or 1, so the
+    count never exceeds rowCount().
+*/
+    const int col = idx.column();
+    const bool track =
+        idx.isValid() &&
+        (role == Qt::EditRole || role == Qt::DisplayRole) &&
+        (col == G::MetadataAttemptedColumn ||
+         col == G::IconLoadedColumn ||
+         col == G::VideoColumn);
+
+    bool oldVal = false;
+    if (track) oldVal = QStandardItemModel::data(idx, Qt::DisplayRole).toBool();
+
+    const bool ok = QStandardItemModel::setData(idx, value, role);
+
+    if (track && ok) {
+        const bool newVal = value.toBool();
+        if (newVal != oldVal) {
+            std::atomic<int> *counter =
+                col == G::MetadataAttemptedColumn ? &metadataAttemptedCount
+              : col == G::IconLoadedColumn        ? &iconLoadedCount
+                                                  : &videoRowCount;
+            counter->fetch_add(newVal ? 1 : -1, std::memory_order_relaxed);
+        }
+    }
+    return ok;
+}
+
+void DataModel::recountLoadFlags()
+{
+/*
+    Resync the running counts with a single full scan. Called after structural
+    row removals (remove/removeFolder use removeRows, which bypasses setData).
+*/
+    if (G::isLogger) G::log("DataModel::recountLoadFlags");
+    int meta = 0, icon = 0, video = 0;
+    const int n = rowCount();
+    for (int row = 0; row < n; ++row) {
+        if (index(row, G::MetadataAttemptedColumn).data().toBool()) ++meta;
+        if (index(row, G::IconLoadedColumn).data().toBool())        ++icon;
+        if (index(row, G::VideoColumn).data().toBool())             ++video;
+    }
+    metadataAttemptedCount.store(meta,  std::memory_order_relaxed);
+    iconLoadedCount.store(icon,         std::memory_order_relaxed);
+    videoRowCount.store(video,          std::memory_order_relaxed);
 }
 
 void DataModel::newInstance()
@@ -474,6 +537,9 @@ void DataModel::remove(QString fPath)
 
     // rebuild fPathRow hash
     rebuildRowFromPathHash();
+
+    // removeRow bypasses setData, so resync the running load-flag counts
+    recountLoadFlags();
 
     // update current index
     int last = sf->rowCount() - 1;;
@@ -779,6 +845,9 @@ void DataModel::removeFolder(const QString &folderPath)
     // rebuild fPathRow hash
     rebuildRowFromPathHash();
 
+    // removeRows bypasses setData, so resync the running load-flag counts
+    recountLoadFlags();
+
     // update current
     setCurrent(currentFilePath, instance);
     emit updateStatus(true, "", "DataModel::removeFolder");
@@ -878,6 +947,10 @@ bool DataModel::endLoad(bool success)
     }
     else {
         clear();
+        // model emptied on the failure path: reset running load-flag counts
+        metadataAttemptedCount.store(0, std::memory_order_relaxed);
+        iconLoadedCount.store(0, std::memory_order_relaxed);
+        videoRowCount.store(0, std::memory_order_relaxed);
         filters->loadingDataModelFailed();
         return false;
     }
@@ -2236,6 +2309,30 @@ void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
     setData(index(dmRow, G::MetadataAttemptedColumn), true);
 }
 
+void DataModel::updateIconChunkLoaded()
+{
+/*
+    Refresh G::iconChunkLoaded without rescanning the whole icon chunk on every
+    icon set. isAllIconChunkLoaded needs all non-video rows in
+    [startIconRange, endIconRange] to carry an icon. Since icons-in-chunk can
+    never exceed the model-wide iconLoadedCount, and videos-in-chunk can never
+    exceed the model-wide videoRowCount, the chunk cannot be complete until
+    iconLoadedCount reaches (span - videoRowCount). Below that threshold we
+    answer false for free; only at/above it do we run the authoritative scan.
+    On a fresh front-loaded folder iconLoadedCount tracks the chunk directly,
+    so the O(chunk) scan runs only as the chunk nears completion instead of
+    once per icon — removing the prior O(N·chunk) GUI-thread cost.
+*/
+    const int span = endIconRange - startIconRange + 1;
+    const int needed = span - videoRowCount.load(std::memory_order_relaxed);
+    if (span > 0 &&
+        iconLoadedCount.load(std::memory_order_relaxed) < needed) {
+        G::iconChunkLoaded = false;
+        return;
+    }
+    G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
+}
+
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)
 {
 /*
@@ -2300,7 +2397,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         if (!existing->icon().isNull()) {
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
             setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
-            G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
+            updateIconChunkLoaded();
             return;
         }
     }
@@ -2309,7 +2406,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     setData(dmIdx, vIcon, Qt::DecorationRole);
     setData(index(dmIdx.row(), G::IconLoadedColumn), true);
     setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
-    G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
+    updateIconChunkLoaded();
 }
 
 void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString src)
@@ -2396,7 +2493,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
             // ensure flags are correct even though the pixmap is unchanged
             setData(index(dmRow, G::IconLoadedColumn), true);
             setData(index(dmRow, G::MetadataReadingColumn), false);
-            G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
+            updateIconChunkLoaded();
             return;
         }
     }
@@ -2408,7 +2505,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     setData(index(dmRow, G::IconLoadedColumn), true);
     setData(index(dmRow, G::MetadataReadingColumn), false);
     setData(index(dmRow, G::IconAspectRatioColumn), (qreal)im.width()/im.height());
-    G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
+    updateIconChunkLoaded();
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)
@@ -2636,15 +2733,12 @@ bool DataModel::isMetadataLoaded(int sfRow)
 bool DataModel::isAllMetadataAttempted()
 {
     if (isDebug)
-        qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance;
-    for (int row = 0; row < rowCount(); ++row) {
-        if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
-            if (isDebug)
-                qDebug() << "DataModel::isAllMetadataAttempted" << "row =" << row << "is not loaded.";
-            return false;
-        }
-    }
-    return true;
+        qDebug() << "DataModel::isAllMetadataAttempted" << "instance =" << instance;
+    // O(1): metadataAttemptedCount is maintained in setData (false↔true
+    // transitions) and resynced by recountLoadFlags() after removals, so it
+    // equals rowCount() exactly when every row has been attempted. This used
+    // to be a full-model scan run once per row in addMetadataForItem — O(N²).
+    return metadataAttemptedCount.load(std::memory_order_relaxed) >= rowCount();
 }
 
 bool DataModel::isAllMetadataLoaded()

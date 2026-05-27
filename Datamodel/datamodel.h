@@ -146,6 +146,17 @@ public:
        the GUI thread is falling behind, avoiding unbounded queue growth
        on folders that produce events faster than they can be consumed. */
     std::atomic<int> queuedReaderEvents{0};
+
+    /* Running counts maintained in DataModel::setData so the "is the load
+       complete?" checks are O(1) instead of O(rows) per row. Previously
+       addMetadataForItem rescanned every row (O(N²) over a folder load) and
+       setIcon1 rescanned the whole icon chunk on every icon — the dominant
+       GUI-thread cost on large folders. Reset in clearDataModel(), recomputed
+       by recountLoadFlags() after structural row removals. */
+    std::atomic<int> metadataAttemptedCount{0};
+    std::atomic<int> iconLoadedCount{0};
+    std::atomic<int> videoRowCount{0};
+
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString firstFolderPathWithImages;
     QString currentFilePath;            // used in caching to update image cache
@@ -237,6 +248,12 @@ public slots:
     void imageCacheWaiting(int sfRow, int instance);
     bool isAllMetadataAttempted();
     bool isAllIconChunkLoaded(int first, int last);
+    // Intercepts MetadataAttempted/IconLoaded/Video column writes to keep the
+    // running counts above accurate; delegates everything to the base class.
+    bool setData(const QModelIndex &index, const QVariant &value,
+                 int role = Qt::EditRole) override;
+    void recountLoadFlags();        // full rescan to resync counts after removals
+    void updateIconChunkLoaded();   // O(1)-gated refresh of G::iconChunkLoaded
     int rowFromPath(QString fPath);
     int proxyRowFromPath(QString fPath, QString src = "");
     QString pathFromProxyRow(int sfRow);

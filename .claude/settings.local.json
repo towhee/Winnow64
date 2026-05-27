@@ -39,7 +39,11 @@
       "Bash(sw_vers)",
       "Bash(xcodebuild -version)",
       "Bash(/usr/libexec/PlistBuddy -c 'Print' /Applications/Xcode.app/Contents/version.plist)",
-      "Bash(xcodebuild -showsdks)"
+      "Bash(xcodebuild -showsdks)",
+      "Bash(sed -n '/bool DataModel::isAllMetadataAttempted/,/^}/p' Datamodel/datamodel.cpp)",
+      "Bash(sed -n '1744,1775p' Datamodel/datamodel.cpp)",
+      "Bash(sed -n '/void DataModel::clearAllIcons/,/^}/p' Datamodel/datamodel.cpp)",
+      "Bash(sed -n '/void DataModel::clearIconsOutsideChunkRange/,/^}/p' Datamodel/datamodel.cpp)"
     ]
   }
 }

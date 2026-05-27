@@ -2,13 +2,8 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Add preference to toggle isFileLogger
-- Update where log file is updated
-- Send all warnings to console and issue log.
-- Add IRB to dng.cpp (see Tiff::parse line 365) for faster thumbs
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
-- Undo delete
 - Resolve Pixmap vs ImageDecoder classes
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Fix MW::ejectUsb(QString path)
