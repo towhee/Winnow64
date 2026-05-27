@@ -211,6 +211,17 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         restoreGeometry(w.geometry);
         restoreState(w.state);
     }
+    else {
+        /* Maximised workspace: setGeometry/restoreGeometry is unreliable here
+           (see note at top of file), but the dock layout (sizes, tabbing,
+           floating, positions) still lives in w.state and must be restored or
+           a multi-dock arrangement is lost. Maximise first so restoreState
+           sizes the dock areas against the final window size. */
+        if (!isMaximized()) showMaximized();
+        restoreState(w.state);
+        // second restoreState req'd for going from docked to floating docks
+        restoreState(w.state);
+    }
 
     // recover selection
     QItemSelection selection;
