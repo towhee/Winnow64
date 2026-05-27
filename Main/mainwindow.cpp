@@ -567,15 +567,6 @@ void MW::showEvent(QShowEvent *event)
 
     QMainWindow::showEvent(event);
 
-    // recover persistent thumb size that can be lost during initialization and show event
-    // Fixed: see IconView::rejustify (if (G::isInitializing && objectName() == "Thumbnails") return;)
-    // if (settings->contains("thumbWidth")) thumbView->iconWidth = settings->value("thumbWidth").toInt();
-    // if (settings->contains("thumbHeight")) thumbView->iconHeight = settings->value("thumbHeight").toInt();
-    // thumbView->setThumbSize();
-    // if (settings->contains("thumbWidthGrid")) gridView->iconWidth = settings->value("thumbWidthGrid").toInt();
-    // if (settings->contains("thumbHeightGrid")) gridView->iconHeight = settings->value("thumbHeightGrid").toInt();
-    // gridView->setThumbSize();
-
     qApp->setStyleSheet(G::css);
 
     fsTree->setRootIndex(fsTree->model()->index(0,0));
@@ -767,7 +758,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         //     return;
         // }
         // stop loading a new folder
-        else if (!G::allMetadataLoaded) stop("Escape key");
+        // else if (!G::allMetadataLoaded) stop("Escape key");
         // stop background ingest
         // else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
