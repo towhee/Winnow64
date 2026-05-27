@@ -138,6 +138,17 @@ private:
        setStartRow and initialize. */
     QSet<int> readSuccessThisCycle;
 
+    /* sf rows currently dispatched to a Reader but not yet returned. Replaces
+       the old cross-thread write of MetadataReadingColumn on the proxy from
+       this worker thread (which mutated the QSortFilterProxyModel off the GUI
+       thread and queued a view dataChanged per dispatched row). Accessed only
+       on metaReadThread (needToRead/processReturningReader/setStartRow/
+       initialize), so no locking. Video rows are the exception: their reading
+       flag stays in the DataModel column because the GUI thread must clear it
+       when FrameDecoder reports the frame. Cleared alongside
+       readSuccessThisCycle. */
+    QSet<int> rowsReading;
+
     DataModel *dm;
     Metadata *metadata;
     FrameDecoder *frameDecoder;     // shared across all Readers; owned here
