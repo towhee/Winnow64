@@ -99,15 +99,20 @@ void MW::loupeDisplay(const QString src)
 void MW::gridDisplay()
 {
 /*
-    Note: When the gridView is displayed it needs to be scrolled to the currentIndex since it
-    has been "hidden". However, the scrollbars take a long time to paint after the view show
-    event, so the ThumbView::scrollToCurrent function must be delayed. This is done by the
-    eventFilter in MW (installEventFilter), intercepted the scrollbar paint events. This is a
-    bit of a cludge to get around lack of notification when the QListView has finished
-    painting itself.
+    Note: When the gridView is displayed it needs to be scrolled to the currentIndex
+    since it has been "hidden". However, the scrollbars take a long time to paint after
+    the view show event, so the ThumbView::scrollToCurrent function must be delayed. This
+    is done by the eventFilter in MW (installEventFilter), intercepted the scrollbar
+    paint events. This is a bit of a cludge to get around lack of notification when the
+    QListView has finished painting itself.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::gridDisplay");
 
+    /*
+    qDebug() << "MW::gridDisplay"
+             << "gridView->iconWidth =" << gridView->iconWidth
+             << "gridView->iconHeight =" << gridView->iconHeight;
+                //*/
 
     // if (embelProperties->templateId > 0) {
     //     QString msg = "Only loupe mode is available while the Embellish Editor is active.<br>"

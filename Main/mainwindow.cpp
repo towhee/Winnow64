@@ -215,8 +215,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     if (argList.length() > 1)
         isStartupArgs = true;
 
-    //
-
     /* TESTING / DEBUGGING FLAGS
        Note G::isLogger is in globals.cpp */
     G::showAllTableColumns = false;     // show all table fields for debugging
@@ -235,7 +233,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
             + "/settings.ini";
     settings = new QSettings(iniPath, QSettings::IniFormat);
-    // settings = new QSettings("Winnow", "winnow_100");
     G::settings = settings;
     // test if new user
     if (settings->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
@@ -529,10 +526,6 @@ void MW::showEvent(QShowEvent *event)
         return;
     }
 
-    // QMainWindow::showEvent(event);
-
-    // Finish initializing
-
     // restore prior geometry and state
     if (isSettings) {
         restoreGeometry(settings->value("Geometry").toByteArray());
@@ -552,6 +545,9 @@ void MW::showEvent(QShowEvent *event)
         thumbDock->setVisible(true);
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
+        qDebug() << "MW::showEvent2"
+                 << "thumbView->iconWidth =" << thumbView->iconWidth
+                 << "thumbView->iconHeight =" << thumbView->iconHeight;
     }
 
     // initial status bar icon state
@@ -572,9 +568,13 @@ void MW::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
 
     // recover persistent thumb size that can be lost during initialization and show event
-    if (settings->contains("thumbWidth")) thumbView->iconWidth = settings->value("thumbWidth").toInt();
-    if (settings->contains("thumbHeight")) thumbView->iconHeight = settings->value("thumbHeight").toInt();
-    thumbView->setThumbSize();
+    // Fixed: see IconView::rejustify (if (G::isInitializing && objectName() == "Thumbnails") return;)
+    // if (settings->contains("thumbWidth")) thumbView->iconWidth = settings->value("thumbWidth").toInt();
+    // if (settings->contains("thumbHeight")) thumbView->iconHeight = settings->value("thumbHeight").toInt();
+    // thumbView->setThumbSize();
+    // if (settings->contains("thumbWidthGrid")) gridView->iconWidth = settings->value("thumbWidthGrid").toInt();
+    // if (settings->contains("thumbHeightGrid")) gridView->iconHeight = settings->value("thumbHeightGrid").toInt();
+    // gridView->setThumbSize();
 
     qApp->setStyleSheet(G::css);
 
@@ -3163,7 +3163,7 @@ void MW::folderChangeCompleted()
     updateMetadataThreadRunStatus(false, true, true, fun);
 
     // build filters if filter dock is visible
-    // /*
+    /*
     qDebug() << "MW::folderChangecompleted"
              << "dm->folderList.count() =" << dm->folderList.count()
              << "dm->isQueueEmpty() =" << dm->isQueueEmpty()
