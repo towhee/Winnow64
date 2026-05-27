@@ -721,6 +721,15 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
     // Skip if wrapping is disabled as justification only applies to grid-style layouts
     if (!isWrapping()) return;
 
+    /* During startup the thumbDock is parked on the left (MW init addDockWidget
+       LeftDockWidgetArea) before restoreState() moves it to its saved location.
+       That makes thumbView wrapping, so a folder-load refresh would rejustify the
+       icons to the transient narrow left-dock width, shrinking the persisted thumb
+       size (loaded in MW::createThumbView) down toward ICON_MIN. Skip until init
+       completes; MW::showEvent applies the size via setThumbSize() once the real
+       layout is restored. */
+    if (G::isInitializing && objectName() == "Thumbnails") return;
+
     QString src = "IconView::rejustify";
     if (isDebug || G::isLogger) G::log(src, objectName());
 

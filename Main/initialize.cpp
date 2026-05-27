@@ -537,6 +537,7 @@ void MW::createThumbView()
     thumbView->setAutoScroll(false);
     thumbView->firstVisibleCell = 0;
     thumbView->showZoomFrame = true;            // may have settings but not showZoomFrame yet
+
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
         if (settings->contains("thumbWidth")) thumbView->iconWidth = settings->value("thumbWidth").toInt();
@@ -612,6 +613,11 @@ void MW::createGridView()
         gridView->badgeSize = classificationBadgeSizeFactor;
         gridView->iconNumberSize = iconNumberSize;
     }
+    /*
+    qDebug() << "MW::createGridView"
+             << "gridView->iconWidth =" << gridView->iconWidth
+             << "gridView->iconHeight =" << gridView->iconHeight;
+                //*/
 
     // update metadata and icons if not loaded for new images when scroll
     connect(gridView->verticalScrollBar(), &QScrollBar::valueChanged,
