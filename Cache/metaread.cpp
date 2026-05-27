@@ -309,6 +309,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         // become eligible for re-dispatch while their setIcon is still in
         // flight on the main thread.
         readSuccessThisCycle.clear();
+        rowsReading.clear();
         if (isDebug)
         {
             qDebug().noquote()
@@ -517,6 +518,7 @@ void MetaRead::initialize(QString src)
     err.clear();
     cycling.fill(false);
     readSuccessThisCycle.clear();
+    rowsReading.clear();
 
     // reset diagnostic lifetime counters
     readsSuccessCount.store(0, std::memory_order_relaxed);
@@ -894,19 +896,17 @@ inline bool MetaRead::needToRead(int sfRow)
     needIcon = false;
     needMeta = false;
 
-    QModelIndex sfReadingIdx = dm->sf->index(sfRow, G::MetadataReadingColumn);
-    bool isReading = sfReadingIdx.data().toBool();
-    // bool isReading = dm->sf->index(sfRow, G::MetadataReadingColumn).data().toBool();
     bool isIcon = dm->sf->index(sfRow, G::IconLoadedColumn).data().toBool();
     bool isMeta = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+    bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
 
-    // if (isDebug)
-    //     qDebug() << "MetaRead::needToRead"
-    //              << "sfRow =" << sfRow
-    //              << "isReading =" << isReading
-    //              << "isIcon =" << isIcon
-    //              << "isMeta =" << isMeta
-    //         ;
+    /* In-flight check. Non-video rows use the worker-local rowsReading set;
+       video rows still use the DataModel column because the GUI thread (via
+       FrameDecoder→setIconFromVideoFrame) is what clears it after the frame
+       is decoded. This avoids the prior per-row cross-thread proxy write. */
+    bool isReading = isVideo
+        ? dm->sf->index(sfRow, G::MetadataReadingColumn).data().toBool()
+        : rowsReading.contains(sfRow);
 
     // already reading this item?
     if (isReading || isIcon) {
@@ -922,13 +922,11 @@ inline bool MetaRead::needToRead(int sfRow)
         return false;
     }
 
-    if (isMeta && isIcon) {
-        dm->sf->setData(sfReadingIdx, false);
-        return false;
-    }
-    else {
-        dm->sf->setData(sfReadingIdx, true);
-    }
+    // mark in-flight
+    if (isVideo)
+        dm->sf->setData(dm->sf->index(sfRow, G::MetadataReadingColumn), true);
+    else
+        rowsReading.insert(sfRow);
 
     if (!isMeta) {
         needMeta = true;
@@ -1119,26 +1117,28 @@ void MetaRead::processReturningReader(int id, Reader *r)
     // re-dispatched Reader::read() concurrently overwriting fPath.
     QString rfPath = r->fPathSnapshot();
 
-    // For video rows, FrameDecoder finishes asynchronously and
-    // DataModel::setIconFromVideoFrame is what clears MetadataReadingColumn.
-    // Clearing it here would let dispatch re-pick the same video before its
-    // frame is decoded, spawning concurrent QMediaPlayers on the same file
-    // (AVFoundation heap corruption).
-    if (!dm->index(dmRow, G::VideoColumn).data().toBool()) {
-        dm->sf->setData(dm->sf->index(dmRow, G::MetadataReadingColumn), false);
-    }
-
     /* Record that this row has been processed in the current cycle so
        needToRead won't pick it again before its setIcon has drained on
        the main thread. Insert regardless of Reader::status — even a
        failed read got far enough to emit an error-icon setIcon, which
        will land IconLoadedColumn=true on the main thread eventually.
        Aborted reads are handled by setStartRow/initialize clearing the
-       set when a new cycle begins. */
+       set when a new cycle begins.
+
+       Non-video: clear the worker-local reading flag now that the reader
+       has returned. Video rows keep their flag (held in the DataModel
+       MetadataReadingColumn) until FrameDecoder→setIconFromVideoFrame
+       clears it on the GUI thread; clearing here would let dispatch
+       re-pick the same video before its frame is decoded, spawning
+       concurrent QMediaPlayers on the same file (AVFoundation corruption). */
     {
         QModelIndex dmIdx = dm->index(dmRow, 0);
         QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
-        if (sfIdx.isValid()) readSuccessThisCycle.insert(sfIdx.row());
+        if (sfIdx.isValid()) {
+            readSuccessThisCycle.insert(sfIdx.row());
+            if (!dm->index(dmRow, G::VideoColumn).data().toBool())
+                rowsReading.remove(sfIdx.row());
+        }
     }
 
     // progress counter

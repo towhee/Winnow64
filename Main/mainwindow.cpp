@@ -2539,14 +2539,16 @@ void MW::stop(QString src)
     if (!stopped["ImageCache"]) emit abortImageCache();
     if (!stopped["BuildFilters"]) emit abortBuildFilters();
 
-    // Process events rather than blocking with loop.exec() — keeps macOS run loop alive
-    if (!allIdle()) {
-        QElapsedTimer waitTimer;
-        waitTimer.start();
-        while (!allIdle() && waitTimer.elapsed() < 3000) {
-            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-            QThread::msleep(10);
-        }
+    // Wait for the subsystems to acknowledge abort. Event-driven: wake the
+    // instant a queued stopped signal arrives (WaitForMoreEvents) instead of
+    // polling in fixed 10 ms sleeps, so teardown returns as soon as the
+    // workers are idle. User input stays excluded so a second folder click
+    // can't reenter the teardown.
+    QElapsedTimer waitTimer;
+    waitTimer.start();
+    while (!allIdle() && waitTimer.elapsed() < 3000) {
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents |
+                            QEventLoop::WaitForMoreEvents, 50);
     }
 
     if (!allIdle()) qWarning() << "NOT ALLIDLE! STOP FAILED";
