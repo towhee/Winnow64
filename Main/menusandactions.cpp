@@ -1497,6 +1497,12 @@ void MW::createHelpActions()
     addAction(helpWelcomeAction);
     connect(helpWelcomeAction, &QAction::triggered, this, &MW::helpWelcome);
 
+    helpPerformanceTipsAction = new QAction(tr("Performance tips"), this);
+    helpPerformanceTipsAction->setObjectName("helPerformanceTips");
+    helpPerformanceTipsAction->setShortcutVisibleInContextMenu(true);
+    addAction(helpPerformanceTipsAction);
+    connect(helpPerformanceTipsAction, &QAction::triggered, this, &MW::helpPerformanceTips);
+
     helpRevealLogFileAction = new QAction("Send log files to Winnow", this);
     helpRevealLogFileAction->setObjectName("RevealLogFileAct");
     helpRevealLogFileAction->setShortcutVisibleInContextMenu(true);
@@ -2096,8 +2102,9 @@ void MW::createHelpMenu()
 
     helpMenu->addAction(aboutAction);
     //    helpMenu->addAction(helpAction);
-    helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpWelcomeAction);
+    helpMenu->addAction(helpShortcutsAction);
+    helpMenu->addAction(helpPerformanceTipsAction);
     helpMenu->addSeparator();
     logMenu = helpMenu->addMenu(tr("&Logs"));
     logMenu->addAction(viewLogAction);

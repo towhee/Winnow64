@@ -15,7 +15,8 @@ Table of Contents
     1. INITIALIZATION
          - Startup Sequence
 
-    2. PROGRAM PIPELINE
+    2. FOLDER LOADING PIPELINE
+         - Overview
          - New Folder Selected (Call Sequence)
          - Concurrent Flow - New Folder Selected
          - Concurrent Flow - New Image Selected
@@ -103,56 +104,147 @@ Startup Sequence
 
 ***********************************************************************************************
 
-PROGRAM PIPELINE
+FOLDER LOADING PIPELINE
 
-    Use G::isFlowLogger or G::isLogger to output program progress.
+    Use G::isFlowLogger or G::isLogger to trace program progress.
+
+-----------------------------------------------------------------------------------------------
+Overview
+-----------------------------------------------------------------------------------------------
+
+    Loading a folder runs in two phases that do NOT overlap with each other.
+    Phase 1 populates the DataModel with one row per eligible file and runs on
+    the GUI thread. Phase 2 reads metadata and icons (MetaRead, on worker
+    threads) and caches full-size images (ImageCache, on worker threads); these
+    two activities within Phase 2 DO overlap.
+
+    Phase 1 - Build the DataModel (GUI thread)
+
+    • A folder or bookmark click calls MW::folderSelectionChange. The mouse
+      modifier decides whether the folder replaces the current selection
+      (resetDataModel = true) or is added to it.
+
+    • When resetDataModel is true the prior load is torn down first: MW::stop
+      halts the worker threads, MW::reset clears state, and
+      DataModel::clearDataModel empties the model. clearDataModel calls
+      QCoreApplication::removePostedEvents(this, QEvent::MetaCall) BEFORE
+      clear(). QStandardItemModel coalesces item edits into a posted
+      _q_emitItemChanged meta-call; if that (or a stale worker setData/setIcon
+      meta-call) fired after clear() freed the items it would dereference freed
+      pointers and crash. DataModel::newInstance then bumps dm->instance so any
+      surviving stale worker signals are ignored.
+
+    • Subfolders are counted (Utilities::subFolderTree) and the folder plus,
+      in the recursive case, every subfolder are queued by
+      DataModel::enqueueFolderSelection / enqueueOp. macOS .photoslibrary
+      bundles are filtered out (they hold huge numbers of derivative files).
+
+    • DataModel::scheduleProcessing starts DataModel::processNextBatch, which
+      drains the folder queue in time-sliced batches. It yields to the event
+      loop every ~30 ms (kTimeBudgetMs), with a secondary cap of 64 folders per
+      tick, rescheduling itself with a zero-delay timer. This time-slicing is
+      what keeps the GUI responsive while a large recursive tree loads.
+
+    • DataModel::addFolder handles one directory: dir.entryInfoList() lists
+      the eligible files, they are sorted (DataModel::lessThan, or
+      lessThanCombineRawJpg when raw+jpg combining is on), and each file is
+      appended as a row (setRowCount + DataModel::addFileDataForRow, which fills
+      the OS file columns and performs raw+jpg pairing).
+
+      Cost note: the sort/filter proxy (dm->sf) inserts each new row into sorted
+      position at O(N), so the whole load is O(N^2). Time-slicing bounds each
+      GUI freeze to roughly one folder's insert time but does not change that
+      total; a single very large folder loaded late can still block briefly.
+
+    • When the queue empties DataModel emits folderChange, handled by
+      MW::folderChanged. It re-enables the panels, sets the current index, and
+      either finishes immediately (DataModel::isAllMetadataAttempted, e.g. a
+      pure removal with no new rows) or starts Phase 2.
+
+    Phase 2 - Read metadata/icons and cache images (worker threads)
+
+    • MW::folderChanged starts MetaRead with a queued
+      QMetaObject::invokeMethod(metaRead, "initialize") followed by
+      MetaRead::setStartRow(startRow). MetaRead lives on metaReadThread.
+
+    • MetaRead::dispatchReaders / dispatch assign rows to Reader workers,
+      walking outward from startRow (the current image) so the user's position
+      is served first. Each Reader reads metadata (Reader::readMetadata ->
+      DataModel::addMetadataForItem) and a G::maxIconSize (256 px) icon
+      (Reader::readIcon -> DataModel::setIcon1, stored in Qt::DecorationRole),
+      delivered to the GUI thread over queued connections. Backpressure
+      (dm->queuedReaderEvents, cap 4 x readerCount) defers dispatch when the GUI
+      thread falls behind draining those events.
+
+    • Once the start row itself has been read, MetaRead emits select, which
+      routes Selection::setCurrentIndex -> MW::updateChange ->
+      MW::fileSelectionChange. That loads the current image and starts
+      ImageCache, so ImageCache runs concurrently with the rest of MetaRead.
+
+    • ImageCache caches full-size images ahead of and behind the current
+      position: ImageCache::setCurrentPosition -> updateTargets ->
+      launchDecoders -> decodeNextImage -> ImageDecoder (decode / rotate /
+      colorManage) -> ImageCache::fillCache -> cacheImage -> nextToCache.
+
+    • MetaRead::done signals MW::folderChangeCompleted, which builds the
+      filters, re-enables the sort/filter menus, applies a single sort pass, and
+      resizes the table columns.
+
+    Instances and aborting
+
+    • Every new primary folder increments dm->instance
+      (DataModel::newInstance). Worker signals carry the instance they were
+      issued under; DataModel slots (setIcon1, addMetadataForItem, setValSf,
+      ...) drop any call whose instance no longer matches, so lagging signals
+      from an abandoned load are harmless.
+
+    • G::stop and dm->abort are the cooperative stop flags. MW::stop sets
+      them, signals the workers to abort, and waits (event-driven, 3 s cap)
+      for them to acknowledge before resetting.
 
 -----------------------------------------------------------------------------------------------
 New Folder Selected (Call Sequence)
 -----------------------------------------------------------------------------------------------
 
-    - FSTree::mousePressEvent or
-      FSTree::select
-    - MW::folderSelectionChange             // prep based on mouse click modifier
-    - MW::stop                              // halt prior loading
-    - MW::reset                             // reset all parameters, new instance
-    - MW::clearDataModel
-    - DM::newInstance                       // if new primary folder
-    - DM::enqueueFolderSelection
-    - DM::enqueueOp
-    - DM::processNextFolder
-    - DM::addFolder
-    - DM::addFileDataForRow                 // iterate all rows
-    - MW::folderChanged
-    - MW::addFolder
-    - Selection::setCurrentRow
-    - Selection::setCurrentIndex
-    - DataModel::setCurrentSF               // update current indexes and fPath
-    - MW::update
+    - FSTree::mousePressEvent / FSTree::select / BookMarks item click
+    - MW::folderSelectionChange             // prep based on mouse modifier
+    - MW::stop                              // halt prior load (if reset)
+    - MW::reset                             // reset parameters
+    - DataModel::clearDataModel             // purge meta-calls, then clear()
+    - DataModel::newInstance                // bump instance (new folder)
+    - DataModel::enqueueFolderSelection
+    - DataModel::enqueueOp
+    - DataModel::scheduleProcessing
+    - DataModel::processNextBatch           // time-sliced; ~30 ms yields
+    - DataModel::addFolder                  // one directory per call
+    - DataModel::addFileDataForRow          // one row per eligible file
+    - DataModel::folderChange               // signal -> MW::folderChanged
+    - MW::folderChanged                     // set current; start Phase 2
+    - MetaRead::initialize                  // queued to metaReadThread
     - MetaRead::setStartRow
-    - MetaRead::run
     - MetaRead::dispatchReaders
-    - Reader::read                          // public slot: prep + dispatch
-    - Reader::readMetadata
-    - Reader::readIcon
     - MetaRead::dispatch
-    - MW::fileSelectionChange
+    - Reader::read                          // prep + dispatch
+    - Reader::readMetadata                  // -> addMetadataForItem
+    - Reader::readIcon                      // -> setIcon1 (256 px)
+    - MetaRead::select                      // signal, at startRow
+    - Selection::setCurrentIndex
+    - DataModel::setCurrentSF               // current indexes + fPath
+    - MW::updateChange
+    - MW::fileSelectionChange               // loads image; start cache
     - ImageView::loadImage
     - ImageCache::setCurrentPosition
-    - ImageCache::run
     - ImageCache::updateTargets
     - ImageCache::launchDecoders
-    - ImageCache::fillCache
-    - ImageCache::nextToCache
     - ImageCache::decodeNextImage
-    - ImageDecoder::read
-    - ImageDecoder::run
     - ImageDecoder::decode
     - ImageDecoder::rotate
     - ImageDecoder::colorManage
     - ImageCache::fillCache
     - ImageCache::cacheImage
     - ImageCache::nextToCache
+    - MetaRead::done                        // signal, all rows read
+    - MW::folderChangeCompleted             // filters, sort, resize cols
 
 -----------------------------------------------------------------------------------------------
 Concurrent Flow - New Folder Selected
@@ -161,20 +253,25 @@ Concurrent Flow - New Folder Selected
     • Selecting a new folder in the Folders or Bookmarks panel calls
       MW::folderSelectionChange.
 
-    • All threads are stopped, the DataModel is cleared and all parameters are reset
-      (see MW::stop, MW::reset, MW::clearDataModel).
+    • If the folder replaces the current selection, the prior load is torn
+      down: all worker threads are stopped, the DataModel is cleared and all
+      parameters are reset (MW::stop, MW::reset, DataModel::clearDataModel).
 
-    • The DataModel is loaded from the queue in DM::processNextFolder, which calls
-      DM::addFolder and iterates DM::addFileDataForRow to populate basic file info per
-      row. MW::folderChanged then sets the current index via Selection::setCurrentRow.
+    • The DataModel is loaded from the folder queue by
+      DataModel::processNextBatch, which calls DataModel::addFolder and
+      iterates DataModel::addFileDataForRow to populate basic file info per
+      row. processNextBatch is time-sliced (yields every ~30 ms) so the GUI
+      stays responsive. MW::folderChanged then sets the current index.
 
-    • MetaRead::setStartRow / MetaRead::run dispatch Reader workers that iterate the
-      DataModel, loading metadata and 256 px icons. For each item, metadata is also
-      signalled to ImageCache via ImageCache::addCacheItemImageMetadata.
+    • MetaRead::setStartRow / dispatchReaders / dispatch send Reader workers
+      outward from the start row, loading metadata
+      (-> DataModel::addMetadataForItem) and 256 px icons
+      (-> DataModel::setIcon1).
 
-    • Once MetaRead has accumulated enough rows (imageCacheTriggerCount), the ImageCache
-      is started; from there it walks setCurrentPosition → updateTargets →
-      launchDecoders → fillCache.
+    • When the start row has been read, MetaRead emits select, which (via
+      MW::updateChange -> MW::fileSelectionChange) starts ImageCache. From
+      there ImageCache walks setCurrentPosition -> updateTargets ->
+      launchDecoders -> fillCache, caching concurrently with MetaRead.
 
 -----------------------------------------------------------------------------------------------
 Concurrent Flow - New Image Selected
