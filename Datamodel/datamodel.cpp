@@ -327,6 +327,20 @@ void DataModel::clearDataModel()
     if (mLock) return;
     if (isDebug)
         qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
+
+    /* Purge queued meta-call events targeting this model before clear() frees
+       every QStandardItem. QStandardItemModel coalesces item edits into a
+       posted _q_emitItemChanged meta-call; if that (or a stale worker
+       setData/setIcon meta-call from the instance being torn down) fires after
+       clear(), it dereferences freed item pointers and crashes in
+       indexFromItem. This became reachable once processNextBatch was time-
+       sliced: the GUI now stays responsive during the folder-add phase, so a
+       folder click can reach clearDataModel while an addFolder tick's
+       coalesced dataChanged is still in the event queue. Removing them is safe
+       — they all target the instance being discarded, and queuedReaderEvents
+       is reset below. */
+    QCoreApplication::removePostedEvents(this, QEvent::MetaCall);
+
     clear();
     setModelProperties();
     // clear the fPath index of datamodel rows
@@ -665,10 +679,24 @@ void DataModel::scheduleProcessing()
 
 void DataModel::processNextBatch()
 {
-    constexpr int kMaxPerTick = 64;
+    /* Folders are processed in time-sliced batches, yielding to the GUI event
+       loop between slices so the UI stays responsive while a large (especially
+       recursive) tree loads. The yield is time-budgeted, not folder-counted:
+       addFolder cost grows with the model size (the sorted proxy re-inserts
+       each new row at O(N)), so a fixed folder count per tick produced multi-
+       second GUI freezes late in a big load (measured 3.4 s blocks). Capping a
+       tick at ~30 ms keeps each freeze to roughly one folder's insert time and
+       returns control to the event loop ~30×/s. kMaxFoldersPerTick remains as a
+       secondary guard so tiny folders still yield periodically. The remaining
+       O(N²) total-load cost is unchanged by this; only responsiveness is. */
+    constexpr int    kMaxFoldersPerTick = 64;
+    constexpr qint64 kTimeBudgetMs      = 30;
+
+    QElapsedTimer tickTimer;
+    tickTimer.start();
 
     int processed = 0;
-    while (processed < kMaxPerTick && !folderQueue.isEmpty() && !G::stop) {
+    while (processed < kMaxFoldersPerTick && !folderQueue.isEmpty() && !G::stop) {
         if (abort) {
             qDebug() << "processNextBatch1";
             emit folderChange(abort);
@@ -688,6 +716,10 @@ void DataModel::processNextBatch()
             removeFolder(folderPath);
         }
         ++processed;
+
+        // Yield to the event loop once this tick's time budget is spent; the
+        // reschedule below picks up the remaining queue on the next tick.
+        if (tickTimer.elapsed() >= kTimeBudgetMs) break;
     }
 
     if (G::stop) {
@@ -727,6 +759,9 @@ void DataModel::addFolder(const QString &folderPath)
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
     locker.unlock(); // Unlock the queue while processing
 
+    // DIAGNOSTIC (temporary): time directory enumeration (cold-cache I/O).
+    QElapsedTimer tEnum; tEnum.start();
+
     // folder fileInfo list
     QDir dir(folderPath);
     dir.setNameFilters(*fileFilters);
@@ -740,6 +775,7 @@ void DataModel::addFolder(const QString &folderPath)
     else {
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
+    qint64 enumMs = tEnum.elapsed();   // DIAGNOSTIC
 
     QString count = QVariant(++subFolderTreeCounter).toString();
     QString progress = "Searching for images in: " + count + " of " +
@@ -756,6 +792,8 @@ void DataModel::addFolder(const QString &folderPath)
     int row = rowCount();
     int oldRowCount = rowCount();
     int newRowCount = oldRowCount;
+
+    QElapsedTimer tInsert; tInsert.start();   // DIAGNOSTIC (temporary)
 
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         // check for escape key release triggering abort
@@ -792,8 +830,25 @@ void DataModel::addFolder(const QString &folderPath)
 
     if (abort) return;
 
+    qint64 insertMs = tInsert.elapsed();   // DIAGNOSTIC (temporary)
+
     int folderRowCount = row - newRowCount;
     newRowCount = row;
+
+    /* DIAGNOSTIC (temporary): log folders whose add took >100 ms, broken into
+       enumeration (cold-cache directory I/O, scales with file count) vs the
+       insert loop (proxy/view work, scales with modelRowsAtStart). If insertMs
+       dominates and grows with modelRowsAtStart, it's the O(N²) proxy insert;
+       if enumMs dominates, it's cold-cache I/O that belongs on a worker. */
+    if (enumMs + insertMs > 100) {
+        qDebug().noquote()
+            << "ADDFOLDER-SLOW: modelRowsAtStart =" << oldRowCount
+            << "files =" << folderFileInfoList.size()
+            << "added =" << folderRowCount
+            << "enumMs =" << enumMs
+            << "insertMs =" << insertMs
+            << folderPath;
+    }
 
     if (oldRowCount == 0 && newRowCount > 0) {
         firstFolderPathWithImages = folderPath;

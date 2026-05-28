@@ -255,3 +255,5 @@ Logs
 
 
 /Users/roryhill/Projects/Winnow64/build/mac-debug:/Library/Developer/CommandLineTools/SDKs/MacOSX15.2.sdk/usr/lib
+Prestidigitating… (15m 11s · ↓ 60.2k tokens · thought for 53s)
+  ⎿
