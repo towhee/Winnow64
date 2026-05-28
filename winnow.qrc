@@ -210,5 +210,6 @@
         <file>DetectionModels/focus_point_model.onnx</file>
         <file>images/lock.svg</file>
         <file>images/icon16/nolink.png</file>
+        <file>Docs/performancetipshelp.html</file>
     </qresource>
 </RCC>

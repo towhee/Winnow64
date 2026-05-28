@@ -579,6 +579,7 @@ qt_add_executable(Winnow
     ${WINNOW_FORMS}
     ${WINNOW_RESOURCES}
     ${WINNOW_NOTES}
+    Main/help.cpp
 )
 
 target_compile_definitions(Winnow PRIVATE

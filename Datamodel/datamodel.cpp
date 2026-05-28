@@ -759,9 +759,6 @@ void DataModel::addFolder(const QString &folderPath)
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
     locker.unlock(); // Unlock the queue while processing
 
-    // DIAGNOSTIC (temporary): time directory enumeration (cold-cache I/O).
-    QElapsedTimer tEnum; tEnum.start();
-
     // folder fileInfo list
     QDir dir(folderPath);
     dir.setNameFilters(*fileFilters);
@@ -775,7 +772,6 @@ void DataModel::addFolder(const QString &folderPath)
     else {
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
-    qint64 enumMs = tEnum.elapsed();   // DIAGNOSTIC
 
     QString count = QVariant(++subFolderTreeCounter).toString();
     QString progress = "Searching for images in: " + count + " of " +
@@ -792,8 +788,6 @@ void DataModel::addFolder(const QString &folderPath)
     int row = rowCount();
     int oldRowCount = rowCount();
     int newRowCount = oldRowCount;
-
-    QElapsedTimer tInsert; tInsert.start();   // DIAGNOSTIC (temporary)
 
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         // check for escape key release triggering abort
@@ -830,25 +824,8 @@ void DataModel::addFolder(const QString &folderPath)
 
     if (abort) return;
 
-    qint64 insertMs = tInsert.elapsed();   // DIAGNOSTIC (temporary)
-
     int folderRowCount = row - newRowCount;
     newRowCount = row;
-
-    /* DIAGNOSTIC (temporary): log folders whose add took >100 ms, broken into
-       enumeration (cold-cache directory I/O, scales with file count) vs the
-       insert loop (proxy/view work, scales with modelRowsAtStart). If insertMs
-       dominates and grows with modelRowsAtStart, it's the O(N²) proxy insert;
-       if enumMs dominates, it's cold-cache I/O that belongs on a worker. */
-    if (enumMs + insertMs > 100) {
-        qDebug().noquote()
-            << "ADDFOLDER-SLOW: modelRowsAtStart =" << oldRowCount
-            << "files =" << folderFileInfoList.size()
-            << "added =" << folderRowCount
-            << "enumMs =" << enumMs
-            << "insertMs =" << insertMs
-            << folderPath;
-    }
 
     if (oldRowCount == 0 && newRowCount > 0) {
         firstFolderPathWithImages = folderPath;

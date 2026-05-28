@@ -978,7 +978,8 @@ private:
     QAction *helpAction;
     QAction *helpShortcutsAction;
     QAction *helpWelcomeAction;
-    QAction *helpFilmStripAction;
+    QAction *helpPerformanceTipsAction;
+    QAction *helpFilmStripAction;  // to be removed, not used
     QAction *helpRevealLogFileAction;
 
     // Help Diagnostics Menu
@@ -1437,6 +1438,9 @@ private:
     void sessionIssuesReport();
     void logReport();
     void mailLogs();
+
+    // HTML Help
+    void helpPerformanceTips();
 
     void mediaReadSpeed();
     void findDuplicates();

@@ -408,30 +408,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     connect(memoryWatchdog, &QTimer::timeout, this, &MW::memoryWatchdogTick);
     memoryWatchdog->start();
 
-    /* DIAGNOSTIC (temporary): GUI event-loop latency probe.
-       Fires on the GUI thread every 250 ms. The gap between fires is how long
-       the GUI thread's *posted-event* loop was blocked. Logs only when that
-       gap exceeds 1 s (silent otherwise), so during the MetaRead stall it
-       tells us which problem we have:
-         • big gaps logged  -> GUI thread is CPU-bound in a slot/paint
-                               (the fix is to find/remove that O(N) work);
-         • no gaps logged   -> posted events flow fine and only native input
-                               (the tab click) is starved by the cross-thread
-                               event flood (the fix is to batch/throttle emits).
-       Remove once the cause is confirmed. */
-    {
-        QTimer *guiLatencyProbe = new QTimer(this);
-        guiLatencyProbe->setInterval(250);
-        connect(guiLatencyProbe, &QTimer::timeout, this,
-                [gap = QElapsedTimer()]() mutable {
-            if (!gap.isValid()) { gap.start(); return; }
-            qint64 ms = gap.restart();
-            if (ms > 1000)
-                qDebug().noquote() << "GUI-LATENCY: event loop blocked" << ms << "ms";
-        });
-        guiLatencyProbe->start();
-    }
-
     if (G::isLogger) G::log("MW::MW",  "(end of MW::MW)");
 }
 
@@ -2566,16 +2542,6 @@ void MW::stop(QString src)
     while (!allIdle() && waitTimer.elapsed() < 3000) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents |
                             QEventLoop::WaitForMoreEvents, 50);
-    }
-
-    {
-        QStringList notIdle;
-        for (auto it = stopped.cbegin(); it != stopped.cend(); ++it)
-            if (!it.value()) notIdle << it.key();
-        qDebug().noquote()
-            << "MW::stop teardown blocked GUI for" << waitTimer.elapsed()
-            << "ms; notIdle =" << (notIdle.isEmpty() ? "none" : notIdle.join(","))
-            << "src =" << src;
     }
 
     if (!allIdle()) qWarning() << "NOT ALLIDLE! STOP FAILED";
