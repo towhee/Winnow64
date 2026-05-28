@@ -2104,8 +2104,10 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
         setCentralMessage("Determining subfolder tree count...");
         dm->subFolderTreeCount = Utilities::subFolderTree(folderPath, subDirs);
         dm->subFolderTreeCounter = 0;
-        setCentralMessage("Subfolder tree count = " +
-                          QVariant(dm->subFolderTreeCount).toString());
+        QString msg = "Processing " + folderPath + "\n" +
+                      "Subfolder tree count = " +
+                      QVariant(dm->subFolderTreeCount).toString();
+        setCentralMessage(msg);
     }
 
     /* put folder in datamodel queue to add or remove if main thread
