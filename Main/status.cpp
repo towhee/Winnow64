@@ -46,7 +46,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
         base = "<font color=\"red\">" + embelProperties->templateName + "</font>"
                 + "&nbsp;" + "&nbsp;" + "&nbsp;";
     }
-    else base = "";
+    else base = "  ";
 
     // define base status text
     if (keepBase) {
