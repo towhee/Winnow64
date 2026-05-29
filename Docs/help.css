@@ -6,6 +6,10 @@ Per-page <style> blocks still work and override these defaults.
 QTextBrowser supports only the CSS 2.1 subset documented at
 https://doc.qt.io/qt-6/richtext-html-subset.html
 (no flexbox, grid, custom properties, or HTML5 semantic tags).
+
+The body/h1/h2/h3 font-sizes below are the design sizes at the default app
+font (12px). HtmlWindow scales them by G::fontSize/12 at load time so help
+text tracks the app font size; if you change these, update HtmlWindow too.
 */
 
 body {
@@ -14,9 +18,9 @@ body {
     font-family: sans-serif;
     font-size: 14px;
 }
-h1 { color: #A74F06;    font-size: 22px; margin: 0.6em 0 0.3em; }
-h2 { color: #7c5004;    font-size: 18px; margin: 0.6em 0 0.3em; }
-h3 { color: #BBBBBB;    font-size: 15px; margin: 0.5em 0 0.2em; }
+h1 { color: #02b0cf;    font-size: 22px; margin: 0.6em 0 0.3em; }
+h2 { color: #016f82;    font-size: 18px; margin: 0.6em 0 0.3em; }
+h3 { color: #013640;    font-size: 15px; margin: 0.5em 0 0.2em; }
 a  { color: #88BBEE; }
 code, pre {
     color: #E0C070;

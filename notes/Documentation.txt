@@ -1,16 +1,17 @@
-***********************************************************************************************
+******************************************************************************************
 WINNOW DEVELOPER DOCUMENTATION
-***********************************************************************************************
+******************************************************************************************
 
 Format conventions
-    • ***  (95 stars)      top-level section divider, followed by an ALL-CAPS title
-    • ---  (95 dashes)     subsection bracket, with a Title-Case heading between the lines
+    • ***  (90 stars)      top-level section divider, followed by an ALL-CAPS title
+    • ---  (90 dashes)     subsection bracket, with a Title-Case heading between lines
+    • text                 insert line breaks to wrap text at 90 characters
     • • / -                bullet lists, indented from the left margin
-    • `path/to/file:line`  file references; line numbers when pointing at a specific spot
+    • `path/to/file:line`  file references; line number for a specific spot
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Table of Contents
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     1. INITIALIZATION
          - Startup Sequence
@@ -59,24 +60,24 @@ Table of Contents
          - Orphaned Help Documents
 
 
-***********************************************************************************************
+******************************************************************************************
 
 INITIALIZATION
 
-    Persistent settings are saved between sessions using QSettings. Persistent settings form
-    two categories at runtime: action settings and preference settings. Action settings are
-    boolean and maintained by the action item's setChecked value. Preferences can be
-    anything and are maintained as public variables, mostly in MW (MainWindow) and managed
-    in the PrefDlg class.
+    Persistent settings are saved between sessions using QSettings. Persistent settings
+    form two categories at runtime: action settings and preference settings. Action
+    settings are boolean and maintained by the action item's setChecked value.
+    Preferences can be anything and are maintained as public variables, mostly in MW
+    (MainWindow) and managed in the PrefDlg class.
 
-    Not all settings can be read immediately, as the classes that use them may not yet have
-    been created. Examples are IconView parameters and the recent folders menu list, since
-    IconView and the menus have not been created yet. Therefore some settings are assigned
-    up front and the rest are assigned as needed.
+    Not all settings can be read immediately, as the classes that use them may not yet
+    have been created. Examples are IconView parameters and the recent folders menu
+    list, since IconView and the menus have not been created yet. Therefore some
+    settings are assigned up front and the rest are assigned as needed.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Startup Sequence
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     • Load QSettings
     • Set default values if no settings available (first time run)
@@ -102,15 +103,15 @@ Startup Sequence
         • Update the image cache
 
 
-***********************************************************************************************
+******************************************************************************************
 
 FOLDER LOADING PIPELINE
 
     Use G::isFlowLogger or G::isLogger to trace program progress.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Overview
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     Loading a folder runs in two phases that do NOT overlap with each other.
     Phase 1 populates the DataModel with one row per eligible file and runs on
@@ -202,9 +203,9 @@ Overview
       them, signals the workers to abort, and waits (event-driven, 3 s cap)
       for them to acknowledge before resetting.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 New Folder Selected (Call Sequence)
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     - FSTree::mousePressEvent / FSTree::select / BookMarks item click
     - MW::folderSelectionChange             // prep based on mouse modifier
@@ -246,9 +247,9 @@ New Folder Selected (Call Sequence)
     - MetaRead::done                        // signal, all rows read
     - MW::folderChangeCompleted             // filters, sort, resize cols
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Concurrent Flow - New Folder Selected
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     • Selecting a new folder in the Folders or Bookmarks panel calls
       MW::folderSelectionChange.
@@ -273,33 +274,33 @@ Concurrent Flow - New Folder Selected
       there ImageCache walks setCurrentPosition -> updateTargets ->
       launchDecoders -> fillCache, caching concurrently with MetaRead.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Concurrent Flow - New Image Selected
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     A new image is selected, which triggers fileSelectionChange:
 
     • If starting the program, select the first image in the folder.
     • Record the current datamodel row and its file path.
     • Update the thumbView and gridView delegates.
-    • Synchronize the thumb, grid and table views. If in loupe mode, load the current
-      image.
+    • Synchronize the thumb, grid and table views. If in loupe mode, load
+      the current image.
     • Update window title, statusbar, info panel and classification badges.
     • Update the metadata and image caching.
-    • If the metadata has not been cached yet for the selected image (usually the first
-      in a new folder), load the thumbnail.
+    • If the metadata has not been cached yet for the selected image
+      (usually the first in a new folder), load the thumbnail.
     • Update the cursor position on the image caching progress bar.
 
     A new image is selected which triggers a scroll event:
 
-    • IconView selection change may trigger a scroll signal, based on the current view
-      (thumb, grid or table). MW::thumbHasScrolled / gridHasScrolled / tableHasScrolled
-      are signalled.
+    • IconView selection change may trigger a scroll signal, based on the
+      current view (thumb, grid or table). MW::thumbHasScrolled /
+      gridHasScrolled / tableHasScrolled are signalled.
     • Update the icon range (firstVisible / lastVisible).
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Flow Flags
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     G::isInitializing
     G::stop
@@ -313,19 +314,19 @@ Flow Flags
     G::ignoreScrollSignal
     isFilterChange
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Current Model Row
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     dm->currentDmRow                        // current row in the DataModel
-    dm->currentSfRow                        // current row in the proxy (sort/filter) model
+    dm->currentSfRow                        // current row in the proxy model
     dm->currentDmIdx                        // QModelIndex into the DataModel
     dm->currentSfIdx                        // QModelIndex into the proxy
     dm->currentFilePath
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Icons
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     int  G::maxIconChunk
     bool G::iconChunkLoaded
@@ -334,16 +335,16 @@ Icons
     int  G::minIconSize = 40;
     int  G::maxIconChunk = 25000;
 
-    int  dm->iconChunkSize                  // max suggested number of icons to cache
-    int  dm->defaultIconChunkSize = 3000    // used unless more is required (change in pref)
+    int  dm->iconChunkSize                  // max suggested icons to cache
+    int  dm->defaultIconChunkSize = 3000    // used unless more required (pref)
     int  dm->hugeIconThreshold = G::maxIconChunk;
     int  dm->firstVisibleIcon;
     int  dm->lastVisibleIcon;
-    int  dm->visibleIcons                   // visible icon count (excl. hidden views)
+    int  dm->visibleIcons                   // visible icon count, shown views
     int  dm->startIconRange;
     int  dm->endIconRange;
     int  dm->scrollToIcon = 0;
-    bool dm->checkChunkSize                 // true if iconChunkSize < rowCount()
+    bool dm->checkChunkSize                 // true if chunkSize < rowCount()
 
     int  dm->iconCount();
     void dm->clearAllIcons();
@@ -364,29 +365,32 @@ Icons
         lastIconRow  = dm->endIconRange;
         bool needIcon;
         MetaRead::needToRead:
-            bool isIcon = dm->sf->index(sfRow, G::IconLoadedColumn).data().toBool();
+            bool isIcon = sf->index(sfRow, G::IconLoadedColumn).data().toBool();
         bool MetaRead::allMetaIconLoaded();
-        emit cleanupIcons();                // signals DataModel::clearIconsOutsideChunkRange
+        emit cleanupIcons();   // -> DataModel::clearIconsOutsideChunkRange
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Icon Chunk Size
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
-    Icons or thumbnails, 256 px on the long side, are stored in the DataModel in column 0
-    and role G::IconRectRole (i.e. dm->index(row, 0).data(G::IconRectRole)). When a folder
-    is loaded, if there are a very large number of images, Winnow loads the icons in
-    chunks, defined by dm->iconChunkSize. The default is dm->defaultIconChunkSize (3000)
-    and the hard ceiling is G::maxIconChunk (25000). If the number of visible icons is
-    greater than iconChunkSize, then iconChunkSize is increased to
-    accommodate the visible icons. As the user moves through the images, either by
-    selection or scrolling, the icon range is recalculated based on the midVisibleIcon.
+    Icons or thumbnails, 256 px on the long side, are stored in the DataModel
+    in column 0 under Qt::DecorationRole (the QPixmap); the icon's QRect is
+    kept on the same cell under G::IconRectRole. When a folder is loaded, if
+    there are a very large number of images, Winnow loads the icons in chunks,
+    defined by dm->iconChunkSize. The default is dm->defaultIconChunkSize
+    (3000) and the hard ceiling is G::maxIconChunk (25000). If the number of
+    visible icons is greater than iconChunkSize, then iconChunkSize is
+    increased to accommodate the visible icons. As the user moves through the
+    images, either by selection or scrolling, the icon range is recalculated
+    based on the midVisibleIcon.
 
-    When the user progresses through the images, the current image is centred in the
-    visible views (thumbView, gridView and tableView) using the midVisibleCell.
+    When the user progresses through the images, the current image is centred
+    in the visible views (thumbView, gridView and tableView) using the
+    midVisibleCell.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Tracking Icon Parameters
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     The number of visible icons (visibleCellCount) can change whenever:
 
@@ -395,22 +399,23 @@ Tracking Icon Parameters
 
     When this happens:
 
-        • IconView::updateVisible is called. A number of IconView operations use the
-          parameters defined in IconView::updateVisible.
-        • MW::updateIconRange updates the DataModel iconChunkSize based on which view
-          has the most visible icons and the current iconChunkSize.
+        • IconView::updateVisible is called. A number of IconView operations
+          use the parameters defined in IconView::updateVisible.
+        • MW::updateIconRange updates the DataModel iconChunkSize based on
+          which view has the most visible icons and the current iconChunkSize.
 
-    The first, mid and last visible icons change whenever there is a scroll event. The
-    scroll event can be triggered by the user scrolling or selecting another image. See
-    also SCROLLING below.
+    The first, mid and last visible icons change whenever there is a scroll
+    event. The scroll event can be triggered by the user scrolling or
+    selecting another image. See also SCROLLING below.
 
-        • MW::thumbHasScrolled, MW::gridHasScrolled or MW::tableHasScrolled is triggered.
+        • MW::thumbHasScrolled, MW::gridHasScrolled or MW::tableHasScrolled is
+          triggered.
         • MW::updateIconRange calls IconView::updateVisible.
         • Other visible views are scrolled to sync.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Other Global Flags
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     G::isSlideShow;
     G::isRunningColorAnalysis;
@@ -430,22 +435,23 @@ Other Global Flags
         • Selection::updateVisible
 
 
-***********************************************************************************************
+******************************************************************************************
 
 DATAMODEL CHANGES
 
     NOTE: The Folder Change and Image Change call sequences below describe the legacy
     MetadataCache architecture (`Cache/mdcache.cpp`), which is no longer compiled. The
-    current architecture uses MetaRead + Reader (see PROGRAM PIPELINE and CACHING). The
+    current architecture uses MetaRead + Reader (see FOLDER LOADING PIPELINE and
+    CACHING). The
     sequences are retained here as historical reference and need a full rewrite.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Folder Change (legacy — needs rewrite)
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     MW::folderSelectionChange
         Housekeeping                        // stop cache threads, slideshow, initializing
-    DataModel::load                         // load basic metadata for every eligible image
+    DataModel::load                         // basic metadata for every eligible image
     MetadataCache::loadNewFolder            // legacy
     MetadataCache::setRange                 // legacy
     MetadataCache::readMetadataIconChunk    // legacy
@@ -466,9 +472,9 @@ Folder Change (legacy — needs rewrite)
     ImageCache::setTargetRange
     ImageCache::run
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Image Change (legacy — needs rewrite)
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     MW::fileSelectionChange
     MW::updateMetadataCacheIconviewState    // no longer exists
@@ -481,9 +487,9 @@ Image Change (legacy — needs rewrite)
     ImageCache::setTargetRange
     ImageCache::run
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Filter Change
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     MW::filterChange
     DataModel::newInstance
@@ -496,26 +502,26 @@ Filter Change
     thumbView->selectThumb
     MW::scrollToCurrentRowIfNotVisible
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Sort Change
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     MW::sortThumbnails
     thumbView->sortThumbs
     ImageCache::rebuildImageCacheParameters
     MW::scrollToCurrentRow
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Insertions, Deletions, Modifications
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     Images inserted:   (TBD)
     Images deleted:    (TBD)
     Images modified:   (TBD)
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Instance
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     The instance is a specific datamodel. Every time the datamodel changes — either a
     folder is added or removed — the instance is incremented. When the instance changes:
@@ -524,7 +530,7 @@ Instance
         • Filtering must be updated.
 
 
-***********************************************************************************************
+******************************************************************************************
 
 CACHING
 
@@ -534,9 +540,9 @@ CACHING
     `Cache/mdcachemgr.cpp`) is no longer compiled — those files are not listed in
     `winnow64.pro` and are retained on disk for reference only.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Overview
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     • When a new folder or a new file is selected, or when a scroll event occurs in
       IconView, MetaRead is started. MetaRead dispatches Reader workers to load
@@ -557,9 +563,9 @@ Overview
 
     See `Cache/metaread.cpp` and `Cache/reader.cpp` top-of-file comments for more detail.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Cache Status
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     • Two status lights on the right side of the status bar (metadataThreadRunningLabel
       and imageThreadRunningLabel) turn from green to red to indicate datamodel metadata
@@ -576,18 +582,18 @@ Cache Status
       dm->sf->index(row, G::IsCachedColumn).data().
 
     Functions:
-        • MW::createStatusBar                       add status labels to right of status bar
-        • MW::refreshAfterImageCacheSizeChange      preferences calls to update cache status
-        • MW::setThreadRunStatusInactive            sets caching status lights gray
-        • MW::updateImageCachingThreadRunStatus     sets image caching light green/red
-        • MW::updateMetadataCachingThreadRunStatus  sets metadata caching light green/red
-        • MW::setCacheStatusVisibility              updateState calls to toggle progressBar
-        • MW::updateImageCacheStatus                ImageCache calls to update cache status
-        • MW::setCachedStatus                       sets isCached in datamodel, refreshes views
+        • MW::createStatusBar                      status labels, right of status bar
+        • MW::refreshAfterImageCacheSizeChange      pref calls update cache status
+        • MW::setThreadRunStatusInactive           caching status lights gray
+        • MW::updateImageCachingThreadRunStatus    image caching light green/red
+        • MW::updateMetadataCachingThreadRunStatus metadata caching light green/red
+        • MW::setCacheStatusVisibility             updateState toggles progressBar
+        • MW::updateImageCacheStatus               ImageCache updates cache status
+        • MW::setCachedStatus                      sets isCached, refreshes views
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Icon Caching
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     • Each icon is a 256 px longside QIcon, so we want to balance how many we load when
       weighing performance vs memory footprint.
@@ -601,8 +607,9 @@ Icon Caching
       preferences. dm->iconChunkSize (the variable used to manage the actual number of
       icons loaded) is initially set to dm->defaultIconChunkSize.
 
-    • If the number of images in the folder(s) is less than dm->defaultIconChunkSize, then
-      all rows in the DataModel are loaded with an icon.
+    • If the number of images in the folder(s) is less than
+      dm->defaultIconChunkSize, then all rows in the DataModel are loaded with
+      an icon.
 
     • When there are more DataModel rows than dm->defaultIconChunkSize, only the default
       amount of icons are loaded. As the user moves through the DataSet, icons are removed
@@ -612,14 +619,15 @@ Icon Caching
       tableView than dm->defaultIconChunkSize, then dm->iconChunkSize is adjusted to the
       largest number in MW::updateIconRange.
 
-    • When the app is resized or the thumbnails are resized, the number visible may change
-      and dm->iconChunkSize is adjusted in MW::updateIconRange.
+    • When the app is resized or the thumbnails are resized, the number
+      visible may change and dm->iconChunkSize is adjusted in
+      MW::updateIconRange.
 
     • When dm->iconChunkSize changes or there is a scroll event, the metadata cache read
       process must be rerun to update the icons.
 
 
-***********************************************************************************************
+******************************************************************************************
 
 SCROLLING
 
@@ -635,9 +643,9 @@ SCROLLING
     employed in fileSelectionChange, where visible views are scrolled to centre on the
     current selection.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Painting Delays
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     When the user changes modes in MW (i.e. from Grid to Loupe), an IconView instance
     (either thumbView or gridView) can change state from hidden to visible. Since hidden
@@ -657,25 +665,25 @@ Painting Delays
     NOTE: An earlier IconView::waitUntilScrollReady helper has been removed. The wait-
     for-paint logic now lives inline in the scroll-handling paths in IconView and MW.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Scrollbar Change Flow
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     • The ScrollBar signal valueChanged triggers MW::thumbHasScrolled,
       MW::gridHasScrolled or MW::tableHasScrolled.
 
-    • MW::updateIconRange updates the first, mid and last visible icons from all views to
-      find the greatest range of visible icons by calling IconView::updateVisible and
-      TableView::updateVisible. dm->iconChunkSize is adjusted if it is less than the
-      visible icon range.
+    • MW::updateIconRange updates the first, mid and last visible icons from
+      all views to find the greatest range of visible icons by calling
+      IconView::updateVisible and TableView::updateVisible. dm->iconChunkSize
+      is adjusted if it is less than the visible icon range.
 
     • Concurrent metadata loading:
         MW::update(midVisibleIcon) is called and it loads any missing icons and cleans up
         any orphaned icons (not in the iconChunkRange).
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Resizing Icons or the Icon Viewport
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     When the IconView viewport is resized or the icon size is changed, the result is a
     scroll event. Since we want to keep the view centred on its original state, the middle
@@ -686,7 +694,7 @@ Resizing Icons or the Icon Viewport
     This allows the three datamodel views to be synced using dm->scrollToIcon.
 
 
-***********************************************************************************************
+******************************************************************************************
 
 FOCUS PREDICTOR
 
@@ -695,9 +703,9 @@ FOCUS PREDICTOR
     enabled, and the loupe view is zoomed, as the user advances each image is panned to
     the predicted focus review location.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Architecture
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     Data
         All the training images and a CSV file that records the focus point, type and
@@ -723,9 +731,9 @@ Architecture
     FocusPredictor
         A C++ class that uses the model to predict the focus point for the current image.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Process
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     1. The training data is created using FocusPointTrainer to append the focus point,
        type and path for each training image to focuspoint.csv.
@@ -740,9 +748,9 @@ Process
     4. Use FocusPredictor::predict to return the normalized image coordinates for the
        predicted focus location.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Implementation
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     When focus prediction is enabled (Toggle Pan to Focus) and the loupe view is zoomed,
     the ImageView pans to the predicted focus point. See:
@@ -757,7 +765,7 @@ Implementation
         • IconViewDelegate::setVpRect
 
 
-***********************************************************************************************
+******************************************************************************************
 
 HELP SYSTEM
 
@@ -766,27 +774,29 @@ HELP SYSTEM
     by HtmlWindow via QTextDocument::setDefaultStyleSheet. To restyle every help page at
     once, edit help.css; no other files need to change.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Architecture
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
-    Utilities/htmlwindow.cpp        HtmlWindow widget (a QScrollArea hosting a QTextBrowser).
-                                    Loads the HTML, applies Docs/help.css as the document's
-                                    default stylesheet, and sets a qrc base URL on the
-                                    document so relative <img src="images/..."> resolves.
+    Utilities/htmlwindow.cpp        HtmlWindow widget (a QScrollArea hosting a
+                                    QTextBrowser). Loads the HTML and applies
+                                    Docs/help.css as the document's default stylesheet,
+                                    and sets a qrc base URL on the document so relative
+                                    <img src="images/..."> resolves.
 
     Docs/help.css                   Shared dark-theme stylesheet for every help page.
                                     Defines body, h1-h3, a, code, pre, .highlight, .warn.
 
-    Docs/_template.html             Reference template demonstrating every supported element
-                                    (headings, paragraphs, span colors, link, image, lists,
-                                    code block, table). Copy this when creating a new page.
+    Docs/_template.html             Reference template demonstrating every supported
+                                    element (headings, paragraphs, span colors, link,
+                                    image, lists, code block, table). Copy this when
+                                    creating a new page.
 
     Docs/<topic>.html               One file per help topic. The <head> only needs:
                                         <link rel="stylesheet" href="help.css">
-                                    Qt ignores the <link> (it already loaded help.css as the
-                                    default stylesheet); VS Code's Live Preview honors it,
-                                    so the editor view matches Winnow.
+                                    Qt ignores the <link> (it already loaded help.css
+                                    as the default stylesheet); VS Code's Live Preview
+                                    honors it, so the editor view matches Winnow.
 
     Docs/images/                    Image assets used by help pages. Reference with a
                                     relative path: <img src="images/Foo.png">.
@@ -796,20 +806,23 @@ Architecture
 
     HtmlWindow lifecycle            Constructor sets Qt::Window (top-level with title bar)
                                     and Qt::WA_DeleteOnClose (self-cleanup on user close).
-                                    Callers pass a parent (`window()` for embedded widgets,
-                                    `this` for top-level dialogs) so the help window is
-                                    destroyed with its owner. MW::closeEvent also sweeps
-                                    findChildren<HtmlWindow*>() as a safety net.
+                                    Callers pass a parent (`window()` for embedded
+                                    widgets, `this` for top-level dialogs) so the help
+                                    window is destroyed with its owner. MW::closeEvent
+                                    also sweeps findChildren<HtmlWindow*>() as a safety
+                                    net.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Adding a New Help Page
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     1. Copy Docs/_template.html to Docs/<yourpage>.html.
 
     2. Edit in VS Code (see "VS Code Workflow" below). Keep the existing
        <link rel="stylesheet" href="help.css"> in the <head>; only add a <style> block
        if you need per-page overrides.
+
+       OR use BBedit.
 
     3. Place any images in Docs/images/ and reference them with a relative path,
        e.g. <img src="images/MyDiagram.png">.
@@ -836,9 +849,9 @@ Adding a New Help Page
 
     6. Build. No other wiring is required.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Editing Help Formatting Globally
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     Edit Docs/help.css. Every help page picks up the change on the next launch (the .css
     is loaded fresh by HtmlWindow each time a help page opens).
@@ -851,9 +864,9 @@ Editing Help Formatting Globally
     For per-page overrides, add a <style> block to that page's <head>. It cascades on
     top of help.css.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 VS Code Workflow
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     Recommended editor: VS Code (free) with the Microsoft "Live Preview" extension.
     Reasons:
@@ -871,27 +884,35 @@ VS Code Workflow
       • Anything outside the CSS 2.1 subset (above) will render in VS Code but not in
         Winnow. When in doubt, check in Winnow.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Entry Points
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
-    Trigger                            Caller                                       HTML file
-    ---------------------------------  -------------------------------------------  -------------------------
-    Help menu / "?" shortcut           MW::help                                     winnowhelp.html
-    Folders panel "?" button           FSTree::howThisWorks                         foldershelp.html
-    Filters panel "?" button           Filters::howThisWorks                        filtershelp.html
-    Embellish panel "?" button         EmbelProperties::coordHelp                   embelcoordsystem.html
-    Filmstrip / status bar help        MW::helpThumbViewStatusBarSymbols            helpfilmstrip.html
-    Find Duplicates "?" button         FindDuplicatesDlg::on_helpBtn_clicked        findduplicateshelp.html
-    Find Duplicates delta info         FindDuplicatesDlg::on_deltaThresholdToolBtn_clicked   pixeldeltahelp.html
-    Ingest dialog "?" button           IngestDlg::on_helpBtn_clicked                ingestautopath.html
+    Each entry lists the UI trigger, then its caller and the HTML file opened:
+
+    Help menu / "?" shortcut
+        MW::help  ->  winnowhelp.html
+    Folders panel "?" button
+        FSTree::howThisWorks  ->  foldershelp.html
+    Filters panel "?" button
+        Filters::howThisWorks  ->  filtershelp.html
+    Embellish panel "?" button
+        EmbelProperties::coordHelp  ->  embelcoordsystem.html
+    Filmstrip / status bar help
+        MW::helpThumbViewStatusBarSymbols  ->  helpfilmstrip.html
+    Find Duplicates "?" button
+        FindDuplicatesDlg::on_helpBtn_clicked  ->  findduplicateshelp.html
+    Find Duplicates delta info
+        FindDuplicatesDlg::on_deltaThresholdToolBtn_clicked  ->  pixeldeltahelp.html
+    Ingest dialog "?" button
+        IngestDlg::on_helpBtn_clicked  ->  ingestautopath.html
 
     Not converted to HtmlWindow (intentionally):
       • MW::helpShortcuts (helpform shortcutsform.ui) — interactive QTreeWidget, not HTML.
 
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 Orphaned Help Documents
------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
     The following files live under Docs/ but have no C++ references. Kept for now because
     they may contain useful source material; can be deleted when confirmed.

@@ -18,7 +18,9 @@
       "Bash(sw_vers)",
       "Bash(/usr/libexec/PlistBuddy -c 'Print' /Applications/Xcode.app/Contents/version.plist)",
       "Bash(/opt/homebrew/lib/QtCore.framework/Versions/A/QtCore)",
-      "Bash(/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake -S /Users/roryhill/Projects/Winnow64 -B /Users/roryhill/Projects/Winnow64/build/mac-debug)"
+      "Bash(/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake -S /Users/roryhill/Projects/Winnow64 -B /Users/roryhill/Projects/Winnow64/build/mac-debug)",
+      "WebFetch(domain:doc.qt.io)",
+      "WebFetch(domain:stackoverflow.com)"
     ]
   }
 }
