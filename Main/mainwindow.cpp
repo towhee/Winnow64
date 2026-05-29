@@ -552,6 +552,7 @@ void MW::showEvent(QShowEvent *event)
 
     // initial status bar icon state
     updateStatusBar();
+    progressLabel->setVisible(isShowCacheProgressBar);
 
     // set initial visibility in embellish template
     embelTemplateChange(embelProperties->templateId);
@@ -2658,7 +2659,7 @@ bool MW::reset(QString src)
     // QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
 
     // update metadata read status light
-    updateMetadataThreadRunStatus(false, true, true, "MW::reset");
+    updateMetadataThreadRunStatus(false, true);
     // updateMetadataThreadRunStatus(true, true, true, "MW::reset");
 
     // stop slideshow if a new folder is selected
@@ -3050,7 +3051,7 @@ void MW::folderChanged(bool aborted)
 
     // rev up metaRead
     if (G::useReadMeta) {
-        updateMetadataThreadRunStatus(true, true, "MW::updateChange", fun);
+        updateMetadataThreadRunStatus(true);
         dm->setIconRange(startRow);
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, startRow),
@@ -3155,7 +3156,7 @@ void MW::folderChangeCompleted()
 
     // hide metadata read progress
     cacheProgressBar->clearMetaReadProgress();
-    updateMetadataThreadRunStatus(false, true, true, fun);
+    updateMetadataThreadRunStatus(false, true);
 
     // build filters if filter dock is visible
     /*

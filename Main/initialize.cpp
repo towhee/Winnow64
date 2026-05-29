@@ -331,6 +331,11 @@ void MW::createMetaRead()
     // Runs multiple reader threads to load metadata and thumbnails
     metaRead = new MetaRead(this, dm, metadata, imageCache);
 
+    if (settings->contains("isShowCacheStatus")) {
+        bool isShow = settings->value("isShowCacheStatus").toBool();
+        metaRead->showProgressInStatusbar = isShow;
+    }
+
     // Release MetaRead's navigation gate as soon as the awaited row decodes.
     // Wired here (not in createImageCache) because metaRead is created after imageCache.
     connect(imageCache, &ImageCache::setCached,

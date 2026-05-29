@@ -597,8 +597,7 @@ private slots:
     void setCacheStatusVisibility();
     void setCacheRunningLightsWidth();
     QString getImageCacheRunningTip(bool isAuto, quint64 maxMB);
-    void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel,
-                                       bool success, QString src = "");
+    void updateMetadataThreadRunStatus(bool isRun, bool success = true);
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateImageCacheStatus(int instruction, bool isAutoSize,
                                 quint64 currMB, quint64 maxMB, int tFirst, int tLast,

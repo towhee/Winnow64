@@ -330,12 +330,11 @@ QString MW::getImageCacheRunningTip(bool isAuto, quint64 maxMB)
     return tip;
 }
 
-void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
-                                       bool success, QString src)
+void MW::updateMetadataThreadRunStatus(bool isRunning, bool success)
 {
     // if (G::instanceClash(instance, "MW::updateMetadataThreadRunStatus")) return;
 
-    if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus", "src = " + src);
+    if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus");
     /*
     qDebug() << "MW::updateMetadataThreadRunStatus"
              << "isRunning =" << isRunning
@@ -356,8 +355,6 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel,
         }
     }
     metadataThreadRunningLabel->setText("◉");
-    progressLabel->setVisible(showCacheLabel);
-    src = "";  // suppress compiler warning
 }
 
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
