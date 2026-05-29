@@ -47,11 +47,34 @@ HtmlWindow::HtmlWindow(const QString &title,
     text->setOpenExternalLinks(true);
     QFile f(htmlPath);
     f.open(QIODevice::ReadOnly);
+    // Scale help text with the app font (G::fontSize, in px). help.css's design
+    // sizes assume the default app font of 12px, so scale them by G::fontSize/12.
+    // Qt's rich-text CSS subset has no %/em font-size, so all sizes are absolute px.
+    const qreal scale = (G::fontSize > 0 ? G::fontSize : 12) / 12.0;
+    const int bodyPx = qRound(14 * scale);
+
     // shared stylesheet for all help pages; per-page <style> blocks override
     QFile cssFile(":/Docs/help.css");
     if (cssFile.open(QIODevice::ReadOnly)) {
-        text->document()->setDefaultStyleSheet(cssFile.readAll());
+        QString css = cssFile.readAll();
         cssFile.close();
+        // Append scaled sizes that override help.css's fixed values (later
+        // equal-specificity rule wins). Qt's HTML importer sizes block text from
+        // per-element rules, not the "body" selector (which styles only the
+        // unused root frame), so we must size the actual text tags (p, li, td,
+        // th, div) — the same mechanism that scales the headings. Spans, code and
+        // pre inherit font-size from their block parent. Keep sizes in sync with
+        // help.css.
+        css += QString(
+            "\nbody, p, li, td, th, div { font-size: %1px; }"
+            "\nh1 { font-size: %2px; }"
+            "\nh2 { font-size: %3px; }"
+            "\nh3 { font-size: %4px; }")
+            .arg(bodyPx)
+            .arg(qRound(22 * scale))
+            .arg(qRound(18 * scale))
+            .arg(qRound(15 * scale));
+        text->document()->setDefaultStyleSheet(css);
     }
     // base URL lets <img src="images/foo.png"> resolve relative to the html file
     text->document()->setBaseUrl(QUrl("qrc" + QFileInfo(htmlPath).path() + "/"));
@@ -60,7 +83,10 @@ HtmlWindow::HtmlWindow(const QString &title,
     text->setMinimumWidth(windowSize.width());
     text->setMinimumHeight(windowSize.height());
     text->setContentsMargins(9,9,9,9);
-    text->setStyleSheet(G::css);
+    // G::css's `QWidget { font-size }` sets the browser's default font; match it
+    // to the scaled help size so any text not in a sized block element (above)
+    // scales too. The per-element rules in the document stylesheet do the rest.
+    text->setStyleSheet(G::css + QString("\nQTextBrowser { font-size: %1px; }").arg(bodyPx));
     setLayout(new QHBoxLayout);
     layout()->setContentsMargins(0,0,0,0);
     layout()->addWidget(text);
