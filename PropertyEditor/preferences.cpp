@@ -171,7 +171,9 @@ void Preferences::itemChange(QModelIndex idx)
         emit mw->setShowCacheStatus(isShow);
         mw->isShowCacheProgressBar = isShow;
         mw->metaRead->showProgressInStatusbar = isShow;
+        mw->imageCache->setShowCacheStatus(isShow);
         mw->progressLabel->setVisible(isShow);
+        mw->settings->setValue("isShowCacheStatus", isShow);
         // hide/show progressWidthSlider in preferences
         QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
         if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
