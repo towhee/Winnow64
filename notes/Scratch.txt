@@ -259,3 +259,15 @@ Prestidigitating… (15m 11s · ↓ 60.2k tokens · thought for 53s)
   ⎿
 
 Compound command contains cd with output redirection - manual approval required to prevent path resolution bypass
+
+Main/mainwindow.cpp (/Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp):
+ ⎿    ✘ [Line 1:11] 'Main/mainwindow.h' file not found [pp_file_not_found] (clang)
+ ⎿    ✘ [Line 10:6] Use of undeclared identifier 'MW' [undeclared_var_use] (clang)
+ ⎿    ✘ [Line 10:32] Unknown type name 'QTabBar' [unknown_typename] (clang)
+ ⎿    ✘ [Line 182:6] Use of undeclared identifier 'MW' [undeclared_var_use] (clang)
+ ⎿    ✘ [Line 199:1] Use of undeclared identifier 'MW' [undeclared_var_use] (clang)
+ ⎿    ✘ [Line 199:14] Unknown type name 'QString' [unknown_typename] (clang)
+ ⎿    ✘ [Line 199:28] Unknown type name 'QWidget' [unknown_typename] (clang)
+ ⎿    ✘ [Line 414:6] Use of undeclared identifier 'MW' [undeclared_var_use] (clang)
+ ⎿    ✘ [Line 414:28] Unknown type name 'QString' [unknown_typename] (clang)
+ ⎿    ✘ [Line 440:6] Use of undeclared identifier 'MW' [undeclared_var_use] (clang)

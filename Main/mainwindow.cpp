@@ -3864,6 +3864,7 @@ void MW::setFontSize(int fontPixelSize)
     setCacheRunningLightsWidth();
     embelProperties->fontSizeChanged(fontPixelSize);
     pref->fontSizeChanged(fontPixelSize);
+    HtmlWindow::refreshOpenWindows();       // re-scale any open help windows
 }
 
 void MW::setBackgroundShade(int shade)
