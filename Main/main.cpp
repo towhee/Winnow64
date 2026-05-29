@@ -3,6 +3,7 @@
 #include "qtsingleapplication.h"
 #include <QMediaPlayer>
 #include <QStandardPaths>
+#include <QFontDatabase>
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
 #endif
@@ -125,6 +126,12 @@ int main(int argc, char *argv[])
     // start program
     QCoreApplication::addLibraryPath("./");
     // QApplication::setStyle(QStyleFactory::create("Fusion"));
+
+    // Use the OS system UI font (San Francisco on macOS, Segoe UI on Windows).
+    // Only the family is set here; text size is driven by the per-widget
+    // font-size in G::css (G::fontSize).
+    instance.setFont(QFontDatabase::systemFont(QFontDatabase::GeneralFont));
+
     MW mw(args);
 
     // // hide root in FSTree after loaded

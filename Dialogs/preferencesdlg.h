@@ -17,6 +17,11 @@ public:
     PreferencesDlg(QWidget *parent, bool &isSolo, Preferences *pref, QString &css);
     ~PreferencesDlg() override;
 
+    // Resize the dialog to the tree's font-scaled natural width (and a
+    // proportional height, clamped to the screen) so the caption:value column
+    // proportions stay constant when the global font size changes.
+    void resizeForFontChange();
+
 public slots:
     void solo();
 

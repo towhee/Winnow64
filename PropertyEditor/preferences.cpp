@@ -306,7 +306,7 @@ void Preferences::itemChange(QModelIndex idx)
         // mw->embedThumbnailsAction->setEnabled(G::modifySourceFiles);
         // toggle status bar modify images button
         mw->toggleModifyImages();
-        setItemEnabled("backupBeforeModify", G::modifySourceFiles);
+        // setItemEnabled("backupBeforeModify", G::modifySourceFiles);
         setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
         setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
     }
@@ -361,9 +361,12 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "globalFontSize") {
-        mw->setFontSize(v.toInt());
+        mw->setFontSize(v.toInt());     // recomputes column widths via resizeColumns()
         G::fontSize = v.toInt();
         setStyleSheet(G::css);
+        // keep the dialog width matched to the new column widths so the
+        // caption:value proportions are preserved (clamped to the screen)
+        if (mw->preferencesDlg) mw->preferencesDlg->resizeForFontChange();
     }
 
     if (source == "globalBackgroundShade") {
@@ -482,7 +485,11 @@ void Preferences::addGeneral()
     i.captionText = "Permit image file modification";
     i.tooltip = "Permit modification to the image file.  In some cases,\n"
                 "changes (ie orientation) may still be made to a\n"
-                "sidecar xmp file."
+                "sidecar xmp file.\n\n"
+                "DISCLAIMER: While I try my best, it is possible that\n"
+                "modification could corrupt the image file.  I suggest\n"
+                "you turn 'Backup before modifying files' until you are, \n"
+                "confident the modifications are safe."
         ;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -507,7 +514,7 @@ void Preferences::addGeneral()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
-    setItemEnabled("backupBeforeModify", G::modifySourceFiles);
+    // setItemEnabled("backupBeforeModify", G::modifySourceFiles);
 
     // Remember last folder
     i.name = "rememberLastDir";
@@ -671,7 +678,7 @@ void Preferences::addModify()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     // addItem(i);
-    setItemEnabled("backupBeforeModify", G::modifySourceFiles);
+    // setItemEnabled("backupBeforeModify", G::modifySourceFiles);
 
     // Automatically and silently add missing thumbnails to TIFF and JPG files
     i.name = "autoAddMissingThumbnails";
@@ -853,7 +860,7 @@ void Preferences::addUserInterface()
     i.parentName = "FontSizeHeader";
     i.tooltip = "The image number is located in the top left corner.  This property\n"
                 "adjusts the size of the number.";
-    i.captionText = "Image count size";
+    i.captionText = "Image count";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 19;
@@ -873,7 +880,7 @@ void Preferences::addUserInterface()
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
-    addItem(i);
+    // addItem(i);
 
     // Loupe classification badge
     i.name = "classificationBadgeInImageDiameter";
@@ -942,8 +949,8 @@ void Preferences::addUserInterface()
 
     // Filmstrip label font size
     i.name = "thumbViewLabelSize";
-    i.parentName = "LabelHeader";
-    i.captionText = "Filmstrip label size";
+    i.parentName = "FontSizeHeader";
+    i.captionText = "Filmstrip file name / title";
     i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -960,8 +967,8 @@ void Preferences::addUserInterface()
     // Show thumbnail label
     i.name = "thumbViewShowLabel";
     i.parentName = "LabelHeader";
-    i.captionText = "Show filmstrip labels";
-    i.tooltip = "Show or hide the label with the file name / title at the bottom of each thumbnail.";
+    i.captionText = "Show in filmstrip";
+    i.tooltip = "Show or hide the file name / title at the bottom of each thumbnail in the filmstrip.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 8;
@@ -973,8 +980,8 @@ void Preferences::addUserInterface()
 
     // Grid label font size
     i.name = "gridViewLabelSize";
-    i.parentName = "LabelHeader";
-    i.captionText = "Grid view label size";
+    i.parentName = "FontSizeHeader";
+    i.captionText = "Grid view file name / title";
     i.tooltip = "Change the display size of the file name / title shown at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -991,7 +998,7 @@ void Preferences::addUserInterface()
     i.name = "gridViewShowLabel";
     i.parentName = "LabelHeader";
     i.captionText = "Show grid view labels";
-    i.tooltip = "Show or hide the label with the file name / title at the bottom of each thumbnail.";
+    i.tooltip = "Show or hide the file name / title at the bottom of each thumbnail in grid view.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->gridView->showIconLabels;
@@ -1011,7 +1018,7 @@ void Preferences::addUserInterface()
     i.key = "showThumbNailSymbolHelp";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Ingest audio Header
     i.name = "PickAudioHeader";

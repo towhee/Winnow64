@@ -271,3 +271,5 @@ Main/mainwindow.cpp (/Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp):
  ⎿    ✘ [Line 414:6] Use of undeclared identifier 'MW' [undeclared_var_use] (clang)
  ⎿    ✘ [Line 414:28] Unknown type name 'QString' [unknown_typename] (clang)
  ⎿    ✘ [Line 440:6] Use of undeclared identifier 'MW' [undeclared_var_use] (clang)
+
+Compound command contains cd with output redirection - manual approval required to prevent path resolution bypass

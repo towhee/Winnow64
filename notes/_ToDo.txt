@@ -2,7 +2,7 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Switching workspaces can get corrupt workspace 0
+- Test backup when modifying files
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
 - Resolve Pixmap vs ImageDecoder classes
