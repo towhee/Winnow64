@@ -66,9 +66,10 @@ public:
     void setTitle(QString title);
     QSize sizeHint() const override;
 protected:
-//    void paintEvent(QPaintEvent *) override;
+    void paintEvent(QPaintEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
-    // void mousePressEvent(QMouseEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 private:
     QLabel *titleLabel;
 
@@ -80,6 +81,11 @@ class DockWidget : public QDockWidget
     Q_OBJECT
 public:
     DockWidget(const QString &title, QString objName, QWidget *parent = nullptr);
+    bool isCollapsed() const { return m_isCollapsed; }
+
+public slots:
+    void setCollapsed(bool collapse);
+    void toggleCollapsed();
 
 private:
     void toggleTopLevel();
@@ -93,10 +99,16 @@ private:
     void restore();
     bool doubleClickDocked;
     bool isRestoring;
+    bool m_isCollapsed = false;
+    QSize m_uncollapsedSize;
+    int m_uncollapsedMinH = 0;
+    int m_uncollapsedMaxH = QWIDGETSIZE_MAX;
+    int m_uncollapsedBodyMinH = 0;
 
 signals:
     void focus(DockWidget *dw);
     void closeFloatingDock();
+    void collapsedChanged(bool collapsed);
 
 protected:
     bool event(QEvent *event) override;

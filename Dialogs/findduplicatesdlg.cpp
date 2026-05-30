@@ -1,6 +1,7 @@
 #include "Dialogs/FindDuplicatesDlg.h"
 #include "ui_findduplicatesdlg.h"
 #include "Main/global.h"
+#include "Utilities/htmlwindow.h"
 #include "Effects/effects.h"
 #include "ui_metadatareport.h"
 
@@ -93,16 +94,18 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *m
     imageDecoder = new ImageDecoder(id, dm, metadata);
 
     ui->setupUi(this);
-    setStyleSheet(G::css);
+    // Group-box title accents are dialog-specific: cyan for sections, white for
+    // the A/B image compare boxes. Layered on top of G::css via the cascade.
+    setStyleSheet(G::css +
+        "QGroupBox#targetBox::title,"
+        "QGroupBox#criteriaBox::title,"
+        "QGroupBox#compareImagesBox::title,"
+        "QGroupBox#candidateListBox::title { color: #6CC1E8; }"
+        "QGroupBox#AImageBox::title,"
+        "QGroupBox#BImageBox::title { color: white; }"
+    );
 
-    // set group box titles blue
-    ui->targetBox->setStyleSheet("QGroupBox::title { color: #6CC1E8; }");
-    ui->criteriaBox->setStyleSheet("QGroupBox::title { color: #6CC1E8; }");
-    ui->compareImagesBox->setStyleSheet("QGroupBox::title { color: #6CC1E8; }");
-    ui->candidateListBox->setStyleSheet("QGroupBox::title { color: #6CC1E8; }");
-    // reset children of  ui->candidateListBox
-    ui->AImageBox->setStyleSheet("QGroupBox::title { color: white; }");
-    ui->BImageBox->setStyleSheet("QGroupBox::title { color: white; }");
+    ui->helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
 
     // candidate images tableview
     ui->tv->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -148,6 +151,9 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *m
 FindDuplicatesDlg::~FindDuplicatesDlg()
 {
     delete ui;
+    if (frameDecoder) delete frameDecoder;
+    if (autonomousImage) delete autonomousImage;
+    if (imageDecoder) delete imageDecoder;
 }
 
 void FindDuplicatesDlg::setupModel()
@@ -1460,16 +1466,10 @@ void FindDuplicatesDlg::resizeEvent(QResizeEvent *event)
 
 void FindDuplicatesDlg::on_helpBtn_clicked()
 {
-    QDialog *dlg = new QDialog;
-    Ui::HelpFindDuplicatesDlg *ui = new Ui::HelpFindDuplicatesDlg;
-    ui->setupUi(dlg);
-    ui->textBrowser->setOpenExternalLinks(true);
-    dlg->setWindowTitle("Find Duplicates");
-    dlg->setStyleSheet(G::css);
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
-    dlg->exec();
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - Find Duplicates",
+                   ":/Docs/findduplicateshelp.html",
+                   QSize(800, 700), r, this);
 }
 
 void FindDuplicatesDlg::on_deltaThresholdToolBtn_clicked()
@@ -1481,16 +1481,10 @@ void FindDuplicatesDlg::on_deltaThresholdToolBtn_clicked()
     255, therefore the maximum pixel delta = 255 and two identical images would have a
     pixel delta = 0.
 */
-    QDialog *dlg = new QDialog;
-    Ui::HelpPixelDelta *ui = new Ui::HelpPixelDelta;
-    ui->setupUi(dlg);
-    ui->textBrowser->setOpenExternalLinks(true);
-    dlg->setWindowTitle("Pixel Delta");
-    dlg->setStyleSheet(G::css);
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
-    dlg->exec();
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - Pixel Delta",
+                   ":/Docs/pixeldeltahelp.html",
+                   QSize(600, 300), r, this);
 }
 
 void FindDuplicatesDlg::progressMsg(QString msg)

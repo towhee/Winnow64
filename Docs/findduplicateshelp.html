@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Find duplicate images and videos</h1>
+
+<p>You have two groups of images in folders: the
+<span class="highlight">candidate</span> images and the
+<span class="highlight">target</span> images. We want to determine if any of
+the candidate images already exist in the target images group.</p>
+
+<h2>Step 1: Pick the candidates</h2>
+<p>The candidate images are the <u>filtered images</u> in the currently selected
+folder(s) in Winnow, shown in the right side of the Find Duplicate Images dialog.
+If there are not any images, close the dialog, select the folder with the
+candidate images, filter if necessary and run the Find Duplicate Images dialog
+again.</p>
+
+<h2>Step 2: Pick the target group</h2>
+<p>Using finder or explorer, drag folders into the
+<span class="highlight">include list</span> located at the top of the dialog.
+If a folder has a hierarchy of subfolders you also want to include, then also
+check <span class="highlight">include subfolders</span>. If you want to exclude
+any folders in the hierarchy then drag the exclude folders to the
+<span class="highlight">exclude list</span>. Excluded folders do not include
+subfolders.</p>
+
+<h2>Step 3: Set the search criteria</h2>
+<p>The criteria for duplication is either file metadata or image pixels. It is
+toggled by checking <span class="highlight">same pixels</span>. If
+<span class="highlight">same pixels</span> is checked you can set the
+<span class="highlight">pixel delta threshold</span> (see adjacent
+<span class="highlight">?</span> for more info). A perfect match = 0 delta. If
+<span class="highlight">same pixels</span> is not checked, then check the
+metadata criteria you wish to use to find duplicates (file name, file type,
+creation date, aspect, duration). Duration for images is always 0, so it is only
+relevant for videos and harmless to include for images.</p>
+
+<h2>Step 4: Search for duplicates</h2>
+<p>Click the <span class="highlight">Find Duplicates</span> button. When the
+search is completed, duplicate images will be checked in the
+<span class="highlight">candidate images list</span> on the right.</p>
+
+<h2>Step 5: Confirm duplicates</h2>
+<p>The <span class="highlight">candidate Images list</span> (right side of
+dialog) shows the number of duplicates found, and if the criteria =
+<span class="highlight">same pixels</span>, the
+<span class="highlight">pixel delta</span> is also shown. If you select an image
+in the <span class="highlight">candidate Images list</span>, the
+<span class="highlight">compare images box</span> will show the candidate and
+matching target image(s). You can use this to confirm duplicates. If it is not
+a duplicate then uncheck the image in the Candidate Images list.</p>
+
+<p>Use the <span class="highlight">Report</span> button to see a detailed
+comparison of the candidate and matching target images, including the metadata
+or pixel deltas. If you want to include all the non-matches, press
+<span class="highlight">alt/option</span> and
+<span class="highlight">Report</span>.</p>
+
+<p>If you are getting false matches, this might be due to identical creation
+times for multiple images taken in rapid succession, and the camera did not
+include millisecond time information. In this case you should use the same
+pixels criteria.</p>
+
+<h2>Step 6: Do something with the duplicates</h2>
+<p>Click the <span class="highlight">Done</span> button. In Winnow, the
+<span class="highlight">filter panel</span> will now contain a
+<span class="highlight">Duplicates found</span> category. If you filter on the
+true items you can then delete, copy or move the images.</p>
+
+</body>
+</html>

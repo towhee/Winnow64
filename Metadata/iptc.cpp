@@ -1,4 +1,5 @@
 #include "iptc.h"
+#include "Utilities/utilities.h"
 
 IPTC::IPTC()
 {
@@ -55,10 +56,22 @@ void IPTC::read(QFile &file, quint32 &offset, ImageMetadata &m)
         uint recordNumber = Utilities::get8(file.read(1));
         uint tag = Utilities::get8(file.read(1));
         uint dataLength = static_cast<uint>(Utilities::get16(file.read(2)));
+        // Sanity: a dataLength that would seek past EOF is malformed; bail rather
+        // than read garbage that propagates into UI text and XMP sidecars.
+        if (file.pos() + dataLength > static_cast<qint64>(file.size())) break;
         if (recordNumber == 2 && tag == 5) {
-            m.title = file.read(dataLength);
-//            qDebug() << G::t.restart() << "\t" << "IPTC title length =" << dataLength
-//                     << "title =" << title;
+            QByteArray raw = file.read(dataLength);
+            // Strip control bytes (NUL, BEL, …) before we hand this off to QString.
+            // Printable text and common whitespace pass through; UTF-8 multibyte
+            // sequences (>= 0x80) pass through and are decoded by fromUtf8.
+            QByteArray clean;
+            clean.reserve(raw.size());
+            for (char c : raw) {
+                const unsigned char u = static_cast<unsigned char>(c);
+                if (u >= 0x20 || u == '\t' || u == '\n' || u == '\r') clean.append(c);
+            }
+            // IPTC IIM ObjectName is spec'd at 64 octets; cap generously at 1 KiB.
+            m.title = QString::fromUtf8(clean).left(1024);
             foundTitle = true;
         }
         else file.seek(file.pos() + dataLength);

@@ -1,6 +1,11 @@
 #include "imagedecoder.h"
 #include "Main/global.h"
 
+#ifdef Q_OS_MAC
+// Defined in Image/thumb_mac.mm — fast HEIC primary-image decode via ImageIO.
+bool macImageIOImage(const QString &fPath, QImage &out);
+#endif
+
 /*
    This class decouples the asyncronous image reading (in CacheImage) from the synchronous
    image decoding, which is executed in multiple ImageDecoder threads.
@@ -40,7 +45,7 @@ ImageDecoder::ImageDecoder(int id,
     isDebug = false;
     isLog = false;
 
-    connect(this, &ImageDecoder::setValSf, dm, &DataModel::setValSf);
+    connect(this, &ImageDecoder::setValSf, dm, &DataModel::setValSf, Qt::QueuedConnection);
 }
 
 ImageDecoder::~ImageDecoder()
@@ -57,16 +62,16 @@ void ImageDecoder::stop()
             << fun.leftJustified(50);
     }
 
-    abort = true;
+    abort.storeRelease(1);
     if (decoderThread.isRunning()) {
         decoderThread.quit();
-        decoderThread.wait();
+        // decoderThread.wait();
     }
 }
 
 bool ImageDecoder::quit()
 {
-    abort = false;
+    abort.storeRelease(0);
     // status = Status::Abort;
     fPath = "";
     // QImage blank;
@@ -86,19 +91,16 @@ void ImageDecoder::abortProcessing()
         << fun.leftJustified(50);
     }
 
-    // Now wait until idle or timeout
-    QDeadlineTimer deadline(500);
-    QMutexLocker lock(&mutex);
-    abort = true;
-    while (!idle) {
-        const int ms = int(deadline.remainingTime());
-        if (!idleCondition.wait(&mutex, ms)) break; // break on timeout
-    }
-    // Don't reset abort here. Let the code that *restarts* work clear it.
+    // Non-blocking: set the atomic abort flag and return. The decoder thread
+    // checks this flag at its iteration points and will quiesce on its own.
+    // The previous wait-on-condition pattern held the decoder's mutex from a
+    // foreign thread (the imageCache thread), creating a double-lock hazard
+    // with this decoder's own setIdle/setBusy under load. Late results from
+    // an in-flight decode are filtered downstream by the instance check.
+    abort.storeRelease(1);
 
     if (G::isLogger)
         G::log(fun, "id = " + QString::number(threadId) + " aborted.");
-
 }
 
 void ImageDecoder::setIdle(bool v)
@@ -116,18 +118,23 @@ bool ImageDecoder::isRunning() const
 
 void ImageDecoder::decode(int row, int instance)
 {
-    abort = false;
+    abort.storeRelease(0);
+    sfRow = row;                   // set early so fillCache has valid row
+    this->instance = instance;
 
-    // range check
-    if (row >= dm->sf->rowCount()) return;
+    if (dm->sf->isSuspended() || row >= dm->sf->rowCount()) {
+        status = Status::Failed;
+        errMsg = dm->sf->isSuspended() ? "Proxy suspended." : "Row out of range.";
+        setIdle();
+        emit done(threadId, int(status), sfRow, QImage(), QString(), 0);
+        return;
+    }
 
     QElapsedTimer t;
     t.start();
 
     setBusy();
-    this->instance = instance;
 
-    sfRow = row ;
     status = Status::Undefined;
     fPath = dm->sf->index(sfRow,0).data(G::PathRole).toString();
     image = QImage();
@@ -148,9 +155,9 @@ void ImageDecoder::decode(int row, int instance)
     if (instance != dm->instance) {
         status = Status::InstanceClash;
         errMsg = "Instance clash.  New folder selected, processing old folder.";
-        G::issue("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
+        G::issueDedup("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
         setIdle();
-        emit done(threadId);
+        emit done(threadId, int(status), sfRow, QImage(), fPath, 0);
         if (isDebug)
         {
             QString fun = "ImageDecoder::decode instance clash";
@@ -166,7 +173,7 @@ void ImageDecoder::decode(int row, int instance)
     }
 
     // decode
-    if (!abort && load()) {
+    if (!abort.loadAcquire() && load()) {
         // if (isDebug) G::log("ImageDecoder::run (if load)", "Image width = " + QString::number(image.width()));
         if (isDebug)
         {
@@ -179,29 +186,39 @@ void ImageDecoder::decode(int row, int instance)
                 << "ms =" << t.elapsed()
                 << fPath;
         }
-        if (metadata->rotateFormats.contains(ext) && !abort) rotate();
-        if (G::colorManage && !abort) colorManage();
+        if (metadata->rotateFormats.contains(ext) && !abort.loadAcquire()) rotate();
+        if (G::colorManage && !abort.loadAcquire()) colorManage();
         if (image.isNull()) status = Status::Failed;
     }
     else {
-        // if (isDebug)
+        if (isDebug)
         {
             QString fun = "ImageDecoder::decode load failed";
             qDebug() << fun.left(50)
                      << "row =" << sfRow
                      << "status =" << statusText.at(status)
                      << "errMsg =" << errMsg
-                ; //*/
+                     << fPath
+                ;
         }
     }
 
     setIdle();
 
-    msToDecode = t.elapsed();
-    emit setValSf(sfRow, G::MSToReadColumn, msToDecode, instance,
-                  "ImageDecoder::decode", Qt::EditRole);
+    nsToDecode = t.nsecsElapsed();
 
-    if (!abort) emit done(threadId);
+    /*
+    qDebug() << fun.left(50)
+             << "row =" << sfRow
+             << "nsToDecode =" << nsToDecode
+             << fPath
+        ;//*/
+
+    emit setValSf(sfRow, G::NSImage, nsToDecode, instance,
+                  "ImageDecoder::decode", Qt::EditRole,
+                  int(Qt::AlignRight | Qt::AlignVCenter));
+
+    emit done(threadId, int(status), sfRow, image, fPath, nsToDecode);
 }
 
 bool ImageDecoder::load()
@@ -231,12 +248,13 @@ bool ImageDecoder::load()
         return false;
     }
 
-    /* get image type (extension)
-       can cause crash: QFileInfo fileInfo(fPath);  or
-                        ext = fPath.section('.', -1).toLower(); */
-    // ext = n.ext;
+    // confirm file exists (the file or folder could have been deleted externally)
+    if (!QFile(fPath).exists()) {
+        status = Status::NoFile;
+        return false;
+    }
+
     ext = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
-    // qDebug() << "ImageDecoder::load" << sfRow << ext << fPath;
 
     // do not cache video files
     if (metadata->videoFormats.contains(ext)) {
@@ -363,20 +381,22 @@ bool ImageDecoder::load()
 
         #ifdef Q_OS_MAC
         imFile.close();
-        if (!image.load(fPath)) {
-            errMsg = "Could not read because QImage::load failed.";
+
+        // Fast path: Apple's ImageIO uses the platform's hardware HEVC
+        // decoder, faster than QImage::load() round-tripping through Qt's
+        // image plugin layer.
+        bool ok = false;
+        // ok = macImageIOImage(fPath, image) && image.width() > 0;
+
+        // Fallback: Qt's HEIF plugin.
+        if (!ok) ok = image.load(fPath) && image.width() > 0;
+
+        if (!ok) {
+            errMsg = "Could not read heic image (ImageIO and QImage::load failed).";
             G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
-            // imFile.close();
             status = Status::Invalid;
             return false;
         }
-        else if (image.width() == 0) {
-            errMsg = "Unable to read heic image";
-            G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
-            status = Status::Invalid;
-            return false;
-        }
-        imFile.close();
         if (isDebug)
         {
         qDebug() << "ImageDecoder::load" << "HEIC image"
@@ -507,11 +527,19 @@ bool ImageDecoder::load()
     /**************************************************************************/
     // All other formats
     else {
-        // try to decode
         imFile.close();
-        if (!image.load(fPath)) {
-            imFile.close();
-            errMsg = "Could not read because QImage::load failed.";
+
+        bool ok = false;
+        // Qt Image Library.
+        if (!ok) ok = image.load(fPath);
+
+        #ifdef Q_OS_MAC
+        // Fallback: Apple ImageIO
+        if (!ok) ok = macImageIOImage(fPath, image) && image.width() > 0;
+        #endif
+
+        if (!ok) {
+            errMsg = "Could not read image (decode failed).";
             G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             status = Status::Invalid;
             return false;
@@ -604,11 +632,20 @@ void ImageDecoder::colorManage()
     if (isDebug) {
         // G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
     }
-    if (metadata->iccFormats.contains(ext)) {
-        // QMutexLocker locker(&mutex);
-        QByteArray iccBuf = dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
-        ICC::transform(iccBuf, image);  // crash when mash next
+    if (!metadata->iccFormats.contains(ext)) return;
+    if (abort.loadAcquire()) return;
+    if (image.isNull()) return;
+
+    // ICC::transform assumes TYPE_BGRA_8 (4 bytes/pixel). Convert if needed so
+    // lcms2's packer does not walk past a narrower buffer (crash site).
+    if (image.format() != QImage::Format_ARGB32 &&
+        image.format() != QImage::Format_RGB32) {
+        image = image.convertToFormat(QImage::Format_ARGB32);
+        if (image.isNull()) return;
     }
+
+    QByteArray iccBuf = dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
+    ICC::transform(iccBuf, image);
 }
 
 bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m)
@@ -619,12 +656,19 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
 
     It is used by FindDuplicatesDlg.
 */
+    QString srcFun = "  ImageDecoder::decodeIndependent";
+    if (G::isLogger) G::log(srcFun, m.fPath);
+
     this->metadata = metadata;
     fPath = m.fPath;
     sfRow = dm->proxyRowFromPath(fPath);
 
+    if (sfRow < 0) {
+        qWarning() << srcFun << "Invalid row for" << fPath;
+        return false;
+    }
+
     if (load()) {
-        //if (metadata->rotateFormats.contains(ext)) rotate();
         if (metadata->rotateFormats.contains(ext)) rotate();
         colorManage();
         img = image;

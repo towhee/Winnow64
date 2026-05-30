@@ -6,9 +6,7 @@
 #include "Metadata/imagemetadata.h"
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
-#include "Metadata/xmp.h"
 #include "ImageFormats/Jpeg/jpeg.h"
-#include "Metadata/metareport.h"
 
 class DNG
 {

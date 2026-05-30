@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QObject>
+#include <atomic>
 #include "Cache/cachedata.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
@@ -50,6 +51,8 @@ public:
     void updateStatus(int instruction, QString source); // update cached send signal
     QString reportToCache();
     QString diagnostics();
+    QString reportHealthChecks();
+    QString reportLifetimeCounters();
     QString reportCacheParameters();
     QString reportCacheDecoders();
     QString reportPressureItemList();
@@ -57,6 +60,7 @@ public:
     QString reportImCache();
     QString reportImCacheRows();
     QString reportToCacheRows();
+    void debugRunStatus();
 
     bool isIdle();
 
@@ -72,11 +76,14 @@ public:
 
     bool debugCaching = false;
     bool debugLog = false;
+    bool autoLogStalls = false;          // dump diagnostics() on stall (throttled)
+    qint64 lastStallSnapshotMs = 0;      // last time we wrote a stall snapshot
 
 signals:
     void stopped(QString src);
-    void waitingForRow(int sfRow);
+    void waitingForRow(int sfRow, int instance);
     void setCached(int sfRow, bool isCached, int instance);
+    void setIcon(int dmRow, const QImage &im, int fromInstance, QString src);
     void decode(int sfRow, int instance);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
@@ -98,7 +105,14 @@ public slots:
     void setShowCacheStatus(bool isShowCacheStatus);
 
     void updateInstance();
-    void fillCache(int id);
+    // doneStatus/doneSfRow/doneImage/doneFPath/doneMsToDecode are the snapshot
+    // carried by ImageDecoder::done; defaulted so non-signal callers still work.
+    void fillCache(int id,
+                   int doneStatus = -1,
+                   int doneSfRow = -1,
+                   QImage doneImage = QImage(),
+                   QString doneFPath = QString(),
+                   qint64 doneMsToDecode = 0);
     void setCurrentPosition(QString path, QString src);
     void filterChange(QString currentImageFullPath, QString source = "");
     void cacheSizeChange();         // flag when cache size is changed in preferences
@@ -126,11 +140,12 @@ private:
     int retry = 0;
     int maxAttemptsToCacheImage = 10;
 
-    bool isInitializing;
+    std::atomic<bool> isInitializing;
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;
-    Metadata *metadata;
+    // One Metadata per decoder: sharing one across threads raced on ifd->ifdDataHash (crashed 2025-03-08).
+    QVector<Metadata*> decoderMetadatas;
 
     QVector<ImageDecoder*> decoders;        // all the decoders
     QVector<QThread*> decoderThreads;       // all the decoder threads
@@ -151,6 +166,7 @@ private:
         bool isRapidForward;
         bool isCooldown;
         qint64 elapsedMs;
+        qint64 tSinceMoveMs;    // ms since last forward step at the time of this check
         int cushion;
         bool highChk;
         bool lowChk;
@@ -208,11 +224,21 @@ private:
     quint64 minStepMB = 256;              // never resize by less than this
     quint64 maxStepMB = 1024;             // never resize by more than this
 
-    // decoder performance
-    int decoderMs = 250;                  // decode ms updated in decodeHistory()
-    int lastNDecoders = 10;               // number of times to calc average decode ms
+    // decoder performance.
+    // NOTE: ImageDecoder::msToDecode is actually nanoseconds (qint64 from
+    // QElapsedTimer::nsecsElapsed) — name is historical. We convert to ms at
+    // the boundary in decodeHistory() so decoderMs / decodeMsAvg are genuine ms.
+    int decoderMs = 250;                  // moving-average decode time, ms
+    int lastNDecoders = 10;               // window size for decodeMsAvg
     Winnow::Util::MovingAvg decodeMsAvg { lastNDecoders };
-    inline void decodeHistory(int msToDecode);
+    inline void decodeHistory(qint64 nsToDecode);
+
+    // lifetime counters since last initImageCache/instance reset.
+    // Used by diagnostics() to surface trim/discard races and health invariants.
+    std::atomic<quint64> cachedCount{0};            // successful icd->insert in cacheImage
+    std::atomic<quint64> trimmedCount{0};           // keys removed in trimOutsideTargetRange
+    std::atomic<quint64> lateDecodeCount{0};        // okToCache: decode finished after row trimmed from toCache
+    std::atomic<quint64> attemptCapHitCount{0};     // okToDecode: "Max attempts reached"
 
     // cache size ceiling with default start amount (MB) to prevent runaway growth
     qint64 maxMBCeiling = G::availableMemoryMB * 0.9;
@@ -223,16 +249,19 @@ private:
     inline void updateMotion(int key, bool isForwardNow);
     inline bool isRapidForward() const;
     inline quint64 calcResizeStepMB() const;
-
-    void releavePressure();
+    
+    void relievePressure();
 
     // --- End Cache pressure section ---
 
     void launchDecoders(QString src);
-    bool okToCache(int id, int sfRow);
+    bool okToCache(int id, int sfRow, int doneStatus);
     bool nullInImCache();
-    void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
+    void cacheImage(int id, int cacheKey,
+                    const QImage &doneImage,
+                    const QString &doneFPath);  // make room and add image to imageCache
     bool cacheUpToDate();           // target range all cached
+    void resetStaleIsCaching();
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList
     void trimOutsideTargetRange();// define start and end key in the target range to cache
     bool anyDecoderCycling();        // All decoder status is ready

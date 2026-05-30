@@ -178,17 +178,6 @@
        </item>
        <item>
         <property name="text">
-         <string>Include subfolders</string>
-        </property>
-        <property name="text">
-         <string>Cmd/Ctrl + Shift + mouse left click</string>
-        </property>
-        <property name="text">
-         <string>Show images in all subfolders as well</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
          <string>Open in Explorer or Finder</string>
         </property>
         <property name="text">
@@ -241,6 +230,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Rename files</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + F2</string>
+        </property>
+        <property name="text">
+         <string>Rename selected files (template or single-file rename)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Report metadata</string>
         </property>
         <property name="text">
@@ -249,6 +249,22 @@
         <property name="text">
          <string>Show geeky extract of metadata from file (error reporting)</string>
         </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Utilities:</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>Focus Stack</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + F</string>
+         </property>
+         <property name="text">
+          <string>Create a Focus Stack from selected images</string>
+         </property>
+        </item>
        </item>
        <item>
         <property name="text">
@@ -268,6 +284,52 @@
          <bold>true</bold>
         </font>
        </property>
+       <item>
+        <property name="text">
+         <string>Folders:</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>New set of images</string>
+         </property>
+         <property name="text">
+          <string>Mouse left click</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Add/Remove folder images</string>
+         </property>
+         <property name="text">
+          <string>Cmd/Ctrl + mouse left click</string>
+         </property>
+         <property name="text">
+          <string>Toggles</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Add between folders</string>
+         </property>
+         <property name="text">
+          <string>Shift + mouse left click</string>
+         </property>
+         <property name="text">
+          <string>Show all images in intervening folders</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Include subfolders</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + mouse left click</string>
+         </property>
+         <property name="text">
+          <string>Show images in all subfolders as well</string>
+         </property>
+        </item>
+       </item>
        <item>
         <property name="text">
          <string>Select All</string>
@@ -946,13 +1008,13 @@
        </item>
        <item>
         <property name="text">
-         <string>Application Menu</string>
+         <string>Embellish Panel</string>
         </property>
         <property name="text">
-         <string>F9</string>
+         <string>F8</string>
         </property>
         <property name="text">
-         <string>Toggles visibility</string>
+         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
         </property>
        </item>
        <item>
@@ -1126,6 +1188,17 @@
          <string>?</string>
         </property>
        </item>
+      </item>
+      <item>
+       <property name="text">
+        <string>Preferences</string>
+       </property>
+       <property name="text">
+        <string>Cmd/Ctrl + ,</string>
+       </property>
+       <property name="text">
+        <string>, = comma</string>
+       </property>
       </item>
      </widget>
     </item>

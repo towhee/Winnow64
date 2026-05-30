@@ -142,12 +142,11 @@ DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : 
 {
     setStyle();
     setLayout(titleBarLayout);
-    titleLabel = new QLabel;
+    titleLabel = new QLabel(this);
     titleLabel->setTextFormat(Qt::RichText);
     setTitle(title);
     titleLabel->setText(title);
     //titleLabel->setPixmap(QPixmap(":/images/icon16/anchor.png"));
-    titleLabel->setStyleSheet("border:none;");
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
 
@@ -161,11 +160,29 @@ void DockTitleBar::setTitle(QString title)
 
 void DockTitleBar::setStyle()
 {
-    QString s = "padding-left: 2px;"
-                "border: none;"
-                "color: #6CC1E8;"
-                "font-size:" + G::strFontSize + "pt;";
+    // Border color mirrors WidgetCSS::frame() (fm = backgroundShade + 35) so
+    // a future change to the frame palette flows through here automatically.
+    int fm = G::backgroundShade + 35;
+    QString borderColor = QColor(fm, fm, fm).name();
+    QString s = "DockTitleBar {"
+                "  border: none;"
+                "  border-bottom: 1px solid " + borderColor + ";"
+                "  font-size:" + G::strFontSize + "pt;"
+                "}";
     setStyleSheet(s);
+}
+
+void DockTitleBar::paintEvent(QPaintEvent *)
+{
+/*
+    QWidget subclasses do not render stylesheet borders/backgrounds unless
+    paintEvent draws the PE_Widget primitive. Without this override the
+    border-bottom set in setStyle() is silently dropped.
+*/
+    QStyleOption opt;
+    opt.initFrom(this);
+    QPainter p(this);
+    style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 
 void DockTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
@@ -176,6 +193,61 @@ void DockTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
     // qDebug() << "DockTitleBar::mouseDoubleClickEvent";
     // event->ignore();
     QWidget::mouseDoubleClickEvent(event);
+}
+
+void DockTitleBar::mousePressEvent(QMouseEvent *event)
+{
+/*
+    In solo mode, left-clicking a collapsed dock's title bar expands it.
+    The existing collapsedChanged → enforceDockSoloMode flow then collapses
+    its siblings in the same area. Outside solo mode (or when the dock is
+    not collapsed) the click falls through to default QWidget handling so
+    Qt's title-bar drag-to-move behaviour is preserved.
+*/
+    if (G::useDWCollapse && event->button() == Qt::LeftButton) {
+        DockWidget *dock = qobject_cast<DockWidget*>(parentWidget());
+        if (dock && dock->isCollapsed() && !dock->isFloating()) {
+            MW *mw = qobject_cast<MW*>(dock->parentWidget());
+            if (mw && mw->dockSoloModeForArea(mw->dockWidgetArea(dock))) {
+                dock->setCollapsed(false);
+                event->accept();
+                return;
+            }
+        }
+    }
+    QWidget::mousePressEvent(event);
+}
+
+void DockTitleBar::contextMenuEvent(QContextMenuEvent *event)
+{
+/*
+    Right-click on a custom dock title bar: take the standard QMainWindow
+    popup (the list of dock toggles) and append our collapse/expand/solo
+    actions scoped to the dock area this title bar belongs to. Floating
+    docks fall through to the unmodified base menu.
+*/
+    DockWidget *dock = qobject_cast<DockWidget*>(parentWidget());
+    if (!dock) { QWidget::contextMenuEvent(event); return; }
+    MW *mw = qobject_cast<MW*>(dock->parentWidget());
+    if (!mw) { QWidget::contextMenuEvent(event); return; }
+
+    QMenu *menu = mw->createPopupMenu();
+    if (!menu) menu = new QMenu(this);
+
+    if (G::useDWCollapse && !dock->isFloating()) {
+        Qt::DockWidgetArea area = mw->dockWidgetArea(dock);
+        menu->addSeparator();
+        menu->addAction("Collapse all", mw, [mw, area](){ mw->collapseDocksInArea(area); });
+        menu->addAction("Expand all",   mw, [mw, area](){ mw->expandDocksInArea(area); });
+        QAction *solo = menu->addAction("Solo mode");
+        solo->setCheckable(true);
+        solo->setChecked(mw->dockSoloModeForArea(area));
+        QObject::connect(solo, &QAction::toggled, mw,
+            [mw, area](bool on){ mw->setDockSoloModeForArea(area, on); });
+    }
+
+    menu->exec(event->globalPos());
+    menu->deleteLater();
 }
 
 
@@ -223,6 +295,83 @@ bool DockWidget::hasCustomTitleBar()
     QWidget *titleBarWidget = this->titleBarWidget();
     if (titleBarWidget) return true;
     else return false;
+}
+
+void DockWidget::setCollapsed(bool collapse)
+{
+/*
+    Collapse squeezes the dock vertically to just its title bar. The body
+    widget is kept VISIBLE (not hidden) so that its sizeHint().width() stays
+    in QDockAreaLayout's width calculation — this is what anchors the dock
+    area at its pre-collapse width when one or more docks in the area are
+    collapsed. The body is forced to zero height by dropping its
+    minimumHeight to 0 and clamping the dock's maxHeight to the title bar.
+
+    No explicit width constraint is applied to the dock itself, so the user
+    can still drag the dock-area splitter inward and outward while collapsed.
+*/
+    if (!G::useDWCollapse) return;
+    if (collapse == m_isCollapsed) return;
+    QWidget *body = widget();
+    QWidget *tb = titleBarWidget();
+    int titleH = tb ? tb->sizeHint().height() : 22;
+    QMainWindow *mw = qobject_cast<QMainWindow*>(parentWidget());
+
+    if (collapse) {
+        m_uncollapsedSize = size();
+        m_uncollapsedMinH = minimumHeight();
+        m_uncollapsedMaxH = maximumHeight();
+        if (body) {
+            m_uncollapsedBodyMinH = body->minimumHeight();
+            body->setMinimumHeight(0);
+        }
+        /* min = 0 (not titleH) so an adjacent expanded sibling can grow by
+        squeezing this collapsed dock smaller. max = titleH keeps the body
+        from un-collapsing. The dock still naturally sits at titleH because
+        body's sizeHint contribution is 0. */
+        setMinimumHeight(0);
+        setMaximumHeight(titleH);
+        m_isCollapsed = true;
+        if (isFloating()) resize(m_uncollapsedSize.width(), titleH);
+    } else {
+        m_isCollapsed = false;
+        if (body) body->setMinimumHeight(m_uncollapsedBodyMinH);
+
+        if (isFloating()) {
+            setMinimumHeight(m_uncollapsedMinH);
+            setMaximumHeight(m_uncollapsedMaxH);
+            if (m_uncollapsedSize.isValid())
+                resize(m_uncollapsedSize);
+        } else {
+            /* Synchronously PIN this dock to its pre-collapse height. The
+            pin forces Qt's QDockAreaLayout to allocate targetH to this
+            dock (growing the dock area at the central widget's expense if
+            necessary) — which resizeDocks alone won't reliably do once the
+            area has been compressed by earlier collapses. The pin is
+            released on the next event-loop tick so the user can drag the
+            inter-dock splitter to resize. */
+            int targetH = m_uncollapsedSize.height();
+            if (targetH <= titleH) targetH = titleH + 1;
+            setMinimumHeight(targetH);
+            setMaximumHeight(targetH);
+
+            int restoreMin = m_uncollapsedMinH;
+            int restoreMax = m_uncollapsedMaxH;
+            QPointer<DockWidget> self(this);
+            QTimer::singleShot(0, this, [self, restoreMin, restoreMax]() {
+                if (!self) return;
+                self->setMinimumHeight(restoreMin);
+                self->setMaximumHeight(restoreMax);
+            });
+        }
+    }
+    m_isCollapsed = collapse;
+    emit collapsedChanged(m_isCollapsed);
+}
+
+void DockWidget::toggleCollapsed()
+{
+    setCollapsed(!m_isCollapsed);
 }
 
 bool DockWidget::event(QEvent *event)
@@ -273,8 +422,7 @@ bool DockWidget::event(QEvent *event)
         return true;
     }
 
-    QDockWidget::event(event);
-    return true;
+    return QDockWidget::event(event);
 }
 
 void DockWidget::closeEvent(QCloseEvent *event)
@@ -445,38 +593,41 @@ bool MW::tabBarContainsDocks(QTabBar *tabBar)
     return false;
 }
 
-bool MW::isDockTabified(QString tabText)
+bool MW::isDockTabified(QDockWidget *dock)
 {
-    QTabBar* widgetTabBar = tabifiedBar();
-    bool found = false;
-    if (widgetTabBar != nullptr) {
-        int idx = widgetTabBar->currentIndex();
-        for (int i = 0; i < widgetTabBar->count(); i++) {
-            if (widgetTabBar->tabText(i) == tabText) {
-                found = true;
-                break;
-            }
-        }
-    }
-    return found;
+    // Identify the dock by the object itself (objectName), not by the tab's
+    // visible text, so a dock showing a graphic instead of text is still
+    // recognised. A dock is tabified if it shares a tab group with others.
+    return dock && !tabifiedDockWidgets(dock).isEmpty();
 }
 
-bool MW::isSelectedDockTab(QString tabText)
+QString MW::dockTabToolTip(const QString &tabText)
 {
-    QTabBar* widgetTabBar = tabifiedBar();
-    bool selected = false;
-    if (widgetTabBar != nullptr) {
-        int idx = widgetTabBar->currentIndex();
-        for (int i = 0; i < widgetTabBar->count(); i++) {
-            if (widgetTabBar->tabText(i) == tabText) {
-                if (i == idx) {
-                    selected = true;
-                    break;
-                }
-            }
-        }
-    }
-    return selected;
+    auto tip = [](const QString &title, const QString &shortcut) {
+        // Title in the dock-title blue (mirrors WidgetCSS "DockTitleBar > QLabel").
+        return QString(
+            "<span style=\"color:#6CC1E8;\">%1</span>: shortcut %2.<br>"
+            "&nbsp;&nbsp;- Selects if not selected and visible.<br>"
+            "&nbsp;&nbsp;- Hides if currently selected.<br>"
+            "&nbsp;&nbsp;- Reveals if currently hidden."
+        ).arg(title, shortcut);
+    };
+
+    if (tabText == folderDockTabText)   return tip(folderDockTabText,   "F3");
+    if (tabText == favDockTabText)      return tip(favDockTabText,      "F4");
+    if (tabText == filterDockTabText)   return tip(filterDockTabText,   "F5");
+    if (tabText == metadataDockTabText) return tip(metadataDockTabText, "F6");
+    if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
+    if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
+    return QString();
+}
+
+bool MW::isSelectedDockTab(QDockWidget *dock)
+{
+    // The front (selected) tab in a tabified group is the only one not
+    // occluded by its siblings, so its visible region is non-empty. This is
+    // determined from the dock object, independent of the tab's label.
+    return dock && dock->isVisible() && !dock->visibleRegion().isEmpty();
 }
 
 void MW::folderDockVisibilityChange()
@@ -493,6 +644,79 @@ void MW::embelDockVisibilityChange()
 
     // loupeDisplay("MW::embelDockVisibilityChange");
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
+}
+
+QList<DockWidget*> MW::docksInArea(Qt::DockWidgetArea area) const
+{
+    QList<DockWidget*> result;
+    for (QDockWidget *d : findChildren<QDockWidget*>()) {
+        if (d->isFloating()) continue;
+        if (dockWidgetArea(d) != area) continue;
+        if (DockWidget *dw = qobject_cast<DockWidget*>(d)) result << dw;
+    }
+    return result;
+}
+
+void MW::collapseDocksInArea(Qt::DockWidgetArea area)
+{
+    for (DockWidget *d : docksInArea(area)) d->setCollapsed(true);
+}
+
+void MW::expandDocksInArea(Qt::DockWidgetArea area)
+{
+    for (DockWidget *d : docksInArea(area)) d->setCollapsed(false);
+}
+
+bool MW::dockSoloModeForArea(Qt::DockWidgetArea area) const
+{
+    return m_dockSoloMode.value(area, false);
+}
+
+void MW::setDockSoloModeForArea(Qt::DockWidgetArea area, bool on)
+{
+    m_dockSoloMode.insert(area, on);
+    if (!on) return;
+    // Keep the first currently-expanded dock; collapse the rest in this area.
+    DockWidget *keep = nullptr;
+    for (DockWidget *d : docksInArea(area)) {
+        if (!d->isCollapsed()) {
+            if (!keep) keep = d;
+            else d->setCollapsed(true);
+        }
+    }
+}
+
+void MW::enforceDockSoloMode(DockWidget *justExpanded)
+{
+    if (!justExpanded || justExpanded->isFloating()) return;
+    Qt::DockWidgetArea area = dockWidgetArea(justExpanded);
+    if (!m_dockSoloMode.value(area, false)) return;
+    for (DockWidget *d : docksInArea(area)) {
+        if (d != justExpanded && !d->isCollapsed()) d->setCollapsed(true);
+    }
+}
+
+void MW::applyDockCollapseState()
+{
+/*
+    Re-apply the persisted collapsed flag for each dock. Must be called AFTER
+    restoreState() so each dock has its restored size — that size is what
+    setCollapsed(true) snapshots as m_uncollapsedSize for the next expand.
+*/
+    if (!G::useDWCollapse) return;
+    auto apply = [this](DockWidget *d, const QString &key) {
+        if (!d) return;
+        settings->beginGroup("DockCollapsed");
+        bool wasCollapsed = settings->value(key, false).toBool();
+        settings->endGroup();
+        if (wasCollapsed) d->setCollapsed(true);
+    };
+    apply(folderDock,   "FolderDock");
+    apply(favDock,      "BookmarkDock");
+    apply(filterDock,   "FilterDock");
+    apply(metadataDock, "MetadataDock");
+    apply(thumbDock,    "ThumbDock");
+    apply(embelDock,    "EmbelDock");
 }
 
 void MW::embelDockActivated(QDockWidget *dockWidget)

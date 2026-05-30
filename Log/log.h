@@ -15,9 +15,6 @@
 
 // Logger temp until integrate
 
-//#include <QMutex>
-//#include <QMutexLocker>
-
 class Logger: public QObject
 {
     Q_OBJECT
@@ -72,7 +69,6 @@ private:
     QString issueLogPath;
     QFile issueLogFile;
     QTextStream out;
-    // PopUp popUp;
 };
 
 #endif // LOG_H

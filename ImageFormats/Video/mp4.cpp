@@ -10,10 +10,17 @@ bool MP4::readAtomHeader(QFile &file, quint32 &size, char (&type)[4]) {
     if (file.read((char*)&size, 4) != 4) return false;
     if (file.read(type, 4) != 4) return false;
     size = qFromBigEndian(size);  // Convert to host byte order
+    // Reject pathological sizes: size==0 (extends to EOF, unsupported), size==1
+    // (extended 64-bit size follows, unsupported), and anything < 8 (header size)
+    // which would underflow `size - 8` and seek backwards.
+    if (size < 8) return false;
     return true;
 }
 
-void MP4::readAtomTree(QFile &file, quint32 maxOffset, QList<Atom> &atomList) {
+void MP4::readAtomTree(QFile &file, quint32 maxOffset, QList<Atom> &atomList, int depth) {
+    // Cap nesting to defuse crafted "moov→trak→trak→…" chains that would otherwise blow the stack.
+    const int kMaxDepth = 32;
+    if (depth >= kMaxDepth) return;
     while (file.pos() < maxOffset) {
         quint32 size;
         char type[4];
@@ -30,11 +37,13 @@ void MP4::readAtomTree(QFile &file, quint32 maxOffset, QList<Atom> &atomList) {
 
         qint64 atomStart = file.pos();
         qint64 atomEnd = atomStart + size - 8;
+        // Refuse atoms that claim to extend past the enclosing scope.
+        if (atomEnd > static_cast<qint64>(maxOffset)) break;
 
         // If atom has children, process them recursively
         if (atom.type == "moov" || atom.type == "trak" || atom.type == "mdia" || atom.type == "minf" ||
             atom.type == "stbl" || atom.type == "udta") {
-            readAtomTree(file, atomEnd, atom.children);
+            readAtomTree(file, static_cast<quint32>(atomEnd), atom.children, depth + 1);
         } else {
             file.seek(atomEnd);  // Skip to the end of this atom
         }

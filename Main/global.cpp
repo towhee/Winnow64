@@ -1,30 +1,45 @@
 #include "Main/global.h"
+#include <algorithm>
+
+#ifdef Q_OS_MAC
+    #include <mach/mach.h>
+    #include <mach/task.h>
+#endif
+#ifdef Q_OS_WIN
+    #include <Windows.h>
+    #include <psapi.h>
+#endif
 
 namespace G
 {
 
 QSettings *settings;
 
-// system messaging
-bool isTestLogger = false;
-bool isLogger = false;              // Writes log messages to file or console
+// LOG
+bool isLogger = false;              // Writes all log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
-bool isFlowLogger2 = false;         // QDebug key program flow points
-bool showIssueInConsole = false;    // Writes warnings to qDebug
-bool isFileLogger = false;          // Writes log messages to file (debug executable ie remote embellish ops)
-bool isErrorLogger = false;         // Writes error log messages to file or console
-bool isIssueLogger = true;         // Writes issue log messages to file or console
+bool sendLogToFile = false;         // Writes log messages to file (isLogAllToFileForDebugging)
+bool isRunByExtern = false;         // Writes log messages to file (debug executable ie remote embellish ops)
+QFile logFile;                      // MW::openLog(), MW::closeLog()
+
+// ISSUES
+bool isIssueLogger = true;          // Writes issue log messages to file or console
+bool isVerboseIssues = false;       // When true: threshold drops to Debug
+bool showIssueInConsole = false;    // Writes issues to qDebug
+int issueThreshold = Issue::Info;   // Drop issues below this severity
+int issueListMaxSize = 5000;        // Ring-buffer cap for in-memory G::issueList
+QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
+
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
 
+bool FSLog = true;                  // Focus Stack log
 bool showAllEvents = false;
-QFile logFile;                      // MW::openLog(), MW::closeLog()
-QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
 // Errors
 QStringList issueList;
 
 
 // Rory version (expanded cache pref, focus stack)
-bool isRory = false;
+bool isRory = true;
 
 // mutex
 QWaitCondition waitCondition;
@@ -33,16 +48,17 @@ QMutex gMutex;
 QThread* guiThread;;            // use to check
 
 // flow
-bool isInitializing;            // flag program starting / initializing
-bool stop = false;              // flag to stop everything involving DM loading new dataset
-bool removingFolderFromDM;      // flag when datamodel folder rows are being deleted
-bool removingRowsFromDM;        // flag when datamodel rows are being deleted
+bool isInitializing = true;            // flag program starting / initializing
+std::atomic<bool> stop{false};
+std::atomic<bool> removingFolderFromDM{false};
+std::atomic<bool> removingRowsFromDM{false};
 
 // datamodel status
-bool allMetadataLoaded;         // all metadata attempted
-bool iconChunkLoaded;           // all icon chunk loaded
+std::atomic<bool> allMetadataLoaded{false};
+std::atomic<bool> iconChunkLoaded{false};
+std::atomic<int> dmInstance{0};
+std::atomic<bool> isModifyingDatamodel{false};
 
-int dmInstance;                 // DataModel instance
 
 // temp while resolving issues, set false to not use
 bool useMyTiff = true;
@@ -57,10 +73,12 @@ bool useReadIcons = true;
 bool useImageCache = true;
 bool useImageView = true;
 bool useInfoView = true;
+bool useDWCollapse = false;         // master switch for dock collapse/expand/solo mode
+bool useDockTitleGraphic = true;    // master switch: show a graphic instead of text on dock tabs (TEST: on for folders tab)
 bool useMultimedia = true;
 bool useUpdateStatus = true;
 bool useFilterView = true;          // not finished
-bool useProcessEvents = true;
+bool useProcessEvents = false;
 
 // system display
 QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded
@@ -90,13 +108,22 @@ QColor borderColor;                 // define after app stylesheet defined
 QColor disabledColor;               // define after app stylesheet defined
 QColor tabWidgetBorderColor;        // define after app stylesheet defined
 QColor pushButtonBackgroundColor;   // define after app stylesheet defined
-QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
-QColor helpColor = QColor(68,95,118);
+QColor scrollBarHandleBackgroundColor; // = QColor(20,30,20);
+QColor helpColor = QColor(37,65,40);
 QColor appleBlue = QColor(21,113,211);      // #1571D3
 QColor selectionColor = QColor(68,95,118);
 QColor mouseOverColor = QColor(40,54,66);
 
 QString css;                        // app stylesheet;
+
+/*  Semantic state stylesheets - not theme-bound; used for status indicators,
+    error highlights, etc. Color, not font size: widgets that need a specific
+    size (e.g. status dots on Windows) should set it via setFont() so it
+    persists across setStyleSheet() calls. */
+QString cssError    = "QLabel,QLineEdit,QComboBox {color:red;}";
+QString cssWarning  = "QLabel,QLineEdit,QComboBox {color:yellow;}";
+QString cssOk       = "QLabel,QLineEdit,QComboBox {color:green;}";
+QString cssInactive = "QLabel,QLineEdit,QComboBox {color:gray;}";
 
 static int transparency = 50;
 QColor labelNoneColor(85,85,85,transparency);                // Background Gray
@@ -112,7 +139,7 @@ QColor labelPurpleColor(QColor(50,30,70));     // Dark purple
 
 QStringList ratings, labelColors;
 
-double iconOpacity = 0.4;
+double iconOpacity = 0.5;           // 0.0 - 1.0 (higher is brighter)
 
 // ui
 int wheelSensitivity = 150;
@@ -120,9 +147,44 @@ bool wheelSpinning = false;
 
 // caching
 bool loadOnlyVisibleIcons;          // not used
-quint64 availableMemoryMB;
+std::atomic<quint64> availableMemoryMB{0};
 int winnowMemoryBeforeCacheMB;
 int metaCacheMB;
+
+// memory overrun guardrail
+quint64 memoryAbortMB = 6000;
+std::atomic<bool> memoryOverrunFlag{false};
+
+quint64 processFootprintMB()
+{
+#ifdef Q_OS_MAC
+    task_vm_info_data_t info{};
+    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+    if (task_info(mach_task_self(), TASK_VM_INFO,
+                  reinterpret_cast<task_info_t>(&info), &count) == KERN_SUCCESS) {
+        return static_cast<quint64>(info.phys_footprint / (1024ull * 1024ull));
+    }
+    return 0;
+#elif defined(Q_OS_WIN)
+    PROCESS_MEMORY_COUNTERS pmc{};
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        return static_cast<quint64>(pmc.WorkingSetSize / (1024ull * 1024ull));
+    }
+    return 0;
+#else
+    return 0;
+#endif
+}
+
+quint64 computeMemoryAbortMB(quint64 totalRamMB)
+{
+    if (totalRamMB == 0) return memoryAbortMB;
+    const quint64 reserve  = std::max<quint64>(4096, totalRamMB / 4);
+    const quint64 ceiling  = (totalRamMB * 85) / 100;
+    const quint64 floorMB  = std::min<quint64>(2048, totalRamMB / 2);
+    const quint64 candidate = (totalRamMB > reserve) ? totalRamMB - reserve : floorMB;
+    return std::clamp(candidate, floorMB, ceiling);
+}
 
 // view
 QString mode;                       // In MW: Loupe, Grid, Table or Compare
@@ -135,7 +197,8 @@ int minIconSize = 40;
 int maxIconChunk = 25000;
 
 // status
-bool isModifyingDatamodel;
+// bool isModifyingDatamodel;
+bool isFirstImageNewInstance;
 bool ignoreScrollSignal;
 bool resizingIcons;
 bool isSlideShow;
@@ -148,11 +211,13 @@ bool colorManage;
 bool modifySourceFiles;
 bool backupBeforeModifying;
 bool autoAddMissingThumbnails;
-bool useSidecar;
 bool renderVideoThumb;
 bool combineRawJpg;
 bool isFilter;
 bool isRemote;
+
+// focus stack
+QStringList fsFusedPaths;
 
 // training
 bool isTraining = false;
@@ -213,24 +278,15 @@ QString sj(QString s, int x)
     return s.leftJustified(x, '.') + " ";
 }
 
-int wait(int ms)
+void wait(int ms)
 /*
-    Reset duration by calling G::wait(0).
+    Use as an alternative to qApp->processEvents().
 */
 {
-    // return 0;
-
-    static int duration = 0;
-    if (ms == 0) {
-        duration = 0;
-        return 0;
-    }
-    QTime t = QTime::currentTime().addMSecs(ms);
-    while (QTime::currentTime() < t) {
-        // /*if (useProcessEvents)*/ qApp->processEvents(QEventLoop::AllEvents, 10);
-    }
-    duration += ms;
-    return duration;
+    if (ms <= 0) return;
+    QEventLoop loop;
+    QTimer::singleShot(ms, &loop, &QEventLoop::quit);
+    loop.exec();
 }
 
 void track(QString functionName, QString comment, bool hideTime)
@@ -266,37 +322,28 @@ Logger logger;
 
 void log(QString functionName, QString comment, bool zeroElapsedTime)
 {
-    logger.log(functionName, comment);
-    return;
-    /*
-    static QMutex mutex;
-    QMutexLocker locker(&mutex);
-    static QString prevFunctionName = "";
-    static QString prevComment = "";
-    QString stop = "";
-    if (zeroElapsedTime) {
-        t.restart();
+    if (!sendLogToFile) {
+        if (functionName == "") qDebug() << " ";  // empty line
+        logger.log(functionName, comment);
+        return;
     }
-    if (functionName != "skipline") {
-        QString microSec = QString("%L1").arg(t.nsecsElapsed() / 1000);
-        QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
-        QString e = microSec.rightJustified(11, ' ') + " ";
-        QString f = prevFunctionName.leftJustified(50, ' ') + " ";
-        QString c = prevComment;
-        if (sendLogToConsole) {
-            QString msg = stop + e + f + c;
-            if (prevFunctionName == "skipline") qDebug().noquote() << " ";
-            else qDebug().noquote() << msg;
-        }
-        else {
-            QString msg = stop + d + e + f + c + "\n";
-            if (logFile.isOpen()) logFile.write(msg.toUtf8());
-        }
+
+    // save log as per Utilities::log
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+    QDir dir(path);
+    if (!dir.exists()) dir.mkpath(path);
+    QFile fLog(path + "/WinnowLog.txt");
+    // if (fLog.isOpen()) fLog.close();
+
+    // Use Append instead of ReadWrite + readAll()
+    if (fLog.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        QString txt = QString("%1  %2  %3\n").arg(t, functionName, comment);
+
+        fLog.write(txt.toUtf8());
+        fLog.close();
     }
-    prevFunctionName = functionName;
-    prevComment = comment;
-    t.restart();
-    //*/
+
 }
 
 //*** ISSUES ******************************************************************************
@@ -315,59 +362,112 @@ void setDM(QObject *dm)
 
 QMutex issueListMutex;
 
-void issue(QString type, QString msg, QString src, int sfRow,  QString fPath)
+// Per-(src, type, msg) repeat counter for issueDedup().
+static QHash<QString, int> issueDedupCounts;
+static QMutex issueDedupMutex;
+
+static int effectiveIssueThreshold()
+{
+    return isVerboseIssues ? Issue::Debug : issueThreshold;
+}
+
+void issue(QString type, QString msg, QString src, int sfRow, QString fPath)
 {
     if (!isIssueLogger) return;
-    QMutexLocker locker(&issueListMutex);
 
-    QSharedPointer<Issue> issue = QSharedPointer<Issue>::create();
-    if (issue->TypeDesc.contains(type)) {
-        if (type == "Comment") return;
-        issue->type = static_cast<Issue::Type>(issue->TypeDesc.indexOf(type));
-        issue->msg = msg;
+    // Resolve type up front so we can filter before any allocation.
+    Issue::Type resolvedType;
+    QString resolvedMsg;
+    int idx = Issue::typeDescList().indexOf(type);
+    if (idx >= 0) {
+        resolvedType = static_cast<Issue::Type>(idx);
+        resolvedMsg = msg;
     }
     else {
-        issue->type = issue->Type::Undefined;
-        issue->msg = type;
+        // Unknown type string — keep both pieces so the original message is not lost.
+        resolvedType = Issue::Undefined;
+        resolvedMsg = msg.isEmpty() ? type : (type + ": " + msg);
     }
 
-    issue->src = src;
-    issue->sfRow = sfRow;
-    issue->fPath = fPath;
-    issue->timeStamp =  QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
+    // Severity filter (Undefined is never filtered — it represents a caller bug).
+    if (resolvedType != Issue::Undefined && resolvedType < effectiveIssueThreshold()) return;
+
+    QMutexLocker locker(&issueListMutex);
+
+    QSharedPointer<Issue> ev = QSharedPointer<Issue>::create();
+    ev->type = resolvedType;
+    ev->msg = resolvedMsg;
+    ev->src = src;
+    ev->sfRow = sfRow;
+    ev->fPath = fPath;
+    ev->timeStamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
+
+    QString line = ev->toString();
 
     if (showIssueInConsole) {
-        qDebug().noquote() << issue->toString();
+        qDebug().noquote() << line;
     }
 
-    bool includeInDataModel = sfRow > -1;
-
-    /*
-    QString fun = "G::issue";
-    qDebug().noquote()
-        << fun.leftJustified(30)
-        << issue->TypeDesc.at(issue->type).leftJustified(10)
-        << QString::number(issue->sfRow).rightJustified(5)
-        << issue->msg.leftJustified(40)
-        << issue->src.leftJustified(30)
-        ;  //*/
-
-    if (modelInstance && includeInDataModel) {
+    if (modelInstance && sfRow > -1) {
         QMetaObject::invokeMethod(
             modelInstance,
             "issue",
-            // Qt::BlockingQueuedConnection,
-            Q_ARG(QSharedPointer<Issue>, issue)
+            Q_ARG(QSharedPointer<Issue>, ev)
         );
     }
 
-    // update current session issue list
-    issueList.append(issue->toString());
-
-    // write to issue log
-    issueLog->log(issue->toString());
-    if (isIssueLogger) {
+    // Ring-buffer: keep only the tail in memory. Full history is on disk.
+    issueList.append(line);
+    if (issueListMaxSize > 0 && issueList.size() > issueListMaxSize) {
+        issueList.removeFirst();
     }
+
+    if (issueLog) issueLog->log(line);
+}
+
+void issueDedup(QString type, QString msg, QString src, int sfRow, QString fPath)
+{
+    QString key = src + "\x1f" + type + "\x1f" + msg;
+    int count;
+    {
+        QMutexLocker dlock(&issueDedupMutex);
+        count = ++issueDedupCounts[key];
+    }
+    // Log first occurrence at full severity; subsequent occurrences silently counted.
+    if (count == 1) issue(type, msg, src, sfRow, fPath);
+}
+
+QStringList issueDedupReport()
+{
+    QMutexLocker dlock(&issueDedupMutex);
+    QStringList out;
+    for (auto it = issueDedupCounts.constBegin(); it != issueDedupCounts.constEnd(); ++it) {
+        if (it.value() > 1) {
+            out.append(QString("repeated %1x  %2").arg(it.value()).arg(it.key()));
+        }
+    }
+    return out;
+}
+
+void issueDedupReset()
+{
+    QMutexLocker dlock(&issueDedupMutex);
+    issueDedupCounts.clear();
+}
+
+void issueBeginSession()
+{
+    // Structural marker, not an issue. Bypasses severity gating and the
+    // datamodel route, writes a separator straight to the disk log.
+    QString ts = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
+    QString line = ts + "----- New Session -----";
+    if (showIssueInConsole) qDebug().noquote() << line;
+    QMutexLocker locker(&issueListMutex);
+    issueList.append(line);
+    if (issueListMaxSize > 0 && issueList.size() > issueListMaxSize) {
+        issueList.removeFirst();
+    }
+    if (issueLog) issueLog->log(line);
 }
 
 bool instanceClash(int instance, QString src)

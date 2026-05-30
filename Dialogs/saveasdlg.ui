@@ -45,10 +45,16 @@
     <layout class="QHBoxLayout" name="pickFolderLayout">
      <item>
       <widget class="QPushButton" name="selectBtn">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="minimumSize">
         <size>
          <width>100</width>
-         <height>0</height>
+         <height>32</height>
         </size>
        </property>
        <property name="maximumSize">
@@ -231,16 +237,22 @@
      </item>
      <item>
       <widget class="QPushButton" name="cancelBtn">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="minimumSize">
         <size>
          <width>100</width>
-         <height>0</height>
+         <height>32</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>100</width>
-         <height>16777215</height>
+         <width>0</width>
+         <height>32</height>
         </size>
        </property>
        <property name="text">
@@ -250,16 +262,22 @@
      </item>
      <item>
       <widget class="QPushButton" name="saveBtn">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="minimumSize">
         <size>
          <width>100</width>
-         <height>0</height>
+         <height>32</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>100</width>
-         <height>16777215</height>
+         <width>0</width>
+         <height>32</height>
         </size>
        </property>
        <property name="text">

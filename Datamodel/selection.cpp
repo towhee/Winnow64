@@ -71,7 +71,7 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
     if (dm->loadingModel) {
         QString msg = "Collecting image files in folder(s), please wait a sec.";
         G::popup->showPopup(msg);
-        qApp->processEvents();
+        // qApp->processEvents();
         return;
 
     }
@@ -107,12 +107,6 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
              << "sfIdx.row() =" << sfIdx.row()
         ;
         //*/
-
-    // scroll first to insure icons are painted first when select a new image
-    // if (thumbView->isVisible())
-    //     thumbView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
-    // if (gridView->isVisible())
-    //     gridView->scrollToRow(sfIdx.row(), "Selection::setCurrentIndex");
 
     // select the new image, load in ImageCache
     emit updateChange(sfIdx.row(), isFileSelectionChange, "Selection::setCurrentIndex");
@@ -156,6 +150,10 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
         qWarning() << "Selection::select(QModelIndex) sfIdx =" << sfIdx << "invalid.";
         G::popup->showPopup("Selection is invalid");
         qApp->beep();
+        G::issue("Warning",
+                 "Selection invalid (out of range or after model reset)",
+                 "Selection::select",
+                 sfIdx.isValid() ? sfIdx.row() : -1);
         return;
     }
     else {
@@ -223,7 +221,10 @@ void Selection::toggleSelect(QModelIndex sfIdx)
 void Selection::next(Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::next");
-    // qDebug() << "Selection::next";
+
+    // check if already at last item
+    if (dm->currentSfRow == (dm->sf->rowCount() - 1)) return;
+
     G::fileSelectionChangeSource = "Key_Right";
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         qDebug() << "Only shift key pressed";
@@ -243,6 +244,10 @@ void Selection::next(Qt::KeyboardModifiers modifiers)
 
 void Selection::prev(Qt::KeyboardModifiers modifiers)
 {
+
+    // check if already at last item
+    if (dm->currentSfRow == 0) return;
+
     G::fileSelectionChangeSource = "Key_Left";
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         // find prev unselected row
@@ -577,8 +582,8 @@ QString Selection::diagnostics()
     rpt << Utilities::centeredRptHdr('=', "Selection Diagnostics");
     rpt << "\n";
 
-    rpt << "\n" << "dm->instance = " << G::s(dm->instance);
-    rpt << "\n" << "G::dmInstance = " << G::s(G::dmInstance);
+    rpt << "\n" << "dm->instance = " << G::s((int)dm->instance);
+    rpt << "\n" << "G::dmInstance = " << G::s((int)G::dmInstance);
     rpt << "\n";
     rpt << "\n" << "currentDmRow = " << G::s(dm->currentDmRow);
     rpt << "\n" << "currentSfRow = " << G::s(dm->currentSfRow);

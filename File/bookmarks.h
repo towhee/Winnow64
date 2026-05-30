@@ -29,6 +29,7 @@ public slots:
     void select(QString fPath);
     void removeBookmark();
     void updateBookmarks();
+    void howThisWorks();
 
 private:
     void addBookmark(QString itemPath);

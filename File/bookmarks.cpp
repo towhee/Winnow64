@@ -1,5 +1,6 @@
 #include "File/bookmarks.h"
 #include "Main/global.h"
+#include "Utilities/htmlwindow.h"
 
 /*
 A QStringList of paths to bookmarked folders is displayed as top level items
@@ -322,7 +323,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
                 "folder."
                 ;
         G::popup->showPopup(msg, 5000);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
         return;
     }
 
@@ -342,7 +343,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
             "only works in the Folder panel."
             ;
         G::popup->showPopup(msg, 2000);
-        qApp->processEvents();
+        if (G::useProcessEvents) qApp->processEvents();
     }
 
     /* trigger itemPressed event, connected to MW::bookmarkClicked slot, which updates
@@ -621,4 +622,13 @@ void BookMarks::dropEvent(QDropEvent *event)
 
     // END MIRRORED CODE SECTION
 
+}
+
+void BookMarks::howThisWorks()
+{
+    if (G::isLogger) G::log("BookMarks::howThisWorks");
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - How bookmarks work",
+                   ":/Docs/bookmarkshelp.html",
+                   QSize(700, 600), r, window());
 }

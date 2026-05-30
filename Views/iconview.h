@@ -59,8 +59,6 @@ public:
 
     int updateMidVisibleCell(QString src);
     void updateVisible(QString src);
-    QSize loupeVPinScene(QSizeF vp, QSizeF scene, QSize icon);
-    QPixmap drawLoupeVPRect(int w, int h);
     void zoomCursor(const QModelIndex &idx,
                     QString src,
                     bool forceUpdate = false,
@@ -98,18 +96,20 @@ public slots:
     QModelIndex pageDownIndex(int fromRow);
 
     bool isCellVisible(int row);
-    void refreshThumb(QModelIndex idx, int role = Qt::EditRole);
-    void refreshThumbs();
+    void refreshIcon(QModelIndex idx, QString src);
+    void refreshIcons(QString src);
+    void forceFullRefresh(QString src);
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
                             int _labelFontSize, bool _showThumbLabels,
                             int _badgeSize, int _iconNumberSize);
 
     void sortThumbs(int sortColumn, bool isReverse);
-    void loupeRect(QRectF vp, qreal imA);
+    void loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN, bool refresh);
     void showLoupeRect(bool isVisible);
 
 private slots:
     void wheelStopped();
+    void applyKineticScroll();
 
 protected:
     void startDrag(Qt::DropActions) override;
@@ -128,6 +128,8 @@ protected:
     void leaveEvent(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     bool viewportEvent(QEvent *event) override;
+
+    // void scrollContentsBy(int dx, int dy) override;
 
 signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
@@ -166,6 +168,22 @@ private:
     // used when invert selection
     bool selectionInverted = false;
     QModelIndex newCurrentIndex;
+
+    // Custom kinetic scrolling
+    QTimer kineticScrollTimer;
+    qreal kineticVelocityX = 0;
+    qreal kineticVelocityY = 0;
+
+    // NEW: Track PEAK speed before liftoff
+    qreal peakVelocityX = 0;
+    qreal peakVelocityY = 0;
+    QElapsedTimer swipeRestTimer;
+
+    // 0.99 provides a long glide. (0.995 is massive)
+    qreal kineticFriction = 0.99;
+
+    qreal scrollAccumulatorX = 0;
+    qreal scrollAccumulatorY = 0;
 
     bool isDebug = false;     // set true/false in constructor
 };

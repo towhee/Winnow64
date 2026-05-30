@@ -8,8 +8,6 @@
 #include "Image/thumb.h"
 #include "Image/autonomousimage.h"
 #include "Cache/imagedecoder.h"
-#include "ui_helpfindduplicates.h"
-#include "ui_helppixeldelta.h"
 
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"

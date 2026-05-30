@@ -76,7 +76,8 @@ Q_NAMESPACE
         RowNumberColumn,
         NameColumn,
         FolderNameColumn,
-        MSToReadColumn,
+        NSThumb,
+        NSImage,
         PickColumn,
         IngestedColumn,
         LabelColumn,
@@ -84,6 +85,7 @@ Q_NAMESPACE
         SearchColumn,
         TypeColumn,
         VideoColumn,
+        SidecarColumn,
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,
@@ -96,7 +98,7 @@ Q_NAMESPACE
         FocusXColumn,
         FocusYColumn,
         GPSCoordColumn,
-        SizeColumn,
+        ByteSizeColumn,
         WidthColumn,
         HeightColumn,
         ModifiedColumn,
@@ -109,6 +111,7 @@ Q_NAMESPACE
         LoadMsecPerMpColumn,
         DimensionsColumn,
         AspectRatioColumn,
+        IconAspectRatioColumn,
         OrientationColumn,
         RotationColumn,
 
@@ -121,7 +124,6 @@ Q_NAMESPACE
         MetadataAttemptedColumn,
         MetadataLoadedColumn,
         IconLoadedColumn,
-        MissingThumbColumn,
         CompareColumn,
         // original values
         _RatingColumn,
@@ -166,7 +168,6 @@ Q_NAMESPACE
 
         OrientationOffsetColumn,
         RotationDegreesColumn,
-        IconSymbolColumn,
         ShootingInfoColumn,
         SearchTextColumn,
         ErrColumn,
@@ -213,16 +214,22 @@ Q_NAMESPACE
     extern QThread* guiThread;
 
     // flow
-    extern bool stop;
-    extern bool removingFolderFromDM;
-    extern bool removingRowsFromDM;
+    // extern bool stop;
+    // extern bool removingFolderFromDM;
+    // extern bool removingRowsFromDM;
+    extern std::atomic<bool> stop;
+    extern std::atomic<bool> removingFolderFromDM;
+    extern std::atomic<bool> removingRowsFromDM;
     extern bool isInitializing;
 
     // datamodel
-    extern bool allMetadataLoaded;
-    extern bool iconChunkLoaded;
-
-    extern int dmInstance;
+    // extern bool allMetadataLoaded;
+    // extern bool iconChunkLoaded;
+    // extern int dmInstance;
+    extern std::atomic<bool> isModifyingDatamodel;
+    extern std::atomic<bool> allMetadataLoaded;
+    extern std::atomic<bool> iconChunkLoaded;
+    extern std::atomic<int> dmInstance;
 
     extern bool useMyTiff;
     extern bool useMissingThumbs;
@@ -233,6 +240,8 @@ Q_NAMESPACE
     extern bool useImageCache;
     extern bool useImageView;
     extern bool useInfoView;
+    extern bool useDWCollapse;   // master switch for dock collapse/expand/solo mode
+    extern bool useDockTitleGraphic;   // master switch: show a graphic instead of text on dock tabs
     extern bool useMultimedia;
     extern bool useUpdateStatus ;
     extern bool useFilterView;      // not finished
@@ -243,18 +252,20 @@ Q_NAMESPACE
 
     extern QSettings *settings;
 
-    extern bool isTestLogger;
     extern bool isLogger;
     extern bool isFlowLogger;
-    extern bool isFlowLogger2;
-    extern bool showIssueInConsole;
-    extern bool isFileLogger;
-    extern bool isErrorLogger;
-    extern bool isIssueLogger;
-    extern bool sendLogToConsole;
-    extern bool showAllEvents;
+    extern bool sendLogToFile;
+    extern bool isRunByExtern;
     extern QFile logFile;
+
+    extern bool isIssueLogger;
+    extern bool showIssueInConsole;
     extern QFile issueLogFile;
+
+    extern bool sendLogToConsole;
+    extern bool FSLog;  // Focus Stack
+
+    extern bool showAllEvents;
     extern bool isDev;
     extern bool isRemote;
 
@@ -263,9 +274,23 @@ Q_NAMESPACE
 
 
     extern bool loadOnlyVisibleIcons;
-    extern quint64 availableMemoryMB;
+    extern std::atomic<quint64> availableMemoryMB;
     extern int winnowMemoryBeforeCacheMB;
     extern int metaCacheMB;
+
+    /* Memory-overrun guardrail.
+       memoryAbortMB: hard cap on the process's resident footprint (MB).
+                      When MetaRead's periodic check sees the footprint
+                      exceed this, it aborts the load and surfaces a
+                      dialog. Tunable; default 6000.
+       memoryOverrunFlag: latched true when the cap is breached so other
+                          subsystems (MetaRead readers, ImageCache,
+                          DataModel slots) can short-circuit cheaply
+                          without re-probing the OS. */
+    extern quint64 memoryAbortMB;
+    extern std::atomic<bool> memoryOverrunFlag;
+    quint64 processFootprintMB();
+    quint64 computeMemoryAbortMB(quint64 totalRamMB);
 
     struct WinScreen {
         QString adaptor;
@@ -325,8 +350,16 @@ Q_NAMESPACE
     extern int textShade;
     extern int backgroundShade;
     extern QString css;
+    // Semantic state stylesheets (not theme-bound). Set via setStyleSheet to
+    // signal widget state; for size-sensitive widgets use setFont() so size
+    // persists when the stylesheet is replaced.
+    extern QString cssError;        // red foreground - error / running / out-of-range
+    extern QString cssWarning;      // yellow foreground - warning
+    extern QString cssOk;           // green foreground - idle / success
+    extern QString cssInactive;     // gray foreground - inactive
 
-    extern bool isModifyingDatamodel;
+    // extern bool isModifyingDatamodel;
+    extern bool isFirstImageNewInstance;
     extern bool ignoreScrollSignal;
     extern bool resizingIcons;
     extern bool isSlideShow;
@@ -339,10 +372,12 @@ Q_NAMESPACE
     extern bool modifySourceFiles;
     extern bool backupBeforeModifying;
     extern bool autoAddMissingThumbnails;
-    extern bool useSidecar;
     extern bool renderVideoThumb;
     extern bool combineRawJpg;
     extern bool isFilter;
+
+    // focus stack
+    extern QStringList fsFusedPaths;
 
     // training
     extern bool isTraining;
@@ -396,10 +431,29 @@ Q_NAMESPACE
     extern IssueLog *issueLog;
     extern void newIssueLog();
     extern QMutex issueListMutex;
+
+    // Severity threshold — issues at or below this level are dropped before
+    // any allocation. Defaults to Info: Debug + Comment are filtered.
+    // Bumped temporarily via G::isVerboseIssues for diagnostic sessions.
+    extern int issueThreshold;
+    extern bool isVerboseIssues;
+
+    // Cap on G::issueList growth (ring buffer). The full record still goes
+    // to IssueLog::log() on disk; issueList is the in-memory tail.
+    extern int issueListMaxSize;
+
     extern void issue(QString type, QString msg = "", QString src = "",
                       int sfRow = -1, QString fPath = "");
 
-    extern int wait(int ms);
+    // Coalesce duplicate issues per (src, type, msg) — caller passes a
+    // hint, the function counts repeats and logs only first + summary.
+    extern void issueDedup(QString type, QString msg, QString src,
+                           int sfRow = -1, QString fPath = "");
+    extern QStringList issueDedupReport();
+    extern void issueDedupReset();
+    extern void issueBeginSession();
+
+    extern void wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);
     extern bool instanceClash(int instance, QString src);

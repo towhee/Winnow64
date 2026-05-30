@@ -2,6 +2,8 @@
 #define WIN_H
 
 #include <QDebug>
+#include <QList>
+#include <QUrl>
 
 #include <Windows.h>                    // req'd by all
 #include <Icm.h>                        // req'd by collectScreensInfo
@@ -20,8 +22,10 @@ class Win
 {
 public:
     static void availableMemory();
+    static quint64 totalMemoryMB();
     static void collectScreensInfo();
     static void setTitleBarColor(WId hWnd, QColor bgColor = QColor(50,50,50));
+    static void share(QList<QUrl> &urls, WId wId);   // system Share flyout (cf. Mac::share)
 };
 
 #endif // WIN_H

@@ -6,6 +6,7 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
+#include <atomic>
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
@@ -20,7 +21,6 @@ public:
     MetaRead(QObject *parent,
              DataModel *dm,
              Metadata *metadata,
-             // FrameDecoder *frameDecoder,
              ImageCache *imageCache);
     ~MetaRead() override;
 
@@ -32,9 +32,11 @@ public:
     void stop();
     void stopReaders();
     void syncInstance();
-    QString reportMetaCache();
     // void cleanupIcons();
     QString diagnostics();
+    QString reportHealthChecks();
+    QString reportLifetimeCounters();
+    void debugRunStatus();
 
     bool isDispatching;
     bool isIdle();
@@ -45,6 +47,14 @@ public:
 
     bool showProgressInStatusbar = true;
     bool isDebug = false;
+    bool autoLogStalls = false;          // dump diagnostics() on stall (throttled)
+    qint64 lastStallSnapshotMs = 0;      // last time we wrote a stall snapshot
+
+    // Lifetime counters since last initialize(). Diagnostic-only.
+    std::atomic<quint64> readsSuccessCount{0};
+    std::atomic<quint64> readsFailedCount{0};      // terminal failure (Meta/Icon/MetaIconFailed)
+    std::atomic<quint64> redosTriggeredCount{0};
+    std::atomic<quint64> dispatchCycleCount{0};
 
     void test();
 
@@ -62,7 +72,7 @@ signals:
     void setValSf(int sfRow, int sfCol, QVariant value,
                   int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void cleanupIcons();
+    void cleanupIcons(int instance);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void fileSelectionChange(QModelIndex sfIdx,
                              QModelIndex idx2 = QModelIndex(),
@@ -72,13 +82,23 @@ signals:
     void done();
     void dispatchIsFinished(QString src);
 
+    /* Emitted when the periodic memory probe in dispatch sees the
+       process footprint exceed G::memoryAbortMB. The receiving slot
+       (MW::onMemoryOverrun) shows a critical dialog and aborts the
+       in-flight folder load. footprintMB and capMB are reported only
+       so the dialog can show concrete numbers. */
+    void memoryOverrun(quint64 footprintMB, quint64 capMB);
+
 public slots:
     void initialize(QString src = "");
     void dispatchReaders();
     void dispatch(int id, bool isReturning);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
     void dispatchFinished(QString src);
+    void allFinished(QString src);
     void abortProcessing();
+    void setAwaitingDecode(int sfRow);
+    void onRowCached(int sfRow, bool isCached, int instance);
 
 private:
     void read(int startRow = 0, QString src = "");// decoder
@@ -97,7 +117,9 @@ private:
     QMutex mutex;
     QWaitCondition condition;
     bool abort = false;
-    bool idle = false;
+    std::atomic<int> awaitingDecodeRow{-1};   // sfRow we're waiting on; -1 = no wait
+    QElapsedTimer awaitingDecodeTimer;        // wall-clock safety bound
+    std::atomic<bool> idle{false};
     void setIdle();
     void setBusy();
 
@@ -109,9 +131,28 @@ private:
     bool allReadersCycling();
     bool noReadersCycling();
 
+    /* Per-cycle set of sf rows a Reader returned Status::Success for.
+       Consulted in needToRead to short-circuit the post-redo race where
+       the proxy's IconLoadedColumn hasn't yet been published by the main
+       thread for a row whose Reader already completed. Cleared on
+       setStartRow and initialize. */
+    QSet<int> readSuccessThisCycle;
+
+    /* sf rows currently dispatched to a Reader but not yet returned. Replaces
+       the old cross-thread write of MetadataReadingColumn on the proxy from
+       this worker thread (which mutated the QSortFilterProxyModel off the GUI
+       thread and queued a view dataChanged per dispatched row). Accessed only
+       on metaReadThread (needToRead/processReturningReader/setStartRow/
+       initialize), so no locking. Video rows are the exception: their reading
+       flag stays in the DataModel column because the GUI thread must clear it
+       when FrameDecoder reports the frame. Cleared alongside
+       readSuccessThisCycle. */
+    QSet<int> rowsReading;
+
     DataModel *dm;
     Metadata *metadata;
-    FrameDecoder *frameDecoder;     // decoder requires this
+    FrameDecoder *frameDecoder;     // shared across all Readers; owned here
+    QThread *frameDecoderThread;
     ImageCache *imageCache;
     Thumb *thumb;                   // decoder requires this
     bool fileSelectionChanged;
@@ -137,6 +178,7 @@ private:
     // bool isDispatching;
     bool success;
     bool isDone;
+    bool allFinishedFired;
     bool aIsDone;
     bool bIsDone;
     bool quitAfterTimeoutInitiated;
@@ -162,6 +204,17 @@ private:
     QElapsedTimer tAbort;
     QTimer *quitTimer;
     quint32 ms;
+
+    /* Memory-overrun probe state.
+       memoryProbeCounter: bumped each time dispatch runs; the actual
+                            task_info syscall fires only every Nth
+                            dispatch to keep probing essentially free.
+       memoryProbeTimer:   wall-clock backstop so very long pauses
+                            (e.g. UI thread stalled) still trigger the
+                            check. */
+    int memoryProbeCounter = 0;
+    QElapsedTimer memoryProbeTimer;
+    bool checkMemoryFootprint();
 };
 
 #endif // METAREAD_H

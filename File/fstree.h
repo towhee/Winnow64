@@ -3,7 +3,6 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Utilities/utilities.h"
-#include "ui_foldershelp.h"
 #include "HoverDelegate.h"
 
 #ifndef FSTREE_H
@@ -129,6 +128,7 @@ private slots:
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;       // debugging
     void mousePressEvent(QMouseEvent *event) override;       // debugging
     void mouseReleaseEvent(QMouseEvent *event) override;     // debugging
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -169,7 +169,7 @@ private:
     int  countSubdirsFast(const QString& root, int hardCap) const;
     void selectRecursively(QString folderPath, bool toggle = false);
     int maxExpandLimit = 100;
-    QColor overLimitColor = QColor(68,95,118);   // orange
+    QColor overLimitColor = QColor(255,165,0);   // orange
 
     bool isSubDirsOverLimit(const QString &root, int hardCap);
 
@@ -179,6 +179,8 @@ private:
     };
     QStringList selectVisibleBetween(const QModelIndex &idx1, const QModelIndex &idx2, bool recurse);
     QElapsedTimer rapidClick;
+    QTimer *pendingClickTimer = nullptr;
+    QString pendingClickPath;
 
     QModelIndex dndOrigSelection;
     QModelIndex prevCurrentIndex;

@@ -1,337 +1,339 @@
 #include "Main/mainwindow.h"
-#include "FocusStack/Pipeline/pipelinepmax.h"
+#include "FocusStack/fs.h"
+
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 
-/*
-Winnow64/FocusStack/
-
-    Petteri/
-        (untouched original sources)
-
-    PetteriModular/
-        Core/
-        Tasks/
-        IO/
-        Wrappers/
-        Namespace: FStack
-
-    Contracts/
-        IAlign.h
-        IFocus.h
-        IDepth.h
-        IFusion.h
-
-    Stages/
-        Align/
-            PetteriAlign.h/.cpp
-            ECCAlign.h/.cpp
-            NoOpAlign.h/.cpp
-        Fusion/
-            PetteriPMaxFusion.h/.cpp
-            WeightedPMax.h/.cpp
-            DepthAwareFusion.h/.cpp
-        Depth/
-            PetteriDepth.h/.cpp
-            ContrastDepth.h/.cpp
-        Focus/
-            PetteriFocus.h/.cpp
-            GradientFocus.h/.cpp
-
-    Pipeline/
-        PipelineBase.h/.cpp
-        PipelinePMax.h/.cpp
-        PipelineWavePMax.h/.cpp
-        PipelineDepthAware.h/.cpp
-        PipelineLegacyPetteri.h/.cpp
-
-    Mask/
-        maskoptions.h/.cpp
-        maskgenerator.h/.cpp
-        maskrefiner.h/.cpp
-        maskassessor.h/.cpp
-
-    Utils/
-        pyramid.h/.cpp
-        blend.h/.cpp
-        filehelpers.h/.cpp
-
-    Cache/
-        PyramidCache.h/.cpp
-        ImageCache.h/.cpp
-*/
-
-void MW::generateFocusStackFromSelection()
+void MW::focusStackFromSelection()
 {
+    QString srcFun = "MW::generateFocusStackFromSelection";
+    if (G::isLogger || G::FSLog) G::log(srcFun, fsMethod);
 
-    QString src = "MW::generateFocusStackFromSelection";
-    if (G::isLogger) G::log(src);
-
-    QStringList paths;
-    if (!dm->getSelection(paths) || paths.isEmpty()) {
+    QStringList inputPaths;
+    if (!dm->getSelectionOrPicks(inputPaths) || inputPaths.isEmpty()) {
         QString msg = "No images selected for focus stacking.";
-        updateStatus(false, msg, src);
+        updateStatus(false, msg, srcFun);
         return;
     }
 
-    QString method = "FusionPMaxBasic";
-    // QString method = "LegacyPetteri";
-    generateFocusStack(paths, method, src);
+    generateFocusStack(inputPaths, fsMethod, /*isLocal*/true);
+}
+
+void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
+{
+/*
+    Called locally from MW::focusStackFromSelection
+    Called externally from MW::handleStartupArgs
+
+    Rules:
+    - Build time-contiguous groups (gap >= 2000ms starts a new group)
+    - Only keep groups with 2+ items
+    - If a group has only 1 item:
+        * do NOT add it to groups
+        * remove that item from the FocusStack input folder (delete file)
+*/
+
+    const QString srcFun = "MW::groupFocusStacks";
+    if (G::isLogger) G::log(srcFun);
+
+    struct Item {
+        QString   path;
+        QDateTime created;
+    };
+
+    // --- Collect (path, created) and drop anything we can't resolve ----------
+    QVector<Item> items;
+    items.reserve(paths.size());
+
+    for (const QString &path : paths)
+    {
+        QDateTime t;
+
+        const int r = dm->rowFromPath(path);
+        if (r >= 0) {
+            t = dm->index(r, G::CreatedColumn).data().toDateTime();
+        } else {
+            ExifTool et;
+            const QString creation = et.readTag(path, "DateTimeOriginal");
+            et.close();
+            t = QDateTime::fromString(creation, "yyyy:MM:dd HH:mm:ss");
+        }
+
+        if (!t.isValid()) {
+            qDebug().noquote() << srcFun << "Skipping (invalid Created):" << path;
+            continue;
+        }
+
+        items.push_back({path, t});
+    }
+
+    if (items.isEmpty()) {
+        updateStatus(false, "No valid images (Created date missing).", srcFun);
+        return;
+    }
+
+    // --- Sort by creation time so stacks become contiguous -------------------
+    std::sort(items.begin(), items.end(), [](const Item &a, const Item &b) {
+        if (a.created == b.created) return a.path < b.path;
+        return a.created < b.created;
+    });
+
+    // --- Group into stacks: new stack if gap >= 2000 ms ----------------------
+    static constexpr qint64 groupGapMs = 2000;  // >= 2 seconds => new group
+
+    auto finalizeCurrent = [&](QStringList &current)
+    {
+        if (current.size() >= 2) {
+            groups.push_back(current);
+        }
+        current.clear();
+    };
+
+    QStringList current;
+    current.reserve(items.size());
+
+    QDateTime prevT;
+    for (const Item &it : items)
+    {
+        if (!prevT.isValid()) {
+            current << it.path;
+            prevT = it.created;
+            continue;
+        }
+
+        const qint64 gapMs = prevT.msecsTo(it.created);
+        if (gapMs >= groupGapMs) {
+            finalizeCurrent(current);
+        }
+
+        current << it.path;
+        prevT = it.created;
+    }
+
+    // finalize last group
+    finalizeCurrent(current);
+
+    if(false) return;
+
+    QString msg;
+    for (int gi = 0; gi < groups.size(); ++gi) {
+        msg = "FocusStack Group " + QString::number(gi + 1);
+        if (G::isRunByExtern) Utilities::log(srcFun, msg);
+        // qDebug().noquote() << "---- FocusStack Group" << (gi + 1) << "----";
+        for (const QString &p : groups[gi]) {
+            const int r = dm->rowFromPath(p);
+            const QDateTime t = (r >= 0)
+                                    ? dm->index(r, G::CreatedColumn).data().toDateTime()
+                                    : QDateTime();
+
+            const QString hhmmsszzz = t.isValid()
+                                          ? t.time().toString("HH:mm:ss:zzz")
+                                          : QString("??:??:??:???");
+
+            // qDebug().noquote() << " " << p << " [" << hhmmsszzz << "]";
+            msg = hhmmsszzz + " " + p;
+        }
+    }
 }
 
 void MW::generateFocusStack(const QStringList paths,
-                            const QString method,
-                            const QString source)
+                            QString method,
+                            const bool isLocal)
 {
-    if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
+/*
+    - Create worker thread with class instantiation fs.
+    - Initiate fs
+    - Finish fs code
+    - Start worker thread
+
+    Called locally from MW::focusStackFromSelection()
+    Called remotely from MW::handleStartupArgs() from Lightroom
+
+    Folder structure:
+
+    remoteFolder            Source stack images (any file format), srcFolder
+        inputFolder         "FocusStack" if remote, srcFolder if local
+            grpFolder       Working folder for each group
+                align       Aligned color pngs
+                depth       Depth map and diagnostics
+                fusion      Fused results when testing
+
+    inputFolder contains the input focus stack images (tiff or png)
+    srcFolder is where to save the fused result image
+        - if local, srcFolder = inputFolder
+        - if remote, srcFolder = inputFolder parent = Lightroom folder
+*/
     QString srcFun = "MW::generateFocusStack";
+    if (G::isLogger || G::FSLog) G::log(srcFun, "method = " + method);
 
-    bool isLocal = (source == "MW::generateFocusStackFromSelection");
+    G::popup->showPopup("Focus stacking initiated", 5000);
 
-    // Options
-    // clean (send all project folders to the trash)
-    bool isClean = false;       // send all project folders to the trash
-    bool isRedoAlign = false;        //
+    // --------------------------------------------------------------------
+    // Create worker thread + FS fs object
+    // --------------------------------------------------------------------
+    fsThread = new QThread(this);
+    // QThread *fsThread = new QThread(this);
+    fsPipeline = new FS();
+    fsPipeline->moveToThread(fsThread);
+    // local req'd for lamda
+    FS *fs = fsPipeline.data();
+
+    // When the thread starts → run the FS pipeline
+    connect(fsThread, &QThread::started, fs, [this, fs]() // Capture 'this' instead of 'fsThread'
+            {
+                fs->run();
+                QMetaObject::invokeMethod(fsThread, "quit", Qt::QueuedConnection);
+            });
+
+    // Abort
+    connect(this, &MW::abortFocusStack, fs, &FS::requestAbort, Qt::DirectConnection);
+
+    // Status update
+    connect(fs, &FS::updateStatus, this, &MW::updateStatus);
+
+    // Progress update
+    connect(fs, &FS::progress, this, [this](int current, int total) {
+            this->cacheProgressBar->updateFocusStackProgress(current, total, Qt::darkYellow);
+    }, Qt::QueuedConnection);
+
+    // Use Winnow to decode and return a cv::Mat
+    connect(fs, &FS::requestImage, this, &MW::matFromQImage, Qt::BlockingQueuedConnection);
+
+    // cleanup when finished
+    connect(fsThread, &QThread::finished, fs, &QObject::deleteLater);
+    connect(fsThread, &QThread::finished, fsThread,   &QObject::deleteLater);
+
+    // --------------------------------------------------------------------
+    // Initialize fs
+    // --------------------------------------------------------------------
 
     // Source images folder (used after pipeline finishes)
     QFileInfo info(paths.first());
-    const QString srcFolder = info.absolutePath();
+    const QString inputFolderPath = info.absolutePath();
+    QString srcFolderPath;
+    // Source images location (ie when sourced from lightroom)
+    if (isLocal) srcFolderPath = inputFolderPath;
+    else {
+        // get parent of inputFolder
+        QFileInfo fi(inputFolderPath);
+        srcFolderPath = fi.dir().absolutePath();
+    }
 
-    // Create Thread + Pipeline
-    QThread *thread = new QThread(this);
-    PipelinePMax *pipeline = new PipelinePMax();   // no parent; lives in thread
-    pipeline->moveToThread(thread);
+    if (G::FSLog) G::log(srcFun, "srcFolder = " + srcFolderPath);
+    if (G::FSLog) G::log(srcFun, "isLocal = " + QVariant(isLocal).toString());
 
-    // Start pipeline when thread begins
-    connect(thread, &QThread::started, pipeline, [pipeline, paths, isRedoAlign]() {
-        pipeline->setInput(paths, isRedoAlign);
-        pipeline->run();      // executes inside worker thread
-    });
+    // if (!G::isRory)
+        method = "DMap";
+    // if (!G::isRory)
+        fsRemoveTemp = true;
 
-    // Pipeline status → UI
-    connect(pipeline, &PipelinePMax::updateStatus,
-            this, &MW::updateStatus, Qt::QueuedConnection);
+    fs->o.method = method;
+    fs->o.isLocal = isLocal;
+    fs->o.enableOpenCL = true;
+    fs->o.removeTemp = fsRemoveTemp;
 
-    connect(pipeline, &PipelinePMax::progress,
-            this, [this](int current, int total)
-            {
-                this->cacheProgressBar->updateUpperProgress(current, total, Qt::darkYellow);
-            }, Qt::QueuedConnection);
+    fs->srcFolderPath = srcFolderPath;
 
-    // Pipeline finished → Handle output
-    connect(pipeline, &PipelinePMax::finished,
-        this, [=](bool ok, const QString &outputFolder)
-        {
-            QString msg = ok
-                ? QString("PMax pipeline finished.\nOutput folder: %1").arg(outputFolder)
-                : QString("PMax pipeline failed.");
-            updateStatus(!ok, msg, srcFun);
+    // Group multiple stacks
+    groupFocusStacks(fs->groups, paths);
 
-            if (ok)
-            {
-                // The resulting fused image file
-                QString fusedPath = pipeline->fusionOutputPath();
+    // --------------------------------------------------------------------
+    // Finished
+    // --------------------------------------------------------------------
 
-                // Copy metadata from first source image file
-                ExifTool et;
-                et.setOverWrite(true);
-                et.copyAll(paths.first(), fusedPath);
-                et.close();
+    connect(fs, &FS::finished, this, [=](bool success) {
+        QString msg;
+        cacheProgressBar->clearFocusStackProgress();
 
-                // Copy fused to source images folder
-                QFileInfo fi(fusedPath);
-                QString destPath = srcFolder + "/" + fi.fileName();
-                QFile::copy(fusedPath, destPath);
+        if (!success) {
+            // Handle Abort or Failure
+            msg = "Focus stacking was aborted or failed.";
+            if (G::FSLog) G::log(srcFun, msg);
+            updateStatus(false, msg);
+            G::popup->showPopup(msg, 5000);
+            G::issue("Error", msg, "MW::generateFocusStack");
+            return;
+        }
 
-                // Insert into datamodel
-                dm->insert(destPath);
+        // Handle Success
+        msg = "Focus stacking completed";
+        if (G::FSLog) G::log(srcFun, msg);
+        updateStatus(false, msg);
+        G::popup->showPopup(msg, 5000);
 
-                if (!isLocal)
-                {
-                    //  Delete source images
-                    for (const QString &p : paths)
-                        QFile(p).moveToTrash();
+        // Evaluate we have a result path
+        if (G::fsFusedPaths.isEmpty()) {
+            msg = "Focus stacking failed: No output path found.";
+            if (G::FSLog) G::log(srcFun, msg);
+            updateStatus(false, msg);
+            G::issue("Error", msg, "MW::generateFocusStack");
+            return;
+        }
 
-                    folderAndFileSelectionChange(fusedPath, srcFun);
-
-                    // Wait for metadata to finish loading (max 3000ms)
-                    const int timeoutMs = 3000;
-                    QElapsedTimer t;
-                    t.start();
-
-                    while (!G::allMetadataLoaded && t.elapsed() < timeoutMs)
-                    {
-                        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-                        QThread::msleep(50);
-                    }
-                }
-
-                sel->select(destPath);
-                waitUntilMetadataLoaded(5000, srcFun);
-                setColorClassForRow(dm->currentSfRow, "Red");
-                embedThumbnails();
-
-                // Update source folder image counts, filters ...
-                // refresh();
+        // Update UI with the new file
+        QString resultPath = G::fsFusedPaths.first();
+        if (isLocal) {
+            dm->insert(resultPath);
+            if (dm->contains(resultPath)) {
+                sel->select(resultPath);
             }
+            // Clear the internal pixmap caches so the delegate is forced
+            // to fetch the newly generated icon from the DataModel.
+            if (thumbView) {
+                thumbView->refreshIcons("MW::generateFocusStack");
+                thumbView->scrollToRow(dm->currentSfRow, "MW::generateFocusStack");
+            }
+            if (gridView && gridView->isVisible()) {
+                gridView->refreshIcons("MW::generateFocusStack");
+                gridView->scrollToRow(dm->currentSfRow, "MW::generateFocusStack");
+            }
+        } else {
+            folderAndFileSelectionChange(resultPath, "FS::threadFinished");
+        }
 
-            // Cleanup after pipeline ends
-            if (isClean) pipeline->clean();
+        fsTree->updateCount();
+        bookmarks->updateCount();
+    }, Qt::QueuedConnection);
 
-            thread->quit();
-            thread->wait();
-            pipeline->deleteLater();
-            thread->deleteLater();
-        },
-        Qt::QueuedConnection);
+    if (fsThread->isRunning()) return;
 
-    // Start the worker thread
-    thread->start();
+
+    // --------------------------------------------------------------------
+    // Start
+    // --------------------------------------------------------------------
+
+    fsThread->start();
+}
+
+void MW::matFromQImage(QString fPath, cv::Mat &mat)
+{
+    G::log("MW::matFromQImage", fPath);
+
+    QFileInfo fileInfo(fPath);
+    ImageMetadata *m;
+
+    // get image metadata
+    int row = dm->proxyRowFromPath(fPath);
+    metadata->loadImageMetadata(fileInfo, row, dm->instance, true, true, false, true, "FindDuplicatesDlg::preview");
+    m = &metadata->m;
+    if (m->video) return;
+
+    // load QImage with QImage::Format_RGB32
+    ImageDecoder imageDecoder(0, dm, metadata);
+    QImage src;
+    imageDecoder.decodeIndependent(src, metadata, *m);
+
+    // Convert to Format_RGB888 for 3-channel or RGBA8888 for 4-channel
+    // Avoid RGB32 as OpenCV expects 3 or 4 channels specifically
+    QImage swapped = src.convertToFormat(QImage::Format_RGBA8888);
+
+    // Deep copy into the output Mat
+    mat = cv::Mat(swapped.height(), swapped.width(), CV_8UC4,
+                  (void*)swapped.bits(), swapped.bytesPerLine()).clone();
+
+    // OpenCV expects BGRA, not RGBA. Swap the channels:
+    cv::cvtColor(mat, mat, cv::COLOR_RGBA2BGRA);
 }
 
 
-// {
-//     if (G::isLogger) G::log("MW::generateFocusStack", "paths " + method);
-//     QString srcFun = "MW::generateFocusStack";
-
-//     bool isLocal = (source == "MW::generateFocusStackFromSelection");
-
-//     // Thread + Pipeline object
-//     QThread *thread = new QThread;
-//     PipelinePMax *pipeline = new PipelinePMax();
-//     pipeline->moveToThread(thread);
-
-//     // Start pipeline when thread starts
-//     connect(thread, &QThread::started, this, [=]() {
-//         pipeline->setInput(paths);
-//         pipeline->run();       // synchronous inside worker thread
-//     });
-
-//     // Pipeline status → MW status
-//     connect(pipeline, &PipelinePMax::updateStatus,
-//             this, &MW::updateStatus,
-//             Qt::QueuedConnection);
-
-//     connect(pipeline, &PipelinePMax::progress,
-//         this, [this](int current, int total) {
-//             this->cacheProgressBar->updateUpperProgress(current, total, Qt::blue);
-//         }, Qt::QueuedConnection);
-
-//     // Pipeline finished → handle result
-//     connect(pipeline, &PipelinePMax::finished,
-//             this,
-//             [=](bool ok, const QString &outputFolder)
-//             {
-//                 QString msg = ok
-//                                   ? QString("PMax pipeline finished.\nOutput folder: %1")
-//                                         .arg(outputFolder)
-//                                   : QString("PMax pipeline failed.");
-
-//                 updateStatus(!ok, msg, srcFun);
-
-//                 if (ok) {
-//                     // Fusion output file is in: pipeline->fusionOutputPath()
-//                     QString fused = pipeline->fusionOutputPath();
-
-//                     dm->insert(fused);
-
-//                     if (!isLocal) {
-//                         // Delete originals
-//                         for (const QString &p : paths)
-//                             QFile(p).moveToTrash();
-
-//                         folderAndFileSelectionChange(fused, srcFun);
-
-//                         // Wait for metadata (3000ms max)
-//                         const int timeoutMs = 3000;
-//                         QElapsedTimer t;
-//                         t.start();
-//                         while (!G::allMetadataLoaded &&
-//                                t.elapsed() < timeoutMs) {
-//                             QCoreApplication::processEvents(
-//                                 QEventLoop::AllEvents, 50);
-//                             QThread::msleep(50);
-//                         }
-//                     }
-
-//                     sel->select(fused);
-//                 }
-
-//                 // Cleanup thread safely
-//                 thread->quit();
-//                 thread->wait();
-//                 pipeline->deleteLater();
-//                 thread->deleteLater();
-//             });
-
-//     // Start the thread
-//     thread->start();
-// }
-//*/
-
-/* PIPELINE: Petteri PMax Original (Default)
-    {
-        qDebug() << "Using legacy Petteri FocusStackWorker";
-        QThread *thread = new QThread;
-        FocusStackWorker *worker = new FocusStackWorker(paths);
-        worker->moveToThread(thread);
-
-        connect(worker, &FocusStackWorker::updateStatus,
-                this, &MW::updateStatus, Qt::QueuedConnection);
-
-        connect(worker, &FocusStackWorker::updateProgress,
-                cacheProgressBar, &ProgressBar::updateUpperProgress, Qt::QueuedConnection);
-
-        connect(worker, &FocusStackWorker::clearProgress,
-                cacheProgressBar, &ProgressBar::clearUpperProgress, Qt::QueuedConnection);
-
-        connect(thread, &QThread::started, worker, &FocusStackWorker::process);
-
-        connect(worker, &FocusStackWorker::finished, this,
-                [=](bool ok, const QString &output, const QString &depthmap)
-                {
-                    QString msg = ok
-                                      ? QString("FocusStack finished successfully. Output: %1 DepthMap: %2")
-                                            .arg(output, depthmap)
-                                      : "FocusStack failed.";
-
-                    updateStatus(false, msg, srcFun);
-
-                    if (ok) {
-                        dm->insert(output);
-                        if (!isLocal) {
-                            for (const QString &path : paths) {
-                                QFile(path).moveToTrash();
-                            }
-
-                            folderAndFileSelectionChange(output,"MW::generateFocusStack");
-
-                            // wait for folder to be fully loaded
-                            const int timeoutMs = 3000;
-                            QElapsedTimer timer;
-                            timer.start();
-                            while (!G::allMetadataLoaded && timer.elapsed() < timeoutMs) {
-                                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-                                QThread::msleep(50);
-                            }
-                        }
-                        sel->select(output);
-                        QTimer::singleShot(50, this, [=]() {
-                            setColorClassForRow(dm->currentSfRow, "Red");
-                        });
-                    }
-
-                    // cleanup
-                    thread->quit();
-                    thread->wait();
-                    worker->deleteLater();
-                    thread->deleteLater();
-                });
-
-        QString msg = "Starting FocusStack background task (%1 images)...";
-        QString src = "MW::generateFocusStack";
-        updateStatus(false, msg, src);
-
-        thread->start();
-    }
-    */
-// }

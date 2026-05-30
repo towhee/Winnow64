@@ -6,7 +6,9 @@
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #endif
-//#include <bitset>
+#ifdef Q_OS_MAC
+#include <sys/stat.h>
+#endif
 
 class Utilities
 {
@@ -26,6 +28,11 @@ public:
     static QString replaceFileName(QString srcPath, QString newName);
     static QString replaceSuffix(QString srcPath, QString newSuffix);
     static QStringList getSidecarPaths(QString srcPath);
+    static quint32 subFolderTreeCount(QString rootFolderPath);
+    static quint32 subFolderTree(const QString &rootFolderPath, QStringList &outSubdirs);
+
+    // File status
+    static bool isLocked(const QString& fPath);
 
     // Get unique
     static void uniqueFolderPath(QString &path, QString delimiter = "_");
@@ -39,12 +46,20 @@ public:
     static QString inputText(QString title, QString description,
                              QStringList doNotUse, QString input = "");
     static void log(QString function, QString msg);
+    static void clearLog();
+
     static void setOpacity(QWidget *widget, qreal opacity);
 
     // Format
     static QString formatMemory(qulonglong bytes, int precision = 1, bool useBinary = true);
     static QString enquote(QString &s);
     static QString centeredRptHdr(QChar padChar, QString title, int width = 180);
+    // Format an integer with locale thousands separators, falling back to
+    // `*`-fill (width - 1 chars) if the formatted value would exceed the
+    // column width — used by tabular reports to keep adjacent columns aligned
+    // when a value is anomalously large.
+    static QString fitNumber(qint64 v, int width);
+    static QString fitNumber(quint64 v, int width);
 
     // Window
     static bool isScreenValid(const QScreen *screen);

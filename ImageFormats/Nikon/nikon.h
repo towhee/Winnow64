@@ -9,10 +9,6 @@
 #include "Metadata/xmp.h"
 #include "Metadata/gps.h"
 #include "ImageFormats/Jpeg/jpeg.h"
-#include "Metadata/metareport.h"
-// req'd to report embedded jpeg
-#include "Metadata/iptc.h"
-#include "Metadata/ExifTool.h"  // req'd for some Nikon lenses not in lookup
 
 class Nikon : public QObject
 {

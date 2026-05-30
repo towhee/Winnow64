@@ -8,7 +8,6 @@
 #include "Metadata/ifd.h"
 #include "Metadata/xmp.h"
 #include "ImageFormats/Jpeg/jpeg.h"
-#include "Metadata/metareport.h"
 
 class Panasonic : public QObject
 {

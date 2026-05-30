@@ -1,5 +1,6 @@
 #include "File/fstree.h"
 #include "Main/global.h"
+#include "Utilities/htmlwindow.h"
 #include "Main/mainwindow.h"   // or whatever your MW header is actually called
 
 extern QStringList mountedDrives;
@@ -547,7 +548,7 @@ FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
     connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
             this->viewport()->update();});
 
-    isDebug = true;
+    isDebug = false;
 }
 
 FSTree::~FSTree() {}
@@ -694,7 +695,9 @@ void FSTree::scrollToCurrent()
 /*
 
 */
-    if (G::isLogger) G::log("FSTree::scrollToCurrent");
+    if (G::isLogger)
+        G::log("FSTree::scrollToCurrent");
+
     QModelIndex idx = getCurrentIndex();
 
     if (!idx.isValid()) return;
@@ -780,6 +783,7 @@ void FSTree::markFolderOverLimit(const QString& folderPath, bool on)
     if (!src.isValid()) return;
 
     fsModel->setData(src, on, FSModel::OverLimitRole);  // highlight flag
+    delegate->setOverLimitTextColor(overLimitColor);
     const QModelIndex idx = fsFilter->mapFromSource(src);
     if (idx.isValid()) viewport()->update(visualRect(idx));
     fsModel->isMaxRecurse = true;
@@ -1135,6 +1139,11 @@ void FSTree::wheelStopped()
     //qDebug() << "ImageView::wheelStopped";
 }
 
+void FSTree::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    // do not pass on
+}
+
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
 /*
@@ -1155,15 +1164,48 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
     // ignore rapid mouse press if still processing MW::stop
     qint64 ms = rapidClick.restart();
+
+    QModelIndex index = indexAt(event->pos());
+    if (!index.isValid()) return;
+
+    // Ignore if click in decoration/indentation area (left of the item's visual rect)
+    if (event->pos().x() < visualRect(index).left()) return;
+
     if (ms < 500) {
+        // Queue this click so the last-clicked folder always loads
+        QString dPath = index.sibling(index.row(), 0).data(QFileSystemModel::FilePathRole).toString();
+        if (!dPath.isEmpty()) {
+            pendingClickPath = dPath;
+            if (pendingClickTimer) {
+                pendingClickTimer->stop();
+                pendingClickTimer->deleteLater();
+            }
+            pendingClickTimer = new QTimer(this);
+            pendingClickTimer->setSingleShot(true);
+            connect(pendingClickTimer, &QTimer::timeout, this, [this]() {
+                if (!pendingClickPath.isEmpty() && !G::stop && !G::isModifyingDatamodel) {
+                    emit folderSelectionChange(pendingClickPath, G::FolderOp::Add, true, false);
+                }
+                pendingClickPath.clear();
+                pendingClickTimer = nullptr;
+            });
+            pendingClickTimer->start(500);
+        }
         event->ignore();
-        qApp->beep();
-        G::popup->showPopup("Rapid clicks are verboten");
         return;
     }
 
+    // Cancel any pending queued click — this real click supersedes it
+    if (pendingClickTimer) {
+        pendingClickTimer->stop();
+        pendingClickTimer->deleteLater();
+        pendingClickTimer = nullptr;
+        pendingClickPath.clear();
+    }
+
     if (G::stop || G::isModifyingDatamodel) {
-        G::popup->showPopup("Busy, try new folder in a sec.", 1000);
+        // qDebug() << "FSTree::mousePressEvent" << "Busy, try new folder in a sec."
+        //             "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
         return;
     }
 
@@ -1179,38 +1221,10 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    // qDebug() << "FSTree::mousePressEvent" << "Processing mouse click."
+    //             "  ms =" << ms << "G::stop =" << G::stop << "G::isModifyingDatamodel =" << G::isModifyingDatamodel;
+
     static QModelIndex prevIdx = QModelIndex();
-
-    QModelIndex index = indexAt(event->pos());
-    if (!index.isValid()) return;
-
-    // decoration clicked
-    QRect rect = visualRect(index);
-    int level = 0;
-    QModelIndex current = index;
-    while (current.parent().isValid()) {
-        current = current.parent();
-        ++level;
-    }
-    int indentationOffset = level * indentation();
-    int decorationWidth = style()->pixelMetric(QStyle::PM_IndicatorWidth);
-    QRect decorationRect = QRect(indentationOffset, rect.top(), decorationWidth, rect.height());
-    /*
-    qDebug() << "FSTree::mousePressEvent"
-             << "level =" << level
-             << "rect =" << rect
-             << "decorationRect =" << decorationRect
-             << "pos =" << event->pos()
-             << "decorationRect.contains(event->pos()) ="
-             << decorationRect.contains(event->pos())
-             << "index.data(FSModel::OverLimitRole).toBool() ="
-             << index.data(FSModel::OverLimitRole).toBool()
-        ;
-    // */
-    if (decorationRect.contains(event->pos())) {
-        QTreeView::mousePressEvent(event);
-        return;
-    }
 
     // context menu is handled in MW::eventFilter
     if (event->button() == Qt::RightButton) {
@@ -1261,7 +1275,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         QString step = "Selecting folders.\n";
         QString escapeClause = "\nPress \"Esc\" to stop.";
         mw->setCentralMessage(step + escapeClause);
-        qApp->processEvents();
+        // qApp->processEvents();
         // fsModel->maxRecursedRoots.clear();
         clearFolderOverLimit();
         G::allMetadataLoaded = false;
@@ -1331,7 +1345,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         if (G::isLogger || G::isFlowLogger)
             G::log("FSTree::mousePressEvent", "Modifiers: Shift, Select All Between");
 
-        foreach(QString path, foldersToAdd) {
+        foreach (QString path, foldersToAdd) {
             resetDataModel = false;
             emit folderSelectionChange(path, G::FolderOp::Add, resetDataModel, isRecurse);
             QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
@@ -1521,7 +1535,7 @@ void FSTree::dropEvent(QDropEvent *event)
     // iterate files
     for (int i = 0; i < count; i++) {
         G::popup->setProgress(i+1);
-        if (G::useProcessEvents) qApp->processEvents();        // processEvents is necessary
+        if (G::useProcessEvents) qApp->processEvents(); // processEvents is necessary
         if (G::stopCopyingFiles) {
             break;
         }
@@ -1801,11 +1815,8 @@ void FSTree::test()
 void FSTree::howThisWorks()
 {
     if (G::isLogger) G::log("FSTree::howThisWorks");
-
-    QDialog *dlg = new QDialog;
-    Ui::FoldersHelpDlg *ui = new Ui::FoldersHelpDlg;
-    ui->setupUi(dlg);
-    dlg->setWindowTitle("Folders Panel Help");
-    dlg->setStyleSheet(G::css);
-    dlg->exec();
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - How folders work",
+                   ":/Docs/foldershelp.html",
+                   QSize(700, 600), r, window());
 }

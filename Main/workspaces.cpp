@@ -211,6 +211,23 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         restoreGeometry(w.geometry);
         restoreState(w.state);
     }
+    else {
+        /* Maximised workspace.  restoreGeometry's maximised handling is
+           unreliable (especially on macOS), so place the window on the
+           workspace's saved screen explicitly, then maximise.  A maximised
+           window ignores setGeometry, so drop to normal first.  The dock
+           layout (sizes, tabbing, floating, positions) lives in w.state and
+           must be restored or a multi-dock arrangement is lost. */
+        QScreen *target = QGuiApplication::screens().value(w.screenNumber);
+        if (target && QGuiApplication::screens().indexOf(screen()) != w.screenNumber) {
+            showNormal();
+            setGeometry(target->availableGeometry());
+        }
+        if (!isMaximized()) showMaximized();
+        restoreState(w.state);
+        // second restoreState req'd for going from docked to floating docks
+        restoreState(w.state);
+    }
 
     // recover selection
     QItemSelection selection;
@@ -235,6 +252,7 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
     wsd.screen = screen();
+    wsd.screenNumber = QGuiApplication::screens().indexOf(screen());
     wsd.geometryRect = geometry();
     wsd.isFullScreen = isFullScreen();
     wsd.isMaximised = isMaximized();
@@ -679,7 +697,7 @@ void MW::saveWorkspaces()
         // State
         settings->setValue("geometry", ws.geometry);
         settings->setValue("state", ws.state);
-        settings->setValue("screenNumber", QGuiApplication::screens().indexOf(screen()));
+        settings->setValue("screenNumber", ws.screenNumber);
         settings->setValue("geometryRect", ws.geometryRect);                        // need?
         settings->setValue("isFullScreen", ws.isFullScreen);                        // need?
         settings->setValue("isMaximised", ws.isMaximised);                          // need?
@@ -706,6 +724,7 @@ void MW::saveWorkspaces()
         settings->setValue("thumbPadding", ws.thumbPadding);
         settings->setValue("thumbWidth", ws.thumbWidth);
         settings->setValue("thumbHeight", ws.thumbHeight);
+        settings->setValue("labelFontSize", ws.labelFontSize);
         settings->setValue("showThumbLabels", ws.showThumbLabels);
 
         // GridView

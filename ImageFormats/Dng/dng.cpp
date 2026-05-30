@@ -1,5 +1,6 @@
 #include "dng.h"
 #include "Main/global.h"
+#include "Metadata/xmp.h"
 
 DNG::DNG()
 {
@@ -102,6 +103,11 @@ bool DNG::parse(MetadataParameters &p,
         ? m.height = ifd->ifdDataHash.value(257).tagValue
         : m.height = 0;
 
+    // IFD0: orientation
+    (ifd->ifdDataHash.contains(274))
+        ? m.orientation = ifd->ifdDataHash.value(274).tagValue
+        : m.orientation = 0;
+
     p.offset = 0;
     if (!m.width || !m.height) jpeg->getDimensions(p, m);
 
@@ -144,7 +150,6 @@ bool DNG::parse(MetadataParameters &p,
                 // is it a JPG
                 quint32 offset = ifd->ifdDataHash.value(273).tagValue;
                 p.file.seek(offset);
-//                quint32 x = get2(file.read(2));
                 if (u.get16(p.file.read(2), true) != 0xFFD8) break;  // order = 4949 so reverse
                 // yes it is a JPG
                 jpgInfo.offset = offset;
@@ -170,7 +175,7 @@ bool DNG::parse(MetadataParameters &p,
                 }
                 count++;
             }
-            // check embedded raw file to determine true imagea dimensions as the preview
+            // check embedded raw file to determine true image dimensions as the preview
             // might be smaller (for reporting only)
             else {
                 if (ifd->ifdDataHash.contains(256) && ifd->ifdDataHash.contains(257)) {
@@ -324,6 +329,7 @@ bool DNG::parse(MetadataParameters &p,
     if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
+            p.xmpModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
             m.rating = xmp.getItem("Rating");
             m.label = xmp.getItem("Label");
             m.title = xmp.getItem("title");

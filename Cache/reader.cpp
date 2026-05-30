@@ -1,34 +1,33 @@
 #include "reader.h"
 #include "Main/global.h"
 
-Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
+Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
+               FrameDecoder *frameDecoder): QObject(nullptr)
 {
     this->dm = dm;
     metadata = new Metadata;
     this->imageCache = imageCache;
+    this->frameDecoder = frameDecoder;  // shared instance owned by MetaRead
     threadId = id;
     instance = 0;
 
+    // Switched from BlockingQueuedConnection to QueuedConnection:
+    // BQC forced every metadata/icon emission to wait on the UI thread, so with 14
+    // readers × 158 images rapid folder-clicks flooded the UI event queue and froze
+    // the beachball. Both slots already reject stale emissions via the instance
+    // guard (DataModel::addMetadataForItem line ~1658, DataModel::setIcon1 line ~2397),
+    // so non-blocking delivery is safe.
     connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem,
-            Qt::BlockingQueuedConnection);
+            Qt::QueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon1,
-            Qt::BlockingQueuedConnection);
+            Qt::QueuedConnection);
 
-    thumb = new Thumb(dm);
+    thumb = new Thumb(dm, frameDecoder);
 
-    frameDecoder = new FrameDecoder();
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    /* FrameDecoder→DataModel signals are connected once in MetaRead. Here we
+       only wire this Reader's videoFrameDecode emission into the shared queue. */
     connect(this, &Reader::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
-    frameDecoderthread = new QThread;
-    frameDecoder->moveToThread(frameDecoderthread);
-    frameDecoderthread->start();
-
-    tiffThumbDecoder = new TiffThumbDecoder();
-    connect(tiffThumbDecoder, &TiffThumbDecoder::setIcon, dm, &DataModel::setIcon1);
-    connect(this, &Reader::tiffMissingThumbDecode, tiffThumbDecoder, &TiffThumbDecoder::addToQueue);
-    tiffThumbDecoderThread = new QThread;
-    tiffThumbDecoder->moveToThread(tiffThumbDecoderThread);
-    tiffThumbDecoderThread->start();
+    connect(this, &Reader::setValDm, dm, &DataModel::setValDm);
 
     isDebug = false;
     debugLog = false;
@@ -36,10 +35,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache): QObject(nullptr)
 
 Reader::~Reader()
 {
-    frameDecoderthread->quit();
-    frameDecoderthread->wait();
-    tiffThumbDecoderThread->quit();
-    tiffThumbDecoderThread->wait();
+    // frameDecoder is shared and owned by MetaRead — do not delete here.
 }
 
 void Reader::stop()
@@ -71,6 +67,9 @@ void Reader::abortProcessing()
     // qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
 
     thumb->abortProcessing();
+    // FrameDecoder is shared; flushing it from a single Reader would clobber
+    // other Readers' pending video work. MetaRead::abortProcessing handles
+    // the global FrameDecoder::stop.
 
     // Tell worker to stop accepting new work
     QMutexLocker lock(&mutex);
@@ -81,16 +80,36 @@ void Reader::abortProcessing()
     while (pending) {
         const qint64 remaining = deadline.remainingTime();
         if (remaining <= 0) {
-            // timed out
+            // timed out — keep abort=true so the reader exits at next check
             break;
         }
         if (!pendingCondition.wait(&mutex, int(remaining))) {
-            abort = false;
-            break;                               // true if finished during wait
+            // wait returned false = deadline expired; keep abort=true
+            break;
         }
     }
 
     status = Status::Aborted;
+}
+
+void Reader::signalAbort()
+{
+    thumb->abortProcessing();
+    // FrameDecoder::stop is driven globally by MetaRead — see abortProcessing.
+    QMutexLocker lock(&mutex);
+    abort = true;
+}
+
+bool Reader::isPending()
+{
+    QMutexLocker lock(&mutex);
+    return pending;
+}
+
+QString Reader::fPathSnapshot() const
+{
+    QMutexLocker lock(&mutex);
+    return fPath;
 }
 
 void Reader::setPending(bool v)
@@ -146,7 +165,11 @@ bool Reader::readMetadata()
     offsetThumb = m->offsetThumb;
     lengthThumb = m->lengthThumb;
 
-    if (!abort) emit addToDatamodel(metadata->m, "Reader::readMetadata");
+    if (!abort) {
+        // Backpressure: bump pending counter; DataModel::addMetadataForItem decrements.
+        dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
+        emit addToDatamodel(metadata->m, "Reader::readMetadata");
+    }
     if (abort) {status = Status::Aborted; return false;}
 
     #ifdef TIMER
@@ -156,7 +179,7 @@ bool Reader::readMetadata()
     if (!isMetaLoaded) {
         status = Status::MetaFailed;
         QString msg = "Failed to load metadata.";
-        G::issue("Warning", msg, "Reader::readMetadata", dmRow, fPath);
+        G::issueDedup("Warning", msg, "Reader::readMetadata", dmRow, fPath);
         if (isDebug)
         {
             qDebug().noquote()
@@ -173,6 +196,10 @@ bool Reader::readMetadata()
 
 void Reader::readIcon()
 {
+/*
+    if isVideo emit videoFrameDecode
+    else thumb->loadThumb
+*/
     QString fun = "Reader::readIcon";
     if (G::isLogger) G::log(fun, fPath);
     if (isDebug)
@@ -184,6 +211,9 @@ void Reader::readIcon()
         << (fPath.isEmpty() ? "EMPTY PATH" : fPath)
             ;
     }
+
+    QElapsedTimer tIcon;
+    tIcon.start();
 
     if (fPath.isEmpty()) {
         qDebug().noquote()
@@ -198,16 +228,16 @@ void Reader::readIcon()
     QString msg;
     QImage image;
 
-    // tiff missing embedded thumbnail
+    /* tiff missing embedded thumbnail
     if (m->ext == "tif" && m->isEmbeddedThumbMissing) {
         emit tiffMissingThumbDecode(fPath, dmRow, instance, m->offsetFull);
         return;
-    }
+    } // */
 
     // video
     if (isVideo) {
         if (G::renderVideoThumb) {
-            // /*
+            /*
             qDebug() << "Reader::readIcon"
                      << fPath
                      << " instance =" << instance
@@ -226,7 +256,8 @@ void Reader::readIcon()
     if (abort) {status = Status::Aborted; return;}
 
     // get thumbnail or err.png or generic video
-    loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance, "MetaRead::readIcon");
+    loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance, *m,
+                                  "MetaRead::readIcon");
 
     if (isDebug)
     {
@@ -239,10 +270,6 @@ void Reader::readIcon()
         ;
     }
 
-    #ifdef TIMER
-    t4 = t.restart();
-    #endif
-
     if (abort) {status = Status::Aborted; return;}
 
     if (loadedIcon) {
@@ -253,17 +280,28 @@ void Reader::readIcon()
             << "id =" << QString::number(threadId).leftJustified(2, ' ')
             << "row =" << QString::number(dmRow).leftJustified(4, ' ')
             << "Emitting setIcon" << "thumb = " << pm << "instance =" << instance;
+        // Backpressure: bump pending counter; DataModel::setIcon1 decrements.
+        dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
         emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
+
+        // qint64 msToDecode = tIcon.elapsed();
+        qint64 msToDecode = tIcon.nsecsElapsed()/1000;
+        // qDebug() << fun << "instance =" << instance << "dmRow =" << dmRow << "microsec =" << msToDecode;
+        emit setValDm(dmRow, G::NSThumb, msToDecode, instance,
+                      "Reader::readIcon", Qt::EditRole,
+                      int(Qt::AlignRight | Qt::AlignVCenter));
+
         if (!im.isNull()) return;
     }
 
     // failed to load icon, load error icon
     QImage im = QImage(":/images/error_image256.png");
+    dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
     emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
     if (status == Status::MetaFailed) status = Status::MetaIconFailed;
     else status = Status::IconFailed;
     msg = "Failed to load thumbnail.";
-    G::issue("Warning", msg, "Reader::readIcon", dmRow, fPath);
+    G::issueDedup("Warning", msg, "Reader::readIcon", dmRow, fPath);
     if (isDebug)
     {
         qDebug().noquote()
@@ -282,12 +320,30 @@ void Reader::read(int dmRow, QString filePath, int instance,
     QString need = "needMeta = "  + QVariant(needMeta).toString() +
                    " needIcon = " + QVariant(needIcon).toString() + " ";
     if (G::isLogger) G::log(fun, need + filePath);
+    if (isDebug)
+        qDebug().noquote() << fun << "instance =" << instance << "dmRow =" << dmRow << need;
     if (filePath.isEmpty()) {
         qWarning().noquote() << fun << "EMPTY FILEPATH";
     }
+
+    t.restart();
+
+    // If a folder change is in progress or memory cap was breached,
+    // don't start a new read.
+    if (G::stop || dm->abort
+        || G::memoryOverrunFlag.load(std::memory_order_relaxed))
+    {
+        setPending(false);
+        // still cycle the reader so MetaRead::dispatch can wind down.
+        if (!abort) emit done(threadId, true);
+        return;
+    }
     abort = false;
     this->dmRow = dmRow;
-    fPath = filePath;
+    {
+        QMutexLocker lock(&mutex);
+        fPath = filePath;
+    }
     this->instance = instance;
     isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
     status = Status::Success;
@@ -328,7 +384,9 @@ void Reader::read(int dmRow, QString filePath, int instance,
         qDebug().noquote()
         << fun.leftJustified(col0Width)
         << "id =" << QString::number(threadId).leftJustified(2, ' ')
-        << "row =" << QString::number(dmRow).leftJustified(4, ' ')
+        << "row =" << QString::number(dmRow).leftJustified(5, ' ')
+        << "ms =" << t.elapsed()
+        << fPath
             ;
     }
 }

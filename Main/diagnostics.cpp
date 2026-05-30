@@ -1,6 +1,15 @@
 #include "Main/mainwindow.h"
 #include "ui_metadatareport.h"
 
+#if defined(Q_OS_WIN)
+#ifndef NOMINMAX
+#define NOMINMAX        // keep windows.h min/max macros from breaking std::min/max
+#endif
+#include <windows.h>
+#include <mapi.h>
+#include <vector>
+#endif
+
 void MW::fitDiagnostics(QDialog *dlg, QTextBrowser *textBrowser)
 {
     if (G::isLogger) G::log("MW::fitDiagnostics");
@@ -51,7 +60,7 @@ void MW::reportState(QString title)
         << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
         << "\nG::iconChunkLoaded                        " << G::iconChunkLoaded
         << "\nG::stop                                " << G::stop
-        << "\nimageView->isFirstImageNewInstance     " << imageView->isFirstImageNewInstance
+        << "\nG::isFirstImageNewInstance     " << G::isFirstImageNewInstance
 
 //        << "\nisDragDrop                             " << isDragDrop
 //        << "\nG::ignoreScrollSignal                  " << G::ignoreScrollSignal
@@ -198,14 +207,14 @@ QString MW::diagnostics()
     rpt << "\n";
 
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
-    rpt << "\n" << "G::stop = " << G::s(G::stop);
+    rpt << "\n" << "G::stop = " << G::s((bool)G::stop);
     rpt << "\n";
-    rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
-    rpt << "\n" << "G::iconChunkLoaded = " << G::s(G::iconChunkLoaded);
+    rpt << "\n" << "G::allMetadataLoaded = " << G::s((bool)G::allMetadataLoaded);
+    rpt << "\n" << "G::iconChunkLoaded = " << G::s((bool)G::iconChunkLoaded);
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abort);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);
-    rpt << "\n" << "dm->instance = " << G::s(dm->instance);
-    rpt << "\n" << "G::dmInstance = " << G::s(G::dmInstance);
+    rpt << "\n" << "dm->instance = " << G::s((int)dm->instance);
+    rpt << "\n" << "G::dmInstance = " << G::s((int)G::dmInstance);
     rpt << "\n";
 
     rpt << "\n" << "G::isRory = " << G::s(G::isRory);
@@ -245,7 +254,7 @@ QString MW::diagnostics()
     rpt << "\n" << "G::wheelSpinning = " << G::s(G::wheelSpinning);
     rpt << "\n";
     rpt << "\n" << "G::loadOnlyVisibleIcons = " << G::s(G::loadOnlyVisibleIcons);
-    rpt << "\n" << "G::availableMemoryMB = " << G::s(G::availableMemoryMB);
+    rpt << "\n" << "G::availableMemoryMB = " << G::s(G::availableMemoryMB.load());
     rpt << "\n" << "G::winnowMemoryBeforeCacheMB = " << G::s(G::winnowMemoryBeforeCacheMB);
     rpt << "\n" << "G::metaCacheMB = " << G::s(G::metaCacheMB);
     rpt << "\n";
@@ -257,7 +266,7 @@ QString MW::diagnostics()
     rpt << "\n" << "G::minIconSize = " << G::s(G::minIconSize);
     rpt << "\n" << "G::maxIconChunk = " << G::s(G::maxIconChunk);
     rpt << "\n";
-    rpt << "\n" << "G::isModifyingDatamodel = " << G::s(G::isModifyingDatamodel);
+    rpt << "\n" << "G::isModifyingDatamodel = " << G::s((bool)G::isModifyingDatamodel);
     rpt << "\n" << "G::ignoreScrollSignal = " << G::s(G::ignoreScrollSignal);
     rpt << "\n" << "G::resizingIcons = " << G::s(G::resizingIcons);
     rpt << "\n" << "G::isSlideShow = " << G::s(G::isSlideShow);
@@ -272,7 +281,6 @@ QString MW::diagnostics()
     rpt << "\n" << "G::modifySourceFiles = " << G::s(G::modifySourceFiles);
     rpt << "\n" << "G::backupBeforeModifying = " << G::s(G::backupBeforeModifying);
     rpt << "\n" << "G::autoAddMissingThumbnails = " << G::s(G::autoAddMissingThumbnails);
-    rpt << "\n" << "G::useSidecar = " << G::s(G::useSidecar);
     rpt << "\n" << "G::renderVideoThumb = " << G::s(G::renderVideoThumb);
     rpt << "\n" << "G::isFilter = " << G::s(G::isFilter);
     rpt << "\n" << "G::isRemote = " << G::s(G::isRemote);
@@ -373,8 +381,8 @@ QString MW::diagnostics()
     rpt << "\n\n" ;
     rpt << "\n" << "STYLESHEET css:";
     int n = 140;
-    for (int i = 0; i < css.length(); i += n) {
-        rpt << "\n" << css.mid(i, n);
+    for (int i = 0; i < G::css.length(); i += n) {
+        rpt << "\n" << G::css.mid(i, n);
     }
     rpt << "\n";
     return reportString;
@@ -396,6 +404,136 @@ void MW::diagnosticsMetadata() {
 void MW::diagnosticsXMP() {} // dummy for now
 void MW::diagnosticsMetadataCache() {diagnosticsReport(metaRead->diagnostics(), "Winnow Diagnostics: MetaRead");}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCache->diagnostics(), "Winnow Diagnostics: ImageCache");}
+
+void MW::diagnosticsMemory()
+{
+    if (G::isLogger) G::log("MW::diagnosticsMemory");
+
+    // Walk the DataModel splitting icon bytes from the rest. Icons are stored
+    // as QIcon at column 0 with Qt::DecorationRole (DataModel::setIcon /
+    // setIcon1). All other roles and columns are treated as metadata.
+    qint64 iconBytes = 0;
+    qint64 metaBytes = 0;
+    int    iconRowCount = 0;
+    const int rows = dm->rowCount();
+    const int cols = dm->columnCount();
+    QHash<int, QByteArray> roles = dm->roleNames();
+    QList<int> roleKeys = roles.keys();
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            QModelIndex dmIdx = dm->index(row, col);
+            for (int role : roleKeys) {
+                QVariant data = dm->data(dmIdx, role);
+                if (data.isNull()) continue;
+                quint64 b = Utilities::qvariantBytes(data);
+                if (role == Qt::DecorationRole) {
+                    iconBytes += b;
+                    if (col == 0 && b > 0) ++iconRowCount;
+                } else {
+                    metaBytes += b;
+                }
+            }
+        }
+    }
+
+    // Refresh OS-side memory stats so the report is current, not from startup.
+#ifdef Q_OS_MAC
+    Mac::availableMemory();
+#elif defined(Q_OS_WIN)
+    Win::availableMemory();
+#endif
+
+    quint64 totalRamMB = 0;
+    int pressureLevel = -1;
+#ifdef Q_OS_MAC
+    totalRamMB = static_cast<quint64>(Mac::totalMemoryMB());
+    pressureLevel = Mac::memoryPressureLevel();
+#elif defined(Q_OS_WIN)
+    totalRamMB = Win::totalMemoryMB();
+#endif
+
+    const quint64 mb           = 1024ull * 1024ull;
+    const quint64 iconMB       = static_cast<quint64>(iconBytes) / mb;
+    const quint64 metaMB       = static_cast<quint64>(metaBytes) / mb;
+    const quint64 imageCacheMB = imageCache ? imageCache->getImCacheSize() : 0;
+    const quint64 footprintMB  = G::processFootprintMB();
+    const quint64 accountedMB  = iconMB + metaMB + imageCacheMB;
+    const qint64  otherMB      = static_cast<qint64>(footprintMB) - static_cast<qint64>(accountedMB);
+
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "Memory Diagnostics", 80);
+    rpt << "\n";
+
+    rpt << "\n" << "Host";
+    rpt << "\n" << "  Total physical RAM      = " << totalRamMB << " MB";
+    rpt << "\n" << "  Available memory        = " << G::availableMemoryMB << " MB";
+    if (pressureLevel >= 0) {
+        const char *pStr = pressureLevel == 0 ? "Normal"
+                         : pressureLevel == 1 ? "Warning"
+                                              : "Critical";
+        rpt << "\n" << "  Memory pressure         = " << pStr
+            << " (" << pressureLevel << ")";
+    }
+
+    rpt << "\n";
+    rpt << "\n" << "Process";
+    rpt << "\n" << "  phys_footprint          = " << footprintMB << " MB";
+    rpt << "\n" << "  memoryAbortMB cap       = " << G::memoryAbortMB << " MB";
+    rpt << "\n" << "  memoryOverrunFlag       = "
+        << (G::memoryOverrunFlag.load(std::memory_order_relaxed) ? "TRUE" : "false");
+    if (G::memoryAbortMB > 0) {
+        const double pct = 100.0 * footprintMB / G::memoryAbortMB;
+        rpt << "\n" << "  Footprint vs cap        = "
+            << QString::number(pct, 'f', 1) << "%";
+    }
+    if (totalRamMB > 0) {
+        const double pct = 100.0 * footprintMB / totalRamMB;
+        rpt << "\n" << "  Footprint vs total RAM  = "
+            << QString::number(pct, 'f', 1) << "%";
+    }
+
+    rpt << "\n";
+    rpt << "\n" << "Breakdown (MB)";
+    rpt << "\n" << "  DataModel (excl. icons) = " << metaMB;
+    rpt << "\n" << "  DataModel icons         = " << iconMB
+        << "  (" << iconRowCount << " rows)";
+    rpt << "\n" << "  ImageCache              = " << imageCacheMB;
+    rpt << "\n" << "  Sum accounted           = " << accountedMB;
+    rpt << "\n" << "  Other (footprint - acc) = " << otherMB
+        << "   <- Qt widgets, decoders, OS overhead, etc.";
+
+    rpt << "\n";
+    rpt << "\n" << "DataModel";
+    rpt << "\n" << "  Rows                    = " << rows;
+    rpt << "\n" << "  Columns                 = " << cols;
+    rpt << "\n" << "  bytesUsed (running)     = " << dm->bytesUsed
+        << " (" << (dm->bytesUsed / mb) << " MB)";
+    rpt << "\n" << "  metaCacheMB estimate    = " << G::metaCacheMB << " MB";
+    rpt << "\n" << "  iconChunkSize           = " << dm->iconChunkSize;
+    rpt << "\n" << "  queuedReaderEvents      = "
+        << dm->queuedReaderEvents.load(std::memory_order_relaxed);
+
+    rpt << "\n";
+    rpt << "\n" << "ImageCache";
+    if (imageCache) {
+        rpt << "\n" << "  currMB                  = " << imageCacheMB << " MB";
+        rpt << "\n" << "  maxMB                   = " << imageCache->getMaxMB() << " MB";
+        rpt << "\n" << "  maxMBCeiling            = " << imageCache->getMaxMBCeiling() << " MB";
+        rpt << "\n" << "  autoMaxMB               = "
+            << (imageCache->getAutoMaxMB() ? "true" : "false");
+        rpt << "\n" << "  autoStrategy            = " << imageCache->getAutoStrategy();
+        rpt << "\n" << "  isRunning               = "
+            << (imageCache->isRunning() ? "true" : "false");
+    } else {
+        rpt << "\n" << "  (not constructed)";
+    }
+    rpt << "\n";
+
+    diagnosticsReport(reportString, "Winnow Diagnostics: Memory");
+}
+
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Diagnostics: Data Model");}
 void MW::diagnosticsDataModelAllRows() {diagnosticsReport(dm->diagnosticsAllRows(), "Winnow Diagnostics: Data Model All Rows");}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}
@@ -409,25 +547,15 @@ void MW::diagnosticsZoom() {} // dummy for now
 
 void MW::diagnosticsReport(QString reportString, QString title)
 {
-    if (G::isLogger) G::log("MW::diagnosticsReport");
-    QDialog *dlg = new QDialog;
-    dlg->setStyleSheet(G::css);
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
-    Ui::metadataReporttDlg md;
-    md.setupUi(dlg);
-    md.textBrowser->setStyleSheet(G::css);
-    QFont courier("Courier", 12);
-    md.textBrowser->setFont(courier);
-    md.textBrowser->setText(reportString);
-    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    QFontMetrics metrics(md.textBrowser->font());
-    md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
-    fitDiagnostics(dlg, md.textBrowser);
-    dlg->setWindowTitle(title);
+    ReportDialog *dlg = new ReportDialog(this);
+    dlg->setReport(title, reportString);
+
+    // fitDiagnostics still works because we provided a browser() getter
+    fitDiagnostics(dlg, dlg->browser());
+
     openWindows.append(dlg);
     dlg->show();
+    dlg->setFocus();
 }
 
 void MW::allIssuesReport()
@@ -435,46 +563,173 @@ void MW::allIssuesReport()
 /*
     Show the issue log, which is stored in the file G::issueLogFile
 */
-    if (G::isLogger) G::log("MW::allIssuesReport");
-    QDialog *dlg = new QDialog;
-    dlg->setStyleSheet(G::css);
-    Ui::metadataReporttDlg md;
-    md.setupUi(dlg);
-    dlg->setWindowTitle("Winnow Issue Log");
-    md.textBrowser->setStyleSheet(G::css);
-    md.textBrowser->setFontFamily("Monaco");
-    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    md.textBrowser->setText(G::issueLog->logText());
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
-    fitDiagnostics(dlg, md.textBrowser);
-    openWindows.append(dlg);
-    dlg->show();
+    diagnosticsReport(G::issueLog->logText(), "Winnow Issues");
 }
 
-void MW::SessionIssuesReport()
+void MW::sessionIssuesReport()
+{
+/*
+    Show the issues from the current session (from when Winnow was opened).
+    Appends a "repeated" summary from issueDedup so collapsed floods still surface.
+*/
+    if (G::isLogger) G::log("MW::SessionIssuesReport");
+    QString body = G::issueList.join("\n");
+    QStringList dedup = G::issueDedupReport();
+    if (!dedup.isEmpty()) {
+        body += "\n\n----- Repeated (collapsed) issues -----\n";
+        body += dedup.join("\n");
+    }
+    diagnosticsReport(body, "Winnow Session Issues");
+}
+
+void MW::logReport()
 {
 /*
     Show the issues from the current session (from when Winnow was opened)
 */
-    if (G::isLogger) G::log("MW::SessionIssuesReport");
-    QDialog *dlg = new QDialog;
-    dlg->setStyleSheet(G::css);
-    Ui::metadataReporttDlg md;
-    md.setupUi(dlg);
-    dlg->setWindowTitle("Winnow Session Issues");
-    md.textBrowser->setStyleSheet(G::css);
-    md.textBrowser->setFontFamily("Monaco");
-    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-    QString content = G::issueList.join("\n");
-    md.textBrowser->setText(content);
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(dlg->winId(), G::backgroundColor);
-    #endif
+    if (G::isLogger) G::log("MW::logReport");
 
-    fitDiagnostics(dlg, md.textBrowser);
-    openWindows.append(dlg);
-    dlg->show();
+    QString content;
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log/WinnowLog.txt";
+    QFile logFile(path);
+
+    qDebug() << "MW::logReport  file.exists =" << logFile.exists() << logFile.isOpen();
+    if (logFile.isOpen()) logFile.close();
+
+    if (logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&logFile);
+        content = in.readAll();
+        logFile.close();
+        if (content.length())
+            diagnosticsReport(content, "Winnow Log");
+        else
+            G::popup->showPopup("The log is empty.", 2000);
+    } else {
+        G::popup->showPopup("Failed to open log.", 2000);
+    }
+
 }
 
+void MW::mailLogs()
+{
+/*
+    Compose an email to the Winnow developer with the two log files attached:
+    WinnowIssueLog.txt and WinnowLog.txt, both located in
+    QStandardPaths::AppDataLocation + "/Log".
+
+    A mailto: URL cannot attach files (clients ignore the attachment
+    parameter), so each platform uses a native mechanism for real attachments:
+        - macOS:   drive Mail.app via AppleScript.
+        - Windows: Simple MAPI (MAPISendMail) attaches to the default client.
+    On any other platform (or if MAPI is unavailable) we fall back to revealing
+    the log folder and opening a pre-filled mailto: that asks the user to attach
+    the files manually.
+*/
+    if (G::isLogger) G::log("MW::mailLogs");
+
+    const QString to = "winnowimageviewer@outlook.com";
+    const QString subject = "Winnow log files";
+    const QString logDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+
+    // Only attach logs that actually exist.
+    QStringList logPaths;
+    for (const QString &name : {QStringLiteral("WinnowIssueLog.txt"), QStringLiteral("WinnowLog.txt")}) {
+        QString path = logDir + "/" + name;
+        if (QFile::exists(path)) logPaths << path;
+    }
+    if (logPaths.isEmpty()) {
+        G::popup->showPopup("No log files were found in " + logDir, 3000);
+        return;
+    }
+
+#if defined(Q_OS_MAC)
+    QString body = "The Winnow log files are attached. Please add a note describing the issue. Thanks. Rory";
+    QStringList args;
+    args << "-e" << "tell application \"Mail\"";
+    args << "-e" << "set newMessage to make new outgoing message with properties "
+                    "{subject:\"" + subject + "\", content:\"" + body + "\", visible:true}";
+    args << "-e" << "tell newMessage";
+    args << "-e" << "make new to recipient at end of to recipients with properties "
+                    "{address:\"" + to + "\"}";
+    for (const QString &path : logPaths) {
+        args << "-e" << "make new attachment with properties {file name:(POSIX file \"" + path +
+                        "\")} at after the last paragraph of content";
+    }
+    args << "-e" << "end tell";
+    args << "-e" << "activate";
+    args << "-e" << "end tell";
+
+    if (QProcess::execute("/usr/bin/osascript", args) != 0)
+        G::popup->showPopup("Unable to open Mail to send the log files.", 3000);
+#else
+    // Reveal the log folder and open a pre-filled email asking the user to
+    // attach the files manually. Used as the fallback on platforms without a
+    // native attach path, or when MAPI is unavailable on Windows.
+    auto revealAndMailto = [&] {
+        revealInFileBrowser(logDir);
+        QString body = "Please attach the log files shown in the file browser ("
+                       + QStringList(logPaths).replaceInStrings(logDir + "/", "").join(" and ")
+                       + ") to this email, along with a note describing the issue. Thanks. Rory";
+        QDesktopServices::openUrl(QUrl("mailto:" + to + "?subject=" + subject + "&body=" + body,
+                                       QUrl::TolerantMode));
+    };
+
+  #if defined(Q_OS_WIN)
+    // Simple MAPI attaches the logs to a new message in the default mail
+    // client. mapi32.dll is loaded dynamically so the build needs no extra
+    // link dependency; if it is missing we fall back to the manual path.
+    typedef ULONG (PASCAL *LPMAPISENDMAIL)(LHANDLE, ULONG_PTR, lpMapiMessage, FLAGS, ULONG);
+    HMODULE hMapi = LoadLibraryA("MAPI32.DLL");
+    LPMAPISENDMAIL mapiSendMail = hMapi
+        ? reinterpret_cast<LPMAPISENDMAIL>(GetProcAddress(hMapi, "MAPISendMail"))
+        : nullptr;
+
+    if (!mapiSendMail) {
+        if (hMapi) FreeLibrary(hMapi);
+        revealAndMailto();
+        return;
+    }
+
+    // Simple MAPI is ANSI; keep every char buffer alive until the call returns.
+    QByteArray toAddrBuf = ("SMTP:" + to).toLocal8Bit();
+    QByteArray toNameBuf = to.toLocal8Bit();
+    QByteArray subjectBuf = subject.toLocal8Bit();
+    QByteArray bodyBuf = "The Winnow log files are attached. Please add a note "
+                         "describing the issue. Thanks. Rory";
+
+    MapiRecipDesc recip = {};
+    recip.ulRecipClass = MAPI_TO;
+    recip.lpszName = toNameBuf.data();
+    recip.lpszAddress = toAddrBuf.data();
+
+    std::vector<QByteArray> pathBufs, nameBufs;
+    pathBufs.reserve(logPaths.size());          // reserve so data() stays valid
+    nameBufs.reserve(logPaths.size());
+    std::vector<MapiFileDesc> files(logPaths.size());
+    for (int i = 0; i < logPaths.size(); ++i) {
+        pathBufs.push_back(QDir::toNativeSeparators(logPaths.at(i)).toLocal8Bit());
+        nameBufs.push_back(QFileInfo(logPaths.at(i)).fileName().toLocal8Bit());
+        files[i].nPosition = static_cast<ULONG>(-1);   // attach, not inline
+        files[i].lpszPathName = pathBufs.back().data();
+        files[i].lpszFileName = nameBufs.back().data();
+    }
+
+    MapiMessage msg = {};
+    msg.lpszSubject = subjectBuf.data();
+    msg.lpszNoteText = bodyBuf.data();
+    msg.nRecipCount = 1;
+    msg.lpRecips = &recip;
+    msg.nFileCount = static_cast<ULONG>(files.size());
+    msg.lpFiles = files.data();
+
+    ULONG rc = mapiSendMail(0, reinterpret_cast<ULONG_PTR>(winId()), &msg,
+                            MAPI_LOGON_UI | MAPI_DIALOG, 0);
+    FreeLibrary(hMapi);
+
+    if (rc != SUCCESS_SUCCESS && rc != MAPI_E_USER_ABORT)
+        G::popup->showPopup("Unable to open the mail client to send the log files.", 3000);
+  #else
+    revealAndMailto();
+  #endif
+#endif
+}

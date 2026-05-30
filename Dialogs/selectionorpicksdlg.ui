@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>629</width>
-    <height>302</height>
+    <width>450</width>
+    <height>312</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;There are pick(s) and more than one item selected.&lt;br/&gt;&lt;/p&gt;&lt;p&gt;PICKS: Picked items are shown in green boundary in the thumbnails. You pick items using the pick shortcuts (` or p) or from the edit menu. Picks are used in the ingest process, but can also be used for any other process that operates on multiple images.&lt;br/&gt;&lt;/p&gt;&lt;p&gt;SELECTION: Selected items are shown with a white boundary in the thumbnails. You select multiple items by holding the shift or ctrl/cmd keys while selecting thumbnails. Selections are not used in ingest because it is easy to accidently clear a selection, which can be very frustrating.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;There are both pick(s) and selected images.  Which do you want to use?&lt;br/&gt;&lt;/p&gt;&lt;p&gt;PICKS: Picked items are shown in green boundary in the thumbnails. You pick items using the pick shortcuts (` or p) or from the edit menu. Picks are used in the ingest process, but can also be used for any other process that operates on multiple images.&lt;br/&gt;&lt;/p&gt;&lt;p&gt;SELECTION: Selected items are shown with a white boundary in the thumbnails. You select multiple items by holding the shift or ctrl/cmd keys while selecting thumbnails. Selections are not used in ingest because it is easy to accidently clear a selection, which can be very frustrating.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="wordWrap">
         <bool>true</bool>
@@ -56,6 +56,18 @@
        </item>
        <item>
         <widget class="QPushButton" name="usePicksBtn">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>32</height>
+          </size>
+         </property>
          <property name="text">
           <string>Use Picks</string>
          </property>
@@ -63,6 +75,18 @@
        </item>
        <item>
         <widget class="QPushButton" name="useSelectionBtn">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>32</height>
+          </size>
+         </property>
          <property name="text">
           <string>Use Selection</string>
          </property>
@@ -70,6 +94,18 @@
        </item>
        <item>
         <widget class="QPushButton" name="cancelBtn">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>32</height>
+          </size>
+         </property>
          <property name="text">
           <string>Cancel</string>
          </property>

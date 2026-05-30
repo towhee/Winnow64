@@ -13,10 +13,9 @@ AboutDlg::AboutDlg(QWidget *parent,
     ui->qtVersion->setText(qtVersion);
     ui->version->setText(version);
     ui->compileDate->setText(compileDate);
-    // once a stylesheet has been inherited can only change stuff like font size via stylesheet
-    QString fontPointSize = QString::number(static_cast<int>(G::strFontSize.toInt() * G::ptToPx));
-    QString styleText = "QLabel {font-size: " + fontPointSize + "px;}";
-    ui->title->setStyleSheet(styleText);
+    QFont titleFont = ui->title->font();
+    titleFont.setPixelSize(static_cast<int>(G::strFontSize.toInt() * G::ptToPx));
+    ui->title->setFont(titleFont);
     adjustSize();
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(winId(), G::backgroundColor);

@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QMessageBox>
 #include <QWaitCondition>           // req'd for removeFolder process
+#include <atomic>
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
 #include "Cache/framedecoder.h"
@@ -36,7 +37,7 @@ signals:
 private:
     Filters *filters;
     mutable bool finished;
-    bool suspendFiltering;
+    std::atomic<bool> suspendFiltering;
 };
 
 class DataModel : public QStandardItemModel
@@ -59,7 +60,7 @@ public:
     bool contains(QString &path);
     void find(QString text);
     ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
-    bool isPick();
+    bool isAnyPick();
     void clearPicks();
     void remove(QString fPath);
     int insert(QString fPath);
@@ -74,12 +75,12 @@ public:
     QString diagnostics();
     QString diagnosticsForCurrentRow();
     QString diagnosticsAllRows();
+    QString reportHealthChecks();
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
-    bool missingThumbnails();
     bool isDimensions(int sfRow);
-    bool subFolderImagesLoaded = false;
+    bool subFolderImagesLoaded = true;
     bool isMetadataAttempted(int sfRow);
     bool isMetadataLoaded(int sfRow);
     // bool isAllMetadataAttempted();
@@ -87,7 +88,7 @@ public:
     QList<int> metadataNotLoaded();
     int iconCount();
     void clearAllIcons();
-    void clearIconsOutsideChunkRange();
+    void clearIconsOutsideChunkRange(int instance);
     bool isAllIconsLoaded();
     // bool isAllIconChunkLoaded(int first, int last);
     bool iconLoaded(int sfRow, int instance);
@@ -99,8 +100,7 @@ public:
     int nextPick();
     int prevPick();
     int nearestPick();
-    bool getSelection(QStringList &list);
-    QStringList getSelectionOrPicks();
+    bool getSelectionOrPicks(QStringList &list);
     bool isSelected(int row);
     void saveSelection();
     void restoreSelection();
@@ -108,15 +108,17 @@ public:
 
     void removeFolder(const QString &folderPath);
 
-    QMutex mutex;
-    QReadWriteLock rwLock;
+    QMutex dmMutex;
+    QReadWriteLock fPathRowLock;
 
     bool isProcessingFolders = false;
 
     SortFilter *sf;
     QItemSelectionModel *selectionModel;
-    // all folders in the datamodel
+    // all folders in the datamodel.  folderSet mirrors folderList for O(1)
+    // membership tests (folderList preserves insertion order).
     QStringList folderList;
+    QSet<QString> folderSet;
     QHash<QString, int> folderImageCount;
     QDir::SortFlags thumbsSortFlags;
 
@@ -128,8 +130,33 @@ public:
     void fPathRowRemove(const QString &path);
     void fPathRowClear();
 
+    // track large recursive subfolder trees
+    quint32 subFolderTreeCount = 0;
+    quint32 subFolderTreeCounter = 0;
+
     // current status
-    int instance = 0;                   // each new load of DataModel increments the instance
+    // int instance = 0;                   // each new load of DataModel increments the instance
+    std::atomic<int> instance;
+
+    /* Backpressure counter for queued Reader → DataModel events.
+       Reader increments before each emit of addToDatamodel/setIcon1/setIcon
+       (Cache/reader.cpp). DataModel decrements at the end of the matching
+       slot (addMetadataForItem, setIcon1, setIcon, setIconFromVideoFrame).
+       MetaRead::dispatch reads it to gate further reader dispatches when
+       the GUI thread is falling behind, avoiding unbounded queue growth
+       on folders that produce events faster than they can be consumed. */
+    std::atomic<int> queuedReaderEvents{0};
+
+    /* Running counts maintained in DataModel::setData so the "is the load
+       complete?" checks are O(1) instead of O(rows) per row. Previously
+       addMetadataForItem rescanned every row (O(N²) over a folder load) and
+       setIcon1 rescanned the whole icon chunk on every icon — the dominant
+       GUI-thread cost on large folders. Reset in clearDataModel(), recomputed
+       by recountLoadFlags() after structural row removals. */
+    std::atomic<int> metadataAttemptedCount{0};
+    std::atomic<int> iconLoadedCount{0};
+    std::atomic<int> videoRowCount{0};
+
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString firstFolderPathWithImages;
     QString currentFilePath;            // used in caching to update image cache
@@ -187,8 +214,14 @@ signals:
     void updateStatus(bool keepBase, QString s, QString source);
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
 
+    /* Emitted when any DataModel hot path observes the process footprint
+       exceeding G::memoryAbortMB. Wired to MW::onMemoryOverrun in
+       Main/initialize.cpp. */
+    void memoryOverrun(quint64 footprintMB, quint64 capMB);
+
 public slots:
-    void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false);
+    void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false,
+                                const QStringList &subDirs = QStringList());
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m, QString src);
@@ -198,6 +231,7 @@ public slots:
     void setIcon1(int dmRow, const QImage &im, int fromInstance, QString src = "");
     void setIconFromVideoFrame(int dmRow, QImage im, int fromInstance, qint64 duration,
                                FrameDecoder *frameDecoder);
+    void clearVideoReadingFlag(int dmRow, int fromInstance);
     void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src,
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
@@ -211,9 +245,15 @@ public slots:
     QStringList rptIssues(int sfRow);
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
-    void imageCacheWaiting(int sfRow);
+    void imageCacheWaiting(int sfRow, int instance);
     bool isAllMetadataAttempted();
     bool isAllIconChunkLoaded(int first, int last);
+    // Intercepts MetadataAttempted/IconLoaded/Video column writes to keep the
+    // running counts above accurate; delegates everything to the base class.
+    bool setData(const QModelIndex &index, const QVariant &value,
+                 int role = Qt::EditRole) override;
+    void recountLoadFlags();        // full rescan to resync counts after removals
+    void updateIconChunkLoaded();   // O(1)-gated refresh of G::iconChunkLoaded
     int rowFromPath(QString fPath);
     int proxyRowFromPath(QString fPath, QString src = "");
     QString pathFromProxyRow(int sfRow);
@@ -236,6 +276,10 @@ private:
     QQueue<QPair<QString, G::FolderOp>> folderQueue;
     QSet<QString> pendingPaths;
     QMutex queueMutex;
+
+    QString prevRawSuffix = "";
+    QString prevRawBaseName = "";
+    QModelIndex prevRawIdx;
 
     enum ErrorType {
         General,
@@ -263,7 +307,8 @@ private:
     bool endLoad(bool success);
     // bool addFileData();
     void addFileDataForRow(int row, QFileInfo fileInfo);
-    void rawPlusJpg();
+    // void rawPlusJpg();
+    void rawJpgPairing(int row, const QString &ext, const QString &baseName);
     double aspectRatio(int w, int h, int orientation);
     void processErr(Error e);
 

@@ -43,11 +43,8 @@ void MW::writeSettings()
     settings->setValue("backupBeforeModifying", G::backupBeforeModifying);
     settings->setValue("autoAddMissingThumbnails", G::autoAddMissingThumbnails);
     settings->setValue("ignoreAddThumbnailsDlg", ignoreAddThumbnailsDlg);
-    settings->setValue("useSidecar", G::useSidecar);
-    //setting->setValue("embedTifThumb", G::embedTifJpgThumb);
     settings->setValue("renderVideoThumb", G::renderVideoThumb);
-    settings->setValue("isLogger", G::isLogger);
-    settings->setValue("isErrorLogger", G::isErrorLogger);
+    settings->setValue("isLogAllToFileForDebugging", G::isLogger);
     settings->setValue("wheelSensitivity", G::wheelSensitivity);
 
     // datamodel
@@ -72,14 +69,14 @@ void MW::writeSettings()
     /* ingest (moved to MW::ingest)
     */
 
-    // thumbs
+    // thumbs (loaded in MW::createThumbView)
     settings->setValue("thumbWidth", thumbView->iconWidth);
     settings->setValue("thumbHeight", thumbView->iconHeight);
     settings->setValue("labelFontSize", thumbView->labelFontSize);
     settings->setValue("showThumbLabels", thumbView->showIconLabels);
     settings->setValue("showZoomFrame", thumbView->showZoomFrame);
 
-    // grid
+    // grid (loaded in MW::createGridView)
     settings->setValue("thumbWidthGrid", gridView->iconWidth);
     settings->setValue("thumbHeightGrid", gridView->iconHeight);
     settings->setValue("labelFontSizeGrid", gridView->labelFontSize);
@@ -119,6 +116,9 @@ void MW::writeSettings()
 
     /* Property Editor */
     settings->setValue("isSoloPrefDlg", isSoloPrefDlg);
+
+    /* Focus Stack */
+    settings->setValue("focusStackMethod", fsMethod);
 
     /* Docks are updated in DockWidget */
 
@@ -163,15 +163,15 @@ void MW::writeSettings()
     // }
     // settings->endGroup();
 
-    // // save filename templates
-    // settings->beginGroup("FileNameTokens");
-    // settings->remove("");
-    // QMapIterator<QString, QString> filenameIter(filenameTemplates);
-    // while (filenameIter.hasNext()) {
-    //     filenameIter.next();
-    //     settings->setValue(filenameIter.key(), filenameIter.value());
-    // }
-    // settings->endGroup();
+    // save filename templates
+    settings->beginGroup("FileNameTokens");
+    settings->remove("");
+    QMapIterator<QString, QString> filenameIter(filenameTemplates);
+    while (filenameIter.hasNext()) {
+        filenameIter.next();
+        settings->setValue(filenameIter.key(), filenameIter.value());
+    }
+    settings->endGroup();
 
     /* Token templates used for shooting information shown in ImageView*/
     settings->setValue("loupeInfoTemplate", infoString->loupeInfoTemplate);
@@ -233,6 +233,23 @@ void MW::writeSettings()
 //    setting->endGroup();
 
 //    saveWorkspaces();
+
+    // dock collapse state and per-area solo mode
+    settings->beginGroup("DockCollapsed");
+    if (folderDock)   settings->setValue("FolderDock", folderDock->isCollapsed());
+    if (favDock)      settings->setValue("BookmarkDock", favDock->isCollapsed());
+    if (filterDock)   settings->setValue("FilterDock", filterDock->isCollapsed());
+    if (metadataDock) settings->setValue("MetadataDock", metadataDock->isCollapsed());
+    if (thumbDock)    settings->setValue("ThumbDock", thumbDock->isCollapsed());
+    if (embelDock)    settings->setValue("EmbelDock", embelDock->isCollapsed());
+    settings->endGroup();
+
+    settings->beginGroup("DockSoloMode");
+    settings->setValue("Left",   m_dockSoloMode.value(Qt::LeftDockWidgetArea,   false));
+    settings->setValue("Right",  m_dockSoloMode.value(Qt::RightDockWidgetArea,  false));
+    settings->setValue("Top",    m_dockSoloMode.value(Qt::TopDockWidgetArea,    false));
+    settings->setValue("Bottom", m_dockSoloMode.value(Qt::BottomDockWidgetArea, false));
+    settings->endGroup();
 }
 
 bool MW::loadSettings()
@@ -260,9 +277,10 @@ bool MW::loadSettings()
         G::combineRawJpg = false;
         prevMode = "Loupe";
         G::mode = "Loupe";
+        isLogAllToFileForDebugging = false;
         G::isLogger = false;
-        G::isFileLogger = false;
-        G::isErrorLogger = false;
+        G::isRunByExtern = false;
+        G::isIssueLogger = false;
         G::wheelSensitivity = 40;
         G::modifySourceFiles = false;
         G::backupBeforeModifying = false;
@@ -292,8 +310,6 @@ bool MW::loadSettings()
         lastDir = "";
         deleteWarning = true;
         G::modifySourceFiles = false;
-        G::modifySourceFiles = false;
-        G::useSidecar = false;
         // G::embedTifJpgThumb = false;
 
         // ingest
@@ -321,6 +337,9 @@ bool MW::loadSettings()
 
         // cache (see MW::createImageCache in initialize.cpp)
 
+        // Focus Stack default method
+        fsMethod = FS::MethodsString.at(FS::Methods::DMap);
+
         if (!isSettings || simulateJustInstalled) return true;
     }
     // end default settings
@@ -328,25 +347,10 @@ bool MW::loadSettings()
     // Get settings saved from last session
 
     // general
-    // sortColumn = setting->value("sortColumn").toInt();
-    // prevSortColumn = sortColumn;
-    // isReverseSort = setting->value("sortReverse").toBool();
     G::autoAdvance = settings->value("autoAdvance").toBool();
     turnOffEmbellish = settings->value("turnOffEmbellish").toBool();
-    /*
-    if (setting->contains("isFileLogger"))
-        G::isFileLogger = setting->value("isFileLogger").toBool();
-    else
-        G::isFileLogger = false;
-    if (setting->contains("isErrorLogger"))
-        G::isErrorLogger = setting->value("isErrorLogger").toBool();
-    else
-        G::isErrorLogger = false;
-    if (G::isFileLogger || G::isErrorLogger)
-        G::isLogger = true;
-    else
-        G::isLogger = false;
-    */
+    isLogAllToFileForDebugging = settings->value("isLogAllToFileForDebugging").toBool();
+
     if (settings->contains("deleteWarning"))
         deleteWarning = settings->value("deleteWarning").toBool();
     else
@@ -371,11 +375,6 @@ bool MW::loadSettings()
         ignoreAddThumbnailsDlg = settings->value("ignoreAddThumbnailsDlg").toBool();
     else
         ignoreAddThumbnailsDlg = false;
-
-    if (settings->contains("useSidecar"))
-        G::useSidecar = settings->value("useSidecar").toBool();
-    else
-        G::useSidecar = false;
 
     if (settings->contains("renderVideoThumb"))
         G::renderVideoThumb = settings->value("renderVideoThumb").toBool();
@@ -470,6 +469,8 @@ bool MW::loadSettings()
     if (settings->contains("isFullScreenThumbs")) fullScreenDocks.isThumbs = settings->value("isFullScreenThumbs").toBool();
     if (settings->contains("isFullScreenStatusBar")) fullScreenDocks.isStatusBar = settings->value("isFullScreenStatusBar").toBool();
 
+    // Focus Stack
+    if (settings->contains("focusStackMethod")) fsMethod = settings->value("focusStackMethod").toString();
 
     /* read external apps */
     /* moved to createActions as required to populate open with ... menu */
@@ -515,6 +516,15 @@ bool MW::loadSettings()
     */
     settings->beginGroup("IngestDescriptionCompleter");
     ingestDescriptionCompleter = settings->childKeys();
+    settings->endGroup();
+
+    // dock solo-mode state per area (collapsed-state itself is applied
+    // post-restoreState in showEvent — see MW::applyDockCollapseState)
+    settings->beginGroup("DockSoloMode");
+    m_dockSoloMode.insert(Qt::LeftDockWidgetArea,   settings->value("Left",   false).toBool());
+    m_dockSoloMode.insert(Qt::RightDockWidgetArea,  settings->value("Right",  false).toBool());
+    m_dockSoloMode.insert(Qt::TopDockWidgetArea,    settings->value("Top",    false).toBool());
+    m_dockSoloMode.insert(Qt::BottomDockWidgetArea, settings->value("Bottom", false).toBool());
     settings->endGroup();
 
     loadWorkspaces();

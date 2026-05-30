@@ -60,7 +60,7 @@ void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
     if (editMode) {
         bool isOkay = true;
         int n = ui->workspaceCB->currentIndex();
-        ui->workspaceCB->setStyleSheet("QComboBox {color:rgb(229,229,229);}");
+        ui->workspaceCB->setStyleSheet("");
         // make sure another workspace name is not being duplicated
         for (int i=0; i<ui->workspaceCB->count(); i++) {
             // ignore current item
@@ -69,7 +69,7 @@ void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
             if (name != ui->workspaceCB->itemText(i)) continue;
             // oh, oh.  Duplicate of another workspace name
             isOkay = false;
-            ui->workspaceCB->setStyleSheet("QComboBox {color:red;}");
+            ui->workspaceCB->setStyleSheet(G::cssError);
         }
         if (isOkay) emit renameWorkspace(n, name);
         ui->workspaceCB->setItemText(ui->workspaceCB->currentIndex(), name);

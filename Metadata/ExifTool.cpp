@@ -1,9 +1,10 @@
 #include "Metadata/ExifTool.h"
 #include "Main/global.h"
+#include "Utilities/utilities.h"
 
 ExifTool::ExifTool()
 {
-    if (G::isFileLogger) Utilities::log("ExifTool::ExifTool", exifToolPath);
+    // if (G::isFileLogger) Utilities::log("ExifTool::ExifTool", exifToolPath);
     #ifdef Q_OS_WIN
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
     #endif
@@ -16,10 +17,29 @@ ExifTool::ExifTool()
     exifToolPath = macOSDir + "/exiftool_wrapper";
     #endif
     // confirm exifToolPath exists
-    if (!QFile(exifToolPath).exists()) {
+    QFileInfo etInfo(exifToolPath);
+    if (!etInfo.exists()) {
         QString msg = "File is missing.";
         G::issue("Warning", msg, "ExifTool::ExifTool", -1, exifToolPath);
         qWarning() << "ExifTool::ExifTool  File is missing:" << exifToolPath;
+        exifToolPath.clear();
+        return;
+    }
+    // Refuse to invoke a bundled helper that has been replaced with a symlink or made
+    // world-writable — defeats trivial tampering of the trusted execution path.
+    if (etInfo.isSymLink()) {
+        G::issue("Warning", "ExifTool binary is a symlink; refusing to launch.",
+                 "ExifTool::ExifTool", -1, exifToolPath);
+        qWarning() << "ExifTool::ExifTool  Binary is a symlink:" << exifToolPath;
+        exifToolPath.clear();
+        return;
+    }
+    if (etInfo.permissions() & QFileDevice::WriteOther) {
+        G::issue("Warning", "ExifTool binary is world-writable; refusing to launch.",
+                 "ExifTool::ExifTool", -1, exifToolPath);
+        qWarning() << "ExifTool::ExifTool  Binary is world-writable:" << exifToolPath;
+        exifToolPath.clear();
+        return;
     }
     //process.setStandardOutputFile("/Users/roryhill/Pictures/_ThumbTest/PNG_.txt");
     //result.open(QIODevice::ReadWrite);
@@ -39,7 +59,8 @@ int ExifTool::execute(QStringList &args)
 {
     /* all args that are a path to an image should be converted to a url
        ie  QUrl("D:/Pictures/Zenfolio/2021-02-12_0006.jpg").path();  */
-    if (G::isFileLogger) Utilities::log("ExifTool::execute", exifToolPath);
+    if (G::isRunByExtern) Utilities::log("ExifTool::execute", exifToolPath);
+    if (exifToolPath.isEmpty()) return -1;   // refused at construction time
     return QProcess::execute(exifToolPath, args);
 }
 
@@ -203,7 +224,7 @@ int ExifTool::copyAll(QString src, QString dst)
     args << "-all:all";
     args << dst;
     args << "-overwrite_original";
-    qDebug() << "ExifTool::copyAll" << src << dst;
+    // qDebug() << "ExifTool::copyAll" << src << dst;
     return execute(args);
 }
 
@@ -212,6 +233,7 @@ int ExifTool::copyAll(const QStringList &src, QStringList &dst)
 /*
 
 */
+    if (exifToolPath.isEmpty()) return -1;   // refused at construction time
     // initial arguments to keep ExifTool open
     QStringList stayOpen;
     stayOpen << "-stay_open";

@@ -1,4 +1,15 @@
+
 #include "framedecoder.h"
+#include "Main/global.h"
+#include <QTimer>
+
+#ifdef Q_OS_MAC
+// Defined in Cache/framedecoder_mac.mm — synchronous AVFoundation thumbnail.
+// Returns false if the asset can't be opened, has no video track, or the
+// image generator fails; caller falls back to the QMediaPlayer pipeline.
+bool macAVFoundationVideoThumbnail(const QString &fPath, int longSide,
+                                   QImage &out, qint64 &outDurationMs);
+#endif
 
 /*
     Generates a thumbnail from the first video frame in a video file.
@@ -107,8 +118,38 @@ bool FrameDecoder::queueContains(const QString &fPath)
 void FrameDecoder::addToQueue(QString path, int longSide, QString source,
                               int dmRow, int dmInstance)
 {
-    if (abort) return;
+    // A prior stop() (e.g. from a folder-change abort) leaves abort=true.
+    // getNextThumbNail resets it, but addToQueue never gets there if we bail
+    // on abort here — so new folders' video thumbs silently drop. A fresh
+    // enqueue is new work; clear the stale flag instead of rejecting.
+    abort = false;
     // if (queueContains(path)) return;
+
+#ifdef Q_OS_MAC
+    // Fast path: AVAssetImageGenerator decodes a thumbnail directly without
+    // running the QMediaPlayer/QVideoSink playback pipeline. ~10–50ms per
+    // file vs. hundreds of ms through the player, and it sidesteps the
+    // CoreMedia VTDecompressionSession race that cleanupPlayer works
+    // around. Only used for dmThumb requests bound to a real datamodel row
+    // — the FindDuplicates "frameImage" path keeps using QMediaPlayer.
+    if (source == "dmThumb" && dmRow >= 0) {
+        QElapsedTimer t; t.start();
+        QImage im;
+        qint64 durationMs = 0;
+        if (macAVFoundationVideoThumbnail(path, longSide, im, durationMs)
+            && !im.isNull())
+        {
+            emit setFrameIcon(dmRow, im, dmInstance, durationMs, this);
+            qint64 usToDecode = t.nsecsElapsed() / 1000;
+            emit setValDm(dmRow, G::NSThumb, usToDecode, dmInstance,
+                          "FrameDecoder::addToQueue (AVFoundation)",
+                          Qt::EditRole,
+                          int(Qt::AlignRight | Qt::AlignVCenter));
+            return;
+        }
+        // Fall through to QMediaPlayer fallback on failure.
+    }
+#endif
 
     Item item;
     item.fPath = path;
@@ -163,6 +204,8 @@ void FrameDecoder::getNextThumbNail(QString src)
         if (status == QMediaPlayer::InvalidMedia) {
             qWarning() << "Invalid media:" << item.fPath;
             mediaPlayer->stop();
+            if (item.source == "dmThumb" && item.dmRow >= 0)
+                emit videoFrameFailed(item.dmRow, item.dmInstance);
             queue.removeFirst();
             getNextThumbNail("invalid media");
         }
@@ -175,6 +218,8 @@ void FrameDecoder::getNextThumbNail(QString src)
         if (status == QMediaPlayer::InvalidMedia) {
             qWarning() << "Invalid media:" << item.fPath;
             mediaPlayer->stop();
+            if (item.source == "dmThumb" && item.dmRow >= 0)
+                emit videoFrameFailed(item.dmRow, item.dmInstance);
             queue.removeFirst();
             getNextThumbNail("invalid media");
         }
@@ -186,15 +231,20 @@ void FrameDecoder::getNextThumbNail(QString src)
 
         qWarning() << "Playback error:" << errStr;
         mediaPlayer->stop();
+        if (item.source == "dmThumb" && item.dmRow >= 0)
+            emit videoFrameFailed(item.dmRow, item.dmInstance);
         queue.removeFirst();
         getNextThumbNail("error");
     });
 
     try {
+        tFrame.start();
         mediaPlayer->setSource(item.fPath);
         mediaPlayer->play();
     } catch (...) {
         qWarning() << "Exception during play for" << item.fPath;
+        if (item.source == "dmThumb" && item.dmRow >= 0)
+            emit videoFrameFailed(item.dmRow, item.dmInstance);
         queue.removeFirst();
         getNextThumbNail("exception");
     }
@@ -204,37 +254,60 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
 {
     if (abort || queue.isEmpty()) return;
 
-    static int attempts = 0;
     Item item = queue.takeFirst();
     const QString path = item.fPath;
 
     if (!frame.isValid() || frame.pixelFormat() == QVideoFrameFormat::Format_Invalid) {
-        attempts++;
-        if (attempts < 10) {
+        frameAttempts++;
+        if (frameAttempts < 10) {
             queue.prepend(item);  // retry
             return;
         }
 
         qWarning() << "Invalid frame after retries:" << path;
+        if (item.source == "dmThumb" && item.dmRow >= 0)
+            emit videoFrameFailed(item.dmRow, item.dmInstance);
         cleanupPlayer();
-        attempts = 0;
+        frameAttempts = 0;
         getNextThumbNail("invalid frame");
         return;
     }
 
-    attempts = 0;
+    frameAttempts = 0;
 
     QImage im = frame.toImage();
     if (im.isNull()) {
         qWarning() << "Null image frame:" << path;
+        if (item.source == "dmThumb" && item.dmRow >= 0)
+            emit videoFrameFailed(item.dmRow, item.dmInstance);
         cleanupPlayer();
         getNextThumbNail("null image");
         return;
     }
 
+    // Check for rotation (Qt 6.7+ style)
+    int angle = 0;
+    #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+        // Use the new Rotation enum
+        auto rotation = frame.rotation();
+        if (rotation == QtVideo::Rotation::Clockwise90) angle = 90;
+        else if (rotation == QtVideo::Rotation::Clockwise180) angle = 180;
+        else if (rotation == QtVideo::Rotation::Clockwise270) angle = 270;
+    #else
+        // Fallback for older Qt 6 versions
+        angle = static_cast<int>(frame.rotationAngle());
+    #endif
+
+    // Apply rotation if needed
+    if (angle != 0) {
+        QTransform tr;
+        tr.rotate(angle);
+        im = im.transformed(tr);
+    }
+
     QImage scaledIm = (item.longSide > 0)
-                ? im.scaled(item.longSide, item.longSide, Qt::KeepAspectRatio)
-                : im;
+                          ? im.scaled(item.longSide, item.longSide, Qt::KeepAspectRatio)
+                          : im;
 
     if (item.source == "dmThumb" && item.dmRow >= 0) {
         qint64 duration = mediaPlayer ? mediaPlayer->duration() : 0;
@@ -248,6 +321,11 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
                  << "duration =" << duration
             ; //*/
         emit setFrameIcon(item.dmRow, scaledIm, item.dmInstance, duration, this);
+
+        qint64 msToDecode = tFrame.isValid() ? tFrame.nsecsElapsed() / 1000 : 0;
+        emit setValDm(item.dmRow, G::NSThumb, msToDecode, item.dmInstance,
+                      "FrameDecoder::handleFrameChanged", Qt::EditRole,
+                      int(Qt::AlignRight | Qt::AlignVCenter));
     } else {
         // used in FindDuplicates
         /*
@@ -269,14 +347,47 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
 
 void FrameDecoder::cleanupPlayer()
 {
-    if (mediaPlayer) {
-        mediaPlayer->stop();
-        mediaPlayer->deleteLater();
-        mediaPlayer = nullptr;
-    }
+    /* Tear down the QMediaPlayer / QVideoSink safely against an in-flight
+       VTDecompressionSessionCreateWithOptions on CoreMedia's shared root
+       queue. The synchronous mp->stop() + ~QMediaPlayer path was racing
+       the format-description serialization (CFDictionary walk inside
+       sbufAtom_appendDictionaryAtom) and crashing in objc_msgSend on a
+       freed Obj-C object.
 
-    if (videoSink) {
-        videoSink->deleteLater();
+       1. Detach the sink so no more frames land on it.
+       2. Skip stop() — ~QMediaPlayer drives the AVPlayer release path
+          itself, and an extra synchronous stop widens the race window.
+       3. Defer deleteLater until mediaStatus leaves the dangerous
+          setup window (LoadingMedia/BufferingMedia/StalledMedia).
+          3000 ms watchdog parented to mp guarantees no leak if the
+          status signal never fires. */
+
+    if (QMediaPlayer *mp = mediaPlayer.data()) {
+        mediaPlayer = nullptr;     // null QPointer first so re-entry is a no-op
+        mp->setVideoOutput(nullptr);
+
+        const auto s = mp->mediaStatus();
+        const bool inSetupWindow =
+            s == QMediaPlayer::LoadingMedia   ||
+            s == QMediaPlayer::BufferingMedia ||
+            s == QMediaPlayer::StalledMedia;
+
+        if (!inSetupWindow) {
+            QTimer::singleShot(0, mp, [mp]{ mp->deleteLater(); });
+        } else {
+            QObject::connect(mp, &QMediaPlayer::mediaStatusChanged, mp,
+                [mp](QMediaPlayer::MediaStatus ns) {
+                    if (ns != QMediaPlayer::LoadingMedia   &&
+                        ns != QMediaPlayer::BufferingMedia &&
+                        ns != QMediaPlayer::StalledMedia) {
+                        mp->deleteLater();
+                    }
+                });
+            QTimer::singleShot(3000, mp, [mp]{ mp->deleteLater(); });
+        }
+    }
+    if (QVideoSink *vs = videoSink.data()) {
         videoSink = nullptr;
+        QTimer::singleShot(0, vs, [vs]{ vs->deleteLater(); });
     }
 }

@@ -1,0 +1,6 @@
+#!/bin/bash
+APP_DIR="$(dirname "$0")/.."
+RES="$APP_DIR/Resources/exiftool"
+
+export PERL5LIB="$RES/lib"
+exec /usr/bin/perl "$RES/ExifTool" "$@"

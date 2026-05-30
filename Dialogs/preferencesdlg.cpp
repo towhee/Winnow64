@@ -91,6 +91,43 @@ PreferencesDlg::~PreferencesDlg()
     delete collapseAllAction;
 }
 
+void PreferencesDlg::resizeForFontChange()
+{
+/*
+    When the global font size changes, PropertyEditor::resizeColumns recomputes
+    the caption (column 1) and value (column 2) widths from the font metrics.
+    The value column is the stretched last section, so its visible width is
+    (dialog width - caption width); the caption:value proportion is only
+    preserved when the dialog width equals the tree's natural width (caption +
+    value). Resize the dialog to that width, scale the height by the same factor
+    so the dialog keeps its proportions, and clamp both to the screen.
+*/
+    QScreen *scr = screen() ? screen() : QGuiApplication::primaryScreen();
+    if (!scr) return;
+    const QRect avail = scr->availableGeometry();
+
+    int targetW = qMin(tree->width + 10, avail.width());    // +10 matches construction
+    qreal factor = width() > 0 ? static_cast<qreal>(targetW) / width() : 1.0;
+    int minH = qMin(600, avail.height());                   // 600 = construction floor
+    int targetH = qBound(minH, qRound(height() * factor), avail.height());
+
+    // Construction pinned the minimum width to the initial font's natural width,
+    // which would otherwise block shrinking when the font gets smaller.
+    setMinimumWidth(targetW);
+    resize(targetW, targetH);
+
+    // Nudge back into view if the resize pushed the dialog off-screen (it grows
+    // from the top-left, so the right/bottom edge can spill past the screen).
+    // Uses frameGeometry so window-manager decorations are accounted for.
+    QRect fg = frameGeometry();
+    QPoint p = pos();
+    if (fg.right()  > avail.right())  p.rx() -= fg.right()  - avail.right();
+    if (fg.bottom() > avail.bottom()) p.ry() -= fg.bottom() - avail.bottom();
+    if (p.x() < avail.left()) p.setX(avail.left());
+    if (p.y() < avail.top())  p.setY(avail.top());
+    if (p != pos()) move(p);
+}
+
 void PreferencesDlg::expand()
 {
     tree->expandAll();

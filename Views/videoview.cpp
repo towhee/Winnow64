@@ -100,8 +100,6 @@ void VideoView::stop()
     video->stop();
     t->stop();
     QGuiApplication::restoreOverrideCursor();
-    // QGuiApplication::restoreOverrideCursor();
-    // QGuiApplication::restoreOverrideCursor();
 }
 
 void VideoView::scrubMoved(int ms)
@@ -129,6 +127,11 @@ void VideoView::durationChanged(qint64 duration_ms)
     // round duration ms to duration seconds to match position changed
     scrub->setMaximum(duration * 1000);
     updatePositionLabel();
+
+    // Force the layout to re-evaluate the VideoWidget's size
+    // now that metadata (like orientation/dimensions) is known.
+    video->updateGeometry();
+    this->layout()->activate();
 }
 
 void VideoView::positionChanged()
@@ -225,8 +228,7 @@ bool VideoView::event(QEvent *event)
         emit mouseSideKeyPress(direction);
         return true;
     }
-    QWidget::event(event);
-    return true;
+    return QWidget::event(event);
 }
 
 void VideoView::relayDrop(QString fPath)

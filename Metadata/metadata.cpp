@@ -2,6 +2,8 @@
 #include <QDebug>
 #include "ImageFormats/Heic/heic.h"
 #include "Main/global.h"
+#include "Metadata/metareport.h"
+#include "ImageFormats/Video/mov.h"
 
 Metadata::Metadata(QObject *parent) : QObject(parent)
 {
@@ -97,7 +99,7 @@ void Metadata::initSupportedFiles()
                         << "hif"
                         << "nef"
                         << "orf"
-                        //<< "png"
+                        << "png"
                         << "raf"
                         << "sr2"
                         << "rw2"
@@ -129,6 +131,7 @@ void Metadata::initSupportedFiles()
 
     embeddedICCFormats  << "jpg"
                         << "jpeg"
+                        << "png"
                            ;
 
     sidecarFormats      << "arw"
@@ -141,6 +144,7 @@ void Metadata::initSupportedFiles()
                         << "sr2"
                         << "jpg"
                         << "jpeg"
+                        << "png"
                         << "xmp"
                         << "tif"
                            ;
@@ -154,6 +158,7 @@ void Metadata::initSupportedFiles()
                         << "cr3"
                         << "nef"
                         << "orf"
+                        << "png"
                         << "raf"
                         << "rw2"
                         << "sr2"
@@ -172,7 +177,6 @@ void Metadata::initSupportedFiles()
                         << "mng"
                         << "pbm"
                         << "pgm"
-                        << "png"
                         << "ppm"
                         << "svg"
                         << "svgz"
@@ -351,6 +355,7 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("fName", n) << G::s(m.fName) << "\n";
     p.rpt << G::sj("type", n) << G::s(m.type) << "\n";
     p.rpt << G::sj("video", n) << G::s(m.video) << "\n";
+    p.rpt << G::sj("sidecar", n) << G::s(m.sidecar) << "\n";
     p.rpt << G::sj("size", n) << G::s(m.size) << "\n";
     p.rpt << G::sj("createdDate", n) << G::s(m.createdDate) << "\n";
     p.rpt << G::sj("modifiedDate", n) << G::s(m.modifiedDate) << "\n";
@@ -360,7 +365,7 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("pick", n) << G::s(m.pick) << "\n";
     p.rpt << G::sj("ingested", n) << G::s(m.ingested) << "\n";
     p.rpt << G::sj("metadataLoaded", n) << G::s(m.metadataLoaded) << "\n";
-    p.rpt << G::sj("missingEmbeddedThumb", n) << G::s(m.isEmbeddedThumbMissing) << "\n";
+    // p.rpt << G::sj("missingEmbeddedThumb", n) << G::s(m.isEmbeddedThumbMissing) << "\n";
     p.rpt << G::sj("isSearch", n) << G::s(m.isSearch) << "\n";
     p.rpt << "\n";
     p.rpt << G::sj("width", n) << G::s(m.width) << "\n";
@@ -426,13 +431,33 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("searchStr", n) << G::s(m.searchStr) << "\n";
 
     if (m.isXmp) {
-        // sidecar xmp
+        // embedded sidecar xmp
         MetaReport::header("Embedded XMP Extract", p.rpt);
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) p.rpt << xmp.docToQString();
         else {
             p.rpt << "ERROR: " << xmp.errMsg[xmp.err] << "\n";
             p.rpt << xmp.docToQString();
+        }
+    }
+
+    if (m.sidecar) {
+        // separate sidecar xmp file
+        QFileInfo info(m.fPath);
+        QString sidecarName = info.completeBaseName() + ".xmp";
+        QString sidecarPath = info.dir().path() + "/" + sidecarName;
+        qDebug() << "    m.fPath =" << m.fPath;
+        qDebug() << "sidecarPath =" << sidecarPath;
+        QFile sidecarFile(sidecarPath);
+        if (sidecarFile.open(QIODevice::ReadOnly)) {
+            QString hdr = "Sidecar: " + sidecarName;
+            MetaReport::header(hdr, p.rpt);
+            Xmp xmp(sidecarFile, 0, sidecarFile.size(), p.instance);
+            if (xmp.isValid) p.rpt << xmp.docToQString();
+            else {
+                p.rpt << "ERROR: " << xmp.errMsg[xmp.err] << "\n";
+                p.rpt << xmp.docToQString();
+            }
         }
     }
 }
@@ -492,14 +517,45 @@ int Metadata::getNewOrientation(int orientation, int rotation)
 
 void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 {
+/*
+    Persist the new orientation.  When G::modifySourceFiles is true the source file's
+    EXIF Orientation tag is updated via ExifTool.  Otherwise the orientation is written
+    to an XMP sidecar (created if absent) so the rotation survives a reload.
+*/
     if (G::isLogger) G::log("Metadata::writeOrientation");
-    qDebug() << "Metadata::writeOrientation" << fPath;
     if (G::modifySourceFiles) {
         ExifTool et;
         et.setOverWrite(true);
         et.writeOrientation(fPath, orientationNumber);
         et.close();
+        return;
     }
+
+    QFileInfo info(fPath);
+    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
+    // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
+    if (QFileInfo(sidecarPath).isSymLink()) {
+        QString msg = "Refusing to write sidecar: path is a symlink.";
+        G::issue("Warning", msg, "Metadata::writeOrientation", -1, sidecarPath);
+        return;
+    }
+    QFile sidecarFile(sidecarPath);
+    if (!sidecarFile.open(QIODevice::ReadWrite)) {
+        QString msg = "Failed to open sidecar to write orientation.";
+        G::issue("Warning", msg, "Metadata::writeOrientation", -1, sidecarPath);
+        return;
+    }
+    Xmp xmp(sidecarFile, G::dmInstance);
+    if (!xmp.isValid) xmp.fix();
+    xmp.setItem("orientation", orientationNumber.toLatin1());
+    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
+        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
+    xmp.setItem("modifydate", modifyDate.toLatin1());
+    if (!xmp.writeSidecar(sidecarFile)) {
+        QString msg = "Failed to write orientation to sidecar.";
+        G::issue("Warning", msg, "Metadata::writeOrientation", -1, sidecarPath);
+    }
+    sidecarFile.close();
 }
 
 bool Metadata::writeXMP(const QString &fPath, QString src)
@@ -514,29 +570,22 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
        dm->imMetadata(fPath);
     because dm is not available from Metadata.
 
-    If it is a supported image type a copy of the image file is made and any metadata changes
-    are updated in buffer. If it is a raw file in the sidecarFormats hash then the xmp data
-    for existing and changed metadata is written to buffer and the original image file is
-    copied unchanged.
+    If it is a supported image type a copy of the image file is made and any metadata
+    changes are updated in buffer. If it is a raw file in the sidecarFormats hash then
+    the xmp data for existing and changed metadata is written to buffer and the original
+    image file is copied unchanged.
 */
-    if (G::isLogger) G::log("Metadata::writeXMP");
+    QString srcFun = "Metadata::writeXMP";
+    if (G::isLogger) G::log(srcFun);
     bool isDebug = false;
 
     // is xmp supported for this file
-    QFileInfo info(fPath);
+    QString sPath = sidecarPath(fPath);
+    QFileInfo info(sPath);
     QString suffix = info.suffix().toLower();
 
     // TEMP PREVENT WRITING TO ANYTHING BUT .XMP
     if (suffix != "xmp") return false;
-
-//    if (!sidecarFormats.contains(suffix)) {
-////        qDebug() << "Metadata::writeXMP" << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
-//        return false;
-//    }
-
-    // write to a sidecar file for all formats for now.  May write inside source image in the future
-//    bool useSidecar = true;
-//    useSidecar = sidecarFormats.contains(suffix);
 
     // new orientation
     int newOrientation = getNewOrientation(m.orientation, m.rotationDegrees);
@@ -576,33 +625,31 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         // && !rotationChanged
        )
     {
-        qWarning() << "Metadata::writeXMP" << "Unable to write xmp buffer. No metadata has been edited."
+        qWarning() << srcFun << "Unable to write xmp buffer. No metadata has been edited."
                  << "src =" << src;
         return false;
     }
 
-    if (isDebug) qDebug() << "Metadata::writeXMP1" << fPath;
-    // make sure file is available ie usb drive may have been ejected
-    QFileInfo fileInfo(fPath);
-    // if (!fileInfo.exists()) return false;
-    if (isDebug) qDebug() << "Metadata::writeXMP2";
+    // if no existing sidecar then need to update sidecar in DataModel and icon delegate
+    bool updateSidecar = false;
+    QFileInfo fileInfo(sPath);
+    if (!fileInfo.exists()) {
+        updateSidecar = true;
+    }
 
     // data edited, open image file
-    p.file.setFileName(fPath);
+    p.file.setFileName(sPath);
     if (p.file.isOpen()) return false;
+    // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
+    if (QFileInfo(fPath).isSymLink()) {
+        G::issue("Warning", "Refusing to write sidecar: path is a symlink.", "Metadata::writeXMP", -1, fPath);
+        return false;
+    }
     if (!p.file.open(QIODevice::ReadWrite)) return false;
 
     // if current xmp is invalid then fix
     Xmp xmp(p.file, p.instance);
     if (!xmp.isValid) xmp.fix();
-
-    /*
-    // orientation is written to xmp sidecars only
-    if (orientationChanged && G::useSidecar) {
-        QString s = QString::number(newOrientation);
-        xmp.setItem("Orientation", s.toLatin1());
-    }
-    //*/
 
     // update xmp data
     if (urlChanged) xmp.setItem("url", m.url.toLatin1());
@@ -638,9 +685,11 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     }
     //*/
 
-    // if (G::useSidecar) xmp.writeSidecar();
-    if (isDebug) qDebug() << "Metadata::writeXMP9";
     xmp.writeSidecar(p.file);
+
+    qDebug() << srcFun<< fPath;
+
+    if (updateSidecar) emit updateSidecarStatus(fPath);
 
     p.file.close();
     return true;
@@ -772,6 +821,15 @@ bool Metadata::parseTIF()
     return true;
 }
 
+bool Metadata::parsePNG()
+{
+    if (G::isLogger) G::log("Metadata::parsePNG");
+    if (png == nullptr) png = new PNG;
+    bool ok = png->parse(p, m, ifd, exif, gps);
+    if (ok && p.report) reportMetadata();
+    return ok;
+}
+
 bool Metadata::parsePanasonic()
 {
     if (G::isLogger) G::log("Metadata::parsePanasonic");
@@ -788,7 +846,7 @@ bool Metadata::parseJPG(quint32 startOffset)
         G::log("Metadata::parseJPG", p.fPath);
     if (!p.file.isOpen()) {
         QString msg = "File not open.";
-        G::issue("Warning", msg, "Metadata::parseJPG", m.row, p.fPath);
+        G::issueDedup("Warning", msg, "Metadata::parseJPG", m.row, p.fPath);
         return false;
     }
 
@@ -801,7 +859,7 @@ bool Metadata::parseJPG(quint32 startOffset)
     p.offset = startOffset;
     if (p.file.fileName() == "") {
         QString msg = "Blank file name.";
-        G::issue("Warning", msg, "Metadata::parseJPG", m.row);
+        G::issueDedup("Warning", msg, "Metadata::parseJPG", m.row);
         return false;
     }
     bool ok = jpeg->parse(p, m, ifd, iptc, exif, gps);
@@ -875,7 +933,7 @@ bool Metadata::parseSidecar()
 
     if (!sidecarFile.open(QIODevice::ReadOnly)) {
         QString msg = "Failed to open sidecar file.";
-        G::issue("Warning", msg, "Metadata::parseSidecar", m.row, sidecarPath);
+        G::issueDedup("Warning", msg, "Metadata::parseSidecar", m.row, sidecarPath);
         return false;
     }
 
@@ -900,7 +958,16 @@ bool Metadata::parseSidecar()
     // extract metadata from sidecar xmp
     if (p.instance != G::dmInstance) {
         QString msg = "Instance clash.";
-        G::issue("Comment", msg, "Metadata::parseSidecar", m.row, sidecarPath);
+        G::issueDedup("Comment", msg, "Metadata::parseSidecar", m.row, sidecarPath);
+    }
+
+    // newer-wins: if embedded XMP carries a ModifyDate that is later than the sidecar's,
+    // keep the embedded values already loaded by the format parser and skip the sidecar.
+    QDateTime sidecarModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
+    if (p.xmpModifyDate.isValid() && sidecarModifyDate.isValid()
+        && sidecarModifyDate < p.xmpModifyDate) {
+        sidecarFile.close();
+        return false;
     }
 
     QString s;
@@ -911,6 +978,7 @@ bool Metadata::parseSidecar()
     s = xmp.getItem("rights"); if (!s.isEmpty()) {m.copyright = s; m._copyright = s;}
     s = xmp.getItem("email"); if (!s.isEmpty()) {m.email = s; m._email = s;}
     s = xmp.getItem("url"); if (!s.isEmpty()) {m.url = s; m._url = s;}
+    s = xmp.getItem("orientation"); if (!s.isEmpty()) {m.orientation = s.toInt(); m._orientation = s.toInt();}
     /*
     qDebug() << "Metadata::parseSidecar" << s << sidecarPath;
     //*/
@@ -934,6 +1002,7 @@ void Metadata::clearMetadata()
 {
     if (G::isLogger) G::log("Metadata::clearMetadata");
     p.fPath = "";
+    p.xmpModifyDate = QDateTime();
     m.fPath = "";
     m.fName = "";
     m.createdDate = QDateTime();
@@ -1052,6 +1121,117 @@ QString Metadata::readExifToolTag(QString fPath, QString tag)
     return output;
 }
 
+Metadata::SniffResult Metadata::sniffFamily(QFile &file)
+{
+    SniffResult r;
+    qint64 saved = file.pos();
+    file.seek(0);
+    QByteArray head = file.read(16);
+    file.seek(saved);
+    if (head.size() < 16) return r;
+
+    const auto b = reinterpret_cast<const unsigned char *>(head.constData());
+
+    // JPEG: FF D8
+    if (b[0] == 0xFF && b[1] == 0xD8) { r.family = FileFamily::JPEG; return r; }
+
+    // PNG: 89 50 4E 47 0D 0A 1A 0A
+    if (b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47 &&
+        b[4] == 0x0D && b[5] == 0x0A && b[6] == 0x1A && b[7] == 0x0A) {
+        r.family = FileFamily::PNG; return r;
+    }
+
+    // TIFF: "II" 2A 00 (little-endian) or "MM" 00 2A (big-endian).
+    if ((b[0] == 'I' && b[1] == 'I' && b[2] == 0x2A && b[3] == 0x00) ||
+        (b[0] == 'M' && b[1] == 'M' && b[2] == 0x00 && b[3] == 0x2A)) {
+        r.family = FileFamily::TIFF; return r;
+    }
+
+    // ISO Base Media File Format: bytes 4-7 = "ftyp", brand at 8-11.
+    if (b[4] == 'f' && b[5] == 't' && b[6] == 'y' && b[7] == 'p') {
+        r.family = FileFamily::ISOBMFF;
+        r.isobmffBrand = head.mid(8, 4);
+        return r;
+    }
+
+    // Fuji RAF: "FUJIFILMCCD-RAW".
+    if (head.startsWith("FUJIFILMCCD-RAW")) { r.family = FileFamily::RAF; return r; }
+
+    // GIF: "GIF87a" or "GIF89a".
+    if (head.startsWith("GIF87a") || head.startsWith("GIF89a")) {
+        r.family = FileFamily::GIF; return r;
+    }
+
+    // BMP: "BM".
+    if (b[0] == 'B' && b[1] == 'M') { r.family = FileFamily::BMP; return r; }
+
+    // WEBP: "RIFF" .... "WEBP".
+    if (b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F' &&
+        b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') {
+        r.family = FileFamily::WEBP; return r;
+    }
+
+    return r;
+}
+
+Metadata::FileFamily Metadata::extensionFamily(const QString &ext) const
+{
+    if (ext == "jpg" || ext == "jpeg") return FileFamily::JPEG;
+    if (ext == "tif" || ext == "tiff") return FileFamily::TIFF;
+    // TIFF-based raws (per `hasJpg` minus the non-TIFF members: raf is RAF, cr3 is ISOBMFF).
+    if (ext == "cr2" || ext == "nef" || ext == "dng" || ext == "orf" ||
+        ext == "arw" || ext == "sr2" || ext == "rw2") return FileFamily::TIFF;
+    if (ext == "png") return FileFamily::PNG;
+    if (ext == "heic" || ext == "hif" || ext == "heif") return FileFamily::ISOBMFF;
+    if (ext == "cr3") return FileFamily::ISOBMFF;
+    // Common ISO-BMFF video extensions. Others in videoFormats (avi, mkv, asf, …) have their own magic.
+    if (ext == "mp4" || ext == "mov" || ext == "m4v" || ext == "m4p" || ext == "qt") return FileFamily::ISOBMFF;
+    if (ext == "raf") return FileFamily::RAF;
+    if (ext == "gif") return FileFamily::GIF;
+    if (ext == "bmp") return FileFamily::BMP;
+    if (ext == "webp") return FileFamily::WEBP;
+    return FileFamily::Unknown;
+}
+
+QString Metadata::reconcileExt(const QString &ext, const SniffResult &sniff) const
+{
+    if (sniff.family == FileFamily::Unknown) return ext;
+
+    const FileFamily extFam = extensionFamily(ext);
+
+    // Within ISO-BMFF, brand may force a sub-family override (HEIC vs CR3 vs video).
+    const bool heicBrand = sniff.isobmffBrand == QByteArray("heic")
+                        || sniff.isobmffBrand == QByteArray("heix")
+                        || sniff.isobmffBrand == QByteArray("mif1")
+                        || sniff.isobmffBrand == QByteArray("msf1");
+    const bool cr3Brand  = sniff.isobmffBrand == QByteArray("crx ");
+
+    if (extFam == sniff.family) {
+        if (sniff.family == FileFamily::ISOBMFF) {
+            const bool extIsHeic = (ext == "heic" || ext == "hif" || ext == "heif");
+            const bool extIsCr3  = (ext == "cr3");
+            if (heicBrand && !extIsHeic) return "heic";
+            if (cr3Brand  && !extIsCr3)  return "cr3";
+        }
+        return ext;
+    }
+
+    switch (sniff.family) {
+        case FileFamily::JPEG: return "jpg";
+        case FileFamily::TIFF: return "tif";
+        case FileFamily::PNG:  return "png";
+        case FileFamily::ISOBMFF:
+            if (heicBrand) return "heic";
+            if (cr3Brand)  return "cr3";
+            return ext;   // unknown brand (mp42/isom/…) — don't guess.
+        case FileFamily::RAF:  return "raf";
+        case FileFamily::GIF:  return "gif";
+        case FileFamily::BMP:  return "bmp";
+        case FileFamily::WEBP: return "webp";
+        default:               return ext;
+    }
+}
+
 bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
     if (G::isLogger)
@@ -1077,7 +1257,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 
     if (p.file.isOpen()) {
         QString msg =  "File already open.";
-        G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
+        G::issueDedup("Warning", msg, "Metadata::readMetadata", m.row, path);
         return false;
     }
 
@@ -1101,9 +1281,18 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;
         if (gps == nullptr) gps = new GPS;
-        // check for heic with jpg extension
-        if (ext == "jpg" && Utilities::getString(p.file, 4, 8) == "ftypheic") ext = "heic";
-        // p.file.seek(0);
+        // Magic-byte sniffing overrides the extension when content disagrees with the name.
+        // Subsumes the previous one-off `ftypheic` check.
+        {
+            const SniffResult sniff = sniffFamily(p.file);
+            const QString routedExt = reconcileExt(ext, sniff);
+            if (routedExt != ext) {
+                G::issue("Info",
+                         "Magic-byte/extension mismatch: routed to " + routedExt,
+                         "Metadata::readMetadata", m.row, path);
+                ext = routedExt;
+            }
+        }
         if (ext == "arw")  parsed = parseSony();
         if (ext == "cr2")  parsed = parseCanon();
         if (ext == "cr3")  parsed = parseCanonCR3();
@@ -1117,28 +1306,27 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "raf")  parsed = parseFuji();
         if (ext == "rw2")  parsed = parsePanasonic();
         if (ext == "tif")  parsed = parseTIF();
+        if (ext == "png")  parsed = parsePNG();
         p.file.close();
         //QFile(path).setPermissions(oldPermissions);
         if (p.file.isOpen()) {
             QString msg =  "Could not close file after format was read.";
-            G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
+            G::issueDedup("Warning", msg, "Metadata::readMetadata", m.row, path);
         }
 
-        if (G::useSidecar) {
-            parseSidecar();
-        }
+        parseSidecar();
 
         if (!parsed) {
             p.file.close();
             QString msg =  "Unable to parse metadata.";
-            G::issue("Warning", msg, "Metadata::readMetadata", m.row, path);
+            G::issueDedup("Warning", msg, "Metadata::readMetadata", m.row, path);
             m.err += msg;
             return false;
         }
     }
     else {  // not open file
         QString msg = "Unable to open file.";
-        G::issue("Error", msg, "Metadata::readMetadata", m.row, m.fPath);
+        G::issueDedup("Error", msg, "Metadata::readMetadata", m.row, m.fPath);
         return false;
     }
 
@@ -1172,7 +1360,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     // check abort
     if (G::stop) {
         QString msg = "Aborted.";
-        G::issue("Comment", msg, "Metadata::loadImageMetadata");
+        G::issueDedup("Comment", msg, "Metadata::loadImageMetadata");
         // qDebug() << "Metadata::loadImageMetadata aborted (G::stop)" << fPath;
         return false;
     }
@@ -1181,7 +1369,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     // check instance up-to-date
     if (instance != G::dmInstance && !isRemote) {
         QString msg = "Instance clash.";
-        G::issue("Comment", msg, "Metadata::loadImageMetadata", -1, fPath);
+        G::issueDedup("Comment", msg, "Metadata::loadImageMetadata", -1, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata Instance clash", msg);
         // qDebug() << "Metadata::loadImageMetadata instance clash" << fPath;
         return false;
@@ -1190,7 +1378,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     // check if null file
     if (fPath == "") {
         QString msg = "Null file sent from " + source;
-        G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
+        G::issueDedup("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata File not exist", fPath);
         // qDebug() << "Metadata::loadImageMetadata null file" << fPath;
         return false;
@@ -1215,20 +1403,17 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
         if (ext == "mov") m.createdDate = MOV::createDate(fPath);
         if (ext == "mp4") m.createdDate = MOV::createDate(fPath);
         if (ext == "m4v") m.createdDate = MOV::createDate(fPath);
-        if (ext == "png") m.createdDate = PNG::createDate(fPath);
         if (!m.createdDate.isValid()) {
             // QString createdDate = readExifToolTag(m.fPath, "createdate");
             // m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
         }
         m.metadataLoaded = true;
-        if (G::useSidecar) {
-            p.file.setFileName(fPath);
-            if (p.file.open(QIODevice::ReadOnly)) {
-                if (parseSidecar()) {
-                    parsedSidecar = true;
-                }
-                p.file.close();
+        p.file.setFileName(fPath);
+        if (p.file.open(QIODevice::ReadOnly)) {
+            if (parseSidecar()) {
+                parsedSidecar = true;
             }
+            p.file.close();
         }
         // qDebug() << "Metadata::loadImageMetadata non-meta file type" << fPath;
         return true;
@@ -1245,7 +1430,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     m.metadataAttempted = true;
     if (!m.metadataLoaded) {
         QString msg = "Metadata not loaded.";
-        G::issue("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
+        G::issueDedup("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
         //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
         // qDebug() << "Metadata::loadImageMetadata could not read metadata" << fPath;

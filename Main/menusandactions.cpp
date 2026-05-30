@@ -302,7 +302,7 @@ void MW::createFileActions()
     runDropletAction->setShortcut(QKeySequence("A"));
     addAction(runDropletAction);
 
-    reportMetadataAction = new QAction(tr("Report Metadata"), this);
+    reportMetadataAction = new QAction(tr("Diagnostics Metadata"), this);
     reportMetadataAction->setObjectName("reportMetadata");
     reportMetadataAction->setShortcutVisibleInContextMenu(true);
     addAction(reportMetadataAction);
@@ -508,7 +508,8 @@ void MW::createEditActions()
     addAction(tokenTemplateEditorAction);
     connect(tokenTemplateEditorAction, &QAction::triggered, infoString, &InfoString::tokenEditor);
 
-    rate0Action = new QAction(tr("Clear rating              "), this);
+    QString blank = QString(20, QChar(0x00A0));
+    rate0Action = new QAction("Clear rating" + blank, this);
     rate0Action->setObjectName("Rate0");
     rate0Action->setShortcutVisibleInContextMenu(true);
     addAction(rate0Action);
@@ -579,12 +580,6 @@ void MW::createEditActions()
     addAction(label5Action);
     connect(label5Action, &QAction::triggered, this, &MW::setColorClass);
 
-    embedThumbnailsAction = new QAction(tr("Embed missing thumbnails"), this);
-    embedThumbnailsAction->setObjectName("embedThumbnails");
-    embedThumbnailsAction->setShortcutVisibleInContextMenu(true);
-    addAction(embedThumbnailsAction);
-    connect(embedThumbnailsAction, &QAction::triggered, this, &MW::embedThumbnailsFromAction);
-
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
     rotateRightAction->setShortcutVisibleInContextMenu(true);
@@ -627,7 +622,7 @@ void MW::createEditActions()
     focusStackAction->setShortcutVisibleInContextMenu(true);
     addAction(focusStackAction);
     connect(focusStackAction, &QAction::triggered,
-            this, &MW::generateFocusStackFromSelection);
+            this, &MW::focusStackFromSelection);
 
     // End Utilities
 
@@ -1223,7 +1218,7 @@ void MW::createViewActions()
     addAction(ratingBadgeVisibleAction);
     connect(ratingBadgeVisibleAction, &QAction::triggered, this, &MW::setRatingBadgeVisibility);
 
-    iconNumberVisibleAction = new QAction(tr("Show Icon Number"), this);
+    iconNumberVisibleAction = new QAction(tr("Show Image Number"), this);
     iconNumberVisibleAction->setObjectName("toggleIconNumber");
     iconNumberVisibleAction->setShortcutVisibleInContextMenu(true);
     iconNumberVisibleAction->setCheckable(true);
@@ -1366,7 +1361,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isFolderDockVisible")) folderDockVisibleAction->setChecked(settings->value("isFolderDockVisible").toBool());
     else folderDockVisibleAction->setChecked(true);
     addAction(folderDockVisibleAction);
-    connect(folderDockVisibleAction, &QAction::triggered, this, &MW::toggleFolderDockVisibility);
+    connect(folderDockVisibleAction, &QAction::triggered, this, &MW::showFolderDock);
 
     favDockVisibleAction = new QAction(tr("Bookmarks Panel"), this);
     favDockVisibleAction->setObjectName("toggleFavs");
@@ -1375,7 +1370,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isFavDockVisible")) favDockVisibleAction->setChecked(settings->value("isFavDockVisible").toBool());
     else favDockVisibleAction->setChecked(true);
     addAction(favDockVisibleAction);
-    connect(favDockVisibleAction, &QAction::triggered, this, &MW::toggleFavDockVisibility);
+    connect(favDockVisibleAction, &QAction::triggered, this, &MW::showFavDock);
 
     filterDockVisibleAction = new QAction(tr("Filters Panel"), this);
     filterDockVisibleAction->setObjectName("toggleFilters");
@@ -1384,7 +1379,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isFilterDockVisible")) filterDockVisibleAction->setChecked(settings->value("isFilterDockVisible").toBool());
     else filterDockVisibleAction->setChecked(true);
     addAction(filterDockVisibleAction);
-    connect(filterDockVisibleAction, &QAction::triggered, this, &MW::toggleFilterDockVisibility);
+    connect(filterDockVisibleAction, &QAction::triggered, this, &MW::showFilterDock);
 
     metadataDockVisibleAction = new QAction(tr("Metadata Panel"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
@@ -1393,7 +1388,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isMetadataDockVisible")) metadataDockVisibleAction->setChecked(settings->value("isMetadataDockVisible").toBool());
     else metadataDockVisibleAction->setChecked(true);
     addAction(metadataDockVisibleAction);
-    connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::toggleMetadataDockVisibility);
+    connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::showMetadataDock);
 
     thumbDockVisibleAction = new QAction(tr("Thumbnails Panel"), this);
     thumbDockVisibleAction->setObjectName("toggleThumbs");
@@ -1402,7 +1397,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isThumbDockVisible")) thumbDockVisibleAction->setChecked(settings->value("isThumbDockVisible").toBool());
     else thumbDockVisibleAction->setChecked(true);
     addAction(thumbDockVisibleAction);
-    connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
+    connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::showThumbDock);
 
     embelDockVisibleAction = new QAction(tr("Embellish Editor Panel"), this);
     embelDockVisibleAction->setObjectName("toggleEmbelDock");
@@ -1411,7 +1406,7 @@ void MW::createWindowActions()
     if (isSettings && settings->contains("isEmbelDockVisible")) embelDockVisibleAction->setChecked(settings->value("isEmbelDockVisible").toBool());
     else embelDockVisibleAction->setChecked(false);
     addAction(embelDockVisibleAction);
-    connect(embelDockVisibleAction, &QAction::triggered, this, &MW::toggleEmbelDockVisibility);
+    connect(embelDockVisibleAction, &QAction::triggered, this, &MW::showEmbelDock);
 
     // rgh delete this ?
     metadataFixedSizeAction = new QAction(tr("Metadata Panel Fix Size"), this);
@@ -1502,13 +1497,13 @@ void MW::createHelpActions()
     addAction(helpWelcomeAction);
     connect(helpWelcomeAction, &QAction::triggered, this, &MW::helpWelcome);
 
-    helpFilmStripAction = new QAction(tr("Film strip and status bar symbols"), this);
-    helpFilmStripAction->setObjectName("helpFilmStrip");
-    helpFilmStripAction->setShortcutVisibleInContextMenu(true);
-    addAction(helpFilmStripAction);
-    connect(helpFilmStripAction, &QAction::triggered, this, &MW::helpThumbViewStatusBarSymbols);
+    helpPerformanceTipsAction = new QAction(tr("Performance tips"), this);
+    helpPerformanceTipsAction->setObjectName("helPerformanceTips");
+    helpPerformanceTipsAction->setShortcutVisibleInContextMenu(true);
+    addAction(helpPerformanceTipsAction);
+    connect(helpPerformanceTipsAction, &QAction::triggered, this, &MW::helpPerformanceTips);
 
-    helpRevealLogFileAction = new QAction("Send log file to Rory", this);
+    helpRevealLogFileAction = new QAction("Send log files to Winnow", this);
     helpRevealLogFileAction->setObjectName("RevealLogFileAct");
     helpRevealLogFileAction->setShortcutVisibleInContextMenu(true);
     addAction(helpRevealLogFileAction);
@@ -1528,17 +1523,41 @@ void MW::createHelpActions()
     addAction(diagnosticsCurrentAction);
     connect(diagnosticsCurrentAction, &QAction::triggered, this, &MW::diagnosticsCurrent);
 
-    diagnosticsLogIssuesAction = new QAction(tr("All Issues"), this);
-    diagnosticsLogIssuesAction->setObjectName("diagnosticsLogIssuesAction");
-    diagnosticsLogIssuesAction->setShortcutVisibleInContextMenu(true);
-    addAction(diagnosticsLogIssuesAction);
-    connect(diagnosticsLogIssuesAction, &QAction::triggered, this, &MW::allIssuesReport);
+    viewLogIssuesAction = new QAction(tr("View all issues"), this);
+    viewLogIssuesAction->setObjectName("diagnosticsLogIssuesAction");
+    viewLogIssuesAction->setShortcutVisibleInContextMenu(true);
+    addAction(viewLogIssuesAction);
+    connect(viewLogIssuesAction, &QAction::triggered, this, &MW::allIssuesReport);
 
-    diagnosticsSessionIssuesAction = new QAction(tr("Session Issues"), this);
-    diagnosticsSessionIssuesAction->setObjectName("diagnosticsSessionIssuesAction");
-    diagnosticsSessionIssuesAction->setShortcutVisibleInContextMenu(true);
-    addAction(diagnosticsSessionIssuesAction);
-    connect(diagnosticsSessionIssuesAction, &QAction::triggered, this, &MW::SessionIssuesReport);
+    viewSessionIssuesAction = new QAction(tr("View session issues"), this);
+    viewSessionIssuesAction->setObjectName("diagnosticsSessionIssuesAction");
+    viewSessionIssuesAction->setShortcutVisibleInContextMenu(true);
+    addAction(viewSessionIssuesAction);
+    connect(viewSessionIssuesAction, &QAction::triggered, this, &MW::sessionIssuesReport);
+
+    // clearIssuesAction = new QAction(tr("Clear session issues"), this);
+    // clearIssuesAction->setObjectName("diagnosticsClearIssuesAction");
+    // clearIssuesAction->setShortcutVisibleInContextMenu(true);
+    // addAction(clearIssuesAction);
+    // connect(clearIssuesAction, &QAction::triggered, this, &MW::sessionIssuesReport);
+
+    viewLogAction = new QAction(tr("View activity log"), this);
+    viewLogAction->setObjectName("showLogAction");
+    viewLogAction->setShortcutVisibleInContextMenu(true);
+    addAction(viewLogAction);
+    connect(viewLogAction, &QAction::triggered, this, &MW::logReport);
+
+    clearLogAction = new QAction(tr("Clear activity log"), this);
+    clearLogAction->setObjectName("clearLogAction");
+    clearLogAction->setShortcutVisibleInContextMenu(true);
+    addAction(clearLogAction);
+    connect(clearLogAction, &QAction::triggered, this, &Utilities::clearLog);
+
+    mailLogAction = new QAction(tr("Mail logs to Winnow for review"), this);
+    mailLogAction->setObjectName("mailLogAction");
+    mailLogAction->setShortcutVisibleInContextMenu(true);
+    addAction(mailLogAction);
+    connect(mailLogAction, &QAction::triggered, this, &MW::mailLogs);
 
     diagnosticsMainAction = new QAction(tr("Main diagnostics"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
@@ -1618,6 +1637,12 @@ void MW::createHelpActions()
     addAction(diagnosticsImageCacheAction);
     connect(diagnosticsImageCacheAction, &QAction::triggered, this, &MW::diagnosticsImageCache);
 
+    diagnosticsMemoryAction = new QAction(tr("Memory diagnostics"), this);
+    diagnosticsMemoryAction->setObjectName("diagnosticsMemory");
+    diagnosticsMemoryAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsMemoryAction);
+    connect(diagnosticsMemoryAction, &QAction::triggered, this, &MW::diagnosticsMemory);
+
     diagnosticsEmbellishAction = new QAction(tr("Embellish diagnostics"), this);
     diagnosticsEmbellishAction->setObjectName("diagnosticsEmbellish");
     diagnosticsEmbellishAction->setShortcutVisibleInContextMenu(true);
@@ -1694,9 +1719,6 @@ void MW::createMiscActions()
     // connect(pasteFilesAction, &QAction::triggered, this, &MW::pasteFiles);
     connect(pasteFilesAction, &QAction::triggered, this,
            [this](){pasteFiles(mouseOverFolderPath);});
-
-    // initially enable/disable actions
-    embedThumbnailsAction->setEnabled(G::modifySourceFiles);
 }
 
 void MW::createMenus()
@@ -1724,7 +1746,7 @@ void MW::createMenus()
 
     QLabel *label = new QLabel;
     label->setText(" TEST ");
-    label->setStyleSheet("QLabel{color:yellow;}");
+    label->setStyleSheet(G::cssWarning);
     QToolBar *toolBar = new QToolBar;
     toolBar->addWidget(label);
 
@@ -1820,7 +1842,7 @@ void MW::createEditMenu()
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || defined(Q_OS_WIN)
     editMenu->addAction(shareFilesAction);
 #endif
     editMenu->addAction(copyFilesAction);
@@ -1861,7 +1883,6 @@ void MW::createEditMenu()
     utilitiesMenu = editMenu->addMenu("Utilities");
     utilitiesMenu->addAction(mediaReadSpeedAction);
     utilitiesMenu->addAction(visCmpImagesAction);
-    if (G::useMyTiff) utilitiesMenu->addAction(embedThumbnailsAction);
     // utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);
     if (G::isRory) utilitiesMenu->addAction(focusStackAction);
@@ -2034,54 +2055,65 @@ void MW::createViewMenu()
 
 }
 
-// void MW::createWindowMenu()
-// {
-//     windowMenu = new QMenu(this);
-//     windowGroupAct = new QAction("Window", this);
-//     windowGroupAct->setMenu(windowMenu);
-//     workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
-//     workspaceMenu->addAction(defaultWorkspaceAction);
-//     workspaceMenu->addAction(newWorkspaceAction);
-//     workspaceMenu->addAction(manageWorkspaceAction);
-//     workspaceMenu->addSeparator();
-//     // add 10 dummy menu items for custom workspaces
-//     for (int i=0; i<10; i++) {
-//         workspaceMenu->addAction(workspaceActions.at(i));
-//     }
-//     connect(workspaceMenu, SIGNAL(triggered(QAction*)),
-//             SLOT(invokeWorkspaceFromAction(QAction*)));
-//     windowMenu->addSeparator();
-//     windowMenu->addAction(folderDockVisibleAction);
-//     windowMenu->addAction(favDockVisibleAction);
-//     windowMenu->addAction(filterDockVisibleAction);
-//     windowMenu->addAction(metadataDockVisibleAction);
-//     windowMenu->addAction(thumbDockVisibleAction);
-//     if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
-//     windowMenu->addSeparator();
-// //    windowMenu->addAction(windowTitleBarVisibleAction);
-//     #ifdef Q_OS_WIN
-//     //windowMenu->addAction(menuBarVisibleAction);
-//     #endif
-//     windowMenu->addAction(statusBarVisibleAction);  // crash
-// }
+/*
+void MW::createWindowMenu()
+{
+    windowMenu = new QMenu(this);
+    windowGroupAct = new QAction("Window", this);
+    windowGroupAct->setMenu(windowMenu);
+    workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
+    workspaceMenu->addAction(defaultWorkspaceAction);
+    workspaceMenu->addAction(newWorkspaceAction);
+    workspaceMenu->addAction(manageWorkspaceAction);
+    workspaceMenu->addSeparator();
+    // add 10 dummy menu items for custom workspaces
+    for (int i=0; i<10; i++) {
+        workspaceMenu->addAction(workspaceActions.at(i));
+    }
+    connect(workspaceMenu, SIGNAL(triggered(QAction*)),
+            SLOT(invokeWorkspaceFromAction(QAction*)));
+    windowMenu->addSeparator();
+    windowMenu->addAction(folderDockVisibleAction);
+    windowMenu->addAction(favDockVisibleAction);
+    windowMenu->addAction(filterDockVisibleAction);
+    windowMenu->addAction(metadataDockVisibleAction);
+    windowMenu->addAction(thumbDockVisibleAction);
+    if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
+    windowMenu->addSeparator();
+//    windowMenu->addAction(windowTitleBarVisibleAction);
+    #ifdef Q_OS_WIN
+    //windowMenu->addAction(menuBarVisibleAction);
+    #endif
+    windowMenu->addAction(statusBarVisibleAction);  // crash
+}
+*/
 
 void MW::createHelpMenu()
 {
     helpMenu = new QMenu(this);
+
     helpGroupAct = new QAction("Help", this);
     helpGroupAct->setMenu(helpMenu);
+
     #ifdef Q_OS_WIN
     helpMenu->addAction(checkForUpdateAction);
     helpMenu->addSeparator();
     #endif
+
     helpMenu->addAction(aboutAction);
     //    helpMenu->addAction(helpAction);
-    helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpWelcomeAction);
-    helpMenu->addAction(helpFilmStripAction);
+    helpMenu->addAction(helpShortcutsAction);
+    helpMenu->addAction(helpPerformanceTipsAction);
     helpMenu->addSeparator();
-    helpMenu->addAction(diagnosticsLogIssuesAction);
-    helpMenu->addAction(diagnosticsSessionIssuesAction);
+    logMenu = helpMenu->addMenu(tr("&Logs"));
+    logMenu->addAction(viewLogAction);
+    logMenu->addAction(clearLogAction);
+    logMenu->addSeparator();
+    logMenu->addAction(viewLogIssuesAction);
+    logMenu->addAction(viewSessionIssuesAction);
+    logMenu->addSeparator();
+    logMenu->addAction(mailLogAction);
     //    helpMenu->addSeparator();
     //    helpMenu->addAction(helpRevealLogFileAction);
     helpMenu->addSeparator();
@@ -2103,6 +2135,7 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAllRowsAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
+    helpDiagnosticsMenu->addAction(diagnosticsMemoryAction);
     helpDiagnosticsMenu->addAction(diagnosticsFiltersAction);
     helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
 }
@@ -2297,50 +2330,60 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(pickAction);
     thumbViewActions->append(rejectAction);
     thumbViewActions->append(pickUnlessRejectedAction);
-    thumbViewActions->append(separatorActionA);
+
+    thumbViewActions->append(separatorAction);
     thumbViewActions->append(ratingGroupAct);
     thumbViewActions->append(labelGroupAct);
-    thumbViewActions->append(separatorAction8);
+
+    thumbViewActions->append(separatorAction1);
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(embelExportGroupAct);
     if (G::isRory) thumbViewActions->append(focusStackAction);
-    thumbViewActions->append(separatorAction9);
+
+    thumbViewActions->append(separatorAction2);
     thumbViewActions->append(ratingBadgeVisibleAction);
     thumbViewActions->append(iconNumberVisibleAction);
-    thumbViewActions->append(separatorAction);
+
+    thumbViewActions->append(separatorAction3);
     thumbViewActions->append(selectAllAction);
     thumbViewActions->append(invertSelectionAction);
-    thumbViewActions->append(separatorAction1);
+
+    thumbViewActions->append(separatorAction4);
+    thumbViewActions->append(thumbsEnlargeAction);
+    thumbViewActions->append(thumbsShrinkAction);
+
+    thumbViewActions->append(separatorAction5);
     thumbViewActions->append(rotateRightAction);
     thumbViewActions->append(rotateLeftAction);
-    thumbViewActions->append(separatorAction3);
+
+    thumbViewActions->append(separatorAction6);
     thumbViewActions->append(sortReverseAction);
-    thumbViewActions->append(separatorAction4);
-    #ifdef Q_OS_MAC
+
+    thumbViewActions->append(separatorAction7);
+    #if defined(Q_OS_MAC) || defined(Q_OS_WIN)
     thumbViewActions->append(shareFilesAction);
     #endif
     thumbViewActions->append(copyFilesAction);
     thumbViewActions->append(copyImageAction);
     thumbViewActions->append(copyImagePathFromContextAction);
     thumbViewActions->append(saveAsFileAction);
-    thumbViewActions->append(separatorAction5);
+
+    thumbViewActions->append(separatorAction8);
     thumbViewActions->append(renameAction);
     thumbViewActions->append(deleteImagesAction);
-    if (G::useMyTiff) {
-        thumbViewActions->append(separatorAction6);
-        thumbViewActions->append(embedThumbnailsAction);
-    }
-    thumbViewActions->append(separatorAction7);
-    thumbViewActions->append(reportMetadataAction);
-    thumbViewActions->append(diagnosticsCurrentAction);
-    thumbViewActions->append(diagnosticsDataModelAction);
-    thumbViewActions->append(diagnosticsSelectionAction);
-    thumbViewActions->append(diagnosticsMetadataCacheAction);
-    thumbViewActions->append(diagnosticsImageCacheAction);
-    thumbViewActions->append(diagnosticsSessionIssuesAction);
-    thumbViewActions->append(separatorAction0);
-    thumbViewActions->append(helpFilmStripAction);
+    // thumbViewActions->append(separatorAction7);
+    // thumbViewActions->append(diagnosticsSelectionAction);
+    // thumbViewActions->append(diagnosticsCurrentAction);
+    // thumbViewActions->append(diagnosticsMetadataAction);
+    // thumbViewActions->append(diagnosticsDataModelAction);
+    // thumbViewActions->append(diagnosticsMetadataCacheAction);
+    // thumbViewActions->append(diagnosticsImageCacheAction);
+    // thumbViewActions->append(diagnosticsMemoryAction);
+    // thumbViewActions->append(separatorAction0);
+    // thumbViewActions->append(diagnosticsSessionIssuesAction);
+    // thumbViewActions->append(showLogAction);
+
     // docking panels context menus
     thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);
@@ -2459,49 +2502,6 @@ void MW::renameEraseMemCardFromContextMenu(QString path)
     eraseUsbActionFromContextMenu->setText(text);
 }
 
-void MW::renameEmbedThumbsContextMenu()
-{
-    QString embed = "Embed ";
-    if (G::backupBeforeModifying) embed = "Backup, then embed ";
-    if (!G::modifySourceFiles) {
-        QString txt = embed + "missing thumbnails";
-        embedThumbnailsAction->setText(txt);
-        embedThumbnailsAction->setEnabled(false);
-        return;
-    }
-
-    QModelIndexList selection = dm->selectionModel->selectedRows();
-    int missingCount = 0;
-    if (!selection.isEmpty()) {
-        for (int i = 0; i < selection.size(); i++) {
-            int sfRow = selection.at(i).row();
-            bool isMissing = dm->sf->index(sfRow, G::MissingThumbColumn).data().toBool();
-            if (isMissing) {
-                missingCount++;
-            }
-            /*
-            qDebug() << "MW::renameEmbedThumbsContextMenu"
-                     << "selection size =" << selection.size()
-                     << "row =" << sfRow
-                     << "missing count =" << missingCount
-                ; // */
-        }
-    }
-    if (missingCount) {
-        QString images = " images";
-        QString thumbnails = " thumbnails ";
-        QString count = QString::number(missingCount);
-        if (missingCount == 1) {
-            images = " image";
-            thumbnails = " thumbnail ";
-        }
-        QString txt = embed + "missing" + thumbnails + "for " + count + images;
-        embedThumbnailsAction->setText(txt);
-        embedThumbnailsAction->setEnabled(true);
-    }
-    else embedThumbnailsAction->setEnabled(false);
-}
-
 void MW::enableSelectionDependentMenus()
 {
 /*
@@ -2595,9 +2595,6 @@ void MW::enableSelectionDependentMenus()
     // diagnosticsMetadataCacheAction->setEnabled(dmHasRows);
     // diagnosticsImageCacheAction->setEnabled(dmHasRows);
     diagnosticsEmbellishAction->setEnabled(dmHasRows);
-
-    // Missing thumbnails: rename and set enabled state
-    renameEmbedThumbsContextMenu();
 }
 
 void MW::loadShortcuts(bool defaultShortcuts)
@@ -2629,6 +2626,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[pickAction->objectName()] = pickAction;
     actionKeys[filterPickAction->objectName()] = filterPickAction;
     actionKeys[ingestAction->objectName()] = ingestAction;
+    actionKeys[renameAction->objectName()] = renameAction;
     actionKeys[reportMetadataAction->objectName()] = reportMetadataAction;
     actionKeys[slideShowAction->objectName()] = slideShowAction;
 //    actionKeys[keyHomeAction->objectName()] = keyHomeAction;
@@ -2705,6 +2703,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         openAction->setShortcut(QKeySequence("O"));
         openUsbAction->setShortcut(QKeySequence("Ctrl+O"));
         ingestAction->setShortcut(QKeySequence("Q"));
+        renameAction->setShortcut(QKeySequence("Ctrl+F2"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
@@ -2859,15 +2858,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         filterDockVisibleAction->setShortcut(QKeySequence("F5"));
         metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
         thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
-        //menuBarVisibleAction->setShortcut(QKeySequence("Shift+F9"));
+        embelDockVisibleAction->setShortcut(QKeySequence("F8"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
-
-        //        folderDockLockAction->setShortcut(QKeySequence("Shift+Alt+F3"));
-        //        favDockLockAction->setShortcut(QKeySequence("Shift+Alt+F4"));
-        //        filterDockLockAction->setShortcut(QKeySequence("Shift+Alt+F5"));
-        //        metadataDockLockAction->setShortcut(QKeySequence("Shift+Alt+F6"));
-        //        thumbDockLockAction->setShortcut(QKeySequence("Shift+Alt+F7"));
-        //        allDocksLockAction->setShortcut(QKeySequence("Ctrl+L"));
 
         // Help
         helpAction->setShortcut(QKeySequence("?"));

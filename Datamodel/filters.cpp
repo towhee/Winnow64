@@ -1,5 +1,6 @@
 #include "Datamodel/filters.h"
 #include "Main/global.h"
+#include "Utilities/htmlwindow.h"
 
 /*
     OVERVIEW
@@ -136,7 +137,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catTitle] = G::TitleColumn;
     filterCategoryToDmColumn[catKeyword] = G::KeywordsColumn;
     filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
-    filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
+    // filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
     filterCategoryToDmColumn[catCompare] = G::CompareColumn;
 
     createPredefinedFilters();
@@ -239,7 +240,7 @@ void Filters::createDynamicFilters()
     titles = new QTreeWidgetItem(this);
     keywords = new QTreeWidgetItem(this);
     creators = new QTreeWidgetItem(this);
-    missingThumbs = new QTreeWidgetItem(this);
+    // missingThumbs = new QTreeWidgetItem(this);
     compare = new QTreeWidgetItem(this);
 
     createFilter(picks, catPick);
@@ -255,7 +256,7 @@ void Filters::createDynamicFilters()
     createFilter(titles, catTitle);
     createFilter(keywords, catKeyword);
     createFilter(creators, catCreator);
-    createFilter(missingThumbs, catMissingThumbs);
+    // createFilter(missingThumbs, catMissingThumbs);
     createFilter(compare, catCompare);
 }
 
@@ -299,7 +300,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(titles);
     setCategoryBackground(keywords);
     setCategoryBackground(creators);
-    setCategoryBackground(missingThumbs);
+    // setCategoryBackground(missingThumbs);
     setCategoryBackground(compare);
 }
 
@@ -327,7 +328,7 @@ void Filters::removeChildrenDynamicFilters()
     titles->takeChildren();
     keywords->takeChildren();
     creators->takeChildren();
-    missingThumbs->takeChildren();
+    // missingThumbs->takeChildren();
     compare->takeChildren();
 }
 
@@ -1175,7 +1176,7 @@ void Filters::collapseAllFiltersExceptSearch()
     collapse(indexFromItem(titles));
     collapse(indexFromItem(keywords));
     collapse(indexFromItem(creators));
-    collapse(indexFromItem(missingThumbs));
+    // collapse(indexFromItem(missingThumbs));
     collapse(indexFromItem(compare));
 }
 
@@ -1337,8 +1338,8 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
         else item->setCheckState(0, Qt::Unchecked);
         item->setData(1, Qt::EditRole, i.key());
         item->setData(3, Qt::EditRole, i.value());
-        item->setTextAlignment(2, Qt::AlignRight);
-        item->setTextAlignment(3, Qt::AlignRight);
+        item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
     }
 
     // sort the result
@@ -1394,8 +1395,8 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         item->setData(1, Qt::EditRole, i.key());
         item->setData(2, Qt::EditRole, i.value());
         item->setData(3, Qt::EditRole, i.value());
-        item->setTextAlignment(2, Qt::AlignRight);
-        item->setTextAlignment(3, Qt::AlignRight);
+        item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
         /*
         qDebug() << "Filters::addCategoryItems  Category =" << category->text(0)
                  << "item =" << i.value();
@@ -1767,13 +1768,10 @@ void Filters::mouseReleaseEvent(QMouseEvent * event)
 void Filters::howThisWorks()
 {
     if (G::isLogger) G::log("Filters::howThisWorks");
-
-    QDialog *dlg = new QDialog;
-    Ui::FiltersHelpDlg *ui = new Ui::FiltersHelpDlg;
-    ui->setupUi(dlg);
-    dlg->setWindowTitle("Filters Help");
-    dlg->setStyleSheet(G::css);
-    dlg->exec();
+    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    new HtmlWindow("Winnow - How filters work",
+                   ":/Docs/filtershelp.html",
+                   QSize(600, 500), r, window());
 }
 
 QString Filters::diagnostics()

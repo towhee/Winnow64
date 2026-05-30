@@ -12,6 +12,7 @@ public:
     HoverDelegate(QObject *parent = nullptr);
 
     void setHoveredIndex(QModelIndex idx0);
+    void setOverLimitTextColor(const QColor &color) { overLimitTextColor = color; }
 
 signals:
     void hoverChanged();

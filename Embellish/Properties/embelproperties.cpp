@@ -1570,42 +1570,40 @@ void EmbelProperties::syncWinnets(QString src)
     QString winnetPath = "";
     QStringList dirFilter;
 
-
-
     // Check QtCore library exists
     {
     #ifdef Q_OS_WIN
-    ext = ".exe";
-    dirFilter << "*.exe";
-    winnetPath = executableDirPath + "/Winnet.exe";
-    // make sure Qt5Core.dll exists
-    QString dllPath = appDataWinnetsPath + "/Qt5Core.dll";
-    if (!QFile(dllPath).exists()) {
-        QString dllSourcePath = executableDirPath + "/Qt5Core.dll";
-        QFile dll(dllSourcePath);
-        dll.copy(dllPath);
-    }
+        ext = ".exe";
+        dirFilter << "*.exe";
+        winnetPath = executableDirPath + "/Winnet.exe";
+        // make sure Qt5Core.dll exists
+        QString dllPath = appDataWinnetsPath + "/Qt5Core.dll";
+        if (!QFile(dllPath).exists()) {
+            QString dllSourcePath = executableDirPath + "/Qt5Core.dll";
+            QFile dll(dllSourcePath);
+            dll.copy(dllPath);
+        }
     #endif
     #ifdef Q_OS_MAC
-    ext = "";  // was ext = ".app";
-    dirFilter << "*.app";
-    winnetPath = executableDirPath + "/Winnets/Winnet";
-    // make sure Frameworks folder exists
-    dir.setPath(appDataWinnetsPath + "/Frameworks");
-    if (!dir.exists())
-        dir.mkdir(appDataWinnetsPath + "/Frameworks");
-    // make sure QtCore.framework exists
-    QString dstPath = appDataWinnetsPath + "/Frameworks/QtCore.framework";
-    if (!QFile(dstPath).exists()) {
-        QString srcPath = executableDirPath + "/Winnets/Frameworks/QtCore.framework";
-         QStringList args;
-        args << "-R" << srcPath << dstPath;
-        auto copy = new QProcess(this);
-        copy->start("cp", args);
-        copy->waitForFinished();
-        copy->close();
-        delete copy;
-    }
+        ext = "";  // was ext = ".app";
+        dirFilter << "*.app";
+        winnetPath = executableDirPath + "/Winnets/Winnet.app/Contents/MacOS/Winnet";
+        // make sure Frameworks folder exists
+        dir.setPath(appDataWinnetsPath + "/Frameworks");
+        if (!dir.exists())
+            dir.mkdir(appDataWinnetsPath + "/Frameworks");
+        // make sure QtCore.framework exists
+        QString dstPath = appDataWinnetsPath + "/Frameworks/QtCore.framework";
+        if (!QFile(dstPath).exists()) {
+            QString srcPath = executableDirPath + "/Winnets/Frameworks/QtCore.framework";
+             QStringList args;
+            args << "-R" << srcPath << dstPath;
+            auto copy = new QProcess(this);
+            copy->start("cp", args);
+            copy->waitForFinished();
+            copy->close();
+            delete copy;
+        }
     #endif
     }
 
@@ -5503,7 +5501,7 @@ QString EmbelProperties::metaString(QString key, QString fPath)
 */
     if (G::isLogger) G::log("EmbelProperties::metaString");
     QString tokenString = mw3->infoString->infoTemplates[key];
-    if (G::isFileLogger) {
+    if (G::isRunByExtern) {
         Utilities::log("EmbelProperties::metaString fPath                            ", fPath);
         Utilities::log("EmbelProperties::metaString tokenString                      ", tokenString);
         QString meta = mw3->infoString->parseTokenString(tokenString, fPath);
@@ -5590,7 +5588,7 @@ void EmbelProperties::coordHelp()
     qDebug() << "EmbelProperties::coordHelp  geometry() =" << r;
     HtmlWindow *w = new HtmlWindow("Winnow - Embel Container and Coordinate System",
                                    ":/Docs/embelcoordsystem.html",
-                                   QSize(939,736), r);
+                                   QSize(939,736), r, window());
 }
 
 void EmbelProperties::addBorder(int count, QString borderName)

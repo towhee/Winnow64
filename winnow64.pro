@@ -13,6 +13,10 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 #    win32:QT += core5compat   # huge performance hit without this
 }
 
+macx-clang {
+    QMAKE_CXXFLAGS += -include arm_acle.h
+}
+
 # QMAKE_BUNDLE_IDENTIFIER = com.winnow.Winnow
 
 # Compile without warnings
@@ -36,27 +40,46 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 CONFIG += c++17
 win32:QMAKE_CXXFLAGS += /std:c++17
 win32:QMAKE_CXXFLAGS += /Zc:__cplusplus
-win32:QMAKE_CXXFLAGS += /wd4138             # supress "*/" found outside of comment
+win32:QMAKE_CXXFLAGS += /wd4138             # suppress "*/" found outside of comment
+
+# # ASan: Enable with: qmake CONFIG+=sanitize_address && make
+# CONFIG(sanitize_address) {
+#     QMAKE_CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -g
+#     QMAKE_CFLAGS   += -fsanitize=address -fno-omit-frame-pointer -g
+#     QMAKE_LFLAGS   += -fsanitize=address
+# }
+
+# # TSan: Enable with: qmake CONFIG+=sanitize_thread && make
+# CONFIG(sanitize_thread) {
+#     QMAKE_CXXFLAGS += -fsanitize=thread -fno-omit-frame-pointer -g
+#     QMAKE_CFLAGS   += -fsanitize=thread -fno-omit-frame-pointer -g
+#     QMAKE_LFLAGS   += -fsanitize=thread
+# }
+
+# Binary hardening for release builds. Defence-in-depth when parsing untrusted files.
+# _FORTIFY_SOURCE needs optimisation to do anything, so debug builds are left alone.
+# Skipped deliberately: -fPIE (already default on modern macOS/clang) and MSVC /guard:cf
+# (requires every linked object — including OpenCV/libheif/libde265/libtiff — to be CFG-built).
+CONFIG(release, debug|release) {
+    macx-clang {
+        QMAKE_CXXFLAGS += -fstack-protector-strong -D_FORTIFY_SOURCE=2
+        QMAKE_CFLAGS   += -fstack-protector-strong -D_FORTIFY_SOURCE=2
+    }
+    win32-msvc* {
+        QMAKE_CXXFLAGS += /sdl
+        QMAKE_CFLAGS   += /sdl
+    }
+}
+
 
 TEMPLATE = app
 TARGET = Winnow
-
-# Precompiled header setup
-# CONFIG += precompile_header
-# PRECOMPILED_HEADER = $$PWD/global.h
 
 INCLUDEPATH += $$PWD
 INCLUDEPATH += .
 INCLUDEPATH += Dialogs
 INCLUDEPATH += Utilities
 INCLUDEPATH += FocusStack
-# INCLUDEPATH += FocusStack/Petteri
-# INCLUDEPATH += FocusStack/PetteriModular
-
-# Petteri Modular engine
-# include($$PWD/FocusStack/PetteriModular/petteri_modular.pri)
-# DISTFILES += FocusStack/PetteriModular/petteri_modular.pri
-
 
 DEPENDPATH += $$PWD
 
@@ -78,12 +101,11 @@ QT += widgets
 QT += multimedia
 QT += multimediawidgets
 QT += concurrent
+QT += svg
 
-HEADERS += Cache/cachedata.h
-HEADERS += Cache/tiffthumbdecoder.h
-HEADERS += ImageFormats/Video/mov.h
-HEADERS += ImageFormats/Video/mp4.h
-HEADERS += ImageFormats/Png/png.h
+HEADERS += Cache/cachedata.h \
+    Utilities/reportdialog.h
+HEADERS +=
 HEADERS += Cache/framedecoder.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -130,77 +152,24 @@ HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
 HEADERS += File/hoverdelegate.h
 HEADERS += File/ingest.h
-
-HEADERS += FocusStack/Contracts/IAlign.h
-HEADERS += FocusStack/Contracts/IDepthMap.h
-HEADERS += FocusStack/Contracts/IFocusmaps.h
-HEADERS += FocusStack/Contracts/IFusion.h
-
-HEADERS += FocusStack/Mask/maskassessor.h
-HEADERS += FocusStack/Mask/maskgenerator.h
-HEADERS += FocusStack/Mask/maskoptions.h
-HEADERS += FocusStack/Mask/maskrefiner.h
-
-# HEADERS += FocusStack/Petteri/3dpreview.h
-# HEADERS += FocusStack/Petteri/align.h
-# HEADERS += FocusStack/Petteri/background_removal.h
-# HEADERS += FocusStack/Petteri/denoise.h
-# HEADERS += FocusStack/Petteri/depthmap.h
-# HEADERS += FocusStack/Petteri/depthmap_inpaint.h
-# HEADERS += FocusStack/Petteri/fast_bilateral.h
-# HEADERS += FocusStack/Petteri/focusmeasure.h
-# HEADERS += FocusStack/Petteri/focusstack.h
-# HEADERS += FocusStack/Petteri/focusstackworker.h
-# HEADERS += FocusStack/Petteri/grayscale.h
-# HEADERS += FocusStack/Petteri/histogrampercentile.h
-# HEADERS += FocusStack/Petteri/loadimg.h
-# HEADERS += FocusStack/Petteri/logger.h
-# HEADERS += FocusStack/Petteri/merge.h
-# HEADERS += FocusStack/Petteri/options.h
-# HEADERS += FocusStack/Petteri/radialfilter.h
-# HEADERS += FocusStack/Petteri/reassign.h
-# HEADERS += FocusStack/Petteri/saveimg.h
-# HEADERS += FocusStack/Petteri/wavelet.h
-# HEADERS += FocusStack/Petteri/wavelet_opencl.h
-# HEADERS += FocusStack/Petteri/wavelet_templates.h
-# HEADERS += FocusStack/Petteri/worker.h
-
-HEADERS += FocusStack/PetteriModular/Align/align.h
-HEADERS += FocusStack/PetteriModular/Align/background_removal.h
-HEADERS += FocusStack/PetteriModular/Align/radialfilter.h
-HEADERS += FocusStack/PetteriModular/Core/logger.h
-HEADERS += FocusStack/PetteriModular/Core/focusstack.h
-HEADERS += FocusStack/PetteriModular/Core/worker.h
-HEADERS += FocusStack/PetteriModular/Denoise/denoise.h
-HEADERS += FocusStack/PetteriModular/Depth/depthmap.h
-HEADERS += FocusStack/PetteriModular/Depth/depthmap_inpaint.h
-HEADERS += FocusStack/PetteriModular/Denoise/fast_bilateral.h
-HEADERS += FocusStack/PetteriModular/Focus/focusmeasure.h
-HEADERS += FocusStack/PetteriModular/Focus/histogrampercentile.h
-HEADERS += FocusStack/PetteriModular/Fusion/merge.h
-HEADERS += FocusStack/PetteriModular/Fusion/reassign.h
-HEADERS += FocusStack/PetteriModular/GrayScale/grayscale.h
-HEADERS += FocusStack/PetteriModular/IO/loadimg.h
-HEADERS += FocusStack/PetteriModular/IO/saveimg.h
-HEADERS += FocusStack/PetteriModular/Options/options.h
-HEADERS += FocusStack/PetteriModular/View/3dpreview.h
-HEADERS += FocusStack/PetteriModular/Wave/wavelet.h
-HEADERS += FocusStack/PetteriModular/Wave/wavelet_opencl.h
-HEADERS += FocusStack/PetteriModular/Wave/wavelet_opencl_kernels.cl
-HEADERS += FocusStack/PetteriModular/Wave/wavelet_templates.h
-HEADERS += FocusStack/PetteriModular/Wrappers/petterialignworker.h
-HEADERS += FocusStack/PetteriModular/Wrappers/petteridepthmapworker.h
-HEADERS += FocusStack/PetteriModular/Wrappers/petterifocusmapsworker.h
-HEADERS += FocusStack/PetteriModular/Wrappers/petteripmaxfusionworker.h
-
-HEADERS += FocusStack/Pipeline/PipelineBase.h
-HEADERS += FocusStack/Pipeline/pipelinepmax.h
-
-HEADERS += FocusStack/Stages/Align/petterialign.h
-HEADERS += FocusStack/Stages/Depth/petteridepthmap.h
-HEADERS += FocusStack/Stages/Focus/petterifocusmaps.h
-HEADERS += FocusStack/Stages/Fusion/petteripmaxfusion.h
-
+HEADERS += FocusStack/FSFusionWaveletTemplates.h
+HEADERS += FocusStack/fs.h
+HEADERS += FocusStack/fsalign.h
+HEADERS += FocusStack/fsalign_types.h
+# HEADERS += FocusStack/fsartifact.h
+# HEADERS += FocusStack/fsbackground.h
+HEADERS += FocusStack/fsdepth.h
+HEADERS += FocusStack/fsfocus.h
+HEADERS += FocusStack/fsfusion.h
+HEADERS += FocusStack/fsfusiondmap.h
+HEADERS += FocusStack/fsfusionpmax.h
+HEADERS += FocusStack/fsfusionreassign.h
+HEADERS += FocusStack/fsfusionwavelet.h
+HEADERS += FocusStack/fsloader.h
+HEADERS += FocusStack/fsmerge.h
+HEADERS += FocusStack/fsphotometric.h
+HEADERS += FocusStack/fsutilities.h
+HEADERS += FocusStack/fusionpyr.h
 HEADERS += Image/autonomousimage.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
@@ -222,12 +191,15 @@ HEADERS += ImageFormats/Jpeg/jpeg.h
 macx:HEADERS += ImageFormats/Jpeg/jpeg2.h
 macx:HEADERS += ImageFormats/Jpeg/decoderJpg.h
 macx:HEADERS += ImageFormats/Jpeg/jpgdecoder.h
-macx:HEADERS += ImageFormats/jpeg/jpegturbo.h
+macx:HEADERS += ImageFormats/Jpeg/jpegturbo.h
 HEADERS += ImageFormats/Nikon/nikon.h
 HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += ImageFormats/Panasonic/panasonic.h
+HEADERS += ImageFormats/Png/png.h
 HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
+HEADERS += ImageFormats/Video/mov.h
+HEADERS += ImageFormats/Video/mp4.h
 macx:HEADERS += ImageFormats/Tiff/libtiff.h
 HEADERS += ImageFormats/Tiff/rorytiff.h
 HEADERS += ImageFormats/Base/rawbase.h
@@ -306,14 +278,14 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp
-SOURCES += Utilities/focuspointtrainer.cpp
-SOURCES += Utilities/focuspredictor.cpp
-SOURCES += Cache/tiffthumbdecoder.cpp
+SOURCES += Cache/cachedata.cpp \
+    Utilities/reportdialog.cpp
+SOURCES +=
 SOURCES += ImageFormats/Video/mov.cpp
 SOURCES += ImageFormats/Video/mp4.cpp
 SOURCES += ImageFormats/Png/png.cpp
 SOURCES += Cache/framedecoder.cpp
+macx:SOURCES += Cache/framedecoder_mac.mm           # AVFoundation fast video thumbnail
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/metaread.cpp
@@ -357,75 +329,31 @@ SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
 SOURCES += File/hoverdelegate.cpp
 SOURCES += File/ingest.cpp
-
 SOURCES += FocusStack/generateFocusStack.cpp
-
-SOURCES += FocusStack/Mask/maskassessor.cpp
-SOURCES += FocusStack/Mask/maskgenerator.cpp
-SOURCES += FocusStack/Mask/maskrefiner.cpp
-
-# Temp comment out while working on PetteriModular
-# SOURCES += FocusStack/Petteri/3dpreview.cpp
-# SOURCES += FocusStack/Petteri/align.cpp
-# SOURCES += FocusStack/Petteri/background_removal.cpp
-# SOURCES += FocusStack/Petteri/denoise.cpp
-# SOURCES += FocusStack/Petteri/depthmap.cpp
-# SOURCES += FocusStack/Petteri/depthmap_inpaint.cpp
-# SOURCES += FocusStack/Petteri/focusmeasure.cpp
-# SOURCES += FocusStack/Petteri/focusstack.cpp
-# SOURCES += FocusStack/Petteri/focusstackworker.cpp
-# SOURCES += FocusStack/Petteri/grayscale.cpp
-# SOURCES += FocusStack/Petteri/histogrampercentile.cpp
-# SOURCES += FocusStack/Petteri/loadimg.cpp
-# SOURCES += FocusStack/Petteri/logger.cpp
-# SOURCES += FocusStack/Petteri/merge.cpp
-# SOURCES += FocusStack/Petteri/options.cpp
-# SOURCES += FocusStack/Petteri/radialfilter.cpp
-# SOURCES += FocusStack/Petteri/reassign.cpp
-# SOURCES += FocusStack/Petteri/saveimg.cpp
-# SOURCES += FocusStack/Petteri/wavelet.cpp
-# SOURCES += FocusStack/Petteri/wavelet_opencl.cpp
-# SOURCES += FocusStack/Petteri/worker.cpp
-
-SOURCES += FocusStack/PetteriModular/Align/align.cpp
-SOURCES += FocusStack/PetteriModular/Align/background_removal.cpp
-SOURCES += FocusStack/PetteriModular/Align/radialfilter.cpp
-SOURCES += FocusStack/PetteriModular/Core/focusstack.cpp
-SOURCES += FocusStack/PetteriModular/Core/logger.cpp
-SOURCES += FocusStack/PetteriModular/Core/worker.cpp
+SOURCES += FocusStack/fs.cpp
+SOURCES += FocusStack/fsalign.cpp
+# SOURCES += FocusStack/fsartifact.cpp
+# SOURCES += FocusStack/fsbackground.cpp
+SOURCES += FocusStack/fsdepth.cpp
+SOURCES += FocusStack/fsfocus.cpp
+SOURCES += FocusStack/fsfusion.cpp
+SOURCES += FocusStack/fsfusiondmap.cpp
 SOURCES +=
-SOURCES += FocusStack/PetteriModular/Depth/depthmap.cpp
-SOURCES += FocusStack/PetteriModular/Depth/depthmap_inpaint.cpp
-SOURCES += FocusStack/PetteriModular/Denoise/denoise.cpp
-SOURCES += FocusStack/PetteriModular/Focus/focusmeasure.cpp
-SOURCES += FocusStack/PetteriModular/Focus/histogrampercentile.cpp
-SOURCES += FocusStack/PetteriModular/Fusion/merge.cpp
-SOURCES += FocusStack/PetteriModular/Fusion/reassign.cpp
-SOURCES += FocusStack/PetteriModular/GrayScale/grayscale.cpp
-SOURCES += FocusStack/PetteriModular/IO/loadimg.cpp
-SOURCES += FocusStack/PetteriModular/IO/saveimg.cpp
-SOURCES += FocusStack/PetteriModular/Options/options.cpp
-SOURCES += FocusStack/PetteriModular/View/3dpreview.cpp
-SOURCES += FocusStack/PetteriModular/Wave/wavelet.cpp
-SOURCES += FocusStack/PetteriModular/Wave/wavelet_opencl.cpp
-SOURCES += FocusStack/PetteriModular/Wrappers/petterialignworker.cpp
-SOURCES += FocusStack/PetteriModular/Wrappers/petteridepthmapworker.cpp
-SOURCES += FocusStack/PetteriModular/Wrappers/petterifocusmapsworker.cpp
-SOURCES += FocusStack/PetteriModular/Wrappers/petteripmaxfusionworker.cpp
-
-SOURCES += FocusStack/Pipeline/PipelineBase.cpp
-SOURCES += FocusStack/Pipeline/pipelinepmax.cpp
-
-SOURCES += FocusStack/Stages/Align/petterialign.cpp
-SOURCES += FocusStack/Stages/Depth/petteridepthmap.cpp
-SOURCES += FocusStack/Stages/Focus/petterifocusmaps.cpp
-SOURCES += FocusStack/Stages/Fusion/petteripmaxfusion.cpp
-
+SOURCES += FocusStack/fsfusionpmax.cpp
+SOURCES += FocusStack/fsfusionreassign.cpp
+SOURCES += FocusStack/fsfusionwavelet.cpp
+SOURCES +=
+SOURCES += FocusStack/fsloader.cpp
+SOURCES += FocusStack/fsmerge.cpp
+SOURCES += FocusStack/fsphotometric.cpp
+SOURCES += FocusStack/fusionpyr.cpp
+SOURCES += FocusStack/fsutilities.cpp
 SOURCES += Image/autonomousimage.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/stack.cpp
 SOURCES += Image/thumb.cpp
+macx:SOURCES += Image/thumb_mac.mm                  # ImageIO fast thumbnail path
 #SOURCES += Image/tiffhandler.cpp
 SOURCES += ImageFormats/Canon/canon.cpp
 SOURCES += ImageFormats/Canon/canoncr3.cpp
@@ -533,6 +461,8 @@ SOURCES += Utilities/classificationlabel.cpp
 SOURCES += Utilities/coloranalysis.cpp
 SOURCES += Utilities/dirwatcher.cpp
 SOURCES += Utilities/dropshadowlabel.cpp
+SOURCES += Utilities/focuspointtrainer.cpp
+SOURCES += Utilities/focuspredictor.cpp
 SOURCES += Utilities/foldercompressor.cpp
 SOURCES += Utilities/htmlwindow.cpp
 SOURCES += Utilities/icc.cpp
@@ -588,14 +518,6 @@ FORMS += Dialogs/updateapp.ui
 FORMS += Dialogs/workspacedlg.ui
 FORMS += Dialogs/zoomdlg.ui
 FORMS += Embellish/embelCoord.ui
-FORMS += Help/filtershelp.ui
-FORMS += Help/foldershelp.ui
-FORMS += Help/helpfindduplicates.ui
-FORMS += Help/helpform.ui
-FORMS += Help/helpingest.ui
-FORMS += Help/helppixeldelta.ui
-FORMS += Help/ingestautopath.ui
-FORMS += Help/introduction.ui
 FORMS += Help/message.ui
 FORMS += Help/shortcutsform.ui
 FORMS += Help/welcome.ui
@@ -607,7 +529,8 @@ ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
 DISTFILES += $$files(Lib/*, true) \
-    FocusStack/Petteri/wavelet_opencl_kernels.cl
+    FocusStack/Petteri/wavelet_opencl_kernels.cl \
+    notes/GeminiCLI.md
 DISTFILES += notes/Documentation.txt
 DISTFILES += Docs/ingestautopath
 DISTFILES += notes/InstallMediaPipe.txt
@@ -652,6 +575,10 @@ macx {
     LIBS += -framework AppKit
     LIBS += -framework CoreFoundation
     LIBS += -framework Foundation
+    LIBS += -framework ImageIO
+    LIBS += -framework CoreGraphics
+    LIBS += -framework AVFoundation
+    LIBS += -framework CoreMedia
 
     # opencv
     LIBS += -L/opt/homebrew/lib

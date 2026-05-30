@@ -22,6 +22,15 @@ Appdlg::Appdlg(QList<G::App> &externalApps, QWidget *parent)
     : QDialog(parent), ui(new Ui::Appdlg), xApps(externalApps)
 {
     ui->setupUi(this);
+    // setStyleSheet(G::css);
+    // ui->okBtn->setFixedSize(220, 60);
+    // ui->okBtn->setStyleSheet(
+    //     "QPushButton { background: red; border: 3px solid yellow; "
+    //     "border-radius: 20px; padding: 8px; min-width: 0; min-height: 0; }");
+    // ui->okBtn->setStyleSheet(
+    //     "QPushButton { background: red; border: 3px solid yellow; "
+    //     "border-radius: 20px; padding: 6px; }");
+
 
     #ifdef Q_OS_LINIX
     //
@@ -45,16 +54,16 @@ Appdlg::Appdlg(QList<G::App> &externalApps, QWidget *parent)
     ui->appsTable->verticalHeader()->setSectionsClickable(false);
     setScreenDependencies();
 
-    setStyleSheet(
-        "QLineEdit {"
-            "selection-background-color: gray;"
-            "border: none;"
-        "}"
-        "QLineEdit:focus {"
-            "background-color:" + G::selectionColor.name() + ";"
-        "}"
-        ";"
-    );
+    // setStyleSheet(
+    //     "QLineEdit {"
+    //         "selection-background-color: gray;"
+    //         "border: none;"
+    //     "}"
+    //     "QLineEdit:focus {"
+    //         "background-color:" + G::selectionColor.name() + ";"
+    //     "}"
+    //     ";"
+    // );
 
     /* fill the table with the shortcuts and blanks for the name and path.
     All table editing after this simply renames the name and path and no rows

@@ -115,6 +115,7 @@ public slots:
 	void showInfoViewMenu(QPoint pt);
 	void copyEntry();
     void setColumn0Width();
+    void howThisWorks();
 
 private slots:
     void dataChanged(const QModelIndex &idx1, const QModelIndex&, const QVector<int> &roles) override;

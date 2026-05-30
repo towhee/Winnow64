@@ -1,0 +1,31 @@
+# Qt internals — known false positives or intentional lock-free patterns
+  race:^QMutexPrivate::                                                                                                                                                                        
+  race:^QBasicMutex::                                                                                                                                                                          
+  race:^QReadWriteLock                                                                                                                                                                         
+  race:^QAtomicOps                                                                                                                                                                             
+  race:^QBasicAtomicInteger                                   
+  race:^QArrayData                                                                                                                                                                             
+  race:^QObjectPrivate::setParent_helper                      
+  race:^QMetaObject::activate                                                                                                                                                                  
+  race:^QCoreApplicationPrivate::sendPostedEvents                                                                                                                                              
+  race:^QThreadStorage                                                                                                                                                                         
+  race:^QHashData                                                                                                                                                                              
+  race:^QListData                                             
+  race:^QString::                                                                                                                                                                              
+                                                              
+  # Apple framework noise                                                                                                                                                                      
+  race:^libdispatch
+  race:^libobjc                                                                                                                                                                                
+  race:^objc_                                                 
+  race:^_dispatch_                       
+  race:^CFRelease                                                                                                                                                                              
+  race:^CFRetain
+  race:CoreFoundation                                                                                                                                                                          
+  race:CoreMedia                                                                                                                                                                               
+  race:MediaToolbox                      
+  race:Foundation                                                                                                                                                                              
+  race:libsystem_                                             
+                                         
+  # Deadlock false positives during shutdown                                                                                                                                                   
+  deadlock:^QThread::wait
+  deadlock:^QCoreApplication::exit 

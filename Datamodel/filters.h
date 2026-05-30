@@ -3,8 +3,6 @@
 
 #include <QtWidgets>
 #include "Utilities/utilities.h"
-#include "ui_filtershelp.h"
-//#include "Datamodel/datamodel.h"
 
 class Filters : public QTreeWidget
 {
@@ -27,7 +25,7 @@ public:
     QTreeWidgetItem *years;
     QTreeWidgetItem *days;
     QTreeWidgetItem *creators;
-    QTreeWidgetItem *missingThumbs;
+    // QTreeWidgetItem *missingThumbs;
     QTreeWidgetItem *compare;
 
     QTreeWidgetItem *activeCategory;   // category just filtered
@@ -46,7 +44,7 @@ public:
     QString catTitle = "Titles";
     QString catKeyword = "Keywords";
     QString catCreator = "Creators";
-    QString catMissingThumbs = "Missing embedded thumbs";
+    // QString catMissingThumbs = "Missing embedded thumbs";
     QString catCompare = "Duplicates found";
 
     QMap<QString,int> filterCategoryToDmColumn;

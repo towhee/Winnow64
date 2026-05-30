@@ -33,6 +33,12 @@ namespace ICC
             return false;
         }
         hOutProfile = cmsOpenProfileFromFile(QFile::encodeName(G::winOutProfilePath).constData(), "r") ;
+        if (!hOutProfile) {
+            G::issue("Error",
+                     "cmsOpenProfileFromFile returned null — output profile invalid",
+                     "ICC::setOutProfile", -1, G::winOutProfilePath);
+            return false;
+        }
         return true;
     }
 

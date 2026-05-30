@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QtConcurrent>
+// #include <QThread>
 //#include <QDesktopWidget>         // qt6.2
 #include "sstream"
 #include "stresstest.h"
@@ -68,16 +69,20 @@
 #include "Utilities/usbutil.h"
 #include "Utilities/inputdlg.h"
 #include "Utilities/htmlwindow.h"
+#include "Utilities/reportdialog.h"
 #include "progressbar.h"
 
 #include "Utilities/coloranalysis.h"
 #include "Utilities/dirwatcher.h"
-#include "Image/stack.h"
-#include "ImageStack/stackcontroller.h"
+#include "Image/stack.h"        // used by meanStack
+// #include "ImageStack/stackcontroller.h"
+
+// #include "FocusStack/fsrunner.h"    // temp class
+#include "FocusStack/fs.h"
+
 #include <QSoundEffect>
 
 #include "Utilities/performance.h"
-#include "ui_helpform.h"
 #include "ui_shortcutsform.h"
 #include "ui_welcome.h"
 #include "ui_message.h"
@@ -117,11 +122,20 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
+    // Headless self-test used by the smoke test layer (tests/). Opens folderPath,
+    // lets it load for settleMs, then exits the app 0 if images loaded, else 2.
+    void runSelfTest(const QString &folderPath, int settleMs);
+
+    // End-to-end metadata read used by the metadata test layer (tests/). Reads
+    // filePath through the full Metadata pipeline and exits 0 if make/model and
+    // dimensions parsed (and match WINNOW_METATEST_MAKE/MODEL if set), else 2.
+    void runMetaTest(const QString &filePath);
+
     /*
     alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa, lambda, mu, nu,
     xi, omicron, pi, rho, sigma, tau, upsilon, phi, chi, psi, and omega.
     */
-    QString versionNumber = "2.04" ;
+    QString versionNumber = "2.05" ;
     QString compileDate = "Compiled: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -250,10 +264,11 @@ public:
     // int displayHorizontalPixels; // move to global
     // int displayVerticalPixels;   // move to global
     bool checkIfUpdate = true;
-    // bool autoAdvance = false;    // move to global
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
     bool isStartingWhileUpdating = true;
+    bool isFirstImageSelected = true;
+    bool isLogAllToFileForDebugging = false;
 
     // appearance
     bool isImageInfoVisible;
@@ -285,6 +300,7 @@ public:
     bool autoIngestFolderPath;
     bool autoEjectUsb;
     bool integrityCheck;
+
     bool isBackgroundIngest;
     bool isBackgroundIngestBeep;
     bool ingestIncludeXmpSidecar;
@@ -354,12 +370,9 @@ public:
     int maxThumbSpaceHeight;
     QString pickMemSize;
     WidgetCSS widgetCSS;
-    // rgh make css consistent with G::css
-    QString css;                // stylesheet text
-    QString css1;               // stylesheet text
-    QString cssBase;            // stylesheet text
 
-    void test();                    // for debugging
+    void test();                // for debugging
+    void mergeProjectFiles();   // to send to Gemini
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
@@ -404,6 +417,7 @@ signals:
     void abortEmbelExport();
     void abortHueReport();
     void abortStackOperation();
+    void abortFocusStack();
     void fusionFinished(bool ok, const QString &outputImagePath,
                         const QString &depthMapPath);
 
@@ -438,6 +452,7 @@ public slots:
     void setProgress(int value);
     void setStatus(QString state);
     void updateStatus(bool keepBase = true, QString s = "", QString source = "");
+    void updateSidecarStatus(QString fPath);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void setThumbDockHeight();  // signal from thumbView
     void setThumbDockFeatures(Qt::DockWidgetArea area);
@@ -465,6 +480,7 @@ public slots:
     void reportWorkspace(WorkspaceData &ws, QString src = "");
     void loadWorkspaces();
     void saveWorkspaces();
+    void matFromQImage(QString fPath, cv::Mat &mat);
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
@@ -490,7 +506,6 @@ private slots:
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
     void renameEraseMemCardFromContextMenu(QString path);
-    void renameEmbedThumbsContextMenu();
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
     void searchTextEdit2();
 //    void searchTextEdit();
@@ -582,8 +597,7 @@ private slots:
     void setCacheStatusVisibility();
     void setCacheRunningLightsWidth();
     QString getImageCacheRunningTip(bool isAuto, quint64 maxMB);
-    void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel,
-                                       bool success, QString src = "");
+    void updateMetadataThreadRunStatus(bool isRun, bool success = true);
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateImageCacheStatus(int instruction, bool isAutoSize,
                                 quint64 currMB, quint64 maxMB, int tFirst, int tLast,
@@ -591,10 +605,11 @@ private slots:
     // caching
     void folderChanged(bool aborted);
     void folderChangeCompleted();
+    void onMemoryOverrun(quint64 footprintMB, quint64 capMB);
     void updateChange(int sfRow, bool isCurrent = true, QString src = "");
 
     void updateDefaultIconChunkSize(int size);
-    bool updateIconRange(bool sizeChange, QString src = "");
+    void updateIconRange(QString src = "");
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();
@@ -669,12 +684,18 @@ private slots:
     void setMetadataDockFixedSize();    // rgh finish or remove
 
     void focusOnDock(DockWidget *dockWidget);
-    void toggleThumbDockVisibity();
-    void toggleEmbelDockVisibility();
-    void toggleFolderDockVisibility();
-    void toggleFavDockVisibility();
-    void toggleFilterDockVisibility();
-    void toggleMetadataDockVisibility();
+    void closeThumbDock();
+    void closeEmbelDock();
+    void closeFolderDock();
+    void closeFavDock();
+    void closeFilterDock();
+    void closeMetadataDock();
+    void showThumbDock();
+    void showEmbelDock();
+    void showFolderDock();
+    void showFavDock();
+    void showFilterDock();
+    void showMetadataDock();
 
     void setMenuBarVisibility();
     void setStatusBarVisibility();
@@ -699,6 +720,7 @@ private slots:
 
     void help();
     void helpShortcuts();
+    void styleShortcutsWindow(QScrollArea *w);  // (re)apply font scaling + fit columns
     void helpWelcome();
 
 private:
@@ -727,6 +749,7 @@ private:
     QMenu *windowMenu;
         QMenu *workspaceMenu;
     QMenu *helpMenu;
+        QMenu *logMenu;
         QMenu *helpDiagnosticsMenu;
             QMenu *testMenu;
 
@@ -797,7 +820,6 @@ private:
     QAction *popPickHistoryAction;
     QAction *pickUnlessRejectedAction;
     QAction *filterPickAction;
-    QAction *embedThumbnailsAction;
     QAction *rotateLeftAction;
     QAction *rotateRightAction;
     QAction *prefAction;
@@ -805,14 +827,14 @@ private:
     QAction *oldPrefAction;
 
     // Go Menu
-   QAction *keyRightAction;
-   QAction *keyLeftAction;
-   QAction *keyUpAction;
-   QAction *keyDownAction;
-   QAction *keyPageUpAction;
-   QAction *keyPageDownAction;
-   QAction *keyHomeAction;
-   QAction *keyEndAction;
+    QAction *keyRightAction;
+    QAction *keyLeftAction;
+    QAction *keyUpAction;
+    QAction *keyDownAction;
+    QAction *keyPageUpAction;
+    QAction *keyPageDownAction;
+    QAction *keyHomeAction;
+    QAction *keyEndAction;
 
     QAction *keyRightAddToSelectionAction;
     QAction *keyLeftAddToSelectionAction;
@@ -956,7 +978,8 @@ private:
     QAction *helpAction;
     QAction *helpShortcutsAction;
     QAction *helpWelcomeAction;
-    QAction *helpFilmStripAction;
+    QAction *helpPerformanceTipsAction;
+    QAction *helpFilmStripAction;  // to be removed, not used
     QAction *helpRevealLogFileAction;
 
     // Help Diagnostics Menu
@@ -965,8 +988,12 @@ private:
     QAction *diagnosticsMainAction;
     QAction *diagnosticsSelectionAction;
     QAction *diagnosticsWorkspacesAction;
-    QAction *diagnosticsLogIssuesAction;
-    QAction *diagnosticsSessionIssuesAction;
+    QAction *viewLogIssuesAction;
+    QAction *viewSessionIssuesAction;
+    // QAction *clearIssuesAction;
+    QAction *viewLogAction;
+    QAction *clearLogAction;
+    QAction *mailLogAction;
     QAction *diagnosticsGridViewAction;
     QAction *diagnosticsFSTreeAction;
     QAction *diagnosticsThumbViewAction;
@@ -978,6 +1005,7 @@ private:
     QAction *diagnosticsXMPAction;
     QAction *diagnosticsMetadataCacheAction;
     QAction *diagnosticsImageCacheAction;
+    QAction *diagnosticsMemoryAction;
     QAction *diagnosticsDataModelAction;
     QAction *diagnosticsDataModelAllRowsAction;
     QAction *diagnosticsEmbellishAction;
@@ -1051,7 +1079,7 @@ private:
     BarBtn *cacheMethodBtn;
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
-    QLabel *rawJpgStatusLabel;
+    BarBtn *rawJpgStatusBtn;
     QLabel *slideShowStatusLabel;
     QLabel *cacheStatusLabel;
     ProgressBar *cacheProgressBar;
@@ -1120,6 +1148,9 @@ private:
     ZoomDlg *zoomDlg = nullptr;
     QTimer *slideShowTimer;
     QTimer *resetTimer;
+    QTimer *memoryWatchdog = nullptr;
+    void memoryWatchdogTick();
+    bool memoryDialogActive = false;
     QWidget *folderDockEmptyWidget;
     QWidget *favDockEmptyWidget;
     QWidget *filterDockEmptyWidget;
@@ -1144,17 +1175,24 @@ private:
     } pick;
     QStack<Pick> *pickStack;
 
+    // focus stack
+    QPointer<FS> fsPipeline;   // current running pipeline (null when inactive)
+    QThread *fsThread;
+
     // slideShow counter
     int slideCount = 0;
+    bool prevUseImageCache = true;
 
     // used in visibility and focus setting for docks
-    enum {SetFocus, SetVisible, SetInvisible} dockToggle;
+    enum {SetFocus, SetVisible} dockOption;
 
     QString prevScreenName;                 // the monitor being used be winnow
     QPoint prevScreenLoc = QPoint(-1,-1);   // the centroid of Winnow window in monitor
     qreal prevDevicePixelRatio = -1;
 
-    QList<QWidget*> openWindows;
+    // QList<QWidget*> openWindows;
+    QList<QPointer<QWidget>> openWindows;
+    QList<QPointer<QScrollArea>> shortcutsWindows;   // open Shortcuts help, for live font updates
 
     bool ignoreDockResize;
     bool wasThumbDockVisible;
@@ -1180,8 +1218,6 @@ private:
     bool ignoreAddThumbnailsDlg = false;
 
     bool sortMenuUpdateToMatchTable = false;
-
-    bool rotationAlertShown = false;
 
     QString imageCacheFilePath;
 
@@ -1220,13 +1256,29 @@ private:
     void createThumbDock();
     void createEmbelDock();
     QTabBar* tabifiedBar();
-    bool isDockTabified(QString tabText);
+    bool isDockTabified(QDockWidget *dock);
+    QString dockTabToolTip(const QString &tabText);
     void tabBarAssignRichText(QTabBar *richTextTabBar);
     bool tabBarContainsDocks(QTabBar *tabBar);
-    bool isSelectedDockTab(QString tabText);
+    bool isSelectedDockTab(QDockWidget *dock);
+    void updateDockTabGraphics(QTabBar *tabBar);   // responsive text/graphic dock tab titles
+    void scheduleDockTabUpdate();                  // deferred re-eval of all dock tab bars
+    QHash<quint64, QString> dockTabTitleByKey;     // QMainWindow tab key -> dock title (learned)
     void folderDockVisibilityChange();
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
+
+public:
+    // dock collapse/expand area-scoped helpers (used by DockTitleBar context menu)
+    QList<DockWidget*> docksInArea(Qt::DockWidgetArea area) const;
+    void collapseDocksInArea(Qt::DockWidgetArea area);
+    void expandDocksInArea(Qt::DockWidgetArea area);
+    void setDockSoloModeForArea(Qt::DockWidgetArea area, bool on);
+    bool dockSoloModeForArea(Qt::DockWidgetArea area) const;
+    void enforceDockSoloMode(DockWidget *justExpanded);
+    void applyDockCollapseState();   // restores per-dock collapsed flag from QSettings
+private:
+    QHash<Qt::DockWidgetArea, bool> m_dockSoloMode;
     void updateState();
     // bool stop(QString src = "");
     // void stopAndClearAllAfterMetaReadStopped();
@@ -1345,9 +1397,6 @@ private:
     double macActualDevicePixelRatio(QPoint loc, QScreen *screen);
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void addRecentFolder(QString fPath);
-    QString embedThumbnails();
-    void embedThumbnailsFromAction();
-    void chkMissingEmbeddedThumbnails(QString src = "FromLoading");
 
     QRect testR;
 
@@ -1373,6 +1422,7 @@ private:
     void diagnosticsXMP();
     void diagnosticsMetadataCache();
     void diagnosticsImageCache();
+    void diagnosticsMemory();
     void diagnosticsDataModel();
     void diagnosticsDataModelAllRows();
     void diagnosticsEmbellish();
@@ -1386,14 +1436,27 @@ private:
     void diagnosticsZoom();
     void diagnosticsReport(QString reportString, QString title = "Winnow Diagnostics");
     void allIssuesReport();
-    void SessionIssuesReport();
+    void sessionIssuesReport();
+    void logReport();
+    void mailLogs();
+
+    // HTML Help
+    void helpPerformanceTips();
 
     void mediaReadSpeed();
     void findDuplicates();
     void reportHueCount();
     void generateMeanStack();
-    void generateFocusStackFromSelection();
-    void generateFocusStack(const QStringList paths, const QString method, const QString source);
+
+    // Focus Stack Utility
+    QString fsMethod;
+    bool fsRemoveTemp = true;
+    bool fs8bit = true;
+    void focusStackFromSelection();
+    void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
+    void generateFocusStack(const QStringList paths, QString method,
+                            const bool isLocal);
+
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();
     void traverseFolderStressTest(int msPerImage = 0, double secPerFolder = 0,

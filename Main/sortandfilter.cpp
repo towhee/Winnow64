@@ -109,6 +109,7 @@ void MW::filterChange(QString source)
     required for sorting operations.
 */
 
+    QString srcFun = "MW::filterChange";
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
     // qDebug() << "MW::filterChange" << "called from:" << source;
 
@@ -130,6 +131,9 @@ void MW::filterChange(QString source)
 
     // prevent unwanted fileSelectionChange()
     isFilterChange = true;
+
+    // save existing selection
+    sel->save("MW::filterChange");
 
     /* refresh the proxy sort/filter, which updates the selectionIndex, which
     triggers a scroll event and MetaRead updates the icons and thumbnails */
@@ -159,9 +163,14 @@ void MW::filterChange(QString source)
         return;
     }
 
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
-
+    if (thumbView && thumbView->isVisible()) {
+        thumbView->refreshIcons(srcFun);
+        thumbView->scrollToRow(dm->currentSfRow, srcFun);
+    }
+    if (gridView && gridView->isVisible()) {
+        gridView->refreshIcons(srcFun);
+        gridView->scrollToRow(dm->currentSfRow, srcFun);
+    }
     // sync the datamodel instance
     metaRead->initialize();
 
@@ -179,8 +188,16 @@ void MW::filterChange(QString source)
     if (!G::removingRowsFromDM)
         emit imageCacheFilterChange(fPath, "MW::filterChange");
 
-    // // clear selection and update datamodel current index
-    sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
+    // // // clear selection and update datamodel current index
+    // sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
+
+    // Recover full selection if filter didn't eliminate any rows; otherwise fall
+    // back to selecting the current single item.
+    if (dm->rowCount() == dm->sf->rowCount()) {
+        sel->recover("MW::filterChange");
+    } else {
+        sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
+    }
 
     // only scroll if filtration has changed visible cells in thumbView
     scrollToCurrentRowIfNotVisible();
@@ -364,7 +381,7 @@ void MW::sortChangeFromAction()
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;        // core
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;        // core
-    if (sortFileSizeAction->isChecked()) sortColumn = G::SizeColumn;        // core
+    if (sortFileSizeAction->isChecked()) sortColumn = G::ByteSizeColumn;        // core
     if (sortCreateAction->isChecked()) sortColumn = G::CreatedColumn;       // core
     if (sortModifyAction->isChecked()) sortColumn = G::ModifiedColumn;      // core
     if (sortPickAction->isChecked()) sortColumn = G::PickColumn;            // core
@@ -419,6 +436,10 @@ void MW::sortChange(QString source)
     // get the current selected item
     dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
 
+    // refresh icons in view
+    if (thumbView->isVisible()) thumbView->refreshIcons("MW::sortChange");
+    if (gridView->isVisible()) gridView->refreshIcons("MW::sortChange");
+
     // update view delegates
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
@@ -470,7 +491,7 @@ void MW::updateSortColumn(int sortColumn)
 
     if (sortColumn == G::NameColumn) sortFileNameAction->setChecked(true);
     if (sortColumn == G::TypeColumn) sortFileTypeAction->setChecked(true);
-    if (sortColumn == G::SizeColumn) sortFileSizeAction->setChecked(true);
+    if (sortColumn == G::ByteSizeColumn) sortFileSizeAction->setChecked(true);
     if (sortColumn == G::CreatedColumn) sortCreateAction->setChecked(true);
     if (sortColumn == G::ModifiedColumn) sortModifyAction->setChecked(true);
     if (sortColumn == G::PickColumn) sortPickAction->setChecked(true);
@@ -486,37 +507,37 @@ void MW::updateSortColumn(int sortColumn)
     if (sortColumn == G::TitleColumn) sortTitleAction->setChecked(true);
 }
 
-void MW::toggleSortDirectionClick()
-{
-/*
-    This is called by connect signals from the menu action and the reverse sort button.  The
-    call is redirected to toggleSortDirection, which has a parameter which is not supported
-    by the action and button signals.
-*/
-    if (G::isLogger) G::log("MW::toggleSortDirectionClick");
-    toggleSortDirection(Tog::toggle);
-    sortChange("MW::toggleSortDirectionClick");
-    // Experiment to reverse sort on the file name while a new folder is loading.
-    // sortReverse();
-}
+// void MW::toggleSortDirectionClick()
+// {
+// /*
+//     This is called by connect signals from the menu action and the reverse sort button.  The
+//     call is redirected to toggleSortDirection, which has a parameter which is not supported
+//     by the action and button signals.
+// */
+//     if (G::isLogger) G::log("MW::toggleSortDirectionClick");
+//     toggleSortDirection(Tog::toggle);
+//     sortChange("MW::toggleSortDirectionClick");
+//     // Experiment to reverse sort on the file name while a new folder is loading.
+//     // sortReverse();
+// }
 
-void MW::toggleSortDirection(Tog n)
-{
-    if (G::isLogger) G::log("MW::toggleSortDirection");
-    if (prevIsReverseSort == isReverseSort)
-    prevIsReverseSort = isReverseSort;
-    if (n == Tog::toggle) isReverseSort = !isReverseSort;
-    if (n == Tog::off) isReverseSort = false;
-    if (n == Tog::on) isReverseSort = true;
-    if (isReverseSort) {
-        sortReverseAction->setChecked(true);
-        reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
-    }
-    else {
-        sortReverseAction->setChecked(false);
-        reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
-    }
-}
+// void MW::toggleSortDirection(Tog n)
+// {
+//     if (G::isLogger) G::log("MW::toggleSortDirection");
+//     if (prevIsReverseSort == isReverseSort)
+//     prevIsReverseSort = isReverseSort;
+//     if (n == Tog::toggle) isReverseSort = !isReverseSort;
+//     if (n == Tog::off) isReverseSort = false;
+//     if (n == Tog::on) isReverseSort = true;
+//     if (isReverseSort) {
+//         sortReverseAction->setChecked(true);
+//         reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
+//     }
+//     else {
+//         sortReverseAction->setChecked(false);
+//         reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
+//     }
+// }
 
 void MW::setRating()
 {
@@ -525,7 +546,7 @@ void MW::setRating()
     rating for all the selected thumbs.
 */
     if (G::isLogger) G::log("MW::setRating");
-    qDebug() << "MW::setRating";
+    // qDebug() << "MW::setRating";
     // do not set rating if slideshow is on
     if (G::isSlideShow) return;
 
@@ -533,8 +554,8 @@ void MW::setRating()
     if (!isRatingBadgeVisible) {
         ratingBadgeVisibleAction->setChecked(true);
         isRatingBadgeVisible = true;
-        thumbView->refreshThumbs();
-        gridView->refreshThumbs();
+        thumbView->refreshIcons("MW::setRating");
+        gridView->refreshIcons("MW::setRating");
     }
 
     QObject* obj = sender();
@@ -567,15 +588,6 @@ void MW::setRating()
     if (isAlreadyRating) rating = "";     // invert the rating(s)
 
     int n = selection.count();
-    /*
-    if (G::useSidecar) {
-        G::popUp->setProgressVisible(true);
-        G::popUp->setProgressMax(n + 1);
-        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
-                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-        G::popUp->showPopup(txt, 0, true, 1);
-    }
-    //*/
 
     // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
     QList<int> rows;
@@ -610,20 +622,17 @@ void MW::setRating()
             }
         }
         // write to sidecar
-        if (G::useSidecar) {
-            // qDebug() << "MW::setRating";
-            dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-            metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setRating");
-            // update _Rating (used to check what metadata has changed in metadata->writeXMP)
-            QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
-            emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
-            G::popup->setProgress(i+1);
-        }
+        dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+        metadata->writeXMP(fPath, "MW::setRating");
+        // update _Rating (used to check what metadata has changed in metadata->writeXMP)
+        QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
+        emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
+        G::popup->setProgress(i+1);
     }
 
     // update thumbnail appearance to show classification
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshIcons("MW::setRating");
+    gridView->refreshIcons("MW::setRating");
 
     /* must execute in order:
        - suspend proxy updates
@@ -673,8 +682,8 @@ void MW::recoverRatingLog()
         }
     }
     settings->endGroup();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshIcons("MW::recoverRatingLog");
+    gridView->refreshIcons("MW::recoverRatingLog");
 }
 
 void MW::clearRatingLog()
@@ -717,8 +726,8 @@ void MW::setColorClassForRow(int sfRow, QString colorClass) {
                   Qt::EditRole, Qt::AlignCenter);
     QString color = dm->sf->index(sfRow, G::LabelColumn).data().toString();
     qDebug() << srcFun << "color =" << color;
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshIcons("MW::setColorClassForRow");
+    gridView->refreshIcons("MW::setColorClassForRow");
     dm->sf->suspend(true, "MW::setColorClass");
     buildFilters->updateCategory(BuildFilters::LabelEdit);
     filterChange("MW::setColorClass"); // sets dm->sf->suspend = false
@@ -727,7 +736,7 @@ void MW::setColorClassForRow(int sfRow, QString colorClass) {
     // write to sidecar
     QString fPath = dm->pathFromProxyRow(sfRow);
     dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-    metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
+    metadata->writeXMP(fPath, "MW::setColorClass");
     // update _Label (used to check what metadata has changed in metadata->writeXMP)
     emit setValSf(sfRow, G::_LabelColumn, colorClass, dm->instance, srcFun,
                   Qt::EditRole);
@@ -748,8 +757,8 @@ void MW::setColorClass()
     if (!isRatingBadgeVisible) {
         ratingBadgeVisibleAction->setChecked(true);
         isRatingBadgeVisible = true;
-        thumbView->refreshThumbs();
-        gridView->refreshThumbs();
+        thumbView->refreshIcons("MW::setColorClass");
+        gridView->refreshIcons("MW::setColorClass");
     }
 
     QObject* obj = sender();
@@ -774,15 +783,6 @@ void MW::setColorClass()
     if (isAlreadyLabel) colorClass = "";     // invert the label
 
     int n = selection.count();
-    /*
-    if (G::useSidecar) {
-        G::popUp->setProgressVisible(true);
-        G::popUp->setProgressMax(n + 1);
-        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
-                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-        G::popUp->showPopup(txt, 0, true, 1);
-    }
-    //*/
 
     /* copy selection to list of dm rows (proxy filter changes during iteration when
        change datamodel)  */
@@ -820,19 +820,17 @@ void MW::setColorClass()
             }
         }
         // write to sidecar
-        if (G::useSidecar) {
-            dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-            metadata->writeXMP(metadata->sidecarPath(fPath), "MW::setColorClass");
-            // update _Label (used to check what metadata has changed in metadata->writeXMP)
-            emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
-                          Qt::EditRole);
-            G::popup->setProgress(i+1);
-        }
+        dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+        metadata->writeXMP(fPath, "MW::setColorClass");
+        // update _Label (used to check what metadata has changed in metadata->writeXMP)
+        emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
+                      Qt::EditRole);
+        G::popup->setProgress(i+1);
     }
 
     // update thumbnail appearance to show classification
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshIcons("MW::setColorClass");
+    gridView->refreshIcons("MW::setColorClass");
 
     /* must execute in order:
        - suspend proxy updates
@@ -889,8 +887,8 @@ void MW::recoverColorClassLog()
         }
     }
     settings->endGroup();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshIcons("MW::recoverColorClassLog");
+    gridView->refreshIcons("MW::recoverColorClassLog");
 }
 
 void MW::clearColorClassLog()

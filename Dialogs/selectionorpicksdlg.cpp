@@ -9,6 +9,7 @@ SelectionOrPicksDlg::SelectionOrPicksDlg(Option &option, QWidget *parent) :
 {
     ui->setupUi(this);
     setStyleSheet(G::css);
+    option = Cancel;
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(winId(), G::backgroundColor);
     #endif

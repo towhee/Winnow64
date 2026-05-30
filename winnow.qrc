@@ -100,7 +100,6 @@
         <file>images/winnow288.png</file>
         <file>images/down-arrow3.png</file>
         <file>images/winnow.ico</file>
-        <file>Docs/Winnow help.html</file>
         <file>images/checkmark64.png</file>
         <file>images/checkmark128.png</file>
         <file>images/checkmark256.png</file>
@@ -114,9 +113,9 @@
         <file>images/branch-open.png</file>
         <file>images/checkmark48.png</file>
         <file>images/checkmark.png</file>
-        <file>Docs/winnow.html</file>
         <file>Docs/versions.html</file>
         <file>Docs/_template.html</file>
+        <file>Docs/help.css</file>
         <file>images/branch-closed-small.png</file>
         <file>images/branch-open-small.png</file>
         <file>images/icon16/filter.png</file>
@@ -132,6 +131,11 @@
         <file>images/icon16/close.png</file>
         <file>images/icon16/refresh.png</file>
         <file>images/icon16/foldertree.png</file>
+        <file>images/icon16/foldertree_white.png</file>
+        <file>images/icon16/bookmarks_white.png</file>
+        <file>images/icon16/filters_white.png</file>
+        <file>images/icon16/metadata_white.png</file>
+        <file>images/icon16/embellish_white.png</file>
         <file>images/icon16/anchor.png</file>
         <file>images/icon16/rectangle.png</file>
         <file>images/icon16/text.png</file>
@@ -144,6 +148,8 @@
         <file>images/icon16/new.png</file>
         <file>images/icon16/down.png</file>
         <file>images/icon16/up.png</file>
+        <file>images/icon16/collapse.png</file>
+        <file>images/icon16/expand.png</file>
         <file>images/branch-blank.png</file>
         <file>images/branch-closed-winnow.png</file>
         <file>images/branch-open-winnow.png</file>
@@ -174,6 +180,14 @@
         <file>images/icon16/media_play.png</file>
         <file>images/error_image256.png</file>
         <file>Docs/filtershelp.html</file>
+        <file>Docs/foldershelp.html</file>
+        <file>Docs/bookmarkshelp.html</file>
+        <file>Docs/metadatahelp.html</file>
+        <file>Docs/findduplicateshelp.html</file>
+        <file>Docs/pixeldeltahelp.html</file>
+        <file>Docs/winnowhelp.html</file>
+        <file>Docs/images/WinnowLoupeView.png</file>
+        <file>Docs/images/WinnowGridView.png</file>
         <file>Docs/images/filters1.png</file>
         <file>Docs/filtershelp.fld/colorschememapping.xml</file>
         <file>Docs/filtershelp.fld/filelist.xml</file>
@@ -194,5 +208,8 @@
         <file>images/target.png</file>
         <file>images/busy_spinner.gif</file>
         <file>DetectionModels/focus_point_model.onnx</file>
+        <file>images/lock.svg</file>
+        <file>images/icon16/nolink.png</file>
+        <file>Docs/performancetipshelp.html</file>
     </qresource>
 </RCC>

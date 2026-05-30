@@ -7,18 +7,17 @@
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
 #include "Cache/framedecoder.h"
-#include "Cache/tiffthumbdecoder.h"
 #include "ImageFormats/Tiff/tiff.h"
 
 class Thumb : public QObject
 {
     Q_OBJECT
 public:
-    explicit Thumb(DataModel *dm);
+    explicit Thumb(DataModel *dm, FrameDecoder *frameDecoder);
     ~Thumb() override;
     void abortProcessing();
     bool loadThumb(QString &fPath, int dmRow, QImage &image,
-                   int instance, QString src);
+                   int instance, const ImageMetadata &m, QString src);
     void presetOffset(uint offset, uint length);
     void insertThumbnailsInJpg(QModelIndexList &selection);
     bool insertingThumbnails = false;
@@ -49,21 +48,20 @@ private:
 
     DataModel *dm;
     Metadata *metadata;
-    FrameDecoder *frameDecoder;
-    QThread *frameDecoderthread;
+    FrameDecoder *frameDecoder;     // shared, owned by MetaRead
     int dmRow;
     QString err;
     QSize thumbMax;
     int instance;
     QFileDevice::Permissions oldPermissions;
 
-    void setImageDimensions(QString &fPath, QImage &image, int row);
+    void setImageDimensions(QString &fPath, QSize size, int row);
     Status loadFromJpgData(QString &fPath, QImage &image);
-    Status loadFromTiff(QString &fPath, QImage &image, int row, ImageMetadata &m);
+    Status loadFromTiff(QString &fPath, QImage &image, int row, const ImageMetadata &m);
     Status loadFromHeic(QString &fPath, QImage &image);
     Status loadFromEntireFile(QString &fPath, QImage &image, int row);
     void loadFromVideo(QString &fPath, int dmRow);
-    void checkOrientation(QString &fPath, QImage &image);
+    void checkOrientation(QImage &image, int orientation, int rotationDegrees);
 
     // status flags
     bool isPresetOffset = false;

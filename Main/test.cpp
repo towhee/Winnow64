@@ -1,6 +1,14 @@
 #include "Main/mainwindow.h"
 #include "ImageFormats/Video/mov.h"
 
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <sys/stat.h>
+#include <thread>
+
 void MW::traverseFolderStressTestFromMenu()
 {
     qDebug() << "MW::traverseFolderStressTestFromMenu";
@@ -92,7 +100,7 @@ void MW::traverseFolderStressTest(int msPerImage, int secPerFolder, bool uturn)
 
     // Block until G::isStressTest becomes false
     while (G::isStressTest || !bounceNextFolder) {
-        qApp->processEvents(); // Process events to keep the UI responsive
+        if (G::useProcessEvents) qApp->processEvents(); // Process events to keep the UI responsive
     }
 
     qDebug() << "MW::traverseFolderStressTest bounceNextFolder";
@@ -180,7 +188,9 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     if (!secPerFolder) G::popup->showPopup(stopMsg, 0);
     G::isStressTest = true;
     bool isForward = true;
-    //slideCount = 0;
+    // Per-folder counter — must reset each call or the !uturn early-exit
+    // below trips immediately on the second folder when bouncing.
+    slideCount = 0;
     int uturnCounter = 0;
     int uturnMax;
     dm->sf->rowCount() < 300 ? uturnMax = dm->sf->rowCount() : uturnMax = 300;
@@ -231,17 +241,15 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     stressSecToGoInFolder = secPerFolder - seconds;
     double elapsedMsPerImage = msElapsed * 1.0 / slideCount;
     int imagePerSec = slideCount * 1.0 / seconds;
-    QString msg = "" + QString::number(slideCount) + " images.<br>" +
-                  QString::number(seconds) + " seconds elapsed.<br>" +
-                  // QString::number(secPerFolder) + " secPerFolder.<br>" +
-                  // QString::number(stressSecToGoInFolder) + " stressSecToGoInFolder.<br>" +
-                  // QString::number(msElapsed) + " ms elapsed.<br>" +
-                  // QString::number(elapsedMsPerImage) + " ms delay.<br>" +
-                  // QString::number(imagePerSec) + " images per second.<br>" +
-                  // QString::number(elapsedMsPerImage) + " ms per image."
-                  + "<br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup."
-                  ;
-    G::popup->showPopup(msg, 0);
+    // Skip the sticky end-of-folder popup when bouncing — it would overlay
+    // the UI after every folder switch and never auto-clear (msDuration=0).
+    if (!secPerFolder) {
+        QString msg = "" + QString::number(slideCount) + " images.<br>" +
+                      QString::number(seconds) + " seconds elapsed."
+                      + "<br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup."
+                      ;
+        G::popup->showPopup(msg, 0);
+    }
     /*
     qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
              << msElapsed << "ms elapsed  "
@@ -297,6 +305,11 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
     G::isStressTest = true;
     QList<QString>bookMarkPaths = bookmarks->bookmarkPaths.values();
     int n = bookMarkPaths.count();
+    if (n == 0) {
+        G::popup->showPopup("Stress test needs at least one bookmark.", 2000);
+        G::isStressTest = false;
+        return;
+    }
     while (G::isStressTest) {
         uint randomIdx = QRandomGenerator::global()->generate() % static_cast<uint>(n);
         if (isRandomSecPerFolder) {
@@ -317,8 +330,12 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
                  << path;
         bookmarks->select(path);
         fsTree->select(path);
+        // Folder load is async — wait until dm->sf is populated before
+        // navigating, otherwise traverseFolderStressTest races against
+        // the in-flight folder change and can crash.
+        waitUntilMetadataLoaded(30000, "bounceFoldersStressTest");
+        if (!G::isStressTest) break;
         traverseFolderStressTest(msPerImage, secPerFolder);
-        // qDebug() << "MW::bounceFoldersStressTest loop to next random folder";
     }
 }
 
@@ -383,6 +400,157 @@ void MW::ingestTest(QWidget* target)
     QApplication::sendEvent(target, &releaseEvent);
 }
 
+void MW::mergeProjectFiles() {
+
+    QString destinationDir = "/Users/roryhill/Temp";
+    QStringList files;
+
+    // /*
+    // FOCUS STACK
+    // files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.h";
+    // files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp";
+
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/generateFocusStack.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fs.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fs.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fs.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsalign_types.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsalign.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsalign.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsdepth.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsdepth.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfocus.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfocus.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusion.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusion.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusiondmap.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusiondmap.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionpmax.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionpmax.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionreassign.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionreassign.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionwavelet.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsfusionwavelet.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/FSFusionWaveletTemplates.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsloader.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsloader.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsmerge.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsmerge.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsphotometric.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsphotometric.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsutilities.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fsutilities.cpp";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fusionpyr.h";
+    // files << "/Users/roryhill/Projects/Winnow64/FocusStack/fusionpyr.cpp";
+    //*/
+
+    // /*
+    // WINNOW CORE
+    files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.h";
+    files << "/Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/global.h";
+    files << "/Users/roryhill/Projects/Winnow64/Main/global.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/initialize.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/navigate.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/settings.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/status.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/viewmodes.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/datamodel.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/datamodel.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/cachedata.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/cachedata.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/framedecoder.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/framedecoder.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/imagecache.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/imagecache.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/imagedecoder.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/imagedecoder.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/filters.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/filters.cpp";
+
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/selection.h";
+    files << "/Users/roryhill/Projects/Winnow64/Datamodel/selection.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconviewdelegate.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/iconviewdelegate.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/imageview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/imageview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infostring.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infostring.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infoview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/infoview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/tableview.h";
+    files << "/Users/roryhill/Projects/Winnow64/Views/tableview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/videoview.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Views/videowidget.cpp";
+
+    files << "/Users/roryhill/Projects/Winnow64/Main/widgetcss.h";
+    files << "/Users/roryhill/Projects/Winnow64/Main/widgetcss.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/Main/workspaces.cpp";
+
+    files << "/Users/roryhill/Projects/Winnow64/Cache/tiffthumbdecoder.h";
+    files << "/Users/roryhill/Projects/Winnow64/Cache/tiffthumbdecoder.cpp";
+
+    files << "/Users/roryhill/Projects/Winnow64/File/fstree.h";
+    files << "/Users/roryhill/Projects/Winnow64/File/fstree.cpp";
+    files << "/Users/roryhill/Projects/Winnow64/File/bookmarks.h";
+    files << "/Users/roryhill/Projects/Winnow64/File/bookmarks.cpp";
+
+
+    // */
+
+    // 1. Ensure the destination directory exists
+    QDir dir(destinationDir);
+    if (!dir.exists()) {
+        dir.mkpath(".");
+    }
+
+    // 2. Setup the output file path
+    QString outputFilePath = dir.filePath("merged_code.txt");
+    QFile outputFile(outputFilePath);
+
+    if (!outputFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qDebug() << "Could not open output file for writing:" << outputFilePath;
+        return;
+    }
+
+    QTextStream out(&outputFile);
+
+    // 3. Iterate through each file path in the list
+    for (const QString &filePath : files) {
+        QFile inputFile(filePath);
+        QFileInfo fileInfo(filePath);
+
+        if (inputFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&inputFile);
+
+            // Add a clear header for the AI to identify the file
+            out << "\n/* =========================================\n";
+            out << "   File: " << fileInfo.fileName() << "\n";
+            out << "   Path: " << filePath << "\n";
+            out << "   ========================================= */\n\n";
+
+            // Stream the content
+            out << in.readAll();
+            out << "\n\n";
+
+            inputFile.close();
+        } else {
+            qDebug() << "Warning: Could not open file for reading:" << filePath;
+        }
+    }
+
+    outputFile.close();
+    qDebug() << "Successfully merged" << files.size() << "files into" << outputFilePath;
+}
+
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
 
@@ -400,46 +568,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fusedPath = "/Users/roryhill/Projects/Stack/Mouse/2025-11-01_0238_PMax/fusion/2025-11-01_0238_pmax_FocusStack.tif";
-    QFileInfo fi(fusedPath);
-    QString destPath = dm->primaryFolderPath() + "/" + fi.fileName();
-    qDebug() << destPath;
-    QFile::copy(fusedPath, destPath);
-    dm->insert(destPath);
-    sel->select(destPath);
-    qDebug() << "G::allMetadataLoaded =" << G::allMetadataLoaded;
-
-    // waitUntilMetadataLoaded(3000);
-    QEventLoop loop;
-    QTimer timeout;
-
-    timeout.setSingleShot(true);
-    timeout.setInterval(3000);     // 3-second timeout
-
-    // When metadata fully loads, exit the loop
-    connect(this, &MW::metadataLoaded, &loop, &QEventLoop::quit);
-    // Also quit on timeout
-    connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
-
-    timeout.start();
-    loop.exec();                   // <-- does NOT freeze UI
-
-    // int sfRow = dm->currentSfRow;
-    // qDebug() << sfRow;
-    // QVariant colorClass = "Red";
-    // QModelIndex sfIdx = dm->sf->index(sfRow, G::LabelColumn);
-    // dm->sf->setData(sfIdx, colorClass, Qt::EditRole);
-
-    // dm->setValSf(sfRow, G::LabelColumn, colorClass,
-    //              dm->instance, "MW::setColorClassForRow",
-    //              Qt::EditRole, Qt::AlignCenter);
-    // thumbView->refreshThumbs();
-    // refresh();
-    // QString color = dm->sf->index(sfRow, G::LabelColumn).data().toString();
-    // qDebug() << "color =" << color;
-
-    setColorClassForRow(dm->currentSfRow, "Red");
-
+    // Bounce between random bookmarked folders, cycling images in each,
+    // until ESC is pressed or something crashes. Prompts for delay/duration.
+    // bounceFoldersStressTest();
+    filters->setEnabled(true);
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
