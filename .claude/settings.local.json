@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(python3 *)",
+      "Bash(brew list *)",
+      "Bash(defaults read *)",
+      "Bash(xargs ls *)",
+      "Bash(xargs -I {} basename {})",
+      "Bash(chmod +x /Users/roryhill/.claude/statusline.sh)",
+      "Bash(iconv -f UTF-16 -t UTF-8 /Users/roryhill/Projects/Winnow64/Docs/filtershelp.html)",
+      "Bash(otool -l \"/Users/roryhill/Projects/Winnow64/ReleaseExtras/Winnets/Winnet.app/Contents/MacOS/Winnet\")",
+      "Bash(xcrun --find clang)",
+      "Bash(xcrun --find cc)",
+      "Bash(xcode-select -p)",
+      "Bash(xcodebuild -version)",
+      "Bash(xcodebuild -showsdks)",
+      "Bash(sw_vers)",
+      "Bash(/usr/libexec/PlistBuddy -c 'Print' /Applications/Xcode.app/Contents/version.plist)",
+      "Bash(/opt/homebrew/lib/QtCore.framework/Versions/A/QtCore)",
+      "Bash(/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake -S /Users/roryhill/Projects/Winnow64 -B /Users/roryhill/Projects/Winnow64/build/mac-debug)",
+      "WebFetch(domain:doc.qt.io)",
+      "WebFetch(domain:stackoverflow.com)"
+    ]
+  }
+}

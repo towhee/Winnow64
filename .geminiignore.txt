@@ -1,0 +1,20 @@
+# Ignore everything first
+*
+
+# Allow only specific code files
+!*.h
+!*.pro
+#!*.cpp
+#!*.hpp
+#!*.ui
+#!*.qrc
+#!*.mm
+#!CMakeLists.txt
+
+# Still ignore build/generated folders even if they contain .cpp
+build/
+debug/
+release/
+moc_*.cpp
+ui_*.h
+qrc_*.cpp

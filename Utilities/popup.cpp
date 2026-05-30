@@ -87,6 +87,21 @@ void Popup::paintEvent(QPaintEvent *event)
 }
 
 void Popup::showPopup(const QString &text,
+                      int msDuration,
+                      bool isAutoSize,
+                      float opacity,
+                      Qt::Alignment alignment)
+{
+    QPointer<Popup> self(this);
+    QTimer::singleShot(0, this, [self, text, msDuration, isAutoSize, opacity, alignment] {
+        if (!self) return;
+        self->showPopup1(text, msDuration, isAutoSize, opacity, alignment);
+        self->raise();
+        self->update();
+    });
+}
+
+void Popup::showPopup1(const QString &text,
                  int msDuration,
                  bool isAutoSize,
                  float opacity,
@@ -217,7 +232,8 @@ void Popup::setPopupAlignment(Qt::Alignment alignment)
 void Popup::setPopupText(const QString &text)
 {
     label.setText(text);
-    repaint(0, 0, width(), height());
+    // repaint(0, 0, width(), height());
+    update();  // instead of repaint
 }
 
 void Popup::setPopupOpacity(float opacity)

@@ -2,9 +2,11 @@
 
 void MW::setCentralMessage(QString message)
 {
-    if (G::isLogger) G::log("MW::setCentralMessage", message);
+    QString fun = "MW::setCentralMessage";
+    if (G::isLogger) G::log(fun, message);
     centralLayout->setCurrentIndex(MessageTab);
     msg.msgLabel->setText(message);
+    centralLayout->currentWidget()->repaint();
 }
 
 /**********************************************************************************************
@@ -127,16 +129,16 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 void MW::setRatingBadgeVisibility() {
     if (G::isLogger) G::log("MW::setRatingBadgeVisibility");
     isRatingBadgeVisible = ratingBadgeVisibleAction->isChecked();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshIcons("MW::setRatingBadgeVisibility");
+    gridView->refreshIcons("MW::setRatingBadgeVisibility");
     updateClassification();
 }
 
 void MW::setIconNumberVisibility() {
     if (G::isLogger) G::log("MW::setIconNumberVisibility");
     isIconNumberVisible = iconNumberVisibleAction->isChecked();
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshIcons("MW::setIconNumberVisibility");
+    gridView->refreshIcons("MW::setIconNumberVisibility");
 }
 
 void MW::setShootingInfoVisibility() {
@@ -203,24 +205,51 @@ void MW::focusOnDock(DockWidget *dockWidget)
     dockWidget->setVisible(true);
 }
 
-void MW::toggleFolderDockVisibility()
+void MW::closeThumbDock()
+{
+    thumbDock->setVisible(false);
+    thumbDockVisibleAction->setChecked(false);
+}
+
+void MW::closeEmbelDock()
+{
+    embelDock->setVisible(false);
+    embelDockVisibleAction->setChecked(false);
+}
+void MW::closeFolderDock()
+{
+    folderDock->setVisible(false);
+    folderDockVisibleAction->setChecked(false);
+}
+void MW::closeFavDock()
+{
+    favDock->setVisible(false);
+    favDockVisibleAction->setChecked(false);
+}
+void MW::closeFilterDock()
+{
+    filterDock->setVisible(false);
+    filterDockVisibleAction->setChecked(false);
+}
+void MW::closeMetadataDock()
+{
+    metadataDock->setVisible(false);
+    metadataDockVisibleAction->setChecked(false);
+}
+
+void MW::showFolderDock()
 {
     if (G::isLogger) G::log("MW::toggleFolderDockVisibility");
     qDebug() << "MW::toggleFolderDockVisibility";
     if (G::isInitializing) return;
-    QString dock = folderDockTabText;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (folderDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    QDockWidget *dock = folderDock;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
-        break;
-    case SetInvisible:
-        folderDock->setVisible(false);
-        folderDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         folderDock->setVisible(true);
@@ -229,23 +258,18 @@ void MW::toggleFolderDockVisibility()
     }
 }
 
-void MW::toggleFavDockVisibility() {
+void MW::showFavDock() {
     if (G::isLogger) G::log("MW::toggleFavDockVisibility");
     if (G::isInitializing) return;
     qDebug() << "MW::toggleFavDockVisibility";
-    QString dock = favDockTabText;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (favDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    QDockWidget *dock = favDock;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         favDock->raise();
         favDockVisibleAction->setChecked(true);
-        break;
-    case SetInvisible:
-        favDock->setVisible(false);
-        favDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         favDock->setVisible(true);
@@ -254,7 +278,7 @@ void MW::toggleFavDockVisibility() {
     }
 }
 
-void MW::toggleFilterDockVisibility()
+void MW::showFilterDock()
 /*
     Called from folterDockVisibleAction.
 
@@ -268,23 +292,18 @@ void MW::toggleFilterDockVisibility()
     if (G::isLogger) G::log("MW::toggleFilterDockVisibility");
     if (G::isInitializing) return;
 
-    QString dock = filterDockTabText;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (filterDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
-    qDebug() << "MW::toggleFilterDockVisibility dockToggle =" << dockToggle;
+    QDockWidget *dock = filterDock;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
+    qDebug() << "MW::toggleFilterDockVisibility dockToggle =" << dockOption;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
         if (!filters->filtersBuilt) {
             buildFilters->build();
         }
-        break;
-    case SetInvisible:
-        filterDock->setVisible(false);
-        filterDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         filterDock->setVisible(true);
@@ -296,23 +315,18 @@ void MW::toggleFilterDockVisibility()
     }
 }
 
-void MW::toggleMetadataDockVisibility() {
+void MW::showMetadataDock() {
     if (!G::useInfoView) return;
     if (G::isLogger) G::log("MW::toggleMetadataDockVisibility");
     if (G::isInitializing) return;
-    QString dock = metadataDockTabText;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (metadataDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    QDockWidget *dock = metadataDock;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         metadataDock->raise();
         metadataDockVisibleAction->setChecked(true);
-        break;
-    case SetInvisible:
-        metadataDock->setVisible(false);
-        metadataDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         metadataDock->setVisible(true);
@@ -321,7 +335,7 @@ void MW::toggleMetadataDockVisibility() {
     }
 }
 
-void MW::toggleThumbDockVisibity()
+void MW::showThumbDock()
 {
     if (G::isLogger) G::log("MW::toggleThumbDockVisibity");
 
@@ -330,20 +344,16 @@ void MW::toggleThumbDockVisibity()
         return;
     }
 
-    QString dock = thumbDockTabText;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (thumbDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    QDockWidget *dock = thumbDock;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
         break;
-    case SetInvisible:
-        thumbDock->setVisible(false);
-        thumbDockVisibleAction->setChecked(false);
-        break;
+
     case SetVisible:
         thumbDock->setVisible(true);
         thumbDock->raise();
@@ -363,22 +373,17 @@ void MW::toggleThumbDockVisibity()
     //*/
 }
 
-void MW::toggleEmbelDockVisibility() {
+void MW::showEmbelDock() {
     if (G::isLogger) G::log("MW::toggleEmbelDockVisibility");
     if (G::isInitializing) return;
-    QString dock = embelDockTabText;
-    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
-    else if (embelDock->isVisible()) dockToggle = SetInvisible;
-    else dockToggle = SetVisible;
+    QDockWidget *dock = embelDock;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
 
-    switch (dockToggle) {
+    switch (dockOption) {
     case SetFocus:
         embelDock->raise();
         embelDockVisibleAction->setChecked(true);
-        break;
-    case SetInvisible:
-        embelDock->setVisible(false);
-        embelDockVisibleAction->setChecked(false);
         break;
     case SetVisible:
         embelDock->setVisible(true);
@@ -475,11 +480,10 @@ void MW::setCombineRawJpg()
     if (combineRawJpg) msg = "Combining Raw + Jpg pairs.  This could take a moment.";
     else msg = "Separating Raw + Jpg pairs.  This could take a moment.";
     G::popup->showPopup(msg);
-    qApp->processEvents();
+    if (G::useProcessEvents) qApp->processEvents();
 
     // prevent crash when there are videos (did not work)
-    stop();
-    // reset();
+    // stop();
 
     settings->setValue("combineRawJpg", combineRawJpg);
     updateStatusBar();
@@ -511,9 +515,6 @@ void MW::setCombineRawJpg()
        }
    }
 
-   // // refresh the proxy sort/filter
-   // dm->sf->filterChange();
-
    // update elements available to sort and filter
    dm->rebuildTypeFilter();
 
@@ -535,7 +536,16 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
     If the image is the current one, then imageView is called.
 
 */
+    QString srcFun = "MW::refreshViewsOnCacheChange";
+
     int sfRow = dm->proxyRowFromPath(fPath, "MW::refreshViewsOnCacheChange");
+
+    if (sfRow == -1) {
+        QString msg = "No sfRow for fPath = " + fPath;
+        qWarning() << "WARNING:" << srcFun << msg;
+        return;
+    }
+
     bool isCurrent = sfRow == dm->currentSfRow;
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
@@ -563,10 +573,17 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
         updateClassification();
+        /* Hide Info until first image shown.  If Winnow is interrupted by an OS
+           permission request then we do not want an info to show */
+        if (isFirstImageSelected) {
+            // qDebug() << fun << "isFirstImageSelected =" << isFirstImageSelected;
+            setShootingInfoVisibility();
+            isFirstImageSelected = false;
+        }
     }
 
-    thumbView->refreshThumb(sfIdx);
-    gridView->refreshThumb(sfIdx);
+    thumbView->refreshIcon(sfIdx, srcFun);
+    gridView->refreshIcon(sfIdx, srcFun);
 
     return;
 }
@@ -609,6 +626,18 @@ void MW::updateClassification()
         compareImages->updateClassification(isPick, rating, colorClass,
                                             isRatingBadgeVisible,
                                             thumbView->currentIndex());
+}
+
+void MW::updateSidecarStatus(QString fPath)
+{
+    QString srcFun = "MW::updateSidecarStatus";
+    if (G::isLogger) G::log(srcFun, fPath);
+    qDebug() << srcFun<< fPath;
+
+    QModelIndex sfIdx = dm->proxyIndexFromPath(fPath);
+    emit  setValSf(sfIdx.row(), G::SidecarColumn, true, G::dmInstance,
+                  srcFun, Qt::EditRole, Qt::AlignVCenter | Qt::AlignCenter);
+    thumbView->refreshIcon(sfIdx, srcFun);
 }
 
 void MW::setIgnoreAddThumbnailsDlg(bool ignore)

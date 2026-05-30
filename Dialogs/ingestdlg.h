@@ -6,7 +6,6 @@
 #include "Datamodel/datamodel.h"
 #include "tokendlg.h"
 
-#include "ui_ingestautopath.h"
 //#include "ui_helpingest.h"
 #include "Utilities/utilities.h"
 #include "Dialogs/ingesterrors.h"
@@ -134,10 +133,6 @@ public:
     // available MB on destination drive
     double availableMB;
     double availableMB2;
-
-    // text styles
-    QString normalText;
-    QString redText;
 
     // list of files not copied
     QStringList failedToCopy;

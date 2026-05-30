@@ -1,5 +1,7 @@
 #include "jpeg2.h"
 #include "Main/global.h"
+#include "Metadata/metareport.h"
+#include "Metadata/ExifTool.h"
 #include <QDebug>
 
 Jpeg2::Jpeg2()
@@ -103,7 +105,7 @@ bool Jpeg2::getDimensions(MetadataParameters &p, ImageMetadata &m)
         marker = u.get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
             QString msg = "Failed, marker < 0xFFC0.";
-            G::issue("Warning", msg, "Jpeg2::getDimensions", m.row, m.fPath);
+            G::issueDedup("Warning", msg, "Jpeg2::getDimensions", m.row, m.fPath);
             return false;
         }
         p.offset = u.get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
@@ -137,12 +139,22 @@ bool Jpeg2::parse(MetadataParameters &p,
     initSegCodeHash();
     m.iccSegmentOffset = 0;
 
+    /* Reset persistent Jpeg2 state between files. See Jpeg::parse for
+       the rationale — same accumulation/heap-corruption fix. */
+    dqt.clear();
+    dhtMap.clear();
+    components.clear();
+    for (int i = 0; i < 4; ++i) huffTblToUse[i] = 0;
+    sosComponentCount = 0;
+    restartInterval = 0;
+    isXmp = false;
+
     //file.open happens in readMetadata
     bool isBigEnd = true;
 
     if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
         QString msg = "JPG does not start with 0xFFD8.";
-        G::issue("Error", msg, "Jpeg2::parse", m.row, m.fPath);
+        G::issueDedup("Error", msg, "Jpeg2::parse", m.row, m.fPath);
         return false;
     }
 
@@ -164,7 +176,7 @@ bool Jpeg2::parse(MetadataParameters &p,
     }
     else {
         QString msg = "JPG does not contain EXIF information.";
-        G::issue("Warning", msg, "Jpeg2::parse", m.row, m.fPath);
+        G::issueDedup("Warning", msg, "Jpeg2::parse", m.row, m.fPath);
         return false;
     }
 
@@ -189,7 +201,7 @@ bool Jpeg2::parse(MetadataParameters &p,
         count++;
         if (count > 100) {
             QString msg = "Endian order not found.";
-            G::issue("Error", msg, "Jpeg2::parse", m.row, m.fPath);
+            G::issueDedup("Error", msg, "Jpeg2::parse", m.row, m.fPath);
             return false;
         }
     }
@@ -348,7 +360,7 @@ bool Jpeg2::parse(MetadataParameters &p,
     /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
     and it is sRGB then no point in saving the byte array of the profile since we already have
     it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
-    if (segmentHash.contains("ICC")) {
+    if (segmentHash.contains("ICC")/* && G::colorManage*/) {
         if (m.iccSegmentOffset && m.iccSegmentLength) {
             m.iccSpace = u.getString(p.file, m.iccSegmentOffset + 52, 4);
             if (m.iccSpace != "sRGB") {
@@ -380,6 +392,7 @@ bool Jpeg2::parse(MetadataParameters &p,
     if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
+            p.xmpModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
             m.rating = xmp.getItem("Rating");     // case is important "Rating"
             m.label = xmp.getItem("Label");       // case is important "Label"
             m.title = xmp.getItem("title");       // case is important "title"
@@ -846,7 +859,7 @@ void Jpeg2::decodeScan(QFile &file, QImage &image)
         bool isBigEnd = true;
         if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
             QString msg = "JPG does not start with 0xFFD8.";
-            G::issue("Error", msg, "Jpeg2::decodeScan", -1, p.fPath);
+            G::issueDedup("Error", msg, "Jpeg2::decodeScan", -1, p.fPath);
             p.file.close();
             // qDebug() << "Jpeg2::decodeScan" << "Close" << p.file.fileName();
             return;

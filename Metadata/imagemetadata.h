@@ -30,6 +30,7 @@ public:
     bool pick = false;
     bool ingested = false;
     bool video = false;
+    bool sidecar = false;
     bool metadataReading = false;           // all metadata except thumb
     bool metadataAttempted = false;         // all metadata except thumb
     bool metadataLoaded = false;            // all metadata except thumb
@@ -152,6 +153,7 @@ public:
     QTextStream rpt;
     QString hdr;
     QString xmpString;
+    QDateTime xmpModifyDate;                // xmp:ModifyDate from embedded XMP (if any)
     bool inclNonEssential;
     QElapsedTimer t;
 };

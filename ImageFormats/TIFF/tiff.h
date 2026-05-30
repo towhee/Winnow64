@@ -11,7 +11,6 @@
 #include "Metadata/xmp.h"
 #include "Metadata/gps.h"
 #include "ImageFormats/Jpeg/jpeg.h"
-#include "Metadata/metareport.h"
 #include <vector>
 #include <cstring>
 
@@ -66,7 +65,7 @@ public:
     bool encodeThumbnail(QString fPath, QImage &thumb);
 
     // add a thumbnail jpg in IRB block
-    void embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail);
+    bool embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail);
 
     // // test libtiff
     // // #ifdef Q_OS_MAC
@@ -76,6 +75,8 @@ public:
 
     // // from QTiffHandler, adapted for Winnow and using Winnow libtiff, which reads jpg encoding
     bool read(QString fPath, QImage *image, quint32 ifdOffset = 0);
+    // produces a thumbnail-sized QImage directly via nearest-neighbor sampling
+    bool readSample(QString fPath, QImage *image, int longSide, quint32 ifdOffset = 0);
     // // #endif
 
 private:

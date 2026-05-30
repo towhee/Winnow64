@@ -173,9 +173,6 @@ DataModel::DataModel(QObject *parent,
 
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
-    sf->setDynamicSortFilter(true);
-    sf->setSortCaseSensitivity(Qt::CaseInsensitive);
-    sf->setFilterCaseSensitivity(Qt::CaseInsensitive);
     selectionModel = new QItemSelectionModel(sf);
 
      // eligible image file types
@@ -207,7 +204,8 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::RowNumberColumn, new QStandardItem("#")); horizontalHeaderItem(G::RowNumberColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::FolderNameColumn, new QStandardItem("Folder Name")); horizontalHeaderItem(G::FolderNameColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::MSToReadColumn, new QStandardItem("Decode ms")); horizontalHeaderItem(G::MSToReadColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::NSThumb, new QStandardItem("NS Thumb")); horizontalHeaderItem(G::NSThumb)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::NSImage, new QStandardItem("NS Image")); horizontalHeaderItem(G::NSImage)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour")); horizontalHeaderItem(G::LabelColumn)->setData(false, G::GeekRole);
@@ -215,6 +213,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type")); horizontalHeaderItem(G::TypeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::VideoColumn, new QStandardItem("Video")); horizontalHeaderItem(G::VideoColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::SidecarColumn, new QStandardItem("Sidecar")); horizontalHeaderItem(G::SidecarColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture")); horizontalHeaderItem(G::ApertureColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter")); horizontalHeaderItem(G::ShutterspeedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ISOColumn, new QStandardItem("ISO")); horizontalHeaderItem(G::ISOColumn)->setData(false, G::GeekRole);
@@ -227,7 +226,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::FocusXColumn, new QStandardItem("FocusX")); horizontalHeaderItem(G::FocusXColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::FocusYColumn, new QStandardItem("FocusY")); horizontalHeaderItem(G::FocusYColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::GPSCoordColumn, new QStandardItem("GPS Coord")); horizontalHeaderItem(G::GPSCoordColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::SizeColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::ByteSizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::ByteSizeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width")); horizontalHeaderItem(G::WidthColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height")); horizontalHeaderItem(G::HeightColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified")); horizontalHeaderItem(G::ModifiedColumn)->setData(false, G::GeekRole);
@@ -239,6 +238,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::LoadMsecPerMpColumn, new QStandardItem("Msec/Mp")); horizontalHeaderItem(G::LoadMsecPerMpColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions")); horizontalHeaderItem(G::DimensionsColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::AspectRatioColumn, new QStandardItem("Aspect Ratio")); horizontalHeaderItem(G::AspectRatioColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::IconAspectRatioColumn, new QStandardItem("Icon Aspect Ratio")); horizontalHeaderItem(G::IconAspectRatioColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationColumn, new QStandardItem("Orientation")); horizontalHeaderItem(G::OrientationColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RotationColumn, new QStandardItem("Rot")); horizontalHeaderItem(G::RotationColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright")); horizontalHeaderItem(G::CopyrightColumn)->setData(false, G::GeekRole);
@@ -250,7 +250,6 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::MetadataAttemptedColumn, new QStandardItem("Meta Attempted")); horizontalHeaderItem(G::MetadataAttemptedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataLoadedColumn, new QStandardItem("Meta Loaded")); horizontalHeaderItem(G::MetadataLoadedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::MissingThumbColumn, new QStandardItem("Missing Thumb")); horizontalHeaderItem(G::MissingThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating")); horizontalHeaderItem(G::_RatingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_LabelColumn, new QStandardItem("_Label")); horizontalHeaderItem(G::_LabelColumn)->setData(true, G::GeekRole);
@@ -288,7 +287,6 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::DecoderErrMsgColumn, new QStandardItem("Decoder Err Msg")); horizontalHeaderItem(G::DecoderErrMsgColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationOffsetColumn, new QStandardItem("OrientationOffset")); horizontalHeaderItem(G::OrientationOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::IconSymbolColumn, new QStandardItem("IconSymbolColumn")); //horizontalHeaderItem(G::IconSymbolColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Load Metadata Errors")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
@@ -329,6 +327,20 @@ void DataModel::clearDataModel()
     if (mLock) return;
     if (isDebug)
         qDebug() << "DataModel::clearDataModel" << "instance =" << instance;
+
+    /* Purge queued meta-call events targeting this model before clear() frees
+       every QStandardItem. QStandardItemModel coalesces item edits into a
+       posted _q_emitItemChanged meta-call; if that (or a stale worker
+       setData/setIcon meta-call from the instance being torn down) fires after
+       clear(), it dereferences freed item pointers and crashes in
+       indexFromItem. This became reachable once processNextBatch was time-
+       sliced: the GUI now stays responsive during the folder-add phase, so a
+       folder click can reach clearDataModel while an addFolder tick's
+       coalesced dataChanged is still in the event queue. Removing them is safe
+       — they all target the instance being discarded, and queuedReaderEvents
+       is reset below. */
+    QCoreApplication::removePostedEvents(this, QEvent::MetaCall);
+
     clear();
     setModelProperties();
     // clear the fPath index of datamodel rows
@@ -336,6 +348,7 @@ void DataModel::clearDataModel()
     fPathRowClear();
     // clear the folder list
     folderList.clear();
+    folderSet.clear();
     pendingPaths.clear();
     folderQueue.clear();
     // clear the folder image count hash
@@ -350,13 +363,79 @@ void DataModel::clearDataModel()
     isProcessingFolders = false;
     // reset memory used by model
     bytesUsed = 0;
+    // clear memory-overrun latch and Reader→DataModel backpressure counter
+    G::memoryOverrunFlag.store(false, std::memory_order_relaxed);
+    queuedReaderEvents.store(0, std::memory_order_relaxed);
+    // model is now empty: reset the running load-flag counts
+    metadataAttemptedCount.store(0, std::memory_order_relaxed);
+    iconLoadedCount.store(0, std::memory_order_relaxed);
+    videoRowCount.store(0, std::memory_order_relaxed);
+}
+
+bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
+{
+/*
+    Intercept writes to the three columns whose totals drive load-completion
+    checks, maintaining a running count so isAllMetadataAttempted() and the
+    icon-chunk check don't have to rescan the model on every row.
+
+    QStandardItem stores Qt::EditRole and Qt::DisplayRole in the same slot, so
+    the bool flags (written with the default EditRole, read elsewhere with
+    DisplayRole) are tracked only for those two roles. Alignment/tooltip/etc.
+    writes on the same columns use other roles and are ignored. Counting only
+    false↔true transitions keeps each row's contribution at 0 or 1, so the
+    count never exceeds rowCount().
+*/
+    const int col = idx.column();
+    const bool track =
+        idx.isValid() &&
+        (role == Qt::EditRole || role == Qt::DisplayRole) &&
+        (col == G::MetadataAttemptedColumn ||
+         col == G::IconLoadedColumn ||
+         col == G::VideoColumn);
+
+    bool oldVal = false;
+    if (track) oldVal = QStandardItemModel::data(idx, Qt::DisplayRole).toBool();
+
+    const bool ok = QStandardItemModel::setData(idx, value, role);
+
+    if (track && ok) {
+        const bool newVal = value.toBool();
+        if (newVal != oldVal) {
+            std::atomic<int> *counter =
+                col == G::MetadataAttemptedColumn ? &metadataAttemptedCount
+              : col == G::IconLoadedColumn        ? &iconLoadedCount
+                                                  : &videoRowCount;
+            counter->fetch_add(newVal ? 1 : -1, std::memory_order_relaxed);
+        }
+    }
+    return ok;
+}
+
+void DataModel::recountLoadFlags()
+{
+/*
+    Resync the running counts with a single full scan. Called after structural
+    row removals (remove/removeFolder use removeRows, which bypasses setData).
+*/
+    if (G::isLogger) G::log("DataModel::recountLoadFlags");
+    int meta = 0, icon = 0, video = 0;
+    const int n = rowCount();
+    for (int row = 0; row < n; ++row) {
+        if (index(row, G::MetadataAttemptedColumn).data().toBool()) ++meta;
+        if (index(row, G::IconLoadedColumn).data().toBool())        ++icon;
+        if (index(row, G::VideoColumn).data().toBool())             ++video;
+    }
+    metadataAttemptedCount.store(meta,  std::memory_order_relaxed);
+    iconLoadedCount.store(icon,         std::memory_order_relaxed);
+    videoRowCount.store(video,          std::memory_order_relaxed);
 }
 
 void DataModel::newInstance()
 {
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::newInstance");
-    instance++;
-    G::dmInstance = instance;
+    int next = ++instance;
+    G::dmInstance = next;
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -382,10 +461,17 @@ bool DataModel::lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2)
     QString s2 = i2.absoluteFilePath().toLower();
     // check if combined raw+jpg duplicates
     if (i1.completeBaseName() == i2.completeBaseName()) {
-        if (i1.suffix().toLower() == "jpg") s1.replace(".jpg", ".zzz");
-        if (i2.suffix().toLower() == "jpg") s2.replace(".jpg", ".zzz");
-        if (i1.suffix().toLower() == "jpeg") s1.replace(".jpeg", ".zzz");
-        if (i2.suffix().toLower() == "jpeg") s2.replace(".jpeg", ".zzz");
+        if (i1.suffix().toLower() == "jpg" || i1.suffix().toLower() == "jpeg") {
+            s1 = i1.absolutePath().toLower() + "/" + i1.completeBaseName().toLower() + ".zzz";
+        }
+        if (i2.suffix().toLower() == "jpg" || i2.suffix().toLower() == "jpeg") {
+            s2 = i2.absolutePath().toLower() + "/" + i2.completeBaseName().toLower() + ".zzz";
+        }
+
+        // if (i1.suffix().toLower() == "jpg") s1.replace(".jpg", ".zzz");
+        // if (i2.suffix().toLower() == "jpg") s2.replace(".jpg", ".zzz");
+        // if (i1.suffix().toLower() == "jpeg") s1.replace(".jpeg", ".zzz");
+        // if (i2.suffix().toLower() == "jpeg") s2.replace(".jpeg", ".zzz");
     }
     return s1 < s2;
 }
@@ -443,23 +529,22 @@ int DataModel::insert(QString fPath)
 void DataModel::remove(QString fPath)
 {
 /*
-    Delete a row from the data model matching the absolute path.  This is used when an image
-    file has been deleted by Winnow.  Also update fPathRow.
+    Delete a row from the data model matching the absolute path. This is used when
+    an image file has been deleted by Winnow. Also update fPathRow.
 */
     if (G::isLogger) G::log("DataModel::remove");
     if (isDebug)
         qDebug() << "DataModel::remove" << "instance =" << instance << fPath;
 
-    // do not use a mutex here because functions called from here
-    // use a mutex ie removeRow, fPathRowRemove    rgh 2025-04-10
+    // do not use a mutex here  rgh 2025-04-10
 
     // remove row from datamodel
     int row;
     for (row = 0; row < rowCount(); ++row) {
         QString rowPath = index(row, 0).data(G::PathRole).toString();
         if (rowPath == fPath) {
+            QModelIndex par = QModelIndex();
             removeRow(row);
-            fPathRowRemove(fPath);
             break;
         }
     }
@@ -467,8 +552,11 @@ void DataModel::remove(QString fPath)
     // rebuild fPathRow hash
     rebuildRowFromPathHash();
 
+    // removeRow bypasses setData, so resync the running load-flag counts
+    recountLoadFlags();
+
     // update current index
-    int last = sf->rowCount() - 1;
+    int last = sf->rowCount() - 1;;
     currentSfRow <= last ? row = currentSfRow : row = last;
     QModelIndex sfIdx = sf->index(row,0);
     setCurrentSF(sfIdx, instance);
@@ -500,7 +588,7 @@ bool DataModel::isQueueEmpty()
 void DataModel::enqueueOp(const QString& folderPath, G::FolderOp op)
 {
     // Toggle logic is handled by caller; here we only queue valid transitions.
-    const bool have = folderList.contains(folderPath);
+    const bool have = folderSet.contains(folderPath);
 
     if (op == G::FolderOp::Toggle) {
         have ? op = G::FolderOp::Remove : op = G::FolderOp::Add;
@@ -521,32 +609,59 @@ void DataModel::enqueueOp(const QString& folderPath, G::FolderOp op)
 }
 
 void DataModel::enqueueFolderSelection(const QString& folderPath,
-                                       G::FolderOp op, bool recurse)
+                                       G::FolderOp op, bool recurse,
+                                       const QStringList &subDirs)
 {
 /*
     op = Add or Delete images in folderPath from datamodel
     recurse = recurse all subfolders of folderPath
+    subDirs = subfolder paths discovered by Utilities::subFolderTree;
+              consumed directly so we don't re-walk the tree here.
 */
 
     if (recurse) {
-        // Only iterate directories; skip "." and ".."
-        // skip symlinks to avoid loops.
-        QDirIterator it(folderPath,
-                        QDir::Dirs | QDir::NoDotAndDotDot | QDir::Readable | QDir::Hidden,
-                        QDirIterator::Subdirectories);
+        // if (folderPath.endsWith(".photoslibrary")) return;
+
+        /* Filter macOS .photoslibrary bundles out of the recursion list.
+           These hold thousands of derivative preview/master images per
+           photo and reliably blow the memory cap. Skip both the bundle
+           itself and anything nested inside one. The user can still open
+           a .photoslibrary explicitly (non-recurse) if they want. */
+        QStringList filtered;
+        filtered.reserve(subDirs.size());
+        for (const QString &p : subDirs) {
+            // if (p.endsWith(".photoslibrary")) continue;
+            if (p.contains(".photoslibrary")) continue;
+            filtered.append(p);
+        }
+        // Keep the displayed total consistent with what we'll process.
+        subFolderTreeCount = static_cast<quint32>(filtered.size());
+
         enqueueOp(folderPath, op);
-        while (it.hasNext()) {
-            const QString p = it.next();
-            const QFileInfo fi = it.fileInfo();
-            if (!fi.isDir()) continue;
-            if (fi.isSymLink()) continue;
+
+        const QString total = QString::number(subFolderTreeCount);
+        QElapsedTimer lastEmit;
+        lastEmit.start();
+        constexpr qint64 kEmitIntervalMs = 50;
+        int i = 0;
+        const int n = filtered.size();
+        for (const QString &p : filtered) {
+            if (abort) return;
+            ++i;
+            // Throttle UI updates: emit and process events at most every
+            // ~50 ms (and always for the final one).
+            if (lastEmit.elapsed() >= kEmitIntervalMs || i == n) {
+                emit updateStatus(false,
+                    "Progress: " + QString::number(i) + " of " + total + " subfolders",
+                    "");
+                qApp->processEvents();  // req'd for status update and abort
+                lastEmit.restart();
+            }
             enqueueOp(p, op);
         }
     } else {
         enqueueOp(folderPath, op);
     }
-
-    // QCoreApplication::processEvents();
 
     scheduleProcessing();
 }
@@ -564,12 +679,24 @@ void DataModel::scheduleProcessing()
 
 void DataModel::processNextBatch()
 {
-    // qDebug() << "processNextBatch";// << pendingPaths;
-    // qDebug() << "processNextBatch invoked on thread =" << QThread::currentThread();     // Pump a reasonable number each tick to balance throughput/latency.
-    constexpr int kMaxPerTick = 64;
+    /* Folders are processed in time-sliced batches, yielding to the GUI event
+       loop between slices so the UI stays responsive while a large (especially
+       recursive) tree loads. The yield is time-budgeted, not folder-counted:
+       addFolder cost grows with the model size (the sorted proxy re-inserts
+       each new row at O(N)), so a fixed folder count per tick produced multi-
+       second GUI freezes late in a big load (measured 3.4 s blocks). Capping a
+       tick at ~30 ms keeps each freeze to roughly one folder's insert time and
+       returns control to the event loop ~30×/s. kMaxFoldersPerTick remains as a
+       secondary guard so tiny folders still yield periodically. The remaining
+       O(N²) total-load cost is unchanged by this; only responsiveness is. */
+    constexpr int    kMaxFoldersPerTick = 64;
+    constexpr qint64 kTimeBudgetMs      = 30;
+
+    QElapsedTimer tickTimer;
+    tickTimer.start();
 
     int processed = 0;
-    while (processed < kMaxPerTick && !folderQueue.isEmpty() && !G::stop) {
+    while (processed < kMaxFoldersPerTick && !folderQueue.isEmpty() && !G::stop) {
         if (abort) {
             qDebug() << "processNextBatch1";
             emit folderChange(abort);
@@ -589,6 +716,10 @@ void DataModel::processNextBatch()
             removeFolder(folderPath);
         }
         ++processed;
+
+        // Yield to the event loop once this tick's time budget is spent; the
+        // reschedule below picks up the remaining queue on the next tick.
+        if (tickTimer.elapsed() >= kTimeBudgetMs) break;
     }
 
     if (G::stop) {
@@ -610,6 +741,7 @@ void DataModel::processNextBatch()
 
     // All done.
     isProcessingFolders = false;
+
     emit folderChange(abort);
 }
 // */
@@ -619,11 +751,11 @@ void DataModel::addFolder(const QString &folderPath)
     QString fun = "DataModel::addFolder";
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, folderPath);
-    // qDebug() << fun << folderPath;
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     abort = false;
     folderList.append(folderPath);
+    folderSet.insert(folderPath);
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
     locker.unlock(); // Unlock the queue while processing
 
@@ -641,33 +773,29 @@ void DataModel::addFolder(const QString &folderPath)
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
 
+    QString count = QVariant(++subFolderTreeCounter).toString();
+    QString progress = "Searching for images in: " + count + " of " +
+                       QVariant(subFolderTreeCount).toString() +
+                       " subfolders";
+
     QString step = "Loading eligible image file information.<br>";
-    step += folderPath + "<br>";
+    step += progress + "<br>";
+    // step += folderPath + "<br>";
     QString escapeClause = "Press \"Esc\" to stop.";
     emit centralMsg(step + escapeClause);
-    qApp->processEvents();
-
-    // test if raw file to match jpg when same file names and one is a jpg
-    QString prevRawSuffix = "";
-    QString prevRawBaseName = "";
-    QModelIndex prevRawIdx;
 
     // datamodel size
     int row = rowCount();
     int oldRowCount = rowCount();
     int newRowCount = oldRowCount;
 
-
-    int counter = 0;
-    int countInterval = 100;
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         // check for escape key release triggering abort
-        // qApp->processEvents();
         if (abort) {
-            // qDebug() << "DataModel::addFolder aborting *************";
             endLoad(false);
             break;
         }
+
         /*
         qDebug() << "DataModel::addFolder"
                  << "row =" << row
@@ -687,47 +815,10 @@ void DataModel::addFolder(const QString &folderPath)
 
         setRowCount(row + 1);
         if (!columnCount()) setColumnCount(G::TotalColumns);
+
+        // ALL RAW+JPG pairing logic is now encapsulated inside here
         addFileDataForRow(row, fileInfo);
 
-        /*
-        Save info for duplicated raw and jpg files, which generally are the result of
-        setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
-        with the same path precede jpg files with duplicate names. Two roles track duplicates:
-        G::DupHideRawRole flags jpg files with duplicate raws and G::DupOtherIdxRole points to
-        the duplicate other file of the pair. For example:
-
-        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(1,0)
-        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(0,0)  DupRawTypeRole = "ORF"
-        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(3,0)
-        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
-        */
-
-        QString suffix = fileInfo.suffix().toLower();
-        QString baseName = fileInfo.completeBaseName();
-        if (metadata->hasJpg.contains(suffix)) {
-            prevRawSuffix = suffix;
-            prevRawBaseName = fileInfo.completeBaseName();
-            prevRawIdx = index(row, 0);
-        }
-
-        QMutexLocker locker(&mutex);
-        // if row/jpg pair
-        if ((suffix == "jpg" || suffix == "jpeg") && baseName == prevRawBaseName) {
-            // hide raw version
-            setData(prevRawIdx, true, G::DupHideRawRole);
-            // set raw version other index to jpg pair
-            setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
-            // point to raw version
-            setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
-            // set flag to show combined JPG file for filtering when ingesting
-            setData(index(row, 0), true, G::DupIsJpgRole);
-            // build combined suffix to show in type column
-            setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
-            if (combineRawJpg)
-                setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
-            else
-                setData(index(row, G::TypeColumn), "JPG");
-        }
         row++;
     }
 
@@ -749,143 +840,15 @@ void DataModel::addFolder(const QString &folderPath)
     // update folder image count
     folderImageCount[folderPath] = folderRowCount;
 
+    // qDebug() << "DataModel::addFolder"
+    //          << "rowCount =" << rowCount()
+    //          << "memMB =" << G::processFootprintMB()
+    //          << folderPath;
+
     if (folderQueue.isEmpty()) {
         endLoad(true);
     }
 }
-
-/*
-void DataModel::addFolder(const QString& folderPath)
-{
-    // All model mutations must happen on GUI thread.
-    Q_ASSERT(thread() == QThread::currentThread());
-
-    abort = false;                 // consider std::atomic_bool if other threads can set it
-    loadingModel = true;
-
-    // Track that this folder is active
-    folderList.append(folderPath);
-
-    // 1) Build file list (no sorting by QDir; we’ll sort ourselves)
-    QDir dir(folderPath);
-    dir.setNameFilters(*fileFilters);                  // assumed already set
-    dir.setFilter(QDir::Files | QDir::Readable | QDir::Hidden);
-    dir.setSorting(QDir::NoSort);
-    QList<QFileInfo> files = dir.entryInfoList();
-
-    // 2) Sort as required
-    if (combineRawJpg) {
-        std::sort(files.begin(), files.end(), lessThanCombineRawJpg);
-    } else {
-        std::sort(files.begin(), files.end(), lessThan);
-    }
-
-    // 3) Filter out zero-size and already-present, and prepare pairing
-    QVector<QFileInfo> toInsert;
-    toInsert.reserve(files.size());
-
-    // O(1) presence check
-    auto hasPath = [&](const QString& p) {
-        // Prefer a QHash<QString,int> pathToRow; fall back to your current function.
-        return fPathRowContains(p);
-    };
-
-    for (const QFileInfo& fi : files) {
-        if (abort) { loadingModel = false; return; }   // clean abort
-        if (fi.size() == 0) continue;
-        if (hasPath(fi.filePath())) continue;
-        toInsert.push_back(fi);
-    }
-    if (toInsert.isEmpty()) {
-        // Nothing new; possibly finish overall load if queue empty
-        if (folderQueue.isEmpty()) endLoad(true);
-        return;
-    }
-
-    // 4) Batch insert rows
-    const int firstRow = rowCount();
-    const int lastRow  = firstRow + toInsert.size() - 1;
-
-    if (columnCount() == 0) setColumnCount(G::TotalColumns);
-    beginInsertRows(QModelIndex(), firstRow, lastRow);
-    // Ensure your internal storage grows here if you keep custom vectors
-    setRowCount(rowCount() + toInsert.size());
-    endInsertRows();
-
-    // 5) Fill data for inserted rows (no signals storming if your setData emits dataChanged;
-    //    consider a final dataChanged over the inserted block if needed)
-    //    Build a RAW index for pairing: baseName -> row index of RAW
-    QHash<QString, int> rawRowByBase;
-
-    const auto isJpg = [](const QString& s) {
-        const QString t = s.toLower();
-        return (t == "jpg" || t == "jpeg");
-    };
-
-    int row = firstRow;
-    int progressCounter = 0;
-    constexpr int kProgressInterval = 100;
-
-    for (const QFileInfo& fi : toInsert) {
-        if (abort) { loadingModel = false; return; }   // clean abort
-
-        addFileDataForRow(row, fi);                    // your existing filler
-        // Ensure PathRole, TypeColumn, etc. are set in addFileDataForRow
-
-        const QString suffix   = fi.suffix().toLower();
-        const QString baseName = fi.completeBaseName();
-
-        // Pair RAW/JPG regardless of order
-        if (!isJpg(suffix)) {
-            // Candidate RAW; remember it for a possible JPG
-            rawRowByBase.insert(baseName, row);
-        } else {
-            // JPG; see if we already saw a RAW with this base name
-            if (int rawRow = rawRowByBase.value(baseName, -1); rawRow >= 0) {
-                // Mark duplicate roles on both rows
-                const QModelIndex jpgIdx = index(row, 0);
-                const QModelIndex rawIdx = index(rawRow, 0);
-
-                setData(rawIdx, true,                     G::DupHideRawRole);
-                setData(rawIdx, jpgIdx,                   G::DupOtherIdxRole);
-                setData(jpgIdx, rawIdx,                   G::DupOtherIdxRole);
-                setData(jpgIdx, true,                     G::DupIsJpgRole);
-                setData(jpgIdx, fi.suffix().toUpper(),    G::DupRawTypeRole);
-
-                if (combineRawJpg)
-                    setData(index(row, G::TypeColumn),     "JPG+" + fi.suffix().toUpper());
-                else
-                    setData(index(row, G::TypeColumn),     "JPG");
-            } else {
-                // JPG appeared before RAW; remember JPG position to link later if you want
-                // (optional: keep a jpgRowByBase and reconcile when RAW shows up)
-            }
-        }
-
-        if (++progressCounter % kProgressInterval == 0) {
-            updateLoadStatus(row + 1); // show progress using current count
-        }
-
-        ++row;
-    }
-
-    // 6) Initialize selection on the first added folder if this is the first batch
-    if (firstRow == 0 && row > 0) {
-        firstFolderPathWithImages = folderPath;
-        setCurrent(index(0, 0), instance);
-    }
-
-    // 7) Adjust icon chunking policy
-    if (rowCount() > hugeIconThreshold) {
-        iconChunkSize = 100;
-    }
-
-    // 8) Finish a “load session” when folder queue is empty
-    if (folderQueue.isEmpty()) {
-        endLoad(true);
-    }
-}
-//*/
 
 void DataModel::removeFolder(const QString &folderPath)
 {
@@ -893,6 +856,7 @@ void DataModel::removeFolder(const QString &folderPath)
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
 
     folderList.removeAll(folderPath);
+    folderSet.remove(folderPath);
     folderImageCount.remove(folderPath);
     QModelIndex par = QModelIndex();
 
@@ -913,6 +877,9 @@ void DataModel::removeFolder(const QString &folderPath)
     // rebuild fPathRow hash
     rebuildRowFromPathHash();
 
+    // removeRows bypasses setData, so resync the running load-flag counts
+    recountLoadFlags();
+
     // update current
     setCurrent(currentFilePath, instance);
     emit updateStatus(true, "", "DataModel::removeFolder");
@@ -920,26 +887,18 @@ void DataModel::removeFolder(const QString &folderPath)
 
 void DataModel::refresh()
 {
-/*
-    The images in the datamodel are compared to the files in the source folders and
-    the datamodel is updated to match where there are differences (additions,
-    removals or modifications).
-*/
     if (G::isLogger) G::log("DataModel::refresh");
-    qDebug() << "DataModel::refresh";
 
     QStringList added;
     QStringList removed;
     QStringList modified;
 
     if (!sourceModified(added, removed, modified)) {
-        qDebug() << "DataModel::refresh nothing modified";
         return;
     }
 
     // additions
     for (const QString &fPath : added) {
-        qDebug() << "DataModel::refresh additions";
         insert(fPath);
     }
 
@@ -988,7 +947,7 @@ void DataModel::find(QString text)
     if (G::isLogger) G::log("DataModel::find");
     if (isDebug) qDebug() << "DataModel::find" << "instance =" << instance << text;
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < sf->rowCount(); ++row) {
         QString searchableText = sf->index(row, G::SearchTextColumn).data().toString();
         qDebug() << "DataModel::find" << searchableText;
@@ -1015,6 +974,10 @@ bool DataModel::endLoad(bool success)
     }
     else {
         clear();
+        // model emptied on the failure path: reset running load-flag counts
+        metadataAttemptedCount.store(0, std::memory_order_relaxed);
+        iconLoadedCount.store(0, std::memory_order_relaxed);
+        videoRowCount.store(0, std::memory_order_relaxed);
         filters->loadingDataModelFailed();
         return false;
     }
@@ -1048,6 +1011,79 @@ bool DataModel::okManyImagesWarning()
     return false;
 }
 
+void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseName)
+{
+    bool isRaw = metadata->hasJpg.contains(ext);
+    bool isJpg = (ext == "jpg" || ext == "jpeg");
+
+    // Only update the fast sequential trackers during the initial bulk folder load
+    if (isRaw && loadingModel) {
+        prevRawSuffix = ext;
+        prevRawBaseName = baseName;
+        prevRawIdx = index(row, 0);
+    }
+
+    QMutexLocker locker(&dmMutex);
+
+    if (isJpg || isRaw) {
+
+        // --- PATH A: BULK LOAD (Fast Sequential Check) ---
+        if (loadingModel) {
+            if (isJpg && baseName == prevRawBaseName) {
+                setData(prevRawIdx, true, G::DupHideRawRole);
+                setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
+                setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
+                setData(index(row, 0), true, G::DupIsJpgRole);
+
+                setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
+                if (combineRawJpg)
+                    setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
+                else
+                    setData(index(row, G::TypeColumn), "JPG");
+            }
+        }
+
+        // --- PATH B: ISOLATED INSERT AFTER LOAD (Targeted Search) ---
+        else {
+            QModelIndexList matches = match(index(0, G::NameColumn), Qt::DisplayRole, baseName, 2, Qt::MatchExactly);
+
+            for (const QModelIndex &idx : matches) {
+                if (idx.row() == row) continue;
+
+                QString otherSuffix = index(idx.row(), G::TypeColumn).data().toString().toLower();
+                QModelIndex otherIdx = index(idx.row(), 0);
+
+                if (isJpg && metadata->hasJpg.contains(otherSuffix)) {
+                    setData(otherIdx, true, G::DupHideRawRole);
+                    setData(otherIdx, index(row, 0), G::DupOtherIdxRole);
+                    setData(index(row, 0), otherIdx, G::DupOtherIdxRole);
+                    setData(index(row, 0), true, G::DupIsJpgRole);
+
+                    setData(index(row, 0), otherSuffix.toUpper(), G::DupRawTypeRole);
+                    if (combineRawJpg)
+                        setData(index(row, G::TypeColumn), "JPG+" + otherSuffix.toUpper());
+                    else
+                        setData(index(row, G::TypeColumn), "JPG");
+                    break;
+                }
+                else if (isRaw && (otherSuffix == "jpg" || otherSuffix == "jpeg")) {
+                    setData(index(row, 0), true, G::DupHideRawRole);
+                    setData(index(row, 0), otherIdx, G::DupOtherIdxRole);
+                    setData(otherIdx, index(row, 0), G::DupOtherIdxRole);
+                    setData(otherIdx, true, G::DupIsJpgRole);
+
+                    setData(otherIdx, ext.toUpper(), G::DupRawTypeRole);
+                    if (combineRawJpg)
+                        setData(otherIdx, "JPG+" + ext.toUpper(), G::TypeColumn);
+                    else
+                        setData(otherIdx, "JPG", G::TypeColumn);
+                    break;
+                }
+            }
+        }
+    }
+}
+
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 {
 /*
@@ -1067,6 +1103,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     • PickColumn
     • IngestedColumn
     • VideoColumn
+    • SidecarColumn
     • MetadataAttemptedColumn
     • MetadataLoadedColumn
     • IconLoadedColumn
@@ -1087,6 +1124,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     QString fPath = fileInfo.filePath();
     QString folderName = fileInfo.dir().dirName();
     QString ext = fileInfo.suffix().toLower();
+    QString baseName = fileInfo.completeBaseName();
+    QString sidecarPath = fileInfo.dir().path() + "/" + baseName + ".xmp";
 
     // build hash to quickly get dmRow from fPath (ie pixmap.cpp, imageCache...)
     if (fPathRow.contains(fPath)) return;
@@ -1095,10 +1134,10 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     // string to hold aggregated text for searching
     QString search = fPath;
 
-    // block signals while stuffing cells
+    // Do not lock mutex here, as this is all new data
+    // Block signals while stuffing data
     const QSignalBlocker b(this);
 
-    // QMutexLocker locker(&mutex);
     setData(index(row, G::RowNumberColumn), row + 1);
     setData(index(row, G::RowNumberColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::PathColumn), fPath, G::PathRole);
@@ -1114,6 +1153,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
     setData(index(row, G::VideoColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::SidecarColumn), QFile(sidecarPath).exists());
+    setData(index(row, G::SidecarColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     uint p = static_cast<uint>(fileInfo.permissions());
     setData(index(row, G::PermissionsColumn), p);
     setData(index(row, G::PermissionsColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
@@ -1122,8 +1163,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::ReadWriteColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     // size
     quint32 bytes = fileInfo.size();
-    setData(index(row, G::SizeColumn), bytes);
-    setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::ByteSizeColumn), bytes);
+    setData(index(row, G::ByteSizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
 
     // estimate cacheSize until read metadata and calc size for QImage
     float mb = static_cast<double>(bytes) / (1 << 20);
@@ -1150,6 +1191,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SearchTextColumn), search);
     setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
 
+    rawJpgPairing(row, ext, baseName);
+
     // emit one compact notification (only if you need the view to refresh now)
     emit dataChanged(index(row, 0), index(row, columnCount()-1));
 }
@@ -1165,9 +1208,9 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     int row = fPathRowValue(fPath);
     if (!index(row,0).isValid()) return false;
 
-    QMutexLocker locker(&mutex);
-    setData(index(row, G::SizeColumn), fileInfo.size());
-    setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    QMutexLocker locker(&dmMutex);
+    setData(index(row, G::ByteSizeColumn), fileInfo.size());
+    setData(index(row, G::ByteSizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     QString s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     setData(index(row, G::ModifiedColumn), s);
 
@@ -1221,8 +1264,9 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.fPath = fPath;
     m.fName = index(row, G::NameColumn).data().toString();
     m.type = index(row, G::TypeColumn).data().toString();
-    m.size = index(row, G::SizeColumn).data().toInt();
+    m.size = index(row, G::ByteSizeColumn).data().toInt();
     m.video = index(row, G::VideoColumn).data().toInt();
+    m.sidecar = index(row, G::SidecarColumn).data().toInt();
     m.label = index(row, G::LabelColumn).data().toString();
     m._label = index(row, G::_LabelColumn).data().toString();
     m.rating = index(row, G::RatingColumn).data().toString();
@@ -1278,6 +1322,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.megapixels = index(row, G::MegaPixelsColumn).data().toFloat();
     m.loadMsecPerMp = index(row, G::LoadMsecPerMpColumn).data().toInt();
     m.aspectRatio = index(row, G::AspectRatioColumn).data().toFloat();
+    // m.iconAspectRatio = index(row, G::IconAspectRatioColumn).data().toFloat();
     m.orientation = index(row, G::OrientationColumn).data().toInt();
     m.orientationOffset = index(row, G::OrientationOffsetColumn).data().toUInt();
     m.rotationDegrees = index(row, G::RotationColumn).data().toInt();
@@ -1425,7 +1470,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, fun, row);
+        G::issueDedup("Comment", errMsg, fun, row);
         return true;
     }
     if (G::stop) return false;
@@ -1442,11 +1487,11 @@ bool DataModel::readMetadataForItem(int row, int instance)
     if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
 
-        // only read metadata from files that we know how to
+        // only read metadata from files that we understand
         QString ext = fileInfo.suffix().toLower();
         if (metadata->hasMetadataFormats.contains(ext)) {
-            //qDebug() << "DataModel::readMetadataForItem" << fPath;
             if (metadata->loadImageMetadata(fileInfo, row, instance, true, true, false, true, "DataModel::readMetadataForItem")) {
+                // loadImageMetadata sets m.instance
                 addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
             }
             else {
@@ -1461,6 +1506,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
             G::issue("Warning", errMsg, fun, row, fPath);
             metadata->clearMetadata();
             metadata->m.row = row;
+            metadata->m.instance = instance;
             metadata->m.compare = false;
             addMetadataForItem(metadata->m, "DataModel::readMetadataForItem");
             return false;
@@ -1483,7 +1529,7 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, fun, sfRow);
+        G::issueDedup("Comment", errMsg, fun, sfRow);
         return true;
     }
     if (G::stop) return false;
@@ -1509,7 +1555,7 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
         else {
             errMsg = "Failed to load metadata.";
             G::issue("Warning", errMsg, fun, sfRow, fPath);
-            mutex.unlock();
+            dmMutex.unlock();
             return false;
         }
     }
@@ -1525,9 +1571,13 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     return true;
 }
 
-void DataModel::imageCacheWaiting(int sfRow)
+void DataModel::imageCacheWaiting(int sfRow, int instance)
 {
     // qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow;
+    if (instance != this->instance) {
+        return;
+    }
+
     int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
     imageCacheWaitingForRow = dmRow;
     if (metadataLoaded(dmRow)) {
@@ -1540,20 +1590,66 @@ void DataModel::imageCacheWaiting(int sfRow)
 bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 {
 /*
-    This function is called after the metadata for each eligible image in the selected
-    folder(s) has been cached or when addAllMetadata is called prior of filtering or sorting.
-    The metadata is displayed in tableView and InfoView.
+    This function is called after the metadata for each eligible image in the
+    selected folder(s) has been cached or when addAllMetadata is called prior of
+    filtering or sorting. The metadata is displayed in tableView and InfoView.
 
-    If a folder is opened with combineRawJpg all the metadata for the raw file may not have
-    been loaded, but editable data, (such as rating, label, title, email, url) may have been
-    edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
+    If a folder is opened with combineRawJpg all the metadata for the raw file may
+    not have been loaded, but editable data, (such as rating, label, title, email,
+    url) may have been edited in the jpg file of the raw+jpg pair. If so, we do not
+    want to overwrite this data.
+
+    dm->queuedReaderEvents is an std::atomic<int> on DataModel that counts Reader-thread
+    events emitted to the GUI but not yet drained. A producer/consumer imbalance — e.g.
+    recursing an Apple .photoslibrary where Readers race through tiny JPG derivatives
+    faster than the GUI can drain its event queue — would otherwise balloon Qt's queue
+    and memory. The cap (4× readers) is loose enough that steady-state throughput is
+    unaffected; it only engages when the GUI is genuinely falling behind.
 */
+    /* Backpressure: matches Reader's fetch_add before emit addToDatamodel.
+       RAII so every early-return path also decrements. */
+    struct QrEvGuard {
+        std::atomic<int> &c;
+        ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
+    } qrEvGuard{queuedReaderEvents};
+
     if (G::isLogger) {
         QString msg = "row = " + QString::number(m.row);
         G::log("DataModel::addMetadataForItem", msg);
     }
 
     if (G::stop) return false;
+
+    /* Memory-overrun fast-path: if the watchdog (or any other subsystem)
+       has latched G::memoryOverrunFlag, abandon this insert. The GUI
+       thread can be buried processing thousands of queued addMetadata
+       events, during which the 250 ms watchdog QTimer may not get a
+       chance to fire — checking the latch here lets us bail per row.
+
+       In addition, every Nth call we probe the footprint directly so the
+       latch can be tripped from this hot path without depending on the
+       watchdog ever scheduling. */
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return false;
+    {
+        static thread_local int probeTick = 0;
+        if ((++probeTick & 0x7F) == 0) {        // every 128 calls
+            const quint64 cap = G::memoryAbortMB;
+            if (cap) {
+                const quint64 footprintMB = G::processFootprintMB();
+                if (footprintMB && footprintMB >= cap) {
+                    abort = true;
+                    bool expected = false;
+                    if (G::memoryOverrunFlag.compare_exchange_strong(
+                            expected, true,
+                            std::memory_order_acq_rel,
+                            std::memory_order_relaxed)) {
+                        emit memoryOverrun(footprintMB, cap);
+                    }
+                    return false;
+                }
+            }
+        }
+    }
 
     if (isDebug)
         qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance
@@ -1564,7 +1660,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (instance > -1 && m.instance != instance) {
         if (G::showIssueInConsole)
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::addMetadataForItem", m.row);        return false;
+        G::issueDedup("Comment", errMsg, "DataModel::addMetadataForItem", m.row);
+        return false;
     }
 
     int row = m.row;
@@ -1584,7 +1681,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     QString search = index(row, G::SearchTextColumn).data().toString();
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     mLock = true;
     // block signals while stuffing cells
     const QSignalBlocker b(this);
@@ -1716,7 +1813,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     // setData(index(row, G::MetadataReadingColumn), m.metadataReading);
     setData(index(row, G::MetadataAttemptedColumn), m.metadataAttempted);
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
-    setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
+    // setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
     setData(index(row, G::CompareColumn), m.compare);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
@@ -1761,11 +1858,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     mLock = false;
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance << "DONE";
 
-    if (isAllMetadataAttempted()) {
-        // qDebug() << "DataModel::addMetadataForItem isAllMetadataAttempted = true";
-        // G::allMetadataLoaded = true;
-        // emit done();
-    }
+    // Publish so MetaRead worker can poll without a BlockingQueuedConnection.
+    G::allMetadataLoaded = isAllMetadataAttempted();
 
     // signal ImageCache that row is loaded
     // if (imageCacheWaitingForRow > -1)
@@ -1926,18 +2020,6 @@ QStringList DataModel::rptIssues(int sfRow)
 //     // sf->setData(sfIdx, v);
 // }
 
-bool DataModel::missingThumbnails()
-{
-    for (int row = 0; row < sf->rowCount(); row++) {
-        if (index(row, G::MissingThumbColumn).data().toBool()) {
-            folderHasMissingEmbeddedThumb = true;
-            return true;
-        }
-    }
-    folderHasMissingEmbeddedThumb = false;
-    return false;
-}
-
 double DataModel::aspectRatio(int w, int h, int orientation)
 {
     if (G::isLogger) G::log("DataModel::aspectRatio");
@@ -1981,7 +2063,7 @@ void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
 
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setValueDm", dmRow);
+        G::issueDedup("Comment", errMsg, "DataModel::setValueDm", dmRow);
         return ;
     }
 
@@ -2003,7 +2085,6 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     /*
     Only call via connection.   Example: emit setValSf(args)
 */
-    if (G::stop) return;
     if (isDebug)
     {
         qDebug() << "DataModel::setValSf"
@@ -2016,11 +2097,22 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
             ;
     }
 
+    // Instance guard.
+    //
+    // Exception: always allow IsCachingColumn=false to pass. A stranded
+    // isCaching=true blocks okToDecode forever (nextToCache will never pick
+    // the row again), while a stale false is idempotent and harmless — the
+    // row either gets re-decoded or stays cached. This closes the race where
+    // a cleanup emit (okToCache, abortProcessing, resetStaleIsCaching) carries
+    // an instance that has since been advanced by another rapid folder click.
     if (instance != this->instance) {
-        errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setValueSF", sfRow);
-        qWarning() << errMsg;
-        return ;
+        const bool isCachingCleanup =
+            (sfCol == G::IsCachingColumn) && !value.toBool();
+        if (!isCachingCleanup) {
+            errMsg = "Instance clash from " + src;
+            G::issueDedup("Comment", errMsg, "DataModel::setValueSF", sfRow);
+            return;
+        }
     }
 
     QModelIndex sfIdx = sf->index(sfRow, sfCol);
@@ -2028,7 +2120,6 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     if (!sfIdx.isValid()) {
         errMsg = "Invalid sfIdx.  Src: " + src;
         G::issue("Warning", errMsg, "DataModel::setValueSF", sfRow);
-        qWarning() << errMsg;
         return;
     }
 
@@ -2038,14 +2129,9 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
 
 bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
 {
-    if (!sfIdx.isValid()) {
-        errMsg = "Invalid index.";
-        G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
-        return false;
-    }
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
+        G::issueDedup("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
         return false;
     }
 
@@ -2073,12 +2159,12 @@ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
     if (G::isLogger) G::log("DataModel::setCurrent (dmIdx)");
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setCurrent", dmIdx.row());
+        G::issueDedup("Comment", errMsg, "DataModel::setCurrent", dmIdx.row());
         return;
     }
 
     // update current index parameters
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     QModelIndex sfIdx = sf->mapFromSource(dmIdx);
     currentSfIdx = sfIdx;
     currentSfRow = sfIdx.row();
@@ -2102,12 +2188,12 @@ void DataModel::setCurrent(QString fPath, int instance)
     if (G::isLogger) G::log("DataModel::setCurrent (fPath)");
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setCurrent");
+        G::issueDedup("Comment", errMsg, "DataModel::setCurrent");
         return;
     }
 
     // update current index parameters
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     // if (fPathRow.contains(fPath)) {
     if (fPathRowContains(fPath)) {
         currentDmIdx = indexFromPath(fPath);
@@ -2142,11 +2228,10 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
                  << "fPathRowValue(fPath) =" << fPathRowValue(fPath)
                 ;
     }
-    // QModelIndex dmIdx = index(fPathRow[fPath], col);
     QModelIndex dmIdx = index(fPathRowValue(fPath), col);
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
+        G::issueDedup("Comment", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
         return;
     }
     if (G::stop) return;
@@ -2155,7 +2240,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
         G::issue("Warning", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
         return;
     }
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     setData(dmIdx, value, role);
 }
 
@@ -2186,7 +2271,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
     if (G::stop) return;
     if (fromInstance != instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::setIconFromVideoFrame", dmRow);
+        G::issueDedup("Comment", errMsg, "DataModel::setIconFromVideoFrame", dmRow);
         return;
     }
 
@@ -2199,7 +2284,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
     }
 
 
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     QString modelDuration = index(dmRow, G::DurationColumn).data().toString();
     if (modelDuration == "") {
         duration /= 1000;
@@ -2227,6 +2312,54 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
     }
 }
 
+void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
+{
+/*
+    Failure-path counterpart to setIconFromVideoFrame.  MetaRead skips clearing
+    MetadataReadingColumn for video rows (Cache/metaread.cpp processReturningReader)
+    so dispatch never spawns a second QMediaPlayer on the same file while one
+    is in flight.  setIconFromVideoFrame clears the flag on the success path;
+    this slot clears it on every failure path FrameDecoder reports
+    (invalid media, playback error, invalid frame, null image, exception).
+    Without it the row stays MetadataReadingColumn=true forever and the
+    dispatcher refuses to revisit it.
+*/
+    if (G::isLogger) G::log("DataModel::clearVideoReadingFlag");
+    if (G::stop) return;
+    if (fromInstance != instance) return;
+
+    QModelIndex dmIdx = index(dmRow, 0);
+    if (!dmIdx.isValid()) return;
+
+    QMutexLocker locker(&dmMutex);
+    setData(index(dmRow, G::MetadataReadingColumn), false);
+    setData(index(dmRow, G::MetadataAttemptedColumn), true);
+}
+
+void DataModel::updateIconChunkLoaded()
+{
+/*
+    Refresh G::iconChunkLoaded without rescanning the whole icon chunk on every
+    icon set. isAllIconChunkLoaded needs all non-video rows in
+    [startIconRange, endIconRange] to carry an icon. Since icons-in-chunk can
+    never exceed the model-wide iconLoadedCount, and videos-in-chunk can never
+    exceed the model-wide videoRowCount, the chunk cannot be complete until
+    iconLoadedCount reaches (span - videoRowCount). Below that threshold we
+    answer false for free; only at/above it do we run the authoritative scan.
+    On a fresh front-loaded folder iconLoadedCount tracks the chunk directly,
+    so the O(chunk) scan runs only as the chunk nears completion instead of
+    once per icon — removing the prior O(N·chunk) GUI-thread cost.
+*/
+    const int span = endIconRange - startIconRange + 1;
+    const int needed = span - videoRowCount.load(std::memory_order_relaxed);
+    if (span > 0 &&
+        iconLoadedCount.load(std::memory_order_relaxed) < needed) {
+        G::iconChunkLoaded = false;
+        return;
+    }
+    G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
+}
+
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)
 {
 /*
@@ -2236,9 +2369,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     loaded, and this is checked against the signal instance.
 
     In addition, the signal queue from MetaRead is cleared in MW::stop to prevent
-    lagging calls when the folder has been changed.  This probably makes the instance
-    checking, which was not totally reliable, to no longer be required.  Keeping it for
-    now.
+    lagging calls when the folder has been changed.
 
     This function is subject to potential race conditions, so it is critical that it only
     be called via a connection with Qt::BlockingQueuedConnection.
@@ -2246,11 +2377,13 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     Do not use QMutexLocker.
 */
     if (G::isLogger) G::log("DataModel::setIcon");
+
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
+        G::issueDedup("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
         return;
     }
+
     if (isDebug)
     {
         // must come after instance check
@@ -2282,44 +2415,75 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         return;
     }
 
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
+
+    /* Idempotent: see setIcon1 for rationale.  Replacing a live decoration
+       runs ~QPixmapIconEngine on the old QIcon, which under memory pressure
+       can crash. */
+    if (QStandardItem *existing = itemFromIndex(dmIdx)) {
+        if (!existing->icon().isNull()) {
+            setData(index(dmIdx.row(), G::IconLoadedColumn), true);
+            setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+            updateIconChunkLoaded();
+            return;
+        }
+    }
+
     const QVariant vIcon = QVariant(QIcon(pm));
     setData(dmIdx, vIcon, Qt::DecorationRole);
     setData(index(dmIdx.row(), G::IconLoadedColumn), true);
     setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+    updateIconChunkLoaded();
 }
 
 void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString src)
 {
     /*
-    setIcon is a slot that can be signalled from another thread.  If the user is rapidly
-    changing folders it is possible to receive a delayed signal from the previous folder.
-    To prevent this, the datamodel instance is incremented every time a new folder is
-    loaded, and this is checked against the signal instance.
+    setIcon is a slot that can be signalled from another thread. If the user is
+    rapidly changing folders it is possible to receive a delayed signal from the
+    previous folder. To prevent this, the datamodel instance is incremented every
+    time a new folder is loaded, and this is checked against the signal instance.
 
     In addition, the signal queue from MetaRead is cleared in MW::stop to prevent
-    lagging calls when the folder has been changed.  This probably makes the instance
-    checking, which was not totally reliable, to no longer be required.  Keeping it for
-    now.
+    lagging calls when the folder has been changed.
 
-    This function is subject to potential race conditions, so it is critical that it only
-    be called via a connection with Qt::BlockingQueuedConnection.
+    This function is subject to potential race conditions, so it is critical that it
+    only be called via a connection with Qt::BlockingQueuedConnection.
+
+    This is a duplicate of DataModel::setIcon, but with different call parameters, and it
+    has a backpressure counter is incremented by Reader. dm->queuedReaderEvents is an
+    std::atomic<int> on DataModel that counts Reader-thread events emitted to the GUI but
+    not yet drained. A producer/consumer imbalance — e.g. recursing an Apple
+    .photoslibrary where Readers race through tiny JPG derivatives faster than the GUI
+    can drain its event queue — would otherwise balloon Qt's queue and memory. The cap
+    (4× readers) is loose enough that steady-state throughput is unaffected; it only
+    engages when the GUI is genuinely falling behind.
 
     Do not use QMutexLocker.
 */
+    /* Backpressure: matches Reader's fetch_add before emit setIcon.
+       RAII so every early-return path also decrements. */
+    struct QrEvGuard {
+        std::atomic<int> &c;
+        ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
+    } qrEvGuard{queuedReaderEvents};
+
     if (G::isLogger) G::log("DataModel::setIcon1", "src = " + src);
+
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, "DataModel::setIcon", dmRow);
+        G::issueDedup("Comment", errMsg, "DataModel::setIcon", dmRow);
         return;
     }
+
     if (isDebug)
     {
+        QModelIndex dmIdx = index(dmRow,0);
         // must come after instance check
         qDebug() << "DataModel::setIcon1"
-                 << "src =" << src
-                 << "instance =" << instance
-                 << "fromInstance =" << fromInstance
                  << "row =" << dmRow
+                 << "isAlreadyIcon =" << !dmIdx.data(Qt::DecorationRole).isNull()
+                 << "src =" << src
                  ;
     }
     if (loadingModel) {
@@ -2332,6 +2496,11 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
         return;
     }
 
+    /* Once the heap cap latches, libmalloc state is fragile; further QPixmap
+       allocation here can store/destroy buffers that crash later when freed
+       (mirrors addMetadataForItem's bail at line ~1532). */
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
+
     QModelIndex dmIdx = index(dmRow,0);
 
     if (!dmIdx.isValid()) {
@@ -2340,17 +2509,35 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
         return;
     }
 
+    /* Idempotent: skip if a thumb is already set. Multiple paths can deliver
+       a thumb for the same row (Reader::setIcon and TiffThumbDecoder::setIcon
+       both connect here, plus rapid scrolling can re-dispatch). Replacing a
+       live decoration runs ~QPixmapIconEngine on the old QIcon — which under
+       memory pressure can hit a freed/poisoned pointer and abort.  Mirrors
+       the guard in setIconFromVideoFrame:2214. */
+    if (QStandardItem *existing = itemFromIndex(dmIdx)) {
+        if (!existing->icon().isNull()) {
+            // ensure flags are correct even though the pixmap is unchanged
+            setData(index(dmRow, G::IconLoadedColumn), true);
+            setData(index(dmRow, G::MetadataReadingColumn), false);
+            updateIconChunkLoaded();
+            return;
+        }
+    }
+
     if (G::isLogger) G::log("DataModel::setIcon1 updating", "src = " + src);
 
     const QVariant vIcon = QVariant(QIcon(QPixmap::fromImage(im)));
     setData(dmIdx, vIcon, Qt::DecorationRole);
     setData(index(dmRow, G::IconLoadedColumn), true);
     setData(index(dmRow, G::MetadataReadingColumn), false);
+    setData(index(dmRow, G::IconAspectRatioColumn), (qreal)im.width()/im.height());
+    updateIconChunkLoaded();
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)
 {
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     if (G::isLogger) G::log("DataModel::iconLoaded");
     if (isDebug) qDebug() << "DataModel::iconLoaded" << "instance =" << this->instance
                           << "fromInstance =" << instance
@@ -2359,7 +2546,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
-        G::issue("Comment", errMsg, "DataModel::iconLoaded", sfRow);
+        G::issueDedup("Comment", errMsg, "DataModel::iconLoaded", sfRow);
         return false;
     }
     if (sfRow >= sf->rowCount()) return false;
@@ -2377,7 +2564,7 @@ int DataModel::iconCount()
 */
     if (isDebug) qDebug() << "DataModel::iconCount" << "instance =" << instance;
     int count = 0;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < rowCount(); ++row) {
 //        qDebug() << "DataModel::iconCount  itemFromIndex  row =" << row;
         if (!itemFromIndex(index(row, 0))->icon().isNull()) count++;
@@ -2478,14 +2665,16 @@ void DataModel::setChunkSize(int chunkSize)
 void DataModel::clearAllIcons() // not being used
 {
     if (isDebug) qDebug() << "DataModel::clearAllIcons" << "instance =" << instance;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < rowCount(); ++row) {
         setData(index(row, 0), QVariant(), Qt::DecorationRole);
     }
 }
 
-void DataModel::clearIconsOutsideChunkRange()
+void DataModel::clearIconsOutsideChunkRange(int instance)
 {
+    if (instance != this->instance) return;
+
     if (isDebug)
     qDebug() << "DataModel::clearIconsOutsideChunkRange"
                  << "instance =" << instance
@@ -2498,7 +2687,13 @@ void DataModel::clearIconsOutsideChunkRange()
         return;
     }
 
-    QMutexLocker locker(&mutex);
+    if (isDebug)
+    qDebug() << "DataModel::clearIconsOutsideChunkRange  cleaning..."
+             << "startIconRange =" << startIconRange
+             << "endIconRange =" << endIconRange
+        ;
+
+    QMutexLocker locker(&dmMutex);
 
     for (int i = 0; i < startIconRange; i++) {
         if (abort) return;
@@ -2523,7 +2718,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     QModelIndex sfIdx = sf->index(sfRow, G::IsCachedColumn);
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
-        G::issue("Comment", errMsg, src, sfIdx.row());
+        G::issueDedup("Comment", errMsg, src, sfIdx.row());
 
         /*
         qDebug() << src << sfRow << errMsg
@@ -2535,7 +2730,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     if (!sfIdx.isValid()) {
         errMsg = "Invalid sfIdx.  Src: " + src;
         G::issue("Warning", errMsg, src, sfIdx.row());
-        // qDebug() << sfRow << "isCached =" << isCached << errMsg;
+        // qDebug() << src << sfRow << "isCached =" << isCached << errMsg;
         return;
     }
     sf->setData(sfIdx, isCached);
@@ -2565,15 +2760,12 @@ bool DataModel::isMetadataLoaded(int sfRow)
 bool DataModel::isAllMetadataAttempted()
 {
     if (isDebug)
-        qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance;
-    for (int row = 0; row < rowCount(); ++row) {
-        if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
-            if (isDebug)
-            qDebug() << "DataModel::isAllMetadataAttempted" << "row =" << row << "is not loaded.";
-            return false;
-        }
-    }
-    return true;
+        qDebug() << "DataModel::isAllMetadataAttempted" << "instance =" << instance;
+    // O(1): metadataAttemptedCount is maintained in setData (false↔true
+    // transitions) and resynced by recountLoadFlags() after removals, so it
+    // equals rowCount() exactly when every row has been attempted. This used
+    // to be a full-model scan run once per row in addMetadataForItem — O(N²).
+    return metadataAttemptedCount.load(std::memory_order_relaxed) >= rowCount();
 }
 
 bool DataModel::isAllMetadataLoaded()
@@ -2607,7 +2799,7 @@ QList<int> DataModel::metadataNotLoaded()
 
 bool DataModel::isPath(QString fPath)
 {
-    if (G::isLogger) G::log("DataModel::rowFromPath");
+    if (G::isLogger) G::log("DataModel::isPath");
     for (int row = 0; row < rowCount(); ++row) {
         if (fPath == index(row, 0).data(G::PathRole).toString())
             return true;
@@ -2619,31 +2811,31 @@ bool DataModel::isPath(QString fPath)
 
 bool DataModel::fPathRowContains(const QString &path)
 {
-    QReadLocker locker(&rwLock);
+    QReadLocker locker(&fPathRowLock);
     return fPathRow.contains(path);
 }
 
 int DataModel::fPathRowValue(const QString &path)
 {
-    QReadLocker locker(&rwLock);
+    QReadLocker locker(&fPathRowLock);
     return fPathRow[path];
 }
 
 void DataModel::fPathRowSet(const QString &path, const int row)
 {
-    QWriteLocker locker(&rwLock);
+    QWriteLocker locker(&fPathRowLock);
     fPathRow[path] = row;
 }
 
 void DataModel::fPathRowRemove(const QString &path)
 {
-    QWriteLocker locker(&rwLock);
+    QWriteLocker locker(&fPathRowLock);
     fPathRow.remove(path);
 }
 
 void DataModel::fPathRowClear()
 {
-    QWriteLocker locker(&rwLock);
+    QWriteLocker locker(&fPathRowLock);
     fPathRow.clear();
 }
 
@@ -2661,10 +2853,9 @@ int DataModel::proxyRowFromPath(QString fPath, QString src)
     if (isDebug)
         qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance
                  << fPath;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     int dmRow;
     int sfRow = -1;
-    // sf->filterChange("DataModel::proxyRowFromPath");
     if (fPathRowContains(fPath)) {
         dmRow = fPathRowValue(fPath);
         QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
@@ -2697,7 +2888,7 @@ void DataModel::rebuildRowFromPathHash()
 {
     if (G::isLogger) G::log("DataModel::refreshRowFromPath");
     if (isDebug) qDebug() << "DataModel::refreshRowFromPath" << "instance =" << instance;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     // fPathRow.clear();
     fPathRowClear();
     for (int row = 0; row < rowCount(); ++row) {
@@ -2710,19 +2901,17 @@ void DataModel::rebuildRowFromPathHash()
 bool DataModel::sourceModified(QStringList &added, QStringList &removed, QStringList &modified)
 {
 /*
-    Determine if the eligible file count has changed and/or any images have been
-    modified. If a file has been modified since the datamodel was loaded then it is
-    added to the modifiedFiles list.
+    Determine if the eligible file count has changed
+    and/or any images have been modified. If a file has been modified since the datamodel
+    was loaded then it is added to the modifiedFiles list.
 
     Called from MW::refreshDataModel.
 */
     if (G::isLogger) G::log("DataModel::sourceModified");
-    // if (isDebug)
-    {
+    if (isDebug)
         qDebug() << "DataModel::sourceModified"
                  << "instance =" << instance
                  << folderList;
-    }
 
     bool hasChanged = false;
     QStringList srcImageFiles;
@@ -2739,7 +2928,6 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
             srcImageFiles << fPath;
             // in datamodel?
             if (!fPathRowContains(fPath)) {
-                qDebug() << "DataModel::sourceModified added" << fPath;
                 added << fPath;
             }
         }
@@ -2749,7 +2937,6 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
     for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i) {
         QString fPath = i.key();
         if (!srcImageFiles.contains(fPath)) {
-            qDebug() << "DataModel::sourceModified removed" << fPath;
             removed << fPath;
         }
     }
@@ -2763,7 +2950,6 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
         QDateTime t2 = info.lastModified();
         // many file formats to not include ms in datetime
         if (t1.msecsTo(t2) > 1000) {
-            qDebug() << "DataModel::sourceModified modified" << fPath;
             modified << fPath;
         }
     }
@@ -2781,11 +2967,11 @@ void DataModel::searchStringChange(QString searchString)
     filtered and unfiltered counts.
 */
     if (G::isLogger) G::log("DataModel::searchStringChange");
-    // if (isDebug)
+    if (isDebug)
          qDebug() << "DataModel::searchStringChange" << "instance =" << instance
                   << "searchString =" << searchString;
     // update datamodel search string match
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < rowCount(); ++row)  {
         // no search string
         if (filters->ignoreSearchStrings.contains(searchString)) {
@@ -2849,7 +3035,7 @@ QModelIndex DataModel::indexFromPath(QString fPath)
     if (!fPathRowContains(fPath)) {
         errMsg = "Not in fPathrow.";
         G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", -1, fPath);
-        if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
+        if (G::isRunByExtern) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
     // int dmRow = fPathRow[fPath];
@@ -2880,7 +3066,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
     if (!fPathRowContains(fPath)) {
         errMsg = "Not in fPathrow.";
         G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", -1, fPath);
-        if (G::isFileLogger) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
+        if (G::isRunByExtern) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
     // int dmRow = fPathRow[fPath];
@@ -2898,7 +3084,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 
 QModelIndex DataModel::proxyIndexFromModelIndex(QModelIndex dmIdx)
 {
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     if (dmIdx.isValid()) return sf->mapFromSource(dmIdx);
     else return QModelIndex();
 }
@@ -3030,49 +3216,47 @@ int DataModel::nearestPick()    // not used
 //    return nullptr;
 //}
 
-bool DataModel::getSelection(QStringList &list)
+bool DataModel::getSelectionOrPicks(QStringList &list)
 {
 /*
     Adds each image that is selected or picked as a file path to list. If there
     are picks and a selection then a dialog offers the user a choice to use.
 */
     if (G::isLogger) G::log("DataModel::getSelection");
-    if (isDebug) qDebug() << "DataModel::getSelection" << "instance =" << instance;
+    // if (isDebug)
+        qDebug() << "DataModel::getSelection"
+                 << "instance =" << instance
+                 << "isAnyPick() =" << isAnyPick()
+                 << "selectionModel->selectedRows().size() =" << selectionModel->selectedRows().size()
+            ;
 
     bool usePicks = false;
 
-    // nothing picked or selected
-    if (isPick() && selectionModel->selectedRows().size() == 0) {
+    // nothing picked and nothing selected
+    if (!isAnyPick() && selectionModel->selectedRows().size() == 0) {
         G::popup->showPopup("Oops.  There are no picks or selected images.", 2000);
         return false;
     }
 
-    // picks = selection
-    bool picksEqualsSelection = true;
-    for (int row = 0; row < sf->rowCount(); row++) {
-        bool isPicked = sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
-        bool isSelected = selectionModel->isSelected(sf->index(row, 0));
-        if (isPicked != isSelected) {
-            picksEqualsSelection = false;
-            break;
+    // picked != selected then choose which to use
+    if (isAnyPick()) {
+        for (int row = 0; row < sf->rowCount(); row++) {
+            bool isPicked = sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "Picked";
+            bool isSelected = selectionModel->isSelected(sf->index(row, 0));
+            if (isPicked != isSelected) {
+                SelectionOrPicksDlg::Option option;
+                SelectionOrPicksDlg dlg(option);
+                dlg.exec();
+                if (option == SelectionOrPicksDlg::Option::Cancel) return false;
+                if (option == SelectionOrPicksDlg::Option::Picks) usePicks = true;
+                break;
+            }
         }
-    }
-
-    if (!picksEqualsSelection) {
-        // use picks or selected
-        if (isPick() && selectionModel->selectedRows().size() > 1) {
-            SelectionOrPicksDlg::Option option;
-            SelectionOrPicksDlg dlg(option);
-            dlg.exec();
-            if (option == SelectionOrPicksDlg::Option::Cancel) return false;
-            if (option == SelectionOrPicksDlg::Option::Picks) usePicks = true;
-        }
-        else if (isPick()) usePicks = true;
     }
 
     if (usePicks) {
         for (int row = 0; row < sf->rowCount(); row++) {
-            if (sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true") {
+            if (sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "Picked") {
                 QModelIndex idx = sf->index(row, 0);
                 list << idx.data(G::PathRole).toString();
             }
@@ -3090,40 +3274,11 @@ bool DataModel::getSelection(QStringList &list)
     return true;
 }
 
-QStringList DataModel::getSelectionOrPicks()
+bool DataModel::isAnyPick()
 {
-    if (G::isLogger) G::log("DataModel::getSelectionOrPicks");
-    if (isDebug) qDebug() << "DataModel::getSelectionOrPicks" << "instance =" << instance;
-
-    QStringList picks;
-
-    // build QStringList of picks
-    if (isPick()) {
-        for (int row = 0; row < sf->rowCount(); ++row) {
-            QModelIndex pickIdx = sf->index(row, G::PickColumn);
-            QModelIndex idx = sf->index(row, 0);
-            // only picks
-            if (pickIdx.data(Qt::EditRole).toString() == "true") {
-                picks << idx.data(G::PathRole).toString();
-            }
-        }
-    }
-
-    // build QStringList of selected images
-    else if (selectionModel->selectedRows().size() > 0) {
-        QModelIndexList idxList = selectionModel->selectedRows();
-        for (int i = 0; i < idxList.size(); ++i) {
-            int row = idxList.at(i).row();
-            QModelIndex idx = sf->index(row, 0);
-            picks << idx.data(G::PathRole).toString();
-        }
-    }
-
-    return picks;
-}
-
-bool DataModel::isPick()
-{
+/*
+    Returns true if any row is picked.
+*/
     if (G::isLogger) G::log("DataModel::isPick");
     if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance;
     for (int row = 0; row < rowCount(); ++row) {
@@ -3140,7 +3295,7 @@ void DataModel::clearPicks()
 */
     if (G::isLogger) G::log("DataModel::clearPicks");
     if (isDebug) qDebug() << "DataModel::clearPicks" << "instance =" << instance;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&dmMutex);
     for (int row = 0; row < sf->rowCount(); row++) {
         setData(index(row, G::PickColumn), "false");
     }
@@ -3179,7 +3334,7 @@ void DataModel::setThumbnailLegend()
     QString rowd = "<tr><td align=\"right\">" + blue + "</td><td>border = Ingested</td></tr>";
     QString rowe = "<tr><td align=\"right\">" + red + "</td><td>border = Rejected</td></tr>";
     QString row1 = "<tr><td><center>" + redMedBullet    + "</center></td><td>Full size image not cached</td></tr>";
-    QString row2 = "<tr><td><center>" + yellowMedBullet + "</center></td><td>Missing embedded thumbnail</td></tr>";
+    // QString row2 = "<tr><td><center>" + yellowMedBullet + "</center></td><td>Missing embedded thumbnail</td></tr>";
     QString row3 = "<tr><td><center>" + lockSym         + "</center></td><td>File is locked</td></tr>";
     QString endTable = "</table>";
     QString footnote = "<p>Show/hide this tooltip legend in Preferences > User Interface";
@@ -3191,7 +3346,7 @@ void DataModel::setThumbnailLegend()
             rowd +
             rowe +
             row1 +
-            row2 +
+            // row2 +
             row3 +
             endTable +
             footnote
@@ -3236,31 +3391,52 @@ QString DataModel::diagnostics()
     int dots = 30;
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
-    rpt << "\n";
+    rpt << "\n\n";
+
+    // Health checks first so anomalies surface before the scalar block.
+    rpt << reportHealthChecks();
+
+    // Cache totals once where useful below.
+    const int     dmRows      = rowCount();
+    const int     sfRows      = sf->rowCount();
+    const int     fPathRowN   = fPathRow.size();
+    const int     queued      = queuedReaderEvents.load();
+    int           folderImgSum = 0;
+    for (auto it = folderImageCount.cbegin(); it != folderImageCount.cend(); ++it)
+        folderImgSum += it.value();
+
     rpt << "\n" << G::sj("abort", dots) << G::s(abort);
-    rpt << "\n" << G::sj("instance", dots) << G::s(instance);
-    rpt << "\n";
+    rpt << "\n" << G::sj("instance", dots) << G::s(instance.load());
+    rpt << "\n" << G::sj("G::dmInstance", dots) << G::s(G::dmInstance.load());
+    rpt << "\n" << G::sj("instanceParent.isValid", dots) << G::s(instanceParent.isValid());
     rpt << "\n" << G::sj("primaryFolderPath", dots) << G::s(primaryFolderPath());
     rpt << "\n" << G::sj("firstFolderPathWithImages", dots) << G::s(firstFolderPathWithImages);
-    rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
+    rpt << "\n";
+    rpt << "\n" << G::sj("dmRowCount", dots) << Utilities::fitNumber(static_cast<qint64>(dmRows), 14);
+    rpt << "\n" << G::sj("sfRowCount", dots) << Utilities::fitNumber(static_cast<qint64>(sfRows), 14);
+    rpt << "\n" << G::sj("fPathRow.size", dots) << Utilities::fitNumber(static_cast<qint64>(fPathRowN), 14);
+    rpt << "\n" << G::sj("iconCount", dots) << Utilities::fitNumber(static_cast<qint64>(iconCount()), 14);
+    rpt << "\n" << G::sj("queuedReaderEvents", dots) << Utilities::fitNumber(static_cast<qint64>(queued), 14);
     rpt << "\n";
     rpt << "\n" << G::sj("combineRawJpg", dots) << G::s(combineRawJpg);
     rpt << "\n";
-    rpt << "\n" << G::sj("dmRowCount", dots) << G::s(rowCount());
-    rpt << "\n" << G::sj("sfRowCount", dots) << G::s(sf->rowCount());
-    rpt << "\n";
-    rpt << "\n" << G::sj("currentDMRow", dots) << G::s(currentDmRow);
-    rpt << "\n" << G::sj("currentSFRow", dots) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
+    rpt << "\n" << G::sj("currentDmRow", dots) << G::s(currentDmRow);
+    rpt << "\n" << G::sj("currentSfRow", dots) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("currentDmIdx.row", dots) << G::s(currentDmIdx.row());
+    rpt << "\n" << G::sj("currentSfIdx.row", dots) << G::s(currentSfIdx.row());
     rpt << "\n";
     rpt << "\n" << G::sj("firstVisibleIcon", dots) << G::s(firstVisibleIcon);
     rpt << "\n" << G::sj("lastVisibleIcon", dots) << G::s(lastVisibleIcon);
+    rpt << "\n" << G::sj("visibleIcons", dots) << G::s(visibleIcons);
     rpt << "\n" << G::sj("startIconRange", dots) << G::s(startIconRange);
     rpt << "\n" << G::sj("endIconRange", dots) << G::s(endIconRange);
-    rpt << "\n" << G::sj("iconChunkSize", dots) << G::s(iconChunkSize);
-    rpt << "\n" << G::sj("defaultIconChunkSize", dots) << G::s(defaultIconChunkSize);
-    rpt << "\n" << G::sj("hugeIconThreshold", dots) << G::s(hugeIconThreshold);
+    rpt << "\n" << G::sj("iconChunkSize", dots) << Utilities::fitNumber(static_cast<qint64>(iconChunkSize), 14);
+    rpt << "\n" << G::sj("defaultIconChunkSize", dots) << Utilities::fitNumber(static_cast<qint64>(defaultIconChunkSize), 14);
+    rpt << "\n" << G::sj("hugeIconThreshold", dots) << Utilities::fitNumber(static_cast<qint64>(hugeIconThreshold), 14);
     rpt << "\n" << G::sj("checkChunkSize", dots) << G::s(checkChunkSize);
     rpt << "\n" << G::sj("scrollToIcon", dots) << G::s(scrollToIcon);
+    rpt << "\n" << G::sj("iconSymbolRects.size", dots) << G::s(iconSymbolRects.size());
     rpt << "\n";
     rpt << "\n" << G::sj("hasDupRawJpg", dots) << G::s(hasDupRawJpg);
     rpt << "\n" << G::sj("loadingModel", dots) << G::s(loadingModel);
@@ -3268,20 +3444,19 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("imageCacheWaitingForRow", dots) << G::s(imageCacheWaitingForRow);
     rpt << "\n" << G::sj("folderHasMissingEmbeddedThumb", dots) << G::s(folderHasMissingEmbeddedThumb);
     rpt << "\n" << G::sj("filtersBuilt", dots) << G::s(filters->filtersBuilt);
-    rpt << "\n" << G::sj("timeToQuit", dots) << G::s(abort);
-    rpt << "\n" << G::sj("bytesUsed", dots) << G::s(bytesUsed);
+    rpt << "\n" << G::sj("bytesUsed", dots) << Utilities::fitNumber(bytesUsed, 18);
     rpt << "\n" << G::sj("showThumbNailSymbolHelp", dots) << G::s(showThumbNailSymbolHelp);
+    rpt << "\n";
+    rpt << "\n" << G::sj("subFolderTreeCount", dots) << Utilities::fitNumber(static_cast<quint64>(subFolderTreeCount), 14);
+    rpt << "\n" << G::sj("subFolderTreeCounter", dots) << Utilities::fitNumber(static_cast<quint64>(subFolderTreeCounter), 14);
     rpt << "\n";
     rpt << "\n" << G::sj("raw", dots) << G::s(raw);
     rpt << "\n" << G::sj("jpg", dots) << G::s(jpg);
-    // for (int row = 0; row < rowCount(); row++) {
-    //     rpt << "\n";
-    //     getDiagnosticsForRow(row, rpt);
-    // }
     rpt << "\n\n";
 
-    // list folderList
-    rpt << "folderList:\n";
+    // folderList / folderSet
+    rpt << "folderList: " << folderList.size() << " entries"
+        << "   (folderSet: " << folderSet.size() << ")\n";
     int i = 0;
     for (QString folder : folderList) {
         QString iStr = QVariant(++i).toString().rightJustified(5);
@@ -3289,29 +3464,143 @@ QString DataModel::diagnostics()
     }
     rpt << "\n";
 
-    // list fPathRow hash
+    // folderImageCount summary
+    rpt << "folderImageCount: " << folderImageCount.size() << " folders, "
+        << folderImgSum << " images total\n\n";
+
+    // fPathRow hash — cap at 1000 entries so a pathological folder can't run away.
     QMap<int,QString> rowMap;
-    rpt << "fPathRow hash:\n";
-    for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i)
-        rowMap.insert(i.value(), i.key());
-    for (int i = 0; i < rowMap.count(); i++) {
-        QString iStr = QVariant(i).toString().rightJustified(5);
-        rpt << iStr << "  " << rowMap[i]<< "\n";
+    rpt << "fPathRow hash: " << fPathRowN << " entries\n";
+    for (auto it = fPathRow.cbegin(), end = fPathRow.cend(); it != end; ++it)
+        rowMap.insert(it.value(), it.key());
+    const int cap = 1000;
+    const int shown = qMin(cap, rowMap.size());
+    int n = 0;
+    for (auto it = rowMap.cbegin(), end = rowMap.cend(); it != end && n < shown; ++it, ++n) {
+        QString iStr = QString::number(it.key()).rightJustified(5);
+        rpt << iStr << "  " << it.value() << "\n";
+    }
+    if (rowMap.size() > cap) {
+        rpt << "  (+" << (rowMap.size() - cap) << " more)\n";
+    }
+
+    return reportString;
+}
+
+QString DataModel::reportHealthChecks()
+{
+/*
+    Invariant checks printed at the top of the diagnostic. Each line prints
+    [OK] or [WARN] so anomalies surface before the reader scrolls through the
+    scalar state. Mirrors the same pattern used in ImageCache and MetaRead.
+*/
+    if (G::isLogger) G::log("DataModel::reportHealthChecks");
+
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+
+    auto line = [&](const QString &ok, const QString &name, const QString &detail) {
+        rpt << "[" << ok.leftJustified(4, ' ') << "] "
+            << name.leftJustified(28, ' ') << ": " << detail << "\n";
+    };
+
+    rpt << "Health checks:\n";
+
+    // 1. rowCount() vs fPathRow.size() parity.
+    {
+        const int n = rowCount();
+        const int m = fPathRow.size();
+        if (n == m) {
+            line("OK", "rowCount vs fPathRow", QString("%1 rows").arg(n));
+        } else {
+            line("WARN", "rowCount vs fPathRow",
+                 QString("rowCount=%1, fPathRow.size=%2").arg(n).arg(m));
+        }
+    }
+
+    // 2. folderList vs folderSet parity.
+    {
+        const int n = folderList.size();
+        const int m = folderSet.size();
+        if (n == m) {
+            line("OK", "folderList vs folderSet", QString("%1 folders").arg(n));
+        } else {
+            line("WARN", "folderList vs folderSet",
+                 QString("folderList=%1, folderSet=%2").arg(n).arg(m));
+        }
+    }
+
+    // 3. queuedReaderEvents backpressure.
+    {
+        const int q = queuedReaderEvents.load();
+        const int threshold = 500;
+        if (q > threshold) {
+            line("WARN", "queuedReaderEvents",
+                 QString("%1 (above threshold %2)").arg(q).arg(threshold));
+        } else {
+            line("OK", "queuedReaderEvents", QString::number(q));
+        }
+    }
+
+    // 4. instance vs G::dmInstance.
+    {
+        const int dm  = instance.load();
+        const int gdm = G::dmInstance.load();
+        if (dm == gdm) {
+            line("OK", "instance vs G::dmInstance",
+                 QString("both = %1").arg(dm));
+        } else {
+            line("WARN", "instance vs G::dmInstance",
+                 QString("instance=%1, G::dmInstance=%2").arg(dm).arg(gdm));
+        }
+    }
+
+    // 5. Visible-range bounds.
+    {
+        const int first = firstVisibleIcon;
+        const int last  = lastVisibleIcon;
+        const int sfN   = sf->rowCount();
+        const bool ok = (first >= 0 && first <= last && last < sfN) || sfN == 0;
+        if (ok) {
+            line("OK", "visible range",
+                 QString("[%1..%2] of %3").arg(first).arg(last).arg(sfN));
+        } else {
+            line("WARN", "visible range",
+                 QString("[%1..%2] vs sf->rowCount=%3").arg(first).arg(last).arg(sfN));
+        }
+    }
+
+    // 6. iconChunkSize vs visibleIcons.
+    if (visibleIcons > iconChunkSize) {
+        line("WARN", "icon chunk vs visible",
+             QString("visibleIcons=%1 > iconChunkSize=%2 — cache will thrash")
+                 .arg(visibleIcons).arg(iconChunkSize));
+    } else {
+        line("OK", "icon chunk vs visible",
+             QString("visibleIcons=%1, iconChunkSize=%2")
+                 .arg(visibleIcons).arg(iconChunkSize));
+    }
+
+    // 7. bytesUsed sanity.
+    {
+        const qint64 b = bytesUsed;
+        const qint64 cap = static_cast<qint64>(G::memoryAbortMB) * 1024 * 1024;
+        if (b < 0) {
+            line("WARN", "bytesUsed",
+                 QString("negative (%1) — accounting drift").arg(b));
+        } else if (b > cap) {
+            line("WARN", "bytesUsed",
+                 QString("%1 exceeds memoryAbortMB cap (%2 bytes)")
+                     .arg(Utilities::fitNumber(b, 18))
+                     .arg(Utilities::fitNumber(cap, 18)));
+        } else {
+            line("OK", "bytesUsed",
+                 QString("%1 bytes").arg(Utilities::fitNumber(b, 18)));
+        }
     }
 
     rpt << "\n";
-
-    // list sort field in order
-    int sortColumn = G::NameColumn;
-    rpt << "DataModel Proxy for sort column " + G::s(sortColumn) + ":\n";
-    for (int sfRow = 0; sfRow < sf->rowCount(); sfRow++) {
-        rpt << G::s(sfRow).rightJustified(5) << "  ";
-        // rpt << QVariant(sfRow).toString().rightJustified(5);
-        rpt << G::s(index(sfRow, sortColumn).data());
-        rpt << "\n";
-    }
-
-
     return reportString;
 }
 
@@ -3368,7 +3657,6 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("isMetadataAttempted", dots) << G::s(index(row, G::MetadataAttemptedColumn).data());
     rpt << "\n  " << G::sj("isMetadataLoaded", dots) << G::s(index(row, G::MetadataLoadedColumn).data());
     rpt << "\n  " << G::sj("isIconLoaded", dots) << G::s(index(row, G::IconLoadedColumn).data());
-    rpt << "\n  " << G::sj("isMissingThumb", dots) << G::s(index(row, G::MissingThumbColumn).data());
     rpt << "\n  " << G::sj("isReadWrite", dots) << G::s(index(row, G::ReadWriteColumn).data());
     rpt << "\n  " << G::sj("dupHideRaw", dots) << G::s(index(row, 0).data(G::DupHideRawRole));
     rpt << "\n  " << G::sj("dupRawRow", dots) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
@@ -3379,7 +3667,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("type", dots) << G::s(index(row, G::TypeColumn).data());
     rpt << "\n  " << G::sj("video", dots) << G::s(index(row, G::VideoColumn).data());
     rpt << "\n  " << G::sj("duration", dots) << G::s(index(row, G::DurationColumn).data());
-    rpt << "\n  " << G::sj("bytes", dots) << G::s(index(row, G::SizeColumn).data());
+    rpt << "\n  " << G::sj("bytes", dots) << G::s(index(row, G::ByteSizeColumn).data());
     rpt << "\n  " << G::sj("pick", dots) << G::s(index(row, G::PickColumn).data());
     rpt << "\n  " << G::sj("ingested", dots) << G::s(index(row, G::IngestedColumn).data());
     rpt << "\n  " << G::sj("label", dots) << G::s(index(row, G::LabelColumn).data());
@@ -3395,7 +3683,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("width", dots) << G::s(index(row, G::WidthColumn).data());
     rpt << "\n  " << G::sj("height", dots) << G::s(index(row, G::HeightColumn).data());
     rpt << "\n  " << G::sj("dimensions", dots) << G::s(index(row, G::DimensionsColumn).data());
-    rpt << "\n  " << G::sj("aspectRatio", dots) << G::s(index(row, G::DimensionsColumn).data());
+    rpt << "\n  " << G::sj("aspectRatio", dots) << G::s(index(row, G::AspectRatioColumn).data());
     rpt << "\n  " << G::sj("rotation", dots) << G::s(index(row, G::RotationColumn).data());
 //    rpt << "\n  " << G::sj("_rotation", dots) << G::s(index(row, G::_RotationColumn).data());
     rpt << "\n  " << G::sj("apertureNum", dots) << G::s(index(row, G::ApertureColumn).data());
@@ -3443,18 +3731,6 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("IsCached", dots) << G::s(index(row, G::IsCachedColumn).data());
     rpt << "\n  " << G::sj("Attempts", dots) << G::s(index(row, G::AttemptsColumn).data());
     rpt << "\n  " << G::sj("DecoderId", dots) << G::s(index(row, G::DecoderIdColumn).data());
-
-    using SymbolRectMap = QHash<QString, QRect>;
-    QVariant v = index(row, G::IconSymbolColumn).data();
-    QHash<QString, QRect> rects = v.value<SymbolRectMap>();
-    rpt << "\n  " << G::sj("Thumb rect", dots) << G::s(rects["Thumb"]);
-    rpt << "\n  " << G::sj("MissingThumb rect", dots) << G::s(rects["MissingThumb"]);
-    rpt << "\n  " << G::sj("Lock rect", dots) << G::s(rects["Lock"]);
-    rpt << "\n  " << G::sj("Rating rect", dots) << G::s(rects["Rating"]);
-    rpt << "\n  " << G::sj("CombineRawJpg rect", dots) << G::s(rects["CombineRawJpg"]);
-    rpt << "\n  " << G::sj("Cache rect", dots) << G::s(rects["Cache"]);
-    rpt << "\n  " << G::sj("Duration rect", dots) << G::s(rects["Duration"]);
-
     rpt << "\n  " << G::sj("DecoderReturnStatus", dots) << G::s(index(row, G::DecoderReturnStatusColumn).data());
     rpt << "\n  " << G::sj("DecoderErrMsg", dots) << G::s(index(row, G::DecoderErrMsgColumn).data());
 
@@ -3485,7 +3761,6 @@ SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
     finished(true), suspendFiltering(false)
 {
     if (G::isLogger) G::log("SortFilter::SortFilter");
-    // qDebug() << "SortFilter::SortFilter";
     this->filters = filters;
 }
 
@@ -3678,7 +3953,7 @@ void SortFilter::suspend(bool suspendFiltering, QString src)
     When false the filtering is refreshed.
 */
     QString msg = "suspendFiltering = " + QVariant(suspendFiltering).toString() +
-                  " src = " + src;
+              " src = " + src;
     if (G::isLogger) G::log("SortFilter::suspend", msg);
     // qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
     this->suspendFiltering = suspendFiltering;

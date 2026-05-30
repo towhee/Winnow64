@@ -4,9 +4,11 @@
 #include <QtGui>
 #include <QtWidgets>
 #include <QStyleOptionViewItem>
+#include <QSvgRenderer>
 #include <QFont>
 #include "Datamodel/datamodel.h"
 #include "Cache/cachedata.h"
+#include "Utilities/utilities.h"
 
 class IconViewDelegate : public QStyledItemDelegate
 {
@@ -37,9 +39,16 @@ public:
     int getThumbWidthFromCellWidth(int cellWidth);
     int getCellWidthFromThumbWidth(int width);
     int getCellHeightFromThumbHeight(int height);
+    QPoint blackBorderOffset(const QModelIndex &sfIdx) const;
     void resetFirstLastVisible();
-
+    void clearCacheItem(int sfRow) { iconCache.remove(sfRow); }
+    void clearAllCache() { iconCache.clear(); }
     QString diagnostics();
+
+    // The key is the model proxy row
+    mutable QCache<int, QPixmap> iconCache;     // item pixmap (source icon or thumb)
+    mutable QCache<int, QRect> thumbRectCache;  // thumb rect (w/o black border)
+    int maxCacheSize = 10000;
 
     QModelIndex currentIndex;
     int currentRow;
@@ -52,7 +61,8 @@ public:
 
     const QRect r;
 
-    int thumbSpacing;
+    // int itemSpacing;
+    // QSize itemSize;
 
     int fPad;
     int tPad;
@@ -62,30 +72,35 @@ public:
     int tPad2;
 
     QString tooltip;
+    QString objName;
 
 signals:
-    void update(const QModelIndex index, QRect iconRect) const;
 
 protected:
     bool helpEvent(QHelpEvent *event, QAbstractItemView *view,
                    const QStyleOptionViewItem &option, const QModelIndex &index);
 
 public slots:
-    void setCurrentIndex(QModelIndex current);
-    void setCurrentRow(int row);
-    void setVpRect(QRectF vp, qreal imA);
+    void setNormVpRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntr);
     void setVpRectVisibility(bool isVisible);
 
 private:
     QObject parent;
     DataModel *dm;
     QItemSelectionModel *selectionModel;
+
+    QRect getSymbolRect(const QString &symbol, const QRect &optionRect,
+                        const QModelIndex &index) const;
+    // QPoint blackBorderOffset(const QModelIndex &sfIdx) const;
+
     bool &isRatingBadgeVisible;
     bool &isIconNumberVisible;
     bool delegateShowThumbLabels;
     QString labelChoice;
     QFont font;
+    QFont starFont;
     QString badFile = "🚫";
+    QSvgRenderer *lockRenderer;
 
     // define colors
     QColor defaultBorderColor;
@@ -95,7 +110,7 @@ private:
     QColor rejectColor;
     QColor ingestedColor;
     QColor cacheColor;
-    QColor missingThumbColor;
+    QColor sidecarColor;
     QColor cacheBorderColor;
     QColor ratingBackgoundColor;
     QColor labelTextColor;
@@ -126,6 +141,7 @@ private:
     int ratingTextSize;
     int alignVertPad;
     int alignHorPad;
+    int starsWidth;
 
     QPoint fPadOffset;
     QPoint tPadOffset;
@@ -140,14 +156,20 @@ private:
     QPoint cacheTopLeft;
     QPoint cacheBottomRight;
 
-    QSize thumbSize;
-    QSize frameSize;
-    QSize selectedSize;
     QSize cellSize;
     QSize cellSpace;
+    QSize frameSize;
+    QSize selectedSize;
+    QSize itemSize;
+    int itemSpacing;
 
-    QRectF vpRect;
-    qreal imA;
+    QRect cacheRect;
+    QRect sidecarRect;
+
+    QPointF vpCntrN;
+    QSizeF vpSizeN;
+    qreal vpA;
+
     bool vpRectIsVisible;
 
     QImage combineRawJpgSymbol;

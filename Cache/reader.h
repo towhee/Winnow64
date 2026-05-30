@@ -5,32 +5,34 @@
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
+#include <atomic>
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
 #include "Image/thumb.h"
 #include "Cache/imagecache.h"
 
-// #define TIMER    // uncomment to time execution
+// #define TIMER    // uncomment for time execution
 
 class Reader : public QObject
 {
     Q_OBJECT
 public:
-    Reader(int id, DataModel *dm, ImageCache *imageCache);
+    Reader(int id, DataModel *dm, ImageCache *imageCache, FrameDecoder *frameDecoder);
     ~Reader() override;
 
     QThread *readerThread;  // use if currentThread() not working in stop()
     int threadId = -1;
-    int instance = 0;
+    std::atomic<int> instance{0};
     qint64 msToRead;
-    QString fPath = "";
+    QString fPath = "";        // races with cross-thread reads from MetaRead;
+                                // see notes — not safely atomicizable
     QString errMsg = "";
-    int dmRow = -1;
+    std::atomic<int> dmRow{-1};
     Metadata *metadata;
     QPixmap pm;
-    bool pending = false;
-    bool loadedIcon = false;
+    bool pending = false;       // protected by mutex
+    std::atomic<bool> loadedIcon{false};
 
     enum Status {
         Ready,
@@ -39,7 +41,8 @@ public:
         MetaFailed,
         IconFailed,
         MetaIconFailed
-    } status;
+    };
+    std::atomic<Status> status{Ready};
     QStringList statusText {
         "Ready",
         "Success",
@@ -50,6 +53,8 @@ public:
     };
 
 signals:
+    void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src = "MW",
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
     void videoFrameDecode(QString fPath, int longSide, QString source,
                           int dmRow, int dmInstance);
     void tiffMissingThumbDecode(QString fPath, int dmRow, int instance, int offset);
@@ -65,6 +70,14 @@ public slots:
     void abortProcessing();
     void stop();
 
+    void signalAbort();   // non-blocking: sets abort flag without waiting
+    bool isPending();     // returns whether a read is currently in progress
+
+    // Thread-safe snapshot of fPath. Reader::read() updates fPath under the
+    // same mutex; MetaRead reads via this accessor to avoid a cross-thread
+    // QString race (QString implicit-shared d-pointer).
+    QString fPathSnapshot() const;
+
 private:
     mutable QMutex mutex;
     QWaitCondition pendingCondition;
@@ -76,10 +89,7 @@ private:
     DataModel *dm;
     ImageMetadata *m;
     ImageCache *imageCache;
-    FrameDecoder *frameDecoder;
-    QThread *frameDecoderthread;
-    TiffThumbDecoder *tiffThumbDecoder;
-    QThread *tiffThumbDecoderThread;
+    FrameDecoder *frameDecoder;     // shared, owned by MetaRead
     Thumb *thumb;
 
     uint offsetThumb;

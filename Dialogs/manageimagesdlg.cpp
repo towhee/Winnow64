@@ -12,9 +12,9 @@ ManageImagesDlg::ManageImagesDlg(QString title,
     ui->setupUi(this);
     setWindowTitle(title);
     setStyleSheet(G::css);
-    ui->newBtn->setStyleSheet("QPushButton {min-width: 120px;}");
-    ui->deleteBtn->setStyleSheet("QPushButton {min-width: 120px;}");
-    ui->doneBtn->setStyleSheet("QPushButton {min-width: 120px;}");
+    ui->newBtn->setMinimumWidth(120);
+    ui->deleteBtn->setMinimumWidth(120);
+    ui->doneBtn->setMinimumWidth(120);
 
     /* set widths and heights that are dependent on the display screen settings in case the
     user drags the dialog to another screen/monitor.  */

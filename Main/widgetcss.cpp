@@ -38,7 +38,7 @@ QString WidgetCSS::css()
     borderColor = QColor(l40,l40,l40);
     G::borderColor = borderColor;
 
-    scrollBarHandleBackgroundColor = G::scrollBarHandleBackgroundColor;
+    G::scrollBarHandleBackgroundColor = QColor(bg,l3,bg);
     selectionColor = G::selectionColor;
     mouseOverColor = G::mouseOverColor;  // not being used, matches what happens in treeview on windows
     progressBarBackgroundColor = QColor(d10,d10,d10);
@@ -50,6 +50,11 @@ QString WidgetCSS::css()
     h20 = QString::number(fontSize * 2.0 * G::ptToPx);
 
     halfFontSize = fontSize / 2;
+
+    // border radius
+    brInteractive  = "6px";
+    brContainer    = "8px";
+    brLargeObjects = "10px";
 
     QString blank = "";
 
@@ -63,6 +68,7 @@ QString WidgetCSS::css()
             comboBox() +
             dialog() +
             dockWidget() +
+            dockTabBar() +
             doubleSpinBox() +
             graphicsView() +
             groupBox() +
@@ -158,7 +164,7 @@ QString WidgetCSS::statusBar()
     "StatusBar::QLabel {"
         "color:" + textColor.name() + ";"
     "}"
-    "QStatusbar::item {"
+    "QStatusBar::item {"
         "border: none;"
     "}";
 }
@@ -173,7 +179,7 @@ QString WidgetCSS::menuBar()
         "spacing: 2px;"
         "padding: 6px 6px;"
         "background: transparent;"
-        "border-radius: 4px;"
+        // "border-radius: " + brLargeObjects + ";"
     "}"
     "QMenuBar::item:selected {"
         "background-color: " + selectionColor.name() + ";"
@@ -195,6 +201,7 @@ QString WidgetCSS::menu()
     "QMenu {"
         "background-color: " + QColor(mb,mb,mb).name() + ";"
         "border: 1px solid gray;"
+        "border-radius: " + brLargeObjects + ";"
     "}"
 
     "QMenu::item {"
@@ -217,7 +224,7 @@ QString WidgetCSS::groupBox()
     return
     "QGroupBox {"
         "border: 1px solid " + QColor(l60,l60,l60).name() + ";"
-        "border-radius: 5px;"
+        "border-radius: " + brContainer + ";"
         "margin-top: 0.5em;"/* leave space at the top for the title */
     "}"
 
@@ -240,6 +247,25 @@ QString WidgetCSS::label()
     "QLabel:disabled {"
         "color:" + disabledColor.name() + ";"
     "}"
+
+    "QLabel#statusLabel {"
+        "font-family: Menlo, Consolas, monospace;"
+    "}"
+
+    // Cyan accent for dock widget titles - intentionally not theme-tied.
+    "DockTitleBar > QLabel {"
+        "border: none;"
+        "background: transparent;"
+        "padding-left: 4px;"
+        "color: #6CC1E8;"
+    "}"
+
+    // Status dots need a larger glyph on Windows to be readable.
+    #ifdef Q_OS_WIN
+    "QLabel#MetadataCacheStatus, QLabel#ImageCacheStatus {"
+        "font-size: 24px;"
+    "}"
+    #endif
     ;
 }
 
@@ -267,6 +293,7 @@ QString WidgetCSS::toolTip()
         "background-color: " + QColor(d5,d5,d5).name() + ";"
         "border-width: 1px;"
         "border-style: solid;"
+        "border-radius: " + brLargeObjects + ";"
         "border-color: " + QColor(l10,l10,l10).name() + ";"
         "margin: 2px;"
         "font-size:" + QString::number(fontSize) + "px;"
@@ -283,22 +310,47 @@ QString WidgetCSS::dockWidget()
         "margin: 0px;"
         "padding: 0px;"
         "spacing: 0px;"
-        "border: 5px solid green;"
-//        "border-color: green;"
-//        "border-color: " + QColor(l40,l40,l40).name() + ";"
     "}"
 
     "QDockWidget::title {"
+        "text-align: left center;"
         "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
             "stop: 0 " + QColor(g1,g1,g1).name() + ", "
             "stop: 1 " + QColor(g0,g0,g0).name() + ");"
-        "padding-left: -2px;"
-        "padding-bottom: 2px;"
-//        "border: 1px;"
-//        "border-color: " + textColor.name() + ";"
+        "padding: 8px;"
     "}"
      ;
 }
+
+QString WidgetCSS::dockTabBar()
+{
+    return
+    "QMainWindow > QTabBar::tab {"
+        // "color: " + QColor(fg-40,fg-40,fg-40).name() + ";"
+        // "background-color: " + QColor(l20,l20,l20).name() + ";"
+        "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
+        // "border-bottom: none;"
+        // "border-radius: " + brInteractive + ";"
+        "border-top-left-radius: " + brInteractive + ";"
+        "border-top-right-radius: " + brInteractive + ";"
+        // "border-bottom-left-radius: 0px;"
+        // "border-bottom-right-radius: 0px;"
+
+        // "padding: 3px 10px;"
+        // "margin-right: 2px;"
+     "}"
+
+    "QMainWindow > QTabBar::tab:selected {"
+        "color: " + G::textColor.name() + ";"
+        "background-color: " + G::selectionColor.name() + ";"
+     "}"
+
+     "QMainWindow > QTabBar::tab:!selected {"
+        "margin-top: 2px;"   // sit lower so selected tab pops
+     "}"
+        ;
+}
+
 
 /* Not working
 QString WidgetCSS::dockTitleBar()
@@ -357,7 +409,7 @@ QString WidgetCSS::stackedWidget()
     "QStackedWidget {"
         "border: 1px solid " + QColor(fm,fm,fm).name() + ";"
         /*border: 1px solid rgb(95,95,95);*/
-        "border-radius: 5px;"
+        "border-radius: " + brContainer + ";"
     "}";
 }
 
@@ -510,13 +562,12 @@ QString WidgetCSS::scrollBar()
 
     "QScrollBar::handle:vertical {"
         "border: 1px solid " + QColor(l40,l40,l40).name() + ";"
-//        "border-right: 0px solid " + QColor(l10,l10,l10).name() + ";"
+        "border-radius: " + brInteractive + ";"
         "min-height: 20px;"
-        "border-radius: 2px;"  /*not working, border=0, maybe if pad*/
     "}"
 
     "QScrollBar::handle:hover {"
-        "background-color: " + scrollBarHandleBackgroundColor.name() + ";"
+    "background-color: " + G::scrollBarHandleBackgroundColor.name() + ";"
     "}"
 
     "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical{"
@@ -553,6 +604,7 @@ QString WidgetCSS::scrollBar()
 
     "QScrollBar::handle:horizontal {"
         "border: 1px solid " + QColor(l40,l40,l40).name() + ";"
+        "border-radius: " + brInteractive + ";"
         "min-width: 20px;"
     "}"
 
@@ -601,7 +653,7 @@ QString WidgetCSS::pushButton()
         "border-width: 1px;"
         "border-style: solid;"
         "border-color: " + QColor(l10,l10,l10).name() + ";"
-        "border-radius: 2px;"
+        "border-radius: " + brInteractive + ";"
         "padding-left: 5px;"
         "padding-right: 5px;"
         "padding-top: 3px;"
@@ -632,10 +684,14 @@ QString WidgetCSS::pushButton()
     "}"
 
     "QPushButton:disabled {"
-        "background-color: " + QColor(d5,d5,d5).name() + ";"
-        "color:" + disabledColor.name() + ";"
-    "}";
-}
+    "background-color: " + QColor(d5,d5,d5).name() + ";"
+      "color:" + disabledColor.name() + ";"
+    "}"
+
+    "QDialogButtonBox QPushButton {"
+    "min-height: 24px;"
+    "min-width: 75px;"
+    "}";}
 
 QString WidgetCSS::comboBox()
 {
@@ -645,7 +701,7 @@ QString WidgetCSS::comboBox()
         "border-width: 1px;"
         "border-style: solid;"
         "border-color: " + borderColor.name() + ";"
-        "border-radius: 2px;"
+        "border-radius: " + brInteractive + ";"
         "padding: 0px 10px 1px 8px;"  /*text  top, right, bottom, left*/
         "min-width: 6em;"
     "}"
@@ -665,11 +721,7 @@ QString WidgetCSS::comboBox()
         "subcontrol-origin: padding;"
         "subcontrol-position: top right;"
         "width: 18px;"
-//        "border-left-width: 1px;"
-//        "border-left-color: darkgray;"
-//        "border-left-style: solid;" /* just a single line */
-        "border-top-right-radius: 5px;" /* same radius as the QComboBox */
-        "border-bottom-right-radius: 5px;"
+        "border-radius: " + brInteractive + ";"   /* same radius as the QComboBox */
     "}"
 
     "QComboBox::drop-down:disabled {"
@@ -709,7 +761,7 @@ QString WidgetCSS::spinBox()
         "border-style: solid;"
         "border-color: " + borderColor.name() + ";"
         "selection-background-color:" + G::selectionColor.name() + ";"
-        "border-radius: 2px;"
+        "border-radius: " + brInteractive + ";"
         "padding-left: 4px;"
     "}"
 
@@ -740,7 +792,7 @@ QString WidgetCSS::doubleSpinBox()
     "border-style: solid;"
     "border-color: " + borderColor.name() + ";"
     "selection-background-color:" + G::selectionColor.name() + ";"
-    "border-radius: 2px;"
+    "border-radius: " + brInteractive + ";"
     "padding-left: 4px;"
     "}"
 
@@ -776,6 +828,9 @@ QString WidgetCSS::lineEdit()
     "QLineEdit {"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
         "border: 1px solid gray;"
+        "border-radius: " + brInteractive + ";"
+        "padding-left: 4px;"
+        "padding-right: 4px;"
         "selection-background-color:" + G::selectionColor.name() + ";"
     "}"
 
@@ -798,6 +853,7 @@ QString WidgetCSS::progressBar()
     return
     "QProgressBar {"
         "background-color: " + QColor(bg,bg,bg).name() + ";"
+        "border: 1px solid gray;"
     "}"
 
     "QProgressBar::chunk {"

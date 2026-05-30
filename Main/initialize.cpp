@@ -53,13 +53,13 @@ void MW::initialize()
 
     colorManageToggleBtn = new BarBtn();
     msg = "Toggle \"Color Manage\" on/off.";
-    colorManageToggleBtn->setToolTip(msg);
+    // colorManageToggleBtn->setToolTip(msg);
     connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManageClick);
 
     panToFocusToggleBtn = new BarBtn();
     msg = "Toggle \"Pan To Predicted Focus\" on/off.  Mouse click or shortcut B";
     panToFocusToggleBtn->setToolTip(msg);
-    connect(panToFocusToggleBtn, &BarBtn::clicked, this, &MW::togglePanToFocusClick);
+    connect(panToFocusToggleBtn, &BarBtn::clicked, this, [this]() { panFocusToggleAction->trigger(); });
 
     reverseSortBtn = new BarBtn();
     reverseSortBtn ->setToolTip("Toggle sort direction: Mouse click or shortcut Opt/Alt + S");
@@ -71,9 +71,12 @@ void MW::initialize()
     subfolderStatusLabel = new QLabel;
     subfolderStatusLabel->setToolTip("Showing contents of all subfolders");
 
-    rawJpgStatusLabel = new QLabel;
-    rawJpgStatusLabel->setToolTip("Raw and Jpg files are combined for viewing.  "
-                                  "Toggle shortcut: Opt/Alt + J");
+    rawJpgStatusBtn = new BarBtn();
+    rawJpgStatusBtn->setToolTip("Toggle \"Combine Raw+Jpg\" on/off.  Shortcut: Opt/Alt + J");
+    connect(rawJpgStatusBtn, &BarBtn::clicked, this, [this]() {
+        combineRawJpgAction->toggle();  // flip checked state without re-emitting triggered
+        setCombineRawJpg();
+    });
     slideShowStatusLabel = new QLabel;
     slideShowStatusLabel->setToolTip("Slideshow is active");
     slideCount = 0;
@@ -128,6 +131,21 @@ void MW::setupPlatform()
         // Mac::joinAllSpaces(window()->winId());
         G::trash = "Trash";
     #endif
+
+    // Scale memoryAbortMB to host RAM. Must run before MetaRead start and
+    // the GUI memory watchdog so the cap is correct on first read.
+    quint64 totalMB = 0;
+    #ifdef Q_OS_MAC
+        totalMB = static_cast<quint64>(Mac::totalMemoryMB());
+    #elif defined(Q_OS_WIN)
+        totalMB = Win::totalMemoryMB();
+    #endif
+    if (totalMB > 0) G::memoryAbortMB = G::computeMemoryAbortMB(totalMB);
+    /*
+    qDebug().nospace() << "MW::setupPlatform Memory: total=" << totalMB
+                       << " MB, available=" << G::availableMemoryMB
+                       << " MB, abortMB=" << G::memoryAbortMB;
+                          // */
 }
 
 void MW::checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredGeometry,
@@ -253,6 +271,9 @@ void MW::createDataModel()
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
     connect(dm, &DataModel::updateProgress, filters, &Filters::updateProgress);
     connect(dm, &DataModel::refreshViewsOnCacheChange, this, &MW::refreshViewsOnCacheChange);
+
+    connect(metadata, &Metadata::updateSidecarStatus, this, &MW::updateSidecarStatus);
+
     connect(this, &MW::updateCurrent, dm, &DataModel::setCurrentSF);
     connect(this, &MW::setValDm, dm, &DataModel::setValDm);
     connect(this, &MW::setValSf, dm, &DataModel::setValSf);
@@ -261,8 +282,8 @@ void MW::createDataModel()
 
     // connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::stop);
     // connect(buildFilters, &BuildFilters::stopped, this, &MW::aborted);
-    connect(buildFilters, &BuildFilters::addToDatamodel, dm, &DataModel::addMetadataForItem,
-            Qt::BlockingQueuedConnection);
+    // connect(buildFilters, &BuildFilters::addToDatamodel, dm, &DataModel::addMetadataForItem,
+    //         Qt::BlockingQueuedConnection);
     connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::abortProcessing);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
@@ -308,7 +329,17 @@ void MW::createMetaRead()
     }
 
     // Runs multiple reader threads to load metadata and thumbnails
-    metaRead = new MetaRead(this, dm, metadata, /*frameDecoderInGui,*/ imageCache);
+    metaRead = new MetaRead(this, dm, metadata, imageCache);
+
+    if (settings->contains("isShowCacheStatus")) {
+        bool isShow = settings->value("isShowCacheStatus").toBool();
+        metaRead->showProgressInStatusbar = isShow;
+    }
+
+    // Release MetaRead's navigation gate as soon as the awaited row decodes.
+    // Wired here (not in createImageCache) because metaRead is created after imageCache.
+    connect(imageCache, &ImageCache::setCached,
+            metaRead, &MetaRead::onRowCached, Qt::QueuedConnection);
 
     // set a value in dm->sf proxy
     connect(metaRead, &MetaRead::setValSf, dm, &DataModel::setValSf);
@@ -328,7 +359,7 @@ void MW::createMetaRead()
     connect(metaRead, &MetaRead::okToSelect, sel, &Selection::okToSelect);
 
     // selectCurrentIndex from MetaRead
-    connect(metaRead, &MetaRead::select, sel, &Selection::setCurrentIndex);
+    connect(metaRead, &MetaRead::select, sel, &Selection::setCurrentIndex, Qt::QueuedConnection);
 
     // MetaRead thread abort (when MW::stop)
     connect(this, &MW::abortMetaRead, metaRead, &MetaRead::abortProcessing);
@@ -340,7 +371,7 @@ void MW::createMetaRead()
     connect(metaRead, &MetaRead::done, this, &MW::folderChangeCompleted);
 
     // Signal to change selection, fileSelectionChange, update ImageCache
-    connect(metaRead, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange);
+    connect(metaRead, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange, Qt::QueuedConnection);
 
     // update statusbar metadata active light
     connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
@@ -353,7 +384,17 @@ void MW::createMetaRead()
 
     // update loading metadata in statusbar
     connect(metaRead, &MetaRead::updateProgressInStatusbar,
-            cacheProgressBar, &ProgressBar::updateUpperProgress);
+            cacheProgressBar, &ProgressBar::updateMetaReadProgress);
+
+    // memory overrun guardrail: surface a critical dialog and abort the
+    // in-flight folder load when MetaRead's footprint probe trips.
+    connect(metaRead, &MetaRead::memoryOverrun,
+            this, &MW::onMemoryOverrun, Qt::QueuedConnection);
+
+    // same path for the DataModel hot-path probe (fires from the GUI thread
+    // when buried processing queued addMetadataForItem events).
+    connect(dm, &DataModel::memoryOverrun,
+            this, &MW::onMemoryOverrun, Qt::QueuedConnection);
 
     metaRead->metaReadThread.start();
 }
@@ -436,10 +477,15 @@ void MW::createImageCache()
     connect(this, &MW::imageCacheColorManageChange,
             imageCache, &ImageCache::colorManageChange);
 
-    // Signal to initialize ImageCache
+    /* Signal to initialize ImageCache Changed from BlockingQueuedConnection to
+    QueuedConnection: BQC froze the UI thread whenever ImageCache's event loop was
+    occupied by an in-flight fillCache for the prior folder instance — the UI waited for
+    the ImageCache thread to return to its event loop, which can take many seconds with
+    14 parallel 8MP decoders. QueuedConnection preserves ordering against the subsequent
+    (already-queued) setImageCachePosition emit in MW::folderChangeCompleted. */
     connect(this, &MW::initializeImageCache,
             imageCache, &ImageCache::initialize,
-            Qt::BlockingQueuedConnection);
+            Qt::QueuedConnection);
 
     // // Signal to update imageCache parameters
     // connect(this, &MW::imageCacheChangeParam,
@@ -496,6 +542,7 @@ void MW::createThumbView()
     thumbView->setAutoScroll(false);
     thumbView->firstVisibleCell = 0;
     thumbView->showZoomFrame = true;            // may have settings but not showZoomFrame yet
+
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
         if (settings->contains("thumbWidth")) thumbView->iconWidth = settings->value("thumbWidth").toInt();
@@ -571,6 +618,11 @@ void MW::createGridView()
         gridView->badgeSize = classificationBadgeSizeFactor;
         gridView->iconNumberSize = iconNumberSize;
     }
+    /*
+    qDebug() << "MW::createGridView"
+             << "gridView->iconWidth =" << gridView->iconWidth
+             << "gridView->iconHeight =" << gridView->iconHeight;
+                //*/
 
     // update metadata and icons if not loaded for new images when scroll
     connect(gridView->verticalScrollBar(), &QScrollBar::valueChanged,
@@ -636,7 +688,6 @@ void MW::createSelection()
     connect(sel->sm, &QItemSelectionModel::selectionChanged, sel, &Selection::selectionChanged);
     connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
     connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrentSF);
-    connect(sel, &Selection::updateMissingThumbnails, this, &MW::renameEmbedThumbsContextMenu);
 }
 
 void MW::createVideoView()
@@ -1039,9 +1090,8 @@ void MW::createAppStyle()
     widgetCSS.fontSize = G::strFontSize.toInt();
     int bg = G::backgroundShade;
     widgetCSS.widgetBackgroundColor = QColor(bg,bg,bg);
-    css = widgetCSS.css();
-    G::css = css;
-    this->setStyleSheet(css);
+    G::css = widgetCSS.css();
+    this->setStyleSheet(G::css);
 
     // fix tooltips for windows (still works in MacOS)
     #ifdef Q_OS_WIN
@@ -1057,17 +1107,12 @@ void MW::createStatusBar()
 {
     if (G::isLogger) G::log("MW::createStatusBar");
     statusBar()->setObjectName("WinnowStatusBar");
-    statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
     // cache status on right side of status bar
 
     // label to hold QPixmap showing progress
     progressLabel = new QLabel();
     progressLabel->setObjectName("StatusProgressLabel");
-    progressLabel->setStyleSheet("QToolTip {"
-                                 "opacity: 200;"         // nada windows
-                                 "color: #ffffff;"       // nada windows
-                                 "}");
 
     // progressBar is created in MW::createDataModel, where it is first req'd
 
@@ -1104,6 +1149,7 @@ void MW::createStatusBar()
     // int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 1.3;
     // qDebug() << "charWidth =" << charWidth;
     // metadataThreadRunningLabel->setFixedWidth(charWidth);
+    metadataThreadRunningLabel->setObjectName("MetadataCacheStatus");
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
     QString tip = "Metadata and Icon caching:\n";
     tip += "\n";
@@ -1127,11 +1173,6 @@ void MW::createStatusBar()
 
     // add process progress bar to left side of statusBar
     progressBar = new QProgressBar;
-    progressBar->setStyleSheet(
-                "QProgressBar {"
-                    "border: 1px solid gray;"
-                "}"
-                );
     progressBar->setFixedSize(50, 8);
     progressBar->setTextVisible(false);
     progressBar->setVisible(false);
@@ -1149,10 +1190,10 @@ void MW::createStatusBar()
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
     filterStatusLabel->setAlignment(Qt::AlignVCenter);
     statusBar()->addWidget(filterStatusLabel);
-    subfolderStatusLabel->setPixmap(QPixmap(":/images/icon16/subfolders.png"));
-    statusBar()->addWidget(subfolderStatusLabel);
-    rawJpgStatusLabel->setPixmap(QPixmap(":/images/icon16/link.png"));
-    statusBar()->addWidget(rawJpgStatusLabel);
+    // deprecated
+    // subfolderStatusLabel->setPixmap(QPixmap(":/images/icon16/subfolders.png"));
+    // statusBar()->addWidget(subfolderStatusLabel);
+    statusBar()->addWidget(rawJpgStatusBtn);
     slideShowStatusLabel->setPixmap(QPixmap(":/images/icon16/slideshow.png"));
     statusBar()->addWidget(slideShowStatusLabel);
 
@@ -1160,6 +1201,7 @@ void MW::createStatusBar()
 
     // general status on left side of status bar
     statusLabel = new QLabel;
+    statusLabel->setObjectName("statusLabel");
     statusBar()->addWidget(statusLabel);
 }
 
@@ -1182,11 +1224,14 @@ void MW::createFolderDock()
     folderTitleLayout->setSpacing(0);
     folderTitleBar = new DockTitleBar("Folders", folderTitleLayout);
     folderDock->setTitleBarWidget(folderTitleBar);
+    folderTitleBar->setToolTip(dockTabToolTip(folderDockTabText));
+    // The folders tab starts with its text title; when G::useDockTitleGraphic
+    // is on, MW::updateDockTabGraphics swaps text<->graphic per available width.
 
     // add widgets to the right side of the title bar layout
     // toggle expansion button
     BarBtn *folderRefreshBtn = new BarBtn();
-    folderRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
+    folderRefreshBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
     folderRefreshBtn->setToolTip("Refresh folders and image counts");
     //folderRefreshBtn->setStyleSheet("QToolTip { color: red;}");
     connect(folderRefreshBtn, &BarBtn::clicked, this, &MW::refresh);
@@ -1197,7 +1242,7 @@ void MW::createFolderDock()
 
     // preferences button
     BarBtn *folderGearBtn = new BarBtn();
-    folderGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    folderGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
     folderGearBtn->setToolTip("Preferences");
     connect(folderGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     folderTitleLayout->addWidget(folderGearBtn);
@@ -1207,19 +1252,35 @@ void MW::createFolderDock()
 
     // question mark button
     BarBtn *folderQuestionBtn = new BarBtn();
-    folderQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
-    folderQuestionBtn->setToolTip("How this works");
+    folderQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
+    folderQuestionBtn->setToolTip("How this works: folder selection tips");
     connect(folderQuestionBtn, &BarBtn::clicked, fsTree, &FSTree::howThisWorks);
     folderTitleLayout->addWidget(folderQuestionBtn);
 
     // Spacer
     folderTitleLayout->addSpacing(10);
 
+    // collapse/expand body button
+    if (G::useDWCollapse) {
+        BarBtn *folderCollapseBtn = new BarBtn();
+        folderCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        folderCollapseBtn->setToolTip("Collapse panel.");
+        connect(folderCollapseBtn, &BarBtn::clicked, folderDock, &DockWidget::toggleCollapsed);
+        connect(folderDock, &DockWidget::collapsedChanged, folderCollapseBtn, [folderCollapseBtn](bool c){
+            folderCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+            folderCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        folderTitleLayout->addWidget(folderCollapseBtn);
+
+        // Spacer
+        folderTitleLayout->addSpacing(10);
+    }
+
     // close button
     BarBtn *folderCloseBtn = new BarBtn();
-    folderCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    folderCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     folderCloseBtn->setToolTip("Hide the Folders Panel");
-    connect(folderCloseBtn, &BarBtn::clicked, this, &MW::toggleFolderDockVisibility);
+    connect(folderCloseBtn, &BarBtn::clicked, this, &MW::closeFolderDock);
     folderTitleLayout->addWidget(folderCloseBtn);
 
     // Spacer
@@ -1245,11 +1306,12 @@ void MW::createFavDock()
     favTitleLayout->setSpacing(0);
     favTitleBar = new DockTitleBar("Bookmarks", favTitleLayout);
     favDock->setTitleBarWidget(favTitleBar);
+    favTitleBar->setToolTip(dockTabToolTip(favDockTabText));
 
     // add widgets to the right side of the title bar layout
     // refresh button
     BarBtn *favRefreshBtn = new BarBtn();
-    favRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
+    favRefreshBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
     favRefreshBtn->setToolTip("Refresh bookmarks and image counts");
     connect(favRefreshBtn, &BarBtn::clicked, this, &MW::refresh);
     favTitleLayout->addWidget(favRefreshBtn);
@@ -1259,7 +1321,7 @@ void MW::createFavDock()
 
     // preferences button
     BarBtn *favGearBtn = new BarBtn();
-    favGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    favGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
     favGearBtn->setToolTip("Preferences");
     connect(favGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     favTitleLayout->addWidget(favGearBtn);
@@ -1267,11 +1329,37 @@ void MW::createFavDock()
     // Spacer
     favTitleLayout->addSpacing(10);
 
+    // question mark button
+    BarBtn *favQuestionBtn = new BarBtn();
+    favQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
+    favQuestionBtn->setToolTip("How this works: bookmark tips");
+    connect(favQuestionBtn, &BarBtn::clicked, bookmarks, &BookMarks::howThisWorks);
+    favTitleLayout->addWidget(favQuestionBtn);
+
+    // Spacer
+    favTitleLayout->addSpacing(10);
+
+    // collapse/expand body button
+    if (G::useDWCollapse) {
+        BarBtn *favCollapseBtn = new BarBtn();
+        favCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        favCollapseBtn->setToolTip("Collapse panel.");
+        connect(favCollapseBtn, &BarBtn::clicked, favDock, &DockWidget::toggleCollapsed);
+        connect(favDock, &DockWidget::collapsedChanged, favCollapseBtn, [favCollapseBtn](bool c){
+            favCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+            favCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        favTitleLayout->addWidget(favCollapseBtn);
+
+        // Spacer
+        favTitleLayout->addSpacing(10);
+    }
+
     // close button
     BarBtn *favCloseBtn = new BarBtn();
-    favCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    favCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     favCloseBtn->setToolTip("Hide the Bookmarks Panel");
-    connect(favCloseBtn, &BarBtn::clicked, this, &MW::toggleFavDockVisibility);
+    connect(favCloseBtn, &BarBtn::clicked, this, &MW::closeFavDock);
     favTitleLayout->addWidget(favCloseBtn);
 
     // Spacer
@@ -1292,12 +1380,13 @@ void MW::createFilterDock()
     filterTitleLayout->setSpacing(0);
     filterTitleBar = new DockTitleBar("Filters", filterTitleLayout);
     filterDock->setTitleBarWidget(filterTitleBar);
+    filterTitleBar->setToolTip(dockTabToolTip(filterDockTabText));
     connect(filterDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     // add widgets to the right side of the title bar layout
     // toggle expansion button
     BarBtn *updateFiltersBtn = new BarBtn();
-    updateFiltersBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
+    updateFiltersBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
     updateFiltersBtn->setToolTip("Update filters");
     connect(updateFiltersBtn, &BarBtn::clicked, this, &MW::updateAllFilters);
     filterTitleLayout->addWidget(updateFiltersBtn);
@@ -1308,7 +1397,7 @@ void MW::createFilterDock()
     // toggle expansion button
     BarBtn *toggleExpansionBtn = new BarBtn();
     toggleExpansionBtn->setIcon(QIcon(":/images/icon16/foldertree.png"));
-    toggleExpansionBtn->setToolTip("Toggle expand all / collapse all");
+    toggleExpansionBtn->setToolTip("Toggle expand all / collapse all in the Filters panel.");
     connect(toggleExpansionBtn, &BarBtn::clicked, filters, &Filters::toggleExpansion);
     filterTitleLayout->addWidget(toggleExpansionBtn);
 
@@ -1317,7 +1406,7 @@ void MW::createFilterDock()
 
     // preferences button
     BarBtn *filterGearBtn = new BarBtn();
-    filterGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    filterGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
     filterGearBtn->setToolTip("Preferences");
     connect(filterGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     filterTitleLayout->addWidget(filterGearBtn);
@@ -1327,7 +1416,7 @@ void MW::createFilterDock()
 
     // question mark button
     BarBtn *filterQuestionBtn = new BarBtn();
-    filterQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    filterQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
     filterQuestionBtn->setToolTip("How this works");
     connect(filterQuestionBtn, &BarBtn::clicked, filters, &Filters::howThisWorks);
     filterTitleLayout->addWidget(filterQuestionBtn);
@@ -1335,11 +1424,27 @@ void MW::createFilterDock()
     // Spacer
     filterTitleLayout->addSpacing(10);
 
+    // collapse/expand body button
+    if (G::useDWCollapse) {
+        BarBtn *filterCollapseBtn = new BarBtn();
+        filterCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        filterCollapseBtn->setToolTip("Collapse panel.");
+        connect(filterCollapseBtn, &BarBtn::clicked, filterDock, &DockWidget::toggleCollapsed);
+        connect(filterDock, &DockWidget::collapsedChanged, filterCollapseBtn, [filterCollapseBtn](bool c){
+            filterCollapseBtn->setIcon(QIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png"));
+            filterCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        filterTitleLayout->addWidget(filterCollapseBtn);
+
+        // Spacer
+        filterTitleLayout->addSpacing(10);
+    }
+
     // close button
     BarBtn *filterCloseBtn = new BarBtn();
-    filterCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    filterCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     filterCloseBtn->setToolTip("Hide the Filters Panel");
-    connect(filterCloseBtn, &BarBtn::clicked, this, &MW::toggleFilterDockVisibility);
+    connect(filterCloseBtn, &BarBtn::clicked, this, &MW::closeFilterDock);
     filterTitleLayout->addWidget(filterCloseBtn);
 
     // Spacer
@@ -1389,11 +1494,12 @@ void MW::createMetadataDock()
     metaTitleLayout->setSpacing(0);
     metaTitleBar = new DockTitleBar("Metadata", metaTitleLayout);
     metadataDock->setTitleBarWidget(metaTitleBar);
+    metaTitleBar->setToolTip(dockTabToolTip(metadataDockTabText));
 
     // add widgets to the right side of the title bar layout
     // preferences button
     BarBtn *metaGearBtn = new BarBtn();
-    metaGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    metaGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
     metaGearBtn->setToolTip("Edit preferences including which items to show in this panel");
     connect(metaGearBtn, &BarBtn::clicked, this, &MW::infoViewPreferences);
     metaTitleLayout->addWidget(metaGearBtn);
@@ -1401,11 +1507,37 @@ void MW::createMetadataDock()
     // Spacer
     metaTitleLayout->addSpacing(10);
 
+    // question mark button
+    BarBtn *metaQuestionBtn = new BarBtn();
+    metaQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
+    metaQuestionBtn->setToolTip("How this works: metadata panel guide");
+    connect(metaQuestionBtn, &BarBtn::clicked, infoView, &InfoView::howThisWorks);
+    metaTitleLayout->addWidget(metaQuestionBtn);
+
+    // Spacer
+    metaTitleLayout->addSpacing(10);
+
+    // collapse/expand body button
+    if (G::useDWCollapse) {
+        BarBtn *metaCollapseBtn = new BarBtn();
+        metaCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        metaCollapseBtn->setToolTip("Collapse panel.");
+        connect(metaCollapseBtn, &BarBtn::clicked, metadataDock, &DockWidget::toggleCollapsed);
+        connect(metadataDock, &DockWidget::collapsedChanged, metaCollapseBtn, [metaCollapseBtn](bool c){
+            metaCollapseBtn->setIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png", G::iconOpacity);
+            metaCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        metaTitleLayout->addWidget(metaCollapseBtn);
+
+        // Spacer
+        metaTitleLayout->addSpacing(10);
+    }
+
     // close button
     BarBtn *metaCloseBtn = new BarBtn();
-    metaCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    metaCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     metaCloseBtn->setToolTip("Hide the Metadata Panel");
-    connect(metaCloseBtn, &BarBtn::clicked, this, &MW::toggleMetadataDockVisibility);
+    connect(metaCloseBtn, &BarBtn::clicked, this, &MW::closeMetadataDock);
     metaTitleLayout->addWidget(metaCloseBtn);
 
     // Spacer
@@ -1437,7 +1569,7 @@ void MW::createThumbDock()
     connect(thumbDock, &DockWidget::focus, this, &MW::focusOnDock);
     connect(thumbDock, &DockWidget::dockLocationChanged, this, &MW::setThumbDockFeatures);
     connect(thumbDock, &DockWidget::topLevelChanged, this, &MW::setThumbDockFloatFeatures);
-    connect(thumbDock, &DockWidget::closeFloatingDock, this, &MW::toggleThumbDockVisibity);
+    connect(thumbDock, &DockWidget::closeFloatingDock, this, &MW::closeThumbDock);
 
     // connect(thumbDock, &QDockWidget::dockLocationChanged, this, &MW::setThumbDockFeatures);
     // connect(thumbDock, &QDockWidget::topLevelChanged, this, &MW::setThumbDockFloatFeatures);
@@ -1476,6 +1608,7 @@ void MW::createEmbelDock()
     embelTitleBar = new DockTitleBar("Embellish Editor", embelTitleLayout);
 //    embelTitleBar = new DockTitleBar("Embellish                             ", embelTitleLayout);
     embelDock->setTitleBarWidget(embelTitleBar);
+    embelTitleBar->setToolTip(dockTabToolTip(embelDockTabText));
 
     // add widgets to the right side of the title bar layout
 
@@ -1536,18 +1669,34 @@ void MW::createEmbelDock()
     // question mark button
     BarBtn *embelQuestionBtn = new BarBtn();
     embelQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    embelQuestionBtn->setToolTip("Embel coordinate and container system.");
+    embelQuestionBtn->setToolTip("Embel Overview.");
     connect(embelQuestionBtn, &BarBtn::clicked, embelProperties, &EmbelProperties::coordHelp);
     embelTitleLayout->addWidget(embelQuestionBtn);
 
     // Spacer
     embelTitleLayout->addSpacing(5);
 
+    // collapse/expand body button
+    if (G::useDWCollapse) {
+        BarBtn *embelCollapseBtn = new BarBtn();
+        embelCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        embelCollapseBtn->setToolTip("Collapse panel.");
+        connect(embelCollapseBtn, &BarBtn::clicked, embelDock, &DockWidget::toggleCollapsed);
+        connect(embelDock, &DockWidget::collapsedChanged, embelCollapseBtn, [embelCollapseBtn](bool c){
+            embelCollapseBtn->setIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png", G::iconOpacity);
+            embelCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        embelTitleLayout->addWidget(embelCollapseBtn);
+
+        // Spacer
+        embelTitleLayout->addSpacing(10);
+    }
+
     // close button
     BarBtn *embelCloseBtn = new BarBtn();
     embelCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     embelCloseBtn->setToolTip("Hide the Embellish Panel");
-    connect(embelCloseBtn, &BarBtn::clicked, this, &MW::toggleEmbelDockVisibility);
+    connect(embelCloseBtn, &BarBtn::clicked, this, &MW::closeEmbelDock);
     embelTitleLayout->addWidget(embelCloseBtn);
 
     // Spacer
@@ -1579,6 +1728,29 @@ void MW::createDocks()
     MW::tabifyDockWidget(favDock, filterDock);
     if (G::useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
     if (!hideEmbellish) if (G::useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
+
+    // Re-evaluate responsive dock tab titles when a dock is dragged between
+    // docks/areas or floated: dragging into a tab group changes the tab count
+    // without a reliable resize/show on the surviving docks.
+    for (DockWidget *d : {folderDock, favDock, filterDock, metadataDock, embelDock}) {
+        connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
+        connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
+    }
+
+    // Solo mode enforcement: when a dock is expanded and its area is in solo
+    // mode, collapse the other docks in the same area.
+    auto wireSolo = [this](DockWidget *d) {
+        if (!d) return;
+        connect(d, &DockWidget::collapsedChanged, this, [this, d](bool collapsed) {
+            if (!collapsed) enforceDockSoloMode(d);
+        });
+    };
+    wireSolo(folderDock);
+    wireSolo(favDock);
+    wireSolo(filterDock);
+    if (G::useInfoView) wireSolo(metadataDock);
+    wireSolo(thumbDock);
+    wireSolo(embelDock);
 }
 
 void MW::createMessageView()

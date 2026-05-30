@@ -330,6 +330,7 @@ bool Panasonic::parse(MetadataParameters &p,
     if (!G::stop && m.isXmp && okToReadXmp && m.xmpSegmentOffset > 0 && m.xmpSegmentLength > 0) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
+            p.xmpModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
             m.rating = xmp.getItem("Rating");
             m.label = xmp.getItem("Label");
             m.title = xmp.getItem("title");

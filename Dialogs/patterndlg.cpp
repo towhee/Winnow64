@@ -86,7 +86,7 @@ void PatternDlgView::debugPxArray(QImage &i, int originX, int originY, int size)
             QString pRgba = QString::number(i.pixel(originX + x, originY + y), 16) + " ";
             row += pRgba;
         }
-        if (G::isFileLogger) Utilities::log("", row);
+        if (G::isRunByExtern) Utilities::log("", row);
         qDebug().noquote() << row;
     }
 }
@@ -201,8 +201,8 @@ PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm)
     setWindowTitle("Tile Extractor");
     setMouseTracking(true);
 
-    saveBtn->setStyleSheet("QPushButton {min-width: 120px;}");
-    exitBtn->setStyleSheet("QPushButton {min-width: 120px;}");
+    saveBtn->setMinimumWidth(120);
+    exitBtn->setMinimumWidth(120);
 
     layout = new QVBoxLayout;
 

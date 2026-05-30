@@ -171,7 +171,9 @@ void Preferences::itemChange(QModelIndex idx)
         emit mw->setShowCacheStatus(isShow);
         mw->isShowCacheProgressBar = isShow;
         mw->metaRead->showProgressInStatusbar = isShow;
+        mw->imageCache->setShowCacheStatus(isShow);
         mw->progressLabel->setVisible(isShow);
+        mw->settings->setValue("isShowCacheStatus", isShow);
         // hide/show progressWidthSlider in preferences
         QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
         if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
@@ -304,7 +306,7 @@ void Preferences::itemChange(QModelIndex idx)
         // mw->embedThumbnailsAction->setEnabled(G::modifySourceFiles);
         // toggle status bar modify images button
         mw->toggleModifyImages();
-        setItemEnabled("backupBeforeModify", G::modifySourceFiles);
+        // setItemEnabled("backupBeforeModify", G::modifySourceFiles);
         setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
         setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
     }
@@ -324,35 +326,20 @@ void Preferences::itemChange(QModelIndex idx)
 
     }
 
-    if (source == "useSidecar") {
-        G::useSidecar = v.toBool();
-    }    
-
     if (source == "activityLog") {
         G::isLogger = v.toBool();
-        G::isFileLogger = v.toBool();
         mw->settings->setValue("isFileLogger", v.toBool());
-    }
-
-    if (source == "errorLog") {
-        G::isLogger = v.toBool();
-        G::isErrorLogger = v.toBool();
-        G::isIssueLogger = v.toBool();
-        mw->settings->setValue("isErrorLogger", v.toBool());
     }
 
     if (source == "renderVideoThumb") {
         G::renderVideoThumb = v.toBool();
     }
 
-    if (source == "isLogger") {
+    if (source == "isLogAllToFileForDebugging") {
+        mw->isLogAllToFileForDebugging = v.toBool();
         G::isLogger = v.toBool();
-        // if (G::isLogger) mw->startLog();
-    }
-
-    if (source == "isErrorLogger") {
-        G::isErrorLogger = v.toBool();
-        G::showIssueInConsole = v.toBool();
+        G::isIssueLogger = v.toBool();
+        G::sendLogToFile = v.toBool();
         // if (G::isErrorLogger) mw->startLog();
     }
 
@@ -374,14 +361,17 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "globalFontSize") {
-        mw->setFontSize(v.toInt());
+        mw->setFontSize(v.toInt());     // recomputes column widths via resizeColumns()
         G::fontSize = v.toInt();
-        setStyleSheet(mw->css);
+        setStyleSheet(G::css);
+        // keep the dialog width matched to the new column widths so the
+        // caption:value proportions are preserved (clamped to the screen)
+        if (mw->preferencesDlg) mw->preferencesDlg->resizeForFontChange();
     }
 
     if (source == "globalBackgroundShade") {
         mw->setBackgroundShade(v.toInt());
-        setStyleSheet(mw->css);
+        setStyleSheet(G::css);
         resizeColumns();
         #ifdef Q_OS_WIN
             Win::setTitleBarColor(mw->preferencesDlg->winId(), G::backgroundColor);
@@ -425,11 +415,27 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "fullScreenShowStatusBar") {
         mw->fullScreenDocks.isStatusBar = v.toBool();
     }
+
+    if (source == "focusStackMethod") {
+        mw->fsMethod = v.toString();
+        mw->writeSetting("focusStackMethod", v.toString());  // also saved in MW::writeSettings
+    }
+
+    if (source == "focusStackRemoveTemp") {
+        mw->fsRemoveTemp = v.toBool();
+        mw->writeSetting("focusStackRemoveTemp", v.toBool());  // also saved in MW::writeSettings
+    }
+
+    if (source == "focusStack8bit") {
+        mw->fs8bit = v.toBool();
+        mw->writeSetting("focusStack8bit", v.toBool());  // also saved in MW::writeSettings
+    }
+
 }
 
 void Preferences::addItems()
 {
-    ItemInfo i;
+    // ItemInfo i;
     /* template of ItemInfo
     i.name = "";
     i.parentName = "";
@@ -447,7 +453,19 @@ void Preferences::addItems()
     i.dropList = {"1", "2"};
     */
     clearItemInfo(i);
+    addGeneral();
+    addModify();
+    addUserInterface();
+    addCache();
+    addSlideShow();
+    addFullScreen();
+    addMetadataPanel();
+    addTableView();
+    if (G::isRory) addUtilities();
+}
 
+void Preferences::addGeneral()
+{
     // General header (Root)
     i.name = "GeneralHeader";
     i.parentName = "???";
@@ -461,7 +479,43 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);
 
-    {
+    // Allow source files to be changed
+    i.name = "modifySourceFiles";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Permit image file modification";
+    i.tooltip = "Permit modification to the image file.  In some cases,\n"
+                "changes (ie orientation) may still be made to a\n"
+                "sidecar xmp file.\n\n"
+                "DISCLAIMER: While I try my best, it is possible that\n"
+                "modification could corrupt the image file.  I suggest\n"
+                "you turn 'Backup before modifying files' until you are, \n"
+                "confident the modifications are safe."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::modifySourceFiles;
+    i.key = "modifySourceFiles";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);       // cancel this for version 1.32 release
+
+
+    // Backup before modifying
+    i.name = "backupBeforeModify";
+    i.parentName = "modifySourceFiles";
+    i.captionText = "   Backup before modify files";
+    i.tooltip = "All image files about to be modified will be copied to a\n"
+                "subfolder called 'backup'"
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::backupBeforeModifying;
+    i.key = "backupBeforeModify";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+    // setItemEnabled("backupBeforeModify", G::modifySourceFiles);
+
     // Remember last folder
     i.name = "rememberLastDir";
     i.parentName = "GeneralHeader";
@@ -486,7 +540,7 @@ void Preferences::addItems()
     i.key = "checkIfUpdate";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Limit loupe fit zoom to 100%.
     i.name = "limitFit100Pct";
@@ -501,12 +555,12 @@ void Preferences::addItems()
     i.key = "limitFit100Pct";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Auto advance
     i.name = "autoAdvance";
     i.parentName = "GeneralHeader";
-    i.captionText = "Auto advance after pick, rating or label.";
+    i.captionText = "Auto advance after pick, rate or label.";
     i.tooltip = "Advance to next image after pick, rating or label change.\n"
                 "CAPS lock toggles state."
                 ;
@@ -530,7 +584,7 @@ void Preferences::addItems()
     i.key = "turnOffEmbellish";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Delete warning
     i.name = "deleteWarning";
@@ -561,25 +615,10 @@ void Preferences::addItems()
     i.key = "renderVideoThumb";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
-    // Logger
-    i.name = "isLogger";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Turn log on";
-    i.tooltip = "Turn this on to write errors to a log file.\n"
-                "Warning: this will impact performance.  Use\n"
-                "to help resolve bugs and crashes.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::isLogger;
-    i.key = "isLogger";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-//    addItem(i);
-
-    // Error Logger
-    i.name = "isErrorLogger";
+    // Issue Logger
+    i.name = "isLogAllToFileForDebugging";
     i.parentName = "GeneralHeader";
     i.captionText = "Turn error logging on";
     i.tooltip = "Turn this on to write errors to a log file.\n"
@@ -587,12 +626,15 @@ void Preferences::addItems()
                 "to help resolve bugs and crashes.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = G::isErrorLogger;
-    i.key = "isErrorLogger";
+    i.value = mw->isLogAllToFileForDebugging;
+    i.key = "isLogAllToFileForDebugging";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+}
 
+void Preferences::addModify()
+{
     // Modify Files header  > File modification header
     i.name = "ModifyHeader";
     i.parentName = "???";
@@ -604,14 +646,15 @@ void Preferences::addItems()
     i.hasValue = false;
     i.captionIsEditable = false;
     i.delegateType = DT_None;
-    addItem(i);
+    // addItem(i);
 
     // Allow source files to be changed
     i.name = "modifySourceFiles";
-    i.parentName = "ModifyHeader";
+    i.parentName = "GeneralHeader";
     i.captionText = "Permit image file modification";
-    i.tooltip = "Permit file modification to change image orientation\n"
-                "or embed thumbnails automatically without notification."
+    i.tooltip = "Permit file modification to the image file.  In some\n"
+                "cases, changes (ie orientation) may still be made to\n"
+                "a sidecar xmp file."
                 ;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -619,7 +662,7 @@ void Preferences::addItems()
     i.key = "modifySourceFiles";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);       // cancel this for version 1.32 release
+    // addItem(i);       // cancel this for version 1.32 release
 
     // Backup before modifying
     i.name = "backupBeforeModify";
@@ -634,8 +677,8 @@ void Preferences::addItems()
     i.key = "backupBeforeModify";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
-    setItemEnabled("backupBeforeModify", G::modifySourceFiles);
+    // addItem(i);
+    // setItemEnabled("backupBeforeModify", G::modifySourceFiles);
 
     // Automatically and silently add missing thumbnails to TIFF and JPG files
     i.name = "autoAddMissingThumbnails";
@@ -656,7 +699,7 @@ void Preferences::addItems()
     i.key = "autoAddMissingThumbnails";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    if (G::useMissingThumbs) addItem(i);
+    // if (G::useMissingThumbs) addItem(i);
     // setItemEnabled("autoAddMissingThumbnails", G::modifySourceFiles);
 
     // Show missing thumbnails dialog
@@ -673,29 +716,9 @@ void Preferences::addItems()
     i.key = "ignoreAddThumbnailsDlg";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    if (G::useMissingThumbs) addItem(i);
+    // if (G::useMissingThumbs) addItem(i);
     setItemEnabled("ignoreAddThumbnailsDlg", G::modifySourceFiles);
-
-    // Write metadata edits to sidecar XMP file
-    i.name = "useSidecar";
-    i.parentName = "ModifyHeader";
-    i.captionText = "Use xmp sidecars";
-    i.tooltip = "This will NOT MODIFY your source image file.\n\n"
-                "If you edit metadata (rating, color class, title, creator,\n"
-                "copyright, email, url) the change will be written to\n"
-                "a XMP sidecar file.  This data can be read by Winnow and\n"
-                "other programs like Lightroom.\n\n"
-                "Note this could slightly impact performance, as it might\n"
-                "take longer to initially read all the metadata when a\n"
-                "folder is being loaded."
-                ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::useSidecar;
-    i.key = "useSidecar";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
+}
 
     /*
     // Loggers: on/off
@@ -736,6 +759,8 @@ void Preferences::addItems()
     addItem(i);
     */
 
+void Preferences::addUserInterface()
+{
     // UserInterfaceHeader Header (Root) ---------------------------------------------------------------
     i.name = "UserInterfaceHeader";
     i.parentName = "";
@@ -779,7 +804,7 @@ void Preferences::addItems()
     i.key = "wheelSensitivity";
     i.delegateType = DT_Slider;
     i.type = "int";
-    i.min = 10;
+    i.min = 1;
     i.max = 210;
     i.fixedWidth = 50;
     addItem(i);
@@ -830,6 +855,24 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
+    // Thumbnail count number size
+    i.name = "iconNumberSize";
+    i.parentName = "FontSizeHeader";
+    i.tooltip = "The image number is located in the top left corner.  This property\n"
+                "adjusts the size of the number.";
+    i.captionText = "Image count";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = 19;
+    i.value =mw->iconNumberSize;
+    i.key = "iconNumberSize";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 10;
+    i.max = 60;
+    i.fixedWidth = 50;
+    addItem(i);
+
     // General category::Badge size subcategory
     i.name = "BadgeSizeHeader";
     i.parentName = "UserInterfaceHeader";
@@ -837,7 +880,7 @@ void Preferences::addItems()
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
-    addItem(i);
+    // addItem(i);
 
     // Loupe classification badge
     i.name = "classificationBadgeInImageDiameter";
@@ -849,14 +892,14 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 36;
-    i.value =mw->classificationBadgeInImageDiameter;
+    i.value = mw->classificationBadgeInImageDiameter;
     i.key = "classificationBadgeInImageDiameter";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 0;
     i.max = 100;
     i.fixedWidth = 50;
-    addItem(i);
+    // addItem(i);
 
     // Thumbnail classification badge
     i.name = "classificationBadgeSizeFactor";
@@ -878,24 +921,6 @@ void Preferences::addItems()
     i.max = 20;
     i.fixedWidth = 50;
     // addItem(i);
-
-    // Thumbnail count number size
-    i.name = "iconNumberSize";
-    i.parentName = "BadgeSizeHeader";
-    i.tooltip = "The image number is located in the top left corner.  This property\n"
-                "adjusts the size of the number.";
-    i.captionText = "Icon count size";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.defaultValue = 19;
-    i.value =mw->iconNumberSize;
-    i.key = "iconNumberSize";
-    i.delegateType = DT_Slider;
-    i.type = "int";
-    i.min = 10;
-    i.max = 60;
-    i.fixedWidth = 50;
-    addItem(i);
 
     // Label Header
     i.name = "LabelHeader";
@@ -924,8 +949,8 @@ void Preferences::addItems()
 
     // Filmstrip label font size
     i.name = "thumbViewLabelSize";
-    i.parentName = "LabelHeader";
-    i.captionText = "Filmstrip label size";
+    i.parentName = "FontSizeHeader";
+    i.captionText = "Filmstrip file name / title";
     i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -942,8 +967,8 @@ void Preferences::addItems()
     // Show thumbnail label
     i.name = "thumbViewShowLabel";
     i.parentName = "LabelHeader";
-    i.captionText = "Show filmstrip labels";
-    i.tooltip = "Show or hide the label with the file name / title at the bottom of each thumbnail.";
+    i.captionText = "Show in filmstrip";
+    i.tooltip = "Show or hide the file name / title at the bottom of each thumbnail in the filmstrip.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 8;
@@ -955,8 +980,8 @@ void Preferences::addItems()
 
     // Grid label font size
     i.name = "gridViewLabelSize";
-    i.parentName = "LabelHeader";
-    i.captionText = "Grid view label size";
+    i.parentName = "FontSizeHeader";
+    i.captionText = "Grid view file name / title";
     i.tooltip = "Change the display size of the file name / title shown at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -973,7 +998,7 @@ void Preferences::addItems()
     i.name = "gridViewShowLabel";
     i.parentName = "LabelHeader";
     i.captionText = "Show grid view labels";
-    i.tooltip = "Show or hide the label with the file name / title at the bottom of each thumbnail.";
+    i.tooltip = "Show or hide the file name / title at the bottom of each thumbnail in grid view.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->gridView->showIconLabels;
@@ -993,7 +1018,7 @@ void Preferences::addItems()
     i.key = "showThumbNailSymbolHelp";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    // addItem(i);
 
     // Ingest audio Header
     i.name = "PickAudioHeader";
@@ -1023,8 +1048,7 @@ void Preferences::addItems()
     // Pick audio volume
     i.name = "pickAudioVolume";
     i.parentName = "PickAudioHeader";
-    i.tooltip = "The image number is located in the top left corner.  This property\n"
-                "adjusts the size of the number.";
+    i.tooltip = "Adjust audio click volume.";
     i.captionText = "Pick audio volume";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -1040,9 +1064,10 @@ void Preferences::addItems()
     i.max = 100;
     i.fixedWidth = 50;
     addItem(i);
+}
 
-    }
-
+void Preferences::addCache()
+{
     // Cache Header (Root)
     i.name = "CacheHeader";
     i.parentName = "";
@@ -1056,7 +1081,6 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);
 
-    {
     // Show caching activity
     i.name = "showCacheProgressBar";
     i.parentName = "CacheHeader";
@@ -1145,7 +1169,7 @@ void Preferences::addItems()
         {48000, "48 GB"},
         {64000, "64 GB"}
     };
-    qDebug() << "pref maxMB =" << mw->imageCache->getMaxMB();
+    // qDebug() << "pref maxMB =" << mw->imageCache->getMaxMB();
     if (mw->imageCache->getAutoMaxMB())
         i.value = "Auto " + mw->imageCache->getAutoStrategy();
     else
@@ -1198,7 +1222,10 @@ void Preferences::addItems()
     // i.type = "QString";
     // i.color = G::disabledColor.name();
     // availMBMsgWidget = addItem(i);
+}
 
+void Preferences::addSlideShow()
+{
     // Slideshow Header (Root)
     i.name = "SlideshowHeader";
     i.parentName = "";
@@ -1254,8 +1281,10 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
-    }
+}
 
+void Preferences::addFullScreen()
+{
     // Full Screen Header (Root)
     i.name = "FullScreenHeader";
     i.parentName = "";
@@ -1269,7 +1298,6 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);//return;
 
-    {
     // Full screen - show folders
     i.name = "fullScreenShowFolders";
     i.parentName = "FullScreenHeader";
@@ -1347,8 +1375,10 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
-    }
+}
 
+void Preferences::addMetadataPanel()
+{
     // Metadata InfoView Header (Root)
     i.name = "MetadataPanelHeader";
     i.parentName = "";
@@ -1362,45 +1392,47 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);
 
-    { // Metadata InfoView items
+    // Metadata InfoView items
 
     // InfoView fields to show
     if (G::useInfoView) {
-    QStandardItemModel *okInfo = mw->infoView->ok;
-    // iterate through infoView data, adding it to the property editor
-    for(int row = 0; row < okInfo->rowCount(); row++) {
-        QModelIndex parentIdx = okInfo->index(row, 0);
-        QString caption = okInfo->index(row, 0).data().toString();
-        i.parentName = "MetadataPanelHeader";
-        i.name = caption;
-        i.captionText = "Show " + caption;
-        i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
-        i.hasValue = true;
-        i.delegateType = DT_Checkbox;
-        i.type = "bool";
-        i.captionIsEditable = false;
-        i.key = "infoView->ok";
-        i.value = okInfo->index(row, 2).data().toBool();
-        i.index = okInfo->index(row, 2);
-        addItem(i);
-        for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
-            QString childCaption = okInfo->index(childRow, 0, parentIdx).data().toString();
-            i.parentName = caption;
-            i.captionText = "Show " + childCaption;
-            i.tooltip = "Show or hide the category " + childCaption + " in the metadata panel";
+        QStandardItemModel *okInfo = mw->infoView->ok;
+        // iterate through infoView data, adding it to the property editor
+        for(int row = 0; row < okInfo->rowCount(); row++) {
+            QModelIndex parentIdx = okInfo->index(row, 0);
+            QString caption = okInfo->index(row, 0).data().toString();
+            i.parentName = "MetadataPanelHeader";
+            i.name = caption;
+            i.captionText = "Show " + caption;
+            i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
             i.hasValue = true;
             i.delegateType = DT_Checkbox;
             i.type = "bool";
             i.captionIsEditable = false;
             i.key = "infoView->ok";
-            i.value = okInfo->index(childRow, 2, parentIdx).data().toBool();
-            i.index = okInfo->index(childRow, 2, parentIdx);
+            i.value = okInfo->index(row, 2).data().toBool();
+            i.index = okInfo->index(row, 2);
             addItem(i);
-        }
-    } // end Metadata InfoView items
+            for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
+                QString childCaption = okInfo->index(childRow, 0, parentIdx).data().toString();
+                i.parentName = caption;
+                i.captionText = "Show " + childCaption;
+                i.tooltip = "Show or hide the category " + childCaption + " in the metadata panel";
+                i.hasValue = true;
+                i.delegateType = DT_Checkbox;
+                i.type = "bool";
+                i.captionIsEditable = false;
+                i.key = "infoView->ok";
+                i.value = okInfo->index(childRow, 2, parentIdx).data().toBool();
+                i.index = okInfo->index(childRow, 2, parentIdx);
+                addItem(i);
+            }
+        } // end Metadata InfoView items
     } // end if (mw->G::useInfoView)
-    }
+}
 
+void Preferences::addTableView()
+{
     // TableView show/hide fields Header (Root)
     i.name = "TableViewColumnsHeader";
     i.parentName = "???";
@@ -1413,8 +1445,6 @@ void Preferences::addItems()
     i.captionIsEditable = false;
     i.delegateType = DT_None;
     addItem(i);
-
-    { // TableView show/hide field items
 
     // TableView conventional fields to show
     QStandardItemModel *tv = mw->tableView->ok;
@@ -1463,10 +1493,88 @@ void Preferences::addItems()
         addItem(i);
     }
     // end TableView show/hide field items
-    }
+}
+
+void Preferences::addUtilities()
+{
+    // Utilities Header (Root)
+    i.name = "UtilitiesHeader";
+    i.parentName = "???";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = true;
+    i.captionText = "Utilities";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+        // Utilities Header (Root)
+        i.name = "FocusStackHeader";
+        i.parentName = "UtilitiesHeader";
+        i.isHeader = true;
+        i.isDecoration = true;
+        i.decorateGradient = true;
+        i.captionText = "Focus Stack Utility";
+        i.tooltip = "";
+        i.hasValue = false;
+        i.captionIsEditable = false;
+        i.delegateType = DT_None;
+        addItem(i);
+
+            // Focus stack mdethod
+            i.name = "focusStackMethod";
+            i.parentName = "FocusStackHeader";
+            i.captionText = "Focus stack method";
+            i.tooltip =
+                "PMax:               Align and fuse using multiscale wavelets\n"
+                "StreamPMax:         Same as PMax but saves memory\n"
+                "TennengradVersions: Depths for various radius/thresholds\n"
+                ;
+            i.hasValue = true;
+            i.captionIsEditable = false;
+            i.value = mw->fsMethod;
+            i.key = "focusStackMethod";
+            i.delegateType = DT_Combo;
+            i.type = "QString";
+            i.dropList = FS::MethodsString;
+            addItem(i);
+
+            // Cleanup working files after focus stacking
+            i.name = "focusStackRemoveTemp";
+            i.parentName = "FocusStackHeader";
+            i.captionText = "Remove all temporary folders";
+            i.tooltip =
+                "If Focus Stack was initiated remotely (ie from Lightroom)\n"
+                "then a subfolder called 'FocusStack' will have been created\n"
+                "with the temporary input images.  Also, working subfolders\n"
+                "will exist, and they will also be removed.";
+            i.hasValue = true;
+            i.captionIsEditable = false;
+            i.value = mw->fsRemoveTemp;
+            i.key = "focusStackRemoveTemp";
+            i.delegateType = DT_Checkbox;
+            i.type = "bool";
+            addItem(i);
+
+            // 8-bit pipeline
+            i.name = "focusStack8bit";
+            i.parentName = "FocusStackHeader";
+            i.captionText = "Limit to 8-bit pipeline";
+            i.tooltip =
+                "If the input images are 16-bit they will be converted to\n"
+                 "8-bit and the output fused image will be 8-bit.\n";
+            i.hasValue = true;
+            i.captionIsEditable = false;
+            i.value = mw->fs8bit;
+            i.key = "focusStack8bit";
+            i.delegateType = DT_Checkbox;
+            i.type = "bool";
+            addItem(i);
+
+}
 
     // enable/disable rory items
     // rory();
 
-    return;
-}

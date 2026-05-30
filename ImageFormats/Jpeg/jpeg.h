@@ -2,8 +2,6 @@
 #define JPEG_H
 
 #include <QtWidgets>
-#include <QColor>
-#include <QRgb>
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
 #include "Metadata/exif.h"
@@ -11,7 +9,6 @@
 #include "Metadata/iptc.h"
 #include "Metadata/gps.h"
 #include "Metadata/xmp.h"
-#include "Metadata/metareport.h"
 #include "Metadata/ExifTool.h"
 
 #include <iostream>

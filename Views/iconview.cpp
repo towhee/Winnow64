@@ -215,7 +215,15 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     // setLayoutMode(QListView::Batched) causes delay that makes scrollTo a headache
     // so do not use!
 
-    setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
+    // setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
+
+    // Force smooth pixel-by-pixel scrolling instead of item snapping
+    setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    // Optional but recommended for trackpad smoothness:
+    verticalScrollBar()->setSingleStep(1);
+    horizontalScrollBar()->setSingleStep(1);
+
     horizontalScrollBar()->setObjectName("IconViewHorizontalScrollBar");
     verticalScrollBar()->setObjectName("IconViewVerticalScrollBar");
     setWordWrap(true);
@@ -245,6 +253,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
                                          showIconLabels, labelChoice,
                                          badgeSize, iconNumberSize);
+    iconViewDelegate->objName = objName;
     setItemDelegate(iconViewDelegate);
 
     zoomFrame = new QLabel;
@@ -255,13 +264,15 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     isDebug = false;
 
     // mouse wheel is spinning
-    wheelTimer.setSingleShot(true);
-    connect(&wheelTimer, &QTimer::timeout, this, &IconView::wheelStopped);
+    // wheelTimer.setSingleShot(true);
+    // connect(&wheelTimer, &QTimer::timeout, this, &IconView::wheelStopped);
+
+    connect(&kineticScrollTimer, &QTimer::timeout, this, &IconView::applyKineticScroll);
 
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
-    connect(iconViewDelegate, SIGNAL(update(QModelIndex, QRect)),
-            this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
+    // connect(iconViewDelegate, SIGNAL(update(QModelIndex, QRect)),
+    //         this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
 
     connect(this, &IconView::setValSf, dm, &DataModel::setValSf);
 }
@@ -306,30 +317,59 @@ QString IconView::diagnostics()
     return reportString;
 }
 
-void IconView::refreshThumb(QModelIndex idx, int role)
+void IconView::refreshIcon(QModelIndex idx, QString src)
 {
+    if (!isVisible()) return;
     if (isDebug) G::log("IconView::refreshThumb", objectName());
+
     if (!idx.isValid()) {
-        qDebug() << "WARNING" << "WARNING"
+        qDebug() << "WARNING"
                    << "IconView::refreshThumb"
                    << "idx =" << idx
                    << "is invalid";
-        QString msg = "Inalid index.";
+        QString msg = "Invalid index.";
         G::issue("Warning", msg, "IconView::refreshThumb");
         return;
     }
+
+    forceFullRefresh("IconView::refreshThumb");
+
     QVector<int> roles;
     roles.append(Qt::EditRole);
     dataChanged(idx, idx, roles);
 }
 
-void IconView::refreshThumbs()
+void IconView::refreshIcons(QString src)
 {
     if (isDebug) G::log("IconView::refreshThumbs", objectName());
+
+    // Force a full repaint of all rows
+    forceFullRefresh(src); // Ensure the delegate drops its cache
     int last = dm->sf->rowCount() - 1;
     QVector<int> roles;
     roles.append(Qt::EditRole);
     dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0), roles);
+
+    // int last = dm->sf->rowCount() - 1;
+    // QVector<int> roles;
+    // roles.append(Qt::EditRole);
+    // dataChanged(dm->sf->index(0, 0), dm->sf->index(last, 0), roles);
+}
+
+void IconView::forceFullRefresh(QString src)
+{
+    /* Clear the delegate icon cache and update dimensions. Calling rejustify() if
+    wrapping is enabled is sufficient as it internally calls setThumbParameters()
+    which clears the cache. Call refreshIcons to repaint all the icons. */
+
+    QString srcFun = "IconView::forceFullRefresh";
+    if (isDebug) G::log(srcFun, objectName());
+
+    if (isWrapping()) {
+        rejustify();
+    } else {
+        setThumbParameters();
+    }
 }
 
 void IconView::setThumbParameters()
@@ -371,6 +411,10 @@ void IconView::setThumbParameters()
     }
     setSpacing(0);
     if (labelFontSize == 0) labelFontSize = 10;
+
+    // Clear the delegate icon cache because the pixmaps are now the wrong size
+    iconViewDelegate->clearAllCache();
+
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
                                          showIconLabels, labelChoice,
                                          badgeSize, iconNumberSize);
@@ -550,7 +594,8 @@ QModelIndex IconView::pageUpIndex(int fromRow)
 
 void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
-    if (isDebug || G::isFlowLogger) qDebug() << "IconView::sortThumbs" << objectName();
+    if (isDebug || G::isFlowLogger)
+        qDebug() << "IconView::sortThumbs" << objectName();
     if (isReverse) dm->sf->sort(sortColumn, Qt::DescendingOrder);
     else dm->sf->sort(sortColumn, Qt::AscendingOrder);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
@@ -562,18 +607,26 @@ void IconView::setThumbSize()
 
 */
     QString src = "IconView::setThumbSize";
-    // if (isDebug || G::isLogger)
+    if (isDebug || G::isLogger)
         G::log(src, objectName());
     if (isDebug)
         qDebug() << src << objectName();
 
+    // Capture the cell at the center of the current viewport before resizing
+    QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
+    QModelIndex centerIdx = indexAt(centerPoint);
+    int centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
+
     G::ignoreScrollSignal = true;
     setThumbParameters();
 
-    // G::ignoreScrollSignal = false;
-    m2->updateIconRange(true, "IconView::setThumbSize");
+    // Re-synchronize the visible range for metadata/caching
+    m2->updateIconRange(src);
 
-    // scrollToCurrent(src);
+    // Recenters the anchor cell
+    if (centerRow >= 0) {
+        scrollToRow(centerRow, src);
+    }
 
     /* debug
     qDebug() << "IconView::setThumbSize"
@@ -665,48 +718,100 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
     increased or decreased in the justify() function, and used to maintain the
     cell size during the resize and preference adjustment operations.
 */
-    QString src = "IconView::rejustify";
-    if (isDebug || G::isLogger)
-        G::log(src, objectName());
-    /*
-    qDebug() << objectName() << "::rejustify   "
-             << "isWrapping" << isWrapping();
-    //*/
-
+    // Skip if wrapping is disabled as justification only applies to grid-style layouts
     if (!isWrapping()) return;
 
-    // get
-    int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
-    if (assignedIconWidth < 40 || assignedIconWidth > 480) assignedIconWidth = iconWidth;
+    /* During startup the thumbDock is parked on the left (MW init addDockWidget
+       LeftDockWidgetArea) before restoreState() moves it to its saved location.
+       That makes thumbView wrapping, so a folder-load refresh would rejustify the
+       icons to the transient narrow left-dock width, shrinking the persisted thumb
+       size (loaded in MW::createThumbView) down toward ICON_MIN. Skip until init
+       completes; MW::showEvent applies the size via setThumbSize() once the real
+       layout is restored. */
+    if (G::isInitializing && objectName() == "Thumbnails") return;
+
+    QString src = "IconView::rejustify";
+    if (isDebug || G::isLogger) G::log(src, objectName());
+
+    // Capture the cell at the center of the viewport before the layout changes
+    QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
+    QModelIndex centerIdx = indexAt(centerPoint);
+    int centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
+
+    // Calculate available row width, accounting for scrollbars and a small margin
+    int wRow = width() - G::scrollBarThickness - 8;
+
+    // Ensure assignedIconWidth is within safe bounds to prevent division by zero or huge cells
+    if (assignedIconWidth < ICON_MIN || assignedIconWidth > G::maxIconSize) {
+        assignedIconWidth = iconWidth;
+    }
+
+    // Determine cell width based on the assigned reference width
     int wCell = iconViewDelegate->getCellWidthFromThumbWidth(assignedIconWidth);
+    if (wCell <= 0) return;
 
-    if (wCell == 0) return;
+    // Calculate how many thumbs fit per row
     int tpr = wRow / wCell;
+    if (tpr <= 0) tpr = 1;
 
-    if (tpr == 0) return;
+    // Recalculate cell width to perfectly fill the available row width (justification)
     wCell = wRow / tpr;
 
+    // Update icon dimensions to match the new justified cell width
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
-    /*
-    qDebug().noquote() << src << objectName()
-             << "assignedIconWidth =" << assignedIconWidth
-             << "wRow =" << wRow
-             << "wCell =" << wCell
-             << "tpr =" << tpr
-             << "iconWidth =" << iconWidth
-             << "iconHeight =" << iconHeight
-             << "midVisibleCell =" << midVisibleCell
-        ;
-    //*/
 
-    skipResize = true;      // prevent feedback loop
+    // Prevent a feedback loop by flagging that we are already handling the resize
+    skipResize = true;
 
-
+    // Update the delegate with new dimensions and clear the QCache
     setThumbParameters();
-    scrollToRow(dm->scrollToIcon, src);
 
-    m2->updateIconRange(true, src);
+    // Maintain the user's position by scrolling back to the mid-visible cell
+    if (centerRow >= 0) {
+        scrollToRow(centerRow, src);
+    }
+
+    // scrollToRow(dm->scrollToIcon, src);
+
+    // Synchronize visibility ranges for caching and metadata reading
+    m2->updateIconRange(src);
+
+
+
+
+    // // get
+    // int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
+    // if (assignedIconWidth < 40 || assignedIconWidth > 480) assignedIconWidth = iconWidth;
+    // int wCell = iconViewDelegate->getCellWidthFromThumbWidth(assignedIconWidth);
+
+    // if (wCell == 0) return;
+    // int tpr = wRow / wCell;
+
+    // if (tpr == 0) return;
+    // wCell = wRow / tpr;
+
+    // iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
+    // iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
+    // /*
+    // qDebug().noquote() << src << objectName()
+    //          << "assignedIconWidth =" << assignedIconWidth
+    //          << "wRow =" << wRow
+    //          << "wCell =" << wCell
+    //          << "tpr =" << tpr
+    //          << "iconWidth =" << iconWidth
+    //          << "iconHeight =" << iconHeight
+    //          << "midVisibleCell =" << midVisibleCell
+    //     ;
+    // //*/
+
+    // skipResize = true;      // prevent feedback loop
+
+
+    // setThumbParameters();
+    // scrollToRow(dm->scrollToIcon, src);
+
+    // m2->updateIconRange(true, src);
 }
 
 void IconView::justify(JustifyAction action)
@@ -804,7 +909,6 @@ void IconView::resizeEvent(QResizeEvent *)
     }
     //*/
 
-    static int prevWidth = 0;
     // int prevMidVisibleCell = midVisibleCell;
 
     /*
@@ -829,13 +933,13 @@ void IconView::resizeEvent(QResizeEvent *)
 
     G::resizingIcons = true;
 
+    static int prevWidth = 0;
     // Rejustify icons
     bool widthChange = width() != prevWidth;
     bool needToRejustify = isWrapping() && widthChange;
+
     if (needToRejustify) {
-        // QTimer::singleShot(500, this, [this, prevMidVisibleCell]() {
-        //     rejustify(prevMidVisibleCell);
-        // });
+        // We call rejustify, which now uses the visual center as the anchor
         QTimer::singleShot(500, this, SLOT(rejustify()));   // calls calcViewportParameters
     }
     prevWidth = width();
@@ -843,11 +947,8 @@ void IconView::resizeEvent(QResizeEvent *)
     // req'd to show/hide scrollbar in thumb dock
     setThumbParameters();
 
-    // return if grid view has not been opened yet
-    //if (m2->gridDisplayFirstOpen) return;
-
     QString src = "IconView::resizeEvent";
-    if (!needToRejustify) m2->updateIconRange(true, src);
+    if (!needToRejustify) m2->updateIconRange(src);
     /*
     qDebug().noquote() << src
              << "Object =" << objectName()
@@ -856,34 +957,34 @@ void IconView::resizeEvent(QResizeEvent *)
                 ;
                 //*/
 
-    // create flag resizeJustDone, and scollToCurrent when mouse release
-    if (isLeftMouseBtnPressed) {
-        if (!isCellVisible(dm->currentSfRow)) {
-            scrollToCurrent(src);
-        }
-        resizeJustDone = true;
-    }
+    // // create flag resizeJustDone, and scollToCurrent when mouse release
+    // if (isLeftMouseBtnPressed) {
+    //     if (!isCellVisible(dm->currentSfRow)) {
+    //         scrollToCurrent(src);
+    //     }
+    //     resizeJustDone = true;
+    // }
+
+    resizeJustDone = true;
+
 }
 
 void IconView::thumbsFitTopOrBottom(QString src)
 {
-/*
-    The thumbnail size is adjusted to fit the thumbDock height and scrolled to
-    keep the midVisibleThumb in the middle. Other objects visible (docks and
-    central widget) are resized.
-
-    Called by MW::eventFilter when a thumbDock resize event occurs triggered by
-    the user resizing the thumbDock.
-
-    Called when thumbViewShowLabel is changed.
-
-    For icon cell anatomy see diagram at top of iconviewdelegate.cpp.
-*/
-    QString fun = "IconView::thumbsFitTopOrBottom";
-    if (isDebug || G::isLogger) G::log(fun, objectName());
     /*
-    qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName()
-                ; //*/
+        The thumbnail size is adjusted to fit the thumbDock height and scrolled to
+        keep the midVisibleThumb in the middle. Other objects visible (docks and
+        central widget) are resized.
+
+        Called by MW::eventFilter when a thumbDock resize event occurs triggered by
+        the user resizing the thumbDock.
+
+        Called when thumbViewShowLabel is changed.
+
+        For icon cell anatomy see diagram at top of iconviewdelegate.cpp.
+    */
+    QString fun = "IconView::thumbsFitTopOrBottom";
+    if (isDebug || G::isLogger) G::log(fun, objectName() + " src: " + src);
 
     // viewport available height
     int newViewportHt = height() - G::scrollBarThickness;
@@ -901,23 +1002,15 @@ void IconView::thumbsFitTopOrBottom(QString src)
     int minCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMin);
 
     bool exceedsLimits = newViewportHt > maxCellHeight || newViewportHt < minCellHeight;
-    /*
-    qDebug() << "IconView::thumbsFitTopOrBottom"
-             << "newViewportHt =" << newViewportHt
-             << "maxCellHeight =" << maxCellHeight
-             << "minCellHeight =" << minCellHeight
-             << "exceedsLimits =" << exceedsLimits
-                ;
-                //*/
 
     // do nothing if exceed limits
     if (exceedsLimits) {
-        /*
-        qDebug() << "IconView::thumbsFitTopOrBottom  exceedsLimits"
-                 << "newViewportHt =" << newViewportHt
-                 << "maxCellHeight =" << maxCellHeight
-                 << "minCellHeight =" << minCellHeight
-            ;//*/
+        if (isDebug) {
+            qDebug() << "IconView::thumbsFitTopOrBottom exceedsLimits"
+                     << "newViewportHt =" << newViewportHt
+                     << "maxCellHeight =" << maxCellHeight
+                     << "minCellHeight =" << minCellHeight;
+        }
         return;
     }
 
@@ -925,25 +1018,103 @@ void IconView::thumbsFitTopOrBottom(QString src)
     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
     iconWidth = static_cast<int>(iconHeight * bestAspectRatio);
 
-    /*
-    qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
-             << "newViewportHt =" << newViewportHt
-             << "maxCellHeight =" << maxCellHeight
-             << "minCellHeight =" << minCellHeight
-             << "bestAspectRatio =" << bestAspectRatio
-             << "iconHeight =" << iconHeight
-             << "iconWidth =" << iconWidth
-             << "hMax =" << hMax
-             << "hMin =" << hMin
-             << "G::maxIconSize =" << G::maxIconSize
-                ;
-    //    */
+    if (isDebug) {
+        qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
+                 << "newViewportHt =" << newViewportHt
+                 << "maxCellHeight =" << maxCellHeight
+                 << "minCellHeight =" << minCellHeight
+                 << "bestAspectRatio =" << bestAspectRatio
+                 << "iconHeight =" << iconHeight
+                 << "iconWidth =" << iconWidth
+                 << "hMax =" << hMax
+                 << "hMin =" << hMin
+                 << "G::maxIconSize =" << G::maxIconSize;
+    }
 
+    // This calls setThumbParameters, which now clears the iconCache
     setThumbSize();
 }
 
+// void IconView::thumbsFitTopOrBottom(QString src)
+// {
+// /*
+//     The thumbnail size is adjusted to fit the thumbDock height and scrolled to
+//     keep the midVisibleThumb in the middle. Other objects visible (docks and
+//     central widget) are resized.
+
+//     Called by MW::eventFilter when a thumbDock resize event occurs triggered by
+//     the user resizing the thumbDock.
+
+//     Called when thumbViewShowLabel is changed.
+
+//     For icon cell anatomy see diagram at top of iconviewdelegate.cpp.
+// */
+//     QString fun = "IconView::thumbsFitTopOrBottom";
+//     if (isDebug || G::isLogger) G::log(fun, objectName());
+//     /*
+//     qDebug() << "IconView::thumbsFitTopOrBottom  midVisibleCell =" << midVisibleCell << objectName()
+//                 ; //*/
+
+//     // viewport available height
+//     int newViewportHt = height() - G::scrollBarThickness;
+
+//     // best aspect ratio to use
+//     double ba = bestAspectRatio;
+//     if (ba > 1.0) ba = 1.0;
+
+//     // max/min viewport height adjusted for best aspect ratio to use
+//     int hMax = static_cast<int>(G::maxIconSize * ba);
+//     int hMin = static_cast<int>(G::minIconSize * ba);
+
+//     // max/min cell size
+//     int maxCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMax);
+//     int minCellHeight = iconViewDelegate->getCellHeightFromThumbHeight(hMin);
+
+//     bool exceedsLimits = newViewportHt > maxCellHeight || newViewportHt < minCellHeight;
+//     /*
+//     qDebug() << "IconView::thumbsFitTopOrBottom"
+//              << "newViewportHt =" << newViewportHt
+//              << "maxCellHeight =" << maxCellHeight
+//              << "minCellHeight =" << minCellHeight
+//              << "exceedsLimits =" << exceedsLimits
+//                 ;
+//                 //*/
+
+//     // do nothing if exceed limits
+//     if (exceedsLimits) {
+//         /*
+//         qDebug() << "IconView::thumbsFitTopOrBottom  exceedsLimits"
+//                  << "newViewportHt =" << newViewportHt
+//                  << "maxCellHeight =" << maxCellHeight
+//                  << "minCellHeight =" << minCellHeight
+//             ;//*/
+//         return;
+//     }
+
+//     // newViewportHt is okay, set icon size
+//     iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newViewportHt);
+//     iconWidth = static_cast<int>(iconHeight * bestAspectRatio);
+
+//     /*
+//     qDebug() << "IconView::thumbsFitTopOrBottom" << objectName()
+//              << "newViewportHt =" << newViewportHt
+//              << "maxCellHeight =" << maxCellHeight
+//              << "minCellHeight =" << minCellHeight
+//              << "bestAspectRatio =" << bestAspectRatio
+//              << "iconHeight =" << iconHeight
+//              << "iconWidth =" << iconWidth
+//              << "hMax =" << hMax
+//              << "hMin =" << hMin
+//              << "G::maxIconSize =" << G::maxIconSize
+//                 ;
+//     //    */
+
+//     setThumbSize();
+// }
+
 void IconView::repaintView()
 {
+    qDebug() << "IconView::repaintView";
     repaint();
 }
 
@@ -1037,10 +1208,8 @@ void IconView::scrollToRow(int row, QString source)
              << "src =" << source;
                 // */
     QModelIndex idx = dm->sf->index(row, 0);
-    if (!idx.isValid()) {
-        // qDebug() << "IconView::scrollToRow inValid row =" << row;
-        return;
-    }
+    if (!idx.isValid()) return;
+
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
@@ -1051,7 +1220,7 @@ void IconView::scrollToCurrent(QString source)
 {
     QString src = "IconView::scrollToCurrent";
     if (isDebug || G::isLogger)
-        G::log(src, objectName());
+        G::log(src, objectName() + " from " + source);
     // if (!dm->currentSfIdx.isValid() || G::isInitializing /*|| !readyToScroll()*/) return;
     /*
     qDebug() << "IconView::scrollToCurrent" << dm->currentSfIdx
@@ -1068,6 +1237,12 @@ void IconView::scrollToCurrent(QString source)
         // updateMidVisibleCell(src);
     }
 }
+
+// void IconView::scrollContentsBy(int dx, int dy)
+// {
+//     qDebug() << "SCROLL EVENT: scrollContentsBy dx =" << dx << "dy =" << dy;
+//     QListView::scrollContentsBy(dx, dy);
+// }
 
 void IconView::enterEvent(QEnterEvent *event)
 {
@@ -1093,46 +1268,120 @@ void IconView::leaveEvent(QEvent *event)
 void IconView::wheelEvent(QWheelEvent *event)
 {
     if (G::isInitializing) return;
-    if (isDebug)
-        qDebug() << "IconView::wheelEvent" << objectName() << event;
 
-    if (wheelSpinningOnEntry && G::wheelSpinning) {
-        //qDebug() << "IconView::wheelEvent ignore because wheelSpinningOnEntry && G::wheelSpinning";
-        return;
+    if (event->source() == Qt::MouseEventSynthesizedBySystem || event->source() == Qt::MouseEventNotSynthesized) {
+
+        QPoint numPixels = event->pixelDelta();
+        QPoint numDegrees = event->angleDelta() / 8;
+
+        // --- UPDATED ASSASSIN SHIELD & TAP-TO-STOP ---
+        if (numPixels.isNull() && numDegrees.isNull()) {
+
+            // TAP-TO-STOP: When you plant your fingers on the glass, macOS sends
+            // a 0-delta event with the ScrollBegin phase. We must catch it here!
+            if (event->phase() == Qt::ScrollBegin) {
+                kineticScrollTimer.stop();
+                kineticVelocityX = 0;
+                kineticVelocityY = 0;
+            }
+
+            event->accept();
+            return;
+        }
+
+        // CRITICAL: We hijack the event and NEVER call QListView::wheelEvent.
+        event->accept();
+
+        qreal currentDx = 0;
+        qreal currentDy = 0;
+
+        if (!numPixels.isNull()) {
+            currentDx = numPixels.x();
+            currentDy = numPixels.y();
+        } else if (!numDegrees.isNull()) {
+            currentDx = (numDegrees.x() / 15.0) * 20.0;
+            currentDy = (numDegrees.y() / 15.0) * 20.0;
+        }
+
+        // Tap-to-Stop Fallback: In case your tap registered a tiny 1-pixel micro-movement
+        if (event->phase() == Qt::ScrollBegin) {
+            kineticScrollTimer.stop();
+            kineticVelocityX = 0;
+            kineticVelocityY = 0;
+        }
+
+        // Boost the raw OS input to give it massive launch speed
+        qreal flickMultiplier = 3.0; // Adjust this to hit your 200-icon goal
+        qreal targetVx = currentDx * flickMultiplier;
+        qreal targetVy = currentDy * flickMultiplier;
+
+        // The Hijack Engine: Only accept speeds that are FASTER than our current glide.
+        // This genius trick allows us to absorb and completely ignore the OS's
+        // short rapid-decay momentum events, keeping only the absolute peak velocity!
+        if ((targetVx > 0 && kineticVelocityX <= 0) || (targetVx < 0 && kineticVelocityX >= 0)) {
+            kineticVelocityX = targetVx; // Clean direction change
+        } else {
+            if (targetVx > 0) kineticVelocityX = qMax(kineticVelocityX, targetVx);
+            else if (targetVx < 0) kineticVelocityX = qMin(kineticVelocityX, targetVx);
+        }
+
+        if ((targetVy > 0 && kineticVelocityY <= 0) || (targetVy < 0 && kineticVelocityY >= 0)) {
+            kineticVelocityY = targetVy; // Clean direction change
+        } else {
+            if (targetVy > 0) kineticVelocityY = qMax(kineticVelocityY, targetVy);
+            else if (targetVy < 0) kineticVelocityY = qMin(kineticVelocityY, targetVy);
+        }
+
+        if (!kineticScrollTimer.isActive() && (qAbs(kineticVelocityX) > 0.1 || qAbs(kineticVelocityY) > 0.1)) {
+            kineticScrollTimer.start(16);
+        }
+
+        return; // Done.
     }
-    wheelSpinningOnEntry = false;
 
-    static int deltaSum = 0;
-    static int prevDelta = 0;
-    int delta = event->angleDelta().y();
-    // change direction?
-    if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
-        deltaSum = delta;
+    QListView::wheelEvent(event);
+}
+
+void IconView::applyKineticScroll()
+{
+    // 1. Base friction (Ensure kineticFriction in your header is ~0.99)
+    kineticVelocityX *= kineticFriction;
+    kineticVelocityY *= kineticFriction;
+
+    // 2. Linear Drag (Replaces the broken 'easingFactor')
+    // This forces a clean, smooth stop at the end of the glide.
+    qreal linearDrag = 0.5;
+
+    if (kineticVelocityX > 0) kineticVelocityX = qMax(0.0, kineticVelocityX - linearDrag);
+    else if (kineticVelocityX < 0) kineticVelocityX = qMin(0.0, kineticVelocityX + linearDrag);
+
+    if (kineticVelocityY > 0) kineticVelocityY = qMax(0.0, kineticVelocityY - linearDrag);
+    else if (kineticVelocityY < 0) kineticVelocityY = qMin(0.0, kineticVelocityY + linearDrag);
+
+    // 3. Accumulate fractional pixel movements
+    scrollAccumulatorX += kineticVelocityX;
+    scrollAccumulatorY += kineticVelocityY;
+
+    // 4. Extract integer pixels to move
+    int dx = static_cast<int>(scrollAccumulatorX);
+    int dy = static_cast<int>(scrollAccumulatorY);
+
+    if (dx != 0 || dy != 0) {
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value() - dx);
+        verticalScrollBar()->setValue(verticalScrollBar()->value() - dy);
+
+        scrollAccumulatorX -= dx;
+        scrollAccumulatorY -= dy;
     }
-    deltaSum += delta;
-    /*
-    qDebug() << "IconView::wheelEvent"
-             << "delta =" << delta
-             << "prevDelta =" << prevDelta
-             << "deltaSum =" << deltaSum
-             << "G::wheelSensitivity =" << G::wheelSensitivity
-                ;
-                //*/
 
-    if (qAbs(deltaSum) > G::wheelSensitivity) {
-        QListView::wheelEvent(event);
-        deltaSum = 0;
+    // 5. Clean Cutoff
+    if (qAbs(kineticVelocityX) < 1.0 && qAbs(kineticVelocityY) < 1.0) {
+        kineticScrollTimer.stop();
+        kineticVelocityX = 0;
+        kineticVelocityY = 0;
+        scrollAccumulatorX = 0;
+        scrollAccumulatorY = 0;
     }
-
-    // set spinning flag in case mouse moves to another object while still spinning
-    G::wheelSpinning = true;
-    // singleshot to flag when wheel has stopped spinning
-    wheelTimer.start(100);
-    /*
-    qDebug() << "IconView::wheelEvent"
-             << "G::wheelSpinning =" << G::wheelSpinning
-             << "wheelSpinningOnEntry =" << wheelSpinningOnEntry
-        ; //*/
 }
 
 void IconView::wheelStopped()
@@ -1185,8 +1434,6 @@ bool IconView::event(QEvent *event) {
 void IconView::showEvent(QShowEvent *event)
 {
     if (G::isInitializing || G::stop) return;
-    // QString src = "IconView::showEvent";
-    // m2->updateIconRange(true, src);
     QListView::showEvent(event);
 }
 
@@ -1312,6 +1559,7 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
         ; //*/
 
     QModelIndex sfIdx = indexAt(event->pos());
+    int sfRow = sfIdx.row();
 
     // update selection
     if (sfIdx.isValid()) {
@@ -1334,34 +1582,37 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
                 ;
                 //*/
 
-    /*
-    // if (resizeJustDone && !isCellVisible(dm->currentSfRow)) {
-    //     scrollToCurrent("IconView::resize");
-    //     resizeJustDone = false;
-    // }
-    */
-
     if (!event->modifiers() && event->button() == Qt::LeftButton && G::mode == "Loupe") {
         QString src = "IconView::mouseReleaseEvent";
-        // Capture the percent coordinates of the mouse click within the thumbnail
-        // so that the full scale image can be panned to the same point.
+
+        /* Capture the percent coordinates of the mouse click within the thumbnail
+        so that the loupe viewport full scale image can be panned to the same point.
+        */
         if (dm->currentSfIdx.isValid()) {
-            QRect iconRect =  dm->currentSfIdx.data(G::IconRectRole).toRect();
-            QPoint iconPt = event->pos() - iconRect.topLeft();
-            xPct = iconPt.x() * 1.0 / iconRect.width();
-            yPct = iconPt.y() * 1.0 / iconRect.height();
-            /* debug
-            qDebug() << "IconView::mouseReleaseEvent"
-                     << "\n currentIndex =" << currentIndex()
-                     << "\n iconRect     =" << iconRect
-                     << "\n mousePt      =" << event->pos()
-                     << "\n iconPt       =" << iconPt
-                     << "\n xPct         =" << xPct
-                     << "\n yPct         =" << yPct;
-            //*/
-            if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
-                // signal ImageView
-                emit thumbClick(xPct, yPct);
+            QRect iconRect;
+
+            /* The cached rectangle defines the thumbnail coordinates inside the
+             black border in the cell */
+            QRect *cachedRect = iconViewDelegate->thumbRectCache.object(sfRow);
+            if (cachedRect) {
+                iconRect = *cachedRect;
+                QPoint iconPt = event->pos() - iconRect.topLeft();
+                // normalize coordinates
+                xPct = iconPt.x() * 1.0 / iconRect.width();
+                yPct = iconPt.y() * 1.0 / iconRect.height();
+                /* debug
+                qDebug() << "IconView::mouseReleaseEvent"
+                         << "\n currentIndex =" << currentIndex()
+                         << "\n iconRect     =" << iconRect
+                         << "\n mousePt      =" << event->pos()
+                         << "\n iconPt       =" << iconPt
+                         << "\n xPct         =" << xPct
+                         << "\n yPct         =" << yPct;
+                //*/
+                if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
+                    // signal ImageView
+                    emit thumbClick(xPct, yPct);
+                }
             }
         }
     }
@@ -1453,374 +1704,181 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 void IconView::showLoupeRect(bool isVisible)
 {
     if (isDebug || G::isLogger) G::log("IconView::showLoupeRect", objectName());
-    // qDebug() << "IconView::showLoupeRect" << isVisible;
-    iconViewDelegate->setVpRectVisibility(isVisible);
-    refreshThumb(dm->currentSfIdx);
 
+    iconViewDelegate->setVpRectVisibility(isVisible);
+    refreshIcon(dm->currentSfIdx, "IconView::loupeRect");
 }
 
-void IconView::loupeRect(QRectF vp, qreal imA)
+void IconView::loupeRect(QSizeF vpSizeN, qreal vpA, QPointF vpCntrN, bool refresh)
 {
 /*
     Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
 */
-    if (isDebug || G::isLogger) G::log("IconView::loupeRect", objectName());
-    /*
-    qDebug() << "IconView::loupeRect"
-             << "vp =" << vp
-             << "imA =" << imA
-        ;//*/
+    if (isDebug || G::isLogger)
+        G::log("IconView::loupeRect", objectName());
+
     iconViewDelegate->setVpRectVisibility(true);
-    iconViewDelegate->setVpRect(vp, imA);
-    refreshThumb(dm->currentSfIdx);
-}
-
-QSize IconView::loupeVPinScene(QSizeF vp, QSizeF scene, QSize icon)
-{
-    // int w, h;       // zoom frame width and height in pixels
-    // int vpW = vp.width();
-    // int vpH = vp.height();
-    // int imW = scene.width();
-    // int imH = scene.height();
-    // int iconW = icon.width();
-    // int iconH = icon.height();
-    // qreal normW = vp.width() / scene.width();
-    // qreal normH = vp.height();
-
-    // if (normW < 1 || normH <= 1 ) {
-    //     // imageView is zoomed in at least one axis
-
-    //     // scale is for the side that needs to be reduced the most to fit
-    //     qreal scale = (normW < normH) ? normW : normH;
-    //     // qreal zoomFit = (normW < normH) ? normW : normH;
-    //     // qreal scale = zoomFit / zoom;
-
-    //     // iv = the cropped image visible in centralRect - the ImageView viewport
-    //     int ivW = (imW > vpW) ? vpW : imW;
-    //     int ivH = (imH > vpH) ? vpH : imH;
-    //     // aspect of iv
-    //     qreal ivA = static_cast<qreal>(vpW) / ivH;
-    //     /*
-    //     qDebug() << "IconView::zoomCursor" << "cW =" << cW << "cH =" << cH
-    //                              << "ivW =" << ivW << "ivH =" << ivH << "ivA =" << ivA
-    //                              << "hScale =" << hScale << "vScale =" << vScale;
-    //     //*/
-
-    //     /* some brands create thumbnails with black borders, which are not part of the
-    //     image, and should be excluded. The long side (ie width if landscape, height if
-    //     portrait, will not have a black border. Using that side and the aspect of the
-    //     original image can give the correct length for the other side of the thumbnail.
-    //     */
-    //     int iconW, iconH;
-    //     if (imA > 1) {
-    //         iconW = iconRect.width();
-    //         iconH = static_cast<int>(iconW / imA);
-    //     }
-    //     else {
-    //         iconH = iconRect.height();
-    //         iconW = static_cast<int>(iconH * imA);
-    //     }
-
-    //     // determine cursor frame dimensions: w, h
-    //     if (normW < normH) {
-    //         w = static_cast<int>(iconW * scale);
-    //         h = static_cast<int>(w / ivA);
-    //     }
-    //     else {
-    //         h = static_cast<int>(iconH * scale);
-    //         w = static_cast<int>(h * ivA);
-    //     }
-
-    //     if (w > iconRect.width()) w = iconRect.width();
-    //     if (h > iconRect.height()) h = iconRect.height();
-
-    //     QString whichScale = normW < normH ? "hScale" : "vScale";
-    //     /*
-    //     qDebug() << "IconView::zoomCursor"
-    //              << whichScale
-    //              << "ivW =" << ivW
-    //              << "ivH =" << ivH
-    //              << "w =" << w
-    //              << "h =" << h
-    //              << "ivA =" << ivA;
-    //     */
-    //     /*
-    //         qDebug() << "IconView::zoomCursor"
-    //                  << "zoom =" << zoom
-    //                  << "zoomFit =" << zoomFit
-    //                  << "iconRect =" << iconRect
-    //                  << "imW =" << imW
-    //                  << "imH =" << imH
-    //                  << "imA =" << imA
-    //                  << "ivW =" << ivW
-    //                  << "ivH =" << ivH
-    //                  << "cW =" << cW
-    //                  << "cH =" << cH
-    //                  << "hScale =" << hScale
-    //                  << "vScale =" << vScale
-    //                  << "scale =" << scale
-    //                  << "iconW =" << iconW
-    //                  << "iconH =" << iconH
-    //                  << "w =" << w
-    //                  << "h =" << h
-    //                  << "ivA =" << ivA;
-    //     //            */
-    // }
-    // else {
-    //     // imageView smaller than central widget so no cropping
-    //     w = iconRect.width();
-    //     h = iconRect.height();
-    // }
-
-     return QSize(1, 1);
-}
-
-QPixmap IconView::drawLoupeVPRect(int w, int h)
-{
-    // w = width of box in cell
-    // h = height of box in cell
-
-    // check if mac Accessibility has scaled pointer size
-    float scale = 1.0;
-#ifdef Q_OS_MAC
-    scale = Mac::getMouseCursorMagnification();
-    if (scale == 0) scale = 1;
-#endif
-    w /= scale;
-    h /= scale;
-
-    // make room for border
-    int pw = 1;                                     // pen width
-    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
-    h += (pw * 8);
-    cursorRect = QRect(0, 0, w, h);
-    /*
-    qDebug() << "IconView::zoomCursor" << cursorRect << G::actDevicePixelRatio << G::sysDevicePixelRatio;
-    //*/
-    auto frame = QImage(w, h, QImage::Format_ARGB32);
-    int opacity = 0;                                // Set this between 0 and 255
-    frame.fill(QColor(0,0,0,opacity));
-    QPen oPen, iPen;
-    oPen.setWidth(pw);
-    iPen.setWidth(pw);
-    oPen.setColor(Qt::white);
-    iPen.setColor(Qt::black);
-    QRect oBorder(0, 0, w-pw-1, h-pw-1);            // outer border
-    QRect iBorder(pw, pw, w-3*pw-1, h-3*pw-1);      // inner border
-    QPainter p(&frame);
-    p.setPen(oPen);
-    p.drawRect(oBorder);
-    p.setPen(iPen);
-    p.drawRect(iBorder);
-    return QPixmap::fromImage(frame);
+    iconViewDelegate->setNormVpRect(vpSizeN, vpA, vpCntrN);
+    if (refresh) refreshIcon(dm->currentSfIdx, "IconView::loupeRect");
 }
 
 void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
 {
 /*
     Turns the cursor into a frame showing the cropped ImageView zoom window in the
-    thumbnail. This is handy for the user to see where a click on thumbnail to instantly
-    pan to in same spot in the imageView zoomed window.
+    thumbnail. This is handy for the user to see where a click on thumbnail to
+    instantly pan to the same spot in the imageView zoomed window.
 
-    This is predicated on the zoom > zoomFit and the mouse position pointing to a valid
-    thumbnail. This function is called from MW::eventFilter when there is mouse movement
-    in the thumbView viewport. It is also called from MW::thumbHasScrolled as the mouse
-    pointer might be on a different thumbnail after the thumbnails scroll. Finally it is
-    called when there is a window resize MW::resizeEvent that will change the
-    centralWidget geometry.
+    This is predicated on the zoom > zoomFit and the mouse position pointing to a
+    valid thumbnail.
 
-    scene           - the extent of full image in ImageView
-    vp              - ImageView viewport into scene
-    icon            - the icon here in IconView
+    - This function is called from MW::eventFilter when there is mouse movement in
+      the thumbView viewport.
+
+    - It is called from MW::thumbHasScrolled as the mouse pointer might be on a
+      different thumbnail after the thumbnails scroll.
+
+`   - It is called from MW::thumbsEnlarge and MW::thumbsShrink.
+
+    - It is called when there is a window resize MW::resizeEvent that will change
+      the centralWidget geometry.
+
+
+
+    i       - The source preview image (ImageView scene)
+    vp      - ImageView viewport into scene (central widget)
+    icon    - the thumbnail in the icon cell
+    zc      - the zoom cursor box
+    N       - normalized
+
 */
-    QSizeF scene = m2->imageView->scene->sceneRect().size();
-    QSizeF vp = m2->imageView->viewport()->size();
-    QSize cell = idx.data(G::IconRectRole).toRect().size();
+    QString srcFun = "IconView::zoomCursor";
+    if (isDebug)
+        G::log(srcFun, objectName() +
+               " row " + QString::number(idx.row()));
 
-    if (isDebug) G::log("IconView::zoomCursor", objectName());
+    // Guards
+    if (!idx.isValid()) return;
+    if (G::stop) return;
+    int sfRow = idx.row();
+    if (m2->imageView->zoom <= m2->imageView->zoomFit) return;
+    if (dm->sf->index(sfRow, G::VideoColumn).data().toBool()) return;
+    if (!showZoomFrame) return;
+    if (G::isEmbellish) return;
+    if (G::isInitializing) return;
+
+    // preview scene dimensions
+    qreal iW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toReal();
+    qreal iH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toReal();
+    qreal iA = dm->sf->index(idx.row(), G::AspectRatioColumn).data().toReal();
+    // swap width / height if portrait
+    if (iA < 1) {
+        qSwap(iW, iH);
+    }
+
+    // viewport
+    QSize vpSize = m2->imageView->viewportInScene();
+    int vpW = vpSize.width();
+    int vpH = vpSize.height();
+
+    // normalized viewport
+    qreal vpWN = static_cast<qreal>(vpW) / iW;
+    qreal vpHN = static_cast<qreal>(vpH) / iH;
+    // qreal vpA = static_cast<qreal>(vpW) / vpH;
+
+    // thumbnail excluding any black border (t)
+    QRect *thumbRect = iconViewDelegate->thumbRectCache.object(sfRow);
+    int tW = thumbRect->width();
+    int tH = thumbRect->height();
+
+    // zoom cursor size
+    int w = qRound(vpWN * tW);
+    int h = qRound(vpHN * tH);
+
+    // if zoom cursor larger than thumbRect then do not show
+    if (w > tW && h > tH) return;
+
     /*
-    qDebug() << "IconView::zoomCursor"
-             << "src =" << src
-             << idx
-             << "forceUpdate =" << forceUpdate
-             << "isFit =" << m2->imageView->isFit
-             << mousePos;
-             //*/
+    qDebug().noquote()
+      << srcFun.leftJustified(40)
+      << "sfRow =" << idx.row()
+      << "iW =" << iW
+      << "iH =" << iH
+      << "vpW =" << vpW
+      << "vpH =" << vpH
+      << "vpWN =" << vpWN
+      << "vpHN =" << vpHN
+      << "tW =" << tW
+      << "tH =" << tH
+      << "iA =" << static_cast<qreal>(iW) / iH
+      // << "vpA =" << vpA
+      << "tA =" << tA
+      << "w =" << w
+      << "h =" << h
+      << "thumbRect =" << *thumbRect
+      ; //*/
 
-    // check for failures
-    QString failReason = "";
-    if (G::isEmbellish) failReason = "G::isEmbellish";
-    if (G::isInitializing) failReason = "G::isInitializing";
-    if (G::stop) failReason = "G::stop";
-    bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-    if (isVideo) failReason = "isVideo";
+    #ifdef Q_OS_MAC
+        float scale = Mac::getMouseCursorMagnification();
+        if (scale < 0.001) scale = 1.0;
+        w /= scale;
+        h /= scale;
+    #endif
 
-    if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
-        setCursor(Qt::ArrowCursor);
-        prevIdx = model()->index(-1, -1);
-        failReason = "mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness";
-    }
+    // make room for white/black border
+    int pw = 1;                             // pen width
+    w += (pw * 6);                          // 2 pens + 2 sides + 2 gaps
+    h += (pw * 6);
 
-    if (QGuiApplication::queryKeyboardModifiers()) {
-        setCursor(Qt::ArrowCursor);
-        failReason = "Key modifier pressed";
-    }
+    QPointF cntr(w / 2.0, h / 2.0);
 
-    if (!showZoomFrame) failReason = "!showZoomFrame";
-    if (!idx.isValid()) failReason = "!idx.isValid()";
-    if (m2->imageView->isFit) failReason = "m2->imageView->isFit";
+    // Create the clipping rectangle in pixmap-local coordinates
+    QRectF clipRect;
+    clipRect.setLeft(   (thumbRect->left()   - mousePos.x()) / scale + cntr.x() );
+    clipRect.setTop(    (thumbRect->top()    - mousePos.y()) / scale + cntr.y() );
+    clipRect.setRight(  (thumbRect->right()  - mousePos.x()) / scale + cntr.x() );
+    clipRect.setBottom( (thumbRect->bottom() - mousePos.y()) / scale + cntr.y() );
 
-    // preview dimensions
-    int imW = scene.width();
-    int imH = scene.height();
-    if (imW == 0 || imH == 0) failReason = "Zero width or height";
+    QPixmap frame(w, h);
+    frame.fill(Qt::transparent);
 
-    qreal zoom = m2->imageView->zoom;
-    imW = static_cast<int>(imW * zoom);
-    imH = static_cast<int>(imH + zoom);
-    qreal imA = static_cast<qreal>(imW) / imH;
+    QPen oPen, iPen;
+    oPen.setWidth(pw);
+    iPen.setWidth(pw);
+    oPen.setColor(Qt::white);
+    iPen.setColor(Qt::black);
 
-    int vpW = vp.width();
-    int vpH = vp.height();
-    /*
-    qDebug() << "IconView::zoomCursor" << idx
-             << "cW =" << vpW << "cH =" << vpH
-             << "imW =" << imW << "imH =" << imH
-             << "scene" << scene
-             << "vp" << vp
-             << "cell" << cell
-    ;
-//        */
-    if (imW < vpW && imH < vpH) {
-        setCursor(Qt::ArrowCursor);
-        prevIdx = model()->index(-1, -1);
-        failReason = "imW < cW && imH < cH";
-    }
+    QPainter p(&frame);
+    p.setRenderHint(QPainter::Antialiasing, false); // Keep lines crisp
+    p.setClipping(true);
+    p.setClipRect(clipRect);
 
-    /* // debugging
-    if (failReason.length()) {
-        qDebug() << "WARNING IconView::zoomCursor Failed because" << failReason;
-        QString msg = "Failed because " + failReason + ".";
-        G::issue("Warning", msg, "IconView::zoomCursor");
-    }
-    else {
-        qDebug() << "IconView::zoomCursor" << "Succeeded";
-    }
-    //*/
+    // --- Draw Borders ---
+    QRect oBorder(0, 0, w, h);            // outer border
+    p.setPen(oPen);
+    p.drawRect(oBorder.adjusted(1, 1, -1, -1));
+    p.setPen(iPen);
+    p.drawRect(oBorder.adjusted(2, 2, -2, -2));
 
-    if (failReason.length()) return;
+    // --- Draw Crosshair ---
+    int midX = w / 2;
+    int midY = h / 2;
+    int chLen = 8;
+    int limit = qMin(w, h);
+    if (chLen * 2 > limit) chLen = limit / 2;
 
-    prevIdx = idx;
+    // Draw White horizontal and vertical base
+    p.setPen(oPen);
+    p.drawLine(midX - chLen, midY, midX + chLen, midY);
+    p.drawLine(midX, midY - chLen, midX, midY + chLen);
 
-    // QSizeF vp(static_cast<qreal>(cW) / imW, static_cast<qreal>(cH) / imH);
+    // Draw Black center lines to create the "sandwich" effect matching the border
+    p.setPen(iPen);
+    int p2 = pw * 2;
+    p.drawLine(midX - chLen + p2, midY, midX + chLen - p2, midY);
+    p.drawLine(midX, midY - chLen + p2, midX, midY + chLen - p2);
 
-    // QRect iconRect = idx.data(G::IconRectRole).toRect();
-
-    // QSize box = loupeVPinScene(vp, iconRect , centralRect);
-    // int w = box.width();
-    // int h = box.height();
-    /*
-    qDebug() << "IconView::zoomCursor"
-             << "idx =" << idx
-             << "idx.data(G::IconRectRole) =" << idx.data(G::IconRectRole)
-             << "iconRect =" << iconRect;
-    //*/
-
-    // /*
-    // normalized scale of ImageView viewport in scene
-    qreal hScale = static_cast<qreal>(vpW) / imW;
-    qreal vScale = static_cast<qreal>(vpH) / imH;
-
-    QRect iconRect = idx.data(G::IconRectRole).toRect();
-    int w, h;       // zoom frame width and height in pixels
-
-    if (hScale < 1 || vScale <= 1 ) {
-        // imageView is zoomed in at least one axis
-
-        // scale is for the side that needs to be reduced the most to fit
-        qreal zoomFit = (hScale < vScale) ? hScale : vScale;
-        qreal scale = zoomFit / zoom;
-
-        // iv = the cropped image visible in centralRect - the ImageView viewport
-        int ivW = (imW > vpW) ? vpW : imW;
-        int ivH = (imH > vpH) ? vpH : imH;
-        // aspect of iv
-        qreal ivA = static_cast<qreal>(ivW) / ivH;
-        /*
-        qDebug() << "IconView::zoomCursor" << "cW =" << cW << "cH =" << cH
-                                 << "ivW =" << ivW << "ivH =" << ivH << "ivA =" << ivA
-                                 << "hScale =" << hScale << "vScale =" << vScale;
-        //*/
-
-        /* some brands create thumbnails with black borders, which are not part of the
-        image, and should be excluded. The long side (ie width if landscape, height if
-        portrait, will not have a black border. Using that side and the aspect of the
-        original image can give the correct length for the other side of the thumbnail.
-        */
-        int iconW, iconH;
-        if (imA > 1) {
-            iconW = iconRect.width();
-            iconH = static_cast<int>(iconW / imA);
-        }
-        else {
-            iconH = iconRect.height();
-            iconW = static_cast<int>(iconH * imA);
-        }
-
-        // determine cursor frame dimensions: w, h
-        if (hScale < vScale) {
-            w = static_cast<int>(iconW * scale);
-            h = static_cast<int>(w / ivA);
-        }
-        else {
-            h = static_cast<int>(iconH * scale);
-            w = static_cast<int>(h * ivA);
-        }
-
-        if (w > iconRect.width()) w = iconRect.width();
-        if (h > iconRect.height()) h = iconRect.height();
-
-        QString whichScale = hScale < vScale ? "hScale" : "vScale";
-        /*
-        qDebug() << "IconView::zoomCursor"
-                 << whichScale
-                 << "ivW =" << ivW
-                 << "ivH =" << ivH
-                 << "w =" << w
-                 << "h =" << h
-                 << "ivA =" << ivA;
-                    //*/
-        /*
-            qDebug() << "IconView::zoomCursor"
-                     << "zoom =" << zoom
-                     << "zoomFit =" << zoomFit
-                     << "iconRect =" << iconRect
-                     << "imW =" << imW
-                     << "imH =" << imH
-                     << "imA =" << imA
-                     << "ivW =" << ivW
-                     << "ivH =" << ivH
-                     << "cW =" << cW
-                     << "cH =" << cH
-                     << "hScale =" << hScale
-                     << "vScale =" << vScale
-                     << "scale =" << scale
-                     << "iconW =" << iconW
-                     << "iconH =" << iconH
-                     << "w =" << w
-                     << "h =" << h
-                     << "ivA =" << ivA;
-        //            */
-    }
-    else {
-        // imageView smaller than central widget so no cropping
-        w = iconRect.width();
-        h = iconRect.height();
-    }
-    //*/
-
-    // draw the new cursor as a frame
-    setCursor(QCursor(drawLoupeVPRect(w, h)));
+    setCursor(QCursor(frame));
 }
 
 void IconView::startDrag(Qt::DropActions)
@@ -1829,7 +1887,7 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program or folder in FSTree.
 */
     if (isDebug) G::log("IconView::startDrag", objectName());
-    qDebug() << "IconView::startDrag" << objectName();
+    // qDebug() << "IconView::startDrag" << objectName();
 
     isMouseDrag = false;
 

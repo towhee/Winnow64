@@ -1,4 +1,5 @@
 #include "tiff.h"
+#include "Metadata/metareport.h"
 
 /*
 
@@ -18,17 +19,18 @@ LibTiff
     • https://libtiff.gitlab.io/libtiff/libtiff.html
     • /Users/roryhill/Qt/6.6.0/Src/qtimageformats/src/3rdparty/libtiff/libtiff
 
-    Copilot: How embed jpg thumbnail in existing till file?
+    Copilot: How embed jpg thumbnail in existing tiff file?
 
-    1. Open the Existing TIFF File: Begin by opening your existing TIFF file using the
-       TIFFOpen function in write mode.
+    1. Open the Existing TIFF File: Begin by opening your existing TIFF file using
+       the TIFFOpen function in write mode.
 
     2. Create the Thumbnail Data: Generate your JPEG thumbnail data. This thumbnail
        should be a valid JPEG image extracted from the main image. You can resize the
        main image or create a separate thumbnail image.
 
     3. Set the TIFFTAG_JPEGTABLES Field: Use the TIFFSetField function to set the
-       TIFFTAG_JPEGTABLES field. Pass the JPEG thumbnail data as the value for this field.
+       TIFFTAG_JPEGTABLES field. Pass the JPEG thumbnail data as the value for this
+       field.
 
     4. Write the Main IFD: Finally, write your main IFD (Image File Directory)
        using TIFFWriteDirectory. Here’s an updated example in C++:
@@ -39,16 +41,17 @@ LibTiff
     const unsigned char jpeg_thumbnail_data[] = { Your JPEG data here };
 
     // Set the TIFFTAG_JPEGTABLES field:
-    if (!TIFFSetField(existing_TIFF, TIFFTAG_JPEGTABLES, sizeof(jpeg_thumbnail_data), jpeg_thumbnail_data)) {
+    if (!TIFFSetField(existing_TIFF, TIFFTAG_JPEGTABLES, sizeof(jpeg_thumbnail_data),
+                      jpeg_thumbnail_data)) {
         // Handle the error if setting the field fails.
     }
 
     // Write the main IFD:
     TIFFWriteDirectory(existing_TIFF);
 
-    Remember to replace the placeholder jpeg_thumbnail_data with your actual JPEG thumbnail
-    data extracted from the main image. This approach will embed the thumbnail within your
-    existing TIFF file.
+    Remember to replace the placeholder jpeg_thumbnail_data with your actual JPEG
+    thumbnail data extracted from the main image. This approach will embed the
+    thumbnail within your existing TIFF file.
 
     End Copilot answer
 
@@ -59,11 +62,11 @@ bool showDebug = false;
 class parseInStream
 {
 /*
-    The incoming stream is read 8 bits at a time into a bit buffer called pending. The
-    buffer is consumed (most significant) n bits at a time (inCode), where n = codesize.
-    currCode starts at 258 and is incremented each time an inCode is consumed. codeSize
-    starts at 9 bits, and is incremented each time currCode exceeds the bit capacity.
-    codeSize maximum is 12 bits.
+    The incoming stream is read 8 bits at a time into a bit buffer called pending.
+    The buffer is consumed (most significant) n bits at a time (inCode), where
+    n = codesize. currCode starts at 258 and is incremented each time an inCode is
+    consumed. codeSize starts at 9 bits, and is incremented each time currCode
+    exceeds the bit capacity. codeSize maximum is 12 bits.
 
 */
 public :
@@ -79,11 +82,11 @@ public :
     bool operator>>(quint32 &inCode)
     {
         /*
-            pending = 32bit buffer                    00000000 00000000 0XXXXXXX XXXXXXXX
-            availBits ie 15                                              XXXXXXX XXXXXXXX
-            codeSize  ie 9 bits                                          XXXXXXX XX
-            availBits -= codeSize                                                  XXXXXX
-            mask (1 << availBits) - 1                                              111111
+            pending = 32bit buffer               00000000 00000000 0XXXXXXX XXXXXXXX
+            availBits ie 15                                         XXXXXXX XXXXXXXX
+            codeSize  ie 9 bits                                     XXXXXXX XX
+            availBits -= codeSize                                             XXXXXX
+            mask (1 << availBits) - 1                                         111111
         */
         /* debugging
         QDebug debug = qDebug();
@@ -91,8 +94,8 @@ public :
         //*/
         while (availBits < codeSize)
         {
-            char c;                                 // 00111011 (example)
-            if (!input.readRawData(&c, 1))          // 00000000 00000000 00000000 00XXXXXX
+            char c;                           // 00111011 (example)
+            if (!input.readRawData(&c, 1))    // 00000000 00000000 00000000 00XXXXXX
                 return false;
             /* debugging
             if (showDebug) {
@@ -247,6 +250,7 @@ bool Tiff::parse(MetadataParameters &p,
     if (ifd->ifdDataHash.contains(34853))
         offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
 
+    // probable embedded thumbnail
     quint32 ifdPhotoshopOffset = 0;
     if (ifd->ifdDataHash.contains(34377))
         ifdPhotoshopOffset = ifd->ifdDataHash.value(34377).tagValue;
@@ -374,35 +378,19 @@ bool Tiff::parse(MetadataParameters &p,
 
     // Chained IFDs ************************************************************
     // search for lastIFDOffset and existing thumbnail
-    parseIFDs(p, m, ifd, nextIFDOffset, thumbLongside, "IFD");
-    if (!lastIFDOffsetPosition) lastIFDOffsetPosition = p.file.pos() - 4;
+    if (!m.lengthThumb) {
+        parseIFDs(p, m, ifd, nextIFDOffset, thumbLongside, "IFD");
+        if (!lastIFDOffsetPosition) lastIFDOffsetPosition = p.file.pos() - 4;
+    }
+    // if (!m.lengthThumb) {
 
     // subIFDs: ****************************************************************
-    /* If save tiff with save pyramid in photoshop then subIFDs created. Iterate to report and
-       possibly read smallest for thumbnail. */
+    /* If save tiff with save pyramid in photoshop then subIFDs created. Iterate to report
+       and possibly read smallest for thumbnail. */
     if (ifdsubIFDOffset) {
         nextIFDOffset = ifdsubIFDOffset;
         parseIFDs(p, m, ifd, nextIFDOffset, thumbLongside, "subIFD");
     }
-
-    // // Create thumbnail if ok and missing
-    // if (G::modifySourceFiles &&
-    //     G::autoAddMissingThumbnails &&
-    //     m.offsetThumb == m.offsetFull &&
-    //     thumbLongside > 512)
-    // {
-    //     p.offset = m.offsetThumb;        // Smallest preview to use
-    //     encodeThumbnail(p, m, ifd);
-    //     // write thumbnail added to xmp sidecar if writing sidecars
-    //     if (G::useSidecar) {
-    //         Xmp xmp(p.file, p.instance);
-    //         if (xmp.isValid) {
-    //             QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
-    //             xmp.setItem("WinnowAddThumb", val);
-    //             // xmp.writeSidecar(p.file);
-    //         }
-    //     }
-    // }
 
     // EXIF: *******************************************************************
 
@@ -523,6 +511,7 @@ bool Tiff::parse(MetadataParameters &p,
     if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
+            p.xmpModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
             m.rating = xmp.getItem("Rating");
             m.label = xmp.getItem("Label");
             m.title = xmp.getItem("title");
@@ -556,7 +545,12 @@ quint32 Tiff::parseIFDs(MetadataParameters &p, ImageMetadata &m, IFD *ifd,
                      quint32 &nextIFDOffset, int &thumbLongside, QString hdr)
 {
     int count = 0;
+    QSet<quint32> visited;
+    const int kMaxIFDs = 32;
     while (nextIFDOffset) {
+        // Guard against malformed IFD chains: bounded depth + cycle detection.
+        if (count >= kMaxIFDs || visited.contains(nextIFDOffset)) break;
+        visited.insert(nextIFDOffset);
         count ++;
         p.hdr = hdr + " " + QString::number(count);
         p.offset = nextIFDOffset;
@@ -638,9 +632,16 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
     p.report = isReport;
     err = "";
 
+    // Sanity bound on file-controlled strip counts to prevent gigabyte allocations.
+    const quint32 kMaxStrips = 100000;
+
     // strip offsets
     if (ifd->ifdDataHash.contains(273)) {
-        int offsetCount = ifd->ifdDataHash.value(273).tagCount;
+        quint32 offsetCount = ifd->ifdDataHash.value(273).tagCount;
+        if (offsetCount > kMaxStrips) {
+            err = "stripOffsets count " + QString::number(offsetCount) + " exceeds limit.  \n";
+            return false;
+        }
         stripOffsets.resize(offsetCount);
         if (offsetCount == 1) {
             stripOffsets[0] = static_cast<uint>(ifd->ifdDataHash.value(273).tagValue);
@@ -648,7 +649,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
         else {
             quint32 offset = ifd->ifdDataHash.value(273).tagValue;
             p.file.seek(offset);
-            for (int i = 0; i < offsetCount; ++i) {
+            for (quint32 i = 0; i < offsetCount; ++i) {
                 stripOffsets[i] = u.get32(p.file.read(4), isBigEnd);
             }
         }
@@ -659,23 +660,22 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
 
     // strip byte counts
     if (ifd->ifdDataHash.contains(279)) {
-        int stripCount = ifd->ifdDataHash.value(279).tagCount;
-//        if (stripCount < 100000) {
-            stripByteCounts.resize(stripCount);
-            if (stripCount == 1) {
-                stripByteCounts[0] = static_cast<uint>(ifd->ifdDataHash.value(279).tagValue);
+        quint32 stripCount = ifd->ifdDataHash.value(279).tagCount;
+        if (stripCount > kMaxStrips) {
+            err = "stripByteCounts count " + QString::number(stripCount) + " exceeds limit.  \n";
+            return false;
+        }
+        stripByteCounts.resize(stripCount);
+        if (stripCount == 1) {
+            stripByteCounts[0] = static_cast<uint>(ifd->ifdDataHash.value(279).tagValue);
+        }
+        else {
+            quint32 offset = ifd->ifdDataHash.value(279).tagValue;
+            p.file.seek(offset);
+            for (quint32 i = 0; i < stripCount; ++i) {
+                stripByteCounts[i] = u.get32(p.file.read(4), isBigEnd);
             }
-            else {
-                quint32 offset = ifd->ifdDataHash.value(279).tagValue;
-                p.file.seek(offset);
-                for (int i = 0; i < stripCount; ++i) {
-                    stripByteCounts[i] = u.get32(p.file.read(4), isBigEnd);
-                }
-            }
-//        }
-//        else {
-//            err = "stripCount > 100000.  \n";
-//        }
+        }
     }
     else {
         err = "No StripByteCounts.  \n";
@@ -961,7 +961,12 @@ bool Tiff::decodeBase(MetadataParameters &p)
     int strips = stripOffsets.count();
     int line = 0;
     quint32 scanBytes = 0;
-    const quint32 totalScanBytes = width * height * bytesPerPixel;
+    // Compute in 64-bit and cap at 1 GB to defuse width/height/bpp overflow attacks.
+    if (width <= 0 || height <= 0 || bytesPerPixel <= 0) return false;
+    const quint64 totalScanBytes64 =
+        static_cast<quint64>(width) * static_cast<quint64>(height) * static_cast<quint64>(bytesPerPixel);
+    if (totalScanBytes64 > (1ULL << 30)) return false;
+    const quint32 totalScanBytes = static_cast<quint32>(totalScanBytes64);
 
     // Ensure the file is open and ready for reading
     if (!p.file.isOpen()) {
@@ -1195,8 +1200,8 @@ bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
     create the thumb by subsampling another IFD image in the tiff.
 
     Steps:
-        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
-          will be appended.
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail
+          IFD will be appended.
         - add new IFD at end of chain, starting with the number of IFD items (15).
         - add IFD items:
             Num  tagId tagType  tagCount    tagValue   tagDescription
@@ -1311,14 +1316,15 @@ bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
 bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
 /*  NOT BEING USED
-    If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
-    thumbnail with a longside of G::maxIconSize to the tiff file. This involves appending
-    an IFD to the end of the IFD chain and sampling the smallest existing IFD preview
-    (source) to the new thumbnail.
+
+    If an image preview (thumbnail) with a longside <= 512px does not exist, then
+    add a thumbnail with a longside of G::maxIconSize to the tiff file. This
+    involves appending an IFD to the end of the IFD chain and sampling the smallest
+    existing IFD preview (source) to the new thumbnail.
 
     Steps:
-        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
-          will be appended.
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail
+          IFD will be appended.
         - add new IFD at end of chain, starting with the number of IFD items (15).
         - add IFD items:
             Num  tagId tagType  tagCount    tagValue   tagDescription
@@ -1441,14 +1447,15 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
     /* NOT BEING USED
-    If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
-    thumbnail with a longside of G::maxIconSize to the tiff file. This involves appending
-    an IFD to the end of the IFD chain and sampling the smallest existing IFD preview
-    (source) to the new thumbnail.
+
+    If an image preview (thumbnail) with a longside <= 512px does not exist, then
+    add a thumbnail with a longside of G::maxIconSize to the tiff file. This
+    involves appending an IFD to the end of the IFD chain and sampling the smallest
+    existing IFD preview (source) to the new thumbnail.
 
     Steps:
-        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD
-          will be appended.
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail
+          IFD will be appended.
         - add new IFD at end of chain, starting with the number of IFD items (15).
         - add IFD items:
             Num  tagId tagType  tagCount    tagValue   tagDescription
@@ -1470,8 +1477,8 @@ bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         - subsample image down to thumbnail resolution
         - write strip pixels rgb at offset StripOffsets
 
-    p.offset must be set to ifdOffset that describes the source image to be sampled to
-    create the thumbnail before calling this function.
+    p.offset must be set to ifdOffset that describes the source image to be sampled
+    to create the thumbnail before calling this function.
 */
     if (G::isLogger || isDebug) G::log("Tiff::encodeThumbnail", p.fPath + " Source = " + source);
     // get decoding parameters from source IFD (p.offset must be preset)
@@ -1574,8 +1581,12 @@ bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     return true;
 }
 
-void Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
+bool Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
 {
+/*
+
+*/
+    QString srcFun = "Tiff::embedIRBThumbnail";
     // convert QImage to QByteArray
     QByteArray jpegData;
     QBuffer buffer(&jpegData); // Create a buffer that writes to jpegData
@@ -1585,8 +1596,8 @@ void Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
     // Open the TIFF file
     TIFF *tif = TIFFOpen(tiffPath.toUtf8().constData(), "r+");
     if (!tif) {
-        qWarning() << "Failed to open TIFF file:" << tiffPath;
-        return;
+        qWarning() << srcFun << "Failed to open TIFF file:" << tiffPath;
+        return false;
     }
 
     qDebug() << "Tiff::embedIRBThumbnail" << tiffPath;
@@ -1597,22 +1608,12 @@ void Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
 
     // IRB ID (1036 for JPEG thumbnail, in big-endian)
     irbData.append(Utilities::put16(1036));
-    // irbData.append(char(0x04)); // High byte
-    // irbData.append(char(0x0C)); // Low byte
 
     // Empty name (Pascal string, length = 0)
     irbData.append(Utilities::put16(0));
-    // irbData.append(char(0x00));
-    // irbData.append(char(0x00));
-    // irbData.append(char(0x00));
-    // irbData.append(char(0x00));
 
     // Size of the JPEG data (4 bytes, big-endian)
     irbData.append(Utilities::put32(jpegData.size()));
-    // irbData.append((jpegData.size() >> 24) & 0xFF);
-    // irbData.append((jpegData.size() >> 16) & 0xFF);
-    // irbData.append((jpegData.size() >> 8) & 0xFF);
-    // irbData.append(jpegData.size() & 0xFF);
 
     // JPEG data
     irbData.append(jpegData);
@@ -1622,6 +1623,8 @@ void Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
 
     // Finalize and close
     TIFFClose(tif);
+
+    return true;
 }
 
 void Tiff::perChannelToInterleave(QImage *im1)
@@ -2429,7 +2432,8 @@ bool Tiff::jpgDecompress(TiffStrip &t, MetadataParameters &p)
 /*************************************************************************************************
 QTTIFFHANDLER SOURCE
 https://github.com/GarageGames/Qt/blob/master/qt-5/qtimageformats/src/plugins/imageformats/tiff/qtiffhandler.cpp
-Using this instead of QImage::load works for all types of TIFF files (incl jpeg compressed)
+Using this instead of QImage::load works for all types of TIFF files
+(incl jpeg compressed)
 *************************************************************************************************/
 
 QImageIOHandler::Transformations Tiff::exif2Qt(int exifOrientation)
@@ -2576,7 +2580,8 @@ bool Tiff::readHeaders(TIFF *tiff, QSize &size, QImage::Format &format,
                        QImageIOHandler::Transformations transformation)
 {
 /*
-    From QTiffHandler.cpp to assign key tiff fields and assign the right QImage format
+    From QTiffHandler.cpp to assign key tiff fields and assign the right QImage
+    format.
 */
     uint32_t width;
     uint32_t height;
@@ -2623,14 +2628,15 @@ bool Tiff::readHeaders(TIFF *tiff, QSize &size, QImage::Format &format,
     else {
         uint16_t count;
         uint16_t *extrasamples;
-        // If there is any definition of the alpha-channel, libtiff will return premultiplied
-        // data to us. If there is none, libtiff will not touch it and  we assume it to be
-        // non-premultiplied, matching behavior of tested image editors, and how older Qt
-        // versions used to save it.
-        bool premultiplied = true;
-        bool gotField = TIFFGetField(tiff, TIFFTAG_EXTRASAMPLES, &count, &extrasamples);
-        if (!gotField || !count || extrasamples[0] == EXTRASAMPLE_UNSPECIFIED)
-            premultiplied = false;
+
+        /* If there is any definition of the alpha-channel, libtiff will return
+        premultiplied data to us. If there is none, libtiff will not touch it and we
+        assume it to be non-premultiplied, matching behavior of tested image
+        editors, and how older Qt versions used to save it. */
+        bool premultiplied =
+        true; bool gotField = TIFFGetField(tiff, TIFFTAG_EXTRASAMPLES, &count,
+        &extrasamples); if (!gotField || !count || extrasamples[0] ==
+        EXTRASAMPLE_UNSPECIFIED) premultiplied = false;
 
         if (bitPerSample == 16 && photometric == PHOTOMETRIC_RGB) {
             // We read 64-bit raw, so unassoc remains unpremultiplied.
@@ -2660,6 +2666,14 @@ bool Tiff::readHeaders(TIFF *tiff, QSize &size, QImage::Format &format,
 
 bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 {
+/*
+    This is used by Winnow in ImageDecoder (decoderToUse == QtTiff).  It is the
+    only tiff decoder that works for jpg compression.
+*/
+    QString fun = "Tiff::read";
+    if (G::isLogger) G::log(fun, fPath);
+    // qDebug().noquote() << fun << "ifdOffset =" << ifdOffset << fPath;
+
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
         qDebug() << "Tiff::read Failed to open TIFF file." << fPath;
@@ -2868,8 +2882,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
             image->setDotsPerMeterY(qRound(resY * (100 / 2.54)));
             break;
         default:
-            // do nothing as defaults have already
-            // been set within the QImage class
+            // do nothing as defaults have already been set within the QImage class
             break;
         }
     }
@@ -2885,6 +2898,294 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
     // }
     // We do not handle colorimetric metadata not on ICC profile form, it seems to be a lot
     // less common, and would need additional API in QColorSpace.
+
+    return true;
+}
+
+bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOffset)
+{
+/*
+    Like read(), but allocates the QImage at thumbnail size and copies only every
+    nth source pixel into it (nearest-neighbor). libtiff's lazy strip/tile
+    decompression means most of the source pixels are never decoded for
+    compression types where libtiff can skip strips/tiles; for uncompressed
+    strip TIFFs, libtiff seeks directly to the requested scanline.
+*/
+    QString fun = "Tiff::readSample";
+    if (G::isLogger) G::log(fun, fPath);
+    // qDebug().noquote() << fun << "ifdOffset =" << ifdOffset << fPath;
+
+    TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
+    if (!tiff) {
+        qDebug() << "Tiff::readSample Failed to open TIFF file." << fPath;
+        return false;
+    }
+
+    if (ifdOffset) {
+        TIFFSetSubDirectory(tiff, ifdOffset);
+    }
+
+    QSize size;
+    QImage::Format format;
+    QImageIOHandler::Transformations transformation;
+    uint16_t photometric;
+    bool grayscale;
+    bool floatingPoint;
+
+    if (!readHeaders(tiff, size, format, photometric, grayscale, floatingPoint, transformation)) {
+        TIFFClose(tiff); tiff = nullptr;
+        qDebug() << "Tiff::readSample Failed to read headers." << fPath;
+        return false;
+    }
+
+    const quint32 srcW = size.width();
+    const quint32 srcH = size.height();
+    const quint32 srcLong = qMax(srcW, srcH);
+    quint32 nth = 1;
+    if (longSide > 0 && quint32(longSide) < srcLong)
+        nth = srcLong / quint32(longSide);
+    const quint32 outW = qMax<quint32>(1, srcW / nth);
+    const quint32 outH = qMax<quint32>(1, srcH / nth);
+
+    if (!QImageIOHandler::allocateImage(QSize(outW, outH), format, image)) {
+        TIFFClose(tiff); tiff = nullptr;
+        qDebug() << "Tiff::readSample Failed to QImageIOHandler::allocateImage." << fPath;
+        return false;
+    }
+
+    if (TIFFIsTiled(tiff) && TIFFTileSize64(tiff) > uint64_t(srcW) * srcH * 16) {
+        // sanity check: tile size shouldn't exceed full-image upper bound
+        TIFFClose(tiff); tiff = nullptr;
+        qDebug() << "Tiff::readSample Corrupt image." << fPath;
+        return false;
+    }
+
+    // Setup color tables (same logic as read())
+    if (format == QImage::Format_Mono || format == QImage::Format_Indexed8) {
+        if (format == QImage::Format_Mono) {
+            QList<QRgb> colortable(2);
+            if (photometric == PHOTOMETRIC_MINISBLACK) {
+                colortable[0] = 0xff000000;
+                colortable[1] = 0xffffffff;
+            } else {
+                colortable[0] = 0xffffffff;
+                colortable[1] = 0xff000000;
+            }
+            image->setColorTable(colortable);
+        } else if (format == QImage::Format_Indexed8) {
+            const uint16_t tableSize = 256;
+            QList<QRgb> qtColorTable(tableSize);
+            if (grayscale) {
+                for (int i = 0; i<tableSize; ++i) {
+                    const int c = (photometric == PHOTOMETRIC_MINISBLACK) ? i : (255 - i);
+                    qtColorTable[i] = qRgb(c, c, c);
+                }
+            } else {
+                uint16_t *redTable = nullptr;
+                uint16_t *greenTable = nullptr;
+                uint16_t *blueTable = nullptr;
+                if (!TIFFGetField(tiff, TIFFTAG_COLORMAP, &redTable, &greenTable, &blueTable)) {
+                    TIFFClose(tiff); tiff = nullptr;
+                    qDebug() << "Tiff::readSample Failed to get field TIFFTAG_COLORMAP." << fPath;
+                    return false;
+                }
+                if (!redTable || !greenTable || !blueTable) {
+                    TIFFClose(tiff); tiff = nullptr;
+                    return false;
+                }
+                for (int i = 0; i < tableSize ;++i) {
+                    const int red = redTable[i] >> 8;
+                    const int green = greenTable[i] >> 8;
+                    const int blue = blueTable[i] >> 8;
+                    qtColorTable[i] = qRgb(red, green, blue);
+                }
+            }
+            image->setColorTable(qtColorTable);
+        }
+    }
+
+    bool format8bit = (format == QImage::Format_Mono || format == QImage::Format_Indexed8 || format == QImage::Format_Grayscale8);
+    bool format16bit = (format == QImage::Format_Grayscale16);
+    bool format64bit = (format == QImage::Format_RGBX64 || format == QImage::Format_RGBA64 || format == QImage::Format_RGBA64_Premultiplied);
+    bool format64fp = (format == QImage::Format_RGBX16FPx4 || format == QImage::Format_RGBA16FPx4 || format == QImage::Format_RGBA16FPx4_Premultiplied);
+    bool format128fp = (format == QImage::Format_RGBX32FPx4 || format == QImage::Format_RGBA32FPx4 || format == QImage::Format_RGBA32FPx4_Premultiplied);
+    // 8-bit RGB lands in Format_RGB32 but only PHOTOMETRIC_RGB has a sane
+    // packed-RGB scanline layout from TIFFReadScanline; YCbCr etc. must go
+    // through the RGBA fallback for photometric conversion.
+    bool formatRGB24 = (format == QImage::Format_RGB32 && photometric == PHOTOMETRIC_RGB);
+
+    if (format8bit || format16bit || format64bit || format64fp || format128fp || formatRGB24) {
+        int bytesPerPixel = image->depth() / 8;
+        if (format == QImage::Format_RGBX64 || format == QImage::Format_RGBX16FPx4)
+            bytesPerPixel = photometric == PHOTOMETRIC_RGB ? 6 : 2;
+        else if (format == QImage::Format_RGBX32FPx4)
+            bytesPerPixel = photometric == PHOTOMETRIC_RGB ? 12 : 4;
+        // source-pixel byte size in the libtiff scanline/tile buffer (= dst
+        // size, except RGB24 where src is packed 3-byte RGB and dst is 4-byte).
+        const int srcBpp = formatRGB24 ? 3 : bytesPerPixel;
+
+        if (TIFFIsTiled(tiff)) {
+            quint32 tileWidth, tileLength;
+            TIFFGetField(tiff, TIFFTAG_TILEWIDTH, &tileWidth);
+            TIFFGetField(tiff, TIFFTAG_TILELENGTH, &tileLength);
+            if (!tileWidth || !tileLength || tileWidth % 16 || tileLength % 16) {
+                TIFFClose(tiff); tiff = nullptr;
+                return false;
+            }
+            const quint32 byteTileWidth = (format == QImage::Format_Mono)
+                                          ? tileWidth/8 : tileWidth * srcBpp;
+            tmsize_t byteTileSize = TIFFTileSize(tiff);
+            uchar *buf = (uchar *)_TIFFmalloc(byteTileSize);
+            if (!buf) {
+                TIFFClose(tiff); tiff = nullptr;
+                return false;
+            }
+
+            for (quint32 ty = 0; ty < srcH; ty += tileLength) {
+                const quint32 firstOutY  = (ty + nth - 1) / nth;
+                const quint32 lastSrcYEx = qMin(ty + tileLength, srcH);
+                const quint32 lastOutYEx = (lastSrcYEx + nth - 1) / nth;
+                if (firstOutY >= outH || firstOutY >= lastOutYEx) continue;
+
+                for (quint32 tx = 0; tx < srcW; tx += tileWidth) {
+                    const quint32 firstOutX  = (tx + nth - 1) / nth;
+                    const quint32 lastSrcXEx = qMin(tx + tileWidth, srcW);
+                    const quint32 lastOutXEx = (lastSrcXEx + nth - 1) / nth;
+                    if (firstOutX >= outW || firstOutX >= lastOutXEx) continue;
+
+                    if (TIFFReadTile(tiff, buf, tx, ty, 0, 0) < 0) {
+                        _TIFFfree(buf);
+                        TIFFClose(tiff); tiff = nullptr;
+                        return false;
+                    }
+
+                    for (quint32 outY = firstOutY; outY < lastOutYEx && outY < outH; ++outY) {
+                        const quint32 srcYInTile = outY * nth - ty;
+                        const uchar *srcRow = buf + srcYInTile * byteTileWidth;
+                        uchar *dstRow = image->scanLine(outY);
+                        if (format == QImage::Format_Mono) {
+                            for (quint32 outX = firstOutX; outX < lastOutXEx && outX < outW; ++outX) {
+                                quint32 sx = outX * nth - tx;
+                                quint8 bit = (srcRow[sx >> 3] >> (7 - (sx & 7))) & 1;
+                                dstRow[outX >> 3] = (dstRow[outX >> 3] & ~(1 << (7 - (outX & 7))))
+                                                  | (bit << (7 - (outX & 7)));
+                            }
+                        } else if (formatRGB24) {
+                            for (quint32 outX = firstOutX; outX < lastOutXEx && outX < outW; ++outX) {
+                                const uchar *p = srcRow + (outX * nth - tx) * 3;
+                                uchar *d = dstRow + outX * 4;
+                                d[0] = p[2]; d[1] = p[1]; d[2] = p[0]; d[3] = 0xFF;
+                            }
+                        } else {
+                            for (quint32 outX = firstOutX; outX < lastOutXEx && outX < outW; ++outX) {
+                                const quint32 srcXInTile = outX * nth - tx;
+                                ::memcpy(dstRow + outX * bytesPerPixel,
+                                         srcRow + srcXInTile * bytesPerPixel,
+                                         bytesPerPixel);
+                            }
+                        }
+                    }
+                }
+            }
+            _TIFFfree(buf);
+        } else {
+            const tmsize_t srcScanBytes = TIFFScanlineSize(tiff);
+            QByteArray rowBuf(srcScanBytes, Qt::Uninitialized);
+            uchar *src = reinterpret_cast<uchar *>(rowBuf.data());
+
+            for (quint32 outY = 0; outY < outH; ++outY) {
+                const quint32 srcY = outY * nth;
+                if (srcY >= srcH) break;
+                if (TIFFReadScanline(tiff, src, srcY, 0) < 0) {
+                    TIFFClose(tiff); tiff = nullptr;
+                    qDebug() << "Tiff::readSample TIFFReadScanline failed" << fPath;
+                    return false;
+                }
+                uchar *dst = image->scanLine(outY);
+                if (format == QImage::Format_Mono) {
+                    for (quint32 outX = 0; outX < outW; ++outX) {
+                        const quint32 sx = outX * nth;
+                        const quint8 bit = (src[sx >> 3] >> (7 - (sx & 7))) & 1;
+                        dst[outX >> 3] = (dst[outX >> 3] & ~(1 << (7 - (outX & 7))))
+                                       | (bit << (7 - (outX & 7)));
+                    }
+                } else if (formatRGB24) {
+                    for (quint32 outX = 0; outX < outW; ++outX) {
+                        const uchar *p = src + (outX * nth) * 3;
+                        uchar *d = dst + outX * 4;
+                        d[0] = p[2]; d[1] = p[1]; d[2] = p[0]; d[3] = 0xFF;
+                    }
+                } else {
+                    for (quint32 outX = 0; outX < outW; ++outX) {
+                        ::memcpy(dst + outX * bytesPerPixel,
+                                 src + (outX * nth) * bytesPerPixel,
+                                 bytesPerPixel);
+                    }
+                }
+            }
+        }
+
+        if (format == QImage::Format_RGBX64 || format == QImage::Format_RGBX16FPx4) {
+            if (photometric == PHOTOMETRIC_RGB)
+                rgb48fixup(image, floatingPoint);
+            else if (floatingPoint) {
+                rgbFixup(image);
+            }
+        }
+        else if (format == QImage::Format_RGBX32FPx4) {
+            if (photometric == PHOTOMETRIC_RGB)
+                rgb96fixup(image);
+            else if (floatingPoint) {
+                rgbFixup(image);
+            }
+        }
+    }
+    else {
+        // RGBA fallback: libtiff decodes the whole raster atomically, so
+        // sample down after the fact. Preserves universal photometric coverage.
+        QImage full(srcW, srcH, QImage::Format_RGB32);
+        const int stopOnError = 1;
+        if (!TIFFReadRGBAImageOriented(tiff, srcW, srcH,
+                reinterpret_cast<uint32_t *>(full.bits()),
+                qt2Exif(transformation), stopOnError)) {
+            TIFFClose(tiff); tiff = nullptr;
+            return false;
+        }
+        for (quint32 y = 0; y < srcH; ++y)
+            convert32BitOrder(full.scanLine(y), srcW);
+        for (quint32 outY = 0; outY < outH; ++outY) {
+            const quint32 *s = reinterpret_cast<const quint32 *>(full.constScanLine(outY * nth));
+            quint32 *d = reinterpret_cast<quint32 *>(image->scanLine(outY));
+            for (quint32 outX = 0; outX < outW; ++outX)
+                d[outX] = s[outX * nth];
+        }
+    }
+
+    float resX = 0;
+    float resY = 0;
+    uint16_t resUnit;
+    if (!TIFFGetField(tiff, TIFFTAG_RESOLUTIONUNIT, &resUnit))
+        resUnit = RESUNIT_INCH;
+
+    if (TIFFGetField(tiff, TIFFTAG_XRESOLUTION, &resX)
+        && TIFFGetField(tiff, TIFFTAG_YRESOLUTION, &resY)) {
+        switch(resUnit) {
+        case RESUNIT_CENTIMETER:
+            image->setDotsPerMeterX(qRound(resX * 100));
+            image->setDotsPerMeterY(qRound(resY * 100));
+            break;
+        case RESUNIT_INCH:
+            image->setDotsPerMeterX(qRound(resX * (100 / 2.54)));
+            image->setDotsPerMeterY(qRound(resY * (100 / 2.54)));
+            break;
+        default:
+            break;
+        }
+    }
+
+    TIFFClose(tiff); tiff = nullptr;
+
+    image->convertTo(QImage::Format_RGB32);
 
     return true;
 }

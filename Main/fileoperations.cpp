@@ -148,27 +148,40 @@ void MW::renameSelectedFiles()
     // rgh redo to make folder agnostic (change RenameFileDlg?)
     QString folderPath = dm->folderList.at(0);
     QStringList selection;
-    if (!dm->getSelection(selection)) return;
+    if (!dm->getSelectionOrPicks(selection)) return;
+    // getSelection can return true with an empty list (no picks, no selection);
+    // opening the dialog in that state crashes when updateExample touches
+    // selection.at(0) via the combobox's currentTextChanged signal.
+    if (selection.isEmpty()) {
+        G::popup->showPopup("No images selected to rename.", 2000);
+        return;
+    }
+
     // Check all files are in the same folder
     for (int i = 0; i < selection.size(); i++) {
         QString thisFolder = QFileInfo(selection.at(i)).path();
         if (thisFolder != folderPath) {
-            QPixmap pixmap(":/images/icon16/subfolders.png");
-            QString includesubfoldersIcon = Utilities::pixmapToString(pixmap);
-            QString msg = "You can only rename images from a single folder.  If<br>"
-                          "'Include subfolders' was invoked you may have selected<br>"
-                          "images from multiple folders and there should be a<br>"
-                          + includesubfoldersIcon +
-                          " in the status bar.<p>"
-                          "Press <font color=\"red\"><b>Esc</b></font> to continue."
-                ;
+            QString msg = "You can only rename images from a single folder.<p>"
+                          "Press <font color=\"red\"><b>Esc</b></font> to continue.";
             G::popup->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
             return;
         }
     }
 
-    RenameFileDlg rf(this, folderPath, selection, filenameTemplates, dm, metadata, imageCache);
+    // Pre-check for Finder-locked files (macOS UF_IMMUTABLE). rename() fails
+    // with EPERM on such files, so warn and bail before opening the dialog —
+    // the user has to unlock in Finder first.
+    QStringList lockedFiles = RenameFileDlg::lockedFilesInSelection(folderPath, selection);
+    if (!lockedFiles.isEmpty()) {
+        QMessageBox::warning(this, "File locked",
+                             RenameFileDlg::lockedFilesMsg(lockedFiles));
+        return;
+    }
+
+    RenameFileDlg rf(this, folderPath, selection, filenameTemplates,
+                     dm, metadata, imageCache);
     rf.exec();
+
     // may have renamed current image
     setWindowTitle(winnowWithVersion + "   " + dm->currentFilePath);
 }
@@ -176,10 +189,11 @@ void MW::renameSelectedFiles()
 void MW::shareFiles()
 {
 /*
-    Mac only.
+    Raise the OS share UI for the selected images: the macOS share sheet
+    (Mac::share) or the Windows Share flyout (Win::share).
 */
-#ifdef Q_OS_MAC
-    if (G::isLogger) G::log("MW::copy");
+#if defined(Q_OS_MAC) || defined(Q_OS_WIN)
+    if (G::isLogger) G::log("MW::shareFiles");
 
     QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.isEmpty()) return;
@@ -192,7 +206,11 @@ void MW::shareFiles()
 
     WId wId = window()->winId();
 
+  #if defined(Q_OS_MAC)
     Mac::share(urls, wId);
+  #else
+    Win::share(urls, wId);
+  #endif
 #endif
 }
 
@@ -205,7 +223,7 @@ void MW::saveAsFile()
         return;
     }
     saveAsDlg = new SaveAsDlg(selection, metadata, dm);
-    saveAsDlg->setStyleSheet(css);
+    saveAsDlg->setStyleSheet(G::css);
     if (saveAsDlg->exec() == QDialog::Accepted) {
         QString savedFolderPath = saveAsDlg->getFolderPath();
         qDebug() << "MW::saveAsFile"
@@ -268,6 +286,9 @@ void MW::insertFiles(QStringList pathList)
 
     After insertion, the call function should select row: sel->select(fPath);
     This will invoke MetaRead which will load the metadata, icon and imageCache.
+
+    It is used by a remote embellish operation when the embellish folder is in the
+    datamodel.
 */
     if (G::isLogger) G::log("MW::insertFile", "dm->instance = " + QString::number(dm->instance));
 
@@ -285,8 +306,8 @@ void MW::insertFiles(QStringList pathList)
     // fPaths.sort(Qt::CaseInsensitive);
     dmInsert(pathList);
 
-    fsTree->updateCount();
-    bookmarks->updateCount();
+    // updata datamodel, imagecache, image counts, selection
+    refresh();
 }
 
 void MW::deleteSelectedFiles()
@@ -322,9 +343,7 @@ void MW::deleteSelectedFiles()
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Yes);
         msgBox.setIcon(QMessageBox::Warning);
-        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                    "QPushButton:default {background-color: rgb(68,95,118);}";
-        msgBox.setStyleSheet(css);
+        msgBox.setStyleSheet(G::css);
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
@@ -335,8 +354,21 @@ void MW::deleteSelectedFiles()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    QModelIndexList selection = dm->selectionModel->selectedRows();
-    if (selection.isEmpty()) return;
+    // QModelIndexList selection = dm->selectionModel->selectedRows();
+    // if (selection.isEmpty()) return;
+    QModelIndexList selection;
+    if (G::mode == "Grid") {
+        selection = gridView->selectionModel()->selectedRows();
+    } else if (G::mode == "Table") {
+        selection = tableView->selectionModel()->selectedRows();
+    } else {
+        selection = dm->selectionModel->selectedRows();
+    }
+
+    if (selection.isEmpty()) {
+        G::popup->showPopup("No images selected to delete.", 1500);
+        return;
+    }
 
     QStringList paths;
     paths.reserve(selection.size());
@@ -405,8 +437,11 @@ void MW::deleteFiles(QStringList paths)
     }
     if (fileWasLocked) G::popup->showPopup("Locked file(s) were not deleted", 3000);
 
-    // updata datamodel, imagecache, image counts, selection
+    // updata datamodel, imagecache, image counts
     refresh();
+
+    // update selection
+    sel->select(dm->currentSfRow);
 }
 
 void MW::currentFolderDeletedExternally(QString path)
@@ -461,15 +496,12 @@ void MW::deleteFolder()
         #endif
         msgBox.setText("This operation will move the folder<br>"
                        + dirToDelete +
-                       "<br>to the " + trash);
+                       "<br>and all subfolders to the " + trash + ".");
         msgBox.setInformativeText("Do you want continue?");
         msgBox.setIcon(QMessageBox::Warning);
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Cancel);
-        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                    "QPushButton:default {background-color: rgb(68,95,118);}";
-        msgBox.setStyleSheet(s);
-        msgBox.setStyleSheet(css);
+        msgBox.setStyleSheet(G::css);
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());

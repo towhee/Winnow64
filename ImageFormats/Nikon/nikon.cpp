@@ -1,5 +1,7 @@
 #include "nikon.h"
 #include "Main/global.h"
+#include "Metadata/iptc.h"      // req'd to report embedded jpeg
+#include "Metadata/ExifTool.h"  // req'd for some Nikon lenses not in lookup
 
 // ExifTool documentation: https://exiftool.org/TagNames/Nikon.html
 
@@ -976,7 +978,7 @@ bool Nikon::parse(MetadataParameters &p,
             if (m.lens.isEmpty()) {
                 ExifTool et;
                 m.lens = et.readTag(m.fPath, "LensModel");
-                qDebug() << "Nikon lens =" << m.lens << m.fPath;
+                // qDebug() << "Nikon lens =" << m.lens << m.fPath;
                 et.close();
             }
         }
@@ -1033,6 +1035,7 @@ bool Nikon::parse(MetadataParameters &p,
     if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
+            p.xmpModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
             m.rating = xmp.getItem("Rating");
             m.label = xmp.getItem("Label");
             m.title = xmp.getItem("title");

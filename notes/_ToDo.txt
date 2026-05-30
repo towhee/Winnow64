@@ -1,103 +1,50 @@
 WHAT'S NEW
-- Auto cache size
-- TableView freeze first two columns when scroll horizontally
-- OS hanging when process large number of recursed folders
-- Ingest Dlg not showing manual paths correctly
-- Selections are now cleared after a filtration change
+- Focus Stacking
 
 BUGS / TO DO
-- Delete folder crash
-- Rename files
+- Test backup when modifying files
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
-- Convert rawJpgStatusLabel to a button like colorManageToggleBtn
-- Copy path(s) not always working
-- Undo delete
-- Try using std::atomic<bool> for flags used in threads
-- "QSortFilterProxyModel: inconsistent changes reported by source model" when drag move file or delete file
-- Universal help color = rgb(43, 85, 49) used in "How this works"
 - Resolve Pixmap vs ImageDecoder classes
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
 - Selection::okToSelect not being used
-- Prev and next folders
-- MW::deleteFiles filter/sort work? Does gridView refresh?
-- MW::insertFiles filter/sort work?
 - Review all rgh comments
-- Add back redo in ImageCache::fillCache
 - Read svg files ie downloads/glyphs.svg
-- Missing thumbs phantom in filters (reproducible?)
-- When select thumb check if null and retry to read
-- ImageView::loadImage happening twice when select a new primary folder
-- if (maxWidth > G::displayPhysicalHorizontalPixels) w = G::displayPhysicalHorizontalPixels - 100;
-- Label colors not getting into LR during ingest
 - Maybe integrate apple sf symbols as svg
-- Test rename selected files
-- Add rotation to image modification
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
 - When copy or move images, should the filter be maintained?  Popup?
 - Select Photos/2020-2029 stalls while loading metadata and icons
-- Closing Winnow while folderSelectionChange can crash (addRecentFolder()) but could be anywhere
-  May need a global wait for abort like used in threads
-- ARW file preview size is wrong ?
-- MW::setDisplayResolution() Dell SQ3223 Middle res size embellish Zen2048 wrong size
-  until move to another monitor and back
-- Rethink image file parse failure reporting
-- Use Exiftool to save image rotation change?
 - Check for updates for macos
-- Add tooltips to menus
-- GoogleDrive folder not showing all videos
-- Open with exiftool
-- qffmpegvideobuffer.cpp QFFmpegVideoBuffer::mapTextures "failed to get textures for frame"
-- ToolTips not painting same way on windows vs macos
 - Help > Check for updates not working (windows)
-- Video thumbs and playback rotation wrong
 - MeanStack not updating embedded image thumbnail
-- G::isNewFileSelection req'd?
 - Make sure HEIC also works on PC including thumbs
-- Get thumbnail from HEIC.
-- folderAndFileSelectionChange does not show folder highlight change
 - Remove settings deprecated items MW::removeDeprecatedSettings()
 - Cmd Del = delete all rejected
 - Cmd+Opt+R = reject all unpicked and unpick all picked
 - bool Usb::isUsb(QString path) not done for MacOS
-- Fast video thumbnail generation
-- Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
 - Read HEIC metadata (MAC issue only?)
 - Convert path to windows \ for copy path to clipboard
-- Extract frame from video
-- Update use of current image for video frame
-- Add G::showWarnings
 - Make ImageDecoder warnings context specific is hasMetadata
 - Save preview as PNG include color manage corrections
 - MW::enableSelectionDependentMenus needs updating for all situations
 
 - Painter not active, state will be reset by begin
 - Embellish not resetting properly
-- No image cached for D:/Pictures/_ThumbTest/2020-01-05_0005-denoise.dng
 - On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
 - Image metadata report does not show sidecar for PNG file
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - Unicode path heics not rendering
-- Include subfolders is wonky
 - E:/2020 √/202001 √/2020-01-25_Linley Valley √/2020-01-25_0024_Focus Stack.tif has bad thumb
   caused by Winnow adding thumbnail
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
 - DNG without JPG preview: show TIFF?
-- DNG without jpg preview: add one similar to TIFF
-- TIF with more than 3 samplesperpixel
-- TIF LZW and predictor = 2 (crashes)
-- Tiff with compression = 7, 8 not supported /Users/roryhill/Photos/_misc/_Calibration/TripleMoireTarget.tif
-- TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
-- Copy / paste files inside Winnow
-- Maintain count when switch folders during the same ingest
 - Cannot delete heic files on PC
 - Add hif file format
 - Rotate heic files
 - Slideshow only load metadata for current image
-- Slideshow of all images on F drive eventually crashed (85000+ images)
 
 CAMERAS NOT SUPPORTED
 - Canon: 1D, 1DS, D2000, DCS1, A3200, G5X, S120, SD450, SX100, SCX130, SX1, SX260, SX50, SX510, SX60, S90
@@ -109,21 +56,11 @@ EMBELLISH
 - Eliminate shadow blur in sunward direction
 - Sharpen needs TLC
 MAC
-- Add HEIC files to Mac https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/ImageIOGuide/imageio_source/ikpg_source.html#//apple_ref/doc/uid/TP40005462-CH218-SW3
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Mac check for updates not done yet
 - Share https://developer.apple.com/documentation/appkit/nssharingservice?language=objc
 PERFORMANCE
-- HEIF files are slow
-CODE IMPROVEMENTS
-- Standardize use of G:css
-- Sort out i.name vs i.key in PropertyEditor
-- When rebuildImageCacheParameters keep imCache images still in filtered target range
-- Tweak panning in compareView (eliminate incremental scrolling)
-- Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
-- Activating bullseye crashes if no image in imageView
-- Show images that have sidecars (indicator in thumbnail and col in datamodel)
 - When add new workspace the menu shortcut is not updated until reopen app
 - Heic thumb rotation wrong
 - Portrait aspect ratios wrong
@@ -136,7 +73,24 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
-- Update Nikon Lenses
+- Collapse DockWidgets and Solo mode
+- Show images that have sidecars (indicator in thumbnail and col in datamodel)
+- Stopped FSTree scrolling when expand/collapse tree
+- Convert rawJpgStatusLabel to a button like colorManageToggleBtn
+- Focus stack all file types
+- IconView smooth scroll on swipe
+- Video plays when try to retreat/advance at first/last item.
+- Beef up instance checking in DataModel
+- Added QQ tip in ingest dialog
+- Info display: if EC is null then do not display EV
+- Delete images not working when in Grid Mode
+- Video aspect was broken by MacOS update
+- Cmd + C works in diagnostic reports
+- Redo IconViewDelegate
+- Refresh Bookmarks and Folders after focus stack
+- Focus stack module
+- Release 2.04
+- Update Nikon Lense mpdel info
 - Delete all files in filter not always working properly
 - Fix sort for case sensitivity
 - Fix refresh when filtered and delete all

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>How folders work</h1>
+
+<p>Mouse clicking selects a folder. All selected folders' eligible images are
+displayed. You can change the selection behavior with the mouse modifier keys:</p>
+
+<h2>No modifier</h2>
+<p>The current selection of folders is cleared and the clicked folder is selected.</p>
+
+<h2>Ctrl/Cmd modifier</h2>
+<p>The folder selection is toggled. If the folder was selected then it will be
+unselected. If it was unselected then it will be selected. If only one folder
+is selected then it cannot be unselected.</p>
+
+<h2>Shift modifier</h2>
+<p>All folders from the prior selection to the current clicked folder will be
+selected. Toggle is ignored.</p>
+
+<h2>Alt/Opt modifier</h2>
+<p>The folder and all subfolders are recursively selected. Combine with Ctrl/Cmd
+to toggle selection. If only the Alt/Opt modifier is used, then any prior
+selection is cleared. If there are too many subfolders then the root folder will
+not expand, but all the subfolders will be loaded and the root folder text will
+change to <span class="warn">orange</span>.</p>
+
+</body>
+</html>

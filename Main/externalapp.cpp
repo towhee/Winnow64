@@ -88,19 +88,26 @@ void MW::runExternalApp()
     for (int i = 0; i < externalApps.length(); ++i) {
         if (externalApps.at(i).name == appName) {
             appPath = externalApps.at(i).path;
+            // QProcess::splitCommand honours quoting; .split(" ") would mangle paths with spaces.
             if (externalApps.at(i).args.length() > 0)
-                arguments << externalApps.at(i).args.split(" ");
+                arguments << QProcess::splitCommand(externalApps.at(i).args);
             break;
         }
     }
     if (appPath == "") return;      // add err handling
+    // Validate that the configured external-app path still exists before launching.
+    // Defence against a tampered/stale settings.ini pointing at an unintended binary.
+    if (!QFileInfo::exists(appPath)) {
+        G::popup->showPopup("External app not found: " + appPath, 3000);
+        return;
+    }
     QFileInfo appInfo;              // qt6.2
     appInfo.setFile(appPath);       // qt6.2
     QString appExecutable = appInfo.fileName();
 
     // get list of selected or picked image files to send to external app
 //    if (!dm->getSelection(arguments)) return;
-    dm->getSelection(files);
+    dm->getSelectionOrPicks(files);
     int nFiles = files.size();
 
     if (nFiles < 1) {
@@ -116,9 +123,7 @@ void MW::runExternalApp()
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Yes);
         msgBox.setIcon(QMessageBox::Warning);
-        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                    "QPushButton:default {background-color: rgb(68,95,118);}";
-        msgBox.setStyleSheet(s);
+        msgBox.setStyleSheet(G::css);
         QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
@@ -144,24 +149,15 @@ void MW::runExternalApp()
     connect(process, SIGNAL(error(QProcess::ProcessError)),
             this, SLOT(externalAppError(QProcess::ProcessError)));
 
-    // Photoshop exception on macOS
+    // Photoshop on macOS: invoke `open` via execve (no shell) so filenames or appName cannot inject commands.
     #ifdef Q_OS_MAC
     if (appName.contains("Photoshop")) {
-        // based on this working in terminal
-        // open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
-
-        // Build the file path argument string
-        QString fileArgs;
-        for (const QString& filePath : arguments) {
-            fileArgs += QString("\"%1\" ").arg(filePath);
-        }
-
-        // Construct the full command as a single string
-        QString command = QString("open %1 -a \"%2\"").arg(fileArgs.trimmed(), appName);
-
-        // Run the command using the shell
-        process->start("bash", QStringList() << "-c" << command);
-
+        QStringList openArgs;
+        openArgs << "-a" << appName;
+        openArgs << files;
+        process->setProgram("/usr/bin/open");
+        process->setArguments(openArgs);
+        process->start();
         return;
     }
     #endif

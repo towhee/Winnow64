@@ -50,23 +50,6 @@ ImageView::ImageView(QWidget *parent,
     this->classificationBadgeDiam = classificationBadgeDiam;
     pixmap = new Pixmap(this, dm, metadata);
 
-    /*
-    // set QOpenGLWidget as QGraphicsView viewport
-    openGLFrame = new OpenGLFrame;
-    QSurfaceFormat format;
-    format.setSamples(4);
-    format.setDepthBufferSize(24);
-    format.setStencilBufferSize(8);
-    format.setVersion(3, 2);
-    format.setProfile(QSurfaceFormat::CoreProfile);
-    openGLFrame->setFormat(format);
-    this->setViewport(openGLFrame);
-    this->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
-
-    // set scene so can override drawForeground
-    scene = new ImageScene(openGLFrame);
-    */
-
     scene = new QGraphicsScene();
     scene->setObjectName("Scene");
 
@@ -78,14 +61,6 @@ ImageView::ImageView(QWidget *parent,
     setAcceptDrops(true);
     pmItem->setAcceptDrops(true);
     setAttribute(Qt::WA_TranslucentBackground);
-    /*
-    setOptimizationFlags(QGraphicsView::DontSavePainterState);
-    setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
-    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
-    setTransformationAnchor(QGraphicsView::AnchorViewCenter);
-    setAlignment(Qt::AlignCenter);
-    setDragMode(QGraphicsView::ScrollHandDrag);
-    */
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -96,7 +71,8 @@ ImageView::ImageView(QWidget *parent,
     moveImageLocked = false;
     infoOverlay = new DropShadowLabel(this);
     infoOverlay->setStyleSheet("font-size: " + QString::number(infoOverlayFontSize) + "pt;");
-    infoOverlay->setVisible(isShootingInfoVisible);
+    infoOverlay->setVisible(false);
+    // infoOverlay->setVisible(isShootingInfoVisible);
     infoOverlay->setAttribute(Qt::WA_TranslucentBackground, true);
     infoOverlay->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
@@ -143,7 +119,7 @@ ImageView::ImageView(QWidget *parent,
     isMouseDrag = false;
     isLeftMouseBtnPressed = false;
     isMouseDoubleClick = false;
-    isFirstImageNewInstance = true;
+    G::isFirstImageNewInstance = true;
     isBusy = false;
 }
 
@@ -166,14 +142,16 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
 
     Slideshow: The image cache is not used.  Each image in the slideshow is loaded here.
 */
-
+    isLoadingImage = true;
+    QString srcFun = "ImageView::loadImage";
     bool isDebug = false;
     bool isCurrent = (fPath == currentImagePath);
 
     if (isDebug)
     {
-        qDebug() << "\nImageView::loadImage:"
-         << "isFirstImageNewInstance =" << isFirstImageNewInstance
+        qDebug() << srcFun
+         << "sfRow =" << dm->proxyRowFromPath(fPath, srcFun)
+         << "G::isFirstImageNewInstance =" << G::isFirstImageNewInstance
          << "isCurrent =" << isCurrent
          << "replace =" << replace
          << "G::isEmbellish =" << G::isEmbellish
@@ -184,21 +162,29 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     if (G::isLogger || G::isFlowLogger)
     {
         QString row = "row = " + QString::number(dm->proxyRowFromPath(fPath));
-        G::log("ImageView::loadImage", row + " Src:" + src +
-               " isFirstImageNewInstance = " + QVariant(isFirstImageNewInstance).toString() +
+        G::log(srcFun, row + " Src:" + src +
+               " G::isFirstImageNewInstance = " + QVariant(G::isFirstImageNewInstance).toString() +
                " " + fPath);
     }
 
     // ignore if result of remote operation
-    if (G::isRemote) return false;
+    if (G::isRemote) {
+        isLoadingImage = false;
+        if (isDebug) qDebug() << srcFun << "quit because G::isRemote = true";
+        return false;
+    }
 
     // No folder selected yet
     if (!fPath.length()) {
+        isLoadingImage = false;
+        if (isDebug) qDebug() << srcFun << "quit because !fPath.length()";
         return false;
     }
 
     // Already displayed
     if (isCurrent && replace == false) {
+        isLoadingImage = false;
+        if (isDebug) qDebug() << srcFun << "quit because isCurrent && replace == false";
         return true;
     }
 
@@ -206,13 +192,14 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     if (G::isProcessingExportedImages) {
         // qDebug() << "WARNING" << "ImageView::loadImage" << "Processing exported images";
         QString msg = "Processing exported images.  Canceled loadImage.";
-        G::issue("Warning", msg, "ImageView::loadImage");
+        G::issue("Warning", msg, srcFun);
+        isLoadingImage = false;
+        if (isDebug) qDebug() << srcFun << "quit because G::isProcessingExportedImages";
         return false;
     }
 
     // set busy in case tryAgain attempt after already moved on to another image
     isBusy = true;
-
     bool isLoaded = false;
 
     // SLIDESHOW
@@ -220,27 +207,39 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         // load image without waiting for cache
         // check metadata loaded for image (might not be if random slideshow)
         int dmRow = dm->rowFromPath(fPath);
-        if (dmRow == -1) return false;
+        if (dmRow == -1) {
+            isLoadingImage = false;
+            return false;
+        }
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, dmRow, dm->instance, true, true, false, true, "ImageView::loadImage")) {
                 // metadata->m.row = dmRow;
                 // metadata->m.instance = dm->instance;
-                dm->addMetadataForItem(metadata->m, "ImageView::loadImage"); // rgh investigate warning (QVariant issue probably)
+                dm->addMetadataForItem(metadata->m, srcFun); // rgh investigate warning (QVariant issue probably)
+            }
+            else {
+                G::issueDedup("Warning",
+                              "Slideshow metadata load failed",
+                              srcFun, dmRow, fPath);
             }
         }
 
         QPixmap displayPixmap;
-        isLoaded = pixmap->load(fPath, displayPixmap, "ImageView::loadImage");
+        isLoaded = pixmap->load(fPath, displayPixmap, srcFun);
 
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
             isBusy = false;
         }
         else {
+            G::issueDedup("Error",
+                          "Slideshow pixmap load failed",
+                          srcFun, dmRow, fPath);
             // set null pixmap
             QPixmap nullPm;
             pmItem->setPixmap(nullPm);
+            isLoadingImage = false;
             return false;
         }
     }
@@ -250,18 +249,21 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     image in icd->imCache hash table. Also must check in case where an ejected drive has
     resulted in clearing icd->cacheItemList. */
 
-    int sfRow = dm->proxyRowFromPath(fPath, "ImageView::loadImage");
-    if (sfRow == -1 || sfRow >= dm->sf->rowCount()) return false;
+    int sfRow = dm->proxyRowFromPath(fPath, srcFun);
+    if (sfRow == -1 || sfRow >= dm->sf->rowCount()) {
+        isLoadingImage = false;
+        return false;
+    }
 
     if (icd->contains(fPath)) {
         QImage image; // confirm the cached image is in the image cache
         if (isDebug)
-            qDebug() << "ImageView::loadImage  row =" << sfRow << fPath;
+            qDebug() << srcFun + "  row =" << sfRow << fPath;
 
         pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
         isLoaded = true;
         if (isDebug)
-            qDebug() << "ImageView::loadImage"
+            qDebug() << srcFun
                      << "w =" << pmItem->pixmap().width()
                      << "h =" << pmItem->pixmap().height()
                      << "isNull =" << pmItem->pixmap().isNull()
@@ -269,29 +271,23 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     }
     else {
         if (isDebug)
-            qDebug() << "ImageView::loadImage isCached = false";
+            qDebug() << srcFun << "isCached = false";
     }
 
-    /* When the program is opening or resizing it is possible this function could be called
-    before the central widget has been fully defined, and has a small default size. If that is
-    the case, ignore, as the function will be called again. Also ignore if the image failed to
-    be loaded into the graphics scene. */
-    /*
-    qDebug() << "ImageView::loadImage:"
-             << "isFirstImageNewInstance =" << isFirstImageNewInstance
-             << "row =" << sfRow
-             << "isLoaded =" << isLoaded
-             << "rect().height() > 50 =" << QVariant(rect().height() > 50).toString();
-    //*/
+    /* When the program is opening or resizing it is possible this function could be
+    called before the central widget has been fully defined, and has a small default
+    size. If that is the case, ignore, as the function will be called again. Also
+    ignore if the image failed to be loaded into the graphics scene. */
     if (isLoaded) {
-        /* important to keep currentImagePath. It is used to check if there isn't an image (when
-        currentImagePath.isEmpty() == true) - for example when no folder has been chosen or the
-        same image is being reloaded. It is also used by Embellish.  */
+        /* important to keep currentImagePath. It is used to check if there isn't an
+        image (when currentImagePath.isEmpty() == true) - for example when no folder
+        has been chosen or the same image is being reloaded. It is also used by
+        Embellish. */
         currentImagePath = fPath;
-        pmItem->setVisible(true);
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
+        // setSceneRect(pmItem->boundingRect());
 
         updateShootingInfo();
 
@@ -299,16 +295,18 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         canvas (central widget window) set the scale to fit window, do not scale the
         image beyond 100% to fit the window.  */
         zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
-        if (isFirstImageNewInstance) {
+        /* If first item in DataModel is a video then zoom has not been set yet but
+           G::isFirstImageNewInstance may be false */
+        if (G::isFirstImageNewInstance || zoom < 0.1) {
             isFit = true;
-            isFirstImageNewInstance = false;
+            G::isFirstImageNewInstance = false;
         }
         if (isFit) {
             setFitZoom();
         }
         if (isDebug) {
-        qDebug() << "ImageView::loadImage:"
-                 << "isFirstImageNewInstance =" << isFirstImageNewInstance
+        qDebug() << srcFun
+                 << "G::isFirstImageNewInstance =" << G::isFirstImageNewInstance
                  << "row =" << sfRow
                  << "isFit =" << isFit
                  << "isFit =" << isFit
@@ -324,15 +322,25 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         if (G::isEmbellish) emit embellish("", "ImageView::loadImage");
         else pmItem->setGraphicsEffect(nullptr);
 
+        // qDebug() << "ImageView::loadImage panToFocus =" << panToFocus;
+
         // focus prediction
         if (panToFocus) {
             predictPanToFocus();
         }
+
+        // update viewpoint box in IconViewDelegate
+        bool adjustCenter = panToFocus;
+        bool refresh = false;
+        // showNormalizedViewport(adjustCenter, refresh, srcFun);
     }
 
     isBusy = false;
 
-    if (isLoaded) return true;
+    if (isLoaded) {
+        isLoadingImage = false;
+        return true;
+    }
     else {
         if (isDebug)
             qDebug() << "ImageView::loadImage isLoaded = false";
@@ -343,6 +351,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         qDebug() << "ImageView::loadImage failed"
                  << "isFirstImageNewInstance =" << isFirstImageNewInstance
                  << "row =" << sfRow; //*/
+        isLoadingImage = false;
         return false;
     }
 }
@@ -380,71 +389,61 @@ void ImageView::scale(bool isNewImage)
 
     If isSlideshow then hide mouse cursor unless is moves.
 */
+
     if (G::isLogger) G::log("ImageView::scale");
-    /*
-    qDebug() << "ImageView::scale"
-             << "isScrollable =" << isScrollable
-             << "isFit =" << isFit
-             << "zoom =" << zoom
-             << "highDpiZoom =" << zoom / G::actDevicePixelRatio
-             << "zoomFit =" << zoomFit
-             << "rect().width() =" << rect().width()
-             << "sceneRect().width() =" << sceneRect().width();
-    //  */
-    transform.reset();
-    if (G::isSlideShow) {
-        setFitZoom();
+
+    // /*
+    if (isFit || G::isSlideShow) {
+        // 1. Initial fit calculation
+        fitInView(pmItem, Qt::KeepAspectRatio);
+        zoom = viewportTransform().m11() * G::actDevicePixelRatio;
+
+        // 2. Constraint: Do not exceed 100% (G::actDevicePixelRatio)
+        if (zoom > 1.0) {
+            zoom = 1.0;
+            transform.reset();
+            // High DPI 100% is 1.0 / actDevicePixelRatio
+            double highDpiZoom = 1.0 / G::actDevicePixelRatio;
+            transform.scale(highDpiZoom, highDpiZoom);
+            setTransform(transform);
+
+            // Center the image manually since fitInView is overridden
+            centerOn(pmItem);
+        }
+    }
+    else {
+        // Manual zoom mode
+        transform.reset();
+        double highDpiZoom = zoom / G::actDevicePixelRatio;
+        transform.scale(highDpiZoom, highDpiZoom);
+        setTransform(transform);
     }
 
-    if (isFit) setFitZoom();
-    double highDpiZoom = zoom / G::actDevicePixelRatio;
-    transform.scale(highDpiZoom, highDpiZoom);
-    // when resize before first image zoom == inf
-    if (zoom > 10) return;
-    setTransform(transform);
     emit zoomChange(zoom, "ImageView::scale");
 
+    // The rest of your functional logic remains identical
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();
-    if (panToFocus) emit showLoupeRect(isScrollable);
 
-    // pan to predicted focus point of interest
+    // Maintain predictive focus and panning logic
     int i = dm->currentSfRow;
     float x = dm->sf->index(i, G::FocusXColumn).data().toFloat();
     float y = dm->sf->index(i, G::FocusYColumn).data().toFloat();
-    /*
-        qDebug() << "ImageView::scale"
-                 << "x =" << x
-                 << "y =" << y;//*/
-    bool isFocus = (x >= 0 && y >= 0);
-    // placeTarget(x, y);
-    if (isFocus && isScrollable && panToFocus && isNewImage) {
+
+    if (x >= 0 && y >= 0 && isScrollable && panToFocus && isNewImage) {
         panTo(x, y);
     }
 
+    // Update cursor and overlays
     if (!G::isSlideShow) {
         if (isScrollable) setCursor(Qt::OpenHandCursor);
-        else {
-            if (isFit) setCursor(Qt::ArrowCursor);
-            else setCursor(Qt::PointingHandCursor);
-        }
+        else setCursor(isFit ? Qt::ArrowCursor : Qt::PointingHandCursor);
     }
 
     placeClassificationBadge();
     setShootingInfo(infoText);
     emit updateStatus(true, "", "ImageView::scale");
-
-    isMouseDoubleClick = false;
-
-    /* debug
-    qDebug() << "ImageView::scale"
-             << "isScrollable =" << isScrollable
-             << "isFit =" << isFit
-             << "zoom =" << zoom
-             << "zoomFit =" << zoomFit
-             << "rect().width() =" << rect().width()
-             << "sceneRect().width() =" << sceneRect().width();
-//    */
+    //*/
 }
 
 bool ImageView::sceneBiggerThanView()
@@ -528,9 +527,13 @@ void ImageView::placeClassificationBadge()
     The bright green thumbsUp pixmap shows the pick status for the current image.
     This function locates the pixmap in the bottom corner of the image label as the
     image is resized and zoomed, adjusting for the aspect ratio of the image and
-    size.
+    size.  NOT IN USE.
 */
     if (G::isLogger) G::log("ImageView::placeClassificationBadge");
+
+    classificationLabel->setDiameter(0);  // hide, not being used
+    return; // not used
+
     QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
     int x, y = 0;                       // bottom right coordinates of visible image
@@ -621,66 +624,177 @@ void ImageView::resizeEvent(QResizeEvent *event)
     ● show predictive focus change
 */
     if (G::isLogger) G::log("ImageView::resizeEvent");
-    /*
-    qDebug() << "ImageView::resizeEvent"
-             << "G::isInitializing =" << G::isInitializing
-             << "G::isLinearLoadDone =" << G::isLinearLoadDone
-             << "isFirstImageNewInstance =" << isFirstImageNewInstance;
-    //    */
+
+    // Do not process resize events during initial application startup
     if (G::isInitializing) return;
+
+    // Call the base class implementation
     QGraphicsView::resizeEvent(event);
+
+    // Recalculate the factor required to fit the image in the new window size
     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
-//    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+
     if (isFit) {
-        setFitZoom();
+        // Optimized scaling: Automatically fits and centers the image
+        fitInView(pmItem, Qt::KeepAspectRatio);
+
+        // Synchronize the zoom member with the new viewport scale
+        zoom = viewportTransform().m11();
+
+        // Apply secondary logic (status updates, badges)
         scale();
+    } else {
+        // If not in Fit mode, we still need to update the prediction overlays
+        bool adjustCenter = true;
+        bool refresh = true;
+        showNormalizedViewport(adjustCenter, refresh, "ImageView::resizeEvent");
     }
+
+    // Maintain UI element positions relative to the new window boundaries
     placeClassificationBadge();
     setShootingInfo(infoText);
-    showPredictedFocus();
+
+
+
+
+
+
+//     if (G::isLogger) G::log("ImageView::resizeEvent");
+//     /*
+//     qDebug() << "ImageView::resizeEvent"
+//              << "G::isInitializing =" << G::isInitializing
+//              << "G::isLinearLoadDone =" << G::isLinearLoadDone
+//              << "isFirstImageNewInstance =" << isFirstImageNewInstance;
+//     //    */
+//     if (G::isInitializing) return;
+//     QGraphicsView::resizeEvent(event);
+//     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+// //    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+//     if (isFit) {
+//         setFitZoom();
+//         scale();
+//     }
+//     placeClassificationBadge();
+//     setShootingInfo(infoText);
+//     showPredictedFocus();
 }
 
-void ImageView::showPredictedFocus()
+QSize ImageView::viewportInScene()
 {
 /*
-    Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
+    Called by IconView::zoomCursor to draw the outline of the size of the viewport
+    relative to the scene as the cursor while hovering on the thumbView.
 */
-    if (!panToFocus || zoom <= zoomFit) return;
+    QString srcFun = "ImageView::viewportInScene";
+    int imW = pmItem->boundingRect().width();
+    int imH = pmItem->boundingRect().height();
+    QPolygonF p = mapToScene(viewport()->rect());
+    qreal x1 = p.at(0).x();
+    qreal y1 = p.at(0).y();
+    qreal x2 = p.at(2).x();
+    qreal y2 = p.at(2).y();
+    qreal w = x2 - x1;
+    qreal h = y2 - y1;
+    return QSize(w, h);
+}
+
+void ImageView::showNormalizedViewport(bool adjustCenter, bool refresh, QString src)
+{
+/*
+    Not being used.
+
+    Sends the normalized coordinates for viewport in scene to IconView delegate,
+    where they can be used to draw the viewport border inside the thumbnail. Can
+    crash if the preceding image was a video.
+
+    Documentation: see FOCUS PREDICTOR in notes/Documentation.txt
+
+*/
+    return;
+    QString srcFun = "ImageView::showNormalizedViewport";
+    qDebug().noquote()
+    << srcFun.leftJustified(40)
+    << "sfRow =" << dm->currentSfRow
+    << "src =" << src
+    ;
+
+    if (zoom <= zoomFit) {
+        // /*
+        qDebug().noquote()
+             << srcFun.leftJustified(40)
+             << "sfRow =" << dm->currentSfRow
+             << "zoom <= zoomFit (no action req'd)"
+             << "src =" << src
+            ; //*/
+        emit showLoupeRect(false);
+        return;
+    }
+
+    static QSizeF prevVpSizeN = QSizeF();
+    static QPointF prevVpCntrN = QPointF();
+
+    // datamodel width/height unreliable (aspect ratio issue or missing)
+    int imW = pmItem->boundingRect().width();
+    int imH = pmItem->boundingRect().height();
+    QRect vpRect = viewport()->rect();
 
     // generate normalized coordinates for viewport in scene
-    qreal w = pmItem->pixmap().width();
-    qreal h = pmItem->pixmap().height();
-    // qreal w = scene->width();
-    // qreal h = scene->height();
     QPolygonF p = mapToScene(viewport()->rect());
-    qreal x1 = p.at(0).x() / w;
-    qreal y1 = p.at(0).y() / h;
-    qreal x2 = p.at(2).x() / w;
-    qreal y2 = p.at(2).y() / h;
-    QRectF vp = QRectF(QPointF(x1, y1), QPointF(x2, y2));
-    qreal imA = w * 1.0 / h;
-    qDebug() << "ImageView::showPredictedFocus"
-             << "vp =" << vp
-             << "imA =" << imA
-                ;
-    emit loupeRect(vp, imA);
+    qreal x1 = p.at(0).x() / imW;
+    qreal y1 = p.at(0).y() / imH;
+    qreal x2 = p.at(2).x() / imW;
+    qreal y2 = p.at(2).y() / imH;
+    qreal w = x2 - x1;
+    qreal h = y2 - y1;
+
+    QSizeF vpSizeN = QSizeF(w, h);
+    qreal vpA = static_cast<qreal>(vpRect.width()) / vpRect.height();
+    if (adjustCenter)
+        vpCntrN = QPointF(x1 + w/2, y1 + h/2);
+    else
+        panTo(vpCntrN.x(), vpCntrN.y());
+
+    // if repeat then return
+    if (vpSizeN == prevVpSizeN && vpCntrN == prevVpCntrN) {
+        qDebug().noquote()
+            << srcFun.leftJustified(40)
+            << "sfRow =" << dm->currentSfRow
+            << "vpSizeN =" << prevVpSizeN
+            << "vpSizeN =" << vpCntrN
+            << "REPEAT: DO NOT SIGNAL";
+            ;
+        return;
+    }
+
+    // /*
+    qDebug().noquote()
+             << srcFun.leftJustified(40)
+             << "sfRow =" << dm->currentSfRow
+             << "imW =" << imW
+             << "imH =" << imH
+             << "vpSizeN =" << vpSizeN
+             << "vpCntrN =" << vpCntrN
+             << "vpA =" << vpA
+             << "src =" << src
+             << "refresh =" << refresh
+        ;//*/
+
+    emit loupeRect(vpSizeN, vpA, vpCntrN, refresh);
+
+    prevVpSizeN = vpSizeN;
+    prevVpCntrN = vpCntrN;
+
 }
 
 void ImageView::predictPanToFocus()
 {
 /*
-    Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
+    Documentation: see FOCUS PREDICTOR in documentation.txt
 */
     if (G::isLogger) G::log("ImageView::focusPrediction");
 
     focusPrediction = focusPredictor->predict(pmItem->pixmap().toImage());
     panTo(focusPrediction.x(), focusPrediction.y());
-    /*
-    qDebug() << "ImageView::getFocusPrediction"
-             << "Predicted (normalized):" << focusPrediction
-             << "x =" << focusPrediction.x()
-             << "y =" << focusPrediction.y()
-        ; //*/
 }
 
 void ImageView::panTo(float xPct, float yPct)
@@ -691,7 +805,9 @@ void ImageView::panTo(float xPct, float yPct)
    main image is panned to the same location as on the thumb. This makes it quick to check
    eyes and other details in many images.
 */
+    QString srcFun = "ImageView::thumbClick";
     if (G::isLogger) G::log("ImageView::thumbClick");
+    // qDebug().noquote() << srcFun.leftJustified(40);
     if (zoom > zoomFit) {
         centerOn(QPointF(xPct * sceneRect().width(), yPct * sceneRect().height()));
     }
@@ -842,6 +958,8 @@ void ImageView::zoomToggle()
     defaults to 1.0
 */
     if (G::isLogger) G::log("ImageView::zoomToggle");
+    QString srcFun = "ImageView::zoomToggle";
+    // qDebug().noquote() << srcFun.leftJustified(40);
 
     if (isFit && zoomFit >= toggleZoom) {
         QString toggleZoomPct = QString::number(toggleZoom * 100) + "%";
@@ -891,6 +1009,14 @@ void ImageView::rotateImage(int degrees)
     if (isFit) {
         zoom = zoomFit;
         scale();
+    }
+
+    // Invalidate the IconViewDelegate cache for this specific image
+    if (thumbView) {
+        // You'll need to call the clear method on the delegate
+        thumbView->iconViewDelegate->clearCacheItem(dm->currentSfRow);
+        // Then tell the view to redraw that specific thumb
+        thumbView->refreshIcon(dm->currentSfIdx, "ImageView::rotateImage");
     }
 }
 
@@ -971,6 +1097,24 @@ QPoint ImageView::scene2CW(QPointF pctPt)
              << "y =" << y
                 ;
     return QPoint(x, y);
+}
+
+QSizeF ImageView::vpNormSizeInScene()
+{
+    QString srcFun = "ImageView::vpMidInScene";
+    qreal sceneW = scene->width();
+    qreal sceneH = scene->height();
+    qreal vpW = viewport()->width();
+    qreal vpH = viewport()->height();
+    qreal vpNormW = vpW / sceneW;
+    qreal vpNormH = vpH / sceneH;
+    /*
+    QSizeF vpNormSize(vpNormW, vpNormH);
+    qDebug() << "Scene      =" << scene->sceneRect();
+    qDebug() << "Viewport   =" << viewport()->rect();
+    qDebug() << "vpNormSize =" << vpNormSize;
+    */
+    return QSizeF(vpNormW, vpNormH);
 }
 
 void ImageView::focus()
@@ -1137,12 +1281,15 @@ void ImageView::scrollChange(int /*value*/)
 {
     if (G::isLogger) G::log("ImageView::scrollChange");
 
-    showPredictedFocus();
     /*
     qDebug() << "ImageView::scrollChange"
              << "mapToScene(viewport()->rect()) =" << mapToScene(viewport()->rect())
-             << x1 << y1 << x2 << y2
         ;//*/
+    if (!isLoadingImage) {
+        bool adjustCenter = true;
+        bool refresh = true;
+        showNormalizedViewport(adjustCenter, refresh, "ImageView::scrollChange");
+    }
 }
 
 // MOUSE CONTROL
@@ -1166,7 +1313,7 @@ void ImageView::enterEvent(QEnterEvent *event)
 void ImageView::leaveEvent(QEvent *event)
 {
     wheelSpinningOnEntry = false;
-    emit showLoupeRect(false);
+    // emit showLoupeRect(false);
 }
 
 void ImageView::wheelEvent(QWheelEvent *event)
@@ -1507,11 +1654,13 @@ QString ImageView::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "ImageView Diagnostics");
     rpt << "\n";
+    rpt << "\n" << "pmItem->pixmap().width() = " << pmItem->pixmap().width();
+    rpt << "\n" << "pmItem->pixmap().height() = " << pmItem->pixmap().height();
     rpt << "\n" << "isBusy = " << G::s(isBusy);
     rpt << "\n" << "shootingInfo = " << G::s(infoText);
     rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);
     rpt << "\n" << "currentImagePath = " << G::s(currentImagePath);
-    rpt << "\n" << "firstImageLoaded = " << G::s(isFirstImageNewInstance);
+    rpt << "\n" << "firstImageLoaded = " << G::s(G::isFirstImageNewInstance);
     rpt << "\n" << "classificationBadgeDiam = " << G::s(classificationBadgeDiam);
     rpt << "\n" << "cursorIsHidden = " << G::s(cursorIsHidden);
     rpt << "\n" << "moveImageLocked = " << G::s(moveImageLocked);
@@ -1567,111 +1716,4 @@ void ImageView::copyImage()
     QApplication::clipboard()->setPixmap(pm, QClipboard::Clipboard);
     QString msg = "Copied current image to the clipboard";
     G::popup->showPopup(msg, 1500);
-}
-
-// not being used, but maybe in the future
-//static inline int bound0To255(int val)
-//{
-//    if (G::isLogger) G::log("ImageView::copyImage");
-//    return ((val > 255) ? 255 : (val < 0) ? 0 : val);
-//}
-
-static inline int hslValue(double n1, double n2, double hue)
-{
-    if (G::isLogger) G::log("ImageView  hslValue");
-    double value;
-
-    if (hue > 255) {
-        hue -= 255;
-    } else if (hue < 0) {
-        hue += 255;
-    }
-
-    if (hue < 42.5) {
-        value = n1 + (n2 - n1) * (hue / 42.5);
-    } else if (hue < 127.5) {
-        value = n2;
-    } else if (hue < 170) {
-        value = n1 + (n2 - n1) * ((170 - hue) / 42.5);
-    } else {
-        value = n1;
-    }
-
-    return ROUND(value * 255.0);
-}
-
-void rgbToHsl(int r, int g, int b, unsigned char *hue, unsigned char *sat, unsigned char *light)
-{
-    if (G::isLogger) G::log("ImageView  rgbToHsl");
-    double h, s, l;
-    int		min, max;
-    int		delta;
-
-    if (r > g) {
-        max = MAX(r, b);
-        min = MIN(g, b);
-    } else {
-        max = MAX(g, b);
-        min = MIN(r, b);
-    }
-
-    l = (max + min) / 2.0;
-
-    if (max == min) {
-        s = 0.0;
-        h = 0.0;
-    } else {
-        delta = (max - min);
-
-        if (l < 128) {
-            s = 255 * (double) delta / (double) (max + min);
-        } else {
-            s = 255 * (double) delta / (double) (511 - max - min);
-        }
-
-        if (r == max) {
-            h = (g - b) / (double) delta;
-        } else if (g == max) {
-            h = 2 + (b - r) / (double) delta;
-        } else {
-            h = 4 + (r - g) / (double) delta;
-        }
-
-        h = h * 42.5;
-        if (h < 0) {
-            h += 255;
-        } else if (h > 255) {
-            h -= 255;
-        }
-    }
-
-    *hue = ROUND(h);
-    *sat = ROUND(s);
-    *light = ROUND(l);
-}
-
-void hslToRgb(double h, double s, double l,
-                    unsigned char *red, unsigned char *green, unsigned char *blue)
-{
-    if (G::isLogger) G::log("ImageView  hslToRgb");
-    if (s == 0) {
-        /* achromatic case */
-        *red = l;
-        *green = l;
-        *blue = l;
-    } else {
-        double m1, m2;
-
-        if (l < 128)
-            m2 = (l * (255 + s)) / 65025.0;
-        else
-            m2 = (l + s - (l * s) / 255.0) / 255.0;
-
-        m1 = (l / 127.5) - m2;
-
-        /* chromatic case */
-        *red = hslValue(m1, m2, h + 85);
-        *green = hslValue(m1, m2, h);
-        *blue = hslValue(m1, m2, h - 85);
-    }
 }

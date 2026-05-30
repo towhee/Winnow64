@@ -123,7 +123,7 @@ void BuildFilters::stop()
         abort = true;
         condition.wakeOne();
         mutex.unlock();
-        wait();
+        // wait();
         abort = false;
     }
     if (!isReset) reset();
@@ -131,11 +131,11 @@ void BuildFilters::stop()
 
 void BuildFilters::abortProcessing()
 {
+    QString srcFun = "BuildFilters::abortProcessing";
     if (G::isLogger || G::isFlowLogger)
     {
         QString isGUI = QVariant(G::isGuiThread()).toString();
-        G::log("Buildfilters::abortProcessing",
-               "starting, isGUI thread = " + isGUI);
+        G::log(srcFun, "starting, isGUI thread = " + isGUI);
     }
 
     if (isRunning()) {
@@ -148,9 +148,9 @@ void BuildFilters::abortProcessing()
     // abort = false;
 
     if (G::isLogger || G::isFlowLogger)
-        G::log("BuildFilters::abortProcessing", "emit stopped");
+        G::log(srcFun, "emit stopped");
 
-    emit stopped("BuildFilters");
+    emit stopped(srcFun);
 }
 
 void BuildFilters::setIdle()
@@ -229,10 +229,13 @@ void BuildFilters::build(AfterAction newAction)
     // ignore if filters are being built
     if (filters->buildingFilters) return;
 
-    if (!G::allMetadataLoaded) {
-        G::popup->showPopup("Not all data required for filtering has been loaded yet.", 2000);
-        return;
-    }
+    // if (!G::allMetadataLoaded) {
+    //     G::popup->showPopup("Not all data required for filtering has been loaded yet.", 2000);
+    //     G::issueDedup("Info",
+    //                   "Filter build deferred — metadata still loading",
+    //                   "BuildFilters::build");
+    //     return;
+    // }
 
     /* Update action to take after build filters. If build has been previously called
     while the DataModel metadata was being loaded then the previous afterAction will
@@ -494,12 +497,12 @@ void BuildFilters::updateUnfilteredCounts()
     filters->updateUnfilteredCountPerItem(map, filters->creators);
     map.clear();
 
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->missingThumbs);
-    map.clear();
+    // for (int row = 0; row < rows; row++) {
+    //     if (abort) return;
+    //     map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    // }
+    // filters->updateUnfilteredCountPerItem(map, filters->missingThumbs);
+    // map.clear();
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
@@ -627,12 +630,12 @@ void BuildFilters::updateFilteredCounts()
     filters->updateFilteredCountPerItem(map, filters->creators);
     map.clear();
 
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->missingThumbs);
-    map.clear();
+    // for (int row = 0; row < rows; row++) {
+    //     if (abort) return;
+    //     map[dm->sf->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    // }
+    // filters->updateFilteredCountPerItem(map, filters->missingThumbs);
+    // map.clear();
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
@@ -702,10 +705,10 @@ void BuildFilters::updateCategoryItems()
         col = G::CreatorColumn;
         cat = filters->creators;
         break;
-    case Category::MissingThumbEdit:
-        col = G::MissingThumbColumn;
-        cat = filters->missingThumbs;
-        break;
+    // case Category::MissingThumbEdit:
+    //     col = G::MissingThumbColumn;
+    //     cat = filters->missingThumbs;
+    //     break;
     case Category::CompareEdit:
         col = G::CompareColumn;
         cat = filters->compare;
@@ -940,15 +943,15 @@ void BuildFilters::appendUniqueItems()
     emit updateProgress(progress += progressInc);
     map.clear();
 
-    // missing thumbnails
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->missingThumbs);
-    time("Initialize missing thumbs");
-    emit updateProgress(progress += progressInc);
-    map.clear();
+    // // missing thumbnails
+    // for (int row = 0; row < rows; row++) {
+    //     if (abort) return;
+    //     map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
+    // }
+    // filters->addCategoryItems(map, filters->missingThumbs);
+    // time("Initialize missing thumbs");
+    // emit updateProgress(progress += progressInc);
+    // map.clear();
 
     // duplicate found (compare)
     for (int row = 0; row < rows; row++) {
@@ -1028,6 +1031,8 @@ void BuildFilters::run()
 
     done();
 
+    setIdle();
+    emit stopped("BuildFilters");
 
     /* elapsed time
     qDebug() << "BuildFilters::run"

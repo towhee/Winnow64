@@ -1,5 +1,6 @@
 #include "xmp.h"
 #include "Main/global.h"
+#include "Utilities/utilities.h"
 
 /*
 
@@ -505,6 +506,69 @@ void Xmp::initialize()
     e.schema = "winnow";
     definedElements["winnowaddthumb"] = e;
 
+    // orientation
+    e.name = "tiff:Orientation";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "tiff";
+    definedElements["orientation"] = e;
+
+    // EXIF camera fields — used by formats that lack a native EXIF block
+    // (e.g. Lightroom-exported PNGs mirror EXIF into the exif: / tiff: namespaces).
+    e.name = "tiff:Make";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "tiff";
+    definedElements["make"] = e;
+
+    e.name = "tiff:Model";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "tiff";
+    definedElements["model"] = e;
+
+    e.name = "exif:FNumber";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["fnumber"] = e;
+
+    e.name = "exif:ExposureTime";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["exposuretime"] = e;
+
+    e.name = "exif:ISOSpeedRatings";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::List;
+    e.schema = "exif";
+    definedElements["isospeedratings"] = e;
+
+    e.name = "exif:FocalLength";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["focallength"] = e;
+
+    e.name = "exif:ExposureBiasValue";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["exposurebiasvalue"] = e;
+
+    e.name = "exif:DateTimeOriginal";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["datetimeoriginal"] = e;
+
+    e.name = "exifEX:LensModel";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exifEX";
+    definedElements["lensmodel"] = e;
+
     // schema rdf:Description attributes to add if missing
     e.node = rdfDescriptionNode;
     e.parentName = "rdf:Description";
@@ -534,6 +598,11 @@ void Xmp::initialize()
     e.name = "xmlns:Iptc4xmpCore";
     e.value = "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/";
     definedElements["Iptc4xmpCore"] = e;
+
+    // tiff schema namespace
+    e.name = "xmlns:tiff";
+    e.value = "http://ns.adobe.com/tiff/1.0/";
+    definedElements["tiff"] = e;
 
     // winnow schema namespace
     e.name = "xmlns:winnow";
@@ -671,7 +740,7 @@ QString Xmp::getItem(QByteArray item)
     if (G::isLogger) G::log("Xmp::getItem");
 
     if (!G::stop && !G::isEmbellish && G::instanceClash(instance, "Xmp::getItem")) {
-        if (G::isFileLogger) Utilities::log("Xmp::getItem Instance clash", item);
+        if (G::isRunByExtern) Utilities::log("Xmp::getItem Instance clash", item);
         return "";
     }
 
@@ -681,7 +750,7 @@ QString Xmp::getItem(QByteArray item)
     //*/
     if (!definedElements.contains(item)) {
         QString msg = item + " not found in xmpObjs";
-        G::issue("Warning", msg, "Xmp::getItem", -1, filePath);
+        G::issueDedup("Warning", msg, "Xmp::getItem", -1, filePath);
         return "";
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -727,7 +796,7 @@ QStringList Xmp::getItemList(QByteArray item)
     //*/
     if (!definedElements.contains(item)) {
         QString msg = item + " not found in xmpObj";
-        G::issue("Warning", msg, "Xmp::getItemList", -1, filePath);
+        G::issueDedup("Warning", msg, "Xmp::getItemList", -1, filePath);
         return valList;
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -794,7 +863,7 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     item = item.toLower();
     if (!definedElements.contains(item)) {
         QString msg = "Failed for " + item + ".";
-        G::issue("Warning", msg, "Xmp::setItem", -1, filePath);
+        G::issueDedup("Warning", msg, "Xmp::setItem", -1, filePath);
     }
 
     // check the item schema namespace has been defined in rdf:description

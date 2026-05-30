@@ -6,7 +6,7 @@
 /*
 This group of classes provides a tool to tokenize a string.
 
-For example a date:  2018-03-17 cab be deconstructed into
+For example a date:  2018-03-17 can be deconstructed into
 
 {YYYY}-{MM}-{DD} where the year, month and day will be substituted from file
 metadata.
@@ -315,10 +315,10 @@ TokenDlg::TokenDlg(QStringList &tokens,
     ui->templatesCB->setMaxCount(100);
 
     // minimum button size override G::css (widgetcss)
-    ui->okBtn->setStyleSheet("QPushButton {min-width: 60px;}");
-    ui->renameBtn->setStyleSheet("QPushButton {min-width: 60px;}");
-    ui->newBtn->setStyleSheet("QPushButton {min-width: 60px;}");
-    ui->deleteBtn->setStyleSheet("QPushButton {min-width: 60px;}");
+    ui->okBtn->setMinimumWidth(60);
+    ui->renameBtn->setMinimumWidth(60);
+    ui->newBtn->setMinimumWidth(60);
+    ui->deleteBtn->setMinimumWidth(60);
 
     setStyleSheet(G::css);
 

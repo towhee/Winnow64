@@ -1,11 +1,92 @@
-namespace FStack {
+for (int slice = 0; slice < grpSlices; ++slice)
+    {
+        // 1. WAIT FOR FUTURES BEFORE RETURNING ON ABORT
+        if (abortRequested()) {
+            for (auto &f : futures) f.waitForFinished();
+            return false;
+        }
 
-} // namespace FStack
+        status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(grpSlices));
 
-If you want, I can now generate:
+        try {
+            // Use your updated lambda decoder here if applicable
+            currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+        } catch (const std::exception &e) {
+            QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
+            status(msg);
+            qWarning() << "FS Error:" << msg;
 
-✅ PetteriFocusMaps complete wiring
-✅ PetteriDepthMap complete wiring
-✅ PetteriPMaxFusion complete wiring
-✅ PipelineWavePMax template
-✅ Or help convert your old MW::generateFocusStack to use pipelines cleanly
+            // Clean up threads on load failure
+            for (auto &f : futures) f.waitForFinished();
+            return false;
+        }
+
+        // ... [existing alignment logic] ...
+
+        if (slice > 0) {
+            if (!align.alignSlice(slice, prevImage, currImage, prevGlobal,
+                                  currGlobal, nullptr, nullptr,
+                                  aopt, &abort, statusCb, progressCb)) {
+                // Wait for existing background threads before aborting
+                for (auto &f : futures) f.waitForFinished();
+                return false;
+            }
+            incrementProgress();
+        }
+
+        globals.push_back(currGlobal);
+
+        // 2. ADD ABORT CHECKS INSIDE THE LAMBDA
+        futures.append(QtConcurrent::run(
+            QThreadPool::globalInstance(),
+            [slice, colorForThread, grayForThread, currGlobal, masterROI,
+            paths = alignedColorPaths[slice], this]()
+            {
+                WarpResult res;
+                res.slice = slice;
+
+                // Exit immediately if aborted
+                if (abortRequested()) return res;
+
+                cv::Mat warpedColor, warpedGray;
+                FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
+                FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
+
+                // Exit before heavy allocations/disk writes if aborted
+                if (abortRequested()) return res;
+
+                res.color = warpedColor(masterROI).clone();
+                res.gray  = warpedGray(masterROI).clone();
+
+                if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
+
+                cv::imwrite(paths.toStdString(), res.color);
+
+                return res;
+            }));
+
+        prevImage = currImage;
+        prevGlobal = currGlobal;
+    }
+
+    // 3. DRAIN FUTURES QUICKLY ON ABORT DURING FUSION
+    for (auto &f : futures) {
+        if (abortRequested()) {
+            // If aborted, don't process. Just safely wait for the thread to exit.
+            f.waitForFinished();
+            continue;
+        }
+
+        WarpResult res = f.result();
+
+        // Optional safety check in case the thread returned early due to abort
+        if (res.color.empty() || res.gray.empty()) continue;
+
+        fuse.streamSlice(res.slice, res.gray, res.color, fopt,
+                         &abort, statusCb, progressCb);
+        incrementProgress();
+    }
+
+    if (abortRequested()) return false;
+
+    // ... [existing finalization and streamFinish logic] ...

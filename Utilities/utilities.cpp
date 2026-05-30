@@ -1,5 +1,6 @@
 #include "utilities.h"
 #include "Main/global.h"
+#include <dirent.h>
 
 bool Utilities::integrityCheck(const QString &path1, const QString &path2)
 {
@@ -111,6 +112,115 @@ QString Utilities::assocXmpPath(QString fPath)
     return QFileInfo((fPath)).dir().absolutePath() + "/" + QFileInfo((fPath)).baseName() + ".xmp";
 }
 
+quint32 Utilities::subFolderTree(const QString &rootFolderPath, QStringList &outSubdirs)
+{
+/*
+    Multi-threaded recursive directory walk. Returns the count of subfolders
+    (not including the root) and fills outSubdirs with their absolute paths.
+    Symlinks are not followed.
+*/
+    const std::string rootPath = rootFolderPath.toStdString();
+
+    QElapsedTimer timer;
+    timer.start();
+
+    std::atomic<size_t> folderCount{0};
+    std::atomic<int> pending{1};   // root is the first pending unit of work
+    std::queue<std::string> workQueue;
+    std::mutex queueMutex;
+    std::condition_variable queueCV;
+    std::vector<std::string> collected;
+    std::mutex collectedMutex;
+    workQueue.push(rootPath);
+
+    auto worker = [&]() {
+        while (true) {
+            std::string path;
+            {
+                std::unique_lock<std::mutex> lock(queueMutex);
+                queueCV.wait(lock, [&]{ return !workQueue.empty() || pending.load() == 0; });
+                if (workQueue.empty()) return;
+                path = std::move(workQueue.front());
+                workQueue.pop();
+            }
+
+            DIR *dir = opendir(path.c_str());
+            if (dir) {
+                struct dirent *e;
+                while ((e = readdir(dir)) != nullptr) {
+                    // skip "." and ".."
+                    if (e->d_name[0] == '.' &&
+                        (e->d_name[1] == '\0' ||
+                         (e->d_name[1] == '.' && e->d_name[2] == '\0')))
+                        continue;
+
+                    bool isDir = false;
+                    if (e->d_type == DT_DIR) {
+                        isDir = true;
+                    } else if (e->d_type == DT_UNKNOWN) {
+                        // fallback for filesystems that don't fill d_type
+                        std::string sub = path + "/" + e->d_name;
+                        struct stat st;
+                        if (lstat(sub.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+                            isDir = true;
+                    }
+
+                    if (isDir) {
+                        folderCount.fetch_add(1, std::memory_order_relaxed);
+                        std::string sub = path + "/" + e->d_name;
+                        {
+                            std::lock_guard<std::mutex> lock(collectedMutex);
+                            collected.push_back(sub);
+                        }
+                        pending.fetch_add(1, std::memory_order_relaxed);
+                        {
+                            std::lock_guard<std::mutex> lock(queueMutex);
+                            workQueue.push(std::move(sub));
+                        }
+                        queueCV.notify_one();
+                    }
+                }
+                closedir(dir);
+            }
+
+            if (pending.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                // last pending unit completed — wake all workers so they can exit
+                std::lock_guard<std::mutex> lock(queueMutex);
+                queueCV.notify_all();
+            }
+        }
+    };
+
+    unsigned n = std::thread::hardware_concurrency();
+    if (n == 0) n = 4;
+    std::vector<std::thread> threads;
+    threads.reserve(n);
+    for (unsigned i = 0; i < n; ++i) threads.emplace_back(worker);
+    for (auto& t : threads) t.join();
+
+    quint32 count = folderCount.load();
+
+    outSubdirs.clear();
+    outSubdirs.reserve(static_cast<int>(collected.size()));
+    for (const auto &s : collected)
+        outSubdirs.append(QString::fromStdString(s));
+
+    qint64 ms = timer.elapsed();
+    qDebug() << "Utilities::subFolderTree"
+             << QString::fromStdString(rootPath)
+             << "=" << count
+             << "in" << ms << "ms"
+             << "(threads:" << n << ")";
+
+    return count;
+}
+
+quint32 Utilities::subFolderTreeCount(QString rootFolderPath)
+{
+    QStringList unused;
+    return subFolderTree(rootFolderPath, unused);
+}
+
 QString Utilities::replaceFileName(QString srcPath, QString newName)
 {
     if (G::isLogger) G::log("Utilities::replaceFileName");
@@ -164,6 +274,19 @@ void Utilities::uniqueInList(QString &name, const QStringList &list, QString del
         }
     } while (list.contains(name));
 }
+
+// File status
+bool Utilities::isLocked(const QString& fPath)
+{
+#ifdef Q_OS_MAC
+    struct stat st;
+    if (stat(fPath.toLocal8Bit().constData(), &st) == 0) {
+        return (st.st_flags & (UF_IMMUTABLE | SF_IMMUTABLE));
+    }
+    return false;
+#endif
+}
+
 
 void Utilities::uniqueFolderPath(QString &path, QString delimiter)
 {
@@ -257,15 +380,26 @@ void Utilities::log(QString function, QString msg)
 {
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
     QDir dir(path);
-    if (!dir.exists()) dir.mkdir(path);
+    if (!dir.exists()) dir.mkpath(path);
     QFile fLog(path + "/WinnowLog.txt");
-    if (fLog.isOpen()) fLog.close();
-    if (fLog.open(QIODevice::ReadWrite)) {
-        fLog.readAll();
+
+    // Use Append instead of ReadWrite + readAll()
+    if (fLog.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
-        QString f = function;
-        QString txt = t + "  " + f + "  " + msg + "\n";
+        QString txt = QString("%1  %2  %3\n").arg(t, function, msg);
+
         fLog.write(txt.toUtf8());
+        fLog.close();
+    }
+}
+
+void Utilities::clearLog()
+{
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log/WinnowLog.txt";
+    QFile fLog(path);
+
+    // Opening with WriteOnly and Truncate clears the file instantly
+    if (fLog.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         fLog.close();
     }
 }
@@ -310,6 +444,20 @@ QString Utilities::formatMemory(qulonglong bytes, int precision, bool useBinary)
 QString Utilities::enquote(QString &s)
 {
     return QChar('\"') + s + QChar('\"');
+}
+
+QString Utilities::fitNumber(qint64 v, int width)
+{
+    const QString s = QLocale::system().toString(v);
+    if (s.size() > width - 1) return QString(width - 1, QChar('*'));
+    return s;
+}
+
+QString Utilities::fitNumber(quint64 v, int width)
+{
+    const QString s = QLocale::system().toString(v);
+    if (s.size() > width - 1) return QString(width - 1, QChar('*'));
+    return s;
 }
 
 void Utilities::hideCursor()
@@ -480,7 +628,7 @@ QByteArray Utilities::put16(quint16 x, bool isBigEnd)
 
 quint32 Utilities::get24(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 3) return 0;
     if (isBigEnd) {
         quint32 x = c[0]&0xFF;
         x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
@@ -497,7 +645,7 @@ quint32 Utilities::get24(QByteArray c, bool isBigEnd)
 
 quint32 Utilities::get32(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 4) return 0;
     if (isBigEnd) {
         quint32 x = c[0]&0xFF;
         x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
@@ -535,7 +683,7 @@ QByteArray Utilities::put32(quint32 x, bool isBigEnd)
 
 quint64 Utilities::get40(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 5) return 0;
     if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
@@ -556,7 +704,7 @@ quint64 Utilities::get40(QByteArray c, bool isBigEnd)
 
 quint64 Utilities::get48(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 6) return 0;
     if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
@@ -579,7 +727,7 @@ quint64 Utilities::get48(QByteArray c, bool isBigEnd)
 
 quint64 Utilities::get64(QByteArray c, bool isBigEnd)
 {
-    if (c == "") return 0;
+    if (c == "" || c.size() < 8) return 0;
     if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
@@ -667,13 +815,19 @@ QString Utilities::getString(T &io, quint32 offset, quint32 length)
 {
 /*
     In IFD type 2 = string
+
+    Clamp offset/length against the device size to defend against malformed
+    tag values (offset past EOF or absurd lengths like 0xFFFFFFFF) that would
+    otherwise force QIODevice::read() to allocate a huge QByteArray.
 */
-    io.seek(offset);
-//    return(io.read(length));
+    const qint64 size = io.size();
+    if (size <= 0 || offset >= static_cast<quint64>(size)) return QString();
+    const quint64 remaining = static_cast<quint64>(size) - offset;
+    if (length > remaining) length = static_cast<quint32>(remaining);
+    if (!io.seek(offset)) return QString();
     QString s = io.read(length);
     QChar z = '\0';
     if (s.endsWith(z)) s.remove(z);
-//    if (s.endsWith('\0')) s.remove('\0');
     return(s);
 }
 template QString Utilities::getString<QFile>(QFile&, quint32 offset, quint32 length);

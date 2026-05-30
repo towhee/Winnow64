@@ -1,10 +1,200 @@
 ﻿#include "Main/mainwindow.h"
 #include "Main/global.h"
 #include <QMetaEnum>
+#include <cstdlib>          // std::_Exit (used by runSelfTest)
 
 /*
-   Program notes / ducumentation: see notes/Documentation.txt
+   Program notes / documentation: see notes/Documentation.txt
 */
+
+void MW::updateDockTabGraphics(QTabBar *tabBar)
+{
+/*
+    Responsive dock tab titles (gated by G::useDockTitleGraphic).
+
+    When all the text titles in a dock tab bar fit, the tabs show text;
+    otherwise they switch to white graphics. QMainWindow does not paint a dock's
+    windowIcon on tabs, and on macOS the tab is painted natively (a QProxyStyle
+    drawControl override and setTabButton geometry are both bypassed), so each
+    graphic is a QLabel parented to the tab bar and positioned by hand over the
+    centre of its tab; an invisible spacer button gives a graphic tab a minimum
+    width of 150% of the graphic.
+
+    A tab is identified by its (unique) text title when shown, and by tabData
+    (set when the title is cleared) when in graphic mode, so identity survives
+    the switch. If both are lost - a full tab-bar rebuild while in graphic mode -
+    the titles are restored so identity can be re-established on the next pass.
+
+    setWindowTitle / setTabButton / new QLabel all post events back through the
+    application event filter, so a re-entrancy guard prevents recursion.
+*/
+    static bool busy = false;
+    if (busy || !tabBar) return;
+
+    // Is this one of the dock tab bars? (QMainWindowTabBar, or - on styles where
+    // dock tabs are plain QTabBars - any tab currently showing a dock title.)
+    bool isDockBar = QString(tabBar->metaObject()->className()) == "QMainWindowTabBar";
+    if (!isDockBar)
+        for (int i = 0; i < tabBar->count(); ++i)
+            if (dockTextNames.contains(tabBar->tabText(i))) { isDockBar = true; break; }
+    if (!isDockBar) return;
+
+    const QHash<QString, QString> graphicFor = {
+        {folderDockTabText,   ":/images/icon16/foldertree_white.png"},
+        {favDockTabText,      ":/images/icon16/bookmarks_white.png"},
+        {filterDockTabText,   ":/images/icon16/filters_white.png"},
+        {metadataDockTabText, ":/images/icon16/metadata_white.png"},
+        {embelDockTabText,    ":/images/icon16/embellish_white.png"},
+    };
+    const QHash<QString, QDockWidget*> dockFor = {
+        {folderDockTabText,   folderDock},
+        {favDockTabText,      favDock},
+        {filterDockTabText,   filterDock},
+        {metadataDockTabText, metadataDock},
+        {embelDockTabText,    embelDock},
+    };
+
+    busy = true;
+
+    // Identity per tab. QMainWindow stores its own stable per-tab key in
+    // tabData (a pointer); it overwrites anything we put there on a title
+    // change, so we must not use tabData as our own store. Instead learn
+    // key -> title while the text is visible, and look it up when titles are
+    // cleared (graphic mode).
+    QStringList id;
+    bool lostIdentity = false;
+    bool anyText = false;
+    for (int i = 0; i < tabBar->count(); ++i) {
+        QString t = tabBar->tabText(i);
+        quint64 key = tabBar->tabData(i).toULongLong();
+        if (!t.isEmpty()) {
+            anyText = true;
+            if (key) dockTabTitleByKey.insert(key, t);   // learn
+        }
+        else {
+            t = dockTabTitleByKey.value(key);            // recover learned title
+        }
+        if (t.isEmpty()) lostIdentity = true;
+        id << t;
+    }
+    // Recover after a rebuild that wiped empty-text/empty-data tabs: restore
+    // text titles so the next pass can identify and re-evaluate.
+    if (lostIdentity) {
+        for (auto it = dockFor.begin(); it != dockFor.end(); ++it)
+            if (it.value() && it.value()->windowTitle().isEmpty())
+                it.value()->setWindowTitle(it.key());
+        busy = false;
+        return;
+    }
+
+    // Width the text titles need vs. the width available. In text mode the tab
+    // bar's sizeHint is exact; remember it so graphic mode uses the *same*
+    // threshold (otherwise an under-estimate makes the two modes disagree and
+    // flip-flop at the boundary). Falls back to a font estimate only before the
+    // first text-mode pass / right after a rebuild.
+    int needTextWidth;
+    if (anyText) {
+        needTextWidth = tabBar->sizeHint().width();
+        tabBar->setProperty("dockTabTextWidth", needTextWidth);
+    }
+    else {
+        needTextWidth = tabBar->property("dockTabTextWidth").toInt();
+        if (needTextWidth <= 0) {
+            int pad = qMax(tabBar->style()->pixelMetric(QStyle::PM_TabBarTabHSpace, nullptr, tabBar), 16);
+            needTextWidth = 0;
+            for (const QString &t : id)
+                needTextWidth += tabBar->fontMetrics().horizontalAdvance(t) + pad;
+        }
+    }
+    // Available width is the dock AREA width, not tabBar->width() (the tab bar
+    // shrinks to fit its tabs). Use the FRONT (visible, un-occluded) dock: a
+    // background tabbed dock can keep a stale width, so a plain max() over the
+    // group may report an old, wider value and never switch when narrowed.
+    int avail = 0;
+    for (const QString &t : id) {
+        QDockWidget *d = dockFor.value(t, nullptr);
+        if (d && d->isVisible() && !d->visibleRegion().isEmpty())
+            avail = qMax(avail, d->width());
+    }
+    if (avail <= 0)   // none clearly visible: fall back to any group dock
+        for (const QString &t : id) {
+            QDockWidget *d = dockFor.value(t, nullptr);
+            if (d) avail = qMax(avail, d->width());
+        }
+    if (avail <= 0) avail = tabBar->width();
+    bool fits = needTextWidth <= avail;
+
+    // Hide every graphic up front; the loop re-shows only the tabs in graphic
+    // mode. A dock can leave this tab bar (e.g. re-tabified into another dock)
+    // yet its label stays parented here - without this, those stale labels
+    // would linger on top of the remaining tabs (and on text titles).
+    const QList<QLabel*> existingLabels =
+        tabBar->findChildren<QLabel*>(QString(), Qt::FindDirectChildrenOnly);
+    for (QLabel *lbl : existingLabels)
+        if (lbl->objectName().startsWith("dockTabGraphic_")) lbl->hide();
+
+    for (int i = 0; i < tabBar->count(); ++i) {
+        QDockWidget *dock = dockFor.value(id.at(i), nullptr);
+        if (!dock) continue;
+        dock->toggleViewAction()->setText(id.at(i));   // keep popup-menu label
+
+        QString labelName = "dockTabGraphic_" + id.at(i);
+        QLabel *graphic = tabBar->findChild<QLabel*>(labelName, Qt::FindDirectChildrenOnly);
+
+        if (fits) {
+            if (dock->windowTitle() != id.at(i)) dock->setWindowTitle(id.at(i));
+            if (tabBar->tabButton(i, QTabBar::LeftSide))
+                tabBar->setTabButton(i, QTabBar::LeftSide, nullptr);   // deletes spacer
+            // graphic already hidden by the bulk-hide above
+        }
+        else {
+            QPixmap pm(graphicFor.value(id.at(i)));
+            if (pm.isNull()) continue;   // missing resource: leave the text title
+            if (!dock->windowTitle().isEmpty()) dock->setWindowTitle(QString());
+            if (!graphic) {
+                graphic = new QLabel(tabBar);
+                graphic->setObjectName(labelName);
+                graphic->setPixmap(pm);
+                graphic->setAttribute(Qt::WA_TransparentForMouseEvents);
+                graphic->setAttribute(Qt::WA_TranslucentBackground);
+                graphic->setStyleSheet("background: transparent;");
+                graphic->resize(graphic->pixmap().size());
+            }
+            // Minimum tab width of 150% of the graphic, via an invisible spacer
+            // button (the tab has no text to size it).
+            if (tabBar->tabButton(i, QTabBar::LeftSide) == nullptr) {
+                QWidget *spacer = new QWidget;
+                spacer->setFixedSize(graphic->pixmap().width() * 3 / 2,
+                                     graphic->pixmap().height());
+                spacer->setAttribute(Qt::WA_TransparentForMouseEvents);
+                tabBar->setTabButton(i, QTabBar::LeftSide, spacer);
+            }
+            QRect g = graphic->rect();
+            g.moveCenter(tabBar->tabRect(i).center());
+            graphic->setGeometry(g);
+            graphic->raise();
+            graphic->show();
+        }
+    }
+    busy = false;
+}
+
+void MW::scheduleDockTabUpdate()
+{
+/*
+    Re-evaluate every dock tab bar after the layout settles. Connected to each
+    tabified dock's dockLocationChanged / topLevelChanged: dragging a dock into
+    a tab group adds a tab but fires no reliable resize/show on the surviving
+    docks, so the tab count can change without the event-filter path noticing.
+    Deferred with a zero timer so the new tab and final geometry exist when it
+    runs.
+*/
+    if (!G::useDockTitleGraphic) return;
+    QTimer::singleShot(0, this, [this]() {
+        const QList<QTabBar *> bars = findChildren<QTabBar *>();
+        for (QTabBar *b : bars) updateDockTabGraphics(b);
+    });
+}
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
@@ -43,7 +233,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
             + "/settings.ini";
     settings = new QSettings(iniPath, QSettings::IniFormat);
-    // settings = new QSettings("Winnow", "winnow_100");
     G::settings = settings;
     // test if new user
     if (settings->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
@@ -156,7 +345,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
                     if (fsTree->select(lastDir)) {
                         folderSelectionChange(lastDir, G::FolderOp::Add);
                         // folderSelectionChange(lastDir, "Add");
-                        updateIconRange(false, "MW::MW rememberLastDir");
+                        updateIconRange("MW::MW rememberLastDir");
                     }
                 }
             }
@@ -206,7 +395,81 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // crash log
     settings->setValue("hasCrashed", true);
 
+    // Memory-overrun watchdog: GUI-thread QTimer that polls phys_footprint
+    // independently of any subsystem. Runs continuously so it catches growth
+    // during folder enumeration and queue draining, not just MetaRead bursts.
+    // Interval is short (50 ms) because at high caps (e.g. 16 GB on a 24 GB
+    // Mac) we have very little headroom between detecting overrun and macOS
+    // killing the process — every extra millisecond risks the abort racing
+    // a SIGKILL or a heap-corruption crash inside PowerLog/CoreFoundation.
+    memoryWatchdog = new QTimer(this);
+    memoryWatchdog->setTimerType(Qt::PreciseTimer);
+    memoryWatchdog->setInterval(50);
+    connect(memoryWatchdog, &QTimer::timeout, this, &MW::memoryWatchdogTick);
+    memoryWatchdog->start();
+
     if (G::isLogger) G::log("MW::MW",  "(end of MW::MW)");
+}
+
+void MW::runSelfTest(const QString &folderPath, int settleMs)
+{
+/*
+    Headless smoke test entry point (see tests/smoke). Opens folderPath via the
+    same path the app uses at startup, lets it load for settleMs, then exits the
+    app with code 0 if the data model loaded at least one image, else 2. main.cpp
+    enables QStandardPaths test mode first, so this never touches real settings.
+*/
+    if (G::isLogger) G::log("MW::runSelfTest", folderPath);
+    centralLayout->setCurrentIndex(LoupeTab);
+    if (fsTree->select(folderPath))
+        folderSelectionChange(folderPath, G::FolderOp::Add);
+
+    QTimer::singleShot(settleMs, this, [this, folderPath]() {
+        const int rows = dm ? dm->rowCount() : 0;
+        fprintf(stderr, "SELFTEST: folder=%s rows=%d\n",
+                folderPath.toLocal8Bit().constData(), rows);
+        fflush(stderr);
+        // Exit immediately, skipping Qt/C++ teardown. We've measured health at the
+        // loaded steady state; forcing the event loop to unwind here delivers
+        // in-flight queued signals to a half-destroyed MW (teardown assert). The
+        // orderly shutdown path (window close) is not what this smoke test covers.
+        std::_Exit(rows > 0 ? 0 : 2);
+    });
+}
+
+void MW::runMetaTest(const QString &filePath)
+{
+/*
+    End-to-end metadata read (see tests/metadata). Reads filePath through the full
+    Metadata pipeline (the same loadImageMetadata the Reader uses), prints the key
+    parsed fields, and exits 0 if make/model/dimensions came back (optionally
+    matching WINNOW_METATEST_MAKE/MODEL substrings), else 2. main.cpp enables
+    QStandardPaths test mode first, so this never touches real settings.
+*/
+    if (G::isLogger) G::log("MW::runMetaTest", filePath);
+    QFileInfo fi(filePath);
+    const bool ok = metadata->loadImageMetadata(fi, 0, 0, true, true, false, false,
+                                                "MW::runMetaTest");
+    const ImageMetadata &m = metadata->m;
+    fprintf(stderr, "METATEST: ok=%d make=[%s] model=[%s] w=%d h=%d\n",
+            ok ? 1 : 0,
+            m.make.toLocal8Bit().constData(),
+            m.model.toLocal8Bit().constData(),
+            m.width, m.height);
+    fflush(stderr);
+
+    // Expected make/model substrings are supplied by the test (env), so this code
+    // stays generic and the fixture's identity lives in the test registration.
+    const QByteArray expMake  = qgetenv("WINNOW_METATEST_MAKE");
+    const QByteArray expModel = qgetenv("WINNOW_METATEST_MODEL");
+    const bool pass = ok
+        && m.width > 0 && m.height > 0
+        && !m.make.isEmpty() && !m.model.isEmpty()
+        && (expMake.isEmpty()
+            || m.make.contains(QString::fromLocal8Bit(expMake), Qt::CaseInsensitive))
+        && (expModel.isEmpty()
+            || m.model.contains(QString::fromLocal8Bit(expModel), Qt::CaseInsensitive));
+    std::_Exit(pass ? 0 : 2);
 }
 
 void MW::whenActivated(Qt::ApplicationState state)
@@ -263,10 +526,6 @@ void MW::showEvent(QShowEvent *event)
         return;
     }
 
-    // QMainWindow::showEvent(event);
-
-    // Finish initializing
-
     // restore prior geometry and state
     if (isSettings) {
         restoreGeometry(settings->value("Geometry").toByteArray());
@@ -278,18 +537,22 @@ void MW::showEvent(QShowEvent *event)
         defaultWorkspace();
     }
 
+    // Apply persisted per-dock collapsed flag. Deferred so the just-restored
+    // dock geometries have settled before setCollapsed() snapshots them.
+    QTimer::singleShot(0, this, &MW::applyDockCollapseState);
+
     if (G::mode == "Loupe" && !thumbDock->isVisible()) {
         thumbDock->setVisible(true);
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
+        qDebug() << "MW::showEvent2"
+                 << "thumbView->iconWidth =" << thumbView->iconWidth
+                 << "thumbView->iconHeight =" << thumbView->iconHeight;
     }
-
-    /* set thumbnail size to fit the thumbdock initial size
-       canceled as dock height reduced every time a new session */
-    // thumbView->thumbsFitTopOrBottom();
 
     // initial status bar icon state
     updateStatusBar();
+    progressLabel->setVisible(isShowCacheProgressBar);
 
     // set initial visibility in embellish template
     embelTemplateChange(embelProperties->templateId);
@@ -305,27 +568,27 @@ void MW::showEvent(QShowEvent *event)
 
     QMainWindow::showEvent(event);
 
-    // qApp->processEvents();
     qApp->setStyleSheet(G::css);
 
     fsTree->setRootIndex(fsTree->model()->index(0,0));
 
     G::isInitializing = false;
 
-    G::issue("New Session.");
+    G::issueBeginSession();
 
     if (G::issueLog->failedToOpen) {
-        // QString popupMsg = "The issue log file failed to open, preventing Winnow<br>"
-        //                    "from writing issues to file.<p>"
-        //                    "File: " +
-        //                    QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
-        //                    "/Log/WinnowErrorLog.txt<p>"
-        //                    "Press ESC to continue."
-        //                     ;
-        // G::popUp->reset();
-        // G::popUp->showPopup(popupMsg, 0, true, 1.0, Qt::AlignCenter);
-        // qDebug() << "MW::showEvent" << popupMsg;
+        QString popupMsg = "The issue log file failed to open, preventing Winnow<br>"
+                           "from writing issues to file.<p>"
+                           "File: " +
+                           QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
+                           "/Log/WinnowIssueLog.txt<p>"
+                           "Press ESC to continue."
+                            ;
+        G::popup->reset();
+        G::popup->showPopup(popupMsg, 0, true, 1.0, Qt::AlignCenter);
+        qDebug() << "MW::showEvent" << popupMsg;
     }
+
 
 }
 
@@ -376,9 +639,6 @@ void MW::closeEvent(QCloseEvent *event)
     if (G::popup != nullptr) G::popup->close();
     if (zoomDlg != nullptr) zoomDlg->close();
     hide();
-    if (!QApplication::clipboard()->image().isNull()) {
-        QApplication::clipboard()->clear();
-    }
 
     // close all open dialogs
     if (preferencesDlg != nullptr) {
@@ -389,6 +649,17 @@ void MW::closeEvent(QCloseEvent *event)
         if (w && w->isVisible()) {
             w->close();
         }
+    }
+    // close any HtmlWindow help pages parented anywhere under MW
+    for (auto *hw : findChildren<HtmlWindow*>()) {
+        hw->close();
+    }
+
+    // check and delete focus stack
+    if (fsPipeline) {
+        fsPipeline->requestAbort();
+        fsThread->quit();
+        fsThread->wait();
     }
 
     if (!simulateJustInstalled) {
@@ -439,11 +710,6 @@ void MW::resizeEvent(QResizeEvent *event)
 
     // update current workspace
     ws.isMaximised = isMaximized();
-
-    // scroll to current
-    if (!thumbView->isCellVisible(dm->currentSfRow)) {
-        keyScrollCurrent();
-    }
 }
 
 void MW::changeEvent(QEvent *event) {
@@ -493,10 +759,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         //     return;
         // }
         // stop loading a new folder
-        else if (!G::allMetadataLoaded) {
-            // qDebug() << "event->key() == Qt::Key_Escape !G::allMetadataLoaded";
-            stop("Escape key");
-        }
+        else if (!G::allMetadataLoaded) stop("Escape key");
         // stop background ingest
         // else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
@@ -507,15 +770,15 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (G::isProcessingExportedImages) emit abortEmbelExport();
         // abort color analysis
         else if (G::isRunningColorAnalysis) emit abortHueReport();
-        // abort stack operation
-        else if (G::isRunningStackOperation) emit abortStackOperation();
-        // stop building filters
-        // else if (filters->buildingFilters) buildFilters->stop();
+        // abort focus stacking
+        else if (fsPipeline) emit abortFocusStack();
         // exit full screen mode
         else if (fullScreenAction->isChecked()) escapeFullScreen();
         // FSTree or Bookmarks disabled
         else if (!fsTree->isEnabled()) fsTree->setEnabled(true);
         else if (!bookmarks->isEnabled()) bookmarks->setEnabled(true);
+        // stop building filters
+        // else if (filters->buildingFilters) buildFilters->stop();
     }
 
     if (G::isSlideShow) {
@@ -974,8 +1237,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
                 bool noModifiers = e->modifiers() == 0;
                 const QModelIndex idx = thumbView->indexAt(e->pos());
-                if (idx.isValid() && noModifiers) {
-                    QString src = "MW::eventFilter: ";
+
+                // in thumb part of cell?
+                QRect *tRect = nullptr;
+                if (thumbView->iconViewDelegate->thumbRectCache.contains(idx.row()))
+                    tRect = thumbView->iconViewDelegate->thumbRectCache[idx.row()];
+                bool inThumb = false;
+                if (tRect && tRect->contains(e->pos())) inThumb = true;
+
+                // qDebug() << idx.isValid() << noModifiers << "In thumb =" << inThumb;
+                if (idx.isValid() && noModifiers && inThumb) {
+                    QString src = "MW::eventFilter";
                     thumbView->zoomCursor(idx, src, /*forceUpdate=*/false, e->pos());
                 }
                 else {
@@ -987,7 +1259,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
     /* DOCK TAB TOOLTIPS
        Call filterDockTabMousePress if filter tab.
-       Show a tooltip for docked widget tabs. // not used
+       // Show a tooltip for docked widget tabs. // not used
     */
     {
         static int prevTabIndex = -1;
@@ -1002,18 +1274,69 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             qDebug() << "MW::eventFilter obj->metaObject()->className() ="
                      << obj->metaObject()->className();
             */
+            // Responsive dock tab titles: show text when the titles fit, else
+            // switch to white graphics (see MW::updateDockTabGraphics).
+            if (G::useDockTitleGraphic
+                    && event->type() != QEvent::Paint
+                    && event->type() != QEvent::UpdateRequest) {
+                updateDockTabGraphics(qobject_cast<QTabBar *>(obj));
+            }
+
             // build filters when filter tab mouse clicked
             if (event->type() == QEvent::MouseButtonPress) {
                 QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
                 QMouseEvent *e = static_cast<QMouseEvent *>(event);
                 int i = tabBar->tabAt(e->pos());
-                // qDebug() << "MW::eventFilter tabText =" << tabBar->tabText(i);
-                if (tabBar->tabText(i) == filterDockTabText) {
+                // A graphic-mode tab has empty text; resolve its identity from
+                // the learned QMainWindow tab key.
+                QString id = tabBar->tabText(i);
+                if (id.isEmpty()) id = dockTabTitleByKey.value(tabBar->tabData(i).toULongLong());
+                if (id == filterDockTabText) {
                     /*
                     qDebug() << "MW::eventFilter filterDock mouse press";*/
                     filterDockTabMousePress();
                 }
             }
+
+            // dynamic tooltip on dock tabs (computed at hover time)
+            if (event->type() == QEvent::ToolTip) {
+                QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+                QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
+                int i = tabBar->tabAt(helpEvent->pos());
+                if (i >= 0) {
+                    // A graphic-mode tab has empty text; resolve its identity
+                    // (for the tooltip) from the learned QMainWindow tab key.
+                    QString id = tabBar->tabText(i);
+                    if (id.isEmpty()) id = dockTabTitleByKey.value(tabBar->tabData(i).toULongLong());
+                    QString tip = dockTabToolTip(id);
+                    if (!tip.isEmpty()) {
+                        QToolTip::showText(helpEvent->globalPos(), tip, tabBar);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // A dock resize/show changes the available width but may not resize the
+        // tab bar (which shrinks to its tabs), so the tab-bar events above can
+        // miss it - re-evaluate the dock tab graphics on dock resize/show too.
+        // This also covers workspace switches: invokeWorkspace's restoreState
+        // resizes and shows the docks, firing these events.
+        if (G::useDockTitleGraphic
+                && (event->type() == QEvent::Resize || event->type() == QEvent::Show)
+                && qobject_cast<QDockWidget *>(obj)) {
+            const QList<QTabBar *> bars = findChildren<QTabBar *>();
+            for (QTabBar *b : bars) updateDockTabGraphics(b);
+        }
+
+        // thumbDock uses Qt's default title bar (no DockTitleBar widget).
+        // ToolTip event only reaches thumbDock when cursor is on a non-child
+        // area — i.e. the title bar — so no geometry check needed.
+        if (obj == thumbDock && event->type() == QEvent::ToolTip) {
+            QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
+            QToolTip::showText(helpEvent->globalPos(),
+                               dockTabToolTip(thumbDockTabText), thumbDock);
+            return true;
         }
     }
     /*
@@ -1320,7 +1643,7 @@ need to adjust it to fit your specific needs.
 #include <QProcess>
 
 class Updater : public QObject {
-    Q_OBJECT
+    _Q_OBJECT // remove leading _ (cmake does not like)
 
 public:
     Updater(QObject *parent = nullptr) : QObject(parent) {
@@ -1449,7 +1772,7 @@ I hope this helps! Let me know if you have any questions.
         return;
     }
 
-    updateAppDlg = new UpdateApp(version, css);
+    updateAppDlg = new UpdateApp(version, G::css);
     int ret = updateAppDlg->exec();
     if (ret == QDialog::Rejected) {
         process.close();
@@ -1498,7 +1821,8 @@ void MW::handleStartupArgs(const QString &args)
     the list of files, inserts the strings "Embellish" and the template name
     "Zen2048" and then resends to Winnow.
 */
-    if (G::isLogger) G::log("MW::handleStartupArgs", args);
+    QString fun = "MW::handleStartupArgs";
+    if (G::isLogger) G::log(fun, args);
 
     // if (args.length() < 2) return;
 
@@ -1509,8 +1833,8 @@ void MW::handleStartupArgs(const QString &args)
 
     // qDebug() << "MW::handleStartupArgs" << argList;
     if (argList.length() > 1) {
-        // if (G::isFileLogger) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
-        if (G::isFileLogger)
+        if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
+        if (G::isRunByExtern)
             Utilities::log("MW::handleStartupArgs", argList.join(" | "));
     }
 
@@ -1521,16 +1845,22 @@ void MW::handleStartupArgs(const QString &args)
     // FOCUSSTACK
     if (srcProgram.startsWith("FocusStack")) {
 
-        // check if at least 2 image paths sent, if not, close Winnow
-        if (argList.length() < 3) close();
+        // qDebug() << fun << argList;
 
-        // QString msg = "MW::handleStartupArgs " + argList.at(0);
-        // Utilities::log("MW::handleStartupArgs", msg);
+        // check if at least 2 image paths sent, if not, close Winnow
+        if (argList.length() < 3) {
+            close();
+            return;
+        }
+
+        QString msg = "MW::handleStartupArgs " + argList.at(0);
+        Utilities::log("MW::handleStartupArgs", msg);
 
         show();
         raise();
 
-        QString method = srcProgram.mid(QString("FocusStack").length());
+        QString method = fsMethod;
+        // QString method = srcProgram.mid(QString("FocusStack").length());
 
         QStringList paths;
         for (int i = 1; i < argList.count(); i++) {
@@ -1538,11 +1868,11 @@ void MW::handleStartupArgs(const QString &args)
         }
         paths.sort();
 
-        generateFocusStack(paths, method, "MW::handleStartupArgs");
+        generateFocusStack(paths, method, /*isLocal*/false);
     }
 
     // EMBELLISH
-    else if (srcProgram.startsWith("Embellish")) {
+    else if (argList.at(1).startsWith("Embellish")) {
         /* This means a remote embellish has been invoked.
                 arg 1 = "Embellish"
                 arg 2 = Embellish template name ie "Zen2048"
@@ -1563,17 +1893,20 @@ void MW::handleStartupArgs(const QString &args)
         G::mode = "Loupe";
 
         // check if any image path sent, if not, return
-        if (argList.length() < 2) return;
+        if (argList.length() < 3) return;
+        // if (argList.length() < 2) return;
 
         // get the embellish template to use
-        templateName = srcProgram.mid(QString("Embellish").length());
+        templateName = argList.at(2);
+        // templateName = srcProgram.mid(QString("Embellish").length());
 
-        /* log
-        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
+        // /* log
+        if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
         //*/
 
         // get the folder where the files to embellish are located
-        QFileInfo info(argList.at(1));
+        QFileInfo info(argList.at(3));
+        // QFileInfo info(argList.at(1));
         QString folderPath = info.dir().absolutePath();
 
         // list of all supported files in the folder
@@ -1694,10 +2027,10 @@ void MW::handleStartupArgs(const QString &args)
         f.dir().path();
         fsTree->select(f.dir().path());
         // folderSelectionChange(); // not req'd after multi-select FSTree
-        if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
+        if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
     }
 
-    if (G::isFileLogger) Utilities::log("MW::handleStartupArgs", "done");
+    if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs", "done");
     return;
 }
 
@@ -1756,17 +2089,33 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
         stop(fun);
         // sync bookmarks if exists
         bookmarks->select(folderPath);
+
     }
     else {
         // stop building but do not clear filters
         buildFilters->abortProcessing();
     }
 
+    /*  Walk the tree once: get the subfolder count AND the list of
+        subfolder paths in a single multi-threaded pass, then pass the
+        list straight to enqueueFolderSelection so it doesn't redo the
+        walk with QDirIterator. */
+    QStringList subDirs;
+    if (recurse) {
+        setCentralMessage("Determining subfolder tree count...");
+        dm->subFolderTreeCount = Utilities::subFolderTree(folderPath, subDirs);
+        dm->subFolderTreeCounter = 0;
+        QString msg = "Processing " + folderPath + "\n" +
+                      "Subfolder tree count = " +
+                      QVariant(dm->subFolderTreeCount).toString();
+        setCentralMessage(msg);
+    }
+
     /* put folder in datamodel queue to add or remove if main thread
        is not blocking */
     dm->abort = false;
-    QTimer::singleShot(0, this, [this, folderPath, op, recurse]{
-        dm->enqueueFolderSelection(folderPath, op, recurse);
+    QTimer::singleShot(0, this, [this, folderPath, op, recurse, subDirs]{
+        dm->enqueueFolderSelection(folderPath, op, recurse, subDirs);
     });
 
     // dm->enqueueFolderSelection(folderPath, op, recurse);
@@ -1799,11 +2148,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (G::isLogger || G::isFlowLogger)
     {
         G::log(fun,
-               "row = " + QString::number(current.row())
-               + " src = " + src);
-        // + " G::fileSelectionChangeSource = " + G::fileSelectionChangeSource);
-        // can crash here
-        // G::log("MW::fileSelectionChange", "Source: " + fun + " " + current.data(G::PathRole).toString());
+               "row = " + QString::number(current.row()) +
+               " src = " + src);
     }
 
     if (G::stop) {
@@ -1815,7 +2161,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     /* debug
     {
     qDebug() << fun
-             << "fun =" << fun
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
              << "G::mode =" << G::mode
              // << "current =" << current
@@ -1840,13 +2185,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         }
     }
 
-    // // folder does not exist
-    // if (!currRootDir.exists()) {
-    //     if (G::isLogger || G::isFlowLogger) G::log(fun,
-    //         "Folder does not exist so exit");
-    //     refreshFolders();
-    //     return;
-    // }
+    /* folder does not exist
+    if (!currRootDir.exists()) {
+        if (G::isLogger || G::isFlowLogger) G::log(fun,
+            "Folder does not exist so exit");
+        refreshFolders();
+        return;
+    }
+    //*/
+
+    // if current is not first and !G::allMetadataLoaded
+    // waitUntilMetadataLoaded(5000, fun);
 
     // if new folder and 1st file is a video and mode == "Table"
     if (G::mode == "Table" && centralLayout->currentIndex() != TableTab) {
@@ -1911,36 +2260,35 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
 
-    // // failsafe to load thumbnail if MetaRead failed
-    // if (!isVideo && !dm->iconLoaded(current.row(), dm->instance)) {
-    //     // qDebug() << source << "reloading thumb for row" << current.row();
-    //     QImage image;
-    //     Thumb *thumb = new Thumb(dm);
-    //     bool ok = thumb->loadThumb(fPath, image, dm->instance, source);
-    //     if (ok) {
-    //         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize,
-    //                                                      Qt::KeepAspectRatio));
-    //         QModelIndex dmIdx = dm->index(dm->rowFromPath(fPath), 0);
-    //         dm->setIcon(dmIdx, pm, ok, dm->instance, source);
-    //     }
-    //     delete thumb;
-    // }
-
     // update loupe/video view
     videoView->stop();
     if (G::mode == "Loupe" || G::mode == "Grid" || G::mode == "Table") {
         if (isVideo) {
+            G::isFirstImageNewInstance = false;
+            updateClassification();
             if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+                // loupeDisplay(fun);
                 if (G::useMultimedia) {
                     centralLayout->setCurrentIndex(VideoTab);
                     videoView->load(fPath);
-                    videoView->play();
+                    // videoView->play();
                 }
             }
+            if (G::mode == "Grid") gridView->refreshIcons(src);
+            // if (G::mode == "Grid") gridDisplay();
+            // if (G::mode == "Table") tableDisplay();
         }
         else if (G::useImageView) {
+            // Mirror the unconditional centralLayout switch used in the video branch.
+            // imageView->loadImage can return false (cache miss, other early-returns),
+            // which would skip loupeDisplay and leave the central widget on VideoTab
+            // from a prior video selection.
+            if ((G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick")
+                && centralLayout->currentIndex() != LoupeTab)
+            {
+                centralLayout->setCurrentIndex(LoupeTab);
+            }
             if (imageView->loadImage(fPath, false, fun)) {
-                updateClassification();
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                     loupeDisplay(fun);
                 }
@@ -1958,8 +2306,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (!G::removingRowsFromDM)
        )
     {
+        // Arm MetaRead's navigation gate so its reader pool yields CPU
+        // to the ImageCache decoder for this selection.
+        QMetaObject::invokeMethod(metaRead, "setAwaitingDecode",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(int, dm->currentSfRow));
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
-        // imageCache->setCurrentPosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
 
     workspaceChanged = false;
@@ -2001,6 +2353,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     is req'd before the initial metadata has been cached and the image can be
     selected.
 */
+    QString fun = "MW::folderAndFileSelectionChange";
     if (G::isLogger || G::isFlowLogger) {
         QString msg = "src = " + src + " fPath = " + fPath;
         G::log("MW::folderAndFileSelectionChange", msg);
@@ -2030,8 +2383,8 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         }
     }
 
-    /*
-    qDebug() << "MW::folderAndFileSelectionChange"
+    // /*
+    qDebug() << fun
              << "isStartupArgs =" << isStartupArgs
              << "folder =" << folder
              << "fPath =" << fPath
@@ -2053,7 +2406,9 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
         return;
     }
 
-    if (G::isFileLogger) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
+    qDebug() << fun << "4";
+
+    if (G::isRunByExtern) Utilities::log("MW::folderAndFileSelectionChange", "call folderSelectionChange for " + folderAndFileChangePath);
     return;
 }
 
@@ -2079,22 +2434,39 @@ void MW::refresh()
               Menu File > Refresh
 
 */
-    if (G::isLogger) G::log("MW::refresh");
+    QString srcFun = "MW::refresh";
+    if (G::isLogger) G::log(srcFun);
     // update image counts
     fsTree->updateCount();
     bookmarks->updateCount();
     dm->refresh();
-    qDebug() << "MW::refresh" << dm->rowCount() << dm->sf->rowCount();
-    if (dm->sf->rowCount()) {
-        // buildFilters->recount();
-    }
-    else {
+    if (!dm->sf->rowCount()) {
         buildFilters->rebuild();
     }
-    filterChange("MW::refresh");
+    filterChange(srcFun);
     buildFilters->recount();
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+
+    // Grid view does not update automatically when insertion or deletion
+    if (thumbView->isVisible()) {
+        // Force the IconView to clear its internal pixmap cache
+        thumbView->refreshIcons(srcFun);
+        // Sync the scroll position to the model's preferred icon
+        thumbView->scrollToRow(dm->currentSfRow, srcFun);
+    }
+    if (gridView->isVisible()) {
+        // Force the IconView to clear its internal pixmap cache
+        gridView->refreshIcons(srcFun);
+        // Sync the scroll position to the model's preferred icon
+        gridView->scrollToRow(dm->currentSfRow, srcFun);
+    }
+
+    // // force thumbnail updates in views
+    // if (G::mode == "Loupe") loupeDisplay();
+    // if (G::mode == "Grid") gridDisplay();
+    // if (G::mode == "Table") tableDisplay();
+
 }
 
 bool MW::allIdle() const {
@@ -2127,21 +2499,20 @@ void MW::stop(QString src)
     prior folder. See ImageCache::fillCache.
 
 */
-
+    QString srcFun = "MW::stop";
     if (G::isLogger || G::isFlowLogger)
-        G::log("MW::stop", "instance = " + QString::number(dm->instance) +
+        G::log(srcFun, "instance = " + QString::number(dm->instance) +
                " src = " + src);
 
     // ignore if already stopping
     if (G::stop) return;
-
-    // qDebug().noquote() << "MW::stop src =" << src;
 
     // stop flags
     G::stop = true;
     dm->abort = true;
 
     // initialize stopped state for MetaRead, ImageCache, BuildFilters
+    stopped.clear();
     stopped["MetaRead"] = metaRead->isIdle();
     stopped["ImageCache"] = imageCache->isIdle();
     stopped["BuildFilters"] = buildFilters->isIdle();
@@ -2149,46 +2520,32 @@ void MW::stop(QString src)
     // stop slideshow
     if (G::isSlideShow && !G::isStressTest) slideShow();
 
+    /* Connect subsystem idle/aborted signals to update the stopped map */
+    QList<QMetaObject::Connection> conns;
+    conns << connect(metaRead, &MetaRead::stopped,
+        this, [this](QString){ stopped["MetaRead"] = true; }, Qt::QueuedConnection);
+    conns << connect(imageCache, &ImageCache::stopped,
+        this, [this](QString){ stopped["ImageCache"] = true; }, Qt::QueuedConnection);
+    conns << connect(buildFilters, &BuildFilters::stopped,
+        this, [this](QString){ stopped["BuildFilters"] = true; }, Qt::QueuedConnection);
+
     if (!stopped["MetaRead"]) emit abortMetaRead();
     if (!stopped["ImageCache"]) emit abortImageCache();
     if (!stopped["BuildFilters"]) emit abortBuildFilters();
 
-    // wait until abort done
-    QEventLoop loop;
-    QTimer to; to.setSingleShot(true); to.start(1000);
-
-    // Update helper
-    auto setStopped = [&](const QString& name){
-        stopped[name] = true;
-        // G::log("MW::stop  setStopped", name);
-        if (allIdle()) {
-            // G::log("MW::stop  setStopped", "allIdle = true");
-            loop.quit();
-        }
-    };
-
-    // Connect subsystem idle/aborted signals (must be Queued across threads)
-    QList<QMetaObject::Connection> conns;
-    conns << connect(metaRead, &MetaRead::stopped,
-                     &loop, [=]{ setStopped("MetaRead"); }, Qt::QueuedConnection);
-    conns << connect(imageCache, &ImageCache::stopped,
-                     &loop, [=]{ setStopped("ImageCache"); }, Qt::QueuedConnection);
-    conns << connect(buildFilters, &BuildFilters::stopped,
-                     &loop, [=]{ setStopped("BuildFilters"); }, Qt::QueuedConnection);
-
-    // Timeout handler
-    connect(&to, &QTimer::timeout, &loop, [&]{
-        if (G::isFlowLogger)
-            G::log("MW::stop", "timed out");
-        loop.quit();
-    });
-
-    // If everything was already idle, skip waiting
-    if (!allIdle()) {
-        // G::log("MW::stop", "start loop");
-        // this blocks until all idle or timeout
-        loop.exec();
+    // Wait for the subsystems to acknowledge abort. Event-driven: wake the
+    // instant a queued stopped signal arrives (WaitForMoreEvents) instead of
+    // polling in fixed 10 ms sleeps, so teardown returns as soon as the
+    // workers are idle. User input stays excluded so a second folder click
+    // can't reenter the teardown.
+    QElapsedTimer waitTimer;
+    waitTimer.start();
+    while (!allIdle() && waitTimer.elapsed() < 3000) {
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents |
+                            QEventLoop::WaitForMoreEvents, 50);
     }
+
+    if (!allIdle()) qWarning() << "NOT ALLIDLE! STOP FAILED";
 
     // Clean up connections
     for (const auto& c : conns) QObject::disconnect(c);
@@ -2204,11 +2561,38 @@ void MW::stop(QString src)
         setCentralMessage("Image loading has been aborted.");
     }
 
-    qApp->processEvents();
+
+    // qDebug() << "RGH";
+    // qDebug() << "MW::stop() Status Report | Source:" << src << "| Instance:" << (int)dm->instance;
+
+    // if (metaRead)
+    //     qDebug() << "  MetaRead:     " << (metaRead ? "RUNNING" : "Stopped")
+    //              << " | isIdle:" << metaRead->isIdle();
+
+    // metaRead->debugRunStatus();
+
+    // if (buildFilters)
+    //     qDebug() << "  BuildFilters: " << (buildFilters->isRunning() ? "RUNNING" : "Stopped")
+    //              << " | isIdle:" << buildFilters->isIdle();
+
+    // if (imageCache) {
+    //     qDebug() << "  ImageCache:   " << (imageCache->isIdle() ? "IDLE   " : "BUSY   ")
+    //              << " | (Main cache state)";
+
+    //     imageCache->debugRunStatus();
+    // }
+
+    // qDebug() << "  Global Flags:  G::stop:" << (bool)G::stop << " | dm->abort:" << (bool)dm->abort;
+
+
+
+
+
     G::stop = false;
     G::isModifyingDatamodel = false;
 
-    if (G::isLogger || G::isFlowLogger) G::log("MW::stop", "done");
+    if (G::isLogger || G::isFlowLogger) G::log(srcFun, "done");
+
 }
 
 bool MW::reset(QString src)
@@ -2228,6 +2612,7 @@ bool MW::reset(QString src)
     dm->clearDataModel();
     // new instance: only done here and if sort/filter operation
     dm->newInstance();
+    emit initializeImageCache();    // may not be req'd
 
     G::allMetadataLoaded = false;
     G::iconChunkLoaded = false;
@@ -2242,11 +2627,10 @@ bool MW::reset(QString src)
     }
     isDragDrop = false;
 
-    // fsTree->clearFolderOverLimit();
     fsTree->setEnabled(true);
     bookmarks->setEnabled(true);
     cacheProgressBar->clearImageCacheProgress();
-    cacheProgressBar->clearUpperProgress();
+    cacheProgressBar->clearMetaReadProgress();
     progressLabel->setVisible(false);
     // updateImageCacheStatus();
     filterStatusLabel->setVisible(false);
@@ -2260,12 +2644,12 @@ bool MW::reset(QString src)
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
     imageView->clear();
-    imageView->isFirstImageNewInstance = true;
+    G::isFirstImageNewInstance = true;
 
     // dm->newInstance();       // newInstance moved to folderSelectionChange()
 
     // Image cache
-    icd->clear();
+    // icd->clear();
 
     // used by updateStatus
     pickMemSize = "";
@@ -2275,7 +2659,8 @@ bool MW::reset(QString src)
     // QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection);
 
     // update metadata read status light
-    updateMetadataThreadRunStatus(true, true, true, "MW::reset");
+    updateMetadataThreadRunStatus(false, true);
+    // updateMetadataThreadRunStatus(true, true, true, "MW::reset");
 
     // stop slideshow if a new folder is selected
     if (G::isSlideShow && !G::isStressTest) slideShow();
@@ -2317,14 +2702,13 @@ void MW::waitUntilMetadataLoaded(int ms, QString src)
 {
 /*
     Wait until metadata has been loaded or ms milliseconds have elapsed
+    Not being used
 */
     QString srcFun = "MW::waitUntilMetadataLoaded";
     QEventLoop loop;
     QTimer timeout;
 
     qDebug() << srcFun << "G::allMetadataLoaded =" << G::allMetadataLoaded;
-
-    if (G::allMetadataLoaded) return;
 
     timeout.setSingleShot(true);
     timeout.setInterval(ms);     // millisecond timeout
@@ -2339,8 +2723,94 @@ void MW::waitUntilMetadataLoaded(int ms, QString src)
 
     int t = timeout.remainingTime();
     if (t < 0) t = ms; else t = ms - t;
-    qDebug() << srcFun << "elapsed ms =" << t
-             << "G::allMetadataLoaded =" << G::allMetadataLoaded;
+}
+
+void MW::memoryWatchdogTick()
+{
+/*
+    Periodic GUI-thread probe of the process's resident footprint. Runs
+    independently of any other subsystem so it catches runaway allocations
+    that happen outside MetaRead::dispatch (folder enumeration, queued
+    setData/setIcon events draining on the GUI thread, ImageCache idle
+    growth, etc).
+
+    Cheap on macOS (single task_info syscall, microseconds). The cap and
+    latch live in Main/global.h.
+*/
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
+    const quint64 cap = G::memoryAbortMB;
+    if (cap == 0) return;
+    const quint64 footprintMB = G::processFootprintMB();
+    if (footprintMB == 0 || footprintMB < cap) return;
+
+    // Atomic latch: if another subsystem already tripped between our load
+    // above and here, let its queued signal drive onMemoryOverrun — don't
+    // double-fire.
+    bool expected = false;
+    if (G::memoryOverrunFlag.compare_exchange_strong(
+            expected, true,
+            std::memory_order_acq_rel, std::memory_order_relaxed))
+    {
+        onMemoryOverrun(footprintMB, cap);
+    }
+}
+
+void MW::onMemoryOverrun(quint64 footprintMB, quint64 capMB)
+{
+/*
+    Either fired by MetaRead::memoryOverrun (queued from the metaRead
+    thread) or called directly from the GUI-thread watchdog tick. In both
+    cases we tear down in-flight async work and surface a critical dialog.
+*/
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::onMemoryOverrun",
+               "footprintMB = " + QString::number(footprintMB)
+               + " capMB = " + QString::number(capMB));
+
+    // Latch (idempotent if MetaRead already set it).
+    G::memoryOverrunFlag.store(true, std::memory_order_release);
+
+    // Suppress duplicate dialogs if multiple subsystems trip in close succession.
+    if (memoryDialogActive) return;
+    memoryDialogActive = true;
+
+    // Stop the watchdog while we tear down — no point re-firing during cleanup.
+    if (memoryWatchdog) memoryWatchdog->stop();
+
+    // Tear down all in-flight async work that could keep allocating.
+    G::stop = true;
+    if (dm) dm->abort = true;
+    emit abortMetaRead();
+    if (imageCache) {
+        QMetaObject::invokeMethod(imageCache, "abortProcessing", Qt::QueuedConnection);
+    }
+
+    /* Drain queued events first so slots that early-return on the latch
+       finish before we block on the dialog. Without this, the QMessageBox
+       can spin up while reader-thread emits are still piling onto the
+       queue, racing macOS's OOM/crash window. */
+    QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents, 50);
+
+    QString msg =
+        "<p><b>Winnow stopped loading the folder to avoid running out of memory.</b></p>"
+        "<p>Process footprint reached <b>" + QString::number(footprintMB)
+        + " MB</b>, exceeding the configured cap of <b>"
+        + QString::number(capMB) + " MB</b>.</p>"
+        "<p>This is most often triggered by recursing into folders that contain"
+        " huge numbers of small JPEG/HEIC files.</p>";
+
+    QMessageBox box(QMessageBox::Critical,
+                    "Winnow — memory limit reached",
+                    msg, QMessageBox::Ok, this);
+    box.setTextFormat(Qt::RichText);
+    box.exec();
+
+    memoryDialogActive = false;
+    // Clear the latch so a fresh folder load is not pre-tripped, and
+    // restart the watchdog so the next load is also protected.
+    G::memoryOverrunFlag.store(false, std::memory_order_release);
+    G::stop = false;
+    if (memoryWatchdog) memoryWatchdog->start();
 }
 
 void MW::nullFiltration()
@@ -2377,7 +2847,7 @@ void MW::updateDefaultIconChunkSize(int size)
     updateChange(dm->currentSfRow, isFileSelectionChange, "MW::updateDefaultIconChunkSize");
 }
 
-bool MW::updateIconRange(bool sizeChange, QString src)
+void MW::updateIconRange(QString src)
 {
 /*
     Polls thumbView, gridView and tableView to determine the first and last thumbnail
@@ -2387,7 +2857,7 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     The number of thumbnails to cache in the DataModel (dm->iconChunkSize) is increased if
     it is less than the visible thumbnails.
 */
-    if (G::isInitializing) return false;
+    if (G::isInitializing) return;
 
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::updateIconRange", "src = " + src);
@@ -2403,7 +2873,6 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     // the chunk range floats within the DataModel range so recalc
     int firstVisible = dm->sf->rowCount();
     int lastVisible = 0;
-    static int chunkSize = dm->defaultIconChunkSize;
     bool chunkSizeChanged = false;
 
     // Grid might not be selected in CentralWidget
@@ -2432,9 +2901,8 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     int visibleIcons = lastVisible - firstVisible + 1;
 
     // chunk size
-    if (dm->iconChunkSize < visibleIcons) dm->setChunkSize(visibleIcons);
-    if (dm->iconChunkSize > chunkSize) {
-        chunkSize = dm->iconChunkSize;
+    if (dm->iconChunkSize < visibleIcons) {
+        dm->setChunkSize(visibleIcons);
         chunkSizeChanged = true;
     }
 
@@ -2445,6 +2913,13 @@ bool MW::updateIconRange(bool sizeChange, QString src)
     dm->firstVisibleIcon = firstVisible;
     dm->lastVisibleIcon = lastVisible;
     dm->visibleIcons = visibleIcons;
+
+    // update icons cached only when the icon or viewport size changes
+    if (chunkSizeChanged) {
+        bool fileSelectionChange = false;
+        G::iconChunkLoaded = false;
+        updateChange(midVisible, fileSelectionChange, "MW::updateIconRange");
+    }
 
     /* debug
     qDebug().noquote()
@@ -2466,14 +2941,8 @@ bool MW::updateIconRange(bool sizeChange, QString src)
             ;
 //        */
 
-    // update icons cached only when the icon or viewport size changes
-    if (chunkSizeChanged) {
-        bool fileSelectionChange = false;
-        G::iconChunkLoaded = false;
-        updateChange(midVisible, fileSelectionChange, "MW::updateIconRange");
-    }
 
-    return chunkSizeChanged;
+    return;
 }
 
 void MW::folderChanged(bool aborted)
@@ -2487,7 +2956,6 @@ void MW::folderChanged(bool aborted)
     msg += " dm->rowCount = " + QString::number(dm->rowCount());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
-    // qDebug() << fun << msg << "G::stop =" << G::stop;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
@@ -2498,14 +2966,13 @@ void MW::folderChanged(bool aborted)
         fsTree->selectionModel()->clear();
     }
 
-    // G::isModifyingDatamodel = false;
     int startRow = 0;
 
     // datamodel has rows
     if (dm->rowCount()) {
         infoView->enable(true);  // not setEnabled() because infoView uses a delegate
     }
-    // datamodel is empty
+    // else datamodel is empty
     else {
         QString msg;
         if (aborted) msg = "Loading folder(s) was aborted";
@@ -2519,19 +2986,22 @@ void MW::folderChanged(bool aborted)
     if (folderAndFileChangePath != "") {
         dm->setCurrent(folderAndFileChangePath, instance);
         startRow = dm->rowFromPath(folderAndFileChangePath);
+        qDebug() << fun
+                 << "startRow =" << startRow
+                 << "folderAndFileChangePath =" << folderAndFileChangePath;
         folderAndFileChangePath = "";
     }
     // reset datamodel current index if it has been removed
     else if (!dm->currentDmIdx.isValid()) {
         dm->setCurrent(dm->index(0,0), dm->instance);
-        imageView->isFirstImageNewInstance = true;
+        G::isFirstImageNewInstance = true;
     }
 
     /*
     qDebug()  << "MW::folderChanged"
               << "startRow =" << startRow
               << "folderAndFileChangePath =" << folderAndFileChangePath;
-              */
+              //*/
 
     // Only one folder selected
     if (dm->folderList.count() == 1) {
@@ -2556,10 +3026,10 @@ void MW::folderChanged(bool aborted)
         G::allMetadataLoaded = true;
         G::iconChunkLoaded = dm->isIconRangeLoaded();
         folderChangeCompleted();
+        emit initializeImageCache();    // may not be req'd
         return;
     }
 
-    // no sorting or filtering until all metadata loaded
     reverseSortBtn->setEnabled(false);
     filters->setEnabled(false);
     // filters->loadingDataModel(false);   // isLoaded = false  rgh why not req'd?
@@ -2567,7 +3037,11 @@ void MW::folderChanged(bool aborted)
     sortMenu->setEnabled(false);
 
     // initialize metaRead only when new instance and first folder loaded
-    metaRead->initialize(fun);
+    // Queued: MetaRead lives on metaReadThread; direct call would race with
+    // MetaRead::dispatch running on that thread.
+    QMetaObject::invokeMethod(metaRead, "initialize",
+                              Qt::QueuedConnection,
+                              Q_ARG(QString, fun));
 
     // initialize imageCache
     // guard for BlockingQueued connection
@@ -2577,7 +3051,7 @@ void MW::folderChanged(bool aborted)
 
     // rev up metaRead
     if (G::useReadMeta) {
-        updateMetadataThreadRunStatus(true, true, "MW::updateChange");
+        updateMetadataThreadRunStatus(true);
         dm->setIconRange(startRow);
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, startRow),
@@ -2601,6 +3075,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
 {
     if (G::stop || dm->abort) return;
 
+    QString fun = "MW::updateChange";
     if (G::isLogger || G::isFlowLogger)
     {
         G::log("MW::updateChange", "row = " + QString::number(sfRow)
@@ -2632,8 +3107,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
 
     if (!metaLoaded) {
         if (G::useReadMeta) {
-            updateMetadataThreadRunStatus(true, true, "MW::updateChange");
-            // metaRead->setStartRow(sfRow, isFileSelectionChange, src);
+            // updateMetadataThreadRunStatus(true, true, false, fun);
             QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                       Q_ARG(int, sfRow),
                                       Q_ARG(bool, isFileSelectionChange),
@@ -2641,6 +3115,9 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
                                       );
         }
     }
+    // else {
+    //     dm->clearIconsOutsideChunkRange(instance);
+    // }
 
     /* No delay now, but leaving old comment just in case...
        Calling fileSelectionChange while imageView->isFirstImageNewInstance == true
@@ -2668,7 +3145,8 @@ void MW::folderChangeCompleted()
         G::log("MW::folderChangeCompleted", msg);
     }
     QString fun = "MW::folderChangeCompleted";
-    qDebug() << fun;
+
+    QMetaObject::invokeMethod(imageCache, "updateInstance", Qt::QueuedConnection);
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
@@ -2676,35 +3154,9 @@ void MW::folderChangeCompleted()
     // // update FSTree image count if fsModel isMaxRecurse is true
     // if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
 
-    // missing thumbnails
-    /*
-    qDebug() << "MW::folderChangeCompleted"
-             << "ignoreAddThumbnailsDlg =" << ignoreAddThumbnailsDlg
-             << "G::autoAddMissingThumbnails =" << G::autoAddMissingThumbnails
-                ; //*/
-
-    // missing thumbnails menu enabled
-    enableSelectionDependentMenus();
-    // /*
-    if (dm->folderHasMissingEmbeddedThumb && G::modifySourceFiles) {
-        embedThumbnailsAction->setEnabled(true);
-    }
-    else {
-        embedThumbnailsAction->setEnabled(false);
-    }//*/
-
-    // if missing thumbnails show missing thumb dialog
-    if (G::modifySourceFiles
-        && !ignoreAddThumbnailsDlg
-        && !G::autoAddMissingThumbnails
-        && dm->folderHasMissingEmbeddedThumb
-       )
-    {
-        chkMissingEmbeddedThumbnails("FromLoading");
-    }
-
     // hide metadata read progress
-    cacheProgressBar->clearUpperProgress();
+    cacheProgressBar->clearMetaReadProgress();
+    updateMetadataThreadRunStatus(false, true);
 
     // build filters if filter dock is visible
     /*
@@ -2714,13 +3166,13 @@ void MW::folderChangeCompleted()
              << "filterDock->visibleRegion().isNull() =" << filterDock->visibleRegion().isNull()
                 ; //*/
     if (dm->folderList.count() > 0
-        && dm->isQueueEmpty()
-        && !filterDock->visibleRegion().isNull()
+        // && dm->isQueueEmpty()
+        // && !filterDock->visibleRegion().isNull()
        )
     {
         buildFilters->build();
         buildFilters->recount();
-        // filters->setEnabled(true);
+        filters->setEnabled(true);
     }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
@@ -2737,7 +3189,7 @@ void MW::folderChangeCompleted()
     updateSortColumn(G::NameColumn);
 
     enableStatusBarBtns();
-    updateStatus(true, "", fun);
+    updateStatus(true, "", fun);    // clear any status message
 
     // update image cache in case not already done during metaRead
     emit setImageCachePosition(dm->currentFilePath, fun);
@@ -2802,7 +3254,7 @@ void MW::thumbHasScrolled()
 
         if (G::ignoreScrollSignal == false) {
             G::ignoreScrollSignal = true;
-            updateIconRange(false, "MW::thumbHasScrolled");
+            updateIconRange("MW::thumbHasScrolled");
             if (gridView->isVisible()) {
                 gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
             }
@@ -2826,13 +3278,12 @@ void MW::gridHasScrolled()
     This function is triggered after a gridView scrollbar change signal. The visible
     thumbnails are determined and loaded if necessary.
 
-    If the change was caused by the user scrolling then we want to process it, as defined by
-    G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
-    another view then we do not want to process again and get into a loop.
+    If the change was caused by the user scrolling then we want to process it, as defined
+    by G::ignoreScrollSignal == false. However, if the scroll change was caused by
+    syncing with another view then we do not want to process again and get into a loop.
 
-    Also, we do not need to process scrolling if it was the result of a new selection, which
-    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewFileSelection is set true
-    in IconView when a selection is made, and set false in fileSelectionChange.
+    Also, we do not need to process scrolling if it was the result of a new selection,
+    which will trigger a thumbnail update in MW::fileSelectionChange.
 
     MW::updateIconRange polls updateVisible in all visible views (thumbView, gridView and
     tableView) to assign the firstVisibleRow, midVisibleRow and lastVisibleRow in
@@ -2855,7 +3306,7 @@ void MW::gridHasScrolled()
 
         if (G::ignoreScrollSignal == false) {
             G::ignoreScrollSignal = true;
-            updateIconRange(false, "MW::gridHasScrolled");
+            updateIconRange("MW::gridHasScrolled");
             thumbView->scrollToRow(gridView->midVisibleCell, fun);
             tableView->scrollToRow(gridView->midVisibleCell, fun);
             updateChange(gridView->midVisibleCell, false, fun);
@@ -2893,7 +3344,7 @@ void MW::tableHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconRange(false, "MW::tableHasScrolled");
+        updateIconRange("MW::tableHasScrolled");
         /*
         qDebug() << "MW::tableHasScrolled"
                  << "tableView->midVisibleRow =" << tableView->midVisibleRow
@@ -2923,7 +3374,7 @@ void MW::loadEntireMetadataCache(QString source)
     if (G::isInitializing) return;
     if (dm->isAllMetadataAttempted()) return;
 
-    updateIconRange(false, "MW::loadEntireMetadataCache");
+    updateIconRange("MW::loadEntireMetadataCache");
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -2941,10 +3392,11 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
                                 QString source)
 {
 /*
-    Displays a statusbar showing the image cache status. Also shows the cache size in the
-    info panel. All status info is passed by copy to prevent collisions on source data,
-    which is being continuously updated by ImageCache
+    Displays a statusbar showing the image cache status. Also shows the cache size
+    in the info panel. All status info is passed by copy to prevent collisions on
+    source data, which is being continuously updated by ImageCache
 */
+    // if (G::instanceClash(instance, "MW::updateImageCacheStatus")) return;
 
     if (G::isLogger) {
         QString strInstruction = imageCache->statusAction.at(instruction);
@@ -3119,15 +3571,15 @@ void MW::embelTemplateChange(int id)
     if (id == 0) {
         embelRunBtn->setVisible(false);
         setRatingBadgeVisibility();
-        setShootingInfoVisibility();
+        // setShootingInfoVisibility();
     }
     else {
         if (dm->rowCount()) {
             loupeDisplay("MW::embelTemplateChange");
             embelRunBtn->setVisible(true);
             isRatingBadgeVisible = false;
-            thumbView->refreshThumbs();
-            gridView->refreshThumbs();
+            thumbView->refreshIcons("MW::embelTemplateChange");
+            gridView->refreshIcons("MW::embelTemplateChange");
             updateClassification();
             imageView->infoOverlay->setVisible(false);
         }
@@ -3159,8 +3611,8 @@ void MW::refreshAfterImageCacheSizeChange()
     if (G::isLogger) G::log("MW::setImageCacheParameters");
 
     // thumbnail cache status indicators
-    thumbView->refreshThumbs();
-    gridView->refreshThumbs();
+    thumbView->refreshIcons("MW::setImageCacheParameters");
+    gridView->refreshIcons("MW::setImageCacheParameters");
 }
 
 void MW::showHiddenFiles()
@@ -3339,8 +3791,8 @@ void MW::preferences(QString text)
     if (preferencesDlg == nullptr) {
         // pref = new Preferences(this);
         if (text != "") pref->expandBranch(text);
-        // preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, css);
-        preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
+        // preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, G::css);
+        preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, G::css);
     }
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(preferencesDlg->winId(), G::backgroundColor);
@@ -3393,18 +3845,17 @@ void MW::setFontSize(int fontPixelSize)
     G::fontSize = fontPixelSize;
     G::strFontSize = QString::number(fontPixelSize);
     widgetCSS.fontSize = fontPixelSize;
-    css = widgetCSS.css();
-    G::css = css;
-    setStyleSheet(css);
+    G::css = widgetCSS.css();
+    setStyleSheet(G::css);
 
     if (G::useInfoView) infoView->refreshLayout();                   // triggers sizehint!
 //    infoView->updateInfo(currentRow);                           // triggers sizehint!
-    bookmarks->setStyleSheet(css);
-    fsTree->setStyleSheet(css);
-    filters->setStyleSheet(css);
-    infoView->setStyleSheet(css);
-    tableView->setStyleSheet(css);
-    statusLabel->setStyleSheet(css);
+    bookmarks->setStyleSheet(G::css);
+    fsTree->setStyleSheet(G::css);
+    filters->setStyleSheet(G::css);
+    infoView->setStyleSheet(G::css);
+    tableView->setStyleSheet(G::css);
+    statusLabel->setStyleSheet(G::css);
     folderTitleBar->setStyle();
     favTitleBar->setStyle();
     filterTitleBar->setStyle();
@@ -3413,6 +3864,11 @@ void MW::setFontSize(int fontPixelSize)
     setCacheRunningLightsWidth();
     embelProperties->fontSizeChanged(fontPixelSize);
     pref->fontSizeChanged(fontPixelSize);
+    HtmlWindow::refreshOpenWindows();       // re-scale any open help windows
+    // re-scale any open Shortcuts help windows (prune ones since closed)
+    shortcutsWindows.removeAll(QPointer<QScrollArea>(nullptr));
+    for (const QPointer<QScrollArea> &w : shortcutsWindows)
+        if (w) styleShortcutsWindow(w);
 }
 
 void MW::setBackgroundShade(int shade)
@@ -3422,40 +3878,38 @@ void MW::setBackgroundShade(int shade)
     G::backgroundColor = QColor(shade,shade,shade);
     int a = shade + 5;
     int b = shade - 15;
-//    css = "QWidget {font-size: " + G::fontSize + "px;}" + cssBase;
     widgetCSS.widgetBackgroundColor = QColor(shade,shade,shade);
-    css = widgetCSS.css();
-    G::css = css;
-    setStyleSheet(css);
+    G::css = widgetCSS.css();
+    setStyleSheet(G::css);
 
     if (G::useInfoView) {
         infoView->updateInfo(dm->currentSfRow);                           // triggers sizehint!
-        infoView->verticalScrollBar()->setStyleSheet(css);          // triggers sizehint!
+        infoView->verticalScrollBar()->setStyleSheet(G::css);          // triggers sizehint!
     }
-    bookmarks->setStyleSheet(css);
-    bookmarks->verticalScrollBar()->setStyleSheet(css);
-    fsTree->setStyleSheet(css);
-    fsTree->verticalScrollBar()->setStyleSheet(css);
-    filters->setStyleSheet(css);
-    filters->verticalScrollBar()->setStyleSheet(css);
+    bookmarks->setStyleSheet(G::css);
+    bookmarks->verticalScrollBar()->setStyleSheet(G::css);
+    fsTree->setStyleSheet(G::css);
+    fsTree->verticalScrollBar()->setStyleSheet(G::css);
+    filters->setStyleSheet(G::css);
+    filters->verticalScrollBar()->setStyleSheet(G::css);
     filters->setCategoryBackground(a, b);
-//    if (G::useInfoView) infoView->setStyleSheet(css);
+//    if (G::useInfoView) infoView->setStyleSheet(G::css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
-    thumbView->setStyleSheet(css);
-    thumbView->horizontalScrollBar()->setStyleSheet(css);
-    thumbView->verticalScrollBar()->setStyleSheet(css);
-    gridView->setStyleSheet(css);
-    tableView->setStyleSheet(css);
-    gridView->verticalScrollBar()->setStyleSheet(css);
-    messageView->setStyleSheet(css);
-    welcome->setStyleSheet(css);
+    thumbView->setStyleSheet(G::css);
+    thumbView->horizontalScrollBar()->setStyleSheet(G::css);
+    thumbView->verticalScrollBar()->setStyleSheet(G::css);
+    gridView->setStyleSheet(G::css);
+    tableView->setStyleSheet(G::css);
+    gridView->verticalScrollBar()->setStyleSheet(G::css);
+    messageView->setStyleSheet(G::css);
+    welcome->setStyleSheet(G::css);
     cacheProgressBar->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     folderTitleBar->setStyle();
     favTitleBar->setStyle();
     filterTitleBar->setStyle();
     metaTitleBar->setStyle();
-    statusBar()->setStyleSheet(css);
-    statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
+    embelTitleBar->setStyle();
+    statusBar()->setStyleSheet(G::css);
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(winId(), G::backgroundColor);
     #endif
@@ -3472,6 +3926,8 @@ void MW::setInfoFontSize()
 void MW::setClassificationBadgeImageDiam(int d)
 {
     if (G::isLogger) G::log("MW::setClassificationBadgeImageDiam");
+    // this feature is no longer used
+    d = 0;
     classificationBadgeInImageDiameter = d;
     imageView->setClassificationBadgeImageDiam(d);
 }
@@ -3522,13 +3978,14 @@ void MW::updateDisplayResolution()
 void MW::setDisplayResolution()
 {
 /*
-    This is triggered by the mainwindow show event at startup, when the operating system
-    display scale is changed and when the app window is dragged to another monitor. The
-    loupe view always shows native pixel resolution (one image pixel = one physical
-    monitor pixel), therefore the zoom has to be factored by the device pixel ratio.
+    This is triggered by the mainwindow show event at startup, when the operating
+    system display scale is changed and when the app window is dragged to another
+    monitor. The loupe view always shows native pixel resolution (one image pixel =
+    one physical monitor pixel), therefore the zoom has to be factored by the device
+    pixel ratio.
 
-    However, on Mac the device pixel ratio is arbitrary, mostly = 2.0 no matter which
-    display scaling is selected, so there are two ratios defined here:
+    However, on Mac the device pixel ratio is arbitrary, mostly = 2.0 no matter
+    which display scaling is selected, so there are two ratios defined here:
 
     G::actDevicePixelRatio - the actual ratio from actual to vertual pixels
     G::sysDevicePixelRatio - the system reported device pixel ratio
@@ -3566,14 +4023,36 @@ void MW::setDisplayResolution()
     //*/
     prevScreenName = screen->name();
 
-    // Device Pixel Ratios
+    // START GEMINI
+    if (!screen) return;
+
+    // Standard Qt ratio (Logical 2x)
     G::sysDevicePixelRatio = screen->devicePixelRatio();
-    #ifdef Q_OS_WIN
-    G::actDevicePixelRatio = screen->devicePixelRatio();
-    #endif
-    #ifdef Q_OS_MAC
+
+#ifdef Q_OS_MAC
+    // This calculates the 'real' hardware-to-logical ratio
     G::actDevicePixelRatio = macActualDevicePixelRatio(loc, screen);
-    #endif
+#else
+    G::actDevicePixelRatio = screen->devicePixelRatio();
+#endif
+
+    // Update virtual and physical pixel counts based on the 'real' ratio
+    G::displayVirtualHorizontalPixels = screen->geometry().width();
+    G::displayVirtualVerticalPixels = screen->geometry().height();
+    G::displayPhysicalHorizontalPixels = qRound(screen->geometry().width() * G::actDevicePixelRatio);
+    G::displayPhysicalVerticalPixels = qRound(screen->geometry().height() * G::actDevicePixelRatio);
+    // END GEMINI
+
+
+
+    // // Device Pixel Ratios
+    // G::sysDevicePixelRatio = screen->devicePixelRatio();
+    // #ifdef Q_OS_WIN
+    // G::actDevicePixelRatio = screen->devicePixelRatio();
+    // #endif
+    // #ifdef Q_OS_MAC
+    // G::actDevicePixelRatio = macActualDevicePixelRatio(loc, screen);
+    // #endif
     devicePixelRatioChanged = !qFuzzyCompare(G::actDevicePixelRatio, prevDevicePixelRatio);
     /*
     qDebug() << "MW::setDisplayResolution" << "2"
@@ -3697,19 +4176,7 @@ void MW::getDisplayProfile()
     ICC::setOutProfile();
     #endif
     #ifdef Q_OS_MAC
-    /* crash waking sleep
-Thread 0 Crashed::  Dispatch queue: com.apple.main-thread
-0   CoreFoundation                	       0x1872a96f0 CF_IS_OBJC + 24
-1   CoreFoundation                	       0x187168ba4 CFURLCopyFileSystemPath + 76
-2   Winnow                        	       0x100ed92b4 Mac::getDisplayProfileURL() + 224 (mac.mm:116)
-3   Winnow                        	       0x100da2f40 MW::getDisplayProfile() + 152 (mainwindow.cpp:4252)
-4   Winnow                        	       0x100da2494 MW::setDisplayResolution() + 1476 (mainwindow.cpp:4218)
-5   Winnow                        	       0x100da48cc MW::moveEvent(QMoveEvent*) + 256 (mainwindow.cpp:801)
-6   QtWidgets                     	       0x102699e54 QWidget::event(QEvent*) + 980
-7   QtWidgets                     	       0x1027b6344 QMainWindow::event(QEvent*) + 380 (qmainwindow.cpp:1321)
-8   QtWidgets                     	       0x1026509f0 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 272 (qapplication.cpp:3287)
-9   QtWidgets                     	       0x102652368 QApplication::notify(QObject*, QEvent*) + 3356
-    */
+
     G::winOutProfilePath = Mac::getDisplayProfileURL();
     ICC::setOutProfile();
     #endif
@@ -4012,8 +4479,9 @@ void MW::setRotation(int degrees)
     When there is a rotation action (rotateLeft or rotateRight) the current
     rotation amount (in degrees) is updated in the datamodel.
 
-    The rotation is updated in the image file EXIF using exifTool in separate threads
-    if G::modifySourceFiles == true.
+    If G::modifySourceFiles == true the rotation is updated in the image file EXIF using
+    exifTool in separate threads.  Otherwise it is written to an XMP sidecar so the
+    rotation survives a reload.
 */
     if (G::isLogger) G::log("MW::setRotation");
     qDebug() << "MW::setRotation degrees =" << degrees;
@@ -4065,9 +4533,6 @@ void MW::setRotation(int degrees)
         // rotate selected cached full size images
         QString fPath = thumbIdx.data(G::PathRole).toString();
         QImage image;
-        // CTSL::HashMap<QString, QImage> imCache
-        // if (icd->imCache.find(fPath, image)) {
-        // QHash<QString, QImage> imCache
         if (icd->contains(fPath)) {
             image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
             icd->insert(fPath, image);
@@ -4081,19 +4546,10 @@ void MW::setRotation(int degrees)
             case 180: orient = "3"; break;
             case 270: orient = "8"; break;
         }
-        if (orient.length() && G::modifySourceFiles) {
+        if (orient.length()) {
             // note that Metadata::writeOrientation must be static!
+            // writes to source EXIF if G::modifySourceFiles, otherwise to xmp sidecar
             QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
-        }
-        else if (!rotationAlertShown) {
-            qDebug() << "MW::setRotation showing popup";
-            QString msg = "Please note that while the images have been rotated in Winnow,<br>"
-                          "the EXIF in the image file has not been updated because file<br>"
-                          "modification is disabled in preferences (General section).<p>"
-                          "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
-                ;
-            G::popup->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
-            rotationAlertShown = true;
         }
     }
 }
@@ -4150,7 +4606,7 @@ void MW::updateState()
     setMetadataDockVisibility();
     setEmbelDockVisibility();
     setThumbDockVisibity();
-    setShootingInfoVisibility();
+    // setShootingInfoVisibility();
     updateStatusBar();
     //setActualDevicePixelRation();
     isUpdatingState = false;
@@ -4219,7 +4675,8 @@ void MW::exportEmbelFromAction(QAction *embelExportAction)
 */
     if (G::isLogger) G::log("MW::exportEmbelFromAction");
 
-    QStringList picks = dm->getSelectionOrPicks();
+    QStringList picks;
+    dm->getSelectionOrPicks(picks);
 
     if (picks.size() == 0)  {
         QMessageBox::information(this,
@@ -4249,7 +4706,8 @@ void MW::exportEmbel()
 */
     if (G::isLogger) G::log("MW::exportEmbel");
 
-    QStringList picks = dm->getSelectionOrPicks();
+    QStringList picks;
+    dm->getSelectionOrPicks(picks);
 
     if (picks.size() == 0)  {
         QMessageBox::information(this,
@@ -4355,7 +4813,7 @@ void MW::ingest()
     bool combinedIncludeJpg;   // req'd by backgroundIngest
     int seqStart = 1;          // req'd by backgroundIngest
 
-    if (dm->isPick()) {
+    if (dm->isAnyPick()) {
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
                                   combinedIncludeJpg,
@@ -4383,7 +4841,7 @@ void MW::ingest()
                                   filenameTemplateSelected,
                                   ingestDescriptionCompleter,
                                   autoIngestFolderPath,
-                                  css);
+                                  G::css);
 
         bool okToIngest = ingestDlg->exec();
         // do not delete ingestDlg: scrambles QMap objects for some reason
@@ -4578,201 +5036,6 @@ void MW::ejectUsbFromContextMenu()
 {
     if (G::isLogger) G::log("MW::ejectUsbFromContextMenu");
     ejectUsb(mouseOverFolderPath);
-}
-
-void MW::embedThumbnailsFromAction()
-{
-    if (G::isLogger) G::log("MW::embedThumbnailsFromAction");
-    chkMissingEmbeddedThumbnails("FromAction");
-}
-
-void MW::chkMissingEmbeddedThumbnails(QString src)
-/*
-    See embedThumbnails for documentation
-*/
-{
-    if (G::isLogger) G::log("MW::chkMissingEmbeddedThumbnails");
-    // /*
-    qDebug() << "MW::chkMissingEmbeddedThumbnails" << "src =" << src
-                ;
-    //*/
-
-    if (!G::useMissingThumbs) return;
-    // just in case, should not be able to get here if !dm->folderHasMissingEmbeddedThumb
-    if (!dm->folderHasMissingEmbeddedThumb) return;
-    // just in case, should not be able to get here if !G::modifySourceFiles
-    if (!G::modifySourceFiles) return;
-
-    // show missing thumbnails dialog unless turned off
-    if (!ignoreAddThumbnailsDlg && src == "FromLoading") {
-        AddThumbnailsDlg *dlg = new AddThumbnailsDlg;
-        connect (dlg, &AddThumbnailsDlg::ignore, this, &MW::setIgnoreAddThumbnailsDlg);
-        connect (dlg, &AddThumbnailsDlg::backup, this, &MW::setBackupModifiedFiles);
-        bool ok = dlg->exec();
-        disconnect (dlg, &AddThumbnailsDlg::ignore, this, &MW::setIgnoreAddThumbnailsDlg);
-        disconnect (dlg, &AddThumbnailsDlg::backup, this, &MW::setBackupModifiedFiles);
-        delete dlg;
-        if (!ok) return;
-        sel->all();
-    }
-
-    QString result = embedThumbnails();
-    if (src == "FromLoading") sel->select(dm->currentSfIdx, Qt::NoModifier,"MW::chkMissingEmbeddedThumbnails");
-    thumbView->refreshThumbs();
-    G::popup->showPopup(result, 3000);
-}
-
-QString MW::embedThumbnails()
-{
-/*
-    This function embeds a thumbnail in jpeg and tiff files that do not have one.  This makes
-    the thumb loading much faster, especially for tiff files.
-
-    This function will not be triggered if G::modifySourceFiles = false
-
-    Triggered by:
-        MENU:  Edit > Utilities > Embed missing thumbnails
-               ThumbView context menu > Embed missing thumbnails
-
-    There are two routines to do this:
-
-        • JPEG: Jpeg::embedThumbnail inserts thumbnail using ExifTool.
-
-        • TIFF: Tiff::encodeThumbnail inserts thumbnail from Tiff::parse.
-
-    Missing thumbnail variables:
-    metadata->canEmbedThumb             list of file types can embed thumbnails
-    G::MissingThumbColumn               datamodel missing thumb column
-    dm->folderHasMissingEmbeddedThumb   datamodel missing thumb in folder flag
-    m.isEmbeddedThumbMissing            datamodel field flag
-    MW::ignoreAddThumbnailsDlg          show addThumbnailsDlg flag
-    G::modifySourceFiles                modifySourceFiles flag
-    G::autoAddMissingThumbnails         silently embed thumbnails flag
-    G::backupBeforeModifying            backup flag
-    G::useMissingThumbs                 missing thumbs use flag
-
-    Settings:
-    modifySourceFiles                   flag
-    backupBeforeModifying               flag
-    autoAddMissingThumbnails            flag
-    ignoreAddThumbnailsDlg              flag
-
-    AddThumbnailsDlg                    Dialog to explain / set flags / embed thumbnails
-
-    MW::chkMissingEmbeddedThumbnails()  function to show AddThumbnailsDlg
-    MW::embedThumbnails()               function to trigger embed thumbnails
-    Thumb:insertThumbnailsInJpg()       function to do insertion
-    Tiff::parse()                       function to parse tiff metadata, calls encodethumbnail
-    Tiff::encodeThumbnail               function to add a tiff directory for thumbnail
-
-    To remove thumbnails from jpeg for testing:
-        In terminal cd path/with/jpg/to/remove/thumb
-        exiftool -ifd1:all= -ext jpg Filename.jpg
-
-    Footnote: I tried creating a QImage from stored icon and save it in a buffer as a jpg
-    and then create IRB 1036 to save jpg thumb in tiff file. This is a bad idea, because
-    adding the jpg thumb in an IRB at EOF will not be contiguous with any existing IRB
-    and they will be stranded.
-
-
-*/
-    if (G::isLogger) G::log("MW::embedThumbnails");
-
-    QModelIndexList selection = dm->selectionModel->selectedRows();
-    if (selection.isEmpty()) return "Nothing selected";
-    int n = selection.size();
-
-    QString txt = "Embedding thumbnail(s) for " + QString::number(selection.size()) +
-                  " images <p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-    G::popup->setProgressVisible(true);
-    G::popup->showPopup(txt, 0, true, 1);
-    G::popup->setProgressMax(n);
-    if (G::useProcessEvents) qApp->processEvents();
-    qDebug() << "MW::embedThumbnails" << txt;
-
-    // copy selection to list of dm rows (proxy filter changes during iteration when
-    // change datamodel)
-    // QList<int> rows;
-    // for (int i = 0; i < n; ++i) {
-    //     int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
-    //     qDebug() << "embedThumbnails" << i << selection.at(i).row() << dmRow;
-    //     rows.append(dmRow);
-    // }
-
-    // flags for return messaging
-    bool lockEncountered = false;
-    bool embeddingHappened = false;
-
-    // temp set flags for Tiff::parse to call Tiff::encodeThumbnail
-    bool autoAdd = G::autoAddMissingThumbnails;
-    G::autoAddMissingThumbnails = true;
-
-    // process selection
-    for (int i = 0; i < n; i++) {
-        G::popup->setProgress(i+1);
-        if (G::useProcessEvents) qApp->processEvents();
-        int sfRow = selection.at(i).row();
-        // int sfRow = rows.at(i);
-        qDebug() << "embedThumbnails" << sfRow;
-        QString fileType = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
-        if (!metadata->canEmbedThumb.contains(fileType)) continue;
-        QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::PathRole).toString();
-        bool isMissing = dm->sf->index(sfRow, G::MissingThumbColumn).data().toBool();
-        bool isReadWrite = dm->sf->index(sfRow, G::ReadWriteColumn).data().toBool();
-        if (!isReadWrite) lockEncountered = true;
-        if (isMissing && isReadWrite) {
-            // Add a thumbnail
-            bool thumbEmbedded = false;
-            if (fileType == "tif") {
-                Tiff tiff;
-                /*
-                // encode by sampling main tiff image
-                // call tif->parse which calls tif->encodeThumbnail. No exiftool for tiff.
-                // ImageMetadata m;
-                // tiff.parse(m, fPath);
-                // thumbEmbedded = !m.isEmbeddedThumbMissing;*/
-                QModelIndex thumbIdx = dm->sf->index(sfRow, 0);
-                QIcon icon = qvariant_cast<QIcon>(thumbIdx.data(Qt::DecorationRole));
-                QSize maxSize = icon.actualSize(QSize(G::maxIconSize,G::maxIconSize));  // 256,256
-                QImage thumbnail = icon.pixmap(maxSize).toImage();
-                thumbEmbedded = tiff.encodeThumbnail(fPath, thumbnail);
-             }
-             else {
-                // must be a jpeg, use exiftool to add thumb
-                Jpeg jpeg;
-                thumbEmbedded = jpeg.embedThumbnail(fPath);
-            }
-            if (thumbEmbedded) {
-                emit setValSf(sfRow, G::MissingThumbColumn, false, dm->instance,
-                              "MW::embedthumbnails");
-                dm->sf->filterChange("MW::embedThumbnails");
-            }
-            embeddingHappened = true;
-        }
-    }
-    // reset flags
-    G::autoAddMissingThumbnails = autoAdd;
-
-    // enable/disable menu
-    enableSelectionDependentMenus();
-
-    refreshBookmarks();     // rgh req'd?
-
-    // update filter list and counts
-    buildFilters->updateCategory(BuildFilters::MissingThumbEdit, BuildFilters::NoAfterAction);
-
-    G::popup->setProgressVisible(false);
-    G::popup->reset();
-
-    QString msg;
-    QString br;
-    if (embeddingHappened) msg += "Thumbnail insertion completed";
-    if (!embeddingHappened && !lockEncountered) msg += "No missing thumbnails in selection";
-    if (msg.length()) br = "<br>";
-    if (lockEncountered) msg += br + "Unable to embed thumbnails in locked files";
-
-    embedThumbnailsAction->setEnabled(false);
-    return msg;
 }
 
 void MW::infoViewChanged(QStandardItem* item)
@@ -4987,9 +5250,7 @@ void MW::revealLogFile()
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Cancel);
     msgBox.setIcon(QMessageBox::Warning);
-    QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                "QPushButton:default {background-color: rgb(68,95,118);}";
-    msgBox.setStyleSheet(css);
+    msgBox.setStyleSheet(G::css);
     QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
     QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
     layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
@@ -5144,7 +5405,7 @@ void MW::generateMeanStack()
 {
     if (G::isLogger) G::log("MW::generateMeanStack");
     QStringList selection;
-    if (!dm->getSelection(selection)) return;
+    if (!dm->getSelectionOrPicks(selection)) return;
     meanStack = new Stack(selection, dm, metadata, icd);
     connect(this, &MW::abortStackOperation, meanStack, &Stack::stop);
     QString fPath = meanStack->mean();
@@ -5157,6 +5418,15 @@ void MW::generateMeanStack()
         // update FSTree image count
         fsTree->refreshModel();
         bookmarks->updateCount();
+
+        if (thumbView && thumbView->isVisible()) {
+            thumbView->refreshIcons("MW::generateMeanStack");
+            thumbView->scrollToRow(dm->currentSfRow, "MW::generateMeanStack");
+        }
+        if (gridView && gridView->isVisible()) {
+            gridView->refreshIcons("MW::generateMeanStack");
+            gridView->scrollToRow(dm->currentSfRow, "MW::generateMeanStack");
+        }
     }
 }
 
@@ -5165,7 +5435,7 @@ void MW::reportHueCount()
     if (G::isLogger) G::log("MW::reportHueCount");
 
     QStringList selection;
-    if (!dm->getSelection(selection)) return;
+    if (!dm->getSelectionOrPicks(selection)) return;
     ColorAnalysis hueReport;
     connect(this, &MW::abortHueReport, &hueReport, &ColorAnalysis::abortHueReport);
     hueReport.process(selection);
@@ -5208,29 +5478,97 @@ void MW::findDuplicates()
 void MW::help()
 {
     if (G::isLogger) G::log("MW::help");
-    QWidget *helpDoc = new QWidget;
-    Ui::helpForm ui;
-    ui.setupUi(helpDoc);
-    openWindows.append(helpDoc);
-    helpDoc->show();
+    HtmlWindow *w = new HtmlWindow("Winnow - Help",
+                                   ":/Docs/winnowhelp.html",
+                                   QSize(900, 750), geometry(), this);
+    openWindows.append(w);
 }
 
 void MW::helpShortcuts()
 {
     if (G::isLogger) G::log("MW::helpShortcuts");
     QScrollArea *helpShortcuts = new QScrollArea;
+    helpShortcuts->setAttribute(Qt::WA_DeleteOnClose);  // frees + nulls the QPointers on close
     Ui::shortcutsForm ui;
     ui.setupUi(helpShortcuts);
-    ui.treeWidget->setColumnWidth(0, 300);
-    ui.treeWidget->setColumnWidth(1, 250);
-    ui.treeWidget->setColumnWidth(2, 250);
-    ui.treeWidget->expandAll();
-    ui.scrollAreaWidgetContents->setStyleSheet(css);
+
+    styleShortcutsWindow(helpShortcuts);                // font scaling + fit columns to text
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(helpShortcuts->winId(), G::backgroundColor);
     #endif
     openWindows.append(helpShortcuts);
+    shortcutsWindows.append(helpShortcuts);             // tracked for live font-size updates
     helpShortcuts->show();
+}
+
+void MW::styleShortcutsWindow(QScrollArea *w)
+{
+/*
+    Applies the current app font (G::fontSize) to the Shortcuts help window and
+    sizes its columns so no text is clipped, growing the window to fit (capped at
+    the screen). Used both when the window is created and when the font size
+    changes while it is open, so it scales dynamically like the HtmlWindow help
+    pages.
+*/
+    if (G::isLogger) G::log("MW::styleShortcutsWindow");
+    QTreeWidget *tree = w->findChild<QTreeWidget*>("treeWidget");
+    if (!tree) return;
+
+    // Theme/background, and the font-size for the header and non-styled rows.
+    if (w->widget()) w->widget()->setStyleSheet(G::css);
+    tree->setStyleSheet(G::css);
+
+    // uic bakes a fixed-size bold QFont onto the category-header items, and a
+    // per-item font overrides the stylesheet — so re-apply the scaled size to
+    // every item, preserving each item's bold flag.
+    int px = static_cast<int>(G::strFontSize.toInt() * G::ptToPx);
+    if (px < 6) px = 6;
+    QTreeWidgetItemIterator it(tree);
+    while (*it) {
+        for (int col = 0; col < tree->columnCount(); ++col) {
+            QFont f = (*it)->font(col);
+            f.setPixelSize(px);
+            (*it)->setFont(col, f);
+        }
+        ++it;
+    }
+    tree->expandAll();
+
+    // Size each column to the larger of its scaled design width and the width
+    // needed to show its longest cell / header label (so nothing overflows),
+    // then size the window to fit all columns. setStretchLastSection(false)
+    // keeps the widths we set instead of stretching the last column to fill.
+    tree->header()->setStretchLastSection(false);
+    const qreal scale = G::strFontSize.toInt() / 12.0;     // design widths assume 12pt default
+    const int designW[3] = {300, 250, 250};
+    int columnsW = 0;
+    for (int c = 0; c < tree->columnCount(); ++c) {
+        tree->resizeColumnToContents(c);                   // fit content + header label
+        int colW = qMax(qRound(designW[qMin(c, 2)] * scale), tree->columnWidth(c));
+        tree->setColumnWidth(c, colW);
+        columnsW += colW;
+    }
+
+    QScreen *scr = w->screen() ? w->screen() : QGuiApplication::primaryScreen();
+    if (!scr) return;
+    const QRect avail = scr->availableGeometry();
+
+    int chrome = 2 * (tree->frameWidth() + w->frameWidth())
+               + tree->style()->pixelMetric(QStyle::PM_ScrollBarExtent);   // reserve v-scrollbar
+    int targetW = qMin(columnsW + chrome, avail.width());
+    int targetH = qMin(w->height(), avail.height());
+    w->resize(targetW, targetH);
+
+    // Nudge back into view if the resize pushed the window off-screen (it grows
+    // from the top-left, so the right/bottom edge can spill past the screen).
+    // Uses frameGeometry so window-manager decorations are accounted for.
+    QRect fg = w->frameGeometry();
+    QPoint pos = w->pos();
+    if (fg.right()  > avail.right())  pos.rx() -= fg.right()  - avail.right();
+    if (fg.bottom() > avail.bottom()) pos.ry() -= fg.bottom() - avail.bottom();
+    if (pos.x() < avail.left()) pos.setX(avail.left());
+    if (pos.y() < avail.top())  pos.setY(avail.top());
+    if (pos != w->pos()) w->move(pos);
 }
 
 void MW::helpWelcome()

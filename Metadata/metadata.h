@@ -14,7 +14,6 @@
 #include "Metadata/irb.h"
 #include "Metadata/iptc.h"
 #include "Metadata/gps.h"
-#include "Metadata/metareport.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
 #include "Metadata/ExifTool.h"
@@ -42,9 +41,7 @@
 #include "ImageFormats/Panasonic/panasonic.h"
 #include "ImageFormats/Sony/sony.h"
 #include "ImageFormats/Tiff/tiff.h"
-#include "ImageFormats/Video/mov.h"
 #include "ImageFormats/Png/png.h"
-#include "ImageFormats/Video/mp4.h"
 
 class Metadata : public QObject
 {
@@ -154,6 +151,16 @@ public:
     QString fileCategory(QString &path, QStringList &paths);
 
 private:
+    // Magic-byte sniffing — route by content, not just by extension.
+    enum class FileFamily { Unknown, JPEG, TIFF, PNG, ISOBMFF, RAF, GIF, BMP, WEBP };
+    struct SniffResult {
+        FileFamily family = FileFamily::Unknown;
+        QByteArray isobmffBrand;   // 4 bytes when family == ISOBMFF
+    };
+    static SniffResult sniffFamily(QFile &file);
+    FileFamily extensionFamily(const QString &ext) const;
+    QString reconcileExt(const QString &ext, const SniffResult &sniff) const;
+
     QMutex mutex;
     // Exif
     Exif *exif = nullptr;
@@ -173,6 +180,7 @@ private:
     Panasonic *panasonic = nullptr;
     Sony *sony = nullptr;
     Tiff *tiff = nullptr;
+    PNG *png = nullptr;
 //#ifdef Q_OS_WIN
     // rgh remove heic
     Heic *heic = nullptr;
@@ -224,9 +232,11 @@ private:
     bool parsePanasonic();
     bool parseSony();
     bool parseTIF();
+    bool parsePNG();
 //    bool parseSidecar();
 
 signals:
+    void updateSidecarStatus(QString fPath);
 
 public slots:
     bool loadImageMetadata(const QFileInfo &fileInfo,
