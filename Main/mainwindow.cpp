@@ -3865,6 +3865,10 @@ void MW::setFontSize(int fontPixelSize)
     embelProperties->fontSizeChanged(fontPixelSize);
     pref->fontSizeChanged(fontPixelSize);
     HtmlWindow::refreshOpenWindows();       // re-scale any open help windows
+    // re-scale any open Shortcuts help windows (prune ones since closed)
+    shortcutsWindows.removeAll(QPointer<QScrollArea>(nullptr));
+    for (const QPointer<QScrollArea> &w : shortcutsWindows)
+        if (w) styleShortcutsWindow(w);
 }
 
 void MW::setBackgroundShade(int shade)
@@ -5484,18 +5488,87 @@ void MW::helpShortcuts()
 {
     if (G::isLogger) G::log("MW::helpShortcuts");
     QScrollArea *helpShortcuts = new QScrollArea;
+    helpShortcuts->setAttribute(Qt::WA_DeleteOnClose);  // frees + nulls the QPointers on close
     Ui::shortcutsForm ui;
     ui.setupUi(helpShortcuts);
-    ui.treeWidget->setColumnWidth(0, 300);
-    ui.treeWidget->setColumnWidth(1, 250);
-    ui.treeWidget->setColumnWidth(2, 250);
-    ui.treeWidget->expandAll();
-    ui.scrollAreaWidgetContents->setStyleSheet(G::css);
+
+    styleShortcutsWindow(helpShortcuts);                // font scaling + fit columns to text
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(helpShortcuts->winId(), G::backgroundColor);
     #endif
     openWindows.append(helpShortcuts);
+    shortcutsWindows.append(helpShortcuts);             // tracked for live font-size updates
     helpShortcuts->show();
+}
+
+void MW::styleShortcutsWindow(QScrollArea *w)
+{
+/*
+    Applies the current app font (G::fontSize) to the Shortcuts help window and
+    sizes its columns so no text is clipped, growing the window to fit (capped at
+    the screen). Used both when the window is created and when the font size
+    changes while it is open, so it scales dynamically like the HtmlWindow help
+    pages.
+*/
+    if (G::isLogger) G::log("MW::styleShortcutsWindow");
+    QTreeWidget *tree = w->findChild<QTreeWidget*>("treeWidget");
+    if (!tree) return;
+
+    // Theme/background, and the font-size for the header and non-styled rows.
+    if (w->widget()) w->widget()->setStyleSheet(G::css);
+    tree->setStyleSheet(G::css);
+
+    // uic bakes a fixed-size bold QFont onto the category-header items, and a
+    // per-item font overrides the stylesheet — so re-apply the scaled size to
+    // every item, preserving each item's bold flag.
+    int px = static_cast<int>(G::strFontSize.toInt() * G::ptToPx);
+    if (px < 6) px = 6;
+    QTreeWidgetItemIterator it(tree);
+    while (*it) {
+        for (int col = 0; col < tree->columnCount(); ++col) {
+            QFont f = (*it)->font(col);
+            f.setPixelSize(px);
+            (*it)->setFont(col, f);
+        }
+        ++it;
+    }
+    tree->expandAll();
+
+    // Size each column to the larger of its scaled design width and the width
+    // needed to show its longest cell / header label (so nothing overflows),
+    // then size the window to fit all columns. setStretchLastSection(false)
+    // keeps the widths we set instead of stretching the last column to fill.
+    tree->header()->setStretchLastSection(false);
+    const qreal scale = G::strFontSize.toInt() / 12.0;     // design widths assume 12pt default
+    const int designW[3] = {300, 250, 250};
+    int columnsW = 0;
+    for (int c = 0; c < tree->columnCount(); ++c) {
+        tree->resizeColumnToContents(c);                   // fit content + header label
+        int colW = qMax(qRound(designW[qMin(c, 2)] * scale), tree->columnWidth(c));
+        tree->setColumnWidth(c, colW);
+        columnsW += colW;
+    }
+
+    QScreen *scr = w->screen() ? w->screen() : QGuiApplication::primaryScreen();
+    if (!scr) return;
+    const QRect avail = scr->availableGeometry();
+
+    int chrome = 2 * (tree->frameWidth() + w->frameWidth())
+               + tree->style()->pixelMetric(QStyle::PM_ScrollBarExtent);   // reserve v-scrollbar
+    int targetW = qMin(columnsW + chrome, avail.width());
+    int targetH = qMin(w->height(), avail.height());
+    w->resize(targetW, targetH);
+
+    // Nudge back into view if the resize pushed the window off-screen (it grows
+    // from the top-left, so the right/bottom edge can spill past the screen).
+    // Uses frameGeometry so window-manager decorations are accounted for.
+    QRect fg = w->frameGeometry();
+    QPoint pos = w->pos();
+    if (fg.right()  > avail.right())  pos.rx() -= fg.right()  - avail.right();
+    if (fg.bottom() > avail.bottom()) pos.ry() -= fg.bottom() - avail.bottom();
+    if (pos.x() < avail.left()) pos.setX(avail.left());
+    if (pos.y() < avail.top())  pos.setY(avail.top());
+    if (pos != w->pos()) w->move(pos);
 }
 
 void MW::helpWelcome()

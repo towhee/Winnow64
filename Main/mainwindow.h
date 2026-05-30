@@ -720,6 +720,7 @@ private slots:
 
     void help();
     void helpShortcuts();
+    void styleShortcutsWindow(QScrollArea *w);  // (re)apply font scaling + fit columns
     void helpWelcome();
 
 private:
@@ -1191,6 +1192,7 @@ private:
 
     // QList<QWidget*> openWindows;
     QList<QPointer<QWidget>> openWindows;
+    QList<QPointer<QScrollArea>> shortcutsWindows;   // open Shortcuts help, for live font updates
 
     bool ignoreDockResize;
     bool wasThumbDockVisible;

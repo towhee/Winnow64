@@ -12,10 +12,11 @@ font (12px). HtmlWindow scales them by G::fontSize/12 at load time so help
 text tracks the app font size; if you change these, update HtmlWindow too.
 */
 
+/* font-family is set by HtmlWindow to the OS system font (code/pre below keep
+   monospace); font-size here is the design size, scaled by HtmlWindow. */
 body {
     background-color: #222222;
     color: silver;
-    font-family: sans-serif;
     font-size: 14px;
 }
 h1 { color: #02b0cf;    font-size: 22px; margin: 0.6em 0 0.3em; }

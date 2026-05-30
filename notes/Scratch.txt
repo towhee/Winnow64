@@ -273,3 +273,5 @@ Main/mainwindow.cpp (/Users/roryhill/Projects/Winnow64/Main/mainwindow.cpp):
  ⎿    ✘ [Line 440:6] Use of undeclared identifier 'MW' [undeclared_var_use] (clang)
 
 Compound command contains cd with output redirection - manual approval required to prevent path resolution bypass
+Contains shell syntax (string) that cannot be statically analyzed
+Permit all grep

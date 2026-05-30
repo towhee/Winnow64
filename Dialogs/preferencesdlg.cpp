@@ -115,6 +115,17 @@ void PreferencesDlg::resizeForFontChange()
     // which would otherwise block shrinking when the font gets smaller.
     setMinimumWidth(targetW);
     resize(targetW, targetH);
+
+    // Nudge back into view if the resize pushed the dialog off-screen (it grows
+    // from the top-left, so the right/bottom edge can spill past the screen).
+    // Uses frameGeometry so window-manager decorations are accounted for.
+    QRect fg = frameGeometry();
+    QPoint p = pos();
+    if (fg.right()  > avail.right())  p.rx() -= fg.right()  - avail.right();
+    if (fg.bottom() > avail.bottom()) p.ry() -= fg.bottom() - avail.bottom();
+    if (p.x() < avail.left()) p.setX(avail.left());
+    if (p.y() < avail.top())  p.setY(avail.top());
+    if (p != pos()) move(p);
 }
 
 void PreferencesDlg::expand()
