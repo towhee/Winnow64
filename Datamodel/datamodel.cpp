@@ -894,13 +894,11 @@ void DataModel::refresh()
     QStringList modified;
 
     if (!sourceModified(added, removed, modified)) {
-        qDebug() << "DataModel::refresh source was not modified";
         return;
     }
 
     // additions
     for (const QString &fPath : added) {
-        qDebug() << "DataModel::refresh add" << fPath;
         insert(fPath);
     }
 
@@ -917,9 +915,6 @@ void DataModel::refresh()
         setData(index(row, G::MetadataAttemptedColumn), false);
         setData(index(row, G::IconLoadedColumn), false);
     }
-
-    // qDebug() << "DataModel::refresh call newInstance";
-    // newInstance();
 }
 
 QString DataModel::primaryFolderPath()

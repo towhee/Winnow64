@@ -606,14 +606,14 @@ void MW::togglePanToFocusClick()
 /*
     This is called by connect signals from the menu action and the PanToFocus button.
 */
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log("MW::togglePanToFocusClick");
     togglePanToFocus(Tog::toggle);
 }
 
 void MW::togglePanToFocus(Tog n)
 {
-    // if (G::isLogger)
+    if (G::isLogger)
         G::log("MW::togglePanToFocus");
     if (n == Tog::toggle) imageView->panToFocus = !imageView->panToFocus;
     if (n == Tog::off) imageView->panToFocus = false;

@@ -1665,8 +1665,10 @@ void MetaRead::allFinished(QString src)
     qint64 ms = t.elapsed();
     int n = dm->rowCount();
     int msPerImage = ms / n;
+    /*
     qDebug() << fun << "Elapsed ms =" << ms
              << "ms per image =" << msPerImage
              << " for" << n << "images";
+                //*/
     setIdle();
 }
