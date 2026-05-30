@@ -55,6 +55,18 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Windows build-wide definitions (apply to every translation unit and all
+# targets below, including tests/):
+#   NOMINMAX               - stop <windows.h> (via win.h) defining min()/max()
+#                            macros, which collide with std::min/std::max in Qt
+#                            headers such as QtConcurrent (qtconcurrentreducekernel.h).
+#   _CRT_SECURE_NO_WARNINGS- allow standard C functions (e.g. std::strerror) that
+#                            MSVC deprecates; /sdl otherwise promotes the C4996
+#                            warning to a build error.
+if(WIN32)
+    add_compile_definitions(NOMINMAX _CRT_SECURE_NO_WARNINGS)
+endif()
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
@@ -557,7 +569,7 @@ if(APPLE)
     )
 elseif(WIN32)
     list(APPEND WINNOW_SOURCES
-        Main/qtlockedfile_win.cpp
+        # qtlockedfile_win.cpp is #included by qtlocalpeer.cpp — do not compile standalone
         Main/winnativeeventfilter.cpp
         Utilities/win.cpp
     )
@@ -765,6 +777,64 @@ if(WIN32)
 
     # App icon for the .exe
     target_sources(Winnow PRIVATE images/winnow.ico)
+
+    # -------------------------------------------------------------------------
+    # Deployment (mirrors the manual Windows steps in notes/DeployInstall.txt).
+    # Assemble a runnable, standalone layout next to Winnow.exe in the build
+    # output so the app — and Qt Creator's "Run" — find everything they resolve
+    # via applicationDirPath(): the ONNX model, ExifTool (et.exe), the Winnet
+    # droplet master (Winnet.exe), the third-party runtime DLLs, and the Qt
+    # runtime. Runs after each build of Winnow; copy_if_different keeps it cheap.
+    # -------------------------------------------------------------------------
+    set(_winnow_out "$<TARGET_FILE_DIR:Winnow>")
+
+    # Qt runtime + plugins (windeployqt auto-detects debug/release from the exe).
+    get_target_property(_winnow_qmake Qt6::qmake IMPORTED_LOCATION)
+    get_filename_component(_winnow_qt_bin "${_winnow_qmake}" DIRECTORY)
+    find_program(WINNOW_WINDEPLOYQT windeployqt HINTS "${_winnow_qt_bin}")
+    if(WINNOW_WINDEPLOYQT)
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND "${WINNOW_WINDEPLOYQT}" --no-translations --verbose 0 "$<TARGET_FILE:Winnow>"
+            COMMENT "windeployqt: deploying Qt runtime + plugins"
+            VERBATIM)
+    else()
+        message(WARNING "windeployqt not found near ${_winnow_qt_bin}; Qt DLLs will not be auto-deployed.")
+    endif()
+
+    # Third-party runtime DLLs. OpenCV links the release world lib for both
+    # configs, so its release DLL is always used; libde265/libheif are per-config;
+    # tiff/zlib ship release-only (used for both — stable C ABIs).
+    add_custom_command(TARGET Winnow POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${LIB_DIR}/opencv/windows/build/x64/vc16/bin/opencv_world4110.dll"
+            "$<IF:$<CONFIG:Debug>,${LIB_DIR}/libde265/debug/libde265.dll,${LIB_DIR}/libde265/release/libde265.dll>"
+            "$<IF:$<CONFIG:Debug>,${LIB_DIR}/libheif/debug/libheif.dll,${LIB_DIR}/libheif/release/libheif.dll>"
+            "${LIB_DIR}/libtiff/build/libtiff/Release/tiff.dll"
+            "${LIB_DIR}/zlib/build/Release/zlib.dll"
+            "${_winnow_out}"
+        COMMENT "Deploying third-party runtime DLLs"
+        VERBATIM)
+
+    # ONNX focus model (tracked in git).
+    add_custom_command(TARGET Winnow POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/focus_point_model.onnx" "${_winnow_out}"
+        COMMENT "Deploying focus_point_model.onnx"
+        VERBATIM)
+
+    # Helper executables. et.exe (ExifTool) and Winnet.exe are not in git; they
+    # live in release/. Warn rather than fail the build if they are absent.
+    foreach(_winnow_helper et.exe Winnet.exe)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release/${_winnow_helper}")
+            add_custom_command(TARGET Winnow POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_CURRENT_SOURCE_DIR}/release/${_winnow_helper}" "${_winnow_out}"
+                COMMENT "Deploying ${_winnow_helper}"
+                VERBATIM)
+        else()
+            message(WARNING "Deploy: release/${_winnow_helper} not found; it will be missing next to Winnow.exe.")
+        endif()
+    endforeach()
 endif()
 
 # =============================================================================

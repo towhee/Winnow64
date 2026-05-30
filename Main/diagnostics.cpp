@@ -722,7 +722,7 @@ void MW::mailLogs()
     msg.nFileCount = static_cast<ULONG>(files.size());
     msg.lpFiles = files.data();
 
-    ULONG rc = mapiSendMail(0, reinterpret_cast<ULONG_PTR>(winId()), &msg,
+    ULONG rc = mapiSendMail(0, static_cast<ULONG_PTR>(winId()), &msg,
                             MAPI_LOGON_UI | MAPI_DIALOG, 0);
     FreeLibrary(hMapi);
 

@@ -1818,12 +1818,13 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
       << "thumbRect =" << *thumbRect
       ; //*/
 
+    float scale = 1.0f;     // non-mac platforms have no cursor magnification
     #ifdef Q_OS_MAC
-        float scale = Mac::getMouseCursorMagnification();
+        scale = Mac::getMouseCursorMagnification();
         if (scale < 0.001) scale = 1.0;
-        w /= scale;
-        h /= scale;
     #endif
+    w /= scale;
+    h /= scale;
 
     // make room for white/black border
     int pw = 1;                             // pen width
