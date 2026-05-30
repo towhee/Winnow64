@@ -128,18 +128,22 @@ void HtmlWindow::applyStyle()
     if (cssFile.open(QIODevice::ReadOnly)) {
         QString css = cssFile.readAll();
         cssFile.close();
-        // Append scaled sizes that override help.css's fixed values (later
-        // equal-specificity rule wins). Qt's HTML importer sizes block text from
-        // per-element rules, not the "body" selector (which styles only the
-        // unused root frame), so we must size the actual text tags (p, li, td,
-        // th, div) — the same mechanism that scales the headings. Spans, code and
-        // pre inherit font-size from their block parent. Keep sizes in sync with
+        // Render help text in the app (OS system) font and override help.css's
+        // fixed sizes with scaled ones (later equal-specificity rule wins). Qt's
+        // HTML importer styles block text from per-element rules, not the "body"
+        // selector (which styles only the unused root frame), so we set the
+        // actual text tags (p, li, td, th, div) plus the headings — the same
+        // mechanism that scales them. Spans inherit from their block parent;
+        // code/pre keep help.css's monospace family. Keep sizes in sync with
         // help.css.
+        const QString family = QApplication::font().family();
         css += QString(
-            "\nbody, p, li, td, th, div { font-size: %1px; }"
-            "\nh1 { font-size: %2px; }"
-            "\nh2 { font-size: %3px; }"
-            "\nh3 { font-size: %4px; }")
+            "\nbody, p, li, td, th, div, h1, h2, h3 { font-family: \"%1\"; }"
+            "\nbody, p, li, td, th, div { font-size: %2px; }"
+            "\nh1 { font-size: %3px; }"
+            "\nh2 { font-size: %4px; }"
+            "\nh3 { font-size: %5px; }")
+            .arg(family)
             .arg(bodyPx)
             .arg(qRound(22 * scale))
             .arg(qRound(18 * scale))
