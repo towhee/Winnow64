@@ -4,6 +4,7 @@
 #include <QtWidgets>
 
 #if defined(Q_OS_WIN)
+#include <windows.h>        // must precede <ioapiset.h> so winnt.h sees the target arch
 #include <ioapiset.h>
 #include <tchar.h>
 #endif

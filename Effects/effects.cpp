@@ -1578,7 +1578,7 @@ void fastblur(BImage img,int radius){
                 vmin[x] = MIN(x + radius + 1, wm);
                 vmax[x] = MAX(x - radius, 0);
             }
-            bool isSum;
+            bool isSum = true;
             if (excludeTransparency && (s[n]>>24 == 255)) {
                 if (!isSum) {
                     p = s[n];

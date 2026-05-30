@@ -1,6 +1,9 @@
 #include "utilities.h"
 #include "Main/global.h"
+#include <filesystem>
+#ifdef Q_OS_MAC
 #include <dirent.h>
+#endif
 
 bool Utilities::integrityCheck(const QString &path1, const QString &path2)
 {
@@ -133,6 +136,21 @@ quint32 Utilities::subFolderTree(const QString &rootFolderPath, QStringList &out
     std::mutex collectedMutex;
     workQueue.push(rootPath);
 
+    // Record a discovered subfolder and queue it for further descent.
+    auto enqueueDir = [&](std::string sub) {
+        folderCount.fetch_add(1, std::memory_order_relaxed);
+        {
+            std::lock_guard<std::mutex> lock(collectedMutex);
+            collected.push_back(sub);
+        }
+        pending.fetch_add(1, std::memory_order_relaxed);
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            workQueue.push(std::move(sub));
+        }
+        queueCV.notify_one();
+    };
+
     auto worker = [&]() {
         while (true) {
             std::string path;
@@ -144,6 +162,7 @@ quint32 Utilities::subFolderTree(const QString &rootFolderPath, QStringList &out
                 workQueue.pop();
             }
 
+#ifdef Q_OS_MAC
             DIR *dir = opendir(path.c_str());
             if (dir) {
                 struct dirent *e;
@@ -165,23 +184,29 @@ quint32 Utilities::subFolderTree(const QString &rootFolderPath, QStringList &out
                             isDir = true;
                     }
 
-                    if (isDir) {
-                        folderCount.fetch_add(1, std::memory_order_relaxed);
-                        std::string sub = path + "/" + e->d_name;
-                        {
-                            std::lock_guard<std::mutex> lock(collectedMutex);
-                            collected.push_back(sub);
-                        }
-                        pending.fetch_add(1, std::memory_order_relaxed);
-                        {
-                            std::lock_guard<std::mutex> lock(queueMutex);
-                            workQueue.push(std::move(sub));
-                        }
-                        queueCV.notify_one();
-                    }
+                    if (isDir)
+                        enqueueDir(path + "/" + e->d_name);
                 }
                 closedir(dir);
             }
+#else
+            // Cross-platform path (Windows). Paths in the queue are UTF-8 (from
+            // QString); convert through QString to a native wide path so non-ASCII
+            // folder names survive (no char8_t / code-page pitfalls). Symlinks are
+            // not followed: symlink_status() reports the link itself.
+            std::filesystem::path dirPath(QString::fromStdString(path).toStdWString());
+            std::error_code ec;
+            for (std::filesystem::directory_iterator it(dirPath,
+                     std::filesystem::directory_options::skip_permission_denied, ec), end;
+                 !ec && it != end; it.increment(ec)) {
+                std::error_code stEc;
+                auto st = it->symlink_status(stEc);
+                if (!stEc && std::filesystem::is_directory(st)) {
+                    enqueueDir(QString::fromStdWString(it->path().generic_wstring())
+                                   .toStdString());
+                }
+            }
+#endif
 
             if (pending.fetch_sub(1, std::memory_order_acq_rel) == 1) {
                 // last pending unit completed — wake all workers so they can exit
@@ -284,6 +309,12 @@ bool Utilities::isLocked(const QString& fPath)
         return (st.st_flags & (UF_IMMUTABLE | SF_IMMUTABLE));
     }
     return false;
+#endif
+#ifdef Q_OS_WIN
+    // Windows analog of the immutable flag is the read-only file attribute.
+    DWORD attrs = GetFileAttributesW(reinterpret_cast<const wchar_t*>(fPath.utf16()));
+    if (attrs == INVALID_FILE_ATTRIBUTES) return false;
+    return (attrs & FILE_ATTRIBUTE_READONLY) != 0;
 #endif
 }
 

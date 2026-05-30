@@ -21,6 +21,11 @@ set(WINNOW_CORE_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/Log/issue.cpp
 )
 
+# Windows: utilities.cpp/inputdlg.cpp call Win::setTitleBarColor (Utilities/win.cpp).
+if(WIN32)
+    list(APPEND WINNOW_CORE_TEST_SOURCES ${CMAKE_SOURCE_DIR}/Utilities/win.cpp)
+endif()
+
 set(WINNOW_TEST_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/Utilities

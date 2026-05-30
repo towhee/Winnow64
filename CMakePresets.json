@@ -70,9 +70,9 @@
 
     {
       "name": "win-debug",
-      "displayName": "Windows Debug (VS 2019, x64)",
+      "displayName": "Windows Debug (VS 2022, x64)",
       "inherits": "_base",
-      "generator": "Visual Studio 16 2019",
+      "generator": "Visual Studio 17 2022",
       "architecture": "x64",
       "condition": {
         "type": "equals",
@@ -82,9 +82,9 @@
     },
     {
       "name": "win-release",
-      "displayName": "Windows Release (VS 2019, x64)",
+      "displayName": "Windows Release (VS 2022, x64)",
       "inherits": "_base",
-      "generator": "Visual Studio 16 2019",
+      "generator": "Visual Studio 17 2022",
       "architecture": "x64",
       "condition": {
         "type": "equals",
