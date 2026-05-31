@@ -1,1 +1,1 @@
-"[Session: \(.rate_limits.five_hour.used_percentage | floor)% (Resets: \(.rate_limits.five_hour.resets_at | strflocaltime("%H:%M")))] [Week: \(.rate_limits.seven_day.used_percentage | floor)% (Resets: \(.rate_limits.seven_day.resets_at | strflocaltime("%a %H:%M")))]"
+"[Session: \(.rate_limits.five_hour.used_percentage | floor)% (Resets: \(.rate_limits.five_hour.resets_at | fromdateiso8601 | strflocaltime("%H:%M")))] [Week: \(.rate_limits.seven_day.used_percentage | floor)% (Resets: \(.rate_limits.seven_day.resets_at | fromdateiso8601 | strflocaltime("%a %H:%M")))]"
