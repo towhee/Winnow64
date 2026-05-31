@@ -171,10 +171,24 @@ QString WidgetCSS::statusBar()
 
 QString WidgetCSS::menuBar()
 {
-    return
+    // On Windows the menu bar sits directly above the dock tab bar with no
+    // visual separation. Add a bottom border (same frame color as
+    // DockTitleBar, fm = backgroundShade + 35) to divide the menu from the
+    // docks. macOS keeps its native menu bar, so no border is needed there.
+#ifdef Q_OS_WIN
+    QString menuBarRule =
     "QMenuBar {"
        "border: 0px solid " + QColor(mb,mb,mb).name() + ";"
-    "}"
+       "border-bottom: 1px solid " + QColor(fm,fm,fm).name() + ";"
+    "}";
+#else
+    QString menuBarRule =
+    "QMenuBar {"
+       "border: 0px solid " + QColor(mb,mb,mb).name() + ";"
+    "}";
+#endif
+    return
+    menuBarRule +
     "QMenuBar::item {"
         "spacing: 2px;"
         "padding: 6px 6px;"
