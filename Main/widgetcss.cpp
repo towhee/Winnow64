@@ -179,7 +179,7 @@ QString WidgetCSS::menuBar()
     QString menuBarRule =
     "QMenuBar {"
        "border: 0px solid " + QColor(mb,mb,mb).name() + ";"
-       "border-bottom: 1px solid " + QColor(fm,fm,fm).name() + ";"
+       "border-bottom: 1px solid " + QColor(mb,mb,mb).name() + ";"
     "}";
 #else
     QString menuBarRule =
@@ -532,6 +532,27 @@ QString WidgetCSS::treeView()
         // "color: " + textColor.name() + ";"
         "background: " + selectionColor.name() + ";"
     "}"
+
+#ifdef Q_OS_WIN
+    // Match the G::css QCheckBox style for checkable tree items (eg Filters panel).
+    // Without these the indicators fall back to the native Windows checkbox.
+    "QTreeView::indicator {"
+        "width: 15px;"
+        "height: 15px;"
+    "}"
+
+    "QTreeView::indicator:unchecked {"
+        "image: url(:/images/checkbox_unchecked_blue.png);"
+    "}"
+
+    "QTreeView::indicator:checked {"
+        "image: url(:/images/checkbox_checked_blue.png);"
+    "}"
+
+    "QTreeView::indicator:disabled {"
+        "image: url(:/images/checkbox_disabled.png);"
+    "}"
+#endif
     ;
 }
 
