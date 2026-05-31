@@ -20,7 +20,16 @@
       "Bash(/opt/homebrew/lib/QtCore.framework/Versions/A/QtCore)",
       "Bash(/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake -S /Users/roryhill/Projects/Winnow64 -B /Users/roryhill/Projects/Winnow64/build/mac-debug)",
       "WebFetch(domain:doc.qt.io)",
-      "WebFetch(domain:stackoverflow.com)"
+      "WebFetch(domain:stackoverflow.com)",
+      "PowerShell($jq = Get-Command jq -ErrorAction SilentlyContinue; if \\($jq\\) { \"jq found: $\\($jq.Source\\)\" } else { \"jq NOT found\" }; if \\(Test-Path \"C:\\\\Users\\\\hillr\\\\projects\\\\winnow64\\\\.claude\\\\statusline.jq\"\\) { \"statusline.jq exists\" } else { \"statusline.jq MISSING\" })",
+      "PowerShell($w = Get-Command winget -ErrorAction SilentlyContinue; if \\($w\\) { \"winget: $\\($w.Source\\)\" } else { \"winget NOT found\" })",
+      "PowerShell(winget install *)",
+      "Bash(powershell -NoProfile -Command '$j = $input | ConvertFrom-Json; $parts = @\\(\\); $fh = $j.rate_limits.five_hour; if \\($fh\\) { $pct = [int]$fh.used_percentage; $rt = [DateTimeOffset]::FromUnixTimeSeconds\\([long]$fh.resets_at\\).LocalDateTime.ToString\\('\\\\''HH:mm'\\\\''\\); $parts += '\\\\''[Session: '\\\\'' + $pct + '\\\\''% \\(Resets: '\\\\'' + $rt + '\\\\''\\)]'\\\\'' }; $sd = $j.rate_limits.seven_day; if \\($sd\\) { $pct = [int]$sd.used_percentage; $rt = [DateTimeOffset]::FromUnixTimeSeconds\\([long]$sd.resets_at\\).LocalDateTime; $parts += '\\\\''[Week: '\\\\'' + $pct + '\\\\''% \\(Resets: '\\\\'' + $rt.ToString\\('\\\\''ddd HH:mm'\\\\''\\) + '\\\\''\\)]'\\\\'' }; if \\($parts.Count -gt 0\\) { $parts -join '\\\\'' '\\\\'' }')",
+      "PowerShell($f = \"C:\\\\Users\\\\hillr\\\\.claude\\\\projects\\\\C--Users-hillr-projects-winnow64\\\\memory\\\\MEMORY.md\"; $line = \"- [Status line blank on Windows]\\(statusline-windows-fix.md\\) - committed jq statusLine shadows working PowerShell one; fixed via settings.local.json override\"; if \\(Test-Path $f\\) { Add-Content -Path $f -Value $line -Encoding utf8 } else { Set-Content -Path $f -Value \"# Memory`n`n$line\" -Encoding utf8 }; \"done\")"
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "powershell -NoProfile -Command \"$j = $input | ConvertFrom-Json; $parts = @(); $fh = $j.rate_limits.five_hour; if ($fh) { $pct = [int]$fh.used_percentage; $rt = [DateTimeOffset]::FromUnixTimeSeconds([long]$fh.resets_at).LocalDateTime.ToString('HH:mm'); $parts += '[Session: ' + $pct + '% (Resets: ' + $rt + ')]' }; $sd = $j.rate_limits.seven_day; if ($sd) { $pct = [int]$sd.used_percentage; $rt = [DateTimeOffset]::FromUnixTimeSeconds([long]$sd.resets_at).LocalDateTime; $parts += '[Week: ' + $pct + '% (Resets: ' + $rt.ToString('ddd HH:mm') + ')]' }; if ($parts.Count -gt 0) { $parts -join ' ' }\""
   }
 }
