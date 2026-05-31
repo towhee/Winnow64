@@ -1,6 +1,7 @@
 #include "File/bookmarks.h"
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
+#include <QStyleFactory>
 
 /*
 A QStringList of paths to bookmarked folders is displayed as top level items
@@ -44,6 +45,17 @@ BookMarks::BookMarks(QWidget *parent, DataModel *dm,
 
     setItemDelegate(delegate);
     // setItemDelegate(new BookDelegate(this));
+
+#ifdef Q_OS_WIN
+    // The native Windows widget style draws a 1px vertical separator at the
+    // column boundary in tree bodies; the macOS style does not. Fusion matches
+    // the Mac behaviour (no separator). The app-wide stylesheet still applies on
+    // top, so the rest of the appearance is unchanged.
+    if (QStyle *fusion = QStyleFactory::create("Fusion")) {
+        fusion->setParent(this);
+        setStyle(fusion);
+    }
+#endif
 
     setAcceptDrops(true);
 	setDragEnabled(false);
