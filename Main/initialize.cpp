@@ -948,9 +948,7 @@ void MW::createEmbel()
     if (G::useInfoView) {
         connect(infoView, &InfoView::dataEdited, embel, &Embel::refreshTexts);
     }
-}
-
-void MW::createFSTree()
+}void MW::createFSTree()
 {
     if (G::isLogger) G::log("MW::createFSTree");
     // loadSettings has not run yet (dependencies, but QSettings has been opened

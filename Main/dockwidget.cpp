@@ -134,7 +134,12 @@ void BarBtn::setIcon(const QIcon &icon)
 
 QSize DockTitleBar::sizeHint() const
 {
+#ifdef Q_OS_MAC
     int h = style()->pixelMetric(QStyle::PM_TitleBarHeight) * 1.1;
+#endif
+#ifdef Q_OS_WIN
+    int h = style()->pixelMetric(QStyle::PM_TitleBarHeight) * 1.6;
+#endif
     return QSize(width(), h);
 }
 
