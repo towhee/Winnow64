@@ -77,3 +77,6 @@ Winnow.app/
 *- Copy*.cpp
 *- Copy*.h
 *- Copy*.txt
+
+# Per-machine Claude Code settings (do not commit)
+.claude/settings.local.json
