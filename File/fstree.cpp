@@ -2,6 +2,7 @@
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
 #include "Main/mainwindow.h"   // or whatever your MW header is actually called
+#include <QStyleFactory>
 
 extern QStringList mountedDrives;
 QStringList mountedDrives;
@@ -504,6 +505,17 @@ FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
     }
 
     setItemDelegate(delegate);
+
+#ifdef Q_OS_WIN
+    // The native Windows widget style draws a 1px vertical separator at the
+    // column boundary in tree bodies; the macOS style does not. Fusion matches
+    // the Mac behaviour (no separator). The app-wide stylesheet still applies on
+    // top, so the rest of the appearance is unchanged.
+    if (QStyle *fusion = QStyleFactory::create("Fusion")) {
+        fusion->setParent(this);
+        setStyle(fusion);
+    }
+#endif
 
     setRootIsDecorated(true);
     setSortingEnabled(false);

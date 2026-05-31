@@ -324,6 +324,16 @@ QString WidgetCSS::dockWidget()
 
 QString WidgetCSS::dockTabBar()
 {
+    // The native Windows tab style renders the dock tab bar ~6px shorter than
+    // macOS. Add vertical padding on Windows only so the bar matches the macOS
+    // height (~26px); macOS is already correct and left untouched.
+    QString winTabHeight = "";
+#ifdef Q_OS_WIN
+    // The general QTabBar::tab rule already applies 2px/3px vertical padding to
+    // these tabs. Override with larger values (net ~+6px) so the dock tab bar
+    // matches the taller macOS height (~26px vs the native Windows ~20px).
+    winTabHeight = "padding-top: 5px; padding-bottom: 6px;";
+#endif
     return
     "QMainWindow > QTabBar::tab {"
         // "color: " + QColor(fg-40,fg-40,fg-40).name() + ";"
@@ -336,6 +346,7 @@ QString WidgetCSS::dockTabBar()
         // "border-bottom-left-radius: 0px;"
         // "border-bottom-right-radius: 0px;"
 
+        + winTabHeight +
         // "padding: 3px 10px;"
         // "margin-right: 2px;"
      "}"

@@ -1,6 +1,7 @@
 #include "Datamodel/filters.h"
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
+#include <QStyleFactory>
 
 /*
     OVERVIEW
@@ -145,6 +146,18 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     setCategoryBackground(a, b);
 
     setItemDelegate(new FiltersDelegate(this));
+
+#ifdef Q_OS_WIN
+    // The native Windows widget style draws a 1px vertical separator at the
+    // column boundary in tree bodies; the macOS style does not. Fusion matches
+    // the Mac behaviour (no separator). The app-wide stylesheet still applies on
+    // top, so the rest of the appearance is unchanged.
+    if (QStyle *fusion = QStyleFactory::create("Fusion")) {
+        fusion->setParent(this);
+        setStyle(fusion);
+    }
+#endif
+
     setFocusPolicy(Qt::NoFocus);
 
     /* Sits above the filters QTreeWidget and is used to message that the filters are
