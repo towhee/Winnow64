@@ -1,9 +1,5 @@
 {
   "env": {
     "ANTHROPIC_CUSTOM_HEADERS": "x-goog-api-key: AIza0881536510"
-  },
-"statusLine": {
-    "type": "command",
-    "command": "jq -rf .claude/statusline.jq"
   }
 }
