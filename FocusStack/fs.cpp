@@ -163,7 +163,11 @@ void FS::incrementProgress()
     qint64 msElapsed = t.elapsed();
     int msStep = msElapsed - msPrevStep;
     QString srcFun = "FS::incrementProgress";
-    qint64 msPerStep = msElapsed / progressCount;
+    // progressCount starts at -1 and is 0 on the second call (first slice with
+    // work). Dividing by it is integer divide-by-zero — silently returns 0 on
+    // ARM64 (macOS) but raises a #DE hardware fault on x86-64 (Windows), which
+    // hard-crashes the process. Guard it.
+    qint64 msPerStep = (progressCount > 0) ? msElapsed / progressCount : 0;
     msToGo = msPerStep * (progressTotal - progressCount);
     emit progress(++progressCount, progressTotal);
 
@@ -453,19 +457,37 @@ bool FS::runDMap()
                 // Exit immediately if aborted
                 if (abortRequested()) return res;
 
-                cv::Mat warpedColor, warpedGray;
-                FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
-                FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
+                // A cv::Exception escaping a QtConcurrent worker calls
+                // std::terminate (hard crash). Contain it: leave res empty so
+                // the consumer skips this slice.
+                try {
+                    const QString wf = "FS::runDMap warp";
+                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) +
+                                         " warp color ch=" + QString::number(colorForThread.channels()));
+                    cv::Mat warpedColor, warpedGray;
+                    FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
+                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " warp gray");
+                    FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
 
-                // Exit before heavy allocations/disk writes if aborted
-                if (abortRequested()) return res;
+                    // Exit before heavy allocations/disk writes if aborted
+                    if (abortRequested()) return res;
 
-                res.color = warpedColor(masterROI).clone();
-                res.gray  = warpedGray(masterROI).clone();
+                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " crop");
+                    res.color = warpedColor(masterROI).clone();
+                    res.gray  = warpedGray(masterROI).clone();
 
-                if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
+                    if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
 
-                cv::imwrite(paths.toStdString(), res.color);
+                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " imwrite");
+                    cv::imwrite(paths.toStdString(), res.color);
+                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " done");
+                }
+                catch (const std::exception &e) {
+                    res.color.release();
+                    res.gray.release();
+                    qWarning().noquote() << "WARNING: FS::runDMap warp slice"
+                                         << slice << "failed:" << e.what();
+                }
 
                 return res;
             }));
@@ -482,6 +504,11 @@ bool FS::runDMap()
     for (auto &f : futures) {
         if (G::FSLog) G::log(srcFun, "Build the depth map");
         WarpResult res = f.result();
+        // Skip slices whose warp worker failed (empty result).
+        if (res.color.empty() || res.gray.empty()) {
+            incrementProgress();
+            continue;
+        }
         fuse.streamSlice(res.slice, res.gray, res.color, fopt,
                          &abort, statusCb, progressCb);
         incrementProgress();
@@ -647,16 +674,26 @@ bool FS::runPMax()
              WarpResult res;
              res.slice = slice;
 
-             cv::Mat warpedColor, warpedGray;
-             FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
-             FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
+             // Contain any cv::Exception: escaping a QtConcurrent worker calls
+             // std::terminate (hard crash). Leave res empty so it is skipped.
+             try {
+                 cv::Mat warpedColor, warpedGray;
+                 FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
+                 FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
 
-             res.color = warpedColor(masterROI).clone();
-             res.gray  = warpedGray(masterROI).clone();
+                 res.color = warpedColor(masterROI).clone();
+                 res.gray  = warpedGray(masterROI).clone();
 
-             if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
+                 if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
 
-             cv::imwrite(paths.toStdString(), res.color);
+                 cv::imwrite(paths.toStdString(), res.color);
+             }
+             catch (const std::exception &e) {
+                 res.color.release();
+                 res.gray.release();
+                 qWarning().noquote() << "WARNING: FS::runPMax warp slice"
+                                      << slice << "failed:" << e.what();
+             }
 
              return res;
             }));
@@ -668,6 +705,11 @@ bool FS::runPMax()
     // Process results as they finish
     for (auto &f : futures) {
         WarpResult res = f.result();
+        // Skip slices whose warp worker failed (empty result).
+        if (res.color.empty() || res.gray.empty()) {
+            incrementProgress();
+            continue;
+        }
         fuse.streamSlice(res.slice, res.gray, res.color, fopt,
                          &abort, statusCb, progressCb);
         incrementProgress();
