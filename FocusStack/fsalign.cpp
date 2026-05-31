@@ -135,6 +135,12 @@ static inline void ensureIdentityWB(cv::Mat& wb)
     }
 }
 
+static inline void ensureAffine(cv::Mat& t)
+{
+    if (t.rows != 2 || t.cols != 3 || t.type() != CV_32F)
+        t = cv::Mat::eye(2, 3, CV_32F);
+}
+
 void apply_contrast_whitebalance_internal(cv::Mat &img,
                                           const cv::Mat &contrast,
                                           const cv::Mat &whitebalance)
@@ -717,12 +723,15 @@ Result computeLocal(const cv::Mat &refGray,
                     const cv::Rect &srcValidArea,
                     const Options &opt)
 {
+    const QString srcFun = "FSAlign::computeLocal";
+
     Result r = makeIdentity(srcValidArea);
 
     // Start with identity transform and default coeffs
     // r.validArea = srcValidArea;
 
     // Low-resolution rough geometric alignment
+    if (G::FSLog) G::log(srcFun, "rough match_transform lowRes=" + QString::number(opt.lowRes));
     match_transform(refGray,
                     srcGray,
                     srcValidArea,
@@ -735,6 +744,7 @@ Result computeLocal(const cv::Mat &refGray,
     // Contrast matching (grayscale)
     if (opt.matchContrast)
     {
+        if (G::FSLog) G::log(srcFun, "match_contrast");
         match_contrast(refGray,
                        srcGray,
                        srcValidArea,
@@ -745,6 +755,7 @@ Result computeLocal(const cv::Mat &refGray,
     // Whitebalance matching (color)
     if (opt.matchWhiteBalance && srcColor.channels() == 3)
     {
+        if (G::FSLog) G::log(srcFun, "match_whitebalance");
         match_whitebalance(refColor,
                            srcColor,
                            srcValidArea,
@@ -758,6 +769,9 @@ Result computeLocal(const cv::Mat &refGray,
                   ? std::max(srcGray.cols, srcGray.rows)
                   : opt.maxRes;
 
+    if (G::FSLog) G::log(srcFun, "refine match_transform res=" + QString::number(res) +
+                                 " srcGray=" + QString::number(srcGray.cols) + "x" +
+                                 QString::number(srcGray.rows));
     match_transform(refGray,
                     srcGray,
                     srcValidArea,
@@ -767,6 +781,7 @@ Result computeLocal(const cv::Mat &refGray,
                     res,
                     false);
 
+    if (G::FSLog) G::log(srcFun, "refine done");
     return r;
 }
 
@@ -777,23 +792,35 @@ Result accumulate(const Result &prevGlobal,
     // Start with the local result; it will be updated to the new global result.
     Result g = local;
 
-    // Ensure contrast and white balance matrices are valid to prevent errors.
-    ensureIdentityContrast(g.contrast);
-    ensureIdentityWB(g.whitebalance);
-    cv::Mat sC = prevGlobal.contrast;
-    cv::Mat sW = prevGlobal.whitebalance;
-    ensureIdentityContrast(sC);
-    ensureIdentityWB(sW);
+    /* Sanitize every input into independent working copies. A malformed Result
+    must degrade to identity, never throw: accumulate() runs outside any
+    try/catch (see Align::alignSlice), so a cv::Exception here would call
+    std::terminate and hard-crash the whole application.
+    The clones also break the aliasing between g.* and local.* — without them
+    the stacking formulas below would read partially-overwritten coefficients
+    (g shares data with local) and silently corrupt the accumulation. */
+    cv::Mat lC = local.contrast.clone();          ensureIdentityContrast(lC);
+    cv::Mat lW = local.whitebalance.clone();      ensureIdentityWB(lW);
+    cv::Mat lT = local.transform.clone();         ensureAffine(lT);
+    cv::Mat sC = prevGlobal.contrast.clone();     ensureIdentityContrast(sC);
+    cv::Mat sW = prevGlobal.whitebalance.clone(); ensureIdentityWB(sW);
+    cv::Mat sT = prevGlobal.transform.clone();    ensureAffine(sT);
+
+    if (G::FSLog) G::log("FSAlign::accumulate", "begin");
+
+    // Independent output buffers so writing g.* never mutates the const inputs.
+    g.contrast     = lC.clone();
+    g.whitebalance = lW.clone();
 
     /*--- 1. Transform Stacking ---
     To combine affine transforms, we represent the 2x3 matrices as 3x3s,
     perform matrix multiplication, then extract the resulting 2x3 matrix.
     NewGlobal = Local * PreviousGlobal */
     cv::Mat prev3 = cv::Mat::eye(3, 3, CV_32F);
-    prevGlobal.transform.copyTo(prev3(cv::Rect(0, 0, 3, 2)));
+    sT.copyTo(prev3(cv::Rect(0, 0, 3, 2)));
 
     cv::Mat local3 = cv::Mat::eye(3, 3, CV_32F);
-    local.transform.copyTo(local3(cv::Rect(0, 0, 3, 2)));
+    lT.copyTo(local3(cv::Rect(0, 0, 3, 2)));
 
     cv::Mat combined3 = local3 * prev3;
     g.transform = combined3(cv::Rect(0, 0, 3, 2)).clone();
@@ -804,11 +831,8 @@ Result accumulate(const Result &prevGlobal,
     The new gain is the product of the local and previous global polynomials.
     We compute the new coefficients, ignoring terms higher than degree 2. */
     {
-        CV_Assert(prevGlobal.contrast.rows == 5 && prevGlobal.contrast.cols == 1);
-        CV_Assert(g.contrast.rows == 5 && g.contrast.cols == 1);
-
-        const cv::Mat &c = local.contrast; // Local coefficients
-        const cv::Mat &sC = prevGlobal.contrast; // Previous global coefficients
+        const cv::Mat &c = lC; // Local coefficients (sanitized)
+        // sC = previous global coefficients (sanitized above)
 
         // Constant term: new_c0 = c0*s0
         g.contrast.at<float>(0) *= sC.at<float>(0);
@@ -840,11 +864,8 @@ Result accumulate(const Result &prevGlobal,
     new_gain   = g_prev * g_local
     new_offset = g_prev * o_local + o_prev */
     {
-        CV_Assert(prevGlobal.whitebalance.rows == 6 && prevGlobal.whitebalance.cols == 1);
-        CV_Assert(g.whitebalance.rows == 6 && g.whitebalance.cols == 1);
-
-        const cv::Mat &sWB = prevGlobal.whitebalance;
-        const cv::Mat &lWB = local.whitebalance;
+        const cv::Mat &sWB = sW;  // previous global WB (sanitized)
+        const cv::Mat &lWB = lW;  // local WB (sanitized)
 
         // Params: [offset_B, gain_B, offset_G, gain_G, offset_R, gain_R]
 
@@ -869,6 +890,7 @@ Result accumulate(const Result &prevGlobal,
     by applying the new global transform to its original valid area corners. */
     g.validArea = compute_valid_area(srcValid, g.transform, false);
 
+    if (G::FSLog) G::log("FSAlign::accumulate", "end");
     return g;
 }
 
@@ -942,7 +964,9 @@ bool Align::alignSlice(int slice,
     }
     catch (const std::exception &e)
     {
-        QString msg = "Alignment failed for ...";
+        QString msg = "Alignment (computeLocal) failed for slice " + s + ": " + e.what();
+        qWarning().noquote() << "WARNING:" << srcFun << msg;
+        if (G::FSLog) G::log(srcFun, msg);
         if (status) status(msg);
         return false;
     }
@@ -950,26 +974,40 @@ bool Align::alignSlice(int slice,
 
     if (G::FSLog) G::log(srcFun, "computeLocal");
 
-    // Stack transforms
-    currGlobal = accumulate(
-        prevGlobal,
-        local,
-        currImage.validArea
-        );
+    /* accumulate() and applyTransform() were previously called outside any
+    try/catch. A cv::Exception from either (e.g. a malformed transform, an
+    out-of-bounds ROI, or an allocation failure on these very large images)
+    would call std::terminate and hard-crash the app instead of failing the
+    slice gracefully. Guard them and report the real error. */
+    try {
+        // Stack transforms
+        currGlobal = accumulate(
+            prevGlobal,
+            local,
+            currImage.validArea
+            );
 
-    // Apply transform to color + gray
-    cv::Mat alignedColorMat, alignedGrayMat;
-    if (alignedColorSlice) {
-        applyTransform(currImage.color, currGlobal.transform, *alignedColorSlice);
-    }
-    if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
-    if (alignedGraySlice) {
-        applyTransform(currImage.gray,  currGlobal.transform, *alignedGraySlice);
-
-        // Ensure gray is 8-bit
-        if (alignedGraySlice->type() != CV_8U) {
-            alignedGraySlice->convertTo(*alignedGraySlice, CV_8U);
+        // Apply transform to color + gray
+        if (alignedColorSlice) {
+            applyTransform(currImage.color, currGlobal.transform, *alignedColorSlice);
         }
+        if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
+        if (alignedGraySlice) {
+            applyTransform(currImage.gray,  currGlobal.transform, *alignedGraySlice);
+
+            // Ensure gray is 8-bit
+            if (alignedGraySlice->type() != CV_8U) {
+                alignedGraySlice->convertTo(*alignedGraySlice, CV_8U);
+            }
+        }
+    }
+    catch (const std::exception &e)
+    {
+        QString msg = "Alignment (accumulate/warp) failed for slice " + s + ": " + e.what();
+        qWarning().noquote() << "WARNING:" << srcFun << msg;
+        if (G::FSLog) G::log(srcFun, msg);
+        if (status) status(msg);
+        return false;
     }
     if (abortFlag && abortFlag->load(std::memory_order_relaxed)) return false;
     if (G::FSLog) G::log(srcFun, "applyTransform alignedGray");
