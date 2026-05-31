@@ -296,7 +296,7 @@ bool MW::loadSettings()
         classificationBadgeSizeFactor = 14;
         iconNumberSize = 24;
 
-        isRatingBadgeVisible = false;
+        isRatingBadgeVisible = true;
         isIconNumberVisible = true;
 
         // datamodel
@@ -416,9 +416,10 @@ bool MW::loadSettings()
     if (settings->contains("iconNumberSize")) iconNumberSize = settings->value("iconNumberSize").toInt();
     else iconNumberSize = 26;
 
-    if (settings->contains("isRatingBadgeVisible")) isRatingBadgeVisible = settings->value("isRatingBadgeVisible").toBool();
-    if (settings->contains("isIconNumberVisible")) isIconNumberVisible = settings->value("isIconNumberVisible").toBool();
-    else isIconNumberVisible = true;
+//    if (settings->contains("isRatingBadgeVisible")) isRatingBadgeVisible = settings->value("isRatingBadgeVisible").toBool();
+//    if (settings->contains("isIconNumberVisible")) isIconNumberVisible = settings->value("isIconNumberVisible").toBool();
+    isRatingBadgeVisible = true;
+    isIconNumberVisible = true;
 
     // datamodel
     if (settings->contains("maxIconSize")) G::maxIconSize = settings->value("maxIconSize").toInt();

@@ -298,6 +298,14 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
         angle = static_cast<int>(frame.rotationAngle());
     #endif
 
+#ifdef Q_OS_WIN
+    // On Windows the multimedia backend delivers QVideoSink frames already
+    // oriented (frame.toImage() returns the rotated image) while frame.rotation()
+    // still reports the angle. Applying it again would double-rotate, so a
+    // portrait clip's thumbnail would come out sideways. Trust toImage().
+    angle = 0;
+#endif
+
     // Apply rotation if needed
     if (angle != 0) {
         QTransform tr;
