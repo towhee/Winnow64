@@ -133,7 +133,13 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
     for (QLabel *lbl : existingLabels)
         if (lbl->objectName().startsWith("dockTabGraphic_")) lbl->hide();
 
-    for (int i = 0; i < tabBar->count(); ++i) {
+    // Bound by id.size() as well as the live tab count. id is a snapshot taken
+    // above, but the setWindowTitle/setTabButton calls below (and a restoreState
+    // in progress at startup) can change tabBar->count() under us. Indexing
+    // id.at(i) past its size reads freed memory — Qt's at() is unchecked in
+    // release — and hashing that stale QString in dockFor.value() crashes. Process
+    // only the tabs we have an id for; any new tabs are handled on the next pass.
+    for (int i = 0; i < id.size() && i < tabBar->count(); ++i) {
         QDockWidget *dock = dockFor.value(id.at(i), nullptr);
         if (!dock) continue;
         dock->toggleViewAction()->setText(id.at(i));   // keep popup-menu label
