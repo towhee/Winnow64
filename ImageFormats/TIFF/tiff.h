@@ -22,9 +22,7 @@
 // #include "zlib.h"
 #endif
 #ifdef Q_OS_WIN
-#include "Lib/libtiff/libtiff/tiff.h"
-#include "Lib/libtiff/libtiff/tiffio.h"
-#include "Lib/libtiff/build/libtiff/tiffconf.h"
+#include "tiffio.h"     // vendored libtiff — Lib/libtiff/include is on the include path
 #include "zlib.h"
 #endif
 

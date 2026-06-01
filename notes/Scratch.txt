@@ -1,0 +1,8 @@
+Github message for Lib\libtiff:
+"This submodule has untracked changes.  Thise changes must be committed inside
+of the submodule before they can be part of the parent repository."
+Review use of this library in Winnow.  Is it cross platform - what are this issues
+with this being synced to Winnow on a Mac?
+
+Stop tracking it as a submodule and instead commit just the small set of files Windows needs (tiff.lib, tiff.dll, the handful
+of headers) under a normal tracked folder.
