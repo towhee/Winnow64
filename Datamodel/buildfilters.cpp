@@ -219,7 +219,7 @@ void BuildFilters::build(AfterAction newAction)
             << "filters visible =" << filters->isVisible()
             << "filters->filtersBuilt =" << filters->filtersBuilt
             << "filters->buildingFilters =" << filters->buildingFilters
-            << "G::allMetadataLoaded =" << G::allMetadataLoaded
+            << "G::allMetadataAttempted =" << G::allMetadataAttempted
                ;
     }
 
@@ -229,7 +229,7 @@ void BuildFilters::build(AfterAction newAction)
     // ignore if filters are being built
     if (filters->buildingFilters) return;
 
-    // if (!G::allMetadataLoaded) {
+    // if (!G::allMetadataAttempted) {
     //     G::popup->showPopup("Not all data required for filtering has been loaded yet.", 2000);
     //     G::issueDedup("Info",
     //                   "Filter build deferred — metadata still loading",
@@ -273,7 +273,7 @@ void BuildFilters::update()
     abortProcessing();
     if (filters->filtersBuilt) {
         action = Action::UpdateCounts;
-        if (G::allMetadataLoaded) start(NormalPriority);
+        if (G::allMetadataAttempted) start(NormalPriority);
     }
     else build();
 }
@@ -317,7 +317,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
     this->category = category;
     if (filters->filtersBuilt) {
         action = Action::UpdateCategory;
-        if (G::allMetadataLoaded) start(NormalPriority);
+        if (G::allMetadataAttempted) start(NormalPriority);
     }
     else build();
 }

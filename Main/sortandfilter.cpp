@@ -12,7 +12,7 @@
     When a folder is first selected only type 1 information is known for all the files in the
     folder unless the folder is small enough so all the files were read in one pass. Filtering
     and sorting can only occur when the filter item is known for all the files. This is
-    tracked by G::metaReadDone.
+    tracked by G::allMetadataAttempted.
 
     Type 2 Filtration steps:
 
@@ -114,7 +114,7 @@ void MW::filterChange(QString source)
     // qDebug() << "MW::filterChange" << "called from:" << source;
 
     // ignore if new folder is being loaded
-    if (!G::allMetadataLoaded) {
+    if (!G::allMetadataAttempted) {
          return;
     }
 
@@ -272,7 +272,7 @@ void MW::invertFilters()
 
 */
     if (G::isLogger) G::log("MW::invertFilters");
-    if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");
+    if (!G::allMetadataAttempted) loadEntireMetadataCache("FilterChange");
 
     if (dm->rowCount() == 0) {
         G::popup->showPopup("No images available to invert filtration", 2000);
@@ -311,7 +311,7 @@ void MW::uncheckAllFilters()
 void MW::clearAllFilters()
 {
     if (G::isLogger) G::log("MW::clearAllFilters");
-    if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");   // rgh is this reqd
+    if (!G::allMetadataAttempted) loadEntireMetadataCache("FilterChange");   // rgh is this reqd
     uncheckAllFilters();
     filters->searchString = "";
     dm->searchStringChange("");
@@ -417,7 +417,7 @@ void MW::sortChange(QString source)
         G::log("MW::sortChange",  "Src = " + source);
     // qDebug() << "MW::sortChange  Src:" << source;
 
-    if (G::isInitializing || !G::allMetadataLoaded || sortMenuUpdateToMatchTable) {
+    if (G::isInitializing || !G::allMetadataAttempted || sortMenuUpdateToMatchTable) {
         return;
     }
 
@@ -467,7 +467,7 @@ void MW::sortReverse()
     thumbView->sortThumbs(G::NameColumn, isReverseSort);
 
     // get the current selected item
-    if (G::allMetadataLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    if (G::allMetadataAttempted) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     else dm->currentSfRow = 0;
 
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;

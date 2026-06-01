@@ -57,7 +57,7 @@ void MW::reportState(QString title)
         << "\nG::isInitializing                      " << G::isInitializing
         << "\ndm->loadingModel                       " << dm->loadingModel
         << "\ndm->basicFileInfoLoaded                " << dm->basicFileInfoLoaded
-        << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
+        << "\nG::allMetadataAttempted                   " << G::allMetadataAttempted
         << "\nG::iconChunkLoaded                        " << G::iconChunkLoaded
         << "\nG::stop                                " << G::stop
         << "\nG::isFirstImageNewInstance     " << G::isFirstImageNewInstance
@@ -209,7 +209,7 @@ QString MW::diagnostics()
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
     rpt << "\n" << "G::stop = " << G::s((bool)G::stop);
     rpt << "\n";
-    rpt << "\n" << "G::allMetadataLoaded = " << G::s((bool)G::allMetadataLoaded);
+    rpt << "\n" << "G::allMetadataAttempted = " << G::s((bool)G::allMetadataAttempted);
     rpt << "\n" << "G::iconChunkLoaded = " << G::s((bool)G::iconChunkLoaded);
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abort);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);

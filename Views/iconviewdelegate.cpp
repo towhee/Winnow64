@@ -571,7 +571,7 @@ textRect         = a rectangle below itemRect
     bool isCached = index.model()->index(sfRow, G::IsCachedColumn).data(Qt::EditRole).toBool();
     // bool isMissingThumb = index.model()->index(sfRow, G::MissingThumbColumn).data().toBool();
     bool isSidecar = index.model()->index(sfRow, G::SidecarColumn).data().toBool();
-    bool metaLoaded = index.model()->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+    bool metaLoaded = index.model()->index(sfRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded;
     bool isVideo = index.model()->index(sfRow, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(sfRow, G::ReadWriteColumn).data().toBool();
     bool isCombineRawJpg = index.model()->index(sfRow, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;

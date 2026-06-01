@@ -142,7 +142,7 @@ void Thumb::setImageDimensions(QString &fPath, QSize size, int row)
     emit setValDm(row, G::AspectRatioColumn, a, instance, src, Qt::EditRole, alignRight);
     emit setValDm(row, G::DimensionsColumn, d, instance, src, Qt::EditRole, Qt::AlignCenter);
 
-    emit setValDm(row, G::MetadataLoadedColumn, true, instance, src);
+    emit setValDm(row, G::MetadataStatusColumn, G::MetaLoaded, instance, src);
 
 }
 

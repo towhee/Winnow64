@@ -1290,7 +1290,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         // qApp->processEvents();
         // fsModel->maxRecursedRoots.clear();
         clearFolderOverLimit();
-        G::allMetadataLoaded = false;
+        G::allMetadataAttempted = false;
     }
 
     // Clear and select folder

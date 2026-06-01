@@ -211,7 +211,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             isLoadingImage = false;
             return false;
         }
-        if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+        if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, dmRow, dm->instance, true, true, false, true, "ImageView::loadImage")) {
                 // metadata->m.row = dmRow;

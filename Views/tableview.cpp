@@ -230,8 +230,7 @@ void TableView::setDefaultColumnWidths()
     defaultColumnWidth[G::UrlColumn] = fm.boundingRect("=Url=======================").width();
     defaultColumnWidth[G::KeywordsColumn] = fm.boundingRect("=keyword, keyword, keyword, keyword=").width();
     defaultColumnWidth[G::MetadataReadingColumn] = fm.boundingRect("=Metadata Reading=").width();
-    defaultColumnWidth[G::MetadataAttemptedColumn] = fm.boundingRect("=Metadata Attempted=").width();
-    defaultColumnWidth[G::MetadataLoadedColumn] = fm.boundingRect("=Meta Loaded=").width();
+    defaultColumnWidth[G::MetadataStatusColumn] = fm.boundingRect("=Meta Status=").width();
     defaultColumnWidth[G::IconLoadedColumn] = fm.boundingRect("=Icon Loaded=").width();
     defaultColumnWidth[G::CompareColumn] = fm.boundingRect("=Compare=").width();
     defaultColumnWidth[G::_RatingColumn] = fm.boundingRect("=_Rating=").width();

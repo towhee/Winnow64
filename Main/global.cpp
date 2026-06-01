@@ -54,7 +54,7 @@ std::atomic<bool> removingFolderFromDM{false};
 std::atomic<bool> removingRowsFromDM{false};
 
 // datamodel status
-std::atomic<bool> allMetadataLoaded{false};
+std::atomic<bool> allMetadataAttempted{false};
 std::atomic<bool> iconChunkLoaded{false};
 std::atomic<int> dmInstance{0};
 std::atomic<bool> isModifyingDatamodel{false};

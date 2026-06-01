@@ -71,7 +71,7 @@ bool EmbelExport::loadImage(QString fPath)
             return true;
         }
         // check metadata loaded for image
-        if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+        if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, dmRow, dm->instance, true, true, false, true, "EmbelExport::")) {
                 // metadata->m.row = dmRow;

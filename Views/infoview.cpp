@@ -473,7 +473,7 @@ void InfoView::updateInfo(const int &row)
     QFileInfo imageInfo = QFileInfo(fPath);
 
     // make sure there is metadata for this image
-    if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
+    if (dm->sf->index(row, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
         metadata->loadImageMetadata(imageInfo, row, dm->instance, true, true, false, true, "InfoView::");
         // int row = dm->rowFromPath(fPath);
         if (row == -1) return;
