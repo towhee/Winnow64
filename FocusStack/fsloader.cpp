@@ -176,7 +176,7 @@ Key idea:
 Image load(const std::string &filePath, ImageDecoderSync externalDecoder)
 {
     QString srcFun = "FSLoader::load";
-    G::log(srcFun, QString::fromStdString(filePath));
+    if (G::FSLog) G::log(srcFun, QString::fromStdString(filePath));
 
     Image out;
     cv::Mat src;
@@ -188,7 +188,7 @@ Image load(const std::string &filePath, ImageDecoderSync externalDecoder)
     //Read using cv
     if (cvFileTypes.contains(ext)) {
         // Load any depth, any color.
-        G::log(srcFun, "Load directly with imread");
+        if (G::FSLog) G::log(srcFun, "Load directly with imread");
         // src = cv::imread(filePath, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
         src = cv::imread(filePath, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH |
                          cv::IMREAD_IGNORE_ORIENTATION);
@@ -197,7 +197,7 @@ Image load(const std::string &filePath, ImageDecoderSync externalDecoder)
     // Read using Winnow
     if (src.empty() && externalDecoder) {
         // Use the provided Qt-based decoder for unsupported types (RAW, HEIC, etc.)
-        G::log(srcFun, "Load using externalDecoder");
+        if (G::FSLog) G::log(srcFun, "Load using externalDecoder");
         src = externalDecoder(QString::fromStdString(filePath));
     }
 
@@ -217,11 +217,12 @@ Image load(const std::string &filePath, ImageDecoderSync externalDecoder)
     out.paddedSize = paddedColor.size();
     out.color = paddedColor;
 
+    /*
     qDebug() << srcFun
              << "out.origSize =" << out.origSize.width << out.origSize.height
              << "out.is16bit =" << out.is16bit
              << "out.validArea =" << out.validArea.width << out.validArea.height
-        ;
+        ; //*/
 
     // Build grayscale (8-bit) for alignment
     cv::Mat gray16;

@@ -3223,7 +3223,7 @@ bool DataModel::getSelectionOrPicks(QStringList &list)
     are picks and a selection then a dialog offers the user a choice to use.
 */
     if (G::isLogger) G::log("DataModel::getSelection");
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "DataModel::getSelection"
                  << "instance =" << instance
                  << "isAnyPick() =" << isAnyPick()

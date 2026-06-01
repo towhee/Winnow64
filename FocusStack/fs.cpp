@@ -98,7 +98,7 @@ void FS::status(const QString &msg)
                         remaining.leftJustified(28) +
                         statusGroupPrefix.leftJustified(20) +
                         msg;
-    emit updateStatus(false, statusMsg, "");
+    if (useUpdateStatus) emit updateStatus(false, statusMsg, "");
 }
 
 bool FS::prepareFolders()
@@ -278,6 +278,7 @@ void FS::run()
     QString msg;
 
     // iterate groups
+    bool failed = false;
     int groupCounter = 0;
     for (const QStringList &g : groups) {
 
@@ -291,14 +292,15 @@ void FS::run()
         status(msg);
         if (G::FSLog) G::log(srcFun, msg);
 
-        if (!initializeGroup(groupCounter++)) return;
+        if (!initializeGroup(groupCounter++)) { failed = true; break; }
 
 
-        if (o.method == "DMap" && !abortRequested()) runDMap();
+        if (o.method == "DMap" && !abortRequested()) { if (!runDMap()) failed = true; }
 
-        if (o.method == "PMax" && !abortRequested()) runPMax();
+        if (o.method == "PMax" && !abortRequested()) { if (!runPMax()) failed = true; }
 
         if (abortRequested()) break;
+        if (failed) break;
 
         // SAVE
         if (o.writeFusedBackToSource) {
@@ -324,8 +326,9 @@ void FS::run()
     if (G::FSLog) G::log("");
     status(msg);
 
-    bool success = !abortRequested();
-    emit finished(success);
+    bool aborted = abortRequested();
+    bool success = !aborted && !failed;
+    emit finished(success, aborted);
 }
 
 bool FS::runDMap()

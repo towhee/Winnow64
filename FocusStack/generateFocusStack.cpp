@@ -167,7 +167,18 @@ void MW::generateFocusStack(const QStringList paths,
     QString srcFun = "MW::generateFocusStack";
     if (G::isLogger || G::FSLog) G::log(srcFun, "method = " + method);
 
-    G::popup->showPopup("Focus stacking initiated", 5000);
+    QString msg =
+        "<p>Focus stacking initiated.</p>"
+        "View progress on the bottom status progress bar.<br>"
+        "Press \"ESC\" to abort focus stacking.<br>"
+        "You can continue to use Winnow while the focus stack is processed."
+        ;
+    G::popup->showPopup(msg, 7000);
+
+    // show status progress bar
+    if (!isShowCacheProgressBar) {
+        progressLabel->setVisible(true);
+    }
 
     // --------------------------------------------------------------------
     // Create worker thread + FS fs object
@@ -242,17 +253,32 @@ void MW::generateFocusStack(const QStringList paths,
     // Finished
     // --------------------------------------------------------------------
 
-    connect(fs, &FS::finished, this, [=](bool success) {
+    connect(fs, &FS::finished, this, [=](bool success, bool aborted) {
         QString msg;
-        cacheProgressBar->clearFocusStackProgress();
 
+        // clear progress
+        cacheProgressBar->clearFocusStackProgress();
+        // hide status progress bar
+        if (!isShowCacheProgressBar) {
+            progressLabel->setVisible(false);
+        }
+
+        // aborted or failed
         if (!success) {
-            // Handle Abort or Failure
-            msg = "Focus stacking was aborted or failed.";
-            if (G::FSLog) G::log(srcFun, msg);
-            updateStatus(false, msg);
-            G::popup->showPopup(msg, 5000);
-            G::issue("Error", msg, "MW::generateFocusStack");
+            if (aborted) {
+                // User pressed ESC
+                msg = "Focus stacking was aborted.";
+                if (G::FSLog) G::log(srcFun, msg);
+                updateStatus(false, msg);
+                G::popup->showPopup(msg, 5000);
+            } else {
+                // Failure
+                msg = "Focus stacking failed.";
+                if (G::FSLog) G::log(srcFun, msg);
+                updateStatus(false, msg);
+                G::popup->showPopup(msg, 5000);
+                G::issue("Error", msg, "MW::generateFocusStack");
+            }
             return;
         }
 
@@ -274,20 +300,7 @@ void MW::generateFocusStack(const QStringList paths,
         // Update UI with the new file
         QString resultPath = G::fsFusedPaths.first();
         if (isLocal) {
-            dm->insert(resultPath);
-            if (dm->contains(resultPath)) {
-                sel->select(resultPath);
-            }
-            // Clear the internal pixmap caches so the delegate is forced
-            // to fetch the newly generated icon from the DataModel.
-            if (thumbView) {
-                thumbView->refreshIcons("MW::generateFocusStack");
-                thumbView->scrollToRow(dm->currentSfRow, "MW::generateFocusStack");
-            }
-            if (gridView && gridView->isVisible()) {
-                gridView->refreshIcons("MW::generateFocusStack");
-                gridView->scrollToRow(dm->currentSfRow, "MW::generateFocusStack");
-            }
+            insertFiles(QStringList{resultPath});
         } else {
             folderAndFileSelectionChange(resultPath, "FS::threadFinished");
         }

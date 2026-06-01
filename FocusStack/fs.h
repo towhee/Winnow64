@@ -62,7 +62,7 @@ signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
     void progress(int current, int total);
     void requestImage(QString fPath, cv::Mat &mat);
-    void finished(bool success);
+    void finished(bool success, bool aborted);
 
 protected:
     bool abortRequested() const { return abort.load(std::memory_order_relaxed); }
@@ -75,6 +75,8 @@ private:
     };
 
     std::atomic_bool abort{false};
+
+    bool useUpdateStatus = false;               // messes with continued Winnow use
 
     bool initializeGroup(int group);            // source groups
     bool prepareFolders();
