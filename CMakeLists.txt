@@ -761,9 +761,9 @@ if(WIN32)
         $<IF:$<CONFIG:Debug>,
             ${LIB_DIR}/libheif/debug/libheif.lib,
             ${LIB_DIR}/libheif/release/libheif.lib>
-        $<IF:$<CONFIG:Debug>,
-            ${LIB_DIR}/libtiff/build/libtiff/Debug/tiff.lib,
-            ${LIB_DIR}/libtiff/build/libtiff/Release/tiff.lib>
+        # libtiff ships a single Release import lib (stable C ABI, used for
+        # both configs — mirrors zlib).
+        ${LIB_DIR}/libtiff/lib/tiff.lib
     )
 
     target_include_directories(Winnow PRIVATE
@@ -771,8 +771,7 @@ if(WIN32)
         ${LIB_DIR}/zlib
         ${LIB_DIR}/zlib/build
         ${LIB_DIR}/libheif/include
-        ${LIB_DIR}/libtiff/libtiff
-        ${LIB_DIR}/libtiff/build/libtiff
+        ${LIB_DIR}/libtiff/include
     )
 
     # App icon for the .exe
@@ -809,7 +808,7 @@ if(WIN32)
             "${LIB_DIR}/opencv/windows/build/x64/vc16/bin/opencv_world4110.dll"
             "$<IF:$<CONFIG:Debug>,${LIB_DIR}/libde265/debug/libde265.dll,${LIB_DIR}/libde265/release/libde265.dll>"
             "$<IF:$<CONFIG:Debug>,${LIB_DIR}/libheif/debug/libheif.dll,${LIB_DIR}/libheif/release/libheif.dll>"
-            "${LIB_DIR}/libtiff/build/libtiff/Release/tiff.dll"
+            "${LIB_DIR}/libtiff/bin/tiff.dll"
             "${LIB_DIR}/zlib/build/Release/zlib.dll"
             "${_winnow_out}"
         COMMENT "Deploying third-party runtime DLLs"
