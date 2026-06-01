@@ -322,16 +322,16 @@ bool ImageCache::isValidKey(int key)
 bool ImageCache::waitForMetaRead(int sfRow, int ms)
 {
     QString fun = "ImageCache::waitForMetaRead";
-    if (G::allMetadataLoaded) {
+    if (G::allMetadataAttempted) {
         if (debugCaching)
         {
         qDebug().noquote() << fun.leftJustified(col0Width, ' ')
                            << "row =" << sfRow
-                           << "  G::allMetadataLoaded = true";
+                           << "  G::allMetadataAttempted = true";
         }
         return true;
     }
-    if (dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
+    if (dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded) {
         if (debugCaching)
         {
             qDebug().noquote() << fun.leftJustified(col0Width, ' ')
@@ -351,7 +351,7 @@ bool ImageCache::waitForMetaRead(int sfRow, int ms)
 
     while(!isLoaded) {
         if (!condition.wait(&gMutex, ms - t.elapsed())) break;
-        isLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+        isLoaded = dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded;
         if (isLoaded) break;
     }
 
@@ -1648,8 +1648,8 @@ QString ImageCache::reportCacheItemList(QString title)
             << (dm->index(sfRow, G::IsCachedColumn).data().toBool() ? "true" : "false")
             << rptStatus.at(dm->sf->index(sfRow, G::DecoderReturnStatusColumn).data().toInt())
             << (icd->contains(fPath) ? "true" : "false")
-            << (dm->index(sfRow, G::MetadataAttemptedColumn).data().toBool() ? "true" : "false")
-            << (dm->index(sfRow, G::MetadataLoadedColumn).data().toBool() ? "true" : "false")
+            << (dm->index(sfRow, G::MetadataStatusColumn).data().toInt() != G::MetaNotAttempted ? "true" : "false")
+            << (dm->index(sfRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded ? "true" : "false")
             << (dm->index(sfRow, G::VideoColumn).data().toBool() ? "true" : "false")
             << QString::number(dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat(), 'f', 2)
             << dm->sf->index(sfRow, G::NSThumb).data().toInt()
@@ -2242,8 +2242,9 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
     // failure paths (unreadable type, video FrameDecoder error) set Attempted
     // without populating offsets, which makes the decoder fail with
     // "length = 0" / "offset is invalid" and burns AttemptsColumn.
-    bool loaded    = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
-    bool attempted = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+    const int metaStatus = dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt();
+    bool loaded    = metaStatus == G::MetaLoaded;
+    bool attempted = metaStatus != G::MetaNotAttempted;
     if (!loaded) {
         if (attempted) {
             // metadata read tried and failed — offsets are 0, decoder cannot succeed
@@ -2254,7 +2255,7 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
             msg = "Metadata not loaded";
             return false;
         }
-        if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
+        if (dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
             msg = "Metadata not loaded";
             return false;
         }
@@ -2336,7 +2337,7 @@ int ImageCache::nextToCache(int id)
     // 50 ms waitForMetaRead on the first not-yet-loaded row.
     for (int i = 0; i < toCache.count(); ++i) {
         int sfRow = toCache.at(i);
-        if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) continue;
+        if (dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) continue;
         QString msg;
         if (okToDecode(sfRow, id, msg)) {
             toCacheStatus[sfRow].msg = msg;
@@ -2411,7 +2412,7 @@ void ImageCache::decodeNextImage(int id, int sfRow)
         "isCached = " + dm->sf->index(sfRow, G::IsCachedColumn).data().toString().leftJustified(6) +
         "isCaching = " + dm->sf->index(sfRow, G::IsCachingColumn).data().toString().leftJustified(6) +
         "attempt = " + dm->sf->index(sfRow, G::AttemptsColumn).data().toString().leftJustified(3) +
-        "isMetadata = " + dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toString().leftJustified(6) +
+        "metaStatus = " + dm->sf->index(sfRow, G::MetadataStatusColumn).data().toString().leftJustified(6) +
         "status = " + dm->sf->index(sfRow,G::DecoderReturnStatusColumn).data().toString()
         );
     }

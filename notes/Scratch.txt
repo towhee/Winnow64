@@ -7,21 +7,10 @@ with this being synced to Winnow on a Mac?
 Stop tracking it as a submodule and instead commit just the small set of files Windows needs (tiff.lib, tiff.dll, the handful
 of headers) under a normal tracked folder.
 
-In MW::generateFocusStack this code is failing to update the thumbView and imageCache.
-All I see is blank in thumbView for the inserted image:
-dm->insert(resultPath);
-if (dm->contains(resultPath)) {
-    sel->select(resultPath);
-}
-// Clear the internal pixmap caches so the delegate is forced
-// to fetch the newly generated icon from the DataModel.
-if (thumbView) {
-    thumbView->refreshIcons("MW::generateFocusStack");
-    thumbView->scrollToRow(dm->currentSfRow, "MW::generateFocusStack");
-}
-if (gridView && gridView->isVisible()) {
-    gridView->refreshIcons("MW::generateFocusStack");
-    gridView->scrollToRow(dm->currentSfRow, "MW::generateFocusStack");
-}
+My thinking was muddy when I introduced G::allMetadataLoaded, G::MetadataAttemptedColumn and
+G::MetadataLoadedColumn.  They do not have clear meanings.  What we really need to know is:
+- Has MetaRead finished
+- Did MetaRead fail for any image
+Review usage and make recommendations for clarity and improved algorithms.
 
-When I reselect the folder then I can see the icon in the thumbView and Image from ImageCache.
+Found 10 new diagnostic issues in 1 file (ctrl+o to expand)

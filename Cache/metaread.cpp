@@ -47,7 +47,7 @@
         consider if a read operation has failed or if the file has been read but the
         reader done signal has not been processed yet.
 
-        • dm->isAllMetadataAttempted and dm->isAllIconChunkLoaded check if datamodel is
+        • dm->isMetaReadFinished and dm->isAllIconChunkLoaded check if datamodel is
           complete.  If not, calling redo will redispatch readers to try again, up to
           5 times.
         • quitAfterTimeout runs if dispatchFinished has not run after a delay of 1000 ms.
@@ -242,7 +242,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
             << "sfRowCount =" << sfRowCount
             << "imageCacheTriggered =" << imageCacheTriggered
             << "fileSelectionChanged =" << fileSelectionChanged
-            << "G::allMetadataLoaded =" << G::allMetadataLoaded
+            << "G::allMetadataAttempted =" << G::allMetadataAttempted
             << "G::iconChunkLoaded =" << G::iconChunkLoaded
             << "src =" << src
             ;
@@ -276,7 +276,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
              << "lastIconRow =" << lastIconRow
              << "iconChunkSize =" << dm->iconChunkSize
              << "fileSelectionChanged =" << fileSelectionChanged
-             << "G::allMetadataLoaded =" << G::allMetadataLoaded
+             << "G::allMetadataAttempted =" << G::allMetadataAttempted
              << "G::iconChunkLoaded =" << G::iconChunkLoaded
              << "isRunning =" << metaReadThread.isRunning()
              << "isDispatching =" << isDispatching
@@ -285,7 +285,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
             ;
     }
 
-    if (G::useUpdateStatus && !G::allMetadataLoaded) {
+    if (G::useUpdateStatus && !G::allMetadataAttempted) {
         // runStatus: isRunning, show, success, source
         emit runStatus(true, true, true, fun);
     }
@@ -621,8 +621,9 @@ QString MetaRead::diagnostics()
     kv("redoCount / redoMax",        QString::number(redoCount) + " / " + QString::number(redoMax));
 
     rpt << "\nGlobals:\n";
-    kv("dm->isAllMetadataAttempted", QVariant(dm->isAllMetadataAttempted()).toString());
-    kv("G::allMetadataLoaded",       QVariant(G::allMetadataLoaded).toString());
+    kv("dm->isMetaReadFinished",     QVariant(dm->isMetaReadFinished()).toString());
+    kv("G::allMetadataAttempted",    QVariant((bool)G::allMetadataAttempted).toString());
+    kv("dm->metaReadHadFailure",     QVariant(dm->metaReadHadFailure()).toString());
     kv("G::iconChunkLoaded",         QVariant(G::iconChunkLoaded).toString());
     kv("G::maxIconChunk",            QString::number(G::maxIconChunk));
     kv("G::memoryAbortMB",           QString::number(G::memoryAbortMB));
@@ -705,7 +706,7 @@ QString MetaRead::diagnostics()
 
     rpt << "\n";
     summariseRows("Metadata rows not loaded",
-                  dm->metadataNotLoaded(),
+                  dm->failedMetadataRows(),
                   dm->firstVisibleIcon, dm->lastVisibleIcon);
 
     // Build the empty-icon list once, then summarise.
@@ -832,7 +833,7 @@ QString MetaRead::reportHealthChecks()
     {
         int overlap = 0;
         for (int r : readSuccessThisCycle) {
-            if (!dm->sf->index(r, G::MetadataAttemptedColumn).data().toBool()) {
+            if (dm->sf->index(r, G::MetadataStatusColumn).data().toInt() == G::MetaNotAttempted) {
                 ++overlap;
             }
         }
@@ -897,7 +898,7 @@ inline bool MetaRead::needToRead(int sfRow)
     needMeta = false;
 
     bool isIcon = dm->sf->index(sfRow, G::IconLoadedColumn).data().toBool();
-    bool isMeta = dm->sf->index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+    bool isMeta = dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt() != G::MetaNotAttempted;
     bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
 
     /* In-flight check. Non-video rows use the worker-local rowsReading set;
@@ -1042,16 +1043,16 @@ bool MetaRead::allMetaIconLoaded()
     Has the datamodel been fully loaded?
 
     Reads atomic flags maintained by DataModel on the main thread:
-    - G::allMetadataLoaded — published in DataModel::addMetadataForItem
+    - G::allMetadataAttempted — published in DataModel::addMetadataForItem
     - G::iconChunkLoaded   — published in DataModel::setIcon, setIcon1, setIconRange
 
     The previous implementation used Qt::BlockingQueuedConnection to dispatch
-    isAllMetadataAttempted/isAllIconChunkLoaded onto the main thread. That
+    isMetaReadFinished/isAllIconChunkLoaded onto the main thread. That
     blocked this worker for an event-loop turn each call and risked deadlock
     if the main thread was waiting on us. The atomics are slightly behind the
     truth (one queued-slot turn) but the dispatch redo loop catches up.
 */
-    return G::allMetadataLoaded && G::iconChunkLoaded;
+    return G::allMetadataAttempted && G::iconChunkLoaded;
 }
 
 void MetaRead::redo()
@@ -1197,8 +1198,8 @@ void MetaRead::processReturningReader(int id, Reader *r)
     if (isDebug)  // returning reader, row has been processed by reader
     {
         QString ms = msElapsed();
-        // bool allLoaded = (dm->isAllMetadataAttempted() && dm->allIconChunkLoaded(firstIconRow, lastIconRow));
-        bool allLoaded = (dm->isAllMetadataAttempted() && dm->isAllIconsLoaded());
+        // bool allLoaded = (dm->isMetaReadFinished() && dm->allIconChunkLoaded(firstIconRow, lastIconRow));
+        bool allLoaded = (dm->isMetaReadFinished() && dm->isAllIconsLoaded());
         QString fun = "MetaRead::dispatch processed";
         qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -1220,7 +1221,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
     }
 
     // report progress in statusbar and top of filter dock
-    if (!isDone && showProgressInStatusbar && !G::allMetadataLoaded) {
+    if (!isDone && showProgressInStatusbar && !G::allMetadataAttempted) {
         emit updateProgressInStatusbar(dmRow, dm->rowCount(), darkRed);
         int progress = 1.0 * metaReadCount / dm->rowCount() * 100;
         emit updateProgressInFilter(progress);
@@ -1254,7 +1255,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
                 << fun.leftJustified(col0Width)
                 <<  "We are done"
                 << QString::number(G::t.elapsed()).rightJustified((5)) << "ms"
-                << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                << "G::allMetadataAttempted =" << G::allMetadataAttempted
                 //<< "toRead =" << toRead
                 << "pending =" << pending()
                 ;
@@ -1635,7 +1636,7 @@ void MetaRead::dispatchFinished(QString src)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "src =" << src
-            << "G::allMetadataLoaded =" << G::allMetadataLoaded
+            << "G::allMetadataAttempted =" << G::allMetadataAttempted
             ;
     }
 
@@ -1658,7 +1659,15 @@ void MetaRead::allFinished(QString src)
     if (debugLog && (G::isLogger || G::isFlowLogger))
         G::log(fun, src);
 
-    G::allMetadataLoaded = true;
+    G::allMetadataAttempted = true;
+    if (dm->metaReadHadFailure()) {
+        // O(1) atomics — avoid scanning the model from this worker thread.
+        const int failed = dm->metadataAttemptedCount.load(std::memory_order_relaxed)
+                         - dm->metadataLoadedCount.load(std::memory_order_relaxed);
+        G::issue("Warning",
+                 QString("MetaRead finished with %1 image(s) that failed to load").arg(failed),
+                 fun);
+    }
     emit runStatus(false, true, true, fun); // running, show, success, src
     emit done();                            // signal MW::folderChangeCompleted
 

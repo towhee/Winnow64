@@ -364,7 +364,7 @@ void Metadata::reportMetadata()
     p.rpt << "\n";
     p.rpt << G::sj("pick", n) << G::s(m.pick) << "\n";
     p.rpt << G::sj("ingested", n) << G::s(m.ingested) << "\n";
-    p.rpt << G::sj("metadataLoaded", n) << G::s(m.metadataLoaded) << "\n";
+    p.rpt << G::sj("metaStatus", n) << G::s(m.metaStatus) << "\n";
     // p.rpt << G::sj("missingEmbeddedThumb", n) << G::s(m.isEmbeddedThumbMissing) << "\n";
     p.rpt << G::sj("isSearch", n) << G::s(m.isSearch) << "\n";
     p.rpt << "\n";
@@ -1009,8 +1009,7 @@ void Metadata::clearMetadata()
     m.modifiedDate = QDateTime();
     m.year = "";
     m.day = "";
-    m.metadataAttempted = false;
-    m.metadataLoaded = false;
+    m.metaStatus = G::MetaNotAttempted;
     m.offsetFull = 0;
     m.lengthFull = 0;
     m.widthPreview = 0;
@@ -1407,7 +1406,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
             // QString createdDate = readExifToolTag(m.fPath, "createdate");
             // m.createdDate = QDateTime::fromString(createdDate, "yyyy:MM:dd hh:mm:ss");
         }
-        m.metadataLoaded = true;
+        m.metaStatus = G::MetaLoaded;
         p.file.setFileName(fPath);
         if (p.file.open(QIODevice::ReadOnly)) {
             if (parseSidecar()) {
@@ -1426,9 +1425,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     okToReadXmp = true;
 
     // read metadata
-    m.metadataLoaded = readMetadata(isReport, fPath, source);
-    m.metadataAttempted = true;
-    if (!m.metadataLoaded) {
+    bool ok = readMetadata(isReport, fPath, source);
+    m.metaStatus = ok ? G::MetaLoaded : G::MetaFailed;
+    if (!ok) {
         QString msg = "Metadata not loaded.";
         G::issueDedup("Warning", msg, "Metadata::loadImageMetadata", m.row, fPath);
         // if (G::isFileLogger) Utilities::log("Metadata::loadImageMetadata  Metadata not loaded for ", fPath);
@@ -1446,7 +1445,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
     m.loadMsecPerMp = 0;
 
     //qDebug() << "Metadata::loadImageMetadata" << t.elapsed() << fPath;
-    return m.metadataLoaded;
+    return m.metaStatus == G::MetaLoaded;
 }
 
 // End Metadata

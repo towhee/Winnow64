@@ -247,8 +247,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url")); horizontalHeaderItem(G::UrlColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::KeywordsColumn, new QStandardItem("Keywords")); horizontalHeaderItem(G::KeywordsColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataReadingColumn, new QStandardItem("Meta Reading")); horizontalHeaderItem(G::MetadataReadingColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::MetadataAttemptedColumn, new QStandardItem("Meta Attempted")); horizontalHeaderItem(G::MetadataAttemptedColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::MetadataLoadedColumn, new QStandardItem("Meta Loaded")); horizontalHeaderItem(G::MetadataLoadedColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::MetadataStatusColumn, new QStandardItem("Meta Status")); horizontalHeaderItem(G::MetadataStatusColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating")); horizontalHeaderItem(G::_RatingColumn)->setData(true, G::GeekRole);
@@ -368,6 +367,7 @@ void DataModel::clearDataModel()
     queuedReaderEvents.store(0, std::memory_order_relaxed);
     // model is now empty: reset the running load-flag counts
     metadataAttemptedCount.store(0, std::memory_order_relaxed);
+    metadataLoadedCount.store(0, std::memory_order_relaxed);
     iconLoadedCount.store(0, std::memory_order_relaxed);
     videoRowCount.store(0, std::memory_order_relaxed);
 }
@@ -376,7 +376,7 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
 {
 /*
     Intercept writes to the three columns whose totals drive load-completion
-    checks, maintaining a running count so isAllMetadataAttempted() and the
+    checks, maintaining a running count so isMetaReadFinished() and the
     icon-chunk check don't have to rescan the model on every row.
 
     QStandardItem stores Qt::EditRole and Qt::DisplayRole in the same slot, so
@@ -387,26 +387,45 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
     count never exceeds rowCount().
 */
     const int col = idx.column();
+    const bool isStatusCol = (col == G::MetadataStatusColumn);
+    const bool isBoolCol   = (col == G::IconLoadedColumn || col == G::VideoColumn);
     const bool track =
         idx.isValid() &&
         (role == Qt::EditRole || role == Qt::DisplayRole) &&
-        (col == G::MetadataAttemptedColumn ||
-         col == G::IconLoadedColumn ||
-         col == G::VideoColumn);
+        (isStatusCol || isBoolCol);
 
+    int  oldStatus = G::MetaNotAttempted;
     bool oldVal = false;
-    if (track) oldVal = QStandardItemModel::data(idx, Qt::DisplayRole).toBool();
+    if (track) {
+        if (isStatusCol) oldStatus = QStandardItemModel::data(idx, Qt::DisplayRole).toInt();
+        else             oldVal    = QStandardItemModel::data(idx, Qt::DisplayRole).toBool();
+    }
 
     const bool ok = QStandardItemModel::setData(idx, value, role);
 
     if (track && ok) {
-        const bool newVal = value.toBool();
-        if (newVal != oldVal) {
-            std::atomic<int> *counter =
-                col == G::MetadataAttemptedColumn ? &metadataAttemptedCount
-              : col == G::IconLoadedColumn        ? &iconLoadedCount
-                                                  : &videoRowCount;
-            counter->fetch_add(newVal ? 1 : -1, std::memory_order_relaxed);
+        if (isStatusCol) {
+            // Tri-state column feeds two counts: "attempted" (Failed or Loaded)
+            // and "loaded" (Loaded only). Each row contributes 0 or 1 to each.
+            const int newStatus = value.toInt();
+            if (newStatus != oldStatus) {
+                const bool wasAttempted = (oldStatus != G::MetaNotAttempted);
+                const bool isAttempted  = (newStatus != G::MetaNotAttempted);
+                if (isAttempted != wasAttempted)
+                    metadataAttemptedCount.fetch_add(isAttempted ? 1 : -1, std::memory_order_relaxed);
+                const bool wasLoaded = (oldStatus == G::MetaLoaded);
+                const bool isLoaded  = (newStatus == G::MetaLoaded);
+                if (isLoaded != wasLoaded)
+                    metadataLoadedCount.fetch_add(isLoaded ? 1 : -1, std::memory_order_relaxed);
+            }
+        }
+        else {
+            const bool newVal = value.toBool();
+            if (newVal != oldVal) {
+                std::atomic<int> *counter =
+                    col == G::IconLoadedColumn ? &iconLoadedCount : &videoRowCount;
+                counter->fetch_add(newVal ? 1 : -1, std::memory_order_relaxed);
+            }
         }
     }
     return ok;
@@ -419,14 +438,17 @@ void DataModel::recountLoadFlags()
     row removals (remove/removeFolder use removeRows, which bypasses setData).
 */
     if (G::isLogger) G::log("DataModel::recountLoadFlags");
-    int meta = 0, icon = 0, video = 0;
+    int meta = 0, loaded = 0, icon = 0, video = 0;
     const int n = rowCount();
     for (int row = 0; row < n; ++row) {
-        if (index(row, G::MetadataAttemptedColumn).data().toBool()) ++meta;
+        const int status = index(row, G::MetadataStatusColumn).data().toInt();
+        if (status != G::MetaNotAttempted)                          ++meta;
+        if (status == G::MetaLoaded)                                ++loaded;
         if (index(row, G::IconLoadedColumn).data().toBool())        ++icon;
         if (index(row, G::VideoColumn).data().toBool())             ++video;
     }
     metadataAttemptedCount.store(meta,  std::memory_order_relaxed);
+    metadataLoadedCount.store(loaded,   std::memory_order_relaxed);
     iconLoadedCount.store(icon,         std::memory_order_relaxed);
     videoRowCount.store(video,          std::memory_order_relaxed);
 }
@@ -521,7 +543,7 @@ int DataModel::insert(QString fPath)
     addFileDataForRow(dmRow, insertFileInfo);
 
     // reset loaded flags so MetaRead knows to load
-    G::allMetadataLoaded = false;
+    G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
     return dmRow;
 }
@@ -912,7 +934,7 @@ void DataModel::refresh()
     // modifications
     for (const QString &fPath : modified) {
         int row = rowFromPath(fPath);
-        setData(index(row, G::MetadataAttemptedColumn), false);
+        setData(index(row, G::MetadataStatusColumn), G::MetaNotAttempted);
         setData(index(row, G::IconLoadedColumn), false);
     }
 }
@@ -976,6 +998,7 @@ bool DataModel::endLoad(bool success)
         clear();
         // model emptied on the failure path: reset running load-flag counts
         metadataAttemptedCount.store(0, std::memory_order_relaxed);
+        metadataLoadedCount.store(0, std::memory_order_relaxed);
         iconLoadedCount.store(0, std::memory_order_relaxed);
         videoRowCount.store(0, std::memory_order_relaxed);
         filters->loadingDataModelFailed();
@@ -1104,8 +1127,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     • IngestedColumn
     • VideoColumn
     • SidecarColumn
-    • MetadataAttemptedColumn
-    • MetadataLoadedColumn
+    • MetadataStatusColumn
     • IconLoadedColumn
     • SearchColumn
     • ErrColumn
@@ -1183,8 +1205,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::IngestedColumn), "false");
     setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::MetadataReadingColumn), false);
-    setData(index(row, G::MetadataAttemptedColumn), false);
-    setData(index(row, G::MetadataLoadedColumn), false);
+    setData(index(row, G::MetadataStatusColumn), G::MetaNotAttempted);
     setData(index(row, G::IconLoadedColumn), false);
     setData(index(row, G::SearchColumn), "false");
     setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
@@ -1279,38 +1300,11 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.day = index(row, G::DayColumn).data().toString();
 
     // rgh retrying here has random crashes - is this required?  Seems to be working...
-    // Information generated by calling Metadata
-    // bool success = false;
-
-    // // check if metadata loaded for this row
-    // if (index(row, G::MetadataLoadedColumn).data().toBool()) {
-    //     success = true;
-    // }
-    // else {
-    //     QFileInfo fileInfo(fPath);
-    //     if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "DataModel::imMetadata")) {
-    //         m.metadataLoaded = true;
-    //         m.metadataAttempted = true;
-    //         addMetadataForItem(metadata->m, "DataModel::imMetadata");
-    //         success = true;
-    //     }
-    // }
-
-    // if (!success) {
-    //     m.metadataLoaded = false;
-    //     m.metadataAttempted = true;
-    //     if (metadata->hasMetadataFormats.contains(m.type.toLower())) {
-    //          errMsg = "Metadata not loaded to model.";
-    //          G::issue("Warning", errMsg, "DataModel::imMetadata", row, fPath);
-    //     }
-    //     return m;
-    // }
 
     m.pick  = index(row, G::PickColumn).data().toBool();
     m.ingested  = index(row, G::IngestedColumn).data().toBool();
     m.metadataReading = index(row, G::MetadataReadingColumn).data().toBool();
-    m.metadataAttempted = index(row, G::MetadataAttemptedColumn).data().toBool();
-    m.metadataLoaded = index(row, G::MetadataLoadedColumn).data().toBool();
+    m.metaStatus = index(row, G::MetadataStatusColumn).data().toInt();
     m.permissions = index(row, G::PermissionsColumn).data().toUInt();
     m.isReadWrite = index(row, G::ReadWriteColumn).data().toBool();
 
@@ -1418,11 +1412,11 @@ void DataModel::addAllMetadata()
         }
         if (abort || G::stop) {
             endLoad(false);
-            setAllMetadataLoaded(false);
+            setAllMetadataAttempted(false);
             return;
         }
         // is metadata already cached (or attempted?)
-        if (index(row, G::MetadataAttemptedColumn).data().toBool()) continue;
+        if (index(row, G::MetadataStatusColumn).data().toInt() != G::MetaNotAttempted) continue;
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
@@ -1440,7 +1434,7 @@ void DataModel::addAllMetadata()
             }
         }
     }
-    setAllMetadataLoaded(true);
+    setAllMetadataAttempted(true);
     emit centralMsg("Metadata loaded");
     if (G::useProcessEvents) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
     endLoad(true);
@@ -1480,11 +1474,11 @@ bool DataModel::readMetadataForItem(int row, int instance)
     // load metadata
     /*
      qDebug() << "DataModel::readMetadataForItem"
-              << "Metadata loaded ="
-              << index(row, G::MetadataLoadedColumn).data().toBool()
+              << "metaStatus ="
+              << index(row, G::MetadataStatusColumn).data().toInt()
               << fPath;//*/
 
-    if (!index(row, G::MetadataAttemptedColumn).data().toBool()) {
+    if (index(row, G::MetadataStatusColumn).data().toInt() == G::MetaNotAttempted) {
         QFileInfo fileInfo(fPath);
 
         // only read metadata from files that we understand
@@ -1539,8 +1533,8 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     // load metadata
     /*
      qDebug() << "DataModel::refreshMetadataForItem"
-              << "Metadata loaded ="
-              << sf->index(row, G::MetadataLoadedColumn).data().toBool()
+              << "metaStatus ="
+              << sf->index(row, G::MetadataStatusColumn).data().toInt()
               << fPath; //*/
 
     QFileInfo fileInfo(fPath);
@@ -1811,8 +1805,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
     // cancel as causing repeats for some videos
     // setData(index(row, G::MetadataReadingColumn), m.metadataReading);
-    setData(index(row, G::MetadataAttemptedColumn), m.metadataAttempted);
-    setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
+    setData(index(row, G::MetadataStatusColumn), m.metaStatus);
     // setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
     setData(index(row, G::CompareColumn), m.compare);
     setData(index(row, G::SearchTextColumn), search.toLower());
@@ -1859,7 +1852,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance << "DONE";
 
     // Publish so MetaRead worker can poll without a BlockingQueuedConnection.
-    G::allMetadataLoaded = isAllMetadataAttempted();
+    G::allMetadataAttempted = isMetaReadFinished();
 
     // signal ImageCache that row is loaded
     // if (imageCacheWaitingForRow > -1)
@@ -1884,7 +1877,7 @@ bool DataModel::metadataLoaded(int dmRow)
     if (isDebug) qDebug() << "DataModel::metadataLoaded" << "instance =" << instance
                           << "row =" << dmRow
                           << folderPathFromModelRow(dmRow);
-    return index(dmRow, G::MetadataLoadedColumn).data().toBool();
+    return index(dmRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded;
 }
 
 bool DataModel::isDimensions(int sfRow)
@@ -2300,8 +2293,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
         if (item != nullptr) {
             item->setIcon(QPixmap::fromImage(im));
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
-            setData(index(dmIdx.row(), G::MetadataAttemptedColumn), true);
-            setData(index(dmIdx.row(), G::MetadataLoadedColumn), true);
+            setData(index(dmIdx.row(), G::MetadataStatusColumn), G::MetaLoaded);
             setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
             // set aspect ratio for video
             if (im.height() > 0) {
@@ -2333,7 +2325,8 @@ void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
 
     QMutexLocker locker(&dmMutex);
     setData(index(dmRow, G::MetadataReadingColumn), false);
-    setData(index(dmRow, G::MetadataAttemptedColumn), true);
+    // attempted but no frame decoded -> failed
+    setData(index(dmRow, G::MetadataStatusColumn), G::MetaFailed);
 }
 
 void DataModel::updateIconChunkLoaded()
@@ -2738,59 +2731,63 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     emit refreshViewsOnCacheChange(fPath, isCached, src);
 }
 
-void DataModel::setAllMetadataLoaded(bool isLoaded)
+void DataModel::setAllMetadataAttempted(bool isAttempted)
 {
     if (isDebug)
-    qDebug() << "DataModel::setAllMetadataLoaded" << "instance =" << instance;
-    G::allMetadataLoaded = isLoaded;
+    qDebug() << "DataModel::setAllMetadataAttempted" << "instance =" << instance;
+    G::allMetadataAttempted = isAttempted;
 }
 
 bool DataModel::isMetadataAttempted(int sfRow)
 {
     if (isDebug) qDebug() << "DataModel::isMetadataAttempted" << "instance =" << instance << folderPathFromProxyRow(sfRow);
-    return index(sfRow, G::MetadataAttemptedColumn).data().toBool();
+    return index(sfRow, G::MetadataStatusColumn).data().toInt() != G::MetaNotAttempted;
 }
 
 bool DataModel::isMetadataLoaded(int sfRow)
 {
     if (isDebug) qDebug() << "DataModel::isMetadataLoaded" << "instance =" << instance << folderPathFromProxyRow(sfRow);
-    return index(sfRow, G::MetadataLoadedColumn).data().toBool();
+    return index(sfRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded;
 }
 
-bool DataModel::isAllMetadataAttempted()
+bool DataModel::isMetaReadFinished()
 {
     if (isDebug)
-        qDebug() << "DataModel::isAllMetadataAttempted" << "instance =" << instance;
-    // O(1): metadataAttemptedCount is maintained in setData (false↔true
-    // transitions) and resynced by recountLoadFlags() after removals, so it
-    // equals rowCount() exactly when every row has been attempted. This used
-    // to be a full-model scan run once per row in addMetadataForItem — O(N²).
+        qDebug() << "DataModel::isMetaReadFinished" << "instance =" << instance;
+    // O(1): metadataAttemptedCount is maintained in setData (status-column
+    // transitions into/out of NotAttempted) and resynced by recountLoadFlags()
+    // after removals, so it equals rowCount() exactly when every row has been
+    // attempted. This used to be a full-model scan run once per row in
+    // addMetadataForItem — O(N²).
     return metadataAttemptedCount.load(std::memory_order_relaxed) >= rowCount();
 }
 
 bool DataModel::isAllMetadataLoaded()
 {
     if (isDebug) qDebug() << "DataModel::isAllMetadataLoaded" << "instance =" << instance;
-    for (int row = 0; row < rowCount(); ++row) {
-        if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
-            if (isDebug)
-            qDebug() << "DataModel::isAllMetadataLoaded" << "row =" << row << "is not loaded.";
-            return false;
-        }
-    }
-    return true;
+    // O(1): metadataLoadedCount is maintained in setData alongside the
+    // attempted count, so it equals rowCount() exactly when every row loaded
+    // successfully. Differs from isMetaReadFinished() in that attempted-but-
+    // failed rows do not count.
+    return metadataLoadedCount.load(std::memory_order_relaxed) >= rowCount();
 }
 
-QList<int> DataModel::metadataNotLoaded()
+bool DataModel::metaReadHadFailure()
 {
-    if (isDebug) qDebug() << "DataModel::metadataNotLoaded" << "instance =" << instance;
+    if (isDebug) qDebug() << "DataModel::metaReadHadFailure" << "instance =" << instance;
+    // O(1): a failure is a row that was attempted but did not load.
+    return metadataLoadedCount.load(std::memory_order_relaxed) <
+           metadataAttemptedCount.load(std::memory_order_relaxed);
+}
+
+QList<int> DataModel::failedMetadataRows()
+{
+    if (isDebug) qDebug() << "DataModel::failedMetadataRows" << "instance =" << instance;
     QList<int> rows;
     for (int row = 0; row < rowCount(); ++row) {
-        if (index(row, G::MetadataAttemptedColumn).data().toBool() &&
-            !index(row, G::MetadataLoadedColumn).data().toBool())
-        {
+        if (index(row, G::MetadataStatusColumn).data().toInt() == G::MetaFailed) {
             if (isDebug)
-            qDebug() << "DataModel::metadataNotLoaded" << "row =" << row << "is not loaded.";
+            qDebug() << "DataModel::failedMetadataRows" << "row =" << row << "failed.";
             rows << row;
         }
     }
@@ -3654,8 +3651,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("isIcon", dots) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
     rpt << "\n  " << G::sj("isCached", dots) << G::s(index(row, G::IsCachedColumn).data());
     rpt << "\n  " << G::sj("MetadataReadingColumn", dots) << G::s(index(row, G::MetadataReadingColumn).data());
-    rpt << "\n  " << G::sj("isMetadataAttempted", dots) << G::s(index(row, G::MetadataAttemptedColumn).data());
-    rpt << "\n  " << G::sj("isMetadataLoaded", dots) << G::s(index(row, G::MetadataLoadedColumn).data());
+    rpt << "\n  " << G::sj("metaStatus", dots) << G::s(index(row, G::MetadataStatusColumn).data());
     rpt << "\n  " << G::sj("isIconLoaded", dots) << G::s(index(row, G::IconLoadedColumn).data());
     rpt << "\n  " << G::sj("isReadWrite", dots) << G::s(index(row, G::ReadWriteColumn).data());
     rpt << "\n  " << G::sj("dupHideRaw", dots) << G::s(index(row, 0).data(G::DupHideRawRole));
@@ -3780,8 +3776,8 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     }
 
     // still loading metadata
-    if (!G::allMetadataLoaded) {
-        // qDebug() << "SortFilter::filterAcceptsRow G::allMetadataLoaded = false" << sourceRow;
+    if (!G::allMetadataAttempted) {
+        // qDebug() << "SortFilter::filterAcceptsRow G::allMetadataAttempted = false" << sourceRow;
         return true;
     }
 

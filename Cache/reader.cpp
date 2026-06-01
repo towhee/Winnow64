@@ -157,8 +157,7 @@ bool Reader::readMetadata()
     m = &metadata->m;
     m->row = dmRow;
     m->instance = instance;
-    m->metadataAttempted = true;
-    m->metadataLoaded = isMetaLoaded;
+    m->metaStatus = isMetaLoaded ? G::MetaLoaded : G::MetaFailed;
     // Do not set m->metadataReading = true (causes some video repeats 2025-07-04
 
     // req'd to readIcon, in case it runs before datamodel has been updated

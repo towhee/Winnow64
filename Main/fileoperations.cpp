@@ -252,8 +252,8 @@ void MW::dmInsert(QStringList pathList)
             int sfRow = dm->proxyRowFromPath(fPath, src);
             // qDebug() << src << "replace row" << sfRow << fPath;
             // insertedRows << dmRow;
-            QModelIndex dmIdx = dm->index(dmRow, G::MetadataLoadedColumn);
-            dm->setData(dmIdx, false);
+            QModelIndex dmIdx = dm->index(dmRow, G::MetadataStatusColumn);
+            dm->setData(dmIdx, G::MetaNotAttempted);
             dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
             imageCache->removeCachedImage(fPath);
             if (dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()) {
@@ -265,7 +265,7 @@ void MW::dmInsert(QStringList pathList)
             if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt()) {
                 emit setValSf(sfRow, G::AttemptsColumn, 0, instance, src);
             }
-            G::allMetadataLoaded = false;
+            G::allMetadataAttempted = false;
             G::iconChunkLoaded = false;
         }
         // insert a new image
@@ -318,7 +318,7 @@ void MW::deleteSelectedFiles()
     if (G::isLogger) G::log("MW::deleteSelectedFiles");
 
     // make sure datamodel is loaded
-    if (!G::allMetadataLoaded) {
+    if (!G::allMetadataAttempted) {
         QString msg = "Please wait until the folder has been completely loaded<br>"
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"
@@ -393,7 +393,7 @@ void MW::deleteFiles(QStringList paths)
     if (G::isLogger) G::log("MW::deleteFiles");
 
     // if still loading metadata then do not delete
-    if (!G::allMetadataLoaded) {
+    if (!G::allMetadataAttempted) {
         QString msg = "Please wait until the folder has been completely loaded<br>"
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"

@@ -83,9 +83,9 @@ public:
     bool subFolderImagesLoaded = true;
     bool isMetadataAttempted(int sfRow);
     bool isMetadataLoaded(int sfRow);
-    // bool isAllMetadataAttempted();
-    bool isAllMetadataLoaded();
-    QList<int> metadataNotLoaded();
+    bool isAllMetadataLoaded();         // O(1): every row loaded successfully
+    bool metaReadHadFailure();          // O(1): some row attempted but not loaded
+    QList<int> failedMetadataRows();    // rows with MetaFailed status (reporting)
     int iconCount();
     void clearAllIcons();
     void clearIconsOutsideChunkRange(int instance);
@@ -154,6 +154,7 @@ public:
        GUI-thread cost on large folders. Reset in clearDataModel(), recomputed
        by recountLoadFlags() after structural row removals. */
     std::atomic<int> metadataAttemptedCount{0};
+    std::atomic<int> metadataLoadedCount{0};
     std::atomic<int> iconLoadedCount{0};
     std::atomic<int> videoRowCount{0};
 
@@ -223,7 +224,7 @@ public slots:
     void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false,
                                 const QStringList &subDirs = QStringList());
     void addAllMetadata();
-    void setAllMetadataLoaded(bool isLoaded);
+    void setAllMetadataAttempted(bool isAttempted);
     bool addMetadataForItem(ImageMetadata m, QString src);
     QString primaryFolderPath();
     QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
@@ -246,9 +247,9 @@ public slots:
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
     void imageCacheWaiting(int sfRow, int instance);
-    bool isAllMetadataAttempted();
+    bool isMetaReadFinished();          // O(1): every row attempted (== rowCount)
     bool isAllIconChunkLoaded(int first, int last);
-    // Intercepts MetadataAttempted/IconLoaded/Video column writes to keep the
+    // Intercepts MetadataStatus/IconLoaded/Video column writes to keep the
     // running counts above accurate; delegates everything to the base class.
     bool setData(const QModelIndex &index, const QVariant &value,
                  int role = Qt::EditRole) override;

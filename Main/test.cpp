@@ -561,7 +561,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
     QFile::copy(fusedPath, destPath);
     dm->insert(destPath);
     sel->select(destPath);
-    qDebug() << "G::allMetadataLoaded =" << G::allMetadataLoaded;
+    qDebug() << "G::allMetadataAttempted =" << G::allMetadataAttempted;
     waitUntilMetadataLoaded(3000);
     setColorClassForRow(dm->currentSfRow, "Red");
 }

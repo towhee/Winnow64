@@ -65,6 +65,16 @@ Q_NAMESPACE
         GeekRole                        // used in TableView display of columns
     };
 
+    // Per-row metadata read outcome, stored in MetadataStatusColumn.
+    // NotAttempted -> MetaRead has not yet tried this row.
+    // Failed       -> read was attempted but did not succeed (terminal).
+    // Loaded       -> metadata successfully read into the model.
+    enum MetaStatus {
+        MetaNotAttempted = 0,
+        MetaFailed       = 1,
+        MetaLoaded       = 2
+    };
+
     /*
     dataModel setHorizontalHeaderItem in DataModel::DataModel must include all prior enum but
     not in the same order!
@@ -121,8 +131,7 @@ Q_NAMESPACE
         UrlColumn,
         KeywordsColumn,
         MetadataReadingColumn,
-        MetadataAttemptedColumn,
-        MetadataLoadedColumn,
+        MetadataStatusColumn,       // tri-state G::MetaStatus: NotAttempted/Failed/Loaded
         IconLoadedColumn,
         CompareColumn,
         // original values
@@ -223,11 +232,17 @@ Q_NAMESPACE
     extern bool isInitializing;
 
     // datamodel
-    // extern bool allMetadataLoaded;
     // extern bool iconChunkLoaded;
     // extern int dmInstance;
     extern std::atomic<bool> isModifyingDatamodel;
-    extern std::atomic<bool> allMetadataLoaded;
+    // "Has MetaRead finished?" — true when every row has been attempted (== model
+    // ready). A LIVE value: republished on every DataModel::addMetadataForItem as
+    // isMetaReadFinished(), and reset false the instant a row is inserted or a new
+    // folder loads, so it self-corrects (a fresh insert makes it false at once).
+    // Read by the app-wide gates (sort/filter/status/cache) and polled by
+    // MetaRead::allMetaIconLoaded. Prefer dm->isMetaReadFinished() where a
+    // race-free point-in-time check is needed (e.g. MW::refresh).
+    extern std::atomic<bool> allMetadataAttempted;
     extern std::atomic<bool> iconChunkLoaded;
     extern std::atomic<int> dmInstance;
 

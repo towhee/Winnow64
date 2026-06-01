@@ -765,7 +765,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         //     return;
         // }
         // stop loading a new folder
-        else if (!G::allMetadataLoaded) stop("Escape key");
+        else if (!G::allMetadataAttempted) stop("Escape key");
         // stop background ingest
         // else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
@@ -2075,7 +2075,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
              << "recurse =" << recurse
              << folderPath; //*/
 
-    G::allMetadataLoaded = false;
+    G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
     // block repeated clicks to folders or bookmarks while processing this one.
@@ -2200,7 +2200,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
     //*/
 
-    // if current is not first and !G::allMetadataLoaded
+    // if current is not first and !G::allMetadataAttempted
     // waitUntilMetadataLoaded(5000, fun);
 
     // if new folder and 1st file is a video and mode == "Table"
@@ -2452,17 +2452,21 @@ void MW::refresh()
         buildFilters->rebuild();
     }
 
-    if (G::allMetadataLoaded) {
+    // Point-in-time check: dm->insert() bumps rowCount, so isMetaReadFinished()
+    // reads false immediately while the new row is unread, routing fresh inserts
+    // to the positioning path below. (Reading the G::allMetadataAttempted global
+    // here would risk a stale value if a stray MetaRead cycle republished it.)
+    if (dm->isMetaReadFinished()) {
         // Normal refresh (delete, save-as, menu/dock refresh): metadata for all
         // rows is loaded, so the proxy can be re-filtered and re-sorted and the
         // ImageCache rebuilt to match.
         filterChange(srcFun);
     }
     else {
-        /* A row was just inserted (e.g. a focus-stack result) which reset
-           G::allMetadataLoaded = false, so MW::filterChange()/sortChange()
-           (both gated on that flag) won't run. Position the new row and load
-           its metadata/icon without disturbing the current selection.
+        /* A row was just inserted (e.g. a focus-stack result), so not every row
+           has been attempted yet. MW::filterChange()/sortChange() won't fully
+           apply here; position the new row and load its metadata/icon without
+           disturbing the current selection.
 
            dm->insert() placed the row at its sorted position in the SOURCE
            model, but the proxy appended it. Re-evaluate the proxy so it mirrors
@@ -2475,7 +2479,7 @@ void MW::refresh()
         // so MetaRead loads its icon/metadata; fall back to the current row.
         int loadRow = dm->currentSfRow;
         for (int r = 0; r < dm->sf->rowCount(); ++r) {
-            if (!dm->sf->index(r, G::MetadataAttemptedColumn).data().toBool()) {
+            if (dm->sf->index(r, G::MetadataStatusColumn).data().toInt() == G::MetaNotAttempted) {
                 loadRow = r;
                 break;
             }
@@ -2495,21 +2499,9 @@ void MW::refresh()
            column). Re-assert source order once loading completes, then keep the
            current selection in view. SingleShotConnection so it fires once and
            does not affect later folder loads. */
-        QString newPath = dm->sf->index(loadRow, 0).data(G::PathRole).toString();
-        connect(this, &MW::metadataLoaded, this, [this, newPath]() {
+        connect(this, &MW::metadataLoaded, this, [this]() {
             QString src = "MW::refresh (post-insert resort)";
-            // PROBE
-            int beforeRow = dm->proxyRowFromPath(newPath, src);
-            int beforeDmRow = dm->rowFromPath(newPath);
             dm->sf->filterChange(src);
-            int afterRow = dm->proxyRowFromPath(newPath, src);
-            qDebug().noquote() << "MW::refresh post-insert PROBE FIRED"
-                << "\n  newPath =" << newPath
-                << "\n  sf->sortColumn() =" << dm->sf->sortColumn()
-                << " sf->rowCount() =" << dm->sf->rowCount()
-                << "\n  source dmRow =" << beforeDmRow
-                << "\n  proxy row before filterChange =" << beforeRow
-                << "\n  proxy row after  filterChange =" << afterRow;
             dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
             if (thumbView->isVisible()) {
                 thumbView->refreshIcons(src);
@@ -2697,7 +2689,7 @@ bool MW::reset(QString src)
     dm->newInstance();
     emit initializeImageCache();    // may not be req'd
 
-    G::allMetadataLoaded = false;
+    G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
 
     // filters
@@ -2791,7 +2783,7 @@ void MW::waitUntilMetadataLoaded(int ms, QString src)
     QEventLoop loop;
     QTimer timeout;
 
-    qDebug() << srcFun << "G::allMetadataLoaded =" << G::allMetadataLoaded;
+    qDebug() << srcFun << "G::allMetadataAttempted =" << G::allMetadataAttempted;
 
     timeout.setSingleShot(true);
     timeout.setInterval(ms);     // millisecond timeout
@@ -3105,8 +3097,8 @@ void MW::folderChanged(bool aborted)
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
 
     // If no new images added to datamodel (only removals or blank folders)
-    if (dm->isAllMetadataAttempted()) {
-        G::allMetadataLoaded = true;
+    if (dm->isMetaReadFinished()) {
+        G::allMetadataAttempted = true;
         G::iconChunkLoaded = dm->isIconRangeLoaded();
         folderChangeCompleted();
         emit initializeImageCache();    // may not be req'd
@@ -3163,14 +3155,14 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     {
         G::log("MW::updateChange", "row = " + QString::number(sfRow)
         + " isFileSelectionChange = " + QVariant(isFileSelectionChange).toString()
-        + " G::allMetadataLoaded = " + QVariant(G::allMetadataLoaded).toString()
+        + " G::allMetadataAttempted = " + QVariant(G::allMetadataAttempted).toString()
         + " G::iconChunkLoaded = " + QVariant(G::iconChunkLoaded).toString()
         + " src = " + src);
     }
 
     // set icon range and G::iconChunkLoaded
     dm->setIconRange(sfRow);
-    bool metaLoaded = G::allMetadataLoaded && G::iconChunkLoaded;
+    bool metaLoaded = G::allMetadataAttempted && G::iconChunkLoaded;
 
     /* debug
     {
@@ -3179,7 +3171,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
          << "isFileSelectionChange =" << QVariant(isFileSelectionChange).toString().leftJustified(5)
          << "src =" << src
          << "metaLoaded =" << QVariant(metaLoaded).toString().leftJustified(5)
-         << "G::allMetadataLoaded =" << QVariant(G::allMetadataLoaded).toString().leftJustified(5)
+         << "G::allMetadataAttempted =" << QVariant(G::allMetadataAttempted).toString().leftJustified(5)
          << "G::iconChunkLoaded =" << QVariant(G::iconChunkLoaded).toString().leftJustified(5)
          << "dm->startIconRange =" << dm->startIconRange
          << "dm->endIconRange =" << dm->endIconRange
@@ -3455,7 +3447,7 @@ void MW::loadEntireMetadataCache(QString source)
              << "G::isInitializing: " << G::isInitializing
              ;
     if (G::isInitializing) return;
-    if (dm->isAllMetadataAttempted()) return;
+    if (dm->isMetaReadFinished()) return;
 
     updateIconRange("MW::loadEntireMetadataCache");
 

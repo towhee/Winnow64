@@ -32,8 +32,8 @@ public:
     bool video = false;
     bool sidecar = false;
     bool metadataReading = false;           // all metadata except thumb
-    bool metadataAttempted = false;         // all metadata except thumb
-    bool metadataLoaded = false;            // all metadata except thumb
+    // Read outcome (all metadata except thumb). See G::MetaStatus.
+    int metaStatus = G::MetaNotAttempted;
     bool isEmbeddedThumbMissing = true;
     bool isThumbLoaded = false;             // refers to thumb only
 

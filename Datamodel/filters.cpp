@@ -891,12 +891,12 @@ void Filters::startBuildFilters(bool isReset)
     if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");
     if (debugFilters)
         qDebug() << "Filters::startBuildFilters"
-                 << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                 << "G::allMetadataAttempted =" << G::allMetadataAttempted
                     ;
     if (isReset) removeChildrenDynamicFilters();
     filtersBuilt = false;
     buildingFilters = true;
-    if (!G::allMetadataLoaded) {
+    if (!G::allMetadataAttempted) {
         msgFrame->setVisible(true);
         filterLabel->setText(buildingFiltersMsg);
         filterLabel->setVisible(true);
@@ -1625,18 +1625,18 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
                  << "item =" << item->text(0)
                  << "parent =" << item->parent()->text(0)
                  << "itemCheckStateHasChanged" << itemCheckStateHasChanged
-                 << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                 << "G::allMetadataAttempted =" << G::allMetadataAttempted
                     ;
     // Only interested in clicks on column 0 (checkbox + text)
     if (item->isDisabled() ||
         column > 0 ||
         !item->parent() ||
-        !G::allMetadataLoaded ||
+        !G::allMetadataAttempted ||
         buildingFilters)
     {
         /*
         qDebug() << "Filters::itemClickedSignal failed"
-                 << "G::allMetadataLoaded =" << G::allMetadataLoaded
+                 << "G::allMetadataAttempted =" << G::allMetadataAttempted
                  << "G::iconChunkLoaded =" << G::iconChunkLoaded
                  << "buildingFilters =" << buildingFilters
             ; //*/

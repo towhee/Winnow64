@@ -467,7 +467,7 @@ void MW::setCombineRawJpg()
 
     if (!dm->rowCount()) return;
 
-    if (dm->rowCount() && !G::allMetadataLoaded) {
+    if (dm->rowCount() && !G::allMetadataAttempted) {
         QString msg = "Folder is still loading.  Try again when the folder has loaded.";
         G::popup->showPopup(msg, 2000);
         return;
