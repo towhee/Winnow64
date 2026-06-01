@@ -32,7 +32,7 @@ QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
 
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
 
-bool FSLog = true;                  // Focus Stack log
+bool FSLog = false;                 // Focus Stack log
 bool showAllEvents = false;
 // Errors
 QStringList issueList;

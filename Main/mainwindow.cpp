@@ -2446,10 +2446,87 @@ void MW::refresh()
     fsTree->updateCount();
     bookmarks->updateCount();
     dm->refresh();
+
+
     if (!dm->sf->rowCount()) {
         buildFilters->rebuild();
     }
-    filterChange(srcFun);
+
+    if (G::allMetadataLoaded) {
+        // Normal refresh (delete, save-as, menu/dock refresh): metadata for all
+        // rows is loaded, so the proxy can be re-filtered and re-sorted and the
+        // ImageCache rebuilt to match.
+        filterChange(srcFun);
+    }
+    else {
+        /* A row was just inserted (e.g. a focus-stack result) which reset
+           G::allMetadataLoaded = false, so MW::filterChange()/sortChange()
+           (both gated on that flag) won't run. Position the new row and load
+           its metadata/icon without disturbing the current selection.
+
+           dm->insert() placed the row at its sorted position in the SOURCE
+           model, but the proxy appended it. Re-evaluate the proxy so it mirrors
+           source order (the default name order). sf->sort() can't do this - the
+           default order uses no active proxy sort column. */
+        dm->sf->filterChange(srcFun);   // invalidateRowsFilter() -> source order
+        dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+
+        // Find the inserted row (first whose metadata has not been attempted)
+        // so MetaRead loads its icon/metadata; fall back to the current row.
+        int loadRow = dm->currentSfRow;
+        for (int r = 0; r < dm->sf->rowCount(); ++r) {
+            if (!dm->sf->index(r, G::MetadataAttemptedColumn).data().toBool()) {
+                loadRow = r;
+                break;
+            }
+        }
+
+        // MetaRead caches dmRowCount (= dm->rowCount()) in initialize() and
+        // bounds its reader dispatch by it; after dm->insert() that cache is one
+        // short, so the inserted row is never read. Re-initialize (queued, ahead
+        // of the setStartRow that updateChange() queues) so it sees the new row.
+        // The canonical load paths (loadConcurrent, MW::filterChange) do the same.
+        QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection,
+                                  Q_ARG(QString, srcFun));
+
+        /* When the inserted row's metadata finishes loading,
+           DataModel::addMetadataForItem emits dataChanged, which makes the proxy
+           re-insert the row at the END (the default order has no active sort
+           column). Re-assert source order once loading completes, then keep the
+           current selection in view. SingleShotConnection so it fires once and
+           does not affect later folder loads. */
+        QString newPath = dm->sf->index(loadRow, 0).data(G::PathRole).toString();
+        connect(this, &MW::metadataLoaded, this, [this, newPath]() {
+            QString src = "MW::refresh (post-insert resort)";
+            // PROBE
+            int beforeRow = dm->proxyRowFromPath(newPath, src);
+            int beforeDmRow = dm->rowFromPath(newPath);
+            dm->sf->filterChange(src);
+            int afterRow = dm->proxyRowFromPath(newPath, src);
+            qDebug().noquote() << "MW::refresh post-insert PROBE FIRED"
+                << "\n  newPath =" << newPath
+                << "\n  sf->sortColumn() =" << dm->sf->sortColumn()
+                << " sf->rowCount() =" << dm->sf->rowCount()
+                << "\n  source dmRow =" << beforeDmRow
+                << "\n  proxy row before filterChange =" << beforeRow
+                << "\n  proxy row after  filterChange =" << afterRow;
+            dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+            if (thumbView->isVisible()) {
+                thumbView->refreshIcons(src);
+                thumbView->scrollToRow(dm->currentSfRow, src);
+            }
+            if (gridView->isVisible()) {
+                gridView->refreshIcons(src);
+                gridView->scrollToRow(dm->currentSfRow, src);
+            }
+        }, Qt::SingleShotConnection);
+
+        // Point MetaRead at the inserted row so its icon range covers it (icons
+        // only load within the range updateChange() centres on the given row);
+        // isFileSelectionChange = false leaves the selection unchanged.
+        updateChange(loadRow, /*isFileSelectionChange*/false, srcFun);
+    }
+
     buildFilters->recount();
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;

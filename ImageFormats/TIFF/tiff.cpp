@@ -1600,7 +1600,7 @@ bool Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
         return false;
     }
 
-    qDebug() << "Tiff::embedIRBThumbnail" << tiffPath;
+    // qDebug() << "Tiff::embedIRBThumbnail" << tiffPath;
 
     // Prepare the IRB block
     QByteArray irbData;

@@ -42,6 +42,8 @@ public:
     bool isIdle();
     bool isBusy();
 
+    int instance;                   // new instance for each folder to detect conflict
+
     int firstIconRow;
     int lastIconRow;
 
@@ -156,7 +158,7 @@ private:
     ImageCache *imageCache;
     Thumb *thumb;                   // decoder requires this
     bool fileSelectionChanged;
-    int instance;                   // new instance for each folder to detect conflict
+    // int instance;                   // new instance for each folder to detect conflict
     Reader *r;                      // terse ptr for current decoder
     int sfRowCount;
     int dmRowCount;

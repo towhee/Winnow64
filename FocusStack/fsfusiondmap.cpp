@@ -1144,7 +1144,7 @@ bool FSFusionDMap::streamFinish(cv::Mat& outputColor,
         for (int s = 0; s < N; ++s)
         {
             QString ss = QString::number(s+1);
-            qDebug() << msg << "s =" << s << "alignedColorPaths.size() =" << alignedColorPaths.size();
+            // qDebug() << msg << "s =" << s << "alignedColorPaths.size() =" << alignedColorPaths.size();
 
             if (s >= alignedColorPaths.size()) break;
 
