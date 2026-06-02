@@ -3245,9 +3245,7 @@ void MW::folderChangeCompleted()
         // && !filterDock->visibleRegion().isNull()
        )
     {
-        buildFilters->build();
-        buildFilters->recount();
-        filters->setEnabled(true);
+        buildFiltersWhenModelReady(dm->instance);
     }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
@@ -3292,6 +3290,69 @@ void MW::folderChangeCompleted()
         }
     }
     //*/
+}
+
+void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
+{
+/*
+    Build the filter tree only once the DataModel is fully updated.
+
+    Readers run on their own threads and deliver metadata/icons to the DataModel
+    via QueuedConnection (Reader::addToDatamodel -> DataModel::addMetadataForItem,
+    Reader::setIcon -> DataModel::setIcon1) on the GUI thread. MetaRead emits
+    done() (-> folderChangeCompleted) once all readers have RETURNED, which can
+    precede the application of those still-queued writes. Building filters then
+    reads empty metadata columns and produces only the file-enumeration
+    categories (File types, Folder) — the small-folder symptom where every reader
+    finishes in one burst before any queued write is drained.
+
+    dm->queuedReaderEvents counts reader-emitted events not yet applied: it is
+    bumped before each emit (Reader) and decremented via RAII on every code path
+    in addMetadataForItem/setIcon1, so == 0 means the model is fully updated. It
+    is terminal here because done() fired only after every reader returned, so no
+    further reader events will be produced for this instance.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log("MW::buildFiltersWhenModelReady");
+
+    // folder changed (or shutting down) while we were waiting — a fresh
+    // folderChangeCompleted for the new instance will drive its own build.
+    if (G::stop || dm->abort || forInstance != dm->instance) return;
+
+    /* Lazy build: do not build while the Filters panel is hidden. Building a
+       hidden Filters tree is unsafe (crashes with videos in the mix) and would
+       latch filters->filtersBuilt, blocking the rebuild. When hidden, leave the
+       filters unbuilt; MW::showFilterDock / MW::filterDockTabMousePress build
+       them when the panel is shown (the datamodel is fully loaded by then). */
+    if (!filterDock->isVisible()) return;
+
+    // wait for the reader-event queue to drain so the datamodel is fully updated
+    if (dm->queuedReaderEvents.load(std::memory_order_relaxed) > 0) {
+        /* Bounded fallback: queuedReaderEvents is balanced (every Reader emit has a
+           matching RAII decrement in addMetadataForItem/setIcon1), so it normally
+           drains to 0 once the readers finish. But a wedged GUI loop or a future
+           increment/decrement imbalance could leave it stuck. Rather than reschedule
+           forever — which would silently never build the filters — cap the wait and
+           then build anyway with whatever has been applied. */
+        constexpr int kPollMs = 10;
+        constexpr int kMaxAttempts = 200;           // 200 × 10ms ≈ 2s
+        if (attempt < kMaxAttempts) {
+            QTimer::singleShot(kPollMs, this, [this, forInstance, attempt]{
+                buildFiltersWhenModelReady(forInstance, attempt + 1);
+            });
+            return;
+        }
+        G::issue("Warning",
+                 QString("Reader-event queue did not drain (queuedReaderEvents = %1) "
+                         "after %2 ms; building filters anyway")
+                     .arg(dm->queuedReaderEvents.load(std::memory_order_relaxed))
+                     .arg(kMaxAttempts * kPollMs),
+                 "MW::buildFiltersWhenModelReady");
+        // fall through and build with whatever metadata has been applied
+    }
+
+    buildFilters->build();
+    buildFilters->recount();
+    filters->setEnabled(true);
 }
 
 void MW::thumbHasScrolled()

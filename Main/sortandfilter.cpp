@@ -33,7 +33,7 @@ void MW::filterDockTabMousePress()
     /* Clicking on the filter dock tab toggles visibility before this
     function is called, so test for the opposite. */
     if (!filters->filtersBuilt) {
-        buildFilters->build();
+        buildFiltersWhenModelReady(dm->instance);
     }
 //    if (filterDock->isVisible() && !filters->filtersBuilt) {
 //        buildFilters->build();

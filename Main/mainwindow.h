@@ -605,6 +605,7 @@ private slots:
     // caching
     void folderChanged(bool aborted);
     void folderChangeCompleted();
+    void buildFiltersWhenModelReady(int forInstance, int attempt = 0);
     void onMemoryOverrun(quint64 footprintMB, quint64 capMB);
     void updateChange(int sfRow, bool isCurrent = true, QString src = "");
 
