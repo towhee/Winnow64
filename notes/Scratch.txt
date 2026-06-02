@@ -7,10 +7,10 @@ with this being synced to Winnow on a Mac?
 Stop tracking it as a submodule and instead commit just the small set of files Windows needs (tiff.lib, tiff.dll, the handful
 of headers) under a normal tracked folder.
 
-My thinking was muddy when I introduced G::allMetadataLoaded, G::MetadataAttemptedColumn and
-G::MetadataLoadedColumn.  They do not have clear meanings.  What we really need to know is:
-- Has MetaRead finished
-- Did MetaRead fail for any image
-Review usage and make recommendations for clarity and improved algorithms.
+When I click on a folder with a small amount of images then the filters are not being
+built for categories other than "File types", even though other categories have more than
+one item (for example rating in /Users/roryhill/Pictures/_test).  Everything seems to work
+for larger folders, so I'm wondering if this is a timing issue.
+
 
 Found 10 new diagnostic issues in 1 file (ctrl+o to expand)

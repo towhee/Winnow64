@@ -302,7 +302,7 @@ void MW::showFilterDock()
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
         if (!filters->filtersBuilt) {
-            buildFilters->build();
+            buildFiltersWhenModelReady(dm->instance);
         }
         break;
     case SetVisible:
@@ -310,7 +310,7 @@ void MW::showFilterDock()
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
         if (!filters->filtersBuilt) {
-            buildFilters->build();
+            buildFiltersWhenModelReady(dm->instance);
         }
     }
 }
