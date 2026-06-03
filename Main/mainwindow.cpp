@@ -1907,7 +1907,8 @@ void MW::handleStartupArgs(const QString &args)
         // templateName = srcProgram.mid(QString("Embellish").length());
 
         // /* log
-        if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
+        // if (G::isRunByExtern)
+            Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
         //*/
 
         // get the folder where the files to embellish are located
