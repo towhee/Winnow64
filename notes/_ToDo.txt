@@ -2,7 +2,6 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Filtered count greater than datamodel count
 - Embellish from winnets opening wrong Winnow app.
 - Test backup when modifying files
 - Windows ingest "how this works" has a white titlebar.
