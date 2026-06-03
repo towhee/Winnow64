@@ -295,6 +295,7 @@ set(WINNOW_SOURCES
     Utilities/stresstest.cpp
     Utilities/usbutil.cpp
     Utilities/utilities.cpp
+    Utilities/winnets.cpp
 
     # Views
     Views/compareImages.cpp
@@ -471,6 +472,7 @@ set(WINNOW_HEADERS
     Utilities/stresstest.h
     Utilities/usbutil.h
     Utilities/utilities.h
+    Utilities/winnets.h
 
     Views/compareImages.h
     Views/compareview.h
@@ -720,15 +722,16 @@ if(APPLE)
                 SKIP_AUTOGEN TRUE)
         endforeach()
         # Keep these bundle files under one IDE tree node instead of letting
-        # CMake scatter them into "Resources"/"Header Files" by file extension
-        # (the embedded Winnet.app ships an Info.plist and a whole framework of
-        # headers). Display-only; mirrors the `notes` source_group above.
+        # CMake scatter them into "Resources"/"Header Files" by file extension.
+        # Display-only; mirrors the `notes` source_group above.
         source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/${src_dir}
             PREFIX "${src_dir}" FILES ${_files})
     endfunction()
 
     winnow_bundle_tree("ReleaseExtras/ExifTool" "ExifTool")
-    winnow_bundle_tree("ReleaseExtras/Winnets" "Winnets")
+    # Winnets are no longer bundled from a hand-committed tree. The master
+    # droplet + a version-correct QtCore are staged fresh into the bundle by the
+    # Winnet target's POST_BUILD step below (search "Winnet — the Embellish").
 
     # Single file: ONNX model
     target_sources(Winnow PRIVATE ReleaseExtras/focus_point_model.onnx)
@@ -736,6 +739,61 @@ if(APPLE)
         MACOSX_PACKAGE_LOCATION "MacOS"
         HEADER_FILE_ONLY TRUE
         SKIP_AUTOGEN TRUE)
+endif()
+
+# =============================================================================
+# Winnet — the Embellish droplet "master"
+#   A tiny Qt Core-only forwarder (tools/Winnet/main.cpp). Winnow's
+#   syncWinnets() copies & renames it once per Embellish template into
+#   <AppData>/Winnow/Winnets/. Exporting images onto a copy (e.g. a Lightroom
+#   export action) runs it; it relaunches Winnow with the template name (from
+#   its own filename) plus the image paths.
+#
+#   Built here as a second target so it ALWAYS links the same Qt as Winnow. The
+#   droplets load a shared QtCore from a sibling Frameworks/ via rpath; if that
+#   QtCore is older than the Qt the droplet was built with, it crashes in dyld
+#   before main() runs. A hand-committed 6.4.0 QtCore caused exactly that, which
+#   is why the master + a version-correct QtCore are now staged at build time.
+# =============================================================================
+add_executable(Winnet tools/Winnet/main.cpp)
+target_link_libraries(Winnet PRIVATE Qt6::Core)
+# Building Winnow always builds (and so re-stages) Winnet. This also covers
+# "build/run just Winnow" in the IDE. The staging itself hangs off Winnet's own
+# POST_BUILD (below) so that editing only tools/Winnet/main.cpp re-stages too —
+# a custom command on Winnow would be skipped when Winnow doesn't relink.
+add_dependencies(Winnow Winnet)
+
+if(APPLE)
+    # Bare Mach-O (no .app bundle) that finds QtCore in a sibling Frameworks/.
+    # This rpath resolves both inside the Winnow bundle's MacOS/Winnets/ and in
+    # <AppData>/Winnow/Winnets/ once syncWinnets() copies the droplet there.
+    set_target_properties(Winnet PROPERTIES
+        MACOSX_BUNDLE OFF
+        INSTALL_RPATH "@executable_path/Frameworks"
+        BUILD_WITH_INSTALL_RPATH TRUE)
+
+    # Locate the active Qt's QtCore.framework (the same Qt that links Winnow).
+    get_target_property(_winnow_qmake Qt6::qmake IMPORTED_LOCATION)
+    get_filename_component(_winnow_qt_bin  "${_winnow_qmake}" DIRECTORY)
+    get_filename_component(_winnow_qt_root "${_winnow_qt_bin}" DIRECTORY)
+    set(_winnow_qt_core_fw "${_winnow_qt_root}/lib/QtCore.framework")
+
+    # Stage the master droplet + a version-correct QtCore into the Winnow app
+    # bundle at Contents/MacOS/Winnets/ — where applicationDirPath()/Winnets/...
+    # resolves at runtime and where syncWinnets() copies from. Attached to Winnet
+    # (not Winnow) so it re-stages whenever Winnet recompiles. make_directory
+    # creates the path even on a clean build where Winnet (a Winnow dependency)
+    # links before Winnow assembles the bundle; Winnow's later relink writes
+    # MacOS/Winnow without disturbing MacOS/Winnets/. The QtCore copy only runs
+    # when its binary differs, so incremental builds stay cheap.
+    set(_winnets_dst "$<TARGET_BUNDLE_CONTENT_DIR:Winnow>/MacOS/Winnets")
+    add_custom_command(TARGET Winnet POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${_winnets_dst}/Frameworks"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:Winnet>" "${_winnets_dst}/Winnet"
+        COMMAND sh -c "cmp -s '${_winnow_qt_core_fw}/Versions/A/QtCore' '${_winnets_dst}/Frameworks/QtCore.framework/Versions/A/QtCore' || { rm -rf '${_winnets_dst}/Frameworks/QtCore.framework' && cp -R '${_winnow_qt_core_fw}' '${_winnets_dst}/Frameworks/QtCore.framework'; }"
+        COMMENT "Staging Winnet master + QtCore into Winnow.app/Contents/MacOS/Winnets"
+        VERBATIM)
 endif()
 
 # =============================================================================
@@ -821,19 +879,26 @@ if(WIN32)
         COMMENT "Deploying focus_point_model.onnx"
         VERBATIM)
 
-    # Helper executables. et.exe (ExifTool) and Winnet.exe are not in git; they
-    # live in release/. Warn rather than fail the build if they are absent.
-    foreach(_winnow_helper et.exe Winnet.exe)
-        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release/${_winnow_helper}")
-            add_custom_command(TARGET Winnow POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${CMAKE_CURRENT_SOURCE_DIR}/release/${_winnow_helper}" "${_winnow_out}"
-                COMMENT "Deploying ${_winnow_helper}"
-                VERBATIM)
-        else()
-            message(WARNING "Deploy: release/${_winnow_helper} not found; it will be missing next to Winnow.exe.")
-        endif()
-    endforeach()
+    # ExifTool (et.exe) is not in git; it lives in release/. Warn rather than
+    # fail the build if absent.
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release/et.exe")
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/release/et.exe" "${_winnow_out}"
+            COMMENT "Deploying et.exe"
+            VERBATIM)
+    else()
+        message(WARNING "Deploy: release/et.exe not found; it will be missing next to Winnow.exe.")
+    endif()
+
+    # Winnet.exe is now built from the Winnet target (above) instead of a
+    # prebuilt copy, so it always matches the Qt that Winnow links. syncWinnets()
+    # copies it (and Qt6Core.dll) into <AppData>/Winnow/Winnets/ per template.
+    add_custom_command(TARGET Winnow POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:Winnet>" "${_winnow_out}"
+        COMMENT "Deploying Winnet.exe (built target)"
+        VERBATIM)
 endif()
 
 # =============================================================================

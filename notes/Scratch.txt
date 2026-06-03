@@ -1,16 +1,41 @@
-Github message for Lib\libtiff:
-"This submodule has untracked changes.  Thise changes must be committed inside
-of the submodule before they can be part of the parent repository."
-Review use of this library in Winnow.  Is it cross platform - what are this issues
-with this being synced to Winnow on a Mac?
+Winnow can be run by another program to embellish and focus stack.  An intermediate
+executable (winnet) is used to identify what is to be done with the images, and then the
+winnet calls Winnow with the appropriate arguments.  This is no longer working.
 
-Stop tracking it as a submodule and instead commit just the small set of files Windows needs (tiff.lib, tiff.dll, the handful
-of headers) under a normal tracked folder.
+See: EmbelProperties::syncWinnets, Winnet project at /Users/roryhill/Projects/Winnet.
 
-When I click on a folder with a small amount of images then the filters are not being
-built for categories other than "File types", even though other categories have more than
-one item (for example rating in /Users/roryhill/Pictures/_test).  Everything seems to work
-for larger folders, so I'm wondering if this is a timing issue.
+To test, I build Winnet project and copy the resulting Winnet executable to
+/Users/roryhill/Library/Application Support/Winnow/Winnets and rename it EmbellishTest.
+I then select 2 files in Lightroom and export them to
+/Users/roryhill/Library/Application Support/Winnow/Winnets/EmbellishTest.  If/when
+EmbellishTest runs it should write debug output to
+/Users/roryhill/Library/Application Support/Winnow/Log/WinnowLog.txt.  This does not appear
+to be working as I am not seeing the log text in WinnowLog.txt.
+
+Please analyse entire Winnet process and help me debug what has gone wrong.
+
+In /Users/roryhill/Projects/Winnow64/tools/Winnet/main.cpp:
+Arguments forwarded to Winnow (the receiving side joins argv[1..] with '\n'
+and splits again — see Main/main.cpp and MW::handleStartupArgs):
+    arg[0]  = this droplet's name   e.g. "EmbellishZen2048"  (srcProgram)
+    arg[1]  = "Embellish"           (module token)
+    arg[2]  = template name         e.g. "Zen2048"
+    arg[3+] = image path(s) to embellish
+
+arg[1] and arg[2] are not required.  They can be determined in MW::handleStartupArgs from
+the source program name.  Fix here too.
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 Found 10 new diagnostic issues in 1 file (ctrl+o to expand)

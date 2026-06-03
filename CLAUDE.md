@@ -2,7 +2,7 @@
 - Tech Stack: C++20, Qt 6, OpenCV 4.x
 - **Framework:** Qt 6 (using signal-slot mechanisms)
 - **Libraries:** OpenCV 4.x, ExifTool (via CLI)
-- **Style:** PascalCase for methods.
+- **Style:** PascalCase for methods. Use block comments `/* ... */` for multi-line comments, not stacked `//` lines (single-line comments may use `//`).
 - **Build System:** CMake (CMakeLists.txt + CMakePresets.json; migrated from QMake — winnow64.pro is legacy)
 - **Core Goal:** Fast image browsing and high-performance focus stacking.
 - **Cross-platform:** All changes must work effectively on both macOS and Windows, unless the change is inherently platform-specific. When a feature needs platform-native code (e.g. file dialogs, mail, shell integration), provide working implementations for both platforms guarded by `Q_OS_MAC`/`Q_OS_WIN`.
