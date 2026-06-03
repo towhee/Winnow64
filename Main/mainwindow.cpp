@@ -319,11 +319,10 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // show main window
     G::newIssueLog();
 
-    /* Simulate startup arguments for debugging
+    /* Simulate startup arguments for debugging. Format matches a winnet:
+       arg[0] = "Embellish<Template>", arg[1+] = image path(s).
     QString simArgs =
-        "0_arg\n"
-        "Embellish\n"
-        "Zen2048\n"
+        "EmbellishZen2048\n"
         "/Users/roryhill/Pictures/Zen2048/2008-05-09_0063.jpg";
     // "/Users/roryhill/Pictures/2025/202503/2025-03-27/2025-03-25_0002.jpg";
     handleStartupArgs(simArgs);
@@ -1823,9 +1822,9 @@ void MW::handleStartupArgs(const QString &args)
     order for Winnow to embellish a series of files that have been exported from
     lightroom, Winnow needs to know which embellish template to use. Instead of
     sending the files directly to Winnow, thay are sent to an intermediary program
-    (a Winnet) that is named after the template. The Winnet (ie Zen2048) receives
-    the list of files, inserts the strings "Embellish" and the template name
-    "Zen2048" and then resends to Winnow.
+    (a Winnet) that is named "Embellish<Template>" (ie EmbellishZen2048). The
+    Winnet forwards its own name as arg[0] followed by the file paths; Winnow
+    derives the module ("Embellish") and template ("Zen2048") from arg[0].
 */
     QString fun = "MW::handleStartupArgs";
     if (G::isLogger) G::log(fun, args);
@@ -1878,17 +1877,20 @@ void MW::handleStartupArgs(const QString &args)
     }
 
     // EMBELLISH
-    else if (argList.at(1).startsWith("Embellish")) {
+    else if (srcProgram.startsWith("Embellish")) {
         /* This means a remote embellish has been invoked.
-                arg 1 = "Embellish"
-                arg 2 = Embellish template name ie "Zen2048"
-                arg 3 = Path to first image being exported to be embellished in folder ie Zen2084
-                arg 4 = Path to 2nd image
+                arg 0 = srcProgram = "Embellish<Template>" ie "EmbellishZen2048"
+                arg 1 = Path to first image being exported to be embellished in folder
+                arg 2 = Path to 2nd image
                 arg...
+
+        The template name is derived from srcProgram (arg 0): the launching winnet
+        is named "Embellish<Template>", so the module and template are not sent
+        explicitly.
 
         The information is gathered and sent to EmbelExport::exportRemoteFiles, where the
         images are embellished and saved in the manner defined by the embellish template
-        in a subfolder, and then the temp image files are deleted in the folder arg 3. */
+        in a subfolder, and then the temp image files are deleted in the folder arg 1. */
 
         /* show main window now.  If we don't, then the update progress popup will not be
         visible.  If there is a significant delay, when a lot of images have to be processed,
@@ -1898,22 +1900,19 @@ void MW::handleStartupArgs(const QString &args)
 
         G::mode = "Loupe";
 
-        // check if any image path sent, if not, return
-        if (argList.length() < 3) return;
-        // if (argList.length() < 2) return;
+        // check if any image path sent (arg 0 + at least one path), if not, return
+        if (argList.length() < 2) return;
 
-        // get the embellish template to use
-        templateName = argList.at(2);
-        // templateName = srcProgram.mid(QString("Embellish").length());
+        // get the embellish template to use (derived from srcProgram, arg 0)
+        templateName = srcProgram.mid(QString("Embellish").length());
 
         // /* log
         // if (G::isRunByExtern)
             Utilities::log("MW::handleStartupArgs", "Template to use: " + templateName);
         //*/
 
-        // get the folder where the files to embellish are located
-        QFileInfo info(argList.at(3));
-        // QFileInfo info(argList.at(1));
+        // get the folder where the files to embellish are located (arg 1)
+        QFileInfo info(argList.at(1));
         QString folderPath = info.dir().absolutePath();
 
         // list of all supported files in the folder
