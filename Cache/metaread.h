@@ -42,6 +42,10 @@ public:
     bool isIdle();
     bool isBusy();
 
+    // Shared FrameDecoder (owned here). Exposed so MW can build a Thumb to
+    // synchronously refresh a single icon after a file is replaced in place.
+    FrameDecoder *getFrameDecoder() const { return frameDecoder; }
+
     int instance;                   // new instance for each folder to detect conflict
 
     int firstIconRow;
