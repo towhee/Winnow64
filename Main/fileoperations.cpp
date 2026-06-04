@@ -308,6 +308,48 @@ void MW::insertFiles(QStringList pathList)
 
     // updata datamodel, imagecache, image counts, selection
     refresh();
+
+    /* Re-read metadata + thumbnail synchronously for the inserted/replaced files
+       so each row ends MetaLoaded with a current icon. For a replaced file (same
+       path, new content - e.g. an image re-embellished in place, or a re-run
+       focus stack), dm->refresh() inside refresh() above detects it as "modified"
+       and resets it to MetaNotAttempted, expecting an async metaRead re-read.
+       That re-read does not reliably complete in this synchronous insert flow,
+       and the ImageCache only decodes MetaLoaded rows - so the image stayed blank
+       in the loupe (and its thumbnail stale) until the user navigated away.
+       Loading here (after refresh, before the caller selects) makes the
+       subsequent selection decode and display the image, and refreshes the icon. */
+    if (!refreshThumb && metaRead)
+        refreshThumb = new Thumb(dm, metaRead->getFrameDecoder());
+
+    for (const QString &fPath : pathList) {
+        int dmRow = dm->rowFromPath(fPath);
+        if (dmRow < 0) continue;
+        // only the rows reset by dm->refresh() (modified/new) need reloading
+        if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded)
+            continue;
+
+        QFileInfo fileInfo(fPath);
+        if (!metadata->loadImageMetadata(fileInfo, dmRow, dm->instance,
+                                         true, true, false, true, src))
+            continue;
+        dm->addMetadataForItem(metadata->m, src);
+
+        /* Refresh the thumbnail. setIcon is idempotent and will not replace a
+           live icon, so clear the stale decoration first, then load the new
+           embedded thumb (metadata->m, just read above, has its offset/length). */
+        if (refreshThumb) {
+            QModelIndex iconIdx = dm->index(dmRow, 0);
+            dm->setData(iconIdx, QVariant(), Qt::DecorationRole);
+            QString p = fPath;
+            QImage image;
+            if (refreshThumb->loadThumb(p, dmRow, image, dm->instance, metadata->m, src)) {
+                QImage icon = image.scaled(G::maxIconSize, G::maxIconSize,
+                                           Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                dm->setIcon(iconIdx, QPixmap::fromImage(icon), dm->instance, src);
+            }
+        }
+    }
 }
 
 void MW::deleteSelectedFiles()

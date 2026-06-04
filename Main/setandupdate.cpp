@@ -546,7 +546,13 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         return;
     }
 
-    bool isCurrent = sfRow == dm->currentSfRow;
+    /* Compare by path, not row, to decide whether the loupe must reload. MW::refresh()
+       can re-sort the proxy and recompute dm->currentSfRow (via currentDmIdx), leaving
+       it off by one relative to the row that was just (re)cached. currentFilePath tracks
+       the selected image and is not disturbed by that re-sort, so a same-path content
+       change (e.g. a re-embellished image already in the folder) is correctly seen as
+       the current image and the loupe is refreshed. */
+    bool isCurrent = (fPath == dm->currentFilePath);
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
 

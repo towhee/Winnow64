@@ -1135,6 +1135,7 @@ private:
     QHeaderView *headerView;
     CompareImages *compareImages;
     MetaRead *metaRead;
+    Thumb *refreshThumb = nullptr;    // lazily created; refreshes a single icon after in-place replace
     ImageCache *imageCache;
     QThread imageCacheThread;
     InfoView *infoView;

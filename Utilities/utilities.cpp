@@ -409,6 +409,9 @@ QString Utilities::inputText(QString title, QString description,
 
 void Utilities::log(QString function, QString msg)
 {
+/*
+    If change formatting then see also tools/Winnet/main.cpp auto log(...)
+*/
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
     QDir dir(path);
     if (!dir.exists()) dir.mkpath(path);

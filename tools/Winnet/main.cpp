@@ -1,5 +1,5 @@
 /*
-    Winnet — the Winnow Embellish droplet "master".
+    Winnet — the Winnow Embellish/FocusStack droplet "master".
 
     A tiny Qt Core-only forwarder that acts like a Photoshop droplet. Winnow's
     EmbelProperties::syncWinnets() copies this executable once per Embellish
@@ -26,6 +26,7 @@
 */
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -49,25 +50,30 @@ int main(int argc, char *argv[])
                       + "/Winnow";
     QString logPath = appData + "/Log/WinnowLog.txt";
     QDir().mkpath(QFileInfo(logPath).path());
-    QFile log(logPath);
-    if (log.open(QIODevice::Append | QIODevice::Text)) {
-        log.write(("\nWinnet: started\n" + appData).toUtf8());
-        log.close();
-    }
+
+    /* Append one line to Winnow's shared log in the same format as
+       Utilities::log ("timestamp  function  msg"). We can't reuse Utilities::log
+       itself: it lives in the Utilities class (which #includes <QtWidgets> and
+       the rest of the app), so linking it would pull QtWidgets back into this
+       Core-only droplet; and it writes to AppDataLocation, which resolves to the
+       wrong per-droplet folder once this executable is renamed. */
+    auto log = [&](const QString &function, const QString &msg) {
+        QFile f(logPath);
+        if (f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+            QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+            f.write(QString("%1  %2  %3\n").arg(t, function, msg).toUtf8());
+            f.close();
+        }
+    };
+
+    log("Winnet::main", "started");
 
     // This droplet's own name carries the template: "Embellish<Template>".
     QString winnetName = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
-#ifdef Q_OS_WIN
+    #ifdef Q_OS_WIN
     if (winnetName.endsWith(".exe", Qt::CaseInsensitive))
         winnetName.chop(4);
-#endif
-
-    /* Template name = droplet name with the leading "Embellish" removed. Only
-       used for the log below; Winnow re-derives it from arg[0] the same way. */
-    const QString module = "Embellish";
-    QString templateName = winnetName.startsWith(module)
-                               ? winnetName.mid(module.length())
-                               : winnetName;
+    #endif
 
     /* Arguments to forward to Winnow: just the droplet name + the image paths.
        The module/template are derived by Winnow from arg[0]. */
@@ -84,16 +90,9 @@ int main(int argc, char *argv[])
     QString winnowPath = settings.value("appPath").toString();
 
     // Debug log — inspected to confirm the droplet actually ran.
-    // QString logPath = appData + "/Log/WinnowLog.txt";
-    // QDir().mkpath(QFileInfo(logPath).path());
-    // QFile log(logPath);
-    if (log.open(QIODevice::Append | QIODevice::Text)) {
-        log.write(("\nWinnet: name       = " + winnetName + "\n").toUtf8());
-        log.write(("Winnet: template   = " + templateName + "\n").toUtf8());
-        log.write(("Winnet: winnowPath = " + winnowPath + "\n").toUtf8());
-        log.write(("Winnet: files      = " + QString::number(argc - 1) + "\n").toUtf8());
-        log.close();
-    }
+    log("Winnet::main", "name=" + winnetName
+                        + " files=" + QString::number(argc - 1)
+                        + " winnowPath=" + winnowPath);
 
     QProcess process;
     process.setProgram(winnowPath);
