@@ -23,8 +23,7 @@ void MW::focusStackFromSelection()
 void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
 {
 /*
-    Called locally from MW::focusStackFromSelection
-    Called externally from MW::handleStartupArgs
+    Called by MW::generateFocusStack
 
     Rules:
     - Build time-contiguous groups (gap >= 2000ms starts a new group)
@@ -35,7 +34,7 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
 */
 
     const QString srcFun = "MW::groupFocusStacks";
-    if (G::isLogger) G::log(srcFun);
+    if (G::isLogger || G::FSLog) G::log(srcFun);
 
     struct Item {
         QString   path;
@@ -61,7 +60,9 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
         }
 
         if (!t.isValid()) {
-            qDebug().noquote() << srcFun << "Skipping (invalid Created):" << path;
+            QString msg = "Skipping (invalid Created DateTimeOriginal):" + path;
+            qDebug().noquote() << srcFun << msg;
+            if (G::isLogger || G::FSLog) G::log(srcFun, msg);
             continue;
         }
 
@@ -69,7 +70,9 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
     }
 
     if (items.isEmpty()) {
-        updateStatus(false, "No valid images (Created date missing).", srcFun);
+        QString msg = "No valid images (Created date missing).";
+        updateStatus(false, msg, srcFun);
+        if (G::isLogger || G::FSLog) G::log(srcFun, msg);
         return;
     }
 
@@ -114,7 +117,7 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
     // finalize last group
     finalizeCurrent(current);
 
-    if(false) return;
+    if (false) return;
 
     QString msg;
     for (int gi = 0; gi < groups.size(); ++gi) {
@@ -248,6 +251,13 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Group multiple stacks
     groupFocusStacks(fs->groups, paths);
+
+    // No stacks found
+    if (fs->groups.empty()) {
+        QString msg = "Unable to find any focus stacks";
+        if (G::isLogger || G::FSLog) G::log(srcFun, msg);
+        return;
+    }
 
     // --------------------------------------------------------------------
     // Finished

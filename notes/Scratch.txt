@@ -25,6 +25,7 @@ and splits again — see Main/main.cpp and MW::handleStartupArgs):
 arg[1] and arg[2] are not required.  They can be determined in MW::handleStartupArgs from
 the source program name.  Fix here too.
 
+When I run a Focus Stack on the 4 images in
 
 
 

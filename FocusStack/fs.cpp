@@ -144,7 +144,7 @@ bool FS::prepareFolders()
 
 void FS::initializeProgress()
 {
-    QString srcFun = "FS::setTotalProgress";
+    QString srcFun = "FS::initializeProgress";
     progressTotal = 0;
     for (const QStringList &g : groups) {
         int gSlices = g.count();

@@ -18,7 +18,7 @@ QSettings *settings;
 // LOG
 bool isLogger = false;              // Writes all log messages to file or console
 bool isFlowLogger = false;          // Writes key program flow points to file or console
-bool sendLogToFile = false;         // Writes log messages to file (isLogAllToFileForDebugging)
+bool sendLogToFile = true;         // Writes log messages to file (isLogAllToFileForDebugging)
 bool isRunByExtern = false;         // Writes log messages to file (debug executable ie remote embellish ops)
 QFile logFile;                      // MW::openLog(), MW::closeLog()
 
@@ -32,7 +32,7 @@ QFile issueLogFile;                 // MW::openErrLog(), MW::closeErrLog()
 
 bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
 
-bool FSLog = false;                 // Focus Stack log
+bool FSLog = true;                 // Focus Stack log
 bool showAllEvents = false;
 // Errors
 QStringList issueList;
