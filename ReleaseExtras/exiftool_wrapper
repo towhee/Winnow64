@@ -1,6 +1,9 @@
 #!/bin/bash
-APP_DIR="$(dirname "$0")/.."
-RES="$APP_DIR/Resources/exiftool"
+# Launched by ExifTool::ExifTool() as Contents/MacOS/exiftool_wrapper. The
+# ExifTool Perl distribution is bundled alongside it at Contents/MacOS/ExifTool/
+# (see winnow_bundle_tree("ReleaseExtras/ExifTool" ...) in CMakeLists.txt), so
+# resolve everything relative to this script's own directory.
+RES="$(dirname "$0")/ExifTool"
 
 export PERL5LIB="$RES/lib"
-exec /usr/bin/perl "$RES/ExifTool" "$@"
+exec /usr/bin/perl "$RES/exiftool" "$@"

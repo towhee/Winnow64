@@ -43,8 +43,6 @@ public:
         bool saveDiagnostics            = true;
     } o;
 
-    QString srcFolderPath; // original source for input images (parent if lightroom)
-
     QString statusGroupPrefix;
     QString statusRunPrefix = "Focus Stacking:  ";
     QList<QStringList> groups;
@@ -91,6 +89,9 @@ private:
 
     // helpers for UI
     void status(const QString &msg);
+
+    QString srcFolderPath;   // original source for input images (parent if lightroom)
+    QString inputFolderPath; //
 
     QStringList inputPaths;
     QString     grpFolderPath;

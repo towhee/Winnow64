@@ -997,7 +997,7 @@ void Preferences::addUserInterface()
     // Show grid thumbnail label
     i.name = "gridViewShowLabel";
     i.parentName = "LabelHeader";
-    i.captionText = "Show grid view labels";
+    i.captionText = "Show in grid";
     i.tooltip = "Show or hide the file name / title at the bottom of each thumbnail in grid view.";
     i.hasValue = true;
     i.captionIsEditable = false;

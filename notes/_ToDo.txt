@@ -2,7 +2,7 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Embellish from winnets opening wrong Winnow app.
+- Focus stack preferences (hide?)
 - Test backup when modifying files
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background

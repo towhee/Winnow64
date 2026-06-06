@@ -53,10 +53,17 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
         if (r >= 0) {
             t = dm->index(r, G::CreatedColumn).data().toDateTime();
         } else {
-            ExifTool et;
-            const QString creation = et.readTag(path, "DateTimeOriginal");
-            et.close();
-            t = QDateTime::fromString(creation, "yyyy:MM:dd HH:mm:ss");
+            /*
+                External launch (e.g. from Lightroom): the files are not in the
+                DataModel, so parse the created date directly. The bundled
+                exiftool wrapper is unreliable here because the external app's
+                launch environment lacks the PATH/perl it needs, so use the
+                native C++ metadata parser instead.
+            */
+            QFileInfo fileInfo(path);
+            metadata->loadImageMetadata(fileInfo, r, dm->instance,
+                                        true, false, false, false, srcFun, true);
+            t = metadata->m.createdDate;
         }
 
         if (!t.isValid()) {
@@ -122,7 +129,7 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
     QString msg;
     for (int gi = 0; gi < groups.size(); ++gi) {
         msg = "FocusStack Group " + QString::number(gi + 1);
-        if (G::isRunByExtern) Utilities::log(srcFun, msg);
+        if (G::FSLog) G::log(srcFun, msg);
         // qDebug().noquote() << "---- FocusStack Group" << (gi + 1) << "----";
         for (const QString &p : groups[gi]) {
             const int r = dm->rowFromPath(p);
@@ -222,32 +229,12 @@ void MW::generateFocusStack(const QStringList paths,
     // Initialize fs
     // --------------------------------------------------------------------
 
-    // Source images folder (used after pipeline finishes)
-    QFileInfo info(paths.first());
-    const QString inputFolderPath = info.absolutePath();
-    QString srcFolderPath;
-    // Source images location (ie when sourced from lightroom)
-    if (isLocal) srcFolderPath = inputFolderPath;
-    else {
-        // get parent of inputFolder
-        QFileInfo fi(inputFolderPath);
-        srcFolderPath = fi.dir().absolutePath();
-    }
-
-    if (G::FSLog) G::log(srcFun, "srcFolder = " + srcFolderPath);
-    if (G::FSLog) G::log(srcFun, "isLocal = " + QVariant(isLocal).toString());
-
-    // if (!G::isRory)
-        method = "DMap";
-    // if (!G::isRory)
-        fsRemoveTemp = true;
+    method = "DMap";                    // Only "DMap" for now (set in pref)
 
     fs->o.method = method;
     fs->o.isLocal = isLocal;
     fs->o.enableOpenCL = true;
-    fs->o.removeTemp = fsRemoveTemp;
-
-    fs->srcFolderPath = srcFolderPath;
+    fs->o.removeTemp = fsRemoveTemp;    // for debugging (set in pref)
 
     // Group multiple stacks
     groupFocusStacks(fs->groups, paths);

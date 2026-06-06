@@ -606,6 +606,11 @@ macx {
     exiftool_data.files = $$files($$PWD/ReleaseExtras/ExifTool, true)
     exiftool_data.path  = Contents/MacOS
 
+    # exiftool_wrapper launcher (sibling to the ExifTool/ dir it execs)
+    QMAKE_BUNDLE_DATA += exiftool_wrapper_data
+    exiftool_wrapper_data.files = $$PWD/ReleaseExtras/exiftool_wrapper
+    exiftool_wrapper_data.path  = Contents/MacOS
+
     # Winnets folder (recursive)
     QMAKE_BUNDLE_DATA += winnets_data
     winnets_data.files = $$files($$PWD/ReleaseExtras/Winnets, true)

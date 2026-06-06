@@ -25,7 +25,22 @@ and splits again — see Main/main.cpp and MW::handleStartupArgs):
 arg[1] and arg[2] are not required.  They can be determined in MW::handleStartupArgs from
 the source program name.  Fix here too.
 
-When I run a Focus Stack on the 4 images in
+When I run a Focus Stack on the 4 images in /Users/roryhill/Pictures/_FocusStack locally
+it works.  However, when I run the same Focus Stack externally (from Lightroom) it fails
+in MW::groupFocusStacks, unable to get the DateTimeOriginal for the files.  File log:
+2026-06-04 06:24:10  Winnet::main  started
+2026-06-04 06:24:10  Winnet::main  name=FocusStack files=4 winnowPath=/Users/roryhill/Projects/Winnow64/build/mac-release/Winnow.app/Contents/MacOS/Winnow
+2026-06-04 06:24:11  MW::handleStartupArgs  MW::handleStartupArgs FocusStack
+2026-06-04 06:24:11  MW::generateFocusStack  method = StmDMapBasic
+2026-06-04 06:24:11  MW::generateFocusStack  srcFolder = /Users/roryhill/Pictures/_FocusStack/FocusStack
+2026-06-04 06:24:11  MW::generateFocusStack  isLocal = false
+2026-06-04 06:24:11  MW::groupFocusStacks
+2026-06-04 06:24:11  MW::groupFocusStacks  Skipping (invalid Created DateTimeOriginal):/Users/roryhill/Pictures/_FocusStack/FocusStack/FocusStack/2025-11-07_0001.tif
+2026-06-04 06:24:11  MW::groupFocusStacks  Skipping (invalid Created DateTimeOriginal):/Users/roryhill/Pictures/_FocusStack/FocusStack/FocusStack/2025-11-07_0002.tif
+2026-06-04 06:24:11  MW::groupFocusStacks  Skipping (invalid Created DateTimeOriginal):/Users/roryhill/Pictures/_FocusStack/FocusStack/FocusStack/2025-11-07_0003.tif
+2026-06-04 06:24:11  MW::groupFocusStacks  Skipping (invalid Created DateTimeOriginal):/Users/roryhill/Pictures/_FocusStack/FocusStack/FocusStack/2025-11-07_0004.tif
+2026-06-04 06:24:11  MW::groupFocusStacks  No valid images (Created date missing).
+2026-06-04 06:24:11  MW::generateFocusStack  Unable to find any focus stacks
 
 
 

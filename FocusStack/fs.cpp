@@ -27,6 +27,44 @@
 #include <QtConcurrent>
 #include <QDebug>
 
+/*
+    LOCAL vs REMOTE
+
+    Local: The source images are selected in Winnow and sent to
+    MW::focusStackFromSelection.
+
+    Remote: The source images are selected in another program (ie Lightroom), a subfolder
+    called /FocusStack will be created and populated with tiff versions of the original
+    images from the srcFolder. Then, via the winnet FocusStack Winnow is run:
+    MW::handleStartupArgs > MW::generateFocusStack.
+
+    INPUT IMAGES TO STACK
+
+    The input image path list is consolidated into groups of individual focus stacks.  The
+    input source(s) could be from multiple different folders, but the images in each group
+    will be from the same folder.
+
+    FOLDER STRUCTURE
+
+    The folders for a group are inferred from the path of the first input image within the
+    group.
+
+    inputFolder: the folder from first input image.
+
+    srcFolder: the location of the source images, where the final fused image will be
+    saved.  Local:   srcFolder = inputFolder.
+            Remote:  srcFolder = parent of inputFolder.
+
+    Working folders:
+        inputFolder (temp if remote)
+            grpFolder (temp)
+                alignFolder (temp)
+                depthFolder (temp)
+                fusionFolder (temp)
+
+
+*/
+
 FS::FS(QObject *parent)
     : QObject(parent)
 {
@@ -44,8 +82,15 @@ bool FS::initializeGroup(int group)
     grpLastSlice = grpSlices - 1;
 
     QFileInfo info(inputPaths.first());
-    const QString srcFolder = info.absolutePath();
-    grpFolderPath = srcFolder + "/" + info.completeBaseName() + "_" + o.method;
+    inputFolderPath = info.absolutePath();
+
+    if (o.isLocal) srcFolderPath = inputFolderPath;
+    else {
+        QFileInfo fi(inputFolderPath);
+        srcFolderPath = fi.dir().absolutePath();  // parent folder
+    }
+
+    grpFolderPath = inputFolderPath + "/" + info.completeBaseName() + "_" + o.method;
     grpFolderPaths << grpFolderPath;
     // qDebug() << "group" << group << "grpFolderPaths =" << grpFolderPaths;
 
@@ -108,14 +153,26 @@ bool FS::prepareFolders()
         srcFolder (focus stack input tiffs)
             grpFolder ie 2025-11-07_0078_StreamPMax
                 alignFolder
-                focusFolder
                 depthFolder
                 fusionFolder
-                backgroundFolder
-                artifactsFolder
+
+    Remote:
+        srcFolder
+            inputFolder (src images converted to tiffs)
+                grpFolder
+                    alignFolder
+                    depthFolder
+                    fusionFolder
+
+    Local:
+            inputFolder = srcFolder
+                grpFolder
+                    alignFolder
+                    depthFolder
+                    fusionFolder
 
     srcFolder contains the input focus stack images
-    dstFolder is where to save the fused result image
+    dstFolder is where to save the fused result image(s)
         - if local, use srcFolder
         - if remote, use srcFolder parent = Lightroom folder
 */
@@ -148,7 +205,7 @@ void FS::initializeProgress()
     progressTotal = 0;
     for (const QStringList &g : groups) {
         int gSlices = g.count();
-        if (o.method == "DMap") progressTotal += (gSlices * 3 + 2);
+        if (o.method == "DMap") progressTotal += (gSlices * 4 + 1);
         if (o.method == "PMax") progressTotal += (gSlices * 2 + 1);
         totSlices += gSlices;
     }
@@ -163,11 +220,13 @@ void FS::incrementProgress()
     qint64 msElapsed = t.elapsed();
     int msStep = msElapsed - msPrevStep;
     QString srcFun = "FS::incrementProgress";
-    // progressCount starts at -1 and is 0 on the second call (first slice with
-    // work). Dividing by it is integer divide-by-zero — silently returns 0 on
-    // ARM64 (macOS) but raises a #DE hardware fault on x86-64 (Windows), which
-    // hard-crashes the process. Guard it.
+
+    /* progressCount starts at -1 and is 0 on the second call (first slice with work).
+    Dividing by it is integer divide-by-zero — silently returns 0 on ARM64 (macOS) but
+    raises a #DE hardware fault on x86-64 (Windows), which hard-crashes the process.
+    Guard it. */
     qint64 msPerStep = (progressCount > 0) ? msElapsed / progressCount : 0;
+
     msToGo = msPerStep * (progressTotal - progressCount);
     emit progress(++progressCount, progressTotal);
 
@@ -294,9 +353,7 @@ void FS::run()
 
         if (!initializeGroup(groupCounter++)) { failed = true; break; }
 
-
         if (o.method == "DMap" && !abortRequested()) { if (!runDMap()) failed = true; }
-
         if (o.method == "PMax" && !abortRequested()) { if (!runPMax()) failed = true; }
 
         if (abortRequested()) break;
@@ -790,6 +847,8 @@ QString FS::save(QString fuseFolderPath)
     ExifTool et;
     et.setOverWrite(true);
     et.copyAll(inputPaths.last(), fusedPath);
+    // qDebug() << srcFun << "et.copyAll" << inputPaths.last() << fusedPath;
+    // et.copyAllTags(inputPaths.last(), fusedPath);
     et.close();
 
     // Embed thumbnail
@@ -865,7 +924,7 @@ bool FS::cleanup()
     for (QString subFolder : grpFolderPaths) {
         // qDebug() << "Remove work folder: " << subFolder;
         msg = "Remove work folder: " + subFolder;
-        if (G::isRunByExtern) Utilities::log(srcFun, msg);
+        if (G::FSLog) G::log(srcFun, msg);
 
         QDir(subFolder).removeRecursively();
     }
@@ -878,30 +937,27 @@ bool FS::cleanup()
     the inputFolder is empty it can be removed too.
     */
 
-    // aborted();
-
     // remove the temp focus stack source tiffs
     QStringList inputFolderPaths;
     // all input files
     for (QString s : inputPaths) {
-        QString srcFolderPath = QFileInfo(s).absolutePath();
-        if (!inputFolderPaths.contains(srcFolderPath)) inputFolderPaths << srcFolderPath;
-        // qDebug() << "Remove input file: " << s;
+        QString inputFolderPath = QFileInfo(s).absolutePath();
+        // add to inputFolderPaths
+        if (!inputFolderPaths.contains(inputFolderPath)) inputFolderPaths << inputFolderPath;
         msg = "Remove input file: " + s;
-        if (G::isRunByExtern) Utilities::log(srcFun, msg);
-
+        if (G::FSLog) G::log(srcFun, msg);
         QFile::remove(s);
     }
 
-    // remove input folder if empty
+    // remove input folder(s) if empty
     for (QString d : inputFolderPaths) {
         // qDebug() << "input folder isEmpty: " << QDir(d).isEmpty();
         msg = "input folder: " + d + "  isEmpty: " + QVariant(QDir(d).isEmpty()).toString();
-        if (G::isRunByExtern) Utilities::log(srcFun, msg);
+        if (G::FSLog) G::log(srcFun, msg);
         if (QDir(d).isEmpty()) {
             // qDebug() << "Remove input folder: " << d;
             msg = "Remove input folder: " + d;
-            if (G::isRunByExtern) Utilities::log(srcFun, msg);
+            if (G::FSLog) G::log(srcFun, msg);
 
             QDir(d).removeRecursively();
         }

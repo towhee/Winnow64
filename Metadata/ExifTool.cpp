@@ -51,8 +51,53 @@ ExifTool::ExifTool()
     startArgs << "-";
     startArgs << "-execute";
     process.start(exifToolPath, startArgs);   // exifToolPath = path to ExifTool.exe or ExifTool.app
-    process.waitForStarted(3000);
-//    qDebug() << "ExifTool::ExifTool" << process.errorString();
+    if (!process.waitForStarted(3000)) {
+        QString msg = "ExifTool process failed to start: " + process.errorString();
+        G::issue("Warning", msg, "ExifTool::ExifTool", -1, exifToolPath);
+        qWarning() << "ExifTool::ExifTool" << msg;
+        exifToolPath.clear();
+        return;
+    }
+
+    /* Handshake: confirm the -stay_open pipe is actually alive before trusting it.
+       waitForStarted() only proves the launcher (e.g. the macOS exiftool_wrapper
+       shell script) started — if it then exec's a mis-pathed perl/ExifTool it dies
+       immediately, and every later copyAllTags/copyICC/addThumb write would go into
+       a dead pipe and fail silently. A no-op "-execute" must echo "{ready}". */
+    process.write("-execute\n");
+    QByteArray buffer;
+    while (!buffer.contains("{ready}")) {
+        if (!process.waitForReadyRead(5000)) break;
+        buffer += process.readAllStandardOutput();
+    }
+    if (!buffer.contains("{ready}")) {
+        QString err = QString::fromUtf8(process.readAllStandardError()).trimmed();
+        QString msg = "ExifTool failed to initialise"
+                      + (err.isEmpty() ? QString(".") : (": " + err));
+        G::issue("Warning", msg, "ExifTool::ExifTool", -1, exifToolPath);
+        qWarning() << "ExifTool::ExifTool" << msg;
+        if (process.state() != QProcess::NotRunning) {
+            process.kill();
+            process.waitForFinished(3000);
+        }
+        exifToolPath.clear();
+        return;
+    }
+    ready = true;
+}
+
+bool ExifTool::ensureRunning(const QString &where)
+{
+    /* Guard for the -stay_open methods: refuse to write into a pipe that never
+       came up (ready == false) or that has since died, and say so loudly rather
+       than dropping the metadata operation on the floor. */
+    if (!ready || process.state() != QProcess::Running) {
+        G::issue("Warning", "ExifTool is not running; metadata operation skipped.",
+                 where, -1, exifToolPath);
+        qWarning() << where << "ExifTool is not running; metadata operation skipped.";
+        return false;
+    }
+    return true;
 }
 
 int ExifTool::execute(QStringList &args)
@@ -60,8 +105,22 @@ int ExifTool::execute(QStringList &args)
     /* all args that are a path to an image should be converted to a url
        ie  QUrl("D:/Pictures/Zenfolio/2021-02-12_0006.jpg").path();  */
     if (G::isRunByExtern) Utilities::log("ExifTool::execute", exifToolPath);
-    if (exifToolPath.isEmpty()) return -1;   // refused at construction time
-    return QProcess::execute(exifToolPath, args);
+    if (exifToolPath.isEmpty()) {            // refused at construction time
+        G::issue("Warning", "ExifTool unavailable; metadata operation skipped.",
+                 "ExifTool::execute", -1, exifToolPath);
+        return -1;
+    }
+    int rc = QProcess::execute(exifToolPath, args);
+    /* QProcess::execute returns -2 (failed to start), -1 (crashed), or the
+       process exit code. ExifTool returns non-zero on any error, so surface it
+       instead of letting the caller (e.g. FS::save) assume the copy succeeded. */
+    if (rc != 0) {
+        G::issue("Warning",
+                 QString("ExifTool exited with code %1.").arg(rc),
+                 "ExifTool::execute", -1, exifToolPath);
+        qWarning() << "ExifTool::execute  exit code =" << rc << exifToolPath;
+    }
+    return rc;
 }
 
 void ExifTool::setOverWrite(bool overWrite)
@@ -71,6 +130,9 @@ void ExifTool::setOverWrite(bool overWrite)
 
 int ExifTool::close()
 {
+    /* Nothing to close if the -stay_open process never came up (construction
+       already reported why); avoid a misleading "waitForFinished failed". */
+    if (process.state() == QProcess::NotRunning) return -1;
     QByteArray closeArgs;
     closeArgs += "-stay_open\n";
     closeArgs += "False\n";
@@ -88,6 +150,7 @@ int ExifTool::close()
 
 void ExifTool::copyAllTags(QString src, QString dst)
 {
+    if (!ensureRunning("ExifTool::copyAllTags")) return;
     QByteArray args;
     args += "-TagsFromFile\n";
     args += src.toUtf8() + "\n";
@@ -100,6 +163,7 @@ void ExifTool::copyAllTags(QString src, QString dst)
 
 void ExifTool::copyICC(QString src, QString dst)
 {
+    if (!ensureRunning("ExifTool::copyICC")) return;
     QByteArray args;
     args += "-TagsFromFile\n";
     args += src.toUtf8() + "\n";
@@ -112,6 +176,7 @@ void ExifTool::copyICC(QString src, QString dst)
 
 QString ExifTool::readTag(QString src, QString tag)
 {
+    if (!ensureRunning("ExifTool::readTag")) return "";
     // Construct -stay_open compatible ExifTool command
     QByteArray args;
     args += "-" + tag.toUtf8() + "\n";   // the tag, e.g. -LensModel
@@ -176,6 +241,7 @@ void ExifTool::writeOrientation(QString src, QString orientation)
     7 = Mirror horizontal and rotate 90 CW
     8 = Rotate 270 CW
 */
+    if (!ensureRunning("ExifTool::writeOrientation")) return;
     QByteArray args;
     args.append("-orientation#=" + orientation.toUtf8() + "\n");
     if (isOverWrite) args += "-overwrite_original\n";
@@ -197,6 +263,7 @@ void ExifTool::readXMP(QString dst, QString tag, QString &val)
 
 void ExifTool::writeXMP(QString dst, QString tag, QString val)
 {
+    if (!ensureRunning("ExifTool::writeXMP")) return;
     QByteArray args;
     args.append('-' + tag.toUtf8() + '=' + val.toUtf8() + '\n');
     args.append(dst.toUtf8() + "\n");
@@ -207,6 +274,7 @@ void ExifTool::writeXMP(QString dst, QString tag, QString val)
 void ExifTool::addThumb(QString src, QString dst)
 {
     // qDebug().noquote() << "ExifTool::addThumb  exifToolPath =" << exifToolPath;
+    if (!ensureRunning("ExifTool::addThumb")) return;
     QByteArray args;
     args.append("-thumbnailimage<=" + src.toUtf8() + "\n");
     if (isOverWrite) args += "-overwrite_original\n";

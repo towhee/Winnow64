@@ -63,7 +63,6 @@ void MW::writeSettings()
     settings->setValue("colorManage", G::colorManage);
     settings->setValue("rememberLastDir", rememberLastDir);
     settings->setValue("checkIfUpdate", checkIfUpdate);
-//    setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     settings->setValue("combineRawJpg", combineRawJpg);
 
     /* ingest (moved to MW::ingest)
@@ -339,6 +338,7 @@ bool MW::loadSettings()
 
         // Focus Stack default method
         fsMethod = FS::MethodsString.at(FS::Methods::DMap);
+        fsRemoveTemp = true;
 
         if (!isSettings || simulateJustInstalled) return true;
     }
@@ -472,6 +472,7 @@ bool MW::loadSettings()
 
     // Focus Stack
     if (settings->contains("focusStackMethod")) fsMethod = settings->value("focusStackMethod").toString();
+    if (settings->contains("focusStackRemoveTemp")) fsRemoveTemp = settings->value("focusStackRemoveTemp").toBool();
 
     /* read external apps */
     /* moved to createActions as required to populate open with ... menu */
