@@ -16,6 +16,7 @@
 *.stash
 .qtc_clangd/
 .xcode/
+.clangd
 
 # --- CMake build (per-machine; see CMakePresets.json) ---
 build/
