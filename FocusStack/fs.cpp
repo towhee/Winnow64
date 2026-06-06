@@ -863,7 +863,7 @@ QString FS::save(QString fuseFolderPath)
             thumbSrc = tmp8;
         }
         QImage thumb = thumbnail(thumbSrc);
-        qDebug() << srcFun << msg << thumb.width() << thumb.height();
+        // qDebug() << srcFun << msg << thumb.width() << thumb.height();
         if (!thumb.isNull()) {
             if (!tiff.embedIRBThumbnail(fusedPath, thumb)) {
                 QString msg = "Failed to embed thumbnail in tif file " + fusedPath;
