@@ -12,6 +12,11 @@ endif()
 
 project(Winnow LANGUAGES C CXX)
 
+# Emit build/<preset>/compile_commands.json on every configure so clangd (the
+# editor language server) can resolve project includes and Qt headers without
+# relying on Qt Creator's .qtc_clangd database. See the project-root .clangd.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(APPLE)
     enable_language(OBJCXX)
 endif()
