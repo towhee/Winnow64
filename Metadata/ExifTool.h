@@ -25,8 +25,11 @@ public:
     int close();
 
 private:
+    bool ensureRunning(const QString &where);
+
     QString exifToolPath;
     QProcess process;
+    bool ready = false;
     bool isOverWrite = false;
     QBuffer result;
 };

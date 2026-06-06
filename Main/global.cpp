@@ -38,8 +38,8 @@ bool showAllEvents = false;
 QStringList issueList;
 
 
-// Rory version (expanded cache pref, focus stack)
-bool isRory = true;
+// Rory version (expanded cache pref, focus stack pref)
+bool isRory = false;
 
 // mutex
 QWaitCondition waitCondition;

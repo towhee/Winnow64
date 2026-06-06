@@ -345,9 +345,9 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
 bool EmbelExport::exportImage(const QString &fPath)
 {
 /*
-    The image file is read and embellished.  The resulting graphics scene is copied to a new
-    QImage and saved to the assigned image format (jpg, png or tif).  A thumbnail is created
-    and saved to ":/thumb.jpg" in the export folder.
+    The image file is read and embellished. The resulting graphics scene is copied to a
+    new QImage and saved to the assigned image format (jpg, png or tif). A thumbnail is
+    created and saved to ":/thumb.jpg" in the export folder.
 */
     if (G::isLogger) G::log("EmbelExport::exportImage");
 

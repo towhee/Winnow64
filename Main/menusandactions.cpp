@@ -1885,7 +1885,7 @@ void MW::createEditMenu()
     utilitiesMenu->addAction(visCmpImagesAction);
     // utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);
-    if (G::isRory) utilitiesMenu->addAction(focusStackAction);
+    utilitiesMenu->addAction(focusStackAction);
     editMenu->addSeparator();
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
 }
@@ -2339,7 +2339,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(embelExportGroupAct);
-    if (G::isRory) thumbViewActions->append(focusStackAction);
+    thumbViewActions->append(focusStackAction);
 
     thumbViewActions->append(separatorAction2);
     thumbViewActions->append(ratingBadgeVisibleAction);
@@ -2794,8 +2794,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
 
         // Utilities
-        if (G::isRory)
-            focusStackAction->setShortcut(QKeySequence("Alt+F"));
+        focusStackAction->setShortcut(QKeySequence("Alt+F"));
 
         // Filters
         // filterUpdateAction->setShortcut(QKeySequence("Shift+F"));

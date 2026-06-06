@@ -729,6 +729,18 @@ if(APPLE)
     endfunction()
 
     winnow_bundle_tree("ReleaseExtras/ExifTool" "ExifTool")
+
+    # The exiftool_wrapper shell script lives one level up from the ExifTool tree
+    # (ReleaseExtras/exiftool_wrapper), so winnow_bundle_tree's recursive glob of
+    # ReleaseExtras/ExifTool/* misses it. Bundle it explicitly into Contents/MacOS/
+    # next to the ExifTool/ dir it execs — that is the path ExifTool::ExifTool()
+    # launches (applicationDirPath()/exiftool_wrapper).
+    target_sources(Winnow PRIVATE ReleaseExtras/exiftool_wrapper)
+    set_source_files_properties(ReleaseExtras/exiftool_wrapper PROPERTIES
+        MACOSX_PACKAGE_LOCATION "MacOS"
+        HEADER_FILE_ONLY TRUE
+        SKIP_AUTOGEN TRUE)
+
     # Winnets are no longer bundled from a hand-committed tree. The master
     # droplet + a version-correct QtCore are staged fresh into the bundle by the
     # Winnet target's POST_BUILD step below (search "Winnet — the Embellish").
