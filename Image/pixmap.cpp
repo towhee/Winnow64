@@ -29,6 +29,10 @@ bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
      // rgh remove heic
      Heic heic;
      return heic.decodePrimaryImage(fPath, image);
+     #else
+     // Heic natively supported on Mac via Qt's image plugin
+     imFile.close();
+     return image.load(fPath);
      #endif
 }
 
