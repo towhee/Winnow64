@@ -278,7 +278,8 @@ Q_NAMESPACE
     extern QFile issueLogFile;
 
     extern bool sendLogToConsole;
-    extern bool FSLog;  // Focus Stack
+    extern bool FSLog;              // Focus Stack remote log
+    extern bool embelLog;           // Embellish remote
 
     extern bool showAllEvents;
     extern bool isDev;
