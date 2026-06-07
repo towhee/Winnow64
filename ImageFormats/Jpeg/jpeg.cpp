@@ -1360,7 +1360,10 @@ bool Jpeg::embedThumbnail(QString fPath)
     qDebug() << "Jpeg::embedThumbnail"
              << "G::backupBeforeModifying =" << G::backupBeforeModifying
              << fPath;
-    if (G::backupBeforeModifying) Utilities::backup(fPath, "backup");
+    if (G::backupBeforeModifying && !Utilities::backup(fPath, "backup")) {
+        G::issue("Warning", "Backup failed; aborting modification.", "Jpeg::embedThumbnail", -1, fPath);
+        return false;
+    }
 
     ExifTool et;
     et.setOverWrite(true);

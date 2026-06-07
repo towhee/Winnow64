@@ -385,14 +385,26 @@ bool Utilities::clipboardHasUrls()
     return false;
 }
 
-void Utilities::backup(QString fPath, QString subfolderName)
+bool Utilities::backup(QString fPath, QString subfolderName)
 {
+/*
+    Copies fPath into a subfolder (eg "backup") beside it before the original is
+    modified, so it can be recovered.  Returns false if the backup could not be
+    made; callers must not modify the file when this returns false.
+*/
     QString fName = QFileInfo(fPath).fileName();
     QString backupFolder = QFileInfo(fPath).dir().path() + "/" + subfolderName;
     QString backupPath = backupFolder + "/" + fName;
-    if (!QDir(backupFolder).exists()) QDir().mkpath(backupFolder);
+    if (!QDir(backupFolder).exists() && !QDir().mkpath(backupFolder)) {
+        G::issue("Warning", "Failed to create backup folder.", "Utilities::backup", -1, backupFolder);
+        return false;
+    }
     uniqueFilePath(backupPath);
-    QFile::copy(fPath, backupPath);
+    if (!QFile::copy(fPath, backupPath)) {
+        G::issue("Warning", "Failed to copy file to backup.", "Utilities::backup", -1, fPath);
+        return false;
+    }
+    return true;
 }
 
 QString Utilities::inputText(QString title, QString description,

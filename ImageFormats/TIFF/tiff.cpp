@@ -1223,6 +1223,8 @@ bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
         - write strip pixels rgb at offset StripOffsets
 
 */
+    if (!G::modifySourceFiles) return false;
+
     ImageMetadata m;
 
     // get lastIFDOffsetPosition
@@ -1237,7 +1239,10 @@ bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
         return false;
     }
 
-    if (G::backupBeforeModifying) Utilities::backup(m.fPath, "backup");
+    if (G::backupBeforeModifying && !Utilities::backup(m.fPath, "backup")) {
+        G::issue("Warning", "Backup failed; aborting modification.", "Tiff::encodeThumbnail", -1, m.fPath);
+        return false;
+    }
 
     IFD *ifd = new IFD;
 
@@ -1350,10 +1355,14 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     create the thumbnail before calling this function.
 */
     if (G::isLogger || isDebug) G::log("Tiff::encodeThumbnail", p.fPath + " Source = " + source);
+    if (!G::modifySourceFiles) return false;
 
    // change p.file from QIODevice::ReadOnly to QIODevice::ReadWrite
     p.file.close();
-    if (G::backupBeforeModifying) Utilities::backup(m.fPath, "backup");
+    if (G::backupBeforeModifying && !Utilities::backup(m.fPath, "backup")) {
+        G::issue("Warning", "Backup failed; aborting modification.", "Tiff::encodeThumbnail", -1, m.fPath);
+        return false;
+    }
     p.file.open(QIODevice::ReadWrite);
 
     // go to last main IFD offset and replace with offset to new IFD at end of file
@@ -1481,6 +1490,7 @@ bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     to create the thumbnail before calling this function.
 */
     if (G::isLogger || isDebug) G::log("Tiff::encodeThumbnail", p.fPath + " Source = " + source);
+    if (!G::modifySourceFiles) return false;
     // get decoding parameters from source IFD (p.offset must be preset)
     if (!parseForDecoding(p, ifd)) {
         return false;
@@ -1488,7 +1498,10 @@ bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 
     // change p.file from QIODevice::ReadOnly to QIODevice::ReadWrite
     p.file.close();
-    if (G::backupBeforeModifying) Utilities::backup(m.fPath, "backup");
+    if (G::backupBeforeModifying && !Utilities::backup(m.fPath, "backup")) {
+        G::issue("Warning", "Backup failed; aborting modification.", "Tiff::encodeThumbnail", -1, m.fPath);
+        return false;
+    }
     p.file.open(QIODevice::ReadWrite);
 
     // go to last main IFD offset and replace with offset to new IFD at end of file
