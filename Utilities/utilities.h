@@ -42,7 +42,7 @@ public:
     static bool comboBoxContainsText(QComboBox* comboBox, const QString& text);
     static bool clipboardHasUrls();
 
-    static void backup(QString fPath, QString subfolderName);
+    static bool backup(QString fPath, QString subfolderName);
     static QString inputText(QString title, QString description,
                              QStringList doNotUse, QString input = "");
     static void log(QString function, QString msg);

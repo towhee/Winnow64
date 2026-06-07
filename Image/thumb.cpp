@@ -566,6 +566,7 @@ void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
     Fix missing thumbnails in JPG.  Not being used.  Also see Jpeg::embedThumbnail().
 */
     qDebug() << "Thumb::insertThumbnailsInJpg";
+    if (!G::modifySourceFiles) return;
     int count = selection.count();
 
     G::popup->setProgressVisible(true);
@@ -607,6 +608,13 @@ void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
         // create a thumbnail size jpg
         QImage thumb = QImage(fPath).scaled(160, 160, Qt::KeepAspectRatio);
         thumb.save(thumbPath, "JPG", 60);
+
+        // back up the source file before modifying it in place
+        if (G::backupBeforeModifying && !Utilities::backup(fPath, "backup")) {
+            G::issue("Warning", "Backup failed; thumbnail not embedded.",
+                     "Thumb::insertThumbnailsInJpg", -1, fPath);
+            continue;
+        }
 
         // add the thumb.jpg to the source file
         et.addThumb(thumbPath, fPath);

@@ -1587,8 +1587,12 @@ void Jpeg2::rptRGB(int col, int row)
 void Jpeg2::embedThumbnail(ImageMetadata &m)
 {
     if (G::isLogger) G::log("Jpeg2::embedThumbnail", m.fPath);
+    if (!G::modifySourceFiles) return;
 
-    if (G::backupBeforeModifying) Utilities::backup(m.fPath, "backup");
+    if (G::backupBeforeModifying && !Utilities::backup(m.fPath, "backup")) {
+        G::issue("Warning", "Backup failed; aborting modification.", "Jpeg2::embedThumbnail", -1, m.fPath);
+        return;
+    }
 
     ExifTool et;
     et.setOverWrite(true);

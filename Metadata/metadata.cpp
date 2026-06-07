@@ -524,6 +524,11 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 */
     if (G::isLogger) G::log("Metadata::writeOrientation");
     if (G::modifySourceFiles) {
+        if (G::backupBeforeModifying && !Utilities::backup(fPath, "backup")) {
+            G::issue("Warning", "Backup failed; orientation not written.",
+                     "Metadata::writeOrientation", -1, fPath);
+            return;
+        }
         ExifTool et;
         et.setOverWrite(true);
         et.writeOrientation(fPath, orientationNumber);
