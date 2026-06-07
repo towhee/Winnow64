@@ -167,7 +167,7 @@ bool AutonomousImage::loadFromTiff(QString &fPath, QImage &image)
     if (isThumbOffset && tiff.decode(*m, fPath, image, getThumb, G::maxIconSize)) return true;
 
     // try load entire tif using Winnow decoder
-    if (!tiff.decode(fPath, m->offsetFull, image)) return true;
+    if (tiff.decode(fPath, m->offsetFull, image)) return true;
 
     // use Qt tiff library to decode
     if (image.load(fPath)) return true;
@@ -224,6 +224,9 @@ bool AutonomousImage::image(QString &fPath, QImage &image, int longSide, QString
     thumbMax.setHeight(longSide);
 
     QString ext = fileInfo.suffix().toLower();
+
+    // set instance for the metadata instance-clash check (was previously uninitialized)
+    instance = G::dmInstance;
 
     // int row = dm->proxyRowFromPath(fPath);
     // int dmRow = dm->fPathRow[fPath];

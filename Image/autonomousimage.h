@@ -33,7 +33,7 @@ private:
     FrameDecoder *frameDecoder;
     QString err;
     QSize thumbMax;
-    int instance;
+    int instance = 0;
     int longSide;
     QString source;
     QFileDevice::Permissions oldPermissions;
