@@ -186,7 +186,8 @@ void Embel::build(QString path, QString src)
     isRemote == true when build is called by EmbelExport and the source is an external
     program. It is used in updateText when a token string is applied.
 */
-    if (G::isLogger) G::log("Embel::build", "Source: " + src);
+    QString srcFun = "Embel::build";
+    if (G::isLogger) G::log(srcFun, "Source: " + src);
     /*
     qDebug() << "Embel::build" << QTime::currentTime()
              << "path =" << path
@@ -212,14 +213,15 @@ void Embel::build(QString path, QString src)
     }
 
     QString msg = "src = " + src + "  fPath = " + fPath;
-    if (G::isRunByExtern) Utilities::log("Embel::build", msg);
+    if (G::embelLog) G::log(srcFun, msg);
 
     clear();
     createBorders();
     createTexts();
     createGraphics();
     borderImageCoordinates();
-    if (G::isRunByExtern) Utilities::log("Embel::build", "w = " + QString::number(w));
+    if (G::embelLog) G::log(srcFun, "w = " + QString::number(w));
+
     scene->setSceneRect(0, 0, w, h);
     addBordersToScene();
     addImageToScene();

@@ -5336,13 +5336,14 @@ QString EmbelProperties::metaString(QString key, QString fPath)
     Look up information using Metadata if the image will not be active
     in Winnow (ie triggered by EmbelExport).
 */
-    if (G::isLogger) G::log("EmbelProperties::metaString");
+    QString srcFun = "EmbelProperties::metaString";
+    if (G::isLogger) G::log(srcFun);
     QString tokenString = mw3->infoString->infoTemplates[key];
-    if (G::isRunByExtern) {
-        Utilities::log("EmbelProperties::metaString fPath                            ", fPath);
-        Utilities::log("EmbelProperties::metaString tokenString                      ", tokenString);
+    if (G::embelLog) {
+        if (G::embelLog) G::log(srcFun, "fPath = " + fPath);
+        if (G::embelLog) G::log(srcFun, "tokenString = " + tokenString);
         QString meta = mw3->infoString->parseTokenString(tokenString, fPath);
-        Utilities::log("EmbelProperties::metaString mw3->infoString->parseTokenString", meta);
+        if (G::embelLog) G::log(srcFun, "mw3->infoString->parseTokenString = " + meta);
     }
     return mw3->infoString->parseTokenString(tokenString, fPath);
 }

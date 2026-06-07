@@ -77,7 +77,8 @@ void PatternDlgView::debugPxArray(QImage &i, int originX, int originY, int size)
     necessary convert text to columns.  You can then analyse the pixels in the array to debug
     the tile pattern.
 */
-    qDebug() << "PatternDlgView::debugPxArray" << size << i.size();
+    QString srcFun = "PatternDlgView::debugPxArray";
+    qDebug() << srcFun << size << i.size();
     QString row;
 
     for (int y = 0; y < size; y++) {
@@ -87,6 +88,7 @@ void PatternDlgView::debugPxArray(QImage &i, int originX, int originY, int size)
             row += pRgba;
         }
         if (G::isRunByExtern) Utilities::log("", row);
+        if (G::embelLog) G::log(srcFun, row);
         qDebug().noquote() << row;
     }
 }

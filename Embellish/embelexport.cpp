@@ -57,13 +57,14 @@ bool EmbelExport::loadImage(QString fPath)
 
     If Winnow has been launched remotely via a winnet then no folder has been loaded so
     no point in looking for an existing QImage or loading metadata.
-*/
-    if (G::isLogger) G::log("EmbelExport::loadImage");
+*/QString srcFun = "EmbelExport::loadImage";
+
+    if (G::isLogger) G::log(srcFun);
     QImage image;
     int dmRow = dm->rowFromPath(fPath);
 
     QString msg = "embellish->isRemote = " + QVariant(embellish->isRemote).toString();
-    if (G::isRunByExtern) Utilities::log("EmbelExport::loadImage", msg);
+    if (G::embelLog) G::log(srcFun, msg);
 
     if (!embellish->isRemote) {
         if (icd->contains(fPath)) {
@@ -144,16 +145,17 @@ QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
 
 bool EmbelExport::isValidExportFolder()
 {
-    if (G::isLogger) G::log("EmbelExport::isValidExportFolder");
+    QString srcFun = "EmbelExport::isValidExportFolder";
+    if (G::isLogger) G::log(srcFun);
     if (embelProperties->saveMethod == "Subfolder") {
         if (embelProperties->exportSubfolder == "") {
-            if (G::isRunByExtern) Utilities::log("EmbelExport::isValidExportFolder", "Embellish export subfolder not defined");
+            if (G::embelLog) G::log(srcFun, "Embellish export subfolder not defined");
             return false;
         }
     }
     else {
         if (embelProperties->exportFolderPath == "") {
-            if (G::isRunByExtern) Utilities::log("EmbelExport::isValidExportFolder", "Embellish export folder not defined");
+            if (G::embelLog) G::log(srcFun, "Embellish export subfolder not defined");
             return false;
         }
     }
@@ -173,7 +175,8 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
     the datamodel is expected to be loaded and up-to-date. For remote situations, the
     data model may not be loaded, and Embel will call Metadata to load the image data.
 */
-    if (G::isLogger) G::log("EmbelExport::exportRemoteFiles");
+    QString srcFun = "EmbelExport::exportRemoteFiles";
+    if (G::isLogger) G::log(srcFun);
 
     // set global isRemote flag
     G::isRemote = true;
@@ -193,7 +196,7 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
     }
 
     //QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
-    if (G::isRunByExtern) Utilities::log("EmbelExport::exportRemoteFiles  First file =", pathList.at(0));
+    if (G::embelLog) G::log(srcFun, "First file =" + pathList.at(0));
 
     exportImages(pathList, true);
 
@@ -205,7 +208,7 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
     // clear embellish
     embelProperties->setCurrentTemplate("Do not Embellish");
     
-    if (G::isRunByExtern) Utilities::log("EmbelExport::exportImages completed", "lastExportedPath = " + lastFileExportedPath);
+    if (G::embelLog) G::log(srcFun, "Completed. lastExportedPath = " + lastFileExportedPath);
 
     // set global isRemote flag
     G::isRemote = false;
@@ -220,7 +223,8 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     metadata is copied from the source image file to the exported image file.
     Finally, the ICC color space is updated.
 */
-    if (G::isLogger) G::log("EmbelExport::exportImages");
+    QString srcFun = "EmbelExport::exportImages";
+    if (G::isLogger) G::log(srcFun);
 
     G::isProcessingExportedImages = true;
     abort = false;
@@ -293,8 +297,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
             dstPaths << dst;
 
             QString msg = "ExifTool copied tags, ICC and thumbnail to embellished image";
-            if (G::isRunByExtern)
-                Utilities::log("EmbelExport::exportImages", msg);
+            if (G::embelLog) G::log(srcFun, msg);
         }
     }
     et.close();
@@ -314,7 +317,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
 
 
     G::isProcessingExportedImages = false;
-    if (G::isRunByExtern) Utilities::log("EmbelExport::exportImages", "Delete embellish");
+    if (G::embelLog) G::log(srcFun, "Delete embellish");
     delete embellish;
 
     if (abort) {
@@ -349,7 +352,8 @@ bool EmbelExport::exportImage(const QString &fPath)
     new QImage and saved to the assigned image format (jpg, png or tif). A thumbnail is
     created and saved to ":/thumb.jpg" in the export folder.
 */
-    if (G::isLogger) G::log("EmbelExport::exportImage");
+    QString srcFun ="EmbelExport::exportImage";
+    if (G::isLogger) G::log(srcFun);
 
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
@@ -368,17 +372,17 @@ bool EmbelExport::exportImage(const QString &fPath)
     if (!embelProperties->overwriteFiles) Utilities::uniqueFilePath(exportPath);
 
     QString msg = "src = " + fPath + " dst = " + exportPath;
-    if (G::isRunByExtern) Utilities::log("EmbelExport::exportImage", msg);
+    if (G::embelLog) G::log(srcFun, msg);
 
     // read the image, add it to the graphics scene and embellish
     if (loadImage(fPath)) {
         // embellish
-        embellish->build(fPath, "EmbelExport::exportImage");
+        embellish->build(fPath, srcFun);
         setSceneRect(scene->itemsBoundingRect());
     }
     else {
         msg = "Failed to load Image " + fPath;
-        if (G::isRunByExtern) Utilities::log("EmbelExport::exportImage", msg);
+        if (G::embelLog) G::log(srcFun, msg);
         return false;
     }
 
@@ -400,7 +404,9 @@ bool EmbelExport::exportImage(const QString &fPath)
     msg = exportPath
             + (wasSaved ? " saved" : " failed")
             + " Image width: " + QString::number(image.width());
-    if (G::isRunByExtern) Utilities::log("EmbelExport::exportImage", msg);
+    if (G::isRunByExtern) Utilities::log(srcfun, msg);
+    if (G::embelLog) G::log(srcFun, msg);
+
 
     if (wasSaved) {
         // add thumbnail
