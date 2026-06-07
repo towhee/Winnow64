@@ -521,6 +521,11 @@ void MW::setCombineRawJpg()
    // redo the filter to either combine or separate the raw and jpg files
    filterChange("MW::setCombineRawJpg");
 
+   /* The proxy baseline changed (raw+jpg pairs collapsed or expanded) without a
+      Filters-tree change, so the unfiltered counts must be recomputed as well as the
+      filtered counts.  filterChange only refreshes filtered counts. */
+   buildFilters->updateAllCounts();
+
    updateStatusBar();
 
    G::popup->close();
