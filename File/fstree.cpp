@@ -1479,15 +1479,13 @@ void FSTree::dropEvent(QDropEvent *event)
     // qDebug() << "FSTree::dropEvent";
 
     G::popup->reset();
-    // QString dropDir = indexAt(event->position().toPoint()).data(QFileSystemModel::FilePathRole).toString();
 
-    // HandleDropOnFolder handle(event, dropDir);
-
+    /*
     if (QMessageBox::question(nullptr, "Confirm", "Accept drop operation?",
                               QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
         event->ignore();
         return;
-    }
+    } //*/
 
     const QMimeData *mimeData = event->mimeData();
     if (!mimeData->hasUrls()) {
@@ -1509,8 +1507,8 @@ void FSTree::dropEvent(QDropEvent *event)
        1. Internal: Only image files are being dragged, sidecar files are inferred.  Popup
           work.
 
-       2. External: Any file can be dragged: image, sidecar or other.  Popup messages do not work
-          because the external program has the operating system window focus.
+       2. External: Any file can be dragged: image, sidecar or other.  Popup messages do
+          not work because the external program has the operating system window focus.
        */
 
     G::stopCopyingFiles = false;
