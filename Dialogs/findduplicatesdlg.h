@@ -6,8 +6,7 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
-#include "Image/autonomousimage.h"
-#include "Cache/imagedecoder.h"
+#include "Image/pixmap.h"
 
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
@@ -73,8 +72,7 @@ private:
     Ui::FindDuplicatesDlg *ui;
     DataModel *dm;
     Metadata *metadata;
-    AutonomousImage *autonomousImage;
-    ImageDecoder *imageDecoder;
+    Pixmap *pixmap;
     FrameDecoder *frameDecoder;
 
     struct B {

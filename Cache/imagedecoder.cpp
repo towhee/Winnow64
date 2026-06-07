@@ -418,7 +418,7 @@ bool ImageDecoder::load()
            Rory         use Rory decoder
         */
 
-        decoderToUse = QtTiff;         // works for all
+        decoderToUse = QtTiff;            // works for all
         // decoderToUse = Rory;           // works for Zerene, not jpg compression
         // decoderToUse = LibTiff;        // works for all
         // decoderToUse = QtImage;        // works for all except jpg compression

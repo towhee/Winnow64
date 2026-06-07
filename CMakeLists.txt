@@ -169,7 +169,6 @@ set(WINNOW_SOURCES
     FocusStack/generateFocusStack.cpp
 
     # Image
-    Image/autonomousimage.cpp
     Image/imagealign.cpp
     Image/pixmap.cpp
     Image/stack.cpp
@@ -389,7 +388,6 @@ set(WINNOW_HEADERS
     FocusStack/fsutilities.h
     FocusStack/fusionpyr.h
 
-    Image/autonomousimage.h
     Image/imagealign.h
     Image/pixmap.h
     Image/stack.h

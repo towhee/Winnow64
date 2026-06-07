@@ -86,12 +86,9 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *m
     metadata(metadata)
 {
     frameDecoder = new FrameDecoder;
-    autonomousImage = new AutonomousImage(metadata, frameDecoder);
+    pixmap = new Pixmap(this, dm, metadata);
     connect(frameDecoder, &FrameDecoder::frameImage, this, &FindDuplicatesDlg::setImageFromVideoFrame);
     // add disconnect in destructor...
-
-    int id = 0; // dummy variable req'd by ImageDecoder
-    imageDecoder = new ImageDecoder(id, dm, metadata);
 
     ui->setupUi(this);
     // Group-box title accents are dialog-specific: cyan for sections, white for
@@ -152,8 +149,7 @@ FindDuplicatesDlg::~FindDuplicatesDlg()
 {
     delete ui;
     if (frameDecoder) delete frameDecoder;
-    if (autonomousImage) delete autonomousImage;
-    if (imageDecoder) delete imageDecoder;
+    // pixmap is parented to this dialog and deleted by Qt
 }
 
 void FindDuplicatesDlg::setupModel()
@@ -222,17 +218,14 @@ void FindDuplicatesDlg::getPreview(QString fPath, QImage &image, QString source)
     m = &metadata->m;
 
     if (m->video) {
-        int longSide = 0;
-        qDebug() << "FindDuplicatesDlg::getPreview"
-                 << "longSide =" << longSide
-                 << "source =" << source
-                 << "fPath =" << fPath
-            ;
-        autonomousImage->image(fPath, image, longSide, source);
+        // first video frame arrives async via FrameDecoder → setImageFromVideoFrame
+        frameDecoder->clear();
+        frameDecoder->addToQueue(fPath, 0, source, -1, dm->instance);
     }
     else {
         frameDecoder->clear();
-        imageDecoder->decodeIndependent(image, metadata, *m);
+        bool colorManage = true;    // previews are shown to the user
+        pixmap->loadIndependent(fPath, image, 0, source, colorManage);
     }
 }
 
@@ -652,12 +645,16 @@ void FindDuplicatesDlg::getMetadataBItems()
         // get the thumbnail (used to compare to A thumbnail in datamodel)
         QImage image;
         if (ui->samePixelsCB->isChecked()) {
-            autonomousImage->image(fPath, image, G::maxIconSize, "BItemThumbnail");
-            qDebug() << "WARNING" << "FindDuplicatesDlg::getMetadataBItems"
-                     << "Zero width height"
-                     << "b =" << b
-                     << fPath;
-            bItems[b].im = image;
+            QString ext = QFileInfo(fPath).suffix().toLower();
+            if (metadata->videoFormats.contains(ext)) {
+                // first video frame arrives async via FrameDecoder → setImageFromVideoFrame,
+                // which stores it into bItems[b].im
+                frameDecoder->addToQueue(fPath, G::maxIconSize, "BItemThumbnail", -1, dm->instance);
+            }
+            else {
+                pixmap->loadIndependent(fPath, image, G::maxIconSize, "BItemThumbnail");
+                bItems[b].im = image;
+            }
         }
 
         // get metadata info for the B file to calc aspect

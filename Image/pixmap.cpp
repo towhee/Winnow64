@@ -13,27 +13,19 @@ Pixmap::Pixmap(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(par
 
 bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
 {
-     QFile imFile(fPath);
-     // check if file is locked by another process   rgh why not just imFile.isOpen
-     if (imFile.isOpen()) return false;
+    QString fun = "Pixmap::loadFromHeic";
+    if (G::isLogger) G::log(fun, fPath);
 
-     if (!imFile.open(QIODevice::ReadOnly)) {
-         return false;
-        // close it to allow qt load to work
-//        imFile.close();
-     }
-
-     // Attempt to decode heic image
-     ImageMetadata m = dm->imMetadata(fPath);
-     #ifdef Q_OS_WIN
-     // rgh remove heic
-     Heic heic;
-     return heic.decodePrimaryImage(fPath, image);
-     #else
-     // Heic natively supported on Mac via Qt's image plugin
-     imFile.close();
-     return image.load(fPath);
-     #endif
+    #ifdef Q_OS_WIN
+    Heic heic;
+    // try to read heic thumbnail, then fall back to the primary image
+    if (heic.decodeThumbnail(fPath, image)) return true;
+    if (heic.decodePrimaryImage(fPath, image)) return true;
+    return false;
+    #else
+    // Heic natively supported on Mac via Qt's image plugin
+    return image.load(fPath);
+    #endif
 }
 
 bool Pixmap::load(QString &fPath, QPixmap &pm, QString src)
@@ -264,46 +256,9 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
     // rotate
     if (metadata->rotateFormats.contains(ext)) {
-        QTransform trans;
         int orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
         int rotationDegrees = dm->index(dmRow, G::RotationDegreesColumn).data().toInt();
-        int degrees = 0;
-        if (orientation) {
-            switch(orientation) {
-            case 3:
-                degrees = rotationDegrees + 180;
-                if (degrees > 360) degrees = degrees - 360;
-                trans.rotate(degrees);
-                image = image.transformed(trans, Qt::SmoothTransformation);
-                break;
-            case 6:
-                degrees = rotationDegrees + 90;
-                if (degrees > 360) degrees = degrees - 360;
-                trans.rotate(degrees);
-                image = image.transformed(trans, Qt::SmoothTransformation);
-                break;
-            case 8:
-                degrees = rotationDegrees + 270;
-                if (degrees > 360) degrees = degrees - 360;
-                trans.rotate(degrees);
-                image = image.transformed(trans, Qt::SmoothTransformation);
-                break;
-            }
-        }
-        else if (rotationDegrees){
-            trans.rotate(rotationDegrees);
-            image = image.transformed(trans, Qt::SmoothTransformation);
-        }
-
-        /* debug
-        qDebug().noquote()
-                 << "Pixmap::load"
-                 << "orientation =" << orientation
-                 << "rotationDegrees   =" << rotationDegrees
-                 << "degrees =" << QString::number(degrees).leftJustified(3, ' ')
-                 << "fPath   =" << fPath
-                    ;
-                    //*/
+        applyOrientation(image, orientation, rotationDegrees);
     }
 
     // color manage if available
@@ -333,4 +288,210 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     //*/
 
     return true;
+}
+
+void Pixmap::applyOrientation(QImage &image, int orientation, int rotationDegrees)
+{
+/*
+    Rotate image based on EXIF orientation plus any additional user rotation. Shared by
+    Pixmap::load and Pixmap::loadIndependent.
+*/
+    QTransform trans;
+    int degrees = 0;
+    if (orientation) {
+        switch (orientation) {
+        case 3:
+            degrees = rotationDegrees + 180;
+            if (degrees > 360) degrees = degrees - 360;
+            trans.rotate(degrees);
+            image = image.transformed(trans, Qt::SmoothTransformation);
+            break;
+        case 6:
+            degrees = rotationDegrees + 90;
+            if (degrees > 360) degrees = degrees - 360;
+            trans.rotate(degrees);
+            image = image.transformed(trans, Qt::SmoothTransformation);
+            break;
+        case 8:
+            degrees = rotationDegrees + 270;
+            if (degrees > 360) degrees = degrees - 360;
+            trans.rotate(degrees);
+            image = image.transformed(trans, Qt::SmoothTransformation);
+            break;
+        }
+    }
+    else if (rotationDegrees) {
+        trans.rotate(rotationDegrees);
+        image = image.transformed(trans, Qt::SmoothTransformation);
+    }
+}
+
+bool Pixmap::loadFromJpgData(QString &fPath, QImage &image, uint offset, uint length)
+{
+/*
+    Read an embedded JPG (known offset and length) and decode it into a QImage.
+*/
+    QString fun = "Pixmap::loadFromJpgData";
+    if (G::isLogger) G::log(fun, fPath);
+
+    QFile imFile(fPath);
+    if (imFile.isOpen()) {
+        G::issue("Warning", "File is already open.", fun, -1, fPath);
+        return false;
+    }
+    if (imFile.open(QIODevice::ReadOnly)) {
+        bool success = false;
+        if (imFile.seek(offset)) {
+            QByteArray buf = imFile.read(length);
+            success = image.loadFromData(buf, "JPEG");
+        }
+        imFile.close();
+        return success;
+    }
+    return false;
+}
+
+bool Pixmap::loadFromTiff(QString &fPath, QImage &image, ImageMetadata *m)
+{
+/*
+    Decode a tiff: try sampling an embedded thumbnail, then the Winnow decoder, then
+    fall back to the Qt tiff library.
+*/
+    QString fun = "Pixmap::loadFromTiff";
+    if (G::isLogger) G::log(fun, fPath);
+
+    QFile imFile(fPath);
+    if (imFile.isOpen()) {
+        G::issue("Warning", "File is already open.", fun, m->row, fPath);
+        return false;
+    }
+    if (m->samplesPerPixel > 3) {
+        QString msg = "Could not read tiff because " + QString::number(m->samplesPerPixel)
+                      + " samplesPerPixel > 3.";
+        G::issue("Error", msg, fun, m->row, fPath);
+        return false;
+    }
+
+    Tiff tiff("Pixmap::loadFromTiff");
+    if (tiff.read(fPath, &image)) return true;
+
+    // // try to decode tiff thumbnail by sampling tiff raw data
+    // bool isThumbOffset = m->offsetThumb > 0;
+    // bool getThumb = true;
+    // if (isThumbOffset && tiff.decode(*m, fPath, image, getThumb, G::maxIconSize)) return true;
+
+    // // try the entire tif using the Winnow decoder
+    // if (tiff.decode(fPath, m->offsetFull, image)) return true;
+
+    // // use Qt tiff library to decode
+    // if (image.load(fPath)) return true;
+
+    return false;
+}
+
+bool Pixmap::loadFromEntireFile(QString &fPath, QImage &image)
+{
+/*
+    Load and decode an entire image file using the Qt image library.
+*/
+    QString fun = "Pixmap::loadFromEntireFile";
+    if (G::isLogger) G::log(fun, fPath);
+
+    if (!image.load(fPath)) {
+        G::issue("Warning", "Failed to load image.", fun, -1, fPath);
+        return false;
+    }
+    if (image.height() == 0) {
+        G::issue("Warning", "Image has width or height = 0.", fun, -1, fPath);
+        return false;
+    }
+    return true;
+}
+
+bool Pixmap::loadIndependent(QString &fPath, QImage &image, int longSide, QString src,
+                             bool colorManage)
+{
+/*
+    Decode an image file that is not necessarily in the datamodel into a QImage, scaled so
+    its long side == longSide (longSide == 0 means do not resize).
+
+    Unlike Pixmap::load (which reads offsets/orientation from the datamodel), this loads the
+    file's own metadata, so it works for arbitrary files such as the target images in
+    FindDuplicatesDlg. Video files are handled by the caller via FrameDecoder. Absorbed from
+    the former AutonomousImage class.
+*/
+    QString fun = "Pixmap::loadIndependent";
+    if (G::isLogger) G::log(fun, fPath);
+
+    QFileInfo fileInfo(fPath);
+
+    // check permissions
+    QFileDevice::Permissions oldPermissions = fileInfo.permissions();
+    if (!(oldPermissions & QFileDevice::ReadUser)) {
+        QFile(fPath).setPermissions(oldPermissions | QFileDevice::ReadUser);
+    }
+
+    QString ext = fileInfo.suffix().toLower();
+    QSize thumbMax(longSide, longSide);
+
+    // load this file's metadata (it may not be in the datamodel)
+    metadata->loadImageMetadata(fileInfo, 0, G::dmInstance, true, true, false, true, fun);
+    ImageMetadata *m = &metadata->m;
+
+    uint offsetThumb = m->offsetThumb;
+    uint lengthThumb = m->lengthThumb;
+    bool isEmbeddedJpg = offsetThumb && lengthThumb;
+
+    bool success = false;
+
+    // raw image file or tiff with embedded jpg
+    if (isEmbeddedJpg) {
+        success = loadFromJpgData(fPath, image, offsetThumb, lengthThumb);
+    }
+    // the image type might not have metadata we can read, so load entire image
+    else if (!metadata->hasMetadataFormats.contains(ext)) {
+        success = loadFromEntireFile(fPath, image);
+    }
+    else if (ext == "heic") {
+        success = loadFromHeic(fPath, image);
+    }
+    else if (ext == "tif") {
+        success = loadFromTiff(fPath, image, m);
+    }
+    // all other image files
+    else {
+        success = loadFromEntireFile(fPath, image);
+        image.convertTo(QImage::Format_RGB32);
+    }
+
+    if (success) {
+        if (longSide) {
+            image = image.scaled(thumbMax, Qt::KeepAspectRatio);
+            image.convertTo(QImage::Format_RGB32);
+        }
+        // rotate if there is orientation metadata
+        if (metadata->rotateFormats.contains(ext))
+            applyOrientation(image, m->orientation, m->rotationDegrees);
+
+        // optional colour management (opt-in and gated by the global switch)
+        if (colorManage && G::colorManage && metadata->iccFormats.contains(ext)
+            && !m->iccBuf.isEmpty()) {
+            /* ICC::transform assumes 4 bytes/pixel (TYPE_BGRA_8); convert first so
+               lcms2's packer does not walk past a narrower buffer. */
+            if (image.format() != QImage::Format_ARGB32 &&
+                image.format() != QImage::Format_RGB32) {
+                image = image.convertToFormat(QImage::Format_ARGB32);
+            }
+            ICC::transform(m->iccBuf, image);
+        }
+    }
+    else {
+        // show bad image png
+        QString badPath = ":/images/badImage1.png";
+        loadFromEntireFile(badPath, image);
+        G::issue("Error", "Could not load image.", fun, m->row, fPath);
+    }
+
+    QFile(fPath).setPermissions(oldPermissions);
+    return success;
 }
