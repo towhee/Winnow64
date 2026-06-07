@@ -19,6 +19,7 @@ public:
     enum Action {
         Reset,
         UpdateCounts,
+        UpdateAllCounts,
         UpdateCategory
     } action;
 
@@ -65,6 +66,7 @@ public slots:
     void build(BuildFilters::AfterAction newAction = NoAfterAction);
     void rebuild();
     void update();
+    void updateAllCounts();
     void updateCategory(BuildFilters::Category category,
                         BuildFilters::AfterAction newAction = NoAfterAction);
     void updateZeroCountCheckedItems(QTreeWidgetItem *cat, int dmColumn);
@@ -77,6 +79,7 @@ private:
     void updateUnfilteredCounts();
     void updateFilteredCounts();
     void updateCategoryItems();
+    bool isHiddenRaw(int row);
     void time(QString msg);
     void setIdle();
     void setBusy();

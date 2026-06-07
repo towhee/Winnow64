@@ -278,6 +278,32 @@ void BuildFilters::update()
     else build();
 }
 
+void BuildFilters::updateAllCounts()
+{
+/*
+    Update both the filtered and unfiltered item counts in a separate thread.  Unlike
+    update() (filtered counts only), this also recomputes the unfiltered counts, which
+    is required when the proxy baseline changes without a filter change - for example
+    when combineRawJpg is toggled (raw+jpg pairs collapse/expand) or rows are added or
+    removed.
+*/
+    if (G::isLogger || G::isFlowLogger) {
+        QString msg = "filters->filtersBuilt = " + QVariant(filters->filtersBuilt).toString();
+        G::log("BuildFilters::updateAllCounts", msg);
+    }
+    if (debugBuildFilters)
+        qDebug()
+            << "BuildFilters::updateAllCounts"
+            << "filters->filtersBuilt =" << filters->filtersBuilt
+               ;
+    abortProcessing();
+    if (filters->filtersBuilt) {
+        action = Action::UpdateAllCounts;
+        if (G::allMetadataAttempted) start(NormalPriority);
+    }
+    else build();
+}
+
 void BuildFilters::recount()
 {
 /*
@@ -380,9 +406,22 @@ void BuildFilters::updateUnfilteredSearchCount()
     int rows = dm->rowCount();
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
     }
     filters->updateSearchCategoryCount(map, false /*isFiltered*/);
+}
+
+bool BuildFilters::isHiddenRaw(int row)
+{
+/*
+    When combineRawJpg is true the raw member of a raw+jpg pair is hidden in the proxy
+    (see SortFilter::filterAcceptsRow).  The unfiltered counts must skip these rows so
+    the "unfiltered" totals reflect the combined proxy baseline rather than every row
+    in the DataModel.
+*/
+    return G::combineRawJpg &&
+           dm->index(row, 0).data(G::DupHideRawRole).toBool();
 }
 
 void BuildFilters::updateUnfilteredCounts()
@@ -393,6 +432,9 @@ void BuildFilters::updateUnfilteredCounts()
     unique item counts by calling filters->addFilteredCountPerItem.
 
     This is used when images are deleted from a filtered dataset.
+
+    When combineRawJpg is true the hidden raw member of each raw+jpg pair is skipped
+    (isHiddenRaw) so the unfiltered totals match the proxy baseline.
 */
     if (debugBuildFilters)
     {
@@ -408,6 +450,7 @@ void BuildFilters::updateUnfilteredCounts()
     // count unfiltered
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
     }
     //filters->updateSearchCategoryCount(map, true /*isFiltered*/);
@@ -415,6 +458,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::PickColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->picks);
@@ -422,6 +466,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::RatingColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->ratings);
@@ -429,6 +474,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::LabelColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->labels);
@@ -436,6 +482,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::TypeColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->types);
@@ -443,6 +490,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->folders);
@@ -450,6 +498,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->years);
@@ -457,6 +506,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::DayColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->days);
@@ -464,6 +514,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->models);
@@ -471,6 +522,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::LensColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->lenses);
@@ -478,6 +530,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->focalLengths);
@@ -485,6 +538,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::TitleColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->titles);
@@ -492,6 +546,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::CreatorColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->creators);
@@ -506,6 +561,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::CompareColumn).data().toString().trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->compare);
@@ -513,6 +569,7 @@ void BuildFilters::updateUnfilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
@@ -717,6 +774,7 @@ void BuildFilters::updateCategoryItems()
 
     for (int row = 0; row < dm->rowCount(); row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, col).data().toString()]++;
     }
 
@@ -814,6 +872,7 @@ void BuildFilters::appendUniqueItems()
     // search (special predefined items to always be shown)
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
     }
     filters->updateSearchCategoryCount(map, false /*isFiltered*/);
@@ -824,6 +883,7 @@ void BuildFilters::appendUniqueItems()
     // picks
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::PickColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->picks);
@@ -834,6 +894,7 @@ void BuildFilters::appendUniqueItems()
     // ratings
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::RatingColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->ratings);
@@ -844,6 +905,7 @@ void BuildFilters::appendUniqueItems()
     // labels
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::LabelColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->labels);
@@ -854,6 +916,7 @@ void BuildFilters::appendUniqueItems()
     // file types
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::TypeColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->types);
@@ -864,6 +927,7 @@ void BuildFilters::appendUniqueItems()
     // folders
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->folders);
@@ -874,6 +938,7 @@ void BuildFilters::appendUniqueItems()
     // years
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         QString yr = dm->index(row, G::YearColumn).data().toString().trimmed();
         // if (yr == "") qDebug() << "row" << row << "is blank";
         map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
@@ -886,6 +951,7 @@ void BuildFilters::appendUniqueItems()
     // days
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::DayColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->days);
@@ -896,6 +962,7 @@ void BuildFilters::appendUniqueItems()
     // camera models
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->models);
@@ -906,6 +973,7 @@ void BuildFilters::appendUniqueItems()
     // lenses
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::LensColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->lenses);
@@ -916,6 +984,7 @@ void BuildFilters::appendUniqueItems()
     // focal lengths
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
     }
     filters->addCategoryItems(map, filters->focalLengths);
@@ -926,6 +995,7 @@ void BuildFilters::appendUniqueItems()
     // titles
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::TitleColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->titles);
@@ -936,6 +1006,7 @@ void BuildFilters::appendUniqueItems()
     // creators
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::CreatorColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->creators);
@@ -956,6 +1027,7 @@ void BuildFilters::appendUniqueItems()
     // duplicate found (compare)
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         map[dm->index(row, G::CompareColumn).data().toString().trimmed()]++;
     }
     filters->addCategoryItems(map, filters->compare);
@@ -966,6 +1038,7 @@ void BuildFilters::appendUniqueItems()
     // keywords
     for (int row = 0; row < rows; row++) {
         if (abort) return;
+        if (isHiddenRaw(row)) continue;
         QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
@@ -1017,6 +1090,14 @@ void BuildFilters::run()
         if (!abort) {
             updateFilteredCounts();
             updateUnfilteredSearchCount();
+        }
+        break;
+    // proxy baseline changed (combineRawJpg toggle, rows added/removed)
+    case Action::UpdateAllCounts:
+        if (!abort) {
+            updateUnfilteredCounts();
+            updateUnfilteredSearchCount();
+            updateFilteredCounts();
         }
         break;
     // category item edited
