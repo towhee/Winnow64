@@ -467,8 +467,6 @@ void MW::mergeProjectFiles() {
     files << "/Users/roryhill/Projects/Winnow64/Cache/imagedecoder.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.h";
     files << "/Users/roryhill/Projects/Winnow64/Cache/metaread.cpp";
-    files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.h";
-    files << "/Users/roryhill/Projects/Winnow64/Cache/metareader.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.h";
     files << "/Users/roryhill/Projects/Winnow64/Datamodel/buildfilters.cpp";
     files << "/Users/roryhill/Projects/Winnow64/Datamodel/filters.h";
