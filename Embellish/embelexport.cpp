@@ -404,7 +404,6 @@ bool EmbelExport::exportImage(const QString &fPath)
     msg = exportPath
             + (wasSaved ? " saved" : " failed")
             + " Image width: " + QString::number(image.width());
-    if (G::isRunByExtern) Utilities::log(srcfun, msg);
     if (G::embelLog) G::log(srcFun, msg);
 
 
