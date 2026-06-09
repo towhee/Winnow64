@@ -600,15 +600,12 @@ QString MetaRead::diagnostics()
     kv("instance",                   QString::number(instance));
     kv("dm->instance",               QString::number(dmInst));
     kv("readerCount",                QString::number(readerCount));
-    kv("expansionFactor",            QString::number(expansionFactor));
     kv("sfRowCount",                 QString::number(sfRowCount));
     kv("dmRowCount",                 QString::number(dmRowCount));
     kv("dm->currentSfRow",           QString::number(dm->currentSfRow));
 
     rpt << "\nIcon chunk:\n";
-    kv("defaultIconChunkSize",       QString::number(dm->defaultIconChunkSize));
     kv("iconChunkSize",              QString::number(dm->iconChunkSize));
-    kv("iconLimit",                  QString::number(iconLimit));
     kv("firstVisibleIcon",           QString::number(dm->firstVisibleIcon));
     kv("lastVisibleIcon",            QString::number(dm->lastVisibleIcon));
     kv("visibleIcons",               QString::number(dm->visibleIcons));
@@ -1232,8 +1229,6 @@ void MetaRead::processReturningReader(int id, Reader *r)
     if (isDebug)  // returning reader, row has been processed by reader
     {
         QString ms = msElapsed();
-        // bool allLoaded = (dm->isMetaReadFinished() && dm->allIconChunkLoaded(firstIconRow, lastIconRow));
-        bool allLoaded = (dm->isMetaReadFinished() && dm->isAllIconsLoaded());
         QString fun = "MetaRead::dispatch processed";
         qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -1241,7 +1236,6 @@ void MetaRead::processReturningReader(int id, Reader *r)
             //<< "startRow =" << QString::number(startRow).leftJustified(4, ' ')
             << "row =" << QString::number(dmRow).leftJustified(4, ' ')
             // << "isRunning =" << QVariant(r->isRunning()).toString().leftJustified(5)
-            // << "allLoaded =" << QVariant(allLoaded).toString().leftJustified(5)
             // << "iconChunkLoaded =" << QVariant(dm->isAllIconChunkLoaded(firstIconRow, lastIconRow)).toString().leftJustified(5)
             // //<< "toRead =" << toRead.size()
             // << "rowCount =" << dm->rowCount()

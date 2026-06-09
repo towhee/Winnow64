@@ -185,7 +185,6 @@ DataModel::DataModel(QObject *parent,
     setThumbnailLegend();
 
     iconChunkSize = G::maxIconChunk;
-    defaultIconChunkSize = G::maxIconChunk;
 
     /* Layer 3: poll memory pressure on the GUI thread. The slot early-returns unless
        G::useJitIconCache, so the timer is cheap when the feature is off. */
@@ -362,8 +361,6 @@ void DataModel::clearDataModel()
     folderImageCount.clear();
     // reset firstFolderPathWithImages
     firstFolderPathWithImages = "";
-    // reset iconChunkSize
-    // iconChunkSize = defaultIconChunkSize;
     // reset missing thumb (jpg/tiff)
     folderHasMissingEmbeddedThumb = false;
     // folderQueue is empty
@@ -860,11 +857,6 @@ void DataModel::addFolder(const QString &folderPath)
     if (oldRowCount == 0 && newRowCount > 0) {
         firstFolderPathWithImages = folderPath;
         setCurrent(index(0, 0), instance);
-    }
-
-    // huge image count
-    if (newRowCount > hugeIconThreshold) {
-        iconChunkSize = 100;
     }
 
     // update folder image count
@@ -2640,19 +2632,6 @@ QString DataModel::iconMemoryReport()
     return r;
 }
 
-bool DataModel::isAllIconsLoaded()
-{
-    if (isDebug) qDebug() << "DataModel::allIconsLoaded" << "instance =" << instance;
-    for (int row = 0; row < rowCount(); ++row) {
-        if (itemFromIndex(index(row, 0))->icon().isNull()) {
-            //qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row;
-            return false;
-        }
-    }
-    return true;
-
-}
-
 bool DataModel::isAllIconChunkLoaded(int first, int last)
 {
     if (isDebug)
@@ -2726,7 +2705,6 @@ void DataModel::setIconRange(int sfRow)
 void DataModel::setChunkSize(int chunkSize)
 {
     iconChunkSize = chunkSize;
-    checkChunkSize = chunkSize > rowCount();
     setIconRange(currentSfRow);
 }
 
@@ -2763,7 +2741,6 @@ void DataModel::resolveIconChunkSize()
     if (!G::useJitIconCache) {
         // brute force: cache an icon for every row in the datamodel
         iconChunkSize = rows;
-        checkChunkSize = false;             // iconChunkSize covers all rows
         setIconRange(currentSfRow);
         return;
     }
@@ -2773,7 +2750,6 @@ void DataModel::resolveIconChunkSize()
        window. refineIconChunkSize() revisits this once real icons have loaded. */
     const int budgetIcons = iconBudgetCount();
     iconChunkSize = qMin(rows, qMax(budgetIcons, iconChunkFloor()));
-    checkChunkSize = iconChunkSize < rows;
 
     if (isDebug || G::isLogger)
         G::log("DataModel::resolveIconChunkSize",
@@ -2860,7 +2836,6 @@ void DataModel::refineIconChunkSize()
     if (newChunk <= iconChunkSize) return;      // grow-only
 
     iconChunkSize = newChunk;
-    checkChunkSize = iconChunkSize < rows;
 
     if (isDebug || G::isLogger)
         G::log("DataModel::refineIconChunkSize",
@@ -2924,7 +2899,6 @@ void DataModel::applyIconCachePressure()
             : qMax(iconChunkSize / 2, visiblePage);         // warn: halve
         if (target < iconChunkSize) {
             iconChunkSize = target;
-            checkChunkSize = iconChunkSize < rows;
             setIconRange(currentSfRow);
             clearIconsOutsideChunkRange(instance);          // free memory now
             emit iconChunkResized();                        // re-dispatch within new range
@@ -2952,15 +2926,6 @@ void DataModel::applyIconCachePressure()
             G::log("DataModel::applyIconCachePressure",
                    QString("latch released availMB=%1")
                        .arg(static_cast<qint64>(G::availableMemoryMB)));
-    }
-}
-
-void DataModel::clearAllIcons() // not being used
-{
-    if (isDebug) qDebug() << "DataModel::clearAllIcons" << "instance =" << instance;
-    QMutexLocker locker(&dmMutex);
-    for (int row = 0; row < rowCount(); ++row) {
-        setData(index(row, 0), QVariant(), Qt::DecorationRole);
     }
 }
 
@@ -3729,9 +3694,6 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("startIconRange", dots) << G::s(startIconRange);
     rpt << "\n" << G::sj("endIconRange", dots) << G::s(endIconRange);
     rpt << "\n" << G::sj("iconChunkSize", dots) << Utilities::fitNumber(static_cast<qint64>(iconChunkSize), 14);
-    rpt << "\n" << G::sj("defaultIconChunkSize", dots) << Utilities::fitNumber(static_cast<qint64>(defaultIconChunkSize), 14);
-    rpt << "\n" << G::sj("hugeIconThreshold", dots) << Utilities::fitNumber(static_cast<qint64>(hugeIconThreshold), 14);
-    rpt << "\n" << G::sj("checkChunkSize", dots) << G::s(checkChunkSize);
     rpt << "\n" << G::sj("useJitIconCache", dots) << G::s(G::useJitIconCache);
     rpt << "\n" << G::sj("icon cache mode", dots)
         << (G::useJitIconCache && iconChunkSize < rowCount() ? "JIT window" : "brute force (full)");

@@ -609,7 +609,6 @@ private slots:
     void onMemoryOverrun(quint64 footprintMB, quint64 capMB);
     void updateChange(int sfRow, bool isCurrent = true, QString src = "");
 
-    void updateDefaultIconChunkSize(int size);
     void updateIconRange(QString src = "");
     void reloadIconChunk();             // re-dispatch MetaRead after a JIT chunk resize
     void thumbHasScrolled();
