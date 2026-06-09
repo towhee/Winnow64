@@ -328,37 +328,41 @@ Current Model Row
 Icons
 ------------------------------------------------------------------------------------------
 
-    int  G::maxIconChunk
     bool G::iconChunkLoaded
     bool G::loadOnlyVisibleIcons            // not used
     int  G::maxIconSize = 256;
     int  G::minIconSize = 40;
     int  G::maxIconChunk = 25000;
+    bool G::useJitIconCache                 // false = brute force; true = JIT layers
+    double G::jitIconCacheMemFraction = 0.5 // share of free-remainder for thumbnails
+    std::atomic<qint64> G::imageCacheHeadroomMB  // image cache's remaining claim (MB)
+    int  G::iconPressureTestLevel = -1      // Layer 3 test override (-1/0/1/2/3)
 
-    int  dm->iconChunkSize                  // max suggested icons to cache
-    int  dm->defaultIconChunkSize = 3000    // used unless more required (pref)
-    int  dm->hugeIconThreshold = G::maxIconChunk;
+    int  dm->iconChunkSize                  // icons to cache (brute force = rows; JIT = budget/floor)
     int  dm->firstVisibleIcon;
     int  dm->lastVisibleIcon;
     int  dm->visibleIcons                   // visible icon count, shown views
     int  dm->startIconRange;
     int  dm->endIconRange;
     int  dm->scrollToIcon = 0;
-    bool dm->checkChunkSize                 // true if chunkSize < rowCount()
 
     int  dm->iconCount();
-    void dm->clearAllIcons();
     void dm->clearIconsOutsideChunkRange();
-    bool dm->isAllIconsLoaded();
     bool dm->isAllIconChunkLoaded(int first, int last);
     bool dm->iconLoaded(int sfRow, int instance);
     bool dm->isIconRangeLoaded();
     void dm->setIconRange(int sfRow);
     void dm->setChunkSize(int chunkSize);
+    void dm->resolveIconChunkSize();        // Layer 1: brute force vs JIT window
+    void dm->refineIconChunkSize();         // Layer 2: re-decide with measured footprint
+    void dm->applyIconCachePressure();      // Layer 3: shrink-only pressure valve
+    int  dm->iconBudgetCount();             // icons that fit the memory budget
+    int  dm->iconChunkFloor();              // 3x visible floor (overrides budget)
+    double dm->avgIconMB();
     void dm->setIcon();
 
-    bool MW::updateIconRange(bool sizeChange, QString src);
-    void MW::updateDefaultIconChunkSize(int size);
+    bool MW::updateIconRange(QString src);
+    void MW::reloadIconChunk();             // re-dispatch after a JIT chunk resize
 
     MetaRead:
         firstIconRow = dm->startIconRange;
@@ -375,14 +379,14 @@ Icon Chunk Size
 
     Icons or thumbnails, 256 px on the long side, are stored in the DataModel
     in column 0 under Qt::DecorationRole (the QPixmap); the icon's QRect is
-    kept on the same cell under G::IconRectRole. When a folder is loaded, if
-    there are a very large number of images, Winnow loads the icons in chunks,
-    defined by dm->iconChunkSize. The default is dm->defaultIconChunkSize
-    (3000) and the hard ceiling is G::maxIconChunk (25000). If the number of
-    visible icons is greater than iconChunkSize, then iconChunkSize is
-    increased to accommodate the visible icons. As the user moves through the
-    images, either by selection or scrolling, the icon range is recalculated
-    based on the midVisibleIcon.
+    kept on the same cell under G::IconRectRole. The number of icons to cache is
+    dm->iconChunkSize, set per folder in DataModel::resolveIconChunkSize: in brute
+    force (G::useJitIconCache == false) it equals the row count (all icons); in JIT
+    it is the memory budget (iconBudgetCount), clamped to the row count and to the
+    3x-visible floor (iconChunkFloor). See the "Icon Caching" section below for the
+    full brute-force vs JIT model (Layers 1-3). As the user moves through the images,
+    either by selection or scrolling, the icon range is recalculated based on the
+    midVisibleIcon, and iconChunkSize is held at the floor by MW::updateIconRange.
 
     When the user progresses through the images, the current image is centred
     in the visible views (thumbView, gridView and tableView) using the

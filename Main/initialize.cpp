@@ -318,17 +318,6 @@ void MW::createMetaRead()
 */
     if (G::isLogger) G::log("MW::createMDCache");
 
-    // MetaRead
-    if (isSettings) {
-       if (settings->contains("iconChunkSize")) {
-           dm->defaultIconChunkSize = settings->value("iconChunkSize").toInt();
-           dm->iconChunkSize = dm->defaultIconChunkSize;
-       }
-    }
-    else {
-       settings->setValue("iconChunkSize", dm->defaultIconChunkSize);
-    }
-
     // Runs multiple reader threads to load metadata and thumbnails
     metaRead = new MetaRead(this, dm, metadata, imageCache);
 

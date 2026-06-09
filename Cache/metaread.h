@@ -177,8 +177,6 @@ private:
     int dmRowCount;
     int metaReadCount;
     int metaReadItems;
-    double expansionFactor = 1.2;
-    int iconLimit;                  // iconChunkSize * expansionFactor
     int redoCount = 0;
     int redoMax = 5;
     bool imageCacheTriggered;

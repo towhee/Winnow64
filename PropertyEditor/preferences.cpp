@@ -34,10 +34,6 @@ void Preferences::rory()
     if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
     else setRowHidden(capIdx.row(), capIdx.parent(), true);
 
-    // capIdx = findCaptionIndex("iconChunkSize");
-    // if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
-    // else setRowHidden(capIdx.row(), capIdx.parent(), true);
-
     capIdx = findCaptionIndex("cacheMethod");
     if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
     else setRowHidden(capIdx.row(), capIdx.parent(), true);
@@ -189,11 +185,6 @@ void Preferences::itemChange(QModelIndex idx)
         G::maxIconSize = v.toInt();
     }
 
-    if (source == "iconChunkSize") {
-        mw->updateDefaultIconChunkSize(v.toInt());
-        mw->settings->setValue("iconChunkSize", v.toInt());
-    }
-
     if (source == "imageCacheSize") {
         QString size = v.toString();
 
@@ -206,21 +197,12 @@ void Preferences::itemChange(QModelIndex idx)
         if (isAuto) {
             if (size == "Auto Frugal") {
                 as = ImageCache::AutoStrategy::Frugal;
-                setItemValue("iconChunkSize", 100);
-                mw->updateDefaultIconChunkSize(100);
-                mw->settings->setValue("iconChunkSize", 100);
             }
             else if (size == "Auto Moderate") {
                 as = ImageCache::AutoStrategy::Moderate;
-                setItemValue("iconChunkSize", 25000);
-                mw->updateDefaultIconChunkSize(25000);
-                mw->settings->setValue("iconChunkSize", 25000);
             }
             else if (size == "Auto Greedy") {
                 as = ImageCache::AutoStrategy::Greedy;
-                setItemValue("iconChunkSize", 25000);
-                mw->updateDefaultIconChunkSize(25000);
-                mw->settings->setValue("iconChunkSize", 25000);
             }
             mw->imageCache->setAutoMaxMB(true, as);
             // emit mw->setAutoMaxMB(true, as);
@@ -1117,25 +1099,6 @@ void Preferences::addCache()
     // else
     //     setRowHidden(capIdx.row(), capIdx.parent(), true);
 
-    // Metadata chunk size (number of thumbnails)
-    i.name = "iconChunkSize";
-    i.parentName = "CacheHeader";
-    i.captionText = "Maximum thumbnails to cache";
-    i.tooltip = "Enter the minimum number of thumbnails you want to cache.\n"
-                "For the best performance this should be greater than the\n"
-                "number of images in the folder.\n"
-                "•  1000 thumbnails consumes approximately 18 MB of RAM\n"
-                "•  3000 is the default amount.\n";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = mw->dm->defaultIconChunkSize;
-    i.key = "iconChunkSize";
-    i.delegateType = DT_Spinbox;
-    i.type = "int";
-    i.min = 10;
-    i.max = G::maxIconChunk;
-    i.fixedWidth = 50;
-    addItem(i);
 
     // Image cache maximum size excluding metadata cache
     i.name = "imageCacheSize";

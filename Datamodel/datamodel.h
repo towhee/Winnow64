@@ -88,10 +88,7 @@ public:
     QList<int> failedMetadataRows();    // rows with MetaFailed status (reporting)
     int iconCount();
     QString iconMemoryReport();         // PROBE: per-icon memory footprint (diagnostic)
-    void clearAllIcons();
     void clearIconsOutsideChunkRange(int instance);
-    bool isAllIconsLoaded();
-    // bool isAllIconChunkLoaded(int first, int last);
     bool iconLoaded(int sfRow, int instance);
     bool isIconRangeLoaded();
     void setIconRange(int sfRow);
@@ -178,15 +175,12 @@ public:
     const QStringList raw = {"arw", "cr2", "cr3", "dng","nef", "orf", "raf", "sr2", "rw2"};
     const QStringList jpg = {"jpg", "jpeg"};
 
-    int hugeIconThreshold = G::maxIconChunk;
     int firstVisibleIcon = 0;
     int lastVisibleIcon = 0;
     int visibleIcons = 0;
     int startIconRange;
     int endIconRange;
     int iconChunkSize;                  // max suggested number of icons to cache
-    int defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
-    bool checkChunkSize;                // true if iconChunkSize < rowCount()
     int scrollToIcon = 0;
 
     /* Layer 2 (measured refinement): running footprint of icons actually loaded this

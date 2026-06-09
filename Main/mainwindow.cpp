@@ -2907,20 +2907,6 @@ void MW::nullFiltration()
     isDragDrop = false;
 }
 
-void MW::updateDefaultIconChunkSize(int size)
-{
-/*
-    This is called from preferences when the default icon chunk size is changed. Settings
-    are updated and if the current chunk size is smaller then it is updated.
-*/
-    if (G::isLogger)
-        G::log("MW::updateDefaultIconChunkSize");
-    dm->defaultIconChunkSize = size;
-    dm->iconChunkSize = size;
-    bool isFileSelectionChange = false;
-    // updateChange calls dm->setIconRange, which resets G::iconChunkLoaded
-    updateChange(dm->currentSfRow, isFileSelectionChange, "MW::updateDefaultIconChunkSize");
-}
 
 void MW::updateIconRange(QString src)
 {
@@ -5754,7 +5740,6 @@ void MW::rory()
     else {
         isShowCacheProgressBar = false;
         refreshAfterImageCacheSizeChange();
-        updateDefaultIconChunkSize(G::maxIconChunk);
     }
 
     qDebug() << "MW::rory" << G::isRory;
