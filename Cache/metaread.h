@@ -38,6 +38,15 @@ public:
     QString reportLifetimeCounters();
     void debugRunStatus();
 
+    /* PROBE accessors: most recent scroll-fill cycle (set in dispatchFinished). Exposed so
+       other diagnostics reports (e.g. MW::diagnosticsMemory) can show scroll-fill latency.
+       lastFillMs < 0 means no scroll-fill cycle has completed yet. */
+    qint64  scrollFillMs()           const { return lastFillMs; }
+    int     scrollFillIcons()        const { return lastFillIcons; }
+    int     scrollFillChunk()        const { return lastFillChunk; }
+    int     scrollFillStillMissing() const { return lastFillStillMissing; }
+    QString scrollFillSrc()          const { return lastFillSrc; }
+
     bool isDispatching;
     bool isIdle();
     bool isBusy();
@@ -208,6 +217,22 @@ private:
 
     QElapsedTimer t;
     QElapsedTimer tAbort;
+
+    /* PROBE (diagnostic): scroll-fill latency. cycleTimer is restarted at the top of
+       every setStartRow (scroll, file-selection, insertion, resize) and read in
+       dispatchFinished to report how long it took to fill the icon chunk after the
+       user moved.  cycleIconsMissingAtStart is the count of empty icons in
+       [firstIconRow,lastIconRow] when the cycle began, so we can log icons-loaded and
+       ms-per-icon.  Remove when sizing is done. */
+    QElapsedTimer cycleTimer;
+    int cycleIconsMissingAtStart = 0;
+    int iconsMissingInChunk();      // PROBE helper: empty icons in current chunk range
+    // PROBE: stats from the most recent scroll-fill cycle, surfaced in diagnostics()
+    qint64  lastFillMs = -1;
+    int     lastFillIcons = 0;
+    int     lastFillChunk = 0;
+    int     lastFillStillMissing = 0;
+    QString lastFillSrc;
     QTimer *quitTimer;
     quint32 ms;
 

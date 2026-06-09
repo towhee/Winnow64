@@ -87,6 +87,7 @@ public:
     bool metaReadHadFailure();          // O(1): some row attempted but not loaded
     QList<int> failedMetadataRows();    // rows with MetaFailed status (reporting)
     int iconCount();
+    QString iconMemoryReport();         // PROBE: per-icon memory footprint (diagnostic)
     void clearAllIcons();
     void clearIconsOutsideChunkRange(int instance);
     bool isAllIconsLoaded();
@@ -95,6 +96,13 @@ public:
     bool isIconRangeLoaded();
     void setIconRange(int sfRow);
     void setChunkSize(int chunkSize);
+    void resolveIconChunkSize();        // Layer 1: brute-force small folders, JIT window for large
+    void refineIconChunkSize();         // Layer 2: re-decide using measured per-icon footprint
+    double avgIconMB();                 // measured per-icon footprint, else worst-case estimate
+    int    iconBudgetCount();           // icons that fit the thumbnail memory budget
+    int    iconChunkFloor();            // hard minimum window (3x visible) — overrides budget
+    int    memoryPressureLevel();       // 0 normal / 1 warn / 2 critical, from availableMemoryMB
+    void   applyIconCachePressure();    // Layer 3: shrink-only pressure valve with hysteresis
     bool isPath(QString fPath);
     void rebuildRowFromPathHash();
     int nextPick();
@@ -171,15 +179,37 @@ public:
     const QStringList jpg = {"jpg", "jpeg"};
 
     int hugeIconThreshold = G::maxIconChunk;
-    int firstVisibleIcon;
-    int lastVisibleIcon;
-    int visibleIcons;
+    int firstVisibleIcon = 0;
+    int lastVisibleIcon = 0;
+    int visibleIcons = 0;
     int startIconRange;
     int endIconRange;
     int iconChunkSize;                  // max suggested number of icons to cache
     int defaultIconChunkSize = 3000;    // used unless more is required (change in pref)
     bool checkChunkSize;                // true if iconChunkSize < rowCount()
     int scrollToIcon = 0;
+
+    /* Layer 2 (measured refinement): running footprint of icons actually loaded this
+       folder, accumulated in setIcon1. Used to replace the worst-case per-icon estimate
+       with the real average and (one-shot) promote a JIT folder back to brute force when
+       the true footprint turns out to fit. Reset per folder in resolveIconChunkSize. */
+    std::atomic<qint64> iconBytesSum{0};
+    std::atomic<int>    iconSamples{0};
+    bool iconChunkRefined = false;
+
+    /* Layer 3 (defensive pressure valve): a GUI-thread timer polls memory pressure and,
+       under warn/critical, shrinks the icon window and evicts — never grows. A cooldown
+       plus an available-memory high-water mark (hysteresis) gate when the latch relaxes,
+       so the cache can't thrash between shrink and re-grow. Only active when
+       G::useJitIconCache. See applyIconCachePressure. */
+    QTimer *iconPressureTimer = nullptr;
+    QElapsedTimer iconPressureClock;
+    qint64 iconPressureCooldownUntil = 0;   // ms on iconPressureClock; latch held until then
+    bool iconCachePressureLatched = false;  // true while pressure-reduced (blocks growth)
+    int  iconPressureLevel = 0;             // last observed level (diagnostics)
+    static constexpr int kIconPressurePollMs   = 1000;   // poll cadence
+    static constexpr int kIconPressureCooldownMs = 60000; // hold latch ≥60s after pressure
+    static constexpr int kIconPressureClearMB  = 2048;   // high-water to relax latch
 
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
@@ -214,6 +244,12 @@ signals:
     void rowLoaded();
     void updateStatus(bool keepBase, QString s, QString source);
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
+
+    /* Emitted when the icon chunk is resized outside the normal scroll/selection flow
+       (Layer 2 refineIconChunkSize, Layer 3 applyIconCachePressure). Wired to
+       MW::reloadIconChunk so MetaRead re-dispatches and (re)loads the newly in-range
+       icons; without it the window grows/shrinks but the new rows wait for a scroll. */
+    void iconChunkResized();
 
     /* Emitted when any DataModel hot path observes the process footprint
        exceeding G::memoryAbortMB. Wired to MW::onMemoryOverrun in

@@ -1049,6 +1049,12 @@ void ImageCache::memChk()
 
     maxMBCeiling = std::max<qint64>(G::availableMemoryMB, minMB) * memThrottle;
 
+    /* Publish the memory the image cache still intends to claim (ceiling minus what it
+       already holds) so DataModel's thumbnail budget can avoid double-counting it. */
+    G::imageCacheHeadroomMB.store(
+        std::max<qint64>(0, maxMBCeiling - static_cast<qint64>(icd->sizeMB())),
+        std::memory_order_relaxed);
+
     /*
     Mac::availableMemory();
     qDebug() << "imageCache::memCheck"

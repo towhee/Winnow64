@@ -611,6 +611,7 @@ private slots:
 
     void updateDefaultIconChunkSize(int size);
     void updateIconRange(QString src = "");
+    void reloadIconChunk();             // re-dispatch MetaRead after a JIT chunk resize
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();

@@ -187,6 +187,14 @@ DataModel::DataModel(QObject *parent,
     iconChunkSize = G::maxIconChunk;
     defaultIconChunkSize = G::maxIconChunk;
 
+    /* Layer 3: poll memory pressure on the GUI thread. The slot early-returns unless
+       G::useJitIconCache, so the timer is cheap when the feature is off. */
+    iconPressureClock.start();
+    iconPressureTimer = new QTimer(this);
+    iconPressureTimer->setInterval(kIconPressurePollMs);
+    connect(iconPressureTimer, &QTimer::timeout, this, &DataModel::applyIconCachePressure);
+    iconPressureTimer->start();
+
     abort = false;
 
     // set true for debug output
@@ -991,7 +999,7 @@ bool DataModel::endLoad(bool success)
     loadingModel = false;
     sf->suspend(false);
     if (success) {
-        checkChunkSize = iconChunkSize > rowCount();
+        resolveIconChunkSize();
         return true;
     }
     else {
@@ -2526,6 +2534,15 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     setData(index(dmRow, G::MetadataReadingColumn), false);
     setData(index(dmRow, G::IconAspectRatioColumn), (qreal)im.width()/im.height());
     updateIconChunkLoaded();
+
+    /* Layer 2 (measured refinement): accumulate the real per-icon footprint. Once enough
+       icons have loaded, recompute the budget with the true average and (one-shot) grow /
+       promote a JIT folder when the measured footprint turns out to fit. */
+    iconBytesSum.fetch_add(im.sizeInBytes(), std::memory_order_relaxed);
+    const int n = iconSamples.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (G::useJitIconCache && !iconChunkRefined && !iconCachePressureLatched
+        && n >= 200 && iconChunkSize < rowCount())
+        refineIconChunkSize();
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)
@@ -2563,6 +2580,64 @@ int DataModel::iconCount()
         if (!itemFromIndex(index(row, 0))->icon().isNull()) count++;
     }
     return count;
+}
+
+QString DataModel::iconMemoryReport()
+{
+/*
+    PROBE (diagnostic): measures the real per-icon memory footprint of the thumbnails
+    currently held in the DataModel (DecorationRole).  Icons are stored as
+    QIcon(QPixmap::fromImage(im)) where im is scaled to G::maxIconSize (256) on the long
+    edge in Reader::readIcon.  QPixmap is 32-bit, so bytes = w * h * 4.
+
+    Reports actual loaded icons, total/avg footprint, the dimension spread, and a
+    projection to a fully-populated model so the brute-force vs just-in-time trade-off
+    can be sized.  Call on the GUI thread (e.g. MW::folderChangeCompleted).
+*/
+    QMutexLocker locker(&dmMutex);
+
+    const int rows = rowCount();
+    int loaded = 0;
+    qint64 totalBytes = 0;
+    int minW = 0, minH = 0, maxW = 0, maxH = 0;
+    qint64 sumW = 0, sumH = 0;
+
+    for (int row = 0; row < rows; ++row) {
+        QIcon ic = itemFromIndex(index(row, 0))->icon();
+        if (ic.isNull()) continue;
+        const QList<QSize> sizes = ic.availableSizes();
+        if (sizes.isEmpty()) continue;
+        const QSize s = sizes.first();
+        totalBytes += qint64(s.width()) * s.height() * 4;   // QPixmap ARGB32
+        if (loaded == 0) { minW = maxW = s.width(); minH = maxH = s.height(); }
+        else {
+            minW = qMin(minW, s.width());  minH = qMin(minH, s.height());
+            maxW = qMax(maxW, s.width());  maxH = qMax(maxH, s.height());
+        }
+        ++loaded;
+        sumW += s.width();             sumH += s.height();
+    }
+
+    const double totalMB = totalBytes / (1024.0 * 1024.0);
+    const double avgKB   = loaded ? totalBytes / 1024.0 / loaded : 0.0;
+    const double projMB  = loaded ? totalMB / loaded * rows : 0.0;   // full model
+
+    QString r;
+    QTextStream s(&r);
+    s << "DataModel::iconMemoryReport  PROBE"
+      << "\n    G::maxIconSize (long edge) = " << G::maxIconSize
+      << "\n    rows in model              = " << rows
+      << "\n    icons loaded               = " << loaded
+      << "\n    total footprint            = " << QString::number(totalMB, 'f', 1) << " MB"
+      << "\n    avg per icon               = " << QString::number(avgKB, 'f', 1) << " KB"
+      << "\n    dims (WxH) min/avg/max     = "
+      << minW << "x" << minH << "  /  "
+      << (loaded ? int(sumW / loaded) : 0) << "x" << (loaded ? int(sumH / loaded) : 0) << "  /  "
+      << maxW << "x" << maxH
+      << "\n    projected full model       = " << QString::number(projMB, 'f', 1)
+      << " MB (" << rows << " icons)";
+    qDebug().noquote() << r;
+    return r;
 }
 
 bool DataModel::isAllIconsLoaded()
@@ -2653,6 +2728,231 @@ void DataModel::setChunkSize(int chunkSize)
     iconChunkSize = chunkSize;
     checkChunkSize = chunkSize > rowCount();
     setIconRange(currentSfRow);
+}
+
+void DataModel::resolveIconChunkSize()
+/*
+    Decide the icon-cache strategy for the just-loaded folder.
+
+    When G::useJitIconCache is false (default), behaviour is brute force: iconChunkSize is
+    set to cover every row, so the whole folder is cached.
+
+    When G::useJitIconCache is true (Layer 1), the folder degrades to just-in-time caching
+    only when it needs to. iconBudgetCount() returns how many icons fit the thumbnail memory
+    budget (free memory after a safety reserve and the image cache's claim). If the whole
+    folder fits, it is cached fully (still brute force for small folders); otherwise
+    iconChunkSize is clamped to the budget, turning it into a bounded sliding window. The
+    existing machinery (setIconRange, MetaRead::needToRead, clearIconsOutsideChunkRange) does
+    the rest, since they all key off iconChunkSize < rowCount().
+
+    At endLoad no icons are loaded yet, so the budget uses a worst-case per-icon estimate;
+    refineIconChunkSize() (Layer 2) revisits the decision once real icons have loaded.
+
+    Called from endLoad on the GUI thread after a folder has loaded.
+*/
+{
+    const int rows = rowCount();
+
+    // new folder: reset the measured-footprint accumulators (Layer 2)
+    iconBytesSum.store(0, std::memory_order_relaxed);
+    iconSamples.store(0, std::memory_order_relaxed);
+    iconChunkRefined = false;
+
+    if (rows == 0) return;
+
+    if (!G::useJitIconCache) {
+        // brute force: cache an icon for every row in the datamodel
+        iconChunkSize = rows;
+        checkChunkSize = false;             // iconChunkSize covers all rows
+        setIconRange(currentSfRow);
+        return;
+    }
+
+    /* JIT (Layer 1): no icons are loaded yet at endLoad, so iconBudgetCount() uses the
+       worst-case per-icon estimate. Small folder -> full populate; large -> bounded
+       window. refineIconChunkSize() revisits this once real icons have loaded. */
+    const int budgetIcons = iconBudgetCount();
+    iconChunkSize = qMin(rows, qMax(budgetIcons, iconChunkFloor()));
+    checkChunkSize = iconChunkSize < rows;
+
+    if (isDebug || G::isLogger)
+        G::log("DataModel::resolveIconChunkSize",
+               QString("rows=%1 budgetIcons=%2 iconChunkSize=%3 mode=%4")
+                   .arg(rows).arg(budgetIcons).arg(iconChunkSize)
+                   .arg(iconChunkSize < rows ? "JIT window" : "full"));
+
+    setIconRange(currentSfRow);
+}
+
+double DataModel::avgIconMB()
+/*
+    Per-icon thumbnail footprint in MB. Returns the measured running average once icons
+    have actually loaded (Layer 2), otherwise a conservative worst-case estimate: a square
+    icon at the long edge, 4 bytes/px (QPixmap ARGB32). Real thumbnails are smaller
+    (KeepAspectRatio), so starting worst-case biases the initial decision toward JIT (safe).
+*/
+{
+    const int n = iconSamples.load(std::memory_order_relaxed);
+    if (n > 0)
+        return double(iconBytesSum.load(std::memory_order_relaxed)) / n / (1024.0 * 1024.0);
+    return double(G::maxIconSize) * G::maxIconSize * 4 / (1024.0 * 1024.0);
+}
+
+int DataModel::iconBudgetCount()
+/*
+    Number of icons that fit the thumbnail memory budget, coordinating with the image cache.
+
+    The budget is the free memory remaining after (a) a safety reserve so OS memory pressure
+    never fires and (b) the image cache's own remaining claim (G::imageCacheHeadroomMB),
+    plus what thumbnails already hold (since those bytes are part of the thumbnail total, and
+    are already reflected in the lower available figure). A jitIconCacheMemFraction share of
+    that remainder is allocated to thumbnails.
+
+    G::availableMemoryMB is a periodically-refreshed atomic (status bar, ImageCache); the
+    last-known value is read here rather than forcing a platform refresh (keeps DataModel
+    free of mac.h/win.h).
+*/
+{
+    const double perIconMB = avgIconMB();
+    if (perIconMB <= 0) return rowCount();
+
+    const qint64 availMB   = static_cast<qint64>(G::availableMemoryMB);
+    const qint64 reserveMB = qMax<qint64>(1024, qint64(availMB * 0.10));
+    const qint64 imgHeadMB = G::imageCacheHeadroomMB.load(std::memory_order_relaxed);
+    const qint64 heldMB    = qint64(iconBytesSum.load(std::memory_order_relaxed)
+                                    / (1024.0 * 1024.0));
+
+    qint64 remainderMB = qMax<qint64>(0, availMB - reserveMB - imgHeadMB) + heldMB;
+    qint64 budgetMB    = qMax<qint64>(128, qint64(remainderMB * G::jitIconCacheMemFraction));
+
+    return int(budgetMB / perIconMB);
+}
+
+int DataModel::iconChunkFloor()
+/*
+    Hard minimum icon window: 3x the current visible icons (a page each side of the visible
+    page) so scrolling is always smooth, with an absolute floor of 256. This OVERRIDES the
+    memory budget (iconBudgetCount) — when the image cache has claimed most of memory and the
+    budget would otherwise fall below this, the floor wins and the thumbnails take the memory
+    they need. The image cache self-throttles in turn, because its own ceiling (memChk) is
+    derived from G::availableMemoryMB, which drops as the thumbnails are held. visibleIcons is
+    the span across the currently visible views, maintained by MW::updateIconRange.
+*/
+{
+    return qMax(256, 3 * visibleIcons);
+}
+
+void DataModel::refineIconChunkSize()
+/*
+    Layer 2: once enough real icons have loaded, recompute the budget with the measured
+    per-icon average (avgIconMB) and grow the window — or promote a JIT folder back to full
+    brute force — when the true footprint turns out to fit. One-shot per folder, and grow-only:
+    shrinking on measured data would be reacting to memory, which is Layer 3 (not implemented).
+    Called from setIcon1 on the GUI thread.
+*/
+{
+    iconChunkRefined = true;
+    const int rows = rowCount();
+    if (rows == 0) return;
+
+    const int budgetIcons = iconBudgetCount();
+    const int newChunk = qMin(rows, qMax(budgetIcons, iconChunkFloor()));
+    if (newChunk <= iconChunkSize) return;      // grow-only
+
+    iconChunkSize = newChunk;
+    checkChunkSize = iconChunkSize < rows;
+
+    if (isDebug || G::isLogger)
+        G::log("DataModel::refineIconChunkSize",
+               QString("rows=%1 avgKB=%2 budgetIcons=%3 iconChunkSize=%4 mode=%5")
+                   .arg(rows).arg(avgIconMB() * 1024, 0, 'f', 1)
+                   .arg(budgetIcons).arg(iconChunkSize)
+                   .arg(iconChunkSize < rows ? "JIT window" : "full"));
+
+    setIconRange(currentSfRow);
+    emit iconChunkResized();            // re-dispatch MetaRead to fill the grown window
+}
+
+int DataModel::memoryPressureLevel()
+/*
+    Cross-platform pressure level derived from G::availableMemoryMB (refreshed periodically
+    by the status bar / ImageCache). 2 = critical, 1 = warn, 0 = normal. Thresholds mirror
+    Mac::memoryPressureLevel so behaviour is consistent; reading the published atomic keeps
+    DataModel free of mac.h/win.h and uniform across platforms.
+*/
+{
+    // test override: force a level so Layer 3 can be validated deterministically.
+    // 3 ("normal but not recovered") reports level 0 here; the release path's roomy
+    // check (applyIconCachePressure) reads the override directly to hold the latch.
+    if (G::iconPressureTestLevel >= 0)
+        return G::iconPressureTestLevel >= 3 ? 0 : qBound(0, G::iconPressureTestLevel, 2);
+
+    const qint64 availMB = static_cast<qint64>(G::availableMemoryMB);
+    if (availMB <= 256)  return 2;
+    if (availMB <= 1024) return 1;
+    return 0;
+}
+
+void DataModel::applyIconCachePressure()
+/*
+    Layer 3: defensive, shrink-only response to memory pressure, with hysteresis.
+
+    Under warn the icon window is halved; under critical it is clamped to the visible page
+    and icons outside it are evicted immediately. The valve never grows the window — that is
+    the job of Layer 1 (load-time budget) and Layer 2 (measured refinement). A latch is held
+    for at least kIconPressureCooldownMs and not released until available memory recovers past
+    kIconPressureClearMB, so the cache cannot oscillate between shrink and re-grow.
+
+    Runs on the GUI thread (QTimer), so mutating iconChunkSize / setIconRange / evicting is
+    safe. No-op unless G::useJitIconCache (brute force is the user's explicit "cache all").
+*/
+{
+    if (!G::useJitIconCache) return;
+    if (loadingModel || G::stop) return;        // don't mutate the model mid-load
+
+    const int rows = rowCount();
+    if (rows == 0) return;
+
+    const int level = memoryPressureLevel();
+    iconPressureLevel = level;
+    const qint64 nowMs = iconPressureClock.elapsed();
+
+    if (level >= 1) {
+        const int visiblePage = qMax(visibleIcons, 64);
+        const int target = (level == 2)
+            ? visiblePage                                   // critical: visible page only
+            : qMax(iconChunkSize / 2, visiblePage);         // warn: halve
+        if (target < iconChunkSize) {
+            iconChunkSize = target;
+            checkChunkSize = iconChunkSize < rows;
+            setIconRange(currentSfRow);
+            clearIconsOutsideChunkRange(instance);          // free memory now
+            emit iconChunkResized();                        // re-dispatch within new range
+            if (isDebug || G::isLogger)
+                G::log("DataModel::applyIconCachePressure",
+                       QString("level=%1 shrank iconChunkSize=%2 availMB=%3")
+                           .arg(level).arg(iconChunkSize)
+                           .arg(static_cast<qint64>(G::availableMemoryMB)));
+        }
+        iconCachePressureLatched = true;
+        iconPressureCooldownUntil = nowMs + kIconPressureCooldownMs;
+        return;
+    }
+
+    // level == 0: relax the latch only after cooldown AND memory has recovered (hysteresis).
+    // Relaxing does not re-grow the window; Layer 1/2 do that on the next folder load.
+    // The "recovered" gate honors the test override: only level 0 counts as recovered
+    // (level 3 reports 0 here but holds the latch via roomy == false).
+    const bool roomy = (G::iconPressureTestLevel >= 0)
+        ? (G::iconPressureTestLevel == 0)
+        : (static_cast<qint64>(G::availableMemoryMB) > kIconPressureClearMB);
+    if (iconCachePressureLatched && nowMs >= iconPressureCooldownUntil && roomy) {
+        iconCachePressureLatched = false;
+        if (isDebug || G::isLogger)
+            G::log("DataModel::applyIconCachePressure",
+                   QString("latch released availMB=%1")
+                       .arg(static_cast<qint64>(G::availableMemoryMB)));
+    }
 }
 
 void DataModel::clearAllIcons() // not being used
@@ -3432,6 +3732,54 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("defaultIconChunkSize", dots) << Utilities::fitNumber(static_cast<qint64>(defaultIconChunkSize), 14);
     rpt << "\n" << G::sj("hugeIconThreshold", dots) << Utilities::fitNumber(static_cast<qint64>(hugeIconThreshold), 14);
     rpt << "\n" << G::sj("checkChunkSize", dots) << G::s(checkChunkSize);
+    rpt << "\n" << G::sj("useJitIconCache", dots) << G::s(G::useJitIconCache);
+    rpt << "\n" << G::sj("icon cache mode", dots)
+        << (G::useJitIconCache && iconChunkSize < rowCount() ? "JIT window" : "brute force (full)");
+    rpt << "\n" << G::sj("icon avg footprint", dots)
+        << QString::number(avgIconMB() * 1024, 'f', 1) << " KB"
+        << (iconSamples.load() > 0
+            ? QString(" (measured, n=%1)").arg(iconSamples.load())
+            : QString(" (worst-case estimate)"));
+    rpt << "\n" << G::sj("icon budget (icons)", dots)
+        << Utilities::fitNumber(static_cast<qint64>(iconBudgetCount()), 14);
+    rpt << "\n" << G::sj("icon chunk floor (3x vis)", dots)
+        << Utilities::fitNumber(static_cast<qint64>(iconChunkFloor()), 14);
+    rpt << "\n" << G::sj("imageCacheHeadroomMB", dots)
+        << Utilities::fitNumber(G::imageCacheHeadroomMB.load(), 14);
+    rpt << "\n" << G::sj("iconChunkRefined", dots) << G::s(iconChunkRefined);
+    {
+        const int lvl = memoryPressureLevel();
+        rpt << "\n" << G::sj("memoryPressureLevel", dots)
+            << QString(lvl == 2 ? "2 critical" : lvl == 1 ? "1 warn" : "0 normal")
+            << (G::iconPressureTestLevel >= 0
+                ? QString(" (test override=%1%2)").arg(G::iconPressureTestLevel)
+                      .arg(G::iconPressureTestLevel == 3 ? " not-recovered" : "")
+                : "");
+    }
+    rpt << "\n" << G::sj("iconCachePressureLatched", dots) << G::s(iconCachePressureLatched);
+    /* List the rows with a loaded icon as compressed ranges, e.g. "5-22, 80-201".
+       Scan the entire (unfiltered) DataModel via the source rows. */
+    {
+        QString ranges;
+        int runStart = -1;
+        const int nRows = rowCount();
+        for (int row = 0; row <= nRows; ++row) {
+            const bool loaded = row < nRows
+                && !itemFromIndex(index(row, 0))->icon().isNull();
+            if (loaded && runStart < 0) {
+                runStart = row;                 // start of a new run
+            }
+            else if (!loaded && runStart >= 0) {
+                if (!ranges.isEmpty()) ranges += ", ";
+                ranges += (row - 1 == runStart)
+                    ? QString::number(runStart)
+                    : QString("%1-%2").arg(runStart).arg(row - 1);
+                runStart = -1;                  // end of the run
+            }
+        }
+        if (ranges.isEmpty()) ranges = "(none)";
+        rpt << "\n" << G::sj("icon loaded", dots) << ranges;
+    }
     rpt << "\n" << G::sj("scrollToIcon", dots) << G::s(scrollToIcon);
     rpt << "\n" << G::sj("iconSymbolRects.size", dots) << G::s(iconSymbolRects.size());
     rpt << "\n";

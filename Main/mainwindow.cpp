@@ -2975,19 +2975,24 @@ void MW::updateIconRange(QString src)
     int midVisible = firstVisible + (firstVisible + lastVisible) / 2;
     int visibleIcons = lastVisible - firstVisible + 1;
 
-    // chunk size
-    if (dm->iconChunkSize < visibleIcons) {
-        dm->setChunkSize(visibleIcons);
+    // publish visibleIcons first so dm->iconChunkFloor() sees the current value
+    dm->firstVisibleIcon = firstVisible;
+    dm->lastVisibleIcon = lastVisible;
+    dm->visibleIcons = visibleIcons;
+
+    /* chunk size: in JIT, hold at least the 3x-visible floor (overrides the memory budget,
+       so switching to a denser view e.g. Grid re-applies it); in brute force, just ensure
+       the visible page fits (iconChunkSize == rowCount, so this never fires). */
+    int minChunk = G::useJitIconCache
+        ? qMin(dm->sf->rowCount(), dm->iconChunkFloor())
+        : visibleIcons;
+    if (dm->iconChunkSize < minChunk) {
+        dm->setChunkSize(minChunk);
         chunkSizeChanged = true;
     }
 
     // Set icon range and G::iconChunkLoaded
     dm->setIconRange(dm->currentSfRow);
-
-    // Update datamodel visible icons for reporting
-    dm->firstVisibleIcon = firstVisible;
-    dm->lastVisibleIcon = lastVisible;
-    dm->visibleIcons = visibleIcons;
 
     // update icons cached only when the icon or viewport size changes
     if (chunkSizeChanged) {
@@ -3018,6 +3023,23 @@ void MW::updateIconRange(QString src)
 
 
     return;
+}
+
+void MW::reloadIconChunk()
+{
+/*
+    Signalled by DataModel::iconChunkResized when the icon chunk is resized outside the
+    normal scroll/selection flow (Layer 2 refineIconChunkSize, Layer 3
+    applyIconCachePressure). The range was already updated by setIconRange; here we just
+    re-dispatch MetaRead at the current row so the newly in-range icons (re)load.
+*/
+    if (G::isLogger) G::log("MW::reloadIconChunk");
+    if (G::isInitializing || !G::useReadMeta) return;
+    QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
+                              Q_ARG(int, dm->currentSfRow),
+                              Q_ARG(bool, false),
+                              Q_ARG(QString, QString("MW::reloadIconChunk"))
+                              );
 }
 
 void MW::folderChanged(bool aborted)
@@ -3220,6 +3242,9 @@ void MW::folderChangeCompleted()
         G::log("MW::folderChangeCompleted", msg);
     }
     QString fun = "MW::folderChangeCompleted";
+
+    // PROBE: per-icon thumbnail memory footprint (diagnostic; remove when sizing done)
+    dm->iconMemoryReport();
 
     QMetaObject::invokeMethod(imageCache, "updateInstance", Qt::QueuedConnection);
 

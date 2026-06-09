@@ -62,6 +62,8 @@ private slots:
     void on_helpBtn_clicked();
     void on_deltaThresholdToolBtn_clicked();
     void on_clrFoldersBtn_clicked();
+    void on_addIncludeBtn_clicked();
+    void on_addExcludeBtn_clicked();
     void on_toggleTvHideChecked_clicked();
     void buildBList();
     void on_tv_doubleClicked(const QModelIndex &index);
@@ -121,6 +123,8 @@ private:
     QPixmap pB;
 
     QStandardItemModel model;
+    QStringList chooseFolders(const QString &title);
+    void addFolders(DragToList *list, const QString &title);
     void getPreview(QString fPath, QImage &image, QString source);
     void showPreview(QString path, QImage image, QString source);
     void fit(QPixmap &pm, QLabel *label);

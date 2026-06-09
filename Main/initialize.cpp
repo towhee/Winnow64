@@ -271,6 +271,7 @@ void MW::createDataModel()
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
     connect(dm, &DataModel::updateProgress, filters, &Filters::updateProgress);
     connect(dm, &DataModel::refreshViewsOnCacheChange, this, &MW::refreshViewsOnCacheChange);
+    connect(dm, &DataModel::iconChunkResized, this, &MW::reloadIconChunk);
 
     connect(metadata, &Metadata::updateSidecarStatus, this, &MW::updateSidecarStatus);
 

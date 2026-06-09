@@ -603,6 +603,67 @@ void FindDuplicatesDlg::on_clrFoldersBtn_clicked()
     clear();
 }
 
+QStringList FindDuplicatesDlg::chooseFolders(const QString &title)
+{
+/*
+    Opens a folder chooser that allows the user to select one or more folders. The
+    native macOS and Windows directory pickers only permit a single selection, so the
+    Qt dialog is used with DontUseNativeDialog and multi-selection enabled on its
+    internal item views.
+*/
+    QFileDialog dlg(this, title);
+    dlg.setFileMode(QFileDialog::Directory);
+    dlg.setOption(QFileDialog::ShowDirsOnly, true);
+    dlg.setOption(QFileDialog::DontResolveSymlinks, true);
+    dlg.setOption(QFileDialog::DontUseNativeDialog, true);
+
+    /* enable multiple folder selection on the dialog's internal views */
+    if (QListView *listView = dlg.findChild<QListView*>("listView")) {
+        listView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    }
+    if (QTreeView *treeView = dlg.findChild<QTreeView*>("treeView")) {
+        treeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    }
+
+    QStringList folders;
+    if (dlg.exec() == QDialog::Accepted) {
+        folders = dlg.selectedFiles();
+    }
+    return folders;
+}
+
+void FindDuplicatesDlg::addFolders(DragToList *list, const QString &title)
+{
+/*
+    Prompts the user to select one or more folders and appends any that are not already
+    present to the supplied target folder list (include or exclude).
+*/
+    QStringList folders = chooseFolders(title);
+    if (folders.isEmpty()) return;
+    foreach (const QString &folder, folders) {
+        if (list->findItems(folder, Qt::MatchExactly).isEmpty()) {
+            list->addItem(folder);
+        }
+    }
+    clear();
+}
+
+void FindDuplicatesDlg::on_addIncludeBtn_clicked()
+{
+/*
+    Adds one or more folders to the list of target folders to search for duplicates.
+*/
+    addFolders(ui->includeSubfolders, tr("Select folder(s) to include"));
+}
+
+void FindDuplicatesDlg::on_addExcludeBtn_clicked()
+{
+/*
+    Adds one or more folders to the list of folders to exclude from the duplicate search.
+*/
+    addFolders(ui->excludeSubfolders, tr("Select folder(s) to exclude"));
+}
+
 void FindDuplicatesDlg::getMetadataBItems()
 {
 /*
