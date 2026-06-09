@@ -603,28 +603,116 @@ Icon Caching
         1. dm->itemFromIndex(dmIdx)->icon().isNull()      // used up to 2023
         2. dmIdx.data(Qt::DecorationRole).isNull()        // switched to in 2023
 
-    • The default limit of icons to load is dm->defaultIconChunkSize, which is set in
-      preferences. dm->iconChunkSize (the variable used to manage the actual number of
-      icons loaded) is initially set to dm->defaultIconChunkSize.
+    • The number of icons to cache is governed by dm->iconChunkSize. How it is set is
+      decided per folder in DataModel::resolveIconChunkSize (called from endLoad) and
+      depends on the G::useJitIconCache flag.
 
-    • If the number of images in the folder(s) is less than
-      dm->defaultIconChunkSize, then all rows in the DataModel are loaded with
-      an icon.
+    Brute force (G::useJitIconCache == false, the default)
 
-    • When there are more DataModel rows than dm->defaultIconChunkSize, only the default
-      amount of icons are loaded. As the user moves through the DataSet, icons are removed
-      and added.
+        • dm->iconChunkSize is set to the DataModel row count, so every icon is cached
+          regardless of folder size. Simplest behaviour; preferred for typical folders.
+          (The G::memoryOverrunFlag bail in DataModel::setIcon1 remains the crash backstop.)
 
-    • When there are more thumbnails (icons) visible in either thumbView, gridView or
-      tableView than dm->defaultIconChunkSize, then dm->iconChunkSize is adjusted to the
-      largest number in MW::updateIconRange.
+    Just-in-time, JIT (G::useJitIconCache == true)
 
-    • When the app is resized or the thumbnails are resized, the number
-      visible may change and dm->iconChunkSize is adjusted in
-      MW::updateIconRange.
+        • A folder is cached fully only when its projected thumbnail footprint fits a memory
+          budget; otherwise dm->iconChunkSize is clamped to a bounded sliding window and the
+          existing machinery (setIconRange, MetaRead::needToRead, clearIconsOutsideChunkRange)
+          loads and evicts icons as the user moves. JIT has three layers:
+
+        Layer 1 - predictive budget (resolveIconChunkSize / iconBudgetCount)
+            At folder load the per-icon footprint is estimated (worst case 256x256x4 bytes)
+            and compared to a budget = free memory after a safety reserve and the image
+            cache's own remaining claim (G::imageCacheHeadroomMB, published by
+            ImageCache::memChk), times G::jitIconCacheMemFraction. Fits -> full; else ->
+            bounded window. iconChunkSize is then clamped to the row count and to a hard
+            floor (iconChunkFloor): max(256, 3 x visibleIcons). The floor OVERRIDES the
+            budget — if the image cache has claimed most of memory and the budget would fall
+            below 3x the visible icons, the floor wins and the thumbnails take the memory
+            they need; the image cache self-throttles because its own ceiling is derived
+            from G::availableMemoryMB, which drops as the thumbnails are held. The floor is
+            re-applied by MW::updateIconRange whenever the visible count changes (e.g.
+            switching to the denser Grid view). Note: sizing is purely budget + floor; there
+            is no separate "visible x 3" target beyond this floor.
+
+        Layer 2 - measured refinement (refineIconChunkSize)
+            As real icons load, DataModel::setIcon1 accumulates their true size. After ~200
+            icons the budget is recomputed with the measured average and the window may grow,
+            or be promoted back to full, when thumbnails turn out smaller than the worst-case
+            estimate. Grow-only and one-shot per folder.
+
+        Layer 3 - defensive pressure valve (applyIconCachePressure)
+            A 1 s GUI-thread timer watches memory pressure (DataModel::memoryPressureLevel,
+            derived from G::availableMemoryMB). On warn it halves the window; on critical it
+            clamps to the visible page and evicts. It never grows. A 60 s cooldown plus a
+            2 GB available-memory high-water mark (hysteresis) gate when the latch releases,
+            so the cache cannot thrash between shrink and re-grow. Releasing does not re-grow;
+            Layer 1/2 re-decide on the next folder load. Brute force is not touched by the
+            valve.
+
+    • Independent of the above, MW::updateIconRange still grows dm->iconChunkSize to at least
+      the number of visible icons when more thumbnails are visible (in thumbView, gridView or
+      tableView) than the current chunk, e.g. after an app or thumbnail resize.
 
     • When dm->iconChunkSize changes or there is a scroll event, the metadata cache read
-      process must be rerun to update the icons.
+      process is rerun to update the icons.
+
+------------------------------------------------------------------------------------------
+How to Test Icon Caching
+------------------------------------------------------------------------------------------
+
+    Flags (Main/global.cpp) — flip at runtime via the debugger or a temporary code change:
+
+      G::useJitIconCache          false = brute force (cache all); true = JIT layers active.
+      G::jitIconCacheMemFraction  share of the free-memory remainder budgeted for thumbnails
+                                  (default 0.5).
+      G::iconPressureTestLevel    forces the Layer 3 pressure level for deterministic testing
+                                  (see values below).
+
+    Diagnostics — Help > diagnostics. The DataModel report shows the live state:
+      iconChunkSize, icon cache mode (JIT window / brute force), icon loaded (row ranges),
+      icon avg footprint (measured vs worst-case), icon budget (icons),
+      icon chunk floor (3x vis), imageCacheHeadroomMB, iconChunkRefined, memoryPressureLevel,
+      iconCachePressureLatched.
+      The Memory report adds per-icon footprint, thumb decode avg and scroll-fill (last).
+
+    Status indicator — the metadata thread "circle" (MW::updateMetadataThreadRunStatus)
+    is colour-coded on success so the active icon-cache mode is visible at a glance:
+      red     metadata thread running
+      green   idle, brute force (G::useJitIconCache == false)
+      blue    idle, JIT caching active (G::useJitIconCache == true)
+      orange  idle, forced pressure (G::iconPressureTestLevel >= 2)  [precedence: orange > blue]
+      yellow  idle, load failed
+
+    Brute force
+      • Set G::useJitIconCache = false and load any folder. Confirm "icon loaded" spans
+        every row and "icon cache mode" = brute force (full).
+
+    Layer 1 - predictive budget
+      • Set G::useJitIconCache = true. A folder small enough to fit the budget caches fully;
+        a large folder (or a lower G::jitIconCacheMemFraction) shows "icon cache mode" =
+        JIT window with iconChunkSize < row count.
+
+    Layer 2 - measured refinement
+      • In JIT window mode, scroll/load past 200 icons. Watch the refineIconChunkSize log
+        line; "icon avg footprint" switches to "(measured, n=...)" and iconChunkSize may grow
+        or be promoted to full (iconChunkRefined = true).
+
+    Layer 3 - pressure valve (use the test override so you need not starve the machine)
+      G::iconPressureTestLevel values:
+        -1  use the real signal (availableMemoryMB)
+         0  normal AND memory recovered      -> latch releases after the 60 s cooldown
+         1  warn                             -> window halved, latched
+         2  critical                         -> window clamped to the visible page, latched
+         3  normal BUT memory not recovered  -> reaches the release branch, held by high-water
+
+      Suggested sequence (G::useJitIconCache = true, a windowed folder loaded):
+        1. = 2   critical: iconChunkSize drops to the visible page, icons evicted, latched.
+        2. = 3   pressure "cleared" but not recovered: after 60 s, still latched (roomy=false).
+        3. = 0   recovered: latch releases on the next 1 s tick (iconCachePressureLatched=false).
+        4. = -1  restore the real signal.
+      Confirm each transition in the DataModel diagnostics and the applyIconCachePressure
+      log lines.
 
 
 ******************************************************************************************

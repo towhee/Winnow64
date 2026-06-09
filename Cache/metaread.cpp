@@ -266,6 +266,27 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     firstIconRow = dm->startIconRange;
     lastIconRow = dm->endIconRange;
 
+    /* JIT re-arm: readSuccessThisCycle holds every row a reader has returned this instance,
+       including metadata-only reads for rows that were outside the icon chunk at the time.
+       needToRead short-circuits on that set, so when the chunk later moves or shrinks
+       (scroll, jump, Layer 2 refine, Layer 3 eviction) those rows would be skipped and
+       their thumbnails never (re)load. Drop any in-range row whose icon is genuinely not
+       loaded so it becomes eligible again. Only needed when the chunk is a window
+       (iconChunkSize < rowCount); in brute force every icon is already loaded. */
+    if (dm->iconChunkSize < sfRowCount) {
+        const int first = qMax(0, firstIconRow);
+        const int last  = qMin(sfRowCount - 1, lastIconRow);
+        for (int row = first; row <= last; ++row) {
+            if (dm->sf->index(row, G::VideoColumn).data().toBool()) continue;
+            if (!dm->sf->index(row, G::IconLoadedColumn).data().toBool())
+                readSuccessThisCycle.remove(row);
+        }
+    }
+
+    // PROBE: start scroll-fill latency timer and snapshot work to do this cycle
+    cycleTimer.restart();
+    cycleIconsMissingAtStart = iconsMissingInChunk();
+
     if (isDebug)
     {
         qDebug() << " ";
@@ -303,11 +324,11 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         isNewStartRowWhileDispatching = false;
         a = startRow;
         b = startRow - 1;
-        // Only clear the per-cycle set when the instance actually changes.
-        // Within-instance setStartRow calls (scroll, file selection) must
-        // preserve the set, otherwise rows already returned by readers
-        // become eligible for re-dispatch while their setIcon is still in
-        // flight on the main thread.
+
+        /* Only clear the per-cycle set when the instance actually changes.
+        Within-instance setStartRow calls (scroll, file selection) must preserve the set,
+        otherwise rows already returned by readers become eligible for re-dispatch while
+        their setIcon is still in flight on the main thread. */
         readSuccessThisCycle.clear();
         rowsReading.clear();
         if (isDebug)
@@ -322,7 +343,6 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
                 // << "b =" << QString::number(b).leftJustified(4, ' ')
                 ;
         }
-        // t.start();
     }
 
     dispatchReaders();
@@ -339,16 +359,16 @@ void MetaRead::stop()
     if (G::isLogger || G::isFlowLogger) G::log(srcFun);
 
     abort = true;
-    // Flush any queued video work on the shared FrameDecoder. Per-Reader
-    // abort no longer touches FrameDecoder (would clobber other Readers'
-    // pending items), so the global flush happens here.
+
+    /* Flush any queued video work on the shared FrameDecoder. Per-Reader abort no longer
+    touches FrameDecoder (would clobber other Readers' pending items), so the global
+    flush happens here. */
     if (frameDecoder) {
         QMetaObject::invokeMethod(frameDecoder, "stop", Qt::QueuedConnection);
     }
     stopReaders();
 
     metaReadThread.quit();
-    // metaReadThread.wait();
 
     if (isIdle()) {
         emit stopped(srcFun);
@@ -357,8 +377,8 @@ void MetaRead::stop()
 
 void MetaRead::stopReaders()
 /*
-    MetaRead::run dispatches all the readers and returns immediately.  The isDispatched flag
-    indicates that dispatching is still running.
+    MetaRead::run dispatches all the readers and returns immediately. The isDispatched
+    flag indicates that dispatching is still running.
 */
 {
     QString fun = "MetaRead::stopReaders";
@@ -597,6 +617,20 @@ QString MetaRead::diagnostics()
     kv("dm->startIconRange",         QString::number(dm->startIconRange));
     kv("dm->endIconRange",           QString::number(dm->endIconRange));
     kv("dm->iconCount",              QString::number(dm->iconCount()));
+
+    rpt << "\nScroll-fill PROBE (last cycle):\n";
+    if (lastFillMs < 0) {
+        kv("lastFill",                   "no scroll-fill cycle yet");
+    }
+    else {
+        double msPerIcon = lastFillIcons > 0 ? double(lastFillMs) / lastFillIcons : 0.0;
+        kv("lastFill src",               lastFillSrc);
+        kv("lastFill elapsed",           QString::number(lastFillMs) + " ms");
+        kv("lastFill iconsLoaded",       QString::number(lastFillIcons));
+        kv("lastFill msPerIcon",         QString::number(msPerIcon, 'f', 2));
+        kv("lastFill chunk",             QString::number(lastFillChunk));
+        kv("lastFill stillMissing",      QString::number(lastFillStillMissing));
+    }
 
     rpt << "\nDispatch state:\n";
     kv("isDispatching",              QVariant(isDispatching).toString());
@@ -1316,7 +1350,6 @@ void MetaRead::dispatch(int id, bool isReturning)
 
     // terse pointer to readers[id]
     r = readers[id];
-    // r->pending = false;
 
     if (abort || dm->sf->isSuspended()) {
         r->status = Reader::Status::Ready;
@@ -1399,21 +1432,20 @@ void MetaRead::dispatch(int id, bool isReturning)
         }
     }
 
-    /* Memory-overrun guardrail: probe phys_footprint periodically and
-       abort cleanly if it exceeds G::memoryAbortMB. checkMemoryFootprint
-       throttles the underlying syscall so this is essentially free. */
+    /* Memory-overrun guardrail: probe phys_footprint periodically and abort cleanly if
+    it exceeds G::memoryAbortMB. checkMemoryFootprint throttles the underlying syscall so
+    this is essentially free. */
     if (checkMemoryFootprint()) {
         return;
     }
 
-    /* Backpressure: if the GUI thread is falling behind processing queued
-       Reader emits, defer this dispatch instead of piling more onto the
-       queue. Cap is generous (4 × readerCount in flight) so steady-state
-       throughput is unaffected; only pathological producer/consumer
-       imbalance (e.g. recursing an Apple .photoslibrary, where readers
-       chew through small JPG derivatives faster than the GUI can drain
-       addToDatamodel events) triggers the gate. nextRowToRead has not yet
-       been called, so the next-row pointer is preserved across the wait. */
+    /* Backpressure: if the GUI thread is falling behind processing queued Reader emits,
+    defer this dispatch instead of piling more onto the queue. Cap is generous (4 ×
+    readerCount in flight) so steady-state throughput is unaffected; only pathological
+    producer/consumer imbalance (e.g. recursing an Apple .photoslibrary, where readers
+    chew through small JPG derivatives faster than the GUI can drain addToDatamodel
+    events) triggers the gate. nextRowToRead has not yet been called, so the next-row
+    pointer is preserved across the wait. */
     if (!abort) {
         const int kQueueCap = 4 * readerCount;
         if (dm->queuedReaderEvents.load(std::memory_order_relaxed) >= kQueueCap) {
@@ -1424,11 +1456,10 @@ void MetaRead::dispatch(int id, bool isReturning)
         }
     }
 
-    /* Navigation gate: while the user is navigating, yield CPU to the
-       ImageCache decoder so the just-selected row decodes promptly.
-       Cleared when ImageCache::setCached fires for the awaited row, or
-       after a 500 ms safety bound so a failed/missed decode can't stall
-       MetaRead forever. */
+    /* Navigation gate: while the user is navigating, yield CPU to the ImageCache decoder
+    so the just-selected row decodes promptly. Cleared when ImageCache::setCached fires
+    for the awaited row, or after a 500 ms safety bound so a failed/missed decode can't
+    stall MetaRead forever. */
     if (!abort) {
         const int awaiting = awaitingDecodeRow.load(std::memory_order_relaxed);
         if (awaiting >= 0) {
@@ -1623,10 +1654,55 @@ void MetaRead::quitAfterTimeout()
     return;
 }
 
+int MetaRead::iconsMissingInChunk()
+{
+/*
+    PROBE helper: count icons not yet loaded within the current icon-chunk range
+    [firstIconRow, lastIconRow].  Reads the IconLoadedColumn flag (same source
+    needToRead consults), so it is consistent with the dispatch decision.
+*/
+    int rows = dm->sf->rowCount();
+    int first = qMax(0, firstIconRow);
+    int last  = qMin(rows - 1, lastIconRow);
+    int missing = 0;
+    for (int row = first; row <= last; ++row) {
+        // ignore video rows (icon arrives asynchronously from FrameDecoder)
+        if (dm->sf->index(row, G::VideoColumn).data().toBool()) continue;
+        if (!dm->sf->index(row, G::IconLoadedColumn).data().toBool()) ++missing;
+    }
+    return missing;
+}
+
 void MetaRead::dispatchFinished(QString src)
 {
     if (quitTimer->isActive()) quitTimer->stop();
     isDone = true;
+
+    // PROBE: scroll-fill latency — how long to fill the icon chunk after this cycle began
+    if (cycleTimer.isValid()) {
+        qint64 ms = cycleTimer.elapsed();
+        int missingNow = iconsMissingInChunk();
+        int loaded = cycleIconsMissingAtStart - missingNow;
+        int chunk = lastIconRow - firstIconRow + 1;
+        double msPerIcon = loaded > 0 ? double(ms) / loaded : 0.0;
+        // capture for diagnostics() report
+        lastFillMs = ms;
+        lastFillIcons = loaded;
+        lastFillChunk = chunk;
+        lastFillStillMissing = missingNow;
+        lastFillSrc = src;
+        qDebug().noquote()
+            << "MetaRead scroll-fill PROBE"
+            << " src =" << src.leftJustified(32)
+            << " elapsed =" << QString::number(ms).rightJustified(5) << "ms"
+            << " iconsLoaded =" << QString::number(loaded).rightJustified(4)
+            << " msPerIcon =" << QString::number(msPerIcon, 'f', 1).rightJustified(6)
+            << " chunkRange =[" << firstIconRow << "," << lastIconRow << "]"
+            << " chunk =" << chunk
+            << " stillMissing =" << missingNow
+            << " readers =" << readerCount;
+        cycleTimer.invalidate();
+    }
 
     QString fun = "MetaRead::dispatchFinished";
     if (debugLog && (G::isLogger || G::isFlowLogger))

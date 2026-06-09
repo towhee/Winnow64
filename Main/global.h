@@ -328,6 +328,33 @@ Q_NAMESPACE
     extern int minIconSize;
     extern int maxIconChunk;
 
+    /* Just-in-time thumbnail caching (testing flag). When false, icons are cached
+       brute-force for the whole folder. When true, a folder is cached fully only if its
+       projected thumbnail footprint fits a memory budget; otherwise it degrades to a
+       bounded sliding window. The budget is the free memory remaining after a safety
+       reserve and the image cache's own claim (imageCacheHeadroomMB), times
+       jitIconCacheMemFraction. See DataModel::resolveIconChunkSize / refineIconChunkSize. */
+    extern bool   useJitIconCache;
+    extern double jitIconCacheMemFraction;
+
+    /* Published by ImageCache::memChk = the memory (MB) the image cache still intends to
+       claim on top of what it already holds (maxMBCeiling - current). DataModel subtracts
+       this from the thumbnail budget so the two caches don't fight over the same memory.
+       0 = not yet known (e.g. before the image cache has run). */
+    extern std::atomic<qint64> imageCacheHeadroomMB;
+
+    /* Test override for Layer 3, so the shrink / evict / hysteresis path can be validated
+       deterministically without starving the machine. See DataModel::memoryPressureLevel
+       and applyIconCachePressure.
+         -1 = use the real signal (availableMemoryMB)
+          0 = normal AND memory recovered     -> latch releases after cooldown
+          1 = warn                            -> window halved, latched
+          2 = critical                        -> window clamped to visible page, latched
+          3 = normal BUT memory not recovered -> reaches release branch, held by high-water
+       (3 reports level 0 but forces the release path's roomy check false, so the
+        "stays latched because memory hasn't recovered" branch is testable.) */
+    extern int iconPressureTestLevel;
+
     extern QColor textColor;
     extern QColor backgroundColor;
     extern QColor borderColor;

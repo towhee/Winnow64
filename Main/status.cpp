@@ -348,7 +348,14 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool success)
     }
     else {
         if (success) {
-            metadataThreadRunningLabel->setStyleSheet(G::cssOk);
+            /* Icon-cache mode indicator: orange under forced pressure (test override),
+               blue when JIT caching is active, green for brute force. */
+            if (G::iconPressureTestLevel >= 2)
+                metadataThreadRunningLabel->setStyleSheet("QLabel,QLineEdit,QComboBox {color:orange;}");
+            else if (G::useJitIconCache)
+                metadataThreadRunningLabel->setStyleSheet("QLabel,QLineEdit,QComboBox {color:blue;}");
+            else
+                metadataThreadRunningLabel->setStyleSheet(G::cssOk);
         }
         else {
             metadataThreadRunningLabel->setStyleSheet(G::cssWarning);

@@ -42,6 +42,11 @@ in MW::groupFocusStacks, unable to get the DateTimeOriginal for the files.  File
 2026-06-04 06:24:11  MW::groupFocusStacks  No valid images (Created date missing).
 2026-06-04 06:24:11  MW::generateFocusStack  Unable to find any focus stacks
 
+FindDuplicates was working, but the last time it was tested was perhaps a year ago.  I
+selected all the images in /Users/roryhill/Pictures/_FocusStack, opened findduplicatesdlg.cpp
+and added /Users/roryhill/Projects/Stack/Mouse using the addIncludeBtn.  I set the search
+parameters to only match file names and no duplicates were found, even though the files
+2025-11-01_0227.orf
 
 
 
@@ -54,4 +59,3 @@ in MW::groupFocusStacks, unable to get the DateTimeOriginal for the files.  File
 
 
 
-Found 10 new diagnostic issues in 1 file (ctrl+o to expand)

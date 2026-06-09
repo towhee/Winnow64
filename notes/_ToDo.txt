@@ -2,9 +2,10 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
+- CombineRawJpg button only works when foleder loaded and sometimes wonky
+- GridView not remembering icon size
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
-- Resolve Pixmap vs ImageDecoder classes
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
