@@ -449,7 +449,10 @@ int IconView::updateMidVisibleCell(QString src)
     QPoint ctr = QPoint(viewport()->rect().x() + viewport()->rect().width() / 2,
                         viewport()->rect().y() + viewport()->rect().height() / 2);
 
-    dm->scrollToIcon = indexAt(QPoint(ctr)).row();
+    /* Only a visible view may update the shared scroll anchor. When hidden, the viewport
+       is collapsed and indexAt(center) returns a meaningless row that would clobber the
+       anchor (e.g. a hidden view scrolled by a sync from the active view). */
+    if (isVisible()) dm->scrollToIcon = indexAt(QPoint(ctr)).row();
     QString msg = objectName() + " src = " + src
                   + " scrollToIcon = " + QVariant(dm->scrollToIcon).toString();
     // G::log("IconView::updateMidVisibleCell", msg);

@@ -38,6 +38,10 @@ void MW::loupeDisplay(const QString src)
                     ; //*/
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::loupeDisplay", "src = " + src);
+    /* Capture the shared scroll anchor before any view is shown/hidden. Showing a view
+       emits scroll signals from its stale position, whose handlers overwrite
+       dm->scrollToIcon; using the captured value keeps the new view's scroll in sync. */
+    int scrollAnchor = dm->scrollToIcon;
     G::mode = "Loupe";
     filterDock->setEnabled(true);
     filters->enable();
@@ -86,7 +90,9 @@ void MW::loupeDisplay(const QString src)
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
 
-    thumbView->scrollToCurrent("MW::loupeDisplay");
+    /* Sync the thumb strip to the shared scroll anchor (not the selection) so it keeps
+       the scroll position of the previous view. Matches MW::tableDisplay's thumb sync. */
+    thumbView->scrollToRow(scrollAnchor, "MW::loupeDisplay");
 
     // If the zoom dialog was active, but hidden by gridView or tableView, then show it
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
@@ -124,6 +130,9 @@ void MW::gridDisplay()
     //     return;
     // }
 
+    /* Capture the shared scroll anchor before any view is shown/hidden (see note in
+       MW::loupeDisplay). */
+    int scrollAnchor = dm->scrollToIcon;
     G::mode = "Grid";
     filterDock->setEnabled(true);
     filters->enable();
@@ -181,9 +190,10 @@ void MW::gridDisplay()
     G::ignoreScrollSignal = false;
     G::wait(100);
 
-    // scrollRow = dm->scrollToIcon;
-    // gridView->scrollToRow(scrollRow, "MW::gridDisplay");
-    gridView->scrollToCurrent("MW::loupeDisplay");
+    /* Sync to the shared scroll anchor (mid-visible row of the last-scrolled view), not
+       the current selection, so the grid keeps the scroll position of the previous view.
+       Matches MW::tableDisplay. */
+    gridView->scrollToRow(scrollAnchor, "MW::gridDisplay");
 
 
     // if the zoom dialog was open then hide it as no image visible to zoom
@@ -213,6 +223,9 @@ void MW::tableDisplay()
     //     return;
     // }
 
+    /* Capture the shared scroll anchor before any view is shown/hidden (see note in
+       MW::loupeDisplay). */
+    int scrollAnchor = dm->scrollToIcon;
     G::mode = "Table";
     filterDock->setEnabled(true);
     filters->enable();
@@ -280,8 +293,7 @@ void MW::tableDisplay()
     // }
     // G::ignoreScrollSignal = false;
     G::wait(100);
-    scrollRow = dm->scrollToIcon;
-//    qDebug() << "MW::tableDisplay" << "scrollRow =" << scrollRow;
+    scrollRow = scrollAnchor;
     tableView->scrollToRow(scrollRow, "MW::tableDisplay");
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, "MW::tableDisplay");
 
