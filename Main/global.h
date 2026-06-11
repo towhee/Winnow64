@@ -361,6 +361,13 @@ Q_NAMESPACE
        + 3-view slot propagations during a bulk load. Set false to restore always-emit. */
     extern bool useVisibleOnlyIconEmit;
 
+    /* When true, DataModel::addFolder adds a folder's rows with a single setRowCount insert
+       and fills their data with the model's signals blocked, emitting one dataChanged for
+       the range — instead of one rowsInserted + ~20 dataChanged per file. Cuts the
+       per-folder enumeration freeze (O(N) view relayout per inserted row). Set false to
+       restore the per-row loop. */
+    extern bool useBatchedFolderInsert;
+
     extern QColor textColor;
     extern QColor backgroundColor;
     extern QColor borderColor;
