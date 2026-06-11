@@ -4,6 +4,8 @@
 #include <QMediaPlayer>
 #include <QStandardPaths>
 #include <QFontDatabase>
+#include <tiffio.h>
+#include <cstdarg>
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
 #endif
@@ -25,6 +27,22 @@ void winnowMessageHandler(QtMsgType type, const QMessageLogContext &context, con
     // Pass everything else to the default handler
     QByteArray localMsg = msg.toLocal8Bit();
     fprintf(stderr, "%s\n", localMsg.constData());
+    fflush(stderr);
+}
+
+/*
+    libtiff routes its warnings through a global handler that prints to stderr by
+    default, producing noisy console output (eg "unknown field with tag", "wrong
+    data type"). Route warnings through this handler so they can be gated by
+    G::suppressTiffWarnings. Errors are left to libtiff's default handler since
+    they signal genuine decode failures.
+*/
+static void winnowTiffWarningHandler(const char *module, const char *fmt, va_list ap)
+{
+    if (G::suppressTiffWarnings) return;
+    if (module) fprintf(stderr, "%s: Warning, ", module);
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, ".\n");
     fflush(stderr);
 }
 
@@ -59,6 +77,9 @@ int main(int argc, char *argv[])
 
     // Install the message handler at the very start of main
     qInstallMessageHandler(winnowMessageHandler);
+
+    // Gate libtiff console warnings behind G::suppressTiffWarnings
+    TIFFSetWarningHandler(winnowTiffWarningHandler);
 
     QLoggingCategory::setFilterRules(
         "qt.multimedia.ffmpeg.*=false\n"

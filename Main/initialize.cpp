@@ -608,6 +608,13 @@ void MW::createGridView()
         gridView->badgeSize = classificationBadgeSizeFactor;
         gridView->iconNumberSize = iconNumberSize;
     }
+
+    /* assignedIconWidth is the reference width rejustify() uses to find the closest
+       justified size for the current window. It must track the restored/default
+       iconWidth, otherwise rejustify() ignores the persisted size and the grid icon
+       size is inconsistent between sessions. */
+    gridView->assignedIconWidth = gridView->iconWidth;
+
     /*
     qDebug() << "MW::createGridView"
              << "gridView->iconWidth =" << gridView->iconWidth

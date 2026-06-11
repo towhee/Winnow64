@@ -813,6 +813,19 @@ Resizing Icons or the Icon Viewport
 
     This allows the three datamodel views to be synced using dm->scrollToIcon.
 
+    Persisted icon size (between sessions):
+        IconView::assignedIconWidth is the reference width that rejustify() uses to
+        compute thumbs-per-row and then justify the cell width to exactly fill the row.
+        The justified result lands in iconWidth, which can differ from assignedIconWidth.
+
+        MW::writeSettings saves gridView->iconWidth (thumbWidthGrid). On restore,
+        MW::createGridView loads iconWidth and must also set
+        gridView->assignedIconWidth = gridView->iconWidth; otherwise rejustify() uses a
+        stale/uninitialised reference and the persisted size is discarded, making the
+        grid icon size inconsistent between sessions. (thumbView is handled separately:
+        rejustify() skips "Thumbnails" while G::isInitializing and MW::showEvent applies
+        the size via setThumbSize().)
+
 
 ******************************************************************************************
 
