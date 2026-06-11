@@ -613,7 +613,6 @@ QString MetaRead::diagnostics()
     kv("dm->endIconRange",           QString::number(dm->endIconRange));
     kv("dm->iconCount",              QString::number(dm->iconCount()));
 
-    rpt << "\nScroll-fill PROBE (last cycle):\n";
     rpt << "\nDispatch state:\n";
     kv("isDispatching",              QVariant(isDispatching).toString());
     kv("isDone",                     QVariant(isDone).toString());
