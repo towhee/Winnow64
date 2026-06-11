@@ -415,13 +415,6 @@ void MW::diagnosticsMemory()
     qint64 iconBytes = 0;
     qint64 metaBytes = 0;
     int    iconRowCount = 0;
-    /* PROBE: thumbnail decode-time summary, read from the G::NSThumb column
-       (microseconds per icon, written by Reader::readIcon). Quantifies the
-       throughput half of scroll-fill latency. */
-    qint64 thumbDecodeSumUs = 0;
-    qint64 thumbDecodeMinUs = 0;
-    qint64 thumbDecodeMaxUs = 0;
-    int    thumbDecodeCount = 0;
     const int rows = dm->rowCount();
     const int cols = dm->columnCount();
     QHash<int, QByteArray> roles = dm->roleNames();
@@ -440,14 +433,6 @@ void MW::diagnosticsMemory()
                     metaBytes += b;
                 }
             }
-        }
-        // PROBE: accumulate per-icon decode time (EditRole on NSThumb column)
-        const qint64 us = dm->index(row, G::NSThumb).data(Qt::EditRole).toLongLong();
-        if (us > 0) {
-            thumbDecodeSumUs += us;
-            if (thumbDecodeCount == 0) thumbDecodeMinUs = thumbDecodeMaxUs = us;
-            else { thumbDecodeMinUs = qMin(thumbDecodeMinUs, us); thumbDecodeMaxUs = qMax(thumbDecodeMaxUs, us); }
-            ++thumbDecodeCount;
         }
     }
 
@@ -514,44 +499,6 @@ void MW::diagnosticsMemory()
     rpt << "\n" << "  DataModel (excl. icons) = " << metaMB;
     rpt << "\n" << "  DataModel icons         = " << iconMB
         << "  (" << iconRowCount << " rows)";
-    // PROBE: per-icon footprint and brute-force projection (sizing the cache options)
-    {
-        const double avgIconKB = iconRowCount ? double(iconBytes) / 1024.0 / iconRowCount : 0.0;
-        const double projFullMB = iconRowCount
-            ? double(iconBytes) / iconRowCount * rows / mb : 0.0;
-        rpt << "\n" << "  icon avg per icon       = "
-            << QString::number(avgIconKB, 'f', 1) << " KB"
-            << "  (G::maxIconSize = " << G::maxIconSize << " px long edge)";
-        rpt << "\n" << "  icon projected full     = "
-            << QString::number(projFullMB, 'f', 1) << " MB"
-            << "  (" << rows << " icons, brute-force ceiling)";
-    }
-    // PROBE: thumbnail decode time (throughput half of scroll-fill latency)
-    {
-        const double avgMs = thumbDecodeCount ? thumbDecodeSumUs / 1000.0 / thumbDecodeCount : 0.0;
-        rpt << "\n" << "  thumb decode avg        = "
-            << QString::number(avgMs, 'f', 2) << " ms/icon"
-            << "  (min " << QString::number(thumbDecodeMinUs / 1000.0, 'f', 2)
-            << ", max " << QString::number(thumbDecodeMaxUs / 1000.0, 'f', 2)
-            << " ms, n=" << thumbDecodeCount << ")";
-    }
-    // PROBE: scroll-fill latency (end-to-end half — last cycle, from MetaRead)
-    if (metaRead) {
-        if (metaRead->scrollFillMs() < 0) {
-            rpt << "\n" << "  scroll-fill (last)      = (no scroll-fill cycle yet)";
-        }
-        else {
-            const int loaded = metaRead->scrollFillIcons();
-            const double msPerIcon = loaded > 0 ? double(metaRead->scrollFillMs()) / loaded : 0.0;
-            rpt << "\n" << "  scroll-fill (last)      = "
-                << metaRead->scrollFillMs() << " ms"
-                << "  (" << loaded << " icons, "
-                << QString::number(msPerIcon, 'f', 2) << " ms/icon, chunk "
-                << metaRead->scrollFillChunk()
-                << ", stillMissing " << metaRead->scrollFillStillMissing()
-                << ", src " << metaRead->scrollFillSrc() << ")";
-        }
-    }
     rpt << "\n" << "  ImageCache              = " << imageCacheMB;
     rpt << "\n" << "  Sum accounted           = " << accountedMB;
     rpt << "\n" << "  Other (footprint - acc) = " << otherMB

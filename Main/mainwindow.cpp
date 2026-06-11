@@ -3229,9 +3229,6 @@ void MW::folderChangeCompleted()
     }
     QString fun = "MW::folderChangeCompleted";
 
-    // PROBE: per-icon thumbnail memory footprint (diagnostic; remove when sizing done)
-    dm->iconMemoryReport();
-
     QMetaObject::invokeMethod(imageCache, "updateInstance", Qt::QueuedConnection);
 
     // req'd when rememberLastDir == true and loading folder at startup

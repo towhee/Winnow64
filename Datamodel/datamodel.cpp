@@ -2035,6 +2035,21 @@ QVariant DataModel::valueSf(int row, int column, int role)
     return sf->index(row, column).data(role);
 }
 
+bool DataModel::iconRowVisible(const QModelIndex &dmIdx)
+{
+/*
+    True when the row is currently visible in a view (or the optimization is off). Used by
+    setIcon1 / setValDm to skip the dataChanged notification for off-screen rows during a
+    bulk load — they are stored without notifying and paint correctly when scrolled to.
+    firstVisibleIcon / lastVisibleIcon are sf (proxy) rows maintained by MW::updateIconRange;
+    a degenerate range (not yet established) falls back to "visible" so nothing is missed.
+*/
+    if (!G::useVisibleOnlyIconEmit) return true;
+    if (lastVisibleIcon <= firstVisibleIcon) return true;   // range not established → emit
+    const int sfRow = sf->mapFromSource(dmIdx).row();
+    return sfRow >= firstVisibleIcon && sfRow <= lastVisibleIcon;
+}
+
 void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
                          QString src, int role, int align)
 {
@@ -2068,8 +2083,16 @@ void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
         return;
     }
 
-    setData(dmIdx, value, role);
-    setData(dmIdx, align, Qt::TextAlignmentRole);
+    /* Batch the value + alignment writes under a QSignalBlocker and emit ONE dataChanged.
+       Called per icon for the NSThumb column during loads; two separate dataChanged here
+       were ~half of the load-time GUI stall (measured). One coalesced signal collapses it. */
+    {
+        const QSignalBlocker blocker(this);
+        setData(dmIdx, value, role);
+        setData(dmIdx, align, Qt::TextAlignmentRole);
+    }
+    if (iconRowVisible(dmIdx))
+        emit dataChanged(dmIdx, dmIdx);
 }
 
 void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
@@ -2510,9 +2533,14 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
        the guard in setIconFromVideoFrame:2214. */
     if (QStandardItem *existing = itemFromIndex(dmIdx)) {
         if (!existing->icon().isNull()) {
-            // ensure flags are correct even though the pixmap is unchanged
-            setData(index(dmRow, G::IconLoadedColumn), true);
-            setData(index(dmRow, G::MetadataReadingColumn), false);
+            // ensure flags are correct even though the pixmap is unchanged (batched)
+            {
+                const QSignalBlocker blocker(this);
+                setData(index(dmRow, G::IconLoadedColumn), true);
+                setData(index(dmRow, G::MetadataReadingColumn), false);
+            }
+            if (iconRowVisible(dmIdx))
+                emit dataChanged(index(dmRow, 0), index(dmRow, columnCount() - 1));
             updateIconChunkLoaded();
             return;
         }
@@ -2521,10 +2549,20 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     if (G::isLogger) G::log("DataModel::setIcon1 updating", "src = " + src);
 
     const QVariant vIcon = QVariant(QIcon(QPixmap::fromImage(im)));
-    setData(dmIdx, vIcon, Qt::DecorationRole);
-    setData(index(dmRow, G::IconLoadedColumn), true);
-    setData(index(dmRow, G::MetadataReadingColumn), false);
-    setData(index(dmRow, G::IconAspectRatioColumn), (qreal)im.width()/im.height());
+    /* Batch the four per-icon setData under a QSignalBlocker and emit ONE dataChanged,
+       mirroring addMetadataForItem. Four separate dataChanged here were measured at
+       ~2 ms/icon of synchronous proxy+view propagation (the load-time GUI stall); one
+       coalesced signal collapses that. The blocker is scoped so the manual emit fires. */
+    {
+        const QSignalBlocker blocker(this);
+        setData(dmIdx, vIcon, Qt::DecorationRole);
+        setData(index(dmRow, G::IconLoadedColumn), true);
+        setData(index(dmRow, G::MetadataReadingColumn), false);
+        setData(index(dmRow, G::IconAspectRatioColumn), (qreal)im.width()/im.height());
+    }
+    // Notify views only for visible rows; off-screen icons paint when scrolled to.
+    if (iconRowVisible(dmIdx))
+        emit dataChanged(dmIdx, index(dmRow, columnCount() - 1));
     updateIconChunkLoaded();
 
     /* Layer 2 (measured refinement): accumulate the real per-icon footprint. Once enough
@@ -2572,64 +2610,6 @@ int DataModel::iconCount()
         if (!itemFromIndex(index(row, 0))->icon().isNull()) count++;
     }
     return count;
-}
-
-QString DataModel::iconMemoryReport()
-{
-/*
-    PROBE (diagnostic): measures the real per-icon memory footprint of the thumbnails
-    currently held in the DataModel (DecorationRole).  Icons are stored as
-    QIcon(QPixmap::fromImage(im)) where im is scaled to G::maxIconSize (256) on the long
-    edge in Reader::readIcon.  QPixmap is 32-bit, so bytes = w * h * 4.
-
-    Reports actual loaded icons, total/avg footprint, the dimension spread, and a
-    projection to a fully-populated model so the brute-force vs just-in-time trade-off
-    can be sized.  Call on the GUI thread (e.g. MW::folderChangeCompleted).
-*/
-    QMutexLocker locker(&dmMutex);
-
-    const int rows = rowCount();
-    int loaded = 0;
-    qint64 totalBytes = 0;
-    int minW = 0, minH = 0, maxW = 0, maxH = 0;
-    qint64 sumW = 0, sumH = 0;
-
-    for (int row = 0; row < rows; ++row) {
-        QIcon ic = itemFromIndex(index(row, 0))->icon();
-        if (ic.isNull()) continue;
-        const QList<QSize> sizes = ic.availableSizes();
-        if (sizes.isEmpty()) continue;
-        const QSize s = sizes.first();
-        totalBytes += qint64(s.width()) * s.height() * 4;   // QPixmap ARGB32
-        if (loaded == 0) { minW = maxW = s.width(); minH = maxH = s.height(); }
-        else {
-            minW = qMin(minW, s.width());  minH = qMin(minH, s.height());
-            maxW = qMax(maxW, s.width());  maxH = qMax(maxH, s.height());
-        }
-        ++loaded;
-        sumW += s.width();             sumH += s.height();
-    }
-
-    const double totalMB = totalBytes / (1024.0 * 1024.0);
-    const double avgKB   = loaded ? totalBytes / 1024.0 / loaded : 0.0;
-    const double projMB  = loaded ? totalMB / loaded * rows : 0.0;   // full model
-
-    QString r;
-    QTextStream s(&r);
-    s << "DataModel::iconMemoryReport  PROBE"
-      << "\n    G::maxIconSize (long edge) = " << G::maxIconSize
-      << "\n    rows in model              = " << rows
-      << "\n    icons loaded               = " << loaded
-      << "\n    total footprint            = " << QString::number(totalMB, 'f', 1) << " MB"
-      << "\n    avg per icon               = " << QString::number(avgKB, 'f', 1) << " KB"
-      << "\n    dims (WxH) min/avg/max     = "
-      << minW << "x" << minH << "  /  "
-      << (loaded ? int(sumW / loaded) : 0) << "x" << (loaded ? int(sumH / loaded) : 0) << "  /  "
-      << maxW << "x" << maxH
-      << "\n    projected full model       = " << QString::number(projMB, 'f', 1)
-      << " MB (" << rows << " icons)";
-    qDebug().noquote() << r;
-    return r;
 }
 
 bool DataModel::isAllIconChunkLoaded(int first, int last)

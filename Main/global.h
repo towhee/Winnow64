@@ -355,6 +355,12 @@ Q_NAMESPACE
         "stays latched because memory hasn't recovered" branch is testable.) */
     extern int iconPressureTestLevel;
 
+    /* When true, DataModel::setIcon1 / setValDm emit dataChanged to the views only when the
+       affected row is currently visible. Off-screen rows are stored without notification and
+       paint correctly when scrolled into view — avoiding the per-icon dataChanged -> proxy
+       + 3-view slot propagations during a bulk load. Set false to restore always-emit. */
+    extern bool useVisibleOnlyIconEmit;
+
     extern QColor textColor;
     extern QColor backgroundColor;
     extern QColor borderColor;
