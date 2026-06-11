@@ -87,7 +87,6 @@ public:
     bool metaReadHadFailure();          // O(1): some row attempted but not loaded
     QList<int> failedMetadataRows();    // rows with MetaFailed status (reporting)
     int iconCount();
-    QString iconMemoryReport();         // PROBE: per-icon memory footprint (diagnostic)
     void clearIconsOutsideChunkRange(int instance);
     bool iconLoaded(int sfRow, int instance);
     bool isIconRangeLoaded();
@@ -259,6 +258,7 @@ public slots:
     QString primaryFolderPath();
     QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
+    bool iconRowVisible(const QModelIndex &dmIdx);  // true if row in visible range (or flag off)
     void setIcon1(int dmRow, const QImage &im, int fromInstance, QString src = "");
     void setIconFromVideoFrame(int dmRow, QImage im, int fromInstance, qint64 duration,
                                FrameDecoder *frameDecoder);

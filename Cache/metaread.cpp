@@ -169,6 +169,7 @@ bool MetaRead::checkMemoryFootprint()
     const quint64 cap = G::memoryAbortMB;
     if (cap == 0) return false;
     const quint64 footprintMB = G::processFootprintMB();
+
     if (footprintMB == 0 || footprintMB < cap) return false;
 
     // Latch and trigger abort. Only the thread that wins the CAS emits;
@@ -283,9 +284,6 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         }
     }
 
-    // PROBE: start scroll-fill latency timer and snapshot work to do this cycle
-    cycleTimer.restart();
-    cycleIconsMissingAtStart = iconsMissingInChunk();
 
     if (isDebug)
     {
@@ -616,19 +614,6 @@ QString MetaRead::diagnostics()
     kv("dm->iconCount",              QString::number(dm->iconCount()));
 
     rpt << "\nScroll-fill PROBE (last cycle):\n";
-    if (lastFillMs < 0) {
-        kv("lastFill",                   "no scroll-fill cycle yet");
-    }
-    else {
-        double msPerIcon = lastFillIcons > 0 ? double(lastFillMs) / lastFillIcons : 0.0;
-        kv("lastFill src",               lastFillSrc);
-        kv("lastFill elapsed",           QString::number(lastFillMs) + " ms");
-        kv("lastFill iconsLoaded",       QString::number(lastFillIcons));
-        kv("lastFill msPerIcon",         QString::number(msPerIcon, 'f', 2));
-        kv("lastFill chunk",             QString::number(lastFillChunk));
-        kv("lastFill stillMissing",      QString::number(lastFillStillMissing));
-    }
-
     rpt << "\nDispatch state:\n";
     kv("isDispatching",              QVariant(isDispatching).toString());
     kv("isDone",                     QVariant(isDone).toString());
@@ -1648,55 +1633,10 @@ void MetaRead::quitAfterTimeout()
     return;
 }
 
-int MetaRead::iconsMissingInChunk()
-{
-/*
-    PROBE helper: count icons not yet loaded within the current icon-chunk range
-    [firstIconRow, lastIconRow].  Reads the IconLoadedColumn flag (same source
-    needToRead consults), so it is consistent with the dispatch decision.
-*/
-    int rows = dm->sf->rowCount();
-    int first = qMax(0, firstIconRow);
-    int last  = qMin(rows - 1, lastIconRow);
-    int missing = 0;
-    for (int row = first; row <= last; ++row) {
-        // ignore video rows (icon arrives asynchronously from FrameDecoder)
-        if (dm->sf->index(row, G::VideoColumn).data().toBool()) continue;
-        if (!dm->sf->index(row, G::IconLoadedColumn).data().toBool()) ++missing;
-    }
-    return missing;
-}
-
 void MetaRead::dispatchFinished(QString src)
 {
     if (quitTimer->isActive()) quitTimer->stop();
     isDone = true;
-
-    // PROBE: scroll-fill latency — how long to fill the icon chunk after this cycle began
-    if (cycleTimer.isValid()) {
-        qint64 ms = cycleTimer.elapsed();
-        int missingNow = iconsMissingInChunk();
-        int loaded = cycleIconsMissingAtStart - missingNow;
-        int chunk = lastIconRow - firstIconRow + 1;
-        double msPerIcon = loaded > 0 ? double(ms) / loaded : 0.0;
-        // capture for diagnostics() report
-        lastFillMs = ms;
-        lastFillIcons = loaded;
-        lastFillChunk = chunk;
-        lastFillStillMissing = missingNow;
-        lastFillSrc = src;
-        qDebug().noquote()
-            << "MetaRead scroll-fill PROBE"
-            << " src =" << src.leftJustified(32)
-            << " elapsed =" << QString::number(ms).rightJustified(5) << "ms"
-            << " iconsLoaded =" << QString::number(loaded).rightJustified(4)
-            << " msPerIcon =" << QString::number(msPerIcon, 'f', 1).rightJustified(6)
-            << " chunkRange =[" << firstIconRow << "," << lastIconRow << "]"
-            << " chunk =" << chunk
-            << " stillMissing =" << missingNow
-            << " readers =" << readerCount;
-        cycleTimer.invalidate();
-    }
 
     QString fun = "MetaRead::dispatchFinished";
     if (debugLog && (G::isLogger || G::isFlowLogger))

@@ -6,6 +6,11 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
 {
     this->dm = dm;
     metadata = new Metadata;
+    /* Point m at this Reader's own metadata struct up front. readMetadata() also sets it,
+       but an icon-only read (needIcon && !needMeta) skips readMetadata, and without this
+       m would be a wild pointer on the reader's first such task — loadThumb then crashes
+       dereferencing it. See read(). */
+    m = &metadata->m;
     this->imageCache = imageCache;
     this->frameDecoder = frameDecoder;  // shared instance owned by MetaRead
     threadId = id;
@@ -368,7 +373,18 @@ void Reader::read(int dmRow, QString filePath, int instance,
     }
 
     if (!abort && needMeta) readMetadata();
-    if (!abort && needIcon) readIcon();
+    if (!abort && needIcon) {
+        /* Icon-only read: readMetadata() was skipped, so m still points at the previous
+           row's metadata (or, on the reader's first task, a default-constructed struct).
+           Pull this row's embedded-thumb offsets from the DataModel and preset them, so
+           loadThumb uses the correct offsets and skips reading them from the stale m. */
+        if (!needMeta) {
+            offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
+            lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
+            thumb->presetOffset(offsetThumb, lengthThumb);
+        }
+        readIcon();
+    }
 
     // cycle backk to MetaRead::dispatchReaders
     bool isReturning = true;

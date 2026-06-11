@@ -672,6 +672,10 @@ How to Test Icon Caching
                                   (default 0.5).
       G::iconPressureTestLevel    forces the Layer 3 pressure level for deterministic testing
                                   (see values below).
+      G::isIconCacheProbe         false (default) = the O(N) scroll-fill and iconMemoryReport
+                                  probes are OFF. Set true ONLY on a small test folder — they
+                                  scan the whole model every dispatch cycle and will stall a
+                                  large/recursive load otherwise.
 
     Diagnostics — Help > diagnostics. The DataModel report shows the live state:
       iconChunkSize, icon cache mode (JIT window / brute force), icon loaded (row ranges),
