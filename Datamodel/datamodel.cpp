@@ -816,20 +816,42 @@ void DataModel::addFolder(const QString &folderPath)
     int oldRowCount = rowCount();
     int newRowCount = oldRowCount;
 
+    if (G::useBatchedFolderInsert) {
+        /* Add the whole folder in one structural insert and fill the cells with the model's
+           signals blocked, emitting a single dataChanged for the range. This replaces N
+           rowsInserted (each an O(N) view relayout) + ~20N dataChanged per folder — the
+           enumeration freeze. Order is unchanged (rows appended in the same sorted
+           folderFileInfoList order; the proxy mirrors source order during load). */
+        QList<QFileInfo> valid;
+        valid.reserve(folderFileInfoList.size());
+        for (const QFileInfo &fileInfo : folderFileInfoList) {
+            if (abort) break;
+            if (fPathRowContains(fileInfo.filePath())) continue;   // already in (multi-folder)
+            if (fileInfo.size() == 0) continue;                    // skip zero-size
+            valid.append(fileInfo);
+        }
+        if (abort) { endLoad(false); return; }
+        if (!valid.isEmpty()) {
+            const int first = row;
+            setRowCount(row + valid.size());            // ONE rowsInserted for the batch
+            if (!columnCount()) setColumnCount(G::TotalColumns);
+            {
+                const QSignalBlocker blocker(this);     // suppress per-cell dataChanged
+                for (const QFileInfo &fileInfo : valid) {
+                    addFileDataForRow(row, fileInfo);
+                    row++;
+                }
+            }
+            emit dataChanged(index(first, 0), index(row - 1, columnCount() - 1));
+        }
+    }
+    else
     for (const QFileInfo &fileInfo : folderFileInfoList) {
         // check for escape key release triggering abort
         if (abort) {
             endLoad(false);
             break;
         }
-
-        /*
-        qDebug() << "DataModel::addFolder"
-                 << "row =" << row
-                 << "size =" << fileInfo.size()
-                 << "file =" << fileInfo.fileName()
-                 << "folder =" << folderPath
-                    ; //*/
 
         // skip if already in datamodel.  This happens when multiple folders selected.
         QString fPath = fileInfo.filePath();

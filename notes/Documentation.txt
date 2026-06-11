@@ -662,6 +662,33 @@ Icon Caching
       process is rerun to update the icons.
 
 ------------------------------------------------------------------------------------------
+Load Responsiveness (keeping the GUI usable during a large/recursive load)
+------------------------------------------------------------------------------------------
+
+    The cost of a folder load on the GUI thread is dominated not by decoding but by the
+    flood of QStandardItemModel signals each row change emits, every one of which runs the
+    proxy (SortFilter) plus all three views' (thumbView, gridView, tableView) handlers
+    synchronously. On a ~9000-image recursive tree this was ~30 s of GUI-thread time,
+    starving keystrokes/mouse for seconds. Three measures cut it to near zero:
+
+    1. Batch per-row writes (always on). DataModel::setIcon1 and setValDm wrap their setData
+       calls in a QSignalBlocker and emit ONE dataChanged, mirroring addMetadataForItem.
+       Four/two signals per icon -> one.
+
+    2. Notify only visible rows (G::useVisibleOnlyIconEmit, default true). setIcon1/setValDm
+       emit their one dataChanged only when the row is within [firstVisibleIcon,
+       lastVisibleIcon] (DataModel::iconRowVisible). Off-screen icons are stored without
+       notification and paint correctly when scrolled to. ~9000 emits -> ~visible-count.
+
+    3. Batch the folder insert (G::useBatchedFolderInsert, default true). DataModel::addFolder
+       adds a folder's rows with a single setRowCount (one rowsInserted, one view relayout)
+       and fills the cells with signals blocked + one dataChanged for the range, instead of
+       one rowsInserted + ~20 dataChanged per file (the enumeration freeze).
+
+    All three are independent of brute force vs JIT — they help any mode. Set the two flags
+    false to restore the prior per-signal behavior.
+
+------------------------------------------------------------------------------------------
 How to Test Icon Caching
 ------------------------------------------------------------------------------------------
 
@@ -672,17 +699,14 @@ How to Test Icon Caching
                                   (default 0.5).
       G::iconPressureTestLevel    forces the Layer 3 pressure level for deterministic testing
                                   (see values below).
-      G::isIconCacheProbe         false (default) = the O(N) scroll-fill and iconMemoryReport
-                                  probes are OFF. Set true ONLY on a small test folder — they
-                                  scan the whole model every dispatch cycle and will stall a
-                                  large/recursive load otherwise.
+      G::useVisibleOnlyIconEmit   true = setIcon1/setValDm notify views only for visible rows.
+      G::useBatchedFolderInsert   true = addFolder inserts a folder's rows in one batch.
 
     Diagnostics — Help > diagnostics. The DataModel report shows the live state:
       iconChunkSize, icon cache mode (JIT window / brute force), icon loaded (row ranges),
       icon avg footprint (measured vs worst-case), icon budget (icons),
       icon chunk floor (3x vis), imageCacheHeadroomMB, iconChunkRefined, memoryPressureLevel,
       iconCachePressureLatched.
-      The Memory report adds per-icon footprint, thumb decode avg and scroll-fill (last).
 
     Status indicator — the metadata thread "circle" (MW::updateMetadataThreadRunStatus)
     is colour-coded on success so the active icon-cache mode is visible at a glance:
