@@ -16,6 +16,8 @@ public:
     // Icon (Thumbnail) parameters
     int iconWidth;
     int iconHeight;
+    // reference width rejustify() uses to keep close to the assigned thumb size
+    int assignedIconWidth;
     int labelFontSize = 13;
     bool showIconLabels;
     QString labelChoice;
@@ -162,7 +164,6 @@ private:
     QLabel *zoomFrame;
 
     // used during gridView resize to keep close to beginning thumb size
-    int assignedIconWidth;
     bool skipResize;
 
     // used when invert selection

@@ -200,7 +200,7 @@ bool Tiff::parse(MetadataParameters &p,
 */
     if (G::isLogger || isDebug) G::log("Tiff::parse", p.fPath);
     //file.open happens in readMetadata
-    // qDebug() << "Tiff::parse" << p.file.fileName();
+    if (isDebug) qDebug() << "Tiff::parse" << p.file.fileName();
 
     Utilities u;
     quint32 startOffset = 0;
@@ -577,6 +577,7 @@ quint32 Tiff::parseIFDs(MetadataParameters &p, ImageMetadata &m, IFD *ifd,
             if (thumbLongside < (G::maxIconSize * 1.5)) m.isEmbeddedThumbMissing = false;
         }
         /*
+        if (isDebug)
         qDebug() << "Tiff::parseIFDs" << p.hdr
                  << "offset =" << p.offset
                  << "m.isEmbeddedThumbMissing =" << m.isEmbeddedThumbMissing
@@ -624,7 +625,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
 
     // endianess
     isBigEnd = isBigEndian(p);
-    // qDebug() << "Tiff::parseForDecoding" << p.fPath << "isBigEnd =" << isBigEnd;
+    if (isDebug) qDebug() << "Tiff::parseForDecoding" << p.fPath << "isBigEnd =" << isBigEnd;
 
     bool isReport = p.report;
     p.report = false;
@@ -764,7 +765,8 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
         err = "LZW compression not supported for per channel planar configuration.  \n";
     }
     if (err != "") G::issue("Error", err, "Tiff::decode_2", -1, p.fPath);
-    if (err != "") qDebug() << "TIFF::parseForDecoding  err =" << err;
+    if (err != "")
+        if (isDebug) qDebug() << "TIFF::parseForDecoding  err =" << err;
 
     if (err != "" && !isReport) return false;
 
@@ -825,7 +827,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
 
 */
     if (G::isLogger || isDebug) G::log("Tiff::decode", fPath + " Source = " + source);
-    //qDebug() << "Tiff::decode1" << fPath;
+    if (isDebug) qDebug() << "Tiff::decode1" << fPath;
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
 
@@ -838,7 +840,9 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
         return false;
     }
 
-    /* qDebug() << "Tiff::decode"
+    /*
+    if (isDebug)
+        qDebug() << "Tiff::decode"
              << "isThumb =" << thumb
              << "newSize =" << newSize
              << "m.offsetThumb =" << m.offsetThumb
@@ -857,7 +861,7 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
     The version is used by ImageDecoders in image cache.
 */
     if (G::isLogger || isDebug) G::log("Tiff::decode_1", fPath + " Source = " + source);
-    // qDebug() << "Tiff::decode(fPath,offset,image)" << fPath;
+    if (isDebug) qDebug() << "Tiff::decode(fPath,offset,image)" << fPath;
 
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
@@ -872,7 +876,7 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
     }
     p.offset = offset;
     /*
-    qDebug() << "Tiff::decode" << fPath << "offset =" << offset;
+    if (isDebug) qDebug() << "Tiff::decode" << fPath << "offset =" << offset;
     //*/
     return decode(p, image);
 }
@@ -893,11 +897,12 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
 
 */
     if (G::isLogger || isDebug) G::log("Tiff::decode2", p.fPath + " Source = " + source);
-    // qDebug() << "Tiff::decode2" << p.fPath;
+    if (isDebug) qDebug() << "Tiff::decode2" << p.fPath;
 
     IFD *ifd = new IFD;
     p.report = false;
     if (!parseForDecoding(p, ifd)) {
+        if (isDebug)
         qDebug() << "Tiff::decode(p,image,newsize)  parseForDecoding failed"
                  << "src:" << source << p.fPath;
         return false;
@@ -910,6 +915,7 @@ bool Tiff::decode(MetadataParameters &p, QImage &image, int newSize)
     if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
     /*
+    if (isDebug)
     qDebug() << "Tiff::decode(p,image,newsize)  compression =" << compression
              << "src:" << source << p.fPath; //*/
     bool decoded = true;
@@ -952,6 +958,7 @@ bool Tiff::decodeBase(MetadataParameters &p)
 */
     if (G::isLogger || isDebug) G::log("Tiff::decodeBase", p.fPath + " Source = " + source);
     // /*
+    if (isDebug)
     qDebug() << "Tiff::decodeBase"
              << "bytesPerPixel =" << bytesPerPixel
              << "bytesPerRow =" << bytesPerRow
@@ -1022,7 +1029,7 @@ bool Tiff::decodeBase(MetadataParameters &p)
 bool Tiff::decodeLZW(MetadataParameters &p)
 {
     if (G::isLogger || isDebug) G::log("Tiff::decodeLZW", p.fPath + " Source = " + source);
-    qDebug() << "Tiff::decodeLZW" << p.fPath;
+    if (isDebug) qDebug() << "Tiff::decodeLZW" << p.fPath;
     int strips = stripOffsets.count();
     // TiffStrips tiffStrips;
     // QFuture<void> future;
@@ -1076,7 +1083,7 @@ bool Tiff::decodeLZW(MetadataParameters &p)
 bool Tiff::decodeZip(MetadataParameters &p)
 {
     if (G::isLogger || isDebug) G::log("Tiff::decodeLZW", p.fPath + " Source = " + source);
-    //qDebug() << "Tiff::decodeLZW" << p.fPath;
+    if (isDebug) qDebug() << "Tiff::decodeLZW" << p.fPath;
     int strips = stripOffsets.count();
     TiffStrips tiffStrips;
     //    QFuture<void> future;
@@ -1135,7 +1142,7 @@ bool Tiff::decodeZip(MetadataParameters &p)
 bool Tiff::decodeJpg(MetadataParameters &p)
 {
     if (G::isLogger || isDebug) G::log("Tiff::decodeLZW", p.fPath + " Source = " + source);
-    qDebug() << "Tiff::decodeJpg" << p.fPath;
+    if (isDebug) qDebug() << "Tiff::decodeJpg" << p.fPath;
     int strips = stripOffsets.count();
     TiffStrips tiffStrips;
     //    QFuture<void> future;
@@ -1561,7 +1568,7 @@ bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
     bool decoded = false;
-    qDebug() << "Tiff::encodeThumbnail" << p.fPath;
+    if (isDebug) qDebug() << "Tiff::encodeThumbnail" << p.fPath;
     if (compression == 1) decoded = decodeBase(p);
     if (compression == 5) decoded = decodeLZW(p);
     if (!decoded) return false;
@@ -1613,7 +1620,7 @@ bool Tiff::embedIRBThumbnail(const QString tiffPath, const QImage &thumbnail)
         return false;
     }
 
-    // qDebug() << "Tiff::embedIRBThumbnail" << tiffPath;
+    if (isDebug) qDebug() << "Tiff::embedIRBThumbnail" << tiffPath;
 
     // Prepare the IRB block
     QByteArray irbData;
@@ -1724,6 +1731,7 @@ void Tiff::sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h)
     int nthH = height / h;
     nthW < nthH ? nth = nthW : nth = nthH;
     /*
+    if (isDebug)
     qDebug() << "Tiff::sample"
              << "width =" << width
              << "height =" << height
@@ -2163,7 +2171,7 @@ void Tiff::lzwDecompressOld(TiffStrip &t, MetadataParameters &p)
     if (G::isLogger || isDebug)
         G::log("Tiff::lzwDecompress3", "strip = " + QString::number(t.strip) + " " + p.fPath + " Source = " + source);
 
-    // qDebug() << "Tiff::lzwDecompress3  strip = " << t.strip << p.fPath;
+    if (isDebug) qDebug() << "Tiff::lzwDecompress3  strip = " << t.strip << p.fPath;
     TiffStrips tiffStrips;
     int alphaRowComponent = t.bytesPerRow / 3;
     const unsigned int clearCode = 256;
@@ -2341,7 +2349,7 @@ Tiff::TiffStrips Tiff::zipDecompress(TiffStrip &t, MetadataParameters &p)
     if (G::isLogger || isDebug)
         G::log("Tiff::zipDecompress", "strip = " + QString::number(t.strip) + " " + p.fPath + " Source = " + source);
 
-    qDebug() << "Tiff::zipDecompress" << p.fPath;
+    if (isDebug) qDebug() << "Tiff::zipDecompress" << p.fPath;
     TiffStrips tiffStrips;
 
     // Prepare zlib structures
@@ -2389,7 +2397,7 @@ bool Tiff::jpgDecompress(TiffStrip &t, MetadataParameters &p)
 {
     if (G::isLogger || isDebug)
         G::log("Tiff::jpgDecompress", "strip = " + QString::number(t.strip) + " " + p.fPath + " Source = " + source);
-    qDebug() << "Tiff::jpgDecompress";
+    if (isDebug) qDebug() << "Tiff::jpgDecompress";
     // Read the JPEG data from the file
     p.file.seek(stripOffsets.at(t.strip));
     QByteArray jpegData = p.file.read(t.stripBytes);
@@ -2689,7 +2697,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
-        qDebug() << "Tiff::read Failed to open TIFF file." << fPath;
+        if (isDebug) qDebug() << "Tiff::read Failed to open TIFF file." << fPath;
         return false;
     }
 
@@ -2706,11 +2714,12 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
     bool floatingPoint;
 
     if (!readHeaders(tiff, size, format, photometric, grayscale, floatingPoint, transformation)) {
-        qDebug() << "Tiff::read Failed to read headers." << fPath;
+        if (isDebug) qDebug() << "Tiff::read Failed to read headers." << fPath;
         return false;
     }
 
     /*
+    if (isDebug)
     qDebug() << "Tiff::read"
              << "format =" << format
              << "photometric =" << photometric
@@ -2723,14 +2732,14 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 
     if (!QImageIOHandler::allocateImage(size, format, image)) {
         TIFFClose(tiff); tiff = nullptr;
-        qDebug() << "Tiff::read Failed to QImageIOHandler::allocateImage." << fPath;
+        if (isDebug) qDebug() << "Tiff::read Failed to QImageIOHandler::allocateImage." << fPath;
         return false;
     }
 
     if (TIFFIsTiled(tiff) && TIFFTileSize64(tiff) > uint64_t(image->sizeInBytes())) {
         // Corrupt image
         TIFFClose(tiff); tiff = nullptr;
-        qDebug() << "Tiff::read Corrupt image." << fPath;
+        if (isDebug) qDebug() << "Tiff::read Corrupt image." << fPath;
         return false;
     }
 
@@ -2764,7 +2773,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
                 uint16_t *blueTable = nullptr;
                 if (!TIFFGetField(tiff, TIFFTAG_COLORMAP, &redTable, &greenTable, &blueTable)) {
                     TIFFClose(tiff); tiff = nullptr;
-                    qDebug() << "Tiff::read Failed to get field TIFFTAG_COLORMAP." << filePath;
+                    if (isDebug) qDebug() << "Tiff::read Failed to get field TIFFTAG_COLORMAP." << filePath;
                     return false;
                 }
                 if (!redTable || !greenTable || !blueTable) {
@@ -2865,10 +2874,10 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
         if (TIFFReadRGBAImageOriented(tiff, width, height, reinterpret_cast<uint32_t *>(image->bits()), qt2Exif(transformation), stopOnError)) {
             for (uint32_t y=0; y<height; ++y)
                 convert32BitOrder(image->scanLine(y), width);
-            // qDebug() << "Tiff::read Succeeded: TIFFReadRGBAImageOriented." << fPath;
+            if (isDebug) qDebug() << "Tiff::read Succeeded: TIFFReadRGBAImageOriented." << fPath;
         } else {
             TIFFClose(tiff); tiff = nullptr;
-            // qDebug() << "Tiff::read Failed to TIFFReadRGBAImageOriented." << fPath;
+            if (isDebug) qDebug() << "Tiff::read Failed to TIFFReadRGBAImageOriented." << fPath;
             return false;
         }
     }
@@ -2930,7 +2939,7 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
 
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
-        qDebug() << "Tiff::readSample Failed to open TIFF file." << fPath;
+        if (isDebug) qDebug() << "Tiff::readSample Failed to open TIFF file." << fPath;
         return false;
     }
 
@@ -2947,7 +2956,7 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
 
     if (!readHeaders(tiff, size, format, photometric, grayscale, floatingPoint, transformation)) {
         TIFFClose(tiff); tiff = nullptr;
-        qDebug() << "Tiff::readSample Failed to read headers." << fPath;
+        if (isDebug) qDebug() << "Tiff::readSample Failed to read headers." << fPath;
         return false;
     }
 
@@ -2962,14 +2971,14 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
 
     if (!QImageIOHandler::allocateImage(QSize(outW, outH), format, image)) {
         TIFFClose(tiff); tiff = nullptr;
-        qDebug() << "Tiff::readSample Failed to QImageIOHandler::allocateImage." << fPath;
+        if (isDebug) qDebug() << "Tiff::readSample Failed to QImageIOHandler::allocateImage." << fPath;
         return false;
     }
 
     if (TIFFIsTiled(tiff) && TIFFTileSize64(tiff) > uint64_t(srcW) * srcH * 16) {
         // sanity check: tile size shouldn't exceed full-image upper bound
         TIFFClose(tiff); tiff = nullptr;
-        qDebug() << "Tiff::readSample Corrupt image." << fPath;
+        if (isDebug) qDebug() << "Tiff::readSample Corrupt image." << fPath;
         return false;
     }
 
@@ -2999,7 +3008,7 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
                 uint16_t *blueTable = nullptr;
                 if (!TIFFGetField(tiff, TIFFTAG_COLORMAP, &redTable, &greenTable, &blueTable)) {
                     TIFFClose(tiff); tiff = nullptr;
-                    qDebug() << "Tiff::readSample Failed to get field TIFFTAG_COLORMAP." << fPath;
+                    if (isDebug) qDebug() << "Tiff::readSample Failed to get field TIFFTAG_COLORMAP." << fPath;
                     return false;
                 }
                 if (!redTable || !greenTable || !blueTable) {
@@ -3111,7 +3120,7 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
                 if (srcY >= srcH) break;
                 if (TIFFReadScanline(tiff, src, srcY, 0) < 0) {
                     TIFFClose(tiff); tiff = nullptr;
-                    qDebug() << "Tiff::readSample TIFFReadScanline failed" << fPath;
+                    if (isDebug) qDebug() << "Tiff::readSample TIFFReadScanline failed" << fPath;
                     return false;
                 }
                 uchar *dst = image->scanLine(outY);

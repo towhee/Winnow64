@@ -738,6 +738,11 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
     QModelIndex centerIdx = indexAt(centerPoint);
     int centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
 
+    /* If the view is at the very top, preserve top-alignment instead of re-centering the
+       geometric middle row. Re-centering would scroll a top-aligned view down (the middle
+       visible row is not row 0), which defeats the scroll-to-top on a new folder load. */
+    bool atTop = verticalScrollBar()->value() == 0;
+
     // Calculate available row width, accounting for scrollbars and a small margin
     int wRow = width() - G::scrollBarThickness - 8;
 
@@ -767,8 +772,12 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
     // Update the delegate with new dimensions and clear the QCache
     setThumbParameters();
 
-    // Maintain the user's position by scrolling back to the mid-visible cell
-    if (centerRow >= 0) {
+    // Maintain the user's position: keep the top at the top, else re-center the
+    // mid-visible cell
+    if (atTop) {
+        verticalScrollBar()->setValue(0);
+    }
+    else if (centerRow >= 0) {
         scrollToRow(centerRow, src);
     }
 

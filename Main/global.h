@@ -248,6 +248,7 @@ Q_NAMESPACE
 
     extern bool useMyTiff;
     extern bool useMissingThumbs;
+    extern bool suppressTiffWarnings;   // silence libtiff warning messages to the console
 
     // limit functionality for testing
     extern bool useApplicationStateChanged;

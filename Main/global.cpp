@@ -65,6 +65,7 @@ std::atomic<bool> isModifyingDatamodel{false};
 // temp while resolving issues, set false to not use
 bool useMyTiff = true;
 bool useMissingThumbs = true;
+bool suppressTiffWarnings = true;   // silence libtiff warning messages to the console
 
 // limit functionality for testing
 bool useApplicationStateChanged = false;
