@@ -3489,10 +3489,12 @@ void MW::tableHasScrolled()
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange("MW::tableHasScrolled");
-        /*
-        qDebug() << "MW::tableHasScrolled"
-                 << "tableView->midVisibleRow =" << tableView->midVisibleRow
-                    ; //*/
+        /* Update the shared scroll anchor here (user-initiated table scroll), not in
+           TableView::updateVisible which also runs from layout/show paths. Only when the
+           table is visible: gridHasScrolled/thumbHasScrolled sync-scroll the hidden table,
+           which re-enters here and would otherwise stamp the hidden table's bogus position
+           onto the anchor. */
+        if (tableView->isVisible()) dm->scrollToIcon = tableView->midVisibleRow;
         if (thumbView->isVisible()) {
             thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
         }

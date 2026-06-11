@@ -124,7 +124,11 @@ void TableView::updateVisible(QString src)
     lastVisibleRow = firstVisibleRow + visibleRowCount - 1;
     if (lastVisibleRow > lastRow) lastVisibleRow = lastRow;
     midVisibleRow = lastVisibleRow - visibleRowCount / 2;
-    dm->scrollToIcon = midVisibleRow;
+    /* Do NOT write dm->scrollToIcon here. updateVisible runs from layout/show paths
+       (resizeEvent, MW::updateIconRange) while the table may sit at a stale or zeroed
+       scroll position, which would clobber the shared scroll anchor before a mode switch
+       reads it. Only the user-scroll handler MW::tableHasScrolled updates scrollToIcon,
+       mirroring how IconView writes it solely from updateMidVisibleCell. */
     /*
     qDebug() << "TableView::updateVisible"
              << "firstVisibleRow =" << firstVisibleRow
