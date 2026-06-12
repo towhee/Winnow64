@@ -229,6 +229,18 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
 
             // Update embellished text fields - Embel::refreshTexts
             emit dataEdited();
+
+            /*
+            Close the edit-progress popup that this branch opened above
+            (setProgressVisible / setProgressMax / setProgress). Only reset the
+            popup here, not unconditionally at the end of dataChanged: this slot
+            also fires when the InfoView metadata panel merely repopulates (e.g.
+            when a new file is selected after a focus stack), and an
+            unconditional reset() would dismiss unrelated popups such as the
+            focus-stack "completed" message.
+            */
+            G::popup->setProgressVisible(false);
+            G::popup->reset();
         }
         dm->sf->suspend(false, "InfoView::dataChanged count = 0");
 
@@ -258,8 +270,6 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     }
     count++;
     if (count > 1) count = 0;
-    G::popup->setProgressVisible(false);
-    G::popup->reset();
 }
 
 void InfoView::refreshLayout()

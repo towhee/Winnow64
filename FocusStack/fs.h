@@ -3,11 +3,13 @@
 
 #include "Metadata/ExifTool.h"
 #include "Metadata/xmp.h"
+#include "Metadata/imagemetadata.h"
 
 #include "QtCore/qdebug.h"
 #include <QObject>
 #include <QStringList>
 #include <QString>
+#include <QHash>
 #include <atomic>
 #include <vector>
 
@@ -47,6 +49,14 @@ public:
     QString statusRunPrefix = "Focus Stacking:  ";
     QList<QStringList> groups;
 
+    /*
+    Per-path ImageMetadata captured on the GUI thread before processing starts,
+    so the worker's decode requests never depend on live DataModel state. This
+    lets the user navigate to other folders while a stack is processing without
+    the decode failing (and previously crashing). Keyed by file path.
+    */
+    QHash<QString, ImageMetadata> metaSnapshot;
+
     // Input configuration
     bool setOptions(const Options &opt);
 
@@ -59,7 +69,7 @@ public:
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
     void progress(int current, int total);
-    void requestImage(QString fPath, cv::Mat &mat);
+    void requestImage(QString fPath, ImageMetadata m, cv::Mat &mat);
     void finished(bool success, bool aborted);
 
 protected:

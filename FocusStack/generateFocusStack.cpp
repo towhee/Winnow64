@@ -246,6 +246,26 @@ void MW::generateFocusStack(const QStringList paths,
         return;
     }
 
+    /*
+    Snapshot the metadata for every slice now, while we are on the GUI thread
+    and the DataModel still describes these files. The worker passes each
+    snapshot back with its decode request, so decoding never re-queries the
+    live DataModel. This lets the user navigate to other folders while the
+    stack processes without the decode failing (which previously crashed in
+    MW::matFromQImage).
+    */
+    fs->metaSnapshot.clear();
+    for (const QStringList &group : std::as_const(fs->groups)) {
+        for (const QString &p : group) {
+            if (fs->metaSnapshot.contains(p)) continue;
+            QFileInfo fileInfo(p);
+            int row = dm->proxyRowFromPath(p);
+            metadata->loadImageMetadata(fileInfo, row, dm->instance,
+                                        true, true, false, true, srcFun);
+            fs->metaSnapshot.insert(p, metadata->m);
+        }
+    }
+
     // --------------------------------------------------------------------
     // Finished
     // --------------------------------------------------------------------
@@ -279,12 +299,6 @@ void MW::generateFocusStack(const QStringList paths,
             return;
         }
 
-        // Handle Success
-        msg = "Focus stacking completed";
-        if (G::FSLog) G::log(srcFun, msg);
-        updateStatus(false, msg);
-        G::popup->showPopup(msg, 5000);
-
         // Evaluate we have a result path
         if (G::fsFusedPaths.isEmpty()) {
             msg = "Focus stacking failed: No output path found.";
@@ -304,6 +318,14 @@ void MW::generateFocusStack(const QStringList paths,
 
         fsTree->updateCount();
         bookmarks->updateCount();
+
+        // Handle Success
+        QString nGroups = QVariant(fs->groups.count()).toString();
+        if (nGroups == "1") msg = nGroups + " focus stack completed";
+        else msg = nGroups + " focus stacks completed";
+        if (G::FSLog) G::log(srcFun, msg);
+        G::popup->showPopup(msg, 3000);
+
     }, Qt::QueuedConnection);
 
     if (fsThread->isRunning()) return;
@@ -316,27 +338,44 @@ void MW::generateFocusStack(const QStringList paths,
     fsThread->start();
 }
 
-void MW::matFromQImage(QString fPath, cv::Mat &mat)
+void MW::matFromQImage(QString fPath, ImageMetadata m, cv::Mat &mat)
 {
     G::log("MW::matFromQImage", fPath);
 
-    QFileInfo fileInfo(fPath);
-    ImageMetadata *m;
+    /*
+    This slot runs on the GUI thread via a Qt::BlockingQueuedConnection from
+    the focus-stack worker. Any exception thrown here unwinds through the Qt
+    event loop and terminates the app (the worker's try/catch cannot catch a
+    throw that happens on another thread). cv::cvtColor throws on an empty Mat,
+    so every failure path must leave mat empty and return instead of throwing.
+    FSLoader::load treats an empty Mat as a load failure and aborts the stack
+    cleanly.
 
-    // get image metadata
-    int row = dm->proxyRowFromPath(fPath);
-    metadata->loadImageMetadata(fileInfo, row, dm->instance, true, true, false, true, "FindDuplicatesDlg::preview");
-    m = &metadata->m;
-    if (m->video) return;
+    The ImageMetadata 'm' is the snapshot captured up front in
+    MW::generateFocusStack. Decoding from it (rather than re-querying the live
+    DataModel) means the user can navigate to other folders while a stack is
+    processing without the decode failing.
+    */
+    mat.release();
 
-    // load QImage with QImage::Format_RGB32
+    if (m.fPath.isEmpty()) m.fPath = fPath;     // guard against a missing snapshot
+    if (m.video) return;
+
+    // decode the source image from the metadata snapshot (no DataModel lookup)
     ImageDecoder imageDecoder(0, dm, metadata);
     QImage src;
-    imageDecoder.decodeIndependent(src, metadata, *m);
+    if (!imageDecoder.decodeIndependent(src, metadata, m) || src.isNull()) {
+        qWarning() << "MW::matFromQImage: decode failed, returning empty mat for" << fPath;
+        return;
+    }
 
     // Convert to Format_RGB888 for 3-channel or RGBA8888 for 4-channel
     // Avoid RGB32 as OpenCV expects 3 or 4 channels specifically
     QImage swapped = src.convertToFormat(QImage::Format_RGBA8888);
+    if (swapped.isNull()) {
+        qWarning() << "MW::matFromQImage: convertToFormat failed for" << fPath;
+        return;
+    }
 
     // Deep copy into the output Mat
     mat = cv::Mat(swapped.height(), swapped.width(), CV_8UC4,

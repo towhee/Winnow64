@@ -446,8 +446,12 @@ bool FS::runDMap()
 
         auto decoder = [this](const QString& p) -> cv::Mat {
             cv::Mat result;
-            // This triggers MW::matFromQImage on the GUI thread and WAITS
-            emit requestImage(p, result);
+            // This triggers MW::matFromQImage on the GUI thread and WAITS.
+            // Pass the metadata snapshot captured up front so the GUI-thread
+            // decode does not depend on live DataModel state (the user may
+            // have navigated to another folder by now).
+            ImageMetadata m = metaSnapshot.value(p);
+            emit requestImage(p, m, result);
             return result.clone(); // Ensure we own the data
         };
 
@@ -463,6 +467,21 @@ bool FS::runDMap()
                      -1, inputPaths.at(slice));
 
             // Clean up threads on load failure
+            for (auto &f : futures) f.waitForFinished();
+            return false;
+        }
+
+        /*
+        FSLoader::load returns an empty Image (rather than throwing) when the
+        decode fails, e.g. when the user navigates to another folder while the
+        stack is still processing. Abort cleanly here instead of feeding empty
+        matrices into alignment.
+        */
+        if (currImage.color.empty() || currImage.gray.empty()) {
+            QString msg = QString("Aborting: Empty image for slice %1.").arg(slice);
+            status(msg);
+            qWarning() << "FS Error:" << msg;
+            G::issue("Error", msg, "FS::runDMap", -1, inputPaths.at(slice));
             for (auto &f : futures) f.waitForFinished();
             return false;
         }

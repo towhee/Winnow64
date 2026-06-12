@@ -254,7 +254,9 @@ bool ImageDecoder::load()
         return false;
     }
 
-    ext = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
+    ext = isIndependent
+              ? indMeta.ext.toLower()
+              : dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
 
     // do not cache video files
     if (metadata->videoFormats.contains(ext)) {
@@ -284,8 +286,12 @@ bool ImageDecoder::load()
 
     // Embedded jpg?
     bool isEmbeddedJpg = false;
-    int offsetFull = dm->sf->index(sfRow, G::OffsetFullColumn).data().toInt();
-    int lengthFull = dm->sf->index(sfRow, G::LengthFullColumn).data().toInt();
+    int offsetFull = isIndependent
+                         ? int(indMeta.offsetFull)
+                         : dm->sf->index(sfRow, G::OffsetFullColumn).data().toInt();
+    int lengthFull = isIndependent
+                         ? int(indMeta.lengthFull)
+                         : dm->sf->index(sfRow, G::LengthFullColumn).data().toInt();
     // embedded image type but no offset
     if (metadata->hasJpg.contains(ext) && offsetFull == 0) {
 
@@ -433,7 +439,9 @@ bool ImageDecoder::load()
 
         if (decoderToUse == Rory) {
             // check for sampling format we cannot read
-            int samplesPerPixel = dm->sf->index(sfRow, G::samplesPerPixelColumn).data().toInt();
+            int samplesPerPixel = isIndependent
+                ? indMeta.samplesPerPixel
+                : dm->sf->index(sfRow, G::samplesPerPixelColumn).data().toInt();
             if (samplesPerPixel > 3) {
                  errMsg = "TIFF samplesPerPixel more than 3.";
                  G::issue("Warning", errMsg, "ImageDecoder::run", sfRow, fPath);
@@ -588,8 +596,12 @@ void ImageDecoder::rotate()
     if (G::isLogger) G::log("ImageDecoder::rotate", "sfRow = " + QString::number(sfRow));
     QTransform trans;
     int degrees = 0;
-    int orientation = dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
-    int rotationDegrees = dm->sf->index(sfRow, G::RotationDegreesColumn).data().toInt();
+    int orientation = isIndependent
+        ? indMeta.orientation
+        : dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
+    int rotationDegrees = isIndependent
+        ? indMeta.rotationDegrees
+        : dm->sf->index(sfRow, G::RotationDegreesColumn).data().toInt();
     if (orientation > 0) {
         switch (orientation) {
         case 3:
@@ -644,7 +656,9 @@ void ImageDecoder::colorManage()
         if (image.isNull()) return;
     }
 
-    QByteArray iccBuf = dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
+    QByteArray iccBuf = isIndependent
+        ? indMeta.iccBuf
+        : dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
     ICC::transform(iccBuf, image);
 }
 
@@ -659,14 +673,17 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
     QString srcFun = "  ImageDecoder::decodeIndependent";
     if (G::isLogger) G::log(srcFun, m.fPath);
 
+    /*
+    Decode from the supplied ImageMetadata, not the live DataModel. sfRow is
+    left at -1 (used only for logging) because the path may no longer be in
+    dm->sf, e.g. the user navigated to another folder while a focus stack is
+    still processing.
+    */
     this->metadata = metadata;
+    isIndependent = true;
+    indMeta = m;
     fPath = m.fPath;
-    sfRow = dm->proxyRowFromPath(fPath);
-
-    if (sfRow < 0) {
-        qWarning() << srcFun << "Invalid row for" << fPath;
-        return false;
-    }
+    sfRow = -1;
 
     if (load()) {
         if (metadata->rotateFormats.contains(ext)) rotate();
