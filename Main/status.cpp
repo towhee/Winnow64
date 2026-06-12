@@ -74,6 +74,9 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 
     if (!keepBase) status = s;
 
+    // debug grid width shrinking issue
+    status += "  " + QVariant(gridView->iconWidth).toString();
+
     statusLabel->setText(status);
 
     // status label tooltip
