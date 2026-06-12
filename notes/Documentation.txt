@@ -680,12 +680,17 @@ Load Responsiveness (keeping the GUI usable during a large/recursive load)
        lastVisibleIcon] (DataModel::iconRowVisible). Off-screen icons are stored without
        notification and paint correctly when scrolled to. ~9000 emits -> ~visible-count.
 
-    3. Batch the folder insert (G::useBatchedFolderInsert, default true). DataModel::addFolder
-       adds a folder's rows with a single setRowCount (one rowsInserted, one view relayout)
-       and fills the cells with signals blocked + one dataChanged for the range, instead of
-       one rowsInserted + ~20 dataChanged per file (the enumeration freeze).
+    3. Batch the folder insert (G::useBatchedFolderInsert, DEFAULT FALSE). DataModel::addFolder
+       can add a folder's rows with a single setRowCount (one rowsInserted, one view relayout)
+       and fill the cells with signals blocked + one dataChanged for the range, instead of
+       one rowsInserted + ~20 dataChanged per file (the enumeration freeze). This is OFF by
+       default: that single wide dataChanged over the whole inserted block makes the
+       sorting-enabled proxy/tableView re-sort the block descending, so folders load Z-A
+       instead of A-Z. The per-row loop preserves A-Z and load latency is unchanged (the
+       per-icon win comes from useVisibleOnlyIconEmit, item 2). Leave false unless the
+       reordering is fixed first.
 
-    All three are independent of brute force vs JIT — they help any mode. Set the two flags
+    Items 1-2 are independent of brute force vs JIT — they help any mode. Set the flags
     false to restore the prior per-signal behavior.
 
 ------------------------------------------------------------------------------------------
@@ -700,7 +705,8 @@ How to Test Icon Caching
       G::iconPressureTestLevel    forces the Layer 3 pressure level for deterministic testing
                                   (see values below).
       G::useVisibleOnlyIconEmit   true = setIcon1/setValDm notify views only for visible rows.
-      G::useBatchedFolderInsert   true = addFolder inserts a folder's rows in one batch.
+      G::useBatchedFolderInsert   true = addFolder inserts a folder's rows in one batch
+                                  (default false; true reorders the proxy Z-A — see above).
 
     Diagnostics — Help > diagnostics. The DataModel report shows the live state:
       iconChunkSize, icon cache mode (JIT window / brute force), icon loaded (row ranges),

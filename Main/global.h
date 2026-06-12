@@ -364,9 +364,13 @@ Q_NAMESPACE
 
     /* When true, DataModel::addFolder adds a folder's rows with a single setRowCount insert
        and fills their data with the model's signals blocked, emitting one dataChanged for
-       the range — instead of one rowsInserted + ~20 dataChanged per file. Cuts the
-       per-folder enumeration freeze (O(N) view relayout per inserted row). Set false to
-       restore the per-row loop. */
+       the range — instead of one rowsInserted + ~20 dataChanged per file.
+
+       DEFAULT OFF: that single wide dataChanged over the whole inserted block makes the
+       sorting-enabled proxy/tableView re-sort the block descending (folders loaded Z-A
+       instead of A-Z). The per-row loop preserves A-Z, and measured load latency is
+       unchanged — the per-icon win comes from useVisibleOnlyIconEmit, not from this.
+       Leave false unless the reordering is fixed first. */
     extern bool useBatchedFolderInsert;
 
     extern QColor textColor;

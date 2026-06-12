@@ -6,8 +6,8 @@ BUGS / TO DO
 - GridView not remembering icon size
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
-want to drop the flags and bake the behavior in
-— but no rush; keeping them is cheap insurance.
+want to drop the flags and bake the behavior in, but no rush; keeping them is cheap
+insurance.
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
 - If all meta loaded but updating icons limit metaRead a and b to iconRange
