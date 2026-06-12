@@ -211,5 +211,6 @@
         <file>images/lock.svg</file>
         <file>images/icon16/nolink.png</file>
         <file>Docs/performancetipshelp.html</file>
+        <file>Docs/focusstackingtipshelp.html</file>
     </qresource>
 </RCC>
