@@ -58,7 +58,21 @@ void MW::loupeDisplay(const QString src)
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) {
         centralLayout->setCurrentIndex(VideoTab);
-        // videoView->load(dm->currentFilePath);
+        /* (Re)load the video unless the same clip is already loaded and paused (i.e.
+           visible on the first frame). Entering loupe from grid/table with a video
+           selected leaves videoView stopped, because MW::fileSelectionChange calls
+           videoView->stop() but only reloads the video when already in Loupe mode (or
+           on double-click). Without a reload the VideoTab shows blank. stop() does not
+           clear the source, so the source alone is not enough - we also require the
+           paused state, which is the displayed state set by VideoView::load(). This
+           guard skips the redundant double-load when fileSelectionChange has just
+           loaded the same clip (e.g. double-click into loupe). */
+        QMediaPlayer *mp = videoView->video->mediaPlayer;
+        bool sameSourceShown = mp->source().toLocalFile() == dm->currentFilePath
+                               && mp->playbackState() == QMediaPlayer::PausedState;
+        if (!sameSourceShown) {
+            videoView->load(dm->currentFilePath);
+        }
     }
     else {
         centralLayout->setCurrentIndex(LoupeTab);

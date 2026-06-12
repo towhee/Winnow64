@@ -819,18 +819,34 @@ Resizing Icons or the Icon Viewport
 
     This allows the three datamodel views to be synced using dm->scrollToIcon.
 
-    Persisted icon size (between sessions):
+    Persisted icon size (between sessions and workspaces):
         IconView::assignedIconWidth is the reference width that rejustify() uses to
         compute thumbs-per-row and then justify the cell width to exactly fill the row.
         The justified result lands in iconWidth, which can differ from assignedIconWidth.
+        Critically, iconWidth is viewport-dependent: a rejustify() at a narrow width
+        shrinks iconWidth toward ICON_MIN, while assignedIconWidth is unchanged.
 
-        MW::writeSettings saves gridView->iconWidth (thumbWidthGrid). On restore,
-        MW::createGridView loads iconWidth and must also set
-        gridView->assignedIconWidth = gridView->iconWidth; otherwise rejustify() uses a
-        stale/uninitialised reference and the persisted size is discarded, making the
-        grid icon size inconsistent between sessions. (thumbView is handled separately:
-        rejustify() skips "Thumbnails" while G::isInitializing and MW::showEvent applies
-        the size via setThumbSize().)
+        Rule: persist (save) assignedIconWidth, not iconWidth. iconWidth can be corrupted
+        by a transient rejustify() — at startup the hidden gridView receives resize events
+        at a narrow width, each scheduling a rejustify() ~500ms later (IconView::resizeEvent)
+        that justifies iconWidth down to e.g. 62. Saving iconWidth persisted that transient
+        size, so the grid reverted to ~62 on the next launch; assignedIconWidth survives the
+        transient. (thumbView has an extra guard: rejustify() skips "Thumbnails" while
+        G::isInitializing, and MW::showEvent applies its size via setThumbSize().)
+
+        Rule: on restore, set assignedIconWidth = iconWidth BEFORE calling rejustify().
+        rejustify() justifies from assignedIconWidth, so if only iconWidth is restored the
+        saved size is discarded and rejustify() uses a stale/uninitialised reference.
+
+        Where these rules are applied:
+            • MW::writeSettings / MW::createGridView  - between-sessions save/restore.
+              writeSettings saves gridView->assignedIconWidth as thumbWidthGrid;
+              createGridView loads it into iconWidth then copies to assignedIconWidth.
+            • MW::saveWorkspace / MW::invokeWorkspace  - per-workspace save/restore for
+              both thumbView and gridView (save assignedIconWidth; on restore set
+              assignedIconWidth = iconWidth before rejustify()).
+            • MW::defaultWorkspace  - sets assignedIconWidth = iconWidth before rejustify()
+              so the hard-coded defaults (thumb 100, grid 160) are honoured.
 
 
 ******************************************************************************************

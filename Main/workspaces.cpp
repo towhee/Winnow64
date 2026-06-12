@@ -162,11 +162,14 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     asGridAction->setChecked(w.isGridDisplay);
     asTableAction->setChecked(w.isTableDisplay);
     asCompareAction->setChecked(w.isCompareDisplay);
+    /* assignedIconWidth must track the restored iconWidth, otherwise rejustify() justifies
+       from the previous reference width and ignores the workspace's saved size. */
     // Thumbview
     thumbView->iconWidth = w.thumbWidth;
     thumbView->iconHeight = w.thumbHeight;
     thumbView->labelFontSize = w.labelFontSize;
     thumbView->showIconLabels = w.showThumbLabels;
+    thumbView->assignedIconWidth = thumbView->iconWidth;
     thumbView->rejustify();
     thumbView->setThumbParameters();
      // GridView
@@ -175,6 +178,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     gridView->labelFontSize = w.labelFontSizeGrid;
     gridView->showIconLabels = w.showThumbLabelsGrid;
     gridView->labelChoice = w.labelChoice;
+    gridView->assignedIconWidth = gridView->iconWidth;
     gridView->rejustify();
     gridView->setThumbParameters();
     // ImageView
@@ -274,14 +278,16 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isTableDisplay = asTableAction->isChecked();
     wsd.isCompareDisplay = asCompareAction->isChecked();
 
+    /* Save assignedIconWidth (the stable user-intended reference size), not the justified,
+       viewport-dependent iconWidth. See note in MW::writeSettings / MW::createGridView. */
     // Thumbview
-    wsd.thumbWidth = thumbView->iconWidth;
+    wsd.thumbWidth = thumbView->assignedIconWidth;
     wsd.thumbHeight = thumbView->iconHeight;
     wsd.labelFontSize = thumbView->labelFontSize;
     wsd.showThumbLabels = thumbView->showIconLabels;
 
     // GridView
-    wsd.thumbWidthGrid = gridView->iconWidth;
+    wsd.thumbWidthGrid = gridView->assignedIconWidth;
     wsd.thumbHeightGrid = gridView->iconHeight;
     wsd.labelFontSizeGrid = gridView->labelFontSize;
     wsd.showThumbLabelsGrid = gridView->showIconLabels;
@@ -403,6 +409,11 @@ void MW::defaultWorkspace()
     gridView->iconHeight = 160;
     gridView->labelFontSize = 10;
     gridView->showIconLabels = true;
+
+    /* assignedIconWidth must track iconWidth so rejustify() honors these defaults instead
+       of justifying from the previous reference width. */
+    thumbView->assignedIconWidth = thumbView->iconWidth;
+    gridView->assignedIconWidth = gridView->iconWidth;
 
     thumbView->setWrapping(false);
     thumbView->setThumbParameters();

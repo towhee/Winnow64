@@ -3,7 +3,8 @@ WHAT'S NEW
 
 BUGS / TO DO
 - CombineRawJpg button only works when folder loaded and sometimes wonky
-- GridView not remembering icon size
+- GridView sometimes not remembering icon size at opening and reverts to gridView->iconWidth = 62 in
+my testing case.
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
 want to drop the flags and bake the behavior in, but no rush; keeping them is cheap

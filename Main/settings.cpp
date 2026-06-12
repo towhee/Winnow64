@@ -76,7 +76,14 @@ void MW::writeSettings()
     settings->setValue("showZoomFrame", thumbView->showZoomFrame);
 
     // grid (loaded in MW::createGridView)
-    settings->setValue("thumbWidthGrid", gridView->iconWidth);
+    /* Persist assignedIconWidth (the stable user-intended reference size), not iconWidth.
+       iconWidth is the justified, viewport-dependent value: during startup the hidden
+       gridView can be rejustified at a transient narrow width, shrinking iconWidth toward
+       ICON_MIN (e.g. 62) while assignedIconWidth stays correct. Saving iconWidth persisted
+       that transient size; assignedIconWidth survives the transient. On restore it is read
+       into iconWidth and copied back to assignedIconWidth (MW::createGridView), and
+       rejustify() recomputes the justified iconWidth once the grid is shown at full width. */
+    settings->setValue("thumbWidthGrid", gridView->assignedIconWidth);
     settings->setValue("thumbHeightGrid", gridView->iconHeight);
     settings->setValue("labelFontSizeGrid", gridView->labelFontSize);
     settings->setValue("showThumbLabelsGrid", gridView->showIconLabels);
