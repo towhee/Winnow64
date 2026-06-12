@@ -980,6 +980,7 @@ private:
     QAction *helpShortcutsAction;
     QAction *helpWelcomeAction;
     QAction *helpPerformanceTipsAction;
+    QAction *helpFocusStackingTipsAction;
     QAction *helpFilmStripAction;  // to be removed, not used
     QAction *helpRevealLogFileAction;
 
@@ -1444,6 +1445,7 @@ private:
 
     // HTML Help
     void helpPerformanceTips();
+    void helpFocusStackingTips();
 
     void mediaReadSpeed();
     void findDuplicates();

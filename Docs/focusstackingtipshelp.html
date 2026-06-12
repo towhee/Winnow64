@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Focus Stacking Tips</h1>
+
+<p>Focus stacking combines a series of images shot at different focus distances into
+a single image with greater depth of field.  Winnow can process one stack at a time or
+a batch of several stacks in one operation.</p>
+
+<h2>Remote vs Local mode</h2>
+<p>Winnow can run the focus stacking computation in two modes:</p>
+<ul>
+<li><b>Local mode</b> runs the stacking engine on this computer.  All processing uses
+your machine's CPU and memory.  Use this when you are working offline or prefer to keep
+everything on your own hardware.  Performance depends on the number of images, their
+resolution and the amount of available memory.</li>
+<li><b>Remote mode</b> sends the images to a dedicated stacking server which performs the
+computation and returns the finished result.  This offloads the heavy processing from your
+machine, which is useful for large stacks or when working on a less powerful computer.
+Remote mode requires a network connection to the server.</li>
+</ul>
+<p>Choose the mode that best matches your hardware and connectivity.  Local mode keeps the
+data on your machine; remote mode trades a network transfer for faster or more capable
+processing.</p>
+
+<h2>Batch selection of multiple stacks</h2>
+<p>You do not have to stack one group of images at a time.  Select the images for several
+stacks and Winnow will detect the separate stacks and process them in sequence as a batch.</p>
+<ul>
+<li>Select all of the images that belong to the stacks you want to process.</li>
+<li>Winnow groups the selection into individual stacks and queues each one.</li>
+<li>Each stack is processed in turn and its result is produced before the next stack begins.</li>
+</ul>
+<p>Batch processing lets you set up many stacks and leave Winnow to work through them
+unattended.</p>
+
+<h2>Status progress bar</h2>
+<p>While a stack or batch is being processed, a progress bar in the status bar shows how
+far along the operation is.</p>
+<ul>
+<li>The progress bar advances as each image in the current stack is processed.</li>
+<li>When processing a batch, it reflects progress through the entire queue of stacks.</li>
+<li>The status bar text reports the current stage so you can see what Winnow is doing at
+each step.</li>
+</ul>
+<p>You can continue to monitor progress here until the stacking operation completes.</p>
+
+</body>
+</html>

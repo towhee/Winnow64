@@ -1503,6 +1503,12 @@ void MW::createHelpActions()
     addAction(helpPerformanceTipsAction);
     connect(helpPerformanceTipsAction, &QAction::triggered, this, &MW::helpPerformanceTips);
 
+    helpFocusStackingTipsAction = new QAction(tr("Focus Stacking tips"), this);
+    helpFocusStackingTipsAction->setObjectName("helpFocusStackingTips");
+    helpFocusStackingTipsAction->setShortcutVisibleInContextMenu(true);
+    addAction(helpFocusStackingTipsAction);
+    connect(helpFocusStackingTipsAction, &QAction::triggered, this, &MW::helpFocusStackingTips);
+
     helpRevealLogFileAction = new QAction("Send log files to Winnow", this);
     helpRevealLogFileAction->setObjectName("RevealLogFileAct");
     helpRevealLogFileAction->setShortcutVisibleInContextMenu(true);
@@ -2105,6 +2111,7 @@ void MW::createHelpMenu()
     helpMenu->addAction(helpWelcomeAction);
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpPerformanceTipsAction);
+    helpMenu->addAction(helpFocusStackingTipsAction);
     helpMenu->addSeparator();
     logMenu = helpMenu->addMenu(tr("&Logs"));
     logMenu->addAction(viewLogAction);
