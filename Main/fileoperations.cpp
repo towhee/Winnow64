@@ -350,6 +350,19 @@ void MW::insertFiles(QStringList pathList)
             }
         }
     }
+
+    /* Re-assert the proxy's sorted order. dm->insert() placed each new row at its
+       sorted position in the SOURCE model, but with no active proxy sort column
+       sf appends it, and the addMetadataForItem dataChanged emitted in the loop
+       above re-appends it to the end. filterChange() (invalidateRowsFilter) rebuilds
+       the proxy mapping in source order so the inserted rows land in their sorted
+       position. This must run synchronously here - the async metadataLoaded signal
+       that refresh() relied on does not reliably fire in this insert flow.
+       See memory project_insertfiles_proxy_brittle. */
+    dm->sf->filterChange(src);
+    dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    if (thumbView->isVisible()) thumbView->refreshIcons(src);
+    if (gridView->isVisible()) gridView->refreshIcons(src);
 }
 
 void MW::deleteSelectedFiles()

@@ -2493,25 +2493,13 @@ void MW::refresh()
         QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection,
                                   Q_ARG(QString, srcFun));
 
-        /* When the inserted row's metadata finishes loading,
-           DataModel::addMetadataForItem emits dataChanged, which makes the proxy
-           re-insert the row at the END (the default order has no active sort
-           column). Re-assert source order once loading completes, then keep the
-           current selection in view. SingleShotConnection so it fires once and
-           does not affect later folder loads. */
-        connect(this, &MW::metadataLoaded, this, [this]() {
-            QString src = "MW::refresh (post-insert resort)";
-            dm->sf->filterChange(src);
-            dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
-            if (thumbView->isVisible()) {
-                thumbView->refreshIcons(src);
-                thumbView->scrollToRow(dm->currentSfRow, src);
-            }
-            if (gridView->isVisible()) {
-                gridView->refreshIcons(src);
-                gridView->scrollToRow(dm->currentSfRow, src);
-            }
-        }, Qt::SingleShotConnection);
+        /* The inserted row appears at the END until the proxy is re-sorted: with no
+           active sort column sf appends it, and the addMetadataForItem dataChanged
+           emitted as its metadata loads re-appends it. The re-assert of source order
+           is done synchronously at the tail of MW::insertFiles (after it loads the
+           inserted rows' metadata), not here - the metadataLoaded signal this used to
+           rely on does not reliably fire in the synchronous insert flow, and a
+           lingering SingleShotConnection could misfire on a later folder load. */
 
         // Point MetaRead at the inserted row so its icon range covers it (icons
         // only load within the range updateChange() centres on the given row);
