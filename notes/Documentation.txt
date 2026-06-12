@@ -769,6 +769,15 @@ SCROLLING
     employed in fileSelectionChange, where visible views are scrolled to centre on the
     current selection.
 
+    Shift + navigation key (extending a selection) does not move the current index, so the
+    centre-on-current scroll above does not fire. Instead, Selection::select (Shift branch)
+    follows the extending selection: it scrolls the visible view(s) just enough to expose
+    the cell one beyond the new selection edge, in the direction of extension (the "look-
+    ahead" cell). This keeps both the last selected item and the next item visible so the
+    user can see where the selection is heading. The scroll uses EnsureVisible (not centre),
+    so it is a no-op when the look-ahead cell is already on screen and is clamped to the
+    start/end of the datamodel. See IconView::ensureRowVisible and TableView::ensureRowVisible.
+
 ------------------------------------------------------------------------------------------
 Painting Delays
 ------------------------------------------------------------------------------------------

@@ -1250,6 +1250,22 @@ void IconView::scrollToCurrent(QString source)
     }
 }
 
+void IconView::ensureRowVisible(int row, QString source)
+/*
+    Minimal scroll to bring row into view (used to follow a shift-extended selection so the
+    cell just beyond the selection edge becomes visible). Unlike scrollToRow, which centers
+    the row, EnsureVisible only scrolls far enough to expose the row at the viewport edge.
+*/
+{
+    if (isDebug || G::isLogger)
+        G::log("IconView::ensureRowVisible", objectName() + " row = " +
+               QVariant(row).toString() + " src = " + source);
+    QModelIndex idx = dm->sf->index(row, 0);
+    if (!idx.isValid()) return;
+    G::ignoreScrollSignal = true;
+    scrollTo(idx, QAbstractItemView::EnsureVisible);
+}
+
 // void IconView::scrollContentsBy(int dx, int dy)
 // {
 //     qDebug() << "SCROLL EVENT: scrollContentsBy dx =" << dx << "dy =" << dy;

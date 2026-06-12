@@ -177,6 +177,27 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
         QItemSelection selection;
         selection.select(shiftAnchorIndex, shiftExtendIndex);
         sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+
+        /* Follow the extending selection: scroll the visible view(s) just enough to expose
+           the cell one beyond the new selection edge, in the direction of extension. This
+           keeps both the last selected item and the next item (the look-ahead) visible so
+           the user can see where the selection is heading. EnsureVisible is a no-op when the
+           look-ahead cell is already on screen, so the view only scrolls when needed. */
+        int extendRow = shiftExtendIndex.row();
+        int anchorRow = shiftAnchorIndex.row();
+        if (extendRow != anchorRow) {
+            int direction = (extendRow > anchorRow) ? 1 : -1;
+            int lookAheadRow = extendRow + direction;
+            int maxRow = dm->sf->rowCount() - 1;
+            if (lookAheadRow >= 0 && lookAheadRow <= maxRow) {
+                if (thumbView->isVisible())
+                    thumbView->ensureRowVisible(lookAheadRow, "Selection::select shift");
+                if (gridView->isVisible())
+                    gridView->ensureRowVisible(lookAheadRow, "Selection::select shift");
+                if (tableView->isVisible())
+                    tableView->ensureRowVisible(lookAheadRow, "Selection::select shift");
+            }
+        }
         return;
     }
 

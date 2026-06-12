@@ -163,6 +163,23 @@ void TableView::scrollToRow(int row, QString source)
     scrollTo(sfIdx, QAbstractItemView::PositionAtCenter);
 }
 
+void TableView::ensureRowVisible(int row, QString source)
+/*
+    Minimal vertical scroll to bring row into view (used to follow a shift-extended
+    selection so the row just beyond the selection edge becomes visible). Unlike
+    scrollToRow, which centers the row, EnsureVisible only scrolls far enough to expose
+    the row at the viewport edge. The horizontal position is preserved.
+*/
+{
+    if (isDebug || G::isLogger) G::log("TableView::ensureRowVisible", source);
+    QModelIndex sfIdx = dm->sf->index(row, frozenColumns);
+    if (!sfIdx.isValid()) return;
+    int hPos = horizontalScrollBar()->value();
+    G::ignoreScrollSignal = true;
+    scrollTo(sfIdx, QAbstractItemView::EnsureVisible);
+    horizontalScrollBar()->setValue(hPos);
+}
+
 void TableView::scrollToCurrent()
 {
     if (isDebug || G::isLogger) G::log("TableView::scrollToCurrent");
