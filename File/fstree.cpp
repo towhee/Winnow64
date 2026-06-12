@@ -1825,7 +1825,7 @@ void FSTree::test()
 void FSTree::howThisWorks()
 {
     if (G::isLogger) G::log("FSTree::howThisWorks");
-    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - How folders work",
                    ":/Docs/foldershelp.html",
                    QSize(700, 600), r, window());

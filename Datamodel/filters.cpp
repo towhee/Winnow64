@@ -1781,7 +1781,7 @@ void Filters::mouseReleaseEvent(QMouseEvent * event)
 void Filters::howThisWorks()
 {
     if (G::isLogger) G::log("Filters::howThisWorks");
-    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - How filters work",
                    ":/Docs/filtershelp.html",
                    QSize(600, 500), r, window());

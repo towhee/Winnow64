@@ -636,7 +636,7 @@ void InfoView::mousePressEvent(QMouseEvent *event)
 void InfoView::howThisWorks()
 {
     if (G::isLogger) G::log("InfoView::howThisWorks");
-    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - How the metadata panel works",
                    ":/Docs/metadatahelp.html",
                    QSize(700, 600), r, window());

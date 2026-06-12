@@ -3,7 +3,7 @@
 void MW::helpPerformanceTips()
 {
     if (G::isLogger) G::log("MW::helpPerformanceTips");
-    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - Performance Tips",
                    ":/Docs/performancetipshelp.html",
                    QSize(600, 400), r, window());
@@ -12,9 +12,7 @@ void MW::helpPerformanceTips()
 void MW::helpFocusStackingTips()
 {
     if (G::isLogger) G::log("MW::helpFocusStackingTips");
-    /* geometry() is already in global coords for a top-level window, so center
-       over it directly (mapToGlobal would double the offset). */
-    QRect r = geometry();
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - Focus Stacking Tips",
                    ":/Docs/focusstackingtipshelp.html",
                    QSize(750, 600), r, window());

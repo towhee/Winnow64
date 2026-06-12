@@ -639,7 +639,7 @@ void BookMarks::dropEvent(QDropEvent *event)
 void BookMarks::howThisWorks()
 {
     if (G::isLogger) G::log("BookMarks::howThisWorks");
-    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - How bookmarks work",
                    ":/Docs/bookmarkshelp.html",
                    QSize(700, 600), r, window());

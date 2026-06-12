@@ -1544,7 +1544,7 @@ void IngestDlg::on_backupChk_stateChanged(int arg1)
 void IngestDlg::on_helpBtn_clicked()
 {
     if (G::isLogger) G::log("IngestDlg::on_helpBtn_clicked");
-    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - Ingest Automatic Path",
                    ":/Docs/ingestautopath.html",
                    QSize(800, 700), r, this);

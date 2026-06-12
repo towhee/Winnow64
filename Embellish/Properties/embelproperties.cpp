@@ -5422,7 +5422,7 @@ void EmbelProperties::test2()
 void EmbelProperties::coordHelp()
 {
     if (G::isLogger) G::log("EmbelProperties::coordHelp");
-    QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     qDebug() << "EmbelProperties::coordHelp  geometry() =" << r;
     HtmlWindow *w = new HtmlWindow("Winnow - Embel Container and Coordinate System",
                                    ":/Docs/embelcoordsystem.html",
