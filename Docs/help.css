@@ -23,6 +23,9 @@ h1 { color: #02b0cf;    font-size: 22px; margin: 0.6em 0 0.3em; }
 h2 { color: #016f82;    font-size: 18px; margin: 0.6em 0 0.3em; }
 h3 { color: #013640;    font-size: 15px; margin: 0.5em 0 0.2em; }
 a  { color: #88BBEE; }
+/* Small gap between list items — less than a full line — so bullet/number
+   lists are easier to read. em scales with the app font (like the headings). */
+li { margin-bottom: 0.4em; }
 code, pre {
     color: #E0C070;
     background-color: #1A1A1A;
