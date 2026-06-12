@@ -203,7 +203,7 @@ double jitIconCacheMemFraction = 0.5;   // share of free-remainder memory budget
 std::atomic<qint64> imageCacheHeadroomMB{0};  // image cache's remaining intended claim (MB)
 int iconPressureTestLevel = -1;         // -1 real; 0 normal+recovered; 1 warn; 2 critical; 3 normal-not-recovered
 bool useVisibleOnlyIconEmit = true;     // setIcon1/setValDm notify views only for visible rows (set false for prior behavior)
-bool useBatchedFolderInsert = true;     // addFolder adds a folder's rows in one insert + blocked fill (set false for per-row)
+bool useBatchedFolderInsert = false;    // OFF: batched insert + one wide dataChanged re-sorts the proxy block Z-A; per-row preserves A-Z. No measurable latency gain over per-row (useVisibleOnlyIconEmit carries the win)
 
 // status
 // bool isModifyingDatamodel;
