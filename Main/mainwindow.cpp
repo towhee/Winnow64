@@ -3106,6 +3106,9 @@ void MW::folderChanged(bool aborted)
     // filters->loadingDataModel(false);   // isLoaded = false  rgh why not req'd?
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
+    // Combine Raw/JPG cannot be toggled mid-load (re-enabled in folderChangeCompleted)
+    rawJpgStatusBtn->setEnabled(false);
+    combineRawJpgAction->setEnabled(false);
 
     // initialize metaRead only when new instance and first folder loaded
     // Queued: MetaRead lives on metaReadThread; direct call would race with
@@ -3254,6 +3257,8 @@ void MW::folderChangeCompleted()
     filters->setEnabled(true); //x
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
+    rawJpgStatusBtn->setEnabled(true);
+    combineRawJpgAction->setEnabled(true);
     // must retain default order in datamodel as ImageCache is already working
     updateSortColumn(G::NameColumn);
 

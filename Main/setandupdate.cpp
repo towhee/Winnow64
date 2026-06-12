@@ -465,16 +465,36 @@ void MW::setCombineRawJpg()
     if (G::isLogger)
         G::log("MW::setCombineRawJpg");
 
-    if (!dm->rowCount()) return;
-
+    /* Block toggling only while a folder is loading (rows exist but metadata is
+       still being read); toggling is allowed when no folder is loaded.  The trigger
+       (menu action or status-bar button) has already flipped combineRawJpgAction's
+       checked state, so restore it to match combineRawJpg, keeping the two in sync;
+       otherwise the action desyncs from the flag and a later click is wasted
+       re-aligning them instead of toggling. */
     if (dm->rowCount() && !G::allMetadataAttempted) {
+        combineRawJpgAction->setChecked(combineRawJpg);
         QString msg = "Folder is still loading.  Try again when the folder has loaded.";
         G::popup->showPopup(msg, 2000);
+        updateStatusBar();
         return;
     }
 
     // flag used in MW, dm and sf, fsTree, bookmarks
     combineRawJpg = combineRawJpgAction->isChecked();
+    settings->setValue("combineRawJpg", combineRawJpg);
+    G::combineRawJpg = combineRawJpg;
+    dm->sf->combineRawJpg = combineRawJpg;
+    fsTree->combineRawJpg = combineRawJpg;
+    bookmarks->combineRawJpg = combineRawJpg;
+
+    if (!dm->rowCount()) {
+        /* No folder loaded: record the setting and refresh the folder/bookmark image
+           counts so they reflect the new pairing; skip the datamodel/proxy rebuild. */
+        fsTree->refreshModel();
+        refreshBookmarks();
+        updateStatusBar();
+        return;
+    }
 
     QString msg;
     if (combineRawJpg) msg = "Combining Raw + Jpg pairs.  This could take a moment.";
@@ -485,13 +505,8 @@ void MW::setCombineRawJpg()
     // prevent crash when there are videos (did not work)
     // stop();
 
-    settings->setValue("combineRawJpg", combineRawJpg);
     updateStatusBar();
 
-    G::combineRawJpg = combineRawJpg;
-    dm->sf->combineRawJpg = combineRawJpg;
-    fsTree->combineRawJpg = combineRawJpg;
-    bookmarks->combineRawJpg = combineRawJpg;
     // update image counts
     fsTree->refreshModel();
     refreshBookmarks();
