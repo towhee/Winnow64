@@ -12,20 +12,15 @@ a single image with greater depth of field.  Winnow can process one stack at a t
 a batch of several stacks in one operation.</p>
 
 <h2>Remote vs Local mode</h2>
-<p>Winnow can run the focus stacking computation in two modes:</p>
+<p>Winnow can receive the source images for a stack in two ways:</p>
 <ul>
-<li><b>Local mode</b> runs the stacking engine on this computer.  All processing uses
-your machine's CPU and memory.  Use this when you are working offline or prefer to keep
-everything on your own hardware.  Performance depends on the number of images, their
-resolution and the amount of available memory.</li>
-<li><b>Remote mode</b> sends the images to a dedicated stacking server which performs the
-computation and returns the finished result.  This offloads the heavy processing from your
-machine, which is useful for large stacks or when working on a less powerful computer.
-Remote mode requires a network connection to the server.</li>
+<li><b>Local mode</b> means you select the source images directly in Winnow and stack
+them.  This is the normal workflow when you are browsing a folder in Winnow and choose
+the images yourself.</li>
+<li><b>Remote mode</b> means the source images are sent to Winnow from another program,
+such as Lightroom.  The external program hands the selected images to Winnow, which then
+processes them into a stack.</li>
 </ul>
-<p>Choose the mode that best matches your hardware and connectivity.  Local mode keeps the
-data on your machine; remote mode trades a network transfer for faster or more capable
-processing.</p>
 
 <h2>Batch selection of multiple stacks</h2>
 <p>You do not have to stack one group of images at a time.  Select the images for several
@@ -33,6 +28,8 @@ stacks and Winnow will detect the separate stacks and process them in sequence a
 <ul>
 <li>Select all of the images that belong to the stacks you want to process.</li>
 <li>Winnow groups the selection into individual stacks and queues each one.</li>
+<li>Any miscellaneous images in the selection that are not part of a stack are detected
+and ignored.</li>
 <li>Each stack is processed in turn and its result is produced before the next stack begins.</li>
 </ul>
 <p>Batch processing lets you set up many stacks and leave Winnow to work through them
