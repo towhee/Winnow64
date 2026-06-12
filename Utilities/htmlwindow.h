@@ -9,7 +9,7 @@ class HtmlWindow : public QScrollArea
 public:
     HtmlWindow(const QString &title,
                const QString &htmlPath,
-               const QSize &size,
+               const QSize &size = QSize(750, 600),
                const QRect mwRect = QRect(),
                QWidget *parent = nullptr);
     ~HtmlWindow() override;

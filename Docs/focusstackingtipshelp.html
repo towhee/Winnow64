@@ -9,20 +9,20 @@
 
 <p>Focus stacking combines a series of images shot at different focus distances into
 a single image with greater depth of field.  Winnow can process one stack at a time or
-a batch of several stacks in one operation.</p>
+a batch of multiple stacks in one operation.</p>
 
-<h2>Remote vs Local mode</h2>
+<h2>Source Images</h2>
 <p>Winnow can receive the source images for a stack in two ways:</p>
 <ul>
-<li><b>Local mode</b> means you select the source images directly in Winnow and stack
+<li>Select the source images directly in Winnow and stack
 them.  This is the normal workflow when you are browsing a folder in Winnow and choose
 the images yourself.</li>
-<li><b>Remote mode</b> means you select the source images in another program, such as
+<li>Select the source images in another program, such as
 Lightroom, and export them to the <i>FocusStack</i> winnet.  This launches Winnow, where
 the images are processed and the final fused image is created.</li>
 </ul>
 
-<h3>Finding the winnets</h3>
+<h2>Finding the winnets</h2>
 <p>The winnets are small export droplets that Winnow keeps in its per-user data folder.
 To set up an export from Lightroom (or another program) you point it at the
 <i>FocusStack</i> winnet in that folder:</p>
@@ -48,15 +48,7 @@ and ignored.</li>
 unattended.</p>
 
 <h2>Status progress bar</h2>
-<p>While a stack or batch is being processed, a progress bar in the status bar shows how
-far along the operation is.</p>
-<ul>
-<li>The progress bar advances as each image in the current stack is processed.</li>
-<li>When processing a batch, it reflects progress through the entire queue of stacks.</li>
-<li>The status bar text reports the current stage so you can see what Winnow is doing at
-each step.</li>
-</ul>
-<p>You can continue to monitor progress here until the stacking operation completes.</p>
+<p>While a stack or batch is being processed, progress is updated in the status bar.</p>
 
 </body>
 </html>

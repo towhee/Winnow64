@@ -15,5 +15,5 @@ void MW::helpFocusStackingTips()
     QRect r = QRect(mapToGlobal(geometry().topLeft()), geometry().size());
     new HtmlWindow("Winnow - Focus Stacking Tips",
                    ":/Docs/focusstackingtipshelp.html",
-                   QSize(600, 400), r, window());
+                   QSize(750, 600), r, window());
 }
