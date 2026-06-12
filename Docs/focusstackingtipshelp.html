@@ -17,9 +17,21 @@ a batch of several stacks in one operation.</p>
 <li><b>Local mode</b> means you select the source images directly in Winnow and stack
 them.  This is the normal workflow when you are browsing a folder in Winnow and choose
 the images yourself.</li>
-<li><b>Remote mode</b> means the source images are sent to Winnow from another program,
-such as Lightroom.  The external program hands the selected images to Winnow, which then
-processes them into a stack.</li>
+<li><b>Remote mode</b> means you select the source images in another program, such as
+Lightroom, and export them to the <i>FocusStack</i> winnet.  This launches Winnow, where
+the images are processed and the final fused image is created.</li>
+</ul>
+
+<h3>Finding the winnets</h3>
+<p>The winnets are small export droplets that Winnow keeps in its per-user data folder.
+To set up an export from Lightroom (or another program) you point it at the
+<i>FocusStack</i> winnet in that folder:</p>
+<ul>
+<li>On <b>macOS</b>, open Finder, choose <b>Go &gt; Go to Folder…</b> and enter
+<code>~/Library/Application Support/Winnow/Winnets</code>.</li>
+<li>On <b>Windows</b>, open Explorer and enter
+<code>%APPDATA%\Winnow\Winnets</code> in the address bar (this expands to
+<code>C:\Users\&lt;you&gt;\AppData\Roaming\Winnow\Winnets</code>).</li>
 </ul>
 
 <h2>Batch selection of multiple stacks</h2>
