@@ -33,6 +33,7 @@ Table of Contents
          - Image Change
          - Filter Change
          - Sort Change
+         - Combine Raw+JPG
          - Insertions, Deletions, Modifications
          - Instance
 
@@ -514,6 +515,50 @@ Sort Change
     thumbView->sortThumbs
     ImageCache::rebuildImageCacheParameters
     MW::scrollToCurrentRow
+
+------------------------------------------------------------------------------------------
+Combine Raw+JPG
+------------------------------------------------------------------------------------------
+
+    When a folder holds raw+jpg pairs (same base name), the "Combine Raw+JPG" toggle
+    decides whether each pair is shown as a single combined row (raw is primary, the jpg
+    folded into it) or as two separate rows. The state lives in the bool combineRawJpg,
+    which is mirrored to G::combineRawJpg, dm->sf, fsTree and bookmarks (the folder and
+    bookmark panels show image counts that depend on the setting).
+
+    Entry points (both route to MW::setCombineRawJpg):
+        • combineRawJpgAction — File menu item, shortcut Opt/Alt + J. Being checkable,
+          the action flips its own checked state before triggered fires.
+        • rawJpgStatusBtn — status-bar button. Its lambda calls
+          combineRawJpgAction->toggle() (which does not re-emit triggered) then calls
+          setCombineRawJpg directly.
+
+    combineRawJpgAction->isChecked() is the source of truth; setCombineRawJpg reads it
+    into combineRawJpg. Because the trigger has already flipped the action before
+    setCombineRawJpg runs, any early return must restore the action with
+    setChecked(combineRawJpg) to keep the action and flag in sync — otherwise they
+    desync and a later click is spent re-aligning them instead of toggling.
+
+    Three load states:
+        • Folder loaded (dm->rowCount() && G::allMetadataAttempted): full apply — persist
+          to QSettings, rewrite the Type column for jpg duplicates ("JPG" vs "JPG+<raw>"),
+          dm->rebuildTypeFilter, filterChange (re-pairs/splits the proxy) and
+          buildFilters->updateAllCounts (the proxy baseline changed without a
+          Filters-tree change, so unfiltered counts must be recomputed too).
+        • No folder loaded (dm->rowCount() == 0): toggling is allowed; setCombineRawJpg
+          records the setting and refreshes the folder/bookmark counts, then returns
+          before the datamodel/proxy rebuild.
+        • Folder loading (rows exist but !G::allMetadataAttempted): toggling is blocked.
+          rawJpgStatusBtn and combineRawJpgAction are disabled in MW::folderChanged at
+          load start and re-enabled in MW::folderChangeCompleted; updateStatusBar also
+          enforces the disabled state. setCombineRawJpg additionally guards this case
+          (restores the action and shows a "folder is still loading" popup) so a queued
+          shortcut cannot slip through.
+
+    Key files: Main/setandupdate.cpp (setCombineRawJpg), Main/status.cpp
+    (updateStatusBar — button icon/tooltip/enabled state), Main/initialize.cpp
+    (rawJpgStatusBtn wiring), Main/menusandactions.cpp (combineRawJpgAction),
+    Main/mainwindow.cpp (folderChanged / folderChangeCompleted enable-disable).
 
 ------------------------------------------------------------------------------------------
 Insertions, Deletions, Modifications

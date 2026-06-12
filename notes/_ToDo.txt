@@ -2,9 +2,7 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- CombineRawJpg button only works when folder loaded and sometimes wonky
-- GridView sometimes not remembering icon size at opening and reverts to gridView->iconWidth = 62 in
-my testing case.
+- Focus Stacking help
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
 want to drop the flags and bake the behavior in, but no rush; keeping them is cheap

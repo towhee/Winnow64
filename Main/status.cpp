@@ -74,9 +74,6 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 
     if (!keepBase) status = s;
 
-    // debug grid width shrinking issue
-    status += "  " + QVariant(gridView->iconWidth).toString();
-
     statusLabel->setText(status);
 
     // status label tooltip
@@ -180,18 +177,26 @@ void MW::updateStatusBar()
         );
     }
 
+    /* Disable Combine Raw/JPG toggling while a folder is loading (rows exist but
+       metadata is still being read); toggling is allowed when no folder is loaded. */
+    bool rawJpgEnabled = !(dm->rowCount() > 0 && !G::allMetadataAttempted);
+    rawJpgStatusBtn->setEnabled(rawJpgEnabled);
+    combineRawJpgAction->setEnabled(rawJpgEnabled);
+
     if (combineRawJpg) {
         rawJpgStatusBtn->setIcon(QIcon(":/images/icon16/link.png"));
         rawJpgStatusBtn->setToolTip(
-            "Combine Raw/JPG is On.  Click to toggle on/off.  "
-            "Shortcut: Opt/Alt + J"
+            rawJpgEnabled
+            ? "Combine Raw/JPG is On.  Click to toggle on/off.  Shortcut: Opt/Alt + J"
+            : "Combine Raw/JPG is On.  Disabled while the folder is loading."
         );
     }
     else {
         rawJpgStatusBtn->setIcon(QIcon(":/images/icon16/nolink.png"));
         rawJpgStatusBtn->setToolTip(
-            "Combine Raw/JPG is Off.  Click to toggle on/off.  "
-            "Shortcut: Opt/Alt + J"
+            rawJpgEnabled
+            ? "Combine Raw/JPG is Off.  Click to toggle on/off.  Shortcut: Opt/Alt + J"
+            : "Combine Raw/JPG is Off.  Disabled while the folder is loading."
         );
     }
 
