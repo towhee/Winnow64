@@ -117,6 +117,16 @@ private:
     QAtomicInt abort {0};
     DataModel *dm;
     Metadata *metadata;
+
+    /*
+    Independent mode is set by decodeIndependent(). When true, load(), rotate()
+    and colorManage() read per-file values (ext, offsets, orientation, icc)
+    from indMeta instead of the live DataModel (dm->sf), so a decode can run
+    even after the DataModel has moved to a different folder. The normal
+    caching path (decode()) leaves this false and is unaffected.
+    */
+    bool isIndependent = false;
+    ImageMetadata indMeta;
     // ImageCacheData::CacheItem n;
     unsigned char *buf;
     QString ext;

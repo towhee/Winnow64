@@ -480,7 +480,7 @@ public slots:
     void reportWorkspace(WorkspaceData &ws, QString src = "");
     void loadWorkspaces();
     void saveWorkspaces();
-    void matFromQImage(QString fPath, cv::Mat &mat);
+    void matFromQImage(QString fPath, ImageMetadata m, cv::Mat &mat);
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
