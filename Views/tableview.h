@@ -14,6 +14,7 @@ public:
     QTableView *frozenView = nullptr;
     void scrollToCurrent();
     void scrollToRow(int row, QString source);
+    void ensureRowVisible(int row, QString source = "");
     bool isRowVisible(int row);
     bool scrollWhenReady;
     QStandardItemModel *ok;
