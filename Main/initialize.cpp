@@ -599,7 +599,6 @@ void MW::createGridView()
         if (settings->contains("labelChoice")) gridView->labelChoice = settings->value("labelChoice").toString();
         if (settings->contains("classificationBadgeSizeFactor")) gridView->badgeSize = settings->value("classificationBadgeSizeFactor").toInt();
         if (settings->contains("iconNumberSize")) gridView->iconNumberSize = settings->value("iconNumberSize").toInt();
-        qDebug().noquote() << "gridView->iconWidth =" << gridView->iconWidth;
     }
     else {
         gridView->iconWidth = 200;

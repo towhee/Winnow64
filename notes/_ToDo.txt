@@ -2,7 +2,6 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Focus Stacking help
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
 want to drop the flags and bake the behavior in, but no rush; keeping them is cheap

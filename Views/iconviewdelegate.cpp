@@ -466,15 +466,31 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     auto sf = proxy ? proxy->sourceModel() : view->model();
     QPoint viewPos = view->viewport()->mapFromGlobal(event->globalPos());
 
-    if (getSymbolRect("Sidecar", option.rect, index).contains(viewPos))
+    /* Symbol visibility flags must mirror the painting conditions in paint() so a
+       tooltip is only offered when the symbol is actually drawn for this icon. */
+    bool isSidecar = sf->index(row, G::SidecarColumn).data().toBool();
+    bool isReadWrite = sf->index(row, G::ReadWriteColumn).data().toBool();
+    bool isCached = sf->index(row, G::IsCachedColumn).data(Qt::EditRole).toBool();
+    bool isVideo = sf->index(row, G::VideoColumn).data().toBool();
+    bool metaLoaded = sf->index(row, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded;
+    QString rating = sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
+    bool isCombineRawJpg = sf->index(row, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
+
+    bool sidecarVisible = isSidecar && !G::isSlideShow;
+    bool lockVisible = !isReadWrite;
+    bool combineRawJpgVisible = isCombineRawJpg;
+    bool cacheVisible = !isCached && !isVideo && metaLoaded && !G::isSlideShow;
+    bool ratingVisible = isRatingBadgeVisible && G::ratings.contains(rating);
+
+    if (sidecarVisible && getSymbolRect("Sidecar", option.rect, index).contains(viewPos))
         tooltip = "Image has a sidecar file";
-    else if (getSymbolRect("Lock", option.rect, index).contains(viewPos))
+    else if (lockVisible && getSymbolRect("Lock", option.rect, index).contains(viewPos))
         tooltip = "Image file is locked";
-    else if (getSymbolRect("CombineRawJpg", option.rect, index).contains(viewPos))
+    else if (combineRawJpgVisible && getSymbolRect("CombineRawJpg", option.rect, index).contains(viewPos))
         tooltip = "Image is JPG version of a RAW+JPG pair";
-    else if (getSymbolRect("Cache", option.rect, index).contains(viewPos))
+    else if (cacheVisible && getSymbolRect("Cache", option.rect, index).contains(viewPos))
         tooltip = "Image file is not cached";
-    else if (getSymbolRect("Rating", option.rect, index).contains(viewPos))
+    else if (ratingVisible && getSymbolRect("Rating", option.rect, index).contains(viewPos))
         tooltip = "Rating";
     else if (getSymbolRect("Duration", option.rect, index).contains(viewPos))
         tooltip = "Video Duration";
@@ -679,9 +695,12 @@ textRect         = a rectangle below itemRect
         QFont videoFont = QApplication::font();
         videoFont.setPixelSize(G::fontSize);
         painter->setFont(videoFont);
-        QRect bRect;
+        QRect bRect = painter->boundingRect(itemRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
+        QColor bgColor = G::backgroundColor;
+        bgColor.setAlpha(200);      // background opacity
+        painter->fillRect(bRect, bgColor);
         painter->setPen(videoTextColor);
-        painter->drawText(itemRect, Qt::AlignBottom | Qt::AlignHCenter, duration, &bRect);
+        painter->drawText(itemRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
         videoDurationHt = bRect.height();
     }
 
