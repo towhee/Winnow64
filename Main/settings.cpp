@@ -99,7 +99,7 @@ void MW::writeSettings()
     // image cache (see preferences.cpp)
     // settings->setValue("autoMaxMB", imageCache->getAutoMaxMB());
     // settings->setValue("cacheMaxMB", imageCache->getMaxMB());
-    // settings->setValue("isShowCacheStatus", imageCache->getShowCacheStatus());
+    // settings->setValue("isShowCacheStatus", isShowCacheProgressBar;
 
     settings->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
     settings->setValue("isIconNumberVisible", iconNumberVisibleAction->isChecked());
