@@ -435,11 +435,15 @@ void MW::createImageCache()
             imageCache->setMaxMB(cacheMaxMB);
         }
 
-        if (settings->contains("isShowCacheStatus")) {
-            bool isShow = settings->value("isShowCacheStatus").toBool();
-            imageCache->setShowCacheStatus(isShow);
-            isShowCacheProgressBar = isShow;
-        }
+        // isShowCacheStatus moved to createStatusBar
+        // if (settings->contains("isShowCacheStatus")) {
+        //     bool isShow = settings->value("isShowCacheStatus").toBool();
+        //     isShowCacheProgressBar = isShow;
+        //     metaRead->showProgressInStatusbar = isShow;
+        //     imageCache->setShowCacheStatus(isShow);
+        //     isShowCacheProgressBar = isShow;
+        //     progressLabel->setVisible(isShow);
+        // }
     }
 
     connect(&imageCacheThread, &QThread::finished,
@@ -1207,6 +1211,16 @@ void MW::createStatusBar()
     statusLabel = new QLabel;
     statusLabel->setObjectName("statusLabel");
     statusBar()->addWidget(statusLabel);
+
+    if (settings->contains("isShowCacheStatus")) {
+        bool isShow = settings->value("isShowCacheStatus").toBool();
+        isShowCacheProgressBar = isShow;
+        metaRead->showProgressInStatusbar = isShow;
+        imageCache->setShowCacheStatus(isShow);
+        isShowCacheProgressBar = isShow;
+        progressLabel->setVisible(isShow);
+    }
+
 }
 
 void MW::createFolderDock()
