@@ -458,6 +458,9 @@ void MW::setIngested()
 
     // update filter counts
     buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction);
+
+    // picks are now "Ingested"; disable ingest if nothing left picked
+    updatePickDependentActions();
 }
 
 void MW::setCombineRawJpg()

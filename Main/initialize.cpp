@@ -683,6 +683,11 @@ void MW::createSelection()
     connect(sel, &Selection::fileSelectionChange, this, &MW::fileSelectionChange);
     connect(sel, &Selection::updateChange, this, &MW::updateChange);
     connect(sel->sm, &QItemSelectionModel::selectionChanged, sel, &Selection::selectionChanged);
+    /* Re-evaluate selection-count dependent actions (focusStack, meanStack, asCompare,
+       Open With apps) whenever the selection set changes, not just when the current
+       index changes (fileSelectionChange). */
+    connect(sel->sm, &QItemSelectionModel::selectionChanged,
+            this, &MW::enableSelectionDependentMenus);
     connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
     connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrentSF);
 }

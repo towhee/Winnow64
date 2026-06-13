@@ -60,6 +60,13 @@ Table of Contents
          - Entry Points
          - Orphaned Help Documents
 
+    8. ACTION ENABLE/DISABLE RULES
+         - Overview
+         - Conditions and Triggers
+         - The Menu vs Shortcut Pitfall
+         - Disabled Shortcut Feedback
+         - Rules by Action
+
 
 ******************************************************************************************
 
@@ -1145,3 +1152,127 @@ Orphaned Help Documents
       • Docs/QPixmap performance.xlsx
       • Docs/winnow.png
       • Docs/debug.log
+
+
+******************************************************************************************
+8. ACTION ENABLE/DISABLE RULES
+******************************************************************************************
+
+------------------------------------------------------------------------------------------
+Overview
+------------------------------------------------------------------------------------------
+
+    Menu/toolbar actions that act on the loaded folder, the current selection, or the set
+    of picked images are enabled/disabled centrally in MW::enableSelectionDependentMenus()
+    (`Main/menusandactions.cpp`).  Pick-dependent actions are additionally kept in sync by
+    MW::updatePickDependentActions() (`Main/mainwindow.cpp`), which is called from the
+    pick-toggle paths.
+
+    Actions that are always valid (app/window/help/about, dock-visibility toggles,
+    workspaces, preferences, open folder, color manage, combine raw+jpg, diagnostics,
+    folder-tree/USB context actions handled by the rename* slots, and "Manage External
+    Applications") are never gated here.
+
+------------------------------------------------------------------------------------------
+Conditions and Triggers
+------------------------------------------------------------------------------------------
+
+    Four state conditions drive enabling.  Each must have a trigger that re-runs the
+    relevant update when the condition can change, otherwise actions get stuck disabled:
+
+    • dmHasRows  (dm->rowCount() > 0 — a folder is loaded)
+         Triggers: fileSelectionChange (auto-select after load), selectionChanged (on
+         clear), and view-mode switches — all call enableSelectionDependentMenus().
+
+    • hasSelection / selection count  (sel->count())
+         Trigger: the selection model's selectionChanged signal is connected directly to
+         enableSelectionDependentMenus() in MW::createSelection()
+         (`Main/initialize.cpp`).  This is essential: extending/shrinking a selection
+         with shift/ctrl does NOT change the current index, so fileSelectionChange alone
+         would never re-evaluate count-dependent actions (e.g. focusStack stuck disabled
+         after growing the selection to two).
+
+    • isAnyPick  (dm->isAnyPick())
+         Triggers: updatePickDependentActions() is called from every pick-toggle path in
+         `Main/pick.cpp` (togglePick, togglePickUnlessRejected, togglePickMouseOverItem,
+         toggleReject, updatePickFromHistory, recoverPickLog) and after ingest in
+         MW::setIngested() (`Main/setandupdate.cpp`).  enableSelectionDependentMenus()
+         also calls it.
+
+    • isUpDown  (gridView or tableView visible)
+         Trigger: view-mode switches call enableSelectionDependentMenus().
+
+------------------------------------------------------------------------------------------
+The Menu vs Shortcut Pitfall
+------------------------------------------------------------------------------------------
+
+    Disabling a QMenu (menu->setEnabled(false)) only greys its entry in the menu bar.  It
+    does NOT disable the window-level keyboard shortcuts of its child actions, because each
+    child is added to MW via addAction() with its own shortcut (e.g. rate "1", label "6",
+    filter "Shift+6").  Those shortcuts keep firing with no folder loaded.
+
+    Therefore menus whose children carry shortcuts are gated with the local setMenuEnabled()
+    helper, which disables the menu AND every child action individually:
+    ratingsMenu, labelsMenu, sortMenu, filterMenu, utilitiesMenu, embelExportMenu.
+    The Open With submenu is iterated the same way but stays enabled so manageAppAction
+    remains reachable; only its per-app actions are gated.
+
+------------------------------------------------------------------------------------------
+Disabled Shortcut Feedback
+------------------------------------------------------------------------------------------
+
+    A disabled QAction does not fire and Qt does not consume its shortcut, so the key
+    falls through as a normal KeyPress.  To tell the user why nothing happened, the qApp
+    event filter (MW::eventFilter, `Main/mainwindow.cpp`) intercepts KeyPress events:
+
+      • MW::disabledActionForShortcut(seq) scans MW::actions() for an action whose
+        shortcut matches the pressed key sequence.  It returns the match only if it is
+        disabled AND no enabled action owns the same shortcut (an enabled action would
+        already have handled the key, so there is nothing to explain).
+      • MW::actionDisabledReason(a) just reads the action's "disabledReason" dynamic
+        property and formats it as "<action name> — <reason>."  The reason is recorded
+        when the action is gated: enableSelectionDependentMenus() uses a gate() helper
+        (and setMenuEnabled() for menu children) that sets both the enabled state and the
+        property; updatePickDependentActions() does the same for ingest/nextPick/prevPick.
+        Because the reason lives next to the gating, the two never drift.  A disabled
+        action with no property set falls back to "not available right now".
+      • On a match the reason is shown via G::popup and the key is consumed (return true).
+
+    Guards: skipped during initialization, for auto-repeat, for modifier-only presses,
+    and when focus is in a text-entry widget (QLineEdit/QTextEdit/QPlainTextEdit) so
+    typing is never hijacked.
+
+------------------------------------------------------------------------------------------
+Rules by Action
+------------------------------------------------------------------------------------------
+
+    Requires dmHasRows (folder loaded):
+      • File: revealFile(+context), reportMetadata, copyFolderPathFromContext,
+        copyImagePathFromContext, rename, saveAsFile, refreshCurrent (always available
+        while a folder is loaded — needed to pick up files added externally).
+      • Edit: selectAll, invertSelection, shareFiles, copyFiles, copyImage,
+        deleteImages, pick, pickMouseOver, reject, pickUnlessRejected, popPickHistory,
+        tokenTemplateEditor, rotateRight/Left, ratingsMenu + rate0..5,
+        labelsMenu + label0..5, utilitiesMenu (mediaReadSpeed, visCmpImages).
+      • Go: jump, random, and all horizontal/home/end/page navigation (+AddToSelection)
+        and the scroll family except up/down.
+      • Filter: filterMenu + all filter* children.
+      • Sort: sortMenu + all sort* children.
+      • Embellish: embelExportMenu + children, embelNew/Read/SaveTemplate.
+      • View: asLoupe, asGrid, asTable, copyInfoTextToClipboard, slideShow,
+        zoomTo/In/Out/Toggle, thumbsEnlarge/Shrink.
+
+    Requires selection count >= 2:
+      • asCompare (compare view), meanStack, focusStack.
+
+    Requires isAnyPick (at least one picked image):
+      • ingest, nextPick, prevPick.
+
+    Requires a view that scrolls vertically (isUpDown — grid or table visible):
+      • keyUp/Down (+AddToSelection), keyScrollUp/Down.
+
+    Other:
+      • Open With per-app actions: require selection (hasSelection); manageAppAction
+        always enabled.
+      • pasteFiles: enabled when the clipboard holds file URLs
+        (Utilities::clipboardHasUrls()).
