@@ -75,6 +75,12 @@ private:
 
 };
 
+/* Shared tooltip display for dock title bars, tabs and the thumbDock title.
+   Positions the tip ourselves (rather than relying on Qt's per-platform
+   placement) so the offset below the cursor is consistent across macOS and
+   Windows. */
+void showDockToolTip(const QPoint &globalPos, const QString &tip, QWidget *w);
+
 //-------------------------------------------------------------------------------------------
 class DockWidget : public QDockWidget
 {

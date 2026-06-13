@@ -354,6 +354,9 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool success)
     if (isRunning) {
         metadataThreadRunningLabel->setStyleSheet(G::cssError);
     }
+    else if (!dm->rowCount()) {
+        metadataThreadRunningLabel->setStyleSheet(G::cssInactive);
+    }
     else {
         if (success) {
             /* Icon-cache mode indicator: orange under forced pressure (test override),

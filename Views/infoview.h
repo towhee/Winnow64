@@ -125,6 +125,7 @@ protected:
 
 private:
     void setupOk();
+    void updateTooltips();
 
     InfoDelegate *infoDelegate;
     QModelIndex selectedEntry;

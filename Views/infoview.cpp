@@ -447,6 +447,9 @@ void InfoView::clearInfo()
             ok->setData(ok->index(childRow, 1, parentIdx), "");
         }
     }
+    /* Clearing the values blanks the display but leaves ToolTipRole holding the
+       previous image's values; refresh tooltips so cleared cells show none. */
+    updateTooltips();
     ignoreDataChange = false;
     srcFunction = "";
 }
@@ -467,6 +470,27 @@ void InfoView::copyEntry()
                     ;
         QApplication::clipboard()->setText(text);
 //        QApplication::clipboard()->setText(ok->itemFromIndex(selectedEntry)->toolTip());
+    }
+}
+
+void InfoView::updateTooltips()
+{
+    // set tooltips
+    for (int row = 0; row < ok->rowCount(); row++) {
+        QModelIndex parentIdx = ok->index(row, 0);
+        ok->setData(parentIdx, "Click category to expand/collapse", Qt::ToolTipRole);
+        for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
+            QModelIndex idx = ok->index(childRow, 1, parentIdx);
+            QString value;
+            if (dm->sf->rowCount()) {
+                value = qvariant_cast<QString>(idx.data());
+            }
+            /* Clear the role with an invalid QVariant (not an empty string) when
+               the value is blank: an empty QString is still a valid ToolTipRole
+               value and produces a tooltip, whereas an invalid QVariant means
+               "no tooltip". */
+            ok->setData(idx, value.isEmpty() ? QVariant() : QVariant(value), Qt::ToolTipRole);
+        }
     }
 }
 
@@ -571,15 +595,7 @@ void InfoView::updateInfo(const int &row)
     this->fPath = fPath;        // not used, convenience value for future use
 
     // set tooltips
-    for(int row = 0; row < ok->rowCount(); row++) {
-        QModelIndex parentIdx = ok->index(row, 0);
-        ok->setData(parentIdx, "Click category to expand/collapse", Qt::ToolTipRole);
-        for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
-            QModelIndex idx = ok->index(childRow, 1, parentIdx);
-            QString value = qvariant_cast<QString>(idx.data());
-            ok->setData(idx, value, Qt::ToolTipRole);
-        }
-    }
+    updateTooltips();
 
     if (G::isThreadTrackingOn) qDebug()
         << "ThumbView::updateExifInfo - loaded metadata display info for"

@@ -894,6 +894,49 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* TOOLTIP POSITION
+
+       Show every widget tooltip ourselves via showDockToolTip so the gap below
+       the cursor is consistent and matches Windows (macOS otherwise places
+       tooltips too far below the cursor). As a qApp event filter this runs
+       before each widget's own ToolTip handling, so it covers all widgets that
+       use setToolTip(), including the dock title bars. Widgets with a
+       dynamically computed tooltip (dock tabs, thumbDock) have an empty
+       toolTip() and fall through to their specific branches below.
+    */
+    if (event->type() == QEvent::ToolTip) {
+        if (QWidget *w = qobject_cast<QWidget *>(obj)) {
+            QHelpEvent *he = static_cast<QHelpEvent *>(event);
+            QString tip = w->toolTip();
+            /* Item views deliver the ToolTip event to their viewport and supply
+               the text via the model's ToolTipRole rather than setToolTip().
+               IconView is excluded: its delegate (IconViewDelegate::helpEvent)
+               builds per-symbol tooltips itself and already routes through
+               showDockToolTip, so we let that event through. */
+            bool isItemViewport = false;
+            if (tip.isEmpty()) {
+                QAbstractItemView *view = qobject_cast<QAbstractItemView *>(w->parentWidget());
+                if (view && view->viewport() == w && !qobject_cast<IconView *>(view)) {
+                    isItemViewport = true;
+                    QModelIndex idx = view->indexAt(he->pos());
+                    if (idx.isValid()) tip = idx.data(Qt::ToolTipRole).toString();
+                }
+            }
+            if (!tip.isEmpty()) {
+                showDockToolTip(he->globalPos(), tip, w);
+                return true;
+            }
+            /* An item-view cell with no ToolTipRole must show nothing. Actively
+               hide any tip still on screen (e.g. left over from a previously
+               hovered cell, or the same cell on the previous image) and consume
+               the event so the default delegate can't leave a stale tooltip up. */
+            if (isItemViewport) {
+                QToolTip::hideText();
+                return true;
+            }
+        }
+    }
+
     /* DEBUG KEY PRESSES (uncomment to use)
     if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow")
     {
@@ -1315,7 +1358,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     if (id.isEmpty()) id = dockTabTitleByKey.value(tabBar->tabData(i).toULongLong());
                     QString tip = dockTabToolTip(id);
                     if (!tip.isEmpty()) {
-                        QToolTip::showText(helpEvent->globalPos(), tip, tabBar);
+                        showDockToolTip(helpEvent->globalPos(), tip, tabBar);
                         return true;
                     }
                 }
@@ -1339,8 +1382,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         // area — i.e. the title bar — so no geometry check needed.
         if (obj == thumbDock && event->type() == QEvent::ToolTip) {
             QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
-            QToolTip::showText(helpEvent->globalPos(),
-                               dockTabToolTip(thumbDockTabText), thumbDock);
+            showDockToolTip(helpEvent->globalPos(),
+                            dockTabToolTip(thumbDockTabText), thumbDock);
             return true;
         }
     }
