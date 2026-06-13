@@ -5513,6 +5513,19 @@ void MW::collapseAllFolders()
 {
     if (G::isLogger) G::log("MW::collapseAllFolders");
     fsTree->collapseAll();
+    updateCollapseFoldersAction();
+}
+
+void MW::updateCollapseFoldersAction()
+{
+/*
+    Enable "Collapse all folders" only when something in the folders tree is expanded.
+    When the tree is already collapsed the action has nothing to do, so it is disabled.
+    Driven by the FSTree expanded/collapsed signals (see createFSTree).
+*/
+    if (G::isLogger) G::log("MW::updateCollapseFoldersAction");
+    if (collapseFoldersAction == nullptr) return;
+    collapseFoldersAction->setEnabled(fsTree->isAnyExpanded());
 }
 
 void MW::openInFinder()

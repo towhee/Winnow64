@@ -633,6 +633,21 @@ bool FSTree::isShowImageCount()
     return fsModel->showImageCount;
 }
 
+bool FSTree::isAnyExpanded() const
+{
+    /* True if any top-level folder in the tree is expanded.  Used to enable/disable
+       the "Collapse all folders" action: when nothing is expanded the tree is already
+       collapsed and the action is meaningless. */
+    QAbstractItemModel *m = model();
+    if (m == nullptr) return false;
+    const QModelIndex root = rootIndex();
+    const int rows = m->rowCount(root);
+    for (int r = 0; r < rows; ++r) {
+        if (isExpanded(m->index(r, 0, root))) return true;
+    }
+    return false;
+}
+
 int FSTree::imageCount(QString path)
 {
     QModelIndex idx0 = fsFilter->mapFromSource(fsModel->index(path));

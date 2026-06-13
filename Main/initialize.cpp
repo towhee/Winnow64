@@ -972,6 +972,10 @@ void MW::createEmbel()
     // select a folder including modifier keys
     connect(fsTree, &FSTree::folderSelectionChange, this, &MW::folderSelectionChange);
 
+    // enable/disable "Collapse all folders" based on tree expansion state
+    connect(fsTree, &QTreeView::expanded, this, &MW::updateCollapseFoldersAction);
+    connect(fsTree, &QTreeView::collapsed, this, &MW::updateCollapseFoldersAction);
+
     // refresh datamodel after dragdrop operation
     connect(fsTree, &FSTree::updateCounts, this, &MW::refresh);
     // connect(fsTree, &FSTree::updateCounts, this, &MW::updateImageCount);

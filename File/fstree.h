@@ -88,6 +88,7 @@ public:
     void updateAFolderCount(const QString &dPath);
     int imageCount(QString path);
     bool isShowImageCount();
+    bool isAnyExpanded() const;
     qlonglong selectionCount();
 
     void clearFolderOverLimit();
