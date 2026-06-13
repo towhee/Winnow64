@@ -41,13 +41,13 @@ ExifTool::ExifTool()
         exifToolPath.clear();
         return;
     }
-    //process.setStandardOutputFile("/Users/roryhill/Pictures/_ThumbTest/PNG_.txt");
-    //result.open(QIODevice::ReadWrite);
-    //process.setStandardOutputProcess(&result);
+
     QStringList startArgs;
     startArgs << "-stay_open";
     startArgs << "True";
     startArgs << "-@";
+    // startArgs << "-m";           // supress warnings
+    // startArgs << "-q -q";        // quiet
     startArgs << "-";
     startArgs << "-execute";
     process.start(exifToolPath, startArgs);   // exifToolPath = path to ExifTool.exe or ExifTool.app

@@ -465,12 +465,11 @@ void Preferences::addGeneral()
     i.name = "modifySourceFiles";
     i.parentName = "GeneralHeader";
     i.captionText = "Permit image file modification";
-    i.tooltip = "Permit modification to the image file.  In some cases,\n"
-                "changes (ie orientation) may still be made to a\n"
-                "sidecar xmp file.\n\n"
+    i.tooltip = "Permit modification to the image file.  If turned off\n"
+                "changes may still be written to a sidecar xmp file.\n\n"
                 "DISCLAIMER: While I try my best, it is possible that\n"
                 "modification could corrupt the image file.  I suggest\n"
-                "you turn 'Backup before modifying files' until you are, \n"
+                "you turn 'Backup before modifying files' until you are \n"
                 "confident the modifications are safe."
         ;
     i.hasValue = true;
