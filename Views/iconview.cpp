@@ -1155,10 +1155,12 @@ void IconView::scrollDown(int /*step*/)
 {
     if (isDebug) G::log("IconView::scrollDown", objectName());
     if(isWrapping()) {
-        verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
+        QScrollBar *sb = verticalScrollBar();
+        sb->setValue(sb->value() + getCellSize().height());
     }
     else {
-        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepAdd);
+        QScrollBar *sb = horizontalScrollBar();
+        sb->setValue(sb->value() + getCellSize().width());
     }
 }
 
@@ -1166,10 +1168,12 @@ void IconView::scrollUp(int /*step*/)
 {
     if (isDebug) G::log("IconView::scrollUp", objectName());
     if(isWrapping()) {
-        verticalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
+        QScrollBar *sb = verticalScrollBar();
+        sb->setValue(sb->value() - getCellSize().height());
     }
     else {
-        horizontalScrollBar()->triggerAction(QAbstractSlider::SliderSingleStepSub);
+        QScrollBar *sb = horizontalScrollBar();
+        sb->setValue(sb->value() - getCellSize().width());
     }
 }
 

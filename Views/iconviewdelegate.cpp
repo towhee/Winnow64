@@ -1,6 +1,7 @@
 
 #include "iconviewdelegate.h"
 #include "Main/global.h"
+#include "Main/dockwidget.h"   // showDockToolTip (consistent cross-platform tooltip offset)
 
 /*
 
@@ -500,7 +501,7 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
         tooltip = "Borders:\n  Yellow:\t Current \n  White:\t Selected \n  Green:\t Picked\n  Blue:\t Ingested\n  Red:\t Rejected";
 
     if (!tooltip.isEmpty()) {
-        QToolTip::showText(event->globalPos(), tooltip, view);
+        showDockToolTip(event->globalPos(), tooltip, view);
         return true;
     }
     return false;

@@ -163,6 +163,19 @@ void DockTitleBar::setTitle(QString title)
     //titleLabel->setPixmap(QPixmap(":/images/icon16/anchor.png"));
 }
 
+void showDockToolTip(const QPoint &globalPos, const QString &tip, QWidget *w)
+{
+    if (tip.isEmpty()) return;
+    QPoint pos = globalPos;
+#ifdef Q_OS_MAC
+    /* macOS places tooltips noticeably further below the cursor than Windows.
+       Lift the anchor so the tip sits just under the cursor to match Windows.
+       Adjust this value if the gap still looks wrong on the Mac. */
+    pos.ry() -= 24;
+#endif
+    QToolTip::showText(pos, tip, w);
+}
+
 void DockTitleBar::setStyle()
 {
     // Border color mirrors WidgetCSS::frame() (fm = backgroundShade + 35) so
@@ -610,11 +623,9 @@ QString MW::dockTabToolTip(const QString &tabText)
 {
     auto tip = [](const QString &title, const QString &shortcut) {
         // Title in the dock-title blue (mirrors WidgetCSS "DockTitleBar > QLabel").
+        // <nobr> stops Qt from word-wrapping the rich-text tooltip.
         return QString(
-            "<span style=\"color:#6CC1E8;\">%1</span>: shortcut %2.<br>"
-            "&nbsp;&nbsp;- Selects if not selected and visible.<br>"
-            "&nbsp;&nbsp;- Hides if currently selected.<br>"
-            "&nbsp;&nbsp;- Reveals if currently hidden."
+            "<nobr><span style=\"color:#6CC1E8;\">%1</span>: shortcut %2.</nobr>"
         ).arg(title, shortcut);
     };
 
