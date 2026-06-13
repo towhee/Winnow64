@@ -2522,7 +2522,16 @@ void MW::enableSelectionDependentMenus()
 
     // File menu
     refreshCurrentAction->setEnabled(dmHasRows);
-    openWithMenu->setEnabled(dmHasRows);
+
+    /* Open With submenu: "Manage External Applications" stays available so the user can
+       configure apps at any time; the per-app actions require at least one selected image. */
+    bool hasSelection = sel->count() > 0;
+    openWithMenu->setEnabled(true);
+    for (QAction *a : openWithMenu->actions()) {
+        if (a == manageAppAction || a->isSeparator()) continue;
+        a->setEnabled(hasSelection);
+    }
+
     ingestAction->setEnabled(dmHasRows);
     revealFileAction->setEnabled(dmHasRows);
     revealFileActionFromContext->setEnabled(dmHasRows);
