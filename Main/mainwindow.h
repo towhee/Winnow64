@@ -715,6 +715,7 @@ private slots:
     void openInFinder();
     void openInExplorer();
     void collapseAllFolders();
+    void updateCollapseFoldersAction();
 
     void newWorkspace();
     QString fixDupWorkspaceName(QString name);
@@ -778,7 +779,7 @@ private:
     QAction *ingestHistoryFoldersAction;
         QList<QAction *> ingestHistoryFolderActions;
     // QAction *subFoldersAction;
-    QAction *collapseFoldersAction;
+    QAction *collapseFoldersAction = nullptr;
     QAction *addBookmarkActionFromContext;
     QAction *removeBookmarkAction;
     QAction *refreshBookmarkAction;

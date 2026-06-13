@@ -202,6 +202,8 @@ void MW::createFileActions()
     collapseFoldersAction->setShortcutVisibleInContextMenu(true);
     addAction(collapseFoldersAction);
     connect(collapseFoldersAction, &QAction::triggered, this, &MW::collapseAllFolders);
+    /* Set initial enabled state; thereafter driven by FSTree expanded/collapsed signals */
+    updateCollapseFoldersAction();
 
     showImageCountAction = new QAction(tr("Show image count"), this);
     showImageCountAction->setObjectName("showImageCount");
