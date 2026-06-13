@@ -243,6 +243,7 @@ void MW::generateFocusStack(const QStringList paths,
     if (fs->groups.empty()) {
         QString msg = "Unable to find any focus stacks";
         if (G::isLogger || G::FSLog) G::log(srcFun, msg);
+        G::popup->showPopup(msg);
         return;
     }
 

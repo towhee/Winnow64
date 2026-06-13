@@ -64,6 +64,7 @@ void MW::togglePickUnlessRejected()
     }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updatePickDependentActions();
     updateStatus(true, "", "MW::togglePickUnlessRejected");
     updateClassification();
     updateClassification();
@@ -97,6 +98,7 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updatePickDependentActions();
     updateStatus(true, "", "MW::togglePickMouseOverItem");
 
     // update filter counts
@@ -190,6 +192,7 @@ void MW::togglePick()
     }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updatePickDependentActions();
     updateStatus(true, "", "MW::togglePick");
     updateClassification();
 
@@ -256,6 +259,7 @@ void MW::toggleReject()
     }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updatePickDependentActions();
     updateStatus(true, "", "MW::toggleReject");
     updateClassification();
 }
@@ -298,6 +302,7 @@ void MW::recoverPickLog()
     settings->endGroup();
     thumbView->refreshIcons("MW::recoverPickLog");
     gridView->refreshIcons("MW::recoverPickLog");
+    updatePickDependentActions();
 }
 
 void MW::clearPickLog()
@@ -372,6 +377,7 @@ void MW::updatePickFromHistory(QString fPath, QString status)
     gridView->refreshIcons("MW::updatePickFromHistory");
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updatePickDependentActions();
     updateStatus(true, "", "MW::updatePickFromHistory");
 
     // update filter counts

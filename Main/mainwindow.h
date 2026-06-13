@@ -716,6 +716,9 @@ private slots:
     void openInExplorer();
     void collapseAllFolders();
     void updateCollapseFoldersAction();
+    void updatePickDependentActions();
+    QAction *disabledActionForShortcut(const QKeySequence &seq);
+    QString actionDisabledReason(QAction *a);
 
     void newWorkspace();
     QString fixDupWorkspaceName(QString name);

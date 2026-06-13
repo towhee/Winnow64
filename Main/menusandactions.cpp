@@ -2519,86 +2519,149 @@ void MW::enableSelectionDependentMenus()
     if (G::isLogger) G::log("MW::enableSelectionDependentMenus");
 
     bool dmHasRows = dm->rowCount() > 0;
+    bool hasSelection = sel->count() > 0;
+    bool has2Selected = sel->count() >= 2;
+    bool isUpDown = gridView->isVisible() || tableView->isVisible();
+
+    /* Reason phrases stored on each action as the "disabledReason" dynamic property when it
+       is gated, so MW::actionDisabledReason() can report why a disabled shortcut did nothing
+       without duplicating the conditions here.  See "Disabled Shortcut Feedback" in
+       notes/Documentation.txt. */
+    const QString needFolder    = "no folder is loaded";
+    const QString needSel       = "select an image first";
+    const QString need2Sel      = "select at least two images";
+    const QString needGridTable = "switch to Grid or Table view";
+    const QString needClipboard = "copy files to the clipboard first";
+
+    /* gate() sets the enabled state and records why it would be disabled. */
+    auto gate = [](QAction *a, bool enabled, const QString &reason) {
+        a->setEnabled(enabled);
+        a->setProperty("disabledReason", reason);
+    };
+
+    /* Disabling a QMenu greys its entry in the menu bar but does NOT disable the
+       window-level keyboard shortcuts of its child actions (each child is addAction'd
+       to MW, e.g. rate "1", label "6", filter "Shift+6").  So the children must be
+       disabled individually, otherwise their shortcuts still fire with no folder loaded. */
+    auto setMenuEnabled = [&gate](QMenu *menu, bool enabled, const QString &reason) {
+        menu->setEnabled(enabled);
+        for (QAction *a : menu->actions())
+            if (!a->isSeparator()) gate(a, enabled, reason);
+    };
 
     // File menu
-    refreshCurrentAction->setEnabled(dmHasRows);
+    // refreshCurrentAction->setEnabled(dmHasRows);
 
     /* Open With submenu: "Manage External Applications" stays available so the user can
        configure apps at any time; the per-app actions require at least one selected image. */
-    bool hasSelection = sel->count() > 0;
     openWithMenu->setEnabled(true);
     for (QAction *a : openWithMenu->actions()) {
         if (a == manageAppAction || a->isSeparator()) continue;
-        a->setEnabled(hasSelection);
+        gate(a, hasSelection, needSel);
     }
 
-    ingestAction->setEnabled(dmHasRows);
-    revealFileAction->setEnabled(dmHasRows);
-    revealFileActionFromContext->setEnabled(dmHasRows);
-    // addBookmarkAction->setEnabled(dmHasRows);
-    reportMetadataAction->setEnabled(dmHasRows);
-    copyFolderPathFromContextAction->setEnabled(dmHasRows);
-    copyImagePathFromContextAction->setEnabled(dmHasRows);
-    renameAction->setEnabled(dmHasRows);
-    saveAsFileAction->setEnabled(dmHasRows);
-    reportMetadataAction->setEnabled(dmHasRows);
+    /* ingest, nextPick, prevPick: enabled only when at least one image is picked */
+    updatePickDependentActions();
+    gate(revealFileAction, dmHasRows, needFolder);
+    gate(revealFileActionFromContext, dmHasRows, needFolder);
+    gate(reportMetadataAction, dmHasRows, needFolder);
+    gate(copyFolderPathFromContextAction, dmHasRows, needFolder);
+    gate(copyImagePathFromContextAction, dmHasRows, needFolder);
+    gate(renameAction, dmHasRows, needFolder);
+    gate(saveAsFileAction, dmHasRows, needFolder);
 
     //Edit menu
-    selectAllAction->setEnabled(dmHasRows);
-    invertSelectionAction->setEnabled(dmHasRows);
-    shareFilesAction->setEnabled(dmHasRows);
-    copyFilesAction->setEnabled(dmHasRows);
-    copyImageAction->setEnabled(dmHasRows);
-    copyImagePathFromContextAction->setEnabled(dmHasRows);
-    pasteFilesAction->setEnabled(Utilities::clipboardHasUrls());
+    gate(selectAllAction, dmHasRows, needFolder);
+    gate(invertSelectionAction, dmHasRows, needFolder);
+    gate(shareFilesAction, dmHasRows, needFolder);
+    gate(copyFilesAction, dmHasRows, needFolder);
+    gate(copyImageAction, dmHasRows, needFolder);
+    gate(pasteFilesAction, Utilities::clipboardHasUrls(), needClipboard);
 
-    deleteImagesAction->setEnabled(dmHasRows);
-    pickAction->setEnabled(dmHasRows);
-    rejectAction->setEnabled(dmHasRows);
-    pickUnlessRejectedAction->setEnabled(dmHasRows);
-    popPickHistoryAction->setEnabled(dmHasRows);
-    tokenTemplateEditorAction->setEnabled(dmHasRows);
-    ratingsMenu->setEnabled(dmHasRows);
-    ratingsMenu->setEnabled(dmHasRows);
-    labelsMenu->setEnabled(dmHasRows);
-    rotateRightAction->setEnabled(dmHasRows);
-    rotateLeftAction->setEnabled(dmHasRows);
-    utilitiesMenu->setEnabled(dmHasRows);
+    gate(deleteImagesAction, dmHasRows, needFolder);
+    gate(pickAction, dmHasRows, needFolder);
+    gate(pickMouseOverAction, dmHasRows, needFolder);
+    gate(rejectAction, dmHasRows, needFolder);
+    gate(pickUnlessRejectedAction, dmHasRows, needFolder);
+    gate(popPickHistoryAction, dmHasRows, needFolder);
+    gate(tokenTemplateEditorAction, dmHasRows, needFolder);
+    setMenuEnabled(ratingsMenu, dmHasRows, needFolder);
+    setMenuEnabled(labelsMenu, dmHasRows, needFolder);
+    gate(rotateRightAction, dmHasRows, needFolder);
+    gate(rotateLeftAction, dmHasRows, needFolder);
+    /* Utilities children (mediaReadSpeed, visCmpImages) operate on the loaded images;
+       meanStack and focusStack need at least two selected images to stack */
+    setMenuEnabled(utilitiesMenu, dmHasRows, needFolder);
+    gate(meanStackAction, has2Selected, need2Sel);
+    gate(focusStackAction, has2Selected, need2Sel);
 
     // Go menu
     goMenu->setEnabled(dmHasRows);
-    bool isUpDown = gridView->isVisible() || tableView->isVisible();
-    keyUpAction->setEnabled(isUpDown);
-    keyDownAction->setEnabled(isUpDown);
-    keyScrollUpAction->setEnabled(isUpDown);
-    keyScrollDownAction->setEnabled(isUpDown);
-    keyUpAddToSelectionAction->setEnabled(isUpDown);
-    keyDownAddToSelectionAction->setEnabled(isUpDown);
 
-    // keyPageDownAction->setEnabled(isUpDown);
-    // keyPageUpAction->setEnabled(isUpDown);
+    /* Horizontal / home / end / page navigation works in any view */
+    gate(jumpAction, dmHasRows, needFolder);
+    gate(keyRightAction, dmHasRows, needFolder);
+    gate(keyLeftAction, dmHasRows, needFolder);
+    gate(keyHomeAction, dmHasRows, needFolder);
+    gate(keyEndAction, dmHasRows, needFolder);
+    gate(keyPageUpAction, dmHasRows, needFolder);
+    gate(keyPageDownAction, dmHasRows, needFolder);
+    gate(keyRightAddToSelectionAction, dmHasRows, needFolder);
+    gate(keyLeftAddToSelectionAction, dmHasRows, needFolder);
+    gate(keyHomeAddToSelectionAction, dmHasRows, needFolder);
+    gate(keyEndAddToSelectionAction, dmHasRows, needFolder);
+    gate(keyPageUpAddToSelectionAction, dmHasRows, needFolder);
+    gate(keyPageDownAddToSelectionAction, dmHasRows, needFolder);
+
+    /* Up/down navigation only meaningful in grid or table view */
+    gate(keyUpAction, isUpDown, needGridTable);
+    gate(keyDownAction, isUpDown, needGridTable);
+    gate(keyUpAddToSelectionAction, isUpDown, needGridTable);
+    gate(keyDownAddToSelectionAction, isUpDown, needGridTable);
+
+    /* Scrolling the current view */
+    gate(keyScrollLeftAction, dmHasRows, needFolder);
+    gate(keyScrollRightAction, dmHasRows, needFolder);
+    gate(keyScrollHomeAction, dmHasRows, needFolder);
+    gate(keyScrollEndAction, dmHasRows, needFolder);
+    gate(keyScrollPageUpAction, dmHasRows, needFolder);
+    gate(keyScrollPageDownAction, dmHasRows, needFolder);
+    gate(keyScrollCurrentAction, dmHasRows, needFolder);
+    gate(keyScrollUpAction, isUpDown, needGridTable);
+    gate(keyScrollDownAction, isUpDown, needGridTable);
+
+    /* nextPick / prevPick handled by updatePickDependentActions() above */
+
+    gate(randomImageAction, dmHasRows, needFolder);
 
     // Filter menu
-    filterMenu->setEnabled(dmHasRows);
+    setMenuEnabled(filterMenu, dmHasRows, needFolder);
 
     // Sort menu
-    sortMenu->setEnabled(dmHasRows);
+    setMenuEnabled(sortMenu, dmHasRows, needFolder);
 
 //    // Embellish menu
     //embelExportMenu->setEnabled(enable);
-    embelExportMenu->setEnabled(dmHasRows);
-    embelNewTemplateAction->setEnabled(dmHasRows);
-    embelReadTemplateAction->setEnabled(dmHasRows);
-    embelSaveTemplateAction->setEnabled(dmHasRows);
+    setMenuEnabled(embelExportMenu, dmHasRows, needFolder);
+    gate(embelNewTemplateAction, dmHasRows, needFolder);
+    gate(embelReadTemplateAction, dmHasRows, needFolder);
+    gate(embelSaveTemplateAction, dmHasRows, needFolder);
 
     // View menu
-    slideShowAction->setEnabled(dmHasRows);
-    zoomToAction->setEnabled(dmHasRows);
-    zoomInAction->setEnabled(dmHasRows);
-    zoomOutAction->setEnabled(dmHasRows);
-    zoomToggleAction->setEnabled(dmHasRows);
-    thumbsEnlargeAction->setEnabled(dmHasRows);
-    thumbsShrinkAction->setEnabled(dmHasRows);
+    /* View modes require a loaded folder; Compare needs at least two selected images */
+    gate(asLoupeAction, dmHasRows, needFolder);
+    gate(asGridAction, dmHasRows, needFolder);
+    gate(asTableAction, dmHasRows, needFolder);
+    gate(asCompareAction, has2Selected, need2Sel);
+    gate(copyInfoTextToClipboardAction, dmHasRows, needFolder);
+
+    gate(slideShowAction, dmHasRows, needFolder);
+    gate(zoomToAction, dmHasRows, needFolder);
+    gate(zoomInAction, dmHasRows, needFolder);
+    gate(zoomOutAction, dmHasRows, needFolder);
+    gate(zoomToggleAction, dmHasRows, needFolder);
+    gate(thumbsEnlargeAction, dmHasRows, needFolder);
+    gate(thumbsShrinkAction, dmHasRows, needFolder);
 
     // Help menu
     // helpDiagnosticsMenu->setEnabled(dmHasRows);

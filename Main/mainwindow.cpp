@@ -1610,6 +1610,30 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* DISABLED SHORTCUT FEEDBACK
+       Qt does not fire a disabled QAction and does not consume its shortcut, so the key
+       falls through as a normal KeyPress.  When the pressed key sequence maps to a disabled
+       action, show a short popup explaining why nothing happened (and consume the key).
+    */
+    if (!G::isInitializing && event->type() == QEvent::KeyPress) {
+        QKeyEvent *e = static_cast<QKeyEvent *>(event);
+        int key = e->key();
+        bool isModifierOnly = key == Qt::Key_Control || key == Qt::Key_Shift ||
+                              key == Qt::Key_Alt || key == Qt::Key_Meta || key == 0;
+        /* Don't interfere with text entry (search filter, rename, etc.) */
+        QWidget *fw = QApplication::focusWidget();
+        bool isTextEntry = qobject_cast<QLineEdit *>(fw) ||
+                           qobject_cast<QTextEdit *>(fw) ||
+                           qobject_cast<QPlainTextEdit *>(fw);
+        if (!isModifierOnly && !e->isAutoRepeat() && !isTextEntry) {
+            QKeySequence seq(e->keyCombination());
+            if (QAction *a = disabledActionForShortcut(seq)) {
+                G::popup->showPopup(actionDisabledReason(a), 2000);
+                return true;
+            }
+        }
+    }
+
     return false;
 }
 
@@ -5514,6 +5538,56 @@ void MW::collapseAllFolders()
     if (G::isLogger) G::log("MW::collapseAllFolders");
     fsTree->collapseAll();
     updateCollapseFoldersAction();
+}
+
+void MW::updatePickDependentActions()
+{
+/*
+    Enable actions that require at least one picked image.  Called from the pick-toggle
+    paths (which change picks outside of selection events) and after ingest clears picks.
+*/
+    if (G::isLogger) G::log("MW::updatePickDependentActions");
+    bool isAnyPick = dm->isAnyPick();
+    const QString reason = "no images are picked";
+    for (QAction *a : {ingestAction, nextPickAction, prevPickAction}) {
+        a->setEnabled(isAnyPick);
+        a->setProperty("disabledReason", reason);
+    }
+}
+
+QAction *MW::disabledActionForShortcut(const QKeySequence &seq)
+{
+/*
+    Returns a disabled MW action whose shortcut matches seq, or nullptr.  If any enabled
+    action owns the same shortcut, returns nullptr (that action would have handled the key,
+    so there is nothing to explain).  Used to give the user feedback when a disabled
+    shortcut is pressed (see eventFilter).
+*/
+    if (seq.isEmpty()) return nullptr;
+    QAction *disabledMatch = nullptr;
+    const QList<QAction *> acts = actions();
+    for (QAction *a : acts) {
+        if (a->shortcuts().contains(seq)) {
+            if (a->isEnabled()) return nullptr;
+            disabledMatch = a;
+        }
+    }
+    return disabledMatch;
+}
+
+QString MW::actionDisabledReason(QAction *a)
+{
+/*
+    Short explanation of why action a is currently disabled.  The reason is stored on the
+    action as the "disabledReason" dynamic property when it is gated in
+    enableSelectionDependentMenus() / updatePickDependentActions(), so this function does not
+    duplicate the gating conditions.
+*/
+    QString name = a->text();
+    name.remove('&');
+    QString why = a->property("disabledReason").toString();
+    if (why.isEmpty()) why = "not available right now";
+    return name + " — " + why + ".";
 }
 
 void MW::updateCollapseFoldersAction()
