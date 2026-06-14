@@ -1066,9 +1066,9 @@ int MetaRead::pending()
 
 void MetaRead::setCycling(bool isCycling)
 {
-    for (bool v : cycling) {
-        v = isCycling;
-    }
+    /* Was `for (bool v : cycling)` — iterated by value, so it never wrote the vector.
+       Use fill (matches initialize's cycling.fill(false)). */
+    cycling.fill(isCycling);
 }
 
 bool MetaRead::allMetaIconLoaded()

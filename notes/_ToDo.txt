@@ -2,7 +2,6 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Set icon caching to JIT when more than 10,000 images.
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
 want to drop the flags and bake the behavior in, but no rush; keeping them is cheap
