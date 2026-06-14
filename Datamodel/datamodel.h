@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QMessageBox>
 #include <QWaitCondition>           // req'd for removeFolder process
+#include <QElapsedTimer>
 #include <atomic>
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
@@ -304,6 +305,25 @@ private:
     // Pair of folderPath and operation type (true=add, false=remove)
     void enqueueOp(const QString& folderPath, G::FolderOp op);
     void scheduleProcessing();
+
+    /* Re-enable the proxy's dynamic sort/filter after a batched load (idempotent).
+       During a batched load (G::useBatchedFolderInsert) dynamic sorting is turned off so
+       the one wide dataChanged per folder does not re-sort the inserted block; this
+       restores it (one re-sort pass) when the load finishes or aborts. */
+    void restoreProxySortAfterLoad();
+    bool sfSortDisabledForLoad = false;
+
+    /* Throttle for addFolder's progress message (gated by G::throttleFolderLoadMsg). */
+    QElapsedTimer centralMsgTimer;
+
+    /* Phase 1 load perf probe (gated by G::isPerfProbe). */
+    QElapsedTimer perfLoadTimer;
+    qint64 perfEnumNs   = 0;            // dir.entryInfoList (I/O + name-filter matching)
+    qint64 perfSortNs   = 0;            // std::sort of each folder's file list
+    qint64 perfMsgNs    = 0;            // progress-string build + emit centralMsg (per folder)
+    qint64 perfInsertNs = 0;            // model fill + synchronous proxy/view reaction
+    int    perfFolders  = 0;
+
     QQueue<QPair<QString, G::FolderOp>> folderQueue;
     QSet<QString> pendingPaths;
     QMutex queueMutex;
@@ -328,6 +348,7 @@ private:
     bool mLock;
 
     QStringList *fileFilters;
+    QSet<QString> supportedExtSet;      // lowercased supported extensions for addFolder suffix check
     QFileInfo fileInfo;
     QImage emptyImg;
 

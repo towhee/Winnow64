@@ -683,6 +683,10 @@ void MW::loadWorkspaces()
         // Processes
         ws.isColorManage = settings->value("isColorManage").toBool();
         ws.sortColumn = settings->value("sortColumn").toInt();
+        /* Sanitize a persisted sortColumn that is out of range (e.g. saved by a build with a
+           different column layout; G::TotalColumns is one past the last real column). Left
+           unchecked it reaches dm->sf->sort() as a phantom column — see IconView::sortThumbs. */
+        if (ws.sortColumn < 0 || ws.sortColumn >= G::TotalColumns) ws.sortColumn = G::NameColumn;
         ws.isReverseSort = settings->value("isReverseSort").toBool();
         workspaces->append(ws);
     }
