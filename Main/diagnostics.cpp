@@ -74,14 +74,11 @@ void MW::reportState(QString title)
         << "\nPOSITION:"
         << "\nG::mode                                " << G::mode
         << "\ncentralLayout->currentIndex()          " << centralLayout->currentIndex()
-        // rgh maybe just list all selected folders, or do we even care
         << "\nG::currRootFolder                      " << dm->folderList.at(0)
         << "\nccurrentFilePath                       " << dm->currentFilePath
         << "\ncurrentRow                             " << dm->currentSfRow
         << "\ncurrentSfIdx                           " << dm->currentSfIdx
         << "\ncurrentDmIdx                           " << dm->currentDmIdx
-//        << "\ndm->firstVisibleRow                    " << dm->firstVisibleRow
-//        << "\ndm->lastVisibleRow                     " << dm->lastVisibleRow
         << "\nG::availableMemoryMB                   " << G::availableMemoryMB
         << "\nG::winnowMemoryBeforeCacheMB           " << G::winnowMemoryBeforeCacheMB
         << "\nG::metaCacheMB                         " << G::metaCacheMB

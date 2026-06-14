@@ -847,7 +847,7 @@ void DataModel::addFolder(const QString &folderPath)
     abort = false;
     folderList.append(folderPath);
     folderSet.insert(folderPath);
-    loadingModel = true;    // rgh is this needed?  Review loadingModel usage
+    loadingModel = true;
     locker.unlock(); // Unlock the queue while processing
 
     const bool probe = G::isPerfProbe;
@@ -1413,8 +1413,6 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.modifiedDate = index(row, G::ModifiedColumn).data().toDateTime();
     m.year = index(row, G::YearColumn).data().toString();
     m.day = index(row, G::DayColumn).data().toString();
-
-    // rgh retrying here has random crashes - is this required?  Seems to be working...
 
     m.pick  = index(row, G::PickColumn).data().toBool();
     m.ingested  = index(row, G::IngestedColumn).data().toBool();

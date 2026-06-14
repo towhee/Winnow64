@@ -6,12 +6,11 @@ BUGS / TO DO
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
 want to drop the flags and bake the behavior in, but no rush; keeping them is cheap
 insurance.
+- Download a HDR PQ CR3 file for testing.
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
-- If all meta loaded but updating icons limit metaRead a and b to iconRange
 - Fix MW::ejectUsb(QString path)
 - Fix MW::ejectUsbFromMainMenu
-- Selection::okToSelect not being used
 - Review all rgh comments
 - Read svg files ie downloads/glyphs.svg
 - Maybe integrate apple sf symbols as svg
@@ -33,7 +32,6 @@ insurance.
 - Save preview as PNG include color manage corrections
 - MW::enableSelectionDependentMenus needs updating for all situations
 
-- Painter not active, state will be reset by begin
 - Embellish not resetting properly
 - On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
 - Image metadata report does not show sidecar for PNG file

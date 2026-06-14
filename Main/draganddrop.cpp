@@ -138,8 +138,6 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
 
     if (!isValidPath(destDir)) {
         msgBox.critical(this, tr("Error"), tr("Can not move or copy images to this folder."));
-        // rgh req'd?  If so, must change as G::currRootFolder has been eliminated
-        // selectCurrentViewDir();
         return;
     }
 

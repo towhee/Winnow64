@@ -5329,30 +5329,6 @@ void MW::getSubfolders(QString fPath)
     }
 }
 
-void MW::selectCurrentViewDir()
-{
-/*
-    Called by MW::dropOp rgh // eliminate?
-*/
-    if (G::isLogger) G::log("MW::selectCurrentViewDir");
-    // rgh this likely no longer makes any sense
-    fsTree->select(dm->folderList.at(0));
-    // QModelIndex idx = fsTree->fsModel->index(G::currRootFolder);
-    // if (idx.isValid()){
-    //     fsTree->expand(idx);
-    //     fsTree->setCurrentIndex(idx);
-    // }
-}
-
-// not req'd rgh ??
-void MW::showNewImageWarning(QWidget *parent)
-// called from runExternalApp
-{
-    if (G::isLogger) G::log("MW::showNewImageWarning");
-    QMessageBox msgBox;
-    msgBox.warning(parent, tr("Warning"), tr("Cannot perform action with temporary image."));
-}
-
 void MW::addNewBookmarkFromContextMenu()
 {
     if (G::isLogger) G::log("MW::addNewBookmarkFromContextMenu");

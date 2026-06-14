@@ -100,7 +100,7 @@ void MW::pasteFiles(QString folderPath)
     fsTree->updateAFolderCount(folderPath);
     bookmarks->updateCount();
 
-    // refresh folder to show pasted images rgh check this
+    // refresh folder to show pasted images
     if (dm->folderList.contains(folderPath)) {
         folderAndFileSelectionChange(dm->currentFilePath, "pasteFiles");
     }
@@ -145,13 +145,12 @@ void MW::copyImagePathFromContext()
 
 void MW::renameSelectedFiles()
 {
-    // rgh redo to make folder agnostic (change RenameFileDlg?)
     QString folderPath = dm->folderList.at(0);
     QStringList selection;
     if (!dm->getSelectionOrPicks(selection)) return;
-    // getSelection can return true with an empty list (no picks, no selection);
-    // opening the dialog in that state crashes when updateExample touches
-    // selection.at(0) via the combobox's currentTextChanged signal.
+    /* getSelection can return true with an empty list (no picks, no selection);
+    opening the dialog in that state crashes when updateExample touches
+    selection.at(0) via the combobox's currentTextChanged signal. */
     if (selection.isEmpty()) {
         G::popup->showPopup("No images selected to rename.", 2000);
         return;
@@ -524,7 +523,7 @@ void MW::deleteFolder()
         G::log("MW::deleteFolder");
     QString dirToDelete;
     QString senderObject = (static_cast<QAction*>(sender()))->objectName();
-    // rgh allow deletion of multiple folders with ample warnings
+    // allow deletion of multiple folders with ample warnings
     if (senderObject == "deleteActiveFolder") {
         dirToDelete = dm->folderList.at(0);
     }
@@ -627,12 +626,6 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
 
     QString msg = "All images removed from " + name;
     G::popup->showPopup(msg);
-
-    // rgh check what to do
-
-    // if (G::currRootFolder.contains(rootPath)) {
-    //     fsTree->select(rootPath);
-    // }
 }
 
 void MW::eraseMemCardImages()

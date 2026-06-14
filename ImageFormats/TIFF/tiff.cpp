@@ -364,7 +364,7 @@ bool Tiff::parse(MetadataParameters &p,
         }
         p.offset = ifdPhotoshopOffset;
         // set m.offsetThumb, m.lengthThumb, m.thumbFormat, m.isEmbeddedThumbMissing
-        irb->readThumb(p, m);    // rgh need to add IRB to dng.cpp
+        irb->readThumb(p, m);
         if (m.lengthThumb) {
             // assign arbitrary value to thumbLongside less than 512
             thumbLongside = 256;
@@ -771,7 +771,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, IFD *ifd)
     if (err != "" && !isReport) return false;
 
 
-    /* rgh used for debugging
+    /*
     G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
                   " Compression:" + QString::number(compression) +
                   " Predictor:" + QString::number(predictor) +
@@ -1766,200 +1766,6 @@ void Tiff::lzwReset(QHash<quint32, QByteArray> &dictionary,
     nextCode = 258;
     prevString.clear();
 }
-
-// void Tiff::lzwDecompress(TiffStrip &t, MetadataParameters &p)
-// {
-//     /*
-//         Receives a tiff strip, decompresses it, and writes the data to QImage Tiff::im
-//     */
-//     if (G::isLogger || isDebug)
-//         G::log("Tiff::lzwDecompress3", "strip = " + QString::number(t.strip) + " " + p.fPath + " Source = " + source);
-
-//     TiffStrips tiffStrips;
-//     int alphaRowComponent = t.bytesPerRow / 3;
-//     const unsigned int clearCode = 256;
-//     const unsigned int EOFCode = 257;
-//     const unsigned int maxCode = 4095;  // 12-bit max
-
-//     // Input and output pointers
-//     char* c = t.in;
-//     std::vector<uchar> tempBuffer(t.bytesPerRow * rowsPerStrip);  // Temporary buffer for decompressed data
-//     uchar* tempOut = tempBuffer.data();
-
-//     // String table initialization
-//     char* s[4096] = {nullptr};  // Pointers to strings for each possible code
-//     int8_t sLen[4096] = {0};  // Code string length
-//     std::memset(sLen, 1, 256);  // 0-255 one char strings
-
-//     char strings[128000];
-//     for (int i = 0; i < 256; i++) {
-//         strings[i] = (char)i;
-//         s[i] = &strings[i];
-//     }
-//     strings[256] = 0;  s[256] = &strings[256];  // Clear code
-//     strings[257] = 0;  s[257] = &strings[257];  // EOF code
-//     char* sEnd = s[257];  // Pointer to current end of strings
-
-//     char ps[256];  // Previous string
-//     size_t psLen = 0;  // Length of previous string
-//     uint32_t code;  // Key to string for code
-//     uint32_t nextCode = 258;  // Used to preset string for next
-//     uint n = 0;  // Output byte counter
-//     uint32_t iBuf = 0;  // Incoming bit buffer
-//     int32_t nBits = 0;  // Incoming bits in the buffer
-//     int32_t codeBits = 9;  // Number of bits to make code (9-12)
-//     uint32_t nextBump = 511;  // When to increment code size first time
-//     uint32_t mask = (1 << codeBits) - 1;  // Extract code from iBuf
-
-//     // Read incoming bytes into the bit buffer (iBuf) using the char pointer c
-//     while (t.incoming) {
-//         // GetNextCode: Read bits to form the next code
-//         while (nBits < codeBits && t.incoming) {
-//             iBuf = (iBuf << 8) | (uint8_t)*c++;
-//             nBits += 8;
-//             --t.incoming;
-//         }
-//         code = (iBuf >> (nBits - codeBits)) & mask;  // Extract code from buffer
-//         nBits -= codeBits;
-
-//         // Handle special codes
-//         if (code == clearCode) {
-//             codeBits = 9;
-//             mask = (1 << codeBits) - 1;
-//             nextBump = 511;
-//             sEnd = s[257];
-//             nextCode = 258;
-//             psLen = 0;
-//             continue;
-//         }
-
-//         if (code == EOFCode) {
-//             break;
-//         }
-
-//         // Handle new code then add prevString + prevString[0]
-//         if (code == nextCode) {
-//             s[code] = sEnd;
-//             switch(psLen) {
-//             case 1:
-//                 *s[code] = ps[0];
-//                 break;
-//             case 2:
-//                 std::memcpy(s[code], ps, 2);
-//                 break;
-//             case 4:
-//                 std::memcpy(s[code], ps, 4);
-//                 break;
-//             default:
-//                 std::memcpy(s[code], ps, psLen);
-//             }
-//             *(s[code] + psLen) = ps[0];
-//             sLen[code] = (int8_t)psLen + 1;
-//             sEnd = s[code] + psLen + 1;
-//         }
-
-//         // Output the decoded string for the current code
-//         // for (uint32_t i = 0; i < (uint32_t)sLen[code]; i++) {
-//         //     if (s[code] != nullptr) {
-//         //         *tempOut++ = (uchar)*(s[code] + i);
-//         //     }
-//         // }
-//         // rgh replace
-//         if (t.bitsPerSample == 8) {
-//             for (uint32_t i = 0; i < (uint32_t)sLen[code]; i++) {
-//                 if (s[code] != nullptr)
-//                     *tempOut++ = (uchar)*(s[code] + i);
-//             }
-//         }
-//         if (t.bitsPerSample == 16) {
-//             for (uint32_t i = 0; i < (uint32_t)sLen[code]; i++) {
-//                 *tempOut++ = (uchar)*(s[code] + i);
-//                 ++n;
-//                 if (n % t.bytesPerRow == 0)
-//                     tempOut += alphaRowComponent;
-//             }
-//         }
-
-
-//         // Add string to nextCode (prevString + strings[code][0])
-//         if (psLen && nextCode <= maxCode) {
-//             s[nextCode] = sEnd;
-//             switch(psLen) {
-//             case 1:
-//                 *s[nextCode] = ps[0];
-//                 break;
-//             case 2:
-//                 std::memcpy(s[nextCode], ps, 2);
-//                 break;
-//             case 4:
-//                 std::memcpy(s[nextCode], ps, 4);
-//                 break;
-//             default:
-//                 std::memcpy(s[nextCode], ps, psLen);
-//             }
-//             *(s[nextCode] + psLen) = *s[code];
-//             sLen[nextCode] = (int8_t)(psLen + 1);
-//             sEnd = s[nextCode] + psLen + 1;
-//             ++nextCode;
-//         }
-
-//         // Copy strings[code] to ps
-//         switch(sLen[code]) {
-//         case 1:
-//             ps[0] = *s[code];
-//             break;
-//         case 2:
-//             ps[0] = *s[code];
-//             ps[1] = *(s[code] + 1);
-//             break;
-//         case 4:
-//             std::memcpy(ps, s[code], 4);
-//             break;
-//         default:
-//             std::memcpy(ps, s[code], sLen[code]);
-//         }
-
-//         psLen = (size_t)sLen[code];
-
-//         // Code size management
-//         if (nextCode == nextBump) {
-//             if (nextCode < maxCode) {
-//                 nextBump = (nextBump << 1) + 1;
-//                 ++codeBits;
-//                 mask = (1 << codeBits) - 1;
-//             } else if (nextCode == maxCode) {
-//                 continue;
-//             } else {
-//                 codeBits = 9;
-//                 mask = (1 << codeBits) - 1;
-//                 nextBump = 511;
-//                 sEnd = s[257];
-//                 nextCode = 258;
-//                 psLen = 0;
-//             }
-//         }
-//     }
-
-//     // Apply the predictor if necessary
-//     if (t.predictor) {
-//         uchar* tempIn = tempBuffer.data();
-//         uchar* out = t.out;
-//         for (int row = 0; row < rowsPerStrip; ++row) {
-//             for (uint32_t col = 0; col < t.bytesPerRow; ++col) {
-//                 if (col < 3) {
-//                     *out++ = *tempIn++;
-//                 } else {
-//                     *out++ = (*tempIn++ + *(out - 3));
-//                 }
-//             }
-//         }
-//     } else {
-//         // Copy the data from the temporary buffer to the QImage if no predictor is used
-//         std::memcpy(t.out, tempBuffer.data(), tempBuffer.size());
-//     }
-
-//     return;
-// }
 
 void Tiff::lzwDecompress(TiffStrip &t, MetadataParameters &p)
 {

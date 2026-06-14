@@ -1287,10 +1287,7 @@ public:
 private:
     QHash<Qt::DockWidgetArea, bool> m_dockSoloMode;
     void updateState();
-    // bool stop(QString src = "");
-    // void stopAndClearAllAfterMetaReadStopped();
     void deleteViewerImage();
-    void selectCurrentViewDir();
     // actions
     void addMenuSeparator(QWidget *widget);
     void createActions();
@@ -1390,7 +1387,6 @@ private:
     void eraseMemCardImages();
     void eraseMemCardImagesFromContextMenu();
 
-    void showNewImageWarning(QWidget *parent);
     bool removeDirOp(QString dirToDelete);
     void addBookmark(QString path);
     void populateWorkspace(int n, QString name);

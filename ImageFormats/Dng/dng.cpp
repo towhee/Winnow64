@@ -290,10 +290,15 @@ bool DNG::parse(MetadataParameters &p,
             : m.lens = "";
 
     // Photoshop: **************************************************************
-    // Get embedded JPG if available
-
-//    bool foundTifThumb = false;
-//    if (ifdPhotoshopOffset) readIRB(ifdPhotoshopOffset);
+    /* Unlike TIFF, DNG is not parsed for an IRB (Photoshop Image Resource Block,
+       tag 34377) thumbnail. The DNG spec stores previews in subIFDs (tag 330),
+       which are handled above: the smallest embedded JPG becomes the thumb and the
+       largest the full preview. An IRB thumb only exists if the DNG was round-tripped
+       through Photoshop, so at best it would be a fallback when no subIFD JPG preview
+       is present - a rare combination. If that fallback is ever needed, call
+       IRB::readThumb() here gated on !m.lengthThumb so it cannot clobber the proper
+       subIFD thumb (mirroring Tiff::parse). ifdPhotoshopOffset (read above) is
+       retained for that purpose. */
 
     // IPTC: *******************************************************************
     // Get title if available

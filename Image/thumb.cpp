@@ -238,6 +238,10 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
             if (imFile.seek(offsetThumb)) {
                 QByteArray buf = imFile.read(lengthThumb);
                 success =  image.loadFromData(buf, "JPEG");
+                /* Embedded thumb is JPEG for all current formats; fall back to
+                   Qt format auto-detection (content sniffing) in case a format
+                   stores a non-JPEG thumb. */
+                if (!success) success = image.loadFromData(buf);
             }
         }
         imFile.close();
@@ -382,6 +386,36 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
     #endif
 }
 
+Thumb::Status Thumb::loadFromImageIO(QString &fPath, QImage &image)
+{
+/*
+    Decode a thumbnail via the platform image framework. Used as a fallback for
+    Canon CR3 files shot in HDR PQ mode, whose embedded THMB/preview is a
+    headerless HEVC bitstream (not JPEG), so loadFromJpgData cannot decode it.
+    On macOS, ImageIO natively supports CR3 and returns the embedded preview
+    (or a downscaled decode of the raw). On Windows there is no safe equivalent
+    here (libheif rejects CR3 and Heic::decodeThumbnail does not guard read
+    failures), so this returns Fail and loadThumb falls through to
+    loadFromEntireFile.
+*/
+    QString fun = "Thumb::loadFromImageIO";
+    if (G::isLogger) G::log(fun, fPath);
+    if (isDebug)
+        qDebug().noquote() << fun.leftJustified(col0Width) << fPath;
+
+    if (abort) return Status::Fail;
+
+    #ifdef Q_OS_MAC
+    if (macImageIOThumbnail(fPath, G::maxIconSize, image) && !image.isNull())
+        return Status::Success;
+    return Status::Fail;
+    #else
+    Q_UNUSED(fPath)
+    Q_UNUSED(image)
+    return Status::Fail;
+    #endif
+}
+
 void Thumb::presetOffset(uint offset, uint length)
 {
 /*
@@ -503,10 +537,24 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
         }
         if (abort) {idle = true; return false;}
 
-        // raw image file or tiff with embedded jpg thumbnail
-        // rgh: what if the embedded thumb is not jpg format?
+        /* Raw image file or tiff with embedded jpg thumbnail. The embedded thumb
+           is JPEG for all current formats; the only non-JPEG embedded thumbs are
+           TIFF-format thumbs in tif IFDs, which leave lengthThumb == 0 (so
+           isEmbeddedThumb is false) and are handled by loadFromTiff below.
+           loadFromJpgData also content-sniffs as a fallback for safety. */
         if (isEmbeddedThumb) {
             status = loadFromJpgData(fPath, image);
+            if (status == Status::Success) break;
+        }
+
+        /* Canon CR3 shot in HDR PQ mode stores its embedded preview as a
+           headerless HEVC bitstream rather than JPEG, so loadFromJpgData above
+           fails. Decode the thumbnail with the platform image framework
+           (ImageIO supports CR3 on macOS). Standard CR3 files succeed in
+           loadFromJpgData above and never reach here. The Open guard preserves
+           the file-locked retry loop. */
+        if (ext == "cr3" && status != Status::Success && status != Status::Open) {
+            status = loadFromImageIO(fPath, image);
             if (status == Status::Success) break;
         }
 

@@ -401,6 +401,66 @@ Icon Chunk Size
     midVisibleCell.
 
 ------------------------------------------------------------------------------------------
+Thumbnail (Icon) Decoding
+------------------------------------------------------------------------------------------
+
+    Thumb::loadThumb (Image/thumb.cpp), called by Reader::readIcon, decodes the
+    icon for column 0. It prefers a small embedded preview over decoding the full
+    image. The routing is:
+
+        • video                          -> loadFromVideo
+        • isEmbeddedThumb (offset+len)   -> loadFromJpgData
+        • cr3 (if loadFromJpgData fails) -> loadFromImageIO   (CR3 HDR PQ, see below)
+        • heic                           -> loadFromHeic
+        • tif (G::useMyTiff)             -> loadFromTiff
+        • else                           -> loadFromEntireFile (Qt, scaled)
+
+    Embedded thumbnail format by file type (verified against external format
+    documentation - ExifTool, the DNG spec, and lclevy/canon_cr3):
+
+        • JPEG and the raw formats NEF, CR2, ARW, SR2, RAF, ORF, RW2: the embedded
+          thumb is JPEG (TIFF tags 513/514 or makernote payloads).
+        • CR3: standard CR3 stores JPEG in the THMB (thumbnail) and PRVW (preview)
+          boxes. BUT a CR3 shot in HDR PQ mode encodes BOTH THMB and PRVW as HEVC
+          (hvc1) - a headerless HEIF bitstream, not JPEG. See "CR3 HDR PQ" below.
+        • DNG: the spec allows preview/thumbnail IFDs to be Uncompressed (RGB), JPEG
+          or JPEG XL. Winnow's DNG parser scans for JPEG streams and selects the
+          smallest JPEG, so m.offsetThumb/lengthThumb always point at a JPEG.
+        • TIFF: IRB (Photoshop) thumbs are JPEG (m.thumbFormat = Jpg); chained-IFD
+          and subIFD thumbs are TIFF format (m.thumbFormat = Tif). The TIFF-format
+          thumbs leave m.lengthThumb == 0, so isEmbeddedThumb is false and they are
+          handled by loadFromTiff rather than loadFromJpgData.
+        • HEIC / HIF (incl. Canon HEIF stills): handled natively by loadFromHeic
+          (libheif on Windows, ImageIO on macOS).
+        • The remaining supported types (bmp, png, gif, webp, jp2, tga, svg, etc.)
+          have no embedded thumbnail; they are decoded whole by loadFromEntireFile.
+
+    loadFromJpgData reads m.offsetThumb/m.lengthThumb and decodes with the fast
+    "JPEG" hint, then falls back to Qt content-sniffing (loadFromData with no format
+    hint) if that fails. The fallback makes the path tolerant of any Qt-decodable
+    self-contained embedded thumbnail; undecodable buffers return false and fall
+    through to the next loader (loadFromTiff / loadFromEntireFile).
+
+    CR3 HDR PQ: the THMB payload is a bare HEVC bitstream (no HEIF file header), so
+    neither the "JPEG" decode nor the content-sniff fallback can read it and
+    loadFromJpgData fails. loadThumb handles this with a failure-driven fallback:
+    when ext == "cr3" and the embedded path did not succeed (and is not retrying a
+    locked file), it calls loadFromImageIO before the loadFromEntireFile catch-all.
+
+        • macOS: loadFromImageIO -> macImageIOThumbnail (ImageIO natively supports
+          CR3 and returns the embedded preview, or a downscaled decode of the raw).
+          This is the supported, tested platform.
+        • Windows: loadFromImageIO returns Fail (no safe path - libheif rejects CR3
+          and Heic::decodeThumbnail does not guard read failures), so loadThumb
+          falls through to loadFromEntireFile as before. A full Windows fix would
+          need WIC plus the Canon raw codec.
+
+    This is failure-driven by design: standard CR3 files decode in loadFromJpgData
+    and never reach loadFromImageIO, so their behaviour is unchanged. It also does
+    not depend on parser-side detection of the hvc1 codec, which keeps the CR3
+    parser untouched.
+
+------------------------------------------------------------------------------------------
 Tracking Icon Parameters
 ------------------------------------------------------------------------------------------
 
