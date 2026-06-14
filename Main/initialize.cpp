@@ -558,6 +558,11 @@ void MW::createThumbView()
         thumbView->iconNumberSize = 24;
     }
 
+    /* assignedIconWidth is the reference width persisted by snapshotWorkspace and reapplied
+       on workspace/fullscreen restore. Seed it from the loaded iconWidth; the IconView ctor
+       set it from iconWidth before iconWidth was assigned here, so it is otherwise stale. */
+    thumbView->assignedIconWidth = thumbView->iconWidth;
+
     // scrolling
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
             this, SLOT(thumbHasScrolled()));

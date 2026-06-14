@@ -617,6 +617,15 @@ void IconView::setThumbSize()
     if (isDebug)
         qDebug() << src << objectName();
 
+    /* Keep assignedIconWidth (the reference width persisted by snapshotWorkspace /
+       writeSettings) in sync with the actual iconWidth. For the non-wrapping thumbView
+       the size is driven by the dock height (thumbsFitTopOrBottom) and the [ ] keys
+       (thumbsShrink/thumbsEnlarge), which all funnel through here. Without this the
+       reference stays stale and a workspace/fullscreen restore reapplies the old width,
+       leaving icons with the correct height but a too-narrow width. The wrapping case
+       (gridView, floating/side thumbView) maintains assignedIconWidth via justify(). */
+    assignedIconWidth = iconWidth;
+
     // Capture the cell at the center of the current viewport before resizing
     QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
     QModelIndex centerIdx = indexAt(centerPoint);
