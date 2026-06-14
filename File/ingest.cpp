@@ -314,14 +314,13 @@ void Ingest::run()
         Finally the source file is copied to the renamed destination.
     */
 
-    // rgh to do: replace int filenameTemplateSelected with QString filenameTemplateSelected
     QMapIterator<QString,QString> it(filenameTemplatesMap);
     int i = 0;
     QString tokenString = "";
     while (it.hasNext()) {
         it.next();
         if (i == filenameTemplateSelected) {
-//            qDebug() << "Ingest::run" << "it.value()" << it.value();
+            // qDebug() << "Ingest::run" << "it.value()" << it.value();
             tokenString = it.value();
             break;
         }

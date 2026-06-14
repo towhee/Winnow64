@@ -136,8 +136,6 @@ private:
     int abortDelay = 1000;
     bool isDecoders = false;
 
-    // rgh retry not being used
-    int retry = 0;
     int maxAttemptsToCacheImage = 10;
 
     std::atomic<bool> isInitializing;

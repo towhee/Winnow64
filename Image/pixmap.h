@@ -12,7 +12,6 @@
 //#endif
 #include "ImageFormats/Jpeg/jpeg.h"
 #ifdef Q_OS_WIN
-// rgh remove heic
 #include "ImageFormats/Heic/heic.h"
 #endif
 

@@ -1522,7 +1522,7 @@ void EmbelProperties::syncWinnets(QString src)
 void EmbelProperties::newStyle()
 {
     if (G::isLogger) G::log("EmbelProperties::newStyle");
-    // rgh prevent duplicate style names
+    // prevent duplicate style names
     QString name = Utilities::inputText("New Style",
                                         "Enter new style name (not created until you add an effect)",
                                         styleList);
@@ -5715,7 +5715,6 @@ void EmbelProperties::addText(int count)
     textDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     textDeleteBtn->setToolTip("Delete this text item");
 
-    // rgh req'd ?
     textDeleteBtn->name = i.name;
     textDeleteBtn->parName = i.parentName;
 
@@ -6188,7 +6187,6 @@ void EmbelProperties::addGraphic(int count)
     graphicDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     graphicDeleteBtn->setToolTip("Delete this text item");
 
-    // rgh req'd ?
     graphicDeleteBtn->name = i.name;
     graphicDeleteBtn->parName = i.parentName;
 

@@ -59,6 +59,7 @@ private:
     Status loadFromJpgData(QString &fPath, QImage &image);
     Status loadFromTiff(QString &fPath, QImage &image, int row, const ImageMetadata &m);
     Status loadFromHeic(QString &fPath, QImage &image);
+    Status loadFromImageIO(QString &fPath, QImage &image);
     Status loadFromEntireFile(QString &fPath, QImage &image, int row);
     void loadFromVideo(QString &fPath, int dmRow);
     void checkOrientation(QImage &image, int orientation, int rotationDegrees);

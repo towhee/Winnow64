@@ -270,7 +270,6 @@ bool ImageCache::isIdle()
 
 bool ImageCache::isRunning() const
 {
-    // rgh should we use QAtomicInt running
     return imageCacheThread.isRunning();
 }
 
@@ -1311,7 +1310,6 @@ QString ImageCache::reportCacheParameters()
     rpt << "\n";
     rpt << "isRunning                = " << (imageCacheThread.isRunning() ? "true" : "false") << "\n";
     rpt << "abort                    = " << (abort ? "true" : "false") << "\n";
-    rpt << "retry                    = " << retry;
 
     rpt << "\n";
     rpt << "instance                 = " << instance << "\n";
@@ -1896,7 +1894,7 @@ QString ImageCache::reportToCache()
 
 void ImageCache::initialize()
 {
-    if (!G::useImageCache) return;   // rgh isolate image cache
+    if (!G::useImageCache) return;
     QString fun = "ImageCache::initialize";
     if (G::isLogger || G::isFlowLogger) log(fun);
 
@@ -2759,7 +2757,6 @@ void ImageCache::fillCache(int id,
     }
 
     // get next image to cache
-    // rgh todo add retry here?  Used Status::Failed
     int toCacheKey = nextToCache(id);
     bool okDecodeNextImage = !abort && toCacheKey != -1 && isValidKey(toCacheKey);
 

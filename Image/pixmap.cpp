@@ -151,7 +151,6 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     }
 
     // HEIC format
-    // rgh remove heic
     else if (metadata->hasHeic.contains(ext)) {
         //qDebug() << "Pixmap::load" << "hasHEIC" << fPath;
         ImageMetadata m = dm->imMetadata(fPath);
