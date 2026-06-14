@@ -735,12 +735,16 @@ Load Responsiveness (keeping the GUI usable during a large/recursive load)
     3. Batch the folder insert (G::useBatchedFolderInsert, DEFAULT FALSE). DataModel::addFolder
        can add a folder's rows with a single setRowCount (one rowsInserted, one view relayout)
        and fill the cells with signals blocked + one dataChanged for the range, instead of
-       one rowsInserted + ~20 dataChanged per file (the enumeration freeze). This is OFF by
-       default: that single wide dataChanged over the whole inserted block makes the
-       sorting-enabled proxy/tableView re-sort the block descending, so folders load Z-A
-       instead of A-Z. The per-row loop preserves A-Z and load latency is unchanged (the
-       per-icon win comes from useVisibleOnlyIconEmit, item 2). Leave false unless the
-       reordering is fixed first.
+       one rowsInserted + ~20 dataChanged per file (the enumeration freeze).
+
+       The Z-A reordering that previously made this unusable is now fixed: while a batched
+       load runs, DataModel::scheduleProcessing turns the proxy's dynamic sort/filter OFF
+       (sf->setDynamicSortFilter(false)), so the one wide dataChanged per folder no longer
+       re-sorts the inserted block. Inserted rows map in source (lessThan / name) order;
+       DataModel::restoreProxySortAfterLoad re-enables dynamic sort in one pass when the
+       load finishes or aborts (every processNextBatch exit path), restoring the same final
+       order the per-row path produces. Still DEFAULT FALSE pending A/B measurement on the
+       recursive pictures tree (see G::isPerfProbe below); flip it to true to test.
 
     Items 1-2 are independent of brute force vs JIT — they help any mode. Set the flags
     false to restore the prior per-signal behavior.
@@ -758,7 +762,37 @@ How to Test Icon Caching
                                   (see values below).
       G::useVisibleOnlyIconEmit   true = setIcon1/setValDm notify views only for visible rows.
       G::useBatchedFolderInsert   true = addFolder inserts a folder's rows in one batch
-                                  (default false; true reorders the proxy Z-A — see above).
+                                  (default false; dynamic sort is disabled during the load
+                                  and restored once at the end, so order is preserved — see
+                                  Load Responsiveness item 3).
+      G::isPerfProbe              true = emit a concise "[PERF] Phase1 load" line per folder
+                                  load: rows, folders, enum(ms), sort(ms), msg(ms),
+                                  insert(ms), other(ms) (= wall - the measured buckets:
+                                  event-loop yields / paint / end-of-load re-sort) and
+                                  wall(ms). Used to A/B the load pipeline. To compare on the
+                                  recursive pictures tree, clear the OS file cache between
+                                  runs (`sudo purge`) and flip the flag under test.
+
+                                  Measured on the ~9000-image / 1333-folder recursive tree
+                                  (batched=true): enum 581, sort 9, msg 1299, insert 249,
+                                  other 100, wall 2239. The dominant cost was NOT the proxy/
+                                  view insert (the prior assumption) but msg — the per-folder
+                                  emit centralMsg, each a synchronous repaint() in
+                                  MW::setCentralMessage. enum is cold≈warm (583 vs 562), i.e.
+                                  not I/O-bound; sort is negligible.
+
+                                  After the three fixes (batched insert + msg throttle +
+                                  entryList/suffix enumeration) the same load is wall 542:
+                                  enum 231, insert 253, msg 16, sort 9, other 32 — a 4.4x
+                                  speedup over the 2408 baseline. Remaining roughly-equal
+                                  costs are enum (1333 serial dir.entryList on the GUI pump)
+                                  and insert (~30 setData/row in addFileDataForRow).
+
+      G::throttleFolderLoadMsg    true (default) = DataModel::addFolder throttles its
+                                  "Searching for images…" progress message to ~50 ms instead
+                                  of once per folder, removing ~1.3 s of synchronous repaints
+                                  on a 1333-folder load. Set false to restore the per-folder
+                                  emit (the msg(ms) A/B baseline).
 
     Diagnostics — Help > diagnostics. The DataModel report shows the live state:
       iconChunkSize, icon cache mode (JIT window / brute force), icon loaded (row ranges),

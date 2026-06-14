@@ -373,6 +373,17 @@ Q_NAMESPACE
        Leave false unless the reordering is fixed first. */
     extern bool useBatchedFolderInsert;
 
+    /* When true, DataModel emits concise [PERF] timing lines for the Phase 1 folder
+       load (enumerate+sort vs model/proxy/view insert, plus total wall time). Used to
+       A/B load-pipeline changes against the recursive pictures tree. Off in production. */
+    extern bool isPerfProbe;
+
+    /* When true, DataModel::addFolder throttles its "Searching for images…" progress
+       message (emit centralMsg) to ~50 ms. Each emit drives MW::setCentralMessage, which
+       does a synchronous repaint(); firing it once per folder cost ~1.3 s over a 1333-folder
+       recursive tree. Set false to restore the per-folder emit (A/B baseline). */
+    extern bool throttleFolderLoadMsg;
+
     extern QColor textColor;
     extern QColor backgroundColor;
     extern QColor borderColor;

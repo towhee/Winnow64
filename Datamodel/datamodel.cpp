@@ -179,6 +179,7 @@ DataModel::DataModel(QObject *parent,
     fileFilters = new QStringList;
     foreach (const QString &str, metadata->supportedFormats) {
         fileFilters->append("*." + str);
+        supportedExtSet.insert(str.toLower());   // O(1) suffix lookup in addFolder
     }
 
     emptyImg.load(":/images/no_image.png");
@@ -701,6 +702,30 @@ void DataModel::scheduleProcessing()
     if (isProcessingFolders) return;
     isProcessingFolders = true;
 
+    /* Fresh throttle window per load so the first folder's progress message fires
+       immediately (subsequent folders are throttled in addFolder). */
+    centralMsgTimer.invalidate();
+
+    /* Phase 1 perf probe: start a dedicated wall timer (G::t is unreliable here — G::log
+       restarts it) and zero the per-load accumulators. */
+    if (G::isPerfProbe) {
+        perfEnumNs = 0;
+        perfSortNs = 0;
+        perfMsgNs = 0;
+        perfInsertNs = 0;
+        perfFolders = 0;
+        perfLoadTimer.start();
+    }
+
+    /* Batched load: turn off the proxy's dynamic sort/filter for the duration so the one
+       wide dataChanged per folder (addFolder) does not re-sort the inserted block Z-A.
+       Inserted rows still map in source (lessThan / name) order; a single re-sort pass is
+       reapplied in restoreProxySortAfterLoad() when the load finishes or aborts. */
+    if (G::useBatchedFolderInsert && !sfSortDisabledForLoad) {
+        sfSortDisabledForLoad = true;
+        sf->setDynamicSortFilter(false);
+    }
+
     processNextBatch();
 }
 
@@ -726,6 +751,7 @@ void DataModel::processNextBatch()
     while (processed < kMaxFoldersPerTick && !folderQueue.isEmpty() && !G::stop) {
         if (abort) {
             qDebug() << "processNextBatch1";
+            restoreProxySortAfterLoad();
             emit folderChange(abort);
             return;
         }
@@ -756,6 +782,7 @@ void DataModel::processNextBatch()
         pendingPaths.clear();
         isProcessingFolders = false;
         qDebug() << "processNextBatch2";
+        restoreProxySortAfterLoad();
         emit folderChange(abort);  // state changed (cleared)
         return;
     }
@@ -769,9 +796,46 @@ void DataModel::processNextBatch()
     // All done.
     isProcessingFolders = false;
 
+    /* Reapply proxy sort/filter in one pass (no-op if it was never disabled). Done before
+       the perf report so the wall time includes this final re-sort cost. */
+    restoreProxySortAfterLoad();
+
+    if (G::isPerfProbe) {
+        const qint64 wallMs = perfLoadTimer.elapsed();
+        const double measuredMs =
+            (perfEnumNs + perfSortNs + perfMsgNs + perfInsertNs) / 1.0e6;
+        qDebug().noquote()
+            << "[PERF] Phase1 load"
+            << " rows="     << rowCount()
+            << " folders="  << perfFolders
+            << " enum(ms)=" << QString::number(perfEnumNs / 1.0e6, 'f', 1)
+            << " sort(ms)=" << QString::number(perfSortNs / 1.0e6, 'f', 1)
+            << " msg(ms)="  << QString::number(perfMsgNs / 1.0e6, 'f', 1)
+            << " insert(ms)=" << QString::number(perfInsertNs / 1.0e6, 'f', 1)
+            << " other(ms)=" << QString::number(wallMs - measuredMs, 'f', 1)  // event-loop yield / paint / restore
+            << " wall(ms)=" << wallMs
+            << " batched="  << G::useBatchedFolderInsert;
+    }
+
     emit folderChange(abort);
 }
 // */
+
+void DataModel::restoreProxySortAfterLoad()
+{
+    /* Idempotent: only acts if scheduleProcessing turned dynamic sort off for a batched
+       load. Re-enabling dynamic sort ALONE replays the proxy's retained sort column/order,
+       which can be descending (→ Z-A). The load is meant to show source (name) order
+       (folderChangeCompleted: "must retain default order"), so force source order with
+       sort(-1) before re-enabling dynamic; sortColumn is then -1 so nothing is replayed. */
+    if (!sfSortDisabledForLoad) return;
+    sfSortDisabledForLoad = false;
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] restore sort: sortColumn=" << sf->sortColumn()
+                           << "sortOrder=" << (sf->sortOrder() == Qt::DescendingOrder ? "Desc" : "Asc");
+    sf->sort(-1);
+    sf->setDynamicSortFilter(true);
+}
 
 void DataModel::addFolder(const QString &folderPath)
 {
@@ -786,11 +850,27 @@ void DataModel::addFolder(const QString &folderPath)
     loadingModel = true;    // rgh is this needed?  Review loadingModel usage
     locker.unlock(); // Unlock the queue while processing
 
-    // folder fileInfo list
+    const bool probe = G::isPerfProbe;
+    QElapsedTimer pt;
+    if (probe) pt.start();
+
+    /* Folder file list. entryList (names only, no QFileInfo/stat) + an O(1) suffix check
+       against supportedExtSet replaces dir.setNameFilters(*fileFilters)+entryInfoList():
+       QDir compiled ~50 wildcard patterns to QRegularExpression on EVERY folder (~66k
+       compiles over a 1333-folder tree). QFileInfo is constructed only for eligible files,
+       and QDir::NoSort skips QDir's own sort (we std::sort below regardless). */
     QDir dir(folderPath);
-    dir.setNameFilters(*fileFilters);
-    dir.setFilter(QDir::Files);
-    QList<QFileInfo> folderFileInfoList = dir.entryInfoList();
+    const QStringList names = dir.entryList(QDir::Files, QDir::NoSort);
+    QList<QFileInfo> folderFileInfoList;
+    folderFileInfoList.reserve(names.size());
+    for (const QString &name : names) {
+        const int dot = name.lastIndexOf('.');
+        if (dot < 0) continue;
+        if (supportedExtSet.contains(name.mid(dot + 1).toLower()))
+            folderFileInfoList.append(QFileInfo(dir.filePath(name)));
+    }
+
+    if (probe) { perfEnumNs += pt.nsecsElapsed(); pt.restart(); }
 
     if (combineRawJpg) {
         // make sure, if raw+jpg pair, that raw file is first to make combining easier
@@ -800,16 +880,27 @@ void DataModel::addFolder(const QString &folderPath)
         std::sort(folderFileInfoList.begin(), folderFileInfoList.end(), lessThan);
     }
 
-    QString count = QVariant(++subFolderTreeCounter).toString();
-    QString progress = "Searching for images in: " + count + " of " +
-                       QVariant(subFolderTreeCount).toString() +
-                       " subfolders";
+    if (probe) { perfSortNs += pt.nsecsElapsed(); pt.restart(); }
 
-    QString step = "Loading eligible image file information.<br>";
-    step += progress + "<br>";
-    // step += folderPath + "<br>";
-    QString escapeClause = "Press \"Esc\" to stop.";
-    emit centralMsg(step + escapeClause);
+    /* Progress message. emit centralMsg drives MW::setCentralMessage, which does a
+       synchronous repaint(); once per folder this cost ~1.3 s over a 1333-folder tree.
+       Throttle to ~50 ms (the counter still advances every folder for accuracy). The first
+       folder of a load always emits (centralMsgTimer invalidated in scheduleProcessing). */
+    ++subFolderTreeCounter;
+    constexpr qint64 kCentralMsgMs = 50;
+    bool doEmit = true;
+    if (G::throttleFolderLoadMsg) {
+        doEmit = !centralMsgTimer.isValid() || centralMsgTimer.elapsed() >= kCentralMsgMs;
+    }
+    if (doEmit) {
+        centralMsgTimer.restart();
+        QString progress = "Searching for images in: " + QString::number(subFolderTreeCounter) +
+                           " of " + QVariant(subFolderTreeCount).toString() + " subfolders";
+        QString step = "Loading eligible image file information.<br>" + progress + "<br>";
+        emit centralMsg(step + "Press \"Esc\" to stop.");
+    }
+
+    if (probe) { perfMsgNs += pt.nsecsElapsed(); pt.restart(); }
 
     // datamodel size
     int row = rowCount();
@@ -870,6 +961,8 @@ void DataModel::addFolder(const QString &folderPath)
 
         row++;
     }
+
+    if (probe) { perfInsertNs += pt.nsecsElapsed(); perfFolders++; }
 
     if (abort) return;
 

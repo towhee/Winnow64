@@ -1,61 +1,19 @@
-Winnow can be run by another program to embellish and focus stack.  An intermediate
-executable (winnet) is used to identify what is to be done with the images, and then the
-winnet calls Winnow with the appropriate arguments.  This is no longer working.
+G::useBatchedFolderInsert = false
+[PERF] Phase1 load  rows= 9062  folders= 1333  enum+sort(ms)= 1933.9  insert(ms)= 370.0  wall(ms)= 2408  batched= false
+useBatchedFolderInsert = true
+[PERF] Phase1 load  rows= 9062  folders= 1333  enum+sort(ms)= 1859.7  insert(ms)= 244.0  wall(ms)= 2201  batched= true
 
-See: EmbelProperties::syncWinnets, Winnet project at /Users/roryhill/Projects/Winnet.
+Cold enum
+[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 583.1  sort(ms)= 9.2  insert(ms)= 249.0  wall(ms)= 2226  batched= true
+Warm enum
+[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 561.9  sort(ms)= 9.2  insert(ms)= 248.1  wall(ms)= 2202  batched= true
+Sorting Z-A
 
-To test, I build Winnet project and copy the resulting Winnet executable to
-/Users/roryhill/Library/Application Support/Winnow/Winnets and rename it EmbellishTest.
-I then select 2 files in Lightroom and export them to
-/Users/roryhill/Library/Application Support/Winnow/Winnets/EmbellishTest.  If/when
-EmbellishTest runs it should write debug output to
-/Users/roryhill/Library/Application Support/Winnow/Log/WinnowLog.txt.  This does not appear
-to be working as I am not seeing the log text in WinnowLog.txt.
+[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 581.0  sort(ms)= 9.1  msg(ms)= 1299.4  insert(ms)= 249.1  other(ms)= 100.4  wall(ms)= 2239  batched= true
 
-Please analyse entire Winnet process and help me debug what has gone wrong.
+throttleFolderLoadMsg = true
+[PERF] restore sort: sortColumn= 88 sortOrder= Desc
+[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 541.3  sort(ms)= 9.2  msg(ms)= 29.6  insert(ms)= 263.6  other(ms)= 44.3  wall(ms)= 888  batched= true
 
-In /Users/roryhill/Projects/Winnow64/tools/Winnet/main.cpp:
-Arguments forwarded to Winnow (the receiving side joins argv[1..] with '\n'
-and splits again — see Main/main.cpp and MW::handleStartupArgs):
-    arg[0]  = this droplet's name   e.g. "EmbellishZen2048"  (srcProgram)
-    arg[1]  = "Embellish"           (module token)
-    arg[2]  = template name         e.g. "Zen2048"
-    arg[3+] = image path(s) to embellish
-
-arg[1] and arg[2] are not required.  They can be determined in MW::handleStartupArgs from
-the source program name.  Fix here too.
-
-When I run a Focus Stack on the 4 images in /Users/roryhill/Pictures/_FocusStack locally
-it works.  However, when I run the same Focus Stack externally (from Lightroom) it fails
-in MW::groupFocusStacks, unable to get the DateTimeOriginal for the files.  File log:
-2026-06-04 06:24:10  Winnet::main  started
-2026-06-04 06:24:10  Winnet::main  name=FocusStack files=4 winnowPath=/Users/roryhill/Projects/Winnow64/build/mac-release/Winnow.app/Contents/MacOS/Winnow
-2026-06-04 06:24:11  MW::handleStartupArgs  MW::handleStartupArgs FocusStack
-2026-06-04 06:24:11  MW::generateFocusStack  method = StmDMapBasic
-2026-06-04 06:24:11  MW::generateFocusStack  srcFolder = /Users/roryhill/Pictures/_FocusStack/FocusStack
-2026-06-04 06:24:11  MW::generateFocusStack  isLocal = false
-2026-06-04 06:24:11  MW::groupFocusStacks
-2026-06-04 06:24:11  MW::groupFocusStacks  Skipping (invalid Created DateTimeOriginal):/Users/roryhill/Pictures/_FocusStack/FocusStack/FocusStack/2025-11-07_0001.tif
-2026-06-04 06:24:11  MW::groupFocusStacks  Skipping (invalid Created DateTimeOriginal):/Users/roryhill/Pictures/_FocusStack/FocusStack/FocusStack/2025-11-07_0002.tif
-2026-06-04 06:24:11  MW::groupFocusStacks  Skipping (invalid Created DateTimeOriginal):/Users/roryhill/Pictures/_FocusStack/FocusStack/FocusStack/2025-11-07_0003.tif
-2026-06-04 06:24:11  MW::groupFocusStacks  Skipping (invalid Created DateTimeOriginal):/Users/roryhill/Pictures/_FocusStack/FocusStack/FocusStack/2025-11-07_0004.tif
-2026-06-04 06:24:11  MW::groupFocusStacks  No valid images (Created date missing).
-2026-06-04 06:24:11  MW::generateFocusStack  Unable to find any focus stacks
-
-FindDuplicates was working, but the last time it was tested was perhaps a year ago.  I
-selected all the images in /Users/roryhill/Pictures/_FocusStack, opened findduplicatesdlg.cpp
-and added /Users/roryhill/Projects/Stack/Mouse using the addIncludeBtn.  I set the search
-parameters to only match file names and no duplicates were found, even though the files
-2025-11-01_0227.orf
-
-
-
-
-
-
-
-
-
-
-
-
+[PERF] restore sort: sortColumn= 88 sortOrder= Desc
+[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 230.6  sort(ms)= 9.4  msg(ms)= 16.3  insert(ms)= 253.5  other(ms)= 32.2  wall(ms)= 542  batched= true
