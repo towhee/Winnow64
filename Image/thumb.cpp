@@ -498,6 +498,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
         // try again after 100ms
         if (status == Status::Open) {
             attempts++;
+            if (G::isPerfProbe) G::probeThumbRetryCount.fetch_add(1, std::memory_order_relaxed);
             G::wait(100);
         }
         if (abort) {idle = true; return false;}

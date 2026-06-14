@@ -384,6 +384,11 @@ Q_NAMESPACE
        recursive tree. Set false to restore the per-folder emit (A/B baseline). */
     extern bool throttleFolderLoadMsg;
 
+    /* Phase-2 probe: count of Thumb::loadThumb 100ms retry waits (file-open contention with
+       ImageCache) across all reader threads. Reset in MetaRead::initialize, reported in
+       MetaRead::allFinished. High count => the retry loop is a real staller. */
+    extern std::atomic<int> probeThumbRetryCount;
+
     extern QColor textColor;
     extern QColor backgroundColor;
     extern QColor borderColor;

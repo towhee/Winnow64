@@ -277,7 +277,9 @@ void Reader::readIcon()
     if (abort) {status = Status::Aborted; return;}
 
     if (loadedIcon) {
-        QImage im(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+        /* Thumb::loadThumb already scaled to G::maxIconSize (thumbMax), aspect-kept and
+           RGB32, so the prior second scale here was a redundant resample + allocation per
+           icon. Emit the loaded image directly. */
         if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
@@ -286,7 +288,7 @@ void Reader::readIcon()
             << "Emitting setIcon" << "thumb = " << pm << "instance =" << instance;
         // Backpressure: bump pending counter; DataModel::setIcon1 decrements.
         dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
-        emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
+        emit setIcon(dmRow, image, instance, "MetaRead::readIcon");
 
         // qint64 msToDecode = tIcon.elapsed();
         qint64 msToDecode = tIcon.nsecsElapsed()/1000;
@@ -295,7 +297,7 @@ void Reader::readIcon()
                       "Reader::readIcon", Qt::EditRole,
                       int(Qt::AlignRight | Qt::AlignVCenter));
 
-        if (!im.isNull()) return;
+        if (!image.isNull()) return;
     }
 
     // failed to load icon, load error icon

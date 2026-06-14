@@ -1,6 +1,16 @@
 #include "metaread.h"
 #include "Main/global.h"
 
+namespace {
+/* RAII nanosecond accumulator for the Phase-2 perf probe. Adds elapsed time to acc on
+   scope exit (covers every early return). No-op unless on (G::isPerfProbe). */
+struct ScopedNs {
+    qint64 &acc; QElapsedTimer t; bool on;
+    ScopedNs(qint64 &a, bool on_) : acc(a), on(on_) { if (on) t.start(); }
+    ~ScopedNs() { if (on) acc += t.nsecsElapsed(); }
+};
+}
+
 /*
     MetaRead, running in a separate thread, dispatches readers to load the metadata and
     icons into the datamodel (dm), which will already include the file information,
@@ -544,6 +554,12 @@ void MetaRead::initialize(QString src)
     redosTriggeredCount.store(0, std::memory_order_relaxed);
     dispatchCycleCount.store(0, std::memory_order_relaxed);
 
+    // Phase-2 perf probe accumulators
+    perfDispatchNs = 0;
+    perfNeedToReadNs = 0;
+    perfNeedToReadCalls = 0;
+    G::probeThumbRetryCount.store(0, std::memory_order_relaxed);
+
     t.start();
 }
 
@@ -909,6 +925,9 @@ inline bool MetaRead::needToRead(int sfRow)
     not already reading.
 */
 {
+    ScopedNs _ntr(perfNeedToReadNs, G::isPerfProbe);
+    if (G::isPerfProbe) perfNeedToReadCalls++;
+
     needIcon = false;
     needMeta = false;
 
@@ -1316,6 +1335,7 @@ void MetaRead::dispatch(int id, bool isReturning)
            - call reader[n] to read metadata and icon into datamodel
            - if last row then quit after delay
 */
+    ScopedNs _disp(perfDispatchNs, G::isPerfProbe);
     QString fun = "MetaRead::dispatch";
     dispatchCycleCount.fetch_add(1, std::memory_order_relaxed);
     if (isDebug)
@@ -1683,6 +1703,23 @@ void MetaRead::allFinished(QString src)
     qint64 ms = t.elapsed();
     int n = dm->rowCount();
     int msPerImage = ms / n;
+
+    if (G::isPerfProbe) {
+        const double dispatchMs = perfDispatchNs / 1.0e6;
+        const double ntrMs = perfNeedToReadNs / 1.0e6;
+        const double ntrAvgUs = perfNeedToReadCalls
+                                ? (perfNeedToReadNs / 1.0e3) / perfNeedToReadCalls : 0.0;
+        qDebug().noquote()
+            << "[PERF] Phase2 metaRead"
+            << " rows="          << n
+            << " cycles="        << dispatchCycleCount.load(std::memory_order_relaxed)
+            << " dispatch(ms)="  << QString::number(dispatchMs, 'f', 1)   // metaReadThread busy
+            << " needToRead(ms)=" << QString::number(ntrMs, 'f', 1)       // proxy hot loop (subset)
+            << " ntrCalls="      << perfNeedToReadCalls
+            << " ntrAvg(us)="    << QString::number(ntrAvgUs, 'f', 2)
+            << " thumbRetries="  << G::probeThumbRetryCount.load(std::memory_order_relaxed)
+            << " wall(ms)="      << ms;                                   // folderChanged -> done
+    }
     /*
     qDebug() << fun << "Elapsed ms =" << ms
              << "ms per image =" << msPerImage

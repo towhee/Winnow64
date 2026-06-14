@@ -17,3 +17,10 @@ throttleFolderLoadMsg = true
 
 [PERF] restore sort: sortColumn= 88 sortOrder= Desc
 [PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 230.6  sort(ms)= 9.4  msg(ms)= 16.3  insert(ms)= 253.5  other(ms)= 32.2  wall(ms)= 542  batched= true
+
+[PERF] restore sort: sortColumn= 88 sortOrder= Desc
+[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 237.9  sort(ms)= 9.2  msg(ms)= 17.8  insert(ms)= 256.5  other(ms)= 31.7  wall(ms)= 553  batched= true
+[PERF] Phase2 metaRead  rows= 9062  cycles= 9822  dispatch(ms)= 92.2  needToRead(ms)= 18.2  ntrCalls= 9198  ntrAvg(us)= 1.98  wall(ms)= 9574
+
+[PERF] Phase2 metaRead  rows= 9062  cycles= 9819  dispatch(ms)= 87.2  needToRead(ms)= 10.5  ntrCalls= 9161  ntrAvg(us)= 1.15  thumbRetries= 0  wall(ms)= 9623
+

@@ -62,6 +62,13 @@ public:
     std::atomic<quint64> redosTriggeredCount{0};
     std::atomic<quint64> dispatchCycleCount{0};
 
+    /* Phase-2 perf probe (gated by G::isPerfProbe). Single-threaded on metaReadThread, so
+       plain members are safe. dispatch(ns) = thread-busy time; needToRead(ns) is the proxy
+       read hot loop nested within it. See [PERF] Phase2 line in allFinished(). */
+    qint64 perfDispatchNs = 0;
+    qint64 perfNeedToReadNs = 0;
+    qint64 perfNeedToReadCalls = 0;
+
     void test();
 
 signals:
