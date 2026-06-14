@@ -197,15 +197,16 @@ bool autoAdvance;
 // icons
 int maxIconSize = 256;
 int minIconSize = 40;
-int maxIconChunk = 25000;
+int maxIconChunk = 10000;
 bool   useJitIconCache = false;         // testing flag; see DataModel::resolveIconChunkSize
 double jitIconCacheMemFraction = 0.5;   // share of free-remainder memory budgeted for thumbnails
 std::atomic<qint64> imageCacheHeadroomMB{0};  // image cache's remaining intended claim (MB)
 int iconPressureTestLevel = -1;         // -1 real; 0 normal+recovered; 1 warn; 2 critical; 3 normal-not-recovered
 bool useVisibleOnlyIconEmit = true;     // setIcon1/setValDm notify views only for visible rows (set false for prior behavior)
 bool useBatchedFolderInsert = true;    // OFF: batched insert + one wide dataChanged re-sorts the proxy block Z-A; per-row preserves A-Z. No measurable latency gain over per-row (useVisibleOnlyIconEmit carries the win)
-bool isPerfProbe = true;               // emit [PERF] Phase 1 load timing lines (A/B load-pipeline changes)
+bool isPerfProbe = false;               // emit [PERF] Phase 1 load timing lines (A/B load-pipeline changes)
 bool throttleFolderLoadMsg = true;     // throttle addFolder progress message to ~50ms (per-folder centralMsg repaint cost ~1.3s/1333 folders)
+std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)
 
 // status
 // bool isModifyingDatamodel;

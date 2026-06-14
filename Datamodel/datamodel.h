@@ -24,6 +24,13 @@ public:
     bool isSuspended();
     bool &combineRawJpg;
 
+    /* Single guard for every sort path (sortThumbs, QTableView::setSortingEnabled, header
+       clicks, workspace restore): a persisted/stale sort column can be out of range
+       (>= G::TotalColumns, the sentinel past the last real column). Sorting by a phantom
+       column silently reverses the model in descending order; treat invalid as -1 (no sort,
+       source order). See the column-88 trace. */
+    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
+
 public slots:
     void filterChange(QString src = "");
     void suspend(bool suspendFiltering, QString src = "");

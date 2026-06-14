@@ -599,11 +599,8 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
     if (isDebug || G::isFlowLogger)
         qDebug() << "IconView::sortThumbs" << objectName();
-    /* Guard: a persisted sortColumn (e.g. from an older build / a workspace) can be out of
-       range (G::TotalColumns == one past the last real column). Sorting the proxy by a
-       phantom column makes every key compare equal — silently in ascending order, but
-       reverses the whole model in descending order. Fall back to the file-name column. */
-    if (sortColumn < 0 || sortColumn >= G::TotalColumns) sortColumn = G::NameColumn;
+    /* Out-of-range sortColumn is clamped centrally in SortFilter::sort (covers every sort
+       path, including QTableView's built-in sorting). */
     if (isReverse) dm->sf->sort(sortColumn, Qt::DescendingOrder);
     else dm->sf->sort(sortColumn, Qt::AscendingOrder);
     scrollTo(currentIndex(), ScrollHint::PositionAtCenter);

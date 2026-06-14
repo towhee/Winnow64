@@ -4369,3 +4369,22 @@ bool SortFilter::isSuspended()
 {
     return suspendFiltering;
 }
+
+void SortFilter::sort(int column, Qt::SortOrder order)
+{
+    /* Guard against a phantom sort column reaching the proxy from ANY path — notably
+       QTableView::setSortingEnabled(true), which calls model()->sort(sortIndicatorSection(),
+       ...) directly and so bypasses MW::sortChange / IconView::sortThumbs. A stale section
+       (e.g. G::TotalColumns == one past the last real column) would sort by an invalid
+       column: keys compare equal and a descending order silently reverses the whole model
+       (the Z-A regression). Treat anything out of range as -1 (no sort = source order).
+       -1 itself is the valid "clear sort" sentinel and passes through. */
+    if (column >= G::TotalColumns || column < -1) {
+        if (G::isPerfProbe)
+            qDebug().noquote() << "[PERF] SortFilter::sort clamped invalid column"
+                               << column << "->" << -1
+                               << (order == Qt::DescendingOrder ? "Desc" : "Asc");
+        column = -1;
+    }
+    QSortFilterProxyModel::sort(column, order);
+}
