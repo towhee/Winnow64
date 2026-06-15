@@ -24,4 +24,3 @@ throttleFolderLoadMsg = true
 
 [PERF] Phase2 metaRead  rows= 9062  cycles= 9819  dispatch(ms)= 87.2  needToRead(ms)= 10.5  ntrCalls= 9161  ntrAvg(us)= 1.15  thumbRetries= 0  wall(ms)= 9623
 
-You have Canon gear (the R6 file is in your set)

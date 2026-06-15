@@ -67,6 +67,12 @@ Table of Contents
          - Disabled Shortcut Feedback
          - Rules by Action
 
+    9. MEMORY CARD EJECT
+         - Overview
+         - Entry Points
+         - Drive Root Normalization
+         - Auto-Eject After Ingest
+
 
 ******************************************************************************************
 
@@ -426,6 +432,13 @@ Thumbnail (Icon) Decoding
         • DNG: the spec allows preview/thumbnail IFDs to be Uncompressed (RGB), JPEG
           or JPEG XL. Winnow's DNG parser scans for JPEG streams and selects the
           smallest JPEG, so m.offsetThumb/lengthThumb always point at a JPEG.
+          The DNG parser deliberately does NOT scan the Photoshop IRB (tag 34377)
+          for a thumbnail the way Tiff::parse does: DNG stores its previews in
+          subIFDs (tag 330), which the parser already handles. An IRB thumb only
+          exists if the DNG was round-tripped through Photoshop, so it would at most
+          be a fallback when no subIFD JPEG preview is present (rare). ifdPhotoshopOffset
+          is still read in dng.cpp so IRB::readThumb() can be added there as a
+          !m.lengthThumb-gated fallback if ever needed.
         • TIFF: IRB (Photoshop) thumbs are JPEG (m.thumbFormat = Jpg); chained-IFD
           and subIFD thumbs are TIFF format (m.thumbFormat = Tif). The TIFF-format
           thumbs leave m.lengthThumb == 0, so isEmbeddedThumb is false and they are
@@ -1351,8 +1364,22 @@ Disabled Shortcut Feedback
       • On a match the reason is shown via G::popup and the key is consumed (return true).
 
     Guards: skipped during initialization, for auto-repeat, for modifier-only presses,
-    and when focus is in a text-entry widget (QLineEdit/QTextEdit/QPlainTextEdit) so
-    typing is never hijacked.
+    when focus is in a text-entry widget (QLineEdit/QTextEdit/QPlainTextEdit), and when
+    focus is in another top-level window (fw->window() != MW) so typing is never hijacked.
+
+    Modeless dialog shortcut guard
+    ..........................................................................................
+    MW's single-key shortcuts use the default Qt::WindowShortcut context, which Qt
+    activates whenever the action's window is anywhere in the parent chain of the active
+    window.  A modeless dialog parented to MW (e.g. the Preferences dialog) therefore does
+    NOT shield these shortcuts on its own: a digit typed into a Preferences spin box would
+    fire rate "1" instead of entering text.  The enabled-action case fires via Qt's shortcut
+    map (QEvent::ShortcutOverride) before the KeyPress feedback handler runs, so the
+    eventFilter also intercepts ShortcutOverride: when focus is in another window
+    (fw->window() != MW) and the key matches an MW-owned shortcut (MW::ownsShortcut(seq)),
+    it accepts the override and consumes the event, delivering the key to the focused widget
+    as normal input.  This scopes suppression to MW's own shortcuts, leaving the dialog's
+    own shortcuts (typically Ctrl-modified) free to fire.
 
 ------------------------------------------------------------------------------------------
 Rules by Action
@@ -1388,3 +1415,69 @@ Rules by Action
         always enabled.
       • pasteFiles: enabled when the clipboard holds file URLs
         (Utilities::clipboardHasUrls()).
+
+
+******************************************************************************************
+
+MEMORY CARD EJECT
+
+------------------------------------------------------------------------------------------
+Overview
+------------------------------------------------------------------------------------------
+
+    Ejecting a removable card (USB drive / memory card) safely unmounts it from the OS.
+    The platform-specific work lives in UsbUtil (`Utilities/usbutil.cpp`):
+
+      • UsbUtil::eject(rootPath) — Windows: DISMOUNT_VOLUME then STORAGE_EJECT_MEDIA via
+        DeviceIoControl; macOS: "diskutil eject <mount point>".  Returns true only on a
+        real success (the Windows path reports failure if either ioctl fails).
+      • UsbUtil::isEjectable(rootPath) — true only when rootPath is a mounted volume that
+        is valid (ready, writable) AND removable (DRIVE_REMOVABLE/DRIVE_CDROM on Windows,
+        under /Volumes/ on macOS).  Both checks require rootPath to be the volume's mount
+        root, not a subfolder.
+
+    MW::ejectUsb(path) (`Main/mainwindow.cpp`) wraps this: if the drive being ejected is
+    currently loaded in the datamodel it first calls stop() and clears the FSTree
+    selection (reading files from a drive after ejection would crash), then ejects and
+    shows a confirmation/failure popup.
+
+------------------------------------------------------------------------------------------
+Entry Points
+------------------------------------------------------------------------------------------
+
+    Eject is reachable ONLY from the context menus of the Folders (FSTree) and Bookmarks
+    panels — there is no main-menu eject action.  The context action
+    (ejectActionFromContextMenu -> MW::ejectUsbFromContextMenu) ejects the drive of the
+    moused-over folder (mouseOverFolderPath).  MW::renameEjectUsbMenu() sets the action's
+    label ("Eject Memory Card <drive>") and enabled state from that folder as the context
+    menu is built.
+
+------------------------------------------------------------------------------------------
+Drive Root Normalization
+------------------------------------------------------------------------------------------
+
+    The moused-over (or ingest source) path is usually a subfolder, e.g. a DCIM folder,
+    but isEjectable/eject require the volume mount root.  Both MW::ejectUsb() and
+    MW::renameEjectUsbMenu() therefore normalize with QStorageInfo(path).rootPath() before
+    calling UsbUtil, so eject works (and the menu item enables) for any folder on the card,
+    not only when the volume root itself is selected.
+
+------------------------------------------------------------------------------------------
+Auto-Eject After Ingest
+------------------------------------------------------------------------------------------
+
+    The ingest dialog has an "eject" checkbox bound to the persisted setting autoEjectUsb
+    ("autoEjectUSB").  When set, MW::ingest() ejects the ingest source card after a
+    successful FOREGROUND ingest — both the gotoIngestFolder early-return path and the
+    normal path, after the copy has finished (IngestDlg runs the foreground copy
+    synchronously during exec()).  The eject targets dm->primaryFolderPath(), normalized
+    to the drive root by ejectUsb().
+
+    Auto-eject is foreground-only by design.  The ingest dialog disables AND clears the
+    eject checkbox whenever background ingest is selected (IngestDlg::
+    on_backgroundIngestChk_stateChanged, `Dialogs/ingestdlg.cpp`), and the checkbox is
+    initialized after the background checkbox so a persisted autoEjectUsb=true is
+    reconciled to false at construction.  As a result autoEjectUsb is always false for a
+    background ingest; MW::ingest() additionally guards the eject with !isBackgroundIngest.
+    A background ingest never auto-ejects (ejecting mid-copy would fail / corrupt the
+    transfer).

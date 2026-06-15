@@ -378,12 +378,6 @@ void MW::createIngestActions()
     }
     addActions(ingestHistoryFolderActions);
 
-    ejectAction = new QAction(tr("Eject Memory Card"), this);
-    ejectAction->setObjectName("ejectUsbDrive");
-    ejectAction->setShortcutVisibleInContextMenu(true);
-    addAction(ejectAction);
-    connect(ejectAction, &QAction::triggered, this, &MW::ejectUsbFromMainMenu);
-
     ejectActionFromContextMenu = new QAction(tr("Eject Memory Card"), this);
     ejectActionFromContextMenu->setObjectName("ejectUsbDriveFromContext");
     ejectActionFromContextMenu->setShortcutVisibleInContextMenu(true);
@@ -1799,7 +1793,6 @@ void MW::createFileMenu()
     // }
     // connect(ingestHistoryFoldersMenu, SIGNAL(triggered(QAction*)),
     //         SLOT(invokeIngestHistoryFolder(QAction*)));
-    // fileMenu->addAction(ejectAction);
     // fileMenu->addAction(eraseUsbAction);
 
     fileMenu->addSeparator();
@@ -1838,7 +1831,6 @@ void MW::createIngestMenu()
     }
     connect(ingestHistoryFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeIngestHistoryFolder(QAction*)));
-    // ingestMenu->addAction(ejectAction);
     // ingestMenu->addAction(eraseUsbAction);
 }
 
@@ -2405,24 +2397,17 @@ void MW::addMenuSeparator(QWidget *widget)
     widget->addAction(separator);
 }
 
-// req'd?
-void MW::enableEjectUsbMenu(QString path)
-{
-    if (G::isLogger)
-        G::log("MW::enableEjectUsbMenu");
-   // if(Usb::isUsb(path)) ejectAction->setEnabled(true);
-   // else ejectAction->setEnabled(false);
-}
-
 void MW::renameEjectUsbMenu(QString path)
 {
+    /* Normalize to the drive root so the eject action is enabled for any folder on
+       a removable card, not only when the moused-over item is the volume root. */
+    QString rootPath = QStorageInfo(path).rootPath();
     QString drive = "";
     QString text;
     bool enabled;
-    if (UsbUtil::isEjectable(path)) {
-        //qDebug() << "MW::renameEjectUsbMenu  enable";
+    if (UsbUtil::isEjectable(rootPath)) {
         enabled = true;
-        drive = Utilities::getDriveName(path);
+        drive = Utilities::getDriveName(rootPath);
         drive = Utilities::enquote(drive);
         text = "Eject Memory Card " + drive;
     }
@@ -2430,10 +2415,7 @@ void MW::renameEjectUsbMenu(QString path)
         enabled = false;
         text = "Eject Memory Card";
     }
-    // qDebug() << "MW::renameEjectUsbMenu" << path << drive;
-    ejectAction->setEnabled(enabled);
     ejectActionFromContextMenu->setEnabled(enabled);
-    ejectAction->setText(text);
     ejectActionFromContextMenu->setText(text);
 }
 

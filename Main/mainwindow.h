@@ -494,7 +494,6 @@ private slots:
     void exportEmbel();
     void enableSelectionDependentMenus();
     void enableStatusBarBtns();
-    void enableEjectUsbMenu(QString path);
     void renameEjectUsbMenu(QString path);
     void renameAddBookmarkAction(QString path);
     void renameRemoveBookmarkAction(QString path);
@@ -503,7 +502,6 @@ private slots:
     void renameCopyFolderPathAction(QString folderName);
     void renameRevealFileAction(QString folderName);
     void ejectUsb(QString path);
-    void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
     void renameEraseMemCardFromContextMenu(QString path);
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
@@ -717,6 +715,7 @@ private slots:
     void collapseAllFolders();
     void updateCollapseFoldersAction();
     void updatePickDependentActions();
+    bool ownsShortcut(const QKeySequence &seq);
     QAction *disabledActionForShortcut(const QKeySequence &seq);
     QString actionDisabledReason(QAction *a);
 
@@ -787,7 +786,6 @@ private:
     QAction *removeBookmarkAction;
     QAction *refreshBookmarkAction;
     QAction *ingestAction;
-    QAction *ejectAction;
     QAction *ejectActionFromContextMenu;
     QAction *eraseUsbAction;
     QAction *eraseUsbActionFromContextMenu;

@@ -15,7 +15,6 @@ public:
     static bool eject(QString driveName);
     static QStringList dcimCards();
     static bool isMemCardWithDCIM(const QString &rootPath);
-    static QStringList ejectableDrives();
     static bool isEjectable(const QString &rootPath);
     static bool isRemovable(const QString &rootPath);
 private:

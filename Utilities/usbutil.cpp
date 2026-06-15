@@ -11,7 +11,6 @@ bool UsbUtil::eject(QString driveName)
     wchar_t wtext[7];
     size_t textlen = 7;
     mbstowcs_s(&textlen, wtext, devicepath, strlen(devicepath)+1);
-    QString errmsg = "";
 
     HANDLE handle = CreateFile(wtext, GENERIC_READ, FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
     if (handle == INVALID_HANDLE_VALUE)
@@ -20,22 +19,16 @@ bool UsbUtil::eject(QString driveName)
     }
 
     DWORD bytes = 0;
-    long result;
 
-    result = DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, 0, 0, 0, 0, &bytes, 0);
-//    if(result) {
-////        FormatErrorMsg("Dismount Volume: ", errmsg);
-//        qDebug() << "Dismount err msg:" << errmsg << result;
-//        return false;
-//    }
-    result = DeviceIoControl(handle, IOCTL_STORAGE_EJECT_MEDIA, 0, 0, 0, 0, &bytes, 0);
-//    if(result) {
-////        FormatErrorMsg("Eject Volume: ", errmsg);
-//        qDebug() << "Eject err msg:" << errmsg << result;
-//        return false;
-//    }
+    /* DeviceIoControl returns nonzero on success.  Dismount the volume, then eject the
+       media, and report failure to the caller if either step fails. */
+    if (!DeviceIoControl(handle, FSCTL_DISMOUNT_VOLUME, 0, 0, 0, 0, &bytes, 0)) {
+        CloseHandle(handle);
+        return false;
+    }
+    BOOL ejected = DeviceIoControl(handle, IOCTL_STORAGE_EJECT_MEDIA, 0, 0, 0, 0, &bytes, 0);
     CloseHandle(handle);
-    return true;
+    return ejected != 0;
 
 #elif defined(Q_OS_MAC)
     QProcess p;
