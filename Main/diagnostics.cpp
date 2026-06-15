@@ -328,8 +328,7 @@ QString MW::diagnostics()
     rpt << "\n" << "slideShowRandom = " << G::s(isSlideShowRandom);
     rpt << "\n" << "slideShowWrap = " << G::s(isSlideShowWrap);
     rpt << "\n" << "cacheSizeMB = " << G::s(imageCache->getMaxMB());
-    rpt << "\n" << "showCacheStatus = " << G::s(isShowCacheProgressBar);
-    rpt << "\n" << "isShowCacheThreadActivity = " << G::s(isShowCacheProgressBar);
+    rpt << "\n" << "showCacheProgress = " << G::s(G::showCacheProgress);
     rpt << "\n" << "progressWidth = " << G::s(cacheBarProgressWidth);
     rpt << "\n" << "fullScreenDocks.isFolders = " << G::s(fullScreenDocks.isFolders);
     rpt << "\n" << "fullScreenDocks.isFavs = " << G::s(fullScreenDocks.isFavs);

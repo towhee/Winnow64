@@ -15,8 +15,8 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
     // work if being resized at the same time due to changes in font size
     ignoreFontSizeChangeSignals = true;
 
-    stringToFitCaptions = "======String to fit in captions column needs to be wide======";
-    stringToFitValues   = "=String to fit in values column=";
+    stringToFitCaptions = "======String to fit in captions column======";
+    stringToFitValues   = "===String to fit in values column===";
     resizeColumns();
 
     addItems();
@@ -26,7 +26,7 @@ void Preferences::rory()
 {
     QModelIndex capIdx;
 
-    capIdx = findCaptionIndex("showCacheProgressBar");
+    capIdx = findCaptionIndex("hideCachingProgressBars");
     if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
     else setRowHidden(capIdx.row(), capIdx.parent(), true);
 
@@ -161,20 +161,29 @@ void Preferences::itemChange(QModelIndex idx)
         G::loadOnlyVisibleIcons = v.toBool();
     }
 
-    if (source == "showCacheProgressBar") {
-        // signal ImageCache
-        bool isShow = v.toBool();
-        emit mw->setShowCacheStatus(isShow);
-        mw->isShowCacheProgressBar = isShow;
-        mw->metaRead->showProgressInStatusbar = isShow;
-        mw->imageCache->setShowCacheStatus(isShow);
-        mw->progress->setVisible(isShow);
-        mw->progress->setCacheRowsEnabled(isShow);
-        mw->settings->setValue("isShowCacheStatus", isShow);
-        // hide/show progressWidthSlider in preferences
-        QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
-        if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
-        else setRowHidden(capIdx.row(), capIdx.parent(), true);
+    if (source == "disableColorCorrection") {
+        // checkbox is "disable", so colour management is the inverse
+        bool disable = v.toBool();
+        // only toggle (which rebuilds the image cache) if the state actually changes
+        if (G::colorManage == disable)
+            mw->toggleColorManage(disable ? MW::off : MW::on);
+        mw->settings->setValue("colorManage", G::colorManage);
+    }
+
+    if (source == "hideCachingProgressBars") {
+        /* Single gate for ImageCache + MetaRead progress. Checkbox is "hide", so
+           G::showCacheProgress is the inverse. ImageCache and MetaRead read
+           G::showCacheProgress directly, so no per-class setters are needed. */
+        bool hide = v.toBool();
+        G::showCacheProgress = !hide;
+        mw->progress->setVisible(G::showCacheProgress);
+        mw->progress->setCacheRowsEnabled(G::showCacheProgress);
+        mw->settings->setValue("showCacheProgress", G::showCacheProgress);
+    }
+
+    if (source == "cacheThumbsJIT") {
+        G::useJitIconCache = v.toBool();
+        mw->settings->setValue("useJitIconCache", G::useJitIconCache);
     }
 
     if (source == "progressWidthSlider") {
@@ -439,7 +448,7 @@ void Preferences::addItems()
     addGeneral();
     addModify();
     addUserInterface();
-    addCache();
+    addProductivity();
     addSlideShow();
     addFullScreen();
     addMetadataPanel();
@@ -1065,15 +1074,15 @@ void Preferences::addUserInterface()
     addItem(i);
 }
 
-void Preferences::addCache()
+void Preferences::addProductivity()
 {
     // Cache Header (Root)
-    i.name = "CacheHeader";
+    i.name = "ProductivityHeader";
     i.parentName = "";
     i.isHeader = true;
     i.isDecoration = true;
     i.decorateGradient = true;
-    i.captionText = "Cache";
+    i.captionText = "Productivity";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
@@ -1081,21 +1090,50 @@ void Preferences::addCache()
     addItem(i);
 
     // Show caching activity
-    i.name = "showCacheProgressBar";
-    i.parentName = "CacheHeader";
-    i.captionText = "Show caching progress";
-    i.tooltip = "Show or hide the cache progress bar in the status area on the lower right.";
+    i.name = "disableColorCorrection";
+    i.parentName = "ProductivityHeader";
+    i.captionText = "Disable color correction";
+    i.tooltip = "Disabled color correction is faster.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->isShowCacheProgressBar;
-    i.key = "showCacheProgressBar";
+    i.value = !G::colorManage;
+    i.key = "disableColorCorrection";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Show caching activity
+    i.name = "hideCachingProgressBars";
+    i.parentName = "ProductivityHeader";
+    i.captionText = "Hide caching progress";
+    i.tooltip = "Show or hide the cache progress bar in the status area on the lower right."
+                "\nHiding is faster.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = !G::showCacheProgress;
+    i.key = "hideCachingProgressBars";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Cache thumbnails JIT
+    i.name = "cacheThumbsJIT";
+    i.parentName = "ProductivityHeader";
+    i.captionText = "Cache thumbs just in time";
+    i.tooltip = "Always cache thumbnails just in time."
+                "\nLess memory req'd, better for very large"
+                "\nfolders, but slower for scrolling.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::useJitIconCache;
+    i.key = "cacheThumbsJIT";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
 
     // // Set the width of the cache status progress bar
     // i.name = "progressWidthSlider";
-    // i.parentName = "CacheHeader";
+    // i.parentName = "ProductivityHeader";
     // i.captionText = "Cache progress bar width";
     // i.tooltip = "Change the width of the cache progress bar in the status bar.";
     // i.hasValue = true;
@@ -1110,7 +1148,7 @@ void Preferences::addCache()
     // i.fixedWidth = 50;
     // addItem(i);
     // hide/show progressWidthSlider in preferences
-    // QModelIndex idx = findCaptionIndex("showCacheProgressBar");
+    // QModelIndex idx = findCaptionIndex("hideCachingProgressBars");
     // if (model->index(idx.row(), 1, idx.parent()).data().toBool())
     //     setRowHidden(capIdx.row(), capIdx.parent(), false);
     // else
@@ -1119,7 +1157,7 @@ void Preferences::addCache()
 
     // Image cache maximum size excluding metadata cache
     i.name = "imageCacheSize";
-    i.parentName = "CacheHeader";
+    i.parentName = "ProductivityHeader";
     i.captionText = "Cache size";
     i.tooltip = "The maximum cache size in GB.  Auto allows Winnow to optimise the\n"
                 "cache size dynamically.\n\n"
@@ -1178,7 +1216,7 @@ void Preferences::addCache()
 
     // // Available memory for caching
     // i.name = "availableMBToCache";
-    // i.parentName = "CacheHeader";
+    // i.parentName = "ProductivityHeader";
     // i.captionText = "Image cache / Available memory";
     // i.tooltip = "The total amount of available memory in MB.  On some\n"
     //             "systems, including Mac M chips, you can allocate more\n"

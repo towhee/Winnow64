@@ -1252,7 +1252,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
     }
 
     // report progress in statusbar and top of filter dock
-    if (!isDone && showProgressInStatusbar && !G::allMetadataAttempted) {
+    if (!isDone && G::showCacheProgress && !G::allMetadataAttempted) {
         emit updateProgressInStatusbar(dmRow, dm->rowCount(), darkRed);
         int progress = 1.0 * metaReadCount / dm->rowCount() * 100;
         emit updateProgressInFilter(progress);

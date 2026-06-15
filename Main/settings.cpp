@@ -99,7 +99,10 @@ void MW::writeSettings()
     // image cache (see preferences.cpp)
     // settings->setValue("autoMaxMB", imageCache->getAutoMaxMB());
     // settings->setValue("cacheMaxMB", imageCache->getMaxMB());
-    // settings->setValue("isShowCacheStatus", isShowCacheProgressBar;
+
+    // performance / productivity
+    settings->setValue("showCacheProgress", G::showCacheProgress);
+    settings->setValue("useJitIconCache", G::useJitIconCache);
 
     settings->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
     settings->setValue("isIconNumberVisible", iconNumberVisibleAction->isChecked());
@@ -341,6 +344,10 @@ bool MW::loadSettings()
 
         // filters
 
+        // performance / productivity
+        G::showCacheProgress = true;
+        G::useJitIconCache = false;
+
         // cache (see MW::createImageCache in initialize.cpp)
 
         // Focus Stack default method
@@ -430,6 +437,10 @@ bool MW::loadSettings()
 
     // datamodel
     if (settings->contains("maxIconSize")) G::maxIconSize = settings->value("maxIconSize").toInt();
+
+    // performance / productivity
+    if (settings->contains("showCacheProgress")) G::showCacheProgress = settings->value("showCacheProgress").toBool();
+    if (settings->contains("useJitIconCache")) G::useJitIconCache = settings->value("useJitIconCache").toBool();
 
     // files
     if (settings->contains("includeSidecars")) G::includeSidecars = settings->value("includeSidecars").toBool();

@@ -46,7 +46,6 @@ public:
     QString getAutoStrategy();
     quint64 getMaxMB();
     quint64 getMaxMBCeiling();
-    bool getShowCacheStatus();
 
     void updateStatus(int instruction, QString source); // update cached send signal
     QString reportToCache();
@@ -102,7 +101,6 @@ public slots:
 
     void setAutoMaxMB(bool autoSize, AutoStrategy strategy = AutoStrategy::Ignore);
     void setMaxMB(quint64 mb);
-    void setShowCacheStatus(bool isShowCacheStatus);
 
     void updateInstance();
     // doneStatus/doneSfRow/doneImage/doneFPath/doneMsToDecode are the snapshot
@@ -193,7 +191,6 @@ private:
     int decodeImageCount;
     quint64 decodeImageMsTot;
     quint64 decodeImageMBTot;
-    bool isShowCacheStatus;     // show in app status bar
     bool firstDispatchNewDM;
 
     // --- Cache pressure section Req'd when autoMaxMB == true ---

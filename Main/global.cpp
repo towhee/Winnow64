@@ -200,6 +200,7 @@ int minIconSize = 40;
 int maxIconChunk = 10000;
 bool   useJitIconCache = false;         // testing flag; see DataModel::resolveIconChunkSize
 double jitIconCacheMemFraction = 0.5;   // share of free-remainder memory budgeted for thumbnails
+bool   showCacheProgress = true;        // single gate for ImageCache + MetaRead progress display
 std::atomic<qint64> imageCacheHeadroomMB{0};  // image cache's remaining intended claim (MB)
 int iconPressureTestLevel = -1;         // -1 real; 0 normal+recovered; 1 warn; 2 critical; 3 normal-not-recovered
 bool useVisibleOnlyIconEmit = true;     // setIcon1/setValDm notify views only for visible rows (set false for prior behavior)

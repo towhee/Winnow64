@@ -186,7 +186,7 @@ void MW::generateFocusStack(const QStringList paths,
     G::popup->showPopup(msg, 7000);
 
     // show status progress bar
-    if (!isShowCacheProgressBar) {
+    if (!G::showCacheProgress) {
         progress->setVisible(true);
     }
 
@@ -277,7 +277,7 @@ void MW::generateFocusStack(const QStringList paths,
         // clear progress
         progress->clearFocusStackProgress();
         // hide status progress bar
-        if (!isShowCacheProgressBar) {
+        if (!G::showCacheProgress) {
             progress->setVisible(false);
         }
 
