@@ -3,6 +3,7 @@ WHAT'S NEW
 
 BUGS / TO DO
 - Streamline media read speed
+- 'Hide or show info fields' does not select pref 'Metadata panel items'
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
 want to drop the flags and bake the behavior in, but no rush; keeping them is cheap
