@@ -70,7 +70,7 @@
 #include "Utilities/inputdlg.h"
 #include "Utilities/htmlwindow.h"
 #include "Utilities/reportdialog.h"
-#include "progressbar.h"
+#include "progress.h"
 
 #include "Utilities/coloranalysis.h"
 #include "Utilities/dirwatcher.h"
@@ -113,7 +113,6 @@ class MW : public QMainWindow
 
     friend class Preferences;       // mw;
     friend class PropertyEditor;    // mw;
-    friend class ProgressBar;       // mw1
     friend class IconView;          // mw2
     friend class EmbelProperties;   // mw3
     friend class InfoString;        // mw4
@@ -729,7 +728,6 @@ private slots:
 
 private:
 //    QApplication *app;
-//    friend class ProgressBar;   // mw1
 
 
     QMenuBar *thumbsMenuBar;
@@ -1086,9 +1084,8 @@ private:
     BarBtn *rawJpgStatusBtn;
     QLabel *slideShowStatusLabel;
     QLabel *cacheStatusLabel;
-    ProgressBar *cacheProgressBar;
-    QLabel *progressLabel;
-    QPixmap *progressPixmap;
+    Progress *progress;
+    int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
     QLabel *statusBarSpacer1;

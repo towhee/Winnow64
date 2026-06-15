@@ -292,7 +292,7 @@ set(WINNOW_SOURCES
     Utilities/inputdlg.cpp
     Utilities/performance.cpp
     Utilities/popup.cpp
-    Utilities/progressbar.cpp
+    Utilities/progress.cpp
     Utilities/renamefile.cpp
     Utilities/reportdialog.cpp
     Utilities/showhelp.cpp
@@ -468,7 +468,7 @@ set(WINNOW_HEADERS
     Utilities/movingavg.h
     Utilities/performance.h
     Utilities/popup.h
-    Utilities/progressbar.h
+    Utilities/progress.h
     Utilities/renamefile.h
     Utilities/reportdialog.h
     Utilities/showhelp.h

@@ -1,26 +1,26 @@
-G::useBatchedFolderInsert = false
-[PERF] Phase1 load  rows= 9062  folders= 1333  enum+sort(ms)= 1933.9  insert(ms)= 370.0  wall(ms)= 2408  batched= false
-useBatchedFolderInsert = true
-[PERF] Phase1 load  rows= 9062  folders= 1333  enum+sort(ms)= 1859.7  insert(ms)= 244.0  wall(ms)= 2201  batched= true
+progressbar.cpp was initially designed to show the status of ImageCache.  It has a fixed
+height.  Over time I have added the MetaRead and FocusStack progress.  I would like to
+replace ProgressBar with a new class called Progress:
 
-Cold enum
-[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 583.1  sort(ms)= 9.2  insert(ms)= 249.0  wall(ms)= 2226  batched= true
-Warm enum
-[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 561.9  sort(ms)= 9.2  insert(ms)= 248.1  wall(ms)= 2202  batched= true
-Sorting Z-A
+- One container that can hold many progress rows. Each row has two columns: text and
+progress bar. The text font size should have a separate variable that can be changed. The
+container width should be adjustable, and the contained progress bars fit the container
+width. The height is variable to fit the rows. The container background is the same as
+MW::statusBar.
 
-[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 581.0  sort(ms)= 9.1  msg(ms)= 1299.4  insert(ms)= 249.1  other(ms)= 100.4  wall(ms)= 2239  batched= true
+- each row has its own update function that defines the text, pixel height of the bar,
+color of the bar and custom display (for example ProgressBar::updateImageCacheProgress).
+Each row height height fits the text and bar heights.
 
-throttleFolderLoadMsg = true
-[PERF] restore sort: sortColumn= 88 sortOrder= Desc
-[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 541.3  sort(ms)= 9.2  msg(ms)= 29.6  insert(ms)= 263.6  other(ms)= 44.3  wall(ms)= 888  batched= true
+- container function to hide/show a bar.  Adjust MW::statusBar height to fit Progress.
 
-[PERF] restore sort: sortColumn= 88 sortOrder= Desc
-[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 230.6  sort(ms)= 9.4  msg(ms)= 16.3  insert(ms)= 253.5  other(ms)= 32.2  wall(ms)= 542  batched= true
+- new rows are added by adding a new update function adding to any container objects that
+have been created to manage Progress.
 
-[PERF] restore sort: sortColumn= 88 sortOrder= Desc
-[PERF] Phase1 load  rows= 9062  folders= 1333  enum(ms)= 237.9  sort(ms)= 9.2  msg(ms)= 17.8  insert(ms)= 256.5  other(ms)= 31.7  wall(ms)= 553  batched= true
-[PERF] Phase2 metaRead  rows= 9062  cycles= 9822  dispatch(ms)= 92.2  needToRead(ms)= 18.2  ntrCalls= 9198  ntrAvg(us)= 1.98  wall(ms)= 9574
+- if feasible, design Progress so it can be located in MW::statusBar or in a separate
+window if it gets too large.
 
-[PERF] Phase2 metaRead  rows= 9062  cycles= 9819  dispatch(ms)= 87.2  needToRead(ms)= 10.5  ntrCalls= 9161  ntrAvg(us)= 1.15  thumbRetries= 0  wall(ms)= 9623
+- Retain ProgressBar until later in case this does not work out.
 
+
+per the guidance to avoid unprompted subagents

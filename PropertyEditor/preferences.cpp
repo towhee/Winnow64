@@ -168,7 +168,8 @@ void Preferences::itemChange(QModelIndex idx)
         mw->isShowCacheProgressBar = isShow;
         mw->metaRead->showProgressInStatusbar = isShow;
         mw->imageCache->setShowCacheStatus(isShow);
-        mw->progressLabel->setVisible(isShow);
+        mw->progress->setVisible(isShow);
+        mw->progress->setCacheRowsEnabled(isShow);
         mw->settings->setValue("isShowCacheStatus", isShow);
         // hide/show progressWidthSlider in preferences
         QModelIndex capIdx = findCaptionIndex("progressWidthSlider");
@@ -790,6 +791,23 @@ void Preferences::addUserInterface()
     i.fixedWidth = 50;
     addItem(i);
 
+    // Set the width of the cache status progress bar
+    i.name = "progressWidthSlider";
+    i.parentName = "UserInterfaceHeader";
+    i.captionText = "Cache progress bar width";
+    i.tooltip = "Change the width of the cache progress bar in the status bar.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = 120;
+    i.value = mw->cacheBarProgressWidth;
+    i.key = "progressWidthSlider";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 100;
+    i.max = 2000;
+    i.fixedWidth = 50;
+    addItem(i);
+
     // UserInterfaceHeader > Font size header
     i.name = "FontSizeHeader";
     i.parentName = "UserInterfaceHeader";
@@ -1075,22 +1093,22 @@ void Preferences::addCache()
     i.type = "bool";
     addItem(i);
 
-    // Set the width of the cache status progress bar
-    i.name = "progressWidthSlider";
-    i.parentName = "CacheHeader";
-    i.captionText = "Cache progress bar width";
-    i.tooltip = "Change the width of the cache progress bar in the status bar.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.defaultValue = 120;
-    i.value = mw->cacheBarProgressWidth;
-    i.key = "progressWidthSlider";
-    i.delegateType = DT_Slider;
-    i.type = "int";
-    i.min = 100;
-    i.max = 2000;
-    i.fixedWidth = 50;
-    addItem(i);
+    // // Set the width of the cache status progress bar
+    // i.name = "progressWidthSlider";
+    // i.parentName = "CacheHeader";
+    // i.captionText = "Cache progress bar width";
+    // i.tooltip = "Change the width of the cache progress bar in the status bar.";
+    // i.hasValue = true;
+    // i.captionIsEditable = false;
+    // i.defaultValue = 120;
+    // i.value = mw->cacheBarProgressWidth;
+    // i.key = "progressWidthSlider";
+    // i.delegateType = DT_Slider;
+    // i.type = "int";
+    // i.min = 100;
+    // i.max = 2000;
+    // i.fixedWidth = 50;
+    // addItem(i);
     // hide/show progressWidthSlider in preferences
     // QModelIndex idx = findCaptionIndex("showCacheProgressBar");
     // if (model->index(idx.row(), 1, idx.parent()).data().toBool())

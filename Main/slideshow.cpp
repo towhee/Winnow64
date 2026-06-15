@@ -17,7 +17,7 @@ void MW::slideShow()
         slideShowAction->setText(tr("Slide Show"));
         slideShowTimer->stop();
         delete slideShowTimer;
-        cacheProgressBar->setVisible(true);
+        progress->setVisible(true);
         // change to ImageCache
         if (G::useImageCache)
             imageCache->setCurrentPosition(dm->currentFilePath, "MW::slideShow");
@@ -125,11 +125,11 @@ void MW::slideShowResetSequence()
     QString msg = "Setting slideshow progress to ";
     if (isSlideShowRandom) {
         msg += "random";
-        progressLabel->setVisible(false);
+        progress->setVisible(false);
     }
     else {
         msg = msg + "sequential";
-        progressLabel->setVisible(isShowCacheProgressBar);
+        progress->setVisible(isShowCacheProgressBar);
     }
     G::popup->showPopup(msg);
 }

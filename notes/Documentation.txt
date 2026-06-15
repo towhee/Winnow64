@@ -701,11 +701,57 @@ Cache Status
       and image caching respectively. A status light on the lower right of each thumbnail
       is made visible when the associated image is cached.
 
-    • An image cache progress bar (progressBar) shows the status of every image in the
-      folder: target range, isCached and cursor position.
+    • An image cache progress bar shows the status of every image in the folder: target
+      range, isCached and cursor position.
+
+    • The progress display is the Progress class (Utilities/progress.h/.cpp), a self-
+      contained container widget held by MW::progress and added to the status bar. It
+      replaced the older ProgressBar (Utilities/progressbar.*, now removed). Unlike
+      ProgressBar, Progress does not reference MW: it owns its own pixmaps, width, colors
+      and palette (no MW::progressLabel/progressPixmap), and communicates
+      with MW only through public methods and the heightChanged() / clicked() signals.
+      Because of this it can later be reparented into a standalone window with no internal
+      changes.
+
+        • Progress holds any number of rows. Each row has a text column and a bar column,
+          its own bar height, color, font and a dedicated update function. Each row owns
+          its bar pixmap, so an incremental paint (e.g. the moving cache cursor) touches
+          only that row.
+        • Three rows are created at startup (in MW::createDataModel) mirroring the former
+          strips, each with a text label: ImageCache "Image Cache" (8 px, with cursor),
+          MetaRead "Metadata" (2 px) and FocusStack "Focus Stack" (2 px). Labels default
+          to empty; setRowText() (called in the ctor here) sets them.
+        • All rows start hidden and are only shown while active, so at startup (before a
+          folder is selected) the container is empty. Each update function showRow(true)
+          and the MetaRead/FocusStack clear functions showRow(false). The ImageCache row
+          is revealed by updateImageCacheProgress/updateCursor (it is not hidden by its
+          clear, since the cache "All" repaint clears-then-draws every tick). Hiding a row
+          collapses it entirely (text + bar), so the container height fits only the live
+          rows. A row's effective visibility is active && enabled: update functions set
+          "active", and setCacheRowsEnabled(isShowCacheProgressBar) sets "enabled" on the
+          ImageCache + MetaRead rows so they honor the "Show caching progress" preference
+          even when the widget is shown for a focus stack (FocusStack is not gated). The
+          rows block is vertically centered within the widget (paintEvent) with
+          topPad/botPad reserved, so a single row lines up with the other status text and
+          a filled Progress shows an equal top/bottom margin. MW floors the status-bar
+          height at its pre-Progress height (MW::statusBarBaseHeight) so collapsing rows
+          never clip the other status text.
+        • setContainerWidth() sizes the bars to the available status-bar width (driven by
+          MW::updateProgressBarWidth via availableSpaceForProgressBar). setTextFontSize()
+          is the separate, settable text-size variable. setBackgroundColor() keeps the
+          container background matching the status bar.
+        • The container height grows to fit the visible rows. Progress::sizeHint() reports
+          that height so the status bar grows automatically; heightChanged() is also
+          connected in MW to set the status-bar minimum height explicitly. Because
+          QStatusBar centers its widgets and reserves its own vertical margin, the
+          heightChanged handler requests a few extra pixels (h + overhead) so Progress is
+          never compressed below its preferred height — otherwise the reserved top/bottom
+          padding gets squeezed out and the margins collapse when Progress fills the bar.
+        • clicked() opens Cache preferences (replacing the old StatusProgressLabel event-
+          filter branch).
 
     • The flag isShowCacheProgressBar toggles cache progress updates and the visibility
-      of the progress bar.
+      of MW::progress.
 
     • isCached is stored in datamodel as
       dm->sf->index(row, G::IsCachedColumn).data().
