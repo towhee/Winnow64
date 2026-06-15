@@ -396,7 +396,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
         imageThreadRunningLabel->setStyleSheet(G::cssOk);
     }
     imageThreadRunningLabel->setText("◉");
-    if (isShowCacheProgressBar) {
+    if (G::showCacheProgress) {
         progress->setVisible(showCacheLabel);
         bool isAutoSize = imageCache->getAutoMaxMB();
         quint64 maxMB = imageCache->getMaxMB();

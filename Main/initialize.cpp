@@ -319,10 +319,8 @@ void MW::createMetaRead()
     // Runs multiple reader threads to load metadata and thumbnails
     metaRead = new MetaRead(this, dm, metadata, imageCache);
 
-    if (settings->contains("isShowCacheStatus")) {
-        bool isShow = settings->value("isShowCacheStatus").toBool();
-        metaRead->showProgressInStatusbar = isShow;
-    }
+    /* MetaRead reads G::showCacheProgress directly (loaded in MW::loadSettings),
+       so no per-instance progress flag needs setting here. */
 
     // Release MetaRead's navigation gate as soon as the awaited row decodes.
     // Wired here (not in createImageCache) because metaRead is created after imageCache.
@@ -408,7 +406,6 @@ void MW::createImageCache()
     if (!isSettings || simulateJustInstalled) {
         as = ImageCache::AutoStrategy::Moderate;
         imageCache->setAutoMaxMB(true, as);
-        imageCache->setShowCacheStatus(true);
     }
     else {
         bool isAuto = false;
@@ -432,8 +429,6 @@ void MW::createImageCache()
         if (!isAuto) {
             imageCache->setMaxMB(cacheMaxMB);
         }
-
-        // isShowCacheStatus moved to createStatusBar
     }
 
     connect(&imageCacheThread, &QThread::finished,
@@ -482,10 +477,6 @@ void MW::createImageCache()
     // Signal to update imageCache maxMB
     connect(this, &MW::setMaxMB,
             imageCache, &ImageCache::setMaxMB, Qt::BlockingQueuedConnection);
-
-    // Signal to update imageCache show cache status
-    connect(this, &MW::setShowCacheStatus,
-            imageCache, &ImageCache::setShowCacheStatus);
 
     // Signal to ImageCache new image selection
     connect(this, &MW::setImageCachePosition,
@@ -1223,18 +1214,13 @@ void MW::createStatusBar()
     statusLabel->setObjectName("statusLabel");
     statusBar()->addWidget(statusLabel);
 
-    if (settings->contains("isShowCacheStatus")) {
-        bool isShow = settings->value("isShowCacheStatus").toBool();
-        isShowCacheProgressBar = isShow;
-        metaRead->showProgressInStatusbar = isShow;
-        imageCache->setShowCacheStatus(isShow);
-        isShowCacheProgressBar = isShow;
-        progress->setVisible(isShow);
-    }
-    /* Gate the cache rows (ImageCache + MetaRead) on the preference so they stay
+    /* Apply the show-caching-progress preference (G::showCacheProgress, loaded in
+       MW::loadSettings). ImageCache and MetaRead read G::showCacheProgress directly.
+       Gate the cache rows (ImageCache + MetaRead) on the preference so they stay
        hidden when "show caching progress" is off, even if the widget is shown
        for a focus stack. */
-    progress->setCacheRowsEnabled(isShowCacheProgressBar);
+    progress->setVisible(G::showCacheProgress);
+    progress->setCacheRowsEnabled(G::showCacheProgress);
 
     /* Capture the status bar height with all the other widgets but without
        Progress. The heightChanged handler keeps the bar at least this tall so

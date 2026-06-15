@@ -317,7 +317,6 @@ public:
     QStack<QString> *slideshowRandomHistoryStack;
 
     // preferences: cache
-    bool isShowCacheProgressBar;
     int cacheBarProgressWidth;
 
     // first use
@@ -398,7 +397,6 @@ signals:
     void initializeImageCache();
     void setAutoMaxMB(bool autoSize, ImageCache::AutoStrategy strategy);
     void setMaxMB(quint64 mb);
-    void setShowCacheStatus(bool isShowCacheStatus);
     void setImageCachePosition(QString, QString);
     void imageCacheFilterChange(QString, QString);
     void imageCacheColorManageChange();

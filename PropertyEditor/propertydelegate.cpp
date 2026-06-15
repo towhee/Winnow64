@@ -131,7 +131,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
     }
 }
 
-QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &/*index*/) const
+QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     // row height = 1.7 * text height
     if (isDebug)
@@ -141,6 +141,35 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
             ;
 
     int height = static_cast<int>(G::strFontSize.toInt() * 1.7 * G::ptToPx);
+
+    /* Grow the row to fit wrapped caption text. Only the caption column wraps
+    (headers stay single-line); the tree row uses the tallest column's hint. */
+    if (index.column() == CapColumn && !index.data(UR_isHeader).toBool()) {
+        QFont font = option.font;
+        font.setPointSize(G::strFontSize.toInt());
+        QFontMetrics fm(font);
+
+        /* Match the text width paint() actually wraps within. Indented items
+        (r3) draw from their indented x to the column's right edge, so subtract
+        the indentation; non-indented items (r2) draw from a 5px left inset. */
+        const QTreeView *view = qobject_cast<const QTreeView*>(parent());
+        int colWidth = view ? view->columnWidth(CapColumn) : option.rect.width();
+        int textLeft = 5;
+        if (view && index.data(UR_isIndent).toBool()) {
+            int depth = 0;
+            for (QModelIndex p = index.parent(); p.isValid(); p = p.parent()) depth++;
+            textLeft = (depth + 1) * view->indentation();   // rootIsDecorated
+        }
+        int width = colWidth - textLeft - 4;    // small safety margin vs paint
+        if (width < 1) width = option.rect.width();
+
+        QRect bounding = fm.boundingRect(QRect(0, 0, width, 0),
+                                         Qt::AlignVCenter | Qt::TextWordWrap,
+                                         index.data().toString());
+        int padding = height - fm.height();     // keep the same vertical breathing room
+        height = qMax(height, bounding.height() + padding);
+    }
+
     return QSize(option.rect.width(), height);
 }
 
@@ -353,8 +382,8 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QRect r1 = QRect(1, r.y(), r.x() + r.width() - 1, r.height());
     // r2 = r0 but leaves 1 pixel at the left, right and bottom margins to draw text
     QRect r2 = QRect(5, r.y(), r.x() + r.width() - 5, r.height()-1);
-    // r3 = r but leaves 1 pixel at the bottom margins to draw text
-    QRect r3 = QRect(r.x(), r.y(), r.x() + r.width(), r.height()-3);
+    // r3 = r but leaves a few pixels at the bottom margin to draw text
+    QRect r3 = QRect(r.x(), r.y(), r.width(), r.height()-3);
     // r4 = entire row width
     QRect r4 = QRect(r.x(), r.y(), w0 + w1, r.height()-3);
     // r5 = entire col width less 50px for barbtns
@@ -403,7 +432,8 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QPen regPen(QColor(t,t,t));             // other items have silver text
     QPen selPen("#1b8a83");                 // selected items have torquoise text
     QPen disPen(G::disabledColor.name());   // disabled items have gray text
-    QPen brdPen(QColor(c,c,c));             // border color
+    // QPen brdPen(QColor(c,c,c));             // border color
+    QPen brdPen(Qt::NoPen);                 // hide border
 
     QString text = index.data().toString();
     QString elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, r.width());
@@ -468,9 +498,9 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             if (index.data(UR_isEnabled).toBool() == false) painter->setPen(disPen);
             // indent the text (maybe not if not a header)
             if (index.data((UR_isIndent)).toBool())
-                painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, text);
+                painter->drawText(r3, Qt::AlignVCenter|Qt::TextWordWrap, text);
             else
-                painter->drawText(r2, Qt::AlignVCenter|Qt::TextSingleLine, text);
+                painter->drawText(r2, Qt::AlignVCenter|Qt::TextWordWrap, text);
             painter->setPen(brdPen);
             // draw line between column 0 and 1
             if (!hasChildren) painter->drawLine(r0.topRight(), r0.bottomRight());

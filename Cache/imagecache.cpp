@@ -1087,7 +1087,7 @@ void ImageCache::updateStatus(int instruction, QString source)
              << "currMB =" << currMB
              << "source =" << source
         ; //*/
-    if (!isShowCacheStatus) instruction = StatusAction::InfoOnly;
+    if (!G::showCacheProgress) instruction = StatusAction::InfoOnly;
     emit showCacheStatus(instruction, isAutoMaxMB, currMB, maxMB,
                          targetFirst, targetLast, source);
 }
@@ -1317,7 +1317,7 @@ QString ImageCache::reportCacheParameters()
 
     rpt << "\n";
     rpt << "isInitializing           = " << (isInitializing ? "true" : "false") << "\n";
-    rpt << "isShowCacheStatus        = " << QVariant(isShowCacheStatus).toString() << "\n";
+    rpt << "showCacheProgress        = " << QVariant(G::showCacheProgress).toString() << "\n";
 
     rpt << "\n";
     rpt << "totFiles                 = " << dm->sf->rowCount() << "\n";
@@ -2024,11 +2024,6 @@ quint64 ImageCache::getMaxMBCeiling()
     return maxMBCeiling;
 }
 
-bool ImageCache::getShowCacheStatus()
-{
-    return isShowCacheStatus;
-}
-
 void ImageCache::setMaxMB(quint64 mb)
 {
     // if (G::isLogger)
@@ -2036,12 +2031,6 @@ void ImageCache::setMaxMB(quint64 mb)
     maxMB = mb;
     dispatch();
     updateStatus(StatusAction::InfoOnly, "setMaxMB");
-}
-
-void ImageCache::setShowCacheStatus(bool isShowCacheStatus)
-{
-    if (G::isLogger) log("setShowCacheStatus");
-    this->isShowCacheStatus = isShowCacheStatus;
 }
 
 void ImageCache::filterChange(QString currentImageFullPath, QString src)

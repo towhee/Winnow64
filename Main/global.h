@@ -338,6 +338,11 @@ Q_NAMESPACE
     extern bool   useJitIconCache;
     extern double jitIconCacheMemFraction;
 
+    /* Single flag gating both ImageCache and MetaRead caching progress. When false,
+       progress is neither calculated nor displayed (see ImageCache::updateStatus,
+       MetaRead::dispatch and the Progress widget). */
+    extern bool   showCacheProgress;
+
     /* Published by ImageCache::memChk = the memory (MB) the image cache still intends to
        claim on top of what it already holds (maxMBCeiling - current). DataModel subtracts
        this from the thumbnail budget so the two caches don't fight over the same memory.

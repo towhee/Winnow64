@@ -728,8 +728,8 @@ Cache Status
           clear, since the cache "All" repaint clears-then-draws every tick). Hiding a row
           collapses it entirely (text + bar), so the container height fits only the live
           rows. A row's effective visibility is active && enabled: update functions set
-          "active", and setCacheRowsEnabled(isShowCacheProgressBar) sets "enabled" on the
-          ImageCache + MetaRead rows so they honor the "Show caching progress" preference
+          "active", and setCacheRowsEnabled(G::showCacheProgress) sets "enabled" on the
+          ImageCache + MetaRead rows so they honor the "Hide caching progress" preference
           even when the widget is shown for a focus stack (FocusStack is not gated). The
           rows block is vertically centered within the widget (paintEvent) with
           topPad/botPad reserved, so a single row lines up with the other status text and
@@ -750,8 +750,14 @@ Cache Status
         • clicked() opens Cache preferences (replacing the old StatusProgressLabel event-
           filter branch).
 
-    • The flag isShowCacheProgressBar toggles cache progress updates and the visibility
-      of MW::progress.
+    • The single global flag G::showCacheProgress gates both ImageCache and MetaRead
+      caching progress: when false, progress is neither calculated nor displayed (it
+      replaces the former MW::isShowCacheProgressBar, ImageCache::isShowCacheStatus and
+      MetaRead::showProgressInStatusbar). ImageCache::updateStatus forces InfoOnly,
+      MetaRead::dispatch skips its progress emit, and MW::progress is hidden. It is set
+      by the "Hide caching progress" preference (Productivity), persisted under the
+      settings key "showCacheProgress" (written in MW::writeSettings, read in
+      MW::loadSettings), and defaults to true.
 
     • isCached is stored in datamodel as
       dm->sf->index(row, G::IsCachedColumn).data().

@@ -557,7 +557,7 @@ void MW::showEvent(QShowEvent *event)
 
     // initial status bar icon state
     updateStatusBar();
-    progress->setVisible(isShowCacheProgressBar);
+    progress->setVisible(G::showCacheProgress);
 
     // set initial visibility in embellish template
     embelTemplateChange(embelProperties->templateId);
@@ -1578,7 +1578,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             if (obj->objectName() == "StatusProgressLabel" ||
                 obj->objectName() == "ImageCacheStatus")
             {
-                preferences("CacheHeader");
+                preferences("ProductivityHeader");
             }
         }
     }
@@ -2356,7 +2356,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
 
-    if (!G::isSlideShow) progress->setVisible(isShowCacheProgressBar);
+    if (!G::isSlideShow) progress->setVisible(G::showCacheProgress);
 
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
 
@@ -4009,8 +4009,9 @@ void MW::infoViewPreferences()
 
 void MW::cachePreferences()
 {
-    if (G::isLogger) G::log("MW::cachePreferences");
-    preferences("CacheHeader");
+    // if (G::isLogger)
+        G::log("MW::cachePreferences");
+    preferences("ProductivityHeader");
 }
 
 void MW::preferences(QString text)
@@ -4022,9 +4023,15 @@ void MW::preferences(QString text)
     if (pref == nullptr) createPreferences();
     if (preferencesDlg == nullptr) {
         // pref = new Preferences(this);
-        if (text != "") pref->expandBranch(text);
         // preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, G::css);
         preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, G::css);
+    }
+    /* Expand the requested branch every time, not only when the dialog is first
+       created. The dialog is reused (NonModal, not deleted on close), so leaving this
+       inside the creation guard meant the branch only expanded on the first open. */
+    if (text != "") {
+        pref->collapseAll();
+        pref->expandBranch(text);
     }
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(preferencesDlg->winId(), G::backgroundColor);
@@ -5872,12 +5879,12 @@ void MW::rory()
 {
     if (pref != nullptr) pref->rory();
     if (G::isRory) {
-        isShowCacheProgressBar = true;
+        G::showCacheProgress = true;
         progress->setCacheRowsEnabled(true);
         refreshAfterImageCacheSizeChange();
     }
     else {
-        isShowCacheProgressBar = false;
+        G::showCacheProgress = false;
         progress->setCacheRowsEnabled(false);
         refreshAfterImageCacheSizeChange();
     }

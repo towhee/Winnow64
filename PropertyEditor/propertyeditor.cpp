@@ -80,7 +80,7 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 {
     if (G::isLogger) G::log("PropertyEditor::PropertyEditor");
     setRootIsDecorated(true);
-    setAlternatingRowColors(true);
+    // setAlternatingRowColors(true);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::SingleSelection);
     setEditTriggers(QAbstractItemView::AllEditTriggers);

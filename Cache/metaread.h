@@ -51,7 +51,6 @@ public:
     int firstIconRow;
     int lastIconRow;
 
-    bool showProgressInStatusbar = true;
     bool isDebug = false;
     bool autoLogStalls = false;          // dump diagnostics() on stall (throttled)
     qint64 lastStallSnapshotMs = 0;      // last time we wrote a stall snapshot

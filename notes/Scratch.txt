@@ -22,5 +22,24 @@ window if it gets too large.
 
 - Retain ProgressBar until later in case this does not work out.
 
+-------------------
+
+Review display of ImageCache and MetaRead caching.  I want a single flag showCacheProgress
+to turn both ImageCache and MetaRead cache progress on or off.  When off, progress
+should not be calculated or displayed.  Clean up legacy flags no longer required.
+
+I have changed the category 'Cache' to 'Performance' and added these items:
+
+- disableColorCorrection (wire to colorManageAction)
+- hideCachingProgressBars (wire to showCacheProgress)
+- cacheThumbsJIT (wire to G::useJitIconCache)
+
+Make sure all four flags are saved in settings and read when open Winnow.
+
+
+
+
+
+
 
 per the guidance to avoid unprompted subagents

@@ -129,7 +129,7 @@ void MW::slideShowResetSequence()
     }
     else {
         msg = msg + "sequential";
-        progress->setVisible(isShowCacheProgressBar);
+        progress->setVisible(G::showCacheProgress);
     }
     G::popup->showPopup(msg);
 }

@@ -21,7 +21,7 @@ private:
     void addGeneral();
     void addModify();
     void addUserInterface();
-    void addCache();
+    void addProductivity();
     void addSlideShow();
     void addFullScreen();
     void addMetadataPanel();
