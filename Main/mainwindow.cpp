@@ -1173,7 +1173,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             revealFileActionFromContext->setEnabled(true);
             deleteFSTreeFolderAction->setEnabled(true);
             eraseUsbActionFromContextMenu->setEnabled(true);
-            ejectAction->setEnabled(true);
             ejectActionFromContextMenu->setEnabled(true);
             addBookmarkActionFromContext->setEnabled(true);
             pasteFilesAction->setEnabled(Utilities::clipboardHasUrls());
@@ -1233,7 +1232,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 revealFileActionFromContext->setEnabled(false);
                 deleteFSTreeFolderAction->setEnabled(false);
                 eraseUsbActionFromContextMenu->setEnabled(false);
-                ejectAction->setEnabled(false);
                 ejectActionFromContextMenu->setEnabled(false);
                 addBookmarkActionFromContext->setEnabled(false);
                 // pasteFilesAction->setEnabled(false);
@@ -1610,6 +1608,32 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* MODELESS DIALOG SHORTCUT GUARD
+       MW's single-key action shortcuts (rate "1", label "6", etc.) use the default
+       Qt::WindowShortcut context.  Qt activates a WindowShortcut whenever the action's
+       window is anywhere in the parent chain of the active window, so a modeless dialog
+       parented to MW (e.g. the Preferences dialog) does NOT shield these shortcuts: a key
+       typed into a Preferences spin box fires the MW shortcut instead of entering text.
+       When keyboard focus is in another window and the key matches an MW-owned shortcut,
+       accept the ShortcutOverride so the key is delivered to the focused widget as normal
+       input rather than triggering the MW action.  (ShortcutOverride is dispatched before
+       the QAction fires, so the DISABLED SHORTCUT FEEDBACK KeyPress handler below cannot
+       intercept the enabled-action case on its own.)
+    */
+    if (event->type() == QEvent::ShortcutOverride) {
+        QWidget *fw = QApplication::focusWidget();
+        QWidget *win = fw ? fw->window() : nullptr;
+        /* Scope to dialog windows: floating QDockWidgets are also separate top-level
+           windows but are part of the MW workspace and keep their shortcut behaviour. */
+        if (win && win != this && qobject_cast<QDialog *>(win)) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            if (ownsShortcut(QKeySequence(e->keyCombination()))) {
+                e->accept();
+                return true;
+            }
+        }
+    }
+
     /* DISABLED SHORTCUT FEEDBACK
        Qt does not fire a disabled QAction and does not consume its shortcut, so the key
        falls through as a normal KeyPress.  When the pressed key sequence maps to a disabled
@@ -1620,12 +1644,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         int key = e->key();
         bool isModifierOnly = key == Qt::Key_Control || key == Qt::Key_Shift ||
                               key == Qt::Key_Alt || key == Qt::Key_Meta || key == 0;
-        /* Don't interfere with text entry (search filter, rename, etc.) */
+        /* Don't interfere with text entry (search filter, rename, etc.), and don't speak
+           for a dialog's keystrokes (the ShortcutOverride guard above already handed those
+           to the focused widget). */
         QWidget *fw = QApplication::focusWidget();
         bool isTextEntry = qobject_cast<QLineEdit *>(fw) ||
                            qobject_cast<QTextEdit *>(fw) ||
                            qobject_cast<QPlainTextEdit *>(fw);
-        if (!isModifierOnly && !e->isAutoRepeat() && !isTextEntry) {
+        bool inDialog = fw && qobject_cast<QDialog *>(fw->window());
+        if (!isModifierOnly && !e->isAutoRepeat() && !isTextEntry && !inDialog) {
             QKeySequence seq(e->keyCombination());
             if (QAction *a = disabledActionForShortcut(seq)) {
                 G::popup->showPopup(actionDisabledReason(a), 2000);
@@ -5149,8 +5176,14 @@ void MW::ingest()
                  << "lastIngestLocation =" << lastIngestLocation
                     ;//*/
 
+        /* Auto-eject the source memory card.  Eject only applies to a foreground ingest
+           (the dialog disables and clears the eject option for background ingests), and
+           the copy has finished by the time exec() returns, so it is safe to eject here. */
+        QString ingestSourcePath = dm->primaryFolderPath();
+
         // if background ingesting do not jump to the ingest destination folder
         if (gotoIngestFolder && !isBackgroundIngest) {
+            if (autoEjectUsb) ejectUsb(ingestSourcePath);
             fsTree->select(lastIngestLocation);
             return;
         }
@@ -5159,6 +5192,8 @@ void MW::ingest()
         setIngested();
 
         updateStatus(true, "", "MW::ingest");
+
+        if (autoEjectUsb && !isBackgroundIngest) ejectUsb(ingestSourcePath);
     }
     else {
         QMessageBox::information(this,
@@ -5184,8 +5219,12 @@ void MW::ejectUsb(QString path)
 */
     if (G::isLogger) G::log("MW::ejectUsb");
 
-    // does datamodel include any image on the ejection drive
+    /* Normalize to the drive root: path may be any folder on the card (eg a DCIM
+       subfolder or the ingest source), but isEjectable/eject operate on the mount root. */
     QStorageInfo ejectDrive(path);
+    QString rootPath = ejectDrive.rootPath();
+
+    // does datamodel include any image on the ejection drive
     bool ejectDriveIsCurrent = false;
     for (QString path : dm->folderList) {
         QStorageInfo currDrive(path);
@@ -5201,18 +5240,13 @@ void MW::ejectUsb(QString path)
         fsTree->selectionModel()->clearSelection();
     }
 
-    // get the drive name ie WIN "D:\" or MAC "Untitled
-    QString driveName = Utilities::getDriveName(path);
-    // #if defined(Q_OS_WIN)
-    // driveName = ejectDrive.rootPath();
-    // #elif defined(Q_OS_MAC)
-    // driveName = ejectDrive.name();
-    // #endif
+    // get the drive name ie WIN "D:" or MAC "Untitled"
+    QString driveName = Utilities::getDriveName(rootPath);
 
     // confirm this is an ejectable drive
-    if (UsbUtil::isEjectable(path)) {
-        // eject USD drive
-        if (UsbUtil::eject(path)) {
+    if (UsbUtil::isEjectable(rootPath)) {
+        // eject USB drive
+        if (UsbUtil::eject(rootPath)) {
             // drive was ejected
             G::popup->showPopup("Ejected drive " + driveName, 2000);
             bookmarks->updateCount();
@@ -5229,13 +5263,6 @@ void MW::ejectUsb(QString path)
         G::popup->showPopup("Drive " + driveName
               + " is not removable and cannot be ejected", 2000);
     }
-}
-
-void MW::ejectUsbFromMainMenu()
-{
-    if (G::isLogger) G::log("MW::ejectUsbFromMainMenu");
-    // rgh chk and fix this
-    // ejectUsb(dm->currentPrimaryFolderPath);
 }
 
 void MW::ejectUsbFromContextMenu()
@@ -5529,6 +5556,20 @@ void MW::updatePickDependentActions()
         a->setEnabled(isAnyPick);
         a->setProperty("disabledReason", reason);
     }
+}
+
+bool MW::ownsShortcut(const QKeySequence &seq)
+{
+/*
+    Returns true if any MW action (enabled or disabled) owns the shortcut seq.  Used by the
+    eventFilter to suppress MW's window shortcuts when keyboard focus is in a modeless dialog
+    parented to MW (see "MODELESS DIALOG SHORTCUT GUARD").
+*/
+    if (seq.isEmpty()) return false;
+    const QList<QAction *> acts = actions();
+    for (QAction *a : acts)
+        if (a->shortcuts().contains(seq)) return true;
+    return false;
 }
 
 QAction *MW::disabledActionForShortcut(const QKeySequence &seq)
