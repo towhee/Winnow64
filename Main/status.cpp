@@ -301,10 +301,10 @@ QString MW::getSelectedFileSize()
 void MW::updateProgressBarWidth()
 {
     if (G::isLogger) G::log("MW::updateProgressBarWidth");
-    if (dm->rowCount() && progressLabel->isVisible()) {
+    if (dm->rowCount() && progress->isVisible()) {
         int availableSpace = availableSpaceForProgressBar();
         if (availableSpace < cacheBarProgressWidth) cacheBarProgressWidth = availableSpace;
-        progressLabel->setFixedWidth(cacheBarProgressWidth);
+        progress->setContainerWidth(cacheBarProgressWidth);
         imageCache->updateStatus(ImageCache::StatusAction::All, "MW::updateProgressBarWidth");
     }
 }
@@ -397,7 +397,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
     }
     imageThreadRunningLabel->setText("◉");
     if (isShowCacheProgressBar) {
-        progressLabel->setVisible(showCacheLabel);
+        progress->setVisible(showCacheLabel);
         bool isAutoSize = imageCache->getAutoMaxMB();
         quint64 maxMB = imageCache->getMaxMB();
         QString tip = getImageCacheRunningTip(isAutoSize, maxMB);

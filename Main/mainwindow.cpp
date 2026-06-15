@@ -557,7 +557,7 @@ void MW::showEvent(QShowEvent *event)
 
     // initial status bar icon state
     updateStatusBar();
-    progressLabel->setVisible(isShowCacheProgressBar);
+    progress->setVisible(isShowCacheProgressBar);
 
     // set initial visibility in embellish template
     embelTemplateChange(embelProperties->templateId);
@@ -2356,7 +2356,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
 
-    if (!G::isSlideShow) progressLabel->setVisible(isShowCacheProgressBar);
+    if (!G::isSlideShow) progress->setVisible(isShowCacheProgressBar);
 
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
 
@@ -2433,8 +2433,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     // update cursor position on progressBar
-    if (cacheProgressBar->isVisible()) {
-        cacheProgressBar->updateCursor(dm->currentSfRow, dm->sf->rowCount());
+    if (progress->isVisible()) {
+        progress->updateCursor(dm->currentSfRow, dm->sf->rowCount());
     }
 
     // Remember last folder (showWindow not completed when initiated)
@@ -2786,9 +2786,9 @@ bool MW::reset(QString src)
 
     fsTree->setEnabled(true);
     bookmarks->setEnabled(true);
-    cacheProgressBar->clearImageCacheProgress();
-    cacheProgressBar->clearMetaReadProgress();
-    progressLabel->setVisible(false);
+    progress->clearImageCacheProgress();
+    progress->clearMetaReadProgress();
+    progress->setVisible(false);
     // updateImageCacheStatus();
     filterStatusLabel->setVisible(false);
     updateClassification();
@@ -2985,7 +2985,7 @@ void MW::nullFiltration()
     setCentralMessage(msg);
     infoView->clearInfo();
     imageView->clear();
-    progressLabel->setVisible(false);
+    progress->setVisible(false);
     isDragDrop = false;
 }
 
@@ -3323,7 +3323,7 @@ void MW::folderChangeCompleted()
     // if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
 
     // hide metadata read progress
-    cacheProgressBar->clearMetaReadProgress();
+    progress->clearMetaReadProgress();
     updateMetadataThreadRunStatus(false, true);
 
     // build filters if filter dock is visible
@@ -3691,12 +3691,11 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
     }
 
 
-    // if (!isShowCacheProgressBar) cacheProgressBar->hide();
     // if (G::showProgress != G::ShowProgress::ImageCache) return;
 
     // Clear: just repaint the progress bar gray and return.
     if (instruction == ImageCache::StatusAction::Clear) {
-        cacheProgressBar->clearImageCacheProgress();
+        progress->clearImageCacheProgress();
         return;
     }
 
@@ -3706,20 +3705,20 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
     {
         int rows = dm->sf->rowCount();
         // clear progress
-        cacheProgressBar->clearImageCacheProgress();
-        cacheProgressBar->updateImageCacheProgress(tFirst, tLast, rows,
-                                         cacheProgressBar->targetColorGradient);
+        progress->clearImageCacheProgress();
+        progress->updateImageCacheProgress(tFirst, tLast, rows,
+                                         progress->targetColorGradient);
         // cached
         for (int i = tFirst; i <= tLast; ++i) {
             if (i >= rows) break;
             if (dm->sf->index(i, G::IsCachedColumn).data().toBool()) {
-                cacheProgressBar->updateImageCacheProgress(i, i, rows,
-                                  cacheProgressBar->imageCacheGradient);
+                progress->updateImageCacheProgress(i, i, rows,
+                                  progress->imageCacheGradient);
             }
         }
 
         // cursor
-        cacheProgressBar->updateCursor(dm->currentSfRow, rows);
+        progress->updateCursor(dm->currentSfRow, rows);
         return;
     }
 
@@ -4136,7 +4135,7 @@ void MW::setBackgroundShade(int shade)
     gridView->verticalScrollBar()->setStyleSheet(G::css);
     messageView->setStyleSheet(G::css);
     welcome->setStyleSheet(G::css);
-    cacheProgressBar->setBackgroundColor(widgetCSS.widgetBackgroundColor);
+    progress->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     folderTitleBar->setStyle();
     favTitleBar->setStyle();
     filterTitleBar->setStyle();
@@ -5874,10 +5873,12 @@ void MW::rory()
     if (pref != nullptr) pref->rory();
     if (G::isRory) {
         isShowCacheProgressBar = true;
+        progress->setCacheRowsEnabled(true);
         refreshAfterImageCacheSizeChange();
     }
     else {
         isShowCacheProgressBar = false;
+        progress->setCacheRowsEnabled(false);
         refreshAfterImageCacheSizeChange();
     }
 

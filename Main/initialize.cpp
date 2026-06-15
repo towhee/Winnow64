@@ -244,7 +244,7 @@ void MW::createDataModel()
     if (G::isLogger) G::log("MW::createDataModel");
     icd = new ImageCacheData(this);
     metadata = new Metadata;
-    cacheProgressBar = new ProgressBar(this);
+    progress = new Progress(this);
 
     // loadSettings not run yet
     if (isSettings && settings->contains("combineRawJpg"))
@@ -372,7 +372,7 @@ void MW::createMetaRead()
 
     // update loading metadata in statusbar
     connect(metaRead, &MetaRead::updateProgressInStatusbar,
-            cacheProgressBar, &ProgressBar::updateMetaReadProgress);
+            progress, &Progress::updateMetaReadProgress);
 
     // memory overrun guardrail: surface a critical dialog and abort the
     // in-flight folder load when MetaRead's footprint probe trips.
@@ -434,14 +434,6 @@ void MW::createImageCache()
         }
 
         // isShowCacheStatus moved to createStatusBar
-        // if (settings->contains("isShowCacheStatus")) {
-        //     bool isShow = settings->value("isShowCacheStatus").toBool();
-        //     isShowCacheProgressBar = isShow;
-        //     metaRead->showProgressInStatusbar = isShow;
-        //     imageCache->setShowCacheStatus(isShow);
-        //     isShowCacheProgressBar = isShow;
-        //     progressLabel->setVisible(isShow);
-        // }
     }
 
     connect(&imageCacheThread, &QThread::finished,
@@ -1121,24 +1113,13 @@ void MW::createStatusBar()
 
     // statusBar()->setFixedHeight(50);  test this works
 
-    // cache status on right side of status bar
+    // cache status (Progress widget) on right side of status bar
 
-    // label to hold QPixmap showing progress
-    progressLabel = new QLabel();
-    progressLabel->setObjectName("StatusProgressLabel");
-
-    // progressBar is created in MW::createDataModel, where it is first req'd
-
-    // set up pixmap that shows progress in the cache
+    // progress width (Progress is created in MW::createDataModel, where first req'd)
     if (isSettings && settings->contains("cacheStatusWidth"))
         cacheBarProgressWidth = settings->value("cacheStatusWidth").toInt();
     else cacheBarProgressWidth = 100;
     if (cacheBarProgressWidth < 100 || cacheBarProgressWidth > 1000) cacheBarProgressWidth = 200;
-    progressPixmap = new QPixmap(4000, 25);   // cacheprogress
-    progressPixmap->scaled(cacheBarProgressWidth, 25);
-    progressPixmap->fill(widgetCSS.widgetBackgroundColor);
-    progressLabel->setFixedWidth(cacheBarProgressWidth);
-    progressLabel->setPixmap(*progressPixmap);
 
     // progress tooltip
     QString progressToolTip = "Cache status for current folder(s):\n";
@@ -1147,9 +1128,34 @@ void MW::createStatusBar()
     progressToolTip += "  • Green:      \timages that are cached\n";
     progressToolTip += "  • LightGreen: \tcurrent image";
     progressToolTip += "\n\nMouse click on cache status progress to open cache preferences.";
-    progressLabel->setToolTip(progressToolTip);
-    progressLabel->setToolTipDuration(100000);
-    statusBar()->addPermanentWidget(progressLabel, 1);
+
+    // Progress widget setup
+    progress->setContainerWidth(cacheBarProgressWidth);
+    progress->setBackgroundColor(widgetCSS.widgetBackgroundColor);
+    progress->setToolTip(progressToolTip);
+    progress->setToolTipDuration(100000);
+    connect(progress, &Progress::clicked, this, [this]() {
+        preferences("CacheHeader");
+    });
+    connect(progress, &Progress::heightChanged, this, [this](int h) {
+        /* Never shrink the status bar below the height it had before Progress
+           was added (captured at the end of createStatusBar); only grow it when
+           Progress needs more room.
+
+           QStatusBar centers its widgets and reserves a small vertical margin.
+           When Progress's preferred height equals the bar height it gets
+           compressed by that margin, squeezing out its reserved top/bottom
+           padding. Request a little extra height so Progress always receives its
+           full preferred height (its sizeHint caps it, so the extra just becomes
+           QStatusBar's outer margin). */
+        int overhead = 4;
+        if (statusBar()->layout()) {
+            QMargins m = statusBar()->layout()->contentsMargins();
+            overhead = qMax(overhead, m.top() + m.bottom());
+        }
+        statusBar()->setMinimumHeight(qMax(statusBarBaseHeight, h + overhead));
+    });
+    statusBar()->addPermanentWidget(progress, 1);
 
     // end progressbar
 
@@ -1223,9 +1229,21 @@ void MW::createStatusBar()
         metaRead->showProgressInStatusbar = isShow;
         imageCache->setShowCacheStatus(isShow);
         isShowCacheProgressBar = isShow;
-        progressLabel->setVisible(isShow);
+        progress->setVisible(isShow);
     }
+    /* Gate the cache rows (ImageCache + MetaRead) on the preference so they stay
+       hidden when "show caching progress" is off, even if the widget is shown
+       for a focus stack. */
+    progress->setCacheRowsEnabled(isShowCacheProgressBar);
 
+    /* Capture the status bar height with all the other widgets but without
+       Progress. The heightChanged handler keeps the bar at least this tall so
+       the other status text is never clipped when Progress collapses. */
+    bool wasVisible = progress->isVisibleTo(statusBar());
+    progress->setVisible(false);
+    statusBarBaseHeight = statusBar()->sizeHint().height();
+    progress->setVisible(wasVisible);
+    statusBar()->setMinimumHeight(qMax(statusBarBaseHeight, progress->preferredHeight()));
 }
 
 void MW::createFolderDock()

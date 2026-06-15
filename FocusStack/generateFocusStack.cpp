@@ -187,7 +187,7 @@ void MW::generateFocusStack(const QStringList paths,
 
     // show status progress bar
     if (!isShowCacheProgressBar) {
-        progressLabel->setVisible(true);
+        progress->setVisible(true);
     }
 
     // --------------------------------------------------------------------
@@ -215,7 +215,7 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Progress update
     connect(fs, &FS::progress, this, [this](int current, int total) {
-            this->cacheProgressBar->updateFocusStackProgress(current, total, Qt::darkYellow);
+            this->progress->updateFocusStackProgress(current, total, Qt::darkYellow);
     }, Qt::QueuedConnection);
 
     // Use Winnow to decode and return a cv::Mat
@@ -275,10 +275,10 @@ void MW::generateFocusStack(const QStringList paths,
         QString msg;
 
         // clear progress
-        cacheProgressBar->clearFocusStackProgress();
+        progress->clearFocusStackProgress();
         // hide status progress bar
         if (!isShowCacheProgressBar) {
-            progressLabel->setVisible(false);
+            progress->setVisible(false);
         }
 
         // aborted or failed

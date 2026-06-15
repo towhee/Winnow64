@@ -408,7 +408,7 @@ void MW::setCacheStatusVisibility()
 {
     if (G::isLogger) G::log("MW::setCacheStatusVisibility");
     if (isShowCacheProgressBar && !G::isSlideShow)
-        progressLabel->setVisible(isShowCacheProgressBar);
+        progress->setVisible(isShowCacheProgressBar);
 }
 
 void MW::setProgress(int value)
