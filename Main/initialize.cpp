@@ -1119,6 +1119,8 @@ void MW::createStatusBar()
     if (G::isLogger) G::log("MW::createStatusBar");
     statusBar()->setObjectName("WinnowStatusBar");
 
+    // statusBar()->setFixedHeight(50);  test this works
+
     // cache status on right side of status bar
 
     // label to hold QPixmap showing progress
