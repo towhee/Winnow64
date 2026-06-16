@@ -396,8 +396,11 @@ Q_NAMESPACE
 
     extern QColor textColor;
     extern QColor backgroundColor;
-    extern QColor borderColor;
     extern QColor disabledColor;
+    extern QColor header1Color;
+    extern QColor header2Color;
+    extern QColor header3Color;
+    extern QColor borderColor;
     extern QColor tabWidgetBorderColor;
     extern QColor pushButtonBackgroundColor;
     extern QColor scrollBarHandleBackgroundColor;

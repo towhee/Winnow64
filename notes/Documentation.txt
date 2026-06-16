@@ -1179,6 +1179,13 @@ Architecture
 
     Docs/help.css                   Shared dark-theme stylesheet for every help page.
                                     Defines body, h1-h3, a, code, pre, .highlight, .warn.
+                                    Some values are fallbacks: at load time HtmlWindow
+                                    overrides the body font-size with the app font size
+                                    (G::strFontSize), scales the h1-h3 font-sizes by
+                                    G::fontSize/12, and sets the h1-h3 colours from the
+                                    theme-tied G::header1/2/3Color. The static values in
+                                    help.css apply only when viewing the file outside the
+                                    app (e.g. VS Code Live Preview).
 
     Docs/_template.html             Reference template demonstrating every supported
                                     element (headings, paragraphs, span colors, link,
@@ -1249,6 +1256,16 @@ Editing Help Formatting Globally
     Edit Docs/help.css. Every help page picks up the change on the next launch (the .css
     is loaded fresh by HtmlWindow each time a help page opens).
 
+    Runtime overrides: HtmlWindow::applyStyle() appends rules on top of help.css so help
+    text tracks the app font and theme. These win over the help.css values (later rule,
+    equal specificity), so editing them in help.css alone has no effect in the app:
+      • body font-size  -> app font size (G::strFontSize)
+      • h1/h2/h3 font-size -> help.css design size scaled by G::fontSize/12
+      • h1/h2/h3 colour -> G::header1/2/3Color (theme-tied; set in WidgetCSS::css())
+    applyStyle() also re-runs on every font/theme change (HtmlWindow::refreshOpenWindows,
+    called from MW), so open help windows update live. To change these, edit applyStyle()
+    (font-size/colours) or the G::headerNColor values in WidgetCSS::css() (colours).
+
     Constraint: QTextBrowser supports only Qt's HTML 4 / CSS 2.1 subset
         https://doc.qt.io/qt-6/richtext-html-subset.html
     Avoid flexbox, grid, CSS custom properties, and HTML5 semantic tags — Qt silently
@@ -1273,7 +1290,11 @@ VS Code Workflow
 
     Expected differences between VS Code preview and Winnow:
       • Font sizes will not match pixel-for-pixel (Chromium vs QTextBrowser defaults).
-        help.css sets explicit sizes on body/h1/h2/h3 to narrow the gap.
+        help.css sets explicit sizes on body/h1/h2/h3 to narrow the gap, but Winnow
+        overrides them at runtime (body = app font size, headings scaled), so the
+        preview shows help.css's static fallback sizes, not Winnow's actual sizes.
+      • Heading colours differ: VS Code shows help.css's static h1/h2/h3 colours, while
+        Winnow overrides them with the theme-tied G::header1/2/3Color.
       • Anything outside the CSS 2.1 subset (above) will render in VS Code but not in
         Winnow. When in doubt, check in Winnow.
 

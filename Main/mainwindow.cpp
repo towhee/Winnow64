@@ -1195,6 +1195,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     QModelIndex idx0 = idx.sibling(idx.row(), 0);
                     folderName = idx0.data(QFileSystemModel::FileNameRole).toString();
                     mouseOverFolderPath = idx0.data(QFileSystemModel::FilePathRole).toString();
+
+                    // is there a bookmark for this folder
+                    if (bookmarks->bookmarkPaths.contains(mouseOverFolderPath)) {
+                        addBookmarkActionFromContext->setEnabled(false);
+                    }
                     /*
                     qDebug() << "MW::eventFilter QEvent::ContextMenu"
                              << "folderName =" << folderName

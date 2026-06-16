@@ -37,7 +37,8 @@ I have changed the category 'Cache' to 'Performance' and added these items:
 Make sure all four flags are saved in settings and read when open Winnow.
 
 
-
+Disable addBookmarkActionFromContext if already folder path is already in
+Bookmarks::bookmarkPaths
 
 
 

@@ -107,8 +107,11 @@ int textShade = 190;                // text default luminousity
 int backgroundShade;                // app background luminousity
 QColor textColor = QColor(textShade,textShade,textShade);
 QColor backgroundColor;             // define after app stylesheet defined
-QColor borderColor;                 // define after app stylesheet defined
 QColor disabledColor;               // define after app stylesheet defined
+QColor header1Color;                // define after app stylesheet defined
+QColor header2Color;                // define after app stylesheet defined
+QColor header3Color;                // define after app stylesheet defined
+QColor borderColor;                 // define after app stylesheet defined
 QColor tabWidgetBorderColor;        // define after app stylesheet defined
 QColor pushButtonBackgroundColor;   // define after app stylesheet defined
 QColor scrollBarHandleBackgroundColor; // = QColor(20,30,20);
