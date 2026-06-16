@@ -49,6 +49,9 @@ public:
     int scrollBarWidth = 14;
     QColor textColor;     // = QColor(G::textShade,G::textShade,G::textShade);
     QColor disabledColor; // = QColor(G::backgroundShade+20,G::backgroundShade+20,G::backgroundShade+20);
+    QColor header1Color;
+    QColor header2Color;
+    QColor header3Color;
     QColor borderColor;
     QColor widgetBackgroundColor;
     QColor progressBarBackgroundColor;

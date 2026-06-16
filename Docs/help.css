@@ -7,18 +7,27 @@ QTextBrowser supports only the CSS 2.1 subset documented at
 https://doc.qt.io/qt-6/richtext-html-subset.html
 (no flexbox, grid, custom properties, or HTML5 semantic tags).
 
-The body/h1/h2/h3 font-sizes below are the design sizes at the default app
-font (12px). HtmlWindow scales them by G::fontSize/12 at load time so help
-text tracks the app font size; if you change these, update HtmlWindow too.
+The h1/h2/h3 font-sizes below are the design sizes at the default app font
+(12px). HtmlWindow scales them by G::fontSize/12 at load time so headings track
+the app font size; if you change these, update HtmlWindow too. Body text is set
+to the app font size (G::strFontSize) by HtmlWindow, so the body font-size below
+is only a fallback.
+
+The h1/h2/h3 colours below are overridden at load time by HtmlWindow with the
+theme-tied G::header1/2/3Color; the values here are fallbacks for viewing this
+file outside the app.
 */
 
 /* font-family is set by HtmlWindow to the OS system font (code/pre below keep
-   monospace); font-size here is the design size, scaled by HtmlWindow. */
+   monospace). The body font-size here is a fallback: HtmlWindow overrides it
+   with the app font size (G::strFontSize) at load time. */
 body {
     background-color: #222222;
     color: silver;
     font-size: 14px;
 }
+/* h1/h2/h3 colours and font-sizes here are fallbacks: HtmlWindow overrides the
+   colours with G::header1/2/3Color and scales the sizes by G::fontSize/12. */
 h1 { color: #02b0cf;    font-size: 22px; margin: 0.6em 0 0.3em; }
 h2 { color: #016f82;    font-size: 18px; margin: 0.6em 0 0.3em; }
 h3 { color: #013640;    font-size: 15px; margin: 0.5em 0 0.2em; }

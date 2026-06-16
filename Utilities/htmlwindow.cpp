@@ -117,11 +117,13 @@ void HtmlWindow::applyStyle()
     // top. The mapping isn't exact across a font resize, but it stays close.
     const int scrollPos = text->verticalScrollBar()->value();
 
-    // Scale help text with the app font (G::fontSize, in px). help.css's design
-    // sizes assume the default app font of 12px, so scale them by G::fontSize/12.
-    // Qt's rich-text CSS subset has no %/em font-size, so all sizes are absolute px.
+    // Scale help headings with the app font (G::fontSize, in px). help.css's
+    // design heading sizes assume the default app font of 12px, so scale them by
+    // G::fontSize/12. Body text is set to the app font size (G::strFontSize)
+    // directly. Qt's rich-text CSS subset has no %/em font-size, so all sizes are
+    // absolute px.
     const qreal scale = (G::fontSize > 0 ? G::fontSize : 12) / 12.0;
-    const int bodyPx = qRound(14 * scale);
+    const int bodyPx = (G::strFontSize.toInt() > 0 ? G::strFontSize.toInt() : 12);
 
     // shared stylesheet for all help pages; per-page <style> blocks override
     QFile cssFile(":/Docs/help.css");
@@ -129,25 +131,29 @@ void HtmlWindow::applyStyle()
         QString css = cssFile.readAll();
         cssFile.close();
         // Render help text in the app (OS system) font and override help.css's
-        // fixed sizes with scaled ones (later equal-specificity rule wins). Qt's
-        // HTML importer styles block text from per-element rules, not the "body"
-        // selector (which styles only the unused root frame), so we set the
-        // actual text tags (p, li, td, th, div) plus the headings — the same
+        // fixed sizes/colours with theme-tied ones (later equal-specificity rule
+        // wins). Qt's HTML importer styles block text from per-element rules, not
+        // the "body" selector (which styles only the unused root frame), so we set
+        // the actual text tags (p, li, td, th, div) plus the headings — the same
         // mechanism that scales them. Spans inherit from their block parent;
-        // code/pre keep help.css's monospace family. Keep sizes in sync with
-        // help.css.
+        // code/pre keep help.css's monospace family. Heading colours come from
+        // G::header1/2/3Color and override help.css's static h1/h2/h3 colours.
+        // Keep sizes in sync with help.css.
         const QString family = QApplication::font().family();
         css += QString(
             "\nbody, p, li, td, th, div, h1, h2, h3 { font-family: \"%1\"; }"
             "\nbody, p, li, td, th, div { font-size: %2px; }"
-            "\nh1 { font-size: %3px; }"
-            "\nh2 { font-size: %4px; }"
-            "\nh3 { font-size: %5px; }")
+            "\nh1 { font-size: %3px; color: %6; }"
+            "\nh2 { font-size: %4px; color: %7; }"
+            "\nh3 { font-size: %5px; color: %8; }")
             .arg(family)
             .arg(bodyPx)
             .arg(qRound(22 * scale))
             .arg(qRound(18 * scale))
-            .arg(qRound(15 * scale));
+            .arg(qRound(15 * scale))
+            .arg(G::header1Color.name())
+            .arg(G::header2Color.name())
+            .arg(G::header3Color.name());
         text->document()->setDefaultStyleSheet(css);
     }
     // base URL lets <img src="images/foo.png"> resolve relative to the html file

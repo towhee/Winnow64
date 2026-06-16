@@ -32,16 +32,24 @@ QString WidgetCSS::css()
 
     textColor = QColor(fg,fg,fg);
     disabledColor = QColor(l40,l40,l40);
-    G::disabledColor = QColor(l40,l40,l40);
+    G::disabledColor = disabledColor;
+    header1Color = QColor(Qt::red);     // #6cc1e8
+    // header1Color = QColor(108,193,232);     // #6cc1e8
+    header2Color = QColor(81,141,169);      // #518da9
+    header3Color = QColor(66,115,138);      // #42738a
+    G::header1Color = header1Color;         // dock titles,
+    G::header2Color = header2Color;
+    // header3Color = QColor(50,82,98);
+    G::header3Color = header3Color;
     G::tabWidgetBorderColor = QColor(l60,l60,l60);
     G::pushButtonBackgroundColor = QColor(d10,d10,d10);
     borderColor = QColor(l40,l40,l40);
     G::borderColor = borderColor;
-
     G::scrollBarHandleBackgroundColor = QColor(bg,l3,bg);
     selectionColor = G::selectionColor;
     mouseOverColor = G::mouseOverColor;  // not being used, matches what happens in treeview on windows
     progressBarBackgroundColor = QColor(d10,d10,d10);
+
 
     // heights (mostly used for rows in TreeView etc)
     h12 = QString::number(fontSize * 1.2 * G::ptToPx);
@@ -271,7 +279,8 @@ QString WidgetCSS::label()
         "border: none;"
         "background: transparent;"
         "padding-left: 4px;"
-        "color: #6CC1E8;"
+        // "color: #6CC1E8;"  // this works
+        "color: " + header1Color.name() + ";" // header1Color.name() does not work
     "}"
 
     // Status dots need a larger glyph on Windows to be readable.
@@ -408,7 +417,6 @@ QString WidgetCSS::tabWidget()
         "color:" + G::textColor.name() + ";"
         "border-bottom: 0px;"
         "background-color: " + G::selectionColor.name() + ";"
-//        "background-color: " + QColor(bg,bg,bg).name() + ";"
     " }"
 
     "QTabBar::tab:disabled {"
