@@ -212,8 +212,8 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::RowNumberColumn, new QStandardItem("#")); horizontalHeaderItem(G::RowNumberColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::FolderNameColumn, new QStandardItem("Folder Name")); horizontalHeaderItem(G::FolderNameColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::NSThumb, new QStandardItem("NS Thumb")); horizontalHeaderItem(G::NSThumb)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::NSImage, new QStandardItem("NS Image")); horizontalHeaderItem(G::NSImage)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::NSThumbColumn, new QStandardItem("NS Thumb")); horizontalHeaderItem(G::NSThumbColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::NSImageColumn, new QStandardItem("NS Image")); horizontalHeaderItem(G::NSImageColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour")); horizontalHeaderItem(G::LabelColumn)->setData(false, G::GeekRole);
@@ -1832,8 +1832,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
     setData(index(row, G::AspectRatioColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    setData(index(row, G::DimensionsColumn), QString::number(m.width) + "x" + QString::number(m.height));
+    QString dim = QString::number(m.width) + "x" + QString::number(m.height);
+    setData(index(row, G::DimensionsColumn), dim);
     setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    search += dim;
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
     setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::LoadMsecPerMpColumn), m.loadMsecPerMp);

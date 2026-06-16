@@ -1656,7 +1656,7 @@ QString ImageCache::reportCacheItemList(QString title)
             << (dm->index(sfRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded ? "true" : "false")
             << (dm->index(sfRow, G::VideoColumn).data().toBool() ? "true" : "false")
             << QString::number(dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat(), 'f', 2)
-            << dm->sf->index(sfRow, G::NSThumb).data().toInt()
+            << dm->sf->index(sfRow, G::NSThumbColumn).data().toInt()
             << dm->sf->index(sfRow, G::OffsetFullColumn).data().toInt()
             << dm->sf->index(sfRow, G::LengthFullColumn).data().toInt()
             ;

@@ -214,7 +214,7 @@ void ImageDecoder::decode(int row, int instance)
              << fPath
         ;//*/
 
-    emit setValSf(sfRow, G::NSImage, nsToDecode, instance,
+    emit setValSf(sfRow, G::NSImageColumn, nsToDecode, instance,
                   "ImageDecoder::decode", Qt::EditRole,
                   int(Qt::AlignRight | Qt::AlignVCenter));
 

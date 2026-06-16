@@ -1,46 +1,9 @@
-progressbar.cpp was initially designed to show the status of ImageCache.  It has a fixed
-height.  Over time I have added the MetaRead and FocusStack progress.  I would like to
-replace ProgressBar with a new class called Progress:
+Modify MW::mediaReadSpeed as follows:
+- execute sudo purge
+- iterate selected image files, collected read speeds
+- report each file name > read speed
+- report media, average read speed.
 
-- One container that can hold many progress rows. Each row has two columns: text and
-progress bar. The text font size should have a separate variable that can be changed. The
-container width should be adjustable, and the contained progress bars fit the container
-width. The height is variable to fit the rows. The container background is the same as
-MW::statusBar.
-
-- each row has its own update function that defines the text, pixel height of the bar,
-color of the bar and custom display (for example ProgressBar::updateImageCacheProgress).
-Each row height height fits the text and bar heights.
-
-- container function to hide/show a bar.  Adjust MW::statusBar height to fit Progress.
-
-- new rows are added by adding a new update function adding to any container objects that
-have been created to manage Progress.
-
-- if feasible, design Progress so it can be located in MW::statusBar or in a separate
-window if it gets too large.
-
-- Retain ProgressBar until later in case this does not work out.
-
--------------------
-
-Review display of ImageCache and MetaRead caching.  I want a single flag showCacheProgress
-to turn both ImageCache and MetaRead cache progress on or off.  When off, progress
-should not be calculated or displayed.  Clean up legacy flags no longer required.
-
-I have changed the category 'Cache' to 'Performance' and added these items:
-
-- disableColorCorrection (wire to colorManageAction)
-- hideCachingProgressBars (wire to showCacheProgress)
-- cacheThumbsJIT (wire to G::useJitIconCache)
-
-Make sure all four flags are saved in settings and read when open Winnow.
-
-
-Disable addBookmarkActionFromContext if already folder path is already in
-Bookmarks::bookmarkPaths
-
-
-
+Add a MediaReadNSColumn to the datamodel before NSThumbColumn.  Include changes as per NSImageColumn in TableView.
 
 per the guidance to avoid unprompted subagents

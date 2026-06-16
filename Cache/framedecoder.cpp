@@ -141,7 +141,7 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
         {
             emit setFrameIcon(dmRow, im, dmInstance, durationMs, this);
             qint64 usToDecode = t.nsecsElapsed() / 1000;
-            emit setValDm(dmRow, G::NSThumb, usToDecode, dmInstance,
+            emit setValDm(dmRow, G::NSThumbColumn, usToDecode, dmInstance,
                           "FrameDecoder::addToQueue (AVFoundation)",
                           Qt::EditRole,
                           int(Qt::AlignRight | Qt::AlignVCenter));
@@ -331,7 +331,7 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
         emit setFrameIcon(item.dmRow, scaledIm, item.dmInstance, duration, this);
 
         qint64 msToDecode = tFrame.isValid() ? tFrame.nsecsElapsed() / 1000 : 0;
-        emit setValDm(item.dmRow, G::NSThumb, msToDecode, item.dmInstance,
+        emit setValDm(item.dmRow, G::NSThumbColumn, msToDecode, item.dmInstance,
                       "FrameDecoder::handleFrameChanged", Qt::EditRole,
                       int(Qt::AlignRight | Qt::AlignVCenter));
     } else {
