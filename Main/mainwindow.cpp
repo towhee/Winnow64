@@ -1745,6 +1745,7 @@ need to adjust it to fit your specific needs.
 #include <QNetworkReply>
 #include <QUrl>
 #include <QProcess>
+#include <QStorageInfo>
 
 class Updater : public QObject {
     _Q_OBJECT // remove leading _ (cmake does not like)
@@ -5741,20 +5742,71 @@ void MW::reportHueCount()
 void MW::mediaReadSpeed()
 {
     if (G::isLogger) G::log("MW::mediaReadSpeed");
-    QMessageBox mBox;
-    mBox.setText("Select a file to test read speed");
-    mBox.setButtonText(QMessageBox::Ok, "Continue");
-    mBox.exec();
 
-    QString fPath = QFileDialog::getOpenFileName(this,
-                                                 tr("Select file for speed test"),
-                                                 "/home"
-                                                 );
-    QFile file(fPath);
-    double MBPerSec = Performance::mediaReadSpeed(file) * 1024 / 8;
-    if (static_cast<int>(MBPerSec) == -1) return;  // err
-    QString msg = "Media read speed: " + QString::number(MBPerSec, 'f', 0) + " MB/sec.";
-    QMessageBox::information(this, "", msg);
+    /*
+        Benchmark every mounted drive by reading a random sample of real image
+        files from it (Performance::sampleReadSpeed), discarding reads that come
+        back at RAM speed as OS-cache hits, and report the result as a table.
+        Random sampling + outlier rejection removes the cache bias without any
+        special commands (no purge, no sudo) or datamodel coupling.
+    */
+
+    /* Collect the user-visible drives: on macOS the boot volume and anything   */
+    /* under /Volumes (matching the FSTree); on Windows every ready drive.       */
+    struct Drive { QString label; QString path; };
+    QList<Drive> drives;
+    for (const QStorageInfo &si : QStorageInfo::mountedVolumes()) {
+        if (!si.isValid() || !si.isReady()) continue;
+#ifndef Q_OS_WIN
+        QString root = si.rootPath();
+        if (root != "/" && !root.startsWith("/Volumes/")) continue;  // skip synthetic mounts
+#else
+        if (si.isReadOnly()) continue;
+        QString root = si.rootPath();
+#endif
+        QString label = si.displayName();
+        if (label.isEmpty()) label = root;
+        /* Scanning "/" wastes the budget in system folders that hold no large  */
+        /* images; sample the user's home (Pictures, Downloads, …) instead.     */
+        QString scanPath = (root == "/") ? QDir::homePath() : root;
+        drives.append({label, scanPath});
+    }
+    if (drives.isEmpty()) {
+        G::popup->showPopup("No mounted drives found.", 2000);
+        return;
+    }
+
+    /* Image name filters (e.g. "*.jpg", "*.nef") from the supported formats. */
+    QStringList nameFilters;
+    for (const QString &ext : metadata->supportedFormats)
+        nameFilters << "*." + ext;
+
+    /* Benchmark each drive (synchronous; keep the UI alive with a popup). */
+    QString rows;
+    for (const Drive &d : std::as_const(drives)) {
+        G::popup->showPopup("Testing read speed: " + d.label + " …", 60000);
+        qApp->processEvents();
+        Performance::ReadSpeedResult r =
+            Performance::sampleReadSpeed(d.path, nameFilters);
+        QString cell = r.error.isEmpty()
+                           ? "<td align=right>" + QString::number(r.mbPerSec, 'f', 0) + "</td>"
+                           : "<td align=right><i>" + r.error + "</i></td>";
+        rows += "<tr><td>" + d.label.toHtmlEscaped() + "</td>" + cell + "</tr>";
+    }
+    G::popup->reset();
+
+    QString html =
+        "<table cellspacing='0' cellpadding='6' "
+        "style='border-collapse:collapse'>"
+        "<tr><th align='left'>Drive</th><th align='right'>MB/sec</th></tr>"
+        + rows + "</table>";
+
+    QMessageBox box(this);
+    box.setWindowTitle("Media read speed");
+    box.setTextFormat(Qt::RichText);
+    box.setText(html);
+    box.setStyleSheet(G::css);
+    box.exec();
 }
 
 void MW::findDuplicates()

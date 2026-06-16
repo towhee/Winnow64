@@ -293,7 +293,7 @@ void Reader::readIcon()
         // qint64 msToDecode = tIcon.elapsed();
         qint64 msToDecode = tIcon.nsecsElapsed()/1000;
         // qDebug() << fun << "instance =" << instance << "dmRow =" << dmRow << "microsec =" << msToDecode;
-        emit setValDm(dmRow, G::NSThumb, msToDecode, instance,
+        emit setValDm(dmRow, G::NSThumbColumn, msToDecode, instance,
                       "Reader::readIcon", Qt::EditRole,
                       int(Qt::AlignRight | Qt::AlignVCenter));
 

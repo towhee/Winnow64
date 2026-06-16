@@ -68,8 +68,8 @@ TableView::TableView(QWidget *parent, DataModel *dm)
 
     FileSizeItemDelegate *fileSizeItemDelegate = new FileSizeItemDelegate;
     setItemDelegateForColumn(G::ByteSizeColumn, fileSizeItemDelegate);
-    setItemDelegateForColumn(G::NSThumb, fileSizeItemDelegate);
-    setItemDelegateForColumn(G::NSImage, fileSizeItemDelegate);
+    setItemDelegateForColumn(G::NSThumbColumn, fileSizeItemDelegate);
+    setItemDelegateForColumn(G::NSImageColumn, fileSizeItemDelegate);
 
     createOkToShow();
 
@@ -208,8 +208,8 @@ void TableView::setDefaultColumnWidths()
     defaultColumnWidth[G::RowNumberColumn] = fm.boundingRect("-999999-").width();
     defaultColumnWidth[G::NameColumn] = fm.boundingRect("2019-02-25_0001.jpg========").width();
     defaultColumnWidth[G::FolderNameColumn] = fm.boundingRect("This is the folder name========").width();
-    defaultColumnWidth[G::NSThumb] = fm.boundingRect("=NS Thumb=").width();
-    defaultColumnWidth[G::NSImage] = fm.boundingRect("==NS Image==").width();
+    defaultColumnWidth[G::NSThumbColumn] = fm.boundingRect("=NS Thumb=").width();
+    defaultColumnWidth[G::NSImageColumn] = fm.boundingRect("==NS Image==").width();
     defaultColumnWidth[G::PickColumn] = fm.boundingRect("===Pick===").width();
     defaultColumnWidth[G::IngestedColumn] = fm.boundingRect("=Ingested=").width();
     defaultColumnWidth[G::LabelColumn] = fm.boundingRect("=Colour=").width();

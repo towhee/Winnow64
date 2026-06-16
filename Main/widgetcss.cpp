@@ -33,8 +33,7 @@ QString WidgetCSS::css()
     textColor = QColor(fg,fg,fg);
     disabledColor = QColor(l40,l40,l40);
     G::disabledColor = disabledColor;
-    header1Color = QColor(Qt::red);     // #6cc1e8
-    // header1Color = QColor(108,193,232);     // #6cc1e8
+    header1Color = QColor(108,193,232);     // #6cc1e8
     header2Color = QColor(81,141,169);      // #518da9
     header3Color = QColor(66,115,138);      // #42738a
     G::header1Color = header1Color;         // dock titles,
