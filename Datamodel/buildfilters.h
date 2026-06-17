@@ -86,8 +86,11 @@ private:
 
     QMutex mutex;
     QWaitCondition condition;
-    bool abort;
-    bool idle = true;
+    /* Status/cancellation flags shared between the GUI thread (abortProcessing,
+       isIdle/isBusy) and the BuildFilters worker thread (run) — std::atomic to
+       remove the TSan-confirmed data race (abort: run vs updateUnfilteredCounts). */
+    std::atomic<bool> abort{false};
+    std::atomic<bool> idle{true};
     DataModel *dm;
     Metadata *metadata;
     Filters *filters;

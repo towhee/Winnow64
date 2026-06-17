@@ -7,3 +7,18 @@ Modify MW::mediaReadSpeed as follows:
 Add a MediaReadNSColumn to the datamodel before NSThumbColumn.  Include changes as per NSImageColumn in TableView.
 
 per the guidance to avoid unprompted subagents
+
+
+
+I recursively loaded all the images on a USB drive. The images were in two separate child
+folders of dcim folder. There was about 1100 orf images in total (no videos). I
+progressed through the images, picking and ingesting. After about 600 images the Image
+Cache started to update intermittently. The thumbnails had the red cache dot on the lower
+right indicating they were not cached while other adjacent thumbnails were cached. When I
+selected the red dot icons nothing was displayed on the imageView. I have experienced
+this before, but it is unusual, and I thought all our changes had fixed it. Also, I
+picked image 800, selected the next image (801) and then used the left arrow key to move
+back to image 800, and the green icon border disappeared, without pressing the pick
+shortcut. I have never seen this behavior before. I will try to reproduce but I do not
+know when it will happen again. Something became corrupted. Please investigate how this
+could have happened.
