@@ -206,6 +206,24 @@ void BookMarks::updateCount(QString dPath)
      }
 }
 
+QStringList BookMarks::bookmarksWithImages()
+{
+/*
+    Returns the bookmark paths where the image count shown in column 1 of the
+    QTreeWidget is >= 2.  The count is maintained by updateCount().
+*/
+    if (G::isLogger) G::log("BookMarks::bookmarksWithImages");
+    QStringList paths;
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if ((*it)->text(1).toInt() >= 2) {
+            paths << (*it)->toolTip(0);
+        }
+        ++it;
+    }
+    return paths;
+}
+
 void BookMarks::select(QString fPath)
 {
 /*

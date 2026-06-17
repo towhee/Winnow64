@@ -19,6 +19,7 @@
 #endif
 
 #include "Main/widgetcss.h"
+#include "Main/winnow_version.h"   // generated from CMake project(VERSION ...) into build/<preset>/Main
 
 #include "appdlg.h"
 #include "addthumbnailsdlg.h"
@@ -130,11 +131,19 @@ public:
     // dimensions parsed (and match WINNOW_METATEST_MAKE/MODEL if set), else 2.
     void runMetaTest(const QString &filePath);
 
+    // Headless soak used by the soak test layer (tests/soak). Bounces between
+    // folders (reloading each and ping-ponging through its images) for
+    // durationMs, seeded for reproducibility, then drives an orderly teardown so
+    // AddressSanitizer/LeakSanitizer can report at exit. Probes footprint each
+    // bounce. Run under mac-asan (leaks) or mac-tsan (races).
+    void runSoakTest(const QStringList &folders, int durationMs,
+                     int msPerImage, uint seed);
+
     /*
     alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa, lambda, mu, nu,
     xi, omicron, pi, rho, sigma, tau, upsilon, phi, chi, psi, and omega.
     */
-    QString versionNumber = "2.05" ;
+    QString versionNumber = WINNOW_VERSION ;   // single-sourced from CMakeLists project(VERSION ...)
     QString compileDate = "Compiled: " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;

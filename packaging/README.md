@@ -1,0 +1,129 @@
+# Winnow packaging / deployment
+
+This directory is the **single, in-repo deployment pipeline** for Winnow. Because
+it lives in the repo, every machine gets it from `git clone` / `git pull`. Each
+machine supplies only its own paths and secrets through a local, git-ignored
+config file — the committed `*.example` files are the templates.
+
+```
+packaging/
+  macos/
+    deploy.command       build -> stage -> sign -> notarize -> DMG -> archive -> upload
+    verify_bundle.command  vanilla-Mac readiness checker
+    entitlements.plist   static hardened-runtime entitlements (committed)
+    config.sh.example    macOS config template  ->  copy to config.sh  (git-ignored)
+  windows/
+    deploy.ps1           build -> (sign) -> Inno Setup installer -> upload
+    winnow.iss           Inno Setup installer definition
+    config.ps1.example   Windows config template -> copy to config.ps1 (git-ignored)
+```
+
+Build output and deploy artifacts go to the git-ignored `build/` and `out/`
+directories at the repo root. Nothing is written outside the repo except the
+optional version archive and the optional server upload.
+
+## Version
+
+The version is single-sourced from `CMakeLists.txt`:
+
+```cmake
+project(Winnow VERSION 2.05 LANGUAGES C CXX)
+```
+
+This feeds **(a)** the generated `Main/winnow_version.h` → the in-app version
+string (`mainwindow.h` uses `WINNOW_VERSION`), and **(b)** the macOS bundle
+`CFBundleShortVersionString`. The deploy scripts read the version *back* from the
+built artifact, so DMG / installer filenames always match the binary. **To bump
+the version, edit only the `project(... VERSION ...)` line.**
+
+---
+
+## One-time setup per machine
+
+### macOS (both Macs)
+
+1. Xcode command line tools: `xcode-select --install`
+2. Qt 6.9.2 (macos) installed (default `~/Qt/6.9.2/macos`).
+3. Homebrew deps: `brew install opencv ffmpeg webp`
+4. Import the **Developer ID Application** certificate into the login keychain.
+5. Store notarization credentials once:
+   ```sh
+   xcrun notarytool store-credentials AC_PASSWORD \
+     --apple-id "<your-apple-id>" --team-id 2663CS489R \
+     --password "<app-specific-password>"
+   ```
+   (Generate the app-specific password at appleid.apple.com — never commit it.)
+6. Create the local config:
+   ```sh
+   cp packaging/macos/config.sh.example packaging/macos/config.sh
+   # edit QT_DIR, DEVELOPER_ID, ARCHIVE_DIR, upload settings
+   ```
+
+### Windows 11
+
+1. Visual Studio 2022 (Desktop C++ workload).
+2. Qt 6.9.2 (MSVC, default `C:\Qt\6.9.2\msvc2022_64`).
+3. [Inno Setup 6](https://jrsoftware.org/isdl.php).
+4. *(optional)* A code-signing certificate + the Windows SDK `signtool.exe`.
+5. Create the local config:
+   ```powershell
+   Copy-Item packaging\windows\config.ps1.example packaging\windows\config.ps1
+   # edit $QtDir, $InnoSetupCompiler, signing, upload settings
+   ```
+
+---
+
+## The Magic Phrase
+
+Say **"Package and deploy to server"** to Claude and it runs the whole macOS
+release end to end, so you don't have to drive the menu yourself. Claude will:
+
+1. Confirm the version (`project(Winnow VERSION ...)` in `CMakeLists.txt`) and the
+   release pre-checks it can verify (e.g. `isLogger`/`isFlowLogger = false` in
+   `Main/global.cpp`), flagging anything that needs your decision.
+2. Build, stage, sign, **notarize**, DMG, and run the vanilla-Mac verify
+   (`deploy.command` steps 0–4 + V) against Qt 6.9.2.
+3. **Promote** (`deploy.command` step 7): a dry-run first, then — after showing the
+   plan and getting your explicit `yes` — archive the current DMG, upload the new
+   one to `current/`, and update the landing-page link.
+
+Prerequisites: `packaging/macos/config.sh` exists, the keychain is unlocked
+(Developer ID cert + `AC_PASSWORD` notary profile). Because the promote step
+writes to the live server, Claude always confirms before that step — every time.
+
+---
+
+## Running a deployment (manually)
+
+### macOS
+```sh
+chmod +x packaging/macos/deploy.command   # first time only
+packaging/macos/deploy.command            # interactive menu; "A" runs the full pipeline
+```
+Produces `out/DMG/Winnow<version>.dmg` (notarized, stapled, with an
+`/Applications` drag-install symlink).
+
+### Windows
+```powershell
+# from a Developer PowerShell for VS 2022 (x64)
+packaging\windows\deploy.ps1               # full pipeline
+packaging\windows\deploy.ps1 -NoBuild      # package the existing build output
+```
+Produces `out\WinnowSetup-<version>.exe`.
+
+---
+
+## Distribution
+
+Distribution is plain downloads (no in-app auto-update): the DMG and the
+`Setup.exe` are uploaded to the DigitalOcean server (`winnow_mac` / `winnow_win`).
+Set `UPLOAD_ENABLED=true` / `$UploadEnabled = $true` in the config to have the
+scripts upload automatically; the ssh key path is per-machine and never committed.
+
+## ⚠️ Security note
+
+`notes/DeployInstall.txt` historically contained plaintext credentials (Apple ID
+password, notarization app-specific password, login password). Those must not
+live in the repo: **regenerate the app-specific password** at appleid.apple.com,
+keep notary credentials only in the keychain (step 5 above), and scrub the old
+values from that file.

@@ -10,7 +10,17 @@ if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
 endif()
 
-project(Winnow LANGUAGES C CXX)
+project(Winnow VERSION 2.05 LANGUAGES C CXX)
+
+# Single source of truth for the app version. project(VERSION ...) above feeds:
+#   - Main/winnow_version.h (generated below) -> the in-app version string
+#   - the macOS bundle CFBundleShortVersionString (set in bundle properties)
+#   - the deploy scripts, which read the version back from the built artifact
+# Bump the version in the project() line above and nowhere else.
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/winnow_version.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/Main/winnow_version.h"
+    @ONLY)
 
 # Emit build/<preset>/compile_commands.json on every configure so clangd (the
 # editor language server) can resolve project includes and Qt headers without
@@ -605,6 +615,7 @@ target_compile_definitions(Winnow PRIVATE
 
 target_include_directories(Winnow PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}      # generated Main/winnow_version.h
     Dialogs
     Utilities
     FocusStack
@@ -700,6 +711,11 @@ if(APPLE)
         MACOSX_BUNDLE_BUNDLE_NAME           "Winnow"
         MACOSX_BUNDLE_GUI_IDENTIFIER        "com.winnow.Winnow"
         MACOSX_BUNDLE_ICON_FILE             "winnow.icns"
+        # Version from project(VERSION ...) so the bundle Info.plist no longer
+        # defaults to 1.0. The deploy script reads CFBundleShortVersionString
+        # back from the built bundle to name the DMG/archive.
+        MACOSX_BUNDLE_SHORT_VERSION_STRING  "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_VERSION        "${PROJECT_VERSION}"
     )
 
     # App icon -> Contents/Resources/winnow.icns
@@ -925,6 +941,26 @@ option(WINNOW_SANITIZE_THREAD "Build the Winnow app with ThreadSanitizer" OFF)
 if(WINNOW_SANITIZE_THREAD)
     target_compile_options(Winnow PRIVATE -fsanitize=thread -fno-omit-frame-pointer -g)
     target_link_options(Winnow PRIVATE -fsanitize=thread)
+endif()
+
+# =============================================================================
+# AddressSanitizer (ASan + LeakSanitizer) build of the app — opt-in, used by the
+# soak test layer (tests/soak/run_soak.sh). Enabled via the mac-asan preset
+# (-DWINNOW_SANITIZE_ADDRESS=ON). OFF by default so normal builds are untouched.
+#   - ASan catches use-after-free / heap-overflow / double-free live during the
+#     run (works regardless of how the process exits).
+#   - LSan's leak report only fires on an ORDERLY exit, so the soak drives a real
+#     window-close teardown (not std::_Exit) when leak detection is wanted.
+# Cannot be combined with WINNOW_SANITIZE_THREAD (the sanitizers are mutually
+# exclusive at link time).
+# =============================================================================
+option(WINNOW_SANITIZE_ADDRESS "Build the Winnow app with AddressSanitizer" OFF)
+if(WINNOW_SANITIZE_ADDRESS)
+    if(WINNOW_SANITIZE_THREAD)
+        message(FATAL_ERROR "WINNOW_SANITIZE_ADDRESS and WINNOW_SANITIZE_THREAD are mutually exclusive.")
+    endif()
+    target_compile_options(Winnow PRIVATE -fsanitize=address -fno-omit-frame-pointer -g)
+    target_link_options(Winnow PRIVATE -fsanitize=address)
 endif()
 
 # =============================================================================

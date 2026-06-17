@@ -104,4 +104,25 @@ if(TARGET Winnow)
         ENVIRONMENT "WINNOW_METATEST_MAKE=NIKON;WINNOW_METATEST_MODEL=D700"
         LABELS "metadata"
     )
+
+    # Soak smoke — a few seconds of the bounce harness (--soaktest) over the
+    # fixture folder, to verify the load/navigate loop runs and exits cleanly.
+    # This is NOT the leak/race hunt (that's tests/soak/run_soak.sh under the
+    # sanitizers); it just keeps the harness itself from rotting. Fast-exit
+    # avoids teardown flakiness in the quick check.
+    #
+    # Opt-in (OFF by default) so the normal `ctest` run stays fast:
+    #   cmake -DWINNOW_BUILD_SOAK_SMOKE=ON ... && ctest -L soak
+    option(WINNOW_BUILD_SOAK_SMOKE "Register the short soak smoke CTest" OFF)
+    if(WINNOW_BUILD_SOAK_SMOKE)
+        add_test(
+            NAME soak_smoke
+            COMMAND $<TARGET_FILE:Winnow> --soaktest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+        )
+        set_tests_properties(soak_smoke PROPERTIES
+            TIMEOUT 60
+            ENVIRONMENT "WINNOW_SOAK_MS=5000;WINNOW_SOAK_IMG_MS=20;WINNOW_SOAK_FAST_EXIT=1"
+            LABELS "soak"
+        )
+    endif()
 endif()

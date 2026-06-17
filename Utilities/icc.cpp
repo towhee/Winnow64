@@ -32,6 +32,13 @@ namespace ICC
             cmsSetLogErrorHandler(err);
             return false;
         }
+        /* Close any previously opened output profile before reopening, else
+           each call (e.g. moving the window to another screen) leaks the
+           prior handle. */
+        if (hOutProfile) {
+            cmsCloseProfile(hOutProfile);
+            hOutProfile = nullptr;
+        }
         hOutProfile = cmsOpenProfileFromFile(QFile::encodeName(G::winOutProfilePath).constData(), "r") ;
         if (!hOutProfile) {
             G::issue("Error",
@@ -69,15 +76,19 @@ namespace ICC
         if (hTransform) {
             quint32 size = static_cast<quint32>(image.height()*image.bytesPerLine()/4);
             cmsDoTransform(hTransform, image.constBits(), image.bits(), size);
-            if (!cmsCloseProfile(hInProfile)) {
-                QString msg = "ICC cmsCloseProfile failed.";
-                G::issue("Warning", msg, "ICC::transform", -1, G::winOutProfilePath);
-                cmsSetLogErrorHandler(err);
-            }
             cmsDeleteTransform(hTransform);
         }
         else {
             QString msg = "ICC cmsCreateTransform failed.";
+            G::issue("Warning", msg, "ICC::transform", -1, G::winOutProfilePath);
+            cmsSetLogErrorHandler(err);
+        }
+
+        /* Always close the input profile, whether or not the transform was
+           created — otherwise the failure path leaks hInProfile on every
+           image it hits. */
+        if (!cmsCloseProfile(hInProfile)) {
+            QString msg = "ICC cmsCloseProfile failed.";
             G::issue("Warning", msg, "ICC::transform", -1, G::winOutProfilePath);
             cmsSetLogErrorHandler(err);
         }

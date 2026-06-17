@@ -9,6 +9,7 @@ CMake/CTest + one script.
 | **smoke** | Real app launches, opens a folder, loads images, no crash | `ctest -L smoke` |
 | **metadata** | Full Metadata pipeline parses a real committed camera file (make/model/dims) | `ctest -L metadata` |
 | **tsan**  | No data races during folder-load concurrency | `tests/tsan/run_tsan.sh` |
+| **soak**  | Races + memory growth under sustained folder bounce (load/navigate) | `tests/soak/run_soak.sh` |
 
 ## Quick start (unit + smoke)
 
@@ -37,6 +38,39 @@ Race detection is by **log scan** (the self-test ends with `std::_Exit`, which
 skips TSan's atexit summary; per-race warnings still print live). Suppressions
 come from `tsan.supp` in the repo root.
 
+## Soak layer
+
+A long-running exercise of the **load/navigate pipeline** — the path where slow
+races and memory growth hide. Driven by the hidden `--soaktest <folders...>`
+flag (`main.cpp` → `MW::runSoakTest`): bounce between folders, reload each, and
+ping-pong through its images, seeded for reproducibility. Each bounce prints a
+probe line (`SOAK: bounce=… footprintMB=… imCacheMB=… dmRows=…`) so a climb can
+be localized — footprint rising while `imCacheMB`/rows stay flat means a leak
+*outside* the image cache.
+
+```sh
+tests/soak/run_soak.sh                                   # asan + tsan, 60 s each
+WINNOW_SOAK_MS=3600000 SOAK_PASSES=tsan tests/soak/run_soak.sh   # 1-hour race hunt
+SOAK_PASSES=leaks tests/soak/run_soak.sh                 # Apple `leaks` leak hunt
+```
+
+Three passes (`SOAK_PASSES`, default `"asan tsan"`):
+
+- **asan** — `mac-asan` build. Catches use-after-free / heap-overflow /
+  double-free live. The reliable **memory-safety** oracle on macOS.
+- **tsan** — `mac-tsan` build. Catches **races** (log scan, fast-exit).
+- **leaks** — Apple's `leaks --atExit` on a `mac-release` build. This is how
+  **leaks** are found on macOS: **LeakSanitizer (ASan `detect_leaks`) is not
+  supported on Apple Silicon**, so the asan pass runs with `detect_leaks=0`.
+  The leak pass relies on `runSoakTest`'s orderly window-close exit so `leaks`
+  scans a fully-released heap; it fails only if leaked bytes exceed
+  `SOAK_LEAKS_MAX_BYTES` (default 64 KiB, to tolerate Qt/macOS one-time globals).
+
+`runSoakTest` exits by an **orderly window close** (`closeEvent` stops the
+reader/cache/decoder threads, then the event loop unwinds and the stack `MW`
+destructs) so the leak scan sees only true leaks. `WINNOW_SOAK_FAST_EXIT=1`
+switches to `std::_Exit` (used by the tsan pass and the quick smoke).
+
 ## How it's wired
 
 - **Unit tests** (`tests/unit/`) link the production sources directly — no copied
@@ -51,7 +85,13 @@ come from `tsan.supp` in the repo root.
   subset) and exits `0` if make/model/dimensions parsed. Expected make/model are
   passed via `WINNOW_METATEST_MAKE` / `WINNOW_METATEST_MODEL` (set in the CTest
   registration), so app code stays generic and the fixture's identity lives here.
-- All three flags enable `QStandardPaths` test mode (so they **never touch your real
+- **Soak** uses the hidden `--soaktest <folders...>` flag → `MW::runSoakTest`,
+  deferred into the event loop (the bounce loop blocks on its own `processEvents`).
+  Pace/duration/seed come from `WINNOW_SOAK_MS` / `WINNOW_SOAK_IMG_MS` /
+  `WINNOW_SOAK_SEED`; `run_soak.sh` builds a temp tree of `SOAK_FOLDERS` fixture
+  copies to bounce between. A short opt-in CTest (`-DWINNOW_BUILD_SOAK_SMOKE=ON`,
+  `ctest -L soak`) just checks the harness still runs.
+- All four flags enable `QStandardPaths` test mode (so they **never touch your real
   `settings.ini`**) and bypass single-instance forwarding so they always start fresh.
 - **Fixtures** (`tests/fixtures/images/`): tiny generated images (`sample0*.{jpg,tif,png}`,
   one JPEG with EXIF — regenerate via `python3 tests/fixtures/generate_fixtures.py`,
