@@ -426,8 +426,65 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
 */
     if (G::isLogger) G::log("MW::runSelfTest", folderPath);
     centralLayout->setCurrentIndex(LoupeTab);
+
+    /* Optional concurrency-stress knobs (env-gated so the default smoke test is
+       unaffected). The TSan proxy run (tests/tsan/run_tsan_proxy.sh) sets these to
+       reproduce the QSortFilterProxyModel data race: a recursive multi-subfolder
+       load (structural proxy inserts on the GUI thread) running concurrently with
+       navigation that keeps the image-cache/decoder threads reading dm->sf. */
+    const bool recurse = qEnvironmentVariableIntValue("WINNOW_SELFTEST_RECURSE") == 1;
+    const int navMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_NAV_MS");
+
     if (fsTree->select(folderPath))
-        folderSelectionChange(folderPath, G::FolderOp::Add);
+        folderSelectionChange(folderPath, G::FolderOp::Add, /*resetDataModel*/true, recurse);
+
+    /* Drive navigation during the settle window. Sweeps forward to the last row
+       (reporting when it gets there), then ping-pongs, keeping the cache target
+       range moving through rows the GUI thread is still inserting/sorting.
+       WINNOW_SELFTEST_STRESS=1 additionally replicates the pick + ingest workflow
+       and reverses the sort mid-load (sortReverse) — proxy/filter mutation running
+       concurrently with the worker threads reading dm->sf, the suspected race. */
+    const bool stress = qEnvironmentVariableIntValue("WINNOW_SELFTEST_STRESS") == 1;
+    if (navMs > 0) {
+        QTimer *navTimer = new QTimer(this);
+        navTimer->setInterval(navMs);
+        int *tick = new int(0);
+        int *cursor = new int(0);          // explicit sweep position (single-select)
+        int *dir = new int(1);             // +1 forward, -1 backward
+        bool *reachedEnd = new bool(false);
+        connect(navTimer, &QTimer::timeout, this, [this, tick, cursor, dir, reachedEnd, stress]() {
+            if (!dm || dm->sf->rowCount() < 2) return;
+            const int last = dm->sf->rowCount() - 1;
+            ++(*tick);
+
+            // advance the sweep cursor; ping-pong at the ends, report reaching the end once
+            *cursor += *dir;
+            if (*cursor >= last) {
+                *cursor = last;
+                *dir = -1;
+                if (!*reachedEnd) {
+                    *reachedEnd = true;
+                    fprintf(stderr, "SELFTEST: reached end at row %d\n", last);
+                    fflush(stderr);
+                }
+            }
+            else if (*cursor <= 0) { *cursor = 0; *dir = 1; }
+
+            // setCurrentRow single-selects (ClearAndSelect) and drives the image cache
+            sel->setCurrentRow(*cursor);
+
+            if (stress) {
+                // pick exactly the current image (faithful one-at-a-time workflow)
+                if (*tick % 30 == 0) { sel->select(*cursor); togglePick(); }
+                if (*tick % 150 == 0) setIngested();            // ingest picks (model side)
+                if (*tick % 90 == 0) {                          // re-sort proxy during load
+                    isReverseSort = !isReverseSort;
+                    sortReverse();
+                }
+            }
+        });
+        navTimer->start();
+    }
 
     QTimer::singleShot(settleMs, this, [this, folderPath]() {
         const int rows = dm ? dm->rowCount() : 0;

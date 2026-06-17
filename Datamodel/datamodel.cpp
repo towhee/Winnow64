@@ -2790,10 +2790,10 @@ void DataModel::setIconRange(int sfRow)
     int start = qMax(0, sfRow - iconChunkSize / 2);
     int end = qMin(rows - 1, start + iconChunkSize);
     start = qMax(0, end - iconChunkSize);
-    // mutex.lock();
+    /* Atomic stores: MetaRead::setStartRow reads these on the metaReadThread.
+       (Was an unguarded plain-int write — TSan-confirmed race, datamodel.h.) */
     startIconRange = start;
     endIconRange = end;
-    // mutex.unlock();
     G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
 }
 
@@ -3786,8 +3786,8 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("firstVisibleIcon", dots) << G::s(firstVisibleIcon);
     rpt << "\n" << G::sj("lastVisibleIcon", dots) << G::s(lastVisibleIcon);
     rpt << "\n" << G::sj("visibleIcons", dots) << G::s(visibleIcons);
-    rpt << "\n" << G::sj("startIconRange", dots) << G::s(startIconRange);
-    rpt << "\n" << G::sj("endIconRange", dots) << G::s(endIconRange);
+    rpt << "\n" << G::sj("startIconRange", dots) << G::s(startIconRange.load());
+    rpt << "\n" << G::sj("endIconRange", dots) << G::s(endIconRange.load());
     rpt << "\n" << G::sj("iconChunkSize", dots) << Utilities::fitNumber(static_cast<qint64>(iconChunkSize), 14);
     rpt << "\n" << G::sj("useJitIconCache", dots) << G::s(G::useJitIconCache);
     rpt << "\n" << G::sj("icon cache mode", dots)

@@ -185,8 +185,12 @@ public:
     int firstVisibleIcon = 0;
     int lastVisibleIcon = 0;
     int visibleIcons = 0;
-    int startIconRange;
-    int endIconRange;
+    /* Icon-chunk bounds. Written on the GUI thread (setIconRange) and read on the
+       metaReadThread (MetaRead::setStartRow) — std::atomic to remove the TSan-
+       confirmed data race on these scalars. The pair is a load hint, so a reader
+       briefly seeing a half-updated range is benign and self-corrects next update. */
+    std::atomic<int> startIconRange{0};
+    std::atomic<int> endIconRange{0};
     int iconChunkSize;                  // max suggested number of icons to cache
     int scrollToIcon = 0;
 
