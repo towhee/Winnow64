@@ -22,6 +22,9 @@
 build/
 CMakeUserPresets.json
 
+# --- Deployment artifacts (staging / notarized / dmg / installer output) ---
+out/
+
 # --- qmake build directories (case-insensitive to match Release/release etc.) ---
 [Dd]ebug/
 [Rr]elease/
@@ -64,8 +67,10 @@ Winnow.app/
 *.Debug
 *.Release
 
-# --- Secrets ---
+# --- Secrets / per-machine deploy config ---
 .env
+packaging/macos/config.sh
+packaging/windows/config.ps1
 
 # --- Third-party libs ---
 # Headers under Lib/opencv, Lib/libheif, Lib/libde265, Lib/libtiff are

@@ -1,6 +1,7 @@
 #include "Main/mainwindow.h"
 #include "ImageFormats/Video/mov.h"
 
+#include <cstdlib>          // std::_Exit (soak fast-exit path)
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
@@ -303,13 +304,33 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
 
     slideCount = 0;
     G::isStressTest = true;
-    QList<QString>bookMarkPaths = bookmarks->bookmarkPaths.values();
+    QList<QString>bookMarkPaths = bookmarks->bookmarksWithImages();
     int n = bookMarkPaths.count();
     if (n == 0) {
         G::popup->showPopup("Stress test needs at least one bookmark.", 2000);
         G::isStressTest = false;
         return;
     }
+    /* Memory-leak probe: footprint and cache size are sampled at the tail of
+       each folder bounce so a slow climb can be localized. If footprintMB
+       climbs while imCacheMB and dm rows stay flat, the leak is outside the
+       image cache; if footprintMB tracks imCacheMB and never recovers, the
+       cache trim is the issue. nonCacheMB = footprintMB - imCacheMB isolates
+       the non-cache residency (the volatile part).
+
+       Anchor sampling (REVERSIBLE — fully off unless WINNOW_SOAK_ANCHOR is set
+       to a small folder path): per-bounce footprint is swamped by folder-size
+       variance (1.5–11 GB), so a slow leak is invisible. After each random
+       bounce we load the same fixed anchor folder and sample footprint THERE —
+       constant content means the only thing that can move ANCHOR footprintMB
+       across a long run is a true leak. Leave the env var unset and this block
+       is skipped entirely; nothing else changes. */
+    const QString anchorPath = qEnvironmentVariable("WINNOW_SOAK_ANCHOR");
+    const bool useAnchor = !anchorPath.isEmpty() && QFileInfo(anchorPath).isDir();
+    if (!anchorPath.isEmpty() && !useAnchor)
+        qDebug() << "MW::bounceFoldersStressTest WINNOW_SOAK_ANCHOR is not a folder:"
+                 << anchorPath;
+    qint64 bounceCount = 0;
     while (G::isStressTest) {
         uint randomIdx = QRandomGenerator::global()->generate() % static_cast<uint>(n);
         if (isRandomSecPerFolder) {
@@ -336,7 +357,135 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
         waitUntilMetadataLoaded(30000, "bounceFoldersStressTest");
         if (!G::isStressTest) break;
         traverseFolderStressTest(msPerImage, secPerFolder);
+
+        /* Footprint probe (see note above loop). sizeMB() is the lock-free
+           atomic byte total; dm rows reflect the current folder. */
+        ++bounceCount;
+        {
+            const qint64 footMB  = static_cast<qint64>(G::processFootprintMB());
+            const qint64 cacheMB = qRound(icd->sizeMB());
+            qDebug().nospace()
+                << "MW::bounceFoldersStressTest PROBE"
+                << "  bounce=" << bounceCount
+                << "  footprintMB=" << footMB
+                << "  imCacheMB=" << cacheMB
+                << "  nonCacheMB=" << (footMB - cacheMB)
+                << "  availMB=" << G::availableMemoryMB.load()
+                << "  dmRows=" << dm->rowCount()
+                << "  sfRows=" << dm->sf->rowCount()
+                << "  folder=" << path;
+        }
+
+        /* Fixed-content baseline (only if WINNOW_SOAK_ANCHOR set). Load the
+           anchor, settle its cache with a short fixed traverse, then sample.
+           Not counted as a bounce. */
+        if (useAnchor && G::isStressTest) {
+            fsTree->select(anchorPath);
+            waitUntilMetadataLoaded(30000, "bounceFoldersStressTest anchor");
+            if (!G::isStressTest) break;
+            traverseFolderStressTest(msPerImage, 0.5);   // fixed 0.5 s dwell
+            const qint64 footMB  = static_cast<qint64>(G::processFootprintMB());
+            const qint64 cacheMB = qRound(icd->sizeMB());
+            qDebug().nospace()
+                << "MW::bounceFoldersStressTest ANCHOR"
+                << "  bounce=" << bounceCount
+                << "  footprintMB=" << footMB
+                << "  imCacheMB=" << cacheMB
+                << "  nonCacheMB=" << (footMB - cacheMB)
+                << "  availMB=" << G::availableMemoryMB.load()
+                << "  dmRows=" << dm->rowCount();
+        }
     }
+}
+
+void MW::runSoakTest(const QStringList &folders, int durationMs,
+                     int msPerImage, uint seed)
+{
+/*
+    Headless race/leak soak (see tests/soak). Reuses the interactive bounce
+    algorithm without its dialogs: pick a random folder, reload it via the normal
+    startup path, ping-pong through its images for a random dwell, repeat until
+    durationMs elapses. Seeded so a failure can be replayed.
+
+    Exit drives an orderly window close (closeEvent → stop all worker threads) so
+    AddressSanitizer/LeakSanitizer's atexit report flags only TRUE leaks; set
+    WINNOW_SOAK_FAST_EXIT=1 to std::_Exit instead (TSan race runs, where the leak
+    check is off and orderly-teardown noise is unwanted).
+
+    Probe line per bounce: footprint vs cache MB vs row counts localizes a climb
+    (footprint up while imCacheMB/rows flat → leak outside the cache).
+*/
+    if (G::isLogger) G::log("MW::runSoakTest");
+    centralLayout->setCurrentIndex(LoupeTab);
+
+    QStringList paths;
+    for (const QString &f : folders)
+        if (QFileInfo(f).isDir()) paths << f;
+    if (paths.isEmpty()) {
+        fprintf(stderr, "SOAK: no valid folders given\n");
+        fflush(stderr);
+        std::_Exit(2);
+    }
+
+    if (msPerImage < 1) msPerImage = 50;
+    QRandomGenerator rng(seed);
+    fprintf(stderr, "SOAK: start folders=%lld durationMs=%d msPerImage=%d seed=%u\n",
+            (long long)paths.size(), durationMs, msPerImage, seed);
+    fflush(stderr);
+
+    G::isStressTest = true;
+    qint64 bounceCount = 0;
+    QElapsedTimer total;
+    total.start();
+
+    while (G::isStressTest && total.elapsed() < durationMs) {
+        const int idx = paths.size() == 1 ? 0
+                                          : int(rng.bounded(uint(paths.size())));
+        const QString path = paths.at(idx);
+
+        /* Random dwell 0.1–3.0 s, never overshooting the remaining budget.
+           Kept >= 0.1 s so traverseFolderStressTest does not fall into its
+           interactive QInputDialog branch. */
+        double secPerFolder = 0.1 + rng.generateDouble() * 2.9;
+        const double remainingSec = (durationMs - total.elapsed()) / 1000.0;
+        if (remainingSec < 0.1) break;
+        if (secPerFolder > remainingSec) secPerFolder = remainingSec;
+
+        if (fsTree->select(path))
+            folderSelectionChange(path, G::FolderOp::Add, /*resetDataModel*/true,
+                                  /*recurse*/false);
+        waitUntilMetadataLoaded(30000, "runSoakTest");
+        if (!G::isStressTest) break;
+
+        traverseFolderStressTest(msPerImage, secPerFolder);
+
+        ++bounceCount;
+        fprintf(stderr,
+            "SOAK: bounce=%lld elapsedMs=%lld footprintMB=%llu imCacheMB=%lld "
+            "availMB=%llu dmRows=%d sfRows=%d folder=%s\n",
+            (long long)bounceCount, (long long)total.elapsed(),
+            (unsigned long long)G::processFootprintMB(),
+            (long long)qRound(icd->sizeMB()),
+            (unsigned long long)G::availableMemoryMB.load(),
+            dm->rowCount(), dm->sf->rowCount(),
+            path.toLocal8Bit().constData());
+        fflush(stderr);
+    }
+
+    G::isStressTest = false;
+    fprintf(stderr, "SOAK: done bounces=%lld elapsedMs=%lld footprintMB=%llu\n",
+            (long long)bounceCount, (long long)total.elapsed(),
+            (unsigned long long)G::processFootprintMB());
+    fflush(stderr);
+
+    if (qEnvironmentVariableIntValue("WINNOW_SOAK_FAST_EXIT") == 1) {
+        std::_Exit(0);
+    }
+    /* Orderly teardown: closeEvent stops the reader/cache/decoder threads, then
+       quitting unwinds exec() so the stack-allocated MW destructs and LSan runs
+       its leak check against a fully-released app. */
+    close();
+    qApp->quit();
 }
 
 void MW::scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay)
@@ -568,9 +717,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Bounce between random bookmarked folders, cycling images in each,
     // until ESC is pressed or something crashes. Prompts for delay/duration.
-    // bounceFoldersStressTest();
-    G::useJitIconCache = !G::useJitIconCache;
-    qDebug() << "G::useJitIconCache =" << G::useJitIconCache;
+    bounceFoldersStressTest();
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*

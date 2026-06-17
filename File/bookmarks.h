@@ -18,6 +18,7 @@ public:
     void saveBookmarks(QSettings *setting);
     void updateCount();
     void updateCount(QString fPath);
+    QStringList bookmarksWithImages();
 
     QSet<QString> bookmarkPaths;
     bool showImageCount;

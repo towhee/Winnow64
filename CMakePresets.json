@@ -69,6 +69,27 @@
     },
 
     {
+      "name": "mac-asan",
+      "displayName": "macOS AddressSanitizer",
+      "inherits": "_base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "HOMEBREW_PREFIX": "/opt/homebrew",
+        "WINNOW_SANITIZE_ADDRESS": "ON",
+        "CMAKE_MAKE_PROGRAM": "/Users/roryhill/Qt/Tools/Ninja/ninja",
+        "CMAKE_C_COMPILER": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang",
+        "CMAKE_CXX_COMPILER": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+        "CMAKE_OBJCXX_COMPILER": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"
+      }
+    },
+
+    {
       "name": "win-debug",
       "displayName": "Windows Debug (VS 2022, x64)",
       "inherits": "_base",
@@ -98,6 +119,7 @@
     { "name": "mac-debug",   "configurePreset": "mac-debug"   },
     { "name": "mac-release", "configurePreset": "mac-release" },
     { "name": "mac-tsan",    "configurePreset": "mac-tsan"    },
+    { "name": "mac-asan",    "configurePreset": "mac-asan"    },
     { "name": "win-debug",   "configurePreset": "win-debug",   "configuration": "Debug"   },
     { "name": "win-release", "configurePreset": "win-release", "configuration": "Release" }
   ]

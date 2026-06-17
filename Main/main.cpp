@@ -94,18 +94,22 @@ int main(int argc, char *argv[])
     // and bypasses the single-instance forwarding so it always starts fresh.
     bool isSelfTest = false;
     bool isMetaTest = false;
+    bool isSoakTest = false;
     QString selfTestFolder;
     QString metaTestFile;
+    QStringList soakFolders;   // one or more folders to bounce between
     int selfTestMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_MS");
     if (selfTestMs <= 0) selfTestMs = 8000;
     for (int i = 1; i < argc; ++i) {
         const QString arg = QString::fromLocal8Bit(argv[i]);
         if (arg == "--selftest") isSelfTest = true;
         else if (arg == "--metatest") isMetaTest = true;
+        else if (arg == "--soaktest") isSoakTest = true;
         else if (isMetaTest && metaTestFile.isEmpty()) metaTestFile = arg;
         else if (isSelfTest && selfTestFolder.isEmpty()) selfTestFolder = arg;
+        else if (isSoakTest) soakFolders << arg;
     }
-    if (isSelfTest || isMetaTest) QStandardPaths::setTestModeEnabled(true);
+    if (isSelfTest || isMetaTest || isSoakTest) QStandardPaths::setTestModeEnabled(true);
 
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
@@ -116,19 +120,19 @@ int main(int argc, char *argv[])
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }
-    // The test modes open their target explicitly (runSelfTest / runMetaTest),
-    // not via args, and must always start a fresh instance.
-    if (isSelfTest || isMetaTest) args.clear();
+    // The test modes open their target explicitly (runSelfTest / runMetaTest /
+    // runSoakTest), not via args, and must always start a fresh instance.
+    if (isSelfTest || isMetaTest || isSoakTest) args.clear();
 
     // terminate if Winnow already open and no arguments to pass
-    if (!isSelfTest && !isMetaTest && args == "" && instance.isRunning()) {
+    if (!isSelfTest && !isMetaTest && !isSoakTest && args == "" && instance.isRunning()) {
         QString msg = "Winnow or a Winnow report is open.";
         // G::popUp->showPopup(msg);
         return 0;
     }
 
     // instance already running
-    if (!isSelfTest && !isMetaTest && instance.sendMessage(args)) {
+    if (!isSelfTest && !isMetaTest && !isSoakTest && instance.sendMessage(args)) {
         if (G::isRunByExtern) Utilities::log("WinnowMain", "Instance already running");
         QString msg = "Winnow or a Winnow report is open.";
         // G::popUp->showPopup(msg);
@@ -166,6 +170,22 @@ int main(int argc, char *argv[])
     }
     else if (isMetaTest) {
         mw.runMetaTest(metaTestFile);
+    }
+    else if (isSoakTest) {
+        // Long-running race/leak soak (see tests/soak). The bounce loop blocks
+        // on its own processEvents, so defer it into the event loop — that lets
+        // the orderly window-close teardown at the end run, which is what makes
+        // LeakSanitizer's exit report meaningful. Duration/pace/seed via env.
+        int soakMs   = qEnvironmentVariableIntValue("WINNOW_SOAK_MS");
+        if (soakMs <= 0) soakMs = 60000;                  // 60 s default
+        int soakImgMs = qEnvironmentVariableIntValue("WINNOW_SOAK_IMG_MS");
+        if (soakImgMs <= 0) soakImgMs = 50;               // 50 ms between images
+        bool seedSet = false;
+        uint soakSeed = qEnvironmentVariableIntValue("WINNOW_SOAK_SEED", &seedSet);
+        if (!seedSet) soakSeed = 1;                       // fixed default → reproducible
+        QTimer::singleShot(0, &mw, [&mw, soakFolders, soakMs, soakImgMs, soakSeed]() {
+            mw.runSoakTest(soakFolders, soakMs, soakImgMs, soakSeed);
+        });
     }
 
     // connect message when instance already running

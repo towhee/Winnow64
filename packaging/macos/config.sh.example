@@ -1,0 +1,50 @@
+#!/bin/zsh
+# --------------------------------------------------------------------
+# Per-machine macOS deployment config for Winnow.
+#
+# Copy this file to "config.sh" in the same directory and edit the
+# values for THIS machine. config.sh is git-ignored, so each Mac keeps
+# its own paths/identity; this .example is committed as the template.
+#
+#   cp config.sh.example config.sh
+# --------------------------------------------------------------------
+
+# Qt install used for macdeployqt (must match the Qt the app was built against).
+QT_DIR="$HOME/Qt/6.9.2/macos"
+
+# Homebrew prefix (Apple Silicon = /opt/homebrew, Intel = /usr/local).
+HOMEBREW_PREFIX="/opt/homebrew"
+
+# Ninja for the CMake build. Optional: only needed if `ninja` is not already on
+# PATH. Qt Creator bundles one here; override if yours is elsewhere.
+NINJA="$HOME/Qt/Tools/Ninja/ninja"
+
+# Code-signing identity (exact string from `security find-identity -v -p codesigning`).
+DEVELOPER_ID="Developer ID Application: Robert Hill (2663CS489R)"
+
+# notarytool keychain profile created once per machine with:
+#   xcrun notarytool store-credentials AC_PASSWORD \
+#     --apple-id "<your-apple-id>" --team-id 2663CS489R --password "<app-specific-pw>"
+NOTARY_KEYCHAIN_PROFILE="AC_PASSWORD"
+
+# Where notarized, version-named archive copies are kept (optional).
+ARCHIVE_DIR="$HOME/Applications/Winnow"
+
+# --- Distribution server (DigitalOcean) ---------------------------------------
+# Used by `upload` (push DMG to a test dir) and `promote` (archive the current
+# release, publish the new DMG to current/, update the landing page).
+SERVER_USER="root"
+SERVER_HOST="165.227.46.158"
+# OpenSSH private key that logs into SERVER_USER@SERVER_HOST. NOTE: a PuTTY .ppk
+# is NOT usable here — convert it (puttygen -O private-openssh) or use an existing
+# OpenSSH key. Per-machine; never committed.
+SERVER_SSH_KEY="$HOME/.ssh/id_rsa"
+# Web root on the server; must contain winnow_mac/ and index.html.
+SERVER_WEB_ROOT="/var/www/html"
+# Public base URL used in the index.html download link and post-publish check.
+WEB_BASE_URL="https://winnow.ca"
+
+# --- Plain test upload (optional; leave UPLOAD_ENABLED=false to skip) ----------
+# `upload` pushes the DMG here for pre-release testing (separate from `promote`).
+UPLOAD_ENABLED=false
+UPLOAD_SUBDIR="winnow_mac/test"   # relative to SERVER_WEB_ROOT

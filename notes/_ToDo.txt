@@ -2,8 +2,6 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Streamline media read speed
-- 'Hide or show info fields' does not select pref 'Metadata panel items'
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
 want to drop the flags and bake the behavior in, but no rush; keeping them is cheap
@@ -11,13 +9,10 @@ insurance.
 - Download a HDR PQ CR3 file for testing.
 - Windows ingest "how this works" has a white titlebar.
 - Windows tooltips have a white background
-- Fix MW::ejectUsb(QString path)
-- Fix MW::ejectUsbFromMainMenu
 - Review all rgh comments
 - Read svg files ie downloads/glyphs.svg
 - Maybe integrate apple sf symbols as svg
 - Confirm do not need MW::focusChange and MW::enableGoKeyActions
-- When copy or move images, should the filter be maintained?  Popup?
 - Select Photos/2020-2029 stalls while loading metadata and icons
 - Check for updates for macos
 - Help > Check for updates not working (windows)

@@ -1,0 +1,363 @@
+================================================================================
+WINNOW DEPLOYMENT
+================================================================================
+
+Claude instruction: Package and deploy to server
+
+Canonical, in-repo deployment pipeline for Winnow (macOS + Windows).
+
+KEEP THIS DOCUMENT UPDATED whenever the deployment changes (scripts, paths,
+version mechanism, signing, distribution). The scripts live in packaging/;
+packaging/README.md is the short quick-start, this file is the full reference.
+
+--------------------------------------------------------------------------------
+0. AT A GLANCE
+--------------------------------------------------------------------------------
+    macOS:    packaging/macos/deploy.command        (interactive menu)
+    Windows:  packaging/windows/deploy.ps1          (run from VS x64 PowerShell)
+
+    Output:   <repo>/out/   (git-ignored)
+                out/DMG/Winnow<version>.dmg          notarized + stapled
+                out/WinnowSetup-<version>.exe        Inno Setup installer
+
+    Version:  set ONLY in CMakeLists.txt -> project(Winnow VERSION x.yz ...)
+
+Everything is derived from each script's own location in the repo, so a plain
+`git clone` gives any machine a working pipeline. The only per-machine, non-
+committed input is a local config file (see section 3).
+
+--------------------------------------------------------------------------------
+1. DESIGN / WHY IT WORKS THIS WAY
+--------------------------------------------------------------------------------
+The pipeline lives INSIDE the repo (packaging/) so it is version-controlled and
+identical on every machine: the two development Macs and the Windows 11 PC. The
+old pipeline lived outside the repo (/Users/roryhill/Projects/WinnowInstall)
+with hardcoded /Users/roryhill paths and could not travel.
+
+Three principles:
+
+  (a) Self-locating. Each script computes the repo root from its own path
+      (zsh ${0:A:h} / PowerShell $MyInvocation). No absolute project paths.
+
+  (b) Per-machine config is separate and git-ignored, beside each platform's
+      scripts: packaging/macos/config.sh and packaging/windows/config.ps1 hold the
+      only machine-specific values: Qt path, signing identity, tool paths, upload
+      target. The
+      committed *.example files are the templates. Secrets stay out of git.
+
+  (c) Single source of truth for version. CMakeLists.txt
+        project(Winnow VERSION 2.05 LANGUAGES C CXX)
+      feeds, via configure_file:
+        - build/<preset>/Main/winnow_version.h   ->  #define WINNOW_VERSION
+              consumed by Main/mainwindow.h (QString versionNumber = WINNOW_VERSION)
+        - the macOS bundle CFBundleShortVersionString / CFBundleVersion
+              (set_target_properties MACOSX_BUNDLE_SHORT_VERSION_STRING)
+      The deploy scripts read the version BACK from the built artifact, so DMG /
+      installer filenames always match the binary. To change the version, edit
+      ONLY the project() line and rebuild.
+
+Distribution is plain downloads (a DMG and a Setup.exe uploaded to the server).
+There is no in-app auto-update; the old Qt Installer Framework online-installer
+mechanism was retired.
+
+--------------------------------------------------------------------------------
+2. PREREQUISITES (one-time per machine)
+--------------------------------------------------------------------------------
+macOS (each Mac):
+  - Xcode command line tools:   xcode-select --install
+  - Qt 6.9.2 (macos), default ~/Qt/6.9.2/macos
+  - Homebrew deps:              brew install opencv ffmpeg webp
+  - "Developer ID Application: Robert Hill (2663CS489R)" certificate imported
+    into the login keychain.
+  - Notarization credentials stored once in the keychain:
+        xcrun notarytool store-credentials AC_PASSWORD \
+          --apple-id "<apple-id>" --team-id 2663CS489R \
+          --password "<app-specific-password>"
+    (Create the app-specific password at appleid.apple.com. Never commit it.)
+
+Windows 11:
+  - Visual Studio 2022 (Desktop development with C++).
+  - Qt 6.9.2 (MSVC), default C:\Qt\6.9.2\msvc2022_64
+  - Inno Setup 6:               https://jrsoftware.org/isdl.php
+  - (optional) An OV/EV code-signing certificate + Windows SDK signtool.exe.
+    Without a cert the installer still builds but is unsigned (SmartScreen
+    warning on download).
+
+--------------------------------------------------------------------------------
+3. LOCAL CONFIG (create once per machine; update when a referenced path changes)
+--------------------------------------------------------------------------------
+The config file itself is created once per machine, but its VALUES are not
+permanent — update them whenever what they point at changes. In particular
+QT_DIR must be re-pointed every time you move to a new Qt version (see section 8),
+and the signing identity / upload target change if those change.
+
+macOS:
+    cp packaging/macos/config.sh.example packaging/macos/config.sh
+    # set: QT_DIR (UPDATE on every Qt upgrade), HOMEBREW_PREFIX, DEVELOPER_ID,
+    #      NOTARY_KEYCHAIN_PROFILE, ARCHIVE_DIR, the SERVER_* fields (for promote/
+    #      upload — see 6.1), and the optional plain-upload settings.
+
+Windows:
+    Copy-Item packaging\windows\config.ps1.example packaging\windows\config.ps1
+    # set: $InnoSetupCompiler, the optional $Sign* and $Upload* settings.
+    # ($QtDir is informational only — the build's Qt is the QT_DIR env var; see s.8.)
+
+config.sh and config.ps1 are git-ignored (see .gitignore). The ssh key used for
+uploading is referenced by path only and never committed.
+
+--------------------------------------------------------------------------------
+4. EXECUTING A macOS DEPLOYMENT
+--------------------------------------------------------------------------------
+
+4.0  THE MAGIC PHRASE (alternative to doing 4.1/4.2 by hand)
+     Say to Claude: "Package and deploy to server"
+     Claude runs the whole macOS release for you instead of you driving the menu:
+       1. confirms the version (CMakeLists project(VERSION ...)) and the pre-checks
+          it can verify (e.g. isLogger/isFlowLogger=false in Main/global.cpp),
+          flagging anything that needs your decision;
+       2. builds, stages, signs, NOTARIZES, makes the DMG, and runs the vanilla-Mac
+          verify (deploy.command 0-4 + V) against Qt 6.9.2;
+       3. PROMOTES (step 7): dry-run first, then — after showing the plan and getting
+          your explicit "yes" — archive current, upload new, update the landing page.
+     Prereqs: packaging/macos/config.sh exists; keychain unlocked (Developer ID cert
+     + AC_PASSWORD notary profile). Claude always confirms before the live-server
+     write, every time. The manual equivalent is 4.1 + 4.2 + 6.1 below.
+
+4.1  PRE-DEPLOYMENT CHECKLIST (manual — verify BEFORE running the pipeline)
+     These are the steps the pipeline does NOT do for you:
+
+       [ ] Version bumped: CMakeLists.txt  project(Winnow VERSION x.yz ...).
+           This is the only place to set it (section 7).
+       [ ] Logging OFF for release: Main/global.cpp
+               bool isLogger     = false;
+               bool isFlowLogger = false;
+       [ ] ExifTool current: if a new ExifTool is needed, update the contents of
+           ReleaseExtras/ExifTool/ (and exiftool_wrapper). It is bundled into the
+           app automatically from there — but only if you refresh it here.
+       [ ] config.sh QT_DIR matches the Qt you built with — critical right after a
+           Qt upgrade (section 8). A mismatch produces a broken bundle.
+       [ ] Code committed / working tree in the state you want to ship.
+       [ ] Prerequisites in place (cert in keychain, notary profile) — the Stage
+           step's check_release will also confirm cert/notary/entitlements/x86_64.
+
+     Already AUTOMATED (do NOT do these by hand):
+       - entitlements.plist copied into the bundle (from packaging/macos/)
+       - Qt frameworks + plugins embedded (macdeployqt)
+       - dependent dylibs relocated + x86_64 slices thinned to arm64
+       - ExifTool, focus_point_model.onnx, and Winnet bundled (CMake from ReleaseExtras/)
+       - version written into Info.plist (CFBundleShortVersionString)
+       - signing, notarization, stapling, DMG, archiving
+
+4.2  RUN THE PIPELINE
+    chmod +x packaging/macos/deploy.command      # first time only
+    packaging/macos/deploy.command               # or double-click in Finder
+
+The script presents a menu. "A" runs the full pipeline; the numbered items run a
+single stage so you can re-run from any point. Stages:
+
+  0) Build       cmake --build --preset mac-release  (configures first if needed).
+                 Produces build/mac-release/Winnow.app and reads its version.
+
+  1) Stage       Copies the built .app to out/Staging/, copies the committed
+                 entitlements.plist into Contents/, then:
+                   - deployQt:      runs macdeployqt (-appstore-compliant) to
+                                    embed Qt frameworks + plugins.
+                   - dependencies:  walks Frameworks/*.dylib, thins any x86_64
+                                    slices to arm64, rewrites install names to
+                                    @executable_path/../Frameworks, and pulls any
+                                    missing non-system deps from Homebrew. Then
+                                    replaces Qt's WebP dylibs with Homebrew's.
+                   - strip_symbols: strip -x on the bundle executables.
+                   - check_release: verifies cert present, notary profile valid,
+                                    entitlements lint, and runs the structural
+                                    vanilla-Mac readiness checks (see 4.3).
+
+  2) Sign        Removes inherited signatures, then deep-signs the STAGED app
+                 (never the build output) with --options runtime --timestamp and
+                 the repo entitlements. Verifies with codesign --verify --strict.
+                 (Gatekeeper reports "Unnotarized" here — expected until step 3.)
+
+  3) Notarize    Copies staging -> out/Notarized/Winnow<version>.app, zips with
+                 ditto, submits with `xcrun notarytool submit --wait`, staples
+                 the ticket, and confirms with `spctl --assess`.
+
+  4) Create DMG  Builds out/DMG/Winnow<version>.dmg (UDZO) from a clean temp dir
+                 containing the notarized .app plus an /Applications symlink for
+                 drag-to-install.
+
+  5) Archive     Copies the notarized app to
+                 $ARCHIVE_DIR/Winnow<version>_<YYYY-MM-DD>.app (if ARCHIVE_DIR set).
+
+  6) Upload      If UPLOAD_ENABLED=true, scp the DMG to the test dir
+                 (SERVER_WEB_ROOT/UPLOAD_SUBDIR). Otherwise skipped.
+
+  7) Promote     Publish to production: archive current, upload new, update the
+                 landing page. Verify-gated. See section 6.1. (NOT in "A".)
+
+  V) Verify vanilla-Mac readiness (section 4.3).
+  D) Promote DRY-RUN — print the server commands, write nothing.
+  A) FULL PIPELINE — 0-6 + verify. Does NOT publish (run 7 separately).
+  P) Print config / Q) Quit.
+
+Notes:
+  - The script does NOT use `set -e`; a failed stage reports and returns to the
+    menu rather than killing the shell.
+  - The app inside the DMG is itself stapled, so the (un-notarized) DMG is fine
+    for download distribution.
+
+4.3  WILL IT RUN ON A VANILLA MAC?  (menu V, or packaging/macos/verify_bundle.command)
+     We cannot boot a clean Mac from the dev machine, but every failure mode that
+     makes an app "only run on my Mac" is verifiable on the bundle. Menu option V
+     (and the standalone verify_bundle.command <app> [--structural-only]) runs:
+
+       Structural (staged app; also folded into the Stage step's checks):
+         1. No load dependency points outside the bundle (/opt, /usr/local,
+            /Users) — must be a system lib or @executable_path/@rpath/@loader_path.
+         2. No LC_RPATH points outside the bundle  (WARNING only — a stray rpath is
+            harmless if a bundle-internal rpath also resolves the dep).
+         3. Every internal @rpath/@executable_path/@loader_path dep resolves to a
+            file present in the bundle (no dangling deps).
+         4. Architecture is arm64 (note: arm64-only -> Apple Silicon only, NOT
+            Intel; an Intel-capable build would need a universal binary).
+         5. Minimum macOS (LC_BUILD_VERSION minos) is not newer than the floor (12).
+
+       Gatekeeper (notarized app — the actual launch gate on a vanilla Mac):
+         6. codesign --verify --deep --strict
+         7. spctl --assess --type exec  ->  "accepted / Notarized Developer ID"
+         8. xcrun stapler validate      (ticket stapled, so it launches offline)
+
+     Method note: the check parses LC_LOAD_DYLIB / LC_RPATH load commands. Do NOT
+     trust a naive `otool -L` scan (it includes each lib's self-id and reports false
+     "external" hits) or a `strings` scan (residual build-path strings flag even a
+     working app). Exit status is non-zero if any non-WARNING check fails.
+
+     What it CANNOT confirm: a runtime crash specific to a clean OS, resources read
+     from absolute dev paths at runtime, or plugins dlopen'd by name. The definitive
+     test remains launching on a fresh macOS VM or a clean second user account.
+
+--------------------------------------------------------------------------------
+5. EXECUTING A WINDOWS DEPLOYMENT
+--------------------------------------------------------------------------------
+Open "Developer PowerShell for VS 2022" (x64), then:
+
+    packaging\windows\deploy.ps1                 # full pipeline
+    packaging\windows\deploy.ps1 -NoBuild        # package existing build output
+    packaging\windows\deploy.ps1 -NoInstaller    # build (+sign) only
+
+Steps:
+  - Build:      cmake --build --preset win-release --config Release. The CMake
+                POST_BUILD steps (CMakeLists.txt) already assemble a runnable
+                layout next to Winnow.exe: windeployqt (Qt runtime + plugins),
+                third-party DLLs (opencv_world, libde265, libheif, tiff, zlib),
+                focus_point_model.onnx, et.exe (if present), and Winnet.exe.
+  - Version:    read from build/win-release/Main/winnow_version.h.
+  - Sign:       if $SignEnabled, signtool-signs every .exe/.dll in the output
+                (and the finished installer). Skipped cleanly otherwise.
+  - Installer:  runs Inno Setup (winnow.iss) over the deployed folder ->
+                out/WinnowSetup-<version>.exe. The .iss packages the whole tree
+                recursively, creates Start Menu + optional desktop shortcuts and
+                an uninstaller, and installs to Program Files.
+  - Upload:     if $UploadEnabled, scp the Setup.exe to $UploadTarget.
+
+--------------------------------------------------------------------------------
+6. DISTRIBUTION
+--------------------------------------------------------------------------------
+Server: ${SERVER_USER}@${SERVER_HOST} (root@165.227.46.158), webroot
+${SERVER_WEB_ROOT} (/var/www/html). Layout:
+    winnow_mac/current/Winnow<ver>.dmg   the live download
+    winnow_mac/<ver>/Winnow<ver>.dmg     archived previous releases
+    index.html                           landing page with the download link
+
+6.1  PROMOTE  (macOS) — menu 7, or "D" for a dry-run
+     `promote` codifies a release publish. Given the live current/ DMG (OLD) and
+     the freshly built DMG (NEW) it:
+       1. VERIFY GATE — runs verify_bundle on the notarized app; refuses to
+          publish if it fails (so a broken build can't go live).
+       2. detects OLD from current/Winnow*.dmg (you confirm), NEW from the DMG.
+       3. prints the full plan and waits for an explicit 'yes' (PRODUCTION write).
+       4. archive : mv current/Winnow<OLD>.dmg -> <OLD>/Winnow<OLD>.dmg (never deletes).
+       5. upload  : scp out/DMG/Winnow<NEW>.dmg -> current/Winnow<NEW>.dmg.
+       6. index   : back up index.html (index.html.bak-<timestamp>) on the server,
+          then bump the Mac link Winnow<OLD>.dmg -> Winnow<NEW>.dmg and
+          "Winnow <OLD> (Apple Silicon" -> "<NEW>", shown as a diff for approval.
+       7. post-check: ls current/ + the archive dir, and curl -sI the new URL (200).
+
+     Run "D" (promote --dry-run) first: it prints every ssh/scp/sed it would run
+     and writes nothing (works offline; prompts for OLD/NEW).
+
+     Config (packaging/macos/config.sh): SERVER_USER, SERVER_HOST, SERVER_SSH_KEY (an
+     OpenSSH key that logs into root@host — a PuTTY .ppk must be converted with
+     `puttygen -O private-openssh`), SERVER_WEB_ROOT, WEB_BASE_URL.
+
+     Still manual: the version pages Docs/winnow.html and Docs/versions.html.
+     `promote` is intentionally NOT part of the "A" full pipeline — publishing is a
+     deliberate, separate action.
+
+6.2  Windows: no promote yet — deploy.ps1 has only the simple test-upload stub
+     ($UploadEnabled). Upload Setup.exe to winnow_win/current manually for now.
+
+6.3  Plain test upload (macOS menu 6): with UPLOAD_ENABLED=true, scp the DMG to
+     winnow_mac/test (UPLOAD_SUBDIR) for pre-release testing — separate from promote.
+
+--------------------------------------------------------------------------------
+7. CHANGING THE VERSION
+--------------------------------------------------------------------------------
+Edit ONE line:
+    CMakeLists.txt:  project(Winnow VERSION x.yz LANGUAGES C CXX)
+Rebuild. The in-app About string, the bundle Info.plist, and all deploy
+filenames update automatically.
+
+--------------------------------------------------------------------------------
+8. CHANGING THE QT VERSION
+--------------------------------------------------------------------------------
+No Qt version is embedded in any build path or deploy script (unlike the old
+Deploy.command, which hardcoded build-winnow64-Qt_6_9_2... and QT_VERSION
+constants). The build locates Qt via the QT_DIR ENVIRONMENT VARIABLE, which
+CMakePresets.json reads as CMAKE_PREFIX_PATH = $env{QT_DIR} (or via the Qt
+Creator / Visual Studio kit). macdeployqt / windeployqt then pull frameworks and
+plugins from whatever Qt the app linked against.
+
+To move to a new Qt (e.g. 6.10.0):
+  1. Install the new Qt on each machine (macOS + Windows).
+  2. Point the BUILD at it: update the QT_DIR environment variable (or the IDE
+     kit) to the new Qt path, then RECONFIGURE CMake and rebuild. deployqt tools
+     follow automatically.
+  3. macOS only: update QT_DIR in packaging/macos/config.sh to the new Qt path. This is
+     where the deploy script finds macdeployqt, and it MUST match the Qt the app
+     was built with (a mismatch yields a broken bundle).
+  4. Windows: nothing functional to change — windeployqt runs as a CMake
+     POST_BUILD step and tracks the linked Qt; refreshing platforms/imageformats/
+     styles DLLs is now automatic. ($QtDir in config.ps1 is informational only;
+     deploy.ps1 does not read it.)
+  5. Update the 6.9.2 references in packaging/README.md and this file.
+
+Caveats:
+  - There are TWO QT_DIR values: one ENV VAR for the build (read by the preset)
+    and a separate QT_DIR in config.sh for the deploy. Keep them pointed at the
+    same Qt; the script does not currently verify they match.
+
+--------------------------------------------------------------------------------
+9. LEGACY (RETAINED, DEPRECATED)
+--------------------------------------------------------------------------------
+The old pipeline at /Users/roryhill/Projects/WinnowInstall (Deploy/Deploy.command,
+Batch/, Deploy/_Batch/, Config/, packages/, repository/, the Qt Installer
+Framework online installer) is retained for reference but is NO LONGER USED. Do
+deployment work in packaging/. notes/DeployInstall.txt documents the old process
+and historically contained plaintext credentials — those should be rotated and
+scrubbed; do not rely on it.
+
+--------------------------------------------------------------------------------
+10. FILE MAP
+--------------------------------------------------------------------------------
+    packaging/README.md                quick-start
+    packaging/macos/config.sh.example  macOS config template (-> macos/config.sh)
+    packaging/macos/deploy.command     macOS pipeline
+    packaging/macos/verify_bundle.command  vanilla-Mac readiness checker (menu V)
+    packaging/macos/entitlements.plist hardened-runtime entitlements
+    packaging/windows/config.ps1.example  Windows config template (-> windows/config.ps1)
+    packaging/windows/deploy.ps1       Windows pipeline
+    packaging/windows/winnow.iss       Inno Setup installer definition
+    winnow_version.h.in                version header template (configure_file)
+    CMakeLists.txt                     project(VERSION) + bundle props + windeployqt
+    out/                               build artifacts (git-ignored)
+================================================================================
