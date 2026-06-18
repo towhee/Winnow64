@@ -34,6 +34,7 @@
 #   WINNOW_SOAK_SEED=<n>     RNG seed for reproducibility (default 1)
 #   SOAK_FOLDERS=<n>         number of fixture subfolders to bounce (default 3)
 #   SOAK_LEAKS_MAX_BYTES=<n> leak-pass failure threshold (default 65536)
+#   SOAK_THREADS_MAX_GROWTH=<n> max allowed thread growth before FAIL (default 300)
 #
 # A real multi-hour hunt:  WINNOW_SOAK_MS=3600000 SOAK_PASSES="tsan" tests/soak/run_soak.sh
 #
@@ -49,6 +50,7 @@ IMG_MS="${WINNOW_SOAK_IMG_MS:-50}"
 SEED="${WINNOW_SOAK_SEED:-1}"
 NFOLDERS="${SOAK_FOLDERS:-3}"
 LEAKS_MAX="${SOAK_LEAKS_MAX_BYTES:-65536}"
+THREADS_MAX_GROWTH="${SOAK_THREADS_MAX_GROWTH:-300}"
 FIXTURES="$ROOT/tests/fixtures/images"
 
 # Build a temp tree of N folders (each a copy of the committed fixtures) so the
@@ -77,6 +79,27 @@ soak_env() {
     echo "WINNOW_SOAK_MS=$DURATION_MS WINNOW_SOAK_IMG_MS=$IMG_MS WINNOW_SOAK_SEED=$SEED"
 }
 
+check_threads() {
+    # Gate on OS thread growth over the run. runSoakTest's "SOAK: done" line
+    # reports threadsGrowth = threadsMax - threadsBaseline. Bounded = no leak; a
+    # large value is the video-thumbnail decoder-thread leak resurfacing.
+    # $1 = log, $2 = pass name. Returns non-zero on failure.
+    local log="$1" name="$2" growth
+    growth=$(grep -oE 'threadsGrowth=-?[0-9]+' "$log" | tail -1 | grep -oE -- '-?[0-9]+')
+    if [ -z "$growth" ] || [ "$growth" -lt 0 ]; then
+        echo "[$name] threads: no sample (probe is macOS-only) — skipped"
+        return 0
+    fi
+    if [ "$growth" -gt "$THREADS_MAX_GROWTH" ]; then
+        echo "[$name] FAIL: thread count grew $growth > $THREADS_MAX_GROWTH — thread leak (see $log)"
+        grep -E '^SOAK: (done|bounce)' "$log" \
+            | grep -oE 'threads=[0-9]+|threadsGrowth=-?[0-9]+' | tail -5
+        return 1
+    fi
+    echo "[$name] threads OK: growth=$growth (<= $THREADS_MAX_GROWTH)"
+    return 0
+}
+
 for pass in $SOAK_PASSES; do
     case "$pass" in
 
@@ -101,6 +124,7 @@ for pass in $SOAK_PASSES; do
         else
             echo "[asan] PASS: no AddressSanitizer errors over $(grep -c '^SOAK: bounce' "$LOG") bounces."
         fi
+        check_threads "$LOG" "asan" || overall=1
         ;;
 
     tsan)
@@ -123,6 +147,7 @@ for pass in $SOAK_PASSES; do
         else
             echo "[tsan] PASS: no races over $(grep -c '^SOAK: bounce' "$LOG") bounces."
         fi
+        check_threads "$LOG" "tsan" || overall=1
         ;;
 
     leaks)
@@ -150,6 +175,7 @@ for pass in $SOAK_PASSES; do
         else
             echo "[leaks] PASS: $bytes leaked bytes (<= $LEAKS_MAX threshold)."
         fi
+        check_threads "$LOG" "leaks" || overall=1
         ;;
 
     *)

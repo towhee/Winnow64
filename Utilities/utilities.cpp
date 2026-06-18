@@ -381,7 +381,11 @@ bool Utilities::comboBoxContainsText(QComboBox* comboBox, const QString& text)
 bool Utilities::clipboardHasUrls()
 {
     const QMimeData *mimeData = QGuiApplication::clipboard()->mimeData();
-    if (mimeData->urls().count()) return true;
+    // mimeData() can be null when there is no window-server clipboard (e.g. the
+    // app launched from a terminal/headless for the soak harness). Guard before
+    // dereferencing — otherwise QMimeData::urls() crashes during startup
+    // (createMenus → enableSelectionDependentMenus).
+    if (mimeData && mimeData->urls().count()) return true;
     return false;
 }
 

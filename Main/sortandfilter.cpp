@@ -85,9 +85,6 @@ void MW::updateFilterMenu(QString source)
     filterGreenAction->setEnabled(f("Green"));
     filterBlueAction->setEnabled(f("Blue"));
     filterPurpleAction->setEnabled(f("Purple"));
-
-    qDebug() << " ";
-    qDebug() << " ";
 }
 
 void MW::filterChange(QString source)

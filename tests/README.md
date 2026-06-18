@@ -71,6 +71,13 @@ reader/cache/decoder threads, then the event loop unwinds and the stack `MW`
 destructs) so the leak scan sees only true leaks. `WINNOW_SOAK_FAST_EXIT=1`
 switches to `std::_Exit` (used by the tsan pass and the quick smoke).
 
+**Thread gate (all passes).** Every bounce logs the live OS thread count
+(`threads=`); the `SOAK: done` line reports `threadsGrowth = threadsMax -
+threadsBaseline`. `run_soak.sh` fails any pass whose growth exceeds
+`SOAK_THREADS_MAX_GROWTH` (default 300). This is what catches the video-thumbnail
+decoder-thread leak (`QMediaPlayer`/AVFoundation) that exhausts `pthread_create`
+under sustained bouncing — independent of the sanitizer in use.
+
 ## How it's wired
 
 - **Unit tests** (`tests/unit/`) link the production sources directly — no copied

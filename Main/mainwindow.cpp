@@ -367,7 +367,12 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // return;  // ignore recover from crash when debugging
 
     // recover from prior crash
-    if (settings->value("hasCrashed").toBool() && !isShiftOnOpen) {
+    /* Skip the (modal, blocking) recovery prompt under QStandardPaths test mode
+       — the soak/self-test harnesses run headless and end via std::_Exit/kill,
+       which leaves hasCrashed=true; without this the next automated launch hangs
+       on a dialog waiting for an answer. */
+    if (settings->value("hasCrashed").toBool() && !isShiftOnOpen
+        && !QStandardPaths::isTestModeEnabled()) {
         int picks = pickLogCount();
         int ratings = ratingLogCount();
         int colors = colorClassLogCount();
@@ -474,9 +479,12 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
             sel->setCurrentRow(*cursor);
 
             if (stress) {
-                // pick exactly the current image (faithful one-at-a-time workflow)
-                if (*tick % 30 == 0) { sel->select(*cursor); togglePick(); }
-                if (*tick % 150 == 0) setIngested();            // ingest picks (model side)
+                /* Mutate the proxy/filter during load to stress the worker
+                   threads reading dm->sf. Picks and ingest were removed: they
+                   write the pick/ingest logs, so a crash or kill mid-run left
+                   state that triggered the "recover prior state" dialog on the
+                   next launch, blocking automated reruns. sortReverse is the
+                   side-effect-free proxy stressor. */
                 if (*tick % 90 == 0) {                          // re-sort proxy during load
                     isReverseSort = !isReverseSort;
                     sortReverse();
@@ -2928,7 +2936,7 @@ void MW::waitUntilMetadataLoaded(int ms, QString src)
     QEventLoop loop;
     QTimer timeout;
 
-    qDebug() << srcFun << "G::allMetadataAttempted =" << G::allMetadataAttempted;
+    // qDebug() << srcFun << "G::allMetadataAttempted =" << G::allMetadataAttempted;
 
     timeout.setSingleShot(true);
     timeout.setInterval(ms);     // millisecond timeout

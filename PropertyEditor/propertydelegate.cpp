@@ -429,8 +429,8 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     font.setPointSize(fontSize);
     painter->setFont(font);
 
-    QPen catPen(G::header2Color);            // root items same other items
-    QPen hdrPen(G::header3Color);            // root items same other items
+    QPen catPen(G::header2Color);           // root items l
+    QPen hdrPen(G::header3Color);           // root items same other items
     QPen regPen(QColor(t,t,t));             // other items have silver text
     QPen selPen("#1b8a83");                 // selected items have torquoise text
     QPen disPen(G::disabledColor.name());   // disabled items have gray text
