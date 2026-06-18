@@ -301,6 +301,7 @@ QString MW::diagnostics()
     rpt << "\n" << "displayPhysicalHorizontalPixels = " << G::s(G::displayPhysicalHorizontalPixels);
     rpt << "\n" << "displayPhysicalVerticalPixels = " << G::s(G::displayPhysicalVerticalPixels);
     rpt << "\n" << "checkIfUpdate = " << G::s(checkIfUpdate);
+    rpt << "\n" << "updateSkipVersion = " << updateSkipVersion;
     rpt << "\n" << "isRatingBadgeVisible = " << G::s(isRatingBadgeVisible);
     rpt << "\n" << "isIconNumberVisible = " << G::s(isIconNumberVisible);
     rpt << "\n" << "classificationBadgeInImageDiameter = " << G::s(classificationBadgeInImageDiameter);

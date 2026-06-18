@@ -31,3 +31,12 @@ $UploadEnabled = $false
 # Uses WinSCP or scp; target host path for the Setup.exe.
 $UploadTarget = "root@165.227.46.158:/var/www/html/winnow_win/test"
 $UploadSshKey = "$env:USERPROFILE\.ssh\winnow_deploy.ppk"
+
+# --- In-app update descriptor (version.json) ---------------------------------
+# Public website base URL and the scp destination for the per-platform
+# version.json consumed by the in-app "Check for updates" feature. Leave
+# $VersionJsonTarget empty to skip publishing it. NOTE: the url written into
+# version.json points at winnow_win/current/, so promote the Setup.exe from
+# test/ to current/ (or change the path below) before the check will find it.
+$WebBaseUrl = "https://winnow.ca"
+$VersionJsonTarget = "root@165.227.46.158:/var/www/html/winnow_win/version.json"

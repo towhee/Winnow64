@@ -534,12 +534,29 @@ EOF
         rm -rf "$tmp"
     fi
 
+    # 7b) Publish version.json (consumed by the in-app "Check for updates" feature)
+    echo "🛰  Updating ${MAC_DIR}/version.json → $NEW…"
+    local vjson
+    vjson="{ \"version\": \"$NEW\", \"url\": \"${WEB_BASE_URL}/winnow_mac/current/Winnow$NEW.dmg\", \"notes\": \"${WEB_BASE_URL}/winnow/versions.html\" }"
+    if $dry; then
+        echo "   [dry-run] upload version.json: $vjson"
+    else
+        local vtmp; vtmp=$(mktemp -d)
+        printf '%s\n' "$vjson" > "$vtmp/version.json"
+        scp -i "$SERVER_SSH_KEY" "$vtmp/version.json" "${SERVER_USER}@${SERVER_HOST}:${MAC_DIR}/version.json" \
+            || { echo "❌ version.json upload failed"; rm -rf "$vtmp"; return 1; }
+        echo "   ✓ version.json updated"
+        rm -rf "$vtmp"
+    fi
+
     # 8) Post-publish check
     echo "🔍 Post-publish:"
     run "$SSH 'ls -l ${MAC_DIR}/current ${MAC_DIR}/$OLD'"
     if ! $dry; then
         echo "   HTTP check: ${WEB_BASE_URL}/winnow_mac/current/Winnow$NEW.dmg"
         curl -sI "${WEB_BASE_URL}/winnow_mac/current/Winnow$NEW.dmg" | head -1
+        echo "   HTTP check: ${WEB_BASE_URL}/winnow_mac/version.json"
+        curl -sI "${WEB_BASE_URL}/winnow_mac/version.json" | head -1
     fi
     echo "✅ Promote complete (old=$OLD new=$NEW)."
 }

@@ -102,6 +102,21 @@ if ($UploadEnabled) {
     Write-Host "Uploading $Setup to $UploadTarget..." -ForegroundColor Cyan
     scp -i $UploadSshKey $Setup $UploadTarget
     Write-Host "  Uploaded" -ForegroundColor Green
+
+    # Publish version.json consumed by the in-app "Check for updates" feature.
+    if ($VersionJsonTarget) {
+        if (-not $WebBaseUrl) { $WebBaseUrl = "https://winnow.ca" }
+        $DownloadUrl = "$WebBaseUrl/winnow_win/current/WinnowSetup-$Version.exe"
+        $NotesUrl    = "$WebBaseUrl/winnow/versions.html"
+        $VersionJson = "{ ""version"": ""$Version"", ""url"": ""$DownloadUrl"", ""notes"": ""$NotesUrl"" }"
+        $VTmp = Join-Path $OutDir "version.json"
+        Set-Content -Path $VTmp -Value $VersionJson -Encoding ASCII
+        Write-Host "Uploading version.json to $VersionJsonTarget..." -ForegroundColor Cyan
+        scp -i $UploadSshKey $VTmp $VersionJsonTarget
+        Write-Host "  version.json published ($Version)" -ForegroundColor Green
+    } else {
+        Write-Host "version.json not published (VersionJsonTarget not set)." -ForegroundColor Yellow
+    }
 } else {
     Write-Host "Upload disabled (UploadEnabled = `$false)." -ForegroundColor Yellow
 }
