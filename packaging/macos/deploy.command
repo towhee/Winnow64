@@ -429,10 +429,19 @@ function promote() {
         [[ -f "$SERVER_SSH_KEY" ]] || { echo "❌ SERVER_SSH_KEY not found: $SERVER_SSH_KEY"; return 1; }
     fi
 
-    local SSH="ssh -i $SERVER_SSH_KEY ${SERVER_USER}@${SERVER_HOST}"
+    # zsh does NOT word-split an unquoted scalar, so a string $SSH would be run as
+    # one command literally named "ssh -i <key> <host>". Use an array: unquoted $SSH
+    # splits into argv words (line that runs ssh directly), while a quoted "$SSH"
+    # joins back to a string for the run()/eval paths.
+    local -a SSH=(ssh -i "$SERVER_SSH_KEY" "${SERVER_USER}@${SERVER_HOST}")
 
     # run-or-print helper
     run() { if $dry; then echo "   [dry-run] $*"; else eval "$@"; fi }
+
+    # Populate NOTARIZED_APP_PATH/DMG_PATH when promote runs standalone in a fresh
+    # session (nothing set them yet) — otherwise the check below wrongly reports
+    # "No notarized app" even though out/Notarized/Winnow<ver>.app exists.
+    ensure_version
 
     # 1) NEW version + DMG present
     local NEW
