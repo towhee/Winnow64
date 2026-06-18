@@ -2453,6 +2453,14 @@ void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
     (invalid media, playback error, invalid frame, null image, exception).
     Without it the row stays MetadataReadingColumn=true forever and the
     dispatcher refuses to revisit it.
+
+    IconLoaded is also set true here so a video whose thumbnail can't be
+    decoded is treated as "done". On the success path setIconFromVideoFrame
+    sets it; on failure it was left false, so readIcon kept re-emitting
+    videoFrameDecode every time the row re-entered the dispatch range. Each
+    retry spun up a fresh AVFoundation/QMediaPlayer decode whose threads were
+    never joined — a thread leak that exhausted pthread_create under sustained
+    folder bouncing. Marking the row done stops the retry loop.
 */
     if (G::isLogger) G::log("DataModel::clearVideoReadingFlag");
     if (G::stop) return;
@@ -2463,8 +2471,9 @@ void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
 
     QMutexLocker locker(&dmMutex);
     setData(index(dmRow, G::MetadataReadingColumn), false);
-    // attempted but no frame decoded -> failed
+    // attempted but no frame decoded -> failed, and done (no retry)
     setData(index(dmRow, G::MetadataStatusColumn), G::MetaFailed);
+    setData(index(dmRow, G::IconLoadedColumn), true);
 }
 
 void DataModel::updateIconChunkLoaded()

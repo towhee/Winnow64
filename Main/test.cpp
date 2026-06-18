@@ -2,7 +2,35 @@
 #include "ImageFormats/Video/mov.h"
 
 #include <cstdlib>          // std::_Exit (soak fast-exit path)
+#ifdef Q_OS_MAC
+#include <malloc/malloc.h>  // malloc_zone_pressure_relief (soak anchor baseline)
+#include <mach/mach.h>      // task_threads (live thread count for soak probe)
+#endif
 #include <atomic>
+
+namespace {
+/* Live OS thread count for this process. A monotonic climb across bounces is a
+   thread leak (the QMediaPlayer/FFmpeg video-thumbnail fallback is the prime
+   suspect); flat means the EAGAIN crash is stack-VM exhaustion instead.
+   Returns -1 where unsupported. */
+int processThreadCount()
+{
+#ifdef Q_OS_MAC
+    thread_act_array_t threads = nullptr;
+    mach_msg_type_number_t count = 0;
+    if (task_threads(mach_task_self(), &threads, &count) != KERN_SUCCESS)
+        return -1;
+    // task_threads allocates the array and the per-thread send rights; free both.
+    for (mach_msg_type_number_t i = 0; i < count; ++i)
+        mach_port_deallocate(mach_task_self(), threads[i]);
+    vm_deallocate(mach_task_self(), reinterpret_cast<vm_address_t>(threads),
+                  count * sizeof(thread_act_t));
+    return static_cast<int>(count);
+#else
+    return -1;
+#endif
+}
+} // namespace
 #include <condition_variable>
 #include <mutex>
 #include <queue>
@@ -183,7 +211,7 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
             randomChangeDirection = (choice == "Yes");
         }
     }
-    qDebug() << "MW::traverseFolderStressTest randomChangeDirection =" << randomChangeDirection;
+    // qDebug() << "MW::traverseFolderStressTest randomChangeDirection =" << randomChangeDirection;
 
     QString stopMsg = "Press <font color=\"red\"><b>ESC</b></font> to stop stress test";
     if (!secPerFolder) G::popup->showPopup(stopMsg, 0);
@@ -195,7 +223,7 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     int uturnCounter = 0;
     int uturnMax;
     dm->sf->rowCount() < 300 ? uturnMax = dm->sf->rowCount() : uturnMax = 300;
-    qDebug() << "uturnMax =" << uturnMax;
+    // qDebug() << "uturnMax =" << uturnMax;
     int uturnAmount;
     if (uturnMax > 10) uturnAmount = QRandomGenerator::global()->bounded(1, uturnMax);
     else uturnAmount = dm->sf->rowCount();
@@ -271,7 +299,7 @@ void MW::bounceFoldersStressTestFromMenu()
 void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
 {
     if (G::isLogger) G::log("MW::bounceFoldersStressTest");
-    qDebug() << "MW::bounceFoldersStressTest" << "ms =" << msPerImage << "duration =" << secPerFolder;
+    // qDebug() << "MW::bounceFoldersStressTest" << "ms =" << msPerImage << "duration =" << secPerFolder;
     G::popup->reset();
 
     if (!msPerImage) {
@@ -318,17 +346,16 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
        cache trim is the issue. nonCacheMB = footprintMB - imCacheMB isolates
        the non-cache residency (the volatile part).
 
-       Anchor sampling (REVERSIBLE — fully off unless WINNOW_SOAK_ANCHOR is set
-       to a small folder path): per-bounce footprint is swamped by folder-size
+       Anchor sampling (REVERSIBLE — set anchorPath to "" to disable, or delete
+       this block to revert): per-bounce footprint is swamped by folder-size
        variance (1.5–11 GB), so a slow leak is invisible. After each random
        bounce we load the same fixed anchor folder and sample footprint THERE —
        constant content means the only thing that can move ANCHOR footprintMB
-       across a long run is a true leak. Leave the env var unset and this block
-       is skipped entirely; nothing else changes. */
-    const QString anchorPath = qEnvironmentVariable("WINNOW_SOAK_ANCHOR");
+       across a long run is a true leak. Point this at any small stable folder. */
+    const QString anchorPath = "/Users/roryhill/Pictures/_heic";
     const bool useAnchor = !anchorPath.isEmpty() && QFileInfo(anchorPath).isDir();
     if (!anchorPath.isEmpty() && !useAnchor)
-        qDebug() << "MW::bounceFoldersStressTest WINNOW_SOAK_ANCHOR is not a folder:"
+        qDebug() << "MW::bounceFoldersStressTest anchorPath is not a folder:"
                  << anchorPath;
     qint64 bounceCount = 0;
     while (G::isStressTest) {
@@ -338,17 +365,17 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
             int msUpper = static_cast<quint64>(upper * 1000);
             quint64 msPerFolder = QRandomGenerator::global()->bounded(msLower, msUpper);
             secPerFolder = msPerFolder * 1.0 / 1000;
-            qDebug() << "MW::bounceFoldersStressTest RANDOM"
-                     << "msLower =" << msLower
-                     << "msUpper =" << msUpper
-                     << "msPerFolder =" << msPerFolder
-                     << "secInFolder =" << secPerFolder
-                     ;
+            // qDebug() << "MW::bounceFoldersStressTest RANDOM"
+            //          << "msLower =" << msLower
+            //          << "msUpper =" << msUpper
+            //          << "msPerFolder =" << msPerFolder
+            //          << "secInFolder =" << secPerFolder
+            //          ;
         }
         QString path = bookMarkPaths.at(randomIdx);
-        qDebug() << "MW::bounceFoldersStressTest"
-                 << "secInFolder =" << secPerFolder
-                 << path;
+        // qDebug() << "MW::bounceFoldersStressTest"
+        //          << "secInFolder =" << secPerFolder
+        //          << path;
         bookmarks->select(path);
         fsTree->select(path);
         // Folder load is async — wait until dm->sf is populated before
@@ -370,28 +397,43 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
                 << "  footprintMB=" << footMB
                 << "  imCacheMB=" << cacheMB
                 << "  nonCacheMB=" << (footMB - cacheMB)
+                << "  threads=" << processThreadCount()
                 << "  availMB=" << G::availableMemoryMB.load()
                 << "  dmRows=" << dm->rowCount()
                 << "  sfRows=" << dm->sf->rowCount()
                 << "  folder=" << path;
         }
 
-        /* Fixed-content baseline (only if WINNOW_SOAK_ANCHOR set). Load the
-           anchor, settle its cache with a short fixed traverse, then sample.
+        /* Fixed-content baseline (only if anchorPath set). Load the anchor,
+           settle its cache with a short fixed traverse, then force libmalloc to
+           return free pages to the OS before sampling. macOS phys_footprint
+           counts dirty pages the allocator hasn't handed back, so without the
+           pressure relief the anchor footprint just tracks the previous folder's
+           high-water mark. After relief, footprintMB is the TRUE resident
+           baseline: flat across the run = retention only (no leak); climbing =
+           a real leak. preReliefMB shows how much was merely retained.
            Not counted as a bounce. */
         if (useAnchor && G::isStressTest) {
             fsTree->select(anchorPath);
             waitUntilMetadataLoaded(30000, "bounceFoldersStressTest anchor");
             if (!G::isStressTest) break;
             traverseFolderStressTest(msPerImage, 0.5);   // fixed 0.5 s dwell
+            const qint64 preReliefMB = static_cast<qint64>(G::processFootprintMB());
+#ifdef Q_OS_MAC
+            /* Ask every malloc zone to return free pages to the OS. Diagnostic
+               only — drives the footprint to its true resident floor. */
+            malloc_zone_pressure_relief(nullptr, 0);
+#endif
             const qint64 footMB  = static_cast<qint64>(G::processFootprintMB());
             const qint64 cacheMB = qRound(icd->sizeMB());
             qDebug().nospace()
                 << "MW::bounceFoldersStressTest ANCHOR"
                 << "  bounce=" << bounceCount
                 << "  footprintMB=" << footMB
+                << "  preReliefMB=" << preReliefMB
                 << "  imCacheMB=" << cacheMB
                 << "  nonCacheMB=" << (footMB - cacheMB)
+                << "  threads=" << processThreadCount()
                 << "  availMB=" << G::availableMemoryMB.load()
                 << "  dmRows=" << dm->rowCount();
         }
@@ -413,7 +455,10 @@ void MW::runSoakTest(const QStringList &folders, int durationMs,
     check is off and orderly-teardown noise is unwanted).
 
     Probe line per bounce: footprint vs cache MB vs row counts localizes a climb
-    (footprint up while imCacheMB/rows flat → leak outside the cache).
+    (footprint up while imCacheMB/rows flat → leak outside the cache). threads is
+    the live OS thread count; the "SOAK: done" summary reports threadsGrowth
+    (threadsMax - threadsBaseline), which run_soak.sh gates on to catch thread
+    leaks (the video-thumbnail decoder-thread leak).
 */
     if (G::isLogger) G::log("MW::runSoakTest");
     centralLayout->setCurrentIndex(LoupeTab);
@@ -435,6 +480,8 @@ void MW::runSoakTest(const QStringList &folders, int durationMs,
 
     G::isStressTest = true;
     qint64 bounceCount = 0;
+    int threadsBaseline = -1;   // first bounce's thread count
+    int threadsMax = -1;        // peak thread count over the run
     QElapsedTimer total;
     total.start();
 
@@ -460,12 +507,16 @@ void MW::runSoakTest(const QStringList &folders, int durationMs,
         traverseFolderStressTest(msPerImage, secPerFolder);
 
         ++bounceCount;
+        const int threads = processThreadCount();
+        if (bounceCount == 1) threadsBaseline = threads;
+        if (threads > threadsMax) threadsMax = threads;
         fprintf(stderr,
             "SOAK: bounce=%lld elapsedMs=%lld footprintMB=%llu imCacheMB=%lld "
-            "availMB=%llu dmRows=%d sfRows=%d folder=%s\n",
+            "threads=%d availMB=%llu dmRows=%d sfRows=%d folder=%s\n",
             (long long)bounceCount, (long long)total.elapsed(),
             (unsigned long long)G::processFootprintMB(),
             (long long)qRound(icd->sizeMB()),
+            threads,
             (unsigned long long)G::availableMemoryMB.load(),
             dm->rowCount(), dm->sf->rowCount(),
             path.toLocal8Bit().constData());
@@ -473,9 +524,17 @@ void MW::runSoakTest(const QStringList &folders, int durationMs,
     }
 
     G::isStressTest = false;
-    fprintf(stderr, "SOAK: done bounces=%lld elapsedMs=%lld footprintMB=%llu\n",
-            (long long)bounceCount, (long long)total.elapsed(),
-            (unsigned long long)G::processFootprintMB());
+    /* Summary line the soak runner gates on: threadsGrowth = threadsMax -
+       threadsBaseline. A bounded value means no thread leak; a large value is
+       the QMediaPlayer/AVFoundation video-thumbnail leak resurfacing. */
+    const int threadsGrowth = (threadsBaseline >= 0 && threadsMax >= 0)
+                                  ? threadsMax - threadsBaseline : -1;
+    fprintf(stderr,
+        "SOAK: done bounces=%lld elapsedMs=%lld footprintMB=%llu "
+        "threadsBaseline=%d threadsMax=%d threadsGrowth=%d\n",
+        (long long)bounceCount, (long long)total.elapsed(),
+        (unsigned long long)G::processFootprintMB(),
+        threadsBaseline, threadsMax, threadsGrowth);
     fflush(stderr);
 
     if (qEnvironmentVariableIntValue("WINNOW_SOAK_FAST_EXIT") == 1) {

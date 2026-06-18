@@ -147,7 +147,15 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
                           int(Qt::AlignRight | Qt::AlignVCenter));
             return;
         }
-        // Fall through to QMediaPlayer fallback on failure.
+        /* AVFoundation failed. Do NOT fall back to QMediaPlayer for dmThumb:
+           files AVFoundation rejects (no moov atom, corrupt) also fail in the
+           FFmpeg backend ("Invalid media"), so the fallback produces nothing
+           while leaking the player's decoder threads — the leak that exhausted
+           pthread_create under sustained bouncing. Report failure so the row is
+           marked done (clearVideoReadingFlag) and never retried. The
+           QMediaPlayer path remains for the FindDuplicates "frameImage" use. */
+        emit videoFrameFailed(dmRow, dmInstance);
+        return;
     }
 #endif
 
