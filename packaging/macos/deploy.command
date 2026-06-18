@@ -19,7 +19,7 @@
 #   • Qt 6.9.2 (macos) at the path in config.sh
 #   • Homebrew deps: opencv ffmpeg webp
 #   • Developer ID Application certificate in the login keychain
-#   • notarytool keychain profile (default name: AC_PASSWORD)
+#   • notarytool keychain profile (default name: AC_APIKEY)
 # --------------------------------------------------------------------
 
 # Launch in Terminal if double-clicked from Finder
@@ -53,7 +53,7 @@ source "$CONFIG_FILE"
 
 # Defaults for anything the config omitted
 : ${HOMEBREW_PREFIX:=/opt/homebrew}
-: ${NOTARY_KEYCHAIN_PROFILE:=AC_PASSWORD}
+: ${NOTARY_KEYCHAIN_PROFILE:=AC_APIKEY}
 : ${UPLOAD_ENABLED:=false}
 : ${SERVER_WEB_ROOT:=/var/www/html}
 : ${WEB_BASE_URL:=https://winnow.ca}
@@ -104,6 +104,18 @@ function resolve_version() {
     DMG_PATH="${DMG_DIR}/${WINNOW_VERSION_NAME}.dmg"
 }
 
+# Ensure WINNOW_VERSION and its derived paths (DMG_PATH, NOTARIZED_APP_PATH, …) are
+# populated when a menu step runs standalone in a fresh session, where no prior
+# build/stage/notarize has set them. The version is identical across all bundles for
+# a given build, so resolve it from a FIXED-path bundle (staging, else release); that
+# version then drives the version-named NOTARIZED/DMG paths the later steps check.
+function ensure_version() {
+    [[ -n "$WINNOW_VERSION" ]] && return 0
+    if [[ -d "$STAGING_APP_PATH" ]]; then resolve_version "$STAGING_APP_PATH"
+    elif [[ -d "$RELEASE_APP_PATH" ]]; then resolve_version "$RELEASE_APP_PATH"
+    fi
+}
+
 # --- Build (CMake preset) --------------------------------------------
 function build() {
     [[ -d "$QT_DIR" ]] || { echo "❌ QT_DIR not found: $QT_DIR (set it in config.sh)"; return 1; }
@@ -138,8 +150,13 @@ function build() {
             need_configure=true
         fi
     fi
-    $need_configure && { cmake --preset mac-release -S "$REPO_ROOT" || return 1; }
-    cmake --build --preset mac-release || return 1
+    # CMake resolves presets relative to the current working directory (the build
+    # preset has no -S to point it at the repo), so run both from REPO_ROOT in a
+    # subshell. Otherwise launching the script from elsewhere (e.g. $HOME) makes
+    # `cmake --build --preset` look for CMakePresets.json in the wrong place.
+    ( cd "$REPO_ROOT" || exit 1
+      $need_configure && { cmake --preset mac-release || exit 1; }
+      cmake --build --preset mac-release ) || return 1
     if [[ ! -d "$RELEASE_APP_PATH" ]]; then
         echo "❌ Build did not produce $RELEASE_APP_PATH"
         return 1
@@ -197,10 +214,42 @@ function dependencies() {
         done
     done
 
+    # Thin the nested Winnet helper's bundled binaries to arm64. The loop above
+    # only covers Contents/Frameworks loose *.dylib; the Winnet copy lives under
+    # Contents/MacOS/Winnets and its frameworks store the Mach-O without a .dylib
+    # extension, so match by Mach-O content (lipo) rather than by name.
+    local winnets_dir="${STAGING_APP_PATH}/Contents/MacOS/Winnets"
+    if [[ -d "$winnets_dir" ]]; then
+        find "$winnets_dir" -type f | while IFS= read -r macho; do
+            if lipo -archs "$macho" 2>/dev/null | grep -q "x86_64"; then
+                echo "      thinning Winnets/${macho#$winnets_dir/} → arm64"
+                lipo "$macho" -thin arm64 -output "${macho}.arm64" && mv "${macho}.arm64" "$macho"
+            fi
+        done
+    fi
+
     # Reinstate Homebrew WebP libs (Qt ships incompatible copies)
     rm -f "$STAGE_FRAMEWORKS_DIR"/libwebp*.dylib
     cp "$HOMEBREW_PREFIX"/lib/libwebp*.dylib "$STAGE_FRAMEWORKS_DIR/" 2>/dev/null || true
     cp "$HOMEBREW_PREFIX"/lib/libsharpyuv.0.dylib "$STAGE_FRAMEWORKS_DIR/" 2>/dev/null || true
+
+    # Strip absolute Homebrew LC_RPATHs from every bundled Mach-O. The link step
+    # bakes $HOMEBREW_PREFIX/lib into the executable (OpenCV/FFmpeg/etc. live
+    # there), and it is searched BEFORE @executable_path/../Frameworks. On any Mac
+    # that has a Homebrew Qt installed, dyld then resolves @rpath/QtCore against
+    # that Homebrew Qt instead of the bundled one — a version skew that crashes the
+    # cocoa plugin at startup (Symbol not found). Vanilla Macs lack the path and
+    # fall through to the bundle, so this only bites dev machines, but the rpath
+    # has no business shipping. Remove it so only the bundled Frameworks resolve.
+    find "$STAGING_APP_PATH/Contents" -type f -perm +111 2>/dev/null | while IFS= read -r macho; do
+        otool -l "$macho" 2>/dev/null |
+            awk '/LC_RPATH/{g=1} g&&/path /{print $2; g=0}' |
+            grep "^${HOMEBREW_PREFIX}" |
+        while IFS= read -r rp; do
+            install_name_tool -delete_rpath "$rp" "$macho" 2>/dev/null &&
+                echo "      removed rpath $rp from ${macho#$STAGING_APP_PATH/}"
+        done
+    done
     echo "   ✓ dylibs fixed"
 }
 
@@ -278,7 +327,12 @@ function sign() {
         codesign --remove-signature "$f" 2>/dev/null || true
     done
 
-    codesign --force --options runtime --timestamp \
+    # --deep signs nested code (the Winnets/Winnet helper + its bundled Qt, the
+    # ExifTool perl script + exiftool_wrapper, and the Frameworks/PlugIns dylibs)
+    # inside-out in one pass. Without it codesign signs only the outer bundle and
+    # --verify --strict rejects the unsigned subcomponents (e.g. ExifTool/exiftool).
+    # This matches the legacy WinnowInstall sign step that produced notarized 2.04.
+    codesign --deep --force --options runtime --timestamp \
         --entitlements "$STAGING_APP_PATH/Contents/entitlements.plist" \
         --sign "$DEVELOPER_ID" "$STAGING_APP_PATH" || return 1
 
@@ -318,6 +372,7 @@ function notarize() {
 
 # --- Build a distributable DMG with an /Applications symlink ----------
 function disk_image() {
+    ensure_version   # set NOTARIZED_APP_PATH/DMG_PATH when run standalone
     [[ -d "$NOTARIZED_APP_PATH" ]] || { echo "❌ No notarized app — run Notarize first."; return 1; }
     mkdir -p "$DMG_DIR"
     rm -f "$DMG_PATH"
@@ -336,6 +391,7 @@ function disk_image() {
 
 # --- Archive a version-named copy ------------------------------------
 function archive() {
+    ensure_version   # set NOTARIZED_APP_PATH/WINNOW_VERSION when run standalone
     [[ -d "$NOTARIZED_APP_PATH" ]] || { echo "❌ No notarized app."; return 1; }
     [[ -n "$ARCHIVE_DIR" ]] || { echo "⚠️  ARCHIVE_DIR unset; skipping."; return 0; }
     local dated="${ARCHIVE_DIR}/Winnow${WINNOW_VERSION}_$(date +%Y-%m-%d).app"
@@ -347,7 +403,8 @@ function archive() {
 # --- Optional plain upload to a test dir (separate from promote) -----
 function upload() {
     [[ "$UPLOAD_ENABLED" == true ]] || { echo "ℹ️  Upload disabled (UPLOAD_ENABLED=false)."; return 0; }
-    [[ -f "$DMG_PATH" ]] || { echo "❌ No DMG to upload."; return 1; }
+    ensure_version   # set DMG_PATH when run standalone (see ensure_version)
+    [[ -f "$DMG_PATH" ]] || { echo "❌ No DMG to upload (looked for $DMG_PATH)."; return 1; }
     local target="${SERVER_USER}@${SERVER_HOST}:${SERVER_WEB_ROOT}/${UPLOAD_SUBDIR}/"
     echo "📡 Uploading DMG to $target…"
     scp -i "$SERVER_SSH_KEY" "$DMG_PATH" "$target" || return 1

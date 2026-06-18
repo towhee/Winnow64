@@ -46,13 +46,29 @@ the version, edit only the `project(... VERSION ...)` line.**
 2. Qt 6.9.2 (macos) installed (default `~/Qt/6.9.2/macos`).
 3. Homebrew deps: `brew install opencv ffmpeg webp`
 4. Import the **Developer ID Application** certificate into the login keychain.
-5. Store notarization credentials once:
+5. Store notarization credentials once under the profile name `AC_APIKEY`
+   (matches `NOTARY_KEYCHAIN_PROFILE` in config.sh). **Preferred: App Store
+   Connect API key** — it has no 2FA/password/expiry friction and won't lock the
+   Apple ID on repeated use, which makes it the robust choice for an automated
+   pipeline:
    ```sh
-   xcrun notarytool store-credentials AC_PASSWORD \
+   # App Store Connect -> Users and Access -> Integrations -> App Store Connect
+   # API -> generate a key (Developer role is sufficient for notarization).
+   # Download AuthKey_<KEYID>.p8 ONCE; note the Key ID and Issuer ID.
+   xcrun notarytool store-credentials AC_APIKEY \
+     --key /path/to/AuthKey_<KEYID>.p8 \
+     --key-id <KEY_ID> --issuer <ISSUER_ID>
+   ```
+   **Fallback: Apple ID + app-specific password** (more fragile — repeated failed
+   attempts can lock the Apple ID, and resetting the Apple ID password
+   invalidates every app-specific password):
+   ```sh
+   xcrun notarytool store-credentials AC_APIKEY \
      --apple-id "<your-apple-id>" --team-id 2663CS489R \
      --password "<app-specific-password>"
    ```
    (Generate the app-specific password at appleid.apple.com — never commit it.)
+   Verify either route with `xcrun notarytool history --keychain-profile AC_APIKEY`.
 6. Create the local config:
    ```sh
    cp packaging/macos/config.sh.example packaging/macos/config.sh
@@ -88,7 +104,7 @@ release end to end, so you don't have to drive the menu yourself. Claude will:
    one to `current/`, and update the landing-page link.
 
 Prerequisites: `packaging/macos/config.sh` exists, the keychain is unlocked
-(Developer ID cert + `AC_PASSWORD` notary profile). Because the promote step
+(Developer ID cert + `AC_APIKEY` notary profile). Because the promote step
 writes to the live server, Claude always confirms before that step — every time.
 
 ---
