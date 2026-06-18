@@ -74,4 +74,7 @@ Mac Deployment steps
 
 It needs a config.sh
 
+! xcrun notarytool store-credentials "AC_PASSWORD" --apple-id "hillrg@hotmail.com" --team-id "2663CS489R" --password "pclq-wccx-jyjg-ggpy"
+
+
 

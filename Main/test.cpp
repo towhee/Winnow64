@@ -352,8 +352,10 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
        bounce we load the same fixed anchor folder and sample footprint THERE —
        constant content means the only thing that can move ANCHOR footprintMB
        across a long run is a true leak. Point this at any small stable folder. */
-    const QString anchorPath = "/Users/roryhill/Pictures/_heic";
-    const bool useAnchor = !anchorPath.isEmpty() && QFileInfo(anchorPath).isDir();
+    const QString anchorPath = "";
+    // const QString anchorPath = "/Users/roryhill/Pictures/_heic";
+    const bool useAnchor = false;
+    // const bool useAnchor = !anchorPath.isEmpty() && QFileInfo(anchorPath).isDir();
     if (!anchorPath.isEmpty() && !useAnchor)
         qDebug() << "MW::bounceFoldersStressTest anchorPath is not a folder:"
                  << anchorPath;
@@ -388,21 +390,21 @@ void MW::bounceFoldersStressTest(int msPerImage, double secPerFolder)
         /* Footprint probe (see note above loop). sizeMB() is the lock-free
            atomic byte total; dm rows reflect the current folder. */
         ++bounceCount;
-        {
-            const qint64 footMB  = static_cast<qint64>(G::processFootprintMB());
-            const qint64 cacheMB = qRound(icd->sizeMB());
-            qDebug().nospace()
-                << "MW::bounceFoldersStressTest PROBE"
-                << "  bounce=" << bounceCount
-                << "  footprintMB=" << footMB
-                << "  imCacheMB=" << cacheMB
-                << "  nonCacheMB=" << (footMB - cacheMB)
-                << "  threads=" << processThreadCount()
-                << "  availMB=" << G::availableMemoryMB.load()
-                << "  dmRows=" << dm->rowCount()
-                << "  sfRows=" << dm->sf->rowCount()
-                << "  folder=" << path;
-        }
+        // {
+        //     const qint64 footMB  = static_cast<qint64>(G::processFootprintMB());
+        //     const qint64 cacheMB = qRound(icd->sizeMB());
+        //     qDebug().nospace()
+        //         << "MW::bounceFoldersStressTest PROBE"
+        //         << "  bounce=" << bounceCount
+        //         << "  footprintMB=" << footMB
+        //         << "  imCacheMB=" << cacheMB
+        //         << "  nonCacheMB=" << (footMB - cacheMB)
+        //         << "  threads=" << processThreadCount()
+        //         << "  availMB=" << G::availableMemoryMB.load()
+        //         << "  dmRows=" << dm->rowCount()
+        //         << "  sfRows=" << dm->sf->rowCount()
+        //         << "  folder=" << path;
+        // }
 
         /* Fixed-content baseline (only if anchorPath set). Load the anchor,
            settle its cache with a short fixed traverse, then force libmalloc to

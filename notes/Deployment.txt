@@ -2,7 +2,7 @@
 WINNOW DEPLOYMENT
 ================================================================================
 
-Claude instruction: Package and deploy to server
+Claude instruction (Magic Phrase): Package and deploy to server
 
 Canonical, in-repo deployment pipeline for Winnow (macOS + Windows).
 
@@ -69,11 +69,28 @@ macOS (each Mac):
   - Homebrew deps:              brew install opencv ffmpeg webp
   - "Developer ID Application: Robert Hill (2663CS489R)" certificate imported
     into the login keychain.
-  - Notarization credentials stored once in the keychain:
-        xcrun notarytool store-credentials AC_PASSWORD \
+  - Notarization credentials stored once in the keychain under the profile name
+    AC_APIKEY (must match NOTARY_KEYCHAIN_PROFILE in config.sh). Two routes:
+
+    PREFERRED -- App Store Connect API key. No 2FA/password/expiry friction and
+    no risk of locking the Apple ID on repeated use, so it is the robust choice
+    for an automated pipeline:
+        /* App Store Connect -> Users and Access -> Integrations ->
+           App Store Connect API -> generate a key (Developer role is enough for
+           notarization). Download AuthKey_<KEYID>.p8 ONCE; note Key ID + Issuer ID. */
+        xcrun notarytool store-credentials AC_APIKEY \
+          --key /path/to/AuthKey_<KEYID>.p8 \
+          --key-id <KEY_ID> --issuer <ISSUER_ID>
+
+    FALLBACK -- Apple ID + app-specific password. More fragile: repeated failed
+    attempts can LOCK the Apple ID (then you must reset the password at
+    iforgot.apple.com, which in turn invalidates every app-specific password):
+        xcrun notarytool store-credentials AC_APIKEY \
           --apple-id "<apple-id>" --team-id 2663CS489R \
           --password "<app-specific-password>"
     (Create the app-specific password at appleid.apple.com. Never commit it.)
+
+    Verify either route:  xcrun notarytool history --keychain-profile AC_APIKEY
 
 Windows 11:
   - Visual Studio 2022 (Desktop development with C++).
@@ -108,20 +125,6 @@ uploading is referenced by path only and never committed.
 --------------------------------------------------------------------------------
 4. EXECUTING A macOS DEPLOYMENT
 --------------------------------------------------------------------------------
-
-4.0  THE MAGIC PHRASE (alternative to doing 4.1/4.2 by hand)
-     Say to Claude: "Package and deploy to server"
-     Claude runs the whole macOS release for you instead of you driving the menu:
-       1. confirms the version (CMakeLists project(VERSION ...)) and the pre-checks
-          it can verify (e.g. isLogger/isFlowLogger=false in Main/global.cpp),
-          flagging anything that needs your decision;
-       2. builds, stages, signs, NOTARIZES, makes the DMG, and runs the vanilla-Mac
-          verify (deploy.command 0-4 + V) against Qt 6.9.2;
-       3. PROMOTES (step 7): dry-run first, then — after showing the plan and getting
-          your explicit "yes" — archive current, upload new, update the landing page.
-     Prereqs: packaging/macos/config.sh exists; keychain unlocked (Developer ID cert
-     + AC_PASSWORD notary profile). Claude always confirms before the live-server
-     write, every time. The manual equivalent is 4.1 + 4.2 + 6.1 below.
 
 4.1  PRE-DEPLOYMENT CHECKLIST (manual — verify BEFORE running the pipeline)
      These are the steps the pipeline does NOT do for you:

@@ -186,20 +186,16 @@ Mac Developer Notes:
 	Comapny/Team: Robert hillrg
 	Company/Team ID: 2663CS489R
 	Winnow App ID: 2663CS489R.com.winnow.winnow
+        Key ID: 4SS564JPL2
+        ISSUER ID: 59498aeb-3c52-4b7f-845f-b2289d936201
 	Developer certificate: 2663CS489R
-        App-Specific Password for Winnow Notarization: pclq-wccx-jyjg-ggpy
+        Keychain AppKey: /Users/roryhill/.appstoreconnect/private_keys/AuthKey_4SS564JPL2.p8
         Keychain login password (MacOS login): kirkpa
 
         /Users/roryhill/Projects/build-winnow64-Qt_6_8_2_for_macOS-Release/Winnow.app/Contents/entitlements.plist
 
-        Save your App-Specific Password to the macOS keychain in terminal:
-	xcrun notarytool store-credentials "AC_PASSWORD" \
-	  --apple-id "hillrg@gmail.com" \
-	  --team-id "2663CS489R" \
-	  --password "pclq-wccx-jyjg-ggpy"
-
-        Credentials saved to Keychain.
-	To use them, specify `--keychain-profile "AC_PASSWORD"`
+       Credentials saved to Keychain.
+        To use them, specify `--keychain-profile "AC_APIKEY"`
 
         In Terminal, test that Xcode and tools are aware of your identity:
 	xcrun notarytool store-credentials "notary-profile" \

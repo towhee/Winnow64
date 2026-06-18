@@ -22,10 +22,12 @@ NINJA="$HOME/Qt/Tools/Ninja/ninja"
 # Code-signing identity (exact string from `security find-identity -v -p codesigning`).
 DEVELOPER_ID="Developer ID Application: Robert Hill (2663CS489R)"
 
-# notarytool keychain profile created once per machine with:
-#   xcrun notarytool store-credentials AC_PASSWORD \
-#     --apple-id "<your-apple-id>" --team-id 2663CS489R --password "<app-specific-pw>"
-NOTARY_KEYCHAIN_PROFILE="AC_PASSWORD"
+# notarytool keychain profile created once per machine. Preferred (App Store
+# Connect API key — no Apple-ID password/2FA, won't lock the account):
+#   xcrun notarytool store-credentials AC_APIKEY \
+#     --key ~/.appstoreconnect/private_keys/AuthKey_<KEYID>.p8 \
+#     --key-id <KEYID> --issuer <ISSUER_ID>
+NOTARY_KEYCHAIN_PROFILE="AC_APIKEY"
 
 # Where notarized, version-named archive copies are kept (optional).
 ARCHIVE_DIR="$HOME/Applications/Winnow"
