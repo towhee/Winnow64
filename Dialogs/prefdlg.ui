@@ -118,7 +118,7 @@
          <rect>
           <x>20</x>
           <y>60</y>
-          <width>261</width>
+          <width>360</width>
           <height>20</height>
          </rect>
         </property>
@@ -128,7 +128,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Check for program updates</string>
+         <string>Check for program updates at startup</string>
         </property>
        </widget>
       </widget>

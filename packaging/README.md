@@ -131,10 +131,33 @@ Produces `out\WinnowSetup-<version>.exe`.
 
 ## Distribution
 
-Distribution is plain downloads (no in-app auto-update): the DMG and the
-`Setup.exe` are uploaded to the DigitalOcean server (`winnow_mac` / `winnow_win`).
-Set `UPLOAD_ENABLED=true` / `$UploadEnabled = $true` in the config to have the
-scripts upload automatically; the ssh key path is per-machine and never committed.
+Distribution is plain downloads: the DMG and the `Setup.exe` are uploaded to the
+DigitalOcean server (`winnow_mac` / `winnow_win`). Set `UPLOAD_ENABLED=true` /
+`$UploadEnabled = $true` in the config to have the scripts upload automatically; the
+ssh key path is per-machine and never committed.
+
+### In-app "Check for updates"
+
+Winnow checks for a newer release (Help → *Check for updates*, and silently at startup
+when the *Check for program updates at startup* preference is on). It does **not**
+auto-install — it fetches a small per-platform descriptor, compares it to the running
+`WINNOW_VERSION`, and on a newer version opens the download URL in the browser. The
+deploy scripts publish that descriptor:
+
+- macOS: `https://winnow.ca/winnow_mac/version.json` (written by `deploy.command`'s
+  promote step, step 7b)
+- Windows: `https://winnow.ca/winnow_win/version.json` (written by `deploy.ps1` when
+  `$VersionJsonTarget` is set)
+
+Shape:
+```json
+{ "version": "2.05",
+  "url":     "https://winnow.ca/winnow_mac/current/Winnow2.05.dmg",
+  "notes":   "https://winnow.ca/winnow/versions.html" }
+```
+The Windows `url` points at `winnow_win/current/`, so promote the Setup.exe from
+`test/` to `current/` (or adjust the path) so the link resolves. The mac promote step
+keeps `version.json` in sync automatically.
 
 ## ⚠️ Security note
 

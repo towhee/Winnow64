@@ -73,6 +73,11 @@ Table of Contents
          - Drive Root Normalization
          - Auto-Eject After Ingest
 
+    10. CHECK FOR UPDATES
+         - Overview
+         - Mechanism
+         - Publishing version.json
+
 
 ******************************************************************************************
 
@@ -1554,3 +1559,61 @@ Auto-Eject After Ingest
     background ingest; MW::ingest() additionally guards the eject with !isBackgroundIngest.
     A background ingest never auto-ejects (ejecting mid-copy would fail / corrupt the
     transfer).
+
+******************************************************************************************
+CHECK FOR UPDATES
+******************************************************************************************
+
+------------------------------------------------------------------------------------------
+Overview
+------------------------------------------------------------------------------------------
+
+    Winnow checks whether a newer release is available for download.  Distribution is
+    plain downloads (notarized DMG on macOS, Inno Setup installer on Windows) from the
+    DigitalOcean server at https://winnow.ca, so the check only NOTIFIES the user and, on
+    request, opens the platform download URL in the default browser — it does not
+    auto-install.  (The old Windows-only Qt `maintenancetool` path is gone.)
+
+    Two entry points, both calling MW::checkForUpdate(bool silent) (`Main/mainwindow.cpp`):
+    • Help → "Check for updates" — silent == false (loud): also reports "up to date" and
+      network errors via popups, and ignores the skip-version setting.
+    • Startup, from MW::showEvent — a deferred QTimer::singleShot fires checkForUpdate(true)
+      4 s after the window shows, gated by the checkIfUpdate preference and skipped when
+      G::isTest (no network during headless / soak runs).  Silent: it only speaks when an
+      update is available and has not been skipped.
+
+------------------------------------------------------------------------------------------
+Mechanism
+------------------------------------------------------------------------------------------
+
+    checkForUpdate() does an async GET (QNetworkAccessManager, no blocking wait) of a
+    small per-platform descriptor:
+        macOS:   https://winnow.ca/winnow_mac/version.json
+        Windows: https://winnow.ca/winnow_win/version.json
+    Shape: { "version": "2.05",
+             "url":     ".../current/Winnow2.05.dmg",
+             "notes":   ".../winnow/versions.html" }
+
+    MW::onUpdateCheckReply() parses the JSON and compares with QVersionNumber (NOT string
+    compare).  The running version is WINNOW_VERSION (`Main/mainwindow.h`, exposed as
+    versionNumber), single-sourced from CMake project(Winnow VERSION ...).  If the remote
+    version is greater it shows the UpdateApp dialog (`Dialogs/updateapp.*`):
+    • Download → QDesktopServices::openUrl(url).
+    • Skip this version → UpdateApp::skipRequested() is true; the caller stores the offered
+      version in updateSkipVersion ("updateSkipVersion") so the silent startup check no
+      longer prompts for it (a loud manual check still does).
+    • Not now → no state change; offered again next launch.
+
+    Preference: checkIfUpdate ("checkIfUpdate", default true) — "Check for program updates
+    at startup" in the preferences dialog (`Dialogs/prefdlg.*`, updateAppChk).
+
+------------------------------------------------------------------------------------------
+Publishing version.json
+------------------------------------------------------------------------------------------
+
+    The deploy scripts publish the descriptor (see packaging/README.md):
+    • macOS deploy.command promote step 7b writes/uploads winnow_mac/version.json from the
+      promoted version, and curl-checks it.
+    • Windows deploy.ps1 writes/uploads winnow_win/version.json when $VersionJsonTarget is
+      set.  Its url points at winnow_win/current/, so the Setup.exe must be in current/.
+    Build dependency: the client needs Qt6::Network (added to CMakeLists.txt).

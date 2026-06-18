@@ -34,7 +34,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Do you want to proceed with the update?</string>
+    <string/>
    </property>
   </widget>
   <widget class="QLabel" name="titleLabel">
@@ -57,24 +57,6 @@
    </property>
    <property name="alignment">
     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-   </property>
-  </widget>
-  <widget class="QLabel" name="currentVersionlabel_2">
-   <property name="geometry">
-    <rect>
-     <x>440</x>
-     <y>670</y>
-     <width>161</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>12</pointsize>
-    </font>
-   </property>
-   <property name="text">
-    <string>You have version:</string>
    </property>
   </widget>
   <widget class="QLabel" name="versionLabel">
@@ -110,7 +92,7 @@
     </font>
    </property>
    <property name="text">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can view version update notes &lt;a href=&quot;http://165.227.46.158/winnow/versions.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;here&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can view version update notes &lt;a href=&quot;https://winnow.ca/winnow/versions.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;here&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
   <widget class="QPushButton" name="cancelBtn">
@@ -141,7 +123,35 @@
     </size>
    </property>
    <property name="text">
-    <string>No thanks</string>
+    <string>Not now</string>
+   </property>
+   <property name="autoDefault">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="skipBtn">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>270</y>
+     <width>140</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>0</width>
+     <height>32</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>16777215</width>
+     <height>32</height>
+    </size>
+   </property>
+   <property name="text">
+    <string>Skip this version</string>
    </property>
    <property name="autoDefault">
     <bool>false</bool>
@@ -175,7 +185,7 @@
     </size>
    </property>
    <property name="text">
-    <string>Proceed</string>
+    <string>Download</string>
    </property>
    <property name="default">
     <bool>true</bool>
@@ -196,7 +206,7 @@
     </font>
    </property>
    <property name="text">
-    <string>The update process will close Winnow, download the current release, and finally, open the new version.  There will be a delay of a few seconds for the new version to open.</string>
+    <string>Selecting Download opens the Winnow download page in your browser. Quit Winnow, then install the downloaded version.</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>

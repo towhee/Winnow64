@@ -108,6 +108,9 @@
 //#include "Utilities/mac.h"
 #endif
 
+class QNetworkAccessManager;
+class QNetworkReply;
+
 class MW : public QMainWindow
 {
     Q_OBJECT
@@ -271,10 +274,10 @@ public:
     // bool mouseClickScroll;       // positionAtCenter scrolling when mouse click?
     // int displayHorizontalPixels; // move to global
     // int displayVerticalPixels;   // move to global
-    bool checkIfUpdate = true;
+    bool checkIfUpdate = true;          // automatic check for a newer Winnow at startup
+    QString updateSkipVersion;          // version the user chose to skip (suppresses startup dialog)
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
-    bool isStartingWhileUpdating = true;
     bool isFirstImageSelected = true;
     bool isLogAllToFileForDebugging = false;
 
@@ -491,7 +494,8 @@ public slots:
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
     void resetFocus();
-    void checkForUpdate();
+    void checkForUpdate(bool silent = false);
+    void onUpdateCheckReply(QNetworkReply *reply);
     void setShowImageCount();
     void about();
     void helpThumbViewStatusBarSymbols();
@@ -1154,6 +1158,7 @@ private:
     WorkspaceDlg *workspaceDlg;
     PreferencesDlg *preferencesDlg = nullptr;
     UpdateApp *updateAppDlg;
+    QNetworkAccessManager *updateNetManager = nullptr;
     ZoomDlg *zoomDlg = nullptr;
     QTimer *slideShowTimer;
     QTimer *resetTimer;

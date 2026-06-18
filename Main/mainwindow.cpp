@@ -2,6 +2,13 @@
 #include "Main/global.h"
 #include <QMetaEnum>
 #include <cstdlib>          // std::_Exit (used by runSelfTest)
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QVersionNumber>
+#include <QDesktopServices>
 
 /*
    Program notes / documentation: see notes/Documentation.txt
@@ -659,7 +666,10 @@ void MW::showEvent(QShowEvent *event)
         qDebug() << "MW::showEvent" << popupMsg;
     }
 
-
+    /* Silent check for a newer Winnow, deferred so it never delays launch.  Only when
+       the user preference is on and not in an automated test run. */
+    if (checkIfUpdate && !G::isTest)
+        QTimer::singleShot(4000, this, [this]{ checkForUpdate(/*silent*/true); });
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -1787,185 +1797,109 @@ void MW::appStateChange(Qt::ApplicationState state)
     }
 }
 
-void MW::checkForUpdate()
+void MW::checkForUpdate(bool silent)
 {
-/* Called from the help menu and from the main window show event if (isCheckUpdate = true)
-   The Qt maintenancetool, an executable in the Winnow folder, checks to see if there is an
-   update on the Winnow server.  If there is then Winnow is closed and the maintenancetool
-   performs the install of the update.  When that is completed the maintenancetool opens
-   Winnow again.
+/*
+    Checks whether a newer Winnow is available.  Distribution is plain downloads (a
+    notarized DMG on macOS, an Inno Setup installer on Windows) from the DigitalOcean
+    server at https://winnow.ca, so this only *notifies* the user and, on request, opens
+    the platform download URL in the default browser - it does not auto-install.
 
-// CHATGPT Sure, I can help you with that. Here's a basic example of how you might set up
-a function to check for a new version of an application and install it. This example uses
-Qt's `QNetworkAccessManager` to send a GET request to the server where your app is
-hosted. It then compares the version number of the current app with the version number
-received from the server. If the server version is newer, it downloads and installs the
-new version.
+    A small per-platform descriptor is fetched:
+        macOS:   https://winnow.ca/winnow_mac/version.json
+        Windows: https://winnow.ca/winnow_win/version.json
+    Shape: { "version": "2.05",
+             "url":     "https://winnow.ca/winnow_mac/current/Winnow2.05.dmg",
+             "notes":   "https://winnow.ca/winnow/versions.html" }
 
-Please note that this is a simplified example and may not cover all edge cases. You may
-need to adjust it to fit your specific needs.
-
-```cpp
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QUrl>
-#include <QProcess>
-#include <QStorageInfo>
-
-class Updater : public QObject {
-    _Q_OBJECT // remove leading _ (cmake does not like)
-
-public:
-    Updater(QObject *parent = nullptr) : QObject(parent) {
-        manager = new QNetworkAccessManager(this);
-        connect(manager, &QNetworkAccessManager::finished, this, &Updater::replyFinished);
-    }
-
-    void checkForUpdates() {
-        manager->get(QNetworkRequest(QUrl("http://www.winnow.ca/winnow_mac/test/version.txt")));
-    }
-
-private slots:
-    void replyFinished(QNetworkReply *reply) {
-        if (reply->error()) {
-            qDebug() << "ERROR!";
-            qDebug() << reply->errorString();
-        } else {
-            QString newVersion = reply->readAll();
-            if (newVersion > CURRENT_VERSION) {
-                QProcess::startDetached("open", QStringList() << "http://www.winnow.ca/winnow_mac/test/Winnow" + newVersion + ".dmg");
-            }
-        }
-        reply->deleteLater();
-    }
-
-private:
-    QNetworkAccessManager *manager;
-    const QString CURRENT_VERSION = "1.37";
-};
-```
-
-In this example, `CURRENT_VERSION` is the current version of your app. You would replace
-`"1.37"` with the actual current version of your app. The URL
-`"http://www.winnow.ca/winnow_mac/test/version.txt"` is where you would host a plain text
-file containing the latest version number of your app. The URL
-`"http://www.winnow.ca/winnow_mac/test/Winnow" + newVersion + ".dmg"` is the download
-link for the new version of your app.
-
-This code should be integrated into your existing Qt application. You can call
-`checkForUpdates()` whenever you want to check for updates, such as at application
-startup.
-
-Please note that this code does not handle the actual installation of the new version. On
-macOS, the downloaded .dmg file will be opened, but the user will need to manually
-install the new version. If you want to automate the installation process, you will need
-to use a software installer framework.
-
-Also, please be aware that accessing the network and starting processes are both actions
-that require appropriate permissions. Depending on your application's security context,
-you may need to request these permissions from the user or system.
-
-Lastly, this code does not include error handling for network errors or process errors.
-In a production environment, you should add appropriate error handling code.
-
-I hope this helps! Let me know if you have any questions.
-
+    The fetch is asynchronous (no blocking wait); onUpdateCheckReply() handles the
+    result.  Called loudly from the Help menu (silent == false) and silently at startup
+    from showEvent() when checkIfUpdate is true (silent == true: only speaks when an
+    update is available and has not been skipped via updateSkipVersion).
 */
-    if (G::isLogger)
-        qDebug() << "MW::checkForUpdate";
-    /* Checking for updates requires the maintenancetool.exe to be in the Winnow.exe folder,
-       which is only true for the installed version of Winnow in the "Program Files".  In
-       order to simulate for testing during development, the maintenancetool.exe path must
-       be set to "c:/program files/winnow/maintenancetool.exe".
-      */
-    QString maintanceToolPath = qApp->applicationDirPath() + "/maintenancetool";
-    QString maintenancePathToUse;
-    if (qApp->applicationDirPath().toLower().contains("release")) {
-        maintenancePathToUse = "c:/program files/winnow/maintenancetool";
-        // RETURN UNLESS TESTING UPDATER IN DEV
-        return;
-    }
-    else {
-        maintenancePathToUse = maintanceToolPath;
-    }
-    //qDebug() << "MW::checkForUpdate" << "maintenancePathToUse" << maintenancePathToUse;
+    if (G::isLogger || G::isFlowLogger) G::log("MW::checkForUpdate");
 
+    // never reach out to the network during automated / headless test runs
+    if (G::isTest || G::isStressTest) return;
+
+    QString platform;
 #ifdef Q_OS_MAC
-
+    platform = "winnow_mac";
 #endif
-
-#ifdef Q_OS_LINIX
-
-#endif
-
 #ifdef Q_OS_WIN
-    QProcess process;
-    process.setProgram(maintenancePathToUse);
-    QStringList chkArgs("check-updates");
-    process.setArguments(chkArgs);
-    process.start();
-    // Wait op to 3 seconds for the update tool to finish
-    process.waitForFinished(3000);
-
-    // bail if failed
-    if (process.error() != QProcess::UnknownError)
-    {
-        QString msg = "Error checking for updates";
-        if (!isStartingWhileUpdating) G::popup->showPopup(msg, 1500);
-        isStartingWhileUpdating = false;
-        return;
-    }
-
-    // Read the output
-    QByteArray data = process.readAllStandardOutput();
-    QVariant noUpdataAvailable = data.contains("no updates available");
-    /*
-    qDebug() << "MW::checkForUpdate" << "process.error() =" << process.error();
-    qDebug() << "MW::checkForUpdate" << "noUpdataAvailable =" << noUpdataAvailable;
-    qDebug() << "MW::checkForUpdate" << "data =" << data;
-    qDebug() << "MW::checkForUpdate" << "exitCode() =" << process.exitCode();
-    qDebug() << "MW::checkForUpdate" << "readAllStandardError() =" << process.readAllStandardError();
-
-    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "process.error() = " + QString::number(process.error()));
-    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "noUpdataAvailable = " + noUpdataAvailable.toString());
-    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "data = " + data);
-    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "readAllStandardError() = " + process.readAllStandardError());
-    if (G::isFileLogger) Utilities::log("MW::checkForUpdate", "exitCode() = " + QString::number(process.exitCode()));
-//    */
-    //G::log("MW::checkForUpdate", "after check");
-
-    if (noUpdataAvailable.toBool())
-    {
-        QString msg = "No updates available";
-        if(!isStartingWhileUpdating) G::popup->showPopup(msg, 1500);
-        if (G::useProcessEvents) qApp->processEvents();
-        return;
-    }
-
-    updateAppDlg = new UpdateApp(version, G::css);
-    int ret = updateAppDlg->exec();
-    if (ret == QDialog::Rejected) {
-        process.close();
-        return;
-    }
-
-    /* Call the maintenance tool binary
-       Note: we start it detached because this application needs to close for the update
-       */
-    QStringList args("--updater");
-    bool startMaintenanceTool = QProcess::startDetached(maintenancePathToUse, args);
-
-    // Close Winnow
-    if (startMaintenanceTool) {
-        QString msg = "Updating Winnow.  Winnow will reopen when update is completed.";
-        G::popup->showPopup(msg, 2000);
-        G::wait(2000);
-        qApp->closeAllWindows();
-    }
-    else if(!isStartingWhileUpdating)
-        G::popup->showPopup("The maintenance tool failed to open", 2000);
-
+    platform = "winnow_win";
 #endif
+    if (platform.isEmpty()) return;     // unsupported platform
+
+    QUrl url("https://winnow.ca/" + platform + "/version.json");
+
+    if (updateNetManager == nullptr) {
+        updateNetManager = new QNetworkAccessManager(this);
+        connect(updateNetManager, &QNetworkAccessManager::finished,
+                this, &MW::onUpdateCheckReply);
+    }
+
+    QNetworkRequest request(url);
+    /* carry the silent flag through to the reply handler */
+    request.setAttribute(QNetworkRequest::User, silent);
+    updateNetManager->get(request);
+}
+
+void MW::onUpdateCheckReply(QNetworkReply *reply)
+{
+    if (G::isLogger || G::isFlowLogger) G::log("MW::onUpdateCheckReply");
+
+    reply->deleteLater();
+
+    const bool silent = reply->request().attribute(QNetworkRequest::User, false).toBool();
+
+    if (reply->error() != QNetworkReply::NoError) {
+        if (!silent)
+            G::popup->showPopup("Could not check for updates:<br>" + reply->errorString(), 2500);
+        return;
+    }
+
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(reply->readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+        if (!silent) G::popup->showPopup("Could not read update information.", 2000);
+        return;
+    }
+
+    QJsonObject obj = doc.object();
+    QString latest   = obj.value("version").toString();
+    QString dmgUrl   = obj.value("url").toString();
+    QString notesUrl = obj.value("notes").toString();
+
+    if (latest.isEmpty()) {
+        if (!silent) G::popup->showPopup("Could not read update information.", 2000);
+        return;
+    }
+
+    QVersionNumber latestVer  = QVersionNumber::fromString(latest);
+    QVersionNumber currentVer = QVersionNumber::fromString(versionNumber);
+
+    if (latestVer <= currentVer) {
+        if (!silent)
+            G::popup->showPopup("Winnow is up to date (version " + versionNumber + ").", 2000);
+        return;
+    }
+
+    // a newer version is available
+    if (silent && latest == updateSkipVersion) return;      // user chose to skip this version
+
+    updateAppDlg = new UpdateApp(latest, versionNumber, notesUrl, G::css, this);
+    updateAppDlg->exec();
+
+    if (updateAppDlg->skipRequested()) {
+        updateSkipVersion = latest;
+        if (settings != nullptr) settings->setValue("updateSkipVersion", updateSkipVersion);
+    }
+    else if (updateAppDlg->result() == QDialog::Accepted && !dmgUrl.isEmpty()) {
+        QDesktopServices::openUrl(QUrl(dmgUrl));
+    }
+
+    updateAppDlg->deleteLater();
 }
 
 void MW::handleStartupArgs(const QString &args)

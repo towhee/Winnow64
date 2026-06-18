@@ -97,7 +97,7 @@ if(APPLE AND NOT TARGET WrapOpenGL::WrapOpenGL)
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS
-    Core Widgets Multimedia MultimediaWidgets Concurrent Svg Test
+    Core Widgets Multimedia MultimediaWidgets Concurrent Svg Test Network
 )
 
 qt_standard_project_setup()
@@ -637,6 +637,7 @@ target_link_libraries(Winnow PRIVATE
     Qt6::Concurrent
     Qt6::Svg
     Qt6::Test
+    Qt6::Network
 )
 
 # Mirrors `macx-clang: QMAKE_CXXFLAGS += -include arm_acle.h`

@@ -1467,7 +1467,9 @@ void MW::createHelpActions()
     checkForUpdateAction->setObjectName("CheckForUpdate");
     checkForUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(checkForUpdateAction);
-    connect(checkForUpdateAction, &QAction::triggered, this, &MW::checkForUpdate);
+    /* lambda (not &MW::checkForUpdate) so QAction::triggered(bool) is not forwarded into
+       the silent parameter — a manual check is always loud. */
+    connect(checkForUpdateAction, &QAction::triggered, this, [this]{ checkForUpdate(false); });
 
     aboutAction = new QAction(tr("About"), this);
     aboutAction->setObjectName("about");
@@ -2095,10 +2097,8 @@ void MW::createHelpMenu()
     helpGroupAct = new QAction("Help", this);
     helpGroupAct->setMenu(helpMenu);
 
-    #ifdef Q_OS_WIN
     helpMenu->addAction(checkForUpdateAction);
     helpMenu->addSeparator();
-    #endif
 
     helpMenu->addAction(aboutAction);
     //    helpMenu->addAction(helpAction);
