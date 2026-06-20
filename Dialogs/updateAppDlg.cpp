@@ -1,10 +1,10 @@
-#include "updateapp.h"
-#include "ui_updateapp.h"
+#include "updateAppDlg.h"
+#include "ui_updateAppDlg.h"
 
-UpdateApp::UpdateApp(const QString &newVersion, const QString &currentVersion,
-                     const QString &notesUrl, QString &css, QWidget *parent) :
+UpdateAppDlg::UpdateAppDlg(const QString &newVersion, const QString &currentVersion,
+                           const QString &notesUrl, QString &css, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::UpdateApp),
+    ui(new Ui::UpdateAppDlg),
     css(css)
 {
     ui->setupUi(this);
@@ -30,28 +30,28 @@ UpdateApp::UpdateApp(const QString &newVersion, const QString &currentVersion,
     #endif
 }
 
-UpdateApp::~UpdateApp()
+UpdateAppDlg::~UpdateAppDlg()
 {
     delete ui;
 }
 
-void UpdateApp::showEvent(QShowEvent *event)
+void UpdateAppDlg::showEvent(QShowEvent *event)
 {
     setStyleSheet(css);
     QDialog::showEvent(event);
 }
 
-void UpdateApp::on_yesBtn_clicked()
+void UpdateAppDlg::on_yesBtn_clicked()
 {
     accept();
 }
 
-void UpdateApp::on_cancelBtn_clicked()
+void UpdateAppDlg::on_cancelBtn_clicked()
 {
     reject();
 }
 
-bool UpdateApp::skipRequested() const
+bool UpdateAppDlg::skipRequested() const
 {
     return ui->dontAskChk->isChecked();
 }

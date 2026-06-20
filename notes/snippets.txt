@@ -1,3 +1,18 @@
+// copy (sftp) to server in .command file
+#!/bin/sh
+
+INSTALLPATH="/Users/roryhill/Projects/WinnowInstall"
+SFTPPATH="/var/www/html/winnow_mac/test"
+
+echo "Start the sftp to copy to server"
+sftp root@165.227.46.158 <<EOF
+cd /var/www/html/winnow_mac/current
+put -r "$INSTALLPATH""/Winnow1.37.dmg"
+exit
+
+read -p "Press any key to quit"
+#$SHELL
+
 // Set and unset bit flags example
 setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
 setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));

@@ -531,7 +531,7 @@ void Preferences::addGeneral()
     i.key = "checkIfUpdate";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    // addItem(i);
+    addItem(i);
 
     // Limit loupe fit zoom to 100%.
     i.name = "limitFit100Pct";

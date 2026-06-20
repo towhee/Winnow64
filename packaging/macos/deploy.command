@@ -331,7 +331,6 @@ function sign() {
     # ExifTool perl script + exiftool_wrapper, and the Frameworks/PlugIns dylibs)
     # inside-out in one pass. Without it codesign signs only the outer bundle and
     # --verify --strict rejects the unsigned subcomponents (e.g. ExifTool/exiftool).
-    # This matches the legacy WinnowInstall sign step that produced notarized 2.04.
     codesign --deep --force --options runtime --timestamp \
         --entitlements "$STAGING_APP_PATH/Contents/entitlements.plist" \
         --sign "$DEVELOPER_ID" "$STAGING_APP_PATH" || return 1
@@ -379,7 +378,10 @@ function disk_image() {
 
     local tmp="${OUT_DIR}/dmg_tmp"
     rm -rf "$tmp"; mkdir -p "$tmp"
-    cp -R "$NOTARIZED_APP_PATH" "$tmp/${APP_BUNDLE}"
+    # Place the app in the DMG under its version-stamped name (e.g. Winnow2.05.app)
+    # rather than the generic Winnow.app, so the bundle the user drags out is
+    # version-identifiable. NOTARIZED_APP_PATH is already named ${WINNOW_VERSION_NAME}.app.
+    cp -R "$NOTARIZED_APP_PATH" "$tmp/${WINNOW_VERSION_NAME}.app"
     ln -s /Applications "$tmp/Applications"
 
     echo "📦 Creating DMG: $DMG_PATH"

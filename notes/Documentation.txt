@@ -1597,9 +1597,12 @@ Mechanism
     MW::onUpdateCheckReply() parses the JSON and compares with QVersionNumber (NOT string
     compare).  The running version is WINNOW_VERSION (`Main/mainwindow.h`, exposed as
     versionNumber), single-sourced from CMake project(Winnow VERSION ...).  If the remote
-    version is greater it shows the UpdateApp dialog (`Dialogs/updateapp.*`):
-    • Download → QDesktopServices::openUrl(url).
-    • Skip this version → UpdateApp::skipRequested() is true; the caller stores the offered
+    version is greater it shows the UpdateAppDlg dialog (`Dialogs/updateAppDlg.*`):
+    • Download → MW::downloadAndOpenUpdate(url): the installer is fetched in-app (no
+      browser, progress shown in G::popup) to the Downloads folder, then opened — on
+      macOS `open` mounts the DMG and brings its Finder window to the front (on top of
+      Winnow); on Windows the downloaded Inno Setup installer is launched.
+    • Skip this version → UpdateAppDlg::skipRequested() is true; the caller stores the offered
       version in updateSkipVersion ("updateSkipVersion") so the silent startup check no
       longer prompts for it (a loud manual check still does).
     • Not now → no state change; offered again next launch.

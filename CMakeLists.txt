@@ -143,7 +143,7 @@ set(WINNOW_SOURCES
     Dialogs/selectionorpicksdlg.cpp
     Dialogs/testaligndlg.cpp
     Dialogs/tokendlg.cpp
-    Dialogs/updateapp.cpp
+    Dialogs/updateAppDlg.cpp
     Dialogs/workspacedlg.cpp
     Dialogs/zoomdlg.cpp
 
@@ -362,7 +362,7 @@ set(WINNOW_HEADERS
     Dialogs/selectionorpicksdlg.h
     Dialogs/testaligndlg.h
     Dialogs/tokendlg.h
-    Dialogs/updateapp.h
+    Dialogs/updateAppDlg.h
     Dialogs/workspacedlg.h
     Dialogs/zoomdlg.h
 
@@ -529,7 +529,7 @@ set(WINNOW_FORMS
     Dialogs/testaligndlg.ui
     Dialogs/testdlg.ui
     Dialogs/tokendlg.ui
-    Dialogs/updateapp.ui
+    Dialogs/updateAppDlg.ui
     Dialogs/workspacedlg.ui
     Dialogs/zoomdlg.ui
     Embellish/embelCoord.ui

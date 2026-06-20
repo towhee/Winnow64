@@ -2,8 +2,6 @@
 WINNOW DEPLOYMENT
 ================================================================================
 
-Claude instruction (Magic Phrase): Package and deploy to server
-
 Canonical, in-repo deployment pipeline for Winnow (macOS + Windows).
 
 KEEP THIS DOCUMENT UPDATED whenever the deployment changes (scripts, paths,
@@ -15,6 +13,8 @@ packaging/README.md is the short quick-start, this file is the full reference.
 --------------------------------------------------------------------------------
     macOS:    packaging/macos/deploy.command        (interactive menu)
     Windows:  packaging/windows/deploy.ps1          (run from VS x64 PowerShell)
+
+	Claude instruction (Magic Phrase): Package and deploy to server
 
     Output:   <repo>/out/   (git-ignored)
                 out/DMG/Winnow<version>.dmg          notarized + stapled

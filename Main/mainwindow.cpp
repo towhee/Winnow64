@@ -9,6 +9,9 @@
 #include <QJsonObject>
 #include <QVersionNumber>
 #include <QDesktopServices>
+#include <QStandardPaths>
+#include <QSaveFile>
+#include <QProcess>
 
 /*
    Program notes / documentation: see notes/Documentation.txt
@@ -1847,7 +1850,8 @@ void MW::checkForUpdate(bool silent)
 
 void MW::onUpdateCheckReply(QNetworkReply *reply)
 {
-    if (G::isLogger || G::isFlowLogger) G::log("MW::onUpdateCheckReply");
+    QString srcFun = "MW::onUpdateCheckReply";
+    if (G::isLogger || G::isFlowLogger) G::log(srcFun);
 
     reply->deleteLater();
 
@@ -1859,8 +1863,10 @@ void MW::onUpdateCheckReply(QNetworkReply *reply)
         return;
     }
 
+    // Get current version.json from server (from checkForUpdate())
     QJsonParseError parseError;
     QJsonDocument doc = QJsonDocument::fromJson(reply->readAll(), &parseError);
+
     if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
         if (!silent) G::popup->showPopup("Could not read update information.", 2000);
         return;
@@ -1871,13 +1877,28 @@ void MW::onUpdateCheckReply(QNetworkReply *reply)
     QString dmgUrl   = obj.value("url").toString();
     QString notesUrl = obj.value("notes").toString();
 
+    QVersionNumber latestVer  = QVersionNumber::fromString(latest);
+    QVersionNumber currentVer = QVersionNumber::fromString(versionNumber);
+
+    /* Test alternative: confirm the update + download flow end-to-end against the
+       server staging folder (sftp://root@165.227.46.158/var/www/html/winnow_mac/test
+       -> https://winnow.ca/winnow_mac/test) instead of the live release folder.
+       The deploy script uploads each new build to winnow_mac/test/ before promoting
+       it to winnow_mac/current/, so flip isTest to true to have Download fetch the
+       staged DMG from test/ rather than the released one from current/. */
+    bool isTest = false;
+    if (isTest) {
+        dmgUrl.replace("/winnow_mac/current/", "/winnow_mac/test/");
+        currentVer = QVersionNumber::fromString("2.04");
+        qDebug() << srcFun << "TEST mode — dmgUrl redirected to test folder:" << dmgUrl;
+        qDebug() << srcFun << "latest =" << latest;
+    }
+
+
     if (latest.isEmpty()) {
         if (!silent) G::popup->showPopup("Could not read update information.", 2000);
         return;
     }
-
-    QVersionNumber latestVer  = QVersionNumber::fromString(latest);
-    QVersionNumber currentVer = QVersionNumber::fromString(versionNumber);
 
     if (latestVer <= currentVer) {
         if (!silent)
@@ -1888,18 +1909,106 @@ void MW::onUpdateCheckReply(QNetworkReply *reply)
     // a newer version is available
     if (silent && latest == updateSkipVersion) return;      // user chose to skip this version
 
-    updateAppDlg = new UpdateApp(latest, versionNumber, notesUrl, G::css, this);
-    updateAppDlg->exec();
+    updateAppDlg = new UpdateAppDlg(latest, versionNumber, notesUrl, G::css, this);
+    int ret = updateAppDlg->exec();
 
+    /* "Don't ask again for this version" is independent of the button pressed: record the
+       skip if ticked, and still open the download if Download was clicked. */
     if (updateAppDlg->skipRequested()) {
         updateSkipVersion = latest;
         if (settings != nullptr) settings->setValue("updateSkipVersion", updateSkipVersion);
     }
-    else if (updateAppDlg->result() == QDialog::Accepted && !dmgUrl.isEmpty()) {
-        QDesktopServices::openUrl(QUrl(dmgUrl));
+    if (ret == QDialog::Accepted && !dmgUrl.isEmpty()) {
+        downloadAndOpenUpdate(dmgUrl);
     }
 
     updateAppDlg->deleteLater();
+}
+
+void MW::downloadAndOpenUpdate(const QString &dmgUrl)
+{
+/*
+    Downloads the update installer directly (no browser) and opens it, so the user
+    never sees their default browser.  On macOS `open` mounts the DMG and brings its
+    Finder volume window to the foreground, landing on top of the Winnow window; on
+    Windows the downloaded Inno Setup installer is launched.  Progress is reported in
+    G::popup.  Called from onUpdateCheckReply() when the user clicks Download.
+*/
+    QString srcFun = "MW::downloadAndOpenUpdate";
+    if (G::isLogger || G::isFlowLogger) G::log(srcFun);
+
+    QUrl url(dmgUrl);
+    QString fileName = url.fileName();
+    if (fileName.isEmpty()) fileName = "WinnowUpdate";
+
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    if (dir.isEmpty()) dir = QDir::tempPath();
+    QString destPath = QDir(dir).filePath(fileName);
+
+    /* QSaveFile writes to a temp file and atomically renames on commit(), so a failed
+       or aborted download never leaves a half-written installer at destPath. */
+    auto *file = new QSaveFile(destPath);
+    if (!file->open(QIODevice::WriteOnly)) {
+        G::popup->showPopup("Could not save the update to<br>" + destPath, 3000);
+        delete file;
+        return;
+    }
+
+    /* Dedicated manager: updateNetManager's finished signal is wired to
+       onUpdateCheckReply(), which would try to JSON-parse the DMG bytes. */
+    auto *netManager = new QNetworkAccessManager(this);
+    QNetworkReply *reply = netManager->get(QNetworkRequest(url));
+
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(100);
+    G::popup->setProgress(0);
+    G::popup->showPopup("Downloading " + fileName + "…", 0, true, 1);
+
+    // stream incoming bytes straight to disk rather than buffering the whole DMG
+    connect(reply, &QNetworkReply::readyRead, this, [reply, file]() {
+        file->write(reply->readAll());
+    });
+
+    connect(reply, &QNetworkReply::downloadProgress, this,
+            [](qint64 received, qint64 total) {
+        if (total > 0)
+            G::popup->setProgress(static_cast<int>(received * 100 / total));
+    });
+
+    connect(reply, &QNetworkReply::finished, this,
+            [this, reply, netManager, file, destPath, fileName]() {
+        reply->deleteLater();
+        netManager->deleteLater();
+
+        G::popup->setProgressVisible(false);
+        G::popup->reset();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            file->cancelWriting();
+            delete file;
+            G::popup->showPopup("Update download failed:<br>" + reply->errorString(), 3500);
+            return;
+        }
+
+        file->write(reply->readAll());      // flush any bytes not yet consumed
+        bool committed = file->commit();    // atomically publish destPath
+        delete file;
+        if (!committed) {
+            G::popup->showPopup("Could not finish saving the update.", 3500);
+            return;
+        }
+
+        #ifdef Q_OS_MAC
+            /* `open` mounts the DMG and opens its Finder window in the foreground,
+               so it appears on top of the Winnow window. */
+            QProcess::startDetached("/usr/bin/open", QStringList() << destPath);
+        #elif defined(Q_OS_WIN)
+            /* Launch the downloaded Inno Setup installer. */
+            QDesktopServices::openUrl(QUrl::fromLocalFile(destPath));
+        #else
+            QDesktopServices::openUrl(QUrl::fromLocalFile(destPath));
+        #endif
+    });
 }
 
 void MW::handleStartupArgs(const QString &args)
