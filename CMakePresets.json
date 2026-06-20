@@ -91,26 +91,30 @@
 
     {
       "name": "win-debug",
-      "displayName": "Windows Debug (VS 2022, x64)",
+      "displayName": "Windows Debug (Ninja, x64)",
       "inherits": "_base",
-      "generator": "Visual Studio 17 2022",
-      "architecture": "x64",
+      "generator": "Ninja",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
       "name": "win-release",
-      "displayName": "Windows Release (VS 2022, x64)",
+      "displayName": "Windows Release (Ninja, x64)",
       "inherits": "_base",
-      "generator": "Visual Studio 17 2022",
-      "architecture": "x64",
+      "generator": "Ninja",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ],
@@ -120,7 +124,7 @@
     { "name": "mac-release", "configurePreset": "mac-release" },
     { "name": "mac-tsan",    "configurePreset": "mac-tsan"    },
     { "name": "mac-asan",    "configurePreset": "mac-asan"    },
-    { "name": "win-debug",   "configurePreset": "win-debug",   "configuration": "Debug"   },
-    { "name": "win-release", "configurePreset": "win-release", "configuration": "Release" }
+    { "name": "win-debug",   "configurePreset": "win-debug"   },
+    { "name": "win-release", "configurePreset": "win-release" }
   ]
 }
