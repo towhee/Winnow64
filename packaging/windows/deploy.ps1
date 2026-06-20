@@ -420,9 +420,15 @@ function Promote {
         Write-Host "   OK  version.json updated" -ForegroundColor Green
     }
 
-    # 8) Post-publish check
+    # 8) Post-publish check - informational ONLY. All production writes are done
+    #    by this point, so a transient SSH/HTTP hiccup here must not abort with
+    #    "Step failed" (and must not skip the temp cleanup below). Best-effort.
     Write-Host "Post-publish:" -ForegroundColor Cyan
-    Invoke-Ssh "ls -l $WinDir/current $WinDir/$Old" -ReadOnly | ForEach-Object { Write-Host "   $_" }
+    try {
+        Invoke-Ssh "ls -l $WinDir/current $WinDir/$Old" -ReadOnly | ForEach-Object { Write-Host "   $_" }
+    } catch {
+        Write-Host "   (skipped server listing - $($_.Exception.Message))" -ForegroundColor Yellow
+    }
     if (-not $script:DryRun) {
         Write-Host "   HTTP check: $downloadUrl"
         try { (Invoke-WebRequest -Uri $downloadUrl -Method Head -UseBasicParsing).StatusCode | ForEach-Object { Write-Host "     HTTP $_" } } catch { Write-Host "     $($_.Exception.Message)" -ForegroundColor Yellow }

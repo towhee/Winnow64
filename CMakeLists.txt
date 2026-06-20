@@ -864,8 +864,37 @@ if(WIN32)
         ${LIB_DIR}/libtiff/include
     )
 
-    # App icon for the .exe
-    target_sources(Winnow PRIVATE images/winnow.ico)
+    # App icon (+ version info) for Winnow.exe and Winnet.exe. A bare .ico in
+    # target_sources is ignored by MSVC; the icon must come from a .rc compiled
+    # by rc and linked in. The icon path is baked into the .rc at configure time
+    # (absolute, backslash-escaped for the rc C-string) so it resolves regardless
+    # of the build/working dir and needs no hardcoded machine-specific path.
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/images/winnow.ico" _winnow_ico_native)
+    string(REPLACE "\\" "\\\\" WINNOW_ICON_PATH "${_winnow_ico_native}")
+
+    # Map the project version (single source of truth, project(Winnow VERSION ...))
+    # into the resource's 4-part FILEVERSION/PRODUCTVERSION. project(VERSION 2.05)
+    # leaves PATCH/TWEAK empty and MINOR may carry a leading zero, so default the
+    # missing parts to 0 and normalise each to a plain integer for the rc fields.
+    # The string FileVersion/ProductVersion use the full @PROJECT_VERSION@ ("2.05").
+    set(WINNOW_VER_MAJOR "${PROJECT_VERSION_MAJOR}")
+    set(WINNOW_VER_MINOR "${PROJECT_VERSION_MINOR}")
+    set(WINNOW_VER_PATCH "${PROJECT_VERSION_PATCH}")
+    set(WINNOW_VER_TWEAK "${PROJECT_VERSION_TWEAK}")
+    foreach(_part MAJOR MINOR PATCH TWEAK)
+        if(NOT WINNOW_VER_${_part} MATCHES "^[0-9]+$")
+            set(WINNOW_VER_${_part} 0)
+        else()
+            math(EXPR WINNOW_VER_${_part} "${WINNOW_VER_${_part}}")
+        endif()
+    endforeach()
+
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Winnow_resource.rc.in"
+                   "${CMAKE_CURRENT_BINARY_DIR}/Winnow_resource.rc" @ONLY)
+    target_sources(Winnow PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/Winnow_resource.rc")
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tools/Winnet/Winnet_resource.rc.in"
+                   "${CMAKE_CURRENT_BINARY_DIR}/Winnet_resource.rc" @ONLY)
+    target_sources(Winnet PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/Winnet_resource.rc")
 
     # Build the runnable app into a dedicated, clean subdir (build/<preset>/app)
     # instead of the build root. Under the single-config Ninja generator the exe
