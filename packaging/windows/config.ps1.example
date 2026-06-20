@@ -8,7 +8,7 @@
 #   Copy-Item config.ps1.example config.ps1
 # --------------------------------------------------------------------
 
-# Qt install path — INFORMATIONAL ONLY. deploy.ps1 does not read this; the build
+# Qt install path - INFORMATIONAL ONLY. deploy.ps1 does not read this; the build
 # selects Qt via the QT_DIR environment variable (CMakePresets CMAKE_PREFIX_PATH)
 # or the VS/Qt Creator kit, and windeployqt runs as a CMake POST_BUILD step that
 # tracks the linked Qt. Kept here for reference / future use.
@@ -17,7 +17,18 @@ $QtDir = "C:\Qt\6.9.2\msvc2022_64"
 # Inno Setup compiler (iscc.exe).
 $InnoSetupCompiler = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 
-# --- Code signing (optional; leave SignEnabled = $false to skip) -------------
+# Ninja for the CMake build (the win-release preset uses the Ninja generator).
+# OPTIONAL: only needed if `ninja` is not already on PATH. A Developer PowerShell
+# for VS 2022 normally has it (shipped with the "C++ CMake tools" component);
+# Qt Creator bundles one too. Set this to point at a ninja.exe if yours isn't
+# found. Leave it as-is/unset to rely on PATH.
+# $NinjaPath = "C:\Qt\Tools\Ninja\ninja.exe"
+
+# Where version-named archive copies of the installer are kept (optional).
+# Leave unset/empty to skip the Archive step.
+$ArchiveDir = "$env:USERPROFILE\Documents\Winnow\Releases"
+
+# --- Code signing (optional; leave $SignEnabled = $false to skip) ------------
 # Requires an OV/EV code-signing certificate. Without it the installer is
 # unsigned (users get a SmartScreen warning).
 $SignEnabled = $false
@@ -26,17 +37,23 @@ $SignToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\sig
 $SignCertSubject = "Robert Hill"
 $SignTimestampUrl = "http://timestamp.digicert.com"
 
-# --- Distribution upload (optional; leave UploadEnabled = $false to skip) -----
-$UploadEnabled = $false
-# Uses WinSCP or scp; target host path for the Setup.exe.
-$UploadTarget = "root@165.227.46.158:/var/www/html/winnow_win/test"
-$UploadSshKey = "$env:USERPROFILE\.ssh\winnow_deploy.ppk"
+# --- Distribution server (DigitalOcean) --------------------------------------
+# Used by Upload (push installer to a test dir) and Promote (archive the current
+# release, publish the new installer to current/, update the landing page +
+# version.json). ssh.exe / scp.exe ship with Windows 10/11 (OpenSSH Client).
+$ServerUser    = "root"
+$ServerHost    = "165.227.46.158"
+# OpenSSH private key that logs into $ServerUser@$ServerHost. NOTE: a PuTTY .ppk
+# is NOT usable with the built-in scp/ssh - convert it once with
+#   puttygen <key>.ppk -O private-openssh -o id_winnow
+# or use an existing OpenSSH key. Per-machine; never committed.
+$ServerSshKey  = "$env:USERPROFILE\.ssh\id_rsa"
+# Web root on the server; must contain winnow_win/ and index.html.
+$ServerWebRoot = "/var/www/html"
+# Public base URL used in the index.html link, version.json, and post-publish check.
+$WebBaseUrl    = "https://winnow.ca"
 
-# --- In-app update descriptor (version.json) ---------------------------------
-# Public website base URL and the scp destination for the per-platform
-# version.json consumed by the in-app "Check for updates" feature. Leave
-# $VersionJsonTarget empty to skip publishing it. NOTE: the url written into
-# version.json points at winnow_win/current/, so promote the Setup.exe from
-# test/ to current/ (or change the path below) before the check will find it.
-$WebBaseUrl = "https://winnow.ca"
-$VersionJsonTarget = "root@165.227.46.158:/var/www/html/winnow_win/version.json"
+# --- Plain test upload (optional; leave $UploadEnabled = $false to skip) ------
+# Upload pushes the installer here for pre-release testing (separate from Promote).
+$UploadEnabled = $false
+$UploadSubdir  = "winnow_win/test"   # relative to $ServerWebRoot

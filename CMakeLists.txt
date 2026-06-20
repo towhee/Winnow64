@@ -867,6 +867,16 @@ if(WIN32)
     # App icon for the .exe
     target_sources(Winnow PRIVATE images/winnow.ico)
 
+    # Build the runnable app into a dedicated, clean subdir (build/<preset>/app)
+    # instead of the build root. Under the single-config Ninja generator the exe
+    # would otherwise land amongst CMake internals (CMakeCache.txt, *.ninja, the
+    # test executables), which the Inno installer (packaging/windows/winnow.iss)
+    # would then package wholesale. Isolating it gives deploy.ps1 / winnow.iss a
+    # clean tree to ship, while Qt Creator's "Run" still finds everything because
+    # the POST_BUILD steps below deploy next to the exe (TARGET_FILE_DIR:Winnow).
+    set_target_properties(Winnow PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/app")
+
     # -------------------------------------------------------------------------
     # Deployment (mirrors the manual Windows steps in notes/DeployInstall.txt).
     # Assemble a runnable, standalone layout next to Winnow.exe in the build

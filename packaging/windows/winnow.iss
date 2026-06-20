@@ -3,7 +3,7 @@
 ;
 ; Driven by packaging\windows\deploy.ps1, which passes:
 ;   /DMyAppVersion=<version>   single-sourced from CMake project(VERSION ...)
-;   /DSourceDir=<dir>          the deployed build output (build\win-release\Release)
+;   /DSourceDir=<dir>          the deployed build output (build\win-release\app)
 ;   /DOutputDir=<dir>          where to write WinnowSetup-<version>.exe (repo out\)
 ;
 ; SourceDir already contains Winnow.exe, the Qt runtime + plugins (windeployqt),
@@ -15,7 +15,7 @@
   #define MyAppVersion "0.0.0"
 #endif
 #ifndef SourceDir
-  #define SourceDir "..\..\build\win-release\Release"
+  #define SourceDir "..\..\build\win-release\app"
 #endif
 #ifndef OutputDir
   #define OutputDir "..\..\out"
