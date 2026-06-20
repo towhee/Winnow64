@@ -10,6 +10,9 @@ per the guidance to avoid unprompted subagents
 
 
 
+
+
+
 I recursively loaded all the images on a USB drive. The images were in two separate child
 folders of dcim folder. There was about 1100 orf images in total (no videos). I
 progressed through the images, picking and ingesting. After about 600 images the Image
@@ -77,4 +80,8 @@ It needs a config.sh
 ! xcrun notarytool store-credentials "AC_PASSWORD" --apple-id "hillrg@hotmail.com" --team-id "2663CS489R" --password "pclq-wccx-jyjg-ggpy"
 
 
-
+WINDOWS:
+Running deploy.cmd, Option 2 Build installer, I got the error message
+"X Step failed: No build output at C:\Users\hillr\Projects\Winnow64\build\win-release\app\Winnow.exe - run Build first."
+but "C:\Users\hillr\Projects\Winnow64\build\win-release\app\Release\Winnow.exe" exists.  I had previously
+built and ran in Qt Creator.
