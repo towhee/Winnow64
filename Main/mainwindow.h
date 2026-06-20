@@ -60,7 +60,7 @@
 //#include "selectionorpicksdlg.h"
 #include "Image/thumb.h"
 #include "preferencesdlg.h"
-#include "updateapp.h"
+#include "updateAppDlg.h"
 #include "workspacedlg.h"
 #include "zoomdlg.h"
 #include "loadusbdlg.h"
@@ -496,6 +496,7 @@ private slots:
     void resetFocus();
     void checkForUpdate(bool silent = false);
     void onUpdateCheckReply(QNetworkReply *reply);
+    void downloadAndOpenUpdate(const QString &dmgUrl);
     void setShowImageCount();
     void about();
     void helpThumbViewStatusBarSymbols();
@@ -1157,7 +1158,7 @@ private:
     AboutDlg *aboutDlg;
     WorkspaceDlg *workspaceDlg;
     PreferencesDlg *preferencesDlg = nullptr;
-    UpdateApp *updateAppDlg;
+    UpdateAppDlg *updateAppDlg;
     QNetworkAccessManager *updateNetManager = nullptr;
     ZoomDlg *zoomDlg = nullptr;
     QTimer *slideShowTimer;

@@ -51,8 +51,7 @@ void UpdateApp::on_cancelBtn_clicked()
     reject();
 }
 
-void UpdateApp::on_skipBtn_clicked()
+bool UpdateApp::skipRequested() const
 {
-    skip = true;
-    reject();
+    return ui->dontAskChk->isChecked();
 }
