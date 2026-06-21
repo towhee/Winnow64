@@ -494,8 +494,13 @@ void MW::deleteFiles(QStringList paths)
     // updata datamodel, imagecache, image counts
     refresh();
 
-    // update selection
-    sel->select(dm->currentSfRow);
+    /* Update selection. When every filtered item is deleted the filters are
+       cleared and the prior current/saved rows no longer exist, leaving
+       dm->currentSfRow invalid (-1). Fall back to the first row so a valid
+       selection is always set (unless the folder is now empty). */
+    int sfRow = dm->currentSfRow;
+    if (sfRow < 0 || sfRow >= dm->sf->rowCount()) sfRow = 0;
+    if (dm->sf->rowCount() > 0) sel->select(sfRow);
 }
 
 void MW::currentFolderDeletedExternally(QString path)
