@@ -51,10 +51,13 @@ void MW::togglePickUnlessRejected()
     }
     if (n > 1) pushPick("End multiple select");
 
-    // update filter counts before filterChange
-    buildFilters->updateCategory(BuildFilters::PickEdit);
     // refresh filtration if any filter pick items (picked, unpicked, rejected) are selected
     bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
+    // update filter counts before filterChange.  runSync when a filterChange will follow,
+    // otherwise the worker thread rebuilds the category tree while filterChange un-suspends
+    // and re-runs filterAcceptsRow over it - a use-after-free crash.
+    buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction,
+                                 picksBeingFiltered);
     if (picksBeingFiltered) {
         filterChange("MW::togglePick");
     }
@@ -179,10 +182,13 @@ void MW::togglePick()
     // avoid null proxy filter
     // buildFilters->updateZeroCountCheckedItems(filters->picks, G::PickColumn);
 
-    // update filter counts before filterChange
-    buildFilters->updateCategory(BuildFilters::PickEdit);
     // refresh filtration if any filter pick items (picked, unpicked, rejected) are selected
     bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
+    // update filter counts before filterChange.  runSync when a filterChange will follow,
+    // otherwise the worker thread rebuilds the category tree while filterChange un-suspends
+    // and re-runs filterAcceptsRow over it - a use-after-free crash.
+    buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction,
+                                 picksBeingFiltered);
     if (picksBeingFiltered) {
         filterChange("MW::togglePick");
     }
@@ -246,10 +252,13 @@ void MW::toggleReject()
     }
     if (idxList.length() > 1) pushPick("End multiple select");
 
-    // update filter counts before filterChange
-    buildFilters->updateCategory(BuildFilters::PickEdit);
     // refresh filtration if any filter pick items (picked, unpicked, rejected) are selected
     bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
+    // update filter counts before filterChange.  runSync when a filterChange will follow,
+    // otherwise the worker thread rebuilds the category tree while filterChange un-suspends
+    // and re-runs filterAcceptsRow over it - a use-after-free crash.
+    buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction,
+                                 picksBeingFiltered);
     if (picksBeingFiltered) {
         filterChange("MW::togglePick");
     }
