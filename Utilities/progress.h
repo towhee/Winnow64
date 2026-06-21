@@ -112,6 +112,8 @@ private:
     int rowIndex(int id) const;          // bounds-checked, -1 if invalid
     int barWidth() const;                // container width minus text column
     int barX() const;                    // x where the bar column starts
+    int barNudge() const;                // px to nudge the bar down vs the text (platform-specific)
+    int singleProgressItemNudge() const; // extra px to nudge the row when only one is visible (platform-specific)
     int effectiveTextColWidth() const;   // explicit textColWidth, else auto-fit
     void rebuildRowPixmap(Row &r);       // (re)create r.bar at current barWidth
     void relayout();                     // recompute tops/heights, emit height
