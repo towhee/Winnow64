@@ -2,8 +2,7 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- When delete all filtered items, the proxy filters are cleared, but a new row is not selected
-- Refresh FSTree after folders have been added / removed
+- Refresh FSTree after folders have been added/removed not working
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
 want to drop the flags and bake the behavior in, but no rush; keeping them is cheap
