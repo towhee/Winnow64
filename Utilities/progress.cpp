@@ -99,6 +99,29 @@ int Progress::barWidth() const
     return w > 1 ? w : 1;
 }
 
+int Progress::barNudge() const
+{
+    /* Pixels to nudge the bar down relative to the status text so it aligns with
+       the text baseline. The text sits lower on Windows, so it needs more nudge. */
+#ifdef Q_OS_WIN
+    return 2;
+#else
+    return 1;
+#endif
+}
+
+int Progress::singleProgressItemNudge() const
+{
+    /* When only one progress row is visible the container is short, so shift the
+       whole row down to vertically center it against the MetaRead/ImageCache
+       activity labels to the right of the progress in the status bar. */
+#ifdef Q_OS_WIN
+    return 1;
+#else
+    return 0;
+#endif
+}
+
 void Progress::rebuildRowPixmap(Row &r)
 {
     r.bar = QPixmap(barWidth(), r.barHeight);
@@ -287,12 +310,19 @@ void Progress::paintEvent(QPaintEvent * /*event*/)
     int yOff = (height() - rowsBlockHeight) / 2;
     if (yOff < 0) yOff = 0;
 
+    /* When only one row is visible, nudge the whole row (text + bar) down to
+       vertically align with the MetaRead/ImageCache activity labels to the right
+       of the progress in the status bar. */
+    int visibleCount = 0;
+    for (const Row &r : rows) if (r.visible) ++visibleCount;
+    if (visibleCount == 1) yOff += singleProgressItemNudge();
+
     QFont f = font();
     for (const Row &r : rows) {
         if (!r.visible) continue;
         // bar column (bar centered vertically within its row, nudged down 1px
         // relative to the text so it aligns with the status text baseline)
-        int barY = r.top + yOff + (r.height - r.barHeight) / 2 + 1;
+        int barY = r.top + yOff + (r.height - r.barHeight) / 2 + barNudge();
         p.drawPixmap(barX(), barY, r.bar);
         // text column
         int tw = effectiveTextColWidth();
