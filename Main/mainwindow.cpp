@@ -2733,11 +2733,25 @@ void MW::refresh()
         gridView->scrollToRow(dm->currentSfRow, srcFun);
     }
 
-    // // force thumbnail updates in views
-    // if (G::mode == "Loupe") loupeDisplay();
-    // if (G::mode == "Grid") gridDisplay();
-    // if (G::mode == "Table") tableDisplay();
-
+    /* MW::filterChange recovers the selection via Selection::recover(), which restores
+       the current index with QItemSelectionModel::NoUpdate and so does NOT re-emit
+       fileSelectionChange. A still image keeps showing because imageView retains its
+       decoded pixmap, but a video's first frame is rendered by videoView (VideoTab),
+       which is left stale/blank without an explicit reload. Re-assert the current
+       video's first frame when in Loupe; the guard skips a clip already shown paused
+       on its first frame so there is no redundant reload. */
+    if (G::useMultimedia && G::mode == "Loupe" && dm->sf->rowCount()) {
+        bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+        if (isVideo && !dm->currentFilePath.isEmpty()) {
+            QMediaPlayer *mp = videoView->video->mediaPlayer;
+            bool sameSourceShown = mp->source().toLocalFile() == dm->currentFilePath
+                                   && mp->playbackState() == QMediaPlayer::PausedState;
+            if (centralLayout->currentIndex() != VideoTab)
+                centralLayout->setCurrentIndex(VideoTab);
+            if (!sameSourceShown)
+                videoView->load(dm->currentFilePath);
+        }
+    }
 }
 
 bool MW::allIdle() const {
