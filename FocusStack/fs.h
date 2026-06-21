@@ -40,7 +40,7 @@ public:
         bool isLocal                    = true;
         bool enableOpenCL               = true;
         bool writeFusedBackToSource     = true;    // false for debugging
-        bool removeTemp                 = false;
+        bool removeTemp                 = true;
         bool isDebugging                = true;
         bool saveDiagnostics            = true;
     } o;
@@ -114,8 +114,6 @@ private:
     QString alignFolderPath;
     QString depthFolderPath;
     QString fusionFolderPath;
-
-    // Options o;
 
     // Alignment output paths
     std::vector<QString> alignedColorPaths;     // intermediate

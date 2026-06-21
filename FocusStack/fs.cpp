@@ -934,10 +934,12 @@ bool FS::cleanup()
             fusion      Fused results when testing
 
     */
-    QString srcFun = "FS::cleanup";
-    if (G::FSLog) G::log(srcFun);
-
     QString msg;
+    msg = "o.isLocal = " + QVariant(o.isLocal).toString();
+
+    QString srcFun = "FS::cleanup";
+    if (G::FSLog) G::log(srcFun, msg);
+
 
     // remove the group working folders (align, depth, fusion)
     for (QString subFolder : grpFolderPaths) {
@@ -953,31 +955,38 @@ bool FS::cleanup()
     /*
     When remote (ie Lightroom), the inputFolder(s) ("FocusStack") may contain files
     other than the input images, so we need to remove the input images, and then if
-    the inputFolder is empty it can be removed too.
+    the inputFolder(s) are empty they can be removed too.
     */
 
     // remove the temp focus stack source tiffs
-    QStringList inputFolderPaths;
-    // all input files
-    for (QString s : inputPaths) {
-        QString inputFolderPath = QFileInfo(s).absolutePath();
-        // add to inputFolderPaths
-        if (!inputFolderPaths.contains(inputFolderPath)) inputFolderPaths << inputFolderPath;
-        msg = "Remove input file: " + s;
-        if (G::FSLog) G::log(srcFun, msg);
-        QFile::remove(s);
+    QStringList inputFolderPaths;       // list of folders
+
+    // iterate groups
+    for (const QStringList &gList : groups) {
+        // iterate group input file path list
+        for (QString s : gList) {
+            // get the folder path
+            QString inputFolderPath = QFileInfo(s).dir().path();
+            // add to inputFolderPaths
+            if (!inputFolderPaths.contains(inputFolderPath)) {
+                inputFolderPaths << inputFolderPath;
+                msg = "Add inputFolderPath: " + inputFolderPath;
+            }
+            msg = "Remove input file: " + s;
+            if (G::FSLog) G::log(srcFun, msg);
+            // remove temp image file
+            QFile::remove(s);
+        }
     }
 
     // remove input folder(s) if empty
     for (QString d : inputFolderPaths) {
-        // qDebug() << "input folder isEmpty: " << QDir(d).isEmpty();
         msg = "input folder: " + d + "  isEmpty: " + QVariant(QDir(d).isEmpty()).toString();
         if (G::FSLog) G::log(srcFun, msg);
         if (QDir(d).isEmpty()) {
-            // qDebug() << "Remove input folder: " << d;
             msg = "Remove input folder: " + d;
             if (G::FSLog) G::log(srcFun, msg);
-
+            // remove folder if it is empty
             QDir(d).removeRecursively();
         }
     }
