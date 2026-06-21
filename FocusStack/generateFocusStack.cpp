@@ -185,10 +185,14 @@ void MW::generateFocusStack(const QStringList paths,
         ;
     G::popup->showPopup(msg, 7000);
 
-    // show status progress bar
-    if (!G::showCacheProgress) {
-        progress->setVisible(true);
-    }
+    /*
+        Show the status progress bar. Force it visible unconditionally: when an
+        empty folder is selected (e.g. a remote stack launched from Lightroom),
+        MW::nullFiltration / MW::reset have already hidden the bar, so relying on
+        G::showCacheProgress to keep it visible fails and the stack progress is
+        never seen.
+    */
+    progress->setVisible(true);
 
     // --------------------------------------------------------------------
     // Create worker thread + FS fs object
@@ -234,7 +238,7 @@ void MW::generateFocusStack(const QStringList paths,
     fs->o.method = method;
     fs->o.isLocal = isLocal;
     fs->o.enableOpenCL = true;
-    fs->o.removeTemp = fsRemoveTemp;    // for debugging (set in pref)
+    // fs->o.removeTemp = fsRemoveTemp;    // for debugging (set in pref)
 
     // Group multiple stacks
     groupFocusStacks(fs->groups, paths);
@@ -244,6 +248,8 @@ void MW::generateFocusStack(const QStringList paths,
         QString msg = "Unable to find any focus stacks";
         if (G::isLogger || G::FSLog) G::log(srcFun, msg);
         G::popup->showPopup(msg);
+        // hide the progress bar we force-showed above
+        if (!G::showCacheProgress) progress->setVisible(false);
         return;
     }
 
@@ -271,7 +277,7 @@ void MW::generateFocusStack(const QStringList paths,
     // Finished
     // --------------------------------------------------------------------
 
-    connect(fs, &FS::finished, this, [=](bool success, bool aborted) {
+    connect(fs, &FS::finished, this, [=, this](bool success, bool aborted) {
         QString msg;
 
         // clear progress
@@ -321,7 +327,7 @@ void MW::generateFocusStack(const QStringList paths,
         bookmarks->updateCount();
 
         // Handle Success
-        QString nGroups = QVariant(fs->groups.count()).toString();
+        QString nGroups = QVariant(G::fsFusedPaths.count()).toString();
         if (nGroups == "1") msg = nGroups + " focus stack completed";
         else msg = nGroups + " focus stacks completed";
         if (G::FSLog) G::log(srcFun, msg);
