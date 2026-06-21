@@ -68,7 +68,8 @@ public slots:
     void update();
     void updateAllCounts();
     void updateCategory(BuildFilters::Category category,
-                        BuildFilters::AfterAction newAction = NoAfterAction);
+                        BuildFilters::AfterAction newAction = NoAfterAction,
+                        bool runSync = false);
     void updateZeroCountCheckedItems(QTreeWidgetItem *cat, int dmColumn);
    // void updateCategoryItems(QTreeWidgetItem *item, int dmColumn);
 

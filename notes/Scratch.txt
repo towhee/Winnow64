@@ -85,3 +85,9 @@ Running deploy.cmd, Option 2 Build installer, I got the error message
 "X Step failed: No build output at C:\Users\hillr\Projects\Winnow64\build\win-release\app\Winnow.exe - run Build first."
 but "C:\Users\hillr\Projects\Winnow64\build\win-release\app\Release\Winnow.exe" exists.  I had previously
 built and ran in Qt Creator.
+
+
+❯ I was making an ingest, working through about 800 images.  I would make a series of picks, ingest and then repeat.  When I got to aobut
+  the 650th image, when I made a pick the thumbView scrolled back to zero.  The 650th image was picked, as could be seen when I scrolled
+  back.  Picking any image in the 650-780 range resulted in scrolling all the way back to zero.  When I tried picking images less than 650
+  no scrolling occurred.  Same thing, no scrolling when I picked the last image, number 800.  Any idea what could cause the scrolling?

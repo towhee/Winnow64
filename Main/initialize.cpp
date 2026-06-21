@@ -924,8 +924,12 @@ void MW::createInfoView()
     connect(infoView->ok, SIGNAL(itemChanged(QStandardItem*)),
             this, SLOT(infoViewChanged(QStandardItem*)));
 
-    // update filters
-    connect(infoView, &InfoView::updateFilter, buildFilters, &BuildFilters::updateCategory);
+    // update filters (lambda so the signal's 2 args map onto updateCategory's 3,
+    // leaving runSync at its default of false)
+    connect(infoView, &InfoView::updateFilter, buildFilters,
+            [this](BuildFilters::Category category, BuildFilters::AfterAction newAction) {
+                buildFilters->updateCategory(category, newAction);
+            });
 
     connect(infoView, &InfoView::filterChange, this, &MW::filterChange);
 }

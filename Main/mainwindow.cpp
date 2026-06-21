@@ -3154,7 +3154,7 @@ void MW::updateIconRange(QString src)
     }
 
     // visible icons
-    int midVisible = firstVisible + (firstVisible + lastVisible) / 2;
+    int midVisible = (firstVisible + lastVisible) / 2;
     int visibleIcons = lastVisible - firstVisible + 1;
 
     // publish visibleIcons first so dm->iconChunkFloor() sees the current value
@@ -3599,18 +3599,22 @@ void MW::thumbHasScrolled()
 
         if (G::ignoreScrollSignal == false) {
             G::ignoreScrollSignal = true;
-            updateIconRange("MW::thumbHasScrolled");
-            if (gridView->isVisible()) {
-                gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
-            }
-            if (tableView->isVisible()) {
-                tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
-            }
-            updateChange(thumbView->midVisibleCell, false, "MW::thumbHasScrolled");
-            // update thumbnail zoom frame cursor
-            QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
-            if (idx.isValid()) {
-                thumbView->zoomCursor(idx, "MW::thumbHasScrolled");
+            /* Only a visible thumbView may drive the shared scroll/sync; a hidden thumb strip
+               reports a bogus midVisibleCell (see MW::tableHasScrolled). */
+            if (thumbView->isVisible()) {
+                updateIconRange("MW::thumbHasScrolled");
+                if (gridView->isVisible()) {
+                    gridView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
+                }
+                if (tableView->isVisible()) {
+                    tableView->scrollToRow(thumbView->midVisibleCell, "MW::thumbHasScrolled");
+                }
+                updateChange(thumbView->midVisibleCell, false, "MW::thumbHasScrolled");
+                // update thumbnail zoom frame cursor
+                QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+                if (idx.isValid()) {
+                    thumbView->zoomCursor(idx, "MW::thumbHasScrolled");
+                }
             }
         }
         G::ignoreScrollSignal = false;
@@ -3651,10 +3655,14 @@ void MW::gridHasScrolled()
 
         if (G::ignoreScrollSignal == false) {
             G::ignoreScrollSignal = true;
-            updateIconRange("MW::gridHasScrolled");
-            thumbView->scrollToRow(gridView->midVisibleCell, fun);
-            tableView->scrollToRow(gridView->midVisibleCell, fun);
-            updateChange(gridView->midVisibleCell, false, fun);
+            /* Only a visible grid may drive the shared scroll/sync; a hidden grid reports a
+               bogus midVisibleCell that would yank the visible views (see MW::tableHasScrolled). */
+            if (gridView->isVisible()) {
+                updateIconRange("MW::gridHasScrolled");
+                thumbView->scrollToRow(gridView->midVisibleCell, fun);
+                tableView->scrollToRow(gridView->midVisibleCell, fun);
+                updateChange(gridView->midVisibleCell, false, fun);
+            }
         }
         G::ignoreScrollSignal = false;
     }
@@ -3689,17 +3697,19 @@ void MW::tableHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconRange("MW::tableHasScrolled");
-        /* Update the shared scroll anchor here (user-initiated table scroll), not in
-           TableView::updateVisible which also runs from layout/show paths. Only when the
-           table is visible: gridHasScrolled/thumbHasScrolled sync-scroll the hidden table,
-           which re-enters here and would otherwise stamp the hidden table's bogus position
-           onto the anchor. */
-        if (tableView->isVisible()) dm->scrollToIcon = tableView->midVisibleRow;
-        if (thumbView->isVisible()) {
-            thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
+        /* Only a visible table may drive the shared scroll/sync. A tableHasScrolled signal
+           while the table is hidden (loupe/grid mode) is a layout/sync artifact: midVisibleRow
+           is a bogus 0 because the hidden viewport isn't laid out, and propagating it would
+           scroll the visible thumbView back to row 0 (and load the wrong icon range).
+           gridHasScrolled/thumbHasScrolled sync-scroll the hidden table, which re-enters here. */
+        if (tableView->isVisible()) {
+            updateIconRange("MW::tableHasScrolled");
+            dm->scrollToIcon = tableView->midVisibleRow;
+            if (thumbView->isVisible()) {
+                thumbView->scrollToRow(tableView->midVisibleRow, "MW::tableHasScrolled");
+            }
+            updateChange(tableView->midVisibleRow, false, "MW::tableHasScrolled");
         }
-        updateChange(tableView->midVisibleRow, false, "MW::tableHasScrolled");
     }
     G::ignoreScrollSignal = false;
 }

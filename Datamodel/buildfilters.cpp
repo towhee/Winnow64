@@ -315,7 +315,8 @@ void BuildFilters::recount()
     updateFilteredCounts();
 }
 
-void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction newAction)
+void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction newAction,
+                                  bool runSync)
 {
 /*
     Called when a category item has been edited.  The old name is removed from the
@@ -326,6 +327,12 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
     category items are being removed or appended, becasue it iterates through all
     the category items and will crash with a bad memory access when it tries to
     access a removed item.
+
+    When runSync is true the rebuild runs inline on the GUI thread (run() is called
+    directly) instead of on the worker thread.  Callers that immediately follow this
+    with MW::filterChange must use runSync, otherwise filterChange un-suspends and
+    re-runs filterAcceptsRow while the worker thread is still mutating the category
+    tree items - a use-after-free crash (see MW::togglePick).
 */
     if (G::isLogger || G::isFlowLogger) qDebug() << "BuildFilters::update";
     if (debugBuildFilters)
@@ -343,7 +350,10 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
     this->category = category;
     if (filters->filtersBuilt) {
         action = Action::UpdateCategory;
-        if (G::allMetadataAttempted) start(NormalPriority);
+        if (G::allMetadataAttempted) {
+            if (runSync) run();     // inline on GUI thread (no race with filterChange)
+            else start(NormalPriority);
+        }
     }
     else build();
 }
