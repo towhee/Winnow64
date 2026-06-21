@@ -106,7 +106,7 @@ int Progress::barNudge() const
 #ifdef Q_OS_WIN
     return 2;
 #else
-    return 1;
+    return 0;
 #endif
 }
 
@@ -118,7 +118,7 @@ int Progress::singleProgressItemNudge() const
 #ifdef Q_OS_WIN
     return 1;
 #else
-    return 0;
+    return 1;
 #endif
 }
 
