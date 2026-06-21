@@ -109,6 +109,11 @@ public:
 
     QFileSystemWatcher volumesWatcher;
 
+    /* Auto-refresh: watch the folders currently visible in the viewport so that
+       subfolders added/removed on disk (e.g. in Finder/Explorer) update the tree
+       without a manual Refresh. See setupFolderWatcher(). */
+    QFileSystemWatcher folderWatcher;
+
     QString diagnostics();
 
     void test();
@@ -126,6 +131,7 @@ private slots:
     void wheelStopped();
     // void hasExpanded(const QPersistentModelIndex &index);
     void onItemExpanded(const QModelIndex &index);
+    void onWatchedDirectoryChanged(const QString &path);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -199,6 +205,14 @@ private:
     QTimer wheelTimer;
     bool wheelSpinningOnEntry;
     bool isDebug = false;
+
+    /* Folder auto-refresh watcher helpers (see fstree.cpp). */
+    void setupFolderWatcher();
+    void scheduleWatchResync();
+    void updateWatchedFolders();
+    QStringList visibleFolderPaths() const;
+    QTimer watchResyncTimer;   // debounce re-sync of the watch set
+    QTimer watchRefreshTimer;  // debounce refresh after a directoryChanged burst
 };
 
 #endif // FSTREE_H

@@ -592,6 +592,16 @@ Filter Change
     thumbView->selectThumb
     MW::scrollToCurrentRowIfNotVisible
 
+    Selection recovery and the central view:
+    When no rows are filtered out, MW::filterChange restores the prior selection via
+    Selection::recover(), which sets the current index with QItemSelectionModel::NoUpdate
+    and therefore does NOT re-emit fileSelectionChange. The central view is thus not
+    re-rendered for the current item. A still image keeps showing because imageView
+    retains its decoded pixmap, but a video's first frame (rendered by videoView on the
+    VideoTab) must be re-asserted explicitly. MW::refresh does this at its tail: for a
+    video current item in Loupe mode it re-selects the VideoTab and reloads the first
+    frame (guarded so a clip already shown paused is not reloaded).
+
 ------------------------------------------------------------------------------------------
 Sort Change
 ------------------------------------------------------------------------------------------
@@ -644,6 +654,34 @@ Combine Raw+JPG
     (updateStatusBar — button icon/tooltip/enabled state), Main/initialize.cpp
     (rawJpgStatusBtn wiring), Main/menusandactions.cpp (combineRawJpgAction),
     Main/mainwindow.cpp (folderChanged / folderChangeCompleted enable-disable).
+
+------------------------------------------------------------------------------------------
+Folder Tree Auto-Refresh
+------------------------------------------------------------------------------------------
+
+    The Folders panel (FSTree) updates itself when subfolders are added or removed on
+    disk outside Winnow (e.g. in Finder/Explorer) — no manual Refresh is needed.
+
+    Mechanism: a cross-platform QFileSystemWatcher (FSTree::folderWatcher) wired up in
+    FSTree::setupFolderWatcher(). Qt maps this onto the native OS facility (FSEvents on
+    macOS, ReadDirectoryChangesW on Windows, inotify on Linux), so one code path serves
+    both platforms.
+
+    Scope: QFileSystemWatcher only reports paths explicitly registered, so rather than
+    watch the whole filesystem Winnow watches only the folders currently visible in the
+    viewport. updateWatchedFolders() diffs the visible set against the watched set and
+    applies the delta; scheduleWatchResync() re-runs it (debounced 150 ms) on scroll,
+    expand, collapse, selection, resize and refresh.
+
+    On a directoryChanged signal, onWatchedDirectoryChanged() debounces (300 ms) then
+    calls FSFilter::refresh() — which uses invalidate() so the view re-queries the live
+    FSModel::hasChildren() and the dropdown decoration appears/disappears — and re-syncs
+    the watch set so a newly created subfolder is itself watched.
+
+    Note: drive/volume mount/unmount is a separate path (Windows WM_DEVICECHANGE via
+    WinNativeEventFilter); this section covers folder content changes only.
+
+    Key files: File/fstree.cpp / File/fstree.h.
 
 ------------------------------------------------------------------------------------------
 Insertions, Deletions, Modifications

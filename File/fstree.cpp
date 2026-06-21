@@ -34,6 +34,9 @@ FSTree  (QTreeView subclass)
 - Coordinates with the DataModel through folderSelectionChange() signals.
 - Displays hover highlights via HoverDelegate.
 - Handles platform drive refresh, selection modifiers, and context menus.
+- Auto-refreshes when subfolders are added/removed on disk via a cross-platform
+  QFileSystemWatcher (setupFolderWatcher()), scoped to the folders currently
+  visible in the viewport.
 
 Key details:
 - countSubdirsFast() uses a non-recursive QStack traversal for safety.
@@ -78,7 +81,8 @@ FSFilter  (QSortFilterProxyModel subclass)
 - macOS: shows only /Users and /Volumes at root, hides system/hidden dirs.
 - Windows: excludes unmounted drives using global mountedDrives list.
 - Linux: allows all.
-- refresh() simply calls invalidateFilter().
+- refresh() calls invalidate() so the view re-queries the live hasChildren()
+  (needed for newly created subfolders under a collapsed folder).
 
 -------------------------------------------------------------------------------
 HoverDelegate  (QStyledItemDelegate subclass)
@@ -246,8 +250,22 @@ FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
 
 void FSFilter::refresh()
 {
-    // qDebug() << "FSFilter::refresh";
-    this->invalidateFilter();
+    /*
+        Use invalidate() rather than invalidateFilter().  invalidateFilter() only
+        emits layoutChanged when the set of accepted source rows actually changes.
+        When a subfolder is created on disk under a folder that is currently
+        collapsed, that folder's children have never been mapped into the proxy, so
+        invalidateFilter() sees no change and emits nothing.  QTreeView then keeps
+        its cached per-item "hasChildren" flag and never redraws the disclosure
+        decoration for the newly non-empty folder.
+
+        invalidate() unconditionally clears the proxy mapping and emits
+        layoutAboutToBeChanged/layoutChanged, forcing the view to rebuild its view
+        items and re-query FSModel::hasChildren() (a live QDirIterator check), so the
+        dropdown decoration appears.  Expansion and selection are preserved via
+        persistent indexes.
+    */
+    this->invalidate();
 }
 
 bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
@@ -560,6 +578,8 @@ FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
     connect(delegate, &HoverDelegate::hoverChanged, this->viewport(), [this]() {
             this->viewport()->update();});
 
+    setupFolderWatcher();
+
     isDebug = false;
 }
 
@@ -624,6 +644,7 @@ void FSTree::refreshModel()
     fsModel->clearCount();
     fsFilter->refresh();
     setFocus();
+    scheduleWatchResync();
     // select(currentFolderPath());
 }
 
@@ -702,6 +723,116 @@ void FSTree::updateAFolderCount(const QString &dPath)
     Updates image count for the dPath folder
 */
     fsModel->updateCount(dPath);
+}
+
+void FSTree::setupFolderWatcher()
+{
+/*
+    Auto-refresh the folder tree when subfolders are added or removed on disk
+    (e.g. in Finder/Explorer) without requiring a manual Refresh.
+
+    QFileSystemWatcher is the cross-platform Qt wrapper over the native facility on
+    each OS (FSEvents/kqueue on macOS, ReadDirectoryChangesW on Windows, inotify on
+    Linux).  It only reports paths that are explicitly registered, so rather than
+    watch the whole filesystem we watch just the directories currently visible in
+    the viewport.  updateWatchedFolders() keeps that set in sync as the user scrolls,
+    expands/collapses, selects or resizes.
+
+    Two debounce timers coalesce bursts:
+      - watchResyncTimer: many scroll/expand events -> one watch-set rebuild.
+      - watchRefreshTimer: one user action (e.g. copying several folders) can fire
+        many directoryChanged signals -> one tree refresh.
+*/
+    if (G::isLogger) G::log("FSTree::setupFolderWatcher");
+
+    watchResyncTimer.setSingleShot(true);
+    watchRefreshTimer.setSingleShot(true);
+
+    connect(&folderWatcher, &QFileSystemWatcher::directoryChanged,
+            this, &FSTree::onWatchedDirectoryChanged);
+
+    connect(&watchResyncTimer, &QTimer::timeout,
+            this, &FSTree::updateWatchedFolders);
+
+    connect(&watchRefreshTimer, &QTimer::timeout, this, [this]() {
+        /* A watched folder's contents changed: refresh decorations (FSFilter::refresh
+           re-queries the live FSModel::hasChildren so dropdown decorations appear or
+           disappear) and re-sync the watch set, since newly created subfolders may
+           now be visible. */
+        fsFilter->refresh();
+        updateWatchedFolders();
+    });
+
+    /* Re-sync the watch set whenever the set of visible folders may have changed. */
+    connect(verticalScrollBar(), &QScrollBar::valueChanged,
+            this, &FSTree::scheduleWatchResync);
+    connect(this, &QTreeView::expanded, this, &FSTree::scheduleWatchResync);
+    connect(this, &QTreeView::collapsed, this, &FSTree::scheduleWatchResync);
+
+    /* Build the initial watch set once the tree is first laid out. */
+    scheduleWatchResync();
+}
+
+void FSTree::scheduleWatchResync()
+{
+/*
+    Debounced request to rebuild the watch set.  Restarting a single-shot timer
+    coalesces rapid scroll/expand/selection bursts into one updateWatchedFolders().
+*/
+    watchResyncTimer.start(150);
+}
+
+QStringList FSTree::visibleFolderPaths() const
+{
+/*
+    Returns the folder paths for the rows currently visible in the viewport, walking
+    top to bottom one row height at a time (same approach as updateCount()).
+*/
+    QStringList paths;
+    const int h = viewport()->height();
+    int y = 0;
+    while (y < h) {
+        QModelIndex idx = indexAt(QPoint(0, y));
+        if (!idx.isValid()) break;
+        const QString p = idx.data(QFileSystemModel::FilePathRole).toString();
+        if (!p.isEmpty() && !paths.contains(p)) paths << p;
+        const int rh = rowHeight(idx);
+        if (rh <= 0) break;             // guard against a zero-height row (infinite loop)
+        y += rh;
+    }
+    return paths;
+}
+
+void FSTree::updateWatchedFolders()
+{
+/*
+    Diff the desired watch set (currently visible folders) against what is already
+    watched and apply only the delta, so we avoid needless add/remove churn.
+*/
+    if (G::isLogger) G::log("FSTree::updateWatchedFolders");
+
+    const QStringList wanted = visibleFolderPaths();
+    const QStringList current = folderWatcher.directories();
+
+    QStringList toRemove;
+    for (const QString &p : current)
+        if (!wanted.contains(p)) toRemove << p;
+    if (!toRemove.isEmpty()) folderWatcher.removePaths(toRemove);
+
+    QStringList toAdd;
+    for (const QString &p : wanted)
+        if (!current.contains(p)) toAdd << p;
+    if (!toAdd.isEmpty()) folderWatcher.addPaths(toAdd);
+}
+
+void FSTree::onWatchedDirectoryChanged(const QString &path)
+{
+/*
+    A watched folder's immediate contents changed (subfolder added/removed/renamed).
+    Debounce the refresh so a burst of changes collapses into one update.
+*/
+    if (G::isLogger) G::log("FSTree::onWatchedDirectoryChanged", path);
+    watchRefreshTimer.start(300);
 }
 
 void FSTree::setShowImageCount(bool showImageCount)
@@ -1096,6 +1227,7 @@ void FSTree::resizeEvent(QResizeEvent *event)
 {
     if (G::isLogger) G::log("FSTree::resizeEvent");
     resizeColumns();
+    scheduleWatchResync();
 }
 
 qlonglong FSTree::selectionCount()
@@ -1113,6 +1245,7 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
 */
     if (G::isInitializing) return;
     QTreeView::selectionChanged(selected, deselected);
+    scheduleWatchResync();
 }
 
 void FSTree::keyPressEvent(QKeyEvent *event){
