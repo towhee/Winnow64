@@ -290,8 +290,9 @@ void Progress::paintEvent(QPaintEvent * /*event*/)
     QFont f = font();
     for (const Row &r : rows) {
         if (!r.visible) continue;
-        // bar column (bar centered vertically within its row)
-        int barY = r.top + yOff + (r.height - r.barHeight) / 2;
+        // bar column (bar centered vertically within its row, nudged down 1px
+        // relative to the text so it aligns with the status text baseline)
+        int barY = r.top + yOff + (r.height - r.barHeight) / 2 + 1;
         p.drawPixmap(barX(), barY, r.bar);
         // text column
         int tw = effectiveTextColWidth();
