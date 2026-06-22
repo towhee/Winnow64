@@ -116,6 +116,7 @@ private:
     int singleProgressItemNudge() const; // extra px to nudge the row when only one is visible (platform-specific)
     int effectiveTextColWidth() const;   // explicit textColWidth, else auto-fit
     void rebuildRowPixmap(Row &r);       // (re)create r.bar at current barWidth
+    void fillBarBackground(Row &r);      // fill r.bar with the bg gradient (so progress shows against it)
     void relayout();                     // recompute tops/heights, emit height
     void rebuildGradients();             // bg/cursor/imageCache/target gradients
 

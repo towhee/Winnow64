@@ -810,7 +810,7 @@ private:
     QAction *showImageCountAction;
     QAction *runDropletAction;
     QAction *reportMetadataAction;
-    QAction *visCmpImagesAction;
+    QAction *findDuplicatesAction;
     QAction *mediaReadSpeedAction;
     QAction *reportHueCountAction;
     QAction *meanStackAction;

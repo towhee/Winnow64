@@ -51,7 +51,7 @@ Progress::Progress(QWidget *parent) : QWidget(parent)
 
     /* Build the three rows that mirror the previous ProgressBar strips. */
     idImageCache = addRow("ImageCache", icBarHeight, imageCacheColor);
-    idMetaRead   = addRow("MetaRead", 2, metaReadCacheColor);
+    idMetaRead   = addRow("MetaRead", 4, metaReadCacheColor);
     idFocusStack = addRow("FocusStack", 2, QColor(Qt::darkYellow));
 
     /* All rows start hidden (Row::active defaults false) and are only shown while
@@ -125,7 +125,17 @@ int Progress::singleProgressItemNudge() const
 void Progress::rebuildRowPixmap(Row &r)
 {
     r.bar = QPixmap(barWidth(), r.barHeight);
-    r.bar.fill(bgColor);
+    fillBarBackground(r);
+}
+
+void Progress::fillBarBackground(Row &r)
+{
+    /* Fill the bar's empty area with the bg gradient (not a flat color) so the
+       progress painted over it remains visible against the background. The
+       gradient is sized to this row's bar height so it spans the full bar. */
+    QPainter pnt(&r.bar);
+    pnt.fillRect(r.bar.rect(), getGradient(bgColor, r.barHeight));
+    pnt.end();
 }
 
 void Progress::rebuildGradients()
@@ -348,9 +358,7 @@ void Progress::clearImageCacheProgress()
 {
     int i = rowIndex(idImageCache);
     if (i < 0) return;
-    QPainter pnt(&rows[i].bar);
-    pnt.fillRect(rows[i].bar.rect(), bgGradient);
-    pnt.end();
+    fillBarBackground(rows[i]);
     update();
 }
 
@@ -423,9 +431,7 @@ void Progress::clearMetaReadProgress()
 {
     int i = rowIndex(idMetaRead);
     if (i < 0) return;
-    QPainter pnt(&rows[i].bar);
-    pnt.fillRect(rows[i].bar.rect(), G::backgroundColor);
-    pnt.end();
+    fillBarBackground(rows[i]);
     showRow(idMetaRead, false);   // collapse the row when inactive
     update();
 }
@@ -453,9 +459,7 @@ void Progress::clearFocusStackProgress()
 {
     int i = rowIndex(idFocusStack);
     if (i < 0) return;
-    QPainter pnt(&rows[i].bar);
-    pnt.fillRect(rows[i].bar.rect(), G::backgroundColor);
-    pnt.end();
+    fillBarBackground(rows[i]);
     showRow(idFocusStack, false);   // collapse the row when inactive
     update();
 }

@@ -1166,11 +1166,11 @@ void MW::createUtilActions()
     addAction(mediaReadSpeedAction);
     connect(mediaReadSpeedAction, &QAction::triggered, this, &MW::mediaReadSpeed);
 
-    visCmpImagesAction = new QAction(tr("Find duplicates"), this);
-    visCmpImagesAction->setObjectName("visCmpImages");
-    visCmpImagesAction->setShortcutVisibleInContextMenu(true);
-    addAction(visCmpImagesAction);
-    connect(visCmpImagesAction, &QAction::triggered, this, &MW::findDuplicates);
+    findDuplicatesAction = new QAction(tr("Find duplicates"), this);
+    findDuplicatesAction->setObjectName("visCmpImages");
+    findDuplicatesAction->setShortcutVisibleInContextMenu(true);
+    addAction(findDuplicatesAction);
+    connect(findDuplicatesAction, &QAction::triggered, this, &MW::findDuplicates);
 
     reportHueCountAction = new QAction(tr("Report hue count"), this);
     reportHueCountAction->setObjectName("reportHueCount");
@@ -1892,7 +1892,7 @@ void MW::createEditMenu()
     editMenu->addSeparator();
     utilitiesMenu = editMenu->addMenu("Utilities");
     utilitiesMenu->addAction(mediaReadSpeedAction);
-    utilitiesMenu->addAction(visCmpImagesAction);
+    utilitiesMenu->addAction(findDuplicatesAction);
     // utilitiesMenu->addAction(reportHueCountAction);
     utilitiesMenu->addAction(meanStackAction);
     utilitiesMenu->addAction(focusStackAction);
@@ -1995,7 +1995,7 @@ void MW::createUtilMenu()
 
     utilMenu->addAction(embelGroupAct);
     utilMenu->addAction(mediaReadSpeedAction);
-    utilMenu->addAction(visCmpImagesAction);
+    utilMenu->addAction(findDuplicatesAction);
     // utilitiesMenu->addAction(reportHueCountAction);
     utilMenu->addAction(meanStackAction);
     utilMenu->addAction(focusStackGroupAct);
