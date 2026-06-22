@@ -24,6 +24,8 @@ class Mac
 {
 public:
     static void initializeAppDelegate();
+    static void disableExtraEditMenuItems();
+    static void stripEditMenuExtras();
     static void availableMemory();
     static qint64 getResidentMemoryUsageBytes();
 

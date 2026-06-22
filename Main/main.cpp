@@ -48,6 +48,12 @@ static void winnowTiffWarningHandler(const char *module, const char *fmt, va_lis
 
 int main(int argc, char *argv[])
 {
+#ifdef Q_OS_MAC
+    // Suppress the system-appended "Start Dictation" / "Emoji & Symbols" items
+    // in the Edit menu. Must run before the menu (and ideally the app) is built.
+    Mac::disableExtraEditMenuItems();
+#endif
+
     /* Original multi instance version
     QApplication a(argc, argv);
     QString args;
@@ -144,6 +150,9 @@ int main(int argc, char *argv[])
 
 #ifdef Q_OS_MAC
     Mac::initializeAppDelegate();
+    // Strip the Sequoia "Writing Tools" / "Autofill" items AppKit appends to
+    // the Edit menu (no defaults switch exists for these).
+    Mac::stripEditMenuExtras();
     // MyApplicationDelegate *delegate = [[MyApplicationDelegate alloc] init];
     // [NSApp setDelegate:delegate];
 #endif
