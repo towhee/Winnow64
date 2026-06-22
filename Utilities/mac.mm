@@ -32,6 +32,98 @@ void Mac::initializeAppDelegate() {
     }
 }
 
+/*
+    macOS auto-appends system items to whatever menu AppKit identifies as the
+    Edit menu: "Start Dictation" and "Emoji & Symbols" (long-standing), plus
+    "Writing Tools" and "Autofill" (Sequoia). AppKit honours a registered
+    default to suppress Dictation; it must be told before the menu is built, so
+    call this at the very top of main(), before QApplication. "Emoji & Symbols"
+    is left in place (NSDisabledCharacterPaletteMenuItem is intentionally not
+    set). Writing Tools and Autofill have no defaults switch and are removed at
+    runtime by stripEditMenuExtras().
+*/
+void Mac::disableExtraEditMenuItems() {
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{
+        @"NSDisabledDictationMenuItem" : @YES,
+    }];
+}
+
+/*
+    Writing Tools and Autofill have no defaults switch, so they are stripped at
+    runtime. Rather than wrap Qt's own NSMenuDelegate on the Edit menu (Qt
+    installs and relies on it, and may rebuild the native menu), observe
+    NSMenuDidBeginTrackingNotification app-wide and remove the offending items
+    from whichever menu is opening, just before it is drawn. This survives Qt
+    rebuilding the menu and never disturbs Qt's delegate.
+
+    The two items are matched by action selector with a localized-title
+    fallback (Autofill is a titled submenu with no action of its own). Set the
+    env var WINNOW_DUMP_EDITMENU=1 to log each opening menu's item titles and
+    actions, which is how the match below can be confirmed or extended.
+*/
+static BOOL itemIsSystemExtra(NSMenuItem *item) {
+    if (item.action == NSSelectorFromString(@"showWritingTools:")) return YES;
+    NSString *lower = item.title.lowercaseString;
+    if (lower.length) {
+        if ([lower containsString:@"writing tools"]) return YES;
+        if ([lower containsString:@"autofill"]) return YES;
+        if ([lower containsString:@"auto-fill"]) return YES;
+    }
+    return NO;
+}
+
+static void stripSystemEditItems(NSMenu *menu) {
+    if (!menu) return;
+    if (getenv("WINNOW_DUMP_EDITMENU")) {
+        NSLog(@"[EditMenu] menu '%@' opened, %ld items", menu.title,
+              (long)menu.numberOfItems);
+        for (NSMenuItem *item in menu.itemArray)
+            NSLog(@"[EditMenu]   '%@' action=%@",
+                  item.title, NSStringFromSelector(item.action));
+    }
+    /* copy: removeItem mutates the menu we are iterating */
+    NSArray<NSMenuItem *> *items = [[menu.itemArray copy] autorelease];
+    for (NSMenuItem *item in items) {
+        if (itemIsSystemExtra(item)) [menu removeItem:item];
+    }
+    /* drop any separator left dangling at the trailing edge */
+    while (menu.numberOfItems > 0 && menu.itemArray.lastObject.isSeparatorItem)
+        [menu removeItemAtIndex:menu.numberOfItems - 1];
+}
+
+@interface WinnowEditMenuStripper : NSObject
++ (instancetype)shared;
+- (void)menuBeganTracking:(NSNotification *)note;
+@end
+
+@implementation WinnowEditMenuStripper
++ (instancetype)shared {
+    static WinnowEditMenuStripper *s = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ s = [[WinnowEditMenuStripper alloc] init]; });
+    return s;
+}
+- (void)menuBeganTracking:(NSNotification *)note {
+    /* The notification fires for the menu-bar root menu, not the Edit submenu.
+       Reach into the submenu titled "Edit" and strip there. */
+    NSMenu *bar = (NSMenu *)note.object;
+    for (NSMenuItem *top in bar.itemArray) {
+        if ([top.title isEqualToString:@"Edit"] && top.submenu) {
+            stripSystemEditItems(top.submenu);
+            break;
+        }
+    }
+}
+@end
+
+void Mac::stripEditMenuExtras() {
+    [[NSNotificationCenter defaultCenter]
+        addObserver:[WinnowEditMenuStripper shared]
+           selector:@selector(menuBeganTracking:)
+               name:NSMenuDidBeginTrackingNotification
+             object:nil];
+}
+
 @interface SharingDelegate : NSObject<NSSharingServicePickerDelegate>
 @end
 
