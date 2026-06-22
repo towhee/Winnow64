@@ -91,3 +91,8 @@ built and ran in Qt Creator.
   the 650th image, when I made a pick the thumbView scrolled back to zero.  The 650th image was picked, as could be seen when I scrolled
   back.  Picking any image in the 650-780 range resulted in scrolling all the way back to zero.  When I tried picking images less than 650
   no scrolling occurred.  Same thing, no scrolling when I picked the last image, number 800.  Any idea what could cause the scrolling?
+
+
+/Users/roryhill/Library/Application Support/Winnow/Winnets/FocusStack
+
+Wrting tools, Autofill, Start dictation
