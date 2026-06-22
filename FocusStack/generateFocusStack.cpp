@@ -392,4 +392,11 @@ void MW::matFromQImage(QString fPath, ImageMetadata m, cv::Mat &mat)
     cv::cvtColor(mat, mat, cv::COLOR_RGBA2BGRA);
 }
 
-
+void MW::copyFocusStackWinnetPath()
+{
+    QString winnetPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    winnetPath += "/Winnets/FocusStack";
+    QApplication::clipboard()->setText(winnetPath);
+    QString msg = "Copied \"" + winnetPath + "\" to the clipboard";
+    G::popup->showPopup(msg, 3000);
+}

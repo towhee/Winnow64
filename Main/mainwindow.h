@@ -751,13 +751,16 @@ private:
     QMenu *editMenu;
     QMenu *ratingsMenu;
     QMenu *labelsMenu;
-    QMenu *utilitiesMenu;
     QMenu *goMenu;
     QMenu *filterMenu;
     QMenu *sortMenu;
-    QMenu *embelMenu;
-        QMenu *embelExportMenu;
-        QMenu *embelExportOverrideMenu;
+
+    QMenu *utilitiesMenu;
+    QMenu *utilMenu;
+        QMenu *embelMenu;
+            QMenu *embelExportMenu;
+            QMenu *embelExportOverrideMenu;
+        QMenu *focusStackMenu;
     QMenu *viewMenu;
        QMenu *zoomSubMenu;
     QMenu *windowMenu;
@@ -812,6 +815,7 @@ private:
     QAction *reportHueCountAction;
     QAction *meanStackAction;
     QAction *focusStackAction;
+    QAction *copyFocusStackWinnetPathAction;
     QAction *exitAction;
 
     // Open with menu in File menu
@@ -1046,7 +1050,9 @@ private:
     QAction *goGroupAct;
     QAction *filterGroupAct;
     QAction *sortGroupAct;
+    QAction *utilGroupAct;
     QAction *embelGroupAct;
+    QAction *focusStackGroupAct;
     QAction *viewGroupAct;
     QAction *windowGroupAct;
     QAction *helpGroupAct;
@@ -1305,7 +1311,7 @@ private:
     void createGoActions();
     void createFilterActions();
     void createSortActions();
-    void createEmbellishActions();
+    void createUtilActions();
     void createViewActions();
     void createWindowActions();
     void createHelpActions();
@@ -1331,7 +1337,7 @@ private:
     void createGoMenu();
     void createFilterMenu();
     void createSortMenu();
-    void createEmbellishMenu();
+    void createUtilMenu();
     void createViewMenu();
     void createWindowMenu();
     void createHelpMenu();
@@ -1342,6 +1348,8 @@ private:
     void createFiltersContextMenu();
     void createInfoViewContextMenu();
     void createThumbViewContextMenu();
+    void createFocusStackMenu();
+    void createEmbellishMenu();
 
     void createTableView();
     void createThumbView();
@@ -1468,6 +1476,7 @@ private:
     void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
     void generateFocusStack(const QStringList paths, QString method,
                             const bool isLocal);
+    void copyFocusStackWinnetPath();
 
     void scrollImageViewStressTest(int ms, int pauseCount, int msPauseDelay);
     void traverseFolderStressTestFromMenu();

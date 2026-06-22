@@ -13,7 +13,7 @@ void MW::createActions()
     createGoActions();              // Go Menu
     createFilterActions();          // Filter Menu
     createSortActions();            // Sort Menu
-    createEmbellishActions();       // Embellish Menu
+    createUtilActions();            // Utilities Menu
     createViewActions();            // View Menu
     createWindowActions();          // View Menu now
     createHelpActions();            // Help Menu
@@ -148,12 +148,12 @@ void MW::createFileActions()
     addActions(recentFolderActions);
 
     QString revealText = "Reveal";
-#ifdef Q_OS_WIN
+    #ifdef Q_OS_WIN
     revealText = "Open in Explorer";
-#endif
-#ifdef Q_OS_MAC
+    #endif
+    #ifdef Q_OS_MAC
     revealText = "Reveal in Finder";
-#endif
+    #endif
 
     saveAsFileAction = new QAction("Save Preview as...", this);
     saveAsFileAction->setObjectName("saveAs");
@@ -587,40 +587,6 @@ void MW::createEditActions()
     rotateLeftAction->setShortcutVisibleInContextMenu(true);
     addAction(rotateLeftAction);
     connect(rotateLeftAction, &QAction::triggered, this, &MW::rotateLeft);
-
-    // Utilities
-    mediaReadSpeedAction = new QAction(tr("Media read speed"), this);
-    mediaReadSpeedAction->setObjectName("mediaReadSpeed");
-    mediaReadSpeedAction->setShortcutVisibleInContextMenu(true);
-    addAction(mediaReadSpeedAction);
-    connect(mediaReadSpeedAction, &QAction::triggered, this, &MW::mediaReadSpeed);
-
-    visCmpImagesAction = new QAction(tr("Find duplicates"), this);
-    visCmpImagesAction->setObjectName("visCmpImages");
-    visCmpImagesAction->setShortcutVisibleInContextMenu(true);
-    addAction(visCmpImagesAction);
-    connect(visCmpImagesAction, &QAction::triggered, this, &MW::findDuplicates);
-
-    reportHueCountAction = new QAction(tr("Report hue count"), this);
-    reportHueCountAction->setObjectName("reportHueCount");
-    reportHueCountAction->setShortcutVisibleInContextMenu(true);
-    addAction(reportHueCountAction);
-    connect(reportHueCountAction, &QAction::triggered, this, &MW::reportHueCount);
-
-    meanStackAction = new QAction(tr("Mean stack"), this);
-    meanStackAction->setObjectName("meanStack");
-    meanStackAction->setShortcutVisibleInContextMenu(true);
-    addAction(meanStackAction);
-    connect(meanStackAction, &QAction::triggered, this, &MW::generateMeanStack);
-
-    focusStackAction = new QAction(tr("Focus stack"), this);
-    focusStackAction->setObjectName("focusStack");
-    focusStackAction->setShortcutVisibleInContextMenu(true);
-    addAction(focusStackAction);
-    connect(focusStackAction, &QAction::triggered,
-            this, &MW::focusStackFromSelection);
-
-    // End Utilities
 
     prefAction = new QAction(tr("Preferences"), this);
     prefAction->setObjectName("settings");
@@ -1082,7 +1048,7 @@ void MW::createSortActions()
     connect(sortReverseAction, &QAction::triggered, this, &MW::toggleSortDirectionClick);
 }
 
-void MW::createEmbellishActions()
+void MW::createUtilActions()
 {
     // Embellish menu
     int n;          // used to populate action lists
@@ -1123,12 +1089,12 @@ void MW::createEmbellishActions()
     connect(embelManageGraphicsAction, &QAction::triggered, embelProperties, &EmbelProperties::manageGraphics);
 
     QString revealText = "Reveal";
-#ifdef Q_OS_WIN
+    #ifdef Q_OS_WIN
     revealText = "Show Winnets in Explorer";
-#endif
-#ifdef Q_OS_MAC
+    #endif
+    #ifdef Q_OS_MAC
     revealText = "Show Winnets in Finder";
-#endif
+    #endif
 
     embelRevealWinnetsAction = new QAction(revealText, this);
     embelRevealWinnetsAction->setObjectName("RevealWinnetsAct");
@@ -1178,6 +1144,46 @@ void MW::createEmbellishActions()
     if (embelProperties->templateId < n)
         embelTemplatesActions.at(embelProperties->templateId)->setChecked(true);
         */
+
+    // Focus stack actions
+    focusStackAction = new QAction(tr("Run focus stack"), this);
+    focusStackAction->setObjectName("runFocusStack");
+    focusStackAction->setShortcutVisibleInContextMenu(true);
+    addAction(focusStackAction);
+    connect(focusStackAction, &QAction::triggered,
+            this, &MW::focusStackFromSelection);
+
+    copyFocusStackWinnetPathAction = new QAction(tr("Copy focus stack winnet path to clipboard"), this);
+    copyFocusStackWinnetPathAction->setObjectName("copyFocusStackWinnetPath");
+    copyFocusStackWinnetPathAction->setShortcutVisibleInContextMenu(true);
+    addAction(copyFocusStackWinnetPathAction);
+    connect(copyFocusStackWinnetPathAction, &QAction::triggered,
+            this, &MW::copyFocusStackWinnetPath);
+
+    mediaReadSpeedAction = new QAction(tr("Media read speed"), this);
+    mediaReadSpeedAction->setObjectName("mediaReadSpeed");
+    mediaReadSpeedAction->setShortcutVisibleInContextMenu(true);
+    addAction(mediaReadSpeedAction);
+    connect(mediaReadSpeedAction, &QAction::triggered, this, &MW::mediaReadSpeed);
+
+    visCmpImagesAction = new QAction(tr("Find duplicates"), this);
+    visCmpImagesAction->setObjectName("visCmpImages");
+    visCmpImagesAction->setShortcutVisibleInContextMenu(true);
+    addAction(visCmpImagesAction);
+    connect(visCmpImagesAction, &QAction::triggered, this, &MW::findDuplicates);
+
+    reportHueCountAction = new QAction(tr("Report hue count"), this);
+    reportHueCountAction->setObjectName("reportHueCount");
+    reportHueCountAction->setShortcutVisibleInContextMenu(true);
+    addAction(reportHueCountAction);
+    connect(reportHueCountAction, &QAction::triggered, this, &MW::reportHueCount);
+
+    meanStackAction = new QAction(tr("Mean stack"), this);
+    meanStackAction->setObjectName("meanStack");
+    meanStackAction->setShortcutVisibleInContextMenu(true);
+    addAction(meanStackAction);
+    connect(meanStackAction, &QAction::triggered, this, &MW::generateMeanStack);
+
 }
 
 void MW::createViewActions()
@@ -1736,6 +1742,8 @@ void MW::createMenus()
     createFilterMenu();
     createSortMenu();
     createEmbellishMenu();
+    createFocusStackMenu();
+    createUtilMenu();
     createViewMenu();
     // createWindowMenu();
     createHelpMenu();
@@ -1978,27 +1986,20 @@ void MW::createSortMenu()
     sortMenu->addAction(sortReverseAction);
 }
 
-void MW::createEmbellishMenu()
+void MW::createUtilMenu()
 {
-    embelMenu = new QMenu(this);
-    //    /*
-    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
-    //*/
-    embelGroupAct = new QAction("Embellish", this);
-    embelGroupAct->setMenu(embelMenu);
-    embelExportMenu = embelMenu->addMenu(tr("Export embellished images..."));
-    embelExportMenu->addActions(embelExportGroupAction->actions());
-    embelMenu->addSeparator();
-    embelMenu->addAction(embelNewTemplateAction);
-    embelMenu->addAction(embelReadTemplateAction);
-    embelMenu->addAction(embelSaveTemplateAction);
-    embelMenu->addSeparator();
-    embelMenu->addAction(embelManageTilesAction);
-    embelMenu->addAction(embelManageGraphicsAction);
-    embelMenu->addSeparator();
-    embelMenu->addAction(embelRevealWinnetsAction);
-    connect(embelExportMenu, &QMenu::triggered, this, &MW::exportEmbelFromAction);
-    //connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
+    utilMenu = new QMenu(this);
+
+    utilGroupAct = new QAction("Utilities", this);
+    utilGroupAct->setMenu(utilMenu);
+
+    utilMenu->addAction(embelGroupAct);
+    utilMenu->addAction(mediaReadSpeedAction);
+    utilMenu->addAction(visCmpImagesAction);
+    // utilitiesMenu->addAction(reportHueCountAction);
+    utilMenu->addAction(meanStackAction);
+    utilMenu->addAction(focusStackGroupAct);
+
 }
 
 void MW::createViewMenu()
@@ -2151,7 +2152,8 @@ void MW::createMainMenu()
     menuBar()->addAction(goGroupAct);
     menuBar()->addAction(filterGroupAct);
     menuBar()->addAction(sortGroupAct);
-    menuBar()->addAction(embelGroupAct);
+    menuBar()->addAction(utilGroupAct);
+    // menuBar()->addAction(embelGroupAct);
     menuBar()->addAction(viewGroupAct);
     // menuBar()->addAction(windowGroupAct);
     menuBar()->addAction(helpGroupAct);
@@ -2168,7 +2170,7 @@ void MW::createMainContextMenu()
     mainContextActions->append(goGroupAct);
     mainContextActions->append(filterGroupAct);
     mainContextActions->append(sortGroupAct);
-    mainContextActions->append(embelGroupAct);
+    mainContextActions->append(utilGroupAct);
     mainContextActions->append(viewGroupAct);
     // mainContextActions->append(windowGroupAct);
     mainContextActions->append(helpGroupAct);
@@ -2388,6 +2390,39 @@ void MW::createThumbViewContextMenu()
     // docking panels context menus
     thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);
+}
+
+void MW::createFocusStackMenu()
+{
+    focusStackMenu = new QMenu(this);
+    focusStackGroupAct = new QAction("Focus Stack", this);
+    focusStackGroupAct->setMenu(focusStackMenu);
+    focusStackMenu->addAction(focusStackAction);
+    focusStackMenu->addAction(copyFocusStackWinnetPathAction);
+}
+
+void MW::createEmbellishMenu()
+{
+    embelMenu = new QMenu(this);
+    //    /*
+    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
+    //*/
+    embelGroupAct = new QAction("Embellish", this);
+    // embelGroupAct->setMenu(utilMenu);
+    embelGroupAct->setMenu(embelMenu);
+    embelExportMenu = embelMenu->addMenu(tr("Export embellished images..."));
+    embelExportMenu->addActions(embelExportGroupAction->actions());
+    embelMenu->addSeparator();
+    embelMenu->addAction(embelNewTemplateAction);
+    embelMenu->addAction(embelReadTemplateAction);
+    embelMenu->addAction(embelSaveTemplateAction);
+    embelMenu->addSeparator();
+    embelMenu->addAction(embelManageTilesAction);
+    embelMenu->addAction(embelManageGraphicsAction);
+    embelMenu->addSeparator();
+    embelMenu->addAction(embelRevealWinnetsAction);
+    connect(embelExportMenu, &QMenu::triggered, this, &MW::exportEmbelFromAction);
+    //connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
 }
 
 void MW::addMenuSeparator(QWidget *widget)
