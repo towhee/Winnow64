@@ -5943,16 +5943,17 @@ void MW::mediaReadSpeed()
 
 void MW::findDuplicates()
 {
-    if (G::isLogger) G::log("MW::findDuplicates");
+    QString srcFun = "MW::findDuplicate";
+    if (G::isLogger) G::log(srcFun);
     FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata);
     findDuplicatesDlg->setStyleSheet(G::css);
     // minimize dialog size fitting contents
     // findDuplicatesDlg->resize(100, 100);
     if (findDuplicatesDlg->exec()) {
-        qDebug() << "MW::findDuplicates accepted";
+        qDebug() << srcFun << "accepted";
         // add true to compare filter
         buildFilters->updateCategory(BuildFilters::CompareEdit, BuildFilters::NoAfterAction);
-        filterChange("MW::visCmpImages");
+        filterChange(srcFun);
     }
 }
 
