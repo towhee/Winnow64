@@ -122,6 +122,7 @@ public:
 
     QMutex dmMutex;
     QReadWriteLock fPathRowLock;
+    QReadWriteLock fPathRawInfoLock;
 
     bool isProcessingFolders = false;
 
@@ -141,6 +142,15 @@ public:
     void fPathRowSet(const QString &path, const int row);
     void fPathRowRemove(const QString &path);
     void fPathRowClear();
+
+    /* RAW sensor unpack info keyed by fPath, populated during metadata read for raw files.
+       Lets the RAW decode path (ImageDecoder, cache mode) obtain RawSensorInfo without
+       re-walking the file. Only raw files are stored, so this stays small. Concurrent: written
+       from Reader/MetaRead threads via addMetadataForItem, read from decoder threads. */
+    QHash<QString, RawSensorInfo> fPathRawInfo;
+    bool fPathRawInfoGet(const QString &path, RawSensorInfo &info);
+    void fPathRawInfoSet(const QString &path, const RawSensorInfo &info);
+    void fPathRawInfoClear();
 
     // track large recursive subfolder trees
     quint32 subFolderTreeCount = 0;

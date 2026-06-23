@@ -61,6 +61,7 @@ void MW::writeSettings()
     // files
     settings->setValue("includeSidecars", G::includeSidecars);
     settings->setValue("colorManage", G::colorManage);
+    settings->setValue("useRaw", G::useRaw);
     settings->setValue("rememberLastDir", rememberLastDir);
     settings->setValue("checkIfUpdate", checkIfUpdate);
     settings->setValue("updateSkipVersion", updateSkipVersion);
@@ -317,6 +318,7 @@ bool MW::loadSettings()
 
         // files
         G::colorManage = true;
+        G::useRaw = false;
         rememberLastDir = false;
         checkIfUpdate = true;
         updateSkipVersion = "";
@@ -449,6 +451,7 @@ bool MW::loadSettings()
     // files
     if (settings->contains("includeSidecars")) G::includeSidecars = settings->value("includeSidecars").toBool();
     if (settings->contains("colorManage")) G::colorManage = settings->value("colorManage").toBool();
+    if (settings->contains("useRaw")) G::useRaw = settings->value("useRaw").toBool();
     // if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
     rememberLastDir = false;    // remove rememberLastDir for now 2025-03-21
     if (settings->contains("checkIfUpdate")) checkIfUpdate = settings->value("checkIfUpdate").toBool();

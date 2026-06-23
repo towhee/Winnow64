@@ -1791,7 +1791,7 @@ Architecture
 
     Pipeline (ImageFormats/Raw/):
         ImageDecoder::load()
-          -> RawFormat::Create(ext)          factory; nullptr until a format is implemented
+          -> RawFormat::Create(ext)          factory; "arw" -> SonyRaw, else nullptr (embedded JPG)
           -> RawFormat::Decode()             shared, camera-agnostic pipeline:
                1. UnpackCfa()                 PER-FORMAT virtual (THE override point):
                                               vendor packed/compressed bitstream -> normalised
@@ -1816,8 +1816,36 @@ Architecture
     the Metadata-owned parser singletons, RawFormat instances are never shared, so the
     per-decode scratch carries no cross-thread races.
 
-    Phasing: 1 scaffold (done) -> 2 first uncompressed format UnpackCfa -> 3 colour/lcms2
-    -> 4 better demosaic (AHD) -> 5 compression (lossless-JPEG CR2/DNG, compressed NEF ...).
+    First format (DONE): SonyRaw::UnpackCfa (ImageFormats/Sony/sony.cpp) handles UNCOMPRESSED
+    ARW only (e.g. Sony A9 II: 14-bit samples stored as LE uint16, Bayer RGGB). It reads
+    StripOffsets/Counts, ImageWidth/Length, BitsPerSample, CFAPattern (33422), WhiteLevel
+    (50717). BlackLevel is absent from the ARW IFD (Sony makernote) -- a 512 default is used
+    for now. Compressed ARW (and other comp values) -> Decode() returns false -> ImageDecoder
+    falls back to the embedded JPG, so other Sony files are unaffected.
+
+    METADATA PLUMBING (RawSensorInfo): the per-file facts UnpackCfa needs (CFA strip
+    offset/length, geometry, bitsPerSample, compression, CFA pattern, levels, sample byte
+    order) live in struct RawSensorInfo (Metadata/rawsensorinfo.h -- dependency-free), carried
+    on ImageMetadata::rawInfo. Sony::parse fills it once during the normal metadata read (from
+    the SubIFD0 it already parses -- no second walk). Persistence to the cache decode path:
+    DataModel keeps a lock-guarded QHash<fPath, RawSensorInfo> (fPathRawInfo*), written in
+    addMetadataForItem and cleared on folder reload; ImageDecoder fetches it via
+    dm->fPathRawInfoGet() in cache mode (indMeta carries it directly in independent mode) and
+    hands it to RawFormat::Decode.
+
+    GATED ON G::useRaw: when raw decoding is OFF (previews only), both the parse-time fill and
+    the addMetadataForItem store are skipped, so the MetaRead path pays nothing -- important
+    because the parse-time extraction grows (makernote colour matrix etc.). If useRaw is toggled
+    on after a folder is read, rawInfo will be absent from the store and UnpackCfa falls back to
+    its self-walk, so correctness holds; the store repopulates on the next folder read. SonyRaw::UnpackCfa uses rawInfo when valid and otherwise
+    falls back to its self-contained TIFF/EP walk (readSonyTiffSensorInfo), so both paths
+    converge on one shared unpack. The CFAPattern->enum mapping is shared via
+    cfaPatternFromPlaneColor() in rawimage.h. WB multipliers + colour matrix are NOT yet in
+    RawSensorInfo (they come from the makernote -> the real-RawColor task).
+
+    Phasing: 1 scaffold (done) -> 2 first uncompressed format UnpackCfa: Sony ARW (done)
+    -> 3 colour/lcms2 + real Sony black level/matrix from makernote -> 4 better demosaic (AHD)
+    -> 5 compression (lossless-JPEG CR2/DNG, compressed NEF/ARW ...).
 
     NOTE: an earlier (2025) unused scaffold (ImageFormats/Base/rawbase.* +
     ImageFormats/Tiff/tiffdecoder.*) used the rejected demosaic()-as-override axis and has
@@ -1881,8 +1909,24 @@ Architecture
                  unchanged and never round-trips through the float buffer.
         RAW:     RawFormat::Decode() develops in its native linear float (RawColor::ToWorking
                  -> Develop -> OutputTransform) and ImageDecoder sets developApplied so
-                 applyDevelop() does not run a second time. (RawFormat is still gated behind
-                 Create()==nullptr, so this path is dormant until a format lands.)
+                 applyDevelop() does not run a second time.
+
+    ABORT: RawFormat::Decode() takes the decoder's abort atomic and polls it between stages and
+        once per row inside the demosaic loop, returning false (lastError "Aborted") if set.
+        This matters because ImageCache::stop() (quit) uses a BlockingQueuedConnection to each
+        decoder; without polling, an in-flight 24MP demosaic would run to completion while the
+        main thread blocks waiting -> beachball. ImageCache::stop() now also calls
+        decoders[id]->abortProcessing() (sets the atomic, non-blocking) BEFORE that blocking
+        wait so the in-flight decode actually sees the flag and bails.
+
+    G::useRaw TOGGLE: ImageDecoder::load() only attempts the RAW path when G::useRaw is true;
+        when false it skips RawFormat entirely and shows the embedded preview/JPG (prior
+        behaviour). A status bar button (MW::useRawBtn, between reverseSortBtn and
+        panToFocusToggleBtn) toggles it -- colored raw.png icon when on, grayscale raw_bw.png
+        when off. MW::toggleUseRaw rebuilds the full-size image cache so the change is visible
+        immediately. The value persists across sessions via QSettings ("useRaw", default
+        false). NOTE: the raw decode is still also gated by RawFormat::Create() returning a
+        decoder for the extension (only "arw" today; others -> embedded JPG regardless).
     InputTransform (Develop/) is the non-raw "un-gamma to linear" step, the symmetric
     counterpart of OutputTransform.
 

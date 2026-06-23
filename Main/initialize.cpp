@@ -65,6 +65,11 @@ void MW::initialize()
     reverseSortBtn ->setToolTip("Toggle sort direction: Mouse click or shortcut Opt/Alt + S");
     connect(reverseSortBtn, &BarBtn::clicked, this, &MW::toggleSortDirectionClick);
 
+    useRawBtn = new BarBtn();
+    msg = "Toggle \"Decode Raw\" on/off.";
+    useRawBtn->setToolTip(msg);
+    connect(useRawBtn, &BarBtn::clicked, this, &MW::toggleUseRawClick);
+
     filterStatusLabel = new QLabel;
     filterStatusLabel->setToolTip("The images have been filtered");
 
@@ -1200,6 +1205,7 @@ void MW::createStatusBar()
     statusBar()->addWidget(colorManageToggleBtn);
     statusBar()->addWidget(includeSidecarsToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
+    statusBar()->addWidget(useRawBtn);
     statusBar()->addWidget(panToFocusToggleBtn);
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
     filterStatusLabel->setAlignment(Qt::AlignVCenter);

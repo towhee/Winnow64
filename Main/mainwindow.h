@@ -561,6 +561,8 @@ private slots:
     void toggleModifyImages();
     void toggleColorManageClick();
     void toggleColorManage(Tog n = toggle);
+    void toggleUseRawClick();
+    void toggleUseRaw(Tog n = toggle);
     void togglePanToFocusClick();
     void togglePanToFocus(Tog n = toggle);
     void allPreferences();
@@ -1101,6 +1103,7 @@ private:
     BarBtn *reverseSortBtn;
     BarBtn *includeSidecarsToggleBtn;
     BarBtn *colorManageToggleBtn;
+    BarBtn *useRawBtn;
     BarBtn *panToFocusToggleBtn;
     BarBtn *modifyImagesBtn;
     BarBtn *cacheMethodBtn;

@@ -206,6 +206,14 @@ void ImageCache::stop()
 
     abort = true;
 
+    /* Signal abort to every decoder first (non-blocking; just sets each decoder's atomic
+       flag, safe to call cross-thread). An in-flight decode polls this flag -- e.g. the RAW
+       demosaic checks it per row -- and returns promptly, so the BlockingQueuedConnection
+       below does not have to wait for a full decode to finish (which beachballs the UI). */
+    for (int id = 0; id < decoderCount; ++id) {
+        decoders[id]->abortProcessing();
+    }
+
     // Stop all decoder threads first
     for (int id = 0; id < decoderCount; ++id) {
         QMetaObject::invokeMethod(decoders[id], "stop", Qt::BlockingQueuedConnection);

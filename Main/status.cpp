@@ -162,6 +162,15 @@ void MW::updateStatusBar()
         );
     }
 
+    if (G::useRaw) {
+        useRawBtn->setIcon(QIcon(":/images/icon16/raw.png"));
+        useRawBtn->setToolTip("Decode Raw is On (demosaic sensor data).  Click to toggle on/off");
+    }
+    else {
+        useRawBtn->setIcon(QIcon(":/images/icon16/raw_bw.png"));
+        useRawBtn->setToolTip("Decode Raw is Off (show embedded preview).  Click to toggle on/off");
+    }
+
     if (sortReverseAction->isChecked()) {
         reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
         reverseSortBtn->setToolTip(
@@ -219,6 +228,7 @@ int MW::availableSpaceForProgressBar()
     if (colorManageToggleBtn->isVisible()) w += s + colorManageToggleBtn->width();
     if (panToFocusToggleBtn->isVisible()) w += s + panToFocusToggleBtn->width();
     if (reverseSortBtn->isVisible()) w += s + reverseSortBtn->width();
+    if (useRawBtn->isVisible()) w += s + useRawBtn->width();
     if (rawJpgStatusBtn->isVisible()) w += s + rawJpgStatusBtn->width();
     if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
     if (subfolderStatusLabel->isVisible()) w += s + subfolderStatusLabel->width();
@@ -613,6 +623,44 @@ void MW::toggleColorManage(Tog n)
     }
 
     // // let ImageView know that the image changed
+    imageView->currentImageHasChanged = true;
+
+    // reload image cache
+    emit imageCacheColorManageChange();
+}
+
+void MW::toggleUseRawClick()
+{
+/*
+    Called by the "Decode Raw" status bar button. Redirected to toggleUseRaw, which takes a
+    Tog parameter not supported by the button's clicked() signal.
+*/
+    if (G::isLogger) G::log("MW::toggleUseRawClick");
+    toggleUseRaw(Tog::toggle);
+}
+
+void MW::toggleUseRaw(Tog n)
+{
+/*
+    When G::useRaw is on, ImageDecoder demosaics the raw sensor data; when off it shows the
+    embedded preview/jpg. The full-size image cache is rebuilt so the change is visible.
+*/
+    if (G::isLogger) G::log("MW::toggleUseRaw");
+    if (n == Tog::toggle) G::useRaw = !G::useRaw;
+    if (n == Tog::off) G::useRaw = false;
+    if (n == Tog::on) G::useRaw = true;
+
+    updateStatusBar();  // updates btn image and tooltip
+
+    if (dm->rowCount() == 0) return;
+
+    // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        QString fPath = dm->index(row, G::PathColumn).data(G::PathRole).toString();
+        refreshViewsOnCacheChange(fPath, false, "MW::toggleUseRaw");
+    }
+
+    // let ImageView know that the image changed
     imageView->currentImageHasChanged = true;
 
     // reload image cache

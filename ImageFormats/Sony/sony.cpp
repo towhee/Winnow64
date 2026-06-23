@@ -1,5 +1,6 @@
 #include "sony.h"
 #include "Main/global.h"
+#include <QSet>
 
 Sony::Sony()
 {
@@ -379,6 +380,38 @@ bool Sony::parse(MetadataParameters &p,
         m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
 //    }
 
+    /* RAW sensor unpack info (read from SubIFD0, which holds the full-res CFA). Captured here,
+       before the IFD hash is overwritten by later reads, so SonyRaw::UnpackCfa can use it on
+       the cache path instead of re-walking the file. Only the uncompressed case is unpackable
+       today; compressed ARW still falls back to the embedded JPG. Sony E-mount is RGGB,
+       little-endian, with BlackLevel kept in the makernote (decoder applies its default).
+
+       Gated on G::useRaw: when raw decoding is off, previews are used, so this work (and the
+       later DataModel store) is skipped to keep the MetaRead path fast. If useRaw is toggled on
+       after a folder is read, SonyRaw::UnpackCfa falls back to its self-walk, so nothing breaks. */
+    if (G::useRaw &&
+        ifd->ifdDataHash.contains(273) && ifd->ifdDataHash.contains(279) &&
+        m.width > 0 && m.height > 0) {
+        RawSensorInfo &ri = m.rawInfo;
+        ri.isRaw = true;
+        ri.stripOffset = ifd->ifdDataHash.value(273).tagValue;
+        ri.stripLength = ifd->ifdDataHash.value(279).tagValue;
+        ri.width = m.width;
+        ri.height = m.height;
+        ri.bitsPerSample = ifd->ifdDataHash.contains(258)
+                               ? static_cast<int>(ifd->ifdDataHash.value(258).tagValue) : 14;
+        ri.compression = ifd->ifdDataHash.contains(259)
+                             ? static_cast<int>(ifd->ifdDataHash.value(259).tagValue) : 1;
+        ri.samplesPerPixel = ifd->ifdDataHash.contains(277)
+                                 ? static_cast<int>(ifd->ifdDataHash.value(277).tagValue) : 1;
+        ri.littleEndianSamples = !isBigEnd;
+        /* cfaPlaneColor left at its RGGB default (Sony E-mount). */
+        if (ifd->ifdDataHash.contains(50717))
+            ri.white = ifd->ifdDataHash.value(50717).tagValue;
+        if (ifd->ifdDataHash.contains(50714))
+            for (int i = 0; i < 4; ++i) ri.black[i] = ifd->ifdDataHash.value(50714).tagValue;
+    }
+
     // IFD 1:
     p.hdr = "IFD1";
     p.offset = nextIFDOffset;
@@ -550,4 +583,215 @@ bool Sony::parse(MetadataParameters &p,
 
     return true;
 
+}
+
+/* ------------------------------------------------------------------------------------------
+   SonyRaw::UnpackCfa  --  uncompressed ARW sensor unpack
+   ------------------------------------------------------------------------------------------ */
+
+namespace {
+
+/* TIFF tag types -> byte size. */
+int tiffTypeSize(quint16 t)
+{
+    switch (t) {
+    case 1: case 2: case 6: case 7: return 1;   // BYTE/ASCII/SBYTE/UNDEFINED
+    case 3: case 8:                 return 2;   // SHORT/SSHORT
+    case 4: case 9: case 11:        return 4;   // LONG/SLONG/FLOAT
+    case 5: case 10: case 12:       return 8;   // RATIONAL/SRATIONAL/DOUBLE
+    default:                        return 1;
+    }
+}
+
+/* One IFD entry: type, count, and the raw 4 value-bytes (offset or inline value). */
+struct RawTag {
+    quint16 type = 0;
+    quint32 count = 0;
+    QByteArray val;     // exactly 4 bytes as stored in the entry
+};
+
+/*
+    Self-contained TIFF/EP walk used as a FALLBACK when the metadata read did not populate
+    ImageMetadata::rawInfo (e.g. an independent decode of a file whose parser ran without the
+    raw fields). Locates the uncompressed full-resolution CFA IFD and fills a RawSensorInfo;
+    the shared unpack below then reads the strip. Returns false if no uncompressed CFA IFD is
+    present (compressed ARW -> caller falls back to the embedded JPG).
+*/
+bool readSonyTiffSensorInfo(QFile &file, RawSensorInfo &info)
+{
+    if (!file.seek(0)) return false;
+    const QByteArray hdr = file.read(8);
+    if (hdr.size() < 8) return false;
+    const bool big = (quint8(hdr[0]) == 'M' && quint8(hdr[1]) == 'M');
+
+    /* Endian-aware readers over a byte buffer. */
+    auto g16 = [&](const QByteArray &b, int i) -> quint32 {
+        const quint8 x = quint8(b[i]), y = quint8(b[i+1]);
+        return big ? (quint32(x) << 8 | y) : (quint32(y) << 8 | x);
+    };
+    auto g32 = [&](const QByteArray &b, int i) -> quint32 {
+        const quint8 x = quint8(b[i]), y = quint8(b[i+1]), z = quint8(b[i+2]), w = quint8(b[i+3]);
+        return big ? (quint32(x)<<24 | quint32(y)<<16 | quint32(z)<<8 | w)
+                   : (quint32(w)<<24 | quint32(z)<<16 | quint32(y)<<8 | x);
+    };
+    auto readAt = [&](quint32 off, int n) -> QByteArray {
+        if (!file.seek(off)) return QByteArray();
+        return file.read(n);
+    };
+
+    /* Read one IFD: fill tags, append any SubIFD offsets, return the next-IFD offset. */
+    auto readIfd = [&](quint32 off, QHash<quint16, RawTag> &tags,
+                       QList<quint32> &subs, quint32 &next) -> bool {
+        const QByteArray cnt = readAt(off, 2);
+        if (cnt.size() < 2) return false;
+        const int n = int(g16(cnt, 0));
+        const QByteArray body = readAt(off + 2, n * 12 + 4);
+        if (body.size() < n * 12 + 4) return false;
+        for (int i = 0; i < n; ++i) {
+            const int e = i * 12;
+            const quint16 tag = quint16(g16(body, e));
+            RawTag t;
+            t.type  = quint16(g16(body, e + 2));
+            t.count = g32(body, e + 4);
+            t.val   = body.mid(e + 8, 4);
+            tags.insert(tag, t);
+            if (tag == 330) {                       // SubIFDs
+                const int sz = tiffTypeSize(t.type) * int(t.count);
+                const QByteArray ob = (sz <= 4) ? t.val : readAt(g32(t.val, 0), int(t.count) * 4);
+                for (quint32 k = 0; k < t.count && int((k+1)*4) <= ob.size(); ++k)
+                    subs << g32(ob, int(k * 4));
+            }
+        }
+        next = g32(body, n * 12);
+        return true;
+    };
+
+    /* First value of a tag as an unsigned scalar (SHORT or LONG, inline). */
+    auto scalar = [&](const RawTag &t) -> quint32 {
+        return t.type == 3 ? g16(t.val, 0) : g32(t.val, 0);
+    };
+
+    /* Collect IFD0 + its SubIFDs + the next-IFD chain, then pick the raw CFA IFD. */
+    QList<quint32> queue { g32(hdr, 4) };
+    QSet<quint32> seen;
+    QHash<quint16, RawTag> rawIfd;      // tags of the chosen raw IFD
+    quint64 bestPixels = 0;
+
+    while (!queue.isEmpty()) {
+        const quint32 off = queue.takeFirst();
+        if (off == 0 || seen.contains(off)) continue;
+        seen.insert(off);
+
+        QHash<quint16, RawTag> tags;
+        QList<quint32> subs;
+        quint32 next = 0;
+        if (!readIfd(off, tags, subs, next)) continue;
+        for (quint32 s : subs) queue << s;
+        if (next) queue << next;
+
+        /* Raw CFA candidate: uncompressed, single-sample, with a strip. */
+        const bool hasStrip = tags.contains(273) && tags.contains(279) &&
+                              tags.contains(256) && tags.contains(257);
+        const quint32 comp = tags.contains(259) ? scalar(tags[259]) : 0;
+        const quint32 spp  = tags.contains(277) ? scalar(tags[277]) : 1;
+        if (hasStrip && comp == 1 && spp == 1) {
+            const quint64 px = quint64(scalar(tags[256])) * scalar(tags[257]);
+            if (px > bestPixels) { bestPixels = px; rawIfd = tags; }
+        }
+    }
+
+    if (rawIfd.isEmpty()) return false;
+
+    info.isRaw = true;
+    info.width = int(scalar(rawIfd[256]));
+    info.height = int(scalar(rawIfd[257]));
+    info.bitsPerSample = rawIfd.contains(258) ? int(scalar(rawIfd[258])) : 14;
+    info.compression = 1;                       // candidate selection required comp == 1
+    info.samplesPerPixel = 1;
+    info.stripOffset = scalar(rawIfd[273]);
+    info.stripLength = scalar(rawIfd[279]);
+    info.littleEndianSamples = !big;
+    if (rawIfd.contains(33422) && rawIfd[33422].val.size() >= 4)
+        for (int i = 0; i < 4; ++i) info.cfaPlaneColor[i] = quint8(rawIfd[33422].val[i]);
+    if (rawIfd.contains(50717)) info.white = scalar(rawIfd[50717]);
+    if (rawIfd.contains(50714))
+        for (int i = 0; i < 4; ++i) info.black[i] = scalar(rawIfd[50714]);
+    return true;
+}
+
+} // namespace
+
+bool SonyRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
+{
+/*
+    Unpack an uncompressed Sony ARW CFA mosaic. Prefer the RawSensorInfo plumbed onto
+    ImageMetadata by Sony::parse (the cache path); fall back to a self-contained TIFF walk when
+    it is absent (e.g. an independent decode without raw metadata). Both paths converge on the
+    shared unpack below, so behaviour is identical either way.
+*/
+    RawSensorInfo info;
+    if (m.rawInfo.isValid()) {
+        info = m.rawInfo;
+    }
+    else if (!readSonyTiffSensorInfo(file, info)) {
+        errMsg = "Sony raw: no uncompressed CFA IFD (compressed ARW not supported yet).";
+        return false;
+    }
+
+    const int W   = info.width;
+    const int H   = info.height;
+    const int bps = info.bitsPerSample;
+
+    if (W <= 0 || H <= 0 || bps <= 0 || bps > 16) {
+        errMsg = "Sony raw: bad CFA dimensions/bps.";
+        return false;
+    }
+    if (info.compression != 1) {
+        errMsg = "Sony raw: compressed ARW not supported yet.";
+        return false;
+    }
+    /* This path handles 16-bit-per-sample storage only (the uncompressed ARW case). */
+    if (info.stripLength < quint32(W) * quint32(H) * 2) {
+        errMsg = "Sony raw: strip smaller than 16-bit storage (packed/compressed unsupported).";
+        return false;
+    }
+
+    raw.pattern = cfaPatternFromPlaneColor(info.cfaPlaneColor);
+    if (raw.pattern == CfaPattern::Unknown) raw.pattern = CfaPattern::RGGB;
+
+    raw.white = info.white ? quint16(info.white) : quint16((1u << bps) - 1);
+
+    /* BlackLevel is absent from the ARW IFD (Sony keeps it in the makernote). Use a
+       reasonable default until the makernote value is plumbed (see real-RawColor task). */
+    const quint16 blackDefault = 512;
+    const bool haveBlack = info.black[0] || info.black[1] || info.black[2] || info.black[3];
+    for (int i = 0; i < 4; ++i)
+        raw.black[i] = haveBlack ? quint16(info.black[i]) : blackDefault;
+
+    /* Read the sensor strip and unpack little/big-endian uint16 samples (masked to bps). */
+    if (!file.seek(info.stripOffset)) {
+        errMsg = "Sony raw: seek to sensor strip failed.";
+        return false;
+    }
+    const QByteArray strip = file.read(int(quint32(W) * quint32(H) * 2));
+    if (strip.size() < W * H * 2) {
+        errMsg = "Sony raw: could not read full sensor strip.";
+        return false;
+    }
+
+    raw.width = W;
+    raw.height = H;
+    raw.cfa.resize(size_t(W) * size_t(H));
+    const quint16 mask = quint16((1u << bps) - 1);
+    const uchar *s = reinterpret_cast<const uchar *>(strip.constData());
+    const size_t count = size_t(W) * size_t(H);
+    if (!info.littleEndianSamples) {
+        for (size_t i = 0; i < count; ++i)
+            raw.cfa[i] = quint16((quint16(s[2*i]) << 8 | s[2*i + 1]) & mask);
+    } else {
+        for (size_t i = 0; i < count; ++i)
+            raw.cfa[i] = quint16((quint16(s[2*i + 1]) << 8 | s[2*i]) & mask);
+    }
+
+    return true;
 }

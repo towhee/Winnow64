@@ -5,6 +5,7 @@
 #include <QImage>
 #include <QFile>
 #include <QString>
+#include <QAtomicInt>
 #include "Metadata/imagemetadata.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "Develop/editparams.h"
@@ -35,9 +36,12 @@ public:
 
     /* Full sensor decode: file -> demosaiced, colour-managed display QImage. When edit is
        non-null and non-identity, develop adjustments are applied in the linear working space
-       (before the output transform). */
+       (before the output transform). abort (when non-null) is polled between stages and inside
+       the demosaic loop so a long decode can bail promptly on shutdown / navigation; an aborted
+       decode returns false with lastError() == "Aborted". */
     bool Decode(QFile &file, const ImageMetadata &m, QImage &out,
-                const EditParams *edit = nullptr);
+                const EditParams *edit = nullptr,
+                const QAtomicInt *abort = nullptr);
 
     QString lastError() const { return errMsg; }
 

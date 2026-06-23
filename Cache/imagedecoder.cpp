@@ -292,25 +292,33 @@ bool ImageDecoder::load()
     developApplied = false;  // reset per decode; the RAW path sets it when it develops
 
     /*
-        FULL-SENSOR RAW DECODE (scaffold).
-        RawFormat::Create() returns nullptr until a per-format UnpackCfa() lands
-        (phase 2+), so today every RAW file falls through to the embedded-JPG path
-        below and behaviour is unchanged. When a decoder exists this is the call site
-        that produces a demosaiced image.
-        TODO(raw): assemble an ImageMetadata carrying the raw-sensor fields (raw
-        offset/length, bitsPerSample, CFA pattern, levels, matrix) for the cache path;
-        indMeta already carries them in independent mode.
+        FULL-SENSOR RAW DECODE.
+        RawFormat::Create() returns nullptr for formats with no sensor decoder yet, so those
+        RAW files fall through to the embedded-JPG path below unchanged. When a decoder exists
+        this is the call site that produces a demosaiced image. The decode needs the raw-sensor
+        fields (RawSensorInfo): in independent mode indMeta already carries them; in cache mode
+        we fetch them from the DataModel's per-file store (populated during the metadata read)
+        via the lock-guarded getter -- cheaper and thread-safer than rebuilding the whole
+        ImageMetadata, since UnpackCfa only consults rawInfo.
     */
-    if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
-        if (rawFormat->Decode(imFile, indMeta, image, &editParams)) {
-            decoderToUse = Raw;
-            developApplied = true;   // RAW develops internally; skip the generic pass
-            imFile.close();
-            status = Status::Success;
-            return true;
+    if (G::useRaw) {
+        if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
+            ImageMetadata rawMeta;
+            if (isIndependent) rawMeta = indMeta;
+            else dm->fPathRawInfoGet(fPath, rawMeta.rawInfo);
+            if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort)) {
+                decoderToUse = Raw;
+                developApplied = true;   // RAW develops internally; skip the generic pass
+                imFile.close();
+                status = Status::Success;
+                return true;
+            }
+            /* Aborted mid-decode (shutdown / navigation): bail now rather than wasting
+               time on the embedded-JPG fallback, whose result would be discarded anyway. */
+            if (abort.loadAcquire()) { imFile.close(); return false; }
+            errMsg = rawFormat->lastError();
+            imFile.seek(0);   // rewind for the embedded-JPG fallback below
         }
-        errMsg = rawFormat->lastError();
-        imFile.seek(0);   // rewind for the embedded-JPG fallback below
     }
 
     // Embedded jpg?

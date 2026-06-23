@@ -353,6 +353,8 @@ void DataModel::clearDataModel()
     // clear the fPath index of datamodel rows
     // fPathRow.clear();
     fPathRowClear();
+    // clear the raw sensor unpack info cache
+    fPathRawInfoClear();
     // clear the folder list
     folderList.clear();
     folderSet.clear();
@@ -1423,6 +1425,9 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     m.width = index(row, G::WidthColumn).data().toInt();
     m.height = index(row, G::HeightColumn).data().toInt();
+    /* Raw sensor unpack info (raw files only) -- stored at metadata-read time so the RAW
+       decode path can use it instead of re-walking the file. */
+    fPathRawInfoGet(fPath, m.rawInfo);
     m.widthPreview = index(row, G::WidthPreviewColumn).data().toInt();
     m.heightPreview = index(row, G::HeightPreviewColumn).data().toInt();
     m.dimensions = index(row, G::DimensionsColumn).data().toString();
@@ -1784,6 +1789,16 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     }
     if (!index(row, 0).isValid()) {
         return false;
+    }
+
+    /* Stash raw sensor unpack info (raw files only) so the RAW decode path can read it without
+       re-walking the file. Keyed by the row's fPath to match DataModel::imMetadata's lookup.
+       Gated on G::useRaw so the preview-only path (useRaw off) pays nothing here -- a single
+       chokepoint covering every vendor parser. When useRaw is off the parsers also skip filling
+       rawInfo; the decoder's self-walk covers a later toggle-on. */
+    if (G::useRaw && m.rawInfo.isRaw) {
+        QString rawPath = index(row, G::PathColumn).data(G::PathRole).toString();
+        if (!rawPath.isEmpty()) fPathRawInfoSet(rawPath, m.rawInfo);
     }
 
     QString search = index(row, G::SearchTextColumn).data().toString();
@@ -3203,6 +3218,27 @@ void DataModel::fPathRowClear()
 {
     QWriteLocker locker(&fPathRowLock);
     fPathRow.clear();
+}
+
+bool DataModel::fPathRawInfoGet(const QString &path, RawSensorInfo &info)
+{
+    QReadLocker locker(&fPathRawInfoLock);
+    auto it = fPathRawInfo.constFind(path);
+    if (it == fPathRawInfo.constEnd()) return false;
+    info = it.value();
+    return true;
+}
+
+void DataModel::fPathRawInfoSet(const QString &path, const RawSensorInfo &info)
+{
+    QWriteLocker locker(&fPathRawInfoLock);
+    fPathRawInfo.insert(path, info);
+}
+
+void DataModel::fPathRawInfoClear()
+{
+    QWriteLocker locker(&fPathRawInfoLock);
+    fPathRawInfo.clear();
 }
 
 int DataModel::rowFromPath(QString fPath)
