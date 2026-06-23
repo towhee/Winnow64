@@ -19,6 +19,21 @@ enum class CfaPattern {
 };
 
 /*
+    Map the four 2x2 CFA colour codes (0=R, 1=G, 2=B) at (r0,c0)(r0,c1)(r1,c0)(r1,c1) -- the
+    TIFF/EP CFAPattern / RawSensorInfo::cfaPlaneColor convention -- to a CfaPattern. Shared by
+    every vendor unpack so the mapping lives in one place. Returns Unknown for anything that
+    is not one of the four Bayer phases.
+*/
+inline CfaPattern cfaPatternFromPlaneColor(const uint8_t p[4]) {
+    const int a = p[0], b = p[1], c = p[2], d = p[3];
+    if (a==0 && b==1 && c==1 && d==2) return CfaPattern::RGGB;
+    if (a==2 && b==1 && c==1 && d==0) return CfaPattern::BGGR;
+    if (a==1 && b==0 && c==2 && d==1) return CfaPattern::GRBG;
+    if (a==1 && b==2 && c==0 && d==1) return CfaPattern::GBRG;
+    return CfaPattern::Unknown;
+}
+
+/*
     Normalised sensor data produced by RawFormat::UnpackCfa(). One uint16 sample per
     photosite (the mosaic), row-major over the active area, together with the metadata
     the shared pipeline needs to turn the mosaic into a colour image.

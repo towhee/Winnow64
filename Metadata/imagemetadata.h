@@ -3,6 +3,7 @@
 
 #include <QtCore>
 #include "Main/global.h"
+#include "Metadata/rawsensorinfo.h"
 
 class ImageMetadata
 {
@@ -111,6 +112,11 @@ public:
     int widthThumb = 0;                     // width of thumbnail
     int heightThumb = 0;                    // height of thumbnail
     int samplesPerPixel = 0;
+
+    /* RAW sensor unpack info (CFA strip offset/length, geometry, bit depth, CFA pattern,
+       levels). Filled by the vendor parser for raw files so the RAW decode path does not
+       have to re-walk the file. Default isRaw == false for non-raw images. */
+    RawSensorInfo rawInfo;
 
     bool isBigEnd = false;
     QList<QVariant> ifdOffsets;             // type must be QVariant to add to datamodel

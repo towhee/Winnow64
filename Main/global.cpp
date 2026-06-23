@@ -229,6 +229,7 @@ bool backupBeforeModifying;
 bool autoAddMissingThumbnails;
 bool renderVideoThumb;
 bool combineRawJpg;
+bool useRaw;
 bool isFilter;
 bool isRemote;
 

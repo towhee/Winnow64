@@ -231,6 +231,7 @@ HEADERS += Metadata/gps.h
 HEADERS += Metadata/ifd.h
 HEADERS += Metadata/iptc.h
 HEADERS += Metadata/imagemetadata.h
+HEADERS += Metadata/rawsensorinfo.h
 HEADERS += Metadata/metadata.h
 HEADERS += Metadata/metareport.h
 HEADERS += Metadata/rapidxml.h

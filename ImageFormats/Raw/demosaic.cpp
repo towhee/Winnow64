@@ -1,13 +1,14 @@
 #include "ImageFormats/Raw/demosaic.h"
 
-bool Demosaic::Run(const RawImage &raw, std::vector<float> &rgb, Algorithm algo)
+bool Demosaic::Run(const RawImage &raw, std::vector<float> &rgb, Algorithm algo,
+                   const QAtomicInt *abort)
 {
     if (!raw.isValid()) return false;
     if (raw.pattern == CfaPattern::XTrans || raw.pattern == CfaPattern::Unknown)
         return false;   // scaffold supports Bayer only
 
     switch (algo) {
-    case Bilinear: return Bilinear3x3(raw, rgb);
+    case Bilinear: return Bilinear3x3(raw, rgb, abort);
     }
     return false;
 }
@@ -31,7 +32,8 @@ int Demosaic::BayerColorAt(CfaPattern pattern, int row, int col)
     }
 }
 
-bool Demosaic::Bilinear3x3(const RawImage &raw, std::vector<float> &rgb)
+bool Demosaic::Bilinear3x3(const RawImage &raw, std::vector<float> &rgb,
+                           const QAtomicInt *abort)
 {
 /*
     Generic 3x3 bilinear demosaic. For every pixel the native colour is taken from the
@@ -48,6 +50,10 @@ bool Demosaic::Bilinear3x3(const RawImage &raw, std::vector<float> &rgb)
     rgb.assign(static_cast<size_t>(W) * static_cast<size_t>(H) * 3, 0.0f);
 
     for (int y = 0; y < H; ++y) {
+        /* Poll abort once per row (cheap relative to a full row of pixels) so a long
+           sensor decode bails promptly on shutdown / navigation rather than blocking the
+           decoder thread -- and with it the BlockingQueuedConnection in ImageCache::stop. */
+        if (abort && abort->loadAcquire()) return false;
         for (int x = 0; x < W; ++x) {
             float sum[3] = {0, 0, 0};
             int   cnt[3] = {0, 0, 0};

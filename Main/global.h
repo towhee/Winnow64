@@ -459,6 +459,7 @@ Q_NAMESPACE
     extern bool autoAddMissingThumbnails;
     extern bool renderVideoThumb;
     extern bool combineRawJpg;
+    extern bool useRaw;         // decode raw sensor data (true) vs embedded preview/jpg (false)
     extern bool isFilter;
 
     // focus stack

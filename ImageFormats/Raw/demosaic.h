@@ -2,6 +2,7 @@
 #define DEMOSAIC_H
 
 #include <vector>
+#include <QAtomicInt>
 #include "ImageFormats/Raw/rawimage.h"
 
 /*
@@ -24,13 +25,15 @@ public:
     Demosaic() = default;
 
     /* Demosaic raw.cfa into interleaved RGB floats. Returns false for unsupported
-       patterns (e.g. XTrans) or an invalid RawImage. */
+       patterns (e.g. XTrans), an invalid RawImage, or if abort is signalled mid-run. */
     bool Run(const RawImage &raw,
              std::vector<float> &rgb,
-             Algorithm algo = Bilinear);
+             Algorithm algo = Bilinear,
+             const QAtomicInt *abort = nullptr);
 
 private:
-    bool Bilinear3x3(const RawImage &raw, std::vector<float> &rgb);
+    bool Bilinear3x3(const RawImage &raw, std::vector<float> &rgb,
+                     const QAtomicInt *abort);
 
     /* Colour of photosite (row,col) for a Bayer pattern: 0=R, 1=G, 2=B. */
     static int BayerColorAt(CfaPattern pattern, int row, int col);
