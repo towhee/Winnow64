@@ -1734,6 +1734,66 @@ void MW::createEmbelDock()
     embelTitleLayout->addSpacing(5);
 }
 
+void MW::createDevelopDock()
+{
+    if (G::isLogger) G::log("MW::createDevelopDock");
+    developProperties = new DevelopProperties(this, settings);
+
+    connect(developProperties, &DevelopProperties::centralMsg, this, &MW::setCentralMessage);
+
+    developDockTabText = "Develop";
+    dockTextNames << developDockTabText;
+    developDock = new DockWidget(developDockTabText, "DevelopDock", this);  // Develop
+    developDock->setObjectName("DevelopDock");
+    developDock->setWidget(developProperties);
+    developDock->setFloating(false);
+    developDock->setVisible(true);
+    // prevent MW splitter resizing developDock so the header - and + buttons stay visible
+    developDock->setMinimumWidth(275);
+    connect(developDock, &DockWidget::focus, this, &MW::focusOnDock);
+    connect(developDock, &QDockWidget::visibilityChanged, this, &MW::developDockVisibilityChange);
+
+    // customize the developDock titlebar
+    QHBoxLayout *developTitleLayout = new QHBoxLayout();
+    developTitleLayout->setContentsMargins(0, 0, 0, 0);
+    developTitleLayout->setSpacing(0);
+
+    developTitleBar = new DockTitleBar("Develop Editor", developTitleLayout);
+    developDock->setTitleBarWidget(developTitleBar);
+    developTitleBar->setToolTip(dockTabToolTip(developDockTabText));
+
+    // collapse/expand body button
+    if (G::useDWCollapse) {
+        BarBtn *developCollapseBtn = new BarBtn();
+        developCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        developCollapseBtn->setToolTip("Collapse panel.");
+        connect(developCollapseBtn, &BarBtn::clicked, developDock, &DockWidget::toggleCollapsed);
+        connect(developDock, &DockWidget::collapsedChanged, developCollapseBtn, [developCollapseBtn](bool c){
+            developCollapseBtn->setIcon(c ? ":/images/icon16/expand.png" : ":/images/icon16/collapse.png", G::iconOpacity);
+            developCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        developTitleLayout->addWidget(developCollapseBtn);
+
+        // Spacer
+        developTitleLayout->addSpacing(10);
+    }
+
+    // close button
+    BarBtn *developCloseBtn = new BarBtn();
+    developCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
+    developCloseBtn->setToolTip("Hide the Develop Panel");
+    connect(developCloseBtn, &BarBtn::clicked, this, &MW::closeDevelopDock);
+    developTitleLayout->addWidget(developCloseBtn);
+
+    // Spacer
+    developTitleLayout->addSpacing(5);
+}
+
+void MW::developDockVisibilityChange()
+{
+    if (G::isLogger) G::log("MW::developDockVisibilityChange");
+}
+
 void MW::createDocks()
 {
     if (G::isLogger) G::log("MW::createDocks");
@@ -1743,6 +1803,7 @@ void MW::createDocks()
     if (G::useInfoView) createMetadataDock();
     createThumbDock();
     createEmbelDock();
+    createDevelopDock();
 
     // connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 
@@ -1752,6 +1813,7 @@ void MW::createDocks()
     if (G::useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
+    addDockWidget(Qt::RightDockWidgetArea, developDock);
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
@@ -1759,11 +1821,12 @@ void MW::createDocks()
     MW::tabifyDockWidget(favDock, filterDock);
     if (G::useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
     if (!hideEmbellish) if (G::useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
+    if (!hideEmbellish) MW::tabifyDockWidget(embelDock, developDock);
 
     // Re-evaluate responsive dock tab titles when a dock is dragged between
     // docks/areas or floated: dragging into a tab group changes the tab count
     // without a reliable resize/show on the surviving docks.
-    for (DockWidget *d : {folderDock, favDock, filterDock, metadataDock, embelDock}) {
+    for (DockWidget *d : {folderDock, favDock, filterDock, metadataDock, embelDock, developDock}) {
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
     }
@@ -1782,6 +1845,7 @@ void MW::createDocks()
     if (G::useInfoView) wireSolo(metadataDock);
     wireSolo(thumbDock);
     wireSolo(embelDock);
+    wireSolo(developDock);
 }
 
 void MW::createMessageView()

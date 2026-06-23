@@ -70,6 +70,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Release 2.05
 - Collapse DockWidgets and Solo mode
 - Show images that have sidecars (indicator in thumbnail and col in datamodel)
 - Stopped FSTree scrolling when expand/collapse tree
@@ -87,7 +88,7 @@ DONE/FIXED
 - Refresh Bookmarks and Folders after focus stack
 - Focus stack module
 - Release 2.04
-- Update Nikon Lense mpdel info
+- Update Nikon Lense model info
 - Delete all files in filter not always working properly
 - Fix sort for case sensitivity
 - Fix refresh when filtered and delete all

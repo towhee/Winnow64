@@ -100,6 +100,7 @@ void MW::reportWorkspaceState()
              << "\nisFilterDockVisible" << w.isFilterDockVisible
              << "\nisMetadataDockVisible" << w.isMetadataDockVisible
              << "\nisEmbelDockVisible" << w.isEmbelDockVisible
+             << "\nisDevelopDockVisible" << w.isDevelopDockVisible
              << "\nisThumbDockVisible" << w.isThumbDockVisible
              << "\nthumbSpacing" << w.thumbSpacing
              << "\nthumbPadding" << w.thumbPadding

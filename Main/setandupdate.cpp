@@ -176,6 +176,12 @@ void MW::setEmbelDockVisibility()
     embelDock->setVisible(embelDockVisibleAction->isChecked());
 }
 
+void MW::setDevelopDockVisibility()
+{
+    if (G::isLogger) G::log("MW::setDevelopDockVisibility");
+    developDock->setVisible(developDockVisibleAction->isChecked());
+}
+
 void MW::setMetadataDockFixedSize()
 {
     if (!G::useInfoView) return;
@@ -215,6 +221,11 @@ void MW::closeEmbelDock()
 {
     embelDock->setVisible(false);
     embelDockVisibleAction->setChecked(false);
+}
+void MW::closeDevelopDock()
+{
+    developDock->setVisible(false);
+    developDockVisibleAction->setChecked(false);
 }
 void MW::closeFolderDock()
 {
@@ -389,6 +400,25 @@ void MW::showEmbelDock() {
         embelDock->setVisible(true);
         embelDock->raise();
         embelDockVisibleAction->setChecked(true);
+    }
+}
+
+void MW::showDevelopDock() {
+    if (G::isLogger) G::log("MW::toggleDevelopDockVisibility");
+    if (G::isInitializing) return;
+    QDockWidget *dock = developDock;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
+
+    switch (dockOption) {
+    case SetFocus:
+        developDock->raise();
+        developDockVisibleAction->setChecked(true);
+        break;
+    case SetVisible:
+        developDock->setVisible(true);
+        developDock->raise();
+        developDockVisibleAction->setChecked(true);
     }
 }
 

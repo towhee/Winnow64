@@ -1,98 +1,26 @@
-Modify MW::mediaReadSpeed as follows:
-- execute sudo purge
-- iterate selected image files, collected read speeds
-- report each file name > read speed
-- report media, average read speed.
+Raw files decode:
+ImageDecoder
+    ImageFormat::demosaic()
 
-Add a MediaReadNSColumn to the datamodel before NSThumbColumn.  Include changes as per NSImageColumn in TableView.
+We just made architecture changes in the conversation 'Raw decoder and editor'.  Here I want to add the 'Develop' UI dock panel.  It
+  will be similar to the 'Embellish' dock, with multiple sections containing sliders, checkboxes etc. Add the Develop panel
+  to the View menu with shortcut F9, and save everything to settings as per the other docks.  Add a
+  separate Properties file similar to the embellish one.
 
-per the guidance to avoid unprompted subagents
-
-
-
-
-
-
-I recursively loaded all the images on a USB drive. The images were in two separate child
-folders of dcim folder. There was about 1100 orf images in total (no videos). I
-progressed through the images, picking and ingesting. After about 600 images the Image
-Cache started to update intermittently. The thumbnails had the red cache dot on the lower
-right indicating they were not cached while other adjacent thumbnails were cached. When I
-selected the red dot icons nothing was displayed on the imageView. I have experienced
-this before, but it is unusual, and I thought all our changes had fixed it. Also, I
-picked image 800, selected the next image (801) and then used the left arrow key to move
-back to image 800, and the green icon border disappeared, without pressing the pick
-shortcut. I have never seen this behavior before. I will try to reproduce but I do not
-know when it will happen again. Something became corrupted. Please investigate how this
-could have happened.
-
-
-
-
-
-
-
-
-To let the TSan app read the USB (/Volumes/Untitled), grant Full Disk Access to the Terminal app you launch the script from:
-
-  1. Open System Settings (Apple menu  → System Settings).
-  2. Go to Privacy & Security → Full Disk Access.
-  3. Click the + button (you may need to authenticate with Touch ID / password).
-  4. In the file picker, navigate to Applications → Utilities → Terminal.app (or iTerm.app if you use that) and add it. Alternatively, drag
-  Terminal in from Finder.
-  5. Make sure its toggle is on (blue).
-  6. Quit Terminal completely (Cmd-Q) and reopen it — the permission only applies to newly launched processes.
-
-  Then verify and run:
-
-  ls /Volumes/Untitled            # should now list DCIM etc., not "Operation not permitted"
-  cd /Users/roryhill/Projects/Winnow64
-  WINNOW_TSAN_FOLDER='/Volumes/Untitled' tests/tsan/run_tsan_proxy.sh
-
-  Notes:
-  - If you'd rather not grant blanket Full Disk Access, Privacy & Security → Files and Folders sometimes lists Terminal with a Removable
-  Volumes toggle — enabling that is narrower. But Full Disk Access is the reliable one for /Volumes.
-  - The Winnow GUI app you normally run already has whatever access it was granted on first launch; this step is only needed because the
-  TSan build runs as a child of Terminal, which inherits Terminal's permissions.
-  - If ls still fails after re-opening Terminal, double-check you added the right Terminal (the one actually running the command — echo
-  $TERM_PROGRAM will say Apple_Terminal or iTerm.app).
-
-  Once ls /Volumes/Untitled works, the script will load the real ORF tree, and Pass C will tell us whether the QSortFilterProxyModel mapping
-  race is real.
-
-Mac Deployment steps
-- package Winnow<version number>.dmg
-- connect to DigitalOcean
-- assume old version = "2.04" and new version = "2.05"
-- move current winnow
-    sftp://root@165.227.46.158/var/www/html/winnow_mac/current/Winnow2.04.dmg
-  to
-    sftp://root@165.227.46.158/var/www/html/winnow_mac/2.04/Winnow2.04.dmg
-- upload Winnow2.04.dmg to
-  sftp://root@165.227.46.158/var/www/html/winnow_mac/current replace
-- edit sftp://root@165.227.46.158/var/www/html/index.html to update
-  <a href="https://winnow.ca/winnow_mac/current/Winnow2.04.dmg">Mac: Winnow 2.04 (Apple Silicon ARM64)</a>
-  to the current version.
-
-
-It needs a config.sh
-
-! xcrun notarytool store-credentials "AC_PASSWORD" --apple-id "hillrg@hotmail.com" --team-id "2663CS489R" --password "pclq-wccx-jyjg-ggpy"
-
-
-WINDOWS:
-Running deploy.cmd, Option 2 Build installer, I got the error message
-"X Step failed: No build output at C:\Users\hillr\Projects\Winnow64\build\win-release\app\Winnow.exe - run Build first."
-but "C:\Users\hillr\Projects\Winnow64\build\win-release\app\Release\Winnow.exe" exists.  I had previously
-built and ran in Qt Creator.
-
-
-❯ I was making an ingest, working through about 800 images.  I would make a series of picks, ingest and then repeat.  When I got to aobut
-  the 650th image, when I made a pick the thumbView scrolled back to zero.  The 650th image was picked, as could be seen when I scrolled
-  back.  Picking any image in the 650-780 range resulted in scrolling all the way back to zero.  When I tried picking images less than 650
-  no scrolling occurred.  Same thing, no scrolling when I picked the last image, number 800.  Any idea what could cause the scrolling?
-
-
-/Users/roryhill/Library/Application Support/Winnow/Winnets/FocusStack
-
-Wrting tools, Autofill, Start dictation
+The initial setup:
+Develop dock items:
+    Layers (header with minus/plus) same as Embellish templates
+        Select layer (dropdown)
+    Basic (header)
+        Denoise (checkbox)
+        Temp (slider)
+        Tint (slider)
+        Exposure (slider)
+        Contrast (slider)
+        Highlights (slider)
+        Shadows (slider)
+        Whites (slider)
+        Blacks (slider)
+        Texture (slider)
+        Dehaze (slider)
+    Effects (header)

@@ -1775,3 +1775,148 @@ Dialog layout
     horizontalLayout_13. leftFrame (on the left) holds the candidate images table (tv);
     rightFrame (on the right) holds the target include/exclude folder lists and the
     comparison controls. The frame names reflect their on-screen positions.
+
+
+==========================================================================================
+RAW DECODING (SENSOR DEMOSAIC)
+==========================================================================================
+
+------------------------------------------------------------------------------------------
+Architecture
+------------------------------------------------------------------------------------------
+
+    Full-sensor RAW decoding (demosaic), based on LibRaw, is being ported in phases. It is
+    separate from the existing embedded-JPG preview path: a RAW file still shows its
+    embedded JPG until a per-format sensor decoder exists.
+
+    Pipeline (ImageFormats/Raw/):
+        ImageDecoder::load()
+          -> RawFormat::Create(ext)          factory; nullptr until a format is implemented
+          -> RawFormat::Decode()             shared, camera-agnostic pipeline:
+               1. UnpackCfa()                 PER-FORMAT virtual (THE override point):
+                                              vendor packed/compressed bitstream -> normalised
+                                              CFA mosaic (RawImage). Lives in the vendor .cpp
+                                              (canon.cpp, nikon.cpp ...) as a class SEPARATE
+                                              from that file's metadata parser.
+               2. SubtractBlack()            shared per-2x2-position black subtraction + clip.
+               3. Demosaic::Run()            shared, camera-agnostic (Bilinear in scaffold;
+                                              AHD/DCB/XTrans later). Operates only on the CFA
+                                              mosaic + pattern, so it is unit-testable.
+               4. RawColor::ToWorking()      shared white balance + camera->sRGB matrix, STOPS
+                                              AT LINEAR (no gamma) -> WorkingImage. SCAFFOLD-
+                                              level matrices; accurate ones are phase 3.
+               5. Develop::Apply()           parametric edits in linear space, applied here for
+                                              RAW (native float) when EditParams is non-identity.
+               6. OutputTransform::ToImage() shared gamma/ICC -> display QImage.
+
+    Demosaic is deliberately NOT the override point: the algorithm is shared across cameras;
+    only the unpack/decompress step is vendor-specific (mirrors LibRaw's real structure).
+
+    Threading: one RawFormat instance is constructed per decode (per decoder thread). Unlike
+    the Metadata-owned parser singletons, RawFormat instances are never shared, so the
+    per-decode scratch carries no cross-thread races.
+
+    Phasing: 1 scaffold (done) -> 2 first uncompressed format UnpackCfa -> 3 colour/lcms2
+    -> 4 better demosaic (AHD) -> 5 compression (lossless-JPEG CR2/DNG, compressed NEF ...).
+
+    NOTE: an earlier (2025) unused scaffold (ImageFormats/Base/rawbase.* +
+    ImageFormats/Tiff/tiffdecoder.*) used the rejected demosaic()-as-override axis and has
+    been removed.
+
+    NOTE: RawColor now stops at LINEAR working-space RGB (no tone/gamma/ICC baked in); the
+    display conversion is owned by the shared OutputTransform stage (see Develop section).
+
+
+==========================================================================================
+DEVELOP / IMAGE EDIT (PARAMETRIC ADJUSTMENTS)
+==========================================================================================
+
+------------------------------------------------------------------------------------------
+Architecture
+------------------------------------------------------------------------------------------
+
+    Lightroom-style non-destructive adjustments (denoise, white balance, exposure, contrast,
+    highlights, shadows, whites, blacks, texture, dehaze ...). They apply to ALL image types
+    (JPEG/TIFF/HEIC/RAW), so they are a shared stage AFTER decode and BEFORE the display
+    tone/gamma/ICC transform -- NOT part of RawFormat.
+
+    Decisions (settled): adjustments run on a FLOAT LINEAR working buffer (exposure/tone/
+    dehaze need headroom), and apply to ALL image types (not raw-only).
+
+    Unifying representation -- WorkingImage (float linear scene-referred RGB + working colour
+    space + white reference). Both decode paths converge on it:
+        RAW:      ... -> Demosaic -> camera-RGB -> working space   (RawColor stops at LINEAR)
+        NON-RAW:  QImage decode -> un-gamma to linear -> working space
+    Consumer:
+        WorkingImage -> Develop(EditParams) -> OutputTransform(tone+gamma+ICC) -> QImage
+
+    EditParams -- one versioned struct, identity defaults (absent = no-op = no behaviour
+    change). The single source of truth for all adjustment values; every stage reads from it.
+    Persisted per-image (datamodel column + sidecar; deferred). The slider UI binds to it.
+
+    Develop -- stateless/reentrant processor, constructed per decode (same discipline as
+    Demosaic/RawFormat). FIXED, hard-coded operation order:
+        1. Denoise (luma/chroma)        earliest; for RAW ideally on the CFA mosaic
+        2. White balance                linear channel scale (RAW: camMul, from temp/tint)
+        3. Exposure                     linear gain 2^EV
+        4. Contrast                     S-curve about mid-grey
+        5. Highlights/Shadows/          luminance-masked parametric tone
+           Whites/Blacks
+        6. Texture                      mid-frequency local contrast
+        7. Dehaze                       local contrast + black-point, haze estimate
+        (room left for Vibrance/Saturation/Clarity/Sharpen)
+
+    Two ops are special for RAW: white balance and denoise give better results applied inside
+    the raw pipeline (WB at the camera-RGB stage; denoise on the CFA mosaic) rather than
+    generically post-demosaic. EditParams is shared, so RawFormat::Decode() takes an optional
+    const EditParams* and consumes those two fields at the right stages; Develop handles the
+    rest. (Scaffold may start with everything in Develop and push those two down later -- a
+    quality-only refactor, no interface change.)
+
+    WIRING (done): the decode path now runs through these classes.
+        NON-RAW: ImageDecoder::load() decodes to QImage as before; then ImageDecoder::
+                 applyDevelop() (after rotate(), before colorManage()) does
+                 InputTransform -> Develop -> OutputTransform. It is a NO-OP and is skipped
+                 entirely when EditParams is identity, so the unedited browsing path is
+                 unchanged and never round-trips through the float buffer.
+        RAW:     RawFormat::Decode() develops in its native linear float (RawColor::ToWorking
+                 -> Develop -> OutputTransform) and ImageDecoder sets developApplied so
+                 applyDevelop() does not run a second time. (RawFormat is still gated behind
+                 Create()==nullptr, so this path is dormant until a format lands.)
+    InputTransform (Develop/) is the non-raw "un-gamma to linear" step, the symmetric
+    counterpart of OutputTransform.
+
+    PERF (keeps Winnow fast): cache the WorkingImage (post-decode, pre-develop). An
+    interactive slider change then re-runs only Develop + OutputTransform -- never decode or
+    demosaic again. Likely a downscaled proxy for live drag with full-res async. NOT YET
+    wired -- applyDevelop() currently re-decodes; the cache hook is the next perf step.
+
+    Phasing: 1 WorkingImage + split RawColor at linear + InputTransform/OutputTransform +
+    Develop skeleton (identity), wired no-op through decode (DONE) -> 2 implement ops
+    (exposure/WB/contrast/tone first; texture/dehaze/denoise later) + WorkingImage cache hook
+    -> 3 push RAW white balance/denoise pre-demosaic for quality -> 4 persistence + slider UI.
+
+------------------------------------------------------------------------------------------
+Develop dock (UI)
+------------------------------------------------------------------------------------------
+
+    The Develop panel is a dock (View menu > Develop Editor Panel, shortcut F9), built like
+    the Embellish dock: MW::createDevelopDock() in initialize.cpp wraps a DevelopProperties
+    widget (Develop/Properties/), a PropertyEditor subclass mirroring EmbelProperties. It is
+    tabbed with the Embellish dock in the right dock area and its visible / collapsed state
+    persists exactly as the other docks (settings isDevelopDockVisible + DevelopDock, plus the
+    workspace struct field isDevelopDockVisible).
+
+    Sections (built via PropertyEditor::addItem):
+        Layers   header with -/+ buttons (same idiom as Embellish Templates) + a "Select
+                 layer" combo. A layer is one set of adjustments; switching rebuilds the
+                 Basic/Effects rows from that layer's saved values. Layers persist under
+                 Settings "Develop/Layers/<name>/..." with "Develop/Layers/current".
+        Basic    Denoise (checkbox); Temp, Tint, Exposure, Contrast, Highlights, Shadows,
+                 Whites, Blacks, Texture, Dehaze (sliders). Integer -100..100 except Exposure
+                 (EV, -5.00..5.00). All default to 0 (identity).
+        Effects  header only (placeholder for future creative effects).
+
+    Each layer maps onto one EditParams (DevelopProperties::editParams()). Binding a value
+    change to a re-decode is deferred: itemChange() persists the value to settings and emits
+    paramsChanged() so the hook is ready.

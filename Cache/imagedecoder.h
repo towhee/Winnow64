@@ -11,6 +11,7 @@
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
 #include "Utilities/icc.h"
+#include "Develop/editparams.h"
 #ifdef Q_OS_WIN
 #include "ImageFormats/Heic/heic.h"
 #endif
@@ -73,7 +74,8 @@ public:
         TurboJpg,       // use turbojpg to decode jpegs
         MacOS,          // use MacOS to decode heic
         LibHeif,        // use libheif to decode heic
-        Rory            // use my decoder
+        Rory,           // use my decoder
+        Raw             // full-sensor demosaic via the RawFormat pipeline
     } decoderToUse;
 
     QStringList decodersText {
@@ -83,7 +85,8 @@ public:
         "TurboJpg",
         "MacOS",
         "LibHeif",
-        "Rory"
+        "Rory",
+        "Raw"
     };
 
 public slots:
@@ -112,6 +115,7 @@ private:
     bool quit();
     void decodeUsingQt();
     void rotate();
+    void applyDevelop();
     void colorManage();
     bool idle = true;
     QAtomicInt abort {0};
@@ -127,6 +131,15 @@ private:
     */
     bool isIndependent = false;
     ImageMetadata indMeta;
+
+    /*
+    Per-image develop adjustments. Identity (no edits) by default, so applyDevelop() is a
+    no-op until parametric edits are stored per image (datamodel/sidecar, deferred) and set
+    here. developApplied guards against a second pass: the RAW path develops internally (in
+    linear float, inside RawFormat::Decode), so applyDevelop() must skip those.
+    */
+    EditParams editParams;
+    bool developApplied = false;
     // ImageCacheData::CacheItem n;
     unsigned char *buf;
     QString ext;

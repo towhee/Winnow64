@@ -60,8 +60,6 @@ ImageFormats/Sony/sony.h
 ImageFormats/Tiff/tiff.h
 ImageFormats/Tiff/libtiff.h
 ImageFormats/Tiff/rorytiff.h
-ImageFormats/Base/rawbase.h
-ImageFormats/Tiff/tiffdecoder.h
 ImageStack/FocusStackConstants.h
 ImageStack/stack_depth_map.h
 ImageStack/focushalo.h
