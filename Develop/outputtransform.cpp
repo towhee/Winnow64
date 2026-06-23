@@ -13,6 +13,25 @@ inline float SrgbGamma(float v)
                            : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
 }
 
+/*
+    Baseline tone curve for scene-referred (RAW) data: a fixed exposure lift followed by the
+    ACES (Narkowicz) filmic shoulder, applied in linear before the sRGB transfer. A raw render
+    is scene-linear and otherwise lands dark and flat next to the camera's JPEG; this lifts the
+    midtones (~+0.7 EV) and rolls highlights off smoothly instead of hard-clipping. It is a
+    fixed default look (not per-image auto-exposure) -- tune kBaselineExposure to taste, or let
+    a future Develop "exposure" override it. Validated against the A9 II embedded preview.
+    Display-referred input skips this (it already carries the camera tone curve).
+*/
+constexpr float kBaselineExposure = 1.6f;       // ~ +0.68 EV
+
+inline float BaselineTone(float v)
+{
+    v *= kBaselineExposure;
+    if (v < 0.0f) v = 0.0f;
+    const float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
+    return Clamp01((v * (a * v + b)) / (v * (c * v + d) + e));
+}
+
 } // namespace
 
 bool OutputTransform::ToImage(const WorkingImage &img, QImage &out)
@@ -26,13 +45,17 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out)
     out = QImage(W, H, QImage::Format_RGB888);
     if (out.isNull()) return false;
 
+    const bool tone = img.sceneReferred;    // baseline tone curve for RAW only
+
     for (int y = 0; y < H; ++y) {
         uchar *line = out.scanLine(y);
         for (int x = 0; x < W; ++x) {
             const size_t o = (static_cast<size_t>(y) * W + x) * 3;
-            for (int c = 0; c < 3; ++c)
-                line[x * 3 + c] =
-                    static_cast<uchar>(std::lround(SrgbGamma(img.rgb[o + c] * scale) * 255.0f));
+            for (int c = 0; c < 3; ++c) {
+                float v = img.rgb[o + c] * scale;
+                if (tone) v = BaselineTone(v);
+                line[x * 3 + c] = static_cast<uchar>(std::lround(SrgbGamma(v) * 255.0f));
+            }
         }
     }
     return true;

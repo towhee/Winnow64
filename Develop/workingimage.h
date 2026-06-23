@@ -26,6 +26,13 @@ struct WorkingImage {
 
     float white = 1.0f;         // linear value that maps to display white (1.0)
 
+    /* True for sensor data (RAW): scene-referred linear with highlight headroom (values may
+       exceed white), so OutputTransform applies a baseline tone curve (exposure + filmic
+       shoulder) to render a pleasing default. False for display-referred input (a JPEG
+       un-gamma'd by InputTransform): it already carries the camera's tone curve, so
+       OutputTransform only re-applies the display gamma. */
+    bool sceneReferred = false;
+
     bool isValid() const {
         return width > 0 && height > 0 &&
                rgb.size() == static_cast<size_t>(width) * static_cast<size_t>(height) * 3;

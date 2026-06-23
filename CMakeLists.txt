@@ -201,6 +201,7 @@ set(WINNOW_SOURCES
     ImageFormats/Olympus/olympus.cpp
     ImageFormats/Panasonic/panasonic.cpp
     ImageFormats/Png/png.cpp
+    ImageFormats/Raw/cameramatrix.cpp
     ImageFormats/Raw/demosaic.cpp
     ImageFormats/Raw/rawcolor.cpp
     ImageFormats/Raw/rawformat.cpp
@@ -428,6 +429,7 @@ set(WINNOW_HEADERS
     ImageFormats/Olympus/olympus.h
     ImageFormats/Panasonic/panasonic.h
     ImageFormats/Png/png.h
+    ImageFormats/Raw/cameramatrix.h
     ImageFormats/Raw/demosaic.h
     ImageFormats/Raw/rawcolor.h
     ImageFormats/Raw/rawformat.h

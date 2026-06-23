@@ -12,8 +12,11 @@
     OutputTransform applies the display gamma/ICC. This is the convergence point where the
     RAW path joins the same WorkingImage that non-raw decodes produce via InputTransform.
 
-    SCAFFOLD: placeholder white balance + matrix maths so the pipeline runs end to end.
-    Accurate per-camera matrices land in a later phase.
+    Colour follows dcraw/libraw: from the model's XYZ->camera matrix (raw.xyzToCam) it builds
+    the camera->linear-sRGB transform and a neutral white balance, applies the white balance
+    (as-shot raw.camMul when present, else the matrix-derived neutral) and the matrix, and
+    clamps to [0,1]. An identity xyzToCam (unknown camera) degrades to an sRGB-assumed
+    pass-through so the image still renders.
 */
 class RawColor
 {

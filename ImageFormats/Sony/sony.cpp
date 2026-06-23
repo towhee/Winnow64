@@ -1,5 +1,6 @@
 #include "sony.h"
 #include "Main/global.h"
+#include "ImageFormats/Raw/cameramatrix.h"
 #include <QSet>
 
 Sony::Sony()
@@ -406,10 +407,35 @@ bool Sony::parse(MetadataParameters &p,
                                  ? static_cast<int>(ifd->ifdDataHash.value(277).tagValue) : 1;
         ri.littleEndianSamples = !isBigEnd;
         /* cfaPlaneColor left at its RGGB default (Sony E-mount). */
-        if (ifd->ifdDataHash.contains(50717))
+        if (ifd->ifdDataHash.contains(50717))      // 0xC61D WhiteLevel
             ri.white = ifd->ifdDataHash.value(50717).tagValue;
-        if (ifd->ifdDataHash.contains(50714))
-            for (int i = 0; i < 4; ++i) ri.black[i] = ifd->ifdDataHash.value(50714).tagValue;
+
+        /* BlackLevel (0x7310, SHORT x4, RGGB order) and the as-shot WB_RGGBLevels (0x7313,
+           SSHORT x4, R G1 G2 B) live in this SubIFD (Sony's "SR2" tags, stored in the clear on
+           ARW). Their four values exceed 4 bytes, so the IFD entry holds an offset -- seek to
+           it and read the four samples. */
+        if (ifd->ifdDataHash.contains(0x7310)) {
+            p.file.seek(ifd->ifdDataHash.value(0x7310).tagValue);
+            for (int i = 0; i < 4; ++i)
+                ri.black[i] = u.get16(p.file.read(2), isBigEnd);
+        }
+        if (ifd->ifdDataHash.contains(0x7313)) {
+            p.file.seek(ifd->ifdDataHash.value(0x7313).tagValue);
+            const int r  = static_cast<qint16>(u.get16(p.file.read(2), isBigEnd));
+            const int g1 = static_cast<qint16>(u.get16(p.file.read(2), isBigEnd));
+            const int g2 = static_cast<qint16>(u.get16(p.file.read(2), isBigEnd));
+            const int b  = static_cast<qint16>(u.get16(p.file.read(2), isBigEnd));
+            /* RawImage.camMul is (R, G, B, G2); these are gains to apply (R,B > G for daylight),
+               so RawColor uses them directly as the as-shot white balance. */
+            if (r > 0 && g1 > 0 && b > 0) {
+                ri.camMul[0] = r;  ri.camMul[1] = g1;
+                ri.camMul[2] = b;  ri.camMul[3] = g2;
+            }
+        }
+
+        /* Colour: per-model XYZ->camera matrix for RawColor (combined with the as-shot WB
+           above to produce accurate colour). */
+        ri.hasColorMatrix = xyzToCamForModel(m.model, ri.xyzToCam);
     }
 
     // IFD 1:
@@ -671,10 +697,30 @@ bool readSonyTiffSensorInfo(QFile &file, RawSensorInfo &info)
         return t.type == 3 ? g16(t.val, 0) : g32(t.val, 0);
     };
 
+    /* ASCII string value of a tag (inline if <= 4 bytes, else at the offset). */
+    auto readAscii = [&](const RawTag &t) -> QString {
+        const int n = int(t.count);
+        if (n <= 0) return QString();
+        QByteArray s = (tiffTypeSize(t.type) * n <= 4) ? t.val.left(n)
+                                                       : readAt(g32(t.val, 0), n);
+        const int z = s.indexOf('\0');
+        if (z >= 0) s = s.left(z);
+        return QString::fromLatin1(s);
+    };
+
+    /* Four 16-bit values of a tag (stored at an offset since 4*2 > 4 bytes). */
+    auto read4 = [&](const RawTag &t, int out[4]) -> bool {
+        const QByteArray b = readAt(g32(t.val, 0), 8);
+        if (b.size() < 8) return false;
+        for (int i = 0; i < 4; ++i) out[i] = qint16(g16(b, i * 2));
+        return true;
+    };
+
     /* Collect IFD0 + its SubIFDs + the next-IFD chain, then pick the raw CFA IFD. */
     QList<quint32> queue { g32(hdr, 4) };
     QSet<quint32> seen;
     QHash<quint16, RawTag> rawIfd;      // tags of the chosen raw IFD
+    QString model;                      // tag 272 (from IFD0) for the colour-matrix lookup
     quint64 bestPixels = 0;
 
     while (!queue.isEmpty()) {
@@ -688,6 +734,9 @@ bool readSonyTiffSensorInfo(QFile &file, RawSensorInfo &info)
         if (!readIfd(off, tags, subs, next)) continue;
         for (quint32 s : subs) queue << s;
         if (next) queue << next;
+
+        if (model.isEmpty() && tags.contains(272))   // Model (IFD0), for the colour matrix
+            model = "Sony " + readAscii(tags[272]);
 
         /* Raw CFA candidate: uncompressed, single-sample, with a strip. */
         const bool hasStrip = tags.contains(273) && tags.contains(279) &&
@@ -713,9 +762,22 @@ bool readSonyTiffSensorInfo(QFile &file, RawSensorInfo &info)
     info.littleEndianSamples = !big;
     if (rawIfd.contains(33422) && rawIfd[33422].val.size() >= 4)
         for (int i = 0; i < 4; ++i) info.cfaPlaneColor[i] = quint8(rawIfd[33422].val[i]);
-    if (rawIfd.contains(50717)) info.white = scalar(rawIfd[50717]);
-    if (rawIfd.contains(50714))
+    if (rawIfd.contains(50717)) info.white = scalar(rawIfd[50717]);   // 0xC61D WhiteLevel
+
+    /* Colour, so the fallback path produces the SAME result as the plumbed path: BlackLevel
+       (0x7310), as-shot WB_RGGBLevels (0x7313, R G1 G2 B -> camMul R,G,B,G2), and the per-model
+       XYZ->camera matrix. Without these the render would be the green-tinted identity result. */
+    int v4[4];
+    if (rawIfd.contains(0x7310) && read4(rawIfd[0x7310], v4))
+        for (int i = 0; i < 4; ++i) info.black[i] = quint32(v4[i] < 0 ? 0 : v4[i]);
+    else if (rawIfd.contains(50714))
         for (int i = 0; i < 4; ++i) info.black[i] = scalar(rawIfd[50714]);
+    if (rawIfd.contains(0x7313) && read4(rawIfd[0x7313], v4) &&
+        v4[0] > 0 && v4[1] > 0 && v4[3] > 0) {
+        info.camMul[0] = v4[0]; info.camMul[1] = v4[1];   // R, G1
+        info.camMul[2] = v4[3]; info.camMul[3] = v4[2];   // B, G2
+    }
+    info.hasColorMatrix = xyzToCamForModel(model, info.xyzToCam);
     return true;
 }
 
@@ -758,6 +820,11 @@ bool SonyRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 
     raw.pattern = cfaPatternFromPlaneColor(info.cfaPlaneColor);
     if (raw.pattern == CfaPattern::Unknown) raw.pattern = CfaPattern::RGGB;
+
+    /* Colour data for RawColor (identity/1s when the parser did not fill it -> approx colour). */
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = info.xyzToCam[i][j];
+    for (int i = 0; i < 4; ++i) raw.camMul[i] = info.camMul[i];
 
     raw.white = info.white ? quint16(info.white) : quint16((1u << bps) - 1);
 
