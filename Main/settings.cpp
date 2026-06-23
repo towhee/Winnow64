@@ -122,6 +122,7 @@ void MW::writeSettings()
     settings->setValue("isFilterDockVisible", filterDockVisibleAction->isChecked());
     settings->setValue("isMetadataDockVisible", metadataDockVisibleAction->isChecked());
     settings->setValue("isEmbelDockVisible", embelDockVisibleAction->isChecked());
+    settings->setValue("isDevelopDockVisible", developDockVisibleAction->isChecked());
     settings->setValue("isThumbDockVisible", thumbDockVisibleAction->isChecked());
 
     /* Property Editor */
@@ -252,6 +253,7 @@ void MW::writeSettings()
     if (metadataDock) settings->setValue("MetadataDock", metadataDock->isCollapsed());
     if (thumbDock)    settings->setValue("ThumbDock", thumbDock->isCollapsed());
     if (embelDock)    settings->setValue("EmbelDock", embelDock->isCollapsed());
+    if (developDock)  settings->setValue("DevelopDock", developDock->isCollapsed());
     settings->endGroup();
 
     settings->beginGroup("DockSoloMode");

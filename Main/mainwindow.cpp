@@ -4982,6 +4982,7 @@ void MW::updateState()
     setFilterDockVisibility();
     setMetadataDockVisibility();
     setEmbelDockVisibility();
+    setDevelopDockVisibility();
     setThumbDockVisibity();
     // setShootingInfoVisibility();
     updateStatusBar();

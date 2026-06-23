@@ -417,6 +417,9 @@ function upload() {
 # Archives the current DMG, uploads the new one to current/, and updates the
 # landing-page download link. Outward-facing PRODUCTION writes: backs up what it
 # overwrites, never deletes the old DMG, and confirms before the first write.
+# If the new version matches the one already published, it asks to overwrite and,
+# on confirmation, replaces current/Winnow<ver>.dmg in place — skipping the archive
+# and the index/version.json link bump (the link already points at this version).
 #   promote            interactive (detect old version, confirm, then publish)
 #   promote --dry-run  print every ssh/scp/sed it WOULD run; touches nothing
 function promote() {
@@ -482,10 +485,31 @@ function promote() {
         read reply; [[ -n "$reply" ]] && OLD="$reply"
     fi
     [[ -n "$OLD" && -n "$NEW" ]] || { echo "❌ Need both OLD and NEW versions."; return 1; }
-    [[ "$OLD" == "$NEW" ]] && { echo "❌ OLD ($OLD) == NEW ($NEW); nothing to promote."; return 1; }
+
+    # Same-version republish: the DMG already published under this version is being
+    # replaced (e.g. a rebuild without a version bump). Don't archive the current DMG
+    # aside (it IS this version) and don't touch the index/version.json (the link is
+    # already correct) — just overwrite current/Winnow$NEW.dmg after an explicit OK.
+    local same_version=false
+    if [[ "$OLD" == "$NEW" ]]; then
+        same_version=true
+        echo "⚠️  Version $NEW is already published — this will OVERWRITE the DMG on the server."
+    fi
 
     # 4) Plan + confirm
-    cat <<EOF
+    if $same_version; then
+        cat <<EOF
+
+============== PROMOTE PLAN  (republish version $NEW) ==============
+  1. archive : SKIPPED (same version — overwriting in place)
+  2. upload  : $DMG_PATH  ->  current/Winnow$NEW.dmg  (OVERWRITE)
+  3. index   : SKIPPED (version unchanged — link already $NEW)
+  server     : ${SERVER_USER}@${SERVER_HOST}:${MAC_DIR}
+$([[ $dry == true ]] && echo "  MODE: DRY-RUN (nothing will be written)")
+===================================================================
+EOF
+    else
+        cat <<EOF
 
 ================ PROMOTE PLAN  (old=$OLD  new=$NEW) ================
   1. archive : mv  current/Winnow$OLD.dmg  ->  $OLD/Winnow$OLD.dmg
@@ -495,20 +519,32 @@ function promote() {
 $([[ $dry == true ]] && echo "  MODE: DRY-RUN (nothing will be written)")
 ===================================================================
 EOF
+    fi
     if ! $dry; then
-        printf "Type 'yes' to publish to PRODUCTION: "
+        if $same_version; then
+            printf "Type 'yes' to OVERWRITE Winnow$NEW.dmg in PRODUCTION: "
+        else
+            printf "Type 'yes' to publish to PRODUCTION: "
+        fi
         read confirm; [[ "$confirm" == "yes" ]] || { echo "Aborted."; return 1; }
     fi
 
     # 5) Archive old (move, never delete; skip if already archived)
-    echo "📦 Archiving current/Winnow$OLD.dmg → $OLD/…"
-    run "$SSH 'mkdir -p ${MAC_DIR}/$OLD && if [ -f ${MAC_DIR}/current/Winnow$OLD.dmg ]; then mv ${MAC_DIR}/current/Winnow$OLD.dmg ${MAC_DIR}/$OLD/Winnow$OLD.dmg; else echo already-archived-or-absent; fi'"
+    if $same_version; then
+        echo "⏭  Skipping archive (overwriting same version $NEW in place)."
+    else
+        echo "📦 Archiving current/Winnow$OLD.dmg → $OLD/…"
+        run "$SSH 'mkdir -p ${MAC_DIR}/$OLD && if [ -f ${MAC_DIR}/current/Winnow$OLD.dmg ]; then mv ${MAC_DIR}/current/Winnow$OLD.dmg ${MAC_DIR}/$OLD/Winnow$OLD.dmg; else echo already-archived-or-absent; fi'"
+    fi
 
     # 6) Upload new
     echo "⬆️  Uploading Winnow$NEW.dmg → current/…"
     run "scp -i $SERVER_SSH_KEY '$DMG_PATH' ${SERVER_USER}@${SERVER_HOST}:${MAC_DIR}/current/Winnow$NEW.dmg"
 
     # 7) Update index.html (server-side backup, then precise edit via download/diff/upload)
+    if $same_version; then
+        echo "⏭  Skipping index.html update (version unchanged — link already Winnow$NEW.dmg)."
+    else
     echo "📝 Updating index.html (Mac link $OLD → $NEW)…"
     local stamp; stamp=$(date +%Y%m%d-%H%M%S)
     run "$SSH 'cp ${INDEX_PATH} ${INDEX_PATH}.bak-$stamp'"
@@ -535,6 +571,7 @@ EOF
         fi
         rm -rf "$tmp"
     fi
+    fi
 
     # 7b) Publish version.json (consumed by the in-app "Check for updates" feature)
     echo "🛰  Updating ${MAC_DIR}/version.json → $NEW…"
@@ -551,9 +588,13 @@ EOF
         rm -rf "$vtmp"
     fi
 
-    # 8) Post-publish check
+    # 8) Post-publish check ($OLD dir only exists when we archived an older version)
     echo "🔍 Post-publish:"
-    run "$SSH 'ls -l ${MAC_DIR}/current ${MAC_DIR}/$OLD'"
+    if $same_version; then
+        run "$SSH 'ls -l ${MAC_DIR}/current'"
+    else
+        run "$SSH 'ls -l ${MAC_DIR}/current ${MAC_DIR}/$OLD'"
+    fi
     if ! $dry; then
         echo "   HTTP check: ${WEB_BASE_URL}/winnow_mac/current/Winnow$NEW.dmg"
         curl -sI "${WEB_BASE_URL}/winnow_mac/current/Winnow$NEW.dmg" | head -1

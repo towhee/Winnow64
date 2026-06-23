@@ -1,5 +1,10 @@
 #include "imagedecoder.h"
 #include "Main/global.h"
+#include "ImageFormats/Raw/rawformat.h"
+#include "Develop/develop.h"
+#include "Develop/inputtransform.h"
+#include "Develop/outputtransform.h"
+#include <memory>
 
 #ifdef Q_OS_MAC
 // Defined in Image/thumb_mac.mm — fast HEIC primary-image decode via ImageIO.
@@ -187,6 +192,7 @@ void ImageDecoder::decode(int row, int instance)
                 << fPath;
         }
         if (metadata->rotateFormats.contains(ext) && !abort.loadAcquire()) rotate();
+        if (!abort.loadAcquire()) applyDevelop();
         if (G::colorManage && !abort.loadAcquire()) colorManage();
         if (image.isNull()) status = Status::Failed;
     }
@@ -283,6 +289,29 @@ bool ImageDecoder::load()
     }
 
     decoderToUse = QtImage;  // default unless overridden
+    developApplied = false;  // reset per decode; the RAW path sets it when it develops
+
+    /*
+        FULL-SENSOR RAW DECODE (scaffold).
+        RawFormat::Create() returns nullptr until a per-format UnpackCfa() lands
+        (phase 2+), so today every RAW file falls through to the embedded-JPG path
+        below and behaviour is unchanged. When a decoder exists this is the call site
+        that produces a demosaiced image.
+        TODO(raw): assemble an ImageMetadata carrying the raw-sensor fields (raw
+        offset/length, bitsPerSample, CFA pattern, levels, matrix) for the cache path;
+        indMeta already carries them in independent mode.
+    */
+    if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
+        if (rawFormat->Decode(imFile, indMeta, image, &editParams)) {
+            decoderToUse = Raw;
+            developApplied = true;   // RAW develops internally; skip the generic pass
+            imFile.close();
+            status = Status::Success;
+            return true;
+        }
+        errMsg = rawFormat->lastError();
+        imFile.seek(0);   // rewind for the embedded-JPG fallback below
+    }
 
     // Embedded jpg?
     bool isEmbeddedJpg = false;
@@ -638,6 +667,31 @@ void ImageDecoder::rotate()
                 ;//*/
 }
 
+void ImageDecoder::applyDevelop()
+{
+/*
+    Applies parametric develop adjustments (EditParams) to the decoded image, in the
+    scene-linear working space: InputTransform (sRGB -> linear) -> Develop -> OutputTransform
+    (linear -> display). Runs after rotate() and before output colour management.
+
+    No-op while editParams is identity (the common case until per-image edits are stored),
+    and skipped for RAW, which develops internally in float (developApplied). This keeps the
+    hot browsing path untouched: an unedited image never round-trips through the float buffer.
+*/
+    if (isLog || G::isLogger) G::log("ImageDecoder::applyDevelop", "sfRow = " + QString::number(sfRow));
+    if (developApplied || editParams.isIdentity() || image.isNull()) return;
+
+    InputTransform input;
+    WorkingImage work;
+    if (!input.FromImage(image, work)) return;
+
+    Develop develop;
+    develop.Apply(work, editParams);
+
+    OutputTransform output;
+    output.ToImage(work, image);
+}
+
 void ImageDecoder::colorManage()
 {
     if (isLog || G::isLogger) G::log("ImageDecoder::colorManage", "sfRow = " + QString::number(sfRow));
@@ -687,6 +741,7 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
 
     if (load()) {
         if (metadata->rotateFormats.contains(ext)) rotate();
+        applyDevelop();
         colorManage();
         img = image;
         return true;

@@ -41,6 +41,7 @@
 #include "Metadata/metadata.h"
 #include "Main/dockwidget.h"
 #include "Embellish/Properties/embelproperties.h"
+#include "Develop/Properties/developproperties.h"
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
 
@@ -119,6 +120,7 @@ class MW : public QMainWindow
     friend class PropertyEditor;    // mw;
     friend class IconView;          // mw2
     friend class EmbelProperties;   // mw3
+    friend class DevelopProperties;
     friend class InfoString;        // mw4
     friend class TableView;         // mw5
 
@@ -203,6 +205,7 @@ public:
         bool isFilterDockVisible;
         bool isMetadataDockVisible;
         bool isEmbelDockVisible;
+        bool isDevelopDockVisible;
         bool isThumbDockVisible;
         bool isImageDockVisible;
         // View
@@ -691,17 +694,20 @@ private slots:
     void setFilterDockVisibility();
     void setMetadataDockVisibility();
     void setEmbelDockVisibility();
+    void setDevelopDockVisibility();
     void setMetadataDockFixedSize();    // rgh finish or remove
 
     void focusOnDock(DockWidget *dockWidget);
     void closeThumbDock();
     void closeEmbelDock();
+    void closeDevelopDock();
     void closeFolderDock();
     void closeFavDock();
     void closeFilterDock();
     void closeMetadataDock();
     void showThumbDock();
     void showEmbelDock();
+    void showDevelopDock();
     void showFolderDock();
     void showFavDock();
     void showFilterDock();
@@ -981,6 +987,7 @@ private:
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
     QAction *embelDockVisibleAction;
+    QAction *developDockVisibleAction;
 //    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
@@ -1118,11 +1125,13 @@ private:
     DockWidget *thumbDock;
     DockWidget *propertiesDock;
     DockWidget *embelDock;
+    DockWidget *developDock;
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
     DockTitleBar *metaTitleBar;
     DockTitleBar *embelTitleBar;
+    DockTitleBar *developTitleBar;
     BarBtn *embelRunBtn;
     FSTree *fsTree;
     BookMarks *bookmarks;
@@ -1144,6 +1153,7 @@ private:
     VideoView *videoView;
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
+    DevelopProperties *developProperties;
     Preferences *pref = nullptr;
     StressTest *stressTest;
     QFrame *embelFrame;
@@ -1262,6 +1272,7 @@ private:
     QString filterDockTabText;
     QString metadataDockTabText;
     QString embelDockTabText;
+    QString developDockTabText;
     QString thumbDockTabText;
 
     QStringList dockTextNames;
@@ -1276,6 +1287,7 @@ private:
     void createMetadataDock();
     void createThumbDock();
     void createEmbelDock();
+    void createDevelopDock();
     QTabBar* tabifiedBar();
     bool isDockTabified(QDockWidget *dock);
     QString dockTabToolTip(const QString &tabText);
@@ -1288,6 +1300,7 @@ private:
     void folderDockVisibilityChange();
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
+    void developDockVisibilityChange();
 
 public:
     // dock collapse/expand area-scoped helpers (used by DockTitleBar context menu)

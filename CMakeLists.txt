@@ -120,6 +120,12 @@ set(WINNOW_SOURCES
     Datamodel/filters.cpp
     Datamodel/selection.cpp
 
+    # Develop
+    Develop/develop.cpp
+    Develop/inputtransform.cpp
+    Develop/outputtransform.cpp
+    Develop/Properties/developproperties.cpp
+
     # Dialogs
     Dialogs/aboutdlg.cpp
     Dialogs/addthumbnailsdlg.cpp
@@ -185,7 +191,6 @@ set(WINNOW_SOURCES
     Image/thumb.cpp
 
     # ImageFormats
-    ImageFormats/Base/rawbase.cpp
     ImageFormats/Canon/canon.cpp
     ImageFormats/Canon/canoncr3.cpp
     ImageFormats/Dng/dng.cpp
@@ -196,10 +201,12 @@ set(WINNOW_SOURCES
     ImageFormats/Olympus/olympus.cpp
     ImageFormats/Panasonic/panasonic.cpp
     ImageFormats/Png/png.cpp
+    ImageFormats/Raw/demosaic.cpp
+    ImageFormats/Raw/rawcolor.cpp
+    ImageFormats/Raw/rawformat.cpp
     ImageFormats/Sony/sony.cpp
     ImageFormats/Tiff/rorytiff.cpp
     ImageFormats/Tiff/tiff.cpp
-    ImageFormats/Tiff/tiffdecoder.cpp
     ImageFormats/Video/mov.cpp
     ImageFormats/Video/mp4.cpp
 
@@ -340,6 +347,13 @@ set(WINNOW_HEADERS
     Datamodel/filters.h
     Datamodel/selection.h
 
+    Develop/develop.h
+    Develop/editparams.h
+    Develop/inputtransform.h
+    Develop/outputtransform.h
+    Develop/workingimage.h
+    Develop/Properties/developproperties.h
+
     Dialogs/aboutdlg.h
     Dialogs/addthumbnailsdlg.h
     Dialogs/appdlg.h
@@ -403,7 +417,6 @@ set(WINNOW_HEADERS
     Image/stack.h
     Image/thumb.h
 
-    ImageFormats/Base/rawbase.h
     ImageFormats/Canon/canon.h
     ImageFormats/Canon/canoncr3.h
     ImageFormats/Dng/dng.h
@@ -415,10 +428,13 @@ set(WINNOW_HEADERS
     ImageFormats/Olympus/olympus.h
     ImageFormats/Panasonic/panasonic.h
     ImageFormats/Png/png.h
+    ImageFormats/Raw/demosaic.h
+    ImageFormats/Raw/rawcolor.h
+    ImageFormats/Raw/rawformat.h
+    ImageFormats/Raw/rawimage.h
     ImageFormats/Sony/sony.h
     ImageFormats/Tiff/rorytiff.h
     ImageFormats/Tiff/tiff.h
-    ImageFormats/Tiff/tiffdecoder.h
     ImageFormats/Video/mov.h
     ImageFormats/Video/mp4.h
 

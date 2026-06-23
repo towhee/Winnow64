@@ -1410,6 +1410,15 @@ void MW::createWindowActions()
     addAction(embelDockVisibleAction);
     connect(embelDockVisibleAction, &QAction::triggered, this, &MW::showEmbelDock);
 
+    developDockVisibleAction = new QAction(tr("Develop Editor Panel"), this);
+    developDockVisibleAction->setObjectName("toggleDevelopDock");
+    developDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    developDockVisibleAction->setCheckable(true);
+    if (isSettings && settings->contains("isDevelopDockVisible")) developDockVisibleAction->setChecked(settings->value("isDevelopDockVisible").toBool());
+    else developDockVisibleAction->setChecked(false);
+    addAction(developDockVisibleAction);
+    connect(developDockVisibleAction, &QAction::triggered, this, &MW::showDevelopDock);
+
     // rgh delete this ?
     metadataFixedSizeAction = new QAction(tr("Metadata Panel Fix Size"), this);
     metadataFixedSizeAction->setObjectName("metadataFixedSize");
@@ -2026,6 +2035,7 @@ void MW::createViewMenu()
     viewMenu->addAction(metadataDockVisibleAction);
     viewMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) viewMenu->addAction(embelDockVisibleAction);
+    viewMenu->addAction(developDockVisibleAction);
     // viewMenu->addSeparator();
     //    windowMenu->addAction(windowTitleBarVisibleAction);
     #ifdef Q_OS_WIN
@@ -2082,6 +2092,7 @@ void MW::createWindowMenu()
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
+    windowMenu->addAction(developDockVisibleAction);
     windowMenu->addSeparator();
 //    windowMenu->addAction(windowTitleBarVisibleAction);
     #ifdef Q_OS_WIN
@@ -2956,6 +2967,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
         thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
         embelDockVisibleAction->setShortcut(QKeySequence("F8"));
+        developDockVisibleAction->setShortcut(QKeySequence("F9"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
 
         // Help

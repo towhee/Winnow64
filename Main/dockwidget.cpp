@@ -635,6 +635,7 @@ QString MW::dockTabToolTip(const QString &tabText)
     if (tabText == metadataDockTabText) return tip(metadataDockTabText, "F6");
     if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
+    if (tabText == developDockTabText)  return tip(developDockTabText,   "F9");
     return QString();
 }
 
