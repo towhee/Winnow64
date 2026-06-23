@@ -25,6 +25,7 @@ bool InputTransform::FromImage(const QImage &in, WorkingImage &out)
     out.width = W;
     out.height = H;
     out.white = 1.0f;
+    out.sceneReferred = false;  // display-referred: already carries the camera tone curve
     out.rgb.assign(static_cast<size_t>(W) * static_cast<size_t>(H) * 3, 0.0f);
 
     for (int y = 0; y < H; ++y) {

@@ -1803,11 +1803,11 @@ Architecture
                                               AHD/DCB/XTrans later). Operates only on the CFA
                                               mosaic + pattern, so it is unit-testable.
                4. RawColor::ToWorking()      shared white balance + camera->sRGB matrix, STOPS
-                                              AT LINEAR (no gamma) -> WorkingImage. SCAFFOLD-
-                                              level matrices; accurate ones are phase 3.
+                                              AT LINEAR (no gamma) -> WorkingImage. Real colour
+                                              (dcraw cam_xyz_coeff); see COLOUR below.
                5. Develop::Apply()           parametric edits in linear space, applied here for
                                               RAW (native float) when EditParams is non-identity.
-               6. OutputTransform::ToImage() shared gamma/ICC -> display QImage.
+               6. OutputTransform::ToImage() baseline tone curve (RAW only) + gamma -> QImage.
 
     Demosaic is deliberately NOT the override point: the algorithm is shared across cameras;
     only the unpack/decompress step is vendor-specific (mirrors LibRaw's real structure).
@@ -1837,14 +1837,37 @@ Architecture
     the addMetadataForItem store are skipped, so the MetaRead path pays nothing -- important
     because the parse-time extraction grows (makernote colour matrix etc.). If useRaw is toggled
     on after a folder is read, rawInfo will be absent from the store and UnpackCfa falls back to
-    its self-walk, so correctness holds; the store repopulates on the next folder read. SonyRaw::UnpackCfa uses rawInfo when valid and otherwise
-    falls back to its self-contained TIFF/EP walk (readSonyTiffSensorInfo), so both paths
-    converge on one shared unpack. The CFAPattern->enum mapping is shared via
-    cfaPatternFromPlaneColor() in rawimage.h. WB multipliers + colour matrix are NOT yet in
-    RawSensorInfo (they come from the makernote -> the real-RawColor task).
+    its self-walk, so correctness holds; the store repopulates on the next folder read.
+    SonyRaw::UnpackCfa uses rawInfo when valid and otherwise falls back to its self-contained
+    TIFF/EP walk (readSonyTiffSensorInfo). CRUCIAL: the self-walk fills the SAME fields as the
+    parse path -- geometry AND colour (model->matrix via tag 272, WB_RGGBLevels 0x7313, BlackLevel
+    0x7310). If it only filled geometry, a toggle-on after a useRaw-off load would render with an
+    identity matrix / no WB (green tint). Both paths therefore produce identical colour. The
+    CFAPattern->enum mapping is shared via cfaPatternFromPlaneColor() in rawimage.h.
+
+    COLOUR (RawColor::ToWorking, real): follows dcraw/libraw cam_xyz_coeff. Input is the model's
+    XYZ(D65)->camera matrix (DNG ColorMatrix / adobe_coeff convention), looked up by model in
+    ImageFormats/Raw/cameramatrix.cpp (seeded with the Sony A9/A9 II; grows per model -- a wrong
+    matrix is a hue shift, not a crash, so verify visually when adding one). From it RawColor
+    builds camRgb = xyzToCam.rgbToXyz, row-normalises so neutral maps to neutral, derives the
+    neutral white balance preMul = 1/rowSum, and inverts to get camera->linear-sRGB (rgbCam).
+    It applies the white balance (as-shot raw.camMul when the parser filled it, else preMul;
+    normalised to green) and the matrix, clamps to [0,1], stays linear. The matrix + camMul ride
+    on RawSensorInfo (xyzToCam, camMul, hasColorMatrix), filled at parse time (model known) so
+    they plumb to the cache path like the rest of rawInfo. An unknown model -> identity xyzToCam
+    -> sRGB-assumed pass-through (approx, still renders).
+
+    SONY AS-SHOT WB + BLACK: Sony::parse reads the as-shot white balance and black level from
+    the SubIFD0 it already parses (the "SR2" tags, stored in the clear on ARW): WB_RGGBLevels
+    (0x7313, SSHORT x4, R G1 G2 B) -> rawInfo.camMul (R,G,B,G2, applied directly as gains),
+    BlackLevel (0x7310, SHORT x4) -> rawInfo.black, WhiteLevel (0xC61D) -> rawInfo.white. So
+    RawColor uses the real as-shot WB (haveAsShot path), not the matrix-derived neutral, on the
+    A9 II. (Found by instrumenting the file; exiftool was used only as a reference oracle.)
+    LIMITATION: clipped highlights can show a slight tint until highlight recovery lands.
 
     Phasing: 1 scaffold (done) -> 2 first uncompressed format UnpackCfa: Sony ARW (done)
-    -> 3 colour/lcms2 + real Sony black level/matrix from makernote -> 4 better demosaic (AHD)
+    -> 3 real colour: per-model matrix + matrix-derived WB (done); still TODO: as-shot WB +
+    black level from the Sony makernote, more model matrices -> 4 better demosaic (AHD)
     -> 5 compression (lossless-JPEG CR2/DNG, compressed NEF/ARW ...).
 
     NOTE: an earlier (2025) unused scaffold (ImageFormats/Base/rawbase.* +
@@ -1929,6 +1952,18 @@ Architecture
         decoder for the extension (only "arw" today; others -> embedded JPG regardless).
     InputTransform (Develop/) is the non-raw "un-gamma to linear" step, the symmetric
     counterpart of OutputTransform.
+
+    BASELINE TONE CURVE: a scene-referred raw render is radiometrically linear and lands dark
+    and flat next to a camera JPEG (measured ~+0.7 EV / much less contrast on the A9 II). So
+    WorkingImage carries a sceneReferred flag: RawColor sets it true (sensor data, with
+    highlight headroom -- RawColor now clamps only negatives, not >1), InputTransform sets it
+    false (a JPEG already has the camera tone curve baked in). OutputTransform applies a fixed
+    baseline tone curve ONLY when sceneReferred: exposure x kBaselineExposure (=1.6, ~+0.68 EV)
+    then the ACES (Narkowicz) filmic shoulder, before the sRGB transfer. This lifts midtones and
+    rolls highlights off smoothly (vs hard-clipping), landing close to the embedded preview
+    (mean luma 0.434 vs 0.445; validated in numpy against the preview). It is a fixed default
+    look, not per-image auto-exposure; a future Develop "exposure" can override it. Non-raw
+    output is unchanged (tone curve skipped), so the unedited-JPEG round trip stays identity.
 
     PERF (keeps Winnow fast): cache the WorkingImage (post-decode, pre-develop). An
     interactive slider change then re-runs only Develop + OutputTransform -- never decode or

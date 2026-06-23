@@ -32,6 +32,15 @@ struct RawSensorInfo {
     uint32_t white = 0;                 // saturation level (0 = unknown -> derive from bps)
     uint32_t black[4] = {0, 0, 0, 0};   // per-2x2-position black level
 
+    /* Colour. xyzToCam is the CIE XYZ(D65) -> camera-RGB matrix (DNG ColorMatrix / libraw
+       adobe_coeff convention); RawColor builds the camera->sRGB transform from it and derives
+       a neutral white balance. camMul is the as-shot WB (R,G,B,G2); left at 1s when not read
+       from the makernote, in which case RawColor uses the matrix-derived neutral WB. Filled at
+       parse time (model known) and carried to the decode path. */
+    bool hasColorMatrix = false;
+    float xyzToCam[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+    float camMul[4] = {1, 1, 1, 1};
+
     /* Enough to unpack: known geometry and a real strip. Compression handling is the
        decoder's call (e.g. SonyRaw rejects what it cannot unpack yet). */
     bool isValid() const {

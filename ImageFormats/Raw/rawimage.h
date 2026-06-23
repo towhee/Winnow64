@@ -56,8 +56,8 @@ struct RawImage {
     uint16_t white = 65535;                 // saturation (clip) level
 
     float camMul[4] = {1, 1, 1, 1};         // as-shot white-balance multipliers (R,G,B,G2)
-    float camToXyz[3][3] = {                // camera-native RGB -> CIE XYZ (D65)
-        {1, 0, 0}, {0, 1, 0}, {0, 0, 1}
+    float xyzToCam[3][3] = {                // CIE XYZ (D65) -> camera-native RGB
+        {1, 0, 0}, {0, 1, 0}, {0, 0, 1}     // (DNG ColorMatrix / dcraw-libraw adobe_coeff convention)
     };
 
     bool isValid() const {
