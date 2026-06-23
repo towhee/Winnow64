@@ -349,16 +349,42 @@ function Promote {
         if ($reply) { $Old = $reply }
     }
     if (-not $Old -or -not $New) { throw "Need both OLD and NEW versions." }
-    if ($Old -eq $New) { throw "OLD ($Old) == NEW ($New); nothing to promote." }
+
+    # Same version already on the server == "redeploy": replace the published
+    # installer with this latest build WITHOUT bumping the version (useful for a
+    # tiny fix where re-versioning isn't warranted). Redeploy skips the archive
+    # (nothing to preserve - same version) and the index.html repoint (the link
+    # already names this version); it just overwrites current\WinnowSetup-<ver>.exe
+    # and re-publishes version.json.
+    $Redeploy = $false
+    if ($Old -eq $New) {
+        if ($script:DryRun) {
+            Write-Host "   OLD == NEW ($New): REDEPLOY mode (replace server installer, same version)." -ForegroundColor Yellow
+            $Redeploy = $true
+        } else {
+            Write-Host "   Server already has Winnow $New." -ForegroundColor Yellow
+            $rd = Read-Host "   Redeploy this build over it (same version, replace installer only)? Type 'yes'"
+            if ($rd -eq 'yes') { $Redeploy = $true }
+            else { throw "OLD ($Old) == NEW ($New); nothing to promote." }
+        }
+    }
 
     # 4) Plan + confirm
     Write-Host ""
-    Write-Host "================ PROMOTE PLAN  (old=$Old  new=$New) ================"
-    Write-Host "  1. archive : move  current\WinnowSetup-$Old.exe (or current\*.exe)  ->  $Old\"
-    Write-Host "  2. upload  : $Setup  ->  current/WinnowSetup-$New.exe"
-    Write-Host "  3. index   : back up index.html, repoint Windows link  $Old -> $New"
-    Write-Host "  4. version : publish $WinDir/version.json  ->  $New"
-    Write-Host "  server     : ${ServerUser}@${ServerHost}:$WinDir"
+    if ($Redeploy) {
+        Write-Host "================ REDEPLOY PLAN  (version=$New, unchanged) ================"
+        Write-Host "  1. upload  : $Setup  ->  current/WinnowSetup-$New.exe  (overwrite)"
+        Write-Host "  2. version : re-publish $WinDir/version.json  ->  $New"
+        Write-Host "  (no archive, no index.html change - version is unchanged)"
+        Write-Host "  server     : ${ServerUser}@${ServerHost}:$WinDir"
+    } else {
+        Write-Host "================ PROMOTE PLAN  (old=$Old  new=$New) ================"
+        Write-Host "  1. archive : move  current\WinnowSetup-$Old.exe (or current\*.exe)  ->  $Old\"
+        Write-Host "  2. upload  : $Setup  ->  current/WinnowSetup-$New.exe"
+        Write-Host "  3. index   : back up index.html, repoint Windows link  $Old -> $New"
+        Write-Host "  4. version : publish $WinDir/version.json  ->  $New"
+        Write-Host "  server     : ${ServerUser}@${ServerHost}:$WinDir"
+    }
     if ($script:DryRun) { Write-Host "  MODE: DRY-RUN (nothing will be written)" -ForegroundColor Yellow }
     Write-Host "==================================================================="
     if (-not $script:DryRun) {
@@ -368,15 +394,26 @@ function Promote {
 
     # 5) Archive old (move every current/*.exe into <old>/; never delete). The
     #    old installer may be the legacy fixed-name file, so archive by glob.
-    Write-Host "Archiving current/*.exe -> $Old/ ..." -ForegroundColor Cyan
-    $archiveCmd = "mkdir -p $WinDir/$Old && for f in $WinDir/current/*.exe; do [ -e `"`$f`" ] && mv `"`$f`" $WinDir/$Old/ || echo nothing-to-archive; done"
-    Invoke-Ssh $archiveCmd | Out-Null
+    #    Skipped on redeploy: the version is unchanged, so there is no prior
+    #    version to preserve (and we'd archive the very file we're replacing).
+    if ($Redeploy) {
+        Write-Host "Redeploy: skipping archive (version unchanged)." -ForegroundColor DarkGray
+    } else {
+        Write-Host "Archiving current/*.exe -> $Old/ ..." -ForegroundColor Cyan
+        $archiveCmd = "mkdir -p $WinDir/$Old && for f in $WinDir/current/*.exe; do [ -e `"`$f`" ] && mv `"`$f`" $WinDir/$Old/ || echo nothing-to-archive; done"
+        Invoke-Ssh $archiveCmd | Out-Null
+    }
 
     # 6) Upload new
     Write-Host "Uploading WinnowSetup-$New.exe -> current/ ..." -ForegroundColor Cyan
     Send-Scp $Setup "$WinDir/current/WinnowSetup-$New.exe"
 
-    # 7) Update index.html (server-side backup, then download/edit/diff/upload)
+    # 7) Update index.html (server-side backup, then download/edit/diff/upload).
+    #    Skipped on redeploy: the version is unchanged, so the Windows link
+    #    already names WinnowSetup-$New.exe with the right version text.
+    if ($Redeploy) {
+        Write-Host "Redeploy: skipping index.html update (version unchanged)." -ForegroundColor DarkGray
+    } else {
     Write-Host "Updating index.html (Windows link $Old -> $New)..." -ForegroundColor Cyan
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
     Invoke-Ssh "cp $IndexPath ${IndexPath}.bak-$stamp" | Out-Null
@@ -404,6 +441,7 @@ function Promote {
         } else {
             Write-Host "   No matching Windows link found to update - check index.html manually." -ForegroundColor Yellow
         }
+    }
     }
 
     # 7b) Publish version.json (consumed by the in-app "Check for updates")
@@ -436,7 +474,8 @@ function Promote {
         try { (Invoke-WebRequest -Uri "$WebBaseUrl/winnow_win/version.json" -Method Head -UseBasicParsing).StatusCode | ForEach-Object { Write-Host "     HTTP $_" } } catch { Write-Host "     $($_.Exception.Message)" -ForegroundColor Yellow }
         if ($tmp -and (Test-Path $tmp)) { Remove-Item -Recurse -Force $tmp }
     }
-    Write-Host "Promote complete (old=$Old new=$New)." -ForegroundColor Green
+    if ($Redeploy) { Write-Host "Redeploy complete (version=$New, installer replaced)." -ForegroundColor Green }
+    else { Write-Host "Promote complete (old=$Old new=$New)." -ForegroundColor Green }
 }
 
 # --- Full pipeline (build -> sign -> installer -> archive -> verify) --
@@ -478,6 +517,7 @@ while ($true) {
     Write-Host "3) Archive installer (local versioned copy)"
     Write-Host "4) Upload installer to test dir"
     Write-Host "5) Promote + publish to server (archive old -> upload new -> update index)"
+    Write-Host "   (if server version == this build, offers REDEPLOY: replace installer only)"
     Write-Host "V) Verify Windows readiness"
     Write-Host "D) Promote DRY-RUN (print server commands, write nothing)"
     Write-Host "A) FULL PIPELINE (0-3 + verify; does NOT publish)"
