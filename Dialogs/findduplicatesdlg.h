@@ -123,6 +123,16 @@ private:
     QPixmap pB;
 
     QStandardItemModel model;
+    /* Maps a candidate index (model row / loop variable 'a') to its dm->sf proxy
+       row. setupModel() only adds selected images, so the candidate list is no
+       longer 1:1 with dm->sf; every candidate access to dm->sf goes through
+       aSfRow(a). */
+    QList<int> aSfRows;
+    int aSfRow(int a) const;
+    /* True if any candidate (selected image) is a video. When false, videos are
+       excluded from the targets too (no point comparing against video duplicates
+       when there are no video candidates). */
+    bool candidatesHaveVideo() const;
     QStringList chooseFolders(const QString &title);
     void addFolders(DragToList *list, const QString &title);
     void getPreview(QString fPath, QImage &image, QString source);
@@ -132,6 +142,9 @@ private:
     void getMetadataBItems();
     void reportRGB(QImage &im);
     int compareRGB(QImage &imA, QImage &imB);
+    /* Normalize a target (B) thumbnail to the candidate decoration icon size
+       (256px long side) so pixel comparison aligns A and B. */
+    QImage normalizeBThumb(const QImage &im) const;
     double compareImagesHues(QImage &imA, QImage &imB);
     void setupModel();
     QString currentMatchString(int a, int b);
@@ -162,6 +175,11 @@ private:
     bool abort;
     bool isRunning = false;
     bool isDebug = false;
+
+    /* Count of queued video thumbnails (B targets) whose first frame has not yet
+       arrived from FrameDecoder. getMetadataBItems waits for this to reach 0
+       before comparison, since video frames are delivered asynchronously. */
+    int pendingVideoFrames = 0;
 };
 
 #endif // FINDDUPLICATESDLG_H

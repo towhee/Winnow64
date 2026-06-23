@@ -78,6 +78,16 @@ Table of Contents
          - Mechanism
          - Publishing version.json
 
+    11. FIND DUPLICATES
+         - Overview
+         - Candidates (A list) and the model mapping
+         - Targets (B list)
+         - Comparison and thumbnail normalization
+         - Video frames (async sync)
+         - Responsiveness
+         - Output
+         - Dialog layout
+
 
 ******************************************************************************************
 
@@ -1658,3 +1668,110 @@ Publishing version.json
     • Windows deploy.ps1 writes/uploads winnow_win/version.json when $VersionJsonTarget is
       set.  Its url points at winnow_win/current/, so the Setup.exe must be in current/.
     Build dependency: the client needs Qt6::Network (added to CMakeLists.txt).
+
+
+******************************************************************************************
+
+FIND DUPLICATES
+
+    FindDuplicatesDlg (`Dialogs/findduplicatesdlg.*`) finds duplicates of a set of
+    candidate images among a set of target images. Launched from MW::findDuplicates,
+    which runs it modally (exec) and, on accept, rebuilds the Compare filter so the
+    flagged duplicates can be shown.
+
+    Two columns of data drive everything:
+    • The candidate "A" list — the images being checked. Held in the datamodel proxy
+      dm->sf, addressed through the aSfRows mapping (see below).
+    • The target "B" list — bItems, built from the include/exclude folders dragged into
+      the dialog. Each B entry caches name, type, createdDate, aspect, duration and a
+      thumbnail (im) for pixel comparison.
+
+------------------------------------------------------------------------------------------
+Candidates (A list) and the model mapping
+------------------------------------------------------------------------------------------
+
+    Candidates are the SELECTED images in dm->sf, not all filtered images. setupModel()
+    builds aSfRows, a list mapping each candidate index (the loop variable 'a' / the row
+    in the dialog's QStandardItemModel) to its dm->sf proxy row:
+    • aSfRows is populated from dm->isSelected(sfRow) over the filtered proxy.
+    • If nothing is selected it falls back to all filtered rows, so the dialog is never
+      empty.
+
+    Because the candidate list is no longer 1:1 with dm->sf, every candidate access to
+    the datamodel goes through aSfRow(a) (returns -1 when out of range, so an invalid
+    QModelIndex yields safe empty data rather than throwing). The dialog model row and
+    results[a]/matches[a] stay keyed by the candidate index a; dm->sf is reached only via
+    aSfRow(a).
+
+------------------------------------------------------------------------------------------
+Targets (B list)
+------------------------------------------------------------------------------------------
+
+    buildBList() expands the include folders (optionally recursing subfolders), subtracts
+    the exclude folders, then appends a bItem per supported file found.
+    • If no candidate is a video (candidatesHaveVideo() is false, tested via
+      G::VideoColumn), videos are excluded from the targets too — there is no point
+      comparing against video duplicates when no candidate is a video.
+    getMetadataBItems() then fills each bItem's metadata and thumbnail.
+
+------------------------------------------------------------------------------------------
+Comparison and thumbnail normalization
+------------------------------------------------------------------------------------------
+
+    on_compareBtn_clicked() runs the search: clear → buildBList → getMetadataBItems →
+    pixelCompare() (when "same pixels" is checked) or findMatches() (criteria match:
+    name/type/date/aspect/duration). matched candidates are checked in the dialog table.
+
+    Pixel comparison only makes sense if the two thumbnails share dimensions, so both the
+    candidate (A, from the decoration-role icon) and target (B) thumbnails are run through
+    normalizeBThumb(): scaled to 256 px on the long side (aspect preserved, the same
+    256 box used to extract the A icon) and converted to QImage::Format_RGB32. For
+    matching-aspect images this yields identical dimensions.
+
+    compareRGB() sums the per-channel absolute differences over the overlapping
+    rectangle. It reads pixels directly from constScanLine() as QRgb (both inputs are
+    already RGB32) — QImage::pixelColor() per pixel was ~50x slower and, run over every
+    A x B combination, was the original cause of the long main-thread stall (beachball).
+
+------------------------------------------------------------------------------------------
+Video frames (async sync)
+------------------------------------------------------------------------------------------
+
+    Video target thumbnails come from FrameDecoder asynchronously: getMetadataBItems()
+    queues each video (addToQueue) and increments pendingVideoFrames; the first frame
+    arrives later at setImageFromVideoFrame(), which stores the normalized thumbnail and
+    decrements the counter. getMetadataBItems() then WAITS for pendingVideoFrames to
+    reach 0 before returning (pumping the event loop, with a 30 s timeout and abort
+    check), so pixelCompare() never runs against null video thumbnails. pendingVideoFrames
+    is reset in clear().
+
+------------------------------------------------------------------------------------------
+Responsiveness
+------------------------------------------------------------------------------------------
+
+    The whole search runs synchronously on the GUI thread. The dialog's progress/abort
+    hooks were originally gated on G::useProcessEvents, which is globally false, so the
+    GUI froze for the entire run. The compute loops (getMetadataBItems, pixelCompare,
+    findMatches) now pump the event loop unconditionally; pixelCompare throttles to one
+    update/processEvents per percent to avoid flooding the loop. on_compareBtn_clicked
+    guards re-entry (if (isRunning) return), disables compareBtn during the run, and
+    resets isRunning / re-enables the button on every exit path.
+
+------------------------------------------------------------------------------------------
+Output
+------------------------------------------------------------------------------------------
+
+    on_updateDupsAndQuitBtn_clicked() writes the result back to the datamodel: it first
+    clears G::CompareColumn on ALL dm->sf rows (candidates are only a subset, so a
+    candidate-only pass would leave stale flags), then sets it true for each checked
+    candidate via aSfRow(a), and accepts the dialog. MW::findDuplicates then refreshes
+    the Compare filter.
+
+------------------------------------------------------------------------------------------
+Dialog layout
+------------------------------------------------------------------------------------------
+
+    findduplicatesdlg.ui lays the upper area out as leftFrame then rightFrame inside
+    horizontalLayout_13. leftFrame (on the left) holds the candidate images table (tv);
+    rightFrame (on the right) holds the target include/exclude folder lists and the
+    comparison controls. The frame names reflect their on-screen positions.
