@@ -52,6 +52,10 @@ struct RawImage {
 
     CfaPattern pattern = CfaPattern::Unknown;
 
+    /* When pattern == XTrans, this is the 6x6 colour map (0=R, 1=G, 2=B) at the mosaic origin;
+       the demosaicer tiles it across the image. Unused for Bayer patterns. */
+    uint8_t xtrans[6][6] = {{0}};
+
     uint16_t black[4] = {0, 0, 0, 0};       // per-2x2-position black level
     uint16_t white = 65535;                 // saturation (clip) level
 

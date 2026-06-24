@@ -1,7 +1,9 @@
 #include "sony.h"
 #include "Main/global.h"
 #include "ImageFormats/Raw/cameramatrix.h"
+#include "ImageFormats/Raw/tiffwalk.h"
 #include <QSet>
+#include <vector>
 
 Sony::Sony()
 {
@@ -781,16 +783,146 @@ bool readSonyTiffSensorInfo(QFile &file, RawSensorInfo &info)
     return true;
 }
 
+/*
+    Sony "ARW Compressed" (Compression 32767, the lossy ARW2 scheme). Each 16-byte group encodes
+    16 photosites of one Bayer colour across 32 columns: an 11-bit max and min, the indices of
+    the pixels holding them, then 7-bit deltas (shifted to fit max-min). The 11-bit values are
+    expanded through a Sony tone curve (tag 0x7010, 4 control points). Ported from dcraw's
+    sony_arw2_load_raw and validated BYTE-IDENTICAL to libraw on an A9 ARW. Returns 1 on success,
+    0 if the file is not ARW-compressed (caller falls through to the uncompressed path), -1 on a
+    compressed-but-failed decode (err set).
+*/
+int decodeSonyArw2(QFile &file, RawImage &raw, QString &err)
+{
+    using namespace TiffWalk;
+    Reader r;
+    if (!r.init(&file)) return 0;
+
+    QList<quint32> queue { r.firstIfd() };
+    QSet<quint32> seen;
+    Ifd rawIfd, ifd0;
+    bool haveIfd0 = false;
+    quint64 bestPx = 0;
+    while (!queue.isEmpty()) {
+        const quint32 off = queue.takeFirst();
+        if (off == 0 || seen.contains(off)) continue;
+        seen.insert(off);
+        Ifd tags; QList<quint32> subs; quint32 next = 0;
+        if (!r.readIfd(off, tags, subs, next)) continue;
+        if (!haveIfd0) { ifd0 = tags; haveIfd0 = true; }
+        for (quint32 s : subs) queue << s;
+        if (next) queue << next;
+        if (tags.contains(259) && r.scalar(tags[259]) == 32767 &&
+            tags.contains(256) && tags.contains(257) && tags.contains(273) && tags.contains(279)) {
+            const quint64 px = quint64(r.scalar(tags[256])) * r.scalar(tags[257]);
+            if (px > bestPx) { bestPx = px; rawIfd = tags; }
+        }
+    }
+    if (rawIfd.isEmpty()) return 0;                      // not an ARW-compressed file
+
+    const int W = int(r.scalar(rawIfd[256]));
+    const int H = int(r.scalar(rawIfd[257]));
+    if (W <= 32 || H <= 0) { err = "ARW2: bad dimensions."; return -1; }
+    if (!rawIfd.contains(0x7010)) { err = "ARW2: missing tone curve (0x7010)."; return -1; }
+    const QVector<quint32> cp = r.u32s(rawIfd[0x7010]);
+    if (cp.size() < 4) { err = "ARW2: short tone curve."; return -1; }
+
+    /* Tone curve: breakpoints at cp[i]>>2, slope starts at 4 and doubles each segment. */
+    std::vector<int> curve(0x4000, 0);
+    {
+        const int bound[5] = { int(cp[0]) >> 2, int(cp[1]) >> 2,
+                               int(cp[2]) >> 2, int(cp[3]) >> 2, 0x4000 };
+        int prev = 0, val = 0, slope = 4;
+        for (int seg = 0; seg < 5; ++seg) {
+            const int end = bound[seg] < 0x4000 ? bound[seg] : 0x4000;
+            for (int vv = prev; vv < end; ++vv) curve[vv] = val + slope * (vv - prev);
+            if (end > prev) val = curve[end - 1] + slope;
+            prev = end; slope *= 2;
+        }
+    }
+
+    const quint32 so = r.scalar(rawIfd[273]);
+    const quint32 sl = r.scalar(rawIfd[279]);
+    if (!file.seek(so)) { err = "ARW2: seek to strip failed."; return -1; }
+    QByteArray strip = file.read(int(sl));
+    if (strip.size() < int(sl)) { err = "ARW2: short strip read."; return -1; }
+    strip.append('\0');                                  // +1 pad: last block reads 1 byte past
+    const uchar *data = reinterpret_cast<const uchar *>(strip.constData());
+    const int rowbytes = (H > 0) ? int(sl / H) : W;      // 1 byte per column
+
+    raw.width = W;
+    raw.height = H;
+    raw.cfa.assign(size_t(W) * size_t(H), 0);
+
+    for (int row = 0; row < H; ++row) {
+        const uchar *rd = data + size_t(row) * rowbytes;
+        int col = 0, dpo = 0;
+        while (col < W - 30) {
+            const uchar *dp = rd + dpo;
+            const quint32 v4 = quint32(dp[0]) | (quint32(dp[1]) << 8) |
+                               (quint32(dp[2]) << 16) | (quint32(dp[3]) << 24);
+            const int mx = v4 & 0x7ff, mn = (v4 >> 11) & 0x7ff;
+            const int imax = (v4 >> 22) & 0xf, imin = (v4 >> 26) & 0xf;
+            int sh = 0;
+            while (sh < 4 && (0x80 << sh) <= mx - mn) ++sh;
+            int pix[16]; int bit = 30;
+            for (int i = 0; i < 16; ++i) {
+                if (i == imax) pix[i] = mx;
+                else if (i == imin) pix[i] = mn;
+                else {
+                    const int b = bit >> 3;
+                    const int s2 = int(dp[b]) | (int(dp[b + 1]) << 8);
+                    pix[i] = (((s2 >> (bit & 7)) & 0x7f) << sh) + mn;
+                    if (pix[i] > 0x7ff) pix[i] = 0x7ff;
+                    bit += 7;
+                }
+            }
+            for (int i = 0; i < 16; ++i) {
+                raw.cfa[size_t(row) * W + col] = uint16_t(curve[pix[i] << 1] >> 2);
+                col += 2;
+            }
+            col -= (col & 1) ? 1 : 31;
+            dpo += 16;
+        }
+    }
+
+    /* Levels / pattern / colour, read from the same SR2 tags as the uncompressed path. */
+    raw.pattern = CfaPattern::RGGB;
+    raw.white = rawIfd.contains(50717) ? uint16_t(r.scalar(rawIfd[50717])) : 16383;
+    uint16_t black = 512;
+    if (rawIfd.contains(0x7310)) {
+        const QVector<quint32> bl = r.u32s(rawIfd[0x7310]);
+        if (!bl.isEmpty()) black = uint16_t(bl[0]);
+    }
+    for (int i = 0; i < 4; ++i) raw.black[i] = black;
+    if (rawIfd.contains(0x7313)) {
+        const QVector<quint32> wb = r.u32s(rawIfd[0x7313]);   // R G1 G2 B
+        if (wb.size() >= 4 && wb[0] && wb[1] && wb[3]) {
+            raw.camMul[0] = wb[0]; raw.camMul[1] = wb[1];
+            raw.camMul[2] = wb[3]; raw.camMul[3] = wb[2];
+        }
+    }
+    QString model;
+    if (haveIfd0 && ifd0.contains(272)) model = "Sony " + r.ascii(ifd0[272]);
+    xyzToCamForModel(model, raw.xyzToCam);
+    return 1;
+}
+
 } // namespace
 
 bool SonyRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 {
 /*
-    Unpack an uncompressed Sony ARW CFA mosaic. Prefer the RawSensorInfo plumbed onto
-    ImageMetadata by Sony::parse (the cache path); fall back to a self-contained TIFF walk when
-    it is absent (e.g. an independent decode without raw metadata). Both paths converge on the
-    shared unpack below, so behaviour is identical either way.
+    Unpack a Sony ARW CFA mosaic. First try the lossy "ARW Compressed" (32767) path; if the file
+    is not ARW-compressed, fall through to the uncompressed path below, which prefers the
+    RawSensorInfo plumbed by Sony::parse (cache path) and otherwise self-walks the TIFF.
 */
+    {
+        const int a2 = decodeSonyArw2(file, raw, errMsg);
+        if (a2 == 1) return true;
+        if (a2 == -1) return false;
+    }
+
     RawSensorInfo info;
     if (m.rawInfo.isValid()) {
         info = m.rawInfo;

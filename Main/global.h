@@ -133,6 +133,7 @@ Q_NAMESPACE
         MetadataReadingColumn,
         MetadataStatusColumn,       // tri-state G::MetaStatus: NotAttempted/Failed/Loaded
         IconLoadedColumn,
+        RawRenderColumn,
         CompareColumn,
         // original values
         _RatingColumn,

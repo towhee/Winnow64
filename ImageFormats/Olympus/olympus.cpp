@@ -1,5 +1,9 @@
 #include "olympus.h"
 #include "Main/global.h"
+#include "ImageFormats/Raw/tiffwalk.h"
+#include "ImageFormats/Raw/rawimage.h"
+#include "ImageFormats/Raw/cameramatrix.h"
+#include <vector>
 
 /*
     https://exiftool.org/TagNames/Olympus.html
@@ -439,4 +443,168 @@ bool Olympus::parse(MetadataParameters &p,
 
     return true;
 
+}
+
+/* ------------------------------------------------------------------------------------------
+   OlympusRaw::UnpackCfa  --  Olympus ORF proprietary 12-bit compression
+   Ported from dcraw's olympus_load_raw; validated byte-identical to libraw on an E-M1 ORF.
+   ------------------------------------------------------------------------------------------ */
+
+bool OlympusRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) { errMsg = "ORF: not a TIFF file."; return false; }
+
+    /* The raw strip is in IFD0 (Olympus tags Compression 1 / 16-bit, but it is really the
+       proprietary 12-bit compression). Pick the largest-strip IFD to be safe. */
+    QList<quint32> queue { r.firstIfd() };
+    QSet<quint32> seen;
+    Ifd rawIfd, ifd0;
+    bool haveIfd0 = false;
+    quint64 bestPx = 0;
+    while (!queue.isEmpty()) {
+        const quint32 off = queue.takeFirst();
+        if (off == 0 || seen.contains(off)) continue;
+        seen.insert(off);
+        Ifd tags; QList<quint32> subs; quint32 next = 0;
+        if (!r.readIfd(off, tags, subs, next)) continue;
+        if (!haveIfd0) { ifd0 = tags; haveIfd0 = true; }
+        for (quint32 s : subs) queue << s;
+        if (next) queue << next;
+        if (tags.contains(256) && tags.contains(257) && tags.contains(273) && tags.contains(279)) {
+            const quint64 px = quint64(r.scalar(tags[256])) * r.scalar(tags[257]);
+            if (px > bestPx) { bestPx = px; rawIfd = tags; }
+        }
+    }
+    if (rawIfd.isEmpty()) { errMsg = "ORF: no CFA strip."; return false; }
+
+    const int W = int(r.scalar(rawIfd[256]));
+    const int H = int(r.scalar(rawIfd[257]));
+    const quint32 so = r.scalar(rawIfd[273]);
+    const quint32 sl = r.scalar(rawIfd[279]);
+    if (W <= 2 || H <= 0) { errMsg = "ORF: bad dimensions."; return false; }
+
+    if (!file.seek(so)) { errMsg = "ORF: seek to strip failed."; return false; }
+    const QByteArray strip = file.read(int(sl));
+    if (strip.size() < int(sl)) { errMsg = "ORF: short strip read."; return false; }
+    const uchar *d = reinterpret_cast<const uchar *>(strip.constData());
+    const int dn = strip.size();
+
+    /* dcraw Olympus Huffman: a direct 4096-entry table indexed by the top 12 bits ->
+       (codeLength << 8) | magnitudeValue. */
+    int huff[4096];
+    huff[0] = 0xc0c;
+    int hn = 0;
+    for (int i = 11; i >= 0; --i)
+        for (int c = 0; c < (2048 >> i); ++c) huff[++hn] = ((i + 1) << 8) | i;
+
+    /* MSB bit reader over the strip, starting 7 bytes in (dcraw skips 7). */
+    int pos = 7; quint64 bitbuf = 0; int vbits = 0;
+    auto ensure = [&](int nb) {
+        while (vbits < nb) {
+            const int b = (pos < dn) ? d[pos] : 0; ++pos;
+            bitbuf = (bitbuf << 8) | quint64(b); vbits += 8;
+        }
+    };
+    auto getbits = [&](int nb) -> int {
+        if (nb <= 0) return 0;
+        ensure(nb);
+        const int v = int((bitbuf >> (vbits - nb)) & ((1u << nb) - 1));
+        vbits -= nb; return v;
+    };
+    auto huffdec = [&]() -> int {
+        ensure(12);
+        const int c = int((bitbuf >> (vbits - 12)) & 0xfff);
+        vbits -= huff[c] >> 8;
+        return huff[c] & 0xff;
+    };
+
+    raw.width = W;
+    raw.height = H;
+    raw.cfa.assign(size_t(W) * size_t(H), 0);
+    std::vector<int> img(size_t(W) * size_t(H), 0);     // signed scratch for predictors
+
+    for (int row = 0; row < H; ++row) {
+        int acarry[2][3] = {{0, 0, 0}, {0, 0, 0}};
+        for (int col = 0; col < W; ++col) {
+            int *carry = acarry[col & 1];
+            const int i = 2 * (carry[2] < 3);
+            int nbits = 2 + i;
+            while ((carry[0] & 0xffff) >> (nbits + i)) ++nbits;
+            const int sign3 = getbits(3);
+            const int low = sign3 & 3;
+            const int sign = ((sign3 >> 2) & 1) ? -1 : 0;     // sign<<29>>31
+            int high = huffdec();
+            if (high == 12) high = getbits(16 - nbits) >> 1;
+            carry[0] = (high << nbits) | getbits(nbits);
+            const int diff = (carry[0] ^ sign) + carry[1];
+            carry[1] = (diff * 3 + carry[1]) >> 5;
+            carry[2] = carry[0] > 16 ? 0 : carry[2] + 1;
+
+            int pred;
+            if (row < 2 && col < 2) pred = 0;
+            else if (row < 2) pred = img[size_t(row) * W + (col - 2)];
+            else if (col < 2) pred = img[size_t(row - 2) * W + col];
+            else {
+                const int w  = img[size_t(row) * W + (col - 2)];
+                const int n  = img[size_t(row - 2) * W + col];
+                const int nw = img[size_t(row - 2) * W + (col - 2)];
+                if ((w < nw && nw < n) || (n < nw && nw < w)) {
+                    if (qAbs(w - nw) > 32 || qAbs(n - nw) > 32) pred = w + n - nw;
+                    else pred = (w + n) >> 1;
+                } else {
+                    pred = (qAbs(w - nw) > qAbs(n - nw)) ? w : n;
+                }
+            }
+            const int val = pred + ((diff << 2) | low);
+            img[size_t(row) * W + col] = val;
+            raw.cfa[size_t(row) * W + col] = uint16_t(val & 0xffff);
+        }
+    }
+
+    /* Levels / pattern / colour. FIRST CUT: 12-bit Olympus scheme -> white 4095; E-M1-validated
+       black 255 and BGGR pattern; matrix by model. As-shot WB (MakerNote 0x2040->0x0100) and
+       per-model black/pattern are a refinement -> RawColor uses the matrix-derived neutral WB. */
+    raw.pattern = CfaPattern::BGGR;
+    raw.white = 4095;
+    for (int i = 0; i < 4; ++i) raw.black[i] = 255;
+    QString model;
+    if (haveIfd0 && ifd0.contains(272)) model = "Olympus " + r.ascii(ifd0[272]);
+    xyzToCamForModel(model, raw.xyzToCam);
+
+    /* As-shot white balance from the Olympus MakerNote (essential -- matrix-neutral renders
+       badly green for Olympus): IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C). The MakerNote is
+       "OLYMPUS\0II\3\0" (12-byte header, embedded IFD at +12, offsets relative to its start),
+       then ImageProcessing (0x2040) -> WB_RBLevels (0x0100, 2 SHORTs R,B, with green == 256). */
+    if (haveIfd0 && ifd0.contains(0x8769)) {
+        Ifd exif; QList<quint32> es; quint32 en = 0;
+        if (r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) && exif.contains(0x927C)) {
+            const quint32 mnAbs = r.ifdPointer(exif[0x927C]);
+            if (file.seek(mnAbs)) {
+                const QByteArray h = file.read(12);
+                if (h.size() == 12 && h.startsWith("OLYMPUS")) {
+                    const bool mbig = (uchar(h[8]) == 'M');
+                    Reader mr;
+                    mr.initEmbedded(&file, mnAbs, 12, mbig);
+                    Ifd mn; QList<quint32> ms; quint32 mnn = 0;
+                    if (mr.readIfd(mr.firstIfd(), mn, ms, mnn) && mn.contains(0x2040)) {
+                        Ifd ip; QList<quint32> is2; quint32 in2 = 0;
+                        if (mr.readIfd(mr.ifdPointer(mn[0x2040]), ip, is2, in2) &&
+                            ip.contains(0x0100)) {
+                            const QVector<quint32> wb = mr.u32s(ip[0x0100]);   // R, B
+                            if (wb.size() >= 2 && wb[0] && wb[1]) {
+                                raw.camMul[0] = wb[0];  raw.camMul[1] = 256;   // R, G(=256)
+                                raw.camMul[2] = wb[1];  raw.camMul[3] = 256;   // B, G2
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return true;
 }

@@ -9,6 +9,7 @@
 #include "Metadata/imagemetadata.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "Develop/editparams.h"
+#include "Develop/workingimage.h"
 
 /*
     Base class for full-sensor RAW decoding. The shared, camera-agnostic pipeline lives
@@ -38,10 +39,17 @@ public:
        non-null and non-identity, develop adjustments are applied in the linear working space
        (before the output transform). abort (when non-null) is polled between stages and inside
        the demosaic loop so a long decode can bail promptly on shutdown / navigation; an aborted
-       decode returns false with lastError() == "Aborted". */
+       decode returns false with lastError() == "Aborted".
+
+       outWork (when non-null) receives the PRE-develop WorkingImage (post-RawColor, scene-
+       linear) as a shared_ptr -- no pixel copy. The caller caches it (WorkingImageCache) so a
+       later slider change re-renders via Develop + OutputTransform without re-decoding. The
+       snapshot is always pre-develop: when edit is non-identity the develop runs on a private
+       copy, leaving the shared image pristine. */
     bool Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 const EditParams *edit = nullptr,
-                const QAtomicInt *abort = nullptr);
+                const QAtomicInt *abort = nullptr,
+                std::shared_ptr<const WorkingImage> *outWork = nullptr);
 
     QString lastError() const { return errMsg; }
 

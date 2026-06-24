@@ -124,6 +124,7 @@ set(WINNOW_SOURCES
     Develop/develop.cpp
     Develop/inputtransform.cpp
     Develop/outputtransform.cpp
+    Develop/workingimagecache.cpp
     Develop/Properties/developproperties.cpp
 
     # Dialogs
@@ -203,8 +204,10 @@ set(WINNOW_SOURCES
     ImageFormats/Png/png.cpp
     ImageFormats/Raw/cameramatrix.cpp
     ImageFormats/Raw/demosaic.cpp
+    ImageFormats/Raw/losslessjpeg.cpp
     ImageFormats/Raw/rawcolor.cpp
     ImageFormats/Raw/rawformat.cpp
+    ImageFormats/Raw/tiffwalk.cpp
     ImageFormats/Sony/sony.cpp
     ImageFormats/Tiff/rorytiff.cpp
     ImageFormats/Tiff/tiff.cpp
@@ -431,8 +434,10 @@ set(WINNOW_HEADERS
     ImageFormats/Png/png.h
     ImageFormats/Raw/cameramatrix.h
     ImageFormats/Raw/demosaic.h
+    ImageFormats/Raw/losslessjpeg.h
     ImageFormats/Raw/rawcolor.h
     ImageFormats/Raw/rawformat.h
+    ImageFormats/Raw/tiffwalk.h
     ImageFormats/Raw/rawimage.h
     ImageFormats/Sony/sony.h
     ImageFormats/Tiff/rorytiff.h

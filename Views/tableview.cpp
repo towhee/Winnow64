@@ -253,6 +253,7 @@ void TableView::setDefaultColumnWidths()
     defaultColumnWidth[G::MetadataReadingColumn] = fm.boundingRect("=Metadata Reading=").width();
     defaultColumnWidth[G::MetadataStatusColumn] = fm.boundingRect("=Meta Status=").width();
     defaultColumnWidth[G::IconLoadedColumn] = fm.boundingRect("=Icon Loaded=").width();
+    defaultColumnWidth[G::RawRenderColumn] = fm.boundingRect("=Raw Render=").width();
     defaultColumnWidth[G::CompareColumn] = fm.boundingRect("=Compare=").width();
     defaultColumnWidth[G::_RatingColumn] = fm.boundingRect("=_Rating=").width();
     defaultColumnWidth[G::_LabelColumn] = fm.boundingRect("=_Label=").width();

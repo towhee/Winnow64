@@ -1,5 +1,9 @@
 #include "canon.h"
 #include "Main/global.h"
+#include "ImageFormats/Raw/tiffwalk.h"
+#include "ImageFormats/Raw/losslessjpeg.h"
+#include "ImageFormats/Raw/rawimage.h"
+#include "ImageFormats/Raw/cameramatrix.h"
 
 Canon::Canon()
 {
@@ -319,6 +323,152 @@ bool Canon::parse(MetadataParameters &p,
 
         if (p.report) p.xmpString = xmp.srcToString();
     }
+
+    return true;
+}
+
+/* ------------------------------------------------------------------------------------------
+   CanonRaw::UnpackCfa  --  Canon CR2 sensor unpack (lossless JPEG + slices + crop)
+   ------------------------------------------------------------------------------------------ */
+
+bool CanonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) { errMsg = "CR2: not a TIFF file."; return false; }
+
+    /* CR2 IFDs are a next-IFD chain (IFD0 preview .. IFD3 raw). The raw IFD is the one carrying
+       the Canon slice tag 0xC640 (and a strip). */
+    QList<quint32> queue { r.firstIfd() };
+    QSet<quint32> seen;
+    Ifd ifd0, rawIfd;
+    bool haveIfd0 = false, haveRaw = false;
+
+    while (!queue.isEmpty()) {
+        const quint32 off = queue.takeFirst();
+        if (off == 0 || seen.contains(off)) continue;
+        seen.insert(off);
+        Ifd tags;
+        QList<quint32> subs;
+        quint32 next = 0;
+        if (!r.readIfd(off, tags, subs, next)) continue;
+        if (!haveIfd0) { ifd0 = tags; haveIfd0 = true; }
+        for (quint32 s : subs) queue << s;
+        if (next) queue << next;
+        if (tags.contains(0xC640) && tags.contains(273) && tags.contains(279)) {
+            rawIfd = tags; haveRaw = true;
+        }
+    }
+    if (!haveRaw) { errMsg = "CR2: no raw IFD (slice tag absent)."; return false; }
+
+    /* Decode the lossless-JPEG raw. */
+    if (!file.seek(r.scalar(rawIfd[273]))) { errMsg = "CR2: seek to raw failed."; return false; }
+    const QByteArray buf = file.read(int(r.scalar(rawIfd[279])));
+    LosslessJpeg::Image im;
+    QString lerr;
+    if (!LosslessJpeg::Decode(reinterpret_cast<const uint8_t *>(buf.constData()),
+                              size_t(buf.size()), im, &lerr)) {
+        errMsg = "CR2: lossless JPEG decode failed (" + lerr + ")."; return false;
+    }
+    const int clrs = im.components;
+    const int jwide = im.width * clrs;
+    const int H = im.height;
+
+    /* Canon vertical slices (tag 0xC640 = [nFullSlices, sliceWidth, lastSliceWidth]). Map the
+       component-interleaved JPEG raster back to sensor (row,col). dcraw's reassembly. */
+    const QVector<quint32> sl = r.u32s(rawIfd[0xC640]);
+    const int s0 = sl.size() > 0 ? int(sl[0]) : 0;
+    const int s1 = sl.size() > 1 ? int(sl[1]) : 0;
+    const int s2 = sl.size() > 2 ? int(sl[2]) : 0;
+    const int W = s0 ? s0 * s1 + s2 : jwide;
+    if (W <= 0 || H <= 0) { errMsg = "CR2: bad raw dimensions."; return false; }
+
+    std::vector<uint16_t> full(size_t(W) * H, 0);
+    const size_t total = size_t(jwide) * H;
+    const size_t slcw = size_t(s1) * H;
+    for (size_t jidx = 0; jidx < total && jidx < im.samples.size(); ++jidx) {
+        int row, col;
+        if (s0 && slcw) {
+            size_t i = jidx / slcw;
+            const int j = (i >= size_t(s0)) ? 1 : 0;
+            if (j) i = size_t(s0);
+            const size_t k = jidx - i * slcw;
+            const int wsl = j ? s2 : s1;
+            row = int(k / wsl);
+            col = int(k % wsl) + int(i) * s1;
+        } else {
+            row = int(jidx / jwide);
+            col = int(jidx % jwide);
+        }
+        if (row < H && col < W) full[size_t(row) * W + col] = im.samples[jidx];
+    }
+
+    /* Canon makernote: IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C). Read SensorInfo (0xE0)
+       for the active-area crop and ColorData (0x4001) for the as-shot white balance. */
+    int left = 0, top = 0, right = W - 1, bottom = H - 1;
+    QVector<quint32> wb;
+    if (haveIfd0 && ifd0.contains(0x8769)) {
+        Ifd exif; QList<quint32> es; quint32 en = 0;
+        if (r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) && exif.contains(0x927C)) {
+            Ifd mn; QList<quint32> ms; quint32 mnn = 0;
+            if (r.readIfd(r.ifdPointer(exif[0x927C]), mn, ms, mnn)) {
+                if (mn.contains(0xE0)) {                    // SensorInfo
+                    const QVector<quint32> si = r.u32s(mn[0xE0]);
+                    if (si.size() >= 9) { left = int(si[5]); top = int(si[6]);
+                                          right = int(si[7]); bottom = int(si[8]); }
+                }
+                if (mn.contains(0x4001)) {                  // ColorData -> WB_RGGBLevelsAsShot
+                    const QVector<quint32> cd = r.u32s(mn[0x4001]);
+                    const int n = cd.size();
+                    const int o = n == 582 ? 25 : n == 653 ? 24 : n == 5120 ? 142 : 63;
+                    if (o + 3 < n) wb = { cd[o], cd[o + 1], cd[o + 2], cd[o + 3] };
+                }
+            }
+        }
+    }
+
+    /* Black level from the masked optical-black columns (x < left) of the full sensor, before
+       cropping them away. Self-calibrating, so no per-model black table is needed. */
+    uint16_t black = 0;
+    if (left > 2) {
+        double sum = 0; size_t cnt = 0;
+        const int mb = left - 2;                            // skip the transition columns
+        for (int y = 0; y < H; ++y)
+            for (int x = 0; x < mb; ++x) { sum += full[size_t(y) * W + x]; ++cnt; }
+        if (cnt) black = uint16_t(sum / double(cnt) + 0.5);
+    }
+
+    /* Crop to the active area. */
+    if (left < 0) left = 0;
+    if (top < 0) top = 0;
+    if (right >= W) right = W - 1;
+    if (bottom >= H) bottom = H - 1;
+    int cw = right - left + 1, ch = bottom - top + 1;
+    if (cw <= 0 || ch <= 0) { left = top = 0; cw = W; ch = H; }
+    /* Keep the crop origin even so the RGGB phase is preserved. */
+    if (left & 1) { ++left; --cw; }
+    if (top & 1)  { ++top;  --ch; }
+
+    raw.width = cw;
+    raw.height = ch;
+    raw.cfa.assign(size_t(cw) * ch, 0);
+    for (int y = 0; y < ch; ++y)
+        for (int x = 0; x < cw; ++x)
+            raw.cfa[size_t(y) * cw + x] = full[size_t(top + y) * W + (left + x)];
+
+    raw.pattern = CfaPattern::RGGB;                         // Canon EOS sensors are RGGB
+    raw.white = uint16_t((1u << im.precision) - 1);
+    for (int i = 0; i < 4; ++i) raw.black[i] = black;
+
+    if (wb.size() == 4 && wb[0] > 0 && wb[1] > 0 && wb[3] > 0) {
+        raw.camMul[0] = wb[0]; raw.camMul[1] = wb[1];       // R, G1
+        raw.camMul[2] = wb[3]; raw.camMul[3] = wb[2];       // B, G2
+    }
+
+    QString model = (haveIfd0 && ifd0.contains(272)) ? r.ascii(ifd0[272]) : QString();
+    xyzToCamForModel(model, raw.xyzToCam);                  // identity fallback if unknown
 
     return true;
 }

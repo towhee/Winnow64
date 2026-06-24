@@ -1,5 +1,9 @@
 #include "panasonic.h"
 #include "Main/global.h"
+#include "ImageFormats/Raw/tiffwalk.h"
+#include "ImageFormats/Raw/rawimage.h"
+#include "ImageFormats/Raw/cameramatrix.h"
+#include <vector>
 
 Panasonic::Panasonic()
 {
@@ -359,4 +363,104 @@ bool Panasonic::parse(MetadataParameters &p,
 
     return true;
 
+}
+
+/* ------------------------------------------------------------------------------------------
+   PanasonicRaw::UnpackCfa  --  Panasonic RW2 (RawFormat 4) decode
+   Ported from dcraw's panasonic_load_raw / pana_bits; validated byte-identical to libraw (GX9).
+   ------------------------------------------------------------------------------------------ */
+
+bool PanasonicRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) { errMsg = "RW2: not a TIFF/RW2 file."; return false; }
+    Ifd t; QList<quint32> subs; quint32 next = 0;
+    if (!r.readIfd(r.firstIfd(), t, subs, next)) { errMsg = "RW2: bad IFD0."; return false; }
+
+    if (!t.contains(0x02) || !t.contains(0x03) || !t.contains(0x118)) {
+        errMsg = "RW2: missing raw tags."; return false;
+    }
+    const int W = int(r.scalar(t[0x02]));               // SensorWidth (raw width incl. margin)
+    const int H = int(r.scalar(t[0x03]));               // SensorHeight
+    const int rawFormat = t.contains(0x2D) ? int(r.scalar(t[0x2D])) : 0;
+    const quint32 strip = r.scalar(t[0x118]);           // RawDataOffset
+    if (W <= 0 || H <= 0) { errMsg = "RW2: bad dimensions."; return false; }
+    if (rawFormat != 4) { errMsg = "RW2: RawFormat != 4 (newer compression unsupported)."; return false; }
+    const int loadFlags = 0x2008;                       // RawFormat 4
+
+    if (!file.seek(strip)) { errMsg = "RW2: seek to raw data failed."; return false; }
+    const QByteArray data = file.readAll();
+    const uchar *dp = reinterpret_cast<const uchar *>(data.constData());
+    const qint64 dn = data.size();
+
+    /* Panasonic "pana_bits": bits come from a reversed 0x4000-byte buffer, refilled (rotated by
+       loadFlags) each time it empties. */
+    std::vector<uchar> buf(0x4000, 0);
+    qint64 fp = 0; int vbits = 0;
+    auto pana = [&](int nbits) -> int {
+        if (nbits == 0) { vbits = 0; return 0; }
+        if (vbits == 0) {
+            for (int i = 0; i < 0x4000 - loadFlags; ++i)
+                buf[loadFlags + i] = (fp + i < dn) ? dp[fp + i] : 0;
+            for (int i = 0; i < loadFlags; ++i) {
+                const qint64 src = fp + 0x4000 - loadFlags + i;
+                buf[i] = (src < dn) ? dp[src] : 0;
+            }
+            fp += 0x4000;
+        }
+        vbits = (vbits - nbits) & 0x1ffff;
+        const int byte = (vbits >> 3) ^ 0x3ff0;
+        const int b = buf[byte] | (buf[byte + 1] << 8);
+        return (b >> (vbits & 7)) & ((1 << nbits) - 1);
+    };
+
+    raw.width = W;
+    raw.height = H;
+    raw.cfa.assign(size_t(W) * size_t(H), 0);
+    for (int row = 0; row < H; ++row) {
+        int pred[2] = {0, 0}, nonz[2] = {0, 0}, sh = 0;
+        for (int col = 0; col < W; ++col) {
+            const int i = col % 14;
+            if (i == 0) { pred[0] = pred[1] = 0; nonz[0] = nonz[1] = 0; }
+            if (i % 3 == 2) sh = 4 >> (3 - pana(2));
+            if (nonz[i & 1]) {
+                const int j = pana(8);
+                if (j) {
+                    pred[i & 1] -= 0x80 << sh;
+                    if (pred[i & 1] < 0 || sh == 4) pred[i & 1] &= (1 << sh) - 1;
+                    pred[i & 1] += j << sh;
+                }
+            } else if ((nonz[i & 1] = pana(8)) || i > 11) {
+                pred[i & 1] = (nonz[i & 1] << 4) | pana(4);
+            }
+            raw.cfa[size_t(row) * W + col] = uint16_t(pred[i & 1] & 0xffff);
+        }
+    }
+
+    /* Pattern (tag 0x09: 1=RGGB 2=GRBG 3=GBRG 4=BGGR), levels, WB, matrix. */
+    switch (t.contains(0x09) ? int(r.scalar(t[0x09])) : 4) {
+    case 1:  raw.pattern = CfaPattern::RGGB; break;
+    case 2:  raw.pattern = CfaPattern::GRBG; break;
+    case 3:  raw.pattern = CfaPattern::GBRG; break;
+    default: raw.pattern = CfaPattern::BGGR; break;
+    }
+    const int bps = t.contains(0x0A) ? int(r.scalar(t[0x0A])) : 12;
+    raw.white = uint16_t((1u << bps) - 1);
+    /* Panasonic stores BlackLevelRed/Green/Blue (0x1C..0x1E) 15 below the true black. */
+    const int blk = (t.contains(0x1C) ? int(r.scalar(t[0x1C])) : 128) + 15;
+    for (int i = 0; i < 4; ++i) raw.black[i] = uint16_t(blk);
+    if (t.contains(0x24) && t.contains(0x25) && t.contains(0x26)) {
+        raw.camMul[0] = r.scalar(t[0x24]);              // R
+        raw.camMul[1] = r.scalar(t[0x25]);              // G (== 256)
+        raw.camMul[2] = r.scalar(t[0x26]);              // B
+        raw.camMul[3] = r.scalar(t[0x25]);
+    }
+    QString model;
+    if (t.contains(272)) model = "Panasonic " + r.ascii(t[272]);
+    xyzToCamForModel(model, raw.xyzToCam);
+
+    return true;
 }

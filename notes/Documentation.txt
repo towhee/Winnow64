@@ -1799,9 +1799,10 @@ Architecture
                                               (canon.cpp, nikon.cpp ...) as a class SEPARATE
                                               from that file's metadata parser.
                2. SubtractBlack()            shared per-2x2-position black subtraction + clip.
-               3. Demosaic::Run()            shared, camera-agnostic (Bilinear in scaffold;
-                                              AHD/DCB/XTrans later). Operates only on the CFA
-                                              mosaic + pattern, so it is unit-testable.
+               3. Demosaic::Run()            shared, camera-agnostic: Bilinear3x3 for Bayer,
+                                              XTransWindow (5x5) for Fuji X-Trans; AHD/DCB later.
+                                              Operates only on the CFA mosaic + pattern (Bayer) or
+                                              raw.xtrans (6x6 map), so it is unit-testable.
                4. RawColor::ToWorking()      shared white balance + camera->sRGB matrix, STOPS
                                               AT LINEAR (no gamma) -> WorkingImage. Real colour
                                               (dcraw cam_xyz_coeff); see COLOUR below.
@@ -1816,12 +1817,20 @@ Architecture
     the Metadata-owned parser singletons, RawFormat instances are never shared, so the
     per-decode scratch carries no cross-thread races.
 
-    First format (DONE): SonyRaw::UnpackCfa (ImageFormats/Sony/sony.cpp) handles UNCOMPRESSED
-    ARW only (e.g. Sony A9 II: 14-bit samples stored as LE uint16, Bayer RGGB). It reads
-    StripOffsets/Counts, ImageWidth/Length, BitsPerSample, CFAPattern (33422), WhiteLevel
-    (50717). BlackLevel is absent from the ARW IFD (Sony makernote) -- a 512 default is used
-    for now. Compressed ARW (and other comp values) -> Decode() returns false -> ImageDecoder
-    falls back to the embedded JPG, so other Sony files are unaffected.
+    SonyRaw::UnpackCfa (ImageFormats/Sony/sony.cpp) handles UNCOMPRESSED ARW (Compression 1,
+    e.g. A9 II: 14-bit LE uint16, Bayer RGGB) AND lossy "ARW Compressed" (Compression 32767):
+        UNCOMPRESSED: reads StripOffsets/Counts, ImageWidth/Length, BitsPerSample, CFAPattern
+            (33422), WhiteLevel (50717), via the plumbed RawSensorInfo or a self-walk.
+        ARW2 COMPRESSED (decodeSonyArw2, tried first): each 16-byte group encodes 16 photosites
+            of one Bayer colour across 32 columns -- an 11-bit max+min, the indices holding them,
+            then 7-bit deltas shifted to fit (max-min). The 11-bit values expand through a Sony
+            tone curve from tag 0x7010 (4 control points): breakpoints at point>>2, slope starts
+            at 4 and doubles each segment; sample = curve[pix<<1]>>2. Columns are de-interleaved
+            even-then-odd within each 32-col group. Ported from dcraw's sony_arw2_load_raw and
+            VERIFIED byte-identical to libraw on an A9 ARW. Levels/WB/matrix from the same SR2
+            tags as the uncompressed path. The NEWER "Lossless Compressed RAW" (Compression JPEG,
+            e.g. A1/A7R5) is lossless JPEG -> can reuse LosslessJpeg later; not handled yet.
+    Other comp values -> Decode() returns false -> ImageDecoder falls back to the embedded JPG.
 
     METADATA PLUMBING (RawSensorInfo): the per-file facts UnpackCfa needs (CFA strip
     offset/length, geometry, bitsPerSample, compression, CFA pattern, levels, sample byte
@@ -1865,10 +1874,118 @@ Architecture
     A9 II. (Found by instrumenting the file; exiftool was used only as a reference oracle.)
     LIMITATION: clipped highlights can show a slight tint until highlight recovery lands.
 
+    ADOBE DNG (DngRaw, ImageFormats/Dng/dng.cpp): self-contained -- DngRaw::UnpackCfa walks the
+    DNG's TIFF/EP IFDs (via the shared TiffWalk reader), finds the CFA image (Photometric ==
+    CFA 32803, full-res, most pixels), and decodes it. Handles UNCOMPRESSED (Compression 1) and
+    LOSSLESS-JPEG (Compression 7), in STRIP or TILE layout (tiles placed left-to-right,
+    top-to-bottom, edge-cropped). DNG carries its OWN colour, so DngRaw reads it from the file:
+    xyzToCam = ColorMatrix2 (D65; else ColorMatrix1), WB camMul = 1 / AsShotNeutral, plus the
+    DNG BlackLevel (50714) / WhiteLevel (50717) / CFAPattern (33422) -- no per-model table and
+    NOTHING plumbed at parse time (the decode is on-demand, so there is no MetaRead cost; it
+    always self-walks). Registered for "dng" in RawFormat::Create. VERIFIED: C++ CFA output is
+    byte-identical to the validated reference on a single-strip lossless DNG (Leica M10) and a
+    726-tile lossless DNG (Nikon D850 / Lightroom), both of which render to coherent, correctly
+    coloured images. LIMITATION: assumes ColorMatrix2's illuminant is D65 (no chromatic
+    adaptation yet); packed sub-16-bit uncompressed storage not handled (16-bit storage only).
+
+    FUJIFILM RAF (FujiRaw, ImageFormats/Fuji/fuji.cpp): RAF is a Fuji container ("FUJIFILMCCD-RAW "):
+    a big-endian header with offsets (92 = CFA metadata dir, 100/104 = CFA data offset/length) to
+    an embedded JPEG, a CFA directory (tag 0x100 = raw H/W; tag 0x131 = the X-Trans 6x6 colour map,
+    36 bytes REVERSED -> [yy][xx], 0=R 1=G 2=B; tag 0xC000 = RAFData block with the WB), and the
+    CFA data. Decodes UNCOMPRESSED RAF only: the CFA block is rawW*rawH*2 bytes plus a small leading
+    header (size = cfaLen - rawW*rawH*2, e.g. 2048), little-endian 16-bit samples. If cfaLen <
+    rawW*rawH*2 the RAF is Fuji-LOSSLESS-compressed -> returns false (embedded-JPEG fallback). WB:
+    the 0x2FF0 tag when present, else WB_GRBLevels [G,R,B] located heuristically in the 0xC000 block
+    (first window: green reference 256..1024, R/B boosted) -- matches libraw on X-T50/X-T2/GFX.
+    Matrix by model (RAF header camera id at 0x1C -> "Fujifilm X-T50"). X-Trans is demosaiced by
+    Demosaic::XTransWindow (5x5 same-colour average over the tiled 6x6 map; native channel exact --
+    the X-Trans analogue of the bilinear Bayer path). VERIFIED byte-identical to libraw on the
+    uncompressed X-T50 RAF; renders to a coherent, correctly-coloured image. LIMITATIONS: Fuji
+    lossless compression (most current cameras, incl. the X-T2/GFX test files) not handled; black
+    1024 / white 16383 are X-Trans-14-bit defaults; the WB heuristic assumes a near-daylight shot.
+
+    PANASONIC RW2 (PanasonicRaw, ImageFormats/Panasonic/panasonic.cpp): RW2 is a TIFF-like file
+    (magic 0x55) whose IFD0 carries Panasonic raw tags -- SensorWidth/Height (0x02/0x03),
+    RawFormat version (0x2D), RawDataOffset (0x118), CFA (0x09: 1=RGGB 2=GRBG 3=GBRG 4=BGGR),
+    per-channel WB (0x24/0x25/0x26 = R/G/B, green==256) and black (0x1C..0x1E, stored 15 below
+    true). Decodes the classic RawFormat-4 compression (dcraw panasonic_load_raw): a 14-column
+    group code with a per-pair nibble predictor, bits pulled from Panasonic's reversed 16 KB
+    "pana_bits" buffer (refilled rotated by loadFlags = 0x2008; byte index vbits>>3 ^ 0x3FF0).
+    Ported from dcraw, validated BYTE-IDENTICAL to libraw on a DC-GX9 RW2; renders to a coherent,
+    correctly-coloured image. Matrix from the per-model table (DC-GX9). LIMITATION: RawFormat
+    5/6/7 (newer cameras) use different loadFlags / a different codec -> returns false (fallback).
+
+    OLYMPUS ORF (OlympusRaw, ImageFormats/Olympus/olympus.cpp): the ORF TIFF LIES (tags the raw
+    strip Compression 1 / 16-bit) but the strip is Olympus's proprietary 12-bit compression: a
+    Huffman magnitude code (a direct 4096-entry 12-bit-prefix table) + an adaptive bit length per
+    sample + a median predictor (w,n,nw) with a 2-column running carry; the bitstream starts 7
+    bytes into the strip. Ported from dcraw's olympus_load_raw, validated byte-identical to libraw
+    on an E-M1 ORF. As-shot WB is read from the Olympus MakerNote (non-standard "OLYMPUS\0II\3\0"
+    header -> TiffWalk::initEmbedded with base = makernote start, IFD at +12; ImageProcessing
+    0x2040 -> WB_RBLevels 0x0100, two SHORTs R,B with green == 256) -- essential, matrix-neutral
+    renders badly green for Olympus. Matrix from the per-model table (E-M1). FIRST CUT: white 4095
+    (12-bit), E-M1-validated black 255 + BGGR pattern (ORF has no CFAPattern tag); per-model
+    black/pattern/bit-depth is a refinement (the OM-1 may differ). NOTE: TiffWalk::init now
+    accepts non-42 TIFF magics (ORF 0x4F52, RW2 0x55, CR2 0x4352) since the endian marker + a sane
+    first-IFD offset is enough; standard TIFF (magic 42) still validates.
+
+    NIKON NEF (NikonRaw, ImageFormats/Nikon/nikon.cpp): self-contained. Walks the NEF IFDs (via
+    TiffWalk) to the CFA SubIFD (Compression 34713 = Nikon NEF Compressed), then reads the
+    linearization/Huffman metadata from the Nikon type-3 MakerNote (tag 0x96). The MakerNote is
+    an EMBEDDED TIFF ("Nikon\0" + 2 version bytes + "\0\0" + its own header at base = mnOffset+10,
+    offsets relative to base) -- TiffWalk::init(file, base) handles that. Nikon's compression is
+    NOT lossless JPEG: each sample is a Huffman-coded difference (one of dcraw's 6 trees, chosen
+    by version byte + bit depth) against DUAL predictors -- a vertical predictor for the first two
+    columns (per row parity), then a running horizontal predictor per column parity -- mapped
+    through a linearization curve (identity for the 0x46 lossless mode; interpolated with a tree
+    "split" row for the 0x44 lossy mode). Ported from dcraw's nikon_load_raw. Colour matrix from
+    the shared per-model table (added D810/D7200/D850); white = (1<<bps)-1; black self-calibrated
+    as the decoded minimum (NEF has no masked border); pattern RGGB. VERIFIED: the C++ decode is
+    BYTE-IDENTICAL to libraw on 14-bit (D810) and 12-bit (D7200) lossless NEF -- validated with a
+    throwaway rawpy/libraw reference in scratch, since the bit-level scheme is too subtle to
+    guess. As-shot WB: read from the UNENCRYPTED MakerNote tag 0x0C (WhiteBalanceRBLevels, 4
+    RATIONALs in order R, B, G1, G2 -- green-normalised multipliers) -> raw.camMul, matching
+    libraw's cam_mul exactly on D810 and D7200. (The encrypted ColorBalance 0x97 carries the same
+    data the hard way; brute-forcing its version-0223 cipher did not converge, and tag 0x0C made
+    it unnecessary.) LIMITATION: the 0x44 lossy-with-curve path is ported but not yet exercised
+    by a test file.
+
+    CANON CR2 (CanonRaw, ImageFormats/Canon/canon.cpp): self-contained. Walks the CR2 IFD chain
+    (via TiffWalk), finds the raw IFD (the one with Canon slice tag 0xC640), decodes its
+    lossless-JPEG strip (Compression 6), then reassembles Canon's vertical SLICES: tag 0xC640 =
+    [nFullSlices, sliceWidth, lastSliceWidth]; the component-interleaved JPEG raster maps back to
+    sensor (row,col) by dcraw's formula. It then reads the Canon makernote (IFD0 -> ExifIFD
+    0x8769 -> MakerNote 0x927C) for SensorInfo (0xE0 -> active-area crop L/T/R/B) and ColorData
+    (0x4001 -> WB_RGGBLevelsAsShot; offset 63 for modern ColorData, 25/24/142 for older lengths).
+    Black is self-calibrated from the masked optical-black columns (x < left) before cropping;
+    white = (1<<precision)-1; colour matrix from the shared per-model table (added 7D Mark II);
+    pattern RGGB; crop origin forced even to keep the Bayer phase. VERIFIED: C++ un-sliced CFA is
+    byte-identical to the validated reference on a 7D Mark II CR2 (which renders to a coherent,
+    correctly-coloured image), and the makernote crop/WB/model read back correctly. LIMITATIONS:
+    lossless-JPEG CR2 only (sRAW/mRAW and very old CR2 layouts not handled); Canon black is a
+    masked-column average, not per-channel; ColorData WB offset table covers the common versions.
+
+    TiffWalk (ImageFormats/Raw/tiffwalk.*): a tiny shared TIFF/EP IFD reader (header, IFDs +
+    SubIFDs, tag value accessors: scalar / u32 array / real array / bytes / ascii, handling the
+    inline-vs-offset rule and endianness). DngRaw uses it; other vendor unpackers can adopt it
+    to stop re-implementing the IFD-walk boilerplate (SonyRaw still has its own inline walk).
+
+    SHARED LOSSLESS-JPEG (ImageFormats/Raw/losslessjpeg.*): the compression behind Canon CR2,
+    most compressed Adobe DNG, and lossless NEF/ARW. NOT DCT JPEG -- the lossless mode (SOF3):
+    each sample is Huffman-coded as the difference from a spatial predictor of its neighbours.
+    LosslessJpeg::Decode(bytes) -> Image{width,height,components,precision,samples} with samples
+    interleaved by component (samples[(y*width+x)*comps + c]). It is camera-agnostic; each vendor
+    decoder extracts the bytestream from its container and reassembles components/tiles/slices
+    into the CFA (that mapping is format-specific, lives in the caller). SCOPE: single scan,
+    Huffman, predictors 1-7, point transform; NO restart intervals yet (returns false on DRI>0).
+    VERIFIED: the C++ output is byte-identical to a reference decoder that was validated
+    end-to-end on a real lossless-JPEG DNG (Leica M10: 14-bit, 2 components, predictor 1) by
+    demosaicing/colour-converting it to a coherent, correctly-coloured image.
+
     Phasing: 1 scaffold (done) -> 2 first uncompressed format UnpackCfa: Sony ARW (done)
-    -> 3 real colour: per-model matrix + matrix-derived WB (done); still TODO: as-shot WB +
-    black level from the Sony makernote, more model matrices -> 4 better demosaic (AHD)
-    -> 5 compression (lossless-JPEG CR2/DNG, compressed NEF/ARW ...).
+    -> 3 real colour: per-model matrix + matrix-derived WB + Sony as-shot WB/black (done); TODO
+    more model matrices -> 4 better demosaic (AHD) -> 5 compression: shared lossless-JPEG decoder
+    (done); wire into DNG/CR2 UnpackCfa next; compressed NEF/ARW later.
 
     NOTE: an earlier (2025) unused scaffold (ImageFormats/Base/rawbase.* +
     ImageFormats/Tiff/tiffdecoder.*) used the rejected demosaic()-as-override axis and has
@@ -1929,10 +2046,12 @@ Architecture
                  applyDevelop() (after rotate(), before colorManage()) does
                  InputTransform -> Develop -> OutputTransform. It is a NO-OP and is skipped
                  entirely when EditParams is identity, so the unedited browsing path is
-                 unchanged and never round-trips through the float buffer.
+                 unchanged and never round-trips through the float buffer. When it does run it
+                 goes through the WorkingImage cache (reuses / populates the pre-develop image).
         RAW:     RawFormat::Decode() develops in its native linear float (RawColor::ToWorking
-                 -> Develop -> OutputTransform) and ImageDecoder sets developApplied so
-                 applyDevelop() does not run a second time.
+                 -> Develop -> OutputTransform), hands its pre-develop WorkingImage back via
+                 outWork (cached by ImageDecoder), and ImageDecoder sets developApplied so
+                 applyDevelop() does not run a second time. See PERF / WORKINGIMAGE CACHE below.
 
     ABORT: RawFormat::Decode() takes the decoder's abort atomic and polls it between stages and
         once per row inside the demosaic loop, returning false (lastError "Aborted") if set.
@@ -1949,7 +2068,7 @@ Architecture
         when off. MW::toggleUseRaw rebuilds the full-size image cache so the change is visible
         immediately. The value persists across sessions via QSettings ("useRaw", default
         false). NOTE: the raw decode is still also gated by RawFormat::Create() returning a
-        decoder for the extension (only "arw" today; others -> embedded JPG regardless).
+        decoder for the extension (arw/dng/cr2/nef/orf/rw2/raf today; others -> embedded JPG).
     InputTransform (Develop/) is the non-raw "un-gamma to linear" step, the symmetric
     counterpart of OutputTransform.
 
@@ -1965,14 +2084,35 @@ Architecture
     look, not per-image auto-exposure; a future Develop "exposure" can override it. Non-raw
     output is unchanged (tone curve skipped), so the unedited-JPEG round trip stays identity.
 
-    PERF (keeps Winnow fast): cache the WorkingImage (post-decode, pre-develop). An
-    interactive slider change then re-runs only Develop + OutputTransform -- never decode or
-    demosaic again. Likely a downscaled proxy for live drag with full-res async. NOT YET
-    wired -- applyDevelop() currently re-decodes; the cache hook is the next perf step.
+    PERF (keeps Winnow fast): WORKINGIMAGE CACHE (Develop/workingimagecache.h, DONE). The
+    expensive part of a RAW is UnpackCfa -> Demosaic -> RawColor, which produces the pre-develop
+    WorkingImage; Develop + OutputTransform that follow are cheap. So that WorkingImage is cached
+    (keyed by absolute file path) and an interactive slider change re-renders via only
+    Develop + OutputTransform -- never decode or demosaic again.
+
+        Storage: WorkingImageCache::instance().put(fPath, work). RAW caches the pre-develop
+            WorkingImage that RawFormat::Decode() now hands back through its outWork out-param
+            (a shared_ptr -- no pixel copy; the snapshot is always pre-develop, so a non-identity
+            edit develops on a private copy and leaves the cached image pristine). Non-raw caches
+            the post-InputTransform WorkingImage the first time applyDevelop() builds one.
+        Re-render: WorkingImageCache::get(fPath) + WorkingImageCache::render(work, edit, out).
+            render() is static/stateless: identity edit -> OutputTransform only (no copy);
+            non-identity -> copy + Develop + OutputTransform. ImageDecoder::applyDevelop() now
+            uses this fast path (cache hit skips InputTransform; miss builds + caches once).
+            The editor (slider UI, deferred) calls get()+render() directly to re-render without
+            a decode; a cache miss falls back to a full decode (which re-populates the entry).
+        Memory: entries are shared_ptr<const WorkingImage> (large -- ~4x the 8-bit QImage), so
+            the cache is byte-budgeted (default 768 MB, setMaxBytes()) with LRU eviction; the
+            most-recently-used entry is never evicted (the active edit always hits). It is a
+            small edit accelerator for recently-viewed images, NOT a second image cache.
+            ImageCache::initialize() clear()s it on every folder change.
+        Still TODO: a downscaled proxy for live drag with full-res async (the current cache is
+            full-res only); explicit pin of the active image so heavy ahead-caching can't evict
+            it before the user edits.
 
     Phasing: 1 WorkingImage + split RawColor at linear + InputTransform/OutputTransform +
-    Develop skeleton (identity), wired no-op through decode (DONE) -> 2 implement ops
-    (exposure/WB/contrast/tone first; texture/dehaze/denoise later) + WorkingImage cache hook
+    Develop skeleton (identity), wired no-op through decode (DONE) + WorkingImage cache hook
+    (DONE) -> 2 implement ops (exposure/WB/contrast/tone first; texture/dehaze/denoise later)
     -> 3 push RAW white balance/denoise pre-demosaic for quality -> 4 persistence + slider UI.
 
 ------------------------------------------------------------------------------------------

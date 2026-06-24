@@ -4,13 +4,58 @@ bool Demosaic::Run(const RawImage &raw, std::vector<float> &rgb, Algorithm algo,
                    const QAtomicInt *abort)
 {
     if (!raw.isValid()) return false;
-    if (raw.pattern == CfaPattern::XTrans || raw.pattern == CfaPattern::Unknown)
-        return false;   // scaffold supports Bayer only
+    if (raw.pattern == CfaPattern::XTrans) return XTransWindow(raw, rgb, abort);
+    if (raw.pattern == CfaPattern::Unknown) return false;
 
     switch (algo) {
     case Bilinear: return Bilinear3x3(raw, rgb, abort);
     }
     return false;
+}
+
+bool Demosaic::XTransWindow(const RawImage &raw, std::vector<float> &rgb,
+                            const QAtomicInt *abort)
+{
+/*
+    Simple Fuji X-Trans demosaic. The 6x6 colour map (raw.xtrans) is tiled across the sensor.
+    For each pixel the measured channel is exact; the two missing channels are the average of
+    the same-colour photosites in a 5x5 window -- which, for X-Trans, always contains at least
+    one of every colour. Soft but obviously correct (the X-Trans analogue of the bilinear Bayer
+    path); a higher-quality algorithm can replace it later.
+*/
+    const int W = raw.width;
+    const int H = raw.height;
+    const float scale = raw.white > 0 ? 1.0f / static_cast<float>(raw.white) : 1.0f;
+    const int R = 2;                                  // 5x5 window
+
+    rgb.assign(static_cast<size_t>(W) * static_cast<size_t>(H) * 3, 0.0f);
+
+    for (int y = 0; y < H; ++y) {
+        if (abort && abort->loadAcquire()) return false;
+        for (int x = 0; x < W; ++x) {
+            float sum[3] = {0, 0, 0};
+            int   cnt[3] = {0, 0, 0};
+            for (int dy = -R; dy <= R; ++dy) {
+                const int yy = y + dy;
+                if (yy < 0 || yy >= H) continue;
+                for (int dx = -R; dx <= R; ++dx) {
+                    const int xx = x + dx;
+                    if (xx < 0 || xx >= W) continue;
+                    const int c = raw.xtrans[yy % 6][xx % 6];
+                    sum[c] += static_cast<float>(raw.cfa[static_cast<size_t>(yy) * W + xx]);
+                    cnt[c] += 1;
+                }
+            }
+            const size_t o = (static_cast<size_t>(y) * W + x) * 3;
+            for (int c = 0; c < 3; ++c)
+                rgb[o + c] = cnt[c] ? (sum[c] / cnt[c]) * scale : 0.0f;
+            /* Native channel exact (no self-blur). */
+            const int nativeC = raw.xtrans[y % 6][x % 6];
+            rgb[o + nativeC] =
+                static_cast<float>(raw.cfa[static_cast<size_t>(y) * W + x]) * scale;
+        }
+    }
+    return true;
 }
 
 int Demosaic::BayerColorAt(CfaPattern pattern, int row, int col)

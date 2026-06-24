@@ -1,5 +1,8 @@
 #include "fuji.h"
 #include "Main/global.h"
+#include "ImageFormats/Raw/rawimage.h"
+#include "ImageFormats/Raw/cameramatrix.h"
+#include <vector>
 
 Fuji::Fuji()
 {
@@ -284,6 +287,115 @@ bool Fuji::parse(MetadataParameters &p,
     }
 
     // Fuji files do not contain xmp
+
+    return true;
+}
+
+/* ------------------------------------------------------------------------------------------
+   FujiRaw::UnpackCfa  --  Fujifilm RAF (uncompressed) container + X-Trans/Bayer CFA
+   Validated byte-identical to libraw on an uncompressed X-Trans RAF (X-T50).
+   ------------------------------------------------------------------------------------------ */
+
+bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
+{
+    Q_UNUSED(m)
+
+    const QByteArray all = (file.seek(0), file.readAll());
+    const uchar *d = reinterpret_cast<const uchar *>(all.constData());
+    const qint64 n = all.size();
+    if (n < 128 || all.left(16) != QByteArray("FUJIFILMCCD-RAW ")) {
+        errMsg = "RAF: not a Fuji RAF file."; return false;
+    }
+    auto be = [&](qint64 o, int k) -> quint32 {     // RAF header values are big-endian
+        quint32 v = 0;
+        for (int i = 0; i < k; ++i) v = (v << 8) | (o + i < n ? d[o + i] : 0);
+        return v;
+    };
+
+    const quint32 cfaHdr = be(92, 4);               // CFA metadata directory offset
+    const quint32 cfaOff = be(100, 4);              // raw CFA data offset
+    const quint32 cfaLen = be(104, 4);              // raw CFA data length
+    if (cfaHdr + 4 > n) { errMsg = "RAF: bad CFA header offset."; return false; }
+
+    /* Walk the Fuji CFA directory (big-endian tag/len records). */
+    int rawW = 0, rawH = 0;
+    bool haveXtrans = false;
+    uint8_t xt[6][6] = {{0}};
+    quint32 c000Off = 0, c000Len = 0;
+    quint32 wbR = 0, wbG = 0, wbB = 0;              // from the older 0x2FF0 tag, if present
+    {
+        quint32 p = cfaHdr;
+        const quint32 entries = be(p, 4); p += 4;
+        for (quint32 e = 0; e < entries && p + 4 <= quint32(n); ++e) {
+            const quint32 tag = be(p, 2), len = be(p + 2, 2); const quint32 s = p + 4;
+            if (tag == 0x100)      { rawH = int(be(s, 2)); rawW = int(be(s + 2, 2)); }
+            else if (tag == 0x131 && len >= 36) {
+                haveXtrans = true;                  // 36 bytes, reversed -> 6x6 (0=R 1=G 2=B)
+                for (int c = 0; c < 36; ++c) {
+                    const int idx = 35 - c;
+                    xt[idx / 6][idx % 6] = uint8_t(d[s + c] & 3);
+                }
+            }
+            else if (tag == 0x2FF0 && len >= 8) {   // older Fuji WB (G,R,B,G ^1 order)
+                wbG = be(s, 2); wbR = be(s + 2, 2); wbB = be(s + 6, 2);
+            }
+            else if (tag == 0xC000) { c000Off = s; c000Len = len; }
+            p = s + len;
+        }
+    }
+    if (rawW <= 0 || rawH <= 0) { errMsg = "RAF: missing raw dimensions."; return false; }
+
+    /* Only uncompressed RAF (16-bit samples) here: the data block is raw_width*raw_height*2
+       bytes plus a small header. If it is smaller, the RAF is Fuji-compressed -> fall back. */
+    const qint64 need = qint64(rawW) * rawH * 2;
+    if (qint64(cfaLen) < need) { errMsg = "RAF: compressed RAF not supported yet."; return false; }
+    const qint64 hdr = qint64(cfaLen) - need;        // leading header inside the CFA block
+    const qint64 base = qint64(cfaOff) + hdr;
+    if (base + need > n) { errMsg = "RAF: CFA data out of range."; return false; }
+
+    raw.width = rawW;
+    raw.height = rawH;
+    raw.cfa.assign(size_t(rawW) * size_t(rawH), 0);
+    const uchar *p = d + base;                        // little-endian 16-bit samples
+    const size_t count = size_t(rawW) * size_t(rawH);
+    for (size_t i = 0; i < count; ++i)
+        raw.cfa[i] = uint16_t(p[2 * i] | (p[2 * i + 1] << 8));
+
+    if (haveXtrans) {
+        raw.pattern = CfaPattern::XTrans;
+        for (int yy = 0; yy < 6; ++yy)
+            for (int xx = 0; xx < 6; ++xx) raw.xtrans[yy][xx] = xt[yy][xx];
+    } else {
+        raw.pattern = CfaPattern::RGGB;              // uncompressed Bayer Fuji (rare)
+    }
+
+    /* Levels: Fuji 14-bit X-Trans -> white 16383, black ~1024. */
+    raw.white = 16383;
+    for (int i = 0; i < 4; ++i) raw.black[i] = 1024;
+
+    /* White balance. Prefer the explicit 0x2FF0 tag; otherwise locate WB_GRBLevels [G,R,B] in
+       the 0xC000 RAFData block heuristically (first window where green is the reference and R,B
+       are boosted) -- its offset is model-specific. Stored green reference is small (~256-1024). */
+    if (wbR && wbG && wbB) {
+        raw.camMul[0] = wbR; raw.camMul[1] = wbG; raw.camMul[2] = wbB; raw.camMul[3] = wbG;
+    } else if (c000Off && c000Len >= 6) {
+        const qint64 lo = c000Off, hi = qMin<qint64>(c000Off + c000Len, n) - 6;
+        for (qint64 o = lo; o <= hi; o += 2) {
+            const int g = d[o] | (d[o + 1] << 8);
+            const int rr = d[o + 2] | (d[o + 3] << 8);
+            const int bb = d[o + 4] | (d[o + 5] << 8);
+            if (g >= 256 && g <= 1024 && rr > g && rr < 4 * g && bb > g && bb < 4 * g) {
+                raw.camMul[0] = rr; raw.camMul[1] = g; raw.camMul[2] = bb; raw.camMul[3] = g;
+                break;
+            }
+        }
+    }
+
+    /* Colour matrix by model: TIFF tag 272 lives in the embedded JPEG's TIFF, not here, so use
+       the camera id text in the RAF header (bytes 0x1C..) -> "Fujifilm " + model. */
+    QString model = QString::fromLatin1(all.mid(0x1C, 32)).trimmed();
+    if (!model.isEmpty()) model = "Fujifilm " + model;
+    xyzToCamForModel(model, raw.xyzToCam);
 
     return true;
 }
