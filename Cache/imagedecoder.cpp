@@ -4,6 +4,7 @@
 #include "Develop/develop.h"
 #include "Develop/inputtransform.h"
 #include "Develop/outputtransform.h"
+#include "Develop/workingimagecache.h"
 #include <memory>
 
 #ifdef Q_OS_MAC
@@ -292,13 +293,13 @@ bool ImageDecoder::load()
     developApplied = false;  // reset per decode; the RAW path sets it when it develops
 
     /*
-        FULL-SENSOR RAW DECODE.
-        RawFormat::Create() returns nullptr for formats with no sensor decoder yet, so those
-        RAW files fall through to the embedded-JPG path below unchanged. When a decoder exists
-        this is the call site that produces a demosaiced image. The decode needs the raw-sensor
-        fields (RawSensorInfo): in independent mode indMeta already carries them; in cache mode
-        we fetch them from the DataModel's per-file store (populated during the metadata read)
-        via the lock-guarded getter -- cheaper and thread-safer than rebuilding the whole
+        FULL-SENSOR RAW DECODE. RawFormat::Create() returns nullptr for formats with no
+        sensor decoder yet, so those RAW files fall through to the embedded-JPG path
+        below unchanged. When a decoder exists this is the call site that produces a
+        demosaiced image. The decode needs the raw-sensor fields (RawSensorInfo): in
+        independent mode indMeta already carries them; in cache mode we fetch them from
+        the DataModel's per-file store (populated during the metadata read) via the
+        lock-guarded getter -- cheaper and thread-safer than rebuilding the whole
         ImageMetadata, since UnpackCfa only consults rawInfo.
     */
     if (G::useRaw) {
@@ -306,11 +307,19 @@ bool ImageDecoder::load()
             ImageMetadata rawMeta;
             if (isIndependent) rawMeta = indMeta;
             else dm->fPathRawInfoGet(fPath, rawMeta.rawInfo);
-            if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort)) {
+            std::shared_ptr<const WorkingImage> work;
+            if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort, &work)) {
                 decoderToUse = Raw;
                 developApplied = true;   // RAW develops internally; skip the generic pass
+                /* Cache the pre-develop WorkingImage so a later edit re-renders without
+                   re-decoding/re-demosaicing (UnpackCfa+Demosaic+RawColor is the costly part;
+                   Develop+OutputTransform that follow are cheap). */
+                WorkingImageCache::instance().put(fPath, work);
                 imFile.close();
                 status = Status::Success;
+                emit setValSf(sfRow, G::RawRenderColumn, true, instance,
+                              "ImageDecoder::load", Qt::EditRole,
+                              int(Qt::AlignRight | Qt::AlignVCenter));
                 return true;
             }
             /* Aborted mid-decode (shutdown / navigation): bail now rather than wasting
@@ -689,15 +698,21 @@ void ImageDecoder::applyDevelop()
     if (isLog || G::isLogger) G::log("ImageDecoder::applyDevelop", "sfRow = " + QString::number(sfRow));
     if (developApplied || editParams.isIdentity() || image.isNull()) return;
 
-    InputTransform input;
-    WorkingImage work;
-    if (!input.FromImage(image, work)) return;
+    /* Reuse the pre-develop WorkingImage if a prior decode cached it (skips InputTransform);
+       otherwise build it once from the decoded QImage and cache it for next time. The cached
+       image is scene-LINEAR (post-InputTransform), matching what the RAW path stores. */
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) {
+        auto built = std::make_shared<WorkingImage>();
+        InputTransform input;
+        if (!input.FromImage(image, *built)) return;
+        WorkingImageCache::instance().put(fPath, built);
+        work = built;
+    }
 
-    Develop develop;
-    develop.Apply(work, editParams);
-
-    OutputTransform output;
-    output.ToImage(work, image);
+    /* Re-render through Develop + OutputTransform. render() copies the cached image (Develop
+       mutates in place) and leaves the cache entry pristine for the next slider value. */
+    WorkingImageCache::render(*work, editParams, image);
 }
 
 void ImageDecoder::colorManage()

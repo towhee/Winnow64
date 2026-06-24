@@ -8,8 +8,12 @@
 
 /* Per-format sensor decoders register here as each UnpackCfa() lands (phase 2+). */
 #include "ImageFormats/Sony/sony.h"     // class SonyRaw
-// #include "ImageFormats/Nikon/nikon.h"   // class NikonRaw
-// #include "ImageFormats/Canon/canon.h"   // class CanonRaw
+#include "ImageFormats/Dng/dng.h"       // class DngRaw
+#include "ImageFormats/Canon/canon.h"   // class CanonRaw
+#include "ImageFormats/Nikon/nikon.h"   // class NikonRaw
+#include "ImageFormats/Olympus/olympus.h" // class OlympusRaw
+#include "ImageFormats/Panasonic/panasonic.h" // class PanasonicRaw
+#include "ImageFormats/Fuji/fuji.h"     // class FujiRaw
 
 std::unique_ptr<RawFormat> RawFormat::Create(const QString &ext)
 {
@@ -20,11 +24,18 @@ std::unique_ptr<RawFormat> RawFormat::Create(const QString &ext)
     ImageDecoder falls back to the embedded JPG, so registering here is safe.
 */
     if (ext == "arw") return std::make_unique<SonyRaw>();
+    if (ext == "dng") return std::make_unique<DngRaw>();
+    if (ext == "cr2") return std::make_unique<CanonRaw>();
+    if (ext == "nef") return std::make_unique<NikonRaw>();
+    if (ext == "orf") return std::make_unique<OlympusRaw>();
+    if (ext == "rw2") return std::make_unique<PanasonicRaw>();
+    if (ext == "raf") return std::make_unique<FujiRaw>();
     return nullptr;
 }
 
 bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
-                       const EditParams *edit, const QAtomicInt *abort)
+                       const EditParams *edit, const QAtomicInt *abort,
+                       std::shared_ptr<const WorkingImage> *outWork)
 {
 /*
     Shared, camera-agnostic pipeline:
@@ -62,23 +73,34 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     }
 
     RawColor color;
-    WorkingImage work;
-    if (!color.ToWorking(raw, rgb, work)) {
+    auto work = std::make_shared<WorkingImage>();
+    if (!color.ToWorking(raw, rgb, *work)) {
         errMsg = "Colour conversion failed.";
         return false;
     }
     if (aborted()) { errMsg = "Aborted"; return false; }
 
+    /* Hand the caller the pre-develop WorkingImage for the WorkingImageCache (shared, no
+       copy). It must stay pristine, so a non-identity develop below runs on a private copy. */
+    if (outWork) *outWork = work;
+
     /* RAW develops in its native linear float (better than an 8-bit round trip), so the
        develop stage runs here rather than in ImageDecoder for raw files. */
+    OutputTransform output;
     if (edit && !edit->isIdentity()) {
+        WorkingImage developed = *work;
         Develop develop;
-        develop.Apply(work, *edit);
+        develop.Apply(developed, *edit);
+        if (aborted()) { errMsg = "Aborted"; return false; }
+        if (!output.ToImage(developed, out)) {
+            errMsg = "Output transform failed.";
+            return false;
+        }
+        return true;
     }
     if (aborted()) { errMsg = "Aborted"; return false; }
 
-    OutputTransform output;
-    if (!output.ToImage(work, out)) {
+    if (!output.ToImage(*work, out)) {
         errMsg = "Output transform failed.";
         return false;
     }

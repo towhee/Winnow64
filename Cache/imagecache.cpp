@@ -1,5 +1,6 @@
 #include "Cache/imagecache.h"
 #include "Main/global.h"
+#include "Develop/workingimagecache.h"
 
 /*  How the Image Cache works:
 
@@ -1923,6 +1924,8 @@ void ImageCache::initialize()
     toCache.clear();
     toCacheStatus.clear();
     pressureHistory.clear();
+    // drop cached pre-develop WorkingImages from the previous folder (memory hygiene)
+    WorkingImageCache::instance().clear();
     if (isAutoMaxMB) maxMB = 1024;  // only if autoMaxMB?
 
     // Sync the instance FIRST, before any early-return. Otherwise ICC::instance

@@ -33,6 +33,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     QString zoomPct = "";
     QString base = "";
     QString spacer = "   ";
+    QString raw = "";
 
     // update G::availableMemory
 #ifdef Q_OS_WIN
@@ -62,6 +63,8 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
             base += spacer +" Selected: " + s;
             // Picked count
             base += spacer + "Picked: " + getPicked();
+            // Raw rendering
+            base += spacer + getRawRendered();
         }
 
         QString preBase = "";
@@ -244,8 +247,8 @@ int MW::availableSpaceForProgressBar()
 QString MW::getPosition()
 {
 /*
-    This function is used by MW::updateStatus to report the current image relative to all the
-    images in the folder ie 17 of 80.
+    This function is used by MW::updateStatus to report the current image relative to all
+    the images in the folder ie 17 of 80.
 
     It is displayed on the status bar and in the infoView.
 */
@@ -295,6 +298,15 @@ QString MW::getPicked()
 
     if (count == 0) return "Nothing";
     return QString::number(count) + " ("  + pickMemSize + ")";
+}
+
+QString MW::getRawRendered()
+{
+    if (G::isLogger) G::log("MW::getRawRendered");
+    if (dm->sf->index(dm->currentSfRow, G::RawRenderColumn).data().toBool()) {
+        return "RAW";
+    }
+    return "";
 }
 
 QString MW::getSelectedFileSize()

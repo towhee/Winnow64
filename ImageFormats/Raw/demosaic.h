@@ -35,6 +35,11 @@ private:
     bool Bilinear3x3(const RawImage &raw, std::vector<float> &rgb,
                      const QAtomicInt *abort);
 
+    /* Fuji X-Trans: per-pixel average of same-colour photosites in a 5x5 window (the 6x6
+       pattern guarantees all three colours within that window), native colour kept exact. */
+    bool XTransWindow(const RawImage &raw, std::vector<float> &rgb,
+                      const QAtomicInt *abort);
+
     /* Colour of photosite (row,col) for a Bayer pattern: 0=R, 1=G, 2=B. */
     static int BayerColorAt(CfaPattern pattern, int row, int col);
 };

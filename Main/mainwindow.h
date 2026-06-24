@@ -1428,6 +1428,7 @@ private:
     QString getPosition();
     QString getZoom();
     QString getPicked();
+    QString getRawRendered();
     QString getSelectedFileSize();
     double macActualDevicePixelRatio(QPoint loc, QScreen *screen);
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);

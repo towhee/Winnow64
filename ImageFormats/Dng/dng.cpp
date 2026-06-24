@@ -1,6 +1,10 @@
 #include "dng.h"
 #include "Main/global.h"
 #include "Metadata/xmp.h"
+#include "ImageFormats/Raw/tiffwalk.h"
+#include "ImageFormats/Raw/losslessjpeg.h"
+#include "ImageFormats/Raw/rawimage.h"
+#include <cmath>
 
 DNG::DNG()
 {
@@ -359,6 +363,207 @@ bool DNG::parse(MetadataParameters &p,
         m._rotationDegrees = m.rotationDegrees;
 
         if (p.report) p.xmpString = xmp.srcToString();
+    }
+
+    return true;
+}
+
+/* ------------------------------------------------------------------------------------------
+   DngRaw::UnpackCfa  --  Adobe DNG sensor unpack (uncompressed + lossless JPEG, strip + tile)
+   ------------------------------------------------------------------------------------------ */
+
+namespace {
+
+/* DNG / TIFF-EP tag numbers used here. */
+enum DngTag {
+    ImageWidth = 256, ImageLength = 257, BitsPerSample = 258, Compression = 259,
+    PhotometricInterpretation = 262, StripOffsets = 273, RowsPerStrip = 278,
+    StripByteCounts = 279, TileWidth = 322, TileLength = 323, TileOffsets = 324,
+    TileByteCounts = 325, NewSubfileType = 254, CFAPatternTag = 33422,
+    BlackLevel = 50714, WhiteLevel = 50717, ColorMatrix1 = 50721, ColorMatrix2 = 50722,
+    AsShotNeutral = 50728
+};
+const int PHOTO_CFA = 32803;
+
+/* Place one decoded lossless-JPEG segment (component-interleaved) into the CFA at (gx,gy). */
+void placeLjpeg(const LosslessJpeg::Image &im, int gx, int gy,
+                std::vector<uint16_t> &cfa, int W, int H)
+{
+    const int cs = im.components;
+    for (int ty = 0; ty < im.height; ++ty) {
+        const int cy = gy + ty;
+        if (cy < 0 || cy >= H) continue;
+        for (int tx = 0; tx < im.width; ++tx) {
+            for (int c = 0; c < cs; ++c) {
+                const int cx = gx + tx * cs + c;
+                if (cx < 0 || cx >= W) continue;
+                cfa[size_t(cy) * W + cx] =
+                    im.samples[(size_t(ty) * im.width + tx) * cs + c];
+            }
+        }
+    }
+}
+
+} // namespace
+
+bool DngRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) { errMsg = "DNG: not a TIFF/EP file."; return false; }
+
+    /* Walk IFD0 + SubIFDs + the next-IFD chain; keep the CFA image IFD (Photometric == CFA),
+       preferring the full-resolution one (NewSubfileType bit0 == 0) with the most pixels. */
+    QList<quint32> queue { r.firstIfd() };
+    QSet<quint32> seen;
+    Ifd cfaIfd;
+    Ifd ifd0;                       // first IFD: holds the colour tags (ColorMatrix, AsShotNeutral)
+    quint64 bestPixels = 0;
+    bool haveIfd0 = false;
+
+    while (!queue.isEmpty()) {
+        const quint32 off = queue.takeFirst();
+        if (off == 0 || seen.contains(off)) continue;
+        seen.insert(off);
+
+        Ifd tags;
+        QList<quint32> subs;
+        quint32 next = 0;
+        if (!r.readIfd(off, tags, subs, next)) continue;
+        if (!haveIfd0) { ifd0 = tags; haveIfd0 = true; }
+        for (quint32 s : subs) queue << s;
+        if (next) queue << next;
+
+        if (tags.contains(PhotometricInterpretation) &&
+            int(r.scalar(tags[PhotometricInterpretation])) == PHOTO_CFA &&
+            tags.contains(ImageWidth) && tags.contains(ImageLength)) {
+            const bool reduced = tags.contains(NewSubfileType) &&
+                                 (r.scalar(tags[NewSubfileType]) & 1);
+            const quint64 px = quint64(r.scalar(tags[ImageWidth])) *
+                               r.scalar(tags[ImageLength]);
+            if (!reduced && px > bestPixels) { bestPixels = px; cfaIfd = tags; }
+        }
+    }
+
+    if (cfaIfd.isEmpty()) { errMsg = "DNG: no CFA image found."; return false; }
+
+    const int W   = int(r.scalar(cfaIfd[ImageWidth]));
+    const int H   = int(r.scalar(cfaIfd[ImageLength]));
+    const int bps = cfaIfd.contains(BitsPerSample) ? int(r.scalar(cfaIfd[BitsPerSample])) : 16;
+    const int comp = cfaIfd.contains(Compression) ? int(r.scalar(cfaIfd[Compression])) : 1;
+    if (W <= 0 || H <= 0 || bps <= 0 || bps > 16) { errMsg = "DNG: bad CFA geometry."; return false; }
+    if (comp != 1 && comp != 7) { errMsg = "DNG: unsupported compression (only 1 / 7)."; return false; }
+
+    raw.width = W;
+    raw.height = H;
+    raw.cfa.assign(size_t(W) * size_t(H), 0);
+
+    /* Build the list of segments (offset, length, grid position) -- tiles or strips. */
+    struct Seg { quint32 off, len; int gx, gy; };
+    QVector<Seg> segs;
+    int segW, segH;
+    if (cfaIfd.contains(TileOffsets) && cfaIfd.contains(TileWidth)) {
+        segW = int(r.scalar(cfaIfd[TileWidth]));
+        segH = int(r.scalar(cfaIfd[TileLength]));
+        const QVector<quint32> offs = r.u32s(cfaIfd[TileOffsets]);
+        const QVector<quint32> lens = r.u32s(cfaIfd[TileByteCounts]);
+        if (segW <= 0 || segH <= 0 || offs.size() != lens.size() || offs.isEmpty()) {
+            errMsg = "DNG: bad tile layout."; return false;
+        }
+        const int across = (W + segW - 1) / segW;
+        for (int i = 0; i < offs.size(); ++i)
+            segs << Seg{ offs[i], lens[i], (i % across) * segW, (i / across) * segH };
+    } else if (cfaIfd.contains(StripOffsets)) {
+        segW = W;
+        segH = cfaIfd.contains(RowsPerStrip) ? int(r.scalar(cfaIfd[RowsPerStrip])) : H;
+        if (segH <= 0) segH = H;
+        const QVector<quint32> offs = r.u32s(cfaIfd[StripOffsets]);
+        const QVector<quint32> lens = r.u32s(cfaIfd[StripByteCounts]);
+        if (offs.size() != lens.size() || offs.isEmpty()) { errMsg = "DNG: bad strip layout."; return false; }
+        for (int i = 0; i < offs.size(); ++i)
+            segs << Seg{ offs[i], lens[i], 0, i * segH };
+    } else {
+        errMsg = "DNG: no strips or tiles."; return false;
+    }
+
+    /* Decode each segment into the CFA. */
+    for (const Seg &s : segs) {
+        if (!file.seek(s.off)) { errMsg = "DNG: seek to segment failed."; return false; }
+        const QByteArray buf = file.read(int(s.len));
+        if (buf.size() < int(s.len)) { errMsg = "DNG: short segment read."; return false; }
+
+        if (comp == 7) {
+            LosslessJpeg::Image im;
+            QString lerr;
+            if (!LosslessJpeg::Decode(reinterpret_cast<const uint8_t *>(buf.constData()),
+                                      size_t(buf.size()), im, &lerr)) {
+                errMsg = "DNG: lossless JPEG decode failed (" + lerr + ").";
+                return false;
+            }
+            placeLjpeg(im, s.gx, s.gy, raw.cfa, W, H);
+        } else {
+            /* Uncompressed: 16-bit little/big-endian samples, segW x segH, row-major. */
+            const uchar *p = reinterpret_cast<const uchar *>(buf.constData());
+            const int rows = qMin(segH, H - s.gy);
+            const int cols = qMin(segW, W - s.gx);
+            const size_t avail = size_t(buf.size()) / 2;
+            for (int ty = 0; ty < rows; ++ty) {
+                for (int tx = 0; tx < cols; ++tx) {
+                    const size_t idx = size_t(ty) * segW + tx;
+                    if (idx >= avail) break;
+                    const uchar *q = p + idx * 2;
+                    const uint16_t v = r.big() ? uint16_t((q[0] << 8) | q[1])
+                                               : uint16_t((q[1] << 8) | q[0]);
+                    raw.cfa[size_t(s.gy + ty) * W + (s.gx + tx)] = v;
+                }
+            }
+        }
+    }
+
+    /* CFA pattern. */
+    if (cfaIfd.contains(CFAPatternTag)) {
+        const QByteArray pat = r.bytes(cfaIfd[CFAPatternTag]);
+        if (pat.size() >= 4) {
+            uint8_t pc[4];
+            for (int i = 0; i < 4; ++i) pc[i] = uint8_t(pat[i]);
+            raw.pattern = cfaPatternFromPlaneColor(pc);
+        }
+    }
+    if (raw.pattern == CfaPattern::Unknown) raw.pattern = CfaPattern::RGGB;
+
+    /* Levels. */
+    raw.white = cfaIfd.contains(WhiteLevel) ? uint16_t(r.scalar(cfaIfd[WhiteLevel]))
+                                            : uint16_t((1u << bps) - 1);
+    if (cfaIfd.contains(BlackLevel)) {
+        const QVector<double> bl = r.reals(cfaIfd[BlackLevel]);
+        for (int i = 0; i < 4; ++i) {
+            const double v = bl.isEmpty() ? 0.0 : bl[i < bl.size() ? i : 0];
+            raw.black[i] = uint16_t(v < 0 ? 0 : v + 0.5);
+        }
+    }
+
+    /* Colour: DNG carries its own. xyzToCam = ColorMatrix2 (D65) when present, else
+       ColorMatrix1. WB from AsShotNeutral (camMul = 1 / neutral). These tags live in IFD0. */
+    const Ifd &col = haveIfd0 ? ifd0 : cfaIfd;
+    const quint16 cmTag = col.contains(ColorMatrix2) ? quint16(ColorMatrix2)
+                        : col.contains(ColorMatrix1) ? quint16(ColorMatrix1) : 0;
+    if (cmTag) {
+        const QVector<double> cm = r.reals(col[cmTag]);
+        if (cm.size() >= 9)
+            for (int i = 0; i < 3; ++i)
+                for (int j = 0; j < 3; ++j)
+                    raw.xyzToCam[i][j] = float(cm[i * 3 + j]);
+    }
+    if (col.contains(AsShotNeutral)) {
+        const QVector<double> n = r.reals(col[AsShotNeutral]);
+        if (n.size() >= 3 && n[0] > 0 && n[1] > 0 && n[2] > 0) {
+            raw.camMul[0] = float(1.0 / n[0]);
+            raw.camMul[1] = float(1.0 / n[1]);
+            raw.camMul[2] = float(1.0 / n[2]);
+            raw.camMul[3] = float(1.0 / n[1]);
+        }
     }
 
     return true;
