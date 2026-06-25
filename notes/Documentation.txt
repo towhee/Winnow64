@@ -1856,8 +1856,12 @@ Architecture
 
     COLOUR (RawColor::ToWorking, real): follows dcraw/libraw cam_xyz_coeff. Input is the model's
     XYZ(D65)->camera matrix (DNG ColorMatrix / adobe_coeff convention), looked up by model in
-    ImageFormats/Raw/cameramatrix.cpp (seeded with the Sony A9/A9 II; grows per model -- a wrong
-    matrix is a hue shift, not a crash, so verify visually when adding one). From it RawColor
+    ImageFormats/Raw/cameramatrix.cpp -- a FULL port of libraw's adobe_coeff for the mainstream
+    still-camera makers (776 models; phone/action/cinema/bare-sensor and 4-colour CMYG/RGBE
+    entries omitted). Lookup is a case-insensitive longest-prefix match, so one "Nikon D800" row
+    covers D800/D800E and "Sony ILCE-9" covers ILCE-9/9M2, while the most specific key wins (a
+    short "Nikon D3" never shadows "D300"). Regenerate from a newer libraw colordata.cpp when
+    bodies are added; a wrong matrix is a hue shift, not a crash, so verify visually. From it RawColor
     builds camRgb = xyzToCam.rgbToXyz, row-normalises so neutral maps to neutral, derives the
     neutral white balance preMul = 1/rowSum, and inverts to get camera->linear-sRGB (rgbCam).
     It applies the white balance (as-shot raw.camMul when the parser filled it, else preMul;
@@ -1930,7 +1934,10 @@ Architecture
     first-IFD offset is enough; standard TIFF (magic 42) still validates.
 
     NIKON NEF (NikonRaw, ImageFormats/Nikon/nikon.cpp): self-contained. Walks the NEF IFDs (via
-    TiffWalk) to the CFA SubIFD (Compression 34713 = Nikon NEF Compressed), then reads the
+    TiffWalk) to the CFA SubIFD (Compression 34713 = Nikon NEF Compressed) -- some bodies (Z9)
+    expose SEVERAL such SubIFDs (the full-res frame plus smaller/0x0 placeholders), so the largest
+    valid-geometry candidate is chosen, not the last seen (else the 0x0 IFD fails the geometry check
+    and the whole decode falls back to the embedded preview), then reads the
     linearization/Huffman metadata from the Nikon type-3 MakerNote (tag 0x96). The MakerNote is
     an EMBEDDED TIFF ("Nikon\0" + 2 version bytes + "\0\0" + its own header at base = mnOffset+10,
     offsets relative to base) -- TiffWalk::init(file, base) handles that. Nikon's compression is
@@ -1939,16 +1946,34 @@ Architecture
     columns (per row parity), then a running horizontal predictor per column parity -- mapped
     through a linearization curve (identity for the 0x46 lossless mode; interpolated with a tree
     "split" row for the 0x44 lossy mode). Ported from dcraw's nikon_load_raw. Colour matrix from
-    the shared per-model table (added D810/D7200/D850); white = (1<<bps)-1; black self-calibrated
-    as the decoded minimum (NEF has no masked border); pattern RGGB. VERIFIED: the C++ decode is
+    the shared per-model table (added D810/D7200/D850/D2H/D100/D800E/Z9; an unknown model falls back
+    to an identity matrix, which renders with a colour cast -- seen on the Z9 before its row was
+    added); white = (1<<bps)-1; black from MakerNote
+    tag 0x3d (4-SHORT per-channel pedestal: D850 400, D810 600, Z9 1008 -- matches libraw), falling
+    back to the decoded minimum only on older bodies that omit 0x3d (D2H/D100/D800E, ~0 pedestal).
+    The minimum alone is fragile: one sub-pedestal hot/noisy pixel drags it below the true black, so
+    the shared SubtractBlack under-subtracts and the frame renders washed-out (was seen on the D850,
+    darkest pixel 78 vs true 400). CFA phase read from the raw SubIFD's
+    CFAPattern tag (0x828E) via cfaPatternFromPlaneColor() -- most bodies are RGGB but older
+    sensors differ (D100 GRBG, D2H GBRG), and decoding those as RGGB rendered greens as magenta;
+    falls back to RGGB when the tag is absent. ACTIVE-AREA CROP: most NEFs store exactly the active
+    area, but a few old bodies pad it with masked optical-black columns that fringe the left/right
+    edges magenta when demosaiced; a per-model crop (libraw margins -- D2H: left 6, width 2482)
+    trims them. Margins are even so the CFA phase is unchanged; add a row per affected model.
+    VERIFIED: the C++ decode is
     BYTE-IDENTICAL to libraw on 14-bit (D810) and 12-bit (D7200) lossless NEF -- validated with a
     throwaway rawpy/libraw reference in scratch, since the bit-level scheme is too subtle to
     guess. As-shot WB: read from the UNENCRYPTED MakerNote tag 0x0C (WhiteBalanceRBLevels, 4
     RATIONALs in order R, B, G1, G2 -- green-normalised multipliers) -> raw.camMul, matching
-    libraw's cam_mul exactly on D810 and D7200. (The encrypted ColorBalance 0x97 carries the same
-    data the hard way; brute-forcing its version-0223 cipher did not converge, and tag 0x0C made
-    it unnecessary.) LIMITATION: the 0x44 lossy-with-curve path is ported but not yet exercised
-    by a test file.
+    libraw's cam_mul exactly on D810/D7200/D100. (Some bodies, e.g. D100, store only R/B and leave
+    the green entries 0, meaning green=1; substitute 1.0 rather than rejecting the tag, else a zero
+    green multiplier drops the WB and leaves a heavy green cast.) Old bodies that lack 0x0C (e.g. D2H) instead carry
+    WB in the ColorBalance block 0x97; its early pre-encryption versions ("0100".."0103") store the
+    same RGGB levels as 16-bit ints at a fixed, version-dependent offset (layout ported from dcraw's
+    parse_makernote) -- reproduces libraw's cam_mul on D2H (611,256,397,256). Without it the matrix-
+    derived neutral WB was used, giving a warm cast. (The version-0223+ cipher is still unbroken but
+    those bodies all expose 0x0C, so it is unneeded.) LIMITATION: the 0x44 lossy-with-curve path is
+    ported but not yet exercised by a test file.
 
     CANON CR2 (CanonRaw, ImageFormats/Canon/canon.cpp): self-contained. Walks the CR2 IFD chain
     (via TiffWalk), finds the raw IFD (the one with Canon slice tag 0xC640), decodes its

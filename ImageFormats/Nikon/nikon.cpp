@@ -1137,6 +1137,7 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     QSet<quint32> seen;
     Ifd ifd0, rawIfd;
     bool haveIfd0 = false, haveRaw = false;
+    quint64 bestArea = 0;
     while (!queue.isEmpty()) {
         const quint32 off = queue.takeFirst();
         if (off == 0 || seen.contains(off)) continue;
@@ -1148,7 +1149,12 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         if (next) queue << next;
         if (tags.contains(259) && r.scalar(tags[259]) == 34713 &&
             tags.contains(256) && tags.contains(257) && tags.contains(273)) {
-            rawIfd = tags; haveRaw = true;
+            /* Some bodies (e.g. Z9) expose several NEF-compressed SubIFDs -- the full-resolution
+               sensor frame alongside smaller or placeholder ones (including a 0x0 entry). Keep the
+               largest valid candidate rather than the last seen, which would otherwise land on the
+               0x0 IFD and fail the geometry check (UnpackCfa returns false -> preview fallback). */
+            const quint64 area = quint64(r.scalar(tags[256])) * quint64(r.scalar(tags[257]));
+            if (area > bestArea) { rawIfd = tags; haveRaw = true; bestArea = area; }
         }
     }
     if (!haveRaw) { errMsg = "NEF: no compressed CFA SubIFD (uncompressed NEF not handled)."; return false; }
@@ -1246,24 +1252,109 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         }
     }
 
-    raw.pattern = CfaPattern::RGGB;                      // Nikon Bayer is RGGB
+    /* CFA phase. Most Nikon bodies are RGGB, but older sensors start the active area on a
+       different Bayer phase (D100 is GRBG, D2H is GBRG); decoding those as RGGB swaps the
+       green photosites into the red/blue channels and renders greens as magenta. The raw
+       SubIFD's CFAPattern (tag 0x828E, plane colours 0=R,1=G,2=B over the 2x2
+       CFARepeatPatternDim) carries the true phase, so read it and fall back to RGGB only
+       when it is absent or not one of the four Bayer phases. */
+    raw.pattern = CfaPattern::RGGB;
+    if (rawIfd.contains(0x828E)) {
+        const QByteArray cfa = r.bytes(rawIfd[0x828E]);
+        if (cfa.size() >= 4) {
+            const uint8_t pc[4] = { uint8_t(cfa[0]), uint8_t(cfa[1]),
+                                    uint8_t(cfa[2]), uint8_t(cfa[3]) };
+            const CfaPattern pat = cfaPatternFromPlaneColor(pc);
+            if (pat != CfaPattern::Unknown) raw.pattern = pat;
+        }
+    }
     raw.white = uint16_t((1u << bps) - 1);
-    for (int i = 0; i < 4; ++i) raw.black[i] = lo;       // self-calibrated (no masked border in NEF)
 
-    QString model = (haveIfd0 && ifd0.contains(272)) ? r.ascii(ifd0[272]) : QString();
+    /* Black level. Modern bodies record the per-channel pedestal in MakerNote tag 0x3d (4 SHORTs;
+       e.g. D850 400, D810 600, Z9 1008); use it directly. The decoded frame minimum is a poor
+       substitute -- a single sub-pedestal hot/noisy pixel drags it below the true black, so the
+       shared SubtractBlack then under-subtracts and the image renders washed-out and low-contrast
+       (seen on the D850, whose darkest pixel was 78 vs a true 400). Older bodies (D2H, D100, D800E)
+       omit 0x3d and have a ~0 pedestal, so fall back to the decoded minimum (at/near zero there). */
+    bool haveBlack = false;
+    if (mn.contains(0x3d)) {
+        const QVector<quint32> bl = mr.u32s(mn[0x3d]);
+        if (bl.size() == 4) {
+            for (int i = 0; i < 4; ++i) raw.black[i] = uint16_t(bl[i]);
+            haveBlack = true;
+        }
+    }
+    if (!haveBlack)
+        for (int i = 0; i < 4; ++i) raw.black[i] = lo;   // self-calibrated fallback (no 0x3d)
+
+    const QString model = (haveIfd0 && ifd0.contains(272)) ? r.ascii(ifd0[272]) : QString();
+
+    /* Active-area crop. Most NEFs store exactly the active area, but a few older bodies pad the
+       frame with masked (optical-black) columns that, demosaiced, fringe the left/right edges
+       magenta. libraw crops these to a per-model active area; mirror its margins here. Margins
+       are even, so the CFA phase at the cropped origin is unchanged (the CFAPattern read above
+       still holds). Add a row per affected model as encountered; modern bodies need no crop. */
+    {
+        int left = 0, top = 0, cw = W, ch = H;
+        if (model == "NIKON D2H" && W == 2496 && H == 1648) { left = 6; cw = 2482; }  // libraw margins
+        if (left != 0 || top != 0 || cw != W || ch != H) {
+            std::vector<uint16_t> cropped(size_t(cw) * size_t(ch));
+            for (int y = 0; y < ch; ++y) {
+                const uint16_t *src = &raw.cfa[size_t(y + top) * W + left];
+                uint16_t *dst = &cropped[size_t(y) * cw];
+                for (int x = 0; x < cw; ++x) dst[x] = src[x];
+            }
+            raw.cfa.swap(cropped);
+            raw.width = cw;
+            raw.height = ch;
+        }
+    }
+
     xyzToCamForModel(model, raw.xyzToCam);               // identity fallback if unknown
 
-    /* As-shot white balance. Nikon stores green-normalised RB multipliers UNENCRYPTED in
-       MakerNote tag 0x0C (WhiteBalanceRBLevels, 4 RATIONALs in order R, B, G1, G2) -- the same
-       values libraw reports as cam_mul -- so no MakerNote decryption is needed (the encrypted
-       ColorBalance 0x97 carries the same data the hard way). */
+    /* As-shot white balance.
+       Modern bodies store green-normalised multipliers UNENCRYPTED in MakerNote tag 0x0C
+       (WhiteBalanceRBLevels, 4 RATIONALs in order R, B, G1, G2) -- the values libraw reports as
+       cam_mul, no decryption needed. Older bodies (D2H, D100) have no 0x0C and carry WB in the
+       ColorBalance block 0x97 instead; its early pre-encryption versions ("0100".."0103") hold
+       the same RGGB levels as 16-bit ints at a fixed offset (layout ported from dcraw's
+       parse_makernote). Without this the matrix-derived neutral WB is used, giving a warm cast. */
     if (mn.contains(0x0C)) {
         const QVector<double> wb = mr.reals(mn[0x0C]);
-        if (wb.size() >= 3 && wb[0] > 0 && wb[1] > 0 && wb[2] > 0) {
+        /* Order R, B, G1, G2. Some bodies (D100) store only R/B and leave the green entries 0,
+           meaning "green-normalised to 1"; substitute 1.0 rather than rejecting the tag (a zero
+           green multiplier would otherwise drop the WB and leave a heavy green cast). */
+        if (wb.size() >= 2 && wb[0] > 0 && wb[1] > 0) {
+            const double g1 = (wb.size() >= 3 && wb[2] > 0) ? wb[2] : 1.0;
+            const double g2 = (wb.size() >= 4 && wb[3] > 0) ? wb[3] : g1;
             raw.camMul[0] = float(wb[0]);                // R
-            raw.camMul[1] = float(wb[2]);                // G1
+            raw.camMul[1] = float(g1);                   // G1
             raw.camMul[2] = float(wb[1]);                // B
-            raw.camMul[3] = float(wb.size() >= 4 ? wb[3] : wb[2]); // G2
+            raw.camMul[3] = float(g2);                   // G2
+        }
+    } else if (mn.contains(0x97)) {
+        const QByteArray cb = mr.bytes(mn[0x97]);
+        const bool be = mr.big();
+        auto s16 = [&](int o) -> int {
+            const uchar a = uchar(cb[o]), b = uchar(cb[o + 1]);
+            return be ? ((a << 8) | b) : ((b << 8) | a);
+        };
+        /* Per dcraw: the 4 ASCII version bytes select the offset and the file order of the four
+           levels. iR/iG1/iB/iG2 are their indices within the 4-short run at that offset. */
+        int off = -1, iR = 0, iG1 = 1, iB = 2, iG2 = 3;
+        if (cb.size() >= 4) {
+            const QByteArray ver = cb.left(4);
+            if      (ver == "0100" && cb.size() >= 80) { off = 72; iR=0; iB=1; iG1=2; iG2=3; }
+            else if (ver == "0102" && cb.size() >= 18) { off = 10; iR=0; iG1=1; iG2=2; iB=3; }
+            else if (ver == "0103" && cb.size() >= 28) { off = 20; iR=0; iG1=1; iB=2; iG2=3; }
+        }
+        if (off >= 0) {
+            const int R = s16(off + 2*iR), G1 = s16(off + 2*iG1),
+                      B = s16(off + 2*iB), G2 = s16(off + 2*iG2);
+            if (R > 0 && G1 > 0 && B > 0) {
+                raw.camMul[0] = float(R);  raw.camMul[1] = float(G1);
+                raw.camMul[2] = float(B);  raw.camMul[3] = float(G2 > 0 ? G2 : G1);
+            }
         }
     }
 

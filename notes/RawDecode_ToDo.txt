@@ -1,0 +1,77 @@
+RAW DECODE / DEVELOP - TASK LIST
+================================================================================
+Goal: decode, render and edit raw files natively in Winnow (no exiftool/libraw at
+runtime), each format validated byte-identical to libraw. All gated by G::useRaw.
+
+PERSISTED 2026-06-24. The original list lived in the "Raw decoder and editor"
+conversation and was never saved to a file; this restores it from the project
+record + current code. Statuses verified against the tree on this date.
+
+Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
+  UnpackCfa (per-format) -> SubtractBlack -> Demosaic -> RawColor -> Develop -> OutputTransform
+
+--------------------------------------------------------------------------------
+ #   Status      Item
+--------------------------------------------------------------------------------
+ 1   [done]      Metadata plumbing (RawSensorInfo: geometry, levels, CFA, matrix,
+                 camMul) filled at parse time and carried to the cache path.
+ 2   [done]      RawColor::ToWorking - white balance + XYZ->cam matrix -> scene-linear
+                 WorkingImage (the convergence point with the non-raw InputTransform).
+ 3   [done]      Lossless-JPEG decoder (shared, for DNG/CR2/NEF lossless paths).
+ 4   [done]      Sony ARW UnpackCfa - uncompressed + ARW2 lossy compressed.
+ 5   [done]      DNG UnpackCfa - uncompressed + lossless JPEG, strip & tile.
+ 6   [done]      Nikon NEF UnpackCfa - Huffman + curve + predictors; CFA phase,
+                 black (tag 0x3d), WB (0x0C / old-body 0x97), Z9 multi-SubIFD.
+ 7   [done]      Canon CR2 UnpackCfa - lossless JPEG + slices + crop.
+ 8   [deferred]  Canon CR3 UnpackCfa - container is mapped, but the CRX codec
+                 (~1500-line wavelet + Golomb-Rice) is a dedicated multi-session
+                 effort. Deferred by choice. (See _ToDo.txt "Parser for CR3 files".)
+ 9   [done]      Olympus ORF UnpackCfa.
+10   [done]      Panasonic RW2 UnpackCfa.
+11   [done]      Fujifilm RAF UnpackCfa (uncompressed X-Trans).
+12   [done]      X-Trans demosaic (5x5 same-colour window).
+13   [todo]      Higher-quality Bayer demosaic (AHD/DCB) to replace Bilinear3x3.
+14   [done]      WorkingImage cache hook (Develop/workingimagecache.*): process-wide,
+                 thread-safe, byte-budgeted LRU of the PRE-develop WorkingImage;
+                 render() re-runs only Develop + OutputTransform.
+15   [todo]      Implement the real Develop ops. Currently ALL IDENTITY NO-OPS
+                 (develop.cpp scaffold) - exposure, contrast, highlights, shadows,
+                 whites, blacks, temp, tint, texture, dehaze, denoise on the
+                 scene-linear buffer. This is what makes #14's cache visible.
+16   [todo]      EditParams persistence + Develop slider UI wiring. The
+                 DevelopProperties dock exists and emits paramsChanged(); it just
+                 needs binding to get() + render(), and edits saved to settings.
+17   [todo]      Per-format raw decode tests (Qt Test + CTest), byte-identical vs
+                 the libraw oracle (project_raw_libraw_oracle).
+
+KNOWN COMPRESSED GAPS (within the "done" decoders):
+   Fuji-lossless RAF, Panasonic RawFormat 5/6/7, Sony lossless-compressed,
+   Nikon 0x44 lossy-with-curve path (ported but not yet exercised by a test file).
+
+--------------------------------------------------------------------------------
+NEW
+--------------------------------------------------------------------------------
+18   [todo]      Decoders for makers in cameramatrix.cpp kTable that cannot be
+                 decoded. The colour matrix is present but INERT until a decoder for
+                 that maker's native raw exists (a matrix only takes effect once
+                 UnpackCfa can open the file). Files that are DNG decode via the DNG
+                 path regardless of maker.
+
+                 Decoders that EXIST: Canon (.cr2), Nikon (.nef), Sony (.arw),
+                 Fujifilm (.raf), Olympus (.orf), Panasonic (.rw2), + DNG container.
+
+                 In kTable but NO decoder (19 makers):
+                   Proprietary-only (cannot open today):
+                     Pentax (.pef), Samsung (.srw), Minolta (.mrw), Epson (.erf),
+                     Kodak (.dcr/.kdc), Hasselblad (.3fr/.fff), Imacon (.fff),
+                     Phase One (.iiq), Leaf (.mos), Mamiya (.mef), Sinar (various),
+                     Casio, Contax, Agfa, Polaroid.
+                   Foveon (needs a non-Bayer demosaic path as well):
+                     Sigma (.x3f).
+                   Mostly ship DNG -> already covered via the DNG path:
+                     Leica, Ricoh, DxO.
+
+                 Note: cameramatrix.cpp is now a full libraw adobe_coeff port (776
+                 mainstream still models, longest-prefix match); regenerate with
+                 tools/gen_cameramatrix.py when bumping libraw.
+--------------------------------------------------------------------------------
