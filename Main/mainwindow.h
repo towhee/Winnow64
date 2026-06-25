@@ -162,6 +162,11 @@ public:
     bool isShiftOnOpen;               // used when opening if shift key pressed
     QString args;                     // opening args
 
+    /* Version tag for saveState()/restoreState(). BUMP whenever the set of docks changes so a
+       window state saved by an older build (missing the new dock) is rejected rather than
+       restored into an inconsistent layout. v1: added developDock. */
+    static constexpr int winnowStateVersion = 1;
+
     // debugging flags
     bool ignoreSelectionChange = false;
     bool isStartupArgs = false;
@@ -536,6 +541,9 @@ private slots:
     void setColorClassForRow(int sfRow, QString colorClass);
 
     void setRotation(int degrees);
+    /* Re-render the current image through Develop when a Develop dock slider changes and push
+       the result straight to the loupe view (the WorkingImage-cache hot path). */
+    void developParamsChange();
     void infoViewChanged(QStandardItem* item);
 //    void filterLastDay();
     void filterDockTabMousePress();

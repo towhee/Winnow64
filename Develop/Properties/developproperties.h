@@ -39,6 +39,10 @@ public:
 public slots:
     void itemChange(QModelIndex idx) override;
 
+protected:
+    // PROBE (temporary, dock-flicker diagnosis): catch a layout/resize oscillation.
+    void resizeEvent(QResizeEvent *event) override;
+
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
     void centralMsg(QString msg);

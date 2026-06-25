@@ -93,6 +93,9 @@ public:
 
 public slots:
     bool loadImage(QString fPath, bool replace = false, QString src = "");
+    /* Swap the displayed pixmap to an already-rendered QImage (a Develop preview) without
+       re-decoding or refitting -- the dimensions are unchanged, only the pixels differ. */
+    void setDevelopPreview(const QImage &image);
     void monitorCursorState();
     void copyImage();
     void panTo(float xPct, float yPct);
