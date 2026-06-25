@@ -9,32 +9,44 @@
     reentrant, constructed per decode (same discipline as Demosaic / RawFormat) so it
     carries no cross-thread state.
 
-    The operation order is fixed and hard-coded (Lightroom-like); order matters and is
-    not a caller concern. SCAFFOLD: every op below is an identity no-op for now, so Apply()
-    leaves the image unchanged. Implementations land in a later phase (exposure / white
-    balance / contrast / tone first; texture / dehaze / denoise after).
+    The operation order is fixed and hard-coded (Lightroom-like); order matters and is not a
+    caller concern. Ops are split by cost (see notes/Documentation.txt "Layer & masking
+    model"):
 
-    Note: for RAW, white balance and denoise give better results applied inside the raw
-    pipeline (RawFormat reads the same EditParams). When that lands those two ops here
-    become conditional, but EditParams and this interface are unchanged.
+        SPATIAL ops (denoise) need a neighbourhood, so each owns a full-image pass. Deferred;
+        currently a no-op.
+
+        POINT ops (white balance, exposure, contrast, tone regions, texture, dehaze) are pure
+        per-pixel functions, so they are FUSED into a single parallel pass: coefficients are
+        precomputed once from EditParams, then applied per pixel in one loop over the image.
+        This is the slider-drag hot path. PHASE 1 implements exposure + contrast; the rest are
+        identity no-ops that slot into the same pass as they land.
 */
 class Develop
 {
 public:
     Develop() = default;
 
-    /* Apply p to img in place. Returns true on success (and trivially when p is
-       identity, leaving img untouched). */
+    /* Apply p to img in place. Returns true on success (and trivially when p is identity,
+       leaving img untouched). */
     bool Apply(WorkingImage &img, const EditParams &p);
 
 private:
-    void Denoise(WorkingImage &img, const EditParams &p);        // 1
-    void WhiteBalance(WorkingImage &img, const EditParams &p);   // 2
-    void Exposure(WorkingImage &img, const EditParams &p);       // 3
-    void Contrast(WorkingImage &img, const EditParams &p);       // 4
-    void ToneRegions(WorkingImage &img, const EditParams &p);    // 5 highlights/shadows/whites/blacks
-    void Texture(WorkingImage &img, const EditParams &p);        // 6
-    void Dehaze(WorkingImage &img, const EditParams &p);         // 7
+    /* Spatial op: owns a full-image pass. Deferred -- no-op. */
+    void Denoise(WorkingImage &img, const EditParams &p);
+
+    /* Precomputed once per Apply(); the fused point pass reads only these. active == false
+       means no implemented point op would change a pixel, so the pass is skipped entirely. */
+    struct PointCoeffs {
+        bool  active        = false;
+        float exposureGain  = 1.0f;   // 2^EV
+        float contrastSlope = 1.0f;   // perceptual-domain slope about mid-grey; 1 = identity
+        float white         = 1.0f;   // linear value that maps to display white
+    };
+    static PointCoeffs buildPointCoeffs(const EditParams &p, const WorkingImage &img);
+
+    /* The fused per-pixel pass, parallelised over row ranges. */
+    void applyPointOps(WorkingImage &img, const PointCoeffs &c);
 };
 
 #endif // DEVELOP_H

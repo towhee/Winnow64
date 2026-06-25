@@ -1,5 +1,8 @@
 ﻿#include "Main/mainwindow.h"
 #include "Main/global.h"
+#include "Develop/workingimage.h"
+#include "Develop/workingimagecache.h"
+#include "Develop/inputtransform.h"
 #include <QMetaEnum>
 #include <cstdlib>          // std::_Exit (used by runSelfTest)
 #include <QNetworkAccessManager>
@@ -608,10 +611,18 @@ void MW::showEvent(QShowEvent *event)
 
     // restore prior geometry and state
     if (isSettings) {
+        /* Versioned restore (winnowStateVersion). A WindowState saved by a build that predates
+           developDock has no place for it; restoring it leaves develop's dock group orphaned as
+           empty zombie tab bars, and the QMainWindow dock layout then never converges -- the
+           tabbed docks flicker continuously (diagnosed via persistent count==0 tab bars in a
+           perpetual LayoutRequest loop). With a version tag, restoreState() rejects the stale
+           state (returns false, changes nothing) and the clean layout built in initialize()
+           stands. The state is re-saved with the current version on exit, so this self-heals
+           after one launch (cost: a one-time reset of saved dock sizes/positions). */
         restoreGeometry(settings->value("Geometry").toByteArray());
-        restoreState(settings->value("WindowState").toByteArray());
+        restoreState(settings->value("WindowState").toByteArray(), winnowStateVersion);
         restoreGeometry(settings->value("Geometry").toByteArray());
-        restoreState(settings->value("WindowState").toByteArray());
+        restoreState(settings->value("WindowState").toByteArray(), winnowStateVersion);
     }
     else {
         defaultWorkspace();
@@ -969,6 +980,24 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                             ;
                 //return QWidget::eventFilter(obj, event);
             }
+        }
+    }
+
+    /* PROBE (temporary, dock-flicker diagnosis): watch the tabified dock tab bar to see what
+       it does during the sustained flicker -- geometry oscillation, tab-selection churn, or a
+       pure repaint loop. */
+    if (QTabBar *tb = qobject_cast<QTabBar *>(obj)) {
+        const QEvent::Type t = event->type();
+        if (t == QEvent::Resize || t == QEvent::Move || t == QEvent::LayoutRequest ||
+            t == QEvent::Show || t == QEvent::Hide) {
+            qDebug() << "PROBE TabBar" << t << "geom =" << tb->geometry()
+                     << "count =" << tb->count() << "current =" << tb->currentIndex();
+        }
+        else if (t == QEvent::Paint) {
+            static int paintN = 0;
+            if (++paintN % 50 == 0)
+                qDebug() << "PROBE TabBar Paint x50 (n =" << paintN
+                         << ") current =" << tb->currentIndex() << "geom =" << tb->geometry();
         }
     }
 
@@ -4929,6 +4958,75 @@ void MW::setRotation(int degrees)
             QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
         }
     }
+}
+
+void MW::developParamsChange()
+{
+/*
+    A Develop dock slider changed (DevelopProperties::paramsChanged). Re-render the current
+    image through Develop + OutputTransform and push the result straight to the loupe view,
+    using the WorkingImage-cache hot path: keep the cached pre-develop scene-linear image and
+    re-run only the cheap develop stage -- no decode, no demosaic, no file read.
+
+    PHASE 1 (Develop ops): this is a live, in-session preview. The edit is NOT yet persisted
+    or written back to the image cache, so navigating away and back shows the un-developed
+    image. Per-image persistence (sidecar) and the layer/mask stack land in later phases.
+    See notes/Documentation.txt "Layer & masking model".
+*/
+    if (G::isLogger) G::log("MW::developParamsChange");
+
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+
+    const EditParams edit = developProperties->editParams();
+
+    /* Reuse the cached pre-develop WorkingImage. RAW always caches it at decode; non-raw
+       caches it the first time it is developed. */
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) {
+        /* Miss (first edit of a non-raw image, or evicted): build the pre-develop
+           WorkingImage once from the decoded display image and cache it. */
+        if (!icd->contains(fPath)) return;          // not decoded yet; nothing to preview
+        const QImage src = icd->imCache.value(fPath);
+        if (src.isNull()) return;
+        auto built = std::make_shared<WorkingImage>();
+        InputTransform input;
+        if (!input.FromImage(src, *built)) return;
+        WorkingImageCache::instance().put(fPath, built);
+        work = built;
+    }
+
+    QImage out;
+    if (!WorkingImageCache::render(*work, edit, out)) return;
+
+    /* Orientation. The RAW decoder hands back a SENSOR-NATIVE (unrotated) WorkingImage and
+       ImageDecoder::run() rotates the display image afterwards via rotate(); a non-raw work is
+       built here from the already-rotated display image. So a scene-referred (raw) render is
+       unrotated and must have the EXIF orientation applied to match the loupe, while a
+       display-referred render is already oriented. (PHASE 1: mirrors ImageDecoder::rotate();
+       fold into a shared helper when the edit pipeline is unified.) */
+    if (work->sceneReferred) {
+        const int sfRow = dm->proxyRowFromPath(fPath);
+        if (sfRow >= 0 && sfRow < dm->sf->rowCount()) {
+            const int orientation =
+                dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
+            const int rotationDegrees =
+                dm->sf->index(sfRow, G::RotationDegreesColumn).data().toInt();
+            int degrees = 0;
+            if (orientation == 3)      degrees = rotationDegrees + 180;
+            else if (orientation == 6) degrees = rotationDegrees + 90;
+            else if (orientation == 8) degrees = rotationDegrees + 270;
+            else                       degrees = rotationDegrees;
+            if (degrees > 360) degrees -= 360;
+            if (degrees != 0) {
+                QTransform trans;
+                trans.rotate(degrees);
+                out = out.transformed(trans, Qt::SmoothTransformation);
+            }
+        }
+    }
+
+    imageView->setDevelopPreview(out);
 }
 
 bool MW::isValidPath(QString &path)

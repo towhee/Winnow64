@@ -38,18 +38,25 @@ Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
 14   [done]      WorkingImage cache hook (Develop/workingimagecache.*): process-wide,
                  thread-safe, byte-budgeted LRU of the PRE-develop WorkingImage;
                  render() re-runs only Develop + OutputTransform.
-15   [todo]      Implement the real Develop ops. Currently ALL IDENTITY NO-OPS
-                 (develop.cpp scaffold) - exposure, contrast, highlights, shadows,
-                 whites, blacks, temp, tint, texture, dehaze, denoise on the
-                 scene-linear buffer. This is what makes #14's cache visible.
+15   [wip]       Implement the real Develop ops on the scene-linear buffer.
+                 PHASE 1 DONE (2026-06-25): exposure (2^EV gain) + contrast (gentle slope
+                 1+0.4*amount about mid-grey, in a perceptual ~gamma-2.2 domain, not
+                 scene-linear - linear power-about-0.18 exploded highlights) implemented
+                 as a single FUSED, QtConcurrent-parallel per-pixel pass
+                 (Develop::buildPointCoeffs + applyPointOps). Remaining no-ops: highlights,
+                 shadows, whites, blacks, temp, tint, texture, dehaze, denoise.
                  DECISION 2026-06-25: texture + dehaze implemented as POINT (per-pixel)
                  ops for now to keep the fused engine simple; revisit a SPATIAL
                  (local-contrast) implementation later for higher quality. Denoise
                  stays spatial/global-only (raw pipeline). See Documentation.txt
-                 "DEVELOP / IMAGE EDIT" layer-masking architecture.
-16   [todo]      EditParams persistence + Develop slider UI wiring. The
-                 DevelopProperties dock exists and emits paramsChanged(); it just
-                 needs binding to get() + render(), and edits saved to settings.
+                 "Layer & masking model" + "BUILD PHASING".
+16   [wip]       EditParams persistence + Develop slider UI wiring.
+                 PHASE 1 DONE (2026-06-25): slider UI wired live --
+                 DevelopProperties::paramsChanged -> MW::developParamsChange() ->
+                 WorkingImageCache get/render -> ImageView::setDevelopPreview (hot path, no
+                 decode). REMAINING: per-image persistence to the XMP sidecar (phase 4) and
+                 the layer/mask stack (phases 2-3); current edits are session-only and not
+                 written back to the image cache.
 17   [todo]      Per-format raw decode tests (Qt Test + CTest), byte-identical vs
                  the libraw oracle (project_raw_libraw_oracle).
 

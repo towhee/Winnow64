@@ -2232,16 +2232,17 @@ Layer & masking model (planned)
           so they cannot fuse: one full-image pass each, blended by the layer's mask, CACHED and
           recomputed only when their own param or mask changes (never on a point-slider drag).
 
-    THREADING. The fused point pass is data-parallel WITHIN one render() (row-tiles via
-    cv::parallel_for_), NOT spread across the ImageDecoder worker pool. The decoder pool is
-    task-parallel ACROSS images (one decoder per image, to fill the browse cache); an
-    interactive edit is a SINGLE image, so the pool leaves it on one core -- only splitting that
-    one image's rows uses all cores. Caveat handled: render() can also be called from a decoder
-    worker (background re-fill of an edited image); to avoid N x N oversubscription the
-    background path runs flat (thread a `bool parallel` into render(), or scope
-    cv::setNumThreads(1) there). Assert cv::getNumThreads() > 1 once at startup so a backend-less
-    OpenCV build is caught rather than silently serial. (QtConcurrent over row-ranges is the
-    Qt-native fallback if we ever want parallelism independent of OpenCV's build.)
+    THREADING. The fused point pass is data-parallel WITHIN one render() (row-tiles), NOT
+    spread across the ImageDecoder worker pool. The decoder pool is task-parallel ACROSS images
+    (one decoder per image, to fill the browse cache); an interactive edit is a SINGLE image, so
+    the pool leaves it on one core -- only splitting that one image's rows uses all cores.
+    IMPLEMENTED (phase 1, Develop::applyPointOps) with QtConcurrent::run over the global
+    QThreadPool -- the same idiom FocusStack already uses (fs.cpp) -- rather than
+    cv::parallel_for_ (which appears nowhere in the tree). The global pool is fixed-size, so a
+    background decoder that also calls render() shares it and oversubscription is bounded
+    automatically (no N x N blow-up, no setNumThreads juggling). Rows split into <= maxThreads
+    chunks of >= 64 rows; small images run flat. (cv::parallel_for_ remains an option if a later
+    spatial op is implemented in OpenCV and wants to stay on OpenCV's own pool.)
 
     MASKS store GEOMETRY, never bitmaps. Parametric masks (linear/radial, ~6 floats) are
     evaluated analytically inline in the fused loop -- zero storage, resolution-independent.
@@ -2266,9 +2267,22 @@ Layer & masking model (planned)
     scaffold's main correctness gap). EditStack is versioned for forward migration.
 
     BUILD PHASING (supersedes the single-EditParams phasing above):
-        1. Fused point engine, global only: implement exposure + contrast for real, restructure
-           render() into the tiled parallel fused loop, wire the dock -> render() -> re-decode so
-           a slider visibly moves the image (proves the hot path + cache loop; RawDecode #15/#16).
+        1. [DONE] Fused point engine, global only: exposure + contrast implemented for real
+           (Develop::buildPointCoeffs + applyPointOps, develop.cpp); render() unchanged (still
+           one EditParams) but Develop now does a single parallel per-pixel pass. Wired live:
+           DevelopProperties::paramsChanged -> MW::developParamsChange() pulls the cached
+           pre-develop WorkingImage (WorkingImageCache), re-renders Develop + OutputTransform,
+           and pushes straight to the loupe via ImageView::setDevelopPreview() -- no decode, no
+           file read. A non-raw cache miss builds the WorkingImage once from the displayed image
+           (InputTransform). Orientation: a scene-referred (raw, sensor-native) render has EXIF
+           orientation applied to match the loupe (mirrors ImageDecoder::rotate()). NOT yet
+           persisted or written back to the image cache -- navigating away drops the preview
+           (phase 4). Exposure = 2^EV scene-linear gain. Contrast = a gentle slope (1 +
+           0.4*amount, so [0.6, 1.4]) about mid-grey applied in a PERCEPTUAL (~gamma 2.2)
+           domain per channel, NOT in scene-linear -- a linear-space power-about-0.18 explodes
+           highlights (they sit several stops above the pivot); encoding to gamma first puts
+           mid-grey near 0.46 and steepens the tone curve evenly. Other sliders still identity
+           no-ops until they land.
         2. Layer object + compositor: add EditStack, run the fused loop over layers with opacity;
            convert the dock's "layers-as-alternatives" into a real stack (no masks yet).
         3. Parametric masks (linear/radial): analytic inline + per-layer alpha cache.

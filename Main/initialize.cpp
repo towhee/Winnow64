@@ -1746,6 +1746,7 @@ void MW::createDevelopDock()
     developProperties = new DevelopProperties(this, settings);
 
     connect(developProperties, &DevelopProperties::centralMsg, this, &MW::setCentralMessage);
+    connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::developParamsChange);
 
     developDockTabText = "Develop";
     dockTextNames << developDockTabText;
@@ -1826,7 +1827,12 @@ void MW::createDocks()
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, filterDock);
     if (G::useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
-    if (!hideEmbellish) if (G::useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
+    /* Do NOT tabify the LEFT-area metadataDock with the RIGHT-area embelDock: that cross-area
+       tabify drags embel (and the develop dock tabbed onto it below) into the LEFT group, so
+       every dock ends up crammed in one left tab group. There the raised develop tab can't get
+       its content width against the squeezed central widget and the dock layout oscillates
+       (tab-bar flicker). embel + develop tab together on the RIGHT via the line below. This
+       default normally only shows when no saved WindowState is restored. */
     if (!hideEmbellish) MW::tabifyDockWidget(embelDock, developDock);
 
     // Re-evaluate responsive dock tab titles when a dock is dragged between

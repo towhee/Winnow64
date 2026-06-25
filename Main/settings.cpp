@@ -18,7 +18,9 @@ void MW::writeSettings()
 
     // state
     settings->setValue("Geometry", saveGeometry());
-    settings->setValue("WindowState", saveState());
+    /* Versioned so a state written here is only restored by a build with the same dock set
+       (see MW::winnowStateVersion and MW::showEvent). */
+    settings->setValue("WindowState", saveState(winnowStateVersion));
     settings->setValue("isFullScreen", isFullScreen());
 
     // full screen
