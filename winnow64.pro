@@ -180,6 +180,7 @@ HEADERS += ImageFormats/Canon/canon.h
 HEADERS += ImageFormats/Canon/canoncr3.h
 HEADERS += ImageFormats/Dng/dng.h
 HEADERS += ImageFormats/Fuji/fuji.h
+HEADERS += ImageFormats/Fuji/fujicompressed.h
 #rgh remove heic
 HEADERS += ImageFormats/Heic/heic.h
 HEADERS += ImageFormats/Heic/heif.h
@@ -358,6 +359,7 @@ SOURCES += ImageFormats/Canon/canon.cpp
 SOURCES += ImageFormats/Canon/canoncr3.cpp
 SOURCES += ImageFormats/Dng/dng.cpp
 SOURCES += ImageFormats/Fuji/fuji.cpp
+SOURCES += ImageFormats/Fuji/fujicompressed.cpp
 SOURCES += ImageFormats/Heic/Heic.cpp
 #win32:SOURCES += ImageFormats/Heic/Heic.cpp
 SOURCES += ImageFormats/Jpeg/jpeg.cpp               # For parsing

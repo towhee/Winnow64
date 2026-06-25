@@ -470,5 +470,14 @@ bool CanonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     QString model = (haveIfd0 && ifd0.contains(272)) ? r.ascii(ifd0[272]) : QString();
     xyzToCamForModel(model, raw.xyzToCam);                  // identity fallback if unknown
 
+    /* Canon sensors saturate BELOW the bit-depth maximum (e.g. the 7D Mark II clips at 13584,
+       not 16383), so the bit-depth white above is too high and washes the highlights. Use the
+       per-model saturation from the adobe_coeff levels table when it has one. */
+    {
+        int tblack = 0, tmax = 0;
+        if (cameraLevelsForModel(model, tblack, tmax) && tmax > 0)
+            raw.white = uint16_t(tmax);
+    }
+
     return true;
 }

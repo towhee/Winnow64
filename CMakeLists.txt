@@ -196,6 +196,7 @@ set(WINNOW_SOURCES
     ImageFormats/Canon/canoncr3.cpp
     ImageFormats/Dng/dng.cpp
     ImageFormats/Fuji/fuji.cpp
+    ImageFormats/Fuji/fujicompressed.cpp
     ImageFormats/Heic/Heic.cpp
     ImageFormats/Jpeg/jpeg.cpp
     ImageFormats/Nikon/nikon.cpp
@@ -425,6 +426,7 @@ set(WINNOW_HEADERS
     ImageFormats/Canon/canoncr3.h
     ImageFormats/Dng/dng.h
     ImageFormats/Fuji/fuji.h
+    ImageFormats/Fuji/fujicompressed.h
     ImageFormats/Heic/heic.h
     ImageFormats/Heic/heif.h
     ImageFormats/Jpeg/jpeg.h
@@ -631,6 +633,7 @@ qt_add_executable(Winnow
     ${WINNOW_RESOURCES}
     ${WINNOW_NOTES}
     Main/help.cpp
+    notes/RawDecode_ToDo.txt
 )
 
 target_compile_definitions(Winnow PRIVATE

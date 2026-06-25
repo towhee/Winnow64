@@ -19,4 +19,13 @@
 */
 bool xyzToCamForModel(const QString &model, float m[3][3]);
 
+/*
+    Per-model black pedestal and sensor saturation from the same libraw adobe_coeff table
+    (t_black / t_maximum). Returns false for an unknown model. A returned value of 0 means
+    "unset" (libraw has no override); a negative black means "use only when the file carries no
+    black". Decoders use this as a fallback where they would otherwise guess -- e.g. Canon, whose
+    saturation (maximum) is below the bit-depth maximum. White balance and CFA stay per-file.
+*/
+bool cameraLevelsForModel(const QString &model, int &black, int &maximum);
+
 #endif // CAMERAMATRIX_H

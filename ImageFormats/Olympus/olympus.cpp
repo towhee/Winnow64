@@ -575,6 +575,23 @@ bool OlympusRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     if (haveIfd0 && ifd0.contains(272)) model = "Olympus " + r.ascii(ifd0[272]);
     xyzToCamForModel(model, raw.xyzToCam);
 
+    /* CFA phase. Olympus bodies differ (the older E-M1 is BGGR, the OM-1 is RGGB), so the BGGR
+       default above is not safe to assume. Read the EXIF CFAPattern (0xA302): a 2x2 repeat-dim
+       header (two SHORTs) followed by the plane-colour bytes (0=R,1=G,2=B). Fall back to BGGR
+       when the tag is absent. Without this an OM-1 renders with red and blue swapped. */
+    if (haveIfd0 && ifd0.contains(0x8769)) {
+        Ifd exif; QList<quint32> es; quint32 en = 0;
+        if (r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) && exif.contains(0xA302)) {
+            const QByteArray cfa = r.bytes(exif[0xA302]);
+            if (cfa.size() >= 8) {
+                const uint8_t pc[4] = { uint8_t(cfa[4]), uint8_t(cfa[5]),
+                                        uint8_t(cfa[6]), uint8_t(cfa[7]) };
+                const CfaPattern pat = cfaPatternFromPlaneColor(pc);
+                if (pat != CfaPattern::Unknown) raw.pattern = pat;
+            }
+        }
+    }
+
     /* As-shot white balance from the Olympus MakerNote (essential -- matrix-neutral renders
        badly green for Olympus): IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C). The MakerNote is
        "OLYMPUS\0II\3\0" (12-byte header, embedded IFD at +12, offsets relative to its start),
