@@ -24,3 +24,7 @@ Develop dock items:
         Texture (slider)
         Dehaze (slider)
     Effects (header)
+
+Make sure you can read white-balance multipliers, black/white levels, CFA phase for every camera
+in the list.  This has been a problem in some of the cameras we have already done.  Can you
+read how exiftool does this and replicate it in Winnow.

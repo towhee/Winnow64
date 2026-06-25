@@ -28,7 +28,11 @@ Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
                  effort. Deferred by choice. (See _ToDo.txt "Parser for CR3 files".)
  9   [done]      Olympus ORF UnpackCfa.
 10   [done]      Panasonic RW2 UnpackCfa.
-11   [done]      Fujifilm RAF UnpackCfa (uncompressed X-Trans).
+11   [done]      Fujifilm RAF UnpackCfa (uncompressed X-Trans + Bayer; lossless/lossy
+                 COMPRESSED via FujiCompressed::decode, ImageFormats/Fuji/fujicompressed.cpp,
+                 a context-struct port of libraw's fuji_compressed.cpp - no globals, thread
+                 safe). Validated byte-identical to libraw on compressed X-Trans (X-T2) and
+                 Bayer (GFX 50S II). Lossy path ported but unexercised (no lossy test file).
 12   [done]      X-Trans demosaic (5x5 same-colour window).
 13   [todo]      Higher-quality Bayer demosaic (AHD/DCB) to replace Bilinear3x3.
 14   [done]      WorkingImage cache hook (Develop/workingimagecache.*): process-wide,
@@ -38,6 +42,11 @@ Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
                  (develop.cpp scaffold) - exposure, contrast, highlights, shadows,
                  whites, blacks, temp, tint, texture, dehaze, denoise on the
                  scene-linear buffer. This is what makes #14's cache visible.
+                 DECISION 2026-06-25: texture + dehaze implemented as POINT (per-pixel)
+                 ops for now to keep the fused engine simple; revisit a SPATIAL
+                 (local-contrast) implementation later for higher quality. Denoise
+                 stays spatial/global-only (raw pipeline). See Documentation.txt
+                 "DEVELOP / IMAGE EDIT" layer-masking architecture.
 16   [todo]      EditParams persistence + Develop slider UI wiring. The
                  DevelopProperties dock exists and emits paramsChanged(); it just
                  needs binding to get() + render(), and edits saved to settings.
@@ -45,8 +54,8 @@ Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
                  the libraw oracle (project_raw_libraw_oracle).
 
 KNOWN COMPRESSED GAPS (within the "done" decoders):
-   Fuji-lossless RAF, Panasonic RawFormat 5/6/7, Sony lossless-compressed,
-   Nikon 0x44 lossy-with-curve path (ported but not yet exercised by a test file).
+   Panasonic RawFormat 5/6/7, Sony lossless-compressed, Nikon 0x44 lossy-with-curve path
+   (ported but not yet exercised by a test file). Fuji-lossless RAF: DONE (see #11).
 
 --------------------------------------------------------------------------------
 NEW
@@ -74,4 +83,30 @@ NEW
                  Note: cameramatrix.cpp is now a full libraw adobe_coeff port (776
                  mainstream still models, longest-prefix match); regenerate with
                  tools/gen_cameramatrix.py when bumping libraw.
+
+19   [wip]       Harden per-file WB / black / white / CFA reads for the DECODED
+                 vendors. Audited 2026-06-24 against the libraw oracle over the
+                 _ThumbTest corpus (iCloud /_ThumbTest).
+                 ROBUST already (read tags, match oracle): Nikon, Sony, Panasonic, DNG.
+                 DONE this pass:
+                   - Olympus CFA: now read from EXIF CFAPattern (0xA302) instead of a
+                     hardcoded BGGR. Validated: E-M1=BGGR, OM-1=RGGB (the OM-1 was
+                     rendering with red/blue swapped).
+                   - Fuji black/white: now read from the FujiIFD that prefixes the CFA
+                     data block (cfaOff -> little-endian TIFF -> 0xf000 -> FujiIFD;
+                     BitsPerSample 0xf003, per-CFA BlackLevel 0xf00a). Replaces the
+                     hardcoded 1024/16383. Verified at parse level on GFX(64)/X-T2(1022)/
+                     X-T50(1023). The compressed RAF decoder (#11) now also reads 0xf007
+                     StripOffset to locate the compressed bitstream, so these levels take
+                     effect on the compressed X-T2/GFX/X-T50 corpus.
+                   - Canon white: was (1<<precision)-1 = 16383 but the 7D Mark II
+                     saturates at 13584 -> washed highlights. cameramatrix.cpp now also
+                     carries libraw adobe_coeff t_black/t_maximum per model
+                     (cameraLevelsForModel); Canon uses t_maximum when set. Verified
+                     7D2 -> 13584. The generator (tools/gen_cameramatrix.py) emits the
+                     levels too; regen pulls future bodies.
+                 REMAINING (minor):
+                   - Olympus black 255 vs OM-1's 254; Sony default black 512 vs an 800
+                     sample; verify Canon ColorData WB offset across versions. Other
+                     vendors could also adopt cameraLevelsForModel where they hardcode.
 --------------------------------------------------------------------------------

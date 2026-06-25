@@ -2,7 +2,9 @@
 #include "Main/global.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "ImageFormats/Raw/cameramatrix.h"
+#include "ImageFormats/Fuji/fujicompressed.h"
 #include <vector>
+#include <algorithm>
 
 Fuji::Fuji()
 {
@@ -319,6 +321,7 @@ bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 
     /* Walk the Fuji CFA directory (big-endian tag/len records). */
     int rawW = 0, rawH = 0;
+    int cropTop = -1, cropLeft = -1, cropW = 0, cropH = 0;   // active-area crop (0x0110 / 0x0111)
     bool haveXtrans = false;
     uint8_t xt[6][6] = {{0}};
     quint32 c000Off = 0, c000Len = 0;
@@ -329,6 +332,12 @@ bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         for (quint32 e = 0; e < entries && p + 4 <= quint32(n); ++e) {
             const quint32 tag = be(p, 2), len = be(p + 2, 2); const quint32 s = p + 4;
             if (tag == 0x100)      { rawH = int(be(s, 2)); rawW = int(be(s + 2, 2)); }
+            else if (tag == 0x110 && len >= 4) {    // RawImageCropTopLeft (top, left)
+                cropTop = int(be(s, 2)); cropLeft = int(be(s + 2, 2));
+            }
+            else if (tag == 0x111 && len >= 4) {    // RawImageCroppedSize (height, width)
+                cropH = int(be(s, 2)); cropW = int(be(s + 2, 2));
+            }
             else if (tag == 0x131 && len >= 36) {
                 haveXtrans = true;                  // 36 bytes, reversed -> 6x6 (0=R 1=G 2=B)
                 for (int c = 0; c < 36; ++c) {
@@ -345,46 +354,141 @@ bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     }
     if (rawW <= 0 || rawH <= 0) { errMsg = "RAF: missing raw dimensions."; return false; }
 
-    /* Only uncompressed RAF (16-bit samples) here: the data block is raw_width*raw_height*2
-       bytes plus a small header. If it is smaller, the RAF is Fuji-compressed -> fall back. */
-    const qint64 need = qint64(rawW) * rawH * 2;
-    if (qint64(cfaLen) < need) { errMsg = "RAF: compressed RAF not supported yet."; return false; }
-    const qint64 hdr = qint64(cfaLen) - need;        // leading header inside the CFA block
-    const qint64 base = qint64(cfaOff) + hdr;
-    if (base + need > n) { errMsg = "RAF: CFA data out of range."; return false; }
+    /* Levels + strip offset. The CFA data block is prefixed by a little-endian TIFF (base =
+       cfaOff): a 1-entry IFD whose 0xf000 points to the FujiIFD, which carries BitsPerSample
+       (0xf003), the per-CFA BlackLevel (0xf00a, LONG[4] Bayer / [36] X-Trans) and the
+       compressed-strip offset (0xf007, relative to cfaOff). Levels vary by body -- X-Trans
+       bodies are ~1023 but a Bayer GFX is 64 -- so read them rather than assuming. Fall back to
+       the 14-bit X-Trans defaults if the IFD is absent or malformed. */
+    raw.white = 16383;
+    for (int i = 0; i < 4; ++i) raw.black[i] = 1024;
+    quint32 stripOffset = 0;
+    {
+        auto le16 = [&](qint64 o) -> quint32 {
+            return (o >= 0 && o + 1 < n) ? quint32(d[o] | (d[o + 1] << 8)) : 0; };
+        auto le32 = [&](qint64 o) -> quint32 {
+            return (o >= 0 && o + 3 < n)
+                ? quint32(d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (quint32(d[o + 3]) << 24))
+                : 0; };
+        const qint64 tb = qint64(cfaOff);                 // TIFF base inside the CFA block
+        if (tb + 8 <= n && d[tb] == 'I' && d[tb + 1] == 'I') {
+            const qint64 ifd0 = tb + le32(tb + 4);
+            quint32 fsub = 0;
+            for (quint32 i = 0, c = le16(ifd0); i < c; ++i) {
+                const qint64 e = ifd0 + 2 + qint64(i) * 12;
+                if (le16(e) == 0xf000) { fsub = le32(e + 8); break; }
+            }
+            if (fsub) {
+                const qint64 fifd = tb + fsub;
+                for (quint32 i = 0, c = le16(fifd); i < c; ++i) {
+                    const qint64 e = fifd + 2 + qint64(i) * 12;
+                    const quint32 tag = le16(e), cnt = le32(e + 4);
+                    if (tag == 0xf003) {                  // BitsPerSample
+                        const quint32 bits = le32(e + 8);
+                        if (bits >= 8 && bits <= 16) raw.white = uint16_t((1u << bits) - 1);
+                    } else if (tag == 0xf007) {           // StripOffset (compressed data)
+                        stripOffset = le32(e + 8);
+                    } else if (tag == 0xf00a && cnt >= 1) {   // BlackLevel (LONG, per CFA position)
+                        const qint64 vp = (cnt * 4 > 4) ? (tb + le32(e + 8)) : (e + 8);
+                        for (int k = 0; k < 4; ++k)
+                            raw.black[k] = uint16_t(le32(vp + qint64(k % int(cnt)) * 4));
+                    }
+                }
+            }
+        }
+    }
 
-    raw.width = rawW;
-    raw.height = rawH;
-    raw.cfa.assign(size_t(rawW) * size_t(rawH), 0);
-    const uchar *p = d + base;                        // little-endian 16-bit samples
-    const size_t count = size_t(rawW) * size_t(rawH);
-    for (size_t i = 0; i < count; ++i)
-        raw.cfa[i] = uint16_t(p[2 * i] | (p[2 * i + 1] << 8));
-
+    /* Fuji Bayer bodies (GFX) are RGGB; X-Trans uses the 6x6 map parsed above. */
     if (haveXtrans) {
         raw.pattern = CfaPattern::XTrans;
         for (int yy = 0; yy < 6; ++yy)
             for (int xx = 0; xx < 6; ++xx) raw.xtrans[yy][xx] = xt[yy][xx];
     } else {
-        raw.pattern = CfaPattern::RGGB;              // uncompressed Bayer Fuji (rare)
+        raw.pattern = CfaPattern::RGGB;
     }
 
-    /* Levels: Fuji 14-bit X-Trans -> white 16383, black ~1024. */
-    raw.white = 16383;
-    for (int i = 0; i < 4; ++i) raw.black[i] = 1024;
+    /* The compressed data block opens with a 16-byte header (signature 0x4953) at cfaOff +
+       StripOffset; uncompressed bodies store interleaved 16-bit samples instead. Route on it. */
+    const qint64 dataOffset = qint64(cfaOff) + stripOffset;
+    if (stripOffset && FujiCompressed::isCompressed(d, n, dataOffset)) {
+        static const int bayerRGGB[2][2] = {{0, 1}, {1, 2}};
+        QString derr;
+        int rw = 0, rh = 0;
+        if (!FujiCompressed::decode(d, n, dataOffset, raw.cfa, rw, rh, xt, bayerRGGB, derr)) {
+            errMsg = "RAF: " + derr;
+            return false;
+        }
+        raw.width = rw;
+        raw.height = rh;
+    } else {
+        /* Uncompressed RAF (16-bit samples): the data block is raw_width*raw_height*2 bytes plus
+           a small leading header inside the CFA block. */
+        const qint64 need = qint64(rawW) * rawH * 2;
+        if (qint64(cfaLen) < need) { errMsg = "RAF: unsupported Fuji compression."; return false; }
+        const qint64 hdr = qint64(cfaLen) - need;        // leading header inside the CFA block
+        const qint64 base = qint64(cfaOff) + hdr;
+        if (base + need > n) { errMsg = "RAF: CFA data out of range."; return false; }
 
-    /* White balance. Prefer the explicit 0x2FF0 tag; otherwise locate WB_GRBLevels [G,R,B] in
-       the 0xC000 RAFData block heuristically (first window where green is the reference and R,B
-       are boosted) -- its offset is model-specific. Stored green reference is small (~256-1024). */
+        raw.width = rawW;
+        raw.height = rawH;
+        raw.cfa.assign(size_t(rawW) * size_t(rawH), 0);
+        const uchar *p = d + base;                        // little-endian 16-bit samples
+        const size_t count = size_t(rawW) * size_t(rawH);
+        for (size_t i = 0; i < count; ++i)
+            raw.cfa[i] = uint16_t(p[2 * i] | (p[2 * i + 1] << 8));
+    }
+
+    /* Crop to the active area (RawImageCropTopLeft 0x0110 + RawImageCroppedSize 0x0111), dropping
+       the optical-black margins -- otherwise the dark border shows as a black edge (most visible on
+       Bayer GFX, which has ~190 black columns on the right). Preserve CFA phase: for Bayer the crop
+       origin must stay even (RGGB unchanged); for X-Trans the 6x6 map is rolled by the crop origin
+       so the demosaicer, which tiles from (0,0), still sees the right colours. */
+    if (cropW > 0 && cropH > 0 && cropTop >= 0 && cropLeft >= 0 &&
+        cropLeft + cropW <= raw.width && cropTop + cropH <= raw.height) {
+        int top = cropTop, left = cropLeft, cw = cropW, ch = cropH;
+        if (raw.pattern != CfaPattern::XTrans) {          // keep Bayer origin even
+            if (left & 1) { ++left; --cw; }
+            if (top & 1)  { ++top;  --ch; }
+        }
+        std::vector<uint16_t> cropped(size_t(cw) * size_t(ch));
+        for (int y = 0; y < ch; ++y) {
+            const uint16_t *src = raw.cfa.data() + size_t(top + y) * raw.width + left;
+            std::copy(src, src + cw, cropped.data() + size_t(y) * cw);
+        }
+        if (raw.pattern == CfaPattern::XTrans) {
+            uint8_t rolled[6][6];
+            for (int r = 0; r < 6; ++r)
+                for (int c = 0; c < 6; ++c) rolled[r][c] = xt[(top + r) % 6][(left + c) % 6];
+            for (int r = 0; r < 6; ++r)
+                for (int c = 0; c < 6; ++c) raw.xtrans[r][c] = rolled[r][c];
+        }
+        raw.cfa.swap(cropped);
+        raw.width = cw;
+        raw.height = ch;
+    }
+
+    /* White balance. Prefer the explicit 0x2FF0 tag; otherwise locate the as-shot WB_GRBLevels
+       [G,R,B] in the 0xC000 RAFData block. The block also holds WB presets (daylight, tungsten,
+       ...) that look just like a WB triple, so a plain first-match scan can land on, say, the
+       tungsten preset and over-saturate. The as-shot WB is instead written as a short run of
+       IDENTICAL [G,R,B] triples, so require the triple to repeat -- robust across bodies (matches
+       libraw within ~1% on GFX/X-T2/X-T50 without the per-model offset table libraw carries).
+       libraw refines this with two-record CCT averaging; the unaveraged triple is within a few
+       percent, which is visually negligible for the develop/preview path. G is the green
+       reference (smallest of the three; ~128..1024). */
     if (wbR && wbG && wbB) {
         raw.camMul[0] = wbR; raw.camMul[1] = wbG; raw.camMul[2] = wbB; raw.camMul[3] = wbG;
-    } else if (c000Off && c000Len >= 6) {
-        const qint64 lo = c000Off, hi = qMin<qint64>(c000Off + c000Len, n) - 6;
+    } else if (c000Off && c000Len >= 18) {
+        const qint64 lo = c000Off, hi = qMin<qint64>(c000Off + c000Len, n) - 18;
+        auto le = [&](qint64 o) { return d[o] | (d[o + 1] << 8); };
         for (qint64 o = lo; o <= hi; o += 2) {
-            const int g = d[o] | (d[o + 1] << 8);
-            const int rr = d[o + 2] | (d[o + 3] << 8);
-            const int bb = d[o + 4] | (d[o + 5] << 8);
-            if (g >= 256 && g <= 1024 && rr > g && rr < 4 * g && bb > g && bb < 4 * g) {
+            const int g = le(o), rr = le(o + 2), bb = le(o + 4);
+            /* The as-shot WB is written as three identical consecutive triples; a preset (e.g. a
+               daylight one near the block start) may repeat only twice, so require three to skip
+               it -- this uniquely selects the as-shot WB on GFX/X-T2/X-T50. */
+            const bool rep3 = g == le(o + 6) && rr == le(o + 8) && bb == le(o + 10) &&
+                              g == le(o + 12) && rr == le(o + 14) && bb == le(o + 16);
+            if (g >= 128 && g <= 1024 && rr > g && rr < 4 * g && bb > g && bb < 4 * g && rep3) {
                 raw.camMul[0] = rr; raw.camMul[1] = g; raw.camMul[2] = bb; raw.camMul[3] = g;
                 break;
             }

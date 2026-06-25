@@ -52,7 +52,7 @@ DISPLAY = {"PhaseOne": "Phase One", "DXO": "DxO"}
 # { LIBRAW_CAMERAMAKER_<Maker>, "model", t_black, t_maximum, { ints... } }
 ENTRY = re.compile(
     r'\{\s*LIBRAW_CAMERAMAKER_(\w+)\s*,\s*"([^"]*)"\s*,'
-    r'\s*[^,{]+,\s*[^,{]+,\s*\{\s*([-0-9,\s]+?)\s*\}',
+    r'\s*([^,{]+?)\s*,\s*([^,{]+?)\s*,\s*\{\s*([-0-9,\s]+?)\s*\}',
     re.DOTALL,
 )
 
@@ -64,15 +64,18 @@ HEADER = '''#include "ImageFormats/Raw/cameramatrix.h"
     libraw/dcraw's adobe_coeff table. This is a full port of that table for the mainstream
     still-camera makers (interchangeable-lens and compact raw cameras); phone, action-cam,
     cinema and bare-sensor entries are omitted, as are 4-colour (CMYG/RGBE) sensors Winnow's
-    Bayer pipeline cannot demosaic. Everything else RawColor needs -- white balance, black and
-    white levels, CFA phase -- is read from each file at decode time, not stored here.
+    Bayer pipeline cannot demosaic. Each row also carries libraw's adobe_coeff t_black and
+    t_maximum (the per-model black pedestal and sensor saturation), used as a fallback white/black
+    by decoders that otherwise only guess (e.g. Canon, whose saturation is below the bit-depth
+    max). White balance and CFA phase are still read from each file at decode time.
 
-    Lookup is a case-insensitive LONGEST-PREFIX match (xyzToCamForModel): the table key is the
-    maker-prefixed model, and the camera's model string matches the longest key that is a prefix
-    of it. This mirrors libraw's prefix scheme (one "D800" row covers D800/D800E; "ILCE-9" covers
-    ILCE-9/9M2) while being order-independent and picking the most specific entry, so a short key
-    like "Nikon D3" never shadows "Nikon D300". An unmatched model returns false and the caller
-    falls back to an identity matrix (approximate colour).
+    Lookup is a case-insensitive LONGEST-PREFIX match: the table key is the maker-prefixed model,
+    and the camera's model string matches the longest key that is a prefix of it. This mirrors
+    libraw's prefix scheme (one "D800" row covers D800/D800E; "ILCE-9" covers ILCE-9/9M2) while
+    being order-independent and picking the most specific entry, so a short key like "Nikon D3"
+    never shadows "Nikon D300". xyzToCamForModel returns the matrix; cameraLevelsForModel returns
+    black/maximum (0 = unset). An unmatched model returns false (caller falls back to identity /
+    its own defaults).
 
     GENERATED FILE -- do not edit by hand. Regenerate with tools/gen_cameramatrix.py against a
     newer libraw colordata.cpp; that rebuilds the whole table so new bodies are picked up.
@@ -82,6 +85,8 @@ namespace {
 
 struct Entry {
     const char *model;      // maker-prefixed key, matched case-insensitively as a prefix
+    int black;              // adobe_coeff t_black  (0 = unset; <0 = use only when file has none)
+    int maximum;            // adobe_coeff t_maximum (sensor saturation; 0 = unset)
     int c[9];               // XYZ(D65)->cam, row-major, * 10000
 };
 
@@ -90,9 +95,7 @@ const Entry kTable[] = {
 
 FOOTER = '''};
 
-} // namespace
-
-bool xyzToCamForModel(const QString &model, float m[3][3])
+const Entry *findEntry(const QString &model)
 {
     /* Case-insensitive longest-prefix match: the most specific key that prefixes the model wins. */
     const QString needle = model.trimmed();
@@ -105,9 +108,26 @@ bool xyzToCamForModel(const QString &model, float m[3][3])
             bestLen = l;
         }
     }
+    return best;
+}
+
+} // namespace
+
+bool xyzToCamForModel(const QString &model, float m[3][3])
+{
+    const Entry *best = findEntry(model);
     if (!best) return false;
     for (int i = 0; i < 9; ++i)
         m[i / 3][i % 3] = best->c[i] / 10000.0f;
+    return true;
+}
+
+bool cameraLevelsForModel(const QString &model, int &black, int &maximum)
+{
+    const Entry *best = findEntry(model);
+    if (!best) return false;
+    black = best->black;
+    maximum = best->maximum;
     return true;
 }
 '''
@@ -120,11 +140,18 @@ def parse(src):
     src = re.sub(r"/\*.*?\*/", "", src, flags=re.DOTALL)
     src = re.sub(r"//[^\n]*", "", src)
 
+    def num(s):
+        try:
+            return int(s.strip(), 0)             # handles decimal, 0x hex and negatives
+        except ValueError:
+            return 0                             # non-literal (expression) -> treat as unset
+
     seen = {}
     rows = []
     skipped_4colour = 0
     for m in ENTRY.finditer(src):
-        maker, model, ints = m.group(1), m.group(2).strip(), m.group(3)
+        maker, model = m.group(1), m.group(2).strip()
+        black, maximum, ints = num(m.group(3)), num(m.group(4)), m.group(5)
         if maker not in PREFIX:
             continue
         vals = [int(x) for x in ints.split(",") if x.strip()]
@@ -136,27 +163,28 @@ def parse(src):
             raise SystemExit(f"model needs escaping, refusing: {key!r}")
         kl = key.lower()
         if kl in seen:
-            if seen[kl] != vals:
-                sys.stderr.write(f"warning: conflicting matrices for {key!r}, keeping first\n")
+            if seen[kl] != (black, maximum, vals):
+                sys.stderr.write(f"warning: conflicting data for {key!r}, keeping first\n")
             continue
-        seen[kl] = vals
-        rows.append((maker, key, vals))
+        seen[kl] = (black, maximum, vals)
+        rows.append((maker, key, black, maximum, vals))
     return rows, skipped_4colour
 
 
 def emit(rows):
     out = [HEADER]
     by = {}
-    for maker, key, vals in rows:
-        by.setdefault(maker, []).append((key, vals))
+    for maker, key, black, maximum, vals in rows:
+        by.setdefault(maker, []).append((key, black, maximum, vals))
     for maker in ORDER:
         items = by.get(maker)
         if not items:
             continue
-        items.sort(key=lambda kv: kv[0].lower())
+        items.sort(key=lambda it: it[0].lower())
         out.append(f"    /* {DISPLAY.get(maker, maker)} ({len(items)}) */\n")
-        for key, vals in items:
-            out.append(f'    {{ "{key}", {{ {", ".join(str(v) for v in vals)} }} }},\n')
+        for key, black, maximum, vals in items:
+            m = ", ".join(str(v) for v in vals)
+            out.append(f'    {{ "{key}", {black}, {maximum}, {{ {m} }} }},\n')
         out.append("\n")
     for maker in by:
         if maker not in ORDER:

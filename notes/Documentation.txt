@@ -1858,10 +1858,14 @@ Architecture
     XYZ(D65)->camera matrix (DNG ColorMatrix / adobe_coeff convention), looked up by model in
     ImageFormats/Raw/cameramatrix.cpp -- a FULL port of libraw's adobe_coeff for the mainstream
     still-camera makers (776 models; phone/action/cinema/bare-sensor and 4-colour CMYG/RGBE
-    entries omitted). Lookup is a case-insensitive longest-prefix match, so one "Nikon D800" row
-    covers D800/D800E and "Sony ILCE-9" covers ILCE-9/9M2, while the most specific key wins (a
-    short "Nikon D3" never shadows "D300"). Regenerate from a newer libraw colordata.cpp when
-    bodies are added; a wrong matrix is a hue shift, not a crash, so verify visually. From it RawColor
+    entries omitted). Each row also carries adobe_coeff t_black/t_maximum, read via
+    cameraLevelsForModel() and used as a fallback black/white where a decoder would otherwise
+    guess (e.g. Canon, whose saturation is below the bit-depth max -- 7D Mark II clips at 13584,
+    not 16383). Lookup is a case-insensitive longest-prefix match, so one "Nikon D800" row covers
+    D800/D800E and "Sony ILCE-9" covers ILCE-9/9M2, while the most specific key wins (a short
+    "Nikon D3" never shadows "D300"). Regenerate from a newer libraw colordata.cpp via
+    tools/gen_cameramatrix.py when bodies are added; a wrong matrix is a hue shift, not a crash,
+    so verify visually. From it RawColor
     builds camRgb = xyzToCam.rgbToXyz, row-normalises so neutral maps to neutral, derives the
     neutral white balance preMul = 1/rowSum, and inverts to get camera->linear-sRGB (rgbCam).
     It applies the white balance (as-shot raw.camMul when the parser filled it, else preMul;
@@ -1896,17 +1900,38 @@ Architecture
     a big-endian header with offsets (92 = CFA metadata dir, 100/104 = CFA data offset/length) to
     an embedded JPEG, a CFA directory (tag 0x100 = raw H/W; tag 0x131 = the X-Trans 6x6 colour map,
     36 bytes REVERSED -> [yy][xx], 0=R 1=G 2=B; tag 0xC000 = RAFData block with the WB), and the
-    CFA data. Decodes UNCOMPRESSED RAF only: the CFA block is rawW*rawH*2 bytes plus a small leading
-    header (size = cfaLen - rawW*rawH*2, e.g. 2048), little-endian 16-bit samples. If cfaLen <
-    rawW*rawH*2 the RAF is Fuji-LOSSLESS-compressed -> returns false (embedded-JPEG fallback). WB:
-    the 0x2FF0 tag when present, else WB_GRBLevels [G,R,B] located heuristically in the 0xC000 block
-    (first window: green reference 256..1024, R/B boosted) -- matches libraw on X-T50/X-T2/GFX.
+    CFA data. The FujiIFD that prefixes the CFA block (cfaOff -> little-endian TIFF -> 0xf000 ->
+    FujiIFD) carries BitsPerSample (0xf003 -> white), per-CFA BlackLevel (0xf00a) and the
+    compressed-strip offset (0xf007). Two CFA encodings, routed on the 16-byte header at cfaOff +
+    0xf007 (signature 0x4953 = compressed):
+      - UNCOMPRESSED: the CFA block is rawW*rawH*2 bytes plus a small leading header (size =
+        cfaLen - rawW*rawH*2, e.g. 2048), little-endian 16-bit samples.
+      - COMPRESSED (lossless/lossy, most current bodies): FujiCompressed::decode
+        (ImageFormats/Fuji/fujicompressed.cpp) -- a faithful port of libraw's fuji_compressed.cpp
+        with all decoder state in a per-call Ctx struct (no globals, so concurrent cache-thread
+        decodes are safe). The 16-byte BE header gives lossless flag, raw_type (16=X-Trans,
+        0=Bayer), bits, geometry, block_size(0x300)/blocks_in_row/total_lines; each vertical
+        block is a gradient-predicted, adaptive Golomb-Rice bitstream decoded into the rawW*rawH
+        mosaic. Fuji Bayer bodies (GFX) are RGGB; X-Trans uses the 0x131 map.
+    Active-area crop: the decoded mosaic is the FULL sensor (incl. optical-black margins, ~190
+    black columns on the right of a GFX); crop to RawImageCropTopLeft (0x0110 = top,left) +
+    RawImageCroppedSize (0x0111 = H,W) to drop them, else they show as a black edge. Bayer keeps an
+    even origin (RGGB phase); X-Trans rolls the 6x6 map by (top%6,left%6) so the demosaicer, which
+    tiles from (0,0), still gets the right colours.
+    WB: the 0x2FF0 tag when present, else the as-shot WB_GRBLevels [G,R,B] in the 0xC000 RAFData
+    block. That block ALSO holds WB presets (daylight/tungsten/...) that look identical to a WB
+    triple, so a plain first-match scan can grab the tungsten preset and badly over-saturate; the
+    as-shot WB is instead written as THREE identical consecutive triples, so we require a 3x repeat
+    (G = green reference, smallest). Robust across bodies without libraw's per-model wb_section
+    offset table; within ~1% of libraw on GFX, ~3% on X-T2 (libraw additionally does two-record CCT
+    averaging -- visually negligible for the preview/develop path).
     Matrix by model (RAF header camera id at 0x1C -> "Fujifilm X-T50"). X-Trans is demosaiced by
     Demosaic::XTransWindow (5x5 same-colour average over the tiled 6x6 map; native channel exact --
     the X-Trans analogue of the bilinear Bayer path). VERIFIED byte-identical to libraw on the
-    uncompressed X-T50 RAF; renders to a coherent, correctly-coloured image. LIMITATIONS: Fuji
-    lossless compression (most current cameras, incl. the X-T2/GFX test files) not handled; black
-    1024 / white 16383 are X-Trans-14-bit defaults; the WB heuristic assumes a near-daylight shot.
+    uncompressed X-T50 and the compressed X-Trans (X-T2) and Bayer (GFX 50S II) RAFs. LIMITATIONS:
+    the lossy compressed path is ported but unexercised (no lossy test file); white level is the
+    FujiIFD BitsPerSample max (e.g. 16383 at 14-bit) not libraw's tighter per-body saturation
+    (e.g. GFX 15872), so highlights clip slightly late; WB is unaveraged (~3% on X-T2).
 
     PANASONIC RW2 (PanasonicRaw, ImageFormats/Panasonic/panasonic.cpp): RW2 is a TIFF-like file
     (magic 0x55) whose IFD0 carries Panasonic raw tags -- SensorWidth/Height (0x02/0x03),
@@ -2139,6 +2164,116 @@ Architecture
     Develop skeleton (identity), wired no-op through decode (DONE) + WorkingImage cache hook
     (DONE) -> 2 implement ops (exposure/WB/contrast/tone first; texture/dehaze/denoise later)
     -> 3 push RAW white balance/denoise pre-demosaic for quality -> 4 persistence + slider UI.
+    NOTE: the single-EditParams render above is the SCAFFOLD. The real editor generalises it
+    to a LAYER + MASK stack (next subsection); EditParams stays the per-layer unit, render()
+    grows to take an EditStack, and the Develop op math is unchanged.
+
+------------------------------------------------------------------------------------------
+Layer & masking model (planned)
+------------------------------------------------------------------------------------------
+
+    GOAL. Apply any edit either globally or through one or more masks, with the SAME edit set
+    shared across a layer's masks, performance critical. The user-facing concept is a LAYER;
+    it maps to exactly one internal object. This is the Lightroom MASKING model (a mask group
+    carrying one edit set), NOT a Photoshop pixel-layer stack -- that distinction is what keeps
+    it fast (see PERFORMANCE).
+
+    A LAYER = one EditParams (the existing struct, unchanged) + a COLLECTION of mask components
+    (radial + brush + linear ...) combined into a single per-pixel alpha + an opacity. The edit
+    set applies wherever that combined alpha > 0, so "the same edits across more than one mask"
+    falls out for free (the masks are unioned). A layer with NO mask components is GLOBAL
+    (applies everywhere) -- so "globally OR on masks" needs no special case. Raw denoise is the
+    one edit that is global-only (it lives in the raw pipeline, not maskable).
+
+    DATA MODEL (Develop/, planned):
+        struct MaskComponent {
+            enum Type { Linear, Radial, Brush };
+            enum Op   { Add, Subtract };          // union / cut-out WITHIN a layer
+            // Linear/Radial: parametric geometry in normalised 0..1 image coords (a few floats)
+            // Brush:         a list of stamps {x,y,radius,flow,hardness} -- NOT a bitmap
+            bool inverted; bool feather; float featherAmount;
+        };
+        struct Layer {
+            QString name;
+            EditParams params;                    // unchanged per-layer unit
+            float opacity = 1.0f;  bool visible = true;
+            std::vector<MaskComponent> mask;      // empty => global
+        };
+        struct EditStack {
+            EditParams base;                       // global edits (or model as layers[0])
+            std::vector<Layer> layers;
+            int version = 1;
+            bool isIdentity() const;
+        };
+
+    COMPOSITING (sequential-on-accumulator). Each layer develops the result of the stack BELOW
+    it, blended back by opacity x mask alpha:
+
+        acc = Develop(workingImage, base.params)                 // global foundation
+        for each layer i (bottom -> top):
+            a   = opacity_i * maskAlpha_i(x)                     // 0 where the layer doesn't act
+            acc = lerp(acc, Develop(acc, params_i), a)           // per pixel
+
+    This makes edits sequentially ADDITIVE (each layer sees the result below it) while keeping
+    opacity and masks well defined per pixel. Layer ORDER therefore matters and REORDER changes
+    the result -- that is correct and is surfaced in the UI. Base layer is always opacity 1, no
+    mask.
+
+    PERFORMANCE (the reason for the masking model over a pixel-layer stack). Ops are split by
+    cost and the cheap ones are FUSED:
+        • POINT ops -- exposure, contrast, highlights/shadows/whites/blacks, temp, tint, and
+          (for now) texture + dehaze -- are pure per-pixel functions. ALL layers' point ops run
+          in a SINGLE fused pass over the image: one read, one write, no per-layer intermediate
+          buffers; N layers cost N cheap evaluations in registers per pixel (bandwidth-bound).
+          This is the slider-drag hot path and is independent of layer/mask count.
+          (DECISION 2026-06-25: texture + dehaze are POINT ops for now to keep the fused engine
+          simple; revisit a SPATIAL local-contrast version later -- see RawDecode_ToDo #15.)
+        • SPATIAL ops -- denoise (and a future spatial texture/dehaze) -- need a neighbourhood,
+          so they cannot fuse: one full-image pass each, blended by the layer's mask, CACHED and
+          recomputed only when their own param or mask changes (never on a point-slider drag).
+
+    THREADING. The fused point pass is data-parallel WITHIN one render() (row-tiles via
+    cv::parallel_for_), NOT spread across the ImageDecoder worker pool. The decoder pool is
+    task-parallel ACROSS images (one decoder per image, to fill the browse cache); an
+    interactive edit is a SINGLE image, so the pool leaves it on one core -- only splitting that
+    one image's rows uses all cores. Caveat handled: render() can also be called from a decoder
+    worker (background re-fill of an edited image); to avoid N x N oversubscription the
+    background path runs flat (thread a `bool parallel` into render(), or scope
+    cv::setNumThreads(1) there). Assert cv::getNumThreads() > 1 once at startup so a backend-less
+    OpenCV build is caught rather than silently serial. (QtConcurrent over row-ranges is the
+    Qt-native fallback if we ever want parallelism independent of OpenCV's build.)
+
+    MASKS store GEOMETRY, never bitmaps. Parametric masks (linear/radial, ~6 floats) are
+    evaluated analytically inline in the fused loop -- zero storage, resolution-independent.
+    Brush masks are stored as the STROKE/STAMP LIST the user painted (not a rasterised alpha),
+    rasterised to a cached alpha buffer on load and after each edit: tiny sidecar, resolution-
+    independent (rasterise at proxy vs full res), and serialisable as text in the XMP sidecar. A
+    layer's combined alpha (the add/subtract union of its components) is rasterised ONCE and
+    cached, recomputed only when mask geometry changes -- never when sliders move.
+
+    CACHE TIERS (most already present):
+        1. pre-develop WorkingImage          -- Develop/workingimagecache.h (DONE)
+        2. per-layer combined mask alpha      -- recompute on geometry change only
+        3. spatial-op outputs (denoise ...)   -- recompute on their param/mask change only
+        4. fused point pass                   -- always re-run on a point-slider drag (cheap)
+    Plus a downscaled PROXY developed during an active drag, full-res async on release (the
+    existing "Still TODO" proxy item) -- sub-frame with the fused engine.
+
+    PERSISTENCE -- XMP SIDECAR, per image. Winnow already writes per-image .xmp sidecars
+    (Metadata/xmp.cpp Xmp::writeSidecar, DOM-based); the EditStack serialises there (parametric
+    geometry + brush strokes as numbers, Lightroom-style). This REPLACES the current global
+    QSettings "Develop/Layers/<name>/..." persistence (which is per-machine, not per-image -- the
+    scaffold's main correctness gap). EditStack is versioned for forward migration.
+
+    BUILD PHASING (supersedes the single-EditParams phasing above):
+        1. Fused point engine, global only: implement exposure + contrast for real, restructure
+           render() into the tiled parallel fused loop, wire the dock -> render() -> re-decode so
+           a slider visibly moves the image (proves the hot path + cache loop; RawDecode #15/#16).
+        2. Layer object + compositor: add EditStack, run the fused loop over layers with opacity;
+           convert the dock's "layers-as-alternatives" into a real stack (no masks yet).
+        3. Parametric masks (linear/radial): analytic inline + per-layer alpha cache.
+        4. XMP sidecar: serialise/deserialise EditStack; retire the QSettings per-layer store.
+        5. Brush masks (stroke list + rasterise) -> spatial ops with cache tier 3 -> proxy-on-drag.
 
 ------------------------------------------------------------------------------------------
 Develop dock (UI)
@@ -2156,6 +2291,11 @@ Develop dock (UI)
                  layer" combo. A layer is one set of adjustments; switching rebuilds the
                  Basic/Effects rows from that layer's saved values. Layers persist under
                  Settings "Develop/Layers/<name>/..." with "Develop/Layers/current".
+                 SCAFFOLD ONLY -- this is the "layers as ALTERNATIVES" model (only the selected
+                 layer is active, persisted per-machine in QSettings). It is superseded by the
+                 "Layer & masking model (planned)" subsection above: all layers active as a
+                 composited stack, the combo selects only which layer the sliders EDIT, opacity +
+                 masks per layer, persisted per-image in the XMP sidecar.
         Basic    Denoise (checkbox); Temp, Tint, Exposure, Contrast, Highlights, Shadows,
                  Whites, Blacks, Texture, Dehaze (sliders). Integer -100..100 except Exposure
                  (EV, -5.00..5.00). All default to 0 (identity).
