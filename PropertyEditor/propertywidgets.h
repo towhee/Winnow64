@@ -52,7 +52,8 @@ enum UserRole
     UR_IconList,                        // list of icons for comboBox
     UR_IsBtn,                           // button to run a secondary widget or help
     UR_BtnText,                         // button text
-    UR_Color                            // QColor for text in LineEdit, LabelEdit
+    UR_Color,                           // QColor for text in LineEdit, LabelEdit, Start slider
+    UR_Color1                           // QColor end in Slider
 };
 
 // reqd as can only pass QVariant convertable type through StandardItemModel

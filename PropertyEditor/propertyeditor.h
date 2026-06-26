@@ -65,9 +65,10 @@ public:
         int min;
         int max;
         int div;                        // used to convert slider int amount to double ie / 100
-        int step;                      // amount to adjust slider one pixel
+        int step;                       // amount to adjust slider one pixel
         int fixedWidth;                 // width of control (ie lineedit in slider)
-        QString color;
+        QString color;                  // slider start, LineEdit/LabelEdit text
+        QString color1;                 // slider end
         QStringList dropList;
         QStringList dropIconList;       // file location of icons
         QModelIndex parIdx;             // datamodel parent index for the item

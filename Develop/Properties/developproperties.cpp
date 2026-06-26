@@ -39,8 +39,8 @@ void DevelopProperties::initialize()
 
     /* Column widths. The dock minimum width is set in MW::createDevelopDock so the
        header - and + buttons are always visible. */
-    stringToFitCaptions = "===captions column===";
-    stringToFitValues   = "====values column====";
+    stringToFitCaptions = "=captions column=";
+    stringToFitValues   = "======values column======";
     resizeColumns();
 
     root = model->invisibleRootItem()->index();
@@ -232,9 +232,11 @@ void DevelopProperties::addHeader(const QString &name, const QString &caption, c
     addItem(i);
 }
 
-void DevelopProperties::addSlider(const QString &key, const QString &caption, const QString &tooltip,
-                                  QModelIndex parIdx, const QString &parentName,
-                                  int min, int max, int div, double defaultValue)
+void DevelopProperties::addSlider(const QString &key, const QString &caption,
+                                  const QString &tooltip, QModelIndex parIdx,
+                                  const QString &parentName, int min, int max,
+                                  int div, QString color, QString color1,
+                                  double defaultValue)
 {
     clearItemInfo(i);
     i.name = key;
@@ -255,6 +257,8 @@ void DevelopProperties::addSlider(const QString &key, const QString &caption, co
     i.max = max;
     i.div = div;
     i.step = 1;
+    i.color = color;
+    i.color1 = color1;
     i.fixedWidth = 50;
     addItem(i);
 }
@@ -292,19 +296,23 @@ void DevelopProperties::addBasic()
 
     addCheckbox("denoise", "Denoise", "Apply noise reduction.", parIdx, "BasicHeader", false);
 
+    QString silver = "#C0C0C0";
+    QString lightgray = "#999999";
+    QString darkgray = "#222222";
+
     /* Lightroom-like ranges. Most adjustments are integer sliders -100..100 (div 0).
        Exposure is a 2-decimal EV slider (-5.00..5.00, div 100). All default to 0
        (identity), matching EditParams. */
-    addSlider("temp",       "Temp",       "White balance temperature.",          parIdx, "BasicHeader", -100, 100, 0);
-    addSlider("tint",       "Tint",       "White balance tint (green/magenta).", parIdx, "BasicHeader", -100, 100, 0);
-    addSlider("exposure",   "Exposure",   "Overall exposure in stops (EV).",     parIdx, "BasicHeader", -500, 500, 100);
-    addSlider("contrast",   "Contrast",   "Global contrast.",                    parIdx, "BasicHeader", -100, 100, 0);
-    addSlider("highlights", "Highlights", "Recover or lift the highlights.",     parIdx, "BasicHeader", -100, 100, 0);
-    addSlider("shadows",    "Shadows",    "Recover or deepen the shadows.",      parIdx, "BasicHeader", -100, 100, 0);
-    addSlider("whites",     "Whites",     "Set the white point.",                parIdx, "BasicHeader", -100, 100, 0);
-    addSlider("blacks",     "Blacks",     "Set the black point.",                parIdx, "BasicHeader", -100, 100, 0);
-    addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0);
-    addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0);
+    addSlider("temp",       "Temp",       "White balance temperature.",          parIdx, "BasicHeader", -100, 100, 0,   "blue", "yellow");
+    addSlider("tint",       "Tint",       "White balance tint (green/magenta).", parIdx, "BasicHeader", -100, 100, 0,   "green", "magenta");
+    addSlider("exposure",   "Exposure",   "Overall exposure in stops (EV).",     parIdx, "BasicHeader", -500, 500, 100, "black", "white");
+    addSlider("contrast",   "Contrast",   "Global contrast.",                    parIdx, "BasicHeader", -100, 100, 0,   "#111111", "#aaaaaa");
+    addSlider("highlights", "Highlights", "Recover or lift the highlights.",     parIdx, "BasicHeader", -100, 100, 0,   "#111111", "#aaaaaa");
+    addSlider("shadows",    "Shadows",    "Recover or deepen the shadows.",      parIdx, "BasicHeader", -100, 100, 0,   "#111111", "#aaaaaa");
+    addSlider("whites",     "Whites",     "Set the white point.",                parIdx, "BasicHeader", -100, 100, 0,   "#111111", "#aaaaaa");
+    addSlider("blacks",     "Blacks",     "Set the black point.",                parIdx, "BasicHeader", -100, 100, 0,   darkgray, lightgray);
+    addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0,   "navy", "lightblue");
+    addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   "#3d0066", "#5f496e");
 }
 
 /* ----------------------------------------------------------------------------------------
