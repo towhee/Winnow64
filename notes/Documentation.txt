@@ -2320,8 +2320,9 @@ Layer & masking model (planned)
     scaffold's main correctness gap). EditStack is versioned for forward migration.
 
     BUILD PHASING (supersedes the single-EditParams phasing above):
-        1. [DONE] Fused point engine, global only: exposure + contrast implemented for real
-           (Develop::buildPointCoeffs + applyPointOps, develop.cpp); render() unchanged (still
+        1. [DONE] Fused point engine, global only: white balance (temp/tint), exposure and
+           contrast implemented for real (Develop::buildPointCoeffs + applyPointOps,
+           develop.cpp); render() unchanged (still
            one EditParams) but Develop now does a single parallel per-pixel pass. Wired live:
            DevelopProperties::paramsChanged -> MW::developParamsChange() pulls the cached
            pre-develop WorkingImage (WorkingImageCache), re-renders Develop + OutputTransform,
@@ -2330,7 +2331,12 @@ Layer & masking model (planned)
            (InputTransform). Orientation: a scene-referred (raw, sensor-native) render has EXIF
            orientation applied to match the loupe (mirrors ImageDecoder::rotate()). NOT yet
            persisted or written back to the image cache -- navigating away drops the preview
-           (phase 4). Exposure = 2^EV scene-linear gain. Contrast = a gentle slope (1 +
+           (phase 4). White balance = per-channel SCENE-LINEAR gain (temp lifts red / lowers
+           blue, tint lowers green toward magenta; sliders -100..100 normalised to +/-1, full
+           scale = +/-50% on a channel via kTempGain/kTintGain). WB and exposure are both linear
+           multiplies, so buildPointCoeffs folds them into one per-channel gain (PointCoeffs::
+           channelGain) applied before the perceptual contrast step. Exposure = 2^EV scene-linear
+           gain. Contrast = a gentle slope (1 +
            0.4*amount, so [0.6, 1.4]) about mid-grey applied in a PERCEPTUAL (~gamma 2.2)
            domain per channel, NOT in scene-linear -- a linear-space power-about-0.18 explodes
            highlights (they sit several stops above the pivot); encoding to gamma first puts

@@ -212,7 +212,7 @@ bool isPerfProbe = false;               // emit [PERF] Phase 1/2 load timing lin
 bool throttleFolderLoadMsg = true;     // throttle addFolder progress message to ~50ms (per-folder centralMsg repaint cost ~1.3s/1333 folders)
 // DecodeRawEngine decodeRawEngine = DecodeRawEngine::winnowDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
 DecodeRawEngine decodeRawEngine = DecodeRawEngine::appleDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
-bool isReportDevelopTime = true;       // log per-stage Develop re-render timings on slider drag (latency probe; off in production)
+bool isReportDevelopTime = false;       // log per-stage Develop re-render timings on slider drag (latency probe; off in production)
 std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)
 
 // status

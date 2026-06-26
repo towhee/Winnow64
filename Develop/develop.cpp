@@ -19,6 +19,15 @@ constexpr float kContrastSlopeRange = 0.4f;
 /* The contrast slider is an integer -100..100 control (see DevelopProperties::addBasic),
    so normalise to the -1..1 "amount" the slope math is designed around. */
 constexpr float kContrastFullScale  = 100.0f;
+
+/* White balance is a per-channel gain in SCENE-LINEAR (the physically correct domain: it
+   rescales the light before any tone curve). The temp/tint sliders are integer -100..100
+   controls, normalised to amount -1..1 by kWbFullScale. Temp warms by lifting red / lowering
+   blue (green fixed); tint shifts the green<->magenta axis on the green channel. The ranges
+   are deliberately gentle creative defaults (full slider = +/-50% on a channel). */
+constexpr float kWbFullScale = 100.0f;
+constexpr float kTempGain    = 0.5f;    // full warm: R *1.5, B *0.5
+constexpr float kTintGain    = 0.5f;    // full magenta: G *0.5
 }
 
 bool Develop::Apply(WorkingImage &img, const EditParams &p)
@@ -98,7 +107,16 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
     PointCoeffs c;
 
     /* Exposure: a scene-linear gain of 2^EV (a +1 EV slider doubles the linear value). */
-    if (p.exposure != 0.0f) c.exposureGain = std::exp2(p.exposure);
+    const float exposureGain = (p.exposure != 0.0f) ? std::exp2(p.exposure) : 1.0f;
+
+    /* White balance: per-channel scene-linear gains (see kTempGain/kTintGain). Folded with the
+       uniform exposure gain into a single per-channel factor -- both are linear multiplies, so
+       they commute and the fused pass applies one multiply per channel. */
+    const float t  = p.temp / kWbFullScale;     // -1..1
+    const float tn = p.tint / kWbFullScale;     // -1..1
+    c.channelGain[0] = (1.0f + kTempGain * t)  * exposureGain;   // R: up when warm
+    c.channelGain[1] = (1.0f - kTintGain * tn) * exposureGain;   // G: down toward magenta
+    c.channelGain[2] = (1.0f - kTempGain * t)  * exposureGain;   // B: down when warm
 
     /* Contrast: a slope about mid-grey applied in a PERCEPTUAL (gamma) domain, NOT in
        scene-linear -- a power curve in linear pivots around 0.18 and sends highlights, which
@@ -112,7 +130,8 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
 
     c.white = (img.white > 0.0f ? img.white : 1.0f);
 
-    c.active = (c.exposureGain != 1.0f) || (c.contrastSlope != 1.0f);
+    c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
+               (c.channelGain[2] != 1.0f) || (c.contrastSlope != 1.0f);
     return c;
 }
 
@@ -122,39 +141,46 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
     const int h = img.height;
     float *rgb = img.rgb.data();
 
-    const float gain  = c.exposureGain;
+    const float g0 = c.channelGain[0];
+    const float g1 = c.channelGain[1];
+    const float g2 = c.channelGain[2];
     const float slope = c.contrastSlope;
     const float white = c.white;
     const float invWhite = 1.0f / white;
-    const bool doExposure = (gain != 1.0f);
+    const bool doGain = (g0 != 1.0f) || (g1 != 1.0f) || (g2 != 1.0f);
     const bool doContrast = (slope != 1.0f);
 
     /* Contrast works in a perceptual (gamma) domain: encode the white-normalised value with
        kInvGamma, steepen/flatten about mid-grey (which lands at pivotGamma there), decode with
        kGamma. Constants are local so they fold into the inner loop. */
     const float pivotGamma = std::pow(0.18f, kInvGamma);
+    auto contrastCh = [=](float v) -> float {
+        /* Perceptual-domain slope about mid-grey; clamps keep pow() positive and crush blacks
+           gracefully rather than producing negatives. */
+        float n = v * invWhite;
+        if (n < 0.0f) n = 0.0f;
+        float s = std::pow(n, kInvGamma);
+        s = pivotGamma + (s - pivotGamma) * slope;
+        if (s < 0.0f) s = 0.0f;
+        return std::pow(s, kGamma) * white;
+    };
 
-    /* One fused per-pixel kernel over a band of rows. Point ops apply per channel (R,G,B
-       interleaved), so the inner loop walks w*3 floats. Exposure then contrast, matching the
-       fixed pipeline order. */
+    /* One fused per-pixel kernel over a band of rows. Point ops apply PER CHANNEL (R,G,B
+       interleaved), so the inner loop walks a pixel at a time: per-channel linear gain (white
+       balance + exposure) then the perceptual contrast slope, matching the fixed pipeline
+       order (WB/exposure in scene-linear, contrast in the gamma domain). */
     auto processRows = [=](int y0, int y1) {
         const int span = w * 3;
         for (int y = y0; y < y1; ++y) {
             float *row = rgb + static_cast<size_t>(y) * span;
-            for (int i = 0; i < span; ++i) {
-                float v = row[i];
-                if (doExposure) v *= gain;
+            for (int x = 0; x < w; ++x) {
+                float *px = row + static_cast<size_t>(x) * 3;
+                if (doGain) { px[0] *= g0; px[1] *= g1; px[2] *= g2; }
                 if (doContrast) {
-                    /* Perceptual-domain slope about mid-grey; clamps keep pow() positive and
-                       crush blacks gracefully rather than producing negatives. */
-                    float n = v * invWhite;
-                    if (n < 0.0f) n = 0.0f;
-                    float s = std::pow(n, kInvGamma);
-                    s = pivotGamma + (s - pivotGamma) * slope;
-                    if (s < 0.0f) s = 0.0f;
-                    v = std::pow(s, kGamma) * white;
+                    px[0] = contrastCh(px[0]);
+                    px[1] = contrastCh(px[1]);
+                    px[2] = contrastCh(px[2]);
                 }
-                row[i] = v;
             }
         }
     };
