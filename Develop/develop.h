@@ -19,8 +19,8 @@
         POINT ops (white balance, exposure, contrast, tone regions, texture, dehaze) are pure
         per-pixel functions, so they are FUSED into a single parallel pass: coefficients are
         precomputed once from EditParams, then applied per pixel in one loop over the image.
-        This is the slider-drag hot path. PHASE 1 implements exposure + contrast; the rest are
-        identity no-ops that slot into the same pass as they land.
+        This is the slider-drag hot path. PHASE 1 implements white balance (temp/tint), exposure
+        and contrast; the rest are identity no-ops that slot into the same pass as they land.
 */
 class Develop
 {
@@ -44,7 +44,10 @@ private:
        means no implemented point op would change a pixel, so the pass is skipped entirely. */
     struct PointCoeffs {
         bool  active        = false;
-        float exposureGain  = 1.0f;   // 2^EV
+        /* Per-channel scene-linear gain = white balance (temp/tint) folded with exposure (2^EV).
+           Both are pure linear multiplies, so they commute and combine into one per-channel
+           factor applied before the perceptual contrast step. {1,1,1} = identity. */
+        float channelGain[3] = {1.0f, 1.0f, 1.0f};
         float contrastSlope = 1.0f;   // perceptual-domain slope about mid-grey; 1 = identity
         float white         = 1.0f;   // linear value that maps to display white
     };
