@@ -1748,6 +1748,16 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::centralMsg, this, &MW::setCentralMessage);
     connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::developParamsChange);
 
+    /* Develop preview render timers (see MW::developParamsChange). The proxy timer coalesces a
+       burst of slider ticks into one screen-resolution render; the full-res timer fires once the
+       drag settles for the crisp final image. */
+    developProxyRenderTimer = new QTimer(this);
+    developProxyRenderTimer->setSingleShot(true);
+    connect(developProxyRenderTimer, &QTimer::timeout, this, [this]{ renderDevelopPreview(false); });
+    developFullResTimer = new QTimer(this);
+    developFullResTimer->setSingleShot(true);
+    connect(developFullResTimer, &QTimer::timeout, this, [this]{ renderDevelopPreview(true); });
+
     developDockTabText = "Develop";
     dockTextNames << developDockTabText;
     developDock = new DockWidget(developDockTabText, "DevelopDock", this);  // Develop

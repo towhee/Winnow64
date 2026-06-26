@@ -76,6 +76,12 @@ public:
        entry or any WorkingImage the caller owns. */
     static bool render(const WorkingImage &work, const EditParams &edit, QImage &out);
 
+    /* Area-downsampled copy of src whose longest edge is <= targetLongEdge (white /
+       sceneReferred carried through). Used to build the interactive develop PROXY so a slider
+       drag renders at screen resolution instead of full sensor resolution. Returns a copy of
+       src unchanged when it is already within targetLongEdge or targetLongEdge <= 0. */
+    static WorkingImage downscaled(const WorkingImage &src, int targetLongEdge);
+
     static qint64 bytesOf(const WorkingImage &work);
 
 private:

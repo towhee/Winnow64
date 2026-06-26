@@ -1,9 +1,11 @@
 #include "ImageFormats/Raw/rawformat.h"
 #include "ImageFormats/Raw/demosaic.h"
 #include "ImageFormats/Raw/rawcolor.h"
+#include "ImageFormats/Raw/applerawdecode.h"
 #include "Develop/workingimage.h"
 #include "Develop/develop.h"
 #include "Develop/outputtransform.h"
+#include "Main/global.h"
 #include <algorithm>
 
 /* Per-format sensor decoders register here as each UnpackCfa() lands (phase 2+). */
@@ -52,31 +54,50 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
 */
     const auto aborted = [abort]{ return abort && abort->loadAcquire(); };
 
-    RawImage raw;
-    if (!UnpackCfa(file, m, raw)) {
-        if (errMsg.isEmpty()) errMsg = "UnpackCfa failed.";
-        return false;
-    }
-    if (!raw.isValid()) {
-        errMsg = "UnpackCfa produced an invalid RawImage.";
-        return false;
-    }
-    if (aborted()) { errMsg = "Aborted"; return false; }
-
-    SubtractBlack(raw);
-
-    Demosaic demosaic;
-    std::vector<float> rgb;
-    if (!demosaic.Run(raw, rgb, Demosaic::Bilinear, abort)) {
-        errMsg = aborted() ? "Aborted" : "Demosaic failed (unsupported CFA pattern?).";
-        return false;
-    }
-
-    RawColor color;
     auto work = std::make_shared<WorkingImage>();
-    if (!color.ToWorking(raw, rgb, *work)) {
-        errMsg = "Colour conversion failed.";
-        return false;
+    bool decoded = false;
+
+#ifdef Q_OS_MAC
+    /* Engine A (macOS only): Core Image decodes file -> WorkingImage directly, bypassing the
+       in-house UnpackCfa/Demosaic/RawColor stages. A soft failure falls through to engine B
+       below, so a format Core Image can't read still decodes. Off-mac this branch is compiled
+       out and the in-house engine is always used. */
+    if (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine) {
+        QString aerr;
+        if (AppleRawDecode::Decode(file.fileName(), *work, aerr) && work->isValid()) {
+            decoded = true;
+        }
+        /* else: aerr is a soft failure -- fall through to the in-house engine. */
+    }
+#endif
+
+    if (!decoded) {
+        /* Engine B (portable): in-house sensor decode. */
+        RawImage raw;
+        if (!UnpackCfa(file, m, raw)) {
+            if (errMsg.isEmpty()) errMsg = "UnpackCfa failed.";
+            return false;
+        }
+        if (!raw.isValid()) {
+            errMsg = "UnpackCfa produced an invalid RawImage.";
+            return false;
+        }
+        if (aborted()) { errMsg = "Aborted"; return false; }
+
+        SubtractBlack(raw);
+
+        Demosaic demosaic;
+        std::vector<float> rgb;
+        if (!demosaic.Run(raw, rgb, Demosaic::Bilinear, abort)) {
+            errMsg = aborted() ? "Aborted" : "Demosaic failed (unsupported CFA pattern?).";
+            return false;
+        }
+
+        RawColor color;
+        if (!color.ToWorking(raw, rgb, *work)) {
+            errMsg = "Colour conversion failed.";
+            return false;
+        }
     }
     if (aborted()) { errMsg = "Aborted"; return false; }
 

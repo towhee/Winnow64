@@ -362,7 +362,8 @@ void ImageView::setDevelopPreview(const QImage &image)
     Replace the displayed pixmap with an already-rendered Develop preview. The image has the
     same dimensions as the current one (only the pixels differ), so we swap the pixmap and
     leave zoom / fit / scene rect untouched -- no refit, no scale reset. Called on the GUI
-    thread from MW::developParamsChange while the user drags a Develop slider.
+    thread from MW::renderDevelopPreview while the user drags a Develop slider; the interactive
+    proxy render is upscaled to these full dimensions by the caller so this contract holds.
 */
     if (G::isLogger) G::log("ImageView::setDevelopPreview");
     if (image.isNull()) return;

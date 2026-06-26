@@ -1,4 +1,9 @@
 #include "Develop/outputtransform.h"
+#include <QtConcurrent>
+#include <QThreadPool>
+#include <QFuture>
+#include <QVector>
+#include <QtGlobal>
 #include <cmath>
 
 namespace {
@@ -46,17 +51,47 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out)
     if (out.isNull()) return false;
 
     const bool tone = img.sceneReferred;    // baseline tone curve for RAW only
+    const float *rgb = img.rgb.data();
+    uchar *bits = out.bits();
+    const qsizetype bpl = out.bytesPerLine();
 
-    for (int y = 0; y < H; ++y) {
-        uchar *line = out.scanLine(y);
-        for (int x = 0; x < W; ++x) {
-            const size_t o = (static_cast<size_t>(y) * W + x) * 3;
-            for (int c = 0; c < 3; ++c) {
-                float v = img.rgb[o + c] * scale;
-                if (tone) v = BaselineTone(v);
-                line[x * 3 + c] = static_cast<uchar>(std::lround(SrgbGamma(v) * 255.0f));
+    /* Per-pixel float -> 8-bit with the (optional) baseline tone curve and the sRGB transfer.
+       This is the dominant slider-drag cost (per-pixel pow), so it is parallelised over row
+       ranges the same way Develop::applyPointOps is (QtConcurrent + the global pool). Rows are
+       disjoint, so the threads write into out's buffer without contention. */
+    auto processRows = [=](int y0, int y1) {
+        for (int y = y0; y < y1; ++y) {
+            uchar *line = bits + static_cast<qsizetype>(y) * bpl;
+            const size_t base = static_cast<size_t>(y) * W * 3;
+            for (int x = 0; x < W; ++x) {
+                const size_t o = base + static_cast<size_t>(x) * 3;
+                for (int c = 0; c < 3; ++c) {
+                    float v = rgb[o + c] * scale;
+                    if (tone) v = BaselineTone(v);
+                    line[x * 3 + c] = static_cast<uchar>(std::lround(SrgbGamma(v) * 255.0f));
+                }
             }
         }
+    };
+
+    const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
+    const int kMinRowsPerChunk = 64;
+    if (maxThreads == 1 || H < kMinRowsPerChunk * 2) {
+        processRows(0, H);
+        return true;
     }
+
+    const int chunks = qMin(maxThreads, (H + kMinRowsPerChunk - 1) / kMinRowsPerChunk);
+    const int rowsPerChunk = (H + chunks - 1) / chunks;
+    QVector<QFuture<void>> futures;
+    futures.reserve(chunks);
+    for (int k = 0; k < chunks; ++k) {
+        const int y0 = k * rowsPerChunk;
+        const int y1 = qMin(H, y0 + rowsPerChunk);
+        if (y0 >= y1) break;
+        futures.append(QtConcurrent::run(QThreadPool::globalInstance(),
+                                         [processRows, y0, y1]() { processRows(y0, y1); }));
+    }
+    for (QFuture<void> &f : futures) f.waitForFinished();
     return true;
 }

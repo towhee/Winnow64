@@ -42,6 +42,7 @@
 #include "Main/dockwidget.h"
 #include "Embellish/Properties/embelproperties.h"
 #include "Develop/Properties/developproperties.h"
+#include "Develop/workingimage.h"
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
 
@@ -541,9 +542,13 @@ private slots:
     void setColorClassForRow(int sfRow, QString colorClass);
 
     void setRotation(int degrees);
-    /* Re-render the current image through Develop when a Develop dock slider changes and push
-       the result straight to the loupe view (the WorkingImage-cache hot path). */
+    /* A Develop dock slider changed: schedule a coalesced proxy re-render now and (re)arm the
+       full-resolution settle render. Connected to DevelopProperties::paramsChanged. */
     void developParamsChange();
+    /* Re-render the current image through Develop + OutputTransform and push it to the loupe.
+       fullRes=false renders the screen-resolution proxy (interactive drag); fullRes=true
+       renders the full image (drag settled). The WorkingImage-cache hot path: no decode. */
+    void renderDevelopPreview(bool fullRes);
     void infoViewChanged(QStandardItem* item);
 //    void filterLastDay();
     void filterDockTabMousePress();
@@ -1165,6 +1170,16 @@ private:
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
     DevelopProperties *developProperties;
+    /* Develop slider-drag preview pipeline. A drag re-renders only the cheap Develop +
+       OutputTransform stage from the cached pre-develop WorkingImage. To stay interactive on
+       large RAW files the drag renders a screen-resolution PROXY (developProxy, cached per
+       path), coalesced so a fast drag collapses to one render; a settle timer then renders the
+       full-resolution image once the slider stops. See MW::developParamsChange /
+       renderDevelopPreview and notes/Documentation.txt "DEVELOP / IMAGE EDIT". */
+    std::shared_ptr<WorkingImage> developProxy;
+    QString developProxyPath;
+    QTimer *developProxyRenderTimer = nullptr;   // coalesces rapid ticks into one proxy render
+    QTimer *developFullResTimer = nullptr;       // fires once the drag settles (full-res render)
     Preferences *pref = nullptr;
     StressTest *stressTest;
     QFrame *embelFrame;

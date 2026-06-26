@@ -28,9 +28,16 @@ struct EditParams {
     float texture = 0.0f;
     float dehaze  = 0.0f;
 
-    /* Noise reduction. */
+    /* Noise reduction -- GLOBAL, applied in the raw decode pipeline (RawFormat / the Apple
+       engine) during demosaic, alongside start WB / black / white. Not maskable: these are
+       baked into WorkingImage before Develop runs. 0 = engine default. */
     float denoiseLuma   = 0.0f;
     float denoiseChroma = 0.0f;
+
+    /* Local (maskable) luminance NR -- a Develop SPATIAL op layered on TOP of the global
+       baseline, operating on the already-decoded WorkingImage (see Develop::Denoise and
+       notes/Documentation.txt "Layer & masking model"). 0 = off. Range 0..1. */
+    float localDenoiseLuma = 0.0f;
 
     int version = 1;
 
@@ -42,7 +49,8 @@ struct EditParams {
                highlights == 0.0f && shadows == 0.0f &&
                whites == 0.0f && blacks == 0.0f &&
                texture == 0.0f && dehaze == 0.0f &&
-               denoiseLuma == 0.0f && denoiseChroma == 0.0f;
+               denoiseLuma == 0.0f && denoiseChroma == 0.0f &&
+               localDenoiseLuma == 0.0f;
     }
 };
 

@@ -131,6 +131,32 @@ Startup Sequence
         • Add the rest of the metadata to datamodel (incl. thumbs as icons)
         • Update the image cache
 
+------------------------------------------------------------------------------------------
+Dock Window State (versioning)
+------------------------------------------------------------------------------------------
+
+    The QMainWindow dock layout is persisted with saveState()/restoreState() under QSettings
+    "WindowState" (MW::settings writes it; MW::showEvent restores it). Both calls pass
+    MW::winnowStateVersion.
+
+    RULE: BUMP winnowStateVersion whenever the SET of docks changes (a dock added or removed).
+    A WindowState saved by an older build does not contain the new dock, and restoring it
+    leaves that dock's group orphaned as empty "zombie" tab bars; the dock layout then never
+    converges and the tabbed docks flicker continuously. The version tag makes restoreState()
+    reject the stale state (returns false, changes nothing) so the layout built in
+    MW::createDocks/initialize() stands; the state is re-saved at the current version on exit,
+    so it self-heals after one launch (cost: a one-time reset of dock sizes/positions).
+
+    Because that fallback layout is what shows after a reject, keep it sane: do NOT tabify a
+    dock in one area with a dock in another area (e.g. the left-area metadataDock with the
+    right-area embelDock) -- a cross-area tabify drags both into one area and crams every dock
+    into a single tab group, where the raised tab oscillates against the squeezed central
+    widget. embel + develop tab together on the RIGHT (see initialize() tabifyDockWidget calls).
+
+    developDock (added with the raw editor) was the first dock to trip this: the pre-existing
+    saved state predated it AND, once saved during a flicker, the corrupt state perpetuated
+    itself across launches until the version bump discarded it.
+
 
 ******************************************************************************************
 
@@ -960,6 +986,16 @@ How to Test Icon Caching
                                   of once per folder, removing ~1.3 s of synchronous repaints
                                   on a 1333-folder load. Set false to restore the per-folder
                                   emit (the msg(ms) A/B baseline).
+
+      G::decodeRawEngine          which engine decodes RAW -> WorkingImage (demosaic + global
+                                  colour/baseline luma NR + start WB/black/white). A/B knob:
+                                    winnowDecodeRawEngine (default) = in-house decoder; portable,
+                                      the only engine on Windows and the canonical focus-stacking
+                                      engine (deterministic, CFA-level control).
+                                    appleDecodeRawEngine = macOS Core Image (CIRAWFilter); GPU
+                                      demosaic + NR, macOS-ONLY — callers fall back to winnow
+                                      off-mac. Both converge on WorkingImage, so Develop / local
+                                      luma NR / OutputTransform are engine-agnostic.
 
     Load performance findings (~9000-image / 1333-folder recursive tree, cold cache)
 
@@ -2182,8 +2218,22 @@ Layer & masking model (planned)
     (radial + brush + linear ...) combined into a single per-pixel alpha + an opacity. The edit
     set applies wherever that combined alpha > 0, so "the same edits across more than one mask"
     falls out for free (the masks are unioned). A layer with NO mask components is GLOBAL
-    (applies everywhere) -- so "globally OR on masks" needs no special case. Raw denoise is the
-    one edit that is global-only (it lives in the raw pipeline, not maskable).
+    (applies everywhere) -- so "globally OR on masks" needs no special case.
+
+    NOISE REDUCTION is split across the two stages (the decode pipeline and Develop):
+        • Colour NR + a BASELINE luminance NR are GLOBAL-ONLY. They live in the raw decode
+          pipeline, applied during demosaic alongside start WB / black / white, so they are
+          baked into WorkingImage before Develop runs and are not maskable. (Which engine does
+          the decode -- in-house vs macOS Core Image -- is selected by G::decodeRawEngine; both
+          converge on WorkingImage so this stays engine-agnostic.)
+        • LOCAL luminance NR is a MASKABLE Develop op: an ADDITIONAL luminance-only smoothing
+          applied on top of the baseline, per layer/mask. It is a SPATIAL op (below), operating
+          on the already-decoded WorkingImage -- so it needs no second decode and is independent
+          of which decode engine ran. It is therefore a PORTABLE OpenCV pass (mac + Windows),
+          not Core Image. Algorithm: ratio-preserving luma denoise -- Y = dot(rgb, lumaWeights);
+          Yd = edge-preserving denoise(Y, strength) (bilateral / guided, NLM as a slower
+          higher-quality option); rgb' = rgb * (Yd / Y) so only luminance changes and chroma
+          ratios are untouched.
 
     DATA MODEL (Develop/, planned):
         struct MaskComponent {
@@ -2228,9 +2278,12 @@ Layer & masking model (planned)
           This is the slider-drag hot path and is independent of layer/mask count.
           (DECISION 2026-06-25: texture + dehaze are POINT ops for now to keep the fused engine
           simple; revisit a SPATIAL local-contrast version later -- see RawDecode_ToDo #15.)
-        • SPATIAL ops -- denoise (and a future spatial texture/dehaze) -- need a neighbourhood,
-          so they cannot fuse: one full-image pass each, blended by the layer's mask, CACHED and
-          recomputed only when their own param or mask changes (never on a point-slider drag).
+        • SPATIAL ops -- local luminance NR (and a future spatial texture/dehaze) -- need a
+          neighbourhood, so they cannot fuse: one pass each, blended by the layer's mask, CACHED
+          and recomputed only when their own param or mask changes (never on a point-slider
+          drag). The pass output depends only on its strength param, not the mask VALUES, so it
+          is computed over the mask BOUNDING BOX + filter-radius halo (not the whole frame) and
+          the cached result is reused while only the blend re-reads the mask alpha.
 
     THREADING. The fused point pass is data-parallel WITHIN one render() (row-tiles), NOT
     spread across the ImageDecoder worker pool. The decoder pool is task-parallel ACROSS images
@@ -2255,7 +2308,7 @@ Layer & masking model (planned)
     CACHE TIERS (most already present):
         1. pre-develop WorkingImage          -- Develop/workingimagecache.h (DONE)
         2. per-layer combined mask alpha      -- recompute on geometry change only
-        3. spatial-op outputs (denoise ...)   -- recompute on their param/mask change only
+        3. spatial-op outputs (local luma NR ...) -- recompute on their param/mask change only
         4. fused point pass                   -- always re-run on a point-slider drag (cheap)
     Plus a downscaled PROXY developed during an active drag, full-res async on release (the
     existing "Still TODO" proxy item) -- sub-frame with the fused engine.
@@ -2281,8 +2334,31 @@ Layer & masking model (planned)
            0.4*amount, so [0.6, 1.4]) about mid-grey applied in a PERCEPTUAL (~gamma 2.2)
            domain per channel, NOT in scene-linear -- a linear-space power-about-0.18 explodes
            highlights (they sit several stops above the pivot); encoding to gamma first puts
-           mid-grey near 0.46 and steepens the tone curve evenly. Other sliders still identity
-           no-ops until they land.
+           mid-grey near 0.46 and steepens the tone curve evenly. The contrast slider is an
+           integer -100..100 control, so buildPointCoeffs NORMALISES it to amount -1..1
+           (p.contrast / 100) before forming the slope -- without this the first slider unit
+           already hits the [0.6,1.4] extreme and fine adjustment is impossible. Other sliders
+           still identity no-ops until they land.
+
+           SLIDER-DRAG LATENCY: the naive path re-rendered the full image synchronously on the
+           GUI thread every tick. For a 50MP RAW that measured ~520 ms/tick (probe below),
+           dominated by OutputTransform::ToImage (~420 ms) -- it was the only serial stage while
+           Develop::applyPointOps was already parallel. Three fixes (DevelopProperties::
+           paramsChanged -> MW::developParamsChange -> MW::renderDevelopPreview):
+             - PROXY: a drag renders a screen-resolution proxy WorkingImage
+               (WorkingImageCache::downscaled, INTER_AREA in scene-linear, sized ~1.5x the loupe
+               viewport, cached per path in MW::developProxy) and FAST-upscales the result to the
+               displayed dimensions so ImageView::setDevelopPreview's "same dimensions" contract
+               holds (zoom/fit/scene untouched). Raw orientation is applied while the proxy is
+               still small (cheap). ~6-20x less pixel work per tick.
+             - PARALLEL ToImage: OutputTransform::ToImage now splits rows across the global pool
+               (same idiom as applyPointOps), cutting the per-pixel pow cost ~Ncore.
+             - COALESCE + SETTLE: developParamsChange does no rendering itself -- it arms a 0ms
+               single-shot (developProxyRenderTimer) that collapses a burst of ticks into one
+               proxy render, and (re)arms developFullResTimer (~160 ms) so the crisp FULL-res
+               render runs once the slider stops.
+           PROBE: set G::isReportDevelopTime to log [DevTime] lines (proxy/full, dims, proxyBuild
+           / render / rotate+scale / preview ms). Off in production.
         2. Layer object + compositor: add EditStack, run the fused loop over layers with opacity;
            convert the dock's "layers-as-alternatives" into a real stack (no masks yet).
         3. Parametric masks (linear/radial): analytic inline + per-layer alpha cache.

@@ -4,7 +4,10 @@
 #include <QFuture>
 #include <QVector>
 #include <QtGlobal>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <cmath>
+#include <vector>
 
 namespace {
 /* Contrast is applied in a perceptual (~sRGB gamma) domain so the slope steepens the tone
@@ -13,6 +16,9 @@ namespace {
 constexpr float kGamma             = 2.2f;
 constexpr float kInvGamma          = 1.0f / kGamma;
 constexpr float kContrastSlopeRange = 0.4f;
+/* The contrast slider is an integer -100..100 control (see DevelopProperties::addBasic),
+   so normalise to the -1..1 "amount" the slope math is designed around. */
+constexpr float kContrastFullScale  = 100.0f;
 }
 
 bool Develop::Apply(WorkingImage &img, const EditParams &p)
@@ -29,9 +35,63 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p)
     return true;
 }
 
-/* SCAFFOLD: spatial op, deferred. Real implementation operates on a neighbourhood and lands
-   in a later phase (for RAW, ideally on the CFA mosaic inside the raw pipeline). */
-void Develop::Denoise(WorkingImage &img, const EditParams &p) { Q_UNUSED(img) Q_UNUSED(p) }
+/* Local luminance noise reduction (spatial op). Ratio-preserving: edge-preserving smoothing of
+   luminance only, applied as a per-pixel scale of RGB so hue/chroma ratios are untouched. The
+   smoothing runs in the perceptual (gamma) domain -- noise is more uniform there, and it matches
+   the contrast op's domain -- while the final ratio is formed in scene-linear. Portable (OpenCV,
+   mac + Windows), independent of which engine decoded the image.
+
+   GLOBAL (no-mask) case: smooths the whole frame. When the layer compositor lands, it calls this
+   per layer bounded to the mask bbox and blends the result by the layer's alpha (see
+   notes/Documentation.txt "Layer & masking model"); the cached output then only re-blends, not
+   re-computes, on a point-slider drag. */
+void Develop::Denoise(WorkingImage &img, const EditParams &p)
+{
+    const float amt = p.localDenoiseLuma;
+    if (amt <= 0.0f) return;
+
+    const int w = img.width;
+    const int h = img.height;
+    const size_t n = static_cast<size_t>(w) * static_cast<size_t>(h);
+    float *rgb = img.rgb.data();
+    const float white = (img.white > 0.0f) ? img.white : 1.0f;
+    const float invWhite = 1.0f / white;
+
+    /* Perceptual, white-normalised luminance (Rec.709 linear-luma weights). Ylin keeps the
+       scene-linear luma so the post-smoothing ratio can be formed in linear. */
+    cv::Mat Yp(h, w, CV_32FC1);
+    std::vector<float> Ylin(n);
+    float *yp = Yp.ptr<float>();
+    for (size_t i = 0; i < n; ++i) {
+        const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+        const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+        Ylin[i] = Y;
+        float nrm = Y * invWhite;
+        if (nrm < 0.0f) nrm = 0.0f;
+        yp[i] = std::pow(nrm, kInvGamma);
+    }
+
+    /* Edge-preserving smoothing on luminance only; strength scales the range/space sigmas.
+       bilateralFilter parallelises internally on OpenCV's own pool (see the threading note in
+       Documentation.txt). d = 0 derives the kernel diameter from sigmaSpace. */
+    const double sigmaColor = 0.03 + 0.09 * static_cast<double>(amt);
+    const double sigmaSpace = 2.0 + 4.0 * static_cast<double>(amt);
+    cv::Mat Ypd;
+    cv::bilateralFilter(Yp, Ypd, 0, sigmaColor, sigmaSpace);
+
+    /* Scale RGB by the linear luminance ratio, preserving chroma. */
+    const float *ypd = Ypd.ptr<float>();
+    constexpr float kEps = 1e-6f;
+    for (size_t i = 0; i < n; ++i) {
+        const float Y = Ylin[i];
+        if (Y <= kEps) continue;                          // black pixel: nothing to scale
+        const float Yd = std::pow(ypd[i], kGamma) * white;   // perceptual -> linear
+        const float factor = Yd / Y;
+        rgb[i * 3 + 0] *= factor;
+        rgb[i * 3 + 1] *= factor;
+        rgb[i * 3 + 2] *= factor;
+    }
+}
 
 Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const WorkingImage &img)
 {
@@ -44,9 +104,11 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
        scene-linear -- a power curve in linear pivots around 0.18 and sends highlights, which
        sit several stops above the pivot, far too high (it "explodes" the highlights). Encoding
        to ~gamma first puts mid-grey near 0.46 and the slope steepens/flattens the tone curve
-       evenly, like a normal contrast control. The slope is deliberately gentle: amount -1..1
-       maps to 1 + 0.4*amount -> [0.6, 1.4] (kContrastSlopeRange). >1 steepens, <1 flattens. */
-    if (p.contrast != 0.0f) c.contrastSlope = 1.0f + kContrastSlopeRange * p.contrast;
+       evenly, like a normal contrast control. The slope is deliberately gentle: the slider's
+       -100..100 value is normalised to amount -1..1, which maps to 1 + 0.4*amount -> [0.6, 1.4]
+       (kContrastSlopeRange). >1 steepens, <1 flattens. */
+    if (p.contrast != 0.0f)
+        c.contrastSlope = 1.0f + kContrastSlopeRange * (p.contrast / kContrastFullScale);
 
     c.white = (img.white > 0.0f ? img.white : 1.0f);
 
