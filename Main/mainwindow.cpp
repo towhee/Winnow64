@@ -983,24 +983,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
-    /* PROBE (temporary, dock-flicker diagnosis): watch the tabified dock tab bar to see what
-       it does during the sustained flicker -- geometry oscillation, tab-selection churn, or a
-       pure repaint loop. */
-    if (QTabBar *tb = qobject_cast<QTabBar *>(obj)) {
-        const QEvent::Type t = event->type();
-        if (t == QEvent::Resize || t == QEvent::Move || t == QEvent::LayoutRequest ||
-            t == QEvent::Show || t == QEvent::Hide) {
-            qDebug() << "PROBE TabBar" << t << "geom =" << tb->geometry()
-                     << "count =" << tb->count() << "current =" << tb->currentIndex();
-        }
-        else if (t == QEvent::Paint) {
-            static int paintN = 0;
-            if (++paintN % 50 == 0)
-                qDebug() << "PROBE TabBar Paint x50 (n =" << paintN
-                         << ") current =" << tb->currentIndex() << "geom =" << tb->geometry();
-        }
-    }
-
     /* TOOLTIP POSITION
 
        Show every widget tooltip ourselves via showDockToolTip so the gap below
@@ -4963,25 +4945,44 @@ void MW::setRotation(int degrees)
 void MW::developParamsChange()
 {
 /*
-    A Develop dock slider changed (DevelopProperties::paramsChanged). Re-render the current
-    image through Develop + OutputTransform and push the result straight to the loupe view,
-    using the WorkingImage-cache hot path: keep the cached pre-develop scene-linear image and
-    re-run only the cheap develop stage -- no decode, no demosaic, no file read.
+    A Develop dock slider changed (DevelopProperties::paramsChanged). A fast drag fires this
+    many times per second, and each re-render is a real cost, so we COALESCE: render the
+    screen-resolution proxy at most once per event-loop turn (the 0ms single-shot collapses a
+    burst of ticks into one render) and (re)arm a settle timer so the crisp full-resolution
+    render runs only once the slider stops moving. The heavy lifting is in renderDevelopPreview.
+*/
+    if (G::isLogger) G::log("MW::developParamsChange");
+
+    constexpr int kDevelopSettleMs = 160;   // full-res render after the drag pauses this long
+    if (!developProxyRenderTimer->isActive()) developProxyRenderTimer->start(0);
+    developFullResTimer->start(kDevelopSettleMs);
+}
+
+void MW::renderDevelopPreview(bool fullRes)
+{
+/*
+    Re-render the current image through Develop + OutputTransform and push the result straight
+    to the loupe, using the WorkingImage-cache hot path: keep the cached pre-develop scene-
+    linear image and re-run only the cheap develop stage -- no decode, no demosaic, no file read.
+
+    fullRes=false (interactive drag) renders a screen-resolution PROXY (cached per path) and
+    upscales it to the displayed dimensions, so a 50MP RAW costs a few MP of work per tick.
+    fullRes=true (drag settled) renders the full image once for a crisp result.
 
     PHASE 1 (Develop ops): this is a live, in-session preview. The edit is NOT yet persisted
     or written back to the image cache, so navigating away and back shows the un-developed
     image. Per-image persistence (sidecar) and the layer/mask stack land in later phases.
     See notes/Documentation.txt "Layer & masking model".
 */
-    if (G::isLogger) G::log("MW::developParamsChange");
+    if (G::isLogger) G::log("MW::renderDevelopPreview");
 
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
 
     const EditParams edit = developProperties->editParams();
 
-    /* Reuse the cached pre-develop WorkingImage. RAW always caches it at decode; non-raw
-       caches it the first time it is developed. */
+    /* Reuse the cached pre-develop (full-res) WorkingImage. RAW always caches it at decode;
+       non-raw caches it the first time it is developed. */
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) {
         /* Miss (first edit of a non-raw image, or evicted): build the pre-develop
@@ -4996,15 +4997,37 @@ void MW::developParamsChange()
         work = built;
     }
 
+    QElapsedTimer probe;
+    if (G::isReportDevelopTime) probe.start();
+    qint64 tProxy = 0;
+
+    /* Pick the render source: full-res for the settled render, else the screen-resolution proxy
+       (built once per image, sized a little over the loupe viewport so a modest zoom still
+       looks reasonable mid-drag). */
+    const WorkingImage *srcImg = work.get();
+    if (!fullRes) {
+        if (developProxyPath != fPath || !developProxy) {
+            const QSize vp = imageView->viewport()->size();
+            const int target = qMax(800, qMax(vp.width(), vp.height()) * 3 / 2);
+            developProxy = std::make_shared<WorkingImage>(
+                WorkingImageCache::downscaled(*work, target));
+            developProxyPath = fPath;
+            if (G::isReportDevelopTime) tProxy = probe.restart();
+        }
+        srcImg = developProxy.get();
+    }
+
     QImage out;
-    if (!WorkingImageCache::render(*work, edit, out)) return;
+    if (!WorkingImageCache::render(*srcImg, edit, out)) return;
+    const qint64 tRender = G::isReportDevelopTime ? probe.restart() : 0;
 
     /* Orientation. The RAW decoder hands back a SENSOR-NATIVE (unrotated) WorkingImage and
        ImageDecoder::run() rotates the display image afterwards via rotate(); a non-raw work is
-       built here from the already-rotated display image. So a scene-referred (raw) render is
+       built from the already-rotated display image. So a scene-referred (raw) render is
        unrotated and must have the EXIF orientation applied to match the loupe, while a
        display-referred render is already oriented. (PHASE 1: mirrors ImageDecoder::rotate();
        fold into a shared helper when the edit pipeline is unified.) */
+    int degrees = 0;
     if (work->sceneReferred) {
         const int sfRow = dm->proxyRowFromPath(fPath);
         if (sfRow >= 0 && sfRow < dm->sf->rowCount()) {
@@ -5012,21 +5035,42 @@ void MW::developParamsChange()
                 dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
             const int rotationDegrees =
                 dm->sf->index(sfRow, G::RotationDegreesColumn).data().toInt();
-            int degrees = 0;
             if (orientation == 3)      degrees = rotationDegrees + 180;
             else if (orientation == 6) degrees = rotationDegrees + 90;
             else if (orientation == 8) degrees = rotationDegrees + 270;
             else                       degrees = rotationDegrees;
             if (degrees > 360) degrees -= 360;
-            if (degrees != 0) {
-                QTransform trans;
-                trans.rotate(degrees);
-                out = out.transformed(trans, Qt::SmoothTransformation);
-            }
         }
     }
+    if (degrees != 0) {
+        QTransform trans;
+        trans.rotate(degrees);
+        /* The proxy is rotated while still small (cheap); the full-res path uses a smooth
+           rotate for the final image. */
+        out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
+    }
+
+    /* Proxy: upscale to the displayed (oriented full-res) dimensions so
+       ImageView::setDevelopPreview can swap the pixmap without disturbing zoom/fit/scene (its
+       contract: identical dimensions). FastTransformation keeps the drag cheap; the settle
+       render replaces this with the crisp full-resolution image. */
+    if (!fullRes) {
+        int fw = work->width, fh = work->height;
+        if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+        if (out.width() != fw || out.height() != fh)
+            out = out.scaled(fw, fh, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    }
+    const qint64 tPost = G::isReportDevelopTime ? probe.restart() : 0;
 
     imageView->setDevelopPreview(out);
+
+    if (G::isReportDevelopTime) {
+        qDebug().noquote() << "[DevTime]" << (fullRes ? "full " : "proxy")
+                           << srcImg->width << "x" << srcImg->height
+                           << " proxyBuild" << tProxy << " render" << tRender
+                           << " rotate+scale" << tPost
+                           << " preview" << probe.restart() << "ms";
+    }
 }
 
 bool MW::isValidPath(QString &path)

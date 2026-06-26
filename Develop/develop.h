@@ -32,7 +32,12 @@ public:
     bool Apply(WorkingImage &img, const EditParams &p);
 
 private:
-    /* Spatial op: owns a full-image pass. Deferred -- no-op. */
+    /* Spatial op: local (maskable) luminance NR, owns a full-image pass. Ratio-preserving --
+       smooths luminance only (chroma untouched), driven by EditParams::localDenoiseLuma. Runs
+       BEFORE the fused point pass (fixed pipeline order). This is the GLOBAL (no-mask) case; the
+       planned layer compositor calls it per layer, bounded to the mask bbox and blended by the
+       layer's alpha (see notes/Documentation.txt "Layer & masking model"). No-op when the
+       strength is 0. */
     void Denoise(WorkingImage &img, const EditParams &p);
 
     /* Precomputed once per Apply(); the fused point pass reads only these. active == false

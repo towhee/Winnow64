@@ -24,27 +24,6 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     expand(model->index(_basic, 0));
     updateHiddenRows(QModelIndex());
     setMouseTracking(true);
-
-    // PROBE (temporary, dock-flicker diagnosis): does a scrollbar range keep changing (i.e.
-    // a scrollbar toggling on/off, the classic scroll-area flicker)?
-    connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, [](int min, int max){
-        qDebug() << "PROBE Develop Vscroll rangeChanged" << min << max;
-    });
-    connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this, [](int min, int max){
-        qDebug() << "PROBE Develop Hscroll rangeChanged" << min << max;
-    });
-}
-
-void DevelopProperties::resizeEvent(QResizeEvent *event)
-{
-    // PROBE (temporary, dock-flicker diagnosis): log the widget + viewport size and which
-    // scrollbars are visible on every resize. A rapidly repeating two-value oscillation here
-    // (esp. with a scrollbar flipping visible/hidden) is the flicker source.
-    qDebug() << "PROBE Develop resizeEvent  size =" << size()
-             << " viewport =" << viewport()->size()
-             << " Vscroll vis =" << verticalScrollBar()->isVisible()
-             << " Hscroll vis =" << horizontalScrollBar()->isVisible();
-    PropertyEditor::resizeEvent(event);
 }
 
 void DevelopProperties::initialize()

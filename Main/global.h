@@ -205,6 +205,20 @@ Q_NAMESPACE
     enum class FolderOp : quint8 { Add, Remove, Toggle };
     Q_ENUM_NS(FolderOp)    // optional, enables nice string conversion via QMetaEnum
 
+    /* Which engine decodes a RAW file to the shared WorkingImage (demosaic + global colour /
+       baseline luminance NR + start WB / black / white). Both converge on WorkingImage, so
+       everything downstream (Develop, masked luminance NR, OutputTransform) is engine-agnostic.
+
+         winnowDecodeRawEngine  in-house decoder (RawFormat::UnpackCfa -> Demosaic -> RawColor).
+                                The portable baseline -- the ONLY engine on Windows, and the
+                                canonical engine for focus stacking (cross-platform-deterministic,
+                                CFA-level control).
+         appleDecodeRawEngine   macOS Core Image (CIRAWFilter) front-end. High-quality GPU
+                                demosaic + NR. macOS-ONLY: callers MUST fall back to
+                                winnowDecodeRawEngine on non-mac (see G::decodeRawEngine). */
+    enum class DecodeRawEngine : quint8 { winnowDecodeRawEngine, appleDecodeRawEngine };
+    Q_ENUM_NS(DecodeRawEngine)
+
     // Generic stringify function
     template <typename Enum>
     inline QString enumClassToString(Enum value)
@@ -389,6 +403,16 @@ Q_NAMESPACE
        does a synchronous repaint(); firing it once per folder cost ~1.3 s over a 1333-folder
        recursive tree. Set false to restore the per-folder emit (A/B baseline). */
     extern bool throttleFolderLoadMsg;
+
+    /* Selects the RAW decode engine (see DecodeRawEngine). Defaults to the portable in-house
+       engine; appleDecodeRawEngine is honoured only on macOS and otherwise falls back to
+       winnowDecodeRawEngine. A/B knob for the Core Image vs in-house decode paths. */
+    extern DecodeRawEngine decodeRawEngine;
+
+    /* Develop slider-drag latency probe. When true, MW::developParamsChange logs per-stage
+       timings (copy / Apply / ToImage / rotate / preview) for each re-render so the dominant
+       cost can be measured before optimising. Default false. */
+    extern bool isReportDevelopTime;
 
     /* Phase-2 probe: count of Thumb::loadThumb 100ms retry waits (file-open contention with
        ImageCache) across all reader threads. Reset in MetaRead::initialize, reported in

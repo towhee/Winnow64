@@ -2,6 +2,9 @@
 #include "Develop/develop.h"
 #include "Develop/outputtransform.h"
 #include <QImage>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <algorithm>
 
 WorkingImageCache &WorkingImageCache::instance()
 {
@@ -153,4 +156,30 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
     Develop develop;
     develop.Apply(developed, edit);
     return output.ToImage(developed, out);
+}
+
+WorkingImage WorkingImageCache::downscaled(const WorkingImage &src, int targetLongEdge)
+{
+    if (!src.isValid() || targetLongEdge <= 0) return src;
+
+    const int longEdge = std::max(src.width, src.height);
+    if (longEdge <= targetLongEdge) return src;   // already small enough
+
+    const double f = static_cast<double>(targetLongEdge) / longEdge;
+    const int dw = std::max(1, static_cast<int>(src.width  * f + 0.5));
+    const int dh = std::max(1, static_cast<int>(src.height * f + 0.5));
+
+    /* INTER_AREA is the correct (anti-aliasing) filter for shrinking. The WorkingImage buffer
+       is interleaved float RGB, so it maps directly onto a CV_32FC3 view with no copy. */
+    const cv::Mat srcMat(src.height, src.width, CV_32FC3,
+                         const_cast<float *>(src.rgb.data()));
+    WorkingImage dst;
+    dst.width = dw;
+    dst.height = dh;
+    dst.white = src.white;
+    dst.sceneReferred = src.sceneReferred;
+    dst.rgb.resize(static_cast<size_t>(dw) * static_cast<size_t>(dh) * 3);
+    cv::Mat dstMat(dh, dw, CV_32FC3, dst.rgb.data());
+    cv::resize(srcMat, dstMat, cv::Size(dw, dh), 0, 0, cv::INTER_AREA);
+    return dst;
 }

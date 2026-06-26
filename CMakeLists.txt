@@ -434,6 +434,7 @@ set(WINNOW_HEADERS
     ImageFormats/Olympus/olympus.h
     ImageFormats/Panasonic/panasonic.h
     ImageFormats/Png/png.h
+    ImageFormats/Raw/applerawdecode.h
     ImageFormats/Raw/cameramatrix.h
     ImageFormats/Raw/demosaic.h
     ImageFormats/Raw/losslessjpeg.h
@@ -592,6 +593,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/notes PREFIX "notes" FILES ${WINNO
 if(APPLE)
     list(APPEND WINNOW_SOURCES
         Cache/framedecoder_mac.mm
+        ImageFormats/Raw/applerawdecode.mm
         Image/thumb_mac.mm
         ImageFormats/Jpeg/jpeg2.cpp
         ImageFormats/Jpeg/jpegturbo.cpp
@@ -698,6 +700,7 @@ if(APPLE)
         "-framework Foundation"
         "-framework ImageIO"
         "-framework CoreGraphics"
+        "-framework CoreImage"
         "-framework AVFoundation"
         "-framework CoreMedia"
     )
