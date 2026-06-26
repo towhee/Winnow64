@@ -2320,9 +2320,9 @@ Layer & masking model (planned)
     scaffold's main correctness gap). EditStack is versioned for forward migration.
 
     BUILD PHASING (supersedes the single-EditParams phasing above):
-        1. [DONE] Fused point engine, global only: white balance (temp/tint), exposure and
-           contrast implemented for real (Develop::buildPointCoeffs + applyPointOps,
-           develop.cpp); render() unchanged (still
+        1. [DONE] Fused point engine, global only: white balance (temp/tint), exposure, contrast
+           and the tone regions (highlights/shadows/whites/blacks) implemented for real
+           (Develop::buildPointCoeffs + applyPointOps, develop.cpp); render() unchanged (still
            one EditParams) but Develop now does a single parallel per-pixel pass. Wired live:
            DevelopProperties::paramsChanged -> MW::developParamsChange() pulls the cached
            pre-develop WorkingImage (WorkingImageCache), re-renders Develop + OutputTransform,
@@ -2335,16 +2335,38 @@ Layer & masking model (planned)
            blue, tint lowers green toward magenta; sliders -100..100 normalised to +/-1, full
            scale = +/-50% on a channel via kTempGain/kTintGain). WB and exposure are both linear
            multiplies, so buildPointCoeffs folds them into one per-channel gain (PointCoeffs::
-           channelGain) applied before the perceptual contrast step. Exposure = 2^EV scene-linear
-           gain. Contrast = a gentle slope (1 +
-           0.4*amount, so [0.6, 1.4]) about mid-grey applied in a PERCEPTUAL (~gamma 2.2)
-           domain per channel, NOT in scene-linear -- a linear-space power-about-0.18 explodes
-           highlights (they sit several stops above the pivot); encoding to gamma first puts
-           mid-grey near 0.46 and steepens the tone curve evenly. The contrast slider is an
-           integer -100..100 control, so buildPointCoeffs NORMALISES it to amount -1..1
-           (p.contrast / 100) before forming the slope -- without this the first slider unit
-           already hits the [0.6,1.4] extreme and fine adjustment is impossible. Other sliders
-           still identity no-ops until they land.
+           channelGain) applied before the perceptual tone curve. Exposure = 2^EV scene-linear
+           gain.
+
+           TONE CURVE (contrast + highlights/shadows/whites/blacks) -- all four tone regions plus
+           contrast are pure 1-D functions of a channel's white-normalised value, applied in a
+           PERCEPTUAL (~gamma 2.2) domain, NOT scene-linear (a linear-space curve about 0.18
+           explodes highlights, which sit several stops above the pivot; encoding to gamma first
+           puts mid-grey near 0.46 so tones shape evenly). buildPointCoeffs BAKES the whole chain
+           into a per-render LUT (PointCoeffs::toneLut, indexed by s=(v/white)^(1/gamma), returning
+           white-normalised linear), so the hot loop does ONE encode pow + one interpolated lookup
+           per channel instead of several pow/exp -- the tone pass is now cheaper than the old
+           contrast-only path. Contrast = gentle slope (1 + 0.4*amount, [0.6,1.4]) about mid-grey;
+           the -100..100 slider is NORMALISED to amount -1..1 (without this the first slider unit
+           already hits the extreme). Each tone region adds a Gaussian-weighted lift in perceptual
+           space (centres: blacks 0.0, shadows 0.25, highlights 0.75, whites 1.0; kToneSigma 0.18,
+           max lift kToneShift 0.20 at full slider; + brightens / - recovers, Lightroom-like).
+           The LUT spans up to ~3 stops above white (kToneLutMaxN) so highlight headroom is shaped,
+           not clipped.
+
+           SPATIAL ops (Texture #6, Dehaze #7) run AFTER the fused point pass, each owning a
+           full-image pass (like Denoise) -- they need a neighbourhood so cannot join the per-
+           pixel kernel. Both are ratio-preserving on LUMINANCE (chroma untouched) and scale their
+           blur radius to the image's longer edge so the screen-res proxy and the full-res settle
+           render shape the same frequency band. Texture = mid-frequency local contrast: a Gaussian
+           base (kTextureSigmaFrac ~0.0015*edge) splits a detail band that + amplifies (kTextureGain)
+           and - smooths. Dehaze = APPROXIMATION (not dark-channel-prior; user-chosen): a large-
+           radius local-contrast boost (box blur, kDehazeSigmaFrac ~0.02*edge -- box because its
+           running-sum cost is ~radius-independent) + a contrast pull about a low pivot (kDehazePivot
+           0.3, deepens shadows) + a saturation lift (kDehazeSat); + clears haze, - adds it. These
+           are global (no-mask) now; the layer compositor will bound them to a mask bbox later.
+           Costs land only on the full-res settle render (the proxy filters ~3MP); denoise
+           (localDenoiseLuma) remains wired but UI-less. All ten Basic sliders are now live.
 
            SLIDER-DRAG LATENCY: the naive path re-rendered the full image synchronously on the
            GUI thread every tick. For a 50MP RAW that measured ~520 ms/tick (probe below),

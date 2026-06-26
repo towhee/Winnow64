@@ -38,18 +38,25 @@ Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
 14   [done]      WorkingImage cache hook (Develop/workingimagecache.*): process-wide,
                  thread-safe, byte-budgeted LRU of the PRE-develop WorkingImage;
                  render() re-runs only Develop + OutputTransform.
-15   [wip]       Implement the real Develop ops on the scene-linear buffer.
-                 PHASE 1 DONE (2026-06-25): exposure (2^EV gain) + contrast (gentle slope
-                 1+0.4*amount about mid-grey, in a perceptual ~gamma-2.2 domain, not
-                 scene-linear - linear power-about-0.18 exploded highlights) implemented
-                 as a single FUSED, QtConcurrent-parallel per-pixel pass
-                 (Develop::buildPointCoeffs + applyPointOps). Remaining no-ops: highlights,
-                 shadows, whites, blacks, temp, tint, texture, dehaze, denoise.
-                 DECISION 2026-06-25: texture + dehaze implemented as POINT (per-pixel)
-                 ops for now to keep the fused engine simple; revisit a SPATIAL
-                 (local-contrast) implementation later for higher quality. Denoise
-                 stays spatial/global-only (raw pipeline). See Documentation.txt
-                 "Layer & masking model" + "BUILD PHASING".
+15   [done]      Implement the real Develop ops on the scene-linear buffer.
+                 DONE (2026-06-25): all ten Basic sliders live (Develop/develop.{h,cpp}).
+                 POINT ops (WB temp/tint, exposure, contrast, tone regions
+                 highlights/shadows/whites/blacks) = a single FUSED, QtConcurrent-parallel
+                 per-pixel pass: WB+exposure fold into a per-channel linear gain; contrast +
+                 tone regions bake into a 1-D perceptual (~gamma-2.2) LUT (PointCoeffs::toneLut)
+                 so the hot loop is one encode pow + one lookup. SPATIAL ops own a full pass
+                 after the point pass: Texture (#6, mid-freq luma local contrast) and Dehaze
+                 (#7). Denoise stays spatial/global-only. Radii scale with the image edge so
+                 the proxy preview matches full-res. See Documentation.txt "DEVELOP / IMAGE
+                 EDIT" + "BUILD PHASING".
+                 CONSIDER (dehaze quality): Dehaze is currently an APPROXIMATION
+                 (large-radius local contrast + low-pivot contrast + saturation; user-chosen
+                 2026-06-25). Consider a true DARK-CHANNEL-PRIOR dehaze as a follow-up:
+                 estimate atmospheric light + per-pixel transmission from the dark channel,
+                 refine the transmission map with a guided filter, then recover scene
+                 radiance. ~120-150 lines, heavier on the full-res settle render, more
+                 parameters to tune; physically removes real haze (better on hazy
+                 landscapes). Would slot into Develop::Dehaze behind the same slider.
 16   [wip]       EditParams persistence + Develop slider UI wiring.
                  PHASE 1 DONE (2026-06-25): slider UI wired live --
                  DevelopProperties::paramsChanged -> MW::developParamsChange() ->
