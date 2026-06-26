@@ -379,6 +379,7 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
     model->setData(valIdx, i.step, UR_DivPx);
     model->setData(valIdx, i.fixedWidth, UR_FixedWidth);
     model->setData(valIdx, i.color, UR_Color);
+    model->setData(valIdx, i.color1, UR_Color1);
     model->setData(valIdx, i.dropList, UR_StringList);
     model->setData(valIdx, i.dropIconList, UR_IconList);
     model->setData(valIdx, i.index, UR_QModelIndex);

@@ -72,6 +72,14 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     int lineEditWidth = idx.data(UR_FixedWidth).toInt();
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
+    QString sCol = idx.data(UR_Color).toString();
+    QString eCol = idx.data(UR_Color1).toString();
+    qDebug() << "sCol = " << sCol;
+    if (sCol.isEmpty()) sCol = "red";
+    if (eCol.isEmpty()) eCol = "white";
+    // slider groove background
+    QString bg = "background:qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 " +
+                 sCol + ", stop:1 " + eCol + ");";
     // divisor if converting integer slider value to double
     div = idx.data(UR_Div).toInt();
     int step = idx.data(UR_DivPx).toInt();
@@ -81,7 +89,6 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     source = idx.data(UR_Source).toString();
 
     slider = new Slider(Qt::Horizontal, div);
-//    slider = new QSlider(Qt::Horizontal);
     slider->setObjectName("DisableGoActions");  // used in MW::focusChange
     slider->setMinimum(min);
     slider->setMaximum(max);
@@ -93,15 +100,17 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
             "margin-left:2;"
          "}"
          "QSlider::sub-page:horizontal {"
-            "background:#1571d3;"   // apple blue
+            // "background:#1571d3;"   // apple blue, left side to the slider handle
             "height:3px;"
          "}"
          "QSlider::add-page:horizontal {"
              "background:transparent;"
              "height:3px;"
          "}"
-         "QSlider::groove:horizontal {"
-            "background: #646464;"
+         "QSlider::groove:horizontal {" +
+            bg +
+            // "background:qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 green, stop:1 magenta);"  // not working
+            // "background: #646464;" // gray
             "border:none;"
             "height:3px;"
          "}"

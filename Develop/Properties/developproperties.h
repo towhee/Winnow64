@@ -61,7 +61,8 @@ private:
     void addHeader(const QString &name, const QString &caption, const QString &tooltip);
     void addSlider(const QString &key, const QString &caption, const QString &tooltip,
                    QModelIndex parIdx, const QString &parentName,
-                   int min, int max, int div, double defaultValue = 0);
+                   int min, int max, int div, QString color, QString color1,
+                   double defaultValue = 0);
     void addCheckbox(const QString &key, const QString &caption, const QString &tooltip,
                      QModelIndex parIdx, const QString &parentName, bool defaultValue = false);
 
