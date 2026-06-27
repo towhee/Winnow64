@@ -119,6 +119,30 @@ QColor helpColor = QColor(37,65,40);
 QColor appleBlue = QColor(21,113,211);      // #1571D3
 QColor selectionColor = QColor(68,95,118);
 QColor mouseOverColor = QColor(40,54,66);
+QString lightgray = "#aaaaaa";
+QString darkgray = "#111111";
+QString lightpurple = "#5f496e";
+QString darkpurple = "#3d0066";
+QString lightblue = "#1f4e85";
+QString darkblue = "#0a1633";
+QString lightyellow = "#857a1f";
+QString darkyellow = "#1a1800";
+QString lightorange = "#854a1f";
+QString darkorange = "#1a0d00";
+QString lightred = "#850000";
+QString darkred = "#110000";
+QString lightcyan = "#1f8585";
+QString darkcyan = "#001a1a";
+QString lightgreen = "#1f851f";
+QString darkgreen = "#001a00";
+QString lightteal = "#1f8567";
+QString darkteal = "#00261c";
+QString lightmaroon = "#5e1a1a";
+QString darkmaroon = "#1a0000";
+QString lightpink = "#854963";
+QString darkpink = "#3d0022";
+QString lightmagenta = "#850085";
+QString darkmagenta = "#1a001a";
 
 QString css;                        // app stylesheet;
 
