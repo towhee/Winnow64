@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "PropertyEditor/propertyeditor.h"
 #include "Develop/editparams.h"
+#include "Develop/editstack.h"
 
 class MW;
 
@@ -32,9 +33,17 @@ public:
     QString layerName;
     int layerId = 0;
 
-    /* Current layer's values assembled into an EditParams. */
+    /* The params the renderer should apply for the current image (the active layer's params).
+       Identity when no image is current. */
     EditParams editParams();
     QString diagnostics();
+
+    /* Per-image edit state (Increment 1). The dock now reflects the CURRENT IMAGE's EditStack
+       (loaded from / saved to its XMP sidecar) instead of app-global QSettings. */
+    void setCurrentImage(const QString &fPath);   // flush previous, load+show this image's stack
+    bool currentIsIdentity() const;               // true if the current image has no edits
+    void flushImage(const QString &fPath);        // write one image's dirty stack to its sidecar
+    void flushAll();                              // write all dirty stacks (quit / pre-op)
 
 public slots:
     void itemChange(QModelIndex idx) override;
@@ -66,9 +75,32 @@ private:
     void addCheckbox(const QString &key, const QString &caption, const QString &tooltip,
                      QModelIndex parIdx, const QString &parentName, bool defaultValue = false);
 
-    QString layerRootPath() const;  // "Develop/Layers/<layerName>/"
+    QString layerRootPath() const;  // "Develop/Layers/<layerName>/" (legacy QSettings; unused now)
     double layerValue(const QString &key, double defaultValue = 0) const;
-    QString uniqueLayerName(const QString &name) const;
+    QString uniqueLayerName(const QString &name) const;   // unique within the current image's layers
+
+    /* Per-image stack helpers. The Layers combo + (+/-) act on the CURRENT IMAGE's EditStack;
+       activeLayerIndex is the layer the dock edits and the renderer shows (no mask/opacity
+       compositing yet). */
+    void populateSlidersFromStack();              // push the active layer's params into the editors
+    void setSliderReal(const QString &key, double real);   // set a slider's displayed value (un-scaled)
+    void setCheckboxValue(const QString &key, bool on);
+    static void applyKeyToParams(const QString &key, const QVariant &v, EditParams &p);
+    QStringList currentLayerNames() const;        // names of the current image's layers (>=1)
+    void refreshLayerCombo();                     // rebuild the combo's list/value from the stack
+    EditParams &activeParams();                   // the active layer's params (creates a layer if none)
+
+    /* The per-image edit state. stackCache holds loaded/edited stacks keyed by file path; dirty
+       marks those needing a sidecar write; currentImagePath is the image the dock currently
+       shows; activeLayerIndex is the selected layer within that image. isPopulating suppresses
+       itemChange while we push values into the editors. */
+    QHash<QString, EditStack> stackCache;
+    QSet<QString> dirty;
+    QString currentImagePath;
+    int activeLayerIndex = 0;
+    bool isPopulating = false;
+    QTimer *debounceWriteTimer = nullptr;
+    static constexpr int kDebounceWriteMs = 2000;  // flush this long after edits settle (gated)
 
     MW *mw;
     QSettings *setting;

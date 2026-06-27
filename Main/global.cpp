@@ -237,6 +237,7 @@ bool throttleFolderLoadMsg = true;     // throttle addFolder progress message to
 // DecodeRawEngine decodeRawEngine = DecodeRawEngine::winnowDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
 DecodeRawEngine decodeRawEngine = DecodeRawEngine::appleDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
 bool isReportDevelopTime = false;       // log per-stage Develop re-render timings on slider drag (latency probe; off in production)
+bool isDevelopDebounceWrite = true;     // also flush per-image develop settings to sidecar a short time after edits settle
 std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)
 
 // status

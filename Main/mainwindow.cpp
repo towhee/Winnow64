@@ -707,6 +707,9 @@ void MW::closeEvent(QCloseEvent *event)
     // for debugging crash test
     //if (testCrash) return;
 
+    // persist any unsaved per-image Develop edits to their sidecars before teardown
+    if (developProperties) developProperties->flushAll();
+
     stop("MW::closeEvent");
 
     // metaRead->stopReaders();
@@ -2441,6 +2444,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     QString fPath = dm->sf->index(current.row(), 0).data(G::PathRole).toString();
     settings->setValue("lastFileSelection", fPath);
 
+    /* Per-image Develop edit state: load this image's saved EditStack into the dock (also flushes
+       the previous image's edits to its sidecar). The developed preview is applied after the
+       loupe image is shown (applyDevelopPreviewIfEdited). */
+    if (developProperties) developProperties->setCurrentImage(fPath);
+
     /* SCROLL CONTROL:
        When an item (icon or row) is selected the default behavior is to scroll the item
        to the center of the view (thumbView, gridView or tableView) so the user does not
@@ -2517,6 +2525,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                     loupeDisplay(fun);
                 }
+                applyDevelopPreviewIfEdited();   // overlay saved develop edits, if any
             }
         }
     }
@@ -4942,6 +4951,31 @@ void MW::setRotation(int degrees)
     }
 }
 
+namespace {
+/* Compose one Develop preview from a source WorkingImage: run Develop + OutputTransform, apply
+   the EXIF rotation, and (proxy only) upscale to the displayed full-res dimensions so the loupe
+   pixmap swap keeps zoom/fit/scene untouched (ImageView::setDevelopPreview's contract). Pure --
+   reads only its arguments (the source WorkingImage is const), so it is safe to call on a
+   background thread for the full-res settle render. degrees/fullW/fullH are computed by the
+   caller on the GUI thread (orientation needs the sort/filter model). */
+QImage developComposite(const WorkingImage &src, const EditParams &edit, int degrees,
+                        bool fullRes, int fullW, int fullH,
+                        WorkingImageCache::RenderTimings *timings = nullptr)
+{
+    QImage out;
+    if (!WorkingImageCache::render(src, edit, out, timings)) return QImage();
+    if (degrees != 0) {
+        QTransform trans;
+        trans.rotate(degrees);
+        /* Proxy: fast (still small); full-res: smooth for the final image. */
+        out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
+    }
+    if (!fullRes && (out.width() != fullW || out.height() != fullH))
+        out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    return out;
+}
+} // namespace
+
 void MW::developParamsChange()
 {
 /*
@@ -4949,11 +4983,13 @@ void MW::developParamsChange()
     many times per second, and each re-render is a real cost, so we COALESCE: render the
     screen-resolution proxy at most once per event-loop turn (the 0ms single-shot collapses a
     burst of ticks into one render) and (re)arm a settle timer so the crisp full-resolution
-    render runs only once the slider stops moving. The heavy lifting is in renderDevelopPreview.
+    render runs only once the slider stops moving. The full-res render runs OFF the GUI thread
+    (renderDevelopFullResAsync) so it never freezes the drag; developParamsGen is bumped here so a
+    render that finishes after the params move on is discarded as stale.
 */
     if (G::isLogger) G::log("MW::developParamsChange");
 
-    constexpr int kDevelopSettleMs = 160;   // full-res render after the drag pauses this long
+    ++developParamsGen;
     if (!developProxyRenderTimer->isActive()) developProxyRenderTimer->start(0);
     developFullResTimer->start(kDevelopSettleMs);
 }
@@ -5017,60 +5053,133 @@ void MW::renderDevelopPreview(bool fullRes)
         srcImg = developProxy.get();
     }
 
-    QImage out;
-    if (!WorkingImageCache::render(*srcImg, edit, out)) return;
+    /* Orientation must be computed here (GUI thread): it reads the sort/filter model. */
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    int fw = work->width, fh = work->height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+
+    const QImage out = developComposite(*srcImg, edit, degrees, fullRes, fw, fh);
+    if (out.isNull()) return;
     const qint64 tRender = G::isReportDevelopTime ? probe.restart() : 0;
-
-    /* Orientation. The RAW decoder hands back a SENSOR-NATIVE (unrotated) WorkingImage and
-       ImageDecoder::run() rotates the display image afterwards via rotate(); a non-raw work is
-       built from the already-rotated display image. So a scene-referred (raw) render is
-       unrotated and must have the EXIF orientation applied to match the loupe, while a
-       display-referred render is already oriented. (PHASE 1: mirrors ImageDecoder::rotate();
-       fold into a shared helper when the edit pipeline is unified.) */
-    int degrees = 0;
-    if (work->sceneReferred) {
-        const int sfRow = dm->proxyRowFromPath(fPath);
-        if (sfRow >= 0 && sfRow < dm->sf->rowCount()) {
-            const int orientation =
-                dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
-            const int rotationDegrees =
-                dm->sf->index(sfRow, G::RotationDegreesColumn).data().toInt();
-            if (orientation == 3)      degrees = rotationDegrees + 180;
-            else if (orientation == 6) degrees = rotationDegrees + 90;
-            else if (orientation == 8) degrees = rotationDegrees + 270;
-            else                       degrees = rotationDegrees;
-            if (degrees > 360) degrees -= 360;
-        }
-    }
-    if (degrees != 0) {
-        QTransform trans;
-        trans.rotate(degrees);
-        /* The proxy is rotated while still small (cheap); the full-res path uses a smooth
-           rotate for the final image. */
-        out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
-    }
-
-    /* Proxy: upscale to the displayed (oriented full-res) dimensions so
-       ImageView::setDevelopPreview can swap the pixmap without disturbing zoom/fit/scene (its
-       contract: identical dimensions). FastTransformation keeps the drag cheap; the settle
-       render replaces this with the crisp full-resolution image. */
-    if (!fullRes) {
-        int fw = work->width, fh = work->height;
-        if (degrees == 90 || degrees == 270) std::swap(fw, fh);
-        if (out.width() != fw || out.height() != fh)
-            out = out.scaled(fw, fh, Qt::IgnoreAspectRatio, Qt::FastTransformation);
-    }
-    const qint64 tPost = G::isReportDevelopTime ? probe.restart() : 0;
 
     imageView->setDevelopPreview(out);
 
     if (G::isReportDevelopTime) {
         qDebug().noquote() << "[DevTime]" << (fullRes ? "full " : "proxy")
                            << srcImg->width << "x" << srcImg->height
-                           << " proxyBuild" << tProxy << " render" << tRender
-                           << " rotate+scale" << tPost
+                           << " proxyBuild" << tProxy << " render+compose" << tRender
                            << " preview" << probe.restart() << "ms";
     }
+}
+
+int MW::developOrientationDegrees(const WorkingImage &work, const QString &fPath) const
+{
+/*
+    EXIF rotation (degrees) to apply to a scene-referred (RAW) render so it matches the loupe.
+    The RAW decoder hands back a SENSOR-NATIVE (unrotated) WorkingImage and ImageDecoder::run()
+    rotates the display image afterwards via rotate(); a non-raw work is built from the already-
+    rotated display image, so display-referred renders need no rotation. Reads the sort/filter
+    model, so it MUST run on the GUI thread. (PHASE 1: mirrors ImageDecoder::rotate(); fold into a
+    shared helper when the edit pipeline is unified.)
+*/
+    Q_UNUSED(work)
+    int degrees = 0;
+    const int sfRow = dm->proxyRowFromPath(fPath);
+    if (sfRow >= 0 && sfRow < dm->sf->rowCount()) {
+        const int orientation =
+            dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
+        const int rotationDegrees =
+            dm->sf->index(sfRow, G::RotationDegreesColumn).data().toInt();
+        if (orientation == 3)      degrees = rotationDegrees + 180;
+        else if (orientation == 6) degrees = rotationDegrees + 90;
+        else if (orientation == 8) degrees = rotationDegrees + 270;
+        else                       degrees = rotationDegrees;
+        if (degrees > 360) degrees -= 360;
+    }
+    return degrees;
+}
+
+void MW::applyDevelopPreviewIfEdited()
+{
+/*
+    Called right after the current image's loupe pixmap is shown. If the image has saved Develop
+    edits (its EditStack is non-identity), render them over the loupe using the existing coalesced
+    proxy + async settle pipeline; an unedited image is left as the normal decoded image. Safe to
+    call more than once per image (the render path is keyed on dm->currentFilePath and coalesced).
+
+    Gated on G::useRaw: saved Develop edits are calibrated against the demosaiced RAW render, so in
+    preview mode (useRaw off) the loupe shows the embedded JPG untouched. Toggling useRaw rebuilds
+    the image cache and re-runs this overlay, so the developed look returns when raw decode is on.
+*/
+    if (G::isLogger) G::log("MW::applyDevelopPreviewIfEdited");
+    if (!G::useRaw) return;
+    if (!developProperties || developProperties->currentIsIdentity()) return;
+    developParamsChange();   // schedule the proxy + full-res settle render of the saved params
+}
+
+void MW::renderDevelopFullResAsync()
+{
+/*
+    Render the crisp full-resolution preview OFF the GUI thread (it is ~1.3s on a 50MP RAW and run
+    synchronously would freeze the drag -- and the freeze itself fakes "settle" pauses that re-fire
+    this timer, so it would run repeatedly mid-drag). developRenderPool drives one render at a
+    time; the result is marshalled back to the GUI thread (onDevelopFullResReady) and applied only
+    if still current. Inputs that need the GUI thread (current path, edit params, orientation) are
+    captured here; the WorkingImage is const and held alive by a shared_ptr for the worker.
+*/
+    if (G::isLogger) G::log("MW::renderDevelopFullResAsync");
+    if (developFullResInFlight) return;   // one at a time; onDevelopFullResReady re-arms if needed
+
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;                    // proxy render builds/caches it first; nothing to do yet
+
+    const EditParams edit = developProperties->editParams();
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    const quint64 gen = developParamsGen;
+
+    developFullResInFlight = true;
+    std::shared_ptr<const WorkingImage> src = work;   // keep alive across the background render
+    developRenderPool->start([this, src, edit, degrees, fPath, gen]() {
+        QElapsedTimer t;
+        WorkingImageCache::RenderTimings rt;
+        const bool probe = G::isReportDevelopTime;
+        if (probe) t.start();
+        const QImage out = developComposite(*src, edit, degrees, /*fullRes*/true, 0, 0,
+                                            probe ? &rt : nullptr);
+        const qint64 ms = probe ? t.elapsed() : 0;
+        QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt]() {
+            if (G::isReportDevelopTime)
+                qDebug().noquote() << "[DevTime] full(async)" << out.width() << "x" << out.height()
+                                   << " total" << ms
+                                   << " (copy" << rt.copyMs << " develop" << rt.developMs
+                                   << " toImage" << rt.toImageMs << ")ms"
+                                   << " develop=[denoise" << rt.denoiseMs << " point" << rt.pointMs
+                                   << " texture" << rt.textureMs << " dehaze" << rt.dehazeMs << "]";
+            onDevelopFullResReady(out, fPath, gen);
+        });
+    });
+}
+
+void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen)
+{
+/*
+    GUI-thread completion for a background full-res render. Apply the image only if it is still
+    current (same image shown, no slider change since it launched); otherwise discard it. If newer
+    params arrived while it ran, re-arm the settle timer so the latest settled value still gets a
+    crisp render -- this also covers the case where the timer fired and was skipped because a render
+    was already in flight.
+*/
+    if (G::isLogger) G::log("MW::onDevelopFullResReady");
+    developFullResInFlight = false;
+
+    const bool currentImage = (fPath == dm->currentFilePath);
+    if (!out.isNull() && currentImage && gen == developParamsGen)
+        imageView->setDevelopPreview(out);
+
+    if (currentImage && gen != developParamsGen)
+        developFullResTimer->start(kDevelopSettleMs);
 }
 
 bool MW::isValidPath(QString &path)
@@ -5303,6 +5412,9 @@ void MW::ingest()
 */
 
     if (G::isLogger) G::log("MW::ingest");
+
+    // flush any unsaved per-image Develop edits so their sidecars are current before they are copied
+    if (developProperties) developProperties->flushAll();
 
     // check if background ingest in progress
     if (G::isRunningBackgroundIngest) {

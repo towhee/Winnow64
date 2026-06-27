@@ -506,6 +506,13 @@ void Xmp::initialize()
     e.schema = "winnow";
     definedElements["winnowaddthumb"] = e;
 
+    // winnow per-image develop edit state (base64 of the EditStack JSON; see Develop/editstack.h)
+    e.name = "winnow:Develop";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "winnow";
+    definedElements["develop"] = e;
+
     // orientation
     e.name = "tiff:Orientation";
     e.parentName = "rdf:Description";

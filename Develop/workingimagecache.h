@@ -70,11 +70,21 @@ public:
     void setEnabled(bool on);            // off => put() is a no-op and the cache is cleared
     bool isEnabled() const;
 
+    /* Per-stage wall-clock timings for one render(), filled when a non-null pointer is passed.
+       A latency probe only (used by the Develop preview's [DevTime] logging); pass nullptr in
+       normal use. */
+    struct RenderTimings {
+        qint64 copyMs = 0; qint64 developMs = 0; qint64 toImageMs = 0;
+        /* Develop sub-stages (subset of developMs). */
+        qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0; qint64 dehazeMs = 0;
+    };
+
     /* Render a WorkingImage through Develop + OutputTransform into out. Copies the image
        only when edit is non-identity (Develop mutates in place). Returns false if work is
        invalid or the output transform fails. Static and stateless: usable with a cached
-       entry or any WorkingImage the caller owns. */
-    static bool render(const WorkingImage &work, const EditParams &edit, QImage &out);
+       entry or any WorkingImage the caller owns. Fills *timings when non-null. */
+    static bool render(const WorkingImage &work, const EditParams &edit, QImage &out,
+                       RenderTimings *timings = nullptr);
 
     /* Area-downsampled copy of src whose longest edge is <= targetLongEdge (white /
        sceneReferred carried through). Used to build the interactive develop PROXY so a slider

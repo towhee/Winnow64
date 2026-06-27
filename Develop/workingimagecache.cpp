@@ -2,6 +2,7 @@
 #include "Develop/develop.h"
 #include "Develop/outputtransform.h"
 #include <QImage>
+#include <QElapsedTimer>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
@@ -140,22 +141,41 @@ void WorkingImageCache::evictLocked()
     }
 }
 
-bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit, QImage &out)
+bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit, QImage &out,
+                               RenderTimings *timings)
 {
     if (!work.isValid()) return false;
 
     OutputTransform output;
 
     /* Identity edit: no Develop, no copy -- transform the cached image straight to QImage. */
-    if (edit.isIdentity())
-        return output.ToImage(work, out);
+    if (edit.isIdentity()) {
+        QElapsedTimer t;
+        if (timings) t.start();
+        const bool ok = output.ToImage(work, out);
+        if (timings) timings->toImageMs = t.elapsed();
+        return ok;
+    }
 
     /* Non-identity: Develop mutates in place, so work on a copy and leave the cached
        (pre-develop) entry pristine for the next slider value. */
+    QElapsedTimer t;
+    if (timings) t.start();
     WorkingImage developed = work;
+    if (timings) timings->copyMs = t.restart();
     Develop develop;
-    develop.Apply(developed, edit);
-    return output.ToImage(developed, out);
+    Develop::StageTimings stage;
+    develop.Apply(developed, edit, timings ? &stage : nullptr);
+    if (timings) {
+        timings->developMs = t.restart();
+        timings->denoiseMs = stage.denoiseMs;
+        timings->pointMs   = stage.pointMs;
+        timings->textureMs = stage.textureMs;
+        timings->dehazeMs  = stage.dehazeMs;
+    }
+    const bool ok = output.ToImage(developed, out);
+    if (timings) timings->toImageMs = t.elapsed();
+    return ok;
 }
 
 WorkingImage WorkingImageCache::downscaled(const WorkingImage &src, int targetLongEdge)

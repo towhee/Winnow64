@@ -1756,7 +1756,13 @@ void MW::createDevelopDock()
     connect(developProxyRenderTimer, &QTimer::timeout, this, [this]{ renderDevelopPreview(false); });
     developFullResTimer = new QTimer(this);
     developFullResTimer->setSingleShot(true);
-    connect(developFullResTimer, &QTimer::timeout, this, [this]{ renderDevelopPreview(true); });
+    connect(developFullResTimer, &QTimer::timeout, this, [this]{ renderDevelopFullResAsync(); });
+
+    /* Dedicated single-thread pool that DRIVES the full-res settle render off the GUI thread (it
+       blocks on the global pool's per-row parallelism internally, so it must not occupy a global-
+       pool slot itself). One driver thread is enough: only one full-res render runs at a time. */
+    developRenderPool = new QThreadPool(this);
+    developRenderPool->setMaxThreadCount(1);
 
     developDockTabText = "Develop";
     dockTextNames << developDockTabText;

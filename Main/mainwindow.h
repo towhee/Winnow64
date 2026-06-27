@@ -549,6 +549,19 @@ private slots:
        fullRes=false renders the screen-resolution proxy (interactive drag); fullRes=true
        renders the full image (drag settled). The WorkingImage-cache hot path: no decode. */
     void renderDevelopPreview(bool fullRes);
+    /* Launch the full-resolution settle render on developRenderPool (off the GUI thread) so a
+       large RAW does not freeze the drag. At most one runs at a time; the result is applied via
+       onDevelopFullResReady only if still current. */
+    void renderDevelopFullResAsync();
+    /* After the current image's loupe pixmap is shown, render its saved Develop edits over it (if
+       any). No-op for an unedited image. Reuses the coalesced proxy + async settle pipeline. */
+    void applyDevelopPreviewIfEdited();
+    /* GUI-thread completion for a background full-res render: apply the image if its params/image
+       are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
+    void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen);
+    /* EXIF rotation (degrees) to apply to a scene-referred render so it matches the loupe. Reads
+       the sort/filter model, so it MUST run on the GUI thread. */
+    int developOrientationDegrees(const WorkingImage &work, const QString &fPath) const;
     void infoViewChanged(QStandardItem* item);
 //    void filterLastDay();
     void filterDockTabMousePress();
@@ -1169,7 +1182,7 @@ private:
     VideoView *videoView;
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
-    DevelopProperties *developProperties;
+    DevelopProperties *developProperties = nullptr;
     /* Develop slider-drag preview pipeline. A drag re-renders only the cheap Develop +
        OutputTransform stage from the cached pre-develop WorkingImage. To stay interactive on
        large RAW files the drag renders a screen-resolution PROXY (developProxy, cached per
@@ -1180,6 +1193,15 @@ private:
     QString developProxyPath;
     QTimer *developProxyRenderTimer = nullptr;   // coalesces rapid ticks into one proxy render
     QTimer *developFullResTimer = nullptr;       // fires once the drag settles (full-res render)
+    /* Full-res settle render runs OFF the GUI thread (it is ~1.3s on a 50MP RAW and would
+       otherwise freeze the drag). developRenderPool drives one such render at a time; the result
+       is marshalled back to the GUI thread and applied only if still current. developParamsGen is
+       bumped on every slider change so a finished render that no longer matches the latest params
+       (or image) is discarded. See MW::renderDevelopFullResAsync. */
+    static constexpr int kDevelopSettleMs = 160;  // full-res render fires this long after the drag pauses
+    QThreadPool *developRenderPool = nullptr;
+    quint64 developParamsGen = 0;                 // ++ on every Develop param change (staleness guard)
+    bool developFullResInFlight = false;          // a background full-res render is running
     Preferences *pref = nullptr;
     StressTest *stressTest;
     QFrame *embelFrame;

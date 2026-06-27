@@ -1,5 +1,35 @@
 #include "Main/mainwindow.h"
 
+/*
+    Builds the "Decode Raw is On" toolbar icon: a 2px white border surrounding a
+    2x2 Bayer-style quadrant grid (top-left red, top-right green, bottom-left
+    green, bottom-right blue).  Rendered at 2x for crisp display on Retina.
+*/
+static QIcon makeUseRawOnIcon()
+{
+    const int size = 16;                     // 16x16 px to match toolbar icons
+    const int border = 2;                    // 2px white border
+
+    QPixmap pm(size, size);
+    pm.fill(Qt::white);
+
+    const int inner = size - 2 * border;
+    const int half = inner / 2;
+    const int x0 = border;
+    const int x1 = border + half;
+    const int y0 = border;
+    const int y1 = border + half;
+
+    QPainter p(&pm);
+    p.fillRect(QRect(x0, y0, half, half), QColor(255,   0,   0));  // top-left  red
+    p.fillRect(QRect(x1, y0, half, half), QColor(  0, 255,   0));  // top-right green
+    p.fillRect(QRect(x0, y1, half, half), QColor(  0, 255,   0));  // bottom-left  green
+    p.fillRect(QRect(x1, y1, half, half), QColor(  0,   0, 255));  // bottom-right blue
+    p.end();
+
+    return QIcon(pm);
+}
+
 void MW::updateStatus(bool keepBase, QString s, QString source)
 {
 /*
@@ -166,7 +196,7 @@ void MW::updateStatusBar()
     }
 
     if (G::useRaw) {
-        useRawBtn->setIcon(QIcon(":/images/icon16/raw.png"));
+        useRawBtn->setIcon(makeUseRawOnIcon());
         useRawBtn->setToolTip("Decode Raw is On (demosaic sensor data).  Click to toggle on/off");
     }
     else {

@@ -11,6 +11,9 @@ void MW::copyFiles()
     QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.isEmpty()) return;
 
+    // flush unsaved per-image Develop edits so copied sidecars are current
+    if (developProperties) developProperties->flushAll();
+
     bool isSidecar = false;
     int n = selection.count();
     QClipboard *clipboard = QGuiApplication::clipboard();

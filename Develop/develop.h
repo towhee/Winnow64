@@ -3,6 +3,7 @@
 
 #include "Develop/editparams.h"
 #include "Develop/workingimage.h"
+#include <QtGlobal>
 
 /*
     Applies parametric develop adjustments to a WorkingImage in place. Stateless and
@@ -28,9 +29,13 @@ class Develop
 public:
     Develop() = default;
 
+    /* Per-stage wall-clock timings for one Apply(), filled when a non-null pointer is passed.
+       A latency probe only (Develop preview [DevTime] logging); pass nullptr in normal use. */
+    struct StageTimings { qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0; qint64 dehazeMs = 0; };
+
     /* Apply p to img in place. Returns true on success (and trivially when p is identity,
-       leaving img untouched). */
-    bool Apply(WorkingImage &img, const EditParams &p);
+       leaving img untouched). Fills *t when non-null. */
+    bool Apply(WorkingImage &img, const EditParams &p, StageTimings *t = nullptr);
 
 private:
     /* Spatial op: local (maskable) luminance NR, owns a full-image pass. Ratio-preserving --
