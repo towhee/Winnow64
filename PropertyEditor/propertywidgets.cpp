@@ -78,8 +78,8 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     if (sCol.isEmpty()) sCol = "red";
     if (eCol.isEmpty()) eCol = "white";
     // slider groove background
-    QString bg = "background:qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 " +
-                 sCol + ", stop:1 " + eCol + ");";
+    QString bg = QString("background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop: 0.0 %1, stop: 1.0 %2);")
+                     .arg(sCol.trimmed(), eCol.trimmed());
     // divisor if converting integer slider value to double
     div = idx.data(UR_Div).toInt();
     int step = idx.data(UR_DivPx).toInt();
