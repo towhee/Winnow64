@@ -1,6 +1,7 @@
 #include "Develop/develop.h"
 #include <QtConcurrent>
 #include <QThreadPool>
+#include <QElapsedTimer>
 #include <QFuture>
 #include <QVector>
 #include <QtGlobal>
@@ -68,23 +69,57 @@ constexpr float kDehazeLocalGain  = 1.0f;      // local-contrast strength
 constexpr float kDehazeContrast   = 0.3f;      // contrast about the low pivot
 constexpr float kDehazePivot      = 0.3f;      // perceptual pivot (below mid-grey)
 constexpr float kDehazeSat        = 0.3f;      // saturation lift at full slider
+
+/* Run fn over the pixel-index range [0, n) split into chunks across the global pool (the same
+   data-parallel idiom as Develop::applyPointOps / OutputTransform::ToImage). fn(i0, i1) must
+   process a disjoint half-open slice; chunks are pixel-aligned so callers that index rgb[i*3+c],
+   yp[i], etc. stay race-free. Falls back to a single in-line call when the pool is one thread or
+   the work is small. */
+template <class F>
+inline void parallelFor(size_t n, F fn)
+{
+    const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
+    const size_t kMinPerChunk = 1u << 16;   // ~65k pixels: keep chunks coarse vs. dispatch cost
+    if (maxThreads == 1 || n < kMinPerChunk * 2) { fn(static_cast<size_t>(0), n); return; }
+
+    const int chunks = static_cast<int>(qMin<size_t>(maxThreads, (n + kMinPerChunk - 1) / kMinPerChunk));
+    const size_t per = (n + chunks - 1) / chunks;
+    QVector<QFuture<void>> futures;
+    futures.reserve(chunks);
+    for (int k = 0; k < chunks; ++k) {
+        const size_t i0 = static_cast<size_t>(k) * per;
+        const size_t i1 = qMin(n, i0 + per);
+        if (i0 >= i1) break;
+        futures.append(QtConcurrent::run(QThreadPool::globalInstance(),
+                                         [fn, i0, i1]() { fn(i0, i1); }));
+    }
+    for (QFuture<void> &f : futures) f.waitForFinished();
+}
 }
 
-bool Develop::Apply(WorkingImage &img, const EditParams &p)
+bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
 {
     if (!img.isValid()) return false;
     if (p.isIdentity()) return true;    // nothing to do; serve image as-is
+
+    QElapsedTimer probe;
+    if (t) probe.start();
 
     /* Fixed pipeline order: spatial ops own a pass, point ops share the fused pass.
        See notes/Documentation.txt "DEVELOP / IMAGE EDIT". Denoise (#1) -> fused point pass
        (#2-5: WB, exposure, contrast, tone regions) -> Texture (#6) -> Dehaze (#7). */
     Denoise(img, p);
+    if (t) t->denoiseMs = probe.restart();
 
     PointCoeffs c = buildPointCoeffs(p, img);
     if (c.active) applyPointOps(img, c);
+    if (t) t->pointMs = probe.restart();
 
     Texture(img, p);
+    if (t) t->textureMs = probe.restart();
+
     Dehaze(img, p);
+    if (t) t->dehazeMs = probe.restart();
     return true;
 }
 
@@ -115,14 +150,17 @@ void Develop::Denoise(WorkingImage &img, const EditParams &p)
     cv::Mat Yp(h, w, CV_32FC1);
     std::vector<float> Ylin(n);
     float *yp = Yp.ptr<float>();
-    for (size_t i = 0; i < n; ++i) {
-        const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-        const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-        Ylin[i] = Y;
-        float nrm = Y * invWhite;
-        if (nrm < 0.0f) nrm = 0.0f;
-        yp[i] = std::pow(nrm, kInvGamma);
-    }
+    float *ylin = Ylin.data();
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            ylin[i] = Y;
+            float nrm = Y * invWhite;
+            if (nrm < 0.0f) nrm = 0.0f;
+            yp[i] = std::pow(nrm, kInvGamma);
+        }
+    });
 
     /* Edge-preserving smoothing on luminance only; strength scales the range/space sigmas.
        bilateralFilter parallelises internally on OpenCV's own pool (see the threading note in
@@ -135,15 +173,17 @@ void Develop::Denoise(WorkingImage &img, const EditParams &p)
     /* Scale RGB by the linear luminance ratio, preserving chroma. */
     const float *ypd = Ypd.ptr<float>();
     constexpr float kEps = 1e-6f;
-    for (size_t i = 0; i < n; ++i) {
-        const float Y = Ylin[i];
-        if (Y <= kEps) continue;                          // black pixel: nothing to scale
-        const float Yd = std::pow(ypd[i], kGamma) * white;   // perceptual -> linear
-        const float factor = Yd / Y;
-        rgb[i * 3 + 0] *= factor;
-        rgb[i * 3 + 1] *= factor;
-        rgb[i * 3 + 2] *= factor;
-    }
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float Y = ylin[i];
+            if (Y <= kEps) continue;                          // black pixel: nothing to scale
+            const float Yd = std::pow(ypd[i], kGamma) * white;   // perceptual -> linear
+            const float factor = Yd / Y;
+            rgb[i * 3 + 0] *= factor;
+            rgb[i * 3 + 1] *= factor;
+            rgb[i * 3 + 2] *= factor;
+        }
+    });
 }
 
 /* Texture (spatial op #6). Ratio-preserving luminance local contrast in the perceptual domain:
@@ -165,36 +205,54 @@ void Develop::Texture(WorkingImage &img, const EditParams &p)
     cv::Mat Yp(h, w, CV_32FC1);
     std::vector<float> Ylin(n);
     float *yp = Yp.ptr<float>();
-    for (size_t i = 0; i < n; ++i) {
-        const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-        const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-        Ylin[i] = Y;
-        float nrm = Y * invWhite;
-        if (nrm < 0.0f) nrm = 0.0f;
-        yp[i] = std::pow(nrm, kInvGamma);
-    }
+    float *ylin = Ylin.data();
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            ylin[i] = Y;
+            float nrm = Y * invWhite;
+            if (nrm < 0.0f) nrm = 0.0f;
+            yp[i] = std::pow(nrm, kInvGamma);
+        }
+    });
 
-    /* Mid-frequency base; sigma scales with the longer edge so proxy and full-res match. */
+    /* Mid-frequency base; sigma scales with the longer edge so proxy and full-res match. The base
+       is a smooth low-frequency band, so for a large sigma compute the (costly) Gaussian on a
+       DOWNSCALED luminance image and upsample -- visually identical to a full-res blur but the
+       blur cost drops ~kDown^2 (GaussianBlur is the dominant texture cost at full res). The
+       downscale factor targets a well-sampled small-image working sigma (~3px) and is capped so
+       the base stays smooth; sigma <= ~3 (e.g. the proxy) blurs at full size as before. */
     const double sigma = qMax(1.0, static_cast<double>(kTextureSigmaFrac) * qMax(w, h));
     cv::Mat base;
-    cv::GaussianBlur(Yp, base, cv::Size(0, 0), sigma);
+    const int kDown = qBound(1, static_cast<int>(sigma / 3.0), 4);
+    if (kDown > 1 && w >= kDown * 2 && h >= kDown * 2) {
+        cv::Mat small;
+        cv::resize(Yp, small, cv::Size(w / kDown, h / kDown), 0, 0, cv::INTER_AREA);
+        cv::GaussianBlur(small, small, cv::Size(0, 0), sigma / kDown);
+        cv::resize(small, base, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+    } else {
+        cv::GaussianBlur(Yp, base, cv::Size(0, 0), sigma);
+    }
 
     /* base + factor*(detail): factor>1 amplifies the band, factor in [0,1) smooths toward base.
        Positive uses the stronger kTextureGain; negative scales the detail down to zero at -1. */
     const float factor = qMax(0.0f, 1.0f + amt * (amt >= 0.0f ? kTextureGain : 1.0f));
     const float *bp = base.ptr<float>();
     constexpr float kEps = 1e-6f;
-    for (size_t i = 0; i < n; ++i) {
-        const float Y = Ylin[i];
-        if (Y <= kEps) continue;
-        float s = bp[i] + factor * (yp[i] - bp[i]);
-        if (s < 0.0f) s = 0.0f;
-        const float Yd = std::pow(s, kGamma) * white;
-        const float r = Yd / Y;
-        rgb[i * 3 + 0] *= r;
-        rgb[i * 3 + 1] *= r;
-        rgb[i * 3 + 2] *= r;
-    }
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float Y = ylin[i];
+            if (Y <= kEps) continue;
+            float s = bp[i] + factor * (yp[i] - bp[i]);
+            if (s < 0.0f) s = 0.0f;
+            const float Yd = std::pow(s, kGamma) * white;
+            const float r = Yd / Y;
+            rgb[i * 3 + 0] *= r;
+            rgb[i * 3 + 1] *= r;
+            rgb[i * 3 + 2] *= r;
+        }
+    });
 }
 
 /* Dehaze (spatial op #7), APPROXIMATION. Stage 1: ratio-preserving luminance large-radius local
@@ -216,14 +274,17 @@ void Develop::Dehaze(WorkingImage &img, const EditParams &p)
     cv::Mat Yp(h, w, CV_32FC1);
     std::vector<float> Ylin(n);
     float *yp = Yp.ptr<float>();
-    for (size_t i = 0; i < n; ++i) {
-        const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-        const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-        Ylin[i] = Y;
-        float nrm = Y * invWhite;
-        if (nrm < 0.0f) nrm = 0.0f;
-        yp[i] = std::pow(nrm, kInvGamma);
-    }
+    float *ylin = Ylin.data();
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            ylin[i] = Y;
+            float nrm = Y * invWhite;
+            if (nrm < 0.0f) nrm = 0.0f;
+            yp[i] = std::pow(nrm, kInvGamma);
+        }
+    });
 
     /* Large-radius base via a box blur: its running-sum cost is ~independent of the kernel size,
        so the wide blur stays cheap even at full resolution. */
@@ -237,34 +298,38 @@ void Develop::Dehaze(WorkingImage &img, const EditParams &p)
     const float cont  = amt * kDehazeContrast;
     const float *bp = base.ptr<float>();
     constexpr float kEps = 1e-6f;
-    for (size_t i = 0; i < n; ++i) {
-        const float Y = Ylin[i];
-        if (Y <= kEps) continue;
-        float s = yp[i] + local * (yp[i] - bp[i]);              // amplify local detail
-        s = kDehazePivot + (s - kDehazePivot) * (1.0f + cont);  // deepen shadows / extend range
-        if (s < 0.0f) s = 0.0f;
-        const float Yd = std::pow(s, kGamma) * white;
-        const float r = Yd / Y;
-        rgb[i * 3 + 0] *= r;
-        rgb[i * 3 + 1] *= r;
-        rgb[i * 3 + 2] *= r;
-    }
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float Y = ylin[i];
+            if (Y <= kEps) continue;
+            float s = yp[i] + local * (yp[i] - bp[i]);              // amplify local detail
+            s = kDehazePivot + (s - kDehazePivot) * (1.0f + cont);  // deepen shadows / extend range
+            if (s < 0.0f) s = 0.0f;
+            const float Yd = std::pow(s, kGamma) * white;
+            const float r = Yd / Y;
+            rgb[i * 3 + 0] *= r;
+            rgb[i * 3 + 1] *= r;
+            rgb[i * 3 + 2] *= r;
+        }
+    });
 
     /* Stage 2: saturation about per-pixel luminance (haze desaturates; dehaze restores). */
     const float sat = 1.0f + amt * kDehazeSat;
-    for (size_t i = 0; i < n; ++i) {
-        const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-        const float Y2 = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-        float nr = Y2 + sat * (r - Y2);
-        float ng = Y2 + sat * (g - Y2);
-        float nb = Y2 + sat * (b - Y2);
-        if (nr < 0.0f) nr = 0.0f;
-        if (ng < 0.0f) ng = 0.0f;
-        if (nb < 0.0f) nb = 0.0f;
-        rgb[i * 3 + 0] = nr;
-        rgb[i * 3 + 1] = ng;
-        rgb[i * 3 + 2] = nb;
-    }
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+            const float Y2 = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            float nr = Y2 + sat * (r - Y2);
+            float ng = Y2 + sat * (g - Y2);
+            float nb = Y2 + sat * (b - Y2);
+            if (nr < 0.0f) nr = 0.0f;
+            if (ng < 0.0f) ng = 0.0f;
+            if (nb < 0.0f) nb = 0.0f;
+            rgb[i * 3 + 0] = nr;
+            rgb[i * 3 + 1] = ng;
+            rgb[i * 3 + 2] = nb;
+        }
+    });
 }
 
 Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const WorkingImage &img)

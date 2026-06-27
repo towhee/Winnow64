@@ -631,6 +631,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         // qDebug() << "MW::refreshViewsOnCacheChange call imageView->loadImage" << fPath;
         centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
+        applyDevelopPreviewIfEdited();   // overlay saved develop edits once the decode is cached
         updateClassification();
         /* Hide Info until first image shown.  If Winnow is interrupted by an OS
            permission request then we do not want an info to show */

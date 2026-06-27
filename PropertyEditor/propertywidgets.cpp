@@ -74,7 +74,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     int max = idx.data(UR_Max).toInt();
     QString sCol = idx.data(UR_Color).toString();
     QString eCol = idx.data(UR_Color1).toString();
-    qDebug() << "sCol = " << sCol;
+    // qDebug() << "sCol = " << sCol;
     if (sCol.isEmpty()) sCol = "red";
     if (eCol.isEmpty()) eCol = "white";
     // slider groove background

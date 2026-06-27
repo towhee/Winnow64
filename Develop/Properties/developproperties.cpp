@@ -15,7 +15,10 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     this->setting = setting;
 
     initialize();
-    readLayerList();
+    /* The Layers combo now lists the CURRENT IMAGE's layers (per-image EditStack), not app-global
+       QSettings presets. Seed one name so the combo is valid before any image is selected. */
+    layerList = QStringList() << "Layer 1";
+    layerName = "Layer 1";
     addLayersHeader();
     addLayerItems();
 
@@ -24,6 +27,13 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     expand(model->index(_basic, 0));
     updateHiddenRows(QModelIndex());
     setMouseTracking(true);
+
+    /* Optional debounce write: flush the in-memory stack to the sidecar a short time after edits
+       settle, so a crash loses less. Gated by G::isDevelopDebounceWrite; navigate-away / quit /
+       pre-op flushes always run regardless. */
+    debounceWriteTimer = new QTimer(this);
+    debounceWriteTimer->setSingleShot(true);
+    connect(debounceWriteTimer, &QTimer::timeout, this, [this]{ flushImage(currentImagePath); });
 }
 
 void DevelopProperties::initialize()
@@ -64,9 +74,10 @@ double DevelopProperties::layerValue(const QString &key, double defaultValue) co
 
 QString DevelopProperties::uniqueLayerName(const QString &name) const
 {
+    const QStringList names = currentLayerNames();
     QString unique = name;
     int n = 1;
-    while (layerList.contains(unique)) {
+    while (names.contains(unique)) {
         unique = name + " " + QString::number(++n);
     }
     return unique;
@@ -145,20 +156,20 @@ void DevelopProperties::addLayersHeader()
     i.parIdx = parIdx;
     i.parentName = "LayersHeader";
     i.captionText = "Select layer";
-    i.tooltip = "The layer whose adjustments are shown below.";
+    i.tooltip = "The layer whose adjustments are shown below (this image's layers).";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = layerName;
+    i.value = currentLayerNames().value(activeLayerIndex);
     i.key = "layerList";
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.color = "#1b8a83";
-    i.dropList = layerList;
+    i.dropList = currentLayerNames();
     layerListEditor = static_cast<ComboBoxEditor*>(addItem(i));
 
     QModelIndex idx = sourceIdx["layerList"];
-    model->setData(idx, layerName);
+    model->setData(idx, currentLayerNames().value(activeLayerIndex));
     propertyDelegate->setEditorData(layerListEditor, idx);
 }
 
@@ -172,43 +183,42 @@ void DevelopProperties::addLayerItems()
 void DevelopProperties::newLayer()
 {
     if (G::isLogger) G::log("DevelopProperties::newLayer");
-    QString name = uniqueLayerName("Layer " + QString::number(layerList.size() + 1));
-    layerList << name;
-    setting->setValue("Develop/Layers/" + name + "/created", true);
-    setCurrentLayer(name);
+    if (currentImagePath.isEmpty()) return;
 
-    /* Rebuild the combo's drop list and the Basic / Effects sections. */
-    layerListEditor->refresh(layerList);
-    layerListEditor->setValue(layerName);
+    EditStack &s = stackCache[currentImagePath];
+    if (s.layers.isEmpty()) s.layers.append(EditLayer());     // ensure a base layer exists
+    EditLayer l;
+    l.name = uniqueLayerName("Layer " + QString::number(s.layers.size() + 1));
+    s.layers.append(l);
+    activeLayerIndex = s.layers.size() - 1;                   // edit the new layer
+    dirty.insert(currentImagePath);
 
-    model->removeRows(1, model->rowCount(QModelIndex()) - 1, QModelIndex());
-    addLayerItems();
-    collapseAll();
-    expand(model->index(_layers, 0));
-    expand(model->index(_basic, 0));
-    updateHiddenRows(QModelIndex());
+    /* New layer is identity, so the rendered result is unchanged; just refresh the combo and
+       show the (zeroed) sliders. The stack only persists once a layer actually changes a pixel. */
+    refreshLayerCombo();
+    populateSlidersFromStack();
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::deleteLayer()
 {
     if (G::isLogger) G::log("DevelopProperties::deleteLayer");
-    if (layerList.size() < 2) {
+    if (currentImagePath.isEmpty()) return;
+
+    EditStack &s = stackCache[currentImagePath];
+    if (s.layers.size() < 2) {
         emit centralMsg("At least one develop layer is required.");
         return;
     }
-    setting->remove("Develop/Layers/" + layerName);
-    layerList.removeAll(layerName);
-    setCurrentLayer(layerList.first());
+    if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) activeLayerIndex = 0;
+    s.layers.removeAt(activeLayerIndex);
+    if (activeLayerIndex >= s.layers.size()) activeLayerIndex = s.layers.size() - 1;
+    dirty.insert(currentImagePath);
 
-    layerListEditor->refresh(layerList);
-    layerListEditor->setValue(layerName);
-
-    model->removeRows(1, model->rowCount(QModelIndex()) - 1, QModelIndex());
-    addLayerItems();
-    collapseAll();
-    expand(model->index(_layers, 0));
-    expand(model->index(_basic, 0));
-    updateHiddenRows(QModelIndex());
+    refreshLayerCombo();
+    populateSlidersFromStack();
+    emit paramsChanged();                                    // removing a layer changes the result
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -249,8 +259,10 @@ void DevelopProperties::addSlider(const QString &key, const QString &caption,
     i.captionIsEditable = false;
     i.key = key;
     i.defaultValue = defaultValue;
-    i.path = layerRootPath() + key;
-    i.value = setting->contains(i.path) ? setting->value(i.path) : i.defaultValue;
+    /* Per-image now: the editor starts at identity and is populated from the current image's
+       EditStack on selection (see populateSlidersFromStack). No app-global QSettings path. */
+    i.path = "";
+    i.value = i.defaultValue;
     i.delegateType = DT_Slider;
     i.type = (div == 0) ? "int" : "double";     // div 0 = integer slider, else double
     i.min = min;
@@ -277,8 +289,8 @@ void DevelopProperties::addCheckbox(const QString &key, const QString &caption, 
     i.captionIsEditable = false;
     i.key = key;
     i.defaultValue = defaultValue;
-    i.path = layerRootPath() + key;
-    i.value = setting->contains(i.path) ? setting->value(i.path) : i.defaultValue;
+    i.path = "";
+    i.value = i.defaultValue;
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -343,45 +355,193 @@ void DevelopProperties::addEffects()
 void DevelopProperties::itemChange(QModelIndex idx)
 {
     if (G::isLogger) G::log("DevelopProperties::itemChange");
+
+    /* Ignore changes we drove ourselves while loading an image's saved values into the editors
+       (setValue emits editorValueChanged -> itemChanged). */
+    if (isPopulating) return;
+
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
 
     if (source == "layerList") {
-        setCurrentLayer(v.toString());
-        model->removeRows(1, model->rowCount(QModelIndex()) - 1, QModelIndex());
-        addLayerItems();
-        collapseAll();
-        expand(model->index(_layers, 0));
-        expand(model->index(_basic, 0));
-        updateHiddenRows(QModelIndex());
+        /* Switch the active layer of the CURRENT IMAGE: repopulate the sliders from that layer
+           and re-render (the renderer shows the active layer). No tree rebuild => no flicker. */
+        if (currentImagePath.isEmpty()) return;
+        const int idx2 = currentLayerNames().indexOf(v.toString());
+        if (idx2 >= 0 && idx2 != activeLayerIndex) {
+            activeLayerIndex = idx2;
+            populateSlidersFromStack();
+            emit paramsChanged();
+        }
         return;
     }
 
-    /* Persist the changed adjustment under the current layer. */
+    /* Write the changed adjustment into the CURRENT IMAGE's active-layer params, mark it dirty,
+       and drive the live preview. Persistence to the sidecar happens on navigate-away / quit /
+       pre-op (always) and, if G::isDevelopDebounceWrite, a short time after edits settle. */
     if (!source.isEmpty()) {
-        setting->setValue(layerRootPath() + source, v);
+        if (currentImagePath.isEmpty()) return;
+        applyKeyToParams(source, v, activeParams());
+        dirty.insert(currentImagePath);
         emit paramsChanged();
+        if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
     }
+}
+
+void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, EditParams &p)
+{
+    /* Slider EditRole carries the real (div-scaled) value, e.g. exposure in EV; the denoise
+       checkbox carries a bool. Map the dock key onto the matching EditParams field. */
+    const float f = v.toFloat();
+    if      (key == "temp")       p.temp       = f;
+    else if (key == "tint")       p.tint       = f;
+    else if (key == "exposure")   p.exposure   = f;
+    else if (key == "contrast")   p.contrast   = f;
+    else if (key == "highlights") p.highlights = f;
+    else if (key == "shadows")    p.shadows    = f;
+    else if (key == "whites")     p.whites     = f;
+    else if (key == "blacks")     p.blacks     = f;
+    else if (key == "texture")    p.texture    = f;
+    else if (key == "dehaze")     p.dehaze     = f;
+    else if (key == "denoise")  { const bool on = v.toBool();
+                                  p.denoiseLuma = on ? 1.0f : 0.0f;
+                                  p.denoiseChroma = on ? 1.0f : 0.0f; }
 }
 
 EditParams DevelopProperties::editParams()
 {
-    EditParams p;
-    p.temp       = static_cast<float>(layerValue("temp"));
-    p.tint       = static_cast<float>(layerValue("tint"));
-    p.exposure   = static_cast<float>(layerValue("exposure"));
-    p.contrast   = static_cast<float>(layerValue("contrast"));
-    p.highlights = static_cast<float>(layerValue("highlights"));
-    p.shadows    = static_cast<float>(layerValue("shadows"));
-    p.whites     = static_cast<float>(layerValue("whites"));
-    p.blacks     = static_cast<float>(layerValue("blacks"));
-    p.texture    = static_cast<float>(layerValue("texture"));
-    p.dehaze     = static_cast<float>(layerValue("dehaze"));
-    if (setting->value(layerRootPath() + "denoise").toBool()) {
-        p.denoiseLuma = 1.0f;
-        p.denoiseChroma = 1.0f;
+    /* The renderer shows the ACTIVE layer (no mask/opacity compositing yet). */
+    if (currentImagePath.isEmpty()) return EditParams();
+    const EditStack s = stackCache.value(currentImagePath);
+    if (s.layers.isEmpty()) return EditParams();
+    const int idx = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size()) ? activeLayerIndex : 0;
+    return s.layers[idx].params;
+}
+
+QStringList DevelopProperties::currentLayerNames() const
+{
+    QStringList names;
+    if (!currentImagePath.isEmpty()) {
+        const EditStack s = stackCache.value(currentImagePath);
+        for (const EditLayer &l : s.layers) names << l.name;
     }
-    return p;
+    if (names.isEmpty()) names << "Layer 1";    // combo always has at least one entry
+    return names;
+}
+
+EditParams &DevelopProperties::activeParams()
+{
+    /* Caller guarantees currentImagePath is non-empty. Ensures a layer exists and the index is
+       in range, then returns the active layer's params for in-place editing. */
+    EditStack &s = stackCache[currentImagePath];
+    if (s.layers.isEmpty()) s.layers.append(EditLayer());
+    if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) activeLayerIndex = 0;
+    return s.layers[activeLayerIndex].params;
+}
+
+void DevelopProperties::refreshLayerCombo()
+{
+    layerList = currentLayerNames();
+    if (activeLayerIndex < 0 || activeLayerIndex >= layerList.size()) activeLayerIndex = 0;
+    if (!layerListEditor) return;
+    /* Guard so the combo's programmatic setValue does not re-enter itemChange. */
+    isPopulating = true;
+    layerListEditor->refresh(layerList);
+    layerListEditor->setValue(layerList.value(activeLayerIndex));
+    isPopulating = false;
+}
+
+/* ----------------------------------------------------------------------------------------
+   Per-image edit state (load / save / populate)
+   ---------------------------------------------------------------------------------------- */
+
+void DevelopProperties::setCurrentImage(const QString &fPath)
+{
+    if (G::isLogger) G::log("DevelopProperties::setCurrentImage", fPath);
+    if (fPath == currentImagePath) return;
+
+    flushImage(currentImagePath);              // persist edits to the image we are leaving
+    currentImagePath = fPath;
+    if (fPath.isEmpty()) return;
+
+    /* Load the stack on first touch (cheap: no sidecar => fast empty read), then cache it. */
+    if (!stackCache.contains(fPath))
+        stackCache.insert(fPath, EditStack::fromBase64(Metadata::readDevelopSidecar(fPath)));
+
+    /* Ensure at least one layer so the combo + active editing have something to point at. An
+       all-identity stack is still treated as identity (not persisted), so this never creates a
+       sidecar for an unedited image. */
+    EditStack &s = stackCache[fPath];
+    if (s.layers.isEmpty()) s.layers.append(EditLayer());
+    activeLayerIndex = 0;
+
+    refreshLayerCombo();
+    populateSlidersFromStack();
+}
+
+bool DevelopProperties::currentIsIdentity() const
+{
+    if (currentImagePath.isEmpty()) return true;
+    return stackCache.value(currentImagePath).isIdentity();
+}
+
+void DevelopProperties::flushImage(const QString &fPath)
+{
+    if (fPath.isEmpty() || !dirty.contains(fPath)) return;
+    dirty.remove(fPath);
+    const EditStack &s = stackCache[fPath];
+    /* Identity => write "" so writeDevelopSidecar clears the attribute (or skips if no sidecar),
+       rather than persisting an empty edit. */
+    const QString blob = s.isIdentity() ? QString() : s.toBase64();
+    Metadata::writeDevelopSidecar(fPath, blob);   // synchronous; sidecar is a few KB, never on a drag
+}
+
+void DevelopProperties::flushAll()
+{
+    const QList<QString> paths = dirty.values();
+    for (const QString &p : paths) flushImage(p);
+}
+
+void DevelopProperties::populateSlidersFromStack()
+{
+    EditParams p;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (!s.layers.isEmpty()) {
+        const int idx = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size()) ? activeLayerIndex : 0;
+        p = s.layers[idx].params;
+    }
+    isPopulating = true;
+    setSliderReal("temp",       p.temp);
+    setSliderReal("tint",       p.tint);
+    setSliderReal("exposure",   p.exposure);
+    setSliderReal("contrast",   p.contrast);
+    setSliderReal("highlights", p.highlights);
+    setSliderReal("shadows",    p.shadows);
+    setSliderReal("whites",     p.whites);
+    setSliderReal("blacks",     p.blacks);
+    setSliderReal("texture",    p.texture);
+    setSliderReal("dehaze",     p.dehaze);
+    setCheckboxValue("denoise", p.denoiseLuma > 0.0f);
+    isPopulating = false;
+}
+
+void DevelopProperties::setSliderReal(const QString &key, double real)
+{
+    const QModelIndex vIdx = sourceIdx.value(key);
+    if (!vIdx.isValid()) return;
+    if (vIdx.data(UR_Editor).value<void*>() == nullptr) return;   // editor not realized
+    /* SliderEditor::setValue takes the raw slider int (real * div; div 0 => 1). */
+    const int div = vIdx.data(UR_Div).toInt();
+    const int factor = (div == 0) ? 1 : div;
+    setItemValue(vIdx, static_cast<int>(qRound(real * factor)));
+}
+
+void DevelopProperties::setCheckboxValue(const QString &key, bool on)
+{
+    const QModelIndex vIdx = sourceIdx.value(key);
+    if (!vIdx.isValid()) return;
+    if (vIdx.data(UR_Editor).value<void*>() == nullptr) return;
+    setItemValue(vIdx, on);
 }
 
 QString DevelopProperties::diagnostics()

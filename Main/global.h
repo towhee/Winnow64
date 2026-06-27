@@ -414,6 +414,11 @@ Q_NAMESPACE
        cost can be measured before optimising. Default false. */
     extern bool isReportDevelopTime;
 
+    /* Gate for the OPTIONAL debounce-while-editing write of per-image Develop settings to the XMP
+       sidecar (a short time after edits settle). Navigate-away / quit / pre-op flushes always run
+       regardless of this flag. Default true; turn off to avoid mid-edit disk writes. */
+    extern bool isDevelopDebounceWrite;
+
     /* Phase-2 probe: count of Thumb::loadThumb 100ms retry waits (file-open contention with
        ImageCache) across all reader threads. Reset in MetaRead::initialize, reported in
        MetaRead::allFinished. High count => the retry loop is a real staller. */

@@ -2155,6 +2155,10 @@ Architecture
         immediately. The value persists across sessions via QSettings ("useRaw", default
         false). NOTE: the raw decode is still also gated by RawFormat::Create() returning a
         decoder for the extension (arw/dng/cr2/nef/orf/rw2/raf today; others -> embedded JPG).
+        Saved Develop edits are also gated on useRaw: MW::applyDevelopPreviewIfEdited() overlays
+        a non-identity EditStack onto the loupe only when useRaw is on, since the edits are
+        calibrated against the demosaiced RAW render. In preview mode (useRaw off) the embedded
+        JPG is shown untouched; toggling useRaw on rebuilds the cache and the developed look returns.
     InputTransform (Develop/) is the non-raw "un-gamma to linear" step, the symmetric
     counterpart of OutputTransform.
 
@@ -2192,9 +2196,10 @@ Architecture
             most-recently-used entry is never evicted (the active edit always hits). It is a
             small edit accelerator for recently-viewed images, NOT a second image cache.
             ImageCache::initialize() clear()s it on every folder change.
-        Still TODO: a downscaled proxy for live drag with full-res async (the current cache is
-            full-res only); explicit pin of the active image so heavy ahead-caching can't evict
-            it before the user edits.
+        Done (2026-06): downscaled proxy for live drag + full-res settle render run async off the
+            GUI thread (see "Load Responsiveness" / renderDevelopFullResAsync).
+        Still TODO: explicit pin of the active image so heavy ahead-caching can't evict it before
+            the user edits.
 
     Phasing: 1 WorkingImage + split RawColor at linear + InputTransform/OutputTransform +
     Develop skeleton (identity), wired no-op through decode (DONE) + WorkingImage cache hook
@@ -2310,8 +2315,9 @@ Layer & masking model (planned)
         2. per-layer combined mask alpha      -- recompute on geometry change only
         3. spatial-op outputs (local luma NR ...) -- recompute on their param/mask change only
         4. fused point pass                   -- always re-run on a point-slider drag (cheap)
-    Plus a downscaled PROXY developed during an active drag, full-res async on release (the
-    existing "Still TODO" proxy item) -- sub-frame with the fused engine.
+    Plus a downscaled PROXY developed during an active drag, full-res async on release (now
+    implemented: renderDevelopFullResAsync, see "Load Responsiveness") -- sub-frame with the
+    fused engine.
 
     PERSISTENCE -- XMP SIDECAR, per image. Winnow already writes per-image .xmp sidecars
     (Metadata/xmp.cpp Xmp::writeSidecar, DOM-based); the EditStack serialises there (parametric
@@ -2385,12 +2391,90 @@ Layer & masking model (planned)
                single-shot (developProxyRenderTimer) that collapses a burst of ticks into one
                proxy render, and (re)arms developFullResTimer (~160 ms) so the crisp FULL-res
                render runs once the slider stops.
-           PROBE: set G::isReportDevelopTime to log [DevTime] lines (proxy/full, dims, proxyBuild
-           / render / rotate+scale / preview ms). Off in production.
+             - ASYNC FULL-RES (2026-06): the settled full-res render is ~1.3 s on a 50MP RAW and
+               was run synchronously on the GUI thread, freezing the drag. Worse, the freeze
+               drained queued slider events in bursts whose gaps re-fired the settle timer, so the
+               1.3 s render ran REPEATEDLY mid-drag. [DevTime] confirmed: proxy ticks ~45 ms
+               (render 25 / rotate+scale 18 / preview 2), but interleaved `full 8640x5760 render
+               1300-1440 ms`. Fix: developFullResTimer now calls MW::renderDevelopFullResAsync,
+               which drives the render on a dedicated 1-thread pool (developRenderPool) OFF the GUI
+               thread; the proxy keeps the drag live meanwhile. The result is marshalled back via
+               QMetaObject::invokeMethod -> MW::onDevelopFullResReady and applied only if still
+               current. STALENESS GUARD: developParamsGen is bumped on every paramsChange; a render
+               whose captured gen != developParamsGen (or whose path != currentFilePath) is
+               discarded, and onDevelopFullResReady re-arms the settle timer so the latest value
+               still gets a crisp render. IN-FLIGHT GUARD: developFullResInFlight allows only one
+               full-res render at a time. Orientation is computed on the GUI thread
+               (MW::developOrientationDegrees, reads dm->sf) before launch; the worker touches only
+               the const WorkingImage (held alive by a shared_ptr) and value-copied params.
+               Compositing (render + rotate + proxy upscale) is shared by both paths via the
+               file-local developComposite() helper.
+             - SPATIAL-OP COST (2026-06, follow-up): with texture/dehaze sliders left non-zero
+               (they carry over between images until per-image params land), the async full-res
+               render was still ~1.45 s. Per-stage [DevTime] (WorkingImageCache::RenderTimings +
+               Develop::StageTimings) pinned it on the spatial ops, NOT the point pass:
+               point 64 / texture 899 / dehaze 399 ms. Two fixes: (a) the per-pixel luminance/
+               output loops in Develop::Denoise/Texture/Dehaze were SINGLE-THREADED -- now split
+               across the global pool via the file-local parallelFor() (same idiom as
+               applyPointOps/ToImage; identical math, bit-for-bit output). (b) Texture's large-
+               sigma cv::GaussianBlur dominated what remained (~600 ms): the base is low-frequency,
+               so it is now computed on a luminance image downscaled by kDown (=clamp(sigma/3,1,4),
+               INTER_AREA down / INTER_LINEAR up) and the cost drops ~kDown^2. Net: full-res render
+               ~1.45 s -> ~360 ms (texture 899->72, dehaze 399->120) on an M4. Spatial ops still
+               recompute every full-res render because they run AFTER the point pass (an exposure
+               change alters their input); the real win for an untouched image is per-image params
+               so a 0 slider early-returns -- see item 4 (XMP sidecar). GENERAL RULE: any new
+               per-pixel Develop loop must use parallelFor; any new large-kernel blur should use a
+               downscaled base (or an O(1) box/integral approach) -- files keep growing.
+           PROBE: set G::isReportDevelopTime to log [DevTime] lines (proxy/full/full(async), dims,
+           proxyBuild / render+compose / preview ms; the async line adds the develop sub-stage
+           breakdown denoise/point/texture/dehaze). Off in production.
         2. Layer object + compositor: add EditStack, run the fused loop over layers with opacity;
            convert the dock's "layers-as-alternatives" into a real stack (no masks yet).
         3. Parametric masks (linear/radial): analytic inline + per-layer alpha cache.
         4. XMP sidecar: serialise/deserialise EditStack; retire the QSettings per-layer store.
+           DONE (2026-06, Increment 1) -- PER-IMAGE DEVELOP STATE:
+             - DATA MODEL: Develop/editstack.h. EditStack { version; QVector<EditLayer> }, each
+               EditLayer { name; mask (reserved -- empty = global, mask editing deferred); opacity
+               (reserved); enabled; EditParams params }. This is the layer = mask + settings shape
+               so the format does NOT change when masks/compositor land. Serialized to JSON then
+               base64 (raw JSON quotes are awkward in an XML attribute). VERSIONED and FORWARD-
+               TOLERANT: unknown keys ignored, missing keys default to identity. Header-only and
+               free of any render-hot-path include (develop.cpp does not include it).
+             - SIDECAR: stored as the winnow:Develop rdf:Description attribute (Xmp::initialize
+               registers definedElements["develop"]; the winnow namespace already existed).
+               Metadata::writeDevelopSidecar / readDevelopSidecar mirror writeOrientation (open
+               sidecar, one Xmp item). An identity stack writes "" which CLEARS the attribute (no
+               sidecar is created just to store nothing).
+             - DOCK (Develop/Properties/developproperties.cpp): the sliders now reflect the CURRENT
+               IMAGE's EditStack, not app-global QSettings. setCurrentImage(fPath) flushes the
+               previous image then loads+caches this image's stack and pushes its params into the
+               editors (populateSlidersFromStack, guarded by isPopulating so the programmatic
+               setValue->itemChanged does not re-mark dirty). itemChange writes into the current
+               image's active-layer params, marks it dirty, drives the live preview, and (if gated)
+               arms the debounce write. editParams() returns the ACTIVE layer's params (the
+               renderer shows the active layer -- no mask/opacity compositing yet). The Layers combo
+               + (+/-) are PER-IMAGE: the combo lists this image's layer names, switching it selects
+               the active layer (activeLayerIndex) and repopulates the sliders, and +/- add/delete
+               layers in this image's EditStack (newLayer/deleteLayer). An all-identity stack is
+               never persisted, so empty layers added to an unedited image are not written. The old
+               QSettings layer helpers (readLayerList/setCurrentLayer/layerRootPath/layerValue) are
+               left defined but unused; presets (Increment 2) will repurpose a QSettings store.
+             - LIFECYCLE / FLUSH: MW::fileSelectionChange calls setCurrentImage; after the loupe
+               pixmap is shown (both the cache-hit path and MW::refreshViewsOnCacheChange) MW::
+               applyDevelopPreviewIfEdited renders the saved edits over an edited image (no-op for
+               identity, so an unedited image stays the normal decode -- and is never written).
+               Sidecars are flushed on navigate-away (setCurrentImage), quit (closeEvent), and
+               before ingest/copy (MW::ingest / copyFiles); NEVER during a drag. Writes are
+               synchronous (a few-KB text file). The OPTIONAL debounce-while-editing write (~2 s
+               after edits settle) is gated by G::isDevelopDebounceWrite (default true); the other
+               flushes always run.
+             - PERF NOTE: setCurrentImage reads the sidecar synchronously on first touch of each
+               image (cheap: no sidecar => fast empty read). Folding the develop blob into the
+               existing metadata sidecar read (a datamodel column) is a fast-follow if navigation
+               over many edited images shows latency.
+           Increment 2 (presets): snapshot an EditStack (or subset) to a QSettings presets
+           collection; apply to a selection (write each image's sidecar). Then masks/compositor.
         5. Brush masks (stroke list + rasterise) -> spatial ops with cache tier 3 -> proxy-on-drag.
 
 ------------------------------------------------------------------------------------------
