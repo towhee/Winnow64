@@ -2524,9 +2524,25 @@ Layer & masking model (planned)
                fixed centre (this is how you ROTATE the gradient); centre/line drag translates; a miss
                falls through to normal pan/zoom. On release ImageView emits maskGeometryChanged ->
                DevelopProperties::setActiveMaskParams (stores into the component, debounce-persists, no
-               tree rebuild). Feather slider live-updates the ramp via maskFeatherChanged. The red
-               tint is a preview overlay only -- it does NOT yet feed developComposite (mask
-               compositing into the render is a later increment). Brush/AI tools come later.
+               tree rebuild). Feather/Invert live-update the overlay via maskFeatherChanged/
+               maskInvertChanged; the tint colour conveys the op (Add=red, Subtract=blue) and Invert
+               flips the ramp.
+             - RENDER COMPOSITING (Stage 4b): the mask now feeds developComposite. The active
+               (non-Base) layer's adjustments are blended over the layers-below result by the mask,
+               in SCENE-LINEAR before the output transform. DevelopProperties::maskJob() captures the
+               recipe as plain values (below = Base params, above = active-layer params, the layer's
+               mask components, combine) so it is safe for the off-thread full-res render.
+               WorkingImageCache::renderMasked develops both sides (an identity side aliases work --
+               no copy/Develop, so a masked layer over an unedited Base is ~one develop pass), mixes
+               above*mask+below*(1-mask) per pixel (parallelFor), then one OutputTransform.
+               buildMaskBuffer (mainwindow.cpp) rasterizes the layer's gradient(s) at WorkingImage
+               (pre-orientation) resolution; each pixel is mapped work-normalized -> output-normalized
+               (output = work rotated CW by degrees) so geometry edited on the oriented loupe lines
+               up after developComposite applies the EXIF rotation; Add=union(max), Subtract=*(1-c).
+               A non-Base layer with NO mask renders its adjustment GLOBALLY (maskJob.active=false ->
+               plain developComposite). Mask add/delete/geometry/feather/invert now emit
+               paramsChanged() so the masked composite re-renders. Brush/AI tools and true N-layer
+               stacking (below is just Base for now) come later.
              - LIFECYCLE / FLUSH: MW::fileSelectionChange calls setCurrentImage; after the loupe
                pixmap is shown (both the cache-hit path and MW::refreshViewsOnCacheChange) MW::
                applyDevelopPreviewIfEdited renders the saved edits over an edited image (no-op for

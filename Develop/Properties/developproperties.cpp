@@ -427,7 +427,7 @@ void DevelopProperties::newMask()
     dirty.insert(currentImagePath);
 
     rebuildMaskTools();
-    /* No paramsChanged(): the mask has no visual effect until the compositor lands. */
+    emit paramsChanged();       // adding a mask confines the layer's adjustment -> re-composite
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
@@ -441,6 +441,7 @@ void DevelopProperties::deleteMask(int index)
     dirty.insert(currentImagePath);
 
     rebuildMaskTools();
+    emit paramsChanged();       // removing a mask changes the layer's coverage -> re-composite
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
@@ -544,7 +545,7 @@ void DevelopProperties::updateMaskEdit()
     if (layer && selectedMaskIndex >= 0 && selectedMaskIndex < layer->masks.size()) {
         const MaskComponent &m = layer->masks[selectedMaskIndex];
         if (m.tool == int(MaskTool::LinearGradient)) {
-            emit maskEditBegin(m.tool, m.paramsJson, m.feather);
+            emit maskEditBegin(m.tool, m.op, m.inverted, m.paramsJson, m.feather);
             return;
         }
     }
@@ -560,6 +561,7 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
     if (layer->masks[selectedMaskIndex].paramsJson == paramsJson) return;
     layer->masks[selectedMaskIndex].paramsJson = paramsJson;
     dirty.insert(currentImagePath);
+    emit paramsChanged();       // new mask geometry -> re-composite the masked layer
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
@@ -782,10 +784,8 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
-    /* The selected mask tool's settings write into the active layer's mask model. Mask edits only
-       update the model/sidecar for now -- they have no visual effect until the mask compositor
-       lands, so we deliberately do NOT emit paramsChanged() (no needless render). Re-enable the
-       emit here when compositing is wired up. */
+    /* The selected mask tool's settings write into the active layer's mask model. Feather/Invert
+       change the mask, so they update the live overlay AND re-composite the masked layer. */
     if (source == "maskFeather" || source == "maskInvert") {
         EditLayer *l = activeLayer();
         if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size()) {
@@ -793,8 +793,12 @@ void DevelopProperties::itemChange(QModelIndex idx)
                 l->masks[selectedMaskIndex].feather = v.toFloat();
                 emit maskFeatherChanged(v.toDouble());      // live-update the overlay ramp
             }
-            else                         l->masks[selectedMaskIndex].inverted = v.toBool();
+            else {
+                l->masks[selectedMaskIndex].inverted = v.toBool();
+                emit maskInvertChanged(v.toBool());         // live-flip the overlay
+            }
             dirty.insert(currentImagePath);
+            emit paramsChanged();                           // re-composite the masked layer
             if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
         }
         return;
@@ -846,6 +850,27 @@ EditParams DevelopProperties::editParams()
     if (s.layers.isEmpty()) return EditParams();
     const int idx = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size()) ? activeLayerIndex : 0;
     return s.layers[idx].params;
+}
+
+DevelopProperties::MaskRenderJob DevelopProperties::maskJob()
+{
+    /* Capture the active layer's compositing recipe as plain values (used on the GUI thread and
+       handed to the off-thread full-res render). Masking applies only for a non-Base layer that has
+       at least one enabled mask component; otherwise the active params render globally. */
+    MaskRenderJob job;
+    if (currentImagePath.isEmpty()) return job;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (s.layers.isEmpty()) return job;
+    const int idx = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size()) ? activeLayerIndex : 0;
+    job.above   = s.layers[idx].params;
+    job.below   = s.layers[0].params;           // layers-below result (Base, for now)
+    job.combine = s.layers[idx].combine;
+    if (idx > 0) {
+        for (const MaskComponent &m : s.layers[idx].masks)
+            if (m.enabled && !m.paramsJson.isEmpty()) job.masks.append(m);
+    }
+    job.active = !job.masks.isEmpty();
+    return job;
 }
 
 QStringList DevelopProperties::currentLayerNames() const

@@ -4977,6 +4977,127 @@ QImage developComposite(const WorkingImage &src, const EditParams &edit, int deg
         out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
     return out;
 }
+
+/* A mask component pre-parsed once (the gradient geometry) so the per-pixel loop is branch-light.
+   Geometry is in output-normalized coords (0..1 of the oriented image), matching what the ImageView
+   overlay edits. */
+struct GradComp {
+    double p1x = 0, p1y = 0, dx = 0, dy = 0, invLen2 = 0;
+    double lo = 0.5, hi = 0.5;      // ramp endpoints along the projection (matches the overlay)
+    bool   hardStep = true;         // feather == 0 -> hard step at the midpoint
+    bool   inverted = false;
+    int    op = 0;                  // 0 Add (union), 1 Subtract (removes)
+    bool   valid = false;
+};
+
+GradComp parseGrad(const MaskComponent &m)
+{
+    GradComp g;
+    g.op = m.op;
+    g.inverted = m.inverted;
+    QJsonParseError err;
+    const QJsonDocument doc = QJsonDocument::fromJson(m.paramsJson.toUtf8(), &err);
+    if (err.error != QJsonParseError::NoError || !doc.isObject()) return g;
+    const QJsonObject o = doc.object();
+    if (!o.contains("x1") || !o.contains("y1") || !o.contains("x2") || !o.contains("y2")) return g;
+    g.p1x = o["x1"].toDouble(); g.p1y = o["y1"].toDouble();
+    const double p2x = o["x2"].toDouble(), p2y = o["y2"].toDouble();
+    g.dx = p2x - g.p1x; g.dy = p2y - g.p1y;
+    const double len2 = g.dx*g.dx + g.dy*g.dy;
+    if (len2 <= 1e-12) return g;
+    g.invLen2 = 1.0 / len2;
+    const double f = qBound(0.0, double(m.feather)/100.0, 1.0);
+    g.lo = 0.5 - 0.5*f; g.hi = 0.5 + 0.5*f;
+    g.hardStep = (g.hi <= g.lo);
+    g.valid = true;
+    return g;
+}
+
+inline float evalGrad(const GradComp &g, double onx, double ony)
+{
+    const double t = ((onx - g.p1x)*g.dx + (ony - g.p1y)*g.dy) * g.invLen2;
+    double v = g.hardStep ? (t >= 0.5 ? 1.0 : 0.0) : (t - g.lo) / (g.hi - g.lo);
+    v = v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v);
+    v = v * v * v * (v * (v * 6.0 - 15.0) + 10.0);   // smootherstep (quintic): very soft ends
+    return float(g.inverted ? 1.0 - v : v);
+}
+
+/* Rasterize the layer's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
+   it aligns with the linear blend before developComposite applies the EXIF rotation. Each pixel is
+   mapped work-normalized -> output-normalized (output = work rotated CW by degrees) before the
+   gradient is evaluated, so the geometry edited on the oriented loupe lines up. */
+std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, int h, int degrees)
+{
+    std::vector<float> out(size_t(w) * size_t(h), 0.0f);
+    if (w <= 0 || h <= 0) return out;
+    QVector<GradComp> comps;
+    comps.reserve(masks.size());
+    for (const MaskComponent &m : masks) {
+        const GradComp g = parseGrad(m);
+        if (g.valid) comps.append(g);
+    }
+    if (comps.isEmpty()) return out;     // no usable geometry -> all-zero (no effect)
+
+    const double invW = 1.0/w, invH = 1.0/h;
+    auto rows = [&](int y0, int y1) {
+        for (int y = y0; y < y1; ++y) {
+            const double wny = (y + 0.5) * invH;
+            float *row = out.data() + size_t(y) * w;
+            for (int x = 0; x < w; ++x) {
+                const double wnx = (x + 0.5) * invW;
+                double onx, ony;
+                switch (degrees) {           // work-normalized -> output-normalized (CW rotation)
+                    case 90:  onx = 1.0 - wny; ony = wnx;       break;
+                    case 180: onx = 1.0 - wnx; ony = 1.0 - wny; break;
+                    case 270: onx = wny;       ony = 1.0 - wnx; break;
+                    default:  onx = wnx;       ony = wny;       break;
+                }
+                float m = 0.0f;
+                for (const GradComp &g : comps) {
+                    const float c = evalGrad(g, onx, ony);
+                    if (g.op == 1) m *= (1.0f - c);     // Subtract
+                    else           m = qMax(m, c);      // Add (Union)
+                }
+                row[x] = m;
+            }
+        }
+    };
+
+    const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
+    if (maxThreads == 1 || size_t(w)*size_t(h) < (size_t(1) << 16)) { rows(0, h); return out; }
+    const int chunks = qMin(maxThreads, h);
+    const int per = (h + chunks - 1) / chunks;
+    QVector<QFuture<void>> futs;
+    futs.reserve(chunks);
+    for (int k = 0; k < chunks; ++k) {
+        const int y0 = k * per, y1 = qMin(h, y0 + per);
+        if (y0 >= y1) break;
+        futs.append(QtConcurrent::run(QThreadPool::globalInstance(), [=]{ rows(y0, y1); }));
+    }
+    for (QFuture<void> &f : futs) f.waitForFinished();
+    return out;
+}
+
+/* developComposite for a masked layer: blend the active layer (above) over the layers-below result
+   (below) in scene-linear by the layer's mask, then apply orientation / proxy scaling exactly as
+   developComposite does. */
+QImage developCompositeMasked(const WorkingImage &src, const EditParams &below, const EditParams &above,
+                              const QVector<MaskComponent> &masks, int /*combine*/,
+                              int degrees, bool fullRes, int fullW, int fullH,
+                              WorkingImageCache::RenderTimings *timings = nullptr)
+{
+    const std::vector<float> mask = buildMaskBuffer(masks, src.width, src.height, degrees);
+    QImage out;
+    if (!WorkingImageCache::renderMasked(src, below, above, mask, out, timings)) return QImage();
+    if (degrees != 0) {
+        QTransform trans;
+        trans.rotate(degrees);
+        out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
+    }
+    if (!fullRes && (out.width() != fullW || out.height() != fullH))
+        out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    return out;
+}
 } // namespace
 
 void MW::developParamsChange()
@@ -5018,7 +5139,7 @@ void MW::renderDevelopPreview(bool fullRes)
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
 
-    const EditParams edit = developProperties->editParams();
+    const auto mj = developProperties->maskJob();   // active layer + (if masked) its blend recipe
 
     /* Reuse the cached pre-develop (full-res) WorkingImage. RAW always caches it at decode;
        non-raw caches it the first time it is developed. */
@@ -5061,7 +5182,9 @@ void MW::renderDevelopPreview(bool fullRes)
     int fw = work->width, fh = work->height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
 
-    const QImage out = developComposite(*srcImg, edit, degrees, fullRes, fw, fh);
+    const QImage out = mj.active
+        ? developCompositeMasked(*srcImg, mj.below, mj.above, mj.masks, mj.combine, degrees, fullRes, fw, fh)
+        : developComposite(*srcImg, mj.above, degrees, fullRes, fw, fh);
     if (out.isNull()) return;
     const qint64 tRender = G::isReportDevelopTime ? probe.restart() : 0;
 
@@ -5145,19 +5268,21 @@ void MW::renderDevelopFullResAsync()
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) return;                    // proxy render builds/caches it first; nothing to do yet
 
-    const EditParams edit = developProperties->editParams();
+    const auto mj = developProperties->maskJob();     // captured on the GUI thread for the worker
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const quint64 gen = developParamsGen;
 
     developFullResInFlight = true;
     std::shared_ptr<const WorkingImage> src = work;   // keep alive across the background render
-    developRenderPool->start([this, src, edit, degrees, fPath, gen]() {
+    developRenderPool->start([this, src, mj, degrees, fPath, gen]() {
         QElapsedTimer t;
         WorkingImageCache::RenderTimings rt;
         const bool probe = G::isReportDevelopTime;
         if (probe) t.start();
-        const QImage out = developComposite(*src, edit, degrees, /*fullRes*/true, 0, 0,
-                                            probe ? &rt : nullptr);
+        const QImage out = mj.active
+            ? developCompositeMasked(*src, mj.below, mj.above, mj.masks, mj.combine, degrees,
+                                     /*fullRes*/true, 0, 0, probe ? &rt : nullptr)
+            : developComposite(*src, mj.above, degrees, /*fullRes*/true, 0, 0, probe ? &rt : nullptr);
         const qint64 ms = probe ? t.elapsed() : 0;
         QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt]() {
             if (G::isReportDevelopTime)

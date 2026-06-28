@@ -3,6 +3,9 @@
 #include "Develop/outputtransform.h"
 #include <QImage>
 #include <QElapsedTimer>
+#include <QtConcurrent>
+#include <QThreadPool>
+#include <QFuture>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
@@ -174,6 +177,77 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
         timings->dehazeMs  = stage.dehazeMs;
     }
     const bool ok = output.ToImage(developed, out);
+    if (timings) timings->toImageMs = t.elapsed();
+    return ok;
+}
+
+namespace {
+/* Data-parallel pixel loop (mirrors Develop::parallelFor, which is file-local there). fn(i0,i1)
+   processes a disjoint half-open pixel slice. */
+template <class F>
+inline void maskParallelFor(size_t n, F fn)
+{
+    const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
+    const size_t kMinPerChunk = 1u << 16;
+    if (maxThreads == 1 || n < kMinPerChunk * 2) { fn(size_t(0), n); return; }
+    const int chunks = int(qMin<size_t>(maxThreads, (n + kMinPerChunk - 1) / kMinPerChunk));
+    const size_t per = (n + chunks - 1) / chunks;
+    QVector<QFuture<void>> futures;
+    futures.reserve(chunks);
+    for (int k = 0; k < chunks; ++k) {
+        const size_t i0 = size_t(k) * per;
+        const size_t i1 = qMin(n, i0 + per);
+        if (i0 >= i1) break;
+        futures.append(QtConcurrent::run(QThreadPool::globalInstance(), [fn, i0, i1]{ fn(i0, i1); }));
+    }
+    for (QFuture<void> &f : futures) f.waitForFinished();
+}
+} // namespace
+
+bool WorkingImageCache::renderMasked(const WorkingImage &work, const EditParams &belowEdit,
+                                     const EditParams &aboveEdit, const std::vector<float> &mask,
+                                     QImage &out, RenderTimings *timings)
+{
+    if (!work.isValid()) return false;
+    const size_t n = size_t(work.width) * size_t(work.height);
+    if (mask.size() != n) return false;
+
+    QElapsedTimer t;
+    if (timings) t.start();
+
+    /* Develop each side in scene-linear. An identity side (commonly Base) skips the copy + Apply
+       and aliases `work`, so a masked layer over an unedited Base costs ~one develop pass. */
+    Develop develop;
+    WorkingImage belowBuf, aboveBuf;
+    const WorkingImage *belowP = &work, *aboveP = &work;
+    if (!belowEdit.isIdentity()) { belowBuf = work; develop.Apply(belowBuf, belowEdit, nullptr); belowP = &belowBuf; }
+    if (!aboveEdit.isIdentity()) { aboveBuf = work; develop.Apply(aboveBuf, aboveEdit, nullptr); aboveP = &aboveBuf; }
+    if (timings) timings->developMs = t.restart();
+
+    /* Fresh destination buffer (metadata copied; pixels written by the blend, no pixel copy). */
+    WorkingImage blended;
+    blended.width = work.width; blended.height = work.height;
+    blended.white = work.white; blended.sceneReferred = work.sceneReferred;
+    blended.rgb.resize(n * 3);
+
+    const float *lo = belowP->rgb.data();
+    const float *hi = aboveP->rgb.data();
+    const float *mk = mask.data();
+    float *dst = blended.rgb.data();
+    maskParallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float m = mk[i];
+            const float im = 1.0f - m;
+            const size_t j = i * 3;
+            dst[j+0] = lo[j+0]*im + hi[j+0]*m;
+            dst[j+1] = lo[j+1]*im + hi[j+1]*m;
+            dst[j+2] = lo[j+2]*im + hi[j+2]*m;
+        }
+    });
+    if (timings) timings->developMs += t.restart();
+
+    OutputTransform output;
+    const bool ok = output.ToImage(blended, out);
     if (timings) timings->toImageMs = t.elapsed();
     return ok;
 }

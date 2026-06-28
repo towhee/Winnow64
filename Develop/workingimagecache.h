@@ -86,6 +86,14 @@ public:
     static bool render(const WorkingImage &work, const EditParams &edit, QImage &out,
                        RenderTimings *timings = nullptr);
 
+    /* Masked composite, blended in scene-linear before the output transform: develop `work` twice
+       (belowEdit and aboveEdit), mix per pixel by mask (above*mask + below*(1-mask)), then one
+       OutputTransform. mask is row-major width*height, 0..1, matching work's dimensions. Falls back
+       cheaply when an edit is identity (no develop copy for that side). */
+    static bool renderMasked(const WorkingImage &work, const EditParams &belowEdit,
+                             const EditParams &aboveEdit, const std::vector<float> &mask,
+                             QImage &out, RenderTimings *timings = nullptr);
+
     /* Area-downsampled copy of src whose longest edge is <= targetLongEdge (white /
        sceneReferred carried through). Used to build the interactive develop PROXY so a slider
        drag renders at screen resolution instead of full sensor resolution. Returns a copy of
