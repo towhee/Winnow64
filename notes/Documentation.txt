@@ -2509,9 +2509,24 @@ Layer & masking model (planned)
                DevelopProperties overrides mousePressEvent to read the clicked row's UR_MaskIndex and
                toggle it (and returns without the base expand/collapse). All mask UI is isolated in
                developproperties.cpp (showMaskMenu/newMask/deleteMask/rebuildMaskTools/addToolRow/
-               setSelectedMask). Spatial editing (drag the gradient, paint the brush, AI-select) is a
-               later increment on the image canvas, not the dock; rendering still shows the active
-               layer with no mask compositing yet.
+               setSelectedMask).
+             - SPATIAL EDITING (Linear Gradient, first tool): edited directly on the loupe, not the
+               dock. Geometry lives in MaskComponent.paramsJson as normalized image coords
+               {x1,y1,x2,y2} in 0..1 (resolution/zoom independent; survives proxy/full re-render).
+               Handshake (wired in MW, mirroring paramsChanged): selecting a spatial tool fires
+               DevelopProperties::maskEditBegin(tool,paramsJson,feather) -> ImageView::beginMaskEdit;
+               deselecting fires maskEditEnd. updateMaskEdit() (end of rebuildMaskTools) tracks every
+               image/layer/selection change; developDockVisibilityChange() ends/re-asserts it so the
+               overlay never leaks into the plain loupe. ImageView draws the overlay in drawForeground
+               (red tint ramp in scene coords; centre line + 0%/100% perpendicular guides + handles in
+               viewport coords for constant on-screen size), shown only while the cursor is over the
+               view (maskHover via enter/leaveEvent). Mouse: endpoint drag rotates+scales about the
+               fixed centre (this is how you ROTATE the gradient); centre/line drag translates; a miss
+               falls through to normal pan/zoom. On release ImageView emits maskGeometryChanged ->
+               DevelopProperties::setActiveMaskParams (stores into the component, debounce-persists, no
+               tree rebuild). Feather slider live-updates the ramp via maskFeatherChanged. The red
+               tint is a preview overlay only -- it does NOT yet feed developComposite (mask
+               compositing into the render is a later increment). Brush/AI tools come later.
              - LIFECYCLE / FLUSH: MW::fileSelectionChange calls setCurrentImage; after the loupe
                pixmap is shown (both the cache-hit path and MW::refreshViewsOnCacheChange) MW::
                applyDevelopPreviewIfEdited renders the saved edits over an edited image (no-op for

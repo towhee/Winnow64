@@ -58,10 +58,20 @@ protected:
 
 public slots:
     void itemChange(QModelIndex idx) override;
+    /* ImageView reports new mask geometry (dragged overlay) as the active tool's paramsJson. */
+    void setActiveMaskParams(const QString &paramsJson);
+    /* Re-assert the overlay for the active tool (e.g. when the Develop dock becomes visible). */
+    void refreshMaskEdit() { updateMaskEdit(); }
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
     void centralMsg(QString msg);
+    /* Mask editing handshake with ImageView. Begin when a spatial mask tool becomes the active
+       (selected) edit target; End when none is selected. ImageView draws the overlay + handles and
+       sends geometry back via setActiveMaskParams. */
+    void maskEditBegin(int tool, const QString &paramsJson, double feather);
+    void maskEditEnd();
+    void maskFeatherChanged(double feather);    // Feather slider -> live overlay ramp update
 
 private:
     void initialize();
@@ -125,6 +135,8 @@ private:
     QStringList currentLayerNames() const;        // names of the current image's layers (>=1)
     void refreshLayerCombo();                     // rebuild the combo's list/value from the stack
     void updateMaskMenuBtn();                     // show [M] only when a non-Base layer is active
+    void updateMaskEdit();                        // emit maskEditBegin/End for the active mask tool
+    static QString defaultMaskParams(int tool);   // initial paramsJson geometry for a new tool
     EditParams &activeParams();                   // the active layer's params (creates a layer if none)
 
     /* The per-image edit state. stackCache holds loaded/edited stacks keyed by file path; dirty

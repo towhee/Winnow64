@@ -421,6 +421,7 @@ void DevelopProperties::newMask()
     MaskComponent m;
     m.op   = txt.startsWith("Subtract") ? int(MaskOp::Subtract) : int(MaskOp::Add);
     m.tool = maskToolFromName(txt.section(' ', 1));
+    m.paramsJson = defaultMaskParams(m.tool);
     layer->masks.append(m);
     selectedMaskIndex = layer->masks.size() - 1;            // start editing the new tool
     dirty.insert(currentImagePath);
@@ -510,12 +511,56 @@ void DevelopProperties::rebuildMaskTools()
 
     isPopulating = false;
     isRebuildingMasks = false;
+
+    updateMaskEdit();       // begin/end the ImageView overlay for the (now) active mask tool
 }
 
 void DevelopProperties::setSelectedMask(int index)
 {
     selectedMaskIndex = index;
     rebuildMaskTools();
+}
+
+QString DevelopProperties::defaultMaskParams(int tool)
+{
+    /* Geometry is stored normalized (0..1 of the image), so it is resolution-independent and
+       survives proxy/full re-renders. Linear Gradient: a vertical line down the middle, ramping
+       0% (top) -> 100% (bottom) across the middle third. Other tools: empty until implemented. */
+    if (tool == int(MaskTool::LinearGradient)) {
+        QJsonObject o;
+        o["x1"] = 0.5; o["y1"] = 0.34;
+        o["x2"] = 0.5; o["y2"] = 0.66;
+        return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+    }
+    return QString();
+}
+
+void DevelopProperties::updateMaskEdit()
+{
+    /* Drive the ImageView mask overlay from the active (selected) mask tool. Begin when a spatial
+       tool is selected and has geometry; otherwise End. Called at the end of every rebuild, so it
+       tracks image/layer switches, selection toggles, add and delete. */
+    EditLayer *layer = activeLayer();
+    if (layer && selectedMaskIndex >= 0 && selectedMaskIndex < layer->masks.size()) {
+        const MaskComponent &m = layer->masks[selectedMaskIndex];
+        if (m.tool == int(MaskTool::LinearGradient)) {
+            emit maskEditBegin(m.tool, m.paramsJson, m.feather);
+            return;
+        }
+    }
+    emit maskEditEnd();
+}
+
+void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
+{
+    /* ImageView dragged the overlay: persist the new geometry into the active mask component. No
+       tree rebuild (would re-emit maskEditBegin and fight the live drag); just store + debounce. */
+    EditLayer *layer = activeLayer();
+    if (!layer || selectedMaskIndex < 0 || selectedMaskIndex >= layer->masks.size()) return;
+    if (layer->masks[selectedMaskIndex].paramsJson == paramsJson) return;
+    layer->masks[selectedMaskIndex].paramsJson = paramsJson;
+    dirty.insert(currentImagePath);
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::onMaskSelectionChanged()
@@ -744,7 +789,10 @@ void DevelopProperties::itemChange(QModelIndex idx)
     if (source == "maskFeather" || source == "maskInvert") {
         EditLayer *l = activeLayer();
         if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size()) {
-            if (source == "maskFeather") l->masks[selectedMaskIndex].feather  = v.toFloat();
+            if (source == "maskFeather") {
+                l->masks[selectedMaskIndex].feather = v.toFloat();
+                emit maskFeatherChanged(v.toDouble());      // live-update the overlay ramp
+            }
             else                         l->masks[selectedMaskIndex].inverted = v.toBool();
             dirty.insert(currentImagePath);
             if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);

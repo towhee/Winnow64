@@ -1748,6 +1748,13 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::centralMsg, this, &MW::setCentralMessage);
     connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::developParamsChange);
 
+    /* Mask editing handshake: the dock activates a spatial mask tool and ImageView draws/edits its
+       overlay, sending dragged geometry back to be persisted into the MaskComponent. */
+    connect(developProperties, &DevelopProperties::maskEditBegin, imageView, &ImageView::beginMaskEdit);
+    connect(developProperties, &DevelopProperties::maskEditEnd,   imageView, &ImageView::endMaskEdit);
+    connect(imageView, &ImageView::maskGeometryChanged, developProperties, &DevelopProperties::setActiveMaskParams);
+    connect(developProperties, &DevelopProperties::maskFeatherChanged, imageView, &ImageView::setMaskFeather);
+
     /* Develop preview render timers (see MW::developParamsChange). The proxy timer coalesces a
        burst of slider ticks into one screen-resolution render; the full-res timer fires once the
        drag settles for the crisp final image. */
@@ -1851,6 +1858,11 @@ void MW::createDevelopDock()
 void MW::developDockVisibilityChange()
 {
     if (G::isLogger) G::log("MW::developDockVisibilityChange");
+    /* Keep the mask overlay confined to Develop: drop it when the dock is hidden or tabbed away,
+       re-assert the active tool's overlay when it returns. */
+    if (!imageView || !developProperties) return;
+    if (developDock->isVisible()) developProperties->refreshMaskEdit();
+    else                          imageView->endMaskEdit();
 }
 
 void MW::createDocks()

@@ -116,6 +116,13 @@ public slots:
     void activateRubberBand();
     void quitRubberBand();
 
+    /* Develop mask editing. beginMaskEdit makes a spatial mask tool the active overlay target (its
+       geometry drawn over the image, draggable); endMaskEdit clears it. setMaskFeather live-updates
+       the ramp softness from the Feather slider. Geometry is normalized image coords (0..1). */
+    void beginMaskEdit(int tool, const QString &paramsJson, double feather);
+    void endMaskEdit();
+    void setMaskFeather(double feather);
+
 signals:
     void togglePick();
     void updateStatus(bool, QString, QString);
@@ -137,6 +144,9 @@ signals:
        Develop scopes' live readout marker; cursorLeftImage when it leaves the image. */
     void cursorImagePos(double xFraction, double yFraction);
     void cursorLeftImage();
+    /* The mask overlay was dragged: the active tool's new geometry as paramsJson, for the dock to
+       persist into the MaskComponent. */
+    void maskGeometryChanged(const QString &paramsJson);
 
 private slots:
     void wheelStopped();
@@ -160,7 +170,7 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
 
 //    void paintEvent(QPaintEvent *event) override;
-//    void drawForeground(QPainter *painter, const QRectF &rect) override;
+    void drawForeground(QPainter *painter, const QRectF &rect) override;   // mask overlay
 
 private:
     void noJpgAvailable();
@@ -263,6 +273,24 @@ private:
 
     QPoint origin;
     QRubberBand *rubberBand;
+
+    /* ------- Develop mask editing ------- */
+    bool    maskEditMode = false;       // a spatial mask tool is the active edit target
+    bool    maskHover    = false;       // cursor is over the view (overlay shown only then)
+    int     maskTool     = 0;           // MaskTool enum value
+    double  maskFeather  = 50.0;        // 0..100, ramp softness
+    QPointF maskP1;                     // gradient start (0% line), normalized image coords
+    QPointF maskP2;                     // gradient end   (100% line), normalized image coords
+    int     maskDrag     = -1;          // active handle: -1 none, 0 p1, 1 p2, 2 move (whole line)
+    QPointF maskMoveAnchorN;            // image-norm cursor at move start
+    QPointF maskP1Anchor, maskP2Anchor; // endpoints at move start
+
+    bool    maskHandlesEditable() const { return maskEditMode && maskHover && pmItem && pmItem->isVisible(); }
+    QString maskParamsJson() const;                 // serialize maskP1/maskP2
+    bool    parseMaskParams(const QString &json);   // -> maskP1/maskP2 (false if invalid)
+    QPointF maskNormToViewport(QPointF n) const;    // normalized image -> viewport px
+    QPointF maskViewportToNorm(QPoint vp) const;    // viewport px -> normalized image
+    int     maskHitTest(QPoint vp) const;           // which handle is under vp (-1 none)
 };
 
 #endif // IMAGEVIEW_H
