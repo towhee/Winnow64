@@ -472,15 +472,14 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     setFirstColumnSpanned(toolIdx.row(), parIdx, true);
 
     /* The selected tool reveals its settings as its OWN children (no duplicate tool-name row):
-       Feather, Invert, and a Done checkbox that ends the build. */
+       Feather and Invert. Clicking the tool caption again collapses it (see mousePressEvent), so
+       no separate Done row is needed. */
     if (selected) {
         addSlider("maskFeather", "Feather", "Soften the mask edge.",
                   toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
         addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
-        addCheckbox("maskDone", "Done", "Finish editing this mask tool.", toolIdx, "", false);
         setSliderReal("maskFeather", m.feather);
         setCheckboxValue("maskInvert", m.inverted);
-        setCheckboxValue("maskDone", false);
         expand(toolIdx);
     }
 }
@@ -777,13 +776,6 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
-    /* Done checkbox ends the build. Defer the rebuild: it deletes this checkbox's own editor, which
-       must not happen inside the editor's value-changed signal. */
-    if (source == "maskDone") {
-        QTimer::singleShot(0, this, [this]{ setSelectedMask(-1); });
-        return;
-    }
-
     /* The selected mask tool's settings write into the active layer's mask model. Feather/Invert
        change the mask, so they update the live overlay AND re-composite the masked layer. */
     if (source == "maskFeather" || source == "maskInvert") {
@@ -852,24 +844,27 @@ EditParams DevelopProperties::editParams()
     return s.layers[idx].params;
 }
 
-DevelopProperties::MaskRenderJob DevelopProperties::maskJob()
+DevelopProperties::StackRenderJob DevelopProperties::stackJob()
 {
-    /* Capture the active layer's compositing recipe as plain values (used on the GUI thread and
-       handed to the off-thread full-res render). Masking applies only for a non-Base layer that has
-       at least one enabled mask component; otherwise the active params render globally. */
-    MaskRenderJob job;
+    /* Capture the WHOLE stack as plain values (GUI thread; also handed to the off-thread full-res
+       render). The render shows every enabled layer regardless of which one is active for editing,
+       so a saved mask is visible the moment the image loads. */
+    StackRenderJob job;
     if (currentImagePath.isEmpty()) return job;
     const EditStack s = stackCache.value(currentImagePath);
     if (s.layers.isEmpty()) return job;
-    const int idx = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size()) ? activeLayerIndex : 0;
-    job.above   = s.layers[idx].params;
-    job.below   = s.layers[0].params;           // layers-below result (Base, for now)
-    job.combine = s.layers[idx].combine;
-    if (idx > 0) {
-        for (const MaskComponent &m : s.layers[idx].masks)
-            if (m.enabled && !m.paramsJson.isEmpty()) job.masks.append(m);
+    job.base = s.layers[0].params;              // Base (layer 0), applied globally
+    for (int i = 1; i < s.layers.size(); ++i) {
+        const EditLayer &l = s.layers[i];
+        if (!l.enabled) continue;
+        if (l.params.isIdentity()) continue;    // no adjustment -> nothing to composite (skip)
+        StackRenderJob::Layer lj;
+        lj.params  = l.params;
+        lj.combine = l.combine;
+        for (const MaskComponent &m : l.masks)
+            if (m.enabled && !m.paramsJson.isEmpty()) lj.masks.append(m);
+        job.layers.append(lj);
     }
-    job.active = !job.masks.isEmpty();
     return job;
 }
 

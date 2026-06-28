@@ -2501,10 +2501,9 @@ Layer & masking model (planned)
                composites stale until a full repaint). mousePressEvent hit-tests the glyph rect
                (mirroring the delegate geometry) to delete; clicks elsewhere on the row toggle it.
                Clicking a tool toggles it: the SELECTED tool expands to show its
-               settings as ITS OWN children (Feather slider, Invert checkbox, Done checkbox) -- no
-               duplicate tool-name row; only one tool is expanded at a time. The Done checkbox ends
-               the build (collapses the tool) via a DEFERRED setSelectedMask(-1) (QTimer 0) so the
-               rebuild does not delete the checkbox inside its own value-changed signal. NB
+               settings as ITS OWN children (Feather slider, Invert checkbox) -- no duplicate
+               tool-name row; only one tool is expanded at a time. Clicking the tool caption again
+               collapses it (setSelectedMask(-1)), so there is no separate Done row. NB
                PropertyEditor::mousePressEvent does NOT select rows (only expand/collapse), so
                DevelopProperties overrides mousePressEvent to read the clicked row's UR_MaskIndex and
                toggle it (and returns without the base expand/collapse). All mask UI is isolated in
@@ -2527,22 +2526,25 @@ Layer & masking model (planned)
                tree rebuild). Feather/Invert live-update the overlay via maskFeatherChanged/
                maskInvertChanged; the tint colour conveys the op (Add=red, Subtract=blue) and Invert
                flips the ramp.
-             - RENDER COMPOSITING (Stage 4b): the mask now feeds developComposite. The active
-               (non-Base) layer's adjustments are blended over the layers-below result by the mask,
-               in SCENE-LINEAR before the output transform. DevelopProperties::maskJob() captures the
-               recipe as plain values (below = Base params, above = active-layer params, the layer's
-               mask components, combine) so it is safe for the off-thread full-res render.
-               WorkingImageCache::renderMasked develops both sides (an identity side aliases work --
-               no copy/Develop, so a masked layer over an unedited Base is ~one develop pass), mixes
-               above*mask+below*(1-mask) per pixel (parallelFor), then one OutputTransform.
-               buildMaskBuffer (mainwindow.cpp) rasterizes the layer's gradient(s) at WorkingImage
-               (pre-orientation) resolution; each pixel is mapped work-normalized -> output-normalized
-               (output = work rotated CW by degrees) so geometry edited on the oriented loupe lines
-               up after developComposite applies the EXIF rotation; Add=union(max), Subtract=*(1-c).
-               A non-Base layer with NO mask renders its adjustment GLOBALLY (maskJob.active=false ->
-               plain developComposite). Mask add/delete/geometry/feather/invert now emit
-               paramsChanged() so the masked composite re-renders. Brush/AI tools and true N-layer
-               stacking (below is just Base for now) come later.
+             - RENDER COMPOSITING (Stage 4b + N-layer stack): the render composites the WHOLE stack
+               in SCENE-LINEAR before the output transform, INDEPENDENT of which layer is active for
+               editing -- so a saved mask is visible the moment the image loads (no need to select
+               its layer). DevelopProperties::stackJob() captures it as plain values (Base params +
+               each enabled non-Base layer's params/masks/combine) so it is safe for the off-thread
+               full-res render. WorkingImageCache::renderStack starts from Base (applied globally),
+               then for each layer develops `work` with that layer's params (an identity side aliases
+               work -- no copy/Develop) and blends over the accumulator by its mask
+               (acc = acc*(1-m)+layer*m; an empty/global mask replaces below); one final
+               OutputTransform. Each layer develops the ORIGINAL work (independent, not stacked
+               adjustments), so where a layer's mask=1 it replaces what is below. buildMaskBuffer
+               (mainwindow.cpp) rasterizes a layer's gradient(s) at WorkingImage (pre-orientation)
+               resolution; each pixel maps work-normalized -> output-normalized (output = work
+               rotated CW by degrees) so geometry edited on the oriented loupe lines up after the
+               EXIF rotation; falloff smootherstep, Add=union(max), Subtract=*(1-c). developComposite
+               remains the fast single-pass path when there are no non-Base layers. Mask
+               add/delete/geometry/feather/invert emit paramsChanged() to re-render. Deferred: true
+               STACKED adjustments (each layer builds on the result below, not the original), the
+               combine field (Union only today), and Brush/AI tools.
              - LIFECYCLE / FLUSH: MW::fileSelectionChange calls setCurrentImage; after the loupe
                pixmap is shown (both the cache-hit path and MW::refreshViewsOnCacheChange) MW::
                applyDevelopPreviewIfEdited renders the saved edits over an edited image (no-op for

@@ -204,50 +204,55 @@ inline void maskParallelFor(size_t n, F fn)
 }
 } // namespace
 
-bool WorkingImageCache::renderMasked(const WorkingImage &work, const EditParams &belowEdit,
-                                     const EditParams &aboveEdit, const std::vector<float> &mask,
-                                     QImage &out, RenderTimings *timings)
+bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &base,
+                                    const std::vector<StackLayer> &layers,
+                                    QImage &out, RenderTimings *timings)
 {
     if (!work.isValid()) return false;
     const size_t n = size_t(work.width) * size_t(work.height);
-    if (mask.size() != n) return false;
 
     QElapsedTimer t;
     if (timings) t.start();
-
-    /* Develop each side in scene-linear. An identity side (commonly Base) skips the copy + Apply
-       and aliases `work`, so a masked layer over an unedited Base costs ~one develop pass. */
     Develop develop;
-    WorkingImage belowBuf, aboveBuf;
-    const WorkingImage *belowP = &work, *aboveP = &work;
-    if (!belowEdit.isIdentity()) { belowBuf = work; develop.Apply(belowBuf, belowEdit, nullptr); belowP = &belowBuf; }
-    if (!aboveEdit.isIdentity()) { aboveBuf = work; develop.Apply(aboveBuf, aboveEdit, nullptr); aboveP = &aboveBuf; }
+
+    /* Accumulator = Base applied globally. Owned (mutable) so layers can blend into it. */
+    WorkingImage acc = work;
+    if (!base.isIdentity()) develop.Apply(acc, base, nullptr);
+
+    for (const StackLayer &L : layers) {
+        if (!L.mask.empty() && L.mask.size() != n) continue;   // malformed mask: skip the layer
+
+        /* Develop this layer from the ORIGINAL work (independent of the layers below); an identity
+           layer aliases work (no copy/Apply). */
+        WorkingImage layBuf;
+        const WorkingImage *layP = &work;
+        if (!L.params.isIdentity()) { layBuf = work; develop.Apply(layBuf, L.params, nullptr); layP = &layBuf; }
+
+        const float *hi = layP->rgb.data();
+        float *dst = acc.rgb.data();
+        if (L.mask.empty()) {                                  // global layer: replaces below
+            const float *src = hi;
+            maskParallelFor(n, [=](size_t i0, size_t i1) {
+                std::copy(src + i0*3, src + i1*3, dst + i0*3);
+            });
+        }
+        else {
+            const float *mk = L.mask.data();
+            maskParallelFor(n, [=](size_t i0, size_t i1) {
+                for (size_t i = i0; i < i1; ++i) {
+                    const float m = mk[i], im = 1.0f - m;
+                    const size_t j = i * 3;
+                    dst[j+0] = dst[j+0]*im + hi[j+0]*m;
+                    dst[j+1] = dst[j+1]*im + hi[j+1]*m;
+                    dst[j+2] = dst[j+2]*im + hi[j+2]*m;
+                }
+            });
+        }
+    }
     if (timings) timings->developMs = t.restart();
 
-    /* Fresh destination buffer (metadata copied; pixels written by the blend, no pixel copy). */
-    WorkingImage blended;
-    blended.width = work.width; blended.height = work.height;
-    blended.white = work.white; blended.sceneReferred = work.sceneReferred;
-    blended.rgb.resize(n * 3);
-
-    const float *lo = belowP->rgb.data();
-    const float *hi = aboveP->rgb.data();
-    const float *mk = mask.data();
-    float *dst = blended.rgb.data();
-    maskParallelFor(n, [=](size_t i0, size_t i1) {
-        for (size_t i = i0; i < i1; ++i) {
-            const float m = mk[i];
-            const float im = 1.0f - m;
-            const size_t j = i * 3;
-            dst[j+0] = lo[j+0]*im + hi[j+0]*m;
-            dst[j+1] = lo[j+1]*im + hi[j+1]*m;
-            dst[j+2] = lo[j+2]*im + hi[j+2]*m;
-        }
-    });
-    if (timings) timings->developMs += t.restart();
-
     OutputTransform output;
-    const bool ok = output.ToImage(blended, out);
+    const bool ok = output.ToImage(acc, out);
     if (timings) timings->toImageMs = t.elapsed();
     return ok;
 }
