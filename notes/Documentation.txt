@@ -2488,6 +2488,65 @@ Develop dock (UI)
     persists exactly as the other docks (settings isDevelopDockVisible + DevelopDock, plus the
     workspace struct field isDevelopDockVisible).
 
+    The dock's widget is a container: a fixed-height SCOPES strip pinned at the top with the
+    DevelopProperties tree below it taking the remaining (stretch) space.
+
+Develop scopes (histogram + vectorscope)
+------------------------------------------------------------------------------------------
+
+    A live histogram (left) and vectorscope (right) sit above the property tree, in
+    Develop/Scopes/: HistogramView (256-bin R/G/B with additive blend + a faint luma outline),
+    VectorscopeView (YCbCr Cb/Cr 2-D accumulation on a circular graticule, log-scaled and
+    hue-coloured), wrapped by ScopesView (a QHBoxLayout, histogram given the larger stretch).
+
+    They reflect the image CURRENTLY SHOWN in the loupe. MW::updateDevelopScopes(const QImage&)
+    does ONE strided sample pass (~180k-pixel budget, so a 50MP RAW costs the same as the proxy;
+    constScanLine so no detach) that fills both scopes from the same downsample. It is called
+    after each develop preview render (the post-Develop `out`, both setDevelopPreview sites) and,
+    for an unedited image, from the decoded image in applyDevelopPreviewIfEdited; the scopes are
+    cleared at the imageView->clear() sites. No new timers -- it piggybacks the existing coalesced
+    render path. The pass is a cheap no-op while the scopes are hidden.
+
+    A button on the Develop editor bar (graphic.png) toggles the strip via MW::toggleDevelopScopes;
+    the choice persists as Settings "Develop/scopesVisible". (A standalone widget above the tree was
+    chosen over an in-tree spanned row so the scope stays pinned rather than scrolling away; see
+    notes/Develop_Scopes_Plan.txt for the rejected alternative.)
+
+    Tone-region slider (ToneRegionSlider, under the histogram, sharing its x-axis): a black->white
+    track with three draggable handles that split the tonal range into blacks | shadows |
+    highlights | whites (like the Lightroom tone-curve region splits). The handles move WHERE the
+    shadows/highlights tone controls act and how far each reaches; blacks (0) and whites (1) stay
+    pinned. They map to three EditParams fields (toneShadowCenter / toneCrossover /
+    toneHighlightCenter, perceptual 0..1, defaults 0.25/0.50/0.75). In Develop::buildToneLut the
+    shadows/highlights Gaussian centres come from the two outer handles and each region's sigma is
+    derived from its gap to the crossover (kToneSigmaSpan, so the default gap reproduces the old
+    fixed kToneSigma) -- i.e. the defaults are an exact no-op. A drag writes the active layer's
+    params and emits paramsChanged() (live re-render, coalesced like the sliders); the splits only
+    change pixels when a tone slider is non-zero, so they are NOT part of EditParams::isIdentity().
+    DevelopProperties::bindToneSlider() connects the slider (drag -> onToneSplitsChanged) and
+    populateSlidersFromStack() pushes the saved positions back on image switch.
+
+    Cursor readout: hovering the loupe marks the pixel under the cursor on both scopes -- vertical
+    R/G/B ticks on the histogram, a ring at its Cb/Cr on the vectorscope. ImageView (mouse tracking
+    on) emits cursorImagePos (normalized) / cursorLeftImage; MW::onImageCursorPos samples that one
+    pixel from developShownImage (the cached QImage last handed to updateDevelopScopes == what the
+    loupe shows; implicitly shared, so O(1) per move, no re-bin, no pixmap->image copy) and calls
+    ScopesView::setMarker / clearMarker. Cleared when the cursor leaves the image. No-op while the
+    scopes are hidden.
+
+    Vectorscope zoom: a right-click menu (100/150/200%) magnifies the plotted trace + marker
+    outward from the centre to reveal low-saturation detail; the graticule circle stays as the
+    100% reference and a small "%"-label shows when zoomed. VectorscopeView::setZoom +
+    zoomChanged; ScopesView re-emits as vectorscopeZoomChanged; MW restores/persists it as
+    Settings "Develop/vectorscopeZoom".
+
+    Skin-tone line: the same right-click menu toggles a flesh-tone reference line -- the YIQ
+    I-axis, which from our BT.601 Cb/Cr coefficients is (Cr-128) = -1.946*(Cb-128); skin of every
+    ethnicity falls along it (hue is constant; only saturation/brightness vary). Drawn centre ->
+    edge into the warm upper-left ray, independent of zoom (it is an angle guide). setSkinLine +
+    skinLineChanged -> ScopesView::vectorscopeSkinLineChanged -> Settings
+    "Develop/vectorscopeSkinLine".
+
     Sections (built via PropertyEditor::addItem):
         Layers   header with -/+ buttons (same idiom as Embellish Templates) + a "Select
                  layer" combo. A layer is one set of adjustments; switching rebuilds the

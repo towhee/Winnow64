@@ -7,23 +7,51 @@ We just made architecture changes in the conversation 'Raw decoder and editor'. 
   to the View menu with shortcut F9, and save everything to settings as per the other docks.  Add a
   separate Properties file similar to the embellish one.
 
+I want to be able to customize the column(i) width for a specific row of the
+PropertyEditor::QTreeView as part of the addItem process. Also, I want to be
+able to set individual row heights as well.  I would like the column width
+units to be percent of the  entire width, and row height to be percent of the
+default row height.  I anticipate needing this for the section that holds the
+histogram (left side) and vector scope (right side). How do you suggest we do this.
+
 The initial setup:
-Develop dock items:
-    Layers (header with minus/plus) same as Embellish templates
-        Select layer (dropdown)
-    Basic (header)
+Develop dock btns Graphs, Transform, ?, X
+    Graphs btns: auto, skin
+        Histogram/VectorScope side by side
+    Core btns: presets, save preset, transform (crop symbol)
+        Demosaic dropdown (Apple, Winnow, Other...)
         Denoise (checkbox)
-        Temp (slider)
-        Tint (slider)
-        Exposure (slider)
-        Contrast (slider)
-        Highlights (slider)
-        Shadows (slider)
-        Whites (slider)
-        Blacks (slider)
-        Texture (slider)
-        Dehaze (slider)
-    Effects (header)
+        Transform
+            Crop
+            Rotate/Level
+            Perspective
+    Layers btns: btns: minus/plus
+        Select layer (lineedit dropdown)
+            Combine masks method
+            Mask 1
+            Mask 2
+        Basic (header)
+            Temp (slider)
+            Tint (slider)
+            Tone segment (slider)
+            Exposure (slider)
+            Contrast (slider)
+            Highlights (slider)
+            Shadows (slider)
+            Whites (slider)
+            Blacks (slider)
+            Texture (slider)
+            Dehaze (slider)
+        Color
+            Red slidder
+            Green slider
+            Blue slider
+            Hue slider
+            Saturation slider
+            Luminance slider
+        Effects (header)
+            Vignette
+            Grain
 
 Make sure you can read white-balance multipliers, black/white levels, CFA phase for every camera
 in the list.  This has been a problem in some of the cameras we have already done.  Can you

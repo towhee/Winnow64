@@ -67,6 +67,10 @@ ImageView::ImageView(QWidget *parent,
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setScene(scene);
 
+    /* Hover moves (no button) are needed for the Develop scopes' live cursor readout. */
+    setMouseTracking(true);
+    viewport()->setMouseTracking(true);
+
     cursorIsHidden = false;
     moveImageLocked = false;
     infoOverlay = new DropShadowLabel(this);
@@ -1328,6 +1332,7 @@ void ImageView::enterEvent(QEnterEvent *event)
 void ImageView::leaveEvent(QEvent *event)
 {
     wheelSpinningOnEntry = false;
+    emit cursorLeftImage();     // clear the Develop scopes readout marker
     // emit showLoupeRect(false);
 }
 
@@ -1566,6 +1571,18 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
                 QTimer::singleShot(500, this, SLOT(hideCursor()));
             }
         }
+    }
+
+    /* Develop scopes readout: map the cursor to the displayed pixmap and emit its normalized
+       position (or "left the image" when outside). One pixmap-coordinate transform; the actual
+       pixel sample + scope overlay happen on the receiving side (MW::onImageCursorPos). */
+    if (pmItem->isVisible()) {
+        const QPointF itemPt = pmItem->mapFromScene(mapToScene(event->pos()));
+        const QRectF br = pmItem->boundingRect();
+        if (br.width() > 0 && br.height() > 0 && br.contains(itemPt))
+            emit cursorImagePos(itemPt.x() / br.width(), itemPt.y() / br.height());
+        else
+            emit cursorLeftImage();
     }
 
     prevPos = event->pos();

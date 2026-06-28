@@ -4,6 +4,7 @@
 #include "Develop/workingimagecache.h"
 #include "Develop/inputtransform.h"
 #include <QMetaEnum>
+#include <cmath>            // std::sqrt (updateDevelopScopes sampling stride)
 #include <cstdlib>          // std::_Exit (used by runSelfTest)
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -2949,6 +2950,7 @@ bool MW::reset(QString src)
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
     imageView->clear();
+    if (scopesView) scopesView->clear();
     G::isFirstImageNewInstance = true;
 
     // dm->newInstance();       // newInstance moved to folderSelectionChange()
@@ -3133,6 +3135,7 @@ void MW::nullFiltration()
     setCentralMessage(msg);
     infoView->clearInfo();
     imageView->clear();
+    if (scopesView) scopesView->clear();
     progress->setVisible(false);
     isDragDrop = false;
 }
@@ -5063,6 +5066,7 @@ void MW::renderDevelopPreview(bool fullRes)
     const qint64 tRender = G::isReportDevelopTime ? probe.restart() : 0;
 
     imageView->setDevelopPreview(out);
+    updateDevelopScopes(out);   // scopes reflect exactly what is shown
 
     if (G::isReportDevelopTime) {
         qDebug().noquote() << "[DevTime]" << (fullRes ? "full " : "proxy")
@@ -5112,8 +5116,14 @@ void MW::applyDevelopPreviewIfEdited()
     the image cache and re-runs this overlay, so the developed look returns when raw decode is on.
 */
     if (G::isLogger) G::log("MW::applyDevelopPreviewIfEdited");
-    if (!G::useRaw) return;
-    if (!developProperties || developProperties->currentIsIdentity()) return;
+    /* An edited image (raw on) renders its saved params, and that render refreshes the scopes via
+       setDevelopPreview. Otherwise nothing overlays the loupe, so refresh the scopes here from the
+       decoded image actually shown (valid in preview mode too). */
+    const bool edited = G::useRaw && developProperties && !developProperties->currentIsIdentity();
+    if (!edited) {
+        updateDevelopScopes(icd->imCache.value(dm->currentFilePath));
+        return;
+    }
     developParamsChange();   // schedule the proxy + full-res settle render of the saved params
 }
 
@@ -5175,11 +5185,103 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
     developFullResInFlight = false;
 
     const bool currentImage = (fPath == dm->currentFilePath);
-    if (!out.isNull() && currentImage && gen == developParamsGen)
+    if (!out.isNull() && currentImage && gen == developParamsGen) {
         imageView->setDevelopPreview(out);
+        updateDevelopScopes(out);
+    }
 
     if (currentImage && gen != developParamsGen)
         developFullResTimer->start(kDevelopSettleMs);
+}
+
+void MW::updateDevelopScopes(const QImage &shown)
+{
+/*
+    Rebuild the Develop scopes (histogram + vectorscope) from the image currently shown. Called
+    after each develop preview render (the post-render `out`) and, for an unedited image, from the
+    decoded image. One strided sample pass at a fixed budget fills both scopes, so the cost is the
+    same on a 50MP RAW as on the small proxy. Cheap no-op while the scopes are hidden; a null image
+    clears them. Stays on the GUI thread (the sample budget keeps it sub-millisecond); revisit only
+    if a probe shows otherwise.
+*/
+    if (G::isLogger) G::log("MW::updateDevelopScopes");
+    developShownImage = shown;   // cache for the cursor readout (implicitly shared; free)
+    if (!scopesView || !developScopesVisible) return;   // hidden: skip the sample cost
+    if (shown.isNull()) { scopesView->clear(); return; }
+
+    /* One conversion to a 32-bit format for fast scanline access (avoids per-pixel QImage::pixel). */
+    QImage im = shown;
+    if (im.format() != QImage::Format_RGB32 &&
+        im.format() != QImage::Format_ARGB32 &&
+        im.format() != QImage::Format_ARGB32_Premultiplied)
+        im = im.convertToFormat(QImage::Format_RGB32);
+
+    const int W = im.width();
+    const int H = im.height();
+    if (W < 1 || H < 1) { scopesView->clear(); return; }
+
+    constexpr qint64 budget = 180000;
+    const int step = qMax(1, static_cast<int>(std::sqrt(static_cast<double>(W) * H / budget)));
+
+    ScopeData d;
+    d.clear();
+    for (int y = 0; y < H; y += step) {
+        /* constScanLine: never detaches (im may share `shown`'s buffer), so a 50MP full-res
+           `out` is sampled in place rather than deep-copied. */
+        const QRgb *line = reinterpret_cast<const QRgb*>(im.constScanLine(y));
+        for (int x = 0; x < W; x += step) {
+            const QRgb p = line[x];
+            const int r = qRed(p), g = qGreen(p), b = qBlue(p);
+            d.hist[0][r]++;
+            d.hist[1][g]++;
+            d.hist[2][b]++;
+            /* BT.709 luma, integer (coeffs * 256 = 54,183,19). */
+            const int luma = (r * 54 + g * 183 + b * 19) >> 8;
+            d.hist[3][luma & 0xff]++;
+            /* BT.601 Cb/Cr around 128 (coeffs * 256), quantised to VN bins for the vectorscope. */
+            const int cb = qBound(0, 128 + ((-43 * r - 85 * g + 128 * b) >> 8), 255);
+            const int cr = qBound(0, 128 + ((128 * r - 107 * g - 21 * b) >> 8), 255);
+            d.vec[(cr * ScopeData::VN) >> 8][(cb * ScopeData::VN) >> 8]++;
+        }
+    }
+    scopesView->setData(d);
+}
+
+void MW::toggleDevelopScopes()
+{
+/*
+    Develop editor-bar toggle: show/hide the scopes strip and persist the choice. When re-shown,
+    repopulate from the image currently displayed -- re-render the developed preview if the image
+    has edits (so the scope matches what is on screen), else sample the decoded image.
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopScopes");
+    developScopesVisible = !developScopesVisible;
+    if (scopesView) scopesView->setVisible(developScopesVisible);
+    settings->setValue("Develop/scopesVisible", developScopesVisible);
+    if (developScopesVisible) {
+        if (G::useRaw && developProperties && !developProperties->currentIsIdentity())
+            developParamsChange();
+        else
+            updateDevelopScopes(icd->imCache.value(dm->currentFilePath));
+    }
+}
+
+void MW::onImageCursorPos(double xFraction, double yFraction)
+{
+/*
+    The loupe cursor is at (xFraction, yFraction) of the displayed image. Sample that one pixel
+    from the cached shown QImage (O(1)) and drive the scopes' readout marker. Cheap no-op while
+    the scopes are hidden or no image is shown.
+*/
+    if (!scopesView || !developScopesVisible) return;
+    if (developShownImage.isNull()) { scopesView->clearMarker(); return; }
+
+    const int x = qBound(0, static_cast<int>(xFraction * developShownImage.width()),
+                         developShownImage.width() - 1);
+    const int y = qBound(0, static_cast<int>(yFraction * developShownImage.height()),
+                         developShownImage.height() - 1);
+    const QRgb p = developShownImage.pixel(x, y);
+    scopesView->setMarker(qRed(p), qGreen(p), qBlue(p));
 }
 
 bool MW::isValidPath(QString &path)

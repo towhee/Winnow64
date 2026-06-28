@@ -67,7 +67,7 @@ Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
 17   [todo]      Per-format raw decode tests (Qt Test + CTest), byte-identical vs
                  the libraw oracle (project_raw_libraw_oracle).
 
-KNOWN COMPRESSED GAPS (within the "done" decoders):
+   KNOWN COMPRESSED GAPS (within the "done" decoders):
    Panasonic RawFormat 5/6/7, Sony lossless-compressed, Nikon 0x44 lossy-with-curve path
    (ported but not yet exercised by a test file). Fuji-lossless RAF: DONE (see #11).
 
@@ -123,4 +123,20 @@ NEW
                    - Olympus black 255 vs OM-1's 254; Sony default black 512 vs an 800
                      sample; verify Canon ColorData WB offset across versions. Other
                      vendors could also adopt cameraLevelsForModel where they hardcode.
+
+20   [DONE 2026-06-27] Histogram scope for Develop. 256-bin RGB + luma, additive
+                 blend, drawn by Develop/Scopes/HistogramView. Fed by MW::updateDevelop-
+                 Scopes (one strided ~180k-px sample pass) from the post-Develop preview
+                 `out` and, unedited, from the decoded image. Perceptual (8-bit) x-axis.
+21   [DONE 2026-06-27] Vectorscope for Develop. YCbCr Cb/Cr 2-D accumulation on a
+                 circular graticule (Develop/Scopes/VectorscopeView), log-scaled, hue-
+                 coloured. Shares the #20 sample pass. Both live in a ScopesView strip
+                 ABOVE the property tree (NOT an in-tree row -- standalone widget chosen
+                 so it stays pinned and the brittle tree code is untouched); toggled by a
+                 Develop editor-bar button, persisted (Develop/scopesVisible).
+
+22   [todo]      Add an eye symbol button to show/hide develop basic modifications and
+                 a reset button to the Basic bar.
+
+23   [todo]      Wire RGB and HSL sliders under the Color Header.
 --------------------------------------------------------------------------------
