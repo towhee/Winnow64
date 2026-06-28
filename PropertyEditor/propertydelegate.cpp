@@ -372,10 +372,20 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     /* Root rows are highlighted with a darker gradient and the decoration, which gets covered
     up, and is repainted */
     QRect r = option.rect;
-    // save column widths
-    static int w0 = 100, w1 = 200;
-    if (index.column() == 0) w0 = r.width();
-    if (index.column() == 1) w1 = r.width();
+    /* Full column widths, taken from the view so they do not depend on paint order. The previous
+       approach cached r.width() into static w0/w1 as each column painted, but for column 0 Qt
+       shrinks the cell rect by the row's indentation, so indented child rows could leave w0 holding
+       a too-small value for a later full-width caption (r4 = w0 + w1). Reading columnWidth() is
+       order-independent and always correct. */
+    int w0 = 100, w1 = 200;
+    if (const QTreeView *view = qobject_cast<const QTreeView*>(option.widget)) {
+        w0 = view->columnWidth(0);
+        w1 = view->columnWidth(1);
+    }
+    else {
+        if (index.column() == 0) w0 = r.width();
+        if (index.column() == 1) w1 = r.width();
+    }
     // r0 extends the rect over the decoration to the left margin
     QRect r0 = QRect(0, r.y(), r.x() + r.width(), r.height());
     // r1 = r0 but leaves 1 pixel at the left and right margins to make room for a border
@@ -464,10 +474,21 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                     painter->drawPixmap(x, y, 9, 9, branchClosed);
                 }
             }
-            // caption text and no borders for root item
-            painter->setPen(catPen);
+            // caption text and no borders for root item. UR_LeafSingleLine rows want the header's
+            // single-line full-width layout but the ordinary LEAF text colour (not category teal).
+            painter->setPen(index.data(UR_LeafSingleLine).toBool() ? regPen : catPen);
             if (index.data(UR_isDecoration).toBool()) {
-                painter->drawText(r4, Qt::AlignVCenter|Qt::TextSingleLine, text);
+                if (index.data(UR_DeleteBtn).toBool()) {
+                    /* Elide before the delegate-drawn [-] glyph (geometry below) so a long caption
+                       never runs under it. */
+                    const int capRight = r.right() - 16 - 4 - 6;    // glyph left edge less a gap
+                    QRect rCap(r4.x(), r4.y(), capRight - r4.x(), r4.height());
+                    const QString cap = painter->fontMetrics().elidedText(text, Qt::ElideRight, rCap.width());
+                    painter->drawText(rCap, Qt::AlignVCenter|Qt::TextSingleLine, cap);
+                }
+                else {
+                    painter->drawText(r4, Qt::AlignVCenter|Qt::TextSingleLine, text);
+                }
             }
             else {
                 painter->drawText(r2, Qt::AlignVCenter|Qt::TextSingleLine, text);
@@ -476,6 +497,18 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             if (!index.data(UR_isBackgroundGradient).toBool()) {
                 painter->setPen(brdPen);
                 painter->drawLine(r0.bottomLeft(), r0.bottomRight());
+            }
+            /* Delegate-drawn [-] remove glyph at the row's right edge. Used by full-width spanned
+               rows (e.g. Develop mask-tool rows) that cannot host a value-column button widget
+               without it covering/clipping the single-line caption. Clicks are hit-tested by the
+               view (see DevelopProperties::mousePressEvent). */
+            if (index.data(UR_DeleteBtn).toBool()) {
+                const int sz = 16;
+                int gx = r.right() - sz - 4;
+                int gy = r.top() + (r.height() - sz)/2;
+                painter->setOpacity(G::iconOpacity);
+                painter->drawPixmap(gx, gy, sz, sz, QPixmap(":/images/icon16/delete.png"));
+                painter->setOpacity(1.0);
             }
         }
         // header row, but value column, so no decoration to deal with

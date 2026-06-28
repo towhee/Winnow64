@@ -51,6 +51,11 @@ public:
     void flushImage(const QString &fPath);        // write one image's dirty stack to its sidecar
     void flushAll();                              // write all dirty stacks (quit / pre-op)
 
+protected:
+    /* PropertyEditor::mousePressEvent does not select rows (it only handles expand/collapse), so we
+       toggle the clicked mask tool ourselves (reveal/hide its settings children) and return. */
+    void mousePressEvent(QMouseEvent *event) override;
+
 public slots:
     void itemChange(QModelIndex idx) override;
 
@@ -72,6 +77,26 @@ private:
 
     void newLayer();
     void deleteLayer();
+
+    /* ---- Mask (one mask per non-Base layer, built from a list of Add/Subtract tools) ----------
+       Self-contained so the whole mask UI can be redesigned by rewriting just these functions and
+       the MaskComponent model. The layer's single mask is an ordered list of tools (each Adds or
+       Subtracts area); the [M] button beside "Select layer" appends one, each tool is a row with a
+       [-] remove button, and clicking a tool reveals its settings (+ a Done button) below the
+       list. Spatial editing (drag/paint/AI-select on the image) is a later increment on the
+       canvas; rendering does not yet composite the mask. */
+    void showMaskMenu();                       // [M] button: pop the Add/Subtract tool-type menu
+    void rebuildMaskTools();                   // rebuild the tool rows under the Layers header
+    /* One row per tool; the SELECTED tool also gets its settings (Feather/Invert/Done) as children. */
+    void addToolRow(QModelIndex parIdx, int index, const MaskComponent &m, bool selected);
+    void newMask();                            // QAction handler: append the chosen Add/Subtract tool
+    void deleteMask(int index);
+    void setSelectedMask(int index);           // make a tool active (-1 = none, e.g. Done)
+    void onMaskSelectionChanged();             // (programmatic selection only; clicks go via mousePressEvent)
+    EditLayer *activeLayer();                  // active layer of the current image, or nullptr
+    static QString maskToolName(int tool);
+    static int maskToolFromName(const QString &name);
+    static QString opName(int op);             // "Add" / "Subtract"
 
     /* Item builders. div converts the integer slider amount to a double (eg /100), and
        defaults to identity (0) so an absent value is a no-op edit. */
@@ -110,6 +135,15 @@ private:
     QString currentImagePath;
     int activeLayerIndex = 0;
     bool isPopulating = false;
+
+    /* Mask UI state. selectedMaskIndex is the component shown in the shared Mask Tool panel (-1 =
+       none). isRebuildingMasks guards the tree-selection handler while we add/remove mask rows.
+       maskMenu is the "+ add mask" type chooser. UR_MaskIndex tags a mask row's caption with its
+       component index so selection can find it. */
+    int selectedMaskIndex = -1;
+    bool isRebuildingMasks = false;
+    QMenu *maskMenu = nullptr;
+    static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;
     static constexpr int kDebounceWriteMs = 2000;  // flush this long after edits settle (gated)
 

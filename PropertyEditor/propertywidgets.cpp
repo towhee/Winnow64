@@ -645,6 +645,14 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(comboBox, Qt::AlignLeft);
     layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
+
+    /* Optional trailing buttons: any BarBtns queued in the global `btns` vector before this editor
+       is created are placed after the combo (e.g. the Develop "Select layer" combo's [M] mask
+       menu button). Same drain-and-clear idiom as BarBtnEditor, so only the editor created
+       immediately after the queue picks them up. */
+    for (int b = 0; b < btns.size(); ++b) layout->addWidget(btns.at(b));
+    btns.clear();
+
     setLayout(layout);
 
     if (idx.data(UR_IconList).toStringList().length() == 0)
