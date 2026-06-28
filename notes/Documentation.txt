@@ -2485,7 +2485,9 @@ Layer & masking model (planned)
                geometry). Each tool ADDS or SUBTRACTS area; the first tool must Add (nothing to
                subtract from an empty mask). The combine field is legacy/unused. The dock places an
                [M] button right after the "Select layer" combo (ComboBoxEditor now drains the global
-               `btns` vector to host trailing buttons); clicking [M] pops a menu of "Add <tool>" and
+               `btns` vector to host trailing buttons). [M] is hidden on the Base layer (index 0,
+               which carries no mask) and shown for any other layer -- updateMaskMenuBtn(), driven by
+               refreshLayerCombo() and the layer-combo change. Clicking [M] pops a menu of "Add <tool>" and
                (once a tool exists) "Subtract <tool>" entries (Linear/Radial Gradient, Brush, Color/
                Luminance Range, Select Subject/Sky/Background, Depth). Each tool is a row under the
                Layers header (caption "Add/Subtract <tool>" with a [-] remove button). The rows are
