@@ -24,6 +24,15 @@ struct EditParams {
     float whites     = 0.0f;
     float blacks     = 0.0f;
 
+    /* Tone-region split positions (perceptual 0..1), set by the histogram region slider. They
+       move WHERE the shadows/highlights controls act and how far each reaches; blacks (0) and
+       whites (1) stay pinned at the ends. Defaults 0.25/0.50/0.75 reproduce the fixed centres
+       the tone curve used before, so they are a no-op until moved (and only matter when a tone
+       slider is non-zero -- hence not part of isIdentity()). */
+    float toneShadowCenter    = 0.25f;
+    float toneCrossover       = 0.50f;
+    float toneHighlightCenter = 0.75f;
+
     /* Presence. */
     float texture = 0.0f;
     float dehaze  = 0.0f;

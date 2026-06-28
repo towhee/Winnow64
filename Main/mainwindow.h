@@ -43,6 +43,7 @@
 #include "Embellish/Properties/embelproperties.h"
 #include "Develop/Properties/developproperties.h"
 #include "Develop/workingimage.h"
+#include "Develop/Scopes/scopesview.h"
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
 
@@ -562,6 +563,15 @@ private slots:
     /* EXIF rotation (degrees) to apply to a scene-referred render so it matches the loupe. Reads
        the sort/filter model, so it MUST run on the GUI thread. */
     int developOrientationDegrees(const WorkingImage &work, const QString &fPath) const;
+    /* Refresh the Develop scopes (histogram + vectorscope) from the image currently shown: the
+       develop preview after a render, else the decoded image. One strided sample pass feeds both
+       scopes; no-op (cheap) while the scopes are hidden. A null image clears the scopes. */
+    void updateDevelopScopes(const QImage &shown);
+    /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the choice. */
+    void toggleDevelopScopes();
+    /* Loupe cursor moved to a normalized position over the displayed image: sample that pixel and
+       drive the scopes' readout marker (no-op while the scopes are hidden). */
+    void onImageCursorPos(double xFraction, double yFraction);
     void infoViewChanged(QStandardItem* item);
 //    void filterLastDay();
     void filterDockTabMousePress();
@@ -1183,6 +1193,14 @@ private:
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
     DevelopProperties *developProperties = nullptr;
+    /* Live Develop scopes (histogram + vectorscope) shown above the property tree in the
+       Develop dock. Fed by updateDevelopScopes() from the displayed image / preview render;
+       toggled by a button on the Develop editor bar and persisted (Develop/scopesVisible). */
+    ScopesView *scopesView = nullptr;
+    bool developScopesVisible = true;
+    /* The QImage last pushed to the scopes (== what the loupe shows; implicitly shared, so
+       holding it is free). Sampled per pixel for the cursor readout marker. */
+    QImage developShownImage;
     /* Develop slider-drag preview pipeline. A drag re-renders only the cheap Develop +
        OutputTransform stage from the cached pre-develop WorkingImage. To stay interactive on
        large RAW files the drag renders a screen-resolution PROXY (developProxy, cached per

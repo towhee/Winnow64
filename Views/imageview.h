@@ -133,6 +133,10 @@ signals:
     void embellish(QString fPath, QString src);
     void newTile();
     void focusClick(QString path, float x, float y, QString type, QImage image);
+    /* Cursor over the loupe: normalized (0..1) position within the displayed image, for the
+       Develop scopes' live readout marker; cursorLeftImage when it leaves the image. */
+    void cursorImagePos(double xFraction, double yFraction);
+    void cursorLeftImage();
 
 private slots:
     void wheelStopped();

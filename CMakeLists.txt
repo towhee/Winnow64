@@ -126,6 +126,10 @@ set(WINNOW_SOURCES
     Develop/outputtransform.cpp
     Develop/workingimagecache.cpp
     Develop/Properties/developproperties.cpp
+    Develop/Scopes/histogramview.cpp
+    Develop/Scopes/vectorscopeview.cpp
+    Develop/Scopes/toneregionslider.cpp
+    Develop/Scopes/scopesview.cpp
 
     # Dialogs
     Dialogs/aboutdlg.cpp
@@ -358,6 +362,11 @@ set(WINNOW_HEADERS
     Develop/outputtransform.h
     Develop/workingimage.h
     Develop/Properties/developproperties.h
+    Develop/Scopes/scopedata.h
+    Develop/Scopes/histogramview.h
+    Develop/Scopes/vectorscopeview.h
+    Develop/Scopes/toneregionslider.h
+    Develop/Scopes/scopesview.h
 
     Dialogs/aboutdlg.h
     Dialogs/addthumbnailsdlg.h

@@ -76,6 +76,9 @@ struct EditStack {
         o["shadows"]         = p.shadows;
         o["whites"]          = p.whites;
         o["blacks"]          = p.blacks;
+        o["toneShadowCenter"]    = p.toneShadowCenter;
+        o["toneCrossover"]       = p.toneCrossover;
+        o["toneHighlightCenter"] = p.toneHighlightCenter;
         o["texture"]         = p.texture;
         o["dehaze"]          = p.dehaze;
         o["denoiseLuma"]     = p.denoiseLuma;
@@ -96,6 +99,9 @@ struct EditStack {
         p.shadows         = static_cast<float>(o.value("shadows").toDouble(p.shadows));
         p.whites          = static_cast<float>(o.value("whites").toDouble(p.whites));
         p.blacks          = static_cast<float>(o.value("blacks").toDouble(p.blacks));
+        p.toneShadowCenter    = static_cast<float>(o.value("toneShadowCenter").toDouble(p.toneShadowCenter));
+        p.toneCrossover       = static_cast<float>(o.value("toneCrossover").toDouble(p.toneCrossover));
+        p.toneHighlightCenter = static_cast<float>(o.value("toneHighlightCenter").toDouble(p.toneHighlightCenter));
         p.texture         = static_cast<float>(o.value("texture").toDouble(p.texture));
         p.dehaze          = static_cast<float>(o.value("dehaze").toDouble(p.dehaze));
         p.denoiseLuma     = static_cast<float>(o.value("denoiseLuma").toDouble(p.denoiseLuma));

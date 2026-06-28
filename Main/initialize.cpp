@@ -1768,7 +1768,35 @@ void MW::createDevelopDock()
     dockTextNames << developDockTabText;
     developDock = new DockWidget(developDockTabText, "DevelopDock", this);  // Develop
     developDock->setObjectName("DevelopDock");
-    developDock->setWidget(developProperties);
+
+    /* Dock content = live scopes strip (histogram + vectorscope) pinned above the property tree.
+       The scopes keep a fixed height; developProperties takes the remaining (stretch) space.
+       Visibility is user-toggled from the editor bar below and persisted. */
+    developScopesVisible = settings->value("Develop/scopesVisible", true).toBool();
+    QWidget *developContainer = new QWidget(developDock);
+    QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
+    developContainerLayout->setContentsMargins(0, 0, 0, 0);
+    developContainerLayout->setSpacing(0);
+    scopesView = new ScopesView(developContainer);
+    scopesView->setVisible(developScopesVisible);
+    developContainerLayout->addWidget(scopesView);
+    developContainerLayout->addWidget(developProperties, 1);
+    developDock->setWidget(developContainer);
+    /* The tone-region slider under the histogram drives the active layer's tone-split params. */
+    developProperties->bindToneSlider(scopesView->toneRegionSlider());
+
+    /* Loupe cursor readout: hovering the image marks the pixel's value on the scopes. */
+    connect(imageView, &ImageView::cursorImagePos, this, &MW::onImageCursorPos);
+    connect(imageView, &ImageView::cursorLeftImage, this,
+            [this]{ if (scopesView) scopesView->clearMarker(); });
+
+    /* Vectorscope zoom + skin-tone line (right-click menu): restore saved choices and persist. */
+    scopesView->setVectorscopeZoom(settings->value("Develop/vectorscopeZoom", 1.0).toDouble());
+    connect(scopesView, &ScopesView::vectorscopeZoomChanged, this,
+            [this](double z){ settings->setValue("Develop/vectorscopeZoom", z); });
+    scopesView->setVectorscopeSkinLine(settings->value("Develop/vectorscopeSkinLine", false).toBool());
+    connect(scopesView, &ScopesView::vectorscopeSkinLineChanged, this,
+            [this](bool on){ settings->setValue("Develop/vectorscopeSkinLine", on); });
     developDock->setFloating(false);
     developDock->setVisible(true);
     // prevent MW splitter resizing developDock so the header - and + buttons stay visible
@@ -1784,6 +1812,14 @@ void MW::createDevelopDock()
     developTitleBar = new DockTitleBar("Develop Editor", developTitleLayout);
     developDock->setTitleBarWidget(developTitleBar);
     developTitleBar->setToolTip(dockTabToolTip(developDockTabText));
+
+    // show/hide the histogram + vectorscope scopes strip
+    BarBtn *developScopesBtn = new BarBtn();
+    developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
+    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope");
+    connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
+    developTitleLayout->addWidget(developScopesBtn);
+    developTitleLayout->addSpacing(10);
 
     // collapse/expand body button
     if (G::useDWCollapse) {

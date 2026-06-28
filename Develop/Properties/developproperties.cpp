@@ -1,6 +1,7 @@
 #include "Develop/Properties/developproperties.h"
 #include "Main/mainwindow.h"
 #include "Main/global.h"
+#include "Develop/Scopes/toneregionslider.h"
 
 /*
     See developproperties.h for an overview. Construction mirrors EmbelProperties:
@@ -15,10 +16,11 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     this->setting = setting;
 
     initialize();
+    addCoreHeader();
     /* The Layers combo now lists the CURRENT IMAGE's layers (per-image EditStack), not app-global
        QSettings presets. Seed one name so the combo is valid before any image is selected. */
-    layerList = QStringList() << "Layer 1";
-    layerName = "Layer 1";
+    layerList = QStringList() << "Base";
+    layerName = "Base";
     addLayersHeader();
     addLayerItems();
 
@@ -95,7 +97,7 @@ void DevelopProperties::readLayerList()
 
     /* Always have at least one layer. */
     if (layerList.isEmpty()) {
-        layerName = "Layer 1";
+        layerName = "Base";
         layerList << layerName;
         setting->setValue("Develop/Layers/current", layerName);
         setting->setValue(layerRootPath() + "created", true);
@@ -113,6 +115,44 @@ void DevelopProperties::setCurrentLayer(QString name)
     layerName = name;
     layerId = layerList.indexOf(name);
     setting->setValue("Develop/Layers/current", layerName);
+}
+
+void DevelopProperties::addCoreHeader()
+{
+    if (G::isLogger) G::log("DevelopProperties::addCoreHeader");
+
+    i.name = "CoreHeader";
+    i.parentName = "???";
+    i.isHeader = true;
+    i.decorateGradient = true;
+    i.okToCollapseRoot = true;
+    i.isDecoration = true;
+    i.captionText = "Core";
+    i.tooltip = "Applies to all layers.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    addItem(i);
+
+    QModelIndex parIdx = capIdx;
+
+    i.name = "demosaic";
+    i.parentName = "CoreHeader";
+    i.captionText = "Demosaic";
+    i.tooltip = "Select demosaic engine.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = "Apple";
+    i.key = "demosaic";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "Apple"
+               << "Winnow";
+    addItem(i);
+
+    addCheckbox("denoise", "Denoise", "Apply raw noise reduction.", parIdx, "CoreHeader", false);
+
 }
 
 void DevelopProperties::addLayersHeader()
@@ -147,7 +187,7 @@ void DevelopProperties::addLayersHeader()
     btns.append(layerNewBtn);
 
     addItem(i);
-    layersIdx = model->index(_layers, 0, root);
+    layersIdx = model->index(_layers, 1, root);
     QModelIndex parIdx = capIdx;
 
     /* Select layer combo. */
@@ -173,10 +213,43 @@ void DevelopProperties::addLayersHeader()
     propertyDelegate->setEditorData(layerListEditor, idx);
 }
 
+void DevelopProperties::bindToneSlider(ToneRegionSlider *slider)
+{
+    if (G::isLogger) G::log("DevelopProperties::bindToneSlider");
+    toneSlider = slider;
+    if (!toneSlider) return;
+    connect(toneSlider, &ToneRegionSlider::valueChanged,
+            this, &DevelopProperties::onToneSplitsChanged);
+    /* Reflect whatever image is already current (if any). */
+    populateSlidersFromStack();
+}
+
+void DevelopProperties::onToneSplitsChanged(double shadow, double crossover, double highlight)
+{
+    if (G::isLogger) G::log("DevelopProperties::onToneSplitsChanged");
+    if (isPopulating) return;
+    if (currentImagePath.isEmpty()) return;
+
+    EditParams &p = activeParams();
+    p.toneShadowCenter    = static_cast<float>(shadow);
+    p.toneCrossover       = static_cast<float>(crossover);
+    p.toneHighlightCenter = static_cast<float>(highlight);
+
+    /* The splits move only the shadows/highlights centres (blacks/whites are pinned), so they
+       change pixels only when one of those two is engaged. Skip the re-render otherwise -- the
+       new positions still ride in the params for when a tone slider is next moved -- so dragging
+       the handles on an untoned image does not spin up needless full-res renders. */
+    if (p.shadows == 0.0f && p.highlights == 0.0f) return;
+    dirty.insert(currentImagePath);
+    emit paramsChanged();
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
 void DevelopProperties::addLayerItems()
 {
     if (G::isLogger) G::log("DevelopProperties::addLayerItems");
     addBasic();
+    addColor();
     addEffects();
 }
 
@@ -306,12 +379,6 @@ void DevelopProperties::addBasic()
     addHeader("BasicHeader", "Basic", "Core tone, white balance and presence adjustments.");
     QModelIndex parIdx = capIdx;
 
-    addCheckbox("denoise", "Denoise", "Apply noise reduction.", parIdx, "BasicHeader", false);
-
-    QString silver = "#C0C0C0";
-    QString lightgray = "#999999";
-    QString darkgray = "#222222";
-
     /* Lightroom-like ranges. Most adjustments are integer sliders -100..100 (div 0).
        Exposure is a 2-decimal EV slider (-5.00..5.00, div 100). All default to 0
        (identity), matching EditParams. */
@@ -323,8 +390,9 @@ void DevelopProperties::addBasic()
     addSlider("shadows",    "Shadows",    "Recover or deepen the shadows.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("whites",     "Whites",     "Set the white point.",                parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("blacks",     "Blacks",     "Set the black point.",                parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
-    addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkblue, G::lightblue);
-    addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkblue, G::lightblue);
+    addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
+    addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
+    addCheckbox("denoise", "Denoise", "Apply local luminace noise reduction.", parIdx, "BasicHeader", false);
     // demo colors
     // addSlider("blue", "Blue", "Blue.", parIdx, "BasicHeader", -100, 100, 0, G::darkblue, G::lightblue);
     // addSlider("yellow", "Yellow", "Yellow.", parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
@@ -336,6 +404,25 @@ void DevelopProperties::addBasic()
     // addSlider("pink", "pink", "pink.", parIdx, "BasicHeader", -100, 100, 0, G::darkpink, G::lightpink);
     // addSlider("purple", "purple", "purple.", parIdx, "BasicHeader", -100, 100, 0, G::darkpurple, G::lightpurple);
     // addSlider("red", "red", "red.", parIdx, "BasicHeader", -100, 100, 0, G::darkred, G::lightred);
+}
+
+void DevelopProperties::addColor()
+{
+    if (G::isLogger) G::log("DevelopProperties::addColor");
+    addHeader("ColorHeader", "Color", "RGB and HSL adjustments.");
+    QModelIndex parIdx = capIdx;
+
+    // addCheckbox("denoise", "Denoise", "Apply noise reduction.", parIdx, "BasicHeader", false);
+
+    /* Lightroom-like ranges. Most adjustments are integer sliders -100..100 (div 0).
+       Exposure is a 2-decimal EV slider (-5.00..5.00, div 100). All default to 0
+       (identity), matching EditParams. */
+    addSlider("red",       "Red",       "White balance temperature.",          parIdx, "ColorHeader", -100, 100, 0,   G::darkred, G::lightred);
+    addSlider("green",       "Green",       "White balance tint (green/magenta).", parIdx, "ColorHeader", -100, 100, 0,   G::darkgreen, G::lightgreen);
+    addSlider("blue",   "Blue",   "Overall exposure in stops (EV).",     parIdx, "ColorHeader", -500, 500, 100, G::darkblue, G::lightblue);
+    addSlider("hue",   "Hue",   "Global contrast.",                    parIdx, "ColorHeader", -100, 100, 0,   G::darkgray, G::lightgray);
+    addSlider("saturation", "Saturation", "Recover or lift the highlights.",     parIdx, "ColorHeader", -100, 100, 0,   G::darkgray, G::lightgray);
+    addSlider("luminance",    "Luminance",    "Recover or deepen the shadows.",      parIdx, "ColorHeader", -100, 100, 0,   G::darkgray, G::lightgray);
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -425,7 +512,7 @@ QStringList DevelopProperties::currentLayerNames() const
         const EditStack s = stackCache.value(currentImagePath);
         for (const EditLayer &l : s.layers) names << l.name;
     }
-    if (names.isEmpty()) names << "Layer 1";    // combo always has at least one entry
+    if (names.isEmpty()) names << "Base";    // combo always has at least one entry
     return names;
 }
 
@@ -522,6 +609,8 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("texture",    p.texture);
     setSliderReal("dehaze",     p.dehaze);
     setCheckboxValue("denoise", p.denoiseLuma > 0.0f);
+    if (toneSlider)
+        toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
     isPopulating = false;
 }
 

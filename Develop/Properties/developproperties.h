@@ -7,6 +7,7 @@
 #include "Develop/editstack.h"
 
 class MW;
+class ToneRegionSlider;
 
 /*
     Develop dock property tree (Lightroom-style parametric edits). It mirrors the
@@ -42,6 +43,11 @@ public:
        (loaded from / saved to its XMP sidecar) instead of app-global QSettings. */
     void setCurrentImage(const QString &fPath);   // flush previous, load+show this image's stack
     bool currentIsIdentity() const;               // true if the current image has no edits
+
+    /* Bind the histogram's tone-region slider (created with the scopes, owned by MW): connect its
+       drags to the active layer's tone-split params and keep a pointer so image switches push the
+       saved positions back into it. */
+    void bindToneSlider(ToneRegionSlider *slider);
     void flushImage(const QString &fPath);        // write one image's dirty stack to its sidecar
     void flushAll();                              // write all dirty stacks (quit / pre-op)
 
@@ -57,9 +63,11 @@ private:
     void readLayerList();
     void setCurrentLayer(QString name);
 
+    void addCoreHeader();
     void addLayersHeader();
     void addLayerItems();           // Basic + Effects for the current layer
     void addBasic();
+    void addColor();
     void addEffects();
 
     void newLayer();
@@ -85,6 +93,9 @@ private:
     void populateSlidersFromStack();              // push the active layer's params into the editors
     void setSliderReal(const QString &key, double real);   // set a slider's displayed value (un-scaled)
     void setCheckboxValue(const QString &key, bool on);
+    /* A tone-region slider drag: write the three split positions into the active layer's params
+       and drive the live preview (no-op while populating). */
+    void onToneSplitsChanged(double shadow, double crossover, double highlight);
     static void applyKeyToParams(const QString &key, const QVariant &v, EditParams &p);
     QStringList currentLayerNames() const;        // names of the current image's layers (>=1)
     void refreshLayerCombo();                     // rebuild the combo's list/value from the stack
@@ -109,6 +120,7 @@ private:
     QModelIndex root;
     QModelIndex layersIdx;
     ComboBoxEditor *layerListEditor = nullptr;
+    ToneRegionSlider *toneSlider = nullptr;       // histogram region slider (owned by ScopesView)
 
     /* Order of root rows in the tree. */
     enum roots { _layers, _basic, _effects };

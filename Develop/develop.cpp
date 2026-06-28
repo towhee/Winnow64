@@ -33,24 +33,32 @@ constexpr float kTintGain    = 0.5f;    // full magenta: G *0.5
 /* Tone-region controls (highlights/shadows/whites/blacks). Each is a smooth, region-weighted
    shift of the PERCEPTUAL (gamma) value, applied after contrast (pipeline order #5). The
    weight is a Gaussian centred on the region's perceptual position; the four overlap gently so
-   the curve stays smooth. Sliders are integer -100..100 (normalised to +/-1 by kToneFullScale);
-   positive always brightens (lifts) the region, negative darkens (recovers), like Lightroom.
-   kToneShift is the max perceptual lift at full slider. The table is built over up to ~3 stops
-   above white (kToneLutMaxN) so highlight headroom is shaped, not clipped. */
+   the curve stays smooth. Blacks/whites are pinned at 0/1; the shadows and highlights centres
+   (and each one's reach, via sigma) come from the per-image tone-split params set by the
+   histogram region slider (see buildToneLut). Sliders are integer -100..100 (normalised to
+   +/-1 by kToneFullScale); positive always brightens (lifts) the region, negative darkens
+   (recovers), like Lightroom. kToneShift is the max perceptual lift at full slider. The table
+   is built over up to ~3 stops above white (kToneLutMaxN) so highlight headroom is shaped. */
 constexpr float kToneFullScale    = 100.0f;
 constexpr float kToneShift        = 0.20f;
 constexpr float kToneSigma        = 0.18f;
+/* Blacks and whites stay pinned at the ends; shadows/highlights centres are per-image now
+   (EditParams tone splits, set by the histogram region slider). */
 constexpr float kBlacksCenter     = 0.00f;
-constexpr float kShadowsCenter    = 0.25f;
-constexpr float kHighlightsCenter = 0.75f;
 constexpr float kWhitesCenter     = 1.00f;
 constexpr float kToneLutMaxN      = 8.0f;   // build the curve over linear n in [0, 8] (~3 stops)
 
-inline float toneWeight(float s, float center)
+inline float toneWeight(float s, float center, float sigma)
 {
     const float d = s - center;
-    return std::exp(-(d * d) / (2.0f * kToneSigma * kToneSigma));
+    return std::exp(-(d * d) / (2.0f * sigma * sigma));
 }
+
+/* The region slider's crossover sets each movable region's reach: half-width = gap to the
+   crossover, scaled so the default gap (0.25) reproduces kToneSigma (0.18). kToneSigmaMin keeps
+   a very narrow region from spiking. */
+constexpr float kToneSigmaSpan = kToneSigma / 0.25f;   // 0.72
+constexpr float kToneSigmaMin  = 0.05f;
 
 /* Texture (spatial op): mid-frequency luminance local contrast. The base-blur radius is a
    fraction of the image's longer edge so the proxy and full-res renders shape the same band;
@@ -372,14 +380,25 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
         const float pivot = std::pow(0.18f, kInvGamma);
         const float sMax  = std::pow(kToneLutMaxN, kInvGamma);
         c.toneLutSMax = sMax;
+        /* Region slider: shadows/highlights centres move with the handles; blacks (0) and whites
+           (1) stay pinned. The crossover sets each movable region's reach (sigma). Defaults
+           0.25/0.50/0.75 give the old fixed centres and kToneSigma, so this is a no-op until moved. */
+        /* Clamp defensively so a hand-edited / corrupt sidecar can never invert the order
+           (qBound requires min <= max): shC <= 0.94 leaves room for hiC, which sits at least
+           0.04 above it, and the crossover stays strictly between them. */
+        const float shC = qBound(0.02f, p.toneShadowCenter, 0.94f);
+        const float hiC = qBound(shC + 0.04f, p.toneHighlightCenter, 0.98f);
+        const float crX = qBound(shC + 0.01f, p.toneCrossover, hiC - 0.01f);
+        const float shSig = std::max(kToneSigmaMin, (crX - shC) * kToneSigmaSpan);
+        const float hiSig = std::max(kToneSigmaMin, (hiC - crX) * kToneSigmaSpan);
         for (int j = 0; j < PointCoeffs::kLutSize; ++j) {
             /* s = the perceptual input value this table entry represents. */
             float s = (static_cast<float>(j) / (PointCoeffs::kLutSize - 1)) * sMax;
             s = pivot + (s - pivot) * slope;                 // contrast slope about mid-grey
-            const float lift = hi * toneWeight(s, kHighlightsCenter)
-                             + sh * toneWeight(s, kShadowsCenter)
-                             + wh * toneWeight(s, kWhitesCenter)
-                             + bk * toneWeight(s, kBlacksCenter);
+            const float lift = hi * toneWeight(s, hiC, hiSig)
+                             + sh * toneWeight(s, shC, shSig)
+                             + wh * toneWeight(s, kWhitesCenter, kToneSigma)
+                             + bk * toneWeight(s, kBlacksCenter, kToneSigma);
             s += kToneShift * lift;                          // tone-region shifts
             if (s < 0.0f) s = 0.0f;                          // crush blacks gracefully
             c.toneLut[j] = std::pow(s, kGamma);              // decode -> white-normalised linear
