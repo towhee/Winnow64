@@ -4978,62 +4978,104 @@ QImage developComposite(const WorkingImage &src, const EditParams &edit, int deg
     return out;
 }
 
-/* A mask component pre-parsed once (the gradient geometry) so the per-pixel loop is branch-light.
-   Geometry is in output-normalized coords (0..1 of the oriented image), matching what the ImageView
-   overlay edits. */
-struct GradComp {
-    double p1x = 0, p1y = 0, dx = 0, dy = 0, invLen2 = 0;
-    double lo = 0.5, hi = 0.5;      // ramp endpoints along the projection (matches the overlay)
-    bool   hardStep = true;         // feather == 0 -> hard step at the midpoint
-    bool   inverted = false;
+/* A mask component pre-parsed once so the per-pixel loop is branch-light. Geometry is in
+   output-normalized coords (0..1 of the oriented image), matching what the ImageView overlay edits.
+   Radial fields are precomputed in OUTPUT-PIXEL space (Wo,Ho) so the ellipse keeps its aspect and
+   rotation; eval converts the normalized pixel to output pixels via Wo,Ho. */
+struct MaskComp {
+    int    tool = 0;                // 0 Linear, 1 Radial
     int    op = 0;                  // 0 Add (union), 1 Subtract (removes)
+    bool   inverted = false;
+    bool   hardStep = true;         // feather == 0
     bool   valid = false;
+    double feat = 0.0;              // feather fraction 0..1
+    /* Linear */
+    double p1x = 0, p1y = 0, dx = 0, dy = 0, invLen2 = 0, lo = 0.5, hi = 0.5;
+    /* Radial (output-pixel space) */
+    double cpx = 0, cpy = 0, iax = 0, iay = 0, cosA = 1, sinA = 0;
 };
 
-GradComp parseGrad(const MaskComponent &m)
+MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho)
 {
-    GradComp g;
+    MaskComp g;
+    g.tool = m.tool;
     g.op = m.op;
     g.inverted = m.inverted;
+    g.feat = qBound(0.0, double(m.feather)/100.0, 1.0);
+    g.hardStep = (g.feat <= 0.0);
     QJsonParseError err;
     const QJsonDocument doc = QJsonDocument::fromJson(m.paramsJson.toUtf8(), &err);
     if (err.error != QJsonParseError::NoError || !doc.isObject()) return g;
     const QJsonObject o = doc.object();
-    if (!o.contains("x1") || !o.contains("y1") || !o.contains("x2") || !o.contains("y2")) return g;
-    g.p1x = o["x1"].toDouble(); g.p1y = o["y1"].toDouble();
-    const double p2x = o["x2"].toDouble(), p2y = o["y2"].toDouble();
-    g.dx = p2x - g.p1x; g.dy = p2y - g.p1y;
-    const double len2 = g.dx*g.dx + g.dy*g.dy;
-    if (len2 <= 1e-12) return g;
-    g.invLen2 = 1.0 / len2;
-    const double f = qBound(0.0, double(m.feather)/100.0, 1.0);
-    g.lo = 0.5 - 0.5*f; g.hi = 0.5 + 0.5*f;
-    g.hardStep = (g.hi <= g.lo);
-    g.valid = true;
+
+    if (m.tool == 0) {              // Linear
+        if (!o.contains("x1") || !o.contains("y1") || !o.contains("x2") || !o.contains("y2")) return g;
+        g.p1x = o["x1"].toDouble(); g.p1y = o["y1"].toDouble();
+        const double p2x = o["x2"].toDouble(), p2y = o["y2"].toDouble();
+        g.dx = p2x - g.p1x; g.dy = p2y - g.p1y;
+        const double len2 = g.dx*g.dx + g.dy*g.dy;
+        if (len2 <= 1e-12) return g;
+        g.invLen2 = 1.0 / len2;
+        g.lo = 0.5 - 0.5*g.feat; g.hi = 0.5 + 0.5*g.feat;
+        g.hardStep = (g.hi <= g.lo);
+        g.valid = true;
+    }
+    else if (m.tool == 1) {         // Radial
+        if (!o.contains("cx") || !o.contains("cy") || !o.contains("rx") || !o.contains("ry")) return g;
+        const double cx = o["cx"].toDouble(), cy = o["cy"].toDouble();
+        const double rx = o["rx"].toDouble(), ry = o["ry"].toDouble();
+        const double ax = rx * Wo, ay = ry * Ho;        // semi-axes in output pixels
+        if (ax <= 1e-6 || ay <= 1e-6) return g;
+        const double ang = o["angle"].toDouble() * 0.017453292519943295;   // deg -> rad
+        g.cpx = cx * Wo; g.cpy = cy * Ho;
+        g.iax = 1.0 / ax; g.iay = 1.0 / ay;
+        g.cosA = std::cos(ang); g.sinA = std::sin(ang);
+        g.valid = true;
+    }
     return g;
 }
 
-inline float evalGrad(const GradComp &g, double onx, double ony)
+inline float smoother(double v)
 {
-    const double t = ((onx - g.p1x)*g.dx + (ony - g.p1y)*g.dy) * g.invLen2;
-    double v = g.hardStep ? (t >= 0.5 ? 1.0 : 0.0) : (t - g.lo) / (g.hi - g.lo);
     v = v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v);
-    v = v * v * v * (v * (v * 6.0 - 15.0) + 10.0);   // smootherstep (quintic): very soft ends
-    return float(g.inverted ? 1.0 - v : v);
+    return float(v * v * v * (v * (v * 6.0 - 15.0) + 10.0));   // smootherstep (quintic)
+}
+
+inline float evalMaskComp(const MaskComp &g, double onx, double ony, double Wo, double Ho)
+{
+    double v;
+    if (g.tool == 1) {              // Radial: distance in the ellipse's local frame (1 = boundary)
+        const double ddx = onx*Wo - g.cpx, ddy = ony*Ho - g.cpy;
+        const double rdx = ddx*g.cosA + ddy*g.sinA;     // rotate by -angle
+        const double rdy = -ddx*g.sinA + ddy*g.cosA;
+        const double ex = rdx*g.iax, ey = rdy*g.iay;
+        const double d = std::sqrt(ex*ex + ey*ey);
+        if (g.hardStep) v = (d <= 1.0) ? 1.0 : 0.0;     // hard edge at the boundary
+        else            v = 1.0 - smoother((d - (1.0 - g.feat)) / g.feat);   // 1 inside -> 0 at edge
+    }
+    else {                          // Linear: projection along p1->p2
+        const double t = ((onx - g.p1x)*g.dx + (ony - g.p1y)*g.dy) * g.invLen2;
+        v = g.hardStep ? (t >= 0.5 ? 1.0 : 0.0) : smoother((t - g.lo) / (g.hi - g.lo));
+    }
+    const float r = float(v);       // both paths already produced the final 0..1 mask value
+    return g.inverted ? 1.0f - r : r;
 }
 
 /* Rasterize the layer's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
    it aligns with the linear blend before developComposite applies the EXIF rotation. Each pixel is
-   mapped work-normalized -> output-normalized (output = work rotated CW by degrees) before the
-   gradient is evaluated, so the geometry edited on the oriented loupe lines up. */
+   mapped work-normalized -> output-normalized (output = work rotated CW by degrees) before each
+   component is evaluated, so the geometry edited on the oriented loupe lines up. */
 std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, int h, int degrees)
 {
     std::vector<float> out(size_t(w) * size_t(h), 0.0f);
     if (w <= 0 || h <= 0) return out;
-    QVector<GradComp> comps;
+    const bool swap = (degrees == 90 || degrees == 270);
+    const double Wo = swap ? h : w, Ho = swap ? w : h;   // output (oriented) pixel dimensions
+
+    QVector<MaskComp> comps;
     comps.reserve(masks.size());
     for (const MaskComponent &m : masks) {
-        const GradComp g = parseGrad(m);
+        const MaskComp g = parseMaskComp(m, Wo, Ho);
         if (g.valid) comps.append(g);
     }
     if (comps.isEmpty()) return out;     // no usable geometry -> all-zero (no effect)
@@ -5053,8 +5095,8 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
                     default:  onx = wnx;       ony = wny;       break;
                 }
                 float m = 0.0f;
-                for (const GradComp &g : comps) {
-                    const float c = evalGrad(g, onx, ony);
+                for (const MaskComp &g : comps) {
+                    const float c = evalMaskComp(g, onx, ony, Wo, Ho);
                     if (g.op == 1) m *= (1.0f - c);     // Subtract
                     else           m = qMax(m, c);      // Add (Union)
                 }

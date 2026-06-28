@@ -278,22 +278,35 @@ private:
     /* ------- Develop mask editing ------- */
     bool    maskEditMode = false;       // a spatial mask tool is the active edit target
     bool    maskHover    = false;       // cursor is over the view (overlay shown only then)
-    int     maskTool     = 0;           // MaskTool enum value
+    int     maskTool     = 0;           // 0 Linear, 1 Radial (MaskTool enum value)
     int     maskOp       = 0;           // MaskOp: 0 = Add, 1 = Subtract (tint colour)
-    bool    maskInverted = false;       // flip the gradient ramp
+    bool    maskInverted = false;       // flip the ramp
     double  maskFeather  = 50.0;        // 0..100, ramp softness
-    QPointF maskP1;                     // gradient start (0% line), normalized image coords
-    QPointF maskP2;                     // gradient end   (100% line), normalized image coords
-    int     maskDrag     = -1;          // active handle: -1 none, 0 p1, 1 p2, 2 move (whole line)
+    /* Linear: endpoints (0%/100%) in normalized image coords. */
+    QPointF maskP1, maskP2;
+    /* Radial: centre (normalized), semi-axes rx (of W) / ry (of H), rotation in degrees. */
+    QPointF maskC = QPointF(0.5, 0.5);
+    double  maskRx = 0.25, maskRy = 0.30, maskAngle = 0.0;
+    int     maskDrag     = -1;          // active handle (per tool, see maskHitTest); -1 none
     QPointF maskMoveAnchorN;            // image-norm cursor at move start
-    QPointF maskP1Anchor, maskP2Anchor; // endpoints at move start
+    QPointF maskP1Anchor, maskP2Anchor; // linear endpoints at move start
+    QPointF maskCAnchor;                // radial centre at move start
+    double  maskAngleAnchor = 0;        // radial angle at rotate start
+    double  maskGrabAngle   = 0;        // cursor angle (rad) at rotate start
 
     bool    maskHandlesEditable() const { return maskEditMode && maskHover && pmItem && pmItem->isVisible(); }
-    QString maskParamsJson() const;                 // serialize maskP1/maskP2
-    bool    parseMaskParams(const QString &json);   // -> maskP1/maskP2 (false if invalid)
+    QString maskParamsJson() const;                 // serialize the active tool's geometry
+    bool    parseMaskParams(const QString &json);   // load geometry (false if invalid)
     QPointF maskNormToViewport(QPointF n) const;    // normalized image -> viewport px
     QPointF maskViewportToNorm(QPoint vp) const;    // viewport px -> normalized image
+    QPointF maskViewportToImage(QPoint vp) const;   // viewport px -> image-pixel (pmItem) coords
     int     maskHitTest(QPoint vp) const;           // which handle is under vp (-1 none)
+    void    drawLinearMask(QPainter *p, const QRectF &br);  // overlay for the Linear tool
+    void    drawRadialMask(QPainter *p, const QRectF &br);  // overlay for the Radial tool
+    /* Radial: the four axis-end handles in image-pixel coords (0:+x 1:-x 2:+y 3:-y). */
+    void    maskRadialAxisHandles(const QRectF &br, QPointF h[4]) const;
+    /* Radial: the rotate handle (viewport px), a stub beyond the +x axis handle. */
+    QPointF maskRadialRotateHandleVp(const QRectF &br) const;
 };
 
 #endif // IMAGEVIEW_H
