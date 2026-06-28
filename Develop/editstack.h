@@ -30,7 +30,7 @@
 */
 
 struct EditLayer {
-    QString    name    = "Layer 1";
+    QString    name    = "Base";        // index 0 is always the Base layer; extras are "Layer 1", ...
     QString    mask;                    // empty = global; reserved (mask editing deferred)
     float      opacity = 1.0f;          // reserved (compositor deferred)
     bool       enabled = true;
@@ -81,6 +81,12 @@ struct EditStack {
         o["toneHighlightCenter"] = p.toneHighlightCenter;
         o["texture"]         = p.texture;
         o["dehaze"]          = p.dehaze;
+        o["red"]             = p.red;
+        o["green"]           = p.green;
+        o["blue"]            = p.blue;
+        o["hue"]             = p.hue;
+        o["saturation"]      = p.saturation;
+        o["luminance"]       = p.luminance;
         o["denoiseLuma"]     = p.denoiseLuma;
         o["denoiseChroma"]   = p.denoiseChroma;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
@@ -104,6 +110,12 @@ struct EditStack {
         p.toneHighlightCenter = static_cast<float>(o.value("toneHighlightCenter").toDouble(p.toneHighlightCenter));
         p.texture         = static_cast<float>(o.value("texture").toDouble(p.texture));
         p.dehaze          = static_cast<float>(o.value("dehaze").toDouble(p.dehaze));
+        p.red             = static_cast<float>(o.value("red").toDouble(p.red));
+        p.green           = static_cast<float>(o.value("green").toDouble(p.green));
+        p.blue            = static_cast<float>(o.value("blue").toDouble(p.blue));
+        p.hue             = static_cast<float>(o.value("hue").toDouble(p.hue));
+        p.saturation      = static_cast<float>(o.value("saturation").toDouble(p.saturation));
+        p.luminance       = static_cast<float>(o.value("luminance").toDouble(p.luminance));
         p.denoiseLuma     = static_cast<float>(o.value("denoiseLuma").toDouble(p.denoiseLuma));
         p.denoiseChroma   = static_cast<float>(o.value("denoiseChroma").toDouble(p.denoiseChroma));
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));

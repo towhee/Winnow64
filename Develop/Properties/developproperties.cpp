@@ -260,8 +260,11 @@ void DevelopProperties::newLayer()
 
     EditStack &s = stackCache[currentImagePath];
     if (s.layers.isEmpty()) s.layers.append(EditLayer());     // ensure a base layer exists
+    s.layers[0].name = "Base";                                // index 0 is always Base
     EditLayer l;
-    l.name = uniqueLayerName("Layer " + QString::number(s.layers.size() + 1));
+    /* Extra layers are numbered "Layer 1", "Layer 2", ... -- the first one above Base is "Layer 1"
+       (Base is index 0, so the new layer's index equals the pre-append size). */
+    l.name = uniqueLayerName("Layer " + QString::number(s.layers.size()));
     s.layers.append(l);
     activeLayerIndex = s.layers.size() - 1;                   // edit the new layer
     dirty.insert(currentImagePath);
@@ -279,11 +282,11 @@ void DevelopProperties::deleteLayer()
     if (currentImagePath.isEmpty()) return;
 
     EditStack &s = stackCache[currentImagePath];
-    if (s.layers.size() < 2) {
-        emit centralMsg("At least one develop layer is required.");
+    if (activeLayerIndex <= 0) {
+        emit centralMsg("The Base layer cannot be removed.");
         return;
     }
-    if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) activeLayerIndex = 0;
+    if (activeLayerIndex >= s.layers.size()) activeLayerIndex = s.layers.size() - 1;
     s.layers.removeAt(activeLayerIndex);
     if (activeLayerIndex >= s.layers.size()) activeLayerIndex = s.layers.size() - 1;
     dirty.insert(currentImagePath);
@@ -412,17 +415,14 @@ void DevelopProperties::addColor()
     addHeader("ColorHeader", "Color", "RGB and HSL adjustments.");
     QModelIndex parIdx = capIdx;
 
-    // addCheckbox("denoise", "Denoise", "Apply noise reduction.", parIdx, "BasicHeader", false);
-
-    /* Lightroom-like ranges. Most adjustments are integer sliders -100..100 (div 0).
-       Exposure is a 2-decimal EV slider (-5.00..5.00, div 100). All default to 0
-       (identity), matching EditParams. */
-    addSlider("red",       "Red",       "White balance temperature.",          parIdx, "ColorHeader", -100, 100, 0,   G::darkred, G::lightred);
-    addSlider("green",       "Green",       "White balance tint (green/magenta).", parIdx, "ColorHeader", -100, 100, 0,   G::darkgreen, G::lightgreen);
-    addSlider("blue",   "Blue",   "Overall exposure in stops (EV).",     parIdx, "ColorHeader", -500, 500, 100, G::darkblue, G::lightblue);
-    addSlider("hue",   "Hue",   "Global contrast.",                    parIdx, "ColorHeader", -100, 100, 0,   G::darkgray, G::lightgray);
-    addSlider("saturation", "Saturation", "Recover or lift the highlights.",     parIdx, "ColorHeader", -100, 100, 0,   G::darkgray, G::lightgray);
-    addSlider("luminance",    "Luminance",    "Recover or deepen the shadows.",      parIdx, "ColorHeader", -100, 100, 0,   G::darkgray, G::lightgray);
+    /* All integer sliders -100..100 (div 0), default 0 (identity), matching EditParams.
+       RGB = per-channel gain; HSL = global hue rotation / saturation / luminance. */
+    addSlider("red",        "Red",        "Per-channel red gain.",                 parIdx, "ColorHeader", -100, 100, 0, G::darkred,   G::lightred);
+    addSlider("green",      "Green",      "Per-channel green gain.",               parIdx, "ColorHeader", -100, 100, 0, G::darkgreen, G::lightgreen);
+    addSlider("blue",       "Blue",       "Per-channel blue gain.",                parIdx, "ColorHeader", -100, 100, 0, G::darkblue,  G::lightblue);
+    addSlider("hue",        "Hue",        "Rotate all hues.",                      parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
+    addSlider("saturation", "Saturation", "Global saturation (grey at -100).",     parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
+    addSlider("luminance",  "Luminance",  "Global luminance (brightness).",        parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -490,6 +490,12 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "blacks")     p.blacks     = f;
     else if (key == "texture")    p.texture    = f;
     else if (key == "dehaze")     p.dehaze     = f;
+    else if (key == "red")        p.red        = f;
+    else if (key == "green")      p.green      = f;
+    else if (key == "blue")       p.blue       = f;
+    else if (key == "hue")        p.hue        = f;
+    else if (key == "saturation") p.saturation = f;
+    else if (key == "luminance")  p.luminance  = f;
     else if (key == "denoise")  { const bool on = v.toBool();
                                   p.denoiseLuma = on ? 1.0f : 0.0f;
                                   p.denoiseChroma = on ? 1.0f : 0.0f; }
@@ -560,6 +566,7 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
        sidecar for an unedited image. */
     EditStack &s = stackCache[fPath];
     if (s.layers.isEmpty()) s.layers.append(EditLayer());
+    s.layers[0].name = "Base";                 // index 0 is always the (un-removable) Base layer
     activeLayerIndex = 0;
 
     refreshLayerCombo();
@@ -608,6 +615,12 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("blacks",     p.blacks);
     setSliderReal("texture",    p.texture);
     setSliderReal("dehaze",     p.dehaze);
+    setSliderReal("red",        p.red);
+    setSliderReal("green",      p.green);
+    setSliderReal("blue",       p.blue);
+    setSliderReal("hue",        p.hue);
+    setSliderReal("saturation", p.saturation);
+    setSliderReal("luminance",  p.luminance);
     setCheckboxValue("denoise", p.denoiseLuma > 0.0f);
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);

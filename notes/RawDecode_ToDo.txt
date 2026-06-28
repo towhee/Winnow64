@@ -138,5 +138,11 @@ NEW
 22   [todo]      Add an eye symbol button to show/hide develop basic modifications and
                  a reset button to the Basic bar.
 
-23   [todo]      Wire RGB and HSL sliders under the Color Header.
+23   [DONE 2026-06-28] Wire RGB and HSL sliders under the Color Header. All six are POINT
+                 ops on the fused pass: RGB (red/green/blue) fold into channelGain (per-channel
+                 scene-linear gain, kRgbGain); HSL (hue/saturation/luminance) is a cross-channel
+                 block after the tone curve -- hue = Rodrigues rotation about the (1,1,1) neutral
+                 axis, saturation = chroma scale about Rec.709 luma, luminance = uniform gain.
+                 EditParams fields + JSON persistence (editstack.h) + UI wiring (applyKeyToParams,
+                 populateSlidersFromStack) all live. See Documentation.txt "DEVELOP / IMAGE EDIT".
 --------------------------------------------------------------------------------

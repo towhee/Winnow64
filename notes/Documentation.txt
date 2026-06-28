@@ -2116,9 +2116,11 @@ Architecture
         4. Contrast                     S-curve about mid-grey
         5. Highlights/Shadows/          luminance-masked parametric tone
            Whites/Blacks
+        5b. Colour RGB                  per-channel linear gain (red/green/blue), folded into #2
+        5c. Colour HSL                  hue rotation + saturation + luminance, after the tone curve
         6. Texture                      mid-frequency local contrast
         7. Dehaze                       local contrast + black-point, haze estimate
-        (room left for Vibrance/Saturation/Clarity/Sharpen)
+        (room left for Vibrance/Clarity/Sharpen)
 
     Two ops are special for RAW: white balance and denoise give better results applied inside
     the raw pipeline (WB at the camera-RGB stage; denoise on the CFA mosaic) rather than
@@ -2276,8 +2278,9 @@ Layer & masking model (planned)
 
     PERFORMANCE (the reason for the masking model over a pixel-layer stack). Ops are split by
     cost and the cheap ones are FUSED:
-        • POINT ops -- exposure, contrast, highlights/shadows/whites/blacks, temp, tint, and
-          (for now) texture + dehaze -- are pure per-pixel functions. ALL layers' point ops run
+        • POINT ops -- exposure, contrast, highlights/shadows/whites/blacks, temp, tint, the
+          Colour RGB + HSL sliders, and (for now) texture + dehaze -- are pure per-pixel
+          functions. ALL layers' point ops run
           in a SINGLE fused pass over the image: one read, one write, no per-layer intermediate
           buffers; N layers cost N cheap evaluations in registers per pixel (bandwidth-bound).
           This is the slider-drag hot path and is independent of layer/mask count.
@@ -2359,6 +2362,16 @@ Layer & masking model (planned)
            max lift kToneShift 0.20 at full slider; + brightens / - recovers, Lightroom-like).
            The LUT spans up to ~3 stops above white (kToneLutMaxN) so highlight headroom is shaped,
            not clipped.
+
+           COLOUR (RGB + HSL, under the Color header) -- all six are POINT ops, so they ride the
+           same fused pass at ~no extra cost. RGB (red/green/blue, -100..100) are per-channel
+           scene-linear gains folded straight into channelGain alongside WB + exposure (kRgbGain
+           0.5 -> full slider = +/-50% on a channel). HSL (hue/saturation/luminance, -100..100) is
+           a cross-channel block applied AFTER the tone curve (it mixes channels, so unlike the
+           tone curve it cannot be a per-channel LUT): hue = a Rodrigues rotation about the neutral
+           (1,1,1) axis so greys stay grey (kHueMaxRad = 60deg at full); saturation = chroma scale
+           about Rec.709 luma (-100 -> grey, +100 -> 2x); luminance = uniform gain (-100 -> black,
+           +100 -> 2x). hslActive gates the block; identity sliders leave the pass untouched.
 
            SPATIAL ops (Texture #6, Dehaze #7) run AFTER the fused point pass, each owning a
            full-image pass (like Denoise) -- they need a neighbourhood so cannot join the per-
@@ -2456,7 +2469,11 @@ Layer & masking model (planned)
                renderer shows the active layer -- no mask/opacity compositing yet). The Layers combo
                + (+/-) are PER-IMAGE: the combo lists this image's layer names, switching it selects
                the active layer (activeLayerIndex) and repopulates the sliders, and +/- add/delete
-               layers in this image's EditStack (newLayer/deleteLayer). An all-identity stack is
+               layers in this image's EditStack (newLayer/deleteLayer). NAMING: index 0 is always
+               the "Base" layer (normalized on load in setCurrentImage); extra layers added with +
+               are numbered "Layer 1", "Layer 2", ... (the new layer's number = its index). The Base
+               layer CANNOT be removed -- deleteLayer refuses when the active layer is index 0
+               (centralMsg "The Base layer cannot be removed."). An all-identity stack is
                never persisted, so empty layers added to an unedited image are not written. The old
                QSettings layer helpers (readLayerList/setCurrentLayer/layerRootPath/layerValue) are
                left defined but unused; presets (Increment 2) will repurpose a QSettings store.
@@ -2560,6 +2577,8 @@ Develop scopes (histogram + vectorscope)
         Basic    Denoise (checkbox); Temp, Tint, Exposure, Contrast, Highlights, Shadows,
                  Whites, Blacks, Texture, Dehaze (sliders). Integer -100..100 except Exposure
                  (EV, -5.00..5.00). All default to 0 (identity).
+        Color    Red, Green, Blue (per-channel gain); Hue, Saturation, Luminance (global HSL).
+                 Integer -100..100 sliders, all default 0 (identity).
         Effects  header only (placeholder for future creative effects).
 
     Each layer maps onto one EditParams (DevelopProperties::editParams()). Binding a value
