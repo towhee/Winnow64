@@ -30,6 +30,19 @@ constexpr float kWbFullScale = 100.0f;
 constexpr float kTempGain    = 0.5f;    // full warm: R *1.5, B *0.5
 constexpr float kTintGain    = 0.5f;    // full magenta: G *0.5
 
+/* Colour -- RGB sliders (red/green/blue). Per-channel scene-linear gain, normalised -1..1 by
+   kRgbFullScale and folded into the same per-channel factor as WB + exposure (free; no extra
+   pass). Gentle creative range: full slider = +/-50% on that channel. */
+constexpr float kRgbFullScale = 100.0f;
+constexpr float kRgbGain      = 0.5f;
+
+/* Colour -- HSL sliders (hue/saturation/luminance), normalised -1..1 by kHslFullScale. Hue is a
+   rotation about the neutral (1,1,1) axis: full slider = +/-kHueMaxRad. Saturation scales chroma
+   about Rec.709 luma: -1 -> grayscale, +1 -> 2x. Luminance is a uniform gain: -1 -> black,
+   +1 -> 2x. Applied as a cross-channel block after the tone curve (see applyPointOps). */
+constexpr float kHslFullScale = 100.0f;
+constexpr float kHueMaxRad    = 1.04719755f;   // 60 degrees at full slider
+
 /* Tone-region controls (highlights/shadows/whites/blacks). Each is a smooth, region-weighted
    shift of the PERCEPTUAL (gamma) value, applied after contrast (pipeline order #5). The
    weight is a Gaussian centred on the region's perceptual position; the four overlap gently so
@@ -348,13 +361,17 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
     const float exposureGain = (p.exposure != 0.0f) ? std::exp2(p.exposure) : 1.0f;
 
     /* White balance: per-channel scene-linear gains (see kTempGain/kTintGain). Folded with the
-       uniform exposure gain into a single per-channel factor -- both are linear multiplies, so
-       they commute and the fused pass applies one multiply per channel. */
+       uniform exposure gain AND the Colour RGB sliders (per-channel gain, kRgbGain) into a single
+       per-channel factor -- all are linear multiplies, so they commute and the fused pass applies
+       one multiply per channel. */
     const float t  = p.temp / kWbFullScale;     // -1..1
     const float tn = p.tint / kWbFullScale;     // -1..1
-    c.channelGain[0] = (1.0f + kTempGain * t)  * exposureGain;   // R: up when warm
-    c.channelGain[1] = (1.0f - kTintGain * tn) * exposureGain;   // G: down toward magenta
-    c.channelGain[2] = (1.0f - kTempGain * t)  * exposureGain;   // B: down when warm
+    const float rGain = 1.0f + kRgbGain * (p.red   / kRgbFullScale);
+    const float gGain = 1.0f + kRgbGain * (p.green / kRgbFullScale);
+    const float bGain = 1.0f + kRgbGain * (p.blue  / kRgbFullScale);
+    c.channelGain[0] = (1.0f + kTempGain * t)  * exposureGain * rGain;   // R: up when warm
+    c.channelGain[1] = (1.0f - kTintGain * tn) * exposureGain * gGain;   // G: down toward magenta
+    c.channelGain[2] = (1.0f - kTempGain * t)  * exposureGain * bGain;   // B: down when warm
 
     c.white = (img.white > 0.0f ? img.white : 1.0f);
 
@@ -405,8 +422,29 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
         }
     }
 
+    /* HSL (hue/saturation/luminance): a cross-channel block applied after the tone curve. Hue
+       rotates about the neutral (1,1,1) axis (Rodrigues rotation of RGB space, which fixes the
+       gray axis so neutrals stay neutral); saturation scales chroma about luma; luminance is a
+       uniform gain. */
+    const float hue = p.hue        / kHslFullScale;     // -1..1
+    const float sat = p.saturation / kHslFullScale;
+    const float lum = p.luminance  / kHslFullScale;
+    c.satFactor = 1.0f + sat;                           // -1 -> grayscale, +1 -> 2x chroma
+    c.lumGain   = 1.0f + lum;                           // -1 -> black, +1 -> 2x
+    if (hue != 0.0f) {
+        const float a = hue * kHueMaxRad;
+        const float cs = std::cos(a);
+        const float sn = std::sin(a);
+        const float k  = (1.0f - cs) / 3.0f;            // axis (1,1,1)/sqrt3 -> k = (1-cos)*nx*ny
+        const float w  = sn * 0.57735027f;              // sin * 1/sqrt(3)
+        c.hueMat[0] = cs + k;       c.hueMat[1] = k - w;       c.hueMat[2] = k + w;
+        c.hueMat[3] = k + w;        c.hueMat[4] = cs + k;      c.hueMat[5] = k - w;
+        c.hueMat[6] = k - w;        c.hueMat[7] = k + w;       c.hueMat[8] = cs + k;
+    }
+    c.hslActive = (c.satFactor != 1.0f) || (c.lumGain != 1.0f) || (hue != 0.0f);
+
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
-               (c.channelGain[2] != 1.0f) || c.toneActive;
+               (c.channelGain[2] != 1.0f) || c.toneActive || c.hslActive;
     return c;
 }
 
@@ -423,6 +461,15 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
     const float invWhite = 1.0f / white;
     const bool doGain = (g0 != 1.0f) || (g1 != 1.0f) || (g2 != 1.0f);
     const bool doTone = c.toneActive;
+    const bool doHsl  = c.hslActive;
+
+    /* HSL coeffs (cross-channel, applied after the tone curve). Locals so they fold into the
+       inner loop the same way the gain/tone constants do. */
+    const float hm0 = c.hueMat[0], hm1 = c.hueMat[1], hm2 = c.hueMat[2];
+    const float hm3 = c.hueMat[3], hm4 = c.hueMat[4], hm5 = c.hueMat[5];
+    const float hm6 = c.hueMat[6], hm7 = c.hueMat[7], hm8 = c.hueMat[8];
+    const float satF = c.satFactor;
+    const float lumG = c.lumGain;
 
     /* Perceptual tone curve via the precomputed LUT (contrast + tone regions, see
        buildPointCoeffs). The table is indexed by the perceptual value s = (v/white)^(1/gamma)
@@ -457,6 +504,21 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
                     px[0] = toneCh(px[0]);
                     px[1] = toneCh(px[1]);
                     px[2] = toneCh(px[2]);
+                }
+                if (doHsl) {
+                    float r = px[0], g = px[1], b = px[2];
+                    /* Hue: rotate about the neutral axis (identity matrix when hue == 0). */
+                    const float hr = hm0 * r + hm1 * g + hm2 * b;
+                    const float hg = hm3 * r + hm4 * g + hm5 * b;
+                    const float hb = hm6 * r + hm7 * g + hm8 * b;
+                    /* Saturation: scale chroma about Rec.709 luma. */
+                    const float Y = 0.2126f * hr + 0.7152f * hg + 0.0722f * hb;
+                    r = (Y + satF * (hr - Y)) * lumG;     // luminance: uniform gain
+                    g = (Y + satF * (hg - Y)) * lumG;
+                    b = (Y + satF * (hb - Y)) * lumG;
+                    px[0] = (r < 0.0f) ? 0.0f : r;
+                    px[1] = (g < 0.0f) ? 0.0f : g;
+                    px[2] = (b < 0.0f) ? 0.0f : b;
                 }
             }
         }

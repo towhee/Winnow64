@@ -37,6 +37,20 @@ struct EditParams {
     float texture = 0.0f;
     float dehaze  = 0.0f;
 
+    /* Colour -- RGB. Per-channel scene-linear gain (-100..100). Folded into the fused point
+       pass's per-channel gain alongside white balance + exposure, so they cost nothing extra.
+       0 = no change; positive lifts that channel, negative attenuates it. */
+    float red   = 0.0f;
+    float green = 0.0f;
+    float blue  = 0.0f;
+
+    /* Colour -- HSL (global, -100..100). Cross-channel point op applied after the tone curve in
+       the same fused pass. hue = rotation about the neutral (gray) axis; saturation = chroma
+       scale about luma (-100 -> grayscale, +100 -> 2x); luminance = uniform brightness gain. */
+    float hue        = 0.0f;
+    float saturation = 0.0f;
+    float luminance  = 0.0f;
+
     /* Noise reduction -- GLOBAL, applied in the raw decode pipeline (RawFormat / the Apple
        engine) during demosaic, alongside start WB / black / white. Not maskable: these are
        baked into WorkingImage before Develop runs. 0 = engine default. */
@@ -58,6 +72,8 @@ struct EditParams {
                highlights == 0.0f && shadows == 0.0f &&
                whites == 0.0f && blacks == 0.0f &&
                texture == 0.0f && dehaze == 0.0f &&
+               red == 0.0f && green == 0.0f && blue == 0.0f &&
+               hue == 0.0f && saturation == 0.0f && luminance == 0.0f &&
                denoiseLuma == 0.0f && denoiseChroma == 0.0f &&
                localDenoiseLuma == 0.0f;
     }

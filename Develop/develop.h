@@ -63,9 +63,10 @@ private:
        means no implemented point op would change a pixel, so the pass is skipped entirely. */
     struct PointCoeffs {
         bool  active        = false;
-        /* Per-channel scene-linear gain = white balance (temp/tint) folded with exposure (2^EV).
-           Both are pure linear multiplies, so they commute and combine into one per-channel
-           factor applied before the perceptual tone curve. {1,1,1} = identity. */
+        /* Per-channel scene-linear gain = white balance (temp/tint) folded with exposure (2^EV)
+           AND the Colour RGB sliders (red/green/blue). All are pure linear multiplies, so they
+           commute and combine into one per-channel factor applied before the perceptual tone
+           curve. {1,1,1} = identity. */
         float channelGain[3] = {1.0f, 1.0f, 1.0f};
         float white         = 1.0f;   // linear value that maps to display white
 
@@ -80,6 +81,16 @@ private:
         bool  toneActive = false;
         float toneLutSMax = 1.0f;          // perceptual s domain the table spans is [0, this]
         float toneLut[kLutSize] = {};      // s -> white-normalised linear output
+
+        /* HSL (hue/saturation/luminance) -- a cross-channel point op applied AFTER the tone curve
+           in the same fused pass (it mixes the three channels, so unlike the tone curve it cannot
+           be a per-channel LUT). hueMat is a 3x3 rotation about the neutral axis (row-major, used
+           only when hue != 0); satFactor scales chroma about luma; lumGain is a uniform gain.
+           hslActive == false => identity (skip the block). */
+        bool  hslActive  = false;
+        float hueMat[9]  = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+        float satFactor  = 1.0f;
+        float lumGain    = 1.0f;
     };
     static PointCoeffs buildPointCoeffs(const EditParams &p, const WorkingImage &img);
 
