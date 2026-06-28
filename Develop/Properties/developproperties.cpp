@@ -524,12 +524,21 @@ void DevelopProperties::setSelectedMask(int index)
 QString DevelopProperties::defaultMaskParams(int tool)
 {
     /* Geometry is stored normalized (0..1 of the image), so it is resolution-independent and
-       survives proxy/full re-renders. Linear Gradient: a vertical line down the middle, ramping
-       0% (top) -> 100% (bottom) across the middle third. Other tools: empty until implemented. */
+       survives proxy/full re-renders. Other tools: empty until implemented. */
     if (tool == int(MaskTool::LinearGradient)) {
+        /* A vertical line down the middle, ramping 0% (top) -> 100% (bottom) across the middle third. */
         QJsonObject o;
         o["x1"] = 0.5; o["y1"] = 0.34;
         o["x2"] = 0.5; o["y2"] = 0.66;
+        return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+    }
+    if (tool == int(MaskTool::RadialGradient)) {
+        /* A centred ellipse covering the middle of the frame; mask 100% inside, ramping to 0% at
+           the edge. cx/cy normalized by W/H, rx by W, ry by H, angle in degrees. */
+        QJsonObject o;
+        o["cx"] = 0.5;  o["cy"] = 0.5;
+        o["rx"] = 0.25; o["ry"] = 0.30;
+        o["angle"] = 0.0;
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
     return QString();
@@ -543,7 +552,7 @@ void DevelopProperties::updateMaskEdit()
     EditLayer *layer = activeLayer();
     if (layer && selectedMaskIndex >= 0 && selectedMaskIndex < layer->masks.size()) {
         const MaskComponent &m = layer->masks[selectedMaskIndex];
-        if (m.tool == int(MaskTool::LinearGradient)) {
+        if (m.tool == int(MaskTool::LinearGradient) || m.tool == int(MaskTool::RadialGradient)) {
             emit maskEditBegin(m.tool, m.op, m.inverted, m.paramsJson, m.feather);
             return;
         }

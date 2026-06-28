@@ -1,5 +1,6 @@
 #include <QGraphicsDropShadowEffect>
 #include <math.h>
+#include <cmath>
 #include "Main/global.h"
 #include "Views/imageview.h"
 #include <QApplication>
@@ -395,8 +396,8 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
     maskInverted = inverted;
     maskFeather = feather;
     if (!parseMaskParams(paramsJson)) {     // missing/invalid -> a sensible default
-        maskP1 = QPointF(0.5, 0.34);
-        maskP2 = QPointF(0.5, 0.66);
+        if (maskTool == 1) { maskC = QPointF(0.5, 0.5); maskRx = 0.25; maskRy = 0.30; maskAngle = 0; }
+        else               { maskP1 = QPointF(0.5, 0.34); maskP2 = QPointF(0.5, 0.66); }
     }
     maskEditMode = true;
     maskHover = underMouse();        // show at once if the cursor is already over the view
@@ -431,8 +432,17 @@ bool ImageView::parseMaskParams(const QString &json)
     const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8(), &err);
     if (err.error != QJsonParseError::NoError || !doc.isObject()) return false;
     const QJsonObject o = doc.object();
+    if (maskTool == 1) {            // Radial
+        if (!o.contains("cx") || !o.contains("cy") || !o.contains("rx") || !o.contains("ry"))
+            return false;
+        maskC = QPointF(o["cx"].toDouble(), o["cy"].toDouble());
+        maskRx = o["rx"].toDouble();
+        maskRy = o["ry"].toDouble();
+        maskAngle = o["angle"].toDouble();
+        return true;
+    }
     if (!o.contains("x1") || !o.contains("y1") || !o.contains("x2") || !o.contains("y2"))
-        return false;
+        return false;               // Linear
     maskP1 = QPointF(o["x1"].toDouble(), o["y1"].toDouble());
     maskP2 = QPointF(o["x2"].toDouble(), o["y2"].toDouble());
     return true;
@@ -441,8 +451,15 @@ bool ImageView::parseMaskParams(const QString &json)
 QString ImageView::maskParamsJson() const
 {
     QJsonObject o;
-    o["x1"] = maskP1.x(); o["y1"] = maskP1.y();
-    o["x2"] = maskP2.x(); o["y2"] = maskP2.y();
+    if (maskTool == 1) {            // Radial
+        o["cx"] = maskC.x(); o["cy"] = maskC.y();
+        o["rx"] = maskRx;    o["ry"] = maskRy;
+        o["angle"] = maskAngle;
+    }
+    else {                          // Linear
+        o["x1"] = maskP1.x(); o["y1"] = maskP1.y();
+        o["x2"] = maskP2.x(); o["y2"] = maskP2.y();
+    }
     return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
 }
 
@@ -461,16 +478,62 @@ QPointF ImageView::maskViewportToNorm(QPoint vp) const
     return QPointF(itemPt.x() / br.width(), itemPt.y() / br.height());
 }
 
+QPointF ImageView::maskViewportToImage(QPoint vp) const
+{
+    return pmItem->mapFromScene(mapToScene(vp));     // image-pixel (pmItem) coords
+}
+
+void ImageView::maskRadialAxisHandles(const QRectF &br, QPointF h[4]) const
+{
+    /* Axis-end handles in image-pixel coords: centre +/- semi-axis along the rotated x and y axes
+       (rx is a fraction of width, ry of height). */
+    const double a = maskAngle * 0.017453292519943295;
+    const double ca = std::cos(a), sa = std::sin(a);
+    const QPointF c(maskC.x()*br.width(), maskC.y()*br.height());
+    const double ax = maskRx * br.width(), ay = maskRy * br.height();
+    const QPointF ux(ca*ax,  sa*ax);     // rotated +x axis * rx
+    const QPointF uy(-sa*ay, ca*ay);     // rotated +y axis * ry
+    h[0] = c + ux; h[1] = c - ux;        // +x, -x  (resize rx)
+    h[2] = c + uy; h[3] = c - uy;        // +y, -y  (resize ry)
+}
+
+QPointF ImageView::maskRadialRotateHandleVp(const QRectF &br) const
+{
+    /* A constant on-screen stub beyond the +x axis handle (viewport coords) so it stays grabbable
+       at any zoom and any ellipse size. */
+    QPointF h[4];
+    maskRadialAxisHandles(br, h);
+    const QPointF cv = maskNormToViewport(maskC);
+    const QPointF hx = mapFromScene(pmItem->mapToScene(h[0]));   // +x handle in viewport
+    QPointF dir = hx - cv;
+    const double len = std::hypot(dir.x(), dir.y());
+    dir = (len > 1e-6) ? dir / len : QPointF(1, 0);
+    return hx + dir * 24.0;              // 24 px beyond the +x handle
+}
+
 int ImageView::maskHitTest(QPoint vp) const
 {
     if (!maskHandlesEditable()) return -1;
     const double rHandle = 11;          // px pick radius
     const QPointF p(vp);
+
+    if (maskTool == 1) {                // Radial: 0 centre(move), 1..4 axis handles, 5 outline(rotate)
+        const QRectF br = pmItem->boundingRect();
+        const QPointF c = maskNormToViewport(maskC);
+        if (QLineF(p, c).length() <= rHandle) return 0;
+        if (QLineF(p, maskRadialRotateHandleVp(br)).length() <= rHandle) return 5;   // rotate stub
+        QPointF h[4];
+        maskRadialAxisHandles(br, h);
+        for (int i = 0; i < 4; ++i)
+            if (QLineF(p, mapFromScene(pmItem->mapToScene(h[i]))).length() <= rHandle) return 1 + i;
+        return -1;
+    }
+
+    /* Linear: 0 p1, 1 p2, 2 move (centre line). */
     const QPointF v1 = maskNormToViewport(maskP1);
     const QPointF v2 = maskNormToViewport(maskP2);
     if (QLineF(p, v1).length() <= rHandle) return 0;
     if (QLineF(p, v2).length() <= rHandle) return 1;
-    /* distance from p to the centre line segment v1..v2 -> move handle */
     const QPointF d = v2 - v1;
     const double len2 = d.x()*d.x() + d.y()*d.y();
     if (len2 > 1e-6) {
@@ -486,10 +549,14 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
 {
     QGraphicsView::drawForeground(painter, rect);
     if (!maskHandlesEditable()) return;
-
     const QRectF br = pmItem->boundingRect();
     if (br.width() <= 0 || br.height() <= 0) return;
+    if (maskTool == 1) drawRadialMask(painter, br);
+    else               drawLinearMask(painter, br);
+}
 
+void ImageView::drawLinearMask(QPainter *painter, const QRectF &br)
+{
     const QPointF s1 = pmItem->mapToScene(QPointF(maskP1.x()*br.width(), maskP1.y()*br.height()));
     const QPointF s2 = pmItem->mapToScene(QPointF(maskP2.x()*br.width(), maskP2.y()*br.height()));
 
@@ -559,6 +626,82 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
     handle((v1+v2)/2.0, 4.5, QColor(255,255,255,235));           // centre (move)
     handle(v1, 5.5, QColor(120,200,255,235));                    // p1 (0%)
     handle(v2, 5.5, QColor(120,200,255,235));                    // p2 (100%)
+    painter->restore();
+}
+
+void ImageView::drawRadialMask(QPainter *painter, const QRectF &br)
+{
+    const QPointF ci(maskC.x()*br.width(), maskC.y()*br.height());      // centre, image px
+    const double ax = qMax(1.0, maskRx*br.width()), ay = qMax(1.0, maskRy*br.height());
+
+    /* 1) Elliptical tint ramp (scene coords) via a transformed radial gradient: a unit circle
+       mapped to the rotated image ellipse, then to scene. mask 100% inside -> 0% at the boundary
+       (Invert swaps); feather widens the transition inward. */
+    {
+        const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
+        const double inner = qBound(0.0, 1.0 - f, 1.0);
+        const QColor base = (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);
+        QColor clear = base; clear.setAlpha(0);
+        QColor full  = base; full.setAlpha(150);
+        const QColor cIn   = maskInverted ? clear : full;       // colour at the centre
+        const QColor cEdge = maskInverted ? full  : clear;      // colour at/after the boundary
+        QRadialGradient rg(QPointF(0, 0), 1.0);
+        rg.setColorAt(0.0, cIn);
+        rg.setColorAt(inner, cIn);
+        if (1.0 > inner) {                                      // smootherstep-sampled ramp stops
+            const int N = 6, aIn = cIn.alpha(), aEd = cEdge.alpha();
+            for (int k = 1; k < N; ++k) {
+                const double s = double(k) / N;
+                const double ss = s * s * s * (s * (s * 6.0 - 15.0) + 10.0);
+                QColor c = base; c.setAlpha(int(aIn + (aEd - aIn) * ss + 0.5));
+                rg.setColorAt(inner + (1.0 - inner) * s, c);
+            }
+        }
+        rg.setColorAt(1.0, cEdge);
+        QBrush brush(rg);
+        QTransform E;
+        E.translate(ci.x(), ci.y()); E.rotate(maskAngle); E.scale(ax, ay);
+        brush.setTransform(E * pmItem->sceneTransform());      // unit circle -> image ellipse -> scene
+        painter->save();
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(brush);
+        painter->drawPolygon(pmItem->mapToScene(br));          // fills only the image area
+        painter->restore();
+    }
+
+    /* 2) Ellipse outline + centre/axis handles, viewport coords (constant on-screen size). */
+    painter->save();
+    painter->resetTransform();
+    const double a = maskAngle * 0.017453292519943295;
+    const double ca = std::cos(a), sa = std::sin(a);
+    QPolygonF poly;
+    const int N = 48;
+    for (int i = 0; i <= N; ++i) {
+        const double t = (6.283185307179586 * i) / N;
+        const double lx = ax * std::cos(t), ly = ay * std::sin(t);
+        const QPointF pImg = ci + QPointF(ca*lx - sa*ly, sa*lx + ca*ly);
+        poly << mapFromScene(pmItem->mapToScene(pImg));
+    }
+    QPen outline(QColor(255, 255, 255, 210)); outline.setWidthF(1.4);
+    painter->setPen(outline); painter->setBrush(Qt::NoBrush);
+    painter->drawPolyline(poly);
+
+    auto handle = [&](const QPointF &c, double r, const QColor &fill) {
+        painter->setPen(QPen(QColor(0, 0, 0, 180), 1.2));
+        painter->setBrush(fill);
+        painter->drawEllipse(c, r, r);
+    };
+    QPointF h[4];
+    maskRadialAxisHandles(br, h);
+    /* Rotate stub: a short stem beyond the +x handle ending in a knob. */
+    const QPointF hx = mapFromScene(pmItem->mapToScene(h[0]));
+    const QPointF rotV = maskRadialRotateHandleVp(br);
+    painter->setPen(outline);
+    painter->drawLine(hx, rotV);
+    for (int i = 0; i < 4; ++i)
+        handle(mapFromScene(pmItem->mapToScene(h[i])), 5.0, QColor(120, 200, 255, 235));
+    handle(rotV, 5.0, QColor(120, 255, 160, 235));                                    // rotate
+    handle(mapFromScene(pmItem->mapToScene(ci)), 4.5, QColor(255, 255, 255, 235));    // centre (move)
     painter->restore();
 }
 
@@ -1653,7 +1796,20 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         const int h = maskHitTest(event->pos());
         if (h >= 0) {
             maskDrag = h;
-            if (h == 2) {                       // move: anchor the whole line
+            if (maskTool == 1) {                // radial: anchor move / rotate
+                const QRectF br = pmItem->boundingRect();
+                const QPointF ci(maskC.x()*br.width(), maskC.y()*br.height());
+                if (h == 0) {                   // centre move
+                    maskMoveAnchorN = maskViewportToNorm(event->pos());
+                    maskCAnchor = maskC;
+                }
+                else if (h == 5) {              // rotate
+                    const QPointF ip = maskViewportToImage(event->pos());
+                    maskGrabAngle = std::atan2(ip.y() - ci.y(), ip.x() - ci.x());
+                    maskAngleAnchor = maskAngle;
+                }
+            }
+            else if (h == 2) {                  // linear move: anchor the whole line
                 maskMoveAnchorN = maskViewportToNorm(event->pos());
                 maskP1Anchor = maskP1;
                 maskP2Anchor = maskP2;
@@ -1733,18 +1889,43 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
     static QPoint prevPos = event->pos();
 
-    /* Mask edit drag: move an endpoint (rotate+scale about the fixed centre) or the whole line. */
+    /* Mask edit drag. Linear: endpoint rotate+scale about centre, or translate. Radial: centre
+       move, axis-handle resize, or outline rotate. */
     if (maskEditMode && maskDrag >= 0) {
-        const QPointF n = maskViewportToNorm(event->pos());
-        if (maskDrag == 0 || maskDrag == 1) {
-            const QPointF c = (maskP1 + maskP2) / 2.0;      // centre stays fixed -> rotate+scale
-            if (maskDrag == 0) { maskP1 = n;          maskP2 = 2.0*c - n; }
-            else               { maskP2 = n;          maskP1 = 2.0*c - n; }
+        if (maskTool == 1) {                                // ---- Radial ----
+            const QRectF br = pmItem->boundingRect();
+            const double bw = br.width(), bh = br.height();
+            const QPointF ci(maskC.x()*bw, maskC.y()*bh);   // current centre, image px
+            const QPointF ip = maskViewportToImage(event->pos());
+            if (maskDrag == 0) {                            // move
+                const QPointF d = maskViewportToNorm(event->pos()) - maskMoveAnchorN;
+                maskC = maskCAnchor + d;
+            }
+            else if (maskDrag == 5) {                       // rotate about centre
+                const double cur = std::atan2(ip.y() - ci.y(), ip.x() - ci.x());
+                maskAngle = maskAngleAnchor + (cur - maskGrabAngle) * 57.29577951308232;
+            }
+            else {                                          // resize a semi-axis (centre fixed)
+                const double a = maskAngle * 0.017453292519943295;
+                const double ca = std::cos(a), sa = std::sin(a);
+                const double ddx = ip.x() - ci.x(), ddy = ip.y() - ci.y();
+                const double lx =  ddx*ca + ddy*sa, ly = -ddx*sa + ddy*ca;   // un-rotated local px
+                if (maskDrag == 1 || maskDrag == 2) maskRx = qMax(2.0, std::abs(lx)) / bw;
+                else                                maskRy = qMax(2.0, std::abs(ly)) / bh;
+            }
         }
-        else {                                              // translate
-            const QPointF d = n - maskMoveAnchorN;
-            maskP1 = maskP1Anchor + d;
-            maskP2 = maskP2Anchor + d;
+        else {                                              // ---- Linear ----
+            const QPointF n = maskViewportToNorm(event->pos());
+            if (maskDrag == 0 || maskDrag == 1) {
+                const QPointF c = (maskP1 + maskP2) / 2.0;  // centre stays fixed -> rotate+scale
+                if (maskDrag == 0) { maskP1 = n;          maskP2 = 2.0*c - n; }
+                else               { maskP2 = n;          maskP1 = 2.0*c - n; }
+            }
+            else {                                          // translate
+                const QPointF d = n - maskMoveAnchorN;
+                maskP1 = maskP1Anchor + d;
+                maskP2 = maskP2Anchor + d;
+            }
         }
         viewport()->update();
         /* Live re-composite as the handle moves. setActiveMaskParams -> paramsChanged ->

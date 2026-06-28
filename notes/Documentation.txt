@@ -2509,23 +2509,26 @@ Layer & masking model (planned)
                toggle it (and returns without the base expand/collapse). All mask UI is isolated in
                developproperties.cpp (showMaskMenu/newMask/deleteMask/rebuildMaskTools/addToolRow/
                setSelectedMask).
-             - SPATIAL EDITING (Linear Gradient, first tool): edited directly on the loupe, not the
-               dock. Geometry lives in MaskComponent.paramsJson as normalized image coords
-               {x1,y1,x2,y2} in 0..1 (resolution/zoom independent; survives proxy/full re-render).
-               Handshake (wired in MW, mirroring paramsChanged): selecting a spatial tool fires
-               DevelopProperties::maskEditBegin(tool,paramsJson,feather) -> ImageView::beginMaskEdit;
-               deselecting fires maskEditEnd. updateMaskEdit() (end of rebuildMaskTools) tracks every
-               image/layer/selection change; developDockVisibilityChange() ends/re-asserts it so the
-               overlay never leaks into the plain loupe. ImageView draws the overlay in drawForeground
-               (red tint ramp in scene coords; centre line + 0%/100% perpendicular guides + handles in
-               viewport coords for constant on-screen size), shown only while the cursor is over the
-               view (maskHover via enter/leaveEvent). Mouse: endpoint drag rotates+scales about the
-               fixed centre (this is how you ROTATE the gradient); centre/line drag translates; a miss
-               falls through to normal pan/zoom. On release ImageView emits maskGeometryChanged ->
+             - SPATIAL EDITING (Linear + Radial Gradient): edited directly on the loupe, not the
+               dock. Geometry lives in MaskComponent.paramsJson as normalized coords: Linear
+               {x1,y1,x2,y2}; Radial {cx,cy,rx,ry,angle} (cx/cy by W,H; rx by W, ry by H; angle deg).
+               Resolution/zoom independent; survives proxy/full re-render. Handshake (wired in MW,
+               mirroring paramsChanged): selecting a spatial tool fires DevelopProperties::maskEditBegin
+               (tool,op,inverted,paramsJson,feather) -> ImageView::beginMaskEdit; deselecting fires
+               maskEditEnd. updateMaskEdit() (end of rebuildMaskTools) tracks every image/layer/
+               selection change; developDockVisibilityChange() ends/re-asserts it so the overlay never
+               leaks into the plain loupe. ImageView::drawForeground dispatches by tool to
+               drawLinearMask / drawRadialMask, shown only while the cursor is over the view (maskHover
+               via enter/leaveEvent). Linear: tint ramp + centre line + 0%/100% perpendicular guides +
+               endpoint/centre handles; endpoint drag rotates+scales about the fixed centre, centre/line
+               drag translates. Radial: elliptical tint (a unit-circle QRadialGradient mapped through a
+               brush transform to the rotated image ellipse) + outline + centre + 4 axis handles; centre
+               handle moves, axis handles resize each semi-axis (centre fixed), dragging the outline
+               rotates. Tints/handles draw in viewport coords for constant on-screen size; a miss falls
+               through to pan/zoom. Drag emits maskGeometryChanged LIVE (and on release) ->
                DevelopProperties::setActiveMaskParams (stores into the component, debounce-persists, no
-               tree rebuild). Feather/Invert live-update the overlay via maskFeatherChanged/
-               maskInvertChanged; the tint colour conveys the op (Add=red, Subtract=blue) and Invert
-               flips the ramp.
+               tree rebuild). Feather/Invert live-update via maskFeatherChanged/maskInvertChanged; tint
+               colour conveys op (Add=red, Subtract=blue); Invert flips (Radial: effect outside).
              - RENDER COMPOSITING (Stage 4b + N-layer stack): the render composites the WHOLE stack
                in SCENE-LINEAR before the output transform, INDEPENDENT of which layer is active for
                editing -- so a saved mask is visible the moment the image loads (no need to select
@@ -2537,10 +2540,13 @@ Layer & masking model (planned)
                (acc = acc*(1-m)+layer*m; an empty/global mask replaces below); one final
                OutputTransform. Each layer develops the ORIGINAL work (independent, not stacked
                adjustments), so where a layer's mask=1 it replaces what is below. buildMaskBuffer
-               (mainwindow.cpp) rasterizes a layer's gradient(s) at WorkingImage (pre-orientation)
+               (mainwindow.cpp) rasterizes a layer's component(s) at WorkingImage (pre-orientation)
                resolution; each pixel maps work-normalized -> output-normalized (output = work
                rotated CW by degrees) so geometry edited on the oriented loupe lines up after the
-               EXIF rotation; falloff smootherstep, Add=union(max), Subtract=*(1-c). developComposite
+               EXIF rotation. parseMaskComp/evalMaskComp branch by tool: Linear = projection ramp;
+               Radial = distance in the ellipse's local frame (computed in OUTPUT-PIXEL space so the
+               ellipse keeps aspect + rotation), 1 inside -> 0 at the boundary. Falloff smootherstep,
+               Add=union(max), Subtract=*(1-c), Invert flips. developComposite
                remains the fast single-pass path when there are no non-Base layers. Mask
                add/delete/geometry/feather/invert emit paramsChanged() to re-render. Deferred: true
                STACKED adjustments (each layer builds on the result below, not the original), the
