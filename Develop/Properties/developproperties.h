@@ -124,6 +124,7 @@ private:
     static void applyKeyToParams(const QString &key, const QVariant &v, EditParams &p);
     QStringList currentLayerNames() const;        // names of the current image's layers (>=1)
     void refreshLayerCombo();                     // rebuild the combo's list/value from the stack
+    void updateMaskMenuBtn();                     // show [M] only when a non-Base layer is active
     EditParams &activeParams();                   // the active layer's params (creates a layer if none)
 
     /* The per-image edit state. stackCache holds loaded/edited stacks keyed by file path; dirty
@@ -143,6 +144,7 @@ private:
     int selectedMaskIndex = -1;
     bool isRebuildingMasks = false;
     QMenu *maskMenu = nullptr;
+    BarBtn *maskMenuBtn = nullptr;      // [M] add-mask button; hidden on the Base layer (no mask)
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;
     static constexpr int kDebounceWriteMs = 2000;  // flush this long after edits settle (gated)

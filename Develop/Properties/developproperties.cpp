@@ -217,13 +217,15 @@ void DevelopProperties::addLayersHeader()
        menu content is built on click (showMaskMenu) so it can offer Subtract only once a tool
        exists. */
     maskMenu = new QMenu(this);
-    BarBtn *maskMenuBtn = new BarBtn();
+    maskMenuBtn = new BarBtn();
     maskMenuBtn->setText("M");
     maskMenuBtn->setToolTip("Add a mask tool (gradient, brush, range, AI select) to this layer");
     connect(maskMenuBtn, &BarBtn::clicked, this, &DevelopProperties::showMaskMenu);
     btns.append(maskMenuBtn);
 
     layerListEditor = static_cast<ComboBoxEditor*>(addItem(i));
+
+    updateMaskMenuBtn();        // Base layer carries no mask, so [M] starts hidden
 
     QModelIndex idx = sourceIdx["layerList"];
     model->setData(idx, currentLayerNames().value(activeLayerIndex));
@@ -398,6 +400,8 @@ void DevelopProperties::showMaskMenu()
         for (int t = 0; t <= int(MaskTool::Depth); ++t) {
             QAction *a = maskMenu->addAction("Subtract " + maskToolName(t));
             connect(a, &QAction::triggered, this, &DevelopProperties::newMask);
+            if (t == int(MaskTool::Brush) || t == int(MaskTool::LuminanceRange))
+                maskMenu->addSeparator();           // group geometric / range / AI tools
         }
     }
     maskMenu->exec(QCursor::pos());
@@ -720,6 +724,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
             selectedMaskIndex = -1;
             populateSlidersFromStack();
             rebuildMaskTools();
+            updateMaskMenuBtn();        // hide [M] on the Base layer
             emit paramsChanged();
         }
         return;
@@ -826,6 +831,13 @@ void DevelopProperties::refreshLayerCombo()
     layerListEditor->refresh(layerList);
     layerListEditor->setValue(layerList.value(activeLayerIndex));
     isPopulating = false;
+    updateMaskMenuBtn();        // hide [M] on the Base layer
+}
+
+void DevelopProperties::updateMaskMenuBtn()
+{
+    /* The Base layer (index 0) carries no mask, so its [M] add-mask button is hidden. */
+    if (maskMenuBtn) maskMenuBtn->setVisible(activeLayerIndex > 0);
 }
 
 /* ----------------------------------------------------------------------------------------
