@@ -3,6 +3,8 @@
 #include "Main/global.h"
 #include "Views/imageview.h"
 #include <QApplication>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #define CLIPBOARD_IMAGE_NAME		"clipboard.png"
 #define ROUND(x) (static_cast<int>((x) + 0.5))
@@ -373,6 +375,164 @@ void ImageView::setDevelopPreview(const QImage &image)
     if (image.isNull()) return;
     pmItem->setPixmap(QPixmap::fromImage(image));
     pmItem->setVisible(true);
+}
+
+/* ============================ Develop mask editing ============================
+
+   A spatial mask tool (Linear Gradient first) is edited directly on the loupe. The dock activates
+   it (beginMaskEdit) when its caption is selected; the overlay is shown only while the cursor is
+   over the view (maskHover). Geometry is normalized image coords (0..1) so it is independent of
+   zoom and of proxy/full render resolution. The red tint previews the mask coverage; it is purely
+   an overlay here and does not touch developComposite. Endpoint drags rotate+scale the gradient
+   about its centre; the centre handle (or the line) translates it.
+   ----------------------------------------------------------------------------------------------- */
+
+void ImageView::beginMaskEdit(int tool, const QString &paramsJson, double feather)
+{
+    if (G::isLogger) G::log("ImageView::beginMaskEdit");
+    maskTool = tool;
+    maskFeather = feather;
+    if (!parseMaskParams(paramsJson)) {     // missing/invalid -> a sensible default
+        maskP1 = QPointF(0.5, 0.34);
+        maskP2 = QPointF(0.5, 0.66);
+    }
+    maskEditMode = true;
+    maskHover = underMouse();        // show at once if the cursor is already over the view
+    maskDrag = -1;
+    viewport()->update();
+}
+
+void ImageView::endMaskEdit()
+{
+    if (!maskEditMode) return;
+    if (G::isLogger) G::log("ImageView::endMaskEdit");
+    maskEditMode = false;
+    maskDrag = -1;
+    viewport()->update();
+}
+
+void ImageView::setMaskFeather(double feather)
+{
+    maskFeather = feather;
+    if (maskEditMode && maskHover) viewport()->update();
+}
+
+bool ImageView::parseMaskParams(const QString &json)
+{
+    QJsonParseError err;
+    const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8(), &err);
+    if (err.error != QJsonParseError::NoError || !doc.isObject()) return false;
+    const QJsonObject o = doc.object();
+    if (!o.contains("x1") || !o.contains("y1") || !o.contains("x2") || !o.contains("y2"))
+        return false;
+    maskP1 = QPointF(o["x1"].toDouble(), o["y1"].toDouble());
+    maskP2 = QPointF(o["x2"].toDouble(), o["y2"].toDouble());
+    return true;
+}
+
+QString ImageView::maskParamsJson() const
+{
+    QJsonObject o;
+    o["x1"] = maskP1.x(); o["y1"] = maskP1.y();
+    o["x2"] = maskP2.x(); o["y2"] = maskP2.y();
+    return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
+QPointF ImageView::maskNormToViewport(QPointF n) const
+{
+    const QRectF br = pmItem->boundingRect();
+    const QPointF itemPt(n.x() * br.width(), n.y() * br.height());
+    return mapFromScene(pmItem->mapToScene(itemPt));
+}
+
+QPointF ImageView::maskViewportToNorm(QPoint vp) const
+{
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return QPointF();
+    const QPointF itemPt = pmItem->mapFromScene(mapToScene(vp));
+    return QPointF(itemPt.x() / br.width(), itemPt.y() / br.height());
+}
+
+int ImageView::maskHitTest(QPoint vp) const
+{
+    if (!maskHandlesEditable()) return -1;
+    const double rHandle = 11;          // px pick radius
+    const QPointF p(vp);
+    const QPointF v1 = maskNormToViewport(maskP1);
+    const QPointF v2 = maskNormToViewport(maskP2);
+    if (QLineF(p, v1).length() <= rHandle) return 0;
+    if (QLineF(p, v2).length() <= rHandle) return 1;
+    /* distance from p to the centre line segment v1..v2 -> move handle */
+    const QPointF d = v2 - v1;
+    const double len2 = d.x()*d.x() + d.y()*d.y();
+    if (len2 > 1e-6) {
+        double t = ((p.x()-v1.x())*d.x() + (p.y()-v1.y())*d.y()) / len2;
+        t = qBound(0.0, t, 1.0);
+        const QPointF proj = v1 + t * d;
+        if (QLineF(p, proj).length() <= rHandle) return 2;
+    }
+    return -1;
+}
+
+void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
+{
+    QGraphicsView::drawForeground(painter, rect);
+    if (!maskHandlesEditable()) return;
+
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return;
+
+    const QPointF s1 = pmItem->mapToScene(QPointF(maskP1.x()*br.width(), maskP1.y()*br.height()));
+    const QPointF s2 = pmItem->mapToScene(QPointF(maskP2.x()*br.width(), maskP2.y()*br.height()));
+
+    /* 1) Red tint ramp, in scene coords so it tracks the image. feather widens the transition
+       around the centre: 0 = hard step at the midpoint, 100 = full linear ramp p1->p2. */
+    {
+        const double f  = qBound(0.0, maskFeather, 100.0) / 100.0;
+        const double lo = qBound(0.0, 0.5 - 0.5*f, 1.0);
+        const double hi = qBound(0.0, 0.5 + 0.5*f, 1.0);
+        QColor c0(220, 40, 40);  c0.setAlpha(0);     // mask 0% -> clear
+        QColor c1(220, 40, 40);  c1.setAlpha(150);   // mask 100% -> tinted
+        QLinearGradient grad(s1, s2);
+        grad.setColorAt(0.0, c0);
+        grad.setColorAt(lo,  c0);
+        if (hi > lo) grad.setColorAt(hi, c1);
+        grad.setColorAt(1.0, c1);
+        painter->save();
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(grad);
+        painter->drawPolygon(pmItem->mapToScene(br));   // fills only the image area
+        painter->restore();
+    }
+
+    /* 2) Centre line, perpendicular 0%/100% guide ticks, and handles -- drawn in viewport coords
+       (identity transform) so they stay a constant on-screen size at any zoom. */
+    painter->save();
+    painter->resetTransform();
+    const QPointF v1 = mapFromScene(s1);
+    const QPointF v2 = mapFromScene(s2);
+    QPointF dir = v2 - v1;
+    const double dlen = QLineF(v1, v2).length();
+    QPointF perp(0, 0);
+    if (dlen > 1e-6) { dir /= dlen; perp = QPointF(-dir.y(), dir.x()); }
+    const double guide = 46;        // half-length of the perpendicular guide ticks (px)
+
+    QPen guidePen(QColor(255,255,255,210)); guidePen.setWidthF(1.4);
+    painter->setPen(guidePen);
+    painter->setBrush(Qt::NoBrush);
+    painter->drawLine(v1, v2);                                   // centre line
+    painter->drawLine(v1 - perp*guide, v1 + perp*guide);         // 0% boundary
+    painter->drawLine(v2 - perp*guide, v2 + perp*guide);         // 100% boundary
+
+    auto handle = [&](const QPointF &c, double r, const QColor &fill) {
+        painter->setPen(QPen(QColor(0,0,0,180), 1.2));
+        painter->setBrush(fill);
+        painter->drawEllipse(c, r, r);
+    };
+    handle((v1+v2)/2.0, 4.5, QColor(255,255,255,235));           // centre (move)
+    handle(v1, 5.5, QColor(120,200,255,235));                    // p1 (0%)
+    handle(v2, 5.5, QColor(120,200,255,235));                    // p2 (100%)
+    painter->restore();
 }
 
 void ImageView::clear()
@@ -1317,6 +1477,9 @@ void ImageView::enterEvent(QEnterEvent *event)
 {
     wheelSpinningOnEntry = G::wheelSpinning;
 
+    /* The mask overlay is "active and visible whenever the mouse is over the imageView". */
+    if (maskEditMode) { maskHover = true; viewport()->update(); }
+
     if (panToFocus && zoom > zoomFit) {
         // qDebug() << "ImageView::enterEvent emit showLoupeRect";
         emit showLoupeRect(true);
@@ -1333,6 +1496,11 @@ void ImageView::leaveEvent(QEvent *event)
 {
     wheelSpinningOnEntry = false;
     emit cursorLeftImage();     // clear the Develop scopes readout marker
+    if (maskEditMode && maskHover) {        // hide the mask overlay when the cursor leaves
+        maskHover = false;
+        maskDrag = -1;
+        viewport()->update();
+    }
     // emit showLoupeRect(false);
 }
 
@@ -1452,6 +1620,21 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    /* Mask edit: grab a handle and start dragging it instead of panning. A miss falls through to
+       the normal pan/zoom handling below, so panning a zoomed image still works while editing. */
+    if (maskEditMode && event->button() == Qt::LeftButton) {
+        const int h = maskHitTest(event->pos());
+        if (h >= 0) {
+            maskDrag = h;
+            if (h == 2) {                       // move: anchor the whole line
+                maskMoveAnchorN = maskViewportToNorm(event->pos());
+                maskP1Anchor = maskP1;
+                maskP2Anchor = maskP2;
+            }
+            return;
+        }
+    }
+
     if (event->button() == Qt::LeftButton) {
         isLeftMouseBtnPressed = true;
         isMouseDrag = false;
@@ -1522,6 +1705,27 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     //*/
 
     static QPoint prevPos = event->pos();
+
+    /* Mask edit drag: move an endpoint (rotate+scale about the fixed centre) or the whole line. */
+    if (maskEditMode && maskDrag >= 0) {
+        const QPointF n = maskViewportToNorm(event->pos());
+        if (maskDrag == 0 || maskDrag == 1) {
+            const QPointF c = (maskP1 + maskP2) / 2.0;      // centre stays fixed -> rotate+scale
+            if (maskDrag == 0) { maskP1 = n;          maskP2 = 2.0*c - n; }
+            else               { maskP2 = n;          maskP1 = 2.0*c - n; }
+        }
+        else {                                              // translate
+            const QPointF d = n - maskMoveAnchorN;
+            maskP1 = maskP1Anchor + d;
+            maskP2 = maskP2Anchor + d;
+        }
+        viewport()->update();
+        return;
+    }
+    /* Hover feedback while a mask tool is active (not dragging): show a move cursor over a handle. */
+    if (maskEditMode && !isLeftMouseBtnPressed) {
+        setCursor(maskHitTest(event->pos()) >= 0 ? Qt::OpenHandCursor : Qt::ArrowCursor);
+    }
 
     /*
     if (isLeftMouseBtnPressed)
@@ -1595,6 +1799,15 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger)
         G::log("ImageView::mouseReleaseEvent", "isScrollable =" + QVariant(isScrollable).toString());
+
+    /* Finish a mask-handle drag: persist the new geometry (dock writes it into the component). */
+    if (maskEditMode && maskDrag >= 0) {
+        maskDrag = -1;
+        isLeftMouseBtnPressed = false;
+        emit maskGeometryChanged(maskParamsJson());
+        return;
+    }
+
     /* rubberband
     if (isRubberBand) {
         setCursor(Qt::ArrowCursor);
