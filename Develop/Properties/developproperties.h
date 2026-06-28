@@ -39,6 +39,19 @@ public:
     EditParams editParams();
     QString diagnostics();
 
+    /* Everything the renderer needs to composite the active layer through its mask: the active
+       layer's adjustments (above) blended over the layers-below result (below = Base params) by the
+       layer's mask components. active == false => render `above` globally (no mask). Captured as
+       plain values so the off-thread full-res render can use it. */
+    struct MaskRenderJob {
+        bool                   active = false;
+        EditParams             below;       // layers-below (Base) params
+        EditParams             above;       // active layer params
+        QVector<MaskComponent> masks;       // active layer's mask components
+        int                    combine = 0; // MaskCombine for this layer
+    };
+    MaskRenderJob maskJob();
+
     /* Per-image edit state (Increment 1). The dock now reflects the CURRENT IMAGE's EditStack
        (loaded from / saved to its XMP sidecar) instead of app-global QSettings. */
     void setCurrentImage(const QString &fPath);   // flush previous, load+show this image's stack
@@ -69,9 +82,10 @@ signals:
     /* Mask editing handshake with ImageView. Begin when a spatial mask tool becomes the active
        (selected) edit target; End when none is selected. ImageView draws the overlay + handles and
        sends geometry back via setActiveMaskParams. */
-    void maskEditBegin(int tool, const QString &paramsJson, double feather);
+    void maskEditBegin(int tool, int op, bool inverted, const QString &paramsJson, double feather);
     void maskEditEnd();
     void maskFeatherChanged(double feather);    // Feather slider -> live overlay ramp update
+    void maskInvertChanged(bool inverted);      // Invert checkbox -> live overlay flip
 
 private:
     void initialize();

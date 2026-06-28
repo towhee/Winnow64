@@ -387,10 +387,12 @@ void ImageView::setDevelopPreview(const QImage &image)
    about its centre; the centre handle (or the line) translates it.
    ----------------------------------------------------------------------------------------------- */
 
-void ImageView::beginMaskEdit(int tool, const QString &paramsJson, double feather)
+void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &paramsJson, double feather)
 {
     if (G::isLogger) G::log("ImageView::beginMaskEdit");
     maskTool = tool;
+    maskOp = op;
+    maskInverted = inverted;
     maskFeather = feather;
     if (!parseMaskParams(paramsJson)) {     // missing/invalid -> a sensible default
         maskP1 = QPointF(0.5, 0.34);
@@ -414,6 +416,12 @@ void ImageView::endMaskEdit()
 void ImageView::setMaskFeather(double feather)
 {
     maskFeather = feather;
+    if (maskEditMode && maskHover) viewport()->update();
+}
+
+void ImageView::setMaskInverted(bool inverted)
+{
+    maskInverted = inverted;
     if (maskEditMode && maskHover) viewport()->update();
 }
 
@@ -491,13 +499,32 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
         const double f  = qBound(0.0, maskFeather, 100.0) / 100.0;
         const double lo = qBound(0.0, 0.5 - 0.5*f, 1.0);
         const double hi = qBound(0.0, 0.5 + 0.5*f, 1.0);
-        QColor c0(220, 40, 40);  c0.setAlpha(0);     // mask 0% -> clear
-        QColor c1(220, 40, 40);  c1.setAlpha(150);   // mask 100% -> tinted
+        /* Tint colour conveys the op: Add (selects) red, Subtract (removes) blue. */
+        const QColor base = (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);
+        QColor clear = base; clear.setAlpha(0);     // mask 0% -> no tint
+        QColor full  = base; full.setAlpha(150);    // mask 100% -> tinted
+        /* Invert swaps which end of the ramp is covered. */
+        const QColor &cLo = maskInverted ? full  : clear;
+        const QColor &cHi = maskInverted ? clear : full;
         QLinearGradient grad(s1, s2);
-        grad.setColorAt(0.0, c0);
-        grad.setColorAt(lo,  c0);
-        if (hi > lo) grad.setColorAt(hi, c1);
-        grad.setColorAt(1.0, c1);
+        grad.setColorAt(0.0, cLo);
+        grad.setColorAt(lo,  cLo);
+        /* Sample a smoothstep falloff (matches evalGrad in the render) so the tinted edge eases in
+           and out instead of kinking at lo/hi -- QLinearGradient only interpolates linearly between
+           stops, so we add intermediate ones. */
+        if (hi > lo) {
+            const int N = 6;
+            const int aLo = cLo.alpha(), aHi = cHi.alpha();
+            for (int k = 1; k < N; ++k) {
+                const double s = double(k) / N;
+                const double ss = s * s * s * (s * (s * 6.0 - 15.0) + 10.0);   // smootherstep
+                QColor c = base;
+                c.setAlpha(int(aLo + (aHi - aLo) * ss + 0.5));
+                grad.setColorAt(lo + (hi - lo) * s, c);
+            }
+        }
+        grad.setColorAt(hi, cHi);
+        grad.setColorAt(1.0, cHi);
         painter->save();
         painter->setPen(Qt::NoPen);
         painter->setBrush(grad);

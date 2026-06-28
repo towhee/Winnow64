@@ -119,9 +119,10 @@ public slots:
     /* Develop mask editing. beginMaskEdit makes a spatial mask tool the active overlay target (its
        geometry drawn over the image, draggable); endMaskEdit clears it. setMaskFeather live-updates
        the ramp softness from the Feather slider. Geometry is normalized image coords (0..1). */
-    void beginMaskEdit(int tool, const QString &paramsJson, double feather);
+    void beginMaskEdit(int tool, int op, bool inverted, const QString &paramsJson, double feather);
     void endMaskEdit();
     void setMaskFeather(double feather);
+    void setMaskInverted(bool inverted);
 
 signals:
     void togglePick();
@@ -278,6 +279,8 @@ private:
     bool    maskEditMode = false;       // a spatial mask tool is the active edit target
     bool    maskHover    = false;       // cursor is over the view (overlay shown only then)
     int     maskTool     = 0;           // MaskTool enum value
+    int     maskOp       = 0;           // MaskOp: 0 = Add, 1 = Subtract (tint colour)
+    bool    maskInverted = false;       // flip the gradient ramp
     double  maskFeather  = 50.0;        // 0..100, ramp softness
     QPointF maskP1;                     // gradient start (0% line), normalized image coords
     QPointF maskP2;                     // gradient end   (100% line), normalized image coords
