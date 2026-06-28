@@ -2474,9 +2474,42 @@ Layer & masking model (planned)
                are numbered "Layer 1", "Layer 2", ... (the new layer's number = its index). The Base
                layer CANNOT be removed -- deleteLayer refuses when the active layer is index 0
                (centralMsg "The Base layer cannot be removed."). An all-identity stack is
-               never persisted, so empty layers added to an unedited image are not written. The old
-               QSettings layer helpers (readLayerList/setCurrentLayer/layerRootPath/layerValue) are
-               left defined but unused; presets (Increment 2) will repurpose a QSettings store.
+               never persisted, so empty layers added to an unedited image are not written (EXCEPTION:
+               a layer that has any mask component counts as non-identity so masks survive
+               navigation). The old QSettings layer helpers (readLayerList/setCurrentLayer/
+               layerRootPath/layerValue) are left defined but unused; presets (Increment 2) will
+               repurpose a QSettings store.
+             - MASK (UI increment; compositor + canvas overlay deferred): each NON-Base layer has ONE
+               mask, built from an ordered list of tools -- editstack.h EditLayer.masks is now that
+               tool list (MaskComponent: tool/op/inverted/feather + opaque paramsJson for per-tool
+               geometry). Each tool ADDS or SUBTRACTS area; the first tool must Add (nothing to
+               subtract from an empty mask). The combine field is legacy/unused. The dock places an
+               [M] button right after the "Select layer" combo (ComboBoxEditor now drains the global
+               `btns` vector to host trailing buttons); clicking [M] pops a menu of "Add <tool>" and
+               (once a tool exists) "Subtract <tool>" entries (Linear/Radial Gradient, Brush, Color/
+               Luminance Range, Select Subject/Sky/Background, Depth). Each tool is a row under the
+               Layers header (caption "Add/Subtract <tool>" with a [-] remove button). The rows are
+               header-style for the single-line full-width caption + expand arrow, but flagged
+               UR_LeafSingleLine (new role) so the delegate paints them in the LEAF colour, not
+               category teal. Each tool row is a single FULL-WIDTH spanned cell
+               (setFirstColumnSpanned) and the [-] remove glyph is DRAWN BY THE DELEGATE at the
+               row's right edge (UR_DeleteBtn role), not a value-column button widget: a column-1
+               widget over the caption gets clipped/covered on expand (the caption's overflow into
+               column 1 is outside the expand repaint's dirty region, and a covering index widget
+               composites stale until a full repaint). mousePressEvent hit-tests the glyph rect
+               (mirroring the delegate geometry) to delete; clicks elsewhere on the row toggle it.
+               Clicking a tool toggles it: the SELECTED tool expands to show its
+               settings as ITS OWN children (Feather slider, Invert checkbox, Done checkbox) -- no
+               duplicate tool-name row; only one tool is expanded at a time. The Done checkbox ends
+               the build (collapses the tool) via a DEFERRED setSelectedMask(-1) (QTimer 0) so the
+               rebuild does not delete the checkbox inside its own value-changed signal. NB
+               PropertyEditor::mousePressEvent does NOT select rows (only expand/collapse), so
+               DevelopProperties overrides mousePressEvent to read the clicked row's UR_MaskIndex and
+               toggle it (and returns without the base expand/collapse). All mask UI is isolated in
+               developproperties.cpp (showMaskMenu/newMask/deleteMask/rebuildMaskTools/addToolRow/
+               setSelectedMask). Spatial editing (drag the gradient, paint the brush, AI-select) is a
+               later increment on the image canvas, not the dock; rendering still shows the active
+               layer with no mask compositing yet.
              - LIFECYCLE / FLUSH: MW::fileSelectionChange calls setCurrentImage; after the loupe
                pixmap is shown (both the cache-hit path and MW::refreshViewsOnCacheChange) MW::
                applyDevelopPreviewIfEdited renders the saved edits over an edited image (no-op for

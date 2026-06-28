@@ -29,11 +29,39 @@
     NOT include it), so pulling in Qt's JSON types here costs nothing there.
 */
 
+/*
+    Masking model (UI increment -- compositor + canvas overlay deferred). A non-Base layer's
+    effect area is the combination of an ordered list of MaskComponents. Each component is created
+    with a tool (gradient/brush/range/AI-select), contributes (Add) or removes (Subtract) area,
+    and may be inverted/feathered. The whole layer combines its Add components by MaskCombine
+    (Union = any, Intersect = overlap); Subtract components are removed from that result. Tool
+    geometry (gradient line, brush strokes, sampled colours) lives in paramsJson, kept opaque here
+    so the sidecar format does not change as tools gain parameters. tool/op/combine are stored as
+    int for trivial, forward-tolerant JSON.
+*/
+enum class MaskTool {
+    LinearGradient, RadialGradient, Brush,
+    ColorRange, LuminanceRange, Subject, Sky, Background, Depth
+};
+enum class MaskOp      { Add, Subtract };
+enum class MaskCombine { Union, Intersect };
+
+struct MaskComponent {
+    int     tool     = int(MaskTool::LinearGradient);
+    int     op       = int(MaskOp::Add);
+    bool    enabled  = true;
+    bool    inverted = false;
+    float   feather  = 50.0f;
+    QString paramsJson;                 // opaque per-tool geometry/sample blob (forward-tolerant)
+};
+
 struct EditLayer {
     QString    name    = "Base";        // index 0 is always the Base layer; extras are "Layer 1", ...
-    QString    mask;                    // empty = global; reserved (mask editing deferred)
+    QString    mask;                    // empty = global; reserved (legacy single-mask slot)
     float      opacity = 1.0f;          // reserved (compositor deferred)
     bool       enabled = true;
+    int        combine = int(MaskCombine::Union);   // how this layer's masks combine
+    QVector<MaskComponent> masks;       // empty (Base or unmasked) = global
     EditParams params;
 };
 
@@ -53,7 +81,7 @@ struct EditStack {
        writing a sidecar for an untouched image. */
     bool isIdentity() const {
         for (const EditLayer &l : layers)
-            if (l.enabled && !l.params.isIdentity()) return false;
+            if (l.enabled && (!l.params.isIdentity() || !l.masks.isEmpty())) return false;
         return true;
     }
 
@@ -131,6 +159,19 @@ struct EditStack {
             lo["mask"]    = l.mask;
             lo["opacity"] = l.opacity;
             lo["enabled"] = l.enabled;
+            lo["combine"] = l.combine;
+            QJsonArray marr;
+            for (const MaskComponent &m : l.masks) {
+                QJsonObject mo;
+                mo["tool"]     = m.tool;
+                mo["op"]       = m.op;
+                mo["enabled"]  = m.enabled;
+                mo["inverted"] = m.inverted;
+                mo["feather"]  = m.feather;
+                if (!m.paramsJson.isEmpty()) mo["params"] = m.paramsJson;
+                marr.append(mo);
+            }
+            lo["masks"]   = marr;
             lo["params"]  = paramsToJson(l.params);
             arr.append(lo);
         }
@@ -151,6 +192,19 @@ struct EditStack {
             l.mask    = lo.value("mask").toString(l.mask);
             l.opacity = static_cast<float>(lo.value("opacity").toDouble(l.opacity));
             l.enabled = lo.value("enabled").toBool(l.enabled);
+            l.combine = lo.value("combine").toInt(l.combine);
+            const QJsonArray marr = lo.value("masks").toArray();
+            for (const QJsonValue &mv : marr) {
+                const QJsonObject mo = mv.toObject();
+                MaskComponent m;
+                m.tool     = mo.value("tool").toInt(m.tool);
+                m.op       = mo.value("op").toInt(m.op);
+                m.enabled  = mo.value("enabled").toBool(m.enabled);
+                m.inverted = mo.value("inverted").toBool(m.inverted);
+                m.feather  = static_cast<float>(mo.value("feather").toDouble(m.feather));
+                m.paramsJson = mo.value("params").toString();
+                l.masks.append(m);
+            }
             l.params  = paramsFromJson(lo.value("params").toObject());
             s.layers.append(l);
         }

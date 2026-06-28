@@ -14,22 +14,21 @@ units to be percent of the  entire width, and row height to be percent of the
 default row height.  I anticipate needing this for the section that holds the
 histogram (left side) and vector scope (right side). How do you suggest we do this.
 
-The initial setup:
-Develop dock btns Graphs, Transform, ?, X
-    Graphs btns: auto, skin
-        Histogram/VectorScope side by side
-    Core btns: presets, save preset, transform (crop symbol)
+The Develop dock layout:
+Develop dock (btns: Graphs, Transform, Reset All, ?, X)
+    Histogram/VectorScope side by side
+    Core (btns: presets, save preset, transform (crop symbol))
         Demosaic dropdown (Apple, Winnow, Other...)
         Denoise (checkbox)
         Transform
             Crop
             Rotate/Level
             Perspective
-    Layers btns: btns: minus/plus
-        Select layer (lineedit dropdown)
+    Layers (btns: btns: minus/plus)
+        Select layer (lineedit dropdown) (Children if not Base layer)
             Combine masks method
             Mask 1
-            Mask 2
+            Mask 2...
         Basic (header)
             Temp (slider)
             Tint (slider)
@@ -53,8 +52,76 @@ Develop dock btns Graphs, Transform, ?, X
             Vignette
             Grain
 
+I am looking for input on how to structure the Layers.  I am looking for a space efficient
+layout that allows the user to add masks to a non-Base layer. When a new mask is selected
+the user can select the type of mask and add/subtract from the mask same as Lightroom.
+Multple masks can be created and the overall layer mask can be the intersection or union of
+the individual masks.  While a mask is being built, a mask control with settings relevant to
+the mask tool should appear, perhaps like the scopes, but under Layers. I am thinking we
+might have an add mask button that shows a list of mask types to get started, similar to
+how Embellish "adds an effect to this style".
+
+Please do not make any program changes until we have ironed out the design/layout for the
+layer/mask process.  Feel free to suggest extending the propertywidgets to facilitate an
+improved, clear, space efficient layout (such as adding buttons after a combobox in the
+ComboBoxEditor).
+
+Design change: [] = widget ie combobox, button etc
+There will only be one mask per layer, with a list of mask tools used to build the mask.
+Each mask tool can add or subtract from the mask.  The first mask tool must be added.
+When you click on a mask tool its settings become visible.  Somewhere we need a Done button
+to end the mask build.  Here is a mockup of the new layout:
+
+Layers
+Select layer    [Layer 2          v] [M]
+Add linear gradient                  [-]
+Subtract brush                       [-]
+
+[M] Mask button dropdown list {Add linear gradient, Add brush, ... Subtract linear gradient,
+    Subtract brush, ...}
+[-] Remove button
+
+To avoid row duplication instead of:
+
+ Subtract brush                      [-]
+vSubtract brush                     [..]
+   Feather
+   Invert
+
+Let's do:
+vSubtract brush                      [-]
+   Feather      [Slider]
+   Invert       [ChkBox]
+   Done         [ChkBox]
+
+
+
 Make sure you can read white-balance multipliers, black/white levels, CFA phase for every camera
 in the list.  This has been a problem in some of the cameras we have already done.  Can you
 read how exiftool does this and replicate it in Winnow.
 
 [Session: 98% (Resets: 10:20)] [Week: 99% (Resets: Sat 15:00)]
+
+Update(Develop/Properties/developproperties.cpp)
+  ⎿  Added 6 lines
+      508
+      509      isPopulating = false;
+      510      isRebuildingMasks = false;
+      511 +
+      512 +    /* Force a full content repaint. The header-style tool rows draw their caption across the full
+      513 +       row width (into the value column via r4 = w0 + w1); after an expand/collapse the view only
+      514 +       repaints a narrow dirty region, which clips the caption to column 0 until the next hover.
+      515 +       A whole-viewport update paints every row with the full clip, so the text is not truncated. */
+      516 +    viewport()->update();
+      517  }
+      518
+      519  void DevelopProperties::setSelectedMask(int index)
+
+⏺ Done. After rebuildMaskTools() finishes (which runs on every expand/collapse/add/delete via setSelectedMask), it now calls
+  viewport()->update() to force a full content repaint.
+
+  The cause: the header-style tool rows draw their caption across the full row width (into the value column via the delegate's r4 = w0 +
+  w1). On collapse the view only repaints a narrow dirty region, so the caption gets clipped to column 0 — exactly what you saw — until a
+  hover triggers a full repaint. Forcing a whole-viewport update reproduces that full repaint immediately, so the captions stay full-width.
+
+  This is a one-line, low-cost fix (one coalesced repaint per rebuild). Please rebuild and confirm the expand→collapse no longer truncates.
