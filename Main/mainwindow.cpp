@@ -5078,17 +5078,29 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
     return out;
 }
 
-/* developComposite for a masked layer: blend the active layer (above) over the layers-below result
-   (below) in scene-linear by the layer's mask, then apply orientation / proxy scaling exactly as
-   developComposite does. */
-QImage developCompositeMasked(const WorkingImage &src, const EditParams &below, const EditParams &above,
-                              const QVector<MaskComponent> &masks, int /*combine*/,
-                              int degrees, bool fullRes, int fullW, int fullH,
-                              WorkingImageCache::RenderTimings *timings = nullptr)
+/* developComposite for a full layer stack: composite every enabled layer in scene-linear (each
+   developed from the original and blended by its mask), then apply orientation / proxy scaling
+   exactly as developComposite does. Falls back to the single-pass developComposite when there are
+   no non-Base layers. */
+QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::StackRenderJob &job,
+                             int degrees, bool fullRes, int fullW, int fullH,
+                             WorkingImageCache::RenderTimings *timings = nullptr)
 {
-    const std::vector<float> mask = buildMaskBuffer(masks, src.width, src.height, degrees);
+    if (job.layers.isEmpty())               // just Base -> the fast single-pass path
+        return developComposite(src, job.base, degrees, fullRes, fullW, fullH, timings);
+
+    std::vector<WorkingImageCache::StackLayer> sl;
+    sl.reserve(job.layers.size());
+    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers) {
+        WorkingImageCache::StackLayer s;
+        s.params = L.params;
+        if (!L.masks.isEmpty())             // empty masks => global layer (no buffer needed)
+            s.mask = buildMaskBuffer(L.masks, src.width, src.height, degrees);
+        sl.push_back(std::move(s));
+    }
+
     QImage out;
-    if (!WorkingImageCache::renderMasked(src, below, above, mask, out, timings)) return QImage();
+    if (!WorkingImageCache::renderStack(src, job.base, sl, out, timings)) return QImage();
     if (degrees != 0) {
         QTransform trans;
         trans.rotate(degrees);
@@ -5139,7 +5151,7 @@ void MW::renderDevelopPreview(bool fullRes)
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
 
-    const auto mj = developProperties->maskJob();   // active layer + (if masked) its blend recipe
+    const auto mj = developProperties->stackJob();   // full layer stack (independent of active layer)
 
     /* Reuse the cached pre-develop (full-res) WorkingImage. RAW always caches it at decode;
        non-raw caches it the first time it is developed. */
@@ -5182,9 +5194,7 @@ void MW::renderDevelopPreview(bool fullRes)
     int fw = work->width, fh = work->height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
 
-    const QImage out = mj.active
-        ? developCompositeMasked(*srcImg, mj.below, mj.above, mj.masks, mj.combine, degrees, fullRes, fw, fh)
-        : developComposite(*srcImg, mj.above, degrees, fullRes, fw, fh);
+    const QImage out = developCompositeStack(*srcImg, mj, degrees, fullRes, fw, fh);
     if (out.isNull()) return;
     const qint64 tRender = G::isReportDevelopTime ? probe.restart() : 0;
 
@@ -5226,24 +5236,31 @@ int MW::developOrientationDegrees(const WorkingImage &work, const QString &fPath
     return degrees;
 }
 
+bool MW::currentDevelopEditsVisible() const
+{
+    if (!developProperties || developProperties->currentIsIdentity()) return false;
+    /* A RAW file's edits are calibrated for the demosaiced render, so they show only in raw mode
+       (in preview mode the loupe shows the untouched embedded JPG). A non-RAW file (JPG/TIFF/PNG)
+       IS the developable image, so its edits show regardless of useRaw. */
+    const QString ext = QFileInfo(dm->currentFilePath).suffix().toLower();
+    const bool isRawFile = metadata && metadata->hasJpg.contains(ext);
+    return G::useRaw || !isRawFile;
+}
+
 void MW::applyDevelopPreviewIfEdited()
 {
 /*
     Called right after the current image's loupe pixmap is shown. If the image has saved Develop
-    edits (its EditStack is non-identity), render them over the loupe using the existing coalesced
-    proxy + async settle pipeline; an unedited image is left as the normal decoded image. Safe to
-    call more than once per image (the render path is keyed on dm->currentFilePath and coalesced).
-
-    Gated on G::useRaw: saved Develop edits are calibrated against the demosaiced RAW render, so in
-    preview mode (useRaw off) the loupe shows the embedded JPG untouched. Toggling useRaw rebuilds
-    the image cache and re-runs this overlay, so the developed look returns when raw decode is on.
+    edits that should be visible (currentDevelopEditsVisible), render them over the loupe using the
+    existing coalesced proxy + async settle pipeline; otherwise the normal decoded image is left.
+    Safe to call more than once per image (the render path is keyed on dm->currentFilePath and
+    coalesced).
 */
     if (G::isLogger) G::log("MW::applyDevelopPreviewIfEdited");
     /* An edited image (raw on) renders its saved params, and that render refreshes the scopes via
        setDevelopPreview. Otherwise nothing overlays the loupe, so refresh the scopes here from the
        decoded image actually shown (valid in preview mode too). */
-    const bool edited = G::useRaw && developProperties && !developProperties->currentIsIdentity();
-    if (!edited) {
+    if (!currentDevelopEditsVisible()) {
         updateDevelopScopes(icd->imCache.value(dm->currentFilePath));
         return;
     }
@@ -5268,7 +5285,7 @@ void MW::renderDevelopFullResAsync()
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) return;                    // proxy render builds/caches it first; nothing to do yet
 
-    const auto mj = developProperties->maskJob();     // captured on the GUI thread for the worker
+    const auto mj = developProperties->stackJob();    // full stack, captured on the GUI thread
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const quint64 gen = developParamsGen;
 
@@ -5279,10 +5296,8 @@ void MW::renderDevelopFullResAsync()
         WorkingImageCache::RenderTimings rt;
         const bool probe = G::isReportDevelopTime;
         if (probe) t.start();
-        const QImage out = mj.active
-            ? developCompositeMasked(*src, mj.below, mj.above, mj.masks, mj.combine, degrees,
-                                     /*fullRes*/true, 0, 0, probe ? &rt : nullptr)
-            : developComposite(*src, mj.above, degrees, /*fullRes*/true, 0, 0, probe ? &rt : nullptr);
+        const QImage out = developCompositeStack(*src, mj, degrees, /*fullRes*/true, 0, 0,
+                                                 probe ? &rt : nullptr);
         const qint64 ms = probe ? t.elapsed() : 0;
         QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt]() {
             if (G::isReportDevelopTime)
@@ -5384,7 +5399,7 @@ void MW::toggleDevelopScopes()
     if (scopesView) scopesView->setVisible(developScopesVisible);
     settings->setValue("Develop/scopesVisible", developScopesVisible);
     if (developScopesVisible) {
-        if (G::useRaw && developProperties && !developProperties->currentIsIdentity())
+        if (currentDevelopEditsVisible())
             developParamsChange();
         else
             updateDevelopScopes(icd->imCache.value(dm->currentFilePath));

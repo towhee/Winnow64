@@ -1747,6 +1747,10 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
             maskP2 = maskP2Anchor + d;
         }
         viewport()->update();
+        /* Live re-composite as the handle moves. setActiveMaskParams -> paramsChanged ->
+           developParamsChange coalesces the proxy render to one per event-loop turn and debounces
+           the full-res settle, so emitting every move is safe (same as a slider drag). */
+        emit maskGeometryChanged(maskParamsJson());
         return;
     }
     /* Hover feedback while a mask tool is active (not dragging): show a move cursor over a handle. */

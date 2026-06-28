@@ -39,18 +39,20 @@ public:
     EditParams editParams();
     QString diagnostics();
 
-    /* Everything the renderer needs to composite the active layer through its mask: the active
-       layer's adjustments (above) blended over the layers-below result (below = Base params) by the
-       layer's mask components. active == false => render `above` globally (no mask). Captured as
-       plain values so the off-thread full-res render can use it. */
-    struct MaskRenderJob {
-        bool                   active = false;
-        EditParams             below;       // layers-below (Base) params
-        EditParams             above;       // active layer params
-        QVector<MaskComponent> masks;       // active layer's mask components
-        int                    combine = 0; // MaskCombine for this layer
+    /* The full layer stack the renderer composites, independent of which layer is active for
+       editing: Base (layer 0) params applied globally, then each enabled non-Base layer developed
+       from the original and blended over the accumulator by its mask (empty mask => global).
+       Captured as plain values so the off-thread full-res render can use it. */
+    struct StackRenderJob {
+        struct Layer {
+            EditParams             params;
+            QVector<MaskComponent> masks;       // empty => layer applies globally
+            int                    combine = 0; // MaskCombine across this layer's components
+        };
+        EditParams     base;                    // layer 0 params (applied globally)
+        QVector<Layer> layers;                  // non-Base, in order, enabled only
     };
-    MaskRenderJob maskJob();
+    StackRenderJob stackJob();
 
     /* Per-image edit state (Increment 1). The dock now reflects the CURRENT IMAGE's EditStack
        (loaded from / saved to its XMP sidecar) instead of app-global QSettings. */
@@ -106,9 +108,9 @@ private:
        Self-contained so the whole mask UI can be redesigned by rewriting just these functions and
        the MaskComponent model. The layer's single mask is an ordered list of tools (each Adds or
        Subtracts area); the [M] button beside "Select layer" appends one, each tool is a row with a
-       [-] remove button, and clicking a tool reveals its settings (+ a Done button) below the
-       list. Spatial editing (drag/paint/AI-select on the image) is a later increment on the
-       canvas; rendering does not yet composite the mask. */
+       [-] remove button, and clicking a tool reveals its settings (Feather, Invert) below the list
+       (click the tool again to collapse). Spatial editing (drag/rotate the gradient on the image)
+       composites the mask into the render; see notes/Documentation.txt. */
     void showMaskMenu();                       // [M] button: pop the Add/Subtract tool-type menu
     void rebuildMaskTools();                   // rebuild the tool rows under the Layers header
     /* One row per tool; the SELECTED tool also gets its settings (Feather/Invert/Done) as children. */

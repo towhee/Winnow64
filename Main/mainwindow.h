@@ -557,6 +557,10 @@ private slots:
     /* After the current image's loupe pixmap is shown, render its saved Develop edits over it (if
        any). No-op for an unedited image. Reuses the coalesced proxy + async settle pipeline. */
     void applyDevelopPreviewIfEdited();
+    /* True when the current image has Develop edits that should be shown. A RAW file's edits show
+       only in raw mode (useRaw): in preview mode the loupe shows the untouched embedded JPG. A
+       non-RAW file (e.g. a JPG) is always the developable image, so its edits show regardless. */
+    bool currentDevelopEditsVisible() const;
     /* GUI-thread completion for a background full-res render: apply the image if its params/image
        are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
     void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen);
