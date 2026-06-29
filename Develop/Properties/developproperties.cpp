@@ -603,6 +603,21 @@ QString DevelopProperties::brushWith(const QString &paramsJson, const QString &k
     return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
 }
 
+void DevelopProperties::setActiveBrushSize(double size)
+{
+    EditLayer *l = activeLayer();
+    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->masks.size()) return;
+    MaskComponent &m = l->masks[selectedMaskIndex];
+    if (m.tool != int(MaskTool::Brush)) return;
+    const int s = qBound(1, int(size + 0.5), 100);
+    m.paramsJson = brushWith(m.paramsJson, "size", s);
+    dirty.insert(currentImagePath);
+    isPopulating = true;                  // sync the Size slider without re-entering itemChange
+    setSliderReal("maskSize", s);
+    isPopulating = false;
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
 void DevelopProperties::emitBrushSettings(const MaskComponent &m)
 {
     emit maskBrushSettingsChanged(brushNum(m.paramsJson, "size", 20),

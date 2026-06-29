@@ -1756,6 +1756,7 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::maskFeatherChanged, imageView, &ImageView::setMaskFeather);
     connect(developProperties, &DevelopProperties::maskInvertChanged, imageView, &ImageView::setMaskInverted);
     connect(developProperties, &DevelopProperties::maskBrushSettingsChanged, imageView, &ImageView::setMaskBrushSettings);
+    connect(imageView, &ImageView::maskBrushSizeRequested, developProperties, &DevelopProperties::setActiveBrushSize);
 
     /* Develop preview render timers (see MW::developParamsChange). The proxy timer coalesces a
        burst of slider ticks into one screen-resolution render; the full-res timer fires once the

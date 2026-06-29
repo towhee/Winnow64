@@ -77,6 +77,8 @@ public slots:
     void setActiveMaskParams(const QString &paramsJson);
     /* Re-assert the overlay for the active tool (e.g. when the Develop dock becomes visible). */
     void refreshMaskEdit() { updateMaskEdit(); }
+    /* ImageView changed the brush size via keyboard ([ ]) or a two-finger drag; sync the dock. */
+    void setActiveBrushSize(double size);
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
