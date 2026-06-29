@@ -200,7 +200,7 @@ void DevelopProperties::addLayersHeader()
     i.name = "layerList";
     i.parIdx = parIdx;
     i.parentName = "LayersHeader";
-    i.captionText = "Select layer";
+    i.captionText = "Layer:";
     i.tooltip = "The layer whose adjustments are shown below (this image's layers).";
     i.isIndent = false;
     i.hasValue = true;
@@ -224,6 +224,11 @@ void DevelopProperties::addLayersHeader()
     btns.append(maskMenuBtn);
 
     layerListEditor = static_cast<ComboBoxEditor*>(addItem(i));
+
+    /* The combo's text is editable so a layer (except Base) can be renamed in place. */
+    layerListEditor->setRenamable(true);
+    connect(layerListEditor, &ComboBoxEditor::itemRenamed,
+            this, &DevelopProperties::onLayerRenamed);
 
     updateMaskMenuBtn();        // Base layer carries no mask, so [M] starts hidden
 
@@ -321,6 +326,29 @@ void DevelopProperties::deleteLayer()
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
+void DevelopProperties::onLayerRenamed(const QString &oldName, const QString &newName)
+{
+    if (G::isLogger) G::log("DevelopProperties::onLayerRenamed");
+    if (currentImagePath.isEmpty()) return;
+
+    EditStack &s = stackCache[currentImagePath];
+    const int idx = currentLayerNames().indexOf(oldName);
+    if (idx <= 0 || idx >= s.layers.size()) {
+        /* Index 0 is the (un-renamable) Base layer; anything else is a stale/unknown name. Restore
+           the displayed text either way. */
+        if (idx == 0) emit centralMsg("The Base layer cannot be renamed.");
+        refreshLayerCombo();
+        return;
+    }
+
+    /* uniqueLayerName checks against the current names (which still include this layer's old name,
+       so it never collides with itself); a clash with ANOTHER layer gets a numeric suffix. */
+    s.layers[idx].name = uniqueLayerName(newName.trimmed());
+    dirty.insert(currentImagePath);
+    refreshLayerCombo();                                      // rebuilds the combo + section headers
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
 /* ----------------------------------------------------------------------------------------
    Mask (one mask per non-Base layer, built from an ordered list of Add/Subtract tools)
 
@@ -367,7 +395,7 @@ int DevelopProperties::maskToolFromName(const QString &name)
 
 QString DevelopProperties::opName(int op)
 {
-    return (op == int(MaskOp::Subtract)) ? "Subtract" : "Add";
+    return (op == int(MaskOp::Subtract)) ? "(-)" : "(+)";
 }
 
 EditLayer *DevelopProperties::activeLayer()
@@ -483,7 +511,7 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskFlow", "Flow", "How much each stroke builds up.",
                       toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
-            addCheckbox("maskAutoMask", "Auto mask (WIP)",
+            addCheckbox("maskAutoMask", "Auto mask",
                         "Limit the brush to similar-luminance areas (work in progress). Toggle with A.",
                         toolIdx, "", false);
             addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
@@ -719,11 +747,12 @@ void DevelopProperties::mousePressEvent(QMouseEvent *event)
    Item builders
    ---------------------------------------------------------------------------------------- */
 
-void DevelopProperties::addHeader(const QString &name, const QString &caption, const QString &tooltip)
+void DevelopProperties::addHeader(const QString &name, const QString &parent,
+                                  const QString &caption, const QString &tooltip)
 {
     clearItemInfo(i);
     i.name = name;
-    i.parentName = "???";
+    i.parentName = parent;  // "???";
     i.isHeader = true;
     i.decorateGradient = true;
     i.isDecoration = true;
@@ -797,7 +826,7 @@ void DevelopProperties::addCheckbox(const QString &key, const QString &caption, 
 void DevelopProperties::addBasic()
 {
     if (G::isLogger) G::log("DevelopProperties::addBasic");
-    addHeader("BasicHeader", "Basic", "Core tone, white balance and presence adjustments.");
+    addHeader("BasicHeader", "???", "Basic", "Core tone, white balance and presence adjustments.");
     QModelIndex parIdx = capIdx;
 
     /* Lightroom-like ranges. Most adjustments are integer sliders -100..100 (div 0).
@@ -830,7 +859,7 @@ void DevelopProperties::addBasic()
 void DevelopProperties::addColor()
 {
     if (G::isLogger) G::log("DevelopProperties::addColor");
-    addHeader("ColorHeader", "Color", "RGB and HSL adjustments.");
+    addHeader("ColorHeader", "???", "Color", "RGB and HSL adjustments.");
     QModelIndex parIdx = capIdx;
 
     /* All integer sliders -100..100 (div 0), default 0 (identity), matching EditParams.
@@ -850,7 +879,7 @@ void DevelopProperties::addColor()
 void DevelopProperties::addEffects()
 {
     if (G::isLogger) G::log("DevelopProperties::addEffects");
-    addHeader("EffectsHeader", "Effects", "Creative effects (to be added).");
+    addHeader("EffectsHeader", "???", "Effects", "Creative effects (to be added).");
 }
 
 void DevelopProperties::updateSectionHeaderCaptions()
@@ -867,7 +896,8 @@ void DevelopProperties::updateSectionHeaderCaptions()
     for (const auto &h : hdrs) {
         const QModelIndex idx = findCaptionIndex(h.first);
         if (idx.isValid())
-            model->setData(idx, h.second + " " + layerName);
+            model->setData(idx, layerName + ": " + h.second);
+            // model->setData(idx, h.second + " " + layerName);
     }
 }
 

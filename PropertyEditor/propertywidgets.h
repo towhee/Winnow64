@@ -242,6 +242,7 @@ public:
     void removeItem(QString item);
     void renameItem(QString oldText, QString newText);
     void refresh(QStringList items);
+    void setRenamable(bool on);     // make the combo's text editable so the current item can be renamed
     WidgetCSS css;
 
 protected:
@@ -250,6 +251,7 @@ protected:
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
+    void itemRenamed(QString oldText, QString newText);
 
 public slots:
     void fontSizeChanged(int fontSize);
@@ -259,6 +261,7 @@ private:
     QComboBox *comboBox;
     QString source;
     QModelIndex idx;
+    bool isRenamable = false;
 };
 
 class PlusMinusEditor : public QWidget
