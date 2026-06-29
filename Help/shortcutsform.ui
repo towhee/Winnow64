@@ -1019,6 +1019,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Develop Panel</string>
+        </property>
+        <property name="text">
+         <string>F9</string>
+        </property>
+        <property name="text">
+         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Application Statusbar</string>
         </property>
         <property name="text">
@@ -1026,6 +1037,27 @@
         </property>
         <property name="text">
          <string>Toggles visibility</string>
+        </property>
+       </item>
+      </item>
+      <item>
+       <property name="text">
+        <string>Develop</string>
+       </property>
+       <property name="font">
+        <font>
+         <bold>true</bold>
+        </font>
+       </property>
+       <item>
+        <property name="text">
+         <string>Auto Mask (Brush)</string>
+        </property>
+        <property name="text">
+         <string>A</string>
+        </property>
+        <property name="text">
+         <string>Toggles; while a brush mask tool is active</string>
         </property>
        </item>
       </item>
