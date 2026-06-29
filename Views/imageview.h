@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QHash>
+#include <QJsonArray>
 #include "Datamodel/datamodel.h"
 #include "Datamodel/selection.h"
 #include "Cache/imagecache.h"
@@ -288,9 +289,21 @@ private:
     /* Radial: centre (normalized), semi-axes rx (of W) / ry (of H), rotation in degrees. */
     QPointF maskC = QPointF(0.5, 0.5);
     double  maskRx = 0.25, maskRy = 0.30, maskAngle = 0.0;
-    /* Brush current settings (0..100; for the cursor + the next stroke). Strokes land in Stage 2. */
+    /* Brush current settings (0..100; for the cursor + the next stroke). */
     double  maskBrushSize = 20.0, maskBrushFlow = 50.0;
     bool    maskBrushAutoMask = false;
+    /* Brush painting state. Preview buffers are in output-oriented space, capped resolution. main =
+       committed strokes; stroke = current in-progress stroke coverage; preview = cached tint image.
+       strokePts is the flat [x0,y0,...] normalized point list being painted. */
+    int                maskBrushW = 0, maskBrushH = 0;
+    std::vector<float> maskBrushMain, maskBrushStroke, maskBrushScratch;
+    QImage             maskBrushPreview;
+    bool               maskPainting = false, maskBrushErase = false;
+    QVector<double>    maskStrokePts;
+    QJsonArray         maskBrushStrokesJson;   // committed strokes (to rebuild paramsJson on commit)
+    QPointF            maskBrushLast;          // last stamped point, buffer-pixel coords
+    QPoint             maskBrushCursorVp;      // cursor pos for the brush-size circle
+    bool               maskBrushCursorOn = false;
     int     maskDrag     = -1;          // active handle (per tool, see maskHitTest); -1 none
     QPointF maskMoveAnchorN;            // image-norm cursor at move start
     QPointF maskP1Anchor, maskP2Anchor; // linear endpoints at move start
@@ -307,6 +320,16 @@ private:
     int     maskHitTest(QPoint vp) const;           // which handle is under vp (-1 none)
     void    drawLinearMask(QPainter *p, const QRectF &br);  // overlay for the Linear tool
     void    drawRadialMask(QPainter *p, const QRectF &br);  // overlay for the Radial tool
+    void    drawBrushMask(QPainter *p, const QRectF &br);   // overlay for the Brush tool
+    /* Brush painting helpers (preview buffers in output-oriented space). */
+    void    brushBuildBuffers(const QString &paramsJson);   // parse strokes + (re)build buffers
+    void    brushEnsureBuffers();                           // rebuild if the pixmap size changed
+    void    brushRebuildPreview(QRect region = QRect());    // composite main+stroke -> tint (region or all)
+    QRect   brushSegRect(QPointF a, QPointF b) const;       // buffer-px bbox of a dab/segment
+    void    brushStampTo(QPointF bufPt);                    // stamp segment last..bufPt into stroke
+    double  brushRadiusBufPx() const;                       // current brush radius in buffer px
+    QPointF brushNormToBuf(QPointF n) const;                // normalized -> preview-buffer px
+    bool    maskIsBrush() const { return maskTool == 2; }
     /* Radial: the four axis-end handles in image-pixel coords (0:+x 1:-x 2:+y 3:-y). */
     void    maskRadialAxisHandles(const QRectF &br, QPointF h[4]) const;
     /* Radial: the rotate handle (viewport px), a stub beyond the +x axis handle. */
