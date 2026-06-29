@@ -6,6 +6,8 @@
 #include <QApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
+#include "Develop/brushstamp.h"
 
 #define CLIPBOARD_IMAGE_NAME		"clipboard.png"
 #define ROUND(x) (static_cast<int>((x) + 0.5))
@@ -397,10 +399,13 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
     maskFeather = feather;
     if (!parseMaskParams(paramsJson)) {     // missing/invalid -> a sensible default
         if (maskTool == 1) { maskC = QPointF(0.5, 0.5); maskRx = 0.25; maskRy = 0.30; maskAngle = 0; }
-        else               { maskP1 = QPointF(0.5, 0.34); maskP2 = QPointF(0.5, 0.66); }
+        else if (maskTool == 0) { maskP1 = QPointF(0.5, 0.34); maskP2 = QPointF(0.5, 0.66); }
     }
+    maskPainting = false;
+    if (maskTool == 2) brushBuildBuffers(paramsJson);    // raster committed strokes into the preview
     maskEditMode = true;
     maskHover = underMouse();        // show at once if the cursor is already over the view
+    maskBrushCursorOn = maskHover && maskTool == 2;
     maskDrag = -1;
     viewport()->update();
 }
@@ -411,6 +416,10 @@ void ImageView::endMaskEdit()
     if (G::isLogger) G::log("ImageView::endMaskEdit");
     maskEditMode = false;
     maskDrag = -1;
+    maskPainting = false;
+    maskBrushCursorOn = false;
+    maskBrushPreview = QImage();
+    maskBrushMain.clear(); maskBrushStroke.clear(); maskBrushW = maskBrushH = 0;
     viewport()->update();
 }
 
@@ -423,6 +432,7 @@ void ImageView::setMaskFeather(double feather)
 void ImageView::setMaskInverted(bool inverted)
 {
     maskInverted = inverted;
+    if (maskTool == 2) brushRebuildPreview();    // invert is baked into the tint image
     if (maskEditMode && maskHover) viewport()->update();
 }
 
@@ -568,8 +578,8 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
     const QRectF br = pmItem->boundingRect();
     if (br.width() <= 0 || br.height() <= 0) return;
     if      (maskTool == 1) drawRadialMask(painter, br);
-    else if (maskTool == 0) drawLinearMask(painter, br);
-    /* Brush (2) overlay lands in Stage 2. */
+    else if (maskTool == 2) drawBrushMask(painter, br);
+    else                    drawLinearMask(painter, br);
 }
 
 void ImageView::drawLinearMask(QPainter *painter, const QRectF &br)
@@ -720,6 +730,126 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br)
     handle(rotV, 5.0, QColor(120, 255, 160, 235));                                    // rotate
     handle(mapFromScene(pmItem->mapToScene(ci)), 4.5, QColor(255, 255, 255, 235));    // centre (move)
     painter->restore();
+}
+
+/* ---- Brush ---- */
+
+double ImageView::brushRadiusBufPx() const
+{
+    const double frac = qBound(0.0, maskBrushSize, 100.0) / 200.0;   // diameter % -> radius fraction
+    return frac * std::max(maskBrushW, maskBrushH);
+}
+
+QPointF ImageView::brushNormToBuf(QPointF n) const
+{
+    return QPointF(n.x() * maskBrushW, n.y() * maskBrushH);
+}
+
+void ImageView::brushBuildBuffers(const QString &paramsJson)
+{
+    const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    maskBrushStrokesJson = o.value("strokes").toArray();
+    maskBrushW = maskBrushH = 0;        // force a rebuild
+    brushEnsureBuffers();
+}
+
+void ImageView::brushEnsureBuffers()
+{
+    /* (Re)build the output-oriented preview buffers from the committed strokes whenever the
+       displayed pixmap's size changes (e.g. the overlay began before the new image was shown).
+       Capped resolution so a live rebuild stays cheap; strokes are normalized so any size is valid. */
+    const QRectF br = pmItem ? pmItem->boundingRect() : QRectF();
+    if (br.width() <= 0 || br.height() <= 0) return;
+    const int cap = 1280;
+    const double longE = std::max(br.width(), br.height());
+    const double s = (longE > cap) ? cap / longE : 1.0;
+    const int w = std::max(1, int(br.width()  * s));
+    const int h = std::max(1, int(br.height() * s));
+    if (w == maskBrushW && h == maskBrushH && !maskBrushMain.empty()) return;   // already current
+    maskBrushW = w; maskBrushH = h;
+    maskBrushMain.assign(size_t(w) * h, 0.0f);
+    maskBrushStroke.assign(size_t(w) * h, 0.0f);
+    BrushStamp::rasterize(maskBrushStrokesJson, maskBrushMain.data(), maskBrushScratch, w, h, 0);
+    brushRebuildPreview();
+}
+
+void ImageView::brushRebuildPreview(QRect region)
+{
+    if (maskBrushW <= 0 || maskBrushH <= 0) { maskBrushPreview = QImage(); return; }
+    if (maskBrushPreview.width() != maskBrushW || maskBrushPreview.height() != maskBrushH) {
+        maskBrushPreview = QImage(maskBrushW, maskBrushH, QImage::Format_ARGB32);
+        region = QRect();                       // size changed -> full rebuild
+    }
+    if (region.isNull()) region = QRect(0, 0, maskBrushW, maskBrushH);
+    region &= QRect(0, 0, maskBrushW, maskBrushH);
+    if (region.isEmpty()) return;
+    const QColor base = (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);
+    const int R = base.red(), Gc = base.green(), B = base.blue();
+    const double tint = 150.0 / 255.0;
+    const double flow = qBound(0.0, maskBrushFlow, 100.0) / 100.0;
+    const float *mn = maskBrushMain.data();
+    const float *st = maskBrushStroke.data();
+    for (int y = region.top(); y <= region.bottom(); ++y) {
+        QRgb *line = reinterpret_cast<QRgb*>(maskBrushPreview.scanLine(y));
+        const size_t rowK = size_t(y) * maskBrushW;
+        for (int x = region.left(); x <= region.right(); ++x) {
+            const size_t k = rowK + x;
+            float m = mn[k];
+            if (maskPainting && st[k] > 0.0f) {            // composite the live stroke
+                const float a = float(flow) * st[k];
+                m = maskBrushErase ? m * (1.0f - a) : m + a * (1.0f - m);
+            }
+            const float disp = maskInverted ? (1.0f - m) : m;
+            const int alpha = int(disp * tint * 255.0 + 0.5);
+            line[x] = qRgba(R, Gc, B, alpha);
+        }
+    }
+}
+
+QRect ImageView::brushSegRect(QPointF a, QPointF b) const
+{
+    const double r = brushRadiusBufPx() + 2.0;
+    const int x0 = int(std::floor(std::min(a.x(), b.x()) - r));
+    const int x1 = int(std::ceil (std::max(a.x(), b.x()) + r));
+    const int y0 = int(std::floor(std::min(a.y(), b.y()) - r));
+    const int y1 = int(std::ceil (std::max(a.y(), b.y()) + r));
+    return QRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1) & QRect(0, 0, maskBrushW, maskBrushH);
+}
+
+void ImageView::brushStampTo(QPointF bufPt)
+{
+    BrushStamp::segmentMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
+                           maskBrushLast, bufPt, brushRadiusBufPx(),
+                           qBound(0.0, maskFeather, 100.0) / 100.0);
+    maskBrushLast = bufPt;
+}
+
+void ImageView::drawBrushMask(QPainter *painter, const QRectF &br)
+{
+    brushEnsureBuffers();           // heal if the pixmap size changed since beginMaskEdit
+    /* 1) Tint preview image over the photo (scene coords, scales with the image). */
+    if (!maskBrushPreview.isNull()) {
+        painter->save();
+        painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+        painter->drawImage(pmItem->mapToScene(br).boundingRect(), maskBrushPreview);
+        painter->restore();
+    }
+    /* 2) Brush-size cursor circle (viewport coords, scales with zoom but constant pen width). */
+    if (maskBrushCursorOn) {
+        const double imgLong = std::max(br.width(), br.height());
+        const double rImg = (qBound(0.0, maskBrushSize, 100.0) / 200.0) * imgLong;
+        const QPointF cImg = pmItem->mapFromScene(mapToScene(maskBrushCursorVp));
+        const QPointF cVp(maskBrushCursorVp);
+        const double rVp = QLineF(cVp, mapFromScene(pmItem->mapToScene(cImg + QPointF(rImg, 0)))).length();
+        painter->save();
+        painter->resetTransform();
+        QPen pen(maskBrushErase ? QColor(255, 170, 170, 235) : QColor(255, 255, 255, 235));
+        pen.setWidthF(1.3);
+        painter->setPen(pen);
+        painter->setBrush(Qt::NoBrush);
+        painter->drawEllipse(cVp, rVp, rVp);
+        painter->restore();
+    }
 }
 
 void ImageView::clear()
@@ -1665,7 +1795,11 @@ void ImageView::enterEvent(QEnterEvent *event)
     wheelSpinningOnEntry = G::wheelSpinning;
 
     /* The mask overlay is "active and visible whenever the mouse is over the imageView". */
-    if (maskEditMode) { maskHover = true; viewport()->update(); }
+    if (maskEditMode) {
+        maskHover = true;
+        if (maskTool == 2) maskBrushCursorOn = true;
+        viewport()->update();
+    }
 
     if (panToFocus && zoom > zoomFit) {
         // qDebug() << "ImageView::enterEvent emit showLoupeRect";
@@ -1683,9 +1817,10 @@ void ImageView::leaveEvent(QEvent *event)
 {
     wheelSpinningOnEntry = false;
     emit cursorLeftImage();     // clear the Develop scopes readout marker
-    if (maskEditMode && maskHover) {        // hide the mask overlay when the cursor leaves
+    if (maskEditMode && maskHover && !maskPainting) {   // hide overlay on leave (not mid-stroke)
         maskHover = false;
         maskDrag = -1;
+        maskBrushCursorOn = false;
         viewport()->update();
     }
     // emit showLoupeRect(false);
@@ -1807,6 +1942,30 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    /* Brush: a left press begins a stroke (Alt = erase). Painting consumes the event so the image
+       does not pan. */
+    if (maskEditMode && maskTool == 2 && event->button() == Qt::LeftButton) {
+        brushEnsureBuffers();
+        if (maskBrushW > 0) {
+            maskPainting = true;
+            maskHover = true;          // painting implies hovering (gates the overlay draw)
+            maskBrushErase = (event->modifiers() & Qt::AltModifier);
+            maskStrokePts.clear();
+            const QPointF n = maskViewportToNorm(event->pos());
+            maskStrokePts << n.x() << n.y();
+            std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
+            maskBrushLast = brushNormToBuf(n);
+            BrushStamp::dabMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
+                               maskBrushLast.x(), maskBrushLast.y(),
+                               brushRadiusBufPx(), qBound(0.0, maskFeather, 100.0) / 100.0);
+            brushRebuildPreview(brushSegRect(maskBrushLast, maskBrushLast));
+            maskBrushCursorVp = event->pos();
+            maskBrushCursorOn = true;
+            viewport()->update();
+        }
+        return;
+    }
+
     /* Mask edit: grab a handle and start dragging it instead of panning. A miss falls through to
        the normal pan/zoom handling below, so panning a zoomed image still works while editing. */
     if (maskEditMode && event->button() == Qt::LeftButton) {
@@ -1905,6 +2064,22 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     //*/
 
     static QPoint prevPos = event->pos();
+
+    /* Brush: paint a stroke (left button held), or just track the size cursor on hover. */
+    if (maskEditMode && maskTool == 2) {
+        maskBrushCursorVp = event->pos();
+        maskBrushCursorOn = true;
+        if (maskPainting) {
+            const QPointF n = maskViewportToNorm(event->pos());
+            maskStrokePts << n.x() << n.y();
+            const QPointF bp = brushNormToBuf(n);
+            const QRect dirty = brushSegRect(maskBrushLast, bp);
+            brushStampTo(bp);
+            brushRebuildPreview(dirty);     // only the new segment's bbox
+        }
+        viewport()->update();
+        if (maskPainting) return;          // consume while painting; hover falls through to scopes
+    }
 
     /* Mask edit drag. Linear: endpoint rotate+scale about centre, or translate. Radial: centre
        move, axis-handle resize, or outline rotate. */
@@ -2028,6 +2203,36 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger)
         G::log("ImageView::mouseReleaseEvent", "isScrollable =" + QVariant(isScrollable).toString());
+
+    /* Finish a brush stroke: composite it into the committed mask, append it to the stroke list,
+       and persist the updated paramsJson (which triggers the masked re-render in stage 3). */
+    if (maskEditMode && maskTool == 2 && maskPainting) {
+        maskPainting = false;
+        isLeftMouseBtnPressed = false;
+        const double flow = qBound(0.0, maskBrushFlow, 100.0) / 100.0;
+        BrushStamp::composite(maskBrushMain.data(), maskBrushStroke.data(),
+                              size_t(maskBrushW) * maskBrushH, flow, maskBrushErase);
+        std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
+        if (maskStrokePts.size() >= 2) {
+            QJsonArray pts;
+            for (double v : maskStrokePts) pts.append(v);
+            QJsonObject stroke;
+            stroke["pts"]      = pts;
+            stroke["size"]     = maskBrushSize;
+            stroke["feather"]  = maskFeather;
+            stroke["flow"]     = maskBrushFlow;
+            stroke["erase"]    = maskBrushErase;
+            stroke["autoMask"] = maskBrushAutoMask;
+            maskBrushStrokesJson.append(stroke);
+            QJsonObject o;
+            o["size"] = maskBrushSize; o["flow"] = maskBrushFlow; o["autoMask"] = maskBrushAutoMask;
+            o["strokes"] = maskBrushStrokesJson;
+            emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+        }
+        brushRebuildPreview();
+        viewport()->update();
+        return;
+    }
 
     /* Finish a mask-handle drag: persist the new geometry (dock writes it into the component). */
     if (maskEditMode && maskDrag >= 0) {
