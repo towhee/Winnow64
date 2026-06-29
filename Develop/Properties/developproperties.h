@@ -88,6 +88,8 @@ signals:
     void maskEditEnd();
     void maskFeatherChanged(double feather);    // Feather slider -> live overlay ramp update
     void maskInvertChanged(bool inverted);      // Invert checkbox -> live overlay flip
+    /* Brush current settings (for the cursor + the next stroke). size/flow 0..100. */
+    void maskBrushSettingsChanged(double size, double feather, double flow, bool autoMask);
 
 private:
     void initialize();
@@ -153,6 +155,12 @@ private:
     void updateMaskMenuBtn();                     // show [M] only when a non-Base layer is active
     void updateMaskEdit();                        // emit maskEditBegin/End for the active mask tool
     static QString defaultMaskParams(int tool);   // initial paramsJson geometry for a new tool
+    int  activeMaskTool() const;                  // active component's tool, or -1
+    /* Brush current-settings accessors over paramsJson (size/flow are 0..100, autoMask bool). */
+    static double  brushNum(const QString &paramsJson, const QString &key, double def);
+    static bool    brushBool(const QString &paramsJson, const QString &key, bool def);
+    static QString brushWith(const QString &paramsJson, const QString &key, const QJsonValue &v);
+    void emitBrushSettings(const MaskComponent &m); // maskBrushSettingsChanged from current settings
     EditParams &activeParams();                   // the active layer's params (creates a layer if none)
 
     /* The per-image edit state. stackCache holds loaded/edited stacks keyed by file path; dirty
