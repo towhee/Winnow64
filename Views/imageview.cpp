@@ -824,6 +824,29 @@ void ImageView::brushStampTo(QPointF bufPt)
     maskBrushLast = bufPt;
 }
 
+void ImageView::adjustBrushSize(double delta)
+{
+    const double sz = qBound(1.0, maskBrushSize + delta, 100.0);
+    if (sz == maskBrushSize) return;
+    maskBrushSize = sz;
+    emit maskBrushSizeRequested(maskBrushSize);     // sync the dock + persist
+    if (maskEditMode && maskHover) viewport()->update();   // cursor circle
+}
+
+void ImageView::brushUndoStroke()
+{
+    if (maskBrushStrokesJson.isEmpty()) return;
+    maskBrushStrokesJson.removeLast();
+    maskBrushW = maskBrushH = 0;                     // force re-raster of the remaining strokes
+    brushEnsureBuffers();
+    viewport()->update();
+    /* Persist the shortened stroke list and re-render. */
+    QJsonObject o;
+    o["size"] = maskBrushSize; o["flow"] = maskBrushFlow; o["autoMask"] = maskBrushAutoMask;
+    o["strokes"] = maskBrushStrokesJson;
+    emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+}
+
 void ImageView::drawBrushMask(QPainter *painter, const QRectF &br)
 {
     brushEnsureBuffers();           // heal if the pixmap size changed since beginMaskEdit
@@ -1797,7 +1820,7 @@ void ImageView::enterEvent(QEnterEvent *event)
     /* The mask overlay is "active and visible whenever the mouse is over the imageView". */
     if (maskEditMode) {
         maskHover = true;
-        if (maskTool == 2) maskBrushCursorOn = true;
+        if (maskTool == 2) { maskBrushCursorOn = true; setFocus(Qt::MouseFocusReason); }  // for [ ] / Cmd+Z
         viewport()->update();
     }
 
@@ -1833,6 +1856,16 @@ void ImageView::wheelEvent(QWheelEvent *event)
 */
     if (G::isLogger)
         qDebug() << "ImageView::wheelEvent";
+
+    /* Brush active over the image: a two-finger drag (or wheel) resizes the brush instead of
+       changing image. Vertical delta; pixelDelta on a trackpad, angleDelta on a mouse wheel. */
+    if (maskEditMode && maskTool == 2 && maskHover) {
+        const QPoint pd = event->pixelDelta();
+        const double dy = !pd.isNull() ? pd.y() : event->angleDelta().y() / 8.0;
+        adjustBrushSize(dy * 0.15);     // up = larger
+        event->accept();
+        return;
+    }
 
     static int accumDelta = 0;
     int triggerDelta = 5;
@@ -1908,6 +1941,16 @@ bool ImageView::event(QEvent *event) {
 }
 
 void ImageView::keyPressEvent(QKeyEvent *event){
+    /* Brush shortcuts: [ / ] resize, Cmd/Ctrl+Z undo the last stroke. */
+    if (maskEditMode && maskTool == 2) {
+        if (event->key() == Qt::Key_BracketLeft)  { adjustBrushSize(-2); return; }
+        if (event->key() == Qt::Key_BracketRight) { adjustBrushSize(+2); return; }
+        if (event->key() == Qt::Key_Z && (event->modifiers() & (Qt::ControlModifier | Qt::MetaModifier))
+            && !(event->modifiers() & Qt::AltModifier)) {
+            brushUndoStroke();
+            return;
+        }
+    }
     emit keyPress(event);
 }
 

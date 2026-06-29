@@ -2556,8 +2556,7 @@ Layer & masking model (planned)
                single-pass path when there are no non-Base layers. Mask add/delete/geometry/feather/
                invert and a committed brush stroke emit paramsChanged() to re-render. Deferred: true
                STACKED adjustments (each layer builds on the result below, not the original), the
-               combine field (Union only today), brush two-finger/[ ] resize + stroke undo, and AI
-               tools.
+               combine field (Union only today), brush auto-mask (checkbox is a stub), and AI tools.
              - BRUSH (freehand mask): vector strokes in paramsJson {size,flow,autoMask,strokes:[{pts,
                size,feather,flow,erase,autoMask}]} (each stroke snapshots its settings; current
                settings drive the next stroke). Painted on the loupe (ImageView): a size-circle cursor,
@@ -2565,7 +2564,10 @@ Layer & masking model (planned)
                stroke by MAX then composited with flow (build-up across strokes). Live red/blue tint
                preview rebuilt only on the dirty segment bbox; the develop re-composites on stroke
                release (maskGeometryChanged -> setActiveMaskParams). Dock rows: Size/Feather/Flow/Auto
-               mask(no-op stub)/Invert. Render compositing as above.
+               mask(no-op stub)/Invert. Size also via [ / ] keys or a two-finger drag (ImageView
+               wheelEvent, gated to brush+hover) -> maskBrushSizeRequested -> setActiveBrushSize syncs
+               the dock; Cmd/Ctrl+Z removes the last stroke (ImageView needs focus, set on brush
+               enter). Render compositing as above.
              - LIFECYCLE / FLUSH: MW::fileSelectionChange calls setCurrentImage; after the loupe
                pixmap is shown (both the cache-hit path and MW::refreshViewsOnCacheChange) MW::
                applyDevelopPreviewIfEdited renders the saved edits over an edited image (no-op for

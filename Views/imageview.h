@@ -150,6 +150,8 @@ signals:
     /* The mask overlay was dragged: the active tool's new geometry as paramsJson, for the dock to
        persist into the MaskComponent. */
     void maskGeometryChanged(const QString &paramsJson);
+    /* Brush size changed on the canvas ([ ] keys or two-finger drag); sync the dock. */
+    void maskBrushSizeRequested(double size);
 
 private slots:
     void wheelStopped();
@@ -326,6 +328,8 @@ private:
     void    brushEnsureBuffers();                           // rebuild if the pixmap size changed
     void    brushRebuildPreview(QRect region = QRect());    // composite main+stroke -> tint (region or all)
     QRect   brushSegRect(QPointF a, QPointF b) const;       // buffer-px bbox of a dab/segment
+    void    adjustBrushSize(double delta);                  // [ ] / two-finger; clamps + syncs dock
+    void    brushUndoStroke();                              // remove + re-raster the last stroke
     void    brushStampTo(QPointF bufPt);                    // stamp segment last..bufPt into stroke
     double  brushRadiusBufPx() const;                       // current brush radius in buffer px
     QPointF brushNormToBuf(QPointF n) const;                // normalized -> preview-buffer px
