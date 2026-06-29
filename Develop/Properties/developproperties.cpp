@@ -482,7 +482,8 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskFlow", "Flow", "How much each stroke builds up.",
                       toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
-            addCheckbox("maskAutoMask", "Auto mask", "Limit the brush to similar areas (coming soon).",
+            addCheckbox("maskAutoMask", "Auto mask (WIP)",
+                        "Limit the brush to similar-luminance areas (work in progress). Toggle with A.",
                         toolIdx, "", false);
             addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
             setSliderReal("maskSize", brushNum(m.paramsJson, "size", 20));
@@ -614,6 +615,20 @@ void DevelopProperties::setActiveBrushSize(double size)
     dirty.insert(currentImagePath);
     isPopulating = true;                  // sync the Size slider without re-entering itemChange
     setSliderReal("maskSize", s);
+    isPopulating = false;
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+void DevelopProperties::setActiveBrushAutoMask(bool on)
+{
+    EditLayer *l = activeLayer();
+    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->masks.size()) return;
+    MaskComponent &m = l->masks[selectedMaskIndex];
+    if (m.tool != int(MaskTool::Brush)) return;
+    m.paramsJson = brushWith(m.paramsJson, "autoMask", on);
+    dirty.insert(currentImagePath);
+    isPopulating = true;                  // sync the checkbox without re-entering itemChange
+    setCheckboxValue("maskAutoMask", on);
     isPopulating = false;
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }

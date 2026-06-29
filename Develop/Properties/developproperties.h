@@ -79,6 +79,8 @@ public slots:
     void refreshMaskEdit() { updateMaskEdit(); }
     /* ImageView changed the brush size via keyboard ([ ]) or a two-finger drag; sync the dock. */
     void setActiveBrushSize(double size);
+    /* ImageView toggled auto-mask ("A"); sync the dock checkbox. */
+    void setActiveBrushAutoMask(bool on);
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)

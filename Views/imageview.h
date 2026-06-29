@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QHash>
 #include <QJsonArray>
+#include "Develop/brushstamp.h"
 #include "Datamodel/datamodel.h"
 #include "Datamodel/selection.h"
 #include "Cache/imagecache.h"
@@ -152,6 +153,8 @@ signals:
     void maskGeometryChanged(const QString &paramsJson);
     /* Brush size changed on the canvas ([ ] keys or two-finger drag); sync the dock. */
     void maskBrushSizeRequested(double size);
+    /* Auto-mask toggled on the canvas ("A"); sync the dock checkbox. */
+    void maskBrushAutoMaskRequested(bool on);
 
 private slots:
     void wheelStopped();
@@ -303,6 +306,8 @@ private:
     bool               maskPainting = false, maskBrushErase = false;
     QVector<double>    maskStrokePts;
     QJsonArray         maskBrushStrokesJson;   // committed strokes (to rebuild paramsJson on commit)
+    std::shared_ptr<const BrushStamp::Guide> maskGuide;   // auto-mask luminance guide (this image)
+    BrushStamp::AutoMaskCtx maskStrokeAM;      // current stroke's auto-mask context
     QPointF            maskBrushLast;          // last stamped point, buffer-pixel coords
     QPoint             maskBrushCursorVp;      // cursor pos for the brush-size circle
     bool               maskBrushCursorOn = false;
@@ -330,6 +335,8 @@ private:
     QRect   brushSegRect(QPointF a, QPointF b) const;       // buffer-px bbox of a dab/segment
     void    adjustBrushSize(double delta);                  // [ ] / two-finger; clamps + syncs dock
     void    brushUndoStroke();                              // remove + re-raster the last stroke
+    void    ensureAutoGuide();                              // build the auto-mask guide if missing
+    void    toggleAutoMask();                               // "A": flip auto-mask + sync the dock
     void    brushStampTo(QPointF bufPt);                    // stamp segment last..bufPt into stroke
     double  brushRadiusBufPx() const;                       // current brush radius in buffer px
     QPointF brushNormToBuf(QPointF n) const;                // normalized -> preview-buffer px

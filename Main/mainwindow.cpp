@@ -5072,13 +5072,13 @@ QMutex g_brushCacheMutex;
 QHash<QString, std::shared_ptr<const std::vector<float>>> g_brushCache;
 
 std::shared_ptr<const std::vector<float>>
-brushRasterCached(const QString &paramsJson, int w, int h, int degrees)
+brushRasterCached(const QString &paramsJson, int w, int h, int degrees, const QString &fPath)
 {
     /* Only the (small) proxy buffer is worth caching: it is re-rasterized on every slider tick of a
        drag. The full-res buffer is huge (~w*h*4 bytes) and built once per settle, so we skip caching
        it rather than risk hundreds of MB per entry. */
     const bool cacheable = (size_t(w) * h) <= 4'000'000;
-    const QString key = paramsJson + "|" + QString::number(w) + "x" + QString::number(h)
+    const QString key = fPath + "|" + paramsJson + "|" + QString::number(w) + "x" + QString::number(h)
                       + "@" + QString::number(degrees);
     if (cacheable) {
         QMutexLocker lk(&g_brushCacheMutex);
@@ -5089,7 +5089,8 @@ brushRasterCached(const QString &paramsJson, int w, int h, int degrees)
     std::vector<float> scratch;
     const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
                                    .object().value("strokes").toArray();
-    BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees);
+    const auto guide = BrushStamp::getGuide(fPath);     // auto-mask guide (same one the preview used)
+    BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees, guide.get());
     if (cacheable) {
         QMutexLocker lk(&g_brushCacheMutex);
         if (g_brushCache.size() > 8) g_brushCache.clear();      // crude cap (proxy-size entries)
@@ -5112,7 +5113,8 @@ struct CompDesc {
    it aligns with the linear blend before developComposite applies the EXIF rotation. Each pixel is
    mapped work-normalized -> output-normalized (output = work rotated CW by degrees) before each
    component is evaluated, so the geometry edited on the oriented loupe lines up. */
-std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, int h, int degrees)
+std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, int h, int degrees,
+                                   const QString &fPath)
 {
     std::vector<float> out(size_t(w) * size_t(h), 0.0f);
     if (w <= 0 || h <= 0) return out;
@@ -5125,7 +5127,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
         if (m.tool == 2) {                                // Brush: rasterize (cached) strokes
             CompDesc d;
             d.isBrush = true;
-            d.brush = brushRasterCached(m.paramsJson, w, h, degrees);
+            d.brush = brushRasterCached(m.paramsJson, w, h, degrees, fPath);
             d.op = m.op;
             d.inverted = m.inverted;
             comps.append(d);
@@ -5189,7 +5191,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
    exactly as developComposite does. Falls back to the single-pass developComposite when there are
    no non-Base layers. */
 QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::StackRenderJob &job,
-                             int degrees, bool fullRes, int fullW, int fullH,
+                             int degrees, bool fullRes, int fullW, int fullH, const QString &fPath,
                              WorkingImageCache::RenderTimings *timings = nullptr)
 {
     if (job.layers.isEmpty())               // just Base -> the fast single-pass path
@@ -5201,7 +5203,7 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
         WorkingImageCache::StackLayer s;
         s.params = L.params;
         if (!L.masks.isEmpty())             // empty masks => global layer (no buffer needed)
-            s.mask = buildMaskBuffer(L.masks, src.width, src.height, degrees);
+            s.mask = buildMaskBuffer(L.masks, src.width, src.height, degrees, fPath);
         sl.push_back(std::move(s));
     }
 
@@ -5300,7 +5302,7 @@ void MW::renderDevelopPreview(bool fullRes)
     int fw = work->width, fh = work->height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
 
-    const QImage out = developCompositeStack(*srcImg, mj, degrees, fullRes, fw, fh);
+    const QImage out = developCompositeStack(*srcImg, mj, degrees, fullRes, fw, fh, fPath);
     if (out.isNull()) return;
     const qint64 tRender = G::isReportDevelopTime ? probe.restart() : 0;
 
@@ -5402,7 +5404,7 @@ void MW::renderDevelopFullResAsync()
         WorkingImageCache::RenderTimings rt;
         const bool probe = G::isReportDevelopTime;
         if (probe) t.start();
-        const QImage out = developCompositeStack(*src, mj, degrees, /*fullRes*/true, 0, 0,
+        const QImage out = developCompositeStack(*src, mj, degrees, /*fullRes*/true, 0, 0, fPath,
                                                  probe ? &rt : nullptr);
         const qint64 ms = probe ? t.elapsed() : 0;
         QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt]() {
