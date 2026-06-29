@@ -110,6 +110,7 @@ private:
 
     void newLayer();
     void deleteLayer();
+    void onLayerRenamed(const QString &oldName, const QString &newName);   // inline rename via the combo (not Base)
 
     /* ---- Mask (one mask per non-Base layer, built from a list of Add/Subtract tools) ----------
        Self-contained so the whole mask UI can be redesigned by rewriting just these functions and
@@ -133,7 +134,8 @@ private:
 
     /* Item builders. div converts the integer slider amount to a double (eg /100), and
        defaults to identity (0) so an absent value is a no-op edit. */
-    void addHeader(const QString &name, const QString &caption, const QString &tooltip);
+    void addHeader(const QString &name, const QString &parent,
+                   const QString &caption, const QString &tooltip);
     void addSlider(const QString &key, const QString &caption, const QString &tooltip,
                    QModelIndex parIdx, const QString &parentName,
                    int min, int max, int div, QString color, QString color1,

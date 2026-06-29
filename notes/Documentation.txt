@@ -2479,7 +2479,14 @@ Layer & masking model (planned)
                the "Base" layer (normalized on load in setCurrentImage); extra layers added with +
                are numbered "Layer 1", "Layer 2", ... (the new layer's number = its index). The Base
                layer CANNOT be removed -- deleteLayer refuses when the active layer is index 0
-               (centralMsg "The Base layer cannot be removed."). An all-identity stack is
+               (centralMsg "The Base layer cannot be removed."). RENAME: the combo's text is editable
+               (ComboBoxEditor::setRenamable -> setEditable + NoInsert; the lineEdit's editingFinished
+               emits itemRenamed(old,new) when the text actually changes, deferred via singleShot(0)
+               so the owner can rebuild the combo). DevelopProperties::onLayerRenamed renames the
+               matched layer (uniqueLayerName resolves clashes with a numeric suffix) and
+               refreshLayerCombo()s; Base (index 0) is rejected with centralMsg "The Base layer
+               cannot be renamed." and selecting a different item from the dropdown never reads as a
+               rename (the text matches the chosen item). An all-identity stack is
                never persisted, so empty layers added to an unedited image are not written (EXCEPTION:
                a layer that has any mask component counts as non-identity so masks survive
                navigation). The old QSettings layer helpers (readLayerList/setCurrentLayer/
@@ -2490,7 +2497,7 @@ Layer & masking model (planned)
                tool list (MaskComponent: tool/op/inverted/feather + opaque paramsJson for per-tool
                geometry). Each tool ADDS or SUBTRACTS area; the first tool must Add (nothing to
                subtract from an empty mask). The combine field is legacy/unused. The dock places an
-               [M] button right after the "Select layer" combo (ComboBoxEditor now drains the global
+               [M] button right after the "Layer:" combo (ComboBoxEditor now drains the global
                `btns` vector to host trailing buttons). [M] is hidden on the Base layer (index 0,
                which carries no mask) and shown for any other layer -- updateMaskMenuBtn(), driven by
                refreshLayerCombo() and the layer-combo change. Clicking [M] pops a menu of "Add <tool>" and

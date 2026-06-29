@@ -716,6 +716,38 @@ void ComboBoxEditor::renameItem(QString oldText, QString newText)
     change(i);
 }
 
+void ComboBoxEditor::setRenamable(bool on)
+{
+/*
+    Makes the combo's text editable so the user can rename the CURRENTLY SELECTED item in place.
+    A committed edit (Enter / focus-out) that actually changes the text emits itemRenamed(old, new);
+    the owner decides whether to accept it (and refreshes the list). Selecting a different item from
+    the dropdown leaves the text matching that item, so it never reads as a rename.
+*/
+    if (G::isLogger) G::log("ComboBoxEditor::setRenamable");
+    isRenamable = on;
+    comboBox->setEditable(on);
+    if (!on) return;
+
+    comboBox->setInsertPolicy(QComboBox::NoInsert);     // Enter must not append a new item
+    const QString clr = idx.data(UR_Color).toString();
+    comboBox->lineEdit()->setStyleSheet("QLineEdit { background: transparent; border: none;"
+                                        "color:" + clr + "; padding: 0px; }");
+
+    connect(comboBox->lineEdit(), &QLineEdit::editingFinished, this, [=]() {
+        const int i = comboBox->currentIndex();
+        if (i < 0) return;
+        const QString oldText = comboBox->itemText(i);
+        const QString newText = comboBox->lineEdit()->text().trimmed();
+        if (newText.isEmpty() || newText == oldText) {
+            comboBox->lineEdit()->setText(oldText);     // restore the displayed name
+            return;
+        }
+        /* Defer so the owner can rebuild the combo (refresh) outside this widget's own signal. */
+        QTimer::singleShot(0, this, [=]() { emit itemRenamed(oldText, newText); });
+    });
+}
+
 void ComboBoxEditor::refresh(QStringList items)
 {
 /*
