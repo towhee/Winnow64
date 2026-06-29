@@ -2469,7 +2469,13 @@ Layer & masking model (planned)
                renderer shows the active layer -- no mask/opacity compositing yet). The Layers combo
                + (+/-) are PER-IMAGE: the combo lists this image's layer names, switching it selects
                the active layer (activeLayerIndex) and repopulates the sliders, and +/- add/delete
-               layers in this image's EditStack (newLayer/deleteLayer). NAMING: index 0 is always
+               layers in this image's EditStack (newLayer/deleteLayer). SECTION HEADERS: the Basic,
+               Color and Effects headers append the active layer's name (e.g. "Basic Base", "Color
+               Layer 1") so it is always clear which layer the sliders below edit --
+               updateSectionHeaderCaptions() rewrites the three header captions (DisplayRole, found
+               via findCaptionIndex) and is driven from addLayerItems (initial build), the layer-
+               combo change in itemChange, and refreshLayerCombo (setCurrentImage/newLayer/
+               deleteLayer); the tree is never rebuilt. NAMING: index 0 is always
                the "Base" layer (normalized on load in setCurrentImage); extra layers added with +
                are numbered "Layer 1", "Layer 2", ... (the new layer's number = its index). The Base
                layer CANNOT be removed -- deleteLayer refuses when the active layer is index 0
