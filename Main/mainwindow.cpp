@@ -3,6 +3,9 @@
 #include "Develop/workingimage.h"
 #include "Develop/workingimagecache.h"
 #include "Develop/inputtransform.h"
+#include "Develop/brushstamp.h"
+#include <QMutex>
+#include <memory>
 #include <QMetaEnum>
 #include <cmath>            // std::sqrt (updateDevelopScopes sampling stride)
 #include <cstdlib>          // std::_Exit (used by runSelfTest)
@@ -5061,6 +5064,50 @@ inline float evalMaskComp(const MaskComp &g, double onx, double ony, double Wo, 
     return g.inverted ? 1.0f - r : r;
 }
 
+/* Cache of rasterized brush masks (work-space coverage, before component invert). A render replays
+   every dab, so caching avoids re-rasterizing on each non-brush slider tick. Keyed by the brush
+   paramsJson + target dims + degrees. Accessed from the GUI thread (proxy) AND the full-res worker
+   thread, so it is mutex-guarded. */
+QMutex g_brushCacheMutex;
+QHash<QString, std::shared_ptr<const std::vector<float>>> g_brushCache;
+
+std::shared_ptr<const std::vector<float>>
+brushRasterCached(const QString &paramsJson, int w, int h, int degrees)
+{
+    /* Only the (small) proxy buffer is worth caching: it is re-rasterized on every slider tick of a
+       drag. The full-res buffer is huge (~w*h*4 bytes) and built once per settle, so we skip caching
+       it rather than risk hundreds of MB per entry. */
+    const bool cacheable = (size_t(w) * h) <= 4'000'000;
+    const QString key = paramsJson + "|" + QString::number(w) + "x" + QString::number(h)
+                      + "@" + QString::number(degrees);
+    if (cacheable) {
+        QMutexLocker lk(&g_brushCacheMutex);
+        auto it = g_brushCache.find(key);
+        if (it != g_brushCache.end()) return it.value();
+    }
+    auto buf = std::make_shared<std::vector<float>>(size_t(w) * h, 0.0f);
+    std::vector<float> scratch;
+    const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
+                                   .object().value("strokes").toArray();
+    BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees);
+    if (cacheable) {
+        QMutexLocker lk(&g_brushCacheMutex);
+        if (g_brushCache.size() > 8) g_brushCache.clear();      // crude cap (proxy-size entries)
+        g_brushCache.insert(key, buf);
+    }
+    return buf;
+}
+
+/* One component to combine: either a parametric eval (Linear/Radial) or a pre-rasterized Brush
+   coverage buffer (work-space, indexed by pixel). */
+struct CompDesc {
+    bool isBrush = false;
+    MaskComp param;                                       // parametric
+    std::shared_ptr<const std::vector<float>> brush;      // brush coverage (raw, pre-invert)
+    int  op = 0;
+    bool inverted = false;
+};
+
 /* Rasterize the layer's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
    it aligns with the linear blend before developComposite applies the EXIF rotation. Each pixel is
    mapped work-normalized -> output-normalized (output = work rotated CW by degrees) before each
@@ -5072,11 +5119,25 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
     const bool swap = (degrees == 90 || degrees == 270);
     const double Wo = swap ? h : w, Ho = swap ? w : h;   // output (oriented) pixel dimensions
 
-    QVector<MaskComp> comps;
+    QVector<CompDesc> comps;
     comps.reserve(masks.size());
     for (const MaskComponent &m : masks) {
-        const MaskComp g = parseMaskComp(m, Wo, Ho);
-        if (g.valid) comps.append(g);
+        if (m.tool == 2) {                                // Brush: rasterize (cached) strokes
+            CompDesc d;
+            d.isBrush = true;
+            d.brush = brushRasterCached(m.paramsJson, w, h, degrees);
+            d.op = m.op;
+            d.inverted = m.inverted;
+            comps.append(d);
+        }
+        else {
+            const MaskComp g = parseMaskComp(m, Wo, Ho);
+            if (!g.valid) continue;
+            CompDesc d;
+            d.param = g;
+            d.op = g.op;
+            comps.append(d);
+        }
     }
     if (comps.isEmpty()) return out;     // no usable geometry -> all-zero (no effect)
 
@@ -5086,6 +5147,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
             const double wny = (y + 0.5) * invH;
             float *row = out.data() + size_t(y) * w;
             for (int x = 0; x < w; ++x) {
+                const size_t k = size_t(y) * w + x;
                 const double wnx = (x + 0.5) * invW;
                 double onx, ony;
                 switch (degrees) {           // work-normalized -> output-normalized (CW rotation)
@@ -5095,9 +5157,11 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
                     default:  onx = wnx;       ony = wny;       break;
                 }
                 float m = 0.0f;
-                for (const MaskComp &g : comps) {
-                    const float c = evalMaskComp(g, onx, ony, Wo, Ho);
-                    if (g.op == 1) m *= (1.0f - c);     // Subtract
+                for (const CompDesc &d : comps) {
+                    float c;
+                    if (d.isBrush) { c = (*d.brush)[k]; if (d.inverted) c = 1.0f - c; }
+                    else           c = evalMaskComp(d.param, onx, ony, Wo, Ho);  // invert inside
+                    if (d.op == 1) m *= (1.0f - c);     // Subtract
                     else           m = qMax(m, c);      // Add (Union)
                 }
                 row[x] = m;
