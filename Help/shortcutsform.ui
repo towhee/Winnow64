@@ -959,7 +959,7 @@
          <string>F3</string>
         </property>
         <property name="text">
-         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
+         <string>Toggles visibility</string>
         </property>
        </item>
        <item>
@@ -970,7 +970,7 @@
          <string>F4</string>
         </property>
         <property name="text">
-         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
+         <string>Toggles visibility</string>
         </property>
        </item>
        <item>
@@ -981,7 +981,7 @@
          <string>F5</string>
         </property>
         <property name="text">
-         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
+         <string>Toggles visibility</string>
         </property>
        </item>
        <item>
@@ -992,7 +992,7 @@
          <string>F6</string>
         </property>
         <property name="text">
-         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
+         <string>Toggles visibility</string>
         </property>
        </item>
        <item>
@@ -1003,7 +1003,7 @@
          <string>F7</string>
         </property>
         <property name="text">
-         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
+         <string>Toggles visibility</string>
         </property>
        </item>
        <item>
@@ -1014,7 +1014,7 @@
          <string>F8</string>
         </property>
         <property name="text">
-         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
+         <string>Toggles visibility</string>
         </property>
        </item>
        <item>
@@ -1025,7 +1025,7 @@
          <string>F9</string>
         </property>
         <property name="text">
-         <string>3 way toggle (Focus &gt; Hide &lt; Show)</string>
+         <string>Toggles visibility</string>
         </property>
        </item>
        <item>

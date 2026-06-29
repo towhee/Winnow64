@@ -270,6 +270,7 @@ void DevelopProperties::addLayerItems()
     addBasic();
     addColor();
     addEffects();
+    updateSectionHeaderCaptions();
 }
 
 void DevelopProperties::newLayer()
@@ -852,6 +853,24 @@ void DevelopProperties::addEffects()
     addHeader("EffectsHeader", "Effects", "Creative effects (to be added).");
 }
 
+void DevelopProperties::updateSectionHeaderCaptions()
+{
+    if (G::isLogger) G::log("DevelopProperties::updateSectionHeaderCaptions");
+    /* The Basic/Color/Effects section headers carry the active layer's name so it is always clear
+       which layer the sliders below are editing, e.g. "Basic Base", "Color Layer 1". */
+    const QString layerName = currentLayerNames().value(activeLayerIndex);
+    const QPair<QString, QString> hdrs[] = {
+        {"BasicHeader",   "Basic"},
+        {"ColorHeader",   "Color"},
+        {"EffectsHeader", "Effects"},
+    };
+    for (const auto &h : hdrs) {
+        const QModelIndex idx = findCaptionIndex(h.first);
+        if (idx.isValid())
+            model->setData(idx, h.second + " " + layerName);
+    }
+}
+
 /* ----------------------------------------------------------------------------------------
    Value change handling
    ---------------------------------------------------------------------------------------- */
@@ -878,6 +897,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
             populateSlidersFromStack();
             rebuildMaskTools();
             updateMaskMenuBtn();        // hide [M] on the Base layer
+            updateSectionHeaderCaptions();
             emit paramsChanged();
         }
         return;
@@ -1026,6 +1046,7 @@ void DevelopProperties::refreshLayerCombo()
     layerListEditor->setValue(layerList.value(activeLayerIndex));
     isPopulating = false;
     updateMaskMenuBtn();        // hide [M] on the Base layer
+    updateSectionHeaderCaptions();
 }
 
 void DevelopProperties::updateMaskMenuBtn()

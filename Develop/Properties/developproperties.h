@@ -106,6 +106,7 @@ private:
     void addBasic();
     void addColor();
     void addEffects();
+    void updateSectionHeaderCaptions();   // append the active layer name to Basic/Color/Effects
 
     void newLayer();
     void deleteLayer();
