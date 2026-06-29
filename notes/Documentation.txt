@@ -2556,7 +2556,7 @@ Layer & masking model (planned)
                single-pass path when there are no non-Base layers. Mask add/delete/geometry/feather/
                invert and a committed brush stroke emit paramsChanged() to re-render. Deferred: true
                STACKED adjustments (each layer builds on the result below, not the original), the
-               combine field (Union only today), brush auto-mask (checkbox is a stub), and AI tools.
+               combine field (Union only today), and AI tools.
              - BRUSH (freehand mask): vector strokes in paramsJson {size,flow,autoMask,strokes:[{pts,
                size,feather,flow,erase,autoMask}]} (each stroke snapshots its settings; current
                settings drive the next stroke). Painted on the loupe (ImageView): a size-circle cursor,
@@ -2564,10 +2564,20 @@ Layer & masking model (planned)
                stroke by MAX then composited with flow (build-up across strokes). Live red/blue tint
                preview rebuilt only on the dirty segment bbox; the develop re-composites on stroke
                release (maskGeometryChanged -> setActiveMaskParams). Dock rows: Size/Feather/Flow/Auto
-               mask(no-op stub)/Invert. Size also via [ / ] keys or a two-finger drag (ImageView
-               wheelEvent, gated to brush+hover) -> maskBrushSizeRequested -> setActiveBrushSize syncs
-               the dock; Cmd/Ctrl+Z removes the last stroke (ImageView needs focus, set on brush
-               enter). Render compositing as above.
+               mask/Invert. Size also via [ / ] keys or a two-finger drag (ImageView wheelEvent, gated
+               to brush+hover) -> maskBrushSizeRequested -> setActiveBrushSize syncs the dock; "A"
+               toggles auto-mask (-> maskBrushAutoMaskRequested -> setActiveBrushAutoMask); Cmd/Ctrl+Z
+               removes the last stroke. ImageView needs focus (set on brush enter) and claims [ ] A
+               from their global action shortcuts via QEvent::ShortcutOverride. Cursor hint: dashed
+               green = auto-mask, pink = erase. AUTO-MASK (WIP -- luminance-only, fixed tolerance,
+               coarse guide; usable but expected to be refined): a luminance guide (BrushStamp::Guide, ~1024
+               long edge, output-oriented) is built once from the loupe pixmap when the brush
+               activates (ImageView::ensureAutoGuide) and registered by path (BrushStamp::putGuide);
+               the develop render samples the SAME guide (getGuide(fPath), threaded through
+               developCompositeStack/buildMaskBuffer/brushRasterCached) so preview == render. A
+               flagged stroke attenuates each dab by an edge factor: paint only where |lum - lumRef|
+               < tol (lumRef = guide luminance at the stroke start; smootherstep falloff). Render
+               compositing as above.
              - LIFECYCLE / FLUSH: MW::fileSelectionChange calls setCurrentImage; after the loupe
                pixmap is shown (both the cache-hit path and MW::refreshViewsOnCacheChange) MW::
                applyDevelopPreviewIfEdited renders the saved edits over an edited image (no-op for

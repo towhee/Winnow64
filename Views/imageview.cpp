@@ -402,6 +402,7 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
         else if (maskTool == 0) { maskP1 = QPointF(0.5, 0.34); maskP2 = QPointF(0.5, 0.66); }
     }
     maskPainting = false;
+    maskGuide.reset();                                   // recompute the auto-mask guide for this image
     if (maskTool == 2) brushBuildBuffers(paramsJson);    // raster committed strokes into the preview
     maskEditMode = true;
     maskHover = underMouse();        // show at once if the cursor is already over the view
@@ -769,7 +770,9 @@ void ImageView::brushEnsureBuffers()
     maskBrushW = w; maskBrushH = h;
     maskBrushMain.assign(size_t(w) * h, 0.0f);
     maskBrushStroke.assign(size_t(w) * h, 0.0f);
-    BrushStamp::rasterize(maskBrushStrokesJson, maskBrushMain.data(), maskBrushScratch, w, h, 0);
+    ensureAutoGuide();                  // committed auto-mask strokes need the guide to re-raster
+    BrushStamp::rasterize(maskBrushStrokesJson, maskBrushMain.data(), maskBrushScratch,
+                          w, h, 0, maskGuide.get());
     brushRebuildPreview();
 }
 
@@ -820,7 +823,8 @@ void ImageView::brushStampTo(QPointF bufPt)
 {
     BrushStamp::segmentMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
                            maskBrushLast, bufPt, brushRadiusBufPx(),
-                           qBound(0.0, maskFeather, 100.0) / 100.0);
+                           qBound(0.0, maskFeather, 100.0) / 100.0,
+                           maskStrokeAM.on ? &maskStrokeAM : nullptr);
     maskBrushLast = bufPt;
 }
 
@@ -831,6 +835,43 @@ void ImageView::adjustBrushSize(double delta)
     maskBrushSize = sz;
     emit maskBrushSizeRequested(maskBrushSize);     // sync the dock + persist
     if (maskEditMode && maskHover) viewport()->update();   // cursor circle
+}
+
+void ImageView::ensureAutoGuide()
+{
+    /* Build a small luminance guide from the displayed image (output-oriented), once per image, and
+       register it by path so the develop render samples the SAME guide as this preview. */
+    if (maskGuide && maskGuide->valid()) return;
+    if (!pmItem || pmItem->pixmap().isNull() || currentImagePath.isEmpty()) return;
+    const QImage img = pmItem->pixmap().toImage();
+    if (img.isNull()) return;
+    const int cap = 1024;
+    const int longE = std::max(img.width(), img.height());
+    const double s = (longE > cap) ? double(cap) / longE : 1.0;
+    const int gw = std::max(1, int(img.width()  * s));
+    const int gh = std::max(1, int(img.height() * s));
+    const QImage small = img.scaled(gw, gh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
+                            .convertToFormat(QImage::Format_ARGB32);
+    auto g = std::make_shared<BrushStamp::Guide>();
+    g->w = gw; g->h = gh; g->lum.resize(size_t(gw) * gh);
+    for (int y = 0; y < gh; ++y) {
+        const QRgb *line = reinterpret_cast<const QRgb*>(small.constScanLine(y));
+        for (int x = 0; x < gw; ++x) {
+            const QRgb p = line[x];
+            g->lum[size_t(y)*gw + x] =
+                float((0.299*qRed(p) + 0.587*qGreen(p) + 0.114*qBlue(p)) / 255.0);
+        }
+    }
+    maskGuide = g;
+    BrushStamp::putGuide(currentImagePath, g);
+}
+
+void ImageView::toggleAutoMask()
+{
+    maskBrushAutoMask = !maskBrushAutoMask;
+    if (maskBrushAutoMask) ensureAutoGuide();
+    emit maskBrushAutoMaskRequested(maskBrushAutoMask);   // sync the dock checkbox + persist
+    if (maskEditMode && maskHover) viewport()->update();  // cursor hint
 }
 
 void ImageView::brushUndoStroke()
@@ -866,8 +907,12 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br)
         const double rVp = QLineF(cVp, mapFromScene(pmItem->mapToScene(cImg + QPointF(rImg, 0)))).length();
         painter->save();
         painter->resetTransform();
-        QPen pen(maskBrushErase ? QColor(255, 170, 170, 235) : QColor(255, 255, 255, 235));
+        const QColor cur = maskBrushErase    ? QColor(255, 170, 170, 235)   // erase
+                         : maskBrushAutoMask ? QColor(150, 255, 150, 235)   // auto-mask
+                                             : QColor(255, 255, 255, 235);
+        QPen pen(cur);
         pen.setWidthF(1.3);
+        if (maskBrushAutoMask) pen.setStyle(Qt::DashLine);     // dashed = auto-mask on
         painter->setPen(pen);
         painter->setBrush(Qt::NoBrush);
         painter->drawEllipse(cVp, rVp, rVp);
@@ -1923,6 +1968,18 @@ bool ImageView::event(QEvent *event) {
 /*
     Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
+    /* While a brush mask is active, claim [ ] A from their global action shortcuts (thumb size /
+       droplet) so the brush gets them as key presses. */
+    if (event->type() == QEvent::ShortcutOverride && maskEditMode && maskTool == 2) {
+        QKeyEvent *ke = static_cast<QKeyEvent *>(event);
+        if (ke->modifiers() == Qt::NoModifier &&
+            (ke->key() == Qt::Key_A || ke->key() == Qt::Key_BracketLeft ||
+             ke->key() == Qt::Key_BracketRight)) {
+            event->accept();
+            return true;
+        }
+    }
+
     if (event->type() == QEvent::NativeGesture) {
         // qDebug() << "ImageView::event" << event << event->type() << QApplication::keyboardModifiers();
         QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
@@ -1945,6 +2002,7 @@ void ImageView::keyPressEvent(QKeyEvent *event){
     if (maskEditMode && maskTool == 2) {
         if (event->key() == Qt::Key_BracketLeft)  { adjustBrushSize(-2); return; }
         if (event->key() == Qt::Key_BracketRight) { adjustBrushSize(+2); return; }
+        if (event->key() == Qt::Key_A && event->modifiers() == Qt::NoModifier) { toggleAutoMask(); return; }
         if (event->key() == Qt::Key_Z && (event->modifiers() & (Qt::ControlModifier | Qt::MetaModifier))
             && !(event->modifiers() & Qt::AltModifier)) {
             brushUndoStroke();
@@ -1997,10 +2055,21 @@ void ImageView::mousePressEvent(QMouseEvent *event)
             const QPointF n = maskViewportToNorm(event->pos());
             maskStrokePts << n.x() << n.y();
             std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
+            /* Auto-mask context for this stroke (preview buffer is output space -> degrees 0). */
+            maskStrokeAM = BrushStamp::AutoMaskCtx();
+            if (maskBrushAutoMask) ensureAutoGuide();
+            if (maskBrushAutoMask && maskGuide && maskGuide->valid()) {
+                maskStrokeAM.on = true;
+                maskStrokeAM.guide = maskGuide->lum.data();
+                maskStrokeAM.gw = maskGuide->w; maskStrokeAM.gh = maskGuide->h;
+                maskStrokeAM.degrees = 0;
+                maskStrokeAM.lumRef = BrushStamp::guideLumAt(maskStrokeAM, n.x(), n.y());
+            }
             maskBrushLast = brushNormToBuf(n);
             BrushStamp::dabMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
                                maskBrushLast.x(), maskBrushLast.y(),
-                               brushRadiusBufPx(), qBound(0.0, maskFeather, 100.0) / 100.0);
+                               brushRadiusBufPx(), qBound(0.0, maskFeather, 100.0) / 100.0,
+                               maskStrokeAM.on ? &maskStrokeAM : nullptr);
             brushRebuildPreview(brushSegRect(maskBrushLast, maskBrushLast));
             maskBrushCursorVp = event->pos();
             maskBrushCursorOn = true;
