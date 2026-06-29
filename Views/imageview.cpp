@@ -426,12 +426,27 @@ void ImageView::setMaskInverted(bool inverted)
     if (maskEditMode && maskHover) viewport()->update();
 }
 
+void ImageView::setMaskBrushSettings(double size, double feather, double flow, bool autoMask)
+{
+    maskBrushSize = size;
+    maskFeather = feather;
+    maskBrushFlow = flow;
+    maskBrushAutoMask = autoMask;
+    if (maskEditMode && maskHover) viewport()->update();   // cursor preview (Stage 2)
+}
+
 bool ImageView::parseMaskParams(const QString &json)
 {
     QJsonParseError err;
     const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8(), &err);
     if (err.error != QJsonParseError::NoError || !doc.isObject()) return false;
     const QJsonObject o = doc.object();
+    if (maskTool == 2) {            // Brush: current settings (strokes handled in Stage 2)
+        maskBrushSize = o.value("size").toDouble(20);
+        maskBrushFlow = o.value("flow").toDouble(50);
+        maskBrushAutoMask = o.value("autoMask").toBool(false);
+        return true;
+    }
     if (maskTool == 1) {            // Radial
         if (!o.contains("cx") || !o.contains("cy") || !o.contains("rx") || !o.contains("ry"))
             return false;
@@ -514,6 +529,7 @@ QPointF ImageView::maskRadialRotateHandleVp(const QRectF &br) const
 int ImageView::maskHitTest(QPoint vp) const
 {
     if (!maskHandlesEditable()) return -1;
+    if (maskTool == 2) return -1;       // Brush has no drag handles (painting lands in Stage 2)
     const double rHandle = 11;          // px pick radius
     const QPointF p(vp);
 
@@ -551,8 +567,9 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
     if (!maskHandlesEditable()) return;
     const QRectF br = pmItem->boundingRect();
     if (br.width() <= 0 || br.height() <= 0) return;
-    if (maskTool == 1) drawRadialMask(painter, br);
-    else               drawLinearMask(painter, br);
+    if      (maskTool == 1) drawRadialMask(painter, br);
+    else if (maskTool == 0) drawLinearMask(painter, br);
+    /* Brush (2) overlay lands in Stage 2. */
 }
 
 void ImageView::drawLinearMask(QPainter *painter, const QRectF &br)

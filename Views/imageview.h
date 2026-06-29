@@ -123,6 +123,7 @@ public slots:
     void endMaskEdit();
     void setMaskFeather(double feather);
     void setMaskInverted(bool inverted);
+    void setMaskBrushSettings(double size, double feather, double flow, bool autoMask);
 
 signals:
     void togglePick();
@@ -287,6 +288,9 @@ private:
     /* Radial: centre (normalized), semi-axes rx (of W) / ry (of H), rotation in degrees. */
     QPointF maskC = QPointF(0.5, 0.5);
     double  maskRx = 0.25, maskRy = 0.30, maskAngle = 0.0;
+    /* Brush current settings (0..100; for the cursor + the next stroke). Strokes land in Stage 2. */
+    double  maskBrushSize = 20.0, maskBrushFlow = 50.0;
+    bool    maskBrushAutoMask = false;
     int     maskDrag     = -1;          // active handle (per tool, see maskHitTest); -1 none
     QPointF maskMoveAnchorN;            // image-norm cursor at move start
     QPointF maskP1Anchor, maskP2Anchor; // linear endpoints at move start

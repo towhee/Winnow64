@@ -471,15 +471,33 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     model->setData(toolIdx, true, UR_DeleteBtn);
     setFirstColumnSpanned(toolIdx.row(), parIdx, true);
 
-    /* The selected tool reveals its settings as its OWN children (no duplicate tool-name row):
-       Feather and Invert. Clicking the tool caption again collapses it (see mousePressEvent), so
-       no separate Done row is needed. */
+    /* The selected tool reveals its settings as its OWN children (no duplicate tool-name row).
+       Clicking the tool caption again collapses it (see mousePressEvent), so no separate Done row is
+       needed. Gradients: Feather + Invert. Brush: Size, Feather, Flow, Auto mask, Invert. */
     if (selected) {
-        addSlider("maskFeather", "Feather", "Soften the mask edge.",
-                  toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-        addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
-        setSliderReal("maskFeather", m.feather);
-        setCheckboxValue("maskInvert", m.inverted);
+        if (m.tool == int(MaskTool::Brush)) {
+            addSlider("maskSize", "Size", "Brush diameter (% of the long edge).",
+                      toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskFeather", "Feather", "Soften the brush edge.",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskFlow", "Flow", "How much each stroke builds up.",
+                      toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
+            addCheckbox("maskAutoMask", "Auto mask", "Limit the brush to similar areas (coming soon).",
+                        toolIdx, "", false);
+            addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
+            setSliderReal("maskSize", brushNum(m.paramsJson, "size", 20));
+            setSliderReal("maskFeather", m.feather);
+            setSliderReal("maskFlow", brushNum(m.paramsJson, "flow", 50));
+            setCheckboxValue("maskAutoMask", brushBool(m.paramsJson, "autoMask", false));
+            setCheckboxValue("maskInvert", m.inverted);
+        }
+        else {
+            addSlider("maskFeather", "Feather", "Soften the mask edge.",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
+            setSliderReal("maskFeather", m.feather);
+            setCheckboxValue("maskInvert", m.inverted);
+        }
         expand(toolIdx);
     }
 }
@@ -541,7 +559,56 @@ QString DevelopProperties::defaultMaskParams(int tool)
         o["angle"] = 0.0;
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
+    if (tool == int(MaskTool::Brush)) {
+        /* Freehand: starts empty. size/flow are 0..100 (current settings for the NEXT stroke; feather
+           lives in MaskComponent.feather). strokes is the accumulated path list -- each stroke
+           snapshots the settings it was painted with. Points are normalized output coords. */
+        QJsonObject o;
+        o["size"] = 20;
+        o["flow"] = 50;
+        o["autoMask"] = false;
+        o["strokes"] = QJsonArray();
+        return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+    }
     return QString();
+}
+
+int DevelopProperties::activeMaskTool() const
+{
+    if (currentImagePath.isEmpty()) return -1;
+    auto it = stackCache.find(currentImagePath);
+    if (it == stackCache.end()) return -1;
+    const EditStack &s = it.value();
+    if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) return -1;
+    if (selectedMaskIndex < 0 || selectedMaskIndex >= s.layers[activeLayerIndex].masks.size()) return -1;
+    return s.layers[activeLayerIndex].masks[selectedMaskIndex].tool;
+}
+
+double DevelopProperties::brushNum(const QString &paramsJson, const QString &key, double def)
+{
+    const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    return o.contains(key) ? o.value(key).toDouble(def) : def;
+}
+
+bool DevelopProperties::brushBool(const QString &paramsJson, const QString &key, bool def)
+{
+    const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    return o.contains(key) ? o.value(key).toBool(def) : def;
+}
+
+QString DevelopProperties::brushWith(const QString &paramsJson, const QString &key, const QJsonValue &v)
+{
+    QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    o[key] = v;
+    return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
+void DevelopProperties::emitBrushSettings(const MaskComponent &m)
+{
+    emit maskBrushSettingsChanged(brushNum(m.paramsJson, "size", 20),
+                                  m.feather,
+                                  brushNum(m.paramsJson, "flow", 50),
+                                  brushBool(m.paramsJson, "autoMask", false));
 }
 
 void DevelopProperties::updateMaskEdit()
@@ -552,7 +619,8 @@ void DevelopProperties::updateMaskEdit()
     EditLayer *layer = activeLayer();
     if (layer && selectedMaskIndex >= 0 && selectedMaskIndex < layer->masks.size()) {
         const MaskComponent &m = layer->masks[selectedMaskIndex];
-        if (m.tool == int(MaskTool::LinearGradient) || m.tool == int(MaskTool::RadialGradient)) {
+        if (m.tool == int(MaskTool::LinearGradient) || m.tool == int(MaskTool::RadialGradient) ||
+            m.tool == int(MaskTool::Brush)) {
             emit maskEditBegin(m.tool, m.op, m.inverted, m.paramsJson, m.feather);
             return;
         }
@@ -781,6 +849,25 @@ void DevelopProperties::itemChange(QModelIndex idx)
             rebuildMaskTools();
             updateMaskMenuBtn();        // hide [M] on the Base layer
             emit paramsChanged();
+        }
+        return;
+    }
+
+    /* Brush current settings (size/feather/flow/autoMask) set what the NEXT stroke uses; existing
+       strokes keep their own snapshot, so these do NOT re-composite -- they just refresh the cursor
+       and brush state in ImageView. (Invert still flips the whole mask -- handled below.) */
+    if (source == "maskSize" || source == "maskFlow" || source == "maskAutoMask" ||
+        (source == "maskFeather" && activeMaskTool() == int(MaskTool::Brush))) {
+        EditLayer *l = activeLayer();
+        if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size()) {
+            MaskComponent &mm = l->masks[selectedMaskIndex];
+            if      (source == "maskFeather")  mm.feather = v.toFloat();
+            else if (source == "maskSize")     mm.paramsJson = brushWith(mm.paramsJson, "size", v.toInt());
+            else if (source == "maskFlow")     mm.paramsJson = brushWith(mm.paramsJson, "flow", v.toInt());
+            else if (source == "maskAutoMask") mm.paramsJson = brushWith(mm.paramsJson, "autoMask", v.toBool());
+            dirty.insert(currentImagePath);
+            emitBrushSettings(mm);
+            if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
         }
         return;
     }
