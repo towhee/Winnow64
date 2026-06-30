@@ -166,7 +166,8 @@ Please give me your thoughts on this design.
 
 All develop pipeline applies to all selected images
 Can a crop be defined on a zoomed image
-Undo feature
+When ImageView::isFit == true then show crop tool pointer
+Undo feature, Reset feature
 Hide/show changes by layer and layer tool and basic, color and effects panel
 Reset basic, color and effects panel settings to default
 

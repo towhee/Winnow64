@@ -3,6 +3,7 @@
 #include <cmath>
 #include "Main/global.h"
 #include "Views/imageview.h"
+#include "Develop/Transform/croptransform.h"
 #include <QApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -376,8 +377,19 @@ void ImageView::setDevelopPreview(const QImage &image)
 */
     if (G::isLogger) G::log("ImageView::setDevelopPreview");
     if (image.isNull()) return;
+    /* Same dimensions (the usual slider-drag case): just swap pixels, leaving zoom/fit/scene. When
+       the dimensions change -- the crop geometry was applied or removed -- treat it like a new image
+       and re-fit so the cropped result is shown sensibly. */
+    const bool sizeChanged = (image.size() != pmItem->pixmap().size());
     pmItem->setPixmap(QPixmap::fromImage(image));
     pmItem->setVisible(true);
+    if (sizeChanged) {
+        /* Dimensions only change when the crop geometry is applied/removed; treat like a new image
+           and re-fit. (During a develop-slider drag the dimensions are constant, so this never
+           fires mid-drag.) */
+        imAspect = image.height() ? double(image.width()) / image.height() : 1.0;
+        resetFitZoom();
+    }
 }
 
 /* ============================ Develop mask editing ============================
@@ -455,17 +467,18 @@ void ImageView::setMaskBrushSettings(double size, double feather, double flow, b
    (cropSyncFrameFromN). beginCropEdit/endCropEdit only toggle the overlay -- they leave the image
    exactly where the user had it. */
 
-void ImageView::beginCropEdit(double aspect, bool locked)
+void ImageView::beginCropEdit(double aspect, bool locked, QRectF initialCrop)
 {
     if (G::isLogger) G::log("ImageView::beginCropEdit");
     if (!pmItem || !pmItem->isVisible()) return;
-    if (cropEditMode) { setCropAspect(aspect, locked); return; }
 
     cropAspect = aspect;
     cropAspectLocked = locked;
-    /* Start from the full image (or the aspect-constrained largest inscribed rect). */
-    cropN = QRectF(0.0, 0.0, 1.0, 1.0);
-    if (cropAspectLocked && cropAspect > 0.0) {
+    /* Start from the stored crop (re-entering an already-cropped image), else the full image (or
+       the aspect-constrained largest inscribed rect). */
+    cropN = (initialCrop.isValid() && !initialCrop.isNull()) ? initialCrop
+                                                             : QRectF(0.0, 0.0, 1.0, 1.0);
+    if (cropN == QRectF(0.0, 0.0, 1.0, 1.0) && cropAspectLocked && cropAspect > 0.0) {
         const QRectF br = pmItem->boundingRect();
         const double imgA = br.width() / br.height();
         double w = 1.0, h = 1.0;
@@ -476,6 +489,7 @@ void ImageView::beginCropEdit(double aspect, bool locked)
 
     cropEditMode = true;
     cropWarp = false;                 // always start as a plain rectangle crop
+    cropAltHeld = false;
     cropDrag = -1;
     /* Give the view room to pan even at fit zoom (so the image can be dragged under the fixed
        frame, with parts moving off the central widget) WITHOUT changing the zoom: only the
@@ -495,6 +509,7 @@ void ImageView::endCropEdit()
     if (G::isLogger) G::log("ImageView::endCropEdit");
     cropEditMode = false;
     cropWarp = false;
+    cropAltHeld = false;
     cropDrag = -1;
     /* Restore the normal scrollable area and re-centre the (possibly panned) image. Zoom is left
        as the user set it. */
@@ -598,21 +613,23 @@ void ImageView::cropEmitChanged()
     emit cropChanged(cropN.x(), cropN.y(), cropN.width(), cropN.height());
 }
 
-void ImageView::rectifyCrop()
+void ImageView::cropQuad(double q[8]) const
 {
-    if (!cropActive() || !cropWarp) return;
-    if (G::isLogger) G::log("ImageView::rectifyCrop");
-    /* The perspective PIXEL warp is the deferred engine step. For now, leave warp mode and take the
-       quad's axis-aligned bounding box as the rectangular crop, and notify so the engine can hook
-       in later. */
-    const QRectF b = QPolygonF(QVector<QPointF>(cropQuadN, cropQuadN + 4))
-                         .boundingRect().intersected(QRectF(0, 0, 1, 1));
-    cropN = b;
-    cropWarp = false;
-    cropSyncFrameFromN();
-    viewport()->update();
-    cropEmitChanged();
-    emit cropRectifyRequested();
+    for (int i = 0; i < 4; ++i) { q[i * 2] = cropQuadN[i].x(); q[i * 2 + 1] = cropQuadN[i].y(); }
+}
+
+QRectF ImageView::computeRectifyCrop() const
+{
+    if (!cropActive() || !cropWarp || !pmItem) return QRectF();
+    const QImage cur = pmItem->pixmap().toImage();
+    if (cur.isNull()) return QRectF();
+    QPointF quadPx[4];
+    for (int i = 0; i < 4; ++i)
+        quadPx[i] = QPointF(cropQuadN[i].x() * cur.width(), cropQuadN[i].y() * cur.height());
+    QRectF cropNorm;
+    const QImage warped = CropTransform::rectifyPerspective(cur, quadPx, cropNorm);
+    if (warped.isNull()) return QRectF();       // degenerate quad
+    return cropNorm;
 }
 
 QRectF ImageView::cropVpRectToN(const QRectF &vp) const
@@ -720,36 +737,44 @@ void ImageView::cropDrawOverlay(QPainter *painter, const QRectF &br)
     painter->resetTransform();                 // draw in viewport coords (constant on-screen size)
     painter->setRenderHint(QPainter::Antialiasing, true);
 
-    const QPen gridPen(QColor(255, 255, 255, 90));
-    const QPen borderPen(QColor(255, 255, 255, 220));
+    /* "Transform" rubber band: while warping, OR while Alt/Opt is held over a rectangle crop (a
+       corner drag will then pull a free perspective quad), use a RED border with CIRCULAR corner
+       handles and NO intermediate side handles. The plain rectangle crop is white with square
+       corner + side handles. */
+    const bool transformStyle = cropWarp || cropAltHeld;
     const qreal hs = 5.0;
+    const QColor gridCol(255, 255, 255, 90);
+    const QColor borderCol = transformStyle ? QColor(230, 40, 40, 235) : QColor(255, 255, 255, 220);
+    const QColor handleFill = transformStyle ? QColor(230, 40, 40, 240) : QColor(255, 255, 255, 235);
+
+    auto drawHandle = [&](QPointF c) {
+        if (transformStyle) painter->drawEllipse(c, hs + 1.0, hs + 1.0);   // circular
+        else                painter->drawRect(QRectF(c.x() - hs, c.y() - hs, hs * 2, hs * 2));
+    };
 
     if (cropWarp) {
         /* ---- Warp quad (TL,TR,BR,BL) ---- */
         const QPointF *q = cropQuadVp;
         QPolygonF poly(QVector<QPointF>(q, q + 4));
 
-        /* Dim outside the quad. */
         QPainterPath outside; outside.addRect(QRectF(viewport()->rect()));
         QPainterPath inside;  inside.addPolygon(poly); inside.closeSubpath();
         painter->fillPath(outside.subtracted(inside), QColor(0, 0, 0, 140));
 
-        /* A bilinear 3x3 guide grid (interpolated along the edges -- a good visual approximation of
-           the perspective grid). */
+        /* A bilinear 3x3 guide grid (interpolated along the edges). */
         auto lerp = [](QPointF a, QPointF b, qreal t){ return a + (b - a) * t; };
-        QPen gp = gridPen; gp.setWidthF(1.0); gp.setCosmetic(true); painter->setPen(gp);
+        QPen gp(gridCol); gp.setWidthF(1.0); gp.setCosmetic(true); painter->setPen(gp);
         for (int k = 1; k <= 2; ++k) {
             const qreal t = k / 3.0;
-            painter->drawLine(lerp(q[0], q[1], t), lerp(q[3], q[2], t));   // TL->TR .. BL->BR
-            painter->drawLine(lerp(q[0], q[3], t), lerp(q[1], q[2], t));   // TL->BL .. TR->BR
+            painter->drawLine(lerp(q[0], q[1], t), lerp(q[3], q[2], t));
+            painter->drawLine(lerp(q[0], q[3], t), lerp(q[1], q[2], t));
         }
-        QPen bp = borderPen; bp.setWidthF(1.5); bp.setCosmetic(true);
+        QPen bp(borderCol); bp.setWidthF(1.5); bp.setCosmetic(true);
         painter->setPen(bp); painter->setBrush(Qt::NoBrush);
         painter->drawPolygon(poly);
 
-        painter->setBrush(QColor(255, 255, 255, 235)); painter->setPen(Qt::NoPen);
-        for (int i = 0; i < 4; ++i)
-            painter->drawRect(QRectF(q[i].x() - hs, q[i].y() - hs, hs * 2, hs * 2));
+        painter->setBrush(handleFill); painter->setPen(Qt::NoPen);
+        for (int i = 0; i < 4; ++i) drawHandle(q[i]);
         painter->restore();
         return;
     }
@@ -758,15 +783,14 @@ void ImageView::cropDrawOverlay(QPainter *painter, const QRectF &br)
     const QRectF f = cropFrameVp;
     if (!f.isValid()) { painter->restore(); return; }
 
-    /* 1) Dim everything outside the frame. */
     QPainterPath outside;
     outside.addRect(QRectF(viewport()->rect()));
     QPainterPath inside; inside.addRect(f);
     outside = outside.subtracted(inside);
     painter->fillPath(outside, QColor(0, 0, 0, 140));
 
-    /* 2) Rule-of-thirds grid + frame border. */
-    QPen grid = gridPen; grid.setWidthF(1.0); grid.setCosmetic(true);
+    /* Rule-of-thirds grid + frame border. */
+    QPen grid(gridCol); grid.setWidthF(1.0); grid.setCosmetic(true);
     painter->setPen(grid);
     for (int k = 1; k <= 2; ++k) {
         const qreal x = f.left() + f.width()  * k / 3.0;
@@ -774,23 +798,24 @@ void ImageView::cropDrawOverlay(QPainter *painter, const QRectF &br)
         painter->drawLine(QPointF(x, f.top()), QPointF(x, f.bottom()));
         painter->drawLine(QPointF(f.left(), y), QPointF(f.right(), y));
     }
-    QPen border = borderPen; border.setWidthF(1.5); border.setCosmetic(true);
+    QPen border(borderCol); border.setWidthF(1.5); border.setCosmetic(true);
     painter->setPen(border);
     painter->setBrush(Qt::NoBrush);
     painter->drawRect(f);
 
-    /* 3) Handles: corners (squares) + edge mids (short bars). */
-    painter->setBrush(QColor(255, 255, 255, 235));
+    /* Handles: corners always; intermediate side handles only in the plain (non-transform) style. */
+    painter->setBrush(handleFill);
     painter->setPen(Qt::NoPen);
     const QPointF corners[4] = { f.topLeft(), f.topRight(), f.bottomRight(), f.bottomLeft() };
-    for (const QPointF &c : corners)
-        painter->drawRect(QRectF(c.x() - hs, c.y() - hs, hs * 2, hs * 2));
-    const QPointF mids[4] = {
-        QPointF(f.center().x(), f.top()), QPointF(f.right(), f.center().y()),
-        QPointF(f.center().x(), f.bottom()), QPointF(f.left(), f.center().y())
-    };
-    for (const QPointF &m : mids)
-        painter->drawRect(QRectF(m.x() - hs, m.y() - hs, hs * 2, hs * 2));
+    for (const QPointF &c : corners) drawHandle(c);
+    if (!transformStyle) {
+        const QPointF mids[4] = {
+            QPointF(f.center().x(), f.top()), QPointF(f.right(), f.center().y()),
+            QPointF(f.center().x(), f.bottom()), QPointF(f.left(), f.center().y())
+        };
+        for (const QPointF &m : mids)
+            painter->drawRect(QRectF(m.x() - hs, m.y() - hs, hs * 2, hs * 2));
+    }
 
     painter->restore();
 }
@@ -2343,6 +2368,15 @@ bool ImageView::event(QEvent *event) {
         }
     }
 
+    /* Crop: Alt/Opt toggles the "transform" rubber-band look the moment it is pressed/released (the
+       mouse-move path also tracks it, for when this view does not hold keyboard focus). */
+    if (cropActive() && (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease)) {
+        if (static_cast<QKeyEvent *>(event)->key() == Qt::Key_Alt) {
+            const bool held = (event->type() == QEvent::KeyPress);
+            if (held != cropAltHeld) { cropAltHeld = held; viewport()->update(); }
+        }
+    }
+
     if (event->type() == QEvent::NativeGesture) {
         // qDebug() << "ImageView::event" << event << event->type() << QApplication::keyboardModifiers();
         QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
@@ -2580,6 +2614,8 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
        Otherwise it is a normal canvas pan -- fall through so the image scrolls under the fixed
        frame; cropN is then recomputed from the (unchanged) frame after the pan, below. */
     if (cropActive()) {
+        const bool alt = (event->modifiers() & Qt::AltModifier);
+        if (alt != cropAltHeld) { cropAltHeld = alt; viewport()->update(); }
         if (cropDrag >= 0 && cropDrag <= 7) {
             cropResizeFromHandle(event->pos());
             viewport()->update();

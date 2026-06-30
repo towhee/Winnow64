@@ -65,9 +65,35 @@ struct EditLayer {
     EditParams params;
 };
 
+/*
+    Geometry (Transform tool): crop + straighten + 4-point perspective warp. PER-IMAGE (not per
+    layer) and applied LAST in the render -- after the develop ops + EXIF orientation -- so it is
+    non-destructive and the develop edits stay calibrated to the full frame. Pipeline order on the
+    output image is: straighten (rotate) -> warp (perspective) -> crop. Identity defaults => no-op.
+
+    Coordinate spaces (all normalized 0..1): quad corners are in the developed/oriented image (the
+    input to the geometry stage), order TL,TR,BR,BL; crop is in the POST-warp output image. Plain
+    doubles so JSON round-trips trivially.
+*/
+struct Geometry {
+    double cropX = 0.0, cropY = 0.0, cropW = 1.0, cropH = 1.0;   // crop rect, post-warp output space
+    double straighten = 0.0;                                     // degrees (deferred UI)
+    bool   hasWarp = false;                                      // 4-point perspective active
+    double quad[8] = {0,0, 1,0, 1,1, 0,1};                       // TL,TR,BR,BL, oriented-image space
+    bool   fillCanvas = false;                                   // content-aware fill (deferred)
+
+    bool cropIsIdentity() const {
+        return cropX == 0.0 && cropY == 0.0 && cropW == 1.0 && cropH == 1.0;
+    }
+    bool isIdentity() const {
+        return cropIsIdentity() && straighten == 0.0 && !hasWarp;
+    }
+};
+
 struct EditStack {
     int                 version = 1;
     QVector<EditLayer>  layers;
+    Geometry            geometry;       // per-image crop / straighten / warp (applied last)
 
     /* The params the renderer should apply. Today: the first enabled layer's params (one layer
        in Increment 1). When the compositor lands this becomes a true multi-layer composite. */
@@ -80,6 +106,7 @@ struct EditStack {
     /* True when nothing would change a pixel -- lets callers skip Develop entirely and avoids
        writing a sidecar for an untouched image. */
     bool isIdentity() const {
+        if (!geometry.isIdentity()) return false;
         for (const EditLayer &l : layers)
             if (l.enabled && (!l.params.isIdentity() || !l.masks.isEmpty())) return false;
         return true;
@@ -178,12 +205,43 @@ struct EditStack {
         QJsonObject o;
         o["version"] = version;
         o["layers"]  = arr;
+        if (!geometry.isIdentity()) o["geometry"] = geometryToJson(geometry);
         return o;
+    }
+
+    static QJsonObject geometryToJson(const Geometry &g) {
+        QJsonObject o;
+        o["cropX"] = g.cropX; o["cropY"] = g.cropY;
+        o["cropW"] = g.cropW; o["cropH"] = g.cropH;
+        o["straighten"] = g.straighten;
+        o["hasWarp"] = g.hasWarp;
+        o["fillCanvas"] = g.fillCanvas;
+        if (g.hasWarp) {
+            QJsonArray q;
+            for (double v : g.quad) q.append(v);
+            o["quad"] = q;
+        }
+        return o;
+    }
+
+    static Geometry geometryFromJson(const QJsonObject &o) {
+        Geometry g;
+        g.cropX = o.value("cropX").toDouble(g.cropX);
+        g.cropY = o.value("cropY").toDouble(g.cropY);
+        g.cropW = o.value("cropW").toDouble(g.cropW);
+        g.cropH = o.value("cropH").toDouble(g.cropH);
+        g.straighten = o.value("straighten").toDouble(g.straighten);
+        g.hasWarp = o.value("hasWarp").toBool(g.hasWarp);
+        g.fillCanvas = o.value("fillCanvas").toBool(g.fillCanvas);
+        const QJsonArray q = o.value("quad").toArray();
+        if (q.size() == 8) for (int i = 0; i < 8; ++i) g.quad[i] = q[i].toDouble(g.quad[i]);
+        return g;
     }
 
     static EditStack fromJson(const QJsonObject &o) {
         EditStack s;
         s.version = o.value("version").toInt(s.version);
+        if (o.contains("geometry")) s.geometry = geometryFromJson(o.value("geometry").toObject());
         const QJsonArray arr = o.value("layers").toArray();
         for (const QJsonValue &v : arr) {
             const QJsonObject lo = v.toObject();

@@ -1028,6 +1028,8 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
     StackRenderJob job;
     if (currentImagePath.isEmpty()) return job;
     const EditStack s = stackCache.value(currentImagePath);
+    job.geometry = s.geometry;                  // per-image crop/warp, applied last (set even with
+                                                // no layers: a crop alone is a valid edit)
     if (s.layers.isEmpty()) return job;
     job.base = s.layers[0].params;              // Base (layer 0), applied globally
     for (int i = 1; i < s.layers.size(); ++i) {
@@ -1042,6 +1044,22 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
         job.layers.append(lj);
     }
     return job;
+}
+
+Geometry DevelopProperties::currentGeometry() const
+{
+    if (currentImagePath.isEmpty()) return Geometry();
+    return stackCache.value(currentImagePath).geometry;
+}
+
+void DevelopProperties::setCurrentGeometry(const Geometry &g)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.layers.isEmpty()) s.layers.append(EditLayer());   // keep the stack shape consistent
+    s.geometry = g;
+    dirty.insert(currentImagePath);
+    if (debounceWriteTimer) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 QStringList DevelopProperties::currentLayerNames() const

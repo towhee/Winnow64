@@ -2756,16 +2756,51 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     The overlay draws the quad with a bilinear 3x3 guide grid + 4 corner handles and dims outside the
     polygon. Panning still works (the quad is fixed on screen, recomputed from the moving image; the
     pan-clamp uses the quad's bounding box, cropFrameBBoxVp). Choosing an aspect, re-entering, or
-    Rectify leaves warp mode. The Rectify button (TransformPanel::rectifyRequested ->
-    ImageView::rectifyCrop) currently flattens the quad to its axis-aligned bounding box and emits
-    cropRectifyRequested -- the real perspective PIXEL warp (cv::warpPerspective + largest-inscribed-
-    rect fit) is the deferred engine step.
+    Rectify leaves warp mode.
 
-    NOT yet done (next increments): the perspective PIXEL warp + largest-inscribed-rect behind
-    Rectify; persisting cropN/quad to the edit stack and APPLYING the crop/warp to the
-    rendered/exported pixels (still geometry-applied-last, see above); re-initialising on image
-    switch (currently re-toggle R per image); content-aware fill. The crop/warp is presently an
-    interactive overlay only -- it does not yet change pixels.
+    Perspective-warp PIXEL engine -- IMPLEMENTED (Develop/Transform/croptransform.{h,cpp}):
+    CropTransform::rectifyPerspective(src, quadPx[4], &outCropNorm) warps the whole image so the
+    quad (TL,TR,BR,BL image-pixel coords) becomes an axis-aligned rectangle and returns the
+    corrected QImage (transparent where the warp leaves the original) plus the largest inscribed
+    axis-aligned rectangle (normalized) as the default crop. Math: cv::getPerspectiveTransform
+    (quad -> WxH rect sized by averaged opposite-edge lengths) -> translate into a positive canvas
+    bounded by the warped image corners -> cv::warpPerspective (BGRA, transparent border) ->
+    validity mask (alpha>=250) -> largest-rectangle-in-binary-matrix (histogram+stack, on a
+    downscaled mask). Self-contained (OpenCV only) so it can later be called from the render
+    pipeline. Validated offline vs the same algorithm in cv2 (keystone quad -> exact axis-aligned
+    rect; inscribed rect avoids the transparent corners). ImageView::rectifyCrop drives it on the
+    DISPLAYED image: warp -> setPixmap -> resetFitZoom -> re-enlarge scene -> crop continues on the
+    rectified image (cropN = outCropNorm). This is a DISPLAY-LEVEL preview (the develop pipeline
+    still holds the original; a develop edit re-renders un-warped).
+
+    Persistent crop (geometry applied in the render pipeline) -- IMPLEMENTED (Phase A, rectangle
+    crop):  EditStack now carries a per-image Geometry (cropX/Y/W/H, straighten, hasWarp+quad[8],
+    fillCanvas), serialized in the sidecar (toJson/fromJson, folded into isIdentity). The renderer
+    applies it LAST -- developCompositeStack runs CropTransform::applyGeometry(out, job.geometry)
+    after the develop ops + EXIF orientation, on the full-output-dimension image, in both the proxy
+    and async full-res paths (StackRenderJob.geometry from DevelopProperties::stackJob).
+    Commit model (Lightroom): MW::developCropEditing gates it -- while the crop tool is being edited
+    the render NEUTRALIZES the geometry so the FULL frame shows for the overlay; committing applies
+    it. MW::enterDevelopCrop (set flag -> render full -> ImageView::beginCropEdit(storedCrop)) and
+    MW::exitDevelopCrop (read cropRect -> endCropEdit -> DevelopProperties::setCurrentGeometry ->
+    clear flag -> render cropped) are driven from toggleDevelopTransform + developDockVisibilityChange.
+    ImageView::setDevelopPreview re-fits when the image dimensions change (crop applied/removed); the
+    same-size path (a develop-slider drag) still just swaps pixels.
+
+    Persistent warp (Phase B) -- IMPLEMENTED: the 4-point perspective is a STORED geometry param
+    (hasWarp + quad[8]), non-destructive (no pixmap bake). Two-phase display via the render gate:
+    while the crop tool is active the render suppresses ONLY the crop (resets it to full) but KEEPS
+    the warp, so before Rectify the full frame shows (trace the quad) and after Rectify the corrected
+    canvas shows (set the final crop). MW::rectifyDevelopCrop stores g.hasWarp + g.quad (= the traced
+    corners, normalized in the developed+oriented frame = applyGeometry's input space) + g.crop (the
+    suggested largest-inscribed rect from ImageView::computeRectifyCrop), then re-renders the
+    corrected canvas and restarts the crop overlay on it. exitDevelopCrop keeps the stored warp and
+    updates only the crop. KNOWN LIMIT: re-warping an already-warped image is wrong (the new quad is
+    traced on the warped canvas, but applyGeometry warps the un-warped frame) -- there is no
+    warp-reset UI yet, so fresh-image warp is the supported path.
+
+    NOT yet done (next increments): the straighten/Level tool; a warp-reset (to re-warp); confirm
+    export applies the geometry; content-aware fill. The panel's Crop and Level buttons are unwired.
 
     Sections (built via PropertyEditor::addItem):
         Layers   header with -/+ buttons (same idiom as Embellish Templates) + a "Select

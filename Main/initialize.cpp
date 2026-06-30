@@ -1808,9 +1808,9 @@ void MW::createDevelopDock()
             [this](bool locked){
                 if (imageView) imageView->setCropAspect(transformPanel->aspectRatio(), locked);
             });
-    /* Rectify button: warp the 4-point perspective quad back to a rectangle (pixel warp deferred). */
-    connect(transformPanel, &TransformPanel::rectifyRequested, this,
-            [this]{ if (imageView) imageView->rectifyCrop(); });
+    /* Rectify button: store the 4-point warp + suggested crop into the image geometry and show the
+       corrected canvas (two-phase warp; non-destructive). */
+    connect(transformPanel, &TransformPanel::rectifyRequested, this, &MW::rectifyDevelopCrop);
     developContainerLayout->addWidget(developProperties, 1);
     developDock->setWidget(developContainer);
     /* The tone-region slider under the histogram drives the active layer's tone-split params. */
@@ -1897,13 +1897,13 @@ void MW::developDockVisibilityChange()
     else                          imageView->endMaskEdit();
 
     /* Same invariant for the crop tool: a visible Transform panel means crop is active. When the
-       dock hides the panel goes with it, so end the crop; when it returns with the panel showing,
-       re-activate it. */
+       dock hides the panel goes with it, so commit + end the crop; when it returns with the panel
+       showing, re-activate it. */
     if (transformPanel) {
-        if (developDock->isVisible() && developTransformVisible)
-            imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked());
-        else
-            imageView->endCropEdit();
+        if (developDock->isVisible() && developTransformVisible) {
+            if (!developCropEditing) enterDevelopCrop();
+        }
+        else if (developCropEditing) exitDevelopCrop();
     }
 }
 
