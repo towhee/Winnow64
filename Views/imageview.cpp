@@ -446,6 +446,355 @@ void ImageView::setMaskBrushSettings(double size, double feather, double flow, b
     if (maskEditMode && maskHover) viewport()->update();   // cursor preview (Stage 2)
 }
 
+/* ========================= Develop crop editing (Transform panel) =========================
+   The crop tool NEVER changes the view transform (no zoom, no auto-pan): the user keeps full
+   control of zoom/pan. cropN (normalized image coords) is the source of truth; cropFrameVp (the
+   on-screen frame) is derived from it. Handles resize the frame over a STATIC canvas; the crop is
+   repositioned by PANNING the canvas under the fixed frame (normal pan; cropN recomputed as the
+   image slides). When the user zooms or the window resizes, the frame tracks the same content
+   (cropSyncFrameFromN). beginCropEdit/endCropEdit only toggle the overlay -- they leave the image
+   exactly where the user had it. */
+
+void ImageView::beginCropEdit(double aspect, bool locked)
+{
+    if (G::isLogger) G::log("ImageView::beginCropEdit");
+    if (!pmItem || !pmItem->isVisible()) return;
+    if (cropEditMode) { setCropAspect(aspect, locked); return; }
+
+    cropAspect = aspect;
+    cropAspectLocked = locked;
+    /* Start from the full image (or the aspect-constrained largest inscribed rect). */
+    cropN = QRectF(0.0, 0.0, 1.0, 1.0);
+    if (cropAspectLocked && cropAspect > 0.0) {
+        const QRectF br = pmItem->boundingRect();
+        const double imgA = br.width() / br.height();
+        double w = 1.0, h = 1.0;
+        if (cropAspect > imgA) h = imgA / cropAspect;    // wider than image -> limit height
+        else                   w = cropAspect / imgA;    // taller -> limit width
+        cropN = QRectF((1.0 - w) / 2.0, (1.0 - h) / 2.0, w, h);
+    }
+
+    cropEditMode = true;
+    cropWarp = false;                 // always start as a plain rectangle crop
+    cropDrag = -1;
+    /* Give the view room to pan even at fit zoom (so the image can be dragged under the fixed
+       frame, with parts moving off the central widget) WITHOUT changing the zoom: only the
+       scrollable area grows, not the transform. Restored in endCropEdit. */
+    const QRectF imgScene = pmItem->mapToScene(pmItem->boundingRect()).boundingRect();
+    setSceneRect(imgScene.adjusted(-imgScene.width(), -imgScene.height(),
+                                    imgScene.width(),  imgScene.height()));
+    cropSyncFrameFromN();             // derive the on-screen frame from cropN (no transform change)
+    setCursor(Qt::ArrowCursor);
+    viewport()->update();
+    cropEmitChanged();
+}
+
+void ImageView::endCropEdit()
+{
+    if (!cropEditMode) return;
+    if (G::isLogger) G::log("ImageView::endCropEdit");
+    cropEditMode = false;
+    cropWarp = false;
+    cropDrag = -1;
+    /* Restore the normal scrollable area and re-centre the (possibly panned) image. Zoom is left
+       as the user set it. */
+    setSceneRect(scene->itemsBoundingRect());
+    centerOn(pmItem);
+    setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
+    viewport()->update();            // clear the overlay; the view transform is untouched
+}
+
+void ImageView::setCropAspect(double aspect, bool locked)
+{
+    cropAspect = aspect;
+    cropAspectLocked = locked;
+    if (!cropEditMode) return;
+    cropWarp = false;                 // choosing an aspect implies a rectangle: leave warp mode
+    /* Re-fit the current crop centre to the new aspect (shrink to stay inside the image). */
+    if (cropAspectLocked && cropAspect > 0.0) {
+        const QRectF br = pmItem->boundingRect();
+        const QPointF c = cropN.center();
+        /* Keep the current crop width, derive height from the aspect (in image-px, then back to
+           normalized), then clamp into the image. */
+        double w = cropN.width();
+        double h = (w * br.width() / cropAspect) / br.height();
+        if (h > 1.0) { h = 1.0; w = (h * br.height() * cropAspect) / br.width(); }
+        cropN = QRectF(c.x() - w / 2.0, c.y() - h / 2.0, w, h);
+        if (cropN.left()   < 0.0) cropN.moveLeft(0.0);
+        if (cropN.top()    < 0.0) cropN.moveTop(0.0);
+        if (cropN.right()  > 1.0) cropN.moveRight(1.0);
+        if (cropN.bottom() > 1.0) cropN.moveBottom(1.0);
+    }
+    cropSyncFrameFromN();
+    viewport()->update();
+    cropEmitChanged();
+}
+
+QRectF ImageView::cropImageOnScreenRect() const
+{
+    /* The image's bounding rect in viewport px, clipped to the visible viewport. */
+    const QRectF imgVp = mapFromScene(pmItem->mapToScene(pmItem->boundingRect())).boundingRect();
+    return imgVp.intersected(QRectF(viewport()->rect()));
+}
+
+QRectF ImageView::cropNToVpRect(const QRectF &n) const
+{
+    /* normalized image rect -> viewport px (tracks the current user zoom/pan). */
+    const QRectF br = pmItem->boundingRect();
+    const QPointF tl = mapFromScene(pmItem->mapToScene(
+                           QPointF(n.left()  * br.width(), n.top()    * br.height())));
+    const QPointF brp = mapFromScene(pmItem->mapToScene(
+                           QPointF(n.right() * br.width(), n.bottom() * br.height())));
+    return QRectF(tl, brp).normalized();
+}
+
+QPointF ImageView::cropVpToN(QPointF vp) const
+{
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return QPointF();
+    const QPointF ip = pmItem->mapFromScene(mapToScene(vp.toPoint()));
+    return QPointF(ip.x() / br.width(), ip.y() / br.height());
+}
+
+QPointF ImageView::cropNToVp(QPointF n) const
+{
+    const QRectF br = pmItem->boundingRect();
+    return mapFromScene(pmItem->mapToScene(QPointF(n.x() * br.width(), n.y() * br.height())));
+}
+
+void ImageView::cropEnterWarp()
+{
+    /* Seed the free quad from the current rectangle (corners TL,TR,BR,BL). */
+    cropQuadN[0] = cropN.topLeft();   cropQuadN[1] = cropN.topRight();
+    cropQuadN[2] = cropN.bottomRight(); cropQuadN[3] = cropN.bottomLeft();
+    for (int i = 0; i < 4; ++i) cropQuadVp[i] = cropNToVp(cropQuadN[i]);
+    cropWarp = true;
+}
+
+QRectF ImageView::cropFrameBBoxVp() const
+{
+    if (!cropWarp) return cropFrameVp;
+    return QPolygonF(QVector<QPointF>(cropQuadVp, cropQuadVp + 4)).boundingRect();
+}
+
+void ImageView::cropSyncFrameFromN()
+{
+    if (!cropActive()) return;
+    if (cropWarp) { for (int i = 0; i < 4; ++i) cropQuadVp[i] = cropNToVp(cropQuadN[i]); }
+    else            cropFrameVp = cropNToVpRect(cropN);
+}
+
+void ImageView::cropEmitChanged()
+{
+    if (cropWarp) {
+        /* No rectangle while warping; emit the quad's bounding box so the persistence hook still
+           gets a sane value (the real quad geometry lands with the warp engine). */
+        const QRectF b = QPolygonF(QVector<QPointF>(cropQuadN, cropQuadN + 4))
+                             .boundingRect().intersected(QRectF(0, 0, 1, 1));
+        emit cropChanged(b.x(), b.y(), b.width(), b.height());
+        return;
+    }
+    cropN = cropN.intersected(QRectF(0, 0, 1, 1));
+    emit cropChanged(cropN.x(), cropN.y(), cropN.width(), cropN.height());
+}
+
+void ImageView::rectifyCrop()
+{
+    if (!cropActive() || !cropWarp) return;
+    if (G::isLogger) G::log("ImageView::rectifyCrop");
+    /* The perspective PIXEL warp is the deferred engine step. For now, leave warp mode and take the
+       quad's axis-aligned bounding box as the rectangular crop, and notify so the engine can hook
+       in later. */
+    const QRectF b = QPolygonF(QVector<QPointF>(cropQuadN, cropQuadN + 4))
+                         .boundingRect().intersected(QRectF(0, 0, 1, 1));
+    cropN = b;
+    cropWarp = false;
+    cropSyncFrameFromN();
+    viewport()->update();
+    cropEmitChanged();
+    emit cropRectifyRequested();
+}
+
+QRectF ImageView::cropVpRectToN(const QRectF &vp) const
+{
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return QRectF();
+    const QPointF a = pmItem->mapFromScene(mapToScene(vp.topLeft().toPoint()));
+    const QPointF b = pmItem->mapFromScene(mapToScene(vp.bottomRight().toPoint()));
+    return QRectF(a.x() / br.width(), a.y() / br.height(),
+                  (b.x() - a.x()) / br.width(), (b.y() - a.y()) / br.height());
+}
+
+int ImageView::cropHitTest(QPoint vp) const
+{
+    const qreal g = 14.0;       // grab radius, px
+    if (cropWarp) {
+        /* Warp: only the 4 free corners are handles (0..3); 8 = inside the quad (pan). */
+        for (int i = 0; i < 4; ++i)
+            if (QLineF(vp, cropQuadVp[i]).length() <= g) return i;
+        if (QPolygonF(QVector<QPointF>(cropQuadVp, cropQuadVp + 4)).containsPoint(vp, Qt::OddEvenFill))
+            return 8;
+        return -1;
+    }
+    /* Rectangle handles 0..7: 0 TL,1 TR,2 BR,3 BL corners; 4 T,5 R,6 B,7 L edge mids. 8 = inside. */
+    const QRectF f = cropFrameVp;
+    if (!f.isValid()) return -1;
+    const QPointF pts[8] = {
+        f.topLeft(), f.topRight(), f.bottomRight(), f.bottomLeft(),
+        QPointF(f.center().x(), f.top()), QPointF(f.right(), f.center().y()),
+        QPointF(f.center().x(), f.bottom()), QPointF(f.left(), f.center().y())
+    };
+    for (int i = 0; i < 8; ++i)
+        if (QLineF(vp, pts[i]).length() <= g) return i;
+    if (f.contains(vp)) return 8;
+    return -1;
+}
+
+void ImageView::cropResizeFromHandle(QPoint vp)
+{
+    /* Move the active handle to vp over a STATIC image (no transform change); rebuild cropN from
+       the frame rect. The part of the frame opposite the dragged handle is the anchor (stays put).
+       With the aspect locked the free dimension follows so the frame keeps its ratio. The handle is
+       clamped to the image's on-screen rect so the crop can never exceed the image. */
+    const QRectF vr = cropImageOnScreenRect();
+    const qreal x = qBound(vr.left(), qreal(vp.x()), vr.right());
+    const qreal y = qBound(vr.top(),  qreal(vp.y()), vr.bottom());
+
+    /* Warp: drag a single quad corner freely (no aspect, no opposite-anchor coupling). */
+    if (cropWarp) {
+        if (cropDrag < 0 || cropDrag > 3) return;
+        cropQuadVp[cropDrag] = QPointF(x, y);
+        cropQuadN[cropDrag]  = cropVpToN(cropQuadVp[cropDrag]);
+        cropEmitChanged();
+        return;
+    }
+
+    const QRectF f0 = cropFrameVp;
+    const qreal a = (cropAspectLocked && cropAspect > 0.0) ? cropAspect : 0.0;
+    const qreal minSz = 16.0;
+    QRectF f = f0;
+
+    if (cropDrag <= 3) {                             // ---- corner ----
+        /* Anchor = opposite corner. */
+        QPointF anchor;
+        switch (cropDrag) {
+        case 0: anchor = f0.bottomRight(); break;    // TL drags
+        case 1: anchor = f0.bottomLeft();  break;    // TR
+        case 2: anchor = f0.topLeft();     break;    // BR
+        default: anchor = f0.topRight();   break;    // BL
+        }
+        qreal w = qMax(minSz, std::abs(x - anchor.x()));
+        qreal h = (a > 0.0) ? w / a : qMax(minSz, std::abs(y - anchor.y()));
+        if (a > 0.0) w = h * a;
+        const qreal left = (x < anchor.x()) ? anchor.x() - w : anchor.x();
+        const qreal top  = (y < anchor.y()) ? anchor.y() - h : anchor.y();
+        f = QRectF(left, top, w, h);
+    }
+    else {                                           // ---- edge ----
+        if (cropDrag == 5 || cropDrag == 7) {        // R / L edge: width changes
+            const qreal anchorX = (cropDrag == 5) ? f0.left() : f0.right();
+            qreal w = qMax(minSz, std::abs(x - anchorX));
+            const qreal left = (x < anchorX) ? anchorX - w : anchorX;
+            qreal h = (a > 0.0) ? w / a : f0.height();
+            const qreal top = (a > 0.0) ? f0.center().y() - h / 2.0 : f0.top();
+            f = QRectF(left, top, w, h);
+        } else {                                     // T / B edge: height changes
+            const qreal anchorY = (cropDrag == 6) ? f0.top() : f0.bottom();
+            qreal h = qMax(minSz, std::abs(y - anchorY));
+            const qreal top = (y < anchorY) ? anchorY - h : anchorY;
+            qreal w = (a > 0.0) ? h * a : f0.width();
+            const qreal left = (a > 0.0) ? f0.center().x() - w / 2.0 : f0.left();
+            f = QRectF(left, top, w, h);
+        }
+    }
+
+    cropFrameVp = f.normalized().intersected(vr);
+    cropN = cropVpRectToN(cropFrameVp);
+    cropEmitChanged();
+}
+
+void ImageView::cropDrawOverlay(QPainter *painter, const QRectF &br)
+{
+    Q_UNUSED(br);
+    painter->save();
+    painter->resetTransform();                 // draw in viewport coords (constant on-screen size)
+    painter->setRenderHint(QPainter::Antialiasing, true);
+
+    const QPen gridPen(QColor(255, 255, 255, 90));
+    const QPen borderPen(QColor(255, 255, 255, 220));
+    const qreal hs = 5.0;
+
+    if (cropWarp) {
+        /* ---- Warp quad (TL,TR,BR,BL) ---- */
+        const QPointF *q = cropQuadVp;
+        QPolygonF poly(QVector<QPointF>(q, q + 4));
+
+        /* Dim outside the quad. */
+        QPainterPath outside; outside.addRect(QRectF(viewport()->rect()));
+        QPainterPath inside;  inside.addPolygon(poly); inside.closeSubpath();
+        painter->fillPath(outside.subtracted(inside), QColor(0, 0, 0, 140));
+
+        /* A bilinear 3x3 guide grid (interpolated along the edges -- a good visual approximation of
+           the perspective grid). */
+        auto lerp = [](QPointF a, QPointF b, qreal t){ return a + (b - a) * t; };
+        QPen gp = gridPen; gp.setWidthF(1.0); gp.setCosmetic(true); painter->setPen(gp);
+        for (int k = 1; k <= 2; ++k) {
+            const qreal t = k / 3.0;
+            painter->drawLine(lerp(q[0], q[1], t), lerp(q[3], q[2], t));   // TL->TR .. BL->BR
+            painter->drawLine(lerp(q[0], q[3], t), lerp(q[1], q[2], t));   // TL->BL .. TR->BR
+        }
+        QPen bp = borderPen; bp.setWidthF(1.5); bp.setCosmetic(true);
+        painter->setPen(bp); painter->setBrush(Qt::NoBrush);
+        painter->drawPolygon(poly);
+
+        painter->setBrush(QColor(255, 255, 255, 235)); painter->setPen(Qt::NoPen);
+        for (int i = 0; i < 4; ++i)
+            painter->drawRect(QRectF(q[i].x() - hs, q[i].y() - hs, hs * 2, hs * 2));
+        painter->restore();
+        return;
+    }
+
+    /* ---- Rectangle crop ---- */
+    const QRectF f = cropFrameVp;
+    if (!f.isValid()) { painter->restore(); return; }
+
+    /* 1) Dim everything outside the frame. */
+    QPainterPath outside;
+    outside.addRect(QRectF(viewport()->rect()));
+    QPainterPath inside; inside.addRect(f);
+    outside = outside.subtracted(inside);
+    painter->fillPath(outside, QColor(0, 0, 0, 140));
+
+    /* 2) Rule-of-thirds grid + frame border. */
+    QPen grid = gridPen; grid.setWidthF(1.0); grid.setCosmetic(true);
+    painter->setPen(grid);
+    for (int k = 1; k <= 2; ++k) {
+        const qreal x = f.left() + f.width()  * k / 3.0;
+        const qreal y = f.top()  + f.height() * k / 3.0;
+        painter->drawLine(QPointF(x, f.top()), QPointF(x, f.bottom()));
+        painter->drawLine(QPointF(f.left(), y), QPointF(f.right(), y));
+    }
+    QPen border = borderPen; border.setWidthF(1.5); border.setCosmetic(true);
+    painter->setPen(border);
+    painter->setBrush(Qt::NoBrush);
+    painter->drawRect(f);
+
+    /* 3) Handles: corners (squares) + edge mids (short bars). */
+    painter->setBrush(QColor(255, 255, 255, 235));
+    painter->setPen(Qt::NoPen);
+    const QPointF corners[4] = { f.topLeft(), f.topRight(), f.bottomRight(), f.bottomLeft() };
+    for (const QPointF &c : corners)
+        painter->drawRect(QRectF(c.x() - hs, c.y() - hs, hs * 2, hs * 2));
+    const QPointF mids[4] = {
+        QPointF(f.center().x(), f.top()), QPointF(f.right(), f.center().y()),
+        QPointF(f.center().x(), f.bottom()), QPointF(f.left(), f.center().y())
+    };
+    for (const QPointF &m : mids)
+        painter->drawRect(QRectF(m.x() - hs, m.y() - hs, hs * 2, hs * 2));
+
+    painter->restore();
+}
+
 bool ImageView::parseMaskParams(const QString &json)
 {
     QJsonParseError err;
@@ -575,6 +924,11 @@ int ImageView::maskHitTest(QPoint vp) const
 void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
 {
     QGraphicsView::drawForeground(painter, rect);
+    if (cropActive()) {
+        const QRectF br = pmItem->boundingRect();
+        if (br.width() > 0 && br.height() > 0) cropDrawOverlay(painter, br);
+        return;
+    }
     if (!maskHandlesEditable()) return;
     const QRectF br = pmItem->boundingRect();
     if (br.width() <= 0 || br.height() <= 0) return;
@@ -1007,6 +1361,10 @@ void ImageView::scale(bool isNewImage)
     placeClassificationBadge();
     setShootingInfo(infoText);
     emit updateStatus(true, "", "ImageView::scale");
+
+    /* User zoom while cropping: the crop tool doesn't drive zoom, but the on-screen frame must
+       follow the same image content, so re-derive it from cropN. */
+    if (cropActive()) { cropSyncFrameFromN(); viewport()->update(); }
     //*/
 }
 
@@ -1218,7 +1576,8 @@ void ImageView::resizeEvent(QResizeEvent *event)
     placeClassificationBadge();
     setShootingInfo(infoText);
 
-
+    // Keep the crop frame on the same image content after a window resize.
+    if (cropActive()) { cropSyncFrameFromN(); viewport()->update(); }
 
 
 
@@ -1902,6 +2261,10 @@ void ImageView::wheelEvent(QWheelEvent *event)
     if (G::isLogger)
         qDebug() << "ImageView::wheelEvent";
 
+    /* While cropping, swallow the wheel so it can't navigate to another image (which would leave
+       the crop overlay stale -- image-switch re-init is a later increment). */
+    if (cropActive()) { event->accept(); return; }
+
     /* Brush active over the image: a two-finger drag (or wheel) resizes the brush instead of
        changing image. Vertical delta; pixelDelta on a trackpad, angleDelta on a mouse wheel. */
     if (maskEditMode && maskTool == 2 && maskHover) {
@@ -2041,6 +2404,26 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) {
         return;
+    }
+
+    /* Crop: grabbing a handle resizes the frame (static canvas) -- consume it. Alt + a corner in
+       rectangle mode breaks the rectangle into a free 4-point warp quad. Anywhere else is a normal
+       canvas pan that slides the image under the fixed frame, so fall through to the pan handling
+       below (cropDrag stays -1; the frame is re-derived from cropN as the image moves). */
+    if (cropActive() && event->button() == Qt::LeftButton) {
+        const int h = cropHitTest(event->pos());
+        if (!cropWarp && (event->modifiers() & Qt::AltModifier) && h >= 0 && h <= 3) {
+            cropEnterWarp();        // seed the quad, then drag this corner
+        }
+        const int maxHandle = cropWarp ? 3 : 7;
+        if (h >= 0 && h <= maxHandle) {
+            cropDrag = h;
+            isLeftMouseBtnPressed = true;
+            setCursor(Qt::SizeAllCursor);
+            viewport()->update();
+            return;
+        }
+        cropDrag = -1;          // pan: handled by the normal Left-button path below
     }
 
     /* Brush: a left press begins a stroke (Alt = erase). Painting consumes the event so the image
@@ -2193,6 +2576,24 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
         if (maskPainting) return;          // consume while painting; hover falls through to scopes
     }
 
+    /* Crop interaction. A handle drag resizes the frame over the STATIC image (consumed here).
+       Otherwise it is a normal canvas pan -- fall through so the image scrolls under the fixed
+       frame; cropN is then recomputed from the (unchanged) frame after the pan, below. */
+    if (cropActive()) {
+        if (cropDrag >= 0 && cropDrag <= 7) {
+            cropResizeFromHandle(event->pos());
+            viewport()->update();
+            return;
+        }
+        if (!isLeftMouseBtnPressed) {                  // hover: pick the cursor
+            const int h = cropHitTest(event->pos());
+            setCursor(h >= 0 && h <= 7 ? Qt::SizeAllCursor
+                                       : (h == 8 ? Qt::OpenHandCursor : Qt::ArrowCursor));
+            return;
+        }
+        /* else: panning -- let the normal scrollbar pan below run, then recompute cropN. */
+    }
+
     /* Mask edit drag. Linear: endpoint rotate+scale about centre, or translate. Radial: centre
        move, axis-handle resize, or outline rotate. */
     if (maskEditMode && maskDrag >= 0) {
@@ -2260,7 +2661,9 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
     if (isLeftMouseBtnPressed) {
         if (G::isSlideShow) emit killSlideshow();
-        if (isScrollable) {
+        /* While cropping the scene is enlarged so the canvas can be dragged under the fixed frame
+           even at fit zoom (otherwise isScrollable would be false and the drag would do nothing). */
+        if (isScrollable || cropActive()) {
             setCursor(Qt::ClosedHandCursor);
             int oldHSB = horizontalScrollBar()->value();
             int oldVSB = verticalScrollBar()->value();
@@ -2282,6 +2685,28 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
                 ; //*/
             mouseDragPt.setX(event->x());
             mouseDragPt.setY(event->y());
+
+            /* Crop pan: the frame is fixed on screen and the image scrolls under it. Clamp the
+               scroll so the image always covers the frame (you can't pan the crop off the image),
+               then recompute cropN from the unchanged frame. */
+            if (cropActive() && cropDrag < 0) {
+                const QRectF imgVp =
+                    mapFromScene(pmItem->mapToScene(pmItem->boundingRect())).boundingRect();
+                const QRectF fb = cropFrameBBoxVp();   // frame, or the quad's bounding box
+                qreal dx = 0, dy = 0;   // viewport px to move the image to re-cover the frame
+                if      (imgVp.left()   > fb.left())   dx = fb.left()   - imgVp.left();
+                else if (imgVp.right()  < fb.right())  dx = fb.right()  - imgVp.right();
+                if      (imgVp.top()    > fb.top())    dy = fb.top()    - imgVp.top();
+                else if (imgVp.bottom() < fb.bottom()) dy = fb.bottom() - imgVp.bottom();
+                if (dx != 0) horizontalScrollBar()->setValue(
+                                 horizontalScrollBar()->value() - qRound(dx));
+                if (dy != 0) verticalScrollBar()->setValue(
+                                 verticalScrollBar()->value() - qRound(dy));
+                /* The frame/quad is fixed on screen; recompute the crop from it as the image moved. */
+                if (cropWarp) for (int i = 0; i < 4; ++i) cropQuadN[i] = cropVpToN(cropQuadVp[i]);
+                else          cropN = cropVpRectToN(cropFrameVp);
+                cropEmitChanged();
+            }
         }
     }
     else {
@@ -2315,6 +2740,19 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger)
         G::log("ImageView::mouseReleaseEvent", "isScrollable =" + QVariant(isScrollable).toString());
+
+    /* End a crop gesture. The view transform is never touched, so there is no re-stage: just clear
+       the drag, release any grab the pan path took, and leave the image where the user left it
+       (no zoom-toggle-on-release). */
+    if (cropActive() && isLeftMouseBtnPressed) {
+        cropDrag = -1;
+        isLeftMouseBtnPressed = false;
+        QGraphicsView::mouseReleaseEvent(event);     // release the pan grab, if any
+        setCursor(Qt::ArrowCursor);
+        viewport()->update();
+        cropEmitChanged();
+        return;
+    }
 
     /* Finish a brush stroke: composite it into the committed mask, append it to the stroke list,
        and persist the updated paramsJson (which triggers the masked re-render in stage 3). */

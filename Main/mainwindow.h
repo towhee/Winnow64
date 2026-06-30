@@ -44,6 +44,7 @@
 #include "Develop/Properties/developproperties.h"
 #include "Develop/workingimage.h"
 #include "Develop/Scopes/scopesview.h"
+#include "Develop/Transform/transformpanel.h"
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
 
@@ -573,6 +574,8 @@ private slots:
     void updateDevelopScopes(const QImage &shown);
     /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the choice. */
     void toggleDevelopScopes();
+    /* Show/hide the Develop Transform panel (editor-bar toggle / "R" shortcut); persists. */
+    void toggleDevelopTransform();
     /* Loupe cursor moved to a normalized position over the displayed image: sample that pixel and
        drive the scopes' readout marker (no-op while the scopes are hidden). */
     void onImageCursorPos(double xFraction, double yFraction);
@@ -1030,6 +1033,7 @@ private:
     QAction *thumbDockVisibleAction;
     QAction *embelDockVisibleAction;
     QAction *developDockVisibleAction;
+    QAction *developTransformAction;    // "R": toggle the Develop Transform (crop) panel
 //    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
@@ -1202,6 +1206,11 @@ private:
        toggled by a button on the Develop editor bar and persisted (Develop/scopesVisible). */
     ScopesView *scopesView = nullptr;
     bool developScopesVisible = true;
+    /* Develop Transform (crop + perspective) panel: a control strip below the scopes and above
+       the property tree. Toggled by a button on the Develop editor bar and the "R" shortcut;
+       visibility persists (Develop/transformVisible). */
+    TransformPanel *transformPanel = nullptr;
+    bool developTransformVisible = false;
     /* The QImage last pushed to the scopes (== what the loupe shows; implicitly shared, so
        holding it is free). Sampled per pixel for the cursor readout marker. */
     QImage developShownImage;

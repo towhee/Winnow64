@@ -1060,6 +1060,28 @@
          <string>Toggles; while a brush mask tool is active</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Transform Panel</string>
+        </property>
+        <property name="text">
+         <string>R</string>
+        </property>
+        <property name="text">
+         <string>Toggles the crop / perspective panel</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Lock Aspect Ratio</string>
+        </property>
+        <property name="text">
+         <string>A</string>
+        </property>
+        <property name="text">
+         <string>Toggles; while the Transform panel has focus</string>
+        </property>
+       </item>
       </item>
       <item>
        <property name="text">
