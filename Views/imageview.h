@@ -127,6 +127,19 @@ public slots:
     void setMaskInverted(bool inverted);
     void setMaskBrushSettings(double size, double feather, double flow, bool autoMask);
 
+    /* Develop crop editing (Transform panel). beginCropEdit enters the Lightroom-style crop:
+       the crop frame is anchored at a fixed centred "stage" in the viewport and the image is
+       zoomed/panned BEHIND it, so dragging inside the frame pans the image while the frame stays
+       put; the 8 edge/corner handles resize the frame. The crop rectangle is the source of truth
+       in normalized image coords (0..1). endCropEdit restores the normal fit/zoom view. */
+    void beginCropEdit(double aspect, bool locked);
+    void endCropEdit();
+    void setCropAspect(double aspect, bool locked);   // aspect = w/h, 0 = free (unconstrained)
+    /* Rectify the 4-point warp quad back to a rectangle. The perspective PIXEL warp is the deferred
+       engine step; for now this resets the quad to its axis-aligned bounding box and leaves warp
+       mode, emitting cropRectifyRequested so the future engine can hook in. No-op unless warping. */
+    void rectifyCrop();
+
 signals:
     void togglePick();
     void updateStatus(bool, QString, QString);
@@ -155,6 +168,10 @@ signals:
     void maskBrushSizeRequested(double size);
     /* Auto-mask toggled on the canvas ("A"); sync the dock checkbox. */
     void maskBrushAutoMaskRequested(bool on);
+    /* The crop rectangle changed (drag/resize/pan); normalized image coords, for persistence. */
+    void cropChanged(double x, double y, double w, double h);
+    /* The user asked to rectify the warp quad (Rectify button); the pixel-warp engine hooks here. */
+    void cropRectifyRequested();
 
 private slots:
     void wheelStopped();
@@ -345,6 +362,43 @@ private:
     void    maskRadialAxisHandles(const QRectF &br, QPointF h[4]) const;
     /* Radial: the rotate handle (viewport px), a stub beyond the +x axis handle. */
     QPointF maskRadialRotateHandleVp(const QRectF &br) const;
+
+    /* ------- Develop crop editing (Transform panel) -------
+       The crop tool NEVER changes the view transform (no zoom, no auto-pan). cropN (normalized
+       image coords) is the source of truth; cropFrameVp (the on-screen frame) is derived from it.
+       Handles resize the frame over a static canvas (cropN := f(frame)). Repositioning the crop is
+       done by PANNING the canvas under the fixed frame (frame stays put, cropN := f(frame) as the
+       image moves). When the user zooms / the window resizes, the image transform changes and the
+       frame tracks the same content (frame := f^-1(cropN)). */
+    bool    cropEditMode   = false;
+    QRectF  cropN          = QRectF(0.0, 0.0, 1.0, 1.0);   // crop in normalized image coords
+    double  cropAspect     = 0.0;        // w/h; 0 = free
+    bool    cropAspectLocked = false;
+    int     cropDrag       = -1;         // -1 none/pan; 0..7 handles (see cropHitTest)
+    QRectF  cropFrameVp;                 // the frame in viewport px (derived from cropN, or dragged)
+
+    /* Warp (4-point perspective) sub-mode: Alt-dragging a crop corner breaks the rectangle into a
+       free quadrilateral whose 4 corners drag independently. cropQuadN holds the corners in
+       normalized image coords (source of truth), cropQuadVp the derived on-screen positions; both
+       ordered TL,TR,BR,BL. The Rectify button warps the quad back to a rectangle (pixel warp is the
+       deferred engine step). */
+    bool    cropWarp       = false;
+    QPointF cropQuadN[4];
+    QPointF cropQuadVp[4];
+
+    QRectF  cropImageOnScreenRect() const;          // image bounds in viewport px, clipped to view
+    QRectF  cropVpRectToN(const QRectF &vp) const;  // a viewport rect -> normalized image rect
+    QRectF  cropNToVpRect(const QRectF &n) const;   // normalized image rect -> viewport rect
+    QPointF cropVpToN(QPointF vp) const;            // a viewport point -> normalized image point
+    QPointF cropNToVp(QPointF n) const;             // a normalized image point -> viewport point
+    void    cropEnterWarp();                        // seed the quad from the current rectangle
+    QRectF  cropFrameBBoxVp() const;                // bbox of the frame/quad in viewport px
+    void    cropSyncFrameFromN();                   // recompute frame/quad from cropN/cropQuadN
+    void    cropEmitChanged();                      // clamp cropN to [0,1] and emit cropChanged
+    int     cropHitTest(QPoint vp) const;           // handle under vp (-1 none, 8 = inside)
+    void    cropResizeFromHandle(QPoint vp);        // move handle cropDrag to vp (aspect-aware)
+    void    cropDrawOverlay(QPainter *p, const QRectF &br);
+    bool    cropActive() const { return cropEditMode && pmItem && pmItem->isVisible(); }
 };
 
 #endif // IMAGEVIEW_H

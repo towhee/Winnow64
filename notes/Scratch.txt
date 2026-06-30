@@ -125,3 +125,53 @@ Update(Develop/Properties/developproperties.cpp)
   hover triggers a full repaint. Forcing a whole-viewport update reproduces that full repaint immediately, so the captions stay full-width.
 
   This is a one-line, low-cost fix (one coalesced repaint per rebuild). Please rebuild and confirm the expand→collapse no longer truncates.
+
+
+Before splitter resize:
+PROBE2 Vertial linear gradi widget DevelopProperties isTree true w0 107 w1 202 r QRect(10,123 97x20) r.right 106 capLeft 10 capRight 309 rCapW 299 deco true delBtn false grad true hasClip false clip QRectF(-1416,-55 0x0) cap= Vertial linear gradient WB: Basic
+After splitter resize:
+PROBE2 Layers               widget DevelopProperties isTree true w0 107 w1 198 r QRect(10,62 97x20) r.right 106 capLeft 5 capRight 267 rCapW 262 deco false delBtn false grad true hasClip false clip QRectF(-1420,-55 0x0) cap= Layers
+PROBE2 (+) Linear Gradient  widget DevelopProperties isTree true w0 107 w1 198 r QRect(20,103 285x20) r.right 304 capLeft 20 capRight 278 rCapW 258 deco true delBtn true grad false hasClip false clip QRectF(-1420,-55 0x0) cap= (+) Linear Gradient
+PROBE2 Vertial linear gradi widget DevelopProperties isTree true w0 107 w1 198 r QRect(10,123 97x20) r.right 106 capLeft 10 capRight 305 rCapW 295 deco true delBtn false grad true hasClip false clip QRectF(-1420,-55 0x0) cap= Vertial linear gradient WB: Basic
+PROBE2 Vertial linear gradi widget DevelopProperties isTree true w0 107 w1 198 r QRect(10,143 97x20) r.right 106 capLeft 10 capRight 305 rCapW 295 deco true delBtn false grad true hasClip false clip QRectF(-1420,-55 0x0) cap= Vertial linear gradient WB: Color
+PROBE2 Vertial linear gradi widget DevelopProperties isTree true w0 107 w1 198 r QRect(10,163 97x20) r.right 106 capLeft 10 capRight 305 rCapW 295 deco true delBtn false grad true hasClip false clip QRectF(-1420,-55 0x0) cap= Vertial linear gradient WB: Effects
+
+Develop module Transform panel design
+Open below Scopes panel (shortcut "R"), above the developproperties tree.
+Aspect dropdown:
+    As shot
+    1 x 1
+    3 x 2
+    4 x 3
+    5 x 7
+    4 x 5
+    8.5 x 11
+    16 x 9
+    16 x 10
+    ------
+    Add custom aspect
+
+A lock / unlock toggle (show locked / unlocked symbols) when clicked or shortcut A
+
+A tool to draw level
+
+A checkbox to fill extra canvas if necessary
+
+When Transform panel has the focus, a crop tool that defines a rectangular crop, or
+when modifer alt/opt defines a 4 point polygon where all 4 corners can be dragged in
+any direction.  When a transform button in the Transform panel then rfecalculates the
+geometry to make the polygon to make it a rectangle.
+
+Please give me your thoughts on this design.
+
+All develop pipeline applies to all selected images
+Can a crop be defined on a zoomed image
+Undo feature
+Hide/show changes by layer and layer tool and basic, color and effects panel
+Reset basic, color and effects panel settings to default
+
+
+Whenever you're back, the queue is:
+- Warp — the 4-point polygon (Alt-drag) + Rectify.
+- Persistence + apply — wire cropChanged into the edit stack and actually crop the rendered/exported pixels.
+- Plus the smaller refinements: image-switch re-init, zoomed-in entry, content-aware fill.

@@ -5514,6 +5514,31 @@ void MW::toggleDevelopScopes()
     }
 }
 
+void MW::toggleDevelopTransform()
+{
+/*
+    Develop editor-bar toggle (also bound to "R"): show/hide the Transform crop/perspective panel
+    and persist the choice. When shown it brings the Develop dock forward so the panel is visible.
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopTransform");
+    developTransformVisible = !developTransformVisible;
+    if (transformPanel) transformPanel->setVisible(developTransformVisible);
+    if (developTransformAction) developTransformAction->setChecked(developTransformVisible);
+    settings->setValue("Develop/transformVisible", developTransformVisible);
+    if (developTransformVisible && developDock) {
+        developDock->setVisible(true);
+        developDock->raise();
+    }
+    /* The crop tool appears whenever the Transform panel is shown (R / editor-bar button), and
+       clears when it is hidden. */
+    if (imageView && transformPanel) {
+        if (developTransformVisible)
+            imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked());
+        else
+            imageView->endCropEdit();
+    }
+}
+
 void MW::onImageCursorPos(double xFraction, double yFraction)
 {
 /*

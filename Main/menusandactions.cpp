@@ -1419,6 +1419,16 @@ void MW::createWindowActions()
     addAction(developDockVisibleAction);
     connect(developDockVisibleAction, &QAction::triggered, this, &MW::showDevelopDock);
 
+    /* "R" toggles the Develop Transform (crop + perspective) panel. */
+    developTransformAction = new QAction(tr("Develop Transform Panel"), this);
+    developTransformAction->setObjectName("toggleDevelopTransform");
+    developTransformAction->setShortcut(QKeySequence("R"));
+    developTransformAction->setShortcutVisibleInContextMenu(true);
+    developTransformAction->setCheckable(true);
+    developTransformAction->setChecked(false);   // crop tool always starts off (panel starts hidden)
+    addAction(developTransformAction);
+    connect(developTransformAction, &QAction::triggered, this, &MW::toggleDevelopTransform);
+
     // rgh delete this ?
     metadataFixedSizeAction = new QAction(tr("Metadata Panel Fix Size"), this);
     metadataFixedSizeAction->setObjectName("metadataFixedSize");

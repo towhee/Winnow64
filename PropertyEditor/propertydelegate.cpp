@@ -388,8 +388,6 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     }
     // r0 extends the rect over the decoration to the left margin
     QRect r0 = QRect(0, r.y(), r.x() + r.width(), r.height());
-    // r1 = r0 but leaves 1 pixel at the left and right margins to make room for a border
-    QRect r1 = QRect(1, r.y(), r.x() + r.width() - 1, r.height());
     // r2 = r0 but leaves 1 pixel at the left, right and bottom margins to draw text
     QRect r2 = QRect(5, r.y(), r.x() + r.width() - 5, r.height()-1);
     // r3 = r but leaves a few pixels at the bottom margin to draw text
@@ -455,44 +453,67 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QPixmap branchOpen(":/images/branch-open-winnow.png");
 
     if (index.data(UR_isHeader).toBool()) {
+        /* The caption lives in column 0; the value-column branch below needs both the caption text
+           and its role flags from this sibling (in the caption-column branch it IS index). */
+        QModelIndex capIndex = index.sibling(index.row(), CapColumn);
+        const QString capText = capIndex.data().toString();
+        /* Header caption pen. UR_LeafSingleLine rows want the header's single-line full-width
+           layout but the ordinary LEAF text colour (not category teal). */
+        QPen capPen = capIndex.data(UR_LeafSingleLine).toBool() ? regPen : catPen;
+
+        /* Right edge for a header caption that spans the row, in VIEWPORT coordinates so it is the
+           same value whichever column is painting. The caption spans the full row (w0 + w1) but is
+           pulled in before any right-aligned value-column widget (e.g. -/+ buttons) so a long
+           caption never runs under it. */
+        auto headerCapRight = [&]() -> int {
+            QModelIndex valIndex = index.sibling(index.row(), ValColumn);
+            QWidget *valEditor =
+                static_cast<QWidget*>(valIndex.data(UR_Editor).value<void*>());
+            if (valEditor && valEditor->isVisible()) {
+                QRect kids = valEditor->childrenRect();
+                if (!kids.isEmpty())
+                    return valEditor->geometry().x() + kids.x() - 6;
+            }
+            return w0 + w1;
+        };
+
+        /* Caption geometry, in VIEWPORT coordinates so it is identical whichever column is
+           painting. capLeft for a decoration row is its column-0 cell left (= indentation), taken
+           from the view so the value-column pass can reproduce it without column-0's rect. */
+        const QTreeView *tv = qobject_cast<const QTreeView*>(option.widget);
+        const bool deco = capIndex.data(UR_isDecoration).toBool();
+        int capLeft = deco ? (tv ? tv->visualRect(capIndex).x() : r4.x()) : r2.x();
+        int capRight = capIndex.data(UR_DeleteBtn).toBool()
+                           ? r.right() - 16 - 4 - 6        // before the [-] glyph (spanned rows)
+                           : headerCapRight();
+
+        /* The caption is drawn in BOTH the caption-column and value-column passes. The painter is
+           not clipped to the cell, so a single pass would suffice for a full repaint, but resizing
+           the (stretch) value column triggers a value-column-ONLY repaint that refills that cell's
+           background over the caption's overflow. Redrawing the same elided text (same viewport
+           rect) in the value-column pass restores it. */
+        auto drawHeaderCaption = [&]() {
+            painter->setPen(capPen);
+            QRect rCap(capLeft, r4.y(), qMax(0, capRight - capLeft), r4.height());
+            const QString cap =
+                painter->fontMetrics().elidedText(capText, Qt::ElideRight, rCap.width());
+            painter->drawText(rCap, Qt::AlignVCenter|Qt::TextSingleLine, cap);
+        };
+
         // header item in caption column
         if (index.column() == CapColumn) {
-            // paint the gradient covering the decoration
+            // paint the gradient covering the decoration (caption column)
             if (index.data(UR_isBackgroundGradient).toBool()) {
-                painter->fillRect(r1, rootCategoryBackground);
+                QRect capFill(1, r.y(), w0 - 1, r.height());
+                painter->fillRect(capFill, rootCategoryBackground);
             }
             // re-instate the decorations
-            if (index.data(UR_isDecoration).toBool() && hasChildren) {
+            if (deco && hasChildren) {
                 int x = r.x() - 10;
-                int y = 0;
-                if (isExpanded) {
-                    y = r0.top() + r0.height()/2 - 5;
-                    painter->drawPixmap(x, y, 9, 9, branchOpen);
-                }
-                else {
-                    y = r0.top() + r0.height()/2 - 5;
-                    painter->drawPixmap(x, y, 9, 9, branchClosed);
-                }
+                int y = r0.top() + r0.height()/2 - 5;
+                painter->drawPixmap(x, y, 9, 9, isExpanded ? branchOpen : branchClosed);
             }
-            // caption text and no borders for root item. UR_LeafSingleLine rows want the header's
-            // single-line full-width layout but the ordinary LEAF text colour (not category teal).
-            painter->setPen(index.data(UR_LeafSingleLine).toBool() ? regPen : catPen);
-            if (index.data(UR_isDecoration).toBool()) {
-                if (index.data(UR_DeleteBtn).toBool()) {
-                    /* Elide before the delegate-drawn [-] glyph (geometry below) so a long caption
-                       never runs under it. */
-                    const int capRight = r.right() - 16 - 4 - 6;    // glyph left edge less a gap
-                    QRect rCap(r4.x(), r4.y(), capRight - r4.x(), r4.height());
-                    const QString cap = painter->fontMetrics().elidedText(text, Qt::ElideRight, rCap.width());
-                    painter->drawText(rCap, Qt::AlignVCenter|Qt::TextSingleLine, cap);
-                }
-                else {
-                    painter->drawText(r4, Qt::AlignVCenter|Qt::TextSingleLine, text);
-                }
-            }
-            else {
-                painter->drawText(r2, Qt::AlignVCenter|Qt::TextSingleLine, text);
-            }
+            drawHeaderCaption();
             // draw separator line if not gradient background
             if (!index.data(UR_isBackgroundGradient).toBool()) {
                 painter->setPen(brdPen);
@@ -511,14 +532,16 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                 painter->setOpacity(1.0);
             }
         }
-        // header row, but value column, so no decoration to deal with
+        // header row, value column
         else {
+            // fill the value-column background, then redraw the spanned caption over it
             if (index.data(UR_isBackgroundGradient).toBool())
                 painter->fillRect(r, rootCategoryBackground);
             else {
                 painter->setPen(brdPen);
                 painter->drawLine(r.bottomLeft(), r.bottomRight());
             }
+            drawHeaderCaption();
         }
     }
     else {

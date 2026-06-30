@@ -2513,6 +2513,26 @@ Layer & masking model (planned)
                column 1 is outside the expand repaint's dirty region, and a covering index widget
                composites stale until a full repaint). mousePressEvent hit-tests the glyph rect
                (mirroring the delegate geometry) to delete; clicks elsewhere on the row toggle it.
+               [Delegate general behaviour] PropertyDelegate::paint spans EVERY header caption
+               (UR_isHeader) across the full row (caption + value columns). The delegate painter is
+               NOT clipped to the cell (confirmed by probe: QPainter::hasClipping() is false during
+               item paint), so a single column-0 pass draws the caption straight across both columns
+               on a full repaint. The catch is PARTIAL repaints: dragging the dock splitter resizes
+               the (stretch) value column, which marks ONLY the value-column cells dirty. QTreeView
+               then repaints just those cells' background, erasing the caption overflow that was
+               drawn during column 0's pass (column 0 is not re-run) - so a long header caption
+               truncated back to the column boundary after a resize even though hasClipping()==false
+               and the elided text was the full string. Fix: the caption is drawn in BOTH passes -
+               the value-column pass fills its own background (gradient, or the bottom separator for
+               non-gradient headers) and then redraws the SAME elided caption at the SAME viewport
+               rect, so a value-column-only repaint restores it. capLeft must be identical in both
+               passes; for a decoration row it is the column-0 cell left (view->visualRect(capIndex)
+               .x()), reproducible without column 0's rect. The caption right edge is pulled in and
+               the text elided when the value field is occupied: before the delegate-drawn [-] glyph
+               (UR_DeleteBtn), or before a value-column widget (value sibling's UR_Editor geometry +
+               childrenRect; e.g. the Layers/Templates -/+ buttons, which are index widgets
+               composited on top and so still show). setFirstColumnSpanned is still used by mask-tool
+               rows (so column-1 is not painted at all) but is NOT required for plain headers.
                Clicking a tool toggles it: the SELECTED tool expands to show its
                settings as ITS OWN children (Feather slider, Invert checkbox) -- no duplicate
                tool-name row; only one tool is expanded at a time. Clicking the tool caption again
@@ -2619,8 +2639,9 @@ Develop dock (UI)
     persists exactly as the other docks (settings isDevelopDockVisible + DevelopDock, plus the
     workspace struct field isDevelopDockVisible).
 
-    The dock's widget is a container: a fixed-height SCOPES strip pinned at the top with the
-    DevelopProperties tree below it taking the remaining (stretch) space.
+    The dock's widget is a container, top to bottom: a fixed-height SCOPES strip, the TRANSFORM
+    (crop + perspective) panel, then the DevelopProperties tree taking the remaining (stretch)
+    space. The scopes and transform strips are each independently toggled from the editor bar.
 
 Develop scopes (histogram + vectorscope)
 ------------------------------------------------------------------------------------------
@@ -2677,6 +2698,74 @@ Develop scopes (histogram + vectorscope)
     edge into the warm upper-left ray, independent of zoom (it is an angle guide). setSkinLine +
     skinLineChanged -> ScopesView::vectorscopeSkinLineChanged -> Settings
     "Develop/vectorscopeSkinLine".
+
+Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
+------------------------------------------------------------------------------------------
+
+    TransformPanel (Develop/Transform/) is a compact control strip below the scopes and above
+    the property tree -- the sibling of ScopesView. It is the UI surface for a non-destructive
+    crop/straighten/perspective edit; it carries NO geometry or pixel state. The crop rectangle,
+    straighten angle and perspective homography will live in the edit stack and apply LAST in the
+    pipeline (after the develop ops), so they stay non-destructive and masks map through them. The
+    image-side overlay and the warp engine are wired to the panel's signals in a later increment;
+    for now each control persists its own state and emits a signal (the integration hook).
+
+    Controls: an Aspect combo (As shot / 1x1 / 3x2 / 4x3 / 5x7 / 4x5 / 8.5x11 / 16x9 / 16x10 /
+    persisted custom aspects / "Add custom aspect..."); userData per item is the w/h ratio
+    (0.0 = As shot/free). A padlock toggle locks the ratio. A "Level" tool (draw a line to
+    straighten), a checkable "Crop" tool (drag a rectangle; Alt/Option-drag gives a 4-point
+    polygon), and a "Rectify" button (warp the whole image so the polygon is axis-aligned, then
+    fit the largest inscribed rectangle as the new crop -- user-confirmed behaviour). A "Fill
+    extra canvas" checkbox (content-aware edge-extend of empty corners left by straighten/rectify).
+    A [?] tips button (top-right, "Crop and transform tips").
+
+    Shortcuts: "R" toggles the panel (MW::toggleDevelopTransform, developTransformAction, editor-
+    bar button rectangle.png; persists Settings "Develop/transformVisible"). "A" toggles the
+    aspect lock while the panel (or one of its non-text controls) has focus -- handled by
+    TransformPanel::eventFilter accepting the key's ShortcutOverride, NOT a QAction, because a
+    panel-scoped "A" QAction would be an ambiguous overload with the window-level "A" (Run
+    Droplet) and the brush "Auto mask A". Custom aspects + lock + fill-canvas state persist under
+    Settings "Develop/Transform/".
+
+    Crop rubber-band tool (ImageView) -- IMPLEMENTED:
+    Showing the Transform panel (R / button) calls ImageView::beginCropEdit; hiding it calls
+    endCropEdit. KEY RULE (user-specified): the crop tool NEVER changes the view transform -- no
+    zoom, no auto-pan. The user keeps full control of zoom/pan; begin/end only toggle the overlay
+    and leave the image exactly where it is. cropN (normalized image coords) is the source of truth;
+    cropFrameVp (the on-screen frame, viewport px) is DERIVED from it (cropNToVpRect) and tracks the
+    image under the current zoom/pan. Interaction (all guarded by cropActive()):
+        - drag a HANDLE (cropHitTest 0..7: 4 corners + 4 edge mids) -> resizes the frame over the
+          STATIC canvas (cropResizeFromHandle anchors the opposite corner/edge, clamps to the
+          image's on-screen rect); cropN := cropVpRectToN(frame). No re-stage, no zoom change.
+        - drag elsewhere -> a NORMAL canvas pan (the existing scrollbar pan); the frame stays fixed
+          on screen and the image slides under it, so cropN is recomputed from the unchanged frame.
+          This is how the crop is repositioned -- you move the canvas, not the crop rectangle.
+        - aspect lock (from the panel, setCropAspect) constrains the frame ratio; "As shot"/ratio 0
+          is free.
+        - when the USER zooms (scale()) or the window resizes, the frame is re-derived from cropN
+          (cropSyncFrameFromN) so the crop stays on the same image content.
+    Overlay (cropDrawOverlay, viewport coords in drawForeground): dimmed exterior, rule-of-thirds
+    grid, frame border, corner/edge handles. ImageView emits cropChanged(x,y,w,h) for persistence.
+    The wheel is swallowed during crop (wheel = image navigation, which would strand the overlay).
+
+    Warp (4-point perspective) sub-mode -- IMPLEMENTED (interaction only):
+    Holding Alt/Option while dragging a crop CORNER breaks the rectangle into a free quadrilateral
+    (cropWarp=true; cropEnterWarp seeds cropQuadN/cropQuadVp from the rectangle, corners TL,TR,BR,BL).
+    In warp mode only the 4 corners are handles (each drags independently, clamped to the image);
+    cropHitTest / cropResizeFromHandle / cropDrawOverlay / cropSyncFrameFromN all branch on cropWarp.
+    The overlay draws the quad with a bilinear 3x3 guide grid + 4 corner handles and dims outside the
+    polygon. Panning still works (the quad is fixed on screen, recomputed from the moving image; the
+    pan-clamp uses the quad's bounding box, cropFrameBBoxVp). Choosing an aspect, re-entering, or
+    Rectify leaves warp mode. The Rectify button (TransformPanel::rectifyRequested ->
+    ImageView::rectifyCrop) currently flattens the quad to its axis-aligned bounding box and emits
+    cropRectifyRequested -- the real perspective PIXEL warp (cv::warpPerspective + largest-inscribed-
+    rect fit) is the deferred engine step.
+
+    NOT yet done (next increments): the perspective PIXEL warp + largest-inscribed-rect behind
+    Rectify; persisting cropN/quad to the edit stack and APPLYING the crop/warp to the
+    rendered/exported pixels (still geometry-applied-last, see above); re-initialising on image
+    switch (currently re-toggle R per image); content-aware fill. The crop/warp is presently an
+    interactive overlay only -- it does not yet change pixels.
 
     Sections (built via PropertyEditor::addItem):
         Layers   header with -/+ buttons (same idiom as Embellish Templates) + a "Select

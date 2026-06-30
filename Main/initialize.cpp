@@ -1791,6 +1791,26 @@ void MW::createDevelopDock()
     scopesView = new ScopesView(developContainer);
     scopesView->setVisible(developScopesVisible);
     developContainerLayout->addWidget(scopesView);
+    /* Transform (crop + perspective) strip sits directly below the scopes and above the tree.
+       ALWAYS starts hidden on launch (its visibility is not restored): a visible panel means the
+       crop tool is active, which should never be the case before the user asks for it. */
+    developTransformVisible = false;
+    transformPanel = new TransformPanel(developContainer, settings);
+    transformPanel->setVisible(developTransformVisible);
+    developContainerLayout->addWidget(transformPanel);
+    /* Drive the ImageView crop overlay from the Transform panel: aspect changes + the lock toggle
+       re-fit the live crop frame. */
+    connect(transformPanel, &TransformPanel::aspectChanged, this,
+            [this](const QString &, double ratio){
+                if (imageView) imageView->setCropAspect(ratio, transformPanel->isAspectLocked());
+            });
+    connect(transformPanel, &TransformPanel::aspectLockToggled, this,
+            [this](bool locked){
+                if (imageView) imageView->setCropAspect(transformPanel->aspectRatio(), locked);
+            });
+    /* Rectify button: warp the 4-point perspective quad back to a rectangle (pixel warp deferred). */
+    connect(transformPanel, &TransformPanel::rectifyRequested, this,
+            [this]{ if (imageView) imageView->rectifyCrop(); });
     developContainerLayout->addWidget(developProperties, 1);
     developDock->setWidget(developContainer);
     /* The tone-region slider under the histogram drives the active layer's tone-split params. */
@@ -1832,6 +1852,14 @@ void MW::createDevelopDock()
     developTitleLayout->addWidget(developScopesBtn);
     developTitleLayout->addSpacing(10);
 
+    // show/hide the Transform (crop + perspective) panel
+    BarBtn *developTransformBtn = new BarBtn();
+    developTransformBtn->setIcon(":/images/icon16/rectangle.png", G::iconOpacity);
+    developTransformBtn->setToolTip("Show or hide the Transform (crop) panel  (R)");
+    connect(developTransformBtn, &BarBtn::clicked, this, &MW::toggleDevelopTransform);
+    developTitleLayout->addWidget(developTransformBtn);
+    developTitleLayout->addSpacing(10);
+
     // collapse/expand body button
     if (G::useDWCollapse) {
         BarBtn *developCollapseBtn = new BarBtn();
@@ -1867,6 +1895,16 @@ void MW::developDockVisibilityChange()
     if (!imageView || !developProperties) return;
     if (developDock->isVisible()) developProperties->refreshMaskEdit();
     else                          imageView->endMaskEdit();
+
+    /* Same invariant for the crop tool: a visible Transform panel means crop is active. When the
+       dock hides the panel goes with it, so end the crop; when it returns with the panel showing,
+       re-activate it. */
+    if (transformPanel) {
+        if (developDock->isVisible() && developTransformVisible)
+            imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked());
+        else
+            imageView->endCropEdit();
+    }
 }
 
 void MW::createDocks()

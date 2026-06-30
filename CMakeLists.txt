@@ -130,6 +130,7 @@ set(WINNOW_SOURCES
     Develop/Scopes/vectorscopeview.cpp
     Develop/Scopes/toneregionslider.cpp
     Develop/Scopes/scopesview.cpp
+    Develop/Transform/transformpanel.cpp
 
     # Dialogs
     Dialogs/aboutdlg.cpp
@@ -367,6 +368,7 @@ set(WINNOW_HEADERS
     Develop/Scopes/vectorscopeview.h
     Develop/Scopes/toneregionslider.h
     Develop/Scopes/scopesview.h
+    Develop/Transform/transformpanel.h
 
     Dialogs/aboutdlg.h
     Dialogs/addthumbnailsdlg.h
