@@ -4,6 +4,7 @@
 #include "Develop/workingimagecache.h"
 #include "Develop/inputtransform.h"
 #include "Develop/brushstamp.h"
+#include "Develop/Transform/croptransform.h"
 #include <QMutex>
 #include <memory>
 #include <QMetaEnum>
@@ -5194,28 +5195,36 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                              int degrees, bool fullRes, int fullW, int fullH, const QString &fPath,
                              WorkingImageCache::RenderTimings *timings = nullptr)
 {
-    if (job.layers.isEmpty())               // just Base -> the fast single-pass path
-        return developComposite(src, job.base, degrees, fullRes, fullW, fullH, timings);
-
-    std::vector<WorkingImageCache::StackLayer> sl;
-    sl.reserve(job.layers.size());
-    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers) {
-        WorkingImageCache::StackLayer s;
-        s.params = L.params;
-        if (!L.masks.isEmpty())             // empty masks => global layer (no buffer needed)
-            s.mask = buildMaskBuffer(L.masks, src.width, src.height, degrees, fPath);
-        sl.push_back(std::move(s));
-    }
-
     QImage out;
-    if (!WorkingImageCache::renderStack(src, job.base, sl, out, timings)) return QImage();
-    if (degrees != 0) {
-        QTransform trans;
-        trans.rotate(degrees);
-        out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
+    if (job.layers.isEmpty()) {             // just Base -> the fast single-pass path
+        out = developComposite(src, job.base, degrees, fullRes, fullW, fullH, timings);
     }
-    if (!fullRes && (out.width() != fullW || out.height() != fullH))
-        out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    else {
+        std::vector<WorkingImageCache::StackLayer> sl;
+        sl.reserve(job.layers.size());
+        for (const DevelopProperties::StackRenderJob::Layer &L : job.layers) {
+            WorkingImageCache::StackLayer s;
+            s.params = L.params;
+            if (!L.masks.isEmpty())         // empty masks => global layer (no buffer needed)
+                s.mask = buildMaskBuffer(L.masks, src.width, src.height, degrees, fPath);
+            sl.push_back(std::move(s));
+        }
+        if (!WorkingImageCache::renderStack(src, job.base, sl, out, timings)) return QImage();
+        if (degrees != 0) {
+            QTransform trans;
+            trans.rotate(degrees);
+            out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
+        }
+        if (!fullRes && (out.width() != fullW || out.height() != fullH))
+            out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    }
+
+    /* Geometry (crop / straighten / warp) is applied LAST -- after the develop ops + EXIF
+       orientation -- on the full-output-dimension image, so the crop dims are identical for the
+       proxy and the full-res render. Callers pass an identity geometry while the crop tool is being
+       edited (the loupe then shows the full frame for the overlay). */
+    if (!out.isNull() && !job.geometry.isIdentity())
+        out = CropTransform::applyGeometry(out, job.geometry);
     return out;
 }
 } // namespace
@@ -5259,7 +5268,14 @@ void MW::renderDevelopPreview(bool fullRes)
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
 
-    const auto mj = developProperties->stackJob();   // full layer stack (independent of active layer)
+    auto mj = developProperties->stackJob();   // full layer stack (independent of active layer)
+    /* While the crop tool is active, suppress only the CROP (the overlay sets it, applied on commit)
+       but KEEP the warp/straighten: before Rectify there is none (full frame); after Rectify the
+       stored quad warps the frame so the crop overlay can be placed on the corrected canvas. */
+    if (developCropEditing) {
+        mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
+        mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
+    }
 
     /* Reuse the cached pre-develop (full-res) WorkingImage. RAW always caches it at decode;
        non-raw caches it the first time it is developed. */
@@ -5393,7 +5409,11 @@ void MW::renderDevelopFullResAsync()
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) return;                    // proxy render builds/caches it first; nothing to do yet
 
-    const auto mj = developProperties->stackJob();    // full stack, captured on the GUI thread
+    auto mj = developProperties->stackJob();          // full stack, captured on the GUI thread
+    if (developCropEditing) {                          // suppress crop, keep warp (see renderDevelopPreview)
+        mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
+        mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
+    }
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const quint64 gen = developParamsGen;
 
@@ -5530,13 +5550,75 @@ void MW::toggleDevelopTransform()
         developDock->raise();
     }
     /* The crop tool appears whenever the Transform panel is shown (R / editor-bar button), and
-       clears when it is hidden. */
+       commits + clears when it is hidden. */
     if (imageView && transformPanel) {
-        if (developTransformVisible)
-            imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked());
-        else
-            imageView->endCropEdit();
+        if (developTransformVisible) enterDevelopCrop();
+        else                         exitDevelopCrop();
     }
+}
+
+void MW::enterDevelopCrop()
+{
+/*
+    Begin editing the crop. Show the FULL developed frame (developCropEditing suppresses the stored
+    geometry in the render) so the overlay can be positioned over the whole image, then start the
+    crop overlay from the stored crop rectangle.
+*/
+    if (G::isLogger) G::log("MW::enterDevelopCrop");
+    if (!imageView || !transformPanel || developCropEditing) return;
+    developCropEditing = true;
+    renderDevelopPreview(false);     // full frame (geometry suppressed); refits if it was cropped
+    const Geometry g = developProperties->currentGeometry();
+    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+}
+
+void MW::exitDevelopCrop()
+{
+/*
+    Commit the crop: write the overlay's rectangle into the image's EditStack geometry (persists via
+    the sidecar) and re-render with the geometry applied, so the loupe shows the cropped result.
+*/
+    if (G::isLogger) G::log("MW::exitDevelopCrop");
+    if (!imageView || !developCropEditing) return;
+    const QRectF crop = imageView->cropRect();
+    imageView->endCropEdit();
+    developCropEditing = false;
+    if (developProperties) {
+        Geometry g = developProperties->currentGeometry();
+        g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
+        developProperties->setCurrentGeometry(g);
+    }
+    renderDevelopPreview(false);     // geometry now applied -> cropped result (refits on size change)
+}
+
+void MW::rectifyDevelopCrop()
+{
+/*
+    Commit the 4-point warp (Rectify button). Store the traced quad + the suggested (largest
+    inscribed) crop into the image's geometry, then re-render: because the crop tool is still active
+    the render KEEPS the warp but suppresses the crop, so the loupe shows the CORRECTED canvas and
+    the crop overlay is restarted on it for the user to set the final crop. Non-destructive: the
+    warp is a stored parameter, not baked pixels.
+*/
+    if (G::isLogger) G::log("MW::rectifyDevelopCrop");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    if (!imageView->cropIsWarp()) return;
+
+    const QRectF suggested = imageView->computeRectifyCrop();
+    if (!suggested.isValid()) return;            // degenerate quad: leave the overlay as-is
+
+    Geometry g = developProperties->currentGeometry();
+    g.hasWarp = true;
+    imageView->cropQuad(g.quad);                 // traced corners (oriented-image normalized space)
+    g.cropX = suggested.x();     g.cropY = suggested.y();
+    g.cropW = suggested.width(); g.cropH = suggested.height();
+    developProperties->setCurrentGeometry(g);
+
+    renderDevelopPreview(false);                 // warp kept, crop suppressed -> corrected canvas
+    /* Restart the crop overlay (rectangle mode) on the corrected canvas at the suggested crop. */
+    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             suggested);
 }
 
 void MW::onImageCursorPos(double xFraction, double yFraction)

@@ -132,13 +132,18 @@ public slots:
        zoomed/panned BEHIND it, so dragging inside the frame pans the image while the frame stays
        put; the 8 edge/corner handles resize the frame. The crop rectangle is the source of truth
        in normalized image coords (0..1). endCropEdit restores the normal fit/zoom view. */
-    void beginCropEdit(double aspect, bool locked);
+    void beginCropEdit(double aspect, bool locked, QRectF initialCrop = QRectF(0, 0, 1, 1));
     void endCropEdit();
     void setCropAspect(double aspect, bool locked);   // aspect = w/h, 0 = free (unconstrained)
-    /* Rectify the 4-point warp quad back to a rectangle. The perspective PIXEL warp is the deferred
-       engine step; for now this resets the quad to its axis-aligned bounding box and leaves warp
-       mode, emitting cropRectifyRequested so the future engine can hook in. No-op unless warping. */
-    void rectifyCrop();
+    QRectF cropRect() const { return cropN; }         // current crop (normalized), for commit
+    /* Warp (4-point perspective) accessors for the commit/persist flow (MW::rectifyDevelopCrop):
+       cropIsWarp = a quad is being traced; cropQuad fills the 4 corners (normalized, TL,TR,BR,BL);
+       computeRectifyCrop runs the warp engine on the displayed image and returns the largest
+       inscribed rectangle (the suggested crop, normalized in the warped canvas), or an invalid rect
+       on a degenerate quad. */
+    bool   cropIsWarp() const { return cropWarp; }
+    void   cropQuad(double q[8]) const;
+    QRectF computeRectifyCrop() const;
 
 signals:
     void togglePick();
@@ -170,8 +175,6 @@ signals:
     void maskBrushAutoMaskRequested(bool on);
     /* The crop rectangle changed (drag/resize/pan); normalized image coords, for persistence. */
     void cropChanged(double x, double y, double w, double h);
-    /* The user asked to rectify the warp quad (Rectify button); the pixel-warp engine hooks here. */
-    void cropRectifyRequested();
 
 private slots:
     void wheelStopped();
@@ -383,6 +386,7 @@ private:
        ordered TL,TR,BR,BL. The Rectify button warps the quad back to a rectangle (pixel warp is the
        deferred engine step). */
     bool    cropWarp       = false;
+    bool    cropAltHeld    = false;      // Alt/Opt down: show the "transform" rubber band style
     QPointF cropQuadN[4];
     QPointF cropQuadVp[4];
 

@@ -51,8 +51,14 @@ public:
         };
         EditParams     base;                    // layer 0 params (applied globally)
         QVector<Layer> layers;                  // non-Base, in order, enabled only
+        Geometry       geometry;                // per-image crop/straighten/warp (applied last)
     };
     StackRenderJob stackJob();
+
+    /* The current image's stored geometry (for loading the crop overlay), and a setter the crop
+       tool calls on commit (writes it into the image's EditStack + marks the sidecar dirty). */
+    Geometry currentGeometry() const;
+    void     setCurrentGeometry(const Geometry &g);
 
     /* Per-image edit state (Increment 1). The dock now reflects the CURRENT IMAGE's EditStack
        (loaded from / saved to its XMP sidecar) instead of app-global QSettings. */

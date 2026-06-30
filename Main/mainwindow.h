@@ -576,6 +576,13 @@ private slots:
     void toggleDevelopScopes();
     /* Show/hide the Develop Transform panel (editor-bar toggle / "R" shortcut); persists. */
     void toggleDevelopTransform();
+    /* Enter/exit the crop editor: enter shows the full frame + overlay (geometry suppressed); exit
+       commits the crop into the image's EditStack geometry and re-renders the cropped result. */
+    void enterDevelopCrop();
+    void exitDevelopCrop();
+    /* Rectify the 4-point warp: store the quad + suggested crop into the image's geometry, then
+       re-render so the corrected canvas shows with the crop overlay on it (two-phase warp). */
+    void rectifyDevelopCrop();
     /* Loupe cursor moved to a normalized position over the displayed image: sample that pixel and
        drive the scopes' readout marker (no-op while the scopes are hidden). */
     void onImageCursorPos(double xFraction, double yFraction);
@@ -1211,6 +1218,9 @@ private:
        visibility persists (Develop/transformVisible). */
     TransformPanel *transformPanel = nullptr;
     bool developTransformVisible = false;
+    /* True while the crop tool is being edited: the render pipeline then SUPPRESSES the geometry
+       (shows the full frame for the overlay); committing the crop clears it and re-renders cropped. */
+    bool developCropEditing = false;
     /* The QImage last pushed to the scopes (== what the loupe shows; implicitly shared, so
        holding it is free). Sampled per pixel for the cursor readout marker. */
     QImage developShownImage;

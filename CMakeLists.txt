@@ -131,6 +131,7 @@ set(WINNOW_SOURCES
     Develop/Scopes/toneregionslider.cpp
     Develop/Scopes/scopesview.cpp
     Develop/Transform/transformpanel.cpp
+    Develop/Transform/croptransform.cpp
 
     # Dialogs
     Dialogs/aboutdlg.cpp
@@ -369,6 +370,7 @@ set(WINNOW_HEADERS
     Develop/Scopes/toneregionslider.h
     Develop/Scopes/scopesview.h
     Develop/Transform/transformpanel.h
+    Develop/Transform/croptransform.h
 
     Dialogs/aboutdlg.h
     Dialogs/addthumbnailsdlg.h
