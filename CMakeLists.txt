@@ -126,6 +126,7 @@ set(WINNOW_SOURCES
     Develop/outputtransform.cpp
     Develop/workingimagecache.cpp
     Develop/Properties/developproperties.cpp
+    Develop/Properties/layerheader.cpp
     Develop/Scopes/histogramview.cpp
     Develop/Scopes/vectorscopeview.cpp
     Develop/Scopes/toneregionslider.cpp
@@ -364,6 +365,7 @@ set(WINNOW_HEADERS
     Develop/outputtransform.h
     Develop/workingimage.h
     Develop/Properties/developproperties.h
+    Develop/Properties/layerheader.h
     Develop/Scopes/scopedata.h
     Develop/Scopes/histogramview.h
     Develop/Scopes/vectorscopeview.h

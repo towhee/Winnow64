@@ -2497,19 +2497,33 @@ Layer & masking model (planned)
                setValue->itemChanged does not re-mark dirty). itemChange writes into the current
                image's active-layer params, marks it dirty, drives the live preview, and (if gated)
                arms the debounce write. editParams() returns the ACTIVE layer's params (the
-               renderer shows the active layer -- no mask/opacity compositing yet). The Layers combo
-               + (+/-) are PER-IMAGE: the combo lists this image's layer names, switching it selects
-               the active layer (activeLayerIndex) and repopulates the sliders, and +/- add/delete
-               layers in this image's EditStack (newLayer/deleteLayer). SECTION HEADERS: the Basic,
-               Color and Effects headers append the active layer's name (e.g. "Basic Base", "Color
-               Layer 1") so it is always clear which layer the sliders below edit --
-               updateSectionHeaderCaptions() rewrites the three header captions (DisplayRole, found
-               via findCaptionIndex) and is driven from addLayerItems (initial build), the layer-
-               combo change in itemChange, and refreshLayerCombo (setCurrentImage/newLayer/
-               deleteLayer); the tree is never rebuilt. PREVIEW / RESET: each section header
-               (Basic/Color/Effects) and the Layers header carry an eye BarBtn that toggles that
-               group's Preview flag on the active layer (EditLayer::showBasic/showColor/showEffects/
-               showLayer, all default true, persisted in the sidecar only when false). Preview is
+               renderer shows the active layer -- no mask/opacity compositing yet).
+               LAYER HEADER (Develop/Properties/layerheader.cpp): the layer dropdown + a compact
+               action set live in a gradient band WIDGET above the tree (the same header gradient as
+               TransformPanel; the old in-tree "Core" and "Layers" headers are gone). Layout:
+               > [dropdown v] [?] [E]. The '>' collapse arrow -> setTreeCollapsed hides/shows ONLY the
+               layer's top items (the Core rows for Base, else the mask-tool rows -- the root rows
+               above BasicHeader; applyLayerItemsCollapsed, re-asserted after each buildTree since a
+               rebuild resets row visibility). The Basic/Color/Effects sections stay visible. The
+               dropdown -> onLayerSelected
+               (switch activeLayerIndex); [E] -> onLayerPreviewToggled (whole-layer eye). The [?]
+               button (and a right-click anywhere on the header) pops an ACTIONS MENU (LayerHeader::
+               showActionsMenu): Rename layer -> renameActiveLayer (QInputDialog), Reset layer ->
+               resetActiveLayer (restore the layer's adjustment defaults), Add layer -> newLayer (name
+               dialog, default "Layer n"), Remove layer -> deleteLayer, Add mask -> showMaskMenu.
+               Rename / Remove / Add mask are disabled on Base (LayerHeader::setBaseActive, driven by
+               updateMaskMenuBtn). DevelopProperties::bindLayerHeader connects these signals.
+               TREE = ACTIVE LAYER: the tree is REBUILT for the active layer by buildTree() (on image
+               change, layer switch and mask add/remove/select): the layer's top items first (Base =>
+               Demosaic + Denoise rows [formerly the Core header]; else the mask tool rows) followed
+               by the Basic / Color / Effects sections. buildTree close()s + removes all rows then
+               re-adds them, preserving the sections' expand-state. SECTION HEADERS: the Basic, Color
+               and Effects headers append the active layer's name (e.g. "Base: Basic", "Layer 1:
+               Color") via updateSectionHeaderCaptions(). PREVIEW / RESET: each section header
+               (Basic/Color/Effects) carries an eye BarBtn that toggles that group's Preview flag on
+               the active layer; the whole-layer eye + reset live in the LayerHeader widget
+               (EditLayer::showBasic/showColor/showEffects/showLayer, all default true, persisted in
+               the sidecar only when false). Preview is
                NON-DESTRUCTIVE: effectiveLayerParams() returns a COPY of the layer's params with any
                previewed-off group folded to identity (EditParams::resetGroup) -- stored values are
                kept, so re-showing restores them; showLayer folds all three. The fold is applied at
@@ -2525,14 +2539,10 @@ Layer & masking model (planned)
                the "Base" layer (normalized on load in setCurrentImage); extra layers added with +
                are numbered "Layer 1", "Layer 2", ... (the new layer's number = its index). The Base
                layer CANNOT be removed -- deleteLayer refuses when the active layer is index 0
-               (centralMsg "The Base layer cannot be removed."). RENAME: the combo's text is editable
-               (ComboBoxEditor::setRenamable -> setEditable + NoInsert; the lineEdit's editingFinished
-               emits itemRenamed(old,new) when the text actually changes, deferred via singleShot(0)
-               so the owner can rebuild the combo). DevelopProperties::onLayerRenamed renames the
-               matched layer (uniqueLayerName resolves clashes with a numeric suffix) and
-               refreshLayerCombo()s; Base (index 0) is rejected with centralMsg "The Base layer
-               cannot be renamed." and selecting a different item from the dropdown never reads as a
-               rename (the text matches the chosen item). An all-identity stack is
+               (centralMsg "The Base layer cannot be removed."). RENAME: the header's [R] button ->
+               renameActiveLayer pops a QInputDialog seeded with the current name; uniqueLayerName
+               resolves clashes with a numeric suffix; Base (index 0) is rejected with centralMsg
+               "The Base layer cannot be renamed." An all-identity stack is
                never persisted, so empty layers added to an unedited image are not written (EXCEPTION:
                a layer that has any mask component counts as non-identity so masks survive
                navigation). The old QSettings layer helpers (readLayerList/setCurrentLayer/
@@ -2542,17 +2552,21 @@ Layer & masking model (planned)
                mask, built from an ordered list of tools -- editstack.h EditLayer.masks is now that
                tool list (MaskComponent: tool/op/inverted/feather + opaque paramsJson for per-tool
                geometry). Each tool ADDS or SUBTRACTS area; the first tool must Add (nothing to
-               subtract from an empty mask). The combine field is legacy/unused. The dock places an
-               [M] button right after the "Layer:" combo (ComboBoxEditor now drains the global
-               `btns` vector to host trailing buttons). [M] is hidden on the Base layer (index 0,
-               which carries no mask) and shown for any other layer -- updateMaskMenuBtn(), driven by
-               refreshLayerCombo() and the layer-combo change. Clicking [M] pops a menu of "Add <tool>" and
-               (once a tool exists) "Subtract <tool>" entries (Linear/Radial Gradient, Brush, Color/
-               Luminance Range, Select Subject/Sky/Background, Depth). Each tool is a row under the
-               Layers header (caption "Add/Subtract <tool>" with a [-] remove button). The rows are
+               subtract from an empty mask). The combine field is legacy/unused. "Add mask" in the
+               LayerHeader actions menu is disabled on the Base layer (index 0, which carries no mask)
+               and enabled for any other layer -- updateMaskMenuBtn()/LayerHeader::setBaseActive,
+               driven by refreshLayerCombo() and the layer switch. It emits maskMenuRequested ->
+               showMaskMenu, which pops a menu of "Add <tool>" and (once a tool exists) "Subtract
+               <tool>" entries (Linear/Radial Gradient, Brush, Color/
+               Luminance Range, Select Subject/Sky/Background, Depth). Each tool is a top-level tree
+               row (caption "Add/Subtract <tool>" with a [-] remove button; the tools sit ABOVE the
+               Basic/Color/Effects sections, added by addMaskItems in buildTree). The rows are
                header-style for the single-line full-width caption + expand arrow, but flagged
                UR_LeafSingleLine (new role) so the delegate paints them in the LEAF colour, not
-               category teal. Each tool row is a single FULL-WIDTH spanned cell
+               category teal. UR_ShowDecoration forces the delegate to draw the expand arrow even when
+               the row has no children (an UNSELECTED tool carries no settings children), so every
+               mask tool shows a closed disclosure arrow (open when selected and its settings show).
+               Each tool row is a single FULL-WIDTH spanned cell
                (setFirstColumnSpanned) and the [-] remove glyph is DRAWN BY THE DELEGATE at the
                row's right edge (UR_DeleteBtn role), not a value-column button widget: a column-1
                widget over the caption gets clipped/covered on expand (the caption's overflow into

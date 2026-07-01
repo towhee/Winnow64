@@ -1,4 +1,5 @@
 #include "Develop/Properties/developproperties.h"
+#include "Develop/Properties/layerheader.h"
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 #include "Develop/Scopes/toneregionslider.h"
@@ -16,17 +17,14 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     this->setting = setting;
 
     initialize();
-    addCoreHeader();
-    /* The Layers combo now lists the CURRENT IMAGE's layers (per-image EditStack), not app-global
-       QSettings presets. Seed one name so the combo is valid before any image is selected. */
+    /* The add-mask type chooser, popped by the LayerHeader's [M] button (bindLayerHeader wires it). */
+    maskMenu = new QMenu(this);
+    /* The Layers combo (now in the LayerHeader widget) lists the CURRENT IMAGE's layers (per-image
+       EditStack), not app-global QSettings presets. Seed one name so it is valid before any image. */
     layerList = QStringList() << "Base";
     layerName = "Base";
-    addLayersHeader();
-    addLayerItems();
+    buildTree();        // active layer's top items (Core for Base) + Basic / Color / Effects
 
-    collapseAll();
-    expand(model->index(_layers, 0));
-    expand(model->index(_basic, 0));
     updateHiddenRows(QModelIndex());
     setMouseTracking(true);
 
@@ -122,29 +120,70 @@ void DevelopProperties::setCurrentLayer(QString name)
     setting->setValue("Develop/Layers/current", layerName);
 }
 
-void DevelopProperties::addCoreHeader()
+void DevelopProperties::buildTree()
 {
-    if (G::isLogger) G::log("DevelopProperties::addCoreHeader");
+    if (G::isLogger) G::log("DevelopProperties::buildTree");
 
-    i.name = "CoreHeader";
-    i.parentName = "???";
-    i.isHeader = true;
-    i.decorateGradient = true;
-    i.okToCollapseRoot = true;
-    i.isDecoration = true;
-    i.captionText = "Core";
-    i.tooltip = "Applies to all layers.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.delegateType = DT_BarBtns;
-    addItem(i);
+    /* Preserve which sections are expanded across the rebuild (first build => Basic open only). */
+    auto expandedOr = [this](const QString &name, bool def)->bool {
+        const QModelIndex idx = findCaptionIndex(name);
+        return idx.isValid() ? isExpanded(idx) : def;
+    };
+    const bool exBasic   = expandedOr("BasicHeader",   true);
+    const bool exColor   = expandedOr("ColorHeader",   false);
+    const bool exEffects = expandedOr("EffectsHeader", false);
 
-    QModelIndex parIdx = capIdx;
+    isPopulating = true;
+    isRebuildingMasks = true;
 
+    /* Delete every row's editor widgets (close), then drop the rows, and rebuild for the ACTIVE
+       layer: its top items first, then the adjustment sections. close() before removeRows so the
+       setIndexWidget editors are freed rather than leaked on each rebuild. */
+    btns.clear();
+    basicEyeBtn = colorEyeBtn = effectsEyeBtn = nullptr;
+    if (model->rowCount() > 0) {
+        close(QModelIndex());
+        model->removeRows(0, model->rowCount());
+    }
+
+    if (activeLayerIndex == 0) addCoreItems();     // Base: Demosaic + Denoise at the top
+    else                        addMaskItems();     // else: this layer's mask tool rows at the top
+    addBasic();
+    addColor();
+    addEffects();
+    updateSectionHeaderCaptions();
+
+    isPopulating = false;
+    isRebuildingMasks = false;
+
+    /* Restore section expand-state (leaves the selected mask tool's own expansion, set in
+       addToolRow, untouched). */
+    auto setExpandOn = [this](const QString &name, bool on){
+        const QModelIndex idx = findCaptionIndex(name);
+        if (idx.isValid()) setExpanded(idx, on);
+    };
+    setExpandOn("BasicHeader",   exBasic);
+    setExpandOn("ColorHeader",   exColor);
+    setExpandOn("EffectsHeader", exEffects);
+
+    populateSlidersFromStack();
+    refreshPreviewButtons();
+    updateMaskEdit();
+    updateHiddenRows(QModelIndex());
+    applyLayerItemsCollapsed();      // re-assert the '>' collapse (a rebuild resets row visibility)
+}
+
+void DevelopProperties::addCoreItems()
+{
+    if (G::isLogger) G::log("DevelopProperties::addCoreItems");
+    /* Base layer only: the raw Demosaic engine + Denoise, shown as plain rows at the TOP of the
+       tree (they apply globally, so no section header). Formerly the "Core" header. */
+    clearItemInfo(i);
     i.name = "demosaic";
-    i.parentName = "CoreHeader";
+    i.parentName = "";              // root row (no section header)
     i.captionText = "Demosaic";
     i.tooltip = "Select demosaic engine.";
+    i.isIndent = true;             // align with the indented Denoise row below
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = "Apple";
@@ -152,93 +191,124 @@ void DevelopProperties::addCoreHeader()
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList.clear();
-    i.dropList << "Apple"
-               << "Winnow";
+    i.dropList << "Apple" << "Winnow";
     addItem(i);
 
-    addCheckbox("denoise", "Denoise", "Apply raw noise reduction.", parIdx, "CoreHeader", false);
-
+    addCheckbox("denoise", "Denoise", "Apply raw noise reduction.", QModelIndex(), "", false);
 }
 
-void DevelopProperties::addLayersHeader()
+void DevelopProperties::addMaskItems()
 {
-    if (G::isLogger) G::log("DevelopProperties::addLayersHeader");
+    if (G::isLogger) G::log("DevelopProperties::addMaskItems");
+    /* Non-Base layers: the layer's ordered Add/Subtract mask tools as rows at the top of the tree.
+       The selected tool is expanded with its settings (addToolRow). */
+    EditLayer *layer = activeLayer();
+    if (!layer || activeLayerIndex == 0) { selectedMaskIndex = -1; return; }
+    const int n = layer->masks.size();
+    if (selectedMaskIndex >= n) selectedMaskIndex = n - 1;
+    for (int m = 0; m < n; ++m)
+        addToolRow(QModelIndex(), m, layer->masks[m], m == selectedMaskIndex);
+}
 
-    /* Layers header (root row 0) with delete (-) and new (+) buttons, the same idiom
-       as the Embellish Templates header. */
-    clearItemInfo(i);
-    i.name = "LayersHeader";
-    i.parentName = "???";
-    i.isHeader = true;
-    i.decorateGradient = true;
-    i.okToCollapseRoot = false;
-    i.isDecoration = false;
-    i.captionText = "Layers";
-    i.tooltip = "A layer holds one set of develop adjustments.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.delegateType = DT_BarBtns;
+void DevelopProperties::bindLayerHeader(LayerHeader *header)
+{
+    if (G::isLogger) G::log("DevelopProperties::bindLayerHeader");
+    layerHeader = header;
+    if (!layerHeader) return;
 
-    BarBtn *layerDeleteBtn = new BarBtn();
-    layerDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
-    layerDeleteBtn->setToolTip("Delete the selected layer");
-    connect(layerDeleteBtn, &BarBtn::clicked, this, &DevelopProperties::deleteLayer);
-    btns.append(layerDeleteBtn);
+    connect(layerHeader, &LayerHeader::layerSelected,       this, &DevelopProperties::onLayerSelected);
+    connect(layerHeader, &LayerHeader::renameRequested,     this, &DevelopProperties::renameActiveLayer);
+    connect(layerHeader, &LayerHeader::resetLayerRequested, this, &DevelopProperties::resetActiveLayer);
+    connect(layerHeader, &LayerHeader::removeLayerRequested,this, &DevelopProperties::deleteLayer);
+    connect(layerHeader, &LayerHeader::addLayerRequested,   this, &DevelopProperties::newLayer);
+    connect(layerHeader, &LayerHeader::maskMenuRequested,   this, &DevelopProperties::showMaskMenu);
+    connect(layerHeader, &LayerHeader::previewToggled,      this, &DevelopProperties::onLayerPreviewToggled);
+    connect(layerHeader, &LayerHeader::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
 
-    BarBtn *layerNewBtn = new BarBtn();
-    layerNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
-    layerNewBtn->setToolTip("Create a new layer");
-    connect(layerNewBtn, &BarBtn::clicked, this, &DevelopProperties::newLayer);
-    btns.append(layerNewBtn);
+    /* Seed the dropdown + eye from the current stack. */
+    refreshLayerCombo();
+    refreshPreviewButtons();
+}
 
-    /* Whole-layer Preview eye (trailing): ignore/show all of the active layer's adjustments. */
-    layerEyeBtn = makeEyeBtn("Preview: show or ignore this whole layer", PV_Layer);
-    btns.append(layerEyeBtn);
+void DevelopProperties::onLayerSelected(const QString &name)
+{
+    if (G::isLogger) G::log("DevelopProperties::onLayerSelected", name);
+    if (currentImagePath.isEmpty()) return;
+    const int idx = currentLayerNames().indexOf(name);
+    if (idx < 0 || idx == activeLayerIndex) return;
+    activeLayerIndex = idx;
+    selectedMaskIndex = -1;
+    buildTree();                 // swap the top items (Core/masks) + repopulate the sections
+    updateMaskMenuBtn();         // Base hides [M]; enables/disables rename + remove
+    emit paramsChanged();        // the renderer shows the active layer
+}
 
-    addItem(i);
-    layersIdx = model->index(_layers, 1, root);
-    QModelIndex parIdx = capIdx;
+void DevelopProperties::renameActiveLayer()
+{
+    if (G::isLogger) G::log("DevelopProperties::renameActiveLayer");
+    if (currentImagePath.isEmpty()) return;
+    if (activeLayerIndex == 0) { emit centralMsg("The Base layer cannot be renamed."); return; }
+    EditStack &s = stackCache[currentImagePath];
+    if (activeLayerIndex >= s.layers.size()) return;
 
-    /* Select layer combo. */
-    clearItemInfo(i);
-    i.name = "layerList";
-    i.parIdx = parIdx;
-    i.parentName = "LayersHeader";
-    i.captionText = "Layer:";
-    i.tooltip = "The layer whose adjustments are shown below (this image's layers).";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = currentLayerNames().value(activeLayerIndex);
-    i.key = "layerList";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.color = "#1b8a83";
-    i.dropList = currentLayerNames();
+    const QString oldName = s.layers[activeLayerIndex].name;
+    bool ok = false;
+    const QString entered = QInputDialog::getText(this, "Rename layer", "Layer name:",
+                                                  QLineEdit::Normal, oldName, &ok).trimmed();
+    if (!ok || entered.isEmpty() || entered == oldName) return;
 
-    /* [M] mask-menu button trailing the Select layer combo. The ComboBoxEditor drains the global
-       `btns` vector (like BarBtnEditor), so queuing it here places it right after the combo. The
-       menu content is built on click (showMaskMenu) so it can offer Subtract only once a tool
-       exists. */
-    maskMenu = new QMenu(this);
-    maskMenuBtn = new BarBtn();
-    maskMenuBtn->setIcon(":/images/icon16/addMask.png", G::iconOpacity);
-    maskMenuBtn->setToolTip("Add a mask tool (gradient, brush, range, AI select) to this layer");
-    connect(maskMenuBtn, &BarBtn::clicked, this, &DevelopProperties::showMaskMenu);
-    btns.append(maskMenuBtn);
+    /* uniqueLayerName still sees this layer's own OLD name, so it only suffixes on a clash with a
+       DIFFERENT layer. */
+    s.layers[activeLayerIndex].name = uniqueLayerName(entered);
+    dirty.insert(currentImagePath);
+    refreshLayerCombo();
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
 
-    layerListEditor = static_cast<ComboBoxEditor*>(addItem(i));
+void DevelopProperties::resetActiveLayer()
+{
+    if (G::isLogger) G::log("DevelopProperties::resetActiveLayer");
+    if (currentImagePath.isEmpty()) return;
+    EditLayer *l = activeLayer();
+    if (!l) return;
+    /* Restore this layer's adjustments to their defaults and un-hide every group (non-destructive to
+       the mask geometry, which defines WHERE the layer applies). */
+    l->params = EditParams();
+    l->showLayer = l->showBasic = l->showColor = l->showEffects = true;
+    dirty.insert(currentImagePath);
+    buildTree();                 // repopulate the sliders at their defaults + refresh the eyes
+    emit paramsChanged();
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
 
-    /* The combo's text is editable so a layer (except Base) can be renamed in place. */
-    layerListEditor->setRenamable(true);
-    connect(layerListEditor, &ComboBoxEditor::itemRenamed,
-            this, &DevelopProperties::onLayerRenamed);
+void DevelopProperties::onLayerPreviewToggled(bool shown)
+{
+    if (G::isLogger) G::log("DevelopProperties::onLayerPreviewToggled");
+    EditLayer *l = activeLayer();
+    if (!l) { if (layerHeader) layerHeader->setPreviewShown(true); return; }
+    l->showLayer = shown;        // non-destructive: values kept, the whole layer folds off at render
+    dirty.insert(currentImagePath);
+    refreshPreviewButtons();
+    emit paramsChanged();
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
 
-    updateMaskMenuBtn();        // Base layer carries no mask, so [M] starts hidden
+void DevelopProperties::setTreeCollapsed(bool collapsed)
+{
+    /* Hide only the LAYER items -- the Core rows (Base) or mask-tool rows that sit ABOVE the
+       Basic/Color/Effects sections. The sections stay visible. */
+    layerItemsCollapsed = collapsed;
+    applyLayerItemsCollapsed();
+}
 
-    QModelIndex idx = sourceIdx["layerList"];
-    model->setData(idx, currentLayerNames().value(activeLayerIndex));
-    propertyDelegate->setEditorData(layerListEditor, idx);
+void DevelopProperties::applyLayerItemsCollapsed()
+{
+    /* The layer's top items are the root rows BEFORE the Basic section (Core rows for Base, else the
+       mask-tool rows). Re-applied after each buildTree, since a rebuild resets row visibility. */
+    const QModelIndex basic = findCaptionIndex("BasicHeader");
+    const int firstSection = basic.isValid() ? basic.row() : model->rowCount();
+    for (int r = 0; r < firstSection; ++r)
+        setRowHidden(r, QModelIndex(), layerItemsCollapsed);
 }
 
 void DevelopProperties::bindToneSlider(ToneRegionSlider *slider)
@@ -273,15 +343,6 @@ void DevelopProperties::onToneSplitsChanged(double shadow, double crossover, dou
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
-void DevelopProperties::addLayerItems()
-{
-    if (G::isLogger) G::log("DevelopProperties::addLayerItems");
-    addBasic();
-    addColor();
-    addEffects();
-    updateSectionHeaderCaptions();
-}
-
 void DevelopProperties::newLayer()
 {
     if (G::isLogger) G::log("DevelopProperties::newLayer");
@@ -290,20 +351,26 @@ void DevelopProperties::newLayer()
     EditStack &s = stackCache[currentImagePath];
     if (s.layers.isEmpty()) s.layers.append(EditLayer());     // ensure a base layer exists
     s.layers[0].name = "Base";                                // index 0 is always Base
+
+    /* Prompt for the name, defaulting to "Layer n" (the first above Base is "Layer 1", since Base is
+       index 0 and the new layer's index equals the pre-append size). */
+    const QString def = uniqueLayerName("Layer " + QString::number(s.layers.size()));
+    bool ok = false;
+    const QString entered = QInputDialog::getText(this, "New layer", "Layer name:",
+                                                  QLineEdit::Normal, def, &ok).trimmed();
+    if (!ok) return;
+
     EditLayer l;
-    /* Extra layers are numbered "Layer 1", "Layer 2", ... -- the first one above Base is "Layer 1"
-       (Base is index 0, so the new layer's index equals the pre-append size). */
-    l.name = uniqueLayerName("Layer " + QString::number(s.layers.size()));
+    l.name = uniqueLayerName(entered.isEmpty() ? def : entered);
     s.layers.append(l);
     activeLayerIndex = s.layers.size() - 1;                   // edit the new layer
     dirty.insert(currentImagePath);
 
-    /* New layer is identity, so the rendered result is unchanged; just refresh the combo and
-       show the (zeroed) sliders. The stack only persists once a layer actually changes a pixel. */
+    /* New layer is identity, so the rendered result is unchanged; just refresh the header combo and
+       rebuild the tree for it. The stack only persists once a layer actually changes a pixel. */
     selectedMaskIndex = -1;
     refreshLayerCombo();
-    populateSlidersFromStack();
-    rebuildMaskTools();
+    buildTree();
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
@@ -324,32 +391,8 @@ void DevelopProperties::deleteLayer()
 
     selectedMaskIndex = -1;
     refreshLayerCombo();
-    populateSlidersFromStack();
-    rebuildMaskTools();
+    buildTree();
     emit paramsChanged();                                    // removing a layer changes the result
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
-}
-
-void DevelopProperties::onLayerRenamed(const QString &oldName, const QString &newName)
-{
-    if (G::isLogger) G::log("DevelopProperties::onLayerRenamed");
-    if (currentImagePath.isEmpty()) return;
-
-    EditStack &s = stackCache[currentImagePath];
-    const int idx = currentLayerNames().indexOf(oldName);
-    if (idx <= 0 || idx >= s.layers.size()) {
-        /* Index 0 is the (un-renamable) Base layer; anything else is a stale/unknown name. Restore
-           the displayed text either way. */
-        if (idx == 0) emit centralMsg("The Base layer cannot be renamed.");
-        refreshLayerCombo();
-        return;
-    }
-
-    /* uniqueLayerName checks against the current names (which still include this layer's old name,
-       so it never collides with itself); a clash with ANOTHER layer gets a numeric suffix. */
-    s.layers[idx].name = uniqueLayerName(newName.trimmed());
-    dirty.insert(currentImagePath);
-    refreshLayerCombo();                                      // rebuilds the combo + section headers
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
@@ -450,10 +493,11 @@ void DevelopProperties::refreshPreviewButtons()
         if (!b) return;
         b->setIcon(shown ? ":/images/icon16/eye.png" : ":/images/icon16/eye_off.png", G::iconOpacity);
     };
-    set(layerEyeBtn,   l ? l->showLayer   : true);
     set(basicEyeBtn,   l ? l->showBasic   : true);
     set(colorEyeBtn,   l ? l->showColor   : true);
     set(effectsEyeBtn, l ? l->showEffects : true);
+    /* The whole-layer eye lives in the LayerHeader widget, not the tree. */
+    if (layerHeader) layerHeader->setPreviewShown(l ? l->showLayer : true);
 }
 
 void DevelopProperties::togglePreviewSection(int group)
@@ -499,8 +543,7 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
     /* Map a header row to its Preview/Reset group; other rows have no menu. */
     int group;
     QString label;
-    if      (name == "LayersHeader")  { group = PV_Layer;   label = "layer"; }
-    else if (name == "BasicHeader")   { group = PV_Basic;   label = "Basic"; }
+    if      (name == "BasicHeader")   { group = PV_Basic;   label = "Basic"; }
     else if (name == "ColorHeader")   { group = PV_Color;   label = "Color"; }
     else if (name == "EffectsHeader") { group = PV_Effects; label = "Effects"; }
     else return;
@@ -570,7 +613,7 @@ void DevelopProperties::newMask()
     selectedMaskIndex = layer->masks.size() - 1;            // start editing the new tool
     dirty.insert(currentImagePath);
 
-    rebuildMaskTools();
+    buildTree();
     emit paramsChanged();       // adding a mask confines the layer's adjustment -> re-composite
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
@@ -584,7 +627,7 @@ void DevelopProperties::deleteMask(int index)
     else if (selectedMaskIndex >  index) selectedMaskIndex--;        // shift to follow the tool
     dirty.insert(currentImagePath);
 
-    rebuildMaskTools();
+    buildTree();
     emit paramsChanged();       // removing a mask changes the layer's coverage -> re-composite
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
@@ -613,6 +656,7 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     model->setData(toolIdx, index, UR_MaskIndex);
     model->setData(toolIdx, true, UR_LeafSingleLine);
     model->setData(toolIdx, true, UR_DeleteBtn);
+    model->setData(toolIdx, true, UR_ShowDecoration);   // always show the expand arrow (settings on click)
     setFirstColumnSpanned(toolIdx.row(), parIdx, true);
 
     /* The selected tool reveals its settings as its OWN children (no duplicate tool-name row).
@@ -647,41 +691,10 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     }
 }
 
-void DevelopProperties::rebuildMaskTools()
-{
-    if (G::isLogger) G::log("DevelopProperties::rebuildMaskTools");
-    QModelIndex lh = findCaptionIndex("LayersHeader");
-    if (!lh.isValid()) return;
-
-    isRebuildingMasks = true;
-    isPopulating = true;
-
-    /* Clear everything under the Layers header EXCEPT row 0 (the "Select layer" combo). */
-    if (model->rowCount(lh) > 1)
-        model->removeRows(1, model->rowCount(lh) - 1, lh);
-
-    EditLayer *layer = activeLayer();
-    if (layer && activeLayerIndex > 0) {                    // Base layer carries no mask
-        const int n = layer->masks.size();
-        if (selectedMaskIndex >= n) selectedMaskIndex = n - 1;
-        for (int m = 0; m < n; ++m)
-            addToolRow(lh, m, layer->masks[m], m == selectedMaskIndex);
-        expand(lh);
-    }
-    else {
-        selectedMaskIndex = -1;
-    }
-
-    isPopulating = false;
-    isRebuildingMasks = false;
-
-    updateMaskEdit();       // begin/end the ImageView overlay for the (now) active mask tool
-}
-
 void DevelopProperties::setSelectedMask(int index)
 {
     selectedMaskIndex = index;
-    rebuildMaskTools();
+    buildTree();            // rebuild so the newly-selected tool shows (only it carries settings)
 }
 
 QString DevelopProperties::defaultMaskParams(int tool)
@@ -878,7 +891,7 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
 
     if (previewGroup >= 0) {
         /* A section header (Basic/Color/Effects): a trailing eye toggle in a BarBtn column, drained
-           by BarBtnEditor. hasValue + DT_BarBtns are what create that column (cf. LayersHeader). */
+           by BarBtnEditor. hasValue + DT_BarBtns are what create that column. */
         BarBtn *eye = makeEyeBtn("Preview: show or ignore these settings", previewGroup);
         if      (previewGroup == PV_Basic)   basicEyeBtn   = eye;
         else if (previewGroup == PV_Color)   colorEyeBtn   = eye;
@@ -1045,23 +1058,6 @@ void DevelopProperties::itemChange(QModelIndex idx)
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
 
-    if (source == "layerList") {
-        /* Switch the active layer of the CURRENT IMAGE: repopulate the sliders from that layer
-           and re-render (the renderer shows the active layer). No tree rebuild => no flicker. */
-        if (currentImagePath.isEmpty()) return;
-        const int idx2 = currentLayerNames().indexOf(v.toString());
-        if (idx2 >= 0 && idx2 != activeLayerIndex) {
-            activeLayerIndex = idx2;
-            selectedMaskIndex = -1;
-            populateSlidersFromStack();
-            rebuildMaskTools();
-            updateMaskMenuBtn();        // hide [M] on the Base layer
-            updateSectionHeaderCaptions();
-            emit paramsChanged();
-        }
-        return;
-    }
-
     /* Brush current settings (size/feather/flow/autoMask) set what the NEXT stroke uses; existing
        strokes keep their own snapshot, so these do NOT re-composite -- they just refresh the cursor
        and brush state in ImageView. (Invert still flips the whole mask -- handled below.) */
@@ -1218,20 +1214,16 @@ void DevelopProperties::refreshLayerCombo()
 {
     layerList = currentLayerNames();
     if (activeLayerIndex < 0 || activeLayerIndex >= layerList.size()) activeLayerIndex = 0;
-    if (!layerListEditor) return;
-    /* Guard so the combo's programmatic setValue does not re-enter itemChange. */
-    isPopulating = true;
-    layerListEditor->refresh(layerList);
-    layerListEditor->setValue(layerList.value(activeLayerIndex));
-    isPopulating = false;
-    updateMaskMenuBtn();        // hide [M] on the Base layer
+    /* The dropdown lives in the LayerHeader widget; push the names + selection (no signal). */
+    if (layerHeader) layerHeader->setLayers(layerList, activeLayerIndex);
+    updateMaskMenuBtn();        // hide [M] + disable rename/remove on the Base layer
     updateSectionHeaderCaptions();
 }
 
 void DevelopProperties::updateMaskMenuBtn()
 {
-    /* The Base layer (index 0) carries no mask, so its [M] add-mask button is hidden. */
-    if (maskMenuBtn) maskMenuBtn->setVisible(activeLayerIndex > 0);
+    /* The Base layer (index 0) applies globally: no mask [M], and it cannot be renamed or removed. */
+    if (layerHeader) layerHeader->setBaseActive(activeLayerIndex == 0);
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -1261,8 +1253,7 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     selectedMaskIndex = -1;
 
     refreshLayerCombo();
-    populateSlidersFromStack();
-    rebuildMaskTools();
+    buildTree();                   // Base is active: Core rows + Basic/Color/Effects, populated
 }
 
 bool DevelopProperties::currentIsIdentity() const
