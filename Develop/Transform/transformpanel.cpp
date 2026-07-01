@@ -4,13 +4,17 @@
 
 #include <QComboBox>
 #include <QToolButton>
-#include <QCheckBox>
+#include <QButtonGroup>
+#include <QLineEdit>
+#include <QDoubleValidator>
 #include <QSettings>
 #include <QLabel>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QPainter>
+#include <QLinearGradient>
 #include <QInputDialog>
-#include <QLineEdit>
 #include <QSignalBlocker>
 #include <QRegularExpression>
 #include <QKeyEvent>
@@ -33,6 +37,25 @@ bool parseAspect(const QString &text, double &w, double &h)
     h = m.captured(2).toDouble();
     return w > 0.0 && h > 0.0;
 }
+
+/* A section-header band that paints the same top-to-bottom gradient as the property-tree
+   headers (see PropertyDelegate::paint: backgroundShade +5 -> -15). Plain QWidget subclass with no
+   _Q_OBJECT (needs no moc) -- it only overrides paintEvent. */
+class GradientHeader : public QWidget
+{
+public:
+    explicit GradientHeader(QWidget *parent = nullptr) : QWidget(parent) {}
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QPainter p(this);
+        const int a = G::backgroundShade + 5;
+        const int b = G::backgroundShade - 15;
+        QLinearGradient g(0, 0, 0, height());
+        g.setColorAt(0, QColor(a, a, a));
+        g.setColorAt(1, QColor(b, b, b));
+        p.fillRect(rect(), g);
+    }
+};
 }
 
 TransformPanel::TransformPanel(QWidget *parent, QSettings *settings)
@@ -45,22 +68,83 @@ TransformPanel::TransformPanel(QWidget *parent, QSettings *settings)
 
 void TransformPanel::buildUi()
 {
-    /* Row 1: section caption on the left, the [?] tips button pinned top-right. */
-    QLabel *title = new QLabel(tr("Transform"), this);
-    title->setStyleSheet("font-weight: bold;");
+    /* -------- Header: property-style gradient band, caption left, [?] [E] [R] trailing -------- */
+    GradientHeader *header = new GradientHeader(this);
+
+    QLabel *title = new QLabel(tr("Transform"), header);
+    title->setStyleSheet(QString("color: %1;").arg(G::header2Color.name()));
+    QFont hf = title->font();
+    hf.setPointSize(G::strFontSize.toInt());
+    title->setFont(hf);
 
     tipBtn = new BarBtn();
     tipBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
     tipBtn->setToolTip(tr("Crop and transform tips"));
     connect(tipBtn, &BarBtn::clicked, this, &TransformPanel::tipsRequested);
 
-    QHBoxLayout *titleRow = new QHBoxLayout;
-    titleRow->setContentsMargins(0, 0, 0, 0);
-    titleRow->addWidget(title);
-    titleRow->addStretch(1);
-    titleRow->addWidget(tipBtn);
+    /* The eye shows/ignores the whole transform (non-destructive). */
+    previewBtn = new BarBtn();
+    connect(previewBtn, &BarBtn::clicked, this, [this]{
+        previewShown = !previewShown;
+        updatePreviewButton();
+        emit previewToggled(previewShown);
+    });
+    updatePreviewButton();
 
-    /* Row 2: aspect ratio combo + the lock toggle. */
+    headerResetBtn = new BarBtn();
+    headerResetBtn->setIcon(":/images/icon16/reset.png", G::iconOpacity);
+    headerResetBtn->setToolTip(tr("Reset crop, straighten and perspective to the full frame"));
+    connect(headerResetBtn, &BarBtn::clicked, this, &TransformPanel::resetRequested);
+
+    QHBoxLayout *headerRow = new QHBoxLayout(header);
+    headerRow->setContentsMargins(6, 3, 6, 3);
+    headerRow->setSpacing(6);
+    headerRow->addWidget(title);
+    headerRow->addStretch(1);
+    headerRow->addWidget(tipBtn);
+    headerRow->addWidget(previewBtn);
+    headerRow->addWidget(headerResetBtn);
+
+    /* -------- Mode toggle (Crop / Level / Warp): mutually exclusive, teal-when-selected -------- */
+    const int bs = G::backgroundShade;
+    const QString border  = QColor(bs + 30, bs + 30, bs + 30).name();
+    const QString normalBg = QColor(bs + 8,  bs + 8,  bs + 8).name();
+    const QString hoverBg  = QColor(bs + 18, bs + 18, bs + 18).name();
+    const QString modeQss = QString(
+        "QToolButton{border:1px solid %1; border-radius:3px; padding:2px 6px; background:%2;}"
+        "QToolButton:hover:!checked{background:%3;}"
+        "QToolButton:checked{background:#1b8a83; border:1px solid #4dd0c6; color:white;}")
+        .arg(border, normalBg, hoverBg);
+
+    auto makeModeBtn = [&](const QString &text, const QString &tip) {
+        QToolButton *b = new QToolButton(this);
+        b->setText(text);
+        b->setToolTip(tip);
+        b->setCheckable(true);
+        b->setStyleSheet(modeQss);
+        b->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        b->setFocusPolicy(Qt::StrongFocus);   // so C/L/W reach the eventFilter after a click
+        return b;
+    };
+    cropModeBtn  = makeModeBtn(tr("Crop"),  tr("Crop and set an aspect ratio (C)"));
+    levelModeBtn = makeModeBtn(tr("Level"), tr("Straighten: draw a level line or type an angle (L)"));
+    warpModeBtn  = makeModeBtn(tr("Warp"),  tr("Perspective correction: drag the corners (W)"));
+
+    modeGroup = new QButtonGroup(this);
+    modeGroup->setExclusive(true);
+    modeGroup->addButton(cropModeBtn,  CropMode);
+    modeGroup->addButton(levelModeBtn, LevelMode);
+    modeGroup->addButton(warpModeBtn,  WarpMode);
+    connect(modeGroup, &QButtonGroup::idClicked, this, &TransformPanel::selectMode);
+
+    /* Uniform mode-button width so the whole toggle column lines up. */
+    int modeW = 0;
+    for (QToolButton *b : {cropModeBtn, levelModeBtn, warpModeBtn})
+        modeW = qMax(modeW, b->sizeHint().width());
+    for (QToolButton *b : {cropModeBtn, levelModeBtn, warpModeBtn})
+        b->setFixedWidth(modeW);
+
+    /* -------- Crop row controls: aspect combo + aspect-lock padlock -------- */
     QLabel *aspectLbl = new QLabel(tr("Aspect"), this);
     aspectCombo = new QComboBox(this);
     aspectCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -68,66 +152,72 @@ void TransformPanel::buildUi()
     connect(aspectCombo, QOverload<int>::of(&QComboBox::activated),
             this, &TransformPanel::onAspectActivated);
 
-    /* The lock toggle. The "A" key also drives it (handled in eventFilter, not a QAction, to avoid
-       an ambiguous overload with the window-level "A"). */
     lockBtn = new QToolButton(this);
     lockBtn->setCheckable(true);
     connect(lockBtn, &QToolButton::clicked, this, &TransformPanel::toggleAspectLock);
 
-    QHBoxLayout *aspectRow = new QHBoxLayout;
-    aspectRow->setContentsMargins(0, 0, 0, 0);
-    aspectRow->addWidget(aspectLbl);
-    aspectRow->addWidget(aspectCombo, 1);
-    aspectRow->addWidget(lockBtn);
-
-    /* Row 3: the three tools. Crop is a toggle (overlay on/off); Straighten and Rectify are
-       one-shot actions. Rectify is enabled once a polygon crop has been drawn (Alt-drag); for now
-       it stays available and simply emits its signal. */
-    straightenBtn = new QToolButton(this);
-    straightenBtn->setText(tr("Level"));
-    straightenBtn->setToolTip(tr("Draw a line on the image to straighten it"));
-    connect(straightenBtn, &QToolButton::clicked, this, &TransformPanel::straightenToolRequested);
-
-    cropBtn = new QToolButton(this);
-    cropBtn->setText(tr("Crop"));
-    cropBtn->setCheckable(true);
-    cropBtn->setToolTip(tr("Drag a crop rectangle. Hold Alt/Option to drag a 4-point polygon for "
-                           "perspective correction."));
-    connect(cropBtn, &QToolButton::toggled, this, &TransformPanel::cropToolToggled);
-
-    rectifyBtn = new QToolButton(this);
-    rectifyBtn->setText(tr("Rectify"));
-    rectifyBtn->setToolTip(tr("Warp the image so the 4-point polygon becomes square, then fit the "
-                              "largest crop that lies inside the corrected canvas"));
-    connect(rectifyBtn, &QToolButton::clicked, this, &TransformPanel::rectifyRequested);
-
-    QHBoxLayout *toolRow = new QHBoxLayout;
-    toolRow->setContentsMargins(0, 0, 0, 0);
-    toolRow->addWidget(straightenBtn);
-    toolRow->addWidget(cropBtn);
-    toolRow->addWidget(rectifyBtn);
-    toolRow->addStretch(1);
-
-    /* Row 4: fill extra canvas (content-aware edge-extend). */
-    fillCanvasChk = new QCheckBox(tr("Fill extra canvas"), this);
-    fillCanvasChk->setToolTip(tr("Content-aware fill of empty corners left by a straighten or "
-                                 "perspective correction"));
-    if (setting)
-        fillCanvasChk->setChecked(setting->value("Develop/Transform/fillCanvas", false).toBool());
-    connect(fillCanvasChk, &QCheckBox::toggled, this, [this](bool on){
-        if (setting) setting->setValue("Develop/Transform/fillCanvas", on);
-        emit fillCanvasToggled(on);
+    /* -------- Level row controls: straighten-angle field -------- */
+    QLabel *angleLbl = new QLabel(tr("Angle"), this);
+    angleEdit = new QLineEdit(this);
+    angleEdit->setToolTip(tr("Straighten angle in degrees (-45 to 45)"));
+    angleEdit->setPlaceholderText("0.0");
+    QDoubleValidator *av = new QDoubleValidator(-45.0, 45.0, 2, angleEdit);
+    av->setNotation(QDoubleValidator::StandardNotation);
+    angleEdit->setValidator(av);
+    angleEdit->setFixedWidth(60);
+    connect(angleEdit, &QLineEdit::editingFinished, this, [this]{
+        emit levelAngleEntered(angleEdit->text().toDouble());
     });
 
-    QVBoxLayout *lay = new QVBoxLayout(this);
-    lay->setContentsMargins(6, 4, 6, 4);
-    lay->setSpacing(4);
-    lay->addLayout(titleRow);
-    lay->addLayout(aspectRow);
-    lay->addLayout(toolRow);
-    lay->addWidget(fillCanvasChk);
+    /* -------- Warp row: a hint (no control yet) -------- */
+    QLabel *warpHint = new QLabel(tr("Drag corners"), this);
+    warpHint->setStyleSheet(QString("color: %1;").arg(G::disabledColor.name()));
 
-    /* Restore the persisted lock state and aspect selection. */
+    /* -------- Per-row reset buttons (all in the last column so they align) -------- */
+    auto makeRowReset = [&](int m, const QString &tip) {
+        BarBtn *b = new BarBtn();
+        b->setIcon(":/images/icon16/reset.png", G::iconOpacity);
+        b->setToolTip(tip);
+        connect(b, &BarBtn::clicked, this, [this, m]{ emit resetModeRequested(m); });
+        return b;
+    };
+    BarBtn *cropResetBtn  = makeRowReset(CropMode,  tr("Reset the crop to the full frame"));
+    BarBtn *levelResetBtn = makeRowReset(LevelMode, tr("Reset the straighten angle to 0"));
+    BarBtn *warpResetBtn  = makeRowReset(WarpMode,  tr("Reset the perspective correction"));
+
+    /* -------- Grid: col0 mode | col1 label | col2 control (stretch) | col3 lock | col4 reset ---- */
+    QGridLayout *grid = new QGridLayout;
+    grid->setContentsMargins(0, 0, 0, 0);
+    grid->setHorizontalSpacing(6);
+    grid->setVerticalSpacing(4);
+    grid->setColumnStretch(2, 1);
+
+    grid->addWidget(cropModeBtn,  0, 0);
+    grid->addWidget(aspectLbl,    0, 1);
+    grid->addWidget(aspectCombo,  0, 2);
+    grid->addWidget(lockBtn,      0, 3);
+    grid->addWidget(cropResetBtn, 0, 4);
+
+    grid->addWidget(levelModeBtn, 1, 0);
+    grid->addWidget(angleLbl,     1, 1);
+    grid->addWidget(angleEdit,    1, 2, Qt::AlignLeft);
+    grid->addWidget(levelResetBtn,1, 4);
+
+    grid->addWidget(warpModeBtn,  2, 0);
+    grid->addWidget(warpHint,     2, 1, 1, 2);
+    grid->addWidget(warpResetBtn, 2, 4);
+
+    /* -------- Assemble -------- */
+    QVBoxLayout *lay = new QVBoxLayout(this);
+    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setSpacing(6);
+    lay->addWidget(header);
+    QVBoxLayout *bodyWrap = new QVBoxLayout;
+    bodyWrap->setContentsMargins(6, 0, 6, 6);
+    bodyWrap->addLayout(grid);
+    lay->addLayout(bodyWrap);
+
+    /* Restore the persisted lock state, aspect selection and mode. */
     aspectLocked = setting && setting->value("Develop/Transform/aspectLocked", false).toBool();
     updateLockButton();
     if (setting) {
@@ -141,16 +231,42 @@ void TransformPanel::buildUi()
             }
         }
     }
+    currentMode = setting ? setting->value("Develop/Transform/mode", CropMode).toInt() : CropMode;
+    setMode(currentMode);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    /* Let "A" toggle the lock whenever the panel or one of its non-text controls has focus. The
-       aspect combo is intentionally excluded so its type-ahead keeps working. */
+    /* Let A/C/L/W act on the focused panel (see eventFilter). The aspect combo and the angle field
+       are intentionally excluded so their text entry / type-ahead still works. */
     setFocusPolicy(Qt::StrongFocus);
     installEventFilter(this);
-    QWidget *filtered[] = {lockBtn, straightenBtn, cropBtn, rectifyBtn, fillCanvasChk};
+    QWidget *filtered[] = {cropModeBtn, levelModeBtn, warpModeBtn, lockBtn};
     for (QWidget *w : filtered)
         w->installEventFilter(this);
+}
+
+void TransformPanel::setMode(int mode)
+{
+    currentMode = mode;
+    QToolButton *b = (mode == LevelMode) ? levelModeBtn
+                   : (mode == WarpMode)  ? warpModeBtn
+                                         : cropModeBtn;
+    if (b) {
+        const QSignalBlocker block(b);
+        b->setChecked(true);
+    }
+    /* The aspect controls only make sense in Crop mode; the angle field only in Level mode. */
+    if (aspectCombo) aspectCombo->setEnabled(mode == CropMode);
+    if (lockBtn)     lockBtn->setEnabled(mode == CropMode);
+    if (angleEdit)   angleEdit->setEnabled(mode == LevelMode);
+}
+
+void TransformPanel::selectMode(int mode)
+{
+    if (mode == currentMode) { setMode(mode); return; }   // still refresh enabled-states
+    setMode(mode);
+    if (setting) setting->setValue("Develop/Transform/mode", mode);
+    emit modeChanged(mode);
 }
 
 void TransformPanel::populateAspectCombo()
@@ -248,6 +364,28 @@ void TransformPanel::toggleAspectLock()
     emit aspectLockToggled(aspectLocked);
 }
 
+void TransformPanel::updatePreviewButton()
+{
+    if (!previewBtn) return;
+    previewBtn->setIcon(previewShown ? ":/images/icon16/eye.png"
+                                     : ":/images/icon16/eye_off.png", G::iconOpacity);
+    previewBtn->setToolTip(previewShown ? tr("Showing the crop result (click to keep editing)")
+                                        : tr("Preview the crop result (click to apply and view)"));
+}
+
+void TransformPanel::setPreviewShown(bool shown)
+{
+    previewShown = shown;
+    updatePreviewButton();
+}
+
+void TransformPanel::setLevelAngle(double degrees)
+{
+    if (!angleEdit) return;
+    const QSignalBlocker block(angleEdit);
+    angleEdit->setText(degrees == 0.0 ? QString() : QString::number(degrees, 'f', 2));
+}
+
 void TransformPanel::updateLockButton()
 {
     if (!lockBtn) return;
@@ -260,14 +398,24 @@ void TransformPanel::updateLockButton()
 
 bool TransformPanel::eventFilter(QObject *watched, QEvent *event)
 {
-    /* Claim a bare "A" before the window-level Run-Droplet shortcut can: accept its
-       ShortcutOverride so the following KeyPress is delivered normally, then toggle on it. */
+    /* Claim a bare A/C/L/W before any window-level shortcut can: accept its ShortcutOverride so the
+       following KeyPress is delivered normally, then act on it. */
     if (event->type() == QEvent::ShortcutOverride || event->type() == QEvent::KeyPress) {
         QKeyEvent *ke = static_cast<QKeyEvent *>(event);
-        if (ke->key() == Qt::Key_A && ke->modifiers() == Qt::NoModifier) {
-            if (event->type() == QEvent::ShortcutOverride) { event->accept(); return true; }
-            toggleAspectLock();
-            return true;
+        if (ke->modifiers() == Qt::NoModifier) {
+            int key = ke->key();
+            const bool ours = (key == Qt::Key_A || key == Qt::Key_C ||
+                               key == Qt::Key_L || key == Qt::Key_W);
+            if (ours) {
+                if (event->type() == QEvent::ShortcutOverride) { event->accept(); return true; }
+                switch (key) {
+                case Qt::Key_A: toggleAspectLock();       break;
+                case Qt::Key_C: selectMode(CropMode);     break;
+                case Qt::Key_L: selectMode(LevelMode);    break;
+                case Qt::Key_W: selectMode(WarpMode);     break;
+                }
+                return true;
+            }
         }
     }
     return QWidget::eventFilter(watched, event);
@@ -281,11 +429,6 @@ QString TransformPanel::aspectKey() const
 double TransformPanel::aspectRatio() const
 {
     return aspectCombo ? aspectCombo->currentData(RatioRole).toDouble() : 0.0;
-}
-
-bool TransformPanel::isFillCanvas() const
-{
-    return fillCanvasChk && fillCanvasChk->isChecked();
 }
 
 void TransformPanel::loadCustomAspects()

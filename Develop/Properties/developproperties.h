@@ -138,10 +138,29 @@ private:
     static int maskToolFromName(const QString &name);
     static QString opName(int op);             // "Add" / "Subtract"
 
+    /* ---- Preview (show/ignore) + Reset per group ----------------------------------------------
+       Each section header (Basic/Color/Effects) and the Layers header carry an eye BarBtn that
+       toggles that group's Preview flag on the active layer (non-destructive: values are kept, the
+       group is folded to identity at render by effectiveLayerParams). Right-clicking a header pops
+       a menu to toggle Preview or Reset (restore defaults, destructive) for that group. Transform's
+       preview/reset live in TransformPanel (separate widget), wired via MW. Group codes: PV_Layer =
+       whole active layer, PV_Basic/PV_Color/PV_Effects = a section. */
+    enum PreviewGroup { PV_Layer = -1, PV_Basic = 0, PV_Color = 1, PV_Effects = 2 };
+    BarBtn *makeEyeBtn(const QString &tooltip, int group);   // queue an eye toggle into `btns`
+    void togglePreviewSection(int group);   // flip the flag, refresh icon, re-render (no value change)
+    void resetSection(int group);           // restore the group's defaults, repopulate, re-render
+    void refreshPreviewButtons();           // sync every eye icon from the active layer's flags
+    static EditParams::Group paramsGroup(int group);   // PV_* -> EditParams::Group (Basic for PV_Layer)
+    bool *previewFlag(EditLayer *l, int group);        // the bool a PV_* code maps to on a layer
+    BarBtn *layerEyeBtn = nullptr, *basicEyeBtn = nullptr,
+           *colorEyeBtn = nullptr, *effectsEyeBtn = nullptr;
+
+    void contextMenuEvent(QContextMenuEvent *event) override;   // header right-click: Preview / Reset
+
     /* Item builders. div converts the integer slider amount to a double (eg /100), and
        defaults to identity (0) so an absent value is a no-op edit. */
     void addHeader(const QString &name, const QString &parent,
-                   const QString &caption, const QString &tooltip);
+                   const QString &caption, const QString &tooltip, int previewGroup = -1);
     void addSlider(const QString &key, const QString &caption, const QString &tooltip,
                    QModelIndex parIdx, const QString &parentName,
                    int min, int max, int div, QString color, QString color1,

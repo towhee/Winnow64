@@ -151,11 +151,13 @@ QImage CropTransform::applyGeometry(const QImage &src, const Geometry &g)
 
     QImage img = src;
 
-    /* 1) Straighten: rotate about the centre, expanding the canvas (the crop trims the corners). */
+    /* 1) Straighten: rotate about the centre, expanding the canvas (the crop trims the corners).
+       Convert to ARGB32 first so the exposed wedges are TRANSPARENT (not black), matching the warp
+       and letting straightenCropNorm / the view background behave. */
     if (g.straighten != 0.0) {
         QTransform t;
         t.rotate(g.straighten);
-        img = img.transformed(t, Qt::SmoothTransformation);
+        img = img.convertToFormat(QImage::Format_ARGB32).transformed(t, Qt::SmoothTransformation);
     }
 
     /* 2) Warp: rectify the 4-point quad (its corners are in this image's normalized space). */
@@ -176,4 +178,35 @@ QImage CropTransform::applyGeometry(const QImage &src, const Geometry &g)
         if (cri.isValid() && cri != img.rect()) img = img.copy(cri);
     }
     return img;
+}
+
+QRectF CropTransform::straightenCropNorm(double W, double H, double deg)
+{
+    if (W <= 0.0 || H <= 0.0 || deg == 0.0) return QRectF(0, 0, 1, 1);
+
+    const double a = deg * 0.017453292519943295;   // radians
+    const double c = std::abs(std::cos(a));
+    const double s = std::abs(std::sin(a));
+    const double canvasW = W * c + H * s;           // bounding box of the rotated frame
+    const double canvasH = W * s + H * c;
+
+    /* rotatedRectWithMaxArea: largest axis-aligned rect (canvas axes) of pure content. */
+    const double longSide  = std::max(W, H);
+    const double shortSide = std::min(W, H);
+    const bool   wLonger   = (W >= H);
+    double wr, hr;
+    if (shortSide <= 2.0 * s * c * longSide || std::abs(s - c) < 1e-10) {
+        const double x = 0.5 * shortSide;
+        if (wLonger) { wr = (s > 1e-9) ? x / s : W; hr = (c > 1e-9) ? x / c : H; }
+        else         { wr = (c > 1e-9) ? x / c : W; hr = (s > 1e-9) ? x / s : H; }
+    } else {
+        const double cos2a = c * c - s * s;
+        wr = (W * c - H * s) / cos2a;
+        hr = (H * c - W * s) / cos2a;
+    }
+    wr = std::max(0.0, std::min(wr, canvasW));
+    hr = std::max(0.0, std::min(hr, canvasH));
+
+    return QRectF((canvasW - wr) / 2.0 / canvasW, (canvasH - hr) / 2.0 / canvasH,
+                  wr / canvasW, hr / canvasH);
 }

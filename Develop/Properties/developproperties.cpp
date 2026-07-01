@@ -191,6 +191,10 @@ void DevelopProperties::addLayersHeader()
     connect(layerNewBtn, &BarBtn::clicked, this, &DevelopProperties::newLayer);
     btns.append(layerNewBtn);
 
+    /* Whole-layer Preview eye (trailing): ignore/show all of the active layer's adjustments. */
+    layerEyeBtn = makeEyeBtn("Preview: show or ignore this whole layer", PV_Layer);
+    btns.append(layerEyeBtn);
+
     addItem(i);
     layersIdx = model->index(_layers, 1, root);
     QModelIndex parIdx = capIdx;
@@ -218,7 +222,7 @@ void DevelopProperties::addLayersHeader()
        exists. */
     maskMenu = new QMenu(this);
     maskMenuBtn = new BarBtn();
-    maskMenuBtn->setText("M");
+    maskMenuBtn->setIcon(":/images/icon16/addMask.png", G::iconOpacity);
     maskMenuBtn->setToolTip("Add a mask tool (gradient, brush, range, AI select) to this layer");
     connect(maskMenuBtn, &BarBtn::clicked, this, &DevelopProperties::showMaskMenu);
     btns.append(maskMenuBtn);
@@ -404,6 +408,117 @@ EditLayer *DevelopProperties::activeLayer()
     EditStack &s = stackCache[currentImagePath];
     if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) return nullptr;
     return &s.layers[activeLayerIndex];
+}
+
+/* ----------------------------------------------------------------------------------------
+   Preview (show/ignore) + Reset per group
+   ---------------------------------------------------------------------------------------- */
+
+EditParams::Group DevelopProperties::paramsGroup(int group)
+{
+    switch (group) {
+    case PV_Color:   return EditParams::Group::Color;
+    case PV_Effects: return EditParams::Group::Effects;
+    default:         return EditParams::Group::Basic;   // PV_Basic (and PV_Layer, unused here)
+    }
+}
+
+bool *DevelopProperties::previewFlag(EditLayer *l, int group)
+{
+    if (!l) return nullptr;
+    switch (group) {
+    case PV_Layer:   return &l->showLayer;
+    case PV_Color:   return &l->showColor;
+    case PV_Effects: return &l->showEffects;
+    default:         return &l->showBasic;              // PV_Basic
+    }
+}
+
+BarBtn *DevelopProperties::makeEyeBtn(const QString &tooltip, int group)
+{
+    BarBtn *b = new BarBtn();
+    b->setIcon(":/images/icon16/eye.png", G::iconOpacity);
+    b->setToolTip(tooltip);
+    connect(b, &BarBtn::clicked, this, [this, group]{ togglePreviewSection(group); });
+    return b;
+}
+
+void DevelopProperties::refreshPreviewButtons()
+{
+    EditLayer *l = activeLayer();
+    auto set = [](BarBtn *b, bool shown) {
+        if (!b) return;
+        b->setIcon(shown ? ":/images/icon16/eye.png" : ":/images/icon16/eye_off.png", G::iconOpacity);
+    };
+    set(layerEyeBtn,   l ? l->showLayer   : true);
+    set(basicEyeBtn,   l ? l->showBasic   : true);
+    set(colorEyeBtn,   l ? l->showColor   : true);
+    set(effectsEyeBtn, l ? l->showEffects : true);
+}
+
+void DevelopProperties::togglePreviewSection(int group)
+{
+    if (G::isLogger) G::log("DevelopProperties::togglePreviewSection");
+    EditLayer *l = activeLayer();
+    bool *f = previewFlag(l, group);
+    if (!f) return;
+    *f = !*f;                               // non-destructive: values are kept, only the fold changes
+    dirty.insert(currentImagePath);
+    refreshPreviewButtons();
+    emit paramsChanged();                   // re-render with the folded params
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+void DevelopProperties::resetSection(int group)
+{
+    if (G::isLogger) G::log("DevelopProperties::resetSection");
+    if (currentImagePath.isEmpty()) return;
+    EditParams &p = activeParams();
+    if (group == PV_Layer) {
+        EditParams::resetGroup(p, EditParams::Group::Basic);
+        EditParams::resetGroup(p, EditParams::Group::Color);
+        EditParams::resetGroup(p, EditParams::Group::Effects);
+    }
+    else {
+        EditParams::resetGroup(p, paramsGroup(group));
+    }
+    dirty.insert(currentImagePath);
+    populateSlidersFromStack();             // reflect the restored defaults (sliders + tone slider)
+    emit paramsChanged();
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
+{
+    if (G::isLogger) G::log("DevelopProperties::contextMenuEvent");
+    QModelIndex idx = indexAt(event->pos());
+    if (!idx.isValid()) return;
+    idx = model->index(idx.row(), CapColumn, idx.parent());
+    const QString name = idx.data(UR_Name).toString();
+
+    /* Map a header row to its Preview/Reset group; other rows have no menu. */
+    int group;
+    QString label;
+    if      (name == "LayersHeader")  { group = PV_Layer;   label = "layer"; }
+    else if (name == "BasicHeader")   { group = PV_Basic;   label = "Basic"; }
+    else if (name == "ColorHeader")   { group = PV_Color;   label = "Color"; }
+    else if (name == "EffectsHeader") { group = PV_Effects; label = "Effects"; }
+    else return;
+
+    EditLayer *l = activeLayer();
+    const bool shown = l ? *previewFlag(l, group) : true;
+
+    QMenu menu(this);
+    QAction *aPreview = menu.addAction("Preview");
+    aPreview->setCheckable(true);
+    aPreview->setChecked(shown);
+    aPreview->setEnabled(l != nullptr);
+    QAction *aReset = menu.addAction("Reset " + label);
+    aReset->setEnabled(!currentImagePath.isEmpty());
+
+    QAction *chosen = menu.exec(event->globalPos());
+    if (chosen == aPreview)    togglePreviewSection(group);
+    else if (chosen == aReset) resetSection(group);
 }
 
 void DevelopProperties::showMaskMenu()
@@ -748,7 +863,7 @@ void DevelopProperties::mousePressEvent(QMouseEvent *event)
    ---------------------------------------------------------------------------------------- */
 
 void DevelopProperties::addHeader(const QString &name, const QString &parent,
-                                  const QString &caption, const QString &tooltip)
+                                  const QString &caption, const QString &tooltip, int previewGroup)
 {
     clearItemInfo(i);
     i.name = name;
@@ -758,10 +873,24 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
     i.isDecoration = true;
     i.captionText = caption;
     i.tooltip = tooltip;
-    i.hasValue = false;
     i.captionIsEditable = false;
     i.path = "Develop/" + name;
-    i.delegateType = DT_None;
+
+    if (previewGroup >= 0) {
+        /* A section header (Basic/Color/Effects): a trailing eye toggle in a BarBtn column, drained
+           by BarBtnEditor. hasValue + DT_BarBtns are what create that column (cf. LayersHeader). */
+        BarBtn *eye = makeEyeBtn("Preview: show or ignore these settings", previewGroup);
+        if      (previewGroup == PV_Basic)   basicEyeBtn   = eye;
+        else if (previewGroup == PV_Color)   colorEyeBtn   = eye;
+        else if (previewGroup == PV_Effects) effectsEyeBtn = eye;
+        btns.append(eye);
+        i.hasValue = true;
+        i.delegateType = DT_BarBtns;
+    }
+    else {
+        i.hasValue = false;
+        i.delegateType = DT_None;
+    }
     addItem(i);
 }
 
@@ -826,7 +955,7 @@ void DevelopProperties::addCheckbox(const QString &key, const QString &caption, 
 void DevelopProperties::addBasic()
 {
     if (G::isLogger) G::log("DevelopProperties::addBasic");
-    addHeader("BasicHeader", "???", "Basic", "Core tone, white balance and presence adjustments.");
+    addHeader("BasicHeader", "???", "Basic", "Core tone, white balance and presence adjustments.", PV_Basic);
     QModelIndex parIdx = capIdx;
 
     /* Lightroom-like ranges. Most adjustments are integer sliders -100..100 (div 0).
@@ -859,7 +988,7 @@ void DevelopProperties::addBasic()
 void DevelopProperties::addColor()
 {
     if (G::isLogger) G::log("DevelopProperties::addColor");
-    addHeader("ColorHeader", "???", "Color", "RGB and HSL adjustments.");
+    addHeader("ColorHeader", "???", "Color", "RGB and HSL adjustments.", PV_Color);
     QModelIndex parIdx = capIdx;
 
     /* All integer sliders -100..100 (div 0), default 0 (identity), matching EditParams.
@@ -879,7 +1008,7 @@ void DevelopProperties::addColor()
 void DevelopProperties::addEffects()
 {
     if (G::isLogger) G::log("DevelopProperties::addEffects");
-    addHeader("EffectsHeader", "???", "Effects", "Creative effects (to be added).");
+    addHeader("EffectsHeader", "???", "Effects", "Creative effects (to be added).", PV_Effects);
 }
 
 void DevelopProperties::updateSectionHeaderCaptions()
@@ -1017,7 +1146,7 @@ EditParams DevelopProperties::editParams()
     const EditStack s = stackCache.value(currentImagePath);
     if (s.layers.isEmpty()) return EditParams();
     const int idx = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size()) ? activeLayerIndex : 0;
-    return s.layers[idx].params;
+    return effectiveLayerParams(s.layers[idx]);   // fold previewed-off groups to identity
 }
 
 DevelopProperties::StackRenderJob DevelopProperties::stackJob()
@@ -1028,16 +1157,18 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
     StackRenderJob job;
     if (currentImagePath.isEmpty()) return job;
     const EditStack s = stackCache.value(currentImagePath);
-    job.geometry = s.geometry;                  // per-image crop/warp, applied last (set even with
-                                                // no layers: a crop alone is a valid edit)
+    /* Transform Preview: previewed off -> bypass geometry at render (identity), while the stored
+       crop/warp stays in the cache so the overlay still draws (see currentGeometry). */
+    job.geometry = s.geometry.show ? s.geometry : Geometry();
     if (s.layers.isEmpty()) return job;
-    job.base = s.layers[0].params;              // Base (layer 0), applied globally
+    job.base = effectiveLayerParams(s.layers[0]);   // Base (layer 0), previewed groups folded off
     for (int i = 1; i < s.layers.size(); ++i) {
         const EditLayer &l = s.layers[i];
         if (!l.enabled) continue;
-        if (l.params.isIdentity()) continue;    // no adjustment -> nothing to composite (skip)
+        const EditParams ep = effectiveLayerParams(l);
+        if (ep.isIdentity()) continue;          // no (visible) adjustment -> nothing to composite
         StackRenderJob::Layer lj;
-        lj.params  = l.params;
+        lj.params  = ep;
         lj.combine = l.combine;
         for (const MaskComponent &m : l.masks)
             if (m.enabled && !m.paramsJson.isEmpty()) lj.masks.append(m);
@@ -1186,6 +1317,7 @@ void DevelopProperties::populateSlidersFromStack()
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
     isPopulating = false;
+    refreshPreviewButtons();        // sync the eye icons to this layer's Preview flags
 }
 
 void DevelopProperties::setSliderReal(const QString &key, double real)
