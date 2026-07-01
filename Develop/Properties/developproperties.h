@@ -8,6 +8,7 @@
 
 class MW;
 class ToneRegionSlider;
+class LayerHeader;
 
 /*
     Develop dock property tree (Lightroom-style parametric edits). It mirrors the
@@ -72,6 +73,11 @@ public:
     void flushImage(const QString &fPath);        // write one image's dirty stack to its sidecar
     void flushAll();                              // write all dirty stacks (quit / pre-op)
 
+    /* The layer dropdown + layer-action buttons live in a gradient header widget ABOVE this tree
+       (see LayerHeader). Bind it once; this class drives its combo/eye/buttons and handles its
+       signals. */
+    void bindLayerHeader(LayerHeader *header);
+
 protected:
     /* PropertyEditor::mousePressEvent does not select rows (it only handles expand/collapse), so we
        toggle the clicked mask tool ourselves (reveal/hide its settings children) and return. */
@@ -87,6 +93,16 @@ public slots:
     void setActiveBrushSize(double size);
     /* ImageView toggled auto-mask ("A"); sync the dock checkbox. */
     void setActiveBrushAutoMask(bool on);
+
+    /* ---- LayerHeader widget handlers (the layer dropdown + buttons above the tree) ---- */
+    void onLayerSelected(const QString &name);    // dropdown picked a different layer
+    void renameActiveLayer();                     // [R] rename (dialog); Base cannot be renamed
+    void resetActiveLayer();                      // header reset: restore the whole layer's defaults
+    void newLayer();                              // [+] add a layer (name dialog, default "Layer n")
+    void deleteLayer();                           // [-] remove the selected layer (not Base)
+    void showMaskMenu();                          // [M] pop the Add/Subtract mask-tool menu
+    void onLayerPreviewToggled(bool shown);       // [E] show/ignore the whole layer
+    void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the layer's items)
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
@@ -106,17 +122,17 @@ private:
     void readLayerList();
     void setCurrentLayer(QString name);
 
-    void addCoreHeader();
-    void addLayersHeader();
-    void addLayerItems();           // Basic + Effects for the current layer
+    /* Build/rebuild the whole tree for the ACTIVE layer: the layer's top items (Core rows for Base,
+       else mask tool rows) followed by the Basic / Color / Effects sections. Called on image change,
+       layer switch and mask add/remove/select; section expand-state is preserved across the rebuild. */
+    void buildTree();
+    void addCoreItems();            // Base only: Demosaic + Denoise rows at the top of the tree
+    void addMaskItems();            // non-Base: the layer's mask tool rows at the top of the tree
+    void applyLayerItemsCollapsed();// hide/show just the layer's top items (not the sections)
     void addBasic();
     void addColor();
     void addEffects();
     void updateSectionHeaderCaptions();   // append the active layer name to Basic/Color/Effects
-
-    void newLayer();
-    void deleteLayer();
-    void onLayerRenamed(const QString &oldName, const QString &newName);   // inline rename via the combo (not Base)
 
     /* ---- Mask (one mask per non-Base layer, built from a list of Add/Subtract tools) ----------
        Self-contained so the whole mask UI can be redesigned by rewriting just these functions and
@@ -125,8 +141,6 @@ private:
        [-] remove button, and clicking a tool reveals its settings (Feather, Invert) below the list
        (click the tool again to collapse). Spatial editing (drag/rotate the gradient on the image)
        composites the mask into the render; see notes/Documentation.txt. */
-    void showMaskMenu();                       // [M] button: pop the Add/Subtract tool-type menu
-    void rebuildMaskTools();                   // rebuild the tool rows under the Layers header
     /* One row per tool; the SELECTED tool also gets its settings (Feather/Invert/Done) as children. */
     void addToolRow(QModelIndex parIdx, int index, const MaskComponent &m, bool selected);
     void newMask();                            // QAction handler: append the chosen Add/Subtract tool
@@ -152,7 +166,7 @@ private:
     void refreshPreviewButtons();           // sync every eye icon from the active layer's flags
     static EditParams::Group paramsGroup(int group);   // PV_* -> EditParams::Group (Basic for PV_Layer)
     bool *previewFlag(EditLayer *l, int group);        // the bool a PV_* code maps to on a layer
-    BarBtn *layerEyeBtn = nullptr, *basicEyeBtn = nullptr,
+    BarBtn *basicEyeBtn = nullptr,
            *colorEyeBtn = nullptr, *effectsEyeBtn = nullptr;
 
     void contextMenuEvent(QContextMenuEvent *event) override;   // header right-click: Preview / Reset
@@ -204,15 +218,16 @@ private:
     QString currentImagePath;
     int activeLayerIndex = 0;
     bool isPopulating = false;
+    bool layerItemsCollapsed = false;   // the '>' header arrow: hide the layer's top items
 
     /* Mask UI state. selectedMaskIndex is the component shown in the shared Mask Tool panel (-1 =
        none). isRebuildingMasks guards the tree-selection handler while we add/remove mask rows.
-       maskMenu is the "+ add mask" type chooser. UR_MaskIndex tags a mask row's caption with its
-       component index so selection can find it. */
+       maskMenu is the "+ add mask" type chooser (popped by the header's [M]). UR_MaskIndex tags a
+       mask row's caption with its component index so selection can find it. */
     int selectedMaskIndex = -1;
     bool isRebuildingMasks = false;
     QMenu *maskMenu = nullptr;
-    BarBtn *maskMenuBtn = nullptr;      // [M] add-mask button; hidden on the Base layer (no mask)
+    LayerHeader *layerHeader = nullptr; // layer dropdown + buttons, in a gradient band above the tree
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;
     static constexpr int kDebounceWriteMs = 2000;  // flush this long after edits settle (gated)
@@ -222,12 +237,7 @@ private:
     ItemInfo i;
 
     QModelIndex root;
-    QModelIndex layersIdx;
-    ComboBoxEditor *layerListEditor = nullptr;
     ToneRegionSlider *toneSlider = nullptr;       // histogram region slider (owned by ScopesView)
-
-    /* Order of root rows in the tree. */
-    enum roots { _layers, _basic, _effects };
 };
 
 #endif // DEVELOPPROPERTIES_H

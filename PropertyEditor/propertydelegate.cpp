@@ -507,8 +507,9 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                 QRect capFill(1, r.y(), w0 - 1, r.height());
                 painter->fillRect(capFill, rootCategoryBackground);
             }
-            // re-instate the decorations
-            if (deco && hasChildren) {
+            // re-instate the decorations (UR_ShowDecoration forces the arrow even with no children,
+            // e.g. an unselected mask-tool row that reveals its settings only when clicked open)
+            if (deco && (hasChildren || capIndex.data(UR_ShowDecoration).toBool())) {
                 int x = r.x() - 10;
                 int y = r0.top() + r0.height()/2 - 5;
                 painter->drawPixmap(x, y, 9, 9, isExpanded ? branchOpen : branchClosed);

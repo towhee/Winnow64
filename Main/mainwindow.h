@@ -45,6 +45,7 @@
 #include "Develop/workingimage.h"
 #include "Develop/Scopes/scopesview.h"
 #include "Develop/Transform/transformpanel.h"
+#include "Develop/Properties/layerheader.h"
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
 

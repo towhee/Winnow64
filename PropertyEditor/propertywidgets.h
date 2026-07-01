@@ -55,7 +55,8 @@ enum UserRole
     UR_Color,                           // QColor for text in LineEdit, LabelEdit, Start slider
     UR_Color1,                          // QColor end in Slider
     UR_LeafSingleLine,                  // header-style row drawn single-line but in LEAF text colour
-    UR_DeleteBtn                        // draw a delete [-] glyph at the row's right (delegate-drawn)
+    UR_DeleteBtn,                       // draw a delete [-] glyph at the row's right (delegate-drawn)
+    UR_ShowDecoration                   // force the expand/collapse arrow even with no children
 };
 
 // reqd as can only pass QVariant convertable type through StandardItemModel

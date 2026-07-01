@@ -1856,6 +1856,12 @@ void MW::createDevelopDock()
             imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
                                      QRectF(0, 0, 1, 1));
     });
+    /* The layer dropdown + layer-action buttons live in a gradient header band ABOVE the property
+       tree (replacing the old in-tree Layers header). DevelopProperties drives it and handles its
+       signals; the collapse arrow hides/shows the tree. */
+    LayerHeader *developLayerHeader = new LayerHeader(developContainer);
+    developContainerLayout->addWidget(developLayerHeader);
+    developProperties->bindLayerHeader(developLayerHeader);
     developContainerLayout->addWidget(developProperties, 1);
     developDock->setWidget(developContainer);
     /* The tone-region slider under the histogram drives the active layer's tone-split params. */
