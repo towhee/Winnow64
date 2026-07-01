@@ -134,6 +134,8 @@ public slots:
        in normalized image coords (0..1). endCropEdit restores the normal fit/zoom view. */
     void beginCropEdit(double aspect, bool locked, QRectF initialCrop = QRectF(0, 0, 1, 1));
     void endCropEdit();
+    void beginLevel();                  // arm the "draw a level line" tool (crop must be active)
+    void beginWarp();                   // enter 4-point perspective mode (seed the quad, drag corners)
     void setCropAspect(double aspect, bool locked);   // aspect = w/h, 0 = free (unconstrained)
     QRectF cropRect() const { return cropN; }         // current crop (normalized), for commit
     /* Warp (4-point perspective) accessors for the commit/persist flow (MW::rectifyDevelopCrop):
@@ -175,6 +177,10 @@ signals:
     void maskBrushAutoMaskRequested(bool on);
     /* The crop rectangle changed (drag/resize/pan); normalized image coords, for persistence. */
     void cropChanged(double x, double y, double w, double h);
+    /* A level line was drawn: the leveling angle to ADD to the straighten (degrees, nearest H/V). */
+    void levelAngleChanged(double deltaDeg);
+    /* Warp mode: the user asked to commit the traced quad (Enter/Return or a double-click). */
+    void warpCommitRequested();
 
 private slots:
     void wheelStopped();
@@ -389,6 +395,15 @@ private:
     bool    cropAltHeld    = false;      // Alt/Opt down: show the "transform" rubber band style
     QPointF cropQuadN[4];
     QPointF cropQuadVp[4];
+    static constexpr int kCropDrawNew = 9;   // cropDrag value while rubber-banding a brand-new crop
+    QPoint  cropDrawAnchorVp;            // drag-start corner while drawing a new crop
+    QCursor cropCursor;                 // arrow + corner-bracket crop glyph (built in the ctor)
+    QCursor levelCursor;               // arrow + spirit-level (vial + bubble) glyph, for the Level tool
+    /* Level (straighten) tool: draw a line along something that should be horizontal/vertical; the
+       line's tilt (reduced to the nearest H/V) is the leveling angle emitted on release. */
+    bool    cropLevelMode = false;      // "draw a level line" is armed (one-shot)
+    bool    cropLevelDragging = false;
+    QPoint  cropLevelP1, cropLevelP2;
 
     QRectF  cropImageOnScreenRect() const;          // image bounds in viewport px, clipped to view
     QRectF  cropVpRectToN(const QRectF &vp) const;  // a viewport rect -> normalized image rect
@@ -401,8 +416,15 @@ private:
     void    cropEmitChanged();                      // clamp cropN to [0,1] and emit cropChanged
     int     cropHitTest(QPoint vp) const;           // handle under vp (-1 none, 8 = inside)
     void    cropResizeFromHandle(QPoint vp);        // move handle cropDrag to vp (aspect-aware)
+    void    cropDrawNewFrom(QPoint vp);             // rubber-band a new crop, anchor -> vp
     void    cropDrawOverlay(QPainter *p, const QRectF &br);
     bool    cropActive() const { return cropEditMode && pmItem && pmItem->isVisible(); }
+    /* True when the crop is (still) the whole frame -- then a drag on empty area draws a NEW crop
+       rectangle instead of panning, and the cursor is a crop crosshair. */
+    bool    cropIsFull() const {
+        return !cropWarp && cropN.x() <= 0.001 && cropN.y() <= 0.001 &&
+               cropN.right() >= 0.999 && cropN.bottom() >= 0.999;
+    }
 };
 
 #endif // IMAGEVIEW_H

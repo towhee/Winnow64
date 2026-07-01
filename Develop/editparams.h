@@ -64,6 +64,41 @@ struct EditParams {
 
     int version = 1;
 
+    /* Adjustment groups, matching the Develop panel's section headers (Basic / Color / Effects).
+       These drive the per-section Preview (show/ignore) and Reset (restore defaults) controls: a
+       group is a fixed subset of the fields above. Note the grouping follows the UI, not the field
+       comments -- texture/dehaze/denoise sit under Basic, and the tone splits belong to Basic for
+       Reset (they are irrelevant to Preview since the tone sliders they modulate are zeroed anyway).
+       denoiseLuma/denoiseChroma are decode-time global NR (baked before Develop runs) so they are in
+       NO group and cannot be previewed/reset via params. Effects is empty today (reserved). */
+    enum class Group { Basic, Color, Effects };
+
+    /* Force one group's fields back to their identity defaults, in place. The defaults come from a
+       fresh EditParams{} so the non-zero tone-split defaults (0.25/0.50/0.75) restore correctly.
+       Reset calls this on the STORED params (destructive); the Preview fold calls it on a COPY. */
+    static void resetGroup(EditParams &p, Group g) {
+        const EditParams def;
+        switch (g) {
+        case Group::Basic:
+            p.temp = def.temp; p.tint = def.tint;
+            p.exposure = def.exposure; p.contrast = def.contrast;
+            p.highlights = def.highlights; p.shadows = def.shadows;
+            p.whites = def.whites; p.blacks = def.blacks;
+            p.texture = def.texture; p.dehaze = def.dehaze;
+            p.localDenoiseLuma = def.localDenoiseLuma;
+            p.toneShadowCenter = def.toneShadowCenter;
+            p.toneCrossover = def.toneCrossover;
+            p.toneHighlightCenter = def.toneHighlightCenter;
+            break;
+        case Group::Color:
+            p.red = def.red; p.green = def.green; p.blue = def.blue;
+            p.hue = def.hue; p.saturation = def.saturation; p.luminance = def.luminance;
+            break;
+        case Group::Effects:
+            break;                              // reserved -- no fields yet
+        }
+    }
+
     /* True when nothing would change, letting callers skip the Develop stage and
        serve the cached WorkingImage directly. */
     bool isIdentity() const {

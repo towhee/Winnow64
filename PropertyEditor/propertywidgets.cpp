@@ -28,11 +28,17 @@ Slider::Slider(Qt::Orientation orientation, int div, QWidget *parent) : QSlider(
 {
     setOrientation(orientation);
     this->div = div;
+    /* Accept click and Tab focus so the Develop arrow-nudge keys (Left/Right, plus
+       PageUp/PageDown for the larger step) land on this slider. Image navigation is
+       gated on the main window holding focus, so a focused slider keeps the arrows. */
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 void Slider::mousePressEvent(QMouseEvent *event)
 {
     QSlider::mousePressEvent(event);
+    /* Take keyboard focus on click so arrows immediately nudge this slider. */
+    setFocus(Qt::MouseFocusReason);
     int min = minimum();
     int max = maximum();
     int value = event->pos().x() * 1.0 / width() * (max - min) + min;
@@ -49,6 +55,37 @@ void Slider::mousePressEvent(QMouseEvent *event)
              << value
                 ;
                 //*/
+}
+
+void Slider::keyPressEvent(QKeyEvent *event)
+{
+    int s = singleStep() ? singleStep() : 1;
+    int ps = pageStep() ? pageStep() : s * 10;
+    switch (event->key()) {
+    case Qt::Key_Left:
+    case Qt::Key_Down:
+        setValue(value() - s);   event->accept(); return;
+    case Qt::Key_Right:
+    case Qt::Key_Up:
+        setValue(value() + s);   event->accept(); return;
+    case Qt::Key_PageDown:
+        setValue(value() - ps);  event->accept(); return;
+    case Qt::Key_PageUp:
+        setValue(value() + ps);  event->accept(); return;
+    }
+    QSlider::keyPressEvent(event);
+}
+
+void Slider::focusInEvent(QFocusEvent *event)
+{
+    QSlider::focusInEvent(event);
+    if (parentWidget()) parentWidget()->update();   // draw the SliderEditor focus cue
+}
+
+void Slider::focusOutEvent(QFocusEvent *event)
+{
+    QSlider::focusOutEvent(event);
+    if (parentWidget()) parentWidget()->update();   // clear the SliderEditor focus cue
 }
 
 /* SLIDER EDITOR *****************************************************************************/
@@ -146,6 +183,10 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
 
+    /* Route focus given to the editor container onto the slider, so clicking or tabbing
+       into the row lets the arrow keys nudge the slider (and paints the focus cue). */
+    setFocusProxy(slider);
+
     outOfRange = false;
     int sliderValue = static_cast<int>(idx.data(Qt::EditRole).toDouble() * div);
     slider->setValue(sliderValue);
@@ -210,11 +251,23 @@ void SliderEditor::fontSizeChanged(int fontSize)
 
 void SliderEditor::paintEvent(QPaintEvent *event)
 {
-    if (outOfRange)
-        setStyleSheet(G::cssError);
-    else
-        setStyleSheet("");      // fall back to the app cascade (G::css)
+    /* Only re-polish when the desired stylesheet actually changes (setStyleSheet is
+       expensive and would otherwise churn on every repaint). */
+    const QString want = outOfRange ? G::cssError : QString();
+    if (styleSheet() != want) setStyleSheet(want);
     QWidget::paintEvent(event);
+
+    /* Focus cue: mark the slider the Develop arrow-nudge keys will act on. The slider and
+       lineEdit are translucent, so the fill drawn here shows around them. */
+    if (slider->hasFocus()) {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(0x15, 0x71, 0xd3, 40));   // subtle accent fill
+        p.drawRoundedRect(rect().adjusted(0, 1, -1, -1), 3, 3);
+        p.setBrush(QColor(0x15, 0x71, 0xd3));        // solid accent bar, left edge
+        p.drawRect(0, 0, 2, height());
+    }
 }
 
 /* LABEL EDITOR ******************************************************************************/
@@ -855,7 +908,7 @@ BarBtnEditor::BarBtnEditor(const QModelIndex, QWidget *parent)
 {
     if (G::isLogger) G::log("BarBtnEditor::BarBtnEditor");
     QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->setContentsMargins(0,2,0,2);
+    layout->setContentsMargins(0,2,6,2);        // small right inset so buttons don't touch the edge
     layout->setSpacing(0);
     layout->setAlignment(Qt::AlignRight);
     for (int i = 0; i < btns.size(); ++i) {

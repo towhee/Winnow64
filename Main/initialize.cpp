@@ -1811,6 +1811,51 @@ void MW::createDevelopDock()
     /* Rectify button: store the 4-point warp + suggested crop into the image geometry and show the
        corrected canvas (two-phase warp; non-destructive). */
     connect(transformPanel, &TransformPanel::rectifyRequested, this, &MW::rectifyDevelopCrop);
+    /* Warp mode commit: Enter/Return or a double-click on the traced quad (ImageView overrides those
+       keys/clicks while warping) rectifies it. */
+    connect(imageView, &ImageView::warpCommitRequested, this, &MW::rectifyDevelopCrop);
+    /* Transform mode toggle (Crop / Level / Warp): arm the matching ImageView tool. */
+    connect(transformPanel, &TransformPanel::modeChanged, this, &MW::setDevelopTransformMode);
+    /* A level line drawn on the image adds to the straighten. */
+    connect(imageView, &ImageView::levelAngleChanged, this, &MW::applyDevelopLevel);
+    /* An angle typed into the Level field sets the straighten directly (absolute). */
+    connect(transformPanel, &TransformPanel::levelAngleEntered, this, &MW::setDevelopLevelAngle);
+    /* Per-row reset: clear just the crop / straighten / warp contribution. */
+    connect(transformPanel, &TransformPanel::resetModeRequested, this, &MW::resetDevelopTransformMode);
+    /* Transform Preview eye: a LIVE result toggle while the crop tool is active. ON = commit the
+       overlay's crop, drop the overlay and render the cropped/warped RESULT; OFF = back to full-frame
+       editing with the overlay. (The panel is only visible while crop-editing, so that is the only
+       case to handle.) */
+    connect(transformPanel, &TransformPanel::previewToggled, this, [this](bool shown){
+        if (!imageView || !developProperties || !developCropEditing) return;
+        developCropShowResult = shown;
+        if (shown) {
+            const QRectF crop = imageView->cropRect();
+            Geometry g = developProperties->currentGeometry();
+            g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
+            developProperties->setCurrentGeometry(g);
+            imageView->endCropEdit();               // drop the overlay, restore the normal view
+            renderDevelopPreview(false);            // geometry applied -> cropped result
+        }
+        else {
+            renderDevelopPreview(false);            // full frame (geometry suppressed) for the overlay
+            const Geometry g = developProperties->currentGeometry();
+            imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                                     QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+        }
+    });
+    /* Transform Reset: clear crop/straighten/warp back to identity (destructive) and return to
+       editing on the full frame. */
+    connect(transformPanel, &TransformPanel::resetRequested, this, [this]{
+        if (!developProperties) return;
+        developProperties->setCurrentGeometry(Geometry());      // identity
+        developCropShowResult = false;
+        transformPanel->setPreviewShown(false);
+        renderDevelopPreview(false);
+        if (developCropEditing && imageView)
+            imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                                     QRectF(0, 0, 1, 1));
+    });
     developContainerLayout->addWidget(developProperties, 1);
     developDock->setWidget(developContainer);
     /* The tone-region slider under the histogram drives the active layer's tone-split params. */

@@ -1161,12 +1161,23 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
                 // if (e->key() == Qt::Key_Return) loupeDisplay("MW::eventFilter Key_Return");  // search filter not mix with sel->save/recover
 
+                /* Don't navigate images when a value editor (e.g. a Develop slider) has focus:
+                   it consumes arrows to nudge its value. This is insurance -- the slider also
+                   accepts the key so it should not reach here -- against the app event filter
+                   seeing the key at MWWindow as it propagates up an unconsumed key. */
+                QWidget *fw = QApplication::focusWidget();
+                bool editorHasFocus =
+                    qobject_cast<QAbstractSlider*>(fw)  ||
+                    qobject_cast<QAbstractSpinBox*>(fw) ||
+                    qobject_cast<QLineEdit*>(fw)        ||
+                    qobject_cast<QComboBox*>(fw);
+
                 // faster than using menu shortcuts
-                if (e->key() == Qt::Key_Right) {
+                if (e->key() == Qt::Key_Right && !editorHasFocus) {
                     if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter Key_Right");
                     sel->next(e->modifiers());
                 }
-                if (e->key() == Qt::Key_Left) {
+                if (e->key() == Qt::Key_Left && !editorHasFocus) {
                     if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter Key_Left");
                     sel->prev(e->modifiers());
                 }
@@ -5272,7 +5283,7 @@ void MW::renderDevelopPreview(bool fullRes)
     /* While the crop tool is active, suppress only the CROP (the overlay sets it, applied on commit)
        but KEEP the warp/straighten: before Rectify there is none (full frame); after Rectify the
        stored quad warps the frame so the crop overlay can be placed on the corrected canvas. */
-    if (developCropEditing) {
+    if (developCropEditing && !developCropShowResult) {
         mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
         mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
     }
@@ -5410,7 +5421,7 @@ void MW::renderDevelopFullResAsync()
     if (!work) return;                    // proxy render builds/caches it first; nothing to do yet
 
     auto mj = developProperties->stackJob();          // full stack, captured on the GUI thread
-    if (developCropEditing) {                          // suppress crop, keep warp (see renderDevelopPreview)
+    if (developCropEditing && !developCropShowResult) {   // suppress crop, keep warp (see renderDevelopPreview)
         mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
         mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
     }
@@ -5567,10 +5578,14 @@ void MW::enterDevelopCrop()
     if (G::isLogger) G::log("MW::enterDevelopCrop");
     if (!imageView || !transformPanel || developCropEditing) return;
     developCropEditing = true;
+    developCropShowResult = false;               // start in editing (overlay), not result-preview
+    transformPanel->setPreviewShown(false);      // eye reflects "editing", not "showing result"
     renderDevelopPreview(false);     // full frame (geometry suppressed); refits if it was cropped
     const Geometry g = developProperties->currentGeometry();
     imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
                              QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    transformPanel->setLevelAngle(g.straighten);         // show the stored angle in the Level field
+    setDevelopTransformMode(transformPanel->mode());     // arm the panel's current mode's tool
 }
 
 void MW::exitDevelopCrop()
@@ -5581,14 +5596,19 @@ void MW::exitDevelopCrop()
 */
     if (G::isLogger) G::log("MW::exitDevelopCrop");
     if (!imageView || !developCropEditing) return;
-    const QRectF crop = imageView->cropRect();
-    imageView->endCropEdit();
-    developCropEditing = false;
-    if (developProperties) {
-        Geometry g = developProperties->currentGeometry();
-        g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
-        developProperties->setCurrentGeometry(g);
+    /* When result-preview is on, the overlay was already committed + dropped at the toggle, so only
+       read/commit the overlay crop when we are still in editing mode. */
+    if (!developCropShowResult) {
+        const QRectF crop = imageView->cropRect();
+        imageView->endCropEdit();
+        if (developProperties) {
+            Geometry g = developProperties->currentGeometry();
+            g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
+            developProperties->setCurrentGeometry(g);
+        }
     }
+    developCropEditing = false;
+    developCropShowResult = false;
     renderDevelopPreview(false);     // geometry now applied -> cropped result (refits on size change)
 }
 
@@ -5616,9 +5636,119 @@ void MW::rectifyDevelopCrop()
     developProperties->setCurrentGeometry(g);
 
     renderDevelopPreview(false);                 // warp kept, crop suppressed -> corrected canvas
-    /* Restart the crop overlay (rectangle mode) on the corrected canvas at the suggested crop. */
+    /* Restart the crop overlay (rectangle mode) on the corrected canvas at the suggested crop, and
+       return the panel toggle to Crop so the UI matches the rectangle overlay. */
     imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
                              suggested);
+    transformPanel->setMode(TransformPanel::CropMode);
+}
+
+void MW::applyDevelopLevel(double deltaDeg)
+{
+/*
+    A level line was drawn on the (straighten-applied) frame. Add its angle to the stored straighten,
+    auto-fit the crop to the rotation wedges (analytic largest inscribed rect, using the developed
+    frame's dimensions), then re-render the straightened canvas and restart the crop overlay.
+*/
+    if (G::isLogger) G::log("MW::applyDevelopLevel");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    if (deltaDeg == 0.0) return;
+
+    const QString fPath = dm->currentFilePath;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;
+    int fw = work->width, fh = work->height;
+    if (work->sceneReferred) {
+        const int deg = developOrientationDegrees(*work, fPath);
+        if (deg == 90 || deg == 270) std::swap(fw, fh);
+    }
+
+    Geometry g = developProperties->currentGeometry();
+    g.straighten = qBound(-45.0, g.straighten + deltaDeg, 45.0);
+    /* Auto-crop to the wedges (analytic; only meaningful without a warp -- with a warp the crop is
+       in post-warp space, so leave it and let the user re-crop). */
+    if (!g.hasWarp) {
+        const QRectF c = CropTransform::straightenCropNorm(fw, fh, g.straighten);
+        g.cropX = c.x(); g.cropY = c.y(); g.cropW = c.width(); g.cropH = c.height();
+    }
+    developProperties->setCurrentGeometry(g);
+
+    renderDevelopPreview(false);                 // straighten kept, crop suppressed -> level canvas
+    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    transformPanel->setLevelAngle(g.straighten); // reflect the new angle in the Level field
+}
+
+void MW::setDevelopTransformMode(int mode)
+{
+/*
+    The Transform panel's Crop / Level / Warp toggle changed: arm the matching ImageView tool on the
+    live crop overlay. Crop restarts the rectangle overlay from the stored crop; Level arms the
+    draw-a-level tool; Warp seeds the 4-point quad for corner dragging. Only meaningful while the
+    crop editor is active (the panel is only visible then).
+*/
+    if (G::isLogger) G::log("MW::setDevelopTransformMode");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    switch (mode) {
+    case TransformPanel::CropMode: {
+        const Geometry g = developProperties->currentGeometry();
+        imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                                 QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+        break;
+    }
+    case TransformPanel::LevelMode:
+        imageView->beginLevel();
+        break;
+    case TransformPanel::WarpMode:
+        imageView->beginWarp();
+        break;
+    }
+}
+
+void MW::setDevelopLevelAngle(double degrees)
+{
+/*
+    An absolute straighten angle was typed into the Level field. Convert it to a delta and reuse the
+    drawn-level path so the crop auto-fits and the canvas re-renders identically.
+*/
+    if (G::isLogger) G::log("MW::setDevelopLevelAngle");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    const Geometry g = developProperties->currentGeometry();
+    const double target = qBound(-45.0, degrees, 45.0);
+    if (target == g.straighten) return;
+    applyDevelopLevel(target - g.straighten);
+}
+
+void MW::resetDevelopTransformMode(int mode)
+{
+/*
+    A per-row Transform reset ([R] on a mode line): clear just that mode's contribution to the
+    geometry, leave the others, then re-render and restart the crop overlay on the result.
+*/
+    if (G::isLogger) G::log("MW::resetDevelopTransformMode");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    Geometry g = developProperties->currentGeometry();
+    switch (mode) {
+    case TransformPanel::CropMode:
+        g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
+        break;
+    case TransformPanel::LevelMode:
+        g.straighten = 0.0;
+        transformPanel->setLevelAngle(0.0);
+        break;
+    case TransformPanel::WarpMode: {
+        g.hasWarp = false;
+        const double identity[8] = {0,0, 1,0, 1,1, 0,1};
+        for (int k = 0; k < 8; ++k) g.quad[k] = identity[k];
+        break;
+    }
+    }
+    developProperties->setCurrentGeometry(g);
+    developCropShowResult = false;
+    transformPanel->setPreviewShown(false);
+    renderDevelopPreview(false);
+    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
 }
 
 void MW::onImageCursorPos(double xFraction, double yFraction)

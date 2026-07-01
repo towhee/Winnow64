@@ -167,12 +167,93 @@ Please give me your thoughts on this design.
 All develop pipeline applies to all selected images
 Can a crop be defined on a zoomed image
 When ImageView::isFit == true then show crop tool pointer
+When crop active Return or Enter or R completes crop
 Undo feature, Reset feature
 Hide/show changes by layer and layer tool and basic, color and effects panel
 Reset basic, color and effects panel settings to default
 
+Layout
+
+Crop aspect   [aspect dropdown          ] [Lock]  [Reset]
+Level amount  [amount   ]                 [Level]
+
+[Reset crop]  [Reset warp]
 
 Whenever you're back, the queue is:
 - Warp — the 4-point polygon (Alt-drag) + Rectify.
 - Persistence + apply — wire cropChanged into the edit stack and actually crop the rendered/exported pixels.
 - Plus the smaller refinements: image-switch re-init, zoomed-in entry, content-aware fill.
+
+Cancel history for now.  Let me define two terms:
+Preview - show/ignore a group of settings, for example the Color settings in Base layer
+Reset - set a group of settings back to their defaults
+I want to be able to preview and/or reset:
+- a layer
+- layer basic
+- layer color
+- layer effects
+- transform
+I see two approaches:
+1. Create Preview and reset buttons and add them to all the (crop / layer / basic / color / effect) headers
+2. Create a context menu.
+What are your thoughts?
+
+|---------------------------------------------------|
+|Transform                               [?] [E] [R]|
+|---------------------------------------------------|
+|                                                   |
+|  Crop (C) / Level (L) / Warp (W) tabs             |
+| aspect [aspect dropdown           ]         [L][R]| or
+| angle  [amount lineedit  ]                     [R]| or
+|                                                [R]|
+|                                                   |
+|---------------------------------------------------|
+
+or
+
+New Transform layout:
+
+|---------------------------------------------------|
+|Transform                               [?] [E] [R]|
+|---------------------------------------------------|
+|                                                   |
+|[Crop ] aspect [aspect dropdown           ]  [L][R]|
+|[Level] angle  [amount lineedit  ]              [R]|
+|[Warp ]                                         [R]|
+|                                                   |
+|---------------------------------------------------|
+
+[E] - eye symbol button
+[L] - lock symbol button
+[R] - reset symbol button (create circle chasing itself reset.png)
+Make sure the [R] buttons are all vertically aligned
+
+Change Transform header formatting to same as a properties header (ie DevelopProperties::addCoreHeader)
+In the header, replace the refresh.png with the new reset.png you are creating.
+
+
+[Crop ] / [Level] / [Warp] are mode selection 3 way toggle.  Only one can be selected.  Format
+buttons so selected has selected background and border. Assign shortcuts: Crop (C),
+Level (L) and Warp (W).  Make appropriate tooltips.
+
+Layers layout
+
+|---------------------------------------------------|
+|>[Layer dropdown                 ][R] [-][+][M] [E]|
+|---------------------------------------------------|
+
+Layer dropdown
+  Base
+  Layer 1
+  ...
+
+Add a new layer (open dialog to enter name, defaulting to layer n)
+
+ >[Base                            ]
+   Demosaic   (copy from Core)
+   Denoise    (copy from Core)
+
+ >[Layer 1                         ]
+   > first mask
+   > second mask
+   > ...

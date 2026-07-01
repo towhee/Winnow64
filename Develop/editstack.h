@@ -63,7 +63,34 @@ struct EditLayer {
     int        combine = int(MaskCombine::Union);   // how this layer's masks combine
     QVector<MaskComponent> masks;       // empty (Base or unmasked) = global
     EditParams params;
+
+    /* Preview (show/ignore) flags for the panel's per-section eye toggles. NON-DESTRUCTIVE: false
+       bypasses that group at render (its fields fold to identity in effectiveLayerParams) while the
+       stored values in `params` are kept, so re-showing restores them. showLayer bypasses the whole
+       layer's params (Basic+Color+Effects together) and is distinct from `enabled` -- `enabled`
+       drives the compositor's layer on/off, showLayer is the editing-side preview and leaves the
+       compositor semantics untouched. All default true so older sidecars are unaffected. */
+    bool showLayer   = true;
+    bool showBasic   = true;
+    bool showColor   = true;
+    bool showEffects = true;
 };
+
+/* The params the renderer should apply for one layer: a COPY of the stored params with any
+   previewed-off group folded back to identity. Never mutates the stored layer. */
+inline EditParams effectiveLayerParams(const EditLayer &l) {
+    EditParams p = l.params;
+    if (!l.showLayer) {
+        EditParams::resetGroup(p, EditParams::Group::Basic);
+        EditParams::resetGroup(p, EditParams::Group::Color);
+        EditParams::resetGroup(p, EditParams::Group::Effects);
+        return p;
+    }
+    if (!l.showBasic)   EditParams::resetGroup(p, EditParams::Group::Basic);
+    if (!l.showColor)   EditParams::resetGroup(p, EditParams::Group::Color);
+    if (!l.showEffects) EditParams::resetGroup(p, EditParams::Group::Effects);
+    return p;
+}
 
 /*
     Geometry (Transform tool): crop + straighten + 4-point perspective warp. PER-IMAGE (not per
@@ -81,6 +108,10 @@ struct Geometry {
     bool   hasWarp = false;                                      // 4-point perspective active
     double quad[8] = {0,0, 1,0, 1,1, 0,1};                       // TL,TR,BR,BL, oriented-image space
     bool   fillCanvas = false;                                   // content-aware fill (deferred)
+    bool   show = true;                                          // Transform Preview: false bypasses
+                                                                 // the geometry stage at render, but
+                                                                 // keeps the stored crop/warp so the
+                                                                 // overlay still draws (default true)
 
     bool cropIsIdentity() const {
         return cropX == 0.0 && cropY == 0.0 && cropW == 1.0 && cropH == 1.0;
@@ -99,16 +130,18 @@ struct EditStack {
        in Increment 1). When the compositor lands this becomes a true multi-layer composite. */
     EditParams effectiveParams() const {
         for (const EditLayer &l : layers)
-            if (l.enabled) return l.params;
+            if (l.enabled) return effectiveLayerParams(l);
         return EditParams();
     }
 
     /* True when nothing would change a pixel -- lets callers skip Develop entirely and avoids
        writing a sidecar for an untouched image. */
     bool isIdentity() const {
-        if (!geometry.isIdentity()) return false;
+        if (!geometry.isIdentity() || !geometry.show) return false;
         for (const EditLayer &l : layers)
-            if (l.enabled && (!l.params.isIdentity() || !l.masks.isEmpty())) return false;
+            if (l.enabled && (!l.params.isIdentity() || !l.masks.isEmpty() ||
+                              !l.showLayer || !l.showBasic || !l.showColor || !l.showEffects))
+                return false;
         return true;
     }
 
@@ -187,6 +220,12 @@ struct EditStack {
             lo["opacity"] = l.opacity;
             lo["enabled"] = l.enabled;
             lo["combine"] = l.combine;
+            /* Preview flags: only emit the non-default (false = previewed off) ones, so a normal
+               untouched layer serializes exactly as before (forward/backward tolerant). */
+            if (!l.showLayer)   lo["showLayer"]   = false;
+            if (!l.showBasic)   lo["showBasic"]   = false;
+            if (!l.showColor)   lo["showColor"]   = false;
+            if (!l.showEffects) lo["showEffects"] = false;
             QJsonArray marr;
             for (const MaskComponent &m : l.masks) {
                 QJsonObject mo;
@@ -205,7 +244,7 @@ struct EditStack {
         QJsonObject o;
         o["version"] = version;
         o["layers"]  = arr;
-        if (!geometry.isIdentity()) o["geometry"] = geometryToJson(geometry);
+        if (!geometry.isIdentity() || !geometry.show) o["geometry"] = geometryToJson(geometry);
         return o;
     }
 
@@ -216,6 +255,7 @@ struct EditStack {
         o["straighten"] = g.straighten;
         o["hasWarp"] = g.hasWarp;
         o["fillCanvas"] = g.fillCanvas;
+        if (!g.show) o["show"] = false;         // only when previewed off (default true)
         if (g.hasWarp) {
             QJsonArray q;
             for (double v : g.quad) q.append(v);
@@ -233,6 +273,7 @@ struct EditStack {
         g.straighten = o.value("straighten").toDouble(g.straighten);
         g.hasWarp = o.value("hasWarp").toBool(g.hasWarp);
         g.fillCanvas = o.value("fillCanvas").toBool(g.fillCanvas);
+        g.show = o.value("show").toBool(g.show);
         const QJsonArray q = o.value("quad").toArray();
         if (q.size() == 8) for (int i = 0; i < 8; ++i) g.quad[i] = q[i].toDouble(g.quad[i]);
         return g;
@@ -251,6 +292,10 @@ struct EditStack {
             l.opacity = static_cast<float>(lo.value("opacity").toDouble(l.opacity));
             l.enabled = lo.value("enabled").toBool(l.enabled);
             l.combine = lo.value("combine").toInt(l.combine);
+            l.showLayer   = lo.value("showLayer").toBool(l.showLayer);
+            l.showBasic   = lo.value("showBasic").toBool(l.showBasic);
+            l.showColor   = lo.value("showColor").toBool(l.showColor);
+            l.showEffects = lo.value("showEffects").toBool(l.showEffects);
             const QJsonArray marr = lo.value("masks").toArray();
             for (const QJsonValue &mv : marr) {
                 const QJsonObject mo = mv.toObject();

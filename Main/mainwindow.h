@@ -583,6 +583,15 @@ private slots:
     /* Rectify the 4-point warp: store the quad + suggested crop into the image's geometry, then
        re-render so the corrected canvas shows with the crop overlay on it (two-phase warp). */
     void rectifyDevelopCrop();
+    /* Apply a drawn level line: add deltaDeg to the straighten, auto-fit the crop to the rotation
+       wedges, re-render the straightened canvas and restart the crop overlay. */
+    void applyDevelopLevel(double deltaDeg);
+    /* Transform panel mode toggle (TransformPanel::Mode): arm the matching ImageView crop tool. */
+    void setDevelopTransformMode(int mode);
+    /* Level field: set the straighten to an absolute angle (typed into the panel). */
+    void setDevelopLevelAngle(double degrees);
+    /* Per-row Transform reset: clear just the crop / straighten / warp (TransformPanel::Mode). */
+    void resetDevelopTransformMode(int mode);
     /* Loupe cursor moved to a normalized position over the displayed image: sample that pixel and
        drive the scopes' readout marker (no-op while the scopes are hidden). */
     void onImageCursorPos(double xFraction, double yFraction);
@@ -1221,6 +1230,10 @@ private:
     /* True while the crop tool is being edited: the render pipeline then SUPPRESSES the geometry
        (shows the full frame for the overlay); committing the crop clears it and re-renders cropped. */
     bool developCropEditing = false;
+    /* Transform Preview eye "live result toggle" (only meaningful while developCropEditing): true =
+       peek at the cropped/warped RESULT (overlay dropped, geometry applied in the render); false =
+       normal editing (full frame + overlay). Reset on enter/exit crop. */
+    bool developCropShowResult = false;
     /* The QImage last pushed to the scopes (== what the loupe shows; implicitly shared, so
        holding it is free). Sampled per pixel for the cursor readout marker. */
     QImage developShownImage;

@@ -31,6 +31,14 @@ QImage rectifyPerspective(const QImage &src, const QPointF quad[4], QRectF &outC
 */
 QImage applyGeometry(const QImage &src, const Geometry &g);
 
+/*
+    The largest axis-aligned rectangle (normalized in the straightened output canvas) that contains
+    only image content after rotating a W x H frame by deg degrees -- i.e. the auto-crop that removes
+    the rotation wedges. Analytic (rotatedRectWithMaxArea), so it needs only the frame aspect + angle
+    and matches applyGeometry's straighten exactly. Identity (0,0,1,1) at deg == 0.
+*/
+QRectF straightenCropNorm(double W, double H, double deg);
+
 }
 
 #endif // CROPTRANSFORM_H

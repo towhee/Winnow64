@@ -69,6 +69,14 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
+    /* Nudge on Left/Right (PageUp/PageDown = larger step) and ACCEPT the key, so it does
+       not propagate up to MW::eventFilter and move image selection. Needed because the
+       Develop sliders use singleStep 0 (QAbstractSlider would then step by 0 and ignore). */
+    void keyPressEvent(QKeyEvent *event) override;
+    /* Repaint the host SliderEditor when focus arrives/leaves so its focus cue
+       (accent bar) tracks which slider the Develop arrow-nudge keys will act on. */
+    void focusInEvent(QFocusEvent *event) override;
+    void focusOutEvent(QFocusEvent *event) override;
 
 private:
     int div;

@@ -2212,6 +2212,37 @@ Architecture
     grows to take an EditStack, and the Develop op math is unchanged.
 
 ------------------------------------------------------------------------------------------
+Panel focus & slider arrow-nudge
+------------------------------------------------------------------------------------------
+
+    The Develop dock is a PropertyEditor (QTreeView) whose value cells are persistent editor
+    widgets (SliderEditor -> Slider). Global image navigation (Left/Right = prev/next image)
+    is handled in MW::eventFilter. The disambiguation between "navigate images" and "nudge
+    this slider" is Qt keyboard focus:
+
+        - Slider has StrongFocus and takes focus on click (Slider::mousePressEvent). SliderEditor
+          sets setFocusProxy(slider), so a click or Tab into the row lands focus on the slider.
+        - Slider::keyPressEvent nudges on Left/Right (Up/Down too; PageUp/PageDown = the larger
+          step) and ACCEPTS the key. Accepting matters: MW's arrow handler is an APPLICATION event
+          filter (qApp->installEventFilter), and application filters run once per object as an
+          UNconsumed key propagates up the parent chain -- so an arrow the slider did not accept
+          reaches MW::eventFilter with obj == "MWWindow" and moves the selection. Consuming it in
+          the slider stops that propagation. (Relying on QAbstractSlider's own stepping was not
+          enough in practice, hence the explicit override.)
+        - Belt-and-suspenders: MW::eventFilter's Left/Right nav is additionally guarded to no-op
+          when QApplication::focusWidget() is a value editor (QAbstractSlider / QAbstractSpinBox /
+          QLineEdit / QComboBox). When focus leaves the panel, arrows navigate images again.
+
+    Focus cue (which slider owns the arrows): SliderEditor::paintEvent draws an accent left bar
+    plus a subtle translucent fill when slider->hasFocus(). Slider::focusInEvent/focusOutEvent
+    call parentWidget()->update() so the cue tracks focus. This behaviour is generic to every
+    PropertyEditor slider (Develop, Embellish, Preferences), not just Develop.
+
+    Not yet done: a panel-LEVEL active-border cue across all docks (thumb/grid/table/folders/
+    Develop). DockWidget notes it has not solved drawing a border around a QDockWidget; the
+    control-level cue above already shows where slider shortcuts land.
+
+------------------------------------------------------------------------------------------
 Layer & masking model (planned)
 ------------------------------------------------------------------------------------------
 
@@ -2475,7 +2506,22 @@ Layer & masking model (planned)
                updateSectionHeaderCaptions() rewrites the three header captions (DisplayRole, found
                via findCaptionIndex) and is driven from addLayerItems (initial build), the layer-
                combo change in itemChange, and refreshLayerCombo (setCurrentImage/newLayer/
-               deleteLayer); the tree is never rebuilt. NAMING: index 0 is always
+               deleteLayer); the tree is never rebuilt. PREVIEW / RESET: each section header
+               (Basic/Color/Effects) and the Layers header carry an eye BarBtn that toggles that
+               group's Preview flag on the active layer (EditLayer::showBasic/showColor/showEffects/
+               showLayer, all default true, persisted in the sidecar only when false). Preview is
+               NON-DESTRUCTIVE: effectiveLayerParams() returns a COPY of the layer's params with any
+               previewed-off group folded to identity (EditParams::resetGroup) -- stored values are
+               kept, so re-showing restores them; showLayer folds all three. The fold is applied at
+               every render-capture site (EditStack::effectiveParams, DevelopProperties::editParams
+               and stackJob). Right-clicking a header (contextMenuEvent) offers Preview (toggle) +
+               Reset <group>; Reset is DESTRUCTIVE -- EditParams::resetGroup on the STORED params,
+               then repopulate. Group->keys mapping follows the UI (texture/dehaze/denoise are
+               Basic; tone splits are Basic for Reset only; denoiseLuma/denoiseChroma are decode-
+               time and in no group). eye.png/eye_off.png live in images/icon16. Transform has its
+               own Preview eye + Reset in TransformPanel, wired to MW (previewToggled/resetRequested);
+               its eye is a live result toggle, not a group fold (see the Transform section below).
+               NAMING: index 0 is always
                the "Base" layer (normalized on load in setCurrentImage); extra layers added with +
                are numbered "Layer 1", "Layer 2", ... (the new layer's number = its index). The Base
                layer CANNOT be removed -- deleteLayer refuses when the active layer is index 0
@@ -2710,22 +2756,40 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     image-side overlay and the warp engine are wired to the panel's signals in a later increment;
     for now each control persists its own state and emits a signal (the integration hook).
 
-    Controls: an Aspect combo (As shot / 1x1 / 3x2 / 4x3 / 5x7 / 4x5 / 8.5x11 / 16x9 / 16x10 /
-    persisted custom aspects / "Add custom aspect..."); userData per item is the w/h ratio
-    (0.0 = As shot/free). A padlock toggle locks the ratio. A "Level" tool (draw a line to
-    straighten), a checkable "Crop" tool (drag a rectangle; Alt/Option-drag gives a 4-point
-    polygon), and a "Rectify" button (warp the whole image so the polygon is axis-aligned, then
-    fit the largest inscribed rectangle as the new crop -- user-confirmed behaviour). A "Fill
-    extra canvas" checkbox (content-aware edge-extend of empty corners left by straighten/rectify).
-    A [?] tips button (top-right, "Crop and transform tips").
+    Layout (redesigned): a property-style gradient HEADER band ("Transform", drawn by an internal
+    GradientHeader QWidget using the same backgroundShade +5 -> -15 gradient as PropertyDelegate)
+    with three trailing BarBtns: [?] tips ("Crop and transform tips"), [E] preview eye (show/ignore
+    the whole transform, previewToggled), [R] reset (clear crop/straighten/warp to identity,
+    resetRequested; icon reset.png -- the "chasing arrows" glyph, replacing the old refresh.png).
+
+    Below it a three-way MODE toggle down the left (Crop / Level / Warp -- a mutually exclusive
+    QButtonGroup; the selected button gets a teal (#1b8a83) background + border). Each mode row
+    carries that mode's controls and its own [R] reset (resetModeRequested, all reset buttons kept
+    in the last grid column so they align vertically):
+        Crop : an Aspect combo (As shot / 1x1 / 3x2 / 4x3 / 5x7 / 4x5 / 8.5x11 / 16x9 / 16x10 /
+               persisted custom aspects / "Add custom aspect..."; userData per item is the w/h
+               ratio, 0.0 = As shot/free) + a padlock that locks the ratio.
+        Level: a straighten-angle field (-45..45 deg, editingFinished -> levelAngleEntered, applied
+               as an absolute straighten). Selecting Level also arms the draw-a-level-line tool.
+        Warp : selecting it seeds the 4-point quad (ImageView::beginWarp) for corner dragging.
+               Commit the traced quad with Enter/Return or a double-click (ImageView claims those
+               keys/clicks via ShortcutOverride while cropWarp is active, emits warpCommitRequested
+               -> MW::rectifyDevelopCrop, which stores the warp + suggested crop and returns the
+               toggle to Crop). There is no separate Rectify button.
+    The Aspect combo/lock are enabled only in Crop mode, the angle field only in Level mode.
+
+    MW wiring: modeChanged -> setDevelopTransformMode arms the matching ImageView tool
+    (beginCropEdit / beginLevel / beginWarp); levelAngleEntered -> setDevelopLevelAngle;
+    resetModeRequested -> resetDevelopTransformMode clears just that mode's geometry contribution.
 
     Shortcuts: "R" toggles the panel (MW::toggleDevelopTransform, developTransformAction, editor-
-    bar button rectangle.png; persists Settings "Develop/transformVisible"). "A" toggles the
-    aspect lock while the panel (or one of its non-text controls) has focus -- handled by
-    TransformPanel::eventFilter accepting the key's ShortcutOverride, NOT a QAction, because a
-    panel-scoped "A" QAction would be an ambiguous overload with the window-level "A" (Run
-    Droplet) and the brush "Auto mask A". Custom aspects + lock + fill-canvas state persist under
-    Settings "Develop/Transform/".
+    bar button rectangle.png; persists Settings "Develop/transformVisible"). While the panel (or one
+    of its non-text controls) has focus, single letters select/act: "C" Crop, "L" Level, "W" Warp,
+    "A" toggles the aspect lock -- all handled by TransformPanel::eventFilter accepting the key's
+    ShortcutOverride, NOT QActions, because a panel-scoped letter QAction would be an ambiguous
+    overload with the window-level shortcuts (e.g. "A" Run Droplet / brush Auto mask). The aspect
+    combo and the angle field are excluded from the filter so their text entry still works. Custom
+    aspects + lock state + selected mode persist under Settings "Develop/Transform/".
 
     Crop rubber-band tool (ImageView) -- IMPLEMENTED:
     Showing the Transform panel (R / button) calls ImageView::beginCropEdit; hiding it calls
@@ -2737,7 +2801,13 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
         - drag a HANDLE (cropHitTest 0..7: 4 corners + 4 edge mids) -> resizes the frame over the
           STATIC canvas (cropResizeFromHandle anchors the opposite corner/edge, clamps to the
           image's on-screen rect); cropN := cropVpRectToN(frame). No re-stage, no zoom change.
-        - drag elsewhere -> a NORMAL canvas pan (the existing scrollbar pan); the frame stays fixed
+        - while the crop is still the WHOLE frame (cropIsFull), the cursor is a crop crosshair and a
+          drag on empty area rubber-bands a brand-new crop (cropDrawNewFrom, cropDrag==kCropDrawNew)
+          -- so you draw the crop directly instead of shrinking the full frame by its handles. Over
+          a handle it reverts to the resize cursor/behaviour.
+        - Alt/Opt over a rectangle crop shows the "transform" rubber band (red border, circular
+          corner handles, no side handles); an Alt-drag of a corner pulls the free perspective quad.
+        - drag elsewhere (a sub-crop exists) -> a NORMAL canvas pan (the existing scrollbar pan); the frame stays fixed
           on screen and the image slides under it, so cropN is recomputed from the unchanged frame.
           This is how the crop is repositioned -- you move the canvas, not the crop rectangle.
         - aspect lock (from the panel, setCropAspect) constrains the frame ratio; "As shot"/ratio 0
@@ -2775,7 +2845,16 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
 
     Persistent crop (geometry applied in the render pipeline) -- IMPLEMENTED (Phase A, rectangle
     crop):  EditStack now carries a per-image Geometry (cropX/Y/W/H, straighten, hasWarp+quad[8],
-    fillCanvas), serialized in the sidecar (toJson/fromJson, folded into isIdentity). The renderer
+    fillCanvas, show), serialized in the sidecar (toJson/fromJson, folded into isIdentity). The
+    Transform panel's Preview eye is a LIVE RESULT TOGGLE (the panel is only on-screen while the crop
+    tool is active, and that view deliberately shows the full frame + overlay, so a plain show/ignore
+    flag would have nothing to toggle): eye ON commits the overlay's crop, drops the overlay
+    (ImageView::endCropEdit) and renders with the geometry applied (MW::developCropShowResult gates
+    the crop-suppression in renderDevelopPreview + the async full-res path); eye OFF re-renders the
+    full frame and re-arms the overlay (beginCropEdit). enter/exitDevelopCrop reset the flag +
+    setPreviewShown. Transform Reset writes an identity Geometry and returns to editing. (Geometry::
+    show is retained in the model/sidecar for a persistent ignore but is not what the eye drives.)
+    The renderer
     applies it LAST -- developCompositeStack runs CropTransform::applyGeometry(out, job.geometry)
     after the develop ops + EXIF orientation, on the full-output-dimension image, in both the proxy
     and async full-res paths (StackRenderJob.geometry from DevelopProperties::stackJob).
@@ -2799,8 +2878,16 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     traced on the warped canvas, but applyGeometry warps the un-warped frame) -- there is no
     warp-reset UI yet, so fresh-image warp is the supported path.
 
-    NOT yet done (next increments): the straighten/Level tool; a warp-reset (to re-warp); confirm
-    export applies the geometry; content-aware fill. The panel's Crop and Level buttons are unwired.
+    Level / straighten tool -- IMPLEMENTED: the panel Level button arms ImageView::beginLevel (draw a
+    line along something that should be horizontal/vertical). On release the line's tilt is reduced to
+    the nearest H/V and emitted (levelAngleChanged); MW::applyDevelopLevel adds it to g.straighten
+    (clamped +/-45), auto-fits the crop to the rotation wedges via CropTransform::straightenCropNorm
+    (analytic rotatedRectWithMaxArea, pixel-validated to sit inside the valid region), then re-renders
+    the straightened canvas and restarts the crop overlay -- same two-phase pattern as Rectify.
+    applyGeometry's straighten converts to ARGB32 so the wedges are transparent.
+
+    NOT yet done (next increments): a warp-reset (to re-warp); confirm export applies the geometry;
+    content-aware fill. The panel's Crop button is unwired.
 
     Sections (built via PropertyEditor::addItem):
         Layers   header with -/+ buttons (same idiom as Embellish Templates) + a "Select

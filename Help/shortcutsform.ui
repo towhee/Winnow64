@@ -1051,6 +1051,17 @@
        </property>
        <item>
         <property name="text">
+         <string>Nudge Slider</string>
+        </property>
+        <property name="text">
+         <string>Left / Right (PageUp / PageDown = larger step)</string>
+        </property>
+        <property name="text">
+         <string>Adjusts the focused slider; click or Tab to a slider to give it focus (it shows an accent bar)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Auto Mask (Brush)</string>
         </property>
         <property name="text">
@@ -1080,6 +1091,17 @@
         </property>
         <property name="text">
          <string>Toggles; while the Transform panel has focus</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Transform Mode</string>
+        </property>
+        <property name="text">
+         <string>C / L / W</string>
+        </property>
+        <property name="text">
+         <string>Select Crop / Level / Warp; while the Transform panel has focus</string>
         </property>
        </item>
       </item>
