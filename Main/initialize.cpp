@@ -1751,10 +1751,12 @@ void MW::createDevelopDock()
     /* Mask editing handshake: the dock activates a spatial mask tool and ImageView draws/edits its
        overlay, sending dragged geometry back to be persisted into the MaskComponent. */
     connect(developProperties, &DevelopProperties::maskEditBegin, imageView, &ImageView::beginMaskEdit);
+    connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::onAiMaskEditBegin);
     connect(developProperties, &DevelopProperties::maskEditEnd,   imageView, &ImageView::endMaskEdit);
     connect(imageView, &ImageView::maskGeometryChanged, developProperties, &DevelopProperties::setActiveMaskParams);
     connect(developProperties, &DevelopProperties::maskFeatherChanged, imageView, &ImageView::setMaskFeather);
     connect(developProperties, &DevelopProperties::maskInvertChanged, imageView, &ImageView::setMaskInverted);
+    connect(developProperties, &DevelopProperties::maskRangeChanged, imageView, &ImageView::setMaskRangeParams);
     connect(developProperties, &DevelopProperties::maskBrushSettingsChanged, imageView, &ImageView::setMaskBrushSettings);
     connect(imageView, &ImageView::maskBrushSizeRequested, developProperties, &DevelopProperties::setActiveBrushSize);
     connect(imageView, &ImageView::maskBrushAutoMaskRequested, developProperties, &DevelopProperties::setActiveBrushAutoMask);

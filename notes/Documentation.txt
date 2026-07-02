@@ -2558,7 +2558,11 @@ Layer & masking model (planned)
                driven by refreshLayerCombo() and the layer switch. It emits maskMenuRequested ->
                showMaskMenu, which pops a menu of "Add <tool>" and (once a tool exists) "Subtract
                <tool>" entries (Linear/Radial Gradient, Brush, Color/
-               Luminance Range, Select Subject/Sky/Background, Depth). Each tool is a top-level tree
+               Luminance Range, Select Subject/Sky/Background, Depth). ADD-LAYER FLOW: newLayer pops
+               the "New layer" name dialog at the cursor (the [+] button just clicked, clamped to the
+               screen) instead of screen-centre, and on accept immediately calls showMaskMenu -- a new
+               layer exists to carry a masked adjustment, so choosing the mask tool is the next step
+               (Escape leaves an empty layer). Each tool is a top-level tree
                row (caption "Add/Subtract <tool>" with a [-] remove button; the tools sit ABOVE the
                Basic/Color/Effects sections, added by addMaskItems in buildTree). The rows are
                header-style for the single-line full-width caption + expand arrow, but flagged
@@ -2671,6 +2675,112 @@ Layer & masking model (planned)
                flagged stroke attenuates each dab by an edge factor: paint only where |lum - lumRef|
                < tol (lumRef = guide luminance at the stroke start; smootherstep falloff). Render
                compositing as above.
+             - CONTENT-RANGE MASKS (Luminance Range + Color Range): coverage depends on the pixel
+               VALUE, not its position, so unlike the geometric tools these need the image's pixels.
+               Both measure on a SHARED display-referred reference (Develop/rangemask.h,
+               RangeMask::RangeRef -- interleaved RGB 0..1, output-oriented, capped ~1024), built and
+               registered by path (putRef/getRef, mirroring BrushStamp's guide) so the loupe overlay
+               and the develop render sample the IDENTICAL map (preview == render). The reference is
+               the developed BASE layer only (Base params + OutputTransform + orientation, MW::
+               ensureRangeRef via developComposite on a downscaled work) -- "what you see", so the
+               selection tracks the base tones -- and BASE-ONLY on purpose: measuring on the composite
+               would let a range mask that shifts its own tones feed back on its own selection and
+               oscillate. ensureRangeRef is cached (keyed on path + a base-params signature; run from
+               renderDevelopPreview and renderDevelopFullResAsync only when a range mask exists), so a
+               range-slider drag or a colour sample never rebuilds it -- they just re-threshold the
+               cached reference. buildMaskBuffer gains a third component kind (isRange) beside brush /
+               parametric: it fetches getRef(fPath) once (absent -> the component yields 0, like a
+               brush with no guide) and per pixel calls RangeMask::lumCoverage / colorCoverage at the
+               mapped output coords, combining with the same Add=max / Subtract=*(1-c) / Invert logic.
+               LUMINANCE RANGE: paramsJson {lo,hi} (0..1 display luminance, Rec.601); coverage 1 inside
+               [lo,hi] with a smootherstep band from MaskComponent.feather. Dock rows Range Min / Range
+               Max / Feather / Invert; lo/hi changes emit maskRangeChanged -> ImageView::
+               setMaskRangeParams (live tint). No canvas interaction. COLOR RANGE: paramsJson
+               {refine (0..100, higher = tighter), samples:[[r,g,b],...] 0..1 display}; coverage from
+               the nearest sample's distance in a cheap luma/chroma opponent space (luma down-weighted,
+               like Lightroom) within a refine-derived tolerance, smootherstep-feathered. EYEDROPPER:
+               with the Color Range tool active, a loupe click samples RangeRef under the cursor (cross
+               cursor), shift-click ADDS another sample; sampled colours draw as on-image swatches
+               (bottom-left, viewport coords) and clicking a swatch removes it (pointer cursor). Sample
+               edits go back through the existing geometry handshake (ImageView::maskGeometryChanged ->
+               DevelopProperties::setActiveMaskParams), so no new persist path. Dock rows Refine /
+               Feather / Invert. The tint (ImageView::drawRangeMask / buildRangePreview) is red (Add) /
+               blue (Subtract) like the other tools and rebuilds on any dock param change (maskRange
+               Changed / setMaskFeather / setMaskInverted) or eyedropper edit; it heals if the
+               reference lands after the overlay began (buildRangePreview on a null preview). Deferred:
+               a dual-handle luminance range slider, per-layer "image below" reference for stacked
+               range masks, and an in-dock swatch strip (swatches live on the loupe for now).
+             - SELECT SUBJECT MASK (AI): an AI salient-object mask that selects the main subject.
+               Like the content-range masks it is CONTENT-derived and shares their preview==render
+               design, but the coverage is a FIXED saliency map produced once by the U^2-Net ONNX
+               model rather than a per-tick threshold. The model runs through OpenCV's DNN module
+               (cv::dnn::readNetFromONNX -- the SAME runtime FocusPredictor uses; no onnxruntime
+               dependency), wrapped in Utilities/subjectpredictor (SubjectPredictor): U^2-Net
+               preprocessing (RGB, 320x320, /maxpixel, per-channel ImageNet mean/std). GOTCHA:
+               U^2-Net has 7 outputs (d0..d6) and OpenCV's forward() with no name returns the LAST-
+               registered layer, which here is a COARSE side output (d6 -- a fuzzy blob, the original
+               "rough selection" bug); we fetch outputs by name (getUnconnectedOutLayersNames) and use
+               outs[0] = d0, the fused full-res saliency, min-max normalized to a 0..1 map. The model
+               file u2net.onnx (~176 MB) sits
+               next to focus_point_model.onnx (executable dir on Windows, .app/Contents/MacOS on mac;
+               CMake bundles/copies it, warning rather than failing if absent so the mask just
+               no-ops). MW::ensureSubjectMask (mirroring ensureRangeRef) develops the downscaled BASE
+               layer (output-oriented, "what you see"), runs the model synchronously on the GUI thread
+               with a busy cursor (~200-400 ms, one-shot per image on the user's add/select action),
+               and registers the coverage by path in Develop/subjectmask.h (SubjectMask::SubjectRef,
+               single-channel). The raw 320x320 saliency is EDGE-REFINED before storage: upsampled to
+               the reference (~1024) size and guided-filtered (He et al.) against the developed base's
+               luminance so the cutout snaps to the real subject boundary instead of a blocky low-res
+               ramp (subjectpredictor guidedFilterGray -- ~9 box filters, OpenCV core only, no
+               ximgproc). It is CACHED BY PATH ONLY -- subject
+               detection is independent of the develop sliders, so slider drags never re-run
+               inference. buildMaskBuffer gains an isSubject component kind: it fetches getRef(fPath)
+               once (absent -> yields 0, like a range mask with no reference) and per pixel calls
+               SubjectMask::coverage at the mapped output coords, combining with the same Add / Subtract
+               / Invert logic. paramsJson is empty (content-derived, no geometry); the dock shows only
+               Feather (a smootherstep threshold band around the 0.5 saliency cutoff -- softens the
+               cutout edge) and Invert (selects the background instead). The saliency is edge-tuned in
+               subjectpredictor (small guided-filter radius = long/256 + eps 1e-6, then a contrast
+               around 0.5) so the matte hugs the subject without a halo; Feather softens from that
+               tight base. The loupe tint (ImageView::buildSubjectPreview, sharing drawRangeMask / the
+               maskRangePreview buffer via rebuildContentPreview) is red (Add) / blue (Subtract) like
+               the other tools, rebuilds on Feather / Invert changes, and heals if the saliency lands
+               after the overlay began. CONTENT-MASK TINT PERSISTENCE: unlike the geometric tools
+               (hover-gated -- their handles are pointer-relative), the Range/Subject coverage tint
+               stays drawn as long as the tool is active (maskEditMode), even when the pointer leaves
+               the view, so it is visible while adjusting Feather/Refine in the dock (drawForeground
+               content branch + the setMaskFeather/setMaskInverted repaint no longer require maskHover).
+               ensureSubjectMask is called from renderDevelopPreview / renderDevelopFullResAsync only
+               when a Subject mask exists (stackHasSubjectMask).
+             - SELECT SKY MASK (AI): the sky twin of Select Subject, built as a PARALLEL of it
+               (Utilities/skypredictor SkyPredictor, Develop/skymask.h SkyMask store, MW::ensureSkyMask
+               / stackHasSkyMask, an isSky component in buildMaskBuffer, ImageView::buildSkyPreview,
+               tool==6). It runs a single-channel sky-segmentation ONNX (skyseg.onnx, next to
+               u2net.onnx; CMake bundles/copies it, warning rather than failing if absent so the mask
+               no-ops) through the SAME OpenCV DNN runtime. Preprocessing is the generic seg-net
+               convention (RGB, /255, per-channel ImageNet mean/std); output is [1,C,H,W] with the sky
+               channel taken (C==2 -> channel 1, else 0). The coarse map is edge-refined by the SHARED
+               SegRefine pipeline (Utilities/segrefine.h -- min-max -> upsample -> guided filter vs the
+               photo's luma -> contrast), the identical matting the Subject mask uses (that code was
+               extracted into segrefine.h so both stay in sync). A SEPARATE path store from SubjectMask
+               so a Subject and a Sky mask can coexist on one image. Dock rows Feather + Invert; the
+               loupe tint, persistence and add/select build (MW::onAiMaskEditBegin handles the AI
+               tools) all mirror Subject.
+             - SELECT BACKGROUND MASK (AI): the INVERSE of Select Subject -- no new model or store. It
+               reuses the SubjectMask saliency (ensureSubjectMask; stackHasSubjectMask + the subjRef
+               fetch + onAiMaskEditBegin all treat Subject and Background the same) and simply selects
+               1 - subject. In buildMaskBuffer the subject CompDesc gains subjectBaseInvert (true for
+               Background), and coverage is sampled with (inverted ^ subjectBaseInvert) so Background
+               with Invert-off = background, Invert-on = subject; the loupe tint (buildSubjectPreview)
+               XORs the same way (maskIsBackground, tool==7). Dock rows Feather + Invert. Remaining
+               scaffolded-only: Depth Range (needs a depth model).
+               KNOWN LIMITATION (validated, not a bug): skyseg is strong on horizon-type skies (offline
+               test on a wide winter forest/sky photo gave a near-perfect mask, bright snow correctly
+               rejected) but weak on sky FRAGMENTED through dense canopy behind a large subject + bokeh
+               -- the raw model output itself only fires on scattered patches there, so no post-
+               processing recovers it. Workaround for such shots: a Luminance/Color Range mask + brush.
+               FUTURE WIP (deferred): benchmark alternative sky models offline (onnxruntime) and swap
+               only if one clearly beats skyseg on the hard case AND loads in OpenCV DNN.
              - LIFECYCLE / FLUSH: MW::fileSelectionChange calls setCurrentImage; after the loupe
                pixmap is shown (both the cache-hit path and MW::refreshViewsOnCacheChange) MW::
                applyDevelopPreviewIfEdited renders the saved edits over an edited image (no-op for
@@ -2680,6 +2790,13 @@ Layer & masking model (planned)
                synchronous (a few-KB text file). The OPTIONAL debounce-while-editing write (~2 s
                after edits settle) is gated by G::isDevelopDebounceWrite (default true); the other
                flushes always run.
+             - VIDEOS: the Develop module operates on decoded still frames, so it is gated off for
+               video selections. MW::currentIsVideo() (the sf VideoColumn flag) guards every entry
+               point: fileSelectionChange hands developProperties->setCurrentImage an EMPTY path for a
+               video (still flushing the image being left, then pointing the dock at nothing), and the
+               three render entries -- applyDevelopPreviewIfEdited, renderDevelopPreview,
+               renderDevelopFullResAsync -- early-return, so armed proxy/settle timers or Transform
+               refreshes never try to develop a video.
              - PERF NOTE: setCurrentImage reads the sidecar synchronously on first touch of each
                image (cheap: no sidecar => fast empty read). Folding the develop blob into the
                existing metadata sidecar read (a datamodel column) is a fast-follow if navigation

@@ -4,6 +4,11 @@
 #include "Develop/workingimagecache.h"
 #include "Develop/inputtransform.h"
 #include "Develop/brushstamp.h"
+#include "Develop/rangemask.h"
+#include "Develop/subjectmask.h"
+#include "Develop/skymask.h"
+#include "Utilities/subjectpredictor.h"
+#include "Utilities/skypredictor.h"
 #include "Develop/Transform/croptransform.h"
 #include <QMutex>
 #include <memory>
@@ -2462,8 +2467,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     /* Per-image Develop edit state: load this image's saved EditStack into the dock (also flushes
        the previous image's edits to its sidecar). The developed preview is applied after the
-       loupe image is shown (applyDevelopPreviewIfEdited). */
-    if (developProperties) developProperties->setCurrentImage(fPath);
+       loupe image is shown (applyDevelopPreviewIfEdited). Videos are not developable, so hand the
+       dock an empty path -- it still flushes the image we are leaving, then points at nothing. */
+    if (developProperties) {
+        const bool selIsVideo = dm->sf->index(current.row(), G::VideoColumn).data().toBool();
+        developProperties->setCurrentImage(selIsVideo ? QString() : fPath);
+    }
 
     /* SCROLL CONTROL:
        When an item (icon or row) is selected the default behavior is to scroll the item
@@ -5111,14 +5120,25 @@ brushRasterCached(const QString &paramsJson, int w, int h, int degrees, const QS
     return buf;
 }
 
-/* One component to combine: either a parametric eval (Linear/Radial) or a pre-rasterized Brush
-   coverage buffer (work-space, indexed by pixel). */
+/* One component to combine: a parametric eval (Linear/Radial), a pre-rasterized Brush coverage
+   buffer (work-space, indexed by pixel), or a content-range eval (Luminance/Color Range) that
+   samples the display-referred RangeRef at the mapped output coords. */
 struct CompDesc {
     bool isBrush = false;
+    bool isRange = false;
+    bool isSubject = false;         // Subject OR Background (Background = subjectBaseInvert)
+    bool subjectBaseInvert = false; // Background: select 1 - subject saliency
+    bool isSky = false;
     MaskComp param;                                       // parametric
     std::shared_ptr<const std::vector<float>> brush;      // brush coverage (raw, pre-invert)
     int  op = 0;
     bool inverted = false;
+    /* Range (content) component. */
+    int    rangeTool = 0;                                 // MaskTool::ColorRange / LuminanceRange
+    double rlo = 0, rhi = 1, refine = 50, feather = 0;
+    bool   rangeValid = false;
+    std::vector<RangeMask::ColorSample> samples;          // colour samples (opponent space)
+    /* Subject (AI saliency) component -- coverage is the shared SubjectRef; feather/inverted above. */
 };
 
 /* Rasterize the layer's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
@@ -5133,6 +5153,29 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
     const bool swap = (degrees == 90 || degrees == 270);
     const double Wo = swap ? h : w, Ho = swap ? w : h;   // output (oriented) pixel dimensions
 
+    /* Content-range masks (Luminance/Color Range) sample this display-referred reference of the
+       developed base; built + registered on the GUI thread (MW::ensureRangeRef). Absent (not yet
+       built) => range components yield 0, mirroring a brush with no auto-mask guide. */
+    std::shared_ptr<const RangeMask::RangeRef> ref;
+    for (const MaskComponent &m : masks)
+        if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) {
+            ref = RangeMask::getRef(fPath);
+            break;
+        }
+
+    /* AI subject mask samples this fixed saliency map (built + registered by MW::ensureSubjectMask).
+       Absent (not yet built) => subject components yield 0, like an unbuilt RangeRef. */
+    /* Subject AND Background both sample the U^2-Net saliency (Background = inverted Subject). */
+    std::shared_ptr<const SubjectMask::SubjectRef> subjRef;
+    for (const MaskComponent &m : masks)
+        if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) {
+            subjRef = SubjectMask::getRef(fPath); break;
+        }
+
+    std::shared_ptr<const SkyMask::SkyRef> skyRef;
+    for (const MaskComponent &m : masks)
+        if (m.tool == int(MaskTool::Sky)) { skyRef = SkyMask::getRef(fPath); break; }
+
     QVector<CompDesc> comps;
     comps.reserve(masks.size());
     for (const MaskComponent &m : masks) {
@@ -5142,6 +5185,51 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
             d.brush = brushRasterCached(m.paramsJson, w, h, degrees, fPath);
             d.op = m.op;
             d.inverted = m.inverted;
+            comps.append(d);
+        }
+        else if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) {
+            if (!ref || !ref->valid()) continue;          // reference not ready -> no effect
+            const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
+            CompDesc d;
+            d.isRange   = true;
+            d.rangeTool = m.tool;
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
+            if (m.tool == int(MaskTool::LuminanceRange)) {
+                d.rlo = o.value("lo").toDouble(0.0);
+                d.rhi = o.value("hi").toDouble(1.0);
+            }
+            else {
+                d.refine = o.value("refine").toDouble(50.0);
+                const QJsonArray sa = o.value("samples").toArray();
+                for (const QJsonValue &sv : sa) {
+                    const QJsonArray c = sv.toArray();
+                    if (c.size() < 3) continue;
+                    d.samples.push_back(RangeMask::toOpp(float(c[0].toDouble()),
+                                                         float(c[1].toDouble()),
+                                                         float(c[2].toDouble())));
+                }
+            }
+            comps.append(d);
+        }
+        else if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) {
+            if (!subjRef || !subjRef->valid()) continue;  // saliency not ready -> no effect
+            CompDesc d;
+            d.isSubject = true;
+            d.subjectBaseInvert = (m.tool == int(MaskTool::Background));   // background = 1 - subject
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
+            comps.append(d);
+        }
+        else if (m.tool == int(MaskTool::Sky)) {
+            if (!skyRef || !skyRef->valid()) continue;    // sky coverage not ready -> no effect
+            CompDesc d;
+            d.isSky     = true;
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
             comps.append(d);
         }
         else {
@@ -5154,6 +5242,9 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
         }
     }
     if (comps.isEmpty()) return out;     // no usable geometry -> all-zero (no effect)
+    const RangeMask::RangeRef *refp = ref ? ref.get() : nullptr;
+    const SubjectMask::SubjectRef *subjp = subjRef ? subjRef.get() : nullptr;
+    const SkyMask::SkyRef *skyp = skyRef ? skyRef.get() : nullptr;
 
     const double invW = 1.0/w, invH = 1.0/h;
     auto rows = [&](int y0, int y1) {
@@ -5174,6 +5265,17 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
                 for (const CompDesc &d : comps) {
                     float c;
                     if (d.isBrush) { c = (*d.brush)[k]; if (d.inverted) c = 1.0f - c; }
+                    else if (d.isRange) {
+                        c = (d.rangeTool == int(MaskTool::LuminanceRange))
+                              ? RangeMask::lumCoverage(*refp, onx, ony, d.rlo, d.rhi, d.feather, d.inverted)
+                              : RangeMask::colorCoverage(*refp, onx, ony, d.samples, d.refine,
+                                                         d.feather, d.inverted);
+                    }
+                    else if (d.isSubject)
+                        c = SubjectMask::coverage(*subjp, onx, ony, float(d.feather),
+                                                  d.inverted ^ d.subjectBaseInvert);
+                    else if (d.isSky)
+                        c = SkyMask::coverage(*skyp, onx, ony, float(d.feather), d.inverted);
                     else           c = evalMaskComp(d.param, onx, ony, Wo, Ho);  // invert inside
                     if (d.op == 1) m *= (1.0f - c);     // Subtract
                     else           m = qMax(m, c);      // Add (Union)
@@ -5238,6 +5340,37 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
         out = CropTransform::applyGeometry(out, job.geometry);
     return out;
 }
+
+/* True if any enabled layer carries a content-range mask (Luminance/Color Range) -- these need the
+   display-referred base reference (MW::ensureRangeRef) built before the composite. */
+bool stackHasRangeMask(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
+        for (const MaskComponent &m : L.masks)
+            if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange))
+                return true;
+    return false;
+}
+
+/* True if any enabled layer carries an AI Subject mask -- these need the saliency map
+   (MW::ensureSubjectMask) built before the composite. */
+bool stackHasSubjectMask(const DevelopProperties::StackRenderJob &job)
+{
+    /* Background reuses the subject saliency (inverted), so it needs the ref built too. */
+    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
+        for (const MaskComponent &m : L.masks)
+            if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) return true;
+    return false;
+}
+
+/* True if any enabled layer carries an AI Sky mask -- needs the sky coverage (MW::ensureSkyMask). */
+bool stackHasSkyMask(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
+        for (const MaskComponent &m : L.masks)
+            if (m.tool == int(MaskTool::Sky)) return true;
+    return false;
+}
 } // namespace
 
 void MW::developParamsChange()
@@ -5256,6 +5389,152 @@ void MW::developParamsChange()
     ++developParamsGen;
     if (!developProxyRenderTimer->isActive()) developProxyRenderTimer->start(0);
     developFullResTimer->start(kDevelopSettleMs);
+}
+
+void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
+                        const EditParams &base, int degrees)
+{
+/*
+    Build (once per image + base params) the display-referred RGB reference the content-range
+    masks measure against, and register it by path so the loupe overlay and the off-thread render
+    sample the identical map. It is the developed BASE layer only (Base params + OutputTransform +
+    EXIF orientation), capped in size -- range selection does not need full resolution, and base-
+    only keeps a range mask from feeding back on its own selection. Cheap no-op when already
+    current (keyed on path + a base-params signature), so range-slider drags and colour samples
+    never rebuild it -- they only re-threshold the cached reference.
+*/
+    if (G::isLogger) G::log("MW::ensureRangeRef");
+    const QByteArray key =
+        QJsonDocument(EditStack::paramsToJson(base)).toJson(QJsonDocument::Compact);
+    if (fPath == developRangeRefPath && key == developRangeRefBaseKey && RangeMask::getRef(fPath))
+        return;                                       // already current
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    int fw = small.width, fh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    if (img.isNull()) return;
+    const QImage rgb = img.convertToFormat(QImage::Format_ARGB32);
+
+    auto r = std::make_shared<RangeMask::RangeRef>();
+    r->w = rgb.width(); r->h = rgb.height();
+    r->rgb.resize(size_t(r->w) * size_t(r->h) * 3);
+    for (int y = 0; y < r->h; ++y) {
+        const QRgb *line = reinterpret_cast<const QRgb*>(rgb.constScanLine(y));
+        float *dst = r->rgb.data() + size_t(y) * size_t(r->w) * 3;
+        for (int x = 0; x < r->w; ++x) {
+            const QRgb p = line[x];
+            dst[x*3+0] = float(qRed(p))   / 255.0f;
+            dst[x*3+1] = float(qGreen(p)) / 255.0f;
+            dst[x*3+2] = float(qBlue(p))  / 255.0f;
+        }
+    }
+    RangeMask::putRef(fPath, r);
+    developRangeRefPath = fPath;
+    developRangeRefBaseKey = key;
+}
+
+void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
+                           const EditParams &base, int degrees)
+{
+/*
+    Build (once per image) the U^2-Net saliency map the "Select Subject" mask samples, and register
+    it by path so the loupe overlay and the off-thread render sample the identical coverage. The
+    model sees the developed BASE layer (downscaled, output-oriented) -- the same reference the range
+    masks use -- so the saliency lines up with what the user sees. Cached by path only: subject
+    detection does not depend on the develop sliders, so slider drags never re-run inference (a cheap
+    no-op once the map exists). Inference is synchronous on the GUI thread (~200-400ms, one-shot per
+    image on the user's add/select action) with a busy cursor.
+*/
+    if (G::isLogger) G::log("MW::ensureSubjectMask");
+    if (fPath == developSubjectRefPath && SubjectMask::getRef(fPath)) return;   // already current
+
+    /* Lazily load u2net.onnx (from the executable dir, next to focus_point_model.onnx). */
+    if (!subjectPredictor) {
+        const QString modelPath =
+            QDir(QCoreApplication::applicationDirPath()).filePath("u2net.onnx");
+        subjectPredictor = new SubjectPredictor(modelPath, 320);
+        if (!subjectPredictor->isLoaded())
+            qWarning("Select Subject: u2net.onnx not found or failed to load at %s",
+                     modelPath.toUtf8().constData());
+    }
+    if (!subjectPredictor->isLoaded()) return;
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    int fw = small.width, fh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    if (img.isNull()) return;
+
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    auto r = std::make_shared<SubjectMask::SubjectRef>();
+    const bool ok = subjectPredictor->predict(img, r->cov, r->w, r->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !r->valid()) return;
+
+    SubjectMask::putRef(fPath, r);
+    developSubjectRefPath = fPath;
+}
+
+void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
+                       const EditParams &base, int degrees)
+{
+/*
+    Sky twin of ensureSubjectMask: build (once per image) the sky coverage the "Select Sky" mask
+    samples and register it by path, from the developed BASE layer (downscaled, output-oriented) so
+    it lines up with what the user sees. Cached by path only; synchronous on the GUI thread with a
+    busy cursor. Lazily loads skyseg.onnx.
+*/
+    if (G::isLogger) G::log("MW::ensureSkyMask");
+    if (fPath == developSkyRefPath && SkyMask::getRef(fPath)) return;      // already current
+
+    if (!skyPredictor) {
+        const QString modelPath =
+            QDir(QCoreApplication::applicationDirPath()).filePath("skyseg.onnx");
+        skyPredictor = new SkyPredictor(modelPath, 320);
+        if (!skyPredictor->isLoaded())
+            qWarning("Select Sky: skyseg.onnx not found or failed to load at %s",
+                     modelPath.toUtf8().constData());
+    }
+    if (!skyPredictor->isLoaded()) return;
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    int fw = small.width, fh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    if (img.isNull()) return;
+
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    auto r = std::make_shared<SkyMask::SkyRef>();
+    const bool ok = skyPredictor->predict(img, r->cov, r->w, r->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !r->valid()) return;
+
+    SkyMask::putRef(fPath, r);
+    developSkyRefPath = fPath;
+}
+
+void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
+                           const QString & /*paramsJson*/, double /*feather*/)
+{
+/*
+    A mask tool became active in the dock. For an AI tool (Subject/Sky), build its coverage now (and
+    repaint) so the loupe tint appears immediately on add/select -- the render path only builds the
+    ref when a non-identity layer carries the mask, so a just-added mask on an unadjusted layer would
+    otherwise show nothing. Cached by path, so re-selecting the same image is a no-op.
+*/
+    const bool needsSubject = (tool == int(MaskTool::Subject) || tool == int(MaskTool::Background));
+    const bool isSky        = (tool == int(MaskTool::Sky));
+    if (!needsSubject && !isSky) return;
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;
+    const auto mj = developProperties->stackJob();
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    if (needsSubject) ensureSubjectMask(fPath, *work, mj.base, degrees);   // Background = inverted subject
+    else              ensureSkyMask(fPath, *work, mj.base, degrees);
+    imageView->viewport()->update();   // heal the tint now the ref exists
 }
 
 void MW::renderDevelopPreview(bool fullRes)
@@ -5278,6 +5557,7 @@ void MW::renderDevelopPreview(bool fullRes)
 
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
+    if (currentIsVideo()) return;               // Develop operates on stills, not videos
 
     auto mj = developProperties->stackJob();   // full layer stack (independent of active layer)
     /* While the crop tool is active, suppress only the CROP (the overlay sets it, applied on commit)
@@ -5329,6 +5609,13 @@ void MW::renderDevelopPreview(bool fullRes)
     int fw = work->width, fh = work->height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
 
+    /* Content-range masks need the display-referred base reference in place before the composite
+       (built from the FULL-res work so it is proxy-independent; cached, so this is a no-op unless
+       the base params or image changed). */
+    if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.base, degrees);
+    if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.base, degrees);
+    if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.base, degrees);
+
     const QImage out = developCompositeStack(*srcImg, mj, degrees, fullRes, fw, fh, fPath);
     if (out.isNull()) return;
     const qint64 tRender = G::isReportDevelopTime ? probe.restart() : 0;
@@ -5371,6 +5658,13 @@ int MW::developOrientationDegrees(const WorkingImage &work, const QString &fPath
     return degrees;
 }
 
+bool MW::currentIsVideo() const
+{
+    if (!dm || !dm->sf || dm->currentSfRow < 0 || dm->currentSfRow >= dm->sf->rowCount())
+        return false;
+    return dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+}
+
 bool MW::currentDevelopEditsVisible() const
 {
     if (!developProperties || developProperties->currentIsIdentity()) return false;
@@ -5392,6 +5686,7 @@ void MW::applyDevelopPreviewIfEdited()
     coalesced).
 */
     if (G::isLogger) G::log("MW::applyDevelopPreviewIfEdited");
+    if (currentIsVideo()) return;               // Develop operates on stills, not videos
     /* An edited image (raw on) renders its saved params, and that render refreshes the scopes via
        setDevelopPreview. Otherwise nothing overlays the loupe, so refresh the scopes here from the
        decoded image actually shown (valid in preview mode too). */
@@ -5417,6 +5712,7 @@ void MW::renderDevelopFullResAsync()
 
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
+    if (currentIsVideo()) return;               // Develop operates on stills, not videos
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) return;                    // proxy render builds/caches it first; nothing to do yet
 
@@ -5427,6 +5723,12 @@ void MW::renderDevelopFullResAsync()
     }
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const quint64 gen = developParamsGen;
+
+    /* Ensure the content-range reference is registered before the background render samples it
+       (GUI thread; cached, so normally a no-op after the proxy render already built it). */
+    if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.base, degrees);
+    if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.base, degrees);
+    if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.base, degrees);
 
     developFullResInFlight = true;
     std::shared_ptr<const WorkingImage> src = work;   // keep alive across the background render

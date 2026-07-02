@@ -79,6 +79,9 @@ QCursor buildLevelCursor()
 #include <QJsonObject>
 #include <QJsonArray>
 #include "Develop/brushstamp.h"
+#include "Develop/rangemask.h"
+#include "Develop/subjectmask.h"
+#include "Develop/skymask.h"
 
 #define CLIPBOARD_IMAGE_NAME		"clipboard.png"
 #define ROUND(x) (static_cast<int>((x) + 0.5))
@@ -488,6 +491,10 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
     maskPainting = false;
     maskGuide.reset();                                   // recompute the auto-mask guide for this image
     if (maskTool == 2) brushBuildBuffers(paramsJson);    // raster committed strokes into the preview
+    if (maskIsContent()) {                               // Range / Subject / Sky: build the tint
+        maskRangeParams = paramsJson;
+        rebuildContentPreview();
+    }
     maskEditMode = true;
     maskHover = underMouse();        // show at once if the cursor is already over the view
     maskBrushCursorOn = maskHover && maskTool == 2;
@@ -505,20 +512,39 @@ void ImageView::endMaskEdit()
     maskBrushCursorOn = false;
     maskBrushPreview = QImage();
     maskBrushMain.clear(); maskBrushStroke.clear(); maskBrushW = maskBrushH = 0;
+    maskRangePreview = QImage();
+    maskRangeParams.clear();
     viewport()->update();
 }
 
 void ImageView::setMaskFeather(double feather)
 {
     maskFeather = feather;
-    if (maskEditMode && maskHover) viewport()->update();
+    if (maskIsContent()) rebuildContentPreview();   // feather softens the tint edge
+    /* Content tints stay visible without hover, so repaint on any edit-mode change (the dock has the
+       pointer while adjusting Feather); geometric tools only matter under the cursor. */
+    if (maskEditMode && (maskHover || maskIsContent())) viewport()->update();
 }
 
 void ImageView::setMaskInverted(bool inverted)
 {
     maskInverted = inverted;
     if (maskTool == 2) brushRebuildPreview();    // invert is baked into the tint image
+    if (maskIsContent()) rebuildContentPreview();   // invert flips the tint coverage
+    if (maskEditMode && (maskHover || maskIsContent())) viewport()->update();
+}
+
+void ImageView::setMaskRangeParams(const QString &paramsJson)
+{
+    if (!maskIsRange()) return;
+    maskRangeParams = paramsJson;
+    buildRangePreview();
     if (maskEditMode && maskHover) viewport()->update();
+}
+
+QColor ImageView::maskTintColor() const
+{
+    return (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);   // Subtract blue / Add red
 }
 
 void ImageView::setMaskBrushSettings(double size, double feather, double flow, bool autoMask)
@@ -1082,11 +1108,19 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
         }
         return;
     }
-    if (!maskHandlesEditable()) return;
+    /* Content masks (Range/Subject) keep their coverage tint visible as long as the tool is active
+       (edit mode), even when the pointer leaves the view -- so the tint stays up while adjusting
+       Feather/Refine in the dock. Geometric/brush tools stay hover-gated: their handles and brush
+       cursor are pointer-relative and would be noise when the mouse is elsewhere. */
+    const bool content = maskIsContent();
+    const bool show = content ? (maskEditMode && pmItem && pmItem->isVisible())
+                              : maskHandlesEditable();
+    if (!show) return;
     const QRectF br = pmItem->boundingRect();
     if (br.width() <= 0 || br.height() <= 0) return;
     if      (maskTool == 1) drawRadialMask(painter, br);
     else if (maskTool == 2) drawBrushMask(painter, br);
+    else if (content)       drawRangeMask(painter, br);
     else                    drawLinearMask(painter, br);
 }
 
@@ -1423,6 +1457,208 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br)
         painter->setPen(pen);
         painter->setBrush(Qt::NoBrush);
         painter->drawEllipse(cVp, rVp, rVp);
+        painter->restore();
+    }
+}
+
+/* ---- Content-range tools (Color Range / Luminance Range) ---- */
+
+void ImageView::buildRangePreview()
+{
+    /* Rebuild the coverage tint from the shared display-referred RangeRef (built by MW from the
+       developed base and registered by path -- the SAME map the render samples, so preview ==
+       render). The RangeRef and the displayed pixmap are both output-oriented, so coverage samples
+       directly at each tint pixel's normalized position (no rotation). */
+    maskRangePreview = QImage();
+    if (currentImagePath.isEmpty() || !pmItem) return;
+    auto ref = RangeMask::getRef(currentImagePath);
+    if (!ref || !ref->valid()) return;
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return;
+
+    const int cap = 1280;
+    const double longE = std::max(br.width(), br.height());
+    const double s = (longE > cap) ? cap / longE : 1.0;
+    const int tw = std::max(1, int(br.width()  * s));
+    const int th = std::max(1, int(br.height() * s));
+
+    const QJsonObject o = QJsonDocument::fromJson(maskRangeParams.toUtf8()).object();
+    const double lo = o.value("lo").toDouble(0.0), hi = o.value("hi").toDouble(1.0);
+    const double refine = o.value("refine").toDouble(50.0);
+    std::vector<RangeMask::ColorSample> samples;
+    const QJsonArray sa = o.value("samples").toArray();
+    for (const QJsonValue &sv : sa) {
+        const QJsonArray c = sv.toArray();
+        if (c.size() < 3) continue;
+        samples.push_back(RangeMask::toOpp(float(c[0].toDouble()), float(c[1].toDouble()),
+                                           float(c[2].toDouble())));
+    }
+    const QColor base = maskTintColor();
+    const int R = base.red(), Gc = base.green(), B = base.blue();
+    const double tint = 150.0 / 255.0;
+    const bool lum = (maskTool == 4);
+
+    QImage img(tw, th, QImage::Format_ARGB32);
+    for (int y = 0; y < th; ++y) {
+        QRgb *line = reinterpret_cast<QRgb*>(img.scanLine(y));
+        const double ony = (y + 0.5) / th;
+        for (int x = 0; x < tw; ++x) {
+            const double onx = (x + 0.5) / tw;
+            const float cov = lum
+                ? RangeMask::lumCoverage(*ref, onx, ony, lo, hi, maskFeather, maskInverted)
+                : RangeMask::colorCoverage(*ref, onx, ony, samples, refine, maskFeather, maskInverted);
+            line[x] = qRgba(R, Gc, B, int(cov * tint * 255.0 + 0.5));
+        }
+    }
+    maskRangePreview = img;
+}
+
+void ImageView::rebuildContentPreview()
+{
+    /* All content masks tint the SAME maskRangePreview buffer; only the coverage source differs.
+       Background shares the Subject saliency (inverted inside buildSubjectPreview). */
+    if      (maskIsSubject() || maskIsBackground()) buildSubjectPreview();
+    else if (maskIsSky())                           buildSkyPreview();
+    else                                            buildRangePreview();
+}
+
+void ImageView::buildSubjectPreview()
+{
+    /* Rebuild the coverage tint from the shared SubjectMask saliency map (built + registered by MW
+       from the U^2-Net model -- the SAME map the render samples, so preview == render). Mirrors
+       buildRangePreview: the ref and the displayed pixmap are both output-oriented, so coverage
+       samples directly at each tint pixel's normalized position. Background selects the INVERSE of
+       the subject, so it XORs the user's invert flag (matches buildMaskBuffer's subjectBaseInvert). */
+    maskRangePreview = QImage();
+    if (currentImagePath.isEmpty() || !pmItem) return;
+    auto ref = SubjectMask::getRef(currentImagePath);
+    if (!ref || !ref->valid()) return;
+    const bool invert = maskInverted ^ maskIsBackground();
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return;
+
+    const int cap = 1280;
+    const double longE = std::max(br.width(), br.height());
+    const double s = (longE > cap) ? cap / longE : 1.0;
+    const int tw = std::max(1, int(br.width()  * s));
+    const int th = std::max(1, int(br.height() * s));
+
+    const QColor base = maskTintColor();
+    const int R = base.red(), Gc = base.green(), B = base.blue();
+    const double tint = 150.0 / 255.0;
+
+    QImage img(tw, th, QImage::Format_ARGB32);
+    for (int y = 0; y < th; ++y) {
+        QRgb *line = reinterpret_cast<QRgb*>(img.scanLine(y));
+        const double ony = (y + 0.5) / th;
+        for (int x = 0; x < tw; ++x) {
+            const double onx = (x + 0.5) / tw;
+            const float cov = SubjectMask::coverage(*ref, onx, ony, float(maskFeather), invert);
+            line[x] = qRgba(R, Gc, B, int(cov * tint * 255.0 + 0.5));
+        }
+    }
+    maskRangePreview = img;
+}
+
+void ImageView::buildSkyPreview()
+{
+    /* Sky twin of buildSubjectPreview: tint from the shared SkyMask coverage (built + registered by
+       MW from skyseg.onnx -- the SAME map the render samples, so preview == render). */
+    maskRangePreview = QImage();
+    if (currentImagePath.isEmpty() || !pmItem) return;
+    auto ref = SkyMask::getRef(currentImagePath);
+    if (!ref || !ref->valid()) return;
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return;
+
+    const int cap = 1280;
+    const double longE = std::max(br.width(), br.height());
+    const double s = (longE > cap) ? cap / longE : 1.0;
+    const int tw = std::max(1, int(br.width()  * s));
+    const int th = std::max(1, int(br.height() * s));
+
+    const QColor base = maskTintColor();
+    const int R = base.red(), Gc = base.green(), B = base.blue();
+    const double tint = 150.0 / 255.0;
+
+    QImage img(tw, th, QImage::Format_ARGB32);
+    for (int y = 0; y < th; ++y) {
+        QRgb *line = reinterpret_cast<QRgb*>(img.scanLine(y));
+        const double ony = (y + 0.5) / th;
+        for (int x = 0; x < tw; ++x) {
+            const double onx = (x + 0.5) / tw;
+            const float cov = SkyMask::coverage(*ref, onx, ony, float(maskFeather), maskInverted);
+            line[x] = qRgba(R, Gc, B, int(cov * tint * 255.0 + 0.5));
+        }
+    }
+    maskRangePreview = img;
+}
+
+void ImageView::rangeSwatchRects(QVector<QRectF> &out) const
+{
+    /* A row of colour swatches along the bottom-left of the viewport (constant on-screen size). */
+    out.clear();
+    if (maskTool != 3) return;
+    const QJsonArray sa = QJsonDocument::fromJson(maskRangeParams.toUtf8())
+                              .object().value("samples").toArray();
+    const double sz = 22, gap = 6, x0 = 12, y0 = viewport()->height() - sz - 12;
+    for (int k = 0; k < sa.size(); ++k)
+        out.append(QRectF(x0 + k * (sz + gap), y0, sz, sz));
+}
+
+void ImageView::rangeSampleAt(QPoint vp, bool add)
+{
+    /* Eyedropper: read the display-referred colour under the cursor from the RangeRef and store it
+       as a sample. add=false replaces the set (plain click), add=true appends (shift-click). The
+       updated paramsJson goes back to the dock via the existing geometry handshake. */
+    if (maskTool != 3 || currentImagePath.isEmpty() || !pmItem) return;
+    auto ref = RangeMask::getRef(currentImagePath);
+    if (!ref || !ref->valid()) return;
+    const QPointF n = maskViewportToNorm(vp);
+    if (n.x() < 0.0 || n.x() > 1.0 || n.y() < 0.0 || n.y() > 1.0) return;
+    float r, g, b; RangeMask::sampleRGB(*ref, n.x(), n.y(), r, g, b);
+
+    QJsonObject o = QJsonDocument::fromJson(maskRangeParams.toUtf8()).object();
+    QJsonArray sa = add ? o.value("samples").toArray() : QJsonArray();
+    QJsonArray c; c.append(r); c.append(g); c.append(b);
+    sa.append(c);
+    o["samples"] = sa;
+    maskRangeParams = QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+    buildRangePreview();
+    viewport()->update();
+    emit maskGeometryChanged(maskRangeParams);      // dock persists the samples + re-composites
+}
+
+void ImageView::drawRangeMask(QPainter *painter, const QRectF &br)
+{
+    /* 1) Coverage tint over the photo (scene coords, scales with the image). */
+    if (maskRangePreview.isNull()) rebuildContentPreview();  // heal if the ref arrived after beginMaskEdit
+    if (!maskRangePreview.isNull()) {
+        painter->save();
+        painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+        painter->drawImage(pmItem->mapToScene(br).boundingRect(), maskRangePreview);
+        painter->restore();
+    }
+    /* 2) Color Range: the sampled-colour swatches (viewport coords). Click a swatch to remove it. */
+    if (maskTool == 3) {
+        QVector<QRectF> rects;
+        rangeSwatchRects(rects);
+        const QJsonArray sa = QJsonDocument::fromJson(maskRangeParams.toUtf8())
+                                  .object().value("samples").toArray();
+        painter->save();
+        painter->resetTransform();
+        for (int k = 0; k < rects.size() && k < sa.size(); ++k) {
+            const QJsonArray c = sa[k].toArray();
+            if (c.size() < 3) continue;
+            const QColor sw(int(c[0].toDouble()*255), int(c[1].toDouble()*255), int(c[2].toDouble()*255));
+            painter->setPen(QPen(QColor(0, 0, 0, 190), 1.0));
+            painter->setBrush(sw);
+            painter->drawRect(rects[k]);
+            painter->setPen(QPen(QColor(255, 255, 255, 210), 1.2));   // little x = removable
+            const QRectF r = rects[k].adjusted(4, 4, -4, -4);
+            painter->drawLine(r.topLeft(), r.bottomRight());
+            painter->drawLine(r.topRight(), r.bottomLeft());
+        }
         painter->restore();
     }
 }
@@ -2626,6 +2862,28 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         cropDrag = -1;          // pan: handled by the normal Left-button path below
     }
 
+    /* Color Range eyedropper: a left click samples the colour under the cursor (shift = add another
+       sample); clicking an on-image swatch removes it. Consumes the event so it does not pan. The
+       Luminance Range tool has no canvas interaction -- clicks fall through to normal pan/zoom. */
+    if (maskEditMode && maskTool == 3 && event->button() == Qt::LeftButton) {
+        QVector<QRectF> rects;
+        rangeSwatchRects(rects);
+        for (int k = 0; k < rects.size(); ++k) {
+            if (!rects[k].contains(event->pos())) continue;
+            QJsonObject o = QJsonDocument::fromJson(maskRangeParams.toUtf8()).object();
+            QJsonArray sa = o.value("samples").toArray();
+            if (k < sa.size()) sa.removeAt(k);
+            o["samples"] = sa;
+            maskRangeParams = QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+            buildRangePreview();
+            viewport()->update();
+            emit maskGeometryChanged(maskRangeParams);
+            return;
+        }
+        rangeSampleAt(event->pos(), event->modifiers() & Qt::ShiftModifier);
+        return;
+    }
+
     /* Brush: a left press begins a stroke (Alt = erase). Painting consumes the event so the image
        does not pan. */
     if (maskEditMode && maskTool == 2 && event->button() == Qt::LeftButton) {
@@ -2853,9 +3111,16 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
         emit maskGeometryChanged(maskParamsJson());
         return;
     }
-    /* Hover feedback while a mask tool is active (not dragging): show a move cursor over a handle. */
+    /* Hover feedback while a mask tool is active (not dragging): show a move cursor over a handle,
+       an eyedropper (cross) for the Color Range sampler (pointer over a removable swatch). */
     if (maskEditMode && !isLeftMouseBtnPressed) {
-        setCursor(maskHitTest(event->pos()) >= 0 ? Qt::OpenHandCursor : Qt::ArrowCursor);
+        if (maskTool == 3) {
+            QVector<QRectF> rects; rangeSwatchRects(rects);
+            bool onSwatch = false;
+            for (const QRectF &r : rects) if (r.contains(event->pos())) { onSwatch = true; break; }
+            setCursor(onSwatch ? Qt::PointingHandCursor : Qt::CrossCursor);
+        }
+        else setCursor(maskHitTest(event->pos()) >= 0 ? Qt::OpenHandCursor : Qt::ArrowCursor);
     }
 
     /*

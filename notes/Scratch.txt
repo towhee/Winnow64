@@ -276,3 +276,5 @@ Review and summarize to make sure we are in agreement before making any changes.
 I think you were right about too many buttons on the LayerHeader.  Get rid of
 Rename, Reset, +, -, addMask buttons and add [?] button.  Replace with a context
 menu that includes the removed button actions.
+
+OpenCV DNN is the ONNX runtime here (not onnxruntime), which constrains model choice.

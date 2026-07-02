@@ -126,6 +126,9 @@ public slots:
     void setMaskFeather(double feather);
     void setMaskInverted(bool inverted);
     void setMaskBrushSettings(double size, double feather, double flow, bool autoMask);
+    /* Content-range tools (Luminance/Color Range): the dock changed lo/hi/refine (or samples) ->
+       rebuild the coverage tint from the shared RangeRef. */
+    void setMaskRangeParams(const QString &paramsJson);
 
     /* Develop crop editing (Transform panel). beginCropEdit enters the Lightroom-style crop:
        the crop frame is anchored at a fixed centred "stage" in the viewport and the image is
@@ -367,6 +370,27 @@ private:
     double  brushRadiusBufPx() const;                       // current brush radius in buffer px
     QPointF brushNormToBuf(QPointF n) const;                // normalized -> preview-buffer px
     bool    maskIsBrush() const { return maskTool == 2; }
+    /* ------- Content-range mask tools (Color Range = 3, Luminance Range = 4) ------- */
+    bool    maskIsRange() const { return maskTool == 3 || maskTool == 4; }
+    /* AI masks (Select Subject = 5, Select Sky = 6): share the range tools' tint buffer + draw path,
+       but the coverage comes from the SubjectMask/SkyMask map instead of the display-referred
+       RangeRef. maskIsContent() = any tint-drawing content mask (range or AI). */
+    bool    maskIsSubject()    const { return maskTool == 5; }
+    bool    maskIsSky()        const { return maskTool == 6; }
+    bool    maskIsBackground() const { return maskTool == 7; }   // = inverted Subject saliency
+    bool    maskIsContent() const {
+        return maskIsRange() || maskIsSubject() || maskIsSky() || maskIsBackground();
+    }
+    void    rebuildContentPreview();                // dispatch to the subject / sky / range tint builder
+    QString maskRangeParams;                       // lo/hi/refine/samples JSON for the active tool
+    QImage  maskRangePreview;                       // coverage tint (output-oriented), like the brush
+    void    drawRangeMask(QPainter *p, const QRectF &br);   // paint the tint + colour swatches
+    void    buildRangePreview();                    // rebuild the tint from the shared RangeRef + params
+    void    buildSubjectPreview();                  // rebuild the tint from the shared SubjectRef
+    void    buildSkyPreview();                      // rebuild the tint from the shared SkyRef
+    void    rangeSwatchRects(QVector<QRectF> &out) const;   // on-image colour swatches (viewport px)
+    void    rangeSampleAt(QPoint vp, bool add);     // eyedropper: sample the loupe colour into samples
+    QColor  maskTintColor() const;                  // Add = red, Subtract = blue (shared tint colour)
     /* Radial: the four axis-end handles in image-pixel coords (0:+x 1:-x 2:+y 3:-y). */
     void    maskRadialAxisHandles(const QRectF &br, QPointF h[4]) const;
     /* Radial: the rotate handle (viewport px), a stub beyond the +x axis handle. */
