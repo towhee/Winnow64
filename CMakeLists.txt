@@ -315,6 +315,8 @@ set(WINNOW_SOURCES
     Utilities/dropshadowlabel.cpp
     Utilities/focuspointtrainer.cpp
     Utilities/focuspredictor.cpp
+    Utilities/subjectpredictor.cpp
+    Utilities/skypredictor.cpp
     Utilities/foldercompressor.cpp
     Utilities/htmlwindow.cpp
     Utilities/icc.cpp
@@ -363,6 +365,7 @@ set(WINNOW_HEADERS
     Develop/editparams.h
     Develop/inputtransform.h
     Develop/outputtransform.h
+    Develop/rangemask.h
     Develop/workingimage.h
     Develop/Properties/developproperties.h
     Develop/Properties/layerheader.h
@@ -513,6 +516,8 @@ set(WINNOW_HEADERS
     Utilities/dropshadowlabel.h
     Utilities/focuspointtrainer.h
     Utilities/focuspredictor.h
+    Utilities/subjectpredictor.h
+    Utilities/skypredictor.h
     Utilities/foldercompressor.h
     Utilities/htmlwindow.h
     Utilities/icc.h
@@ -810,12 +815,34 @@ if(APPLE)
     # droplet + a version-correct QtCore are staged fresh into the bundle by the
     # Winnet target's POST_BUILD step below (search "Winnet — the Embellish").
 
-    # Single file: ONNX model
+    # ONNX models bundled into the .app (Contents/MacOS): focus point (tracked in git) + U^2-Net
+    # subject saliency. u2net.onnx (~176 MB) is large; if it is absent, warn rather than fail so the
+    # project still builds -- the Select Subject mask then simply no-ops until the file is added.
     target_sources(Winnow PRIVATE ReleaseExtras/focus_point_model.onnx)
     set_source_files_properties(ReleaseExtras/focus_point_model.onnx PROPERTIES
         MACOSX_PACKAGE_LOCATION "MacOS"
         HEADER_FILE_ONLY TRUE
         SKIP_AUTOGEN TRUE)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/u2net.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/u2net.onnx)
+        set_source_files_properties(ReleaseExtras/u2net.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/u2net.onnx not found -- 'Select Subject' mask will no-op. "
+                        "Download u2net.onnx into ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/skyseg.onnx)
+        set_source_files_properties(ReleaseExtras/skyseg.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/skyseg.onnx not found -- 'Select Sky' mask will no-op. "
+                        "Add skyseg.onnx to ReleaseExtras/ to enable it.")
+    endif()
 endif()
 
 # =============================================================================
@@ -988,12 +1015,32 @@ if(WIN32)
         COMMENT "Deploying third-party runtime DLLs"
         VERBATIM)
 
-    # ONNX focus model (tracked in git).
+    # ONNX models (tracked in git): focus point + U^2-Net subject saliency.
     add_custom_command(TARGET Winnow POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/focus_point_model.onnx" "${_winnow_out}"
         COMMENT "Deploying focus_point_model.onnx"
         VERBATIM)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/u2net.onnx")
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/u2net.onnx" "${_winnow_out}"
+            COMMENT "Deploying u2net.onnx"
+            VERBATIM)
+    else()
+        message(WARNING "ReleaseExtras/u2net.onnx not found -- 'Select Subject' mask will no-op. "
+                        "Download u2net.onnx into ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx")
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx" "${_winnow_out}"
+            COMMENT "Deploying skyseg.onnx"
+            VERBATIM)
+    else()
+        message(WARNING "ReleaseExtras/skyseg.onnx not found -- 'Select Sky' mask will no-op. "
+                        "Add skyseg.onnx to ReleaseExtras/ to enable it.")
+    endif()
 
     # ExifTool (et.exe) is not in git; it lives in release/. Warn rather than
     # fail the build if absent.

@@ -86,3 +86,5 @@ packaging/windows/config.ps1
 
 # Per-machine Claude Code settings (do not commit)
 .claude/settings.local.json
+ReleaseExtras/skyseg.onnx
+ReleaseExtras/u2net.onnx

@@ -114,6 +114,9 @@ signals:
     void maskEditEnd();
     void maskFeatherChanged(double feather);    // Feather slider -> live overlay ramp update
     void maskInvertChanged(bool inverted);      // Invert checkbox -> live overlay flip
+    /* Content-range tool params (Luminance lo/hi, Color refine + samples) changed in the dock ->
+       ImageView rebuilds its coverage tint. */
+    void maskRangeChanged(const QString &paramsJson);
     /* Brush current settings (for the cursor + the next stroke). size/flow 0..100. */
     void maskBrushSettingsChanged(double size, double feather, double flow, bool autoMask);
 

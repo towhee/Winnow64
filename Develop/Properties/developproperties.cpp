@@ -353,12 +353,26 @@ void DevelopProperties::newLayer()
     s.layers[0].name = "Base";                                // index 0 is always Base
 
     /* Prompt for the name, defaulting to "Layer n" (the first above Base is "Layer 1", since Base is
-       index 0 and the new layer's index equals the pre-append size). */
+       index 0 and the new layer's index equals the pre-append size). Pop the dialog near the cursor
+       (the [+] button just clicked) rather than screen-centre, so the flow stays where the user is
+       looking, clamped to the screen. */
     const QString def = uniqueLayerName("Layer " + QString::number(s.layers.size()));
-    bool ok = false;
-    const QString entered = QInputDialog::getText(this, "New layer", "Layer name:",
-                                                  QLineEdit::Normal, def, &ok).trimmed();
-    if (!ok) return;
+    QInputDialog dlg(this);
+    dlg.setWindowTitle("New layer");
+    dlg.setLabelText("Layer name:");
+    dlg.setTextEchoMode(QLineEdit::Normal);
+    dlg.setTextValue(def);
+    dlg.adjustSize();
+    const QPoint cur = QCursor::pos();
+    QPoint tl(cur.x() - dlg.width() / 2, cur.y() - 20);
+    if (QScreen *scr = QGuiApplication::screenAt(cur)) {
+        const QRect a = scr->availableGeometry();
+        tl.setX(qBound(a.left(), tl.x(), a.right()  - dlg.width()));
+        tl.setY(qBound(a.top(),  tl.y(), a.bottom() - dlg.height()));
+    }
+    dlg.move(tl);
+    if (dlg.exec() != QDialog::Accepted) return;
+    const QString entered = dlg.textValue().trimmed();
 
     EditLayer l;
     l.name = uniqueLayerName(entered.isEmpty() ? def : entered);
@@ -372,6 +386,10 @@ void DevelopProperties::newLayer()
     refreshLayerCombo();
     buildTree();
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+
+    /* A new layer's whole point is to apply a masked adjustment, so the next step is choosing a mask
+       tool -- pop that menu straight away (near the cursor). Escape just leaves an empty layer. */
+    showMaskMenu();
 }
 
 void DevelopProperties::deleteLayer()
@@ -680,6 +698,35 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
             setCheckboxValue("maskAutoMask", brushBool(m.paramsJson, "autoMask", false));
             setCheckboxValue("maskInvert", m.inverted);
         }
+        else if (m.tool == int(MaskTool::LuminanceRange)) {
+            /* Selects a luminance band [lo,hi] (stored 0..1, shown 0..100). Feather softens the band
+               edges; Invert flips the selection. */
+            addSlider("maskRangeLo", "Range Min", "Lower luminance bound of the selected band.",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskRangeHi", "Range Max", "Upper luminance bound of the selected band.",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskFeather", "Feather", "Soften the band edges.",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
+            setSliderReal("maskRangeLo", brushNum(m.paramsJson, "lo", 0.25) * 100.0);
+            setSliderReal("maskRangeHi", brushNum(m.paramsJson, "hi", 0.75) * 100.0);
+            setSliderReal("maskFeather", m.feather);
+            setCheckboxValue("maskInvert", m.inverted);
+        }
+        else if (m.tool == int(MaskTool::ColorRange)) {
+            /* Colours are sampled by clicking the loupe (shift-click adds, and the on-image swatches
+               remove); the dock carries only Refine (tolerance), Feather and Invert. */
+            addSlider("maskRefine", "Refine",
+                      "Colour tolerance: higher selects fewer, closer colours. Click the image to "
+                      "sample; shift-click to add another colour.",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskFeather", "Feather", "Soften the selection edge.",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
+            setSliderReal("maskRefine", brushNum(m.paramsJson, "refine", 50));
+            setSliderReal("maskFeather", m.feather);
+            setCheckboxValue("maskInvert", m.inverted);
+        }
         else {
             addSlider("maskFeather", "Feather", "Soften the mask edge.",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
@@ -726,6 +773,22 @@ QString DevelopProperties::defaultMaskParams(int tool)
         o["flow"] = 50;
         o["autoMask"] = false;
         o["strokes"] = QJsonArray();
+        return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+    }
+    if (tool == int(MaskTool::LuminanceRange)) {
+        /* Selects a band of display-referred luminance [lo,hi] (0..1). Starts on the mid-tones so the
+           mask is visible; the feather (MaskComponent.feather) softens the band edges. */
+        QJsonObject o;
+        o["lo"] = 0.25;
+        o["hi"] = 0.75;
+        return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+    }
+    if (tool == int(MaskTool::ColorRange)) {
+        /* Selects pixels near one or more sampled colours (added by clicking the loupe). refine 0..100
+           sets the tolerance (higher = tighter). samples are [r,g,b] 0..1 in display space. */
+        QJsonObject o;
+        o["refine"] = 50;
+        o["samples"] = QJsonArray();
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
     return QString();
@@ -807,7 +870,10 @@ void DevelopProperties::updateMaskEdit()
     if (layer && selectedMaskIndex >= 0 && selectedMaskIndex < layer->masks.size()) {
         const MaskComponent &m = layer->masks[selectedMaskIndex];
         if (m.tool == int(MaskTool::LinearGradient) || m.tool == int(MaskTool::RadialGradient) ||
-            m.tool == int(MaskTool::Brush)) {
+            m.tool == int(MaskTool::Brush) ||
+            m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange) ||
+            m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Sky) ||
+            m.tool == int(MaskTool::Background)) {
             emit maskEditBegin(m.tool, m.op, m.inverted, m.paramsJson, m.feather);
             return;
         }
@@ -1077,6 +1143,23 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
+    /* Content-range tool settings (Luminance Range lo/hi, Color Range refine) live in the active
+       component's paramsJson. They change coverage, so re-composite AND live-update the loupe tint. */
+    if (source == "maskRangeLo" || source == "maskRangeHi" || source == "maskRefine") {
+        EditLayer *l = activeLayer();
+        if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size()) {
+            MaskComponent &mm = l->masks[selectedMaskIndex];
+            if      (source == "maskRangeLo") mm.paramsJson = brushWith(mm.paramsJson, "lo", v.toDouble() / 100.0);
+            else if (source == "maskRangeHi") mm.paramsJson = brushWith(mm.paramsJson, "hi", v.toDouble() / 100.0);
+            else                              mm.paramsJson = brushWith(mm.paramsJson, "refine", v.toInt());
+            dirty.insert(currentImagePath);
+            emit maskRangeChanged(mm.paramsJson);   // live-update the loupe tint
+            emit paramsChanged();                   // re-composite the masked layer
+            if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+        }
+        return;
+    }
+
     /* The selected mask tool's settings write into the active layer's mask model. Feather/Invert
        change the mask, so they update the live overlay AND re-composite the masked layer. */
     if (source == "maskFeather" || source == "maskInvert") {
@@ -1166,8 +1249,17 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
         StackRenderJob::Layer lj;
         lj.params  = ep;
         lj.combine = l.combine;
-        for (const MaskComponent &m : l.masks)
-            if (m.enabled && !m.paramsJson.isEmpty()) lj.masks.append(m);
+        for (const MaskComponent &m : l.masks) {
+            if (!m.enabled) continue;
+            /* Content-derived AI masks (Select Subject/Sky/Background) carry NO paramsJson -- their
+               coverage is the model's map, not stored geometry -- so the empty-params skip must not
+               drop them (it still drops a geometry tool that has not been placed yet). */
+            const bool contentDerived = (m.tool == int(MaskTool::Subject) ||
+                                         m.tool == int(MaskTool::Sky) ||
+                                         m.tool == int(MaskTool::Background));
+            if (m.paramsJson.isEmpty() && !contentDerived) continue;
+            lj.masks.append(m);
+        }
         job.layers.append(lj);
     }
     return job;

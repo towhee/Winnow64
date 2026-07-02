@@ -563,6 +563,10 @@ private slots:
        only in raw mode (useRaw): in preview mode the loupe shows the untouched embedded JPG. A
        non-RAW file (e.g. a JPG) is always the developable image, so its edits show regardless. */
     bool currentDevelopEditsVisible() const;
+    /* True when the current selection is a video. The Develop module operates on decoded still
+       frames, so every Develop entry point (dock load + preview/full-res render) is gated on this to
+       avoid trying to develop a video. */
+    bool currentIsVideo() const;
     /* GUI-thread completion for a background full-res render: apply the image if its params/image
        are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
     void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen);
@@ -1257,6 +1261,33 @@ private:
     QThreadPool *developRenderPool = nullptr;
     quint64 developParamsGen = 0;                 // ++ on every Develop param change (staleness guard)
     bool developFullResInFlight = false;          // a background full-res render is running
+    /* Content-range mask (Luminance/Color Range) reference: a display-referred RGB map of the
+       developed BASE layer, registered by path (RangeMask::putRef) and sampled identically by
+       the loupe overlay and the render. Base-only so a range mask cannot feed back on its own
+       selection. Rebuilt only when the base params or the image change (range-slider ticks and
+       colour samples just re-threshold), tracked by path + a base-params signature. */
+    void ensureRangeRef(const QString &fPath, const WorkingImage &work,
+                        const EditParams &base, int degrees);
+    QString developRangeRefPath;
+    QByteArray developRangeRefBaseKey;
+    /* AI "Select Subject" mask: the U^2-Net saliency map (SubjectMask store) built once per image by
+       ensureSubjectMask. Keyed on path only (independent of develop sliders). The predictor loads
+       u2net.onnx lazily on first use. */
+    void ensureSubjectMask(const QString &fPath, const WorkingImage &work,
+                           const EditParams &base, int degrees);
+    /* Build the AI coverage + show the loupe tint the moment a Subject/Sky mask is selected -- the
+       render path skips identity layers, so it cannot be relied on to build the ref before the user
+       has adjusted a slider. Connected to DevelopProperties::maskEditBegin; no-op for other tools. */
+    void onAiMaskEditBegin(int tool, int op, bool inverted, const QString &paramsJson,
+                           double feather);
+    QString developSubjectRefPath;
+    class SubjectPredictor *subjectPredictor = nullptr;
+    /* AI "Select Sky" mask: single-channel sky coverage (SkyMask store) built once per image by
+       ensureSkyMask (skyseg.onnx, lazily loaded). Keyed on path only. Twin of the Subject mask. */
+    void ensureSkyMask(const QString &fPath, const WorkingImage &work,
+                       const EditParams &base, int degrees);
+    QString developSkyRefPath;
+    class SkyPredictor *skyPredictor = nullptr;
     Preferences *pref = nullptr;
     StressTest *stressTest;
     QFrame *embelFrame;
