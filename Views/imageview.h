@@ -123,6 +123,11 @@ public slots:
        the ramp softness from the Feather slider. Geometry is normalized image coords (0..1). */
     void beginMaskEdit(int tool, int op, bool inverted, const QString &paramsJson, double feather);
     void endMaskEdit();
+    /* The whole-layer mask (all Add/Subtract tools composited) as a red coverage tint, shown under
+       the active tool's handles while any mask tool is expanded. MW builds it (buildMaskBuffer);
+       clear when no tool is expanded. */
+    void setLayerMaskTint(const QImage &tint);
+    void clearLayerMaskTint();
     void setMaskFeather(double feather);
     void setMaskInverted(bool inverted);
     void setMaskBrushSettings(double size, double feather, double flow, bool autoMask);
@@ -354,9 +359,11 @@ private:
     QPointF maskViewportToNorm(QPoint vp) const;    // viewport px -> normalized image
     QPointF maskViewportToImage(QPoint vp) const;   // viewport px -> image-pixel (pmItem) coords
     int     maskHitTest(QPoint vp) const;           // which handle is under vp (-1 none)
-    void    drawLinearMask(QPainter *p, const QRectF &br);  // overlay for the Linear tool
-    void    drawRadialMask(QPainter *p, const QRectF &br);  // overlay for the Radial tool
-    void    drawBrushMask(QPainter *p, const QRectF &br);   // overlay for the Brush tool
+    /* drawTint=false draws only the tool's handles/guides/cursor/swatches (the whole-layer composite
+       tint has already been painted underneath by the layer-mask overlay). */
+    void    drawLinearMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Linear tool
+    void    drawRadialMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Radial tool
+    void    drawBrushMask(QPainter *p, const QRectF &br, bool drawTint = true);   // overlay for the Brush tool
     /* Brush painting helpers (preview buffers in output-oriented space). */
     void    brushBuildBuffers(const QString &paramsJson);   // parse strokes + (re)build buffers
     void    brushEnsureBuffers();                           // rebuild if the pixmap size changed
@@ -378,16 +385,19 @@ private:
     bool    maskIsSubject()    const { return maskTool == 5; }
     bool    maskIsSky()        const { return maskTool == 6; }
     bool    maskIsBackground() const { return maskTool == 7; }   // = inverted Subject saliency
+    bool    maskIsDepth()      const { return maskTool == 8; }   // depth-band over the MiDaS field
     bool    maskIsContent() const {
-        return maskIsRange() || maskIsSubject() || maskIsSky() || maskIsBackground();
+        return maskIsRange() || maskIsSubject() || maskIsSky() || maskIsBackground() || maskIsDepth();
     }
-    void    rebuildContentPreview();                // dispatch to the subject / sky / range tint builder
+    void    rebuildContentPreview();                // dispatch to the subject / sky / depth / range builder
     QString maskRangeParams;                       // lo/hi/refine/samples JSON for the active tool
     QImage  maskRangePreview;                       // coverage tint (output-oriented), like the brush
-    void    drawRangeMask(QPainter *p, const QRectF &br);   // paint the tint + colour swatches
+    QImage  maskLayerTint;                          // whole-layer composite coverage tint (output-oriented), all tools
+    void    drawRangeMask(QPainter *p, const QRectF &br, bool drawTint = true);   // paint the tint + colour swatches
     void    buildRangePreview();                    // rebuild the tint from the shared RangeRef + params
     void    buildSubjectPreview();                  // rebuild the tint from the shared SubjectRef
     void    buildSkyPreview();                      // rebuild the tint from the shared SkyRef
+    void    buildDepthPreview();                    // rebuild the tint from the shared DepthRef (band)
     void    rangeSwatchRects(QVector<QRectF> &out) const;   // on-image colour swatches (viewport px)
     void    rangeSampleAt(QPoint vp, bool add);     // eyedropper: sample the loupe colour into samples
     QColor  maskTintColor() const;                  // Add = red, Subtract = blue (shared tint colour)

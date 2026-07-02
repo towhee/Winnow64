@@ -1280,6 +1280,10 @@ private:
        has adjusted a slider. Connected to DevelopProperties::maskEditBegin; no-op for other tools. */
     void onAiMaskEditBegin(int tool, int op, bool inverted, const QString &paramsJson,
                            double feather);
+    /* Rebuild (or clear) the whole-layer mask coverage tint shown in the loupe while a mask tool is
+       expanded: composite the active layer's Add/Subtract tools (buildMaskBuffer) into a red tint
+       and hand it to ImageView. Cheap (capped resolution); a no-op when no tool is expanded. */
+    void updateMaskOverlayTint();
     QString developSubjectRefPath;
     class SubjectPredictor *subjectPredictor = nullptr;
     /* AI "Select Sky" mask: single-channel sky coverage (SkyMask store) built once per image by
@@ -1288,6 +1292,13 @@ private:
                        const EditParams &base, int degrees);
     QString developSkyRefPath;
     class SkyPredictor *skyPredictor = nullptr;
+    /* AI "Depth Range" mask: a MiDaS depth field (DepthMask store) built once per image by
+       ensureDepthMask (midas.onnx, lazily loaded). Keyed on path only. The mask selects a [near,far]
+       band of the field (like Luminance Range over depth). */
+    void ensureDepthMask(const QString &fPath, const WorkingImage &work,
+                         const EditParams &base, int degrees);
+    QString developDepthRefPath;
+    class DepthPredictor *depthPredictor = nullptr;
     Preferences *pref = nullptr;
     StressTest *stressTest;
     QFrame *embelFrame;

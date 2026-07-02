@@ -3,15 +3,25 @@
 #include "Main/global.h"
 
 #include <QComboBox>
+#include <QLabel>
 #include <QHBoxLayout>
-#include <QMenu>
-#include <QContextMenuEvent>
 #include <QPainter>
+#include <QPixmap>
 #include <QLinearGradient>
 
 LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
 {
     if (G::isLogger) G::log("LayerHeader::LayerHeader");
+
+    /* Checkmark for the active layer, plus a same-size transparent spacer so the other layers'
+       captions line up with it in the popup. */
+    const int iconPx = 12;
+    QPixmap cm(":/images/checkmark.png");
+    if (!cm.isNull())
+        checkIcon = QIcon(cm.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    QPixmap blank(iconPx, iconPx);
+    blank.fill(Qt::transparent);
+    blankIcon = QIcon(blank);
 
     /* Collapse arrow: hides/shows the selected layer's rows in the tree below. */
     collapseBtn = new BarBtn();
@@ -23,19 +33,31 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
     });
     updateCollapseIcon();
 
+    layerLabel = new QLabel(tr("Layer"), this);
+
     combo = new QComboBox(this);
     combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    combo->setToolTip("The layer whose settings are shown below (this image's layers)");
-    connect(combo, QOverload<int>::of(&QComboBox::activated), this, [this](int){
-        emit layerSelected(combo->currentText());
-    });
-
-    /* [?] pops the layer-actions menu (rename / reset / add / remove / add mask); also on right-click. */
-    menuBtn = new BarBtn();
-    menuBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    menuBtn->setToolTip("Layer actions (rename, reset, add, remove, mask)");
-    connect(menuBtn, &BarBtn::clicked, this, [this]{
-        showActionsMenu(menuBtn->mapToGlobal(QPoint(0, menuBtn->height())));
+    combo->setIconSize(QSize(iconPx, iconPx));
+    combo->setToolTip("The layer whose settings are shown below (this image's layers), plus layer actions");
+    connect(combo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
+        const int role = combo->itemData(idx).toInt();
+        if (role >= 0) {                    // a layer row: role is its index
+            emit layerSelected(combo->itemText(idx));
+            return;
+        }
+        /* An action row: fire it and revert the box to the active layer, so the box never shows the
+           action caption. */
+        {
+            const QSignalBlocker block(combo);
+            combo->setCurrentIndex(activeIndex);
+        }
+        switch (role) {
+        case ActAddLayer: emit addLayerRequested();   break;
+        case ActAddMask:  emit addMaskRequested();     break;
+        case ActReset:    emit resetLayerRequested();  break;
+        case ActRemove:   emit removeLayerRequested(); break;
+        case ActRename:   emit renameRequested();      break;
+        }
     });
 
     previewBtn = new BarBtn();
@@ -51,41 +73,12 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
     row->setContentsMargins(4, 3, 6, 3);
     row->setSpacing(4);
     row->addWidget(collapseBtn);
+    row->addWidget(layerLabel);
     row->addWidget(combo, 1);
     row->addSpacing(4);
-    row->addWidget(menuBtn);
     row->addWidget(previewBtn);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-}
-
-void LayerHeader::showActionsMenu(const QPoint &globalPos)
-{
-    QMenu menu(this);
-    QAction *aRename = menu.addAction("Rename layer...");
-    QAction *aReset  = menu.addAction("Reset layer");
-    menu.addSeparator();
-    QAction *aAdd    = menu.addAction("Add layer...");
-    QAction *aRemove = menu.addAction("Remove layer");
-    menu.addSeparator();
-    QAction *aMask   = menu.addAction("Add mask...");
-
-    /* Base applies globally: it cannot be renamed, removed or masked. */
-    aRename->setEnabled(!baseActive);
-    aRemove->setEnabled(!baseActive);
-    aMask->setEnabled(!baseActive);
-
-    QAction *chosen = menu.exec(globalPos);
-    if      (chosen == aRename) emit renameRequested();
-    else if (chosen == aReset)  emit resetLayerRequested();
-    else if (chosen == aAdd)    emit addLayerRequested();
-    else if (chosen == aRemove) emit removeLayerRequested();
-    else if (chosen == aMask)   emit maskMenuRequested();
-}
-
-void LayerHeader::contextMenuEvent(QContextMenuEvent *event)
-{
-    showActionsMenu(event->globalPos());
 }
 
 void LayerHeader::paintEvent(QPaintEvent *)
@@ -105,15 +98,45 @@ void LayerHeader::setLayers(const QStringList &names, int currentIndex)
 {
     const QSignalBlocker block(combo);
     combo->clear();
-    combo->addItems(names);
-    if (currentIndex >= 0 && currentIndex < names.size())
-        combo->setCurrentIndex(currentIndex);
-    setBaseActive(combo->currentIndex() == 0);
+
+    layerCount  = names.size();
+    activeIndex = (currentIndex >= 0 && currentIndex < layerCount) ? currentIndex : 0;
+    baseActive  = (activeIndex == 0);
+
+    /* Layers first; the active one carries the checkmark, the rest a blank spacer. Each layer row's
+       item data is its own index (>= 0), which the activated handler uses to tell layers from
+       actions. */
+    for (int i = 0; i < layerCount; ++i) {
+        combo->addItem(i == activeIndex ? checkIcon : blankIcon, names.at(i));
+        combo->setItemData(i, i);
+    }
+
+    /* Separator, then "Add new layer" (always available). */
+    combo->insertSeparator(combo->count());
+    combo->addItem(tr("Add new layer"));
+    combo->setItemData(combo->count() - 1, ActAddLayer);
+
+    /* Per-layer actions, captioned with the active layer's name. Omitted for Base (index 0), which
+       applies globally and cannot be reset/removed/renamed here. */
+    if (!baseActive) {
+        const QString nm = names.at(activeIndex);
+        combo->insertSeparator(combo->count());
+        combo->addItem(tr("Add mask to %1").arg(nm));
+        combo->setItemData(combo->count() - 1, ActAddMask);
+        combo->addItem(tr("Reset %1").arg(nm));
+        combo->setItemData(combo->count() - 1, ActReset);
+        combo->addItem(tr("Remove %1").arg(nm));
+        combo->setItemData(combo->count() - 1, ActRemove);
+        combo->addItem(tr("Rename %1").arg(nm));
+        combo->setItemData(combo->count() - 1, ActRename);
+    }
+
+    combo->setCurrentIndex(activeIndex);
 }
 
 QString LayerHeader::currentLayerName() const
 {
-    return combo ? combo->currentText() : QString();
+    return combo ? combo->itemText(activeIndex) : QString();
 }
 
 void LayerHeader::setPreviewShown(bool shown)
@@ -124,7 +147,7 @@ void LayerHeader::setPreviewShown(bool shown)
 
 void LayerHeader::setBaseActive(bool isBase)
 {
-    /* Base (index 0) applies globally: the menu disables Rename / Remove / Add mask for it. */
+    /* Base (index 0) applies globally: the dropdown omits the per-layer action group for it. */
     baseActive = isBase;
 }
 

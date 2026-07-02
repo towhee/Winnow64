@@ -1753,6 +1753,11 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::maskEditBegin, imageView, &ImageView::beginMaskEdit);
     connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::onAiMaskEditBegin);
     connect(developProperties, &DevelopProperties::maskEditEnd,   imageView, &ImageView::endMaskEdit);
+    /* Whole-layer mask coverage tint: rebuild/clear when the mask selection changes (begin/end) or
+       any mask geometry/param changes (paramsChanged). MW composites the active layer's tools. */
+    connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::updateMaskOverlayTint);
+    connect(developProperties, &DevelopProperties::maskEditEnd,   this, &MW::updateMaskOverlayTint);
+    connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::updateMaskOverlayTint);
     connect(imageView, &ImageView::maskGeometryChanged, developProperties, &DevelopProperties::setActiveMaskParams);
     connect(developProperties, &DevelopProperties::maskFeatherChanged, imageView, &ImageView::setMaskFeather);
     connect(developProperties, &DevelopProperties::maskInvertChanged, imageView, &ImageView::setMaskInverted);

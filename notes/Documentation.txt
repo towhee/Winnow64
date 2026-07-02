@@ -2498,21 +2498,27 @@ Layer & masking model (planned)
                image's active-layer params, marks it dirty, drives the live preview, and (if gated)
                arms the debounce write. editParams() returns the ACTIVE layer's params (the
                renderer shows the active layer -- no mask/opacity compositing yet).
-               LAYER HEADER (Develop/Properties/layerheader.cpp): the layer dropdown + a compact
-               action set live in a gradient band WIDGET above the tree (the same header gradient as
-               TransformPanel; the old in-tree "Core" and "Layers" headers are gone). Layout:
-               > [dropdown v] [?] [E]. The '>' collapse arrow -> setTreeCollapsed hides/shows ONLY the
+               LAYER HEADER (Develop/Properties/layerheader.cpp): the layer dropdown lives in a
+               gradient band WIDGET above the tree (the same header gradient as TransformPanel; the
+               old in-tree "Core" and "Layers" headers are gone). Layout:
+               > Layer [dropdown v] [E]. The '>' collapse arrow -> setTreeCollapsed hides/shows ONLY the
                layer's top items (the Core rows for Base, else the mask-tool rows -- the root rows
                above BasicHeader; applyLayerItemsCollapsed, re-asserted after each buildTree since a
-               rebuild resets row visibility). The Basic/Color/Effects sections stay visible. The
-               dropdown -> onLayerSelected
-               (switch activeLayerIndex); [E] -> onLayerPreviewToggled (whole-layer eye). The [?]
-               button (and a right-click anywhere on the header) pops an ACTIONS MENU (LayerHeader::
-               showActionsMenu): Rename layer -> renameActiveLayer (QInputDialog), Reset layer ->
-               resetActiveLayer (restore the layer's adjustment defaults), Add layer -> newLayer (name
-               dialog, default "Layer n"), Remove layer -> deleteLayer, Add mask -> showMaskMenu.
-               Rename / Remove / Add mask are disabled on Base (LayerHeader::setBaseActive, driven by
-               updateMaskMenuBtn). DevelopProperties::bindLayerHeader connects these signals.
+               rebuild resets row visibility). The Basic/Color/Effects sections stay visible. [E] ->
+               onLayerPreviewToggled (whole-layer eye). The DROPDOWN carries both the layers and the
+               layer actions (LayerHeader::setLayers): the image's layers first (the active one marked
+               with a checkmark) -> onLayerSelected (switch activeLayerIndex); then, below a separator,
+               "Add new layer" -> newLayer (name dialog, default "Layer n"); then, below another
+               separator, the per-layer actions "Add mask to <layer>" -> showMaskMenu and
+               Reset/Remove/Rename <layer> -> resetActiveLayer / deleteLayer / renameActiveLayer.
+               Picking an action reverts the box to the active layer (an action row is never left
+               showing). The per-layer group is OMITTED for Base (index 0) -- LayerHeader::setBaseActive,
+               driven by updateMaskMenuBtn. MASK ENTRY POINTS: a layer's first mask tool is offered
+               automatically when the layer is created (newLayer -> showMaskMenu); further tools are
+               added via the dropdown "Add mask to <layer>" or the [+] glyph on each mask-tool row in
+               the tree (UR_AddBtn, hit-tested in mousePressEvent -> showMaskMenu). The dropdown entry
+               covers the case where the layer has no masks at all (skipped on create, or all deleted).
+               DevelopProperties::bindLayerHeader connects these signals.
                TREE = ACTIVE LAYER: the tree is REBUILT for the active layer by buildTree() (on image
                change, layer switch and mask add/remove/select): the layer's top items first (Base =>
                Demosaic + Denoise rows [formerly the Core header]; else the mask tool rows) followed
@@ -2552,13 +2558,12 @@ Layer & masking model (planned)
                mask, built from an ordered list of tools -- editstack.h EditLayer.masks is now that
                tool list (MaskComponent: tool/op/inverted/feather + opaque paramsJson for per-tool
                geometry). Each tool ADDS or SUBTRACTS area; the first tool must Add (nothing to
-               subtract from an empty mask). The combine field is legacy/unused. "Add mask" in the
-               LayerHeader actions menu is disabled on the Base layer (index 0, which carries no mask)
-               and enabled for any other layer -- updateMaskMenuBtn()/LayerHeader::setBaseActive,
-               driven by refreshLayerCombo() and the layer switch. It emits maskMenuRequested ->
-               showMaskMenu, which pops a menu of "Add <tool>" and (once a tool exists) "Subtract
-               <tool>" entries (Linear/Radial Gradient, Brush, Color/
-               Luminance Range, Select Subject/Sky/Background, Depth). ADD-LAYER FLOW: newLayer pops
+               subtract from an empty mask). The combine field is legacy/unused. A layer's first mask
+               tool is offered automatically when the layer is created (newLayer -> showMaskMenu); Base
+               (index 0) carries no mask. showMaskMenu pops a menu of "Add <tool> Mask" and (once a tool
+               exists) "Subtract <tool> Mask" entries -- every tool name ends in "Mask" and the AI
+               tools drop the "Select" prefix (maskToolName): Linear/Radial Gradient, Brush, Color/
+               Luminance Range, Subject/Sky/Background, Depth Range. ADD-LAYER FLOW: newLayer pops
                the "New layer" name dialog at the cursor (the [+] button just clicked, clamped to the
                screen) instead of screen-centre, and on accept immediately calls showMaskMenu -- a new
                layer exists to carry a masked adjustment, so choosing the mask tool is the next step
@@ -2626,17 +2631,35 @@ Layer & masking model (planned)
                DevelopProperties::setActiveMaskParams (stores into the component, debounce-persists, no
                tree rebuild). Feather/Invert live-update via maskFeatherChanged/maskInvertChanged; tint
                colour conveys op (Add=red, Subtract=blue); Invert flips (Radial: effect outside).
+             - WHOLE-LAYER MASK TINT (composite overlay): while ANY mask tool is expanded (its settings
+               shown, i.e. selectedMaskIndex >= 0 on a non-Base layer), the loupe shows the ENTIRE layer
+               mask -- all the layer's Add/Subtract tools composited -- as a single red coverage tint,
+               and hides it when all tools are collapsed. MW::updateMaskOverlayTint (wired to
+               maskEditBegin/maskEditEnd + paramsChanged) reuses the render-path buildMaskBuffer (so the
+               tint is pixel-consistent with the developed result) at a capped resolution (~1600 px long
+               edge; geometry is normalized so any size is faithful), builds the AI/range refs it needs
+               (cached), converts coverage -> premultiplied red (alpha up to 150), orients it to the
+               displayed pixmap, and hands it to ImageView::setLayerMaskTint (clearLayerMaskTint when no
+               tool is expanded / DevelopProperties::maskOverlayActive() is false). ImageView::
+               drawForeground paints this composite tint UNDER the active tool's handles, NOT hover-gated
+               (unlike the per-tool handles); when it is present the per-tool draw takes drawTint=false
+               so it draws only its handles/guides/cursor/swatches (its own tint would double up). The
+               composite reflows live during a geometric drag (setActiveMaskParams -> paramsChanged ->
+               rebuild).
              - RENDER COMPOSITING (Stage 4b + N-layer stack): the render composites the WHOLE stack
                in SCENE-LINEAR before the output transform, INDEPENDENT of which layer is active for
                editing -- so a saved mask is visible the moment the image loads (no need to select
                its layer). DevelopProperties::stackJob() captures it as plain values (Base params +
                each enabled non-Base layer's params/masks/combine) so it is safe for the off-thread
                full-res render. WorkingImageCache::renderStack starts from Base (applied globally),
-               then for each layer develops `work` with that layer's params (an identity side aliases
-               work -- no copy/Develop) and blends over the accumulator by its mask
-               (acc = acc*(1-m)+layer*m; an empty/global mask replaces below); one final
-               OutputTransform. Each layer develops the ORIGINAL work (independent, not stacked
-               adjustments), so where a layer's mask=1 it replaces what is below. buildMaskBuffer
+               then for each layer develops the RUNNING ACCUMULATOR `acc` with that layer's params (an
+               identity side aliases acc -- no copy/Develop) and blends back over acc by its mask
+               (acc = acc*(1-m)+layer*m; an empty/global mask applies the params globally on top); one
+               final OutputTransform. Because each layer develops the accumulated result (NOT the
+               original work), where two layers' masks OVERLAP their adjustments COMPOUND rather than
+               the top layer replacing the one below -- e.g. two overlapping +1-stop layers give ~+2
+               stops in the overlap (in scene-linear the per-op composition is natural: exposure
+               multiplies, etc.). Layer ORDER therefore matters for non-commuting ops. buildMaskBuffer
                (mainwindow.cpp) rasterizes a layer's component(s) at WorkingImage (pre-orientation)
                resolution; each pixel maps work-normalized -> output-normalized (output = work
                rotated CW by degrees) so geometry edited on the oriented loupe lines up after the
@@ -2772,8 +2795,24 @@ Layer & masking model (planned)
                1 - subject. In buildMaskBuffer the subject CompDesc gains subjectBaseInvert (true for
                Background), and coverage is sampled with (inverted ^ subjectBaseInvert) so Background
                with Invert-off = background, Invert-on = subject; the loupe tint (buildSubjectPreview)
-               XORs the same way (maskIsBackground, tool==7). Dock rows Feather + Invert. Remaining
-               scaffolded-only: Depth Range (needs a depth model).
+               XORs the same way (maskIsBackground, tool==7). Dock rows Feather + Invert.
+             - DEPTH RANGE MASK (AI): a HYBRID -- the MODEL produces a depth field (like Subject/Sky)
+               but the SELECTION is a [near,far] BAND (like Luminance Range over depth). Model is MiDaS
+               v2.1 small (midas.onnx, ~64MB, conv-based -- an official OpenCV DNN sample; ViT DPT /
+               Depth-Anything won't load) via Utilities/depthpredictor: input [1,3,256,256], /255 +
+               ImageNet mean/std, single output [1,256,256] inverse depth. The map is min-max'd and
+               INVERTED to 0=near..1=far, then guided-UPSAMPLED against the photo (SegRefine::
+               guidedUpsample -- continuous field, guided-filter joint upsampling, NO binary contrast).
+               Stored in Develop/depthmask.h (DepthMask::DepthRef, its own path store) and built by
+               MW::ensureDepthMask (stackHasDepthMask + a depthRef fetch + onAiMaskEditBegin, all
+               mirroring Sky). buildMaskBuffer's isDepth CompDesc carries the band [rlo,rhi] from
+               paramsJson {lo,hi}; per pixel it calls DepthMask::coverage = a smootherstep band over
+               the sampled depth (the exact analogue of RangeMask::lumCoverage). Dock rows Near / Far /
+               Feather / Invert (Near/Far reuse the maskRangeLo/maskRangeHi sources -> maskRangeChanged
+               -> ImageView::setMaskRangeParams, which now accepts Depth; live tint buildDepthPreview).
+               paramsJson is non-empty {lo,hi} so it is NOT content-derived (survives stackJob's empty-
+               params skip normally). All AI masks (Subject/Background/Sky/Depth) now implemented; none
+               scaffolded-only remain.
                KNOWN LIMITATION (validated, not a bug): skyseg is strong on horizon-type skies (offline
                test on a wide winter forest/sky photo gave a near-perfect mask, bright snow correctly
                rejected) but weak on sky FRAGMENTED through dense canopy behind a large subject + bokeh

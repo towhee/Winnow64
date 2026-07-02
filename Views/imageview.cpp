@@ -82,6 +82,7 @@ QCursor buildLevelCursor()
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
 #include "Develop/skymask.h"
+#include "Develop/depthmask.h"
 
 #define CLIPBOARD_IMAGE_NAME		"clipboard.png"
 #define ROUND(x) (static_cast<int>((x) + 0.5))
@@ -514,7 +515,23 @@ void ImageView::endMaskEdit()
     maskBrushMain.clear(); maskBrushStroke.clear(); maskBrushW = maskBrushH = 0;
     maskRangePreview = QImage();
     maskRangeParams.clear();
+    maskLayerTint = QImage();
     viewport()->update();
+}
+
+void ImageView::setLayerMaskTint(const QImage &tint)
+{
+    /* The whole-layer composite coverage tint (all Add/Subtract tools), built by MW and shown under
+       the active tool's handles while any tool is expanded. */
+    maskLayerTint = tint;
+    if (maskEditMode) viewport()->update();
+}
+
+void ImageView::clearLayerMaskTint()
+{
+    if (maskLayerTint.isNull()) return;
+    maskLayerTint = QImage();
+    if (maskEditMode) viewport()->update();
 }
 
 void ImageView::setMaskFeather(double feather)
@@ -536,10 +553,10 @@ void ImageView::setMaskInverted(bool inverted)
 
 void ImageView::setMaskRangeParams(const QString &paramsJson)
 {
-    if (!maskIsRange()) return;
+    if (!maskIsRange() && !maskIsDepth()) return;   // Depth reuses lo/hi via maskRangeChanged
     maskRangeParams = paramsJson;
-    buildRangePreview();
-    if (maskEditMode && maskHover) viewport()->update();
+    rebuildContentPreview();
+    if (maskEditMode && (maskHover || maskIsContent())) viewport()->update();
 }
 
 QColor ImageView::maskTintColor() const
@@ -1108,30 +1125,44 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
         }
         return;
     }
-    /* Content masks (Range/Subject) keep their coverage tint visible as long as the tool is active
-       (edit mode), even when the pointer leaves the view -- so the tint stays up while adjusting
-       Feather/Refine in the dock. Geometric/brush tools stay hover-gated: their handles and brush
-       cursor are pointer-relative and would be noise when the mouse is elsewhere. */
+    /* Whole-layer mask: while any tool is expanded (maskEditMode), the composite of ALL the layer's
+       Add/Subtract tools is shown as a red coverage tint (built by MW). It is NOT hover-gated -- the
+       whole mask stays visible whenever a tool is expanded -- and is drawn UNDER the active tool's
+       handles. When it is present the per-tool draw skips its own tint (it would double up) and draws
+       only its handles/guides/cursor/swatches. */
+    const bool haveComposite = maskEditMode && !maskLayerTint.isNull() && pmItem && pmItem->isVisible();
+    if (haveComposite) {
+        const QRectF cbr = pmItem->boundingRect();
+        if (cbr.width() > 0 && cbr.height() > 0) {
+            painter->save();
+            painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+            painter->drawImage(pmItem->mapToScene(cbr).boundingRect(), maskLayerTint);
+            painter->restore();
+        }
+    }
+
     const bool content = maskIsContent();
     const bool show = content ? (maskEditMode && pmItem && pmItem->isVisible())
                               : maskHandlesEditable();
     if (!show) return;
     const QRectF br = pmItem->boundingRect();
     if (br.width() <= 0 || br.height() <= 0) return;
-    if      (maskTool == 1) drawRadialMask(painter, br);
-    else if (maskTool == 2) drawBrushMask(painter, br);
-    else if (content)       drawRangeMask(painter, br);
-    else                    drawLinearMask(painter, br);
+    const bool tint = !haveComposite;   // composite already painted the coverage -> handles only
+    if      (maskTool == 1) drawRadialMask(painter, br, tint);
+    else if (maskTool == 2) drawBrushMask(painter, br, tint);
+    else if (content)       drawRangeMask(painter, br, tint);
+    else                    drawLinearMask(painter, br, tint);
 }
 
-void ImageView::drawLinearMask(QPainter *painter, const QRectF &br)
+void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTint)
 {
     const QPointF s1 = pmItem->mapToScene(QPointF(maskP1.x()*br.width(), maskP1.y()*br.height()));
     const QPointF s2 = pmItem->mapToScene(QPointF(maskP2.x()*br.width(), maskP2.y()*br.height()));
 
     /* 1) Red tint ramp, in scene coords so it tracks the image. feather widens the transition
-       around the centre: 0 = hard step at the midpoint, 100 = full linear ramp p1->p2. */
-    {
+       around the centre: 0 = hard step at the midpoint, 100 = full linear ramp p1->p2. Skipped when
+       the whole-layer composite tint is already shown (drawTint=false): only the handles are drawn. */
+    if (drawTint) {
         const double f  = qBound(0.0, maskFeather, 100.0) / 100.0;
         const double lo = qBound(0.0, 0.5 - 0.5*f, 1.0);
         const double hi = qBound(0.0, 0.5 + 0.5*f, 1.0);
@@ -1198,15 +1229,16 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br)
     painter->restore();
 }
 
-void ImageView::drawRadialMask(QPainter *painter, const QRectF &br)
+void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTint)
 {
     const QPointF ci(maskC.x()*br.width(), maskC.y()*br.height());      // centre, image px
     const double ax = qMax(1.0, maskRx*br.width()), ay = qMax(1.0, maskRy*br.height());
 
     /* 1) Elliptical tint ramp (scene coords) via a transformed radial gradient: a unit circle
        mapped to the rotated image ellipse, then to scene. mask 100% inside -> 0% at the boundary
-       (Invert swaps); feather widens the transition inward. */
-    {
+       (Invert swaps); feather widens the transition inward. Skipped when the whole-layer composite
+       tint is already shown (drawTint=false): only the handles are drawn. */
+    if (drawTint) {
         const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
         const double inner = qBound(0.0, 1.0 - f, 1.0);
         const QColor base = (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);
@@ -1429,11 +1461,12 @@ void ImageView::brushUndoStroke()
     emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
 }
 
-void ImageView::drawBrushMask(QPainter *painter, const QRectF &br)
+void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint)
 {
     brushEnsureBuffers();           // heal if the pixmap size changed since beginMaskEdit
-    /* 1) Tint preview image over the photo (scene coords, scales with the image). */
-    if (!maskBrushPreview.isNull()) {
+    /* 1) Tint preview image over the photo (scene coords, scales with the image). Skipped when the
+       whole-layer composite tint is already shown (drawTint=false): only the brush cursor is drawn. */
+    if (drawTint && !maskBrushPreview.isNull()) {
         painter->save();
         painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
         painter->drawImage(pmItem->mapToScene(br).boundingRect(), maskBrushPreview);
@@ -1519,6 +1552,7 @@ void ImageView::rebuildContentPreview()
        Background shares the Subject saliency (inverted inside buildSubjectPreview). */
     if      (maskIsSubject() || maskIsBackground()) buildSubjectPreview();
     else if (maskIsSky())                           buildSkyPreview();
+    else if (maskIsDepth())                         buildDepthPreview();
     else                                            buildRangePreview();
 }
 
@@ -1594,6 +1628,43 @@ void ImageView::buildSkyPreview()
     maskRangePreview = img;
 }
 
+void ImageView::buildDepthPreview()
+{
+    /* Depth Range tint: band [lo,hi] over the shared DepthMask field (built + registered by MW from
+       midas.onnx). Like buildRangePreview but the value is depth, not luminance; lo/hi come from the
+       Near/Far sliders via maskRangeParams. */
+    maskRangePreview = QImage();
+    if (currentImagePath.isEmpty() || !pmItem) return;
+    auto ref = DepthMask::getRef(currentImagePath);
+    if (!ref || !ref->valid()) return;
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return;
+
+    const int cap = 1280;
+    const double longE = std::max(br.width(), br.height());
+    const double s = (longE > cap) ? cap / longE : 1.0;
+    const int tw = std::max(1, int(br.width()  * s));
+    const int th = std::max(1, int(br.height() * s));
+
+    const QJsonObject o = QJsonDocument::fromJson(maskRangeParams.toUtf8()).object();
+    const double lo = o.value("lo").toDouble(0.0), hi = o.value("hi").toDouble(0.5);
+    const QColor base = maskTintColor();
+    const int R = base.red(), Gc = base.green(), B = base.blue();
+    const double tint = 150.0 / 255.0;
+
+    QImage img(tw, th, QImage::Format_ARGB32);
+    for (int y = 0; y < th; ++y) {
+        QRgb *line = reinterpret_cast<QRgb*>(img.scanLine(y));
+        const double ony = (y + 0.5) / th;
+        for (int x = 0; x < tw; ++x) {
+            const double onx = (x + 0.5) / tw;
+            const float cov = DepthMask::coverage(*ref, onx, ony, lo, hi, maskFeather, maskInverted);
+            line[x] = qRgba(R, Gc, B, int(cov * tint * 255.0 + 0.5));
+        }
+    }
+    maskRangePreview = img;
+}
+
 void ImageView::rangeSwatchRects(QVector<QRectF> &out) const
 {
     /* A row of colour swatches along the bottom-left of the viewport (constant on-screen size). */
@@ -1629,11 +1700,12 @@ void ImageView::rangeSampleAt(QPoint vp, bool add)
     emit maskGeometryChanged(maskRangeParams);      // dock persists the samples + re-composites
 }
 
-void ImageView::drawRangeMask(QPainter *painter, const QRectF &br)
+void ImageView::drawRangeMask(QPainter *painter, const QRectF &br, bool drawTint)
 {
-    /* 1) Coverage tint over the photo (scene coords, scales with the image). */
-    if (maskRangePreview.isNull()) rebuildContentPreview();  // heal if the ref arrived after beginMaskEdit
-    if (!maskRangePreview.isNull()) {
+    /* 1) Coverage tint over the photo (scene coords, scales with the image). Skipped when the
+       whole-layer composite tint is already shown (drawTint=false): only the swatches are drawn. */
+    if (drawTint && maskRangePreview.isNull()) rebuildContentPreview();  // heal if the ref arrived after beginMaskEdit
+    if (drawTint && !maskRangePreview.isNull()) {
         painter->save();
         painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
         painter->drawImage(pmItem->mapToScene(br).boundingRect(), maskRangePreview);

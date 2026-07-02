@@ -89,6 +89,51 @@ inline bool refine(const cv::Mat &rawSal, const QImage &image,
     return true;
 }
 
+/* Guided UPSAMPLING for a continuous field (the Depth mask's MiDaS map). Unlike refine() this keeps
+   the values continuous -- NO binary contrast -- because a depth-range mask selects a band of the
+   field, not a foreground alpha. Min-max normalize (optionally invert so 0=near, 1=far), cubic-
+   upsample to the guide's native size, then guided-filter against the guide luminance (the classic
+   guided-filter joint-upsampling use). Output out is w*h, output-oriented. */
+inline bool guidedUpsample(const cv::Mat &rawField, const QImage &image, bool invert,
+                           std::vector<float> &out, int &w, int &h)
+{
+    if (rawField.empty()) return false;
+    double lo = 0.0, hi = 0.0;
+    cv::minMaxLoc(rawField, &lo, &hi);
+    cv::Mat norm;
+    if (hi - lo > 1e-6) {
+        rawField.convertTo(norm, CV_32F, 1.0 / (hi - lo), -lo / (hi - lo));
+        if (invert) norm = 1.0f - norm;
+    } else {
+        norm = cv::Mat::zeros(rawField.size(), CV_32F);
+    }
+
+    const QImage guideRgb = image.convertToFormat(QImage::Format_RGB888);
+    const int ow = guideRgb.width(), oh = guideRgb.height();
+    if (ow <= 0 || oh <= 0) return false;
+    cv::Mat guide(oh, ow, CV_32F);
+    for (int y = 0; y < oh; ++y) {
+        const uchar *line = guideRgb.constScanLine(y);
+        float *g = guide.ptr<float>(y);
+        for (int x = 0; x < ow; ++x)
+            g[x] = (0.299f * line[x*3+0] + 0.587f * line[x*3+1] + 0.114f * line[x*3+2]) / 255.0f;
+    }
+
+    cv::Mat up, refined;
+    cv::resize(norm, up, cv::Size(ow, oh), 0, 0, cv::INTER_CUBIC);
+    const int radius = std::max(2, int(std::lround(std::max(ow, oh) / 200.0)));
+    guidedFilterGray(guide, up, refined, radius, 1e-3);   // gentle eps: smooth field, edge-aware
+
+    out.resize(size_t(ow) * oh);
+    for (int y = 0; y < oh; ++y) {
+        const float *rp = refined.ptr<float>(y);
+        for (int x = 0; x < ow; ++x)
+            out[size_t(y) * ow + x] = std::clamp(rp[x], 0.0f, 1.0f);
+    }
+    w = ow; h = oh;
+    return true;
+}
+
 } // namespace SegRefine
 
 #endif // SEGREFINE_H

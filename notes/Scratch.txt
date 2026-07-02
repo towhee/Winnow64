@@ -243,16 +243,30 @@ Remove CoreHeader from DevelopProperties
 Replace LayersHeader with a new LayerHeader outside DevelopProperties tree, which shows
 the children of the selected layer as tree items.  Format same way as Transfor Header.
 
-Layers layout
+In Develop I want to change the LayerHeader to add "Layer" to left of the layer dropdown and
+eliminate the [?] button.  Keep the preview button [E].
 
 |---------------------------------------------------|
-|>[Layer dropdown                 ][R] [-][+][M] [E]|
+|>Layer[Layer dropdown                 ]         [E]|
 |---------------------------------------------------|
 
-Layer dropdown:
+Layer dropdown changes.
+- After the layers listed add a separator and a new item: "Add new layer"
+- Add another separator
+- Add action items for the selected layer unless it is the base layer as mocked below
+
+Layer dropdown mockup:
   Base
   Layer 1 (or whatever name assigned)
-  ...
+ √Layer 2 (Selected layer)
+  More Layers
+  ---
+  Add new layer
+  --- (hide if base is selected)
+  Reset Layer 2 (hide if base is selected)
+  Remove Layer 2 (hide if base is selected)
+  Rename Layer 2 (hide if base is selected)
+
 
 Buttons:
   [R] is renameLayer button (new rename.png required)
