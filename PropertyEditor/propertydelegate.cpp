@@ -483,8 +483,11 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         const QTreeView *tv = qobject_cast<const QTreeView*>(option.widget);
         const bool deco = capIndex.data(UR_isDecoration).toBool();
         int capLeft = deco ? (tv ? tv->visualRect(capIndex).x() : r4.x()) : r2.x();
-        int capRight = capIndex.data(UR_DeleteBtn).toBool()
-                           ? r.right() - 16 - 4 - 6        // before the [-] glyph (spanned rows)
+        /* Reserve room at the right for the delegate-drawn glyphs: [-] alone, or [+][-] when both. */
+        int glyphSlots = (capIndex.data(UR_DeleteBtn).toBool() ? 1 : 0)
+                       + (capIndex.data(UR_AddBtn).toBool()    ? 1 : 0);
+        int capRight = glyphSlots > 0
+                           ? r.right() - glyphSlots * (16 + 4) - 6   // before the glyph cluster (spanned rows)
                            : headerCapRight();
 
         /* The caption is drawn in BOTH the caption-column and value-column passes. The painter is
@@ -520,16 +523,23 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                 painter->setPen(brdPen);
                 painter->drawLine(r0.bottomLeft(), r0.bottomRight());
             }
-            /* Delegate-drawn [-] remove glyph at the row's right edge. Used by full-width spanned
-               rows (e.g. Develop mask-tool rows) that cannot host a value-column button widget
-               without it covering/clipping the single-line caption. Clicks are hit-tested by the
-               view (see DevelopProperties::mousePressEvent). */
-            if (index.data(UR_DeleteBtn).toBool()) {
+            /* Delegate-drawn [+] add / [-] remove glyphs at the row's right edge ([-] at the edge,
+               [+] one slot to its left). Used by full-width spanned rows (e.g. Develop mask-tool
+               rows) that cannot host a value-column button widget without it covering/clipping the
+               single-line caption. Clicks are hit-tested by the view (see
+               DevelopProperties::mousePressEvent). */
+            if (index.data(UR_DeleteBtn).toBool() || index.data(UR_AddBtn).toBool()) {
                 const int sz = 16;
-                int gx = r.right() - sz - 4;
                 int gy = r.top() + (r.height() - sz)/2;
                 painter->setOpacity(G::iconOpacity);
-                painter->drawPixmap(gx, gy, sz, sz, QPixmap(":/images/icon16/delete.png"));
+                /* [-] sits at the right edge; [+] (when present) sits one slot to its left. */
+                int gx = r.right() - sz - 4;
+                if (index.data(UR_DeleteBtn).toBool()) {
+                    painter->drawPixmap(gx, gy, sz, sz, QPixmap(":/images/icon16/delete.png"));
+                    gx -= sz + 4;
+                }
+                if (index.data(UR_AddBtn).toBool())
+                    painter->drawPixmap(gx, gy, sz, sz, QPixmap(":/images/icon16/new.png"));
                 painter->setOpacity(1.0);
             }
         }

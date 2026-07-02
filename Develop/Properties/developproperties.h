@@ -42,8 +42,8 @@ public:
 
     /* The full layer stack the renderer composites, independent of which layer is active for
        editing: Base (layer 0) params applied globally, then each enabled non-Base layer developed
-       from the original and blended over the accumulator by its mask (empty mask => global).
-       Captured as plain values so the off-thread full-res render can use it. */
+       from the running accumulator (so overlapping masks COMPOUND) and blended over it by its mask
+       (empty mask => global). Captured as plain values so the off-thread full-res render can use it. */
     struct StackRenderJob {
         struct Layer {
             EditParams             params;
@@ -55,6 +55,11 @@ public:
         Geometry       geometry;                // per-image crop/straighten/warp (applied last)
     };
     StackRenderJob stackJob();
+
+    /* Whole-layer mask overlay: true when a mask tool is expanded on a non-Base layer (so MW should
+       show the composited layer mask), plus the active layer's ordered mask tools to composite. */
+    bool maskOverlayActive() const;
+    QVector<MaskComponent> activeLayerMasks() const;
 
     /* The current image's stored geometry (for loading the crop overlay), and a setter the crop
        tool calls on commit (writes it into the image's EditStack + marks the sidecar dirty). */
@@ -73,9 +78,9 @@ public:
     void flushImage(const QString &fPath);        // write one image's dirty stack to its sidecar
     void flushAll();                              // write all dirty stacks (quit / pre-op)
 
-    /* The layer dropdown + layer-action buttons live in a gradient header widget ABOVE this tree
-       (see LayerHeader). Bind it once; this class drives its combo/eye/buttons and handles its
-       signals. */
+    /* The layer dropdown (layers + layer actions) and the preview eye live in a gradient header
+       widget ABOVE this tree (see LayerHeader). Bind it once; this class drives its combo/eye and
+       handles its signals. */
     void bindLayerHeader(LayerHeader *header);
 
 protected:
@@ -100,7 +105,7 @@ public slots:
     void resetActiveLayer();                      // header reset: restore the whole layer's defaults
     void newLayer();                              // [+] add a layer (name dialog, default "Layer n")
     void deleteLayer();                           // [-] remove the selected layer (not Base)
-    void showMaskMenu();                          // [M] pop the Add/Subtract mask-tool menu
+    void showMaskMenu();                          // pop the Add/Subtract mask-tool menu (on new layer)
     void onLayerPreviewToggled(bool shown);       // [E] show/ignore the whole layer
     void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the layer's items)
 
@@ -140,9 +145,9 @@ private:
     /* ---- Mask (one mask per non-Base layer, built from a list of Add/Subtract tools) ----------
        Self-contained so the whole mask UI can be redesigned by rewriting just these functions and
        the MaskComponent model. The layer's single mask is an ordered list of tools (each Adds or
-       Subtracts area); the [M] button beside "Select layer" appends one, each tool is a row with a
-       [-] remove button, and clicking a tool reveals its settings (Feather, Invert) below the list
-       (click the tool again to collapse). Spatial editing (drag/rotate the gradient on the image)
+       Subtracts area); each tool is a row with a [+] add and a [-] remove button ([+] appends
+       another tool via showMaskMenu), and clicking a tool reveals its settings (Feather, Invert)
+       below the list (click the tool again to collapse). Spatial editing (drag/rotate the gradient on the image)
        composites the mask into the render; see notes/Documentation.txt. */
     /* One row per tool; the SELECTED tool also gets its settings (Feather/Invert/Done) as children. */
     void addToolRow(QModelIndex parIdx, int index, const MaskComponent &m, bool selected);
@@ -201,7 +206,7 @@ private:
     static void applyKeyToParams(const QString &key, const QVariant &v, EditParams &p);
     QStringList currentLayerNames() const;        // names of the current image's layers (>=1)
     void refreshLayerCombo();                     // rebuild the combo's list/value from the stack
-    void updateMaskMenuBtn();                     // show [M] only when a non-Base layer is active
+    void updateMaskMenuBtn();                     // tell the header whether Base is active (per-layer actions)
     void updateMaskEdit();                        // emit maskEditBegin/End for the active mask tool
     static QString defaultMaskParams(int tool);   // initial paramsJson geometry for a new tool
     int  activeMaskTool() const;                  // active component's tool, or -1

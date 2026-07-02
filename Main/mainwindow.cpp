@@ -7,8 +7,10 @@
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
 #include "Develop/skymask.h"
+#include "Develop/depthmask.h"
 #include "Utilities/subjectpredictor.h"
 #include "Utilities/skypredictor.h"
+#include "Utilities/depthpredictor.h"
 #include "Develop/Transform/croptransform.h"
 #include <QMutex>
 #include <memory>
@@ -5129,6 +5131,7 @@ struct CompDesc {
     bool isSubject = false;         // Subject OR Background (Background = subjectBaseInvert)
     bool subjectBaseInvert = false; // Background: select 1 - subject saliency
     bool isSky = false;
+    bool isDepth = false;           // Depth Range: band [rlo,rhi] over the depth field
     MaskComp param;                                       // parametric
     std::shared_ptr<const std::vector<float>> brush;      // brush coverage (raw, pre-invert)
     int  op = 0;
@@ -5175,6 +5178,10 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
     std::shared_ptr<const SkyMask::SkyRef> skyRef;
     for (const MaskComponent &m : masks)
         if (m.tool == int(MaskTool::Sky)) { skyRef = SkyMask::getRef(fPath); break; }
+
+    std::shared_ptr<const DepthMask::DepthRef> depthRef;
+    for (const MaskComponent &m : masks)
+        if (m.tool == int(MaskTool::Depth)) { depthRef = DepthMask::getRef(fPath); break; }
 
     QVector<CompDesc> comps;
     comps.reserve(masks.size());
@@ -5232,6 +5239,18 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
             d.feather   = m.feather;
             comps.append(d);
         }
+        else if (m.tool == int(MaskTool::Depth)) {
+            if (!depthRef || !depthRef->valid()) continue;  // depth field not ready -> no effect
+            const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
+            CompDesc d;
+            d.isDepth   = true;
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
+            d.rlo       = o.value("lo").toDouble(0.0);      // depth band [lo,hi], 0=near..1=far
+            d.rhi       = o.value("hi").toDouble(0.5);
+            comps.append(d);
+        }
         else {
             const MaskComp g = parseMaskComp(m, Wo, Ho);
             if (!g.valid) continue;
@@ -5245,6 +5264,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
     const RangeMask::RangeRef *refp = ref ? ref.get() : nullptr;
     const SubjectMask::SubjectRef *subjp = subjRef ? subjRef.get() : nullptr;
     const SkyMask::SkyRef *skyp = skyRef ? skyRef.get() : nullptr;
+    const DepthMask::DepthRef *depthp = depthRef ? depthRef.get() : nullptr;
 
     const double invW = 1.0/w, invH = 1.0/h;
     auto rows = [&](int y0, int y1) {
@@ -5276,6 +5296,8 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
                                                   d.inverted ^ d.subjectBaseInvert);
                     else if (d.isSky)
                         c = SkyMask::coverage(*skyp, onx, ony, float(d.feather), d.inverted);
+                    else if (d.isDepth)
+                        c = DepthMask::coverage(*depthp, onx, ony, d.rlo, d.rhi, d.feather, d.inverted);
                     else           c = evalMaskComp(d.param, onx, ony, Wo, Ho);  // invert inside
                     if (d.op == 1) m *= (1.0f - c);     // Subtract
                     else           m = qMax(m, c);      // Add (Union)
@@ -5369,6 +5391,15 @@ bool stackHasSkyMask(const DevelopProperties::StackRenderJob &job)
     for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
         for (const MaskComponent &m : L.masks)
             if (m.tool == int(MaskTool::Sky)) return true;
+    return false;
+}
+
+/* True if any enabled layer carries an AI Depth Range mask -- needs the depth field (ensureDepthMask). */
+bool stackHasDepthMask(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
+        for (const MaskComponent &m : L.masks)
+            if (m.tool == int(MaskTool::Depth)) return true;
     return false;
 }
 } // namespace
@@ -5514,27 +5545,127 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
     developSkyRefPath = fPath;
 }
 
+void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
+                         const EditParams &base, int degrees)
+{
+/*
+    Depth twin of ensureSkyMask: build (once per image) the MiDaS depth field the "Depth Range" mask
+    bands over, from the developed BASE layer (downscaled, output-oriented). Cached by path only;
+    synchronous on the GUI thread with a busy cursor. Lazily loads midas.onnx.
+*/
+    if (G::isLogger) G::log("MW::ensureDepthMask");
+    if (fPath == developDepthRefPath && DepthMask::getRef(fPath)) return;      // already current
+
+    if (!depthPredictor) {
+        const QString modelPath =
+            QDir(QCoreApplication::applicationDirPath()).filePath("midas.onnx");
+        depthPredictor = new DepthPredictor(modelPath, 256);
+        if (!depthPredictor->isLoaded())
+            qWarning("Depth Range: midas.onnx not found or failed to load at %s",
+                     modelPath.toUtf8().constData());
+    }
+    if (!depthPredictor->isLoaded()) return;
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    int fw = small.width, fh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    if (img.isNull()) return;
+
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    auto r = std::make_shared<DepthMask::DepthRef>();
+    const bool ok = depthPredictor->predict(img, r->depth, r->w, r->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !r->valid()) return;
+
+    DepthMask::putRef(fPath, r);
+    developDepthRefPath = fPath;
+}
+
 void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
                            const QString & /*paramsJson*/, double /*feather*/)
 {
 /*
-    A mask tool became active in the dock. For an AI tool (Subject/Sky), build its coverage now (and
-    repaint) so the loupe tint appears immediately on add/select -- the render path only builds the
-    ref when a non-identity layer carries the mask, so a just-added mask on an unadjusted layer would
-    otherwise show nothing. Cached by path, so re-selecting the same image is a no-op.
+    A mask tool became active in the dock. For an AI tool (Subject/Background/Sky/Depth), build its
+    coverage now (and repaint) so the loupe tint appears immediately on add/select -- the render path
+    only builds the ref when a non-identity layer carries the mask, so a just-added mask on an
+    unadjusted layer would otherwise show nothing. Cached by path, so re-selecting is a no-op.
 */
     const bool needsSubject = (tool == int(MaskTool::Subject) || tool == int(MaskTool::Background));
     const bool isSky        = (tool == int(MaskTool::Sky));
-    if (!needsSubject && !isSky) return;
+    const bool isDepth      = (tool == int(MaskTool::Depth));
+    if (!needsSubject && !isSky && !isDepth) return;
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) return;
     const auto mj = developProperties->stackJob();
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
-    if (needsSubject) ensureSubjectMask(fPath, *work, mj.base, degrees);   // Background = inverted subject
-    else              ensureSkyMask(fPath, *work, mj.base, degrees);
+    if (needsSubject)   ensureSubjectMask(fPath, *work, mj.base, degrees);   // Background = inverted subject
+    else if (isSky)     ensureSkyMask(fPath, *work, mj.base, degrees);
+    else                ensureDepthMask(fPath, *work, mj.base, degrees);
     imageView->viewport()->update();   // heal the tint now the ref exists
+}
+
+void MW::updateMaskOverlayTint()
+{
+/*
+    While any mask tool is expanded, the loupe shows the WHOLE layer mask (all the layer's Add/
+    Subtract tools composited) as a red coverage tint, under the active tool's handles. Rebuild it
+    whenever the mask selection or geometry changes (wired to maskEditBegin/End + paramsChanged), or
+    clear it when no tool is expanded. The composite reuses the render-path buildMaskBuffer, so the
+    tint is pixel-consistent with the developed result.
+*/
+    if (G::isLogger) G::log("MW::updateMaskOverlayTint");
+    if (!developProperties->maskOverlayActive()) { imageView->clearLayerMaskTint(); return; }
+
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty() || currentIsVideo()) { imageView->clearLayerMaskTint(); return; }
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) { imageView->clearLayerMaskTint(); return; }
+    const QVector<MaskComponent> masks = developProperties->activeLayerMasks();
+    if (masks.isEmpty()) { imageView->clearLayerMaskTint(); return; }
+
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    const EditParams base = developProperties->stackJob().base;
+
+    /* Build any content/AI references the layer's tools sample (cached; no-op if already present),
+       so the composite is non-zero even for a just-added mask on an unadjusted layer. */
+    bool needRange = false, needSubject = false, needSky = false, needDepth = false;
+    for (const MaskComponent &m : masks) {
+        if      (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) needRange = true;
+        else if (m.tool == int(MaskTool::Subject)    || m.tool == int(MaskTool::Background))     needSubject = true;
+        else if (m.tool == int(MaskTool::Sky))        needSky = true;
+        else if (m.tool == int(MaskTool::Depth))      needDepth = true;
+    }
+    if (needRange)   ensureRangeRef(fPath, *work, base, degrees);
+    if (needSubject) ensureSubjectMask(fPath, *work, base, degrees);
+    if (needSky)     ensureSkyMask(fPath, *work, base, degrees);
+    if (needDepth)   ensureDepthMask(fPath, *work, base, degrees);
+
+    /* Composite at a capped resolution (geometry is normalized, so any size is faithful) -- the tint
+       is smooth-scaled onto the image, so a couple of MP is ample and keeps live drags cheap. */
+    int mw = work->width, mh = work->height;
+    if (mw <= 0 || mh <= 0) { imageView->clearLayerMaskTint(); return; }
+    const int cap = 1600;
+    const double sc = qMin(1.0, double(cap) / qMax(mw, mh));
+    const int bw = qMax(1, int(mw * sc)), bh = qMax(1, int(mh * sc));
+    const std::vector<float> buf = buildMaskBuffer(masks, bw, bh, degrees, fPath);
+
+    /* Work-space coverage -> premultiplied red tint (alpha proportional to coverage), then oriented
+       to match the displayed (output) pixmap exactly as developCompositeStack rotates the render. */
+    QImage tint(bw, bh, QImage::Format_ARGB32_Premultiplied);
+    const int maxA = 150;                       // matches the per-tool tint's full-coverage alpha
+    for (int y = 0; y < bh; ++y) {
+        QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
+        const float *mrow = buf.data() + size_t(y) * bw;
+        for (int x = 0; x < bw; ++x) {
+            const int a = int(qBound(0.0f, mrow[x], 1.0f) * maxA + 0.5f);
+            row[x] = qRgba(220 * a / 255, 40 * a / 255, 40 * a / 255, a);   // premultiplied
+        }
+    }
+    if (degrees != 0) tint = tint.transformed(QTransform().rotate(degrees));
+    imageView->setLayerMaskTint(tint);
 }
 
 void MW::renderDevelopPreview(bool fullRes)
@@ -5615,6 +5746,7 @@ void MW::renderDevelopPreview(bool fullRes)
     if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.base, degrees);
     if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.base, degrees);
     if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.base, degrees);
+    if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.base, degrees);
 
     const QImage out = developCompositeStack(*srcImg, mj, degrees, fullRes, fw, fh, fPath);
     if (out.isNull()) return;
@@ -5729,6 +5861,7 @@ void MW::renderDevelopFullResAsync()
     if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.base, degrees);
     if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.base, degrees);
     if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.base, degrees);
+    if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.base, degrees);
 
     developFullResInFlight = true;
     std::shared_ptr<const WorkingImage> src = work;   // keep alive across the background render

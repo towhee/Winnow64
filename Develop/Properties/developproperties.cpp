@@ -17,7 +17,7 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     this->setting = setting;
 
     initialize();
-    /* The add-mask type chooser, popped by the LayerHeader's [M] button (bindLayerHeader wires it). */
+    /* The add-mask type chooser, popped automatically when a new layer is created (newLayer). */
     maskMenu = new QMenu(this);
     /* The Layers combo (now in the LayerHeader widget) lists the CURRENT IMAGE's layers (per-image
        EditStack), not app-global QSettings presets. Seed one name so it is valid before any image. */
@@ -221,7 +221,7 @@ void DevelopProperties::bindLayerHeader(LayerHeader *header)
     connect(layerHeader, &LayerHeader::resetLayerRequested, this, &DevelopProperties::resetActiveLayer);
     connect(layerHeader, &LayerHeader::removeLayerRequested,this, &DevelopProperties::deleteLayer);
     connect(layerHeader, &LayerHeader::addLayerRequested,   this, &DevelopProperties::newLayer);
-    connect(layerHeader, &LayerHeader::maskMenuRequested,   this, &DevelopProperties::showMaskMenu);
+    connect(layerHeader, &LayerHeader::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
     connect(layerHeader, &LayerHeader::previewToggled,      this, &DevelopProperties::onLayerPreviewToggled);
     connect(layerHeader, &LayerHeader::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
 
@@ -238,8 +238,8 @@ void DevelopProperties::onLayerSelected(const QString &name)
     if (idx < 0 || idx == activeLayerIndex) return;
     activeLayerIndex = idx;
     selectedMaskIndex = -1;
+    refreshLayerCombo();         // move the checkmark + re-caption the per-layer actions to the new layer
     buildTree();                 // swap the top items (Core/masks) + repopulate the sections
-    updateMaskMenuBtn();         // Base hides [M]; enables/disables rename + remove
     emit paramsChanged();        // the renderer shows the active layer
 }
 
@@ -417,19 +417,19 @@ void DevelopProperties::deleteLayer()
 /* ----------------------------------------------------------------------------------------
    Mask (one mask per non-Base layer, built from an ordered list of Add/Subtract tools)
 
-   Tree shape, all children of the Layers header:
+   Tree shape (the mask-tool rows at the top of the tree, above the Basic/Color/Effects sections):
 
-     Select layer   [Layer 2  v] [M]     <- combo (row 0) with the [M] mask-menu button trailing it
-     Add Linear Gradient          [-]    <- one row per tool (caption = op + tool; [-] removes it)
-     Subtract Brush               [-]    <- selected tool is expanded; its settings are ITS children
+     Add Linear Gradient       [+][-]    <- one row per tool (caption = op + tool; [+] adds another, [-] removes)
+     Subtract Brush            [+][-]    <- selected tool is expanded; its settings are ITS children
         Feather  [slider]
         Invert   [checkbox]
         Done     [checkbox]              <- ends the build (collapses the tool)
 
    Tool rows are header-style (single-line full-width caption + expand arrow) but flagged
-   UR_LeafSingleLine so they paint in the leaf colour, not category teal. The [M] menu
-   (showMaskMenu) appends a tool (newMask); Subtract is offered only once a tool exists ("the first
-   must be added"). Only the SELECTED tool carries its settings children (no duplicate tool-name
+   UR_LeafSingleLine so they paint in the leaf colour, not category teal. The [+] glyph (UR_AddBtn,
+   hit-tested in mousePressEvent) pops showMaskMenu to append a tool (newMask); a new layer's first
+   tool is offered automatically (newLayer -> showMaskMenu). Subtract is offered only once a tool
+   exists ("the first must be added"). Only the SELECTED tool carries its settings children (no duplicate tool-name
    row); clicking a tool (mousePressEvent) toggles which one is expanded. Spatial editing (drag/
    paint/AI-select on the image) is deferred to the canvas; rendering does not yet composite the
    mask.
@@ -438,15 +438,15 @@ void DevelopProperties::deleteLayer()
 QString DevelopProperties::maskToolName(int tool)
 {
     switch (static_cast<MaskTool>(tool)) {
-    case MaskTool::LinearGradient:  return "Linear Gradient";
-    case MaskTool::RadialGradient:  return "Radial Gradient";
-    case MaskTool::Brush:           return "Brush";
-    case MaskTool::ColorRange:      return "Color Range";
-    case MaskTool::LuminanceRange:  return "Luminance Range";
-    case MaskTool::Subject:         return "Select Subject";
-    case MaskTool::Sky:             return "Select Sky";
-    case MaskTool::Background:      return "Select Background";
-    case MaskTool::Depth:           return "Depth Range";
+    case MaskTool::LinearGradient:  return "Linear Gradient Mask";
+    case MaskTool::RadialGradient:  return "Radial Gradient Mask";
+    case MaskTool::Brush:           return "Brush Mask";
+    case MaskTool::ColorRange:      return "Color Range Mask";
+    case MaskTool::LuminanceRange:  return "Luminance Range Mask";
+    case MaskTool::Subject:         return "Subject Mask";
+    case MaskTool::Sky:             return "Sky Mask";
+    case MaskTool::Background:      return "Background Mask";
+    case MaskTool::Depth:           return "Depth Range Mask";
     }
     return "Mask";
 }
@@ -469,6 +469,22 @@ EditLayer *DevelopProperties::activeLayer()
     EditStack &s = stackCache[currentImagePath];
     if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) return nullptr;
     return &s.layers[activeLayerIndex];
+}
+
+bool DevelopProperties::maskOverlayActive() const
+{
+    /* A mask tool is expanded (its settings shown) on a non-Base layer -> show the whole-layer mask. */
+    return activeLayerIndex > 0 && selectedMaskIndex >= 0;
+}
+
+QVector<MaskComponent> DevelopProperties::activeLayerMasks() const
+{
+    if (currentImagePath.isEmpty()) return {};
+    auto it = stackCache.constFind(currentImagePath);
+    if (it == stackCache.constEnd()) return {};
+    const EditStack &s = it.value();
+    if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) return {};
+    return s.layers[activeLayerIndex].masks;
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -621,7 +637,7 @@ void DevelopProperties::newMask()
     if (!a) return;
 
     /* Action text is "Add <tool>" / "Subtract <tool>"; the first word is the op, the rest the
-       tool name (handles multi-word names like "Select Subject"). */
+       tool name (handles multi-word names like "Subject Mask"). */
     const QString txt = a->text();
     MaskComponent m;
     m.op   = txt.startsWith("Subtract") ? int(MaskOp::Subtract) : int(MaskOp::Add);
@@ -662,7 +678,7 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     i.name = QString("maskTool%1").arg(index);
     i.parIdx = parIdx;
     i.captionText = opName(m.op) + " " + maskToolName(m.tool);
-    i.tooltip = "Mask tool. Click to show/hide its settings; [-] to remove.";
+    i.tooltip = "Mask tool. Click to show/hide its settings; [+] to add another tool, [-] to remove.";
     i.isHeader = true;
     i.isDecoration = true;
     i.decorateGradient = false;
@@ -674,6 +690,7 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     model->setData(toolIdx, index, UR_MaskIndex);
     model->setData(toolIdx, true, UR_LeafSingleLine);
     model->setData(toolIdx, true, UR_DeleteBtn);
+    model->setData(toolIdx, true, UR_AddBtn);           // [+] left of [-]: add another mask tool
     model->setData(toolIdx, true, UR_ShowDecoration);   // always show the expand arrow (settings on click)
     setFirstColumnSpanned(toolIdx.row(), parIdx, true);
 
@@ -710,6 +727,21 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
             addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
             setSliderReal("maskRangeLo", brushNum(m.paramsJson, "lo", 0.25) * 100.0);
             setSliderReal("maskRangeHi", brushNum(m.paramsJson, "hi", 0.75) * 100.0);
+            setSliderReal("maskFeather", m.feather);
+            setCheckboxValue("maskInvert", m.inverted);
+        }
+        else if (m.tool == int(MaskTool::Depth)) {
+            /* Selects a depth band [Near,Far] over the MiDaS depth field (stored 0=near..1=far,
+               shown 0..100). Same mechanics as Luminance Range but over depth. */
+            addSlider("maskRangeLo", "Near", "Near bound of the selected depth band (0 = nearest).",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskRangeHi", "Far", "Far bound of the selected depth band (100 = farthest).",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskFeather", "Feather", "Soften the depth-band edges.",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
+            setSliderReal("maskRangeLo", brushNum(m.paramsJson, "lo", 0.0) * 100.0);
+            setSliderReal("maskRangeHi", brushNum(m.paramsJson, "hi", 0.5) * 100.0);
             setSliderReal("maskFeather", m.feather);
             setCheckboxValue("maskInvert", m.inverted);
         }
@@ -789,6 +821,14 @@ QString DevelopProperties::defaultMaskParams(int tool)
         QJsonObject o;
         o["refine"] = 50;
         o["samples"] = QJsonArray();
+        return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+    }
+    if (tool == int(MaskTool::Depth)) {
+        /* Selects a depth band [lo,hi] (0=near..1=far) over the model depth field. Starts on the near
+           half so the mask is visible; feather (MaskComponent.feather) softens the band edges. */
+        QJsonObject o;
+        o["lo"] = 0.0;
+        o["hi"] = 0.5;
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
     return QString();
@@ -873,7 +913,7 @@ void DevelopProperties::updateMaskEdit()
             m.tool == int(MaskTool::Brush) ||
             m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange) ||
             m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Sky) ||
-            m.tool == int(MaskTool::Background)) {
+            m.tool == int(MaskTool::Background) || m.tool == int(MaskTool::Depth)) {
             emit maskEditBegin(m.tool, m.op, m.inverted, m.paramsJson, m.feather);
             return;
         }
@@ -918,15 +958,21 @@ void DevelopProperties::mousePressEvent(QMouseEvent *event)
             const QVariant v = idx.siblingAtColumn(0).data(UR_MaskIndex);
             if (v.isValid()) {
                 const int m = v.toInt();
-                /* The [-] remove glyph is delegate-drawn at the row's right edge (must mirror the
-                   geometry in PropertyDelegate::paint for UR_DeleteBtn). A click there removes the
-                   tool; a click anywhere else on the row toggles its settings. */
+                /* The [+] add and [-] remove glyphs are delegate-drawn at the row's right edge (must
+                   mirror the geometry in PropertyDelegate::paint for UR_AddBtn/UR_DeleteBtn): [-] at
+                   the edge, [+] one slot to its left. A click on [-] removes the tool, on [+] adds
+                   another; a click anywhere else on the row toggles its settings. */
                 const QRect rowRect = visualRect(idx);
                 const int sz = 16;
-                const QRect delRect(rowRect.right() - sz - 4,
-                                    rowRect.top() + (rowRect.height() - sz)/2, sz, sz);
+                const int gy = rowRect.top() + (rowRect.height() - sz)/2;
+                const QRect delRect(rowRect.right() - sz - 4, gy, sz, sz);
+                const QRect addRect(rowRect.right() - 2*sz - 8, gy, sz, sz);
                 if (delRect.contains(event->pos())) {
                     deleteMask(m);
+                    return;
+                }
+                if (addRect.contains(event->pos())) {
+                    showMaskMenu();
                     return;
                 }
                 setSelectedMask(m == selectedMaskIndex ? -1 : m);   // click open tool to collapse

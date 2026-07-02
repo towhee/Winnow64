@@ -222,15 +222,18 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
     for (const StackLayer &L : layers) {
         if (!L.mask.empty() && L.mask.size() != n) continue;   // malformed mask: skip the layer
 
-        /* Develop this layer from the ORIGINAL work (independent of the layers below); an identity
-           layer aliases work (no copy/Apply). */
+        /* Develop this layer from the running ACCUMULATOR (the result of the layers below), so where
+           layer masks overlap the adjustments COMPOUND rather than the top layer replacing the one
+           below -- e.g. two overlapping +1-stop layers give ~+2 stops in the overlap. In scene-linear
+           this stacking is the natural per-op composition (exposure multiplies, etc.). An identity
+           layer aliases acc (no copy/Apply) and blends to a no-op. */
         WorkingImage layBuf;
-        const WorkingImage *layP = &work;
-        if (!L.params.isIdentity()) { layBuf = work; develop.Apply(layBuf, L.params, nullptr); layP = &layBuf; }
+        const WorkingImage *layP = &acc;
+        if (!L.params.isIdentity()) { layBuf = acc; develop.Apply(layBuf, L.params, nullptr); layP = &layBuf; }
 
         const float *hi = layP->rgb.data();
         float *dst = acc.rgb.data();
-        if (L.mask.empty()) {                                  // global layer: replaces below
+        if (L.mask.empty()) {                                  // global layer: its params on top of acc
             const float *src = hi;
             maskParallelFor(n, [=](size_t i0, size_t i1) {
                 std::copy(src + i0*3, src + i1*3, dst + i0*3);

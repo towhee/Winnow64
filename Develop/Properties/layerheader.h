@@ -2,29 +2,44 @@
 #define LAYERHEADER_H
 
 #include <QWidget>
+#include <QIcon>
 #include <QString>
 #include <QStringList>
 
 class QComboBox;
+class QLabel;
 class BarBtn;
 
 /*
     The Develop dock's layer header: a compact gradient band (styled like TransformPanel's header)
     that sits ABOVE the DevelopProperties tree and replaces the old in-tree "Layers" header. It owns
-    the layer dropdown and the layer-action buttons; it carries no model state and simply emits a
+    the layer dropdown and the whole-layer preview eye; it carries no model state and simply emits a
     signal per user action (DevelopProperties does the work and drives this widget's display back).
 
     Layout:
-        > [ Layer dropdown                       v ] [?] [E]
-        |   |                                        |   |
-        |   selected layer's items shown            |   whole-layer preview eye
-        |   in the tree below                       actions menu (also on right-click):
-        collapse arrow (hide/show the                  Rename / Reset / Add / Remove / Add mask
-        tree = the layer's items)
+        > Layer [ Layer dropdown                     v ]              [E]
+        |       |                                                      |
+        |       selected layer's items shown in the tree below        whole-layer preview eye
+        collapse arrow (hide/show the tree = the layer's items)
 
-    The actions menu is also raised by right-clicking the header. Rename, Remove and Add mask are
-    disabled on the Base layer (index 0), which applies globally and cannot be masked, removed or
-    renamed.
+    The dropdown lists the image's layers (the active one carries a checkmark) and, below a
+    separator, the layer actions:
+
+        Base
+        Layer 1
+      v Layer 2                (active layer)
+        More Layers
+        ---
+        Add new layer
+        ---                    (per-layer group, hidden when Base is active)
+        Add mask to Layer 2
+        Reset Layer 2
+        Remove Layer 2
+        Rename Layer 2
+
+    Picking a layer emits layerSelected; picking an action emits its signal and the box reverts to
+    the active layer (an action row is never left showing). The per-layer group (Reset / Remove /
+    Rename) is omitted for the Base layer (index 0), which applies globally.
 */
 class LayerHeader : public QWidget
 {
@@ -35,7 +50,7 @@ public:
     /* Refill the dropdown and select currentIndex WITHOUT emitting layerSelected. */
     void setLayers(const QStringList &names, int currentIndex);
     void setPreviewShown(bool shown);           // eye icon (whole-layer preview)
-    void setBaseActive(bool isBase);            // Base: disable Rename / Remove / Add mask
+    void setBaseActive(bool isBase);            // Base: omit the per-layer action group
     bool isCollapsed() const { return collapsed; }
     QString currentLayerName() const;
 
@@ -45,24 +60,30 @@ signals:
     void resetLayerRequested();                  // menu: reset the whole layer to identity
     void removeLayerRequested();                 // menu: remove the selected layer
     void addLayerRequested();                    // menu: add a new layer
-    void maskMenuRequested();                    // menu: pop the add-mask menu
+    void addMaskRequested();                     // menu: add a mask tool to the selected layer
     void previewToggled(bool shown);             // [E] show/ignore the whole layer
     void collapseToggled(bool collapsed);        // > hide/show the layer's tree items
 
 protected:
     void paintEvent(QPaintEvent *) override;         // the property-header gradient band
-    void contextMenuEvent(QContextMenuEvent *) override;   // right-click raises the actions menu
 
 private:
     void updatePreviewIcon();
     void updateCollapseIcon();
-    void showActionsMenu(const QPoint &globalPos);   // the [?] / right-click layer-actions menu
+
+    /* Non-negative item data is a layer index; these negative codes tag the action rows. */
+    enum ComboAction { ActAddLayer = -1, ActAddMask = -2, ActReset = -3, ActRemove = -4, ActRename = -5 };
 
     BarBtn    *collapseBtn = nullptr;
+    QLabel    *layerLabel  = nullptr;
     QComboBox *combo       = nullptr;
-    BarBtn    *menuBtn     = nullptr;   // [?] pops the layer-actions menu
     BarBtn    *previewBtn  = nullptr;
 
+    QIcon checkIcon;                    // marks the active layer in the dropdown
+    QIcon blankIcon;                    // same-size spacer so other layers stay aligned
+
+    int  layerCount   = 0;              // number of layer rows at the top of the combo
+    int  activeIndex  = 0;              // the selected layer's row (the box reverts here)
     bool previewShown = true;
     bool collapsed    = false;
     bool baseActive   = true;           // the selected layer is Base (index 0)

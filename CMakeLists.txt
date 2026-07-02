@@ -317,6 +317,7 @@ set(WINNOW_SOURCES
     Utilities/focuspredictor.cpp
     Utilities/subjectpredictor.cpp
     Utilities/skypredictor.cpp
+    Utilities/depthpredictor.cpp
     Utilities/foldercompressor.cpp
     Utilities/htmlwindow.cpp
     Utilities/icc.cpp
@@ -518,6 +519,7 @@ set(WINNOW_HEADERS
     Utilities/focuspredictor.h
     Utilities/subjectpredictor.h
     Utilities/skypredictor.h
+    Utilities/depthpredictor.h
     Utilities/foldercompressor.h
     Utilities/htmlwindow.h
     Utilities/icc.h
@@ -843,6 +845,16 @@ if(APPLE)
         message(WARNING "ReleaseExtras/skyseg.onnx not found -- 'Select Sky' mask will no-op. "
                         "Add skyseg.onnx to ReleaseExtras/ to enable it.")
     endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/midas.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/midas.onnx)
+        set_source_files_properties(ReleaseExtras/midas.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
+                        "Add midas.onnx to ReleaseExtras/ to enable it.")
+    endif()
 endif()
 
 # =============================================================================
@@ -1040,6 +1052,16 @@ if(WIN32)
     else()
         message(WARNING "ReleaseExtras/skyseg.onnx not found -- 'Select Sky' mask will no-op. "
                         "Add skyseg.onnx to ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/midas.onnx")
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/midas.onnx" "${_winnow_out}"
+            COMMENT "Deploying midas.onnx"
+            VERBATIM)
+    else()
+        message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
+                        "Add midas.onnx to ReleaseExtras/ to enable it.")
     endif()
 
     # ExifTool (et.exe) is not in git; it lives in release/. Warn rather than
