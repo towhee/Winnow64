@@ -3069,23 +3069,69 @@ void MW::memoryWatchdogTick()
 
     Cheap on macOS (single task_info syscall, microseconds). The cap and
     latch live in Main/global.h.
+
+    Response is graduated rather than a single hard abort:
+
+      • footprint >= cap (G::memoryAbortMB): engage the ImageCache decode throttle —
+        park decoders and shrink/trim the cache to free memory. No teardown, no dialog.
+        This is the normal Decode-Raw pressure case (full-res raws are large).
+      • footprint drops below the resume threshold (cap with ~12% hysteresis): release
+        the throttle and resume caching.
+      • footprint >= critical (cap + headroom): genuine runaway the throttle could not
+        contain — fall back to the old hard onMemoryOverrun abort dialog to avoid OS OOM.
+
+    With Decode Raw off, small JPEG/HEIC decodes never reach the cap, so none of this
+    engages — the raw-off path is unchanged.
 */
     if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
     const quint64 cap = G::memoryAbortMB;
     if (cap == 0) return;
     const quint64 footprintMB = G::processFootprintMB();
-    if (footprintMB == 0 || footprintMB < cap) return;
+    if (footprintMB == 0) return;
 
-    // Atomic latch: if another subsystem already tripped between our load
-    // above and here, let its queued signal drive onMemoryOverrun — don't
-    // double-fire.
-    bool expected = false;
-    if (G::memoryOverrunFlag.compare_exchange_strong(
-            expected, true,
-            std::memory_order_acq_rel, std::memory_order_relaxed))
-    {
-        onMemoryOverrun(footprintMB, cap);
+    const quint64 resumeMB   = (cap * 88) / 100;                 // ~12% hysteresis
+    const quint64 criticalMB = cap + qMax<quint64>(2048, cap / 10);
+
+    // Last resort: throttle could not contain the footprint → hard abort (dialog).
+    if (footprintMB >= criticalMB) {
+        bool expected = false;
+        if (G::memoryOverrunFlag.compare_exchange_strong(
+                expected, true,
+                std::memory_order_acq_rel, std::memory_order_relaxed))
+        {
+            if (imageCache) {
+                imageCache->setMemoryThrottled(false);
+                imageCache->noteMemoryWarning(
+                    QString("CRITICAL footprint=%1 MB >= %2 MB; throttle failed, "
+                            "hard abort.").arg(footprintMB).arg(criticalMB));
+            }
+            memoryThrottleActive = false;
+            onMemoryOverrun(footprintMB, criticalMB);
+        }
+        return;
     }
+
+    if (footprintMB >= cap) {
+        // Engage throttle (idempotent). setMemoryThrottled only flips an atomic, so the
+        // decode choke point stops immediately; memoryPause does the freeing on the
+        // ImageCache thread.
+        if (!memoryThrottleActive && imageCache) {
+            memoryThrottleActive = true;
+            imageCache->setMemoryThrottled(true);
+            QMetaObject::invokeMethod(imageCache, "memoryPause", Qt::QueuedConnection,
+                                      Q_ARG(quint64, footprintMB), Q_ARG(quint64, cap));
+        }
+    }
+    else if (footprintMB <= resumeMB) {
+        // Recovered: release throttle and resume caching.
+        if (memoryThrottleActive && imageCache) {
+            memoryThrottleActive = false;
+            imageCache->setMemoryThrottled(false);
+            QMetaObject::invokeMethod(imageCache, "memoryResume", Qt::QueuedConnection,
+                                      Q_ARG(quint64, footprintMB));
+        }
+    }
+    // Between resumeMB and cap while throttled: hold — let the trim keep draining.
 }
 
 void MW::onMemoryOverrun(quint64 footprintMB, quint64 capMB)

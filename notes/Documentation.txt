@@ -41,6 +41,7 @@ Table of Contents
          - Overview
          - Cache Status
          - Icon Caching
+         - Memory Governor (process footprint, decode concurrency)
 
     5. SCROLLING
          - Painting Delays
@@ -1069,6 +1070,87 @@ How to Test Icon Caching
         4. = -1  restore the real signal.
       Confirm each transition in the DataModel diagnostics and the applyIconCachePressure
       log lines.
+
+------------------------------------------------------------------------------------------
+Memory Governor (process footprint, decode concurrency)
+------------------------------------------------------------------------------------------
+
+    Winnow bounds its resident process footprint so a large folder cannot run the machine
+    out of memory. There are three independent consumers of memory and three cooperating
+    governors. The important thing to understand first: the ImageCache (imCache) is usually
+    NOT the biggest consumer. When Decode Raw is on, in-flight raw decoders are.
+
+    The three memory consumers
+      • ImageCache (Cache/cachedata.h imCache): the decoded 8-bit display QImages, W*H*4
+        bytes each. Byte-accounted by icd->sizeMB(). Bounded by the cache ceiling (below).
+      • WorkingImageCache (Develop/workingimagecache.h): a SEPARATE, byte-budgeted LRU of
+        the scene-linear float WorkingImage (W*H*3 floats = 3x the QImage) kept so a Develop
+        slider re-render skips demosaic. Default budget 768 MB; setMaxBytes() is not called,
+        so it stays at the default. It is NOT counted by icd->sizeMB().
+      • In-flight decoders: each of decoderCount (= QThread::idealThreadCount) decoder
+        threads, while decoding, transiently holds its working buffers. For an embedded-JPG
+        or ordinary JPEG/HEIC decode that is ~one QImage. For a FULL-SENSOR RAW decode
+        (UnpackCfa -> Demosaic -> RawColor) it is the float WorkingImage plus demosaic
+        scratch -- about 8x the cached QImage. This is the key asymmetry: the CACHED result
+        is identical for a raw and a same-resolution JPEG, but the raw DECODE working set is
+        ~8x, and it is multiplied across all decoder threads.
+
+    Why Decode Raw off is cheap
+      With Decode Raw off (G::useRaw == false) a raw file is shown from its EMBEDDED JPG
+      preview (ImageDecoder gates the sensor path on G::useRaw). That is one libjpeg pass,
+      ~QImage-sized. So none of the raw-specific governing below engages, and that path runs
+      at full decoder concurrency, unchanged. Raw-off performance/stability is the priority
+      and is deliberately left untouched.
+
+    Governor 1 - raw decode concurrency cap (Cache/imagecache.cpp, the primary control)
+      Because N raw decodes at ~8x-QImage each can exceed the memory cap even while imCache
+      is nearly empty, the number of CONCURRENT full-sensor raw decodes is bounded:
+
+          rawDecodeLimit = clamp( (memoryAbortMB * 0.50) / (decodedQImageMB * 8),
+                                  1, decoderCount )
+
+      Gated at decodeNextImage (the single choke point reached from both launchDecoders and
+      fillCache): if the row willUseSensorDecode() and activeRawDecodes >= rawDecodeLimit,
+      the decoder is parked (cycling[id] = false) instead of starting another decode. A
+      finishing sensor decode decrements the counter in fillCache and frees a slot; the
+      remaining active decoders keep the pipeline full, so throughput holds at the limit.
+      willUseSensorDecode() is false for JPEG/HEIC and for the Decode-Raw-off embedded path,
+      so those are never gated. RawFormat::HasSensorDecoder(ext) is the cheap, no-alloc test.
+      decoderIsRaw[id] marks a decoder on the sensor path so the decrement fires exactly once
+      per decode; both are reset per folder in initialize(). On a big-RAM machine the larger
+      memoryAbortMB opens the limit back toward full concurrency.
+
+    Governor 2 - image cache ceiling clamp (ImageCache::memChk)
+      maxMBCeiling (the cache's growth target) is derived from availableMemoryMB but then
+      clamped so cache budget + measured non-cache footprint + a per-decoder reserve stays
+      under memoryAbortMB. Because "non-cache footprint" is measured live, it already
+      includes in-flight decoders, so the cache automatically plans fewer images while raw
+      decodes are consuming memory.
+
+    Governor 3 - memory watchdog (MW::memoryWatchdogTick, 50 ms GUI-thread probe)
+      A backstop, graduated rather than a single hard abort. cap = G::memoryAbortMB
+      (computeMemoryAbortMB scales it to host RAM, e.g. ~18.4 GB on 24 GB):
+        • footprint >= cap        -> engage the ImageCache throttle: setMemoryThrottled(true)
+          parks decoders at decodeNextImage, and memoryPause() (queued to the cache thread)
+          shrinks/trims imCache. No dialog.
+        • footprint <= 0.88*cap   -> release the throttle, memoryResume() relaunches decoders.
+        • footprint >= cap + max(2 GB, cap/10) -> genuine runaway the throttle could not
+          contain: fall back to the old hard onMemoryOverrun abort dialog (prevents OS OOM).
+      With the concurrency cap in place the footprint should not approach the cap during raw
+      traversal, so the watchdog rarely fires; it exists for the pathological case.
+
+    Diagnostics
+      ImageCache::diagnostics() prints a "Memory Footprint / Raw Decode" block (process
+      footprint, imCache MB/count, WorkingImageCache MB/count/budget, G::useRaw, decoderCount,
+      active/peak raw decodes, the computed limit and per-decode estimate) and a "Memory
+      Pressure Warnings" ring buffer of timestamped PAUSE / RESUME / CRITICAL events. A large
+      footprint with a small imCache and a WorkingImageCache still at ~budget confirms the
+      memory is in the concurrent raw decoders, which the concurrency cap bounds.
+
+    Tunables
+      rawDecodeLimit()'s 0.50 budget fraction and x8 per-decode factor (Cache/imagecache.cpp);
+      the watchdog's 0.88 resume hysteresis and critical headroom (MW::memoryWatchdogTick);
+      computeMemoryAbortMB() (Main/global.cpp) for the host-scaled cap itself.
 
 
 ******************************************************************************************

@@ -292,3 +292,5 @@ Rename, Reset, +, -, addMask buttons and add [?] button.  Replace with a context
 menu that includes the removed button actions.
 
 OpenCV DNN is the ONNX runtime here (not onnxruntime), which constrains model choice.
+
+hasSensorDecoder
