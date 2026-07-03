@@ -201,6 +201,7 @@ set(WINNOW_SOURCES
     # ImageFormats
     ImageFormats/Canon/canon.cpp
     ImageFormats/Canon/canoncr3.cpp
+    ImageFormats/Canon/crx.cpp
     ImageFormats/Dng/dng.cpp
     ImageFormats/Fuji/fuji.cpp
     ImageFormats/Fuji/fujicompressed.cpp

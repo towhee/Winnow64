@@ -44,4 +44,19 @@ protected:
     bool UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw) override;
 };
 
+/*
+    Sensor unpack for Canon CR3 (the per-format override of RawFormat for the CRX codec).
+    Self-contained: walks the CR3's ISO-BMFF box tree for the full-resolution CRAW track,
+    decodes the CRX lossless bitstream (adaptive Golomb-Rice + MED + T.87 run mode) into its
+    four Bayer planes, interleaves them into the RGGB mosaic, crops to the IAD1 active area,
+    self-calibrates black from the masked border, and reads the as-shot white balance from
+    the CMT3 makernote ColorData (0x4001). Only level-0 single-tile CRAW is handled (current
+    full-frame bodies). Implemented in crx.cpp. See CanonCR3 for CR3 metadata parsing.
+*/
+class CanonCR3Raw : public RawFormat
+{
+protected:
+    bool UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw) override;
+};
+
 #endif // CANON_H

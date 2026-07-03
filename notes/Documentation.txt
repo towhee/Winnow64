@@ -1115,7 +1115,15 @@ Memory Governor (process footprint, decode concurrency)
       finishing sensor decode decrements the counter in fillCache and frees a slot; the
       remaining active decoders keep the pipeline full, so throughput holds at the limit.
       willUseSensorDecode() is false for JPEG/HEIC and for the Decode-Raw-off embedded path,
-      so those are never gated. RawFormat::HasSensorDecoder(ext) is the cheap, no-alloc test.
+      so those are never gated. RawFormat::HasSensorDecoder(ext) is the cheap, no-alloc test
+      (a hash lookup, no decoder constructed). It and RawFormat::Create() both derive from a
+      single extension->decoder-factory table, rawFactories() in ImageFormats/Raw/rawformat.cpp
+      -- so "which extensions have a sensor decoder" lives in exactly one place and the two
+      cannot drift out of sync. Adding a new format's sensor decoder is a one-line change
+      there. (Note ext membership is an over-approximation: e.g. a compressed ARW matches
+      but its Decode() falls back to the embedded JPG. That is the safe direction for a
+      memory guard -- the first decode must assume the heavy path -- and such fallbacks
+      decode cheaply anyway, so throttling them costs nothing.)
       decoderIsRaw[id] marks a decoder on the sensor path so the decrement fires exactly once
       per decode; both are reset per folder in initialize(). On a big-RAM machine the larger
       memoryAbortMB opens the limit back toward full concurrency.
@@ -2132,6 +2140,28 @@ Architecture
     correctly-coloured image), and the makernote crop/WB/model read back correctly. LIMITATIONS:
     lossless-JPEG CR2 only (sRAW/mRAW and very old CR2 layouts not handled); Canon black is a
     masked-column average, not per-channel; ColorData WB offset table covers the common versions.
+
+    CANON CR3 / CRX (CanonCR3Raw, ImageFormats/Canon/crx.cpp): self-contained clean-room decode
+    of Canon's CRX lossless codec (registered for "cr3"; CanonCR3 handles CR3 metadata, this is
+    the sensor path). Walks the ISO-BMFF box tree for the full-resolution CRAW track, reads its
+    CMP1 geometry (fW/fH, tile, nBits, planes, cfaLayout), the IAD1 active-area crop, and the CRX
+    bitstream location (stbl co64 offset + stsz length). The CRX entropy stream is adaptive
+    Golomb-Rice (escape 41 / 21 bits / kMax 15) + JPEG-LS-style MED prediction + T.87 run mode.
+    KEY POINTS re-derived by byte-level instrumentation vs the libraw/rawpy oracle: (a) the tile's
+    four Bayer planes share ONE CONTINUOUS bitstream -- do NOT re-seek per plane to the byte
+    offsets (only R5 and R6II even planes land byte-aligned; odd planes start mid-byte); the reader
+    runs continuously, only k and the run s_param reset at each plane's first line. (b) The
+    non-top line adapts k from a LOOK-AHEAD-adjusted code bit_code=(bit_code+|2*(d-b)|)>>1 (the
+    sample itself is decoded with adaptation OFF); the top line uses ordinary per-symbol adaptation.
+    (c) run entry when coeff a==b==d; predictor med(a,b,c); s_param persists plane-wide. The four
+    planes interleave ROW-MAJOR into the RGGB mosaic (plane 0/1/2/3 -> quad (0,0)(0,1)(1,0)(1,1)),
+    then crop to IAD1. Black self-calibrated PER-CHANNEL from the masked columns; white=(1<<nBits)-1
+    refined by the per-model table; WB from the CMT3 makernote ColorData (0x4001, same offset table
+    as CR2); matrix from the per-model table; pattern RGGB. VERIFIED: full-sensor mosaic is
+    byte-identical (0 diffs) to the rawpy oracle on EOS R5 (46.65M px) and R6 II (25.49M px), all
+    four planes. LIMITATIONS: level-0 (no wavelet) single-tile CRAW only -- current full-frame
+    bodies; leveled/multi-tile or non-4-plane CRAW returns false (caller falls back to the embedded
+    preview). CR3 HDR-PQ preview handling is unchanged (see the loadFromImageIO section above).
 
     TiffWalk (ImageFormats/Raw/tiffwalk.*): a tiny shared TIFF/EP IFD reader (header, IFDs +
     SubIFDs, tag value accessors: scalar / u32 array / real array / bytes / ascii, handling the
