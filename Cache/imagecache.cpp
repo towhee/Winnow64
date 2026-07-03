@@ -1,6 +1,8 @@
 #include "Cache/imagecache.h"
 #include "Main/global.h"
 #include "Develop/workingimagecache.h"
+#include "ImageFormats/Raw/rawformat.h"
+#include <QFileInfo>
 
 /*  How the Image Cache works:
 
@@ -165,6 +167,7 @@ ImageCache::ImageCache(QObject *parent,
         decoders.append(decoder);
         decoderThreads.append(thread);
         cycling.append(false);
+        decoderIsRaw.append(false);
     }
 
     pressureHistory.reserve(50);    // avoid reallocations
@@ -1057,6 +1060,36 @@ void ImageCache::memChk()
 
     maxMBCeiling = std::max<qint64>(G::availableMemoryMB, minMB) * memThrottle;
 
+    /* Clamp the ceiling so the image cache never plans past the hard watchdog cap
+       (G::memoryAbortMB). The availableMemoryMB-derived ceiling above knows nothing
+       about that cap, so on a machine with lots of free RAM the cache would grow toward
+       available memory and — combined with the non-cache footprint and in-flight decoder
+       working buffers — trip onMemoryOverrun. This is invisible with JPEG/HEIC (tiny
+       per-image decode) but bites hard when Decode Raw is on: each concurrent decoder
+       holds a full-resolution raw in flight (hundreds of MB), so we must reserve headroom
+       for those transients as well as the current non-cache footprint. */
+    if (G::memoryAbortMB > 0) {
+        const qint64 cacheMB     = static_cast<qint64>(icd->sizeMB());
+        const qint64 footprintMB = static_cast<qint64>(G::processFootprintMB());
+        // Everything the process holds that is NOT the image cache (Qt, DataModel,
+        // thumbnails, plus whatever decoders happen to be running right now).
+        const qint64 nonCacheMB  = std::max<qint64>(0, footprintMB - cacheMB);
+        /* Reserve for peak decoder transients that may not be in nonCacheMB at this
+           instant: decoderCount concurrent decodes, each roughly one decoded image.
+           Size the per-image estimate from the current row's decoded size (raw ≈ 200+ MB,
+           JPEG small), falling back to a modest floor. */
+        float perImgMB = 0.0f;
+        if (currRow >= 0 && currRow < dm->sf->rowCount())
+            perImgMB = dm->sf->index(currRow, G::CacheSizeColumn).data().toFloat();
+        const qint64 decoderReserveMB =
+            static_cast<qint64>(decoderCount) *
+            std::max<qint64>(16, static_cast<qint64>(perImgMB));
+        const qint64 capBudgetMB =
+            static_cast<qint64>(G::memoryAbortMB) - nonCacheMB - decoderReserveMB;
+        maxMBCeiling = std::min<qint64>(maxMBCeiling,
+                                        std::max<qint64>(minMB, capBudgetMB));
+    }
+
     /* Publish the memory the image cache still intends to claim (ceiling minus what it
        already holds) so DataModel's thumbnail budget can avoid double-counting it. */
     G::imageCacheHeadroomMB.store(
@@ -1116,6 +1149,8 @@ QString ImageCache::diagnostics()
     rpt << Utilities::centeredRptHdr('=', objectName() + " ImageCache Diagnostics");
     rpt << "\n\n";
     rpt << reportHealthChecks();
+    rpt << reportMemoryFootprint();
+    rpt << reportMemoryWarnings();
     rpt << reportLifetimeCounters();
     rpt << reportCacheParameters();
     rpt << reportCacheDecoders();
@@ -1255,6 +1290,11 @@ QString ImageCache::reportHealthChecks()
         const int dmInst = dm->instance.load();
         QStringList stale;
         for (int id = 0; id < decoderCount; ++id) {
+            /* Skip decoders never dispatched this folder. With the raw-decode concurrency
+               cap some decoders legitimately stay unused (status still Undefined), so their
+               initial instance=0 is not the "returned an image from a previous folder" bug
+               this check exists to catch. */
+            if (decoders[id]->status == ImageDecoder::Undefined) continue;
             const int dec = decoders[id]->instance.load();
             if (dec != dmInst) stale << QString("%1(dec=%2)").arg(id).arg(dec);
         }
@@ -1924,6 +1964,10 @@ void ImageCache::initialize()
     toCache.clear();
     toCacheStatus.clear();
     pressureHistory.clear();
+    // reset raw-decode concurrency accounting for the new folder
+    activeRawDecodes.store(0, std::memory_order_relaxed);
+    peakActiveRawDecodes = 0;
+    for (int i = 0; i < decoderIsRaw.size(); ++i) decoderIsRaw[i] = false;
     // drop cached pre-develop WorkingImages from the previous folder (memory hygiene)
     WorkingImageCache::instance().clear();
     if (isAutoMaxMB) maxMB = 1024;  // only if autoMaxMB?
@@ -2033,6 +2077,188 @@ quint64 ImageCache::getMaxMB()
 quint64 ImageCache::getMaxMBCeiling()
 {
     return maxMBCeiling;
+}
+
+void ImageCache::setMemoryThrottled(bool on)
+{
+/*
+    Called from the GUI-thread memory watchdog. Only flips an atomic, so it is safe to
+    call directly across threads; the actual pause/resume work is done on the ImageCache
+    thread by memoryPause()/memoryResume() (queued).
+*/
+    memoryThrottled.store(on, std::memory_order_relaxed);
+}
+
+bool ImageCache::isMemoryThrottled() const
+{
+    return memoryThrottled.load(std::memory_order_relaxed);
+}
+
+void ImageCache::noteMemoryWarning(const QString &msg)
+{
+/*
+    Thread-safe append to the memory-warning ring buffer surfaced in diagnostics().
+    Written from both the GUI thread (watchdog) and the ImageCache thread (pause/resume).
+*/
+    const QString stamped =
+        QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz") + "  " + msg;
+    QMutexLocker locker(&memWarnMutex);
+    memoryWarnings.append(stamped);
+    while (memoryWarnings.size() > maxMemoryWarnings) memoryWarnings.removeFirst();
+}
+
+void ImageCache::memoryPause(quint64 footprintMB, quint64 capMB)
+{
+/*
+    Queued from MW::memoryWatchdogTick when the process footprint reaches the pause
+    threshold. Runs on the ImageCache thread. The throttle flag (set by the watchdog
+    before this fires) already stops new decodes at decodeNextImage; here we actively
+    free memory by shrinking maxMB and re-running the target-range trim so the footprint
+    falls back below the resume threshold. No teardown, no dialog — this replaces the old
+    hard onMemoryOverrun abort for the normal Decode-Raw pressure case.
+*/
+    if (abort) return;
+
+    const quint64 beforeMB = icd->sizeMB();
+    /* Shrink the cache budget so trimOutsideTargetRange sheds images. Drop to ~70% of
+       what is currently held (never below minMB) so we give back a meaningful chunk in
+       one step rather than dribbling. */
+    const qint64 shrunkMB = std::max<qint64>(minMB, static_cast<qint64>(beforeMB * 0.70));
+    maxMB = static_cast<quint64>(shrunkMB);
+    maxMBCeiling = std::min<qint64>(maxMBCeiling, shrunkMB);
+
+    /* Recompute the (smaller) target range and evict everything outside it. Decoders are
+       parked via the throttle flag, so this frees memory without immediately re-filling. */
+    updateToCache();
+
+    const quint64 afterMB = icd->sizeMB();
+    noteMemoryWarning(
+        QString("PAUSE  footprint=%1 MB >= cap=%2 MB. Decoders parked; cache %3 -> %4 MB "
+                "(maxMB=%5).")
+            .arg(footprintMB).arg(capMB).arg(beforeMB).arg(afterMB).arg(maxMB));
+
+    if (G::isLogger || G::isFlowLogger)
+        log("memoryPause", QString("footprint=%1 cap=%2 cache %3->%4 MB")
+                               .arg(footprintMB).arg(capMB).arg(beforeMB).arg(afterMB));
+
+    updateStatus(StatusAction::All, "ImageCache::memoryPause");
+}
+
+void ImageCache::memoryResume(quint64 footprintMB)
+{
+/*
+    Queued from MW::memoryWatchdogTick when the footprint has dropped below the resume
+    threshold. Runs on the ImageCache thread. The throttle flag has already been cleared
+    by the watchdog; relaunch decoders so caching of the target range continues.
+*/
+    if (abort) return;
+
+    noteMemoryWarning(
+        QString("RESUME footprint=%1 MB below resume threshold. Caching resumed "
+                "(cache=%2 MB, maxMB=%3).")
+            .arg(footprintMB).arg(icd->sizeMB()).arg(maxMB));
+
+    if (G::isLogger || G::isFlowLogger)
+        log("memoryResume", QString("footprint=%1 MB").arg(footprintMB));
+
+    /* dispatch() re-runs memChk (recomputing the ceiling now that memory has freed),
+       rebuilds the target range and relaunches decoders. */
+    dispatch();
+}
+
+QString ImageCache::reportMemoryWarnings()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('-', "Memory Pressure Warnings");
+    rpt << "\n";
+    QMutexLocker locker(&memWarnMutex);
+    if (memoryWarnings.isEmpty()) {
+        rpt << "  (none)\n";
+    }
+    else {
+        for (const QString &w : memoryWarnings) rpt << "  " << w << "\n";
+    }
+    rpt << "\n";
+    return reportString;
+}
+
+bool ImageCache::willUseSensorDecode(int sfRow) const
+{
+/*
+    True when a decode of sfRow will take the memory-heavy full-sensor RAW path: Decode Raw
+    is on AND the file extension has a sensor decoder. With Decode Raw off, RAW files use the
+    embedded JPG (cheap), so this returns false and the concurrency cap does not apply.
+*/
+    if (!G::useRaw) return false;
+    if (sfRow < 0 || sfRow >= dm->sf->rowCount()) return false;
+    const QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+    const QString ext = QFileInfo(fPath).suffix().toLower();
+    return RawFormat::HasSensorDecoder(ext);
+}
+
+int ImageCache::rawDecodeLimit(int sfRow) const
+{
+/*
+    Maximum number of concurrent full-sensor RAW decodes. A sensor decode's peak transient
+    is dominated by the scene-linear float WorkingImage (W*H*3 floats = 3x the 8-bit QImage)
+    plus demosaic scratch — about 8x the cached QImage in practice. We let concurrent raw
+    decodes use up to ~half the hard memory cap, leaving the other half for the image cache,
+    the WorkingImageCache, thumbnails and the app baseline. Clamped to [1, decoderCount], so
+    on a big-RAM machine (larger memoryAbortMB) it opens back up toward full concurrency.
+*/
+    float qimgMB = (sfRow >= 0 && sfRow < dm->sf->rowCount())
+                       ? dm->sf->index(sfRow, G::CacheSizeColumn).data().toFloat()
+                       : 0.0f;
+    if (qimgMB <= 0.0f) qimgMB = 150.0f;                       // ~33 MP fallback
+    const double perDecodeMB = static_cast<double>(qimgMB) * 8.0;
+    const double budgetMB = (G::memoryAbortMB > 0)
+                                ? static_cast<double>(G::memoryAbortMB) * 0.50
+                                : 6000.0;
+    const int lim = static_cast<int>(budgetMB / perDecodeMB);
+    return std::clamp(lim, 1, decoderCount);
+}
+
+QString ImageCache::reportMemoryFootprint()
+{
+/*
+    Confirms where process memory lives: the image cache, the (separate, byte-budgeted)
+    WorkingImageCache, or in-flight full-sensor RAW decodes. A large footprint with a small
+    imCache and a full WorkingImageCache still short of the total means the memory is in the
+    concurrent raw decoders — which the raw decode limit below bounds.
+*/
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    const double MB = 1024.0 * 1024.0;
+    WorkingImageCache &wic = WorkingImageCache::instance();
+
+    rpt << Utilities::centeredRptHdr('-', "Memory Footprint / Raw Decode");
+    rpt << "\n";
+    rpt << "  process footprint       : " << G::processFootprintMB() << " MB\n";
+    rpt << "  memoryAbortMB cap        : " << G::memoryAbortMB << " MB\n";
+    int imCacheCount = 0;
+    {
+        QMutexLocker locker(&icd->rwLock);
+        imCacheCount = icd->imCache.count();
+    }
+    rpt << "  imageCache (imCache)     : " << icd->sizeMB()
+        << " MB (" << imCacheCount << " images)\n";
+    rpt << "  WorkingImageCache        : " << static_cast<qint64>(wic.currentBytes() / MB)
+        << " MB (" << wic.count() << " entries, budget "
+        << static_cast<qint64>(wic.maxBytes() / MB) << " MB)\n";
+    rpt << "  Decode Raw (G::useRaw)   : " << (G::useRaw ? "ON" : "off") << "\n";
+    rpt << "  decoderCount             : " << decoderCount << "\n";
+    rpt << "  active raw decodes       : " << activeRawDecodes.load(std::memory_order_relaxed)
+        << " (peak " << peakActiveRawDecodes << ")\n";
+    const int lim = (currRow >= 0 && currRow < dm->sf->rowCount()) ? rawDecodeLimit(currRow) : 0;
+    const float qimgMB = (currRow >= 0 && currRow < dm->sf->rowCount())
+                             ? dm->sf->index(currRow, G::CacheSizeColumn).data().toFloat() : 0.0f;
+    rpt << "  raw decode limit         : " << lim
+        << "  (est " << QString::number(qimgMB * 8.0, 'f', 0) << " MB/decode)\n";
+    rpt << "\n";
+    return reportString;
 }
 
 void ImageCache::setMaxMB(quint64 mb)
@@ -2393,6 +2619,42 @@ void ImageCache::decodeNextImage(int id, int sfRow)
             );
     }
 
+    /* Memory pressure gate: this is the single choke point where any new decode starts
+       (reached from both launchDecoders and fillCache). While the memory watchdog holds
+       the throttle, park this decoder instead of starting another full-resolution decode.
+       memoryResume() relaunches decoders once the footprint recovers. Inert when Decode
+       Raw is off — small JPEG/HEIC decodes never push the footprint to the threshold. */
+    if (memoryThrottled.load(std::memory_order_relaxed)) {
+        cycling[id] = false;
+        if (debugCaching)
+            qDebug().noquote() << src.leftJustified(col0Width, ' ')
+                               << "decoder" << QString::number(id).leftJustified(3)
+                               << "parked (memory throttle)";
+        return;
+    }
+
+    /* Raw-decode concurrency cap: bound how many full-sensor RAW decodes run at once so
+       their combined float working set stays under the memory cap. Park this decoder if we
+       are already at the limit; a finishing sensor decode (fillCache) frees a slot, and the
+       remaining active decoders keep the pipeline full. Not applied to JPEG/HEIC or the
+       Decode-Raw-off embedded-JPG path (willUseSensorDecode returns false), so that path is
+       unchanged and runs at full concurrency. */
+    const bool sensorRaw = willUseSensorDecode(sfRow);
+    if (sensorRaw) {
+        const int limit = rawDecodeLimit(sfRow);
+        if (activeRawDecodes.load(std::memory_order_relaxed) >= limit) {
+            cycling[id] = false;
+            if (debugCaching)
+                qDebug().noquote() << src.leftJustified(col0Width, ' ')
+                                   << "decoder" << QString::number(id).leftJustified(3)
+                                   << "parked (raw decode limit" << limit << ")";
+            return;
+        }
+        const int now = activeRawDecodes.fetch_add(1, std::memory_order_relaxed) + 1;
+        decoderIsRaw[id] = true;
+        if (now > peakActiveRawDecodes) peakActiveRawDecodes = now;
+    }
+
     // set isCaching
     if (toCacheStatus.contains(sfRow)) {
         toCacheStatus[sfRow].isCaching = true;
@@ -2708,6 +2970,15 @@ void ImageCache::fillCache(int id,
 */
 
     QString src = "";
+
+    /* A decode cycle for this decoder is ending (completed, failed, or invoke-retry). If it
+       was a full-sensor RAW decode, release its slot in the concurrency cap so a parked
+       decoder can take it. Guarded by the per-decoder flag so it fires exactly once per
+       sensor decode regardless of which fillCache path we came in on. */
+    if (id >= 0 && id < decoderIsRaw.size() && decoderIsRaw[id]) {
+        decoderIsRaw[id] = false;
+        activeRawDecodes.fetch_sub(1, std::memory_order_relaxed);
+    }
 
     // Prefer the snapshot delivered via the done() signal (stable copy from emit time).
     // Fall back to live decoder state only for legacy callers that pass no snapshot

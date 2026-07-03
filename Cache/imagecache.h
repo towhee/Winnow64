@@ -47,6 +47,14 @@ public:
     quint64 getMaxMB();
     quint64 getMaxMBCeiling();
 
+    /* Thread-safe throttle flag set from the GUI-thread memory watchdog. Honored at the
+       single decode choke point (decodeNextImage) so no new full-resolution decode starts
+       while under memory pressure. */
+    void setMemoryThrottled(bool on);
+    bool isMemoryThrottled() const;
+    /* Thread-safe append to the memory-warning ring buffer surfaced in diagnostics(). */
+    void noteMemoryWarning(const QString &msg);
+
     void updateStatus(int instruction, QString source); // update cached send signal
     QString reportToCache();
     QString diagnostics();
@@ -59,6 +67,7 @@ public:
     QString reportImCache();
     QString reportImCacheRows();
     QString reportToCacheRows();
+    QString reportMemoryWarnings();
     void debugRunStatus();
 
     bool isIdle();
@@ -120,6 +129,14 @@ public slots:
     void removeCachedImage(QString fPath); // remove image from imageCache and update status
     void updateToCache();
 
+    /* Memory pressure throttle (driven by MW::memoryWatchdogTick). memoryPause parks
+       decoders and shrinks/trims the cache to free memory; memoryResume relaunches
+       decoders once the footprint recovers. Queued from the GUI thread so the heavy
+       work runs on the ImageCache thread. Inert when Decode Raw is off — small
+       JPEG/HEIC decodes never push the footprint to the pause threshold. */
+    void memoryPause(quint64 footprintMB, quint64 capMB);
+    void memoryResume(quint64 footprintMB);
+
 private slots:
     void dispatch();  // Main processing loop
 
@@ -136,6 +153,16 @@ private:
 
     int maxAttemptsToCacheImage = 10;
 
+    /* Memory pressure throttle state. memoryThrottled is set by the GUI-thread watchdog
+       (setMemoryThrottled) and read on the ImageCache thread at the decode choke point.
+       memoryWarnings is a small ring buffer of timestamped pause/resume/critical events
+       printed by diagnostics(); guarded by memWarnMutex since it is written from both
+       threads. */
+    std::atomic<bool> memoryThrottled{false};
+    QMutex memWarnMutex;
+    QStringList memoryWarnings;
+    static constexpr int maxMemoryWarnings = 50;
+
     std::atomic<bool> isInitializing;
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
@@ -146,6 +173,20 @@ private:
     QVector<ImageDecoder*> decoders;        // all the decoders
     QVector<QThread*> decoderThreads;       // all the decoder threads
     QVector<bool> cycling;                  // all the decoders activity
+
+    /* Raw-decode concurrency cap. A full-sensor RAW decode (UnpackCfa->Demosaic->RawColor)
+       holds a large float WorkingImage plus demosaic scratch — ~8x the cached 8-bit QImage
+       — so fanning all decoderCount threads onto RAWs at once can blow the memory cap even
+       though the image cache itself is small. decoderIsRaw[id] marks a decoder currently on
+       the sensor path; activeRawDecodes counts them and is bounded by rawDecodeLimit().
+       Only engaged when Decode Raw is on for a sensor-decodable file — JPEG/HEIC and the
+       Decode-Raw-off embedded-JPG path run at full concurrency, unchanged. */
+    QVector<bool> decoderIsRaw;
+    std::atomic<int> activeRawDecodes{0};
+    int peakActiveRawDecodes = 0;           // instrumentation (diagnostics report)
+    bool willUseSensorDecode(int sfRow) const;
+    int  rawDecodeLimit(int sfRow) const;
+    QString reportMemoryFootprint();        // WorkingImageCache + in-flight raw decode stats
     struct CacheItem {
         bool isCaching;
         QString msg;

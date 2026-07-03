@@ -1327,6 +1327,7 @@ private:
     QTimer *memoryWatchdog = nullptr;
     void memoryWatchdogTick();
     bool memoryDialogActive = false;
+    bool memoryThrottleActive = false;  // ImageCache decode throttle engaged (pressure)
     QWidget *folderDockEmptyWidget;
     QWidget *favDockEmptyWidget;
     QWidget *filterDockEmptyWidget;

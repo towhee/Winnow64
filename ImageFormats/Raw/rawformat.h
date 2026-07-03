@@ -35,6 +35,11 @@ public:
        nullptr if the format has no sensor decoder yet. */
     static std::unique_ptr<RawFormat> Create(const QString &ext);
 
+    /* Cheap membership test (no allocation) for "does this extension have a sensor
+       decoder". Used to decide, without constructing a decoder, whether a decode will take
+       the memory-heavy full-sensor path. Kept in sync with Create(). */
+    static bool HasSensorDecoder(const QString &ext);
+
     /* Full sensor decode: file -> demosaiced, colour-managed display QImage. When edit is
        non-null and non-identity, develop adjustments are applied in the linear working space
        (before the output transform). abort (when non-null) is polled between stages and inside

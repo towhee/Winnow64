@@ -35,6 +35,13 @@ std::unique_ptr<RawFormat> RawFormat::Create(const QString &ext)
     return nullptr;
 }
 
+bool RawFormat::HasSensorDecoder(const QString &ext)
+{
+    /* Keep in sync with Create() above. Cheap membership test, no allocation. */
+    return ext == "arw" || ext == "dng" || ext == "cr2" || ext == "nef" ||
+           ext == "orf" || ext == "rw2" || ext == "raf";
+}
+
 bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                        const EditParams *edit, const QAtomicInt *abort,
                        std::shared_ptr<const WorkingImage> *outWork)
