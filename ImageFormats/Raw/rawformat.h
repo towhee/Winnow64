@@ -37,7 +37,8 @@ public:
 
     /* Cheap membership test (no allocation) for "does this extension have a sensor
        decoder". Used to decide, without constructing a decoder, whether a decode will take
-       the memory-heavy full-sensor path. Kept in sync with Create(). */
+       the memory-heavy full-sensor path. Shares one extension->factory table with Create()
+       (see rawformat.cpp), so the two can never drift out of sync. */
     static bool HasSensorDecoder(const QString &ext);
 
     /* Full sensor decode: file -> demosaiced, colour-managed display QImage. When edit is

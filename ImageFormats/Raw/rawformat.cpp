@@ -7,6 +7,7 @@
 #include "Develop/outputtransform.h"
 #include "Main/global.h"
 #include <algorithm>
+#include <QHash>
 
 /* Per-format sensor decoders register here as each UnpackCfa() lands (phase 2+). */
 #include "ImageFormats/Sony/sony.h"     // class SonyRaw
@@ -17,29 +18,49 @@
 #include "ImageFormats/Panasonic/panasonic.h" // class PanasonicRaw
 #include "ImageFormats/Fuji/fuji.h"     // class FujiRaw
 
+namespace {
+/*
+    Single source of truth mapping a (lower-case, dot-less) file extension to its sensor
+    decoder factory. Create() and HasSensorDecoder() both derive from this table, so adding
+    a new format's sensor decoder is a one-line change here with no second list to keep in
+    sync. The factory returns unique_ptr<RawFormat> (each concrete decoder up-casts). The
+    table is a function-local static: initialised once, thread-safe (magic statics), and
+    const reads are safe from the concurrent decoder threads that call Create().
+*/
+using RawFactory = std::unique_ptr<RawFormat> (*)();
+
+const QHash<QString, RawFactory> &rawFactories()
+{
+    static const QHash<QString, RawFactory> table = {
+        {"arw", []() -> std::unique_ptr<RawFormat> { return std::make_unique<SonyRaw>();      }},
+        {"dng", []() -> std::unique_ptr<RawFormat> { return std::make_unique<DngRaw>();       }},
+        {"cr2", []() -> std::unique_ptr<RawFormat> { return std::make_unique<CanonRaw>();     }},
+        {"cr3", []() -> std::unique_ptr<RawFormat> { return std::make_unique<CanonCR3Raw>();  }},
+        {"nef", []() -> std::unique_ptr<RawFormat> { return std::make_unique<NikonRaw>();     }},
+        {"orf", []() -> std::unique_ptr<RawFormat> { return std::make_unique<OlympusRaw>();   }},
+        {"rw2", []() -> std::unique_ptr<RawFormat> { return std::make_unique<PanasonicRaw>(); }},
+        {"raf", []() -> std::unique_ptr<RawFormat> { return std::make_unique<FujiRaw>();      }},
+    };
+    return table;
+}
+} // namespace
+
 std::unique_ptr<RawFormat> RawFormat::Create(const QString &ext)
 {
 /*
-    Map a (lower-case, dot-less) extension to its sensor decoder, or nullptr if none exists
-    yet (ImageDecoder then keeps using the embedded-JPG path). A decoder that cannot handle a
-    given file -- e.g. SonyRaw on a compressed ARW -- returns false from Decode(), and
-    ImageDecoder falls back to the embedded JPG, so registering here is safe.
+    Build the sensor decoder for a (lower-case, dot-less) file extension, or nullptr if none
+    exists yet (ImageDecoder then keeps using the embedded-JPG path). A decoder that cannot
+    handle a given file -- e.g. SonyRaw on a compressed ARW -- returns false from Decode(),
+    and ImageDecoder falls back to the embedded JPG, so registering here is safe.
 */
-    if (ext == "arw") return std::make_unique<SonyRaw>();
-    if (ext == "dng") return std::make_unique<DngRaw>();
-    if (ext == "cr2") return std::make_unique<CanonRaw>();
-    if (ext == "nef") return std::make_unique<NikonRaw>();
-    if (ext == "orf") return std::make_unique<OlympusRaw>();
-    if (ext == "rw2") return std::make_unique<PanasonicRaw>();
-    if (ext == "raf") return std::make_unique<FujiRaw>();
-    return nullptr;
+    const auto it = rawFactories().constFind(ext);
+    return it != rawFactories().cend() ? (*it)() : nullptr;
 }
 
 bool RawFormat::HasSensorDecoder(const QString &ext)
 {
-    /* Keep in sync with Create() above. Cheap membership test, no allocation. */
-    return ext == "arw" || ext == "dng" || ext == "cr2" || ext == "nef" ||
-           ext == "orf" || ext == "rw2" || ext == "raf";
+    /* Cheap membership test, no allocation. Shares rawFactories() with Create(). */
+    return rawFactories().contains(ext);
 }
 
 bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
