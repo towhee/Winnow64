@@ -2757,7 +2757,11 @@ Layer & masking model (planned)
                (unlike the per-tool handles); when it is present the per-tool draw takes drawTint=false
                so it draws only its handles/guides/cursor/swatches (its own tint would double up). The
                composite reflows live during a geometric drag (setActiveMaskParams -> paramsChanged ->
-               rebuild).
+               rebuild). "M" (toggleMaskOverlayAction -> MW::toggleMaskOverlay -> ImageView::
+               toggleMaskTint) HIDES/SHOWS this overlay while editing -- flips ImageView::maskTintHidden,
+               which gates BOTH the whole-layer composite and the per-tool preview in drawForeground
+               (handles/cursor keep drawing so editing continues); reset to shown on each beginMaskEdit,
+               no-op outside mask editing.
              - RENDER COMPOSITING (Stage 4b + N-layer stack): the render composites the WHOLE stack
                in SCENE-LINEAR before the output transform, INDEPENDENT of which layer is active for
                editing -- so a saved mask is visible the moment the image loads (no need to select
@@ -2767,7 +2771,13 @@ Layer & masking model (planned)
                then for each layer develops the RUNNING ACCUMULATOR `acc` with that layer's params (an
                identity side aliases acc -- no copy/Develop) and blends back over acc by its mask
                (acc = acc*(1-m)+layer*m; an empty/global mask applies the params globally on top); one
-               final OutputTransform. Because each layer develops the accumulated result (NOT the
+               final OutputTransform. MASK BLEND SPACE is an A/B flag (kPerceptualMaskBlend in
+               workingimagecache.cpp): A = lerp in scene-linear (physically faithful, but a STRONG
+               masked adjustment's visible falloff is front-loaded -- display gamma steepens it near
+               m=1, so a linear feather reads abrupt at the size edge); B (current) = lerp in a
+               PERCEPTUAL (gamma 2.2) space so DISPLAYED brightness tracks m ~linearly and a feather
+               reads evenly (== the coverage tint). Only feather pixels (0<m<1) pay the pow; m<=0 skip,
+               m>=1 copy. Flip the flag to compare/revert. Because each layer develops the accumulated result (NOT the
                original work), where two layers' masks OVERLAP their adjustments COMPOUND rather than
                the top layer replacing the one below -- e.g. two overlapping +1-stop layers give ~+2
                stops in the overlap (in scene-linear the per-op composition is natural: exposure
@@ -2789,27 +2799,62 @@ Layer & masking model (planned)
                invert and a committed brush stroke emit paramsChanged() to re-render. Deferred: true
                STACKED adjustments (each layer builds on the result below, not the original), the
                combine field (Union only today), and AI tools.
-             - BRUSH (freehand mask): vector strokes in paramsJson {size,flow,autoMask,strokes:[{pts,
-               size,feather,flow,erase,autoMask}]} (each stroke snapshots its settings; current
-               settings drive the next stroke). Painted on the loupe (ImageView): a size-circle cursor,
-               left-drag paints, Alt-drag erases; dabs = smootherstep feathered circles accumulated per
-               stroke by MAX then composited with flow (build-up across strokes). Live red/blue tint
+             - BRUSH (freehand mask): vector strokes in paramsJson {size,flow,autoMask,autoMaskMode,
+               strokes:[{pts,size,feather,flow,erase,autoMask,autoMaskMode}]} (each stroke snapshots
+               its settings, incl. the auto-mask mode; current
+               settings drive the next stroke). DEFAULTS: feather 0 (crisp), flow 100. Painted on the
+               loupe (ImageView): a two-ring cursor -- the OUTER ring is the brush SIZE (the total
+               extent; coverage reaches 0 there), and when feather>0 an INNER ring at radius*(1-f/2)
+               (the half-coverage radius) marks the feather, matching Lightroom's cursor. left-drag
+               paints, Alt-drag erases; dabs = smootherstep dabs accumulated per stroke by MAX then
+               composited with flow (build-up across strokes). FEATHER = LIGHTROOM MODEL (softens
+               INWARD): coverage is a full-strength core out to radius*(1-feather/100), then
+               smootherstep to 0 at radius (BrushStamp::coverage) -- so feather does NOT change the
+               brush footprint (size = outer extent, fixed); it shrinks the solid core inward
+               (feather 0 = hard edge at the size ring, feather 100 = fully soft, core -> centre).
+               Pairs with the perceptual mask blend (kPerceptualMaskBlend) so the displayed effect
+               tracks the coverage the way Lightroom's does. Live red/blue tint
                preview rebuilt only on the dirty segment bbox; the develop re-composites on stroke
-               release (maskGeometryChanged -> setActiveMaskParams). Dock rows: Size/Feather/Flow/Auto
+               release (maskGeometryChanged -> setActiveMaskParams). WHILE a stroke is being swiped the
+               whole-layer composite tint (maskLayerTint, rebuilt only on release) is SUPPRESSED
+               (drawForeground brushStroking guard) so the per-brush live preview shows the stroke
+               building up in real time instead of the tint only appearing after release. Dock rows: Size/Feather/Flow/Auto
                mask/Invert. Size also via [ / ] keys or a two-finger drag (ImageView wheelEvent, gated
                to brush+hover) -> maskBrushSizeRequested -> setActiveBrushSize syncs the dock; "A"
                toggles auto-mask (-> maskBrushAutoMaskRequested -> setActiveBrushAutoMask); Cmd/Ctrl+Z
                removes the last stroke. ImageView needs focus (set on brush enter) and claims [ ] A
-               from their global action shortcuts via QEvent::ShortcutOverride. Cursor hint: dashed
-               green = auto-mask, pink = erase. AUTO-MASK (WIP -- luminance-only, fixed tolerance,
-               coarse guide; usable but expected to be refined): a luminance guide (BrushStamp::Guide, ~1024
-               long edge, output-oriented) is built once from the loupe pixmap when the brush
-               activates (ImageView::ensureAutoGuide) and registered by path (BrushStamp::putGuide);
-               the develop render samples the SAME guide (getGuide(fPath), threaded through
-               developCompositeStack/buildMaskBuffer/brushRasterCached) so preview == render. A
-               flagged stroke attenuates each dab by an edge factor: paint only where |lum - lumRef|
-               < tol (lumRef = guide luminance at the stroke start; smootherstep falloff). Render
-               compositing as above.
+               from their global action shortcuts via QEvent::ShortcutOverride. Each cursor ring is
+               drawn twice -- a dark halo under the coloured line -- so it stays visible on light AND
+               dark images (Level-tool halo idiom). Cursor hint: dashed
+               blue = AI auto-mask, green = luminance auto-mask, pink = erase, white = plain. AUTO-MASK has TWO MODES
+               (per-stroke, chosen by the "AI edge (SAM)" dock checkbox; stored as autoMaskMode
+               "lum"|"ai" in the stroke + brush paramsJson; the "A" key just toggles auto-mask on/off,
+               keeping the current mode). Both attenuate each dab by an edge factor
+               (BrushStamp::edgeFactor) evaluated in the SHARED rasterizer, so preview == render:
+                 * LUMINANCE ("lum", default): a luminance guide (BrushStamp::Guide, ~1024 long edge,
+                   output-oriented) is built once from the loupe pixmap when the brush activates
+                   (ImageView::ensureAutoGuide) and registered by path (BrushStamp::putGuide); the
+                   render samples the SAME guide (getGuide(fPath), threaded through
+                   developCompositeStack/buildMaskBuffer/brushRasterCached). A flagged stroke paints
+                   only where |lum - lumRef| < tol (lumRef = guide luminance at the stroke start;
+                   smootherstep falloff).
+                 * AI ("ai"): confines the stroke to the SAM 2 object UNDER ITS START POINT. The
+                   encoder is PRE-WARMED on entering brush-AI (MW::onAiMaskEditBegin when an AI-mode
+                   brush is selected/added; MW::warmBrushSamEncoder via maskBrushAiEnabled when the
+                   checkbox is ticked) so the first stroke pays only the ~40ms decode. On stroke start
+                   ImageView emits maskBrushSamFieldRequested(seed) -> MW::onBrushSamFieldRequested
+                   -> ensureBrushSamField: the shared Object-Mask encoder (ensureObjectEncoder, cached
+                   ~1s/image) plus a POINT-prompt decode (ObjectMaskPredictor::refinePoint: one +ve
+                   point label 1 + one pad label -1, has_mask_input=0 -- fits the fixed 2-point decoder,
+                   no re-export) yield a 0..1 object coverage field, stored as a BrushStamp SAM field
+                   keyed by path+seed (putSamField/getSamField, samFieldKey). edgeFactor with aiField=1
+                   returns that coverage directly, so the dab is clipped to the object even across a
+                   same-luminance background. The render pre-pass (MW::ensureBrushSamFields, called in
+                   updateMaskOverlayTint + the two develop render paths) repopulates fields the store
+                   dropped. LIMITATION: a truly cold render (reopen / evicted store) before the field
+                   is decoded paints that stroke UNCONFINED until the mask is re-entered. This "ai" mode
+                   is a 2nd auto-mask option for A/B testing against "lum" -- shares the SAM 2 encoder
+                   with the OBJECT MASK tool (below).
              - CONTENT-RANGE MASKS (Luminance Range + Color Range): coverage depends on the pixel
                VALUE, not its position, so unlike the geometric tools these need the image's pixels.
                Both measure on a SHARED display-referred reference (Develop/rangemask.h,
@@ -2923,8 +2968,8 @@ Layer & masking model (planned)
                Feather / Invert (Near/Far reuse the maskRangeLo/maskRangeHi sources -> maskRangeChanged
                -> ImageView::setMaskRangeParams, which now accepts Depth; live tint buildDepthPreview).
                paramsJson is non-empty {lo,hi} so it is NOT content-derived (survives stackJob's empty-
-               params skip normally). All AI masks (Subject/Background/Sky/Depth) now implemented; none
-               scaffolded-only remain.
+               params skip normally). AI masks Subject/Background/Sky/Depth are fully implemented;
+               Object Mask (below) is the one AI mask currently at scaffold stage.
                KNOWN LIMITATION (validated, not a bug): skyseg is strong on horizon-type skies (offline
                test on a wide winter forest/sky photo gave a near-perfect mask, bright snow correctly
                rejected) but weak on sky FRAGMENTED through dense canopy behind a large subject + bokeh
@@ -2932,6 +2977,70 @@ Layer & masking model (planned)
                processing recovers it. Workaround for such shots: a Luminance/Color Range mask + brush.
                FUTURE WIP (deferred): benchmark alternative sky models offline (onnxruntime) and swap
                only if one clearly beats skyseg on the hard case AND loads in OpenCV DNN.
+             - OBJECT MASK (AI, SCAFFOLD -- predictor + ref store built, UI/wiring pending): a
+               PROMPTABLE mask. The user brushes a rough outline around an object; the filled
+               silhouette is refined to the true edge by a SAM 2 encoder+decoder ONNX pair via OpenCV
+               DNN (NO onnxruntime -- feasibility proved by an offline spike: cv::dnn 4.11 loads+runs
+               both graphs). Unlike Subject/Sky (one-shot per image) it is TWO-PHASE, matching SAM's
+               heavy-encoder / light-decoder split: Utilities/objectmaskpredictor ObjectMaskPredictor::
+               setImage() encodes the developed base ONCE (~1s CPU, caches image_embed + high_res_feats
+               + guide), then refine() runs the decoder PER brush edit (~40ms) feeding the painted fill
+               as the dense mask_input prompt (has_mask_input=1, +/-8 logits) plus the stroke bbox as a
+               box (labels 2/3), picks the best of 3 candidate masks by predicted IoU, morphologically
+               cleans it (open + keep-largest-CC + hole-fill, kills occluder specks), then shares
+               SegRefine::refine for the edge matte. Output ObjectRef (Develop/objectmask.h, its own
+               path store; coverage() identical to SubjectMask). Preprocessing = SAM 2 reference: RGB,
+               1024^2, (px/255-mean)/std, ImageNet stats; point_coords scaled to the 1024 space.
+               DEPLOYMENT: the DECODER must be the FIXED-SHAPE export -- cv::dnn's importer rejects the
+               stock samexporter decoder's dynamic num_labels/num_points ("parseShape: dynamic 'zero'
+               shapes"); pin them (1 label / 2 points) + onnxsim constant-fold offline (build-time tool
+               only, nothing extra ships). Encoder loads as-is. Models (sam2 encoder/decoder .onnx) live
+               next to u2net.onnx in the executable dir; warn-if-absent like the other AI masks.
+               WIRED: MaskTool::Object (appended to the enum); MW::ensureObjectMask (two-phase --
+               encode cached by path in objectMaskPredictor, decode the component brush + putRef under
+               objectRefKey = path+brushHash so multiple object masks coexist); stackHasObjectMask; and
+               the four triggers (onAiMaskEditBegin warms the encoder + decodes if a stroke exists;
+               updateMaskOverlayTint per-component; renderDevelopPreview + renderDevelopFullResAsync
+               loop the job's object components). Brush contract (INTERIM, the UI must emit it):
+               paramsJson {"brush":{"poly":[[x,y],...]}}, output-normalized 0..1 filled outline,
+               rasterized by parseObjectBrush (Qt QPainter, no opencv in mainwindow).
+               buildMaskBuffer WIRED: CompDesc.isObject + a PER-COMPONENT objRef (object refs are
+               per-brush, not shared by path like Subject/Sky/Depth, so each CompDesc carries its own
+               ObjectMask::getRef(objectRefKey(fPath,paramsJson))); the per-pixel loop calls
+               ObjectMask::coverage. objectRefKey lives in the first anon namespace (before
+               buildMaskBuffer) so both it and ensureObjectMask share it. Absent ref => no effect.
+               BRUSH UI WIRED (ImageView): the Object tool is a FREEHAND LASSO, not a stamping brush --
+               the user drags a rough outline (maskObjLasso, output-normalized points via
+               maskViewportToNorm), drawObjectMask renders it live (viewport coords, op-coloured, faint
+               fill until the SAM coverage exists), and mouseRelease emits {"brush":{"poly":[[x,y],...]}}
+               through maskGeometryChanged -> DevelopProperties::setActiveMaskParams -> paramsChanged,
+               which runs ensureObjectMask (encode once + decode the fill) and refreshes maskLayerTint.
+               State: maskObjLasso/maskObjDrawing (imageview.h); handlers in mousePress/Move/Release +
+               beginMaskEdit(restore stored poly)/endMaskEdit(clear); maskHitTest returns -1 for Object;
+               leaveEvent keeps the overlay mid-lasso. The decoded cutout shows via maskLayerTint (built
+               by MW, NOT hover-gated); the lasso is only the editing affordance, so Object is NOT in
+               maskIsContent() and needs no per-tool content preview.
+               DOCK ROWS WIRED (developproperties.cpp): maskToolName/FromName know Object; showMaskMenu
+               offers Add/Subtract Object Mask (loops now bound to MaskTool::Object); the maskEditBegin
+               dispatcher includes Object so selecting it activates the ImageView lasso AND fires
+               onAiMaskEditBegin (warms the encoder); the tool's settings rows are the generic Feather +
+               Invert (Object falls through the row-builder else, like Subject/Sky); defaultMaskParams
+               returns empty (no lasso yet). NOT added to the stackJob contentDerived list on purpose --
+               an undrawn Object mask (empty params) SHOULD be dropped from the render like an unplaced
+               gradient; once the lasso is drawn its params are non-empty and it composites.
+               Full loop closes via existing signals: lasso release -> maskGeometryChanged ->
+               setActiveMaskParams -> paramsChanged -> {updateMaskOverlayTint -> ensureObjectMask ->
+               buildMaskBuffer tint} + {developParamsChange -> masked render}.
+               MODELS + EXPORT WIRED: ReleaseExtras/tools/export_sam2.{py,sh} produce sam2_encoder.onnx
+               (as-is) + sam2_decoder.onnx (fixed-shape: pins prompt dims 1 label/2 points + onnxsim
+               constant-fold; prints Shape=0 on success). CMake stages both like u2net/skyseg/midas
+               (warn-if-absent; bundled into MacOS/ on mac, copied beside Winnow.exe on Windows). The
+               produced pair was verified to load+run under cv::dnn (enc ~1s, dec ~43ms). See
+               ReleaseExtras/tools/README.md. Loader expects the names sam2_encoder/decoder.onnx.
+               PENDING: full-app build verify; live end-to-end test; Windows confirm. NOTE buildMaskBuffer
+               runs off the GUI thread; ObjectMask get/putRef are QMutex-guarded.
+               Model quality validated offline (box + brush) on a real photo; the brush dense-prompt
+               path fixes the box-only occluder weakness (IoU 0.92->0.99).
              - LIFECYCLE / FLUSH: MW::fileSelectionChange calls setCurrentImage; after the loupe
                pixmap is shown (both the cache-hit path and MW::refreshViewsOnCacheChange) MW::
                applyDevelopPreviewIfEdited renders the saved edits over an edited image (no-op for

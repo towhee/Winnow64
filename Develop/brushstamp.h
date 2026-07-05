@@ -13,7 +13,9 @@
 
     Stroke JSON: { pts:[x0,y0,x1,y1,...] normalized output coords, size, feather, flow (0..100),
                    erase, autoMask }. size = diameter as % of the image long edge (radius =
-    size/200 * longEdge). feather is the dab edge softness fraction (feather/100).
+    size/200 * longEdge = the OUTER extent). feather (feather/100) softens INWARD Lightroom-style:
+    full-coverage core out to radius*(1-feather/100), smootherstep falloff to 0 at radius -- so
+    feather=0 is a crisp edge at the size circle and feather=100 is fully soft (see coverage()).
 */
 
 #include <vector>
@@ -57,6 +59,37 @@ inline std::shared_ptr<const Guide> getGuide(const QString &path)
     return it != guideStore().end() ? it.value() : nullptr;
 }
 
+/* ---- SAM auto-mask field (2nd auto-mask mode: "AI") ----
+   For the "AI" auto-mask a stroke is confined to the SAM-segmented object under its START point,
+   rather than to a luminance band. That object coverage is a 0..1 field in output-normalized space
+   -- the same shape as a luminance Guide -- so it reuses the Guide struct. Unlike the single per-
+   image luminance guide, each AI stroke has its OWN field (keyed by its seed point), decoded by
+   MW::ensureBrushSamField (SAM 2 point prompt) and read here by rasterize(). Populated on the GUI
+   thread; read (getSamField) from the render worker -- both mutex-guarded. Reuses guideMutex. */
+inline QHash<QString, std::shared_ptr<const Guide>> &samFieldStore()
+{ static QHash<QString, std::shared_ptr<const Guide>> s; return s; }
+
+/* Stable key for a stroke's SAM field: path + rounded seed point (must match between the ImageView
+   preview and the develop render so they sample the SAME field). */
+inline QString samFieldKey(const QString &path, double onx, double ony)
+{
+    return path + "|sam|" + QString::number(onx, 'f', 4) + "," + QString::number(ony, 'f', 4);
+}
+
+inline void putSamField(const QString &key, std::shared_ptr<const Guide> f)
+{
+    QMutexLocker lk(&guideMutex());
+    if (samFieldStore().size() > 16) samFieldStore().clear();   // crude cap (a few MB each)
+    samFieldStore().insert(key, std::move(f));
+}
+
+inline std::shared_ptr<const Guide> getSamField(const QString &key)
+{
+    QMutexLocker lk(&guideMutex());
+    auto it = samFieldStore().find(key);
+    return it != samFieldStore().end() ? it.value() : nullptr;
+}
+
 /* Per-stroke auto-mask state: limit a dab to pixels whose luminance is near the stroke-start
    luminance (lumRef), within tol. degrees maps a TARGET pixel back to output-normalized (0 for the
    output-space preview; the render's EXIF degrees for work space). */
@@ -67,6 +100,7 @@ struct AutoMaskCtx {
     float  tol = 0.15f;
     int    degrees = 0;
     bool   on = false;
+    bool   aiField = false;    // guide is a SAM object coverage field (0..1), not a luminance map
 };
 
 inline float guideLumAt(const AutoMaskCtx &a, double onx, double ony)
@@ -86,6 +120,8 @@ inline float edgeFactor(const AutoMaskCtx &a, int x, int y, int w, int h)
         case 270: onx = tny;       ony = 1.0 - tnx; break;
         default:  onx = tnx;       ony = tny;       break;
     }
+    if (a.aiField)                       // AI mode: the field IS the confinement coverage (0..1)
+        return guideLumAt(a, onx, ony);
     const double d = std::abs(double(guideLumAt(a, onx, ony)) - double(a.lumRef));
     const double half = a.tol * 0.5;
     if (d <= half)    return 1.0f;
@@ -95,14 +131,17 @@ inline float edgeFactor(const AutoMaskCtx &a, int x, int y, int w, int h)
     return float(1.0 - s);
 }
 
-/* Coverage 0..1 of a dab at distance `dist` (px) from centre: solid core out to radius*(1-f), then
-   a smootherstep falloff to 0 at radius. */
+/* Coverage 0..1 of a dab at distance `dist` (px) from centre -- LIGHTROOM model: `radius` is the
+   OUTER extent (the brush SIZE; coverage reaches 0 there and does NOT grow with feather). Feather
+   f=feather/100 softens INWARD: the full-coverage core boundary is radius*(1-f), so f=0 is a hard
+   edge at radius and f=1 is fully soft (core collapses to the centre). Smootherstep falloff from the
+   core to the outer edge. (Cursor's inner ring = the half-coverage radius radius*(1-f/2).) */
 inline float coverage(double dist, double radius, double f)
 {
-    if (radius <= 0.0) return 0.0f;
-    const double inner = radius * (1.0 - f);
-    if (dist <= inner)  return 1.0f;
-    if (dist >= radius) return 0.0f;
+    if (radius <= 0.0)   return 0.0f;
+    if (dist >= radius)  return 0.0f;
+    const double inner = radius * (1.0 - f);               // full-coverage core boundary
+    if (dist <= inner)   return 1.0f;
     double s = (dist - inner) / (radius - inner);          // 0..1 across the feather band
     s = s * s * s * (s * (s * 6.0 - 15.0) + 10.0);         // smootherstep
     return float(1.0 - s);
@@ -114,7 +153,7 @@ inline void dabMax(float *cov, int w, int h, double cx, double cy, double radius
                    const AutoMaskCtx *am = nullptr)
 {
     if (radius <= 0.0) return;
-    const int x0 = std::max(0,     int(std::floor(cx - radius)));
+    const int x0 = std::max(0,     int(std::floor(cx - radius)));   // outer extent = radius (LR)
     const int x1 = std::min(w - 1, int(std::ceil (cx + radius)));
     const int y0 = std::max(0,     int(std::floor(cy - radius)));
     const int y1 = std::min(h - 1, int(std::ceil (cy + radius)));
@@ -176,7 +215,8 @@ inline QPointF point(const QJsonArray &pts, int i, int degrees, int w, int h)
    w*h buffer for the per-stroke coverage. `guide` (optional) enables auto-mask on strokes flagged
    for it. */
 inline void rasterize(const QJsonArray &strokes, float *mask, std::vector<float> &scratch,
-                      int w, int h, int degrees, const Guide *guide = nullptr)
+                      int w, int h, int degrees, const Guide *guide = nullptr,
+                      const QString &fPath = QString())
 {
     if (w <= 0 || h <= 0) return;
     const double longEdge = std::max(w, h);
@@ -186,16 +226,29 @@ inline void rasterize(const QJsonArray &strokes, float *mask, std::vector<float>
         const QJsonArray pts = so.value("pts").toArray();
         if (pts.size() < 2) continue;
         const double size = so.value("size").toDouble(20);
-        const double f    = std::clamp(so.value("feather").toDouble(50) / 100.0, 0.0, 1.0);
-        const double flow = std::clamp(so.value("flow").toDouble(50) / 100.0, 0.0, 1.0);
+        const double f    = std::clamp(so.value("feather").toDouble(0) / 100.0, 0.0, 1.0);
+        const double flow = std::clamp(so.value("flow").toDouble(100) / 100.0, 0.0, 1.0);
         const bool  erase = so.value("erase").toBool(false);
         const double radius = (size / 200.0) * longEdge;
 
         AutoMaskCtx am;
-        if (so.value("autoMask").toBool(false) && guide && guide->valid()) {
-            am.on = true; am.guide = guide->lum.data(); am.gw = guide->w; am.gh = guide->h;
-            am.degrees = degrees;
-            am.lumRef = guideLumAt(am, pts.at(0).toDouble(), pts.at(1).toDouble());
+        std::shared_ptr<const Guide> samHold;    // keep the AI field alive across this stroke's dabs
+        if (so.value("autoMask").toBool(false)) {
+            if (so.value("autoMaskMode").toString("lum") == "ai") {
+                /* AI mode: confine to the SAM object under the stroke's seed (per-stroke field). If
+                   the field is not decoded yet (cold render), paint unconfined. */
+                samHold = getSamField(samFieldKey(fPath, pts.at(0).toDouble(), pts.at(1).toDouble()));
+                if (samHold && samHold->valid()) {
+                    am.on = true; am.aiField = true;
+                    am.guide = samHold->lum.data(); am.gw = samHold->w; am.gh = samHold->h;
+                    am.degrees = degrees;
+                }
+            }
+            else if (guide && guide->valid()) {
+                am.on = true; am.guide = guide->lum.data(); am.gw = guide->w; am.gh = guide->h;
+                am.degrees = degrees;
+                am.lumRef = guideLumAt(am, pts.at(0).toDouble(), pts.at(1).toDouble());
+            }
         }
         const AutoMaskCtx *amp = am.on ? &am : nullptr;
 

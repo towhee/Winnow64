@@ -581,6 +581,7 @@ private slots:
     void toggleDevelopScopes();
     /* Show/hide the Develop Transform panel (editor-bar toggle / "R" shortcut); persists. */
     void toggleDevelopTransform();
+    void toggleMaskOverlay();           // "M": hide/show the active layer mask overlay tint
     /* Enter/exit the crop editor: enter shows the full frame + overlay (geometry suppressed); exit
        commits the crop into the image's EditStack geometry and re-renders the cropped result. */
     void enterDevelopCrop();
@@ -1004,6 +1005,9 @@ private:
     QAction *sortFocalLengthAction;
     QAction *sortTitleAction;
 
+    // Develop
+    QAction *developAction;
+
     // Embellish
     QAction *embelNewTemplateAction;
     QAction *embelExportAction;
@@ -1055,6 +1059,7 @@ private:
     QAction *embelDockVisibleAction;
     QAction *developDockVisibleAction;
     QAction *developTransformAction;    // "R": toggle the Develop Transform (crop) panel
+    QAction *toggleMaskOverlayAction;   // "M": hide/show the current layer's mask overlay tint
 //    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
@@ -1194,6 +1199,10 @@ private:
     DockWidget *propertiesDock;
     DockWidget *embelDock;
     DockWidget *developDock;
+    /* The dock's normal features, captured at creation so setDevelopPanelEnabled() can
+       strip them (lock float/move) while disabled and restore them when re-enabled. */
+    QDockWidget::DockWidgetFeatures developDockFeatures = QDockWidget::NoDockWidgetFeatures;
+    void setDevelopPanelEnabled(bool on);   // enable/disable the whole Develop dock + panel
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
@@ -1280,6 +1289,13 @@ private:
        has adjusted a slider. Connected to DevelopProperties::maskEditBegin; no-op for other tools. */
     void onAiMaskEditBegin(int tool, int op, bool inverted, const QString &paramsJson,
                            double feather);
+    /* ImageView is starting a Brush stroke in "AI" auto-mask mode: synchronously decode the SAM
+       object under the stroke's seed point so the live preview can confine the stroke to it.
+       Connected to ImageView::maskBrushSamFieldRequested (direct, same thread). */
+    void onBrushSamFieldRequested(double onx, double ony);
+    /* Pre-warm the SAM 2 encoder for the current image when Brush "AI" auto-mask is enabled via the
+       dock checkbox (the tool is already active, so maskEditBegin does not re-fire). */
+    void warmBrushSamEncoder();
     /* Rebuild (or clear) the whole-layer mask coverage tint shown in the loupe while a mask tool is
        expanded: composite the active layer's Add/Subtract tools (buildMaskBuffer) into a red tint
        and hand it to ImageView. Cheap (capped resolution); a no-op when no tool is expanded. */
@@ -1299,6 +1315,29 @@ private:
                          const EditParams &base, int degrees);
     QString developDepthRefPath;
     class DepthPredictor *depthPredictor = nullptr;
+    /* AI "Object Mask" (SAM 2): a PROMPTABLE brush mask. Two-phase, unlike the other AI masks:
+       ensureObjectMask encodes the developed base ONCE per image (cached in objectMaskPredictor)
+       then decodes the component's brush stroke (paramsJson) into an ObjectRef. Because the coverage
+       DEPENDS on the brush, the ObjectRef is keyed by path + brush signature (objectRefKey), so
+       several object masks on one image coexist. Lazily loads sam2_encoder/decoder.onnx. */
+    void ensureObjectMask(const QString &fPath, const WorkingImage &work,
+                          const EditParams &base, int degrees, const QString &paramsJson);
+    /* Shared with the Brush "AI" auto-mask: lazily load the predictor and ensure the SAM 2 encoder
+       embedding for fPath is cached (Phase 1). Returns false + leaves nothing cached on failure;
+       outputs the oriented guide dims. */
+    bool ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, int &gw, int &gh);
+    /* Brush "AI" auto-mask (2nd auto-mask mode): decode the SAM 2 object under a stroke's seed point
+       (output-normalized) and register it in the BrushStamp SAM-field store, so the brush rasterizer
+       (preview + render) confines the stroke to that object. Reuses objectMaskPredictor's encoder. */
+    void ensureBrushSamField(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, double seedOnx, double seedOny);
+    /* Ensure the SAM field for every AI-auto-mask stroke in a Brush component's paramsJson (render
+       pre-pass; a no-op for luminance/plain strokes and already-decoded fields). */
+    void ensureBrushSamFields(const QString &fPath, const WorkingImage &work,
+                              const EditParams &base, int degrees, const QString &paramsJson);
+    QString developObjectImagePath;   // path whose encoder embedding is cached in objectMaskPredictor
+    class ObjectMaskPredictor *objectMaskPredictor = nullptr;
     Preferences *pref = nullptr;
     StressTest *stressTest;
     QFrame *embelFrame;

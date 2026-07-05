@@ -8,9 +8,11 @@
 #include "Develop/subjectmask.h"
 #include "Develop/skymask.h"
 #include "Develop/depthmask.h"
+#include "Develop/objectmask.h"
 #include "Utilities/subjectpredictor.h"
 #include "Utilities/skypredictor.h"
 #include "Utilities/depthpredictor.h"
+#include "Utilities/objectmaskpredictor.h"
 #include "Develop/Transform/croptransform.h"
 #include <QMutex>
 #include <memory>
@@ -306,6 +308,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createMessageView();
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
+
+    /* Apply the persisted Develop enabled state now that BOTH the dock (createDocks) and
+       developAction (createActions) exist -- createDocks runs first, so this cannot live in
+       createDevelopDock. */
+    setDevelopPanelEnabled(developAction->isChecked());
 
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
@@ -5159,7 +5166,7 @@ brushRasterCached(const QString &paramsJson, int w, int h, int degrees, const QS
     const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
                                    .object().value("strokes").toArray();
     const auto guide = BrushStamp::getGuide(fPath);     // auto-mask guide (same one the preview used)
-    BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees, guide.get());
+    BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees, guide.get(), fPath);
     if (cacheable) {
         QMutexLocker lk(&g_brushCacheMutex);
         if (g_brushCache.size() > 8) g_brushCache.clear();      // crude cap (proxy-size entries)
@@ -5178,6 +5185,8 @@ struct CompDesc {
     bool subjectBaseInvert = false; // Background: select 1 - subject saliency
     bool isSky = false;
     bool isDepth = false;           // Depth Range: band [rlo,rhi] over the depth field
+    bool isObject = false;          // Object Mask (SAM 2): per-brush ObjectRef (not shared by path)
+    std::shared_ptr<const ObjectMask::ObjectRef> objRef;  // this component's decoded coverage
     MaskComp param;                                       // parametric
     std::shared_ptr<const std::vector<float>> brush;      // brush coverage (raw, pre-invert)
     int  op = 0;
@@ -5189,6 +5198,15 @@ struct CompDesc {
     std::vector<RangeMask::ColorSample> samples;          // colour samples (opponent space)
     /* Subject (AI saliency) component -- coverage is the shared SubjectRef; feather/inverted above. */
 };
+
+/* ObjectRef store key: path + a hash of the brush blob. Unlike Subject/Sky/Depth (one param-
+   independent ref per path), an object mask's coverage depends on its brush, so each component's
+   brush gets its own ref and several object masks on one image coexist. MW::ensureObjectMask
+   registers under this key; buildMaskBuffer's object sampler looks it up by the SAME key. */
+QString objectRefKey(const QString &fPath, const QString &paramsJson)
+{
+    return fPath + "|obj|" + QString::number(qHash(paramsJson));
+}
 
 /* Rasterize the layer's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
    it aligns with the linear blend before developComposite applies the EXIF rotation. Each pixel is
@@ -5297,6 +5315,19 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
             d.rhi       = o.value("hi").toDouble(0.5);
             comps.append(d);
         }
+        else if (m.tool == int(MaskTool::Object)) {
+            /* Per-brush ref (keyed path+brush), built by MW::ensureObjectMask. Absent (not yet
+               decoded, or this brush empty) => no effect, like an unbuilt SubjectRef. */
+            auto objRef = ObjectMask::getRef(objectRefKey(fPath, m.paramsJson));
+            if (!objRef || !objRef->valid()) continue;
+            CompDesc d;
+            d.isObject  = true;
+            d.objRef    = objRef;
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
+            comps.append(d);
+        }
         else {
             const MaskComp g = parseMaskComp(m, Wo, Ho);
             if (!g.valid) continue;
@@ -5344,6 +5375,8 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
                         c = SkyMask::coverage(*skyp, onx, ony, float(d.feather), d.inverted);
                     else if (d.isDepth)
                         c = DepthMask::coverage(*depthp, onx, ony, d.rlo, d.rhi, d.feather, d.inverted);
+                    else if (d.isObject)
+                        c = ObjectMask::coverage(*d.objRef, onx, ony, float(d.feather), d.inverted);
                     else           c = evalMaskComp(d.param, onx, ony, Wo, Ho);  // invert inside
                     if (d.op == 1) m *= (1.0f - c);     // Subtract
                     else           m = qMax(m, c);      // Add (Union)
@@ -5446,6 +5479,16 @@ bool stackHasDepthMask(const DevelopProperties::StackRenderJob &job)
     for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
         for (const MaskComponent &m : L.masks)
             if (m.tool == int(MaskTool::Depth)) return true;
+    return false;
+}
+
+/* True if any enabled layer carries an AI Object mask -- each needs its brush decoded into an
+   ObjectRef (MW::ensureObjectMask) before the composite. */
+bool stackHasObjectMask(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
+        for (const MaskComponent &m : L.masks)
+            if (m.tool == int(MaskTool::Object)) return true;
     return false;
 }
 } // namespace
@@ -5628,8 +5671,172 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
     developDepthRefPath = fPath;
 }
 
+namespace {
+/* Rasterize the object brush from paramsJson into a W*H coverage (row-major, 0/1, output-oriented).
+   INTERIM CONTRACT (the brush UI must emit this): {"brush":{"poly":[[x,y],...]}} where x,y are
+   output-normalized 0..1 -- the filled interior of the user's stroke. Returns false if absent. */
+bool parseObjectBrush(const QString &paramsJson, int W, int H, std::vector<float> &cov)
+{
+    if (paramsJson.isEmpty() || W <= 0 || H <= 0) return false;
+    const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    const QJsonArray poly = o.value("brush").toObject().value("poly").toArray();
+    if (poly.size() < 3) return false;
+    QPolygonF pts;
+    for (const QJsonValue &pv : poly) {
+        const QJsonArray p = pv.toArray();
+        if (p.size() < 2) continue;
+        pts << QPointF(p.at(0).toDouble() * W, p.at(1).toDouble() * H);
+    }
+    if (pts.size() < 3) return false;
+
+    QImage m(W, H, QImage::Format_Grayscale8);
+    m.fill(0);
+    QPainter g(&m);
+    g.setRenderHint(QPainter::Antialiasing, false);
+    g.setPen(Qt::NoPen); g.setBrush(Qt::white);
+    g.drawPolygon(pts);
+    g.end();
+
+    cov.resize(size_t(W) * size_t(H));
+    for (int y = 0; y < H; ++y) {
+        const uchar *line = m.constScanLine(y);
+        float *d = cov.data() + size_t(y) * size_t(W);
+        for (int x = 0; x < W; ++x) d[x] = line[x] ? 1.0f : 0.0f;
+    }
+    return true;
+}
+} // namespace
+
+void MW::ensureObjectMask(const QString &fPath, const WorkingImage &work,
+                          const EditParams &base, int degrees, const QString &paramsJson)
+{
+/*
+    Build the SAM 2 "Object Mask" coverage for one brush component. TWO-PHASE (unlike the other AI
+    masks): the heavy encoder runs ONCE per image (cached in objectMaskPredictor, keyed by path --
+    the ~1s cost), then the light decoder runs PER brush edit (~40ms), refining the painted-and-
+    filled stroke to the object edge. The result is registered under objectRefKey(path, brush) so it
+    is a no-op once decoded and several object masks per image coexist. Synchronous on the GUI thread
+    with a busy cursor. Lazily loads sam2_encoder/decoder.onnx (the decoder MUST be the fixed-shape
+    export -- see ObjectMaskPredictor). A component with no brush yet just warms the encoder.
+*/
+    if (G::isLogger) G::log("MW::ensureObjectMask");
+    const QString refKey = objectRefKey(fPath, paramsJson);
+    if (ObjectMask::getRef(refKey)) return;                 // this brush already decoded
+
+    /* Phase 1: lazily load the predictor + encode the base ONCE per image (cached). */
+    int gw, gh;
+    if (!ensureObjectEncoder(fPath, work, base, degrees, gw, gh)) return;
+
+    /* Phase 2: decode the brush stroke. No stroke yet -> encoder is warmed, nothing to register. */
+    std::vector<float> brushCov;
+    if (!parseObjectBrush(paramsJson, gw, gh, brushCov)) return;
+
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    auto r = std::make_shared<ObjectMask::ObjectRef>();
+    const bool ok = objectMaskPredictor->refine(brushCov, gw, gh, r->cov, r->w, r->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !r->valid()) return;
+
+    ObjectMask::putRef(refKey, r);
+}
+
+bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, int &gw, int &gh)
+{
+/*
+    Phase 1 shared by the Object Mask and the Brush "AI" auto-mask: lazily load the SAM 2 encoder+
+    decoder (next to u2net.onnx in the executable dir) and encode the developed base ONCE per image,
+    caching image_embed + high_res_feats in objectMaskPredictor (keyed by developObjectImagePath).
+    ~1s CPU. Outputs the oriented guide dims. Returns false if the model is missing or encode failed.
+*/
+    if (!objectMaskPredictor) {
+        const QDir dir(QCoreApplication::applicationDirPath());
+        objectMaskPredictor = new ObjectMaskPredictor(dir.filePath("sam2_encoder.onnx"),
+                                                      dir.filePath("sam2_decoder.onnx"), 1024);
+        if (!objectMaskPredictor->isLoaded())
+            qWarning("Object Mask: sam2_encoder/decoder.onnx not found or failed to load in %s",
+                     dir.absolutePath().toUtf8().constData());
+    }
+    if (!objectMaskPredictor->isLoaded()) return false;
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    gw = small.width; gh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(gw, gh);
+
+    if (developObjectImagePath != fPath || !objectMaskPredictor->hasImage()) {
+        const QImage img = developComposite(small, base, degrees, /*fullRes*/true, gw, gh);
+        if (img.isNull()) return false;
+        QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+        const bool okEnc = objectMaskPredictor->setImage(img);
+        QGuiApplication::restoreOverrideCursor();
+        if (!okEnc) return false;
+        developObjectImagePath = fPath;
+    }
+    return true;
+}
+
+void MW::ensureBrushSamField(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, double seedOnx, double seedOny)
+{
+/*
+    Brush "AI" auto-mask (2nd auto-mask mode). Decode the SAM 2 object under a stroke's seed point
+    (a single positive point prompt) and register the coverage as a BrushStamp SAM field keyed by
+    the seed, so BrushStamp::rasterize (preview AND render) confines the stroke to that object.
+    Two-phase like ensureObjectMask, sharing the encoder embedding via ensureObjectEncoder. A no-op
+    once this seed is decoded. GUI thread (busy cursor); ~40ms decode after the one-time encode.
+*/
+    if (G::isLogger) G::log("MW::ensureBrushSamField");
+    const QString key = BrushStamp::samFieldKey(fPath, seedOnx, seedOny);
+    if (BrushStamp::getSamField(key)) return;               // this stroke already decoded
+
+    int gw, gh;
+    if (!ensureObjectEncoder(fPath, work, base, degrees, gw, gh)) return;
+
+    auto field = std::make_shared<BrushStamp::Guide>();
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    const bool ok = objectMaskPredictor->refinePoint(seedOnx, seedOny, field->lum, field->w, field->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !field->valid()) return;
+
+    BrushStamp::putSamField(key, field);
+}
+
+void MW::ensureBrushSamFields(const QString &fPath, const WorkingImage &work,
+                              const EditParams &base, int degrees, const QString &paramsJson)
+{
+    /* Render pre-pass: ensure a SAM field exists for every AI-auto-mask stroke in a Brush component,
+       so the render confines them exactly as the preview did. No-op for luminance/plain strokes. */
+    const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
+                                   .object().value("strokes").toArray();
+    for (const QJsonValue &sv : strokes) {
+        const QJsonObject so = sv.toObject();
+        if (!so.value("autoMask").toBool(false)) continue;
+        if (so.value("autoMaskMode").toString("lum") != "ai") continue;
+        const QJsonArray pts = so.value("pts").toArray();
+        if (pts.size() < 2) continue;
+        ensureBrushSamField(fPath, work, base, degrees, pts.at(0).toDouble(), pts.at(1).toDouble());
+    }
+}
+
+void MW::onBrushSamFieldRequested(double onx, double ony)
+{
+/*
+    ImageView started a Brush stroke in AI auto-mask mode. Decode the SAM object under the seed now
+    (synchronous -- direct-connected on the GUI thread), so the caller can read the field back from
+    the BrushStamp store immediately and confine the live stroke. Same prep as onAiMaskEditBegin.
+*/
+    if (G::isLogger) G::log("MW::onBrushSamFieldRequested");
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;
+    const auto mj = developProperties->stackJob();
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    ensureBrushSamField(fPath, *work, mj.base, degrees, onx, ony);
+}
+
 void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
-                           const QString & /*paramsJson*/, double /*feather*/)
+                           const QString &paramsJson, double /*feather*/)
 {
 /*
     A mask tool became active in the dock. For an AI tool (Subject/Background/Sky/Depth), build its
@@ -5640,7 +5847,13 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     const bool needsSubject = (tool == int(MaskTool::Subject) || tool == int(MaskTool::Background));
     const bool isSky        = (tool == int(MaskTool::Sky));
     const bool isDepth      = (tool == int(MaskTool::Depth));
-    if (!needsSubject && !isSky && !isDepth) return;
+    const bool isObject     = (tool == int(MaskTool::Object));
+    /* Brush in "AI" auto-mask mode: warm the SAM 2 encoder now (encode-only) so the first stroke's
+       decode is instant instead of paying the ~1s encode. */
+    const bool isBrushAi    = (tool == int(MaskTool::Brush) &&
+                               QJsonDocument::fromJson(paramsJson.toUtf8()).object()
+                                   .value("autoMaskMode").toString("lum") == "ai");
+    if (!needsSubject && !isSky && !isDepth && !isObject && !isBrushAi) return;
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
     auto work = WorkingImageCache::instance().get(fPath);
@@ -5649,8 +5862,28 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     if (needsSubject)   ensureSubjectMask(fPath, *work, mj.base, degrees);   // Background = inverted subject
     else if (isSky)     ensureSkyMask(fPath, *work, mj.base, degrees);
-    else                ensureDepthMask(fPath, *work, mj.base, degrees);
+    else if (isDepth)   ensureDepthMask(fPath, *work, mj.base, degrees);
+    else if (isObject)  ensureObjectMask(fPath, *work, mj.base, degrees, paramsJson);  // warms encoder; decodes if a stroke exists
+    else { int gw, gh; ensureObjectEncoder(fPath, *work, mj.base, degrees, gw, gh); }   // isBrushAi: warm only
     imageView->viewport()->update();   // heal the tint now the ref exists
+}
+
+void MW::warmBrushSamEncoder()
+{
+/*
+    The Brush "AI edge (SAM)" checkbox was just turned on (the tool is already active, so maskEditBegin
+    won't re-fire). Warm the shared SAM 2 encoder for the current image now, so the first AI stroke
+    only pays the ~40ms decode. Encode is cached, so this is a no-op if already warm.
+*/
+    if (G::isLogger) G::log("MW::warmBrushSamEncoder");
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;
+    const auto mj = developProperties->stackJob();
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    int gw, gh;
+    ensureObjectEncoder(fPath, *work, mj.base, degrees, gw, gh);
 }
 
 void MW::updateMaskOverlayTint()
@@ -5688,6 +5921,14 @@ void MW::updateMaskOverlayTint()
     if (needSubject) ensureSubjectMask(fPath, *work, base, degrees);
     if (needSky)     ensureSkyMask(fPath, *work, base, degrees);
     if (needDepth)   ensureDepthMask(fPath, *work, base, degrees);
+    /* Object masks are per-brush, so build each one from its own component params. */
+    for (const MaskComponent &m : masks)
+        if (m.tool == int(MaskTool::Object))
+            ensureObjectMask(fPath, *work, base, degrees, m.paramsJson);
+    /* Brush "AI" auto-mask strokes need their SAM object fields before the tint composites. */
+    for (const MaskComponent &m : masks)
+        if (m.tool == int(MaskTool::Brush))
+            ensureBrushSamFields(fPath, *work, base, degrees, m.paramsJson);
 
     /* Composite at a capped resolution (geometry is normalized, so any size is faithful) -- the tint
        is smooth-scaled onto the image, so a couple of MP is ample and keeps live drags cheap. */
@@ -5793,6 +6034,16 @@ void MW::renderDevelopPreview(bool fullRes)
     if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.base, degrees);
     if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.base, degrees);
     if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.base, degrees);
+    if (stackHasObjectMask(mj))
+        for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
+            for (const MaskComponent &m : L.masks)
+                if (m.tool == int(MaskTool::Object))
+                    ensureObjectMask(fPath, *work, mj.base, degrees, m.paramsJson);
+    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM object field before the render. */
+    for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
+        for (const MaskComponent &m : L.masks)
+            if (m.tool == int(MaskTool::Brush))
+                ensureBrushSamFields(fPath, *work, mj.base, degrees, m.paramsJson);
 
     const QImage out = developCompositeStack(*srcImg, mj, degrees, fullRes, fw, fh, fPath);
     if (out.isNull()) return;
@@ -5908,6 +6159,16 @@ void MW::renderDevelopFullResAsync()
     if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.base, degrees);
     if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.base, degrees);
     if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.base, degrees);
+    if (stackHasObjectMask(mj))
+        for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
+            for (const MaskComponent &m : L.masks)
+                if (m.tool == int(MaskTool::Object))
+                    ensureObjectMask(fPath, *work, mj.base, degrees, m.paramsJson);
+    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM object field before the render. */
+    for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
+        for (const MaskComponent &m : L.masks)
+            if (m.tool == int(MaskTool::Brush))
+                ensureBrushSamFields(fPath, *work, mj.base, degrees, m.paramsJson);
 
     developFullResInFlight = true;
     std::shared_ptr<const WorkingImage> src = work;   // keep alive across the background render
@@ -6047,6 +6308,17 @@ void MW::toggleDevelopTransform()
         if (developTransformVisible) enterDevelopCrop();
         else                         exitDevelopCrop();
     }
+}
+
+void MW::toggleMaskOverlay()
+{
+/*
+    "M": hide/show the current layer's mask overlay tint (the red coverage visualisation) so the user
+    can see the developed image without it while still editing. The visibility state lives in
+    ImageView (per mask-edit session); this just flips it. No-op when no mask tool is active.
+*/
+    if (G::isLogger) G::log("MW::toggleMaskOverlay");
+    if (imageView) imageView->toggleMaskTint();
 }
 
 void MW::enterDevelopCrop()

@@ -1,0 +1,4 @@
+# Build-time artifacts of export_sam2 (downloads + throwaway venv); the .onnx outputs land in
+# ReleaseExtras/ (also untracked, like the other large models).
+_sam2_dl/
+_sam2_venv/

@@ -294,3 +294,13 @@ menu that includes the removed button actions.
 OpenCV DNN is the ONNX runtime here (not onnxruntime), which constrains model choice.
 
 hasSensorDecoder
+
+Mode: View / Develop
+Raw: Sensor / Preview
+
+Add two buttons to the Develop Panel title bar: "Raw" and "Rendered".  When the selected image is not a raw format then disable "Raw"
+ and Select "Rendered".  This is to give the user the choice to edit the raw version or the embedded preview when it is a raw format.
+ When the user selects "Raw" then run the raw decoder, otherwise run the rendered decoder (ie JPG or HEIC etc). Also, add Raw or Rendered
+ to the JSON edit data saved to the xmp sidecar.
+
+Create a 16 px button (developBtn) with 3 thick horizontal lines (red, green, blue).
