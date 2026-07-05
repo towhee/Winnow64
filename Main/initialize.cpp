@@ -1765,6 +1765,8 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::maskBrushSettingsChanged, imageView, &ImageView::setMaskBrushSettings);
     connect(imageView, &ImageView::maskBrushSizeRequested, developProperties, &DevelopProperties::setActiveBrushSize);
     connect(imageView, &ImageView::maskBrushAutoMaskRequested, developProperties, &DevelopProperties::setActiveBrushAutoMask);
+    connect(imageView, &ImageView::maskBrushSamFieldRequested, this, &MW::onBrushSamFieldRequested);
+    connect(developProperties, &DevelopProperties::maskBrushAiEnabled, this, &MW::warmBrushSamEncoder);
 
     /* Develop preview render timers (see MW::developParamsChange). The proxy timer coalesces a
        burst of slider ticks into one screen-resolution render; the full-res timer fires once the
@@ -1786,6 +1788,7 @@ void MW::createDevelopDock()
     dockTextNames << developDockTabText;
     developDock = new DockWidget(developDockTabText, "DevelopDock", this);  // Develop
     developDock->setObjectName("DevelopDock");
+    developDockFeatures = developDock->features();   // remember for setDevelopPanelEnabled()
 
     /* Dock content = live scopes strip (histogram + vectorscope) pinned above the property tree.
        The scopes keep a fixed height; developProperties takes the remaining (stretch) space.
@@ -1943,6 +1946,18 @@ void MW::createDevelopDock()
 
     // Spacer
     developTitleLayout->addSpacing(5);
+}
+
+void MW::setDevelopPanelEnabled(bool on)
+{
+    if (G::isLogger) G::log("MW::setDevelopPanelEnabled");
+    if (!developDock) return;
+    developDock->setEnabled(on);
+    /* setEnabled() greys the frame but does NOT stop a title-bar double-click from floating
+       the dock (or a drag from moving it) -- that is governed by features(), not enabled
+       state. So strip the features while disabled and restore the captured set when on. */
+    developDock->setFeatures(on ? developDockFeatures : QDockWidget::NoDockWidgetFeatures);
+    if (developProperties) developProperties->setPanelEnabled(on);
 }
 
 void MW::developDockVisibilityChange()

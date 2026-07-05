@@ -1051,6 +1051,17 @@
        </property>
        <item>
         <property name="text">
+         <string>Develop</string>
+        </property>
+        <property name="text">
+         <string>D</string>
+        </property>
+        <property name="text">
+         <string>Enables / disables the Develop panel</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Nudge Slider</string>
         </property>
         <property name="text">
@@ -1102,6 +1113,17 @@
         </property>
         <property name="text">
          <string>Select Crop / Level / Warp; while the Transform panel has focus</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Mask Overlay</string>
+        </property>
+        <property name="text">
+         <string>M</string>
+        </property>
+        <property name="text">
+         <string>Hide / show the current layer mask overlay; while a mask tool is active</string>
         </property>
        </item>
       </item>

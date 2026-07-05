@@ -3,7 +3,7 @@
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 #include "Develop/Scopes/toneregionslider.h"
-
+#include <functional>
 /*
     See developproperties.h for an overview. Construction mirrors EmbelProperties:
     initialize tree behaviour, read the saved layer list, add the persistent Layers
@@ -171,6 +171,7 @@ void DevelopProperties::buildTree()
     updateMaskEdit();
     updateHiddenRows(QModelIndex());
     applyLayerItemsCollapsed();      // re-assert the '>' collapse (a rebuild resets row visibility)
+    if (!panelEnabled) applyItemsEnabled(false);   // keep captions greyed if the panel is disabled
 }
 
 void DevelopProperties::addCoreItems()
@@ -228,6 +229,45 @@ void DevelopProperties::bindLayerHeader(LayerHeader *header)
     /* Seed the dropdown + eye from the current stack. */
     refreshLayerCombo();
     refreshPreviewButtons();
+}
+
+void DevelopProperties::setPanelEnabled(bool enabled)
+{
+    if (G::isLogger) G::log("DevelopProperties::setPanelEnabled");
+    panelEnabled = enabled;
+
+    /* The tree view: blocks interaction and (because the sliders/checkboxes/combos are
+       persistent editors parented under the viewport) inherits a disabled look to every
+       control without clobbering their individual enabled flags. */
+    setEnabled(enabled);
+
+    /* The LayerHeader band (layer dropdown + buttons + eye) sits ABOVE the tree and is a
+       sibling widget, so it must be greyed explicitly. */
+    if (layerHeader) layerHeader->setEnabled(enabled);
+
+    applyItemsEnabled(enabled);
+}
+
+void DevelopProperties::applyItemsEnabled(bool enabled)
+{
+    /* Caption text is painted by PropertyDelegate from the per-item UR_isEnabled role, NOT
+       the widget's enabled state, so walk every row (recursively) and set the flag or the
+       captions stay black over the greyed controls. buildTree() calls this too, because a
+       rebuild recreates rows with the default (enabled) flag and would otherwise un-grey a
+       panel that is meant to stay disabled. */
+    std::function<void(const QModelIndex &)> setRows = [&](const QModelIndex &parent) {
+        const int rows = model->rowCount(parent);
+        for (int r = 0; r < rows; ++r) {
+            QModelIndex capIdx = model->index(r, CapColumn, parent);
+            model->setData(capIdx, enabled, UR_isEnabled);
+            setRows(capIdx);            // children hang off the caption (column 0) index
+        }
+        if (rows)
+            emit model->dataChanged(model->index(0, CapColumn, parent),
+                                    model->index(rows - 1, CapColumn, parent));
+    };
+    setRows(QModelIndex());
+    viewport()->update();
 }
 
 void DevelopProperties::onLayerSelected(const QString &name)
@@ -447,13 +487,14 @@ QString DevelopProperties::maskToolName(int tool)
     case MaskTool::Sky:             return "Sky Mask";
     case MaskTool::Background:      return "Background Mask";
     case MaskTool::Depth:           return "Depth Range Mask";
+    case MaskTool::Object:          return "Object Mask";
     }
     return "Mask";
 }
 
 int DevelopProperties::maskToolFromName(const QString &name)
 {
-    for (int t = 0; t <= int(MaskTool::Depth); ++t)
+    for (int t = 0; t <= int(MaskTool::Object); ++t)
         if (maskToolName(t) == name) return t;
     return int(MaskTool::LinearGradient);
 }
@@ -610,7 +651,7 @@ void DevelopProperties::showMaskMenu()
     /* Built fresh each click: Subtract is offered only once at least one tool exists (the first
        tool must Add -- there is nothing to subtract from an empty mask). */
     maskMenu->clear();
-    for (int t = 0; t <= int(MaskTool::Depth); ++t) {
+    for (int t = 0; t <= int(MaskTool::Object); ++t) {
         QAction *a = maskMenu->addAction("Add " + maskToolName(t));
         connect(a, &QAction::triggered, this, &DevelopProperties::newMask);
         if (t == int(MaskTool::Brush) || t == int(MaskTool::LuminanceRange))
@@ -618,7 +659,7 @@ void DevelopProperties::showMaskMenu()
     }
     if (!layer->masks.isEmpty()) {
         maskMenu->addSeparator();
-        for (int t = 0; t <= int(MaskTool::Depth); ++t) {
+        for (int t = 0; t <= int(MaskTool::Object); ++t) {
             QAction *a = maskMenu->addAction("Subtract " + maskToolName(t));
             connect(a, &QAction::triggered, this, &DevelopProperties::newMask);
             if (t == int(MaskTool::Brush) || t == int(MaskTool::LuminanceRange))
@@ -643,6 +684,7 @@ void DevelopProperties::newMask()
     m.op   = txt.startsWith("Subtract") ? int(MaskOp::Subtract) : int(MaskOp::Add);
     m.tool = maskToolFromName(txt.section(' ', 1));
     m.paramsJson = defaultMaskParams(m.tool);
+    if (m.tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush defaults to a crisp edge
     layer->masks.append(m);
     selectedMaskIndex = layer->masks.size() - 1;            // start editing the new tool
     dirty.insert(currentImagePath);
@@ -701,18 +743,22 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
         if (m.tool == int(MaskTool::Brush)) {
             addSlider("maskSize", "Size", "Brush diameter (% of the long edge).",
                       toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskFeather", "Feather", "Soften the brush edge.",
+            addSlider("maskFeather", "Feather", "Soft edge added OUTSIDE the brush size (0 = crisp).",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskFlow", "Flow", "How much each stroke builds up.",
                       toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
             addCheckbox("maskAutoMask", "Auto mask",
-                        "Limit the brush to similar-luminance areas (work in progress). Toggle with A.",
+                        "Limit the brush to the edge under the stroke start. Toggle with A.",
+                        toolIdx, "", false);
+            addCheckbox("maskAutoMaskAi", "AI edge (SAM)",
+                        "Auto mask mode: on = SAM object under the stroke start; off = similar-luminance band.",
                         toolIdx, "", false);
             addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
             setSliderReal("maskSize", brushNum(m.paramsJson, "size", 20));
             setSliderReal("maskFeather", m.feather);
-            setSliderReal("maskFlow", brushNum(m.paramsJson, "flow", 50));
+            setSliderReal("maskFlow", brushNum(m.paramsJson, "flow", 100));
             setCheckboxValue("maskAutoMask", brushBool(m.paramsJson, "autoMask", false));
+            setCheckboxValue("maskAutoMaskAi", brushStr(m.paramsJson, "autoMaskMode", "lum") == "ai");
             setCheckboxValue("maskInvert", m.inverted);
         }
         else if (m.tool == int(MaskTool::LuminanceRange)) {
@@ -802,8 +848,9 @@ QString DevelopProperties::defaultMaskParams(int tool)
            snapshots the settings it was painted with. Points are normalized output coords. */
         QJsonObject o;
         o["size"] = 20;
-        o["flow"] = 50;
+        o["flow"] = 100;
         o["autoMask"] = false;
+        o["autoMaskMode"] = "lum";      // "lum" (luminance band) | "ai" (SAM object)
         o["strokes"] = QJsonArray();
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
@@ -831,6 +878,11 @@ QString DevelopProperties::defaultMaskParams(int tool)
         o["hi"] = 0.5;
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
+    if (tool == int(MaskTool::Object)) {
+        /* SAM 2 object mask: starts empty (no lasso yet). The user drags a rough outline on the image;
+           ImageView emits {"brush":{"poly":[...]}} which MW decodes. Empty -> no coverage until drawn. */
+        return QString();
+    }
     return QString();
 }
 
@@ -855,6 +907,12 @@ bool DevelopProperties::brushBool(const QString &paramsJson, const QString &key,
 {
     const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
     return o.contains(key) ? o.value(key).toBool(def) : def;
+}
+
+QString DevelopProperties::brushStr(const QString &paramsJson, const QString &key, const QString &def)
+{
+    const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    return o.contains(key) ? o.value(key).toString(def) : def;
 }
 
 QString DevelopProperties::brushWith(const QString &paramsJson, const QString &key, const QJsonValue &v)
@@ -897,8 +955,9 @@ void DevelopProperties::emitBrushSettings(const MaskComponent &m)
 {
     emit maskBrushSettingsChanged(brushNum(m.paramsJson, "size", 20),
                                   m.feather,
-                                  brushNum(m.paramsJson, "flow", 50),
-                                  brushBool(m.paramsJson, "autoMask", false));
+                                  brushNum(m.paramsJson, "flow", 100),
+                                  brushBool(m.paramsJson, "autoMask", false),
+                                  brushStr(m.paramsJson, "autoMaskMode", "lum"));
 }
 
 void DevelopProperties::updateMaskEdit()
@@ -913,7 +972,8 @@ void DevelopProperties::updateMaskEdit()
             m.tool == int(MaskTool::Brush) ||
             m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange) ||
             m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Sky) ||
-            m.tool == int(MaskTool::Background) || m.tool == int(MaskTool::Depth)) {
+            m.tool == int(MaskTool::Background) || m.tool == int(MaskTool::Depth) ||
+            m.tool == int(MaskTool::Object)) {
             emit maskEditBegin(m.tool, m.op, m.inverted, m.paramsJson, m.feather);
             return;
         }
@@ -1174,6 +1234,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
        strokes keep their own snapshot, so these do NOT re-composite -- they just refresh the cursor
        and brush state in ImageView. (Invert still flips the whole mask -- handled below.) */
     if (source == "maskSize" || source == "maskFlow" || source == "maskAutoMask" ||
+        source == "maskAutoMaskAi" ||
         (source == "maskFeather" && activeMaskTool() == int(MaskTool::Brush))) {
         EditLayer *l = activeLayer();
         if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size()) {
@@ -1182,6 +1243,10 @@ void DevelopProperties::itemChange(QModelIndex idx)
             else if (source == "maskSize")     mm.paramsJson = brushWith(mm.paramsJson, "size", v.toInt());
             else if (source == "maskFlow")     mm.paramsJson = brushWith(mm.paramsJson, "flow", v.toInt());
             else if (source == "maskAutoMask") mm.paramsJson = brushWith(mm.paramsJson, "autoMask", v.toBool());
+            else if (source == "maskAutoMaskAi") {
+                mm.paramsJson = brushWith(mm.paramsJson, "autoMaskMode", v.toBool() ? "ai" : "lum");
+                if (v.toBool()) emit maskBrushAiEnabled();   // pre-warm the SAM encoder
+            }
             dirty.insert(currentImagePath);
             emitBrushSettings(mm);
             if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);

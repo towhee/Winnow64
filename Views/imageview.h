@@ -128,9 +128,13 @@ public slots:
        clear when no tool is expanded. */
     void setLayerMaskTint(const QImage &tint);
     void clearLayerMaskTint();
+    /* "M": hide/show the mask overlay tint (both the whole-layer composite and the per-tool preview)
+       while editing a mask -- handles/cursor stay so editing continues. No-op outside mask editing. */
+    void toggleMaskTint();
     void setMaskFeather(double feather);
     void setMaskInverted(bool inverted);
-    void setMaskBrushSettings(double size, double feather, double flow, bool autoMask);
+    void setMaskBrushSettings(double size, double feather, double flow, bool autoMask,
+                              const QString &autoMaskMode = QStringLiteral("lum"));
     /* Content-range tools (Luminance/Color Range): the dock changed lo/hi/refine (or samples) ->
        rebuild the coverage tint from the shared RangeRef. */
     void setMaskRangeParams(const QString &paramsJson);
@@ -183,6 +187,10 @@ signals:
     void maskBrushSizeRequested(double size);
     /* Auto-mask toggled on the canvas ("A"); sync the dock checkbox. */
     void maskBrushAutoMaskRequested(bool on);
+    /* Starting a Brush stroke in "AI" auto-mask mode: ask MW to decode the SAM object under the
+       stroke's seed point (output-normalized) so the live stroke can be confined to it. Direct-
+       connected (synchronous), so the field is in the BrushStamp store when this returns. */
+    void maskBrushSamFieldRequested(double onx, double ony);
     /* The crop rectangle changed (drag/resize/pan); normalized image coords, for persistence. */
     void cropChanged(double x, double y, double w, double h);
     /* A level line was drawn: the leveling angle to ADD to the straighten (degrees, nearest H/V). */
@@ -329,8 +337,9 @@ private:
     QPointF maskC = QPointF(0.5, 0.5);
     double  maskRx = 0.25, maskRy = 0.30, maskAngle = 0.0;
     /* Brush current settings (0..100; for the cursor + the next stroke). */
-    double  maskBrushSize = 20.0, maskBrushFlow = 50.0;
+    double  maskBrushSize = 20.0, maskBrushFlow = 100.0;
     bool    maskBrushAutoMask = false;
+    QString maskBrushAutoMaskMode = QStringLiteral("lum");   // "lum" (luminance) | "ai" (SAM)
     /* Brush painting state. Preview buffers are in output-oriented space, capped resolution. main =
        committed strokes; stroke = current in-progress stroke coverage; preview = cached tint image.
        strokePts is the flat [x0,y0,...] normalized point list being painted. */
@@ -341,10 +350,17 @@ private:
     QVector<double>    maskStrokePts;
     QJsonArray         maskBrushStrokesJson;   // committed strokes (to rebuild paramsJson on commit)
     std::shared_ptr<const BrushStamp::Guide> maskGuide;   // auto-mask luminance guide (this image)
+    std::shared_ptr<const BrushStamp::Guide> maskBrushSamField;  // AI stroke's SAM field (kept alive
+                                                          // while maskStrokeAM.guide points into it)
     BrushStamp::AutoMaskCtx maskStrokeAM;      // current stroke's auto-mask context
     QPointF            maskBrushLast;          // last stamped point, buffer-pixel coords
     QPoint             maskBrushCursorVp;      // cursor pos for the brush-size circle
     bool               maskBrushCursorOn = false;
+    /* Object Mask (SAM 2): a freehand lasso. maskObjLasso is the rough outline the user drags (output-
+       normalized 0..1 points); on release it is emitted as {"brush":{"poly":[...]}} and MW decodes it
+       to the precise edge. Only an editing affordance -- the decoded coverage shows via maskLayerTint. */
+    QPolygonF maskObjLasso;
+    bool      maskObjDrawing = false;
     int     maskDrag     = -1;          // active handle (per tool, see maskHitTest); -1 none
     QPointF maskMoveAnchorN;            // image-norm cursor at move start
     QPointF maskP1Anchor, maskP2Anchor; // linear endpoints at move start
@@ -364,6 +380,7 @@ private:
     void    drawLinearMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Linear tool
     void    drawRadialMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Radial tool
     void    drawBrushMask(QPainter *p, const QRectF &br, bool drawTint = true);   // overlay for the Brush tool
+    void    drawObjectMask(QPainter *p, const QRectF &br, bool drawTint = true);  // freehand-lasso overlay (Object tool)
     /* Brush painting helpers (preview buffers in output-oriented space). */
     void    brushBuildBuffers(const QString &paramsJson);   // parse strokes + (re)build buffers
     void    brushEnsureBuffers();                           // rebuild if the pixmap size changed
@@ -386,6 +403,7 @@ private:
     bool    maskIsSky()        const { return maskTool == 6; }
     bool    maskIsBackground() const { return maskTool == 7; }   // = inverted Subject saliency
     bool    maskIsDepth()      const { return maskTool == 8; }   // depth-band over the MiDaS field
+    bool    maskIsObject()     const { return maskTool == 9; }   // SAM 2 freehand-lasso object mask
     bool    maskIsContent() const {
         return maskIsRange() || maskIsSubject() || maskIsSky() || maskIsBackground() || maskIsDepth();
     }
@@ -393,6 +411,7 @@ private:
     QString maskRangeParams;                       // lo/hi/refine/samples JSON for the active tool
     QImage  maskRangePreview;                       // coverage tint (output-oriented), like the brush
     QImage  maskLayerTint;                          // whole-layer composite coverage tint (output-oriented), all tools
+    bool    maskTintHidden = false;                 // "M": suppress the mask overlay tint while editing
     void    drawRangeMask(QPainter *p, const QRectF &br, bool drawTint = true);   // paint the tint + colour swatches
     void    buildRangePreview();                    // rebuild the tint from the shared RangeRef + params
     void    buildSubjectPreview();                  // rebuild the tint from the shared SubjectRef

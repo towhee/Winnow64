@@ -317,6 +317,7 @@ set(WINNOW_SOURCES
     Utilities/focuspointtrainer.cpp
     Utilities/focuspredictor.cpp
     Utilities/subjectpredictor.cpp
+    Utilities/objectmaskpredictor.cpp
     Utilities/skypredictor.cpp
     Utilities/depthpredictor.cpp
     Utilities/foldercompressor.cpp
@@ -519,6 +520,7 @@ set(WINNOW_HEADERS
     Utilities/focuspointtrainer.h
     Utilities/focuspredictor.h
     Utilities/subjectpredictor.h
+    Utilities/objectmaskpredictor.h
     Utilities/skypredictor.h
     Utilities/depthpredictor.h
     Utilities/foldercompressor.h
@@ -856,6 +858,21 @@ if(APPLE)
         message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
                         "Add midas.onnx to ReleaseExtras/ to enable it.")
     endif()
+    # SAM 2 object-mask pair (encoder + FIXED-SHAPE decoder). Produced by
+    # ReleaseExtras/tools/export_sam2.sh; the decoder MUST be the pinned/onnxsim'd export or
+    # OpenCV DNN cannot load it (see Utilities/objectmaskpredictor.h). Warn-if-absent like the rest.
+    foreach(_m sam2_encoder sam2_decoder)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx")
+            target_sources(Winnow PRIVATE ReleaseExtras/${_m}.onnx)
+            set_source_files_properties(ReleaseExtras/${_m}.onnx PROPERTIES
+                MACOSX_PACKAGE_LOCATION "MacOS"
+                HEADER_FILE_ONLY TRUE
+                SKIP_AUTOGEN TRUE)
+        else()
+            message(WARNING "ReleaseExtras/${_m}.onnx not found -- 'Object Mask' will no-op. "
+                            "Run ReleaseExtras/tools/export_sam2.sh to produce it.")
+        endif()
+    endforeach()
 endif()
 
 # =============================================================================
@@ -1064,6 +1081,19 @@ if(WIN32)
         message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
                         "Add midas.onnx to ReleaseExtras/ to enable it.")
     endif()
+    # SAM 2 object-mask pair (encoder + FIXED-SHAPE decoder; see ReleaseExtras/tools/export_sam2.sh).
+    foreach(_m sam2_encoder sam2_decoder)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx")
+            add_custom_command(TARGET Winnow POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx" "${_winnow_out}"
+                COMMENT "Deploying ${_m}.onnx"
+                VERBATIM)
+        else()
+            message(WARNING "ReleaseExtras/${_m}.onnx not found -- 'Object Mask' will no-op. "
+                            "Run ReleaseExtras/tools/export_sam2.sh to produce it.")
+        endif()
+    endforeach()
 
     # ExifTool (et.exe) is not in git; it lives in release/. Warn rather than
     # fail the build if absent.

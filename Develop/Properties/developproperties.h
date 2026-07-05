@@ -83,6 +83,13 @@ public:
        handles its signals. */
     void bindLayerHeader(LayerHeader *header);
 
+    /* Enable/disable the WHOLE Develop panel so it "looks" disabled, not just the dock
+       frame. Greys the property tree (caption text, which the delegate paints from the
+       per-item UR_isEnabled role, plus every persistent editor and user interaction) and
+       the LayerHeader band above the tree. MW pairs this with developDock->setEnabled()
+       so the dock frame and scopes grey out as well. */
+    void setPanelEnabled(bool enabled);
+
 protected:
     /* PropertyEditor::mousePressEvent does not select rows (it only handles expand/collapse), so we
        toggle the clicked mask tool ourselves (reveal/hide its settings children) and return. */
@@ -123,7 +130,10 @@ signals:
        ImageView rebuilds its coverage tint. */
     void maskRangeChanged(const QString &paramsJson);
     /* Brush current settings (for the cursor + the next stroke). size/flow 0..100. */
-    void maskBrushSettingsChanged(double size, double feather, double flow, bool autoMask);
+    void maskBrushSettingsChanged(double size, double feather, double flow, bool autoMask,
+                                  const QString &autoMaskMode);
+    /* Brush "AI edge (SAM)" was just enabled in the dock -> MW pre-warms the SAM encoder. */
+    void maskBrushAiEnabled();
 
 private:
     void initialize();
@@ -213,6 +223,7 @@ private:
     /* Brush current-settings accessors over paramsJson (size/flow are 0..100, autoMask bool). */
     static double  brushNum(const QString &paramsJson, const QString &key, double def);
     static bool    brushBool(const QString &paramsJson, const QString &key, bool def);
+    static QString brushStr(const QString &paramsJson, const QString &key, const QString &def);
     static QString brushWith(const QString &paramsJson, const QString &key, const QJsonValue &v);
     void emitBrushSettings(const MaskComponent &m); // maskBrushSettingsChanged from current settings
     EditParams &activeParams();                   // the active layer's params (creates a layer if none)
@@ -239,6 +250,11 @@ private:
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;
     static constexpr int kDebounceWriteMs = 2000;  // flush this long after edits settle (gated)
+
+    /* Whole-panel enable state (Develop menu action). When false the tree is disabled and
+       every caption is greyed; buildTree() re-applies it so a rebuild can't un-grey it. */
+    bool panelEnabled = true;
+    void applyItemsEnabled(bool enabled);   // set UR_isEnabled on every row (recursively)
 
     MW *mw;
     QSettings *setting;

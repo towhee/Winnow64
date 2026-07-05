@@ -9,6 +9,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
+#include <cmath>
 
 WorkingImageCache &WorkingImageCache::instance()
 {
@@ -204,6 +205,19 @@ inline void maskParallelFor(size_t n, F fn)
 }
 } // namespace
 
+/* ---- Masked-layer blend space (A/B, one flag to flip + revert) ----
+   A (kPerceptualMaskBlend = false): lerp the masked layer in SCENE-LINEAR light -- physically
+   faithful, but a STRONG masked adjustment's visible falloff is front-loaded because the display
+   gamma steepens it near coverage m=1 (a linear feather then reads abrupt at the size edge).
+   B (true, current): lerp in a PERCEPTUAL (gamma 2.2) space, so the DISPLAYED brightness tracks m
+   ~linearly and a feather reads evenly. Only feather-transition pixels (0<m<1) pay the pow; m<=0 is
+   a skip and m>=1 a copy (numerically identical to the old blend at those ends). */
+namespace {
+inline constexpr bool kPerceptualMaskBlend = true;
+inline float maskEnc(float x) { return x <= 0.0f ? 0.0f : std::pow(x, 1.0f / 2.2f); }  // linear->perc
+inline float maskDec(float y) { return y <= 0.0f ? 0.0f : std::pow(y, 2.2f); }         // perc->linear
+}
+
 bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &base,
                                     const std::vector<StackLayer> &layers,
                                     QImage &out, RenderTimings *timings)
@@ -243,11 +257,23 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
             const float *mk = L.mask.data();
             maskParallelFor(n, [=](size_t i0, size_t i1) {
                 for (size_t i = i0; i < i1; ++i) {
-                    const float m = mk[i], im = 1.0f - m;
+                    const float m = mk[i];
                     const size_t j = i * 3;
-                    dst[j+0] = dst[j+0]*im + hi[j+0]*m;
-                    dst[j+1] = dst[j+1]*im + hi[j+1]*m;
-                    dst[j+2] = dst[j+2]*im + hi[j+2]*m;
+                    if (m <= 0.0f) continue;                       // layer has no effect here
+                    if (m >= 1.0f) {                               // fully the layer
+                        dst[j+0] = hi[j+0]; dst[j+1] = hi[j+1]; dst[j+2] = hi[j+2];
+                        continue;
+                    }
+                    const float im = 1.0f - m;
+                    if (kPerceptualMaskBlend) {                    // B: lerp in perceptual space
+                        dst[j+0] = maskDec(maskEnc(dst[j+0])*im + maskEnc(hi[j+0])*m);
+                        dst[j+1] = maskDec(maskEnc(dst[j+1])*im + maskEnc(hi[j+1])*m);
+                        dst[j+2] = maskDec(maskEnc(dst[j+2])*im + maskEnc(hi[j+2])*m);
+                    } else {                                       // A: lerp in scene-linear
+                        dst[j+0] = dst[j+0]*im + hi[j+0]*m;
+                        dst[j+1] = dst[j+1]*im + hi[j+1]*m;
+                        dst[j+2] = dst[j+2]*im + hi[j+2]*m;
+                    }
                 }
             });
         }

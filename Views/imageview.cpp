@@ -485,6 +485,7 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
     maskOp = op;
     maskInverted = inverted;
     maskFeather = feather;
+    maskTintHidden = false;             // new mask edit -> start with the overlay tint shown ("M" toggles)
     if (!parseMaskParams(paramsJson)) {     // missing/invalid -> a sensible default
         if (maskTool == 1) { maskC = QPointF(0.5, 0.5); maskRx = 0.25; maskRy = 0.30; maskAngle = 0; }
         else if (maskTool == 0) { maskP1 = QPointF(0.5, 0.34); maskP2 = QPointF(0.5, 0.66); }
@@ -492,6 +493,16 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
     maskPainting = false;
     maskGuide.reset();                                   // recompute the auto-mask guide for this image
     if (maskTool == 2) brushBuildBuffers(paramsJson);    // raster committed strokes into the preview
+    if (maskIsObject()) {                                // Object: restore the stored lasso outline
+        maskObjLasso.clear();
+        maskObjDrawing = false;
+        const QJsonArray poly = QJsonDocument::fromJson(paramsJson.toUtf8())
+                                    .object().value("brush").toObject().value("poly").toArray();
+        for (const QJsonValue &pv : poly) {
+            const QJsonArray xy = pv.toArray();
+            if (xy.size() >= 2) maskObjLasso << QPointF(xy.at(0).toDouble(), xy.at(1).toDouble());
+        }
+    }
     if (maskIsContent()) {                               // Range / Subject / Sky: build the tint
         maskRangeParams = paramsJson;
         rebuildContentPreview();
@@ -510,6 +521,8 @@ void ImageView::endMaskEdit()
     maskEditMode = false;
     maskDrag = -1;
     maskPainting = false;
+    maskObjDrawing = false;
+    maskObjLasso.clear();
     maskBrushCursorOn = false;
     maskBrushPreview = QImage();
     maskBrushMain.clear(); maskBrushStroke.clear(); maskBrushW = maskBrushH = 0;
@@ -532,6 +545,16 @@ void ImageView::clearLayerMaskTint()
     if (maskLayerTint.isNull()) return;
     maskLayerTint = QImage();
     if (maskEditMode) viewport()->update();
+}
+
+void ImageView::toggleMaskTint()
+{
+    /* "M": flip the mask overlay tint (whole-layer composite + per-tool preview) hidden/shown so the
+       user can see the image without the red coverage. Only meaningful while editing a mask; handles
+       and the brush cursor keep drawing (drawForeground gates only the tint on maskTintHidden). */
+    if (!maskEditMode) return;
+    maskTintHidden = !maskTintHidden;
+    viewport()->update();
 }
 
 void ImageView::setMaskFeather(double feather)
@@ -564,12 +587,14 @@ QColor ImageView::maskTintColor() const
     return (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);   // Subtract blue / Add red
 }
 
-void ImageView::setMaskBrushSettings(double size, double feather, double flow, bool autoMask)
+void ImageView::setMaskBrushSettings(double size, double feather, double flow, bool autoMask,
+                                     const QString &autoMaskMode)
 {
     maskBrushSize = size;
     maskFeather = feather;
     maskBrushFlow = flow;
     maskBrushAutoMask = autoMask;
+    maskBrushAutoMaskMode = autoMaskMode;
     if (maskEditMode && maskHover) viewport()->update();   // cursor preview (Stage 2)
 }
 
@@ -988,8 +1013,9 @@ bool ImageView::parseMaskParams(const QString &json)
     const QJsonObject o = doc.object();
     if (maskTool == 2) {            // Brush: current settings (strokes handled in Stage 2)
         maskBrushSize = o.value("size").toDouble(20);
-        maskBrushFlow = o.value("flow").toDouble(50);
+        maskBrushFlow = o.value("flow").toDouble(100);
         maskBrushAutoMask = o.value("autoMask").toBool(false);
+        maskBrushAutoMaskMode = o.value("autoMaskMode").toString("lum");
         return true;
     }
     if (maskTool == 1) {            // Radial
@@ -1074,7 +1100,7 @@ QPointF ImageView::maskRadialRotateHandleVp(const QRectF &br) const
 int ImageView::maskHitTest(QPoint vp) const
 {
     if (!maskHandlesEditable()) return -1;
-    if (maskTool == 2) return -1;       // Brush has no drag handles (painting lands in Stage 2)
+    if (maskTool == 2 || maskIsObject()) return -1;   // Brush/Object paint, no drag handles
     const double rHandle = 11;          // px pick radius
     const QPointF p(vp);
 
@@ -1130,7 +1156,14 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
        whole mask stays visible whenever a tool is expanded -- and is drawn UNDER the active tool's
        handles. When it is present the per-tool draw skips its own tint (it would double up) and draws
        only its handles/guides/cursor/swatches. */
-    const bool haveComposite = maskEditMode && !maskLayerTint.isNull() && pmItem && pmItem->isVisible();
+    /* While a brush stroke is being swiped, the whole-layer composite (maskLayerTint) is STALE -- it
+       only rebuilds on stroke release (paramsChanged). Suppress it during the stroke so the per-brush
+       live preview (maskBrushPreview, updated on every move) shows the stroke building up in real time
+       instead of the tint only appearing after release. */
+    const bool brushStroking = (maskTool == 2 && maskPainting);
+    const bool showTint = !maskTintHidden;                  // "M" toggles the mask overlay tint
+    const bool haveComposite = maskEditMode && !maskLayerTint.isNull() && pmItem && pmItem->isVisible()
+                               && !brushStroking && showTint;
     if (haveComposite) {
         const QRectF cbr = pmItem->boundingRect();
         if (cbr.width() > 0 && cbr.height() > 0) {
@@ -1147,11 +1180,43 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
     if (!show) return;
     const QRectF br = pmItem->boundingRect();
     if (br.width() <= 0 || br.height() <= 0) return;
-    const bool tint = !haveComposite;   // composite already painted the coverage -> handles only
+    const bool tint = showTint && !haveComposite;   // "M" off, or composite already painted -> handles only
     if      (maskTool == 1) drawRadialMask(painter, br, tint);
     else if (maskTool == 2) drawBrushMask(painter, br, tint);
+    else if (maskIsObject()) drawObjectMask(painter, br, tint);
     else if (content)       drawRangeMask(painter, br, tint);
     else                    drawLinearMask(painter, br, tint);
+}
+
+void ImageView::drawObjectMask(QPainter *painter, const QRectF &br, bool drawTint)
+{
+/*
+    Draw the freehand lasso outline the user is dragging (or the stored one), in viewport coords so it
+    stays a constant on-screen width at any zoom. A faint op-coloured fill is shown only until the SAM
+    coverage exists (drawTint = no whole-layer composite yet); once decoded, maskLayerTint shows the
+    real cutout and this is just the editable outline.
+*/
+    if (maskObjLasso.size() < 2) return;
+    QPolygonF vp;
+    vp.reserve(maskObjLasso.size());
+    for (const QPointF &n : maskObjLasso)
+        vp << mapFromScene(pmItem->mapToScene(QPointF(n.x() * br.width(), n.y() * br.height())));
+
+    painter->save();
+    painter->resetTransform();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    /* Outline colour conveys the op: Add (selects) red, Subtract (removes) blue -- matches the ramp. */
+    const QColor base = (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);
+    if (drawTint) {
+        QColor fill = base; fill.setAlpha(50);
+        painter->setPen(Qt::NoPen); painter->setBrush(fill);
+        painter->drawPolygon(vp);
+    }
+    QPen halo(QColor(0, 0, 0, 160)); halo.setWidthF(3.0); halo.setCosmetic(true);
+    painter->setPen(halo); painter->setBrush(Qt::NoBrush); painter->drawPolygon(vp);
+    QPen line(base); line.setWidthF(1.5); line.setCosmetic(true);
+    painter->setPen(line); painter->drawPolygon(vp);
+    painter->restore();
 }
 
 void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTint)
@@ -1345,7 +1410,7 @@ void ImageView::brushEnsureBuffers()
     maskBrushStroke.assign(size_t(w) * h, 0.0f);
     ensureAutoGuide();                  // committed auto-mask strokes need the guide to re-raster
     BrushStamp::rasterize(maskBrushStrokesJson, maskBrushMain.data(), maskBrushScratch,
-                          w, h, 0, maskGuide.get());
+                          w, h, 0, maskGuide.get(), currentImagePath);
     brushRebuildPreview();
 }
 
@@ -1384,7 +1449,7 @@ void ImageView::brushRebuildPreview(QRect region)
 
 QRect ImageView::brushSegRect(QPointF a, QPointF b) const
 {
-    const double r = brushRadiusBufPx() + 2.0;
+    const double r = brushRadiusBufPx() + 2.0;   // outer extent = radius (feather softens inward)
     const int x0 = int(std::floor(std::min(a.x(), b.x()) - r));
     const int x1 = int(std::ceil (std::max(a.x(), b.x()) + r));
     const int y0 = int(std::floor(std::min(a.y(), b.y()) - r));
@@ -1457,6 +1522,7 @@ void ImageView::brushUndoStroke()
     /* Persist the shortened stroke list and re-render. */
     QJsonObject o;
     o["size"] = maskBrushSize; o["flow"] = maskBrushFlow; o["autoMask"] = maskBrushAutoMask;
+    o["autoMaskMode"] = maskBrushAutoMaskMode;
     o["strokes"] = maskBrushStrokesJson;
     emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
 }
@@ -1481,15 +1547,35 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
         const double rVp = QLineF(cVp, mapFromScene(pmItem->mapToScene(cImg + QPointF(rImg, 0)))).length();
         painter->save();
         painter->resetTransform();
-        const QColor cur = maskBrushErase    ? QColor(255, 170, 170, 235)   // erase
-                         : maskBrushAutoMask ? QColor(150, 255, 150, 235)   // auto-mask
-                                             : QColor(255, 255, 255, 235);
-        QPen pen(cur);
-        pen.setWidthF(1.3);
-        if (maskBrushAutoMask) pen.setStyle(Qt::DashLine);     // dashed = auto-mask on
-        painter->setPen(pen);
+        painter->setRenderHint(QPainter::Antialiasing, true);
         painter->setBrush(Qt::NoBrush);
-        painter->drawEllipse(cVp, rVp, rVp);
+        const bool aiAuto = maskBrushAutoMask && maskBrushAutoMaskMode == "ai";
+        const QColor cur = maskBrushErase ? QColor(255, 170, 170, 235)   // erase
+                         : aiAuto          ? QColor(150, 200, 255, 235)   // AI (SAM) auto-mask
+                         : maskBrushAutoMask ? QColor(150, 255, 150, 235) // luminance auto-mask
+                                             : QColor(255, 255, 255, 235);
+        /* Draw each ring twice: a dark halo underneath then the coloured line on top, so the cursor
+           stays visible on light AND dark images (the plain white line vanished on white). Mirrors
+           the crop Level tool's halo idiom. */
+        const bool dash = maskBrushAutoMask;
+        auto ring = [&](double r, const QColor &c, double w, bool dashed) {
+            QPen halo(QColor(0, 0, 0, 150));
+            halo.setWidthF(w + 1.6);
+            if (dashed) halo.setStyle(Qt::DashLine);
+            painter->setPen(halo);
+            painter->drawEllipse(cVp, r, r);
+            QPen pen(c);
+            pen.setWidthF(w);
+            if (dashed) pen.setStyle(Qt::DashLine);
+            painter->setPen(pen);
+            painter->drawEllipse(cVp, r, r);
+        };
+        ring(rVp, cur, 1.4, dash);                             // outer = brush SIZE (coverage 0 here)
+        /* Lightroom-style: feather softens INWARD. The inner ring marks the half-coverage radius
+           radius*(1-f/2) (== LR's inner circle). Only drawn when feather > 0 (else it coincides). */
+        const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
+        if (f > 0.001)
+            ring(rVp * (1.0 - f * 0.5), cur, 1.4, dash);       // inner = half-coverage (feather guide)
         painter->restore();
     }
 }
@@ -2705,7 +2791,7 @@ void ImageView::leaveEvent(QEvent *event)
 {
     wheelSpinningOnEntry = false;
     emit cursorLeftImage();     // clear the Develop scopes readout marker
-    if (maskEditMode && maskHover && !maskPainting) {   // hide overlay on leave (not mid-stroke)
+    if (maskEditMode && maskHover && !maskPainting && !maskObjDrawing) {   // hide on leave (not mid-stroke/lasso)
         maskHover = false;
         maskDrag = -1;
         maskBrushCursorOn = false;
@@ -2956,6 +3042,17 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    /* Object Mask: a left press starts a freehand lasso; it consumes the event so the image does not
+       pan. Move extends the outline, release emits it (SAM refines the fill to the object edge). */
+    if (maskEditMode && maskIsObject() && event->button() == Qt::LeftButton) {
+        maskObjDrawing = true;
+        maskHover = true;
+        maskObjLasso.clear();
+        maskObjLasso << maskViewportToNorm(event->pos());
+        viewport()->update();
+        return;
+    }
+
     /* Brush: a left press begins a stroke (Alt = erase). Painting consumes the event so the image
        does not pan. */
     if (maskEditMode && maskTool == 2 && event->button() == Qt::LeftButton) {
@@ -2968,15 +3065,31 @@ void ImageView::mousePressEvent(QMouseEvent *event)
             const QPointF n = maskViewportToNorm(event->pos());
             maskStrokePts << n.x() << n.y();
             std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
-            /* Auto-mask context for this stroke (preview buffer is output space -> degrees 0). */
+            /* Auto-mask context for this stroke (preview buffer is output space -> degrees 0). Two
+               modes: "ai" confines to the SAM object under the seed (decoded by MW, synchronous via
+               maskBrushSamFieldRequested); "lum" confines to a luminance band (local guide). */
             maskStrokeAM = BrushStamp::AutoMaskCtx();
-            if (maskBrushAutoMask) ensureAutoGuide();
-            if (maskBrushAutoMask && maskGuide && maskGuide->valid()) {
-                maskStrokeAM.on = true;
-                maskStrokeAM.guide = maskGuide->lum.data();
-                maskStrokeAM.gw = maskGuide->w; maskStrokeAM.gh = maskGuide->h;
-                maskStrokeAM.degrees = 0;
-                maskStrokeAM.lumRef = BrushStamp::guideLumAt(maskStrokeAM, n.x(), n.y());
+            maskBrushSamField.reset();
+            if (maskBrushAutoMask && maskBrushAutoMaskMode == "ai") {
+                emit maskBrushSamFieldRequested(n.x(), n.y());   // MW decodes + stores (blocking)
+                maskBrushSamField = BrushStamp::getSamField(
+                    BrushStamp::samFieldKey(currentImagePath, n.x(), n.y()));
+                if (maskBrushSamField && maskBrushSamField->valid()) {
+                    maskStrokeAM.on = true; maskStrokeAM.aiField = true;
+                    maskStrokeAM.guide = maskBrushSamField->lum.data();
+                    maskStrokeAM.gw = maskBrushSamField->w; maskStrokeAM.gh = maskBrushSamField->h;
+                    maskStrokeAM.degrees = 0;
+                }
+            }
+            else if (maskBrushAutoMask) {
+                ensureAutoGuide();
+                if (maskGuide && maskGuide->valid()) {
+                    maskStrokeAM.on = true;
+                    maskStrokeAM.guide = maskGuide->lum.data();
+                    maskStrokeAM.gw = maskGuide->w; maskStrokeAM.gh = maskGuide->h;
+                    maskStrokeAM.degrees = 0;
+                    maskStrokeAM.lumRef = BrushStamp::guideLumAt(maskStrokeAM, n.x(), n.y());
+                }
             }
             maskBrushLast = brushNormToBuf(n);
             BrushStamp::dabMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
@@ -3089,6 +3202,20 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     //*/
 
     static QPoint prevPos = event->pos();
+
+    /* Object Mask: extend the freehand lasso while dragging (consume so the image does not pan). */
+    if (maskEditMode && maskIsObject()) {
+        if (maskObjDrawing) {
+            const QPointF n = maskViewportToNorm(event->pos());
+            /* Add a vertex only once the cursor has moved a little, to keep the outline compact. */
+            if (maskObjLasso.isEmpty() || QLineF(maskObjLasso.last(), n).length() > 0.004)
+                maskObjLasso << n;
+            viewport()->update();
+            return;
+        }
+        setCursor(Qt::CrossCursor);       // signal "draw here"; consume so hover cursor is not overridden
+        return;
+    }
 
     /* Brush: paint a stroke (left button held), or just track the size cursor on hover. */
     if (maskEditMode && maskTool == 2) {
@@ -3325,6 +3452,26 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
 
+    /* Finish an Object Mask lasso: emit the closed outline as the brush poly. MW::ensureObjectMask
+       (via setActiveMaskParams -> paramsChanged) encodes the image once, decodes the fill to the
+       object edge, and the layer tint updates. A too-small outline is dropped. */
+    if (maskEditMode && maskIsObject() && maskObjDrawing) {
+        maskObjDrawing = false;
+        isLeftMouseBtnPressed = false;
+        if (maskObjLasso.size() >= 3) {
+            QJsonArray poly;
+            for (const QPointF &p : maskObjLasso) {
+                QJsonArray xy; xy.append(p.x()); xy.append(p.y());
+                poly.append(xy);
+            }
+            QJsonObject brush; brush["poly"] = poly;
+            QJsonObject o;     o["brush"]    = brush;
+            emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+        }
+        viewport()->update();
+        return;
+    }
+
     /* Finish a brush stroke: composite it into the committed mask, append it to the stroke list,
        and persist the updated paramsJson (which triggers the masked re-render in stage 3). */
     if (maskEditMode && maskTool == 2 && maskPainting) {
@@ -3344,9 +3491,11 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
             stroke["flow"]     = maskBrushFlow;
             stroke["erase"]    = maskBrushErase;
             stroke["autoMask"] = maskBrushAutoMask;
+            stroke["autoMaskMode"] = maskBrushAutoMaskMode;
             maskBrushStrokesJson.append(stroke);
             QJsonObject o;
             o["size"] = maskBrushSize; o["flow"] = maskBrushFlow; o["autoMask"] = maskBrushAutoMask;
+            o["autoMaskMode"] = maskBrushAutoMaskMode;
             o["strokes"] = maskBrushStrokesJson;
             emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
         }

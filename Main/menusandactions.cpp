@@ -1050,6 +1050,22 @@ void MW::createSortActions()
 
 void MW::createUtilActions()
 {
+    // Develop
+    developAction = new QAction(tr("Develop"), this);
+    developAction->setObjectName("develop");
+    developAction->setCheckable(true);
+    developAction->setChecked(settings->value("Develop/enabled", true).toBool());
+    developAction->setShortcut(QKeySequence("D"));
+    developAction->setShortcutVisibleInContextMenu(true);
+    addAction(developAction);
+    /* When Develop is unchecked, disable (grey out) the Develop panel. State is
+       persisted so it is restored on the next launch (applied to developDock in
+       MW::initialize, which runs after the dock is created). */
+    connect(developAction, &QAction::toggled, this, [this](bool checked) {
+        setDevelopPanelEnabled(checked);            // dock frame + features + tree + header
+        settings->setValue("Develop/enabled", checked);
+    });
+
     // Embellish menu
     int n;          // used to populate action lists
 
@@ -1428,6 +1444,15 @@ void MW::createWindowActions()
     developTransformAction->setChecked(false);   // crop tool always starts off (panel starts hidden)
     addAction(developTransformAction);
     connect(developTransformAction, &QAction::triggered, this, &MW::toggleDevelopTransform);
+
+    /* "M" hides/shows the current layer's mask overlay tint while a mask tool is active (see the
+       real image without the red coverage tint; handles/cursor stay). No-op outside mask editing. */
+    toggleMaskOverlayAction = new QAction(tr("Toggle Mask Overlay"), this);
+    toggleMaskOverlayAction->setObjectName("toggleMaskOverlay");
+    toggleMaskOverlayAction->setShortcut(QKeySequence("M"));
+    toggleMaskOverlayAction->setShortcutVisibleInContextMenu(true);
+    addAction(toggleMaskOverlayAction);
+    connect(toggleMaskOverlayAction, &QAction::triggered, this, &MW::toggleMaskOverlay);
 
     // rgh delete this ?
     metadataFixedSizeAction = new QAction(tr("Metadata Panel Fix Size"), this);
@@ -2012,6 +2037,7 @@ void MW::createUtilMenu()
     utilGroupAct = new QAction("Utilities", this);
     utilGroupAct->setMenu(utilMenu);
 
+    utilMenu->addAction(developAction);
     utilMenu->addAction(embelGroupAct);
     utilMenu->addAction(mediaReadSpeedAction);
     utilMenu->addAction(findDuplicatesAction);
