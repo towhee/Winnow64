@@ -1,6 +1,7 @@
 #include "ImageFormats/Raw/rawformat.h"
 #include "ImageFormats/Raw/demosaic.h"
 #include "ImageFormats/Raw/rawcolor.h"
+#include "ImageFormats/Raw/rawdenoise.h"
 #include "ImageFormats/Raw/applerawdecode.h"
 #include "Develop/workingimage.h"
 #include "Develop/develop.h"
@@ -129,15 +130,23 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     }
     if (aborted()) { errMsg = "Aborted"; return false; }
 
-    /* Hand the caller the pre-develop WorkingImage for the WorkingImageCache (shared, no
-       copy). It must stay pristine, so a non-identity develop below runs on a private copy. */
+    /* Hand the caller the pre-develop WorkingImage for the WorkingImageCache (shared, no copy). It
+       stays CLEAN -- no denoise, no develop: the interactive develop path applies "Denoise raw" on
+       top of this cached image with its own async cache (see MW::ensureRawDenoise), and the
+       non-identity render below runs on a private copy so the cached image is never mutated. */
     if (outWork) *outWork = work;
 
-    /* RAW develops in its native linear float (better than an 8-bit round trip), so the
-       develop stage runs here rather than in ImageDecoder for raw files. */
+    /* RAW develops in its native linear float (better than an 8-bit round trip), so the develop
+       stage runs here rather than in ImageDecoder for raw files. "Denoise raw" (Base-layer global
+       NR, post-demosaic) is applied to the private copy BEFORE the develop ops, for both decode
+       engines; no-op unless edit sets denoiseLuma/denoiseChroma and the model is loaded. iso
+       conditions the learned denoiser. This is the NON-interactive path (export / a decode carrying
+       saved edits); the live preview denoises via the develop cache instead. */
     OutputTransform output;
     if (edit && !edit->isIdentity()) {
         WorkingImage developed = *work;
+        RawDenoise::Apply(developed, *edit, m.ISONum);
+        if (aborted()) { errMsg = "Aborted"; return false; }
         Develop develop;
         develop.Apply(developed, *edit);
         if (aborted()) { errMsg = "Aborted"; return false; }

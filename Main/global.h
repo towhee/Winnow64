@@ -219,6 +219,15 @@ Q_NAMESPACE
     enum class DecodeRawEngine : quint8 { winnowDecodeRawEngine, appleDecodeRawEngine };
     Q_ENUM_NS(DecodeRawEngine)
 
+    /* Winnow's top-level operation mode (more may follow).
+         Preview  fast image review: uses the embedded preview JPGs and keeps a large forward
+                  cache of upcoming images.
+         Develop  view/edit a SINGLE image at best quality (scene-linear raw decode); maintaining
+                  a large forward cache is a low priority here.
+       Toggled by the D shortcut and the status-bar Operation Mode dropdown (extreme left). */
+    enum class OperationMode : quint8 { Preview, Develop };
+    Q_ENUM_NS(OperationMode)
+
     // Generic stringify function
     template <typename Enum>
     inline QString enumClassToString(Enum value)
@@ -408,6 +417,7 @@ Q_NAMESPACE
        engine; appleDecodeRawEngine is honoured only on macOS and otherwise falls back to
        winnowDecodeRawEngine. A/B knob for the Core Image vs in-house decode paths. */
     extern DecodeRawEngine decodeRawEngine;
+    extern OperationMode operationMode;     // Preview (fast review) vs Develop (best-quality single image)
 
     /* Develop slider-drag latency probe. When true, MW::developParamsChange logs per-stage
        timings (copy / Apply / ToImage / rotate / preview) for each re-render so the dominant

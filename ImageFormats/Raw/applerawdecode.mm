@@ -32,14 +32,18 @@ bool Decode(const QString &path, WorkingImage &out, QString &err)
                 return false;
             }
 
-            /* Disable Apple's tone boost and sharpening so the result is scene-linear and
-               unsharpened: the tone curve is OutputTransform's job, and pre-alignment
-               sharpening hurts focus stacking. Colour NR + baseline luminance NR are LEFT at
-               their defaults -- that is the global NR step. */
-            f.boostAmount       = 0.0;   // no global tone boost -> keep linear headroom
-            f.boostShadowAmount = 0.0;
-            f.sharpnessAmount   = 0.0;
-            f.detailAmount      = 0.0;
+            /* Disable Apple's tone boost, sharpening AND noise reduction so the result is scene-
+               linear, unsharpened and UN-denoised: the tone curve is OutputTransform's job, pre-
+               alignment sharpening hurts focus stacking, and noise reduction is now the "Denoise
+               raw" control's job (RawDenoise / TreeNet). Leaving Core Image's default NR on would
+               pre-clean the image, leaving the learned denoiser little to do -- so we hand it the
+               true, noisy raw and let the Denoise sliders control NR (Lightroom model). */
+            // f.boostAmount       = 0.0;   // no global tone boost -> keep linear headroom
+            // f.boostShadowAmount = 0.0;
+            // f.sharpnessAmount   = 0.0;
+            // f.detailAmount      = 0.0;
+            // f.luminanceNoiseReductionAmount = 0.0;   // no baseline luma NR -> Denoise raw owns it
+            // f.colorNoiseReductionAmount     = 0.0;   // no baseline chroma NR -> Denoise raw owns it
 
             /* Output SENSOR orientation -- do NOT bake in EXIF orientation. Raw formats are in
                metadata->rotateFormats, so the shared pipeline (ImageDecoder::rotate) applies

@@ -2,3 +2,5 @@
 # ReleaseExtras/ (also untracked, like the other large models).
 _sam2_dl/
 _sam2_venv/
+_nafnet_venv/
+_treenet_dl/

@@ -67,10 +67,11 @@ struct EditParams {
     /* Adjustment groups, matching the Develop panel's section headers (Basic / Color / Effects).
        These drive the per-section Preview (show/ignore) and Reset (restore defaults) controls: a
        group is a fixed subset of the fields above. Note the grouping follows the UI, not the field
-       comments -- texture/dehaze/denoise sit under Basic, and the tone splits belong to Basic for
+       comments -- texture/dehaze sit under Basic, and the tone splits belong to Basic for
        Reset (they are irrelevant to Preview since the tone sliders they modulate are zeroed anyway).
-       denoiseLuma/denoiseChroma are decode-time global NR (baked before Develop runs) so they are in
-       NO group and cannot be previewed/reset via params. Effects is empty today (reserved). */
+       localDenoiseLuma ("Denoise", local post-demosaic NR) is under Effects. denoiseLuma/denoiseChroma
+       are decode-time global NR (the Base layer's "Denoise raw", baked before Develop runs) so they
+       are in NO group and cannot be previewed/reset via params. */
     enum class Group { Basic, Color, Effects };
 
     /* Force one group's fields back to their identity defaults, in place. The defaults come from a
@@ -85,7 +86,6 @@ struct EditParams {
             p.highlights = def.highlights; p.shadows = def.shadows;
             p.whites = def.whites; p.blacks = def.blacks;
             p.texture = def.texture; p.dehaze = def.dehaze;
-            p.localDenoiseLuma = def.localDenoiseLuma;
             p.toneShadowCenter = def.toneShadowCenter;
             p.toneCrossover = def.toneCrossover;
             p.toneHighlightCenter = def.toneHighlightCenter;
@@ -95,7 +95,8 @@ struct EditParams {
             p.hue = def.hue; p.saturation = def.saturation; p.luminance = def.luminance;
             break;
         case Group::Effects:
-            break;                              // reserved -- no fields yet
+            p.localDenoiseLuma = def.localDenoiseLuma;   // "Denoise" (local NR) lives in Effects
+            break;
         }
     }
 

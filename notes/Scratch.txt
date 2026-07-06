@@ -304,3 +304,23 @@ Add two buttons to the Develop Panel title bar: "Raw" and "Rendered".  When the 
  to the JSON edit data saved to the xmp sidecar.
 
 Create a 16 px button (developBtn) with 3 thick horizontal lines (red, green, blue).
+
+If the file type is a raw file, in the develop panel, under the layer selection row, add
+another row to choose whether to edit the raw data or the embedded preview:
+|---------------------------------------------------|
+|>Layer[Layer dropdown                 ]         [E]|
+|---------------------------------------------------|
+|Edit:          • Raw    • Embedded Preview         |
+|  Demosaic                                         |
+|  Denoise raw                                      |
+
+The checkboxes (•) are A/B.  They need to be synced with useRawBtn in the status bar.
+
+If Edit Raw is selected then show the Demosaic and Denoise rows. Note Demosaic and
+Denoise are offset approximately 2 characters. They should align with "Temp" in the Basic
+section.
+
+brew install onnxruntime
+python export_nafnet.py
+configure -DWINNOW_ENABLE_ORT=ON
+

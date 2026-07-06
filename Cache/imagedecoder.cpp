@@ -306,7 +306,10 @@ bool ImageDecoder::load()
         if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
             ImageMetadata rawMeta;
             if (isIndependent) rawMeta = indMeta;
-            else dm->fPathRawInfoGet(fPath, rawMeta.rawInfo);
+            else {
+                dm->fPathRawInfoGet(fPath, rawMeta.rawInfo);
+                rawMeta.ISONum = dm->sf->index(sfRow, G::ISOColumn).data().toInt();  // "Denoise raw" conditioning
+            }
             std::shared_ptr<const WorkingImage> work;
             if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort, &work)) {
                 decoderToUse = Raw;
@@ -696,6 +699,9 @@ void ImageDecoder::applyDevelop()
     hot browsing path untouched: an unedited image never round-trips through the float buffer.
 */
     if (isLog || G::isLogger) G::log("ImageDecoder::applyDevelop", "sfRow = " + QString::number(sfRow));
+    /* Preview mode shows the as-shot image WITHOUT the saved develop recipe (fast review). Only the
+       browse/loupe decode is gated on mode; independent decodes (focus stack) still develop. */
+    if (!isIndependent && G::operationMode != G::OperationMode::Develop) return;
     if (developApplied || editParams.isIdentity() || image.isNull()) return;
 
     /* Reuse the pre-develop WorkingImage if a prior decode cached it (skips InputTransform);

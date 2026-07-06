@@ -9,6 +9,7 @@
 #include "Develop/skymask.h"
 #include "Develop/depthmask.h"
 #include "Develop/objectmask.h"
+#include "ImageFormats/Raw/rawdenoise.h"
 #include "Utilities/subjectpredictor.h"
 #include "Utilities/skypredictor.h"
 #include "Utilities/depthpredictor.h"
@@ -312,7 +313,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     /* Apply the persisted Develop enabled state now that BOTH the dock (createDocks) and
        developAction (createActions) exist -- createDocks runs first, so this cannot live in
        createDevelopDock. */
-    setDevelopPanelEnabled(developAction->isChecked());
+    syncDevelopPanelEnabled();   // gated by developAction AND Develop operation mode
 
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
@@ -2477,8 +2478,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     /* Per-image Develop edit state: load this image's saved EditStack into the dock (also flushes
        the previous image's edits to its sidecar). The developed preview is applied after the
        loupe image is shown (applyDevelopPreviewIfEdited). Videos are not developable, so hand the
-       dock an empty path -- it still flushes the image we are leaving, then points at nothing. */
-    if (developProperties) {
+       dock an empty path -- it still flushes the image we are leaving, then points at nothing.
+       In Preview mode the Develop panel is disabled and no edits can be made, so leave it untouched
+       (no edits are pending to flush either); setOperationMode re-syncs it on entering Develop. */
+    if (developProperties && G::operationMode == G::OperationMode::Develop) {
         const bool selIsVideo = dm->sf->index(current.row(), G::VideoColumn).data().toBool();
         developProperties->setCurrentImage(selIsVideo ? QString() : fPath);
     }
@@ -5989,9 +5992,29 @@ void MW::renderDevelopPreview(bool fullRes)
     /* Reuse the cached pre-develop (full-res) WorkingImage. RAW always caches it at decode;
        non-raw caches it the first time it is developed. */
     auto work = WorkingImageCache::instance().get(fPath);
+    const bool wantRaw = isFileRaw(fPath) && G::useRaw;
+    fprintf(stderr, "DBG WI: get=%s isRaw=%d useRaw=%d cachedSceneRef=%d\n",
+            work ? "HIT" : "MISS", int(isFileRaw(fPath)), int(G::useRaw),
+            work ? int(work->sceneReferred) : -1); fflush(stderr);
+    /* Develop needs the SCENE-LINEAR raw WorkingImage, not the tone-mapped 8-bit display image. It
+       may be absent (evicted from the small WorkingImageCache during Preview read-ahead) OR a prior
+       develop-miss may have cached a display-referred one under this path. Either way, (re-)decode
+       the raw -- decodeIndependent caches the scene-linear WorkingImage as a side effect. Synchronous:
+       a miss is occasional (Develop mode suspends read-ahead) and Develop prioritises quality. */
+    if (wantRaw && (!work || !work->sceneReferred)) {
+        ImageMetadata m = dm->imMetadata(fPath);
+        if (m.fPath.isEmpty()) m.fPath = fPath;
+        ImageDecoder dec(0, dm, metadata);
+        QImage img;
+        const bool ok = dec.decodeIndependent(img, metadata, m);
+        auto w2 = WorkingImageCache::instance().get(fPath);
+        fprintf(stderr, "DBG WI: re-decode ok=%d -> sceneRef=%d %dx%d\n", int(ok),
+                w2 ? int(w2->sceneReferred) : -1, w2 ? w2->width : 0, w2 ? w2->height : 0); fflush(stderr);
+        if (ok && w2 && w2->sceneReferred) work = w2;
+    }
     if (!work) {
-        /* Miss (first edit of a non-raw image, or evicted): build the pre-develop
-           WorkingImage once from the decoded display image and cache it. */
+        /* Non-raw (JPG/TIFF/HEIC), or the raw re-decode failed: build the pre-develop WorkingImage
+           from the decoded display image. Correct for display-referred files; a last resort for raw. */
         if (!icd->contains(fPath)) return;          // not decoded yet; nothing to preview
         const QImage src = icd->imCache.value(fPath);
         if (src.isNull()) return;
@@ -6001,6 +6024,14 @@ void MW::renderDevelopPreview(bool fullRes)
         WorkingImageCache::instance().put(fPath, built);
         work = built;
     }
+    fprintf(stderr, "DBG WI: develop base sceneRef=%d %dx%d\n",
+            work ? int(work->sceneReferred) : -1, work ? work->width : 0, work ? work->height : 0);
+    fflush(stderr);
+
+    /* Base image for the render: the raw-DENOISED WorkingImage when the Base layer's "Denoise raw"
+       is set and ready, else the clean cached image. The heavy denoise runs on settle (see
+       renderDevelopFullResAsync -> ensureRawDenoise), so a slider tick never blocks on it. */
+    const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.base, work);
 
     QElapsedTimer probe;
     if (G::isReportDevelopTime) probe.start();
@@ -6009,13 +6040,13 @@ void MW::renderDevelopPreview(bool fullRes)
     /* Pick the render source: full-res for the settled render, else the screen-resolution proxy
        (built once per image, sized a little over the loupe viewport so a modest zoom still
        looks reasonable mid-drag). */
-    const WorkingImage *srcImg = work.get();
+    const WorkingImage *srcImg = base.get();
     if (!fullRes) {
         if (developProxyPath != fPath || !developProxy) {
             const QSize vp = imageView->viewport()->size();
             const int target = qMax(800, qMax(vp.width(), vp.height()) * 3 / 2);
             developProxy = std::make_shared<WorkingImage>(
-                WorkingImageCache::downscaled(*work, target));
+                WorkingImageCache::downscaled(*base, target));
             developProxyPath = fPath;
             if (G::isReportDevelopTime) tProxy = probe.restart();
         }
@@ -6096,13 +6127,21 @@ bool MW::currentIsVideo() const
 
 bool MW::currentDevelopEditsVisible() const
 {
+    /* Develop edits render only in Develop mode. Preview mode is fast, as-shot review: it shows the
+       embedded preview / decoded image WITHOUT the saved develop recipe. */
+    if (G::operationMode != G::OperationMode::Develop) return false;
     if (!developProperties || developProperties->currentIsIdentity()) return false;
     /* A RAW file's edits are calibrated for the demosaiced render, so they show only in raw mode
        (in preview mode the loupe shows the untouched embedded JPG). A non-RAW file (JPG/TIFF/PNG)
        IS the developable image, so its edits show regardless of useRaw. */
-    const QString ext = QFileInfo(dm->currentFilePath).suffix().toLower();
-    const bool isRawFile = metadata && metadata->hasJpg.contains(ext);
-    return G::useRaw || !isRawFile;
+    return G::useRaw || !isFileRaw(dm->currentFilePath);
+}
+
+bool MW::isFileRaw(const QString &fPath) const
+{
+    if (!metadata) return false;
+    const QString ext = QFileInfo(fPath).suffix().toLower();
+    return metadata->hasJpg.contains(ext);
 }
 
 void MW::applyDevelopPreviewIfEdited()
@@ -6153,6 +6192,16 @@ void MW::renderDevelopFullResAsync()
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const quint64 gen = developParamsGen;
 
+    /* Ensure the raw-DENOISED base is ready before the crisp full-res render. If "Denoise raw" is
+       set but the denoised image for the current amounts isn't cached yet, compute it off-thread
+       and bail -- ensureRawDenoise() repaints and re-arms this render when it lands. */
+    const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.base, work);
+    if (base == work &&
+        (mj.base.denoiseLuma > 0.0f || mj.base.denoiseChroma > 0.0f)) {
+        ensureRawDenoise(fPath, mj.base, work, currentImageIso());
+        return;
+    }
+
     /* Ensure the content-range reference is registered before the background render samples it
        (GUI thread; cached, so normally a no-op after the proxy render already built it). */
     if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.base, degrees);
@@ -6171,7 +6220,7 @@ void MW::renderDevelopFullResAsync()
                 ensureBrushSamFields(fPath, *work, mj.base, degrees, m.paramsJson);
 
     developFullResInFlight = true;
-    std::shared_ptr<const WorkingImage> src = work;   // keep alive across the background render
+    std::shared_ptr<const WorkingImage> src = base;   // denoised base when set, else clean; kept alive
     developRenderPool->start([this, src, mj, degrees, fPath, gen]() {
         QElapsedTimer t;
         WorkingImageCache::RenderTimings rt;
@@ -6213,6 +6262,76 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
 
     if (currentImage && gen != developParamsGen)
         developFullResTimer->start(kDevelopSettleMs);
+}
+
+/* Cache key for the raw-denoised base: image path + the two Base "Denoise raw" amounts + ISO. */
+static QString rawDenoiseKey(const QString &fPath, const EditParams &base, int iso)
+{
+    return QString("%1|dnL=%2|dnC=%3|iso=%4")
+        .arg(fPath).arg(base.denoiseLuma).arg(base.denoiseChroma).arg(iso);
+}
+
+int MW::currentImageIso() const
+{
+    if (!dm || !dm->sf) return 0;
+    return dm->sf->index(dm->currentSfRow, G::ISOColumn).data().toInt();
+}
+
+std::shared_ptr<const WorkingImage> MW::developRawDenoisedBase(
+    const QString &fPath, const EditParams &base,
+    const std::shared_ptr<const WorkingImage> &clean)
+{
+/*
+    The base image the develop render should start from. "Denoise raw" is a Base-only, RAW-only
+    global op: when it is set and the denoised WorkingImage for the current amounts is cached, that
+    is the base; otherwise the clean cached image is used (and ensureRawDenoise() computes the
+    denoised one off-thread on settle). Pure lookup -- never runs the model.
+*/
+    if (!clean || (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f))
+        return clean;
+    const QString key = rawDenoiseKey(fPath, base, currentImageIso());
+    if (developDenoisedKey == key && developDenoised) return developDenoised;
+    return clean;   // not ready yet -> serve clean; ensureRawDenoise() fills it in
+}
+
+void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
+                          const std::shared_ptr<const WorkingImage> &clean, int iso)
+{
+/*
+    Compute the raw-denoised base off the GUI thread (developRenderPool: heavy DNN, ~like the full-
+    res render), cache it, then repaint. Coalesced -- one compute in flight, and a no-op if the
+    current amounts are already computed or being computed. Called from the settle path so dragging
+    the denoise slider does not spawn a model run per tick.
+*/
+    if (!clean) return;
+    if (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f) return;
+    const QString key = rawDenoiseKey(fPath, base, iso);
+    if (developDenoisedKey == key && developDenoised) return;   // already current
+    /* ONE job at a time. Concurrent jobs (one per drag value) finish out of order and a stale
+       early result can win the cache, so the lookup never matches the settled slider. Serialize:
+       while a job runs, skip new requests; the completion re-renders, and the render's gate
+       re-triggers this for the latest params -- so it converges on where the sliders end up. */
+    if (!developDenoiseInFlightKey.isEmpty()) return;
+    developDenoiseInFlightKey = key;
+
+    std::shared_ptr<const WorkingImage> src = clean;            // keep the clean base alive
+    const EditParams b = base;
+    developRenderPool->start([this, src, b, iso, key, fPath]() {
+        auto denoised = std::make_shared<WorkingImage>(*src);   // copy, then denoise in place
+        RawDenoise::Apply(*denoised, b, iso);
+        std::shared_ptr<const WorkingImage> result = denoised;
+        QMetaObject::invokeMethod(this, [this, result, key, fPath]() {
+            developDenoiseInFlightKey.clear();                  // job finished; allow the next (latest) one
+            if (!dm || fPath != dm->currentFilePath) return;    // navigated away; drop it
+            developDenoised = result;
+            developDenoisedKey = key;
+            developProxy.reset();                               // rebuild proxy from the denoised base
+            developProxyPath.clear();
+            ++developParamsGen;                                 // discard any stale in-flight full-res
+            renderDevelopPreview(false);                        // repaint the proxy now
+            developFullResTimer->start(kDevelopSettleMs);       // and a crisp full-res
+        });
+    });
 }
 
 void MW::updateDevelopScopes(const QImage &shown)

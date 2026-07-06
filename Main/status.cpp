@@ -694,6 +694,10 @@ void MW::toggleUseRaw(Tog n)
 
     updateStatusBar();  // updates btn image and tooltip
 
+    /* Keep the Develop panel's "Edit: Raw / Embedded Preview" selector in sync with the status
+       bar button (both drive G::useRaw). */
+    if (developProperties) developProperties->syncEditRaw(G::useRaw);
+
     if (dm->rowCount() == 0) return;
 
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)

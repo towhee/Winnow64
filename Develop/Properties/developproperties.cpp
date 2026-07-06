@@ -171,20 +171,67 @@ void DevelopProperties::buildTree()
     updateMaskEdit();
     updateHiddenRows(QModelIndex());
     applyLayerItemsCollapsed();      // re-assert the '>' collapse (a rebuild resets row visibility)
+    applyCoreVisibility();           // hide Demosaic/Denoise raw when editing preview (after collapse)
     if (!panelEnabled) applyItemsEnabled(false);   // keep captions greyed if the panel is disabled
 }
 
 void DevelopProperties::addCoreItems()
 {
     if (G::isLogger) G::log("DevelopProperties::addCoreItems");
-    /* Base layer only: the raw Demosaic engine + Denoise, shown as plain rows at the TOP of the
-       tree (they apply globally, so no section header). Formerly the "Core" header. */
+    /* Base layer only. These rows apply to raw sensor data, so they are shown for RAW files only:
+       a JPG/TIFF/PNG is already the developable image (no demosaic, no raw denoise, no source
+       choice). Non-raw Base layers get no Core rows. */
+    if (!currentIsRaw()) return;
+
+    /* Edit source selector (directly under the layer header): choose whether Develop edits the raw
+       sensor data or the embedded preview jpg. An A/B radio pair kept in sync with G::useRaw and
+       the status-bar useRaw button. "Edit:" is left-aligned (isIndent = false); the radios are
+       hosted in the value cell (DT_None = no built-in editor, so the cell is ours). */
+    clearItemInfo(i);
+    i.name = "editSource";
+    i.parentName = "";              // root row (no section header)
+    i.captionText = "Edit:";
+    i.tooltip = "Edit the raw sensor data (demosaic) or the embedded preview jpg.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "editSource";
+    i.delegateType = DT_None;
+    addItem(i);
+
+    const QModelIndex editValIdx = findValueIndex("editSource");
+    if (editValIdx.isValid()) {
+        /* Recreated on every rebuild; the previous widget is freed when removeRows() drops the row
+           (setIndexWidget gives the view ownership of the index widget). */
+        QWidget *w = new QWidget;
+        w->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(w);
+        hb->setContentsMargins(0, 0, 0, 0);
+        hb->setSpacing(12);
+        QRadioButton *rawBtn  = new QRadioButton("Raw", w);
+        QRadioButton *prevBtn = new QRadioButton("Embedded Preview", w);
+        QButtonGroup *grp = new QButtonGroup(w);
+        grp->setExclusive(true);
+        grp->addButton(rawBtn);
+        grp->addButton(prevBtn);
+        rawBtn->setChecked(G::useRaw);
+        prevBtn->setChecked(!G::useRaw);
+        hb->addWidget(rawBtn);
+        hb->addWidget(prevBtn);
+        hb->addStretch(1);
+        editRawRadio = rawBtn;      // QPointer: cleared automatically when the row/widget is freed
+        connect(rawBtn, &QRadioButton::toggled, this, &DevelopProperties::onEditSourceChanged);
+        setIndexWidget(editValIdx, w);
+    }
+
+    /* Demosaic engine + raw noise reduction. Indented (isIndent = true) so they align with the
+       Basic-section sliders (e.g. "Temp"). Visible only when editing raw (applyCoreVisibility). */
     clearItemInfo(i);
     i.name = "demosaic";
-    i.parentName = "";              // root row (no section header)
+    i.parentName = "";
     i.captionText = "Demosaic";
     i.tooltip = "Select demosaic engine.";
-    i.isIndent = true;             // align with the indented Denoise row below
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = "Apple";
@@ -194,8 +241,76 @@ void DevelopProperties::addCoreItems()
     i.dropList.clear();
     i.dropList << "Apple" << "Winnow";
     addItem(i);
+    /* Root leaves get one indent level; add another (UR_ExtraIndent) so they line up with the
+       Basic-section sliders (which are one level deeper, being children of BasicHeader). */
+    model->setData(capIdx, true, UR_ExtraIndent);
 
-    addCheckbox("denoise", "Denoise", "Apply raw noise reduction.", QModelIndex(), "", false);
+    /* "Denoise raw": Base-layer, decode-time raw noise reduction (denoiseLuma/denoiseChroma),
+       baked into the pre-develop WorkingImage (global, not maskable) -- distinct from the Effects
+       "Denoise" (localDenoiseLuma). Two Lightroom-style 0..100 sliders mapped to 0..1: Luminance =
+       the master AI-denoise amount; Color = extra chroma-noise suppression. */
+    addSlider("denoiseLuma", "Denoise Lum", "Raw luminance noise reduction (AI, whole image).",
+              QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray);
+    model->setData(capIdx, true, UR_ExtraIndent);
+    addSlider("denoiseChroma", "Denoise Color", "Raw colour (chroma) noise reduction.",
+              QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray);
+    model->setData(capIdx, true, UR_ExtraIndent);
+    /* Visibility (per G::useRaw + collapse) is applied by buildTree() after applyLayerItemsCollapsed. */
+}
+
+bool DevelopProperties::currentIsRaw() const
+{
+    return mw && mw->isFileRaw(currentImagePath);
+}
+
+void DevelopProperties::onEditSourceChanged(bool raw)
+{
+    if (G::isLogger) G::log("DevelopProperties::onEditSourceChanged");
+    /* rawBtn->toggled fires for both halves of the exclusive pair; either way `raw` is the new
+       state of the "Raw" button. Only ask MW to switch when it actually differs from G::useRaw
+       (syncEditRaw sets the button with signals blocked, so this is also the loop guard). */
+    if (raw == G::useRaw) return;
+    emit useRawRequested(raw);
+}
+
+void DevelopProperties::syncEditRaw(bool useRaw)
+{
+    if (G::isLogger) G::log("DevelopProperties::syncEditRaw");
+    if (editRawRadio) {
+        /* An exclusive QButtonGroup auto-unchecks the siblings when a button is CHECKED, but does
+           NOT auto-check a sibling when the checked button is unchecked. So editRawRadio->setChecked
+           (false) would leave both "Raw" and "Embedded Preview" blank. Always check the button that
+           should be selected: "Raw" when useRaw, otherwise its group sibling ("Embedded Preview").
+           editRawRadio is the only button connected to a slot, so blocking it also guards re-entry. */
+        QSignalBlocker block(editRawRadio);
+        QAbstractButton *target = editRawRadio;
+        if (!useRaw) {
+            if (QButtonGroup *grp = editRawRadio->group()) {
+                for (QAbstractButton *b : grp->buttons()) {
+                    if (b != editRawRadio) { target = b; break; }
+                }
+            }
+        }
+        target->setChecked(true);
+    }
+    applyCoreVisibility();
+}
+
+void DevelopProperties::applyCoreVisibility()
+{
+    /* Demosaic + Denoise raw are visible only when editing raw AND the layer items are not
+       collapsed ('>'). Scan root rows only (the Effects "Denoise" is a distinct key, "localDenoise",
+       and is never touched here) and set those two rows directly -- this must run AFTER
+       applyLayerItemsCollapsed(), which would otherwise re-show them on a non-collapsed rebuild. */
+    const bool hide = !G::useRaw || layerItemsCollapsed;
+    for (int r = 0; r < model->rowCount(); ++r) {
+        const QModelIndex cap = model->index(r, CapColumn);
+        const QString name = cap.data(UR_Name).toString();
+        if (name == "demosaic" || name == "denoiseLuma" || name == "denoiseChroma") {
+            model->setData(cap, hide, UR_isHidden);   // remembered for updateHiddenRows()
+            setRowHidden(r, QModelIndex(), hide);
+        }
+    }
 }
 
 void DevelopProperties::addMaskItems()
@@ -206,9 +321,41 @@ void DevelopProperties::addMaskItems()
     EditLayer *layer = activeLayer();
     if (!layer || activeLayerIndex == 0) { selectedMaskIndex = -1; return; }
     const int n = layer->masks.size();
+    /* A layer with no mask yet shows a single "Add mask" placeholder row with a [+] button (the layer
+       otherwise has no top rows). It vanishes as soon as a tool is added -- the layer then shows its
+       tool rows, and adding a tool selects it (see the "hidden when a mask is selected" invariant). */
+    if (n == 0) {
+        selectedMaskIndex = -1;
+        addAddMaskRow();
+        return;
+    }
     if (selectedMaskIndex >= n) selectedMaskIndex = n - 1;
     for (int m = 0; m < n; ++m)
         addToolRow(QModelIndex(), m, layer->masks[m], m == selectedMaskIndex);
+}
+
+void DevelopProperties::addAddMaskRow()
+{
+    /* Placeholder row shown only while the active (non-Base) layer has no mask: a header-style,
+       full-width single-line "Add mask" caption carrying just a [+] glyph (UR_AddBtn, no [-] and no
+       expand arrow). Clicking anywhere on the row pops the Add/Subtract chooser (showMaskMenu). It is
+       identified in mousePressEvent by its name ("addMask"), as it has no UR_MaskIndex. */
+    clearItemInfo(i);
+    i.name = "addMask";
+    i.parIdx = QModelIndex();
+    i.captionText = "Add mask";
+    i.tooltip = "This layer has no mask (it applies globally). Click [+] to add a mask tool.";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = false;
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex rowIdx = capIdx;
+    model->setData(rowIdx, true, UR_LeafSingleLine);
+    model->setData(rowIdx, true, UR_AddBtn);            // [+] add the first mask tool
+    setFirstColumnSpanned(rowIdx.row(), QModelIndex(), true);
 }
 
 void DevelopProperties::bindLayerHeader(LayerHeader *header)
@@ -339,6 +486,7 @@ void DevelopProperties::setTreeCollapsed(bool collapsed)
        Basic/Color/Effects sections. The sections stay visible. */
     layerItemsCollapsed = collapsed;
     applyLayerItemsCollapsed();
+    applyCoreVisibility();           // core rows also depend on collapse state
 }
 
 void DevelopProperties::applyLayerItemsCollapsed()
@@ -1015,6 +1163,12 @@ void DevelopProperties::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton) {
         const QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
+            /* The "Add mask" placeholder row (shown while the layer has no mask) has no UR_MaskIndex;
+               a click anywhere on it -- including its [+] -- pops the Add/Subtract chooser. */
+            if (idx.siblingAtColumn(0).data(UR_Name).toString() == "addMask") {
+                showMaskMenu();
+                return;
+            }
             const QVariant v = idx.siblingAtColumn(0).data(UR_MaskIndex);
             if (v.isValid()) {
                 const int m = v.toInt();
@@ -1156,7 +1310,6 @@ void DevelopProperties::addBasic()
     addSlider("blacks",     "Blacks",     "Set the black point.",                parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
-    addCheckbox("denoise", "Denoise", "Apply local luminace noise reduction.", parIdx, "BasicHeader", false);
     // demo colors
     // addSlider("blue", "Blue", "Blue.", parIdx, "BasicHeader", -100, 100, 0, G::darkblue, G::lightblue);
     // addSlider("yellow", "Yellow", "Yellow.", parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
@@ -1193,7 +1346,13 @@ void DevelopProperties::addColor()
 void DevelopProperties::addEffects()
 {
     if (G::isLogger) G::log("DevelopProperties::addEffects");
-    addHeader("EffectsHeader", "???", "Effects", "Creative effects (to be added).", PV_Effects);
+    addHeader("EffectsHeader", "???", "Effects", "Local (post-demosaic) effects.", PV_Effects);
+    QModelIndex parIdx = capIdx;
+
+    /* Local luminance noise reduction: a per-layer, maskable Develop op on the decoded image
+       (localDenoiseLuma). Distinct from the Base layer's "Denoise raw" (decode-time global raw NR,
+       denoiseLuma/denoiseChroma) -- different function, different key. */
+    addCheckbox("localDenoise", "Denoise", "Apply local luminance noise reduction to rendered image.", parIdx, "EffectsHeader", false);
 }
 
 void DevelopProperties::updateSectionHeaderCaptions()
@@ -1291,6 +1450,14 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
+    /* The "Demosaic" combo (raw-only, Base) selects the RAW decode ENGINE (Apple Core Image vs the
+       in-house Winnow decoder). It is not an EditParams value -- it forces a re-decode -- so handle
+       it here (emit to MW) and skip applyKeyToParams / the normal preview render. */
+    if (source == "demosaic") {
+        emit demosaicEngineChanged(v.toString() == "Apple");
+        return;
+    }
+
     /* Write the changed adjustment into the CURRENT IMAGE's active-layer params, mark it dirty,
        and drive the live preview. Persistence to the sidecar happens on navigate-away / quit /
        pre-op (always) and, if G::isDevelopDebounceWrite, a short time after edits settle. */
@@ -1324,9 +1491,10 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "hue")        p.hue        = f;
     else if (key == "saturation") p.saturation = f;
     else if (key == "luminance")  p.luminance  = f;
-    else if (key == "denoise")  { const bool on = v.toBool();
-                                  p.denoiseLuma = on ? 1.0f : 0.0f;
-                                  p.denoiseChroma = on ? 1.0f : 0.0f; }
+    else if (key == "denoiseLuma")   p.denoiseLuma   = f / 100.0f;   // Base "Denoise raw" (0..100 -> 0..1)
+    else if (key == "denoiseChroma") p.denoiseChroma = f / 100.0f;
+    else if (key == "localDenoise")                            // Effects "Denoise" (local NR)
+                                  p.localDenoiseLuma = v.toBool() ? 1.0f : 0.0f;
 }
 
 EditParams DevelopProperties::editParams()
@@ -1507,7 +1675,9 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("hue",        p.hue);
     setSliderReal("saturation", p.saturation);
     setSliderReal("luminance",  p.luminance);
-    setCheckboxValue("denoise", p.denoiseLuma > 0.0f);
+    setSliderReal("denoiseLuma",   p.denoiseLuma   * 100.0);      // Base "Denoise raw" (0..1 -> 0..100)
+    setSliderReal("denoiseChroma", p.denoiseChroma * 100.0);
+    setCheckboxValue("localDenoise", p.localDenoiseLuma > 0.0f);  // Effects "Denoise"
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
     isPopulating = false;

@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Develop/workingimagecache.h"
 
 void MW::initialize()
 {
@@ -1190,6 +1191,40 @@ void MW::createStatusBar()
 
     setCacheRunningLightsWidth();
 
+    // Operation Mode dropdown at the EXTREME LEFT of the status bar (Preview / Develop). A standout
+    // orange background makes the current mode obvious. Item order matches G::OperationMode
+    // (0 = Preview, 1 = Develop). Toggled here or via the D shortcut (operationModeAction).
+    operationModeCombo = new QComboBox;
+    operationModeCombo->setObjectName("operationModeCombo");
+    operationModeCombo->addItem("Preview");
+    operationModeCombo->addItem("Develop");
+    operationModeCombo->setCurrentIndex(int(G::operationMode));
+    operationModeCombo->setFocusPolicy(Qt::NoFocus);
+    operationModeCombo->setToolTip("Operation mode:\n  Preview — fast image review (embedded previews)\n"
+                                   "  Develop — best-quality single-image view/edit\nShortcut: D");
+    /* Pin the width to the widest item via the STYLESHEET min-width/max-width. The global widget
+       CSS (widgetcss.cpp) sets "QComboBox { min-width: 6em }", and in Qt a stylesheet min-width
+       OVERRIDES setFixedWidth() -- so the width must be a stylesheet property here to win. Width =
+       widest bold label + padding(12) + arrow(14) + slack. */
+    QFont opModeBold = operationModeCombo->font(); opModeBold.setBold(true);
+    const int opModeW = qMax(QFontMetrics(opModeBold).horizontalAdvance("Preview"),
+                             QFontMetrics(opModeBold).horizontalAdvance("Develop")) + 12 + 4;
+    operationModeCombo->setStyleSheet(QString(
+        "QComboBox {background-color:#445f76; color:white;"
+        // "QComboBox {background-color:#007AFF; color:white; font-weight:bold;"
+        " padding:1px 6px; border:none; border-radius:3px; margin:0 4px;"
+        " min-width:%1px; max-width:%1px;}"
+        "QComboBox::drop-down {border:none; width:14px;} "
+        "QComboBox QAbstractItemView {background-color:#445f76; color:white;"
+        // "QComboBox QAbstractItemView {background-color:#2b2b2b; color:white;"
+        " selection-background-color:#445f76;}").arg(opModeW));
+        // " selection-background-color:#007AFF;}").arg(opModeW));
+    connect(operationModeCombo, &QComboBox::activated, this, [this](int i) {
+        setOperationMode(i == int(G::OperationMode::Develop) ? G::OperationMode::Develop
+                                                             : G::OperationMode::Preview);
+    });
+    statusBar()->addWidget(operationModeCombo);
+
     // add process progress bar to left side of statusBar
     progressBar = new QProgressBar;
     progressBar->setFixedSize(50, 8);
@@ -1205,7 +1240,10 @@ void MW::createStatusBar()
     statusBar()->addWidget(colorManageToggleBtn);
     statusBar()->addWidget(includeSidecarsToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
-    statusBar()->addWidget(useRawBtn);
+    /* useRawBtn removed from the status bar: raw-vs-preview decode is now owned by the Operation
+       Mode (Preview=preview, Develop=raw; overridable in Develop via the "Edit source" selector).
+       The button is still created + wired (toggleUseRawClick) in case we bring it back. */
+    // statusBar()->addWidget(useRawBtn);
     statusBar()->addWidget(panToFocusToggleBtn);
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
     filterStatusLabel->setAlignment(Qt::AlignVCenter);
@@ -1747,6 +1785,22 @@ void MW::createDevelopDock()
 
     connect(developProperties, &DevelopProperties::centralMsg, this, &MW::setCentralMessage);
     connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::developParamsChange);
+    /* The dock's "Edit: Raw / Embedded Preview" selector drives G::useRaw through the same path as
+       the status-bar button (toggleUseRaw is a private slot, hence the signal hop). */
+    connect(developProperties, &DevelopProperties::useRawRequested, this,
+            [this](bool useRaw){ toggleUseRaw(useRaw ? Tog::on : Tog::off); });
+
+    /* The dock's "Demosaic" combo selects the RAW decode engine (Apple Core Image vs in-house
+       Winnow). Set G::decodeRawEngine, drop the current image's cached scene-linear WorkingImage so
+       it re-decodes with the new engine, and re-render. NOTE (verify next session): the visible
+       re-decode relies on renderDevelopPreview's raw re-decode path (gated on isFileRaw && useRaw). */
+    connect(developProperties, &DevelopProperties::demosaicEngineChanged, this,
+            [this](bool useApple){
+                G::decodeRawEngine = useApple ? G::DecodeRawEngine::appleDecodeRawEngine
+                                              : G::DecodeRawEngine::winnowDecodeRawEngine;
+                WorkingImageCache::instance().remove(dm->currentFilePath);
+                developParamsChange();
+            });
 
     /* Mask editing handshake: the dock activates a spatial mask tool and ImageView draws/edits its
        overlay, sending dragged geometry back to be persisted into the MaskComponent. */
@@ -1958,6 +2012,68 @@ void MW::setDevelopPanelEnabled(bool on)
        state. So strip the features while disabled and restore the captured set when on. */
     developDock->setFeatures(on ? developDockFeatures : QDockWidget::NoDockWidgetFeatures);
     if (developProperties) developProperties->setPanelEnabled(on);
+}
+
+void MW::syncDevelopPanelEnabled()
+{
+    if (G::isLogger) G::log("MW::syncDevelopPanelEnabled");
+    /* The Develop panel is usable only when the user's Develop toggle is on AND we are in Develop
+       operation mode. Preview mode is fast, as-shot review, so the panel is always greyed there. */
+    const bool on = developAction && developAction->isChecked()
+                    && G::operationMode == G::OperationMode::Develop;
+    setDevelopPanelEnabled(on);
+}
+
+void MW::setOperationMode(G::OperationMode mode)
+{
+/*
+    Apply the top-level operation mode (Preview vs Develop) and keep the status-bar dropdown in
+    sync. Preview = fast image review (embedded previews + large forward cache); Develop = best-
+    quality single-image view/edit. Entering a mode re-targets the image cache: Develop trims the
+    forward read-ahead to just the current image (setTargetRange), Preview restores the full
+    forward cache. (The raw re-decode on a Develop cache-miss is handled in renderDevelopPreview.)
+*/
+    if (G::isLogger)
+        G::log("MW::setOperationMode", mode == G::OperationMode::Develop ? "Develop" : "Preview");
+    if (G::operationMode == mode) return;               // no change
+    G::operationMode = mode;
+    if (operationModeCombo) {
+        QSignalBlocker block(operationModeCombo);       // setCurrentIndex must not re-fire activated()
+        operationModeCombo->setCurrentIndex(int(mode));
+    }
+    /* The mode owns the raw/preview decode: Develop decodes RAW sensor data (best quality), Preview
+       shows embedded previews (fast). toggleUseRaw() flips G::useRaw, syncs the Develop "Edit: Raw /
+       Embedded Preview" selector, and rebuilds the cache -- which, in Develop, re-targets to just the
+       current image (setTargetRange). Within Develop the Edit-source selector can still OVERRIDE to
+       Embedded Preview. If useRaw is already correct, just re-target for the mode's read-ahead change. */
+    const bool wantUseRaw = (mode == G::OperationMode::Develop);
+    if (G::useRaw != wantUseRaw)
+        toggleUseRaw(wantUseRaw ? Tog::on : Tog::off);
+    else if (imageCache && dm && !dm->currentFilePath.isEmpty())
+        imageCache->setCurrentPosition(dm->currentFilePath, "MW::setOperationMode");
+
+    /* Preview greys out the Develop panel; Develop re-enables it. The panel is not kept in sync
+       with the selected image while in Preview (fileSelectionChange skips it), so on entering
+       Develop point it at the current image before enabling. Leaving Develop, flush any unsaved
+       edits of the image we were on so they persist. */
+    if (developProperties) {
+        if (mode == G::OperationMode::Develop) {
+            const bool selIsVideo = currentIsVideo();
+            developProperties->setCurrentImage(selIsVideo || !dm ? QString()
+                                                                 : dm->currentFilePath);
+        }
+        else {
+            developProperties->flushAll();
+        }
+    }
+    syncDevelopPanelEnabled();
+}
+
+void MW::toggleOperationMode()
+{
+    if (G::isLogger) G::log("MW::toggleOperationMode");
+    setOperationMode(G::operationMode == G::OperationMode::Develop
+                         ? G::OperationMode::Preview : G::OperationMode::Develop);
 }
 
 void MW::developDockVisibilityChange()

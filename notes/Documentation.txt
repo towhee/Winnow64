@@ -2194,6 +2194,49 @@ Architecture
 
 
 ==========================================================================================
+OPERATION MODE (Preview vs Develop)
+==========================================================================================
+
+    Winnow's top-level mode is G::OperationMode (global.h): Preview | Develop (more may follow).
+      Preview  fast image review -- embedded preview JPGs + a large forward read-ahead cache.
+      Develop  view/edit a SINGLE image at BEST quality (scene-linear raw decode). A large forward
+               cache is a LOW priority here, so Develop suspends read-ahead and, on a WorkingImage-
+               cache miss for a raw, RE-DECODES to the scene-linear image rather than falling back
+               to the tone-mapped display image (that fallback is only correct for non-raw files).
+    UI: a standout (Apple-blue) dropdown at the EXTREME LEFT of the status bar (createStatusBar,
+    width pinned via stylesheet min/max-width to beat the global "QComboBox { min-width:6em }"), and
+    the D shortcut (operationModeAction) -- both call MW::setOperationMode / toggleOperationMode.
+    (D previously enabled/disabled the Develop panel via developAction; that action is now
+    shortcut-less in the Utilities menu.)
+
+    The mode also OWNS whether the Develop panel is usable: it is enabled only when the user's
+    Develop toggle (developAction) is on AND the mode is Develop -- Preview always greys it out.
+    MW::syncDevelopPanelEnabled() computes that AND and is called on both inputs (developAction
+    toggled, setOperationMode). In Preview the panel is not kept in sync with the selected image
+    either: fileSelectionChange skips developProperties->setCurrentImage (no edits are possible, so
+    none are pending to flush), and setOperationMode re-points the panel at the current image when
+    entering Develop / flushes edits when leaving it.
+
+    The mode OWNS the raw/preview decode (G::useRaw): setOperationMode calls toggleUseRaw(on) for
+    Develop and toggleUseRaw(off) for Preview -- so Preview shows embedded previews and Develop
+    decodes raw sensor data. Within Develop the "Edit: Raw / Embedded Preview" selector can still
+    OVERRIDE to embedded preview (it drives the same toggleUseRaw); the override lasts until the next
+    mode switch, which re-applies the mode default. The standalone status-bar useRawBtn is REMOVED
+    (commented out; button still created/wired in case it returns).
+
+    Behaviour implemented: (1) setTargetRange targets ONLY the current image in Develop mode (no
+    forward read-ahead -> the current image's scene-linear WorkingImage is not evicted); (2)
+    renderDevelopPreview re-decodes the raw on a WorkingImage miss OR when the cached one is
+    display-referred (a prior develop-miss fallback), via ImageDecoder::decodeIndependent (which
+    caches the scene-linear WorkingImage). Non-raw files still build from the display image.
+
+    OPEN QUESTION (decide later): should THUMBNAIL generation ALWAYS use the embedded preview
+    (useRaw=false) for raw files, even in Develop mode? Rationale: in Develop you edit ONE image;
+    the thumb strip is for orientation and does not need the slow full-raw decode. Currently
+    G::useRaw is global, so Develop=true also makes the strip decode raws (bounded by the Develop
+    read-ahead suspension, but still). A dedicated "thumbnails always preview" path would decouple
+    the loupe (raw) from the strip (preview).
+
 DEVELOP / IMAGE EDIT (PARAMETRIC ADJUSTMENTS)
 ==========================================================================================
 
@@ -2371,11 +2414,29 @@ Layer & masking model (planned)
     (applies everywhere) -- so "globally OR on masks" needs no special case.
 
     NOISE REDUCTION is split across the two stages (the decode pipeline and Develop):
-        • Colour NR + a BASELINE luminance NR are GLOBAL-ONLY. They live in the raw decode
-          pipeline, applied during demosaic alongside start WB / black / white, so they are
-          baked into WorkingImage before Develop runs and are not maskable. (Which engine does
-          the decode -- in-house vs macOS Core Image -- is selected by G::decodeRawEngine; both
-          converge on WorkingImage so this stays engine-agnostic.)
+        • "DENOISE RAW" (Colour + luminance NR) is GLOBAL-ONLY, driven by EditParams
+          denoiseLuma/denoiseChroma (two Base-layer 0..1 sliders, "Denoise Lum"/"Denoise Color").
+          IMPLEMENTED as a learned, POST-demosaic denoiser (RawRefinery "TreeNet"): RawFormat::Decode
+          calls RawDenoise::Apply on the scene-linear WorkingImage after RawColor, for BOTH decode
+          engines, before caching (ImageFormats/Raw/rawdenoise.cpp). The model takes linear-Rec2020
+          RGB {1,3,H,W} + an ISO/6400 conditioning scalar {1,1} and returns denoised RGB; the engine
+          converts scene-linear sRGB <-> Rec2020 around it, runs it through the unified inference
+          layer (see INFERENCE below -- ANE on macOS via ORT's CoreML EP, DirectML on Windows) tiled
+          with a feathered blend, and applies the result as a HIGHLIGHT-PRESERVING, amount-scaled
+          correction (add of denoised-minus-clipped-input; luma by denoiseLuma, chroma by
+          max(luma,chroma)). Global / not maskable (a Base op applied before Develop). Because it is
+          post-demosaic on the WorkingImage it applies to EVERY image -- X-Trans and the macOS Apple
+          decode engine included (no CFA-stage limitation). Without rawdenoise.onnx (ReleaseExtras/,
+          warn-if-absent) and a WINNOW_ENABLE_ORT build it no-ops. NOTE: a PRE-demosaic (Bayer-domain)
+          denoiser is the better long-term design (deferred). LIVE PREVIEW: the cached pre-develop
+          WorkingImage is kept CLEAN (RawFormat::Decode caches it BEFORE denoise; denoise runs only on
+          the private develop copy, i.e. the non-interactive export path). The interactive develop
+          render derives a raw-DENOISED base from the clean cache (MW::developRawDenoisedBase /
+          ensureRawDenoise), cached by path+amounts+ISO and computed OFF the GUI thread on settle
+          (developRenderPool) -- so a denoise-amount change re-runs the model ONCE and later tone/
+          exposure edits reuse the denoised base; both the proxy and the full-res render start from it.
+          ISO for the conditioning comes from ImageMetadata::ISONum (populated in cache mode from
+          G::ISOColumn; live preview reads it via MW::currentImageIso).
         • LOCAL luminance NR is a MASKABLE Develop op: an ADDITIONAL luminance-only smoothing
           applied on top of the baseline, per layer/mask. It is a SPATIAL op (below), operating
           on the already-decoded WorkingImage -- so it needs no second decode and is independent
@@ -2633,8 +2694,22 @@ Layer & masking model (planned)
                DevelopProperties::bindLayerHeader connects these signals.
                TREE = ACTIVE LAYER: the tree is REBUILT for the active layer by buildTree() (on image
                change, layer switch and mask add/remove/select): the layer's top items first (Base =>
-               Demosaic + Denoise rows [formerly the Core header]; else the mask tool rows) followed
-               by the Basic / Color / Effects sections. buildTree close()s + removes all rows then
+               the Edit-source selector + Demosaic + Denoise raw rows [formerly the Core header]; else
+               the mask tool rows) followed by the Basic / Color / Effects sections.
+               EDIT SOURCE (RAW files only, Base layer -- addCoreItems): the first Base top row is
+               "Edit:" hosting an A/B radio pair "Raw" / "Embedded Preview" (a plain QWidget in the
+               value cell of a DT_None row, recreated each buildTree). It is kept in sync with G::useRaw
+               and the status-bar useRaw button BOTH WAYS: picking a radio -> onEditSourceChanged ->
+               useRawRequested signal -> MW::toggleUseRaw (a private slot, hence the hop); the button ->
+               toggleUseRaw -> DevelopProperties::syncEditRaw sets the radio (signals blocked) back.
+               currentIsRaw() (MW::isFileRaw = suffix in metadata->hasJpg) gates the whole Core block --
+               non-raw files get no Core rows (they ARE the developable image). The Demosaic + Denoise
+               raw rows show only when editing raw: applyCoreVisibility() (hide = !useRaw ||
+               layerItemsCollapsed) runs LAST in buildTree (after applyLayerItemsCollapsed, which would
+               otherwise re-show them) and again from setTreeCollapsed/syncEditRaw. Demosaic/Denoise raw
+               are root leaves, so they carry UR_ExtraIndent (one extra indent level in the
+               delegate's paint + sizeHint) to line up with the Basic sliders ("Temp"), which sit a
+               level deeper as BasicHeader children; "Edit:" is left-aligned (not indented). buildTree close()s + removes all rows then
                re-adds them, preserving the sections' expand-state. SECTION HEADERS: the Basic, Color
                and Effects headers append the active layer's name (e.g. "Base: Basic", "Layer 1:
                Color") via updateSectionHeaderCaptions(). PREVIEW / RESET: each section header
@@ -2648,9 +2723,11 @@ Layer & masking model (planned)
                every render-capture site (EditStack::effectiveParams, DevelopProperties::editParams
                and stackJob). Right-clicking a header (contextMenuEvent) offers Preview (toggle) +
                Reset <group>; Reset is DESTRUCTIVE -- EditParams::resetGroup on the STORED params,
-               then repopulate. Group->keys mapping follows the UI (texture/dehaze/denoise are
-               Basic; tone splits are Basic for Reset only; denoiseLuma/denoiseChroma are decode-
-               time and in no group). eye.png/eye_off.png live in images/icon16. Transform has its
+               then repopulate. Group->keys mapping follows the UI (texture/dehaze are Basic; tone
+               splits are Basic for Reset only; localDenoiseLuma -- the Effects "Denoise" (local NR,
+               key "localDenoise") -- is in Effects; denoiseLuma/denoiseChroma are the Base "Denoise
+               raw" (decode-time global NR, key "denoise") and in no group). eye.png/eye_off.png live
+               in images/icon16. Transform has its
                own Preview eye + Reset in TransformPanel, wired to MW (previewToggled/resetRequested);
                its eye is a live result toggle, not a group fold (see the Transform section below).
                NAMING: index 0 is always
@@ -2679,7 +2756,14 @@ Layer & masking model (planned)
                the "New layer" name dialog at the cursor (the [+] button just clicked, clamped to the
                screen) instead of screen-centre, and on accept immediately calls showMaskMenu -- a new
                layer exists to carry a masked adjustment, so choosing the mask tool is the next step
-               (Escape leaves an empty layer). Each tool is a top-level tree
+               (Escape leaves an empty layer). ADD-MASK PLACEHOLDER: a non-Base layer with no mask yet
+               (e.g. Escape was pressed) shows a single "Add mask" row at the top of the tree with a
+               [+] glyph -- a header-style UR_LeafSingleLine spanned row carrying only UR_AddBtn (no
+               [-], no expand arrow), added by addAddMaskRow in addMaskItems. Clicking anywhere on it
+               (it has no UR_MaskIndex; mousePressEvent identifies it by UR_Name "addMask") pops
+               showMaskMenu. It disappears as soon as a tool is added -- the layer then shows its tool
+               rows, and adding a tool selects it, so the placeholder is present precisely when no mask
+               is selected. Each tool is a top-level tree
                row (caption "Add/Subtract <tool>" with a [-] remove button; the tools sit ABOVE the
                Basic/Color/Effects sections, added by addMaskItems in buildTree). The rows are
                header-style for the single-line full-width caption + expand arrow, but flagged
@@ -2890,6 +2974,24 @@ Layer & masking model (planned)
                reference lands after the overlay began (buildRangePreview on a null preview). Deferred:
                a dual-handle luminance range slider, per-layer "image below" reference for stacked
                range masks, and an in-dock swatch strip (swatches live on the loupe for now).
+             - INFERENCE LAYER (Utilities/inference/): the unified model-inference seam that new
+               neural features use. InferenceSession (front door) owns an InferenceBackend; the only
+               concrete backend today is OrtBackend (ONNX Runtime). Per-platform execution providers
+               are selected at load: CoreML EP on macOS (dispatches to the Apple Neural Engine / GPU),
+               DirectML on Windows, CPU everywhere as the fallback. All ORT contact is confined to
+               ortbackend.cpp behind a PIMPL, and the whole layer is guarded by WINNOW_HAVE_ORT: built
+               without ORT (CMake option WINNOW_ENABLE_ORT=OFF, the default until the runtime is
+               vendored on both platforms) it compiles to a stub -- IsLoaded()==false, Run() no-ops --
+               so features degrade like a missing model. This DELIBERATELY supersedes the old cv::dnn /
+               "no onnxruntime" approach for NEW models (it reaches the ANE and loads architectures
+               cv::dnn cannot, e.g. attention/diffusion); the existing cv::dnn predictors (u2net/skyseg/
+               midas/focus/SAM2, below) keep working unchanged and migrate opportunistically. The
+               InferenceBackend abstract class is an ESCAPE HATCH: a native CoreMLBackend can be added
+               for a model that needs maximal ANE utilisation (generative fill) without touching
+               callers. FUTURE: we may move to a full native-per-platform solution (native Core ML on
+               Mac + DirectML/native on Windows) if ORT's CoreML EP under-utilises the ANE. First user
+               of the layer: the raw denoiser (NAFNet, see "DENOISE RAW" above). Models resolve via
+               applicationDirPath() + a ReleaseExtras/ .onnx, warn-if-absent, like the cv::dnn models.
              - SELECT SUBJECT MASK (AI): an AI salient-object mask that selects the main subject.
                Like the content-range masks it is CONTENT-derived and shares their preview==render
                design, but the coverage is a FIXED saliency map produced once by the U^2-Net ONNX

@@ -35,6 +35,22 @@ Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
                  Bayer (GFX 50S II). Lossy path ported but unexercised (no lossy test file).
 12   [done]      X-Trans demosaic (5x5 same-colour window).
 13   [todo]      Higher-quality Bayer demosaic (AHD/DCB) to replace Bilinear3x3.
+13b  [wip]       DENOISE RAW. Code landed via the unified inference layer (Utilities/inference/,
+                 ORT: ANE on macOS / DirectML on Windows). PIVOTED to POST-demosaic RawRefinery
+                 "TreeNet" (linear-Rec2020 RGB {1,3,H,W} + ISO/6400 cond) after finding no ready
+                 pre-demosaic 4-ch weights; PRE-demosaic Bayer NAFNet remains the long-term aim
+                 (export_nafnet_raw.py kept, unwired). ImageFormats/Raw/rawdenoise.* runs on the
+                 scene-linear WorkingImage after RawColor (both engines) -> applies to ALL images
+                 (X-Trans + Apple engine included); tiled feathered blend, highlight-preserving
+                 amount-scaled correction by EditParams denoiseLuma/denoiseChroma. UI: two Base
+                 sliders. Build: CMake WINNOW_ENABLE_ORT (default OFF) + rawdenoise.onnx in
+                 ReleaseExtras (warn-if-absent; a REAL super-light TreeNet is placed there).
+                 VALIDATED: onnxruntime 1.27 (CoreML) loads+runs TreeNet; OrtBackend C++ API
+                 compiles+runs on 1.27; CMake configure clean (opencv 4.13/qt 6.11). LIVE PREVIEW
+                 DONE (MW::developRawDenoisedBase/ensureRawDenoise: cached async denoise off the clean
+                 WorkingImage, keyed path+amounts+ISO, on settle -- no re-decode). REMAINING: (a) A/B
+                 TreeNet variants on real high-ISO files + confirm weights' license before shipping;
+                 (b) in-app build with WINNOW_ENABLE_ORT=ON + visual test.
 14   [done]      WorkingImage cache hook (Develop/workingimagecache.*): process-wide,
                  thread-safe, byte-budgeted LRU of the PRE-develop WorkingImage;
                  render() re-runs only Develop + OutputTransform.

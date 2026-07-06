@@ -563,6 +563,9 @@ private slots:
        only in raw mode (useRaw): in preview mode the loupe shows the untouched embedded JPG. A
        non-RAW file (e.g. a JPG) is always the developable image, so its edits show regardless. */
     bool currentDevelopEditsVisible() const;
+    /* True if fPath is a raw file (a format that carries an embedded jpg preview). Used by the
+       Develop panel to show the raw-only rows (Edit source, Demosaic, Denoise raw). */
+    bool isFileRaw(const QString &fPath) const;
     /* True when the current selection is a video. The Develop module operates on decoded still
        frames, so every Develop entry point (dock load + preview/full-res render) is gated on this to
        avoid trying to develop a video. */
@@ -570,6 +573,19 @@ private slots:
     /* GUI-thread completion for a background full-res render: apply the image if its params/image
        are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
     void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen);
+    /* Base image the develop render pipeline should start from: the raw-DENOISED WorkingImage when
+       the Base layer has "Denoise raw" (denoiseLuma/denoiseChroma) set and it is ready, else the
+       clean cached WorkingImage. Pure lookup (no work); the async compute is ensureRawDenoise(). */
+    std::shared_ptr<const WorkingImage> developRawDenoisedBase(
+        const QString &fPath, const EditParams &base,
+        const std::shared_ptr<const WorkingImage> &clean);
+    /* Compute the raw-denoised base for the current Base params OFF the GUI thread (developRenderPool),
+       cache it (developDenoised), then repaint. Coalesced (one in flight); no-op if already current or
+       already computing this key. Called from the settle path so a drag does not spawn many DNN runs. */
+    void ensureRawDenoise(const QString &fPath, const EditParams &base,
+                          const std::shared_ptr<const WorkingImage> &clean, int iso);
+    /* ISO of the current image (sort/filter model, GUI thread) for the denoise model conditioning. */
+    int currentImageIso() const;
     /* EXIF rotation (degrees) to apply to a scene-referred render so it matches the loupe. Reads
        the sort/filter model, so it MUST run on the GUI thread. */
     int developOrientationDegrees(const WorkingImage &work, const QString &fPath) const;
@@ -1007,6 +1023,7 @@ private:
 
     // Develop
     QAction *developAction;
+    QAction *operationModeAction;   // D shortcut: toggle Preview <-> Develop operation mode
 
     // Embellish
     QAction *embelNewTemplateAction;
@@ -1174,6 +1191,7 @@ private:
     BarBtn *includeSidecarsToggleBtn;
     BarBtn *colorManageToggleBtn;
     BarBtn *useRawBtn;
+    QComboBox *operationModeCombo = nullptr;   // status-bar Operation Mode dropdown (Preview/Develop)
     BarBtn *panToFocusToggleBtn;
     BarBtn *modifyImagesBtn;
     BarBtn *cacheMethodBtn;
@@ -1203,6 +1221,15 @@ private:
        strip them (lock float/move) while disabled and restore them when re-enabled. */
     QDockWidget::DockWidgetFeatures developDockFeatures = QDockWidget::NoDockWidgetFeatures;
     void setDevelopPanelEnabled(bool on);   // enable/disable the whole Develop dock + panel
+    /* The Develop panel is enabled only when the user's Develop toggle is on AND the operation
+       mode is Develop -- Preview mode always greys it out. Call after either input changes. */
+    void syncDevelopPanelEnabled();
+    /* Operation mode (G::operationMode): Preview (fast review) vs Develop (best-quality single
+       image). setOperationMode applies a mode and syncs the status-bar dropdown; toggleOperationMode
+       flips between the two (D shortcut). Behavior wiring (suspend read-ahead, raw re-decode on
+       Develop) is layered on in setOperationMode as it lands. */
+    void setOperationMode(G::OperationMode mode);
+    void toggleOperationMode();
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
@@ -1270,6 +1297,14 @@ private:
     QThreadPool *developRenderPool = nullptr;
     quint64 developParamsGen = 0;                 // ++ on every Develop param change (staleness guard)
     bool developFullResInFlight = false;          // a background full-res render is running
+    /* Interactive "Denoise raw": the raw denoiser is a heavy DNN run on the CLEAN pre-develop
+       WorkingImage (Base-only, RAW-only). Cached here keyed by path + amounts + ISO and computed OFF
+       the GUI thread, so a base denoise change re-runs the model ONCE (not every develop tick) and
+       later exposure/tone edits reuse the denoised base. With no denoise the render uses the clean
+       cached image unchanged. See developRawDenoisedBase / ensureRawDenoise and RawDenoise::Apply. */
+    std::shared_ptr<const WorkingImage> developDenoised;
+    QString developDenoisedKey;                   // "path|dnL|dnC|iso"; empty when clean
+    QString developDenoiseInFlightKey;            // key currently being computed (coalesce guard)
     /* Content-range mask (Luminance/Color Range) reference: a display-referred RGB map of the
        developed BASE layer, registered by path (RangeMask::putRef) and sampled identically by
        the loupe overlay and the render. Base-only so a range mask cannot feed back on its own

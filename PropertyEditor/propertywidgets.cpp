@@ -161,6 +161,21 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
          "QSlider::handle:focus, QSlider::handle:hover{"
             "background:#1571d3;"
          "}"
+         /* Disabled (e.g. Preview operation mode): grey the vivid groove/handle so the whole
+            slider reads as deactivated. The coloured rules above set explicit backgrounds that
+            override the default disabled palette, so :disabled must be spelled out here. */
+         "QSlider::groove:horizontal:disabled {"
+            "background:#4b4b4b;"
+            "border:none;"
+            "height:3px;"
+         "}"
+         "QSlider::sub-page:horizontal:disabled {"
+            "background:#4b4b4b;"
+            "height:3px;"
+         "}"
+         "QSlider::handle:horizontal:disabled {"
+            "background:#5a5a5a;"
+         "}"
     );
     slider->setWindowFlags(Qt::FramelessWindowHint);
     slider->setAttribute(Qt::WA_TranslucentBackground);
@@ -169,7 +184,8 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     lineEdit->setObjectName("DisableGoActions");    // used in MW::focusChange
     lineEdit->setMaximumWidth(lineEditWidth);
     lineEdit->setAlignment(Qt::AlignRight);
-    lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}");
+    lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}"
+                            "QLineEdit:disabled {color:gray;}");   // grey value in Preview mode
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -292,7 +308,7 @@ LabelEditor::LabelEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
 //                            "border-radius:0px;"
                             "color:" + clr + ";"
                             "}"
-                            "Qlabel:disabled {color:gray}"
+                            "QLabel:disabled {color:gray}"
                             );
     label->setWindowFlags(Qt::FramelessWindowHint);
     label->setAttribute(Qt::WA_TranslucentBackground);
@@ -355,7 +371,7 @@ LineEditor::LineEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent
                                 "margin-left:0px;"
                                 "color:" + clr +";"
                             "}"
-                            "QlineEdit:disabled"
+                            "QLineEdit:disabled"
                             "{"
                                 "color:gray;"
                             "}"
@@ -423,8 +439,7 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     spinBox->setMinimum(min);
     spinBox->setMaximum(max);
     spinBox->setStyleSheet("QSpinBox {background:transparent; border:none;"
-                           "padding:0px; border-radius:0px;}"
-                           "margin-left:-7;"
+                           "padding:0px; border-radius:0px; margin-left:-7;}"
                            "QSpinBox:disabled {color:gray}");
     spinBox->setWindowFlags(Qt::FramelessWindowHint);
     spinBox->setAttribute(Qt::WA_TranslucentBackground);
@@ -604,7 +619,8 @@ CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     source = idx.data(UR_Source).toString();
     checkBox = new QCheckBox(parent);
     checkBox->setObjectName("DisableGoActions");  // used in MW::focusChange
-    checkBox->setStyleSheet("QCheckBox {background: transparent; border:none;}");
+    checkBox->setStyleSheet("QCheckBox {background: transparent; border:none;}"
+                            "QCheckBox:disabled {color:gray}");
     checkBox->setWindowFlags(Qt::FramelessWindowHint);
     checkBox->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -672,6 +688,9 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
                                 "background: transparent;"
                                 "padding: 0px 0px 0px 0px;"
                                 "border: none;"
+                            "}"
+                            "QComboBox:disabled {"
+                                "color: gray;"
                             "}"
                             "QComboBox::item:selected {"
                                 "background-color: rgb(68,95,118);"
@@ -785,7 +804,8 @@ void ComboBoxEditor::setRenamable(bool on)
     comboBox->setInsertPolicy(QComboBox::NoInsert);     // Enter must not append a new item
     const QString clr = idx.data(UR_Color).toString();
     comboBox->lineEdit()->setStyleSheet("QLineEdit { background: transparent; border: none;"
-                                        "color:" + clr + "; padding: 0px; }");
+                                        "color:" + clr + "; padding: 0px; }"
+                                        "QLineEdit:disabled { color: gray; }");
 
     connect(comboBox->lineEdit(), &QLineEdit::editingFinished, this, [=]() {
         const int i = comboBox->currentIndex();
@@ -845,6 +865,9 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
     QString pushBtnStyle =
         "QPushButton {"
             "min-width: 25px;"
+        "}"
+        "QPushButton:disabled {"
+            "color: gray;"
         "}"
         ;
     minusBtn = new QPushButton;
@@ -937,7 +960,8 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
                                 "background: transparent;"      // this works
                                 "border:none;"       // nada
                                 "padding:0px;"
-                            "}");
+                            "}"
+                            "QLineEdit:disabled {color:gray;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -1035,6 +1059,9 @@ void ColorEditor::updateLabelWhenLineEdited(QString value)
                         "QPushButton:hover {"
                             "border: 1px solid yellow;"
                         "}"
+                        "QPushButton:disabled {"
+                            "background-color:#4b4b4b;"
+                        "}"
                         );
     emit editorValueChanged(this);
 }
@@ -1063,7 +1090,8 @@ SelectFolderEditor::SelectFolderEditor(const QModelIndex &idx, QWidget *parent) 
                                 "background: transparent;"      // this works
                                 "border:none;"                  // nada
                                 "padding:0px;"
-                            "}");
+                            "}"
+                            "QLineEdit:disabled {color:gray;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
     lineEdit->setContextMenuPolicy(Qt::ActionsContextMenu);
@@ -1135,7 +1163,8 @@ SelectFileEditor::SelectFileEditor(const QModelIndex &idx, QWidget *parent) : QW
                             "background: transparent;"      // this works
                             "border:none;"                  // nada
                             "padding:0px;"
-                            "}");
+                            "}"
+                            "QLineEdit:disabled {color:gray;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
     lineEdit->setContextMenuPolicy(Qt::ActionsContextMenu);
