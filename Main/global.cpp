@@ -117,7 +117,7 @@ QColor pushButtonBackgroundColor;   // define after app stylesheet defined
 QColor scrollBarHandleBackgroundColor; // = QColor(20,30,20);
 QColor helpColor = QColor(37,65,40);
 QColor appleBlue = QColor(21,113,211);      // #1571D3
-QColor selectionColor = QColor(68,95,118);
+QColor selectionColor = QColor(68,95,118);  // #445f76
 QColor mouseOverColor = QColor(40,54,66);
 QString lightgray = "#aaaaaa";
 QString darkgray = "#111111";
@@ -236,6 +236,7 @@ bool isPerfProbe = false;               // emit [PERF] Phase 1/2 load timing lin
 bool throttleFolderLoadMsg = true;     // throttle addFolder progress message to ~50ms (per-folder centralMsg repaint cost ~1.3s/1333 folders)
 // DecodeRawEngine decodeRawEngine = DecodeRawEngine::winnowDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
 DecodeRawEngine decodeRawEngine = DecodeRawEngine::appleDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
+OperationMode operationMode = OperationMode::Preview;   // start in fast-review Preview mode
 bool isReportDevelopTime = false;       // log per-stage Develop re-render timings on slider drag (latency probe; off in production)
 bool isDevelopDebounceWrite = true;     // also flush per-image develop settings to sidecar a short time after edits settle
 std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)

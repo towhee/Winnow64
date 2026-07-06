@@ -836,6 +836,17 @@ void ImageCache::setTargetRange(int key)
         }
     };
 
+    /* Develop mode: view/edit a SINGLE image at best quality. Forward read-ahead is a low priority
+       here -- and each neighbour decode caches its own scene-linear WorkingImage, evicting the one
+       the Develop pipeline needs (WorkingImageCache is small relative to a 50-60MP image). So target
+       ONLY the current image: no ahead/behind, nothing to churn or evict. Preview mode keeps the
+       full forward cache below. */
+    if (G::operationMode == G::OperationMode::Develop) {
+        addToQueue(key);
+        firstDispatchNewDM = false;
+        return;
+    }
+
     if (isAutoMaxMB) {
         // Fill forward up to ~2/3 capacity
         while (!abort && count <= cushionHigh && sumMB < forwardMB) {

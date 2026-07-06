@@ -90,6 +90,11 @@ public:
        so the dock frame and scopes grey out as well. */
     void setPanelEnabled(bool enabled);
 
+    /* Sync the raw "Edit: Raw / Embedded Preview" selector (added under the layer header for raw
+       files only) with G::useRaw. Called by MW::toggleUseRaw so the status-bar useRaw button and
+       this selector always agree; also toggles the visibility of the Demosaic / Denoise raw rows. */
+    void syncEditRaw(bool useRaw);
+
 protected:
     /* PropertyEditor::mousePressEvent does not select rows (it only handles expand/collapse), so we
        toggle the clicked mask tool ourselves (reveal/hide its settings children) and return. */
@@ -119,6 +124,12 @@ public slots:
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
     void centralMsg(QString msg);
+    /* The "Edit: Raw / Embedded Preview" selector was changed; MW drives G::useRaw (toggleUseRaw)
+       -- a private slot, so we route through this signal rather than calling it directly. */
+    void useRawRequested(bool useRaw);
+    /* The "Demosaic" combo selects the RAW decode engine (Apple Core Image vs in-house Winnow).
+       MW sets G::decodeRawEngine and re-decodes the current image. */
+    void demosaicEngineChanged(bool useApple);
     /* Mask editing handshake with ImageView. Begin when a spatial mask tool becomes the active
        (selected) edit target; End when none is selected. ImageView draws the overlay + handles and
        sends geometry back via setActiveMaskParams. */
@@ -146,6 +157,7 @@ private:
     void buildTree();
     void addCoreItems();            // Base only: Demosaic + Denoise rows at the top of the tree
     void addMaskItems();            // non-Base: the layer's mask tool rows at the top of the tree
+    void addAddMaskRow();           // non-Base with no mask: an "Add mask" [+] placeholder row
     void applyLayerItemsCollapsed();// hide/show just the layer's top items (not the sections)
     void addBasic();
     void addColor();
@@ -255,6 +267,15 @@ private:
        every caption is greyed; buildTree() re-applies it so a rebuild can't un-grey it. */
     bool panelEnabled = true;
     void applyItemsEnabled(bool enabled);   // set UR_isEnabled on every row (recursively)
+
+    /* Raw "Edit source" selector (Base layer, raw files only). editRawRadio is the "Raw" button
+       of the A/B pair; the widget lives in the Edit row's value cell (recreated each buildTree).
+       currentIsRaw() gates the raw-only rows; onEditSourceChanged() drives G::useRaw via MW;
+       applyCoreVisibility() shows/hides the Demosaic + Denoise raw rows per G::useRaw. */
+    bool currentIsRaw() const;
+    void onEditSourceChanged(bool raw);
+    void applyCoreVisibility();
+    QPointer<QRadioButton> editRawRadio;
 
     MW *mw;
     QSettings *setting;

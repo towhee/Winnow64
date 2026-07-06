@@ -57,7 +57,8 @@ enum UserRole
     UR_LeafSingleLine,                  // header-style row drawn single-line but in LEAF text colour
     UR_DeleteBtn,                       // draw a delete [-] glyph at the row's right (delegate-drawn)
     UR_AddBtn,                          // draw an add [+] glyph left of the [-] (delegate-drawn)
-    UR_ShowDecoration                   // force the expand/collapse arrow even with no children
+    UR_ShowDecoration,                  // force the expand/collapse arrow even with no children
+    UR_ExtraIndent                      // add one extra indent level to an indented leaf caption
 };
 
 // reqd as can only pass QVariant convertable type through StandardItemModel

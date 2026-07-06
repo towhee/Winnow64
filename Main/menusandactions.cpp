@@ -1055,16 +1055,25 @@ void MW::createUtilActions()
     developAction->setObjectName("develop");
     developAction->setCheckable(true);
     developAction->setChecked(settings->value("Develop/enabled", true).toBool());
-    developAction->setShortcut(QKeySequence("D"));
+    /* D is reassigned to the Operation Mode toggle (operationModeAction, below). developAction
+       (enable/disable the Develop panel) stays in the Utilities menu but is now shortcut-less. */
     developAction->setShortcutVisibleInContextMenu(true);
     addAction(developAction);
     /* When Develop is unchecked, disable (grey out) the Develop panel. State is
        persisted so it is restored on the next launch (applied to developDock in
        MW::initialize, which runs after the dock is created). */
     connect(developAction, &QAction::toggled, this, [this](bool checked) {
-        setDevelopPanelEnabled(checked);            // dock frame + features + tree + header
+        syncDevelopPanelEnabled();                  // gated by checked AND Develop operation mode
         settings->setValue("Develop/enabled", checked);
     });
+
+    // Operation Mode toggle (Preview <-> Develop). D shortcut; also on the status-bar dropdown.
+    operationModeAction = new QAction(tr("Toggle Preview / Develop Mode"), this);
+    operationModeAction->setObjectName("operationMode");
+    operationModeAction->setShortcut(QKeySequence("D"));
+    operationModeAction->setShortcutVisibleInContextMenu(true);
+    addAction(operationModeAction);
+    connect(operationModeAction, &QAction::triggered, this, &MW::toggleOperationMode);
 
     // Embellish menu
     int n;          // used to populate action lists

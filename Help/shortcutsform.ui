@@ -1051,13 +1051,13 @@
        </property>
        <item>
         <property name="text">
-         <string>Develop</string>
+         <string>Operation Mode</string>
         </property>
         <property name="text">
          <string>D</string>
         </property>
         <property name="text">
-         <string>Enables / disables the Develop panel</string>
+         <string>Toggle Preview / Develop operation mode</string>
         </property>
        </item>
        <item>

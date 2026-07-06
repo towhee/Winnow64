@@ -158,6 +158,7 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
         if (view && index.data(UR_isIndent).toBool()) {
             int depth = 0;
             for (QModelIndex p = index.parent(); p.isValid(); p = p.parent()) depth++;
+            if (index.data(UR_ExtraIndent).toBool()) depth++;   // match the paint() extra level
             textLeft = (depth + 1) * view->indentation();   // rootIsDecorated
         }
         int width = colWidth - textLeft - 4;    // small safety margin vs paint
@@ -567,8 +568,16 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             // disabled?
             if (index.data(UR_isEnabled).toBool() == false) painter->setPen(disPen);
             // indent the text (maybe not if not a header)
-            if (index.data((UR_isIndent)).toBool())
-                painter->drawText(r3, Qt::AlignVCenter|Qt::TextWordWrap, text);
+            if (index.data((UR_isIndent)).toBool()) {
+                QRect ri = r3;
+                /* One extra indent level for root leaves that should line up with a section's
+                   children (e.g. Develop's Demosaic / Denoise raw align with the Basic sliders). */
+                if (index.data(UR_ExtraIndent).toBool()) {
+                    const QTreeView *v = qobject_cast<const QTreeView*>(option.widget);
+                    ri.adjust(v ? v->indentation() : 12, 0, 0, 0);
+                }
+                painter->drawText(ri, Qt::AlignVCenter|Qt::TextWordWrap, text);
+            }
             else
                 painter->drawText(r2, Qt::AlignVCenter|Qt::TextWordWrap, text);
             painter->setPen(brdPen);
