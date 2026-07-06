@@ -5993,9 +5993,6 @@ void MW::renderDevelopPreview(bool fullRes)
        non-raw caches it the first time it is developed. */
     auto work = WorkingImageCache::instance().get(fPath);
     const bool wantRaw = isFileRaw(fPath) && G::useRaw;
-    fprintf(stderr, "DBG WI: get=%s isRaw=%d useRaw=%d cachedSceneRef=%d\n",
-            work ? "HIT" : "MISS", int(isFileRaw(fPath)), int(G::useRaw),
-            work ? int(work->sceneReferred) : -1); fflush(stderr);
     /* Develop needs the SCENE-LINEAR raw WorkingImage, not the tone-mapped 8-bit display image. It
        may be absent (evicted from the small WorkingImageCache during Preview read-ahead) OR a prior
        develop-miss may have cached a display-referred one under this path. Either way, (re-)decode
@@ -6008,8 +6005,6 @@ void MW::renderDevelopPreview(bool fullRes)
         QImage img;
         const bool ok = dec.decodeIndependent(img, metadata, m);
         auto w2 = WorkingImageCache::instance().get(fPath);
-        fprintf(stderr, "DBG WI: re-decode ok=%d -> sceneRef=%d %dx%d\n", int(ok),
-                w2 ? int(w2->sceneReferred) : -1, w2 ? w2->width : 0, w2 ? w2->height : 0); fflush(stderr);
         if (ok && w2 && w2->sceneReferred) work = w2;
     }
     if (!work) {
@@ -6024,9 +6019,6 @@ void MW::renderDevelopPreview(bool fullRes)
         WorkingImageCache::instance().put(fPath, built);
         work = built;
     }
-    fprintf(stderr, "DBG WI: develop base sceneRef=%d %dx%d\n",
-            work ? int(work->sceneReferred) : -1, work ? work->width : 0, work ? work->height : 0);
-    fflush(stderr);
 
     /* Base image for the render: the raw-DENOISED WorkingImage when the Base layer's "Denoise raw"
        is set and ready, else the clean cached image. The heavy denoise runs on settle (see
@@ -6413,6 +6405,14 @@ void MW::toggleDevelopTransform()
     and persist the choice. When shown it brings the Develop dock forward so the panel is visible.
 */
     if (G::isLogger) G::log("MW::toggleDevelopTransform");
+    /* Transform/Crop only exists in Develop mode. In Preview mode tell the user how to switch and
+       leave the panel closed. */
+    if (G::operationMode != G::OperationMode::Develop) {
+        if (G::popup) G::popup->showPopup("Transform/Crop is only available in Develop Mode, "
+                                          "which can be set in the status bar or the shortcut \"D\".",
+                                          3000);
+        return;
+    }
     developTransformVisible = !developTransformVisible;
     if (transformPanel) transformPanel->setVisible(developTransformVisible);
     if (developTransformAction) developTransformAction->setChecked(developTransformVisible);

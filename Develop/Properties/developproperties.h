@@ -164,6 +164,12 @@ private:
     void addEffects();
     void updateSectionHeaderCaptions();   // append the active layer name to Basic/Color/Effects
 
+    /* Section (Basic/Color/Effects) expand state persists across sessions in QSettings.
+       sectionExpanded reads the saved state (with a first-run default); persistSectionExpanded
+       writes it when the user toggles a section header. */
+    bool sectionExpanded(const QString &name, bool def) const;
+    void persistSectionExpanded(const QModelIndex &idx, bool expanded);
+
     /* ---- Mask (one mask per non-Base layer, built from a list of Add/Subtract tools) ----------
        Self-contained so the whole mask UI can be redesigned by rewriting just these functions and
        the MaskComponent model. The layer's single mask is an ordered list of tools (each Adds or
