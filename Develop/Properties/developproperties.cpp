@@ -35,6 +35,11 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     debounceWriteTimer->setSingleShot(true);
     connect(debounceWriteTimer, &QTimer::timeout, this, [this]{ flushImage(currentImagePath); });
 
+    /* Persist the Basic/Color/Effects section expand-state across sessions (QSettings). Fires for
+       every expand/collapse; persistSectionExpanded filters to the three section headers. */
+    connect(this, &QTreeView::expanded,  this, [this](const QModelIndex &idx){ persistSectionExpanded(idx, true);  });
+    connect(this, &QTreeView::collapsed, this, [this](const QModelIndex &idx){ persistSectionExpanded(idx, false); });
+
     /* Programmatic row selection reveals that mask tool's settings (clicks go via mousePressEvent,
        since the base PropertyEditor does not select on click). */
     connect(selectionModel(), &QItemSelectionModel::currentChanged,
@@ -124,14 +129,16 @@ void DevelopProperties::buildTree()
 {
     if (G::isLogger) G::log("DevelopProperties::buildTree");
 
-    /* Preserve which sections are expanded across the rebuild (first build => Basic open only). */
+    /* Preserve which sections are expanded across the rebuild. On the first build no header row
+       exists yet, so the default comes from the session-persistent QSettings state (first-ever
+       run => Basic open only). */
     auto expandedOr = [this](const QString &name, bool def)->bool {
         const QModelIndex idx = findCaptionIndex(name);
         return idx.isValid() ? isExpanded(idx) : def;
     };
-    const bool exBasic   = expandedOr("BasicHeader",   true);
-    const bool exColor   = expandedOr("ColorHeader",   false);
-    const bool exEffects = expandedOr("EffectsHeader", false);
+    const bool exBasic   = expandedOr("BasicHeader",   sectionExpanded("BasicHeader",   true));
+    const bool exColor   = expandedOr("ColorHeader",   sectionExpanded("ColorHeader",   false));
+    const bool exEffects = expandedOr("EffectsHeader", sectionExpanded("EffectsHeader", false));
 
     isPopulating = true;
     isRebuildingMasks = true;
@@ -173,6 +180,19 @@ void DevelopProperties::buildTree()
     applyLayerItemsCollapsed();      // re-assert the '>' collapse (a rebuild resets row visibility)
     applyCoreVisibility();           // hide Demosaic/Denoise raw when editing preview (after collapse)
     if (!panelEnabled) applyItemsEnabled(false);   // keep captions greyed if the panel is disabled
+}
+
+bool DevelopProperties::sectionExpanded(const QString &name, bool def) const
+{
+    return setting->value("Develop/SectionExpanded/" + name, def).toBool();
+}
+
+void DevelopProperties::persistSectionExpanded(const QModelIndex &idx, bool expanded)
+{
+    /* Only the three adjustment section headers persist (mask tool rows also expand/collapse). */
+    const QString name = idx.data(UR_Name).toString();
+    if (name == "BasicHeader" || name == "ColorHeader" || name == "EffectsHeader")
+        setting->setValue("Develop/SectionExpanded/" + name, expanded);
 }
 
 void DevelopProperties::addCoreItems()

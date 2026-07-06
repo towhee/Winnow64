@@ -2710,7 +2710,13 @@ Layer & masking model (planned)
                are root leaves, so they carry UR_ExtraIndent (one extra indent level in the
                delegate's paint + sizeHint) to line up with the Basic sliders ("Temp"), which sit a
                level deeper as BasicHeader children; "Edit:" is left-aligned (not indented). buildTree close()s + removes all rows then
-               re-adds them, preserving the sections' expand-state. SECTION HEADERS: the Basic, Color
+               re-adds them, preserving the sections' expand-state within a session (read from the
+               current rows on rebuild). ACROSS SESSIONS the Basic/Color/Effects expand-state also
+               persists in QSettings under "Develop/SectionExpanded/<Header>": the first build (no
+               rows yet) seeds each header's default from sectionExpanded() (first-ever run => Basic
+               open, Color/Effects closed), and QTreeView::expanded/collapsed -> persistSectionExpanded()
+               writes the state whenever the user toggles one of the three headers (mask tool rows,
+               which also expand/collapse, are filtered out by name). SECTION HEADERS: the Basic, Color
                and Effects headers append the active layer's name (e.g. "Base: Basic", "Layer 1:
                Color") via updateSectionHeaderCaptions(). PREVIEW / RESET: each section header
                (Basic/Color/Effects) carries an eye BarBtn that toggles that group's Preview flag on
