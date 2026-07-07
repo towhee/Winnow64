@@ -179,6 +179,7 @@ struct EditStack {
         o["denoiseLuma"]     = p.denoiseLuma;
         o["denoiseChroma"]   = p.denoiseChroma;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
+        o["localDenoiseChroma"]= p.localDenoiseChroma;
         o["version"]         = p.version;
         return o;
     }
@@ -208,6 +209,7 @@ struct EditStack {
         p.denoiseLuma     = static_cast<float>(o.value("denoiseLuma").toDouble(p.denoiseLuma));
         p.denoiseChroma   = static_cast<float>(o.value("denoiseChroma").toDouble(p.denoiseChroma));
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));
+        p.localDenoiseChroma= static_cast<float>(o.value("localDenoiseChroma").toDouble(p.localDenoiseChroma));
         p.version         = o.value("version").toInt(p.version);
         return p;
     }

@@ -1369,10 +1369,15 @@ void DevelopProperties::addEffects()
     addHeader("EffectsHeader", "???", "Effects", "Local (post-demosaic) effects.", PV_Effects);
     QModelIndex parIdx = capIdx;
 
-    /* Local luminance noise reduction: a per-layer, maskable Develop op on the decoded image
-       (localDenoiseLuma). Distinct from the Base layer's "Denoise raw" (decode-time global raw NR,
-       denoiseLuma/denoiseChroma) -- different function, different key. */
-    addCheckbox("localDenoise", "Denoise", "Apply local luminance noise reduction to rendered image.", parIdx, "EffectsHeader", false);
+    /* Local noise reduction: per-layer, maskable Develop ops on the decoded image
+       (localDenoiseLuma / localDenoiseChroma). Distinct from the Base layer's "Denoise raw"
+       (decode-time global raw NR, denoiseLuma/denoiseChroma) -- different function, different keys.
+       Two 0..100 strength sliders (mapped to 0..1): Denoise = luminance NR (ratio-preserving),
+       Denoise Color = chroma NR (opponent-chroma blur, luma kept exact) -- see Develop::Denoise. */
+    addSlider("localDenoise", "Denoise", "Local luminance noise reduction on the rendered image.",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
+    addSlider("localDenoiseChroma", "Denoise Color", "Local colour (chroma) noise reduction.",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
 }
 
 void DevelopProperties::updateSectionHeaderCaptions()
@@ -1492,8 +1497,8 @@ void DevelopProperties::itemChange(QModelIndex idx)
 
 void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, EditParams &p)
 {
-    /* Slider EditRole carries the real (div-scaled) value, e.g. exposure in EV; the denoise
-       checkbox carries a bool. Map the dock key onto the matching EditParams field. */
+    /* Slider EditRole carries the real (div-scaled) value, e.g. exposure in EV, or 0..100 for the
+       denoise sliders. Map the dock key onto the matching EditParams field. */
     const float f = v.toFloat();
     if      (key == "temp")       p.temp       = f;
     else if (key == "tint")       p.tint       = f;
@@ -1513,8 +1518,8 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "luminance")  p.luminance  = f;
     else if (key == "denoiseLuma")   p.denoiseLuma   = f / 100.0f;   // Base "Denoise raw" (0..100 -> 0..1)
     else if (key == "denoiseChroma") p.denoiseChroma = f / 100.0f;
-    else if (key == "localDenoise")                            // Effects "Denoise" (local NR)
-                                  p.localDenoiseLuma = v.toBool() ? 1.0f : 0.0f;
+    else if (key == "localDenoise")       p.localDenoiseLuma   = f / 100.0f;  // Effects "Denoise" (0..100 -> 0..1)
+    else if (key == "localDenoiseChroma") p.localDenoiseChroma = f / 100.0f;  // Effects "Denoise Color"
 }
 
 EditParams DevelopProperties::editParams()
@@ -1697,7 +1702,8 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("luminance",  p.luminance);
     setSliderReal("denoiseLuma",   p.denoiseLuma   * 100.0);      // Base "Denoise raw" (0..1 -> 0..100)
     setSliderReal("denoiseChroma", p.denoiseChroma * 100.0);
-    setCheckboxValue("localDenoise", p.localDenoiseLuma > 0.0f);  // Effects "Denoise"
+    setSliderReal("localDenoise",       p.localDenoiseLuma   * 100.0);   // Effects "Denoise" (0..1 -> 0..100)
+    setSliderReal("localDenoiseChroma", p.localDenoiseChroma * 100.0);   // Effects "Denoise Color"
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
     isPopulating = false;

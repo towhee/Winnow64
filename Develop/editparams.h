@@ -57,10 +57,12 @@ struct EditParams {
     float denoiseLuma   = 0.0f;
     float denoiseChroma = 0.0f;
 
-    /* Local (maskable) luminance NR -- a Develop SPATIAL op layered on TOP of the global
-       baseline, operating on the already-decoded WorkingImage (see Develop::Denoise and
-       notes/Documentation.txt "Layer & masking model"). 0 = off. Range 0..1. */
+    /* Local (maskable) NR -- Develop SPATIAL ops layered on TOP of the global baseline, operating
+       on the already-decoded WorkingImage (see Develop::Denoise and notes/Documentation.txt
+       "Layer & masking model"). localDenoiseLuma = luminance NR (ratio-preserving); localDenoise-
+       Chroma = colour/chroma NR (opponent-chroma blur, luma kept exact). 0 = off. Range 0..1. */
     float localDenoiseLuma = 0.0f;
+    float localDenoiseChroma = 0.0f;
 
     int version = 1;
 
@@ -95,7 +97,8 @@ struct EditParams {
             p.hue = def.hue; p.saturation = def.saturation; p.luminance = def.luminance;
             break;
         case Group::Effects:
-            p.localDenoiseLuma = def.localDenoiseLuma;   // "Denoise" (local NR) lives in Effects
+            p.localDenoiseLuma = def.localDenoiseLuma;       // "Denoise" (local NR) lives in Effects
+            p.localDenoiseChroma = def.localDenoiseChroma;   // "Denoise Color" (local chroma NR)
             break;
         }
     }
@@ -111,7 +114,7 @@ struct EditParams {
                red == 0.0f && green == 0.0f && blue == 0.0f &&
                hue == 0.0f && saturation == 0.0f && luminance == 0.0f &&
                denoiseLuma == 0.0f && denoiseChroma == 0.0f &&
-               localDenoiseLuma == 0.0f;
+               localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f;
     }
 };
 
