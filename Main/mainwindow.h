@@ -1297,14 +1297,18 @@ private:
     QThreadPool *developRenderPool = nullptr;
     quint64 developParamsGen = 0;                 // ++ on every Develop param change (staleness guard)
     bool developFullResInFlight = false;          // a background full-res render is running
-    /* Interactive "Denoise raw": the raw denoiser is a heavy DNN run on the CLEAN pre-develop
-       WorkingImage (Base-only, RAW-only). Cached here keyed by path + amounts + ISO and computed OFF
-       the GUI thread, so a base denoise change re-runs the model ONCE (not every develop tick) and
-       later exposure/tone edits reuse the denoised base. With no denoise the render uses the clean
-       cached image unchanged. See developRawDenoisedBase / ensureRawDenoise and RawDenoise::Apply. */
+    /* Interactive "Denoise raw": PMRID is a heavy DNN run PRE-demosaic (Base-only, RAW-only,
+       Winnow engine only). ensureRawDenoise re-decodes the raw with PMRID once to build the
+       full-strength denoised base (developPmridFull, keyed path+iso), then blends clean<->PMRID by
+       the two amounts (luma/chroma split) into developDenoised (keyed path+amounts+iso). So the
+       model runs ONCE per image; amount changes only re-blend (cheap), and later exposure/tone
+       edits reuse the base. With no denoise the render uses the clean cached image unchanged. See
+       developRawDenoisedBase / ensureRawDenoise. */
     std::shared_ptr<const WorkingImage> developDenoised;
     QString developDenoisedKey;                   // "path|dnL|dnC|iso"; empty when clean
     QString developDenoiseInFlightKey;            // key currently being computed (coalesce guard)
+    std::shared_ptr<const WorkingImage> developPmridFull;   // full-strength PMRID base, reused across amounts
+    QString developPmridKey;                      // "path|iso" for developPmridFull
     /* Content-range mask (Luminance/Color Range) reference: a display-referred RGB map of the
        developed BASE layer, registered by path (RangeMask::putRef) and sampled identically by
        the loupe overlay and the render. Base-only so a range mask cannot feed back on its own

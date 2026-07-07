@@ -1,7 +1,7 @@
 #include "ImageFormats/Raw/rawformat.h"
 #include "ImageFormats/Raw/demosaic.h"
 #include "ImageFormats/Raw/rawcolor.h"
-#include "ImageFormats/Raw/rawdenoise.h"
+#include "ImageFormats/Raw/pmrid.h"
 #include "ImageFormats/Raw/applerawdecode.h"
 #include "Develop/workingimage.h"
 #include "Develop/develop.h"
@@ -66,7 +66,8 @@ bool RawFormat::HasSensorDecoder(const QString &ext)
 
 bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                        const EditParams *edit, const QAtomicInt *abort,
-                       std::shared_ptr<const WorkingImage> *outWork)
+                       std::shared_ptr<const WorkingImage> *outWork,
+                       bool denoiseRaw)
 {
 /*
     Shared, camera-agnostic pipeline:
@@ -85,6 +86,11 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
 
     auto work = std::make_shared<WorkingImage>();
     bool decoded = false;
+    /* Separate PMRID-denoised base for the DEVELOPED display/export image, built only when a saved
+       "Denoise raw" edit is present (below). *work (the cached base) always stays CLEAN; the
+       develop pass renders from this when set. Null on the Apple engine (no CFA) and with no
+       denoise edit. */
+    std::shared_ptr<WorkingImage> denoisedBase;
 
 #ifdef Q_OS_MAC
     /* Engine A (macOS only): Core Image decodes file -> WorkingImage directly, bypassing the
@@ -115,6 +121,15 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
 
         SubtractBlack(raw);
 
+        /* PMRID pre-demosaic raw denoise (in-house/Winnow engine only). Runs at full strength on
+           the mosaic before demosaic; the caller (MW::ensureRawDenoise) requests it to build the
+           denoised base and blends the user's amount. No-op for non-Bayer patterns or if the
+           model is absent. */
+        if (denoiseRaw && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
+            PMRID::Apply(raw, m.ISONum);
+            if (aborted()) { errMsg = "Aborted"; return false; }
+        }
+
         Demosaic demosaic;
         std::vector<float> rgb;
         if (!demosaic.Run(raw, rgb, Demosaic::Bilinear, abort)) {
@@ -127,6 +142,29 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             errMsg = "Colour conversion failed.";
             return false;
         }
+
+        /* Developed display/export base for a saved "Denoise raw" edit (the normal cache decode,
+           denoiseRaw == false; the denoiseRaw path already put the full-strength result in *work).
+           PMRID is pre-demosaic, so denoise a COPY of the mosaic, demosaic it a second time, and
+           blend toward the clean *work by the saved amounts -- matching the interactive render
+           (MW::ensureRawDenoise) while leaving *work (the cached base) clean. Winnow engine + Bayer
+           only; PMRID::Apply returns false otherwise, so we skip the extra work. */
+        if (!denoiseRaw && edit &&
+            (edit->denoiseLuma > 0.0f || edit->denoiseChroma > 0.0f) &&
+            G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
+            RawImage rawDen = raw;
+            if (PMRID::Apply(rawDen, m.ISONum)) {
+                std::vector<float> rgbDen;
+                WorkingImage pmridWork;
+                if (demosaic.Run(rawDen, rgbDen, Demosaic::Bilinear, abort) &&
+                    color.ToWorking(rawDen, rgbDen, pmridWork)) {
+                    denoisedBase = std::make_shared<WorkingImage>();
+                    Develop::BlendRawDenoise(*work, pmridWork, edit->denoiseLuma,
+                                             edit->denoiseChroma, *denoisedBase);
+                }
+            }
+            if (aborted()) { errMsg = "Aborted"; return false; }
+        }
     }
     if (aborted()) { errMsg = "Aborted"; return false; }
 
@@ -137,16 +175,14 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     if (outWork) *outWork = work;
 
     /* RAW develops in its native linear float (better than an 8-bit round trip), so the develop
-       stage runs here rather than in ImageDecoder for raw files. "Denoise raw" (Base-layer global
-       NR, post-demosaic) is applied to the private copy BEFORE the develop ops, for both decode
-       engines; no-op unless edit sets denoiseLuma/denoiseChroma and the model is loaded. iso
-       conditions the learned denoiser. This is the NON-interactive path (export / a decode carrying
-       saved edits); the live preview denoises via the develop cache instead. */
+       stage runs here rather than in ImageDecoder for raw files. This is the NON-interactive path
+       (a decode carrying saved edits -> the display/export image). "Denoise raw" is the PMRID
+       PRE-demosaic denoiser: when set it is baked into denoisedBase above (a blended copy),
+       leaving *work clean, and the develop pass renders from that base so the exported/displayed
+       image matches the interactive preview (MW::ensureRawDenoise). */
     OutputTransform output;
     if (edit && !edit->isIdentity()) {
-        WorkingImage developed = *work;
-        RawDenoise::Apply(developed, *edit, m.ISONum);
-        if (aborted()) { errMsg = "Aborted"; return false; }
+        WorkingImage developed = denoisedBase ? *denoisedBase : *work;
         Develop develop;
         develop.Apply(developed, *edit);
         if (aborted()) { errMsg = "Aborted"; return false; }

@@ -7,6 +7,7 @@
 #include <QtGlobal>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -203,6 +204,40 @@ void Develop::Denoise(WorkingImage &img, const EditParams &p)
             rgb[i * 3 + 0] *= factor;
             rgb[i * 3 + 1] *= factor;
             rgb[i * 3 + 2] *= factor;
+        }
+    });
+}
+
+void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den,
+                              float lum, float chr, WorkingImage &out)
+{
+/*
+    Interactive "Denoise raw" blend: out = clean + amount-scaled (den - clean). PMRID runs at full
+    strength once (den); the two Base amounts scale a luma/chroma split of the correction here, so
+    dragging the sliders only re-blends (cheap) instead of re-running the model. Mirrors the
+    highlight-preserving split used by the old post-demosaic path: highlights (correction ~0) pass
+    through untouched.
+*/
+    out = clean;                                    // dims/white/sceneReferred + fallback
+    if (clean.width != den.width || clean.height != den.height) return;
+    lum = std::clamp(lum, 0.0f, 1.0f);
+    chr = std::clamp(chr, 0.0f, 1.0f);
+    const float cAmt = std::max(lum, chr);
+    if (cAmt <= 0.0f) return;                        // nothing to add -> clean
+
+    const size_t n = static_cast<size_t>(clean.width) * static_cast<size_t>(clean.height);
+    const float *c = clean.rgb.data();
+    const float *d = den.rgb.data();
+    float *o = out.rgb.data();
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float dr = d[i * 3 + 0] - c[i * 3 + 0];
+            const float dg = d[i * 3 + 1] - c[i * 3 + 1];
+            const float db = d[i * 3 + 2] - c[i * 3 + 2];
+            const float dY = 0.2126f * dr + 0.7152f * dg + 0.0722f * db;   // luma of the correction
+            o[i * 3 + 0] = c[i * 3 + 0] + lum * dY + cAmt * (dr - dY);
+            o[i * 3 + 1] = c[i * 3 + 1] + lum * dY + cAmt * (dg - dY);
+            o[i * 3 + 2] = c[i * 3 + 2] + lum * dY + cAmt * (db - dY);
         }
     });
 }
