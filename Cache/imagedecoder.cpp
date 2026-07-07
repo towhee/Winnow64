@@ -778,3 +778,28 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
     qDebug() << "ImageDecoder::decode failed" << fPath;
     return false;
 }
+
+std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMetadata &m,
+                                                                   bool denoiseRaw)
+{
+/*
+    Uncached raw sensor decode -> pre-develop WorkingImage, for the "Denoise raw" base
+    (MW::ensureRawDenoise). denoiseRaw runs PMRID pre-demosaic (in-house/Winnow engine only, see
+    RawFormat::Decode). Consults only the supplied m (fPath + rawInfo + ISONum) so it is safe to
+    call from the develop render pool. Does NOT touch WorkingImageCache.
+*/
+    if (G::isLogger) G::log("  ImageDecoder::decodeRawWorking", m.fPath);
+    const QString ext = QFileInfo(m.fPath).suffix().toLower();
+    std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext);
+    if (!rawFormat) return nullptr;                     // no in-house decoder for this format
+
+    QFile file(m.fPath);
+    if (!file.open(QIODevice::ReadOnly)) return nullptr;
+
+    QImage throwaway;                                    // develop skipped: identity edit
+    const EditParams identity;
+    std::shared_ptr<const WorkingImage> work;
+    const bool ok = rawFormat->Decode(file, m, throwaway, &identity, &abort, &work, denoiseRaw);
+    file.close();
+    return ok ? work : nullptr;
+}

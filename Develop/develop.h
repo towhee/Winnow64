@@ -37,6 +37,15 @@ public:
        leaving img untouched). Fills *t when non-null. */
     bool Apply(WorkingImage &img, const EditParams &p, StageTimings *t = nullptr);
 
+    /* Blend a full-strength raw-denoised image toward the clean one, per the Base "Denoise raw"
+       amounts (the interactive slider blend for the PMRID pre-demosaic denoiser -- see
+       MW::ensureRawDenoise). The (denoised - clean) correction is split, in scene-linear RGB, into
+       a luma term (scaled by lum) and a per-channel chroma term (scaled by max(lum,chr)), so
+       highlights (where the correction is ~0) pass through. Writes into out (set to clean when the
+       dimensions mismatch or both amounts are 0). Static: carries no develop state. */
+    static void BlendRawDenoise(const WorkingImage &clean, const WorkingImage &denoised,
+                                float lum, float chr, WorkingImage &out);
+
 private:
     /* Spatial op: local (maskable) luminance NR, owns a full-image pass. Ratio-preserving --
        smooths luminance only (chroma untouched), driven by EditParams::localDenoiseLuma. Runs

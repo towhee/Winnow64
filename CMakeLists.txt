@@ -216,6 +216,7 @@ set(WINNOW_SOURCES
     ImageFormats/Raw/losslessjpeg.cpp
     ImageFormats/Raw/rawcolor.cpp
     ImageFormats/Raw/rawdenoise.cpp
+    ImageFormats/Raw/pmrid.cpp
     ImageFormats/Raw/rawformat.cpp
     ImageFormats/Raw/tiffwalk.cpp
     ImageFormats/Sony/sony.cpp
@@ -464,6 +465,7 @@ set(WINNOW_HEADERS
     ImageFormats/Raw/losslessjpeg.h
     ImageFormats/Raw/rawcolor.h
     ImageFormats/Raw/rawdenoise.h
+    ImageFormats/Raw/pmrid.h
     ImageFormats/Raw/rawformat.h
     ImageFormats/Raw/tiffwalk.h
     ImageFormats/Raw/rawimage.h
@@ -909,6 +911,18 @@ if(APPLE)
         message(WARNING "ReleaseExtras/rawdenoise.onnx not found -- 'Denoise raw' will no-op. "
                         "Add rawdenoise.onnx to ReleaseExtras/ to enable it.")
     endif()
+    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0) for the Base "Denoise raw" control on
+    # the in-house decode path. Warn-if-absent like the rest; without it, PMRID no-ops.
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/pmrid.onnx)
+        set_source_files_properties(ReleaseExtras/pmrid.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/pmrid.onnx not found -- pre-demosaic raw denoise will no-op. "
+                        "Add pmrid.onnx to ReleaseExtras/ to enable it.")
+    endif()
     # SAM 2 object-mask pair (encoder + FIXED-SHAPE decoder). Produced by
     # ReleaseExtras/tools/export_sam2.sh; the decoder MUST be the pinned/onnxsim'd export or
     # OpenCV DNN cannot load it (see Utilities/objectmaskpredictor.h). Warn-if-absent like the rest.
@@ -1170,6 +1184,17 @@ if(WIN32)
     else()
         message(WARNING "ReleaseExtras/rawdenoise.onnx not found -- 'Denoise raw' will no-op. "
                         "Add rawdenoise.onnx to ReleaseExtras/ to enable it.")
+    endif()
+    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0). Warn-if-absent; without it PMRID no-ops.
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx")
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx" "${_winnow_out}"
+            COMMENT "Deploying pmrid.onnx"
+            VERBATIM)
+    else()
+        message(WARNING "ReleaseExtras/pmrid.onnx not found -- pre-demosaic raw denoise will no-op. "
+                        "Add pmrid.onnx to ReleaseExtras/ to enable it.")
     endif()
     # SAM 2 object-mask pair (encoder + FIXED-SHAPE decoder; see ReleaseExtras/tools/export_sam2.sh).
     foreach(_m sam2_encoder sam2_decoder)

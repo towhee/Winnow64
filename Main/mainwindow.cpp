@@ -9,7 +9,8 @@
 #include "Develop/skymask.h"
 #include "Develop/depthmask.h"
 #include "Develop/objectmask.h"
-#include "ImageFormats/Raw/rawdenoise.h"
+#include "Develop/develop.h"
+#include "Cache/imagedecoder.h"
 #include "Utilities/subjectpredictor.h"
 #include "Utilities/skypredictor.h"
 #include "Utilities/depthpredictor.h"
@@ -6263,6 +6264,13 @@ static QString rawDenoiseKey(const QString &fPath, const EditParams &base, int i
         .arg(fPath).arg(base.denoiseLuma).arg(base.denoiseChroma).arg(iso);
 }
 
+/* Cache key for the FULL-strength PMRID base (amount-independent -- the model runs once per image;
+   the two amounts only scale the blend). */
+static QString pmridBaseKey(const QString &fPath, int iso)
+{
+    return QString("%1|iso=%2").arg(fPath).arg(iso);
+}
+
 int MW::currentImageIso() const
 {
     if (!dm || !dm->sf) return 0;
@@ -6290,10 +6298,12 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                           const std::shared_ptr<const WorkingImage> &clean, int iso)
 {
 /*
-    Compute the raw-denoised base off the GUI thread (developRenderPool: heavy DNN, ~like the full-
-    res render), cache it, then repaint. Coalesced -- one compute in flight, and a no-op if the
-    current amounts are already computed or being computed. Called from the settle path so dragging
-    the denoise slider does not spawn a model run per tick.
+    Build the raw-denoised base off the GUI thread (developRenderPool). PMRID runs PRE-demosaic, so
+    the denoised base comes from RE-DECODING the raw with the denoiser on (ImageDecoder::
+    decodeRawWorking, in-house/Winnow engine only) -- NOT from the already-demosaiced clean image.
+    That heavy re-decode runs ONCE per image and is cached (developPmridFull, keyed path+iso); the
+    two Base amounts only scale a cheap luma/chroma blend (Develop::BlendRawDenoise) toward it, so
+    dragging the sliders re-blends without re-running the model. Coalesced -- one job in flight.
 */
     if (!clean) return;
     if (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f) return;
@@ -6306,15 +6316,40 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
     if (!developDenoiseInFlightKey.isEmpty()) return;
     developDenoiseInFlightKey = key;
 
+    /* Build the raw metadata (rawInfo + ISO) on the GUI thread for the off-thread re-decode; the
+       worker then consults only this copy (no DataModel access). Reuse the cached full-strength
+       PMRID base for this image if we already have it (amount change only). */
+    const QString pkey = pmridBaseKey(fPath, iso);
+    ImageMetadata m;
+    m.fPath = fPath;
+    m.ISONum = iso;
+    dm->fPathRawInfoGet(fPath, m.rawInfo);
+    std::shared_ptr<const WorkingImage> pmridCached =
+        (developPmridKey == pkey && developPmridFull) ? developPmridFull : nullptr;
+
     std::shared_ptr<const WorkingImage> src = clean;            // keep the clean base alive
     const EditParams b = base;
-    developRenderPool->start([this, src, b, iso, key, fPath]() {
-        auto denoised = std::make_shared<WorkingImage>(*src);   // copy, then denoise in place
-        RawDenoise::Apply(*denoised, b, iso);
-        std::shared_ptr<const WorkingImage> result = denoised;
-        QMetaObject::invokeMethod(this, [this, result, key, fPath]() {
+    developRenderPool->start([this, src, b, key, pkey, fPath, m, pmridCached]() {
+        /* 1. Full-strength PMRID base (re-decode once; reuse the cache across amounts). */
+        std::shared_ptr<const WorkingImage> pmrid = pmridCached;
+        if (!pmrid) {
+            ImageDecoder dec(0, dm, metadata);
+            pmrid = dec.decodeRawWorking(m, /*denoiseRaw*/true);
+        }
+        if (!pmrid) {   // no in-house decoder (e.g. lossless ARW -> Apple path) or decode failed
+            QMetaObject::invokeMethod(this, [this]() { developDenoiseInFlightKey.clear(); });
+            return;
+        }
+        /* 2. Blend clean <-> PMRID by the luma/chroma amounts (cheap, per-settle). */
+        auto blended = std::make_shared<WorkingImage>();
+        Develop::BlendRawDenoise(*src, *pmrid, b.denoiseLuma, b.denoiseChroma, *blended);
+        std::shared_ptr<const WorkingImage> result = blended;
+
+        QMetaObject::invokeMethod(this, [this, result, pmrid, key, pkey, fPath]() {
             developDenoiseInFlightKey.clear();                  // job finished; allow the next (latest) one
             if (!dm || fPath != dm->currentFilePath) return;    // navigated away; drop it
+            developPmridFull = pmrid;                           // cache the full base for other amounts
+            developPmridKey = pkey;
             developDenoised = result;
             developDenoisedKey = key;
             developProxy.reset();                               // rebuild proxy from the denoised base

@@ -16,6 +16,8 @@
 #include "ImageFormats/Heic/heic.h"
 #endif
 
+struct WorkingImage;
+
 class ImageDecoder : public QObject
 {
     Q_OBJECT
@@ -23,6 +25,14 @@ public:
     ImageDecoder(int id, DataModel *dm, Metadata *metadata);
     ~ImageDecoder() override;
     bool decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m);
+
+    /* Decode the raw sensor file straight to a pre-develop WorkingImage, uncached (does NOT touch
+       WorkingImageCache), for the "Denoise raw" base. m must carry fPath + rawInfo + ISONum.
+       denoiseRaw runs the PMRID pre-demosaic denoiser (in-house/Winnow engine only). Returns
+       nullptr if the format has no in-house decoder or the decode fails. Thread-safe: consults only
+       the supplied m (no DataModel access), so callable from the develop render pool. */
+    std::shared_ptr<const WorkingImage> decodeRawWorking(const ImageMetadata &m, bool denoiseRaw);
+
     bool isRunning() const;
     void setIdle();
     void setBusy();

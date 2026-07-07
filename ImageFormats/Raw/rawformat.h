@@ -51,11 +51,18 @@ public:
        linear) as a shared_ptr -- no pixel copy. The caller caches it (WorkingImageCache) so a
        later slider change re-renders via Develop + OutputTransform without re-decoding. The
        snapshot is always pre-develop: when edit is non-identity the develop runs on a private
-       copy, leaving the shared image pristine. */
+       copy, leaving the shared image pristine.
+
+       denoiseRaw applies the PMRID pre-demosaic raw denoiser (in-house/Winnow engine only) at
+       full strength before demosaic, so outWork is the DENOISED pre-develop base. The default
+       (false) leaves the decode clean -- the clean WorkingImage is cached, and the "Denoise raw"
+       amount is produced by a separate denoiseRaw=true decode and blended (MW::ensureRawDenoise).
+       No-op on the Apple engine (no CFA) and for non-Bayer patterns. */
     bool Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 const EditParams *edit = nullptr,
                 const QAtomicInt *abort = nullptr,
-                std::shared_ptr<const WorkingImage> *outWork = nullptr);
+                std::shared_ptr<const WorkingImage> *outWork = nullptr,
+                bool denoiseRaw = false);
 
     QString lastError() const { return errMsg; }
 

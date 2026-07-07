@@ -324,3 +324,5 @@ brew install onnxruntime
 python export_nafnet.py
 configure -DWINNOW_ENABLE_ORT=ON
 
+JDNDM & SGNet (Self-Guidance Network), BJDD (Blind Joint Demosaicing and Denoising) and
+Unified-Demosaicing (Samsung Labs)
