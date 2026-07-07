@@ -2588,8 +2588,12 @@ Layer & masking model (planned)
            running-sum cost is ~radius-independent) + a contrast pull about a low pivot (kDehazePivot
            0.3, deepens shadows) + a saturation lift (kDehazeSat); + clears haze, - adds it. These
            are global (no-mask) now; the layer compositor will bound them to a mask bbox later.
-           Costs land only on the full-res settle render (the proxy filters ~3MP); denoise
-           (localDenoiseLuma) remains wired but UI-less. All ten Basic sliders are now live.
+           Costs land only on the full-res settle render (the proxy filters ~3MP). The Effects
+           "Denoise" is two 0..100 sliders (mapped to 0..1) into Develop::Denoise: "Denoise"
+           (localDenoiseLuma) = luminance NR via a perceptual bilateral (ratio-preserving), and
+           "Denoise Color" (localDenoiseChroma) = chroma NR via a downscaled opponent-chroma
+           (R-Y, B-Y) blur that keeps luma exact. Luma runs first, then chroma. All ten Basic
+           sliders are now live.
 
            SLIDER-DRAG LATENCY: the naive path re-rendered the full image synchronously on the
            GUI thread every tick. For a 50MP RAW that measured ~520 ms/tick (probe below),
@@ -3398,12 +3402,15 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                  "Layer & masking model (planned)" subsection above: all layers active as a
                  composited stack, the combo selects only which layer the sliders EDIT, opacity +
                  masks per layer, persisted per-image in the XMP sidecar.
-        Basic    Denoise (checkbox); Temp, Tint, Exposure, Contrast, Highlights, Shadows,
+        Basic    Temp, Tint, Exposure, Contrast, Highlights, Shadows,
                  Whites, Blacks, Texture, Dehaze (sliders). Integer -100..100 except Exposure
                  (EV, -5.00..5.00). All default to 0 (identity).
         Color    Red, Green, Blue (per-channel gain); Hue, Saturation, Luminance (global HSL).
                  Integer -100..100 sliders, all default 0 (identity).
-        Effects  header only (placeholder for future creative effects).
+        Effects  Denoise (localDenoiseLuma, luminance NR) + Denoise Color (localDenoiseChroma,
+                 chroma NR) -- two 0..100 sliders (mapped to 0..1), default 0. Local, maskable,
+                 post-demosaic. Distinct from the Base layer's "Denoise raw" (PMRID pre-demosaic,
+                 denoiseLuma/denoiseChroma).
 
     Each layer maps onto one EditParams (DevelopProperties::editParams()). Binding a value
     change to a re-decode is deferred: itemChange() persists the value to settings and emits

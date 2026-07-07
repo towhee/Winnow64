@@ -142,6 +142,17 @@ bool Apply(RawImage &raw, int iso)
         }
     }
 
+    /* TEMP (raw-denoise test signal -- remove after testing): green-channel mean/std BEFORE. */
+    double dbgBSum = 0.0, dbgBSumSq = 0.0;
+    for (int c = 1; c <= 2; ++c)
+        for (size_t p = 0; p < pk; ++p) {
+            const float v = rggb[c * pk + p];
+            dbgBSum += v; dbgBSumSq += double(v) * v;
+        }
+    const double dbgN = 2.0 * double(pk);
+    const double dbgBMean = dbgBSum / dbgN;
+    const double dbgBStd = std::sqrt(std::max(0.0, dbgBSumSq / dbgN - dbgBMean * dbgBMean));
+
     /* Feathered accumulator for the denoised packed image. */
     std::vector<float> acc(4 * pk, 0.0f);
     std::vector<float> wsum(pk, 0.0f);
@@ -211,6 +222,24 @@ bool Apply(RawImage &raw, int iso)
             put(sy + 1, sx + 1, acc[3 * pk + o]);
         }
     }
+
+    /* TEMP (raw-denoise test signal -- remove after testing): green-channel mean/std AFTER +
+       backend. std drops with noise (also with any detail smoothing), so the % is a rough
+       noise-reduction indicator, not exact. */
+    double dbgASum = 0.0, dbgASumSq = 0.0;
+    for (size_t p = 0; p < pk; ++p) {
+        const float ws = wsum[p] > 0.0f ? 1.0f / wsum[p] : 0.0f;
+        for (int c = 1; c <= 2; ++c) {
+            const float v = acc[c * pk + p] * ws;
+            dbgASum += v; dbgASumSq += double(v) * v;
+        }
+    }
+    const double dbgAMean = dbgASum / dbgN;
+    const double dbgAStd = std::sqrt(std::max(0.0, dbgASumSq / dbgN - dbgAMean * dbgAMean));
+    qDebug("PMRID::Apply [TEST] %dx%d iso=%d via %s  green mean %.5f->%.5f  std %.5f->%.5f (~%.0f%% less)",
+           W, H, iso, s->BackendName().toUtf8().constData(),
+           dbgBMean, dbgAMean, dbgBStd, dbgAStd,
+           100.0 * (1.0 - (dbgBStd > 0.0 ? dbgAStd / dbgBStd : 0.0)));
 
     if (G::isLogger)
         G::log("PMRID::Apply", QString("%1x%2 iso=%3 via %4")

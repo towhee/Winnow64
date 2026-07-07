@@ -157,8 +157,9 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
    re-computes, on a point-slider drag. */
 void Develop::Denoise(WorkingImage &img, const EditParams &p)
 {
-    const float amt = p.localDenoiseLuma;
-    if (amt <= 0.0f) return;
+    const float lumAmt = p.localDenoiseLuma;
+    const float chrAmt = p.localDenoiseChroma;
+    if (lumAmt <= 0.0f && chrAmt <= 0.0f) return;
 
     const int w = img.width;
     const int h = img.height;
@@ -167,45 +168,98 @@ void Develop::Denoise(WorkingImage &img, const EditParams &p)
     const float white = (img.white > 0.0f) ? img.white : 1.0f;
     const float invWhite = 1.0f / white;
 
-    /* Perceptual, white-normalised luminance (Rec.709 linear-luma weights). Ylin keeps the
-       scene-linear luma so the post-smoothing ratio can be formed in linear. */
-    cv::Mat Yp(h, w, CV_32FC1);
-    std::vector<float> Ylin(n);
-    float *yp = Yp.ptr<float>();
-    float *ylin = Ylin.data();
-    parallelFor(n, [=](size_t i0, size_t i1) {
-        for (size_t i = i0; i < i1; ++i) {
-            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-            ylin[i] = Y;
-            float nrm = Y * invWhite;
-            if (nrm < 0.0f) nrm = 0.0f;
-            yp[i] = std::pow(nrm, kInvGamma);
-        }
-    });
+    /* LUMINANCE NR (localDenoiseLuma): edge-preserving smoothing on luminance only, ratio-
+       preserving so chroma is untouched. */
+    if (lumAmt > 0.0f) {
+        /* Perceptual, white-normalised luminance (Rec.709 linear-luma weights). Ylin keeps the
+           scene-linear luma so the post-smoothing ratio can be formed in linear. */
+        cv::Mat Yp(h, w, CV_32FC1);
+        std::vector<float> Ylin(n);
+        float *yp = Yp.ptr<float>();
+        float *ylin = Ylin.data();
+        parallelFor(n, [=](size_t i0, size_t i1) {
+            for (size_t i = i0; i < i1; ++i) {
+                const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+                const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                ylin[i] = Y;
+                float nrm = Y * invWhite;
+                if (nrm < 0.0f) nrm = 0.0f;
+                yp[i] = std::pow(nrm, kInvGamma);
+            }
+        });
 
-    /* Edge-preserving smoothing on luminance only; strength scales the range/space sigmas.
-       bilateralFilter parallelises internally on OpenCV's own pool (see the threading note in
-       Documentation.txt). d = 0 derives the kernel diameter from sigmaSpace. */
-    const double sigmaColor = 0.03 + 0.09 * static_cast<double>(amt);
-    const double sigmaSpace = 2.0 + 4.0 * static_cast<double>(amt);
-    cv::Mat Ypd;
-    cv::bilateralFilter(Yp, Ypd, 0, sigmaColor, sigmaSpace);
+        /* Edge-preserving smoothing on luminance only; strength scales the range/space sigmas.
+           bilateralFilter parallelises internally on OpenCV's own pool (see the threading note in
+           Documentation.txt). d = 0 derives the kernel diameter from sigmaSpace. */
+        const double sigmaColor = 0.03 + 0.09 * static_cast<double>(lumAmt);
+        const double sigmaSpace = 2.0 + 4.0 * static_cast<double>(lumAmt);
+        cv::Mat Ypd;
+        cv::bilateralFilter(Yp, Ypd, 0, sigmaColor, sigmaSpace);
 
-    /* Scale RGB by the linear luminance ratio, preserving chroma. */
-    const float *ypd = Ypd.ptr<float>();
-    constexpr float kEps = 1e-6f;
-    parallelFor(n, [=](size_t i0, size_t i1) {
-        for (size_t i = i0; i < i1; ++i) {
-            const float Y = ylin[i];
-            if (Y <= kEps) continue;                          // black pixel: nothing to scale
-            const float Yd = std::pow(ypd[i], kGamma) * white;   // perceptual -> linear
-            const float factor = Yd / Y;
-            rgb[i * 3 + 0] *= factor;
-            rgb[i * 3 + 1] *= factor;
-            rgb[i * 3 + 2] *= factor;
-        }
-    });
+        /* Scale RGB by the linear luminance ratio, preserving chroma. */
+        const float *ypd = Ypd.ptr<float>();
+        constexpr float kEps = 1e-6f;
+        parallelFor(n, [=](size_t i0, size_t i1) {
+            for (size_t i = i0; i < i1; ++i) {
+                const float Y = ylin[i];
+                if (Y <= kEps) continue;                          // black pixel: nothing to scale
+                const float Yd = std::pow(ypd[i], kGamma) * white;   // perceptual -> linear
+                const float factor = Yd / Y;
+                rgb[i * 3 + 0] *= factor;
+                rgb[i * 3 + 1] *= factor;
+                rgb[i * 3 + 2] *= factor;
+            }
+        });
+    }
+
+    /* COLOUR/CHROMA NR (localDenoiseChroma): smooth the opponent chroma (R-Y, B-Y) while keeping
+       luminance EXACT, so colour blotches wash out without touching luma detail. Chroma noise is
+       low-frequency, so we blur a downscaled copy (fast, O(1)-ish -- see the Develop perf note in
+       Documentation.txt) and upsample; mild colour bleed at edges is acceptable for chroma. Runs
+       after the luma pass, on the luma-denoised RGB. */
+    if (chrAmt > 0.0f) {
+        cv::Mat chroma(h, w, CV_32FC3);          // (Cr, Cb, 0), white-normalised linear
+        std::vector<float> Yn(n);
+        float *cp = chroma.ptr<float>();
+        float *yn = Yn.data();
+        parallelFor(n, [=](size_t i0, size_t i1) {
+            for (size_t i = i0; i < i1; ++i) {
+                const float r = rgb[i * 3 + 0] * invWhite;
+                const float g = rgb[i * 3 + 1] * invWhite;
+                const float b = rgb[i * 3 + 2] * invWhite;
+                const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                yn[i] = Y;
+                cp[i * 3 + 0] = r - Y;            // Cr
+                cp[i * 3 + 1] = b - Y;            // Cb
+                cp[i * 3 + 2] = 0.0f;
+            }
+        });
+
+        /* Downscaled edge-preserving blur of the chroma; strength scales the sigmas. */
+        const int scale = 4;
+        const int sw = std::max(1, w / scale), sh = std::max(1, h / scale);
+        cv::Mat lo, loD;
+        cv::resize(chroma, lo, cv::Size(sw, sh), 0, 0, cv::INTER_AREA);
+        const double sigmaColorC = 0.02 + 0.10 * static_cast<double>(chrAmt);
+        const double sigmaSpaceC = 2.0 + 6.0 * static_cast<double>(chrAmt);
+        cv::bilateralFilter(lo, loD, 0, sigmaColorC, sigmaSpaceC);
+        cv::Mat chromaD;
+        cv::resize(loD, chromaD, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+
+        /* Recombine: keep Y exact, take the smoothed chroma; derive G so Y is preserved. */
+        const float *cpd = chromaD.ptr<float>();
+        parallelFor(n, [=](size_t i0, size_t i1) {
+            for (size_t i = i0; i < i1; ++i) {
+                const float Y = yn[i];
+                const float R = Y + cpd[i * 3 + 0];
+                const float B = Y + cpd[i * 3 + 1];
+                const float G = (Y - 0.2126f * R - 0.0722f * B) / 0.7152f;
+                rgb[i * 3 + 0] = std::max(0.0f, R * white);
+                rgb[i * 3 + 1] = std::max(0.0f, G * white);
+                rgb[i * 3 + 2] = std::max(0.0f, B * white);
+            }
+        });
+    }
 }
 
 void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den,

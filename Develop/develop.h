@@ -47,12 +47,13 @@ public:
                                 float lum, float chr, WorkingImage &out);
 
 private:
-    /* Spatial op: local (maskable) luminance NR, owns a full-image pass. Ratio-preserving --
-       smooths luminance only (chroma untouched), driven by EditParams::localDenoiseLuma. Runs
-       BEFORE the fused point pass (fixed pipeline order). This is the GLOBAL (no-mask) case; the
-       planned layer compositor calls it per layer, bounded to the mask bbox and blended by the
-       layer's alpha (see notes/Documentation.txt "Layer & masking model"). No-op when the
-       strength is 0. */
+    /* Spatial op: local (maskable) NR, owns a full-image pass, run BEFORE the fused point pass
+       (fixed pipeline order). Two independent strengths: EditParams::localDenoiseLuma = luminance
+       NR (ratio-preserving, chroma untouched); EditParams::localDenoiseChroma = colour/chroma NR
+       (downscaled opponent-chroma blur, luminance kept exact). Luma runs first, then chroma on the
+       result. This is the GLOBAL (no-mask) case; the planned layer compositor calls it per layer,
+       bounded to the mask bbox and blended by the layer's alpha (see notes/Documentation.txt
+       "Layer & masking model"). No-op when both strengths are 0. */
     void Denoise(WorkingImage &img, const EditParams &p);
 
     /* Spatial op (pipeline #6): mid-frequency local contrast on LUMINANCE only (ratio-preserving,
