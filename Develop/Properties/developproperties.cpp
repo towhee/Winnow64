@@ -320,15 +320,20 @@ void DevelopProperties::applyCoreVisibility()
 {
     /* Demosaic + Denoise raw are visible only when editing raw AND the layer items are not
        collapsed ('>'). Scan root rows only (the Effects "Denoise" is a distinct key, "localDenoise",
-       and is never touched here) and set those two rows directly -- this must run AFTER
-       applyLayerItemsCollapsed(), which would otherwise re-show them on a non-collapsed rebuild. */
+       and is never touched here) and set those rows directly -- this must run AFTER
+       applyLayerItemsCollapsed(), which would otherwise re-show them on a non-collapsed rebuild.
+       The "Denoise raw" sliders (PMRID) additionally require the WINNOW decode engine (PMRID needs
+       the CFA mosaic); on the Apple engine they are inert, so hide them -- but keep the Demosaic
+       selector itself visible so the user can switch back. */
     const bool hide = !G::useRaw || layerItemsCollapsed;
+    const bool apple = (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine);
     for (int r = 0; r < model->rowCount(); ++r) {
         const QModelIndex cap = model->index(r, CapColumn);
         const QString name = cap.data(UR_Name).toString();
         if (name == "demosaic" || name == "denoiseLuma" || name == "denoiseChroma") {
-            model->setData(cap, hide, UR_isHidden);   // remembered for updateHiddenRows()
-            setRowHidden(r, QModelIndex(), hide);
+            const bool h = hide || (apple && name != "demosaic");
+            model->setData(cap, h, UR_isHidden);   // remembered for updateHiddenRows()
+            setRowHidden(r, QModelIndex(), h);
         }
     }
 }
@@ -1479,7 +1484,8 @@ void DevelopProperties::itemChange(QModelIndex idx)
        in-house Winnow decoder). It is not an EditParams value -- it forces a re-decode -- so handle
        it here (emit to MW) and skip applyKeyToParams / the normal preview render. */
     if (source == "demosaic") {
-        emit demosaicEngineChanged(v.toString() == "Apple");
+        emit demosaicEngineChanged(v.toString() == "Apple");   // MW sets G::decodeRawEngine (direct)
+        applyCoreVisibility();   // engine changed -> show/hide the Denoise-raw rows (PMRID is Winnow-only)
         return;
     }
 

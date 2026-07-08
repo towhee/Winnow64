@@ -34,10 +34,54 @@ const     char *kModelFile = "pmrid.onnx";
 constexpr double kK[2] = {0.0005995267, 0.00868861};                 // K(iso)   = kK0*iso + kK1
 constexpr double kB[3] = {7.11772e-7, 6.514934e-4, 0.11492713};      // Sigma(iso)= ...*iso^2 + ...
 
-/* Single-frame Sony noise estimate (var = k*x + b, [0,1] domain), from the ISO-6400 spike.
-   STOPGAP until per-model K(ISO)/B(ISO) come from the calibration capture. */
-constexpr double kSonyK = 1.052e-3;
-constexpr double kSonyB = 1.197e-6;
+/* Per-camera noise calibration: var = k*iso-dependent*x + b in the white-normalised [0,1] domain
+   (green plane), measured by a photon-transfer sweep (tools/calibrate_pmrid.py -> _pmrid_out/
+   calib_<model>.json). k = shot-noise gain (~doubles per ISO stop), b = read-noise floor. */
+struct IsoKB { int iso; double k; double b; };
+
+constexpr IsoKB kA7R5[] = {   // Sony ILCE-7RM5
+    {   100, 2.679249e-05, 1.209511e-09 }, {   200, 5.324481e-05, 2.094189e-08 },
+    {   400, 1.070231e-04, 2.446033e-08 }, {   800, 2.140609e-04, 9.039847e-08 },
+    {  1600, 4.277943e-04, 3.610540e-07 }, {  3200, 8.555372e-04, 1.386220e-06 },
+    {  6400, 1.710885e-03, 5.153719e-06 }, { 12800, 3.379437e-03, 2.121978e-05 },
+    { 25600, 4.760316e-03, 3.789355e-05 },
+};
+constexpr IsoKB kA1M2[] = {   // Sony ILCE-1M2 (A1 II)
+    {   100, 2.262302e-05, 5.375863e-09 }, {   200, 4.564027e-05, 3.518424e-08 },
+    {   400, 9.117619e-05, 1.471515e-07 }, {   800, 1.807107e-04, 3.878459e-08 },
+    {  1600, 3.619991e-04, 1.659519e-07 }, {  3200, 7.263821e-04, 6.005952e-07 },
+    {  6400, 1.442054e-03, 2.510492e-06 }, { 12800, 2.881715e-03, 1.002150e-05 },
+    { 25600, 3.973885e-03, 2.307054e-05 },
+};
+
+/* Interpolate (k,b) for iso from a table, log-log (k ~ ISO, geometric ISO grid), clamped. */
+void lookupKB(const IsoKB *t, int n, int iso, double &k, double &b)
+{
+    if (iso <= t[0].iso)     { k = t[0].k;     b = t[0].b;     return; }
+    if (iso >= t[n - 1].iso) { k = t[n - 1].k; b = t[n - 1].b; return; }
+    for (int i = 1; i < n; ++i) {
+        if (iso <= t[i].iso) {
+            const double f = (std::log(double(iso))     - std::log(double(t[i - 1].iso)))
+                           / (std::log(double(t[i].iso)) - std::log(double(t[i - 1].iso)));
+            auto lerpLog = [f](double a, double c) {
+                return std::exp(std::log(std::max(a, 1e-12)) * (1.0 - f) +
+                                std::log(std::max(c, 1e-12)) * f);
+            };
+            k = lerpLog(t[i - 1].k, t[i].k);
+            b = lerpLog(t[i - 1].b, t[i].b);
+            return;
+        }
+    }
+}
+
+/* Pick the calibration table by camera model (m.model is "Sony ILCE-..."); default to the A7R5
+   (a generic full-frame Sony) for uncalibrated bodies -- better than no denoise, and any camera
+   can be added by capturing its frames (tools/pmrid_calibration_capture.md). */
+void modelKB(const QString &model, int iso, double &k, double &b)
+{
+    if (model.contains("ILCE-1M2")) lookupKB(kA1M2, int(sizeof(kA1M2) / sizeof(kA1M2[0])), iso, k, b);
+    else                            lookupKB(kA7R5, int(sizeof(kA7R5) / sizeof(kA7R5[0])), iso, k, b);
+}
 
 /* KSigma affine coefficients: map the measured (k,b) noise onto the OPPO anchor's statistics. */
 struct Cvt { float k; float b; };
@@ -103,9 +147,8 @@ static InferenceSession *SharedSession()
     return session.get();
 }
 
-bool Apply(RawImage &raw, int iso)
+bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progress)
 {
-    Q_UNUSED(iso)   // reserved for the future ISO-dependent coefficient table
     if (!raw.isValid()) return false;
 
     int dy, dx;
@@ -120,7 +163,9 @@ bool Apply(RawImage &raw, int iso)
     if (Wpk <= 0 || Hpk <= 0) return false;
     const float white = raw.white > 0 ? float(raw.white) : 1.0f;
     const float invWhite = 1.0f / white;
-    const Cvt cvt = cvtCoeffs(kSonyK, kSonyB);
+    double k, b;
+    modelKB(model, iso > 0 ? iso : 100, k, b);            // per-camera, per-ISO noise model
+    const Cvt cvt = cvtCoeffs(k, b);
 
     const std::string inName  = s->InputNames()[0];
     const std::string outName = s->OutputNames()[0];
@@ -142,23 +187,15 @@ bool Apply(RawImage &raw, int iso)
         }
     }
 
-    /* TEMP (raw-denoise test signal -- remove after testing): green-channel mean/std BEFORE. */
-    double dbgBSum = 0.0, dbgBSumSq = 0.0;
-    for (int c = 1; c <= 2; ++c)
-        for (size_t p = 0; p < pk; ++p) {
-            const float v = rggb[c * pk + p];
-            dbgBSum += v; dbgBSumSq += double(v) * v;
-        }
-    const double dbgN = 2.0 * double(pk);
-    const double dbgBMean = dbgBSum / dbgN;
-    const double dbgBStd = std::sqrt(std::max(0.0, dbgBSumSq / dbgN - dbgBMean * dbgBMean));
-
     /* Feathered accumulator for the denoised packed image. */
     std::vector<float> acc(4 * pk, 0.0f);
     std::vector<float> wsum(pk, 0.0f);
 
     const std::vector<int> xs = tileStarts(Wpk);
     const std::vector<int> ys = tileStarts(Hpk);
+    const int tileTotal = int(xs.size() * ys.size());
+    int tileDone = 0;
+    if (progress) progress(0, tileTotal);
 
     for (int ty0 : ys) {
         const int th = std::min(kTile, Hpk - ty0);
@@ -203,6 +240,7 @@ bool Apply(RawImage &raw, int iso)
                     }
                 }
             }
+            if (progress) progress(++tileDone, tileTotal);
         }
     }
 
@@ -223,23 +261,6 @@ bool Apply(RawImage &raw, int iso)
         }
     }
 
-    /* TEMP (raw-denoise test signal -- remove after testing): green-channel mean/std AFTER +
-       backend. std drops with noise (also with any detail smoothing), so the % is a rough
-       noise-reduction indicator, not exact. */
-    double dbgASum = 0.0, dbgASumSq = 0.0;
-    for (size_t p = 0; p < pk; ++p) {
-        const float ws = wsum[p] > 0.0f ? 1.0f / wsum[p] : 0.0f;
-        for (int c = 1; c <= 2; ++c) {
-            const float v = acc[c * pk + p] * ws;
-            dbgASum += v; dbgASumSq += double(v) * v;
-        }
-    }
-    const double dbgAMean = dbgASum / dbgN;
-    const double dbgAStd = std::sqrt(std::max(0.0, dbgASumSq / dbgN - dbgAMean * dbgAMean));
-    qDebug("PMRID::Apply [TEST] %dx%d iso=%d via %s  green mean %.5f->%.5f  std %.5f->%.5f (~%.0f%% less)",
-           W, H, iso, s->BackendName().toUtf8().constData(),
-           dbgBMean, dbgAMean, dbgBStd, dbgAStd,
-           100.0 * (1.0 - (dbgBStd > 0.0 ? dbgAStd / dbgBStd : 0.0)));
 
     if (G::isLogger)
         G::log("PMRID::Apply", QString("%1x%2 iso=%3 via %4")

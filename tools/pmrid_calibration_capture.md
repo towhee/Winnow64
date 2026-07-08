@@ -135,18 +135,49 @@ usable K/B(ISO) and measure the lift over the single-frame estimate; do the full
 
 ---
 
-## What happens next (I'll build `calibrate_pmrid.py`)
+## Status — loop COMPLETE for Sony A7R5 (ILCE-7RM5) + A1 II (ILCE-1M2)  ✅ 2026-07-07
 
-Once frames exist, I'll write a processing script that:
-1. rawpy-reads each frame, subtracts per-channel black, splits the 4 Bayer channels, crops the
-   central ROI.
-2. Per ISO, per shutter: differences the pair → temporal variance = var(F1−F2)/2; mean signal =
-   (mean(F1)+mean(F2))/2 − black. Rejects clipped/near-black levels.
-3. Robust-fits **var = k·μ + b** per ISO (green sites primary; reports R/B too).
-4. Fits **K(ISO)** and **B(ISO)** polynomials (linear-ish k, quadratic b, matching PMRID's form),
-   picks an anchor ISO, and writes the coefficients + PTC/fit plots.
-5. Re-runs `oracle_pmrid.py` with the fitted coeffs vs the single-frame estimate → quantifies the
-   quality lift, and pins the final numbers for the C++ integration.
+The capture → calibrate → integrate loop is done and shipped for these two bodies. Results were
+textbook: **R² = 1.0000** at every ISO, `k` (shot-noise gain) doubling exactly per ISO stop, and
+the fitted read-noise `b` matching the lens-cap darks.
 
-Deliverable: the `K_coeff` / `B_coeff` / anchor / scale that Winnow will bake in for Sony bodies
-(and the recipe to repeat for other in-house-decoded sensors).
+`tools/calibrate_pmrid.py` is the processing tool. What it actually does (settled implementation):
+1. rawpy-reads each frame; extracts the green plane; central 60% ROI (avoids vignetting).
+2. **Single-frame spatial noise** per frame: median variance over 16×16 flat blocks (robust to
+   dust/gradient) → one (signal, var) point per frame in the white-normalised [0,1] domain. (The
+   pairing turned out inconsistent, so no pair-differencing; the defocused flat field makes the
+   single-frame estimate clean.) The lens-cap **darks** (mean ≈ 0, at 1/8000) anchor `b`.
+3. **Quadratic fit** `var = c₂·x² + k·x + b` per ISO — the x² term absorbs PRNU so the exported
+   `k` (shot) and `b` (read) match PMRID's linear noise model. Clipped frames rejected.
+4. Writes `_pmrid_out/calib_<model>.json` (per-ISO `k,b` table) + a `.png` (PTC + k/b-vs-ISO).
+
+Integrated into `ImageFormats/Raw/pmrid.cpp` as per-model `IsoKB` tables (`kA7R5`, `kA1M2`), with
+log-ISO interpolation (`lookupKB`) and model selection (`modelKB`, keyed on `ImageMetadata::model`).
+`PMRID::Apply(raw, iso, model)` uses them; the single-frame stopgap is gone.
+
+### Adding another camera
+Shoot its frames per this doc, then:
+```
+tools/_pmrid_venv/bin/python tools/calibrate_pmrid.py ~/Pictures/_calibrate_pmrid_<CAM>
+```
+Copy the printed `iso_k_b` table into a new `IsoKB` array in `pmrid.cpp` and add a `modelKB` branch
+matching its `ImageMetadata::model` substring. Uncalibrated bodies fall back to the A7R5 table
+(functional but approximate). **Add a row to the findings log below** (regression record).
+
+---
+
+## Calibration findings log
+
+Per-camera summary + provenance. The full per-ISO `k,b` tables are the shipped source of truth in
+`pmrid.cpp`; the raw `_pmrid_out/calib_<model>.json` + `.png` are scratch (regenerate via the
+script). `k ≈ 1/full-well-electrons` in the white-normalised domain, so full-well ≈ 1/`k`(ISO 100).
+
+| Model (ImageMetadata) | Captured | Frames | ISO range | R² | k @100 | Full-well (e⁻) | b @6400 | b @25600 | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| Sony ILCE-7RM5 (A7R5) | 2026-07-07 | 148 | 100–25600 | 1.0000 | 2.68e-5 | ~37,300 | 5.15e-6 | 3.79e-5 | 60 MP FF; baseline |
+| Sony ILCE-1M2 (A1 II) | 2026-07-07 | 131 | 100–25600 | 1.0000 | 2.26e-5 | ~44,200 | 2.51e-6 | 2.31e-5 | 50 MP FF; ~15% less shot noise (deeper wells), ~½ read noise at high ISO; hint of dual-gain b-dip ~ISO 800 |
+
+**Comparison (A1 II vs A7R5):** cleaner sensor at both ends — shot-noise `k` ~0.84× (larger pixels
+→ ~18% deeper wells), read-noise `b` ~0.5× at high ISO. Confirms per-camera calibration matters:
+the A7R5 table on an A1 II would over-denoise by ~15% (shot) to ~2× (read) — hence the fallback is
+"functional but approximate", not ideal, for uncalibrated bodies.

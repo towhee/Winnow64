@@ -189,12 +189,27 @@ void Develop::Denoise(WorkingImage &img, const EditParams &p)
         });
 
         /* Edge-preserving smoothing on luminance only; strength scales the range/space sigmas.
-           bilateralFilter parallelises internally on OpenCV's own pool (see the threading note in
-           Documentation.txt). d = 0 derives the kernel diameter from sigmaSpace. */
+           d = 0 derives the kernel diameter from sigmaSpace. The bilateral is the expensive part
+           and (unlike the O(n) passes) grows with pixel count, so run it at a BOUNDED resolution:
+           downscale to ~2 MP, filter with a proportionally smaller spatial sigma (same effective
+           radius), then upscale. This keeps the interactive proxy render off the GUI thread's
+           critical path (see the Develop perf note in Documentation.txt); small images (<=2 MP,
+           e.g. the proxy on a modest display) skip the downscale and filter at full resolution. */
         const double sigmaColor = 0.03 + 0.09 * static_cast<double>(lumAmt);
         const double sigmaSpace = 2.0 + 4.0 * static_cast<double>(lumAmt);
+        const double mp = static_cast<double>(n) / 1e6;
+        const int scale = (mp > 2.0) ? std::max(1, int(std::lround(std::sqrt(mp / 2.0)))) : 1;
         cv::Mat Ypd;
-        cv::bilateralFilter(Yp, Ypd, 0, sigmaColor, sigmaSpace);
+        if (scale > 1) {
+            const int sw = std::max(1, w / scale), sh = std::max(1, h / scale);
+            cv::Mat lo, loD;
+            cv::resize(Yp, lo, cv::Size(sw, sh), 0, 0, cv::INTER_AREA);
+            cv::bilateralFilter(lo, loD, 0, sigmaColor, sigmaSpace / scale);
+            cv::resize(loD, Ypd, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+        }
+        else {
+            cv::bilateralFilter(Yp, Ypd, 0, sigmaColor, sigmaSpace);
+        }
 
         /* Scale RGB by the linear luminance ratio, preserving chroma. */
         const float *ypd = Ypd.ptr<float>();

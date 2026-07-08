@@ -326,3 +326,11 @@ configure -DWINNOW_ENABLE_ORT=ON
 
 JDNDM & SGNet (Self-Guidance Network), BJDD (Blind Joint Demosaicing and Denoising) and
 Unified-Demosaicing (Samsung Labs)
+
+Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.67 chrAmt=1.00  luma 11ms  chroma 32ms
+Develop::Denoise [TEST] 8640x5760 (49.8 MP) lumAmt=0.67 chrAmt=1.00  luma 58ms  chroma 159ms
+Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.00 chrAmt=1.00  luma 0ms  chroma 30ms
+Develop::Denoise [TEST] 8640x5760 (49.8 MP) lumAmt=0.00 chrAmt=1.00  luma 0ms  chroma 145ms
+Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.00 chrAmt=0.97  luma 0ms  chroma 31ms
+Develop::Denoise [TEST] 8640x5760 (49.8 MP) lumAmt=0.00 chrAmt=0.97  luma 0ms  chroma 168ms
+Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.00 chrAmt=0.07  luma 0ms  chroma 7ms
