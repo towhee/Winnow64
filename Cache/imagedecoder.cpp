@@ -302,13 +302,14 @@ bool ImageDecoder::load()
         lock-guarded getter -- cheaper and thread-safer than rebuilding the whole
         ImageMetadata, since UnpackCfa only consults rawInfo.
     */
-    if (G::useRaw) {
+    if (G::operationMode == G::OperationMode::Develop && G::useRaw) {
         if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
             ImageMetadata rawMeta;
             if (isIndependent) rawMeta = indMeta;
             else {
                 dm->fPathRawInfoGet(fPath, rawMeta.rawInfo);
                 rawMeta.ISONum = dm->sf->index(sfRow, G::ISOColumn).data().toInt();  // "Denoise raw" conditioning
+                rawMeta.model  = dm->sf->index(sfRow, G::CameraModelColumn).data().toString();  // PMRID calibration
             }
             std::shared_ptr<const WorkingImage> work;
             if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort, &work)) {
@@ -780,7 +781,8 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
 }
 
 std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMetadata &m,
-                                                                   bool denoiseRaw)
+                                                                   bool denoiseRaw,
+                                                                   const std::function<void(int, int)> &progress)
 {
 /*
     Uncached raw sensor decode -> pre-develop WorkingImage, for the "Denoise raw" base
@@ -799,7 +801,7 @@ std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMe
     QImage throwaway;                                    // develop skipped: identity edit
     const EditParams identity;
     std::shared_ptr<const WorkingImage> work;
-    const bool ok = rawFormat->Decode(file, m, throwaway, &identity, &abort, &work, denoiseRaw);
+    const bool ok = rawFormat->Decode(file, m, throwaway, &identity, &abort, &work, denoiseRaw, progress);
     file.close();
     return ok ? work : nullptr;
 }

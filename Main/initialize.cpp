@@ -1201,7 +1201,7 @@ void MW::createStatusBar()
     operationModeCombo->setCurrentIndex(int(G::operationMode));
     operationModeCombo->setFocusPolicy(Qt::NoFocus);
     operationModeCombo->setToolTip("Operation mode:\n  Preview — fast image review (embedded previews)\n"
-                                   "  Develop — best-quality single-image view/edit\nShortcut: D");
+                                   "  Develop — edit image (including raw data)\nShortcut: D");
     /* Pin the width to the widest item via the STYLESHEET min-width/max-width. The global widget
        CSS (widgetcss.cpp) sets "QComboBox { min-width: 6em }", and in Qt a stylesheet min-width
        OVERRIDES setFixedWidth() -- so the width must be a stylesheet property here to win. Width =

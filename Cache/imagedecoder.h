@@ -6,6 +6,7 @@
 #include <QThread>
 #include <QWaitCondition>
 #include <atomic>
+#include <functional>
 #include "Cache/cachedata.h"
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
@@ -30,8 +31,10 @@ public:
        WorkingImageCache), for the "Denoise raw" base. m must carry fPath + rawInfo + ISONum.
        denoiseRaw runs the PMRID pre-demosaic denoiser (in-house/Winnow engine only). Returns
        nullptr if the format has no in-house decoder or the decode fails. Thread-safe: consults only
-       the supplied m (no DataModel access), so callable from the develop render pool. */
-    std::shared_ptr<const WorkingImage> decodeRawWorking(const ImageMetadata &m, bool denoiseRaw);
+       the supplied m (no DataModel access), so callable from the develop render pool. progress (when
+       set) is forwarded to the PMRID denoiser for per-tile status-bar feedback. */
+    std::shared_ptr<const WorkingImage> decodeRawWorking(const ImageMetadata &m, bool denoiseRaw,
+                                                         const std::function<void(int, int)> &progress = {});
 
     bool isRunning() const;
     void setIdle();

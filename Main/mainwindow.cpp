@@ -5996,17 +5996,14 @@ void MW::renderDevelopPreview(bool fullRes)
     const bool wantRaw = isFileRaw(fPath) && G::useRaw;
     /* Develop needs the SCENE-LINEAR raw WorkingImage, not the tone-mapped 8-bit display image. It
        may be absent (evicted from the small WorkingImageCache during Preview read-ahead) OR a prior
-       develop-miss may have cached a display-referred one under this path. Either way, (re-)decode
-       the raw -- decodeIndependent caches the scene-linear WorkingImage as a side effect. Synchronous:
-       a miss is occasional (Develop mode suspends read-ahead) and Develop prioritises quality. */
-    if (wantRaw && (!work || !work->sceneReferred)) {
-        ImageMetadata m = dm->imMetadata(fPath);
-        if (m.fPath.isEmpty()) m.fPath = fPath;
-        ImageDecoder dec(0, dm, metadata);
-        QImage img;
-        const bool ok = dec.decodeIndependent(img, metadata, m);
-        auto w2 = WorkingImageCache::instance().get(fPath);
-        if (ok && w2 && w2->sceneReferred) work = w2;
+       develop-miss may have cached a display-referred one under this path. Decode it OFF the GUI
+       thread (ensureDevelopWork) and bail -- doing it inline froze the first slider drag by ~1s on a
+       50MP RAW. The completion re-renders; until then the loupe keeps showing the current image.
+       developWorkTriedPath guards a display-referred format (no scene-linear result possible): after
+       one async attempt we fall through and render the display-referred fallback below, not loop. */
+    if (wantRaw && (!work || !work->sceneReferred) && developWorkTriedPath != fPath) {
+        ensureDevelopWork(fPath);
+        return;
     }
     if (!work) {
         /* Non-raw (JPG/TIFF/HEIC), or the raw re-decode failed: build the pre-develop WorkingImage
@@ -6190,10 +6187,13 @@ void MW::renderDevelopFullResAsync()
        and bail -- ensureRawDenoise() repaints and re-arms this render when it lands. */
     const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.base, work);
     if (base == work &&
-        (mj.base.denoiseLuma > 0.0f || mj.base.denoiseChroma > 0.0f)) {
+        (mj.base.denoiseLuma > 0.0f || mj.base.denoiseChroma > 0.0f) &&
+        G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
         ensureRawDenoise(fPath, mj.base, work, currentImageIso());
-        return;
+        return;   // wait for the denoised base; PMRID re-arms this render when it lands
     }
+    /* On the Apple engine PMRID can't run (no CFA), so "Denoise raw" is inert -- don't bail here
+       (there is no denoised base coming); fall through and render the clean base at full res. */
 
     /* Ensure the content-range reference is registered before the background render samples it
        (GUI thread; cached, so normally a no-op after the proxy render already built it). */
@@ -6307,6 +6307,9 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
 */
     if (!clean) return;
     if (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f) return;
+    /* PMRID needs the CFA mosaic -> Winnow engine only. On the Apple engine "Denoise raw" is inert;
+       bail so a slider drag doesn't trigger a pointless full re-decode that produces no denoise. */
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
     const QString key = rawDenoiseKey(fPath, base, iso);
     if (developDenoisedKey == key && developDenoised) return;   // already current
     /* ONE job at a time. Concurrent jobs (one per drag value) finish out of order and a stale
@@ -6323,6 +6326,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
     ImageMetadata m;
     m.fPath = fPath;
     m.ISONum = iso;
+    m.model = dm->sf->index(dm->currentSfRow, G::CameraModelColumn).data().toString();  // PMRID calibration
     dm->fPathRawInfoGet(fPath, m.rawInfo);
     std::shared_ptr<const WorkingImage> pmridCached =
         (developPmridKey == pkey && developPmridFull) ? developPmridFull : nullptr;
@@ -6333,11 +6337,19 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
         /* 1. Full-strength PMRID base (re-decode once; reuse the cache across amounts). */
         std::shared_ptr<const WorkingImage> pmrid = pmridCached;
         if (!pmrid) {
+            /* Per-tile status-bar progress during the heavy model run (marshalled to the GUI). */
+            auto prog = [this](int done, int total) {
+                const int pct = total > 0 ? int(done * 100 / total) : 0;
+                QMetaObject::invokeMethod(this, [this, pct]() { setProgress(pct); });
+            };
             ImageDecoder dec(0, dm, metadata);
-            pmrid = dec.decodeRawWorking(m, /*denoiseRaw*/true);
+            pmrid = dec.decodeRawWorking(m, /*denoiseRaw*/true, prog);
         }
         if (!pmrid) {   // no in-house decoder (e.g. lossless ARW -> Apple path) or decode failed
-            QMetaObject::invokeMethod(this, [this]() { developDenoiseInFlightKey.clear(); });
+            QMetaObject::invokeMethod(this, [this]() {
+                developDenoiseInFlightKey.clear();
+                setProgress(-1);                                // hide the bar
+            });
             return;
         }
         /* 2. Blend clean <-> PMRID by the luma/chroma amounts (cheap, per-settle). */
@@ -6347,6 +6359,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
 
         QMetaObject::invokeMethod(this, [this, result, pmrid, key, pkey, fPath]() {
             developDenoiseInFlightKey.clear();                  // job finished; allow the next (latest) one
+            setProgress(-1);                                    // hide the progress bar
             if (!dm || fPath != dm->currentFilePath) return;    // navigated away; drop it
             developPmridFull = pmrid;                           // cache the full base for other amounts
             developPmridKey = pkey;
@@ -6357,6 +6370,44 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
             ++developParamsGen;                                 // discard any stale in-flight full-res
             renderDevelopPreview(false);                        // repaint the proxy now
             developFullResTimer->start(kDevelopSettleMs);       // and a crisp full-res
+        });
+    });
+}
+
+void MW::ensureDevelopWork(const QString &fPath)
+{
+/*
+    Decode the current image's SCENE-LINEAR pre-develop WorkingImage OFF the GUI thread when it is
+    missing from WorkingImageCache (evicted, or only a display-referred one cached), then re-render.
+    decodeIndependent caches the scene-linear WorkingImage as a side effect. Coalesced -- one decode
+    in flight. This replaces the old synchronous re-decode in renderDevelopPreview that blocked the
+    first slider drag ~1s on a 50MP RAW; the slider stays live and the develop preview appears once
+    the decode lands (the loupe shows the current image meanwhile).
+*/
+    if (fPath.isEmpty()) return;
+    if (developWorkInFlight == fPath) return;               // already decoding this image
+    developWorkInFlight = fPath;
+
+    ImageMetadata m = dm->imMetadata(fPath);                // GUI thread: read the datamodel
+    if (m.fPath.isEmpty()) m.fPath = fPath;
+    const quint64 gen = developParamsGen;
+
+    developRenderPool->start([this, fPath, m, gen]() mutable {
+        ImageDecoder dec(0, dm, metadata);
+        QImage img;
+        dec.decodeIndependent(img, metadata, m);            // side effect: caches scene-linear work
+        QMetaObject::invokeMethod(this, [this, fPath, gen]() {
+            developWorkInFlight.clear();
+            if (!dm || fPath != dm->currentFilePath) return;   // navigated away; drop it
+            /* Success (scene-linear work now cached) -> clear the marker so a future eviction can
+               re-decode. Otherwise (display-referred format, e.g. lossless ARW) -> mark it so the
+               re-render below uses the display fallback instead of looping the async decode. */
+            auto w = WorkingImageCache::instance().get(fPath);
+            if (w && w->sceneReferred) developWorkTriedPath.clear();
+            else                        developWorkTriedPath = fPath;
+            renderDevelopPreview(false);                       // render the proxy (scene-linear or fallback)
+            if (gen == developParamsGen)                       // no newer edit arrived; settle a crisp one
+                developFullResTimer->start(kDevelopSettleMs);
         });
     });
 }

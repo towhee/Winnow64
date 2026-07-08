@@ -2,6 +2,7 @@
 #define RAWFORMAT_H
 
 #include <memory>
+#include <functional>
 #include <QImage>
 #include <QFile>
 #include <QString>
@@ -62,7 +63,8 @@ public:
                 const EditParams *edit = nullptr,
                 const QAtomicInt *abort = nullptr,
                 std::shared_ptr<const WorkingImage> *outWork = nullptr,
-                bool denoiseRaw = false);
+                bool denoiseRaw = false,
+                const std::function<void(int, int)> &denoiseProgress = {});
 
     QString lastError() const { return errMsg; }
 

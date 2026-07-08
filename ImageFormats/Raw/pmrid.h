@@ -1,6 +1,9 @@
 #ifndef PMRID_H
 #define PMRID_H
 
+#include <QString>
+#include <functional>
+
 struct RawImage;
 
 /*
@@ -30,17 +33,21 @@ struct RawImage;
     stays a clean, parameter-free denoiser (keeps a future "fixed strength" mode a small
     change).
 
-    NOTE: the noise coefficients are currently a single-frame Sony estimate (stopgap).
-    Proper per-camera-model K(ISO)/B(ISO) come from the calibration capture
-    (tools/pmrid_calibration_capture.md -> calibrate_pmrid.py).
+    Noise coefficients are per-camera-model K(ISO)/B(ISO) from the calibration capture
+    (tools/pmrid_calibration_capture.md -> calibrate_pmrid.py -> _pmrid_out/calib_<model>.json),
+    interpolated in ISO; uncalibrated bodies fall back to a generic full-frame Sony table.
 */
 namespace PMRID {
 
 /* Denoise raw.cfa in place at full strength. Returns true iff the mosaic was modified.
    No-op (false) when the model is not loaded or the pattern is non-Bayer. Call AFTER
-   SubtractBlack (expects black-subtracted cfa in [0, raw.white]). iso is reserved for the
-   future ISO-dependent coefficient table (unused by the single-frame stopgap). */
-bool Apply(RawImage &raw, int iso);
+   SubtractBlack (expects black-subtracted cfa in [0, raw.white]). iso + model select the
+   per-camera noise calibration (model is ImageMetadata::model, e.g. "Sony ILCE-7RM5").
+   progress, when set, is called after each tile as progress(tilesDone, tilesTotal) -- used to
+   drive the status-bar progress bar during the interactive denoise (MW::ensureRawDenoise). It may
+   be called from a worker thread, so the callback must marshal to the GUI thread itself. */
+using ProgressFn = std::function<void(int done, int total)>;
+bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progress = {});
 
 } // namespace PMRID
 

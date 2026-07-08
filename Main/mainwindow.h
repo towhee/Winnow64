@@ -584,6 +584,11 @@ private slots:
        already computing this key. Called from the settle path so a drag does not spawn many DNN runs. */
     void ensureRawDenoise(const QString &fPath, const EditParams &base,
                           const std::shared_ptr<const WorkingImage> &clean, int iso);
+    /* Ensure the current image's scene-linear (pre-develop) WorkingImage is cached, decoding it OFF
+       the GUI thread when it is missing (evicted / a display-referred one cached), then re-render.
+       Coalesced (one decode in flight). Replaces the old synchronous re-decode inside
+       renderDevelopPreview that froze the first slider drag by ~1s on a 50MP RAW. */
+    void ensureDevelopWork(const QString &fPath);
     /* ISO of the current image (sort/filter model, GUI thread) for the denoise model conditioning. */
     int currentImageIso() const;
     /* EXIF rotation (degrees) to apply to a scene-referred render so it matches the loupe. Reads
@@ -1309,6 +1314,9 @@ private:
     QString developDenoiseInFlightKey;            // key currently being computed (coalesce guard)
     std::shared_ptr<const WorkingImage> developPmridFull;   // full-strength PMRID base, reused across amounts
     QString developPmridKey;                      // "path|iso" for developPmridFull
+    QString developWorkInFlight;                  // path whose scene-linear decode is running (ensureDevelopWork coalesce)
+    QString developWorkTriedPath;                 // path already async-decoded but with no scene-linear result
+                                                  // (display-referred format) -> render the fallback, don't loop
     /* Content-range mask (Luminance/Color Range) reference: a display-referred RGB map of the
        developed BASE layer, registered by path (RangeMask::putRef) and sampled identically by
        the loupe overlay and the render. Base-only so a range mask cannot feed back on its own

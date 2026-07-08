@@ -67,7 +67,8 @@ bool RawFormat::HasSensorDecoder(const QString &ext)
 bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                        const EditParams *edit, const QAtomicInt *abort,
                        std::shared_ptr<const WorkingImage> *outWork,
-                       bool denoiseRaw)
+                       bool denoiseRaw,
+                       const std::function<void(int, int)> &denoiseProgress)
 {
 /*
     Shared, camera-agnostic pipeline:
@@ -126,7 +127,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
            denoised base and blends the user's amount. No-op for non-Bayer patterns or if the
            model is absent. */
         if (denoiseRaw && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
-            PMRID::Apply(raw, m.ISONum);
+            PMRID::Apply(raw, m.ISONum, m.model, denoiseProgress);
             if (aborted()) { errMsg = "Aborted"; return false; }
         }
 
@@ -153,7 +154,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             (edit->denoiseLuma > 0.0f || edit->denoiseChroma > 0.0f) &&
             G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
             RawImage rawDen = raw;
-            if (PMRID::Apply(rawDen, m.ISONum)) {
+            if (PMRID::Apply(rawDen, m.ISONum, m.model)) {
                 std::vector<float> rgbDen;
                 WorkingImage pmridWork;
                 if (demosaic.Run(rawDen, rgbDen, Demosaic::Bilinear, abort) &&
