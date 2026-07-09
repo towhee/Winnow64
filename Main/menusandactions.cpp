@@ -1622,6 +1622,12 @@ void MW::createHelpActions()
     addAction(mailLogAction);
     connect(mailLogAction, &QAction::triggered, this, &MW::mailLogs);
 
+    diagnosticsDevelopAction = new QAction(tr("Develop diagnostics"), this);
+    diagnosticsDevelopAction->setObjectName("diagnosticsDevelop");
+    diagnosticsDevelopAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsDevelopAction);
+    connect(diagnosticsDevelopAction, &QAction::triggered, this, &MW::diagnosticsDevelop);
+
     diagnosticsMainAction = new QAction(tr("Main diagnostics"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
     diagnosticsMainAction->setShortcutVisibleInContextMenu(true);
@@ -2181,6 +2187,7 @@ void MW::createHelpMenu()
     testMenu->addAction(bounceFoldersStressTestAction);
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
     helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
+    helpDiagnosticsMenu->addAction(diagnosticsDevelopAction);
     helpDiagnosticsMenu->addAction(diagnosticsMainAction);
     helpDiagnosticsMenu->addAction(diagnosticsSelectionAction);
     helpDiagnosticsMenu->addAction(diagnosticsWorkspacesAction);

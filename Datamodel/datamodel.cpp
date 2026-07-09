@@ -1403,6 +1403,11 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.fPath = fPath;
     m.fName = index(row, G::NameColumn).data().toString();
     m.type = index(row, G::TypeColumn).data().toString();
+    /* ImageDecoder::load() selects the in-house RAW decoder off m.ext in independent
+       mode; keep it populated (from the same TypeColumn cache mode uses) so
+       decodeIndependent takes the raw path instead of falling back to the display-
+       referred embedded JPG. */
+    m.ext = m.type;
     m.size = index(row, G::ByteSizeColumn).data().toInt();
     m.video = index(row, G::VideoColumn).data().toInt();
     m.sidecar = index(row, G::SidecarColumn).data().toInt();

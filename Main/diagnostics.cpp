@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Develop/workingimagecache.h"
 #include "ui_metadatareport.h"
 
 #if defined(Q_OS_WIN)
@@ -336,6 +337,8 @@ QString MW::diagnostics()
     rpt << "\n" << "fullScreenDocks.isFavs = " << G::s(fullScreenDocks.isFavs);
     rpt << "\n" << "fullScreenDocks.isFilters = " << G::s(fullScreenDocks.isFilters);
     rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isMetadata);
+    rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isDevelop);
+    rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isEmbellish);
     rpt << "\n" << "fullScreenDocks.isThumbs = " << G::s(fullScreenDocks.isThumbs);
     rpt << "\n" << "fullScreenDocks.isStatusBar = " << G::s(fullScreenDocks.isStatusBar);
     rpt << "\n" << "isNormalScreen = " << G::s(!isFullScreen());
@@ -386,6 +389,233 @@ QString MW::diagnostics()
     return reportString;
 }
 
+QString MW::developDiagnostics()
+{
+/*
+    A single snapshot of everything relevant to the Develop pipeline for the CURRENTLY
+    SELECTED image: the operation-mode / raw-engine globals, the current file, the cached
+    scene-linear WorkingImage base, the raw sensor-unpack info, the effective EditParams
+    (Base + non-Base layers), the crop/warp geometry, and the interactive develop caches
+    (PMRID "Denoise raw" base, scene-linear re-decode guards, proxy / full-res render
+    state, mask reference caches). Read-only -- builds the report from live state and
+    touches no pixels.
+*/
+    if (G::isLogger) G::log("MW::developDiagnostics");
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+
+    rpt << Utilities::centeredRptHdr('=', "Develop Diagnostics");
+    rpt << "\n";
+
+    /* One-line EditParams dump helper (only the fields that drive a pixel). */
+    auto dumpParams = [&rpt](const EditParams &p, const QString &indent) {
+        rpt << "\n" << indent << "isIdentity = " << G::s(p.isIdentity());
+        rpt << "\n" << indent << "temp = " << G::s(p.temp) << "   tint = " << G::s(p.tint);
+        rpt << "\n" << indent << "exposure = " << G::s(p.exposure)
+            << "   contrast = " << G::s(p.contrast);
+        rpt << "\n" << indent << "highlights = " << G::s(p.highlights)
+            << "   shadows = " << G::s(p.shadows)
+            << "   whites = " << G::s(p.whites) << "   blacks = " << G::s(p.blacks);
+        rpt << "\n" << indent << "toneShadowCenter = " << G::s(p.toneShadowCenter)
+            << "   toneCrossover = " << G::s(p.toneCrossover)
+            << "   toneHighlightCenter = " << G::s(p.toneHighlightCenter);
+        rpt << "\n" << indent << "texture = " << G::s(p.texture)
+            << "   dehaze = " << G::s(p.dehaze);
+        rpt << "\n" << indent << "red = " << G::s(p.red) << "   green = " << G::s(p.green)
+            << "   blue = " << G::s(p.blue);
+        rpt << "\n" << indent << "hue = " << G::s(p.hue) << "   saturation = " << G::s(p.saturation)
+            << "   luminance = " << G::s(p.luminance);
+        rpt << "\n" << indent << "denoiseLuma (raw) = " << G::s(p.denoiseLuma)
+            << "   denoiseChroma (raw) = " << G::s(p.denoiseChroma);
+        rpt << "\n" << indent << "localDenoiseLuma = " << G::s(p.localDenoiseLuma)
+            << "   localDenoiseChroma = " << G::s(p.localDenoiseChroma);
+    };
+    auto dims = [](const std::shared_ptr<const WorkingImage> &w) -> QString {
+        return w ? QString("%1 x %2").arg(w->width).arg(w->height) : QString("(none)");
+    };
+
+    // OPERATION MODE / RAW ENGINE
+    rpt << "\n" << "OPERATION MODE";
+    rpt << "\n" << "  G::operationMode = "
+        << (G::operationMode == G::OperationMode::Develop ? "Develop" : "Preview");
+    rpt << "\n" << "  G::useRaw = " << G::s(G::useRaw);
+    rpt << "\n" << "  G::decodeRawEngine = "
+        << (G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine ? "Winnow (in-house)"
+                                                                            : "Apple (Core Image)");
+    rpt << "\n" << "  G::isReportDevelopTime = " << G::s(G::isReportDevelopTime);
+    rpt << "\n";
+
+    const QString fPath = dm ? dm->currentFilePath : QString();
+
+    // CURRENT IMAGE
+    rpt << "\n" << "CURRENT IMAGE";
+    rpt << "\n" << "  currentFilePath = " << (fPath.isEmpty() ? "(none)" : fPath);
+    if (fPath.isEmpty()) {
+        rpt << "\n" << "  (no image selected -- nothing further to report)";
+        rpt << "\n";
+        return reportString;
+    }
+    rpt << "\n" << "  isFileRaw = " << G::s(isFileRaw(fPath));
+    rpt << "\n" << "  currentIsVideo = " << G::s(currentIsVideo());
+    rpt << "\n" << "  ISO = " << G::s(currentImageIso());
+    rpt << "\n" << "  Camera model = "
+        << dm->sf->index(dm->currentSfRow, G::CameraModelColumn).data().toString();
+    rpt << "\n";
+
+    // DEVELOP BASE (cached scene-linear WorkingImage)
+    auto work = WorkingImageCache::instance().get(fPath);
+    rpt << "\n" << "DEVELOP BASE (WorkingImageCache pre-develop image)";
+    rpt << "\n" << "  cached = " << (work ? "yes" : "no");
+    if (work) {
+        const double mb = double(work->rgb.size() * sizeof(float)) / (1024.0 * 1024.0);
+        rpt << "\n" << "  dimensions = " << dims(work);
+        rpt << "\n" << "  sceneReferred = " << G::s(work->sceneReferred)
+            << (work->sceneReferred ? "  (scene-linear sensor decode -- correct for Develop)"
+                                    : "  (DISPLAY-REFERRED fallback -- develop is editing the tone-mapped image)");
+        rpt << "\n" << "  white = " << G::s(work->white);
+        rpt << "\n" << "  rgb floats = " << G::s((int)work->rgb.size())
+            << "   (~" << QString::number(mb, 'f', 1) << " MB)";
+        rpt << "\n" << "  isValid = " << G::s(work->isValid());
+    }
+    rpt << "\n";
+
+    // RAW SENSOR INFO
+    if (isFileRaw(fPath)) {
+        RawSensorInfo ri;
+        dm->fPathRawInfoGet(fPath, ri);
+        rpt << "\n" << "RAW SENSOR INFO (rawInfo, from metadata read)";
+        rpt << "\n" << "  isValid = " << G::s(ri.isValid())
+            << "   isRaw = " << G::s(ri.isRaw);
+        rpt << "\n" << "  active area = " << G::s(ri.width) << " x " << G::s(ri.height);
+        rpt << "\n" << "  bitsPerSample = " << G::s(ri.bitsPerSample)
+            << "   compression = " << G::s(ri.compression)
+            << "   samplesPerPixel = " << G::s(ri.samplesPerPixel);
+        rpt << "\n" << "  stripOffset = " << G::s((int)ri.stripOffset)
+            << "   stripLength = " << G::s((int)ri.stripLength);
+        rpt << "\n" << "  white = " << G::s((int)ri.white)
+            << "   black = [" << G::s((int)ri.black[0]) << ", " << G::s((int)ri.black[1])
+            << ", " << G::s((int)ri.black[2]) << ", " << G::s((int)ri.black[3]) << "]";
+        rpt << "\n" << "  cfaPlaneColor = [" << G::s((int)ri.cfaPlaneColor[0])
+            << ", " << G::s((int)ri.cfaPlaneColor[1]) << ", " << G::s((int)ri.cfaPlaneColor[2])
+            << ", " << G::s((int)ri.cfaPlaneColor[3]) << "]  (0=R 1=G 2=B)";
+        rpt << "\n" << "  hasColorMatrix = " << G::s(ri.hasColorMatrix);
+        rpt << "\n";
+    }
+
+    // EDIT PARAMS (Base + non-Base layers) + GEOMETRY
+    DevelopProperties::StackRenderJob mj = developProperties->stackJob();
+    rpt << "\n" << "DEVELOP EDIT PARAMS -- Base layer (applied globally)";
+    dumpParams(mj.base, "  ");
+    rpt << "\n";
+    rpt << "\n" << "NON-BASE LAYERS (enabled, in order) = " << G::s((int)mj.layers.size());
+    for (int i = 0; i < mj.layers.size(); ++i) {
+        const DevelopProperties::StackRenderJob::Layer &L = mj.layers.at(i);
+        rpt << "\n" << "  Layer " << G::s(i + 1) << ": masks = " << G::s((int)L.masks.size())
+            << "   combine = " << G::s(L.combine)
+            << (L.masks.isEmpty() ? "   (no mask -> global)" : "");
+        dumpParams(L.params, "    ");
+    }
+    rpt << "\n";
+    const Geometry &g = mj.geometry;
+    rpt << "\n" << "GEOMETRY (crop / straighten / warp -- applied last)";
+    rpt << "\n" << "  isIdentity = " << G::s(g.isIdentity()) << "   show = " << G::s(g.show);
+    rpt << "\n" << "  crop = x " << G::s(g.cropX) << "  y " << G::s(g.cropY)
+        << "  w " << G::s(g.cropW) << "  h " << G::s(g.cropH);
+    rpt << "\n" << "  straighten = " << G::s(g.straighten) << " deg"
+        << "   hasWarp = " << G::s(g.hasWarp) << "   fillCanvas = " << G::s(g.fillCanvas);
+    rpt << "\n";
+
+    // DENOISE / PMRID CACHE STATE
+    rpt << "\n" << "DENOISE 'RAW' (PMRID) CACHE STATE";
+    rpt << "\n" << "  Base denoiseLuma/Chroma = " << G::s(mj.base.denoiseLuma)
+        << " / " << G::s(mj.base.denoiseChroma)
+        << (G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine
+                ? "" : "   (inert: PMRID needs the CFA mosaic, not available on the Apple engine)");
+    rpt << "\n" << "  developDenoised = " << dims(developDenoised)
+        << "   key = " << (developDenoisedKey.isEmpty() ? "(clean)" : developDenoisedKey);
+    rpt << "\n" << "  developPmridFull = " << dims(developPmridFull)
+        << "   key = " << (developPmridKey.isEmpty() ? "(none)" : developPmridKey);
+    rpt << "\n" << "  developDenoiseInFlightKey = "
+        << (developDenoiseInFlightKey.isEmpty() ? "(idle)" : developDenoiseInFlightKey);
+    rpt << "\n";
+
+    // SCENE-LINEAR RE-DECODE + RENDER STATE
+    rpt << "\n" << "RENDER / DECODE STATE";
+    rpt << "\n" << "  developWorkInFlight = "
+        << (developWorkInFlight.isEmpty() ? "(idle)" : developWorkInFlight);
+    rpt << "\n" << "  developWorkTriedPath = "
+        << (developWorkTriedPath.isEmpty() ? "(none)" : developWorkTriedPath)
+        << (developWorkTriedPath == fPath
+                ? "   <-- THIS image: scene-linear decode was tried and gave no result (using fallback base)"
+                : "");
+    rpt << "\n" << "  developParamsGen = " << G::s((int)developParamsGen);
+    rpt << "\n" << "  developFullResInFlight = " << G::s(developFullResInFlight);
+    rpt << "\n" << "  developProxy = " << dims(developProxy)
+        << "   path = " << (developProxyPath.isEmpty() ? "(none)" : developProxyPath);
+    rpt << "\n";
+
+    // RENDER VERIFICATION (did the develop pipeline actually change pixels?)
+    rpt << "\n" << "RENDER VERIFICATION";
+
+    /* Axis 1: the DISPLAY vs the Preview (embedded) image -- confirms the decode change
+       (demosaic) and/or edits altered pixels. Populates on entering Develop, edited or
+       not. */
+    rpt << "\n" << "  [A] Develop display vs Preview (embedded) -- captured on Develop entry";
+    if (developVerifyVsPreviewPath.isEmpty() || developVerifyVsPreviewMaxAbs < 0) {
+        rpt << "\n" << "      not run"
+            << (developVerifyPreviewBaseline.isNull()
+                    ? " (no Preview baseline -- enter Develop from Preview with an image shown)"
+                    : " (waiting for the Develop display to render)");
+    }
+    else {
+        const bool stale = (developVerifyVsPreviewPath != fPath);
+        rpt << "\n" << "      ran on = " << developVerifyVsPreviewPath
+            << (stale ? "   (STALE: not the current image)" : "");
+        rpt << "\n" << "      max abs pixel diff (0..255) = " << G::s(developVerifyVsPreviewMaxAbs)
+            << (developVerifyVsPreviewMaxAbs > 0
+                    ? "   -> PIXELS CHANGED vs Preview (decode/demosaic and/or edits took effect)"
+                    : "   -> identical to Preview");
+        rpt << "\n" << "      mean abs pixel diff = " << QString::number(developVerifyVsPreviewMeanAbs, 'f', 4);
+        if (developVerifyVsPreviewMaxAbs == 0 && isFileRaw(fPath) && G::useRaw)
+            rpt << "\n" << "      WARNING: a raw in Edit=Raw is pixel-identical to the embedded preview"
+                        << " -- the demosaic/decode did not take effect.";
+    }
+
+    /* Axis 2: the recipe vs the un-developed base -- isolates whether the EDITS/denoise
+       changed the demosaiced base. Populates on the last full-res settle (edited
+       renders). */
+    rpt << "\n" << "  [B] recipe vs un-developed base -- last full-res settle";
+    if (developVerifyPath.isEmpty() || developVerifyMaxAbs < 0) {
+        rpt << "\n" << "      not run yet (settle a full-res render with edits to populate)";
+    }
+    else {
+        const bool stale = (developVerifyPath != fPath);
+        rpt << "\n" << "      ran on = " << developVerifyPath << (stale ? "   (STALE: not the current image)" : "");
+        rpt << "\n" << "      recipe identity (no non-geometry edits) = " << G::s(developVerifyRecipeIdentity);
+        rpt << "\n" << "      geometry active (crop/warp) = " << G::s(developVerifyGeometryActive);
+        rpt << "\n" << "      max abs pixel diff (0..255) = " << G::s(developVerifyMaxAbs)
+            << (developVerifyMaxAbs > 0 ? "   -> PIXELS CHANGED (recipe is affecting the base)"
+                                        : "   -> NO CHANGE (render is pixel-identical to the un-developed base)");
+        rpt << "\n" << "      mean abs pixel diff = " << QString::number(developVerifyMeanAbs, 'f', 4);
+        if (developVerifyMaxAbs == 0 && !developVerifyRecipeIdentity)
+            rpt << "\n" << "      WARNING: a non-identity recipe produced NO pixel change -- an edit is being dropped.";
+    }
+    rpt << "\n";
+
+    // MASK REFERENCE CACHES
+    rpt << "\n" << "MASK REFERENCE CACHES (path currently registered)";
+    rpt << "\n" << "  range  = " << (developRangeRefPath.isEmpty()   ? "(none)" : developRangeRefPath);
+    rpt << "\n" << "  subject= " << (developSubjectRefPath.isEmpty() ? "(none)" : developSubjectRefPath);
+    rpt << "\n" << "  sky    = " << (developSkyRefPath.isEmpty()     ? "(none)" : developSkyRefPath);
+    rpt << "\n" << "  depth  = " << (developDepthRefPath.isEmpty()   ? "(none)" : developDepthRefPath);
+    rpt << "\n" << "  object = " << (developObjectImagePath.isEmpty()? "(none)" : developObjectImagePath);
+    rpt << "\n";
+
+    return reportString;
+}
+
+void MW::diagnosticsDevelop() {diagnosticsReport(this->developDiagnostics(), "Winnow Diagnostics: Develop");}
 void MW::diagnosticsMain() {diagnosticsReport(this->diagnostics(), "Winnow Diagnostics: MainWindow");}
 void MW::diagnosticsSelection() {diagnosticsReport(sel->diagnostics(), "Winnow Diagnostics: Selection");}
 void MW::diagnosticsWorkspaces() {diagnosticsReport(this->reportWorkspaces(), "Winnow Diagnostics: WorkSpaces");}
