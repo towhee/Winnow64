@@ -254,7 +254,9 @@ void DevelopProperties::addCoreItems()
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = "Apple";
+    /* Reflect the sticky engine (G::decodeRawEngine) rather than a hardcoded default,
+       so a tree rebuild on folder/image selection shows the engine actually in effect. */
+    i.value = (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine) ? "Apple" : "Winnow";
     i.key = "demosaic";
     i.delegateType = DT_Combo;
     i.type = "QString";

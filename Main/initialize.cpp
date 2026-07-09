@@ -1211,14 +1211,11 @@ void MW::createStatusBar()
                              QFontMetrics(opModeBold).horizontalAdvance("Develop")) + 12 + 4;
     operationModeCombo->setStyleSheet(QString(
         "QComboBox {background-color:#445f76; color:white;"
-        // "QComboBox {background-color:#007AFF; color:white; font-weight:bold;"
         " padding:1px 6px; border:none; border-radius:3px; margin:0 4px;"
         " min-width:%1px; max-width:%1px;}"
         "QComboBox::drop-down {border:none; width:14px;} "
         "QComboBox QAbstractItemView {background-color:#445f76; color:white;"
-        // "QComboBox QAbstractItemView {background-color:#2b2b2b; color:white;"
         " selection-background-color:#445f76;}").arg(opModeW));
-        // " selection-background-color:#007AFF;}").arg(opModeW));
     connect(operationModeCombo, &QComboBox::activated, this, [this](int i) {
         setOperationMode(i == int(G::OperationMode::Develop) ? G::OperationMode::Develop
                                                              : G::OperationMode::Preview);
@@ -2012,6 +2009,7 @@ void MW::setDevelopPanelEnabled(bool on)
        state. So strip the features while disabled and restore the captured set when on. */
     developDock->setFeatures(on ? developDockFeatures : QDockWidget::NoDockWidgetFeatures);
     if (developProperties) developProperties->setPanelEnabled(on);
+    developDock->setVisible(on);
 }
 
 void MW::syncDevelopPanelEnabled()
@@ -2035,27 +2033,62 @@ void MW::setOperationMode(G::OperationMode mode)
 */
     if (G::isLogger)
         G::log("MW::setOperationMode", mode == G::OperationMode::Develop ? "Develop" : "Preview");
+
+    // Only show develop in Develop Mode
+    developDock->setVisible(mode == G::OperationMode::Develop);
+
     if (G::operationMode == mode) return;               // no change
     G::operationMode = mode;
     if (operationModeCombo) {
         QSignalBlocker block(operationModeCombo);       // setCurrentIndex must not re-fire activated()
         operationModeCombo->setCurrentIndex(int(mode));
     }
-    /* The mode owns the raw/preview decode: Develop decodes RAW sensor data (best quality), Preview
-       shows embedded previews (fast). toggleUseRaw() flips G::useRaw, syncs the Develop "Edit: Raw /
-       Embedded Preview" selector, and rebuilds the cache -- which, in Develop, re-targets to just the
-       current image (setTargetRange). Within Develop the Edit-source selector can still OVERRIDE to
-       Embedded Preview. If useRaw is already correct, just re-target for the mode's read-ahead change. */
+
+    /* Capture the Preview (embedded) image BEFORE the re-decode below so the Develop
+       diagnostics can verify the Develop render (demosaic + edits) actually differs from
+       what Preview showed. Small, downscaled copy; the display-vs-Preview check runs in
+       updateDevelopScopes. Entering Develop only (leaving it, there is no Develop render
+       to verify). */
+    if (mode == G::OperationMode::Develop && icd && dm && !dm->currentFilePath.isEmpty()
+        && icd->contains(dm->currentFilePath)) {
+        const QImage prev = icd->imCache.value(dm->currentFilePath);
+        developVerifyPreviewBaseline = prev.isNull()
+            ? QImage()
+            : prev.scaled(256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        developVerifyPreviewBaselinePath = dm->currentFilePath;
+        developVerifyVsPreviewMaxAbs = -1;   // reset until the display populates it
+        developVerifyVsPreviewPath.clear();
+    }
+
+    /* The mode owns the raw/preview decode: Develop decodes RAW sensor data (best
+    quality), Preview shows embedded previews (fast). toggleUseRaw() flips G::useRaw,
+    syncs the Develop "Edit: Raw / Embedded Preview" selector, and rebuilds the cache --
+    which, in Develop, re-targets to just the current image (setTargetRange). Within
+    Develop the Edit-source selector can still OVERRIDE to Embedded Preview. If useRaw is
+    already correct, just re-target for the mode's read-ahead change. */
     const bool wantUseRaw = (mode == G::OperationMode::Develop);
     if (G::useRaw != wantUseRaw)
-        toggleUseRaw(wantUseRaw ? Tog::on : Tog::off);
-    else if (imageCache && dm && !dm->currentFilePath.isEmpty())
+        toggleUseRaw(wantUseRaw ? Tog::on : Tog::off);   // flips useRaw + reloads cache
+    else if (imageCache && dm && !dm->currentFilePath.isEmpty()) {
+        /* useRaw already matches the target, but the MODE change alone re-selects
+           the decode: ImageDecoder::load() branches on (operationMode == Develop &&
+           useRaw), so Preview shows the embedded preview while Develop demosaics the
+           raw. Re-target read-ahead for the mode, then FORCE the current image to
+           re-decode + reload so the loupe reflects the new mode -- without this it
+           keeps showing the prior mode's image until the user toggles the Edit-source
+           selector (which re-decodes via toggleUseRaw). Matches the toggleUseRaw
+           refresh (currentImageHasChanged + imageCacheColorManageChange ->
+           reloadImageCache -> refreshViewsOnCacheChange -> loupe). */
         imageCache->setCurrentPosition(dm->currentFilePath, "MW::setOperationMode");
+        imageView->currentImageHasChanged = true;
+        emit imageCacheColorManageChange();
+    }
 
-    /* Preview greys out the Develop panel; Develop re-enables it. The panel is not kept in sync
-       with the selected image while in Preview (fileSelectionChange skips it), so on entering
-       Develop point it at the current image before enabling. Leaving Develop, flush any unsaved
-       edits of the image we were on so they persist. */
+    /* Preview greys out the Develop panel; Develop re-enables it. The panel is not kept
+    in sync with the selected image while in Preview (fileSelectionChange skips it), so
+    on entering Develop point it at the current image before enabling. Leaving Develop,
+    flush any unsaved edits of the image we were on so they persist. */
+
     if (developProperties) {
         if (mode == G::OperationMode::Develop) {
             const bool selIsVideo = currentIsVideo();
@@ -2082,8 +2115,14 @@ void MW::developDockVisibilityChange()
     /* Keep the mask overlay confined to Develop: drop it when the dock is hidden or tabbed away,
        re-assert the active tool's overlay when it returns. */
     if (!imageView || !developProperties) return;
-    if (developDock->isVisible()) developProperties->refreshMaskEdit();
-    else                          imageView->endMaskEdit();
+    if (developDock->isVisible()) {
+        developDock->raise();
+        developDockVisibleAction->setChecked(true);
+        developProperties->refreshMaskEdit();
+    }
+    else {
+        imageView->endMaskEdit();
+    }
 
     /* Same invariant for the crop tool: a visible Transform panel means crop is active. When the
        dock hides the panel goes with it, so commit + end the crop; when it returns with the panel
@@ -2136,6 +2175,11 @@ void MW::createDocks()
     for (DockWidget *d : {folderDock, favDock, filterDock, metadataDock, embelDock, developDock}) {
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
+        /* WORK IN PROGRESS - DISABLED.
+           Intended: a dock dropped into an existing tab group lands last (rightmost),
+           not at the drop position. Disabled because it broke dock-tab selection
+           (see MW::moveDroppedDockLast). Re-enable once fixed. */
+        // connect(d, &QDockWidget::dockLocationChanged, this, &MW::moveDroppedDockLast);
     }
 
     // Solo mode enforcement: when a dock is expanded and its area is in solo

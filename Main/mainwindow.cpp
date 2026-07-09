@@ -74,6 +74,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {filterDockTabText,   ":/images/icon16/filters_white.png"},
         {metadataDockTabText, ":/images/icon16/metadata_white.png"},
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
+        {developDockTabText,  ":/images/icon16/develop_white.png"},
     };
     const QHash<QString, QDockWidget*> dockFor = {
         {folderDockTabText,   folderDock},
@@ -81,6 +82,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {filterDockTabText,   filterDock},
         {metadataDockTabText, metadataDock},
         {embelDockTabText,    embelDock},
+        {developDockTabText,  developDock},
     };
 
     busy = true;
@@ -228,6 +230,69 @@ void MW::scheduleDockTabUpdate()
     QTimer::singleShot(0, this, [this]() {
         const QList<QTabBar *> bars = findChildren<QTabBar *>();
         for (QTabBar *b : bars) updateDockTabGraphics(b);
+    });
+}
+
+QDockWidget* MW::dockForTabText(const QString &tabText)
+{
+    if (tabText == folderDockTabText)   return folderDock;
+    if (tabText == favDockTabText)      return favDock;
+    if (tabText == filterDockTabText)   return filterDock;
+    if (tabText == metadataDockTabText) return metadataDock;
+    if (tabText == embelDockTabText)    return embelDock;
+    if (tabText == developDockTabText)  return developDock;
+    return nullptr;
+}
+
+void MW::moveDroppedDockLast()
+{
+/*
+    WORK IN PROGRESS - currently DISABLED (the dockLocationChanged connection in
+    initialize() is commented out). It broke dock-tab selection: clicking a tab
+    could no longer raise its dock. Cause not yet diagnosed (likely the re-tabify /
+    raise() firing on interactions that are not true drops). Left intact for a
+    later fix; do not re-enable the connection until tab selection is verified.
+
+    When a dock is dropped into an existing tab group, QMainWindow inserts it at
+    the drop position (often the front). We want a dropped dock to always become
+    the LAST (rightmost) tab in its group, regardless of where it was dropped.
+
+    Connected to each dock's dockLocationChanged. After the drop settles (deferred
+    zero timer), find the tab bar now holding the moved dock, read the group in
+    visual (tab) order, and if the moved dock is not already last, re-tabify it
+    after the current last dock. tabifyDockWidget(last, moved) moves moved's tab
+    immediately after last's, so it becomes the rightmost. The "already last"
+    early-out makes the re-tabify (which re-fires this signal) a no-op the second
+    time, so there is no recursion.
+
+    Tab identity is by text title, falling back to the learned key map when the
+    tabs are in graphic mode (empty text) - the same identity scheme as
+    updateDockTabGraphics.
+*/
+    QDockWidget *moved = qobject_cast<QDockWidget*>(sender());
+    if (!moved) return;
+    QTimer::singleShot(0, this, [this, moved]() {
+        if (moved->isFloating()) return;
+        const QList<QTabBar *> bars = findChildren<QTabBar *>();
+        for (QTabBar *bar : bars) {
+            QList<QDockWidget*> ordered;
+            int movedIndex = -1;
+            for (int i = 0; i < bar->count(); ++i) {
+                QString title = bar->tabText(i);
+                if (title.isEmpty())   // graphic mode: recover learned title
+                    title = dockTabTitleByKey.value(bar->tabData(i).toULongLong());
+                QDockWidget *d = dockForTabText(title);
+                if (!d) continue;
+                if (d == moved) movedIndex = ordered.size();
+                ordered << d;
+            }
+            if (movedIndex < 0) continue;                    // not this bar
+            if (ordered.size() < 2) return;                  // nothing to reorder
+            if (movedIndex == ordered.size() - 1) return;    // already last
+            tabifyDockWidget(ordered.last(), moved);
+            moved->raise();
+            return;
+        }
     });
 }
 
@@ -677,6 +742,9 @@ void MW::showEvent(QShowEvent *event)
 
     // set screen attributes in global
     setDisplayResolution();
+
+    // hide develop at startup
+    developDock->setVisible(false);
 
     QMainWindow::showEvent(event);
 
@@ -4779,8 +4847,10 @@ void MW::toggleFullScreen()
             metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
             metadataDock->setVisible(fullScreenDocks.isMetadata);
         }
-        embelDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
-        embelDock->setVisible(fullScreenDocks.isMetadata);
+        developDockVisibleAction->setChecked(fullScreenDocks.isDevelop);
+        developDock->setVisible(fullScreenDocks.isDevelop);
+        embelDockVisibleAction->setChecked(fullScreenDocks.isEmbellish);
+        embelDock->setVisible(fullScreenDocks.isEmbellish);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
         thumbDock->setVisible(fullScreenDocks.isThumbs);
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
@@ -6214,7 +6284,8 @@ void MW::renderDevelopFullResAsync()
 
     developFullResInFlight = true;
     std::shared_ptr<const WorkingImage> src = base;   // denoised base when set, else clean; kept alive
-    developRenderPool->start([this, src, mj, degrees, fPath, gen]() {
+    std::shared_ptr<const WorkingImage> clean = work; // un-denoised base for verify
+    developRenderPool->start([this, src, clean, mj, degrees, fPath, gen]() {
         QElapsedTimer t;
         WorkingImageCache::RenderTimings rt;
         const bool probe = G::isReportDevelopTime;
@@ -6222,7 +6293,54 @@ void MW::renderDevelopFullResAsync()
         const QImage out = developCompositeStack(*src, mj, degrees, /*fullRes*/true, 0, 0, fPath,
                                                  probe ? &rt : nullptr);
         const qint64 ms = probe ? t.elapsed() : 0;
-        QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt]() {
+
+        /* Cheap pixel-change verification (developVerifyMaxAbs): at a small fixed size,
+           render the CLEAN base with identity params (the un-developed original) vs the
+           actual base (incl. raw denoise) with the recipe -- geometry suppressed on both
+           so the sizes match -- and measure the pixel difference. maxAbs==0 proves the
+           develop produced NOTHING visible over the original (the failure class
+           behind the denoise + Apple-demosaic bugs). ~256px, sub-ms. */
+        int vMaxAbs = -1;
+        double vMeanAbs = -1.0;
+        {
+            DevelopProperties::StackRenderJob idJob;  // identity: default base, no layers
+            DevelopProperties::StackRenderJob edJob = mj;
+            idJob.geometry = Geometry();
+            edJob.geometry = Geometry();  // isolate recipe/denoise from crop/warp
+            /* Downscale once; reuse the clean baseline when no raw denoise is active
+               (src==clean), so the common case pays a single O(N) downscale, not two. */
+            const WorkingImage baseSmall = WorkingImageCache::downscaled(*src, 256);
+            WorkingImage cleanSmallStore;
+            const WorkingImage *cleanSmall = &baseSmall;
+            if (src != clean) { cleanSmallStore = WorkingImageCache::downscaled(*clean, 256);
+                                cleanSmall = &cleanSmallStore; }
+            const QImage baseImg = developCompositeStack(*cleanSmall, idJob, degrees, false, 0, 0, fPath);
+            const QImage editImg = developCompositeStack(baseSmall,   edJob, degrees, false, 0, 0, fPath);
+            if (!baseImg.isNull() && !editImg.isNull() && baseImg.size() == editImg.size()) {
+                const QImage a = baseImg.convertToFormat(QImage::Format_RGB888);
+                const QImage b = editImg.convertToFormat(QImage::Format_RGB888);
+                quint64 acc = 0, n = 0;
+                int mx = 0;
+                const int wb = a.width() * 3;
+                for (int r = 0; r < a.height(); ++r) {
+                    const uchar *pa = a.constScanLine(r);
+                    const uchar *pb = b.constScanLine(r);
+                    for (int i = 0; i < wb; ++i) {
+                        const int d = qAbs(int(pa[i]) - int(pb[i]));
+                        acc += quint64(d);
+                        if (d > mx) mx = d;
+                        ++n;
+                    }
+                }
+                vMaxAbs = mx;
+                vMeanAbs = n ? double(acc) / double(n) : -1.0;
+            }
+        }
+        const bool vRecipeIdentity = mj.base.isIdentity() && mj.layers.isEmpty();
+        const bool vGeometryActive = !mj.geometry.isIdentity();
+
+        QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt,
+                                         vMaxAbs, vMeanAbs, vRecipeIdentity, vGeometryActive]() {
             if (G::isReportDevelopTime)
                 qDebug().noquote() << "[DevTime] full(async)" << out.width() << "x" << out.height()
                                    << " total" << ms
@@ -6230,6 +6348,13 @@ void MW::renderDevelopFullResAsync()
                                    << " toImage" << rt.toImageMs << ")ms"
                                    << " develop=[denoise" << rt.denoiseMs << " point" << rt.pointMs
                                    << " texture" << rt.textureMs << " dehaze" << rt.dehazeMs << "]";
+            if (dm && fPath == dm->currentFilePath) {
+                developVerifyMaxAbs = vMaxAbs;
+                developVerifyMeanAbs = vMeanAbs;
+                developVerifyRecipeIdentity = vRecipeIdentity;
+                developVerifyGeometryActive = vGeometryActive;
+                developVerifyPath = fPath;
+            }
             onDevelopFullResReady(out, fPath, gen);
         });
     });
@@ -6390,6 +6515,12 @@ void MW::ensureDevelopWork(const QString &fPath)
 
     ImageMetadata m = dm->imMetadata(fPath);                // GUI thread: read the datamodel
     if (m.fPath.isEmpty()) m.fPath = fPath;
+    /* ImageDecoder::load() selects the in-house RAW decoder off m.ext in independent
+       mode; without it the scene-linear decode is skipped and the base falls back to
+       the display-referred embedded JPG (wrong size + not scene-linear), breaking the
+       "Denoise raw" blend. imMetadata() now populates ext, so this is a defensive
+       fallback for the rare empty-struct return (invalid row). */
+    if (m.ext.isEmpty()) m.ext = QFileInfo(fPath).suffix().toLower();
     const quint64 gen = developParamsGen;
 
     developRenderPool->start([this, fPath, m, gen]() mutable {
@@ -6412,6 +6543,36 @@ void MW::ensureDevelopWork(const QString &fPath)
     });
 }
 
+/* Cheap, size-agnostic pixel-difference between two QImages: sample both on a normalised
+   grid (no scaling of the large image) and return the max and mean per-pixel max-channel
+   difference in 0..255. Used for the develop render verifications. maxAbs == 0 =>
+   visually identical. */
+static void imageGridDiff(const QImage &a, const QImage &b, int grid, int &maxAbs, double &meanAbs)
+{
+    maxAbs = -1;
+    meanAbs = -1.0;
+    if (a.isNull() || b.isNull() || grid < 1) return;
+    quint64 acc = 0;
+    int mx = 0, cnt = 0;
+    for (int gy = 0; gy < grid; ++gy) {
+        const double fy = (gy + 0.5) / grid;
+        const int ay = qMin(a.height() - 1, int(fy * a.height()));
+        const int by = qMin(b.height() - 1, int(fy * b.height()));
+        for (int gx = 0; gx < grid; ++gx) {
+            const double fx = (gx + 0.5) / grid;
+            const QRgb ca = a.pixel(qMin(a.width() - 1, int(fx * a.width())), ay);
+            const QRgb cb = b.pixel(qMin(b.width() - 1, int(fx * b.width())), by);
+            const int d = qMax(qMax(qAbs(qRed(ca) - qRed(cb)), qAbs(qGreen(ca) - qGreen(cb))),
+                               qAbs(qBlue(ca) - qBlue(cb)));
+            acc += quint64(d);
+            if (d > mx) mx = d;
+            ++cnt;
+        }
+    }
+    maxAbs = mx;
+    meanAbs = cnt ? double(acc) / cnt : -1.0;
+}
+
 void MW::updateDevelopScopes(const QImage &shown)
 {
 /*
@@ -6424,6 +6585,19 @@ void MW::updateDevelopScopes(const QImage &shown)
 */
     if (G::isLogger) G::log("MW::updateDevelopScopes");
     developShownImage = shown;   // cache for the cursor readout (implicitly shared; free)
+
+    /* Verify the Develop display differs from the Preview (embedded) image captured on
+       mode entry -- confirms the decode change (demosaic) and/or edits actually altered
+       pixels. Grid-sampled, so it is cheap even on a 50MP `shown` (no scaling). Runs for
+       edited AND unedited displays. */
+    if (dm && !shown.isNull() && !developVerifyPreviewBaseline.isNull()
+        && developVerifyPreviewBaselinePath == dm->currentFilePath) {
+        // 64x64 grid: negligible per drag tick
+        imageGridDiff(developVerifyPreviewBaseline, shown, 64,
+                      developVerifyVsPreviewMaxAbs, developVerifyVsPreviewMeanAbs);
+        developVerifyVsPreviewPath = dm->currentFilePath;
+    }
+
     if (!scopesView || !developScopesVisible) return;   // hidden: skip the sample cost
     if (shown.isNull()) { scopesView->clear(); return; }
 

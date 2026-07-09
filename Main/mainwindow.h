@@ -264,6 +264,8 @@ public:
         bool isFavs;
         bool isFilters;
         bool isMetadata;
+        bool isDevelop;
+        bool isEmbellish;
         bool isThumbs;
         bool isStatusBar;
     } fullScreenDocks;
@@ -1104,6 +1106,7 @@ private:
     // Help Diagnostics Menu
     QAction *diagnosticsAllAction;
     QAction *diagnosticsCurrentAction;
+    QAction *diagnosticsDevelopAction;
     QAction *diagnosticsMainAction;
     QAction *diagnosticsSelectionAction;
     QAction *diagnosticsWorkspacesAction;
@@ -1302,6 +1305,36 @@ private:
     QThreadPool *developRenderPool = nullptr;
     quint64 developParamsGen = 0;                 // ++ on every Develop param change (staleness guard)
     bool developFullResInFlight = false;          // a background full-res render is running
+
+    /* Develop render verification (cheap, updated on each full-res settle; reported by
+       the Develop diagnostics). Renders the base at a small fixed size TWICE -- the clean
+       base with identity params vs the actual base (incl. raw denoise) with the recipe
+       (geometry suppressed so sizes match) -- and measures the pixel difference. Confirms
+       the develop pipeline truly changed pixels: a maxAbs of 0 means the render is pixel-
+       identical to the un-developed original (the failure class behind the denoise +
+       Apple-demosaic bugs). See renderDevelopFullResAsync. */
+    int developVerifyMaxAbs = -1;    // max |edited-original| 0..255; -1 = not run
+    double developVerifyMeanAbs = -1.0;   // mean |edited-original| 0..255
+    // no non-geometry edits at verify time (so no change expected):
+    bool developVerifyRecipeIdentity = true;
+    // crop/warp present (changes pixels independently of the recipe):
+    bool developVerifyGeometryActive = false;
+    QString developVerifyPath;       // image the last recipe verification ran on
+
+    /* Second verification axis -- the Develop DISPLAY vs the Preview (embedded)
+       image. The Preview image is captured (downscaled) on entering Develop; each
+       develop display (edited OR not, via updateDevelopScopes) is grid-sampled against
+       it. This is what confirms the DECODE change (embedded preview -> demosaic) actually
+       altered pixels, independent of any edits -- so it populates even for an unedited
+       image (unlike the recipe check, which needs an edited settle). */
+    // downscaled Preview (embedded) image; captured on Develop entry:
+    QImage developVerifyPreviewBaseline;
+    QString developVerifyPreviewBaselinePath;
+    // max channel diff (0..255) display vs Preview; >0 = changed:
+    int developVerifyVsPreviewMaxAbs = -1;
+    double developVerifyVsPreviewMeanAbs = -1.0;
+    // image the last display-vs-Preview verification ran on:
+    QString developVerifyVsPreviewPath;
     /* Interactive "Denoise raw": PMRID is a heavy DNN run PRE-demosaic (Base-only, RAW-only,
        Winnow engine only). ensureRawDenoise re-decodes the raw with PMRID once to build the
        full-strength denoised base (developPmridFull, keyed path+iso), then blends clean<->PMRID by
@@ -1528,6 +1561,8 @@ private:
     bool isSelectedDockTab(QDockWidget *dock);
     void updateDockTabGraphics(QTabBar *tabBar);   // responsive text/graphic dock tab titles
     void scheduleDockTabUpdate();                  // deferred re-eval of all dock tab bars
+    void moveDroppedDockLast();  // a dock dropped into a tab group lands last
+    QDockWidget* dockForTabText(const QString &tabText);
     QHash<quint64, QString> dockTabTitleByKey;     // QMainWindow tab key -> dock title (learned)
     void folderDockVisibilityChange();
     void embelDockActivated(QDockWidget *dockWidget);
@@ -1674,6 +1709,8 @@ private:
     void diagnosticsAll();
     void diagnosticsCurrent();
     QString diagnostics();
+    QString developDiagnostics();
+    void diagnosticsDevelop();
     void diagnosticsMain();
     void diagnosticsSelection();
     void diagnosticsWorkspaces();

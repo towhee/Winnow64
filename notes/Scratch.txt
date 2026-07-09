@@ -334,3 +334,18 @@ Develop::Denoise [TEST] 8640x5760 (49.8 MP) lumAmt=0.00 chrAmt=1.00  luma 0ms  c
 Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.00 chrAmt=0.97  luma 0ms  chroma 31ms
 Develop::Denoise [TEST] 8640x5760 (49.8 MP) lumAmt=0.00 chrAmt=0.97  luma 0ms  chroma 168ms
 Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.00 chrAmt=0.07  luma 0ms  chroma 7ms
+
+- Build/run
+- Select /Users/roryhill/Pictures/_test/2004-09-24_0098_Mountain Sheep.jpg in Preview Mode.
+- Zoom to 100%
+- Switch to Develop Mode (Demosaic = Apple, Edit = Raw)
+- No change from the embedded preview from Preview Mode
+- Select Edit = Embedded Preview (no change)
+- Select Edit = Raw (Apple demosaic runs and image updates)
+Conclusion: Apple demosaic is not triggered initially when change to Develop Mode
+
+
+
+
+
+

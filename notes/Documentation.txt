@@ -159,6 +159,65 @@ Dock Window State (versioning)
     itself across launches until the version bump discarded it.
 
 
+------------------------------------------------------------------------------------------
+Responsive dock tab titles (text <-> graphic)
+------------------------------------------------------------------------------------------
+
+    When several docks are tabbed together in a narrow area, their text titles
+    ("Folders", "Bookmarks", ...) may not all fit. MW::updateDockTabGraphics (gated
+    by G::useDockTitleGraphic) measures the width the text titles need against the
+    width of the visible dock: if they fit the tabs show text, otherwise EVERY tab
+    in the group switches to a small white glyph (a QLabel centred over each tab,
+    since QMainWindow does not paint a dock's windowIcon on tabs and macOS paints
+    the tab natively).
+
+    THE FAILURE MODE: if any dock in the group has NO registered glyph, the bar can
+    never resolve to graphics -- there is no width at which all tabs are satisfied --
+    so the layout thrashes and the tabs flicker continuously. (This is separate from
+    the versioning flicker above; same symptom, different cause.) developDock hit
+    this because it was added to the group without a glyph.
+
+    RULE: EVERY dock that can be tabbed into the group MUST register a glyph. When
+    adding a new dock, do all of:
+      1. Create images/icon16/<name>_white.png  -- a 16x16 white-on-transparent glyph
+         matching the weight of the existing ones (foldertree/bookmarks/filters/
+         metadata/embellish/develop).
+      2. Register it in winnow.qrc.
+      3. Add <dockTabText> -> ":/images/icon16/<name>_white.png" to the graphicFor
+         hash AND <dockTabText> -> <dock> to the dockFor hash, both in
+         MW::updateDockTabGraphics.
+      4. Append <dockTabText> to dockTextNames in initialize() (dock-bar detection).
+      5. Add a tooltip case in MW::dockTabToolTip (dock name + shortcut).
+      6. Bump winnowStateVersion (see "Dock Window State" above -- the set of docks
+         changed).
+
+    A missing glyph resource is handled gracefully at runtime (the tab keeps its
+    text title), but that just reproduces the flicker when the group is too narrow,
+    so treat steps 1-3 as mandatory, not optional.
+
+
+------------------------------------------------------------------------------------------
+Dropped dock lands last (rightmost tab)   [WORK IN PROGRESS - DISABLED]
+------------------------------------------------------------------------------------------
+
+    STATUS: disabled. The dockLocationChanged connection in initialize() is commented
+    out because it broke dock-tab selection (clicking a tab no longer raised its dock).
+    The code (MW::moveDroppedDockLast) is left intact for a later fix. The rest of this
+    note describes the intended behavior.
+
+    QMainWindow inserts a dock dropped into an existing tab group at the drop position
+    (often the front). MW::moveDroppedDockLast (connected to every group dock's
+    dockLocationChanged, next to scheduleDockTabUpdate) overrides this: after the drop
+    settles it reads the group in visual tab order and, if the dropped dock is not
+    already last, re-tabifies it after the current last dock (tabifyDockWidget(last,
+    moved)) so it becomes the rightmost tab. The "already last" early-out makes the
+    re-tabify's own dockLocationChanged a no-op, so there is no recursion. Tab identity
+    uses the text title, falling back to the learned dockTabTitleByKey map in graphic
+    mode. (Reordering by dragging a TAB within a group is left to Qt -- only drops that
+    fire dockLocationChanged are forced last.) A new dock added to the connect loop in
+    initialize() inherits this.
+
+
 ******************************************************************************************
 
 FOLDER LOADING PIPELINE
@@ -988,15 +1047,25 @@ How to Test Icon Caching
                                   on a 1333-folder load. Set false to restore the per-folder
                                   emit (the msg(ms) A/B baseline).
 
-      G::decodeRawEngine          which engine decodes RAW -> WorkingImage (demosaic + global
-                                  colour/baseline luma NR + start WB/black/white). A/B knob:
-                                    winnowDecodeRawEngine (default) = in-house decoder; portable,
-                                      the only engine on Windows and the canonical focus-stacking
-                                      engine (deterministic, CFA-level control).
-                                    appleDecodeRawEngine = macOS Core Image (CIRAWFilter); GPU
-                                      demosaic + NR, macOS-ONLY — callers fall back to winnow
-                                      off-mac. Both converge on WorkingImage, so Develop / local
+      G::decodeRawEngine          which engine decodes RAW -> WorkingImage (demosaic
+                                  + global colour/baseline luma NR + start WB/black/
+                                  white). A/B knob:
+                                    winnowDecodeRawEngine (default) = in-house
+                                      decoder; portable, the only engine on Windows
+                                      and the canonical focus-stacking engine
+                                      (deterministic, CFA-level control).
+                                    appleDecodeRawEngine = macOS Core Image
+                                      (CIRAWFilter); GPU demosaic + NR, macOS-ONLY --
+                                      callers fall back to winnow off-mac. Both
+                                      converge on WorkingImage, so Develop / local
                                       luma NR / OutputTransform are engine-agnostic.
+                                  Sticky: persisted in QSettings ("decodeRawEngine",
+                                  saved/loaded next to "useRaw"), so the Develop
+                                  "Demosaic" combo survives app restarts. The combo is
+                                  rebuilt from G::decodeRawEngine (not a hardcoded
+                                  default) so folder/image selection keeps the choice.
+                                  Off-mac an appleDecodeRawEngine value is normalized
+                                  to winnow on load.
 
     Load performance findings (~9000-image / 1333-folder recursive tree, cold cache)
 
@@ -2397,6 +2466,51 @@ Panel focus & slider arrow-nudge
     Develop). DockWidget notes it has not solved drawing a border around a QDockWidget; the
     control-level cue above already shows where slider shortcuts land.
 
+    Develop diagnostics report (Help > Diagnostics > Develop diagnostics)
+        MW::developDiagnostics() dumps everything the Develop pipeline depends on for
+        the currently selected image, in one read-only snapshot: the operation-mode /
+        raw-engine globals (G::operationMode, G::useRaw, G::decodeRawEngine); the current
+        file (raw?, video?, ISO, camera model); the cached scene-linear WorkingImage base
+        (dims, sceneReferred, white, MB) -- the first thing to check, since a
+        sceneReferred=false base, or dims that differ from the sensor active area,
+        means Develop is editing the display-referred embedded JPG, not the sensor
+        image; the rawInfo (active area, bits, compression, CFA, black/white, matrix);
+        the effective EditParams for the Base layer and each enabled non-Base layer
+        (+ mask counts); the crop/warp Geometry; and the interactive develop caches
+        (PMRID "Denoise raw" base + keys, developWorkTriedPath / in-flight guards,
+        proxy + full-res render state, mask reference caches). Wired in menusand-
+        actions.cpp (diagnosticsDevelopAction) via MW::diagnosticsDevelop.
+        RENDER VERIFICATION has TWO axes, so the two failure modes seen (edit silently
+        dropped; demosaic/decode not triggered) are each caught:
+          [A] Develop DISPLAY vs the Preview (embedded) image. The Preview image is
+              captured (downscaled) on entering Develop (MW::setOperationMode, before
+              the re-decode); each develop display -- edited OR not -- is grid-sampled
+              against it in MW::updateDevelopScopes (cheap, no scaling of the 50MP
+              shown). maxAbs>0 confirms the decode change (demosaic) and/or edits took
+              effect; maxAbs==0 on a raw in Edit=Raw means the demosaic did NOT apply
+              (display still the embedded preview). This axis populates for an unedited
+              image on mode entry.
+          [B] recipe vs the un-developed base. On each full-res settle the worker
+              renders the CLEAN base with identity params vs the actual base (incl. raw
+              denoise) with the recipe at ~256px (geometry suppressed so sizes match).
+              maxAbs==0 with a non-identity recipe = a dropped edit (the "denoise does
+              nothing" class). Populates only on edited settle renders.
+        Both are sub-ms and stored on MW (developVerify* / developVerifyVsPreview*).
+
+    Entering Develop must re-decode the current image (MW::setOperationMode)
+        ImageDecoder::load() picks the decode by (G::operationMode==Develop &&
+        G::useRaw): Preview shows the embedded preview, Develop demosaics the raw.
+        Switching mode therefore changes the decode even when useRaw does not flip.
+        setOperationMode drives the re-decode via toggleUseRaw WHEN useRaw changes; but
+        if useRaw already matches the target (e.g. it was left true from a prior
+        session / settings), toggleUseRaw is skipped and NOTHING re-decoded -- the
+        loupe kept showing the Preview embedded image until the user toggled the
+        Edit-source selector. FIX: the useRaw-unchanged branch now also sets
+        imageView->currentImageHasChanged and emits imageCacheColorManageChange()
+        (-> reloadImageCache -> refreshViewsOnCacheChange -> loupe), matching the
+        toggleUseRaw refresh, so entering Develop always renders through the mode's decode
+        path.
+
 ------------------------------------------------------------------------------------------
 Layer & masking model (planned)
 ------------------------------------------------------------------------------------------
@@ -2437,6 +2551,16 @@ Layer & masking model (planned)
           exposure edits reuse the denoised base; both the proxy and the full-res render start from it.
           ISO for the conditioning comes from ImageMetadata::ISONum (populated in cache mode from
           G::ISOColumn; live preview reads it via MW::currentImageIso).
+          BASE MUST BE SCENE-LINEAR: the denoise blend (Develop::BlendRawDenoise)
+          subtracts the clean cached base from the denoised re-decode, so the two must
+          share geometry + space. The clean base comes from MW::ensureDevelopWork ->
+          ImageDecoder::decodeIndependent, which selects the in-house RAW decoder off
+          ImageMetadata::ext. DataModel::imMetadata() populates m.type but NOT m.ext,
+          so ensureDevelopWork sets m.ext from the file suffix; without it the raw
+          decode is skipped, the base falls back to the display-referred embedded JPG
+          (active-area size, not scene-linear), and the blend silently rejects the size
+          mismatch (denoise appears dead). See the Develop diagnostics report to confirm
+          the base is sceneReferred with matching dims.
         • LOCAL luminance NR is a MASKABLE Develop op: an ADDITIONAL luminance-only smoothing
           applied on top of the baseline, per layer/mask. It is a SPATIAL op (below), operating
           on the already-decoded WorkingImage -- so it needs no second decode and is independent

@@ -2,7 +2,10 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Make demosaic method sticky
+- Change progress to right side status bar for demosaic
+- Drag dock tabify to the right (last) - WIP
+- Develop presets (selection dialog)
+- Reformat the documentation.txt (when have lots of tokens)
 - Add Develop Panel to Full Screen defaults in properties
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
