@@ -124,6 +124,7 @@ private:
     int idImageCache = -1;
     int idMetaRead = -1;
     int idFocusStack = -1;
+    int idRawDenoise = -1;
 
     int containerWidth = 200;            // total widget width
     int textColWidth = 0;                // column 1 width (0 = bars use full width)

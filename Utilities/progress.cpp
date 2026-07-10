@@ -53,6 +53,7 @@ Progress::Progress(QWidget *parent) : QWidget(parent)
     idImageCache = addRow("ImageCache", icBarHeight, imageCacheColor);
     idMetaRead   = addRow("MetaRead", 4, metaReadCacheColor);
     idFocusStack = addRow("FocusStack", 2, QColor(Qt::darkYellow));
+    idRawDenoise = addRow("FocusStack", 2, QColor(G::darkorange));
 
     /* All rows start hidden (Row::active defaults false) and are only shown while
        active, so at startup (no folder selected) the container is empty. The
@@ -62,6 +63,7 @@ Progress::Progress(QWidget *parent) : QWidget(parent)
     setRowText(idImageCache, "Image Cache");
     setRowText(idMetaRead, "Metadata");
     setRowText(idFocusStack, "Focus Stack");
+    setRowText(idRawDenoise, "Raw Denoise");
 }
 
 /* ------------------------------------------------------------------ helpers */

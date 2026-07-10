@@ -345,7 +345,11 @@ Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.00 chrAmt=0.07  luma 0ms  chr
 Conclusion: Apple demosaic is not triggered initially when change to Develop Mode
 
 
-
+Take a look at the design of progress.h/cpp.  Can you modify it so a progress bar can be
+added at runtime, but still retain the ImageCache custom behavior?  There are currently
+update and clear custom functions for each progress bar, where there should only be one
+except for the Image Cache exception.  Also, note that I started to add the Raw Denoise
+progress row, but did not add separate clear and update functions pending this review.
 
 
 
