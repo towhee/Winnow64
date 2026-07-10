@@ -186,13 +186,11 @@ void MW::generateFocusStack(const QStringList paths,
     G::popup->showPopup(msg, 7000);
 
     /*
-        Show the status progress bar. Force it visible unconditionally: when an
-        empty folder is selected (e.g. a remote stack launched from Lightroom),
-        MW::nullFiltration / MW::reset have already hidden the bar, so relying on
-        G::showCacheProgress to keep it visible fails and the stack progress is
-        never seen.
+        No need to force the status progress bar visible: Progress shows its own
+        container as soon as the FocusStack row is painted (updateProgress below),
+        even when the folder is empty and MW::nullFiltration / MW::reset have
+        cleared the other rows.
     */
-    progress->setVisible(true);
 
     // --------------------------------------------------------------------
     // Create worker thread + FS fs object
@@ -219,7 +217,7 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Progress update
     connect(fs, &FS::progress, this, [this](int current, int total) {
-            this->progress->updateFocusStackProgress(current, total, Qt::darkYellow);
+            progress->updateProgress(progressFocusStackRow, current, total, Qt::darkYellow);
     }, Qt::QueuedConnection);
 
     // Use Winnow to decode and return a cv::Mat
@@ -248,8 +246,6 @@ void MW::generateFocusStack(const QStringList paths,
         QString msg = "Unable to find any focus stacks";
         if (G::isLogger || G::FSLog) G::log(srcFun, msg);
         G::popup->showPopup(msg);
-        // hide the progress bar we force-showed above
-        if (!G::showCacheProgress) progress->setVisible(false);
         return;
     }
 
@@ -280,12 +276,8 @@ void MW::generateFocusStack(const QStringList paths,
     connect(fs, &FS::finished, this, [=, this](bool success, bool aborted) {
         QString msg;
 
-        // clear progress
-        progress->clearFocusStackProgress();
-        // hide status progress bar
-        if (!G::showCacheProgress) {
-            progress->setVisible(false);
-        }
+        // clear progress (Progress hides its container if no other row is live)
+        progress->clearProgress(progressFocusStackRow);
 
         // aborted or failed
         if (!success) {

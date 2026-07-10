@@ -375,8 +375,10 @@ void MW::createMetaRead()
     connect(metaRead, &MetaRead::updateProgressInFilter, filters, &Filters::updateProgress);
 
     // update loading metadata in statusbar
-    connect(metaRead, &MetaRead::updateProgressInStatusbar,
-            progress, &Progress::updateMetaReadProgress);
+    connect(metaRead, &MetaRead::updateProgressInStatusbar, this,
+            [this](int item, int items, QColor color) {
+                progress->updateProgress(progressMetaReadRow, item, items, color);
+            });
 
     // memory overrun guardrail: surface a critical dialog and abort the
     // in-flight folder load when MetaRead's footprint probe trips.
@@ -1135,6 +1137,21 @@ void MW::createStatusBar()
     progress->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     progress->setToolTip(progressToolTip);
     progress->setToolTipDuration(100000);
+
+    /* Add the runtime rows this window drives (ImageCache is created by Progress
+       itself). MetaRead items complete out of order -> Fill::Cell; FocusStack and
+       RawDenoise are sequential -> Fill::FromStart. */
+    progressMetaReadRow = progress->addRow("MetaRead", 4, progress->metaReadCacheColor,
+                                           Progress::Fill::Cell);
+    progress->setRowText(progressMetaReadRow, "Metadata");
+    progressFocusStackRow = progress->addRow("FocusStack", 2, QColor(Qt::darkYellow),
+                                             Progress::Fill::FromStart);
+    progress->setRowText(progressFocusStackRow, "Focus Stack");
+    /* Visible orange (G::darkorange "#1a0d00" is a near-black slider-gradient end,
+       not a display color, so it vanishes against the status-bar background). */
+    progressRawDenoiseRow = progress->addRow("RawDenoise", 2, QColor(G::lightorange),
+                                             Progress::Fill::FromStart);
+    progress->setRowText(progressRawDenoiseRow, "Raw Denoise");
     connect(progress, &Progress::clicked, this, [this]() {
         preferences("CacheHeader");
     });
@@ -1262,10 +1279,9 @@ void MW::createStatusBar()
     /* Apply the show-caching-progress preference (G::showCacheProgress, loaded in
        MW::loadSettings). ImageCache and MetaRead read G::showCacheProgress directly.
        Gate the cache rows (ImageCache + MetaRead) on the preference so they stay
-       hidden when "show caching progress" is off, even if the widget is shown
-       for a focus stack. */
-    progress->setVisible(G::showCacheProgress);
-    progress->setCacheRowsEnabled(G::showCacheProgress);
+       hidden when "show caching progress" is off. Progress manages its own container
+       visibility from its row content, so we don't toggle the widget here. */
+    setCacheProgressEnabled(G::showCacheProgress);
 
     /* Capture the status bar height with all the other widgets but without
        Progress. The heightChanged handler keeps the bar at least this tall so

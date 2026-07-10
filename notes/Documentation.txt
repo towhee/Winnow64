@@ -852,22 +852,36 @@ Cache Status
       Because of this it can later be reparented into a standalone window with no internal
       changes.
 
-        • Progress holds any number of rows. Each row has a text column and a bar column,
-          its own bar height, color, font and a dedicated update function. Each row owns
-          its bar pixmap, so an incremental paint (e.g. the moving cache cursor) touches
+        • Progress holds any number of rows. Each row has a text column and a bar
+          column, its own bar height, color, font and a Fill style. Each row owns its
+          bar pixmap, so an incremental paint (e.g. the moving cache cursor) touches
           only that row.
-        • Three rows are created at startup (in MW::createDataModel) mirroring the former
-          strips, each with a text label: ImageCache "Image Cache" (8 px, with cursor),
-          MetaRead "Metadata" (2 px) and FocusStack "Focus Stack" (2 px). Labels default
-          to empty; setRowText() (called in the ctor here) sets them.
+        • Rows are added at runtime with addRow(name, barHeight, color, fill), which
+          returns an int id; the owner holds the id and drives the row with the generic
+          updateProgress(id, item, items, color) / clearProgress(id). A row's Fill style
+          decides how updateProgress paints: Fill::FromStart fills 0->current item
+          (sequential progress, e.g. FocusStack, RawDenoise); Fill::Cell paints only the
+          current item's cell (items that complete out of order, e.g. MetaRead reading
+          metadata across threads). An invalid color argument defaults to the row's own
+          bar color. clearProgress refills the bar background and hides the row.
+        • The ImageCache row is the one exception: its moving cursor and directional
+          range fills are not expressible as a Fill, so Progress creates it in its ctor
+          and keeps its own updateImageCacheProgress()/updateCursor()/
+          clearImageCacheProgress(). Its id is exposed via imageCacheRow() for MW's gate.
+        • All other rows are added by their owner (MW) at startup in
+          MW::createDataModel: MetaRead "Metadata" (4 px, Fill::Cell), FocusStack "Focus
+          Stack" (2 px, Fill::FromStart) and RawDenoise "Raw Denoise" (2 px,
+          Fill::FromStart). MW stores their ids in progressMetaReadRow /
+          progressFocusStackRow / progressRawDenoiseRow. Labels default to empty;
+          setRowText() sets them.
         • All rows start hidden and are only shown while active, so at startup (before a
-          folder is selected) the container is empty. Each update function showRow(true)
-          and the MetaRead/FocusStack clear functions showRow(false). The ImageCache row
-          is revealed by updateImageCacheProgress/updateCursor (it is not hidden by its
-          clear, since the cache "All" repaint clears-then-draws every tick). Hiding a row
-          collapses it entirely (text + bar), so the container height fits only the live
-          rows. A row's effective visibility is active && enabled: update functions set
-          "active", and setCacheRowsEnabled(G::showCacheProgress) sets "enabled" on the
+          folder is selected) the container is empty. updateProgress showRow(true) and
+          clearProgress showRow(false). The ImageCache row is revealed by
+          updateImageCacheProgress/updateCursor (it is not hidden by its clear, since the
+          cache "All" repaint clears-then-draws every tick). Hiding a row collapses it
+          entirely (text + bar), so the container height fits only the live rows. A row's
+          effective visibility is active && enabled: update functions set "active", and
+          MW::setCacheProgressEnabled(G::showCacheProgress) calls setRowEnabled() on the
           ImageCache + MetaRead rows so they honor the "Hide caching progress" preference
           even when the widget is shown for a focus stack (FocusStack is not gated). The
           rows block is vertically centered within the widget (paintEvent) with
@@ -875,10 +889,20 @@ Cache Status
           a filled Progress shows an equal top/bottom margin. MW floors the status-bar
           height at its pre-Progress height (MW::statusBarBaseHeight) so collapsing rows
           never clip the other status text.
-        • setContainerWidth() sizes the bars to the available status-bar width (driven by
-          MW::updateProgressBarWidth via availableSpaceForProgressBar). setTextFontSize()
-          is the separate, settable text-size variable. setBackgroundColor() keeps the
-          container background matching the status bar.
+        • Progress manages its own container visibility: it shows the widget whenever a
+          row is visible and hides it when none are (updateContainerVisibility, called
+          from relayout). Hosts therefore never call progress->setVisible() for a per-row
+          concern -- doing so would hide a concurrent FocusStack/RawDenoise row when cache
+          progress is turned off. Two host hooks remain: setSuppressed(true) force-hides
+          the whole container regardless of rows (used for a random slideshow, which does
+          no caching), and reset() clears + hides every row when the folder is closed
+          (MW::reset / MW::nullFiltration). The cache "Hide caching progress" preference
+          is applied only via MW::setCacheProgressEnabled -> setRowEnabled on the
+          ImageCache + MetaRead rows; the container then follows automatically.
+        • setContainerWidth() sizes the bars to the available status-bar width (driven
+          by MW::updateProgressBarWidth via availableSpaceForProgressBar).
+          setTextFontSize() is the separate, settable text-size variable.
+          setBackgroundColor() keeps the container background matching the status bar.
         • The container height grows to fit the visible rows. Progress::sizeHint() reports
           that height so the status bar grows automatically; heightChanged() is also
           connected in MW to set the status-bar minimum height explicitly. Because
@@ -2856,8 +2880,15 @@ Layer & masking model (planned)
                kept, so re-showing restores them; showLayer folds all three. The fold is applied at
                every render-capture site (EditStack::effectiveParams, DevelopProperties::editParams
                and stackJob). Right-clicking a header (contextMenuEvent) offers Preview (toggle) +
-               Reset <group>; Reset is DESTRUCTIVE -- EditParams::resetGroup on the STORED params,
-               then repopulate. Group->keys mapping follows the UI (texture/dehaze are Basic; tone
+               Reset <group>; Reset is DESTRUCTIVE -- EditParams::resetGroup on the
+               STORED params, then repopulate. The same menu (shown anywhere in the
+               tree, not only on a header) also carries the tree-wide items Expand all /
+               Collapse all / Solo mode, mirroring the Embellish dock: Expand all /
+               Collapse all call QTreeView expandAll/collapseAll; Solo mode is a checkable
+               toggle (persisted as Settings "Develop/isSolo", restored in initialize via
+               setSolo) that, when on, collapses the other top-level sections whenever one
+               is expanded (PropertyEditor::collapseAllExcept in mousePressEvent).
+               Group->keys mapping follows the UI (texture/dehaze are Basic; tone
                splits are Basic for Reset only; localDenoiseLuma -- the Effects "Denoise" (local NR,
                key "localDenoise") -- is in Effects; denoiseLuma/denoiseChroma are the Base "Denoise
                raw" (decode-time global NR, key "denoise") and in no group). eye.png/eye_off.png live

@@ -16,8 +16,8 @@
     MW-owned pixmap); Progress instead owns all of its own state.
 
     Design goals:
-    - One container holding many rows.  Each row has its own height, bar color,
-      font and dedicated update function (e.g. updateImageCacheProgress).
+    - One container holding many rows.  Each row has its own height, bar color
+      and font.
     - Each row owns its own bar pixmap so incremental paints (e.g. the moving
       ImageCache cursor) only touch that row.
     - The container width is settable; the bars fit the available width.  The
@@ -27,9 +27,14 @@
       and the heightChanged() / clicked() signals, so it can be reparented into
       a standalone window later with no internal changes.
 
-    A row is created once with addRow() and is afterwards addressed by the int
-    id it returns.  Adding a new indicator is just: addRow() at setup, plus a
-    dedicated update function that paints into that row's bar.
+    Rows are added at runtime by whoever drives them: addRow() returns an int id,
+    the owner holds it, and drives the row with the generic updateProgress(id, ...)
+    / clearProgress(id).  A row's Fill style (FromStart vs Cell) decides how
+    updateProgress paints, so no per-row update/clear function is needed.
+
+    The ImageCache row is the one exception: its moving cursor and directional
+    range fills are not expressible as a simple Fill, so it is created here and
+    keeps its own updateImageCacheProgress()/updateCursor()/clearImageCacheProgress().
 */
 
 class Progress : public QWidget
@@ -38,15 +43,45 @@ class Progress : public QWidget
 public:
     explicit Progress(QWidget *parent = nullptr);
 
-    /* Row management */
-    int addRow(const QString &name, int barHeight, const QColor &color);
+    /* How a generic row's updateProgress() paints:
+         FromStart - fill the bar from 0 up to the current item (sequential
+                     progress, e.g. FocusStack, RawDenoise).
+         Cell      - fill only the current item's cell (items complete out of
+                     order, e.g. MetaRead reading metadata across threads). */
+    enum class Fill { FromStart, Cell };
+
+    /* Row management.  addRow() may be called at runtime; it returns the id used
+       to address the row in the generic update/clear functions below. */
+    int addRow(const QString &name, int barHeight, const QColor &color,
+               Fill fill = Fill::FromStart);
     void setRowText(int id, const QString &text);
     void showRow(int id, bool visible);
-    /* Enable/disable the cache rows (ImageCache + MetaRead) as a group. When
-       disabled they stay hidden even if their update functions request them, so
-       the cache rows honor the "Show caching progress" preference while the
-       FocusStack row can still appear (e.g. during a focus stack). */
-    void setCacheRowsEnabled(bool enabled);
+    /* Enable/disable a row as a preference gate.  A disabled row stays hidden
+       even when its update function requests it, without losing its painted
+       content.  The host uses this to honor "Show caching progress" for the
+       ImageCache + MetaRead rows while leaving other rows (e.g. FocusStack)
+       free to appear. */
+    void setRowEnabled(int id, bool enabled);
+
+    /* Generic row driver (every row except the ImageCache row).  updateProgress
+       reveals the row and paints per the row's Fill style; an invalid color uses
+       the row's own bar color.  clearProgress refills the bar and hides the row. */
+    void updateProgress(int id, int item, int items, QColor color = QColor());
+    void clearProgress(int id);
+
+    /* Clear and hide every row (e.g. when the folder is closed). */
+    void reset();
+
+    /* Force the whole container hidden regardless of row content (e.g. during a
+       random slideshow). While suppressed, active rows stay laid out but the
+       widget is not shown; clearing suppression re-shows it if any row is live.
+       Progress otherwise manages its own visibility: it shows itself whenever a
+       row is visible and hides itself when none are, so hosts never toggle the
+       widget's visibility for a per-row concern. */
+    void setSuppressed(bool suppressed);
+
+    /* Id of the ImageCache row (created in the ctor), for the host's cache gate. */
+    int imageCacheRow() const { return idImageCache; }
 
     /* Container configuration */
     void setContainerWidth(int w);
@@ -78,12 +113,6 @@ public:
     QLinearGradient cursorGradient;
     QLinearGradient targetColorGradient;
 
-public slots:
-    void clearMetaReadProgress();
-    void updateMetaReadProgress(int item, int items, QColor color = Qt::blue);
-    void clearFocusStackProgress();
-    void updateFocusStackProgress(int item, int items, QColor color = Qt::blue);
-
 signals:
     void heightChanged(int newHeight);
     void clicked();
@@ -99,16 +128,17 @@ private:
         int     fontSize;        // point size for this row's text
         int     barHeight;       // pixel height of the bar
         QColor  barColor;        // base color
+        Fill    fill = Fill::FromStart; // how updateProgress paints this row
         bool    active = false;  // row has content to show (set by update fns)
-        bool    enabled = true;  // preference gate (see setCacheRowsEnabled)
+        bool    enabled = true;  // preference gate (see setRowEnabled)
         bool    visible = false; // effective = active && enabled (used by layout/paint)
         QPixmap bar;             // backing store for the bar column
         int     top = 0;         // computed y within container
         int     height = 0;      // computed row height
     };
 
-    void setRowEnabled(int id, bool enabled);
     void applyRowVisibility(int i); // recompute Row::visible from active && enabled
+    void updateContainerVisibility(); // show/hide widget from row content + suppressed
     int rowIndex(int id) const;          // bounds-checked, -1 if invalid
     int barWidth() const;                // container width minus text column
     int barX() const;                    // x where the bar column starts
@@ -122,9 +152,7 @@ private:
 
     QList<Row> rows;
     int idImageCache = -1;
-    int idMetaRead = -1;
-    int idFocusStack = -1;
-    int idRawDenoise = -1;
+    bool suppressed = false;             // force-hide the widget regardless of rows
 
     int containerWidth = 200;            // total widget width
     int textColWidth = 0;                // column 1 width (0 = bars use full width)

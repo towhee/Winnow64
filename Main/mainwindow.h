@@ -1209,6 +1209,11 @@ private:
     QLabel *slideShowStatusLabel;
     QLabel *cacheStatusLabel;
     Progress *progress;
+    /* Progress rows added at runtime (ImageCache is owned by Progress itself).
+       Each is driven with progress->updateProgress(id, ...)/clearProgress(id). */
+    int progressMetaReadRow = -1;
+    int progressFocusStackRow = -1;
+    int progressRawDenoiseRow = -1;
     int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
@@ -1639,6 +1644,9 @@ private:
     void createStatusBar();
     int availableSpaceForProgressBar();
     void updateProgressBarWidth();
+    /* Gate the cache progress rows (ImageCache + MetaRead) as a group, honoring
+       the "Show caching progress" preference. */
+    void setCacheProgressEnabled(bool on);
     void updateStatusBar();
     void createMessageView();
     void createPreferences();

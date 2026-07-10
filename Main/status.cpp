@@ -361,6 +361,16 @@ void MW::updateProgressBarWidth()
     }
 }
 
+void MW::setCacheProgressEnabled(bool on)
+{
+    if (G::isLogger) G::log("MW::setCacheProgressEnabled");
+    /* Gate the cache rows (ImageCache + MetaRead) as a group so they honor the
+       "Show caching progress" preference while other rows (e.g. FocusStack) can
+       still appear. */
+    progress->setRowEnabled(progress->imageCacheRow(), on);
+    progress->setRowEnabled(progressMetaReadRow, on);
+}
+
 void MW::setCacheRunningLightsWidth() {
     QFontMetrics fm(metadataThreadRunningLabel->font());
     #ifdef Q_OS_WIN
@@ -449,7 +459,9 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
     }
     imageThreadRunningLabel->setText("◉");
     if (G::showCacheProgress) {
-        progress->setVisible(showCacheLabel);
+        /* Show the ImageCache row while caching is active; Progress shows/hides its
+           own container from row content. */
+        progress->showRow(progress->imageCacheRow(), showCacheLabel);
         bool isAutoSize = imageCache->getAutoMaxMB();
         quint64 maxMB = imageCache->getMaxMB();
         QString tip = getImageCacheRunningTip(isAutoSize, maxMB);

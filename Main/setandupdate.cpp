@@ -437,8 +437,9 @@ void MW::setStatusBarVisibility()
 void MW::setCacheStatusVisibility()
 {
     if (G::isLogger) G::log("MW::setCacheStatusVisibility");
-    if (G::showCacheProgress && !G::isSlideShow)
-        progress->setVisible(G::showCacheProgress);
+    /* Progress manages its own container visibility from its row content (see
+       Progress::updateContainerVisibility), so nothing to toggle here. The cache
+       rows are gated by the preference via setCacheProgressEnabled. */
 }
 
 void MW::setProgress(int value)
