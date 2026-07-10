@@ -176,8 +176,10 @@ void Preferences::itemChange(QModelIndex idx)
            G::showCacheProgress directly, so no per-class setters are needed. */
         bool hide = v.toBool();
         G::showCacheProgress = !hide;
-        mw->progress->setVisible(G::showCacheProgress);
-        mw->progress->setCacheRowsEnabled(G::showCacheProgress);
+        /* Gate the cache rows; Progress shows/hides its own container from row
+           content, so we don't toggle the whole widget here (that would also hide
+           a concurrent FocusStack / RawDenoise row). */
+        mw->setCacheProgressEnabled(G::showCacheProgress);
         mw->settings->setValue("showCacheProgress", G::showCacheProgress);
     }
 

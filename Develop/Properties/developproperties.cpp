@@ -50,7 +50,7 @@ void DevelopProperties::initialize()
 {
     if (G::isLogger) G::log("DevelopProperties::initialize");
 
-    setSolo(false);
+    setSolo(setting->value("Develop/isSolo", false).toBool());
     setIndentation(10);
     setAlternatingRowColors(false);
     setMouseTracking(false);
@@ -786,32 +786,50 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
 {
     if (G::isLogger) G::log("DevelopProperties::contextMenuEvent");
     QModelIndex idx = indexAt(event->pos());
-    if (!idx.isValid()) return;
-    idx = model->index(idx.row(), CapColumn, idx.parent());
-    const QString name = idx.data(UR_Name).toString();
+    if (idx.isValid()) idx = model->index(idx.row(), CapColumn, idx.parent());
+    const QString name = idx.isValid() ? idx.data(UR_Name).toString() : QString();
 
-    /* Map a header row to its Preview/Reset group; other rows have no menu. */
-    int group;
+    /* Map a header row to its Preview/Reset group; other rows only get tree items. */
+    int group = -1;
     QString label;
     if      (name == "BasicHeader")   { group = PV_Basic;   label = "Basic"; }
     else if (name == "ColorHeader")   { group = PV_Color;   label = "Color"; }
     else if (name == "EffectsHeader") { group = PV_Effects; label = "Effects"; }
-    else return;
-
-    EditLayer *l = activeLayer();
-    const bool shown = l ? *previewFlag(l, group) : true;
 
     QMenu menu(this);
-    QAction *aPreview = menu.addAction("Preview");
-    aPreview->setCheckable(true);
-    aPreview->setChecked(shown);
-    aPreview->setEnabled(l != nullptr);
-    QAction *aReset = menu.addAction("Reset " + label);
-    aReset->setEnabled(!currentImagePath.isEmpty());
+
+    /* Section-specific Preview/Reset (only when the click landed on a section header). */
+    QAction *aPreview = nullptr;
+    QAction *aReset = nullptr;
+    if (group >= 0) {
+        EditLayer *l = activeLayer();
+        const bool shown = l ? *previewFlag(l, group) : true;
+        aPreview = menu.addAction("Preview");
+        aPreview->setCheckable(true);
+        aPreview->setChecked(shown);
+        aPreview->setEnabled(l != nullptr);
+        aReset = menu.addAction("Reset " + label);
+        aReset->setEnabled(!currentImagePath.isEmpty());
+        menu.addSeparator();
+    }
+
+    /* Tree-wide items, available anywhere in the dock (mirrors the Embellish dock). */
+    QAction *aExpandAll = menu.addAction("Expand all");
+    QAction *aCollapseAll = menu.addAction("Collapse all");
+    QAction *aSolo = menu.addAction("Solo mode");
+    aSolo->setCheckable(true);
+    aSolo->setChecked(setting->value("Develop/isSolo", false).toBool());
 
     QAction *chosen = menu.exec(event->globalPos());
-    if (chosen == aPreview)    togglePreviewSection(group);
-    else if (chosen == aReset) resetSection(group);
+    if      (chosen == nullptr)      return;
+    else if (chosen == aPreview)     togglePreviewSection(group);
+    else if (chosen == aReset)       resetSection(group);
+    else if (chosen == aExpandAll)   expandAll();
+    else if (chosen == aCollapseAll) collapseAll();
+    else if (chosen == aSolo) {
+        setSolo(aSolo->isChecked());
+        setting->setValue("Develop/isSolo", aSolo->isChecked());
+    }
 }
 
 void DevelopProperties::showMaskMenu()

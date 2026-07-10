@@ -49,21 +49,15 @@ Progress::Progress(QWidget *parent) : QWidget(parent)
     icBarHeight = 8;
     rebuildGradients();
 
-    /* Build the three rows that mirror the previous ProgressBar strips. */
-    idImageCache = addRow("ImageCache", icBarHeight, imageCacheColor);
-    idMetaRead   = addRow("MetaRead", 4, metaReadCacheColor);
-    idFocusStack = addRow("FocusStack", 2, QColor(Qt::darkYellow));
-    idRawDenoise = addRow("FocusStack", 2, QColor(G::darkorange));
+    /* Only the ImageCache row is created here: it has custom paint (moving cursor
+       + directional range fills) and the host needs its id for the cache gate. All
+       other rows (MetaRead, FocusStack, RawDenoise, ...) are added at runtime by
+       their owner via addRow() and driven with updateProgress()/clearProgress().
 
-    /* All rows start hidden (Row::active defaults false) and are only shown while
-       active, so at startup (no folder selected) the container is empty. The
-       update functions show their row; the MetaRead/FocusStack clear functions
-       hide theirs again. This lets the container collapse to fit just the live
-       rows. */
+       Rows start hidden (Row::active defaults false) and are only shown while
+       active, so at startup (no folder selected) the container is empty. */
+    idImageCache = addRow("ImageCache", icBarHeight, imageCacheColor);
     setRowText(idImageCache, "Image Cache");
-    setRowText(idMetaRead, "Metadata");
-    setRowText(idFocusStack, "Focus Stack");
-    setRowText(idRawDenoise, "Raw Denoise");
 }
 
 /* ------------------------------------------------------------------ helpers */
@@ -189,17 +183,51 @@ void Progress::relayout()
     setFixedHeight(total);
     updateGeometry();
     emit heightChanged(total);
+    updateContainerVisibility();
+}
+
+void Progress::updateContainerVisibility()
+{
+    /* The widget shows itself whenever it has a visible row and hides when it has
+       none, so hosts never toggle the whole container for a per-row concern.
+       suppressed forces it hidden regardless (e.g. during a random slideshow). */
+    bool any = false;
+    for (const Row &r : rows) if (r.visible) { any = true; break; }
+    bool shouldShow = any && !suppressed;
+    if (shouldShow == isHidden()) setVisible(shouldShow);
+}
+
+void Progress::setSuppressed(bool s)
+{
+    if (suppressed == s) return;
+    suppressed = s;
+    updateContainerVisibility();
+}
+
+void Progress::reset()
+{
+    /* Clear and hide every row (folder closed): the container then hides itself. */
+    for (Row &r : rows) {
+        fillBarBackground(r);
+        r.active = false;
+        r.visible = false;
+    }
+    prevCursorPos = 0;   // forget the ImageCache cursor position
+    relayout();
+    update();
 }
 
 /* -------------------------------------------------------------- row config */
 
-int Progress::addRow(const QString &name, int barHeight, const QColor &color)
+int Progress::addRow(const QString &name, int barHeight, const QColor &color,
+                     Fill fill)
 {
     Row r;
     r.name = name;
     r.fontSize = 0;
     r.barHeight = barHeight;
     r.barColor = color;
+    r.fill = fill;
     rebuildRowPixmap(r);
     rows.append(r);
     relayout();
@@ -233,12 +261,6 @@ void Progress::setRowEnabled(int id, bool enabled)
     if (i < 0) return;
     rows[i].enabled = enabled;
     applyRowVisibility(i);
-}
-
-void Progress::setCacheRowsEnabled(bool enabled)
-{
-    setRowEnabled(idImageCache, enabled);
-    setRowEnabled(idMetaRead, enabled);
 }
 
 void Progress::applyRowVisibility(int i)
@@ -427,60 +449,39 @@ void Progress::updateCursor(int item, int items)
     prevCursorPos = pos;
 }
 
-/* ------------------------------------------------------ MetaRead row paint */
+/* ------------------------------------------------- generic row driver */
 
-void Progress::clearMetaReadProgress()
+void Progress::clearProgress(int id)
 {
-    int i = rowIndex(idMetaRead);
+    int i = rowIndex(id);
     if (i < 0) return;
     fillBarBackground(rows[i]);
-    showRow(idMetaRead, false);   // collapse the row when inactive
+    showRow(id, false);   // collapse the row when inactive
     update();
 }
 
-void Progress::updateMetaReadProgress(int item, int items, QColor color)
+void Progress::updateProgress(int id, int item, int items, QColor color)
 {
-    int i = rowIndex(idMetaRead);
+    int i = rowIndex(id);
     if (i < 0 || items <= 0) return;
-    showRow(idMetaRead, true);    // reveal the row while active
+    showRow(id, true);    // reveal the row while active
     Row &r = rows[i];
+    if (!color.isValid()) color = r.barColor;   // default to the row's bar color
     QPainter pnt(&r.bar);
     float itemWidth = static_cast<float>(barWidth()) / items;
     int pxStart = qRound(item * itemWidth);
     int pxWidth = itemWidth + 1;
 
-    QRect doneRect(pxStart, 0, pxWidth, r.barHeight);
-    pnt.fillRect(doneRect, color);
-    pnt.end();
-    update();
-}
-
-/* ---------------------------------------------------- FocusStack row paint */
-
-void Progress::clearFocusStackProgress()
-{
-    int i = rowIndex(idFocusStack);
-    if (i < 0) return;
-    fillBarBackground(rows[i]);
-    showRow(idFocusStack, false);   // collapse the row when inactive
-    update();
-}
-
-void Progress::updateFocusStackProgress(int item, int items, QColor color)
-{
-    int i = rowIndex(idFocusStack);
-    if (i < 0 || items <= 0) return;
-    showRow(idFocusStack, true);    // reveal the row while active
-    Row &r = rows[i];
-    QPainter pnt(&r.bar);
-    float itemWidth = static_cast<float>(barWidth()) / items;
-    int pxStart = qRound(item * itemWidth);
-    int pxWidth = itemWidth + 1;
-    int pxEnd = pxStart + pxWidth;
-
-    // focus stack fills from the start of the bar up to the current item
-    QRect doneRect(0, 0, pxEnd, r.barHeight);
-    pnt.fillRect(doneRect, color);
+    if (r.fill == Fill::FromStart) {
+        // fill from the start of the bar up to (and including) the current item
+        QRect doneRect(0, 0, pxStart + pxWidth, r.barHeight);
+        pnt.fillRect(doneRect, color);
+    }
+    else {
+        // paint only the current item's cell (items may complete out of order)
+        QRect doneRect(pxStart, 0, pxWidth, r.barHeight);
+        pnt.fillRect(doneRect, color);
+    }
     pnt.end();
     update();
 }

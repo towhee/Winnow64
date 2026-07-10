@@ -729,7 +729,6 @@ void MW::showEvent(QShowEvent *event)
 
     // initial status bar icon state
     updateStatusBar();
-    progress->setVisible(G::showCacheProgress);
 
     // set initial visibility in embellish template
     embelTemplateChange(embelProperties->templateId);
@@ -2595,8 +2594,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
 
-    if (!G::isSlideShow) progress->setVisible(G::showCacheProgress);
-
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
 
     // update loupe/video view
@@ -3040,9 +3037,7 @@ bool MW::reset(QString src)
 
     fsTree->setEnabled(true);
     bookmarks->setEnabled(true);
-    progress->clearImageCacheProgress();
-    progress->clearMetaReadProgress();
-    progress->setVisible(false);
+    progress->reset();
     // updateImageCacheStatus();
     filterStatusLabel->setVisible(false);
     updateClassification();
@@ -3287,7 +3282,7 @@ void MW::nullFiltration()
     infoView->clearInfo();
     imageView->clear();
     if (scopesView) scopesView->clear();
-    progress->setVisible(false);
+    progress->reset();
     isDragDrop = false;
 }
 
@@ -3625,7 +3620,7 @@ void MW::folderChangeCompleted()
     // if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
 
     // hide metadata read progress
-    progress->clearMetaReadProgress();
+    progress->clearProgress(progressMetaReadRow);
     updateMetadataThreadRunStatus(false, true);
 
     // build filters if filter dock is visible
@@ -6462,10 +6457,12 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
         /* 1. Full-strength PMRID base (re-decode once; reuse the cache across amounts). */
         std::shared_ptr<const WorkingImage> pmrid = pmridCached;
         if (!pmrid) {
-            /* Per-tile status-bar progress during the heavy model run (marshalled to the GUI). */
+            /* Per-tile status-bar progress during the heavy model run (marshalled to
+               the GUI). */
             auto prog = [this](int done, int total) {
-                const int pct = total > 0 ? int(done * 100 / total) : 0;
-                QMetaObject::invokeMethod(this, [this, pct]() { setProgress(pct); });
+                QMetaObject::invokeMethod(this, [this, done, total]() {
+                    progress->updateProgress(progressRawDenoiseRow, done, total);
+                });
             };
             ImageDecoder dec(0, dm, metadata);
             pmrid = dec.decodeRawWorking(m, /*denoiseRaw*/true, prog);
@@ -6473,7 +6470,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
         if (!pmrid) {   // no in-house decoder (e.g. lossless ARW -> Apple path) or decode failed
             QMetaObject::invokeMethod(this, [this]() {
                 developDenoiseInFlightKey.clear();
-                setProgress(-1);                                // hide the bar
+                progress->clearProgress(progressRawDenoiseRow);  // hide the row
             });
             return;
         }
@@ -6483,8 +6480,9 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
         std::shared_ptr<const WorkingImage> result = blended;
 
         QMetaObject::invokeMethod(this, [this, result, pmrid, key, pkey, fPath]() {
-            developDenoiseInFlightKey.clear();                  // job finished; allow the next (latest) one
-            setProgress(-1);                                    // hide the progress bar
+            // job finished; allow the next (latest) one
+            developDenoiseInFlightKey.clear();
+            progress->clearProgress(progressRawDenoiseRow);     // hide the progress row
             if (!dm || fPath != dm->currentFilePath) return;    // navigated away; drop it
             developPmridFull = pmrid;                           // cache the full base for other amounts
             developPmridKey = pkey;
@@ -8044,12 +8042,12 @@ void MW::rory()
     if (pref != nullptr) pref->rory();
     if (G::isRory) {
         G::showCacheProgress = true;
-        progress->setCacheRowsEnabled(true);
+        setCacheProgressEnabled(true);
         refreshAfterImageCacheSizeChange();
     }
     else {
         G::showCacheProgress = false;
-        progress->setCacheRowsEnabled(false);
+        setCacheProgressEnabled(false);
         refreshAfterImageCacheSizeChange();
     }
 
