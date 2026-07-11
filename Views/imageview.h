@@ -46,6 +46,13 @@ public:
     qreal zoom;
     qreal zoomFit;
     bool isFit;
+    /* Zoom/pan captured when an interim preview is shown (loadImageInterim), so the
+       developed image that replaces it (a different size) keeps the same view instead of
+       re-fitting. Keyed to the image path so a navigation elsewhere can't consume it. */
+    QString developCaptureForPath;
+    QPointF developCaptureScrollPct;
+    qreal   developCaptureZoom = 1.0;
+    bool    developCaptureIsFit = true;
     qreal refZoom;                      // adjusted to real screen pixels
     qreal toggleZoom;
     bool isRubberBand;
@@ -62,6 +69,10 @@ public:
 
     void exportImage();
     qreal getFitScaleFactor(QRectF container, QRectF content);
+    /* Re-apply the zoom/pan captured for the current image at navigation
+       (loadImageInterim), so a later same-image display (clean loadImage, developed
+       setDevelopPreview) keeps the view instead of re-fitting. False if no match. */
+    bool applyDevelopCapturedView();
     void clear();
     void setCursorHiding(bool hide);
     bool isBusy;
@@ -95,8 +106,13 @@ public:
 
 public slots:
     bool loadImage(QString fPath, bool replace = false, QString src = "");
+    /* Paint the embedded JPG preview immediately as a placeholder while the slow
+       scene-linear RAW decode runs (Develop mode). Cheap (embedded JPG, not the sensor
+       decode); the real developed image replaces it when the decode lands. Returns false
+       (shows nothing) if the preview can't be read. */
+    bool loadImageInterim(QString fPath);
     /* Swap the displayed pixmap to an already-rendered QImage (a Develop preview) without
-       re-decoding or refitting -- the dimensions are unchanged, only the pixels differ. */
+       re-decoding or refitting -- dimensions are unchanged, only the pixels differ. */
     void setDevelopPreview(const QImage &image);
     void monitorCursorState();
     void copyImage();

@@ -564,6 +564,16 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         // caption text and cell borders
         if (index.column() == CapColumn) {
             if (!isAlternatingRows) painter->fillRect(r0, valueRowBackground);
+            /* Expand/collapse arrow for a DECORATED value row (e.g. Develop's Demosaic
+               row, whose raw-denoise sliders are children). The delegate otherwise draws
+               arrows only for header rows; mirror that here, in the gutter over the
+               native indicator (same position the header branch uses, r.x() - 10). */
+            if (index.data(UR_isDecoration).toBool() &&
+                (hasChildren || index.data(UR_ShowDecoration).toBool())) {
+                int ax = r.x() - 10;
+                int ay = r0.top() + r0.height()/2 - 5;
+                painter->drawPixmap(ax, ay, 9, 9, isExpanded ? branchOpen : branchClosed);
+            }
 //            if (isSelected) painter->setPen(selPen);
             // disabled?
             if (index.data(UR_isEnabled).toBool() == false) painter->setPen(disPen);

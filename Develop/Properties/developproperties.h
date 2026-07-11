@@ -99,6 +99,11 @@ protected:
     /* PropertyEditor::mousePressEvent does not select rows (it only handles expand/collapse), so we
        toggle the clicked mask tool ourselves (reveal/hide its settings children) and return. */
     void mousePressEvent(QMouseEvent *event) override;
+    /* Suppress the native branch indicator; every expandable Develop row draws its own
+       winnow arrow via the delegate, so the native triangle is redundant (and shows
+       through beside the Demosaic value row's arrow). rootIsDecorated stays true. */
+    void drawBranches(QPainter *painter, const QRect &rect,
+                      const QModelIndex &index) const override;
 
 public slots:
     void itemChange(QModelIndex idx) override;
@@ -205,7 +210,14 @@ private:
     BarBtn *basicEyeBtn = nullptr,
            *colorEyeBtn = nullptr, *effectsEyeBtn = nullptr;
 
-    void contextMenuEvent(QContextMenuEvent *event) override;   // header right-click: Preview / Reset
+    void contextMenuEvent(QContextMenuEvent *event) override;   // right-click menu
+
+    /* Expand all / Collapse all, extended to drive the Layer row (its collapse arrow
+       lives in the LayerHeader band, not the tree). onSectionExpanded folds the Layer
+       row into Solo mode: expanding an adjustment section collapses the layer, and
+       vice versa. */
+    void setAllSectionsExpanded(bool expand);
+    void onSectionExpanded(const QModelIndex &idx);
 
     /* Item builders. div converts the integer slider amount to a double (eg /100), and
        defaults to identity (0) so an absent value is a no-op edit. */
@@ -255,7 +267,8 @@ private:
     QString currentImagePath;
     int activeLayerIndex = 0;
     bool isPopulating = false;
-    bool layerItemsCollapsed = false;   // the '>' header arrow: hide the layer's top items
+    bool layerItemsCollapsed = false;   // the '>' arrow: hide the layer's top items
+    bool isBulkExpandCollapse = false;  // guard: Expand/Collapse all vs Solo handler
 
     /* Mask UI state. selectedMaskIndex is the component shown in the shared Mask Tool panel (-1 =
        none). isRebuildingMasks guards the tree-selection handler while we add/remove mask rows.

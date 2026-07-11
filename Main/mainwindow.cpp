@@ -2630,6 +2630,30 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 }
                 applyDevelopPreviewIfEdited();   // overlay saved develop edits, if any
             }
+            /* Image-cache miss in Develop mode on a RAW: the scene-linear sensor decode
+               is slow (~2-3s), so paint the embedded JPG preview immediately instead of a
+               blank loupe. The developed image replaces it when the decode lands
+               (refreshViewsOnCacheChange). */
+            else if (G::operationMode == G::OperationMode::Develop && G::useRaw
+                     && isFileRaw(fPath) && !icd->contains(fPath)) {
+                if (imageView->loadImageInterim(fPath)) {
+                    if (G::mode == "Loupe" ||
+                        G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+                        loupeDisplay(fun);
+                    }
+                }
+                /* If the saved recipe has a "Denoise raw" amount, start the denoise
+                   decode now (not after the ImageCache decode + settle): it shows from
+                   the start and produces the clean + PMRID bases in one pass, publishing
+                   the clean base so the ImageCache decode reuses it. No-op without a
+                   denoise edit or off the Winnow engine. */
+                if (developProperties) {
+                    const auto mj = developProperties->stackJob();
+                    ensureRawDenoise(fPath, mj.base,
+                                     WorkingImageCache::instance().get(fPath),
+                                     currentImageIso());
+                }
+            }
         }
     }
 
@@ -6409,6 +6433,11 @@ std::shared_ptr<const WorkingImage> MW::developRawDenoisedBase(
 */
     if (!clean || (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f))
         return clean;
+    /* PMRID is Winnow-engine only; on the Apple engine "Denoise raw" is inert, so serve
+       the clean base even if a Winnow-denoised base is still cached (the key is engine-
+       independent, so this is what makes a Winnow->Apple switch actually update). */
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine)
+        return clean;
     const QString key = rawDenoiseKey(fPath, base, currentImageIso());
     if (developDenoisedKey == key && developDenoised) return developDenoised;
     return clean;   // not ready yet -> serve clean; ensureRawDenoise() fills it in
@@ -6418,81 +6447,119 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                           const std::shared_ptr<const WorkingImage> &clean, int iso)
 {
 /*
-    Build the raw-denoised base off the GUI thread (developRenderPool). PMRID runs PRE-demosaic, so
-    the denoised base comes from RE-DECODING the raw with the denoiser on (ImageDecoder::
-    decodeRawWorking, in-house/Winnow engine only) -- NOT from the already-demosaiced clean image.
-    That heavy re-decode runs ONCE per image and is cached (developPmridFull, keyed path+iso); the
-    two Base amounts only scale a cheap luma/chroma blend (Develop::BlendRawDenoise) toward it, so
-    dragging the sliders re-blends without re-running the model. Coalesced -- one job in flight.
+    Build the raw-denoised base off the GUI thread (developRenderPool). PMRID runs
+    PRE-demosaic, so the denoised base comes from DECODING the raw with the denoiser on
+    (ImageDecoder::decodeRawWorking, in-house/Winnow engine only) -- NOT from an
+    already-demosaiced image. That one decode ALSO returns the CLEAN base (outClean,
+    demosaiced from the same mosaic before PMRID), so a single UnpackCfa yields both bases
+    the blend needs instead of a second full decode; the clean base is published to
+    WorkingImageCache so the rest of the develop pipeline reuses it. The heavy decode runs
+    ONCE per image and is cached (developPmridFull, keyed path+iso); the two Base amounts
+    only scale a cheap luma/chroma blend (Develop::BlendRawDenoise), so a slider drag
+    re-blends without re-running the model. Callable on image select (clean == null): the
+    worker decodes both bases and progress shows from the start. Coalesced -- one job.
 */
-    if (!clean) return;
     if (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f) return;
-    /* PMRID needs the CFA mosaic -> Winnow engine only. On the Apple engine "Denoise raw" is inert;
-       bail so a slider drag doesn't trigger a pointless full re-decode that produces no denoise. */
+    /* PMRID needs the CFA mosaic -> Winnow engine only. On the Apple engine "Denoise raw"
+       is inert; bail so a slider drag doesn't trigger a full re-decode that denoises
+       nothing. */
     if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
     const QString key = rawDenoiseKey(fPath, base, iso);
     if (developDenoisedKey == key && developDenoised) return;   // already current
-    /* ONE job at a time. Concurrent jobs (one per drag value) finish out of order and a stale
-       early result can win the cache, so the lookup never matches the settled slider. Serialize:
-       while a job runs, skip new requests; the completion re-renders, and the render's gate
-       re-triggers this for the latest params -- so it converges on where the sliders end up. */
+    /* ONE job at a time. Concurrent jobs (one per drag value) finish out of order and a
+       stale early result can win the cache, so the lookup never matches the slider.
+       Serialize: while a job runs, skip new requests; the completion re-renders, and the
+       render's gate re-triggers this for the latest params -- so it converges on where
+       the sliders end up. */
     if (!developDenoiseInFlightKey.isEmpty()) return;
     developDenoiseInFlightKey = key;
 
-    /* Build the raw metadata (rawInfo + ISO) on the GUI thread for the off-thread re-decode; the
-       worker then consults only this copy (no DataModel access). Reuse the cached full-strength
-       PMRID base for this image if we already have it (amount change only). */
+    /* Build the raw metadata (rawInfo + ISO) on the GUI thread for the off-thread decode;
+       the worker then consults only this copy (no DataModel access). Reuse the cached
+       full-strength PMRID base for this image if we already have it (amount change). */
     const QString pkey = pmridBaseKey(fPath, iso);
     ImageMetadata m;
     m.fPath = fPath;
     m.ISONum = iso;
-    m.model = dm->sf->index(dm->currentSfRow, G::CameraModelColumn).data().toString();  // PMRID calibration
+    // model drives the PMRID calibration
+    m.model = dm->sf->index(dm->currentSfRow, G::CameraModelColumn).data().toString();
     dm->fPathRawInfoGet(fPath, m.rawInfo);
     std::shared_ptr<const WorkingImage> pmridCached =
         (developPmridKey == pkey && developPmridFull) ? developPmridFull : nullptr;
 
-    std::shared_ptr<const WorkingImage> src = clean;            // keep the clean base alive
+    // clean base if the caller had one (may be null on select)
+    std::shared_ptr<const WorkingImage> src = clean;
     const EditParams b = base;
     developRenderPool->start([this, src, b, key, pkey, fPath, m, pmridCached]() {
-        /* 1. Full-strength PMRID base (re-decode once; reuse the cache across amounts). */
+        /* Resolve both bases. The PMRID base and the clean base come from ONE decode
+           (shared UnpackCfa) when either is missing; a pure amount change (both cached)
+           skips the decode and just re-blends. clean is taken from the caller, else
+           WorkingImageCache, else the decode's outClean. */
         std::shared_ptr<const WorkingImage> pmrid = pmridCached;
-        if (!pmrid) {
-            /* Per-tile status-bar progress during the heavy model run (marshalled to
-               the GUI). */
+        std::shared_ptr<const WorkingImage> cleanBase =
+            src ? src : WorkingImageCache::instance().get(fPath);
+        // freshClean is published to WorkingImageCache if the decode produced it
+        std::shared_ptr<const WorkingImage> freshClean;
+        if (!pmrid || !cleanBase) {
+            /* Reveal the progress row (EMPTY) as the decode starts; PMRID then fills it
+               per tile. Must not updateProgress(0,1) here -- FromStart would paint the
+               whole bar (item 0 of 1 = full width), leaving it stuck at 100%. */
+            QMetaObject::invokeMethod(this, [this]() {
+                progress->showRow(progressRawDenoiseRow, true);
+            });
             auto prog = [this](int done, int total) {
                 QMetaObject::invokeMethod(this, [this, done, total]() {
                     progress->updateProgress(progressRawDenoiseRow, done, total);
                 });
             };
             ImageDecoder dec(0, dm, metadata);
-            pmrid = dec.decodeRawWorking(m, /*denoiseRaw*/true, prog);
+            /* Ask for the clean base only when we don't already have it, so the common
+               amount-change decode (clean cached, PMRID evicted) skips a demosaic. */
+            std::shared_ptr<const WorkingImage> decodedClean;
+            auto decodedPmrid =
+                dec.decodeRawWorking(m, true, prog, cleanBase ? nullptr : &decodedClean);
+            if (decodedPmrid) {
+                if (!pmrid) pmrid = decodedPmrid;
+                if (!cleanBase && decodedClean) {
+                    cleanBase = decodedClean;
+                    freshClean = decodedClean;
+                }
+            }
         }
-        if (!pmrid) {   // no in-house decoder (e.g. lossless ARW -> Apple path) or decode failed
+        /* No in-house decoder (lossless ARW -> Apple) or the decode failed. */
+        if (!pmrid || !cleanBase) {
             QMetaObject::invokeMethod(this, [this]() {
                 developDenoiseInFlightKey.clear();
                 progress->clearProgress(progressRawDenoiseRow);  // hide the row
             });
             return;
         }
-        /* 2. Blend clean <-> PMRID by the luma/chroma amounts (cheap, per-settle). */
+        /* Blend clean <-> PMRID by the luma/chroma amounts (cheap, per-settle). */
         auto blended = std::make_shared<WorkingImage>();
-        Develop::BlendRawDenoise(*src, *pmrid, b.denoiseLuma, b.denoiseChroma, *blended);
+        Develop::BlendRawDenoise(*cleanBase, *pmrid, b.denoiseLuma, b.denoiseChroma, *blended);
         std::shared_ptr<const WorkingImage> result = blended;
 
-        QMetaObject::invokeMethod(this, [this, result, pmrid, key, pkey, fPath]() {
+        QMetaObject::invokeMethod(this, [this, result, pmrid, freshClean, key, pkey, fPath]() {
             // job finished; allow the next (latest) one
             developDenoiseInFlightKey.clear();
-            progress->clearProgress(progressRawDenoiseRow);     // hide the progress row
-            if (!dm || fPath != dm->currentFilePath) return;    // navigated away; drop it
-            developPmridFull = pmrid;                           // cache the full base for other amounts
+            progress->clearProgress(progressRawDenoiseRow);   // hide the progress row
+            if (!dm || fPath != dm->currentFilePath) return;  // navigated away; drop it
+            /* Engine switched to Apple mid-decode: this Winnow result is stale -- drop
+               it so it can't re-publish a Winnow base the Apple render would ignore. */
+            if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+            /* Publish the freshly-decoded clean base so renderDevelopPreview /
+               ensureDevelopWork reuse it, not trigger another scene-linear decode. */
+            if (freshClean && !WorkingImageCache::instance().contains(fPath))
+                WorkingImageCache::instance().put(fPath, freshClean);
+            developPmridFull = pmrid;      // cache the full base for other amounts
             developPmridKey = pkey;
             developDenoised = result;
             developDenoisedKey = key;
-            developProxy.reset();                               // rebuild proxy from the denoised base
+            developProxy.reset();          // rebuild proxy from the denoised base
             developProxyPath.clear();
-            ++developParamsGen;                                 // discard any stale in-flight full-res
-            renderDevelopPreview(false);                        // repaint the proxy now
-            developFullResTimer->start(kDevelopSettleMs);       // and a crisp full-res
+            ++developParamsGen;            // discard any stale in-flight full-res
+            renderDevelopPreview(false);   // repaint the proxy now
+            developFullResTimer->start(kDevelopSettleMs);   // and a crisp full-res
         });
     });
 }

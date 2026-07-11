@@ -37,7 +37,10 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
 
     /* Persist the Basic/Color/Effects section expand-state across sessions (QSettings). Fires for
        every expand/collapse; persistSectionExpanded filters to the three section headers. */
-    connect(this, &QTreeView::expanded,  this, [this](const QModelIndex &idx){ persistSectionExpanded(idx, true);  });
+    connect(this, &QTreeView::expanded,  this, [this](const QModelIndex &idx){
+        persistSectionExpanded(idx, true);
+        onSectionExpanded(idx);                 // Solo: fold the Layer row in
+    });
     connect(this, &QTreeView::collapsed, this, [this](const QModelIndex &idx){ persistSectionExpanded(idx, false); });
 
     /* Programmatic row selection reveals that mask tool's settings (clicks go via mousePressEvent,
@@ -139,6 +142,9 @@ void DevelopProperties::buildTree()
     const bool exBasic   = expandedOr("BasicHeader",   sectionExpanded("BasicHeader",   true));
     const bool exColor   = expandedOr("ColorHeader",   sectionExpanded("ColorHeader",   false));
     const bool exEffects = expandedOr("EffectsHeader", sectionExpanded("EffectsHeader", false));
+    /* The Demosaic row (Base, raw) also expands/collapses to hide its raw-denoise
+       children; default expanded on first run. */
+    const bool exDemosaic = expandedOr("demosaic",     sectionExpanded("demosaic",      true));
 
     isPopulating = true;
     isRebuildingMasks = true;
@@ -152,6 +158,12 @@ void DevelopProperties::buildTree()
         close(QModelIndex());
         model->removeRows(0, model->rowCount());
     }
+    /* removeRows deletes the items but leaves sourceIdx (key -> value index) holding
+       stale entries; addItem repopulates it for every row it re-adds, but a key NOT
+       re-added this pass (e.g. denoiseLuma/denoiseChroma when the engine is Apple) keeps
+       a dangling index that isValid() still returns true for -- setSliderReal would then
+       crash on data(). Clear it so only rows present after the rebuild have entries. */
+    sourceIdx.clear();
 
     if (activeLayerIndex == 0) addCoreItems();     // Base: Demosaic + Denoise at the top
     else                        addMaskItems();     // else: this layer's mask tool rows at the top
@@ -172,6 +184,7 @@ void DevelopProperties::buildTree()
     setExpandOn("BasicHeader",   exBasic);
     setExpandOn("ColorHeader",   exColor);
     setExpandOn("EffectsHeader", exEffects);
+    setExpandOn("demosaic",      exDemosaic);
 
     populateSlidersFromStack();
     refreshPreviewButtons();
@@ -189,9 +202,11 @@ bool DevelopProperties::sectionExpanded(const QString &name, bool def) const
 
 void DevelopProperties::persistSectionExpanded(const QModelIndex &idx, bool expanded)
 {
-    /* Only the three adjustment section headers persist (mask tool rows also expand/collapse). */
+    /* The three adjustment section headers and the Demosaic row persist (mask tool
+       rows also expand/collapse, but their state is transient). */
     const QString name = idx.data(UR_Name).toString();
-    if (name == "BasicHeader" || name == "ColorHeader" || name == "EffectsHeader")
+    if (name == "BasicHeader" || name == "ColorHeader" || name == "EffectsHeader" ||
+        name == "demosaic")
         setting->setValue("Develop/SectionExpanded/" + name, expanded);
 }
 
@@ -263,21 +278,35 @@ void DevelopProperties::addCoreItems()
     i.dropList.clear();
     i.dropList << "Apple" << "Winnow";
     addItem(i);
-    /* Root leaves get one indent level; add another (UR_ExtraIndent) so they line up with the
-       Basic-section sliders (which are one level deeper, being children of BasicHeader). */
-    model->setData(capIdx, true, UR_ExtraIndent);
+    const QModelIndex demosaicIdx = capIdx;
+    /* No UR_ExtraIndent here: as the raw-denoise group parent the Demosaic row aligns
+       with the section headers (Basic/Color/Effects), and its expand arrow sits in the
+       gutter over the native indicator (an ExtraIndent offset would push the delegate
+       arrow off the native one, showing two). Its denoise children indent one tree
+       level, lining up with the sliders. */
 
-    /* "Denoise raw": Base-layer, decode-time raw noise reduction (denoiseLuma/denoiseChroma),
-       baked into the pre-develop WorkingImage (global, not maskable) -- distinct from the Effects
-       "Denoise" (localDenoiseLuma). Two Lightroom-style 0..100 sliders mapped to 0..1: Luminance =
-       the master AI-denoise amount; Color = extra chroma-noise suppression. */
-    addSlider("denoiseLuma", "Denoise Lum", "Raw luminance noise reduction (AI, whole image).",
-              QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray);
-    model->setData(capIdx, true, UR_ExtraIndent);
-    addSlider("denoiseChroma", "Denoise Color", "Raw colour (chroma) noise reduction.",
-              QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray);
-    model->setData(capIdx, true, UR_ExtraIndent);
-    /* Visibility (per G::useRaw + collapse) is applied by buildTree() after applyLayerItemsCollapsed. */
+    /* "Denoise raw": Base-layer, decode-time raw noise reduction (denoiseLuma/
+       denoiseChroma), baked into the pre-develop WorkingImage (global, not maskable) --
+       distinct from the Effects "Denoise" (localDenoiseLuma). Two Lightroom-style 0..100
+       sliders mapped to 0..1: Luminance = the master AI-denoise amount; Color = extra
+       chroma-noise suppression (default 100).
+
+       These are CHILDREN of the Demosaic row so it gains an expand/collapse arrow that
+       hides them -- but only on the WINNOW engine (PMRID/NAFNet needs the CFA mosaic). On
+       Apple the raw denoise is inert, so add no children: the row then has no arrow. */
+    if (G::decodeRawEngine != G::DecodeRawEngine::appleDecodeRawEngine) {
+        addSlider("denoiseLuma", "Denoise Lum",
+                  "Raw luminance noise reduction (AI, whole image).",
+                  demosaicIdx, "", 0, 100, 0, G::darkgray, G::lightgray, 0);
+        addSlider("denoiseChroma", "Denoise Color", "Raw colour (chroma) noise reduction.",
+                  demosaicIdx, "", 0, 100, 0, G::darkgray, G::lightgray, 100);
+        /* Draw the expand/collapse arrow on the Demosaic row. The delegate decorates only
+           rows flagged UR_isDecoration (normally headers); Demosaic is a value row, so we
+           flag it now it has children. Apple: no children, no flag -> no arrow. */
+        model->setData(demosaicIdx, true, UR_isDecoration);
+    }
+    /* Visibility (per G::useRaw + collapse) applied by buildTree() after
+       applyLayerItemsCollapsed. */
 }
 
 bool DevelopProperties::currentIsRaw() const
@@ -320,23 +349,24 @@ void DevelopProperties::syncEditRaw(bool useRaw)
 
 void DevelopProperties::applyCoreVisibility()
 {
-    /* Demosaic + Denoise raw are visible only when editing raw AND the layer items are not
-       collapsed ('>'). Scan root rows only (the Effects "Denoise" is a distinct key, "localDenoise",
-       and is never touched here) and set those rows directly -- this must run AFTER
-       applyLayerItemsCollapsed(), which would otherwise re-show them on a non-collapsed rebuild.
-       The "Denoise raw" sliders (PMRID) additionally require the WINNOW decode engine (PMRID needs
-       the CFA mosaic); on the Apple engine they are inert, so hide them -- but keep the Demosaic
-       selector itself visible so the user can switch back. */
+    /* The Demosaic row (and its raw-denoise children on the Winnow engine) is visible
+       only when editing raw AND the layer items are not collapsed ('>'). Scan root rows
+       for "demosaic" -- hiding the parent hides the whole subtree -- and run AFTER
+       applyLayerItemsCollapsed(), which would otherwise re-show it on a non-collapsed
+       rebuild. On the Apple engine the row has no children (addCoreItems), so there is
+       nothing extra to hide here. */
     const bool hide = !G::useRaw || layerItemsCollapsed;
-    const bool apple = (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine);
     for (int r = 0; r < model->rowCount(); ++r) {
         const QModelIndex cap = model->index(r, CapColumn);
-        const QString name = cap.data(UR_Name).toString();
-        if (name == "demosaic" || name == "denoiseLuma" || name == "denoiseChroma") {
-            const bool h = hide || (apple && name != "demosaic");
-            model->setData(cap, h, UR_isHidden);   // remembered for updateHiddenRows()
-            setRowHidden(r, QModelIndex(), h);
-        }
+        if (cap.data(UR_Name).toString() != "demosaic") continue;
+        model->setData(cap, hide, UR_isHidden);   // remembered for updateHiddenRows()
+        setRowHidden(r, QModelIndex(), hide);
+        /* Keep the denoise children's UR_isHidden in step with the parent so a later
+           updateHiddenRows() can't force-show them; when the parent is shown they still
+           obey the expand/collapse arrow (a collapsed parent hides them regardless). */
+        for (int c = 0; c < model->rowCount(cap); ++c)
+            model->setData(model->index(c, CapColumn, cap), hide, UR_isHidden);
+        break;
     }
 }
 
@@ -509,11 +539,22 @@ void DevelopProperties::onLayerPreviewToggled(bool shown)
 
 void DevelopProperties::setTreeCollapsed(bool collapsed)
 {
-    /* Hide only the LAYER items -- the Core rows (Base) or mask-tool rows that sit ABOVE the
-       Basic/Color/Effects sections. The sections stay visible. */
+    /* Hide only the LAYER items -- the Core rows (Base) or mask-tool rows that sit ABOVE
+       the Basic/Color/Effects sections. The sections stay visible. */
     layerItemsCollapsed = collapsed;
     applyLayerItemsCollapsed();
     applyCoreVisibility();           // core rows also depend on collapse state
+
+    /* Solo: showing the layer's items is one of the mutually-exclusive sections, so
+       collapse the three adjustment sections (they would otherwise stay open alongside
+       the layer). Skipped during the Expand-all bulk sweep, which wants all open. */
+    if (!collapsed && !isBulkExpandCollapse &&
+        setting->value("Develop/isSolo", false).toBool()) {
+        for (const char *h : {"BasicHeader", "ColorHeader", "EffectsHeader"}) {
+            const QModelIndex idx = findCaptionIndex(h);
+            if (idx.isValid()) collapse(idx);
+        }
+    }
 }
 
 void DevelopProperties::applyLayerItemsCollapsed()
@@ -824,11 +865,42 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
     if      (chosen == nullptr)      return;
     else if (chosen == aPreview)     togglePreviewSection(group);
     else if (chosen == aReset)       resetSection(group);
-    else if (chosen == aExpandAll)   expandAll();
-    else if (chosen == aCollapseAll) collapseAll();
+    else if (chosen == aExpandAll)   setAllSectionsExpanded(true);
+    else if (chosen == aCollapseAll) setAllSectionsExpanded(false);
     else if (chosen == aSolo) {
         setSolo(aSolo->isChecked());
         setting->setValue("Develop/isSolo", aSolo->isChecked());
+    }
+}
+
+void DevelopProperties::setAllSectionsExpanded(bool expand)
+{
+    if (G::isLogger) G::log("DevelopProperties::setAllSectionsExpanded");
+    /* Expand/Collapse all also drives the Layer row, whose collapse arrow lives in the
+       LayerHeader band (not the tree). The bulk guard stops onSectionExpanded from
+       re-collapsing the layer as the tree sections expand under Solo. */
+    isBulkExpandCollapse = true;
+    if (expand) expandAll();
+    else        collapseAll();
+    setTreeCollapsed(!expand);                          // show/hide the layer's own items
+    if (layerHeader) layerHeader->setCollapsed(!expand);
+    isBulkExpandCollapse = false;
+}
+
+void DevelopProperties::onSectionExpanded(const QModelIndex &idx)
+{
+    /* Solo: one section open at a time. The base PropertyEditor collapses the sibling
+       tree sections when a root is expanded; extend that to the Layer row (a separate
+       widget above the tree). Only the three adjustment sections are peers of the layer
+       -- the Demosaic row is itself a layer item (it hides when the layer collapses), so
+       expanding it must NOT collapse the layer. Skipped during the Expand-all sweep. */
+    if (isBulkExpandCollapse) return;
+    if (!setting->value("Develop/isSolo", false).toBool()) return;
+    const QString name = idx.data(UR_Name).toString();
+    if (name != "BasicHeader" && name != "ColorHeader" && name != "EffectsHeader") return;
+    if (!layerItemsCollapsed) {
+        setTreeCollapsed(true);
+        if (layerHeader) layerHeader->setCollapsed(true);
     }
 }
 
@@ -1242,6 +1314,15 @@ void DevelopProperties::mousePressEvent(QMouseEvent *event)
     PropertyEditor::mousePressEvent(event);
 }
 
+void DevelopProperties::drawBranches(QPainter *, const QRect &, const QModelIndex &) const
+{
+    /* Intentionally empty: draw no native branch indicator. Every expandable Develop row
+       draws its own winnow arrow through PropertyDelegate (section headers, mask tools,
+       and the Demosaic row), so the native triangle is redundant; on the Demosaic value
+       row (whose background fill is skipped when isAlternatingRows) it also showed
+       through beside the delegate arrow, giving a doubled, oversized decoration. */
+}
+
 /* ----------------------------------------------------------------------------------------
    Item builders
    ---------------------------------------------------------------------------------------- */
@@ -1504,8 +1585,13 @@ void DevelopProperties::itemChange(QModelIndex idx)
        in-house Winnow decoder). It is not an EditParams value -- it forces a re-decode -- so handle
        it here (emit to MW) and skip applyKeyToParams / the normal preview render. */
     if (source == "demosaic") {
-        emit demosaicEngineChanged(v.toString() == "Apple");   // MW sets G::decodeRawEngine (direct)
-        applyCoreVisibility();   // engine changed -> show/hide the Denoise-raw rows (PMRID is Winnow-only)
+        emit demosaicEngineChanged(v.toString() == "Apple");   // MW sets decodeRawEngine
+        /* The engine drives whether the raw-denoise children (and so the expand arrow)
+           exist -- Winnow yes, Apple no. Rebuild the tree to add/remove them, but DEFER
+           it: doing it inline would delete this combo's live editor mid-signal.
+           G::decodeRawEngine is set synchronously by the MW handler above, so the
+           rebuild sees the new engine. */
+        QTimer::singleShot(0, this, [this]{ buildTree(); });
         return;
     }
 

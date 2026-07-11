@@ -68,7 +68,8 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                        const EditParams *edit, const QAtomicInt *abort,
                        std::shared_ptr<const WorkingImage> *outWork,
                        bool denoiseRaw,
-                       const std::function<void(int, int)> &denoiseProgress)
+                       const std::function<void(int, int)> &denoiseProgress,
+                       std::shared_ptr<const WorkingImage> *outClean)
 {
 /*
     Shared, camera-agnostic pipeline:
@@ -122,11 +123,27 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
 
         SubtractBlack(raw);
 
-        /* PMRID pre-demosaic raw denoise (in-house/Winnow engine only). Runs at full strength on
-           the mosaic before demosaic; the caller (MW::ensureRawDenoise) requests it to build the
-           denoised base and blends the user's amount. No-op for non-Bayer patterns or if the
-           model is absent. */
+        /* PMRID pre-demosaic raw denoise (in-house/Winnow engine only). Runs at full
+           strength on the mosaic before demosaic; the caller (MW::ensureRawDenoise)
+           requests it to build the denoised base and blends the user's amount. No-op for
+           non-Bayer patterns or if the model is absent. */
         if (denoiseRaw && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
+            /* Clean base for the blend, from the SAME mosaic demosaiced before PMRID --
+               so one UnpackCfa yields both the clean and denoised bases
+               (MW::ensureRawDenoise) instead of a second full decode. PMRID::Apply
+               mutates raw in place, so this must run first. Demosaic/RawColor do not
+               mutate raw, so raw stays valid for the denoised pass below. */
+            if (outClean) {
+                Demosaic cleanDemosaic;
+                std::vector<float> rgbClean;
+                RawColor cleanColor;
+                auto cleanWork = std::make_shared<WorkingImage>();
+                if (cleanDemosaic.Run(raw, rgbClean, Demosaic::Bilinear, abort) &&
+                    cleanColor.ToWorking(raw, rgbClean, *cleanWork)) {
+                    *outClean = cleanWork;
+                }
+                if (aborted()) { errMsg = "Aborted"; return false; }
+            }
             PMRID::Apply(raw, m.ISONum, m.model, denoiseProgress);
             if (aborted()) { errMsg = "Aborted"; return false; }
         }

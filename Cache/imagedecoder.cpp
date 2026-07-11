@@ -304,6 +304,25 @@ bool ImageDecoder::load()
     */
     if (G::operationMode == G::OperationMode::Develop && G::useRaw) {
         if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
+            /* Reuse an already-decoded clean base (e.g. one MW::ensureRawDenoise
+               published on select) instead of repeating the costly
+               UnpackCfa+Demosaic+RawColor: transform it straight to the display image.
+               This removes the redundant second decode when the develop denoise path has
+               run first. Skipped when nothing scene-linear is cached. */
+            if (auto cached = WorkingImageCache::instance().get(fPath);
+                cached && cached->sceneReferred && !abort.loadAcquire()) {
+                OutputTransform output;
+                if (output.ToImage(*cached, image)) {
+                    decoderToUse = Raw;
+                    developApplied = true;
+                    imFile.close();
+                    status = Status::Success;
+                    emit setValSf(sfRow, G::RawRenderColumn, true, instance,
+                                  "ImageDecoder::load", Qt::EditRole,
+                                  int(Qt::AlignRight | Qt::AlignVCenter));
+                    return true;
+                }
+            }
             ImageMetadata rawMeta;
             if (isIndependent) rawMeta = indMeta;
             else {
@@ -782,7 +801,8 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
 
 std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMetadata &m,
                                                                    bool denoiseRaw,
-                                                                   const std::function<void(int, int)> &progress)
+                                                                   const std::function<void(int, int)> &progress,
+                                                                   std::shared_ptr<const WorkingImage> *outClean)
 {
 /*
     Uncached raw sensor decode -> pre-develop WorkingImage, for the "Denoise raw" base
@@ -801,7 +821,8 @@ std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMe
     QImage throwaway;                                    // develop skipped: identity edit
     const EditParams identity;
     std::shared_ptr<const WorkingImage> work;
-    const bool ok = rawFormat->Decode(file, m, throwaway, &identity, &abort, &work, denoiseRaw, progress);
+    const bool ok = rawFormat->Decode(file, m, throwaway, &identity, &abort, &work, denoiseRaw,
+                                      progress, outClean);
     file.close();
     return ok ? work : nullptr;
 }
