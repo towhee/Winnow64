@@ -32,9 +32,12 @@ public:
        denoiseRaw runs the PMRID pre-demosaic denoiser (in-house/Winnow engine only). Returns
        nullptr if the format has no in-house decoder or the decode fails. Thread-safe: consults only
        the supplied m (no DataModel access), so callable from the develop render pool. progress (when
-       set) is forwarded to the PMRID denoiser for per-tile status-bar feedback. */
+       set) is forwarded to the PMRID denoiser for per-tile status-bar feedback. outClean (when
+       non-null AND denoiseRaw) also receives the CLEAN pre-develop base (pre-PMRID) from the same
+       decode, so one UnpackCfa yields both bases MW::ensureRawDenoise needs. */
     std::shared_ptr<const WorkingImage> decodeRawWorking(const ImageMetadata &m, bool denoiseRaw,
-                                                         const std::function<void(int, int)> &progress = {});
+                                                         const std::function<void(int, int)> &progress = {},
+                                                         std::shared_ptr<const WorkingImage> *outClean = nullptr);
 
     bool isRunning() const;
     void setIdle();

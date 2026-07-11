@@ -1811,7 +1811,11 @@ void MW::createDevelopDock()
             [this](bool useApple){
                 G::decodeRawEngine = useApple ? G::DecodeRawEngine::appleDecodeRawEngine
                                               : G::DecodeRawEngine::winnowDecodeRawEngine;
-                WorkingImageCache::instance().remove(dm->currentFilePath);
+                /* Clear the WHOLE WorkingImageCache, not just the current file: the
+                   clean bases are engine-specific and ImageDecoder::load() now reuses
+                   ANY cached scene-linear entry (the redundant-decode short-circuit), so
+                   a stale non-current entry would otherwise be served after a switch. */
+                WorkingImageCache::instance().clear();
                 developParamsChange();
             });
 

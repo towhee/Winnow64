@@ -58,13 +58,19 @@ public:
        full strength before demosaic, so outWork is the DENOISED pre-develop base. The default
        (false) leaves the decode clean -- the clean WorkingImage is cached, and the "Denoise raw"
        amount is produced by a separate denoiseRaw=true decode and blended (MW::ensureRawDenoise).
-       No-op on the Apple engine (no CFA) and for non-Bayer patterns. */
+       No-op on the Apple engine (no CFA) and for non-Bayer patterns.
+
+       outClean (when non-null AND denoiseRaw) additionally receives the CLEAN pre-develop base --
+       the same mosaic demosaiced BEFORE PMRID -- so one decode (one UnpackCfa) yields both the
+       clean and denoised bases that MW::ensureRawDenoise blends, instead of two separate decodes.
+       Ignored when denoiseRaw is false (outWork is already the clean base). */
     bool Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 const EditParams *edit = nullptr,
                 const QAtomicInt *abort = nullptr,
                 std::shared_ptr<const WorkingImage> *outWork = nullptr,
                 bool denoiseRaw = false,
-                const std::function<void(int, int)> &denoiseProgress = {});
+                const std::function<void(int, int)> &denoiseProgress = {},
+                std::shared_ptr<const WorkingImage> *outClean = nullptr);
 
     QString lastError() const { return errMsg; }
 

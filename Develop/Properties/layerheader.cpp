@@ -23,9 +23,16 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
     blank.fill(Qt::transparent);
     blankIcon = QIcon(blank);
 
-    /* Collapse arrow: hides/shows the selected layer's rows in the tree below. */
+    /* Collapse arrow: hides/shows the selected layer's rows in the tree below. Matches
+       the tree's branch arrows (PropertyDelegate draws the same pixmap at 9x9, full
+       opacity in the gutter). The button is one indentation wide (10px, the tree's
+       gutter) with no padding, so the 9x9 icon sits in the gutter and the "Layer" label
+       after it lands at x=10 -- aligned with the tree's section-header captions. */
     collapseBtn = new BarBtn();
     collapseBtn->setToolTip("Hide or show this layer's settings");
+    collapseBtn->setIconSize(QSize(9, 9));
+    collapseBtn->setFixedSize(10, 16);
+    collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
     connect(collapseBtn, &BarBtn::clicked, this, [this]{
         collapsed = !collapsed;
         updateCollapseIcon();
@@ -34,6 +41,12 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
     updateCollapseIcon();
 
     layerLabel = new QLabel(tr("Layer"), this);
+    /* Match the tree's section-header captions (PropertyDelegate): same point size
+       (G::strFontSize) and colour (G::header2Color), regular weight (headers are not
+       bold -- the delegate only sets the point size). Both via the stylesheet so they
+       don't fight a setFont() call. */
+    layerLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
+                                  .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
 
     combo = new QComboBox(this);
     combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -70,12 +83,16 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
     updatePreviewIcon();
 
     QHBoxLayout *row = new QHBoxLayout(this);
-    row->setContentsMargins(4, 3, 6, 3);
-    row->setSpacing(4);
+    /* margin.left 0 + a gutter-width (10px) arrow button + spacing 0 puts the arrow in
+       the tree's gutter and the "Layer" label at one indentation (x=10), aligning it with
+       the tree's section-header captions. Tweak if the tree frame/indentation changes. */
+    row->setContentsMargins(0, 3, 6, 3);
+    row->setSpacing(0);
     row->addWidget(collapseBtn);
     row->addWidget(layerLabel);
+    row->addSpacing(6);
     row->addWidget(combo, 1);
-    row->addSpacing(4);
+    row->addSpacing(6);
     row->addWidget(previewBtn);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -139,6 +156,12 @@ QString LayerHeader::currentLayerName() const
     return combo ? combo->itemText(activeIndex) : QString();
 }
 
+void LayerHeader::setCollapsed(bool c)
+{
+    collapsed = c;
+    updateCollapseIcon();
+}
+
 void LayerHeader::setPreviewShown(bool shown)
 {
     previewShown = shown;
@@ -161,7 +184,11 @@ void LayerHeader::updatePreviewIcon()
 void LayerHeader::updateCollapseIcon()
 {
     if (!collapseBtn) return;
-    /* Open branch (down) when the layer's settings are showing; closed branch (right) when hidden. */
-    collapseBtn->setIcon(collapsed ? ":/images/branch-closed-winnow.png"
-                                   : ":/images/branch-open-winnow.png", G::iconOpacity);
+    /* Open branch (down) when settings show; closed branch (right) when hidden. Full
+       opacity + 9x9 (setIconSize in the ctor) to match the tree's branch arrows;
+       BarBtn::setIcon(path, opacity) would dim it (G::iconOpacity) at native 11x11, so
+       set a plain full-opacity icon instead. */
+    const QString path = collapsed ? ":/images/branch-closed-winnow.png"
+                                    : ":/images/branch-open-winnow.png";
+    collapseBtn->setIcon(QIcon(QPixmap(path)));
 }

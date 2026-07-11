@@ -54,8 +54,12 @@ struct EditParams {
     /* Noise reduction -- GLOBAL, applied in the raw decode pipeline (RawFormat / the Apple
        engine) during demosaic, alongside start WB / black / white. Not maskable: these are
        baked into WorkingImage before Develop runs. 0 = engine default. */
+    /* Default color (chroma) NR is full: chroma noise is objectionable and chroma
+       detail is low-frequency, so baking 100 at decode is the right baseline. A
+       fresh raw carrying this default still counts as identity (see isIdentity). */
+    static constexpr float kDefaultDenoiseChroma = 1.0f;
     float denoiseLuma   = 0.0f;
-    float denoiseChroma = 0.0f;
+    float denoiseChroma = kDefaultDenoiseChroma;
 
     /* Local (maskable) NR -- Develop SPATIAL ops layered on TOP of the global baseline, operating
        on the already-decoded WorkingImage (see Develop::Denoise and notes/Documentation.txt
@@ -113,7 +117,7 @@ struct EditParams {
                texture == 0.0f && dehaze == 0.0f &&
                red == 0.0f && green == 0.0f && blue == 0.0f &&
                hue == 0.0f && saturation == 0.0f && luminance == 0.0f &&
-               denoiseLuma == 0.0f && denoiseChroma == 0.0f &&
+               denoiseLuma == 0.0f && denoiseChroma == kDefaultDenoiseChroma &&
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f;
     }
 };

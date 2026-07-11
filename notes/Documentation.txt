@@ -2553,7 +2553,18 @@ Layer & masking model (planned)
 
     NOISE REDUCTION is split across the two stages (the decode pipeline and Develop):
         • "DENOISE RAW" (Colour + luminance NR) is GLOBAL-ONLY, driven by EditParams
-          denoiseLuma/denoiseChroma (two Base-layer 0..1 sliders, "Denoise Lum"/"Denoise Color").
+          denoiseLuma/denoiseChroma (two Base-layer 0..1 sliders,
+          "Denoise Lum"/"Denoise Color").
+          UI: the two sliders are CHILDREN of the Base "Demosaic" row, which gains an
+          expand/collapse arrow to hide them; the arrow appears only on the WINNOW engine
+          (Apple adds no children -- see DevelopProperties::addCoreItems). The arrow is
+          delegate-drawn: PropertyDelegate paints branch arrows only for rows flagged
+          UR_isDecoration, so addCoreItems sets that flag on the Demosaic row (a value
+          row, not a header) once it has children. "Denoise Color"
+          defaults to 100 -- a fresh raw carrying only that default still counts as
+          identity (EditParams::kDefaultDenoiseChroma, mirrored in isIdentity). The row
+          honours the dock's Expand all / Collapse all / Solo mode, and its state persists
+          under Develop/SectionExpanded/demosaic.
           IMPLEMENTED as a learned, POST-demosaic denoiser (RawRefinery "TreeNet"): RawFormat::Decode
           calls RawDenoise::Apply on the scene-linear WorkingImage after RawColor, for BOTH decode
           engines, before caching (ImageFormats/Raw/rawdenoise.cpp). The model takes linear-Rec2020
@@ -2569,12 +2580,44 @@ Layer & masking model (planned)
           denoiser is the better long-term design (deferred). LIVE PREVIEW: the cached pre-develop
           WorkingImage is kept CLEAN (RawFormat::Decode caches it BEFORE denoise; denoise runs only on
           the private develop copy, i.e. the non-interactive export path). The interactive develop
-          render derives a raw-DENOISED base from the clean cache (MW::developRawDenoisedBase /
-          ensureRawDenoise), cached by path+amounts+ISO and computed OFF the GUI thread on settle
-          (developRenderPool) -- so a denoise-amount change re-runs the model ONCE and later tone/
-          exposure edits reuse the denoised base; both the proxy and the full-res render start from it.
-          ISO for the conditioning comes from ImageMetadata::ISONum (populated in cache mode from
-          G::ISOColumn; live preview reads it via MW::currentImageIso).
+          render derives a raw-DENOISED base from the clean cache
+          (MW::developRawDenoisedBase / ensureRawDenoise), cached by path+amounts+ISO and
+          computed OFF the GUI thread (developRenderPool) -- so a denoise-amount change
+          re-runs the model ONCE and later tone/exposure edits reuse the denoised base;
+          both the proxy and the full-res render start from it. ISO for the conditioning
+          comes from ImageMetadata::ISONum (populated in cache mode from G::ISOColumn;
+          live preview reads it via MW::currentImageIso).
+          ONE DECODE, TWO BASES + PREVIEW-FIRST: ensureRawDenoise is triggered on image
+          SELECT (MW::fileSelectionChange), not only on settle, so its progress row
+          (progressRawDenoiseRow) appears immediately. Its single decode returns BOTH the
+          PMRID base and the CLEAN base (RawFormat::Decode outClean = the same mosaic
+          demosaiced before PMRID -> one UnpackCfa, not two) and publishes the clean base
+          to WorkingImageCache. The ImageCache decode then REUSES that clean base
+          (ImageDecoder::load short-circuits UnpackCfa+Demosaic when a scene-linear entry
+          is cached), removing the redundant second decode. Meanwhile the loupe shows the
+          embedded JPG immediately (ImageView::loadImageInterim on a develop-raw cache
+          miss) and the developed image pops in when the decode lands.
+          ZOOM/PAN KEPT ACROSS THE POP: loadImageInterim captures the outgoing zoom/pan
+          (developCapture*); the developed image restores it via applyDevelopCapturedView,
+          called from both the clean-image loadImage and setDevelopPreview, instead of
+          re-fitting -- so a zoomed inspection stays put through interim -> developed. The
+          crop case still re-fits: setDevelopPreview keeps the view only when the aspect
+          ratio is unchanged (a resolution change); an aspect change = crop -> refit.
+          WHY TWO DEMOSAICS: "Denoise raw" is not all-or-nothing -- it is a BLEND scaled
+          by the luma/chroma amount sliders, so the decode needs BOTH endpoints, and both
+          come from demosaicing the SAME CFA mosaic, differing only in whether PMRID ran
+          first:
+            - clean base (outClean) = mosaic demosaiced BEFORE PMRID = the noisy,
+              un-denoised RGB = the 0% endpoint.
+            - PMRID base (*work)    = mosaic demosaiced AFTER PMRID = full-strength
+              denoised RGB = the 100% endpoint.
+          PMRID itself is a PRE-demosaic (CFA-domain) denoiser, NOT a joint
+          demosaic+denoise; the demosaic is a separate bilinear pass on each.
+          Develop::BlendRawDenoise then does shown = clean + amount*(pmrid - clean)
+          (luma/chroma split). The progress bar (progressRawDenoiseRow) tracks ONLY the
+          PMRID stage, so it sits empty through the demosaics and fills through the PMRID
+          tiles. Caching both bases is what lets a denoise-slider drag re-blend instantly:
+          the model re-runs only on an image or ISO change.
           BASE MUST BE SCENE-LINEAR: the denoise blend (Develop::BlendRawDenoise)
           subtracts the clean cached base from the denoised re-decode, so the two must
           share geometry + space. The clean base comes from MW::ensureDevelopWork ->
@@ -2884,10 +2927,19 @@ Layer & masking model (planned)
                STORED params, then repopulate. The same menu (shown anywhere in the
                tree, not only on a header) also carries the tree-wide items Expand all /
                Collapse all / Solo mode, mirroring the Embellish dock: Expand all /
-               Collapse all call QTreeView expandAll/collapseAll; Solo mode is a checkable
-               toggle (persisted as Settings "Develop/isSolo", restored in initialize via
-               setSolo) that, when on, collapses the other top-level sections whenever one
-               is expanded (PropertyEditor::collapseAllExcept in mousePressEvent).
+               Collapse all go through DevelopProperties::setAllSectionsExpanded,
+               which calls QTreeView expandAll/collapseAll AND drives the Layer row
+               (its collapse arrow lives in the LayerHeader band, not the tree --
+               LayerHeader::setCollapsed + setTreeCollapsed). Solo mode is a checkable
+               toggle (persisted as Settings "Develop/isSolo", restored in initialize
+               via setSolo) that, when on, collapses the other top-level sections
+               whenever one is expanded (PropertyEditor::collapseAllExcept in
+               mousePressEvent). The Layer row is folded into Solo too: expanding an
+               adjustment section (Basic/Color/Effects) collapses the layer
+               (DevelopProperties::onSectionExpanded) and expanding the layer collapses
+               those sections (setTreeCollapsed). The Demosaic row is a layer item, NOT
+               a Solo peer, so expanding it never collapses the layer. A bulk guard
+               (isBulkExpandCollapse) keeps Expand all from tripping the Solo handler.
                Group->keys mapping follows the UI (texture/dehaze are Basic; tone
                splits are Basic for Reset only; localDenoiseLuma -- the Effects "Denoise" (local NR,
                key "localDenoise") -- is in Effects; denoiseLuma/denoiseChroma are the Base "Denoise

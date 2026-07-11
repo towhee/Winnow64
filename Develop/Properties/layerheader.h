@@ -52,6 +52,9 @@ public:
     void setPreviewShown(bool shown);           // eye icon (whole-layer preview)
     void setBaseActive(bool isBase);            // Base: omit the per-layer action group
     bool isCollapsed() const { return collapsed; }
+    /* Programmatic collapse (Expand all / Collapse all / Solo) -- updates the arrow
+       WITHOUT emitting collapseToggled; the caller drives the tree itself. */
+    void setCollapsed(bool collapsed);
     QString currentLayerName() const;
 
 signals:

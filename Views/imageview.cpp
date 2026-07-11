@@ -377,31 +377,25 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
 
         updateShootingInfo();
 
-        /* If this is the first image in a new folder, and the image is smaller than the
-        canvas (central widget window) set the scale to fit window, do not scale the
-        image beyond 100% to fit the window.  */
-        zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
-        /* If first item in DataModel is a video then zoom has not been set yet but
-           G::isFirstImageNewInstance may be false */
-        if (G::isFirstImageNewInstance || zoom < 0.1) {
-            isFit = true;
-            G::isFirstImageNewInstance = false;
+        /* Restore the zoom/pan captured at navigation (loadImageInterim) when the clean
+           develop image lands after the interim preview, so it doesn't jump to fit. Falls
+           through to the normal fit logic for every other load (no capture matches). */
+        if (!applyDevelopCapturedView()) {
+            /* If this is the first image in a new folder, and the image is smaller than
+            the canvas (central widget window) set the scale to fit window, do not scale
+            the image beyond 100% to fit the window.  */
+            zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+            /* If first item in DataModel is a video then zoom has not been set yet but
+               G::isFirstImageNewInstance may be false */
+            if (G::isFirstImageNewInstance || zoom < 0.1) {
+                isFit = true;
+                G::isFirstImageNewInstance = false;
+            }
+            if (isFit) {
+                setFitZoom();
+            }
+            scale(true);    // isNewImage == true
         }
-        if (isFit) {
-            setFitZoom();
-        }
-        if (isDebug) {
-        qDebug() << srcFun
-                 << "G::isFirstImageNewInstance =" << G::isFirstImageNewInstance
-                 << "row =" << sfRow
-                 << "isFit =" << isFit
-                 << "isFit =" << isFit
-                 << "zoomFit =" << zoomFit
-                 << "zoom =" << zoom
-                 << "Src:" << src;
-        }
-
-        scale(true);    // isNewImage == true
 
         /* send signal to Embel::build (with new image), blank first parameter means
            local vs remote (ie exported from lightroom to embellish)  */
@@ -442,6 +436,54 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     }
 }
 
+bool ImageView::loadImageInterim(QString fPath)
+{
+/*
+    Show the embedded JPG preview immediately as a placeholder while the slow
+    scene-linear RAW decode runs (Develop mode). The caller (MW::fileSelectionChange)
+    reaches here only on a genuine image-cache miss, so this fills the otherwise-blank
+    loupe until the developed image lands (MW::refreshViewsOnCacheChange -> loadImage).
+    Sourced from the embedded JPG (Pixmap::load), not the sensor decode, so it is cheap.
+    The real load runs with replace=true and refits, so this need not leave the fit
+    machinery in any special state. Returns false (shows nothing) if the preview can't
+    be read, preserving prior behaviour.
+*/
+    if (G::isLogger) G::log("ImageView::loadImageInterim", fPath);
+    if (fPath.isEmpty()) return false;
+
+    QImage preview;
+    if (!pixmap->load(fPath, preview, "ImageView::loadImageInterim") || preview.isNull())
+        return false;
+
+    /* Capture the zoom/pan in effect (from the outgoing image) BEFORE the pixmap swap, so
+       the developed image can restore it -- see setDevelopPreview. Read the live scroll
+       fraction while it is still valid. */
+    developCaptureForPath = fPath;
+    developCaptureIsFit = isFit;
+    developCaptureZoom = zoom;
+    developCaptureScrollPct = isScrollable ? getScrollPct() : scrollPct;
+
+    currentImagePath = fPath;
+    pmItem->setPixmap(QPixmap::fromImage(preview));
+    pmItem->setVisible(true);
+    setSceneRect(scene->itemsBoundingRect());
+
+    updateShootingInfo();
+
+    /* Mirror loadImage's fit logic so the placeholder is framed like the real image. */
+    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+    if (G::isFirstImageNewInstance || zoom < 0.1) {
+        isFit = true;
+        G::isFirstImageNewInstance = false;
+        developCaptureIsFit = true;   // first image in folder -> fit, no view to restore
+    }
+    if (isFit) setFitZoom();
+    scale(true);
+    if (!isFit && isScrollable) setScrollBars(developCaptureScrollPct);   // keep the pan
+    pmItem->setGraphicsEffect(nullptr);
+    return true;
+}
+
 void ImageView::setDevelopPreview(const QImage &image)
 {
 /*
@@ -453,19 +495,37 @@ void ImageView::setDevelopPreview(const QImage &image)
 */
     if (G::isLogger) G::log("ImageView::setDevelopPreview");
     if (image.isNull()) return;
-    /* Same dimensions (the usual slider-drag case): just swap pixels, leaving zoom/fit/scene. When
-       the dimensions change -- the crop geometry was applied or removed -- treat it like a new image
-       and re-fit so the cropped result is shown sensibly. */
-    const bool sizeChanged = (image.size() != pmItem->pixmap().size());
+    /* Same dimensions (usual slider-drag case): swap pixels, leave zoom/fit alone. */
+    const QSize oldSize = pmItem->pixmap().size();
+    const bool sizeChanged = (image.size() != oldSize);
     pmItem->setPixmap(QPixmap::fromImage(image));
     pmItem->setVisible(true);
     if (sizeChanged) {
-        /* Dimensions only change when the crop geometry is applied/removed; treat like a new image
-           and re-fit. (During a develop-slider drag the dimensions are constant, so this never
-           fires mid-drag.) */
         imAspect = image.height() ? double(image.width()) / image.height() : 1.0;
-        resetFitZoom();
+        const double oldAspect =
+            oldSize.height() ? double(oldSize.width()) / oldSize.height() : 0.0;
+        const bool aspectSame = oldAspect > 0.0 && qAbs(imAspect - oldAspect) < 0.01;
+        /* Same framing, higher res AND a captured view for this image: the demosaic
+           finished and the developed image is replacing the interim preview -- restore
+           the captured zoom/pan so it doesn't jump. Otherwise (aspect changed = crop
+           applied/removed, or no capture) treat like a new image and re-fit. */
+        if (!(aspectSame && applyDevelopCapturedView()))
+            resetFitZoom();
     }
+}
+
+bool ImageView::applyDevelopCapturedView()
+{
+    if (G::isLogger) G::log("ImageView::applyDevelopCapturedView");
+    if (developCaptureForPath.isEmpty() || developCaptureForPath != currentImagePath)
+        return false;
+    setSceneRect(scene->itemsBoundingRect());
+    zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+    isFit = developCaptureIsFit;
+    if (!isFit) zoom = developCaptureZoom;
+    scale();                                                  // re-applies zoom per isFit
+    if (!isFit && isScrollable) setScrollBars(developCaptureScrollPct);   // restore pan
+    return true;
 }
 
 /* ============================ Develop mask editing ============================
