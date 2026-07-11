@@ -358,6 +358,10 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
     model->setData(valIdx, false, UR_isHidden);
     model->setData(capIdx, true, UR_isEnabled);
     model->setData(valIdx, true, UR_isEnabled);
+
+    // model->setData(capIdx, false, UR_isDivider);
+    // model->setData(valIdx, false, UR_isDivider);
+
     model->setData(capIdx, i.key, UR_Source);           // key = "effect" for sortOrder
 
     // if no value associated (header item or spacer etc) then we are done
@@ -394,6 +398,43 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
     model->setData(valIdx, QVariant::fromValue(static_cast<void*>(editor)), UR_Editor);
 
     return editor;
+}
+
+void PropertyEditor::addDivider(int height, int lineHeight, QColor lineColor,
+                                QModelIndex parIdx, QString parentName, QString name)
+{
+    if (G::isLogger) G::log("PropertyEditor::addDivider");
+
+    /* Build the row through addItem with hasValue = false, so it returns after the
+       caption roles (no value editor is created) -- the same path headers use. capIdx is
+       left pointing at the new caption cell. */
+    ItemInfo i;
+    clearItemInfo(i);
+    i.name = name;
+    i.parIdx = parIdx;
+    i.parentName = parentName;
+    i.isHeader = false;
+    i.isDecoration = false;
+    i.isIndent = false;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    const QModelIndex idx = capIdx;
+    model->setData(idx, true, UR_isDivider);
+    model->setData(idx, height, UR_DividerHeight);
+    model->setData(idx, lineHeight, UR_DividerLineHeight);
+    model->setData(idx, lineColor, UR_DividerColor);
+
+    /* One full-width, non-interactive cell: span column 0 across the row and drop the
+       selectable/editable flags so clicks and keyboard navigation skip it (it stays
+       enabled so it is not greyed by applyItemsEnabled). */
+    setFirstColumnSpanned(idx.row(), idx.parent(), true);
+    auto strip = [this](const QModelIndex &x) {
+        if (QStandardItem *it = model->itemFromIndex(x)) it->setFlags(Qt::ItemIsEnabled);
+    };
+    strip(idx);
+    strip(idx.sibling(idx.row(), ValColumn));
 }
 
 void PropertyEditor::clearItemInfo(ItemInfo &i)

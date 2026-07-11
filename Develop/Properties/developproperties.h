@@ -270,6 +270,10 @@ private:
     bool layerItemsCollapsed = false;   // the '>' arrow: hide the layer's top items
     bool isBulkExpandCollapse = false;  // guard: Expand/Collapse all vs Solo handler
 
+    int dividerHeight;
+    QColor divColor;
+
+
     /* Mask UI state. selectedMaskIndex is the component shown in the shared Mask Tool panel (-1 =
        none). isRebuildingMasks guards the tree-selection handler while we add/remove mask rows.
        maskMenu is the "+ add mask" type chooser (popped by the header's [M]). UR_MaskIndex tags a

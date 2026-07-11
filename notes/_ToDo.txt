@@ -2,7 +2,8 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Change progress to right side status bar for demosaic
+- Cannot use Embellish panel when in Develop mode
+- Add Sharpen and Soften sliders
 - Drag dock tabify to the right (last) - WIP
 - Develop presets (selection dialog)
 - Reformat the documentation.txt (when have lots of tokens)
