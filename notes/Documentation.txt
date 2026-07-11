@@ -2365,10 +2365,13 @@ Architecture
         5. Highlights/Shadows/          luminance-masked parametric tone
            Whites/Blacks
         5b. Colour RGB                  per-channel linear gain (red/green/blue), folded into #2
-        5c. Colour HSL                  hue rotation + saturation + luminance, after the tone curve
+        5c. Colour HSL                  hue rotation + saturation + vibrance + luminance,
+                                        after the tone curve
         6. Texture                      mid-frequency local contrast
         7. Dehaze                       local contrast + black-point, haze estimate
-        (room left for Vibrance/Clarity/Sharpen)
+        8. Vignette                     radial corner exposure falloff (exposure/feather)
+        9. Grain                        monochromatic film grain (amount/size/roughness)
+        (room left for Clarity/Sharpen)
 
     Two ops are special for RAW: white balance and denoise give better results applied inside
     the raw pipeline (WB at the camera-RGB stage; denoise on the CFA mosaic) rather than
@@ -2588,15 +2591,23 @@ Layer & masking model (planned)
           comes from ImageMetadata::ISONum (populated in cache mode from G::ISOColumn;
           live preview reads it via MW::currentImageIso).
           ONE DECODE, TWO BASES + PREVIEW-FIRST: ensureRawDenoise is triggered on image
-          SELECT (MW::fileSelectionChange), not only on settle, so its progress row
-          (progressRawDenoiseRow) appears immediately. Its single decode returns BOTH the
-          PMRID base and the CLEAN base (RawFormat::Decode outClean = the same mosaic
-          demosaiced before PMRID -> one UnpackCfa, not two) and publishes the clean base
-          to WorkingImageCache. The ImageCache decode then REUSES that clean base
-          (ImageDecoder::load short-circuits UnpackCfa+Demosaic when a scene-linear entry
-          is cached), removing the redundant second decode. Meanwhile the loupe shows the
-          embedded JPG immediately (ImageView::loadImageInterim on a develop-raw cache
-          miss) and the developed image pops in when the decode lands.
+          SELECT (MW::fileSelectionChange) AND on entering Develop (MW::setOperationMode),
+          not only on settle, so its progress row (progressRawDenoiseRow) appears
+          immediately in both the "select while already in Develop" and the "in Preview
+          then switch to Develop" flows. Its single decode returns BOTH the PMRID base and
+          the CLEAN base (RawFormat::Decode outClean = the same mosaic demosaiced before
+          PMRID = one UnpackCfa, not two) and publishes the clean base to the cache.
+          The ImageCache decode then REUSES that clean base (ImageDecoder::load
+          short-circuits UnpackCfa+Demosaic when a scene-linear entry is cached), removing
+          the redundant second decode. Meanwhile the loupe shows the embedded JPG
+          immediately (ImageView::loadImageInterim on a develop-raw cache miss) and the
+          developed image pops in when the decode lands.
+          STAGED PROGRESS: the denoise progress bar spans the WHOLE decode, not just the
+          PMRID stage: RawFormat::Decode maps the pre-PMRID (clean) demosaic to [0,25%],
+          PMRID to [25,75%], and the post-PMRID (denoised) demosaic to [75,100%] of one
+          0..1000 bar (Demosaic::Run gained a per-row progress callback). So the bar
+          moves as the clean demosaic runs and continues through PMRID -- no empty gap.
+          Inert for a normal (non-denoise) decode, which passes no progress sink.
           ZOOM/PAN KEPT ACROSS THE POP: loadImageInterim captures the outgoing zoom/pan
           (developCapture*); the developed image restores it via applyDevelopCapturedView,
           called from both the clean-image loadImage and setDevelopPreview, instead of
@@ -2758,28 +2769,46 @@ Layer & masking model (planned)
            The LUT spans up to ~3 stops above white (kToneLutMaxN) so highlight headroom is shaped,
            not clipped.
 
-           COLOUR (RGB + HSL, under the Color header) -- all six are POINT ops, so they ride the
-           same fused pass at ~no extra cost. RGB (red/green/blue, -100..100) are per-channel
-           scene-linear gains folded straight into channelGain alongside WB + exposure (kRgbGain
-           0.5 -> full slider = +/-50% on a channel). HSL (hue/saturation/luminance, -100..100) is
-           a cross-channel block applied AFTER the tone curve (it mixes channels, so unlike the
-           tone curve it cannot be a per-channel LUT): hue = a Rodrigues rotation about the neutral
-           (1,1,1) axis so greys stay grey (kHueMaxRad = 60deg at full); saturation = chroma scale
-           about Rec.709 luma (-100 -> grey, +100 -> 2x); luminance = uniform gain (-100 -> black,
-           +100 -> 2x). hslActive gates the block; identity sliders leave the pass untouched.
+           COLOUR (RGB + HSL, under the Color header) -- all seven are POINT ops, so they
+           ride the same fused pass at ~no extra cost. RGB (red/green/blue, -100..100) are
+           per-channel scene-linear gains folded straight into channelGain alongside WB +
+           exposure (kRgbGain 0.5 -> full slider = +/-50% on a channel). HSL
+           (hue/saturation/vibrance/luminance, -100..100) is a cross-channel block applied
+           AFTER the tone curve (it mixes channels, so unlike the tone curve it cannot be
+           a per-channel LUT): hue = a Rodrigues rotation about the neutral (1,1,1) axis
+           so greys stay grey (kHueMaxRad = 60deg at full); saturation = chroma scale
+           about Rec.709 luma (-100 -> grey, +100 -> 2x); vibrance = the same chroma
+           scale but weighted per pixel by (1 - HSV saturation), so muted pixels move
+           more than already-saturated ones (protecting skies/skin from clipping);
+           luminance = uniform gain (-100 -> black, +100 -> 2x). hslActive gates the
+           block; identity sliders leave the pass untouched.
 
-           SPATIAL ops (Texture #6, Dehaze #7) run AFTER the fused point pass, each owning a
-           full-image pass (like Denoise) -- they need a neighbourhood so cannot join the per-
-           pixel kernel. Both are ratio-preserving on LUMINANCE (chroma untouched) and scale their
-           blur radius to the image's longer edge so the screen-res proxy and the full-res settle
-           render shape the same frequency band. Texture = mid-frequency local contrast: a Gaussian
-           base (kTextureSigmaFrac ~0.0015*edge) splits a detail band that + amplifies (kTextureGain)
-           and - smooths. Dehaze = APPROXIMATION (not dark-channel-prior; user-chosen): a large-
-           radius local-contrast boost (box blur, kDehazeSigmaFrac ~0.02*edge -- box because its
-           running-sum cost is ~radius-independent) + a contrast pull about a low pivot (kDehazePivot
-           0.3, deepens shadows) + a saturation lift (kDehazeSat); + clears haze, - adds it. These
-           are global (no-mask) now; the layer compositor will bound them to a mask bbox later.
-           Costs land only on the full-res settle render (the proxy filters ~3MP). The Effects
+           SPATIAL ops (Texture #6, Dehaze #7, Vignette #8, Grain #9) run AFTER the fused
+           point pass, each owning a full-image pass (like Denoise) -- they need a
+           neighbourhood (or, for Vignette/Grain, pixel coordinates / a noise field) so
+           cannot join the per-pixel kernel. Texture and Dehaze are ratio-preserving on LUMINANCE (chroma
+           untouched) and scale their blur radius to the image's longer edge so the
+           screen-res proxy and the full-res settle render shape the same frequency band.
+           Texture = mid-frequency local contrast: a Gaussian base (kTextureSigmaFrac
+           ~0.0015*edge) splits a detail band that + amplifies (kTextureGain) and -
+           smooths. Dehaze = APPROXIMATION (not dark-channel-prior; user-chosen): a
+           large-radius local-contrast boost (box blur, kDehazeSigmaFrac ~0.02*edge -- box
+           because its running-sum cost is ~radius-independent) + a contrast pull about a
+           low pivot (kDehazePivot 0.3, deepens shadows) + a saturation lift (kDehazeSat);
+           + clears haze, - adds it. Vignette = a radial exposure falloff about the
+           centre: mask = pow(rn, k), rn the elliptical radius (0 centre, 1 corner), k
+           from the Feather slider (high feather -> low k -> gradual/reaches inward; low
+           feather -> corner-hugging); corner gain = 2^Exposure (- darkens, + brightens),
+           scaled by the mask. Off-centre / shaped vignettes use radial masks, so this
+           global op is just Exposure + Feather. Grain = monochromatic film grain added to
+           perceptual luminance (ratio-preserving, like Texture): a fixed-seed noise field
+           on a coarse grain-cell grid (Size sets the cell, scaled to the long edge so the
+           proxy and full res match) is bilinearly upsampled, its amplitude modulated by a
+           lower-frequency Roughness field (0 uniform, 1 patchy), weighted toward the
+           midtones (fades to 0 at black/white) and scaled by Amount. The fixed seed keeps
+           the pattern stable across re-renders (no shimmer). These are global (no-mask)
+           now; the layer compositor will bound them to a mask bbox later.
+           Costs land only on the full-res settle render (proxy filters ~3MP). The Effects
            "Denoise" is two 0..100 sliders (mapped to 0..1) into Develop::Denoise: "Denoise"
            (localDenoiseLuma) = luminance NR via a perceptual bilateral (ratio-preserving), and
            "Denoise Color" (localDenoiseChroma) = chroma NR via a downscaled opponent-chroma
@@ -3612,12 +3641,20 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
         Basic    Temp, Tint, Exposure, Contrast, Highlights, Shadows,
                  Whites, Blacks, Texture, Dehaze (sliders). Integer -100..100 except Exposure
                  (EV, -5.00..5.00). All default to 0 (identity).
-        Color    Red, Green, Blue (per-channel gain); Hue, Saturation, Luminance (global HSL).
+        Color    Red, Green, Blue (per-channel gain); Hue, Saturation, Vibrance, Luminance
+                 (global HSL).
                  Integer -100..100 sliders, all default 0 (identity).
-        Effects  Denoise (localDenoiseLuma, luminance NR) + Denoise Color (localDenoiseChroma,
-                 chroma NR) -- two 0..100 sliders (mapped to 0..1), default 0. Local, maskable,
-                 post-demosaic. Distinct from the Base layer's "Denoise raw" (PMRID pre-demosaic,
-                 denoiseLuma/denoiseChroma).
+        Effects  Denoise (localDenoiseLuma, luminance NR) + Denoise Color
+                 (localDenoiseChroma, chroma NR) -- two 0..100 sliders (mapped to 0..1),
+                 default 0. Local, maskable, post-demosaic. Distinct from the Base layer's
+                 "Denoise raw" (PMRID pre-demosaic, denoiseLuma/denoiseChroma). Also
+                 Vignette (vignetteExposure, EV -5.00..5.00, default 0) + Vignette Feather
+                 (vignetteFeather, 0..100 -> 0..1, default 50): a global radial
+                 corner-exposure falloff (see #8 above); shaped vignettes use masks. Also
+                 Grain (grainAmount, 0..100 -> 0..1, default 0) + grain Size (grainSize,
+                 0..100 -> 0..1, default 25) + grain Roughness (grainRoughness, 0..100 ->
+                 0..1, default 50): monochromatic film grain (see #9 above); size and
+                 roughness are inert until amount is non-zero.
 
     Each layer maps onto one EditParams (DevelopProperties::editParams()). Binding a value
     change to a re-decode is deferred: itemChange() persists the value to settings and emits

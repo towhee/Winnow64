@@ -175,11 +175,17 @@ struct EditStack {
         o["blue"]            = p.blue;
         o["hue"]             = p.hue;
         o["saturation"]      = p.saturation;
+        o["vibrance"]        = p.vibrance;
         o["luminance"]       = p.luminance;
         o["denoiseLuma"]     = p.denoiseLuma;
         o["denoiseChroma"]   = p.denoiseChroma;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
         o["localDenoiseChroma"]= p.localDenoiseChroma;
+        o["vignetteExposure"]= p.vignetteExposure;
+        o["vignetteFeather"] = p.vignetteFeather;
+        o["grainAmount"]     = p.grainAmount;
+        o["grainSize"]       = p.grainSize;
+        o["grainRoughness"]  = p.grainRoughness;
         o["version"]         = p.version;
         return o;
     }
@@ -205,11 +211,17 @@ struct EditStack {
         p.blue            = static_cast<float>(o.value("blue").toDouble(p.blue));
         p.hue             = static_cast<float>(o.value("hue").toDouble(p.hue));
         p.saturation      = static_cast<float>(o.value("saturation").toDouble(p.saturation));
+        p.vibrance        = static_cast<float>(o.value("vibrance").toDouble(p.vibrance));
         p.luminance       = static_cast<float>(o.value("luminance").toDouble(p.luminance));
         p.denoiseLuma     = static_cast<float>(o.value("denoiseLuma").toDouble(p.denoiseLuma));
         p.denoiseChroma   = static_cast<float>(o.value("denoiseChroma").toDouble(p.denoiseChroma));
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));
         p.localDenoiseChroma= static_cast<float>(o.value("localDenoiseChroma").toDouble(p.localDenoiseChroma));
+        p.vignetteExposure= static_cast<float>(o.value("vignetteExposure").toDouble(p.vignetteExposure));
+        p.vignetteFeather = static_cast<float>(o.value("vignetteFeather").toDouble(p.vignetteFeather));
+        p.grainAmount     = static_cast<float>(o.value("grainAmount").toDouble(p.grainAmount));
+        p.grainSize       = static_cast<float>(o.value("grainSize").toDouble(p.grainSize));
+        p.grainRoughness  = static_cast<float>(o.value("grainRoughness").toDouble(p.grainRoughness));
         p.version         = o.value("version").toInt(p.version);
         return p;
     }

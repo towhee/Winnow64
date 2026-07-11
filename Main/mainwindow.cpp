@@ -2399,6 +2399,20 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
+
+    /* A new folder invalidates the current image's develop denoise caches (they hold the
+       previous folder image's ~60MP bases). Drop them so revisiting an image RE-DECODES
+       (showing progress again) rather than short-circuiting on a stale hit, and so we
+       don't pin hundreds of MB across folders. The pre-develop WorkingImageCache is
+       cleared separately on the ImageCache thread (its folder reset). */
+    developDenoised.reset();
+    developDenoisedKey.clear();
+    developPmridFull.reset();
+    developPmridKey.clear();
+    developProxy.reset();
+    developProxyPath.clear();
+    developWorkTriedPath.clear();
+
     // block repeated clicks to folders or bookmarks while processing this one.
     bookmarks->setEnabled(false);
     fsTree->setEnabled(false);
@@ -6366,7 +6380,8 @@ void MW::renderDevelopFullResAsync()
                                    << " (copy" << rt.copyMs << " develop" << rt.developMs
                                    << " toImage" << rt.toImageMs << ")ms"
                                    << " develop=[denoise" << rt.denoiseMs << " point" << rt.pointMs
-                                   << " texture" << rt.textureMs << " dehaze" << rt.dehazeMs << "]";
+                                   << " texture" << rt.textureMs << " dehaze" << rt.dehazeMs
+                                   << " vignette" << rt.vignetteMs << " grain" << rt.grainMs << "]";
             if (dm && fPath == dm->currentFilePath) {
                 developVerifyMaxAbs = vMaxAbs;
                 developVerifyMeanAbs = vMeanAbs;

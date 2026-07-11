@@ -176,6 +176,8 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
         timings->pointMs   = stage.pointMs;
         timings->textureMs = stage.textureMs;
         timings->dehazeMs  = stage.dehazeMs;
+        timings->vignetteMs = stage.vignetteMs;
+        timings->grainMs = stage.grainMs;
     }
     const bool ok = output.ToImage(developed, out);
     if (timings) timings->toImageMs = t.elapsed();

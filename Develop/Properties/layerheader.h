@@ -69,10 +69,14 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent *) override;         // the property-header gradient band
+    /* Clicking the "Layer" label toggles collapse just like the arrow (filtered here
+       because QLabel has no clicked signal). */
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     void updatePreviewIcon();
     void updateCollapseIcon();
+    void toggleCollapsed();             // arrow click or "Layer" label click
 
     /* Non-negative item data is a layer index; these negative codes tag the action rows. */
     enum ComboAction { ActAddLayer = -1, ActAddMask = -2, ActReset = -3, ActRemove = -4, ActRename = -5 };
