@@ -2114,6 +2114,17 @@ void MW::setOperationMode(G::OperationMode mode)
             const bool selIsVideo = currentIsVideo();
             developProperties->setCurrentImage(selIsVideo || !dm ? QString()
                                                                  : dm->currentFilePath);
+            /* Entering Develop re-decodes the current image (~3s). If it has a "Denoise
+               raw" amount, start that decode NOW so its progress shows immediately --
+               otherwise it would not fire until the clean decode + settle. Produces the
+               clean + PMRID bases in one pass and publishes the clean base (which
+               ImageDecoder::load then reuses). No-op without a denoise edit / on Apple. */
+            if (!selIsVideo && dm && !dm->currentFilePath.isEmpty()) {
+                const auto mj = developProperties->stackJob();
+                ensureRawDenoise(dm->currentFilePath, mj.base,
+                                 WorkingImageCache::instance().get(dm->currentFilePath),
+                                 currentImageIso());
+            }
         }
         else {
             developProperties->flushAll();

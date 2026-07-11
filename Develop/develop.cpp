@@ -92,6 +92,30 @@ constexpr float kDehazeContrast   = 0.3f;      // contrast about the low pivot
 constexpr float kDehazePivot      = 0.3f;      // perceptual pivot (below mid-grey)
 constexpr float kDehazeSat        = 0.3f;      // saturation lift at full slider
 
+/* Vignette (spatial op #8): a radial exposure falloff about the image centre. The mask is
+   pow(rn, k) where rn is the elliptical radius normalised to 1 at the corners, so it is 0
+   at the centre and 1 at the corners; feather maps to the exponent k (high feather -> low
+   k -> gradual/reaches inward; low feather -> high k -> effect hugs the corners). The
+   corner gain is 2^vignetteExposure, scaled by the mask so the centre is untouched. */
+constexpr float kVignetteFeatherKMin = 0.5f;   // exponent at feather = 1 (gradual)
+constexpr float kVignetteFeatherKMax = 5.0f;   // exponent at feather = 0 (corner-hugging)
+
+/* Grain (spatial op #9): monochromatic film grain added to perceptual luminance, most
+   visible in the midtones. The noise is generated at a REDUCED resolution (a grain-cell
+   grid) and bilinearly upsampled, so the particle size is set by the cell size and the
+   cost stays low; the cell scales with the long edge (kGrainCellUnit) so the proxy and
+   full-res render show proportionally the same grain. grainSize maps the cell from fine
+   to coarse (kGrainCellMin..Max units); grainRoughness modulates the grain amplitude with
+   a second, lower-frequency field (kGrainRoughFreqDiv) so it is patchy, not uniform.
+   kGrainStrength is the max perceptual std at full amount. A fixed RNG seed keeps the
+   pattern stable across re-renders (no shimmer). */
+constexpr float  kGrainStrength     = 0.12f;   // perceptual std of grain at amount = 1
+constexpr double kGrainCellUnit     = 1500.0;  // long-edge px per grain "unit"
+constexpr double kGrainCellMin      = 0.75;    // grain cell (units) at size = 0 (fine)
+constexpr double kGrainCellMax      = 3.75;    // grain cell (units) at size = 1 (coarse)
+constexpr int    kGrainRoughFreqDiv = 4;       // roughness field: lower frequency factor
+constexpr uint64_t kGrainSeed = 0x9E3779B97F4A7C15ULL;   // fixed: grain must not shimmer
+
 /* Run fn over the pixel-index range [0, n) split into chunks across the global pool (the same
    data-parallel idiom as Develop::applyPointOps / OutputTransform::ToImage). fn(i0, i1) must
    process a disjoint half-open slice; chunks are pixel-aligned so callers that index rgb[i*3+c],
@@ -128,8 +152,9 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     if (t) probe.start();
 
     /* Fixed pipeline order: spatial ops own a pass, point ops share the fused pass.
-       See notes/Documentation.txt "DEVELOP / IMAGE EDIT". Denoise (#1) -> fused point pass
-       (#2-5: WB, exposure, contrast, tone regions) -> Texture (#6) -> Dehaze (#7). */
+       See notes/Documentation.txt "DEVELOP / IMAGE EDIT". Denoise (#1) -> fused point
+       pass (#2-5: WB, exposure, contrast, tone regions) -> Texture (#6) -> Dehaze (#7) ->
+       Vignette (#8, a final radial exposure falloff) -> Grain (#9, film grain, last). */
     Denoise(img, p);
     if (t) t->denoiseMs = probe.restart();
 
@@ -142,6 +167,12 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
 
     Dehaze(img, p);
     if (t) t->dehazeMs = probe.restart();
+
+    Vignette(img, p);
+    if (t) t->vignetteMs = probe.restart();
+
+    Grain(img, p);
+    if (t) t->grainMs = probe.restart();
     return true;
 }
 
@@ -457,6 +488,129 @@ void Develop::Dehaze(WorkingImage &img, const EditParams &p)
     });
 }
 
+/* Vignette (spatial op #8, runs last). Per-pixel radial exposure gain about the centre;
+   see the constants block above for the mask/feather model. A pure per-pixel op (no
+   neighbourhood), but kept out of the fused point pass since it needs pixel coordinates,
+   not just the channel value. Custom / off-centre vignettes are handled by radial masks,
+   so this global op is centre-only. */
+void Develop::Vignette(WorkingImage &img, const EditParams &p)
+{
+    const float ev = p.vignetteExposure;                 // EV applied at the corners
+    if (ev == 0.0f) return;
+
+    const int w = img.width;
+    const int h = img.height;
+    if (w < 1 || h < 1) return;
+    const size_t n = static_cast<size_t>(w) * static_cast<size_t>(h);
+    float *rgb = img.rgb.data();
+
+    /* Elliptical normalisation: dx,dy in [-1,1] across the frame, so the radius reaches 1
+       at the mid-edges and sqrt(2) at the corners; dividing by sqrt(2) puts full effect
+       at the corners. */
+    const float cx = (w - 1) * 0.5f;
+    const float cy = (h - 1) * 0.5f;
+    const float invHalfW = (w > 1) ? 2.0f / (w - 1) : 0.0f;
+    const float invHalfH = (h > 1) ? 2.0f / (h - 1) : 0.0f;
+    const float invCorner = 0.70710678f;                 // 1 / sqrt(2)
+
+    /* Feather -> falloff exponent. High feather spreads the effect inward (low k); low
+       feather concentrates it in the corners (high k). */
+    const float feather = qBound(0.0f, p.vignetteFeather, 1.0f);
+    const float k = kVignetteFeatherKMin +
+                    (1.0f - feather) * (kVignetteFeatherKMax - kVignetteFeatherKMin);
+
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const int x = static_cast<int>(i % static_cast<size_t>(w));
+            const int y = static_cast<int>(i / static_cast<size_t>(w));
+            const float dx = (x - cx) * invHalfW;         // -1..1
+            const float dy = (y - cy) * invHalfH;         // -1..1
+            float rn = std::sqrt(dx * dx + dy * dy) * invCorner;   // 0 centre -> 1 corner
+            if (rn > 1.0f) rn = 1.0f;
+            const float mask = std::pow(rn, k);           // 0 centre -> 1 corner
+            const float gain = std::exp2(ev * mask);      // ev stops at corner
+            rgb[i * 3 + 0] *= gain;
+            rgb[i * 3 + 1] *= gain;
+            rgb[i * 3 + 2] *= gain;
+        }
+    });
+}
+
+/* Grain (spatial op #9, runs LAST). Monochromatic film grain: a deterministic noise field
+   is generated on a coarse grain-cell grid (size sets the cell), bilinearly upsampled,
+   its amplitude modulated by a lower-frequency roughness field. It is added to PERCEPTUAL
+   luminance and folded back as a ratio-preserving RGB scale (like Texture) so only the
+   luminance is perturbed. A midtone weight fades the grain toward pure black / white. See
+   the grain constants block for the size / roughness / proxy-match model. No-op at 0. */
+void Develop::Grain(WorkingImage &img, const EditParams &p)
+{
+    const float amount = qBound(0.0f, p.grainAmount, 1.0f);
+    if (amount == 0.0f) return;
+
+    const int w = img.width;
+    const int h = img.height;
+    if (w < 1 || h < 1) return;
+    const size_t n = static_cast<size_t>(w) * static_cast<size_t>(h);
+    float *rgb = img.rgb.data();
+    const float white = (img.white > 0.0f) ? img.white : 1.0f;
+    const float invWhite = 1.0f / white;
+
+    /* Grain cell size in pixels: scales with the long edge (so the proxy and full-res
+       render show the same grain proportionally) and grows with grainSize (fine to
+       coarse). The noise grid divides the image into cells: bigger cell = bigger grain. */
+    const float size01 = qBound(0.0f, p.grainSize, 1.0f);
+    const double unit = qMax(1.0, static_cast<double>(qMax(w, h)) / kGrainCellUnit);
+    const double cellPx = unit * (kGrainCellMin + size01 * (kGrainCellMax - kGrainCellMin));
+    const int nw = qMax(1, static_cast<int>(std::lround(w / cellPx)));
+    const int nh = qMax(1, static_cast<int>(std::lround(h / cellPx)));
+
+    /* Fixed-seed noise -> stable across re-renders (no shimmer). Grain N(0,1) on the cell
+       grid, upsampled to full res; the roughness field is a coarser [0,1] grid that patchily
+       modulates the grain amplitude (0 roughness = uniform, 1 = strongly varying). */
+    cv::RNG rng(kGrainSeed);
+    cv::Mat grainSmall(nh, nw, CV_32FC1);
+    rng.fill(grainSmall, cv::RNG::NORMAL, 0.0, 1.0);
+    cv::Mat grain;
+    cv::resize(grainSmall, grain, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+
+    const float rough01 = qBound(0.0f, p.grainRoughness, 1.0f);
+    cv::Mat roughUp;
+    if (rough01 > 0.0f) {
+        const int rw = qMax(1, nw / kGrainRoughFreqDiv);
+        const int rh = qMax(1, nh / kGrainRoughFreqDiv);
+        cv::Mat roughSmall(rh, rw, CV_32FC1);
+        rng.fill(roughSmall, cv::RNG::UNIFORM, 0.0, 1.0);
+        cv::resize(roughSmall, roughUp, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+    }
+
+    const float strength = amount * kGrainStrength;
+    const float *gp = grain.ptr<float>();
+    const float *rp = roughUp.empty() ? nullptr : roughUp.ptr<float>();
+    constexpr float kEps = 1e-6f;
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            if (Y <= kEps) continue;
+            float nrm = Y * invWhite;
+            if (nrm < 0.0f) nrm = 0.0f;
+            const float s = std::pow(nrm, kInvGamma);
+            /* Midtone weight: peaks at mid-grey, fades to 0 at black / white; sqrt broadens
+               it so shadows and highlights still carry some grain. */
+            const float lw = std::sqrt(qMax(0.0f, 4.0f * s * (1.0f - s)));
+            /* Roughness: mean-1 amplitude that varies more as roughness rises (u in [0,1]). */
+            const float amp = rp ? (1.0f - rough01 + rough01 * 2.0f * rp[i]) : 1.0f;
+            float s2 = s + strength * lw * amp * gp[i];
+            if (s2 < 0.0f) s2 = 0.0f;
+            const float Yd = std::pow(s2, kGamma) * white;
+            const float ratio = Yd / Y;
+            rgb[i * 3 + 0] = r * ratio;
+            rgb[i * 3 + 1] = g * ratio;
+            rgb[i * 3 + 2] = b * ratio;
+        }
+    });
+}
+
 Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const WorkingImage &img)
 {
     PointCoeffs c;
@@ -532,9 +686,11 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
        uniform gain. */
     const float hue = p.hue        / kHslFullScale;     // -1..1
     const float sat = p.saturation / kHslFullScale;
+    const float vib = p.vibrance   / kHslFullScale;
     const float lum = p.luminance  / kHslFullScale;
-    c.satFactor = 1.0f + sat;                           // -1 -> grayscale, +1 -> 2x chroma
-    c.lumGain   = 1.0f + lum;                           // -1 -> black, +1 -> 2x
+    c.satFactor = 1.0f + sat;                          // -1 -> grayscale, +1 -> 2x chroma
+    c.vibAmount = vib;                                 // per-pixel weighted chroma boost
+    c.lumGain   = 1.0f + lum;                          // -1 -> black, +1 -> 2x
     if (hue != 0.0f) {
         const float a = hue * kHueMaxRad;
         const float cs = std::cos(a);
@@ -545,7 +701,8 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
         c.hueMat[3] = k + w;        c.hueMat[4] = cs + k;      c.hueMat[5] = k - w;
         c.hueMat[6] = k - w;        c.hueMat[7] = k + w;       c.hueMat[8] = cs + k;
     }
-    c.hslActive = (c.satFactor != 1.0f) || (c.lumGain != 1.0f) || (hue != 0.0f);
+    c.hslActive = (c.satFactor != 1.0f) || (c.vibAmount != 0.0f) ||
+                  (c.lumGain != 1.0f) || (hue != 0.0f);
 
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
                (c.channelGain[2] != 1.0f) || c.toneActive || c.hslActive;
@@ -573,6 +730,8 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
     const float hm3 = c.hueMat[3], hm4 = c.hueMat[4], hm5 = c.hueMat[5];
     const float hm6 = c.hueMat[6], hm7 = c.hueMat[7], hm8 = c.hueMat[8];
     const float satF = c.satFactor;
+    const float vibA = c.vibAmount;
+    const bool  doVib = (vibA != 0.0f);
     const float lumG = c.lumGain;
 
     /* Perceptual tone curve via the precomputed LUT (contrast + tone regions, see
@@ -615,11 +774,22 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
                     const float hr = hm0 * r + hm1 * g + hm2 * b;
                     const float hg = hm3 * r + hm4 * g + hm5 * b;
                     const float hb = hm6 * r + hm7 * g + hm8 * b;
-                    /* Saturation: scale chroma about Rec.709 luma. */
+                    /* Saturation: scale chroma about Rec.709 luma. Vibrance adds a
+                       per-pixel boost weighted by (1 - HSV saturation), so muted pixels
+                       move more than already-saturated ones; the two factors combine
+                       multiplicatively. */
                     const float Y = 0.2126f * hr + 0.7152f * hg + 0.0722f * hb;
-                    r = (Y + satF * (hr - Y)) * lumG;     // luminance: uniform gain
-                    g = (Y + satF * (hg - Y)) * lumG;
-                    b = (Y + satF * (hb - Y)) * lumG;
+                    float sF = satF;
+                    if (doVib) {
+                        const float mx = (hr > hg ? (hr > hb ? hr : hb) : (hg > hb ? hg : hb));
+                        const float mn = (hr < hg ? (hr < hb ? hr : hb) : (hg < hb ? hg : hb));
+                        const float pxSat = (mx > 1e-6f) ? (mx - mn) / mx : 0.0f;  // 0..1
+                        sF *= 1.0f + vibA * (1.0f - pxSat);
+                        if (sF < 0.0f) sF = 0.0f;        // never invert chroma
+                    }
+                    r = (Y + sF * (hr - Y)) * lumG;       // luminance: uniform gain
+                    g = (Y + sF * (hg - Y)) * lumG;
+                    b = (Y + sF * (hb - Y)) * lumG;
                     px[0] = (r < 0.0f) ? 0.0f : r;
                     px[1] = (g < 0.0f) ? 0.0f : g;
                     px[2] = (b < 0.0f) ? 0.0f : b;

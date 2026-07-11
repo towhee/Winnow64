@@ -77,6 +77,7 @@ public:
         qint64 copyMs = 0; qint64 developMs = 0; qint64 toImageMs = 0;
         /* Develop sub-stages (subset of developMs). */
         qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0; qint64 dehazeMs = 0;
+        qint64 vignetteMs = 0; qint64 grainMs = 0;
     };
 
     /* Render a WorkingImage through Develop + OutputTransform into out. Copies the image

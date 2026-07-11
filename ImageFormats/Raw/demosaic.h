@@ -2,6 +2,7 @@
 #define DEMOSAIC_H
 
 #include <vector>
+#include <functional>
 #include <QAtomicInt>
 #include "ImageFormats/Raw/rawimage.h"
 
@@ -25,20 +26,25 @@ public:
     Demosaic() = default;
 
     /* Demosaic raw.cfa into interleaved RGB floats. Returns false for unsupported
-       patterns (e.g. XTrans), an invalid RawImage, or if abort is signalled mid-run. */
+       patterns (e.g. XTrans), an invalid RawImage, or if abort is signalled mid-run.
+       progress (when set) is called periodically as (rowsDone, totalRows) for the
+       status bar -- the demosaic is a visible slice of a "Denoise raw" decode. */
     bool Run(const RawImage &raw,
              std::vector<float> &rgb,
              Algorithm algo = Bilinear,
-             const QAtomicInt *abort = nullptr);
+             const QAtomicInt *abort = nullptr,
+             const std::function<void(int, int)> &progress = {});
 
 private:
     bool Bilinear3x3(const RawImage &raw, std::vector<float> &rgb,
-                     const QAtomicInt *abort);
+                     const QAtomicInt *abort,
+                     const std::function<void(int, int)> &progress);
 
     /* Fuji X-Trans: per-pixel average of same-colour photosites in a 5x5 window (the 6x6
-       pattern guarantees all three colours within that window), native colour kept exact. */
+       pattern guarantees all three colours in that window), native colour kept exact. */
     bool XTransWindow(const RawImage &raw, std::vector<float> &rgb,
-                      const QAtomicInt *abort);
+                      const QAtomicInt *abort,
+                      const std::function<void(int, int)> &progress);
 
     /* Colour of photosite (row,col) for a Bayer pattern: 0=R, 1=G, 2=B. */
     static int BayerColorAt(CfaPattern pattern, int row, int col);

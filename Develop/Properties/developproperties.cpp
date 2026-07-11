@@ -1463,6 +1463,7 @@ void DevelopProperties::addColor()
     addSlider("hue",        "Hue",        "Rotate all hues.",                      parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addSlider("saturation", "Saturation", "Global saturation (grey at -100).",     parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addSlider("luminance",  "Luminance",  "Global luminance (brightness).",        parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
+    addSlider("vibrance",   "Vibrance",   "Saturation weighted toward muted colours.", parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -1484,6 +1485,28 @@ void DevelopProperties::addEffects()
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
     addSlider("localDenoiseChroma", "Denoise Color", "Local colour (chroma) noise reduction.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
+
+    /* Vignette: a global radial exposure falloff about the image centre (see
+       Develop::Vignette). Two sliders: Exposure (a 2-decimal EV slider like Basic
+       Exposure, the corner adjustment -- negative darkens, positive brightens) and
+       Feather (0..100, how far it reaches inward). Off-centre / shaped vignettes use
+       radial masks instead. */
+    addSlider("vignetteExposure", "Vignette:", "Corner exposure (EV): - darkens, + brightens.",
+              parIdx, "EffectsHeader", -500, 500, 100, G::darkgray, G::lightgray);
+    addSlider("vignetteFeather", "  feather", "How far the vignette reaches inward.",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+
+    /* Grain: monochromatic film grain added to luminance (see Develop::Grain). Amount is
+       the strength, size the particle size (scaled to the image so the proxy matches full
+       res), roughness how patchy / irregular the grain is. Size and roughness are
+       sub-controls of Amount (indented "  " captions, like the vignette feather) and are
+       inert until Amount is non-zero. All three 0..100 sliders mapped to 0..1. */
+    addSlider("grainAmount", "Grain:", "Add monochromatic film grain to the image.",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
+    addSlider("grainSize", "  size", "Grain particle size (fine to coarse).",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 25);
+    addSlider("grainRoughness", "  roughness", "How patchy / irregular the grain is.",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
 }
 
 void DevelopProperties::updateSectionHeaderCaptions()
@@ -1627,11 +1650,17 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "blue")       p.blue       = f;
     else if (key == "hue")        p.hue        = f;
     else if (key == "saturation") p.saturation = f;
+    else if (key == "vibrance")   p.vibrance   = f;
     else if (key == "luminance")  p.luminance  = f;
     else if (key == "denoiseLuma")   p.denoiseLuma   = f / 100.0f;   // Base "Denoise raw" (0..100 -> 0..1)
     else if (key == "denoiseChroma") p.denoiseChroma = f / 100.0f;
-    else if (key == "localDenoise")       p.localDenoiseLuma   = f / 100.0f;  // Effects "Denoise" (0..100 -> 0..1)
-    else if (key == "localDenoiseChroma") p.localDenoiseChroma = f / 100.0f;  // Effects "Denoise Color"
+    else if (key == "localDenoise")       p.localDenoiseLuma   = f / 100.0f;  // "Denoise"
+    else if (key == "localDenoiseChroma") p.localDenoiseChroma = f / 100.0f;
+    else if (key == "vignetteExposure")   p.vignetteExposure   = f;           // EV
+    else if (key == "vignetteFeather")    p.vignetteFeather    = f / 100.0f;
+    else if (key == "grainAmount")        p.grainAmount        = f / 100.0f;   // "Grain"
+    else if (key == "grainSize")          p.grainSize          = f / 100.0f;
+    else if (key == "grainRoughness")     p.grainRoughness     = f / 100.0f;
 }
 
 EditParams DevelopProperties::editParams()
@@ -1811,11 +1840,17 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("blue",       p.blue);
     setSliderReal("hue",        p.hue);
     setSliderReal("saturation", p.saturation);
+    setSliderReal("vibrance",   p.vibrance);
     setSliderReal("luminance",  p.luminance);
     setSliderReal("denoiseLuma",   p.denoiseLuma   * 100.0);      // Base "Denoise raw" (0..1 -> 0..100)
     setSliderReal("denoiseChroma", p.denoiseChroma * 100.0);
-    setSliderReal("localDenoise",       p.localDenoiseLuma   * 100.0);   // Effects "Denoise" (0..1 -> 0..100)
-    setSliderReal("localDenoiseChroma", p.localDenoiseChroma * 100.0);   // Effects "Denoise Color"
+    setSliderReal("localDenoise",       p.localDenoiseLuma   * 100.0);   // "Denoise"
+    setSliderReal("localDenoiseChroma", p.localDenoiseChroma * 100.0);
+    setSliderReal("vignetteExposure",   p.vignetteExposure);            // "Vignette" (EV)
+    setSliderReal("vignetteFeather",    p.vignetteFeather    * 100.0);
+    setSliderReal("grainAmount",        p.grainAmount        * 100.0);   // "Grain"
+    setSliderReal("grainSize",          p.grainSize          * 100.0);
+    setSliderReal("grainRoughness",     p.grainRoughness     * 100.0);
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
     isPopulating = false;

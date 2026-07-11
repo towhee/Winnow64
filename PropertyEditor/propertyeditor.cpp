@@ -579,8 +579,15 @@ void PropertyEditor::mouseDoubleClickEvent(QMouseEvent *event)
     QModelIndex idx = indexAt(event->pos());
     idx = model->index(idx.row(), ValColumn, idx.parent());
     QVariant value = idx.data(UR_DefaultValue);
-    if (idx.data(UR_DelegateType).toInt() == DT_Slider)
-        value = idx.data(UR_DefaultValue).toDouble() * idx.data(UR_Div).toInt();
+    if (idx.data(UR_DelegateType).toInt() == DT_Slider) {
+        /* setItemValue sets the slider POSITION, which is the real value times div.
+           Integer sliders carry div == 0 (see SliderEditor, which treats it as 1), so
+           guard against it here -- otherwise a non-zero default (e.g. Vignette Feather =
+           50) multiplies to 0 and double-click appears to do nothing. */
+        int div = idx.data(UR_Div).toInt();
+        if (div == 0) div = 1;
+        value = idx.data(UR_DefaultValue).toDouble() * div;
+    }
     setItemValue(idx, value);
 }
 

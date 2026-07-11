@@ -31,7 +31,8 @@ public:
 
     /* Per-stage wall-clock timings for one Apply(), filled when a non-null pointer is passed.
        A latency probe only (Develop preview [DevTime] logging); pass nullptr in normal use. */
-    struct StageTimings { qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0; qint64 dehazeMs = 0; };
+    struct StageTimings { qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0;
+                          qint64 dehazeMs = 0; qint64 vignetteMs = 0; qint64 grainMs = 0; };
 
     /* Apply p to img in place. Returns true on success (and trivially when p is identity,
        leaving img untouched). Fills *t when non-null. */
@@ -66,8 +67,24 @@ private:
     /* Spatial op (pipeline #7): an APPROXIMATE dehaze (not dark-channel-prior) -- large-radius
        luminance local contrast + a contrast pull about a low pivot (deepens shadows / extends
        range) + a saturation boost, since haze flattens contrast and desaturates. Positive
-       removes haze, negative adds it. Runs last. No-op when EditParams::dehaze is 0. */
+       removes haze, negative adds it. No-op when EditParams::dehaze is 0. */
     void Dehaze(WorkingImage &img, const EditParams &p);
+
+    /* Spatial op (pipeline #8, runs LAST): a radial exposure vignette about the image
+       centre. vignetteExposure is the EV applied at the corners (negative darkens = the
+       classic vignette, positive brightens), ramping smoothly to 0 at the centre;
+       vignetteFeather (0..1) shapes the falloff (high = gradual/reaches inward, low =
+       concentrated in the corners). Custom / off-centre vignettes are done with radial
+       masks, so this global op is just the two sliders. No-op when the EV is 0. */
+    void Vignette(WorkingImage &img, const EditParams &p);
+
+    /* Spatial op (pipeline #9, runs LAST -- after Vignette): monochromatic film grain
+       added to luminance (ratio-preserving, like Texture/Denoise). Deterministic
+       (fixed-seed noise) so a re-render does not make the grain shimmer, and the particle
+       size scales with the image so the proxy preview matches full res. grainAmount is
+       the strength, grainSize the particle size, grainRoughness the amplitude
+       irregularity. No-op when grainAmount is 0. */
+    void Grain(WorkingImage &img, const EditParams &p);
 
     /* Precomputed once per Apply(); the fused point pass reads only these. active == false
        means no implemented point op would change a pixel, so the pass is skipped entirely. */
@@ -95,11 +112,13 @@ private:
         /* HSL (hue/saturation/luminance) -- a cross-channel point op applied AFTER the tone curve
            in the same fused pass (it mixes the three channels, so unlike the tone curve it cannot
            be a per-channel LUT). hueMat is a 3x3 rotation about the neutral axis (row-major, used
-           only when hue != 0); satFactor scales chroma about luma; lumGain is a uniform gain.
-           hslActive == false => identity (skip the block). */
+           only when hue != 0); satFactor scales chroma about luma; vibAmount is a per-pixel
+           saturation boost weighted by how muted the pixel already is (0 = off); lumGain is a
+           uniform gain. hslActive == false => identity (skip the block). */
         bool  hslActive  = false;
         float hueMat[9]  = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
         float satFactor  = 1.0f;
+        float vibAmount  = 0.0f;
         float lumGain    = 1.0f;
     };
     static PointCoeffs buildPointCoeffs(const EditParams &p, const WorkingImage &img);

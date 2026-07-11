@@ -44,11 +44,14 @@ struct EditParams {
     float green = 0.0f;
     float blue  = 0.0f;
 
-    /* Colour -- HSL (global, -100..100). Cross-channel point op applied after the tone curve in
-       the same fused pass. hue = rotation about the neutral (gray) axis; saturation = chroma
-       scale about luma (-100 -> grayscale, +100 -> 2x); luminance = uniform brightness gain. */
+    /* Colour -- HSL (global, -100..100). Cross-channel point op applied after the tone
+       curve in the same fused pass. hue = rotation about the neutral (gray) axis;
+       saturation = chroma scale about luma (-100 -> grayscale, +100 -> 2x); vibrance =
+       saturation weighted by how muted each pixel already is (boosts low-chroma pixels,
+       protects saturated ones); luminance = uniform brightness gain. */
     float hue        = 0.0f;
     float saturation = 0.0f;
+    float vibrance   = 0.0f;
     float luminance  = 0.0f;
 
     /* Noise reduction -- GLOBAL, applied in the raw decode pipeline (RawFormat / the Apple
@@ -67,6 +70,28 @@ struct EditParams {
        Chroma = colour/chroma NR (opponent-chroma blur, luma kept exact). 0 = off. Range 0..1. */
     float localDenoiseLuma = 0.0f;
     float localDenoiseChroma = 0.0f;
+
+    /* Vignette (Effects SPATIAL op, runs last). A radial exposure falloff about the image
+       centre: vignetteExposure is the EV applied at the corners (negative darkens = the
+       classic vignette, positive brightens), ramping smoothly to 0 at the centre.
+       vignetteFeather (0..1) shapes the falloff -- high spreads the effect inward
+       (gradual), low concentrates it in the corners. For anything off-centre or shaped,
+       the user paints radial masks instead, so these two sliders are all the global
+       vignette needs. Feather is not part of isIdentity (it only matters when
+       vignetteExposure is non-zero). */
+    float vignetteExposure = 0.0f;
+    float vignetteFeather  = 0.5f;
+
+    /* Grain (Effects SPATIAL op, runs last -- after Vignette). Monochromatic film grain
+       added to luminance (ratio-preserving), most visible in the midtones and fading
+       toward black / white. grainAmount (0..1) is the strength; grainSize (0..1) the
+       particle size, scaled to the image so the proxy preview matches full res;
+       grainRoughness (0..1) the irregularity of the grain amplitude (0 = uniform). Size
+       and roughness only matter when grainAmount is non-zero, so they are not part of
+       isIdentity(). */
+    float grainAmount    = 0.0f;
+    float grainSize      = 0.25f;
+    float grainRoughness = 0.5f;
 
     int version = 1;
 
@@ -98,11 +123,17 @@ struct EditParams {
             break;
         case Group::Color:
             p.red = def.red; p.green = def.green; p.blue = def.blue;
-            p.hue = def.hue; p.saturation = def.saturation; p.luminance = def.luminance;
+            p.hue = def.hue; p.saturation = def.saturation;
+            p.vibrance = def.vibrance; p.luminance = def.luminance;
             break;
         case Group::Effects:
-            p.localDenoiseLuma = def.localDenoiseLuma;       // "Denoise" (local NR) lives in Effects
-            p.localDenoiseChroma = def.localDenoiseChroma;   // "Denoise Color" (local chroma NR)
+            p.localDenoiseLuma = def.localDenoiseLuma;       // "Denoise" (local NR)
+            p.localDenoiseChroma = def.localDenoiseChroma;   // "Denoise Color" (chroma)
+            p.vignetteExposure = def.vignetteExposure;       // "Vignette" (radial)
+            p.vignetteFeather = def.vignetteFeather;
+            p.grainAmount = def.grainAmount;                 // "Grain" (film grain)
+            p.grainSize = def.grainSize;
+            p.grainRoughness = def.grainRoughness;
             break;
         }
     }
@@ -116,9 +147,10 @@ struct EditParams {
                whites == 0.0f && blacks == 0.0f &&
                texture == 0.0f && dehaze == 0.0f &&
                red == 0.0f && green == 0.0f && blue == 0.0f &&
-               hue == 0.0f && saturation == 0.0f && luminance == 0.0f &&
+               hue == 0.0f && saturation == 0.0f && vibrance == 0.0f && luminance == 0.0f &&
                denoiseLuma == 0.0f && denoiseChroma == kDefaultDenoiseChroma &&
-               localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f;
+               localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
+               vignetteExposure == 0.0f && grainAmount == 0.0f;
     }
 };
 

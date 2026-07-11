@@ -8,6 +8,7 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QLinearGradient>
+#include <QMouseEvent>
 
 LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
 {
@@ -33,14 +34,13 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
     collapseBtn->setIconSize(QSize(9, 9));
     collapseBtn->setFixedSize(10, 16);
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
-    connect(collapseBtn, &BarBtn::clicked, this, [this]{
-        collapsed = !collapsed;
-        updateCollapseIcon();
-        emit collapseToggled(collapsed);
-    });
+    connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
     updateCollapseIcon();
 
     layerLabel = new QLabel(tr("Layer"), this);
+    /* Clicking the label toggles collapse as if the arrow was clicked. */
+    layerLabel->setCursor(Qt::PointingHandCursor);
+    layerLabel->installEventFilter(this);
     /* Match the tree's section-header captions (PropertyDelegate): same point size
        (G::strFontSize) and colour (G::header2Color), regular weight (headers are not
        bold -- the delegate only sets the point size). Both via the stylesheet so they
@@ -172,6 +172,25 @@ void LayerHeader::setBaseActive(bool isBase)
 {
     /* Base (index 0) applies globally: the dropdown omits the per-layer action group for it. */
     baseActive = isBase;
+}
+
+void LayerHeader::toggleCollapsed()
+{
+    collapsed = !collapsed;
+    updateCollapseIcon();
+    emit collapseToggled(collapsed);
+}
+
+bool LayerHeader::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == layerLabel && event->type() == QEvent::MouseButtonRelease) {
+        QMouseEvent *me = static_cast<QMouseEvent *>(event);
+        if (me->button() == Qt::LeftButton && layerLabel->rect().contains(me->pos())) {
+            toggleCollapsed();
+            return true;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 void LayerHeader::updatePreviewIcon()

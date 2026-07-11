@@ -123,6 +123,15 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
 
         SubtractBlack(raw);
 
+        /* Combined status-bar progress for a "Denoise raw" decode: the clean pre-PMRID
+           demosaic, the PMRID model, and the denoised demosaic each drive a slice of one
+           0..1000 bar so the user sees continuous movement, not an empty bar through the
+           demosaics. Inert when the caller passed no progress sink (a normal decode). */
+        auto stage = [&denoiseProgress](int base, int span, int done, int total) {
+            if (denoiseProgress && total > 0)
+                denoiseProgress(base + span * done / total, 1000);
+        };
+
         /* PMRID pre-demosaic raw denoise (in-house/Winnow engine only). Runs at full
            strength on the mosaic before demosaic; the caller (MW::ensureRawDenoise)
            requests it to build the denoised base and blends the user's amount. No-op for
@@ -138,19 +147,24 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 std::vector<float> rgbClean;
                 RawColor cleanColor;
                 auto cleanWork = std::make_shared<WorkingImage>();
-                if (cleanDemosaic.Run(raw, rgbClean, Demosaic::Bilinear, abort) &&
+                auto cleanProg = [&stage](int d, int t) { stage(0, 250, d, t); };
+                if (cleanDemosaic.Run(raw, rgbClean, Demosaic::Bilinear, abort, cleanProg) &&
                     cleanColor.ToWorking(raw, rgbClean, *cleanWork)) {
                     *outClean = cleanWork;
                 }
                 if (aborted()) { errMsg = "Aborted"; return false; }
             }
-            PMRID::Apply(raw, m.ISONum, m.model, denoiseProgress);
+            PMRID::Apply(raw, m.ISONum, m.model,
+                         [&stage](int d, int t) { stage(250, 500, d, t); });
             if (aborted()) { errMsg = "Aborted"; return false; }
         }
 
         Demosaic demosaic;
         std::vector<float> rgb;
-        if (!demosaic.Run(raw, rgb, Demosaic::Bilinear, abort)) {
+        /* The denoised (post-PMRID) demosaic is the last slice of the progress bar. */
+        std::function<void(int, int)> demProg;
+        if (denoiseRaw) demProg = [&stage](int d, int t) { stage(750, 250, d, t); };
+        if (!demosaic.Run(raw, rgb, Demosaic::Bilinear, abort, demProg)) {
             errMsg = aborted() ? "Aborted" : "Demosaic failed (unsupported CFA pattern?).";
             return false;
         }
