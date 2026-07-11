@@ -28,6 +28,10 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     updateHiddenRows(QModelIndex());
     setMouseTracking(true);
 
+    dividerHeight = 5;
+    const int c = G::backgroundShade + 20;
+    divColor = QColor(c,c,c);
+
     /* Optional debounce write: flush the in-memory stack to the sidecar a short time after edits
        settle, so a crash loses less. Gated by G::isDevelopDebounceWrite; navigate-away / quit /
        pre-op flushes always run regardless. */
@@ -1428,12 +1432,14 @@ void DevelopProperties::addBasic()
        (identity), matching EditParams. */
     addSlider("temp",       "Temp",       "White balance temperature.",          parIdx, "BasicHeader", -100, 100, 0,   G::lightblue, G::lightyellow);
     addSlider("tint",       "Tint",       "White balance tint (green/magenta).", parIdx, "BasicHeader", -100, 100, 0,   G::lightgreen, G::lightmagenta);
+    addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "WBDevider");
     addSlider("exposure",   "Exposure",   "Overall exposure in stops (EV).",     parIdx, "BasicHeader", -500, 500, 100, G::darkgray, G::lightgray);
     addSlider("contrast",   "Contrast",   "Global contrast.",                    parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("highlights", "Highlights", "Recover or lift the highlights.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("shadows",    "Shadows",    "Recover or deepen the shadows.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("whites",     "Whites",     "Set the white point.",                parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("blacks",     "Blacks",     "Set the black point.",                parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
+    addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "ToneDevider");
     addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     // demo colors
@@ -1460,9 +1466,11 @@ void DevelopProperties::addColor()
     addSlider("red",        "Red",        "Per-channel red gain.",                 parIdx, "ColorHeader", -100, 100, 0, G::darkred,   G::lightred);
     addSlider("green",      "Green",      "Per-channel green gain.",               parIdx, "ColorHeader", -100, 100, 0, G::darkgreen, G::lightgreen);
     addSlider("blue",       "Blue",       "Per-channel blue gain.",                parIdx, "ColorHeader", -100, 100, 0, G::darkblue,  G::lightblue);
+    addDivider(dividerHeight, 1, divColor, parIdx, "ColorHeader", "RGBDevider");
     addSlider("hue",        "Hue",        "Rotate all hues.",                      parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addSlider("saturation", "Saturation", "Global saturation (grey at -100).",     parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addSlider("luminance",  "Luminance",  "Global luminance (brightness).",        parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
+    addDivider(dividerHeight, 1, divColor, parIdx, "ColorHeader", "HSLDevider");
     addSlider("vibrance",   "Vibrance",   "Saturation weighted toward muted colours.", parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
 }
 
@@ -1481,10 +1489,12 @@ void DevelopProperties::addEffects()
        (decode-time global raw NR, denoiseLuma/denoiseChroma) -- different function, different keys.
        Two 0..100 strength sliders (mapped to 0..1): Denoise = luminance NR (ratio-preserving),
        Denoise Color = chroma NR (opponent-chroma blur, luma kept exact) -- see Develop::Denoise. */
-    addSlider("localDenoise", "Denoise", "Local luminance noise reduction on the rendered image.",
+    addSlider("localDenoise", "Denoise:", "Local luminance noise reduction on the rendered image.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
-    addSlider("localDenoiseChroma", "Denoise Color", "Local colour (chroma) noise reduction.",
+    addSlider("localDenoiseChroma", "   Color", "Local colour (chroma) noise reduction.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
+
+    addDivider(dividerHeight, 1, divColor, parIdx, "EffectsHeader", "VignetteDevider");
 
     /* Vignette: a global radial exposure falloff about the image centre (see
        Develop::Vignette). Two sliders: Exposure (a 2-decimal EV slider like Basic
@@ -1493,20 +1503,25 @@ void DevelopProperties::addEffects()
        radial masks instead. */
     addSlider("vignetteExposure", "Vignette:", "Corner exposure (EV): - darkens, + brightens.",
               parIdx, "EffectsHeader", -500, 500, 100, G::darkgray, G::lightgray);
-    addSlider("vignetteFeather", "  feather", "How far the vignette reaches inward.",
+    addSlider("vignetteFeather", "   Feather", "How far the vignette reaches inward.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+
+    addDivider(dividerHeight, 1, divColor, parIdx, "EffectsHeader", "GrainDivider");
 
     /* Grain: monochromatic film grain added to luminance (see Develop::Grain). Amount is
        the strength, size the particle size (scaled to the image so the proxy matches full
        res), roughness how patchy / irregular the grain is. Size and roughness are
        sub-controls of Amount (indented "  " captions, like the vignette feather) and are
        inert until Amount is non-zero. All three 0..100 sliders mapped to 0..1. */
+
     addSlider("grainAmount", "Grain:", "Add monochromatic film grain to the image.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
-    addSlider("grainSize", "  size", "Grain particle size (fine to coarse).",
+    addSlider("grainSize", "   Size", "Grain particle size (fine to coarse).",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 25);
-    addSlider("grainRoughness", "  roughness", "How patchy / irregular the grain is.",
+    addSlider("grainRoughness", "   Roughness", "How patchy / irregular the grain is.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+
+    addDivider(dividerHeight, 1, divColor, parIdx, "EffectsHeader", "EndDivider");
 }
 
 void DevelopProperties::updateSectionHeaderCaptions()

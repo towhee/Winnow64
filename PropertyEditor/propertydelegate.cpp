@@ -133,14 +133,22 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    // row height = 1.7 * text height
     if (isDebug)
         qDebug() << "PropertyDelegate::sizeHint"
                  << "option.rect.width =" << option.rect.width()
                  << "option.rect.height =" << option.rect.height()
             ;
 
+    // row height = 1.7 * text height
     int height = static_cast<int>(G::strFontSize.toInt() * 1.7 * G::ptToPx);
+
+    /* Divider/spacer rows carry their own fixed height (see addDivider). The role lives
+       on the CAPTION cell only, so read it via the sibling -- QTreeView size-hints every
+       column and uses the tallest, so the value column must report the divider height too
+       or it wins with the normal height. Early return skips the caption-wrap grow. */
+    const QModelIndex capIndex = index.sibling(index.row(), CapColumn);
+    if (capIndex.data(UR_isDivider).toBool())
+        return QSize(option.rect.width(), capIndex.data(UR_DividerHeight).toInt());
 
     /* Grow the row to fit wrapped caption text. Only the caption column wraps
     (headers stay single-line); the tree row uses the tallest column's hint. */
@@ -370,14 +378,17 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            ;
            // */
 
-    /* Root rows are highlighted with a darker gradient and the decoration, which gets covered
-    up, and is repainted */
+    /* Root rows are highlighted with a darker gradient and the decoration, which gets
+    covered up, and is repainted */
+
     QRect r = option.rect;
-    /* Full column widths, taken from the view so they do not depend on paint order. The previous
-       approach cached r.width() into static w0/w1 as each column painted, but for column 0 Qt
-       shrinks the cell rect by the row's indentation, so indented child rows could leave w0 holding
-       a too-small value for a later full-width caption (r4 = w0 + w1). Reading columnWidth() is
-       order-independent and always correct. */
+
+    /* Full column widths, taken from the view so they do not depend on paint order. The
+    previous approach cached r.width() into static w0/w1 as each column painted, but for
+    column 0 Qt shrinks the cell rect by the row's indentation, so indented child rows
+    could leave w0 holding a too-small value for a later full-width caption (r4 = w0 +
+    w1). Reading columnWidth() is order-independent and always correct. */
+
     int w0 = 100, w1 = 200;
     if (const QTreeView *view = qobject_cast<const QTreeView*>(option.widget)) {
         w0 = view->columnWidth(0);
@@ -389,6 +400,28 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     }
     // r0 extends the rect over the decoration to the left margin
     QRect r0 = QRect(0, r.y(), r.x() + r.width(), r.height());
+
+    /* Divider/spacer row: draw the optional centred horizontal rule (the tree background
+       shows through as the band). The row is spanned, so this normally paints once across
+       the whole width; the caption sibling carries the role, so it renders from either
+       column even if spanning is off. sizeHint gave the row its height. Return before all
+       the header/leaf/value painting below -- a divider has none of it. */
+    if (index.sibling(index.row(), CapColumn).data(UR_isDivider).toBool()) {
+        // const int e = G::backgroundShade/* + 10*/;          // leaf value-row background shade
+        // set divider height in sizeHint()
+        // newRowHeight = index.data(UR_DividerHeight).toInt();
+        // painter->fillRect(r0, QColor(G::lightblue));
+        const int lineH = index.data(UR_DividerLineHeight).toInt();
+        const QColor lineColor = index.data(UR_DividerColor).value<QColor>();
+        if (lineH > 0 && lineColor.alpha() > 0) {
+            const int margin = 6;                        // horizontal inset of the rule
+            const int yMid = r0.center().y() - lineH / 2;
+            painter->fillRect(QRect(r0.left() + margin, yMid,
+                                    r0.width() - 2 * margin, lineH), lineColor);
+        }
+        painter->restore();
+        return;
+    }
     // r2 = r0 but leaves 1 pixel at the left, right and bottom margins to draw text
     QRect r2 = QRect(5, r.y(), r.x() + r.width() - 5, r.height()-1);
     // r3 = r but leaves a few pixels at the bottom margin to draw text
