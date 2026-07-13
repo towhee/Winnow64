@@ -21,6 +21,7 @@
 */
 
 #include <vector>
+#include <cstdint>
 #include <cmath>
 #include <algorithm>
 #include <memory>
@@ -29,6 +30,101 @@
 #include <QMutex>
 
 namespace ObjectMask {
+
+/*
+    ---- Perimeter-paint closure + fill ----
+    The Object Mask is painted as a PERIMETER: the user traces the object boundary with a
+    solid brush (multiple strokes; Alt erases). The strokes accumulate into a perimeter
+    coverage raster; this pair of helpers decides whether that boundary encloses a region
+    and, if so, returns the filled silhouette (perimeter + interior) handed to SAM 2 as a
+    dense prompt. Header-only and shared so the ImageView live overlay (preview) and the
+    develop render (parseObjectBrush) compute the SAME closure/fill.
+
+    bridgePx: the gap-bridging dilation, as a fraction of the long edge so the closure
+    decision is resolution-independent (preview and render rasterize at different sizes).
+    Both sides MUST call this so a loop shown closed (green) in the preview also fills.
+*/
+inline int bridgePx(int w, int h)
+{
+    return std::max(1, int(std::round(0.008 * std::max(w, h))));
+}
+
+/*
+    fillEnclosed: `perim` is the accumulated perimeter coverage (row-major w*h, 0..1,
+    output-oriented). Morphological close + border flood-fill (robust to a thick wall):
+      1. Threshold at 0.5 -> a binary wall.
+      2. Thicken the wall by `bridge` px (separable square dilation) so small gaps between
+         separate strokes still count as closed.
+      3. Flood-fill the BACKGROUND inward from every border pixel (4-neighbour BFS over
+         non-wall pixels). Any non-wall pixel the flood never reaches is ENCLOSED.
+      4. fill = wall OR enclosed. closed = enclosed-area fraction exceeds minAreaFrac
+         (ignores the speck a not-quite-closed loop leaves). Not closed -> fill = wall.
+    Returns closed; fill is always written.
+*/
+inline bool fillEnclosed(const std::vector<float>& perim, int w, int h, int bridge,
+                         std::vector<float>& fill, double minAreaFrac = 0.0008)
+{
+    fill.assign(size_t(w) * size_t(h), 0.0f);
+    if (w <= 0 || h <= 0 || perim.size() != size_t(w) * size_t(h)) return false;
+
+    /* 1) binary wall */
+    std::vector<uint8_t> wall(size_t(w) * h, 0);
+    for (size_t i = 0; i < wall.size(); ++i) wall[i] = perim[i] >= 0.5f ? 1 : 0;
+
+    /* 2) thicken the wall by `bridge` px (separable dilation) to bridge small gaps */
+    if (bridge > 0) {
+        std::vector<uint8_t> tmp(wall.size(), 0);
+        for (int y = 0; y < h; ++y) {                 // horizontal pass: wall -> tmp
+            const uint8_t *s = wall.data() + size_t(y) * w;
+            uint8_t *d = tmp.data() + size_t(y) * w;
+            for (int x = 0; x < w; ++x) {
+                uint8_t v = 0;
+                const int k0 = std::max(0, x - bridge), k1 = std::min(w - 1, x + bridge);
+                for (int k = k0; k <= k1; ++k) if (s[k]) { v = 1; break; }
+                d[x] = v;
+            }
+        }
+        for (int x = 0; x < w; ++x) {                 // vertical pass: tmp -> wall
+            for (int y = 0; y < h; ++y) {
+                uint8_t v = 0;
+                const int k0 = std::max(0, y - bridge), k1 = std::min(h - 1, y + bridge);
+                for (int k = k0; k <= k1; ++k) if (tmp[size_t(k) * w + x]) { v = 1; break; }
+                wall[size_t(y) * w + x] = v;
+            }
+        }
+    }
+
+    /* 3) BFS the background inward from the border (non-wall pixels only) */
+    std::vector<uint8_t> reached(size_t(w) * h, 0);
+    std::vector<int> stack;
+    stack.reserve(size_t(w) * h / 4 + 16);
+    auto push = [&](int x, int y) {
+        const size_t i = size_t(y) * w + x;
+        if (!wall[i] && !reached[i]) { reached[i] = 1; stack.push_back(int(i)); }
+    };
+    for (int x = 0; x < w; ++x) { push(x, 0); push(x, h - 1); }
+    for (int y = 0; y < h; ++y) { push(0, y); push(w - 1, y); }
+    while (!stack.empty()) {
+        const int i = stack.back(); stack.pop_back();
+        const int x = i % w, y = i / w;
+        if (x > 0)     push(x - 1, y);
+        if (x < w - 1) push(x + 1, y);
+        if (y > 0)     push(x, y - 1);
+        if (y < h - 1) push(x, y + 1);
+    }
+
+    /* 4) enclosed = neither wall nor reached; fill = wall + enclosed */
+    size_t enclosed = 0;
+    for (size_t i = 0; i < fill.size(); ++i) {
+        const bool inside = !wall[i] && !reached[i];
+        if (inside) ++enclosed;
+        fill[i] = (wall[i] || inside) ? 1.0f : 0.0f;
+    }
+    const bool closed = double(enclosed) > minAreaFrac * double(w) * double(h);
+    if (!closed)
+        for (size_t i = 0; i < fill.size(); ++i) fill[i] = wall[i] ? 1.0f : 0.0f;
+    return closed;
+}
 
 struct ObjectRef {
     std::vector<float> cov;     // single channel 0..1, row-major, output-oriented

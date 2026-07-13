@@ -351,5 +351,129 @@ update and clear custom functions for each progress bar, where there should only
 except for the Image Cache exception.  Also, note that I started to add the Raw Denoise
 progress row, but did not add separate clear and update functions pending this review.
 
+Export
+Crop (Expand generative fill)
+Remove/replace masked area
+Presets
+Color profiles
+Color mixer
+
+------------------------------
+Regenerative fill:
+
+See https://gemini.google.com/app/7a2267e405881f53 for how to use LaMa on MacOS.
+
+Every existing Develop edit is parametric — a slider value re-applied cheaply on each
+render tick. Regen fill is not: it synthesizes pixels via a ~100–500 ms inference pass
+you can't run per-tick. So it must follow the ObjectMask pattern, not the slider pattern:
+
+- User defines a region → on commit (stroke-end / button press), run LaMa once on the tile.
+
+- Cache the synthesized RGB patch as a path-registered FillRef (a direct analogue of
+ObjectMask::ObjectRef — same putRef/getRef/mutex store, but carrying an RGB patch + its
+mask instead of a coverage alpha).
+
+- The render just composites the cached patch within the mask (feathered). No inference
+on the render thread.
+
+This makes fill a new layer kind in StackRenderJob: instead of EditParams applied through
+a mask, a Fill layer substitutes its FillRef patch inside the mask. LaMa is
+deterministic, so the cached patch is stable and re-renders reproduce exactly.
+
+Pipeline order (the one real tradeoff): fill should composite last — after adjustments
+and geometry, on the near-final oriented image. Reason: LaMa synthesizes from the current
+surroundings, so filling against the already-adjusted, already-warped image makes the
+result self-consistent by construction, and it's the only way the expand-crop case works
+(the empty region only exists after geometry). The cost: if the user later cranks
+exposure, the baked patch won't track it. I'd bake at commit and offer a debounced
+auto-regenerate when surroundings change materially (reuse the existing
+debounceWriteTimer idiom) — this is exactly how Lightroom/Photoshop behave.
+
+The three use cases → three discoverable entry points, one engine
+
+Per the discoverability goal, I'd not bury this in the "Add mask" menu — a user removing
+a tourist doesn't think "mask." Make it a first-class, labeled tool:
+
+1. Spot / small brushed fill — a labeled "Heal / Fill" brush tool
+
+- Visible entry in the Develop dock with a healing-brush icon + tooltip ("Remove spots
+and small objects"). If it becomes a dock tab, it needs the 16×16 white glyph
+registration from the [dock-tab-graphics rule](every tabbable dock).
+
+- Reuses the existing brush infrastructure wholesale — maskBrush* buffers,
+size/flow/feather, [ ] keys, two-finger size, Alt-erase. Those modifiers stay as
+accelerators on top of the visible tool, not the only way in.
+
+- Fill fires on stroke-end; the brushed region → LaMa tile → FillRef.
+
+2. Object removal — reuse the region selectors, add a prominent action
+
+- The mask tools you already have (Object/SAM, Subject, Brush) are the region selector.
+So: on a Fill layer, once a mask exists, surface a prominent on-canvas "Remove" / "Fill"
+button floating near the selection (discovered where the work is), plus the same action
+in the panel.
+
+- This reuses maskEditBegin/End, the perimeter-paint fillEnclosed closure, and SegRefine
+matting untouched — you're just adding a "now synthesize the masked region" action after
+the mask is defined.
+
+3. Expand fill for crops — a contextual button in the Transform panel
+
+- This mask is free and exact: after crop/straighten/warp, you already know
+deterministically which output pixels have no source. No brushing, no segmentation.
+
+- Discoverability done right: a "Fill edges" toggle/button that appears in the Transform
+panel only when the geometry exposes empty pixels — surfaced at the exact moment it's
+relevant — plus an on-canvas hint over the empty wedges. The out-of-bounds region becomes
+the fill mask directly.
+
+What you reuse vs. build
+
+┌──────────────────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────┐
+│                   Reuse as-is                    │                                  Build new                                  │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ ORT/ANE inference layer (PMRID's exact path)     │ LaMa ONNX export + session wiring                                           │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ Brush buffers, size/flow/feather, [ ], Alt-erase │ FillRef store (RGB patch, ObjectRef-cloned)                                 │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ Mask tools + maskEditBegin/End handshake         │ Fill layer kind in StackRenderJob + composite                               │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ SegRefine, fillEnclosed closure                  │ Tile extraction: scene-linear→sRGB8, run, back to linear, feather composite │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ debounceWriteTimer, EditStack persistence        │ Transform "Fill edges" contextual affordance                                │
+└──────────────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────┘
+
+The whole thing is one LaMa session + three mask-builders + one composite-back, mirroring
+how ObjectMask already bridges the ImageView preview and the render.
+
+Open decisions for you
+
+1. Layer model: dedicated "Fill" layer kind, or a "Fill" action available on any existing
+non-Base mask layer? I lean toward a dedicated Fill layer — clearer in the layer
+dropdown, and its "no adjustment sliders, just a synthesized patch" nature is visibly
+distinct.
+
+2. Naming: "Heal", "Remove", "Generative Fill", or "Fill"? Affects the icon/tooltip and
+how discoverable the intent is. ("Remove" reads most honestly given it's LaMa, not
+prompt-driven generation.)
+
+3. Model: LaMa vs MI-GAN — still worth the quick prototype bake-off on your real
+straighten wedges before wiring, since case 3 is their weakest mode.
 
 
+Want me to (a) turn this into a task list and start the FillRef + Fill-layer scaffolding, or (b) do the LaMa-vs-MI-GAN export/quality bake-off first? I'd recommend (b) — it de-risks the model choice before any UI is committed.
+
+D       Develop toggle
+R       Crop toggle
+N       New Layer
+M       New Mask
+S       Spot tool
+X       Export
+H       Histogram/Vectorscope toggle
+
+How to get (k, b):
+First: use DNG tag 51041
+Second: use IsoKB tables (A7R5, A1M2) + append tables with Bill Claff results
+Third: use blind per-image estimation
+
+I want to ti

@@ -1,4 +1,5 @@
 #include "ImageFormats/Raw/pmrid.h"
+#include "ImageFormats/Raw/pmrid_calib_tables.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "Utilities/inference/inferencesession.h"
 #include "Main/global.h"
@@ -34,27 +35,14 @@ const     char *kModelFile = "pmrid.onnx";
 constexpr double kK[2] = {0.0005995267, 0.00868861};                 // K(iso)   = kK0*iso + kK1
 constexpr double kB[3] = {7.11772e-7, 6.514934e-4, 0.11492713};      // Sigma(iso)= ...*iso^2 + ...
 
-/* Per-camera noise calibration: var = k*iso-dependent*x + b in the white-normalised [0,1] domain
-   (green plane), measured by a photon-transfer sweep (tools/calibrate_pmrid.py -> _pmrid_out/
-   calib_<model>.json). k = shot-noise gain (~doubles per ISO stop), b = read-noise floor. */
-struct IsoKB { int iso; double k; double b; };
+/* Per-camera noise tables (var = k*x + b, white-normalised [0,1], green plane) live in
+   pmrid_calib_tables.h; bring the names into this translation unit. */
+using PMRID::IsoKB;
+using PMRID::CalibTable;
+using PMRID::kA7R5;
+using PMRID::kCalibTables;
 
-constexpr IsoKB kA7R5[] = {   // Sony ILCE-7RM5
-    {   100, 2.679249e-05, 1.209511e-09 }, {   200, 5.324481e-05, 2.094189e-08 },
-    {   400, 1.070231e-04, 2.446033e-08 }, {   800, 2.140609e-04, 9.039847e-08 },
-    {  1600, 4.277943e-04, 3.610540e-07 }, {  3200, 8.555372e-04, 1.386220e-06 },
-    {  6400, 1.710885e-03, 5.153719e-06 }, { 12800, 3.379437e-03, 2.121978e-05 },
-    { 25600, 4.760316e-03, 3.789355e-05 },
-};
-constexpr IsoKB kA1M2[] = {   // Sony ILCE-1M2 (A1 II)
-    {   100, 2.262302e-05, 5.375863e-09 }, {   200, 4.564027e-05, 3.518424e-08 },
-    {   400, 9.117619e-05, 1.471515e-07 }, {   800, 1.807107e-04, 3.878459e-08 },
-    {  1600, 3.619991e-04, 1.659519e-07 }, {  3200, 7.263821e-04, 6.005952e-07 },
-    {  6400, 1.442054e-03, 2.510492e-06 }, { 12800, 2.881715e-03, 1.002150e-05 },
-    { 25600, 3.973885e-03, 2.307054e-05 },
-};
-
-/* Interpolate (k,b) for iso from a table, log-log (k ~ ISO, geometric ISO grid), clamped. */
+/* Interpolate (k,b) for iso from a table, log-log (k ~ ISO, geometric grid), clamped. */
 void lookupKB(const IsoKB *t, int n, int iso, double &k, double &b)
 {
     if (iso <= t[0].iso)     { k = t[0].k;     b = t[0].b;     return; }
@@ -74,13 +62,20 @@ void lookupKB(const IsoKB *t, int n, int iso, double &k, double &b)
     }
 }
 
-/* Pick the calibration table by camera model (m.model is "Sony ILCE-..."); default to the A7R5
-   (a generic full-frame Sony) for uncalibrated bodies -- better than no denoise, and any camera
-   can be added by capturing its frames (tools/pmrid_calibration_capture.md). */
-void modelKB(const QString &model, int iso, double &k, double &b)
+/* Look up (k,b) for a KNOWN camera model (m.model is "Sony ILCE-...") by scanning the
+   pmrid_calib_tables.h registry for the first substring match. Returns false and leaves
+   k,b untouched for an unrecognised body, so resolveKB() can fall through to blind
+   estimation rather than borrowing a mismatched sensor's curve. Add a body via a MEASURED
+   sweep (pmrid_calibration_capture.md) or a DERIVED table (gen_pmrid_tables.py). */
+bool modelKB(const QString &model, int iso, double &k, double &b)
 {
-    if (model.contains("ILCE-1M2")) lookupKB(kA1M2, int(sizeof(kA1M2) / sizeof(kA1M2[0])), iso, k, b);
-    else                            lookupKB(kA7R5, int(sizeof(kA7R5) / sizeof(kA7R5[0])), iso, k, b);
+    for (const CalibTable &t : kCalibTables) {
+        if (model.contains(QLatin1String(t.modelMatch))) {
+            lookupKB(t.rows, t.n, iso, k, b);
+            return true;
+        }
+    }
+    return false;
 }
 
 /* KSigma affine coefficients: map the measured (k,b) noise onto the OPPO anchor's statistics. */
@@ -125,9 +120,127 @@ std::vector<int> tileStarts(int total)
     return v;
 }
 
+/* Blind Poisson-Gaussian noise estimation from the green CFA plane (tier 3 of resolveKB):
+   fit var = k*x + b in the white-normalised [0,1] domain from flat image regions, so an
+   uncalibrated body still denoises with its own noise model. Method: per block, measure
+   (mean, variance) of the green sites; bin by intensity and keep the low variance
+   percentile in each bin (texture only raises variance, so that floor is ~pure noise);
+   least-squares fit the per-bin floors. Returns false if the frame is too flat/textured
+   to fit reliably. One-shot pre-inference sweep of ~half the pixels -- negligible beside
+   the net. */
+bool estimateKB(const RawImage &raw, double &k, double &b)
+{
+    int dy, dx;
+    if (!rggbOrigin(raw.pattern, dy, dx)) return false;
+
+    const int W = raw.width;
+    const float white = raw.white > 0 ? float(raw.white) : 1.0f;
+    const float invWhite = 1.0f / white;
+
+    constexpr int kBlk  = 16;    // packed-grid block (16 -> 32x32 mosaic)
+    constexpr int kBins = 32;
+    const int Wpk = (W - dx) / 2, Hpk = (raw.height - dy) / 2;
+    if (Wpk < kBlk || Hpk < kBlk) return false;
+
+    auto at = [&](int y, int x) -> uint16_t { return raw.cfa[size_t(y) * W + x]; };
+
+    std::vector<std::vector<float>> bins(kBins);   // block variances per intensity bin
+    for (int by = 0; by + kBlk <= Hpk; by += kBlk) {
+        for (int bx = 0; bx + kBlk <= Wpk; bx += kBlk) {
+            /* Mean/variance of G1 and G2 separately, then average, so the fixed G1/G2
+               pedestal difference does not masquerade as noise. */
+            double s1 = 0, s2 = 0, ss1 = 0, ss2 = 0;
+            for (int y = 0; y < kBlk; ++y) {
+                const int sy = dy + 2 * (by + y);
+                for (int x = 0; x < kBlk; ++x) {
+                    const int sx = dx + 2 * (bx + x);
+                    const float g1 = at(sy,     sx + 1) * invWhite;   // G1
+                    const float g2 = at(sy + 1, sx)     * invWhite;   // G2
+                    s1 += g1; ss1 += double(g1) * g1;
+                    s2 += g2; ss2 += double(g2) * g2;
+                }
+            }
+            const int n = kBlk * kBlk;
+            const double m1 = s1 / n, m2 = s2 / n;
+            const double v1 = std::max(0.0, ss1 / n - m1 * m1);
+            const double v2 = std::max(0.0, ss2 / n - m2 * m2);
+            const double mean = 0.5 * (m1 + m2);
+            if (mean <= 0.0 || mean >= 1.0) continue;   // skip black / clipped blocks
+            int bi = int(mean * kBins);
+            if (bi >= kBins) bi = kBins - 1;
+            bins[bi].push_back(float(0.5 * (v1 + v2)));
+        }
+    }
+
+    /* Per-bin noise floor = low percentile of block variances (the flat regions). */
+    std::vector<double> xs, ys;
+    for (int i = 0; i < kBins; ++i) {
+        std::vector<float> &vv = bins[i];
+        if (vv.size() < 8) continue;                // too few flat samples to trust
+        std::sort(vv.begin(), vv.end());
+        xs.push_back((i + 0.5) / kBins);
+        ys.push_back(vv[size_t(vv.size() * 0.10)]); // 10th percentile
+    }
+    if (xs.size() < 4) return false;                // not enough intensity coverage
+
+    /* Least-squares var = k*x + b over the per-bin floors. */
+    const int n = int(xs.size());
+    double sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (int i = 0; i < n; ++i) {
+        sx += xs[i]; sy += ys[i]; sxx += xs[i] * xs[i]; sxy += xs[i] * ys[i];
+    }
+    const double den = n * sxx - sx * sx;
+    if (std::abs(den) < 1e-12) return false;
+    const double kk = (n * sxy - sx * sy) / den;
+    if (kk <= 0.0) return false;                    // shot noise must rise with signal
+    k = kk;
+    b = std::max(0.0, (sy - kk * sx) / n);
+    return true;
+}
+
+/* Which tier of resolveKB() supplied the (k,b) noise model -- logged for diagnostics. */
+enum class KBSource { DngNoiseProfile, ModelTable, BlindEstimate, GenericFallback };
+
+const char *kbSourceName(KBSource s)
+{
+    switch (s) {
+    case KBSource::DngNoiseProfile: return "DNG NoiseProfile";
+    case KBSource::ModelTable:      return "model table";
+    case KBSource::BlindEstimate:   return "blind estimate";
+    case KBSource::GenericFallback: return "generic fallback";
+    }
+    return "?";
+}
+
+/* Resolve the (k,b) noise model for this frame via the priority chain:
+   1) a DNG NoiseProfile baked into the file, 2) a measured per-model table, 3) blind
+   per-image estimation from the CFA, 4) a generic full-frame table as a last-ditch guard
+   (so we never denoise with nonsense coefficients when 1-3 all decline). */
+KBSource resolveKB(const RawImage &raw, const QString &model, int iso, double &k, double &b)
+{
+    if (raw.hasNoiseProfile && raw.npScale > 0.0) {
+        k = raw.npScale; b = raw.npOffset;
+        return KBSource::DngNoiseProfile;
+    }
+    if (modelKB(model, iso, k, b))   return KBSource::ModelTable;
+    if (estimateKB(raw, k, b))       return KBSource::BlindEstimate;
+    lookupKB(kA7R5, int(sizeof(kA7R5) / sizeof(kA7R5[0])), iso, k, b);
+    return KBSource::GenericFallback;
+}
+
 } // namespace
 
 namespace PMRID {
+
+/* Last resolution snapshot for the Develop diagnostics (see pmrid.h). */
+static std::mutex g_resMutex;
+static Resolution g_lastRes;
+
+Resolution LastResolution()
+{
+    std::lock_guard<std::mutex> lock(g_resMutex);
+    return g_lastRes;
+}
 
 static InferenceSession *SharedSession()
 {
@@ -164,8 +277,13 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
     const float white = raw.white > 0 ? float(raw.white) : 1.0f;
     const float invWhite = 1.0f / white;
     double k, b;
-    modelKB(model, iso > 0 ? iso : 100, k, b);            // per-camera, per-ISO noise model
+    const KBSource kbSrc = resolveKB(raw, model, iso > 0 ? iso : 100, k, b);
     const Cvt cvt = cvtCoeffs(k, b);
+    {
+        std::lock_guard<std::mutex> lock(g_resMutex);
+        g_lastRes = { true, model, iso, QString::fromLatin1(kbSourceName(kbSrc)),
+                      k, b, raw.hasNoiseProfile };
+    }
 
     const std::string inName  = s->InputNames()[0];
     const std::string outName = s->OutputNames()[0];
@@ -263,8 +381,10 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
 
 
     if (G::isLogger)
-        G::log("PMRID::Apply", QString("%1x%2 iso=%3 via %4")
-                                   .arg(W).arg(H).arg(iso).arg(s->BackendName()));
+        G::log("PMRID::Apply", QString("%1x%2 iso=%3 via %4 kb=[%5,%6] (%7)")
+                                   .arg(W).arg(H).arg(iso).arg(s->BackendName())
+                                   .arg(k, 0, 'g', 4).arg(b, 0, 'g', 4)
+                                   .arg(kbSourceName(kbSrc)));
     return true;
 }
 

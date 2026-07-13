@@ -1350,8 +1350,17 @@ private:
     std::shared_ptr<const WorkingImage> developDenoised;
     QString developDenoisedKey;                   // "path|dnL|dnC|iso"; empty when clean
     QString developDenoiseInFlightKey;            // key currently being computed (coalesce guard)
-    std::shared_ptr<const WorkingImage> developPmridFull;   // full-strength PMRID base, reused across amounts
+    // full-strength PMRID base, reused across amounts
+    std::shared_ptr<const WorkingImage> developPmridFull;
     QString developPmridKey;                      // "path|iso" for developPmridFull
+    /* Diagnostic snapshot of the (k,b) noise-model tier (PMRID::resolveKB) that produced
+       developPmridFull -- valid for exactly developPmridKey, so the Develop diagnostics
+       report shows it ONLY for the current image's base, never a stale one. Set in
+       ensureRawDenoise when PMRID decodes; cleared/reset with developPmridFull. */
+    QString developPmridResSource;                // resolveKB tier name; "" = unset
+    double  developPmridResK = 0.0;
+    double  developPmridResB = 0.0;
+    bool    developPmridResHadNP = false;
     QString developWorkInFlight;                  // path whose scene-linear decode is running (ensureDevelopWork coalesce)
     QString developWorkTriedPath;                 // path already async-decoded but with no scene-linear result
                                                   // (display-referred format) -> render the fallback, don't loop

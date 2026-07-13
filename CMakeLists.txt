@@ -215,7 +215,6 @@ set(WINNOW_SOURCES
     ImageFormats/Raw/demosaic.cpp
     ImageFormats/Raw/losslessjpeg.cpp
     ImageFormats/Raw/rawcolor.cpp
-    ImageFormats/Raw/rawdenoise.cpp
     ImageFormats/Raw/pmrid.cpp
     ImageFormats/Raw/rawformat.cpp
     ImageFormats/Raw/tiffwalk.cpp
@@ -320,6 +319,7 @@ set(WINNOW_SOURCES
     Utilities/focuspredictor.cpp
     Utilities/inference/inferencesession.cpp
     Utilities/inference/ortbackend.cpp
+    Utilities/inference/miganfill.cpp
     Utilities/subjectpredictor.cpp
     Utilities/objectmaskpredictor.cpp
     Utilities/skypredictor.cpp
@@ -464,7 +464,6 @@ set(WINNOW_HEADERS
     ImageFormats/Raw/demosaic.h
     ImageFormats/Raw/losslessjpeg.h
     ImageFormats/Raw/rawcolor.h
-    ImageFormats/Raw/rawdenoise.h
     ImageFormats/Raw/pmrid.h
     ImageFormats/Raw/rawformat.h
     ImageFormats/Raw/tiffwalk.h
@@ -528,6 +527,7 @@ set(WINNOW_HEADERS
     Utilities/inference/inferencebackend.h
     Utilities/inference/inferencesession.h
     Utilities/inference/ortbackend.h
+    Utilities/inference/miganfill.h
     Utilities/subjectpredictor.h
     Utilities/objectmaskpredictor.h
     Utilities/skypredictor.h
@@ -879,6 +879,16 @@ if(APPLE)
         message(WARNING "ReleaseExtras/u2net.onnx not found -- 'Select Subject' mask will no-op. "
                         "Download u2net.onnx into ReleaseExtras/ to enable it.")
     endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/migan.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/migan.onnx)
+        set_source_files_properties(ReleaseExtras/migan.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/migan.onnx not found -- spot fill will no-op. "
+                        "Export migan.onnx into ReleaseExtras/ to enable it.")
+    endif()
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx")
         target_sources(Winnow PRIVATE ReleaseExtras/skyseg.onnx)
         set_source_files_properties(ReleaseExtras/skyseg.onnx PROPERTIES
@@ -899,20 +909,8 @@ if(APPLE)
         message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
                         "Add midas.onnx to ReleaseExtras/ to enable it.")
     endif()
-    # Raw denoiser (RawRefinery TreeNet) for the Base "Denoise raw" control (runs via the ORT
-    # inference layer, ANE on macOS). Warn-if-absent like the rest; without it, raw denoise no-ops.
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/rawdenoise.onnx")
-        target_sources(Winnow PRIVATE ReleaseExtras/rawdenoise.onnx)
-        set_source_files_properties(ReleaseExtras/rawdenoise.onnx PROPERTIES
-            MACOSX_PACKAGE_LOCATION "MacOS"
-            HEADER_FILE_ONLY TRUE
-            SKIP_AUTOGEN TRUE)
-    else()
-        message(WARNING "ReleaseExtras/rawdenoise.onnx not found -- 'Denoise raw' will no-op. "
-                        "Add rawdenoise.onnx to ReleaseExtras/ to enable it.")
-    endif()
-    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0) for the Base "Denoise raw" control on
-    # the in-house decode path. Warn-if-absent like the rest; without it, PMRID no-ops.
+    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0) for the Base "Denoise raw"
+    # control on the in-house decode path. Warn-if-absent; without it, PMRID no-ops.
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx")
         target_sources(Winnow PRIVATE ReleaseExtras/pmrid.onnx)
         set_source_files_properties(ReleaseExtras/pmrid.onnx PROPERTIES
@@ -1174,18 +1172,8 @@ if(WIN32)
         message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
                         "Add midas.onnx to ReleaseExtras/ to enable it.")
     endif()
-    # Raw denoiser (RawRefinery TreeNet, "Denoise raw"). Warn-if-absent; without it raw denoise no-ops.
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/rawdenoise.onnx")
-        add_custom_command(TARGET Winnow POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/rawdenoise.onnx" "${_winnow_out}"
-            COMMENT "Deploying rawdenoise.onnx"
-            VERBATIM)
-    else()
-        message(WARNING "ReleaseExtras/rawdenoise.onnx not found -- 'Denoise raw' will no-op. "
-                        "Add rawdenoise.onnx to ReleaseExtras/ to enable it.")
-    endif()
-    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0). Warn-if-absent; without it PMRID no-ops.
+    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0). Warn-if-absent; without it,
+    # PMRID no-ops.
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx")
         add_custom_command(TARGET Winnow POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different

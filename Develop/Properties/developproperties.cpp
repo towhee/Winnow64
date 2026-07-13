@@ -1,5 +1,6 @@
 #include "Develop/Properties/developproperties.h"
 #include "Develop/Properties/layerheader.h"
+#include "Develop/fillspot.h"
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 #include "Develop/Scopes/toneregionslider.h"
@@ -296,7 +297,7 @@ void DevelopProperties::addCoreItems()
        chroma-noise suppression (default 100).
 
        These are CHILDREN of the Demosaic row so it gains an expand/collapse arrow that
-       hides them -- but only on the WINNOW engine (PMRID/NAFNet needs the CFA mosaic). On
+       hides them -- but only on the WINNOW engine (PMRID needs the CFA mosaic). On
        Apple the raw denoise is inert, so add no children: the row then has no arrow. */
     if (G::decodeRawEngine != G::DecodeRawEngine::appleDecodeRawEngine) {
         addSlider("denoiseLuma", "Denoise Lum",
@@ -433,6 +434,7 @@ void DevelopProperties::bindLayerHeader(LayerHeader *header)
     connect(layerHeader, &LayerHeader::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
     connect(layerHeader, &LayerHeader::previewToggled,      this, &DevelopProperties::onLayerPreviewToggled);
     connect(layerHeader, &LayerHeader::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
+    connect(layerHeader, &LayerHeader::spotToolToggled,     this, &DevelopProperties::onSpotToolToggled);
 
     /* Seed the dropdown + eye from the current stack. */
     refreshLayerCombo();
@@ -485,10 +487,83 @@ void DevelopProperties::onLayerSelected(const QString &name)
     const int idx = currentLayerNames().indexOf(name);
     if (idx < 0 || idx == activeLayerIndex) return;
     activeLayerIndex = idx;
-    selectedMaskIndex = -1;
-    refreshLayerCombo();         // move the checkmark + re-caption the per-layer actions to the new layer
-    buildTree();                 // swap the top items (Core/masks) + repopulate the sections
-    emit paramsChanged();        // the renderer shows the active layer
+
+    /* Selecting a layer reveals ITS OWN section (the mask-tool rows) and shows its mask
+       straight away -- select the first mask tool so its coverage overlays the image. The
+       Basic/Color/Effects sections keep whatever expand state they had. Base (index 0)
+       applies globally, so it has no mask to show. */
+    EditLayer *l = activeLayer();
+    selectedMaskIndex = (idx > 0 && l && !l->masks.isEmpty()) ? 0 : -1;
+
+    refreshLayerCombo();          // move checkmark + re-caption actions to new layer
+    buildTree();                  // swap top items (Core/masks) + repopulate sections
+
+    /* Un-collapse the layer's own items (its mask rows). Bulk-guarded so setTreeCollapsed
+       does not fold the adjustment sections under Solo -- those stay as the user left
+       them. */
+    isBulkExpandCollapse = true;
+    setTreeCollapsed(false);
+    isBulkExpandCollapse = false;
+    if (layerHeader) layerHeader->setCollapsed(false);
+
+    emit paramsChanged();         // the renderer shows the active layer
+}
+
+void DevelopProperties::onSpotToolToggled(bool active)
+{
+    if (G::isLogger) G::log("DevelopProperties::onSpotToolToggled");
+    if (spotMode == active) return;
+    spotMode = active;
+    if (layerHeader) layerHeader->setSpotActive(active);
+    if (active) { emit spotEditBegin(); emitSpotPins(); }   // arm + seed the pins
+    else        emit spotEditEnd();
+}
+
+void DevelopProperties::onSpotStrokeCommitted(const QString &paramsJson)
+{
+    if (G::isLogger) G::log("DevelopProperties::onSpotStrokeCommitted");
+    if (currentImagePath.isEmpty() || paramsJson.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    FillSpot fs;
+    fs.paramsJson = paramsJson;
+    s.spots.append(fs);
+    dirty.insert(currentImagePath);
+    emitSpotPins();
+    emit paramsChanged();                   // re-render -> MiganFill heals the new spot
+}
+
+void DevelopProperties::onSpotRemoveRequested(int index)
+{
+    if (G::isLogger) G::log("DevelopProperties::onSpotRemoveRequested");
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (index < 0 || index >= s.spots.size()) return;
+    s.spots.remove(index);
+    dirty.insert(currentImagePath);
+    emitSpotPins();
+    emit paramsChanged();                   // re-render without the removed spot
+}
+
+/* Centre (centroid of the stroke points) of each spot, in output-normalized coords, for
+   the pins. Order matches EditStack::spots so a pin index maps to a spot. */
+QVector<QPointF> DevelopProperties::spotPinCenters() const
+{
+    QVector<QPointF> centers;
+    if (currentImagePath.isEmpty()) return centers;
+    const EditStack s = stackCache.value(currentImagePath);
+    for (const FillSpot &sp : s.spots) {
+        const FillSpotGeom::Parsed p = FillSpotGeom::parse(sp.paramsJson);
+        if (!p.valid()) { centers.append(QPointF(0.5, 0.5)); continue; }
+        double sx = 0, sy = 0; const int n = int(p.pts.size() / 2);
+        for (int i = 0; i < n; ++i) { sx += p.pts[2 * i]; sy += p.pts[2 * i + 1]; }
+        centers.append(QPointF(sx / n, sy / n));
+    }
+    return centers;
+}
+
+void DevelopProperties::emitSpotPins()
+{
+    emit spotPinsChanged(spotPinCenters());
 }
 
 void DevelopProperties::renameActiveLayer()
@@ -1074,6 +1149,18 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
             setSliderReal("maskFeather", m.feather);
             setCheckboxValue("maskInvert", m.inverted);
         }
+        else if (m.tool == int(MaskTool::Object)) {
+            /* Perimeter-paint: trace the object boundary with a solid brush (Alt erases;
+               [ ] or two-finger drag resize). Size = diameter; Feather softens edge. */
+            addSlider("maskSize", "Size", "Perimeter brush diameter (% of the long edge).",
+                      toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskFeather", "Feather", "Soften the refined cutout edge.",
+                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
+            setSliderReal("maskSize", brushNum(m.paramsJson, "size", 8));
+            setSliderReal("maskFeather", m.feather);
+            setCheckboxValue("maskInvert", m.inverted);
+        }
         else {
             addSlider("maskFeather", "Feather", "Soften the mask edge.",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
@@ -1148,9 +1235,15 @@ QString DevelopProperties::defaultMaskParams(int tool)
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
     if (tool == int(MaskTool::Object)) {
-        /* SAM 2 object mask: starts empty (no lasso yet). The user drags a rough outline on the image;
-           ImageView emits {"brush":{"poly":[...]}} which MW decodes. Empty -> no coverage until drawn. */
-        return QString();
+        /* SAM 2 object mask, perimeter-paint: the user traces the object BOUNDARY with a
+           solid brush (multiple strokes; Alt erases). Brush-style blob (mirrors the Brush
+           tool): size + a stroke list of normalized output-coord points. Empty -> no
+           coverage until a closed loop is drawn, when MW fills the enclosed region and
+           SAM refines it to the object edge. */
+        QJsonObject o;
+        o["size"] = 8;
+        o["strokes"] = QJsonArray();
+        return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
     return QString();
 }
@@ -1196,7 +1289,7 @@ void DevelopProperties::setActiveBrushSize(double size)
     EditLayer *l = activeLayer();
     if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->masks.size()) return;
     MaskComponent &m = l->masks[selectedMaskIndex];
-    if (m.tool != int(MaskTool::Brush)) return;
+    if (m.tool != int(MaskTool::Brush) && m.tool != int(MaskTool::Object)) return;
     const int s = qBound(1, int(size + 0.5), 100);
     m.paramsJson = brushWith(m.paramsJson, "size", s);
     dirty.insert(currentImagePath);
@@ -1638,6 +1731,10 @@ void DevelopProperties::itemChange(QModelIndex idx)
        pre-op (always) and, if G::isDevelopDebounceWrite, a short time after edits settle. */
     if (!source.isEmpty()) {
         if (currentImagePath.isEmpty()) return;
+        /* This slider modifies the masked pixels (not the mask itself). If a mask overlay
+           is shown, hide its red coverage so the user sees the effect. Covers all Basic/
+           Color/Effects sliders and any future adjustment key via applyKeyToParams. */
+        if (maskOverlayActive()) emit maskTintHideRequested();
         applyKeyToParams(source, v, activeParams());
         dirty.insert(currentImagePath);
         emit paramsChanged();
@@ -1699,6 +1796,7 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
     /* Transform Preview: previewed off -> bypass geometry at render (identity), while the stored
        crop/warp stays in the cache so the overlay still draws (see currentGeometry). */
     job.geometry = s.geometry.show ? s.geometry : Geometry();
+    job.spots    = s.spots;              // healed before geometry (Base-only too)
     if (s.layers.isEmpty()) return job;
     job.base = effectiveLayerParams(s.layers[0]);   // Base (layer 0), previewed groups folded off
     for (int i = 1; i < s.layers.size(); ++i) {
@@ -1805,7 +1903,8 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     selectedMaskIndex = -1;
 
     refreshLayerCombo();
-    buildTree();                   // Base is active: Core rows + Basic/Color/Effects, populated
+    buildTree();                   // Base active: Core rows + Basic/Color/Effects
+    if (spotMode) emitSpotPins();  // spot tool armed across a nav -> refresh pins
 }
 
 bool DevelopProperties::currentIsIdentity() const

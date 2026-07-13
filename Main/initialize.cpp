@@ -1824,6 +1824,17 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::maskEditBegin, imageView, &ImageView::beginMaskEdit);
     connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::onAiMaskEditBegin);
     connect(developProperties, &DevelopProperties::maskEditEnd,   imageView, &ImageView::endMaskEdit);
+    /* Regenerative spot fill: arm/disarm the ImageView brush; stroke -> FillSpot. */
+    connect(developProperties, &DevelopProperties::spotEditBegin, imageView, &ImageView::beginSpotEdit);
+    connect(developProperties, &DevelopProperties::spotEditEnd,   imageView, &ImageView::endSpotEdit);
+    connect(imageView, &ImageView::spotStrokeCommitted,
+            developProperties, &DevelopProperties::onSpotStrokeCommitted);
+    connect(developProperties, &DevelopProperties::spotPinsChanged,
+            imageView, &ImageView::setSpotPins);
+    connect(imageView, &ImageView::spotRemoveRequested,
+            developProperties, &DevelopProperties::onSpotRemoveRequested);
+    connect(imageView, &ImageView::spotToolExited, developProperties,
+            [this]{ developProperties->onSpotToolToggled(false); });
     /* Whole-layer mask coverage tint: rebuild/clear when the mask selection changes (begin/end) or
        any mask geometry/param changes (paramsChanged). MW composites the active layer's tools. */
     connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::updateMaskOverlayTint);
@@ -1838,6 +1849,9 @@ void MW::createDevelopDock()
     connect(imageView, &ImageView::maskBrushAutoMaskRequested, developProperties, &DevelopProperties::setActiveBrushAutoMask);
     connect(imageView, &ImageView::maskBrushSamFieldRequested, this, &MW::onBrushSamFieldRequested);
     connect(developProperties, &DevelopProperties::maskBrushAiEnabled, this, &MW::warmBrushSamEncoder);
+    /* Adjustment slider changed while a mask overlay is shown -> hide coverage tint. */
+    connect(developProperties, &DevelopProperties::maskTintHideRequested,
+            imageView, &ImageView::hideMaskTint);
 
     /* Develop preview render timers (see MW::developParamsChange). The proxy timer coalesces a
        burst of slider ticks into one screen-resolution render; the full-res timer fires once the
@@ -1992,6 +2006,16 @@ void MW::createDevelopDock()
     developTitleLayout->addWidget(developTransformBtn);
     developTitleLayout->addSpacing(10);
 
+    // question mark button
+    BarBtn *devQuestionBtn = new BarBtn();
+    devQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
+    devQuestionBtn->setToolTip("How this works: develop tips");
+    connect(devQuestionBtn, &BarBtn::clicked, bookmarks, &BookMarks::howThisWorks);
+    developTitleLayout->addWidget(devQuestionBtn);
+
+    // Spacer
+    developTitleLayout->addSpacing(10);
+
     // collapse/expand body button
     if (G::useDWCollapse) {
         BarBtn *developCollapseBtn = new BarBtn();
@@ -2131,6 +2155,12 @@ void MW::setOperationMode(G::OperationMode mode)
         }
     }
     syncDevelopPanelEnabled();
+
+    /* The isCached red-dot indicator is suppressed in Develop Mode (drawn per-paint in
+       IconViewDelegate). Repaint the icon views so dots on rows other than the current
+       image are added/removed to match the new mode. */
+    if (thumbView) thumbView->viewport()->update();
+    if (gridView) gridView->viewport()->update();
 }
 
 void MW::toggleOperationMode()

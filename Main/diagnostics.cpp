@@ -396,9 +396,9 @@ QString MW::developDiagnostics()
     SELECTED image: the operation-mode / raw-engine globals, the current file, the cached
     scene-linear WorkingImage base, the raw sensor-unpack info, the effective EditParams
     (Base + non-Base layers), the crop/warp geometry, and the interactive develop caches
-    (PMRID "Denoise raw" base, scene-linear re-decode guards, proxy / full-res render
-    state, mask reference caches). Read-only -- builds the report from live state and
-    touches no pixels.
+    (PMRID "Denoise raw" base + the resolved (k,b) noise-model tier, scene-linear re-decode
+    guards, proxy / full-res render state, mask reference caches). Read-only -- builds the
+    report from live state and touches no pixels.
 */
     if (G::isLogger) G::log("MW::developDiagnostics");
     QString reportString;
@@ -538,6 +538,19 @@ QString MW::developDiagnostics()
         << "   key = " << (developPmridKey.isEmpty() ? "(none)" : developPmridKey);
     rpt << "\n" << "  developDenoiseInFlightKey = "
         << (developDenoiseInFlightKey.isEmpty() ? "(idle)" : developDenoiseInFlightKey);
+    /* Noise model (k,b): the PMRID::resolveKB tier that produced the CURRENT image's base
+       (snapshot keyed to developPmridKey, so it is never stale) -- the first thing to
+       check if a file denoises wrong. Shown only while developPmridFull is this image. */
+    const bool resCurrent = !developPmridResSource.isEmpty() &&
+                            developPmridKey.startsWith(fPath + "|");
+    if (resCurrent) {
+        rpt << "\n" << "  noise model: source = " << developPmridResSource
+            << "   k = " << G::s(developPmridResK) << "   b = " << G::s(developPmridResB)
+            << "   DNG NoiseProfile = " << (developPmridResHadNP ? "yes" : "no");
+    } else {
+        rpt << "\n" << "  noise model = (no current PMRID base -- not yet run/rebuilt "
+                       "for this image)";
+    }
     rpt << "\n";
 
     // SCENE-LINEAR RE-DECODE + RENDER STATE

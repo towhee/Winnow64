@@ -2505,7 +2505,16 @@ Panel focus & slider arrow-nudge
         the effective EditParams for the Base layer and each enabled non-Base layer
         (+ mask counts); the crop/warp Geometry; and the interactive develop caches
         (PMRID "Denoise raw" base + keys, developWorkTriedPath / in-flight guards,
-        proxy + full-res render state, mask reference caches). Wired in menusand-
+        proxy + full-res render state, mask reference caches). The DENOISE section also
+        reports the PMRID (k,b) noise-model resolution FOR THE CURRENT IMAGE -- the tier
+        that fired (DNG NoiseProfile / model table / blind / generic), the resolved k,b,
+        and whether the file carried a DNG NoiseProfile -- the first thing to check if a
+        file denoises wrong (e.g. source=generic on a Nikon means its modelMatch missed).
+        The snapshot (developPmridResSource/K/B/HadNP) is captured in ensureRawDenoise
+        on a PMRID decode and keyed to developPmridKey, so it is NEVER stale: it shows
+        only while developPmridFull is this image's base, else "(no current PMRID base)"
+        while the base is (re)building. PMRID::LastResolution() is the worker-side
+        hand-off the snapshot is captured from. Wired in menusand-
         actions.cpp (diagnosticsDevelopAction) via MW::diagnosticsDevelop.
         RENDER VERIFICATION has TWO axes, so the two failure modes seen (edit silently
         dropped; demosaic/decode not triggered) are each caught:
@@ -2568,19 +2577,21 @@ Layer & masking model (planned)
           identity (EditParams::kDefaultDenoiseChroma, mirrored in isIdentity). The row
           honours the dock's Expand all / Collapse all / Solo mode, and its state persists
           under Develop/SectionExpanded/demosaic.
-          IMPLEMENTED as a learned, POST-demosaic denoiser (RawRefinery "TreeNet"): RawFormat::Decode
-          calls RawDenoise::Apply on the scene-linear WorkingImage after RawColor, for BOTH decode
-          engines, before caching (ImageFormats/Raw/rawdenoise.cpp). The model takes linear-Rec2020
-          RGB {1,3,H,W} + an ISO/6400 conditioning scalar {1,1} and returns denoised RGB; the engine
-          converts scene-linear sRGB <-> Rec2020 around it, runs it through the unified inference
-          layer (see INFERENCE below -- ANE on macOS via ORT's CoreML EP, DirectML on Windows) tiled
-          with a feathered blend, and applies the result as a HIGHLIGHT-PRESERVING, amount-scaled
-          correction (add of denoised-minus-clipped-input; luma by denoiseLuma, chroma by
-          max(luma,chroma)). Global / not maskable (a Base op applied before Develop). Because it is
-          post-demosaic on the WorkingImage it applies to EVERY image -- X-Trans and the macOS Apple
-          decode engine included (no CFA-stage limitation). Without rawdenoise.onnx (ReleaseExtras/,
-          warn-if-absent) and a WINNOW_ENABLE_ORT build it no-ops. NOTE: a PRE-demosaic (Bayer-domain)
-          denoiser is the better long-term design (deferred). LIVE PREVIEW: the cached pre-develop
+          IMPLEMENTED as PMRID (MegVii, Apache-2.0), a PRE-demosaic (CFA/Bayer-domain)
+          learned denoiser: it runs on the raw mosaic BEFORE demosaic (ImageFormats/
+          Raw/pmrid.{h,cpp}, PMRID::Apply) through the unified inference layer
+          (Utilities/inference/, ORT -- CoreML/ANE on macOS, DirectML on Windows). Needs a
+          WINNOW_ENABLE_ORT build (default OFF -> no-op stub) plus pmrid.onnx
+          (ReleaseExtras/, committed, warn-if-absent), else it no-ops. Global / not
+          maskable (a Base op before Develop). Because it needs the
+          CFA mosaic it is WINNOW-engine + BAYER only: inert on the macOS Apple decode
+          engine (no CFA) and on X-Trans, where "Denoise raw" no-ops. Conditioned by ISO
+          (ImageMetadata::ISONum); applied as an amount-scaled BLEND (see WHY TWO
+          DEMOSAICS below), luma by denoiseLuma, chroma by max(luma,chroma). (History: an
+          earlier post-demosaic RawRefinery "TreeNet" path via the ORT inference layer,
+          plus an unwired NAFNet export, were removed 2026-07-12 when PMRID superseded
+          them; recover from git if a post-demosaic engine is ever wanted -- e.g. to cover
+          X-Trans/Apple.) LIVE PREVIEW: the cached pre-develop
           WorkingImage is kept CLEAN (RawFormat::Decode caches it BEFORE denoise; denoise runs only on
           the private develop copy, i.e. the non-interactive export path). The interactive develop
           render derives a raw-DENOISED base from the clean cache
@@ -2590,6 +2601,18 @@ Layer & masking model (planned)
           both the proxy and the full-res render start from it. ISO for the conditioning
           comes from ImageMetadata::ISONum (populated in cache mode from G::ISOColumn;
           live preview reads it via MW::currentImageIso).
+          NOISE MODEL (k,b): the KSigma normalization needs a per-frame Poisson-Gaussian
+          model (var = k*x + b, white-normalised green plane), resolved by a priority
+          chain (PMRID::resolveKB): (1) a DNG NoiseProfile (tag 51041) baked into the
+          file, read by DngRaw::UnpackCfa -- exact, no calibration; (2) a per-camera-model
+          K(ISO)/B(ISO) table (pmrid_calib_tables.h) -- MEASURED by a photon-transfer
+          sweep (calibrate_pmrid.py) or DERIVED from published sensor data
+          (gen_pmrid_tables.py, photonstophotos/Bill Claff) -- ISO-interpolated; (3) blind
+          estimation from the CFA (var-vs-mean over flat blocks, PMRID::estimateKB) so an
+          uncalibrated body still denoises with its own model; (4) a generic full-frame
+          Sony table as a last-ditch guard. The chosen tier is logged by PMRID::Apply.
+          Only DNG carries a NoiseProfile, so proprietary raws (ARW/NEF/CR2/CR3...) use
+          tier 2 if known, else tier 3.
           ONE DECODE, TWO BASES + PREVIEW-FIRST: ensureRawDenoise is triggered on image
           SELECT (MW::fileSelectionChange) AND on entering Develop (MW::setOperationMode),
           not only on settle, so its progress row (progressRawDenoiseRow) appears
@@ -2904,7 +2927,11 @@ Layer & masking model (planned)
                rebuild resets row visibility). The Basic/Color/Effects sections stay visible. [E] ->
                onLayerPreviewToggled (whole-layer eye). The DROPDOWN carries both the layers and the
                layer actions (LayerHeader::setLayers): the image's layers first (the active one marked
-               with a checkmark) -> onLayerSelected (switch activeLayerIndex); then, below a separator,
+               with a checkmark) -> onLayerSelected (switch activeLayerIndex; then reveal
+               the layer's OWN section -- un-collapse its mask rows (setTreeCollapsed
+               (false), bulk-guarded so Solo leaves Basic/Color/Effects as-is) and select
+               its first mask so the coverage overlays the image, selectedMaskIndex 0
+               (Base has none, -1)); then, below a separator,
                "Add new layer" -> newLayer (name dialog, default "Layer n"); then, below another
                separator, the per-layer actions "Add mask to <layer>" -> showMaskMenu and
                Reset/Remove/Rename <layer> -> resetActiveLayer / deleteLayer / renameActiveLayer.
@@ -3091,7 +3118,12 @@ Layer & masking model (planned)
                toggleMaskTint) HIDES/SHOWS this overlay while editing -- flips ImageView::maskTintHidden,
                which gates BOTH the whole-layer composite and the per-tool preview in drawForeground
                (handles/cursor keep drawing so editing continues); reset to shown on each beginMaskEdit,
-               no-op outside mask editing.
+               no-op outside mask editing. Changing ANY adjustment slider (Basic/Color/
+               Effects, or any future key via applyKeyToParams) while the overlay is shown
+               also hides it (DevelopProperties::maskTintHideRequested ->
+               ImageView::hideMaskTint) so the effect on the masked pixels is visible;
+               re-shown by "M" or by re-selecting a mask tool. Mask-only edits (Feather/
+               Invert/Range/Brush settings) keep the overlay shown.
              - RENDER COMPOSITING (Stage 4b + N-layer stack): the render composites the WHOLE stack
                in SCENE-LINEAR before the output transform, INDEPENDENT of which layer is active for
                editing -- so a saved mask is visible the moment the image loads (no need to select
@@ -3235,9 +3267,11 @@ Layer & masking model (planned)
                InferenceBackend abstract class is an ESCAPE HATCH: a native CoreMLBackend can be added
                for a model that needs maximal ANE utilisation (generative fill) without touching
                callers. FUTURE: we may move to a full native-per-platform solution (native Core ML on
-               Mac + DirectML/native on Windows) if ORT's CoreML EP under-utilises the ANE. First user
-               of the layer: the raw denoiser (NAFNet, see "DENOISE RAW" above). Models resolve via
-               applicationDirPath() + a ReleaseExtras/ .onnx, warn-if-absent, like the cv::dnn models.
+               Mac + DirectML/native on Windows) if ORT's CoreML EP underuses the ANE.
+               Active consumer: PMRID "Denoise raw" (ImageFormats/Raw/pmrid.cpp, see
+               "DENOISE RAW" above) -- it took over when the earlier RawRefinery "TreeNet"
+               denoiser was removed 2026-07-12. Models resolve via applicationDirPath()
+               + a ReleaseExtras/ .onnx, warn-if-absent, like the cv::dnn models.
              - SELECT SUBJECT MASK (AI): an AI salient-object mask that selects the main subject.
                Like the content-range masks it is CONTENT-derived and shares their preview==render
                design, but the coverage is a FIXED saliency map produced once by the U^2-Net ONNX
@@ -3325,11 +3359,13 @@ Layer & masking model (planned)
                processing recovers it. Workaround for such shots: a Luminance/Color Range mask + brush.
                FUTURE WIP (deferred): benchmark alternative sky models offline (onnxruntime) and swap
                only if one clearly beats skyseg on the hard case AND loads in OpenCV DNN.
-             - OBJECT MASK (AI, SCAFFOLD -- predictor + ref store built, UI/wiring pending): a
-               PROMPTABLE mask. The user brushes a rough outline around an object; the filled
-               silhouette is refined to the true edge by a SAM 2 encoder+decoder ONNX pair via OpenCV
-               DNN (NO onnxruntime -- feasibility proved by an offline spike: cv::dnn 4.11 loads+runs
-               both graphs). Unlike Subject/Sky (one-shot per image) it is TWO-PHASE, matching SAM's
+             - OBJECT MASK (AI, PERIMETER-PAINT): a PROMPTABLE mask. The user traces the
+               object BOUNDARY with a solid brush (multiple strokes; Opt/Alt erases); when
+               the traced perimeter forms a CLOSED loop the enclosed region is filled and
+               that silhouette is refined to the edge by a SAM 2 encoder+decoder pair via
+               OpenCV DNN (NO onnxruntime -- feasibility proved by an offline spike:
+               cv::dnn 4.11 loads+runs both graphs). Unlike Subject/Sky (one-shot per
+               image) it is TWO-PHASE, matching SAM's
                heavy-encoder / light-decoder split: Utilities/objectmaskpredictor ObjectMaskPredictor::
                setImage() encodes the developed base ONCE (~1s CPU, caches image_embed + high_res_feats
                + guide), then refine() runs the decoder PER brush edit (~40ms) feeding the painted fill
@@ -3349,36 +3385,62 @@ Layer & masking model (planned)
                objectRefKey = path+brushHash so multiple object masks coexist); stackHasObjectMask; and
                the four triggers (onAiMaskEditBegin warms the encoder + decodes if a stroke exists;
                updateMaskOverlayTint per-component; renderDevelopPreview + renderDevelopFullResAsync
-               loop the job's object components). Brush contract (INTERIM, the UI must emit it):
-               paramsJson {"brush":{"poly":[[x,y],...]}}, output-normalized 0..1 filled outline,
-               rasterized by parseObjectBrush (Qt QPainter, no opencv in mainwindow).
-               buildMaskBuffer WIRED: CompDesc.isObject + a PER-COMPONENT objRef (object refs are
-               per-brush, not shared by path like Subject/Sky/Depth, so each CompDesc carries its own
-               ObjectMask::getRef(objectRefKey(fPath,paramsJson))); the per-pixel loop calls
-               ObjectMask::coverage. objectRefKey lives in the first anon namespace (before
-               buildMaskBuffer) so both it and ensureObjectMask share it. Absent ref => no effect.
-               BRUSH UI WIRED (ImageView): the Object tool is a FREEHAND LASSO, not a stamping brush --
-               the user drags a rough outline (maskObjLasso, output-normalized points via
-               maskViewportToNorm), drawObjectMask renders it live (viewport coords, op-coloured, faint
-               fill until the SAM coverage exists), and mouseRelease emits {"brush":{"poly":[[x,y],...]}}
-               through maskGeometryChanged -> DevelopProperties::setActiveMaskParams -> paramsChanged,
-               which runs ensureObjectMask (encode once + decode the fill) and refreshes maskLayerTint.
-               State: maskObjLasso/maskObjDrawing (imageview.h); handlers in mousePress/Move/Release +
-               beginMaskEdit(restore stored poly)/endMaskEdit(clear); maskHitTest returns -1 for Object;
-               leaveEvent keeps the overlay mid-lasso. The decoded cutout shows via maskLayerTint (built
-               by MW, NOT hover-gated); the lasso is only the editing affordance, so Object is NOT in
-               maskIsContent() and needs no per-tool content preview.
-               DOCK ROWS WIRED (developproperties.cpp): maskToolName/FromName know Object; showMaskMenu
-               offers Add/Subtract Object Mask (loops now bound to MaskTool::Object); the maskEditBegin
-               dispatcher includes Object so selecting it activates the ImageView lasso AND fires
-               onAiMaskEditBegin (warms the encoder); the tool's settings rows are the generic Feather +
-               Invert (Object falls through the row-builder else, like Subject/Sky); defaultMaskParams
-               returns empty (no lasso yet). NOT added to the stackJob contentDerived list on purpose --
-               an undrawn Object mask (empty params) SHOULD be dropped from the render like an unplaced
-               gradient; once the lasso is drawn its params are non-empty and it composites.
-               Full loop closes via existing signals: lasso release -> maskGeometryChanged ->
-               setActiveMaskParams -> paramsChanged -> {updateMaskOverlayTint -> ensureObjectMask ->
-               buildMaskBuffer tint} + {developParamsChange -> masked render}.
+               loop the job's object components). Perimeter-paint contract (the
+               UI emits it): paramsJson {"size":N,"strokes":[{"pts":[x,y,...],
+               "size":N,"erase":bool},...]}, output-normalized 0..1 boundary
+               strokes (like the Brush tool). parseObjectBrush rasterizes the
+               strokes with BrushStamp::rasterize, then ObjectMask::fillEnclosed
+               (Develop/objectmask.h) does a morphological close + border flood-
+               fill: it thickens the wall by bridgePx (a fraction of the long
+               edge, so preview/render agree), floods the background inward from
+               the border, and any unreached non-wall pixel is ENCLOSED. Returns
+               the filled silhouette ONLY when a closed loop is found; an open
+               trace -> no coverage (matches the amber/green UI). No opencv in
+               mainwindow.
+               buildMaskBuffer WIRED: CompDesc.isObject + a PER-COMPONENT objRef
+               (object refs are per-brush, not shared by path like Subject/Sky/
+               Depth, so each CompDesc carries its own ObjectMask::getRef(
+               objectRefKey(fPath,paramsJson))); the per-pixel loop calls
+               ObjectMask::coverage. objectRefKey lives in the first anon
+               namespace (before buildMaskBuffer) so both it and ensureObjectMask
+               share it. Absent ref => no effect.
+               PERIMETER-PAINT UI WIRED (ImageView): the Object tool is a solid
+               BOUNDARY brush (NOT a lasso, NOT a fill brush). It REUSES the
+               Brush buffers: strokes accumulate into maskBrushMain (the
+               perimeter wall), maskBrushStroke holds the in-progress stroke,
+               maskBrushSize is the diameter, maskBrushStrokesJson the committed
+               list. Press begins a stroke (Alt = erase); move stamps segments
+               (BrushStamp) + folds them into maskObjPerim (wall+stroke) and runs
+               objRecomputeFill (ObjectMask::fillEnclosed) -> maskObjClosed +
+               maskObjFill; objRebuildPreview tints the overlay AMBER while open,
+               GREEN + a faint fill once closed. Release composites the stroke
+               into the wall and emits {"size","strokes"} via maskGeometryChanged
+               -> setActiveMaskParams -> paramsChanged, which runs
+               ensureObjectMask (encode once + fill + decode) when closed and
+               refreshes maskLayerTint. Size: [ / ] keys, a two-finger drag /
+               wheel (adjustBrushSize -> maskBrushSizeRequested ->
+               setActiveBrushSize), or the dock Size slider; Cmd/Ctrl+Z =
+               objUndoStroke. State: maskObjPerim/maskObjFill/maskObjClosed/
+               maskObjDrawing (imageview.h); helpers objEnsureBuffers/
+               objRecomputeFill/objRebuildPreview/objUndoStroke; beginMaskEdit
+               restores strokes+size, endMaskEdit clears; maskHitTest returns -1
+               for Object; drawMask suppresses the stale layer tint while a
+               stroke is in flight (brushStroking) so the amber/green shows live.
+               Object is NOT in maskIsContent() and needs no content preview.
+               DOCK ROWS WIRED (developproperties.cpp): maskToolName/FromName
+               know Object; showMaskMenu offers Add/Subtract Object Mask (loops
+               bound to MaskTool::Object); the maskEditBegin dispatcher includes
+               Object so selecting it activates the perimeter brush AND fires
+               onAiMaskEditBegin (warms the encoder); the settings rows are Size
+               + Feather + Invert (its own row-builder branch); setActiveBrushSize
+               accepts Object; defaultMaskParams returns {"size":8,"strokes":[]}.
+               NOT added to the stackJob contentDerived list on purpose -- an
+               undrawn/open Object mask yields no coverage and is dropped from the
+               render like an unplaced gradient; once a loop closes it fills and
+               composites. Full loop closes via existing signals: stroke release
+               -> maskGeometryChanged -> setActiveMaskParams -> paramsChanged ->
+               {updateMaskOverlayTint -> ensureObjectMask -> buildMaskBuffer tint}
+               + {developParamsChange -> masked render}.
                MODELS + EXPORT WIRED: ReleaseExtras/tools/export_sam2.{py,sh} produce sam2_encoder.onnx
                (as-is) + sam2_decoder.onnx (fixed-shape: pins prompt dims 1 label/2 points + onnxsim
                constant-fold; prints Shape=0 on success). CMake stages both like u2net/skyseg/midas
@@ -3411,7 +3473,51 @@ Layer & masking model (planned)
                over many edited images shows latency.
            Increment 2 (presets): snapshot an EditStack (or subset) to a QSettings presets
            collection; apply to a selection (write each image's sidecar). Then masks/compositor.
-        5. Brush masks (stroke list + rasterise) -> spatial ops with cache tier 3 -> proxy-on-drag.
+        5. Brush masks (stroke list + rasterise) -> spatial ops with cache tier 3
+           -> proxy-on-drag.
+
+------------------------------------------------------------------------------------------
+Regenerative spot fill (MI-GAN)
+------------------------------------------------------------------------------------------
+
+    "Spot removal": brush over a blemish / small object and it is healed from the
+    surrounding pixels by MI-GAN inpainting, via the unified inference layer (ORT ->
+    CoreML/ANE on macOS, DirectML on Windows, CPU fallback). MI-GAN beat LaMa in a
+    bake-off: 27 MB and ~76 ms on the ANE, identical quality on SMALL holes; LaMa is
+    208 MB, CPU-bound (its FFC ops do not run on CoreML), and only wins on LARGE
+    removal. Larger/one-sided fills were poor for both, so shipp  ed scope = SPOTS only.
+
+    DATA MODEL (Develop/editstack.h): per-image like Geometry -- EditStack::spots is an
+    ordered list of FillSpot{enabled, paramsJson}. paramsJson is opaque brush geometry
+    (FillSpotGeom: size = diameter/long-edge, feather 0..100, pts = output-normalized
+    stroke points), serialized under the "fill" key (forward-tolerant). PARAMETRIC and
+    non-destructive: only the stroke is stored; the heal is re-synthesized at render
+    (MI-GAN is deterministic) and is stable under later slider changes (no re-inference
+    on an exposure tweak).
+
+    RENDER: heals run BEFORE the geometry stage, on the developed oriented full frame,
+    so spots stay glued to content when it is later cropped/straightened.
+    developCompositeStack (Main/mainwindow.cpp) calls MiganFill::apply(out, job.spots)
+    just before CropTransform::applyGeometry; StackRenderJob.spots is filled by
+    DevelopProperties::stackJob. Engine (Utilities/inference/miganfill.*): per spot,
+    take a square context tile (~4x the spot), resize to 512, pack [keep-0.5, im*keep]
+    (keep=1 outside the hole), run, composite im*keep + out*(1-keep). The hole is
+    DILATED a few px for the model (hard edges seam); the ORIGINAL soft brush alpha
+    composites the patch back, so the seam is feathered. Spots apply in order (each
+    heals over prior ones). Shared FillSpotGeom rasteriser (Develop/fillspot.h) is used
+    by BOTH the ImageView preview and the render, so preview == render (cf. objectmask.h).
+
+    UI (discoverability): a labelled spot tool in the Develop title bar (LayerHeader spot
+    BarBtn, images/icon16/spot.png; dims off, brightens armed) AND a pinned "Fill (spot
+    removal)" entry in the layer dropdown both arm the mode. Armed, ImageView shows a
+    brush-size circle cursor ([ / ] resize); a swiped stroke paints one spot on release;
+    Escape disarms. Each spot drops an on-canvas PIN; click a pin to remove it. Stroke ->
+    spotStrokeCommitted -> DevelopProperties appends a FillSpot -> re-render (heal); pins
+    come from spotPinCenters via spotPinsChanged. Model: ReleaseExtras/migan.onnx
+    (gitignored, EXISTS-guarded bundling); warn-if-absent -> the tool no-ops like the AI
+    masks. FUTURE: the "Fill" pseudo-layer can be promoted to a real EditLayer (format is
+    forward-tolerant); larger creative fills need a diffusion model behind the
+    InferenceBackend seam.
 
 ------------------------------------------------------------------------------------------
 Develop dock (UI)

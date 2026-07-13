@@ -10,6 +10,8 @@
 #include "Develop/depthmask.h"
 #include "Develop/objectmask.h"
 #include "Develop/develop.h"
+#include "ImageFormats/Raw/pmrid.h"
+#include "Utilities/inference/miganfill.h"
 #include "Cache/imagedecoder.h"
 #include "Utilities/subjectpredictor.h"
 #include "Utilities/skypredictor.h"
@@ -2409,6 +2411,9 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     developDenoisedKey.clear();
     developPmridFull.reset();
     developPmridKey.clear();
+    developPmridResSource.clear();     // drop the noise-model snapshot with its base
+    developPmridResK = developPmridResB = 0.0;
+    developPmridResHadNP = false;
     developProxy.reset();
     developProxyPath.clear();
     developWorkTriedPath.clear();
@@ -5272,9 +5277,30 @@ brushRasterCached(const QString &paramsJson, int w, int h, int degrees, const QS
     std::vector<float> scratch;
     const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
                                    .object().value("strokes").toArray();
-    const auto guide = BrushStamp::getGuide(fPath);     // auto-mask guide (same one the preview used)
+    const auto guide = BrushStamp::getGuide(fPath);   // guide the preview used
+
+    /* An auto-mask stroke rasterized before its confinement input is registered paints
+       UNCONFINED (full brush). Detect that so we don't cache the poisoned buffer: a lum
+       stroke needs the guide; an "ai" stroke needs its SAM field. Caching a guideless
+       result would replay the full brush on every later slider tick (the proxy is cached)
+       while the settle render -- uncached -- rebuilds it confined once the guide lands,
+       so the preview flashes broad then snaps to the auto-mask band. */
+    bool autoInputsReady = true;
+    for (const QJsonValue &sv : strokes) {
+        const QJsonObject so = sv.toObject();
+        if (!so.value("autoMask").toBool(false)) continue;
+        const QJsonArray pts = so.value("pts").toArray();
+        if (pts.size() < 2) continue;
+        if (so.value("autoMaskMode").toString("lum") == "ai") {
+            if (!BrushStamp::getSamField(
+                    BrushStamp::samFieldKey(fPath, pts.at(0).toDouble(), pts.at(1).toDouble())))
+                autoInputsReady = false;
+        }
+        else if (!guide || !guide->valid()) autoInputsReady = false;
+    }
+
     BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees, guide.get(), fPath);
-    if (cacheable) {
+    if (cacheable && autoInputsReady) {
         QMutexLocker lk(&g_brushCacheMutex);
         if (g_brushCache.size() > 8) g_brushCache.clear();      // crude cap (proxy-size entries)
         g_brushCache.insert(key, buf);
@@ -5540,10 +5566,16 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
             out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
     }
 
+    /* Regenerative spot fill (MI-GAN) heals BEFORE geometry, on the developed oriented
+       full frame, so heals stay glued to content when later cropped/straightened. No-op
+       if the model/ORT is absent or there are no spots. */
+    if (!out.isNull() && !job.spots.isEmpty())
+        MiganFill::apply(out, job.spots);
+
     /* Geometry (crop / straighten / warp) is applied LAST -- after the develop ops + EXIF
-       orientation -- on the full-output-dimension image, so the crop dims are identical for the
-       proxy and the full-res render. Callers pass an identity geometry while the crop tool is being
-       edited (the loupe then shows the full frame for the overlay). */
+       orientation -- on the full-output-dimension image, so the crop dims match for the
+       proxy and the full-res render. Callers pass identity geometry while the crop tool
+       is being edited (the loupe then shows the full frame for the overlay). */
     if (!out.isNull() && !job.geometry.isIdentity())
         out = CropTransform::applyGeometry(out, job.geometry);
     return out;
@@ -5596,6 +5628,26 @@ bool stackHasObjectMask(const DevelopProperties::StackRenderJob &job)
     for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
         for (const MaskComponent &m : L.masks)
             if (m.tool == int(MaskTool::Object)) return true;
+    return false;
+}
+
+/* True if any enabled layer carries a Brush mask with a LUMINANCE auto-mask stroke -- it
+   needs the guide registered (ImageView::ensureAutoGuide) before the composite, else the
+   stroke rasterizes unconfined. ("ai" strokes instead use SAM fields.) */
+bool stackHasLumAutoMaskBrush(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
+        for (const MaskComponent &m : L.masks) {
+            if (m.tool != int(MaskTool::Brush)) continue;
+            const QJsonArray strokes = QJsonDocument::fromJson(m.paramsJson.toUtf8())
+                                           .object().value("strokes").toArray();
+            for (const QJsonValue &sv : strokes) {
+                const QJsonObject so = sv.toObject();
+                if (so.value("autoMask").toBool(false) &&
+                    so.value("autoMaskMode").toString("lum") != "ai")
+                    return true;
+            }
+        }
     return false;
 }
 } // namespace
@@ -5779,37 +5831,31 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
 }
 
 namespace {
-/* Rasterize the object brush from paramsJson into a W*H coverage (row-major, 0/1, output-oriented).
-   INTERIM CONTRACT (the brush UI must emit this): {"brush":{"poly":[[x,y],...]}} where x,y are
-   output-normalized 0..1 -- the filled interior of the user's stroke. Returns false if absent. */
+/* Rasterize the object PERIMETER brush from paramsJson into a W*H coverage (row-major,
+   0/1, output-oriented), then fill the enclosed region -- the silhouette handed to SAM 2
+   as a dense prompt. CONTRACT (the perimeter brush UI emits this): {"size":N,"strokes":
+   [{"pts":[x,y,...],"size":N,"erase":bool},...]} with x,y output-normalized 0..1. The
+   strokes are the traced boundary; fillEnclosed decides closure + fills the interior.
+   Returns false (no coverage) unless the perimeter forms a CLOSED loop -- an open trace
+   is not a selection yet (mirrors the preview's amber/green signal). Uses the SAME
+   BrushStamp rasterize + ObjectMask::fillEnclosed as the overlay so the two agree. */
 bool parseObjectBrush(const QString &paramsJson, int W, int H, std::vector<float> &cov)
 {
     if (paramsJson.isEmpty() || W <= 0 || H <= 0) return false;
     const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
-    const QJsonArray poly = o.value("brush").toObject().value("poly").toArray();
-    if (poly.size() < 3) return false;
-    QPolygonF pts;
-    for (const QJsonValue &pv : poly) {
-        const QJsonArray p = pv.toArray();
-        if (p.size() < 2) continue;
-        pts << QPointF(p.at(0).toDouble() * W, p.at(1).toDouble() * H);
-    }
-    if (pts.size() < 3) return false;
+    const QJsonArray strokes = o.value("strokes").toArray();
+    if (strokes.isEmpty()) return false;
 
-    QImage m(W, H, QImage::Format_Grayscale8);
-    m.fill(0);
-    QPainter g(&m);
-    g.setRenderHint(QPainter::Antialiasing, false);
-    g.setPen(Qt::NoPen); g.setBrush(Qt::white);
-    g.drawPolygon(pts);
-    g.end();
+    /* Rasterize the perimeter strokes (output-oriented, so degrees = 0). Each stroke is a
+       solid dab run (feather 0, flow 100); erase strokes remove from the wall.
+       BrushStamp::rasterize reads size/feather/flow/erase per stroke (like Brush). */
+    std::vector<float> perim(size_t(W) * size_t(H), 0.0f), scratch;
+    BrushStamp::rasterize(strokes, perim.data(), scratch, W, H, /*degrees*/0);
 
-    cov.resize(size_t(W) * size_t(H));
-    for (int y = 0; y < H; ++y) {
-        const uchar *line = m.constScanLine(y);
-        float *d = cov.data() + size_t(y) * size_t(W);
-        for (int x = 0; x < W; ++x) d[x] = line[x] ? 1.0f : 0.0f;
-    }
+    std::vector<float> fill;
+    const bool closed = ObjectMask::fillEnclosed(perim, W, H, ObjectMask::bridgePx(W, H), fill);
+    if (!closed) return false;                 // open perimeter -> no selection yet
+    cov = std::move(fill);
     return true;
 }
 } // namespace
@@ -6163,11 +6209,15 @@ void MW::renderDevelopPreview(bool fullRes)
             for (const MaskComponent &m : L.masks)
                 if (m.tool == int(MaskTool::Object))
                     ensureObjectMask(fPath, *work, mj.base, degrees, m.paramsJson);
-    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM object field before the render. */
+    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM field before rendering. */
     for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
         for (const MaskComponent &m : L.masks)
             if (m.tool == int(MaskTool::Brush))
                 ensureBrushSamFields(fPath, *work, mj.base, degrees, m.paramsJson);
+    /* Brush luminance auto-mask: guarantee the guide is registered (built from the loupe,
+       the same one the overlay samples) so proxy and settle confine identically -- else a
+       guideless proxy paints the full brush and the settle snaps it to the band. */
+    if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
 
     const QImage out = developCompositeStack(*srcImg, mj, degrees, fullRes, fw, fh, fPath);
     if (out.isNull()) return;
@@ -6309,11 +6359,14 @@ void MW::renderDevelopFullResAsync()
             for (const MaskComponent &m : L.masks)
                 if (m.tool == int(MaskTool::Object))
                     ensureObjectMask(fPath, *work, mj.base, degrees, m.paramsJson);
-    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM object field before the render. */
+    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM field before the render. */
     for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
         for (const MaskComponent &m : L.masks)
             if (m.tool == int(MaskTool::Brush))
                 ensureBrushSamFields(fPath, *work, mj.base, degrees, m.paramsJson);
+    /* Register the brush luminance auto-mask guide (GUI thread) before dispatching the
+       worker, so the off-thread render confines the stroke the same as the proxy did. */
+    if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
 
     developFullResInFlight = true;
     std::shared_ptr<const WorkingImage> src = base;   // denoised base when set, else clean; kept alive
@@ -6515,6 +6568,11 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
             src ? src : WorkingImageCache::instance().get(fPath);
         // freshClean is published to WorkingImageCache if the decode produced it
         std::shared_ptr<const WorkingImage> freshClean;
+        /* Diagnostic: the (k,b) tier PMRID used for THIS decode (captured right after the
+           decode so a concurrent run can't overwrite the global; read-ahead is off in
+           Develop anyway). Only meaningful when a decode actually ran (capturedRes). */
+        PMRID::Resolution decodeRes;
+        bool capturedRes = false;
         if (!pmrid || !cleanBase) {
             /* Reveal the progress row (EMPTY) as the decode starts; PMRID then fills it
                per tile. Must not updateProgress(0,1) here -- FromStart would paint the
@@ -6539,6 +6597,8 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                     cleanBase = decodedClean;
                     freshClean = decodedClean;
                 }
+                decodeRes = PMRID::LastResolution();
+                capturedRes = true;
             }
         }
         /* No in-house decoder (lossless ARW -> Apple) or the decode failed. */
@@ -6554,7 +6614,8 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
         Develop::BlendRawDenoise(*cleanBase, *pmrid, b.denoiseLuma, b.denoiseChroma, *blended);
         std::shared_ptr<const WorkingImage> result = blended;
 
-        QMetaObject::invokeMethod(this, [this, result, pmrid, freshClean, key, pkey, fPath]() {
+        QMetaObject::invokeMethod(this, [this, result, pmrid, freshClean, key, pkey, fPath,
+                                         decodeRes, capturedRes]() {
             // job finished; allow the next (latest) one
             developDenoiseInFlightKey.clear();
             progress->clearProgress(progressRawDenoiseRow);   // hide the progress row
@@ -6568,6 +6629,12 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                 WorkingImageCache::instance().put(fPath, freshClean);
             developPmridFull = pmrid;      // cache the full base for other amounts
             developPmridKey = pkey;
+            if (capturedRes) {             // noise-model snapshot for this base (diag)
+                developPmridResSource = decodeRes.source;
+                developPmridResK = decodeRes.k;
+                developPmridResB = decodeRes.b;
+                developPmridResHadNP = decodeRes.hadNoiseProfile;
+            }
             developDenoised = result;
             developDenoisedKey = key;
             developProxy.reset();          // rebuild proxy from the denoised base

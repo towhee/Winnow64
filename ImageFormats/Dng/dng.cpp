@@ -380,8 +380,9 @@ enum DngTag {
     PhotometricInterpretation = 262, StripOffsets = 273, RowsPerStrip = 278,
     StripByteCounts = 279, TileWidth = 322, TileLength = 323, TileOffsets = 324,
     TileByteCounts = 325, NewSubfileType = 254, CFAPatternTag = 33422,
+    LinearizationTable = 50712,
     BlackLevel = 50714, WhiteLevel = 50717, ColorMatrix1 = 50721, ColorMatrix2 = 50722,
-    AsShotNeutral = 50728
+    AsShotNeutral = 50728, NoiseProfile = 51041
 };
 const int PHOTO_CFA = 32803;
 
@@ -541,6 +542,25 @@ bool DngRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         for (int i = 0; i < 4; ++i) {
             const double v = bl.isEmpty() ? 0.0 : bl[i < bl.size() ? i : 0];
             raw.black[i] = uint16_t(v < 0 ? 0 : v + 0.5);
+        }
+    }
+
+    /* NoiseProfile (var = scale*x + offset, x in the black-subtracted white-normalised
+       [0,1] domain) -- exactly PMRID's (k,b), so hand it straight through. Skip when a
+       LinearizationTable is present: it remaps the domain the profile was measured in.
+       Values are paired (scale, offset) per colour plane in CFAPlaneColor order; for
+       Bayer that is R,G,B, so the green plane is index 1 (else the single/first pair). */
+    if (!(cfaIfd.contains(LinearizationTable) ||
+          (haveIfd0 && ifd0.contains(LinearizationTable)))) {
+        QVector<double> v;
+        if (cfaIfd.contains(NoiseProfile))                v = r.reals(cfaIfd[NoiseProfile]);
+        else if (haveIfd0 && ifd0.contains(NoiseProfile)) v = r.reals(ifd0[NoiseProfile]);
+        const int planes = int(v.size()) / 2;
+        const int g = planes >= 2 ? 1 : 0;            // green plane in R,G,B order
+        if (planes >= 1 && v[2 * g] > 0.0) {
+            raw.hasNoiseProfile = true;
+            raw.npScale  = v[2 * g];
+            raw.npOffset = v[2 * g + 1] < 0.0 ? 0.0 : v[2 * g + 1];
         }
     }
 

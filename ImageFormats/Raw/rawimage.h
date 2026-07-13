@@ -59,6 +59,14 @@ struct RawImage {
     uint16_t black[4] = {0, 0, 0, 0};       // per-2x2-position black level
     uint16_t white = 65535;                 // saturation (clip) level
 
+    /* DNG NoiseProfile (tag 51041), green plane: var = npScale*x + npOffset in the
+       black-subtracted, white-normalised [0,1] domain -- the (k,b) the PMRID raw
+       denoiser needs. Set only by DngRaw::UnpackCfa when the tag is present and
+       trustworthy; every other format leaves hasNoiseProfile == false. */
+    bool   hasNoiseProfile = false;
+    double npScale  = 0.0;
+    double npOffset = 0.0;
+
     float camMul[4] = {1, 1, 1, 1};         // as-shot white-balance multipliers (R,G,B,G2)
     float xyzToCam[3][3] = {                // CIE XYZ (D65) -> camera-native RGB
         {1, 0, 0}, {0, 1, 0}, {0, 0, 1}     // (DNG ColorMatrix / dcraw-libraw adobe_coeff convention)

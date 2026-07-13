@@ -35,22 +35,26 @@ Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
                  Bayer (GFX 50S II). Lossy path ported but unexercised (no lossy test file).
 12   [done]      X-Trans demosaic (5x5 same-colour window).
 13   [todo]      Higher-quality Bayer demosaic (AHD/DCB) to replace Bilinear3x3.
-13b  [wip]       DENOISE RAW. Code landed via the unified inference layer (Utilities/inference/,
-                 ORT: ANE on macOS / DirectML on Windows). PIVOTED to POST-demosaic RawRefinery
-                 "TreeNet" (linear-Rec2020 RGB {1,3,H,W} + ISO/6400 cond) after finding no ready
-                 pre-demosaic 4-ch weights; PRE-demosaic Bayer NAFNet remains the long-term aim
-                 (export_nafnet_raw.py kept, unwired). ImageFormats/Raw/rawdenoise.* runs on the
-                 scene-linear WorkingImage after RawColor (both engines) -> applies to ALL images
-                 (X-Trans + Apple engine included); tiled feathered blend, highlight-preserving
-                 amount-scaled correction by EditParams denoiseLuma/denoiseChroma. UI: two Base
-                 sliders. Build: CMake WINNOW_ENABLE_ORT (default OFF) + rawdenoise.onnx in
-                 ReleaseExtras (warn-if-absent; a REAL super-light TreeNet is placed there).
-                 VALIDATED: onnxruntime 1.27 (CoreML) loads+runs TreeNet; OrtBackend C++ API
-                 compiles+runs on 1.27; CMake configure clean (opencv 4.13/qt 6.11). LIVE PREVIEW
-                 DONE (MW::developRawDenoisedBase/ensureRawDenoise: cached async denoise off the clean
-                 WorkingImage, keyed path+amounts+ISO, on settle -- no re-decode). REMAINING: (a) A/B
-                 TreeNet variants on real high-ISO files + confirm weights' license before shipping;
-                 (b) in-app build with WINNOW_ENABLE_ORT=ON + visual test.
+13b  [wip]       DENOISE RAW. Now PMRID (MegVii, Apache-2.0): a PRE-demosaic (CFA/Bayer-
+                 domain) learned denoiser on the raw mosaic before demosaic (ImageFormats/
+                 Raw/pmrid.{h,cpp}, PMRID::Apply), run through the unified inference layer
+                 (Utilities/inference/, ORT: ANE on macOS / DirectML on Windows). WINNOW
+                 engine + BAYER only -> inert on the Apple engine (no CFA) and X-Trans.
+                 Applied as an amount-scaled BLEND of clean vs denoised bases from ONE
+                 UnpackCfa (Develop::BlendRawDenoise), luma by denoiseLuma / chroma by
+                 max(luma,chroma). UI: two Base sliders (children of the Demosaic row).
+                 Build: CMake WINNOW_ENABLE_ORT (default OFF) + pmrid.onnx in
+                 ReleaseExtras (committed, warn-if-absent). LIVE PREVIEW DONE
+                 (MW::developRawDenoisedBase / ensureRawDenoise: cached async denoise
+                 off the clean WorkingImage, keyed path+amounts+ISO -- one decode, two
+                 bases, no re-decode on a slider drag). HISTORY: an earlier POST-demosaic
+                 RawRefinery "TreeNet" path (rawdenoise.*) and an unwired 4-ch Bayer
+                 NAFNet export were REMOVED 2026-07-12 when PMRID superseded them (recover
+                 from git if a post-demosaic engine is ever wanted, e.g. to cover X-Trans/
+                 Apple). REMAINING: (a) confirm PMRID weights + coeffs provisioning
+                 (tools/pmrid_integration_scope.md); (b) in-app build with
+                 WINNOW_ENABLE_ORT=ON + visual test; (c) optional post-demosaic fallback
+                 for X-Trans / the Apple engine.
 14   [done]      WorkingImage cache hook (Develop/workingimagecache.*): process-wide,
                  thread-safe, byte-budgeted LRU of the PRE-develop WorkingImage;
                  render() re-runs only Develop + OutputTransform.
@@ -73,13 +77,16 @@ Pipeline (ImageFormats/Raw/rawformat.cpp Decode):
                  radiance. ~120-150 lines, heavier on the full-res settle render, more
                  parameters to tune; physically removes real haze (better on hazy
                  landscapes). Would slot into Develop::Dehaze behind the same slider.
-16   [wip]       EditParams persistence + Develop slider UI wiring.
+16   [done]      EditParams persistence + Develop slider UI wiring.
                  PHASE 1 DONE (2026-06-25): slider UI wired live --
                  DevelopProperties::paramsChanged -> MW::developParamsChange() ->
-                 WorkingImageCache get/render -> ImageView::setDevelopPreview (hot path, no
-                 decode). REMAINING: per-image persistence to the XMP sidecar (phase 4) and
-                 the layer/mask stack (phases 2-3); current edits are session-only and not
-                 written back to the image cache.
+                 WorkingImageCache get/render -> ImageView::setDevelopPreview (hot
+                 path, no decode). PERSISTENCE DONE: DevelopProperties::flushImage
+                 writes the per-image EditStack (base64) to the XMP sidecar on
+                 navigate-away / quit / pre-op (and, if G::isDevelopDebounceWrite,
+                 after edits settle); Metadata::readDevelopSidecar loads it into
+                 stackCache on first touch. Layer/mask stack persists too
+                 (EditStack::toJson/fromJson). Edits are no longer session-only.
 17   [todo]      Per-format raw decode tests (Qt Test + CTest), byte-identical vs
                  the libraw oracle (project_raw_libraw_oracle).
 
@@ -151,14 +158,176 @@ NEW
                  so it stays pinned and the brittle tree code is untouched); toggled by a
                  Develop editor-bar button, persisted (Develop/scopesVisible).
 
-22   [todo]      Add an eye symbol button to show/hide develop basic modifications and
+22   [done]      Add an eye symbol button to show/hide develop basic modifications and
                  a reset button to the Basic bar.
+                 DONE: per-section Preview (eye) + Reset. Each section header
+                 (Basic/Color/Effects) carries an eye BarBtn (basicEyeBtn/colorEyeBtn/
+                 effectsEyeBtn) -> togglePreviewSection folds that group to identity at
+                 render (non-destructive, EditLayer::showBasic/showColor/showEffects); the
+                 whole-layer eye lives in the LayerHeader. Right-click a header (or its
+                 context menu) -> Preview toggle + "Reset <section>" (resetSection). A
+                 header divider row separates the groups (PropertyEditor::addDivider).
 
 23   [DONE 2026-06-28] Wire RGB and HSL sliders under the Color Header. All six are POINT
                  ops on the fused pass: RGB (red/green/blue) fold into channelGain (per-channel
                  scene-linear gain, kRgbGain); HSL (hue/saturation/luminance) is a cross-channel
                  block after the tone curve -- hue = Rodrigues rotation about the (1,1,1) neutral
                  axis, saturation = chroma scale about Rec.709 luma, luminance = uniform gain.
-                 EditParams fields + JSON persistence (editstack.h) + UI wiring (applyKeyToParams,
-                 populateSlidersFromStack) all live. See Documentation.txt "DEVELOP / IMAGE EDIT".
+                 EditParams fields + JSON persistence (editstack.h) + UI wiring
+                 (applyKeyToParams, populateSlidersFromStack) all live. See
+                 Documentation.txt "DEVELOP / IMAGE EDIT".
+
+24   [done]      Vignette (Effects). Radial corner-exposure falloff about the
+                 image centre (Develop::Vignette, spatial op #8): mask = pow(rn,
+                 k), rn the elliptical radius (0 centre, 1 corner), k from the
+                 Feather slider; corner gain = 2^Exposure. Two sliders
+                 (vignetteExposure EV + vignetteFeather). Off-centre / shaped
+                 vignettes use radial masks.
+
+25   [done]      Grain (Effects). Monochromatic film grain added to perceptual
+                 luminance (Develop::Grain, spatial op #9, runs last, ratio-
+                 preserving). Fixed-seed noise on a coarse grain-cell grid (Size
+                 sets the cell, scaled to the long edge so proxy == full res),
+                 bilinearly upsampled, amplitude modulated by a lower-frequency
+                 Roughness field, midtone-weighted, scaled by Amount. Three
+                 sliders (grainAmount/grainSize/grainRoughness, 0..100 -> 0..1).
+                 EditParams + JSON + UI wiring live.
+
+26   [done]      PropertyEditor divider rows. PropertyEditor::addDivider(height,
+                 lineHeight, lineColor, ...) adds a non-interactive, spanned,
+                 unselectable spacer row with an optional centred rule; per-divider
+                 roles (UR_isDivider / UR_DividerHeight / UR_DividerLineHeight /
+                 UR_DividerColor) drawn by PropertyDelegate. sizeHint reads the role
+                 via the caption sibling so BOTH columns report the divider height
+                 (else the value column's normal height wins). Separates the
+                 Effects groups.
+
+--------------------------------------------------------------------------------
+REMAINING DEVELOP-MODULE WORK (beyond raw decode; verified vs tree 2026-07-11)
+--------------------------------------------------------------------------------
+27   [todo]      Color management. inputtransform.h / outputtransform.h /
+                 workingimage.h are still SCAFFOLD: input assumes sRGB (drops
+                 alpha, ignores embedded ICC), output is a plain linear->sRGB
+                 transfer, and the working space is hardcoded linear sRGB / D65
+                 with no colour-space tag. Needed: ICC-aware input from the
+                 image's embedded profile, ICC output / soft-proof, and a tagged
+                 working space. Biggest correctness gap for wide-gamut files.
+
+28   [todo]      Transform panel leftovers (crop/warp + persistence done).
+                 Remaining: interactive Straighten/Level UI (the straighten
+                 field exists, no UI); warp-reset control; content-aware Fill
+                 (fillCanvas deferred); baked-geometry export path.
+
+29   [todo]      Layer opacity. Mask compositing is done (WorkingImageCache::
+                 renderStack blends masked layers, perceptual A/B), but
+                 EditLayer::opacity is still reserved / unwired -- add the
+                 opacity slider and fold it into the per-layer blend.
+
+30   [blocked]   Object Mask (SAM). Brush-perimeter Develop mask refined by
+                 SAM2. Encoder + decoder run under OpenCV DNN, but the decoder
+                 needs an offline fixed-shape re-export (onnxsim, pinned
+                 num_labels/points) or it will not load. Blocked on that
+                 re-export.
+
+31   [todo]      Dehaze quality (optional follow-up). Dehaze is currently an
+                 APPROXIMATION (large-radius local contrast + low-pivot contrast
+                 + saturation). Consider a true dark-channel-prior dehaze
+                 (atmospheric light + transmission map, guided-filter refine,
+                 radiance recovery); ~120-150 lines, heavier on the settle
+                 render. Would slot behind the same slider (see #15 CONSIDER).
+
+32   [idea]      Sharpness (Effects, new). A separate op from Texture: small
+                 ABSOLUTE-pixel unsharp radius (Texture is resolution-
+                 proportional mid-frequency), a threshold/masking control to
+                 protect noise, applied full-res only (output sharpening breaks
+                 the proxy-match), placed last in the pipeline (near Grain).
+
+33   [todo]      Develop presets. Save a develop recipe as a named preset and
+                 apply it to one or many selected images (Lightroom-style). Store
+                 app-global (QSettings or a presets folder), NOT the per-image XMP
+                 sidecar -- a preset is reusable across images, the sidecar is one
+                 image's stack. Reuse EditStack::toJson/fromJson (or a params-only
+                 subset) so a preset is just a serialized stack. Decisions: scope
+                 (whole stack vs Basic/Color/Effects-only partial presets; include
+                 masks + geometry or params-only -- masks are image-specific, so
+                 default params-only); apply semantics (replace vs merge onto the
+                 active layer); batch-apply across the selection (mark each image
+                 dirty + flush its sidecar). UI: a preset list/menu in the Develop
+                 dock (save current / apply / rename / delete), + ship a few
+                 built-in starters. Hooks exist: activeParams / stackCache / dirty
+                 / flushImage + populateSlidersFromStack for the live refresh.
+
+34   [todo]      Improved Object Mask perimeter-paint interaction (refines the
+                 Object Mask UX; feeds SAM2 refine, see #30). The user traces the
+                 object BOUNDARY with a solid brush (not a scribble): each stroke
+                 adds to the perimeter; holding Opt/Alt (Qt::AltModifier, same key
+                 both platforms) erases from it. Brush size is adjustable (a Size
+                 slider like the Brush mask, and/or [ ] keys) and/or two finger
+                 touchpad drag. When the painted
+                 perimeter forms a CLOSED loop the stroke colour changes to signal
+                 closure (e.g. in-progress amber -> closed green), the enclosed
+                 region is filled to the candidate mask, and that region is handed
+                 to SAM2 for refinement (#30). Decisions / work: closed-loop
+                 detection (stroke self-intersection or a morphological
+                 close+flood-fill of the perimeter raster); fill + hole handling;
+                 store as a Brush-style MaskComponent (perimeter points +
+                 size/erase) so it round-trips via paramsJson; live overlay while
+                 painting. Cross-ref: brushstamp.h, the Brush mask tool rows, and
+                 the Object Mask predictor.
+
+35   [todo]      Export. Render the developed image (full Develop + OutputTransform,
+                 baked geometry from the Transform panel) to a file. Format/bit-depth/
+                 colour-space/resize/quality options; single + batch over the selection.
+                 Ties to #27 (ICC output) and #28 (baked-geometry export path).
+
+36   [todo]      Crop with generative fill (expand). Extend the canvas beyond the
+                 original frame (out-crop / "expand") and fill the new area with
+                 generatively synthesised content. Uses the inference layer
+                 (project_inference_runtime_strategy); pairs with #28 content-aware Fill.
+
+37   [todo]      Remove / replace masked area. Given a Develop mask (Brush / Object /
+                 range etc.), remove the masked content (inpaint) or replace it with
+                 generated content from a prompt. Inference-layer op; shares mask plumbing
+                 with the mask tools and the #36 generative fill.
+
+38   [todo]      Color profiles. Camera / creative rendering profiles (Adobe-style camera
+                 profiles, film-look LUTs) selectable per image, applied early in Develop.
+                 Distinct from #27 colour management (working/output ICC); this is the
+                 look/rendering profile. Persist the choice in the EditStack.
+
+39   [todo]      Color mixer. Per-hue HSL mixer (8 colour bands: red/orange/yellow/green/
+                 aqua/blue/purple/magenta, each with hue/saturation/luminance) beyond
+                 the single global HSL of #23. Point op after the tone curve; EditParams
+                 fields + JSON persistence + UI rows under the Color header.
+
+40   [idea]      Consolidate the AI-mask model stack (deployment size). The mask
+                 models total ~570 MB: u2net.onnx (Subject + inverted Background,
+                 176), skyseg.onnx (Sky, 176), midas.onnx (Depth, 66), sam2_encoder+
+                 decoder (Object, 154). Two levers, both bigger than cutting model COUNT:
+                 (a) Quantize/downsize on the unified ORT layer -- int8 u2net/skyseg
+                     (~4x smaller each) or swap for a lighter ISNet/MODNet; the single
+                     largest saving.
+                 (b) A SINGLE SAM2 backing Object + Subject + Sky via AUTO-PROMPTING.
+                     NOT a drop-in: today's export is a pinned 1-label/2-point
+                     promptable decoder with no saliency and no automatic-mask-
+                     generation. Would need an auto-prompt seed (saliency point for
+                     Subject; top-edge points for Sky) + an AMG pipeline, and SAM2
+                     returns ONE connected region per prompt -- wrong for canopy Sky
+                     (the documented skyseg weakness), so it risks REGRESSING Sky/
+                     Subject. Research task, not a ready consolidation.
+                 Note: Background is already consolidated (inverted Subject, no own
+                 model); u2net and skyseg are the same U^2-Net architecture but
+                 different weights, so they cannot share a file. Cross-ref
+                 project_subject_mask, project_range_masks,
+                 project_inference_runtime_strategy.
+
+41   [todo]      Align the ReleaseExtras git policy. Provisioned-at-deploy models
+                 should be handled consistently: today skyseg/u2net/sam2_* are
+                 .gitignore'd but midas.onnx (66 MB) and focus_point_model.onnx
+                 (11 MB) are COMMITTED into the repo (77 MB of models in history).
+                 Pick one policy -- either gitignore all large models + provision at
+                 deploy (preferred; shrinks the repo), or commit all deliberately
+                 (LFS) -- and make .gitignore + the deploy scripts match. pmrid.onnx
+                 (4 MB) was committed too; rawdenoise.onnx (committed) was removed
+                 2026-07-12 (dead TreeNet path).
 --------------------------------------------------------------------------------
