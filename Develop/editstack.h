@@ -122,10 +122,30 @@ struct Geometry {
     }
 };
 
+/*
+    Regenerative fill (spot removal). PER-IMAGE like Geometry: an ordered history of
+    spot heals. Each spot is a brush region synthesized by MI-GAN and composited BEFORE
+    the geometry stage, so spots stay glued to the photo content when it is later cropped
+    or straightened. Surfaced in the dock as a single pinned "Fill" pseudo-layer (always
+    last); it carries no adjustment params.
+
+    Parametric + non-destructive: only the brush geometry is stored (points in oriented-
+    image normalized coords -- the geometry stage's input space -- plus size/feather, all
+    opaque in paramsJson, forward-tolerant like MaskComponent). Heals are re-synthesized
+    deterministically at render (MI-GAN is deterministic) and cached in memory. Spots
+    apply in order so each heals over the accumulation of prior ones. `enabled` toggles a
+    history entry off without deleting it.
+*/
+struct FillSpot {
+    bool    enabled = true;
+    QString paramsJson;   // stroke blob: points, size, feather
+};
+
 struct EditStack {
     int                 version = 1;
     QVector<EditLayer>  layers;
-    Geometry            geometry;       // per-image crop / straighten / warp (applied last)
+    Geometry            geometry;       // crop/straighten/warp, applied last
+    QVector<FillSpot>   spots;          // per-image spot heals (applied before geometry)
 
     /* The params the renderer should apply. Today: the first enabled layer's params (one layer
        in Increment 1). When the compositor lands this becomes a true multi-layer composite. */
@@ -139,6 +159,8 @@ struct EditStack {
        writing a sidecar for an untouched image. */
     bool isIdentity() const {
         if (!geometry.isIdentity() || !geometry.show) return false;
+        for (const FillSpot &s : spots)
+            if (s.enabled) return false;
         for (const EditLayer &l : layers)
             if (l.enabled && (!l.params.isIdentity() || !l.masks.isEmpty() ||
                               !l.showLayer || !l.showBasic || !l.showColor || !l.showEffects))
@@ -260,6 +282,16 @@ struct EditStack {
         o["version"] = version;
         o["layers"]  = arr;
         if (!geometry.isIdentity() || !geometry.show) o["geometry"] = geometryToJson(geometry);
+        if (!spots.isEmpty()) {
+            QJsonArray sarr;
+            for (const FillSpot &s : spots) {
+                QJsonObject so;
+                so["enabled"] = s.enabled;
+                if (!s.paramsJson.isEmpty()) so["params"] = s.paramsJson;
+                sarr.append(so);
+            }
+            o["fill"] = sarr;
+        }
         return o;
     }
 
@@ -298,6 +330,14 @@ struct EditStack {
         EditStack s;
         s.version = o.value("version").toInt(s.version);
         if (o.contains("geometry")) s.geometry = geometryFromJson(o.value("geometry").toObject());
+        const QJsonArray sarr = o.value("fill").toArray();
+        for (const QJsonValue &sv : sarr) {
+            const QJsonObject so = sv.toObject();
+            FillSpot fs;
+            fs.enabled    = so.value("enabled").toBool(fs.enabled);
+            fs.paramsJson = so.value("params").toString();
+            s.spots.append(fs);
+        }
         const QJsonArray arr = o.value("layers").toArray();
         for (const QJsonValue &v : arr) {
             const QJsonObject lo = v.toObject();

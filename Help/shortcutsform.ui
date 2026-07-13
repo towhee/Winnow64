@@ -1084,6 +1084,28 @@
        </item>
        <item>
         <property name="text">
+         <string>Resize Brush (Brush / Object mask)</string>
+        </property>
+        <property name="text">
+         <string>[ / ]  (or two-finger drag)</string>
+        </property>
+        <property name="text">
+         <string>Shrinks / grows the brush; while a Brush or Object mask tool is active</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Undo Stroke (Brush / Object mask)</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Z</string>
+        </property>
+        <property name="text">
+         <string>Removes the last painted stroke; while a Brush or Object mask tool is active</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Transform Panel</string>
         </property>
         <property name="text">

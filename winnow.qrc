@@ -135,6 +135,7 @@
         <file>images/icon16/rename.png</file>
         <file>images/icon16/eye.png</file>
         <file>images/icon16/eye_off.png</file>
+        <file>images/icon16/spot.png</file>
         <file>images/icon16/foldertree.png</file>
         <file>images/icon16/foldertree_white.png</file>
         <file>images/icon16/bookmarks_white.png</file>
@@ -151,6 +152,7 @@
         <file>images/icon16/delta.png</file>
         <file>images/icon16/delete.png</file>
         <file>images/icon16/questionmark.png</file>
+        <file>images/icon16/ellipsis.png</file>
         <file>images/icon16/new.png</file>
         <file>images/icon16/down.png</file>
         <file>images/icon16/up.png</file>

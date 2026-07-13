@@ -70,8 +70,17 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
         case ActReset:    emit resetLayerRequested();  break;
         case ActRemove:   emit removeLayerRequested(); break;
         case ActRename:   emit renameRequested();      break;
+        case ActSpotFill: emit spotToolToggled(!spotActive); break;
         }
     });
+
+    /* Spot-removal tool (regenerative fill). A visible title-bar affordance
+       (discoverability): brush over blemishes to heal them; heals are recorded in
+       the pinned "Fill" layer. DevelopProperties drives it back via setSpotActive. */
+    spotBtn = new BarBtn();
+    spotBtn->setToolTip("Spot removal: brush over a blemish to heal it (Fill layer)");
+    connect(spotBtn, &BarBtn::clicked, this, [this]{ emit spotToolToggled(!spotActive); });
+    updateSpotIcon();
 
     previewBtn = new BarBtn();
     previewBtn->setToolTip("Preview: show or ignore this whole layer");
@@ -93,6 +102,8 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
     row->addSpacing(6);
     row->addWidget(combo, 1);
     row->addSpacing(6);
+    row->addWidget(spotBtn);
+    row->addSpacing(4);
     row->addWidget(previewBtn);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -132,6 +143,11 @@ void LayerHeader::setLayers(const QStringList &names, int currentIndex)
     combo->insertSeparator(combo->count());
     combo->addItem(tr("Add new layer"));
     combo->setItemData(combo->count() - 1, ActAddLayer);
+
+    /* Pinned "Fill" entry (spot removal): arms the same mode as the title-bar button.
+       An action row, so it never disturbs the layer index / checkmark logic. */
+    combo->addItem(tr("Fill (spot removal)"));
+    combo->setItemData(combo->count() - 1, ActSpotFill);
 
     /* Per-layer actions, captioned with the active layer's name. Omitted for Base (index 0), which
        applies globally and cannot be reset/removed/renamed here. */
@@ -198,6 +214,19 @@ void LayerHeader::updatePreviewIcon()
     if (!previewBtn) return;
     previewBtn->setIcon(previewShown ? ":/images/icon16/eye.png"
                                      : ":/images/icon16/eye_off.png", G::iconOpacity);
+}
+
+void LayerHeader::setSpotActive(bool active)
+{
+    spotActive = active;
+    updateSpotIcon();
+}
+
+void LayerHeader::updateSpotIcon()
+{
+    if (!spotBtn) return;
+    /* Full opacity when armed, dimmed when off (same idiom as the eye button). */
+    spotBtn->setIcon(":/images/icon16/spot.png", spotActive ? 1.0 : G::iconOpacity);
 }
 
 void LayerHeader::updateCollapseIcon()

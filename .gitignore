@@ -90,3 +90,4 @@ ReleaseExtras/skyseg.onnx
 ReleaseExtras/u2net.onnx
 ReleaseExtras/sam2_decoder.onnx
 ReleaseExtras/sam2_encoder.onnx
+ReleaseExtras/migan.onnx

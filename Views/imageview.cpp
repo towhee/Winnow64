@@ -79,6 +79,8 @@ QCursor buildLevelCursor()
 #include <QJsonObject>
 #include <QJsonArray>
 #include "Develop/brushstamp.h"
+#include "Develop/objectmask.h"
+#include "Develop/fillspot.h"
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
 #include "Develop/skymask.h"
@@ -553,15 +555,14 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
     maskPainting = false;
     maskGuide.reset();                                   // recompute the auto-mask guide for this image
     if (maskTool == 2) brushBuildBuffers(paramsJson);    // raster committed strokes into the preview
-    if (maskIsObject()) {                                // Object: restore the stored lasso outline
-        maskObjLasso.clear();
+    if (maskIsObject()) {                                // Object: restore perimeter
         maskObjDrawing = false;
-        const QJsonArray poly = QJsonDocument::fromJson(paramsJson.toUtf8())
-                                    .object().value("brush").toObject().value("poly").toArray();
-        for (const QJsonValue &pv : poly) {
-            const QJsonArray xy = pv.toArray();
-            if (xy.size() >= 2) maskObjLasso << QPointF(xy.at(0).toDouble(), xy.at(1).toDouble());
-        }
+        maskBrushErase = false;
+        const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+        maskBrushStrokesJson = o.value("strokes").toArray();
+        maskBrushSize = o.value("size").toDouble(8);
+        maskBrushW = maskBrushH = 0;                     // force a rebuild for this image
+        objEnsureBuffers();                              // re-raster + recompute closure
     }
     if (maskIsContent()) {                               // Range / Subject / Sky: build the tint
         maskRangeParams = paramsJson;
@@ -569,7 +570,7 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
     }
     maskEditMode = true;
     maskHover = underMouse();        // show at once if the cursor is already over the view
-    maskBrushCursorOn = maskHover && maskTool == 2;
+    maskBrushCursorOn = maskHover && (maskTool == 2 || maskIsObject());
     maskDrag = -1;
     viewport()->update();
 }
@@ -582,7 +583,8 @@ void ImageView::endMaskEdit()
     maskDrag = -1;
     maskPainting = false;
     maskObjDrawing = false;
-    maskObjLasso.clear();
+    maskObjClosed = false;
+    maskObjPerim.clear(); maskObjFill.clear();
     maskBrushCursorOn = false;
     maskBrushPreview = QImage();
     maskBrushMain.clear(); maskBrushStroke.clear(); maskBrushW = maskBrushH = 0;
@@ -590,6 +592,118 @@ void ImageView::endMaskEdit()
     maskRangeParams.clear();
     maskLayerTint = QImage();
     viewport()->update();
+}
+
+void ImageView::beginSpotEdit()
+{
+    if (G::isLogger) G::log("ImageView::beginSpotEdit");
+    spotEditMode = true;
+    spotPainting = false;
+    spotStrokePts.clear();
+    spotCursorOn = false;
+    spotHoverPin = -1;
+    setCursor(Qt::BlankCursor);         // the brush-size circle IS the cursor
+    viewport()->update();
+}
+
+void ImageView::endSpotEdit()
+{
+    if (!spotEditMode) return;
+    if (G::isLogger) G::log("ImageView::endSpotEdit");
+    spotEditMode = false;
+    spotPainting = false;
+    spotCursorOn = false;
+    spotStrokePts.clear();
+    spotPins.clear();
+    unsetCursor();
+    viewport()->update();
+}
+
+void ImageView::setSpotPins(const QVector<QPointF> &pins)
+{
+    spotPins = pins;
+    spotHoverPin = -1;                  // indices may have shifted (e.g. after a remove)
+    if (spotEditMode) viewport()->update();
+}
+
+/* Index of the committed spot pin under vp (within a small viewport radius), or -1. */
+int ImageView::spotPinHitTest(QPoint vp) const
+{
+    for (int i = 0; i < spotPins.size(); ++i)
+        if (QLineF(QPointF(vp), maskNormToViewport(spotPins[i])).length() <= 9.0) return i;
+    return -1;
+}
+
+/* Minimum spot size as a % of the long edge = a ~3 px diameter on the displayed image
+   (spotBrushSize is diameter/long-edge * 100). Lets tiny blemishes be targeted. */
+double ImageView::spotSizeMin() const
+{
+    const QRectF br = pmItem ? pmItem->boundingRect() : QRectF();
+    const double longE = std::max(br.width(), br.height());
+    if (longE <= 0) return 0.05;
+    return std::clamp(300.0 / longE, 0.02, 100.0);      // 3px / longE, as a percent
+}
+
+/* A Develop tool (crop / mask / spot) owns the canvas -- gate the default loupe mouse
+   behaviour (click-to-zoom, pan, pick) so a tool gesture can't also toggle zoom etc. */
+bool ImageView::developToolActive() const
+{
+    return cropActive() || maskEditMode || spotEditMode;
+}
+
+/*
+    Spot-mode overlay (viewport coords): committed pins (click to remove), the live stroke
+    path while painting, and the brush-size circle cursor. Mirrors the brush/object size-
+    cursor idiom (drawObjectMask): reset transform, project the image radius to viewport px.
+*/
+void ImageView::drawSpotOverlay(QPainter *painter, const QRectF &br)
+{
+    painter->save();
+    painter->resetTransform();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setBrush(Qt::NoBrush);
+
+    QPen halo(QColor(0, 0, 0, 160)); halo.setWidthF(3.0); halo.setCosmetic(true);
+
+    for (int i = 0; i < spotPins.size(); ++i) {         // committed pins
+        const QPointF v = maskNormToViewport(spotPins[i]);
+        const bool hot = (i == spotHoverPin);           // cursor over it -> delete hint
+        painter->setPen(halo);
+        painter->drawEllipse(v, 5.0, 5.0);
+        painter->setPen(QPen(hot ? QColor(255, 80, 80, 255) : QColor(120, 200, 255, 240),
+                             hot ? 1.8 : 1.4));
+        painter->drawEllipse(v, 5.0, 5.0);
+        if (hot) {                                       // red "X" == click to delete
+            painter->drawLine(v + QPointF(-3, -3), v + QPointF(3, 3));
+            painter->drawLine(v + QPointF(-3, 3),  v + QPointF(3, -3));
+        } else {                                         // "+" marker
+            painter->drawLine(v + QPointF(-3, 0), v + QPointF(3, 0));
+            painter->drawLine(v + QPointF(0, -3), v + QPointF(0, 3));
+        }
+    }
+
+    if (spotPainting && spotStrokePts.size() >= 4) {    // live stroke path
+        QPolygonF poly;
+        for (int i = 0; i + 1 < spotStrokePts.size(); i += 2)
+            poly << maskNormToViewport(QPointF(spotStrokePts[i], spotStrokePts[i + 1]));
+        QPen sp(QColor(255, 120, 120, 190)); sp.setWidthF(2.0); sp.setCosmetic(true);
+        painter->setPen(sp);
+        painter->drawPolyline(poly);
+    }
+
+    if (spotCursorOn && br.width() > 0) {               // brush-size circle
+        const double imgLong = std::max(br.width(), br.height());
+        const double rImg = (qBound(0.0, spotBrushSize, 100.0) / 200.0) * imgLong;
+        const QPointF cImg = pmItem->mapFromScene(mapToScene(spotCursorVp));
+        const QPointF cVp(spotCursorVp);
+        const double rVp =
+            QLineF(cVp, mapFromScene(pmItem->mapToScene(cImg + QPointF(rImg, 0)))).length();
+        painter->setPen(halo);
+        painter->drawEllipse(cVp, rVp, rVp);
+        painter->setPen(QPen(QColor(255, 255, 255, 235), 1.4));
+        painter->drawEllipse(cVp, rVp, rVp);
+    }
+    painter->restore();
 }
 
 void ImageView::setLayerMaskTint(const QImage &tint)
@@ -614,6 +728,16 @@ void ImageView::toggleMaskTint()
        and the brush cursor keep drawing (drawForeground gates only the tint on maskTintHidden). */
     if (!maskEditMode) return;
     maskTintHidden = !maskTintHidden;
+    viewport()->update();
+}
+
+void ImageView::hideMaskTint()
+{
+    /* An adjustment slider (Basic/Color/Effects) was changed; get the red coverage out of
+       the way so the user sees the effect on the masked pixels. Re-shown by "M" or by
+       re-selecting a mask tool. */
+    if (!maskEditMode || maskTintHidden) return;
+    maskTintHidden = true;
     viewport()->update();
 }
 
@@ -1211,7 +1335,14 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
         }
         return;
     }
-    /* Whole-layer mask: while any tool is expanded (maskEditMode), the composite of ALL the layer's
+    /* Spot-removal mode owns the overlay (pins + live stroke + brush cursor); it is
+       mutually exclusive with mask editing (arming it does not set maskEditMode). */
+    if (spotEditMode && pmItem && pmItem->isVisible()) {
+        const QRectF sbr = pmItem->boundingRect();
+        if (sbr.width() > 0 && sbr.height() > 0) drawSpotOverlay(painter, sbr);
+        return;
+    }
+    /* Whole-layer mask: while any tool is expanded (maskEditMode), the composite of the
        Add/Subtract tools is shown as a red coverage tint (built by MW). It is NOT hover-gated -- the
        whole mask stays visible whenever a tool is expanded -- and is drawn UNDER the active tool's
        handles. When it is present the per-tool draw skips its own tint (it would double up) and draws
@@ -1220,7 +1351,8 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
        only rebuilds on stroke release (paramsChanged). Suppress it during the stroke so the per-brush
        live preview (maskBrushPreview, updated on every move) shows the stroke building up in real time
        instead of the tint only appearing after release. */
-    const bool brushStroking = (maskTool == 2 && maskPainting);
+    const bool brushStroking = (maskTool == 2 && maskPainting) ||
+                               (maskIsObject() && maskObjDrawing);
     const bool showTint = !maskTintHidden;                  // "M" toggles the mask overlay tint
     const bool haveComposite = maskEditMode && !maskLayerTint.isNull() && pmItem && pmItem->isVisible()
                                && !brushStroking && showTint;
@@ -1251,32 +1383,40 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
 void ImageView::drawObjectMask(QPainter *painter, const QRectF &br, bool drawTint)
 {
 /*
-    Draw the freehand lasso outline the user is dragging (or the stored one), in viewport coords so it
-    stays a constant on-screen width at any zoom. A faint op-coloured fill is shown only until the SAM
-    coverage exists (drawTint = no whole-layer composite yet); once decoded, maskLayerTint shows the
-    real cutout and this is just the editable outline.
+    Perimeter-paint overlay. maskBrushPreview (built by objRebuildPreview) tints the boundary
+    wall and, once the loop closes, the enclosed fill -- AMBER while the perimeter is still
+    open, GREEN once ObjectMask::fillEnclosed reports a closed region. Drawn in scene coords so
+    it tracks the image. Skipped when the whole-layer composite tint is already shown
+    (drawTint=false, the SAM cutout has landed): only the size cursor remains. Like the brush.
 */
-    if (maskObjLasso.size() < 2) return;
-    QPolygonF vp;
-    vp.reserve(maskObjLasso.size());
-    for (const QPointF &n : maskObjLasso)
-        vp << mapFromScene(pmItem->mapToScene(QPointF(n.x() * br.width(), n.y() * br.height())));
-
-    painter->save();
-    painter->resetTransform();
-    painter->setRenderHint(QPainter::Antialiasing, true);
-    /* Outline colour conveys the op: Add (selects) red, Subtract (removes) blue -- matches the ramp. */
-    const QColor base = (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);
-    if (drawTint) {
-        QColor fill = base; fill.setAlpha(50);
-        painter->setPen(Qt::NoPen); painter->setBrush(fill);
-        painter->drawPolygon(vp);
+    objEnsureBuffers();             // heal if the pixmap size changed since beginMaskEdit
+    if (drawTint && !maskBrushPreview.isNull()) {
+        painter->save();
+        painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+        painter->drawImage(pmItem->mapToScene(br).boundingRect(), maskBrushPreview);
+        painter->restore();
     }
-    QPen halo(QColor(0, 0, 0, 160)); halo.setWidthF(3.0); halo.setCosmetic(true);
-    painter->setPen(halo); painter->setBrush(Qt::NoBrush); painter->drawPolygon(vp);
-    QPen line(base); line.setWidthF(1.5); line.setCosmetic(true);
-    painter->setPen(line); painter->drawPolygon(vp);
-    painter->restore();
+    /* Brush-size cursor circle (viewport coords, scales with zoom, constant pen width).
+       Red while erasing (Alt held during a stroke); white otherwise. */
+    if (maskBrushCursorOn) {
+        const double imgLong = std::max(br.width(), br.height());
+        const double rImg = (qBound(0.0, maskBrushSize, 100.0) / 200.0) * imgLong;
+        const QPointF cImg = pmItem->mapFromScene(mapToScene(maskBrushCursorVp));
+        const QPointF cVp(maskBrushCursorVp);
+        const double rVp =
+            QLineF(cVp, mapFromScene(pmItem->mapToScene(cImg + QPointF(rImg, 0)))).length();
+        painter->save();
+        painter->resetTransform();
+        painter->setRenderHint(QPainter::Antialiasing, true);
+        painter->setBrush(Qt::NoBrush);
+        const QColor cur = maskBrushErase ? QColor(255, 170, 170, 235)
+                                          : QColor(255, 255, 255, 235);
+        QPen halo(QColor(0, 0, 0, 160)); halo.setWidthF(3.0); halo.setCosmetic(true);
+        painter->setPen(halo); painter->drawEllipse(cVp, rVp, rVp);
+        QPen ring(cur); ring.setWidthF(1.4); ring.setCosmetic(true);
+        painter->setPen(ring); painter->drawEllipse(cVp, rVp, rVp);
+        painter->restore();
+    }
 }
 
 void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTint)
@@ -1537,9 +1677,17 @@ void ImageView::adjustBrushSize(double delta)
 
 void ImageView::ensureAutoGuide()
 {
-    /* Build a small luminance guide from the displayed image (output-oriented), once per image, and
-       register it by path so the develop render samples the SAME guide as this preview. */
-    if (maskGuide && maskGuide->valid()) return;
+    /* Build a small luminance guide from the displayed image (output-oriented), once per
+       image, and register it by path so the develop render samples the SAME guide as this
+       preview. */
+    if (maskGuide && maskGuide->valid()) {
+        /* Already built for this image, but the shared store may have evicted it (crude
+           size cap) -- re-register so the render's getGuide() never comes up empty and
+           paints unconfined. */
+        if (!currentImagePath.isEmpty() && !BrushStamp::getGuide(currentImagePath))
+            BrushStamp::putGuide(currentImagePath, maskGuide);
+        return;
+    }
     if (!pmItem || pmItem->pixmap().isNull() || currentImagePath.isEmpty()) return;
     const QImage img = pmItem->pixmap().toImage();
     if (img.isNull()) return;
@@ -1583,6 +1731,83 @@ void ImageView::brushUndoStroke()
     QJsonObject o;
     o["size"] = maskBrushSize; o["flow"] = maskBrushFlow; o["autoMask"] = maskBrushAutoMask;
     o["autoMaskMode"] = maskBrushAutoMaskMode;
+    o["strokes"] = maskBrushStrokesJson;
+    emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+}
+
+/* ---- Object Mask perimeter-paint helpers (reuse the brush buffers) ---- */
+
+void ImageView::objEnsureBuffers()
+{
+    /* Size the output-oriented buffers to the displayed pixmap (capped) and re-raster the
+       committed perimeter strokes into maskBrushMain (the wall). Rebuilds only when the
+       pixmap size changed, so a live paint stays cheap. Strokes normalized. */
+    const QRectF br = pmItem ? pmItem->boundingRect() : QRectF();
+    if (br.width() <= 0 || br.height() <= 0) return;
+    const int cap = 1280;
+    const double longE = std::max(br.width(), br.height());
+    const double s = (longE > cap) ? cap / longE : 1.0;
+    const int w = std::max(1, int(br.width()  * s));
+    const int h = std::max(1, int(br.height() * s));
+    if (w == maskBrushW && h == maskBrushH && !maskBrushMain.empty()) return;   // current
+    maskBrushW = w; maskBrushH = h;
+    maskBrushMain.assign(size_t(w) * h, 0.0f);
+    maskBrushStroke.assign(size_t(w) * h, 0.0f);
+    BrushStamp::rasterize(maskBrushStrokesJson, maskBrushMain.data(), maskBrushScratch, w, h, 0);
+    objRecomputeFill();
+    objRebuildPreview();
+}
+
+void ImageView::objRecomputeFill()
+{
+    /* Combine the committed wall (maskBrushMain) with the current stroke, then flood-fill
+       the enclosed region. Same BrushStamp compositing + ObjectMask::fillEnclosed the
+       render runs, so the amber/green matches what SAM is handed on release. */
+    const size_t n = size_t(maskBrushW) * maskBrushH;
+    if (n == 0) { maskObjClosed = false; maskObjPerim.clear(); maskObjFill.clear(); return; }
+    maskObjPerim.assign(maskBrushMain.begin(), maskBrushMain.end());
+    if (maskObjDrawing)                         // fold the live stroke in (add / erase)
+        BrushStamp::composite(maskObjPerim.data(), maskBrushStroke.data(), n, 1.0, maskBrushErase);
+    maskObjClosed = ObjectMask::fillEnclosed(maskObjPerim, maskBrushW, maskBrushH,
+                                             ObjectMask::bridgePx(maskBrushW, maskBrushH),
+                                             maskObjFill);
+}
+
+void ImageView::objRebuildPreview()
+{
+    /* Amber (open) / green (closed) tint: the perimeter wall at a strong alpha, plus the
+       enclosed interior at a faint alpha once the loop closes. Open -> fill == wall,
+       so only the amber boundary shows. Full rebuild (cheap on the capped buffer). */
+    if (maskBrushW <= 0 || maskBrushH <= 0) { maskBrushPreview = QImage(); return; }
+    if (maskBrushPreview.width() != maskBrushW || maskBrushPreview.height() != maskBrushH)
+        maskBrushPreview = QImage(maskBrushW, maskBrushH, QImage::Format_ARGB32);
+    const QColor col = maskObjClosed ? QColor(60, 200, 90) : QColor(240, 170, 30);
+    const int R = col.red(), Gc = col.green(), B = col.blue();
+    const float *wall = maskObjPerim.data();
+    const float *fill = maskObjFill.data();
+    const bool haveFill = maskObjFill.size() == size_t(maskBrushW) * maskBrushH;
+    for (int y = 0; y < maskBrushH; ++y) {
+        QRgb *line = reinterpret_cast<QRgb*>(maskBrushPreview.scanLine(y));
+        const size_t rowK = size_t(y) * maskBrushW;
+        for (int x = 0; x < maskBrushW; ++x) {
+            const size_t k = rowK + x;
+            int alpha = 0;
+            if (wall[k] >= 0.5f)                                    alpha = 165;   // wall
+            else if (maskObjClosed && haveFill && fill[k] >= 0.5f)  alpha = 70;    // fill
+            line[x] = qRgba(R, Gc, B, alpha);
+        }
+    }
+}
+
+void ImageView::objUndoStroke()
+{
+    if (maskBrushStrokesJson.isEmpty()) return;
+    maskBrushStrokesJson.removeLast();
+    maskBrushW = maskBrushH = 0;                     // force re-raster of the rest
+    objEnsureBuffers();
+    viewport()->update();
+    QJsonObject o;
+    o["size"] = maskBrushSize;
     o["strokes"] = maskBrushStrokesJson;
     emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
 }
@@ -2831,7 +3056,9 @@ void ImageView::enterEvent(QEnterEvent *event)
     /* The mask overlay is "active and visible whenever the mouse is over the imageView". */
     if (maskEditMode) {
         maskHover = true;
-        if (maskTool == 2) { maskBrushCursorOn = true; setFocus(Qt::MouseFocusReason); }  // for [ ] / Cmd+Z
+        if (maskTool == 2 || maskIsObject()) {   // for [ ] / Cmd+Z
+            maskBrushCursorOn = true; setFocus(Qt::MouseFocusReason);
+        }
         viewport()->update();
     }
 
@@ -2868,13 +3095,26 @@ void ImageView::wheelEvent(QWheelEvent *event)
     if (G::isLogger)
         qDebug() << "ImageView::wheelEvent";
 
-    /* While cropping, swallow the wheel so it can't navigate to another image (which would leave
-       the crop overlay stale -- image-switch re-init is a later increment). */
+    /* While cropping, swallow the wheel so it can't navigate away (leaves the crop
+       overlay stale -- image-switch re-init is a later increment). */
     if (cropActive()) { event->accept(); return; }
 
-    /* Brush active over the image: a two-finger drag (or wheel) resizes the brush instead of
-       changing image. Vertical delta; pixelDelta on a trackpad, angleDelta on a mouse wheel. */
-    if (maskEditMode && maskTool == 2 && maskHover) {
+    /* Spot removal armed: a two-finger drag (or wheel) resizes the spot brush, not the
+       image. */
+    if (spotEditMode) {
+        const QPoint pd = event->pixelDelta();
+        const double dy = !pd.isNull() ? pd.y() : event->angleDelta().y() / 8.0;
+        spotBrushSize = qBound(spotSizeMin(), spotBrushSize + dy * 0.04, 100.0);
+        spotCursorVp = event->position().toPoint();
+        spotCursorOn = true;
+        viewport()->update();
+        event->accept();
+        return;
+    }
+
+    /* Brush/Object active over the image: a two-finger drag (or wheel) resizes the brush,
+       not the image. Vertical delta; pixelDelta on a trackpad, angleDelta on a wheel. */
+    if (maskEditMode && (maskTool == 2 || maskIsObject()) && maskHover) {
         const QPoint pd = event->pixelDelta();
         const double dy = !pd.isNull() ? pd.y() : event->angleDelta().y() / 8.0;
         adjustBrushSize(dy * 0.15);     // up = larger
@@ -2938,13 +3178,14 @@ bool ImageView::event(QEvent *event) {
 /*
     Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
-    /* While a brush mask is active, claim [ ] A from their global action shortcuts (thumb size /
-       droplet) so the brush gets them as key presses. */
-    if (event->type() == QEvent::ShortcutOverride && maskEditMode && maskTool == 2) {
+    /* While a brush/object mask is active, claim [ ] (and A for the brush auto-mask) from
+       their global action shortcuts (thumb size / droplet), routing them to the tool. */
+    if (event->type() == QEvent::ShortcutOverride && maskEditMode &&
+        (maskTool == 2 || maskIsObject())) {
         QKeyEvent *ke = static_cast<QKeyEvent *>(event);
-        if (ke->modifiers() == Qt::NoModifier &&
-            (ke->key() == Qt::Key_A || ke->key() == Qt::Key_BracketLeft ||
-             ke->key() == Qt::Key_BracketRight)) {
+        const bool sizeKey = ke->key() == Qt::Key_BracketLeft || ke->key() == Qt::Key_BracketRight;
+        const bool autoKey = maskTool == 2 && ke->key() == Qt::Key_A;   // A is brush-only
+        if (ke->modifiers() == Qt::NoModifier && (sizeKey || autoKey)) {
             event->accept();
             return true;
         }
@@ -2994,6 +3235,24 @@ void ImageView::keyPressEvent(QKeyEvent *event){
         emit warpCommitRequested();
         return;
     }
+    /* Spot removal: [ / ] resize the brush, Escape disarms the tool. */
+    if (spotEditMode) {
+        if (event->key() == Qt::Key_BracketLeft)  {
+            spotBrushSize = qMax(spotSizeMin(), spotBrushSize - 1); viewport()->update(); return; }
+        if (event->key() == Qt::Key_BracketRight) {
+            spotBrushSize = qMin(100.0, spotBrushSize + 1); viewport()->update(); return; }
+        if (event->key() == Qt::Key_Escape) { emit spotToolExited(); return; }
+    }
+    /* Object shortcuts: [ / ] resize, Cmd/Ctrl+Z undo the last perimeter stroke. */
+    if (maskEditMode && maskIsObject()) {
+        if (event->key() == Qt::Key_BracketLeft)  { adjustBrushSize(-2); return; }
+        if (event->key() == Qt::Key_BracketRight) { adjustBrushSize(+2); return; }
+        if (event->key() == Qt::Key_Z && (event->modifiers() & (Qt::ControlModifier | Qt::MetaModifier))
+            && !(event->modifiers() & Qt::AltModifier)) {
+            objUndoStroke();
+            return;
+        }
+    }
     /* Brush shortcuts: [ / ] resize, Cmd/Ctrl+Z undo the last stroke. */
     if (maskEditMode && maskTool == 2) {
         if (event->key() == Qt::Key_BracketLeft)  { adjustBrushSize(-2); return; }
@@ -3018,6 +3277,8 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
         emit warpCommitRequested();
         return;
     }
+    /* A Develop tool owns the canvas: swallow the double-click so it can't zoom/pan. */
+    if (developToolActive()) { event->accept(); return; }
     if (event->button() == Qt::LeftButton) {
         isLeftMouseBtnPressed = true;
         mousePressPt.setX(event->x());
@@ -3041,6 +3302,20 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) {
+        return;
+    }
+
+    /* Spot removal: click a pin to delete that spot, else start a new stroke. */
+    if (spotEditMode && event->button() == Qt::LeftButton) {
+        const int pin = spotPinHitTest(event->pos());
+        if (pin >= 0) { emit spotRemoveRequested(pin); return; }
+        spotPainting = true;
+        spotCursorVp = event->pos();
+        spotCursorOn = true;
+        const QPointF n = maskViewportToNorm(event->pos());
+        spotStrokePts.clear();
+        spotStrokePts << n.x() << n.y();
+        viewport()->update();
         return;
     }
 
@@ -3102,14 +3377,28 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    /* Object Mask: a left press starts a freehand lasso; it consumes the event so the image does not
-       pan. Move extends the outline, release emits it (SAM refines the fill to the object edge). */
+    /* Object Mask: a left press begins a perimeter stroke (Alt = erase). Painting eats
+       the event so the image can't pan. Each stroke adds to (or erases from) the traced
+       boundary; when it closes the overlay flips amber -> green (objRecomputeFill). */
     if (maskEditMode && maskIsObject() && event->button() == Qt::LeftButton) {
-        maskObjDrawing = true;
-        maskHover = true;
-        maskObjLasso.clear();
-        maskObjLasso << maskViewportToNorm(event->pos());
-        viewport()->update();
+        objEnsureBuffers();
+        if (maskBrushW > 0) {
+            maskObjDrawing = true;
+            maskHover = true;
+            maskBrushErase = (event->modifiers() & Qt::AltModifier);
+            maskStrokePts.clear();
+            const QPointF n = maskViewportToNorm(event->pos());
+            maskStrokePts << n.x() << n.y();
+            std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
+            maskBrushLast = brushNormToBuf(n);
+            BrushStamp::dabMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
+                               maskBrushLast.x(), maskBrushLast.y(), brushRadiusBufPx(), 0.0);
+            maskBrushCursorVp = event->pos();
+            maskBrushCursorOn = true;
+            objRecomputeFill();
+            objRebuildPreview();
+            viewport()->update();
+        }
         return;
     }
 
@@ -3193,6 +3482,9 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     }
 
     if (event->button() == Qt::LeftButton) {
+        /* A Develop tool owns the canvas: don't start a pan or let the click reach the
+           base view -- the tool's own branches above handled the gesture. */
+        if (developToolActive()) { event->accept(); return; }
         isLeftMouseBtnPressed = true;
         isMouseDrag = false;
         mousePressPt.setX(event->x());
@@ -3263,18 +3555,44 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
     static QPoint prevPos = event->pos();
 
-    /* Object Mask: extend the freehand lasso while dragging (consume so the image does not pan). */
+    /* Spot removal: track the brush cursor; while painting, extend the stroke. Consume
+       the move so the canvas never pans in spot mode. */
+    if (spotEditMode) {
+        spotCursorVp = event->pos();
+        if (spotPainting) {
+            const QPointF n = maskViewportToNorm(event->pos());
+            spotStrokePts << n.x() << n.y();
+            spotCursorOn = true;
+            spotHoverPin = -1;
+        } else {
+            /* Over a committed pin -> show a click-to-delete cursor and hide the brush
+               circle; the pin itself turns red with an X (drawSpotOverlay). */
+            spotHoverPin = spotPinHitTest(event->pos());
+            const bool overPin = spotHoverPin >= 0;
+            setCursor(overPin ? Qt::PointingHandCursor : Qt::BlankCursor);
+            spotCursorOn = !overPin;
+        }
+        viewport()->update();
+        return;
+    }
+
+    /* Object Mask: paint a perimeter stroke (left held), or track the size cursor.
+       Like the Brush tool -- stamp the segment, fold into the wall, recompute closure. */
     if (maskEditMode && maskIsObject()) {
+        maskBrushCursorVp = event->pos();
+        maskBrushCursorOn = true;
         if (maskObjDrawing) {
             const QPointF n = maskViewportToNorm(event->pos());
-            /* Add a vertex only once the cursor has moved a little, to keep the outline compact. */
-            if (maskObjLasso.isEmpty() || QLineF(maskObjLasso.last(), n).length() > 0.004)
-                maskObjLasso << n;
-            viewport()->update();
-            return;
+            maskStrokePts << n.x() << n.y();
+            const QPointF bp = brushNormToBuf(n);
+            BrushStamp::segmentMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
+                                   maskBrushLast, bp, brushRadiusBufPx(), 0.0);
+            maskBrushLast = bp;
+            objRecomputeFill();
+            objRebuildPreview();
         }
-        setCursor(Qt::CrossCursor);       // signal "draw here"; consume so hover cursor is not overridden
-        return;
+        viewport()->update();
+        if (maskObjDrawing) return;        // consume while painting; hover falls through to scopes
     }
 
     /* Brush: paint a stroke (left button held), or just track the size cursor on hover. */
@@ -3479,7 +3797,21 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     if (G::isLogger)
         G::log("ImageView::mouseReleaseEvent", "isScrollable =" + QVariant(isScrollable).toString());
 
-    /* Finish a level line: reduce its tilt to the nearest horizontal/vertical and emit the leveling
+    /* Spot removal: a finished stroke -> emit its FillSpotGeom (size/feather/pts); the
+       dock appends it as a FillSpot and re-renders (MI-GAN heals it). */
+    if (spotEditMode && spotPainting) {
+        spotPainting = false;
+        if (spotStrokePts.size() >= 2) {
+            std::vector<double> pts(spotStrokePts.begin(), spotStrokePts.end());
+            emit spotStrokeCommitted(
+                FillSpotGeom::toJson(spotBrushSize / 100.0, spotFeather, pts));
+        }
+        spotStrokePts.clear();
+        viewport()->update();
+        return;
+    }
+
+    /* Finish a level line: reduce its tilt to the nearest horizontal/vertical and emit
        angle (a delta added to the straighten). A too-short line is ignored. */
     if (cropActive() && cropLevelMode) {
         cropLevelMode = false;
@@ -3512,22 +3844,32 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
 
-    /* Finish an Object Mask lasso: emit the closed outline as the brush poly. MW::ensureObjectMask
-       (via setActiveMaskParams -> paramsChanged) encodes the image once, decodes the fill to the
-       object edge, and the layer tint updates. A too-small outline is dropped. */
+    /* Finish an Object Mask perimeter stroke: composite it into the committed wall, add
+       it to the stroke list, and persist {"size","strokes"}. MW::ensureObjectMask (via
+       paramsChanged) rasterizes the perimeter, fills it if closed, and SAM-refines the
+       fill to the object edge; an open perimeter yields no coverage yet. */
     if (maskEditMode && maskIsObject() && maskObjDrawing) {
         maskObjDrawing = false;
         isLeftMouseBtnPressed = false;
-        if (maskObjLasso.size() >= 3) {
-            QJsonArray poly;
-            for (const QPointF &p : maskObjLasso) {
-                QJsonArray xy; xy.append(p.x()); xy.append(p.y());
-                poly.append(xy);
-            }
-            QJsonObject brush; brush["poly"] = poly;
-            QJsonObject o;     o["brush"]    = brush;
-            emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+        BrushStamp::composite(maskBrushMain.data(), maskBrushStroke.data(),
+                              size_t(maskBrushW) * maskBrushH, 1.0, maskBrushErase);
+        std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
+        if (maskStrokePts.size() >= 2) {
+            QJsonArray pts;
+            for (double v : maskStrokePts) pts.append(v);
+            QJsonObject stroke;
+            stroke["pts"]   = pts;
+            stroke["size"]  = maskBrushSize;
+            stroke["erase"] = maskBrushErase;
+            maskBrushStrokesJson.append(stroke);
+            QJsonObject o;
+            o["size"]    = maskBrushSize;
+            o["strokes"] = maskBrushStrokesJson;
+            emit maskGeometryChanged(
+                QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
         }
+        objRecomputeFill();             // re-evaluate closure on the committed wall
+        objRebuildPreview();
         viewport()->update();
         return;
     }
@@ -3612,6 +3954,10 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
              << "viewport()->rect().contains(event->pos()) =" << viewport()->rect().contains(event->pos())
         ; //*/
     if (!viewport()->rect().contains(event->pos())) return;
+
+    /* A Develop tool owns the canvas: a tool click (e.g. deleting a spot pin) must NOT
+       fall through to the loupe's click-to-toggle-zoom / pan. */
+    if (developToolActive()) { event->accept(); return; }
 
     // zoom > zoomFit (set in scale)
     if (isScrollable) setCursor(Qt::OpenHandCursor);

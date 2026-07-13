@@ -36,56 +36,19 @@ If you pick a non-`tiny` variant, keep the output filenames `sam2_encoder.onnx` 
 
 ---
 
-# Raw denoiser (`rawdenoise.onnx`)
+# Raw denoiser (`pmrid.onnx`)
 
-The Base **Denoise raw** control needs `rawdenoise.onnx` in `ReleaseExtras/` (not in git). It runs
-through Winnow's **unified inference layer** (`Utilities/inference/`) via **ONNX Runtime** — CoreML EP
-on macOS (Apple Neural Engine), DirectML on Windows — NOT OpenCV DNN. So unlike the masks it needs ORT
-vendored and the build configured with `-DWINNOW_ENABLE_ORT=ON` (default OFF; without it the inference
-layer is a no-op stub and Denoise raw silently disables).
+The Base **Denoise raw** control uses **PMRID** (MegVii, Apache-2.0), a *pre-demosaic*
+sensor-domain denoiser that runs on the CFA mosaic before demosaic. Model file
+`pmrid.onnx` lives in `ReleaseExtras/` (committed). Unlike the cv::dnn mask models it runs
+through Winnow's **unified inference layer** (`Utilities/inference/`) via **ONNX Runtime**
+— CoreML EP on macOS (ANE), DirectML on Windows — so it needs ORT vendored and a
+`-DWINNOW_ENABLE_ORT=ON` build (default OFF → the layer is a no-op stub and Denoise raw
+silently disables). The C++ engine is `ImageFormats/Raw/pmrid.{h,cpp}`; wiring is in
+`rawformat.cpp` + `MW::ensureRawDenoise`. See `tools/pmrid_integration_scope.md` for
+provisioning/coeffs.
 
-**Active model — RawRefinery "TreeNet"** (post-demosaic): `forward(input[1,3,H,W] linear-Rec2020 RGB,
-cond[1,1]=ISO/6400) -> [1,3,H,W]`. The C++ engine (`ImageFormats/Raw/rawdenoise.cpp`) does the
-scene-linear-sRGB ↔ Rec2020 conversion and ISO conditioning around it. Weights come from
-[RawRefinery](https://github.com/rymuelle/RawRefinery) (repo MIT). **⚠ Confirm the release weights'
-license before shipping** — they are separate signed release binaries.
-
-> A **pre-demosaic (4-channel Bayer) NAFNet** is the better long-term design; that path lives in
-> `export_nafnet_raw.py` (+ `.sh`) and is **not currently wired** (the C++ engine is post-demosaic RGB).
-
-## Produce it
-
-```bash
-./export_treenet.sh            # super_light (default); or: light | standard | heavy
-```
-
-macOS/Linux: the wrapper makes a throwaway venv (`torch`, `onnx`, `onnxruntime`, `numpy` — build-time
-only), downloads the chosen TreeNet checkpoint, and writes `ReleaseExtras/rawdenoise.onnx`. Sizes:
-`super_light` ≈ 1.4 MB (fast, lower quality) → `standard` ≈ 500 MB (best). A/B them on real high-ISO
-files and pick before shipping (fp16 can halve `standard`).
-
-Windows: run the Python directly —
-```
-python -m venv _nafnet_venv
-_nafnet_venv\Scripts\pip install torch onnx onnxruntime numpy
-_nafnet_venv\Scripts\python export_treenet.py super_light
-```
-
-## ONNX Runtime
-
-- **macOS:** `brew install onnxruntime` (Homebrew's build ships the CoreML EP). CMake finds it when
-  `WINNOW_ENABLE_ORT=ON`.
-- **Windows:** drop the DirectML ORT build under `Lib/onnxruntime/windows/` (`include/`, `lib/`, and
-  the runtime DLLs `onnxruntime.dll` / `onnxruntime_providers_shared.dll` / `DirectML.dll`).
-
-## Validate / preview
-
-`validate_rawdenoise.py` reproduces the C++ wrapping (demosaic → linear Rec2020 → model → correction)
-and writes before/after preview PNGs so you can judge the denoiser on a real raw, plus `.npy` dumps to
-diff preprocessing against a C++ dump:
-
-```bash
-_nafnet_venv/bin/pip install rawpy pillow          # oracle-only extra deps
-_nafnet_venv/bin/python validate_rawdenoise.py --model ../rawdenoise.onnx --raw file.ARW --crop 1024
-```
+> The earlier post-demosaic **RawRefinery "TreeNet"** path (`rawdenoise.*` + the ORT
+> inference layer) and the unwired **NAFNet** export were removed 2026-07-12; PMRID
+> superseded both. Recover them from git history if a post-demosaic engine is wanted.
 

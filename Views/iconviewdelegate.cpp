@@ -480,7 +480,8 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     bool sidecarVisible = isSidecar && !G::isSlideShow;
     bool lockVisible = !isReadWrite;
     bool combineRawJpgVisible = isCombineRawJpg;
-    bool cacheVisible = !isCached && !isVideo && metaLoaded && !G::isSlideShow;
+    bool cacheVisible = !isCached && !isVideo && metaLoaded && !G::isSlideShow &&
+                        G::operationMode != G::OperationMode::Develop;
     bool ratingVisible = isRatingBadgeVisible && G::ratings.contains(rating);
 
     if (sidecarVisible && getSymbolRect("Sidecar", option.rect, index).contains(viewPos))
@@ -728,8 +729,9 @@ textRect         = a rectangle below itemRect
     if (isCombineRawJpg) painter->drawImage(combineRawJpgRect.translated(origin), combineRawJpgSymbol);
     if (!isReadWrite) lockRenderer->render(painter, lockRect.translated(origin));
 
-    // Draw cache and missing thumbnail status circles
-    if (!isCached && !isVideo && metaLoaded && !G::isSlideShow) {
+    // Draw cache and missing thumbnail status circles (hidden in Develop Mode)
+    bool notDevelopMode = G::operationMode != G::OperationMode::Develop;
+    if (!isCached && !isVideo && metaLoaded && !G::isSlideShow && notDevelopMode) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect.translated(origin));

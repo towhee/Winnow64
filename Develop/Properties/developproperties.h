@@ -52,7 +52,8 @@ public:
         };
         EditParams     base;                    // layer 0 params (applied globally)
         QVector<Layer> layers;                  // non-Base, in order, enabled only
-        Geometry       geometry;                // per-image crop/straighten/warp (applied last)
+        Geometry       geometry;       // crop/straighten/warp, applied last
+        QVector<FillSpot> spots;       // spot heals, applied before geometry
     };
     StackRenderJob stackJob();
 
@@ -116,6 +117,13 @@ public slots:
     /* ImageView toggled auto-mask ("A"); sync the dock checkbox. */
     void setActiveBrushAutoMask(bool on);
 
+    /* Regenerative spot fill. onSpotToolToggled arms/disarms spot-brush mode (from the
+       title-bar button or the pinned "Fill" layer); onSpotStrokeCommitted takes one
+       finished stroke and appends it as a FillSpot to the current stack. */
+    void onSpotToolToggled(bool active);
+    void onSpotStrokeCommitted(const QString &paramsJson);
+    void onSpotRemoveRequested(int index);      // a pin was clicked -> drop that spot
+
     /* ---- LayerHeader widget handlers (the layer dropdown + buttons above the tree) ---- */
     void onLayerSelected(const QString &name);    // dropdown picked a different layer
     void renameActiveLayer();                     // [R] rename (dialog); Base cannot be renamed
@@ -140,6 +148,12 @@ signals:
        sends geometry back via setActiveMaskParams. */
     void maskEditBegin(int tool, int op, bool inverted, const QString &paramsJson, double feather);
     void maskEditEnd();
+    /* Regenerative spot fill: arm/disarm ImageView spot-brush capture. Emitted when the
+       title-bar spot tool (or the pinned "Fill" layer) is toggled. */
+    void spotEditBegin();
+    void spotEditEnd();
+    /* The current image's spot centres (normalized), for ImageView's on-canvas pins. */
+    void spotPinsChanged(const QVector<QPointF> &pins);
     void maskFeatherChanged(double feather);    // Feather slider -> live overlay ramp update
     void maskInvertChanged(bool inverted);      // Invert checkbox -> live overlay flip
     /* Content-range tool params (Luminance lo/hi, Color refine + samples) changed in the dock ->
@@ -148,8 +162,13 @@ signals:
     /* Brush current settings (for the cursor + the next stroke). size/flow 0..100. */
     void maskBrushSettingsChanged(double size, double feather, double flow, bool autoMask,
                                   const QString &autoMaskMode);
-    /* Brush "AI edge (SAM)" was just enabled in the dock -> MW pre-warms the SAM encoder. */
+    /* Brush "AI edge (SAM)" was just enabled in the dock -> MW pre-warms the SAM
+       encoder. */
     void maskBrushAiEnabled();
+    /* An adjustment slider (Basic/Color/Effects) was changed while a mask overlay is
+       shown -> ImageView hides the red coverage tint so the effect on the masked pixels
+       is visible. */
+    void maskTintHideRequested();
 
 private:
     void initialize();
@@ -280,6 +299,9 @@ private:
        mask row's caption with its component index so selection can find it. */
     int selectedMaskIndex = -1;
     bool isRebuildingMasks = false;
+    bool spotMode = false;              // regenerative spot-fill brushing is armed
+    QVector<QPointF> spotPinCenters() const;   // current image's spot centres (norm)
+    void emitSpotPins();                       // push spotPinCenters() to ImageView
     QMenu *maskMenu = nullptr;
     LayerHeader *layerHeader = nullptr; // layer dropdown + buttons, in a gradient band above the tree
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;

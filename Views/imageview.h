@@ -139,6 +139,13 @@ public slots:
        the ramp softness from the Feather slider. Geometry is normalized image coords (0..1). */
     void beginMaskEdit(int tool, int op, bool inverted, const QString &paramsJson, double feather);
     void endMaskEdit();
+    /* Regenerative spot fill: arm/disarm the spot-removal brush. Stroke capture + pins
+       land in the next increment; a finished stroke emits spotStrokeCommitted
+       (FillSpotGeom paramsJson: size/feather/pts). */
+    void beginSpotEdit();
+    void endSpotEdit();
+    /* The dock pushes the current image's spot centres (normalized) to draw the pins. */
+    void setSpotPins(const QVector<QPointF> &pins);
     /* The whole-layer mask (all Add/Subtract tools composited) as a red coverage tint, shown under
        the active tool's handles while any mask tool is expanded. MW builds it (buildMaskBuffer);
        clear when no tool is expanded. */
@@ -147,6 +154,10 @@ public slots:
     /* "M": hide/show the mask overlay tint (both the whole-layer composite and the per-tool preview)
        while editing a mask -- handles/cursor stay so editing continues. No-op outside mask editing. */
     void toggleMaskTint();
+    /* Force the mask overlay tint hidden (e.g. an adjustment slider was changed so the
+       user can see the effect on the masked pixels). No-op outside mask editing or if
+       already hidden. */
+    void hideMaskTint();
     void setMaskFeather(double feather);
     void setMaskInverted(bool inverted);
     void setMaskBrushSettings(double size, double feather, double flow, bool autoMask,
@@ -154,6 +165,10 @@ public slots:
     /* Content-range tools (Luminance/Color Range): the dock changed lo/hi/refine (or samples) ->
        rebuild the coverage tint from the shared RangeRef. */
     void setMaskRangeParams(const QString &paramsJson);
+    /* Build (once per image) + register the brush auto-mask luminance guide. Public so
+       the develop render can guarantee it exists before rasterizing a lum auto-mask
+       brush (GUI thread). */
+    void ensureAutoGuide();
 
     /* Develop crop editing (Transform panel). beginCropEdit enters the Lightroom-style crop:
        the crop frame is anchored at a fixed centred "stage" in the viewport and the image is
@@ -211,8 +226,14 @@ signals:
     void cropChanged(double x, double y, double w, double h);
     /* A level line was drawn: the leveling angle to ADD to the straighten (degrees, nearest H/V). */
     void levelAngleChanged(double deltaDeg);
-    /* Warp mode: the user asked to commit the traced quad (Enter/Return or a double-click). */
+    /* Warp mode: user asked to commit the traced quad (Enter/Return or double-click). */
     void warpCommitRequested();
+    /* A regenerative-fill spot stroke finished: FillSpotGeom paramsJson (size/feather/
+       pts), for DevelopProperties to append as a FillSpot. */
+    void spotStrokeCommitted(const QString &paramsJson);
+    /* A spot pin was clicked (remove that spot), or Escape disarmed the tool. */
+    void spotRemoveRequested(int index);
+    void spotToolExited();
 
 private slots:
     void wheelStopped();
@@ -340,6 +361,23 @@ private:
     QPoint origin;
     QRubberBand *rubberBand;
 
+    /* ------- Regenerative spot fill ------- */
+    bool    spotEditMode = false;       // the spot-removal brush is armed
+    double  spotBrushSize = 8.0;        // diameter as % of the long edge ([ ] resize)
+    double  spotFeather   = 40.0;       // 0..100, composite edge softness
+    QVector<double> spotStrokePts;      // in-progress stroke, flat normalized x,y
+    bool    spotPainting  = false;
+    QPoint  spotCursorVp;               // cursor pos for the brush-size circle
+    bool    spotCursorOn  = false;
+    QVector<QPointF> spotPins;          // committed spot centres (normalized)
+    int     spotHoverPin = -1;          // pin under the cursor (delete hint), -1 none
+    int     spotPinHitTest(QPoint vp) const;            // pin under vp (-1 none)
+    double  spotSizeMin() const;                        // min size % == 3px diameter
+    /* True while a Develop tool (crop / mask / spot) owns the canvas: the default loupe
+       click-to-zoom / pan / pick is suppressed so a tool click can't leak to it. */
+    bool    developToolActive() const;
+    void    drawSpotOverlay(QPainter *p, const QRectF &br);  // pins + stroke + cursor
+
     /* ------- Develop mask editing ------- */
     bool    maskEditMode = false;       // a spatial mask tool is the active edit target
     bool    maskHover    = false;       // cursor is over the view (overlay shown only then)
@@ -372,11 +410,16 @@ private:
     QPointF            maskBrushLast;          // last stamped point, buffer-pixel coords
     QPoint             maskBrushCursorVp;      // cursor pos for the brush-size circle
     bool               maskBrushCursorOn = false;
-    /* Object Mask (SAM 2): a freehand lasso. maskObjLasso is the rough outline the user drags (output-
-       normalized 0..1 points); on release it is emitted as {"brush":{"poly":[...]}} and MW decodes it
-       to the precise edge. Only an editing affordance -- the decoded coverage shows via maskLayerTint. */
-    QPolygonF maskObjLasso;
-    bool      maskObjDrawing = false;
+    /* Object Mask (SAM 2), perimeter-paint: the user traces the object BOUNDARY with a
+       solid brush (many strokes; Alt erases). Reuses the maskBrush* buffers -- strokes
+       accumulate into maskBrushMain (the perimeter wall), maskBrushStroke is the current
+       stroke, maskBrushSize the diameter, maskBrushStrokesJson the committed list.
+       maskObjPerim = wall + live stroke; ObjectMask::fillEnclosed fills the enclosed
+       region into maskObjFill and sets maskObjClosed (amber open, green + fill closed).
+       Each stroke release emits {"size","strokes"}; MW fills + SAM-refines it closed. */
+    std::vector<float> maskObjPerim, maskObjFill;   // wall + filled silhouette
+    bool               maskObjClosed  = false;      // an enclosed region was found
+    bool               maskObjDrawing = false;
     int     maskDrag     = -1;          // active handle (per tool, see maskHitTest); -1 none
     QPointF maskMoveAnchorN;            // image-norm cursor at move start
     QPointF maskP1Anchor, maskP2Anchor; // linear endpoints at move start
@@ -396,16 +439,20 @@ private:
     void    drawLinearMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Linear tool
     void    drawRadialMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Radial tool
     void    drawBrushMask(QPainter *p, const QRectF &br, bool drawTint = true);   // overlay for the Brush tool
-    void    drawObjectMask(QPainter *p, const QRectF &br, bool drawTint = true);  // freehand-lasso overlay (Object tool)
+    void    drawObjectMask(QPainter *p, const QRectF &br, bool drawTint = true);
+    /* Object Mask perimeter-paint helpers (reuse brush buffers; amber/green closure). */
+    void    objEnsureBuffers();     // size buffers + re-raster committed strokes
+    void    objRecomputeFill();     // wall(main+stroke) -> fillEnclosed -> maskObjClosed
+    void    objRebuildPreview();    // amber/green wall + fill tint image
+    void    objUndoStroke();        // remove + re-raster the last perimeter stroke
     /* Brush painting helpers (preview buffers in output-oriented space). */
     void    brushBuildBuffers(const QString &paramsJson);   // parse strokes + (re)build buffers
     void    brushEnsureBuffers();                           // rebuild if the pixmap size changed
     void    brushRebuildPreview(QRect region = QRect());    // composite main+stroke -> tint (region or all)
     QRect   brushSegRect(QPointF a, QPointF b) const;       // buffer-px bbox of a dab/segment
     void    adjustBrushSize(double delta);                  // [ ] / two-finger; clamps + syncs dock
-    void    brushUndoStroke();                              // remove + re-raster the last stroke
-    void    ensureAutoGuide();                              // build the auto-mask guide if missing
-    void    toggleAutoMask();                               // "A": flip auto-mask + sync the dock
+    void    brushUndoStroke();                              // remove + re-raster stroke
+    void    toggleAutoMask();                               // "A": toggle auto-mask
     void    brushStampTo(QPointF bufPt);                    // stamp segment last..bufPt into stroke
     double  brushRadiusBufPx() const;                       // current brush radius in buffer px
     QPointF brushNormToBuf(QPointF n) const;                // normalized -> preview-buffer px
