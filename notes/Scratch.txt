@@ -476,4 +476,82 @@ First: use DNG tag 51041
 Second: use IsoKB tables (A7R5, A1M2) + append tables with Bill Claff results
 Third: use blind per-image estimation
 
-I want to ti
+Single source of truth for the tint color
+
+ImageView::maskTintColor() — Views/imageview.cpp:769
+return (maskOp == 1) ? QColor(40,110,230)   // Subtract = blue
+                     : QColor(220,40,40);   // Add = red
+This drives every per-tool preview (brush, range, subject, sky, depth) — they all start with const QColor base = maskTintColor();. Change it here and all individual tools update.
+
+⚠️ Gotcha: the whole-layer composite tint does not call maskTintColor(). Its color is hard-coded separately in Main/mainwindow.cpp:6104 (qRgba(220*a/255, 40*a/255, 40*a/255, a)). So a color change needs editing both places.
+
+---
+A. Turn the overlay on/off
+
+┌───────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                      Concern                      │                                            file:function                                             │
+├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ "M" toggle (hides both whole-layer + per-tool)    │ ImageView::toggleMaskTint() — Views/imageview.cpp:724 (flips maskTintHidden)                         │
+├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Force-hide (slider changed)                       │ ImageView::hideMaskTint() — Views/imageview.cpp:734                                                  │
+├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ The gate that reads the flag & dispatches drawing │ ImageView::drawForeground() — Views/imageview.cpp:1356–1380 (showTint, haveComposite, per-tool tint) │
+├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ "M" action wiring / shortcut                      │ MW::… toggleMaskOverlayAction — Main/menusandactions.cpp:1459                                        │
+└───────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+B. Whole-layer mask (the composite of all Add/Subtract tools)
+
+┌─────────────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│             Concern             │                                                       file:function                                                       │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Build + push the composite tint │ MW::updateMaskOverlayTint() — Main/mainwindow.cpp:~6051–6108 (color at 6104, full-coverage alpha maxA=150 at 6098)        │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Receive / show it               │ ImageView::setLayerMaskTint() — Views/imageview.cpp:709                                                                   │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Clear it                        │ ImageView::clearLayerMaskTint() — Views/imageview.cpp:717                                                                 │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Paint it                        │ drawForeground() haveComposite block — imageview.cpp:1357–1367                                                            │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Is the overlay active at all?   │ DevelopProperties::maskOverlayActive() — Develop/Properties/developproperties.cpp:810 (gates whether MW builds vs clears) │
+└─────────────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+C. Individual layer mask tools (per-tool preview)
+
+Color comes from maskTintColor() (above); full-coverage alpha is 150/255 (e.g. imageview.cpp:1902). Draw/build functions:
+
+┌──────────────────────────┬────────────────────────────────────────────────────────────────────┬─────────────────────────────────────┐
+│           Tool           │                               build                                │                draw                 │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Linear                   │ —                                                                  │ drawLinearMask() imageview.cpp:1422 │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Radial                   │ —                                                                  │ drawRadialMask() 1497               │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Brush                    │ brushRebuildPreview() 1617                                         │ drawBrushMask() 1815                │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Object (SAM)             │ objRebuildPreview() 1776                                           │ drawObjectMask() 1383               │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Range (Lum/Color)        │ buildRangePreview() 1870                                           │ drawRangeMask() 2074                │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Subject / Sky / Depth AI │ buildSubjectPreview() 1930, buildSkyPreview(), buildDepthPreview() │ shares drawRangeMask()              │
+└──────────────────────────┴────────────────────────────────────────────────────────────────────┴─────────────────────────────────────┘
+
+---
+Quick recipe:
+- Change tint color: edit maskTintColor() (imageview.cpp:769) and the qRgba(...) at mainwindow.cpp:6104.
+- Change tint strength: maxA (mainwindow.cpp:6098) + the 150.0/255.0 per-tool constants in the build*Preview functions.
+- On/off behavior: toggleMaskTint()/hideMaskTint() + the showTint gate in drawForeground().
+
+Want me to unify the two color sites so maskTintColor() is the only place, and hoist the alpha constant to one named value?
+
+
+
+I want to change the Develop Mode layers dropdown to only include the Layer names, and
+move the rest of the dropdown items: Add new layer, space, Reset X, Remove X, Rename X
+(where X is the current layer name) to a separate menu that is triggered by
+layerMenuBtn similar to how embelproperties effectNewBtn triggers EmbelProperties::effectContextMenu.
+
+Spot fill quality issue.
+- The likely better fix for noisy images is an exemplar/PatchMatch inpaint that copies real neighboring pixels (so the fill carries the actual grain), or heal-denoised-then-reinject-matched-noise, rather than a synthesis GAN.
+- If keeping MI-GAN, post-match the patch's noise statistics to the surroundings so it stops reading as a smooth smudge.
+- Exposure tracking is a separate decision — the post-develop heal is the higher-quality path; confirm with the [SpotProbe] whether it already tracks before redoing the upstream refactor.

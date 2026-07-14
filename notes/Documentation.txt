@@ -13,8 +13,15 @@ Format conventions
 Table of Contents
 ------------------------------------------------------------------------------------------
 
+    MAINTENANCE: keep this Table of Contents in sync with the document. Whenever a
+    top-level section (*** or === divider) or a subsection (--- divider) is added,
+    removed, or renamed, update the matching entry here in the same pass.
+
     1. INITIALIZATION
          - Startup Sequence
+         - Dock Window State (versioning)
+         - Responsive dock tab titles (text <-> graphic)
+         - Dropped dock lands last (rightmost tab)  [WORK IN PROGRESS - DISABLED]
 
     2. FOLDER LOADING PIPELINE
          - Overview
@@ -25,15 +32,17 @@ Table of Contents
          - Current Model Row
          - Icons
          - Icon Chunk Size
+         - Thumbnail (Icon) Decoding
          - Tracking Icon Parameters
          - Other Global Flags
 
     3. DATAMODEL CHANGES
-         - Folder Change
-         - Image Change
+         - Folder Change (legacy — needs rewrite)
+         - Image Change (legacy — needs rewrite)
          - Filter Change
          - Sort Change
          - Combine Raw+JPG
+         - Folder Tree Auto-Refresh
          - Insertions, Deletions, Modifications
          - Instance
 
@@ -41,6 +50,8 @@ Table of Contents
          - Overview
          - Cache Status
          - Icon Caching
+         - Load Responsiveness (keeping the GUI usable during a large/recursive load)
+         - How to Test Icon Caching
          - Memory Governor (process footprint, decode concurrency)
 
     5. SCROLLING
@@ -80,7 +91,6 @@ Table of Contents
          - Publishing version.json
 
     11. FIND DUPLICATES
-         - Overview
          - Candidates (A list) and the model mapping
          - Targets (B list)
          - Comparison and thumbnail normalization
@@ -88,6 +98,20 @@ Table of Contents
          - Responsiveness
          - Output
          - Dialog layout
+
+    12. RAW DECODING (SENSOR DEMOSAIC)
+         - Architecture
+
+    13. OPERATION MODE (Preview vs Develop)
+
+    14. DEVELOP / IMAGE EDIT (PARAMETRIC ADJUSTMENTS)
+         - Architecture
+         - Panel focus & slider arrow-nudge
+         - Layer & masking model (planned)
+         - Regenerative spot fill (MI-GAN)
+         - Develop dock (UI)
+         - Develop scopes (histogram + vectorscope)
+         - Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
 
 
 ******************************************************************************************
@@ -2921,23 +2945,27 @@ Layer & masking model (planned)
                LAYER HEADER (Develop/Properties/layerheader.cpp): the layer dropdown lives in a
                gradient band WIDGET above the tree (the same header gradient as TransformPanel; the
                old in-tree "Core" and "Layers" headers are gone). Layout:
-               > Layer [dropdown v] [E]. The '>' collapse arrow -> setTreeCollapsed hides/shows ONLY the
-               layer's top items (the Core rows for Base, else the mask-tool rows -- the root rows
-               above BasicHeader; applyLayerItemsCollapsed, re-asserted after each buildTree since a
-               rebuild resets row visibility). The Basic/Color/Effects sections stay visible. [E] ->
-               onLayerPreviewToggled (whole-layer eye). The DROPDOWN carries both the layers and the
-               layer actions (LayerHeader::setLayers): the image's layers first (the active one marked
-               with a checkmark) -> onLayerSelected (switch activeLayerIndex; then reveal
-               the layer's OWN section -- un-collapse its mask rows (setTreeCollapsed
-               (false), bulk-guarded so Solo leaves Basic/Color/Effects as-is) and select
-               its first mask so the coverage overlays the image, selectedMaskIndex 0
-               (Base has none, -1)); then, below a separator,
-               "Add new layer" -> newLayer (name dialog, default "Layer n"); then, below another
-               separator, the per-layer actions "Add mask to <layer>" -> showMaskMenu and
-               Reset/Remove/Rename <layer> -> resetActiveLayer / deleteLayer / renameActiveLayer.
-               Picking an action reverts the box to the active layer (an action row is never left
-               showing). The per-layer group is OMITTED for Base (index 0) -- LayerHeader::setBaseActive,
-               driven by updateMaskMenuBtn. MASK ENTRY POINTS: a layer's first mask tool is offered
+               > Layer [dropdown v] [...] [E]. The '>' collapse arrow ->
+               setTreeCollapsed hides/shows ONLY the layer's top items (the Core rows
+               for Base, else the mask-tool rows -- the root rows above BasicHeader;
+               applyLayerItemsCollapsed, re-asserted after each buildTree since a
+               rebuild resets row visibility). The Basic/Color/Effects sections stay
+               visible. [E] -> onLayerPreviewToggled (whole-layer eye). The DROPDOWN
+               carries ONLY the layers (LayerHeader::setLayers): the image's layers,
+               the active one marked with a checkmark -> onLayerSelected (switch
+               activeLayerIndex; then reveal the layer's OWN section -- un-collapse its
+               mask rows (setTreeCollapsed(false), bulk-guarded so Solo leaves
+               Basic/Color/Effects as-is) and select its first mask so the coverage
+               overlays the image, selectedMaskIndex 0 (Base has none, -1)). The layer
+               ACTIONS live on a separate ellipsis menu button [...] (layerMenuBtn)
+               between the dropdown and [E], patterned on EmbelProperties::effectNewBtn
+               -> effectContextMenu: clicking it pops a QMenu (LayerHeader::showLayerMenu,
+               built on demand) with "Add new layer" -> newLayer (name dialog, default
+               "Layer n"); then, below a separator, the per-layer actions "Add mask to
+               <layer>" -> showMaskMenu and Reset/Remove/Rename <layer> ->
+               resetActiveLayer / deleteLayer / renameActiveLayer. The per-layer group
+               is OMITTED for Base (index 0) -- LayerHeader::setBaseActive, driven by
+               updateMaskMenuBtn. MASK ENTRY POINTS: a layer's first mask tool is offered
                automatically when the layer is created (newLayer -> showMaskMenu); further tools are
                added via the dropdown "Add mask to <layer>" or the [+] glyph on each mask-tool row in
                the tree (UR_AddBtn, hit-tested in mousePressEvent -> showMaskMenu). The dropdown entry
@@ -3507,10 +3535,12 @@ Regenerative spot fill (MI-GAN)
     heals over prior ones). Shared FillSpotGeom rasteriser (Develop/fillspot.h) is used
     by BOTH the ImageView preview and the render, so preview == render (cf. objectmask.h).
 
-    UI (discoverability): a labelled spot tool in the Develop title bar (LayerHeader spot
-    BarBtn, images/icon16/spot.png; dims off, brightens armed) AND a pinned "Fill (spot
-    removal)" entry in the layer dropdown both arm the mode. Armed, ImageView shows a
-    brush-size circle cursor ([ / ] resize); a swiped stroke paints one spot on release;
+    UI (discoverability): a spot tool BarBtn in the Develop dock title bar
+    (initialize.cpp, images/icon16/spot.png; dims off, brightens armed) arms the mode.
+    It calls DevelopProperties::onSpotToolToggled; DevelopProperties owns the armed
+    state (spotMode) and drives the button icon back via the spotActiveChanged signal.
+    Armed, ImageView shows a brush-size circle cursor ([ / ] resize); a swiped stroke
+    paints one spot on release;
     Escape disarms. Each spot drops an on-canvas PIN; click a pin to remove it. Stroke ->
     spotStrokeCommitted -> DevelopProperties appends a FillSpot -> re-render (heal); pins
     come from spotPinCenters via spotPinsChanged. Model: ReleaseExtras/migan.onnx

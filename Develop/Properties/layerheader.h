@@ -22,14 +22,16 @@ class BarBtn;
         |       selected layer's items shown in the tree below        whole-layer preview eye
         collapse arrow (hide/show the tree = the layer's items)
 
-    The dropdown lists the image's layers (the active one carries a checkmark) and, below a
-    separator, the layer actions:
+    The dropdown lists ONLY the image's layers (the active one carries a checkmark):
 
         Base
         Layer 1
       v Layer 2                (active layer)
         More Layers
-        ---
+
+    Picking a layer emits layerSelected. The layer actions live on a separate menu button
+    (layerMenuBtn, an ellipsis) that pops up a QMenu (like EmbelProperties::effectContextMenu):
+
         Add new layer
         ---                    (per-layer group, hidden when Base is active)
         Add mask to Layer 2
@@ -37,9 +39,8 @@ class BarBtn;
         Remove Layer 2
         Rename Layer 2
 
-    Picking a layer emits layerSelected; picking an action emits its signal and the box reverts to
-    the active layer (an action row is never left showing). The per-layer group (Reset / Remove /
-    Rename) is omitted for the Base layer (index 0), which applies globally.
+    Each menu row emits its signal. The per-layer group (Add mask / Reset / Remove / Rename) is
+    omitted for the Base layer (index 0), which applies globally.
 */
 class LayerHeader : public QWidget
 {
@@ -50,7 +51,6 @@ public:
     /* Refill the dropdown and select currentIndex WITHOUT emitting layerSelected. */
     void setLayers(const QStringList &names, int currentIndex);
     void setPreviewShown(bool shown);           // eye icon (whole-layer preview)
-    void setSpotActive(bool active);            // reflect the spot-removal tool on/off
     void setBaseActive(bool isBase);            // Base: omit the per-layer action group
     bool isCollapsed() const { return collapsed; }
     /* Programmatic collapse (Expand all / Collapse all / Solo) -- updates the arrow
@@ -67,7 +67,6 @@ signals:
     void addMaskRequested();                     // menu: add a mask tool to the selected layer
     void previewToggled(bool shown);             // [E] show/ignore the whole layer
     void collapseToggled(bool collapsed);        // > hide/show the layer's tree items
-    void spotToolToggled(bool active);           // title-bar spot-removal tool toggled
 
 protected:
     void paintEvent(QPaintEvent *) override;         // the property-header gradient band
@@ -77,20 +76,15 @@ protected:
 
 private:
     void updatePreviewIcon();
-    void updateSpotIcon();
     void updateCollapseIcon();
     void toggleCollapsed();             // arrow click or "Layer" label click
+    void showLayerMenu();               // layerMenuBtn: pop up the layer-actions menu
 
-    /* Non-negative item data is a layer index; these negative codes tag the action rows. */
-    enum ComboAction { ActAddLayer = -1, ActAddMask = -2, ActReset = -3, ActRemove = -4,
-                       ActRename = -5, ActSpotFill = -6 };
-
-    BarBtn    *collapseBtn = nullptr;
-    QLabel    *layerLabel  = nullptr;
-    QComboBox *combo       = nullptr;
-    BarBtn    *spotBtn     = nullptr;
-    BarBtn    *previewBtn  = nullptr;
-    bool       spotActive  = false;
+    BarBtn    *collapseBtn  = nullptr;
+    QLabel    *layerLabel   = nullptr;
+    QComboBox *combo        = nullptr;
+    BarBtn    *layerMenuBtn = nullptr;
+    BarBtn    *previewBtn   = nullptr;
 
     QIcon checkIcon;                    // marks the active layer in the dropdown
     QIcon blankIcon;                    // same-size spacer so other layers stay aligned

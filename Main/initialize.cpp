@@ -2006,11 +2006,28 @@ void MW::createDevelopDock()
     developTitleLayout->addWidget(developTransformBtn);
     developTitleLayout->addSpacing(10);
 
+    /* Spot-removal tool (regenerative fill): brush over a blemish to heal it; heals are
+       recorded in the pinned "Fill" layer. DevelopProperties owns the armed state and
+       drives the icon back via spotActiveChanged (full opacity armed, dimmed off). */
+    BarBtn *developSpotBtn = new BarBtn();
+    developSpotBtn->setIcon(":/images/icon16/spot.png", G::iconOpacity);
+    developSpotBtn->setToolTip("Spot removal: brush over a blemish to heal it (Fill layer)");
+    connect(developSpotBtn, &BarBtn::clicked, this, [this]{
+        if (developProperties)
+            developProperties->onSpotToolToggled(!developProperties->isSpotActive());
+    });
+    connect(developProperties, &DevelopProperties::spotActiveChanged, developSpotBtn,
+            [developSpotBtn](bool active){
+        developSpotBtn->setIcon(":/images/icon16/spot.png", active ? 1.0 : G::iconOpacity);
+    });
+    developTitleLayout->addWidget(developSpotBtn);
+    developTitleLayout->addSpacing(10);
+
     // question mark button
     BarBtn *devQuestionBtn = new BarBtn();
     devQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
     devQuestionBtn->setToolTip("How this works: develop tips");
-    connect(devQuestionBtn, &BarBtn::clicked, bookmarks, &BookMarks::howThisWorks);
+    connect(devQuestionBtn, &BarBtn::clicked, developProperties, &DevelopProperties::howThisWorks);
     developTitleLayout->addWidget(devQuestionBtn);
 
     // Spacer
