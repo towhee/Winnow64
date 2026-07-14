@@ -118,11 +118,12 @@ public slots:
     void setActiveBrushAutoMask(bool on);
 
     /* Regenerative spot fill. onSpotToolToggled arms/disarms spot-brush mode (from the
-       title-bar button or the pinned "Fill" layer); onSpotStrokeCommitted takes one
-       finished stroke and appends it as a FillSpot to the current stack. */
+       Develop title-bar button); onSpotStrokeCommitted takes one finished stroke and
+       appends it as a FillSpot to the current stack. */
     void onSpotToolToggled(bool active);
     void onSpotStrokeCommitted(const QString &paramsJson);
     void onSpotRemoveRequested(int index);      // a pin was clicked -> drop that spot
+    bool isSpotActive() const { return spotMode; }   // for the title-bar spot button
 
     /* ---- LayerHeader widget handlers (the layer dropdown + buttons above the tree) ---- */
     void onLayerSelected(const QString &name);    // dropdown picked a different layer
@@ -133,6 +134,8 @@ public slots:
     void showMaskMenu();                          // pop the Add/Subtract mask-tool menu (on new layer)
     void onLayerPreviewToggled(bool shown);       // [E] show/ignore the whole layer
     void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the layer's items)
+
+    void howThisWorks();                          // Develop help
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
@@ -149,9 +152,11 @@ signals:
     void maskEditBegin(int tool, int op, bool inverted, const QString &paramsJson, double feather);
     void maskEditEnd();
     /* Regenerative spot fill: arm/disarm ImageView spot-brush capture. Emitted when the
-       title-bar spot tool (or the pinned "Fill" layer) is toggled. */
+       Develop title-bar spot tool is toggled. */
     void spotEditBegin();
     void spotEditEnd();
+    /* Spot tool armed/disarmed: drives the title-bar spot button's on/off icon. */
+    void spotActiveChanged(bool active);
     /* The current image's spot centres (normalized), for ImageView's on-canvas pins. */
     void spotPinsChanged(const QVector<QPointF> &pins);
     void maskFeatherChanged(double feather);    // Feather slider -> live overlay ramp update

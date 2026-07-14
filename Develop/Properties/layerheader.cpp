@@ -4,6 +4,8 @@
 
 #include <QComboBox>
 #include <QLabel>
+#include <QMenu>
+#include <QAction>
 #include <QHBoxLayout>
 #include <QPainter>
 #include <QPixmap>
@@ -51,36 +53,18 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
     combo = new QComboBox(this);
     combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     combo->setIconSize(QSize(iconPx, iconPx));
-    combo->setToolTip("The layer whose settings are shown below (this image's layers), plus layer actions");
+    combo->setToolTip("The layer whose settings are shown below (this image's layers)");
+    /* The combo lists only layers, so every activated row is a layer selection. */
     connect(combo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
-        const int role = combo->itemData(idx).toInt();
-        if (role >= 0) {                    // a layer row: role is its index
-            emit layerSelected(combo->itemText(idx));
-            return;
-        }
-        /* An action row: fire it and revert the box to the active layer, so the box never shows the
-           action caption. */
-        {
-            const QSignalBlocker block(combo);
-            combo->setCurrentIndex(activeIndex);
-        }
-        switch (role) {
-        case ActAddLayer: emit addLayerRequested();   break;
-        case ActAddMask:  emit addMaskRequested();     break;
-        case ActReset:    emit resetLayerRequested();  break;
-        case ActRemove:   emit removeLayerRequested(); break;
-        case ActRename:   emit renameRequested();      break;
-        case ActSpotFill: emit spotToolToggled(!spotActive); break;
-        }
+        emit layerSelected(combo->itemText(idx));
     });
 
-    /* Spot-removal tool (regenerative fill). A visible title-bar affordance
-       (discoverability): brush over blemishes to heal them; heals are recorded in
-       the pinned "Fill" layer. DevelopProperties drives it back via setSpotActive. */
-    spotBtn = new BarBtn();
-    spotBtn->setToolTip("Spot removal: brush over a blemish to heal it (Fill layer)");
-    connect(spotBtn, &BarBtn::clicked, this, [this]{ emit spotToolToggled(!spotActive); });
-    updateSpotIcon();
+    /* Layer-actions menu button (ellipsis): pops up the Add / Reset / Remove / Rename
+       menu, like EmbelProperties::effectNewBtn triggers effectContextMenu. */
+    layerMenuBtn = new BarBtn();
+    layerMenuBtn->setToolTip("Layer actions (add, reset, remove, rename)");
+    layerMenuBtn->setIcon(":/images/icon16/ellipsis.png", G::iconOpacity);
+    connect(layerMenuBtn, &BarBtn::clicked, this, [this]{ showLayerMenu(); });
 
     previewBtn = new BarBtn();
     previewBtn->setToolTip("Preview: show or ignore this whole layer");
@@ -102,8 +86,8 @@ LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
     row->addSpacing(6);
     row->addWidget(combo, 1);
     row->addSpacing(6);
-    row->addWidget(spotBtn);
-    row->addSpacing(4);
+    row->addWidget(layerMenuBtn);
+    row->addSpacing(6);
     row->addWidget(previewBtn);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -131,40 +115,40 @@ void LayerHeader::setLayers(const QStringList &names, int currentIndex)
     activeIndex = (currentIndex >= 0 && currentIndex < layerCount) ? currentIndex : 0;
     baseActive  = (activeIndex == 0);
 
-    /* Layers first; the active one carries the checkmark, the rest a blank spacer. Each layer row's
-       item data is its own index (>= 0), which the activated handler uses to tell layers from
-       actions. */
-    for (int i = 0; i < layerCount; ++i) {
+    /* Layers only; the active one carries the checkmark, the rest a blank spacer. The
+       layer actions now live on the layerMenuBtn menu (see showLayerMenu). */
+    for (int i = 0; i < layerCount; ++i)
         combo->addItem(i == activeIndex ? checkIcon : blankIcon, names.at(i));
-        combo->setItemData(i, i);
-    }
-
-    /* Separator, then "Add new layer" (always available). */
-    combo->insertSeparator(combo->count());
-    combo->addItem(tr("Add new layer"));
-    combo->setItemData(combo->count() - 1, ActAddLayer);
-
-    /* Pinned "Fill" entry (spot removal): arms the same mode as the title-bar button.
-       An action row, so it never disturbs the layer index / checkmark logic. */
-    combo->addItem(tr("Fill (spot removal)"));
-    combo->setItemData(combo->count() - 1, ActSpotFill);
-
-    /* Per-layer actions, captioned with the active layer's name. Omitted for Base (index 0), which
-       applies globally and cannot be reset/removed/renamed here. */
-    if (!baseActive) {
-        const QString nm = names.at(activeIndex);
-        combo->insertSeparator(combo->count());
-        combo->addItem(tr("Add mask to %1").arg(nm));
-        combo->setItemData(combo->count() - 1, ActAddMask);
-        combo->addItem(tr("Reset %1").arg(nm));
-        combo->setItemData(combo->count() - 1, ActReset);
-        combo->addItem(tr("Remove %1").arg(nm));
-        combo->setItemData(combo->count() - 1, ActRemove);
-        combo->addItem(tr("Rename %1").arg(nm));
-        combo->setItemData(combo->count() - 1, ActRename);
-    }
 
     combo->setCurrentIndex(activeIndex);
+}
+
+void LayerHeader::showLayerMenu()
+{
+    if (G::isLogger) G::log("LayerHeader::showLayerMenu");
+
+    QMenu menu(this);
+
+    /* "Add new layer" is always available. */
+    connect(menu.addAction(tr("Add new layer")), &QAction::triggered,
+            this, [this]{ emit addLayerRequested(); });
+
+    /* Per-layer actions, captioned with the active layer's name. Omitted for Base
+       (index 0), which applies globally and cannot be reset/removed/renamed here. */
+    if (!baseActive) {
+        const QString nm = currentLayerName();
+        menu.addSeparator();
+        connect(menu.addAction(tr("Add mask to %1").arg(nm)), &QAction::triggered,
+                this, [this]{ emit addMaskRequested(); });
+        connect(menu.addAction(tr("Reset %1").arg(nm)), &QAction::triggered,
+                this, [this]{ emit resetLayerRequested(); });
+        connect(menu.addAction(tr("Remove %1").arg(nm)), &QAction::triggered,
+                this, [this]{ emit removeLayerRequested(); });
+        connect(menu.addAction(tr("Rename %1").arg(nm)), &QAction::triggered,
+                this, [this]{ emit renameRequested(); });
+    }
+
+    menu.exec(QCursor::pos());
 }
 
 QString LayerHeader::currentLayerName() const
@@ -216,19 +200,6 @@ void LayerHeader::updatePreviewIcon()
                                      : ":/images/icon16/eye_off.png", G::iconOpacity);
 }
 
-void LayerHeader::setSpotActive(bool active)
-{
-    spotActive = active;
-    updateSpotIcon();
-}
-
-void LayerHeader::updateSpotIcon()
-{
-    if (!spotBtn) return;
-    /* Full opacity when armed, dimmed when off (same idiom as the eye button). */
-    spotBtn->setIcon(":/images/icon16/spot.png", spotActive ? 1.0 : G::iconOpacity);
-}
-
 void LayerHeader::updateCollapseIcon()
 {
     if (!collapseBtn) return;
@@ -237,6 +208,6 @@ void LayerHeader::updateCollapseIcon()
        BarBtn::setIcon(path, opacity) would dim it (G::iconOpacity) at native 11x11, so
        set a plain full-opacity icon instead. */
     const QString path = collapsed ? ":/images/branch-closed-winnow.png"
-                                    : ":/images/branch-open-winnow.png";
+                                   : ":/images/branch-open-winnow.png";
     collapseBtn->setIcon(QIcon(QPixmap(path)));
 }

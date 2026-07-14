@@ -434,7 +434,6 @@ void DevelopProperties::bindLayerHeader(LayerHeader *header)
     connect(layerHeader, &LayerHeader::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
     connect(layerHeader, &LayerHeader::previewToggled,      this, &DevelopProperties::onLayerPreviewToggled);
     connect(layerHeader, &LayerHeader::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
-    connect(layerHeader, &LayerHeader::spotToolToggled,     this, &DevelopProperties::onSpotToolToggled);
 
     /* Seed the dropdown + eye from the current stack. */
     refreshLayerCombo();
@@ -514,7 +513,7 @@ void DevelopProperties::onSpotToolToggled(bool active)
     if (G::isLogger) G::log("DevelopProperties::onSpotToolToggled");
     if (spotMode == active) return;
     spotMode = active;
-    if (layerHeader) layerHeader->setSpotActive(active);
+    emit spotActiveChanged(active);            // update the title-bar spot button icon
     if (active) { emit spotEditBegin(); emitSpotPins(); }   // arm + seed the pins
     else        emit spotEditEnd();
 }
@@ -1997,4 +1996,13 @@ QString DevelopProperties::diagnostics()
     rs << "Develop layers: " << layerList.join(", ") << "\n";
     rs << "Current layer: " << layerName << "\n";
     return rpt;
+}
+
+void DevelopProperties::howThisWorks()
+{
+    if (G::isLogger) G::log("DevelopProperties::howThisWorks");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Develop Module",
+                   ":/Docs/develophelp.html",
+                   QSize(700, 600), r, window());
 }
