@@ -79,6 +79,15 @@ bool useInfoView = true;
 bool useDWCollapse = false;         // master switch for dock collapse/expand/solo mode
 bool useDockTitleGraphic = true;    // master switch: show a graphic instead of text on dock tabs (TEST: on for folders tab)
 bool useMultimedia = true;
+bool useLamaSpotFill = true;        // TEST: spot heals with LaMa (GPU); false -> MI-GAN
+/* Fill/Object replace modes SHELVED 2026-07-17 (Winnow scope = spot cleanup only; see
+   Documentation.txt "WHAT WAS TRIED"). The ReplacePanel + engines are kept; this flag
+   re-enables the panel and the Fill/Object modes if the feature is revisited. */
+bool useReplaceFillModes = false;
+/* Model-path heal correction (Object fills + clone fallbacks; clone heals need none).
+   Poisson default: keeps the model's content with the level solved from the boundary. */
+int  spotFillCorrectMode = 1;       // A/B: 0 none 1 Poisson 2 low-freq 3 harmonic
+bool spotFillGrain = true;          // add surround-matched grain to the heal (N toggles)
 bool useUpdateStatus = true;
 bool useFilterView = true;          // not finished
 bool useProcessEvents = false;

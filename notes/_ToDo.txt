@@ -2,12 +2,13 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
+- Crop flip aspect
+- Crop shortcut C conflicts with Compare C.
 - Spot fill quality issue (reassess)
 - Cannot use Embellish panel when in Develop mode
 - When mask tool is selected or activated show its specific mask in a different tint
 - Add Sharpen and Soften sliders
 - Review what is needed in ReleaseExtras
-- Add settings for other cameras for PMRID
 - Drag dock tabify to the right (last) - WIP
 - Develop presets (selection dialog)
 - Reformat the documentation.txt (when have lots of tokens)

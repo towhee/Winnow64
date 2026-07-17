@@ -463,14 +463,6 @@ straighten wedges before wiring, since case 3 is their weakest mode.
 
 Want me to (a) turn this into a task list and start the FillRef + Fill-layer scaffolding, or (b) do the LaMa-vs-MI-GAN export/quality bake-off first? I'd recommend (b) — it de-risks the model choice before any UI is committed.
 
-D       Develop toggle
-R       Crop toggle
-N       New Layer
-M       New Mask
-S       Spot tool
-X       Export
-H       Histogram/Vectorscope toggle
-
 How to get (k, b):
 First: use DNG tag 51041
 Second: use IsoKB tables (A7R5, A1M2) + append tables with Bill Claff results
@@ -555,3 +547,43 @@ Spot fill quality issue.
 - The likely better fix for noisy images is an exemplar/PatchMatch inpaint that copies real neighboring pixels (so the fill carries the actual grain), or heal-denoised-then-reinject-matched-noise, rather than a synthesis GAN.
 - If keeping MI-GAN, post-match the patch's noise statistics to the surroundings so it stops reading as a smooth smudge.
 - Exposure tracking is a separate decision — the post-develop heal is the higher-quality path; confirm with the [SpotProbe] whether it already tracks before redoing the upstream refactor.
+
+Spot fill next steps: Create a Replace Panel to host filling.
+
+Replace (triggered by clicking current spot fill button) opens a Replace panel similar to the
+Crop panel:
+
+|---------------------------------------------------|
+| Fill Replace                                [?][E]|
+|---------------------------------------------------|
+| • (S)pot                                          |
+| • (F)ill                                          |
+| • (O)bject                                        |
+|---------------------------------------------------|
+
+where:
+() = shortcut.  Replace () with shortcut character in bold color G::header2Color.
+[?] = questionFillBtn
+[E] = previewBtn
+Shortcut F toggles Replace panel show/hide
+
+Clone:  Default to clone spot fill, fall back to LaMa as the fallback for holes that have
+no clean source neighborhood.  Just a spot - no dragging.
+
+Fill: User drags brush to paint the fill area. Replace with clone fill, fallback to LaMa as the fallback for holes that have
+no clean source neighborhood.
+
+Object: Object select using brush drag, then LaMa regenerative fill.
+
+
+
+We need to isolate Develop Mode shortcuts from Preview Mode shortcuts:
+D       Develop toggle
+R       Crop toggle
+N       New Layer
+M       New Mask
+S       Spot tool
+X       Export
+H       Histogram/Vectorscope toggle
+
+

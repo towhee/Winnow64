@@ -129,8 +129,10 @@ void LayerHeader::showLayerMenu()
 
     QMenu menu(this);
 
-    /* "Add new layer" is always available. */
-    connect(menu.addAction(tr("Add new layer")), &QAction::triggered,
+    /* "Add new layer" is always available. The tab'd key hints are the Develop mode local
+       shortcuts (MW::loadDevelopShortcuts); these are plain menu actions with no sequence
+       of their own, so the hint has to be part of the text. */
+    connect(menu.addAction(tr("Add new layer\tN")), &QAction::triggered,
             this, [this]{ emit addLayerRequested(); });
 
     /* Per-layer actions, captioned with the active layer's name. Omitted for Base
@@ -138,7 +140,7 @@ void LayerHeader::showLayerMenu()
     if (!baseActive) {
         const QString nm = currentLayerName();
         menu.addSeparator();
-        connect(menu.addAction(tr("Add mask to %1").arg(nm)), &QAction::triggered,
+        connect(menu.addAction(tr("Add mask to %1\tM").arg(nm)), &QAction::triggered,
                 this, [this]{ emit addMaskRequested(); });
         connect(menu.addAction(tr("Reset %1").arg(nm)), &QAction::triggered,
                 this, [this]{ emit resetLayerRequested(); });

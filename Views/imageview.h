@@ -144,6 +144,9 @@ public slots:
        (FillSpotGeom paramsJson: size/feather/pts). */
     void beginSpotEdit();
     void endSpotEdit();
+    /* Replace-panel mode (FillSpotGeom::Kind): Spot = click only (no drag), Fill/Object
+       = drag a brush stroke. The committed paramsJson carries it as "kind". */
+    void setSpotReplaceMode(int mode);
     /* The dock pushes the current image's spot centres (normalized) to draw the pins. */
     void setSpotPins(const QVector<QPointF> &pins);
     /* The whole-layer mask (all Add/Subtract tools composited) as a red coverage tint, shown under
@@ -363,9 +366,16 @@ private:
 
     /* ------- Regenerative spot fill ------- */
     bool    spotEditMode = false;       // the spot-removal brush is armed
+    int     spotReplaceMode = 0;        // FillSpotGeom::Kind: 0 spot, 1 fill, 2 object
     double  spotBrushSize = 8.0;        // diameter as % of the long edge ([ ] resize)
     double  spotFeather   = 40.0;       // 0..100, composite edge softness
     QVector<double> spotStrokePts;      // in-progress stroke, flat normalized x,y
+    /* Fill mode paints an AREA before committing: strokes accumulate here (each with
+       the brush size it was painted at; Opt/Alt strokes erase), shown as a tint in the
+       overlay. Enter commits them as ONE FillSpot; Escape clears them. */
+    struct SpotPendingStroke { double size; bool erase; QVector<double> pts; };
+    QVector<SpotPendingStroke> spotPending;
+    bool    spotStrokeErase = false;    // in-progress stroke is an erase (Opt/Alt held)
     bool    spotPainting  = false;
     QPoint  spotCursorVp;               // cursor pos for the brush-size circle
     bool    spotCursorOn  = false;

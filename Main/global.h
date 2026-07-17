@@ -283,6 +283,10 @@ Q_NAMESPACE
     extern bool useDWCollapse;   // master switch for dock collapse/expand/solo mode
     extern bool useDockTitleGraphic;   // master switch: show a graphic instead of text on dock tabs
     extern bool useMultimedia;
+    extern bool useLamaSpotFill;   // spot tool heals with LaMa (GPU) instead of MI-GAN
+    extern bool useReplaceFillModes;   // Fill/Object modes shelved; false = spots only
+    extern int  spotFillCorrectMode;   // model-path heal correction 0-3, see global.cpp
+    extern bool spotFillGrain;         // match surround grain into the heal (N toggles)
     extern bool useUpdateStatus ;
     extern bool useFilterView;      // not finished
     extern bool useReadIcons;

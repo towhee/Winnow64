@@ -107,28 +107,65 @@ void TransformPanel::buildUi()
 
     /* -------- Mode toggle (Crop / Level / Warp): mutually exclusive, teal-when-selected -------- */
     const int bs = G::backgroundShade;
+    const QString select = G::selectionColor.name();
     const QString border  = QColor(bs + 30, bs + 30, bs + 30).name();
     const QString normalBg = QColor(bs + 8,  bs + 8,  bs + 8).name();
     const QString hoverBg  = QColor(bs + 18, bs + 18, bs + 18).name();
     const QString modeQss = QString(
         "QToolButton{border:1px solid %1; border-radius:3px; padding:2px 6px; background:%2;}"
         "QToolButton:hover:!checked{background:%3;}"
-        "QToolButton:checked{background:#1b8a83; border:1px solid #4dd0c6; color:white;}")
-        .arg(border, normalBg, hoverBg);
+        "QToolButton:checked{background-color:%4; border:1px solid %3; color:white;}")
+        .arg(border, normalBg, hoverBg, select);
 
-    auto makeModeBtn = [&](const QString &text, const QString &tip) {
+    // auto makeModeBtn = [&](const QString &text, const QString &tip) {
+    //     QToolButton *b = new QToolButton(this);
+    //     b->setText(text);
+    //     b->setToolTip(tip);
+    //     b->setCheckable(true);
+    //     b->setStyleSheet(modeQss);
+    //     b->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    //     b->setFocusPolicy(Qt::StrongFocus);   // so C/L/W reach the eventFilter after a click
+    //     b->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    //     return b;
+    // };
+
+    auto makeModeBtn = [&](const QString &htmlText, const QString &tip) {
         QToolButton *b = new QToolButton(this);
-        b->setText(text);
         b->setToolTip(tip);
         b->setCheckable(true);
         b->setStyleSheet(modeQss);
         b->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        b->setFocusPolicy(Qt::StrongFocus);   // so C/L/W reach the eventFilter after a click
+        b->setFocusPolicy(Qt::StrongFocus);
+
+        // 1. Create a QLabel that accepts HTML rich text
+        QLabel *label = new QLabel(htmlText, b);
+        label->setAttribute(Qt::WA_TransparentForMouseEvents); // Clicks pass through to the button
+        label->setAlignment(Qt::AlignCenter);
+        label->setStyleSheet("background-color: transparent;");
+
+        // 2. Put the label inside a layout inside the button
+        QHBoxLayout *layout = new QHBoxLayout(b);
+        layout->setContentsMargins(6, 2, 6, 2); // Match your QSS padding
+        layout->addWidget(label);
+        layout->setSizeConstraint(QLayout::SetMinimumSize);
+        layout->setContentsMargins(6, 2, 6, 2);
+        b->setLayout(layout);
+
         return b;
     };
-    cropModeBtn  = makeModeBtn(tr("Crop"),  tr("Crop and set an aspect ratio (C)"));
-    levelModeBtn = makeModeBtn(tr("Level"), tr("Straighten: draw a level line or type an angle (L)"));
-    warpModeBtn  = makeModeBtn(tr("Warp"),  tr("Perspective correction: drag the corners (W)"));
+
+    // 3. Pass raw HTML straight to your factory function
+    // Use an inline style block to force the first letter to be bold and white
+    cropModeBtn = makeModeBtn(tr("<span style='color:white; font-weight:bold;'>C</span>rop"),
+                              tr("Crop and set an aspect ratio (C)"));
+    levelModeBtn = makeModeBtn(tr("<span style='color:white; font-weight:bold;'>L</span>evel"),
+                              tr("Straighten: draw a level line or type an angle (L)"));
+    warpModeBtn = makeModeBtn(tr("<span style='color:white; font-weight:bold;'>W</span>arp"),
+                              tr("Perspective correction: drag the corners (W)"));
+
+    // cropModeBtn  = makeModeBtn(tr("Crop"),  tr("Crop and set an aspect ratio (C)"));
+    // levelModeBtn = makeModeBtn(tr("Level"), tr("Straighten: draw a level line or type an angle (L)"));
+    // warpModeBtn  = makeModeBtn(tr("Warp"),  tr("Perspective correction: drag the corners (W)"));
 
     modeGroup = new QButtonGroup(this);
     modeGroup->setExclusive(true);
@@ -171,7 +208,7 @@ void TransformPanel::buildUi()
 
     /* -------- Warp row: a hint (no control yet) -------- */
     QLabel *warpHint = new QLabel(tr("Drag corners"), this);
-    warpHint->setStyleSheet(QString("color: %1;").arg(G::disabledColor.name()));
+    // warpHint->setStyleSheet(QString("color: %1;").arg(G::disabledColor.name()));
 
     /* -------- Per-row reset buttons (all in the last column so they align) -------- */
     auto makeRowReset = [&](int m, const QString &tip) {

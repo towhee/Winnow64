@@ -77,6 +77,7 @@ Table of Contents
          - Conditions and Triggers
          - The Menu vs Shortcut Pitfall
          - Disabled Shortcut Feedback
+         - Develop Mode Local Shortcuts
          - Rules by Action
 
     9. MEMORY CARD EJECT
@@ -108,7 +109,7 @@ Table of Contents
          - Architecture
          - Panel focus & slider arrow-nudge
          - Layer & masking model (planned)
-         - Regenerative spot fill (MI-GAN)
+         - Fill Replace (spot / fill / object heal)  [SHIPPED: SPOTS ONLY]
          - Develop dock (UI)
          - Develop scopes (histogram + vectorscope)
          - Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
@@ -1751,6 +1752,93 @@ Disabled Shortcut Feedback
     own shortcuts (typically Ctrl-modified) free to fire.
 
 ------------------------------------------------------------------------------------------
+Develop Mode Local Shortcuts
+------------------------------------------------------------------------------------------
+
+    Seven keys mean something different in Develop mode than in Preview mode:
+
+        R   Crop / Transform panel      developTransformAction   (Preview: unbound)
+        N   New layer                   developNewLayerAction    (Preview: unbound)
+        M   New mask                    developNewMaskAction     (Preview: unbound)
+        O   Mask overlay tint on/off    toggleMaskOverlayAction  (Preview: Open folder)
+        S   Spot removal tool           developSpotAction        (Preview: Slideshow)
+        X   Export (STUB, see below)    developExportAction      (Preview: Reject)
+        H   Histogram / vectorscope     developScopesAction      (Preview: unbound)
+
+    Why not just give these actions a shortcut
+    ......................................................................................
+    Qt allows exactly ONE QAction per key sequence.  Bind "S" to both slideShowAction and
+    developSpotAction and QShortcutMap reports an ambiguous overload and fires NEITHER, so
+    a mode-local key cannot be expressed as a second QAction.  Nor can the keys be swapped
+    on/off the actions at mode change: that fights the user's shortcut customisations in
+    the "Shortcuts" settings group, and any desync leaves keys bound to the wrong mode.
+
+    Mechanism
+    ......................................................................................
+    The Develop actions are created with NO QKeySequence.  MW::loadDevelopShortcuts,
+    called at the end of MW::loadShortcuts, fills developShortcuts -- a QHash<int,
+    QAction*> of bare Qt::Key -> action.  MW::eventFilter routes both QEvent::ShortcutOverride and
+    QEvent::KeyPress to MW::developShortcutIntercept while G::operationMode == Develop:
+
+      • ShortcutOverride is accepted, which is what cancels the global QAction (Qt sends
+        the override to the focus widget before the shortcut system runs).
+      • The KeyPress that follows triggers the Develop action.  The work is done here and
+        not on the override, because the override is only sent for keys a global action
+        owns -- R/N/M/H own none -- and because consuming the KeyPress is what makes the
+        selection rule below a real "ignore" rather than a fall-through.
+
+    In Preview mode the arbiter is never called and every key behaves as the global table
+    says.  This is the same two-step pattern ReplacePanel::eventFilter uses.
+
+    Precedence: tool-local > mode-local > global
+    ......................................................................................
+    A key an armed tool owns ([ / ] brush size, A auto-mask, Cmd+Z undo stroke, Enter and
+    Esc) is deliberately NOT in developShortcuts.  ImageView::event claims those from
+    their global actions itself while its tool is live, so tool-local keys outrank mode-local
+    ones without the table needing to know tools exist.  The converse also matters: the
+    spot tool must NOT claim S, or S could arm the tool but never disarm it.
+
+    Guards (MW::developShortcutIntercept, in order)
+    ......................................................................................
+      • Focus in a QDialog -> bail.  Mirrors the MODELESS DIALOG SHORTCUT GUARD, which
+        cannot cover these keys because it matches via MW::ownsShortcut() and a Develop
+        action has no sequence to match.  Without it a bare S typed into a Preferences
+        field would arm the spot tool.  Floating QDockWidgets are separate top-level
+        windows too but belong to the MW workspace, hence the QDialog test.
+      • Focus in a value editor (QAbstractSlider / QAbstractSpinBox / QLineEdit /
+        QComboBox) -> bail, so arrows still nudge a Develop slider and letters still type.
+      • Auto-repeat -> bail; every Develop key is a toggle or pops a dialog.
+
+    Selection keys are ignored in Develop mode
+    ......................................................................................
+    Arrows, PgUp/PgDn and Home/End (bare or Shift'd, plus the Ctrl+Shift+Alt pick-nav and
+    Shift+Ctrl+Right random-image combos) are swallowed in Develop mode unless thumbView
+    has the focus, so the keyboard cannot navigate off the image being developed.  Alt+key
+    is EXCLUDED -- Alt+arrow / Alt+Home scroll and pan within the image, which is useful
+    while developing -- but Ctrl+Shift+Alt+Left/Right IS pick navigation, hence the Ctrl
+    test in isSelectionKey().  Focus is tested with MW::thumbViewHasFocus().
+
+    Note the bare Left/Right navigation intercept further down MW::eventFilter bypasses
+    the shortcut system entirely (it is faster than a menu shortcut).  It needs no mode
+    guard of its own only because the arbiter runs first and consumes the arrow; keep that
+    ordering.
+
+    Discoverability
+    ......................................................................................
+    A key-less QAction renders no shortcut column, so each Develop action embeds its hint
+    in its text after a tab ("New Layer\tN") -- the idiom pickAction and jumpAction
+    already use for their multi-key hints.  The keys are surfaced in three places: the Utilities >
+    Develop submenu (built in MW::createUtilMenu; MW::syncDevelopMenuEnabled greys the
+    mode-local items outside Develop mode so they never advertise a key that does
+    something else), the Develop editor-bar button tooltips, and Help > Shortcuts.
+
+    Export is a stub
+    ......................................................................................
+    MW::developExport() only shows a "not implemented yet" popup: the render-to-file path
+    does not exist yet.  Action, menu item, shortcut and help entry are wired, so the
+    feature needs only that function body.
+
+------------------------------------------------------------------------------------------
 Rules by Action
 ------------------------------------------------------------------------------------------
 
@@ -3142,15 +3230,17 @@ Layer & masking model (planned)
                (unlike the per-tool handles); when it is present the per-tool draw takes drawTint=false
                so it draws only its handles/guides/cursor/swatches (its own tint would double up). The
                composite reflows live during a geometric drag (setActiveMaskParams -> paramsChanged ->
-               rebuild). "M" (toggleMaskOverlayAction -> MW::toggleMaskOverlay -> ImageView::
-               toggleMaskTint) HIDES/SHOWS this overlay while editing -- flips ImageView::maskTintHidden,
+               rebuild). "O" (toggleMaskOverlayAction -> MW::toggleMaskOverlay -> ImageView::
+               toggleMaskTint; a Develop mode local shortcut, Open Folder in
+               Preview mode -- see DEVELOP MODE LOCAL SHORTCUTS) HIDES/SHOWS
+               this overlay while editing -- flips ImageView::maskTintHidden,
                which gates BOTH the whole-layer composite and the per-tool preview in drawForeground
                (handles/cursor keep drawing so editing continues); reset to shown on each beginMaskEdit,
                no-op outside mask editing. Changing ANY adjustment slider (Basic/Color/
                Effects, or any future key via applyKeyToParams) while the overlay is shown
                also hides it (DevelopProperties::maskTintHideRequested ->
                ImageView::hideMaskTint) so the effect on the masked pixels is visible;
-               re-shown by "M" or by re-selecting a mask tool. Mask-only edits (Feather/
+               re-shown by "O" or by re-selecting a mask tool. Mask-only edits (Feather/
                Invert/Range/Brush settings) keep the overlay shown.
              - RENDER COMPOSITING (Stage 4b + N-layer stack): the render composites the WHOLE stack
                in SCENE-LINEAR before the output transform, INDEPENDENT of which layer is active for
@@ -3296,6 +3386,22 @@ Layer & masking model (planned)
                for a model that needs maximal ANE utilisation (generative fill) without touching
                callers. FUTURE: we may move to a full native-per-platform solution (native Core ML on
                Mac + DirectML/native on Windows) if ORT's CoreML EP underuses the ANE.
+               DEVICE SELECTION (InferenceDevice pref, ortbackend.cpp): the pref biases
+               WHICH compute units the CoreML EP targets. Auto/NPU append the CoreML EP
+               with flags 0 = the full set (ANE -> GPU -> CPU), the ANE-first default. GPU
+               appends it with COREML_FLAG_USE_CPU_AND_GPU | COREML_FLAG_CREATE_MLPROGRAM,
+               i.e. Apple GPU (Metal / MPSGraph) with the ANE EXCLUDED -- for graphs whose
+               ops the ANE cannot service (e.g. FFT-based FFC blocks in LaMa-style
+               generative fill); BackendName() then reports "CoreML/GPU" so a log line
+               confirms the GPU units took. CPU forces the CPU EP. CAVEAT: this only picks
+               the target DEVICE -- ops the CoreML EP cannot map are still partitioned
+               back to the CPU EP regardless of the flag, so an end-to-end-GPU LaMa also
+               depends on the ONNX export (FFT decomposed to matmul); the GPU flag alone
+               does not guarantee it. Note there is NO ONNX Runtime "MPS execution
+               provider" -- MPS-as-a-backend is a PyTorch concept; on ORT the GPU is
+               reached THROUGH the CoreML EP's CPUAndGPU compute units as above. Only
+               PMRID requests a device today (Auto), so the GPU path stays inert until a
+               caller asks for it.
                Active consumer: PMRID "Denoise raw" (ImageFormats/Raw/pmrid.cpp, see
                "DENOISE RAW" above) -- it took over when the earlier RawRefinery "TreeNet"
                denoiser was removed 2026-07-12. Models resolve via applicationDirPath()
@@ -3505,23 +3611,81 @@ Layer & masking model (planned)
            -> proxy-on-drag.
 
 ------------------------------------------------------------------------------------------
-Regenerative spot fill (MI-GAN)
+Fill Replace (spot / fill / object heal)
 ------------------------------------------------------------------------------------------
 
-    "Spot removal": brush over a blemish / small object and it is healed from the
-    surrounding pixels by MI-GAN inpainting, via the unified inference layer (ORT ->
-    CoreML/ANE on macOS, DirectML on Windows, CPU fallback). MI-GAN beat LaMa in a
-    bake-off: 27 MB and ~76 ms on the ANE, identical quality on SMALL holes; LaMa is
-    208 MB, CPU-bound (its FFC ops do not run on CoreML), and only wins on LARGE
-    removal. Larger/one-sided fills were poor for both, so shipp  ed scope = SPOTS only.
+    "Fill Replace": heal a clicked spot, a brushed area, or a brushed-over object,
+    parametrically and non-destructively. SHIPPED SCOPE (decision 2026-07-17): SPOT
+    CLEANUP ONLY -- the spot button / "F" arms a click-to-heal spot tool; the Fill
+    (paint an area) and Object (remove an object) modes and the Fill Replace panel are
+    SHELVED behind G::useReplaceFillModes=false (global.cpp). All the code below is
+    kept and working; flip the flag to bring the panel + modes back. The primary engine
+    is an exemplar CLONE heal (real neighbouring pixels, Lightroom heal-brush style --
+    see CLONE HEAL below); clone fallbacks (and Object-kind spots) use LaMa
+    regenerative inpainting via the unified inference layer on the Apple GPU (see
+    ENGINE SELECTION / LAMA SPOT-FILL below).
+
+    ------------------------------ WHAT WAS TRIED -------------------------------------
+    Intent: grow "spot removal" into a full Lightroom-class Fill Replace tool -- Spot
+    (click), Fill (paint an area, clone-filled) and Object (brush an object, generative
+    fill) -- entirely offline. Chronology and honest results:
+
+    1. MI-GAN inpaint (27 MB, ~76 ms/512-tile on the ANE): fine on tiny spots; on
+       high-ISO / noisy or defocused content the fill is a coarse colored mosaic that
+       reads as a smudge. Kept only as the G::useLamaSpotFill=false fallback.
+    2. LaMa inpaint (208 MB, ~272 ms/512-tile on the Apple GPU via CoreML CPUAndGPU;
+       the ANE cannot run its FFC blocks): better than MI-GAN, but any 512-net fill
+       upscaled to a large tile is soft and its low-frequency level drifts (measured +5
+       luma dome). Corrections (Poisson / low-freq transfer / harmonic membrane) plus
+       grain matching (quilted real residual -- synthetic RNG noise measured wrong in
+       sigma AND character) narrowed but never closed the gap; a ground-truth bench
+       (heal clean areas, compare to the untouched original) proved any generative fill
+       leaves a visible patch on grainy/mottled surrounds.
+    3. Exemplar CLONE heal (no model; masked template match + Poisson blend + chunking
+       for long strokes + pinned sources + thickness-based feather + coverage-aware
+       source rules): EXCELLENT on spots and thin-stroke removals (branch tests healed
+       invisibly, user-confirmed) -- this is the shipped spot engine. On LARGE fills it
+       hits an information limit: a 200px-wide region's true content is not inferable
+       from its surround (ground-truth RMSE ~15 for every method tried), and patch-
+       scale colour drift remains perceptible; candidate fixes (low-freq harmonization,
+       smaller chunks) benched WORSE and were rejected.
+    4. Diffusion inpaint (DreamShaper-8-inpainting, SD1.5-class, ~2 GB fp16, ~15 s per
+       512 fill via torch/MPS on the M4): clearly the best large-area quality (bench:
+       fat-fill RMSE 9.1 vs 15.8 for clone; stalk+leaf removal visually superior), but
+       only with ALL of: a complete object mask + margin (else it REGENERATES the
+       object from leftover fragments -- this is what SAM2 selection would be for), a
+       background prompt plus a negative prompt (else worse than clone; the word
+       "bokeh" literally paints bokeh discs), and the grain quilt on top. Integration
+       would demand a ~2 GB model, a new runtime (stable-diffusion.cpp or Core ML),
+       heal-result caching (15 s cannot run per render), and prompt plumbing.
+
+    CONCLUSION (2026-07-17): spots are solved and shipped; large-area fill is not worth
+    the model size / runtime / complexity for Winnow's scope. Fill + Object modes
+    shelved, code retained. If revisited, the path is: SAM2 click-select (full-object
+    mask) -> diffusion tier with negative prompt + grain quilt + cached results.
+    -----------------------------------------------------------------------------------
+
+    HISTORY (detail): the tool began as MI-GAN "spot removal" (MI-GAN beat LaMa in the
+    first bake-off: 27 MB and ~76 ms on the ANE vs 208 MB and seemingly CPU-bound;
+    scope was SPOTS only). 2026-07: LaMa was found NOT CPU-bound after all -- it runs
+    on the Apple GPU via the CoreML EP's CPUAndGPU compute units at ~272 ms/tile, 4.2x
+    faster than CPU; the ANE genuinely can't take its FFC blocks but the GPU can (see
+    project_lama_coreml_gpu). Then measurement showed ANY generative fill reads as a
+    patch on grainy/mottled surrounds, so the clone heal became the primary engine and
+    LaMa the regenerative path; MI-GAN remains only as the G::useLamaSpotFill=false
+    fallback engine.
 
     DATA MODEL (Develop/editstack.h): per-image like Geometry -- EditStack::spots is an
     ordered list of FillSpot{enabled, paramsJson}. paramsJson is opaque brush geometry
-    (FillSpotGeom: size = diameter/long-edge, feather 0..100, pts = output-normalized
-    stroke points), serialized under the "fill" key (forward-tolerant). PARAMETRIC and
-    non-destructive: only the stroke is stored; the heal is re-synthesized at render
-    (MI-GAN is deterministic) and is stable under later slider changes (no re-inference
-    on an exposure tweak).
+    (FillSpotGeom: feather 0..100 + "kind" = the Replace mode, and EITHER the
+    single-stroke form -- size = diameter/long-edge, pts = output-normalized stroke
+    points (Spot click / Object drag / legacy spots) -- OR the painted-area form
+    "strokes": an ordered add/erase stroke list, each with its own brush size, from Fill
+    mode; rasterize() composites them in paint order, add = max, erase = multiply by
+    (1 - alpha), per-segment so long painted strokes stay cheap), serialized under the
+    "fill" key (forward-tolerant). PARAMETRIC and non-destructive: only the strokes are
+    stored; the heal is re-synthesized at render (the engines are deterministic) and is
+    stable under later slider changes (no re-inference on an exposure tweak).
 
     RENDER: heals run BEFORE the geometry stage, on the developed oriented full frame,
     so spots stay glued to content when it is later cropped/straightened.
@@ -3548,6 +3712,162 @@ Regenerative spot fill (MI-GAN)
     masks. FUTURE: the "Fill" pseudo-layer can be promoted to a real EditLayer (format is
     forward-tolerant); larger creative fills need a diffusion model behind the
     InferenceBackend seam.
+
+    FILL REPLACE PANEL (Develop/Replace/replacepanel.* -- SHELVED: hidden while
+    G::useReplaceFillModes is false, see WHAT WAS TRIED; the description below applies
+    when the flag is re-enabled): the tool's UI surface, a
+    TransformPanel-style strip below the Transform panel ("Fill Replace" gradient header
+    with [?] tips and [E] preview eye; the eye renders with/without every committed heal
+    -- non-destructive bypass via DevelopProperties::spotsShown gating stackJob's spots).
+    Three mode rows, each shortcut letter bold in G::header2Color:
+      Spot   (S)  click a blemish -- single click, no dragging; clone heal
+      Fill   (F)  PAINT the area to replace (resizable brush; strokes accumulate as a
+                  teal tint, Opt/Alt strokes ERASE from it), then Enter commits the
+                  painted area as ONE heal; Esc clears the pending paint (a second Esc
+                  exits the tool). Uncommitted paint is discarded on mode switch / tool
+                  exit. Clone heal.
+      Object (O)  brush over an object to remove; regenerative model fill
+    The brush has NO user-facing feather: the cursor is one ring (= exactly what gets
+    replaced), the tint shows exactly what was brushed, and rasterization is HARD (1px
+    anti-alias edge). The seamless transition is the ENGINE's job: at composite time the
+    alpha is feathered by a band sized from the stroke THICKNESS (featherFromHole =
+    clamp(0.7 x max inscribed radius, 2..12px) -- NOT the bbox: a thin diagonal stroke
+    has a huge bbox, and a bbox-sized feather smeared content far outside the brushed
+    area; the clone extent is dilated by the same band so the ramp blends cloned content
+    over its whole width). The stored per-spot "feather" JSON field is legacy metadata,
+    no longer rasterized.
+    The title-bar spot button or "S" toggles the panel; visible == armed
+    (DevelopProperties::spotMode, panel visibility tracks spotActiveChanged so Escape
+    closes it too). S is a Develop mode local shortcut (Slideshow in Preview mode) -- see
+    DEVELOP MODE LOCAL SHORTCUTS. The tool must NOT claim S back from that table while
+    armed, or S could arm it but never disarm it.
+
+    S/F/O select the mode while the panel has focus (ReplacePanel::eventFilter, gated on
+    G::useReplaceFillModes). The loupe's S/F/O mode keys, and the A/B "F" tool toggle,
+    "B" correction cycle and "N" grain toggle, were RETIRED when S became the Develop mode
+    spot toggle -- G::spotFillCorrectMode / G::spotFillGrain keep their defaults and are
+    no longer keyboard-settable. The mode is
+    stored per stroke as "kind" in FillSpotGeom paramsJson (legacy spots parse as fill),
+    so each heal re-renders with the engine it was made with; mode persists to QSettings
+    "Develop/Replace/mode".
+
+    ENGINE SELECTION (lamafill.cpp LamaFill::apply, per spot by kind): spot/fill heal by
+    the exemplar CLONE (cloneHealOne, below) and fall back to the model path when no
+    clean source region exists (e.g. the hole touches a frame edge); object goes straight
+    to the model path (a removed object leaves no clean source to clone). Clone heals
+    need NO model, so lama.onnx-absent builds still heal spots/fills; only the model path
+    no-ops warn-if-absent.
+
+    LAMA SPOT-FILL (Utilities/inference/lamafill.*, LamaFill::apply, mirrors MiganFill's
+    tile-context heal + soft-alpha composite). developCompositeStack uses it when
+    G::useLamaSpotFill (default true), else falls back to MiganFill;
+    flip the flag in global.cpp to revert. Runs on the GPU (InferenceDevice::GPU ->
+    CoreML CPUAndGPU) because the ANE can't service LaMa's FFC. LaMa I/O differs from
+    MI-GAN: two inputs image[1x3x512x512] RGB in [0,1] + mask[1x1x512x512] where 1 =
+    inpaint region; output[1x3x512x512] RGB in [0,255] (verified by probe). Model is
+    ReleaseExtras/lama.onnx (gitignored, EXISTS-guarded mac bundling like migan.onnx --
+    Windows deploy copy not added, matching MI-GAN). The lama.onnx export MUST be the
+    fixed-shape (1x3x512x512) + Einsum("ij,jk->ik")->MatMul rewrite, which cut CoreML
+    partitions 405->76; a raw dynamic-batch export is far slower. See
+    project_lama_coreml_gpu for the export recipe.
+
+    HEAL LUMINANCE-MATCH A/B (large fills leave a low-frequency "patch" offset against a
+    smooth surround, since the alpha composite feathers only the SEAM, not the interior
+    level): applyFillCorrection (lamafill.cpp) corrects the model fill at net-res before
+    compositing, selected by G::spotFillCorrectMode -- 0 none (raw model), 1 Poisson
+    (cv::seamlessClone NORMAL_CLONE, boundary-gradient match; no-ops if the hole is empty
+    or touches a frame edge; preserves the model's WRONG gradient so it still patches),
+    2 membrane transfer (model texture + push-pull surround level; INERT for this
+    lama.onnx -- probe-verified 2026-07-16 that the export composites the input over the
+    keep region IN-GRAPH, so orig == model outside the hole, the membrane of their
+    difference is identically zero and mode 2 == mode 0 byte-for-byte; any correction
+    anchored on the keep-region model-vs-orig difference is dead for this export),
+    3 pure harmonic (push-pull surround only, discard the model). The surround is
+    reconstructed by pushPull() -- a Gaussian-pyramid push-pull (Gortler et al.) that
+    fills the hole with a smooth harmonic membrane; this REPLACED a single-Gaussian
+    normalized convolution that collapsed to a flat average deep in a large hole (leaving
+    a residual luminance blob). Mode 1 Poisson is the DEFAULT: the model path serves
+    Object fills (and clone fallbacks), which must keep the model's content, and Poisson
+    keeps it with the level solved from the boundary; mode 3 discards the model, only
+    right for smooth surfaces. **B** cycles the mode while the replace tool is armed
+    (ImageView::keyPressEvent -> spotFillModeChanged -> MW::developParamsChange re-heals
+    the same image live -- proxy tick + full-res settle; a bare
+    renderDevelopPreview(false) left the loupe stuck on the upscaled PROXY, whose
+    grainless surround invalidated the first A/B round; status bar shows the mode).
+    TESTING-only key, not in shortcutsform.ui.
+
+    CLONE HEAL (cloneHealOne, Lightroom heal-brush style, the spot/fill engine): a
+    masked template match on the context ring finds the best source patch near the spot
+    -- coarse-to-fine (match at reduced resolution so the hole is ~<=48px, refine +-q px
+    at full res), search window 3x the hole so lighting agrees -- then cv::seamlessClone
+    (NORMAL_CLONE) Poisson-blends the patch over the hole (texture AND gradients from
+    the source, level solved from the destination boundary) and the engine-feathered
+    alpha blends it in. WHY POISSON: ground-truth benchmarked (scratch heal_bench.py --
+    heal strokes over CLEAN background, compare against the untouched original) it beat
+    every alternative on every content type (trunk RMSE 5.8 vs 7.5 membrane-split /
+    5.9 xphoto SHIFTMAP / 7.0 pure membrane; bokeh 5.4 vs 10.3 / 8.7 / 7.4). Harmonic
+    membranes obey the maximum principle and can NEVER reconstruct a local brightness
+    maximum, so any membrane-based low-freq dims the bokeh blobs a stroke crosses (a
+    visible "dark sausage"); SHIFTMAP shows graph-cut patch seams on defocused
+    backgrounds; Poisson keeps the source's own blobs and only tilts them to fit the
+    boundary. No model inference, full resolution; copied pixels carry the surround's
+    true texture at EVERY frequency (grain, mid-freq mottle), which was the remaining
+    visible tell of every generative fill. Holes reaching a FRAME EDGE still clone:
+    seamlessClone needs its mask strictly inside the patch, so the tile is REFLECT-
+    padded 8px for the solve and cropped back. Returns false when no clean source
+    exists -> the caller falls back to the model path.
+
+    PINNED SOURCES: the template match runs on DEVELOPED pixels, so re-matching every
+    render could flip the chosen source mid-slider-drag (heal-content shimmer). The
+    first successful match per (image path, render size, spot geometry, chunk) is
+    pinned in a small mutex-guarded cache (full-res renders run off the GUI thread) and
+    reused; the Poisson blend still re-runs on the current pixels, so exposure/colour
+    edits track while the heal GEOMETRY stays stable. "No source" is pinned too, so
+    failing chunks don't re-search every render. Also removes the per-render match
+    cost. Keyed by qHash(paramsJson), so editing a spot re-matches naturally.
+
+    CHUNKED CLONE (large/long painted regions): ONE source offset for a whole stroke
+    leaves a stroke-shaped ghost when the background structure doesn't repeat at a
+    single shift (measured on the branch-removal test), so when the coverage bbox
+    exceeds ~1.5x the chunk size the heal splits into a grid of chunks: each chunk
+    clones its own windowed share of the coverage (ChunkWin: weight 1 on the core cell,
+    linear ramp over core/4 px; cores tile the bbox so every covered pixel is at full
+    weight in exactly one chunk) from its own LOCAL source, and the ramps blend
+    neighbouring chunks' different sources into each other. The chunk core = 3x the
+    painted THICKNESS (6 x max inscribed radius, clamped 96..384 px) -- like the
+    feather, NOT the brush diameter: a big brush previously made 640px chunks whose
+    interiors sit far from any boundary, and nothing matches a smoothly varying
+    background at that scale (stalk test: colour drift, 2000px source offsets). The
+    coarse match also carries a DISTANCE PENALTY (score x (1 + (d/R)^2)): a source at
+    the search edge must be ~2x better than a near one, keeping heals inside the local
+    colour/lighting zone. Two coverage-aware rules keep sources clean, both against the
+    WHOLE blemish, not just the chunk's hole: (1) the template-match ring ignores all
+    coverage (else it seeks sources that LOOK like the remaining blemish), and (2) a
+    candidate source is rejected if the pixels it would copy -- the chunk's hole SHAPE,
+    padded past the feather dilation -- overlap ANY coverage; the overlap for every
+    offset comes from ONE cross-correlation (cv::matchTemplate TM_CCORR) of the
+    coverage with the hole shape. The shape matters: a bounding-RECT test rejected
+    nearly every candidate for a diagonal stroke (its bbox is a huge, mostly-empty
+    square), silently sending all chunks to the model path -- which WAS the visible
+    stroke-shaped smudge (lab-verified on the branch image). A chunk with no valid
+    source falls back to the model fill for just that chunk.
+
+    GRAIN MATCH (applyGrainMatch, G::spotFillGrain, default on, **N** toggles): measured
+    root cause of the residual "patch" on smooth walls is NOT luminance (level corrections
+    land within ~1/255) but MISSING sensor grain -- a smooth fill reads as plastic against
+    a grainy wall (harmonic fill measured at 0.17x the surround's grain). Synthetic RNG
+    noise also measured WRONG in character (white, lag-1 autocorrelation ~0.05 vs the real
+    grain's ~0.38; channel-independent ~0.04 vs ~0.92 -> chroma confetti that attenuates
+    more than real grain under display resampling), so the grain is QUILTED: random
+    high-frequency residual (sigma-4 highpass) blocks from the tile's kept surround,
+    screened to near-median energy so structure is never copied, overlap-blended across
+    the hole with random flips -- copied real grain carries sigma, spatial and channel
+    correlation and fine mottle for free. Per channel the amplitude tops the fill's
+    existing grain up to the surround's in quadrature; falls back to channel- and
+    spatially-correlated synthetic noise when the surround has too few clean source
+    blocks (fixed RNG seed either way so re-renders don't shimmer). MODEL-path only --
+    clone heals carry real grain already. Diagnosis was instrument-first (measured the
+    A/B outputs in Python) after level-only fixes kept failing.
 
 ------------------------------------------------------------------------------------------
 Develop dock (UI)
@@ -3658,7 +3978,9 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     resetModeRequested -> resetDevelopTransformMode clears just that mode's geometry contribution.
 
     Shortcuts: "R" toggles the panel (MW::toggleDevelopTransform, developTransformAction, editor-
-    bar button rectangle.png; persists Settings "Develop/transformVisible"). While the panel (or one
+    bar button rectangle.png; persists Settings "Develop/transformVisible"). R is a Develop mode
+    local shortcut and does nothing in Preview mode -- see DEVELOP MODE LOCAL
+    SHORTCUTS. While the panel (or one
     of its non-text controls) has focus, single letters select/act: "C" Crop, "L" Level, "W" Warp,
     "A" toggles the aspect lock -- all handled by TransformPanel::eventFilter accepting the key's
     ShortcutOverride, NOT QActions, because a panel-scoped letter QAction would be an ambiguous

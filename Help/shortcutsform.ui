@@ -1057,7 +1057,29 @@
          <string>D</string>
         </property>
         <property name="text">
-         <string>Toggle Preview / Develop operation mode</string>
+         <string>Toggle Preview / Develop operation mode (works in either mode)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Develop Mode keys</string>
+        </property>
+        <property name="text">
+         <string>R  N  M  O  S  X  H</string>
+        </property>
+        <property name="text">
+         <string>These seven keys mean something different in Develop mode than they do in Preview mode: in Preview, S is Slideshow, X is Reject and O is Open Folder, and R / N / M / H do nothing. Every other shortcut in this list behaves the same in both modes.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Image selection</string>
+        </property>
+        <property name="text">
+         <string>Arrows, PgUp / PgDn, Home / End</string>
+        </property>
+        <property name="text">
+         <string>IGNORED in Develop mode unless the Thumbnails panel has the focus, so the keys cannot navigate off the image being developed. Click a thumbnail to give the panel focus. Alt + the same keys still scroll and pan the image.</string>
         </property>
        </item>
        <item>
@@ -1073,6 +1095,39 @@
        </item>
        <item>
         <property name="text">
+         <string>New Layer</string>
+        </property>
+        <property name="text">
+         <string>N</string>
+        </property>
+        <property name="text">
+         <string>Adds a layer to this image (prompts for a name); in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>New Mask</string>
+        </property>
+        <property name="text">
+         <string>M</string>
+        </property>
+        <property name="text">
+         <string>Pops the Add / Subtract mask tool menu for the active layer; in Develop mode. The Base layer applies globally and cannot be masked</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Mask Overlay</string>
+        </property>
+        <property name="text">
+         <string>O</string>
+        </property>
+        <property name="text">
+         <string>Hide / show the current layer mask overlay; while a mask tool is active</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Auto Mask (Brush)</string>
         </property>
         <property name="text">
@@ -1084,13 +1139,13 @@
        </item>
        <item>
         <property name="text">
-         <string>Resize Brush (Brush / Object mask)</string>
+         <string>Resize Brush (Brush / Object mask / Spot)</string>
         </property>
         <property name="text">
          <string>[ / ]  (or two-finger drag)</string>
         </property>
         <property name="text">
-         <string>Shrinks / grows the brush; while a Brush or Object mask tool is active</string>
+         <string>Shrinks / grows the brush; while a Brush, Object mask or Spot tool is active</string>
         </property>
        </item>
        <item>
@@ -1106,13 +1161,13 @@
        </item>
        <item>
         <property name="text">
-         <string>Transform Panel</string>
+         <string>Crop / Transform Panel</string>
         </property>
         <property name="text">
          <string>R</string>
         </property>
         <property name="text">
-         <string>Toggles the crop / perspective panel</string>
+         <string>Toggles the crop / perspective panel and its crop tool; in Develop mode</string>
         </property>
        </item>
        <item>
@@ -1139,13 +1194,35 @@
        </item>
        <item>
         <property name="text">
-         <string>Mask Overlay</string>
+         <string>Spot Removal</string>
         </property>
         <property name="text">
-         <string>M</string>
+         <string>S</string>
         </property>
         <property name="text">
-         <string>Hide / show the current layer mask overlay; while a mask tool is active</string>
+         <string>Toggles the spot-removal tool (click a blemish to heal it); in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Histogram / Vectorscope</string>
+        </property>
+        <property name="text">
+         <string>H</string>
+        </property>
+        <property name="text">
+         <string>Show / hide the scopes strip; in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Export</string>
+        </property>
+        <property name="text">
+         <string>X</string>
+        </property>
+        <property name="text">
+         <string>Exports the developed image; in Develop mode. NOT IMPLEMENTED YET</string>
         </property>
        </item>
       </item>

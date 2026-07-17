@@ -1075,6 +1075,45 @@ void MW::createUtilActions()
     addAction(operationModeAction);
     connect(operationModeAction, &QAction::triggered, this, &MW::toggleOperationMode);
 
+    /* ---- Develop mode local shortcuts ------------------------------------------------
+       These actions are given NO key sequence.  Qt allows only one QAction per sequence
+       (a second makes both ambiguous and fires neither) and S/X are already Slideshow /
+       Reject globally, so their keys live in developShortcuts (see loadDevelopShortcuts)
+       and are dispatched by developShortcutIntercept while in Develop mode.  The tab in
+       each text renders the key hint the missing sequence would otherwise supply -- the
+       same idiom pickAction and jumpAction use for their multi-key hints. */
+
+    developNewLayerAction = new QAction(tr("New Layer\tN"), this);
+    developNewLayerAction->setObjectName("developNewLayer");
+    developNewLayerAction->setShortcutVisibleInContextMenu(true);
+    addAction(developNewLayerAction);
+    connect(developNewLayerAction, &QAction::triggered, this, &MW::developNewLayer);
+
+    developNewMaskAction = new QAction(tr("New Mask\tM"), this);
+    developNewMaskAction->setObjectName("developNewMask");
+    developNewMaskAction->setShortcutVisibleInContextMenu(true);
+    addAction(developNewMaskAction);
+    connect(developNewMaskAction, &QAction::triggered, this, &MW::developNewMask);
+
+    developSpotAction = new QAction(tr("Spot Removal Tool\tS"), this);
+    developSpotAction->setObjectName("developSpot");
+    developSpotAction->setShortcutVisibleInContextMenu(true);
+    addAction(developSpotAction);
+    connect(developSpotAction, &QAction::triggered, this, &MW::toggleDevelopReplace);
+
+    developExportAction = new QAction(tr("Export Developed Image\tX"), this);
+    developExportAction->setObjectName("developExport");
+    developExportAction->setShortcutVisibleInContextMenu(true);
+    addAction(developExportAction);
+    connect(developExportAction, &QAction::triggered, this, &MW::developExport);
+
+    developScopesAction = new QAction(tr("Histogram / Vectorscope\tH"), this);
+    developScopesAction->setObjectName("developScopes");
+    developScopesAction->setShortcutVisibleInContextMenu(true);
+    developScopesAction->setCheckable(true);
+    addAction(developScopesAction);
+    connect(developScopesAction, &QAction::triggered, this, &MW::toggleDevelopScopes);
+
     // Embellish menu
     int n;          // used to populate action lists
 
@@ -1444,21 +1483,22 @@ void MW::createWindowActions()
     addAction(developDockVisibleAction);
     connect(developDockVisibleAction, &QAction::triggered, this, &MW::showDevelopDock);
 
-    /* "R" toggles the Develop Transform (crop + perspective) panel. */
-    developTransformAction = new QAction(tr("Develop Transform Panel"), this);
+    /* "R" (Develop mode only) toggles the Develop Transform (crop + perspective) panel.
+       Like every Develop-local action it has no QKeySequence -- loadDevelopShortcuts owns
+       the key, and the tab in the text renders the hint a key-less action cannot. */
+    developTransformAction = new QAction(tr("Crop / Transform Panel\tR"), this);
     developTransformAction->setObjectName("toggleDevelopTransform");
-    developTransformAction->setShortcut(QKeySequence("R"));
     developTransformAction->setShortcutVisibleInContextMenu(true);
     developTransformAction->setCheckable(true);
-    developTransformAction->setChecked(false);   // crop tool always starts off (panel starts hidden)
+    developTransformAction->setChecked(false);   // crop starts off (panel starts hidden)
     addAction(developTransformAction);
     connect(developTransformAction, &QAction::triggered, this, &MW::toggleDevelopTransform);
 
-    /* "M" hides/shows the current layer's mask overlay tint while a mask tool is active (see the
-       real image without the red coverage tint; handles/cursor stay). No-op outside mask editing. */
-    toggleMaskOverlayAction = new QAction(tr("Toggle Mask Overlay"), this);
+    /* "O" hides/shows the current layer's mask overlay tint while a mask tool is active
+       (see the real image without the red coverage tint; handles/cursor stay). No-op
+       outside mask editing. */
+    toggleMaskOverlayAction = new QAction(tr("Mask Overlay\tO"), this);
     toggleMaskOverlayAction->setObjectName("toggleMaskOverlay");
-    toggleMaskOverlayAction->setShortcut(QKeySequence("M"));
     toggleMaskOverlayAction->setShortcutVisibleInContextMenu(true);
     addAction(toggleMaskOverlayAction);
     connect(toggleMaskOverlayAction, &QAction::triggered, this, &MW::toggleMaskOverlay);
@@ -2052,7 +2092,32 @@ void MW::createUtilMenu()
     utilGroupAct = new QAction("Utilities", this);
     utilGroupAct->setMenu(utilMenu);
 
-    utilMenu->addAction(developAction);
+    /* Develop submenu.  The Develop mode tools were previously reachable only by their
+       shortcut keys, which made them invisible to anyone not reading the help.  The keys
+       shown after the tab are Develop mode local -- outside Develop mode they do what the
+       global table says (S = Slideshow, X = Reject...), so the items are enabled only in
+       Develop mode (see syncDevelopMenuEnabled). */
+    developMenu = new QMenu(this);
+    developGroupAct = new QAction("Develop", this);
+    developGroupAct->setMenu(developMenu);
+
+    developMenu->addAction(developAction);          // enable/disable the Develop panel
+    developMenu->addAction(operationModeAction);    // D: works in both modes
+    developMenu->addSeparator();
+    developMenu->addAction(developNewLayerAction);
+    developMenu->addAction(developNewMaskAction);
+    developMenu->addAction(toggleMaskOverlayAction);
+    developMenu->addSeparator();
+    developMenu->addAction(developTransformAction);
+    developMenu->addAction(developSpotAction);
+    developMenu->addSeparator();
+    developMenu->addAction(developScopesAction);
+    developMenu->addAction(developExportAction);
+    /* Grey the mode-local items outside Develop mode: their keys belong to other actions
+       there, so an enabled item would advertise a shortcut that does something else. */
+    connect(developMenu, &QMenu::aboutToShow, this, &MW::syncDevelopMenuEnabled);
+
+    utilMenu->addAction(developGroupAct);
     utilMenu->addAction(embelGroupAct);
     utilMenu->addAction(mediaReadSpeedAction);
     utilMenu->addAction(findDuplicatesAction);
@@ -3028,5 +3093,58 @@ void MW::loadShortcuts(bool defaultShortcuts)
     }
 
     settings->endGroup();
+
+    loadDevelopShortcuts();
+}
+
+void MW::loadDevelopShortcuts()
+{
+/*
+    The Develop mode local shortcut table: a bare key -> the action to run INSTEAD of
+    whatever the global table above binds that key to.  MW::developShortcutIntercept looks
+    the key up here while G::operationMode == Develop; in Preview nothing changes, so S is
+    still Slideshow, X still Reject and H still unbound.
+
+    These keys are deliberately NOT QAction shortcuts.  Qt permits one QAction per key
+    sequence -- bind "S" to both Slideshow and the spot tool and QShortcutMap reports an
+    ambiguous overload and fires NEITHER -- so a mode-local key cannot be expressed as a
+    second QAction.  Dispatching from the table sidesteps that entirely, and leaves the
+    global table (and its user customisations in the Shortcuts settings group) untouched.
+
+    Not in this table, and deliberately so: keys an armed tool already owns ([ ] brush
+    size, A auto-mask, Cmd+Z undo stroke, Enter/Esc).  ImageView claims those from global
+    actions itself while its tool is live (see ImageView::event), which keeps tool-local
+    keys ranked above mode-local ones without this table needing to know about tools.
+*/
+    if (G::isLogger) G::log("MW::loadDevelopShortcuts");
+    developShortcuts.clear();
+    developShortcuts[Qt::Key_R] = developTransformAction;   // global: unbound
+    developShortcuts[Qt::Key_N] = developNewLayerAction;    // global: unbound
+    developShortcuts[Qt::Key_M] = developNewMaskAction;     // global: unbound
+    developShortcuts[Qt::Key_O] = toggleMaskOverlayAction;  // global: Open folder
+    developShortcuts[Qt::Key_S] = developSpotAction;        // global: Slideshow
+    developShortcuts[Qt::Key_X] = developExportAction;      // global: Reject
+    developShortcuts[Qt::Key_H] = developScopesAction;      // global: unbound
+}
+
+void MW::syncDevelopMenuEnabled()
+{
+/*
+    Called as the Develop menu opens.  Every item below the first separator is Develop
+    mode local, so outside Develop mode its key means something else entirely and the item
+    must not offer it.  developAction (enable the panel) and operationModeAction (D) work
+    in both modes and stay enabled.
+*/
+    if (G::isLogger) G::log("MW::syncDevelopMenuEnabled");
+    const bool inDevelop = G::operationMode == G::OperationMode::Develop;
+    const QList<QAction *> modeLocal {
+        developNewLayerAction, developNewMaskAction, toggleMaskOverlayAction,
+        developTransformAction, developSpotAction, developScopesAction, developExportAction
+    };
+    for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);
+
+    // Reflect live state for the checkable toggles
+    if (developTransformAction) developTransformAction->setChecked(developTransformVisible);
+    if (developScopesAction) developScopesAction->setChecked(developScopesVisible);
 }
 
