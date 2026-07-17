@@ -552,10 +552,9 @@ QVector<QPointF> DevelopProperties::spotPinCenters() const
     const EditStack s = stackCache.value(currentImagePath);
     for (const FillSpot &sp : s.spots) {
         const FillSpotGeom::Parsed p = FillSpotGeom::parse(sp.paramsJson);
-        if (!p.valid()) { centers.append(QPointF(0.5, 0.5)); continue; }
-        double sx = 0, sy = 0; const int n = int(p.pts.size() / 2);
-        for (int i = 0; i < n; ++i) { sx += p.pts[2 * i]; sy += p.pts[2 * i + 1]; }
-        centers.append(QPointF(sx / n, sy / n));
+        double cx = 0.5, cy = 0.5;
+        if (p.valid()) FillSpotGeom::centroid(p, cx, cy);   // add-coverage centroid
+        centers.append(QPointF(cx, cy));
     }
     return centers;
 }
@@ -1795,7 +1794,8 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
     /* Transform Preview: previewed off -> bypass geometry at render (identity), while the stored
        crop/warp stays in the cache so the overlay still draws (see currentGeometry). */
     job.geometry = s.geometry.show ? s.geometry : Geometry();
-    job.spots    = s.spots;              // healed before geometry (Base-only too)
+    /* Replace preview eye off -> render without the heals (spots stay in the cache). */
+    if (spotsShown) job.spots = s.spots; // healed before geometry (Base-only too)
     if (s.layers.isEmpty()) return job;
     job.base = effectiveLayerParams(s.layers[0]);   // Base (layer 0), previewed groups folded off
     for (int i = 1; i < s.layers.size(); ++i) {

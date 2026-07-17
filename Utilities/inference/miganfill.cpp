@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QCoreApplication>
 #include <opencv2/imgproc.hpp>
+#include <algorithm>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -110,6 +111,11 @@ void healOne(cv::Mat &full, const std::vector<float> &cov, int bx0, int by0, int
     cv::Mat heal, alpha;
     cv::resize(healN, heal,  cv::Size(t, t), 0, 0, cv::INTER_CUBIC);
     cv::resize(holeN, alpha, cv::Size(t, t), 0, 0, cv::INTER_LINEAR);
+    /* The brushed area is now rasterized HARD (fillspot.h); feather the composite
+       alpha here so the heal still blends seamlessly (band sized from the heal). */
+    cv::GaussianBlur(alpha, alpha, cv::Size(),
+                     std::clamp(0.06 * std::max(bx1 - bx0 + 1, by1 - by0 + 1),
+                                2.0, 24.0) / 2.0);
 
     cv::Mat dst = full(roi);
     for (int y = 0; y < t; ++y) {

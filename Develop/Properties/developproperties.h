@@ -124,6 +124,10 @@ public slots:
     void onSpotStrokeCommitted(const QString &paramsJson);
     void onSpotRemoveRequested(int index);      // a pin was clicked -> drop that spot
     bool isSpotActive() const { return spotMode; }   // for the title-bar spot button
+    /* Replace panel preview eye: false renders WITHOUT the spot heals (non-destructive
+       bypass, like the Transform eye); the spots stay in the stack. Session-wide. */
+    void setSpotsShown(bool shown) { spotsShown = shown; }
+    bool isSpotsShown() const { return spotsShown; }
 
     /* ---- LayerHeader widget handlers (the layer dropdown + buttons above the tree) ---- */
     void onLayerSelected(const QString &name);    // dropdown picked a different layer
@@ -305,6 +309,7 @@ private:
     int selectedMaskIndex = -1;
     bool isRebuildingMasks = false;
     bool spotMode = false;              // regenerative spot-fill brushing is armed
+    bool spotsShown = true;             // Replace preview eye: heals rendered or bypassed
     QVector<QPointF> spotPinCenters() const;   // current image's spot centres (norm)
     void emitSpotPins();                       // push spotPinCenters() to ImageView
     QMenu *maskMenu = nullptr;

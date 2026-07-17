@@ -62,9 +62,22 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref)
     if (pref != InferenceDevice::CPU) {
         try {
 #ifdef Q_OS_MAC
-            /* flags 0 = let CoreML use the full compute unit set (ANE -> GPU -> CPU). */
-            Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CoreML(so, 0));
-            d->backend = "CoreML";
+            /* Map the requested device onto CoreML compute units. flags 0 lets CoreML
+               use the full set (ANE -> GPU -> CPU), the right default for Auto/NPU. GPU
+               forces the Apple GPU (Metal / MPSGraph) and excludes the ANE -- needed for
+               graphs whose ops the ANE cannot service (e.g. FFT-based FFC blocks). It
+               pairs the GPU compute-unit flag with the ML Program format, which supports
+               the broader op set. Note this only sets the target device: ops the
+               CoreML EP cannot map are still partitioned to the CPU EP regardless of
+               the flag. */
+            uint32_t coremlFlags = 0;
+            const char *coremlName = "CoreML";
+            if (pref == InferenceDevice::GPU) {
+                coremlFlags = COREML_FLAG_USE_CPU_AND_GPU | COREML_FLAG_CREATE_MLPROGRAM;
+                coremlName = "CoreML/GPU";
+            }
+            Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CoreML(so, coremlFlags));
+            d->backend = coremlName;
 #elif defined(Q_OS_WIN)
             /* DirectML requires sequential execution and no memory pattern. */
             so.DisableMemPattern();

@@ -1951,9 +1951,59 @@ void MW::createDevelopDock()
             imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
                                      QRectF(0, 0, 1, 1));
     });
-    /* The layer dropdown + layer-action buttons live in a gradient header band ABOVE the property
-       tree (replacing the old in-tree Layers header). DevelopProperties drives it and handles its
-       signals; the collapse arrow hides/shows the tree. */
+    /* Fill Replace (spot/fill/object heal) strip below the Transform panel, above the
+       layer header. ALWAYS starts hidden: a visible panel means the replace tool is
+       armed, which should never be the case before the user asks (spot button or "F"). */
+    replacePanel = new ReplacePanel(developContainer, settings);
+    replacePanel->setVisible(false);
+    developContainerLayout->addWidget(replacePanel);
+    /* Panel visibility tracks the armed state (DevelopProperties owns it): arming shows
+       the panel and pushes the current mode to the loupe capture; Escape/spot-button
+       disarm hides it through the same signal. */
+    connect(developProperties, &DevelopProperties::spotActiveChanged, this, [this](bool active){
+        if (!replacePanel) return;
+        /* Fill/Object modes shelved (G::useReplaceFillModes): the panel stays hidden
+           and arming always captures in Spot mode -- spot cleanup only. */
+        replacePanel->setVisible(active && G::useReplaceFillModes);
+        if (active) {
+            if (imageView) imageView->setSpotReplaceMode(
+                G::useReplaceFillModes ? replacePanel->mode() : int(ReplacePanel::SpotMode));
+            replacePanel->setPreviewShown(developProperties->isSpotsShown());
+            if (developDock) { developDock->setVisible(true); developDock->raise(); }
+        }
+        else if (!developProperties->isSpotsShown()) {
+            /* Never leave the heals silently bypassed with the eye out of reach. */
+            developProperties->setSpotsShown(true);
+            replacePanel->setPreviewShown(true);
+            developParamsChange();
+        }
+    });
+    /* Mode row picked in the panel -> capture behaviour + stored kind. (The loupe's S/F/O
+       mode keys were retired when S became the Develop mode spot-tool toggle; the panel's
+       own S/F/O still work while it has focus, and it is only shown when the Fill/Object
+       modes are un-shelved.) */
+    connect(replacePanel, &ReplacePanel::modeChanged, this, [this](int mode){
+        if (imageView) imageView->setSpotReplaceMode(mode);
+    });
+    /* Preview eye: render with/without every committed heal (non-destructive bypass). */
+    connect(replacePanel, &ReplacePanel::previewToggled, this, [this](bool shown){
+        if (!developProperties) return;
+        developProperties->setSpotsShown(shown);
+        developParamsChange();
+    });
+    connect(replacePanel, &ReplacePanel::tipsRequested, this, [this]{
+        if (G::popup) G::popup->showPopup(
+            "<b>Fill Replace</b><br>"
+            "Spot: click a blemish to heal it with cloned surroundings.<br>"
+            "Fill: paint the area to replace (Opt/Alt erases), then Enter fills it "
+            "with cloned surroundings; Esc clears the paint.<br>"
+            "Object: brush over an object to remove it with a regenerative fill.<br><br>"
+            "[ and ] resize the brush. Click a pin to remove a heal. Esc exits.", 6000);
+    });
+
+    /* The layer dropdown + layer-action buttons live in a gradient header band ABOVE the
+       property tree (replacing the old in-tree Layers header). DevelopProperties drives
+       it and handles its signals; the collapse arrow hides/shows the tree. */
     LayerHeader *developLayerHeader = new LayerHeader(developContainer);
     developContainerLayout->addWidget(developLayerHeader);
     developProperties->bindLayerHeader(developLayerHeader);
@@ -1993,7 +2043,7 @@ void MW::createDevelopDock()
     // show/hide the histogram + vectorscope scopes strip
     BarBtn *developScopesBtn = new BarBtn();
     developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
-    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope");
+    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope  (H)");
     connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
     developTitleLayout->addWidget(developScopesBtn);
     developTitleLayout->addSpacing(10);
@@ -2011,11 +2061,8 @@ void MW::createDevelopDock()
        drives the icon back via spotActiveChanged (full opacity armed, dimmed off). */
     BarBtn *developSpotBtn = new BarBtn();
     developSpotBtn->setIcon(":/images/icon16/spot.png", G::iconOpacity);
-    developSpotBtn->setToolTip("Spot removal: brush over a blemish to heal it (Fill layer)");
-    connect(developSpotBtn, &BarBtn::clicked, this, [this]{
-        if (developProperties)
-            developProperties->onSpotToolToggled(!developProperties->isSpotActive());
-    });
+    developSpotBtn->setToolTip("Spot removal: click a blemish to heal it  (S)");
+    connect(developSpotBtn, &BarBtn::clicked, this, &MW::toggleDevelopReplace);
     connect(developProperties, &DevelopProperties::spotActiveChanged, developSpotBtn,
             [developSpotBtn](bool active){
         developSpotBtn->setIcon(":/images/icon16/spot.png", active ? 1.0 : G::iconOpacity);

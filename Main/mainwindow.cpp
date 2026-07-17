@@ -12,6 +12,7 @@
 #include "Develop/develop.h"
 #include "ImageFormats/Raw/pmrid.h"
 #include "Utilities/inference/miganfill.h"
+#include "Utilities/inference/lamafill.h"
 #include "Cache/imagedecoder.h"
 #include "Utilities/subjectpredictor.h"
 #include "Utilities/skypredictor.h"
@@ -1047,6 +1048,101 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     QMainWindow::keyReleaseEvent(event);
 }
 
+bool MW::thumbViewHasFocus() const
+{
+    const QWidget *fw = QApplication::focusWidget();
+    if (!fw || !thumbView) return false;
+    return fw == thumbView || thumbView->isAncestorOf(fw);
+}
+
+/* The bare/Shift'd navigation keys, plus the pick-nav and random-image combos, all move
+   the selection off the current image. In Develop mode they are suppressed unless the
+   thumbnails have the focus (see developShortcutIntercept). Alt+key is EXCLUDED:
+   Alt+arrow / Alt+Home etc scroll and pan within the image rather than changing the
+   selection, which is useful while developing -- but Ctrl+Shift+Alt+Left/Right IS pick
+   navigation, hence the Ctrl test. */
+static bool isSelectionKey(const QKeyEvent *e)
+{
+    switch (e->key()) {
+    case Qt::Key_Left:   case Qt::Key_Right:
+    case Qt::Key_Up:     case Qt::Key_Down:
+    case Qt::Key_PageUp: case Qt::Key_PageDown:
+    case Qt::Key_Home:   case Qt::Key_End:
+        break;
+    default:
+        return false;
+    }
+    const Qt::KeyboardModifiers m = e->modifiers();
+    if ((m & Qt::AltModifier) && !(m & Qt::ControlModifier)) return false;  // scroll/pan
+    return true;
+}
+
+bool MW::developShortcutIntercept(QEvent *event)
+{
+/*
+    Develop mode's shortcut arbiter, called from eventFilter for both
+    QEvent::ShortcutOverride and QEvent::KeyPress. Two rules, in order:
+
+      1. A key in developShortcuts runs its Develop action in place of the global action
+         bound to the same key (S = spot tool here, Slideshow in Preview).
+      2. A selection key is swallowed unless thumbView has the focus, so arrows and page
+         keys cannot navigate off the image being developed.
+
+    Everything else falls through and behaves exactly as it does in Preview mode. Returns
+    true when the key has been consumed.
+
+    Both event types are handled, in the two-step ReplacePanel::eventFilter established:
+    accept the ShortcutOverride (which is what frees the key from the global QAction --
+    Qt sends it before the shortcut system runs), then act on the KeyPress that follows.
+    Doing the work on the KeyPress rather than the override matters twice over. It is the
+    only event Qt guarantees for keys NO global action owns (R/N/M/H), and consuming it
+    makes rule 2 a real "ignore": accepting only the override would free an arrow from
+    keyDownAction and then let it reach the loupe, where QGraphicsView scrolls on arrows.
+
+    Tool-local keys ([ ] etc) are not in the table, so an armed tool still gets them from
+    its own ShortcutOverride claim in ImageView::event -- tool-local outranks mode-local.
+*/
+    QKeyEvent *e = static_cast<QKeyEvent *>(event);
+    QWidget *fw = QApplication::focusWidget();
+    const bool isOverride = event->type() == QEvent::ShortcutOverride;
+
+    /* Never arbitrate a dialog's keystrokes. This mirrors the MODELESS DIALOG SHORTCUT
+       GUARD below, which cannot cover these keys: it works off ownsShortcut(), and a
+       Develop action has no QKeySequence for that to match. Without this a bare S typed
+       into a Preferences field would arm the spot tool. Floating QDockWidgets are also
+       separate top-level windows but belong to the MW workspace, hence the QDialog
+       test. */
+    QWidget *win = fw ? fw->window() : nullptr;
+    if (win && win != this && qobject_cast<QDialog *>(win)) return false;
+
+    /* A value editor owns its keys unconditionally: arrows nudge a Develop slider,
+       letters type into the search field. Arbitrating those away would break both. */
+    if (qobject_cast<QAbstractSlider *>(fw)  || qobject_cast<QAbstractSpinBox *>(fw) ||
+        qobject_cast<QLineEdit *>(fw)        || qobject_cast<QComboBox *>(fw))
+        return false;
+
+    /* 1. Develop mode local shortcut beats the global action on the same key. Held keys
+       must not re-fire: every one of these is a toggle or pops a dialog. */
+    if (e->modifiers() == Qt::NoModifier && !e->isAutoRepeat()) {
+        if (QAction *a = developShortcuts.value(e->key())) {
+            event->accept();
+            if (!isOverride) {          // the override only frees the key; act now
+                if (G::isLogger) G::log("MW::developShortcutIntercept", a->objectName());
+                a->trigger();
+            }
+            return true;
+        }
+    }
+
+    // 2. Selection keys are inert unless the user is deliberately in the thumbnails
+    if (isSelectionKey(e) && !thumbViewHasFocus()) {
+        event->accept();
+        return true;
+    }
+
+    return false;
+}
+
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
     // return false to propagate events
@@ -1215,6 +1311,19 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* DEVELOP MODE LOCAL SHORTCUTS
+       The ShortcutOverride pass runs before Qt's shortcut system, so a Develop key beats
+       the global action bound to it; the KeyPress pass does the work (and swallows the
+       selection keys). Must precede the navigation intercept below, which would otherwise
+       act on an arrow first. See MW::developShortcutIntercept. */
+    {
+        if (!G::isInitializing && G::operationMode == G::OperationMode::Develop
+            && (event->type() == QEvent::ShortcutOverride
+                || event->type() == QEvent::KeyPress)) {
+            if (developShortcutIntercept(event)) return true;
+        }
+    }
+
     /* KEYPRESS INTERCEPT (NAVIGATION and MODIFIERS) */
     {
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
@@ -1256,6 +1365,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                     qobject_cast<QAbstractSpinBox*>(fw) ||
                     qobject_cast<QLineEdit*>(fw)        ||
                     qobject_cast<QComboBox*>(fw);
+
+                /* In Develop mode an arrow only reaches here when the thumbnails have the
+                   focus -- developShortcutIntercept (above) consumes the others. */
 
                 // faster than using menu shortcuts
                 if (e->key() == Qt::Key_Right && !editorHasFocus) {
@@ -5566,11 +5678,17 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
             out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
     }
 
-    /* Regenerative spot fill (MI-GAN) heals BEFORE geometry, on the developed oriented
-       full frame, so heals stay glued to content when later cropped/straightened. No-op
-       if the model/ORT is absent or there are no spots. */
-    if (!out.isNull() && !job.spots.isEmpty())
-        MiganFill::apply(out, job.spots);
+    /* Fill Replace heals BEFORE geometry, on the developed oriented full frame, so heals
+       stay glued to content when later cropped/straightened. The replace engine
+       (lamafill.cpp) heals Spot/Fill kinds by exemplar clone -- no model needed -- and
+       Object kinds (or clone fallbacks) with LaMa; the model path no-ops warn-if-absent.
+       Flip G::useLamaSpotFill off (global.cpp) to revert to the MI-GAN engine. */
+    if (!out.isNull() && !job.spots.isEmpty()) {
+        if (G::useLamaSpotFill)
+            LamaFill::apply(out, job.spots, fPath);   // fPath keys the pinned sources
+        else
+            MiganFill::apply(out, job.spots);
+    }
 
     /* Geometry (crop / straighten / warp) is applied LAST -- after the develop ops + EXIF
        orientation -- on the full-output-dimension image, so the crop dims match for the
@@ -6836,15 +6954,73 @@ void MW::toggleDevelopTransform()
     }
 }
 
+void MW::toggleDevelopReplace()
+{
+/*
+    Title-bar spot button (also "S" in Develop mode): arm/disarm the Fill
+    Replace (spot/fill/object heal) tool. DevelopProperties owns the armed state; the
+    ReplacePanel's visibility tracks it via spotActiveChanged (see createDevelopDock), so
+    Escape on the loupe closes the panel through the same path.
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopReplace");
+    if (G::operationMode != G::OperationMode::Develop) {
+        if (G::popup) G::popup->showPopup("Fill Replace is only available in Develop Mode, "
+                                          "which can be set in the status bar or the shortcut \"D\".",
+                                          3000);
+        return;
+    }
+    if (developProperties)
+        developProperties->onSpotToolToggled(!developProperties->isSpotActive());
+}
+
 void MW::toggleMaskOverlay()
 {
 /*
-    "M": hide/show the current layer's mask overlay tint (the red coverage visualisation) so the user
-    can see the developed image without it while still editing. The visibility state lives in
-    ImageView (per mask-edit session); this just flips it. No-op when no mask tool is active.
+    "O" (Develop mode): hide/show the current layer's mask overlay tint (the red coverage
+    visualisation) so the user can see the developed image without it while still editing.
+    The visibility state lives in ImageView (per mask-edit session); this just flips it.
+    No-op when no mask tool is active.
 */
     if (G::isLogger) G::log("MW::toggleMaskOverlay");
     if (imageView) imageView->toggleMaskTint();
+}
+
+void MW::developNewLayer()
+{
+/*
+    "N" (Develop mode): add a layer to the current image's edit stack. DevelopProperties
+    owns the flow (name dialog, append, select the new layer) and no-ops without a current
+    image; this just brings the dock forward so the new layer's tree is visible.
+*/
+    if (G::isLogger) G::log("MW::developNewLayer");
+    if (!developProperties) return;
+    if (developDock) { developDock->setVisible(true); developDock->raise(); }
+    developProperties->newLayer();
+}
+
+void MW::developNewMask()
+{
+/*
+    "M" (Develop mode): pop the Add/Subtract mask-tool menu at the cursor for the active
+    layer, the same menu the tree's [+] mask row shows. DevelopProperties handles the Base
+    layer case (it cannot be masked) with its own message.
+*/
+    if (G::isLogger) G::log("MW::developNewMask");
+    if (!developProperties) return;
+    if (developDock) { developDock->setVisible(true); developDock->raise(); }
+    developProperties->showMaskMenu();
+}
+
+void MW::developExport()
+{
+/*
+    "X" (Develop mode): export the developed image. NOT BUILT YET -- the render-to-file
+    path is still outstanding (see notes/Documentation.txt "Develop Export"). The action,
+    menu item, shortcut and help entry are wired so the feature only needs this body.
+*/
+    if (G::isLogger) G::log("MW::developExport");
+    if (G::popup)
+        G::popup->showPopup("Develop export is not implemented yet.", 2000);
 }
 
 void MW::enterDevelopCrop()

@@ -133,6 +133,7 @@ set(WINNOW_SOURCES
     Develop/Scopes/scopesview.cpp
     Develop/Transform/transformpanel.cpp
     Develop/Transform/croptransform.cpp
+    Develop/Replace/replacepanel.cpp
 
     # Dialogs
     Dialogs/aboutdlg.cpp
@@ -320,6 +321,7 @@ set(WINNOW_SOURCES
     Utilities/inference/inferencesession.cpp
     Utilities/inference/ortbackend.cpp
     Utilities/inference/miganfill.cpp
+    Utilities/inference/lamafill.cpp
     Utilities/subjectpredictor.cpp
     Utilities/objectmaskpredictor.cpp
     Utilities/skypredictor.cpp
@@ -383,6 +385,7 @@ set(WINNOW_HEADERS
     Develop/Scopes/scopesview.h
     Develop/Transform/transformpanel.h
     Develop/Transform/croptransform.h
+    Develop/Replace/replacepanel.h
 
     Dialogs/aboutdlg.h
     Dialogs/addthumbnailsdlg.h
@@ -528,6 +531,7 @@ set(WINNOW_HEADERS
     Utilities/inference/inferencesession.h
     Utilities/inference/ortbackend.h
     Utilities/inference/miganfill.h
+    Utilities/inference/lamafill.h
     Utilities/subjectpredictor.h
     Utilities/objectmaskpredictor.h
     Utilities/skypredictor.h
@@ -762,6 +766,7 @@ if(APPLE)
         opencv_imgcodecs
         opencv_video
         opencv_dnn
+        opencv_photo        # cv::seamlessClone (LamaFill Poisson heal correction)
     )
     target_include_directories(Winnow PRIVATE
         ${HOMEBREW_PREFIX}/opt/opencv/include/opencv4)
@@ -888,6 +893,16 @@ if(APPLE)
     else()
         message(WARNING "ReleaseExtras/migan.onnx not found -- spot fill will no-op. "
                         "Export migan.onnx into ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/lama.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/lama.onnx)
+        set_source_files_properties(ReleaseExtras/lama.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/lama.onnx not found -- LaMa spot fill falls back "
+                        "to MI-GAN. Export lama.onnx into ReleaseExtras/ to enable it.")
     endif()
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx")
         target_sources(Winnow PRIVATE ReleaseExtras/skyseg.onnx)

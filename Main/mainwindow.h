@@ -45,6 +45,7 @@
 #include "Develop/workingimage.h"
 #include "Develop/Scopes/scopesview.h"
 #include "Develop/Transform/transformpanel.h"
+#include "Develop/Replace/replacepanel.h"
 #include "Develop/Properties/layerheader.h"
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
@@ -182,6 +183,9 @@ public:
     QSettings *settings;
     QString iniPath;
     QMap<QString, QAction *> actionKeys;
+    /* Develop mode local shortcuts: Qt::Key (bare, no modifiers) -> the action to run
+       instead of whatever the global shortcut table binds that key to. */
+    QHash<int, QAction *> developShortcuts;
 
     QMap<QString, QString> pathTemplates;
     QMap<QString, QString> filenameTemplates;
@@ -602,9 +606,15 @@ private slots:
     void updateDevelopScopes(const QImage &shown);
     /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the choice. */
     void toggleDevelopScopes();
-    /* Show/hide the Develop Transform panel (editor-bar toggle / "R" shortcut); persists. */
+    /* Show/hide the Develop Transform panel (editor-bar toggle / "R"); persists. */
     void toggleDevelopTransform();
-    void toggleMaskOverlay();           // "M": hide/show the active layer mask overlay tint
+    /* Show/hide the Fill Replace panel (title-bar spot button / "S" in Develop mode):
+       visible == the replace (spot/fill/object) tool is armed on the loupe. */
+    void toggleDevelopReplace();
+    void toggleMaskOverlay();     // "O": hide/show the active layer mask overlay tint
+    void developNewLayer();       // "N": add a layer to the current image's stack
+    void developNewMask();        // "M": pop the Add/Subtract mask tool menu
+    void developExport();         // "X": export the developed image (not built yet)
     /* Enter/exit the crop editor: enter shows the full frame + overlay (geometry suppressed); exit
        commits the crop into the image's EditStack geometry and re-renders the cropped result. */
     void enterDevelopCrop();
@@ -853,6 +863,7 @@ private:
 
     QMenu *utilitiesMenu;
     QMenu *utilMenu;
+        QMenu *developMenu;
         QMenu *embelMenu;
             QMenu *embelExportMenu;
             QMenu *embelExportOverrideMenu;
@@ -1030,7 +1041,18 @@ private:
 
     // Develop
     QAction *developAction;
-    QAction *operationModeAction;   // D shortcut: toggle Preview <-> Develop operation mode
+    QAction *operationModeAction;   // D shortcut: toggle Preview <-> Develop mode
+
+    /* Develop mode local shortcuts (see loadDevelopShortcuts).  These actions carry NO
+       QKeySequence -- their keys live in developShortcuts and are dispatched by
+       developShortcutIntercept, so S/X can also stay bound to Slideshow/Reject
+       globally. */
+    QAction *developNewLayerAction;     // N
+    QAction *developNewMaskAction;      // M
+    QAction *developSpotAction;         // S
+    QAction *developExportAction;       // X
+    QAction *developScopesAction;       // H
+    // developTransformAction (R) and toggleMaskOverlayAction (O) live with the docks
 
     // Embellish
     QAction *embelNewTemplateAction;
@@ -1155,6 +1177,7 @@ private:
     QAction *filterGroupAct;
     QAction *sortGroupAct;
     QAction *utilGroupAct;
+    QAction *developGroupAct;
     QAction *embelGroupAct;
     QAction *focusStackGroupAct;
     QAction *viewGroupAct;
@@ -1280,6 +1303,9 @@ private:
        the property tree. Toggled by a button on the Develop editor bar and the "R" shortcut;
        visibility persists (Develop/transformVisible). */
     TransformPanel *transformPanel = nullptr;
+    /* Fill Replace (spot/fill/object heal) strip below the Transform panel. Visible only
+       while the replace tool is armed (like the Transform panel / crop tool pairing). */
+    ReplacePanel *replacePanel = nullptr;
     bool developTransformVisible = false;
     /* True while the crop tool is being edited: the render pipeline then SUPPRESSES the geometry
        (shows the full frame for the overlay); committing the crop clears it and re-renders cropped. */
@@ -1674,6 +1700,15 @@ private:
     void writeSettings();
     bool loadSettings();
     void loadShortcuts(bool defaultShortcuts);
+    /* Build the Develop mode local shortcut table (key -> action).  Called at the end of
+       loadShortcuts, once every action exists. */
+    void loadDevelopShortcuts();
+    /* Develop mode shortcut arbiter, called from eventFilter on QEvent::ShortcutOverride.
+       Returns true when it has consumed the key. */
+    bool developShortcutIntercept(QEvent *event);
+    bool thumbViewHasFocus() const;     // the selection keys' gate in Develop mode
+    /* Grey the Develop menu's mode-local items outside Develop mode (aboutToShow). */
+    void syncDevelopMenuEnabled();
     void startLog();
     void closeLog();
     void clearLog();
