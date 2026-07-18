@@ -193,6 +193,14 @@ void TransformPanel::buildUi()
     lockBtn->setCheckable(true);
     connect(lockBtn, &QToolButton::clicked, this, &TransformPanel::toggleAspectLock);
 
+    /* Flip the aspect between landscape and portrait (swap w/h). Checkable so the
+       pressed state shows the current orientation; also driven by the "F" key. */
+    flipBtn = new BarBtn();
+    flipBtn->setCheckable(true);
+    flipBtn->setIcon(":/images/icon16/swap.png", G::iconOpacity);
+    flipBtn->setToolTip(tr("Flip the aspect ratio between landscape and portrait (F)"));
+    connect(flipBtn, &BarBtn::clicked, this, &TransformPanel::toggleAspectFlip);
+
     /* -------- Level row controls: straighten-angle field -------- */
     QLabel *angleLbl = new QLabel(tr("Angle"), this);
     angleEdit = new QLineEdit(this);
@@ -229,10 +237,17 @@ void TransformPanel::buildUi()
     grid->setVerticalSpacing(4);
     grid->setColumnStretch(2, 1);
 
+    /* Lock + flip share the padlock column so the reset buttons stay aligned in col4. */
+    QHBoxLayout *lockFlipRow = new QHBoxLayout;
+    lockFlipRow->setContentsMargins(0, 0, 0, 0);
+    lockFlipRow->setSpacing(2);
+    lockFlipRow->addWidget(lockBtn);
+    lockFlipRow->addWidget(flipBtn);
+
     grid->addWidget(cropModeBtn,  0, 0);
     grid->addWidget(aspectLbl,    0, 1);
     grid->addWidget(aspectCombo,  0, 2);
-    grid->addWidget(lockBtn,      0, 3);
+    grid->addLayout(lockFlipRow,  0, 3);
     grid->addWidget(cropResetBtn, 0, 4);
 
     grid->addWidget(levelModeBtn, 1, 0);
@@ -257,6 +272,8 @@ void TransformPanel::buildUi()
     /* Restore the persisted lock state, aspect selection and mode. */
     aspectLocked = setting && setting->value("Develop/Transform/aspectLocked", false).toBool();
     updateLockButton();
+    aspectFlipped = setting && setting->value("Develop/Transform/aspectFlipped", false).toBool();
+    updateFlipButton();
     if (setting) {
         const QString key = setting->value("Develop/Transform/aspectKey", "asShot").toString();
         for (int i = 0; i < aspectCombo->count(); ++i) {
@@ -273,11 +290,11 @@ void TransformPanel::buildUi()
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    /* Let A/C/L/W act on the focused panel (see eventFilter). The aspect combo and the angle field
-       are intentionally excluded so their text entry / type-ahead still works. */
+    /* Let A/F/C/L/W act on the focused panel (see eventFilter). The aspect combo and the
+       angle field are excluded so their text entry / type-ahead still works. */
     setFocusPolicy(Qt::StrongFocus);
     installEventFilter(this);
-    QWidget *filtered[] = {cropModeBtn, levelModeBtn, warpModeBtn, lockBtn};
+    QWidget *filtered[] = {cropModeBtn, levelModeBtn, warpModeBtn, lockBtn, flipBtn};
     for (QWidget *w : filtered)
         w->installEventFilter(this);
 }
@@ -295,6 +312,7 @@ void TransformPanel::setMode(int mode)
     /* The aspect controls only make sense in Crop mode; the angle field only in Level mode. */
     if (aspectCombo) aspectCombo->setEnabled(mode == CropMode);
     if (lockBtn)     lockBtn->setEnabled(mode == CropMode);
+    if (flipBtn)     flipBtn->setEnabled(mode == CropMode);
     if (angleEdit)   angleEdit->setEnabled(mode == LevelMode);
 }
 
@@ -304,6 +322,20 @@ void TransformPanel::selectMode(int mode)
     setMode(mode);
     if (setting) setting->setValue("Develop/Transform/mode", mode);
     emit modeChanged(mode);
+}
+
+void TransformPanel::setAspectAsShot()
+{
+    if (!aspectCombo) return;
+    /* "As shot" is the first entry, but find it by key so a reorder cannot break this. */
+    int idx = 0;
+    for (int i = 0; i < aspectCombo->count(); ++i) {
+        if (aspectCombo->itemData(i, KeyRole).toString() == "asShot") { idx = i; break; }
+    }
+    const QSignalBlocker block(aspectCombo);
+    aspectCombo->setCurrentIndex(idx);
+    lastAspectIndex = idx;
+    if (setting) setting->setValue("Develop/Transform/aspectKey", "asShot");
 }
 
 void TransformPanel::populateAspectCombo()
@@ -401,6 +433,21 @@ void TransformPanel::toggleAspectLock()
     emit aspectLockToggled(aspectLocked);
 }
 
+void TransformPanel::toggleAspectFlip()
+{
+    aspectFlipped = !aspectFlipped;
+    updateFlipButton();
+    if (setting) setting->setValue("Develop/Transform/aspectFlipped", aspectFlipped);
+    emit aspectFlipToggled(aspectFlipped);
+}
+
+void TransformPanel::updateFlipButton()
+{
+    if (!flipBtn) return;
+    const QSignalBlocker block(flipBtn);
+    flipBtn->setChecked(aspectFlipped);
+}
+
 void TransformPanel::updatePreviewButton()
 {
     if (!previewBtn) return;
@@ -435,27 +482,35 @@ void TransformPanel::updateLockButton()
 
 bool TransformPanel::eventFilter(QObject *watched, QEvent *event)
 {
-    /* Claim a bare A/C/L/W before any window-level shortcut can: accept its ShortcutOverride so the
-       following KeyPress is delivered normally, then act on it. */
+    /* Claim a bare A/F/C/L/W before any window-level shortcut can: accept its
+       ShortcutOverride so the following KeyPress is delivered normally, then act. */
     if (event->type() == QEvent::ShortcutOverride || event->type() == QEvent::KeyPress) {
         QKeyEvent *ke = static_cast<QKeyEvent *>(event);
         if (ke->modifiers() == Qt::NoModifier) {
             int key = ke->key();
             const bool ours = (key == Qt::Key_A || key == Qt::Key_C ||
-                               key == Qt::Key_L || key == Qt::Key_W);
+                               key == Qt::Key_L || key == Qt::Key_W ||
+                               key == Qt::Key_F);
             if (ours) {
                 if (event->type() == QEvent::ShortcutOverride) { event->accept(); return true; }
-                switch (key) {
-                case Qt::Key_A: toggleAspectLock();       break;
-                case Qt::Key_C: selectMode(CropMode);     break;
-                case Qt::Key_L: selectMode(LevelMode);    break;
-                case Qt::Key_W: selectMode(WarpMode);     break;
-                }
+                handleTransformShortcut(key);
                 return true;
             }
         }
     }
     return QWidget::eventFilter(watched, event);
+}
+
+bool TransformPanel::handleTransformShortcut(int key)
+{
+    switch (key) {
+    case Qt::Key_A: toggleAspectLock();   return true;
+    case Qt::Key_F: toggleAspectFlip();   return true;
+    case Qt::Key_C: selectMode(CropMode); return true;
+    case Qt::Key_L: selectMode(LevelMode);return true;
+    case Qt::Key_W: selectMode(WarpMode); return true;
+    default:        return false;
+    }
 }
 
 QString TransformPanel::aspectKey() const

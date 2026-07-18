@@ -2,8 +2,9 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
+- When reset transform the Level amount box is not reset to zero and the level
+tool cursor is replaced with the crop tool cursor.
 - Crop flip aspect
-- Crop shortcut C conflicts with Compare C.
 - Spot fill quality issue (reassess)
 - Cannot use Embellish panel when in Develop mode
 - When mask tool is selected or activated show its specific mask in a different tint

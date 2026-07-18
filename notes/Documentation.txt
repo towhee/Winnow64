@@ -1794,9 +1794,29 @@ Develop Mode Local Shortcuts
     ......................................................................................
     A key an armed tool owns ([ / ] brush size, A auto-mask, Cmd+Z undo stroke, Enter and
     Esc) is deliberately NOT in developShortcuts.  ImageView::event claims those from
-    their global actions itself while its tool is live, so tool-local keys outrank mode-local
-    ones without the table needing to know tools exist.  The converse also matters: the
-    spot tool must NOT claim S, or S could arm the tool but never disarm it.
+    their global actions itself while its tool is live, so tool-local keys outrank
+    mode-local ones without the table needing to know tools exist.  The converse also
+    matters: the spot tool must NOT claim S, or S could arm the tool but never disarm it.
+
+    Contextual mode-local keys (active only while a panel/tool is up)
+    ......................................................................................
+    Some Develop keys are only valid while a specific tool is active, so they cannot live
+    in the static developShortcuts table (that would steal them mode-wide).  They are
+    instead a guarded branch INSIDE developShortcutIntercept, ahead of rule 1, keyed off
+    the tool's "active" flag.  Today the only case is the Transform panel: while
+    developCropEditing is true, C/L/W/A beat their window-level shortcuts (A Run Droplet,
+    C Compare) and call TransformPanel::handleTransformShortcut(key); Esc calls
+    MW::cancelDevelopTransform (discard the session + hide the panel); Enter/Return calls
+    toggleDevelopTransform (commit + hide, i.e. R again), EXCEPT while a warp quad is
+    traced (imageView->cropIsWarp()) where the branch falls through so ImageView commits
+    the quad (rectify) via its own Enter path.  See the Transform section.  Doing it in
+    the
+    arbiter -- not in ImageView::event as tool-local keys are -- is deliberate: the crop
+    overlay usually does NOT hold keyboard focus, so an ImageView ShortcutOverride claim
+    never fires (this was the first, wrong, fix).  The arbiter is a qApp filter, so it
+    works regardless of focus.  ADD FUTURE panel/tool-scoped letter keys here the same way
+    (guard on the tool's active flag), NOT to developShortcuts and NOT to
+    ImageView::event.
 
     Guards (MW::developShortcutIntercept, in order)
     ......................................................................................
@@ -3963,7 +3983,25 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     in the last grid column so they align vertically):
         Crop : an Aspect combo (As shot / 1x1 / 3x2 / 4x3 / 5x7 / 4x5 / 8.5x11 / 16x9 / 16x10 /
                persisted custom aspects / "Add custom aspect..."; userData per item is the w/h
-               ratio, 0.0 = As shot/free) + a padlock that locks the ratio.
+               ratio, 0.0 = As shot/free) + a padlock that locks the ratio + a flip button
+               (swap.png, "F") that swaps the crop between landscape and portrait. Locking
+               "As shot" constrains drags to the image's native aspect
+               (ImageView::cropLockedAspect); flipping honours 1/aspect.
+               Flip (ImageView::setCropAspectFlip) rotates the crop box 90 deg by swapping
+               its pixel width and height (new width = old height, etc.), keeping the
+               centre and scaling down only if the rotated box would not fit the image; a
+               locked crop already sits at the ratio so the swap lands on the inverted
+               ratio, a free crop just swaps its own dimensions.
+               Flip STASH: a straight flip-back must restore the exact pre-flip rect,
+               else the scale-to-fit clamping shrinks the crop a little on every
+               landscape<->portrait round trip. cropFlipPrevN holds the rect from before
+               the last flip and cropFlipResultN what that flip produced; if the crop is
+               unchanged since (cropN still == cropFlipResultN, epsilon compare) the next
+               flip restores cropFlipPrevN verbatim instead of recomputing. Any manual
+               crop edit (resize/draw/pan) moves cropN off cropFlipResultN, so the next
+               flip recomputes from the edited rect. The stash is discarded in
+               beginCropEdit (new session) and setCropAspect (aspect/lock change breaks
+               the pairing).
         Level: a straighten-angle field (-45..45 deg, editingFinished -> levelAngleEntered, applied
                as an absolute straighten). Selecting Level also arms the draw-a-level-line tool.
         Warp : selecting it seeds the 4-point quad (ImageView::beginWarp) for corner dragging.
@@ -3971,22 +4009,47 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                keys/clicks via ShortcutOverride while cropWarp is active, emits warpCommitRequested
                -> MW::rectifyDevelopCrop, which stores the warp + suggested crop and returns the
                toggle to Crop). There is no separate Rectify button.
-    The Aspect combo/lock are enabled only in Crop mode, the angle field only in Level mode.
+    The Aspect combo/lock/flip are enabled only in Crop mode, the angle field only in
+    Level mode.
 
     MW wiring: modeChanged -> setDevelopTransformMode arms the matching ImageView tool
     (beginCropEdit / beginLevel / beginWarp); levelAngleEntered -> setDevelopLevelAngle;
-    resetModeRequested -> resetDevelopTransformMode clears just that mode's geometry contribution.
+    resetModeRequested -> resetDevelopTransformMode clears just that mode's geometry
+    contribution. The CROP reset (and the header reset) also calls setAspectAsShot()
+    first: beginCropEdit re-fits a full-frame crop to a LOCKED aspect (cropAspect > 0), so
+    without freeing the aspect the reset to the full frame would just re-inscribe the
+    locked ratio and appear to do nothing.
 
     Shortcuts: "R" toggles the panel (MW::toggleDevelopTransform, developTransformAction, editor-
     bar button rectangle.png; persists Settings "Develop/transformVisible"). R is a Develop mode
     local shortcut and does nothing in Preview mode -- see DEVELOP MODE LOCAL
-    SHORTCUTS. While the panel (or one
-    of its non-text controls) has focus, single letters select/act: "C" Crop, "L" Level, "W" Warp,
-    "A" toggles the aspect lock -- all handled by TransformPanel::eventFilter accepting the key's
-    ShortcutOverride, NOT QActions, because a panel-scoped letter QAction would be an ambiguous
-    overload with the window-level shortcuts (e.g. "A" Run Droplet / brush Auto mask). The aspect
-    combo and the angle field are excluded from the filter so their text entry still works. Custom
-    aspects + lock state + selected mode persist under Settings "Develop/Transform/".
+    SHORTCUTS. Closing the panel has two OPPOSITE outcomes: R / Enter / the editor-bar
+    button all COMMIT (via toggleDevelopTransform -> exitDevelopCrop: write the overlay
+    crop into the edit stack, show the cropped result); Esc CANCELS via
+    MW::cancelDevelopTransform -- restores the Geometry snapshot taken at enterDevelopCrop
+    (developCropGeometryBackup), drops the overlay WITHOUT reading its rect, and hides the
+    panel. The snapshot/restore is needed because straighten and warp are written to
+    geometry LIVE during a session (applyDevelopLevel / rectifyDevelopCrop), so a cancel
+    must revert them, not merely skip the pending crop. (Enter is special-cased while a
+    WARP quad is being traced: there it commits the quad -- rectify -- not closes; see
+    the contextual-keys note in DEVELOP MODE LOCAL SHORTCUTS.)
+    Whenever Transform is active, single letters select/act: "C" Crop, "L"
+    Level, "W" Warp, "A" toggles the aspect lock, "F" flips the aspect between
+    landscape and portrait -- and must beat the window-level shortcuts on those keys
+    (e.g. "A" Run Droplet, "C" Compare, "F" the spot/fill tool, which stays available
+    outside a transform session). Because the crop overlay
+    (ImageView), not the panel, usually holds focus during a transform, these are
+    dispatched by MW::developShortcutIntercept (the qApp-level Develop-mode arbiter that
+    also routes "S" to the spot tool), gated on developCropEditing: it accepts the key's
+    ShortcutOverride (freeing it from the global QAction) and, on the following KeyPress,
+    calls TransformPanel::handleTransformShortcut(key). It runs before Qt's shortcut
+    system and independent of focus, so it works wherever focus sits; the arbiter's
+    value-editor guard excludes text fields (aspect combo, angle field) so typing an
+    aspect/angle still works. TransformPanel::eventFilter still claims the same keys when
+    the panel or one of its non-text controls holds focus (the same handler). A
+    panel-scoped letter QAction is not used because it would be an ambiguous overload with
+    the window-level shortcuts. Custom aspects + lock state + selected mode persist under
+    Settings "Develop/Transform/".
 
     Crop rubber-band tool (ImageView) -- IMPLEMENTED:
     Showing the Transform panel (R / button) calls ImageView::beginCropEdit; hiding it calls

@@ -1167,7 +1167,7 @@
          <string>R</string>
         </property>
         <property name="text">
-         <string>Toggles the crop / perspective panel and its crop tool; in Develop mode</string>
+         <string>Toggles the crop / perspective panel and its crop tool, applying changes on close (Esc cancels instead); in Develop mode</string>
         </property>
        </item>
        <item>
@@ -1178,7 +1178,18 @@
          <string>A</string>
         </property>
         <property name="text">
-         <string>Toggles; while the Transform panel has focus</string>
+         <string>Toggles; while Transform is active (panel or crop overlay)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Flip Aspect Ratio</string>
+        </property>
+        <property name="text">
+         <string>F</string>
+        </property>
+        <property name="text">
+         <string>Swaps the crop between landscape and portrait; while Transform is active (panel or crop overlay)</string>
         </property>
        </item>
        <item>
@@ -1189,7 +1200,29 @@
          <string>C / L / W</string>
         </property>
         <property name="text">
-         <string>Select Crop / Level / Warp; while the Transform panel has focus</string>
+         <string>Select Crop / Level / Warp; while Transform is active (panel or crop overlay)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Commit Transform</string>
+        </property>
+        <property name="text">
+         <string>Enter</string>
+        </property>
+        <property name="text">
+         <string>Applies this crop / level / warp and closes the panel, the same as pressing R again (while tracing a Warp quad, Enter commits the quad instead); in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Cancel Transform</string>
+        </property>
+        <property name="text">
+         <string>Esc</string>
+        </property>
+        <property name="text">
+         <string>Discards this crop / level / warp session and closes the panel (R closes but keeps the changes); in Develop mode</string>
         </property>
        </item>
        <item>

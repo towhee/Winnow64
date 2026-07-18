@@ -586,4 +586,9 @@ S       Spot tool
 X       Export
 H       Histogram/Vectorscope toggle
 
+Presets
+
+Save preset dialog: contains a checklist of all settable items in the develop
+module: crop, level, warp, raw noise reduction,
+
 

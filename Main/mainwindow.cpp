@@ -1121,6 +1121,41 @@ bool MW::developShortcutIntercept(QEvent *event)
         qobject_cast<QLineEdit *>(fw)        || qobject_cast<QComboBox *>(fw))
         return false;
 
+    /* 1a. While a Transform (crop/level/warp) is active, its A/F/C/L/W act on the
+       Transform panel and must beat the window-level shortcuts on those keys (A Run
+       Droplet, C Compare ...). This runs before Qt's shortcut system and independent of
+       which widget holds focus, so it works whether the panel or the crop overlay is
+       focused. Text editors (aspect combo, angle field) are already excluded by the
+       value-editor guard above, so typing still works. Contextual, so NOT in
+       developShortcuts. */
+    if (developCropEditing && transformPanel && e->modifiers() == Qt::NoModifier
+        && !e->isAutoRepeat()) {
+        const int k = e->key();
+        if (k == Qt::Key_A || k == Qt::Key_F || k == Qt::Key_C ||
+            k == Qt::Key_L || k == Qt::Key_W) {
+            event->accept();
+            if (!isOverride) transformPanel->handleTransformShortcut(k);
+            return true;
+        }
+        /* Esc cancels the whole transform session (discard + hide the panel), not just
+           the active mode. Escape owns no global QAction, so only KeyPress arrives. */
+        if (k == Qt::Key_Escape) {
+            event->accept();
+            if (!isOverride) cancelDevelopTransform();
+            return true;
+        }
+        /* Enter/Return commits the transform and closes the panel, like pressing R again
+           (toggleDevelopTransform's commit-on-hide). EXCEPTION: while a warp quad is
+           traced, Enter commits the quad (rectify) instead -- leave it to ImageView's own
+           warp-commit path (ImageView::event / keyPressEvent), so fall through here. */
+        if ((k == Qt::Key_Return || k == Qt::Key_Enter)
+            && !(imageView && imageView->cropIsWarp())) {
+            event->accept();
+            if (!isOverride) toggleDevelopTransform();
+            return true;
+        }
+    }
+
     /* 1. Develop mode local shortcut beats the global action on the same key. Held keys
        must not re-fire: every one of these is a toggle or pops a dialog. */
     if (e->modifiers() == Qt::NoModifier && !e->isAutoRepeat()) {
@@ -7034,10 +7069,13 @@ void MW::enterDevelopCrop()
     if (!imageView || !transformPanel || developCropEditing) return;
     developCropEditing = true;
     developCropShowResult = false;               // start in editing (overlay), not result-preview
+    /* Snapshot pre-session geometry so Esc (cancelDevelopTransform) can revert it. */
+    developCropGeometryBackup = developProperties->currentGeometry();
     transformPanel->setPreviewShown(false);      // eye reflects "editing", not "showing result"
     renderDevelopPreview(false);     // full frame (geometry suppressed); refits if it was cropped
     const Geometry g = developProperties->currentGeometry();
     imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             transformPanel->isAspectFlipped(),
                              QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
     transformPanel->setLevelAngle(g.straighten);         // show the stored angle in the Level field
     setDevelopTransformMode(transformPanel->mode());     // arm the panel's current mode's tool
@@ -7064,7 +7102,34 @@ void MW::exitDevelopCrop()
     }
     developCropEditing = false;
     developCropShowResult = false;
-    renderDevelopPreview(false);     // geometry now applied -> cropped result (refits on size change)
+    renderDevelopPreview(false);     // geometry applied -> cropped result
+}
+
+void MW::cancelDevelopTransform()
+{
+/*
+    Esc while the Transform panel is open: cancel the session instead of committing it.
+    Discard every crop/straighten/warp change made since the panel opened by restoring the
+    geometry snapshot taken in enterDevelopCrop, drop the crop overlay WITHOUT reading its
+    rectangle, and hide the panel with the same visibility bookkeeping as
+    toggleDevelopTransform's hide path (minus the commit). Counterpart to exitDevelopCrop.
+*/
+    if (G::isLogger) G::log("MW::cancelDevelopTransform");
+    if (!developTransformVisible || !developCropEditing) return;
+
+    if (imageView) imageView->endCropEdit();     // drop overlay; do NOT commit cropRect()
+    if (developProperties)
+        developProperties->setCurrentGeometry(developCropGeometryBackup);   // revert
+    developCropEditing = false;
+    developCropShowResult = false;
+
+    /* Hide the panel (toggleDevelopTransform's hide branch, without exitDevelopCrop). */
+    developTransformVisible = false;
+    if (transformPanel) transformPanel->setVisible(false);
+    if (developTransformAction) developTransformAction->setChecked(false);
+    settings->setValue("Develop/transformVisible", false);
+
+    renderDevelopPreview(false);     // restored geometry applied -> pre-session result
 }
 
 void MW::rectifyDevelopCrop()
@@ -7094,6 +7159,7 @@ void MW::rectifyDevelopCrop()
     /* Restart the crop overlay (rectangle mode) on the corrected canvas at the suggested crop, and
        return the panel toggle to Crop so the UI matches the rectangle overlay. */
     imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             transformPanel->isAspectFlipped(),
                              suggested);
     transformPanel->setMode(TransformPanel::CropMode);
 }
@@ -7130,6 +7196,7 @@ void MW::applyDevelopLevel(double deltaDeg)
 
     renderDevelopPreview(false);                 // straighten kept, crop suppressed -> level canvas
     imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             transformPanel->isAspectFlipped(),
                              QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
     transformPanel->setLevelAngle(g.straighten); // reflect the new angle in the Level field
 }
@@ -7148,6 +7215,7 @@ void MW::setDevelopTransformMode(int mode)
     case TransformPanel::CropMode: {
         const Geometry g = developProperties->currentGeometry();
         imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                                 transformPanel->isAspectFlipped(),
                                  QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
         break;
     }
@@ -7185,6 +7253,9 @@ void MW::resetDevelopTransformMode(int mode)
     Geometry g = developProperties->currentGeometry();
     switch (mode) {
     case TransformPanel::CropMode:
+        /* Reset the aspect to "As shot" (free) first, else beginCropEdit below re-fits
+           the full frame to the locked aspect and the reset appears to do nothing. */
+        transformPanel->setAspectAsShot();
         g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
         break;
     case TransformPanel::LevelMode:
@@ -7203,7 +7274,11 @@ void MW::resetDevelopTransformMode(int mode)
     transformPanel->setPreviewShown(false);
     renderDevelopPreview(false);
     imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             transformPanel->isAspectFlipped(),
                              QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    /* beginCropEdit re-arms the crop cursor; restore the row's own tool so resetting the
+       Level/Warp row keeps its cursor instead of dropping back to the crop tool. */
+    setDevelopTransformMode(mode);
 }
 
 void MW::onImageCursorPos(double xFraction, double yFraction)

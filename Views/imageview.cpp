@@ -869,23 +869,25 @@ void ImageView::setMaskBrushSettings(double size, double feather, double flow, b
    (cropSyncFrameFromN). beginCropEdit/endCropEdit only toggle the overlay -- they leave the image
    exactly where the user had it. */
 
-void ImageView::beginCropEdit(double aspect, bool locked, QRectF initialCrop)
+void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF initialCrop)
 {
     if (G::isLogger) G::log("ImageView::beginCropEdit");
     if (!pmItem || !pmItem->isVisible()) return;
 
     cropAspect = aspect;
     cropAspectLocked = locked;
+    cropAspectFlipped = flipped;
     /* Start from the stored crop (re-entering an already-cropped image), else the full image (or
        the aspect-constrained largest inscribed rect). */
     cropN = (initialCrop.isValid() && !initialCrop.isNull()) ? initialCrop
                                                              : QRectF(0.0, 0.0, 1.0, 1.0);
-    if (cropN == QRectF(0.0, 0.0, 1.0, 1.0) && cropAspectLocked && cropAspect > 0.0) {
+    const double lockedA = cropLockedAspect();           // flip-aware; 0 when free
+    if (cropN == QRectF(0.0, 0.0, 1.0, 1.0) && lockedA > 0.0) {
         const QRectF br = pmItem->boundingRect();
         const double imgA = br.width() / br.height();
         double w = 1.0, h = 1.0;
-        if (cropAspect > imgA) h = imgA / cropAspect;    // wider than image -> limit height
-        else                   w = cropAspect / imgA;    // taller -> limit width
+        if (lockedA > imgA) h = imgA / lockedA;   // wider than image -> limit height
+        else                w = lockedA / imgA;   // taller -> limit width
         cropN = QRectF((1.0 - w) / 2.0, (1.0 - h) / 2.0, w, h);
     }
 
@@ -894,6 +896,7 @@ void ImageView::beginCropEdit(double aspect, bool locked, QRectF initialCrop)
     cropAltHeld = false;
     cropLevelMode = cropLevelDragging = false;
     cropDrag = -1;
+    cropFlipPrevN = cropFlipResultN = QRectF();   // no flip stash into a new session
     /* Give the view room to pan even at fit zoom (so the image can be dragged under the fixed
        frame, with parts moving off the central widget) WITHOUT changing the zoom: only the
        scrollable area grows, not the transform. Restored in endCropEdit. */
@@ -945,27 +948,84 @@ void ImageView::beginWarp()
     viewport()->update();
 }
 
-void ImageView::setCropAspect(double aspect, bool locked)
+void ImageView::cropClampN()
+{
+    if (cropN.left()   < 0.0) cropN.moveLeft(0.0);
+    if (cropN.top()    < 0.0) cropN.moveTop(0.0);
+    if (cropN.right()  > 1.0) cropN.moveRight(1.0);
+    if (cropN.bottom() > 1.0) cropN.moveBottom(1.0);
+}
+
+void ImageView::cropRefitToLockedAspect()
+{
+    /* Re-fit the current crop centre to the (flip-aware) locked aspect, shrinking to
+       stay inside the image. No-op when the aspect is free/unlocked. */
+    const double a = cropLockedAspect();
+    if (a <= 0.0 || !pmItem) return;
+    const QRectF br = pmItem->boundingRect();
+    const QPointF c = cropN.center();
+    /* Keep the current crop width, derive height from the aspect (in image-px, then
+       back to normalized), then clamp into the image. */
+    double w = cropN.width();
+    double h = (w * br.width() / a) / br.height();
+    if (h > 1.0) { h = 1.0; w = (h * br.height() * a) / br.width(); }
+    cropN = QRectF(c.x() - w / 2.0, c.y() - h / 2.0, w, h);
+    cropClampN();
+}
+
+void ImageView::setCropAspect(double aspect, bool locked, bool flipped)
 {
     cropAspect = aspect;
     cropAspectLocked = locked;
+    cropAspectFlipped = flipped;
     if (!cropEditMode) return;
     cropWarp = false;                 // choosing an aspect implies a rectangle: leave warp mode
-    /* Re-fit the current crop centre to the new aspect (shrink to stay inside the image). */
-    if (cropAspectLocked && cropAspect > 0.0) {
+    cropFlipPrevN = cropFlipResultN = QRectF();   // aspect/lock change breaks the pairing
+    cropRefitToLockedAspect();
+    cropSyncFrameFromN();
+    viewport()->update();
+    cropEmitChanged();
+}
+
+void ImageView::setCropAspectFlip(bool flipped)
+{
+    cropAspectFlipped = flipped;
+    if (!cropEditMode || !pmItem) return;
+    cropWarp = false;
+
+    const QRectF before = cropN;
+    /* If the crop is unchanged since the last flip, this is a straight flip-back: restore
+       the exact pre-flip rect so alternating orientations does not shrink the crop. A
+       manual edit in between moves cropN away from cropFlipResultN, so we recompute. */
+    auto rectsClose = [](const QRectF &a, const QRectF &b) {
+        return qAbs(a.x() - b.x()) < 1e-6 && qAbs(a.y() - b.y()) < 1e-6 &&
+               qAbs(a.width()  - b.width())  < 1e-6 &&
+               qAbs(a.height() - b.height()) < 1e-6;
+    };
+    const bool canRestore = cropFlipPrevN.isValid() && cropFlipResultN.isValid() &&
+                            rectsClose(before, cropFlipResultN);
+    if (canRestore) {
+        cropN = cropFlipPrevN;
+    } else {
+        /* Rotate the crop box 90 degrees by swapping its pixel width and height (new
+           width = old height, etc.), keeping the centre and scaling down uniformly to
+           stay inside the image. A locked crop already sits at the ratio, so this lands
+           on the inverted ratio; a free crop just swaps its own dimensions. */
         const QRectF br = pmItem->boundingRect();
-        const QPointF c = cropN.center();
-        /* Keep the current crop width, derive height from the aspect (in image-px, then back to
-           normalized), then clamp into the image. */
-        double w = cropN.width();
-        double h = (w * br.width() / cropAspect) / br.height();
-        if (h > 1.0) { h = 1.0; w = (h * br.height() * cropAspect) / br.width(); }
-        cropN = QRectF(c.x() - w / 2.0, c.y() - h / 2.0, w, h);
-        if (cropN.left()   < 0.0) cropN.moveLeft(0.0);
-        if (cropN.top()    < 0.0) cropN.moveTop(0.0);
-        if (cropN.right()  > 1.0) cropN.moveRight(1.0);
-        if (cropN.bottom() > 1.0) cropN.moveBottom(1.0);
+        if (br.width() > 0.0 && br.height() > 0.0) {
+            const QPointF c = cropN.center();
+            double w = cropN.height() * br.height() / br.width();
+            double h = cropN.width()  * br.width()  / br.height();
+            double s = 1.0;
+            if (w > 1.0) s = qMin(s, 1.0 / w);
+            if (h > 1.0) s = qMin(s, 1.0 / h);
+            w *= s; h *= s;
+            cropN = QRectF(c.x() - w / 2.0, c.y() - h / 2.0, w, h);
+            cropClampN();
+        }
     }
+    cropFlipPrevN   = before;   // this orientation; the next flip-back restores it
+    cropFlipResultN = cropN;    // detect an intervening manual edit before the next flip
     cropSyncFrameFromN();
     viewport()->update();
     cropEmitChanged();
@@ -1093,6 +1153,21 @@ int ImageView::cropHitTest(QPoint vp) const
     return -1;
 }
 
+qreal ImageView::cropLockedAspect() const
+{
+    if (!cropAspectLocked) return 0.0;
+    qreal base = cropAspect;
+    if (base <= 0.0) {
+        /* "As shot": lock to the displayed image's native aspect. Its on-screen w/h
+           is the uniformly-scaled image, so it equals the image-pixel aspect. */
+        if (!pmItem) return 0.0;
+        const QRectF br = pmItem->boundingRect();
+        base = (br.height() > 0.0) ? br.width() / br.height() : 0.0;
+    }
+    if (base <= 0.0) return 0.0;
+    return cropAspectFlipped ? 1.0 / base : base;
+}
+
 void ImageView::cropResizeFromHandle(QPoint vp)
 {
     /* Move the active handle to vp over a STATIC image (no transform change); rebuild cropN from
@@ -1113,7 +1188,7 @@ void ImageView::cropResizeFromHandle(QPoint vp)
     }
 
     const QRectF f0 = cropFrameVp;
-    const qreal a = (cropAspectLocked && cropAspect > 0.0) ? cropAspect : 0.0;
+    const qreal a = cropLockedAspect();
     const qreal minSz = 16.0;
     QRectF f = f0;
 
@@ -1167,7 +1242,7 @@ void ImageView::cropDrawNewFrom(QPoint vp)
     const qreal by = qBound(vr.top(),  qreal(vp.y()), vr.bottom());
     qreal w = std::abs(bx - ax);
     qreal h = std::abs(by - ay);
-    const qreal a = (cropAspectLocked && cropAspect > 0.0) ? cropAspect : 0.0;
+    const qreal a = cropLockedAspect();
     if (a > 0.0) h = w / a;
     const qreal left = (bx < ax) ? ax - w : ax;
     const qreal top  = (by < ay) ? ay - h : ay;
@@ -3294,8 +3369,9 @@ bool ImageView::event(QEvent *event) {
         }
     }
 
-    /* Crop: Alt/Opt toggles the "transform" rubber-band look the moment it is pressed/released (the
-       mouse-move path also tracks it, for when this view does not hold keyboard focus). */
+    /* Crop: Alt/Opt toggles the "transform" rubber-band look the moment it is pressed/
+       released (the mouse-move path also tracks it, for when this view does not hold
+       keyboard focus). */
     if (cropActive() && (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease)) {
         if (static_cast<QKeyEvent *>(event)->key() == Qt::Key_Alt) {
             const bool held = (event->type() == QEvent::KeyPress);
@@ -3600,8 +3676,11 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     if (event->button() == Qt::LeftButton) {
         /* A Develop tool owns the canvas: don't start a pan or let the click reach the
-           base view -- the tool's own branches above handled the gesture. */
-        if (developToolActive()) { event->accept(); return; }
+           base view -- the tool's own branches above handled the gesture. EXCEPTION: a
+           crop with no handle grabbed (cropDrag < 0) deliberately falls through here to
+           pan the image under the fixed frame (see the crop branch above); the crop
+           release handler suppresses the click-to-zoom, so let it start the pan. */
+        if (developToolActive() && !(cropActive() && cropDrag < 0)) { event->accept(); return; }
         isLeftMouseBtnPressed = true;
         isMouseDrag = false;
         mousePressPt.setX(event->x());
