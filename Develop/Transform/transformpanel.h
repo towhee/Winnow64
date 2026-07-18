@@ -27,14 +27,15 @@ class BarBtn;
         - A property-style gradient header ("Transform") with three trailing BarBtns: [?] tips,
           [E] preview eye (show/ignore the whole transform), [R] reset (clear crop/straighten/warp).
         - A three-way MODE toggle (Crop / Level / Warp -- only one selected at a time; shortcuts
-          C / L / W while the panel has focus) down the left, each row carrying that mode's controls
+          C / L / W whenever Transform is active, whether the panel or the crop overlay holds
+          focus) down the left, each row carrying that mode's controls
           and its own [R] reset (all reset buttons kept vertically aligned):
-            Crop : aspect combo + aspect-lock padlock + reset
-            Level: straighten-angle field                + reset
-            Warp : perspective hint                       + reset
+            Crop : aspect combo + aspect-lock padlock + flip (F) + reset
+            Level: straighten-angle field                        + reset
+            Warp : perspective hint                              + reset
 
-    Custom aspects, the last-used aspect, the lock state and the selected mode persist to QSettings
-    under "Develop/Transform/".
+    Custom aspects, the last-used aspect, the lock state, the flip (portrait) state and the
+    selected mode persist to QSettings under "Develop/Transform/".
 */
 class TransformPanel : public QWidget
 {
@@ -46,6 +47,7 @@ public:
     enum Mode { CropMode = 0, LevelMode = 1, WarpMode = 2 };
 
     bool    isAspectLocked() const { return aspectLocked; }
+    bool    isAspectFlipped() const { return aspectFlipped; }  // portrait orientation
     QString aspectKey() const;      // the selected entry's key, e.g. "asShot", "3:2", "21:9"
     double  aspectRatio() const;    // w/h of the selected entry; 0.0 for "As shot" (free)
     int     mode() const { return currentMode; }
@@ -56,10 +58,15 @@ public:
     void setLevelAngle(double degrees);
     /* Select a mode programmatically (no modeChanged emitted). */
     void setMode(int mode);
+    /* Select the "As shot" (free) aspect programmatically (no aspectChanged emitted).
+       Used by the crop reset so the full-frame reset is not re-inscribed by a locked
+       aspect. */
+    void setAspectAsShot();
 
 signals:
     void aspectChanged(const QString &key, double ratio);  // ratio = w/h, 0.0 = As shot / free
     void aspectLockToggled(bool locked);
+    void aspectFlipToggled(bool flipped);  // flip crop between landscape and portrait
     void modeChanged(int mode);            // Crop / Level / Warp selected (see Mode)
     void levelAngleEntered(double degrees);// absolute straighten typed into the Level field
     void rectifyRequested();               // apply perspective rectify to the drawn quad
@@ -70,6 +77,11 @@ signals:
 
 public slots:
     void toggleAspectLock();               // lock button click, or the "A" key (see eventFilter)
+    void toggleAspectFlip();               // flip button click, or the "F" key
+    /* Act on a bare A/F/C/L/W transform shortcut. Called from eventFilter (panel-
+       focused) and, while the crop overlay holds focus, routed here from ImageView
+       via MW. Returns true if the key was one of ours and was acted on. */
+    bool handleTransformShortcut(int key);
 
 protected:
     /* Single-letter shortcuts (A lock, C Crop, L Level, W Warp) are claimed via ShortcutOverride
@@ -87,6 +99,7 @@ private:
     void addAspectItem(const QString &caption, const QString &key, double ratio);
     void promptAddCustomAspect();          // dialog -> append + persist a custom ratio
     void updateLockButton();               // swap the padlock glyph + tooltip for aspectLocked
+    void updateFlipButton();               // reflect aspectFlipped in the flip button
     void updatePreviewButton();            // set the eye glyph/tooltip from previewShown
     void loadCustomAspects();
     void saveCustomAspects();
@@ -100,6 +113,7 @@ private:
 
     QComboBox   *aspectCombo  = nullptr;
     QToolButton *lockBtn      = nullptr;
+    BarBtn      *flipBtn      = nullptr;    // swap aspect landscape <-> portrait
     QLineEdit   *angleEdit    = nullptr;
     BarBtn      *tipBtn       = nullptr;
     BarBtn      *previewBtn   = nullptr;    // eye: show/ignore the transform (Geometry::show)
@@ -107,6 +121,7 @@ private:
 
     bool previewShown = true;              // mirror of the current image's Geometry::show
     bool aspectLocked = false;
+    bool aspectFlipped = false;            // true = portrait: honour 1/ratio
     int  currentMode = CropMode;
     int  lastAspectIndex = 0;              // restore selection after a "custom" cancel
 

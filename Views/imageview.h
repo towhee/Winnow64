@@ -178,11 +178,16 @@ public slots:
        zoomed/panned BEHIND it, so dragging inside the frame pans the image while the frame stays
        put; the 8 edge/corner handles resize the frame. The crop rectangle is the source of truth
        in normalized image coords (0..1). endCropEdit restores the normal fit/zoom view. */
-    void beginCropEdit(double aspect, bool locked, QRectF initialCrop = QRectF(0, 0, 1, 1));
+    void beginCropEdit(double aspect, bool locked, bool flipped,
+                       QRectF initialCrop = QRectF(0, 0, 1, 1));
     void endCropEdit();
     void beginLevel();                  // arm the "draw a level line" tool (crop must be active)
     void beginWarp();                   // enter 4-point perspective mode (seed the quad, drag corners)
-    void setCropAspect(double aspect, bool locked);   // aspect = w/h, 0 = free (unconstrained)
+    void setCropAspect(double aspect, bool locked, bool flipped);  // aspect = w/h, 0 = free
+    /* Toggle the crop between landscape and portrait: inverts the enforced aspect and
+       rotates the current crop box 90 degrees (locked -> refit to the inverted ratio;
+       free -> swap w/h). */
+    void setCropAspectFlip(bool flipped);
     QRectF cropRect() const { return cropN; }         // current crop (normalized), for commit
     /* Warp (4-point perspective) accessors for the commit/persist flow (MW::rectifyDevelopCrop):
        cropIsWarp = a quad is being traced; cropQuad fills the 4 corners (normalized, TL,TR,BR,BL);
@@ -509,6 +514,14 @@ private:
     QRectF  cropN          = QRectF(0.0, 0.0, 1.0, 1.0);   // crop in normalized image coords
     double  cropAspect     = 0.0;        // w/h; 0 = free
     bool    cropAspectLocked = false;
+    bool    cropAspectFlipped = false;   // portrait: honour 1/aspect instead of aspect
+    /* Flip memory: cropFlipPrevN is the crop as it was before the last flip; restoring it
+       on a flip-back keeps the size stable across landscape<->portrait alternation
+       (recomputing would shrink it via clamping). cropFlipResultN is what that flip
+       produced, so an intervening manual crop edit is detected and the stash discarded.
+       Both invalid = no stash. */
+    QRectF  cropFlipPrevN;
+    QRectF  cropFlipResultN;
     int     cropDrag       = -1;         // -1 none/pan; 0..7 handles (see cropHitTest)
     QRectF  cropFrameVp;                 // the frame in viewport px (derived from cropN, or dragged)
 
@@ -542,6 +555,12 @@ private:
     void    cropEmitChanged();                      // clamp cropN to [0,1] and emit cropChanged
     int     cropHitTest(QPoint vp) const;           // handle under vp (-1 none, 8 = inside)
     void    cropResizeFromHandle(QPoint vp);        // move handle cropDrag to vp (aspect-aware)
+    /* The aspect the drag honours: 0 when unlocked, else cropAspect, except a locked
+       "As shot" (cropAspect == 0) resolves to the image's native w/h so the frame
+       keeps the original proportions. */
+    qreal   cropLockedAspect() const;
+    void    cropClampN();                           // clamp cropN's edges into [0,1]
+    void    cropRefitToLockedAspect();              // reshape cropN to the locked aspect
     void    cropDrawNewFrom(QPoint vp);             // rubber-band a new crop, anchor -> vp
     void    cropDrawOverlay(QPainter *p, const QRectF &br);
     bool    cropActive() const { return cropEditMode && pmItem && pmItem->isVisible(); }

@@ -619,6 +619,11 @@ private slots:
        commits the crop into the image's EditStack geometry and re-renders the cropped result. */
     void enterDevelopCrop();
     void exitDevelopCrop();
+    /* Esc while the Transform panel is open: cancel the session -- discard every
+       crop/straighten/warp change made since it opened (restore the enter-time geometry
+       snapshot), drop the overlay WITHOUT committing, and hide the panel. The counterpart
+       to toggleDevelopTransform's commit-on-hide. */
+    void cancelDevelopTransform();
     /* Rectify the 4-point warp: store the quad + suggested crop into the image's geometry, then
        re-render so the corrected canvas shows with the crop overlay on it (two-phase warp). */
     void rectifyDevelopCrop();
@@ -1314,6 +1319,11 @@ private:
        peek at the cropped/warped RESULT (overlay dropped, geometry applied in the render); false =
        normal editing (full frame + overlay). Reset on enter/exit crop. */
     bool developCropShowResult = false;
+    /* Snapshot of the image's Geometry taken when the Transform panel opens
+       (enterDevelopCrop), so Esc (cancelDevelopTransform) can restore it. Straighten and
+       warp are written live during a session, so a cancel must revert them, not just skip
+       the pending overlay crop. */
+    Geometry developCropGeometryBackup;
     /* The QImage last pushed to the scopes (== what the loupe shows; implicitly shared, so
        holding it is free). Sampled per pixel for the cursor readout marker. */
     QImage developShownImage;

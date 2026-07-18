@@ -1897,11 +1897,17 @@ void MW::createDevelopDock()
        re-fit the live crop frame. */
     connect(transformPanel, &TransformPanel::aspectChanged, this,
             [this](const QString &, double ratio){
-                if (imageView) imageView->setCropAspect(ratio, transformPanel->isAspectLocked());
+                if (imageView) imageView->setCropAspect(ratio, transformPanel->isAspectLocked(),
+                                                        transformPanel->isAspectFlipped());
             });
     connect(transformPanel, &TransformPanel::aspectLockToggled, this,
             [this](bool locked){
-                if (imageView) imageView->setCropAspect(transformPanel->aspectRatio(), locked);
+                if (imageView) imageView->setCropAspect(transformPanel->aspectRatio(), locked,
+                                                        transformPanel->isAspectFlipped());
+            });
+    connect(transformPanel, &TransformPanel::aspectFlipToggled, this,
+            [this](bool flipped){
+                if (imageView) imageView->setCropAspectFlip(flipped);
             });
     /* Rectify button: store the 4-point warp + suggested crop into the image geometry and show the
        corrected canvas (two-phase warp; non-destructive). */
@@ -1935,7 +1941,9 @@ void MW::createDevelopDock()
         else {
             renderDevelopPreview(false);            // full frame (geometry suppressed) for the overlay
             const Geometry g = developProperties->currentGeometry();
-            imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+            imageView->beginCropEdit(transformPanel->aspectRatio(),
+                                     transformPanel->isAspectLocked(),
+                                     transformPanel->isAspectFlipped(),
                                      QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
         }
     });
@@ -1944,12 +1952,19 @@ void MW::createDevelopDock()
     connect(transformPanel, &TransformPanel::resetRequested, this, [this]{
         if (!developProperties) return;
         developProperties->setCurrentGeometry(Geometry());      // identity
+        transformPanel->setAspectAsShot();      // free aspect, else full frame re-fits it
+        transformPanel->setLevelAngle(0.0);     // clear the straighten field
         developCropShowResult = false;
         transformPanel->setPreviewShown(false);
         renderDevelopPreview(false);
-        if (developCropEditing && imageView)
-            imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
-                                     QRectF(0, 0, 1, 1));
+        if (developCropEditing && imageView) {
+            imageView->beginCropEdit(transformPanel->aspectRatio(),
+                                     transformPanel->isAspectLocked(),
+                                     transformPanel->isAspectFlipped(), QRectF(0, 0, 1, 1));
+            /* beginCropEdit re-arms the crop cursor; restore the tool for the current row
+               (Level/Warp) so resetting while straightening keeps the level cursor. */
+            setDevelopTransformMode(transformPanel->mode());
+        }
     });
     /* Fill Replace (spot/fill/object heal) strip below the Transform panel, above the
        layer header. ALWAYS starts hidden: a visible panel means the replace tool is
