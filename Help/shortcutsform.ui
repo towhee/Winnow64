@@ -1068,7 +1068,7 @@
          <string>R  N  M  O  S  X  H</string>
         </property>
         <property name="text">
-         <string>These seven keys mean something different in Develop mode than they do in Preview mode: in Preview, S is Slideshow, X is Reject and O is Open Folder, and R / N / M / H do nothing. Every other shortcut in this list behaves the same in both modes.</string>
+         <string>These eight keys mean something different in Develop mode than they do in Preview mode: in Preview, S is Slideshow, X is Reject, O is Open Folder, P is Pick, and R / N / M / H do nothing. Every other shortcut in this list behaves the same in both modes.</string>
         </property>
        </item>
        <item>
@@ -1256,6 +1256,28 @@
         </property>
         <property name="text">
          <string>Exports the developed image; in Develop mode. NOT IMPLEMENTED YET</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Save Develop Preset</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift + N</string>
+        </property>
+        <property name="text">
+         <string>Saves the current develop settings as a reusable preset; in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Run Develop Preset</string>
+        </property>
+        <property name="text">
+         <string>P</string>
+        </property>
+        <property name="text">
+         <string>Applies a saved develop preset (NOT IMPLEMENTED YET); in Develop mode. In Preview, P is Pick</string>
         </property>
        </item>
       </item>

@@ -141,6 +141,7 @@ set(WINNOW_SOURCES
     Dialogs/appdlg.cpp
     Dialogs/copystyledlg.cpp
     Dialogs/editlistdlg.cpp
+    Dialogs/savedeveloppresetdlg.cpp
     Dialogs/erasememcardimagesdlg.cpp
     Dialogs/findduplicatesdlg.cpp
     Dialogs/imagedlg.cpp
@@ -392,6 +393,7 @@ set(WINNOW_HEADERS
     Dialogs/appdlg.h
     Dialogs/copystyledlg.h
     Dialogs/editlistdlg.h
+    Dialogs/savedeveloppresetdlg.h
     Dialogs/erasememcardimagesdlg.h
     Dialogs/findduplicatesdlg.h
     Dialogs/imagedlg.h

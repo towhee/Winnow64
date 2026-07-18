@@ -4,6 +4,7 @@
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 #include "Develop/Scopes/toneregionslider.h"
+#include "Dialogs/savedeveloppresetdlg.h"
 #include <functional>
 /*
     See developproperties.h for an overview. Construction mirrors EmbelProperties:
@@ -568,7 +569,10 @@ void DevelopProperties::renameActiveLayer()
 {
     if (G::isLogger) G::log("DevelopProperties::renameActiveLayer");
     if (currentImagePath.isEmpty()) return;
-    if (activeLayerIndex == 0) { emit centralMsg("The Base layer cannot be renamed."); return; }
+    if (activeLayerIndex == 0) {
+        if (G::popup) G::popup->showPopup("The Base layer cannot be renamed.");
+        return;
+    }
     EditStack &s = stackCache[currentImagePath];
     if (activeLayerIndex >= s.layers.size()) return;
 
@@ -732,7 +736,7 @@ void DevelopProperties::deleteLayer()
 
     EditStack &s = stackCache[currentImagePath];
     if (activeLayerIndex <= 0) {
-        emit centralMsg("The Base layer cannot be removed.");
+        if (G::popup) G::popup->showPopup("The Base layer cannot be removed.");
         return;
     }
     if (activeLayerIndex >= s.layers.size()) activeLayerIndex = s.layers.size() - 1;
@@ -938,12 +942,18 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
     aSolo->setCheckable(true);
     aSolo->setChecked(setting->value("Develop/isSolo", false).toBool());
 
+    /* Save the current image's develop state as a reusable preset (also Cmd+Shift+N). */
+    menu.addSeparator();
+    QAction *aSavePreset = menu.addAction("Save Develop Preset…");
+    aSavePreset->setEnabled(!currentImagePath.isEmpty() && !currentIsIdentity());
+
     QAction *chosen = menu.exec(event->globalPos());
     if      (chosen == nullptr)      return;
     else if (chosen == aPreview)     togglePreviewSection(group);
     else if (chosen == aReset)       resetSection(group);
     else if (chosen == aExpandAll)   setAllSectionsExpanded(true);
     else if (chosen == aCollapseAll) setAllSectionsExpanded(false);
+    else if (chosen == aSavePreset)  saveDevelopPreset();
     else if (chosen == aSolo) {
         setSolo(aSolo->isChecked());
         setting->setValue("Develop/isSolo", aSolo->isChecked());
@@ -986,7 +996,7 @@ void DevelopProperties::showMaskMenu()
     if (G::isLogger) G::log("DevelopProperties::showMaskMenu");
     EditLayer *layer = activeLayer();
     if (!layer || activeLayerIndex == 0) {
-        emit centralMsg("The Base layer applies globally and cannot be masked.");
+        if (G::popup) G::popup->showPopup("The Base layer applies globally and cannot be masked.");
         return;
     }
 
@@ -1910,6 +1920,212 @@ bool DevelopProperties::currentIsIdentity() const
 {
     if (currentImagePath.isEmpty()) return true;
     return stackCache.value(currentImagePath).isIdentity();
+}
+
+/* --------------------------------------------------------------------------------
+   Develop presets (save). Snapshot the current image's EditStack into a named preset
+   in QSettings via the Save Develop Preset checklist. Applying a preset is a later task.
+   -------------------------------------------------------------------------------- */
+
+/* Build one layer's checklist group: the Basic / Color / Effects adjustment leaves
+   (mask geometry is content-specific and not a preset item). Vignette folds in its
+   feather; Grain folds in size + roughness (their "changed" test is the primary only,
+   matching isIdentity). Raw NR and the tone splits are surfaced under Global. */
+static PresetGroup layerPresetGroup(const EditLayer &l, int index)
+{
+    const EditParams &p = l.params;
+    const EditParams def;
+    PresetGroup g;
+    g.title = index == 0 ? QStringLiteral("Base layer")
+                         : QStringLiteral("Layer %1").arg(index);
+    g.checkable = true;
+    auto add = [&](const QString &key, const QString &label, bool changed) {
+        g.leaves.append({key, label, changed});
+    };
+    add("temp",       "Temp",       p.temp       != def.temp);
+    add("tint",       "Tint",       p.tint       != def.tint);
+    add("exposure",   "Exposure",   p.exposure   != def.exposure);
+    add("contrast",   "Contrast",   p.contrast   != def.contrast);
+    add("highlights", "Highlights", p.highlights != def.highlights);
+    add("shadows",    "Shadows",    p.shadows    != def.shadows);
+    add("whites",     "Whites",     p.whites     != def.whites);
+    add("blacks",     "Blacks",     p.blacks     != def.blacks);
+    add("texture",    "Texture",    p.texture    != def.texture);
+    add("dehaze",     "Dehaze",     p.dehaze     != def.dehaze);
+    add("red",        "Red",        p.red        != def.red);
+    add("green",      "Green",      p.green      != def.green);
+    add("blue",       "Blue",       p.blue       != def.blue);
+    add("hue",        "Hue",        p.hue        != def.hue);
+    add("saturation", "Saturation", p.saturation != def.saturation);
+    add("luminance",  "Luminance",  p.luminance  != def.luminance);
+    add("vibrance",   "Vibrance",   p.vibrance   != def.vibrance);
+    add("denoise",  "Denoise",  p.localDenoiseLuma   != def.localDenoiseLuma ||
+                                p.localDenoiseChroma != def.localDenoiseChroma);
+    add("vignette", "Vignette", p.vignetteExposure != def.vignetteExposure);
+    add("grain",    "Grain",    p.grainAmount      != def.grainAmount);
+    return g;
+}
+
+void DevelopProperties::saveDevelopPreset()
+{
+    if (G::isLogger) G::log("DevelopProperties::saveDevelopPreset");
+    if (currentImagePath.isEmpty()) {
+        if (G::popup) G::popup->showPopup("No image to save a develop preset from.");
+        return;
+    }
+    const EditStack s = stackCache.value(currentImagePath);
+    if (s.isIdentity()) {
+        if (G::popup) G::popup->showPopup("No develop edits to save as a preset.");
+        return;
+    }
+
+    const EditParams def;
+    const Geometry gdef;
+    const EditParams base = s.layers.isEmpty() ? def : s.layers.first().params;
+
+    QVector<PresetGroup> groups;
+
+    /* Global settings: a non-checkable container. Raw NR + tone splits come from the Base
+       layer; crop / level / warp / spots from the per-image Geometry + spot history. */
+    /* Raw demosaic + raw denoise only apply to a raw file, and denoise (PMRID) is the
+       Winnow engine only. Both leaves stay listed, but pre-check them only when relevant:
+       demosaic when the file is raw; raw NR when it is raw AND not decoded by Apple. */
+    const bool isRaw = currentIsRaw();
+    const bool usingApple =
+        G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
+    const bool rawNoiseChanged =
+        base.denoiseLuma != def.denoiseLuma || base.denoiseChroma != def.denoiseChroma;
+
+    PresetGroup gg;
+    gg.title = "Global settings";
+    gg.checkable = false;
+    gg.leaves.append({"demosaic", "Raw demosaic", isRaw});
+    gg.leaves.append({"rawNoise", "Raw noise reduction",
+        isRaw && !usingApple && rawNoiseChanged});
+    gg.leaves.append({"histogram", "Histogram tonal ranges",
+        base.toneShadowCenter != def.toneShadowCenter ||
+        base.toneCrossover != def.toneCrossover ||
+        base.toneHighlightCenter != def.toneHighlightCenter});
+    gg.leaves.append({"crop", "Crop", !s.geometry.cropIsIdentity()});
+    gg.leaves.append({"level", "Level", s.geometry.straighten != gdef.straighten});
+    gg.leaves.append({"warp", "Warp", s.geometry.hasWarp});
+    gg.leaves.append({"spots", "Spots", !s.spots.isEmpty()});
+    groups.append(gg);
+
+    /* One group per layer (Base + extras). */
+    for (int i = 0; i < s.layers.size(); ++i)
+        groups.append(layerPresetGroup(s.layers[i], i));
+
+    SaveDevelopPresetDlg dlg(groups, presetNames(), mw);
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    writePreset(dlg.presetName(), dlg.selected(), s);
+    setting->sync();            // flush to disk now (QSettings otherwise defers it)
+    if (G::popup) G::popup->showPopup("Saved develop preset \"" + dlg.presetName() + "\".");
+}
+
+QStringList DevelopProperties::presetNames() const
+{
+    setting->beginGroup("Develop Presets");
+    QStringList names = setting->childGroups();
+    setting->endGroup();
+    return names;
+}
+
+void DevelopProperties::writePreset(const QString &name,
+                                    const QHash<QString, QSet<QString>> &selected,
+                                    const EditStack &s)
+{
+    const EditParams base = s.layers.isEmpty() ? EditParams() : s.layers.first().params;
+
+    setting->beginGroup("Develop Presets");
+    setting->beginGroup(name);
+    setting->remove("");                    // overwrite: clear any prior contents
+
+    /* Global. */
+    const QSet<QString> gk = selected.value("Global settings");
+    if (!gk.isEmpty()) {
+        setting->beginGroup("Global");
+        if (gk.contains("demosaic")) {
+            const bool apple =
+                G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
+            setting->setValue("demosaicEngine", apple ? "apple" : "winnow");
+        }
+        if (gk.contains("rawNoise")) {
+            setting->setValue("denoiseLuma", base.denoiseLuma);
+            setting->setValue("denoiseChroma", base.denoiseChroma);
+        }
+        if (gk.contains("histogram")) {
+            setting->setValue("toneShadowCenter", base.toneShadowCenter);
+            setting->setValue("toneCrossover", base.toneCrossover);
+            setting->setValue("toneHighlightCenter", base.toneHighlightCenter);
+        }
+        if (gk.contains("crop")) {
+            const Geometry &g = s.geometry;
+            setting->setValue("crop", QStringLiteral("%1,%2,%3,%4")
+                .arg(g.cropX).arg(g.cropY).arg(g.cropW).arg(g.cropH));
+        }
+        if (gk.contains("level"))
+            setting->setValue("straighten", s.geometry.straighten);
+        if (gk.contains("warp") && s.geometry.hasWarp) {
+            QStringList q;
+            for (double v : s.geometry.quad) q << QString::number(v);
+            setting->setValue("warp", q.join(','));
+        }
+        if (gk.contains("spots") && !s.spots.isEmpty()) {
+            setting->beginWriteArray("spots");
+            for (int i = 0; i < s.spots.size(); ++i) {
+                setting->setArrayIndex(i);
+                setting->setValue("params", s.spots[i].paramsJson);
+                setting->setValue("enabled", s.spots[i].enabled);
+            }
+            setting->endArray();
+        }
+        setting->endGroup();
+    }
+
+    /* One sub-group per layer, keyed by the same title the checklist used. */
+    for (int i = 0; i < s.layers.size(); ++i) {
+        const QString title = i == 0 ? QStringLiteral("Base layer")
+                                     : QStringLiteral("Layer %1").arg(i);
+        const QSet<QString> lk = selected.value(title);
+        if (lk.isEmpty()) continue;
+        setting->beginGroup(title);
+        writeLayerLeaves(s.layers[i].params, lk);
+        setting->endGroup();
+    }
+
+    setting->endGroup();                    // name
+    setting->endGroup();                    // Develop Presets
+}
+
+void DevelopProperties::writeLayerLeaves(const EditParams &p, const QSet<QString> &lk)
+{
+    /* Store raw EditParams field values under their JSON key names (the source of truth),
+       so a future apply can assign them straight back. */
+    const struct { const char *k; float v; } scal[] = {
+        {"temp", p.temp}, {"tint", p.tint}, {"exposure", p.exposure},
+        {"contrast", p.contrast}, {"highlights", p.highlights}, {"shadows", p.shadows},
+        {"whites", p.whites}, {"blacks", p.blacks}, {"texture", p.texture},
+        {"dehaze", p.dehaze}, {"red", p.red}, {"green", p.green}, {"blue", p.blue},
+        {"hue", p.hue}, {"saturation", p.saturation}, {"luminance", p.luminance},
+        {"vibrance", p.vibrance},
+    };
+    for (const auto &e : scal)
+        if (lk.contains(e.k)) setting->setValue(e.k, e.v);
+    if (lk.contains("denoise")) {
+        setting->setValue("localDenoiseLuma", p.localDenoiseLuma);
+        setting->setValue("localDenoiseChroma", p.localDenoiseChroma);
+    }
+    if (lk.contains("vignette")) {
+        setting->setValue("vignetteExposure", p.vignetteExposure);
+        setting->setValue("vignetteFeather", p.vignetteFeather);
+    }
+    if (lk.contains("grain")) {
+        setting->setValue("grainAmount", p.grainAmount);
+        setting->setValue("grainSize", p.grainSize);
+        setting->setValue("grainRoughness", p.grainRoughness);
+    }
 }
 
 void DevelopProperties::flushImage(const QString &fPath)

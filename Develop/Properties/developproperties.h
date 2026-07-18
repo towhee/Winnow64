@@ -141,9 +141,14 @@ public slots:
 
     void howThisWorks();                          // Develop help
 
+    /* Snapshot the current image's develop state into a named preset (QSettings). Opens
+       the Save Develop Preset checklist dialog; no-op (with a message) when there is no
+       current image or it has no edits. Reached via Cmd+Shift+N and the dock context
+       menu. Applying a preset is a separate, later task. */
+    void saveDevelopPreset();
+
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
-    void centralMsg(QString msg);
     /* The "Edit: Raw / Embedded Preview" selector was changed; MW drives G::useRaw (toggleUseRaw)
        -- a private slot, so we route through this signal rather than calling it directly. */
     void useRawRequested(bool useRaw);
@@ -258,7 +263,18 @@ private:
     void addCheckbox(const QString &key, const QString &caption, const QString &tooltip,
                      QModelIndex parIdx, const QString &parentName, bool defaultValue = false);
 
-    QString layerRootPath() const;  // "Develop/Layers/<layerName>/" (legacy QSettings; unused now)
+    /* ---- Develop presets (save) --------------------------------------------------
+       presetNames lists the existing preset groups; writePreset persists the dialog's
+       selection under "Develop Presets/<name>/Global|Base layer|Layer N/";
+       writeLayerLeaves writes one layer group's checked adjustment values (raw
+       EditParams field values under their JSON key names, so a future apply can
+       round-trip them). */
+    QStringList presetNames() const;
+    void writePreset(const QString &name, const QHash<QString, QSet<QString>> &selected,
+                     const EditStack &stack);
+    void writeLayerLeaves(const EditParams &p, const QSet<QString> &keys);
+
+    QString layerRootPath() const;  // "Develop/Layers/<layerName>/" (legacy; unused now)
     double layerValue(const QString &key, double defaultValue = 0) const;
     QString uniqueLayerName(const QString &name) const;   // unique within the current image's layers
 
