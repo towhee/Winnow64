@@ -1107,6 +1107,30 @@ void MW::createUtilActions()
     addAction(developExportAction);
     connect(developExportAction, &QAction::triggered, this, &MW::developExport);
 
+    /* Save Develop Preset. Unlike the bare-key Develop actions above (dispatched by
+       developShortcutIntercept, which only arbitrates unmodified keys), this is a
+       modified combo owned by no other action, so it carries a REAL QKeySequence. The
+       portable "Ctrl+Shift+N" maps to Cmd+Shift+N on macOS. It is enabled only in Develop
+       mode (setOperationMode + syncDevelopMenuEnabled), so the shortcut is inert in
+       Preview. Starts disabled to match the Preview default at startup. */
+    developSavePresetAction = new QAction(tr("Save Develop Preset…"), this);
+    developSavePresetAction->setObjectName("developSavePreset");
+    developSavePresetAction->setShortcut(QKeySequence("Ctrl+Shift+N"));
+    developSavePresetAction->setShortcutVisibleInContextMenu(true);
+    developSavePresetAction->setEnabled(false);
+    addAction(developSavePresetAction);
+    connect(developSavePresetAction, &QAction::triggered, this, &MW::developSavePreset);
+
+    /* Run (apply) a saved preset -- the title-bar Preset button + "P". P is globally
+       Pick, so like the other bare Develop keys it goes through developShortcutIntercept
+       (loadDevelopShortcuts) rather than a real QKeySequence, which would clash with
+       Pick. Applying presets is not built yet (stub); saving is Cmd+Shift+N above. */
+    developRunPresetAction = new QAction(tr("Run Develop Preset\tP"), this);
+    developRunPresetAction->setObjectName("developRunPreset");
+    developRunPresetAction->setShortcutVisibleInContextMenu(true);
+    addAction(developRunPresetAction);
+    connect(developRunPresetAction, &QAction::triggered, this, &MW::developRunPreset);
+
     developScopesAction = new QAction(tr("Histogram / Vectorscope\tH"), this);
     developScopesAction->setObjectName("developScopes");
     developScopesAction->setShortcutVisibleInContextMenu(true);
@@ -2113,6 +2137,8 @@ void MW::createUtilMenu()
     developMenu->addSeparator();
     developMenu->addAction(developScopesAction);
     developMenu->addAction(developExportAction);
+    developMenu->addAction(developRunPresetAction);
+    developMenu->addAction(developSavePresetAction);
     /* Grey the mode-local items outside Develop mode: their keys belong to other actions
        there, so an enabled item would advertise a shortcut that does something else. */
     connect(developMenu, &QMenu::aboutToShow, this, &MW::syncDevelopMenuEnabled);
@@ -3125,6 +3151,7 @@ void MW::loadDevelopShortcuts()
     developShortcuts[Qt::Key_S] = developSpotAction;        // global: Slideshow
     developShortcuts[Qt::Key_X] = developExportAction;      // global: Reject
     developShortcuts[Qt::Key_H] = developScopesAction;      // global: unbound
+    developShortcuts[Qt::Key_P] = developRunPresetAction;   // global: Pick
 }
 
 void MW::syncDevelopMenuEnabled()
@@ -3139,7 +3166,8 @@ void MW::syncDevelopMenuEnabled()
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
     const QList<QAction *> modeLocal {
         developNewLayerAction, developNewMaskAction, toggleMaskOverlayAction,
-        developTransformAction, developSpotAction, developScopesAction, developExportAction
+        developTransformAction, developSpotAction, developScopesAction, developExportAction,
+        developSavePresetAction, developRunPresetAction
     };
     for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);
 

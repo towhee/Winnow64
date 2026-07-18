@@ -586,9 +586,57 @@ S       Spot tool
 X       Export
 H       Histogram/Vectorscope toggle
 
-Presets
+Develop Presets like lightroom:
 
-Save preset dialog: contains a checklist of all settable items in the develop
-module: crop, level, warp, raw noise reduction,
+Create a Save Preset dialog: contains a scrollable checklist of all settable items in the
+develop module to be included in the preset: crop, level, warp, raw noise reduction (lum,
+color), spots, histogram tone settings (one checkbox for the 3 settings), each layer
+(all basic, color and effects). Include Select all, Select none, Cancel and Save buttons.
+
+I want to review the list of checkable settings.
+
+Save the preset checked items in settings in a group heirarchy:
+    Develop Presets
+        Preset 1 name
+            Global
+                crop : value (if set)
+                level : value (if set)
+                ...
+            Base layer
+                all non-default settings checked
+            Layer 1
+                all non-default settings checked
+            ...
+
+Dialog Mockup:
+|--------------------------------------|
+|        Create Develop Preset         |
+|--------------------------------------|
+| Preset name: [lineedit             ] |
+|                                      |
+| > Global settings                    |
+|   [ ] Raw noise reduction            |
+|   [ ] Histogram tonal ranges         |
+|   [ ] Crop                           |
+|   [ ] Level                          |
+|   [ ] Warp                           |
+|                                      |
+| > [ ] Base layer                     |
+|       [ ] Temp                       |
+|       [ ] Tint                       |
+|       [ ] ...                        |
+|                                      |
+| > [ ] Layer 1                        |
+|       [ ] Temp                       |
+|       [ ] Tint                       |
+|       [ ] ...                        |
+|                                      |
+| Select all  Select none  Cancel Save |
+|--------------------------------------|
+
+where > means subitems can be collaped/expanded.
+
+Shortcut: Shift-Cmd-N in develop mode only
+Add to context menus that also include solo mode in the develop panel
 
 

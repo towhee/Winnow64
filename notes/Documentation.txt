@@ -113,6 +113,7 @@ Table of Contents
          - Develop dock (UI)
          - Develop scopes (histogram + vectorscope)
          - Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
+         - Develop presets (save)
 
 
 ******************************************************************************************
@@ -1755,7 +1756,7 @@ Disabled Shortcut Feedback
 Develop Mode Local Shortcuts
 ------------------------------------------------------------------------------------------
 
-    Seven keys mean something different in Develop mode than in Preview mode:
+    Eight keys mean something different in Develop mode than in Preview mode:
 
         R   Crop / Transform panel      developTransformAction   (Preview: unbound)
         N   New layer                   developNewLayerAction    (Preview: unbound)
@@ -1764,6 +1765,7 @@ Develop Mode Local Shortcuts
         S   Spot removal tool           developSpotAction        (Preview: Slideshow)
         X   Export (STUB, see below)    developExportAction      (Preview: Reject)
         H   Histogram / vectorscope     developScopesAction      (Preview: unbound)
+        P   Run/apply preset (STUB)     developRunPresetAction   (Preview: Pick)
 
     Why not just give these actions a shortcut
     ......................................................................................
@@ -1847,10 +1849,17 @@ Develop Mode Local Shortcuts
     ......................................................................................
     A key-less QAction renders no shortcut column, so each Develop action embeds its hint
     in its text after a tab ("New Layer\tN") -- the idiom pickAction and jumpAction
-    already use for their multi-key hints.  The keys are surfaced in three places: the Utilities >
-    Develop submenu (built in MW::createUtilMenu; MW::syncDevelopMenuEnabled greys the
-    mode-local items outside Develop mode so they never advertise a key that does
-    something else), the Develop editor-bar button tooltips, and Help > Shortcuts.
+    already use for their multi-key hints.  The keys are surfaced in three places: the
+    Utilities > Develop submenu (built in MW::createUtilMenu; MW::syncDevelopMenuEnabled
+    greys the mode-local items outside Develop mode so they never advertise a key that
+    does something else), the Develop editor-bar button tooltips, and Help > Shortcuts.
+
+    The one exception is Save Develop Preset (Cmd+Shift+N): a MODIFIED combo owned by no
+    other action, so it is a normal QAction with a real QKeySequence (not in the arbiter's
+    bare-key table). It is kept Develop-only by its enabled state -- setOperationMode
+    enables it only in Develop mode and syncDevelopMenuEnabled greys the menu item in
+    Preview -- since a disabled QAction's shortcut does not fire. See the "Develop presets
+    (save)" subsection in the DEVELOP section.
 
     Export is a stub
     ......................................................................................
@@ -3142,11 +3151,12 @@ Layer & masking model (planned)
                NAMING: index 0 is always
                the "Base" layer (normalized on load in setCurrentImage); extra layers added with +
                are numbered "Layer 1", "Layer 2", ... (the new layer's number = its index). The Base
-               layer CANNOT be removed -- deleteLayer refuses when the active layer is index 0
-               (centralMsg "The Base layer cannot be removed."). RENAME: the header's [R] button ->
-               renameActiveLayer pops a QInputDialog seeded with the current name; uniqueLayerName
-               resolves clashes with a numeric suffix; Base (index 0) is rejected with centralMsg
-               "The Base layer cannot be renamed." An all-identity stack is
+               layer CANNOT be removed -- deleteLayer refuses when the active layer is
+               index 0 (popup "The Base layer cannot be removed.").
+               RENAME: the header's [R] button -> renameActiveLayer pops a QInputDialog
+               seeded with the current name; uniqueLayerName resolves clashes with a
+               numeric suffix; Base (index 0) is rejected with a popup "The Base
+               layer cannot be renamed." An all-identity stack is
                never persisted, so empty layers added to an unedited image are not written (EXCEPTION:
                a layer that has any mask component counts as non-identity so masks survive
                navigation). The old QSettings layer helpers (readLayerList/setCurrentLayer/
@@ -4177,6 +4187,70 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                  0..1, default 50): monochromatic film grain (see #9 above); size and
                  roughness are inert until amount is non-zero.
 
-    Each layer maps onto one EditParams (DevelopProperties::editParams()). Binding a value
-    change to a re-decode is deferred: itemChange() persists the value to settings and emits
-    paramsChanged() so the hook is ready.
+    Each layer maps onto one EditParams (DevelopProperties::editParams()). Binding a
+    value change to a re-decode is deferred: itemChange() persists the value to settings
+    and emits paramsChanged() so the hook is ready.
+
+
+Develop presets (save)
+-----------------------
+
+    Save the current image's develop state as a named, reusable preset (Lightroom's
+    "New Develop Preset"). SAVE ONLY for now -- applying a preset is a later task.
+    SAVING a preset is reached two ways: Cmd+Shift+N (Develop mode only) or the Develop
+    dock context menu ("Save Develop Preset...", in the same menu as Expand all /
+    Collapse all / Solo). APPLYING (running) a saved preset is the colour-wheel Preset
+    button in the Develop panel title bar, or the "P" key -- a STUB for now (the
+    picker/apply path is not built; MW::developRunPreset). The title-bar Preset + Export
+    buttons are colourful BarBtn glyphs in the same style as the Scope and Transform
+    buttons (Export -> lightning, also a stub).
+
+    Dialog (Dialogs/savedeveloppresetdlg.{h,cpp}, SaveDevelopPresetDlg). A preset-name
+    field plus a collapsible, scrollable checklist of every settable item. Items that
+    differ from their default on the current image are pre-checked and their group
+    pre-expanded, so the user can Save immediately or fine-tune. Buttons: Select all /
+    Select none / Cancel / Save (Save is disabled until the name is non-empty; an
+    existing name prompts to overwrite). Right-clicking the checklist pops Expand all /
+    Collapse all.
+
+    The dialog is UI-only: it renders a model of PresetGroup { title, checkable, leaves }
+    and reports back the preset name + the checked leaf keys per group. It knows nothing
+    of the develop data model or the settings layout. Groups:
+        Global settings   a non-checkable container. Leaves: Raw demosaic (the decode
+                          engine, G::decodeRawEngine), Raw noise reduction (Base
+                          denoiseLuma+denoiseChroma), Histogram tonal ranges (the three
+                          tone splits), Crop, Level (straighten) and Warp (each a SEPARATE
+                          leaf, from the per-image Geometry), Spots (all spot heals).
+                          Raw demosaic + Raw noise reduction only apply to raw files, and
+                          raw NR (PMRID) is the Winnow engine only; both stay listed but
+                          are pre-checked only when relevant (demosaic when the file is
+                          raw; raw NR when raw AND not decoded by Apple).
+        Base layer /      one checkable tri-state parent per layer. Leaves are the Basic /
+        Layer N           Color / Effects adjustments (temp..grain). Denoise folds in its
+                          Color (chroma); Vignette folds in its feather; Grain folds in
+                          size + roughness. Mask geometry is content-specific and is NOT a
+                          preset item.
+
+    Write (DevelopProperties::saveDevelopPreset / writePreset / writeLayerLeaves). The
+    caller snapshots the current image's EditStack and persists the checked values to
+    QSettings under the requested hierarchy:
+        Develop Presets/<name>/Global/<key>       = value
+        Develop Presets/<name>/Base layer/<key>   = value
+        Develop Presets/<name>/Layer 1/<key>      = value
+    Leaf keys reuse the EditParams JSON field names and store the RAW param values (the
+    source of truth, e.g. denoise 0..1), so a future "apply preset" can assign them
+    straight back (mirroring EditStack::paramsFromJson). Geometry is stored as crop
+    ("x,y,w,h"), straighten and warp ("q0..q7"); spots as a QSettings array of paramsJson.
+    Writing a preset first clears any prior group of the same name (overwrite).
+
+    Shortcut wiring. Two separate actions:
+      - developSavePresetAction (SAVE, Cmd+Shift+N). Unlike the bare-key Develop actions
+        (dispatched by developShortcutIntercept, which arbitrates only unmodified keys),
+        this is a modified combo owned by no other action, so it carries a REAL
+        QKeySequence ("Ctrl+Shift+N"). It is enabled only in Develop mode --
+        setOperationMode tracks the mode (a disabled QAction's shortcut does not fire) and
+        syncDevelopMenuEnabled greys the menu item in Preview.
+      - developRunPresetAction (RUN/apply, "P" + the title-bar Preset button). P is
+        globally Pick, so like the other bare Develop keys it is dispatched by
+        developShortcutIntercept via the developShortcuts table (loadDevelopShortcuts),
+        NOT a real QKeySequence -- QKeySequence("P") would clash with Pick. Stub for now.

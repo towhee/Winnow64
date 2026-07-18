@@ -1796,7 +1796,6 @@ void MW::createDevelopDock()
     if (G::isLogger) G::log("MW::createDevelopDock");
     developProperties = new DevelopProperties(this, settings);
 
-    connect(developProperties, &DevelopProperties::centralMsg, this, &MW::setCentralMessage);
     connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::developParamsChange);
     /* The dock's "Edit: Raw / Embedded Preview" selector drives G::useRaw through the same path as
        the status-bar button (toggleUseRaw is a private slot, hence the signal hop). */
@@ -2085,6 +2084,24 @@ void MW::createDevelopDock()
     developTitleLayout->addWidget(developSpotBtn);
     developTitleLayout->addSpacing(10);
 
+    /* Preset: apply a saved develop preset (P). STUB for now -- the picker/apply path is
+       not built yet (saving a preset is Cmd+Shift+N, or the dock context menu). The
+       colour-wheel glyph matches the Scope / Transform title-bar button style. */
+    BarBtn *developPresetBtn = new BarBtn();
+    developPresetBtn->setIcon(":/images/icon16/colorwheel.png", G::iconOpacity);
+    developPresetBtn->setToolTip("Select a develop preset.  (P)");
+    connect(developPresetBtn, &BarBtn::clicked, this, &MW::developRunPreset);
+    developTitleLayout->addWidget(developPresetBtn);
+    developTitleLayout->addSpacing(10);
+
+    /* Export the developed image. STUB for now (MW::developExport is not built yet). */
+    BarBtn *developExportBtn = new BarBtn();
+    developExportBtn->setIcon(":/images/icon16/lightning.png", G::iconOpacity);
+    developExportBtn->setToolTip("Export the developed image  (X)");
+    connect(developExportBtn, &BarBtn::clicked, this, &MW::developExport);
+    developTitleLayout->addWidget(developExportBtn);
+    developTitleLayout->addSpacing(10);
+
     // question mark button
     BarBtn *devQuestionBtn = new BarBtn();
     devQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
@@ -2159,6 +2176,12 @@ void MW::setOperationMode(G::OperationMode mode)
 
     // Only show develop in Develop Mode
     developDock->setVisible(mode == G::OperationMode::Develop);
+
+    /* Save Develop Preset carries a real Cmd+Shift+N shortcut, so gate it by mode here
+       (before the no-change return, so it always tracks the mode) -- a disabled QAction's
+       shortcut does not fire, keeping it Develop-only. */
+    if (developSavePresetAction)
+        developSavePresetAction->setEnabled(mode == G::OperationMode::Develop);
 
     if (G::operationMode == mode) return;               // no change
     G::operationMode = mode;

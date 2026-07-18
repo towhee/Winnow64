@@ -615,6 +615,8 @@ private slots:
     void developNewLayer();       // "N": add a layer to the current image's stack
     void developNewMask();        // "M": pop the Add/Subtract mask tool menu
     void developExport();         // "X": export the developed image (not built yet)
+    void developSavePreset();     // Cmd+Shift+N: save develop state as a preset
+    void developRunPreset();      // P: apply a saved develop preset (stub)
     /* Enter/exit the crop editor: enter shows the full frame + overlay (geometry suppressed); exit
        commits the crop into the image's EditStack geometry and re-renders the cropped result. */
     void enterDevelopCrop();
@@ -1056,6 +1058,8 @@ private:
     QAction *developNewMaskAction;      // M
     QAction *developSpotAction;         // S
     QAction *developExportAction;       // X
+    QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
+    QAction *developRunPresetAction = nullptr;    // P (develop-mode local, arbiter)
     QAction *developScopesAction;       // H
     // developTransformAction (R) and toggleMaskOverlayAction (O) live with the docks
 

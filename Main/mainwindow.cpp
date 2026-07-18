@@ -7033,6 +7033,31 @@ void MW::developNewLayer()
     developProperties->newLayer();
 }
 
+void MW::developSavePreset()
+{
+/*
+    Cmd+Shift+N (Develop mode only): save the current image's develop state as a named,
+    reusable preset. DevelopProperties owns the flow (checklist dialog + QSettings write)
+    and no-ops with a message when there is no current image or it has no edits.
+*/
+    if (G::isLogger) G::log("MW::developSavePreset");
+    if (!developProperties) return;
+    developProperties->saveDevelopPreset();
+}
+
+void MW::developRunPreset()
+{
+/*
+    "P" (Develop mode): apply a saved develop preset to the current image. NOT BUILT YET
+    -- the preset-picker + apply path is outstanding (saving a preset is Cmd+Shift+N). The
+    title-bar Preset button, the P arbiter key, menu item and help entry are wired so the
+    feature only needs this body.
+*/
+    if (G::isLogger) G::log("MW::developRunPreset");
+    if (G::popup)
+        G::popup->showPopup("Applying develop presets is not implemented yet.", 2000);
+}
+
 void MW::developNewMask()
 {
 /*
