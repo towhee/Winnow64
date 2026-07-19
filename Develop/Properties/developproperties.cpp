@@ -148,9 +148,6 @@ void DevelopProperties::buildTree()
     const bool exBasic   = expandedOr("BasicHeader",   sectionExpanded("BasicHeader",   true));
     const bool exColor   = expandedOr("ColorHeader",   sectionExpanded("ColorHeader",   false));
     const bool exEffects = expandedOr("EffectsHeader", sectionExpanded("EffectsHeader", false));
-    /* The Demosaic row (Base, raw) also expands/collapses to hide its raw-denoise
-       children; default expanded on first run. */
-    const bool exDemosaic = expandedOr("demosaic",     sectionExpanded("demosaic",      true));
 
     isPopulating = true;
     isRebuildingMasks = true;
@@ -190,7 +187,6 @@ void DevelopProperties::buildTree()
     setExpandOn("BasicHeader",   exBasic);
     setExpandOn("ColorHeader",   exColor);
     setExpandOn("EffectsHeader", exEffects);
-    setExpandOn("demosaic",      exDemosaic);
 
     populateSlidersFromStack();
     refreshPreviewButtons();
@@ -208,11 +204,10 @@ bool DevelopProperties::sectionExpanded(const QString &name, bool def) const
 
 void DevelopProperties::persistSectionExpanded(const QModelIndex &idx, bool expanded)
 {
-    /* The three adjustment section headers and the Demosaic row persist (mask tool
-       rows also expand/collapse, but their state is transient). */
+    /* Only the three adjustment section headers persist (mask tool rows also expand/
+       collapse, but their state is transient). */
     const QString name = idx.data(UR_Name).toString();
-    if (name == "BasicHeader" || name == "ColorHeader" || name == "EffectsHeader" ||
-        name == "demosaic")
+    if (name == "BasicHeader" || name == "ColorHeader" || name == "EffectsHeader")
         setting->setValue("Develop/SectionExpanded/" + name, expanded);
 }
 
@@ -226,19 +221,23 @@ void DevelopProperties::addCoreItems()
 
     /* Edit source selector (directly under the layer header): choose whether Develop edits the raw
        sensor data or the embedded preview jpg. An A/B radio pair kept in sync with G::useRaw and
-       the status-bar useRaw button. "Edit:" is left-aligned (isIndent = false); the radios are
-       hosted in the value cell (DT_None = no built-in editor, so the cell is ours). */
+       the status-bar useRaw button. "Edit:" is indented to line up with the Demosaic row
+       below it (isIndent = true); the radios are hosted in the value cell (DT_None = no
+       built-in editor, so the cell is ours). */
     clearItemInfo(i);
     i.name = "editSource";
     i.parentName = "";              // root row (no section header)
     i.captionText = "Edit:";
     i.tooltip = "Edit the raw sensor data (demosaic) or the embedded preview jpg.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "editSource";
     i.delegateType = DT_None;
     addItem(i);
+    /* A little extra vertical breathing room (4px top + 4px bottom) to set the source
+       selector apart from the layer header above and the Demosaic row below. */
+    model->setData(capIdx, 8, UR_ExtraRowHeight);
 
     const QModelIndex editValIdx = findValueIndex("editSource");
     if (editValIdx.isValid()) {
@@ -266,7 +265,9 @@ void DevelopProperties::addCoreItems()
     }
 
     /* Demosaic engine + raw noise reduction. Indented (isIndent = true) so they align with the
-       Basic-section sliders (e.g. "Temp"). Visible only when editing raw (applyCoreVisibility). */
+       Basic-section sliders (e.g. "Temp"). Visible only when editing raw (applyCoreVisibility).
+       DT_None: we own the value cell and host a real QComboBox formatted like the layer
+       dropdown (LayerHeader::combo), rather than the delegate's DT_Combo. */
     clearItemInfo(i);
     i.name = "demosaic";
     i.parentName = "";
@@ -275,21 +276,51 @@ void DevelopProperties::addCoreItems()
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
-    /* Reflect the sticky engine (G::decodeRawEngine) rather than a hardcoded default,
-       so a tree rebuild on folder/image selection shows the engine actually in effect. */
-    i.value = (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine) ? "Apple" : "Winnow";
     i.key = "demosaic";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList.clear();
-    i.dropList << "Apple" << "Winnow";
+    i.delegateType = DT_None;
     addItem(i);
-    const QModelIndex demosaicIdx = capIdx;
-    /* No UR_ExtraIndent here: as the raw-denoise group parent the Demosaic row aligns
-       with the section headers (Basic/Color/Effects), and its expand arrow sits in the
-       gutter over the native indicator (an ExtraIndent offset would push the delegate
-       arrow off the native one, showing two). Its denoise children indent one tree
-       level, lining up with the sliders. */
+
+    const QModelIndex demosaicValIdx = findValueIndex("demosaic");
+    if (demosaicValIdx.isValid()) {
+        /* Real QComboBox in the value cell, formatted like the layer dropdown: a 12px
+           checkmark on the ACTIVE engine and a blank spacer on the other, expanding width.
+           Recreated on every rebuild (setIndexWidget gives the view ownership), so reading
+           G::decodeRawEngine here keeps the checkmark on the engine actually in effect. */
+        const int iconPx = 12;
+        QPixmap cm(":/images/checkmark.png");
+        const QIcon checkIcon = cm.isNull() ? QIcon()
+            : QIcon(cm.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        QPixmap blank(iconPx, iconPx);
+        blank.fill(Qt::transparent);
+        const QIcon blankIcon(blank);
+
+        const bool apple = G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
+        QComboBox *engine = new QComboBox;
+        engine->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        engine->setIconSize(QSize(iconPx, iconPx));
+        engine->setToolTip("Select demosaic engine (Apple Core Image or in-house Winnow).");
+        engine->addItem(apple ? checkIcon : blankIcon, "Apple");
+        engine->addItem(apple ? blankIcon : checkIcon, "Winnow");
+        engine->setCurrentIndex(apple ? 0 : 1);
+        /* Switching the engine forces a re-decode (MW sets G::decodeRawEngine), then a
+           deferred rebuild adds/removes the raw-denoise rows -- doing it inline would
+           delete this live editor mid-signal. Mirrors the old DT_Combo itemChange. */
+        connect(engine, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
+            emit demosaicEngineChanged(idx == 0);       // 0 = Apple
+            QTimer::singleShot(0, this, [this]{ buildTree(); });
+        });
+        /* Host the combo in a container with a 10px right margin so it clears the panel's
+           right edge (setIndexWidget otherwise stretches it flush to the cell edge). */
+        QWidget *cell = new QWidget;
+        cell->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *cellHb = new QHBoxLayout(cell);
+        cellHb->setContentsMargins(0, 0, 10, 0);
+        cellHb->setSpacing(0);
+        cellHb->addWidget(engine);
+        setIndexWidget(demosaicValIdx, cell);
+    }
+    /* The Demosaic row is a plain leaf (no children, no decoration arrow), so it draws
+       in the ordinary caption colour like "Edit:" -- not the teal header colour. */
 
     /* "Denoise raw": Base-layer, decode-time raw noise reduction (denoiseLuma/
        denoiseChroma), baked into the pre-develop WorkingImage (global, not maskable) --
@@ -297,19 +328,22 @@ void DevelopProperties::addCoreItems()
        sliders mapped to 0..1: Luminance = the master AI-denoise amount; Color = extra
        chroma-noise suppression (default 100).
 
-       These are CHILDREN of the Demosaic row so it gains an expand/collapse arrow that
-       hides them -- but only on the WINNOW engine (PMRID needs the CFA mosaic). On
-       Apple the raw denoise is inert, so add no children: the row then has no arrow. */
+       Shown only on the WINNOW engine (PMRID needs the CFA mosaic); on Apple the raw
+       denoise is inert so they are omitted. They are root-level SIBLINGS of the Demosaic
+       row (not children) so they always show with no collapse arrow; UR_ExtraIndent lines
+       their captions up one tree level, matching the Basic sliders. Their per-raw
+       visibility is handled with the Demosaic row in applyCoreVisibility. */
     if (G::decodeRawEngine != G::DecodeRawEngine::appleDecodeRawEngine) {
+        /* 4px gap-only divider (no line) to separate the Demosaic row from the denoise
+           sliders. Hidden with them in applyCoreVisibility. */
+        addDivider(4, 0, divColor, QModelIndex(), "", "denoiseGap");
         addSlider("denoiseLuma", "Denoise Lum",
                   "Raw luminance noise reduction (AI, whole image).",
-                  demosaicIdx, "", 0, 100, 0, G::darkgray, G::lightgray, 0);
+                  QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray, 0);
+        model->setData(capIdx, true, UR_ExtraIndent);
         addSlider("denoiseChroma", "Denoise Color", "Raw colour (chroma) noise reduction.",
-                  demosaicIdx, "", 0, 100, 0, G::darkgray, G::lightgray, 100);
-        /* Draw the expand/collapse arrow on the Demosaic row. The delegate decorates only
-           rows flagged UR_isDecoration (normally headers); Demosaic is a value row, so we
-           flag it now it has children. Apple: no children, no flag -> no arrow. */
-        model->setData(demosaicIdx, true, UR_isDecoration);
+                  QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray, 100);
+        model->setData(capIdx, true, UR_ExtraIndent);
     }
     /* Visibility (per G::useRaw + collapse) applied by buildTree() after
        applyLayerItemsCollapsed. */
@@ -355,24 +389,20 @@ void DevelopProperties::syncEditRaw(bool useRaw)
 
 void DevelopProperties::applyCoreVisibility()
 {
-    /* The Demosaic row (and its raw-denoise children on the Winnow engine) is visible
+    /* The Demosaic row and its raw-denoise sibling sliders (Winnow engine) are visible
        only when editing raw AND the layer items are not collapsed ('>'). Scan root rows
-       for "demosaic" -- hiding the parent hides the whole subtree -- and run AFTER
-       applyLayerItemsCollapsed(), which would otherwise re-show it on a non-collapsed
-       rebuild. On the Apple engine the row has no children (addCoreItems), so there is
-       nothing extra to hide here. */
+       for those names -- run AFTER applyLayerItemsCollapsed(), which would otherwise
+       re-show them on a non-collapsed rebuild. On the Apple engine the denoise rows are
+       absent (addCoreItems), so only the Demosaic row matches. */
     const bool hide = !G::useRaw || layerItemsCollapsed;
     for (int r = 0; r < model->rowCount(); ++r) {
         const QModelIndex cap = model->index(r, CapColumn);
-        if (cap.data(UR_Name).toString() != "demosaic") continue;
+        const QString name = cap.data(UR_Name).toString();
+        if (name != "demosaic" && name != "denoiseGap" &&
+            name != "denoiseLuma" && name != "denoiseChroma")
+            continue;
         model->setData(cap, hide, UR_isHidden);   // remembered for updateHiddenRows()
         setRowHidden(r, QModelIndex(), hide);
-        /* Keep the denoise children's UR_isHidden in step with the parent so a later
-           updateHiddenRows() can't force-show them; when the parent is shown they still
-           obey the expand/collapse arrow (a collapsed parent hides them regardless). */
-        for (int c = 0; c < model->rowCount(cap); ++c)
-            model->setData(model->index(c, CapColumn, cap), hide, UR_isHidden);
-        break;
     }
 }
 

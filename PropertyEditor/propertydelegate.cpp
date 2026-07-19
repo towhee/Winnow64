@@ -179,6 +179,10 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
         height = qMax(height, bounding.height() + padding);
     }
 
+    /* Optional per-row extra height (split top+bottom by paint's vertical centering).
+       Role lives on the caption cell, read via the sibling so both columns agree. */
+    height += capIndex.data(UR_ExtraRowHeight).toInt();
+
     return QSize(option.rect.width(), height);
 }
 

@@ -6949,6 +6949,7 @@ void MW::toggleDevelopScopes()
     if (G::isLogger) G::log("MW::toggleDevelopScopes");
     developScopesVisible = !developScopesVisible;
     if (scopesView) scopesView->setVisible(developScopesVisible);
+    if (developScopesBtn) developScopesBtn->setActive(developScopesVisible);
     settings->setValue("Develop/scopesVisible", developScopesVisible);
     if (developScopesVisible) {
         if (currentDevelopEditsVisible())
@@ -6976,6 +6977,7 @@ void MW::toggleDevelopTransform()
     developTransformVisible = !developTransformVisible;
     if (transformPanel) transformPanel->setVisible(developTransformVisible);
     if (developTransformAction) developTransformAction->setChecked(developTransformVisible);
+    if (developTransformBtn) developTransformBtn->setActive(developTransformVisible);
     settings->setValue("Develop/transformVisible", developTransformVisible);
     if (developTransformVisible && developDock) {
         developDock->setVisible(true);
@@ -7152,6 +7154,7 @@ void MW::cancelDevelopTransform()
     developTransformVisible = false;
     if (transformPanel) transformPanel->setVisible(false);
     if (developTransformAction) developTransformAction->setChecked(false);
+    if (developTransformBtn) developTransformBtn->setActive(false);
     settings->setValue("Develop/transformVisible", false);
 
     renderDevelopPreview(false);     // restored geometry applied -> pre-session result

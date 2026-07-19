@@ -59,6 +59,7 @@ enum UserRole
     UR_AddBtn,                          // draw an add [+] glyph left of the [-] (delegate-drawn)
     UR_ShowDecoration,                  // force expand/collapse arrow, no children
     UR_ExtraIndent,                     // one extra indent level for a leaf caption
+    UR_ExtraRowHeight,                  // extra px added to a row height (top+bottom pad)
     UR_isDivider,                       // spacer/divider row (see addDivider)
     UR_DividerHeight,                   // divider: total row height in px
     UR_DividerLineHeight,               // divider: line thickness in px (0 = gap only)
