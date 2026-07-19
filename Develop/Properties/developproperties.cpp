@@ -1,5 +1,7 @@
 #include "Develop/Properties/developproperties.h"
 #include "Develop/Properties/layerheader.h"
+#include <QCheckBox>
+#include <QPushButton>
 #include "Develop/fillspot.h"
 #include "Main/mainwindow.h"
 #include "Main/global.h"
@@ -337,6 +339,51 @@ void DevelopProperties::addCoreItems()
         /* 4px gap-only divider (no line) to separate the Demosaic row from the denoise
            sliders. Hidden with them in applyCoreVisibility. */
         addDivider(4, 0, divColor, QModelIndex(), "", "denoiseGap");
+
+        /* Auto-run vs manual raw denoise. A full-width (spanned) row: an "auto run
+           denoise" checkbox (persisted to Develop/autoRunDenoise) on the left and a "Run
+           Denoise" push button on the right. When auto is off MW skips its automatic
+           PMRID runs and the button forces one. Hidden with the denoise group in
+           applyCoreVisibility. */
+        clearItemInfo(i);
+        i.name = "autoRunDenoise";
+        i.parentName = "";
+        i.captionText = "";
+        i.tooltip = "Run raw denoise automatically, or on demand with Run Denoise.";
+        i.isIndent = true;
+        i.hasValue = false;
+        i.captionIsEditable = false;
+        i.key = "autoRunDenoise";
+        i.delegateType = DT_None;
+        addItem(i);
+        const QModelIndex autoIdx = capIdx;
+        model->setData(autoIdx, 6, UR_ExtraRowHeight);   // room for the checkbox + button
+        setFirstColumnSpanned(autoIdx.row(), QModelIndex(), true);
+        if (autoIdx.isValid()) {
+            QWidget *rowW = new QWidget;
+            rowW->setAttribute(Qt::WA_TranslucentBackground);
+            QHBoxLayout *rhb = new QHBoxLayout(rowW);
+            /* Left pad to the denoise-slider caption column (2 x tree indent), 10px right
+               so the button clears the panel edge. */
+            rhb->setContentsMargins(indentation * 2, 0, 10, 0);
+            rhb->setSpacing(8);
+            QCheckBox *autoCb = new QCheckBox("auto run denoise", rowW);
+            autoCb->setChecked(setting->value("Develop/autoRunDenoise", true).toBool());
+            autoCb->setToolTip("On: denoise runs automatically. Off: click Run Denoise.");
+            connect(autoCb, &QCheckBox::toggled, this, [this](bool on){
+                setting->setValue("Develop/autoRunDenoise", on);
+                emit autoRunDenoiseToggled(on);
+            });
+            QPushButton *runBtn = new QPushButton("Run Denoise", rowW);
+            runBtn->setToolTip("Run the raw denoise now.");
+            connect(runBtn, &QPushButton::clicked, this,
+                    [this]{ emit runRawDenoiseRequested(); });
+            rhb->addWidget(autoCb);
+            rhb->addStretch(1);
+            rhb->addWidget(runBtn);
+            setIndexWidget(autoIdx, rowW);
+        }
+
         addSlider("denoiseLuma", "Denoise Lum",
                   "Raw luminance noise reduction (AI, whole image).",
                   QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray, 0);
@@ -398,7 +445,7 @@ void DevelopProperties::applyCoreVisibility()
     for (int r = 0; r < model->rowCount(); ++r) {
         const QModelIndex cap = model->index(r, CapColumn);
         const QString name = cap.data(UR_Name).toString();
-        if (name != "demosaic" && name != "denoiseGap" &&
+        if (name != "demosaic" && name != "denoiseGap" && name != "autoRunDenoise" &&
             name != "denoiseLuma" && name != "denoiseChroma")
             continue;
         model->setData(cap, hide, UR_isHidden);   // remembered for updateHiddenRows()

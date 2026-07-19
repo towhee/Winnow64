@@ -647,4 +647,10 @@ must return to its prior state. For example, if the user was brushing a mask, an
 switched to zoom/pan by pressing alt/opt, when they released alt/opt then they should
 return to brushing the mask.
 
-
+In develop panel, demosaic section, between demosaic row and denoise lum row, add another row:
+[ ] auto run denoise         [Run Denoise]
+where
+[ ] = checkbox
+[Run Denoise] = a push button.
+When auto run denoise is on then execute the raw denoise same as is currently being done.
+When auto run denoise is off, execute the raw denoise when [Run Denoise] is clicked.

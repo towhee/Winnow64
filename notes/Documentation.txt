@@ -2748,6 +2748,19 @@ Layer & masking model (planned)
           counts as identity (EditParams::kDefaultDenoiseChroma, mirrored in isIdentity).
           The denoise rows share the Demosaic row's per-raw visibility (hidden when not
           editing raw or when the layer is collapsed -- applyCoreVisibility).
+          RUN MODE: a full-width (setFirstColumnSpanned) row sits between the Demosaic row
+          and "Denoise Lum": an "auto run denoise" checkbox + a "Run Denoise" button
+          (DevelopProperties::addCoreItems; also hidden by applyCoreVisibility). The
+          checkbox persists to QSettings Develop/autoRunDenoise (mirrored in the runtime
+          flag MW::developAutoRunDenoise). When ON (default) the heavy PMRID decode runs
+          automatically as before -- the three ensureRawDenoise auto call sites (render
+          settle in renderDevelopFullResAsync, image-select, and entering Develop) are
+          gated on developAutoRunDenoise. When OFF those calls are skipped so the render
+          uses the CLEAN base (no denoise) until the user clicks "Run Denoise", which
+          calls MW::runRawDenoiseNow to force one ensureRawDenoise for the current image +
+          Base params. Toggling the checkbox ON also runs it immediately
+          (MW::onAutoRunDenoiseToggled). The button/checkbox signals
+          (autoRunDenoiseToggled / runRawDenoiseRequested) are wired in initialize.cpp.
           IMPLEMENTED as PMRID (MegVii, Apache-2.0), a PRE-demosaic (CFA/Bayer-domain)
           learned denoiser: it runs on the raw mosaic BEFORE demosaic (ImageFormats/
           Raw/pmrid.{h,cpp}, PMRID::Apply) through the unified inference layer

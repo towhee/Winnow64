@@ -2851,7 +2851,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                    the start and produces the clean + PMRID bases in one pass, publishing
                    the clean base so the ImageCache decode reuses it. No-op without a
                    denoise edit or off the Winnow engine. */
-                if (developProperties) {
+                if (developProperties && developAutoRunDenoise) {
                     const auto mj = developProperties->stackJob();
                     ensureRawDenoise(fPath, mj.base,
                                      WorkingImageCache::instance().get(fPath),
@@ -6532,7 +6532,8 @@ void MW::renderDevelopFullResAsync()
     const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.base, work);
     if (base == work &&
         (mj.base.denoiseLuma > 0.0f || mj.base.denoiseChroma > 0.0f) &&
-        G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
+        G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine &&
+        developAutoRunDenoise) {   // auto off: render clean; "Run Denoise" runs PMRID
         ensureRawDenoise(fPath, mj.base, work, currentImageIso());
         return;   // wait for the denoised base; PMRID re-arms this render when it lands
     }
@@ -6835,6 +6836,29 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
             developFullResTimer->start(kDevelopSettleMs);   // and a crisp full-res
         });
     });
+}
+
+void MW::onAutoRunDenoiseToggled(bool on)
+{
+    if (G::isLogger) G::log("MW::onAutoRunDenoiseToggled");
+    developAutoRunDenoise = on;
+    settings->setValue("Develop/autoRunDenoise", on);
+    /* Turning auto ON behaves "as currently done": run the denoise for the current image
+       now so it updates without waiting for the next param change. */
+    if (on) runRawDenoiseNow();
+}
+
+void MW::runRawDenoiseNow()
+{
+    if (G::isLogger) G::log("MW::runRawDenoiseNow");
+    if (!G::useRaw || !developProperties || !dm) return;
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    /* PMRID is Winnow-engine only; inert on Apple. */
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    const auto mj = developProperties->stackJob();
+    ensureRawDenoise(fPath, mj.base, WorkingImageCache::instance().get(fPath),
+                     currentImageIso());
 }
 
 void MW::ensureDevelopWork(const QString &fPath)

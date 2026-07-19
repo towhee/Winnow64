@@ -1818,6 +1818,14 @@ void MW::createDevelopDock()
                 developParamsChange();
             });
 
+    /* The dock's "auto run denoise" checkbox + "Run Denoise" button. When auto is off the
+       heavy PMRID denoise runs only on the button (see the gated ensureRawDenoise call
+       sites); the button forces a run regardless. */
+    connect(developProperties, &DevelopProperties::autoRunDenoiseToggled,
+            this, &MW::onAutoRunDenoiseToggled);
+    connect(developProperties, &DevelopProperties::runRawDenoiseRequested,
+            this, &MW::runRawDenoiseNow);
+
     /* Mask editing handshake: the dock activates a spatial mask tool and ImageView draws/edits its
        overlay, sending dragged geometry back to be persisted into the MaskComponent. */
     connect(developProperties, &DevelopProperties::maskEditBegin, imageView, &ImageView::beginMaskEdit);
@@ -1878,6 +1886,7 @@ void MW::createDevelopDock()
        The scopes keep a fixed height; developProperties takes the remaining (stretch) space.
        Visibility is user-toggled from the editor bar below and persisted. */
     developScopesVisible = settings->value("Develop/scopesVisible", true).toBool();
+    developAutoRunDenoise = settings->value("Develop/autoRunDenoise", true).toBool();
     QWidget *developContainer = new QWidget(developDock);
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
     developContainerLayout->setContentsMargins(0, 0, 0, 0);
@@ -2248,7 +2257,7 @@ void MW::setOperationMode(G::OperationMode mode)
                otherwise it would not fire until the clean decode + settle. Produces the
                clean + PMRID bases in one pass and publishes the clean base (which
                ImageDecoder::load then reuses). No-op without a denoise edit / on Apple. */
-            if (!selIsVideo && dm && !dm->currentFilePath.isEmpty()) {
+            if (!selIsVideo && dm && !dm->currentFilePath.isEmpty() && developAutoRunDenoise) {
                 const auto mj = developProperties->stackJob();
                 ensureRawDenoise(dm->currentFilePath, mj.base,
                                  WorkingImageCache::instance().get(dm->currentFilePath),
