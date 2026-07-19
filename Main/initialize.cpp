@@ -2055,17 +2055,19 @@ void MW::createDevelopDock()
     developTitleBar->setToolTip(dockTabToolTip(developDockTabText));
 
     // show/hide the histogram + vectorscope scopes strip
-    BarBtn *developScopesBtn = new BarBtn();
+    developScopesBtn = new BarBtn();
     developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
     developScopesBtn->setToolTip("Show or hide the histogram and vectorscope  (H)");
+    developScopesBtn->setActive(developScopesVisible);
     connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
     developTitleLayout->addWidget(developScopesBtn);
     developTitleLayout->addSpacing(10);
 
     // show/hide the Transform (crop + perspective) panel
-    BarBtn *developTransformBtn = new BarBtn();
+    developTransformBtn = new BarBtn();
     developTransformBtn->setIcon(":/images/icon16/rectangle.png", G::iconOpacity);
     developTransformBtn->setToolTip("Show or hide the Transform (crop) panel  (R)");
+    developTransformBtn->setActive(developTransformVisible);
     connect(developTransformBtn, &BarBtn::clicked, this, &MW::toggleDevelopTransform);
     developTitleLayout->addWidget(developTransformBtn);
     developTitleLayout->addSpacing(10);
@@ -2073,13 +2075,14 @@ void MW::createDevelopDock()
     /* Spot-removal tool (regenerative fill): brush over a blemish to heal it; heals are
        recorded in the pinned "Fill" layer. DevelopProperties owns the armed state and
        drives the icon back via spotActiveChanged (full opacity armed, dimmed off). */
-    BarBtn *developSpotBtn = new BarBtn();
+    developSpotBtn = new BarBtn();
     developSpotBtn->setIcon(":/images/icon16/spot.png", G::iconOpacity);
     developSpotBtn->setToolTip("Spot removal: click a blemish to heal it  (S)");
     connect(developSpotBtn, &BarBtn::clicked, this, &MW::toggleDevelopReplace);
     connect(developProperties, &DevelopProperties::spotActiveChanged, developSpotBtn,
-            [developSpotBtn](bool active){
+            [this](bool active){
         developSpotBtn->setIcon(":/images/icon16/spot.png", active ? 1.0 : G::iconOpacity);
+        developSpotBtn->setActive(active);
     });
     developTitleLayout->addWidget(developSpotBtn);
     developTitleLayout->addSpacing(10);

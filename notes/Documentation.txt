@@ -2708,16 +2708,17 @@ Layer & masking model (planned)
         • "DENOISE RAW" (Colour + luminance NR) is GLOBAL-ONLY, driven by EditParams
           denoiseLuma/denoiseChroma (two Base-layer 0..1 sliders,
           "Denoise Lum"/"Denoise Color").
-          UI: the two sliders are CHILDREN of the Base "Demosaic" row, which gains an
-          expand/collapse arrow to hide them; the arrow appears only on the WINNOW engine
-          (Apple adds no children -- see DevelopProperties::addCoreItems). The arrow is
-          delegate-drawn: PropertyDelegate paints branch arrows only for rows flagged
-          UR_isDecoration, so addCoreItems sets that flag on the Demosaic row (a value
-          row, not a header) once it has children. "Denoise Color"
-          defaults to 100 -- a fresh raw carrying only that default still counts as
-          identity (EditParams::kDefaultDenoiseChroma, mirrored in isIdentity). The row
-          honours the dock's Expand all / Collapse all / Solo mode, and its state persists
-          under Develop/SectionExpanded/demosaic.
+          UI: the two sliders are root-level SIBLINGS of the Base "Demosaic" row (not
+          children), always shown with no collapse arrow; they appear only on the WINNOW
+          engine (Apple omits them -- see DevelopProperties::addCoreItems). UR_ExtraIndent
+          lines their captions up one tree level so they align with the Basic sliders.
+          The Demosaic row is a plain leaf (no children, no UR_isDecoration), so it draws
+          in the ordinary caption colour like "Edit:", not the teal header colour; the
+          "Edit:" source row carries a small UR_ExtraRowHeight (8px) for breathing room.
+          "Denoise Color" defaults to 100 -- a fresh raw carrying only that default still
+          counts as identity (EditParams::kDefaultDenoiseChroma, mirrored in isIdentity).
+          The denoise rows share the Demosaic row's per-raw visibility (hidden when not
+          editing raw or when the layer is collapsed -- applyCoreVisibility).
           IMPLEMENTED as PMRID (MegVii, Apache-2.0), a PRE-demosaic (CFA/Bayer-domain)
           learned denoiser: it runs on the raw mosaic BEFORE demosaic (ImageFormats/
           Raw/pmrid.{h,cpp}, PMRID::Apply) through the unified inference layer
@@ -4204,6 +4205,15 @@ Develop presets (save)
     picker/apply path is not built; MW::developRunPreset). The title-bar Preset + Export
     buttons are colourful BarBtn glyphs in the same style as the Scope and Transform
     buttons (Export -> lightning, also a stub).
+
+    Active border. The Develop title-bar buttons that toggle a panel/tool -- Scopes,
+    Transform and Spot -- carry a blue (G::appleBlue) border while their panel is shown /
+    the tool is armed, like a conventional checked toolbutton (BarBtn::setActive). MW
+    keeps them as members and calls setActive from the toggle handlers
+    (toggleDevelopScopes, toggleDevelopTransform + cancelDevelopTransform,
+    spotActiveChanged) so the border tracks the real state even when toggled by the
+    keyboard (H / R / Esc / S). The Preset + Export buttons are momentary (no panel), so
+    they show no persistent border yet.
 
     Dialog (Dialogs/savedeveloppresetdlg.{h,cpp}, SaveDevelopPresetDlg). A preset-name
     field plus a collapsible, scrollable checklist of every settable item. Items that

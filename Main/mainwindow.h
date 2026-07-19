@@ -1060,6 +1060,11 @@ private:
     QAction *developExportAction;       // X
     QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
     QAction *developRunPresetAction = nullptr;    // P (develop-mode local, arbiter)
+    /* Title-bar toggle buttons that carry the blue "active" border while their panel /
+       tool is on (kept in sync from the toggle handlers). */
+    BarBtn *developScopesBtn = nullptr;
+    BarBtn *developTransformBtn = nullptr;
+    BarBtn *developSpotBtn = nullptr;
     QAction *developScopesAction;       // H
     // developTransformAction (R) and toggleMaskOverlayAction (O) live with the docks
 

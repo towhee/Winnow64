@@ -47,6 +47,9 @@ public:
     QString type;           // ie "effect"
     void setIcon(QString path, double opacity);
     void setIcon(const QIcon &icon);
+    /* Show/clear a blue "active" border, e.g. when the panel this button toggles is
+       visible (mirrors a conventional checked toolbutton). */
+    void setActive(bool on);
 
 protected:
 //    void enterEvent(QEvent*);

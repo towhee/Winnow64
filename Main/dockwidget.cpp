@@ -110,6 +110,18 @@ void BarBtn::setIcon(const QIcon &icon)
     QToolButton::setIcon(icon);
 }
 
+void BarBtn::setActive(bool on)
+{
+    /* Override the inherited (border:none) style with a blue accent border when active,
+       matching a conventional checked button. Appended after G::css so it wins; cleared
+       back to G::css when inactive. */
+    if (on)
+        setStyleSheet(G::css + "QToolButton { border: 1px solid " + G::appleBlue.name() +
+                      "; border-radius: 2px; }");
+    else
+        setStyleSheet(G::css);
+}
+
 //void BarBtn::enterEvent(QEvent*)
 //{
 //    setStyleSheet
