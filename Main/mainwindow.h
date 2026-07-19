@@ -590,6 +590,12 @@ private slots:
        already computing this key. Called from the settle path so a drag does not spawn many DNN runs. */
     void ensureRawDenoise(const QString &fPath, const EditParams &base,
                           const std::shared_ptr<const WorkingImage> &clean, int iso);
+    /* Dock "auto run denoise" checkbox handler: store developAutoRunDenoise (+ persist);
+       turning it ON runs the denoise for the current image immediately. */
+    void onAutoRunDenoiseToggled(bool on);
+    /* Dock "Run Denoise" button handler: force ensureRawDenoise for the current image and
+       Base params regardless of developAutoRunDenoise. */
+    void runRawDenoiseNow();
     /* Ensure the current image's scene-linear (pre-develop) WorkingImage is cached, decoding it OFF
        the GUI thread when it is missing (evicted / a display-referred one cached), then re-render.
        Coalesced (one decode in flight). Replaces the old synchronous re-decode inside
@@ -1393,6 +1399,11 @@ private:
        edits reuse the base. With no denoise the render uses the clean cached image unchanged. See
        developRawDenoisedBase / ensureRawDenoise. */
     std::shared_ptr<const WorkingImage> developDenoised;
+    /* Run mode for the heavy PMRID denoise. true (default): run automatically on image
+       select / entering Develop / a denoise-param settle (the auto call sites gate on
+       this). false: run only when the dock's "Run Denoise" button is clicked
+       (runRawDenoiseNow). Persisted to QSettings Develop/autoRunDenoise. */
+    bool developAutoRunDenoise = true;
     QString developDenoisedKey;                   // "path|dnL|dnC|iso"; empty when clean
     QString developDenoiseInFlightKey;            // key currently being computed (coalesce guard)
     // full-strength PMRID base, reused across amounts

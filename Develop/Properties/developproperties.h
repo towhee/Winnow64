@@ -152,9 +152,15 @@ signals:
     /* The "Edit: Raw / Embedded Preview" selector was changed; MW drives G::useRaw (toggleUseRaw)
        -- a private slot, so we route through this signal rather than calling it directly. */
     void useRawRequested(bool useRaw);
-    /* The "Demosaic" combo selects the RAW decode engine (Apple Core Image vs in-house Winnow).
-       MW sets G::decodeRawEngine and re-decodes the current image. */
+    /* The "Demosaic" combo selects the RAW decode engine (Apple Core Image vs in-house
+       Winnow). MW sets G::decodeRawEngine and re-decodes the current image. */
     void demosaicEngineChanged(bool useApple);
+    /* Base raw-denoise (PMRID) run mode. autoRunDenoiseToggled: the "auto run denoise"
+       checkbox flipped -- MW gates its automatic PMRID runs on it.
+       runRawDenoiseRequested: the "Run Denoise" button was clicked -- run now regardless
+       of the flag. */
+    void autoRunDenoiseToggled(bool on);
+    void runRawDenoiseRequested();
     /* Mask editing handshake with ImageView. Begin when a spatial mask tool becomes the active
        (selected) edit target; End when none is selected. ImageView draws the overlay + handles and
        sends geometry back via setActiveMaskParams. */
