@@ -665,6 +665,48 @@ bool ImageView::developToolActive() const
     return cropActive() || maskEditMode || spotEditMode;
 }
 
+/* Hold Space in Develop mode to temporarily borrow the loupe zoom/pan gesture over the
+   active mask / spot / crop tool: the tool's mouse branches are skipped so the base
+   pan/zoom path runs (click toggles zoom, drag pans a zoomed image). Releasing Space
+   restores the tool with no state lost. MW's global event filter calls this on Space
+   press/release because ImageView usually lacks keyboard focus in Develop. A change that
+   arrives while a stroke/drag is in flight is deferred and applied on the next release,
+   so a partly-painted stroke isn't corrupted. */
+void ImageView::setSpacePanOverride(bool on)
+{
+    if (on == spacePanOverride) { spacePanDeferred = false; return; }
+    const bool gestureInFlight = isLeftMouseBtnPressed || maskPainting || spotPainting
+                              || maskObjDrawing || maskDrag >= 0 || cropDrag >= 0
+                              || cropLevelDragging;
+    if (gestureInFlight) { spacePanDeferred = true; spacePanDeferredVal = on; return; }
+    spacePanDeferred = false;
+    spacePanOverride = on;
+    if (on) {
+        /* Suppress the tool's brush/spot cursor circle and show the loupe hand cursor. */
+        maskBrushCursorOn = false;
+        spotCursorOn = false;
+        setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
+    }
+    else {
+        /* Restore the tool cursor; the next hover in mouseMoveEvent refines it. */
+        if (spotEditMode) setCursor(Qt::BlankCursor);   // brush-size circle is the cursor
+        else if (isScrollable) setCursor(Qt::OpenHandCursor);
+        else setCursor(Qt::ArrowCursor);
+    }
+    viewport()->update();
+}
+
+/* A Space state change that landed mid-gesture was stashed; apply it now that we are at a
+   gesture edge (mouse press / hover, no button down). setSpacePanOverride re-defers if a
+   gesture is still in flight, so this is safe to call unconditionally. */
+void ImageView::applyDeferredSpacePan()
+{
+    if (!spacePanDeferred) return;
+    const bool v = spacePanDeferredVal;
+    spacePanDeferred = false;
+    setSpacePanOverride(v);
+}
+
 /*
     Spot-mode overlay (viewport coords): committed pins (click to remove), the live stroke
     path while painting, and the brush-size circle cursor. Mirrors the brush/object size-
@@ -3243,18 +3285,17 @@ void ImageView::leaveEvent(QEvent *event)
 void ImageView::wheelEvent(QWheelEvent *event)
 {
 /*
-    Mouse wheel scrolling / trackpad swiping = next/previous image.
+    Preview: mouse wheel / trackpad scroll = next/previous image.
+    Develop: wheel / two-finger scroll = zoom the image under the cursor. While a Spot or
+    Brush/Object tool is armed the wheel resizes that tool instead; hold Space to zoom
+    (spacePanOverride bypasses the resize).
 */
     if (G::isLogger)
         qDebug() << "ImageView::wheelEvent";
 
-    /* While cropping, swallow the wheel so it can't navigate away (leaves the crop
-       overlay stale -- image-switch re-init is a later increment). */
-    if (cropActive()) { event->accept(); return; }
-
     /* Spot removal armed: a two-finger drag (or wheel) resizes the spot brush, not the
-       image. */
-    if (spotEditMode) {
+       image. Space held (spacePanOverride) bypasses this so the wheel zooms instead. */
+    if (!spacePanOverride && spotEditMode) {
         const QPoint pd = event->pixelDelta();
         const double dy = !pd.isNull() ? pd.y() : event->angleDelta().y() / 8.0;
         spotBrushSize = qBound(spotSizeMin(), spotBrushSize + dy * 0.04, 100.0);
@@ -3266,14 +3307,26 @@ void ImageView::wheelEvent(QWheelEvent *event)
     }
 
     /* Brush/Object active over the image: a two-finger drag (or wheel) resizes the brush,
-       not the image. Vertical delta; pixelDelta on a trackpad, angleDelta on a wheel. */
-    if (maskEditMode && (maskTool == 2 || maskIsObject()) && maskHover) {
+       not the image. Vertical delta; pixelDelta on a trackpad, angleDelta on a wheel.
+       Space held bypasses this so the wheel zooms instead. */
+    if (!spacePanOverride && maskEditMode && (maskTool == 2 || maskIsObject()) && maskHover) {
         const QPoint pd = event->pixelDelta();
         const double dy = !pd.isNull() ? pd.y() : event->angleDelta().y() / 8.0;
         adjustBrushSize(dy * 0.15);     // up = larger
         event->accept();
         return;
     }
+
+    /* Develop mode: the wheel / two-finger scroll zooms the image under the cursor
+       (including while cropping). Preview keeps the wheel for prev/next navigation. */
+    if (G::operationMode == G::OperationMode::Develop) {
+        wheelZoom(event);
+        return;
+    }
+
+    /* Safety: swallow the wheel while cropping (a Develop feature) so it can't
+       navigate. */
+    if (cropActive()) { event->accept(); return; }
 
     static int accumDelta = 0;
     int triggerDelta = 5;
@@ -3325,6 +3378,54 @@ void ImageView::wheelStopped()
     G::wheelSpinning = false;
     wheelSpinningOnEntry = false;
     //qDebug() << "ImageView::wheelStopped";
+}
+
+/* Develop-mode wheel / two-finger scroll zoom, anchored on the cursor. A trackpad reports
+   pixelDelta (smooth, per-pixel); a mouse wheel reports angleDelta in 120-unit notches
+   (one notch ~= one zoomInc step).
+
+   Anchoring is done manually with the scrollbars (the same mechanism as the mouse-drag
+   pan), NOT via centerOn or AnchorUnderMouse. The scrollbars are ScrollBarAlwaysOff, so
+   centerOn doesn't reliably scroll and the view falls back to its AlignCenter centring;
+   setting the scrollbar values directly does work. Capture the scene point under the
+   cursor, scale with NoAnchor, then scroll that point back under the cursor. */
+void ImageView::wheelZoom(QWheelEvent *event)
+{
+    double factor;
+    const QPoint pd = event->pixelDelta();
+    if (!pd.isNull())
+        factor = std::pow(1.0015, pd.y());          // trackpad: up = zoom in
+    else
+        factor = std::pow(1.0 + zoomInc, event->angleDelta().y() / 120.0);   // wheel
+
+    if (factor <= 0.0) { event->accept(); return; }
+
+    const qreal newZoom = qBound(zoomMin, zoom * factor, zoomMax);
+    if (newZoom == zoom) { event->accept(); return; }
+
+    /* Work in float throughout (viewportTransform maps scene<->viewport in doubles) and
+       round only once at the integer scrollbars -- rounding the cursor or using the
+       integer mapFromScene makes the anchor jitter by up to a pixel as the zoom
+       changes. */
+    const QPointF cursorVp = event->position();
+    const QPointF sceneAnchor = viewportTransform().inverted().map(cursorVp);
+
+    const QGraphicsView::ViewportAnchor savedAnchor = transformationAnchor();
+    setTransformationAnchor(QGraphicsView::NoAnchor);   // do the anchoring ourselves
+    zoom = newZoom;
+    isFit = false;
+    scale();
+    setTransformationAnchor(savedAnchor);
+
+    /* Scroll so the captured scene point sits back under the cursor. Only meaningful when
+       scrollable (zoom > fit); at/below fit scale() centres the image. */
+    if (isScrollable) {
+        const QPointF nowVp = viewportTransform().map(sceneAnchor);   // where it landed
+        const QPointF deltaPx = cursorVp - nowVp;                     // move to cursor
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value() - qRound(deltaPx.x()));
+        verticalScrollBar()->setValue(verticalScrollBar()->value() - qRound(deltaPx.y()));
+    }
+    event->accept();
 }
 
 bool ImageView::event(QEvent *event) {
@@ -3464,12 +3565,13 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     // if (G::isLogger)
     G::log("ImageView::mouseDoubleClickEvent", "isScrollable =" + QVariant(isScrollable).toString());
     /* Commit a perspective warp with a double-click while the quad is being traced. */
-    if (cropActive() && cropWarp && event->button() == Qt::LeftButton) {
+    if (!spacePanOverride && cropActive() && cropWarp && event->button() == Qt::LeftButton) {
         emit warpCommitRequested();
         return;
     }
-    /* A Develop tool owns the canvas: swallow the double-click so it can't zoom/pan. */
-    if (developToolActive()) { event->accept(); return; }
+    /* A Develop tool owns the canvas: swallow the double-click so it can't zoom/pan.
+       (Skipped while Space is held so the override's zoom/pan runs.) */
+    if (!spacePanOverride && developToolActive()) { event->accept(); return; }
     if (event->button() == Qt::LeftButton) {
         isLeftMouseBtnPressed = true;
         mousePressPt.setX(event->x());
@@ -3496,9 +3598,12 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    applyDeferredSpacePan();    // a Space change stashed mid-gesture takes effect here
+
     /* Spot removal: click a pin to delete that spot, else start a new stroke. In Fill
-       mode Opt/Alt starts an ERASE stroke (subtracts from the painted area). */
-    if (spotEditMode && event->button() == Qt::LeftButton) {
+       mode Opt/Alt starts an ERASE stroke (subtracts from the painted area). Skipped
+       while Space is held (spacePanOverride) so the loupe zoom/pan gesture runs. */
+    if (!spacePanOverride && spotEditMode && event->button() == Qt::LeftButton) {
         const int pin = spotPinHitTest(event->pos());
         if (pin >= 0) { emit spotRemoveRequested(pin); return; }
         spotPainting = true;
@@ -3516,13 +3621,13 @@ void ImageView::mousePressEvent(QMouseEvent *event)
        rectangle mode breaks the rectangle into a free 4-point warp quad. Anywhere else is a normal
        canvas pan that slides the image under the fixed frame, so fall through to the pan handling
        below (cropDrag stays -1; the frame is re-derived from cropN as the image moves). */
-    if (cropActive() && cropLevelMode && event->button() == Qt::LeftButton) {
+    if (!spacePanOverride && cropActive() && cropLevelMode && event->button() == Qt::LeftButton) {
         cropLevelP1 = cropLevelP2 = event->pos();   // start the level line
         cropLevelDragging = true;
         isLeftMouseBtnPressed = true;
         return;
     }
-    if (cropActive() && event->button() == Qt::LeftButton) {
+    if (!spacePanOverride && cropActive() && event->button() == Qt::LeftButton) {
         const int h = cropHitTest(event->pos());
         if (!cropWarp && (event->modifiers() & Qt::AltModifier) && h >= 0 && h <= 3) {
             cropEnterWarp();        // seed the quad, then drag this corner
@@ -3551,7 +3656,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     /* Color Range eyedropper: a left click samples the colour under the cursor (shift = add another
        sample); clicking an on-image swatch removes it. Consumes the event so it does not pan. The
        Luminance Range tool has no canvas interaction -- clicks fall through to normal pan/zoom. */
-    if (maskEditMode && maskTool == 3 && event->button() == Qt::LeftButton) {
+    if (!spacePanOverride && maskEditMode && maskTool == 3 && event->button() == Qt::LeftButton) {
         QVector<QRectF> rects;
         rangeSwatchRects(rects);
         for (int k = 0; k < rects.size(); ++k) {
@@ -3573,7 +3678,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     /* Object Mask: a left press begins a perimeter stroke (Alt = erase). Painting eats
        the event so the image can't pan. Each stroke adds to (or erases from) the traced
        boundary; when it closes the overlay flips amber -> green (objRecomputeFill). */
-    if (maskEditMode && maskIsObject() && event->button() == Qt::LeftButton) {
+    if (!spacePanOverride && maskEditMode && maskIsObject() && event->button() == Qt::LeftButton) {
         objEnsureBuffers();
         if (maskBrushW > 0) {
             maskObjDrawing = true;
@@ -3597,7 +3702,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     /* Brush: a left press begins a stroke (Alt = erase). Painting consumes the event so the image
        does not pan. */
-    if (maskEditMode && maskTool == 2 && event->button() == Qt::LeftButton) {
+    if (!spacePanOverride && maskEditMode && maskTool == 2 && event->button() == Qt::LeftButton) {
         brushEnsureBuffers();
         if (maskBrushW > 0) {
             maskPainting = true;
@@ -3648,7 +3753,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     /* Mask edit: grab a handle and start dragging it instead of panning. A miss falls through to
        the normal pan/zoom handling below, so panning a zoomed image still works while editing. */
-    if (maskEditMode && event->button() == Qt::LeftButton) {
+    if (!spacePanOverride && maskEditMode && event->button() == Qt::LeftButton) {
         const int h = maskHitTest(event->pos());
         if (h >= 0) {
             maskDrag = h;
@@ -3680,7 +3785,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
            crop with no handle grabbed (cropDrag < 0) deliberately falls through here to
            pan the image under the fixed frame (see the crop branch above); the crop
            release handler suppresses the click-to-zoom, so let it start the pan. */
-        if (developToolActive() && !(cropActive() && cropDrag < 0)) { event->accept(); return; }
+        if (!spacePanOverride && developToolActive() && !(cropActive() && cropDrag < 0)) { event->accept(); return; }
         isLeftMouseBtnPressed = true;
         isMouseDrag = false;
         mousePressPt.setX(event->x());
@@ -3751,9 +3856,11 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
     static QPoint prevPos = event->pos();
 
+    applyDeferredSpacePan();    // a Space change stashed mid-gesture applies at hover
+
     /* Spot removal: track the brush cursor; while painting, extend the stroke. Consume
        the move so the canvas never pans in spot mode. */
-    if (spotEditMode) {
+    if (!spacePanOverride && spotEditMode) {
         spotCursorVp = event->pos();
         if (spotPainting) {
             /* Spot mode is a single click -- no dragging, the stroke stays the press
@@ -3778,7 +3885,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
     /* Object Mask: paint a perimeter stroke (left held), or track the size cursor.
        Like the Brush tool -- stamp the segment, fold into the wall, recompute closure. */
-    if (maskEditMode && maskIsObject()) {
+    if (!spacePanOverride && maskEditMode && maskIsObject()) {
         maskBrushCursorVp = event->pos();
         maskBrushCursorOn = true;
         if (maskObjDrawing) {
@@ -3796,7 +3903,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     }
 
     /* Brush: paint a stroke (left button held), or just track the size cursor on hover. */
-    if (maskEditMode && maskTool == 2) {
+    if (!spacePanOverride && maskEditMode && maskTool == 2) {
         maskBrushCursorVp = event->pos();
         maskBrushCursorOn = true;
         if (maskPainting) {
@@ -3814,12 +3921,13 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     /* Crop interaction. A handle drag resizes the frame over the STATIC image (consumed here).
        Otherwise it is a normal canvas pan -- fall through so the image scrolls under the fixed
        frame; cropN is then recomputed from the (unchanged) frame after the pan, below. */
-    if (cropActive() && cropLevelMode) {               // drawing / hovering the level line
+    /* drawing / hovering the level line */
+    if (!spacePanOverride && cropActive() && cropLevelMode) {
         if (cropLevelDragging) { cropLevelP2 = event->pos(); viewport()->update(); }
         else setCursor(levelCursor);
         return;
     }
-    if (cropActive()) {
+    if (!spacePanOverride && cropActive()) {
         const bool alt = (event->modifiers() & Qt::AltModifier);
         if (alt != cropAltHeld) { cropAltHeld = alt; viewport()->update(); }
         if (cropDrag == kCropDrawNew) {                // rubber-band a brand-new crop from the anchor
@@ -3890,7 +3998,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     }
     /* Hover feedback while a mask tool is active (not dragging): show a move cursor over a handle,
        an eyedropper (cross) for the Color Range sampler (pointer over a removable swatch). */
-    if (maskEditMode && !isLeftMouseBtnPressed) {
+    if (!spacePanOverride && maskEditMode && !isLeftMouseBtnPressed) {
         if (maskTool == 3) {
             QVector<QRectF> rects; rangeSwatchRects(rects);
             bool onSwatch = false;
@@ -4002,7 +4110,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
        stroke's brush size + erase flag) -- Enter commits, Escape clears (see
        keyPressEvent); the dock then appends the FillSpot and re-renders (the replace
        engine heals it, see lamafill.cpp). */
-    if (spotEditMode && spotPainting) {
+    if (!spacePanOverride && spotEditMode && spotPainting) {
         spotPainting = false;
         if (spotStrokePts.size() >= 2) {
             if (spotReplaceMode == 1) {
@@ -4025,7 +4133,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
     /* Finish a level line: reduce its tilt to the nearest horizontal/vertical and emit
        angle (a delta added to the straighten). A too-short line is ignored. */
-    if (cropActive() && cropLevelMode) {
+    if (!spacePanOverride && cropActive() && cropLevelMode) {
         cropLevelMode = false;
         isLeftMouseBtnPressed = false;
         const bool wasDragging = cropLevelDragging;
@@ -4046,7 +4154,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     /* End a crop gesture. The view transform is never touched, so there is no re-stage: just clear
        the drag, release any grab the pan path took, and leave the image where the user left it
        (no zoom-toggle-on-release). */
-    if (cropActive() && isLeftMouseBtnPressed) {
+    if (!spacePanOverride && cropActive() && isLeftMouseBtnPressed) {
         cropDrag = -1;
         isLeftMouseBtnPressed = false;
         QGraphicsView::mouseReleaseEvent(event);     // release the pan grab, if any
@@ -4060,7 +4168,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
        it to the stroke list, and persist {"size","strokes"}. MW::ensureObjectMask (via
        paramsChanged) rasterizes the perimeter, fills it if closed, and SAM-refines the
        fill to the object edge; an open perimeter yields no coverage yet. */
-    if (maskEditMode && maskIsObject() && maskObjDrawing) {
+    if (!spacePanOverride && maskEditMode && maskIsObject() && maskObjDrawing) {
         maskObjDrawing = false;
         isLeftMouseBtnPressed = false;
         BrushStamp::composite(maskBrushMain.data(), maskBrushStroke.data(),
@@ -4088,7 +4196,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
     /* Finish a brush stroke: composite it into the committed mask, append it to the stroke list,
        and persist the updated paramsJson (which triggers the masked re-render in stage 3). */
-    if (maskEditMode && maskTool == 2 && maskPainting) {
+    if (!spacePanOverride && maskEditMode && maskTool == 2 && maskPainting) {
         maskPainting = false;
         isLeftMouseBtnPressed = false;
         const double flow = qBound(0.0, maskBrushFlow, 100.0) / 100.0;
@@ -4119,7 +4227,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     }
 
     /* Finish a mask-handle drag: persist the new geometry (dock writes it into the component). */
-    if (maskEditMode && maskDrag >= 0) {
+    if (!spacePanOverride && maskEditMode && maskDrag >= 0) {
         maskDrag = -1;
         isLeftMouseBtnPressed = false;
         emit maskGeometryChanged(maskParamsJson());
@@ -4168,8 +4276,9 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     if (!viewport()->rect().contains(event->pos())) return;
 
     /* A Develop tool owns the canvas: a tool click (e.g. deleting a spot pin) must NOT
-       fall through to the loupe's click-to-toggle-zoom / pan. */
-    if (developToolActive()) { event->accept(); return; }
+       fall through to the loupe's click-to-toggle-zoom / pan. (Skipped while Space is
+       held so the override's zoom/pan runs.) */
+    if (!spacePanOverride && developToolActive()) { event->accept(); return; }
 
     // zoom > zoomFit (set in scale)
     if (isScrollable) setCursor(Qt::OpenHandCursor);
