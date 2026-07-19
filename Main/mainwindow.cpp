@@ -1359,6 +1359,44 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* DEVELOP MODE: hold Space to borrow the loupe zoom/pan gesture over a mask / spot /
+       crop tool (click toggles zoom, drag pans a zoomed image); release resumes the tool.
+       ImageView usually lacks keyboard focus in Develop, so drive it from this global
+       filter, which sees KeyPress AND KeyRelease. Space is bound to zoomToggleAction
+       globally, so the ShortcutOverride pass is accepted to free the key (as
+       developShortcutIntercept does) and stop that action firing. A value editor keeps
+       Space as a literal character; auto-repeat is ignored so a held key can't
+       flicker. */
+    {
+        if (!G::isInitializing && G::operationMode == G::OperationMode::Develop && imageView
+            && (event->type() == QEvent::ShortcutOverride
+                || event->type() == QEvent::KeyPress
+                || event->type() == QEvent::KeyRelease)) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            if (e->key() == Qt::Key_Space) {
+                QWidget *fw = QApplication::focusWidget();
+                const bool editor =
+                    qobject_cast<QAbstractSlider *>(fw)  || qobject_cast<QAbstractSpinBox *>(fw) ||
+                    qobject_cast<QLineEdit *>(fw)        || qobject_cast<QComboBox *>(fw);
+                if (!editor) {
+                    /* Accept frees the key from the global shortcut on the override
+                       pass (so zoomToggleAction can't fire); KeyPress/Release acts. */
+                    event->accept();
+                    if (event->type() == QEvent::KeyPress && !e->isAutoRepeat())
+                        imageView->setSpacePanOverride(true);
+                    else if (event->type() == QEvent::KeyRelease && !e->isAutoRepeat())
+                        imageView->setSpacePanOverride(false);
+                    return true;
+                }
+            }
+        }
+    }
+
+    /* Clear the Space zoom/pan override if the app deactivates while Space is held -- a
+       release delivered to another app would otherwise leave the override stuck on. */
+    if (event->type() == QEvent::ApplicationDeactivate && imageView)
+        imageView->setSpacePanOverride(false);
+
     /* KEYPRESS INTERCEPT (NAVIGATION and MODIFIERS) */
     {
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {

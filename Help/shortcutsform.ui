@@ -1238,6 +1238,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Zoom / Pan (hold)</string>
+        </property>
+        <property name="text">
+         <string>Space</string>
+        </property>
+        <property name="text">
+         <string>Hold Space to temporarily zoom/pan over any mask, spot or crop tool (click toggles zoom, drag pans); release resumes the tool. The mouse wheel / two-finger scroll zooms the image; while a Spot or Brush tool is armed the wheel resizes it, so hold Space to zoom with the wheel there. In Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Histogram / Vectorscope</string>
         </property>
         <property name="text">

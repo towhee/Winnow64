@@ -1820,6 +1820,35 @@ Develop Mode Local Shortcuts
     (guard on the tool's active flag), NOT to developShortcuts and NOT to
     ImageView::event.
 
+    Space: temporary zoom/pan over a Develop tool
+    ......................................................................................
+    In Develop mode a mask / spot / crop tool owns the mouse (brush, lasso, eyedropper,
+    spot pins, crop handles), so the loupe's click-to-zoom / drag-to-pan is unavailable
+    while editing.  HOLDING Space borrows it back: the tool's mouse branches are skipped
+    and the base loupe gesture runs (click toggles zoom, drag pans a zoomed image);
+    releasing Space resumes the tool with no state lost.  It applies to every tool,
+    including Crop.
+
+    The wheel / two-finger scroll zooms too: in Develop mode ImageView::wheelEvent zooms
+    the image under the cursor (ImageView::wheelZoom, cursor-anchored) instead of the
+    Preview-mode prev/next navigation.  While a Spot or Brush/Object tool is armed the
+    wheel still resizes that tool, so hold Space (spacePanOverride) to zoom with the wheel
+    there -- the same flag that gates the mouse branches also bypasses the tool's
+    wheel-resize.
+
+    Space is bound to zoomToggleAction globally, and ImageView usually lacks keyboard
+    focus in Develop, so this is driven from MW::eventFilter (a qApp filter that sees
+    KeyPress AND KeyRelease), NOT developShortcutIntercept (which never sees KeyRelease
+    and is not meant for held-state keys).  The ShortcutOverride pass is accepted to free
+    the key from zoomToggleAction; KeyPress/KeyRelease call
+    ImageView::setSpacePanOverride, which flips the spacePanOverride flag that every
+    ImageView mouse handler is gated on.
+    A value editor keeps Space as a literal character (same guard as the arbiter), auto-
+    repeat is ignored, and ApplicationDeactivate clears the flag so a Space released in
+    another app can't leave it stuck.  A change that arrives mid-stroke is deferred (see
+    ImageView::applyDeferredSpacePan) and applied on the next mouse release so a partly-
+    painted stroke isn't corrupted.
+
     Guards (MW::developShortcutIntercept, in order)
     ......................................................................................
       • Focus in a QDialog -> bail.  Mirrors the MODELESS DIALOG SHORTCUT GUARD, which

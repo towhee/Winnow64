@@ -639,4 +639,12 @@ where > means subitems can be collaped/expanded.
 Shortcut: Shift-Cmd-N in develop mode only
 Add to context menus that also include solo mode in the develop panel
 
+In Preview Mode, when imageView is visible (loupe), a mouse click toggles the zoom and a
+mouse drag pans the imageview if zoom > fit. In Develop Mode, the mouse is used as a
+brush or a grab for mask tools, but we still need to zoom and pan. Can you add use
+alt/opt to change to the zoom/pan behavior as well. When alt/opt is released, the mouse
+must return to its prior state. For example, if the user was brushing a mask, and
+switched to zoom/pan by pressing alt/opt, when they released alt/opt then they should
+return to brushing the mask.
+
 

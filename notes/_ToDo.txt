@@ -2,9 +2,12 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
+- Add checkbox to run raw denoise automatically
+- Add mouse behavior to develop help tips
 - Expand/contract layer mask or submask
 - Change submask feather, rebuild submask?
 - Spot fill quality issue (reassess)
+- WB temp values, sampler
 - Redo help preformance tips
 - Cannot use Embellish panel when in Develop mode
 - When mask tool is selected or activated show its specific mask in a different tint

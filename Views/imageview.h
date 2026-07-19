@@ -134,6 +134,13 @@ public slots:
     void activateRubberBand();
     void quitRubberBand();
 
+    /* Develop: hold Space to temporarily borrow the loupe zoom/pan gesture over any
+       active mask / spot / crop tool (click toggles zoom, drag pans); release resumes the
+       tool. MW's global event filter drives this on Space press/release, since ImageView
+       usually lacks keyboard focus in Develop mode. A change arriving mid-gesture is
+       deferred to the next mouse release (see spacePanDeferred). */
+    void setSpacePanOverride(bool on);
+
     /* Develop mask editing. beginMaskEdit makes a spatial mask tool the active overlay target (its
        geometry drawn over the image, draggable); endMaskEdit clears it. setMaskFeather live-updates
        the ramp softness from the Feather slider. Geometry is normalized image coords (0..1). */
@@ -251,6 +258,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void scrollContentsBy(int dx, int dy) override;
     void wheelEvent(QWheelEvent *event) override;
+    void wheelZoom(QWheelEvent *event);     // Develop: wheel / two-finger scroll = zoom
     void nativeGestureEvent(QNativeGestureEvent *event);
     bool event(QEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
@@ -391,6 +399,14 @@ private:
     /* True while a Develop tool (crop / mask / spot) owns the canvas: the default loupe
        click-to-zoom / pan / pick is suppressed so a tool click can't leak to it. */
     bool    developToolActive() const;
+    /* Space held: the loupe zoom/pan gesture temporarily overrides the active tool (the
+       tool's mouse branches are skipped so the base pan/zoom path runs). See
+       setSpacePanOverride. spacePanDeferred holds a state change requested mid-gesture,
+       applied on the next mouse release so an in-progress stroke isn't corrupted. */
+    bool    spacePanOverride = false;
+    bool    spacePanDeferred = false;
+    bool    spacePanDeferredVal = false;
+    void    applyDeferredSpacePan();    // apply a deferred Space change at a gesture edge
     void    drawSpotOverlay(QPainter *p, const QRectF &br);  // pins + stroke + cursor
 
     /* ------- Develop mask editing ------- */
