@@ -6532,10 +6532,15 @@ void MW::renderDevelopFullResAsync()
     const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.base, work);
     if (base == work &&
         (mj.base.denoiseLuma > 0.0f || mj.base.denoiseChroma > 0.0f) &&
-        G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine &&
-        developAutoRunDenoise) {   // auto off: render clean; "Run Denoise" runs PMRID
-        ensureRawDenoise(fPath, mj.base, work, currentImageIso());
-        return;   // wait for the denoised base; PMRID re-arms this render when it lands
+        G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
+        /* Run PMRID when Auto run is on, OR when the PMRID base is already cached (a
+           manual "Denoise" already ran) -- an amount change is then only a cheap re-blend
+           (reuses developPmridFull) and must NOT fall through to the clean render, which
+           would drop the denoise. */
+        if (developAutoRunDenoise || rawDenoiseReadyForCurrent()) {
+            ensureRawDenoise(fPath, mj.base, work, currentImageIso());
+            return;   // wait for the (re)blended base; PMRID re-arms this render
+        }
     }
     /* On the Apple engine PMRID can't run (no CFA), so "Denoise raw" is inert -- don't bail here
        (there is no denoised base coming); fall through and render the clean base at full res. */
@@ -6829,6 +6834,8 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
             }
             developDenoised = result;
             developDenoisedKey = key;
+            if (developProperties)
+                developProperties->updateDenoiseRunState(true);   // -> "Denoised"
             developProxy.reset();          // rebuild proxy from the denoised base
             developProxyPath.clear();
             ++developParamsGen;            // discard any stale in-flight full-res
@@ -6861,6 +6868,47 @@ void MW::runRawDenoiseNow()
                      currentImageIso());
 }
 
+void MW::clearRawDenoiseNow()
+{
+    if (G::isLogger) G::log("MW::clearRawDenoiseNow");
+    /* "Denoise" unchecked: drop BOTH the blended and the full-strength PMRID base so the
+       render falls back to clean and the amount sliders disable again. Reset the checkbox
+       label and re-render. (With Auto run on, the next auto trigger recomputes it.) */
+    developDenoised.reset();
+    developDenoisedKey.clear();
+    developPmridFull.reset();
+    developPmridKey.clear();
+    if (developProperties) developProperties->updateDenoiseRunState(false);
+    developParamsChange();
+}
+
+bool MW::rawDenoiseReadyForCurrent()
+{
+    /* True once the full-strength PMRID base for the current image is cached -- i.e. the
+       heavy denoise has completed. Amount-independent (the base is keyed path+iso; the
+       sliders only scale the blend), so it stays true across denoise-amount changes. It
+       drives both the "Denoise"/"Denoised" checkbox and the amount-slider enabled. */
+    if (!dm) return false;
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty() || !developPmridFull) return false;
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return false;
+    return developPmridKey == pmridBaseKey(fPath, currentImageIso());
+}
+
+void MW::onDemosaicProgress(const QString &fPath, int done, int total)
+{
+    /* Relayed from an ImageCache decoder thread. Show the "Demosaic" status-bar row only
+       for the CURRENT image's Winnow raw demosaic while Auto-run denoise is off (with it
+       on, the "Denoise raw" path shows its own row). Cleared when the current image
+       finishes caching (setCached, wired in createImageCache). */
+    if (developAutoRunDenoise) return;
+    if (G::operationMode != G::OperationMode::Develop || !G::useRaw) return;
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    if (!dm || fPath != dm->currentFilePath) return;
+    progress->showRow(progressDemosaicRow, true);
+    progress->updateProgress(progressDemosaicRow, done, total);
+}
+
 void MW::ensureDevelopWork(const QString &fPath)
 {
 /*
@@ -6884,12 +6932,29 @@ void MW::ensureDevelopWork(const QString &fPath)
        fallback for the rare empty-struct return (invalid row). */
     if (m.ext.isEmpty()) m.ext = QFileInfo(fPath).suffix().toLower();
     const quint64 gen = developParamsGen;
+    /* Show the Winnow raw demosaic progress on this develop-open decode -- the "Denoise
+       raw" path (ensureRawDenoise) shows its own row and runs only when Auto run is on,
+       so this covers the manual (Auto run off) case. Raw + in-house engine only. */
+    const bool showDemosaic = !developAutoRunDenoise && G::useRaw && isFileRaw(fPath)
+        && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine;
 
-    developRenderPool->start([this, fPath, m, gen]() mutable {
+    developRenderPool->start([this, fPath, m, gen, showDemosaic]() mutable {
         ImageDecoder dec(0, dm, metadata);
+        std::function<void(int, int)> prog;
+        if (showDemosaic) {
+            QMetaObject::invokeMethod(this, [this]() {
+                progress->showRow(progressDemosaicRow, true);
+            });
+            prog = [this](int done, int total) {
+                QMetaObject::invokeMethod(this, [this, done, total]() {
+                    progress->updateProgress(progressDemosaicRow, done, total);
+                });
+            };
+        }
         QImage img;
-        dec.decodeIndependent(img, metadata, m);            // side effect: caches scene-linear work
-        QMetaObject::invokeMethod(this, [this, fPath, gen]() {
+        dec.decodeIndependent(img, metadata, m, prog);   // caches the scene-linear work
+        QMetaObject::invokeMethod(this, [this, fPath, gen, showDemosaic]() {
+            if (showDemosaic) progress->clearProgress(progressDemosaicRow);
             developWorkInFlight.clear();
             if (!dm || fPath != dm->currentFilePath) return;   // navigated away; drop it
             /* Success (scene-linear work now cached) -> clear the marker so a future eviction can

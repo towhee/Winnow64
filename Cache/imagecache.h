@@ -100,6 +100,9 @@ signals:
                          QString source = "");
     void updateIsRunning(bool, bool);   // (isRunning, showCacheLabel)
     void refreshViews(QString fPath, bool isCached, QString src);
+    /* Relayed from a decoder thread: per-tile RAW demosaic progress for MW's status-bar
+       "Demosaic" row (see MW::onDemosaicProgress). */
+    void demosaicProgress(QString fPath, int done, int total);
 
 public slots:
     void start();

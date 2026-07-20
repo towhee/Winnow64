@@ -593,9 +593,17 @@ private slots:
     /* Dock "auto run denoise" checkbox handler: store developAutoRunDenoise (+ persist);
        turning it ON runs the denoise for the current image immediately. */
     void onAutoRunDenoiseToggled(bool on);
-    /* Dock "Run Denoise" button handler: force ensureRawDenoise for the current image and
-       Base params regardless of developAutoRunDenoise. */
+    /* Dock "Denoise" checkbox handlers: runRawDenoiseNow forces ensureRawDenoise for the
+       current image + Base params regardless of developAutoRunDenoise; clearRawDenoiseNow
+       drops the denoised base and re-renders clean. rawDenoiseReadyForCurrent reports
+       whether a denoised base is cached for the current image + params (drives the
+       "Denoise"/"Denoised" checkbox state). */
     void runRawDenoiseNow();
+    void clearRawDenoiseNow();
+    bool rawDenoiseReadyForCurrent();
+    /* Show the status-bar "Demosaic" progress row while the CURRENT image's Winnow raw
+       demosaic decodes with Auto-run denoise off (relayed from ImageCache). */
+    void onDemosaicProgress(const QString &fPath, int done, int total);
     /* Ensure the current image's scene-linear (pre-develop) WorkingImage is cached, decoding it OFF
        the GUI thread when it is missing (evicted / a display-referred one cached), then re-render.
        Coalesced (one decode in flight). Replaces the old synchronous re-decode inside
@@ -1257,6 +1265,7 @@ private:
     int progressMetaReadRow = -1;
     int progressFocusStackRow = -1;
     int progressRawDenoiseRow = -1;
+    int progressDemosaicRow = -1;
     int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;

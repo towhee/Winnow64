@@ -1,7 +1,5 @@
 #include "Develop/Properties/developproperties.h"
 #include "Develop/Properties/layerheader.h"
-#include <QCheckBox>
-#include <QPushButton>
 #include "Develop/fillspot.h"
 #include "Main/mainwindow.h"
 #include "Main/global.h"
@@ -340,57 +338,83 @@ void DevelopProperties::addCoreItems()
            sliders. Hidden with them in applyCoreVisibility. */
         addDivider(4, 0, divColor, QModelIndex(), "", "denoiseGap");
 
-        /* Auto-run vs manual raw denoise. A full-width (spanned) row: an "auto run
-           denoise" checkbox (persisted to Develop/autoRunDenoise) on the left and a "Run
-           Denoise" push button on the right. When auto is off MW skips its automatic
-           PMRID runs and the button forces one. Hidden with the denoise group in
-           applyCoreVisibility. */
+        /* Manual "Denoise" trigger + "Auto run" toggle. A full-width (spanned) row:
+           "Denoise" checkbox on the left (aligned with the Demosaic caption above), "Auto
+           run" checkbox on the right. Checking "Denoise" runs the PMRID denoise now
+           (MW::runRawDenoiseNow) and it relabels to "Denoised" when the result lands
+           (updateDenoiseRunState, driven by MW). "Auto run" (persisted to
+           Develop/autoRunDenoise) runs the denoise automatically instead. Hidden with the
+           denoise group in applyCoreVisibility. */
         clearItemInfo(i);
         i.name = "autoRunDenoise";
         i.parentName = "";
         i.captionText = "";
-        i.tooltip = "Run raw denoise automatically, or on demand with Run Denoise.";
+        i.tooltip = "Run raw denoise, automatically (Auto run) or on demand (Denoise).";
         i.isIndent = true;
-        i.hasValue = false;
+        i.hasValue = true;
         i.captionIsEditable = false;
         i.key = "autoRunDenoise";
         i.delegateType = DT_None;
         addItem(i);
-        const QModelIndex autoIdx = capIdx;
-        model->setData(autoIdx, 6, UR_ExtraRowHeight);   // room for the checkbox + button
-        setFirstColumnSpanned(autoIdx.row(), QModelIndex(), true);
-        if (autoIdx.isValid()) {
-            QWidget *rowW = new QWidget;
-            rowW->setAttribute(Qt::WA_TranslucentBackground);
-            QHBoxLayout *rhb = new QHBoxLayout(rowW);
-            /* Left pad to the denoise-slider caption column (2 x tree indent), 10px right
-               so the button clears the panel edge. */
-            rhb->setContentsMargins(indentation * 2, 0, 10, 0);
-            rhb->setSpacing(8);
-            QCheckBox *autoCb = new QCheckBox("auto run denoise", rowW);
+        const QModelIndex autoCapIdx = capIdx;
+        const QModelIndex autoValIdx = findValueIndex("autoRunDenoise");
+        model->setData(autoCapIdx, 6, UR_ExtraRowHeight);   // room for the checkboxes
+        if (autoCapIdx.isValid()) {
+            /* "Denoise" in the CAPTION cell -> left-aligns with the Demosaic caption.
+               Manual run + completion state: checked / "Denoised" reflects a ready
+               denoised base for the current image (queried from MW). */
+            const bool denoised = mw && mw->rawDenoiseReadyForCurrent();
+            QCheckBox *denCb = new QCheckBox(denoised ? "Denoised" : "Denoise");
+            denCb->setChecked(denoised);
+            denCb->setToolTip("Run the raw denoise; shows \"Denoised\" when complete.");
+            connect(denCb, &QCheckBox::toggled, this, [this](bool on){
+                if (on) emit runRawDenoiseRequested();
+                else    emit clearRawDenoiseRequested();
+            });
+            denoiseRunCheck = denCb;      // QPointer: MW relabels it on completion
+            QWidget *capW = new QWidget;
+            capW->setAttribute(Qt::WA_TranslucentBackground);
+            QHBoxLayout *chb = new QHBoxLayout(capW);
+            chb->setContentsMargins(0, 0, 0, 0);
+            chb->setSpacing(0);
+            chb->addWidget(denCb);
+            chb->addStretch(1);
+            setIndexWidget(autoCapIdx, capW);
+        }
+        if (autoValIdx.isValid()) {
+            /* "Auto run" in the VALUE cell -> left-aligns with the Demosaic dropdown.
+               Persisted flag; when on the denoise runs automatically. */
+            QCheckBox *autoCb = new QCheckBox("Auto run");
             autoCb->setChecked(setting->value("Develop/autoRunDenoise", true).toBool());
-            autoCb->setToolTip("On: denoise runs automatically. Off: click Run Denoise.");
+            autoCb->setToolTip("On: denoise runs automatically. Off: use the Denoise box.");
             connect(autoCb, &QCheckBox::toggled, this, [this](bool on){
                 setting->setValue("Develop/autoRunDenoise", on);
                 emit autoRunDenoiseToggled(on);
             });
-            QPushButton *runBtn = new QPushButton("Run Denoise", rowW);
-            runBtn->setToolTip("Run the raw denoise now.");
-            connect(runBtn, &QPushButton::clicked, this,
-                    [this]{ emit runRawDenoiseRequested(); });
-            rhb->addWidget(autoCb);
-            rhb->addStretch(1);
-            rhb->addWidget(runBtn);
-            setIndexWidget(autoIdx, rowW);
+            QWidget *valW = new QWidget;
+            valW->setAttribute(Qt::WA_TranslucentBackground);
+            QHBoxLayout *vhb = new QHBoxLayout(valW);
+            vhb->setContentsMargins(0, 0, 10, 0);
+            vhb->setSpacing(0);
+            vhb->addWidget(autoCb);
+            vhb->addStretch(1);
+            setIndexWidget(autoValIdx, valW);
         }
 
         addSlider("denoiseLuma", "Denoise Lum",
                   "Raw luminance noise reduction (AI, whole image).",
-                  QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray, 0);
+                  QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray, 75);
         model->setData(capIdx, true, UR_ExtraIndent);
         addSlider("denoiseChroma", "Denoise Color", "Raw colour (chroma) noise reduction.",
                   QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray, 100);
         model->setData(capIdx, true, UR_ExtraIndent);
+
+        /* The amount sliders only scale the blend of a computed PMRID base, so start them
+           disabled and enable them once the denoise has produced that base (mirrors
+           updateDenoiseRunState, driven by MW on completion / clear). */
+        const bool denoiseReady = mw && mw->rawDenoiseReadyForCurrent();
+        setItemEnabled("denoiseLuma", denoiseReady);
+        setItemEnabled("denoiseChroma", denoiseReady);
     }
     /* Visibility (per G::useRaw + collapse) applied by buildTree() after
        applyLayerItemsCollapsed. */
@@ -399,6 +423,22 @@ void DevelopProperties::addCoreItems()
 bool DevelopProperties::currentIsRaw() const
 {
     return mw && mw->isFileRaw(currentImagePath);
+}
+
+void DevelopProperties::updateDenoiseRunState(bool denoised)
+{
+    /* Reflect the raw-denoise completion state (a ready PMRID base) on the "Denoise"
+       checkbox without re-emitting toggled() (that would re-trigger a run/clear), and
+       enable the amount sliders only once that base exists -- they merely scale the blend
+       of it, so they are inert (and disabled) until the heavy denoise has completed. */
+    if (!denoiseRunCheck) return;      // denoise section absent (Apple engine / non-raw)
+    {
+        QSignalBlocker block(denoiseRunCheck);
+        denoiseRunCheck->setChecked(denoised);
+        denoiseRunCheck->setText(denoised ? "Denoised" : "Denoise");
+    }
+    setItemEnabled("denoiseLuma", denoised);
+    setItemEnabled("denoiseChroma", denoised);
 }
 
 void DevelopProperties::onEditSourceChanged(bool raw)
@@ -554,6 +594,13 @@ void DevelopProperties::applyItemsEnabled(bool enabled)
                                     model->index(rows - 1, CapColumn, parent));
     };
     setRows(QModelIndex());
+    /* The raw-denoise amount sliders stay disabled (greyed caption + value) until the
+       PMRID base exists -- they only scale that base's blend, which is absent until the
+       denoise has run. Re-assert here so enabling the panel doesn't un-grey them. */
+    if (enabled && denoiseRunCheck && !(mw && mw->rawDenoiseReadyForCurrent())) {
+        setItemEnabled("denoiseLuma", false);
+        setItemEnabled("denoiseChroma", false);
+    }
     viewport()->update();
 }
 

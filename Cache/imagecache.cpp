@@ -160,6 +160,10 @@ ImageCache::ImageCache(QObject *parent,
 
         decoder->moveToThread(thread);
         connect(decoder, &ImageDecoder::done, this, &ImageCache::fillCache);
+        /* Relay the decoder's RAW demosaic progress to MW (drops sfRow; MW gates on the
+           current file path). */
+        connect(decoder, &ImageDecoder::demosaicProgress, this,
+                [this](int, QString fp, int d, int t){ emit demosaicProgress(fp, d, t); });
         connect(thread, &QThread::finished, decoder, &QObject::deleteLater);
         connect(thread, &QThread::finished, thread, &QObject::deleteLater);
 

@@ -2744,23 +2744,59 @@ Layer & masking model (planned)
           The Demosaic row is a plain leaf (no children, no UR_isDecoration), so it draws
           in the ordinary caption colour like "Edit:", not the teal header colour; the
           "Edit:" source row carries a small UR_ExtraRowHeight (8px) for breathing room.
-          "Denoise Color" defaults to 100 -- a fresh raw carrying only that default still
-          counts as identity (EditParams::kDefaultDenoiseChroma, mirrored in isIdentity).
+          "Denoise Lum" defaults to 75 and "Denoise Color" to 100 -- a fresh raw carrying
+          only those defaults still counts as identity (EditParams::kDefaultDenoiseLuma /
+          kDefaultDenoiseChroma, mirrored in isIdentity). A saved recipe overrides them
+          per image (paramsFromJson keeps the default only for keys absent from the JSON).
           The denoise rows share the Demosaic row's per-raw visibility (hidden when not
           editing raw or when the layer is collapsed -- applyCoreVisibility).
-          RUN MODE: a full-width (setFirstColumnSpanned) row sits between the Demosaic row
-          and "Denoise Lum": an "auto run denoise" checkbox + a "Run Denoise" button
-          (DevelopProperties::addCoreItems; also hidden by applyCoreVisibility). The
-          checkbox persists to QSettings Develop/autoRunDenoise (mirrored in the runtime
-          flag MW::developAutoRunDenoise). When ON (default) the heavy PMRID decode runs
-          automatically as before -- the three ensureRawDenoise auto call sites (render
-          settle in renderDevelopFullResAsync, image-select, and entering Develop) are
-          gated on developAutoRunDenoise. When OFF those calls are skipped so the render
-          uses the CLEAN base (no denoise) until the user clicks "Run Denoise", which
-          calls MW::runRawDenoiseNow to force one ensureRawDenoise for the current image +
-          Base params. Toggling the checkbox ON also runs it immediately
-          (MW::onAutoRunDenoiseToggled). The button/checkbox signals
-          (autoRunDenoiseToggled / runRawDenoiseRequested) are wired in initialize.cpp.
+          RUN MODE: a row sits between the Demosaic row and "Denoise Lum"
+          (DevelopProperties::addCoreItems; also hidden by applyCoreVisibility) with two
+          checkboxes hosted in the two columns so they line up with the Demosaic row:
+          "Denoise" in the CAPTION cell (aligned with the "Demosaic" caption) and "Auto
+          run" in the VALUE cell (aligned with the Demosaic dropdown).
+            - "Auto run" persists to QSettings Develop/autoRunDenoise (mirrored in the
+              runtime flag MW::developAutoRunDenoise). When ON (default) the heavy PMRID
+              decode runs automatically -- the three ensureRawDenoise auto call sites
+              (render settle in renderDevelopFullResAsync, image-select, and entering
+              Develop) gate on developAutoRunDenoise. When OFF they are skipped so the
+              render uses the CLEAN base. Turning it ON also runs the denoise immediately
+              (MW::onAutoRunDenoiseToggled -> runRawDenoiseNow).
+            - "Denoise" is the manual trigger + completion state. Checking it emits
+              runRawDenoiseRequested -> MW::runRawDenoiseNow (forces one ensureRawDenoise
+              regardless of the flag); unchecking emits clearRawDenoiseRequested ->
+              MW::clearRawDenoiseNow (drops BOTH developDenoised and the full-strength
+              developPmridFull base, re-renders clean). Its label is "Denoise" until the
+              PMRID base is ready, then "Denoised".
+          MW::rawDenoiseReadyForCurrent tests developPmridFull (the full-strength base,
+          keyed path+iso and so AMOUNT-INDEPENDENT). It drives both the checkbox label
+          and the amount-slider enabled state (DevelopProperties::updateDenoiseRunState,
+          called on ensureRawDenoise completion and clear; seeded on buildTree). Because
+          the base is amount-independent, once it exists a "Denoise Lum"/"Denoise Color"
+          change is only a cheap re-blend: the render gate re-runs ensureRawDenoise when
+          developAutoRunDenoise OR rawDenoiseReadyForCurrent (NOT auto-only), so a
+          manual-mode slider change stays denoised instead of reverting to clean. The
+          amount sliders are DISABLED (greyed caption + value) until the base exists (they
+          only scale its blend), enabling when the denoise completes. applyItemsEnabled
+          re-asserts that disable when the panel is (re-)enabled, so a panel-wide enable
+          can't un-grey them.
+          Signals (autoRunDenoiseToggled / runRawDenoiseRequested /
+          clearRawDenoiseRequested) are wired in initialize.cpp.
+          DEMOSAIC PROGRESS: with Auto run OFF the "Denoise raw" decode (which shows the
+          "Raw Denoise" row) does not run on open, so the plain Winnow sensor demosaic
+          that produces the image would otherwise show no feedback. It now shows a blue
+          "Demosaic" row (progressDemosaicRow) for the CURRENT image. That demosaic runs
+          in the ImageCache decoder threads (ImageDecoder::load, the Develop+useRaw
+          raw-sensor branch -> RawFormat::Decode), so progress is routed as a SIGNAL, not
+          a direct call: RawFormat::Decode drives its progress sink from Demosaic::Run's
+          per-tile callback (a clean, non-denoise decode with a sink now drives the whole
+          bar); ImageDecoder::load emits demosaicProgress(sfRow, fPath, done, total);
+          ImageCache relays it as demosaicProgress(fPath, done, total);
+          MW::onDemosaicProgress updates the row, gated to the current file + Develop +
+          useRaw + Winnow + Auto run off, and clears it on setCached for the current row.
+          (The rarely-used scene-linear fallback MW::ensureDevelopWork ->
+          ImageDecoder::decodeIndependent instead passes its own decodeProgress callback,
+          updating the same row directly.)
           IMPLEMENTED as PMRID (MegVii, Apache-2.0), a PRE-demosaic (CFA/Bayer-domain)
           learned denoiser: it runs on the raw mosaic BEFORE demosaic (ImageFormats/
           Raw/pmrid.{h,cpp}, PMRID::Apply) through the unified inference layer

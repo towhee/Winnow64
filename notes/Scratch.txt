@@ -654,3 +654,11 @@ where
 [Run Denoise] = a push button.
 When auto run denoise is on then execute the raw denoise same as is currently being done.
 When auto run denoise is off, execute the raw denoise when [Run Denoise] is clicked.
+
+Change [Run Denoise] button to a checkbox and change layout to:
+[ ] Denoise         [ ] Auto run
+
+aligned with Demosaic from row above in base layer panel.
+
+When '[ ] Denoise' is checked, run denoise.  When denoising completes, change '[ ] Denoise'
+to '[ ] Denoised.

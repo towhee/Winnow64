@@ -331,7 +331,17 @@ bool ImageDecoder::load()
                 rawMeta.model  = dm->sf->index(sfRow, G::CameraModelColumn).data().toString();  // PMRID calibration
             }
             std::shared_ptr<const WorkingImage> work;
-            if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort, &work)) {
+            /* Demosaic progress: a cache-mode decode reports per tile via the
+               demosaicProgress signal (ImageCache relays it to MW); the independent path
+               (ensureDevelopWork) uses its own decodeProgress callback. */
+            std::function<void(int, int)> demProg = decodeProgress;
+            if (!isIndependent) {
+                const int row = sfRow;
+                const QString fp = fPath;
+                demProg = [this, row, fp](int d, int t){ emit demosaicProgress(row, fp, d, t); };
+            }
+            if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort, &work,
+                                  false, demProg)) {
                 decoderToUse = Raw;
                 developApplied = true;   // RAW develops internally; skip the generic pass
                 /* Cache the pre-develop WorkingImage so a later edit re-renders without
@@ -765,7 +775,8 @@ void ImageDecoder::colorManage()
     ICC::transform(iccBuf, image);
 }
 
-bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m)
+bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m,
+                                     const std::function<void(int, int)> &progress)
 {
 /*
     This function is called externally, does not require the DataModel and does not
@@ -787,6 +798,7 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
     indMeta = m;
     fPath = m.fPath;
     sfRow = -1;
+    decodeProgress = progress;      // forwarded to the RAW demosaic by load()
 
     if (load()) {
         if (metadata->rotateFormats.contains(ext)) rotate();

@@ -3,9 +3,6 @@ WHAT'S NEW
 
 BUGS / TO DO
 - Maintain zoom when switch from embedded preview to raw
-- Disable raw denoise slider rows if not denoised
-- Show progress when demosaicing and not auto raw denoise
-- Add checkbox to run raw denoise automatically
 - Add mouse behavior to develop help tips
 - Expand/contract layer mask or submask
 - Change submask feather, rebuild submask?

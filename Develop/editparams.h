@@ -58,10 +58,13 @@ struct EditParams {
        engine) during demosaic, alongside start WB / black / white. Not maskable: these are
        baked into WorkingImage before Develop runs. 0 = engine default. */
     /* Default color (chroma) NR is full: chroma noise is objectionable and chroma
-       detail is low-frequency, so baking 100 at decode is the right baseline. A
-       fresh raw carrying this default still counts as identity (see isIdentity). */
+       detail is low-frequency, so baking 100 at decode is the right baseline.
+       Default luma NR is 0.75: strong enough to clean sensor grain while leaving
+       fine detail intact. A fresh raw carrying these defaults still counts as
+       identity (see isIdentity); a saved recipe overrides them per image. */
+    static constexpr float kDefaultDenoiseLuma   = 0.75f;
     static constexpr float kDefaultDenoiseChroma = 1.0f;
-    float denoiseLuma   = 0.0f;
+    float denoiseLuma   = kDefaultDenoiseLuma;
     float denoiseChroma = kDefaultDenoiseChroma;
 
     /* Local (maskable) NR -- Develop SPATIAL ops layered on TOP of the global baseline, operating
@@ -148,7 +151,7 @@ struct EditParams {
                texture == 0.0f && dehaze == 0.0f &&
                red == 0.0f && green == 0.0f && blue == 0.0f &&
                hue == 0.0f && saturation == 0.0f && vibrance == 0.0f && luminance == 0.0f &&
-               denoiseLuma == 0.0f && denoiseChroma == kDefaultDenoiseChroma &&
+               denoiseLuma == kDefaultDenoiseLuma && denoiseChroma == kDefaultDenoiseChroma &&
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f;
     }

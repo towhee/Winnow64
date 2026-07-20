@@ -498,6 +498,14 @@ void MW::createImageCache()
     connect(imageCache, &ImageCache::setCached,
             dm, &DataModel::setCached);
 
+    /* RAW demosaic progress -> the "Demosaic" status-bar row (MW gates on current image +
+       Winnow + Auto-run off). Clear it when the current image finishes caching. */
+    connect(imageCache, &ImageCache::demosaicProgress, this, &MW::onDemosaicProgress);
+    connect(imageCache, &ImageCache::setCached, this, [this](int sfRow, bool isCached, int){
+        if (isCached && dm && sfRow == dm->currentSfRow)
+            progress->clearProgress(progressDemosaicRow);
+    });
+
     // Signal datamodel to signal back when some row is loaded
     connect(imageCache, &ImageCache::waitingForRow,
             dm, &DataModel::imageCacheWaiting);
@@ -1152,6 +1160,11 @@ void MW::createStatusBar()
     progressRawDenoiseRow = progress->addRow("RawDenoise", 2, QColor(G::lightorange),
                                              Progress::Fill::FromStart);
     progress->setRowText(progressRawDenoiseRow, "Raw Denoise");
+    /* Winnow raw demosaic progress on develop-open when auto-run denoise is off (the
+       denoise path shows its own row). Blue to distinguish from the orange denoise. */
+    progressDemosaicRow = progress->addRow("Demosaic", 2, QColor("#3a97c9"),
+                                           Progress::Fill::FromStart);
+    progress->setRowText(progressDemosaicRow, "Demosaicing");
     connect(progress, &Progress::clicked, this, [this]() {
         preferences("CacheHeader");
     });
@@ -1825,6 +1838,8 @@ void MW::createDevelopDock()
             this, &MW::onAutoRunDenoiseToggled);
     connect(developProperties, &DevelopProperties::runRawDenoiseRequested,
             this, &MW::runRawDenoiseNow);
+    connect(developProperties, &DevelopProperties::clearRawDenoiseRequested,
+            this, &MW::clearRawDenoiseNow);
 
     /* Mask editing handshake: the dock activates a spatial mask tool and ImageView draws/edits its
        overlay, sending dragged geometry back to be persisted into the MaskComponent. */
