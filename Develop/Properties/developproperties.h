@@ -147,6 +147,11 @@ public slots:
        menu. Applying a preset is a separate, later task. */
     void saveDevelopPreset();
 
+    /* MW-driven raw-denoise completion state for the "Denoise"/"Denoised" checkbox:
+       checked + "Denoised" when a denoised base is ready for the current image, else
+       unchecked + "Denoise". Signal-blocked so it never re-triggers a run. */
+    void updateDenoiseRunState(bool denoised);
+
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
     /* The "Edit: Raw / Embedded Preview" selector was changed; MW drives G::useRaw (toggleUseRaw)
@@ -161,6 +166,7 @@ signals:
        of the flag. */
     void autoRunDenoiseToggled(bool on);
     void runRawDenoiseRequested();
+    void clearRawDenoiseRequested();    // "Denoise" unchecked -> drop the denoised base
     /* Mask editing handshake with ImageView. Begin when a spatial mask tool becomes the active
        (selected) edit target; End when none is selected. ImageView draws the overlay + handles and
        sends geometry back via setActiveMaskParams. */
@@ -353,6 +359,11 @@ private:
     void onEditSourceChanged(bool raw);
     void applyCoreVisibility();
     QPointer<QRadioButton> editRawRadio;
+    /* "Denoise" run/state checkbox in the Core (raw) section. MW calls
+       updateDenoiseRunState to reflect completion: checked + "Denoised" when a denoised
+       base is ready for the current image, else unchecked + "Denoise". QPointer --
+       recreated each buildTree. */
+    QPointer<QCheckBox> denoiseRunCheck;
 
     MW *mw;
     QSettings *setting;

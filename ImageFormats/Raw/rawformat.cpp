@@ -164,6 +164,9 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         /* The denoised (post-PMRID) demosaic is the last slice of the progress bar. */
         std::function<void(int, int)> demProg;
         if (denoiseRaw) demProg = [&stage](int d, int t) { stage(750, 250, d, t); };
+        /* A clean (non-denoise) decode with a progress sink: the demosaic drives the
+           whole bar -- lets MW::ensureDevelopWork show demosaic progress on open. */
+        else if (denoiseProgress) demProg = [&stage](int d, int t) { stage(0, 1000, d, t); };
         if (!demosaic.Run(raw, rgb, Demosaic::Bilinear, abort, demProg)) {
             errMsg = aborted() ? "Aborted" : "Demosaic failed (unsupported CFA pattern?).";
             return false;
