@@ -381,6 +381,7 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
     model->setData(valIdx, i.max, UR_Max);
     model->setData(valIdx, i.div, UR_Div);
     model->setData(valIdx, i.step, UR_DivPx);
+    model->setData(valIdx, i.logScale, UR_LogScale);
     model->setData(valIdx, i.fixedWidth, UR_FixedWidth);
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.color1, UR_Color1);
@@ -462,6 +463,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.min = 0;                      // DT_Spinbox, DT_Slider
     i.max = 0;                      // DT_Spinbox, DT_Slider
     i.div = 1;                      // DT_Slider (zero == int, nonzero = double)
+    i.logScale = false;             // DT_Slider (min/max a log range)
     i.step = 1;                    // DT_Slider
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo

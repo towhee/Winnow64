@@ -308,6 +308,7 @@ WorkingImage WorkingImageCache::downscaled(const WorkingImage &src, int targetLo
     dst.height = dh;
     dst.white = src.white;
     dst.sceneReferred = src.sceneReferred;
+    dst.cam = src.cam;      // white balance must resolve identically on the proxy
     dst.rgb.resize(static_cast<size_t>(dw) * static_cast<size_t>(dh) * 3);
     cv::Mat dstMat(dh, dw, CV_32FC3, dst.rgb.data());
     cv::resize(srcMat, dstMat, cv::Size(dw, dh), 0, 0, cv::INTER_AREA);

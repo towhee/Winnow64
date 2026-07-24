@@ -625,6 +625,10 @@ private slots:
     /* Show/hide the Fill Replace panel (title-bar spot button / "S" in Develop mode):
        visible == the replace (spot/fill/object) tool is armed on the loupe. */
     void toggleDevelopReplace();
+    /* "W" in Develop mode: arm/disarm the Basic panel's white-balance dropper. Transform
+       claims W for Warp while it is active (arbiter rule 1a), so this only runs when no
+       Transform session is up. */
+    void toggleDevelopWbSampler();
     void toggleMaskOverlay();     // "O": hide/show the active layer mask overlay tint
     void developNewLayer();       // "N": add a layer to the current image's stack
     void developNewMask();        // "M": pop the Add/Subtract mask tool menu
@@ -1071,6 +1075,7 @@ private:
     QAction *developNewLayerAction;     // N
     QAction *developNewMaskAction;      // M
     QAction *developSpotAction;         // S
+    QAction *developWbSamplerAction = nullptr;    // W (Transform owns W while it is up)
     QAction *developExportAction;       // X
     QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
     QAction *developRunPresetAction = nullptr;    // P (develop-mode local, arbiter)
@@ -1133,7 +1138,7 @@ private:
     QAction *embelDockVisibleAction;
     QAction *developDockVisibleAction;
     QAction *developTransformAction;    // "R": toggle the Develop Transform (crop) panel
-    QAction *toggleMaskOverlayAction;   // "M": hide/show the current layer's mask overlay tint
+    QAction *toggleMaskOverlayAction;   // "O": hide/show the layer's mask overlay tint
 //    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;

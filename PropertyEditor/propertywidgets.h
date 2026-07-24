@@ -63,7 +63,9 @@ enum UserRole
     UR_isDivider,                       // spacer/divider row (see addDivider)
     UR_DividerHeight,                   // divider: total row height in px
     UR_DividerLineHeight,               // divider: line thickness in px (0 = gap only)
-    UR_DividerColor                     // divider: line QColor (alpha 0 = gap only)
+    UR_DividerColor,                    // divider: line QColor (alpha 0 = gap only)
+    UR_LogScale,                        // Slider: UR_Min/UR_Max are a LOG value range
+    UR_FlashLevel                       // caption: 0..1 flash tint feedback
 };
 
 // reqd as can only pass QVariant convertable type through StandardItemModel
@@ -87,6 +89,7 @@ protected:
     void focusOutEvent(QFocusEvent *event) override;
 
 private:
+    void syncFocusRepaint();    // repaint the value + caption cells on focus in/out
     int div;
 };
 
@@ -97,6 +100,8 @@ public:
     SliderEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     void setValue(QVariant value);
     double value();
+    void focusSlider();     // give keyboard focus to the inner slider (nudge target)
+    bool sliderHasFocus() const;   // true while the inner slider owns keyboard focus
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -112,6 +117,16 @@ private:
     void change(double value);
     void sliderMoved();
     void updateSliderWhenLineEdited();
+    /* Log-scale mode (UR_LogScale): the slider's integer position is a point on a
+       LOGARITHMIC ramp between UR_Min and UR_Max, not the value itself. Needed by the
+       white-balance Temp slider, whose 2000..50000 K range would otherwise cram every
+       useful temperature into the first sixth of the track. valueFromPos/posFromValue
+       convert; everything outside this class still sees the real value. */
+    bool logScale;
+    double valueFromPos(int pos) const;
+    int    posFromValue(double v) const;
+    double logMin, logMax;
+    static constexpr int kLogSteps = 1000;
     bool outOfRange;
     bool isInt;
     int div;

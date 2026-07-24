@@ -113,6 +113,8 @@ Table of Contents
          - Develop dock (UI)
          - Develop scopes (histogram + vectorscope)
          - Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
+         - White balance (absolute, Kelvin)
+         - Color Mix panel (colour grading)
          - Develop presets (save)
 
 
@@ -1756,16 +1758,22 @@ Disabled Shortcut Feedback
 Develop Mode Local Shortcuts
 ------------------------------------------------------------------------------------------
 
-    Eight keys mean something different in Develop mode than in Preview mode:
+    Nine keys mean something different in Develop mode than in Preview mode:
 
         R   Crop / Transform panel      developTransformAction   (Preview: unbound)
         N   New layer                   developNewLayerAction    (Preview: unbound)
         M   New mask                    developNewMaskAction     (Preview: unbound)
         O   Mask overlay tint on/off    toggleMaskOverlayAction  (Preview: Open folder)
         S   Spot removal tool           developSpotAction        (Preview: Slideshow)
+        W   White balance sampler       developWbSamplerAction   (Preview: New workspace)
         X   Export (STUB, see below)    developExportAction      (Preview: Reject)
         H   Histogram / vectorscope     developScopesAction      (Preview: unbound)
         P   Run/apply preset (STUB)     developRunPresetAction   (Preview: Pick)
+
+    W is DOUBLY contextual: an ACTIVE Transform session claims it for Warp (arbiter rule
+    1a, which runs before this table), so W reaches the white balance dropper only when
+    no Transform is up -- the tool-local > mode-local ranking below, applied to a panel
+    tool rather than an ImageView one.
 
     Why not just give these actions a shortcut
     ......................................................................................
@@ -1856,6 +1864,10 @@ Develop Mode Local Shortcuts
         action has no sequence to match.  Without it a bare S typed into a Preferences
         field would arm the spot tool.  Floating QDockWidgets are separate top-level
         windows too but belong to the MW workspace, hence the QDialog test.
+      • Esc while a MASK tool is expanded -> collapse it (escapeMaskTool, like clicking
+        its caption) and consume. Placed BEFORE the value-editor bail so it fires even
+        when focus is on a mask slider (Hue/Sat) or the Color Range wheel; skipped (falls
+        through) while the WB dropper or Transform is up, whose Esc handlers run later.
       • Focus in a value editor (QAbstractSlider / QAbstractSpinBox / QLineEdit /
         QComboBox) -> bail, so arrows still nudge a Develop slider and letters still type.
       • Auto-repeat -> bail; every Develop key is a toggle or pops a dialog.
@@ -1873,6 +1885,19 @@ Develop Mode Local Shortcuts
     the shortcut system entirely (it is faster than a menu shortcut).  It needs no mode
     guard of its own only because the arbiter runs first and consumes the arrow; keep that
     ordering.
+
+    Only Loupe view is allowed in Develop mode
+    ......................................................................................
+    Develop edits a single image, so the Grid (G), Table (T) and Compare (C) view modes
+    are unavailable while in Develop -- only Loupe (E) remains.  This is NOT arbitrated in
+    developShortcutIntercept: MW::setOperationMode forces Loupe on entry (loupeDisplay
+    when G::mode != "Loupe") and MW::enableSelectionDependentMenus disables asGridAction,
+    asTableAction and asCompareAction while G::operationMode == Develop.  A disabled
+    QAction greys its View-menu item AND stops its G/T/C shortcut firing (same idea as
+    Save Develop Preset), so one gate covers both the menu and the key.  The disabled
+    reason ("not available in Develop mode") surfaces via the Disabled Shortcut Feedback
+    path.  Returning to Preview re-enables them (subject to the usual folder /
+    two-selected gates).
 
     Discoverability
     ......................................................................................
@@ -2537,6 +2562,10 @@ Architecture
         5b. Colour RGB                  per-channel linear gain (red/green/blue), folded into #2
         5c. Colour HSL                  hue rotation + saturation + vibrance + luminance,
                                         after the tone curve
+        5d. Colour grading (Color Mix)  tonal-range tinting: per shadows/mid/highlights a
+                                        zero-luma hue+sat chroma push + a luminance nudge,
+                                        weighted by smooth tonal windows; after HSL in the
+                                        same fused point-op pass (Color Mix panel below)
         6. Texture                      mid-frequency local contrast
         7. Dehaze                       local contrast + black-point, haze estimate
         8. Vignette                     radial corner exposure falloff (exposure/feather)
@@ -2654,10 +2683,29 @@ Panel focus & slider arrow-nudge
           when QApplication::focusWidget() is a value editor (QAbstractSlider / QAbstractSpinBox /
           QLineEdit / QComboBox). When focus leaves the panel, arrows navigate images again.
 
-    Focus cue (which slider owns the arrows): SliderEditor::paintEvent draws an accent left bar
-    plus a subtle translucent fill when slider->hasFocus(). Slider::focusInEvent/focusOutEvent
-    call parentWidget()->update() so the cue tracks focus. This behaviour is generic to every
-    PropertyEditor slider (Develop, Embellish, Preferences), not just Develop.
+    Focus cue (which slider owns the arrows): SliderEditor::paintEvent fills the VALUE
+    cell with a subtle translucent blue when slider->hasFocus(), and the delegate fills
+    the CAPTION cell with the SAME blue (checking the value sibling is DT_Slider and
+    SliderEditor::sliderHasFocus()), so the whole focused row reads as one blue band -- no
+    separate accent bar. Slider::focusInEvent/focusOutEvent -> syncFocusRepaint() repaints
+    the SliderEditor (value cell) AND its parent viewport (so the delegate re-tints the
+    caption) as focus moves. Generic to every PropertyEditor slider (Develop, Embellish,
+    Preferences), not only Develop.
+
+    Caption click (Develop): clicking a slider row's CAPTION (column 0, not the value
+    cell) is intercepted in DevelopProperties::mousePressEvent -- it (a) focuses that
+    slider via SliderEditor::focusSlider (so arrow keys nudge it without first clicking
+    the track), (b) hides the mask overlay (maskTintHideRequested) so the effect shows --
+    EXCEPT for a mask-setting slider (child of a mask tool, e.g. Feather/Hue), which keeps
+    the overlay since you are editing the mask -- and (c) FLASHES the caption white,
+    fading to 0 over ~0.45s as
+    feedback. The flash is a generic PropertyEditor mechanism:
+    DevelopProperties::flashCaption animates the caption UR_FlashLevel role (0..1) with a
+    QVariantAnimation, and PropertyDelegate blends the caption text toward white by that
+    amount (0/absent = normal, no effect elsewhere). A caption DOUBLE-click resets the
+    slider to default (base PropertyEditor) and then re-focuses the slider
+    (DevelopProperties::mouseDoubleClickEvent) -- otherwise Qt's click-focus moves to the
+    tree and the row would lose its blue cue.
 
     Not yet done: a panel-LEVEL active-border cue across all docks (thumb/grid/table/folders/
     Develop). DockWidget notes it has not solved drawing a border around a QDockWidget; the
@@ -2851,12 +2899,29 @@ Layer & masking model (planned)
           0..1000 bar (Demosaic::Run gained a per-row progress callback). So the bar
           moves as the clean demosaic runs and continues through PMRID -- no empty gap.
           Inert for a normal (non-denoise) decode, which passes no progress sink.
-          ZOOM/PAN KEPT ACROSS THE POP: loadImageInterim captures the outgoing zoom/pan
-          (developCapture*); the developed image restores it via applyDevelopCapturedView,
+          ZOOM/PAN KEPT ACROSS THE POP: MW::fileSelectionChange captures the outgoing
+          zoom/pan (ImageView::captureDevelopView -> developCapture*) BEFORE the pixmap is
+          replaced, for every Develop navigation (loadImageInterim also captures if the
+          caller did not); the developed image restores it via applyDevelopCapturedView,
           called from both the clean-image loadImage and setDevelopPreview, instead of
           re-fitting -- so a zoomed inspection stays put through interim -> developed. The
           crop case still re-fits: setDevelopPreview keeps the view only when the aspect
           ratio is unchanged (a resolution change); an aspect change = crop -> refit.
+          MATCHING PREVIEW MODE (SAME AREA IN THE NEXT IMAGE): in Preview the swap is
+          synchronous, so navigating zoomed lands on the same area and a thumbnail click
+          pans the loupe to the clicked point (IconView::thumbClick -> ImageView::panTo).
+          In Develop the developed image arrives seconds later, so a capture frozen at
+          navigation would undo any pan made meanwhile -- and the thumbnail click always
+          arrives afterwards (selection happens on mouse press, thumbClick on release).
+          ImageView::refreshDevelopCapture therefore keeps the capture in step with the
+          live view (called from panTo, scale and scrollChange) until the developed image
+          consumes it; developCaptureLocked suspends tracking while the view is being
+          (re)framed by loadImageInterim / applyDevelopCapturedView. The interim JPG is a
+          fraction of the sensor resolution, so loadImageInterim scales the carried zoom
+          by the change in fit zoom (interimZoomScale) -- the placeholder frames the same
+          content as the developed image (and stays scrollable, so the pan is not
+          swallowed); tracking divides the factor back out so the capture is always in
+          full size terms. First image in a new folder is not captured (it starts at fit).
           WHY TWO DEMOSAICS: "Denoise raw" is not all-or-nothing -- it is a BLEND scaled
           by the luma/chroma amount sliders, so the decode needs BOTH endpoints, and both
           come from demosaicing the SAME CFA mosaic, differing only in whether PMRID ran
@@ -2989,9 +3054,9 @@ Layer & masking model (planned)
            (InputTransform). Orientation: a scene-referred (raw, sensor-native) render has EXIF
            orientation applied to match the loupe (mirrors ImageDecoder::rotate()). NOT yet
            persisted or written back to the image cache -- navigating away drops the preview
-           (phase 4). White balance = per-channel SCENE-LINEAR gain (temp lifts red / lowers
-           blue, tint lowers green toward magenta; sliders -100..100 normalised to +/-1, full
-           scale = +/-50% on a channel via kTempGain/kTintGain). WB and exposure are both linear
+           (phase 4). White balance = per-channel SCENE-LINEAR gain, now ABSOLUTE
+           (Kelvin + tint) rather than a relative nudge -- see "White balance
+           (absolute, Kelvin)" below. WB and exposure are both linear
            multiplies, so buildPointCoeffs folds them into one per-channel gain (PointCoeffs::
            channelGain) applied before the perceptual tone curve. Exposure = 2^EV scene-linear
            gain.
@@ -3158,7 +3223,12 @@ Layer & masking model (planned)
                -> effectContextMenu: clicking it pops a QMenu (LayerHeader::showLayerMenu,
                built on demand) with "Add new layer" -> newLayer (name dialog, default
                "Layer n"); then, below a separator, the per-layer actions "Add mask to
-               <layer>" -> showMaskMenu and Reset/Remove/Rename <layer> ->
+               <layer>" -> showMaskMenu, a checkable "Show mask overlay" (shown only
+               while a mask tool is expanded; toggles the red coverage tint, the same
+               action as the "O" shortcut -- maskOverlayToggleRequested ->
+               MW::toggleMaskOverlay, and its check state is pushed back from
+               ImageView::maskTintVisibilityChanged -> setMaskOverlayShown), and
+               Reset/Remove/Rename <layer> ->
                resetActiveLayer / deleteLayer / renameActiveLayer. The per-layer group
                is OMITTED for Base (index 0) -- LayerHeader::setBaseActive, driven by
                updateMaskMenuBtn. MASK ENTRY POINTS: a layer's first mask tool is offered
@@ -3220,6 +3290,12 @@ Layer & masking model (planned)
                those sections (setTreeCollapsed). The Demosaic row is a layer item, NOT
                a Solo peer, so expanding it never collapses the layer. A bulk guard
                (isBulkExpandCollapse) keeps Expand all from tripping the Solo handler.
+               For a RAW file being edited as raw (currentIsRaw() && G::useRaw) the menu
+               also offers "Raw demosaic" -- captioned "Raw demosaic and denoise" when
+               the engine is Winnow (that engine adds the raw-denoise rows). It is a
+               navigation shortcut: DevelopProperties::showRawDemosaic activates the Base
+               layer (onLayerSelected, since the Demosaic/Denoise Core rows exist only
+               there) and un-collapses the layer items so the rows are visible.
                Group->keys mapping follows the UI (texture/dehaze are Basic; tone
                splits are Basic for Reset only; localDenoiseLuma -- the Effects "Denoise" (local NR,
                key "localDenoise") -- is in Effects; denoiseLuma/denoiseChroma are the Base "Denoise
@@ -3323,8 +3399,11 @@ Layer & masking model (planned)
                rotates. Tints/handles draw in viewport coords for constant on-screen size; a miss falls
                through to pan/zoom. Drag emits maskGeometryChanged LIVE (and on release) ->
                DevelopProperties::setActiveMaskParams (stores into the component, debounce-persists, no
-               tree rebuild). Feather/Invert live-update via maskFeatherChanged/maskInvertChanged; tint
-               colour conveys op (Add=red, Subtract=blue); Invert flips (Radial: effect outside).
+               tree rebuild). Feather/Invert live-update via maskFeatherChanged/
+               maskInvertChanged; tint colour conveys op (ImageView::maskTintColor --
+               Add=amber 255,190,60, Subtract=blue 40,110,230). That preview is ALWAYS the
+               SELECTED tool, so its colour matches the selected-tool highlight in the
+               whole-layer composite below. Invert flips (Radial: effect outside).
              - WHOLE-LAYER MASK TINT (composite overlay): while ANY mask tool is expanded (its settings
                shown, i.e. selectedMaskIndex >= 0 on a non-Base layer), the loupe shows the ENTIRE layer
                mask -- all the layer's Add/Subtract tools composited -- as a single red coverage tint,
@@ -3332,7 +3411,8 @@ Layer & masking model (planned)
                maskEditBegin/maskEditEnd + paramsChanged) reuses the render-path buildMaskBuffer (so the
                tint is pixel-consistent with the developed result) at a capped resolution (~1600 px long
                edge; geometry is normalized so any size is faithful), builds the AI/range refs it needs
-               (cached), converts coverage -> premultiplied red (alpha up to 150), orients it to the
+               (cached), converts coverage -> premultiplied red (alpha up to 150),
+               HIGHLIGHTS the selected tool (below), orients it to the
                displayed pixmap, and hands it to ImageView::setLayerMaskTint (clearLayerMaskTint when no
                tool is expanded / DevelopProperties::maskOverlayActive() is false). ImageView::
                drawForeground paints this composite tint UNDER the active tool's handles, NOT hover-gated
@@ -3349,8 +3429,26 @@ Layer & masking model (planned)
                Effects, or any future key via applyKeyToParams) while the overlay is shown
                also hides it (DevelopProperties::maskTintHideRequested ->
                ImageView::hideMaskTint) so the effect on the masked pixels is visible;
-               re-shown by "O" or by re-selecting a mask tool. Mask-only edits (Feather/
+               re-shown by "O", by the layer menu's "Show mask overlay" row, or by
+               re-selecting a mask tool. Mask-only edits (Feather/
                Invert/Range/Brush settings) keep the overlay shown.
+             - SELECTED-TOOL HIGHLIGHT (which submask am I editing?): a layer mask can
+               be built from several tools, so the composite tint alone does not say
+               which one the panel is showing. updateMaskOverlayTint therefore builds a
+               SECOND coverage buffer for the selected component only --
+               DevelopProperties::activeMaskIndex() gives its position in
+               activeLayerMasks(), and its op is forced to Add before the buildMaskBuffer
+               call so a SUBTRACT tool still shows the footprint it is cutting (a lone
+               Subtract component would otherwise composite to zero). Per pixel the red
+               (220,40,40) is then lerped toward the tool's colour by that tool's
+               coverage -- amber (255,190,60) for Add, blue (40,110,230) for Subtract,
+               the same colours ImageView::maskTintColor uses for the live per-tool
+               preview -- and alpha is max(layerCoverage, toolCoverage), so the highlight
+               changes the HUE only, never the opacity. Clicking another tool row in the
+               layer panel re-emits maskEditBegin (updateMaskEdit), so the highlight
+               follows the selection with no extra wiring. A single-tool layer is
+               therefore entirely amber/blue; red always means "covered by some OTHER
+               tool in this layer".
              - RENDER COMPOSITING (Stage 4b + N-layer stack): the render composites the WHOLE stack
                in SCENE-LINEAR before the output transform, INDEPENDENT of which layer is active for
                editing -- so a saved mask is visible the moment the image loads (no need to select
@@ -3464,16 +3562,38 @@ Layer & masking model (planned)
                LUMINANCE RANGE: paramsJson {lo,hi} (0..1 display luminance, Rec.601); coverage 1 inside
                [lo,hi] with a smootherstep band from MaskComponent.feather. Dock rows Range Min / Range
                Max / Feather / Invert; lo/hi changes emit maskRangeChanged -> ImageView::
-               setMaskRangeParams (live tint). No canvas interaction. COLOR RANGE: paramsJson
-               {refine (0..100, higher = tighter), samples:[[r,g,b],...] 0..1 display}; coverage from
-               the nearest sample's distance in a cheap luma/chroma opponent space (luma down-weighted,
-               like Lightroom) within a refine-derived tolerance, smootherstep-feathered. EYEDROPPER:
-               with the Color Range tool active, a loupe click samples RangeRef under the cursor (cross
-               cursor), shift-click ADDS another sample; sampled colours draw as on-image swatches
-               (bottom-left, viewport coords) and clicking a swatch removes it (pointer cursor). Sample
-               edits go back through the existing geometry handshake (ImageView::maskGeometryChanged ->
-               DevelopProperties::setActiveMaskParams), so no new persist path. Dock rows Refine /
-               Feather / Invert. The tint (ImageView::drawRangeMask / buildRangePreview) is red (Add) /
+               setMaskRangeParams (live tint). No canvas interaction. COLOR RANGE: a HUE +
+               SATURATION band selection in HSV (value ignored -- brightness stays with
+               Luminance Range). paramsJson {hueLo, hueHi (degrees 0..90), satLo, satHi
+               (0..100 -> sat fractions 0..1), samples:[[r,g,b],...] 0..1 display}. Each
+               sample fixes a centre (hue angle, sat radius; ColorSample via RangeMask::
+               rgb2hs); coverage is 1 where a pixel's HUE lies in [centre-hueLo, centre+
+               hueHi] AND its SAT in [centre-satLo, centre+satHi] of ANY sample (union),
+               each edge smootherstep-feathered, a tiny sat floor dropping near-neutral
+               pixels. hueLo/hueHi/satLo/satHi widen the band INDEPENDENTLY in four
+               directions -- this replaced the earlier symmetric "refine" luma/chroma
+               distance tolerance. WHEEL: a spanned ColorRangeWheel index widget above the
+               sliders (mirrors the Color Mix colorGradeWheel embed) paints the HSV disc,
+               a dot per sample, the band SECTOR per sample, and four GRAB HANDLES on the
+               anchor (first) sample -- two hue edges (on the rim, each labelled with its
+               ABSOLUTE hue in degrees) + inner/outer sat arcs. Dragging a
+               handle changes the matching GLOBAL bound; wheel<->sliders stay in sync
+               (onColorRangeWheelChanged writes params + guarded setSliderReal; slider
+               drags call wheel->setBounds). The disc/dots/sector use the SAME HSV as the
+               coverage, so the wheel is a faithful picture of the selection. EYEDROPPER:
+               with the tool active a loupe click samples RangeRef under the cursor
+               (PIPETTE cursor -- the shared dropperCursor, same as the WB pick),
+               shift-click ADDS another sample; sampled colours draw as on-image swatches
+               (bottom-left, viewport coords) and clicking a swatch removes it (pointer
+               cursor). A SAMPLING LOUPE (ImageView::drawSampleLoupe -- the WB "pick a
+               target neutral" panel generalised, shared by both) follows the tip while
+               hovering the image: a magnified 5x5 grid of the pixels under the tip +
+               their RGB and HSL readout. Sample edits go back through the existing
+               geometry handshake (ImageView::maskGeometryChanged ->
+               DevelopProperties::setActiveMaskParams, which also refreshes the wheel
+               dots), so no new persist path. Dock rows: the wheel, then Hue Lo / Hue Hi /
+               Sat Lo / Sat Hi / Feather / Invert. The tint
+               (ImageView::drawRangeMask / buildRangePreview) is red (Add) /
                blue (Subtract) like the other tools and rebuilds on any dock param change (maskRange
                Changed / setMaskFeather / setMaskInverted) or eyedropper edit; it heals if the
                reference lands after the overlay began (buildRangePreview on a null preview). Deferred:
@@ -4238,6 +4358,200 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     NOT yet done (next increments): a warp-reset (to re-warp); confirm export applies the geometry;
     content-aware fill. The panel's Crop button is unwired.
 
+    White balance (absolute, Kelvin) -- IMPLEMENTED
+    -----------------------------------------------
+    The Basic panel's white balance is ABSOLUTE, like Lightroom's: Temp is a colour
+    temperature in KELVIN and Tint a green/magenta offset, both resolved against the
+    image's own colour characterisation rather than applied as a blind per-channel
+    nudge. "5500 K" therefore means the same light on every camera body.
+
+    COLOUR SCIENCE (Develop/whitebalance.h/.cpp) -- self-contained, no Qt widgets, unit
+    tested by tests/unit/tst_whitebalance.cpp. The model: a white balance names the
+    illuminant the scene was lit by. For a target (Kelvin, tint) the forward chain is
+
+        (K, tint) -> xy chromaticity on the locus, tint displacing it perpendicular
+                  -> XYZ -> camera RGB (cam.xyzToCam) -> the as-shot WB the decode
+                     already baked in (cam.asShotMul) -> linear sRGB (cam.camToSrgb)
+                  = s, the rendered colour of that illuminant's neutral
+
+    gains() returns (s.g/s.r, 1, s.g/s.b): the scene-linear gains that make s neutral
+    again. Green is PINNED to 1 so exposure does not drift with temperature -- which is
+    why a tint change moves the red and blue gains, not the green one.
+
+    TWO LOCI, crossfaded 4000..5000 K (smoothstep): the PLANCKIAN (blackbody) locus
+    below, because tungsten and candlelight really are incandescent, and the CIE
+    DAYLIGHT locus above, because daylight is NOT a blackbody and the standard D
+    illuminants are defined on it. Using Planckian throughout puts D65 about 550 K and
+    22 tint units out, so an untouched sRGB file would open reading "7050 K, -22"
+    instead of "6500, 0". The crossfade exists so dragging the slider through 4000 K
+    shows no colour step.
+
+    SIGN of both controls: they describe the LIGHT, so the image moves the opposite way.
+    A higher Kelvin says "the light was bluer" and renders the image WARMER; a positive
+    tint assumes a GREENER light and renders the image MORE MAGENTA. This matches the
+    Lightroom sliders under the hand.
+
+    THE INVERSE, solve(): given a colour in linear sRGB, find the (K, tint) whose
+    illuminant renders to that chromaticity. NESTED bisection -- for every candidate K
+    the tint is solved exactly first, then that K is judged on the warmth it produces
+    with its own matched tint. Alternating the two searches instead (bisect K, bisect
+    tint, repeat) leaves each K step judged against a stale tint and drifts badly at
+    strong tints: a +80 tint at 3400 K came back as 2742 K / +42. Cost is ~1600
+    evaluations of a 30-flop function, irrelevant because solve() runs on a dropper
+    click, an Auto pick and once per decode -- never per rendered pixel. ONE function
+    serves three callers: the as-shot estimate (solve for neutral -- the as-shot render
+    IS neutral by construction, so the illuminant that renders neutral is the shooting
+    illuminant), the dropper (solve for the sampled pixel), and Auto.
+
+    WHAT CARRIES IT: WorkingImage::cam (struct CameraColor, workingimage.h) holds
+    xyzToCam / asShotMul / camToSrgb plus the solved asShotK + asShotTint. RawColor::
+    ToWorking fills it from the model matrix and the as-shot multipliers it applied;
+    InputTransform fills a SYNTHETIC camera for non-raw whose response IS linear sRGB
+    (asShotMul = 1, camToSrgb = identity, xyzToCam = XYZ->sRGB), so a display-referred
+    file resolves to its own white point, D65 ~6500 K, and the sliders behave uniformly.
+    WorkingImageCache::downscaled COPIES cam -- otherwise the interactive proxy would
+    resolve white balance differently from the full-res render.
+
+    STORAGE (EditParams): temp is Kelvin and tint the offset, both ABSOLUTE, with
+    temp == 0 the sentinel for "as shot" (NOT 0 K) so an untouched image reads as
+    identity and never marks itself edited. The panel always writes the pair together --
+    moving Tint alone still commits the resolved Kelvin -- so temp == 0 only ever means
+    a pristine image and the two can never disagree about their reference. Develop uses
+    relativeGains(), which divides by the gains at (asShotK, asShotTint) and so is an
+    EXACT no-op at as-shot even though asShotK came from a bisection fit. wbPreset (a
+    WhiteBalance::Preset as int) is stored only so the dropdown can show what was
+    picked; temp/tint are what render.
+
+    THE WB ROW (DevelopProperties::addWhiteBalanceRow, above Temp) -- a DT_None row
+    owning both cells, the same idiom as the Core rows: a dropper button in the caption
+    cell, the preset dropdown in the value cell. The button is a BarBtn -- the SAME
+    class as the Develop title-bar tools (Scopes / Transform / Spot), so it inherits
+    their chrome for free: G::css draws it transparent with no border, and
+    BarBtn::setActive() adds the blue accent when armed. Do not hand-roll a stylesheet
+    here; it drifts from the title bar the moment that chrome changes. The glyph is
+    DRAWN (dropperIcon) rather than shipped as a png + qrc entry, at G::iconOpacity
+    when idle so the row has no conspicuously brighter icon in it. The ARMED ghost is
+    drawn at FULL opacity in the accent colour: dimming it too would leave the empty
+    socket indistinguishable from the idle glyph.
+        DROPPER   armed from the row's button, the Develop menu, or "W" (a Develop mode
+                  local shortcut -- New Workspace in Preview; an active Transform owns W
+                  for Warp, so W reaches the dropper only when no Transform is up). All
+                  three go through DevelopProperties::toggleWbDropper, which refuses to
+                  arm with no current image so the key cannot arm a dropper that can
+                  only fail. It toggles ImageView's wbPickMode (beginWbPick/endWbPick).
+                  Arming it
+                  LIFTS THE DROPPER OUT OF THE BUTTON: the mouse cursor becomes a
+                  pipette (ImageView::dropperCursor, buildDropperCursor, hotspot at the
+                  TIP so the sampled pixel is the one under the point) and the button's
+                  icon becomes a faint dashed ghost of the same glyph -- the empty
+                  socket. The ghost rather than a blank keeps the button's size so the
+                  row does not twitch. TWO gates are needed against the loupe's
+                  click-to-toggle-zoom, which fires on mouse RELEASE. wbPickMode joins
+                  developToolActive() (as every canvas tool must), but that alone is NOT
+                  enough here: the dropper AUTO-DISMISSES, so the dock clears wbPickMode
+                  synchronously while handling wbSampled during the PRESS, and by the
+                  release developToolActive() is false again. mousePressEvent therefore
+                  also latches ImageView::suppressClickZoom, a one-shot consumed at the
+                  top of mouseReleaseEvent (consumed there, not at the gate, so an early
+                  return cannot leave it set and swallow the NEXT click). Any future
+                  disarm-on-press tool needs the same pair. The cursor is likewise
+                  RE-ASSERTED from mouseMoveEvent, not just set in beginWbPick -- the
+                  base view resets it as the pointer moves, which is why spot/level/crop/
+                  mask all re-apply their cursors there too.
+        LOUPE     while the dropper is armed and over the image, ImageView::drawWbLoupe
+                  paints a "Pick a target neutral:" panel that follows the tip, modelled
+                  on Lightroom's: a 5x5 grid of the pixels under the tip, one image pixel
+                  per cell, a crosshair on the centre cell, and an R/G/B readout in
+                  PERCENT. The grid is EXACTLY the 5x5 patch onWbSampled averages
+                  (kWbLoupeCells keeps them in step) and the readout is that average --
+                  so the panel is a preview of the measurement, not a decorative
+                  magnifier. Swatches/readout are DISPLAY values (the developed pixels on
+                  screen); the balance itself is solved from the pre-develop scene-linear
+                  buffer, which is the right input but not what the user is looking at.
+                  While Opt/Alt is held the title swaps to "Pick a skin tone:" and the
+                  panel border picks up the accent colour, so which sample the click
+                  will take is unmistakable; a permanent dim hint line advertises the
+                  modifier the rest of the time. wbAltHeld is read from the MOUSE
+                  events (ImageView has no reliable keyboard focus in Develop), so the
+                  title catches up on the next movement -- the CLICK always uses its
+                  own modifiers, so the action is correct regardless.
+                  Pixels are read from the displayed pixmap PER PAINT over the clamped
+                  5x5 rect -- caching the whole pixmap as a QImage would cost ~180MB on a
+                  45MP raw for 25 pixels of data and would go stale when a develop edit
+                  re-rendered the preview. It is painted from an overridden paintEvent
+                  (after QGraphicsView::paintEvent) rather than drawForeground, whose
+                  many early returns cannot guarantee the panel lands on top. The button
+                  is
+                  enabled whenever there is a current image and deliberately NOT gated
+                  on the cached WorkingImage -- buildTree can run before the decode
+                  populates the cache, which used to leave the dropper dead for the
+                  session. A left click is checked FIRST in
+                  mousePressEvent -- while armed the dropper owns the click, ahead of
+                  any crop or mask tool -- and
+                  emits wbSampled(nx, ny); Esc emits wbPickExited. ImageView only reports
+                  WHERE: DevelopProperties::onWbSampled reads that point out of the
+                  PRE-DEVELOP WorkingImage (the same buffer Develop's WB acts on, so the
+                  solve is exact and independent of any exposure/tone already dialled in),
+                  averages a 5x5 patch (one pixel is a poor estimate on a noisy raw), and
+                  solves. It auto-dismisses on use, like Lightroom. A black or clipped
+                  sample is refused with a popup rather than silently mis-balancing.
+                  ESC disarms it, and that MUST live in MW::developShortcutIntercept
+                  (rule 1b), not ImageView: the dropper is armed from the Develop dock,
+                  so focus is in the dock and ImageView's keyPressEvent never runs --
+                  the same reason Transform's Esc is arbitrated there. ImageView keeps
+                  an Esc handler only as a fallback for when it does hold focus. The
+                  dropper is checked BEFORE the Transform block, so the more recently
+                  armed tool owns Esc.
+        SKIN      Opt/Alt-click samples SKIN instead of a neutral (WhiteBalance::
+                  solveSkin) -- for portraits, where there is often no neutral in frame
+                  but always a face. It does NOT drive the sample to grey; it drives it
+                  back onto the skin HUE LINE, keeping the skin's own saturation and
+                  lightness. Measured skin of very different depths agrees on hue to
+                  0.3 deg in the (warmth, green) plane while chroma magnitude differs
+                  23% (ColorChecker light vs dark skin patches), so hue is the part a
+                  cast corrupts and the part safe to correct; a fixed reference
+                  chromaticity would desaturate deep skin by about a quarter.
+                  GEOMETRY: the same (warmth, green) log axes solve() bisects on, where
+                  NEUTRAL IS THE ORIGIN -- so hue is a direction and saturation the
+                  distance. The sampled chroma is projected onto the skin direction
+                  (keep the along-line part, zero the perpendicular error); that
+                  projection is the target T, and the correction is the one carrying
+                  the sample to it. It reduces to the neutral case exactly: solving for
+                  the component-wise ratio s/T neutralises it, and a neutral pick is
+                  just T = (1,1,1) -- so both dropper modes share one solver and cannot
+                  drift apart. Exact in one shot; the corrected sample lands ON the line
+                  by construction, no iteration.
+                  GUARD: a sample more than kSkinHueToleranceDeg (60) off the line, or
+                  with almost no chroma, is REFUSED with a message naming the reason
+                  rather than applying a wild correction. 60 deg is deliberately
+                  generous: skin under a strong tungsten cast is already 14 deg off and
+                  a tighter limit would refuse exactly the images the tool exists for.
+                  It rejects foliage (67 deg) and blue sky (167). It CANNOT reject a red
+                  or orange object -- a red shirt is only 18 deg off, because skin hue
+                  genuinely IS orange. The guard catches gross mis-clicks, not subtle
+                  ones. An extreme blue cast can push skin past the tolerance; the
+                  neutral dropper is the fallback there.
+        PRESETS   As Shot, Auto, Daylight 5500/+10, Cloudy 6500/+10, Shade 7500/+10,
+                  Tungsten 2850/0, Fluorescent 3800/+21, Flash 5500/0, Custom (Adobe's
+                  standard values). As Shot writes the 0 sentinel -- the canonical, exact
+                  way back. Auto is a robust neutral estimate (autoWhiteBalance: average
+                  the BRIGHT, unclipped pixels above the 80th luminance percentile, so a
+                  large saturated subject cannot drag the balance) then solved. Custom is
+                  a readout, not a command -- picking it changes nothing; any manual
+                  slider move demotes the selection to it.
+        NON-RAW   only As Shot / Auto / Custom are offered, matching Lightroom: a
+                  rendered JPEG has no camera-neutral reference for the named
+                  illuminants to mean anything against.
+
+    THE KELVIN SLIDER: 2000..50000 K on a LOGARITHMIC ramp (ItemInfo::logScale ->
+    UR_LogScale -> SliderEditor). Linear would bury every useful temperature in the first
+    sixth of the track. The slider's integer position is a point on the ramp, not the
+    value; valueFromPos/posFromValue convert and everything outside SliderEditor still
+    sees real Kelvin, rounded to 10 K (finer resolution is meaningless and reads as
+    noise). Above 25000 K the daylight branch is extrapolated -- well behaved, but no
+    real illuminant lives there. Temp's gradient runs blue -> yellow WITH the value,
+    which is correct: a higher Kelvin renders the image warmer.
+
     Sections (built via PropertyEditor::addItem):
         Layers   header with -/+ buttons (same idiom as Embellish Templates) + a "Select
                  layer" combo. A layer is one set of adjustments; switching rebuilds the
@@ -4248,9 +4562,11 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                  "Layer & masking model (planned)" subsection above: all layers active as a
                  composited stack, the combo selects only which layer the sliders EDIT, opacity +
                  masks per layer, persisted per-image in the XMP sidecar.
-        Basic    Temp, Tint, Exposure, Contrast, Highlights, Shadows,
-                 Whites, Blacks, Texture, Dehaze (sliders). Integer -100..100 except Exposure
-                 (EV, -5.00..5.00). All default to 0 (identity).
+        Basic    WB (dropper + preset dropdown), Temp, Tint, Exposure, Contrast,
+                 Highlights, Shadows, Whites, Blacks, Texture, Dehaze. Integer -100..100
+                 except Exposure (EV, -5.00..5.00), Temp (KELVIN, 2000..50000, log ramp)
+                 and Tint (-150..150). All default to 0 (identity). See "White balance
+                 (absolute, Kelvin)" below for the WB row.
         Color    Red, Green, Blue (per-channel gain); Hue, Saturation, Vibrance, Luminance
                  (global HSL).
                  Integer -100..100 sliders, all default 0 (identity).
@@ -4269,6 +4585,40 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     Each layer maps onto one EditParams (DevelopProperties::editParams()). Binding a
     value change to a re-decode is deferred: itemChange() persists the value to settings
     and emits paramsChanged() so the hook is ready.
+
+
+Color Mix panel (colour grading)
+--------------------------------
+
+    A minimalist take on Lightroom's Color Grading, added as its own Develop section
+    (DevelopProperties::addColorMix, header "ColorMixHeader", preview group PV_ColorMix)
+    ALONGSIDE the legacy Color panel (RGB + global HSL), which stays for now. Distinct
+    function from the Color panel: grading selects pixels by TONE and adds a tint; the HSL
+    sliders remap existing hues. (The Lightroom 8-band hue mixer -- hue-selective HSL --
+    is a separate, still-deferred op.)
+
+    UI (compact, per the mockup): three Dark / Mid / Light checkboxes on one row, one
+    shared hue/saturation wheel, and a single Luminance slider.
+      • The wheel (Develop/Properties/colorgradewheel.*) is a directly-embedded index
+        widget (setIndexWidget on a full-width first-column-spanned row), NOT a delegate
+        editor. Hue = angle, saturation = radius; it draws all three range dots (active
+        bright, inactive dim) and a drag moves EVERY checked range to the cursor's hue/sat
+        -- so one checked range edits it alone, all three checked = a global tint.
+      • The checkboxes are UI selection state (gradeActiveMask), not EditParams: they
+        pick which range(s) the wheel + Luminance slider write. Default: Mid checked.
+      • Luminance (key "gradeLum") writes to every checked range; on load it shows the
+        lowest checked range's value.
+
+    Data + pipeline. EditParams gains nine grade fields (gradeShadow/Mid/High x Hue/Sat/
+    Lum), its own Group::ColorMix (reset/preview independent of the Color group), and a
+    per-layer showColorMix preview flag; all persist through editstack.h (forward-
+    tolerant, so old sidecars load as identity). The math lives header-only in Develop/
+    colorgrade.h (gradeTintVector + gradeTonalWeights -- no Qt/OpenCV, unit-tested by
+    tst_colorgrade); Develop::buildPointCoeffs/applyPointOps consume it as stage 5d,
+    folded into the same fused point-op pass as HSL (per pixel: split perceptual lightness
+    into three smooth tonal weights, then add each range's weighted zero-luma tint +
+    weighted luminance gain). Strengths are tuning constants (kGradeTintStrength /
+    kGradeLumStrength) in develop.cpp.
 
 
 Develop presets (save)

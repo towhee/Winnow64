@@ -1,4 +1,5 @@
 #include "ImageFormats/Raw/rawcolor.h"
+#include "Develop/whitebalance.h"
 #include <cmath>
 
 namespace {
@@ -96,6 +97,22 @@ bool RawColor::ToWorking(const RawImage &raw,
     float m[3][3];
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j) m[i][j] = static_cast<float>(rgbCam[i][j]);
+
+    /* Hand the colour characterisation to the Develop stage so its white balance can be
+       ABSOLUTE (Kelvin + tint) instead of a relative nudge: the model matrix, the
+       as-shot multipliers applied just above, and the camera->sRGB matrix.
+       resolveAsShot then back-solves the temperature the shot was balanced for,
+       which is what the Temp slider reads before the user touches it. See
+       Develop/whitebalance.h. */
+    out.cam.valid = true;
+    for (int i = 0; i < 3; ++i) {
+        out.cam.asShotMul[i] = wb[i];
+        for (int j = 0; j < 3; ++j) {
+            out.cam.xyzToCam[i][j] = raw.xyzToCam[i][j];
+            out.cam.camToSrgb[i][j] = m[i][j];
+        }
+    }
+    WhiteBalance::resolveAsShot(out.cam);
 
     out.width = W;
     out.height = H;

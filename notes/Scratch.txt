@@ -662,3 +662,41 @@ aligned with Demosaic from row above in base layer panel.
 
 When '[ ] Denoise' is checked, run denoise.  When denoising completes, change '[ ] Denoise'
 to '[ ] Denoised.
+
+
+In Preview Mode, if zoomed more than fit, then the zoom box is shown in the thumbView
+thumbnail cursor. If another thumbView icon is selected, then the imageView is zoomed and
+panned to show the same area. This behavior should be replicated in Develop Mode. When a
+new image is selected in Develop Mode, after demosaic, the same zoom and pan must be
+executed.
+
+In a new Color Mix panel I want to combine the Lightroom Color mixer and Color grading
+controls in a minamilist layout.  I'm thinking of something like this, but I am looking f
+or your input:
+
+|--------------------------------------|
+| Color Tweaking                       |
+|--------------------------------------|
+| []Dark   []Mid    []Light            |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|           Color Wheel                |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+| Luminance  [ slider            ]     |
+
+where [] = checkbox (check all three to adjust entire range
+
+Can we integrate the Lightroom color mixer into this?  Does it give us different
+functionality.
+
+
+

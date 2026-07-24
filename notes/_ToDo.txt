@@ -2,15 +2,15 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Maintain zoom when switch from embedded preview to raw
-- Add mouse behavior to develop help tips
+- WB undo
+- Press D while not in loupe mode does not work
+- Raw demosaic Winnow wrong for /Users/roryhill/Pictures/_test_raw/NEF D7200.NEF
 - Expand/contract layer mask or submask
 - Change submask feather, rebuild submask?
 - Spot fill quality issue (reassess)
 - WB temp values, sampler
 - Redo help preformance tips
 - Cannot use Embellish panel when in Develop mode
-- When mask tool is selected or activated show its specific mask in a different tint
 - Add Sharpen and Soften sliders
 - Review what is needed in ReleaseExtras
 - Drag dock tabify to the right (last) - WIP

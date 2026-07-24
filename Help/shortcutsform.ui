@@ -1227,6 +1227,39 @@
        </item>
        <item>
         <property name="text">
+         <string>White Balance Sampler</string>
+        </property>
+        <property name="text">
+         <string>W</string>
+        </property>
+        <property name="text">
+         <string>Arms the Basic panel's white-balance dropper (click a neutral to balance from it); in Develop mode. While a Transform session is active W means Warp instead</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Cancel White Balance Dropper</string>
+        </property>
+        <property name="text">
+         <string>Esc</string>
+        </property>
+        <property name="text">
+         <string>Disarms the Basic panel's white-balance dropper without sampling; in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>White Balance from Skin</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + click</string>
+        </property>
+        <property name="text">
+         <string>With the white-balance dropper armed, Opt/Alt-click a lit midtone area of skin to correct the skin colour instead of sampling a neutral; in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Spot Removal</string>
         </property>
         <property name="text">

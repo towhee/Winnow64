@@ -71,10 +71,11 @@ struct EditLayer {
        layer's params (Basic+Color+Effects together) and is distinct from `enabled` -- `enabled`
        drives the compositor's layer on/off, showLayer is the editing-side preview and leaves the
        compositor semantics untouched. All default true so older sidecars are unaffected. */
-    bool showLayer   = true;
-    bool showBasic   = true;
-    bool showColor   = true;
-    bool showEffects = true;
+    bool showLayer    = true;
+    bool showBasic    = true;
+    bool showColor    = true;
+    bool showColorMix = true;
+    bool showEffects  = true;
 };
 
 /* The params the renderer should apply for one layer: a COPY of the stored params with any
@@ -84,12 +85,14 @@ inline EditParams effectiveLayerParams(const EditLayer &l) {
     if (!l.showLayer) {
         EditParams::resetGroup(p, EditParams::Group::Basic);
         EditParams::resetGroup(p, EditParams::Group::Color);
+        EditParams::resetGroup(p, EditParams::Group::ColorMix);
         EditParams::resetGroup(p, EditParams::Group::Effects);
         return p;
     }
-    if (!l.showBasic)   EditParams::resetGroup(p, EditParams::Group::Basic);
-    if (!l.showColor)   EditParams::resetGroup(p, EditParams::Group::Color);
-    if (!l.showEffects) EditParams::resetGroup(p, EditParams::Group::Effects);
+    if (!l.showBasic)    EditParams::resetGroup(p, EditParams::Group::Basic);
+    if (!l.showColor)    EditParams::resetGroup(p, EditParams::Group::Color);
+    if (!l.showColorMix) EditParams::resetGroup(p, EditParams::Group::ColorMix);
+    if (!l.showEffects)  EditParams::resetGroup(p, EditParams::Group::Effects);
     return p;
 }
 
@@ -163,7 +166,8 @@ struct EditStack {
             if (s.enabled) return false;
         for (const EditLayer &l : layers)
             if (l.enabled && (!l.params.isIdentity() || !l.masks.isEmpty() ||
-                              !l.showLayer || !l.showBasic || !l.showColor || !l.showEffects))
+                              !l.showLayer || !l.showBasic || !l.showColor ||
+                              !l.showColorMix || !l.showEffects))
                 return false;
         return true;
     }
@@ -179,8 +183,9 @@ struct EditStack {
 
     static QJsonObject paramsToJson(const EditParams &p) {
         QJsonObject o;
-        o["temp"]            = p.temp;
+        o["temp"]            = p.temp;      // Kelvin; 0 = as shot
         o["tint"]            = p.tint;
+        o["wbPreset"]        = p.wbPreset;
         o["exposure"]        = p.exposure;
         o["contrast"]        = p.contrast;
         o["highlights"]      = p.highlights;
@@ -199,6 +204,15 @@ struct EditStack {
         o["saturation"]      = p.saturation;
         o["vibrance"]        = p.vibrance;
         o["luminance"]       = p.luminance;
+        o["gradeShadowHue"]  = p.gradeShadowHue;
+        o["gradeShadowSat"]  = p.gradeShadowSat;
+        o["gradeShadowLum"]  = p.gradeShadowLum;
+        o["gradeMidHue"]     = p.gradeMidHue;
+        o["gradeMidSat"]     = p.gradeMidSat;
+        o["gradeMidLum"]     = p.gradeMidLum;
+        o["gradeHighHue"]    = p.gradeHighHue;
+        o["gradeHighSat"]    = p.gradeHighSat;
+        o["gradeHighLum"]    = p.gradeHighLum;
         o["denoiseLuma"]     = p.denoiseLuma;
         o["denoiseChroma"]   = p.denoiseChroma;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
@@ -217,6 +231,7 @@ struct EditStack {
         EditParams p;
         p.temp            = static_cast<float>(o.value("temp").toDouble(p.temp));
         p.tint            = static_cast<float>(o.value("tint").toDouble(p.tint));
+        p.wbPreset        = o.value("wbPreset").toInt(p.wbPreset);
         p.exposure        = static_cast<float>(o.value("exposure").toDouble(p.exposure));
         p.contrast        = static_cast<float>(o.value("contrast").toDouble(p.contrast));
         p.highlights      = static_cast<float>(o.value("highlights").toDouble(p.highlights));
@@ -235,6 +250,15 @@ struct EditStack {
         p.saturation      = static_cast<float>(o.value("saturation").toDouble(p.saturation));
         p.vibrance        = static_cast<float>(o.value("vibrance").toDouble(p.vibrance));
         p.luminance       = static_cast<float>(o.value("luminance").toDouble(p.luminance));
+        p.gradeShadowHue  = static_cast<float>(o.value("gradeShadowHue").toDouble(p.gradeShadowHue));
+        p.gradeShadowSat  = static_cast<float>(o.value("gradeShadowSat").toDouble(p.gradeShadowSat));
+        p.gradeShadowLum  = static_cast<float>(o.value("gradeShadowLum").toDouble(p.gradeShadowLum));
+        p.gradeMidHue     = static_cast<float>(o.value("gradeMidHue").toDouble(p.gradeMidHue));
+        p.gradeMidSat     = static_cast<float>(o.value("gradeMidSat").toDouble(p.gradeMidSat));
+        p.gradeMidLum     = static_cast<float>(o.value("gradeMidLum").toDouble(p.gradeMidLum));
+        p.gradeHighHue    = static_cast<float>(o.value("gradeHighHue").toDouble(p.gradeHighHue));
+        p.gradeHighSat    = static_cast<float>(o.value("gradeHighSat").toDouble(p.gradeHighSat));
+        p.gradeHighLum    = static_cast<float>(o.value("gradeHighLum").toDouble(p.gradeHighLum));
         p.denoiseLuma     = static_cast<float>(o.value("denoiseLuma").toDouble(p.denoiseLuma));
         p.denoiseChroma   = static_cast<float>(o.value("denoiseChroma").toDouble(p.denoiseChroma));
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));
@@ -260,9 +284,10 @@ struct EditStack {
             /* Preview flags: only emit the non-default (false = previewed off) ones, so a normal
                untouched layer serializes exactly as before (forward/backward tolerant). */
             if (!l.showLayer)   lo["showLayer"]   = false;
-            if (!l.showBasic)   lo["showBasic"]   = false;
-            if (!l.showColor)   lo["showColor"]   = false;
-            if (!l.showEffects) lo["showEffects"] = false;
+            if (!l.showBasic)    lo["showBasic"]    = false;
+            if (!l.showColor)    lo["showColor"]    = false;
+            if (!l.showColorMix) lo["showColorMix"] = false;
+            if (!l.showEffects)  lo["showEffects"]  = false;
             QJsonArray marr;
             for (const MaskComponent &m : l.masks) {
                 QJsonObject mo;
@@ -348,9 +373,10 @@ struct EditStack {
             l.enabled = lo.value("enabled").toBool(l.enabled);
             l.combine = lo.value("combine").toInt(l.combine);
             l.showLayer   = lo.value("showLayer").toBool(l.showLayer);
-            l.showBasic   = lo.value("showBasic").toBool(l.showBasic);
-            l.showColor   = lo.value("showColor").toBool(l.showColor);
-            l.showEffects = lo.value("showEffects").toBool(l.showEffects);
+            l.showBasic    = lo.value("showBasic").toBool(l.showBasic);
+            l.showColor    = lo.value("showColor").toBool(l.showColor);
+            l.showColorMix = lo.value("showColorMix").toBool(l.showColorMix);
+            l.showEffects  = lo.value("showEffects").toBool(l.showEffects);
             const QJsonArray marr = lo.value("masks").toArray();
             for (const QJsonValue &mv : marr) {
                 const QJsonObject mo = mv.toObject();

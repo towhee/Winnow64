@@ -521,6 +521,12 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         const QTreeView *tv = qobject_cast<const QTreeView*>(option.widget);
         const bool deco = capIndex.data(UR_isDecoration).toBool();
         int capLeft = deco ? (tv ? tv->visualRect(capIndex).x() : r4.x()) : r2.x();
+        /* Nest a header one indent level right (Develop's Basic/Color/Color Mix/Effects
+           sections sit under the Layer band above the tree). Only the header's own
+           content (arrow + caption) shifts; child rows keep their own indentation. */
+        const int hdrExtraIndent = capIndex.data(UR_ExtraIndent).toBool()
+                                       ? (tv ? tv->indentation() : 10) : 0;
+        capLeft += hdrExtraIndent;
         /* Reserve room at the right for the delegate-drawn glyphs: [-] alone, or [+][-] when both. */
         int glyphSlots = (capIndex.data(UR_DeleteBtn).toBool() ? 1 : 0)
                        + (capIndex.data(UR_AddBtn).toBool()    ? 1 : 0);
@@ -551,7 +557,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             // re-instate the decorations (UR_ShowDecoration forces the arrow even with no children,
             // e.g. an unselected mask-tool row that reveals its settings only when clicked open)
             if (deco && (hasChildren || capIndex.data(UR_ShowDecoration).toBool())) {
-                int x = r.x() - 10;
+                int x = r.x() - 10 + hdrExtraIndent;
                 int y = r0.top() + r0.height()/2 - 5;
                 painter->drawPixmap(x, y, 9, 9, isExpanded ? branchOpen : branchClosed);
             }
@@ -601,6 +607,16 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         // caption text and cell borders
         if (index.column() == CapColumn) {
             if (!isAlternatingRows) painter->fillRect(r0, valueRowBackground);
+            /* Selected-row cue: when this row's value editor is a slider that owns focus,
+               tint the caption cell the SAME translucent blue the SliderEditor paints on
+               the value cell, so the whole row reads as one blue band. Check DT_Slider
+               first: UR_Editor holds a different editor type for non-slider rows. */
+            const QModelIndex valSib = index.sibling(index.row(), ValColumn);
+            if (valSib.data(UR_DelegateType).toInt() == DT_Slider) {
+                auto *se = static_cast<SliderEditor*>(valSib.data(UR_Editor).value<void*>());
+                if (se && se->sliderHasFocus())
+                    painter->fillRect(r0, QColor(0x15, 0x71, 0xd3, 40));
+            }
             /* Expand/collapse arrow for a DECORATED value row (e.g. Develop's Demosaic
                row, whose raw-denoise sliders are children). The delegate otherwise draws
                arrows only for header rows; mirror that here, in the gutter over the
@@ -614,6 +630,16 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 //            if (isSelected) painter->setPen(selPen);
             // disabled?
             if (index.data(UR_isEnabled).toBool() == false) painter->setPen(disPen);
+            /* Flash feedback: blend the caption toward white while UR_FlashLevel > 0
+               (DevelopProperties animates it to 0 on a slider-row caption click). */
+            const qreal flash = index.data(UR_FlashLevel).toReal();
+            if (flash > 0.0) {
+                const QColor cc = painter->pen().color();
+                painter->setPen(QColor(
+                    int(cc.red()   + (255 - cc.red())   * flash),
+                    int(cc.green() + (255 - cc.green()) * flash),
+                    int(cc.blue()  + (255 - cc.blue())  * flash)));
+            }
             // indent the text (maybe not if not a header)
             if (index.data((UR_isIndent)).toBool()) {
                 QRect ri = r3;

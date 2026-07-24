@@ -66,6 +66,11 @@ endfunction()
 winnow_add_unit_test(tst_byteops   unit/tst_byteops.cpp)
 winnow_add_unit_test(tst_pathutils unit/tst_pathutils.cpp)
 winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
+# tst_colorgrade tests Develop/colorgrade.h (header-only: no OpenCV / develop.cpp needed).
+winnow_add_unit_test(tst_colorgrade unit/tst_colorgrade.cpp)
+# tst_whitebalance compiles Develop/whitebalance.cpp (depends only on workingimage.h).
+winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp)
 # tst_exiftags also compiles Metadata/exif.cpp (its only dependency is exif.h).
 winnow_add_unit_test(tst_exiftags  unit/tst_exiftags.cpp ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp)
 # tst_ifd compiles Metadata/ifd.cpp + metareport.cpp (ifd's link closure).

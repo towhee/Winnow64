@@ -120,6 +120,16 @@ private:
         float satFactor  = 1.0f;
         float vibAmount  = 0.0f;
         float lumGain    = 1.0f;
+
+        /* Colour grading (Color Mix panel) -- tonal-range tinting applied after HSL in
+           the same fused pass. For each of the three ranges [0]=shadows, [1]=midtones,
+           [2]=highlights: gradeTint is a zero-luma RGB chroma push (hue+sat pre-scaled)
+           ADDED to the pixel, gradeLum a per-range luminance gain delta. Both weighted
+           per pixel by smooth tonal windows of the pixel's luma (see applyPointOps).
+           gradeActive == false => identity (skip the block). */
+        bool  gradeActive = false;
+        float gradeTint[3][3] = {};   // [range][rgb], zero-luma chroma offset
+        float gradeLum[3]     = {};   // [range] luminance gain delta (0 = none)
     };
     static PointCoeffs buildPointCoeffs(const EditParams &p, const WorkingImage &img);
 

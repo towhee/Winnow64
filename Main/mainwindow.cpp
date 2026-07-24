@@ -1115,11 +1115,37 @@ bool MW::developShortcutIntercept(QEvent *event)
     QWidget *win = fw ? fw->window() : nullptr;
     if (win && win != this && qobject_cast<QDialog *>(win)) return false;
 
+    /* Esc collapses the active MASK tool (hide its settings), like the other Develop
+       tools exit on Esc. Checked BEFORE the value-editor guard below: while a mask is
+       edited focus is usually on a dock slider (Hue/Sat) or the Color Range wheel, so the
+       guard would otherwise swallow Esc first. Yields to the WB dropper and Transform,
+       whose own Esc handlers run below. Escape owns no global QAction, so only KeyPress
+       arrives. */
+    if (e->key() == Qt::Key_Escape && !e->isAutoRepeat() && !isOverride && developProperties
+        && !developProperties->isWbDropperActive() && !developCropEditing
+        && developProperties->escapeMaskTool()) {
+        event->accept();
+        return true;
+    }
+
     /* A value editor owns its keys unconditionally: arrows nudge a Develop slider,
        letters type into the search field. Arbitrating those away would break both. */
     if (qobject_cast<QAbstractSlider *>(fw)  || qobject_cast<QAbstractSpinBox *>(fw) ||
         qobject_cast<QLineEdit *>(fw)        || qobject_cast<QComboBox *>(fw))
         return false;
+
+    /* 1b. Esc disarms the white-balance dropper. It is armed from the Develop dock, so
+       focus is in the dock and ImageView never sees the key -- the arbiter is the only
+       place that reliably gets it, the same reason Transform's Esc lives here. Checked
+       BEFORE the Transform block: the dropper is the more recently armed tool, so it
+       owns Esc while it is up. Escape owns no global QAction, so only KeyPress
+       arrives. */
+    if (developProperties && developProperties->isWbDropperActive()
+        && e->key() == Qt::Key_Escape && !e->isAutoRepeat()) {
+        event->accept();
+        if (!isOverride) developProperties->cancelWbDropper();
+        return true;
+    }
 
     /* 1a. While a Transform (crop/level/warp) is active, its A/F/C/L/W act on the
        Transform panel and must beat the window-level shortcuts on those keys (A Run
@@ -2827,6 +2853,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 && centralLayout->currentIndex() != LoupeTab)
             {
                 centralLayout->setCurrentIndex(LoupeTab);
+            }
+            /* Develop mode: remember the zoom/pan of the image being left BEFORE it is
+               replaced, so the developed image shows the same area when it arrives
+               (which can be seconds later, after the demosaic).  Preview mode gets this
+               for free because the swap is synchronous.  ImageView keeps the capture in
+               step with any pan/zoom made meanwhile (eg a thumbnail click pans to the
+               clicked point on mouse release, after this selection change). */
+            if (G::operationMode == G::OperationMode::Develop) {
+                imageView->captureDevelopView(fPath);
             }
             if (imageView->loadImage(fPath, false, fun)) {
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
@@ -5510,8 +5545,8 @@ struct CompDesc {
     int  op = 0;
     bool inverted = false;
     /* Range (content) component. */
-    int    rangeTool = 0;                                 // MaskTool::ColorRange / LuminanceRange
-    double rlo = 0, rhi = 1, refine = 50, feather = 0;
+    int    rangeTool = 0;                                 // ColorRange / LuminanceRange
+    double rlo = 0, rhi = 1, hueLo = 20, hueHi = 20, satLo = 0.25, satHi = 0.25, feather = 0;
     bool   rangeValid = false;
     std::vector<RangeMask::ColorSample> samples;          // colour samples (opponent space)
     /* Subject (AI saliency) component -- coverage is the shared SubjectRef; feather/inverted above. */
@@ -5590,14 +5625,17 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
                 d.rhi = o.value("hi").toDouble(1.0);
             }
             else {
-                d.refine = o.value("refine").toDouble(50.0);
+                d.hueLo = o.value("hueLo").toDouble(20.0);
+                d.hueHi = o.value("hueHi").toDouble(20.0);
+                d.satLo = o.value("satLo").toDouble(25.0) / 100.0;
+                d.satHi = o.value("satHi").toDouble(25.0) / 100.0;
                 const QJsonArray sa = o.value("samples").toArray();
                 for (const QJsonValue &sv : sa) {
                     const QJsonArray c = sv.toArray();
                     if (c.size() < 3) continue;
-                    d.samples.push_back(RangeMask::toOpp(float(c[0].toDouble()),
-                                                         float(c[1].toDouble()),
-                                                         float(c[2].toDouble())));
+                    d.samples.push_back(RangeMask::toHueSat(float(c[0].toDouble()),
+                                                            float(c[1].toDouble()),
+                                                            float(c[2].toDouble())));
                 }
             }
             comps.append(d);
@@ -5683,7 +5721,8 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
                     else if (d.isRange) {
                         c = (d.rangeTool == int(MaskTool::LuminanceRange))
                               ? RangeMask::lumCoverage(*refp, onx, ony, d.rlo, d.rhi, d.feather, d.inverted)
-                              : RangeMask::colorCoverage(*refp, onx, ony, d.samples, d.refine,
+                              : RangeMask::colorCoverage(*refp, onx, ony, d.samples,
+                                                         d.hueLo, d.hueHi, d.satLo, d.satHi,
                                                          d.feather, d.inverted);
                     }
                     else if (d.isSubject)
@@ -6283,16 +6322,44 @@ void MW::updateMaskOverlayTint()
     const int bw = qMax(1, int(mw * sc)), bh = qMax(1, int(mh * sc));
     const std::vector<float> buf = buildMaskBuffer(masks, bw, bh, degrees, fPath);
 
-    /* Work-space coverage -> premultiplied red tint (alpha proportional to coverage), then oriented
-       to match the displayed (output) pixmap exactly as developCompositeStack rotates the render. */
+    /* The SELECTED tool (the row the user clicked in the layer panel) also gets its OWN
+       coverage buffer, so its share of the layer mask can be tinted a different colour.
+       Its op is forced to Add: a Subtract tool contributes nothing to the composite (it
+       cuts a hole), but the user still needs to see the footprint they are editing. */
+    std::vector<float> selBuf;
+    QColor selColour;
+    const int selIdx = developProperties->activeMaskIndex();
+    if (selIdx >= 0 && selIdx < masks.size()) {
+        MaskComponent sel = masks[selIdx];
+        const bool subtract = (sel.op == int(MaskOp::Subtract));
+        sel.op = int(MaskOp::Add);
+        selBuf = buildMaskBuffer({sel}, bw, bh, degrees, fPath);
+        /* Matches ImageView::maskTintColor so the live per-tool preview (mid-stroke,
+           mid-drag) and this composite highlight are the same colour. */
+        selColour = subtract ? QColor(40, 110, 230) : QColor(255, 190, 60);
+    }
+
+    /* Work-space coverage -> premultiplied tint (alpha proportional to coverage), then
+       oriented to match the displayed (output) pixmap exactly as developCompositeStack
+       rotates the render. The layer composite is red; where the selected tool covers, the
+       hue is blended toward its colour by that tool's coverage. Alpha is the MAX of the
+       two coverages, so highlighting never makes the overlay more opaque -- only different. */
     QImage tint(bw, bh, QImage::Format_ARGB32_Premultiplied);
-    const int maxA = 150;                       // matches the per-tool tint's full-coverage alpha
+    const int maxA = 150;             // matches the per-tool tint's full-coverage alpha
+    const bool haveSel = !selBuf.empty();
     for (int y = 0; y < bh; ++y) {
         QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
         const float *mrow = buf.data() + size_t(y) * bw;
+        const float *srow = haveSel ? selBuf.data() + size_t(y) * bw : nullptr;
         for (int x = 0; x < bw; ++x) {
-            const int a = int(qBound(0.0f, mrow[x], 1.0f) * maxA + 0.5f);
-            row[x] = qRgba(220 * a / 255, 40 * a / 255, 40 * a / 255, a);   // premultiplied
+            const float mAll = qBound(0.0f, mrow[x], 1.0f);
+            const float mSel = srow ? qBound(0.0f, srow[x], 1.0f) : 0.0f;
+            const int a = int(qMax(mAll, mSel) * maxA + 0.5f);
+            if (a == 0) { row[x] = 0; continue; }
+            const int r = int(220 + (selColour.red()   - 220) * mSel + 0.5f);
+            const int g = int( 40 + (selColour.green() -  40) * mSel + 0.5f);
+            const int b = int( 40 + (selColour.blue()  -  40) * mSel + 0.5f);
+            row[x] = qRgba(r * a / 255, g * a / 255, b * a / 255, a);   // premultiplied
         }
     }
     if (degrees != 0) tint = tint.transformed(QTransform().rotate(degrees));
@@ -7135,6 +7202,30 @@ void MW::toggleDevelopReplace()
     }
     if (developProperties)
         developProperties->onSpotToolToggled(!developProperties->isSpotActive());
+}
+
+void MW::toggleDevelopWbSampler()
+{
+/*
+    "W" in Develop mode (and the Develop menu): arm/disarm the Basic panel's white-
+    balance dropper -- click a neutral to balance from it, Opt/Alt-click skin to correct
+    the skin colour. DevelopProperties owns the armed state, so this just flips it and
+    the dock button / cursor / loupe follow.
+
+    W is claimed by an ACTIVE Transform session for Warp (developShortcutIntercept rule
+    1a, which runs before the developShortcuts table), so this is only reached when no
+    Transform is up -- tool-local beats mode-local, the same ranking S and the brush keys
+    already follow.
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopWbSampler");
+    if (G::operationMode != G::OperationMode::Develop) {
+        if (G::popup)
+            G::popup->showPopup("The white balance sampler is only available in Develop "
+                                "Mode, which can be set in the status bar or the "
+                                "shortcut \"D\".", 3000);
+        return;
+    }
+    if (developProperties) developProperties->toggleWbDropper();
 }
 
 void MW::toggleMaskOverlay()

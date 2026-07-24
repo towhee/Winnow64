@@ -73,6 +73,94 @@ QCursor buildLevelCursor()
     p.end();
     return QCursor(pm, 1, 1);
 }
+
+/*
+    The white-balance dropper cursor: a laboratory pipette -- black rubber bulb, clear
+    graduated glass barrel, tapered tip -- lying on the same 45-degree diagonal and at
+    the same 32px size as the rest of the tool cursors.
+
+    Its TIP is the hotspot, so the pixel sampled is the one under the point of the tool
+    (a crosshair would leave the user guessing which end samples).
+
+    Built in a LOCAL frame rotated onto the diagonal: the origin is the tip and the body
+    runs up local -y toward the bulb, which makes the pipette's proportions readable as
+    a simple stack of lengths instead of a dozen hand-solved diagonal endpoints. Drawn
+    halo-first like the other cursors so it reads on any image; the glass barrel is
+    filled light with a dark outline so it stays legible over both dark and light
+    pixels, rather than relying on the image showing through.
+*/
+QCursor buildDropperCursor()
+{
+    const qreal dpr = 2.0;
+    const int S = 32;
+    QPixmap pm(int(S * dpr), int(S * dpr));
+    pm.setDevicePixelRatio(dpr);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    /* Local geometry, tip at the origin, body running up -y (lengths from the tip). */
+    const qreal tipLen  = 6.0;    // tapered point
+    const qreal barrelY = -20.0;  // barrel runs from -tipLen to here
+    const qreal barrelW = 2.1;    // half-width
+    /* The bulb is a capsule, not a ball: on the reference it is roughly twice as long
+       as it is wide, and a rounder bulb reads as a generic pin at cursor size. */
+    const qreal bulbTop = -30.2;
+    const qreal bulbW   = 3.2;    // half-width
+
+    QPainterPath body;            // taper + barrel as one silhouette
+    body.moveTo(0.0, 0.0);
+    body.lineTo(-0.75, -1.0);
+    body.lineTo(-barrelW, -tipLen);
+    body.lineTo(-barrelW, barrelY);
+    body.lineTo(barrelW, barrelY);
+    body.lineTo(barrelW, -tipLen);
+    body.lineTo(0.75, -1.0);
+    body.closeSubpath();
+
+    QPainterPath bulb;            // rubber bulb, rounded cap
+    bulb.addRoundedRect(QRectF(-bulbW, bulbTop, bulbW * 2.0, bulbTop * -1.0 + barrelY + 1.0),
+                        3.2, 3.2);
+    QPainterPath collar;          // the lip where the bulb grips the glass
+    collar.addRect(QRectF(-2.6, barrelY - 1.2, 5.2, 2.4));
+
+    p.translate(2.6, 29.4);       // tip lands here -> the hotspot
+    p.rotate(45.0);               // local -y becomes up-and-right
+
+    /* 1) Halo: the whole silhouette stroked white, so the glyph never disappears into
+          a light image. */
+    QPen halo(QColor(255, 255, 255, 235));
+    halo.setWidthF(3.4);
+    halo.setJoinStyle(Qt::RoundJoin);
+    halo.setCapStyle(Qt::RoundCap);
+    p.setPen(halo);
+    p.setBrush(Qt::NoBrush);
+    p.drawPath(body);
+    p.drawPath(bulb);
+
+    /* 2) Glass: light fill, dark outline. */
+    p.setPen(QPen(QColor(25, 25, 25), 1.1, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    p.setBrush(QColor(248, 248, 248));
+    p.drawPath(body);
+
+    /* 3) Graduation marks: short ticks off the barrel's left edge, the detail that
+          reads the shape as a pipette rather than a generic pointer. */
+    QPen tick(QColor(60, 60, 60), 0.9);
+    p.setPen(tick);
+    for (int i = 0; i < 3; ++i) {
+        const qreal y = -10.0 - i * 3.2;
+        p.drawLine(QPointF(-barrelW, y), QPointF(-barrelW + 1.5, y));
+    }
+
+    /* 4) Bulb + collar: solid black, like the rubber on the reference. */
+    p.setPen(QPen(QColor(15, 15, 15), 1.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    p.setBrush(QColor(20, 20, 20));
+    p.drawPath(collar);
+    p.drawPath(bulb);
+
+    p.end();
+    return QCursor(pm, 3, 29);    // hotspot = the tip (matches the translate above)
+}
 }
 #include <QApplication>
 #include <QJsonDocument>
@@ -132,6 +220,7 @@ ImageView::ImageView(QWidget *parent,
     this->classificationBadgeDiam = classificationBadgeDiam;
     cropCursor = buildCropCursor();
     levelCursor = buildLevelCursor();
+    dropperCursor = buildDropperCursor();
     pixmap = new Pixmap(this, dm, metadata);
 
     scene = new QGraphicsScene();
@@ -383,6 +472,10 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
            develop image lands after the interim preview, so it doesn't jump to fit. Falls
            through to the normal fit logic for every other load (no capture matches). */
         if (!applyDevelopCapturedView()) {
+            /* Coming off an interim preview without a capture to consume: put zoom back
+               into full size terms (see loadImageInterim). */
+            if (!isFit && interimZoomScale > 0) zoom /= interimZoomScale;
+            interimZoomScale = 1.0;
             /* If this is the first image in a new folder, and the image is smaller than
             the canvas (central widget window) set the scale to fit window, do not scale
             the image beyond 100% to fit the window.  */
@@ -458,12 +551,13 @@ bool ImageView::loadImageInterim(QString fPath)
         return false;
 
     /* Capture the zoom/pan in effect (from the outgoing image) BEFORE the pixmap swap, so
-       the developed image can restore it -- see setDevelopPreview. Read the live scroll
-       fraction while it is still valid. */
-    developCaptureForPath = fPath;
-    developCaptureIsFit = isFit;
-    developCaptureZoom = zoom;
-    developCaptureScrollPct = isScrollable ? getScrollPct() : scrollPct;
+       the developed image can restore it -- see setDevelopPreview. MW normally captures
+       before calling here; only capture if it did not (the live scroll state is still
+       that of the outgoing image at this point). */
+    if (developCaptureForPath != fPath) captureDevelopView(fPath);
+
+    /* Reframing the interim preview must not overwrite the capture. */
+    developCaptureLocked = true;
 
     currentImagePath = fPath;
     pmItem->setPixmap(QPixmap::fromImage(preview));
@@ -473,7 +567,16 @@ bool ImageView::loadImageInterim(QString fPath)
     updateShootingInfo();
 
     /* Mirror loadImage's fit logic so the placeholder is framed like the real image. */
+    const qreal fullZoomFit = zoomFit;      // fit zoom of the full size image being left
     zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+    /* The preview is a fraction of the sensor resolution, so the same zoom number would
+       show much more of the picture (and could even make the placeholder unscrollable,
+       swallowing a pan). Scale the zoom by the change in fit zoom -- the ratio of the
+       image dimensions -- so the placeholder frames the same content as the developed
+       image will. Divided back out in refreshDevelopCapture. */
+    if (fullZoomFit > 0 && zoomFit > 0) interimZoomScale = zoomFit / fullZoomFit;
+    else interimZoomScale = 1.0;
+    if (!isFit) zoom *= interimZoomScale;
     if (G::isFirstImageNewInstance || zoom < 0.1) {
         isFit = true;
         G::isFirstImageNewInstance = false;
@@ -483,7 +586,46 @@ bool ImageView::loadImageInterim(QString fPath)
     scale(true);
     if (!isFit && isScrollable) setScrollBars(developCaptureScrollPct);   // keep the pan
     pmItem->setGraphicsEffect(nullptr);
+    developCaptureLocked = false;   // resume tracking (thumb click pan, zoom, scroll)
     return true;
+}
+
+void ImageView::captureDevelopView(const QString &fPath)
+{
+/*
+    Remember the view (fit / zoom / scroll fraction) for a Develop navigation to fPath.
+    Called before the outgoing image is replaced, so the live scroll fraction still
+    describes the view the user is looking at. The capture is subsequently kept in step
+    with the live view by refreshDevelopCapture until the developed image arrives and
+    applyDevelopCapturedView consumes it.
+*/
+    if (G::isLogger) G::log("ImageView::captureDevelopView", fPath);
+    developCaptureForPath.clear();
+    if (fPath.isEmpty()) return;
+    /* First image in a new folder starts at fit -- there is no view to carry over, and a
+       capture would pre-empt the fit logic in loadImage. */
+    if (G::isFirstImageNewInstance) return;
+    developCaptureForPath = fPath;
+    developCaptureIsFit = isFit;
+    developCaptureZoom = zoom;
+    developCaptureScrollPct = isScrollable ? getScrollPct() : scrollPct;
+}
+
+void ImageView::refreshDevelopCapture()
+{
+/*
+    Track the live view while the Develop decode for the captured image is in flight.
+
+    Navigation in Develop mode shows the embedded JPG placeholder first, and the user
+    (or a thumbnail click, which arrives on mouse release, after the selection change)
+    can pan or zoom that placeholder. Without this the developed image would land and
+    restore the pre-navigation view, undoing the pan.
+*/
+    if (developCaptureLocked || isLoadingImage) return;
+    if (developCaptureForPath.isEmpty() || developCaptureForPath != currentImagePath) return;
+    developCaptureIsFit = isFit;
+    developCaptureZoom = interimZoomScale > 0 ? zoom / interimZoomScale : zoom;
+    developCaptureScrollPct = isScrollable ? getScrollPct() : scrollPct;
 }
 
 void ImageView::setDevelopPreview(const QImage &image)
@@ -511,8 +653,10 @@ void ImageView::setDevelopPreview(const QImage &image)
            finished and the developed image is replacing the interim preview -- restore
            the captured zoom/pan so it doesn't jump. Otherwise (aspect changed = crop
            applied/removed, or no capture) treat like a new image and re-fit. */
-        if (!(aspectSame && applyDevelopCapturedView()))
+        if (!(aspectSame && applyDevelopCapturedView())) {
+            interimZoomScale = 1.0;     // full size image again
             resetFitZoom();
+        }
     }
 }
 
@@ -521,12 +665,15 @@ bool ImageView::applyDevelopCapturedView()
     if (G::isLogger) G::log("ImageView::applyDevelopCapturedView");
     if (developCaptureForPath.isEmpty() || developCaptureForPath != currentImagePath)
         return false;
+    developCaptureLocked = true;    // restoring: do not track our own reframing
+    interimZoomScale = 1.0;         // full size image: zoom is in full size terms again
     setSceneRect(scene->itemsBoundingRect());
     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
     isFit = developCaptureIsFit;
     if (!isFit) zoom = developCaptureZoom;
     scale();                                                  // re-applies zoom per isFit
     if (!isFit && isScrollable) setScrollBars(developCaptureScrollPct);   // restore pan
+    developCaptureLocked = false;
     return true;
 }
 
@@ -547,7 +694,8 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
     maskOp = op;
     maskInverted = inverted;
     maskFeather = feather;
-    maskTintHidden = false;             // new mask edit -> start with the overlay tint shown ("M" toggles)
+    maskTintHidden = false;         // new mask edit -> tint shown ("O" toggles)
+    emit maskTintVisibilityChanged(true);
     if (!parseMaskParams(paramsJson)) {     // missing/invalid -> a sensible default
         if (maskTool == 1) { maskC = QPointF(0.5, 0.5); maskRx = 0.25; maskRy = 0.30; maskAngle = 0; }
         else if (maskTool == 0) { maskP1 = QPointF(0.5, 0.34); maskP2 = QPointF(0.5, 0.66); }
@@ -569,8 +717,10 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
         rebuildContentPreview();
     }
     maskEditMode = true;
-    maskHover = underMouse();        // show at once if the cursor is already over the view
+    maskHover = underMouse();        // show at once if the cursor is already over view
     maskBrushCursorOn = maskHover && (maskTool == 2 || maskIsObject());
+    rangeLoupeOn = false;            // no sampling loupe until the pointer is over image
+    if (maskTool == 3) setCursor(dropperCursor);   // the pipette is "in the user's hand"
     maskDrag = -1;
     viewport()->update();
 }
@@ -591,6 +741,11 @@ void ImageView::endMaskEdit()
     maskRangePreview = QImage();
     maskRangeParams.clear();
     maskLayerTint = QImage();
+    rangeLoupeOn = false;
+    /* Restore the normal loupe cursor. A tool set its own (dropper for Color Range, a
+       blank cursor for Brush/Object) that mouseMoveEvent only refreshes on the next move,
+       so an Esc collapse while hovering the image would otherwise leave it showing. */
+    setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
     viewport()->update();
 }
 
@@ -621,6 +776,224 @@ void ImageView::endSpotEdit()
     spotPins.clear();
     unsetCursor();
     viewport()->update();
+}
+
+void ImageView::beginWbPick()
+{
+    if (G::isLogger) G::log("ImageView::beginWbPick");
+    wbPickMode = true;
+    wbLoupeOn = false;                  // no panel until the pointer is over the image
+    setCursor(dropperCursor);           // the dropper is now "in the user's hand"
+    viewport()->update();
+}
+
+void ImageView::endWbPick()
+{
+    if (!wbPickMode) return;
+    if (G::isLogger) G::log("ImageView::endWbPick");
+    wbPickMode = false;
+    wbLoupeOn = false;
+    unsetCursor();
+    viewport()->update();
+}
+
+void ImageView::drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
+                                const QString &tip, bool accent)
+{
+/*
+    A shared eyedropper loupe: a panel that follows the dropper showing the pixels under
+    the tip magnified into a 5x5 grid, with their average as an RGB readout. Modelled on
+    Lightroom's, restyled to Winnow's dark overlay look. Used by BOTH the white-balance
+    "pick a target neutral" dropper and the Color Range mask sampler; the caller supplies
+    the title, the footer tip, and whether the accent (modifier) colour is active.
+
+    The grid is EXACTLY the 5x5 patch the samplers read, so what the user sees is what
+    gets sampled -- the panel is a preview of the measurement, not a decorative
+    magnifier. kWbLoupeCells keeps the two in step.
+
+    The swatches and readout are DISPLAY values (the developed pixels on screen, shown
+    0..100% like Lightroom). White balance itself is solved from the pre-develop
+    scene-linear WorkingImage, which is the correct input but is not what the user is
+    looking at -- so the readout deliberately reports what is on screen.
+*/
+    if (!pmItem || !pmItem->isVisible()) return;
+
+    const int cells = kWbLoupeCells;
+    const int half = cells / 2;
+    const QPointF ip = maskViewportToImage(vp);
+    const int cx = int(std::floor(ip.x()));
+    const int cy = int(std::floor(ip.y()));
+
+    /* Pull ONLY the 5x5 neighbourhood, per paint. Caching the whole displayed pixmap as
+       a QImage would cost ~180MB on a 45MP raw for 25 pixels of data, and would go stale
+       the moment a develop edit re-rendered the preview underneath us. Clamped to the
+       pixmap, with the offset kept so cells outside the image can be drawn as empty. */
+    const QPixmap &pm = pmItem->pixmap();
+    const QRect want(cx - half, cy - half, cells, cells);
+    const QRect src = want.intersected(QRect(0, 0, pm.width(), pm.height()));
+    QImage patch;
+    if (!src.isEmpty())
+        patch = pm.copy(src).toImage().convertToFormat(QImage::Format_RGB32);
+    if (patch.isNull()) return;
+
+    /* Geometry. Cell size is fixed in SCREEN px so the panel is a constant size whatever
+       the zoom -- it magnifies image pixels, it does not track the view transform. */
+    const int cell = 40, pad = 8, titleH = 26, readH = 26, tipH = 18;
+    const int gridW = cells * cell;
+    const int panelW = gridW + pad * 2;
+    const int panelH = titleH + gridW + readH * 2 + tipH + pad;   // RGB row + HSL row
+
+    /* Sit below-right of the tip, flipping at the viewport edges so the panel is never
+       clipped (and never lands under the pointer). */
+    const int gap = 22;
+    int px = vp.x() + gap;
+    int py = vp.y() + gap;
+    if (px + panelW > viewport()->width())  px = vp.x() - gap - panelW;
+    if (py + panelH > viewport()->height()) py = vp.y() - gap - panelH;
+    px = qBound(4, px, qMax(4, viewport()->width()  - panelW - 4));
+    py = qBound(4, py, qMax(4, viewport()->height() - panelH - 4));
+    const QRect panel(px, py, panelW, panelH);
+
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    /* Panel: near-black with a subtle light border, like the other Winnow overlays.
+       When the accent (modifier) mode is active the border picks up the accent colour, so
+       the alternate action the click will take is unmistakable. */
+    QPainterPath bg;
+    bg.addRoundedRect(QRectF(panel), 7, 7);
+    p.fillPath(bg, QColor(18, 18, 18, 235));
+    p.setPen(QPen(accent ? QColor(21, 113, 211, 230) : QColor(255, 255, 255, 45),
+                  accent ? 1.6 : 1.0));
+    p.drawPath(bg);
+
+    /* Title. */
+    QFont f = p.font();
+    f.setPointSizeF(f.pointSizeF() * 0.95);
+    p.setFont(f);
+    p.setPen(QColor(235, 235, 235));
+    p.drawText(QRect(panel.x(), panel.y() + 3, panelW, titleH - 3), Qt::AlignCenter, title);
+
+    /* The grid: one image pixel per cell, centre cell = the pixel under the tip. Out-of-
+       image cells (near an edge) draw as flat dark so the panel keeps its shape. */
+    const int gx = panel.x() + pad;
+    const int gy = panel.y() + titleH;
+    double sum[3] = {0, 0, 0};
+    int counted = 0;
+    p.setRenderHint(QPainter::Antialiasing, false);      // crisp swatch edges
+    for (int j = 0; j < cells; ++j) {
+        for (int i = 0; i < cells; ++i) {
+            /* Image pixel -> patch coords (the patch was clipped to the image). */
+            const int sx = cx + i - half - src.x();
+            const int sy = cy + j - half - src.y();
+            const QRect r(gx + i * cell, gy + j * cell, cell, cell);
+            if (sx < 0 || sy < 0 || sx >= patch.width() || sy >= patch.height()) {
+                p.fillRect(r, QColor(40, 40, 40));       // outside the image
+                continue;
+            }
+            const QRgb c = patch.pixel(sx, sy);
+            p.fillRect(r, QColor(qRed(c), qGreen(c), qBlue(c)));
+            sum[0] += qRed(c); sum[1] += qGreen(c); sum[2] += qBlue(c);
+            ++counted;
+        }
+    }
+    /* Cell separators + grid outline. */
+    p.setPen(QPen(QColor(0, 0, 0, 130), 1.0));
+    for (int k = 1; k < cells; ++k) {
+        p.drawLine(gx + k * cell, gy, gx + k * cell, gy + gridW);
+        p.drawLine(gx, gy + k * cell, gx + gridW, gy + k * cell);
+    }
+    p.setPen(QPen(QColor(0, 0, 0, 180), 1.0));
+    p.drawRect(QRect(gx, gy, gridW, gridW));
+
+    /* Crosshair on the centre cell = the pixel under the dropper tip. Drawn in the
+       cell's own contrast so it reads on a light or a dark sample. */
+    const QRect mid(gx + half * cell, gy + half * cell, cell, cell);
+    const int mx = cx - src.x(), my = cy - src.y();
+    const QRgb midRgb = (mx >= 0 && my >= 0 && mx < patch.width() && my < patch.height())
+                            ? patch.pixel(mx, my) : qRgb(128, 128, 128);
+    const int midLuma = qRound(0.2126 * qRed(midRgb) + 0.7152 * qGreen(midRgb)
+                               + 0.0722 * qBlue(midRgb));
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setPen(QPen(midLuma > 128 ? QColor(0, 0, 0, 170) : QColor(255, 255, 255, 190), 1.2));
+    const QPointF mc = QRectF(mid).center();
+    const double arm = 5.0;
+    p.drawLine(QPointF(mc.x() - arm, mc.y()), QPointF(mc.x() + arm, mc.y()));
+    p.drawLine(QPointF(mc.x(), mc.y() - arm), QPointF(mc.x(), mc.y() + arm));
+
+    /* Readout: the AVERAGE of the grid, i.e. the value that will actually be sampled,
+       as a percentage (Lightroom's units). */
+    if (counted == 0) return;
+    const double r = sum[0] / counted * 100.0 / 255.0;
+    const double g = sum[1] / counted * 100.0 / 255.0;
+    const double b = sum[2] / counted * 100.0 / 255.0;
+
+    const int ry = panel.y() + titleH + gridW;
+    QFont lf = p.font();
+    lf.setBold(true);
+    const int colW = gridW / 3;
+
+    /* One readout row: three label/value pairs laid out evenly + a right-aligned unit. */
+    auto drawRow = [&](int rowY, const char *const labels[3], const QString vals[3],
+                       const QString &unit) {
+        for (int k = 0; k < 3; ++k) {
+            const QRect col(gx + k * colW, rowY, colW, readH);
+            p.setFont(lf);
+            p.setPen(QColor(240, 240, 240));
+            p.drawText(QRect(col.x(), col.y(), 16, col.height()),
+                       Qt::AlignVCenter | Qt::AlignLeft, labels[k]);
+            p.setFont(f);
+            p.setPen(QColor(200, 200, 200));
+            p.drawText(QRect(col.x() + 16, col.y(), col.width() - 16, col.height()),
+                       Qt::AlignVCenter | Qt::AlignLeft, vals[k]);
+        }
+        p.setPen(QColor(150, 150, 150));
+        p.drawText(QRect(gx, rowY, gridW, readH), Qt::AlignVCenter | Qt::AlignRight, unit);
+    };
+
+    /* RGB row (0..100%, Lightroom's units). */
+    const char *const rgbLabels[3] = {"R", "G", "B"};
+    const QString rgbVals[3] = {QString::number(r, 'f', 1), QString::number(g, 'f', 1),
+                                QString::number(b, 'f', 1)};
+    drawRow(ry, rgbLabels, rgbVals, "%");
+
+    /* HSL row below it: hue in degrees, saturation + lightness in percent (same avg). */
+    const QColor hsl = QColor::fromRgbF(sum[0] / counted / 255.0, sum[1] / counted / 255.0,
+                                        sum[2] / counted / 255.0);
+    const int hueDeg = qMax(0, hsl.hslHue());        // -1 (achromatic) -> 0
+    const char *const hslLabels[3] = {"H", "S", "L"};
+    const QString hslVals[3] = {QString::number(hueDeg),
+                                QString::number(hsl.hslSaturationF() * 100.0, 'f', 0),
+                                QString::number(hsl.lightnessF() * 100.0, 'f', 0)};
+    drawRow(ry + readH, hslLabels, hslVals, QString());
+
+    /* Footer tip: the caller's hint (e.g. a modifier action), advertised permanently
+       rather than only while the modifier happens to be held. */
+    if (!tip.isEmpty()) {
+        QFont tf = f;
+        tf.setPointSizeF(f.pointSizeF() * 0.88);
+        p.setFont(tf);
+        p.setPen(accent ? QColor(120, 175, 240) : QColor(140, 140, 140));
+        p.drawText(QRect(gx, panel.y() + titleH + gridW + readH * 2, gridW, tipH),
+                   Qt::AlignVCenter | Qt::AlignHCenter, tip);
+    }
+}
+
+void ImageView::paintEvent(QPaintEvent *event)
+{
+    QGraphicsView::paintEvent(event);
+    /* Painted here, after the scene and every drawForeground overlay, so the loupe is
+       always on top. Shared by the WB dropper and the Color Range mask sampler. */
+    if (wbPickMode && wbLoupeOn) {
+        QPainter p(viewport());
+        drawSampleLoupe(p, wbLoupeVp,
+                        wbAltHeld ? "Pick a skin tone:" : "Pick a target neutral:",
+                        wbAltHeld ? "Sampling skin tone" : "Opt/Alt-click: skin tone",
+                        wbAltHeld);
+    }
+    else if (maskEditMode && maskTool == 3 && rangeLoupeOn) {
+        QPainter p(viewport());
+        drawSampleLoupe(p, rangeLoupeVp, "Sample a colour:", "Shift-click: add a colour", false);
+    }
 }
 
 void ImageView::setSpotReplaceMode(int mode)
@@ -659,10 +1032,13 @@ double ImageView::spotSizeMin() const
 }
 
 /* A Develop tool (crop / mask / spot) owns the canvas -- gate the default loupe mouse
-   behaviour (click-to-zoom, pan, pick) so a tool gesture can't also toggle zoom etc. */
+   behaviour (click-to-zoom, pan, pick) so a tool gesture can't also toggle zoom etc. Only
+   mask tools that actually consume a mouse gesture count (maskToolUsesMouse); the AI
+   masks (Subject/Sky/Background/Depth) and the Luminance Range tool have no canvas
+   interaction, so with one active a click behaves like the normal loupe (zoom / pan). */
 bool ImageView::developToolActive() const
 {
-    return cropActive() || maskEditMode || spotEditMode;
+    return cropActive() || maskToolUsesMouse() || spotEditMode || wbPickMode;
 }
 
 /* Hold Space in Develop mode to temporarily borrow the loupe zoom/pan gesture over the
@@ -848,6 +1224,7 @@ void ImageView::toggleMaskTint()
        and the brush cursor keep drawing (drawForeground gates only the tint on maskTintHidden). */
     if (!maskEditMode) return;
     maskTintHidden = !maskTintHidden;
+    emit maskTintVisibilityChanged(!maskTintHidden);
     viewport()->update();
 }
 
@@ -858,6 +1235,7 @@ void ImageView::hideMaskTint()
        re-selecting a mask tool. */
     if (!maskEditMode || maskTintHidden) return;
     maskTintHidden = true;
+    emit maskTintVisibilityChanged(false);
     viewport()->update();
 }
 
@@ -888,7 +1266,13 @@ void ImageView::setMaskRangeParams(const QString &paramsJson)
 
 QColor ImageView::maskTintColor() const
 {
-    return (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);   // Subtract blue / Add red
+    /* This is ALWAYS the SELECTED tool's own preview (the tool being edited), so it uses
+       the highlight colours MW::updateMaskOverlayTint gives the selected component in the
+       whole-layer composite: amber for Add, blue for Subtract (the rest of the layer
+       stays red). Keep the two in sync -- mid-stroke the composite is suppressed and this
+       preview takes over, so a mismatch would flicker the colour on release. */
+    return (maskOp == 1) ? QColor(40, 110, 230)     // Subtract blue
+                         : QColor(255, 190, 60);    // Add amber (selected-tool highlight)
 }
 
 void ImageView::setMaskBrushSettings(double size, double feather, double flow, bool autoMask,
@@ -2083,14 +2467,16 @@ void ImageView::buildRangePreview()
 
     const QJsonObject o = QJsonDocument::fromJson(maskRangeParams.toUtf8()).object();
     const double lo = o.value("lo").toDouble(0.0), hi = o.value("hi").toDouble(1.0);
-    const double refine = o.value("refine").toDouble(50.0);
+    const double hueLo = o.value("hueLo").toDouble(20.0), hueHi = o.value("hueHi").toDouble(20.0);
+    const double satLo = o.value("satLo").toDouble(25.0) / 100.0;
+    const double satHi = o.value("satHi").toDouble(25.0) / 100.0;
     std::vector<RangeMask::ColorSample> samples;
     const QJsonArray sa = o.value("samples").toArray();
     for (const QJsonValue &sv : sa) {
         const QJsonArray c = sv.toArray();
         if (c.size() < 3) continue;
-        samples.push_back(RangeMask::toOpp(float(c[0].toDouble()), float(c[1].toDouble()),
-                                           float(c[2].toDouble())));
+        samples.push_back(RangeMask::toHueSat(float(c[0].toDouble()), float(c[1].toDouble()),
+                                              float(c[2].toDouble())));
     }
     const QColor base = maskTintColor();
     const int R = base.red(), Gc = base.green(), B = base.blue();
@@ -2105,7 +2491,8 @@ void ImageView::buildRangePreview()
             const double onx = (x + 0.5) / tw;
             const float cov = lum
                 ? RangeMask::lumCoverage(*ref, onx, ony, lo, hi, maskFeather, maskInverted)
-                : RangeMask::colorCoverage(*ref, onx, ony, samples, refine, maskFeather, maskInverted);
+                : RangeMask::colorCoverage(*ref, onx, ony, samples, hueLo, hueHi, satLo, satHi,
+                                           maskFeather, maskInverted);
             line[x] = qRgba(R, Gc, B, int(cov * tint * 255.0 + 0.5));
         }
     }
@@ -2369,6 +2756,9 @@ void ImageView::scale(bool isNewImage)
     // The rest of your functional logic remains identical
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();
+
+    /* Keep a pending Develop capture in step with a user zoom on the interim preview. */
+    refreshDevelopCapture();
 
     // Maintain predictive focus and panning logic
     int i = dm->currentSfRow;
@@ -2760,6 +3150,9 @@ void ImageView::panTo(float xPct, float yPct)
     // qDebug().noquote() << srcFun.leftJustified(40);
     if (zoom > zoomFit) {
         centerOn(QPointF(xPct * sceneRect().width(), yPct * sceneRect().height()));
+        /* Develop: the click lands after the navigation captured the outgoing view, so
+           the new pan must become what the developed image restores. */
+        refreshDevelopCapture();
     }
 }
 
@@ -3236,6 +3629,7 @@ void ImageView::scrollChange(int /*value*/)
              << "mapToScene(viewport()->rect()) =" << mapToScene(viewport()->rect())
         ;//*/
     if (!isLoadingImage) {
+        refreshDevelopCapture();    // a pan while the Develop decode is in flight
         bool adjustCenter = true;
         bool refresh = true;
         showNormalizedViewport(adjustCenter, refresh, "ImageView::scrollChange");
@@ -3505,6 +3899,14 @@ void ImageView::keyPressEvent(QKeyEvent *event){
         emit warpCommitRequested();
         return;
     }
+    /* White-balance dropper: Escape disarms it without sampling. FALLBACK ONLY -- the
+       dropper is armed from the Develop dock, so focus is there and this handler
+       normally never runs; MW::developShortcutIntercept is the path that actually
+       fires. Kept for the case where ImageView does hold focus. */
+    if (wbPickMode && event->key() == Qt::Key_Escape) {
+        emit wbPickExited();
+        return;
+    }
     /* Spot removal: [ / ] resize the brush, Escape disarms the tool. */
     if (spotEditMode) {
         if (event->key() == Qt::Key_BracketLeft)  {
@@ -3599,6 +4001,27 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     }
 
     applyDeferredSpacePan();    // a Space change stashed mid-gesture takes effect here
+
+    /* White-balance dropper: a left click reports the normalized point and consumes the
+       event so the canvas cannot pan. Checked FIRST -- while the dropper is armed it owns
+       the click, ahead of any crop or mask tool. The dock does the colour solve and
+       disarms us. Space (spacePanOverride) still yields to the pan gesture. */
+    if (!spacePanOverride && wbPickMode && event->button() == Qt::LeftButton) {
+        /* Latch a one-shot zoom suppression for the RELEASE that follows. The dropper
+           auto-dismisses: the dock disarms us synchronously while handling wbSampled
+           below, so wbPickMode is ALREADY false by the time mouseReleaseEvent runs and
+           developToolActive() can no longer gate the loupe's click-to-toggle-zoom.
+           Without this the sample lands AND the view zooms to 100%. */
+        suppressClickZoom = true;
+        const QPointF n = maskViewportToNorm(event->pos());
+        /* Opt/Alt = sample SKIN (correct the skin hue) rather than a neutral. Taken
+           from the click's own modifiers, so it is right regardless of what the loupe
+           title last showed. */
+        const bool skin = (event->modifiers() & Qt::AltModifier);
+        if (n.x() >= 0.0 && n.x() <= 1.0 && n.y() >= 0.0 && n.y() <= 1.0)
+            emit wbSampled(n.x(), n.y(), skin);
+        return;
+    }
 
     /* Spot removal: click a pin to delete that spot, else start a new stroke. In Fill
        mode Opt/Alt starts an ERASE stroke (subtracts from the painted area). Skipped
@@ -3858,6 +4281,24 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
     applyDeferredSpacePan();    // a Space change stashed mid-gesture applies at hover
 
+    /* White-balance dropper: RE-ASSERT the pipette cursor on every move and consume the
+       move so the canvas cannot pan while sampling. Setting the cursor once in
+       beginWbPick is not enough -- the base view resets it as the pointer moves over the
+       canvas, which is why every other tool here (spot, level, crop, mask) also
+       re-applies its cursor from mouseMoveEvent. */
+    if (!spacePanOverride && wbPickMode) {
+        setCursor(dropperCursor);
+        /* Track the tip for the "pick a target neutral" loupe; hide it once the pointer
+           leaves the image, where there is nothing to sample. */
+        wbLoupeVp = event->pos();
+        wbAltHeld = (event->modifiers() & Qt::AltModifier);
+        const QPointF n = maskViewportToNorm(event->pos());
+        wbLoupeOn = (n.x() >= 0.0 && n.x() <= 1.0 && n.y() >= 0.0 && n.y() <= 1.0);
+        viewport()->update();
+        event->accept();
+        return;
+    }
+
     /* Spot removal: track the brush cursor; while painting, extend the stroke. Consume
        the move so the canvas never pans in spot mode. */
     if (!spacePanOverride && spotEditMode) {
@@ -3996,14 +4437,20 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
         emit maskGeometryChanged(maskParamsJson());
         return;
     }
-    /* Hover feedback while a mask tool is active (not dragging): show a move cursor over a handle,
-       an eyedropper (cross) for the Color Range sampler (pointer over a removable swatch). */
+    /* Hover feedback while a mask tool is active (not dragging): a move cursor over a
+       handle, the pipette for the Color Range sampler (pointing hand over a swatch). */
     if (!spacePanOverride && maskEditMode && !isLeftMouseBtnPressed) {
         if (maskTool == 3) {
             QVector<QRectF> rects; rangeSwatchRects(rects);
             bool onSwatch = false;
             for (const QRectF &r : rects) if (r.contains(event->pos())) { onSwatch = true; break; }
-            setCursor(onSwatch ? Qt::PointingHandCursor : Qt::CrossCursor);
+            setCursor(onSwatch ? Qt::PointingHandCursor : dropperCursor);
+            /* Drive the sampling loupe: track the tip, hide once off the image. */
+            rangeLoupeVp = event->pos();
+            const QPointF n = maskViewportToNorm(event->pos());
+            rangeLoupeOn = !onSwatch && (n.x() >= 0.0 && n.x() <= 1.0 &&
+                                         n.y() >= 0.0 && n.y() <= 1.0);
+            viewport()->update();
         }
         else setCursor(maskHitTest(event->pos()) >= 0 ? Qt::OpenHandCursor : Qt::ArrowCursor);
     }
@@ -4104,6 +4551,12 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger)
         G::log("ImageView::mouseReleaseEvent", "isScrollable =" + QVariant(isScrollable).toString());
+
+    /* Consume the one-shot click-zoom suppression up front, so it is cleared no matter
+       which of the early returns below this release takes (leaving it set would swallow
+       the zoom on the NEXT click). See the white-balance branch in mousePressEvent. */
+    const bool swallowClickZoom = suppressClickZoom;
+    suppressClickZoom = false;
 
     /* Spot removal, stroke finished. Spot (bare click) / Object (drag): commit as one
        FillSpot immediately. Fill: ACCUMULATE into the pending painted area (with this
@@ -4277,8 +4730,12 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
     /* A Develop tool owns the canvas: a tool click (e.g. deleting a spot pin) must NOT
        fall through to the loupe's click-to-toggle-zoom / pan. (Skipped while Space is
-       held so the override's zoom/pan runs.) */
-    if (!spacePanOverride && developToolActive()) { event->accept(); return; }
+       held so the override's zoom/pan runs.) swallowClickZoom covers the tools that
+       DISARM on the press, whose mode flag is already clear by now. */
+    if (!spacePanOverride && (developToolActive() || swallowClickZoom)) {
+        event->accept();
+        return;
+    }
 
     // zoom > zoomFit (set in scale)
     if (isScrollable) setCursor(Qt::OpenHandCursor);

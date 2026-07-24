@@ -1,4 +1,6 @@
 #include "Develop/develop.h"
+#include "Develop/whitebalance.h"
+#include "Develop/colorgrade.h"
 #include <QtConcurrent>
 #include <QThreadPool>
 #include <QElapsedTimer>
@@ -23,13 +25,10 @@ constexpr float kContrastSlopeRange = 0.4f;
 constexpr float kContrastFullScale  = 100.0f;
 
 /* White balance is a per-channel gain in SCENE-LINEAR (the physically correct domain: it
-   rescales the light before any tone curve). The temp/tint sliders are integer -100..100
-   controls, normalised to amount -1..1 by kWbFullScale. Temp warms by lifting red / lowering
-   blue (green fixed); tint shifts the green<->magenta axis on the green channel. The ranges
-   are deliberately gentle creative defaults (full slider = +/-50% on a channel). */
-constexpr float kWbFullScale = 100.0f;
-constexpr float kTempGain    = 0.5f;    // full warm: R *1.5, B *0.5
-constexpr float kTintGain    = 0.5f;    // full magenta: G *0.5
+   rescales the light before any tone curve). The gains are ABSOLUTE: p.temp is a Kelvin
+   temperature and p.tint a green/magenta offset, resolved against the image's own colour
+   characterisation (WorkingImage::cam) by WhiteBalance::relativeGains -- so "5500 K"
+   means the same light on every camera body. See Develop/whitebalance.h. */
 
 /* Colour -- RGB sliders (red/green/blue). Per-channel scene-linear gain, normalised -1..1 by
    kRgbFullScale and folded into the same per-channel factor as WB + exposure (free; no extra
@@ -43,6 +42,17 @@ constexpr float kRgbGain      = 0.5f;
    +1 -> 2x. Applied as a cross-channel block after the tone curve (see applyPointOps). */
 constexpr float kHslFullScale = 100.0f;
 constexpr float kHueMaxRad    = 1.04719755f;   // 60 degrees at full slider
+
+/* Colour grading (Color Mix panel) -- tonal-range tinting. Each range's hue+sat becomes a
+   zero-luma RGB chroma push scaled by kGradeTintStrength (amount added at full sat), and
+   its -100..100 luminance a gain delta scaled by kGradeLumStrength (+/-100 -> +/-50% in
+   that range). Weighted per pixel by smooth tonal windows split at kGradeShadowEnd /
+   kGradeHighStart in the perceptual (gamma) domain. See buildPointCoeffs' grade block. */
+constexpr float kGradeTintStrength = 0.5f;
+constexpr float kGradeLumStrength  = 0.5f;
+constexpr float kGradeLumFullScale = 100.0f;
+constexpr float kGradeShadowEnd    = 0.5f;    // perceptual L: shadow weight reaches 0
+constexpr float kGradeHighStart    = 0.5f;    // perceptual L: highlight weight starts
 
 /* Tone-region controls (highlights/shadows/whites/blacks). Each is a smooth, region-weighted
    shift of the PERCEPTUAL (gamma) value, applied after contrast (pipeline order #5). The
@@ -618,18 +628,24 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
     /* Exposure: a scene-linear gain of 2^EV (a +1 EV slider doubles the linear value). */
     const float exposureGain = (p.exposure != 0.0f) ? std::exp2(p.exposure) : 1.0f;
 
-    /* White balance: per-channel scene-linear gains (see kTempGain/kTintGain). Folded with the
-       uniform exposure gain AND the Colour RGB sliders (per-channel gain, kRgbGain) into a single
-       per-channel factor -- all are linear multiplies, so they commute and the fused pass applies
-       one multiply per channel. */
-    const float t  = p.temp / kWbFullScale;     // -1..1
-    const float tn = p.tint / kWbFullScale;     // -1..1
+    /* White balance: per-channel scene-linear gains for the absolute (Kelvin, tint),
+       taken RELATIVE to the as-shot rendering so an untouched image (p.temp == 0) is
+       an exact no-op. Folded with the uniform exposure gain AND the Colour RGB
+       sliders (per-channel gain, kRgbGain) into a single per-channel factor -- all
+       are linear multiplies, so they commute and the fused pass applies one multiply
+       per channel. */
+    float wbGain[3] = {1.0f, 1.0f, 1.0f};
+    if (p.temp > 0.0f || p.tint != 0.0f) {
+        float kelvin, tint;
+        WhiteBalance::resolve(img.cam, p.temp, p.tint, kelvin, tint);
+        WhiteBalance::relativeGains(img.cam, kelvin, tint, wbGain);
+    }
     const float rGain = 1.0f + kRgbGain * (p.red   / kRgbFullScale);
     const float gGain = 1.0f + kRgbGain * (p.green / kRgbFullScale);
     const float bGain = 1.0f + kRgbGain * (p.blue  / kRgbFullScale);
-    c.channelGain[0] = (1.0f + kTempGain * t)  * exposureGain * rGain;   // R: up when warm
-    c.channelGain[1] = (1.0f - kTintGain * tn) * exposureGain * gGain;   // G: down toward magenta
-    c.channelGain[2] = (1.0f - kTempGain * t)  * exposureGain * bGain;   // B: down when warm
+    c.channelGain[0] = wbGain[0] * exposureGain * rGain;
+    c.channelGain[1] = wbGain[1] * exposureGain * gGain;
+    c.channelGain[2] = wbGain[2] * exposureGain * bGain;
 
     c.white = (img.white > 0.0f ? img.white : 1.0f);
 
@@ -704,8 +720,26 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
     c.hslActive = (c.satFactor != 1.0f) || (c.vibAmount != 0.0f) ||
                   (c.lumGain != 1.0f) || (hue != 0.0f);
 
+    /* Colour grading: turn each range's (hue, sat, lum) into a pre-scaled zero-luma RGB
+       tint vector + a luminance gain delta. HSV(hue, 1, 1) gives a fully-saturated hue
+       colour; subtracting its Rec.709 luma leaves a chroma-only push that shifts colour
+       without brightness. sat scales it, so a sat-0 range contributes nothing. */
+    const float gHue[3] = {p.gradeShadowHue, p.gradeMidHue, p.gradeHighHue};
+    const float gSat[3] = {p.gradeShadowSat, p.gradeMidSat, p.gradeHighSat};
+    const float gLum[3] = {p.gradeShadowLum, p.gradeMidLum, p.gradeHighLum};
+    for (int r = 0; r < 3; ++r) {
+        ColorGrade::gradeTintVector(gHue[r], gSat[r], kGradeTintStrength, c.gradeTint[r]);
+        c.gradeLum[r] = (gLum[r] / kGradeLumFullScale) * kGradeLumStrength;
+    }
+    c.gradeActive = (c.gradeTint[0][0] != 0.0f || c.gradeTint[0][1] != 0.0f ||
+                     c.gradeTint[0][2] != 0.0f || c.gradeTint[1][0] != 0.0f ||
+                     c.gradeTint[1][1] != 0.0f || c.gradeTint[1][2] != 0.0f ||
+                     c.gradeTint[2][0] != 0.0f || c.gradeTint[2][1] != 0.0f ||
+                     c.gradeTint[2][2] != 0.0f ||
+                     c.gradeLum[0] != 0.0f || c.gradeLum[1] != 0.0f || c.gradeLum[2] != 0.0f);
+
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
-               (c.channelGain[2] != 1.0f) || c.toneActive || c.hslActive;
+               (c.channelGain[2] != 1.0f) || c.toneActive || c.hslActive || c.gradeActive;
     return c;
 }
 
@@ -723,6 +757,7 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
     const bool doGain = (g0 != 1.0f) || (g1 != 1.0f) || (g2 != 1.0f);
     const bool doTone = c.toneActive;
     const bool doHsl  = c.hslActive;
+    const bool doGrade = c.gradeActive;
 
     /* HSL coeffs (cross-channel, applied after the tone curve). Locals so they fold into the
        inner loop the same way the gain/tone constants do. */
@@ -733,6 +768,14 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
     const float vibA = c.vibAmount;
     const bool  doVib = (vibA != 0.0f);
     const float lumG = c.lumGain;
+
+    /* Colour-grading coeffs (per-range zero-luma tint + luminance delta). Locals so the
+       grade block folds into the inner loop like the HSL constants. Tonal weights split the
+       pixel's PERCEPTUAL lightness (gamma-encoded luma), matching the slider feel. */
+    const float gt00 = c.gradeTint[0][0], gt01 = c.gradeTint[0][1], gt02 = c.gradeTint[0][2];
+    const float gt10 = c.gradeTint[1][0], gt11 = c.gradeTint[1][1], gt12 = c.gradeTint[1][2];
+    const float gt20 = c.gradeTint[2][0], gt21 = c.gradeTint[2][1], gt22 = c.gradeTint[2][2];
+    const float gl0 = c.gradeLum[0], gl1 = c.gradeLum[1], gl2 = c.gradeLum[2];
 
     /* Perceptual tone curve via the precomputed LUT (contrast + tone regions, see
        buildPointCoeffs). The table is indexed by the perceptual value s = (v/white)^(1/gamma)
@@ -790,6 +833,30 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
                     r = (Y + sF * (hr - Y)) * lumG;       // luminance: uniform gain
                     g = (Y + sF * (hg - Y)) * lumG;
                     b = (Y + sF * (hb - Y)) * lumG;
+                    px[0] = (r < 0.0f) ? 0.0f : r;
+                    px[1] = (g < 0.0f) ? 0.0f : g;
+                    px[2] = (b < 0.0f) ? 0.0f : b;
+                }
+                if (doGrade) {
+                    /* Split the pixel's perceptual lightness into three smooth tonal
+                       windows (shadows/mid/highlights, weights sum to 1), then apply each
+                       range's luminance gain + zero-luma chroma tint, weighted by its
+                       window. Tint is in 0..1 RGB units, scaled to the working range by
+                       white. The perceptual encode pow is the only transcendental. */
+                    float Yg = 0.2126f * px[0] + 0.7152f * px[1] + 0.0722f * px[2];
+                    float n = Yg * invWhite;
+                    if (n < 0.0f) n = 0.0f; else if (n > 1.0f) n = 1.0f;
+                    const float L = std::pow(n, kInvGamma);          // perceptual 0..1
+                    float wS, wM, wH;
+                    ColorGrade::gradeTonalWeights(L, kGradeShadowEnd, kGradeHighStart,
+                                                  wS, wM, wH);
+                    const float lumMul = 1.0f + wS * gl0 + wM * gl1 + wH * gl2;
+                    const float tR = (wS * gt00 + wM * gt10 + wH * gt20) * white;
+                    const float tG = (wS * gt01 + wM * gt11 + wH * gt21) * white;
+                    const float tB = (wS * gt02 + wM * gt12 + wH * gt22) * white;
+                    float r = px[0] * lumMul + tR;
+                    float g = px[1] * lumMul + tG;
+                    float b = px[2] * lumMul + tB;
                     px[0] = (r < 0.0f) ? 0.0f : r;
                     px[1] = (g < 0.0f) ? 0.0f : g;
                     px[2] = (b < 0.0f) ? 0.0f : b;

@@ -1855,6 +1855,16 @@ void MW::createDevelopDock()
             imageView, &ImageView::setSpotPins);
     connect(imageView, &ImageView::spotRemoveRequested,
             developProperties, &DevelopProperties::onSpotRemoveRequested);
+    /* White-balance dropper: arm/disarm the ImageView pick mode; a click comes back as a
+       normalized point for the dock to solve into a Kelvin/tint. */
+    connect(developProperties, &DevelopProperties::wbDropperBegin,
+            imageView, &ImageView::beginWbPick);
+    connect(developProperties, &DevelopProperties::wbDropperEnd,
+            imageView, &ImageView::endWbPick);
+    connect(imageView, &ImageView::wbSampled,
+            developProperties, &DevelopProperties::onWbSampled);
+    connect(imageView, &ImageView::wbPickExited,
+            developProperties, &DevelopProperties::cancelWbDropper);
     connect(imageView, &ImageView::spotToolExited, developProperties,
             [this]{ developProperties->onSpotToolToggled(false); });
     /* Whole-layer mask coverage tint: rebuild/clear when the mask selection changes (begin/end) or
@@ -1874,6 +1884,11 @@ void MW::createDevelopDock()
     /* Adjustment slider changed while a mask overlay is shown -> hide coverage tint. */
     connect(developProperties, &DevelopProperties::maskTintHideRequested,
             imageView, &ImageView::hideMaskTint);
+    /* Layer menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
+    connect(developProperties, &DevelopProperties::maskOverlayToggleRequested,
+            this, &MW::toggleMaskOverlay);
+    connect(imageView, &ImageView::maskTintVisibilityChanged,
+            developProperties, &DevelopProperties::setMaskOverlayShown);
 
     /* Develop preview render timers (see MW::developParamsChange). The proxy timer coalesces a
        burst of slider ticks into one screen-resolution render; the full-res timer fires once the
@@ -2213,9 +2228,17 @@ void MW::setOperationMode(G::OperationMode mode)
     if (G::operationMode == mode) return;               // no change
     G::operationMode = mode;
     if (operationModeCombo) {
-        QSignalBlocker block(operationModeCombo);       // setCurrentIndex must not re-fire activated()
+        QSignalBlocker block(operationModeCombo);   // setCurrentIndex must not re-fire
         operationModeCombo->setCurrentIndex(int(mode));
     }
+
+    /* Develop shows a single image, so only Loupe is allowed: force Loupe on entry, and
+       refresh the View-menu gating (enableSelectionDependentMenus disables Grid/Table/
+       Compare -- and their G/T/C shortcuts -- while in Develop, re-enabling on return to
+       Preview). */
+    if (mode == G::OperationMode::Develop && G::mode != "Loupe")
+        loupeDisplay("MW::setOperationMode");
+    enableSelectionDependentMenus();
 
     /* Capture the Preview (embedded) image BEFORE the re-decode below so the Develop
        diagnostics can verify the Develop render (demosaic + edits) actually differs from

@@ -97,48 +97,85 @@ inline float lumCoverage(const RangeRef &ref, double onx, double ony,
 }
 
 /* ---- Color Range ----
-   A sampled colour in a cheap luma/chroma opponent space (luma down-weighted so the match
-   keys on hue/saturation more than brightness, as Lightroom's colour range does). Callers
-   pre-convert each stored sample with toOpp() once, then pass the list. */
-struct ColorSample { float y, cb, cr; };
+   A HUE + SATURATION band selection in HSV (value is ignored -- brightness stays with the
+   Luminance Range mask). Each sampled colour fixes a centre (hue angle, sat radius); the
+   mask selects pixels whose HUE lies in [centre - hueLo, centre + hueHi] AND whose SAT
+   lies in [centre - satLo, centre + satHi] of ANY sample (union), each edge eased by a
+   smootherstep feather band. hueLo/hueHi are degrees; satLo/satHi are sat fractions
+   (0..1) measured from the sample's own saturation, so the band tracks the sample.
+   A tiny absolute saturation floor drops near-neutral pixels, whose hue is noise.
 
-inline ColorSample toOpp(float r, float g, float b)
+   This matches the dock's colour WHEEL exactly (same HSV hue angle + sat radius), so the
+   pick dots and band sector the user drags are a faithful picture of the selection. */
+struct ColorSample { float hue, sat; };    // hue degrees 0..360, sat 0..1 (HSV)
+
+/* Fast HSV hue (degrees, 0 for neutral) + saturation (0..1) from display RGB 0..1. */
+inline void rgb2hs(float r, float g, float b, float &hueDeg, float &sat)
 {
-    const float Y = luma(r, g, b);
-    return { Y, b - Y, r - Y };
+    const float mx = std::max(r, std::max(g, b));
+    const float mn = std::min(r, std::min(g, b));
+    const float d = mx - mn;
+    sat = (mx <= 0.0f) ? 0.0f : d / mx;
+    if (d <= 1e-6f) { hueDeg = 0.0f; return; }
+    float h;
+    if      (mx == r) h = 60.0f * (std::fmod((g - b) / d, 6.0f));
+    else if (mx == g) h = 60.0f * ((b - r) / d + 2.0f);
+    else              h = 60.0f * ((r - g) / d + 4.0f);
+    if (h < 0.0f) h += 360.0f;
+    hueDeg = h;
 }
 
-/* Distance tolerance from refine (0..100): higher refine = tighter selection. */
-inline double colorTol(double refinePct)
+inline ColorSample toHueSat(float r, float g, float b)
 {
-    return 0.05 + (1.0 - std::clamp(refinePct / 100.0, 0.0, 1.0)) * 0.45;   // 0.05 .. 0.50
+    ColorSample s; rgb2hs(r, g, b, s.hue, s.sat); return s;
 }
 
-/* Coverage 1 where the pixel is within tol of the NEAREST sample, easing to 0 over a
-   smootherstep band around tol set by featherPct. No samples -> nothing selected. */
+/* Smallest signed angular difference a-b in degrees, wrapped to (-180, 180]. */
+inline double angDiffDeg(double a, double b)
+{
+    double d = a - b;
+    while (d >  180.0) d -= 360.0;
+    while (d < -180.0) d += 360.0;
+    return d;
+}
+
+/* One-sided smootherstep gate: 1 while |x| <= edge, easing to 0 across band beyond. */
+inline double bandGate(double x, double edge, double band)
+{
+    const double over = std::fabs(x) - std::max(0.0, edge);
+    if (over <= 0.0) return 1.0;
+    return 1.0 - smoother(over / std::max(1e-6, band));
+}
+
+/* Coverage 1 where the pixel's hue AND saturation fall inside the BEST-matching sample's
+   window, easing to 0 over smootherstep feather bands beyond each edge. hueLo/hueHi are
+   degrees; satLo/satHi are saturation fractions (0..1). No sample -> nothing selected. */
 inline float colorCoverage(const RangeRef &ref, double onx, double ony,
                            const std::vector<ColorSample> &samples,
-                           double refinePct, double featherPct, bool inverted)
+                           double hueLoDeg, double hueHiDeg,
+                           double satLo, double satHi,
+                           double featherPct, bool inverted)
 {
     if (samples.empty()) return inverted ? 1.0f : 0.0f;
     float r, g, b; sampleRGB(ref, onx, ony, r, g, b);
-    const ColorSample px = toOpp(r, g, b);
-    double best = 1e30;
+    const ColorSample px = toHueSat(r, g, b);
+
+    const double f = std::clamp(featherPct / 100.0, 0.0, 1.0);
+    const double hueBand = f * 30.0;    // up to a 30 deg soft hue edge
+    const double satBand = f * 0.25;    // up to a 0.25 soft saturation edge
+    const double satFloor = 0.015;      // below this the hue is noise -> not selectable
+
+    double best = 0.0;
     for (const ColorSample &s : samples) {
-        const double dy  = (px.y  - s.y) * 0.5;    // luma down-weighted
-        const double dcb =  px.cb - s.cb;
-        const double dcr =  px.cr - s.cr;
-        const double d = std::sqrt(dy * dy + dcb * dcb + dcr * dcr);
-        if (d < best) best = d;
+        const double dh = angDiffDeg(px.hue, s.hue);   // +ve = hi side, -ve = lo side
+        const double hueCov = bandGate(dh, (dh >= 0.0) ? hueHiDeg : hueLoDeg, hueBand);
+        const double ds = px.sat - s.sat;              // +ve = hi side, -ve = lo side
+        const double satCov = bandGate(ds, (ds >= 0.0) ? satHi : satLo, satBand);
+        const double cov = hueCov * satCov;
+        if (cov > best) best = cov;
     }
-    const double tol  = colorTol(refinePct);
-    const double band = std::max(1e-6, std::clamp(featherPct / 100.0, 0.0, 1.0) * tol);
-    const double loEdge = tol - band * 0.5, hiEdge = tol + band * 0.5;
-    double v;
-    if (best <= loEdge)      v = 1.0;
-    else if (best >= hiEdge) v = 0.0;
-    else                     v = 1.0 - smoother((best - loEdge) / band);
-    const float c = float(v);
+    if (px.sat < satFloor) best *= smoother(px.sat / satFloor);   // fade near-neutral out
+    const float c = float(best);
     return inverted ? 1.0f - c : c;
 }
 
