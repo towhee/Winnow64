@@ -142,6 +142,15 @@ void LayerHeader::showLayerMenu()
         menu.addSeparator();
         connect(menu.addAction(tr("Add mask to %1\tM").arg(nm)), &QAction::triggered,
                 this, [this]{ emit addMaskRequested(); });
+        /* Show/hide the red mask coverage tint on the loupe. Only meaningful while a mask
+           tool is expanded (its overlay is being edited), so the row is omitted if not.
+           Same action as the "O" Develop shortcut (MW::toggleMaskOverlay). */
+        if (maskOverlayAvailable) {
+            QAction *ov = menu.addAction(tr("Show mask overlay\tO"));
+            ov->setCheckable(true);
+            ov->setChecked(maskOverlayShown);
+            connect(ov, &QAction::triggered, this, [this]{ emit maskOverlayToggled(); });
+        }
         connect(menu.addAction(tr("Reset %1").arg(nm)), &QAction::triggered,
                 this, [this]{ emit resetLayerRequested(); });
         connect(menu.addAction(tr("Remove %1").arg(nm)), &QAction::triggered,
@@ -168,6 +177,16 @@ void LayerHeader::setPreviewShown(bool shown)
 {
     previewShown = shown;
     updatePreviewIcon();
+}
+
+void LayerHeader::setMaskOverlayAvailable(bool available)
+{
+    maskOverlayAvailable = available;
+}
+
+void LayerHeader::setMaskOverlayShown(bool shown)
+{
+    maskOverlayShown = shown;
 }
 
 void LayerHeader::setBaseActive(bool isBase)

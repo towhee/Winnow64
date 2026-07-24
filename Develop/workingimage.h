@@ -19,10 +19,43 @@
     left for later so wider gamuts (e.g. linear ProPhoto) can be carried without changing
     this struct's shape.
 */
+/*
+    The colour characterisation of the source, carried with the pixels so Develop can
+    compute an ABSOLUTE white balance (a Kelvin temperature + green/magenta tint)
+    rather than a blind relative nudge. See Develop/whitebalance.h.
+
+    Both decode paths fill it:
+
+      RAW      xyzToCam is the model's XYZ->camera matrix, asShotMul the as-shot
+               multipliers RawColor applied, camToSrgb the camera->linear-sRGB
+               matrix it applied after.
+      NON-RAW  a synthetic "camera" whose response IS linear sRGB: asShotMul = 1,
+               camToSrgb = identity, xyzToCam = XYZ->linear sRGB. A display-referred
+               file is already balanced to its own white point, which for sRGB is
+               D65 -- so the same maths resolves its as-shot temperature to ~6500 K
+               and the sliders behave uniformly.
+
+    asShotK / asShotTint are the temperature and tint the as-shot rendering
+    corresponds to, solved once at decode (WhiteBalance::solve). They are what the
+    Temp / Tint sliders show before the user touches them, and the reference the
+    stored EditParams values are relative to -- EditParams::temp == 0 means "as
+    shot", NOT 0 K.
+*/
+struct CameraColor {
+    bool  valid = false;
+    float asShotMul[3]  = {1.0f, 1.0f, 1.0f};
+    float xyzToCam[3][3] = {{1,0,0}, {0,1,0}, {0,0,1}};
+    float camToSrgb[3][3] = {{1,0,0}, {0,1,0}, {0,0,1}};
+    float asShotK    = 0.0f;    // 0 = not solved
+    float asShotTint = 0.0f;
+};
+
 struct WorkingImage {
     std::vector<float> rgb;     // interleaved R,G,B, scene-linear
     int width = 0;
     int height = 0;
+
+    CameraColor cam;            // colour characterisation for absolute white balance
 
     float white = 1.0f;         // linear value that maps to display white (1.0)
 

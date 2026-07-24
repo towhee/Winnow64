@@ -5,10 +5,14 @@
 #include "PropertyEditor/propertyeditor.h"
 #include "Develop/editparams.h"
 #include "Develop/editstack.h"
+#include "Develop/workingimage.h"
+#include "Develop/Properties/colorgradewheel.h"
+#include "Develop/Properties/colorrangewheel.h"
 
 class MW;
 class ToneRegionSlider;
 class LayerHeader;
+class QVariantAnimation;
 
 /*
     Develop dock property tree (Lightroom-style parametric edits). It mirrors the
@@ -60,7 +64,14 @@ public:
     /* Whole-layer mask overlay: true when a mask tool is expanded on a non-Base layer (so MW should
        show the composited layer mask), plus the active layer's ordered mask tools to composite. */
     bool maskOverlayActive() const;
+    /* Esc from the Develop arbiter: if a mask tool is expanded, collapse it (hide its
+       settings, like clicking its caption again) and return true; else false. */
+    bool escapeMaskTool();
     QVector<MaskComponent> activeLayerMasks() const;
+    /* Index into activeLayerMasks() of the tool whose settings are expanded (the one
+       the user clicked in the layer panel), or -1. MW tints this component in its own
+       colour so the user can see the selected tool's share of the layer mask. */
+    int  activeMaskIndex() const;
 
     /* The current image's stored geometry (for loading the crop overlay), and a setter the crop
        tool calls on commit (writes it into the image's EditStack + marks the sidecar dirty). */
@@ -100,6 +111,9 @@ protected:
     /* PropertyEditor::mousePressEvent does not select rows (it only handles expand/collapse), so we
        toggle the clicked mask tool ourselves (reveal/hide its settings children) and return. */
     void mousePressEvent(QMouseEvent *event) override;
+    /* A double-click resets the slider to default (base class) but Qt then moves focus to
+       the tree; re-focus the slider so the caption double-click keeps the row lit. */
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
     /* Suppress the native branch indicator; every expandable Develop row draws its own
        winnow arrow via the delegate, so the native triangle is redundant (and shows
        through beside the Demosaic value row's arrow). rootIsDecorated stays true. */
@@ -116,6 +130,8 @@ public slots:
     void setActiveBrushSize(double size);
     /* ImageView toggled auto-mask ("A"); sync the dock checkbox. */
     void setActiveBrushAutoMask(bool on);
+    /* ImageView showed/hid the mask overlay tint; sync the layer menu's check state. */
+    void setMaskOverlayShown(bool shown);
 
     /* Regenerative spot fill. onSpotToolToggled arms/disarms spot-brush mode (from the
        Develop title-bar button); onSpotStrokeCommitted takes one finished stroke and
@@ -147,6 +163,16 @@ public slots:
        menu. Applying a preset is a separate, later task. */
     void saveDevelopPreset();
 
+    /* ---- White balance (Basic panel, above Temp) ---------------------------------
+       The dropper: ImageView reports the normalized point the user clicked, and
+       onWbSampled reads that pixel out of the pre-develop WorkingImage and solves the
+       (Kelvin, tint) that makes it neutral -- Lightroom's behaviour. cancelWbDropper
+       disarms without sampling (Esc, image change, another tool). */
+    void onWbSampled(double nx, double ny, bool skin);
+    void cancelWbDropper();
+    void toggleWbDropper();         // "W" in Develop mode, and the row's dropper button
+    bool isWbDropperActive() const { return wbDropperActive; }
+
     /* MW-driven raw-denoise completion state for the "Denoise"/"Denoised" checkbox:
        checked + "Denoised" when a denoised base is ready for the current image, else
        unchecked + "Denoise". Signal-blocked so it never re-triggers a run. */
@@ -176,6 +202,9 @@ signals:
        Develop title-bar spot tool is toggled. */
     void spotEditBegin();
     void spotEditEnd();
+    /* White-balance dropper: arm/disarm ImageView's sample-a-neutral mode. */
+    void wbDropperBegin();
+    void wbDropperEnd();
     /* Spot tool armed/disarmed: drives the title-bar spot button's on/off icon. */
     void spotActiveChanged(bool active);
     /* The current image's spot centres (normalized), for ImageView's on-canvas pins. */
@@ -195,6 +224,8 @@ signals:
        shown -> ImageView hides the red coverage tint so the effect on the masked pixels
        is visible. */
     void maskTintHideRequested();
+    /* The layer menu's "Show mask overlay" row was clicked -> MW flips the tint. */
+    void maskOverlayToggleRequested();
 
 private:
     void initialize();
@@ -211,8 +242,58 @@ private:
     void applyLayerItemsCollapsed();// hide/show just the layer's top items (not the sections)
     void addBasic();
     void addColor();
+    void addColorMix();
     void addEffects();
-    void updateSectionHeaderCaptions();   // append the active layer name to Basic/Color/Effects
+
+    /* ---- White balance row (Basic, above Temp) -----------------------------------
+       A dropper toggle in the caption cell and the preset dropdown in the value cell,
+       built with the same DT_None + setIndexWidget idiom as the Core rows. The named
+       illuminants are offered for RAW only: a rendered JPEG has no camera-neutral
+       reference, so (like Lightroom) it gets As Shot / Auto / Custom. Full colour
+       science lives in Develop/whitebalance.h -- this is only the UI. */
+    void addWhiteBalanceRow(QModelIndex parIdx);
+    void setWbPreset(int preset);      // apply a dropdown pick to the active layer
+    void refreshWbRow();               // sync the combo + Temp/Tint display
+    void setWbDropperActive(bool on);
+    /* The current image's colour characterisation, from the cached pre-develop
+       WorkingImage. Invalid when the image is not (yet) in the cache, which resolves
+       temperatures to a D65 fallback and disables the dropper. */
+    CameraColor currentCam() const;
+    static QIcon dropperIcon(bool armed);   // drawn, not a resource
+    QPointer<QComboBox> wbCombo;
+    QPointer<BarBtn> wbDropperBtn;
+    bool wbDropperActive = false;
+    void updateSectionHeaderCaptions();   // append active layer name to section headers
+
+    /* ---- Color Mix (colour grading) --------------------------------------------------
+       The wheel is a directly-embedded index widget (setIndexWidget), NOT a delegate
+       editor; it edits whichever range(s) the Dark/Mid/Light checkboxes select
+       (gradeActiveMask bits: 0x1 shadow, 0x2 mid, 0x4 high). The Luminance slider writes
+       the same active range(s). Recreated on every tree rebuild. */
+    QPointer<ColorGradeWheel> colorGradeWheel;
+    int  gradeActiveMask = 0x2;             // midtones checked by default
+    void onGradeWheelChanged(bool commit);  // wheel drag -> active-layer grade params
+    void refreshColorMixRow();              // push stored grade to the wheel + Lum slider
+    void setGradeLum(float lum);            // write Lum to every active range
+    int  firstActiveGradeRange() const;     // lowest checked range (drives Lum slider)
+
+    /* ---- Color Range mask wheel ------------------------------------------------------
+       Embedded index widget (like colorGradeWheel) shown above the Color Range mask's
+       sliders. Shows the sampled colours + their hue/sat selection band and lets the user
+       drag the hue/sat bounds. Recreated on every tree rebuild that shows a Color Range
+       tool; null otherwise. */
+    QPointer<ColorRangeWheel> colorRangeWheel;
+    void onColorRangeWheelChanged(bool commit);   // wheel drag -> mask hue/sat bounds
+    void refreshColorRangeWheel();                // push samples + bounds into the wheel
+    static QVector<QPointF> colorRangeSamplesHS(const QString &paramsJson);
+
+    /* Clicking a slider row's caption flashes that caption white (fading to 0 via
+       UR_FlashLevel) as feedback, in addition to focusing the slider + hiding the mask
+       overlay (see mousePressEvent). QPersistentModelIndex so a tree rebuild mid-flash
+       cannot leave a stale row lit. */
+    void flashCaption(const QModelIndex &capIdx);
+    QPersistentModelIndex flashCaptionIdx;
+    QPointer<QVariantAnimation> captionFlashAnim;
 
     /* Section (Basic/Color/Effects) expand state persists across sessions in QSettings.
        sectionExpanded reads the saved state (with a first-run default); persistSectionExpanded
@@ -244,16 +325,18 @@ private:
        group is folded to identity at render by effectiveLayerParams). Right-clicking a header pops
        a menu to toggle Preview or Reset (restore defaults, destructive) for that group. Transform's
        preview/reset live in TransformPanel (separate widget), wired via MW. Group codes: PV_Layer =
-       whole active layer, PV_Basic/PV_Color/PV_Effects = a section. */
-    enum PreviewGroup { PV_Layer = -1, PV_Basic = 0, PV_Color = 1, PV_Effects = 2 };
+       whole active layer, PV_Basic/PV_Color/PV_ColorMix/PV_Effects = a section. */
+    enum PreviewGroup { PV_Layer = -1, PV_Basic = 0, PV_Color = 1,
+                        PV_ColorMix = 2, PV_Effects = 3 };
     BarBtn *makeEyeBtn(const QString &tooltip, int group);   // queue an eye toggle into `btns`
     void togglePreviewSection(int group);   // flip the flag, refresh icon, re-render (no value change)
     void resetSection(int group);           // restore the group's defaults, repopulate, re-render
     void refreshPreviewButtons();           // sync every eye icon from the active layer's flags
+    void showRawDemosaic();                 // Base + expand: reveal raw Core rows
     static EditParams::Group paramsGroup(int group);   // PV_* -> EditParams::Group (Basic for PV_Layer)
     bool *previewFlag(EditLayer *l, int group);        // the bool a PV_* code maps to on a layer
     BarBtn *basicEyeBtn = nullptr,
-           *colorEyeBtn = nullptr, *effectsEyeBtn = nullptr;
+           *colorEyeBtn = nullptr, *colorMixEyeBtn = nullptr, *effectsEyeBtn = nullptr;
 
     void contextMenuEvent(QContextMenuEvent *event) override;   // right-click menu
 
@@ -271,7 +354,7 @@ private:
     void addSlider(const QString &key, const QString &caption, const QString &tooltip,
                    QModelIndex parIdx, const QString &parentName,
                    int min, int max, int div, QString color, QString color1,
-                   double defaultValue = 0);
+                   double defaultValue = 0, bool logScale = false);
     void addCheckbox(const QString &key, const QString &caption, const QString &tooltip,
                      QModelIndex parIdx, const QString &parentName, bool defaultValue = false);
 

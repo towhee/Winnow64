@@ -12,9 +12,24 @@
     deferred. See notes/Documentation.txt "DEVELOP / IMAGE EDIT".
 */
 struct EditParams {
-    /* White balance. 0,0 = as-shot / no change. */
+    /* White balance, ABSOLUTE (Lightroom-style), resolved against the source's own colour
+       characterisation -- see Develop/whitebalance.h.
+
+         temp  correlated colour temperature in KELVIN (2000..50000). The sentinel 0 means
+               "as shot": the image has no white-balance edit, so it stays at its decoded
+               balance and reads as identity. It does NOT mean 0 K.
+         tint  green/magenta offset (-150..+150, positive = magenta), absolute like temp.
+
+       The panel writes both together -- moving Tint alone still commits the resolved
+       Kelvin -- so temp == 0 only ever means a pristine image and the pair can never
+       disagree about their reference.
+
+       wbPreset is the WB dropdown's selection (a WhiteBalance::Preset cast to int; 0 =
+       As Shot). Kept only so the dropdown can show what the user picked: temp/tint above
+       are what actually render, and any manual slider move switches this to Custom. */
     float temp = 0.0f;
     float tint = 0.0f;
+    int   wbPreset = 0;
 
     /* Tone. All 0 = identity. */
     float exposure   = 0.0f;    // EV
@@ -53,6 +68,16 @@ struct EditParams {
     float saturation = 0.0f;
     float vibrance   = 0.0f;
     float luminance  = 0.0f;
+
+    /* Colour grading (Color Mix panel) -- tonal-range tinting, the Lightroom "teal
+       shadows / orange highlights" look. Three ranges (shadows / midtones / highlights);
+       each ADDS a chroma tint of the given hue at the given saturation and NUDGES that
+       range's luminance. Applied as a point op after HSL in the fused pass, weighted by
+       smooth per-pixel tonal windows. hue is 0..360 (degrees), sat 0..1 (0 = no tint, so
+       hue is irrelevant there), lum -100..100. Identity = every sat and lum 0. */
+    float gradeShadowHue = 0.0f, gradeShadowSat = 0.0f, gradeShadowLum = 0.0f;
+    float gradeMidHue    = 0.0f, gradeMidSat    = 0.0f, gradeMidLum    = 0.0f;
+    float gradeHighHue   = 0.0f, gradeHighSat   = 0.0f, gradeHighLum   = 0.0f;
 
     /* Noise reduction -- GLOBAL, applied in the raw decode pipeline (RawFormat / the Apple
        engine) during demosaic, alongside start WB / black / white. Not maskable: these are
@@ -106,7 +131,9 @@ struct EditParams {
        localDenoiseLuma ("Denoise", local post-demosaic NR) is under Effects. denoiseLuma/denoiseChroma
        are decode-time global NR (the Base layer's "Denoise raw", baked before Develop runs) so they
        are in NO group and cannot be previewed/reset via params. */
-    enum class Group { Basic, Color, Effects };
+    /* ColorMix = the nine colour-grading fields (its own group so the Color Mix panel's
+       Preview/Reset are independent of the legacy Color panel's RGB/HSL group). */
+    enum class Group { Basic, Color, ColorMix, Effects };
 
     /* Force one group's fields back to their identity defaults, in place. The defaults come from a
        fresh EditParams{} so the non-zero tone-split defaults (0.25/0.50/0.75) restore correctly.
@@ -115,7 +142,7 @@ struct EditParams {
         const EditParams def;
         switch (g) {
         case Group::Basic:
-            p.temp = def.temp; p.tint = def.tint;
+            p.temp = def.temp; p.tint = def.tint; p.wbPreset = def.wbPreset;
             p.exposure = def.exposure; p.contrast = def.contrast;
             p.highlights = def.highlights; p.shadows = def.shadows;
             p.whites = def.whites; p.blacks = def.blacks;
@@ -128,6 +155,14 @@ struct EditParams {
             p.red = def.red; p.green = def.green; p.blue = def.blue;
             p.hue = def.hue; p.saturation = def.saturation;
             p.vibrance = def.vibrance; p.luminance = def.luminance;
+            break;
+        case Group::ColorMix:
+            p.gradeShadowHue = def.gradeShadowHue; p.gradeShadowSat = def.gradeShadowSat;
+            p.gradeShadowLum = def.gradeShadowLum;
+            p.gradeMidHue = def.gradeMidHue; p.gradeMidSat = def.gradeMidSat;
+            p.gradeMidLum = def.gradeMidLum;
+            p.gradeHighHue = def.gradeHighHue; p.gradeHighSat = def.gradeHighSat;
+            p.gradeHighLum = def.gradeHighLum;
             break;
         case Group::Effects:
             p.localDenoiseLuma = def.localDenoiseLuma;       // "Denoise" (local NR)
@@ -151,6 +186,9 @@ struct EditParams {
                texture == 0.0f && dehaze == 0.0f &&
                red == 0.0f && green == 0.0f && blue == 0.0f &&
                hue == 0.0f && saturation == 0.0f && vibrance == 0.0f && luminance == 0.0f &&
+               gradeShadowSat == 0.0f && gradeShadowLum == 0.0f &&
+               gradeMidSat == 0.0f && gradeMidLum == 0.0f &&
+               gradeHighSat == 0.0f && gradeHighLum == 0.0f &&
                denoiseLuma == kDefaultDenoiseLuma && denoiseChroma == kDefaultDenoiseChroma &&
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f;

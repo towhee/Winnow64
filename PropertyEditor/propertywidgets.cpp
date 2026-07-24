@@ -1,5 +1,7 @@
 #include "propertywidgets.h"
 #include "Main/global.h"
+#include <cmath>
+#include <algorithm>
 
 /*
 The property editor has four components:
@@ -76,16 +78,28 @@ void Slider::keyPressEvent(QKeyEvent *event)
     QSlider::keyPressEvent(event);
 }
 
+/* Repaint the value cell (SliderEditor focus fill) AND the caption cell (delegate tints
+   it the same blue) on focus in/out. The SliderEditor is a persistent editor parented to
+   the view's viewport, so parentWidget()->parentWidget() is that viewport; repainting it
+   lets the delegate re-tint the caption. */
+void Slider::syncFocusRepaint()
+{
+    if (!parentWidget()) return;
+    parentWidget()->update();                              // SliderEditor value-cell cue
+    if (parentWidget()->parentWidget())
+        parentWidget()->parentWidget()->update();          // viewport -> caption tint
+}
+
 void Slider::focusInEvent(QFocusEvent *event)
 {
     QSlider::focusInEvent(event);
-    if (parentWidget()) parentWidget()->update();   // draw the SliderEditor focus cue
+    syncFocusRepaint();
 }
 
 void Slider::focusOutEvent(QFocusEvent *event)
 {
     QSlider::focusOutEvent(event);
-    if (parentWidget()) parentWidget()->update();   // clear the SliderEditor focus cue
+    syncFocusRepaint();
 }
 
 /* SLIDER EDITOR *****************************************************************************/
@@ -125,12 +139,25 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     if (div == 0) div = 1;
     source = idx.data(UR_Source).toString();
 
+    /* Log scale: UR_Min/UR_Max are the VALUE range and the slider runs over kLogSteps
+       positions along a logarithmic ramp between them (see the header). */
+    logScale = idx.data(UR_LogScale).toBool() && min > 0 && max > min;
+    logMin = logScale ? std::log(double(min)) : 0.0;
+    logMax = logScale ? std::log(double(max)) : 1.0;
+
     slider = new Slider(Qt::Horizontal, div);
     slider->setObjectName("DisableGoActions");  // used in MW::focusChange
-    slider->setMinimum(min);
-    slider->setMaximum(max);
-    slider->setSingleStep(step);
-    slider->setPageStep(step * 10);
+    slider->setMinimum(logScale ? 0 : min);
+    slider->setMaximum(logScale ? kLogSteps : max);
+    if (logScale) {
+        /* One step ~ 0.4% of the value, so an arrow-key nudge is a fine adjustment at
+           any temperature rather than a fixed number of Kelvin. */
+        slider->setSingleStep(1);
+        slider->setPageStep(kLogSteps / 20);
+    } else {
+        slider->setSingleStep(step);
+        slider->setPageStep(step * 10);
+    }
     slider->setStyleSheet(
          "QSlider {"
             "background: transparent;"
@@ -204,9 +231,24 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     setFocusProxy(slider);
 
     outOfRange = false;
-    int sliderValue = static_cast<int>(idx.data(Qt::EditRole).toDouble() * div);
+    const double initial = idx.data(Qt::EditRole).toDouble();
+    int sliderValue = logScale ? posFromValue(initial)
+                               : static_cast<int>(initial * div);
     slider->setValue(sliderValue);
     emit slider->valueChanged(sliderValue);
+}
+
+double SliderEditor::valueFromPos(int pos) const
+{
+    const double f = double(pos) / kLogSteps;
+    return std::exp(logMin + f * (logMax - logMin));
+}
+
+int SliderEditor::posFromValue(double v) const
+{
+    if (v <= 0.0) return 0;
+    const double f = (std::log(v) - logMin) / (logMax - logMin);
+    return std::clamp(static_cast<int>(f * kLogSteps + 0.5), 0, kLogSteps);
 }
 
 double SliderEditor::value()
@@ -218,7 +260,18 @@ double SliderEditor::value()
 void SliderEditor::setValue(QVariant value)
 {
     if (G::isLogger) G::log("SliderEditor::setValue");
-    slider->setValue(value.toInt());
+    slider->setValue(logScale ? posFromValue(value.toDouble()) : value.toInt());
+}
+
+void SliderEditor::focusSlider()
+{
+    if (G::isLogger) G::log("SliderEditor::focusSlider");
+    if (slider) slider->setFocus(Qt::MouseFocusReason);
+}
+
+bool SliderEditor::sliderHasFocus() const
+{
+    return slider && slider->hasFocus();
 }
 
 void SliderEditor::sliderMoved()
@@ -231,6 +284,14 @@ void SliderEditor::change(double value)
 {
     if (G::isLogger) G::log("SliderEditor::change");
     if (outOfRange) return;
+    if (logScale) {
+        /* Round to 10 K: the ramp gives far finer resolution than is meaningful, and an
+           unrounded 5487 K reads as noise next to Lightroom's tidy numbers. */
+        const double v = std::round(valueFromPos(static_cast<int>(value)) / 10.0) * 10.0;
+        lineEdit->setText(QString::number(v, 'f', 0));
+        emit editorValueChanged(this);
+        return;
+    }
     double v = static_cast<double>(value) / div;
     if (isInt) {
         lineEdit->setText(QString::number(v));
@@ -244,6 +305,12 @@ void SliderEditor::change(double value)
 void SliderEditor::updateSliderWhenLineEdited()
 {
     if (G::isLogger) G::log("SliderEditor::updateSliderWhenLineEdited");
+    if (logScale) {
+        /* Typed values are clamped into range rather than allowed out of it: there is no
+           meaningful temperature beyond the ramp's ends. */
+        slider->setValue(posFromValue(lineEdit->text().toDouble()));
+        return;
+    }
     int sliderValue = static_cast<int>(lineEdit->text().toDouble() * div);
     if (sliderValue >= slider->minimum() && sliderValue <= slider->maximum()) {
         outOfRange = false;
@@ -274,15 +341,15 @@ void SliderEditor::paintEvent(QPaintEvent *event)
     QWidget::paintEvent(event);
 
     /* Focus cue: mark the slider the Develop arrow-nudge keys will act on. The slider and
-       lineEdit are translucent, so the fill drawn here shows around them. */
+       lineEdit are translucent, so the fill drawn here shows around them. The delegate
+       tints the CAPTION cell the same blue (see PropertyDelegate::paint), so the whole
+       selected row reads as one blue band. */
     if (slider->hasFocus()) {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
         p.setPen(Qt::NoPen);
         p.setBrush(QColor(0x15, 0x71, 0xd3, 40));   // subtle accent fill
         p.drawRoundedRect(rect().adjusted(0, 1, -1, -1), 3, 3);
-        p.setBrush(QColor(0x15, 0x71, 0xd3));        // solid accent bar, left edge
-        p.drawRect(0, 0, 2, height());
     }
 }
 

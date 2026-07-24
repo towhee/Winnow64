@@ -1101,6 +1101,12 @@ void MW::createUtilActions()
     addAction(developSpotAction);
     connect(developSpotAction, &QAction::triggered, this, &MW::toggleDevelopReplace);
 
+    developWbSamplerAction = new QAction(tr("White Balance Sampler\tW"), this);
+    developWbSamplerAction->setObjectName("developWbSampler");
+    developWbSamplerAction->setShortcutVisibleInContextMenu(true);
+    addAction(developWbSamplerAction);
+    connect(developWbSamplerAction, &QAction::triggered, this, &MW::toggleDevelopWbSampler);
+
     developExportAction = new QAction(tr("Export Developed Image\tX"), this);
     developExportAction->setObjectName("developExport");
     developExportAction->setShortcutVisibleInContextMenu(true);
@@ -2134,6 +2140,7 @@ void MW::createUtilMenu()
     developMenu->addSeparator();
     developMenu->addAction(developTransformAction);
     developMenu->addAction(developSpotAction);
+    developMenu->addAction(developWbSamplerAction);
     developMenu->addSeparator();
     developMenu->addAction(developScopesAction);
     developMenu->addAction(developExportAction);
@@ -2819,11 +2826,15 @@ void MW::enableSelectionDependentMenus()
     gate(embelSaveTemplateAction, dmHasRows, needFolder);
 
     // View menu
-    /* View modes require a loaded folder; Compare needs at least two selected images */
+    /* View modes require a loaded folder; Compare needs at least two selected images.
+       Develop mode allows only Loupe: Grid/Table/Compare are disabled (which also
+       disables their G/T/C shortcuts) until the user returns to Preview. */
+    const bool inDevelop = G::operationMode == G::OperationMode::Develop;
+    const QString needPreview = "not available in Develop mode";
     gate(asLoupeAction, dmHasRows, needFolder);
-    gate(asGridAction, dmHasRows, needFolder);
-    gate(asTableAction, dmHasRows, needFolder);
-    gate(asCompareAction, has2Selected, need2Sel);
+    gate(asGridAction, dmHasRows && !inDevelop, inDevelop ? needPreview : needFolder);
+    gate(asTableAction, dmHasRows && !inDevelop, inDevelop ? needPreview : needFolder);
+    gate(asCompareAction, has2Selected && !inDevelop, inDevelop ? needPreview : need2Sel);
     gate(copyInfoTextToClipboardAction, dmHasRows, needFolder);
 
     gate(slideShowAction, dmHasRows, needFolder);
@@ -3149,6 +3160,9 @@ void MW::loadDevelopShortcuts()
     developShortcuts[Qt::Key_M] = developNewMaskAction;     // global: unbound
     developShortcuts[Qt::Key_O] = toggleMaskOverlayAction;  // global: Open folder
     developShortcuts[Qt::Key_S] = developSpotAction;        // global: Slideshow
+    /* W is ALSO claimed by an active Transform session for Warp (arbiter rule 1a, which
+       runs before this table), so it reaches the dropper only when no Transform is up. */
+    developShortcuts[Qt::Key_W] = developWbSamplerAction;   // global: New Workspace
     developShortcuts[Qt::Key_X] = developExportAction;      // global: Reject
     developShortcuts[Qt::Key_H] = developScopesAction;      // global: unbound
     developShortcuts[Qt::Key_P] = developRunPresetAction;   // global: Pick
@@ -3166,7 +3180,8 @@ void MW::syncDevelopMenuEnabled()
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
     const QList<QAction *> modeLocal {
         developNewLayerAction, developNewMaskAction, toggleMaskOverlayAction,
-        developTransformAction, developSpotAction, developScopesAction, developExportAction,
+        developTransformAction, developSpotAction, developWbSamplerAction,
+        developScopesAction, developExportAction,
         developSavePresetAction, developRunPresetAction
     };
     for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);

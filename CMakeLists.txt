@@ -124,8 +124,11 @@ set(WINNOW_SOURCES
     Develop/develop.cpp
     Develop/inputtransform.cpp
     Develop/outputtransform.cpp
+    Develop/whitebalance.cpp
     Develop/workingimagecache.cpp
     Develop/Properties/developproperties.cpp
+    Develop/Properties/colorgradewheel.cpp
+    Develop/Properties/colorrangewheel.cpp
     Develop/Properties/layerheader.cpp
     Develop/Scopes/histogramview.cpp
     Develop/Scopes/vectorscopeview.cpp
@@ -372,12 +375,16 @@ set(WINNOW_HEADERS
     Datamodel/selection.h
 
     Develop/develop.h
+    Develop/colorgrade.h
     Develop/editparams.h
     Develop/inputtransform.h
     Develop/outputtransform.h
     Develop/rangemask.h
+    Develop/whitebalance.h
     Develop/workingimage.h
     Develop/Properties/developproperties.h
+    Develop/Properties/colorgradewheel.h
+    Develop/Properties/colorrangewheel.h
     Develop/Properties/layerheader.h
     Develop/Scopes/scopedata.h
     Develop/Scopes/histogramview.h

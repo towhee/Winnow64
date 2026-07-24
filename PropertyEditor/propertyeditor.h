@@ -65,6 +65,7 @@ public:
         int min;
         int max;
         int div;                        // used to convert slider int amount to double ie / 100
+        bool logScale = false;          // DT_Slider: min/max a LOG range (eg Kelvin)
         int step;                       // amount to adjust slider one pixel
         int fixedWidth;                 // width of control (ie lineedit in slider)
         QString color;                  // slider start, LineEdit/LabelEdit text

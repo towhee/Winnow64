@@ -35,12 +35,13 @@ class BarBtn;
         Add new layer
         ---                    (per-layer group, hidden when Base is active)
         Add mask to Layer 2
+        Show mask overlay     (checkable; only while a mask tool is being edited)
         Reset Layer 2
         Remove Layer 2
         Rename Layer 2
 
-    Each menu row emits its signal. The per-layer group (Add mask / Reset / Remove / Rename) is
-    omitted for the Base layer (index 0), which applies globally.
+    Each menu row emits its signal. The per-layer group (Add mask / Show mask overlay / Reset /
+    Remove / Rename) is omitted for the Base layer (index 0), which applies globally.
 */
 class LayerHeader : public QWidget
 {
@@ -52,6 +53,10 @@ public:
     void setLayers(const QStringList &names, int currentIndex);
     void setPreviewShown(bool shown);           // eye icon (whole-layer preview)
     void setBaseActive(bool isBase);            // Base: omit the per-layer action group
+    /* Mask overlay tint state, pushed by DevelopProperties so the menu row shows the
+       right check state and only appears while a mask tool is being edited. */
+    void setMaskOverlayAvailable(bool available);
+    void setMaskOverlayShown(bool shown);
     bool isCollapsed() const { return collapsed; }
     /* Programmatic collapse (Expand all / Collapse all / Solo) -- updates the arrow
        WITHOUT emitting collapseToggled; the caller drives the tree itself. */
@@ -64,7 +69,8 @@ signals:
     void resetLayerRequested();                  // menu: reset the whole layer to identity
     void removeLayerRequested();                 // menu: remove the selected layer
     void addLayerRequested();                    // menu: add a new layer
-    void addMaskRequested();                     // menu: add a mask tool to the selected layer
+    void addMaskRequested();                     // menu: add a mask tool to this layer
+    void maskOverlayToggled();                   // menu: show/hide the mask overlay
     void previewToggled(bool shown);             // [E] show/ignore the whole layer
     void collapseToggled(bool collapsed);        // > hide/show the layer's tree items
 
@@ -94,6 +100,8 @@ private:
     bool previewShown = true;
     bool collapsed    = false;
     bool baseActive   = true;           // the selected layer is Base (index 0)
+    bool maskOverlayAvailable = false;  // a mask tool is being edited -> menu row applies
+    bool maskOverlayShown     = true;   // the red coverage tint is currently visible
 };
 
 #endif // LAYERHEADER_H

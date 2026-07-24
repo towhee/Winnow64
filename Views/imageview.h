@@ -46,13 +46,21 @@ public:
     qreal zoom;
     qreal zoomFit;
     bool isFit;
-    /* Zoom/pan captured when an interim preview is shown (loadImageInterim), so the
-       developed image that replaces it (a different size) keeps the same view instead of
-       re-fitting. Keyed to the image path so a navigation elsewhere can't consume it. */
+    /* Zoom/pan captured when a Develop navigation starts (before the outgoing image is
+       replaced), so the developed image that arrives after the demosaic keeps the same
+       view instead of re-fitting. Keyed to the image path so a navigation elsewhere
+       can't consume it. The capture tracks the live view while the decode is in flight
+       (refreshDevelopCapture) so a thumbnail click pan or a zoom made on the interim
+       preview is what gets restored, not the pre-navigation view. */
     QString developCaptureForPath;
     QPointF developCaptureScrollPct;
     qreal   developCaptureZoom = 1.0;
     bool    developCaptureIsFit = true;
+    bool    developCaptureLocked = false;  // suspend tracking while (re)framing the view
+    /* The interim preview is a small embedded JPG, so the zoom that framed the full size
+       image must be scaled up to frame the same content. Tracking divides it back out so
+       the capture always stays in full size terms. 1.0 whenever a full image is shown. */
+    qreal   interimZoomScale = 1.0;
     qreal refZoom;                      // adjusted to real screen pixels
     qreal toggleZoom;
     bool isRubberBand;
@@ -70,9 +78,12 @@ public:
     void exportImage();
     qreal getFitScaleFactor(QRectF container, QRectF content);
     /* Re-apply the zoom/pan captured for the current image at navigation
-       (loadImageInterim), so a later same-image display (clean loadImage, developed
+       (captureDevelopView), so a later same-image display (clean loadImage, developed
        setDevelopPreview) keeps the view instead of re-fitting. False if no match. */
     bool applyDevelopCapturedView();
+    /* While a Develop decode is in flight for the captured image, keep the capture in
+       step with the live view (thumbnail click pan, zoom, scroll). */
+    void refreshDevelopCapture();
     void clear();
     void setCursorHiding(bool hide);
     bool isBusy;
@@ -111,6 +122,10 @@ public slots:
        decode); the real developed image replaces it when the decode lands. Returns false
        (shows nothing) if the preview can't be read. */
     bool loadImageInterim(QString fPath);
+    /* Record the zoom/pan of the outgoing image for a Develop navigation to fPath.
+       Must be called before the displayed pixmap is replaced, while the live scroll
+       state is still that of the image being left. */
+    void captureDevelopView(const QString &fPath);
     /* Swap the displayed pixmap to an already-rendered QImage (a Develop preview) without
        re-decoding or refitting -- dimensions are unchanged, only the pixels differ. */
     void setDevelopPreview(const QImage &image);
@@ -151,6 +166,11 @@ public slots:
        (FillSpotGeom paramsJson: size/feather/pts). */
     void beginSpotEdit();
     void endSpotEdit();
+    /* White-balance dropper: arm/disarm "click a neutral". A click emits wbSampled with
+       the normalized image point and the tool disarms itself (the dock does the colour
+       solve -- ImageView only reports where). */
+    void beginWbPick();
+    void endWbPick();
     /* Replace-panel mode (FillSpotGeom::Kind): Spot = click only (no drag), Fill/Object
        = drag a brush stroke. The committed paramsJson carries it as "kind". */
     void setSpotReplaceMode(int mode);
@@ -229,6 +249,10 @@ signals:
     /* The mask overlay was dragged: the active tool's new geometry as paramsJson, for the dock to
        persist into the MaskComponent. */
     void maskGeometryChanged(const QString &paramsJson);
+    /* The mask overlay tint was shown/hidden (by "O", by an adjustment slider, or by
+       the start of a new mask edit) so the dock's layer menu shows the matching check
+       state. */
+    void maskTintVisibilityChanged(bool shown);
     /* Brush size changed on the canvas ([ ] keys or two-finger drag); sync the dock. */
     void maskBrushSizeRequested(double size);
     /* Auto-mask toggled on the canvas ("A"); sync the dock checkbox. */
@@ -246,6 +270,10 @@ signals:
     /* A regenerative-fill spot stroke finished: FillSpotGeom paramsJson (size/feather/
        pts), for DevelopProperties to append as a FillSpot. */
     void spotStrokeCommitted(const QString &paramsJson);
+    /* The white-balance dropper was clicked at this normalized image point. skin =
+       Opt/Alt was held: correct from a SKIN sample rather than a neutral one. */
+    void wbSampled(double nx, double ny, bool skin);
+    void wbPickExited();            // dismissed with Esc
     /* A spot pin was clicked (remove that spot), or Escape disarmed the tool. */
     void spotRemoveRequested(int index);
     void spotToolExited();
@@ -272,7 +300,9 @@ protected:
 //    void dropEvent(QDropEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
 
-//    void paintEvent(QPaintEvent *event) override;
+    /* Painted AFTER the scene so the white-balance loupe sits on top of every overlay
+       (drawForeground has too many early-return paths to guarantee that). */
+    void paintEvent(QPaintEvent *event) override;
     void drawForeground(QPainter *painter, const QRectF &rect) override;   // mask overlay
 
 private:
@@ -379,6 +409,27 @@ private:
 
     /* ------- Regenerative spot fill ------- */
     bool    spotEditMode = false;       // the spot-removal brush is armed
+    bool    wbPickMode = false;         // the white-balance dropper is armed
+    /* White-balance loupe: the "pick a target neutral" panel that follows the cursor
+       while the dropper is armed -- a magnified 5x5 grid of the pixels under the tip
+       (exactly the patch onWbSampled averages) plus their RGB readout. The pixels are
+       read straight from the displayed pixmap per paint, so the panel can never show a
+       stale preview and nothing large is held while armed. See drawSampleLoupe. */
+    void    drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
+                            const QString &tip, bool accent);
+    QPoint  wbLoupeVp;                  // cursor position (viewport px)
+    bool    wbLoupeOn = false;          // cursor is over the image -> draw the panel
+    /* Opt/Alt held = the next click samples SKIN, not a neutral. Read from the mouse
+       events themselves (they carry the authoritative modifier state and the loupe
+       repaints on every move anyway), so the panel needs no keyboard focus -- which it
+       does not reliably have in Develop. The CLICK always uses its own modifiers, so
+       the action is right even if the title has not caught up. */
+    bool    wbAltHeld = false;
+    static constexpr int kWbLoupeCells = 5;   // 5x5 = the patch onWbSampled averages
+    /* One-shot: suppress the click-to-toggle-zoom on the NEXT mouse release. Needed by
+       tools that disarm on the press (the WB dropper), so developToolActive() is already
+       false when the release arrives. Consumed at the top of mouseReleaseEvent. */
+    bool    suppressClickZoom = false;
     int     spotReplaceMode = 0;        // FillSpotGeom::Kind: 0 spot, 1 fill, 2 object
     double  spotBrushSize = 8.0;        // diameter as % of the long edge ([ ] resize)
     double  spotFeather   = 40.0;       // 0..100, composite edge softness
@@ -501,8 +552,25 @@ private:
     bool    maskIsContent() const {
         return maskIsRange() || maskIsSubject() || maskIsSky() || maskIsBackground() || maskIsDepth();
     }
+    /* True only when the active mask tool actually consumes a canvas mouse gesture and
+       shows its own cursor: Linear/Radial handles, Brush, Color Range eyedropper, Object
+       perimeter-paint. The AI masks (Subject/Sky/Background/Depth) and the Luminance
+       Range tool have no canvas interaction, so a click there must behave like the normal
+       loupe (zoom / pan) rather than being swallowed by developToolActive(). */
+    bool    maskToolUsesMouse() const {
+        if (!maskEditMode) return false;
+        switch (maskTool) {
+        case 0: case 1:   // Linear / Radial drag handles
+        case 2:           // Brush paint
+        case 3:           // Color Range eyedropper
+        case 9:           // Object perimeter-paint
+            return true;
+        default:          // 4 Luminance Range, 5-8 AI masks: no canvas interaction
+            return false;
+        }
+    }
     void    rebuildContentPreview();                // dispatch to the subject / sky / depth / range builder
-    QString maskRangeParams;                       // lo/hi/refine/samples JSON for the active tool
+    QString maskRangeParams;                       // lo/hi/hue/samples JSON, active tool
     QImage  maskRangePreview;                       // coverage tint (output-oriented), like the brush
     QImage  maskLayerTint;                          // whole-layer composite coverage tint (output-oriented), all tools
     bool    maskTintHidden = false;                 // "M": suppress the mask overlay tint while editing
@@ -511,9 +579,11 @@ private:
     void    buildSubjectPreview();                  // rebuild the tint from the shared SubjectRef
     void    buildSkyPreview();                      // rebuild the tint from the shared SkyRef
     void    buildDepthPreview();                    // rebuild the tint from the shared DepthRef (band)
-    void    rangeSwatchRects(QVector<QRectF> &out) const;   // on-image colour swatches (viewport px)
-    void    rangeSampleAt(QPoint vp, bool add);     // eyedropper: sample the loupe colour into samples
-    QColor  maskTintColor() const;                  // Add = red, Subtract = blue (shared tint colour)
+    void    rangeSwatchRects(QVector<QRectF> &out) const;   // on-image colour swatches
+    void    rangeSampleAt(QPoint vp, bool add);     // eyedropper: sample into samples
+    QPoint  rangeLoupeVp;                           // Color Range sampler cursor pos
+    bool    rangeLoupeOn = false;                   // cursor over image -> draw the loupe
+    QColor  maskTintColor() const;          // selected tool: Add = amber, Subtract = blue
     /* Radial: the four axis-end handles in image-pixel coords (0:+x 1:-x 2:+y 3:-y). */
     void    maskRadialAxisHandles(const QRectF &br, QPointF h[4]) const;
     /* Radial: the rotate handle (viewport px), a stub beyond the +x axis handle. */
@@ -554,6 +624,7 @@ private:
     QPoint  cropDrawAnchorVp;            // drag-start corner while drawing a new crop
     QCursor cropCursor;                 // arrow + corner-bracket crop glyph (built in the ctor)
     QCursor levelCursor;               // arrow + spirit-level (vial + bubble) glyph, for the Level tool
+    QCursor dropperCursor;             // pipette, hotspot at tip (white balance)
     /* Level (straighten) tool: draw a line along something that should be horizontal/vertical; the
        line's tilt (reduced to the nearest H/V) is the leveling angle emitted on release. */
     bool    cropLevelMode = false;      // "draw a level line" is armed (one-shot)
