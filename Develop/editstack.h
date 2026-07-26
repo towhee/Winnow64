@@ -44,7 +44,7 @@ enum class MaskTool {
     ColorRange, LuminanceRange, Subject, Sky, Background, Depth,
     Object                              // APPEND ONLY (tool is serialized as int; keep order stable)
 };
-enum class MaskOp      { Add, Subtract };
+enum class MaskOp      { Add, Subtract, Intersect };   // APPEND ONLY (serialized as int)
 enum class MaskCombine { Union, Intersect };
 
 struct MaskComponent {

@@ -5735,8 +5735,11 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
                     else if (d.isObject)
                         c = ObjectMask::coverage(*d.objRef, onx, ony, float(d.feather), d.inverted);
                     else           c = evalMaskComp(d.param, onx, ony, Wo, Ho);  // invert inside
-                    if (d.op == 1) m *= (1.0f - c);     // Subtract
-                    else           m = qMax(m, c);      // Add (Union)
+                    /* Sequential fold: Subtract removes, Intersect keeps overlap,
+                       Add unions. */
+                    if      (d.op == int(MaskOp::Subtract))  m *= (1.0f - c);
+                    else if (d.op == int(MaskOp::Intersect)) m *= c;
+                    else                                     m = qMax(m, c);
                 }
                 row[x] = m;
             }
@@ -6288,6 +6291,15 @@ void MW::updateMaskOverlayTint()
     const QVector<MaskComponent> masks = developProperties->activeLayerMasks();
     if (masks.isEmpty()) { imageView->clearLayerMaskTint(); return; }
 
+    /* The in-progress (uncommitted) tool is a real component in `masks`; draw it BLUE and
+       exclude it from the RED committed veil. `masks` (all) still drives the ref-building
+       below so the blue preview composites too. */
+    const int pendIdx = developProperties->pendingMaskIndex();
+    QVector<MaskComponent> redMasks = masks;
+    MaskComponent pendingM;
+    const bool hasBlue = (pendIdx >= 0 && pendIdx < masks.size());
+    if (hasBlue) { pendingM = masks.at(pendIdx); redMasks.removeAt(pendIdx); }
+
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const EditParams base = developProperties->stackJob().base;
 
@@ -6320,50 +6332,118 @@ void MW::updateMaskOverlayTint()
     const int cap = 1600;
     const double sc = qMin(1.0, double(cap) / qMax(mw, mh));
     const int bw = qMax(1, int(mw * sc)), bh = qMax(1, int(mh * sc));
-    const std::vector<float> buf = buildMaskBuffer(masks, bw, bh, degrees, fPath);
+    const std::vector<float> buf = buildMaskBuffer(redMasks, bw, bh, degrees, fPath);
 
-    /* The SELECTED tool (the row the user clicked in the layer panel) also gets its OWN
-       coverage buffer, so its share of the layer mask can be tinted a different colour.
-       Its op is forced to Add: a Subtract tool contributes nothing to the composite (it
-       cuts a hole), but the user still needs to see the footprint they are editing. */
-    std::vector<float> selBuf;
-    QColor selColour;
-    const int selIdx = developProperties->activeMaskIndex();
-    if (selIdx >= 0 && selIdx < masks.size()) {
-        MaskComponent sel = masks[selIdx];
-        const bool subtract = (sel.op == int(MaskOp::Subtract));
-        sel.op = int(MaskOp::Add);
-        selBuf = buildMaskBuffer({sel}, bw, bh, degrees, fPath);
-        /* Matches ImageView::maskTintColor so the live per-tool preview (mid-stroke,
-           mid-drag) and this composite highlight are the same colour. */
-        selColour = subtract ? QColor(40, 110, 230) : QColor(255, 190, 60);
-    }
-
-    /* Work-space coverage -> premultiplied tint (alpha proportional to coverage), then
-       oriented to match the displayed (output) pixmap exactly as developCompositeStack
-       rotates the render. The layer composite is red; where the selected tool covers, the
-       hue is blended toward its colour by that tool's coverage. Alpha is the MAX of the
-       two coverages, so highlighting never makes the overlay more opaque -- only different. */
+    /* RESULT VEIL: the whole-layer composite as a flat RED coverage tint, alpha by
+       coverage. This is the TRUE resulting mask -- Subtract holes stay holes, and
+       nothing is painted back over a hole (the constituent marks below are EDGES only),
+       so the veil alone answers "what does this layer affect?". */
     QImage tint(bw, bh, QImage::Format_ARGB32_Premultiplied);
-    const int maxA = 150;             // matches the per-tool tint's full-coverage alpha
-    const bool haveSel = !selBuf.empty();
+    const int maxA = 150;             // full-coverage alpha
     for (int y = 0; y < bh; ++y) {
         QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
         const float *mrow = buf.data() + size_t(y) * bw;
-        const float *srow = haveSel ? selBuf.data() + size_t(y) * bw : nullptr;
         for (int x = 0; x < bw; ++x) {
-            const float mAll = qBound(0.0f, mrow[x], 1.0f);
-            const float mSel = srow ? qBound(0.0f, srow[x], 1.0f) : 0.0f;
-            const int a = int(qMax(mAll, mSel) * maxA + 0.5f);
-            if (a == 0) { row[x] = 0; continue; }
-            const int r = int(220 + (selColour.red()   - 220) * mSel + 0.5f);
-            const int g = int( 40 + (selColour.green() -  40) * mSel + 0.5f);
-            const int b = int( 40 + (selColour.blue()  -  40) * mSel + 0.5f);
-            row[x] = qRgba(r * a / 255, g * a / 255, b * a / 255, a);   // premultiplied
+            const int a = int(qBound(0.0f, mrow[x], 1.0f) * maxA + 0.5f);
+            row[x] = a ? qRgba(220 * a / 255, 40 * a / 255, 40 * a / 255, a) : 0;
+        }
+    }
+
+    /* BREAKDOWN: outline each constituent over the veil so the user can read HOW the
+       result is built, in a register that can never be mistaken for the result FILL --
+       Add tools GREEN, Subtract tools BLUE. The RESULT VEIL WINS: a mark is painted only
+       where the result is absent (buf < gateT), so a tool's coverage that survives into
+       the result reads RED, and its green/blue only shows where it was EXCLUDED (an Add
+       cut away by a Subtract, or a Subtract's footprint). This also stops a noisy
+       content mask (Color/Luminance Range) whose per-pixel "edges" are everywhere from
+       fogging the subject green -- there the coverage IS the result, so it stays red.
+       The SELECTED tool is drawn thicker and LAST. Result view (false) = veil alone. */
+    /* Breakdown/legend describe the RED committed tools (redMasks). While a BLUE tool is
+       previewed it is the selected one, so no committed tool is highlighted. */
+    int selIdx = hasBlue ? -1 : developProperties->activeMaskIndex();
+    if (selIdx >= redMasks.size()) selIdx = -1;
+    if (maskShowBreakdown) {
+        const QColor addCol(70, 220, 110), subCol(60, 150, 255);
+        const float gateT = 0.12f;   // result present here -> red wins, skip the mark
+        /* Paint the inner-boundary pixels of a coverage buffer into the tint, but only
+           where the result is absent. `thick` is the neighbourhood radius: 1 = a 1px
+           ring, 2 = a thicker selected-tool ring. */
+        auto outline = [&](const std::vector<float> &cov, const QColor &col, int thick) {
+            const float T = 0.5f;
+            for (int y = 0; y < bh; ++y) {
+                QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
+                for (int x = 0; x < bw; ++x) {
+                    const size_t idx = size_t(y) * bw + x;
+                    if (cov[idx] < T || buf[idx] > gateT) continue;   // absent/in result
+                    bool edge = false;
+                    for (int dy = -thick; dy <= thick && !edge; ++dy)
+                        for (int dx = -thick; dx <= thick; ++dx) {
+                            const int nx = x + dx, ny = y + dy;
+                            if (nx < 0 || ny < 0 || nx >= bw || ny >= bh ||
+                                cov[size_t(ny) * bw + nx] < T) { edge = true; break; }
+                        }
+                    if (!edge) continue;
+                    const int a = 235;
+                    row[x] = qRgba(col.red() * a / 255, col.green() * a / 255,
+                                   col.blue() * a / 255, a);
+                }
+            }
+        };
+        /* Non-selected constituents first (thin), selected last (thick) so it wins. */
+        for (int i = 0; i < redMasks.size(); ++i) {
+            if (i == selIdx || !redMasks[i].enabled) continue;
+            MaskComponent c = redMasks[i];
+            const bool sub = (c.op == int(MaskOp::Subtract));
+            c.op = int(MaskOp::Add);         // outline the footprint, not the sign
+            outline(buildMaskBuffer({c}, bw, bh, degrees, fPath), sub ? subCol : addCol, 1);
+        }
+        if (selIdx >= 0 && selIdx < redMasks.size()) {
+            MaskComponent c = redMasks[selIdx];
+            const bool sub = (c.op == int(MaskOp::Subtract));
+            c.op = int(MaskOp::Add);
+            outline(buildMaskBuffer({c}, bw, bh, degrees, fPath), sub ? subCol : addCol, 2);
+        }
+    }
+    /* PENDING (blue) preview: the in-progress tool being defined in the MaskPanel, drawn
+       over the red committed veil so the user sees exactly what a combine would fold in.
+       Uncommitted -- discarded on Cancel/Esc. */
+    if (hasBlue) {
+        const std::vector<float> pbuf = buildMaskBuffer({pendingM}, bw, bh, degrees, fPath);
+        const int pA = 150;
+        for (int y = 0; y < bh; ++y) {
+            QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
+            const float *prow = pbuf.data() + size_t(y) * bw;
+            for (int x = 0; x < bw; ++x) {
+                const int a = int(qBound(0.0f, prow[x], 1.0f) * pA + 0.5f);
+                if (a) row[x] = qRgba(40 * a / 255, 120 * a / 255, 255 * a / 255, a);
+            }
         }
     }
     if (degrees != 0) tint = tint.transformed(QTransform().rotate(degrees));
     imageView->setLayerMaskTint(tint);
+
+    /* Legend: tell ImageView which tool/role is being edited (and the mode), so the
+       on-canvas chip can label the overlay (see ImageView::setMaskLegend). */
+    QString selName;
+    int selOp = -1;
+    if (selIdx >= 0 && selIdx < redMasks.size()) {
+        selName = DevelopProperties::maskToolName(redMasks[selIdx].tool);
+        selOp   = redMasks[selIdx].op;
+    }
+    imageView->setMaskLegend(maskShowBreakdown, selName, selOp);
+}
+
+void MW::toggleMaskBreakdown()
+{
+/*
+    Layer menu "Show mask breakdown": flip the mask overlay between Result view (the veil
+    alone -- "what does this layer affect?") and Breakdown view (the veil plus a green/blue
+    outline of every constituent -- "how is the mask built?"). Session-wide; rebuilds tint.
+*/
+    if (G::isLogger) G::log("MW::toggleMaskBreakdown");
+    maskShowBreakdown = !maskShowBreakdown;
+    if (developProperties) developProperties->setMaskBreakdownShown(maskShowBreakdown);
+    updateMaskOverlayTint();
 }
 
 void MW::renderDevelopPreview(bool fullRes)

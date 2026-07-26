@@ -699,4 +699,46 @@ Can we integrate the Lightroom color mixer into this?  Does it give us different
 functionality.
 
 
+Alternate approach to layers and masks:
+
+Append layers with a checkbox, name and dropmenu.  When a new layer is created, select the
+initial mask tool from the mask tool list (add vs subtract not required).  The initial mask
+is created and shown with a red tint.  When mask is called again, select a new mask tool,
+define the mask (with a blue tint) and then either add, subtract or intersect with the
+existing layer mask to update the layer mask.  Do not save the blue tinted mask.  Repeat to
+keep building the layer mask.
+
+|--------------------------------------|
+| Layers                            [v]|
+|--------------------------------------|
+| Base                                 |
+| []Layer 1                         [v]|
+| []Layer 2                         [v]|
+
+where [v] = contextMenu.png.  /Users/roryhill/Projects/Winnow64/images/down-arrow1.png
+Change color  to G::selectionColor on a 16 pixel background and call it contextMenu.png.
+[] = checkbox (hide/show layer effect)
+
+When a mask is required, open a panel above layers to edit the mask.
+|--------------------------------------|
+| Mask                              [v]|
+|--------------------------------------|
+| Mask title                           |
+| Existing mask stuff                  |
+|                                      |
+| [Add]  [Subtract]  [Intersect]       |
+|--------------------------------------|
+Close the Mask panel after Add, Subtract, Intersect or Esc.
+
+Move the contents of the Base layer to a separate panel above Layers:
+|--------------------------------------|
+| Raw                               [?]|
+|--------------------------------------|
+| Prev base layer rows                 |
+|                                      |
+|--------------------------------------|
+
+Only show Raaw panel when one or more of the selected files is a raw file.
+
+
 

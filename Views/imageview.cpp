@@ -727,6 +727,10 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
 
 void ImageView::endMaskEdit()
 {
+    /* The composite tint can be shown with maskEditMode OFF (a committed-mask display, so
+       it survives past editing), so ALWAYS drop it here -- else leaving Develop (dock
+       hidden) would leave the red tint painted over the image. */
+    if (!maskLayerTint.isNull()) { maskLayerTint = QImage(); viewport()->update(); }
     if (!maskEditMode) return;
     if (G::isLogger) G::log("ImageView::endMaskEdit");
     maskEditMode = false;
@@ -1207,22 +1211,91 @@ void ImageView::setLayerMaskTint(const QImage &tint)
     /* The whole-layer composite coverage tint (all Add/Subtract tools), built by MW and shown under
        the active tool's handles while any tool is expanded. */
     maskLayerTint = tint;
-    if (maskEditMode) viewport()->update();
+    viewport()->update();       // may be a committed-mask display (not in maskEditMode)
 }
 
 void ImageView::clearLayerMaskTint()
 {
     if (maskLayerTint.isNull()) return;
     maskLayerTint = QImage();
+    viewport()->update();
+}
+
+void ImageView::setMaskLegend(bool breakdown, const QString &selName, int selOp)
+{
+    maskLegendBreakdown = breakdown;
+    maskLegendSelName   = selName;
+    maskLegendSelOp     = selOp;
     if (maskEditMode) viewport()->update();
+}
+
+void ImageView::drawMaskLegend(QPainter *painter)
+{
+/*
+    A compact chip, top-left of the view, that names the overlay's colours so the tints
+    are self-explanatory: the RED swatch is "Result" (what the layer affects); in
+    Breakdown view a GREEN "+ Add" and BLUE "- Subtract" swatch name the constituent
+    outlines. The selected tool + role is appended so the user knows which piece they are
+    editing. Drawn in viewport coords, over the overlay, only while editing a mask.
+*/
+    struct Chip { QColor c; QString label; };
+    QVector<Chip> chips;
+    chips.append({QColor(220, 40, 40), "Result"});
+    if (maskLegendBreakdown) {
+        chips.append({QColor(70, 220, 110), "+ Add"});
+        chips.append({QColor(60, 150, 255), "- Subtract"});
+    }
+    QString sel;
+    if (maskLegendSelOp >= 0 && !maskLegendSelName.isEmpty())
+        sel = (maskLegendSelOp == 1 ? "Subtract: " : "Add: ") + maskLegendSelName;
+
+    painter->save();
+    painter->resetTransform();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    QFont f = painter->font();
+    f.setPointSizeF(f.pointSizeF() > 0 ? f.pointSizeF() : 10.0);
+    painter->setFont(f);
+    const QFontMetrics fm(f);
+    const int pad = 8, gap = 6, sw = 11, rowH = qMax(fm.height(), sw) + 2;
+
+    /* Measure the widest row so the panel wraps the swatches + text + selected line. */
+    int wMax = 0;
+    for (const Chip &ch : chips)
+        wMax = qMax(wMax, sw + 5 + fm.horizontalAdvance(ch.label));
+    if (!sel.isEmpty()) wMax = qMax(wMax, fm.horizontalAdvance(sel));
+    const int rows = chips.size() + (sel.isEmpty() ? 0 : 1);
+    const QRect panel(12, 12, wMax + 2 * pad, rows * rowH + 2 * pad - 2);
+
+    QColor bg(0, 0, 0, 150);
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(bg);
+    painter->drawRoundedRect(panel, 5, 5);
+
+    int y = panel.top() + pad;
+    for (const Chip &ch : chips) {
+        const QRect sr(panel.left() + pad, y + (rowH - sw) / 2, sw, sw);
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(ch.c);
+        painter->drawRoundedRect(sr, 2, 2);
+        painter->setPen(QColor(235, 235, 235));
+        painter->drawText(QRect(sr.right() + 5, y, wMax, rowH),
+                          Qt::AlignVCenter | Qt::AlignLeft, ch.label);
+        y += rowH;
+    }
+    if (!sel.isEmpty()) {
+        painter->setPen(QColor(200, 200, 200));
+        painter->drawText(QRect(panel.left() + pad, y, wMax, rowH),
+                          Qt::AlignVCenter | Qt::AlignLeft, sel);
+    }
+    painter->restore();
 }
 
 void ImageView::toggleMaskTint()
 {
-    /* "M": flip the mask overlay tint (whole-layer composite + per-tool preview) hidden/shown so the
-       user can see the image without the red coverage. Only meaningful while editing a mask; handles
-       and the brush cursor keep drawing (drawForeground gates only the tint on maskTintHidden). */
-    if (!maskEditMode) return;
+    /* "M"/"O": flip the mask overlay tint hidden/shown so the user can see the image
+       without the red coverage. Works while editing a mask AND while a committed-mask
+       tint is displayed (maskEditMode off but a tint is present). */
+    if (!maskEditMode && maskLayerTint.isNull()) return;
     maskTintHidden = !maskTintHidden;
     emit maskTintVisibilityChanged(!maskTintHidden);
     viewport()->update();
@@ -1231,9 +1304,9 @@ void ImageView::toggleMaskTint()
 void ImageView::hideMaskTint()
 {
     /* An adjustment slider (Basic/Color/Effects) was changed; get the red coverage out of
-       the way so the user sees the effect on the masked pixels. Re-shown by "M" or by
-       re-selecting a mask tool. */
-    if (!maskEditMode || maskTintHidden) return;
+       the way so the user sees the effect on the masked pixels. Re-shown by "M"/"O" or by
+       re-selecting a mask tool. Applies to the committed-mask display too. */
+    if (maskTintHidden || (!maskEditMode && maskLayerTint.isNull())) return;
     maskTintHidden = true;
     emit maskTintVisibilityChanged(false);
     viewport()->update();
@@ -1266,13 +1339,13 @@ void ImageView::setMaskRangeParams(const QString &paramsJson)
 
 QColor ImageView::maskTintColor() const
 {
-    /* This is ALWAYS the SELECTED tool's own preview (the tool being edited), so it uses
-       the highlight colours MW::updateMaskOverlayTint gives the selected component in the
-       whole-layer composite: amber for Add, blue for Subtract (the rest of the layer
-       stays red). Keep the two in sync -- mid-stroke the composite is suppressed and this
-       preview takes over, so a mismatch would flicker the colour on release. */
-    return (maskOp == 1) ? QColor(40, 110, 230)     // Subtract blue
-                         : QColor(255, 190, 60);    // Add amber (selected-tool highlight)
+    /* The SELECTED tool's own live preview (mid-drag / mid-stroke, before the composite
+       rebuilds). RED is reserved for the RESULT veil (MW::updateMaskOverlayTint), so a
+       constituent is shown by its ROLE colour -- GREEN for Add, BLUE for Subtract -- the
+       same colours as its Breakdown outline. Keep the two in sync so the colour does not
+       flicker on release. */
+    return (maskOp == 1) ? QColor(60, 150, 255)     // Subtract blue
+                         : QColor(70, 220, 110);    // Add green
 }
 
 void ImageView::setMaskBrushSettings(double size, double feather, double flow, bool autoMask,
@@ -1932,8 +2005,11 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
        instead of the tint only appearing after release. */
     const bool brushStroking = (maskTool == 2 && maskPainting) ||
                                (maskIsObject() && maskObjDrawing);
-    const bool showTint = !maskTintHidden;                  // "M" toggles the mask overlay tint
-    const bool haveComposite = maskEditMode && !maskLayerTint.isNull() && pmItem && pmItem->isVisible()
+    const bool showTint = !maskTintHidden;                  // "M"/"O" toggles the tint
+    /* The tint is drawn whenever MW has pushed one (its presence == "overlay wanted"), so
+       it survives past maskEditMode -- e.g. the combined result stays visible after a
+       commit. Edit handles/cursor below stay gated on maskEditMode. */
+    const bool haveComposite = !maskLayerTint.isNull() && pmItem && pmItem->isVisible()
                                && !brushStroking && showTint;
     if (haveComposite) {
         const QRectF cbr = pmItem->boundingRect();
@@ -1944,6 +2020,9 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
             painter->restore();
         }
     }
+    /* Legend chip: explains the overlay colours + names the selected tool. Shown while a
+       mask tool is being edited and the overlay is not toggled off ("O"). */
+    if (maskEditMode && showTint) drawMaskLegend(painter);
 
     const bool content = maskIsContent();
     const bool show = content ? (maskEditMode && pmItem && pmItem->isVisible())
@@ -2003,15 +2082,16 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTin
     const QPointF s1 = pmItem->mapToScene(QPointF(maskP1.x()*br.width(), maskP1.y()*br.height()));
     const QPointF s2 = pmItem->mapToScene(QPointF(maskP2.x()*br.width(), maskP2.y()*br.height()));
 
-    /* 1) Red tint ramp, in scene coords so it tracks the image. feather widens the transition
-       around the centre: 0 = hard step at the midpoint, 100 = full linear ramp p1->p2. Skipped when
-       the whole-layer composite tint is already shown (drawTint=false): only the handles are drawn. */
+    /* 1) Role tint ramp, in scene coords so it tracks the image. feather widens the
+       transition around the centre: 0 = hard step at the midpoint, 100 = full linear ramp
+       p1->p2. Skipped when the whole-layer composite tint is already shown
+       (drawTint=false): only the handles are drawn. */
     if (drawTint) {
         const double f  = qBound(0.0, maskFeather, 100.0) / 100.0;
         const double lo = qBound(0.0, 0.5 - 0.5*f, 1.0);
         const double hi = qBound(0.0, 0.5 + 0.5*f, 1.0);
-        /* Tint colour conveys the op: Add (selects) red, Subtract (removes) blue. */
-        const QColor base = (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);
+        /* Tint colour conveys the op: Add green, Subtract blue (red = result veil). */
+        const QColor base = (maskOp == 1) ? QColor(60, 150, 255) : QColor(70, 220, 110);
         QColor clear = base; clear.setAlpha(0);     // mask 0% -> no tint
         QColor full  = base; full.setAlpha(150);    // mask 100% -> tinted
         /* Invert swaps which end of the ramp is covered. */
@@ -2085,7 +2165,7 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTin
     if (drawTint) {
         const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
         const double inner = qBound(0.0, 1.0 - f, 1.0);
-        const QColor base = (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);
+        const QColor base = (maskOp == 1) ? QColor(60, 150, 255) : QColor(70, 220, 110);
         QColor clear = base; clear.setAlpha(0);
         QColor full  = base; full.setAlpha(150);
         const QColor cIn   = maskInverted ? clear : full;       // colour at the centre

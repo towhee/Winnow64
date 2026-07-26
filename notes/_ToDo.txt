@@ -2,6 +2,15 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
+- The red tint layer mask should be visible whenever the layer is selected and overlay is on.
+- Add expand/collapse decoration to Layers header
+- When collapse Layers header select Base layer
+- Single mouse click on Raw and Layers headers expand/collapse
+- Add a check box to the Base layer, the same as other layers.  When unchecked, hide all
+  tree settings
+- The Raw panel should respect solo mode
+- The Transform panel should cancel if another part of the develop panel (ie the tree) is
+  selected.
 - WB undo
 - Press D while not in loupe mode does not work
 - Raw demosaic Winnow wrong for /Users/roryhill/Pictures/_test_raw/NEF D7200.NEF

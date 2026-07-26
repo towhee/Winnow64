@@ -498,6 +498,10 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         /* Header caption pen. UR_LeafSingleLine rows want the header's single-line full-width
            layout but the ordinary LEAF text colour (not category teal). */
         QPen capPen = capIndex.data(UR_LeafSingleLine).toBool() ? regPen : catPen;
+        /* Optional per-row caption colour (e.g. a mask tool row tinted by its
+           Add/Subtract role). Overrides the leaf/category pen when set. */
+        const QVariant capColorV = capIndex.data(UR_CaptionColor);
+        if (capColorV.isValid()) capPen = QPen(capColorV.value<QColor>());
 
         /* Right edge for a header caption that spans the row, in VIEWPORT coordinates so it is the
            same value whichever column is painting. The caption spans the full row (w0 + w1) but is

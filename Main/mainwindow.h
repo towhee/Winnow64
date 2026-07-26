@@ -47,6 +47,9 @@
 #include "Develop/Transform/transformpanel.h"
 #include "Develop/Replace/replacepanel.h"
 #include "Develop/Properties/layerheader.h"
+#include "Develop/Properties/layerheaderlab.h"   // experimental, G::useLayerHeaderLab
+#include "Develop/Properties/rawpanel.h"          // lab UI raw-decode strip
+#include "Develop/Properties/maskpanel.h"         // lab UI mask-editing strip
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
 
@@ -630,6 +633,7 @@ private slots:
        Transform session is up. */
     void toggleDevelopWbSampler();
     void toggleMaskOverlay();     // "O": hide/show the active layer mask overlay tint
+    void toggleMaskBreakdown();   // layer menu: Result view <-> Breakdown (outlines)
     void developNewLayer();       // "N": add a layer to the current image's stack
     void developNewMask();        // "M": pop the Add/Subtract mask tool menu
     void developExport();         // "X": export the developed image (not built yet)
@@ -1464,6 +1468,10 @@ private:
        expanded: composite the active layer's Add/Subtract tools (buildMaskBuffer) into a red tint
        and hand it to ImageView. Cheap (capped resolution); a no-op when no tool is expanded. */
     void updateMaskOverlayTint();
+    /* Mask overlay display mode (layer menu toggle). true = Breakdown: the result veil
+       PLUS a green(Add)/blue(Subtract) outline of each constituent;
+       false = Result: the composite veil alone. Session-wide, default true. */
+    bool maskShowBreakdown = true;
     QString developSubjectRefPath;
     class SubjectPredictor *subjectPredictor = nullptr;
     /* AI "Select Sky" mask: single-channel sky coverage (SkyMask store) built once per image by

@@ -3227,8 +3227,10 @@ Layer & masking model (planned)
                while a mask tool is expanded; toggles the red coverage tint, the same
                action as the "O" shortcut -- maskOverlayToggleRequested ->
                MW::toggleMaskOverlay, and its check state is pushed back from
-               ImageView::maskTintVisibilityChanged -> setMaskOverlayShown), and
-               Reset/Remove/Rename <layer> ->
+               ImageView::maskTintVisibilityChanged -> setMaskOverlayShown), a checkable
+               "Show mask breakdown" (Result view vs Breakdown view -- see RESULT VEIL /
+               BREAKDOWN OUTLINES below; maskBreakdownToggleRequested ->
+               MW::toggleMaskBreakdown), and Reset/Remove/Rename <layer> ->
                resetActiveLayer / deleteLayer / renameActiveLayer. The per-layer group
                is OMITTED for Base (index 0) -- LayerHeader::setBaseActive, driven by
                updateMaskMenuBtn. MASK ENTRY POINTS: a layer's first mask tool is offered
@@ -3401,54 +3403,63 @@ Layer & masking model (planned)
                DevelopProperties::setActiveMaskParams (stores into the component, debounce-persists, no
                tree rebuild). Feather/Invert live-update via maskFeatherChanged/
                maskInvertChanged; tint colour conveys op (ImageView::maskTintColor --
-               Add=amber 255,190,60, Subtract=blue 40,110,230). That preview is ALWAYS the
-               SELECTED tool, so its colour matches the selected-tool highlight in the
-               whole-layer composite below. Invert flips (Radial: effect outside).
-             - WHOLE-LAYER MASK TINT (composite overlay): while ANY mask tool is expanded (its settings
-               shown, i.e. selectedMaskIndex >= 0 on a non-Base layer), the loupe shows the ENTIRE layer
-               mask -- all the layer's Add/Subtract tools composited -- as a single red coverage tint,
-               and hides it when all tools are collapsed. MW::updateMaskOverlayTint (wired to
-               maskEditBegin/maskEditEnd + paramsChanged) reuses the render-path buildMaskBuffer (so the
-               tint is pixel-consistent with the developed result) at a capped resolution (~1600 px long
-               edge; geometry is normalized so any size is faithful), builds the AI/range refs it needs
-               (cached), converts coverage -> premultiplied red (alpha up to 150),
-               HIGHLIGHTS the selected tool (below), orients it to the
-               displayed pixmap, and hands it to ImageView::setLayerMaskTint (clearLayerMaskTint when no
-               tool is expanded / DevelopProperties::maskOverlayActive() is false). ImageView::
-               drawForeground paints this composite tint UNDER the active tool's handles, NOT hover-gated
-               (unlike the per-tool handles); when it is present the per-tool draw takes drawTint=false
-               so it draws only its handles/guides/cursor/swatches (its own tint would double up). The
-               composite reflows live during a geometric drag (setActiveMaskParams -> paramsChanged ->
-               rebuild). "O" (toggleMaskOverlayAction -> MW::toggleMaskOverlay -> ImageView::
-               toggleMaskTint; a Develop mode local shortcut, Open Folder in
-               Preview mode -- see DEVELOP MODE LOCAL SHORTCUTS) HIDES/SHOWS
-               this overlay while editing -- flips ImageView::maskTintHidden,
-               which gates BOTH the whole-layer composite and the per-tool preview in drawForeground
-               (handles/cursor keep drawing so editing continues); reset to shown on each beginMaskEdit,
-               no-op outside mask editing. Changing ANY adjustment slider (Basic/Color/
-               Effects, or any future key via applyKeyToParams) while the overlay is shown
-               also hides it (DevelopProperties::maskTintHideRequested ->
-               ImageView::hideMaskTint) so the effect on the masked pixels is visible;
-               re-shown by "O", by the layer menu's "Show mask overlay" row, or by
-               re-selecting a mask tool. Mask-only edits (Feather/
-               Invert/Range/Brush settings) keep the overlay shown.
-             - SELECTED-TOOL HIGHLIGHT (which submask am I editing?): a layer mask can
-               be built from several tools, so the composite tint alone does not say
-               which one the panel is showing. updateMaskOverlayTint therefore builds a
-               SECOND coverage buffer for the selected component only --
-               DevelopProperties::activeMaskIndex() gives its position in
-               activeLayerMasks(), and its op is forced to Add before the buildMaskBuffer
-               call so a SUBTRACT tool still shows the footprint it is cutting (a lone
-               Subtract component would otherwise composite to zero). Per pixel the red
-               (220,40,40) is then lerped toward the tool's colour by that tool's
-               coverage -- amber (255,190,60) for Add, blue (40,110,230) for Subtract,
-               the same colours ImageView::maskTintColor uses for the live per-tool
-               preview -- and alpha is max(layerCoverage, toolCoverage), so the highlight
-               changes the HUE only, never the opacity. Clicking another tool row in the
-               layer panel re-emits maskEditBegin (updateMaskEdit), so the highlight
-               follows the selection with no extra wiring. A single-tool layer is
-               therefore entirely amber/blue; red always means "covered by some OTHER
-               tool in this layer".
+               Add=green 70,220,110, Subtract=blue 60,150,255). RED is reserved for the
+               RESULT veil (below), so a constituent is shown by its ROLE colour, the same
+               green/blue as its Breakdown outline. That preview is ALWAYS the SELECTED
+               tool. Invert flips (Radial: effect outside).
+             - RESULT VEIL (composite overlay): while ANY mask tool is expanded
+               (selectedMaskIndex >= 0 on a non-Base layer), the loupe shows the ENTIRE
+               layer mask -- all the layer's Add/Subtract tools composited -- as a single
+               flat RED coverage tint, and hides it when all tools collapse. This is the
+               TRUE resulting mask: alpha is the composite coverage ALONE (up to 150), so
+               Subtract holes stay holes and the veil by itself answers "what does this
+               layer affect?". MW::updateMaskOverlayTint (wired to maskEditBegin/End +
+               paramsChanged) reuses the render-path buildMaskBuffer (so the tint is
+               pixel-consistent with the render) at a capped resolution (~1600 px long
+               edge), builds the AI/range refs it needs (cached), converts coverage ->
+               premultiplied red, adds the Breakdown outlines (below), orients it to the
+               displayed pixmap, and hands it to ImageView::setLayerMaskTint
+               (clearLayerMaskTint when no tool is expanded). drawForeground paints the
+               veil UNDER the active tool's handles, NOT hover-gated; when present the
+               per-tool draw takes drawTint=false (its own tint would double up). The veil
+               reflows live during a geometric drag. "O" (toggleMaskOverlayAction ->
+               MW::toggleMaskOverlay -> ImageView::toggleMaskTint) HIDES/SHOWS the whole
+               overlay -- flips maskTintHidden, gating BOTH veil and per-tool preview
+               (handles/cursor keep drawing); reset to shown on each beginMaskEdit.
+               Changing any adjustment slider while shown also hides it
+               (maskTintHideRequested -> hideMaskTint) so the effect is visible; re-shown
+               by "O", the layer menu's "Show mask overlay" row, or re-selecting a tool.
+               Mask-only edits (Feather/Invert/Range/Brush) keep the overlay shown.
+             - BREAKDOWN OUTLINES (which constituents build this mask?): the veil is a
+               FILL, so to show HOW it is built without repainting over it, each
+               constituent is drawn as an EDGE on top of the veil -- Add tools GREEN
+               (70,220,110), Subtract tools BLUE (60,150,255). The RESULT VEIL WINS: a
+               mark is painted only where the result is ABSENT (buf <= ~0.12), so coverage
+               that survives into the result reads RED and green/blue show only where a
+               tool's coverage is EXCLUDED (an Add cut by a Subtract, or a Subtract
+               footprint). This also stops a noisy content mask (Color/Luminance Range),
+               whose per-pixel "edges" are everywhere, from fogging the subject green --
+               there the coverage IS the result, so it stays red. updateMaskOverlayTint
+               finds the inner-boundary pixels of each constituent's coverage (op forced
+               to Add; a threshold-crossing neighbourhood test) and paints the
+               result-absent ones; the SELECTED tool
+               (DevelopProperties::activeMaskIndex()) is drawn LAST with a thicker ring so
+               it reads on top, and clicking another row re-emits maskEditBegin so the
+               emphasis follows the selection. RESULT vs BREAKDOWN is a session toggle
+               (MW::maskShowBreakdown, default Breakdown), flipped by the layer menu's
+               "Show mask breakdown" row (LayerHeader::maskBreakdownToggled ->
+               DevelopProperties::maskBreakdownToggleRequested -> toggleMaskBreakdown):
+               Breakdown = veil + outlines; Result = veil alone. RED thus always means
+               "the result", green/blue always mean "an Add/Subtract constituent".
+             - OVERLAY LEGEND (what do the colours mean?): while the overlay is shown
+               ImageView::drawMaskLegend paints a compact chip top-left naming the colours
+               -- a RED "Result" swatch always, plus GREEN "+ Add" and BLUE "- Subtract"
+               swatches in Breakdown view -- and appends the selected tool's name + role
+               ("Add: Brush Mask"). MW pushes this via ImageView::setMaskLegend (name from
+               DevelopProperties::maskToolName, now public). The dock echoes the same
+               language: each mask tool ROW's caption is tinted by its role (green Add /
+               blue Subtract) via the UR_CaptionColor delegate role (set in addToolRow,
+               honoured in PropertyDelegate).
              - RENDER COMPOSITING (Stage 4b + N-layer stack): the render composites the WHOLE stack
                in SCENE-LINEAR before the output transform, INDEPENDENT of which layer is active for
                editing -- so a saved mask is visible the moment the image loads (no need to select
