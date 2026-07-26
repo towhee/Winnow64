@@ -11,7 +11,9 @@
 
 class MW;
 class ToneRegionSlider;
-class LayerHeader;
+class LayerHeaderBase;
+class RawPanel;
+class MaskPanel;
 class QVariantAnimation;
 
 /*
@@ -72,6 +74,10 @@ public:
        the user clicked in the layer panel), or -1. MW tints this component in its own
        colour so the user can see the selected tool's share of the layer mask. */
     int  activeMaskIndex() const;
+    /* Display name of a MaskTool (public so MW can label the overlay legend). */
+    static QString maskToolName(int tool);
+    /* Layer menu's "Show mask breakdown" check state, mirrored from MW's session flag. */
+    void setMaskBreakdownShown(bool shown);
 
     /* The current image's stored geometry (for loading the crop overlay), and a setter the crop
        tool calls on commit (writes it into the image's EditStack + marks the sidecar dirty). */
@@ -91,9 +97,24 @@ public:
     void flushAll();                              // write all dirty stacks (quit / pre-op)
 
     /* The layer dropdown (layers + layer actions) and the preview eye live in a gradient header
-       widget ABOVE this tree (see LayerHeader). Bind it once; this class drives its combo/eye and
-       handles its signals. */
-    void bindLayerHeader(LayerHeader *header);
+       widget ABOVE this tree (see LayerHeaderBase). Bind it once; this class drives its
+       combo/eye and handles its signals. The concrete widget (LayerHeader or the
+       experimental LayerHeaderLab) is chosen in MW init behind G::useLayerHeaderLab. */
+    void bindLayerHeader(LayerHeaderBase *header);
+
+    /* The raw-decode controls (Edit source / Demosaic / Denoise) live in a RawPanel above
+       the Layers list (lab UI), lifted out of the Base "Core" tree rows. Bind it once;
+       this class handles its signals (reusing the existing raw signal contract) and
+       pushes state back via syncRawPanel(). Constructed only when G::useLayerHeaderLab. */
+    void bindRawPanel(RawPanel *panel);
+
+    /* The transient mask build-up strip (lab UI) above the Layers list. Bind it once;
+       this class drives it and owns the mask model. */
+    void bindMaskPanel(MaskPanel *panel);
+    /* Index (into the active layer's masks) of the in-progress, uncommitted tool -- MW
+       draws it BLUE over the red committed veil while a later mask tool is previewed. -1
+       when nothing is pending (the first tool is committed immediately, drawn red). */
+    int pendingMaskIndex() const { return pendingIdx; }
 
     /* Enable/disable the WHOLE Develop panel so it "looks" disabled, not just the dock
        frame. Greys the property tree (caption text, which the delegate paints from the
@@ -153,6 +174,7 @@ public slots:
     void deleteLayer();                           // [-] remove the selected layer (not Base)
     void showMaskMenu();                          // pop the Add/Subtract mask-tool menu (on new layer)
     void onLayerPreviewToggled(bool shown);       // [E] show/ignore the whole layer
+    void onLayerEnabledToggled(int index, bool on); // list row show/hide checkbox
     void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the layer's items)
 
     void howThisWorks();                          // Develop help
@@ -226,6 +248,8 @@ signals:
     void maskTintHideRequested();
     /* The layer menu's "Show mask overlay" row was clicked -> MW flips the tint. */
     void maskOverlayToggleRequested();
+    /* The layer menu's "Show mask breakdown" row -> MW flips Result/Breakdown view. */
+    void maskBreakdownToggleRequested();
 
 private:
     void initialize();
@@ -314,8 +338,7 @@ private:
     void deleteMask(int index);
     void setSelectedMask(int index);           // make a tool active (-1 = none, e.g. Done)
     void onMaskSelectionChanged();             // (programmatic selection only; clicks go via mousePressEvent)
-    EditLayer *activeLayer();                  // active layer of the current image, or nullptr
-    static QString maskToolName(int tool);
+    EditLayer *activeLayer();                  // active layer of image, or nullptr
     static int maskToolFromName(const QString &name);
     static QString opName(int op);             // "Add" / "Subtract"
 
@@ -419,12 +442,37 @@ private:
        mask row's caption with its component index so selection can find it. */
     int selectedMaskIndex = -1;
     bool isRebuildingMasks = false;
+
+    /* ---- Mask build-up (lab UI): append-only "flatten" via the MaskPanel ----------
+       A picked tool is APPENDED to the layer's masks and edited via the property tree
+       (addToolRow -- so its settings look exactly like the tree). The FIRST tool on an
+       empty mask is committed immediately and drawn RED; a LATER tool is a preview drawn
+       BLUE (pendingIdx = its index) until [Add]/[Subtract]/[Intersect] sets its op (fold)
+       or Cancel/Esc removes it. maskPanelOpen tracks whether the strip is up, so Esc
+       cancels the panel edit rather than collapsing a legacy tree tool. Gradient + brush
+       use this flow; range/AI still edit in the tree. */
+    MaskPanel *maskPanel = nullptr;
+    int  pendingIdx = -1;                     // uncommitted (blue) tool's index, else -1
+    bool maskPanelOpen = false;
+    /* Keep the combined-mask (red) overlay showing after a tool is committed/finished
+       (the panel closes but the result stays visible + 'O'-toggleable). Cleared on layer/
+       image switch or cancel. */
+    bool maskLatched = false;
+    void beginMaskTool(int tool);            // pick -> append; commit first, else pending
+    void onMaskToolChosen(int tool);         // a tool was chosen -> beginMaskTool
+    void commitPendingMask(int op);          // [Add]/[Subtract]/[Intersect]
+    void finishFirstMask();                  // [Done] on the first tool (keep it)
+    void cancelMaskTool();                   // [x]/Esc: discard the preview / first tool
+    MaskComponent *editingMaskComp();        // the tool being built, or null
+    /* MaskEditor (panel) change routing -- mirrors the tree's itemChange mask blocks. */
+    void onMaskEditorSetting(const QString &key, const QVariant &value);
+    void onMaskEditorWheel(int hueLo, int hueHi, int satLo, int satHi, bool commit);
     bool spotMode = false;              // regenerative spot-fill brushing is armed
     bool spotsShown = true;             // Replace preview eye: heals rendered or bypassed
     QVector<QPointF> spotPinCenters() const;   // current image's spot centres (norm)
     void emitSpotPins();                       // push spotPinCenters() to ImageView
     QMenu *maskMenu = nullptr;
-    LayerHeader *layerHeader = nullptr; // layer dropdown + buttons, in a gradient band above the tree
+    LayerHeaderBase *layerHeader = nullptr; // layer dropdown + buttons, band above tree
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;
     static constexpr int kDebounceWriteMs = 2000;  // flush this long after edits settle (gated)
@@ -442,6 +490,14 @@ private:
     void onEditSourceChanged(bool raw);
     void applyCoreVisibility();
     QPointer<QRadioButton> editRawRadio;
+
+    /* RawPanel (lab UI) sync + handlers. syncRawPanel pushes the current raw state (edit
+       source, engine, denoise run state, Base denoise amounts) into the panel and toggles
+       its visibility (raw files only); setBaseDenoise writes a slider change into the
+       Base layer's params. rawPanel is null in the legacy UI -- all guards no-op. */
+    RawPanel *rawPanel = nullptr;
+    void syncRawPanel();
+    void setBaseDenoise(bool luma, int value0to100);
     /* "Denoise" run/state checkbox in the Core (raw) section. MW calls
        updateDenoiseRunState to reflect completion: checked + "Denoised" when a denoised
        base is ready for the current image, else unchecked + "Denoise". QPointer --

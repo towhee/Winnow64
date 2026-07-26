@@ -12,7 +12,7 @@
 #include <QLinearGradient>
 #include <QMouseEvent>
 
-LayerHeader::LayerHeader(QWidget *parent) : QWidget(parent)
+LayerHeader::LayerHeader(QWidget *parent) : LayerHeaderBase(parent)
 {
     if (G::isLogger) G::log("LayerHeader::LayerHeader");
 
@@ -150,6 +150,12 @@ void LayerHeader::showLayerMenu()
             ov->setCheckable(true);
             ov->setChecked(maskOverlayShown);
             connect(ov, &QAction::triggered, this, [this]{ emit maskOverlayToggled(); });
+            /* Result view (veil only) vs Breakdown view (veil + a green/blue outline
+               of each Add/Subtract tool, so the mask's constituents are legible). */
+            QAction *bd = menu.addAction(tr("Show mask breakdown"));
+            bd->setCheckable(true);
+            bd->setChecked(maskBreakdownShown);
+            connect(bd, &QAction::triggered, this, [this]{ emit maskBreakdownToggled(); });
         }
         connect(menu.addAction(tr("Reset %1").arg(nm)), &QAction::triggered,
                 this, [this]{ emit resetLayerRequested(); });
@@ -187,6 +193,11 @@ void LayerHeader::setMaskOverlayAvailable(bool available)
 void LayerHeader::setMaskOverlayShown(bool shown)
 {
     maskOverlayShown = shown;
+}
+
+void LayerHeader::setMaskBreakdownShown(bool shown)
+{
+    maskBreakdownShown = shown;
 }
 
 void LayerHeader::setBaseActive(bool isBase)

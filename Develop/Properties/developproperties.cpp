@@ -1,5 +1,8 @@
 #include "Develop/Properties/developproperties.h"
-#include "Develop/Properties/layerheader.h"
+#include "Develop/Properties/layerheaderbase.h"
+#include "Develop/Properties/rawpanel.h"
+#include "Develop/Properties/maskpanel.h"
+#include "Develop/Properties/maskeditor.h"
 #include "Develop/fillspot.h"
 #include "Main/mainwindow.h"
 #include "Main/global.h"
@@ -172,8 +175,10 @@ void DevelopProperties::buildTree()
        crash on data(). Clear it so only rows present after the rebuild have entries. */
     sourceIdx.clear();
 
-    if (activeLayerIndex == 0) addCoreItems();     // Base: Demosaic + Denoise at the top
-    else                        addMaskItems();     // else: this layer's mask tool rows at the top
+    /* Lab UI: the Base "Core" rows live in the RawPanel above the Layers list, so the
+       tree omits them (addMaskItems stays until the Mask panel lands in Phase 4). */
+    if (activeLayerIndex == 0) { if (!G::useLayerHeaderLab) addCoreItems(); }
+    else                       addMaskItems();      // this layer's mask tool rows
     addBasic();
     addColor();
     addColorMix();
@@ -198,8 +203,9 @@ void DevelopProperties::buildTree()
     updateMaskEdit();
     updateHiddenRows(QModelIndex());
     applyLayerItemsCollapsed();      // re-assert the '>' collapse (a rebuild resets row visibility)
-    applyCoreVisibility();           // hide Demosaic/Denoise raw when editing preview (after collapse)
-    if (!panelEnabled) applyItemsEnabled(false);   // keep captions greyed if the panel is disabled
+    applyCoreVisibility();           // hide Demosaic/Denoise raw on preview
+    if (!panelEnabled) applyItemsEnabled(false);   // keep captions greyed if disabled
+    syncRawPanel();                  // lab UI: reflect raw state + visibility in RawPanel
 }
 
 bool DevelopProperties::sectionExpanded(const QString &name, bool def) const
@@ -436,6 +442,8 @@ void DevelopProperties::updateDenoiseRunState(bool denoised)
        checkbox without re-emitting toggled() (that would re-trigger a run/clear), and
        enable the amount sliders only once that base exists -- they merely scale the blend
        of it, so they are inert (and disabled) until the heavy denoise has completed. */
+    /* Lab UI: the RawPanel owns the checkbox/sliders (the tree row is absent). */
+    if (rawPanel) rawPanel->setDenoiseRunState(denoised);
     if (!denoiseRunCheck) return;      // denoise section absent (Apple engine / non-raw)
     {
         QSignalBlocker block(denoiseRunCheck);
@@ -476,6 +484,7 @@ void DevelopProperties::syncEditRaw(bool useRaw)
         }
         target->setChecked(true);
     }
+    if (rawPanel) rawPanel->setEditSource(useRaw);   // lab UI mirror
     applyCoreVisibility();
 }
 
@@ -506,9 +515,18 @@ void DevelopProperties::addMaskItems()
     EditLayer *layer = activeLayer();
     if (!layer || activeLayerIndex == 0) { selectedMaskIndex = -1; return; }
     const int n = layer->masks.size();
-    /* A layer with no mask yet shows a single "Add mask" placeholder row with a [+] button (the layer
-       otherwise has no top rows). It vanishes as soon as a tool is added -- the layer then shows its
-       tool rows, and adding a tool selects it (see the "hidden when a mask is selected" invariant). */
+
+    /* Lab UI (append-only "flatten"): the tool being built shows its settings in the
+       MaskPanel's own tree (above the Layers list), NOT here. Committed tools are folded
+       into the mask and never re-opened, so the main tree shows no mask rows -- only the
+       "Add mask" placeholder when the layer has no mask and nothing is being edited. */
+    if (G::useLayerHeaderLab) {
+        if (n == 0 && !maskPanelOpen) { selectedMaskIndex = -1; addAddMaskRow(); }
+        return;
+    }
+
+    /* Legacy: the whole ordered tool list, the selected one expanded. A no-mask layer
+       shows a single "Add mask" placeholder row with a [+] button. */
     if (n == 0) {
         selectedMaskIndex = -1;
         addAddMaskRow();
@@ -543,26 +561,271 @@ void DevelopProperties::addAddMaskRow()
     setFirstColumnSpanned(rowIdx.row(), QModelIndex(), true);
 }
 
-void DevelopProperties::bindLayerHeader(LayerHeader *header)
+void DevelopProperties::bindLayerHeader(LayerHeaderBase *header)
 {
     if (G::isLogger) G::log("DevelopProperties::bindLayerHeader");
     layerHeader = header;
     if (!layerHeader) return;
 
-    connect(layerHeader, &LayerHeader::layerSelected,       this, &DevelopProperties::onLayerSelected);
-    connect(layerHeader, &LayerHeader::renameRequested,     this, &DevelopProperties::renameActiveLayer);
-    connect(layerHeader, &LayerHeader::resetLayerRequested, this, &DevelopProperties::resetActiveLayer);
-    connect(layerHeader, &LayerHeader::removeLayerRequested,this, &DevelopProperties::deleteLayer);
-    connect(layerHeader, &LayerHeader::addLayerRequested,   this, &DevelopProperties::newLayer);
-    connect(layerHeader, &LayerHeader::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
-    connect(layerHeader, &LayerHeader::maskOverlayToggled,  this,
+    connect(layerHeader, &LayerHeaderBase::layerSelected,       this, &DevelopProperties::onLayerSelected);
+    connect(layerHeader, &LayerHeaderBase::renameRequested,     this, &DevelopProperties::renameActiveLayer);
+    connect(layerHeader, &LayerHeaderBase::resetLayerRequested, this, &DevelopProperties::resetActiveLayer);
+    connect(layerHeader, &LayerHeaderBase::removeLayerRequested,this, &DevelopProperties::deleteLayer);
+    connect(layerHeader, &LayerHeaderBase::addLayerRequested,   this, &DevelopProperties::newLayer);
+    connect(layerHeader, &LayerHeaderBase::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
+    connect(layerHeader, &LayerHeaderBase::maskOverlayToggled,  this,
             &DevelopProperties::maskOverlayToggleRequested);
-    connect(layerHeader, &LayerHeader::previewToggled,      this, &DevelopProperties::onLayerPreviewToggled);
-    connect(layerHeader, &LayerHeader::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
+    connect(layerHeader, &LayerHeaderBase::maskBreakdownToggled, this,
+            &DevelopProperties::maskBreakdownToggleRequested);
+    connect(layerHeader, &LayerHeaderBase::previewToggled,      this, &DevelopProperties::onLayerPreviewToggled);
+    connect(layerHeader, &LayerHeaderBase::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
+    connect(layerHeader, &LayerHeaderBase::layerEnabledToggled, this, &DevelopProperties::onLayerEnabledToggled);
 
     /* Seed the dropdown + eye from the current stack. */
     refreshLayerCombo();
     refreshPreviewButtons();
+}
+
+void DevelopProperties::bindRawPanel(RawPanel *panel)
+{
+    if (G::isLogger) G::log("DevelopProperties::bindRawPanel");
+    rawPanel = panel;
+    if (!rawPanel) return;
+
+    /* Edit source reuses the existing loop-guarded slot (drives G::useRaw via MW). */
+    connect(rawPanel, &RawPanel::editSourceChanged, this, &DevelopProperties::onEditSourceChanged);
+    /* Demosaic: ask MW to switch engine + re-decode, then reflect the engine (which shows
+       or hides the denoise block). */
+    connect(rawPanel, &RawPanel::demosaicChanged, this, [this](bool apple){
+        emit demosaicEngineChanged(apple);
+        if (rawPanel) rawPanel->setEngine(apple);
+    });
+    connect(rawPanel, &RawPanel::denoiseRunToggled, this, [this](bool on){
+        if (on) emit runRawDenoiseRequested(); else emit clearRawDenoiseRequested();
+    });
+    connect(rawPanel, &RawPanel::autoRunToggled, this, [this](bool on){
+        setting->setValue("Develop/autoRunDenoise", on);
+        emit autoRunDenoiseToggled(on);
+    });
+    connect(rawPanel, &RawPanel::denoiseLumaChanged,   this, [this](int v){ setBaseDenoise(true,  v); });
+    connect(rawPanel, &RawPanel::denoiseChromaChanged, this, [this](int v){ setBaseDenoise(false, v); });
+    connect(rawPanel, &RawPanel::tipsRequested, this, &DevelopProperties::howThisWorks);
+
+    syncRawPanel();
+}
+
+void DevelopProperties::syncRawPanel()
+{
+    if (!rawPanel) return;
+    const bool raw = currentIsRaw();
+    /* Raw-decode strip: only for raw files, and only in the lab UI (legacy keeps the Core
+       rows in the tree). */
+    rawPanel->setVisible(raw && G::useLayerHeaderLab);
+    if (!raw) return;
+
+    const bool apple = (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine);
+    rawPanel->setEditSource(G::useRaw);
+    rawPanel->setEngine(apple);
+    rawPanel->setAutoRun(setting->value("Develop/autoRunDenoise", true).toBool());
+    rawPanel->setDenoiseRunState(mw && mw->rawDenoiseReadyForCurrent());
+
+    /* Push the Base layer's stored denoise amounts (0..1 -> 0..100). */
+    float dl = EditParams::kDefaultDenoiseLuma, dc = EditParams::kDefaultDenoiseChroma;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (!s.layers.isEmpty()) {
+        dl = s.layers.at(0).params.denoiseLuma;
+        dc = s.layers.at(0).params.denoiseChroma;
+    }
+    rawPanel->setDenoiseValues(qRound(dl * 100.0f), qRound(dc * 100.0f));
+}
+
+void DevelopProperties::setBaseDenoise(bool luma, int value0to100)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.layers.isEmpty()) s.layers.append(EditLayer());
+    const float f = value0to100 / 100.0f;      // dock 0..100 -> stored 0..1
+    if (luma) s.layers[0].params.denoiseLuma   = f;
+    else      s.layers[0].params.denoiseChroma = f;
+    dirty.insert(currentImagePath);
+    emit paramsChanged();                       // live preview (Base denoise re-decodes)
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+void DevelopProperties::bindMaskPanel(MaskPanel *panel)
+{
+    if (G::isLogger) G::log("DevelopProperties::bindMaskPanel");
+    maskPanel = panel;
+    if (!maskPanel) return;
+    connect(maskPanel, &MaskPanel::committed, this, &DevelopProperties::commitPendingMask);
+    connect(maskPanel, &MaskPanel::finished,  this, &DevelopProperties::finishFirstMask);
+    connect(maskPanel, &MaskPanel::cancelled, this, &DevelopProperties::cancelMaskTool);
+
+    /* The panel's embedded tree edits the tool being built; route its changes into the
+       active mask component (onMaskEditorSetting mirrors the main tree's itemChange). */
+    if (MaskEditor *ed = maskPanel->editor()) {
+        connect(ed, &MaskEditor::settingChanged, this, &DevelopProperties::onMaskEditorSetting);
+        connect(ed, &MaskEditor::wheelChanged,   this, &DevelopProperties::onMaskEditorWheel);
+    }
+}
+
+void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &v)
+{
+    MaskComponent *mm = editingMaskComp();
+    if (!mm) return;
+    /* Brush next-stroke settings (size/flow/autoMask + brush feather): refresh the
+       cursor, do NOT re-composite (existing strokes keep their snapshot). */
+    const bool brushLike = key == "maskSize" || key == "maskFlow" ||
+                           key == "maskAutoMask" || key == "maskAutoMaskAi" ||
+                           (key == "maskFeather" && mm->tool == int(MaskTool::Brush));
+    if (brushLike) {
+        if      (key == "maskFeather")  mm->feather = v.toFloat();
+        else if (key == "maskSize")     mm->paramsJson = brushWith(mm->paramsJson, "size", v.toInt());
+        else if (key == "maskFlow")     mm->paramsJson = brushWith(mm->paramsJson, "flow", v.toInt());
+        else if (key == "maskAutoMask") mm->paramsJson = brushWith(mm->paramsJson, "autoMask", v.toBool());
+        else if (key == "maskAutoMaskAi") {
+            mm->paramsJson = brushWith(mm->paramsJson, "autoMaskMode", v.toBool() ? "ai" : "lum");
+            if (v.toBool()) emit maskBrushAiEnabled();      // pre-warm the SAM encoder
+        }
+        emitBrushSettings(*mm);
+    }
+    /* Content-range settings (Luminance/Depth lo/hi, Color Range hue/sat): change
+       coverage, so re-composite AND live-update the loupe tint. */
+    else if (key == "maskRangeLo" || key == "maskRangeHi" || key == "maskHueLo" ||
+             key == "maskHueHi"   || key == "maskSatLo"   || key == "maskSatHi") {
+        if      (key == "maskRangeLo") mm->paramsJson = brushWith(mm->paramsJson, "lo", v.toDouble() / 100.0);
+        else if (key == "maskRangeHi") mm->paramsJson = brushWith(mm->paramsJson, "hi", v.toDouble() / 100.0);
+        else if (key == "maskHueLo")   mm->paramsJson = brushWith(mm->paramsJson, "hueLo", v.toInt());
+        else if (key == "maskHueHi")   mm->paramsJson = brushWith(mm->paramsJson, "hueHi", v.toInt());
+        else if (key == "maskSatLo")   mm->paramsJson = brushWith(mm->paramsJson, "satLo", v.toInt());
+        else                           mm->paramsJson = brushWith(mm->paramsJson, "satHi", v.toInt());
+        emit maskRangeChanged(mm->paramsJson);
+        emit paramsChanged();
+    }
+    /* Feather (non-brush) / Invert: change the mask -> overlay + re-composite. */
+    else if (key == "maskFeather" || key == "maskInvert") {
+        if (key == "maskFeather") { mm->feather = v.toFloat(); emit maskFeatherChanged(v.toDouble()); }
+        else                      { mm->inverted = v.toBool(); emit maskInvertChanged(v.toBool()); }
+        emit paramsChanged();
+    }
+    else return;
+    dirty.insert(currentImagePath);
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+void DevelopProperties::onMaskEditorWheel(int hueLo, int hueHi, int satLo, int satHi, bool commit)
+{
+    MaskComponent *mm = editingMaskComp();
+    if (!mm) return;
+    mm->paramsJson = brushWith(mm->paramsJson, "hueLo", hueLo);
+    mm->paramsJson = brushWith(mm->paramsJson, "hueHi", hueHi);
+    mm->paramsJson = brushWith(mm->paramsJson, "satLo", satLo);
+    mm->paramsJson = brushWith(mm->paramsJson, "satHi", satHi);
+    dirty.insert(currentImagePath);
+    emit maskRangeChanged(mm->paramsJson);      // live-update the loupe tint
+    emit paramsChanged();                        // re-composite the masked layer
+    if (commit && G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+MaskComponent *DevelopProperties::editingMaskComp()
+{
+    EditLayer *l = activeLayer();
+    if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size())
+        return &l->masks[selectedMaskIndex];
+    return nullptr;
+}
+
+void DevelopProperties::onMaskToolChosen(int tool)
+{
+    /* Every tool builds up through the MaskPanel (blue/red flow); its settings render in
+       the panel's embedded MaskEditor. */
+    beginMaskTool(tool);
+}
+
+void DevelopProperties::beginMaskTool(int tool)
+{
+    if (G::isLogger) G::log("DevelopProperties::beginMaskTool");
+    EditLayer *layer = activeLayer();
+    if (!layer || activeLayerIndex == 0) return;
+
+    const bool first = layer->masks.isEmpty();
+    MaskComponent m;
+    m.op   = int(MaskOp::Add);
+    m.tool = tool;
+    m.paramsJson = defaultMaskParams(tool);
+    if (tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush -> crisp edge
+
+    /* Append the tool; its settings render in the panel's embedded MaskEditor. The first
+       tool is committed immediately (drawn RED); a later tool is a BLUE preview
+       (pendingIdx) until Add/Subtract/Intersect folds it in. */
+    layer->masks.append(m);
+    selectedMaskIndex = layer->masks.size() - 1;
+    pendingIdx = first ? -1 : selectedMaskIndex;
+    maskPanelOpen = true;
+    if (maskPanel) {
+        maskPanel->showForTool(maskToolName(tool), first);
+        /* Populate the panel's embedded settings tree, aligned to the tree's split. */
+        if (MaskEditor *ed = maskPanel->editor()) {
+            ed->setCaptionWidth(captionColumnWidth);
+            ed->showTool(m);
+            if (tool == int(MaskTool::ColorRange))
+                ed->setWheelSamples(colorRangeSamplesHS(m.paramsJson));
+        }
+    }
+
+    dirty.insert(currentImagePath);
+    buildTree();                 // emits maskEditBegin for the on-canvas overlay
+    emit paramsChanged();        // overlay/tint (red committed, blue pending)
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+void DevelopProperties::commitPendingMask(int op)
+{
+    EditLayer *layer = activeLayer();
+    if (!layer || pendingIdx < 0 || pendingIdx >= layer->masks.size()) return;
+    layer->masks[pendingIdx].op = op;      // fold the preview in (sequential)
+    pendingIdx = -1;
+    selectedMaskIndex = -1;                // flatten: committed tools are not re-opened
+    maskLatched = true;                    // keep the combined (red) mask overlay showing
+    maskPanelOpen = false;
+    if (maskPanel) maskPanel->hide();
+    dirty.insert(currentImagePath);
+    buildTree();
+    emit paramsChanged();
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+void DevelopProperties::finishFirstMask()
+{
+    /* [Done] on the first tool: already committed (red); close the panel but keep the
+       mask overlay showing. */
+    pendingIdx = -1;
+    selectedMaskIndex = -1;
+    maskLatched = true;
+    maskPanelOpen = false;
+    if (maskPanel) maskPanel->hide();
+    buildTree();
+    emit paramsChanged();
+}
+
+void DevelopProperties::cancelMaskTool()
+{
+    EditLayer *layer = activeLayer();
+    /* Remove the just-added tool being edited (the blue preview, or an empty layer's
+       first tool -> the layer goes back to global). */
+    if (layer && selectedMaskIndex >= 0 && selectedMaskIndex < layer->masks.size())
+        layer->masks.removeAt(selectedMaskIndex);
+    pendingIdx = -1;
+    selectedMaskIndex = -1;
+    /* Cancel discards the in-progress tool. Keep the overlay only if committed masks
+       remain on the layer. */
+    maskLatched = (layer && !layer->masks.isEmpty());
+    maskPanelOpen = false;
+    if (maskPanel) maskPanel->hide();
+    dirty.insert(currentImagePath);
+    buildTree();
+    emit paramsChanged();
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::setPanelEnabled(bool enabled)
@@ -617,14 +880,23 @@ void DevelopProperties::onLayerSelected(const QString &name)
     if (currentImagePath.isEmpty()) return;
     const int idx = currentLayerNames().indexOf(name);
     if (idx < 0 || idx == activeLayerIndex) return;
+    /* Discard an in-progress mask preview on the layer being left. */
+    if (maskPanelOpen) cancelMaskTool();
     activeLayerIndex = idx;
 
-    /* Selecting a layer reveals ITS OWN section (the mask-tool rows) and shows its mask
-       straight away -- select the first mask tool so its coverage overlays the image. The
-       Basic/Color/Effects sections keep whatever expand state they had. Base (index 0)
-       applies globally, so it has no mask to show. */
     EditLayer *l = activeLayer();
-    selectedMaskIndex = (idx > 0 && l && !l->masks.isEmpty()) ? 0 : -1;
+    const bool hasMask = (idx > 0 && l && !l->masks.isEmpty());
+    if (G::useLayerHeaderLab) {
+        /* Lab UI: committed tools are not re-edited (flatten). Show the layer's combined
+           mask (red, no handles) via the latch when it has one; no tool is "selected". */
+        selectedMaskIndex = -1;
+        maskLatched = hasMask;
+    }
+    else {
+        /* Legacy: select the first mask tool so its coverage overlays the image. */
+        maskLatched = false;
+        selectedMaskIndex = hasMask ? 0 : -1;
+    }
 
     refreshLayerCombo();          // move checkmark + re-caption actions to new layer
     buildTree();                  // swap top items (Core/masks) + repopulate sections
@@ -742,10 +1014,24 @@ void DevelopProperties::onLayerPreviewToggled(bool shown)
     if (G::isLogger) G::log("DevelopProperties::onLayerPreviewToggled");
     EditLayer *l = activeLayer();
     if (!l) { if (layerHeader) layerHeader->setPreviewShown(true); return; }
-    l->showLayer = shown;        // non-destructive: values kept, the whole layer folds off at render
+    l->showLayer = shown;        // non-destructive: kept, layer folds off at render
     dirty.insert(currentImagePath);
     refreshPreviewButtons();
     emit paramsChanged();
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+void DevelopProperties::onLayerEnabledToggled(int index, bool on)
+{
+    if (G::isLogger) G::log("DevelopProperties::onLayerEnabledToggled");
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    /* Base (index 0) applies globally and has no checkbox; guard anyway. */
+    if (index <= 0 || index >= s.layers.size()) return;
+    if (s.layers[index].enabled == on) return;
+    s.layers[index].enabled = on;                 // compositor skips a disabled layer (stackJob)
+    dirty.insert(currentImagePath);
+    emit paramsChanged();                          // re-composite with the layer on/off
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
@@ -929,7 +1215,9 @@ int DevelopProperties::maskToolFromName(const QString &name)
 
 QString DevelopProperties::opName(int op)
 {
-    return (op == int(MaskOp::Subtract)) ? "(-)" : "(+)";
+    if (op == int(MaskOp::Subtract))  return "(-)";
+    if (op == int(MaskOp::Intersect)) return "(∩)";   // ∩ intersect
+    return "(+)";
 }
 
 EditLayer *DevelopProperties::activeLayer()
@@ -942,8 +1230,10 @@ EditLayer *DevelopProperties::activeLayer()
 
 bool DevelopProperties::maskOverlayActive() const
 {
-    /* A mask tool is expanded (its settings shown) on a non-Base layer -> show the whole-layer mask. */
-    return activeLayerIndex > 0 && selectedMaskIndex >= 0;
+    /* Show the layer mask overlay on a non-Base layer while a tool is being edited
+       (selectedMaskIndex) OR after a commit/finish latched it on (the combined result
+       stays visible + 'O'-toggleable until the layer/image changes). */
+    return activeLayerIndex > 0 && (selectedMaskIndex >= 0 || maskLatched);
 }
 
 QVector<MaskComponent> DevelopProperties::activeLayerMasks() const
@@ -1174,8 +1464,23 @@ void DevelopProperties::showMaskMenu()
         return;
     }
 
-    /* Built fresh each click: Subtract is offered only once at least one tool exists (the first
-       tool must Add -- there is nothing to subtract from an empty mask). */
+    /* Lab UI: a plain tool list -- the Add/Subtract/Intersect choice is made later on the
+       MaskPanel, once the tool is defined (build-up model). */
+    if (G::useLayerHeaderLab) {
+        maskMenu->clear();
+        for (int t = 0; t <= int(MaskTool::Object); ++t) {
+            QAction *a = maskMenu->addAction(maskToolName(t));
+            a->setData(t);
+            connect(a, &QAction::triggered, this, [this, t]{ onMaskToolChosen(t); });
+            if (t == int(MaskTool::Brush) || t == int(MaskTool::LuminanceRange))
+                maskMenu->addSeparator();       // group geometric / range / AI tools
+        }
+        maskMenu->exec(QCursor::pos());
+        return;
+    }
+
+    /* Built fresh each click: Subtract is offered only once at least one tool exists (the
+       first tool must Add -- there is nothing to subtract from an empty mask). */
     maskMenu->clear();
     for (int t = 0; t <= int(MaskTool::Object); ++t) {
         QAction *a = maskMenu->addAction("Add " + maskToolName(t));
@@ -1207,7 +1512,9 @@ void DevelopProperties::newMask()
        tool name (handles multi-word names like "Subject Mask"). */
     const QString txt = a->text();
     MaskComponent m;
-    m.op   = txt.startsWith("Subtract") ? int(MaskOp::Subtract) : int(MaskOp::Add);
+    m.op   = txt.startsWith("Subtract")  ? int(MaskOp::Subtract)
+           : txt.startsWith("Intersect") ? int(MaskOp::Intersect)
+                                         : int(MaskOp::Add);
     m.tool = maskToolFromName(txt.section(' ', 1));
     m.paramsJson = defaultMaskParams(m.tool);
     if (m.tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush defaults to a crisp edge
@@ -1256,6 +1563,11 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     addItem(i);
     const QModelIndex toolIdx = capIdx;
     model->setData(toolIdx, index, UR_MaskIndex);
+    /* Tint the caption by the tool's role so the dock matches the canvas overlay:
+       Add = green, Subtract = blue (see MW::updateMaskOverlayTint). */
+    model->setData(toolIdx, QColor(m.op == int(MaskOp::Subtract) ? QColor(90, 165, 255)
+                                                                 : QColor(90, 220, 125)),
+                   UR_CaptionColor);
     model->setData(toolIdx, true, UR_LeafSingleLine);
     model->setData(toolIdx, true, UR_DeleteBtn);
     model->setData(toolIdx, true, UR_AddBtn);           // [+] left of [-]: add another mask tool
@@ -1406,6 +1718,9 @@ void DevelopProperties::setSelectedMask(int index)
 
 bool DevelopProperties::escapeMaskTool()
 {
+    /* Lab UI: Esc while the MaskPanel is up cancels the panel edit (discard the blue
+       preview, or the just-created first tool) rather than collapsing a tree tool. */
+    if (maskPanelOpen) { cancelMaskTool(); return true; }
     if (activeMaskTool() < 0) return false;   // no mask tool expanded
     setSelectedMask(-1);                      // collapse it (as clicking its caption)
     return true;
@@ -1565,6 +1880,12 @@ void DevelopProperties::setMaskOverlayShown(bool shown)
     if (layerHeader) layerHeader->setMaskOverlayShown(shown);
 }
 
+void DevelopProperties::setMaskBreakdownShown(bool shown)
+{
+    /* MW flipped Result/Breakdown; mirror the layer menu's "breakdown" check. */
+    if (layerHeader) layerHeader->setMaskBreakdownShown(shown);
+}
+
 void DevelopProperties::updateMaskEdit()
 {
     /* Drive the ImageView mask overlay from the active (selected) mask tool. Begin when a spatial
@@ -1590,17 +1911,23 @@ void DevelopProperties::updateMaskEdit()
 
 void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
 {
-    /* ImageView dragged the overlay: persist the new geometry into the active mask component. No
-       tree rebuild (would re-emit maskEditBegin and fight the live drag); just store + debounce. */
+    /* ImageView dragged the overlay: persist the new geometry into the active mask
+       component. No tree rebuild (would re-emit maskEditBegin and fight the live drag);
+       just store + debounce. The pending (blue) tool is a real component in layer->masks
+       at selectedMaskIndex, so the normal path below persists it too. */
     EditLayer *layer = activeLayer();
     if (!layer || selectedMaskIndex < 0 || selectedMaskIndex >= layer->masks.size()) return;
     if (layer->masks[selectedMaskIndex].paramsJson == paramsJson) return;
     layer->masks[selectedMaskIndex].paramsJson = paramsJson;
     dirty.insert(currentImagePath);
     /* A Color Range pipette pick/remove arrives here too -> refresh the wheel dots
-       (bounds unchanged). No tree rebuild, so the wheel survives and just repaints. */
-    if (colorRangeWheel && activeMaskTool() == int(MaskTool::ColorRange))
-        colorRangeWheel->setSamples(colorRangeSamplesHS(paramsJson));
+       (bounds unchanged). No tree rebuild, so the wheel survives and just repaints.
+       Legacy: the tree's colorRangeWheel; lab: the MaskPanel's embedded editor wheel. */
+    if (activeMaskTool() == int(MaskTool::ColorRange)) {
+        const QVector<QPointF> hs = colorRangeSamplesHS(paramsJson);
+        if (colorRangeWheel) colorRangeWheel->setSamples(hs);
+        if (maskPanel && maskPanel->editor()) maskPanel->editor()->setWheelSamples(hs);
+    }
     emit paramsChanged();       // new mask geometry -> re-composite the masked layer
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
@@ -2800,8 +3127,22 @@ void DevelopProperties::refreshLayerCombo()
 {
     layerList = currentLayerNames();
     if (activeLayerIndex < 0 || activeLayerIndex >= layerList.size()) activeLayerIndex = 0;
-    /* The dropdown lives in the LayerHeader widget; push the names + selection (no signal). */
-    if (layerHeader) layerHeader->setLayers(layerList, activeLayerIndex);
+    /* Push names + per-layer enabled + selection into the header (no signal). The
+       dropdown header ignores enabled/isBase (default setLayerRows -> setLayers); the
+       list panel (LayersPanel) uses them to build the per-row show/hide checkboxes. */
+    if (layerHeader) {
+        QVector<LayerHeaderBase::LayerRowInfo> rows;
+        rows.reserve(layerList.size());
+        const EditStack s = stackCache.value(currentImagePath);
+        for (int i = 0; i < layerList.size(); ++i) {
+            LayerHeaderBase::LayerRowInfo r;
+            r.name    = layerList.at(i);
+            r.isBase  = (i == 0);
+            r.enabled = (i < s.layers.size()) ? s.layers.at(i).enabled : true;
+            rows.append(r);
+        }
+        layerHeader->setLayerRows(rows, activeLayerIndex);
+    }
     updateMaskMenuBtn();        // hide [M] + disable rename/remove on the Base layer
     updateSectionHeaderCaptions();
 }
@@ -2821,7 +3162,20 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     if (G::isLogger) G::log("DevelopProperties::setCurrentImage", fPath);
     if (fPath == currentImagePath) return;
 
-    flushImage(currentImagePath);              // persist edits to the image we are leaving
+    /* Leaving the image: drop an uncommitted (blue) mask preview so it is NOT saved (it's
+       a real component in layer->masks; a committed first tool stays). Must run BEFORE
+       flushImage. Then hide the panel. */
+    if (maskPanelOpen) {
+        EditLayer *l = activeLayer();
+        if (l && pendingIdx >= 0 && pendingIdx < l->masks.size())
+            l->masks.removeAt(pendingIdx);
+        pendingIdx = -1;
+        selectedMaskIndex = -1;
+        maskPanelOpen = false;
+        if (maskPanel) maskPanel->hide();
+    }
+    maskLatched = false;         // a fresh image starts with no latched mask overlay
+    flushImage(currentImagePath);              // persist edits to the image being left
     cancelWbDropper();                  // an armed dropper does not follow the image
     currentImagePath = fPath;
     if (fPath.isEmpty()) return;

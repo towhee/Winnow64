@@ -181,6 +181,10 @@ public slots:
        clear when no tool is expanded. */
     void setLayerMaskTint(const QImage &tint);
     void clearLayerMaskTint();
+    /* Legend content for the on-canvas overlay chip, pushed by MW when it rebuilds the
+       tint: whether Breakdown outlines show, and the selected tool name + op (-1 none,
+       0 Add, 1 Subtract). Drawn in drawForeground while the overlay is visible. */
+    void setMaskLegend(bool breakdown, const QString &selName, int selOp);
     /* "M": hide/show the mask overlay tint (both the whole-layer composite and the per-tool preview)
        while editing a mask -- handles/cursor stay so editing continues. No-op outside mask editing. */
     void toggleMaskTint();
@@ -573,7 +577,12 @@ private:
     QString maskRangeParams;                       // lo/hi/hue/samples JSON, active tool
     QImage  maskRangePreview;                       // coverage tint (output-oriented), like the brush
     QImage  maskLayerTint;                          // whole-layer composite coverage tint (output-oriented), all tools
-    bool    maskTintHidden = false;                 // "M": suppress the mask overlay tint while editing
+    bool    maskTintHidden = false;                 // "M": suppress the mask overlay tint
+    /* On-canvas legend state (set by setMaskLegend, drawn in drawMaskLegend). */
+    bool    maskLegendBreakdown = true;             // Breakdown outlines vs Result view
+    QString maskLegendSelName;                      // selected tool name ("" = none)
+    int     maskLegendSelOp = -1;                   // selected op: -1 none, 0 Add, 1 Sub
+    void    drawMaskLegend(QPainter *painter);      // overlay legend chip (viewport)
     void    drawRangeMask(QPainter *p, const QRectF &br, bool drawTint = true);   // paint the tint + colour swatches
     void    buildRangePreview();                    // rebuild the tint from the shared RangeRef + params
     void    buildSubjectPreview();                  // rebuild the tint from the shared SubjectRef

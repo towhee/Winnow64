@@ -65,7 +65,8 @@ enum UserRole
     UR_DividerLineHeight,               // divider: line thickness in px (0 = gap only)
     UR_DividerColor,                    // divider: line QColor (alpha 0 = gap only)
     UR_LogScale,                        // Slider: UR_Min/UR_Max are a LOG value range
-    UR_FlashLevel                       // caption: 0..1 flash tint feedback
+    UR_FlashLevel,                      // caption: 0..1 flash tint feedback
+    UR_CaptionColor                     // header caption: override pen QColor (mask role)
 };
 
 // reqd as can only pass QVariant convertable type through StandardItemModel

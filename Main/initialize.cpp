@@ -1887,6 +1887,9 @@ void MW::createDevelopDock()
     /* Layer menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
     connect(developProperties, &DevelopProperties::maskOverlayToggleRequested,
             this, &MW::toggleMaskOverlay);
+    /* Layer menu "Show mask breakdown" <-> MW's Result/Breakdown session flag. */
+    connect(developProperties, &DevelopProperties::maskBreakdownToggleRequested,
+            this, &MW::toggleMaskBreakdown);
     connect(imageView, &ImageView::maskTintVisibilityChanged,
             developProperties, &DevelopProperties::setMaskOverlayShown);
 
@@ -2057,7 +2060,28 @@ void MW::createDevelopDock()
     /* The layer dropdown + layer-action buttons live in a gradient header band ABOVE the
        property tree (replacing the old in-tree Layers header). DevelopProperties drives
        it and handles its signals; the collapse arrow hides/shows the tree. */
-    LayerHeader *developLayerHeader = new LayerHeader(developContainer);
+    /* G::useLayerHeaderLab swaps in the experimental LayerHeaderLab (scratch copy for
+       reshaping the Layer section); both satisfy LayerHeaderBase so bindLayerHeader is
+       type-agnostic. Retire the flag + lab once the design is copied back. */
+    /* Lab UI: the raw-decode controls move out of the Base "Core" tree rows into a
+       RawPanel ABOVE the Layers list (shown for raw files only; DevelopProperties drives
+       its visibility + state). Only built under the flag; legacy keeps the Core rows. */
+    if (G::useLayerHeaderLab) {
+        RawPanel *rawPanel = new RawPanel(developContainer, settings);
+        rawPanel->setVisible(false);                 // syncRawPanel reveals it for raw
+        developContainerLayout->addWidget(rawPanel);
+        developProperties->bindRawPanel(rawPanel);
+
+        /* The transient mask-editing strip: between Raw and the Layers list, hidden until
+           a mask tool is being defined (DevelopProperties shows/hides it). */
+        MaskPanel *maskPanel = new MaskPanel(developContainer);
+        maskPanel->setVisible(false);
+        developContainerLayout->addWidget(maskPanel);
+        developProperties->bindMaskPanel(maskPanel);
+    }
+    LayerHeaderBase *developLayerHeader = G::useLayerHeaderLab
+            ? static_cast<LayerHeaderBase *>(new LayerHeaderLab(developContainer))
+            : static_cast<LayerHeaderBase *>(new LayerHeader(developContainer));
     developContainerLayout->addWidget(developLayerHeader);
     developProperties->bindLayerHeader(developLayerHeader);
     developContainerLayout->addWidget(developProperties, 1);

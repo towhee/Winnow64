@@ -1,7 +1,8 @@
 #ifndef LAYERHEADER_H
 #define LAYERHEADER_H
 
-#include <QWidget>
+#include "Develop/Properties/layerheaderbase.h"
+
 #include <QIcon>
 #include <QString>
 #include <QStringList>
@@ -43,36 +44,26 @@ class BarBtn;
     Each menu row emits its signal. The per-layer group (Add mask / Show mask overlay / Reset /
     Remove / Rename) is omitted for the Base layer (index 0), which applies globally.
 */
-class LayerHeader : public QWidget
+class LayerHeader : public LayerHeaderBase
 {
     Q_OBJECT
 public:
     explicit LayerHeader(QWidget *parent = nullptr);
 
     /* Refill the dropdown and select currentIndex WITHOUT emitting layerSelected. */
-    void setLayers(const QStringList &names, int currentIndex);
-    void setPreviewShown(bool shown);           // eye icon (whole-layer preview)
-    void setBaseActive(bool isBase);            // Base: omit the per-layer action group
+    void setLayers(const QStringList &names, int currentIndex) override;
+    void setPreviewShown(bool shown) override;           // eye icon (whole-layer preview)
+    void setBaseActive(bool isBase) override;            // Base: omit per-layer group
     /* Mask overlay tint state, pushed by DevelopProperties so the menu row shows the
        right check state and only appears while a mask tool is being edited. */
-    void setMaskOverlayAvailable(bool available);
-    void setMaskOverlayShown(bool shown);
-    bool isCollapsed() const { return collapsed; }
+    void setMaskOverlayAvailable(bool available) override;
+    void setMaskOverlayShown(bool shown) override;
+    void setMaskBreakdownShown(bool shown) override;     // Result <-> Breakdown state
+    bool isCollapsed() const override { return collapsed; }
     /* Programmatic collapse (Expand all / Collapse all / Solo) -- updates the arrow
        WITHOUT emitting collapseToggled; the caller drives the tree itself. */
-    void setCollapsed(bool collapsed);
-    QString currentLayerName() const;
-
-signals:
-    void layerSelected(const QString &name);    // user picked a different layer in the dropdown
-    void renameRequested();                      // menu: rename the selected layer
-    void resetLayerRequested();                  // menu: reset the whole layer to identity
-    void removeLayerRequested();                 // menu: remove the selected layer
-    void addLayerRequested();                    // menu: add a new layer
-    void addMaskRequested();                     // menu: add a mask tool to this layer
-    void maskOverlayToggled();                   // menu: show/hide the mask overlay
-    void previewToggled(bool shown);             // [E] show/ignore the whole layer
-    void collapseToggled(bool collapsed);        // > hide/show the layer's tree items
+    void setCollapsed(bool collapsed) override;
+    QString currentLayerName() const override;
 
 protected:
     void paintEvent(QPaintEvent *) override;         // the property-header gradient band
@@ -102,6 +93,7 @@ private:
     bool baseActive   = true;           // the selected layer is Base (index 0)
     bool maskOverlayAvailable = false;  // a mask tool is being edited -> menu row applies
     bool maskOverlayShown     = true;   // the red coverage tint is currently visible
+    bool maskBreakdownShown   = true;   // Breakdown view (veil + outlines) vs Result view
 };
 
 #endif // LAYERHEADER_H

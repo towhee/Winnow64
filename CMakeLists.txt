@@ -130,6 +130,10 @@ set(WINNOW_SOURCES
     Develop/Properties/colorgradewheel.cpp
     Develop/Properties/colorrangewheel.cpp
     Develop/Properties/layerheader.cpp
+    Develop/Properties/layerheaderlab.cpp
+    Develop/Properties/rawpanel.cpp
+    Develop/Properties/maskpanel.cpp
+    Develop/Properties/maskeditor.cpp
     Develop/Scopes/histogramview.cpp
     Develop/Scopes/vectorscopeview.cpp
     Develop/Scopes/toneregionslider.cpp
@@ -386,6 +390,11 @@ set(WINNOW_HEADERS
     Develop/Properties/colorgradewheel.h
     Develop/Properties/colorrangewheel.h
     Develop/Properties/layerheader.h
+    Develop/Properties/layerheaderbase.h
+    Develop/Properties/layerheaderlab.h
+    Develop/Properties/rawpanel.h
+    Develop/Properties/maskpanel.h
+    Develop/Properties/maskeditor.h
     Develop/Scopes/scopedata.h
     Develop/Scopes/histogramview.h
     Develop/Scopes/vectorscopeview.h
