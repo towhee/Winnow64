@@ -1,133 +1,26 @@
 #include "Develop/Properties/maskeditor.h"
 #include "Develop/Properties/colorrangewheel.h"
-#include "PropertyEditor/propertywidgets.h"     // SliderEditor
 #include "Main/global.h"
 
-#include <QScrollBar>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QMouseEvent>
-#include <QVariantAnimation>
 
-/* Read a numeric field from a mask tool's paramsJson (0 if absent). */
+/* Read a numeric field from a mask tool's paramsJson (def if absent). */
 static double pnum(const QJsonObject &o, const QString &key, double def)
 {
     return o.contains(key) ? o.value(key).toDouble(def) : def;
 }
 
-MaskEditor::MaskEditor(QWidget *parent) : PropertyEditor(parent)
+MaskEditor::MaskEditor(QWidget *parent) : PanelEditor(parent)
 {
     if (G::isLogger) G::log("MaskEditor::MaskEditor");
-
-    /* Same chrome as the Develop tree so the rows render identically. */
-    setIndentation(10);
-    setAlternatingRowColors(false);
-    setMouseTracking(false);
-    setHeaderHidden(true);
-    setSelectionMode(QAbstractItemView::NoSelection);
-    setFocusPolicy(Qt::NoFocus);
-    setFrameShape(QFrame::NoFrame);
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    viewport()->setAutoFillBackground(false);
-
-    stringToFitCaptions = "=captions column=";
-    stringToFitValues   = "======values column======";
-    resizeColumns();
 }
-
-void MaskEditor::setCaptionWidth(int w)
-{
-    if (w > 0) setColumnWidth(CapColumn, w);
-}
-
-/* ---- generic tree-row builders (mirror DevelopProperties, at root level) ---- */
-
-void MaskEditor::addSlider(const QString &key, const QString &caption,
-                           const QString &tooltip, int min, int max)
-{
-    clearItemInfo(i);
-    i.name = key;
-    i.parIdx = QModelIndex();
-    i.parentName = "";
-    i.captionText = caption;
-    i.tooltip = tooltip;
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = key;
-    i.defaultValue = 0;
-    i.path = "";
-    i.value = i.defaultValue;
-    i.delegateType = DT_Slider;
-    i.type = "int";                 // div 0 = integer slider (0..100)
-    i.min = min;
-    i.max = max;
-    i.div = 0;
-    i.logScale = false;
-    i.step = 1;
-    i.color = G::darkgray;
-    i.color1 = G::lightgray;
-    i.fixedWidth = 50;
-    addItem(i);
-}
-
-void MaskEditor::addCheckbox(const QString &key, const QString &caption, const QString &tooltip)
-{
-    clearItemInfo(i);
-    i.name = key;
-    i.parIdx = QModelIndex();
-    i.parentName = "";
-    i.captionText = caption;
-    i.tooltip = tooltip;
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = key;
-    i.defaultValue = false;
-    i.path = "";
-    i.value = i.defaultValue;
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-}
-
-void MaskEditor::setSliderReal(const QString &key, double real)
-{
-    const QModelIndex vIdx = sourceIdx.value(key);
-    if (!vIdx.isValid()) return;
-    if (vIdx.data(UR_Editor).value<void*>() == nullptr) return;   // editor not realized
-    const int div = vIdx.data(UR_Div).toInt();
-    const int factor = (div == 0) ? 1 : div;
-    setItemValue(vIdx, static_cast<int>(qRound(real * factor)));
-}
-
-void MaskEditor::setCheckboxValue(const QString &key, bool on)
-{
-    const QModelIndex vIdx = sourceIdx.value(key);
-    if (!vIdx.isValid()) return;
-    if (vIdx.data(UR_Editor).value<void*>() == nullptr) return;
-    setItemValue(vIdx, on);
-}
-
-int MaskEditor::sliderInt(const QString &key) const
-{
-    const QModelIndex vIdx = sourceIdx.value(key);
-    return vIdx.isValid() ? vIdx.data(Qt::EditRole).toInt() : 0;
-}
-
-/* ---- build a tool's settings ---- */
 
 void MaskEditor::showTool(const MaskComponent &m)
 {
     isPopulating = true;
-    wheel = nullptr;                 // freed with its row by removeRows/close below
-
-    if (model->rowCount() > 0) {
-        close(QModelIndex());
-        model->removeRows(0, model->rowCount());
-    }
-    sourceIdx.clear();
+    wheel = nullptr;                 // freed with its row by clearRows() below
+    clearRows();
 
     const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
     const int feather = int(m.feather + 0.5f);
@@ -264,67 +157,13 @@ void MaskEditor::syncWheelFromSliders()
                      sliderInt("maskSatLo") / 100.0f, sliderInt("maskSatHi") / 100.0f);
 }
 
-void MaskEditor::fitHeight()
-{
-    int h = 6;
-    for (int r = 0; r < model->rowCount(); ++r)
-        h += sizeHintForRow(r);
-    setFixedHeight(h);
-}
-
 void MaskEditor::itemChange(QModelIndex index)
 {
     if (isPopulating) return;
     const QString src = index.data(UR_Source).toString();
-    const QVariant v  = index.data(Qt::EditRole);
-    /* A Hue/Sat slider drag also moves the wheel band. */
+    /* A Hue/Sat slider drag also moves the wheel band; then report the change out. */
     if (src == "maskHueLo" || src == "maskHueHi" ||
         src == "maskSatLo" || src == "maskSatHi")
         syncWheelFromSliders();
-    emit settingChanged(src, v);
-}
-
-void MaskEditor::mousePressEvent(QMouseEvent *event)
-{
-    /* Click a slider row's caption -> focus its slider (arrow keys nudge) + flash the
-       caption, like DevelopProperties::mousePressEvent (the base does not select on
-       click). */
-    if (event->button() == Qt::LeftButton) {
-        const QModelIndex idx = indexAt(event->pos());
-        if (idx.isValid() && idx.column() == CapColumn) {
-            const QModelIndex valIdx = model->index(idx.row(), ValColumn, idx.parent());
-            if (valIdx.data(UR_DelegateType).toInt() == DT_Slider) {
-                if (auto *se = static_cast<SliderEditor*>(
-                        valIdx.data(UR_Editor).value<void*>()))
-                    se->focusSlider();
-                flashCaption(idx);
-                return;
-            }
-        }
-    }
-    PropertyEditor::mousePressEvent(event);
-}
-
-void MaskEditor::flashCaption(const QModelIndex &capIdx)
-{
-    if (!capIdx.isValid()) return;
-    if (flashAnim) { flashAnim->stop(); flashAnim->deleteLater(); }
-    if (flashIdx.isValid() && flashIdx != capIdx)
-        model->setData(flashIdx, QVariant(), UR_FlashLevel);
-    flashIdx = capIdx;
-    auto *anim = new QVariantAnimation(this);
-    flashAnim = anim;
-    anim->setDuration(450);
-    anim->setStartValue(1.0);
-    anim->setEndValue(0.0);
-    anim->setEasingCurve(QEasingCurve::OutCubic);
-    connect(anim, &QVariantAnimation::valueChanged, this, [this](const QVariant &val){
-        if (flashIdx.isValid()) model->setData(flashIdx, val.toReal(), UR_FlashLevel);
-    });
-    connect(anim, &QVariantAnimation::finished, this, [this, anim]{
-        if (flashIdx.isValid()) model->setData(flashIdx, QVariant(), UR_FlashLevel);
-        flashIdx = QModelIndex();
-        anim->deleteLater();
-    });
-    anim->start();
+    emit settingChanged(src, index.data(Qt::EditRole));
 }

@@ -24,7 +24,8 @@ LayerHeaderLab::LayerHeaderLab(QWidget *parent) : LayerHeaderBase(parent)
 {
     if (G::isLogger) G::log("LayerHeaderLab::LayerHeaderLab");
 
-    /* contextMenu.png: the selectionColor chevron generated from down-arrow1.png. */
+    /* contextMenu.png: a light-gray (176,176,176) chevron, matching the title-bar glyphs
+       (e.g. questionmark.png); generated from down-arrow1.png. */
     menuIcon = QIcon(QPixmap(":/images/contextMenu.png"));
 
     QVBoxLayout *outer = new QVBoxLayout(this);
@@ -35,10 +36,20 @@ LayerHeaderLab::LayerHeaderLab(QWidget *parent) : LayerHeaderBase(parent)
        so LayerHeaderLab::paintEvent can draw the property-header gradient behind it. */
     headerBand = new QWidget(this);
     headerBand->setAttribute(Qt::WA_TranslucentBackground);
+    headerBand->setCursor(Qt::PointingHandCursor);
+    headerBand->installEventFilter(this);        // a header click toggles collapse
     QHBoxLayout *hb = new QHBoxLayout(headerBand);
-    hb->setContentsMargins(10, 3, 6, 3);
-    hb->setSpacing(6);
-    titleLabel = new QLabel(tr("Layers"), headerBand);
+    hb->setContentsMargins(0, 3, 6, 3);
+    hb->setSpacing(0);
+    /* Collapse arrow (branch glyph) in a gutter-width button, matching the tree's section
+       headers + the Raw panel: click it (or the caption) to hide/show the list. */
+    collapseBtn = new BarBtn();
+    collapseBtn->setToolTip("Hide or show the layer list");
+    collapseBtn->setIconSize(QSize(9, 9));
+    collapseBtn->setFixedSize(10, 16);
+    collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
+    connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleListCollapsed(); });
+    titleLabel = new QLabel(tr("Scope"), headerBand);
     titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
                                   .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
     panelMenuBtn = new BarBtn();
@@ -46,10 +57,12 @@ LayerHeaderLab::LayerHeaderLab(QWidget *parent) : LayerHeaderBase(parent)
     panelMenuBtn->setIcon(menuIcon);
     panelMenuBtn->setIconSize(QSize(16, 16));
     connect(panelMenuBtn, &BarBtn::clicked, this, [this]{ showPanelMenu(); });
+    hb->addWidget(collapseBtn);
     hb->addWidget(titleLabel);
     hb->addStretch(1);
     hb->addWidget(panelMenuBtn);
     outer->addWidget(headerBand);
+    updateListCollapseIcon();
 
     /* Rows container: one row widget per layer, rebuilt by setLayerRows. */
     rowsContainer = new QWidget(this);
@@ -125,19 +138,15 @@ QWidget *LayerHeaderLab::makeRow(int index, const LayerRowInfo &r, bool active)
     hb->setContentsMargins(10, 2, 6, 2);
     hb->setSpacing(6);
 
-    if (r.isBase) {
-        /* Base has no show/hide checkbox (it applies globally). A spacer keeps its name
-           aligned with the checkbox'd rows below. */
-        hb->addSpacing(18);
-    }
-    else {
-        QCheckBox *cb = new QCheckBox(row);
-        cb->setChecked(r.enabled);
-        cb->setToolTip("Show or hide this layer's effect");
-        connect(cb, &QCheckBox::toggled, this,
-                [this, index](bool on){ emit layerEnabledToggled(index, on); });
-        hb->addWidget(cb);
-    }
+    /* Every layer -- Base included -- gets a show/hide checkbox that toggles
+       EditLayer::enabled; the compositor skips a disabled layer (Base off => the image
+       renders with no develop adjustments). */
+    QCheckBox *cb = new QCheckBox(row);
+    cb->setChecked(r.enabled);
+    cb->setToolTip("Show or hide this layer's effect");
+    connect(cb, &QCheckBox::toggled, this,
+            [this, index](bool on){ emit layerEnabledToggled(index, on); });
+    hb->addWidget(cb);
 
     QLabel *name = new QLabel(r.name, row);
     name->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
@@ -162,10 +171,15 @@ QWidget *LayerHeaderLab::makeRow(int index, const LayerRowInfo &r, bool active)
 
 bool LayerHeaderLab::eventFilter(QObject *watched, QEvent *event)
 {
-    /* Click anywhere on a row body (incl. its name label, which ignores the press and
-       propagates it up) selects that layer. Checkbox / menu-button clicks are consumed by
-       those widgets and never reach here. */
-    if (event->type() == QEvent::MouseButtonRelease) {
+    /* A single left click anywhere on the header band (caption or empty area) toggles the
+       list collapse; the arrow + [v] buttons consume their own clicks. A click on a row
+       body (incl. its name label, which ignores the press so it propagates up) selects
+       that layer; checkbox / menu-button clicks are consumed by those widgets. */
+    if (event->type() == QEvent::MouseButtonPress && watched == headerBand) {
+        QMouseEvent *me = static_cast<QMouseEvent *>(event);
+        if (me->button() == Qt::LeftButton) { toggleListCollapsed(); return true; }
+    }
+    else if (event->type() == QEvent::MouseButtonRelease) {
         QWidget *w = qobject_cast<QWidget *>(watched);
         QMouseEvent *me = static_cast<QMouseEvent *>(event);
         if (w && me->button() == Qt::LeftButton) {
@@ -182,6 +196,25 @@ void LayerHeaderLab::selectRowDeferred(const QString &name)
        which rebuilds these rows. Emitting inline would delete the row widget from inside
        its own event handler. */
     QTimer::singleShot(0, this, [this, name]{ emit layerSelected(name); });
+}
+
+void LayerHeaderLab::toggleListCollapsed()
+{
+    listCollapsed = !listCollapsed;
+    if (rowsContainer) rowsContainer->setVisible(!listCollapsed);
+    updateListCollapseIcon();
+    /* No layer can be picked while the list is hidden -> fall back to Base (index 0). */
+    if (listCollapsed) selectRowDeferred(names.value(0, "Base"));
+}
+
+void LayerHeaderLab::updateListCollapseIcon()
+{
+    if (!collapseBtn) return;
+    /* Open branch (down) when the list shows; closed (right) when hidden. Full opacity,
+       9x9, matching the tree's branch arrows. */
+    const QString path = listCollapsed ? ":/images/branch-closed-winnow.png"
+                                       : ":/images/branch-open-winnow.png";
+    collapseBtn->setIcon(QIcon(QPixmap(path)));
 }
 
 void LayerHeaderLab::showPanelMenu()

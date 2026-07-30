@@ -18,7 +18,7 @@ class BarBtn;
     dock layer control. It replaces the dropdown LayerHeader with a VERTICAL LIST:
 
         | Layers                            [v] |   <- gradient header + panel menu
-        | Base                                  |   <- no checkbox (applies globally)
+        | [x] Base                              |   <- checkbox = show/hide (no [v] menu)
         | [x] Layer 1                       [v] |   <- checkbox = show/hide, [v] = actions
         | [ ] Layer 2                       [v] |
 
@@ -68,19 +68,25 @@ private:
     void showPanelMenu();                 // panel [v]: Add new layer
     void showRowMenu(int index, const QString &name);   // row [v]: per-layer actions
     void selectRowDeferred(const QString &name);        // emit layerSelected next tick
+    /* The header's collapse arrow: hide/show the layer LIST (not the tree). Collapsing
+       falls back to Base, since no layer can be picked while the list is hidden. */
+    void toggleListCollapsed();
+    void updateListCollapseIcon();
 
     QWidget     *headerBand    = nullptr;
+    BarBtn      *collapseBtn   = nullptr;
     QLabel      *titleLabel    = nullptr;
     BarBtn      *panelMenuBtn  = nullptr;
     QWidget     *rowsContainer = nullptr;
     QVBoxLayout *rowsLayout    = nullptr;
 
-    QIcon menuIcon;                        // contextMenu.png (selectionColor chevron)
+    QIcon menuIcon;                        // contextMenu.png (light-gray chevron)
 
     QStringList names;                     // current row names (for currentLayerName)
     int  activeIndex  = 0;
     bool previewShown = true;
-    bool collapsed    = false;
+    bool collapsed    = false;             // base setCollapsed state (inert)
+    bool listCollapsed = false;            // header arrow: the layer LIST is hidden
     bool baseActive   = true;
     bool maskOverlayAvailable = false;
     bool maskOverlayShown     = true;

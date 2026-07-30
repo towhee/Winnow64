@@ -740,5 +740,20 @@ Move the contents of the Base layer to a separate panel above Layers:
 
 Only show Raaw panel when one or more of the selected files is a raw file.
 
+/Users/roryhill/Projects/Winnow64/images/contextMenu.png
+/Users/roryhill/Projects/Winnow64/images/icon16/questionmark.png
 
+Change how the layer masks work.
 
+In the layer dropdown menu
+replace "Add mask to layer" with three menu options:
+- "Add to layername mask"
+- "Subtract from layername mask"
+- "Intersect layername mask"
+
+Next present mask tool options (same as present).
+
+Show mask tool in mask panel.  In the mask panel replace Add, Subtract and Intersect with
+Done button.
+
+All mask tools use the same mask tint (currently red).

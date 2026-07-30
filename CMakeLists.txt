@@ -134,6 +134,7 @@ set(WINNOW_SOURCES
     Develop/Properties/rawpanel.cpp
     Develop/Properties/maskpanel.cpp
     Develop/Properties/maskeditor.cpp
+    Develop/Properties/paneleditor.cpp
     Develop/Scopes/histogramview.cpp
     Develop/Scopes/vectorscopeview.cpp
     Develop/Scopes/toneregionslider.cpp
@@ -395,6 +396,7 @@ set(WINNOW_HEADERS
     Develop/Properties/rawpanel.h
     Develop/Properties/maskpanel.h
     Develop/Properties/maskeditor.h
+    Develop/Properties/paneleditor.h
     Develop/Scopes/scopedata.h
     Develop/Scopes/histogramview.h
     Develop/Scopes/vectorscopeview.h

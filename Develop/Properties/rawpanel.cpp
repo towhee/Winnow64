@@ -1,4 +1,5 @@
 #include "Develop/Properties/rawpanel.h"
+#include "Develop/Properties/paneleditor.h"
 #include "Main/dockwidget.h"        // BarBtn
 #include "Main/global.h"
 
@@ -7,7 +8,6 @@
 #include <QButtonGroup>
 #include <QComboBox>
 #include <QCheckBox>
-#include <QSlider>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPainter>
@@ -44,6 +44,8 @@ void RawPanel::buildUi()
        matching the tree's section headers (same idiom as the old LayerHeader). */
     headerBand = new QWidget(this);
     headerBand->setAttribute(Qt::WA_TranslucentBackground);
+    headerBand->setCursor(Qt::PointingHandCursor);
+    headerBand->installEventFilter(this);        // a header click toggles collapse
     QHBoxLayout *hb = new QHBoxLayout(headerBand);
     hb->setContentsMargins(0, 3, 6, 3);
     hb->setSpacing(0);
@@ -54,8 +56,6 @@ void RawPanel::buildUi()
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
     titleLabel = new QLabel(tr("Raw"), headerBand);
-    titleLabel->setCursor(Qt::PointingHandCursor);
-    titleLabel->installEventFilter(this);        // caption click toggles collapse
     titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
                                   .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
     tipBtn = new BarBtn();
@@ -68,17 +68,19 @@ void RawPanel::buildUi()
     hb->addWidget(tipBtn);
     outer->addWidget(headerBand);
 
-    /* Body container (normal background); hidden when collapsed. */
+    /* Body container (normal background); hidden when collapsed. Zero horizontal margins
+       so the embedded denoise editor spans full width and aligns with the property tree;
+       the custom rows below re-add the 10px inset so their captions stay indented. */
     body = new QWidget(this);
     QVBoxLayout *bl = new QVBoxLayout(body);
-    bl->setContentsMargins(10, 4, 10, 6);
+    bl->setContentsMargins(0, 4, 0, 6);
     bl->setSpacing(4);
     outer->addWidget(body);
 
     /* Edit source: Raw / Embedded Preview (always shown while the panel is visible). */
     QWidget *editRow = new QWidget(body);
     QHBoxLayout *el = new QHBoxLayout(editRow);
-    el->setContentsMargins(0, 0, 0, 0);
+    el->setContentsMargins(10, 0, 10, 0);
     el->setSpacing(12);
     QLabel *editLbl = new QLabel(tr("Edit:"), editRow);
     editLbl->setStyleSheet(capCss);
@@ -108,9 +110,9 @@ void RawPanel::buildUi()
     /* Demosaic engine. */
     QWidget *demRow = new QWidget(rawBlock);
     QHBoxLayout *dl = new QHBoxLayout(demRow);
-    dl->setContentsMargins(0, 0, 0, 0);
+    dl->setContentsMargins(10, 0, 10, 0);
     dl->setSpacing(6);
-    QLabel *demLbl = new QLabel(tr("Demosaic"), demRow);
+    QLabel *demLbl = new QLabel(tr("Render using"), demRow);
     demLbl->setStyleSheet(capCss);
     engineCombo = new QComboBox(demRow);
     engineCombo->addItem(tr("Apple"));      // index 0 = Apple
@@ -132,7 +134,7 @@ void RawPanel::buildUi()
     /* Run row: "Denoise"/"Denoised" + "Auto run". */
     QWidget *runRow = new QWidget(denoiseBlock);
     QHBoxLayout *nl = new QHBoxLayout(runRow);
-    nl->setContentsMargins(0, 0, 0, 0);
+    nl->setContentsMargins(10, 0, 10, 0);
     nl->setSpacing(6);
     denoiseCheck = new QCheckBox(tr("Denoise"), runRow);
     denoiseCheck->setToolTip("Run the raw denoise; shows \"Denoised\" when complete.");
@@ -147,33 +149,21 @@ void RawPanel::buildUi()
     nl->addWidget(autoRunCheck);
     nb->addWidget(runRow);
 
-    /* Lum / Color amount sliders (0..100). Enabled only once a denoised base is ready. */
-    auto addSliderRow = [&](const QString &cap, QSlider *&slider, QLabel *&val,
-                            void (RawPanel::*sig)(int)) {
-        QWidget *row = new QWidget(denoiseBlock);
-        QHBoxLayout *sl = new QHBoxLayout(row);
-        sl->setContentsMargins(12, 0, 0, 0);
-        sl->setSpacing(6);
-        QLabel *lbl = new QLabel(cap, row);
-        lbl->setStyleSheet(capCss);
-        lbl->setMinimumWidth(44);
-        slider = new QSlider(Qt::Horizontal, row);
-        slider->setRange(0, 100);
-        val = new QLabel("0", row);
-        val->setStyleSheet(capCss);
-        val->setMinimumWidth(26);
-        val->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        connect(slider, &QSlider::valueChanged, this, [this, val, sig](int v){
-            val->setText(QString::number(v));
-            (this->*sig)(v);
-        });
-        sl->addWidget(lbl);
-        sl->addWidget(slider, 1);
-        sl->addWidget(val);
-        nb->addWidget(row);
-    };
-    addSliderRow(tr("Lum"),   lumaSlider,   lumaValue,   &RawPanel::denoiseLumaChanged);
-    addSliderRow(tr("Color"), chromaSlider, chromaValue, &RawPanel::denoiseChromaChanged);
+    /* Lum / Color amount sliders (0..100), rendered by an embedded PanelEditor so they
+       look/align exactly like the property tree. Enabled only once a denoised base is
+       ready (setDenoiseRunState). */
+    denoiseEditor = new PanelEditor(denoiseBlock);
+    denoiseEditor->addSlider("denoiseLuma", "Lum",
+                             "Raw luminance noise reduction (AI, whole image).", 0, 100);
+    denoiseEditor->addSlider("denoiseChroma", "Color",
+                             "Raw colour (chroma) noise reduction.", 0, 100);
+    denoiseEditor->fitHeight();
+    connect(denoiseEditor, &PanelEditor::settingChanged, this,
+            [this](const QString &key, const QVariant &v){
+                if      (key == "denoiseLuma")   emit denoiseLumaChanged(v.toInt());
+                else if (key == "denoiseChroma") emit denoiseChromaChanged(v.toInt());
+            });
+    nb->addWidget(denoiseEditor);
 
     body->setVisible(!collapsed);        // honour the persisted collapse state
     updateCollapseIcon();
@@ -200,12 +190,12 @@ void RawPanel::updateCollapseIcon()
 
 bool RawPanel::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched == titleLabel && event->type() == QEvent::MouseButtonRelease) {
+    /* A single left click anywhere on the header band -- the caption (which ignores the
+       press so it propagates here) or the empty area -- toggles collapse. The [?] tip and
+       collapse-arrow buttons consume their own clicks, so they keep working. */
+    if (watched == headerBand && event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *me = static_cast<QMouseEvent *>(event);
-        if (me->button() == Qt::LeftButton && titleLabel->rect().contains(me->pos())) {
-            toggleCollapsed();
-            return true;
-        }
+        if (me->button() == Qt::LeftButton) { toggleCollapsed(); return true; }
     }
     return QWidget::eventFilter(watched, event);
 }
@@ -249,10 +239,10 @@ void RawPanel::setDenoiseRunState(bool denoised)
         denoiseCheck->setText(denoised ? tr("Denoised") : tr("Denoise"));
     }
     /* The amount sliders only scale a computed PMRID base -> inert until it exists. */
-    if (lumaSlider)   lumaSlider->setEnabled(denoised);
-    if (chromaSlider) chromaSlider->setEnabled(denoised);
-    if (lumaValue)    lumaValue->setEnabled(denoised);
-    if (chromaValue)  chromaValue->setEnabled(denoised);
+    if (denoiseEditor) {
+        denoiseEditor->setRowEnabled("denoiseLuma", denoised);
+        denoiseEditor->setRowEnabled("denoiseChroma", denoised);
+    }
 }
 
 void RawPanel::setAutoRun(bool on)
@@ -264,14 +254,12 @@ void RawPanel::setAutoRun(bool on)
 
 void RawPanel::setDenoiseValues(int luma, int chroma)
 {
-    if (lumaSlider) {
-        QSignalBlocker b(lumaSlider);
-        lumaSlider->setValue(luma);
-        if (lumaValue) lumaValue->setText(QString::number(luma));
-    }
-    if (chromaSlider) {
-        QSignalBlocker b(chromaSlider);
-        chromaSlider->setValue(chroma);
-        if (chromaValue) chromaValue->setText(QString::number(chroma));
-    }
+    if (!denoiseEditor) return;
+    denoiseEditor->setSliderReal("denoiseLuma", luma);     // seeds silently (no echo)
+    denoiseEditor->setSliderReal("denoiseChroma", chroma);
+}
+
+void RawPanel::setCaptionWidth(int w)
+{
+    if (denoiseEditor) denoiseEditor->setCaptionWidth(w);
 }
