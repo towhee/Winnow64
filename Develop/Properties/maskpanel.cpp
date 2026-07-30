@@ -80,6 +80,16 @@ void MaskPanel::buildUi()
     connect(addBtn, &QPushButton::clicked, this, [this]{ emit committed(0); });
     connect(subBtn, &QPushButton::clicked, this, [this]{ emit committed(1); });
     connect(intBtn, &QPushButton::clicked, this, [this]{ emit committed(2); });
+    /* The global stylesheet (widgetcss.cpp) sets "QPushButton { min-width: 100px }",
+       which Qt applies as an EXPLICIT minimum width (~112px at this DPI). Three side by
+       side then floor the row -- and thus the whole develop dock -- at ~348px, widening
+       the dock permanently (a size policy alone can't undo an explicit minimum). Override
+       min-width on just these buttons so the row fits inside the dock; Ignored lets them
+       share whatever width the row gets equally. */
+    for (QPushButton *b : {addBtn, subBtn, intBtn}) {
+        b->setStyleSheet("QPushButton { min-width: 0; }");
+        b->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+    }
     cl->addWidget(addBtn);
     cl->addWidget(subBtn);
     cl->addWidget(intBtn);

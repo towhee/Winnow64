@@ -39,7 +39,8 @@ LayerHeader::LayerHeader(QWidget *parent) : LayerHeaderBase(parent)
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
     updateCollapseIcon();
 
-    layerLabel = new QLabel(tr("Layer"), this);
+    layerLabel = new QLabel(tr("Scope"), this);
+    // layerLabel = new QLabel(tr("Layer"), this);
     /* Clicking the label toggles collapse as if the arrow was clicked. */
     layerLabel->setCursor(Qt::PointingHandCursor);
     layerLabel->installEventFilter(this);

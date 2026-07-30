@@ -8,9 +8,9 @@ class QLabel;
 class QRadioButton;
 class QComboBox;
 class QCheckBox;
-class QSlider;
 class QSettings;
 class BarBtn;
+class PanelEditor;
 
 /*
     RawPanel (experimental, behind G::useLayerHeaderLab) -- the Develop dock's raw-decode
@@ -44,6 +44,7 @@ public:
     void setDenoiseRunState(bool denoised);
     void setAutoRun(bool on);
     void setDenoiseValues(int luma0to100, int chroma0to100);
+    void setCaptionWidth(int w);                  // align denoise sliders to the tree
 
 signals:
     void tipsRequested();                         // [?]
@@ -78,10 +79,7 @@ private:
     QWidget      *denoiseBlock = nullptr;         // Denoise row + sliders (Apple hides)
     QCheckBox    *denoiseCheck = nullptr;
     QCheckBox    *autoRunCheck = nullptr;
-    QSlider      *lumaSlider   = nullptr;
-    QSlider      *chromaSlider = nullptr;
-    QLabel       *lumaValue    = nullptr;
-    QLabel       *chromaValue  = nullptr;
+    PanelEditor  *denoiseEditor = nullptr;        // tree-styled Lum/Color sliders
 };
 
 #endif // RAWPANEL_H

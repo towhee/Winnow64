@@ -282,7 +282,7 @@ void DevelopProperties::addCoreItems()
     clearItemInfo(i);
     i.name = "demosaic";
     i.parentName = "";
-    i.captionText = "Demosaic";
+    i.captionText = "Render using";
     i.tooltip = "Select demosaic engine.";
     i.isIndent = true;
     i.hasValue = true;
@@ -624,6 +624,7 @@ void DevelopProperties::syncRawPanel()
     if (!raw) return;
 
     const bool apple = (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine);
+    rawPanel->setCaptionWidth(captionColumnWidth);   // align denoise sliders to the tree
     rawPanel->setEditSource(G::useRaw);
     rawPanel->setEngine(apple);
     rawPanel->setAutoRun(setting->value("Develop/autoRunDenoise", true).toBool());
@@ -1026,10 +1027,11 @@ void DevelopProperties::onLayerEnabledToggled(int index, bool on)
     if (G::isLogger) G::log("DevelopProperties::onLayerEnabledToggled");
     if (currentImagePath.isEmpty()) return;
     EditStack &s = stackCache[currentImagePath];
-    /* Base (index 0) applies globally and has no checkbox; guard anyway. */
-    if (index <= 0 || index >= s.layers.size()) return;
+    /* Base (index 0) now has a checkbox too; the compositor honours layers[0].enabled
+       (see stackJob) so a disabled Base renders with no develop adjustments. */
+    if (index < 0 || index >= s.layers.size()) return;
     if (s.layers[index].enabled == on) return;
-    s.layers[index].enabled = on;                 // compositor skips a disabled layer (stackJob)
+    s.layers[index].enabled = on;                 // compositor skips a disabled layer
     dirty.insert(currentImagePath);
     emit paramsChanged();                          // re-composite with the layer on/off
     if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
@@ -3061,7 +3063,10 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
     /* Replace preview eye off -> render without the heals (spots stay in the cache). */
     if (spotsShown) job.spots = s.spots; // healed before geometry (Base-only too)
     if (s.layers.isEmpty()) return job;
-    job.base = effectiveLayerParams(s.layers[0]);   // Base (layer 0), previewed groups folded off
+    /* Base (layer 0): apply its params (previewed groups folded off) when enabled; a
+       disabled Base contributes identity params -- the image with no develop adjustments,
+       matching how a disabled layer is skipped below. */
+    job.base = s.layers[0].enabled ? effectiveLayerParams(s.layers[0]) : EditParams();
     for (int i = 1; i < s.layers.size(); ++i) {
         const EditLayer &l = s.layers[i];
         if (!l.enabled) continue;
