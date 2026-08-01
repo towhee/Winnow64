@@ -19,7 +19,7 @@
 #include <QIcon>
 
 /*
-    RawPanel (see rawpanel.h): the raw-decode strip lifted out of the Base "Core" tree
+    RawPanel (see rawpanel.h): the raw-decode strip lifted out of the Global "Core" tree
     rows. A dumb view -- controls emit, DevelopProperties pushes state back.
 */
 
@@ -41,7 +41,7 @@ void RawPanel::buildUi()
 
     /* Header band (collapse arrow + "Raw" + [?]); transparent so paintEvent draws the
        gradient behind. The arrow sits in a 10px gutter and the caption lands at x=10,
-       matching the tree's section headers (same idiom as the old LayerHeader). */
+       matching the tree's section headers (same idiom as the old ScopeHeader). */
     headerBand = new QWidget(this);
     headerBand->setAttribute(Qt::WA_TranslucentBackground);
     headerBand->setCursor(Qt::PointingHandCursor);

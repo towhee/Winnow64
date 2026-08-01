@@ -12,15 +12,15 @@
 /*
     Per-image Develop edit state, persisted in the image's XMP sidecar (winnow:Develop).
 
-    An EditStack is an ordered list of EditLayers; each layer carries a mask (reserved -- mask
+    An EditStack is an ordered list of EditScopes; each scope carries a mask (reserved -- mask
     editing and the compositor land in a later increment, so today the mask is always empty =
     global) and an EditParams (the slider values). This is the on-disk shape the docs call the
-    "EditStack / Layer & masking model": it stores layer = mask + settings so the format does not
+    "EditStack / Scope & masking model": it stores scope = mask + settings so the format does not
     change when masks arrive.
 
-    INCREMENT 1: the dock edits a single (global) layer; the renderer reads effectiveParams()
-    which today returns the first enabled layer's params. The multi-layer compositor (opacity /
-    mask blending over N layers) is deferred (roadmap item 2), but the format already supports it.
+    INCREMENT 1: the dock edits a single (global) scope; the renderer reads effectiveParams()
+    which today returns the first enabled scope's params. The multi-scope compositor (opacity /
+    mask blending over N scopes) is deferred (roadmap item 2), but the format already supports it.
 
     Serialization is JSON, then base64 for the sidecar attribute (raw JSON quotes are awkward in
     an XML attribute value). It is VERSIONED and FORWARD-TOLERANT: unknown keys are ignored and
@@ -30,10 +30,10 @@
 */
 
 /*
-    Masking model (UI increment -- compositor + canvas overlay deferred). A non-Base layer's
+    Masking model (UI increment -- compositor + canvas overlay deferred). A mask's
     effect area is the combination of an ordered list of MaskComponents. Each component is created
     with a tool (gradient/brush/range/AI-select), contributes (Add) or removes (Subtract) area,
-    and may be inverted/feathered. The whole layer combines its Add components by MaskCombine
+    and may be inverted/feathered. The whole scope combines its Add components by MaskCombine
     (Union = any, Intersect = overlap); Subtract components are removed from that result. Tool
     geometry (gradient line, brush strokes, sampled colours) lives in paramsJson, kept opaque here
     so the sidecar format does not change as tools gain parameters. tool/op/combine are stored as
@@ -56,33 +56,33 @@ struct MaskComponent {
     QString paramsJson;                 // opaque per-tool geometry/sample blob (forward-tolerant)
 };
 
-struct EditLayer {
-    QString    name    = "Base";        // index 0 is always the Base layer; extras are "Layer 1", ...
+struct EditScope {
+    QString    name    = "Global";      // index 0 = Global; masks are "Mask 1", "Mask 2", ...
     QString    mask;                    // empty = global; reserved (legacy single-mask slot)
     float      opacity = 1.0f;          // reserved (compositor deferred)
     bool       enabled = true;
-    int        combine = int(MaskCombine::Union);   // how this layer's masks combine
-    QVector<MaskComponent> masks;       // empty (Base or unmasked) = global
+    int        combine = int(MaskCombine::Union);   // how this scope's masks combine
+    QVector<MaskComponent> components;       // empty (Global scope) = whole image
     EditParams params;
 
     /* Preview (show/ignore) flags for the panel's per-section eye toggles. NON-DESTRUCTIVE: false
-       bypasses that group at render (its fields fold to identity in effectiveLayerParams) while the
-       stored values in `params` are kept, so re-showing restores them. showLayer bypasses the whole
-       layer's params (Basic+Color+Effects together) and is distinct from `enabled` -- `enabled`
-       drives the compositor's layer on/off, showLayer is the editing-side preview and leaves the
+       bypasses that group at render (its fields fold to identity in effectiveScopeParams) while the
+       stored values in `params` are kept, so re-showing restores them. showScope bypasses the whole
+       scope's params (Basic+Color+Effects together) and is distinct from `enabled` -- `enabled`
+       drives the compositor's scope on/off, showScope is the editing-side preview and leaves the
        compositor semantics untouched. All default true so older sidecars are unaffected. */
-    bool showLayer    = true;
+    bool showScope    = true;
     bool showBasic    = true;
     bool showColor    = true;
     bool showColorMix = true;
     bool showEffects  = true;
 };
 
-/* The params the renderer should apply for one layer: a COPY of the stored params with any
-   previewed-off group folded back to identity. Never mutates the stored layer. */
-inline EditParams effectiveLayerParams(const EditLayer &l) {
+/* The params the renderer should apply for one scope: a COPY of the stored params with any
+   previewed-off group folded back to identity. Never mutates the stored scope. */
+inline EditParams effectiveScopeParams(const EditScope &l) {
     EditParams p = l.params;
-    if (!l.showLayer) {
+    if (!l.showScope) {
         EditParams::resetGroup(p, EditParams::Group::Basic);
         EditParams::resetGroup(p, EditParams::Group::Color);
         EditParams::resetGroup(p, EditParams::Group::ColorMix);
@@ -98,7 +98,7 @@ inline EditParams effectiveLayerParams(const EditLayer &l) {
 
 /*
     Geometry (Transform tool): crop + straighten + 4-point perspective warp. PER-IMAGE (not per
-    layer) and applied LAST in the render -- after the develop ops + EXIF orientation -- so it is
+    scope) and applied LAST in the render -- after the develop ops + EXIF orientation -- so it is
     non-destructive and the develop edits stay calibrated to the full frame. Pipeline order on the
     output image is: straighten (rotate) -> warp (perspective) -> crop. Identity defaults => no-op.
 
@@ -129,7 +129,7 @@ struct Geometry {
     Regenerative fill (spot removal). PER-IMAGE like Geometry: an ordered history of
     spot heals. Each spot is a brush region synthesized by MI-GAN and composited BEFORE
     the geometry stage, so spots stay glued to the photo content when it is later cropped
-    or straightened. Surfaced in the dock as a single pinned "Fill" pseudo-layer (always
+    or straightened. Surfaced in the dock as a single pinned "Fill" pseudo-scope (always
     last); it carries no adjustment params.
 
     Parametric + non-destructive: only the brush geometry is stored (points in oriented-
@@ -146,15 +146,15 @@ struct FillSpot {
 
 struct EditStack {
     int                 version = 1;
-    QVector<EditLayer>  layers;
+    QVector<EditScope>  scopes;
     Geometry            geometry;       // crop/straighten/warp, applied last
     QVector<FillSpot>   spots;          // per-image spot heals (applied before geometry)
 
-    /* The params the renderer should apply. Today: the first enabled layer's params (one layer
-       in Increment 1). When the compositor lands this becomes a true multi-layer composite. */
+    /* The params the renderer should apply. Today: the first enabled scope's params (one scope
+       in Increment 1). When the compositor lands this becomes a true multi-scope composite. */
     EditParams effectiveParams() const {
-        for (const EditLayer &l : layers)
-            if (l.enabled) return effectiveLayerParams(l);
+        for (const EditScope &l : scopes)
+            if (l.enabled) return effectiveScopeParams(l);
         return EditParams();
     }
 
@@ -164,19 +164,19 @@ struct EditStack {
         if (!geometry.isIdentity() || !geometry.show) return false;
         for (const FillSpot &s : spots)
             if (s.enabled) return false;
-        for (const EditLayer &l : layers)
-            if (l.enabled && (!l.params.isIdentity() || !l.masks.isEmpty() ||
-                              !l.showLayer || !l.showBasic || !l.showColor ||
+        for (const EditScope &l : scopes)
+            if (l.enabled && (!l.params.isIdentity() || !l.components.isEmpty() ||
+                              !l.showScope || !l.showBasic || !l.showColor ||
                               !l.showColorMix || !l.showEffects))
                 return false;
         return true;
     }
 
-    /* The layer the dock edits (Increment 1: layer 0), created from identity if the stack is
+    /* The scope the dock edits (Increment 1: scope 0), created from identity if the stack is
        empty. */
-    EditLayer &activeLayer() {
-        if (layers.isEmpty()) layers.append(EditLayer());
-        return layers.first();
+    EditScope &activeScope() {
+        if (scopes.isEmpty()) scopes.append(EditScope());
+        return scopes.first();
     }
 
     /* ---- Serialization ------------------------------------------------------------------- */
@@ -274,7 +274,7 @@ struct EditStack {
 
     QJsonObject toJson() const {
         QJsonArray arr;
-        for (const EditLayer &l : layers) {
+        for (const EditScope &l : scopes) {
             QJsonObject lo;
             lo["name"]    = l.name;
             lo["mask"]    = l.mask;
@@ -282,14 +282,14 @@ struct EditStack {
             lo["enabled"] = l.enabled;
             lo["combine"] = l.combine;
             /* Preview flags: only emit the non-default (false = previewed off) ones, so a normal
-               untouched layer serializes exactly as before (forward/backward tolerant). */
-            if (!l.showLayer)   lo["showLayer"]   = false;
+               untouched scope serializes exactly as before (forward/backward tolerant). */
+            if (!l.showScope)    lo["showLayer"]    = false;
             if (!l.showBasic)    lo["showBasic"]    = false;
             if (!l.showColor)    lo["showColor"]    = false;
             if (!l.showColorMix) lo["showColorMix"] = false;
             if (!l.showEffects)  lo["showEffects"]  = false;
             QJsonArray marr;
-            for (const MaskComponent &m : l.masks) {
+            for (const MaskComponent &m : l.components) {
                 QJsonObject mo;
                 mo["tool"]     = m.tool;
                 mo["op"]       = m.op;
@@ -305,7 +305,7 @@ struct EditStack {
         }
         QJsonObject o;
         o["version"] = version;
-        o["layers"]  = arr;
+        o["scopes"]  = arr;      // wire key kept: sidecars written before the rename
         if (!geometry.isIdentity() || !geometry.show) o["geometry"] = geometryToJson(geometry);
         if (!spots.isEmpty()) {
             QJsonArray sarr;
@@ -363,16 +363,16 @@ struct EditStack {
             fs.paramsJson = so.value("params").toString();
             s.spots.append(fs);
         }
-        const QJsonArray arr = o.value("layers").toArray();
+        const QJsonArray arr = o.value("scopes").toArray();
         for (const QJsonValue &v : arr) {
             const QJsonObject lo = v.toObject();
-            EditLayer l;
+            EditScope l;
             l.name    = lo.value("name").toString(l.name);
             l.mask    = lo.value("mask").toString(l.mask);
             l.opacity = static_cast<float>(lo.value("opacity").toDouble(l.opacity));
             l.enabled = lo.value("enabled").toBool(l.enabled);
             l.combine = lo.value("combine").toInt(l.combine);
-            l.showLayer   = lo.value("showLayer").toBool(l.showLayer);
+            l.showScope    = lo.value("showLayer").toBool(l.showScope);
             l.showBasic    = lo.value("showBasic").toBool(l.showBasic);
             l.showColor    = lo.value("showColor").toBool(l.showColor);
             l.showColorMix = lo.value("showColorMix").toBool(l.showColorMix);
@@ -387,10 +387,10 @@ struct EditStack {
                 m.inverted = mo.value("inverted").toBool(m.inverted);
                 m.feather  = static_cast<float>(mo.value("feather").toDouble(m.feather));
                 m.paramsJson = mo.value("params").toString();
-                l.masks.append(m);
+                l.components.append(m);
             }
             l.params  = paramsFromJson(lo.value("params").toObject());
-            s.layers.append(l);
+            s.scopes.append(l);
         }
         return s;
     }

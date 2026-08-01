@@ -192,9 +192,9 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
    the contrast op's domain -- while the final ratio is formed in scene-linear. Portable (OpenCV,
    mac + Windows), independent of which engine decoded the image.
 
-   GLOBAL (no-mask) case: smooths the whole frame. When the layer compositor lands, it calls this
-   per layer bounded to the mask bbox and blends the result by the layer's alpha (see
-   notes/Documentation.txt "Layer & masking model"); the cached output then only re-blends, not
+   GLOBAL (no-mask) case: smooths the whole frame. When the scope compositor lands, it calls this
+   per scope bounded to the mask bbox and blends the result by the scope's alpha (see
+   notes/Documentation.txt "Scope & masking model"); the cached output then only re-blends, not
    re-computes, on a point-slider drag. */
 void Develop::Denoise(WorkingImage &img, const EditParams &p)
 {
@@ -323,7 +323,7 @@ void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den
 {
 /*
     Interactive "Denoise raw" blend: out = clean + amount-scaled (den - clean). PMRID runs at full
-    strength once (den); the two Base amounts scale a luma/chroma split of the correction here, so
+    strength once (den); the two Global amounts scale a luma/chroma split of the correction here, so
     dragging the sliders only re-blends (cheap) instead of re-running the model. Mirrors the
     highlight-preserving split used by the old post-demosaic path: highlights (correction ~0) pass
     through untouched.

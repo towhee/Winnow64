@@ -87,19 +87,19 @@ public:
     static bool render(const WorkingImage &work, const EditParams &edit, QImage &out,
                        RenderTimings *timings = nullptr);
 
-    /* One layer of a stack composite: its develop params and a 0..1 mask (row-major width*height,
-       matching work; empty => the layer applies globally). */
-    struct StackLayer {
+    /* One scope of a stack composite: its develop params and a 0..1 mask (row-major width*height,
+       matching work; empty => the scope applies globally). */
+    struct StackScope {
         EditParams         params;
         std::vector<float> mask;
     };
 
     /* Stack composite, blended in scene-linear before the output transform: start from base
-       (applied globally), then for each layer develop `work` with its params and blend over the
-       accumulator by its mask (acc = acc*(1-m) + layer*m; global layer replaces). One final
+       (applied globally), then for each scope develop `work` with its params and blend over the
+       accumulator by its mask (acc = acc*(1-m) + scope*m; global scope replaces). One final
        OutputTransform. An identity params side skips its develop (aliases work). */
     static bool renderStack(const WorkingImage &work, const EditParams &base,
-                            const std::vector<StackLayer> &layers,
+                            const std::vector<StackScope> &scopes,
                             QImage &out, RenderTimings *timings = nullptr);
 
     /* Area-downsampled copy of src whose longest edge is <= targetLongEdge (white /

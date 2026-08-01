@@ -5,15 +5,17 @@
 #include "PropertyEditor/propertyeditor.h"
 #include "Develop/editparams.h"
 #include "Develop/editstack.h"
+#include "Develop/History/develophistory.h"
 #include "Develop/workingimage.h"
 #include "Develop/Properties/colorgradewheel.h"
 #include "Develop/Properties/colorrangewheel.h"
 
 class MW;
 class ToneRegionSlider;
-class LayerHeaderBase;
+class ScopeHeaderBase;
 class RawPanel;
 class MaskPanel;
+class HistoryView;
 class QVariantAnimation;
 
 /*
@@ -22,9 +24,9 @@ class QVariantAnimation;
     headers, sliders, checkboxes and a combo. All values persist to QSettings under
     the "Develop/" branch.
 
-    Layers (header with minus/plus, the same idiom as Embellish templates) let several
-    independent adjustment sets be stored. Switching the "Select layer" combo rebuilds
-    the Basic / Effects sections from that layer's saved values. Each layer maps onto a
+    Scopes (header with minus/plus, the same idiom as Embellish templates) let several
+    independent adjustment sets be stored. Switching the "Select scope" combo rebuilds
+    the Basic / Effects sections from that scope's saved values. Each scope maps onto a
     single EditParams -- the one source of truth read by the Develop processor (and, for
     RAW, the white-balance / denoise steps inside RawFormat).
 
@@ -37,46 +39,44 @@ class DevelopProperties : public PropertyEditor
 public:
     DevelopProperties(QWidget *parent, QSettings *setting);
 
-    QStringList layerList;
-    QString layerName;
-    int layerId = 0;
+    QStringList scopeList;      // this image's scopes: "Global", then each mask
 
-    /* The params the renderer should apply for the current image (the active layer's params).
+    /* The params the renderer should apply for the current image (the active scope's params).
        Identity when no image is current. */
     EditParams editParams();
     QString diagnostics();
 
-    /* The full layer stack the renderer composites, independent of which layer is active for
-       editing: Base (layer 0) params applied globally, then each enabled non-Base layer developed
+    /* The full scope stack the renderer composites, independent of which scope is active for
+       editing: Global (scope 0) params applied globally, then each enabled mask developed
        from the running accumulator (so overlapping masks COMPOUND) and blended over it by its mask
        (empty mask => global). Captured as plain values so the off-thread full-res render can use it. */
     struct StackRenderJob {
-        struct Layer {
+        struct Scope {
             EditParams             params;
-            QVector<MaskComponent> masks;       // empty => layer applies globally
-            int                    combine = 0; // MaskCombine across this layer's components
+            QVector<MaskComponent> components;   // empty => applies to the whole image
+            int                    combine = 0;  // MaskCombine across the components
         };
-        EditParams     base;                    // layer 0 params (applied globally)
-        QVector<Layer> layers;                  // non-Base, in order, enabled only
+        EditParams     global;                  // scope 0 params (whole image)
+        QVector<Scope> scopes;                  // masks, in order, enabled only
         Geometry       geometry;       // crop/straighten/warp, applied last
         QVector<FillSpot> spots;       // spot heals, applied before geometry
     };
     StackRenderJob stackJob();
 
-    /* Whole-layer mask overlay: true when a mask tool is expanded on a non-Base layer (so MW should
-       show the composited layer mask), plus the active layer's ordered mask tools to composite. */
+    /* Whole-mask overlay: true when a mask tool is expanded on a mask (so MW should
+       show the composited mask), plus the active scope's ordered mask tools to composite. */
     bool maskOverlayActive() const;
     /* Esc from the Develop arbiter: if a mask tool is expanded, collapse it (hide its
        settings, like clicking its caption again) and return true; else false. */
     bool escapeMaskTool();
-    QVector<MaskComponent> activeLayerMasks() const;
-    /* Index into activeLayerMasks() of the tool whose settings are expanded (the one
-       the user clicked in the layer panel), or -1. MW tints this component in its own
-       colour so the user can see the selected tool's share of the layer mask. */
+    QVector<MaskComponent> activeScopeComponents() const;
+    /* Index into activeScopeComponents() of the tool whose settings are expanded (the one
+       the user clicked in the scope panel), or -1. MW tints this component in its own
+       colour so the user can see the selected tool's share of the mask. */
     int  activeMaskIndex() const;
     /* Display name of a MaskTool (public so MW can label the overlay legend). */
     static QString maskToolName(int tool);
-    /* Layer menu's "Show mask breakdown" check state, mirrored from MW's session flag. */
+    /* Scope menu's "Show mask breakdown" check state, mirrored from MW's session flag. */
     void setMaskBreakdownShown(bool shown);
 
     /* The current image's stored geometry (for loading the crop overlay), and a setter the crop
@@ -90,28 +90,42 @@ public:
     bool currentIsIdentity() const;               // true if the current image has no edits
 
     /* Bind the histogram's tone-region slider (created with the scopes, owned by MW): connect its
-       drags to the active layer's tone-split params and keep a pointer so image switches push the
+       drags to the active scope's tone-split params and keep a pointer so image switches push the
        saved positions back into it. */
     void bindToneSlider(ToneRegionSlider *slider);
     void flushImage(const QString &fPath);        // write one image's dirty stack to its sidecar
     void flushAll();                              // write all dirty stacks (quit / pre-op)
 
-    /* The layer dropdown (layers + layer actions) and the preview eye live in a gradient header
-       widget ABOVE this tree (see LayerHeaderBase). Bind it once; this class drives its
-       combo/eye and handles its signals. The concrete widget (LayerHeader or the
-       experimental LayerHeaderLab) is chosen in MW init behind G::useLayerHeaderLab. */
-    void bindLayerHeader(LayerHeaderBase *header);
+    /* The scope dropdown (scopes + scope actions) and the preview eye live in a gradient header
+       widget ABOVE this tree (see ScopeHeaderBase). Bind it once; this class drives its
+       combo/eye and handles its signals. The concrete widget (ScopeHeader or the
+       experimental ScopeHeaderLab) is chosen in MW init behind G::useScopeHeaderLab. */
+    void bindScopeHeader(ScopeHeaderBase *header);
 
     /* The raw-decode controls (Edit source / Demosaic / Denoise) live in a RawPanel above
-       the Layers list (lab UI), lifted out of the Base "Core" tree rows. Bind it once;
+       the Scopes list (lab UI), lifted out of the Global "Core" tree rows. Bind it once;
        this class handles its signals (reusing the existing raw signal contract) and
-       pushes state back via syncRawPanel(). Constructed only when G::useLayerHeaderLab. */
+       pushes state back via syncRawPanel(). Constructed only when G::useScopeHeaderLab. */
     void bindRawPanel(RawPanel *panel);
 
-    /* The transient mask build-up strip (lab UI) above the Layers list. Bind it once;
+    /* The transient mask build-up strip (lab UI) above the Scopes list. Bind it once;
        this class drives it and owns the mask model. */
     void bindMaskPanel(MaskPanel *panel);
-    /* Index (into the active layer's masks) of the in-progress, uncommitted tool -- MW
+
+    /* The History dock's list (owned by MW, lives in its own dock). Bind it once; this
+       class owns the DevelopHistory model it views and answers its hover/click. */
+    void bindHistoryView(HistoryView *view);
+
+    /* History hover: show entry i's state in the loupe WITHOUT touching the stored stack
+       or the sliders (previewStack overrides what stackJob/editParams report). The caller
+       renders the PROXY only -- hovering must not spin up full-res settle renders. */
+    void previewHistoryEntry(int index);
+    void endHistoryPreview();
+    /* History click: make entry i the current state -- restore its EditStack, rebuild the
+       panel, mark the sidecar dirty and re-render. Steps after it are discarded by the
+       NEXT edit (see DevelopHistory::record). */
+    void applyHistoryEntry(int index);
+    /* Index (into the active scope's masks) of the in-progress, uncommitted tool -- MW
        draws it BLUE over the red committed veil while a later mask tool is previewed. -1
        when nothing is pending (the first tool is committed immediately, drawn red). */
     int pendingMaskIndex() const { return pendingIdx; }
@@ -119,11 +133,11 @@ public:
     /* Enable/disable the WHOLE Develop panel so it "looks" disabled, not just the dock
        frame. Greys the property tree (caption text, which the delegate paints from the
        per-item UR_isEnabled role, plus every persistent editor and user interaction) and
-       the LayerHeader band above the tree. MW pairs this with developDock->setEnabled()
+       the ScopeHeader band above the tree. MW pairs this with developDock->setEnabled()
        so the dock frame and scopes grey out as well. */
     void setPanelEnabled(bool enabled);
 
-    /* Sync the raw "Edit: Raw / Embedded Preview" selector (added under the layer header for raw
+    /* Sync the raw "Edit: Raw / Embedded Preview" selector (added under the scope header for raw
        files only) with G::useRaw. Called by MW::toggleUseRaw so the status-bar useRaw button and
        this selector always agree; also toggles the visibility of the Demosaic / Denoise raw rows. */
     void syncEditRaw(bool useRaw);
@@ -151,7 +165,7 @@ public slots:
     void setActiveBrushSize(double size);
     /* ImageView toggled auto-mask ("A"); sync the dock checkbox. */
     void setActiveBrushAutoMask(bool on);
-    /* ImageView showed/hid the mask overlay tint; sync the layer menu's check state. */
+    /* ImageView showed/hid the mask overlay tint; sync the scope menu's check state. */
     void setMaskOverlayShown(bool shown);
 
     /* Regenerative spot fill. onSpotToolToggled arms/disarms spot-brush mode (from the
@@ -166,16 +180,16 @@ public slots:
     void setSpotsShown(bool shown) { spotsShown = shown; }
     bool isSpotsShown() const { return spotsShown; }
 
-    /* ---- LayerHeader widget handlers (the layer dropdown + buttons above the tree) ---- */
-    void onLayerSelected(const QString &name);    // dropdown picked a different layer
-    void renameActiveLayer();                     // [R] rename (dialog); Base cannot be renamed
-    void resetActiveLayer();                      // header reset: restore the whole layer's defaults
-    void newLayer();                              // [+] add a layer (name dialog, default "Layer n")
-    void deleteLayer();                           // [-] remove the selected layer (not Base)
-    void showMaskMenu();                          // pop the Add/Subtract mask-tool menu (on new layer)
-    void onLayerPreviewToggled(bool shown);       // [E] show/ignore the whole layer
-    void onLayerEnabledToggled(int index, bool on); // list row show/hide checkbox
-    void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the layer's items)
+    /* ---- ScopeHeader widget handlers (the scope dropdown + buttons above the tree) ---- */
+    void onScopeSelected(const QString &name);    // dropdown picked a different scope
+    void renameActiveScope();                     // [R] rename (dialog); Global cannot be renamed
+    void resetActiveScope();                      // header reset: restore the whole scope's defaults
+    void newScope();                              // [+] add a scope (name dialog, default "Scope n")
+    void deleteScope();                           // [-] remove the selected scope (not Global)
+    void showMaskMenu();                          // pop the Add/Subtract mask-tool menu (on new scope)
+    void onScopePreviewToggled(bool shown);       // [E] show/ignore the whole scope
+    void onScopeEnabledToggled(int index, bool on); // list row show/hide checkbox
+    void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the scope's items)
 
     void howThisWorks();                          // Develop help
 
@@ -202,13 +216,17 @@ public slots:
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
+    /* A History row is being hovered (or the hover ended): re-render the PROXY preview
+       only. Deliberately not paramsChanged -- that also arms the full-res settle render,
+       which a passing cursor must not trigger. */
+    void historyPreviewChanged();
     /* The "Edit: Raw / Embedded Preview" selector was changed; MW drives G::useRaw (toggleUseRaw)
        -- a private slot, so we route through this signal rather than calling it directly. */
     void useRawRequested(bool useRaw);
     /* The "Demosaic" combo selects the RAW decode engine (Apple Core Image vs in-house
        Winnow). MW sets G::decodeRawEngine and re-decodes the current image. */
     void demosaicEngineChanged(bool useApple);
-    /* Base raw-denoise (PMRID) run mode. autoRunDenoiseToggled: the "auto run denoise"
+    /* Global raw-denoise (PMRID) run mode. autoRunDenoiseToggled: the "auto run denoise"
        checkbox flipped -- MW gates its automatic PMRID runs on it.
        runRawDenoiseRequested: the "Run Denoise" button was clicked -- run now regardless
        of the flag. */
@@ -246,24 +264,22 @@ signals:
        shown -> ImageView hides the red coverage tint so the effect on the masked pixels
        is visible. */
     void maskTintHideRequested();
-    /* The layer menu's "Show mask overlay" row was clicked -> MW flips the tint. */
+    /* The scope menu's "Show mask overlay" row was clicked -> MW flips the tint. */
     void maskOverlayToggleRequested();
-    /* The layer menu's "Show mask breakdown" row -> MW flips Result/Breakdown view. */
+    /* The scope menu's "Show mask breakdown" row -> MW flips Result/Breakdown view. */
     void maskBreakdownToggleRequested();
 
 private:
     void initialize();
-    void readLayerList();
-    void setCurrentLayer(QString name);
 
-    /* Build/rebuild the whole tree for the ACTIVE layer: the layer's top items (Core rows for Base,
+    /* Build/rebuild the whole tree for the ACTIVE scope: the scope's top items (Core rows for Global,
        else mask tool rows) followed by the Basic / Color / Effects sections. Called on image change,
-       layer switch and mask add/remove/select; section expand-state is preserved across the rebuild. */
+       scope switch and mask add/remove/select; section expand-state is preserved across the rebuild. */
     void buildTree();
-    void addCoreItems();            // Base only: Demosaic + Denoise rows at the top of the tree
-    void addMaskItems();            // non-Base: the layer's mask tool rows at the top of the tree
-    void addAddMaskRow();           // non-Base with no mask: an "Add mask" [+] placeholder row
-    void applyLayerItemsCollapsed();// hide/show just the layer's top items (not the sections)
+    void addCoreItems();            // Global only: Demosaic + Denoise rows at the top of the tree
+    void addMaskItems();            // non-Global: the scope's mask tool rows at the top of the tree
+    void addAddMaskRow();           // non-Global with no mask: an "Add mask" [+] placeholder row
+    void applyScopeItemsCollapsed();// hide/show just the scope's top items (not the sections)
     void addBasic();
     void addColor();
     void addColorMix();
@@ -276,7 +292,7 @@ private:
        reference, so (like Lightroom) it gets As Shot / Auto / Custom. Full colour
        science lives in Develop/whitebalance.h -- this is only the UI. */
     void addWhiteBalanceRow(QModelIndex parIdx);
-    void setWbPreset(int preset);      // apply a dropdown pick to the active layer
+    void setWbPreset(int preset);      // apply a dropdown pick to the active scope
     void refreshWbRow();               // sync the combo + Temp/Tint display
     void setWbDropperActive(bool on);
     /* The current image's colour characterisation, from the cached pre-develop
@@ -287,7 +303,7 @@ private:
     QPointer<QComboBox> wbCombo;
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;
-    void updateSectionHeaderCaptions();   // append active layer name to section headers
+    void updateSectionHeaderCaptions();   // append active scope name to section headers
 
     /* ---- Color Mix (colour grading) --------------------------------------------------
        The wheel is a directly-embedded index widget (setIndexWidget), NOT a delegate
@@ -296,7 +312,7 @@ private:
        the same active range(s). Recreated on every tree rebuild. */
     QPointer<ColorGradeWheel> colorGradeWheel;
     int  gradeActiveMask = 0x2;             // midtones checked by default
-    void onGradeWheelChanged(bool commit);  // wheel drag -> active-layer grade params
+    void onGradeWheelChanged(bool commit);  // wheel drag -> active-scope grade params
     void refreshColorMixRow();              // push stored grade to the wheel + Lum slider
     void setGradeLum(float lum);            // write Lum to every active range
     int  firstActiveGradeRange() const;     // lowest checked range (drives Lum slider)
@@ -325,9 +341,9 @@ private:
     bool sectionExpanded(const QString &name, bool def) const;
     void persistSectionExpanded(const QModelIndex &idx, bool expanded);
 
-    /* ---- Mask (one mask per non-Base layer, built from a list of Add/Subtract tools) ----------
+    /* ---- Mask (one mask per mask, built from a list of Add/Subtract tools) ----------
        Self-contained so the whole mask UI can be redesigned by rewriting just these functions and
-       the MaskComponent model. The layer's single mask is an ordered list of tools (each Adds or
+       the MaskComponent model. The scope's single mask is an ordered list of tools (each Adds or
        Subtracts area); each tool is a row with a [+] add and a [-] remove button ([+] appends
        another tool via showMaskMenu), and clicking a tool reveals its settings (Feather, Invert)
        below the list (click the tool again to collapse). Spatial editing (drag/rotate the gradient on the image)
@@ -338,34 +354,37 @@ private:
     void deleteMask(int index);
     void setSelectedMask(int index);           // make a tool active (-1 = none, e.g. Done)
     void onMaskSelectionChanged();             // (programmatic selection only; clicks go via mousePressEvent)
-    EditLayer *activeLayer();                  // active layer of image, or nullptr
+    EditScope *activeScope();                  // active scope of image, or nullptr
     static int maskToolFromName(const QString &name);
     static QString opName(int op);             // "Add" / "Subtract"
 
     /* ---- Preview (show/ignore) + Reset per group ----------------------------------------------
-       Each section header (Basic/Color/Effects) and the Layers header carry an eye BarBtn that
-       toggles that group's Preview flag on the active layer (non-destructive: values are kept, the
-       group is folded to identity at render by effectiveLayerParams). Right-clicking a header pops
+       Each section header (Basic/Color/Effects) and the Scopes header carry an eye BarBtn that
+       toggles that group's Preview flag on the active scope (non-destructive: values are kept, the
+       group is folded to identity at render by effectiveScopeParams). Right-clicking a header pops
        a menu to toggle Preview or Reset (restore defaults, destructive) for that group. Transform's
-       preview/reset live in TransformPanel (separate widget), wired via MW. Group codes: PV_Layer =
-       whole active layer, PV_Basic/PV_Color/PV_ColorMix/PV_Effects = a section. */
-    enum PreviewGroup { PV_Layer = -1, PV_Basic = 0, PV_Color = 1,
+       preview/reset live in TransformPanel (separate widget), wired via MW. Group codes: PV_Scope =
+       whole active scope, PV_Basic/PV_Color/PV_ColorMix/PV_Effects = a section. */
+    enum PreviewGroup { PV_Scope = -1, PV_Basic = 0, PV_Color = 1,
                         PV_ColorMix = 2, PV_Effects = 3 };
     BarBtn *makeEyeBtn(const QString &tooltip, int group);   // queue an eye toggle into `btns`
     void togglePreviewSection(int group);   // flip the flag, refresh icon, re-render (no value change)
     void resetSection(int group);           // restore the group's defaults, repopulate, re-render
-    void refreshPreviewButtons();           // sync every eye icon from the active layer's flags
-    void showRawDemosaic();                 // Base + expand: reveal raw Core rows
-    static EditParams::Group paramsGroup(int group);   // PV_* -> EditParams::Group (Basic for PV_Layer)
-    bool *previewFlag(EditLayer *l, int group);        // the bool a PV_* code maps to on a layer
+    void refreshPreviewButtons();           // sync every eye icon from the active scope's flags
+    void showRawDemosaic();                 // Global + expand: reveal raw Core rows
+    /* PV_* -> EditParams::Group (Basic for PV_Scope). */
+    static EditParams::Group paramsGroup(int group);
+    /* PV_* -> "Basic" / "Effects" / ... , for history captions. */
+    static QString groupLabel(int group);
+    bool *previewFlag(EditScope *l, int group);        // the bool a PV_* code maps to on a scope
     BarBtn *basicEyeBtn = nullptr,
            *colorEyeBtn = nullptr, *colorMixEyeBtn = nullptr, *effectsEyeBtn = nullptr;
 
     void contextMenuEvent(QContextMenuEvent *event) override;   // right-click menu
 
-    /* Expand all / Collapse all, extended to drive the Layer row (its collapse arrow
-       lives in the LayerHeader band, not the tree). onSectionExpanded folds the Layer
-       row into Solo mode: expanding an adjustment section collapses the layer, and
+    /* Expand all / Collapse all, extended to drive the Scope row (its collapse arrow
+       lives in the ScopeHeader band, not the tree). onSectionExpanded folds the Scope
+       row into Solo mode: expanding an adjustment section collapses the scope, and
        vice versa. */
     void setAllSectionsExpanded(bool expand);
     void onSectionExpanded(const QModelIndex &idx);
@@ -383,32 +402,30 @@ private:
 
     /* ---- Develop presets (save) --------------------------------------------------
        presetNames lists the existing preset groups; writePreset persists the dialog's
-       selection under "Develop Presets/<name>/Global|Base layer|Layer N/";
-       writeLayerLeaves writes one layer group's checked adjustment values (raw
+       selection under "Develop Presets/<name>/Global|Global scope|Scope N/";
+       writeScopeLeaves writes one scope group's checked adjustment values (raw
        EditParams field values under their JSON key names, so a future apply can
        round-trip them). */
     QStringList presetNames() const;
     void writePreset(const QString &name, const QHash<QString, QSet<QString>> &selected,
                      const EditStack &stack);
-    void writeLayerLeaves(const EditParams &p, const QSet<QString> &keys);
+    void writeScopeLeaves(const EditParams &p, const QSet<QString> &keys);
 
-    QString layerRootPath() const;  // "Develop/Layers/<layerName>/" (legacy; unused now)
-    double layerValue(const QString &key, double defaultValue = 0) const;
-    QString uniqueLayerName(const QString &name) const;   // unique within the current image's layers
+    QString uniqueScopeName(const QString &name) const;  // unique within this image
 
-    /* Per-image stack helpers. The Layers combo + (+/-) act on the CURRENT IMAGE's EditStack;
-       activeLayerIndex is the layer the dock edits and the renderer shows (no mask/opacity
+    /* Per-image stack helpers. The Scopes combo + (+/-) act on the CURRENT IMAGE's EditStack;
+       activeScopeIndex is the scope the dock edits and the renderer shows (no mask/opacity
        compositing yet). */
-    void populateSlidersFromStack();              // push the active layer's params into the editors
+    void populateSlidersFromStack();              // push the active scope's params into the editors
     void setSliderReal(const QString &key, double real);   // set a slider's displayed value (un-scaled)
     void setCheckboxValue(const QString &key, bool on);
-    /* A tone-region slider drag: write the three split positions into the active layer's params
+    /* A tone-region slider drag: write the three split positions into the active scope's params
        and drive the live preview (no-op while populating). */
     void onToneSplitsChanged(double shadow, double crossover, double highlight);
     static void applyKeyToParams(const QString &key, const QVariant &v, EditParams &p);
-    QStringList currentLayerNames() const;        // names of the current image's layers (>=1)
-    void refreshLayerCombo();                     // rebuild the combo's list/value from the stack
-    void updateMaskMenuBtn();                     // tell the header whether Base is active (per-layer actions)
+    QStringList currentScopeNames() const;        // names of the current image's scopes (>=1)
+    void refreshScopeList();                     // rebuild the combo's list/value from the stack
+    void updateMaskMenuBtn();                     // tell the header whether Global is active (per-scope actions)
     void updateMaskEdit();                        // emit maskEditBegin/End for the active mask tool
     static QString defaultMaskParams(int tool);   // initial paramsJson geometry for a new tool
     int  activeMaskTool() const;                  // active component's tool, or -1
@@ -418,18 +435,48 @@ private:
     static QString brushStr(const QString &paramsJson, const QString &key, const QString &def);
     static QString brushWith(const QString &paramsJson, const QString &key, const QJsonValue &v);
     void emitBrushSettings(const MaskComponent &m); // maskBrushSettingsChanged from current settings
-    EditParams &activeParams();                   // the active layer's params (creates a layer if none)
+    EditParams &activeParams();                   // the active scope's params (creates a scope if none)
 
     /* The per-image edit state. stackCache holds loaded/edited stacks keyed by file path; dirty
        marks those needing a sidecar write; currentImagePath is the image the dock currently
-       shows; activeLayerIndex is the selected layer within that image. isPopulating suppresses
+       shows; activeScopeIndex is the selected scope within that image. isPopulating suppresses
        itemChange while we push values into the editors. */
     QHash<QString, EditStack> stackCache;
     QSet<QString> dirty;
     QString currentImagePath;
-    int activeLayerIndex = 0;
+
+    /* ---- Edit history (the History dock) ------------------------------------------
+       noteEdit() is the SINGLE commit point for every develop action: it marks the
+       sidecar dirty (what the old bare dirty.insert did), pushes a labelled snapshot of
+       the image's EditStack onto its history, and arms the debounced write. A non-empty
+       mergeKey coalesces a continuous gesture (a slider drag, a wheel drag) into one
+       history entry instead of one per tick.
+
+       previewStack/previewActive is the hover override read by stackJob/editParams;
+       isRestoringHistory suppresses recording while a restore repopulates the panel
+       (otherwise reverting would itself append history entries). */
+    void noteEdit(const QString &action, const QString &value = QString(),
+                  const QString &mergeKey = QString());
+    /* noteEdit with an explicit prefix: "Global" for the raw rows (which always write
+       scope 0), or "" for whole-image actions (crop, spots) that belong to no scope. */
+    void noteScopeEdit(const QString &scope, const QString &action,
+                       const QString &value = QString(),
+                       const QString &mergeKey = QString());
+    /* Display prefix for a history entry: the active scope's name, except an unrenamed
+       "Mask N" with tools reads as its tool ("Subject Mask"), matching the dock. */
+    QString historyScopeLabel() const;
+    /* A slider's committed value, formatted the way the slider itself shows it (int when
+       div == 0, else 2 dp) with a + on positives. */
+    static QString historyValueText(const QModelIndex &valIdx, const QVariant &v);
+
+    DevelopHistory *history = nullptr;
+    HistoryView *historyView = nullptr;
+    EditStack previewStack;
+    bool previewActive = false;
+    bool isRestoringHistory = false;
+    int activeScopeIndex = 0;
     bool isPopulating = false;
-    bool layerItemsCollapsed = false;   // the '>' arrow: hide the layer's top items
+    bool scopeItemsCollapsed = false;   // the '>' arrow: hide the scope's top items
     bool isBulkExpandCollapse = false;  // guard: Expand/Collapse all vs Solo handler
 
     int dividerHeight;
@@ -444,7 +491,7 @@ private:
     bool isRebuildingMasks = false;
 
     /* ---- Mask build-up (lab UI): append-only "flatten" via the MaskPanel ----------
-       A picked tool is APPENDED to the layer's masks and edited via the property tree
+       A picked tool is APPENDED to the scope's masks and edited via the property tree
        (addToolRow -- so its settings look exactly like the tree). The FIRST tool on an
        empty mask is committed immediately and drawn RED; a LATER tool is a preview drawn
        BLUE (pendingIdx = its index) until [Add]/[Subtract]/[Intersect] sets its op (fold)
@@ -455,7 +502,7 @@ private:
     int  pendingIdx = -1;                     // uncommitted (blue) tool's index, else -1
     bool maskPanelOpen = false;
     /* Keep the combined-mask (red) overlay showing after a tool is committed/finished
-       (the panel closes but the result stays visible + 'O'-toggleable). Cleared on layer/
+       (the panel closes but the result stays visible + 'O'-toggleable). Cleared on scope/
        image switch or cancel. */
     bool maskLatched = false;
     void beginMaskTool(int tool);            // pick -> append; commit first, else pending
@@ -472,7 +519,7 @@ private:
     QVector<QPointF> spotPinCenters() const;   // current image's spot centres (norm)
     void emitSpotPins();                       // push spotPinCenters() to ImageView
     QMenu *maskMenu = nullptr;
-    LayerHeaderBase *layerHeader = nullptr; // layer dropdown + buttons, band above tree
+    ScopeHeaderBase *scopeHeader = nullptr; // scope dropdown + buttons, band above tree
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;
     static constexpr int kDebounceWriteMs = 2000;  // flush this long after edits settle (gated)
@@ -482,7 +529,7 @@ private:
     bool panelEnabled = true;
     void applyItemsEnabled(bool enabled);   // set UR_isEnabled on every row (recursively)
 
-    /* Raw "Edit source" selector (Base layer, raw files only). editRawRadio is the "Raw" button
+    /* Raw "Edit source" selector (Global scope, raw files only). editRawRadio is the "Raw" button
        of the A/B pair; the widget lives in the Edit row's value cell (recreated each buildTree).
        currentIsRaw() gates the raw-only rows; onEditSourceChanged() drives G::useRaw via MW;
        applyCoreVisibility() shows/hides the Demosaic + Denoise raw rows per G::useRaw. */
@@ -492,12 +539,12 @@ private:
     QPointer<QRadioButton> editRawRadio;
 
     /* RawPanel (lab UI) sync + handlers. syncRawPanel pushes the current raw state (edit
-       source, engine, denoise run state, Base denoise amounts) into the panel and toggles
-       its visibility (raw files only); setBaseDenoise writes a slider change into the
-       Base layer's params. rawPanel is null in the legacy UI -- all guards no-op. */
+       source, engine, denoise run state, Global denoise amounts) into the panel and toggles
+       its visibility (raw files only); setGlobalDenoise writes a slider change into the
+       Global scope's params. rawPanel is null in the legacy UI -- all guards no-op. */
     RawPanel *rawPanel = nullptr;
     void syncRawPanel();
-    void setBaseDenoise(bool luma, int value0to100);
+    void setGlobalDenoise(bool luma, int value0to100);
     /* "Denoise" run/state checkbox in the Core (raw) section. MW calls
        updateDenoiseRunState to reflect completion: checked + "Denoised" when a denoised
        base is ready for the current image, else unchecked + "Denoise". QPointer --

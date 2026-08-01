@@ -1,4 +1,4 @@
-#include "Develop/Properties/layerheaderlab.h"
+#include "Develop/Properties/scopeheaderlab.h"
 #include "Main/dockwidget.h"        // BarBtn
 #include "Main/global.h"
 
@@ -15,14 +15,14 @@
 #include <QTimer>
 
 /*
-    EXPERIMENTAL LayersPanel (see layerheaderlab.h). A vertical list of layer rows in a
-    gradient-headed band, wired through the LayerHeaderBase contract so DevelopProperties
-    drives it unchanged. Edit freely; swap over layerheader.* once it proves out.
+    EXPERIMENTAL ScopeHeaderLab (see scopeheaderlab.h). A vertical list of scope rows in a
+    gradient-headed band, wired through the ScopeHeaderBase contract so DevelopProperties
+    drives it unchanged. Edit freely; swap over scopeheader.* once it proves out.
 */
 
-LayerHeaderLab::LayerHeaderLab(QWidget *parent) : LayerHeaderBase(parent)
+ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
 {
-    if (G::isLogger) G::log("LayerHeaderLab::LayerHeaderLab");
+    if (G::isLogger) G::log("ScopeHeaderLab::ScopeHeaderLab");
 
     /* contextMenu.png: a light-gray (176,176,176) chevron, matching the title-bar glyphs
        (e.g. questionmark.png); generated from down-arrow1.png. */
@@ -32,8 +32,8 @@ LayerHeaderLab::LayerHeaderLab(QWidget *parent) : LayerHeaderBase(parent)
     outer->setContentsMargins(0, 0, 0, 0);
     outer->setSpacing(0);
 
-    /* Header band: "Layers" caption + a trailing [v] panel menu. Transparent background
-       so LayerHeaderLab::paintEvent can draw the property-header gradient behind it. */
+    /* Header band: "Scopes" caption + a trailing [v] panel menu. Transparent background
+       so ScopeHeaderLab::paintEvent can draw the property-header gradient behind it. */
     headerBand = new QWidget(this);
     headerBand->setAttribute(Qt::WA_TranslucentBackground);
     headerBand->setCursor(Qt::PointingHandCursor);
@@ -44,7 +44,7 @@ LayerHeaderLab::LayerHeaderLab(QWidget *parent) : LayerHeaderBase(parent)
     /* Collapse arrow (branch glyph) in a gutter-width button, matching the tree's section
        headers + the Raw panel: click it (or the caption) to hide/show the list. */
     collapseBtn = new BarBtn();
-    collapseBtn->setToolTip("Hide or show the layer list");
+    collapseBtn->setToolTip("Hide or show the scope list");
     collapseBtn->setIconSize(QSize(9, 9));
     collapseBtn->setFixedSize(10, 16);
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
@@ -53,7 +53,7 @@ LayerHeaderLab::LayerHeaderLab(QWidget *parent) : LayerHeaderBase(parent)
     titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
                                   .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
     panelMenuBtn = new BarBtn();
-    panelMenuBtn->setToolTip("Layer actions (add a new layer)");
+    panelMenuBtn->setToolTip("Scope actions (new mask)");
     panelMenuBtn->setIcon(menuIcon);
     panelMenuBtn->setIconSize(QSize(16, 16));
     connect(panelMenuBtn, &BarBtn::clicked, this, [this]{ showPanelMenu(); });
@@ -64,7 +64,7 @@ LayerHeaderLab::LayerHeaderLab(QWidget *parent) : LayerHeaderBase(parent)
     outer->addWidget(headerBand);
     updateListCollapseIcon();
 
-    /* Rows container: one row widget per layer, rebuilt by setLayerRows. */
+    /* Rows container: one row widget per scope, rebuilt by setScopeRows. */
     rowsContainer = new QWidget(this);
     rowsLayout = new QVBoxLayout(rowsContainer);
     rowsLayout->setContentsMargins(0, 0, 0, 2);
@@ -74,7 +74,7 @@ LayerHeaderLab::LayerHeaderLab(QWidget *parent) : LayerHeaderBase(parent)
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 }
 
-void LayerHeaderLab::paintEvent(QPaintEvent *)
+void ScopeHeaderLab::paintEvent(QPaintEvent *)
 {
     /* The property-header gradient (backgroundShade +5 -> -15), behind the header band
        only; the rows below sit on the dock background. */
@@ -89,31 +89,31 @@ void LayerHeaderLab::paintEvent(QPaintEvent *)
     p.fillRect(r, g);
 }
 
-void LayerHeaderLab::setLayers(const QStringList &n, int currentIndex)
+void ScopeHeaderLab::setScopes(const QStringList &n, int currentIndex)
 {
-    /* Legacy contract (dropdown path / default callers): all layers enabled, 0 = Base. */
-    QVector<LayerRowInfo> rows;
+    /* Legacy contract (dropdown path / default callers): all scopes enabled, 0 = Global. */
+    QVector<ScopeRowInfo> rows;
     rows.reserve(n.size());
     for (int i = 0; i < n.size(); ++i) {
-        LayerRowInfo r;
+        ScopeRowInfo r;
         r.name = n.at(i);
-        r.isBase = (i == 0);
+        r.isGlobal = (i == 0);
         r.enabled = true;
         rows.append(r);
     }
-    setLayerRows(rows, currentIndex);
+    setScopeRows(rows, currentIndex);
 }
 
-void LayerHeaderLab::setLayerRows(const QVector<LayerRowInfo> &rows, int active)
+void ScopeHeaderLab::setScopeRows(const QVector<ScopeRowInfo> &rows, int active)
 {
     activeIndex = (active >= 0 && active < rows.size()) ? active : 0;
-    baseActive  = (activeIndex == 0);
+    globalActive  = (activeIndex == 0);
     names.clear();
-    for (const LayerRowInfo &r : rows) names << r.name;
+    for (const ScopeRowInfo &r : rows) names << r.name;
     rebuild(rows, activeIndex);
 }
 
-void LayerHeaderLab::rebuild(const QVector<LayerRowInfo> &rows, int active)
+void ScopeHeaderLab::rebuild(const QVector<ScopeRowInfo> &rows, int active)
 {
     /* Drop the old rows (widgets own their children; deleteLater is unnecessary here as
        nothing captures them beyond this rebuild). */
@@ -125,10 +125,10 @@ void LayerHeaderLab::rebuild(const QVector<LayerRowInfo> &rows, int active)
         rowsLayout->addWidget(makeRow(i, rows.at(i), i == active));
 }
 
-QWidget *LayerHeaderLab::makeRow(int index, const LayerRowInfo &r, bool active)
+QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
 {
     QWidget *row = new QWidget(rowsContainer);
-    row->setProperty("layerName", r.name);      // read back by the row-body click filter
+    row->setProperty("scopeName", r.name);      // read back by the row-body click filter
     row->installEventFilter(this);
     /* Active row: a selectionColor band + white caption; others transparent. */
     if (active)
@@ -138,14 +138,14 @@ QWidget *LayerHeaderLab::makeRow(int index, const LayerRowInfo &r, bool active)
     hb->setContentsMargins(10, 2, 6, 2);
     hb->setSpacing(6);
 
-    /* Every layer -- Base included -- gets a show/hide checkbox that toggles
-       EditLayer::enabled; the compositor skips a disabled layer (Base off => the image
+    /* Every scope -- Global included -- gets a show/hide checkbox that toggles
+       EditScope::enabled; the compositor skips a disabled scope (Global off => the image
        renders with no develop adjustments). */
     QCheckBox *cb = new QCheckBox(row);
     cb->setChecked(r.enabled);
-    cb->setToolTip("Show or hide this layer's effect");
+    cb->setToolTip("Show or hide this scope's edits");
     connect(cb, &QCheckBox::toggled, this,
-            [this, index](bool on){ emit layerEnabledToggled(index, on); });
+            [this, index](bool on){ emit scopeEnabledToggled(index, on); });
     hb->addWidget(cb);
 
     QLabel *name = new QLabel(r.name, row);
@@ -155,9 +155,9 @@ QWidget *LayerHeaderLab::makeRow(int index, const LayerRowInfo &r, bool active)
     hb->addWidget(name);
     hb->addStretch(1);
 
-    if (!r.isBase) {
+    if (!r.isGlobal) {
         BarBtn *menuBtn = new BarBtn();
-        menuBtn->setToolTip("Layer actions (add mask, reset, remove, rename)");
+        menuBtn->setToolTip("Scope actions (add to mask, reset, remove, rename)");
         menuBtn->setIcon(menuIcon);
         menuBtn->setIconSize(QSize(16, 16));
         const QString nm = r.name;
@@ -169,12 +169,12 @@ QWidget *LayerHeaderLab::makeRow(int index, const LayerRowInfo &r, bool active)
     return row;
 }
 
-bool LayerHeaderLab::eventFilter(QObject *watched, QEvent *event)
+bool ScopeHeaderLab::eventFilter(QObject *watched, QEvent *event)
 {
     /* A single left click anywhere on the header band (caption or empty area) toggles the
        list collapse; the arrow + [v] buttons consume their own clicks. A click on a row
        body (incl. its name label, which ignores the press so it propagates up) selects
-       that layer; checkbox / menu-button clicks are consumed by those widgets. */
+       that scope; checkbox / menu-button clicks are consumed by those widgets. */
     if (event->type() == QEvent::MouseButtonPress && watched == headerBand) {
         QMouseEvent *me = static_cast<QMouseEvent *>(event);
         if (me->button() == Qt::LeftButton) { toggleListCollapsed(); return true; }
@@ -183,31 +183,31 @@ bool LayerHeaderLab::eventFilter(QObject *watched, QEvent *event)
         QWidget *w = qobject_cast<QWidget *>(watched);
         QMouseEvent *me = static_cast<QMouseEvent *>(event);
         if (w && me->button() == Qt::LeftButton) {
-            const QString nm = w->property("layerName").toString();
+            const QString nm = w->property("scopeName").toString();
             if (!nm.isEmpty()) { selectRowDeferred(nm); return true; }
         }
     }
-    return LayerHeaderBase::eventFilter(watched, event);
+    return ScopeHeaderBase::eventFilter(watched, event);
 }
 
-void LayerHeaderLab::selectRowDeferred(const QString &name)
+void ScopeHeaderLab::selectRowDeferred(const QString &name)
 {
-    /* Defer a tick: layerSelected loops back through DevelopProperties -> setLayerRows,
+    /* Defer a tick: scopeSelected loops back through DevelopProperties -> setScopeRows,
        which rebuilds these rows. Emitting inline would delete the row widget from inside
        its own event handler. */
-    QTimer::singleShot(0, this, [this, name]{ emit layerSelected(name); });
+    QTimer::singleShot(0, this, [this, name]{ emit scopeSelected(name); });
 }
 
-void LayerHeaderLab::toggleListCollapsed()
+void ScopeHeaderLab::toggleListCollapsed()
 {
     listCollapsed = !listCollapsed;
     if (rowsContainer) rowsContainer->setVisible(!listCollapsed);
     updateListCollapseIcon();
-    /* No layer can be picked while the list is hidden -> fall back to Base (index 0). */
-    if (listCollapsed) selectRowDeferred(names.value(0, "Base"));
+    /* No scope can be picked while the list is hidden -> fall back to Global (index 0). */
+    if (listCollapsed) selectRowDeferred(names.value(0, "Global"));
 }
 
-void LayerHeaderLab::updateListCollapseIcon()
+void ScopeHeaderLab::updateListCollapseIcon()
 {
     if (!collapseBtn) return;
     /* Open branch (down) when the list shows; closed (right) when hidden. Full opacity,
@@ -217,25 +217,25 @@ void LayerHeaderLab::updateListCollapseIcon()
     collapseBtn->setIcon(QIcon(QPixmap(path)));
 }
 
-void LayerHeaderLab::showPanelMenu()
+void ScopeHeaderLab::showPanelMenu()
 {
     QMenu menu(this);
-    connect(menu.addAction(tr("Add new layer\tN")), &QAction::triggered,
-            this, [this]{ emit addLayerRequested(); });
+    connect(menu.addAction(tr("New mask\tN")), &QAction::triggered,
+            this, [this]{ emit addScopeRequested(); });
     menu.exec(QCursor::pos());
 }
 
-void LayerHeaderLab::showRowMenu(int index, const QString &name)
+void ScopeHeaderLab::showRowMenu(int index, const QString &name)
 {
-    if (G::isLogger) G::log("LayerHeaderLab::showRowMenu");
+    if (G::isLogger) G::log("ScopeHeaderLab::showRowMenu");
 
-    /* Per-layer actions act on the ACTIVE layer in DevelopProperties, so a row menu first
+    /* Per-scope actions act on the ACTIVE scope in DevelopProperties, so a row menu first
        selects its own row. Read the choice as an int code while the menu is alive, then
        fire everything on the next tick (the select rebuilds the rows, deleting this
        button -- must not happen inside its own click handler). */
     enum { AddMask = 1, Reset, Remove, Rename };
     QMenu menu(this);
-    QAction *aMask   = menu.addAction(tr("Add mask to %1\tM").arg(name));
+    QAction *aMask   = menu.addAction(tr("Add to %1\tM").arg(name));
     aMask->setData(AddMask);
     menu.addSeparator();
     menu.addAction(tr("Reset %1").arg(name))->setData(Reset);
@@ -247,27 +247,27 @@ void LayerHeaderLab::showRowMenu(int index, const QString &name)
     if (code == 0) return;
 
     QTimer::singleShot(0, this, [this, name, code]{
-        emit layerSelected(name);            // make this the active layer first
+        emit scopeSelected(name);            // make this the active scope first
         switch (code) {
             case AddMask: emit addMaskRequested();     break;
-            case Reset:   emit resetLayerRequested();  break;
-            case Remove:  emit removeLayerRequested();  break;
+            case Reset:   emit resetScopeRequested();  break;
+            case Remove:  emit removeScopeRequested();  break;
             case Rename:  emit renameRequested();      break;
         }
     });
 }
 
-void LayerHeaderLab::setCollapsed(bool c)
+void ScopeHeaderLab::setCollapsed(bool c)
 {
-    /* State only -- the layer LIST always stays visible. In the dropdown header this hid
-       the active layer's tree items; in this list panel that job belongs to
-       DevelopProperties::setTreeCollapsed (the adjustments below), NOT the layer rows.
+    /* State only -- the scope LIST always stays visible. In the dropdown header this hid
+       the active scope's tree items; in this list panel that job belongs to
+       DevelopProperties::setTreeCollapsed (the adjustments below), NOT the scope rows.
        DevelopProperties drives this from Collapse-all / Solo / section-expand, so hiding
-       the rows here would make the whole layer list vanish. */
+       the rows here would make the whole scope list vanish. */
     collapsed = c;
 }
 
-QString LayerHeaderLab::currentLayerName() const
+QString ScopeHeaderLab::currentScopeName() const
 {
     return (activeIndex >= 0 && activeIndex < names.size()) ? names.at(activeIndex) : QString();
 }

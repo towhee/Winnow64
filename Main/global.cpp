@@ -84,10 +84,10 @@ bool useLamaSpotFill = true;        // TEST: spot heals with LaMa (GPU); false -
    Documentation.txt "WHAT WAS TRIED"). The ReplacePanel + engines are kept; this flag
    re-enables the panel and the Fill/Object modes if the feature is revisited. */
 bool useReplaceFillModes = false;
-/* Develop dock Layer header: true swaps the experimental LayerHeaderLab in for the
-   shipping LayerHeader (both satisfy LayerHeaderBase). Scratch flag for reshaping the
-   Layer section; retire it once the lab design is copied back over layerheader.*. */
-bool useLayerHeaderLab = true;
+/* Develop dock Scope header: true swaps the experimental ScopeHeaderLab in for the
+   shipping ScopeHeader (both satisfy ScopeHeaderBase). Scratch flag for reshaping the
+   Scope section; retire it once the lab design is copied back over scopeheader.*. */
+bool useScopeHeaderLab = true;
 /* Model-path heal correction (Object fills + clone fallbacks; clone heals need none).
    Poisson default: keeps the model's content with the level solved from the boundary. */
 int  spotFillCorrectMode = 1;       // A/B: 0 none 1 Poisson 2 low-freq 3 harmonic

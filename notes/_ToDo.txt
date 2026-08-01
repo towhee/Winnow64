@@ -1,9 +1,9 @@
 WHAT'S NEW
+- Develop History panel
 - Focus Stacking
 
 BUGS / TO DO
-- The Transform panel should cancel if another part of the develop panel (ie the tree) is
-  selected.
+- The open lock in Transform should be more obvious.
 - WB undo
 - Press D while not in loupe mode does not work
 - Raw demosaic Winnow wrong for /Users/roryhill/Pictures/_test_raw/NEF D7200.NEF

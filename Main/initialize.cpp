@@ -1810,6 +1810,11 @@ void MW::createDevelopDock()
     developProperties = new DevelopProperties(this, settings);
 
     connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::developParamsChange);
+    /* History hover preview: PROXY render only. developParamsChange would also arm the
+       full-res settle render, and a cursor passing down the History list must not queue
+       one heavy render per row -- the click (applyHistoryEntry) does the full path. */
+    connect(developProperties, &DevelopProperties::historyPreviewChanged, this,
+            [this]{ renderDevelopPreview(false); });
     /* The dock's "Edit: Raw / Embedded Preview" selector drives G::useRaw through the same path as
        the status-bar button (toggleUseRaw is a private slot, hence the signal hop). */
     connect(developProperties, &DevelopProperties::useRawRequested, this,
@@ -1867,8 +1872,8 @@ void MW::createDevelopDock()
             developProperties, &DevelopProperties::cancelWbDropper);
     connect(imageView, &ImageView::spotToolExited, developProperties,
             [this]{ developProperties->onSpotToolToggled(false); });
-    /* Whole-layer mask coverage tint: rebuild/clear when the mask selection changes (begin/end) or
-       any mask geometry/param changes (paramsChanged). MW composites the active layer's tools. */
+    /* Whole-mask coverage tint: rebuild/clear when the mask selection changes (begin/end) or
+       any mask geometry/param changes (paramsChanged). MW composites the active scope's tools. */
     connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::updateMaskOverlayTint);
     connect(developProperties, &DevelopProperties::maskEditEnd,   this, &MW::updateMaskOverlayTint);
     connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::updateMaskOverlayTint);
@@ -1884,10 +1889,10 @@ void MW::createDevelopDock()
     /* Adjustment slider changed while a mask overlay is shown -> hide coverage tint. */
     connect(developProperties, &DevelopProperties::maskTintHideRequested,
             imageView, &ImageView::hideMaskTint);
-    /* Layer menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
+    /* Scope menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
     connect(developProperties, &DevelopProperties::maskOverlayToggleRequested,
             this, &MW::toggleMaskOverlay);
-    /* Layer menu "Show mask breakdown" <-> MW's Result/Breakdown session flag. */
+    /* Scope menu "Show mask breakdown" <-> MW's Result/Breakdown session flag. */
     connect(developProperties, &DevelopProperties::maskBreakdownToggleRequested,
             this, &MW::toggleMaskBreakdown);
     connect(imageView, &ImageView::maskTintVisibilityChanged,
@@ -2008,7 +2013,7 @@ void MW::createDevelopDock()
         }
     });
     /* Fill Replace (spot/fill/object heal) strip below the Transform panel, above the
-       layer header. ALWAYS starts hidden: a visible panel means the replace tool is
+       scope header. ALWAYS starts hidden: a visible panel means the replace tool is
        armed, which should never be the case before the user asks (spot button or "F"). */
     replacePanel = new ReplacePanel(developContainer, settings);
     replacePanel->setVisible(false);
@@ -2057,36 +2062,36 @@ void MW::createDevelopDock()
             "[ and ] resize the brush. Click a pin to remove a heal. Esc exits.", 6000);
     });
 
-    /* The layer dropdown + layer-action buttons live in a gradient header band ABOVE the
-       property tree (replacing the old in-tree Layers header). DevelopProperties drives
+    /* The scope dropdown + scope-action buttons live in a gradient header band ABOVE the
+       property tree (replacing the old in-tree Scopes header). DevelopProperties drives
        it and handles its signals; the collapse arrow hides/shows the tree. */
-    /* G::useLayerHeaderLab swaps in the experimental LayerHeaderLab (scratch copy for
-       reshaping the Layer section); both satisfy LayerHeaderBase so bindLayerHeader is
+    /* G::useScopeHeaderLab swaps in the experimental ScopeHeaderLab (scratch copy for
+       reshaping the Scope section); both satisfy ScopeHeaderBase so bindScopeHeader is
        type-agnostic. Retire the flag + lab once the design is copied back. */
-    /* Lab UI: the raw-decode controls move out of the Base "Core" tree rows into a
-       RawPanel ABOVE the Layers list (shown for raw files only; DevelopProperties drives
+    /* Lab UI: the raw-decode controls move out of the Global "Core" tree rows into a
+       RawPanel ABOVE the Scopes list (shown for raw files only; DevelopProperties drives
        its visibility + state). Only built under the flag; legacy keeps the Core rows. */
-    if (G::useLayerHeaderLab) {
+    if (G::useScopeHeaderLab) {
         RawPanel *rawPanel = new RawPanel(developContainer, settings);
         rawPanel->setVisible(false);                 // syncRawPanel reveals it for raw
         developContainerLayout->addWidget(rawPanel);
         developProperties->bindRawPanel(rawPanel);
 
-        /* The transient mask-editing strip: between Raw and the Layers list, hidden until
+        /* The transient mask-editing strip: between Raw and the Scopes list, hidden until
            a mask tool is being defined (DevelopProperties shows/hides it). */
         MaskPanel *maskPanel = new MaskPanel(developContainer);
         maskPanel->setVisible(false);
         developContainerLayout->addWidget(maskPanel);
         developProperties->bindMaskPanel(maskPanel);
     }
-    LayerHeaderBase *developLayerHeader = G::useLayerHeaderLab
-            ? static_cast<LayerHeaderBase *>(new LayerHeaderLab(developContainer))
-            : static_cast<LayerHeaderBase *>(new LayerHeader(developContainer));
-    developContainerLayout->addWidget(developLayerHeader);
-    developProperties->bindLayerHeader(developLayerHeader);
+    ScopeHeaderBase *developScopeHeader = G::useScopeHeaderLab
+            ? static_cast<ScopeHeaderBase *>(new ScopeHeaderLab(developContainer))
+            : static_cast<ScopeHeaderBase *>(new ScopeHeader(developContainer));
+    developContainerLayout->addWidget(developScopeHeader);
+    developProperties->bindScopeHeader(developScopeHeader);
     developContainerLayout->addWidget(developProperties, 1);
     developDock->setWidget(developContainer);
-    /* The tone-region slider under the histogram drives the active layer's tone-split params. */
+    /* The tone-region slider under the histogram drives the active scope's tone-split params. */
     developProperties->bindToneSlider(scopesView->toneRegionSlider());
 
     /* Loupe cursor readout: hovering the image marks the pixel's value on the scopes. */
@@ -2120,7 +2125,7 @@ void MW::createDevelopDock()
     // show/hide the histogram + vectorscope scopes strip
     developScopesBtn = new BarBtn();
     developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
-    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope  (H)");
+    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope  (G)");
     developScopesBtn->setActive(developScopesVisible);
     connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
     developTitleLayout->addWidget(developScopesBtn);
@@ -2136,7 +2141,7 @@ void MW::createDevelopDock()
     developTitleLayout->addSpacing(10);
 
     /* Spot-removal tool (regenerative fill): brush over a blemish to heal it; heals are
-       recorded in the pinned "Fill" layer. DevelopProperties owns the armed state and
+       recorded in the pinned "Fill" scope. DevelopProperties owns the armed state and
        drives the icon back via spotActiveChanged (full opacity armed, dimmed off). */
     developSpotBtn = new BarBtn();
     developSpotBtn->setIcon(":/images/icon16/spot.png", G::iconOpacity);
@@ -2205,6 +2210,90 @@ void MW::createDevelopDock()
     developTitleLayout->addSpacing(5);
 }
 
+void MW::createHistoryDock()
+{
+/*
+    The Develop edit history (Lightroom's History panel): every committed develop action,
+    newest first. Hovering a row previews that state in the loupe; clicking it reverts the
+    image to it. The timeline lives in DevelopProperties (which owns the per-image
+    EditStack it snapshots), so this dock is a pure view -- created AFTER
+    createDevelopDock so developProperties exists to bind to.
+
+    Session scoped: the sidecar stores only the current EditStack, so history is rebuilt
+    as the user edits and discarded on quit.
+*/
+    if (G::isLogger) G::log("MW::createHistoryDock");
+
+    historyDockTabText = "History";
+    dockTextNames << historyDockTabText;
+    historyDock = new DockWidget(historyDockTabText, "HistoryDock", this);
+    historyDock->setObjectName("HistoryDock");
+
+    historyView = new HistoryView(historyDock);
+    historyDock->setWidget(historyView);
+    if (developProperties) developProperties->bindHistoryView(historyView);
+
+    historyDock->setFloating(false);
+    historyDock->setVisible(false);          // shown with the Develop dock
+    connect(historyDock, &DockWidget::focus, this, &MW::focusOnDock);
+    connect(historyDock, &QDockWidget::visibilityChanged,
+            this, &MW::historyDockVisibilityChange);
+
+    // customize the historyDock titlebar
+    QHBoxLayout *historyTitleLayout = new QHBoxLayout();
+    historyTitleLayout->setContentsMargins(0, 0, 0, 0);
+    historyTitleLayout->setSpacing(0);
+    historyTitleBar = new DockTitleBar("Develop History", historyTitleLayout);
+    historyDock->setTitleBarWidget(historyTitleBar);
+    historyTitleBar->setToolTip(dockTabToolTip(historyDockTabText));
+
+    // question mark button
+    BarBtn *historyQuestionBtn = new BarBtn();
+    historyQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
+    historyQuestionBtn->setToolTip("How this works: develop history tips");
+    connect(historyQuestionBtn, &BarBtn::clicked, this, [this]{
+        if (G::popup) G::popup->showPopup(
+            "<b>Develop History</b><br>"
+            "Every develop action for this image, newest first.<br>"
+            "Hover an entry to preview that state; click it to go back to it.<br>"
+            "Editing from an earlier entry discards the entries after it.<br><br>"
+            "History is per image and lasts for this session -- the sidecar keeps the "
+            "current state, not the steps.", 6000);
+    });
+    historyTitleLayout->addWidget(historyQuestionBtn);
+
+    // Spacer
+    historyTitleLayout->addSpacing(10);
+
+    // collapse/expand body button
+    if (G::useDWCollapse) {
+        BarBtn *historyCollapseBtn = new BarBtn();
+        historyCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        historyCollapseBtn->setToolTip("Collapse panel.");
+        connect(historyCollapseBtn, &BarBtn::clicked, historyDock, &DockWidget::toggleCollapsed);
+        connect(historyDock, &DockWidget::collapsedChanged, historyCollapseBtn,
+                [historyCollapseBtn](bool c){
+            historyCollapseBtn->setIcon(c ? ":/images/icon16/expand.png"
+                                          : ":/images/icon16/collapse.png", G::iconOpacity);
+            historyCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        historyTitleLayout->addWidget(historyCollapseBtn);
+
+        // Spacer
+        historyTitleLayout->addSpacing(10);
+    }
+
+    // close button
+    BarBtn *historyCloseBtn = new BarBtn();
+    historyCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
+    historyCloseBtn->setToolTip("Hide the History Panel");
+    connect(historyCloseBtn, &BarBtn::clicked, this, &MW::closeHistoryDock);
+    historyTitleLayout->addWidget(historyCloseBtn);
+
+    // Spacer
+    historyTitleLayout->addSpacing(5);
+}
+
 void MW::setDevelopPanelEnabled(bool on)
 {
     if (G::isLogger) G::log("MW::setDevelopPanelEnabled");
@@ -2215,7 +2304,16 @@ void MW::setDevelopPanelEnabled(bool on)
        state. So strip the features while disabled and restore the captured set when on. */
     developDock->setFeatures(on ? developDockFeatures : QDockWidget::NoDockWidgetFeatures);
     if (developProperties) developProperties->setPanelEnabled(on);
+    /* History is part of the Develop tool: it comes and goes with it. Show it FIRST --
+       showing a tabified dock makes it the front tab, so Develop must be shown last (and
+       raised) or the pair would open on the History tab. */
+    if (historyDock) {
+        historyDock->setEnabled(on);
+        historyDock->setVisible(on);
+        if (historyDockVisibleAction) historyDockVisibleAction->setChecked(on);
+    }
     developDock->setVisible(on);
+    if (on) developDock->raise();
 }
 
 void MW::syncDevelopPanelEnabled()
@@ -2240,8 +2338,12 @@ void MW::setOperationMode(G::OperationMode mode)
     if (G::isLogger)
         G::log("MW::setOperationMode", mode == G::OperationMode::Develop ? "Develop" : "Preview");
 
-    // Only show develop in Develop Mode
-    developDock->setVisible(mode == G::OperationMode::Develop);
+    // Only show develop (and its history) in Develop Mode. History first, so Develop
+    // ends up the front tab of the pair (see setDevelopPanelEnabled).
+    const bool inDevelop = (mode == G::OperationMode::Develop);
+    if (historyDock) historyDock->setVisible(inDevelop);
+    developDock->setVisible(inDevelop);
+    if (inDevelop) developDock->raise();
 
     /* Save Develop Preset carries a real Cmd+Shift+N shortcut, so gate it by mode here
        (before the no-change return, so it always tracks the mode) -- a disabled QAction's
@@ -2321,7 +2423,7 @@ void MW::setOperationMode(G::OperationMode mode)
                ImageDecoder::load then reuses). No-op without a denoise edit / on Apple. */
             if (!selIsVideo && dm && !dm->currentFilePath.isEmpty() && developAutoRunDenoise) {
                 const auto mj = developProperties->stackJob();
-                ensureRawDenoise(dm->currentFilePath, mj.base,
+                ensureRawDenoise(dm->currentFilePath, mj.global,
                                  WorkingImageCache::instance().get(dm->currentFilePath),
                                  currentImageIso());
             }
@@ -2353,7 +2455,13 @@ void MW::developDockVisibilityChange()
        re-assert the active tool's overlay when it returns. */
     if (!imageView || !developProperties) return;
     if (developDock->isVisible()) {
-        developDock->raise();
+        /* A TABIFIED dock keeps isVisible() == true even when a sibling tab is selected
+           (that is why isSelectedDockTab tests the visible REGION instead). So an
+           unconditional raise() here yanked Develop straight back to the front the
+           instant the user clicked a sibling tab -- clicking the History tab appeared to
+           do nothing. Only raise when Develop really is the front tab, where raise() is
+           a no-op anyway; the paths that SHOW the dock raise it explicitly. */
+        if (isSelectedDockTab(developDock)) developDock->raise();
         developDockVisibleAction->setChecked(true);
         developProperties->refreshMaskEdit();
     }
@@ -2372,6 +2480,21 @@ void MW::developDockVisibilityChange()
     }
 }
 
+void MW::historyDockVisibilityChange()
+{
+    if (G::isLogger) G::log("MW::historyDockVisibilityChange");
+    /* createDocks runs BEFORE createActions, so the action can still be null here. */
+    if (!historyDock || !developProperties) return;
+    if (historyDock->isVisible()) {
+        if (historyDockVisibleAction) historyDockVisibleAction->setChecked(true);
+    }
+    else {
+        /* Tabbed away or hidden mid-hover: never leave the loupe showing a previewed
+           history state the user can no longer see the row for. */
+        developProperties->endHistoryPreview();
+    }
+}
+
 void MW::createDocks()
 {
     if (G::isLogger) G::log("MW::createDocks");
@@ -2382,6 +2505,7 @@ void MW::createDocks()
     createThumbDock();
     createEmbelDock();
     createDevelopDock();
+    createHistoryDock();   // after Develop: it binds to developProperties
 
     // connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 
@@ -2392,6 +2516,7 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
     addDockWidget(Qt::RightDockWidgetArea, developDock);
+    addDockWidget(Qt::RightDockWidgetArea, historyDock);
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
@@ -2405,11 +2530,15 @@ void MW::createDocks()
        (tab-bar flicker). embel + develop tab together on the RIGHT via the line below. This
        default normally only shows when no saved WindowState is restored. */
     if (!hideEmbellish) MW::tabifyDockWidget(embelDock, developDock);
+    /* History joins the same RIGHT group, immediately after Develop -- the two are one
+       tool and are shown/hidden together (see setHistoryDockVisibility). */
+    MW::tabifyDockWidget(developDock, historyDock);
 
     // Re-evaluate responsive dock tab titles when a dock is dragged between
     // docks/areas or floated: dragging into a tab group changes the tab count
     // without a reliable resize/show on the surviving docks.
-    for (DockWidget *d : {folderDock, favDock, filterDock, metadataDock, embelDock, developDock}) {
+    for (DockWidget *d : {folderDock, favDock, filterDock, metadataDock, embelDock,
+                          developDock, historyDock}) {
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
         /* WORK IN PROGRESS - DISABLED.
@@ -2434,6 +2563,7 @@ void MW::createDocks()
     wireSolo(thumbDock);
     wireSolo(embelDock);
     wireSolo(developDock);
+    wireSolo(historyDock);
 }
 
 void MW::createMessageView()

@@ -108,7 +108,7 @@ Table of Contents
     14. DEVELOP / IMAGE EDIT (PARAMETRIC ADJUSTMENTS)
          - Architecture
          - Panel focus & slider arrow-nudge
-         - Layer & masking model (planned)
+         - Scope & mask model (Global + masks)
          - Fill Replace (spot / fill / object heal)  [SHIPPED: SPOTS ONLY]
          - Develop dock (UI)
          - Develop scopes (histogram + vectorscope)
@@ -116,6 +116,7 @@ Table of Contents
          - White balance (absolute, Kelvin)
          - Color Mix panel (colour grading)
          - Develop presets (save)
+         - Develop history (the History dock)
 
 
 ******************************************************************************************
@@ -1758,17 +1759,23 @@ Disabled Shortcut Feedback
 Develop Mode Local Shortcuts
 ------------------------------------------------------------------------------------------
 
-    Nine keys mean something different in Develop mode than in Preview mode:
+    Ten keys mean something different in Develop mode than in Preview mode:
 
         R   Crop / Transform panel      developTransformAction   (Preview: unbound)
-        N   New layer                   developNewLayerAction    (Preview: unbound)
-        M   New mask                    developNewMaskAction     (Preview: unbound)
+        N   New Mask                    developNewScopeAction    (Preview: unbound)
+        M   Add to Mask                 developAddToMaskAction   (Preview: unbound)
         O   Mask overlay tint on/off    toggleMaskOverlayAction  (Preview: Open folder)
         S   Spot removal tool           developSpotAction        (Preview: Slideshow)
         W   White balance sampler       developWbSamplerAction   (Preview: New workspace)
         X   Export (STUB, see below)    developExportAction      (Preview: Reject)
-        H   Histogram / vectorscope     developScopesAction      (Preview: unbound)
+        G   Histogram / vectorscope     developScopesAction      (Preview: Grid view)
+        H   Develop History panel       historyDockVisibleAction (Preview: unbound)
         P   Run/apply preset (STUB)     developRunPresetAction   (Preview: Pick)
+
+    H is the odd one out in that its action is NOT Develop-menu local: it is the View
+    menu's "Develop History Panel" dock toggle, which stays enabled in both modes (the
+    menu item works in Preview) while the KEY is Develop-only, because the History dock
+    only exists alongside the Develop dock.
 
     W is DOUBLY contextual: an ACTIVE Transform session claims it for Warp (arbiter rule
     1a, which runs before this table), so W reaches the white balance dropper only when
@@ -1902,7 +1909,7 @@ Develop Mode Local Shortcuts
     Discoverability
     ......................................................................................
     A key-less QAction renders no shortcut column, so each Develop action embeds its hint
-    in its text after a tab ("New Layer\tN") -- the idiom pickAction and jumpAction
+    in its text after a tab ("New Mask\tN") -- the idiom pickAction and jumpAction
     already use for their multi-key hints.  The keys are surfaced in three places: the
     Utilities > Develop submenu (built in MW::createUtilMenu; MW::syncDevelopMenuEnabled
     greys the mode-local items outside Develop mode so they never advertise a key that
@@ -2658,7 +2665,7 @@ Architecture
     (DONE) -> 2 implement ops (exposure/WB/contrast/tone first; texture/dehaze/denoise later)
     -> 3 push RAW white balance/denoise pre-demosaic for quality -> 4 persistence + slider UI.
     NOTE: the single-EditParams render above is the SCAFFOLD. The real editor generalises it
-    to a LAYER + MASK stack (next subsection); EditParams stays the per-layer unit, render()
+    to a SCOPE + MASK stack (next subsection); EditParams stays the per-scope unit, render()
     grows to take an EditStack, and the Develop op math is unchanged.
 
 ------------------------------------------------------------------------------------------
@@ -2720,7 +2727,7 @@ Panel focus & slider arrow-nudge
         sceneReferred=false base, or dims that differ from the sensor active area,
         means Develop is editing the display-referred embedded JPG, not the sensor
         image; the rawInfo (active area, bits, compression, CFA, black/white, matrix);
-        the effective EditParams for the Base layer and each enabled non-Base layer
+        the effective EditParams for the Global scope and each enabled non-Global scope
         (+ mask counts); the crop/warp Geometry; and the interactive develop caches
         (PMRID "Denoise raw" base + keys, developWorkTriedPath / in-flight guards,
         proxy + full-res render state, mask reference caches). The DENOISE section also
@@ -2766,26 +2773,33 @@ Panel focus & slider arrow-nudge
         path.
 
 ------------------------------------------------------------------------------------------
-Layer & masking model (planned)
+Scope & mask model (Global + masks)
 ------------------------------------------------------------------------------------------
 
-    GOAL. Apply any edit either globally or through one or more masks, with the SAME edit set
-    shared across a layer's masks, performance critical. The user-facing concept is a LAYER;
-    it maps to exactly one internal object. This is the Lightroom MASKING model (a mask group
-    carrying one edit set), NOT a Photoshop pixel-layer stack -- that distinction is what keeps
-    it fast (see PERFORMANCE).
+    TERMINOLOGY (renamed 2026-07-30; was "layer" throughout). The dock band is captioned
+    SCOPE and lists what each edit set applies to: row 0 is GLOBAL (the whole image) and
+    every other row is a MASK ("Mask 1", or renamed "Sky"/"Subject"). In code the unit is
+    an EditScope (EditStack::scopes); its mask is EditScope::components, an ordered
+    list of MaskComponents. Do not confuse this "scope" with the Develop SCOPES panel
+    (histogram + vectorscope, developScopes*/G) -- unrelated feature, same word.
 
-    A LAYER = one EditParams (the existing struct, unchanged) + a COLLECTION of mask components
+    GOAL. Apply any edit either globally or through one or more masks, with the SAME
+    edit set shared across a scope's masks, performance critical. The user-facing
+    concept is a MASK; it maps to exactly one internal object. This is the Lightroom
+    MASKING model (a mask group carrying one edit set), NOT a Photoshop pixel-scope
+    stack -- that distinction is what keeps it fast (see PERFORMANCE).
+
+    A SCOPE = one EditParams (the existing struct, unchanged) + a COLLECTION of mask components
     (radial + brush + linear ...) combined into a single per-pixel alpha + an opacity. The edit
     set applies wherever that combined alpha > 0, so "the same edits across more than one mask"
-    falls out for free (the masks are unioned). A layer with NO mask components is GLOBAL
+    falls out for free (the masks are unioned). A scope with NO mask components is GLOBAL
     (applies everywhere) -- so "globally OR on masks" needs no special case.
 
     NOISE REDUCTION is split across the two stages (the decode pipeline and Develop):
         • "DENOISE RAW" (Colour + luminance NR) is GLOBAL-ONLY, driven by EditParams
-          denoiseLuma/denoiseChroma (two Base-layer 0..1 sliders,
+          denoiseLuma/denoiseChroma (two Global-scope 0..1 sliders,
           "Denoise Lum"/"Denoise Color").
-          UI: the two sliders are root-level SIBLINGS of the Base "Demosaic" row (not
+          UI: the two sliders are root-level SIBLINGS of the Global "Demosaic" row (not
           children), always shown with no collapse arrow; they appear only on the WINNOW
           engine (Apple omits them -- see DevelopProperties::addCoreItems). UR_ExtraIndent
           lines their captions up one tree level so they align with the Basic sliders.
@@ -2797,7 +2811,7 @@ Layer & masking model (planned)
           kDefaultDenoiseChroma, mirrored in isIdentity). A saved recipe overrides them
           per image (paramsFromJson keeps the default only for keys absent from the JSON).
           The denoise rows share the Demosaic row's per-raw visibility (hidden when not
-          editing raw or when the layer is collapsed -- applyCoreVisibility).
+          editing raw or when the scope is collapsed -- applyCoreVisibility).
           RUN MODE: a row sits between the Demosaic row and "Denoise Lum"
           (DevelopProperties::addCoreItems; also hidden by applyCoreVisibility) with two
           checkboxes hosted in the two columns so they line up with the Demosaic row:
@@ -2851,7 +2865,7 @@ Layer & masking model (planned)
           (Utilities/inference/, ORT -- CoreML/ANE on macOS, DirectML on Windows). Needs a
           WINNOW_ENABLE_ORT build (default OFF -> no-op stub) plus pmrid.onnx
           (ReleaseExtras/, committed, warn-if-absent), else it no-ops. Global / not
-          maskable (a Base op before Develop). Because it needs the
+          maskable (a Global op before Develop). Because it needs the
           CFA mosaic it is WINNOW-engine + BAYER only: inert on the macOS Apple decode
           engine (no CFA) and on X-Trans, where "Denoise raw" no-ops. Conditioned by ISO
           (ImageMetadata::ISONum); applied as an amount-scaled BLEND (see WHY TWO
@@ -2948,7 +2962,7 @@ Layer & masking model (planned)
           mismatch (denoise appears dead). See the Develop diagnostics report to confirm
           the base is sceneReferred with matching dims.
         • LOCAL luminance NR is a MASKABLE Develop op: an ADDITIONAL luminance-only smoothing
-          applied on top of the baseline, per layer/mask. It is a SPATIAL op (below), operating
+          applied on top of the baseline, per scope/mask. It is a SPATIAL op (below), operating
           on the already-decoded WorkingImage -- so it needs no second decode and is independent
           of which decode engine ran. It is therefore a PORTABLE OpenCV pass (mac + Windows),
           not Core Image. Algorithm: ratio-preserving luma denoise -- Y = dot(rgb, lumaWeights);
@@ -2959,49 +2973,49 @@ Layer & masking model (planned)
     DATA MODEL (Develop/, planned):
         struct MaskComponent {
             enum Type { Linear, Radial, Brush };
-            enum Op   { Add, Subtract };          // union / cut-out WITHIN a layer
+            enum Op   { Add, Subtract };          // union / cut-out WITHIN a scope
             // Linear/Radial: parametric geometry in normalised 0..1 image coords (a few floats)
             // Brush:         a list of stamps {x,y,radius,flow,hardness} -- NOT a bitmap
             bool inverted; bool feather; float featherAmount;
         };
-        struct Layer {
+        struct Scope {
             QString name;
-            EditParams params;                    // unchanged per-layer unit
+            EditParams params;                    // unchanged per-scope unit
             float opacity = 1.0f;  bool visible = true;
             std::vector<MaskComponent> mask;      // empty => global
         };
         struct EditStack {
-            EditParams base;                       // global edits (or model as layers[0])
-            std::vector<Layer> layers;
+            EditParams base;                       // global edits (or model as scopes[0])
+            std::vector<Scope> scopes;
             int version = 1;
             bool isIdentity() const;
         };
 
-    COMPOSITING (sequential-on-accumulator). Each layer develops the result of the stack BELOW
+    COMPOSITING (sequential-on-accumulator). Each scope develops the result of the stack BELOW
     it, blended back by opacity x mask alpha:
 
         acc = Develop(workingImage, base.params)                 // global foundation
-        for each layer i (bottom -> top):
-            a   = opacity_i * maskAlpha_i(x)                     // 0 where the layer doesn't act
+        for each scope i (bottom -> top):
+            a   = opacity_i * maskAlpha_i(x)                     // 0 where the scope doesn't act
             acc = lerp(acc, Develop(acc, params_i), a)           // per pixel
 
-    This makes edits sequentially ADDITIVE (each layer sees the result below it) while keeping
-    opacity and masks well defined per pixel. Layer ORDER therefore matters and REORDER changes
-    the result -- that is correct and is surfaced in the UI. Base layer is always opacity 1, no
+    This makes edits sequentially ADDITIVE (each scope sees the result below it) while keeping
+    opacity and masks well defined per pixel. Scope ORDER therefore matters and REORDER changes
+    the result -- that is correct and is surfaced in the UI. Global scope is always opacity 1, no
     mask.
 
-    PERFORMANCE (the reason for the masking model over a pixel-layer stack). Ops are split by
+    PERFORMANCE (the reason for the masking model over a pixel-scope stack). Ops are split by
     cost and the cheap ones are FUSED:
         • POINT ops -- exposure, contrast, highlights/shadows/whites/blacks, temp, tint, the
           Colour RGB + HSL sliders, and (for now) texture + dehaze -- are pure per-pixel
-          functions. ALL layers' point ops run
-          in a SINGLE fused pass over the image: one read, one write, no per-layer intermediate
-          buffers; N layers cost N cheap evaluations in registers per pixel (bandwidth-bound).
-          This is the slider-drag hot path and is independent of layer/mask count.
+          functions. ALL scopes' point ops run
+          in a SINGLE fused pass over the image: one read, one write, no per-scope intermediate
+          buffers; N scopes cost N cheap evaluations in registers per pixel (bandwidth-bound).
+          This is the slider-drag hot path and is independent of scope/mask count.
           (DECISION 2026-06-25: texture + dehaze are POINT ops for now to keep the fused engine
           simple; revisit a SPATIAL local-contrast version later -- see RawDecode_ToDo #15.)
         • SPATIAL ops -- local luminance NR (and a future spatial texture/dehaze) -- need a
-          neighbourhood, so they cannot fuse: one pass each, blended by the layer's mask, CACHED
+          neighbourhood, so they cannot fuse: one pass each, blended by the scope's mask, CACHED
           and recomputed only when their own param or mask changes (never on a point-slider
           drag). The pass output depends only on its strength param, not the mask VALUES, so it
           is computed over the mask BOUNDING BOX + filter-radius halo (not the whole frame) and
@@ -3024,12 +3038,12 @@ Layer & masking model (planned)
     Brush masks are stored as the STROKE/STAMP LIST the user painted (not a rasterised alpha),
     rasterised to a cached alpha buffer on load and after each edit: tiny sidecar, resolution-
     independent (rasterise at proxy vs full res), and serialisable as text in the XMP sidecar. A
-    layer's combined alpha (the add/subtract union of its components) is rasterised ONCE and
+    scope's combined alpha (the add/subtract union of its components) is rasterised ONCE and
     cached, recomputed only when mask geometry changes -- never when sliders move.
 
     CACHE TIERS (most already present):
         1. pre-develop WorkingImage          -- Develop/workingimagecache.h (DONE)
-        2. per-layer combined mask alpha      -- recompute on geometry change only
+        2. per-scope combined mask alpha      -- recompute on geometry change only
         3. spatial-op outputs (local luma NR ...) -- recompute on their param/mask change only
         4. fused point pass                   -- always re-run on a point-slider drag (cheap)
     Plus a downscaled PROXY developed during an active drag, full-res async on release (now
@@ -3039,7 +3053,7 @@ Layer & masking model (planned)
     PERSISTENCE -- XMP SIDECAR, per image. Winnow already writes per-image .xmp sidecars
     (Metadata/xmp.cpp Xmp::writeSidecar, DOM-based); the EditStack serialises there (parametric
     geometry + brush strokes as numbers, Lightroom-style). This REPLACES the current global
-    QSettings "Develop/Layers/<name>/..." persistence (which is per-machine, not per-image -- the
+    QSettings "Develop/Scopes/<name>/..." persistence (which is per-machine, not per-image -- the
     scaffold's main correctness gap). EditStack is versioned for forward migration.
 
     BUILD PHASING (supersedes the single-EditParams phasing above):
@@ -3115,7 +3129,7 @@ Layer & masking model (planned)
            lower-frequency Roughness field (0 uniform, 1 patchy), weighted toward the
            midtones (fades to 0 at black/white) and scaled by Amount. The fixed seed keeps
            the pattern stable across re-renders (no shimmer). These are global (no-mask)
-           now; the layer compositor will bound them to a mask bbox later.
+           now; the scope compositor will bound them to a mask bbox later.
            Costs land only on the full-res settle render (proxy filters ~3MP). The Effects
            "Denoise" is two 0..100 sliders (mapped to 0..1) into Develop::Denoise: "Denoise"
            (localDenoiseLuma) = luminance NR via a perceptual bilateral (ratio-preserving), and
@@ -3178,14 +3192,14 @@ Layer & masking model (planned)
            PROBE: set G::isReportDevelopTime to log [DevTime] lines (proxy/full/full(async), dims,
            proxyBuild / render+compose / preview ms; the async line adds the develop sub-stage
            breakdown denoise/point/texture/dehaze). Off in production.
-        2. Layer object + compositor: add EditStack, run the fused loop over layers with opacity;
-           convert the dock's "layers-as-alternatives" into a real stack (no masks yet).
-        3. Parametric masks (linear/radial): analytic inline + per-layer alpha cache.
-        4. XMP sidecar: serialise/deserialise EditStack; retire the QSettings per-layer store.
+        2. Scope object + compositor: add EditStack, run the fused loop over scopes with opacity;
+           convert the dock's "scopes-as-alternatives" into a real stack (no masks yet).
+        3. Parametric masks (linear/radial): analytic inline + per-scope alpha cache.
+        4. XMP sidecar: serialise/deserialise EditStack; retire the QSettings per-scope store.
            DONE (2026-06, Increment 1) -- PER-IMAGE DEVELOP STATE:
-             - DATA MODEL: Develop/editstack.h. EditStack { version; QVector<EditLayer> }, each
-               EditLayer { name; mask (reserved -- empty = global, mask editing deferred); opacity
-               (reserved); enabled; EditParams params }. This is the layer = mask + settings shape
+             - DATA MODEL: Develop/editstack.h. EditStack { version; QVector<EditScope> }, each
+               EditScope { name; mask (reserved -- empty = global, mask editing deferred); opacity
+               (reserved); enabled; EditParams params }. This is the scope = mask + settings shape
                so the format does NOT change when masks/compositor land. Serialized to JSON then
                base64 (raw JSON quotes are awkward in an XML attribute). VERSIONED and FORWARD-
                TOLERANT: unknown keys ignored, missing keys default to identity. Header-only and
@@ -3200,50 +3214,51 @@ Layer & masking model (planned)
                previous image then loads+caches this image's stack and pushes its params into the
                editors (populateSlidersFromStack, guarded by isPopulating so the programmatic
                setValue->itemChanged does not re-mark dirty). itemChange writes into the current
-               image's active-layer params, marks it dirty, drives the live preview, and (if gated)
-               arms the debounce write. editParams() returns the ACTIVE layer's params (the
-               renderer shows the active layer -- no mask/opacity compositing yet).
-               LAYER HEADER (Develop/Properties/layerheader.cpp): the layer dropdown lives in a
+               image's active-scope params, marks it dirty, drives the live preview, and (if gated)
+               arms the debounce write. editParams() returns the ACTIVE scope's params (the
+               renderer shows the active scope -- no mask/opacity compositing yet).
+               SCOPE HEADER (Develop/Properties/scopeheader.cpp): the scope dropdown lives in a
                gradient band WIDGET above the tree (the same header gradient as TransformPanel; the
                old in-tree "Core" and "Layers" headers are gone). Layout:
-               > Layer [dropdown v] [...] [E]. The '>' collapse arrow ->
-               setTreeCollapsed hides/shows ONLY the layer's top items (the Core rows
-               for Base, else the mask-tool rows -- the root rows above BasicHeader;
-               applyLayerItemsCollapsed, re-asserted after each buildTree since a
+               > Scope [dropdown v] [...] [E] (the band caption reads "Scope";
+               it was "Layer"/"Layers" before 2026-07-30). The '>' collapse arrow ->
+               setTreeCollapsed hides/shows ONLY the scope's top items (the Core rows
+               for Global, else the mask-tool rows -- the root rows above BasicHeader;
+               applyScopeItemsCollapsed, re-asserted after each buildTree since a
                rebuild resets row visibility). The Basic/Color/Effects sections stay
-               visible. [E] -> onLayerPreviewToggled (whole-layer eye). The DROPDOWN
-               carries ONLY the layers (LayerHeader::setLayers): the image's layers,
-               the active one marked with a checkmark -> onLayerSelected (switch
-               activeLayerIndex; then reveal the layer's OWN section -- un-collapse its
+               visible. [E] -> onScopePreviewToggled (whole-mask eye). The DROPDOWN
+               carries ONLY the scopes (ScopeHeader::setScopes): the image's scopes,
+               the active one marked with a checkmark -> onScopeSelected (switch
+               activeScopeIndex; then reveal the scope's OWN section -- un-collapse its
                mask rows (setTreeCollapsed(false), bulk-guarded so Solo leaves
                Basic/Color/Effects as-is) and select its first mask so the coverage
-               overlays the image, selectedMaskIndex 0 (Base has none, -1)). The layer
-               ACTIONS live on a separate ellipsis menu button [...] (layerMenuBtn)
+               overlays the image, selectedMaskIndex 0 (Global has none, -1)). The scope
+               ACTIONS live on a separate ellipsis menu button [...] (scopeMenuBtn)
                between the dropdown and [E], patterned on EmbelProperties::effectNewBtn
-               -> effectContextMenu: clicking it pops a QMenu (LayerHeader::showLayerMenu,
-               built on demand) with "Add new layer" -> newLayer (name dialog, default
-               "Layer n"); then, below a separator, the per-layer actions "Add mask to
-               <layer>" -> showMaskMenu, a checkable "Show mask overlay" (shown only
+               -> effectContextMenu: clicking it pops a QMenu (ScopeHeader::showScopeMenu,
+               built on demand) with "New mask" -> newScope (name dialog, default
+               "Mask n"); then, below a separator, the per-scope actions "Add to
+               <mask>" -> showMaskMenu, a checkable "Show mask overlay" (shown only
                while a mask tool is expanded; toggles the red coverage tint, the same
                action as the "O" shortcut -- maskOverlayToggleRequested ->
                MW::toggleMaskOverlay, and its check state is pushed back from
                ImageView::maskTintVisibilityChanged -> setMaskOverlayShown), a checkable
                "Show mask breakdown" (Result view vs Breakdown view -- see RESULT VEIL /
                BREAKDOWN OUTLINES below; maskBreakdownToggleRequested ->
-               MW::toggleMaskBreakdown), and Reset/Remove/Rename <layer> ->
-               resetActiveLayer / deleteLayer / renameActiveLayer. The per-layer group
-               is OMITTED for Base (index 0) -- LayerHeader::setBaseActive, driven by
-               updateMaskMenuBtn. MASK ENTRY POINTS: a layer's first mask tool is offered
-               automatically when the layer is created (newLayer -> showMaskMenu); further tools are
-               added via the dropdown "Add mask to <layer>" or the [+] glyph on each mask-tool row in
+               MW::toggleMaskBreakdown), and Reset/Remove/Rename <scope> ->
+               resetActiveScope / deleteScope / renameActiveScope. The per-scope group
+               is OMITTED for Global (index 0) -- ScopeHeader::setGlobalActive, driven by
+               updateMaskMenuBtn. MASK ENTRY POINTS: a scope's first mask tool is offered
+               automatically when the scope is created (newScope -> showMaskMenu); further tools are
+               added via the dropdown "Add to <mask>" or the [+] glyph on each mask-tool row in
                the tree (UR_AddBtn, hit-tested in mousePressEvent -> showMaskMenu). The dropdown entry
-               covers the case where the layer has no masks at all (skipped on create, or all deleted).
-               DevelopProperties::bindLayerHeader connects these signals.
-               TREE = ACTIVE LAYER: the tree is REBUILT for the active layer by buildTree() (on image
-               change, layer switch and mask add/remove/select): the layer's top items first (Base =>
+               covers the case where the scope has no masks at all (skipped on create, or all deleted).
+               DevelopProperties::bindScopeHeader connects these signals.
+               TREE = ACTIVE SCOPE: the tree is REBUILT for the active scope by buildTree() (on image
+               change, scope switch and mask add/remove/select): the scope's top items first (Global =>
                the Edit-source selector + Demosaic + Denoise raw rows [formerly the Core header]; else
                the mask tool rows) followed by the Basic / Color / Effects sections.
-               EDIT SOURCE (RAW files only, Base layer -- addCoreItems): the first Base top row is
+               EDIT SOURCE (RAW files only, Global scope -- addCoreItems): the first Global top row is
                "Edit:" hosting an A/B radio pair "Raw" / "Embedded Preview" (a plain QWidget in the
                value cell of a DT_None row, recreated each buildTree). It is kept in sync with G::useRaw
                and the status-bar useRaw button BOTH WAYS: picking a radio -> onEditSourceChanged ->
@@ -3252,7 +3267,7 @@ Layer & masking model (planned)
                currentIsRaw() (MW::isFileRaw = suffix in metadata->hasJpg) gates the whole Core block --
                non-raw files get no Core rows (they ARE the developable image). The Demosaic + Denoise
                raw rows show only when editing raw: applyCoreVisibility() (hide = !useRaw ||
-               layerItemsCollapsed) runs LAST in buildTree (after applyLayerItemsCollapsed, which would
+               scopeItemsCollapsed) runs LAST in buildTree (after applyScopeItemsCollapsed, which would
                otherwise re-show them) and again from setTreeCollapsed/syncEditRaw. Demosaic/Denoise raw
                are root leaves, so they carry UR_ExtraIndent (one extra indent level in the
                delegate's paint + sizeHint) to line up with the Basic sliders ("Temp"), which sit a
@@ -3264,15 +3279,15 @@ Layer & masking model (planned)
                open, Color/Effects closed), and QTreeView::expanded/collapsed -> persistSectionExpanded()
                writes the state whenever the user toggles one of the three headers (mask tool rows,
                which also expand/collapse, are filtered out by name). SECTION HEADERS: the Basic, Color
-               and Effects headers append the active layer's name (e.g. "Base: Basic", "Layer 1:
+               and Effects headers append the active scope's name (e.g. "Global: Basic", "Sky:
                Color") via updateSectionHeaderCaptions(). PREVIEW / RESET: each section header
                (Basic/Color/Effects) carries an eye BarBtn that toggles that group's Preview flag on
-               the active layer; the whole-layer eye + reset live in the LayerHeader widget
-               (EditLayer::showBasic/showColor/showEffects/showLayer, all default true, persisted in
+               the active scope; the whole-mask eye + reset live in the ScopeHeader widget
+               (EditScope::showBasic/showColor/showEffects/showScope, all default true, persisted in
                the sidecar only when false). Preview is
-               NON-DESTRUCTIVE: effectiveLayerParams() returns a COPY of the layer's params with any
+               NON-DESTRUCTIVE: effectiveScopeParams() returns a COPY of the scope's params with any
                previewed-off group folded to identity (EditParams::resetGroup) -- stored values are
-               kept, so re-showing restores them; showLayer folds all three. The fold is applied at
+               kept, so re-showing restores them; showScope folds all three. The fold is applied at
                every render-capture site (EditStack::effectiveParams, DevelopProperties::editParams
                and stackJob). Right-clicking a header (contextMenuEvent) offers Preview (toggle) +
                Reset <group>; Reset is DESTRUCTIVE -- EditParams::resetGroup on the
@@ -3280,64 +3295,67 @@ Layer & masking model (planned)
                tree, not only on a header) also carries the tree-wide items Expand all /
                Collapse all / Solo mode, mirroring the Embellish dock: Expand all /
                Collapse all go through DevelopProperties::setAllSectionsExpanded,
-               which calls QTreeView expandAll/collapseAll AND drives the Layer row
-               (its collapse arrow lives in the LayerHeader band, not the tree --
-               LayerHeader::setCollapsed + setTreeCollapsed). Solo mode is a checkable
+               which calls QTreeView expandAll/collapseAll AND drives the Scope row
+               (its collapse arrow lives in the ScopeHeader band, not the tree --
+               ScopeHeader::setCollapsed + setTreeCollapsed). Solo mode is a checkable
                toggle (persisted as Settings "Develop/isSolo", restored in initialize
                via setSolo) that, when on, collapses the other top-level sections
                whenever one is expanded (PropertyEditor::collapseAllExcept in
-               mousePressEvent). The Layer row is folded into Solo too: expanding an
-               adjustment section (Basic/Color/Effects) collapses the layer
-               (DevelopProperties::onSectionExpanded) and expanding the layer collapses
-               those sections (setTreeCollapsed). The Demosaic row is a layer item, NOT
-               a Solo peer, so expanding it never collapses the layer. A bulk guard
+               mousePressEvent). The Scope row is folded into Solo too: expanding an
+               adjustment section (Basic/Color/Effects) collapses the scope
+               (DevelopProperties::onSectionExpanded) and expanding the scope collapses
+               those sections (setTreeCollapsed). The Demosaic row is a scope item, NOT
+               a Solo peer, so expanding it never collapses the scope. A bulk guard
                (isBulkExpandCollapse) keeps Expand all from tripping the Solo handler.
                For a RAW file being edited as raw (currentIsRaw() && G::useRaw) the menu
                also offers "Raw demosaic" -- captioned "Raw demosaic and denoise" when
                the engine is Winnow (that engine adds the raw-denoise rows). It is a
-               navigation shortcut: DevelopProperties::showRawDemosaic activates the Base
-               layer (onLayerSelected, since the Demosaic/Denoise Core rows exist only
-               there) and un-collapses the layer items so the rows are visible.
+               navigation shortcut: DevelopProperties::showRawDemosaic activates the Global
+               scope (onScopeSelected, since the Demosaic/Denoise Core rows exist only
+               there) and un-collapses the scope items so the rows are visible.
                Group->keys mapping follows the UI (texture/dehaze are Basic; tone
                splits are Basic for Reset only; localDenoiseLuma -- the Effects "Denoise" (local NR,
-               key "localDenoise") -- is in Effects; denoiseLuma/denoiseChroma are the Base "Denoise
+               key "localDenoise") -- is in Effects; denoiseLuma/denoiseChroma are the Global "Denoise
                raw" (decode-time global NR, key "denoise") and in no group). eye.png/eye_off.png live
                in images/icon16. Transform has its
                own Preview eye + Reset in TransformPanel, wired to MW (previewToggled/resetRequested);
                its eye is a live result toggle, not a group fold (see the Transform section below).
-               NAMING: index 0 is always
-               the "Base" layer (normalized on load in setCurrentImage); extra layers added with +
-               are numbered "Layer 1", "Layer 2", ... (the new layer's number = its index). The Base
-               layer CANNOT be removed -- deleteLayer refuses when the active layer is
-               index 0 (popup "The Base layer cannot be removed.").
-               RENAME: the header's [R] button -> renameActiveLayer pops a QInputDialog
-               seeded with the current name; uniqueLayerName resolves clashes with a
-               numeric suffix; Base (index 0) is rejected with a popup "The Base
-               layer cannot be renamed." An all-identity stack is
-               never persisted, so empty layers added to an unedited image are not written (EXCEPTION:
-               a layer that has any mask component counts as non-identity so masks survive
-               navigation). The old QSettings layer helpers (readLayerList/setCurrentLayer/
-               layerRootPath/layerValue) are left defined but unused; presets (Increment 2) will
-               repurpose a QSettings store.
-             - MASK (UI increment; compositor + canvas overlay deferred): each NON-Base layer has ONE
-               mask, built from an ordered list of tools -- editstack.h EditLayer.masks is now that
+               NAMING: index 0 is always the "Global" scope (named "Base"
+               before 2026-07-30; normalized on load in setCurrentImage, so
+               older sidecars re-label themselves).  Every OTHER scope is a
+               MASK in the UI -- added with + and named "Mask 1", "Mask 2", ...
+               (the new scope's number = its index), renameable to anything
+               ("Sky", "Subject").  Global CANNOT be removed -- deleteScope
+               refuses when the active scope is index 0 (popup "Global cannot
+               be removed.").
+               RENAME: the header's [R] button -> renameActiveScope pops a QInputDialog
+               seeded with the current name; uniqueScopeName resolves clashes with a
+               numeric suffix; Global (index 0) is rejected with a popup "Global
+               cannot be renamed." An all-identity stack is
+               never persisted, so empty scopes added to an unedited image are not written (EXCEPTION:
+               a scope that has any mask component counts as non-identity so masks survive
+               navigation). The old QSettings scope helpers (readLayerList / setCurrentLayer /
+               layerRootPath / layerValue) were DELETED in the 2026-07-30 rename -- they had
+               been dead since the stack moved per-image; presets use their own QSettings store.
+             - MASK (UI increment; compositor + canvas overlay deferred): each NON-Global scope has ONE
+               mask, built from an ordered list of tools -- editstack.h EditScope.components is now that
                tool list (MaskComponent: tool/op/inverted/feather + opaque paramsJson for per-tool
                geometry). Each tool ADDS or SUBTRACTS area; the first tool must Add (nothing to
-               subtract from an empty mask). The combine field is legacy/unused. A layer's first mask
-               tool is offered automatically when the layer is created (newLayer -> showMaskMenu); Base
+               subtract from an empty mask). The combine field is legacy/unused. A scope's first mask
+               tool is offered automatically when the scope is created (newScope -> showMaskMenu); Global
                (index 0) carries no mask. showMaskMenu pops a menu of "Add <tool> Mask" and (once a tool
                exists) "Subtract <tool> Mask" entries -- every tool name ends in "Mask" and the AI
                tools drop the "Select" prefix (maskToolName): Linear/Radial Gradient, Brush, Color/
-               Luminance Range, Subject/Sky/Background, Depth Range. ADD-LAYER FLOW: newLayer pops
-               the "New layer" name dialog at the cursor (the [+] button just clicked, clamped to the
+               Luminance Range, Subject/Sky/Background, Depth Range. ADD-MASK FLOW: newScope pops
+               the "New scope" name dialog at the cursor (the [+] button just clicked, clamped to the
                screen) instead of screen-centre, and on accept immediately calls showMaskMenu -- a new
-               layer exists to carry a masked adjustment, so choosing the mask tool is the next step
-               (Escape leaves an empty layer). ADD-MASK PLACEHOLDER: a non-Base layer with no mask yet
+               scope exists to carry a masked adjustment, so choosing the mask tool is the next step
+               (Escape leaves an empty scope). ADD-MASK PLACEHOLDER: a non-Global scope with no mask yet
                (e.g. Escape was pressed) shows a single "Add mask" row at the top of the tree with a
                [+] glyph -- a header-style UR_LeafSingleLine spanned row carrying only UR_AddBtn (no
                [-], no expand arrow), added by addAddMaskRow in addMaskItems. Clicking anywhere on it
                (it has no UR_MaskIndex; mousePressEvent identifies it by UR_Name "addMask") pops
-               showMaskMenu. It disappears as soon as a tool is added -- the layer then shows its tool
+               showMaskMenu. It disappears as soon as a tool is added -- the scope then shows its tool
                rows, and adding a tool selects it, so the placeholder is present precisely when no mask
                is selected. Each tool is a top-level tree
                row (caption "Add/Subtract <tool>" with a [-] remove button; the tools sit ABOVE the
@@ -3371,7 +3389,7 @@ Layer & masking model (planned)
                .x()), reproducible without column 0's rect. The caption right edge is pulled in and
                the text elided when the value field is occupied: before the delegate-drawn [-] glyph
                (UR_DeleteBtn), or before a value-column widget (value sibling's UR_Editor geometry +
-               childrenRect; e.g. the Layers/Templates -/+ buttons, which are index widgets
+               childrenRect; e.g. the Scopes/Templates -/+ buttons, which are index widgets
                composited on top and so still show). setFirstColumnSpanned is still used by mask-tool
                rows (so column-1 is not painted at all) but is NOT required for plain headers.
                Clicking a tool toggles it: the SELECTED tool expands to show its
@@ -3389,7 +3407,7 @@ Layer & masking model (planned)
                Resolution/zoom independent; survives proxy/full re-render. Handshake (wired in MW,
                mirroring paramsChanged): selecting a spatial tool fires DevelopProperties::maskEditBegin
                (tool,op,inverted,paramsJson,feather) -> ImageView::beginMaskEdit; deselecting fires
-               maskEditEnd. updateMaskEdit() (end of rebuildMaskTools) tracks every image/layer/
+               maskEditEnd. updateMaskEdit() (end of rebuildMaskTools) tracks every image/scope/
                selection change; developDockVisibilityChange() ends/re-asserts it so the overlay never
                leaks into the plain loupe. ImageView::drawForeground dispatches by tool to
                drawLinearMask / drawRadialMask, shown only while the cursor is over the view (maskHover
@@ -3408,18 +3426,18 @@ Layer & masking model (planned)
                green/blue as its Breakdown outline. That preview is ALWAYS the SELECTED
                tool. Invert flips (Radial: effect outside).
              - RESULT VEIL (composite overlay): while ANY mask tool is expanded
-               (selectedMaskIndex >= 0 on a non-Base layer), the loupe shows the ENTIRE
-               layer mask -- all the layer's Add/Subtract tools composited -- as a single
+               (selectedMaskIndex >= 0 on a non-Global scope), the loupe shows the ENTIRE
+               mask -- all the scope's Add/Subtract tools composited -- as a single
                flat RED coverage tint, and hides it when all tools collapse. This is the
                TRUE resulting mask: alpha is the composite coverage ALONE (up to 150), so
                Subtract holes stay holes and the veil by itself answers "what does this
-               layer affect?". MW::updateMaskOverlayTint (wired to maskEditBegin/End +
+               scope affect?". MW::updateMaskOverlayTint (wired to maskEditBegin/End +
                paramsChanged) reuses the render-path buildMaskBuffer (so the tint is
                pixel-consistent with the render) at a capped resolution (~1600 px long
                edge), builds the AI/range refs it needs (cached), converts coverage ->
                premultiplied red, adds the Breakdown outlines (below), orients it to the
-               displayed pixmap, and hands it to ImageView::setLayerMaskTint
-               (clearLayerMaskTint when no tool is expanded). drawForeground paints the
+               displayed pixmap, and hands it to ImageView::setScopeMaskTint
+               (clearScopeMaskTint when no tool is expanded). drawForeground paints the
                veil UNDER the active tool's handles, NOT hover-gated; when present the
                per-tool draw takes drawTint=false (its own tint would double up). The veil
                reflows live during a geometric drag. "O" (toggleMaskOverlayAction ->
@@ -3428,7 +3446,7 @@ Layer & masking model (planned)
                (handles/cursor keep drawing); reset to shown on each beginMaskEdit.
                Changing any adjustment slider while shown also hides it
                (maskTintHideRequested -> hideMaskTint) so the effect is visible; re-shown
-               by "O", the layer menu's "Show mask overlay" row, or re-selecting a tool.
+               by "O", the scope menu's "Show mask overlay" row, or re-selecting a tool.
                Mask-only edits (Feather/Invert/Range/Brush) keep the overlay shown.
              - BREAKDOWN OUTLINES (which constituents build this mask?): the veil is a
                FILL, so to show HOW it is built without repainting over it, each
@@ -3446,8 +3464,8 @@ Layer & masking model (planned)
                (DevelopProperties::activeMaskIndex()) is drawn LAST with a thicker ring so
                it reads on top, and clicking another row re-emits maskEditBegin so the
                emphasis follows the selection. RESULT vs BREAKDOWN is a session toggle
-               (MW::maskShowBreakdown, default Breakdown), flipped by the layer menu's
-               "Show mask breakdown" row (LayerHeader::maskBreakdownToggled ->
+               (MW::maskShowBreakdown, default Breakdown), flipped by the scope menu's
+               "Show mask breakdown" row (ScopeHeader::maskBreakdownToggled ->
                DevelopProperties::maskBreakdownToggleRequested -> toggleMaskBreakdown):
                Breakdown = veil + outlines; Result = veil alone. RED thus always means
                "the result", green/blue always mean "an Add/Subtract constituent".
@@ -3460,27 +3478,27 @@ Layer & masking model (planned)
                language: each mask tool ROW's caption is tinted by its role (green Add /
                blue Subtract) via the UR_CaptionColor delegate role (set in addToolRow,
                honoured in PropertyDelegate).
-             - RENDER COMPOSITING (Stage 4b + N-layer stack): the render composites the WHOLE stack
-               in SCENE-LINEAR before the output transform, INDEPENDENT of which layer is active for
+             - RENDER COMPOSITING (Stage 4b + N-scope stack): the render composites the WHOLE stack
+               in SCENE-LINEAR before the output transform, INDEPENDENT of which scope is active for
                editing -- so a saved mask is visible the moment the image loads (no need to select
-               its layer). DevelopProperties::stackJob() captures it as plain values (Base params +
-               each enabled non-Base layer's params/masks/combine) so it is safe for the off-thread
-               full-res render. WorkingImageCache::renderStack starts from Base (applied globally),
-               then for each layer develops the RUNNING ACCUMULATOR `acc` with that layer's params (an
+               its scope). DevelopProperties::stackJob() captures it as plain values (Global params +
+               each enabled non-Global scope's params/masks/combine) so it is safe for the off-thread
+               full-res render. WorkingImageCache::renderStack starts from Global (whole image),
+               then for each scope develops the RUNNING ACCUMULATOR `acc` with that scope's params (an
                identity side aliases acc -- no copy/Develop) and blends back over acc by its mask
-               (acc = acc*(1-m)+layer*m; an empty/global mask applies the params globally on top); one
+               (acc = acc*(1-m)+scope*m; an empty/global mask applies the params globally on top); one
                final OutputTransform. MASK BLEND SPACE is an A/B flag (kPerceptualMaskBlend in
                workingimagecache.cpp): A = lerp in scene-linear (physically faithful, but a STRONG
                masked adjustment's visible falloff is front-loaded -- display gamma steepens it near
                m=1, so a linear feather reads abrupt at the size edge); B (current) = lerp in a
                PERCEPTUAL (gamma 2.2) space so DISPLAYED brightness tracks m ~linearly and a feather
                reads evenly (== the coverage tint). Only feather pixels (0<m<1) pay the pow; m<=0 skip,
-               m>=1 copy. Flip the flag to compare/revert. Because each layer develops the accumulated result (NOT the
-               original work), where two layers' masks OVERLAP their adjustments COMPOUND rather than
-               the top layer replacing the one below -- e.g. two overlapping +1-stop layers give ~+2
+               m>=1 copy. Flip the flag to compare/revert. Because each scope develops the accumulated result (NOT the
+               original work), where two scopes' masks OVERLAP their adjustments COMPOUND rather than
+               the top scope replacing the one below -- e.g. two overlapping +1-stop scopes give ~+2
                stops in the overlap (in scene-linear the per-op composition is natural: exposure
-               multiplies, etc.). Layer ORDER therefore matters for non-commuting ops. buildMaskBuffer
-               (mainwindow.cpp) rasterizes a layer's component(s) at WorkingImage (pre-orientation)
+               multiplies, etc.). Scope ORDER therefore matters for non-commuting ops. buildMaskBuffer
+               (mainwindow.cpp) rasterizes a scope's component(s) at WorkingImage (pre-orientation)
                resolution; each pixel maps work-normalized -> output-normalized (output = work
                rotated CW by degrees) so geometry edited on the oriented loupe lines up after the
                EXIF rotation. parseMaskComp/evalMaskComp branch by tool: Linear = projection ramp;
@@ -3493,9 +3511,9 @@ Layer & masking model (planned)
                bytes and built once per settle). Components combine in order: brush samples its buffer
                (then component Invert), parametric uses evalMaskComp. Falloff smootherstep,
                Add=union(max), Subtract=*(1-c), Invert flips. developComposite remains the fast
-               single-pass path when there are no non-Base layers. Mask add/delete/geometry/feather/
+               single-pass path when there are no masks. Mask add/delete/geometry/feather/
                invert and a committed brush stroke emit paramsChanged() to re-render. Deferred: true
-               STACKED adjustments (each layer builds on the result below, not the original), the
+               STACKED adjustments (each scope builds on the result below, not the original), the
                combine field (Union only today), and AI tools.
              - BRUSH (freehand mask): vector strokes in paramsJson {size,flow,autoMask,autoMaskMode,
                strokes:[{pts,size,feather,flow,erase,autoMask,autoMaskMode}]} (each stroke snapshots
@@ -3514,7 +3532,7 @@ Layer & masking model (planned)
                tracks the coverage the way Lightroom's does. Live red/blue tint
                preview rebuilt only on the dirty segment bbox; the develop re-composites on stroke
                release (maskGeometryChanged -> setActiveMaskParams). WHILE a stroke is being swiped the
-               whole-layer composite tint (maskLayerTint, rebuilt only on release) is SUPPRESSED
+               whole-mask composite tint (scopeMaskTint, rebuilt only on release) is SUPPRESSED
                (drawForeground brushStroking guard) so the per-brush live preview shows the stroke
                building up in real time instead of the tint only appearing after release. Dock rows: Size/Feather/Flow/Auto
                mask/Invert. Size also via [ / ] keys or a two-finger drag (ImageView wheelEvent, gated
@@ -3559,7 +3577,7 @@ Layer & masking model (planned)
                RangeMask::RangeRef -- interleaved RGB 0..1, output-oriented, capped ~1024), built and
                registered by path (putRef/getRef, mirroring BrushStamp's guide) so the loupe overlay
                and the develop render sample the IDENTICAL map (preview == render). The reference is
-               the developed BASE layer only (Base params + OutputTransform + orientation, MW::
+               the developed GLOBAL scope only (Global params + OutputTransform + orientation, MW::
                ensureRangeRef via developComposite on a downscaled work) -- "what you see", so the
                selection tracks the base tones -- and BASE-ONLY on purpose: measuring on the composite
                would let a range mask that shifts its own tones feed back on its own selection and
@@ -3608,14 +3626,14 @@ Layer & masking model (planned)
                blue (Subtract) like the other tools and rebuilds on any dock param change (maskRange
                Changed / setMaskFeather / setMaskInverted) or eyedropper edit; it heals if the
                reference lands after the overlay began (buildRangePreview on a null preview). Deferred:
-               a dual-handle luminance range slider, per-layer "image below" reference for stacked
+               a dual-handle luminance range slider, per-scope "image below" reference for stacked
                range masks, and an in-dock swatch strip (swatches live on the loupe for now).
              - INFERENCE LAYER (Utilities/inference/): the unified model-inference seam that new
                neural features use. InferenceSession (front door) owns an InferenceBackend; the only
                concrete backend today is OrtBackend (ONNX Runtime). Per-platform execution providers
                are selected at load: CoreML EP on macOS (dispatches to the Apple Neural Engine / GPU),
                DirectML on Windows, CPU everywhere as the fallback. All ORT contact is confined to
-               ortbackend.cpp behind a PIMPL, and the whole layer is guarded by WINNOW_HAVE_ORT: built
+               ortbackend.cpp behind a PIMPL, and the whole scope is guarded by WINNOW_HAVE_ORT: built
                without ORT (CMake option WINNOW_ENABLE_ORT=OFF, the default until the runtime is
                vendored on both platforms) it compiles to a stub -- IsLoaded()==false, Run() no-ops --
                so features degrade like a missing model. This DELIBERATELY supersedes the old cv::dnn /
@@ -3661,7 +3679,7 @@ Layer & masking model (planned)
                next to focus_point_model.onnx (executable dir on Windows, .app/Contents/MacOS on mac;
                CMake bundles/copies it, warning rather than failing if absent so the mask just
                no-ops). MW::ensureSubjectMask (mirroring ensureRangeRef) develops the downscaled BASE
-               layer (output-oriented, "what you see"), runs the model synchronously on the GUI thread
+               scope (output-oriented, "what you see"), runs the model synchronously on the GUI thread
                with a busy cursor (~200-400 ms, one-shot per image on the user's add/select action),
                and registers the coverage by path in Develop/subjectmask.h (SubjectMask::SubjectRef,
                single-channel). The raw 320x320 saliency is EDGE-REFINED before storage: upsampled to
@@ -3791,14 +3809,14 @@ Layer & masking model (planned)
                into the wall and emits {"size","strokes"} via maskGeometryChanged
                -> setActiveMaskParams -> paramsChanged, which runs
                ensureObjectMask (encode once + fill + decode) when closed and
-               refreshes maskLayerTint. Size: [ / ] keys, a two-finger drag /
+               refreshes scopeMaskTint. Size: [ / ] keys, a two-finger drag /
                wheel (adjustBrushSize -> maskBrushSizeRequested ->
                setActiveBrushSize), or the dock Size slider; Cmd/Ctrl+Z =
                objUndoStroke. State: maskObjPerim/maskObjFill/maskObjClosed/
                maskObjDrawing (imageview.h); helpers objEnsureBuffers/
                objRecomputeFill/objRebuildPreview/objUndoStroke; beginMaskEdit
                restores strokes+size, endMaskEdit clears; maskHitTest returns -1
-               for Object; drawMask suppresses the stale layer tint while a
+               for Object; drawMask suppresses the stale scope tint while a
                stroke is in flight (brushStroking) so the amber/green shows live.
                Object is NOT in maskIsContent() and needs no content preview.
                DOCK ROWS WIRED (developproperties.cpp): maskToolName/FromName
@@ -3949,7 +3967,7 @@ Fill Replace (spot / fill / object heal)
     spotStrokeCommitted -> DevelopProperties appends a FillSpot -> re-render (heal); pins
     come from spotPinCenters via spotPinsChanged. Model: ReleaseExtras/migan.onnx
     (gitignored, EXISTS-guarded bundling); warn-if-absent -> the tool no-ops like the AI
-    masks. FUTURE: the "Fill" pseudo-layer can be promoted to a real EditLayer (format is
+    masks. FUTURE: the "Fill" pseudo-scope can be promoted to a real EditScope (format is
     forward-tolerant); larger creative fills need a diffusion model behind the
     InferenceBackend seam.
 
@@ -4140,8 +4158,9 @@ Develop scopes (histogram + vectorscope)
     cleared at the imageView->clear() sites. No new timers -- it piggybacks the existing coalesced
     render path. The pass is a cheap no-op while the scopes are hidden.
 
-    A button on the Develop editor bar (graphic.png) toggles the strip via MW::toggleDevelopScopes;
-    the choice persists as Settings "Develop/scopesVisible". (A standalone widget above the tree was
+    A button on the Develop editor bar (graphic.png), or "G" in Develop mode, toggles
+    the strip via MW::toggleDevelopScopes; the choice persists as Settings
+    "Develop/scopesVisible". (A standalone widget above the tree was
     chosen over an in-tree spanned row so the scope stays pinned rather than scrolling away; see
     notes/Develop_Scopes_Plan.txt for the rejected alternative.)
 
@@ -4153,7 +4172,7 @@ Develop scopes (histogram + vectorscope)
     toneHighlightCenter, perceptual 0..1, defaults 0.25/0.50/0.75). In Develop::buildToneLut the
     shadows/highlights Gaussian centres come from the two outer handles and each region's sigma is
     derived from its gap to the crossover (kToneSigmaSpan, so the default gap reproduces the old
-    fixed kToneSigma) -- i.e. the defaults are an exact no-op. A drag writes the active layer's
+    fixed kToneSigma) -- i.e. the defaults are an exact no-op. A drag writes the active scope's
     params and emits paramsChanged() (live re-render, coalesced like the sliders); the splits only
     change pixels when a tone slider is non-zero, so they are NOT part of EditParams::isIdentity().
     DevelopProperties::bindToneSlider() connects the slider (drag -> onToneSplitsChanged) and
@@ -4564,15 +4583,15 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     which is correct: a higher Kelvin renders the image warmer.
 
     Sections (built via PropertyEditor::addItem):
-        Layers   header with -/+ buttons (same idiom as Embellish Templates) + a "Select
-                 layer" combo. A layer is one set of adjustments; switching rebuilds the
-                 Basic/Effects rows from that layer's saved values. Layers persist under
-                 Settings "Develop/Layers/<name>/..." with "Develop/Layers/current".
-                 SCAFFOLD ONLY -- this is the "layers as ALTERNATIVES" model (only the selected
-                 layer is active, persisted per-machine in QSettings). It is superseded by the
-                 "Layer & masking model (planned)" subsection above: all layers active as a
-                 composited stack, the combo selects only which layer the sliders EDIT, opacity +
-                 masks per layer, persisted per-image in the XMP sidecar.
+        Scope    the band above the tree (scopeheader.cpp / scopeheaderlab.cpp): Global
+                 plus one row per mask, with -/+ and the per-row [v] menu. Selecting a
+                 row only chooses which scope the sliders EDIT -- every enabled scope is
+                 composited, per the "Scope & mask model" subsection above, and the whole
+                 stack persists per-image in the XMP sidecar.
+                 HISTORY: an early SCAFFOLD stored "scopes as ALTERNATIVES" per-machine
+                 under QSettings "Develop/Layers/<name>/..." (only the selected one
+                 active). Its helpers (readLayerList / setCurrentLayer / layerRootPath /
+                 layerValue) were deleted in the 2026-07-30 rename.
         Basic    WB (dropper + preset dropdown), Temp, Tint, Exposure, Contrast,
                  Highlights, Shadows, Whites, Blacks, Texture, Dehaze. Integer -100..100
                  except Exposure (EV, -5.00..5.00), Temp (KELVIN, 2000..50000, log ramp)
@@ -4583,7 +4602,7 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                  Integer -100..100 sliders, all default 0 (identity).
         Effects  Denoise (localDenoiseLuma, luminance NR) + Denoise Color
                  (localDenoiseChroma, chroma NR) -- two 0..100 sliders (mapped to 0..1),
-                 default 0. Local, maskable, post-demosaic. Distinct from the Base layer's
+                 default 0. Local, maskable, post-demosaic. Distinct from the Global scope's
                  "Denoise raw" (PMRID pre-demosaic, denoiseLuma/denoiseChroma). Also
                  Vignette (vignetteExposure, EV -5.00..5.00, default 0) + Vignette Feather
                  (vignetteFeather, 0..100 -> 0..1, default 50): a global radial
@@ -4593,7 +4612,7 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                  0..1, default 50): monochromatic film grain (see #9 above); size and
                  roughness are inert until amount is non-zero.
 
-    Each layer maps onto one EditParams (DevelopProperties::editParams()). Binding a
+    Each scope maps onto one EditParams (DevelopProperties::editParams()). Binding a
     value change to a re-decode is deferred: itemChange() persists the value to settings
     and emits paramsChanged() so the hook is ready.
 
@@ -4622,7 +4641,7 @@ Color Mix panel (colour grading)
 
     Data + pipeline. EditParams gains nine grade fields (gradeShadow/Mid/High x Hue/Sat/
     Lum), its own Group::ColorMix (reset/preview independent of the Color group), and a
-    per-layer showColorMix preview flag; all persist through editstack.h (forward-
+    per-scope showColorMix preview flag; all persist through editstack.h (forward-
     tolerant, so old sidecars load as identity). The math lives header-only in Develop/
     colorgrade.h (gradeTintVector + gradeTonalWeights -- no Qt/OpenCV, unit-tested by
     tst_colorgrade); Develop::buildPointCoeffs/applyPointOps consume it as stage 5d,
@@ -4666,7 +4685,7 @@ Develop presets (save)
     and reports back the preset name + the checked leaf keys per group. It knows nothing
     of the develop data model or the settings layout. Groups:
         Global settings   a non-checkable container. Leaves: Raw demosaic (the decode
-                          engine, G::decodeRawEngine), Raw noise reduction (Base
+                          engine, G::decodeRawEngine), Raw noise reduction (Global
                           denoiseLuma+denoiseChroma), Histogram tonal ranges (the three
                           tone splits), Crop, Level (straighten) and Warp (each a SEPARATE
                           leaf, from the per-image Geometry), Spots (all spot heals).
@@ -4674,18 +4693,18 @@ Develop presets (save)
                           raw NR (PMRID) is the Winnow engine only; both stay listed but
                           are pre-checked only when relevant (demosaic when the file is
                           raw; raw NR when raw AND not decoded by Apple).
-        Base layer /      one checkable tri-state parent per layer. Leaves are the Basic /
-        Layer N           Color / Effects adjustments (temp..grain). Denoise folds in its
+        Global edits /     one checkable tri-state parent per scope. Leaves are the Basic /
+        Mask N            Color / Effects adjustments (temp..grain). Denoise folds in its
                           Color (chroma); Vignette folds in its feather; Grain folds in
                           size + roughness. Mask geometry is content-specific and is NOT a
                           preset item.
 
-    Write (DevelopProperties::saveDevelopPreset / writePreset / writeLayerLeaves). The
+    Write (DevelopProperties::saveDevelopPreset / writePreset / writeScopeLeaves). The
     caller snapshots the current image's EditStack and persists the checked values to
     QSettings under the requested hierarchy:
         Develop Presets/<name>/Global/<key>       = value
-        Develop Presets/<name>/Base layer/<key>   = value
-        Develop Presets/<name>/Layer 1/<key>      = value
+        Develop Presets/<name>/Global edits/<key>  = value
+        Develop Presets/<name>/Mask 1/<key>        = value
     Leaf keys reuse the EditParams JSON field names and store the RAW param values (the
     source of truth, e.g. denoise 0..1), so a future "apply preset" can assign them
     straight back (mirroring EditStack::paramsFromJson). Geometry is stored as crop
@@ -4703,3 +4722,87 @@ Develop presets (save)
         globally Pick, so like the other bare Develop keys it is dispatched by
         developShortcutIntercept via the developShortcuts table (loadDevelopShortcuts),
         NOT a real QKeySequence -- QKeySequence("P") would clash with Pick. Stub for now.
+
+
+Develop history (the History dock)
+-----------------------------------
+
+    A Lightroom-style list of every develop action on the current image. Hovering an
+    entry previews that state in the loupe; clicking it reverts the image to it. The
+    dock is tabbed with the Develop dock in the right area and is shown / hidden with
+    it -- the two are one tool. Develop is always raised as the front tab of the pair
+    (History is shown first, then Develop, then raised), so History is reached by
+    clicking its tab -- or with "H" (menu View > Develop History Panel). H is a Develop
+    MODE LOCAL key (developShortcuts / developShortcutIntercept), not a QKeySequence,
+    since the dock is Develop-only; the F-key series the other docks use ran out at F10
+    (F11 is taken by macOS). Like F3-F9 it shows/raises rather than toggles.
+
+    STARTUP. Winnow always opens in Preview mode, so MW::showEvent hides the Develop
+    tool after restoreState() -- through closeDevelopDock(), which takes History with
+    it and unchecks both dock actions. Hiding developDock alone was not enough:
+    restoreState() re-shows every dock the last session had visible, so quitting from
+    Develop mode reopened with History on screen, visible but disabled.
+
+    GOTCHA (cost an afternoon): a TABIFIED dock keeps isVisible() == true even when a
+    sibling tab is selected -- that is why isSelectedDockTab tests the visible REGION.
+    developDockVisibilityChange used to raise() developDock on any visibilityChanged
+    where isVisible() was true, which yanked Develop back to the front the moment a
+    sibling tab was clicked, so the History tab appeared dead. It now raises only when
+    Develop really is the front tab. Any future dock tabbed with Develop needs the same
+    care.
+
+    THE SIDECAR DOES NOT RECORD ACTIONS. winnow:Develop holds ONE base64 blob: the
+    current EditStack, i.e. the RESULT state (Metadata::readDevelopSidecar /
+    writeDevelopSidecar, and DevelopProperties::flushImage). There is no action log to
+    read, so History builds its own timeline of labelled EditStack SNAPSHOTS. It stays
+    in sync with the sidecar by sharing the same object: an entry IS an EditStack, so
+    restoring one just writes it back into stackCache and marks the image dirty, and the
+    ordinary flush persists it. The sidecar remains the single source of truth for the
+    current state.
+
+    SESSION SCOPED. Entries are built in memory as the user edits and are discarded on
+    quit; nothing new is written to the sidecar (no format change). Snapshots are not
+    free -- a brush / object mask paramsJson runs to tens of KB -- so DevelopHistory caps
+    at kMaxEntries (100) steps per image, dropping the oldest EDITS (the baseline entry
+    survives and adopts the dropped step's state), and kMaxImages (40) images LRU.
+
+    Recording seam (ONE function). Every develop action already ended with the same three
+    lines: dirty.insert(currentImagePath) / emit paramsChanged() / debounceWriteTimer->
+    start(). That dirty.insert was the exact commit point and every one of them (~30) is
+    now DevelopProperties::noteEdit(action, value, mergeKey) -- mark dirty, record the
+    snapshot, arm the debounced write. Use noteScopeEdit(scope, ...) where the prefix is
+    not the active scope: "Global" for the raw rows (they always write scope 0) and ""
+    for whole-image actions (crop, spot heals) that belong to no scope.
+      - Labels. The scope prefix is the active EditScope's name, except an unrenamed
+        "Mask N" carrying tools reads as its first tool (maskToolName), so an edit on a
+        Subject mask logs as "Subject Mask: Hue  -18". Slider captions come from the
+        row's own caption cell; values are formatted exactly as the slider shows them
+        (integer when UR_Div is 0, else 2 dp) with a + on positives (historyValueText).
+      - Coalescing. A non-empty mergeKey that matches the top entry REPLACES it, so a
+        whole slider drag or colour-wheel drag is ONE entry, not one per tick. Structural
+        actions (add/delete mask, reset, crop) pass no mergeKey.
+      - Guards. isPopulating (pushing saved values into the editors) and
+        isRestoringHistory (a revert repopulating the panel) suppress recording.
+
+    Revert model (Lightroom). pos is the entry currently applied. Recording a new action
+    while pos is not the last entry DISCARDS everything after pos -- editing from an
+    earlier state truncates, like an undo stack. Rows after pos are painted dimmed in the
+    meantime.
+
+    Hover preview = PROXY RENDER ONLY. previewHistoryEntry sets previewStack/previewActive
+    (read at the top of stackJob and editParams, so nothing else in the render path knows)
+    and emits historyPreviewChanged, which createDevelopDock connects to
+    renderDevelopPreview(false). It deliberately does NOT go through developParamsChange:
+    that also arms the full-res settle render, and a cursor passing down the list must not
+    queue one heavy render per row. The view debounces the hover (kHoverDelayMs 120) and
+    ends the preview on leave; preview is skipped while a mask tool or the spot tool is
+    armed (they own the canvas overlay). The click (applyHistoryEntry) takes the full
+    path: retire any half-built mask tool, write the snapshot into stackCache, mark dirty,
+    refreshScopeList + buildTree (scope/mask structure may differ), emit paramsChanged.
+
+    Files. Develop/History/develophistory.h (HistoryEntry + DevelopHistory, header-only,
+    owned by DevelopProperties) and Develop/History/historyview.{h,cpp} (HistoryView, a
+    QListWidget already themed by WidgetCSS::listWidget, plus HistoryDelegate painting
+    action left / value right). MW::createHistoryDock runs AFTER createDevelopDock (it
+    binds to developProperties). Adding the dock required the full new-dock checklist
+    above, including the history_white.png glyph and the winnowStateVersion bump to 2.

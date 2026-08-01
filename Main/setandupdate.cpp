@@ -179,7 +179,23 @@ void MW::setEmbelDockVisibility()
 void MW::setDevelopDockVisibility()
 {
     if (G::isLogger) G::log("MW::setDevelopDockVisibility");
-    developDock->setVisible(developDockVisibleAction->isChecked());
+    const bool on = developDockVisibleAction->isChecked();
+    /* History is part of the Develop tool -- it follows the Develop dock, action and all,
+       so a later setHistoryDockVisibility() agrees rather than fighting it. Shown before
+       Develop so Develop, not History, is the front tab of the pair. */
+    if (historyDock && historyDockVisibleAction) {
+        historyDockVisibleAction->setChecked(on);
+        historyDock->setVisible(on);
+    }
+    developDock->setVisible(on);
+    if (on) developDock->raise();
+}
+
+void MW::setHistoryDockVisibility()
+{
+    if (G::isLogger) G::log("MW::setHistoryDockVisibility");
+    if (!historyDock || !historyDockVisibleAction) return;
+    historyDock->setVisible(historyDockVisibleAction->isChecked());
 }
 
 void MW::setMetadataDockFixedSize()
@@ -226,6 +242,13 @@ void MW::closeDevelopDock()
 {
     developDock->setVisible(false);
     developDockVisibleAction->setChecked(false);
+    closeHistoryDock();             // the two are one tool
+}
+void MW::closeHistoryDock()
+{
+    if (!historyDock || !historyDockVisibleAction) return;
+    historyDock->setVisible(false);
+    historyDockVisibleAction->setChecked(false);
 }
 void MW::closeFolderDock()
 {
@@ -410,6 +433,13 @@ void MW::showDevelopDock() {
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
     else dockOption = SetVisible;
 
+    /* Bring History up with Develop, BEFORE it: showing a tabified dock makes it the
+       front tab, so History must be shown first and Develop raised last. */
+    if (historyDock && !historyDock->isVisible()) {
+        historyDock->setVisible(true);
+        historyDockVisibleAction->setChecked(true);
+    }
+
     switch (dockOption) {
     case SetFocus:
         developDock->raise();
@@ -419,6 +449,25 @@ void MW::showDevelopDock() {
         developDock->setVisible(true);
         developDock->raise();
         developDockVisibleAction->setChecked(true);
+    }
+}
+
+void MW::showHistoryDock() {
+    if (G::isLogger) G::log("MW::showHistoryDock");
+    if (G::isInitializing) return;
+    QDockWidget *dock = historyDock;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
+    else dockOption = SetVisible;
+
+    switch (dockOption) {
+    case SetFocus:
+        historyDock->raise();
+        historyDockVisibleAction->setChecked(true);
+        break;
+    case SetVisible:
+        historyDock->setVisible(true);
+        historyDock->raise();
+        historyDockVisibleAction->setChecked(true);
     }
 }
 

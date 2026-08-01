@@ -78,6 +78,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {metadataDockTabText, ":/images/icon16/metadata_white.png"},
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
         {developDockTabText,  ":/images/icon16/develop_white.png"},
+        {historyDockTabText,  ":/images/icon16/history_white.png"},
     };
     const QHash<QString, QDockWidget*> dockFor = {
         {folderDockTabText,   folderDock},
@@ -86,6 +87,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {metadataDockTabText, metadataDock},
         {embelDockTabText,    embelDock},
         {developDockTabText,  developDock},
+        {historyDockTabText,  historyDock},
     };
 
     busy = true;
@@ -244,6 +246,7 @@ QDockWidget* MW::dockForTabText(const QString &tabText)
     if (tabText == metadataDockTabText) return metadataDock;
     if (tabText == embelDockTabText)    return embelDock;
     if (tabText == developDockTabText)  return developDock;
+    if (tabText == historyDockTabText)  return historyDock;
     return nullptr;
 }
 
@@ -745,8 +748,12 @@ void MW::showEvent(QShowEvent *event)
     // set screen attributes in global
     setDisplayResolution();
 
-    // hide develop at startup
-    developDock->setVisible(false);
+    /* Hide the Develop tool at startup: Winnow always opens in Preview mode. History is
+       part of the Develop tool (tabbed with it, shown and hidden with it), so it must be
+       hidden here too -- restoreState() above re-shows every dock the last session had
+       visible, and hiding Develop alone left History on screen, visible but disabled.
+       Both actions are unchecked so the View menu agrees with what is on screen. */
+    closeDevelopDock();     // hides developDock + historyDock, unchecks both actions
 
     QMainWindow::showEvent(event);
 
@@ -2888,7 +2895,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                    denoise edit or off the Winnow engine. */
                 if (developProperties && developAutoRunDenoise) {
                     const auto mj = developProperties->stackJob();
-                    ensureRawDenoise(fPath, mj.base,
+                    ensureRawDenoise(fPath, mj.global,
                                      WorkingImageCache::instance().get(fPath),
                                      currentImageIso());
                 }
@@ -5561,11 +5568,11 @@ QString objectRefKey(const QString &fPath, const QString &paramsJson)
     return fPath + "|obj|" + QString::number(qHash(paramsJson));
 }
 
-/* Rasterize the layer's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
+/* Rasterize the scope's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
    it aligns with the linear blend before developComposite applies the EXIF rotation. Each pixel is
    mapped work-normalized -> output-normalized (output = work rotated CW by degrees) before each
    component is evaluated, so the geometry edited on the oriented loupe lines up. */
-std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, int h, int degrees,
+std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int w, int h, int degrees,
                                    const QString &fPath)
 {
     std::vector<float> out(size_t(w) * size_t(h), 0.0f);
@@ -5573,11 +5580,11 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
     const bool swap = (degrees == 90 || degrees == 270);
     const double Wo = swap ? h : w, Ho = swap ? w : h;   // output (oriented) pixel dimensions
 
-    /* Content-range masks (Luminance/Color Range) sample this display-referred reference of the
+    /* Content-range components (Luminance/Color Range) sample this display-referred reference of the
        developed base; built + registered on the GUI thread (MW::ensureRangeRef). Absent (not yet
        built) => range components yield 0, mirroring a brush with no auto-mask guide. */
     std::shared_ptr<const RangeMask::RangeRef> ref;
-    for (const MaskComponent &m : masks)
+    for (const MaskComponent &m : components)
         if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) {
             ref = RangeMask::getRef(fPath);
             break;
@@ -5587,22 +5594,22 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
        Absent (not yet built) => subject components yield 0, like an unbuilt RangeRef. */
     /* Subject AND Background both sample the U^2-Net saliency (Background = inverted Subject). */
     std::shared_ptr<const SubjectMask::SubjectRef> subjRef;
-    for (const MaskComponent &m : masks)
+    for (const MaskComponent &m : components)
         if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) {
             subjRef = SubjectMask::getRef(fPath); break;
         }
 
     std::shared_ptr<const SkyMask::SkyRef> skyRef;
-    for (const MaskComponent &m : masks)
+    for (const MaskComponent &m : components)
         if (m.tool == int(MaskTool::Sky)) { skyRef = SkyMask::getRef(fPath); break; }
 
     std::shared_ptr<const DepthMask::DepthRef> depthRef;
-    for (const MaskComponent &m : masks)
+    for (const MaskComponent &m : components)
         if (m.tool == int(MaskTool::Depth)) { depthRef = DepthMask::getRef(fPath); break; }
 
     QVector<CompDesc> comps;
-    comps.reserve(masks.size());
-    for (const MaskComponent &m : masks) {
+    comps.reserve(components.size());
+    for (const MaskComponent &m : components) {
         if (m.tool == 2) {                                // Brush: rasterize (cached) strokes
             CompDesc d;
             d.isBrush = true;
@@ -5761,29 +5768,29 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &masks, int w, i
     return out;
 }
 
-/* developComposite for a full layer stack: composite every enabled layer in scene-linear (each
+/* developComposite for a full scope stack: composite every enabled scope in scene-linear (each
    developed from the original and blended by its mask), then apply orientation / proxy scaling
    exactly as developComposite does. Falls back to the single-pass developComposite when there are
-   no non-Base layers. */
+   no non-Global scopes. */
 QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::StackRenderJob &job,
                              int degrees, bool fullRes, int fullW, int fullH, const QString &fPath,
                              WorkingImageCache::RenderTimings *timings = nullptr)
 {
     QImage out;
-    if (job.layers.isEmpty()) {             // just Base -> the fast single-pass path
-        out = developComposite(src, job.base, degrees, fullRes, fullW, fullH, timings);
+    if (job.scopes.isEmpty()) {             // just Global -> the fast single-pass path
+        out = developComposite(src, job.global, degrees, fullRes, fullW, fullH, timings);
     }
     else {
-        std::vector<WorkingImageCache::StackLayer> sl;
-        sl.reserve(job.layers.size());
-        for (const DevelopProperties::StackRenderJob::Layer &L : job.layers) {
-            WorkingImageCache::StackLayer s;
+        std::vector<WorkingImageCache::StackScope> sl;
+        sl.reserve(job.scopes.size());
+        for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes) {
+            WorkingImageCache::StackScope s;
             s.params = L.params;
-            if (!L.masks.isEmpty())         // empty masks => global layer (no buffer needed)
-                s.mask = buildMaskBuffer(L.masks, src.width, src.height, degrees, fPath);
+            if (!L.components.isEmpty())         // empty masks => global scope (no buffer needed)
+                s.mask = buildMaskBuffer(L.components, src.width, src.height, degrees, fPath);
             sl.push_back(std::move(s));
         }
-        if (!WorkingImageCache::renderStack(src, job.base, sl, out, timings)) return QImage();
+        if (!WorkingImageCache::renderStack(src, job.global, sl, out, timings)) return QImage();
         if (degrees != 0) {
             QTransform trans;
             trans.rotate(degrees);
@@ -5814,63 +5821,63 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
     return out;
 }
 
-/* True if any enabled layer carries a content-range mask (Luminance/Color Range) -- these need the
+/* True if any enabled scope carries a content-range mask (Luminance/Color Range) -- these need the
    display-referred base reference (MW::ensureRangeRef) built before the composite. */
 bool stackHasRangeMask(const DevelopProperties::StackRenderJob &job)
 {
-    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
-        for (const MaskComponent &m : L.masks)
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
             if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange))
                 return true;
     return false;
 }
 
-/* True if any enabled layer carries an AI Subject mask -- these need the saliency map
+/* True if any enabled scope carries an AI Subject mask -- these need the saliency map
    (MW::ensureSubjectMask) built before the composite. */
 bool stackHasSubjectMask(const DevelopProperties::StackRenderJob &job)
 {
     /* Background reuses the subject saliency (inverted), so it needs the ref built too. */
-    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
-        for (const MaskComponent &m : L.masks)
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
             if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) return true;
     return false;
 }
 
-/* True if any enabled layer carries an AI Sky mask -- needs the sky coverage (MW::ensureSkyMask). */
+/* True if any enabled scope carries an AI Sky mask -- needs the sky coverage (MW::ensureSkyMask). */
 bool stackHasSkyMask(const DevelopProperties::StackRenderJob &job)
 {
-    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
-        for (const MaskComponent &m : L.masks)
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
             if (m.tool == int(MaskTool::Sky)) return true;
     return false;
 }
 
-/* True if any enabled layer carries an AI Depth Range mask -- needs the depth field (ensureDepthMask). */
+/* True if any enabled scope carries an AI Depth Range mask -- needs the depth field (ensureDepthMask). */
 bool stackHasDepthMask(const DevelopProperties::StackRenderJob &job)
 {
-    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
-        for (const MaskComponent &m : L.masks)
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
             if (m.tool == int(MaskTool::Depth)) return true;
     return false;
 }
 
-/* True if any enabled layer carries an AI Object mask -- each needs its brush decoded into an
+/* True if any enabled scope carries an AI Object mask -- each needs its brush decoded into an
    ObjectRef (MW::ensureObjectMask) before the composite. */
 bool stackHasObjectMask(const DevelopProperties::StackRenderJob &job)
 {
-    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
-        for (const MaskComponent &m : L.masks)
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
             if (m.tool == int(MaskTool::Object)) return true;
     return false;
 }
 
-/* True if any enabled layer carries a Brush mask with a LUMINANCE auto-mask stroke -- it
+/* True if any enabled scope carries a Brush mask with a LUMINANCE auto-mask stroke -- it
    needs the guide registered (ImageView::ensureAutoGuide) before the composite, else the
    stroke rasterizes unconfined. ("ai" strokes instead use SAM fields.) */
 bool stackHasLumAutoMaskBrush(const DevelopProperties::StackRenderJob &job)
 {
-    for (const DevelopProperties::StackRenderJob::Layer &L : job.layers)
-        for (const MaskComponent &m : L.masks) {
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components) {
             if (m.tool != int(MaskTool::Brush)) continue;
             const QJsonArray strokes = QJsonDocument::fromJson(m.paramsJson.toUtf8())
                                            .object().value("strokes").toArray();
@@ -5909,7 +5916,7 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
 /*
     Build (once per image + base params) the display-referred RGB reference the content-range
     masks measure against, and register it by path so the loupe overlay and the off-thread render
-    sample the identical map. It is the developed BASE layer only (Base params + OutputTransform +
+    sample the identical map. It is the developed GLOBAL scope only (Global params + OutputTransform +
     EXIF orientation), capped in size -- range selection does not need full resolution, and base-
     only keeps a range mask from feeding back on its own selection. Cheap no-op when already
     current (keyed on path + a base-params signature), so range-slider drags and colour samples
@@ -5952,7 +5959,7 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
 /*
     Build (once per image) the U^2-Net saliency map the "Select Subject" mask samples, and register
     it by path so the loupe overlay and the off-thread render sample the identical coverage. The
-    model sees the developed BASE layer (downscaled, output-oriented) -- the same reference the range
+    model sees the developed GLOBAL scope (downscaled, output-oriented) -- the same reference the range
     masks use -- so the saliency lines up with what the user sees. Cached by path only: subject
     detection does not depend on the develop sliders, so slider drags never re-run inference (a cheap
     no-op once the map exists). Inference is synchronous on the GUI thread (~200-400ms, one-shot per
@@ -5993,7 +6000,7 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
 {
 /*
     Sky twin of ensureSubjectMask: build (once per image) the sky coverage the "Select Sky" mask
-    samples and register it by path, from the developed BASE layer (downscaled, output-oriented) so
+    samples and register it by path, from the developed GLOBAL scope (downscaled, output-oriented) so
     it lines up with what the user sees. Cached by path only; synchronous on the GUI thread with a
     busy cursor. Lazily loads skyseg.onnx.
 */
@@ -6031,7 +6038,7 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
 {
 /*
     Depth twin of ensureSkyMask: build (once per image) the MiDaS depth field the "Depth Range" mask
-    bands over, from the developed BASE layer (downscaled, output-oriented). Cached by path only;
+    bands over, from the developed GLOBAL scope (downscaled, output-oriented). Cached by path only;
     synchronous on the GUI thread with a busy cursor. Lazily loads midas.onnx.
 */
     if (G::isLogger) G::log("MW::ensureDepthMask");
@@ -6218,7 +6225,7 @@ void MW::onBrushSamFieldRequested(double onx, double ony)
     if (!work) return;
     const auto mj = developProperties->stackJob();
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
-    ensureBrushSamField(fPath, *work, mj.base, degrees, onx, ony);
+    ensureBrushSamField(fPath, *work, mj.global, degrees, onx, ony);
 }
 
 void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
@@ -6227,8 +6234,8 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
 /*
     A mask tool became active in the dock. For an AI tool (Subject/Background/Sky/Depth), build its
     coverage now (and repaint) so the loupe tint appears immediately on add/select -- the render path
-    only builds the ref when a non-identity layer carries the mask, so a just-added mask on an
-    unadjusted layer would otherwise show nothing. Cached by path, so re-selecting is a no-op.
+    only builds the ref when a non-identity scope carries the mask, so a just-added mask on an
+    unadjusted scope would otherwise show nothing. Cached by path, so re-selecting is a no-op.
 */
     const bool needsSubject = (tool == int(MaskTool::Subject) || tool == int(MaskTool::Background));
     const bool isSky        = (tool == int(MaskTool::Sky));
@@ -6246,11 +6253,11 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     if (!work) return;
     const auto mj = developProperties->stackJob();
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
-    if (needsSubject)   ensureSubjectMask(fPath, *work, mj.base, degrees);   // Background = inverted subject
-    else if (isSky)     ensureSkyMask(fPath, *work, mj.base, degrees);
-    else if (isDepth)   ensureDepthMask(fPath, *work, mj.base, degrees);
-    else if (isObject)  ensureObjectMask(fPath, *work, mj.base, degrees, paramsJson);  // warms encoder; decodes if a stroke exists
-    else { int gw, gh; ensureObjectEncoder(fPath, *work, mj.base, degrees, gw, gh); }   // isBrushAi: warm only
+    if (needsSubject)   ensureSubjectMask(fPath, *work, mj.global, degrees);   // Background = inverted subject
+    else if (isSky)     ensureSkyMask(fPath, *work, mj.global, degrees);
+    else if (isDepth)   ensureDepthMask(fPath, *work, mj.global, degrees);
+    else if (isObject)  ensureObjectMask(fPath, *work, mj.global, degrees, paramsJson);  // warms encoder; decodes if a stroke exists
+    else { int gw, gh; ensureObjectEncoder(fPath, *work, mj.global, degrees, gw, gh); }   // isBrushAi: warm only
     imageView->viewport()->update();   // heal the tint now the ref exists
 }
 
@@ -6269,44 +6276,44 @@ void MW::warmBrushSamEncoder()
     const auto mj = developProperties->stackJob();
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     int gw, gh;
-    ensureObjectEncoder(fPath, *work, mj.base, degrees, gw, gh);
+    ensureObjectEncoder(fPath, *work, mj.global, degrees, gw, gh);
 }
 
 void MW::updateMaskOverlayTint()
 {
 /*
-    While any mask tool is expanded, the loupe shows the WHOLE layer mask (all the layer's Add/
+    While any mask tool is expanded, the loupe shows the WHOLE mask (all the scope's Add/
     Subtract tools composited) as a red coverage tint, under the active tool's handles. Rebuild it
     whenever the mask selection or geometry changes (wired to maskEditBegin/End + paramsChanged), or
     clear it when no tool is expanded. The composite reuses the render-path buildMaskBuffer, so the
     tint is pixel-consistent with the developed result.
 */
     if (G::isLogger) G::log("MW::updateMaskOverlayTint");
-    if (!developProperties->maskOverlayActive()) { imageView->clearLayerMaskTint(); return; }
+    if (!developProperties->maskOverlayActive()) { imageView->clearScopeMaskTint(); return; }
 
     const QString fPath = dm->currentFilePath;
-    if (fPath.isEmpty() || currentIsVideo()) { imageView->clearLayerMaskTint(); return; }
+    if (fPath.isEmpty() || currentIsVideo()) { imageView->clearScopeMaskTint(); return; }
     auto work = WorkingImageCache::instance().get(fPath);
-    if (!work) { imageView->clearLayerMaskTint(); return; }
-    const QVector<MaskComponent> masks = developProperties->activeLayerMasks();
-    if (masks.isEmpty()) { imageView->clearLayerMaskTint(); return; }
+    if (!work) { imageView->clearScopeMaskTint(); return; }
+    const QVector<MaskComponent> components = developProperties->activeScopeComponents();
+    if (components.isEmpty()) { imageView->clearScopeMaskTint(); return; }
 
-    /* The in-progress (uncommitted) tool is a real component in `masks`; draw it BLUE and
-       exclude it from the RED committed veil. `masks` (all) still drives the ref-building
+    /* The in-progress (uncommitted) tool is a real component in `components`; draw it BLUE and
+       exclude it from the RED committed veil. `components` (all) still drives the ref-building
        below so the blue preview composites too. */
     const int pendIdx = developProperties->pendingMaskIndex();
-    QVector<MaskComponent> redMasks = masks;
+    QVector<MaskComponent> redMasks = components;
     MaskComponent pendingM;
-    const bool hasBlue = (pendIdx >= 0 && pendIdx < masks.size());
-    if (hasBlue) { pendingM = masks.at(pendIdx); redMasks.removeAt(pendIdx); }
+    const bool hasBlue = (pendIdx >= 0 && pendIdx < components.size());
+    if (hasBlue) { pendingM = components.at(pendIdx); redMasks.removeAt(pendIdx); }
 
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
-    const EditParams base = developProperties->stackJob().base;
+    const EditParams base = developProperties->stackJob().global;
 
-    /* Build any content/AI references the layer's tools sample (cached; no-op if already present),
-       so the composite is non-zero even for a just-added mask on an unadjusted layer. */
+    /* Build any content/AI references the scope's tools sample (cached; no-op if already present),
+       so the composite is non-zero even for a just-added mask on an unadjusted scope. */
     bool needRange = false, needSubject = false, needSky = false, needDepth = false;
-    for (const MaskComponent &m : masks) {
+    for (const MaskComponent &m : components) {
         if      (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) needRange = true;
         else if (m.tool == int(MaskTool::Subject)    || m.tool == int(MaskTool::Background))     needSubject = true;
         else if (m.tool == int(MaskTool::Sky))        needSky = true;
@@ -6316,28 +6323,28 @@ void MW::updateMaskOverlayTint()
     if (needSubject) ensureSubjectMask(fPath, *work, base, degrees);
     if (needSky)     ensureSkyMask(fPath, *work, base, degrees);
     if (needDepth)   ensureDepthMask(fPath, *work, base, degrees);
-    /* Object masks are per-brush, so build each one from its own component params. */
-    for (const MaskComponent &m : masks)
+    /* Object components are per-brush, so build each one from its own component params. */
+    for (const MaskComponent &m : components)
         if (m.tool == int(MaskTool::Object))
             ensureObjectMask(fPath, *work, base, degrees, m.paramsJson);
     /* Brush "AI" auto-mask strokes need their SAM object fields before the tint composites. */
-    for (const MaskComponent &m : masks)
+    for (const MaskComponent &m : components)
         if (m.tool == int(MaskTool::Brush))
             ensureBrushSamFields(fPath, *work, base, degrees, m.paramsJson);
 
     /* Composite at a capped resolution (geometry is normalized, so any size is faithful) -- the tint
        is smooth-scaled onto the image, so a couple of MP is ample and keeps live drags cheap. */
     int mw = work->width, mh = work->height;
-    if (mw <= 0 || mh <= 0) { imageView->clearLayerMaskTint(); return; }
+    if (mw <= 0 || mh <= 0) { imageView->clearScopeMaskTint(); return; }
     const int cap = 1600;
     const double sc = qMin(1.0, double(cap) / qMax(mw, mh));
     const int bw = qMax(1, int(mw * sc)), bh = qMax(1, int(mh * sc));
     const std::vector<float> buf = buildMaskBuffer(redMasks, bw, bh, degrees, fPath);
 
-    /* RESULT VEIL: the whole-layer composite as a flat RED coverage tint, alpha by
+    /* RESULT VEIL: the whole-mask composite as a flat RED coverage tint, alpha by
        coverage. This is the TRUE resulting mask -- Subtract holes stay holes, and
        nothing is painted back over a hole (the constituent marks below are EDGES only),
-       so the veil alone answers "what does this layer affect?". */
+       so the veil alone answers "what does this scope affect?". */
     QImage tint(bw, bh, QImage::Format_ARGB32_Premultiplied);
     const int maxA = 150;             // full-coverage alpha
     for (int y = 0; y < bh; ++y) {
@@ -6420,7 +6427,7 @@ void MW::updateMaskOverlayTint()
         }
     }
     if (degrees != 0) tint = tint.transformed(QTransform().rotate(degrees));
-    imageView->setLayerMaskTint(tint);
+    imageView->setScopeMaskTint(tint);
 
     /* Legend: tell ImageView which tool/role is being edited (and the mode), so the
        on-canvas chip can label the overlay (see ImageView::setMaskLegend). */
@@ -6436,8 +6443,8 @@ void MW::updateMaskOverlayTint()
 void MW::toggleMaskBreakdown()
 {
 /*
-    Layer menu "Show mask breakdown": flip the mask overlay between Result view (the veil
-    alone -- "what does this layer affect?") and Breakdown view (the veil plus a green/blue
+    Scope menu "Show mask breakdown": flip the mask overlay between Result view (the veil
+    alone -- "what does this scope affect?") and Breakdown view (the veil plus a green/blue
     outline of every constituent -- "how is the mask built?"). Session-wide; rebuilds tint.
 */
     if (G::isLogger) G::log("MW::toggleMaskBreakdown");
@@ -6459,8 +6466,8 @@ void MW::renderDevelopPreview(bool fullRes)
 
     PHASE 1 (Develop ops): this is a live, in-session preview. The edit is NOT yet persisted
     or written back to the image cache, so navigating away and back shows the un-developed
-    image. Per-image persistence (sidecar) and the layer/mask stack land in later phases.
-    See notes/Documentation.txt "Layer & masking model".
+    image. Per-image persistence (sidecar) and the scope/mask stack land in later phases.
+    See notes/Documentation.txt "Scope & masking model".
 */
     if (G::isLogger) G::log("MW::renderDevelopPreview");
 
@@ -6468,7 +6475,7 @@ void MW::renderDevelopPreview(bool fullRes)
     if (fPath.isEmpty()) return;
     if (currentIsVideo()) return;               // Develop operates on stills, not videos
 
-    auto mj = developProperties->stackJob();   // full layer stack (independent of active layer)
+    auto mj = developProperties->stackJob();   // full scope stack (independent of active scope)
     /* While the crop tool is active, suppress only the CROP (the overlay sets it, applied on commit)
        but KEEP the warp/straighten: before Rectify there is none (full frame); after Rectify the
        stored quad warps the frame so the crop overlay can be placed on the corrected canvas. */
@@ -6505,10 +6512,10 @@ void MW::renderDevelopPreview(bool fullRes)
         work = built;
     }
 
-    /* Base image for the render: the raw-DENOISED WorkingImage when the Base layer's "Denoise raw"
+    /* Global image for the render: the raw-DENOISED WorkingImage when the Global scope's "Denoise raw"
        is set and ready, else the clean cached image. The heavy denoise runs on settle (see
        renderDevelopFullResAsync -> ensureRawDenoise), so a slider tick never blocks on it. */
-    const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.base, work);
+    const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.global, work);
 
     QElapsedTimer probe;
     if (G::isReportDevelopTime) probe.start();
@@ -6538,20 +6545,20 @@ void MW::renderDevelopPreview(bool fullRes)
     /* Content-range masks need the display-referred base reference in place before the composite
        (built from the FULL-res work so it is proxy-independent; cached, so this is a no-op unless
        the base params or image changed). */
-    if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.base, degrees);
-    if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.base, degrees);
-    if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.base, degrees);
-    if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.base, degrees);
+    if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.global, degrees);
+    if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.global, degrees);
+    if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.global, degrees);
+    if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.global, degrees);
     if (stackHasObjectMask(mj))
-        for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
-            for (const MaskComponent &m : L.masks)
+        for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+            for (const MaskComponent &m : L.components)
                 if (m.tool == int(MaskTool::Object))
-                    ensureObjectMask(fPath, *work, mj.base, degrees, m.paramsJson);
+                    ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
     /* Brush "AI" auto-mask strokes: ensure each stroke's SAM field before rendering. */
-    for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
-        for (const MaskComponent &m : L.masks)
+    for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+        for (const MaskComponent &m : L.components)
             if (m.tool == int(MaskTool::Brush))
-                ensureBrushSamFields(fPath, *work, mj.base, degrees, m.paramsJson);
+                ensureBrushSamFields(fPath, *work, mj.global, degrees, m.paramsJson);
     /* Brush luminance auto-mask: guarantee the guide is registered (built from the loupe,
        the same one the overlay samples) so proxy and settle confine identically -- else a
        guideless proxy paints the full brush and the settle snaps it to the band. */
@@ -6676,16 +6683,16 @@ void MW::renderDevelopFullResAsync()
     /* Ensure the raw-DENOISED base is ready before the crisp full-res render. If "Denoise raw" is
        set but the denoised image for the current amounts isn't cached yet, compute it off-thread
        and bail -- ensureRawDenoise() repaints and re-arms this render when it lands. */
-    const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.base, work);
+    const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.global, work);
     if (base == work &&
-        (mj.base.denoiseLuma > 0.0f || mj.base.denoiseChroma > 0.0f) &&
+        (mj.global.denoiseLuma > 0.0f || mj.global.denoiseChroma > 0.0f) &&
         G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
         /* Run PMRID when Auto run is on, OR when the PMRID base is already cached (a
            manual "Denoise" already ran) -- an amount change is then only a cheap re-blend
            (reuses developPmridFull) and must NOT fall through to the clean render, which
            would drop the denoise. */
         if (developAutoRunDenoise || rawDenoiseReadyForCurrent()) {
-            ensureRawDenoise(fPath, mj.base, work, currentImageIso());
+            ensureRawDenoise(fPath, mj.global, work, currentImageIso());
             return;   // wait for the (re)blended base; PMRID re-arms this render
         }
     }
@@ -6694,20 +6701,20 @@ void MW::renderDevelopFullResAsync()
 
     /* Ensure the content-range reference is registered before the background render samples it
        (GUI thread; cached, so normally a no-op after the proxy render already built it). */
-    if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.base, degrees);
-    if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.base, degrees);
-    if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.base, degrees);
-    if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.base, degrees);
+    if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.global, degrees);
+    if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.global, degrees);
+    if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.global, degrees);
+    if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.global, degrees);
     if (stackHasObjectMask(mj))
-        for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
-            for (const MaskComponent &m : L.masks)
+        for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+            for (const MaskComponent &m : L.components)
                 if (m.tool == int(MaskTool::Object))
-                    ensureObjectMask(fPath, *work, mj.base, degrees, m.paramsJson);
+                    ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
     /* Brush "AI" auto-mask strokes: ensure each stroke's SAM field before the render. */
-    for (const DevelopProperties::StackRenderJob::Layer &L : mj.layers)
-        for (const MaskComponent &m : L.masks)
+    for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+        for (const MaskComponent &m : L.components)
             if (m.tool == int(MaskTool::Brush))
-                ensureBrushSamFields(fPath, *work, mj.base, degrees, m.paramsJson);
+                ensureBrushSamFields(fPath, *work, mj.global, degrees, m.paramsJson);
     /* Register the brush luminance auto-mask guide (GUI thread) before dispatching the
        worker, so the off-thread render confines the stroke the same as the proxy did. */
     if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
@@ -6733,7 +6740,7 @@ void MW::renderDevelopFullResAsync()
         int vMaxAbs = -1;
         double vMeanAbs = -1.0;
         {
-            DevelopProperties::StackRenderJob idJob;  // identity: default base, no layers
+            DevelopProperties::StackRenderJob idJob;  // identity: default base, no scopes
             DevelopProperties::StackRenderJob edJob = mj;
             idJob.geometry = Geometry();
             edJob.geometry = Geometry();  // isolate recipe/denoise from crop/warp
@@ -6766,7 +6773,7 @@ void MW::renderDevelopFullResAsync()
                 vMeanAbs = n ? double(acc) / double(n) : -1.0;
             }
         }
-        const bool vRecipeIdentity = mj.base.isIdentity() && mj.layers.isEmpty();
+        const bool vRecipeIdentity = mj.global.isIdentity() && mj.scopes.isEmpty();
         const bool vGeometryActive = !mj.geometry.isIdentity();
 
         QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt,
@@ -6813,7 +6820,7 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
         developFullResTimer->start(kDevelopSettleMs);
 }
 
-/* Cache key for the raw-denoised base: image path + the two Base "Denoise raw" amounts + ISO. */
+/* Cache key for the raw-denoised base: image path + the two Global "Denoise raw" amounts + ISO. */
 static QString rawDenoiseKey(const QString &fPath, const EditParams &base, int iso)
 {
     return QString("%1|dnL=%2|dnC=%3|iso=%4")
@@ -6838,7 +6845,7 @@ std::shared_ptr<const WorkingImage> MW::developRawDenoisedBase(
     const std::shared_ptr<const WorkingImage> &clean)
 {
 /*
-    The base image the develop render should start from. "Denoise raw" is a Base-only, RAW-only
+    The base image the develop render should start from. "Denoise raw" is a Global-only, RAW-only
     global op: when it is set and the denoised WorkingImage for the current amounts is cached, that
     is the base; otherwise the clean cached image is used (and ensureRawDenoise() computes the
     denoised one off-thread on settle). Pure lookup -- never runs the model.
@@ -6866,7 +6873,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
     demosaiced from the same mosaic before PMRID), so a single UnpackCfa yields both bases
     the blend needs instead of a second full decode; the clean base is published to
     WorkingImageCache so the rest of the develop pipeline reuses it. The heavy decode runs
-    ONCE per image and is cached (developPmridFull, keyed path+iso); the two Base amounts
+    ONCE per image and is cached (developPmridFull, keyed path+iso); the two Global amounts
     only scale a cheap luma/chroma blend (Develop::BlendRawDenoise), so a slider drag
     re-blends without re-running the model. Callable on image select (clean == null): the
     worker decodes both bases and progress shows from the start. Coalesced -- one job.
@@ -7011,7 +7018,7 @@ void MW::runRawDenoiseNow()
     /* PMRID is Winnow-engine only; inert on Apple. */
     if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
     const auto mj = developProperties->stackJob();
-    ensureRawDenoise(fPath, mj.base, WorkingImageCache::instance().get(fPath),
+    ensureRawDenoise(fPath, mj.global, WorkingImageCache::instance().get(fPath),
                      currentImageIso());
 }
 
@@ -7311,7 +7318,7 @@ void MW::toggleDevelopWbSampler()
 void MW::toggleMaskOverlay()
 {
 /*
-    "O" (Develop mode): hide/show the current layer's mask overlay tint (the red coverage
+    "O" (Develop mode): hide/show the current scope's mask overlay tint (the red coverage
     visualisation) so the user can see the developed image without it while still editing.
     The visibility state lives in ImageView (per mask-edit session); this just flips it.
     No-op when no mask tool is active.
@@ -7320,17 +7327,17 @@ void MW::toggleMaskOverlay()
     if (imageView) imageView->toggleMaskTint();
 }
 
-void MW::developNewLayer()
+void MW::developNewScope()
 {
 /*
-    "N" (Develop mode): add a layer to the current image's edit stack. DevelopProperties
-    owns the flow (name dialog, append, select the new layer) and no-ops without a current
-    image; this just brings the dock forward so the new layer's tree is visible.
+    "N" (Develop mode): add a scope to the current image's edit stack. DevelopProperties
+    owns the flow (name dialog, append, select the new scope) and no-ops without a current
+    image; this just brings the dock forward so the new scope's tree is visible.
 */
-    if (G::isLogger) G::log("MW::developNewLayer");
+    if (G::isLogger) G::log("MW::developNewScope");
     if (!developProperties) return;
     if (developDock) { developDock->setVisible(true); developDock->raise(); }
-    developProperties->newLayer();
+    developProperties->newScope();
 }
 
 void MW::developSavePreset()
@@ -7358,14 +7365,14 @@ void MW::developRunPreset()
         G::popup->showPopup("Applying develop presets is not implemented yet.", 2000);
 }
 
-void MW::developNewMask()
+void MW::developAddToMask()
 {
 /*
     "M" (Develop mode): pop the Add/Subtract mask-tool menu at the cursor for the active
-    layer, the same menu the tree's [+] mask row shows. DevelopProperties handles the Base
-    layer case (it cannot be masked) with its own message.
+    scope, the same menu the tree's [+] mask row shows. DevelopProperties handles the Global
+    scope case (it cannot be masked) with its own message.
 */
-    if (G::isLogger) G::log("MW::developNewMask");
+    if (G::isLogger) G::log("MW::developAddToMask");
     if (!developProperties) return;
     if (developDock) { developDock->setVisible(true); developDock->raise(); }
     developProperties->showMaskMenu();
@@ -7677,6 +7684,7 @@ void MW::updateState()
     setMetadataDockVisibility();
     setEmbelDockVisibility();
     setDevelopDockVisibility();
+    setHistoryDockVisibility();     // follows Develop (set just above)
     setThumbDockVisibity();
     // setShootingInfoVisibility();
     updateStatusBar();
@@ -7826,7 +7834,7 @@ void MW::ingest()
 
               Root Folder                   (rootFolderPath)
             + Path to base folder           (fromRootToBaseFolder) source pathTemplateString
-            + Base Folder Description       (baseFolderDescription)
+            + Global Folder Description       (baseFolderDescription)
             + File Name                     (fileBaseName)     source filenameTemplateString
             + File Suffix                   (fileSuffix)
 

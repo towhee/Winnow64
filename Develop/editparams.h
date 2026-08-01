@@ -94,7 +94,7 @@ struct EditParams {
 
     /* Local (maskable) NR -- Develop SPATIAL ops layered on TOP of the global baseline, operating
        on the already-decoded WorkingImage (see Develop::Denoise and notes/Documentation.txt
-       "Layer & masking model"). localDenoiseLuma = luminance NR (ratio-preserving); localDenoise-
+       "Scope & masking model"). localDenoiseLuma = luminance NR (ratio-preserving); localDenoise-
        Chroma = colour/chroma NR (opponent-chroma blur, luma kept exact). 0 = off. Range 0..1. */
     float localDenoiseLuma = 0.0f;
     float localDenoiseChroma = 0.0f;
@@ -129,7 +129,7 @@ struct EditParams {
        comments -- texture/dehaze sit under Basic, and the tone splits belong to Basic for
        Reset (they are irrelevant to Preview since the tone sliders they modulate are zeroed anyway).
        localDenoiseLuma ("Denoise", local post-demosaic NR) is under Effects. denoiseLuma/denoiseChroma
-       are decode-time global NR (the Base layer's "Denoise raw", baked before Develop runs) so they
+       are decode-time global NR (the Global scope's "Denoise raw", baked before Develop runs) so they
        are in NO group and cannot be previewed/reset via params. */
     /* ColorMix = the nine colour-grading fields (its own group so the Color Mix panel's
        Preview/Reset are independent of the legacy Color panel's RGB/HSL group). */

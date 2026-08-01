@@ -730,7 +730,7 @@ void ImageView::endMaskEdit()
     /* The composite tint can be shown with maskEditMode OFF (a committed-mask display, so
        it survives past editing), so ALWAYS drop it here -- else leaving Develop (dock
        hidden) would leave the red tint painted over the image. */
-    if (!maskLayerTint.isNull()) { maskLayerTint = QImage(); viewport()->update(); }
+    if (!scopeMaskTint.isNull()) { scopeMaskTint = QImage(); viewport()->update(); }
     if (!maskEditMode) return;
     if (G::isLogger) G::log("ImageView::endMaskEdit");
     maskEditMode = false;
@@ -744,7 +744,7 @@ void ImageView::endMaskEdit()
     maskBrushMain.clear(); maskBrushStroke.clear(); maskBrushW = maskBrushH = 0;
     maskRangePreview = QImage();
     maskRangeParams.clear();
-    maskLayerTint = QImage();
+    scopeMaskTint = QImage();
     rangeLoupeOn = false;
     /* Restore the normal loupe cursor. A tool set its own (dropper for Color Range, a
        blank cursor for Brush/Object) that mouseMoveEvent only refreshes on the next move,
@@ -1206,18 +1206,18 @@ void ImageView::drawSpotOverlay(QPainter *painter, const QRectF &br)
     painter->restore();
 }
 
-void ImageView::setLayerMaskTint(const QImage &tint)
+void ImageView::setScopeMaskTint(const QImage &tint)
 {
-    /* The whole-layer composite coverage tint (all Add/Subtract tools), built by MW and shown under
+    /* The whole-mask composite coverage tint (all Add/Subtract tools), built by MW and shown under
        the active tool's handles while any tool is expanded. */
-    maskLayerTint = tint;
+    scopeMaskTint = tint;
     viewport()->update();       // may be a committed-mask display (not in maskEditMode)
 }
 
-void ImageView::clearLayerMaskTint()
+void ImageView::clearScopeMaskTint()
 {
-    if (maskLayerTint.isNull()) return;
-    maskLayerTint = QImage();
+    if (scopeMaskTint.isNull()) return;
+    scopeMaskTint = QImage();
     viewport()->update();
 }
 
@@ -1233,7 +1233,7 @@ void ImageView::drawMaskLegend(QPainter *painter)
 {
 /*
     A compact chip, top-left of the view, that names the overlay's colours so the tints
-    are self-explanatory: the RED swatch is "Result" (what the layer affects); in
+    are self-explanatory: the RED swatch is "Result" (what the mask affects); in
     Breakdown view a GREEN "+ Add" and BLUE "- Subtract" swatch name the constituent
     outlines. The selected tool + role is appended so the user knows which piece they are
     editing. Drawn in viewport coords, over the overlay, only while editing a mask.
@@ -1295,7 +1295,7 @@ void ImageView::toggleMaskTint()
     /* "M"/"O": flip the mask overlay tint hidden/shown so the user can see the image
        without the red coverage. Works while editing a mask AND while a committed-mask
        tint is displayed (maskEditMode off but a tint is present). */
-    if (!maskEditMode && maskLayerTint.isNull()) return;
+    if (!maskEditMode && scopeMaskTint.isNull()) return;
     maskTintHidden = !maskTintHidden;
     emit maskTintVisibilityChanged(!maskTintHidden);
     viewport()->update();
@@ -1306,7 +1306,7 @@ void ImageView::hideMaskTint()
     /* An adjustment slider (Basic/Color/Effects) was changed; get the red coverage out of
        the way so the user sees the effect on the masked pixels. Re-shown by "M"/"O" or by
        re-selecting a mask tool. Applies to the committed-mask display too. */
-    if (maskTintHidden || (!maskEditMode && maskLayerTint.isNull())) return;
+    if (maskTintHidden || (!maskEditMode && scopeMaskTint.isNull())) return;
     maskTintHidden = true;
     emit maskTintVisibilityChanged(false);
     viewport()->update();
@@ -1994,12 +1994,12 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
         if (sbr.width() > 0 && sbr.height() > 0) drawSpotOverlay(painter, sbr);
         return;
     }
-    /* Whole-layer mask: while any tool is expanded (maskEditMode), the composite of the
+    /* Whole-mask coverage: while any tool is expanded (maskEditMode), the composite of the
        Add/Subtract tools is shown as a red coverage tint (built by MW). It is NOT hover-gated -- the
        whole mask stays visible whenever a tool is expanded -- and is drawn UNDER the active tool's
        handles. When it is present the per-tool draw skips its own tint (it would double up) and draws
        only its handles/guides/cursor/swatches. */
-    /* While a brush stroke is being swiped, the whole-layer composite (maskLayerTint) is STALE -- it
+    /* While a brush stroke is being swiped, the whole-mask composite (scopeMaskTint) is STALE -- it
        only rebuilds on stroke release (paramsChanged). Suppress it during the stroke so the per-brush
        live preview (maskBrushPreview, updated on every move) shows the stroke building up in real time
        instead of the tint only appearing after release. */
@@ -2009,14 +2009,14 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
     /* The tint is drawn whenever MW has pushed one (its presence == "overlay wanted"), so
        it survives past maskEditMode -- e.g. the combined result stays visible after a
        commit. Edit handles/cursor below stay gated on maskEditMode. */
-    const bool haveComposite = !maskLayerTint.isNull() && pmItem && pmItem->isVisible()
+    const bool haveComposite = !scopeMaskTint.isNull() && pmItem && pmItem->isVisible()
                                && !brushStroking && showTint;
     if (haveComposite) {
         const QRectF cbr = pmItem->boundingRect();
         if (cbr.width() > 0 && cbr.height() > 0) {
             painter->save();
             painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-            painter->drawImage(pmItem->mapToScene(cbr).boundingRect(), maskLayerTint);
+            painter->drawImage(pmItem->mapToScene(cbr).boundingRect(), scopeMaskTint);
             painter->restore();
         }
     }
@@ -2044,7 +2044,7 @@ void ImageView::drawObjectMask(QPainter *painter, const QRectF &br, bool drawTin
     Perimeter-paint overlay. maskBrushPreview (built by objRebuildPreview) tints the boundary
     wall and, once the loop closes, the enclosed fill -- AMBER while the perimeter is still
     open, GREEN once ObjectMask::fillEnclosed reports a closed region. Drawn in scene coords so
-    it tracks the image. Skipped when the whole-layer composite tint is already shown
+    it tracks the image. Skipped when the whole-mask composite tint is already shown
     (drawTint=false, the SAM cutout has landed): only the size cursor remains. Like the brush.
 */
     objEnsureBuffers();             // heal if the pixmap size changed since beginMaskEdit
@@ -2084,7 +2084,7 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTin
 
     /* 1) Role tint ramp, in scene coords so it tracks the image. feather widens the
        transition around the centre: 0 = hard step at the midpoint, 100 = full linear ramp
-       p1->p2. Skipped when the whole-layer composite tint is already shown
+       p1->p2. Skipped when the whole-mask composite tint is already shown
        (drawTint=false): only the handles are drawn. */
     if (drawTint) {
         const double f  = qBound(0.0, maskFeather, 100.0) / 100.0;
@@ -2160,7 +2160,7 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTin
 
     /* 1) Elliptical tint ramp (scene coords) via a transformed radial gradient: a unit circle
        mapped to the rotated image ellipse, then to scene. mask 100% inside -> 0% at the boundary
-       (Invert swaps); feather widens the transition inward. Skipped when the whole-layer composite
+       (Invert swaps); feather widens the transition inward. Skipped when the whole-mask composite
        tint is already shown (drawTint=false): only the handles are drawn. */
     if (drawTint) {
         const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
@@ -2475,7 +2475,7 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
 {
     brushEnsureBuffers();           // heal if the pixmap size changed since beginMaskEdit
     /* 1) Tint preview image over the photo (scene coords, scales with the image). Skipped when the
-       whole-layer composite tint is already shown (drawTint=false): only the brush cursor is drawn. */
+       whole-mask composite tint is already shown (drawTint=false): only the brush cursor is drawn. */
     if (drawTint && !maskBrushPreview.isNull()) {
         painter->save();
         painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
@@ -2736,7 +2736,7 @@ void ImageView::rangeSampleAt(QPoint vp, bool add)
 void ImageView::drawRangeMask(QPainter *painter, const QRectF &br, bool drawTint)
 {
     /* 1) Coverage tint over the photo (scene coords, scales with the image). Skipped when the
-       whole-layer composite tint is already shown (drawTint=false): only the swatches are drawn. */
+       whole-mask composite tint is already shown (drawTint=false): only the swatches are drawn. */
     if (drawTint && maskRangePreview.isNull()) rebuildContentPreview();  // heal if the ref arrived after beginMaskEdit
     if (drawTint && !maskRangePreview.isNull()) {
         painter->save();

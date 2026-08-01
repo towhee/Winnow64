@@ -757,3 +757,26 @@ Show mask tool in mask panel.  In the mask panel replace Add, Subtract and Inter
 Done button.
 
 All mask tools use the same mask tint (currently red).
+
+In develop, I have changed the LayersHeader text from 'Layers' to 'Scope'.  Change the
+Base Layer text description from 'Base' to 'Global'.
+
+Create a new dock called 'History' that is shown next to the Develop dock.  The History
+dock should be patterned after the Lightroom develop history function, listing each
+develop action, and allow the user to return to any previous history action, the same as
+lightroom.  The History dock should open/show and close/hide in conjunction with the
+Develop dock.  The develop actions are already recorded to the sidecar file, so History
+should use or sync with the sidecar file.  When the mouse hovers over a history item, the
+imageView should match that point in the action history.  Each History action item should
+show the action item description and value (where relevent).  For example:
+    Global: Exposure                    +5
+    Subject Mask: Hue                  -18
+
+
+
+
+
+If in Develop mode when close Winnow, when reopen, the Develop panel is not visible (correct behavior), but the History panel is visible
+  and disabled (wrong behavior).  Winnow opens in Preview mode, so the History panel should be hidden.
+
+

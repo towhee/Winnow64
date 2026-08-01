@@ -1030,6 +1030,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Develop History Panel</string>
+        </property>
+        <property name="text">
+         <string>H</string>
+        </property>
+        <property name="text">
+         <string>Shows / raises the develop history panel; in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Application Statusbar</string>
         </property>
         <property name="text">
@@ -1095,24 +1106,24 @@
        </item>
        <item>
         <property name="text">
-         <string>New Layer</string>
+         <string>New Mask</string>
         </property>
         <property name="text">
          <string>N</string>
         </property>
         <property name="text">
-         <string>Adds a layer to this image (prompts for a name); in Develop mode</string>
+         <string>Adds a mask to this image (prompts for a name); in Develop mode</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>New Mask</string>
+         <string>Add to Mask</string>
         </property>
         <property name="text">
          <string>M</string>
         </property>
         <property name="text">
-         <string>Pops the Add / Subtract mask tool menu for the active layer; in Develop mode. The Base layer applies globally and cannot be masked</string>
+         <string>Pops the Add / Subtract mask tool menu for the active mask; in Develop mode. Global applies to the whole image and cannot be masked</string>
         </property>
        </item>
        <item>
@@ -1123,7 +1134,7 @@
          <string>O</string>
         </property>
         <property name="text">
-         <string>Hide / show the current layer mask overlay; while a mask tool is active</string>
+         <string>Hide / show the current mask overlay; while a mask tool is active</string>
         </property>
        </item>
        <item>
@@ -1285,10 +1296,10 @@
          <string>Histogram / Vectorscope</string>
         </property>
         <property name="text">
-         <string>H</string>
+         <string>G</string>
         </property>
         <property name="text">
-         <string>Show / hide the scopes strip; in Develop mode</string>
+         <string>Show / hide the scopes strip; in Develop mode. In Preview, G is Grid view</string>
         </property>
        </item>
        <item>

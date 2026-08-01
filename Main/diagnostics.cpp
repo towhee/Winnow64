@@ -102,6 +102,7 @@ void MW::reportWorkspaceState()
              << "\nisMetadataDockVisible" << w.isMetadataDockVisible
              << "\nisEmbelDockVisible" << w.isEmbelDockVisible
              << "\nisDevelopDockVisible" << w.isDevelopDockVisible
+             << "\nisHistoryDockVisible" << w.isHistoryDockVisible
              << "\nisThumbDockVisible" << w.isThumbDockVisible
              << "\nthumbSpacing" << w.thumbSpacing
              << "\nthumbPadding" << w.thumbPadding
@@ -395,7 +396,7 @@ QString MW::developDiagnostics()
     A single snapshot of everything relevant to the Develop pipeline for the CURRENTLY
     SELECTED image: the operation-mode / raw-engine globals, the current file, the cached
     scene-linear WorkingImage base, the raw sensor-unpack info, the effective EditParams
-    (Base + non-Base layers), the crop/warp geometry, and the interactive develop caches
+    (Base + non-Base scopes), the crop/warp geometry, and the interactive develop caches
     (PMRID "Denoise raw" base + the resolved (k,b) noise-model tier, scene-linear re-decode
     guards, proxy / full-res render state, mask reference caches). Read-only -- builds the
     report from live state and touches no pixels.
@@ -503,17 +504,17 @@ QString MW::developDiagnostics()
         rpt << "\n";
     }
 
-    // EDIT PARAMS (Base + non-Base layers) + GEOMETRY
+    // EDIT PARAMS (Global + masks) + GEOMETRY
     DevelopProperties::StackRenderJob mj = developProperties->stackJob();
-    rpt << "\n" << "DEVELOP EDIT PARAMS -- Base layer (applied globally)";
-    dumpParams(mj.base, "  ");
+    rpt << "\n" << "DEVELOP EDIT PARAMS -- Global scope (applied to the whole image)";
+    dumpParams(mj.global, "  ");
     rpt << "\n";
-    rpt << "\n" << "NON-BASE LAYERS (enabled, in order) = " << G::s((int)mj.layers.size());
-    for (int i = 0; i < mj.layers.size(); ++i) {
-        const DevelopProperties::StackRenderJob::Layer &L = mj.layers.at(i);
-        rpt << "\n" << "  Layer " << G::s(i + 1) << ": masks = " << G::s((int)L.masks.size())
+    rpt << "\n" << "MASKS (enabled, in order) = " << G::s((int)mj.scopes.size());
+    for (int i = 0; i < mj.scopes.size(); ++i) {
+        const DevelopProperties::StackRenderJob::Scope &L = mj.scopes.at(i);
+        rpt << "\n" << "  Mask " << G::s(i + 1) << ": components = " << G::s((int)L.components.size())
             << "   combine = " << G::s(L.combine)
-            << (L.masks.isEmpty() ? "   (no mask -> global)" : "");
+            << (L.components.isEmpty() ? "   (no components -> whole image)" : "");
         dumpParams(L.params, "    ");
     }
     rpt << "\n";
@@ -528,8 +529,8 @@ QString MW::developDiagnostics()
 
     // DENOISE / PMRID CACHE STATE
     rpt << "\n" << "DENOISE 'RAW' (PMRID) CACHE STATE";
-    rpt << "\n" << "  Base denoiseLuma/Chroma = " << G::s(mj.base.denoiseLuma)
-        << " / " << G::s(mj.base.denoiseChroma)
+    rpt << "\n" << "  Global denoiseLuma/Chroma = " << G::s(mj.global.denoiseLuma)
+        << " / " << G::s(mj.global.denoiseChroma)
         << (G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine
                 ? "" : "   (inert: PMRID needs the CFA mosaic, not available on the Apple engine)");
     rpt << "\n" << "  developDenoised = " << dims(developDenoised)

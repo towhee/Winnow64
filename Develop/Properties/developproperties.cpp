@@ -1,8 +1,9 @@
 #include "Develop/Properties/developproperties.h"
-#include "Develop/Properties/layerheaderbase.h"
+#include "Develop/Properties/scopeheaderbase.h"
 #include "Develop/Properties/rawpanel.h"
 #include "Develop/Properties/maskpanel.h"
 #include "Develop/Properties/maskeditor.h"
+#include "Develop/History/historyview.h"
 #include "Develop/fillspot.h"
 #include "Main/mainwindow.h"
 #include "Main/global.h"
@@ -11,12 +12,14 @@
 #include "Develop/rangemask.h"
 #include "Develop/workingimagecache.h"
 #include "Dialogs/savedeveloppresetdlg.h"
+#include <QRegularExpression>
 #include <QVariantAnimation>
+#include <algorithm>
 #include <functional>
 /*
     See developproperties.h for an overview. Construction mirrors EmbelProperties:
-    initialize tree behaviour, read the saved layer list, add the persistent Layers
-    header (tree row 0), then build the Basic / Effects sections for the current layer.
+    initialize tree behaviour, read the saved scope list, add the persistent Scopes
+    header (tree row 0), then build the Basic / Effects sections for the current scope.
 */
 
 DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : PropertyEditor(parent)
@@ -26,13 +29,17 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     this->setting = setting;
 
     initialize();
-    /* The add-mask type chooser, popped automatically when a new layer is created (newLayer). */
+    /* Per-image edit history (the History dock's model). Session scoped: it records a
+       labelled EditStack snapshot per action via noteEdit and is never written to the
+       sidecar (which holds only the current state). */
+    history = new DevelopHistory(this);
+    /* The mask-tool chooser, popped when a new mask is created (newScope). */
     maskMenu = new QMenu(this);
-    /* The Layers combo (now in the LayerHeader widget) lists the CURRENT IMAGE's layers (per-image
-       EditStack), not app-global QSettings presets. Seed one name so it is valid before any image. */
-    layerList = QStringList() << "Base";
-    layerName = "Base";
-    buildTree();        // active layer's top items (Core for Base) + Basic / Color / Effects
+    /* The Scope list (in the ScopeHeader widget) shows the CURRENT IMAGE's scopes --
+       Global plus one row per mask (per-image EditStack), not app-global QSettings
+       presets. Seed one name so it is valid before any image. */
+    scopeList = QStringList() << "Global";
+    buildTree();        // active scope's top items + Basic / Color / Effects
 
     updateHiddenRows(QModelIndex());
     setMouseTracking(true);
@@ -52,7 +59,7 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        every expand/collapse; persistSectionExpanded filters to the three section headers. */
     connect(this, &QTreeView::expanded,  this, [this](const QModelIndex &idx){
         persistSectionExpanded(idx, true);
-        onSectionExpanded(idx);                 // Solo: fold the Layer row in
+        onSectionExpanded(idx);                 // Solo: fold the Scope row in
     });
     connect(this, &QTreeView::collapsed, this, [this](const QModelIndex &idx){ persistSectionExpanded(idx, false); });
 
@@ -82,63 +89,19 @@ void DevelopProperties::initialize()
     root = model->invisibleRootItem()->index();
 }
 
-/* ----------------------------------------------------------------------------------------
-   Layers
-   ---------------------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------------------
+   Scopes (the Scope list: Global + one entry per mask)
+   --------------------------------------------------------------------------------- */
 
-QString DevelopProperties::layerRootPath() const
+QString DevelopProperties::uniqueScopeName(const QString &name) const
 {
-    return "Develop/Layers/" + layerName + "/";
-}
-
-double DevelopProperties::layerValue(const QString &key, double defaultValue) const
-{
-    QString path = layerRootPath() + key;
-    if (setting->contains(path)) return setting->value(path).toDouble();
-    return defaultValue;
-}
-
-QString DevelopProperties::uniqueLayerName(const QString &name) const
-{
-    const QStringList names = currentLayerNames();
+    const QStringList names = currentScopeNames();
     QString unique = name;
     int n = 1;
     while (names.contains(unique)) {
         unique = name + " " + QString::number(++n);
     }
     return unique;
-}
-
-void DevelopProperties::readLayerList()
-{
-    if (G::isLogger) G::log("DevelopProperties::readLayerList");
-    layerList.clear();
-
-    setting->beginGroup("Develop/Layers");
-    layerList = setting->childGroups();
-    QString current = setting->value("current").toString();
-    setting->endGroup();
-
-    /* Always have at least one layer. */
-    if (layerList.isEmpty()) {
-        layerName = "Base";
-        layerList << layerName;
-        setting->setValue("Develop/Layers/current", layerName);
-        setting->setValue(layerRootPath() + "created", true);
-    }
-    else {
-        layerName = layerList.contains(current) ? current : layerList.first();
-    }
-    layerId = layerList.indexOf(layerName);
-}
-
-void DevelopProperties::setCurrentLayer(QString name)
-{
-    if (G::isLogger) G::log("DevelopProperties::setCurrentLayer", name);
-    if (name.isEmpty() || !layerList.contains(name)) return;
-    layerName = name;
-    layerId = layerList.indexOf(name);
-    setting->setValue("Develop/Layers/current", layerName);
 }
 
 void DevelopProperties::buildTree()
@@ -160,7 +123,7 @@ void DevelopProperties::buildTree()
     isRebuildingMasks = true;
 
     /* Delete every row's editor widgets (close), then drop the rows, and rebuild for the ACTIVE
-       layer: its top items first, then the adjustment sections. close() before removeRows so the
+       scope: its top items first, then the adjustment sections. close() before removeRows so the
        setIndexWidget editors are freed rather than leaked on each rebuild. */
     btns.clear();
     basicEyeBtn = colorEyeBtn = effectsEyeBtn = nullptr;
@@ -175,10 +138,10 @@ void DevelopProperties::buildTree()
        crash on data(). Clear it so only rows present after the rebuild have entries. */
     sourceIdx.clear();
 
-    /* Lab UI: the Base "Core" rows live in the RawPanel above the Layers list, so the
+    /* Lab UI: the Global "Core" rows live in the RawPanel above the Scopes list, so the
        tree omits them (addMaskItems stays until the Mask panel lands in Phase 4). */
-    if (activeLayerIndex == 0) { if (!G::useLayerHeaderLab) addCoreItems(); }
-    else                       addMaskItems();      // this layer's mask tool rows
+    if (activeScopeIndex == 0) { if (!G::useScopeHeaderLab) addCoreItems(); }
+    else                       addMaskItems();      // this scope's mask tool rows
     addBasic();
     addColor();
     addColorMix();
@@ -202,7 +165,7 @@ void DevelopProperties::buildTree()
     refreshPreviewButtons();
     updateMaskEdit();
     updateHiddenRows(QModelIndex());
-    applyLayerItemsCollapsed();      // re-assert the '>' collapse (a rebuild resets row visibility)
+    applyScopeItemsCollapsed();      // re-assert the '>' collapse (a rebuild resets row visibility)
     applyCoreVisibility();           // hide Demosaic/Denoise raw on preview
     if (!panelEnabled) applyItemsEnabled(false);   // keep captions greyed if disabled
     syncRawPanel();                  // lab UI: reflect raw state + visibility in RawPanel
@@ -225,12 +188,12 @@ void DevelopProperties::persistSectionExpanded(const QModelIndex &idx, bool expa
 void DevelopProperties::addCoreItems()
 {
     if (G::isLogger) G::log("DevelopProperties::addCoreItems");
-    /* Base layer only. These rows apply to raw sensor data, so they are shown for RAW files only:
+    /* Global scope only. These rows apply to raw sensor data, so they are shown for RAW files only:
        a JPG/TIFF/PNG is already the developable image (no demosaic, no raw denoise, no source
-       choice). Non-raw Base layers get no Core rows. */
+       choice). Non-raw Global scopes get no Core rows. */
     if (!currentIsRaw()) return;
 
-    /* Edit source selector (directly under the layer header): choose whether Develop edits the raw
+    /* Edit source selector (directly under the scope header): choose whether Develop edits the raw
        sensor data or the embedded preview jpg. An A/B radio pair kept in sync with G::useRaw and
        the status-bar useRaw button. "Edit:" is indented to line up with the Demosaic row
        below it (isIndent = true); the radios are hosted in the value cell (DT_None = no
@@ -247,7 +210,7 @@ void DevelopProperties::addCoreItems()
     i.delegateType = DT_None;
     addItem(i);
     /* A little extra vertical breathing room (4px top + 4px bottom) to set the source
-       selector apart from the layer header above and the Demosaic row below. */
+       selector apart from the scope header above and the Demosaic row below. */
     model->setData(capIdx, 8, UR_ExtraRowHeight);
 
     const QModelIndex editValIdx = findValueIndex("editSource");
@@ -277,8 +240,8 @@ void DevelopProperties::addCoreItems()
 
     /* Demosaic engine + raw noise reduction. Indented (isIndent = true) so they align with the
        Basic-section sliders (e.g. "Temp"). Visible only when editing raw (applyCoreVisibility).
-       DT_None: we own the value cell and host a real QComboBox formatted like the layer
-       dropdown (LayerHeader::combo), rather than the delegate's DT_Combo. */
+       DT_None: we own the value cell and host a real QComboBox formatted like the scope
+       dropdown (ScopeHeader::combo), rather than the delegate's DT_Combo. */
     clearItemInfo(i);
     i.name = "demosaic";
     i.parentName = "";
@@ -293,7 +256,7 @@ void DevelopProperties::addCoreItems()
 
     const QModelIndex demosaicValIdx = findValueIndex("demosaic");
     if (demosaicValIdx.isValid()) {
-        /* Real QComboBox in the value cell, formatted like the layer dropdown: a 12px
+        /* Real QComboBox in the value cell, formatted like the scope dropdown: a 12px
            checkmark on the ACTIVE engine and a blank spacer on the other, expanding width.
            Recreated on every rebuild (setIndexWidget gives the view ownership), so reading
            G::decodeRawEngine here keeps the checkmark on the engine actually in effect. */
@@ -333,7 +296,7 @@ void DevelopProperties::addCoreItems()
     /* The Demosaic row is a plain leaf (no children, no decoration arrow), so it draws
        in the ordinary caption colour like "Edit:" -- not the teal header colour. */
 
-    /* "Denoise raw": Base-layer, decode-time raw noise reduction (denoiseLuma/
+    /* "Denoise raw": Global-scope, decode-time raw noise reduction (denoiseLuma/
        denoiseChroma), baked into the pre-develop WorkingImage (global, not maskable) --
        distinct from the Effects "Denoise" (localDenoiseLuma). Two Lightroom-style 0..100
        sliders mapped to 0..1: Luminance = the master AI-denoise amount; Color = extra
@@ -428,7 +391,7 @@ void DevelopProperties::addCoreItems()
         setItemEnabled("denoiseChroma", denoiseReady);
     }
     /* Visibility (per G::useRaw + collapse) applied by buildTree() after
-       applyLayerItemsCollapsed. */
+       applyScopeItemsCollapsed. */
 }
 
 bool DevelopProperties::currentIsRaw() const
@@ -491,11 +454,11 @@ void DevelopProperties::syncEditRaw(bool useRaw)
 void DevelopProperties::applyCoreVisibility()
 {
     /* The Demosaic row and its raw-denoise sibling sliders (Winnow engine) are visible
-       only when editing raw AND the layer items are not collapsed ('>'). Scan root rows
-       for those names -- run AFTER applyLayerItemsCollapsed(), which would otherwise
+       only when editing raw AND the scope items are not collapsed ('>'). Scan root rows
+       for those names -- run AFTER applyScopeItemsCollapsed(), which would otherwise
        re-show them on a non-collapsed rebuild. On the Apple engine the denoise rows are
        absent (addCoreItems), so only the Demosaic row matches. */
-    const bool hide = !G::useRaw || layerItemsCollapsed;
+    const bool hide = !G::useRaw || scopeItemsCollapsed;
     for (int r = 0; r < model->rowCount(); ++r) {
         const QModelIndex cap = model->index(r, CapColumn);
         const QString name = cap.data(UR_Name).toString();
@@ -510,22 +473,22 @@ void DevelopProperties::applyCoreVisibility()
 void DevelopProperties::addMaskItems()
 {
     if (G::isLogger) G::log("DevelopProperties::addMaskItems");
-    /* Non-Base layers: the layer's ordered Add/Subtract mask tools as rows at the top of the tree.
+    /* Non-Global scopes: the scope's ordered Add/Subtract mask tools as rows at the top of the tree.
        The selected tool is expanded with its settings (addToolRow). */
-    EditLayer *layer = activeLayer();
-    if (!layer || activeLayerIndex == 0) { selectedMaskIndex = -1; return; }
-    const int n = layer->masks.size();
+    EditScope *scope = activeScope();
+    if (!scope || activeScopeIndex == 0) { selectedMaskIndex = -1; return; }
+    const int n = scope->components.size();
 
     /* Lab UI (append-only "flatten"): the tool being built shows its settings in the
-       MaskPanel's own tree (above the Layers list), NOT here. Committed tools are folded
+       MaskPanel's own tree (above the Scopes list), NOT here. Committed tools are folded
        into the mask and never re-opened, so the main tree shows no mask rows -- only the
-       "Add mask" placeholder when the layer has no mask and nothing is being edited. */
-    if (G::useLayerHeaderLab) {
+       "Add mask" placeholder when the scope has no mask and nothing is being edited. */
+    if (G::useScopeHeaderLab) {
         if (n == 0 && !maskPanelOpen) { selectedMaskIndex = -1; addAddMaskRow(); }
         return;
     }
 
-    /* Legacy: the whole ordered tool list, the selected one expanded. A no-mask layer
+    /* Legacy: the whole ordered tool list, the selected one expanded. A no-mask scope
        shows a single "Add mask" placeholder row with a [+] button. */
     if (n == 0) {
         selectedMaskIndex = -1;
@@ -534,12 +497,12 @@ void DevelopProperties::addMaskItems()
     }
     if (selectedMaskIndex >= n) selectedMaskIndex = n - 1;
     for (int m = 0; m < n; ++m)
-        addToolRow(QModelIndex(), m, layer->masks[m], m == selectedMaskIndex);
+        addToolRow(QModelIndex(), m, scope->components[m], m == selectedMaskIndex);
 }
 
 void DevelopProperties::addAddMaskRow()
 {
-    /* Placeholder row shown only while the active (non-Base) layer has no mask: a header-style,
+    /* Placeholder row shown only while the active (non-Global) scope has no mask: a header-style,
        full-width single-line "Add mask" caption carrying just a [+] glyph (UR_AddBtn, no [-] and no
        expand arrow). Clicking anywhere on the row pops the Add/Subtract chooser (showMaskMenu). It is
        identified in mousePressEvent by its name ("addMask"), as it has no UR_MaskIndex. */
@@ -547,7 +510,7 @@ void DevelopProperties::addAddMaskRow()
     i.name = "addMask";
     i.parIdx = QModelIndex();
     i.captionText = "Add mask";
-    i.tooltip = "This layer has no mask (it applies globally). Click [+] to add a mask tool.";
+    i.tooltip = "This mask is empty. Click [+] to add a mask tool.";
     i.isHeader = true;
     i.isDecoration = true;
     i.decorateGradient = false;
@@ -561,28 +524,28 @@ void DevelopProperties::addAddMaskRow()
     setFirstColumnSpanned(rowIdx.row(), QModelIndex(), true);
 }
 
-void DevelopProperties::bindLayerHeader(LayerHeaderBase *header)
+void DevelopProperties::bindScopeHeader(ScopeHeaderBase *header)
 {
-    if (G::isLogger) G::log("DevelopProperties::bindLayerHeader");
-    layerHeader = header;
-    if (!layerHeader) return;
+    if (G::isLogger) G::log("DevelopProperties::bindScopeHeader");
+    scopeHeader = header;
+    if (!scopeHeader) return;
 
-    connect(layerHeader, &LayerHeaderBase::layerSelected,       this, &DevelopProperties::onLayerSelected);
-    connect(layerHeader, &LayerHeaderBase::renameRequested,     this, &DevelopProperties::renameActiveLayer);
-    connect(layerHeader, &LayerHeaderBase::resetLayerRequested, this, &DevelopProperties::resetActiveLayer);
-    connect(layerHeader, &LayerHeaderBase::removeLayerRequested,this, &DevelopProperties::deleteLayer);
-    connect(layerHeader, &LayerHeaderBase::addLayerRequested,   this, &DevelopProperties::newLayer);
-    connect(layerHeader, &LayerHeaderBase::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
-    connect(layerHeader, &LayerHeaderBase::maskOverlayToggled,  this,
+    connect(scopeHeader, &ScopeHeaderBase::scopeSelected,       this, &DevelopProperties::onScopeSelected);
+    connect(scopeHeader, &ScopeHeaderBase::renameRequested,     this, &DevelopProperties::renameActiveScope);
+    connect(scopeHeader, &ScopeHeaderBase::resetScopeRequested, this, &DevelopProperties::resetActiveScope);
+    connect(scopeHeader, &ScopeHeaderBase::removeScopeRequested,this, &DevelopProperties::deleteScope);
+    connect(scopeHeader, &ScopeHeaderBase::addScopeRequested,   this, &DevelopProperties::newScope);
+    connect(scopeHeader, &ScopeHeaderBase::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
+    connect(scopeHeader, &ScopeHeaderBase::maskOverlayToggled,  this,
             &DevelopProperties::maskOverlayToggleRequested);
-    connect(layerHeader, &LayerHeaderBase::maskBreakdownToggled, this,
+    connect(scopeHeader, &ScopeHeaderBase::maskBreakdownToggled, this,
             &DevelopProperties::maskBreakdownToggleRequested);
-    connect(layerHeader, &LayerHeaderBase::previewToggled,      this, &DevelopProperties::onLayerPreviewToggled);
-    connect(layerHeader, &LayerHeaderBase::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
-    connect(layerHeader, &LayerHeaderBase::layerEnabledToggled, this, &DevelopProperties::onLayerEnabledToggled);
+    connect(scopeHeader, &ScopeHeaderBase::previewToggled,      this, &DevelopProperties::onScopePreviewToggled);
+    connect(scopeHeader, &ScopeHeaderBase::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
+    connect(scopeHeader, &ScopeHeaderBase::scopeEnabledToggled, this, &DevelopProperties::onScopeEnabledToggled);
 
     /* Seed the dropdown + eye from the current stack. */
-    refreshLayerCombo();
+    refreshScopeList();
     refreshPreviewButtons();
 }
 
@@ -607,8 +570,8 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
         setting->setValue("Develop/autoRunDenoise", on);
         emit autoRunDenoiseToggled(on);
     });
-    connect(rawPanel, &RawPanel::denoiseLumaChanged,   this, [this](int v){ setBaseDenoise(true,  v); });
-    connect(rawPanel, &RawPanel::denoiseChromaChanged, this, [this](int v){ setBaseDenoise(false, v); });
+    connect(rawPanel, &RawPanel::denoiseLumaChanged,   this, [this](int v){ setGlobalDenoise(true,  v); });
+    connect(rawPanel, &RawPanel::denoiseChromaChanged, this, [this](int v){ setGlobalDenoise(false, v); });
     connect(rawPanel, &RawPanel::tipsRequested, this, &DevelopProperties::howThisWorks);
 
     syncRawPanel();
@@ -620,7 +583,7 @@ void DevelopProperties::syncRawPanel()
     const bool raw = currentIsRaw();
     /* Raw-decode strip: only for raw files, and only in the lab UI (legacy keeps the Core
        rows in the tree). */
-    rawPanel->setVisible(raw && G::useLayerHeaderLab);
+    rawPanel->setVisible(raw && G::useScopeHeaderLab);
     if (!raw) return;
 
     const bool apple = (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine);
@@ -630,27 +593,29 @@ void DevelopProperties::syncRawPanel()
     rawPanel->setAutoRun(setting->value("Develop/autoRunDenoise", true).toBool());
     rawPanel->setDenoiseRunState(mw && mw->rawDenoiseReadyForCurrent());
 
-    /* Push the Base layer's stored denoise amounts (0..1 -> 0..100). */
+    /* Push the Global scope's stored denoise amounts (0..1 -> 0..100). */
     float dl = EditParams::kDefaultDenoiseLuma, dc = EditParams::kDefaultDenoiseChroma;
     const EditStack s = stackCache.value(currentImagePath);
-    if (!s.layers.isEmpty()) {
-        dl = s.layers.at(0).params.denoiseLuma;
-        dc = s.layers.at(0).params.denoiseChroma;
+    if (!s.scopes.isEmpty()) {
+        dl = s.scopes.at(0).params.denoiseLuma;
+        dc = s.scopes.at(0).params.denoiseChroma;
     }
     rawPanel->setDenoiseValues(qRound(dl * 100.0f), qRound(dc * 100.0f));
 }
 
-void DevelopProperties::setBaseDenoise(bool luma, int value0to100)
+void DevelopProperties::setGlobalDenoise(bool luma, int value0to100)
 {
     if (currentImagePath.isEmpty()) return;
     EditStack &s = stackCache[currentImagePath];
-    if (s.layers.isEmpty()) s.layers.append(EditLayer());
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
     const float f = value0to100 / 100.0f;      // dock 0..100 -> stored 0..1
-    if (luma) s.layers[0].params.denoiseLuma   = f;
-    else      s.layers[0].params.denoiseChroma = f;
-    dirty.insert(currentImagePath);
-    emit paramsChanged();                       // live preview (Base denoise re-decodes)
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+    if (luma) s.scopes[0].params.denoiseLuma   = f;
+    else      s.scopes[0].params.denoiseChroma = f;
+    /* Always scope 0, whichever scope is being edited. */
+    noteScopeEdit("Global", luma ? "Denoise raw" : "Denoise raw color",
+                  QString::number(value0to100),
+                  luma ? "global/denoiseLuma" : "global/denoiseChroma");
+    emit paramsChanged();               // live preview (Global denoise re-decodes)
 }
 
 void DevelopProperties::bindMaskPanel(MaskPanel *panel)
@@ -668,6 +633,20 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
         connect(ed, &MaskEditor::settingChanged, this, &DevelopProperties::onMaskEditorSetting);
         connect(ed, &MaskEditor::wheelChanged,   this, &DevelopProperties::onMaskEditorWheel);
     }
+}
+
+/* History caption for a mask-tool setting key (the tree/panel row's own wording). */
+static QString maskSettingLabel(const QString &key)
+{
+    if (key == "maskFeather")      return "Feather";
+    if (key == "maskInvert")       return "Invert";
+    if (key == "maskSize")         return "Brush size";
+    if (key == "maskFlow")         return "Brush flow";
+    if (key == "maskAutoMask")     return "Auto mask";
+    if (key == "maskAutoMaskAi")   return "Auto mask AI";
+    if (key == "maskRangeLo" || key == "maskRangeHi") return "Range";
+    if (key.startsWith("maskHue") || key.startsWith("maskSat")) return "Color range";
+    return "Mask setting";
 }
 
 void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &v)
@@ -710,8 +689,8 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
         emit paramsChanged();
     }
     else return;
-    dirty.insert(currentImagePath);
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+    noteEdit(maskSettingLabel(key), historyValueText(QModelIndex(), v),
+             "mask/" + key);
 }
 
 void DevelopProperties::onMaskEditorWheel(int hueLo, int hueHi, int satLo, int satHi, bool commit)
@@ -722,17 +701,16 @@ void DevelopProperties::onMaskEditorWheel(int hueLo, int hueHi, int satLo, int s
     mm->paramsJson = brushWith(mm->paramsJson, "hueHi", hueHi);
     mm->paramsJson = brushWith(mm->paramsJson, "satLo", satLo);
     mm->paramsJson = brushWith(mm->paramsJson, "satHi", satHi);
-    dirty.insert(currentImagePath);
+    noteEdit("Color range", QString(), "mask/colorRangeWheel");
     emit maskRangeChanged(mm->paramsJson);      // live-update the loupe tint
-    emit paramsChanged();                        // re-composite the masked layer
-    if (commit && G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+    emit paramsChanged();                        // re-composite the masked scope
 }
 
 MaskComponent *DevelopProperties::editingMaskComp()
 {
-    EditLayer *l = activeLayer();
-    if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size())
-        return &l->masks[selectedMaskIndex];
+    EditScope *l = activeScope();
+    if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->components.size())
+        return &l->components[selectedMaskIndex];
     return nullptr;
 }
 
@@ -746,10 +724,10 @@ void DevelopProperties::onMaskToolChosen(int tool)
 void DevelopProperties::beginMaskTool(int tool)
 {
     if (G::isLogger) G::log("DevelopProperties::beginMaskTool");
-    EditLayer *layer = activeLayer();
-    if (!layer || activeLayerIndex == 0) return;
+    EditScope *scope = activeScope();
+    if (!scope || activeScopeIndex == 0) return;
 
-    const bool first = layer->masks.isEmpty();
+    const bool first = scope->components.isEmpty();
     MaskComponent m;
     m.op   = int(MaskOp::Add);
     m.tool = tool;
@@ -759,8 +737,8 @@ void DevelopProperties::beginMaskTool(int tool)
     /* Append the tool; its settings render in the panel's embedded MaskEditor. The first
        tool is committed immediately (drawn RED); a later tool is a BLUE preview
        (pendingIdx) until Add/Subtract/Intersect folds it in. */
-    layer->masks.append(m);
-    selectedMaskIndex = layer->masks.size() - 1;
+    scope->components.append(m);
+    selectedMaskIndex = scope->components.size() - 1;
     pendingIdx = first ? -1 : selectedMaskIndex;
     maskPanelOpen = true;
     if (maskPanel) {
@@ -774,26 +752,28 @@ void DevelopProperties::beginMaskTool(int tool)
         }
     }
 
-    dirty.insert(currentImagePath);
+    noteEdit("Add " + maskToolName(tool));
     buildTree();                 // emits maskEditBegin for the on-canvas overlay
     emit paramsChanged();        // overlay/tint (red committed, blue pending)
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::commitPendingMask(int op)
 {
-    EditLayer *layer = activeLayer();
-    if (!layer || pendingIdx < 0 || pendingIdx >= layer->masks.size()) return;
-    layer->masks[pendingIdx].op = op;      // fold the preview in (sequential)
+    EditScope *scope = activeScope();
+    if (!scope || pendingIdx < 0 || pendingIdx >= scope->components.size()) return;
+    scope->components[pendingIdx].op = op;      // fold the preview in (sequential)
+    const QString toolName = maskToolName(scope->components[pendingIdx].tool);
     pendingIdx = -1;
     selectedMaskIndex = -1;                // flatten: committed tools are not re-opened
     maskLatched = true;                    // keep the combined (red) mask overlay showing
     maskPanelOpen = false;
     if (maskPanel) maskPanel->hide();
-    dirty.insert(currentImagePath);
+    const QString verb = op == int(MaskOp::Subtract)  ? "Subtract "
+                       : op == int(MaskOp::Intersect) ? "Intersect "
+                                                      : "Add ";
+    noteEdit(verb + toolName);
     buildTree();
     emit paramsChanged();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::finishFirstMask()
@@ -811,22 +791,21 @@ void DevelopProperties::finishFirstMask()
 
 void DevelopProperties::cancelMaskTool()
 {
-    EditLayer *layer = activeLayer();
-    /* Remove the just-added tool being edited (the blue preview, or an empty layer's
-       first tool -> the layer goes back to global). */
-    if (layer && selectedMaskIndex >= 0 && selectedMaskIndex < layer->masks.size())
-        layer->masks.removeAt(selectedMaskIndex);
+    EditScope *scope = activeScope();
+    /* Remove the just-added tool being edited (the blue preview, or an empty scope's
+       first tool -> the scope goes back to global). */
+    if (scope && selectedMaskIndex >= 0 && selectedMaskIndex < scope->components.size())
+        scope->components.removeAt(selectedMaskIndex);
     pendingIdx = -1;
     selectedMaskIndex = -1;
     /* Cancel discards the in-progress tool. Keep the overlay only if committed masks
-       remain on the layer. */
-    maskLatched = (layer && !layer->masks.isEmpty());
+       remain on the scope. */
+    maskLatched = (scope && !scope->components.isEmpty());
     maskPanelOpen = false;
     if (maskPanel) maskPanel->hide();
-    dirty.insert(currentImagePath);
+    noteEdit("Cancel mask tool");
     buildTree();
     emit paramsChanged();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::setPanelEnabled(bool enabled)
@@ -839,9 +818,9 @@ void DevelopProperties::setPanelEnabled(bool enabled)
        control without clobbering their individual enabled flags. */
     setEnabled(enabled);
 
-    /* The LayerHeader band (layer dropdown + buttons + eye) sits ABOVE the tree and is a
+    /* The ScopeHeader band (scope dropdown + buttons + eye) sits ABOVE the tree and is a
        sibling widget, so it must be greyed explicitly. */
-    if (layerHeader) layerHeader->setEnabled(enabled);
+    if (scopeHeader) scopeHeader->setEnabled(enabled);
 
     applyItemsEnabled(enabled);
 }
@@ -875,20 +854,20 @@ void DevelopProperties::applyItemsEnabled(bool enabled)
     viewport()->update();
 }
 
-void DevelopProperties::onLayerSelected(const QString &name)
+void DevelopProperties::onScopeSelected(const QString &name)
 {
-    if (G::isLogger) G::log("DevelopProperties::onLayerSelected", name);
+    if (G::isLogger) G::log("DevelopProperties::onScopeSelected", name);
     if (currentImagePath.isEmpty()) return;
-    const int idx = currentLayerNames().indexOf(name);
-    if (idx < 0 || idx == activeLayerIndex) return;
-    /* Discard an in-progress mask preview on the layer being left. */
+    const int idx = currentScopeNames().indexOf(name);
+    if (idx < 0 || idx == activeScopeIndex) return;
+    /* Discard an in-progress mask preview on the scope being left. */
     if (maskPanelOpen) cancelMaskTool();
-    activeLayerIndex = idx;
+    activeScopeIndex = idx;
 
-    EditLayer *l = activeLayer();
-    const bool hasMask = (idx > 0 && l && !l->masks.isEmpty());
-    if (G::useLayerHeaderLab) {
-        /* Lab UI: committed tools are not re-edited (flatten). Show the layer's combined
+    EditScope *l = activeScope();
+    const bool hasMask = (idx > 0 && l && !l->components.isEmpty());
+    if (G::useScopeHeaderLab) {
+        /* Lab UI: committed tools are not re-edited (flatten). Show the scope's combined
            mask (red, no handles) via the latch when it has one; no tool is "selected". */
         selectedMaskIndex = -1;
         maskLatched = hasMask;
@@ -899,18 +878,18 @@ void DevelopProperties::onLayerSelected(const QString &name)
         selectedMaskIndex = hasMask ? 0 : -1;
     }
 
-    refreshLayerCombo();          // move checkmark + re-caption actions to new layer
+    refreshScopeList();          // move checkmark + re-caption actions to new scope
     buildTree();                  // swap top items (Core/masks) + repopulate sections
 
-    /* Un-collapse the layer's own items (its mask rows). Bulk-guarded so setTreeCollapsed
+    /* Un-collapse the scope's own items (its mask rows). Bulk-guarded so setTreeCollapsed
        does not fold the adjustment sections under Solo -- those stay as the user left
        them. */
     isBulkExpandCollapse = true;
     setTreeCollapsed(false);
     isBulkExpandCollapse = false;
-    if (layerHeader) layerHeader->setCollapsed(false);
+    if (scopeHeader) scopeHeader->setCollapsed(false);
 
-    emit paramsChanged();         // the renderer shows the active layer
+    emit paramsChanged();         // the renderer shows the active scope
 }
 
 void DevelopProperties::onSpotToolToggled(bool active)
@@ -931,7 +910,7 @@ void DevelopProperties::onSpotStrokeCommitted(const QString &paramsJson)
     FillSpot fs;
     fs.paramsJson = paramsJson;
     s.spots.append(fs);
-    dirty.insert(currentImagePath);
+    noteScopeEdit(QString(), "Spot heal");   // whole-image, belongs to no scope
     emitSpotPins();
     emit paramsChanged();                   // re-render -> MiganFill heals the new spot
 }
@@ -943,7 +922,7 @@ void DevelopProperties::onSpotRemoveRequested(int index)
     EditStack &s = stackCache[currentImagePath];
     if (index < 0 || index >= s.spots.size()) return;
     s.spots.remove(index);
-    dirty.insert(currentImagePath);
+    noteScopeEdit(QString(), "Remove spot heal");
     emitSpotPins();
     emit paramsChanged();                   // re-render without the removed spot
 }
@@ -969,85 +948,81 @@ void DevelopProperties::emitSpotPins()
     emit spotPinsChanged(spotPinCenters());
 }
 
-void DevelopProperties::renameActiveLayer()
+void DevelopProperties::renameActiveScope()
 {
-    if (G::isLogger) G::log("DevelopProperties::renameActiveLayer");
+    if (G::isLogger) G::log("DevelopProperties::renameActiveScope");
     if (currentImagePath.isEmpty()) return;
-    if (activeLayerIndex == 0) {
-        if (G::popup) G::popup->showPopup("The Base layer cannot be renamed.");
+    if (activeScopeIndex == 0) {
+        if (G::popup) G::popup->showPopup("Global cannot be renamed.");
         return;
     }
     EditStack &s = stackCache[currentImagePath];
-    if (activeLayerIndex >= s.layers.size()) return;
+    if (activeScopeIndex >= s.scopes.size()) return;
 
-    const QString oldName = s.layers[activeLayerIndex].name;
+    const QString oldName = s.scopes[activeScopeIndex].name;
     bool ok = false;
-    const QString entered = QInputDialog::getText(this, "Rename layer", "Layer name:",
+    const QString entered = QInputDialog::getText(this, "Rename mask", "Mask name:",
                                                   QLineEdit::Normal, oldName, &ok).trimmed();
     if (!ok || entered.isEmpty() || entered == oldName) return;
 
-    /* uniqueLayerName still sees this layer's own OLD name, so it only suffixes on a clash with a
-       DIFFERENT layer. */
-    s.layers[activeLayerIndex].name = uniqueLayerName(entered);
-    dirty.insert(currentImagePath);
-    refreshLayerCombo();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+    /* uniqueScopeName still sees this scope's own OLD name, so it only suffixes on a clash with a
+       DIFFERENT scope. */
+    s.scopes[activeScopeIndex].name = uniqueScopeName(entered);
+    noteEdit("Rename mask", s.scopes[activeScopeIndex].name);
+    refreshScopeList();
 }
 
-void DevelopProperties::resetActiveLayer()
+void DevelopProperties::resetActiveScope()
 {
-    if (G::isLogger) G::log("DevelopProperties::resetActiveLayer");
+    if (G::isLogger) G::log("DevelopProperties::resetActiveScope");
     if (currentImagePath.isEmpty()) return;
-    EditLayer *l = activeLayer();
+    EditScope *l = activeScope();
     if (!l) return;
-    /* Restore this layer's adjustments to their defaults and un-hide every group (non-destructive to
-       the mask geometry, which defines WHERE the layer applies). */
+    /* Restore this scope's adjustments to their defaults and un-hide every group (non-destructive to
+       the mask geometry, which defines WHERE the scope applies). */
     l->params = EditParams();
-    l->showLayer = l->showBasic = l->showColor = l->showEffects = true;
-    dirty.insert(currentImagePath);
-    buildTree();                 // repopulate the sliders at their defaults + refresh the eyes
+    l->showScope = l->showBasic = l->showColor = l->showEffects = true;
+    noteEdit("Reset all");
+    buildTree();                 // repopulate the sliders at their defaults + the eyes
     emit paramsChanged();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
-void DevelopProperties::onLayerPreviewToggled(bool shown)
+void DevelopProperties::onScopePreviewToggled(bool shown)
 {
-    if (G::isLogger) G::log("DevelopProperties::onLayerPreviewToggled");
-    EditLayer *l = activeLayer();
-    if (!l) { if (layerHeader) layerHeader->setPreviewShown(true); return; }
-    l->showLayer = shown;        // non-destructive: kept, layer folds off at render
-    dirty.insert(currentImagePath);
+    if (G::isLogger) G::log("DevelopProperties::onScopePreviewToggled");
+    EditScope *l = activeScope();
+    if (!l) { if (scopeHeader) scopeHeader->setPreviewShown(true); return; }
+    l->showScope = shown;        // non-destructive: kept, scope folds off at render
+    noteEdit(shown ? "Show scope" : "Hide scope");
     refreshPreviewButtons();
     emit paramsChanged();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
-void DevelopProperties::onLayerEnabledToggled(int index, bool on)
+void DevelopProperties::onScopeEnabledToggled(int index, bool on)
 {
-    if (G::isLogger) G::log("DevelopProperties::onLayerEnabledToggled");
+    if (G::isLogger) G::log("DevelopProperties::onScopeEnabledToggled");
     if (currentImagePath.isEmpty()) return;
     EditStack &s = stackCache[currentImagePath];
-    /* Base (index 0) now has a checkbox too; the compositor honours layers[0].enabled
-       (see stackJob) so a disabled Base renders with no develop adjustments. */
-    if (index < 0 || index >= s.layers.size()) return;
-    if (s.layers[index].enabled == on) return;
-    s.layers[index].enabled = on;                 // compositor skips a disabled layer
-    dirty.insert(currentImagePath);
-    emit paramsChanged();                          // re-composite with the layer on/off
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+    /* Global (index 0) now has a checkbox too; the compositor honours scopes[0].enabled
+       (see stackJob) so a disabled Global renders with no develop adjustments. */
+    if (index < 0 || index >= s.scopes.size()) return;
+    if (s.scopes[index].enabled == on) return;
+    s.scopes[index].enabled = on;                 // compositor skips a disabled scope
+    noteScopeEdit(s.scopes[index].name, on ? "Show" : "Hide");
+    emit paramsChanged();                          // re-composite with the scope on/off
 }
 
 void DevelopProperties::setTreeCollapsed(bool collapsed)
 {
-    /* Hide only the LAYER items -- the Core rows (Base) or mask-tool rows that sit ABOVE
+    /* Hide only the SCOPE items -- the Core rows (Global) or mask-tool rows that sit ABOVE
        the Basic/Color/Effects sections. The sections stay visible. */
-    layerItemsCollapsed = collapsed;
-    applyLayerItemsCollapsed();
+    scopeItemsCollapsed = collapsed;
+    applyScopeItemsCollapsed();
     applyCoreVisibility();           // core rows also depend on collapse state
 
-    /* Solo: showing the layer's items is one of the mutually-exclusive sections, so
+    /* Solo: showing the scope's items is one of the mutually-exclusive sections, so
        collapse the three adjustment sections (they would otherwise stay open alongside
-       the layer). Skipped during the Expand-all bulk sweep, which wants all open. */
+       the scope). Skipped during the Expand-all bulk sweep, which wants all open. */
     if (!collapsed && !isBulkExpandCollapse &&
         setting->value("Develop/isSolo", false).toBool()) {
         for (const char *h : {"BasicHeader", "ColorHeader", "EffectsHeader"}) {
@@ -1057,14 +1032,14 @@ void DevelopProperties::setTreeCollapsed(bool collapsed)
     }
 }
 
-void DevelopProperties::applyLayerItemsCollapsed()
+void DevelopProperties::applyScopeItemsCollapsed()
 {
-    /* The layer's top items are the root rows BEFORE the Basic section (Core rows for Base, else the
+    /* The scope's top items are the root rows BEFORE the Basic section (Core rows for Global, else the
        mask-tool rows). Re-applied after each buildTree, since a rebuild resets row visibility. */
     const QModelIndex basic = findCaptionIndex("BasicHeader");
     const int firstSection = basic.isValid() ? basic.row() : model->rowCount();
     for (int r = 0; r < firstSection; ++r)
-        setRowHidden(r, QModelIndex(), layerItemsCollapsed);
+        setRowHidden(r, QModelIndex(), scopeItemsCollapsed);
 }
 
 void DevelopProperties::bindToneSlider(ToneRegionSlider *slider)
@@ -1094,28 +1069,27 @@ void DevelopProperties::onToneSplitsChanged(double shadow, double crossover, dou
        new positions still ride in the params for when a tone slider is next moved -- so dragging
        the handles on an untoned image does not spin up needless full-res renders. */
     if (p.shadows == 0.0f && p.highlights == 0.0f) return;
-    dirty.insert(currentImagePath);
+    noteEdit("Tonal ranges", QString(), "tone/splits");
     emit paramsChanged();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
-void DevelopProperties::newLayer()
+void DevelopProperties::newScope()
 {
-    if (G::isLogger) G::log("DevelopProperties::newLayer");
+    if (G::isLogger) G::log("DevelopProperties::newScope");
     if (currentImagePath.isEmpty()) return;
 
     EditStack &s = stackCache[currentImagePath];
-    if (s.layers.isEmpty()) s.layers.append(EditLayer());     // ensure a base layer exists
-    s.layers[0].name = "Base";                                // index 0 is always Base
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());     // ensure a base scope exists
+    s.scopes[0].name = "Global";                    // index 0 is always the Global scope
 
-    /* Prompt for the name, defaulting to "Layer n" (the first above Base is "Layer 1", since Base is
-       index 0 and the new layer's index equals the pre-append size). Pop the dialog near the cursor
+    /* Prompt for the name, defaulting to "Scope n" (the first above Global is "Scope 1", since Global is
+       index 0 and the new scope's index equals the pre-append size). Pop the dialog near the cursor
        (the [+] button just clicked) rather than screen-centre, so the flow stays where the user is
        looking, clamped to the screen. */
-    const QString def = uniqueLayerName("Layer " + QString::number(s.layers.size()));
+    const QString def = uniqueScopeName("Mask " + QString::number(s.scopes.size()));
     QInputDialog dlg(this);
-    dlg.setWindowTitle("New layer");
-    dlg.setLabelText("Layer name:");
+    dlg.setWindowTitle("New mask");
+    dlg.setLabelText("Mask name:");
     dlg.setTextEchoMode(QLineEdit::Normal);
     dlg.setTextValue(def);
     dlg.adjustSize();
@@ -1130,48 +1104,48 @@ void DevelopProperties::newLayer()
     if (dlg.exec() != QDialog::Accepted) return;
     const QString entered = dlg.textValue().trimmed();
 
-    EditLayer l;
-    l.name = uniqueLayerName(entered.isEmpty() ? def : entered);
-    s.layers.append(l);
-    activeLayerIndex = s.layers.size() - 1;                   // edit the new layer
-    dirty.insert(currentImagePath);
+    EditScope l;
+    l.name = uniqueScopeName(entered.isEmpty() ? def : entered);
+    s.scopes.append(l);
+    activeScopeIndex = s.scopes.size() - 1;                   // edit the new scope
+    noteScopeEdit(l.name, "New mask scope");
 
-    /* New layer is identity, so the rendered result is unchanged; just refresh the header combo and
-       rebuild the tree for it. The stack only persists once a layer actually changes a pixel. */
+    /* New scope is identity, so the rendered result is unchanged; just refresh the header
+       combo and rebuild the tree for it. The stack only persists once a scope actually
+       changes a pixel. */
     selectedMaskIndex = -1;
-    refreshLayerCombo();
+    refreshScopeList();
     buildTree();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 
-    /* A new layer's whole point is to apply a masked adjustment, so the next step is choosing a mask
-       tool -- pop that menu straight away (near the cursor). Escape just leaves an empty layer. */
+    /* A new scope's whole point is to apply a masked adjustment, so the next step is choosing a mask
+       tool -- pop that menu straight away (near the cursor). Escape just leaves an empty scope. */
     showMaskMenu();
 }
 
-void DevelopProperties::deleteLayer()
+void DevelopProperties::deleteScope()
 {
-    if (G::isLogger) G::log("DevelopProperties::deleteLayer");
+    if (G::isLogger) G::log("DevelopProperties::deleteScope");
     if (currentImagePath.isEmpty()) return;
 
     EditStack &s = stackCache[currentImagePath];
-    if (activeLayerIndex <= 0) {
-        if (G::popup) G::popup->showPopup("The Base layer cannot be removed.");
+    if (activeScopeIndex <= 0) {
+        if (G::popup) G::popup->showPopup("Global cannot be removed.");
         return;
     }
-    if (activeLayerIndex >= s.layers.size()) activeLayerIndex = s.layers.size() - 1;
-    s.layers.removeAt(activeLayerIndex);
-    if (activeLayerIndex >= s.layers.size()) activeLayerIndex = s.layers.size() - 1;
-    dirty.insert(currentImagePath);
+    if (activeScopeIndex >= s.scopes.size()) activeScopeIndex = s.scopes.size() - 1;
+    const QString goneName = s.scopes.at(activeScopeIndex).name;
+    s.scopes.removeAt(activeScopeIndex);
+    if (activeScopeIndex >= s.scopes.size()) activeScopeIndex = s.scopes.size() - 1;
+    noteScopeEdit(QString(), "Delete " + goneName);
 
     selectedMaskIndex = -1;
-    refreshLayerCombo();
+    refreshScopeList();
     buildTree();
-    emit paramsChanged();                                    // removing a layer changes the result
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+    emit paramsChanged();                    // removing a scope changes the result
 }
 
 /* ----------------------------------------------------------------------------------------
-   Mask (one mask per non-Base layer, built from an ordered list of Add/Subtract tools)
+   Mask (one mask per mask, built from an ordered list of Add/Subtract tools)
 
    Tree shape (the mask-tool rows at the top of the tree, above the Basic/Color/Effects sections):
 
@@ -1183,8 +1157,8 @@ void DevelopProperties::deleteLayer()
 
    Tool rows are header-style (single-line full-width caption + expand arrow) but flagged
    UR_LeafSingleLine so they paint in the leaf colour, not category teal. The [+] glyph (UR_AddBtn,
-   hit-tested in mousePressEvent) pops showMaskMenu to append a tool (newMask); a new layer's first
-   tool is offered automatically (newLayer -> showMaskMenu). Subtract is offered only once a tool
+   hit-tested in mousePressEvent) pops showMaskMenu to append a tool (newMask); a new scope's first
+   tool is offered automatically (newScope -> showMaskMenu). Subtract is offered only once a tool
    exists ("the first must be added"). Only the SELECTED tool carries its settings children (no duplicate tool-name
    row); clicking a tool (mousePressEvent) toggles which one is expanded. Spatial editing (drag/
    paint/AI-select on the image) is deferred to the canvas; rendering does not yet composite the
@@ -1222,42 +1196,42 @@ QString DevelopProperties::opName(int op)
     return "(+)";
 }
 
-EditLayer *DevelopProperties::activeLayer()
+EditScope *DevelopProperties::activeScope()
 {
     if (currentImagePath.isEmpty()) return nullptr;
     EditStack &s = stackCache[currentImagePath];
-    if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) return nullptr;
-    return &s.layers[activeLayerIndex];
+    if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) return nullptr;
+    return &s.scopes[activeScopeIndex];
 }
 
 bool DevelopProperties::maskOverlayActive() const
 {
-    /* Show the layer mask overlay on a non-Base layer while a tool is being edited
+    /* Show the mask overlay on a mask while a tool is being edited
        (selectedMaskIndex) OR after a commit/finish latched it on (the combined result
-       stays visible + 'O'-toggleable until the layer/image changes). */
-    return activeLayerIndex > 0 && (selectedMaskIndex >= 0 || maskLatched);
+       stays visible + 'O'-toggleable until the scope/image changes). */
+    return activeScopeIndex > 0 && (selectedMaskIndex >= 0 || maskLatched);
 }
 
-QVector<MaskComponent> DevelopProperties::activeLayerMasks() const
+QVector<MaskComponent> DevelopProperties::activeScopeComponents() const
 {
     if (currentImagePath.isEmpty()) return {};
     auto it = stackCache.constFind(currentImagePath);
     if (it == stackCache.constEnd()) return {};
     const EditStack &s = it.value();
-    if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) return {};
-    return s.layers[activeLayerIndex].masks;
+    if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) return {};
+    return s.scopes[activeScopeIndex].components;
 }
 
 int DevelopProperties::activeMaskIndex() const
 {
-    /* Position of the expanded tool within activeLayerMasks() (same ordering), or -1. */
+    /* Position of the expanded tool within activeScopeComponents() (same ordering), or -1. */
     if (currentImagePath.isEmpty()) return -1;
     auto it = stackCache.constFind(currentImagePath);
     if (it == stackCache.constEnd()) return -1;
     const EditStack &s = it.value();
-    if (activeLayerIndex <= 0 || activeLayerIndex >= s.layers.size()) return -1;
+    if (activeScopeIndex <= 0 || activeScopeIndex >= s.scopes.size()) return -1;
     if (selectedMaskIndex < 0 ||
-        selectedMaskIndex >= s.layers[activeLayerIndex].masks.size()) return -1;
+        selectedMaskIndex >= s.scopes[activeScopeIndex].components.size()) return -1;
     return selectedMaskIndex;
 }
 
@@ -1271,15 +1245,27 @@ EditParams::Group DevelopProperties::paramsGroup(int group)
     case PV_Color:    return EditParams::Group::Color;
     case PV_ColorMix: return EditParams::Group::ColorMix;
     case PV_Effects:  return EditParams::Group::Effects;
-    default:          return EditParams::Group::Basic;   // PV_Basic (+ PV_Layer, unused)
+    default:          return EditParams::Group::Basic;   // PV_Basic (+ PV_Scope, unused)
     }
 }
 
-bool *DevelopProperties::previewFlag(EditLayer *l, int group)
+/* Section name for history captions ("Reset Basic", "Hide Effects"). */
+QString DevelopProperties::groupLabel(int group)
+{
+    switch (group) {
+    case PV_Color:    return "Color";
+    case PV_ColorMix: return "Color Mix";
+    case PV_Effects:  return "Effects";
+    case PV_Scope:    return "all";
+    default:          return "Basic";
+    }
+}
+
+bool *DevelopProperties::previewFlag(EditScope *l, int group)
 {
     if (!l) return nullptr;
     switch (group) {
-    case PV_Layer:    return &l->showLayer;
+    case PV_Scope:    return &l->showScope;
     case PV_Color:    return &l->showColor;
     case PV_ColorMix: return &l->showColorMix;
     case PV_Effects:  return &l->showEffects;
@@ -1298,7 +1284,7 @@ BarBtn *DevelopProperties::makeEyeBtn(const QString &tooltip, int group)
 
 void DevelopProperties::refreshPreviewButtons()
 {
-    EditLayer *l = activeLayer();
+    EditScope *l = activeScope();
     auto set = [](BarBtn *b, bool shown) {
         if (!b) return;
         b->setIcon(shown ? ":/images/icon16/eye.png" : ":/images/icon16/eye_off.png", G::iconOpacity);
@@ -1307,21 +1293,20 @@ void DevelopProperties::refreshPreviewButtons()
     set(colorEyeBtn,    l ? l->showColor    : true);
     set(colorMixEyeBtn, l ? l->showColorMix : true);
     set(effectsEyeBtn,  l ? l->showEffects  : true);
-    /* The whole-layer eye lives in the LayerHeader widget, not the tree. */
-    if (layerHeader) layerHeader->setPreviewShown(l ? l->showLayer : true);
+    /* The whole-mask eye lives in the ScopeHeader widget, not the tree. */
+    if (scopeHeader) scopeHeader->setPreviewShown(l ? l->showScope : true);
 }
 
 void DevelopProperties::togglePreviewSection(int group)
 {
     if (G::isLogger) G::log("DevelopProperties::togglePreviewSection");
-    EditLayer *l = activeLayer();
+    EditScope *l = activeScope();
     bool *f = previewFlag(l, group);
     if (!f) return;
-    *f = !*f;                               // non-destructive: values are kept, only the fold changes
-    dirty.insert(currentImagePath);
+    *f = !*f;                     // non-destructive: values kept, only the fold changes
+    noteEdit((*f ? "Show " : "Hide ") + groupLabel(group));
     refreshPreviewButtons();
     emit paramsChanged();                   // re-render with the folded params
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::resetSection(int group)
@@ -1329,7 +1314,7 @@ void DevelopProperties::resetSection(int group)
     if (G::isLogger) G::log("DevelopProperties::resetSection");
     if (currentImagePath.isEmpty()) return;
     EditParams &p = activeParams();
-    if (group == PV_Layer) {
+    if (group == PV_Scope) {
         EditParams::resetGroup(p, EditParams::Group::Basic);
         EditParams::resetGroup(p, EditParams::Group::Color);
         EditParams::resetGroup(p, EditParams::Group::ColorMix);
@@ -1338,10 +1323,9 @@ void DevelopProperties::resetSection(int group)
     else {
         EditParams::resetGroup(p, paramsGroup(group));
     }
-    dirty.insert(currentImagePath);
-    populateSlidersFromStack();             // reflect the restored defaults (sliders + tone slider)
+    noteEdit("Reset " + groupLabel(group));
+    populateSlidersFromStack();      // reflect the restored defaults (sliders + tone)
     emit paramsChanged();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
@@ -1365,7 +1349,7 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
     QAction *aPreview = nullptr;
     QAction *aReset = nullptr;
     if (group >= 0) {
-        EditLayer *l = activeLayer();
+        EditScope *l = activeScope();
         const bool shown = l ? *previewFlag(l, group) : true;
         aPreview = menu.addAction("Preview");
         aPreview->setCheckable(true);
@@ -1383,8 +1367,8 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
     aSolo->setCheckable(true);
     aSolo->setChecked(setting->value("Develop/isSolo", false).toBool());
 
-    /* Jump to the raw decode rows. They are Core rows on the Base layer (addCoreItems),
-       so this activates Base and un-collapses it. Raw files only, and only while editing
+    /* Jump to the raw decode rows. They are Core rows on the Global scope (addCoreItems),
+       so this activates Global and un-collapses it. Raw files only, and only while editing
        raw (applyCoreVisibility hides them when editing the embedded preview). The Winnow
        engine adds the raw-denoise rows alongside Demosaic, hence the longer caption. */
     QAction *aRawDemosaic = nullptr;
@@ -1417,58 +1401,60 @@ void DevelopProperties::showRawDemosaic()
 {
     if (G::isLogger) G::log("DevelopProperties::showRawDemosaic");
     /* Reveal the Demosaic (and, on the Winnow engine, raw-denoise) rows: they are Core
-       rows on the Base layer, hidden while the layer items are collapsed. Bulk-guarded so
+       rows on the Global scope, hidden while the scope items are collapsed. Bulk-guarded so
        un-collapsing does not fold the adjustment sections under Solo. */
-    if (activeLayerIndex != 0) onLayerSelected(currentLayerNames().value(0));
+    if (activeScopeIndex != 0) onScopeSelected(currentScopeNames().value(0));
     isBulkExpandCollapse = true;
     setTreeCollapsed(false);
     isBulkExpandCollapse = false;
-    if (layerHeader) layerHeader->setCollapsed(false);
+    if (scopeHeader) scopeHeader->setCollapsed(false);
 }
 
 void DevelopProperties::setAllSectionsExpanded(bool expand)
 {
     if (G::isLogger) G::log("DevelopProperties::setAllSectionsExpanded");
-    /* Expand/Collapse all also drives the Layer row, whose collapse arrow lives in the
-       LayerHeader band (not the tree). The bulk guard stops onSectionExpanded from
-       re-collapsing the layer as the tree sections expand under Solo. */
+    /* Expand/Collapse all also drives the Scope row, whose collapse arrow lives in the
+       ScopeHeader band (not the tree). The bulk guard stops onSectionExpanded from
+       re-collapsing the scope as the tree sections expand under Solo. */
     isBulkExpandCollapse = true;
     if (expand) expandAll();
     else        collapseAll();
-    setTreeCollapsed(!expand);                          // show/hide the layer's own items
-    if (layerHeader) layerHeader->setCollapsed(!expand);
+    setTreeCollapsed(!expand);                          // show/hide the scope's own items
+    if (scopeHeader) scopeHeader->setCollapsed(!expand);
     isBulkExpandCollapse = false;
 }
 
 void DevelopProperties::onSectionExpanded(const QModelIndex &idx)
 {
     /* Solo: one section open at a time. The base PropertyEditor collapses the sibling
-       tree sections when a root is expanded; extend that to the Layer row (a separate
-       widget above the tree). Only the three adjustment sections are peers of the layer
-       -- the Demosaic row is itself a layer item (it hides when the layer collapses), so
-       expanding it must NOT collapse the layer. Skipped during the Expand-all sweep. */
+       tree sections when a root is expanded; extend that to the Scope row (a separate
+       widget above the tree). Only the three adjustment sections are peers of the scope
+       -- the Demosaic row is itself a scope item (it hides when the scope collapses), so
+       expanding it must NOT collapse the scope. Skipped during the Expand-all sweep. */
     if (isBulkExpandCollapse) return;
     if (!setting->value("Develop/isSolo", false).toBool()) return;
     const QString name = idx.data(UR_Name).toString();
     if (name != "BasicHeader" && name != "ColorHeader" && name != "EffectsHeader") return;
-    if (!layerItemsCollapsed) {
+    if (!scopeItemsCollapsed) {
         setTreeCollapsed(true);
-        if (layerHeader) layerHeader->setCollapsed(true);
+        if (scopeHeader) scopeHeader->setCollapsed(true);
     }
 }
 
 void DevelopProperties::showMaskMenu()
 {
     if (G::isLogger) G::log("DevelopProperties::showMaskMenu");
-    EditLayer *layer = activeLayer();
-    if (!layer || activeLayerIndex == 0) {
-        if (G::popup) G::popup->showPopup("The Base layer applies globally and cannot be masked.");
+    EditScope *scope = activeScope();
+    if (!scope || activeScopeIndex == 0) {
+        if (G::popup)
+            G::popup->showPopup("Global applies to the whole image. "
+                               "Press N to create a mask.");
         return;
     }
 
     /* Lab UI: a plain tool list -- the Add/Subtract/Intersect choice is made later on the
        MaskPanel, once the tool is defined (build-up model). */
-    if (G::useLayerHeaderLab) {
+    if (G::useScopeHeaderLab) {
         maskMenu->clear();
         for (int t = 0; t <= int(MaskTool::Object); ++t) {
             QAction *a = maskMenu->addAction(maskToolName(t));
@@ -1490,7 +1476,7 @@ void DevelopProperties::showMaskMenu()
         if (t == int(MaskTool::Brush) || t == int(MaskTool::LuminanceRange))
             maskMenu->addSeparator();           // group geometric / range / AI tools
     }
-    if (!layer->masks.isEmpty()) {
+    if (!scope->components.isEmpty()) {
         maskMenu->addSeparator();
         for (int t = 0; t <= int(MaskTool::Object); ++t) {
             QAction *a = maskMenu->addAction("Subtract " + maskToolName(t));
@@ -1505,8 +1491,8 @@ void DevelopProperties::showMaskMenu()
 void DevelopProperties::newMask()
 {
     if (G::isLogger) G::log("DevelopProperties::newMask");
-    EditLayer *layer = activeLayer();
-    if (!layer || activeLayerIndex == 0) return;            // Base layer has no mask
+    EditScope *scope = activeScope();
+    if (!scope || activeScopeIndex == 0) return;            // Global scope has no mask
     QAction *a = qobject_cast<QAction*>(sender());
     if (!a) return;
 
@@ -1520,27 +1506,26 @@ void DevelopProperties::newMask()
     m.tool = maskToolFromName(txt.section(' ', 1));
     m.paramsJson = defaultMaskParams(m.tool);
     if (m.tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush defaults to a crisp edge
-    layer->masks.append(m);
-    selectedMaskIndex = layer->masks.size() - 1;            // start editing the new tool
-    dirty.insert(currentImagePath);
+    scope->components.append(m);
+    selectedMaskIndex = scope->components.size() - 1;      // start editing the new tool
+    noteEdit(txt);              // "Add Subject Mask" / "Subtract Brush Mask" / ...
 
     buildTree();
-    emit paramsChanged();       // adding a mask confines the layer's adjustment -> re-composite
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+    emit paramsChanged();       // a mask confines the scope's adjustment -> re-composite
 }
 
 void DevelopProperties::deleteMask(int index)
 {
-    EditLayer *layer = activeLayer();
-    if (!layer || index < 0 || index >= layer->masks.size()) return;
-    layer->masks.removeAt(index);
-    if      (selectedMaskIndex == index) selectedMaskIndex = -1;     // its settings close
-    else if (selectedMaskIndex >  index) selectedMaskIndex--;        // shift to follow the tool
-    dirty.insert(currentImagePath);
+    EditScope *scope = activeScope();
+    if (!scope || index < 0 || index >= scope->components.size()) return;
+    const QString goneTool = maskToolName(scope->components.at(index).tool);
+    scope->components.removeAt(index);
+    if      (selectedMaskIndex == index) selectedMaskIndex = -1;   // its settings close
+    else if (selectedMaskIndex >  index) selectedMaskIndex--;      // follow the tool
+    noteEdit("Delete " + goneTool);
 
     buildTree();
-    emit paramsChanged();       // removing a mask changes the layer's coverage -> re-composite
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+    emit paramsChanged();       // less mask coverage on the scope -> re-composite
 }
 
 void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComponent &m, bool selected)
@@ -1807,9 +1792,9 @@ int DevelopProperties::activeMaskTool() const
     auto it = stackCache.find(currentImagePath);
     if (it == stackCache.end()) return -1;
     const EditStack &s = it.value();
-    if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) return -1;
-    if (selectedMaskIndex < 0 || selectedMaskIndex >= s.layers[activeLayerIndex].masks.size()) return -1;
-    return s.layers[activeLayerIndex].masks[selectedMaskIndex].tool;
+    if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) return -1;
+    if (selectedMaskIndex < 0 || selectedMaskIndex >= s.scopes[activeScopeIndex].components.size()) return -1;
+    return s.scopes[activeScopeIndex].components[selectedMaskIndex].tool;
 }
 
 double DevelopProperties::brushNum(const QString &paramsJson, const QString &key, double def)
@@ -1839,31 +1824,29 @@ QString DevelopProperties::brushWith(const QString &paramsJson, const QString &k
 
 void DevelopProperties::setActiveBrushSize(double size)
 {
-    EditLayer *l = activeLayer();
-    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->masks.size()) return;
-    MaskComponent &m = l->masks[selectedMaskIndex];
+    EditScope *l = activeScope();
+    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
+    MaskComponent &m = l->components[selectedMaskIndex];
     if (m.tool != int(MaskTool::Brush) && m.tool != int(MaskTool::Object)) return;
     const int s = qBound(1, int(size + 0.5), 100);
     m.paramsJson = brushWith(m.paramsJson, "size", s);
-    dirty.insert(currentImagePath);
-    isPopulating = true;                  // sync the Size slider without re-entering itemChange
+    noteEdit("Brush size", QString::number(s), "mask/brushSize");
+    isPopulating = true;            // sync the Size slider without re-entering itemChange
     setSliderReal("maskSize", s);
     isPopulating = false;
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::setActiveBrushAutoMask(bool on)
 {
-    EditLayer *l = activeLayer();
-    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->masks.size()) return;
-    MaskComponent &m = l->masks[selectedMaskIndex];
+    EditScope *l = activeScope();
+    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
+    MaskComponent &m = l->components[selectedMaskIndex];
     if (m.tool != int(MaskTool::Brush)) return;
     m.paramsJson = brushWith(m.paramsJson, "autoMask", on);
-    dirty.insert(currentImagePath);
-    isPopulating = true;                  // sync the checkbox without re-entering itemChange
+    noteEdit("Auto mask", on ? "On" : "Off");
+    isPopulating = true;            // sync the checkbox without re-entering itemChange
     setCheckboxValue("maskAutoMask", on);
     isPopulating = false;
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::emitBrushSettings(const MaskComponent &m)
@@ -1878,26 +1861,26 @@ void DevelopProperties::emitBrushSettings(const MaskComponent &m)
 void DevelopProperties::setMaskOverlayShown(bool shown)
 {
     /* ImageView flipped the red coverage tint ("O", an adjustment slider, or a new mask
-       edit); mirror it so the layer menu's "Show mask overlay" row checks correctly. */
-    if (layerHeader) layerHeader->setMaskOverlayShown(shown);
+       edit); mirror it so the scope menu's "Show mask overlay" row checks correctly. */
+    if (scopeHeader) scopeHeader->setMaskOverlayShown(shown);
 }
 
 void DevelopProperties::setMaskBreakdownShown(bool shown)
 {
-    /* MW flipped Result/Breakdown; mirror the layer menu's "breakdown" check. */
-    if (layerHeader) layerHeader->setMaskBreakdownShown(shown);
+    /* MW flipped Result/Breakdown; mirror the scope menu's "breakdown" check. */
+    if (scopeHeader) scopeHeader->setMaskBreakdownShown(shown);
 }
 
 void DevelopProperties::updateMaskEdit()
 {
     /* Drive the ImageView mask overlay from the active (selected) mask tool. Begin when a spatial
        tool is selected and has geometry; otherwise End. Called at the end of every rebuild, so it
-       tracks image/layer switches, selection toggles, add and delete. */
-    EditLayer *layer = activeLayer();
-    /* The layer menu's "Show mask overlay" row only applies while a tool is expanded. */
-    if (layerHeader) layerHeader->setMaskOverlayAvailable(maskOverlayActive());
-    if (layer && selectedMaskIndex >= 0 && selectedMaskIndex < layer->masks.size()) {
-        const MaskComponent &m = layer->masks[selectedMaskIndex];
+       tracks image/scope switches, selection toggles, add and delete. */
+    EditScope *scope = activeScope();
+    /* The scope menu's "Show mask overlay" row only applies while a tool is expanded. */
+    if (scopeHeader) scopeHeader->setMaskOverlayAvailable(maskOverlayActive());
+    if (scope && selectedMaskIndex >= 0 && selectedMaskIndex < scope->components.size()) {
+        const MaskComponent &m = scope->components[selectedMaskIndex];
         if (m.tool == int(MaskTool::LinearGradient) || m.tool == int(MaskTool::RadialGradient) ||
             m.tool == int(MaskTool::Brush) ||
             m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange) ||
@@ -1915,13 +1898,15 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
 {
     /* ImageView dragged the overlay: persist the new geometry into the active mask
        component. No tree rebuild (would re-emit maskEditBegin and fight the live drag);
-       just store + debounce. The pending (blue) tool is a real component in layer->masks
+       just store + debounce. The pending (blue) tool is a real component in scope->components
        at selectedMaskIndex, so the normal path below persists it too. */
-    EditLayer *layer = activeLayer();
-    if (!layer || selectedMaskIndex < 0 || selectedMaskIndex >= layer->masks.size()) return;
-    if (layer->masks[selectedMaskIndex].paramsJson == paramsJson) return;
-    layer->masks[selectedMaskIndex].paramsJson = paramsJson;
-    dirty.insert(currentImagePath);
+    EditScope *scope = activeScope();
+    if (!scope || selectedMaskIndex < 0 || selectedMaskIndex >= scope->components.size()) return;
+    if (scope->components[selectedMaskIndex].paramsJson == paramsJson) return;
+    scope->components[selectedMaskIndex].paramsJson = paramsJson;
+    /* One entry per tool being shaped, not per drag tick / per brush stroke. */
+    noteEdit("Edit " + maskToolName(scope->components[selectedMaskIndex].tool),
+             QString(), QString("mask/geom/%1").arg(selectedMaskIndex));
     /* A Color Range pipette pick/remove arrives here too -> refresh the wheel dots
        (bounds unchanged). No tree rebuild, so the wheel survives and just repaints.
        Legacy: the tree's colorRangeWheel; lab: the MaskPanel's embedded editor wheel. */
@@ -1930,8 +1915,7 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
         if (colorRangeWheel) colorRangeWheel->setSamples(hs);
         if (maskPanel && maskPanel->editor()) maskPanel->editor()->setWheelSamples(hs);
     }
-    emit paramsChanged();       // new mask geometry -> re-composite the masked layer
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+    emit paramsChanged();       // new mask geometry -> re-composite the masked scope
 }
 
 void DevelopProperties::onMaskSelectionChanged()
@@ -1955,7 +1939,7 @@ void DevelopProperties::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton) {
         const QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
-            /* The "Add mask" placeholder row (shown while the layer has no mask) has no UR_MaskIndex;
+            /* The "Add mask" placeholder row (shown while the scope has no mask) has no UR_MaskIndex;
                a click anywhere on it -- including its [+] -- pops the Add/Subtract chooser. */
             if (idx.siblingAtColumn(0).data(UR_Name).toString() == "addMask") {
                 showMaskMenu();
@@ -2008,7 +1992,7 @@ void DevelopProperties::mousePressEvent(QMouseEvent *event)
 
 void DevelopProperties::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    /* Base resets the row's slider to its default. On a CAPTION double-click Qt has moved
+    /* Global resets the row's slider to its default. On a CAPTION double-click Qt has moved
        keyboard focus to the tree (the caption cell is delegate-painted, not a widget), so
        re-focus the slider to keep the row lit blue -- matching the single-click cue. */
     PropertyEditor::mouseDoubleClickEvent(event);
@@ -2093,7 +2077,7 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
     }
     addItem(i);
     /* Nest the section header (Basic/Color/Color Mix/Effects) one indent level under the
-       Layer band above the tree. Only the header content shifts -- its child rows keep
+       Scope band above the tree. Only the header content shifts -- its child rows keep
        their own indentation (the delegate reads UR_ExtraIndent on the header caption). */
     model->setData(capIdx, true, UR_ExtraIndent);
 }
@@ -2410,10 +2394,9 @@ void DevelopProperties::onWbSampled(double nx, double ny, bool skin)
     p.temp = k;
     p.tint = t;
     p.wbPreset = int(WhiteBalance::Preset::Custom);
-    dirty.insert(currentImagePath);
+    noteEdit("White balance", QString::number(qRound(k)) + "K");
     refreshWbRow();
     emit paramsChanged();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::setWbPreset(int preset)
@@ -2453,23 +2436,22 @@ void DevelopProperties::setWbPreset(int preset)
     }
 
     p.wbPreset = preset;
-    dirty.insert(currentImagePath);
+    noteEdit("White balance", WhiteBalance::presetName(w));
     refreshWbRow();
     emit paramsChanged();
-    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
 void DevelopProperties::refreshWbRow()
 {
-    /* Push the active layer's white balance back into the row: the resolved absolute
+    /* Push the active scope's white balance back into the row: the resolved absolute
        Kelvin/tint onto the two sliders (an untouched image shows its AS-SHOT values, not
        the 0 sentinel) and the preset onto the combo. */
     EditParams p;
     const EditStack s = stackCache.value(currentImagePath);
-    if (!s.layers.isEmpty()) {
-        const int ix = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size())
-                           ? activeLayerIndex : 0;
-        p = s.layers[ix].params;
+    if (!s.scopes.isEmpty()) {
+        const int ix = (activeScopeIndex >= 0 && activeScopeIndex < s.scopes.size())
+                           ? activeScopeIndex : 0;
+        p = s.scopes[ix].params;
     }
     const CameraColor cam = currentCam();
     float k, t;
@@ -2563,7 +2545,7 @@ void DevelopProperties::addColor()
    to move them together = a global tint), plus one Luminance slider for the checked
    range(s). The wheel and range checkboxes are custom widgets hosted via setIndexWidget
    (not delegate editors); the wheel writes hue/sat and the slider luminance into the
-   active layer's nine grade params (see onGradeWheelChanged / setGradeLum). Distinct from
+   active scope's nine grade params (see onGradeWheelChanged / setGradeLum). Distinct from
    the legacy Color panel (RGB + global HSL), which stays for now.
    ------------------------------------------------------------------------------------ */
 
@@ -2663,7 +2645,7 @@ void DevelopProperties::setGradeLum(float lum)
     if (gradeActiveMask & 0x4) p.gradeHighLum   = lum;
 }
 
-/* Wheel drag -> the active layer's grade hue/sat for every checked range, then preview.
+/* Wheel drag -> the active scope's grade hue/sat for every checked range, then preview.
    commit marks the drag-release, when the debounced sidecar write is scheduled (live
    moves only render; dirty is set every move so navigate-away still persists). */
 void DevelopProperties::onGradeWheelChanged(bool commit)
@@ -2683,23 +2665,23 @@ void DevelopProperties::onGradeWheelChanged(bool commit)
         p.gradeHighHue = colorGradeWheel->hue(2);
         p.gradeHighSat = colorGradeWheel->sat(2);
     }
-    dirty.insert(currentImagePath);
+    /* One entry for the whole wheel drag, keyed by which ranges it is moving. */
+    noteEdit("Color grade", QString(),
+             QString("grade/wheel/%1").arg(gradeActiveMask));
     emit paramsChanged();
-    if (commit && G::isDevelopDebounceWrite)
-        debounceWriteTimer->start(kDebounceWriteMs);
 }
 
-/* Push the active layer's stored grade into the wheel dots + the Luminance slider (which
+/* Push the active scope's stored grade into the wheel dots + the Luminance slider (which
    shows the lowest checked range's value). Guards the slider set so it does not feed back
-   as an edit. Called on image/layer load and whenever the range checkboxes change. */
+   as an edit. Called on image/scope load and whenever the range checkboxes change. */
 void DevelopProperties::refreshColorMixRow()
 {
     EditParams p;
     const EditStack s = stackCache.value(currentImagePath);
-    if (!s.layers.isEmpty()) {
-        const int idx = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size())
-                            ? activeLayerIndex : 0;
-        p = s.layers[idx].params;
+    if (!s.scopes.isEmpty()) {
+        const int idx = (activeScopeIndex >= 0 && activeScopeIndex < s.scopes.size())
+                            ? activeScopeIndex : 0;
+        p = s.scopes[idx].params;
     }
     if (colorGradeWheel) {
         colorGradeWheel->setRange(0, p.gradeShadowHue, p.gradeShadowSat);
@@ -2739,9 +2721,9 @@ QVector<QPointF> DevelopProperties::colorRangeSamplesHS(const QString &paramsJso
 void DevelopProperties::refreshColorRangeWheel()
 {
     if (!colorRangeWheel) return;
-    EditLayer *l = activeLayer();
-    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->masks.size()) return;
-    const MaskComponent &m = l->masks[selectedMaskIndex];
+    EditScope *l = activeScope();
+    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
+    const MaskComponent &m = l->components[selectedMaskIndex];
     if (m.tool != int(MaskTool::ColorRange)) return;
     colorRangeWheel->setSamples(colorRangeSamplesHS(m.paramsJson));
     colorRangeWheel->setBounds(brushNum(m.paramsJson, "hueLo", 20),
@@ -2755,9 +2737,9 @@ void DevelopProperties::refreshColorRangeWheel()
 void DevelopProperties::onColorRangeWheelChanged(bool commit)
 {
     if (!colorRangeWheel) return;
-    EditLayer *l = activeLayer();
-    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->masks.size()) return;
-    MaskComponent &mm = l->masks[selectedMaskIndex];
+    EditScope *l = activeScope();
+    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
+    MaskComponent &mm = l->components[selectedMaskIndex];
     if (mm.tool != int(MaskTool::ColorRange)) return;
     const int hueLo = int(colorRangeWheel->hueLo() + 0.5f);
     const int hueHi = int(colorRangeWheel->hueHi() + 0.5f);
@@ -2767,7 +2749,7 @@ void DevelopProperties::onColorRangeWheelChanged(bool commit)
     mm.paramsJson = brushWith(mm.paramsJson, "hueHi", hueHi);
     mm.paramsJson = brushWith(mm.paramsJson, "satLo", satLo);
     mm.paramsJson = brushWith(mm.paramsJson, "satHi", satHi);
-    dirty.insert(currentImagePath);
+    noteEdit("Color range", QString(), "mask/colorRangeWheel");
     const bool wasPop = isPopulating;
     isPopulating = true;                 // sync sliders without re-entering itemChange
     setSliderReal("maskHueLo", hueLo);
@@ -2776,7 +2758,7 @@ void DevelopProperties::onColorRangeWheelChanged(bool commit)
     setSliderReal("maskSatHi", satHi);
     isPopulating = wasPop;
     emit maskRangeChanged(mm.paramsJson);   // live-update the loupe tint
-    emit paramsChanged();                   // re-composite the masked layer
+    emit paramsChanged();                   // re-composite the masked scope
     if (commit && G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
 }
 
@@ -2790,8 +2772,8 @@ void DevelopProperties::addEffects()
     addHeader("EffectsHeader", "???", "Effects", "Local (post-demosaic) effects.", PV_Effects);
     QModelIndex parIdx = capIdx;
 
-    /* Local noise reduction: per-layer, maskable Develop ops on the decoded image
-       (localDenoiseLuma / localDenoiseChroma). Distinct from the Base layer's "Denoise raw"
+    /* Local noise reduction: per-scope, maskable Develop ops on the decoded image
+       (localDenoiseLuma / localDenoiseChroma). Distinct from the Global scope's "Denoise raw"
        (decode-time global raw NR, denoiseLuma/denoiseChroma) -- different function, different keys.
        Two 0..100 strength sliders (mapped to 0..1): Denoise = luminance NR (ratio-preserving),
        Denoise Color = chroma NR (opponent-chroma blur, luma kept exact) -- see Develop::Denoise. */
@@ -2833,9 +2815,9 @@ void DevelopProperties::addEffects()
 void DevelopProperties::updateSectionHeaderCaptions()
 {
     if (G::isLogger) G::log("DevelopProperties::updateSectionHeaderCaptions");
-    /* The Basic/Color/Effects section headers carry the active layer's name so it is always clear
-       which layer the sliders below are editing, e.g. "Basic Base", "Color Layer 1". */
-    const QString layerName = currentLayerNames().value(activeLayerIndex);
+    /* The Basic/Color/Effects section headers carry the active scope's name so it is
+       always clear what the sliders below edit, e.g. "Global: Basic", "Sky: Color". */
+    const QString scopeName = currentScopeNames().value(activeScopeIndex);
     const QPair<QString, QString> hdrs[] = {
         {"BasicHeader",    "Basic"},
         {"ColorHeader",    "Color"},
@@ -2845,8 +2827,8 @@ void DevelopProperties::updateSectionHeaderCaptions()
     for (const auto &h : hdrs) {
         const QModelIndex idx = findCaptionIndex(h.first);
         if (idx.isValid())
-            model->setData(idx, layerName + ": " + h.second);
-            // model->setData(idx, h.second + " " + layerName);
+            model->setData(idx, scopeName + ": " + h.second);
+            // model->setData(idx, h.second + " " + scopeName);
     }
 }
 
@@ -2871,9 +2853,9 @@ void DevelopProperties::itemChange(QModelIndex idx)
     if (source == "maskSize" || source == "maskFlow" || source == "maskAutoMask" ||
         source == "maskAutoMaskAi" ||
         (source == "maskFeather" && activeMaskTool() == int(MaskTool::Brush))) {
-        EditLayer *l = activeLayer();
-        if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size()) {
-            MaskComponent &mm = l->masks[selectedMaskIndex];
+        EditScope *l = activeScope();
+        if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->components.size()) {
+            MaskComponent &mm = l->components[selectedMaskIndex];
             if      (source == "maskFeather")  mm.feather = v.toFloat();
             else if (source == "maskSize")     mm.paramsJson = brushWith(mm.paramsJson, "size", v.toInt());
             else if (source == "maskFlow")     mm.paramsJson = brushWith(mm.paramsJson, "flow", v.toInt());
@@ -2882,9 +2864,9 @@ void DevelopProperties::itemChange(QModelIndex idx)
                 mm.paramsJson = brushWith(mm.paramsJson, "autoMaskMode", v.toBool() ? "ai" : "lum");
                 if (v.toBool()) emit maskBrushAiEnabled();   // pre-warm the SAM encoder
             }
-            dirty.insert(currentImagePath);
+            noteEdit(maskSettingLabel(source), historyValueText(idx, v),
+                     "mask/" + source);
             emitBrushSettings(mm);
-            if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
         }
         return;
     }
@@ -2894,16 +2876,17 @@ void DevelopProperties::itemChange(QModelIndex idx)
     if (source == "maskRangeLo" || source == "maskRangeHi" ||
         source == "maskHueLo"   || source == "maskHueHi" ||
         source == "maskSatLo"   || source == "maskSatHi") {
-        EditLayer *l = activeLayer();
-        if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size()) {
-            MaskComponent &mm = l->masks[selectedMaskIndex];
+        EditScope *l = activeScope();
+        if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->components.size()) {
+            MaskComponent &mm = l->components[selectedMaskIndex];
             if      (source == "maskRangeLo") mm.paramsJson = brushWith(mm.paramsJson, "lo", v.toDouble() / 100.0);
             else if (source == "maskRangeHi") mm.paramsJson = brushWith(mm.paramsJson, "hi", v.toDouble() / 100.0);
             else if (source == "maskHueLo")   mm.paramsJson = brushWith(mm.paramsJson, "hueLo", v.toInt());
             else if (source == "maskHueHi")   mm.paramsJson = brushWith(mm.paramsJson, "hueHi", v.toInt());
             else if (source == "maskSatLo")   mm.paramsJson = brushWith(mm.paramsJson, "satLo", v.toInt());
             else                              mm.paramsJson = brushWith(mm.paramsJson, "satHi", v.toInt());
-            dirty.insert(currentImagePath);
+            noteEdit(maskSettingLabel(source), historyValueText(idx, v),
+                     "mask/" + source);
             /* Keep the wheel's band in step with a slider drag. */
             if (colorRangeWheel && activeMaskTool() == int(MaskTool::ColorRange))
                 colorRangeWheel->setBounds(brushNum(mm.paramsJson, "hueLo", 20),
@@ -2911,33 +2894,32 @@ void DevelopProperties::itemChange(QModelIndex idx)
                                            brushNum(mm.paramsJson, "satLo", 25) / 100.0,
                                            brushNum(mm.paramsJson, "satHi", 25) / 100.0);
             emit maskRangeChanged(mm.paramsJson);   // live-update the loupe tint
-            emit paramsChanged();                   // re-composite the masked layer
-            if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+            emit paramsChanged();                   // re-composite the masked scope
         }
         return;
     }
 
-    /* The selected mask tool's settings write into the active layer's mask model. Feather/Invert
-       change the mask, so they update the live overlay AND re-composite the masked layer. */
+    /* The selected mask tool's settings write into the active scope's mask model. Feather/Invert
+       change the mask, so they update the live overlay AND re-composite the masked scope. */
     if (source == "maskFeather" || source == "maskInvert") {
-        EditLayer *l = activeLayer();
-        if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->masks.size()) {
+        EditScope *l = activeScope();
+        if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->components.size()) {
             if (source == "maskFeather") {
-                l->masks[selectedMaskIndex].feather = v.toFloat();
+                l->components[selectedMaskIndex].feather = v.toFloat();
                 emit maskFeatherChanged(v.toDouble());      // live-update the overlay ramp
             }
             else {
-                l->masks[selectedMaskIndex].inverted = v.toBool();
+                l->components[selectedMaskIndex].inverted = v.toBool();
                 emit maskInvertChanged(v.toBool());         // live-flip the overlay
             }
-            dirty.insert(currentImagePath);
-            emit paramsChanged();                  // re-composite the masked layer
-            if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+            noteEdit(maskSettingLabel(source), historyValueText(idx, v),
+                     "mask/" + source);
+            emit paramsChanged();                  // re-composite the masked scope
         }
         return;
     }
 
-    /* The "Demosaic" combo (raw-only, Base) selects the RAW decode ENGINE (Apple Core Image vs the
+    /* The "Demosaic" combo (raw-only, Global) selects the RAW decode ENGINE (Apple Core Image vs the
        in-house Winnow decoder). It is not an EditParams value -- it forces a re-decode -- so handle
        it here (emit to MW) and skip applyKeyToParams / the normal preview render. */
     if (source == "demosaic") {
@@ -2967,14 +2949,15 @@ void DevelopProperties::itemChange(QModelIndex idx)
         p.temp = k;
         p.tint = t;
         p.wbPreset = int(WhiteBalance::Preset::Custom);
-        dirty.insert(currentImagePath);
+        /* Temp and Tint commit together, so they share one history entry. */
+        noteEdit("White balance",
+                 QString::number(qRound(k)) + "K", "wb/tempTint");
         if (wbCombo) {
             QSignalBlocker b(wbCombo);
             const int ix = wbCombo->findData(p.wbPreset);
             if (ix >= 0) wbCombo->setCurrentIndex(ix);
         }
         emit paramsChanged();
-        if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
         return;
     }
 
@@ -2984,13 +2967,12 @@ void DevelopProperties::itemChange(QModelIndex idx)
         if (currentImagePath.isEmpty()) return;
         if (maskOverlayActive()) emit maskTintHideRequested();
         setGradeLum(v.toFloat());
-        dirty.insert(currentImagePath);
+        noteEdit("Color grade luminance", historyValueText(idx, v), "grade/lum");
         emit paramsChanged();
-        if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
         return;
     }
 
-    /* Write the changed adjustment into the CURRENT IMAGE's active-layer params, mark it
+    /* Write the changed adjustment into the CURRENT IMAGE's active-scope params, mark it
        dirty, and drive the live preview. Persistence to the sidecar happens on navigate-
        away / quit / pre-op (always) and, if G::isDevelopDebounceWrite, once edits settle. */
     if (!source.isEmpty()) {
@@ -3000,9 +2982,11 @@ void DevelopProperties::itemChange(QModelIndex idx)
            Color/Effects sliders and any future adjustment key via applyKeyToParams. */
         if (maskOverlayActive()) emit maskTintHideRequested();
         applyKeyToParams(source, v, activeParams());
-        dirty.insert(currentImagePath);
+        /* History caption = the row's own caption ("Exposure"); the whole drag folds
+           into one entry (mergeKey), so the list reads one step per slider. */
+        noteEdit(idx.siblingAtColumn(0).data().toString(), historyValueText(idx, v),
+                 historyScopeLabel() + "/" + source);
         emit paramsChanged();
-        if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
     }
 }
 
@@ -3028,7 +3012,7 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "saturation") p.saturation = f;
     else if (key == "vibrance")   p.vibrance   = f;
     else if (key == "luminance")  p.luminance  = f;
-    else if (key == "denoiseLuma")   p.denoiseLuma   = f / 100.0f;   // Base "Denoise raw" (0..100 -> 0..1)
+    else if (key == "denoiseLuma")   p.denoiseLuma   = f / 100.0f;   // Global "Denoise raw" (0..100 -> 0..1)
     else if (key == "denoiseChroma") p.denoiseChroma = f / 100.0f;
     else if (key == "localDenoise")       p.localDenoiseLuma   = f / 100.0f;  // "Denoise"
     else if (key == "localDenoiseChroma") p.localDenoiseChroma = f / 100.0f;
@@ -3041,41 +3025,43 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
 
 EditParams DevelopProperties::editParams()
 {
-    /* The renderer shows the ACTIVE layer (no mask/opacity compositing yet). */
+    /* The renderer shows the ACTIVE scope (no mask/opacity compositing yet). */
     if (currentImagePath.isEmpty()) return EditParams();
-    const EditStack s = stackCache.value(currentImagePath);
-    if (s.layers.isEmpty()) return EditParams();
-    const int idx = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size()) ? activeLayerIndex : 0;
-    return effectiveLayerParams(s.layers[idx]);   // fold previewed-off groups to identity
+    const EditStack s = previewActive ? previewStack : stackCache.value(currentImagePath);
+    if (s.scopes.isEmpty()) return EditParams();
+    const int idx = (activeScopeIndex >= 0 && activeScopeIndex < s.scopes.size()) ? activeScopeIndex : 0;
+    return effectiveScopeParams(s.scopes[idx]);   // fold previewed-off groups to identity
 }
 
 DevelopProperties::StackRenderJob DevelopProperties::stackJob()
 {
     /* Capture the WHOLE stack as plain values (GUI thread; also handed to the off-thread full-res
-       render). The render shows every enabled layer regardless of which one is active for editing,
+       render). The render shows every enabled scope regardless of which one is active for editing,
        so a saved mask is visible the moment the image loads. */
     StackRenderJob job;
     if (currentImagePath.isEmpty()) return job;
-    const EditStack s = stackCache.value(currentImagePath);
+    /* A hovered History row overrides what renders, without disturbing the stored stack
+       or the sliders (see previewHistoryEntry). */
+    const EditStack s = previewActive ? previewStack : stackCache.value(currentImagePath);
     /* Transform Preview: previewed off -> bypass geometry at render (identity), while the stored
        crop/warp stays in the cache so the overlay still draws (see currentGeometry). */
     job.geometry = s.geometry.show ? s.geometry : Geometry();
     /* Replace preview eye off -> render without the heals (spots stay in the cache). */
-    if (spotsShown) job.spots = s.spots; // healed before geometry (Base-only too)
-    if (s.layers.isEmpty()) return job;
-    /* Base (layer 0): apply its params (previewed groups folded off) when enabled; a
-       disabled Base contributes identity params -- the image with no develop adjustments,
-       matching how a disabled layer is skipped below. */
-    job.base = s.layers[0].enabled ? effectiveLayerParams(s.layers[0]) : EditParams();
-    for (int i = 1; i < s.layers.size(); ++i) {
-        const EditLayer &l = s.layers[i];
+    if (spotsShown) job.spots = s.spots; // healed before geometry (Global-only too)
+    if (s.scopes.isEmpty()) return job;
+    /* Global (scope 0): apply its params (previewed groups folded off) when enabled; a
+       disabled Global contributes identity params -- the image with no develop adjustments,
+       matching how a disabled scope is skipped below. */
+    job.global = s.scopes[0].enabled ? effectiveScopeParams(s.scopes[0]) : EditParams();
+    for (int i = 1; i < s.scopes.size(); ++i) {
+        const EditScope &l = s.scopes[i];
         if (!l.enabled) continue;
-        const EditParams ep = effectiveLayerParams(l);
+        const EditParams ep = effectiveScopeParams(l);
         if (ep.isIdentity()) continue;          // no (visible) adjustment -> nothing to composite
-        StackRenderJob::Layer lj;
+        StackRenderJob::Scope lj;
         lj.params  = ep;
         lj.combine = l.combine;
-        for (const MaskComponent &m : l.masks) {
+        for (const MaskComponent &m : l.components) {
             if (!m.enabled) continue;
             /* Content-derived AI masks (Select Subject/Sky/Background) carry NO paramsJson -- their
                coverage is the model's map, not stored geometry -- so the empty-params skip must not
@@ -3084,9 +3070,9 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
                                          m.tool == int(MaskTool::Sky) ||
                                          m.tool == int(MaskTool::Background));
             if (m.paramsJson.isEmpty() && !contentDerived) continue;
-            lj.masks.append(m);
+            lj.components.append(m);
         }
-        job.layers.append(lj);
+        job.scopes.append(lj);
     }
     return job;
 }
@@ -3101,61 +3087,87 @@ void DevelopProperties::setCurrentGeometry(const Geometry &g)
 {
     if (currentImagePath.isEmpty()) return;
     EditStack &s = stackCache[currentImagePath];
-    if (s.layers.isEmpty()) s.layers.append(EditLayer());   // keep the stack shape consistent
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());   // keep the stack shape
+    /* Name the history entry for WHICH part of the transform moved, so a crop drag and a
+       straighten read as separate steps (and each drag coalesces into one). */
+    const Geometry &was = s.geometry;
+    QString action, mergeKey, value;
+    if (g.straighten != was.straighten) {
+        action = "Straighten";
+        mergeKey = "geom/straighten";
+        value = QString::number(g.straighten, 'f', 1) + QChar(0x00B0);
+    }
+    else if (g.hasWarp != was.hasWarp ||
+             !std::equal(std::begin(g.quad), std::end(g.quad), std::begin(was.quad))) {
+        action = g.hasWarp ? "Warp" : "Remove warp";
+        mergeKey = "geom/warp";
+    }
+    else if (g.show != was.show) {
+        action = g.show ? "Show transform" : "Hide transform";
+    }
+    else if (!g.cropIsIdentity() || !was.cropIsIdentity()) {
+        action = g.cropIsIdentity() ? "Remove crop" : "Crop";
+        mergeKey = "geom/crop";
+    }
     s.geometry = g;
-    dirty.insert(currentImagePath);
-    if (debounceWriteTimer) debounceWriteTimer->start(kDebounceWriteMs);
+    /* Whole-image, so no scope prefix. An identical re-set records nothing. */
+    if (action.isEmpty()) {
+        dirty.insert(currentImagePath);
+        if (debounceWriteTimer) debounceWriteTimer->start(kDebounceWriteMs);
+        return;
+    }
+    noteScopeEdit(QString(), action, value, mergeKey);
 }
 
-QStringList DevelopProperties::currentLayerNames() const
+QStringList DevelopProperties::currentScopeNames() const
 {
     QStringList names;
     if (!currentImagePath.isEmpty()) {
         const EditStack s = stackCache.value(currentImagePath);
-        for (const EditLayer &l : s.layers) names << l.name;
+        for (const EditScope &l : s.scopes) names << l.name;
     }
-    if (names.isEmpty()) names << "Base";    // combo always has at least one entry
+    if (names.isEmpty()) names << "Global";  // combo always has at least one entry
     return names;
 }
 
 EditParams &DevelopProperties::activeParams()
 {
-    /* Caller guarantees currentImagePath is non-empty. Ensures a layer exists and the index is
-       in range, then returns the active layer's params for in-place editing. */
+    /* Caller guarantees currentImagePath is non-empty. Ensures a scope exists and the index is
+       in range, then returns the active scope's params for in-place editing. */
     EditStack &s = stackCache[currentImagePath];
-    if (s.layers.isEmpty()) s.layers.append(EditLayer());
-    if (activeLayerIndex < 0 || activeLayerIndex >= s.layers.size()) activeLayerIndex = 0;
-    return s.layers[activeLayerIndex].params;
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) activeScopeIndex = 0;
+    return s.scopes[activeScopeIndex].params;
 }
 
-void DevelopProperties::refreshLayerCombo()
+void DevelopProperties::refreshScopeList()
 {
-    layerList = currentLayerNames();
-    if (activeLayerIndex < 0 || activeLayerIndex >= layerList.size()) activeLayerIndex = 0;
-    /* Push names + per-layer enabled + selection into the header (no signal). The
-       dropdown header ignores enabled/isBase (default setLayerRows -> setLayers); the
-       list panel (LayersPanel) uses them to build the per-row show/hide checkboxes. */
-    if (layerHeader) {
-        QVector<LayerHeaderBase::LayerRowInfo> rows;
-        rows.reserve(layerList.size());
+    scopeList = currentScopeNames();
+    if (activeScopeIndex < 0 || activeScopeIndex >= scopeList.size()) activeScopeIndex = 0;
+    /* Push names + per-scope enabled + selection into the header (no signal). The
+       dropdown header ignores enabled/isGlobal (default setScopeRows -> setScopes); the
+       list panel (ScopeHeaderLab) uses them to build the per-row show/hide checkboxes. */
+    if (scopeHeader) {
+        QVector<ScopeHeaderBase::ScopeRowInfo> rows;
+        rows.reserve(scopeList.size());
         const EditStack s = stackCache.value(currentImagePath);
-        for (int i = 0; i < layerList.size(); ++i) {
-            LayerHeaderBase::LayerRowInfo r;
-            r.name    = layerList.at(i);
-            r.isBase  = (i == 0);
-            r.enabled = (i < s.layers.size()) ? s.layers.at(i).enabled : true;
+        for (int i = 0; i < scopeList.size(); ++i) {
+            ScopeHeaderBase::ScopeRowInfo r;
+            r.name    = scopeList.at(i);
+            r.isGlobal  = (i == 0);
+            r.enabled = (i < s.scopes.size()) ? s.scopes.at(i).enabled : true;
             rows.append(r);
         }
-        layerHeader->setLayerRows(rows, activeLayerIndex);
+        scopeHeader->setScopeRows(rows, activeScopeIndex);
     }
-    updateMaskMenuBtn();        // hide [M] + disable rename/remove on the Base layer
+    updateMaskMenuBtn();        // hide [M] + disable rename/remove on the Global scope
     updateSectionHeaderCaptions();
 }
 
 void DevelopProperties::updateMaskMenuBtn()
 {
-    /* The Base layer (index 0) applies globally: no mask [M], and it cannot be renamed or removed. */
-    if (layerHeader) layerHeader->setBaseActive(activeLayerIndex == 0);
+    /* The Global scope (index 0) applies globally: no mask [M], and it cannot be renamed or removed. */
+    if (scopeHeader) scopeHeader->setGlobalActive(activeScopeIndex == 0);
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -3168,38 +3180,49 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     if (fPath == currentImagePath) return;
 
     /* Leaving the image: drop an uncommitted (blue) mask preview so it is NOT saved (it's
-       a real component in layer->masks; a committed first tool stays). Must run BEFORE
+       a real component in scope->components; a committed first tool stays). Must run BEFORE
        flushImage. Then hide the panel. */
     if (maskPanelOpen) {
-        EditLayer *l = activeLayer();
-        if (l && pendingIdx >= 0 && pendingIdx < l->masks.size())
-            l->masks.removeAt(pendingIdx);
+        EditScope *l = activeScope();
+        if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
+            l->components.removeAt(pendingIdx);
         pendingIdx = -1;
         selectedMaskIndex = -1;
         maskPanelOpen = false;
         if (maskPanel) maskPanel->hide();
     }
     maskLatched = false;         // a fresh image starts with no latched mask overlay
+    previewActive = false;       // a History hover does not follow the image
+    previewStack = EditStack();
     flushImage(currentImagePath);              // persist edits to the image being left
     cancelWbDropper();                  // an armed dropper does not follow the image
     currentImagePath = fPath;
-    if (fPath.isEmpty()) return;
+    if (fPath.isEmpty()) {
+        if (historyView) historyView->setImage(QString());
+        return;
+    }
 
     /* Load the stack on first touch (cheap: no sidecar => fast empty read), then cache it. */
     if (!stackCache.contains(fPath))
         stackCache.insert(fPath, EditStack::fromBase64(Metadata::readDevelopSidecar(fPath)));
 
-    /* Ensure at least one layer so the combo + active editing have something to point at. An
+    /* Ensure at least one scope so the combo + active editing have something to point at. An
        all-identity stack is still treated as identity (not persisted), so this never creates a
        sidecar for an unedited image. */
     EditStack &s = stackCache[fPath];
-    if (s.layers.isEmpty()) s.layers.append(EditLayer());
-    s.layers[0].name = "Base";                 // index 0 is always the (un-removable) Base layer
-    activeLayerIndex = 0;
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    s.scopes[0].name = "Global";    // index 0 is the (un-removable) Global scope
+    activeScopeIndex = 0;
     selectedMaskIndex = -1;
 
-    refreshLayerCombo();
-    buildTree();                   // Base active: Core rows + Basic/Color/Effects
+    /* Baseline history entry for this image ("Original", or "Saved settings" when the
+       sidecar already carried edits). Idempotent, so returning to an image keeps the
+       steps taken earlier in this session. */
+    if (history) history->seed(fPath, s);
+    if (historyView) historyView->setImage(fPath);
+
+    refreshScopeList();
+    buildTree();                   // Global active: Core rows + Basic/Color/Effects
     if (spotMode) emitSpotPins();  // spot tool armed across a nav -> refresh pins
 }
 
@@ -3210,21 +3233,159 @@ bool DevelopProperties::currentIsIdentity() const
 }
 
 /* --------------------------------------------------------------------------------
+   Edit history (the History dock).  The sidecar stores only the CURRENT EditStack, so
+   the timeline is built here: noteEdit snapshots the stack after every committed
+   action, hover previews a snapshot, and a click restores one.
+   -------------------------------------------------------------------------------- */
+
+void DevelopProperties::bindHistoryView(HistoryView *view)
+{
+    if (G::isLogger) G::log("DevelopProperties::bindHistoryView");
+    historyView = view;
+    if (!historyView) return;
+    historyView->bindHistory(history);
+    historyView->setImage(currentImagePath);
+    connect(historyView, &HistoryView::entryHovered,
+            this, &DevelopProperties::previewHistoryEntry);
+    connect(historyView, &HistoryView::hoverEnded,
+            this, &DevelopProperties::endHistoryPreview);
+    connect(historyView, &HistoryView::entryChosen,
+            this, &DevelopProperties::applyHistoryEntry);
+}
+
+void DevelopProperties::noteEdit(const QString &action, const QString &value,
+                                 const QString &mergeKey)
+{
+    noteScopeEdit(historyScopeLabel(), action, value, mergeKey);
+}
+
+void DevelopProperties::noteScopeEdit(const QString &scope, const QString &action,
+                                      const QString &value, const QString &mergeKey)
+{
+    if (currentImagePath.isEmpty()) return;
+    dirty.insert(currentImagePath);
+    /* Do not record our own writes: isPopulating is pushing saved values into the
+       editors, isRestoringHistory is a revert repopulating the panel. */
+    if (history && !isPopulating && !isRestoringHistory && !action.isEmpty()) {
+        history->record(currentImagePath, scope, action, value, mergeKey,
+                        stackCache.value(currentImagePath));
+    }
+    if (G::isDevelopDebounceWrite && debounceWriteTimer)
+        debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+QString DevelopProperties::historyScopeLabel() const
+{
+    const EditStack s = stackCache.value(currentImagePath);
+    if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size())
+        return QStringLiteral("Global");
+    const EditScope &l = s.scopes.at(activeScopeIndex);
+    /* An unrenamed mask scope ("Mask 2") reads better as what it actually selects, so
+       an edit on a Subject mask logs as "Subject Mask: Hue". A user-chosen name wins. */
+    static const QRegularExpression autoName("^Mask \\d+$");
+    if (!l.components.isEmpty() && autoName.match(l.name).hasMatch())
+        return maskToolName(l.components.first().tool);
+    return l.name;
+}
+
+QString DevelopProperties::historyValueText(const QModelIndex &valIdx, const QVariant &v)
+{
+    if (v.typeId() == QMetaType::Bool) return v.toBool() ? "On" : "Off";
+    /* Match what the slider itself displays (SliderEditor::change): integer when there
+       is no divisor, else 2 dp -- with a leading + so the list reads like Lightroom. */
+    bool ok = false;
+    const double d = v.toDouble(&ok);
+    if (!ok) return v.toString();
+    const int div = valIdx.isValid() ? valIdx.data(UR_Div).toInt() : 0;
+    QString s = (div == 0) ? QString::number(qRound(d)) : QString::number(d, 'f', 2);
+    if (d > 0) s.prepend('+');
+    return s;
+}
+
+void DevelopProperties::previewHistoryEntry(int index)
+{
+    if (G::isLogger) G::log("DevelopProperties::previewHistoryEntry");
+    if (!history || currentImagePath.isEmpty()) return;
+    /* The crop overlay and an open mask tool own the canvas; a hover preview underneath
+       them would fight for it. */
+    if (maskPanelOpen || spotMode) return;
+    const HistoryEntry *e = history->at(currentImagePath, index);
+    if (!e) return;
+    if (index == history->pos(currentImagePath)) {   // already showing this state
+        endHistoryPreview();
+        return;
+    }
+    previewStack = e->stack;
+    previewActive = true;
+    emit historyPreviewChanged();
+}
+
+void DevelopProperties::endHistoryPreview()
+{
+    if (!previewActive) return;
+    previewActive = false;
+    previewStack = EditStack();
+    emit historyPreviewChanged();
+}
+
+void DevelopProperties::applyHistoryEntry(int index)
+{
+    if (G::isLogger) G::log("DevelopProperties::applyHistoryEntry");
+    if (!history || currentImagePath.isEmpty()) return;
+    const HistoryEntry *e = history->at(currentImagePath, index);
+    if (!e) return;
+
+    /* A half-built mask tool indexes into the scope we are about to replace, so retire it
+       first (same teardown setCurrentImage does when leaving an image). */
+    if (maskPanelOpen) {
+        EditScope *l = activeScope();
+        if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
+            l->components.removeAt(pendingIdx);
+        pendingIdx = -1;
+        selectedMaskIndex = -1;
+        maskPanelOpen = false;
+        if (maskPanel) maskPanel->hide();
+    }
+    maskLatched = false;
+    previewActive = false;              // the previewed state is about to become real
+    previewStack = EditStack();
+
+    isRestoringHistory = true;
+    EditStack s = e->stack;
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    s.scopes[0].name = "Global";
+    stackCache[currentImagePath] = s;
+    dirty.insert(currentImagePath);
+    history->setPos(currentImagePath, index);
+    if (activeScopeIndex >= s.scopes.size()) activeScopeIndex = 0;
+    selectedMaskIndex = -1;
+
+    refreshScopeList();
+    buildTree();                        // scope/mask structure may differ from now
+    if (spotMode) emitSpotPins();
+    isRestoringHistory = false;
+
+    emit paramsChanged();               // full render + settled full-res
+    if (G::isDevelopDebounceWrite && debounceWriteTimer)
+        debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+/* --------------------------------------------------------------------------------
    Develop presets (save). Snapshot the current image's EditStack into a named preset
    in QSettings via the Save Develop Preset checklist. Applying a preset is a later task.
    -------------------------------------------------------------------------------- */
 
-/* Build one layer's checklist group: the Basic / Color / Effects adjustment leaves
+/* Build one scope's checklist group: the Basic / Color / Effects adjustment leaves
    (mask geometry is content-specific and not a preset item). Vignette folds in its
    feather; Grain folds in size + roughness (their "changed" test is the primary only,
    matching isIdentity). Raw NR and the tone splits are surfaced under Global. */
-static PresetGroup layerPresetGroup(const EditLayer &l, int index)
+static PresetGroup scopePresetGroup(const EditScope &l, int index)
 {
     const EditParams &p = l.params;
     const EditParams def;
     PresetGroup g;
-    g.title = index == 0 ? QStringLiteral("Base layer")
-                         : QStringLiteral("Layer %1").arg(index);
+    g.title = index == 0 ? QStringLiteral("Global edits")
+                         : QStringLiteral("Mask %1").arg(index);
     g.checkable = true;
     auto add = [&](const QString &key, const QString &label, bool changed) {
         g.leaves.append({key, label, changed});
@@ -3268,12 +3429,12 @@ void DevelopProperties::saveDevelopPreset()
 
     const EditParams def;
     const Geometry gdef;
-    const EditParams base = s.layers.isEmpty() ? def : s.layers.first().params;
+    const EditParams base = s.scopes.isEmpty() ? def : s.scopes.first().params;
 
     QVector<PresetGroup> groups;
 
-    /* Global settings: a non-checkable container. Raw NR + tone splits come from the Base
-       layer; crop / level / warp / spots from the per-image Geometry + spot history. */
+    /* Global settings: a non-checkable container. Raw NR + tone splits come from the Global
+       scope; crop / level / warp / spots from the per-image Geometry + spot history. */
     /* Raw demosaic + raw denoise only apply to a raw file, and denoise (PMRID) is the
        Winnow engine only. Both leaves stay listed, but pre-check them only when relevant:
        demosaic when the file is raw; raw NR when it is raw AND not decoded by Apple. */
@@ -3299,9 +3460,9 @@ void DevelopProperties::saveDevelopPreset()
     gg.leaves.append({"spots", "Spots", !s.spots.isEmpty()});
     groups.append(gg);
 
-    /* One group per layer (Base + extras). */
-    for (int i = 0; i < s.layers.size(); ++i)
-        groups.append(layerPresetGroup(s.layers[i], i));
+    /* One group per scope (Global + extras). */
+    for (int i = 0; i < s.scopes.size(); ++i)
+        groups.append(scopePresetGroup(s.scopes[i], i));
 
     SaveDevelopPresetDlg dlg(groups, presetNames(), mw);
     if (dlg.exec() != QDialog::Accepted) return;
@@ -3323,7 +3484,7 @@ void DevelopProperties::writePreset(const QString &name,
                                     const QHash<QString, QSet<QString>> &selected,
                                     const EditStack &s)
 {
-    const EditParams base = s.layers.isEmpty() ? EditParams() : s.layers.first().params;
+    const EditParams base = s.scopes.isEmpty() ? EditParams() : s.scopes.first().params;
 
     setting->beginGroup("Develop Presets");
     setting->beginGroup(name);
@@ -3371,14 +3532,14 @@ void DevelopProperties::writePreset(const QString &name,
         setting->endGroup();
     }
 
-    /* One sub-group per layer, keyed by the same title the checklist used. */
-    for (int i = 0; i < s.layers.size(); ++i) {
-        const QString title = i == 0 ? QStringLiteral("Base layer")
-                                     : QStringLiteral("Layer %1").arg(i);
+    /* One sub-group per scope, keyed by the same title the checklist used. */
+    for (int i = 0; i < s.scopes.size(); ++i) {
+        const QString title = i == 0 ? QStringLiteral("Global edits")
+                                     : QStringLiteral("Mask %1").arg(i);
         const QSet<QString> lk = selected.value(title);
         if (lk.isEmpty()) continue;
         setting->beginGroup(title);
-        writeLayerLeaves(s.layers[i].params, lk);
+        writeScopeLeaves(s.scopes[i].params, lk);
         setting->endGroup();
     }
 
@@ -3386,7 +3547,7 @@ void DevelopProperties::writePreset(const QString &name,
     setting->endGroup();                    // Develop Presets
 }
 
-void DevelopProperties::writeLayerLeaves(const EditParams &p, const QSet<QString> &lk)
+void DevelopProperties::writeScopeLeaves(const EditParams &p, const QSet<QString> &lk)
 {
     /* Store raw EditParams field values under their JSON key names (the source of truth),
        so a future apply can assign them straight back. */
@@ -3436,9 +3597,9 @@ void DevelopProperties::populateSlidersFromStack()
 {
     EditParams p;
     const EditStack s = stackCache.value(currentImagePath);
-    if (!s.layers.isEmpty()) {
-        const int idx = (activeLayerIndex >= 0 && activeLayerIndex < s.layers.size()) ? activeLayerIndex : 0;
-        p = s.layers[idx].params;
+    if (!s.scopes.isEmpty()) {
+        const int idx = (activeScopeIndex >= 0 && activeScopeIndex < s.scopes.size()) ? activeScopeIndex : 0;
+        p = s.scopes[idx].params;
     }
     isPopulating = true;
     /* Temp/Tint are absolute and stored with 0 = "as shot", so they resolve through the
@@ -3458,7 +3619,7 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("saturation", p.saturation);
     setSliderReal("vibrance",   p.vibrance);
     setSliderReal("luminance",  p.luminance);
-    setSliderReal("denoiseLuma",   p.denoiseLuma   * 100.0);      // Base "Denoise raw" (0..1 -> 0..100)
+    setSliderReal("denoiseLuma",   p.denoiseLuma   * 100.0);      // Global "Denoise raw" (0..1 -> 0..100)
     setSliderReal("denoiseChroma", p.denoiseChroma * 100.0);
     setSliderReal("localDenoise",       p.localDenoiseLuma   * 100.0);   // "Denoise"
     setSliderReal("localDenoiseChroma", p.localDenoiseChroma * 100.0);
@@ -3472,7 +3633,7 @@ void DevelopProperties::populateSlidersFromStack()
     refreshColorMixRow();           // push grade values into the wheel + Lum slider
     isPopulating = false;
     refreshWbRow();                 // Temp/Tint resolved + the preset dropdown
-    refreshPreviewButtons();        // sync the eye icons to this layer's Preview flags
+    refreshPreviewButtons();        // sync the eye icons to this scope's Preview flags
 }
 
 void DevelopProperties::setSliderReal(const QString &key, double real)
@@ -3498,8 +3659,8 @@ QString DevelopProperties::diagnostics()
 {
     QString rpt;
     QTextStream rs(&rpt);
-    rs << "Develop layers: " << layerList.join(", ") << "\n";
-    rs << "Current layer: " << layerName << "\n";
+    rs << "Develop scopes: " << scopeList.join(", ") << "\n";
+    rs << "Current scope: " << currentScopeNames().value(activeScopeIndex) << "\n";
     return rpt;
 }
 
