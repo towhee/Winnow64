@@ -133,14 +133,22 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    // row height = 1.7 * text height
     if (isDebug)
         qDebug() << "PropertyDelegate::sizeHint"
                  << "option.rect.width =" << option.rect.width()
                  << "option.rect.height =" << option.rect.height()
             ;
 
+    // row height = 1.7 * text height
     int height = static_cast<int>(G::strFontSize.toInt() * 1.7 * G::ptToPx);
+
+    /* Divider/spacer rows carry their own fixed height (see addDivider). The role lives
+       on the CAPTION cell only, so read it via the sibling -- QTreeView size-hints every
+       column and uses the tallest, so the value column must report the divider height too
+       or it wins with the normal height. Early return skips the caption-wrap grow. */
+    const QModelIndex capIndex = index.sibling(index.row(), CapColumn);
+    if (capIndex.data(UR_isDivider).toBool())
+        return QSize(option.rect.width(), capIndex.data(UR_DividerHeight).toInt());
 
     /* Grow the row to fit wrapped caption text. Only the caption column wraps
     (headers stay single-line); the tree row uses the tallest column's hint. */
@@ -158,6 +166,7 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
         if (view && index.data(UR_isIndent).toBool()) {
             int depth = 0;
             for (QModelIndex p = index.parent(); p.isValid(); p = p.parent()) depth++;
+            if (index.data(UR_ExtraIndent).toBool()) depth++;   // match the paint() extra level
             textLeft = (depth + 1) * view->indentation();   // rootIsDecorated
         }
         int width = colWidth - textLeft - 4;    // small safety margin vs paint
@@ -169,6 +178,10 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
         int padding = height - fm.height();     // keep the same vertical breathing room
         height = qMax(height, bounding.height() + padding);
     }
+
+    /* Optional per-row extra height (split top+bottom by paint's vertical centering).
+       Role lives on the caption cell, read via the sibling so both columns agree. */
+    height += capIndex.data(UR_ExtraRowHeight).toInt();
 
     return QSize(option.rect.width(), height);
 }
@@ -369,17 +382,50 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            ;
            // */
 
-    /* Root rows are highlighted with a darker gradient and the decoration, which gets covered
-    up, and is repainted */
+    /* Root rows are highlighted with a darker gradient and the decoration, which gets
+    covered up, and is repainted */
+
     QRect r = option.rect;
-    // save column widths
-    static int w0 = 100, w1 = 200;
-    if (index.column() == 0) w0 = r.width();
-    if (index.column() == 1) w1 = r.width();
+
+    /* Full column widths, taken from the view so they do not depend on paint order. The
+    previous approach cached r.width() into static w0/w1 as each column painted, but for
+    column 0 Qt shrinks the cell rect by the row's indentation, so indented child rows
+    could leave w0 holding a too-small value for a later full-width caption (r4 = w0 +
+    w1). Reading columnWidth() is order-independent and always correct. */
+
+    int w0 = 100, w1 = 200;
+    if (const QTreeView *view = qobject_cast<const QTreeView*>(option.widget)) {
+        w0 = view->columnWidth(0);
+        w1 = view->columnWidth(1);
+    }
+    else {
+        if (index.column() == 0) w0 = r.width();
+        if (index.column() == 1) w1 = r.width();
+    }
     // r0 extends the rect over the decoration to the left margin
     QRect r0 = QRect(0, r.y(), r.x() + r.width(), r.height());
-    // r1 = r0 but leaves 1 pixel at the left and right margins to make room for a border
-    QRect r1 = QRect(1, r.y(), r.x() + r.width() - 1, r.height());
+
+    /* Divider/spacer row: draw the optional centred horizontal rule (the tree background
+       shows through as the band). The row is spanned, so this normally paints once across
+       the whole width; the caption sibling carries the role, so it renders from either
+       column even if spanning is off. sizeHint gave the row its height. Return before all
+       the header/leaf/value painting below -- a divider has none of it. */
+    if (index.sibling(index.row(), CapColumn).data(UR_isDivider).toBool()) {
+        // const int e = G::backgroundShade/* + 10*/;          // leaf value-row background shade
+        // set divider height in sizeHint()
+        // newRowHeight = index.data(UR_DividerHeight).toInt();
+        // painter->fillRect(r0, QColor(G::lightblue));
+        const int lineH = index.data(UR_DividerLineHeight).toInt();
+        const QColor lineColor = index.data(UR_DividerColor).value<QColor>();
+        if (lineH > 0 && lineColor.alpha() > 0) {
+            const int margin = 6;                        // horizontal inset of the rule
+            const int yMid = r0.center().y() - lineH / 2;
+            painter->fillRect(QRect(r0.left() + margin, yMid,
+                                    r0.width() - 2 * margin, lineH), lineColor);
+        }
+        painter->restore();
+        return;
+    }
     // r2 = r0 but leaves 1 pixel at the left, right and bottom margins to draw text
     QRect r2 = QRect(5, r.y(), r.x() + r.width() - 5, r.height()-1);
     // r3 = r but leaves a few pixels at the bottom margin to draw text
@@ -445,47 +491,116 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QPixmap branchOpen(":/images/branch-open-winnow.png");
 
     if (index.data(UR_isHeader).toBool()) {
+        /* The caption lives in column 0; the value-column branch below needs both the caption text
+           and its role flags from this sibling (in the caption-column branch it IS index). */
+        QModelIndex capIndex = index.sibling(index.row(), CapColumn);
+        const QString capText = capIndex.data().toString();
+        /* Header caption pen. UR_LeafSingleLine rows want the header's single-line full-width
+           layout but the ordinary LEAF text colour (not category teal). */
+        QPen capPen = capIndex.data(UR_LeafSingleLine).toBool() ? regPen : catPen;
+        /* Optional per-row caption colour (e.g. a mask tool row tinted by its
+           Add/Subtract role). Overrides the leaf/category pen when set. */
+        const QVariant capColorV = capIndex.data(UR_CaptionColor);
+        if (capColorV.isValid()) capPen = QPen(capColorV.value<QColor>());
+
+        /* Right edge for a header caption that spans the row, in VIEWPORT coordinates so it is the
+           same value whichever column is painting. The caption spans the full row (w0 + w1) but is
+           pulled in before any right-aligned value-column widget (e.g. -/+ buttons) so a long
+           caption never runs under it. */
+        auto headerCapRight = [&]() -> int {
+            QModelIndex valIndex = index.sibling(index.row(), ValColumn);
+            QWidget *valEditor =
+                static_cast<QWidget*>(valIndex.data(UR_Editor).value<void*>());
+            if (valEditor && valEditor->isVisible()) {
+                QRect kids = valEditor->childrenRect();
+                if (!kids.isEmpty())
+                    return valEditor->geometry().x() + kids.x() - 6;
+            }
+            return w0 + w1;
+        };
+
+        /* Caption geometry, in VIEWPORT coordinates so it is identical whichever column is
+           painting. capLeft for a decoration row is its column-0 cell left (= indentation), taken
+           from the view so the value-column pass can reproduce it without column-0's rect. */
+        const QTreeView *tv = qobject_cast<const QTreeView*>(option.widget);
+        const bool deco = capIndex.data(UR_isDecoration).toBool();
+        int capLeft = deco ? (tv ? tv->visualRect(capIndex).x() : r4.x()) : r2.x();
+        /* Nest a header one indent level right (Develop's Basic/Color/Color Mix/Effects
+           sections sit under the Layer band above the tree). Only the header's own
+           content (arrow + caption) shifts; child rows keep their own indentation. */
+        const int hdrExtraIndent = capIndex.data(UR_ExtraIndent).toBool()
+                                       ? (tv ? tv->indentation() : 10) : 0;
+        capLeft += hdrExtraIndent;
+        /* Reserve room at the right for the delegate-drawn glyphs: [-] alone, or [+][-] when both. */
+        int glyphSlots = (capIndex.data(UR_DeleteBtn).toBool() ? 1 : 0)
+                       + (capIndex.data(UR_AddBtn).toBool()    ? 1 : 0);
+        int capRight = glyphSlots > 0
+                           ? r.right() - glyphSlots * (16 + 4) - 6   // before the glyph cluster (spanned rows)
+                           : headerCapRight();
+
+        /* The caption is drawn in BOTH the caption-column and value-column passes. The painter is
+           not clipped to the cell, so a single pass would suffice for a full repaint, but resizing
+           the (stretch) value column triggers a value-column-ONLY repaint that refills that cell's
+           background over the caption's overflow. Redrawing the same elided text (same viewport
+           rect) in the value-column pass restores it. */
+        auto drawHeaderCaption = [&]() {
+            painter->setPen(capPen);
+            QRect rCap(capLeft, r4.y(), qMax(0, capRight - capLeft), r4.height());
+            const QString cap =
+                painter->fontMetrics().elidedText(capText, Qt::ElideRight, rCap.width());
+            painter->drawText(rCap, Qt::AlignVCenter|Qt::TextSingleLine, cap);
+        };
+
         // header item in caption column
         if (index.column() == CapColumn) {
-            // paint the gradient covering the decoration
+            // paint the gradient covering the decoration (caption column)
             if (index.data(UR_isBackgroundGradient).toBool()) {
-                painter->fillRect(r1, rootCategoryBackground);
+                QRect capFill(1, r.y(), w0 - 1, r.height());
+                painter->fillRect(capFill, rootCategoryBackground);
             }
-            // re-instate the decorations
-            if (index.data(UR_isDecoration).toBool() && hasChildren) {
-                int x = r.x() - 10;
-                int y = 0;
-                if (isExpanded) {
-                    y = r0.top() + r0.height()/2 - 5;
-                    painter->drawPixmap(x, y, 9, 9, branchOpen);
-                }
-                else {
-                    y = r0.top() + r0.height()/2 - 5;
-                    painter->drawPixmap(x, y, 9, 9, branchClosed);
-                }
+            // re-instate the decorations (UR_ShowDecoration forces the arrow even with no children,
+            // e.g. an unselected mask-tool row that reveals its settings only when clicked open)
+            if (deco && (hasChildren || capIndex.data(UR_ShowDecoration).toBool())) {
+                int x = r.x() - 10 + hdrExtraIndent;
+                int y = r0.top() + r0.height()/2 - 5;
+                painter->drawPixmap(x, y, 9, 9, isExpanded ? branchOpen : branchClosed);
             }
-            // caption text and no borders for root item
-            painter->setPen(catPen);
-            if (index.data(UR_isDecoration).toBool()) {
-                painter->drawText(r4, Qt::AlignVCenter|Qt::TextSingleLine, text);
-            }
-            else {
-                painter->drawText(r2, Qt::AlignVCenter|Qt::TextSingleLine, text);
-            }
+            drawHeaderCaption();
             // draw separator line if not gradient background
             if (!index.data(UR_isBackgroundGradient).toBool()) {
                 painter->setPen(brdPen);
                 painter->drawLine(r0.bottomLeft(), r0.bottomRight());
             }
+            /* Delegate-drawn [+] add / [-] remove glyphs at the row's right edge ([-] at the edge,
+               [+] one slot to its left). Used by full-width spanned rows (e.g. Develop mask-tool
+               rows) that cannot host a value-column button widget without it covering/clipping the
+               single-line caption. Clicks are hit-tested by the view (see
+               DevelopProperties::mousePressEvent). */
+            if (index.data(UR_DeleteBtn).toBool() || index.data(UR_AddBtn).toBool()) {
+                const int sz = 16;
+                int gy = r.top() + (r.height() - sz)/2;
+                painter->setOpacity(G::iconOpacity);
+                /* [-] sits at the right edge; [+] (when present) sits one slot to its left. */
+                int gx = r.right() - sz - 4;
+                if (index.data(UR_DeleteBtn).toBool()) {
+                    painter->drawPixmap(gx, gy, sz, sz, QPixmap(":/images/icon16/delete.png"));
+                    gx -= sz + 4;
+                }
+                if (index.data(UR_AddBtn).toBool())
+                    painter->drawPixmap(gx, gy, sz, sz, QPixmap(":/images/icon16/new.png"));
+                painter->setOpacity(1.0);
+            }
         }
-        // header row, but value column, so no decoration to deal with
+        // header row, value column
         else {
+            // fill the value-column background, then redraw the spanned caption over it
             if (index.data(UR_isBackgroundGradient).toBool())
                 painter->fillRect(r, rootCategoryBackground);
             else {
                 painter->setPen(brdPen);
                 painter->drawLine(r.bottomLeft(), r.bottomRight());
             }
+            drawHeaderCaption();
         }
     }
     else {
@@ -496,12 +611,50 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         // caption text and cell borders
         if (index.column() == CapColumn) {
             if (!isAlternatingRows) painter->fillRect(r0, valueRowBackground);
+            /* Selected-row cue: when this row's value editor is a slider that owns focus,
+               tint the caption cell the SAME translucent blue the SliderEditor paints on
+               the value cell, so the whole row reads as one blue band. Check DT_Slider
+               first: UR_Editor holds a different editor type for non-slider rows. */
+            const QModelIndex valSib = index.sibling(index.row(), ValColumn);
+            if (valSib.data(UR_DelegateType).toInt() == DT_Slider) {
+                auto *se = static_cast<SliderEditor*>(valSib.data(UR_Editor).value<void*>());
+                if (se && se->sliderHasFocus())
+                    painter->fillRect(r0, QColor(0x15, 0x71, 0xd3, 40));
+            }
+            /* Expand/collapse arrow for a DECORATED value row (e.g. Develop's Demosaic
+               row, whose raw-denoise sliders are children). The delegate otherwise draws
+               arrows only for header rows; mirror that here, in the gutter over the
+               native indicator (same position the header branch uses, r.x() - 10). */
+            if (index.data(UR_isDecoration).toBool() &&
+                (hasChildren || index.data(UR_ShowDecoration).toBool())) {
+                int ax = r.x() - 10;
+                int ay = r0.top() + r0.height()/2 - 5;
+                painter->drawPixmap(ax, ay, 9, 9, isExpanded ? branchOpen : branchClosed);
+            }
 //            if (isSelected) painter->setPen(selPen);
             // disabled?
             if (index.data(UR_isEnabled).toBool() == false) painter->setPen(disPen);
+            /* Flash feedback: blend the caption toward white while UR_FlashLevel > 0
+               (DevelopProperties animates it to 0 on a slider-row caption click). */
+            const qreal flash = index.data(UR_FlashLevel).toReal();
+            if (flash > 0.0) {
+                const QColor cc = painter->pen().color();
+                painter->setPen(QColor(
+                    int(cc.red()   + (255 - cc.red())   * flash),
+                    int(cc.green() + (255 - cc.green()) * flash),
+                    int(cc.blue()  + (255 - cc.blue())  * flash)));
+            }
             // indent the text (maybe not if not a header)
-            if (index.data((UR_isIndent)).toBool())
-                painter->drawText(r3, Qt::AlignVCenter|Qt::TextWordWrap, text);
+            if (index.data((UR_isIndent)).toBool()) {
+                QRect ri = r3;
+                /* One extra indent level for root leaves that should line up with a section's
+                   children (e.g. Develop's Demosaic / Denoise raw align with the Basic sliders). */
+                if (index.data(UR_ExtraIndent).toBool()) {
+                    const QTreeView *v = qobject_cast<const QTreeView*>(option.widget);
+                    ri.adjust(v ? v->indentation() : 12, 0, 0, 0);
+                }
+                painter->drawText(ri, Qt::AlignVCenter|Qt::TextWordWrap, text);
+            }
             else
                 painter->drawText(r2, Qt::AlignVCenter|Qt::TextWordWrap, text);
             painter->setPen(brdPen);

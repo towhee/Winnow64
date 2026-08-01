@@ -3,38 +3,138 @@
 
 #include "Develop/editparams.h"
 #include "Develop/workingimage.h"
+#include <QtGlobal>
 
 /*
     Applies parametric develop adjustments to a WorkingImage in place. Stateless and
     reentrant, constructed per decode (same discipline as Demosaic / RawFormat) so it
     carries no cross-thread state.
 
-    The operation order is fixed and hard-coded (Lightroom-like); order matters and is
-    not a caller concern. SCAFFOLD: every op below is an identity no-op for now, so Apply()
-    leaves the image unchanged. Implementations land in a later phase (exposure / white
-    balance / contrast / tone first; texture / dehaze / denoise after).
+    The operation order is fixed and hard-coded (Lightroom-like); order matters and is not a
+    caller concern. Ops are split by cost (see notes/Documentation.txt "Scope & masking
+    model"):
 
-    Note: for RAW, white balance and denoise give better results applied inside the raw
-    pipeline (RawFormat reads the same EditParams). When that lands those two ops here
-    become conditional, but EditParams and this interface are unchanged.
+        SPATIAL ops (denoise, texture, dehaze) need a neighbourhood, so each owns a full-image
+        pass. Denoise runs first; texture and dehaze run after the point pass. Each is a no-op
+        when its slider is 0.
+
+        POINT ops (white balance, exposure, contrast, tone regions) are pure per-pixel functions,
+        so they are FUSED into a single parallel pass: coefficients are precomputed once from
+        EditParams, then applied per pixel in one loop over the image. This is the slider-drag
+        hot path. All Basic sliders are now implemented; the proxy/coalesce preview pipeline
+        (MW::renderDevelopPreview) keeps spatial-op cost off the interactive drag.
 */
 class Develop
 {
 public:
     Develop() = default;
 
-    /* Apply p to img in place. Returns true on success (and trivially when p is
-       identity, leaving img untouched). */
-    bool Apply(WorkingImage &img, const EditParams &p);
+    /* Per-stage wall-clock timings for one Apply(), filled when a non-null pointer is passed.
+       A latency probe only (Develop preview [DevTime] logging); pass nullptr in normal use. */
+    struct StageTimings { qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0;
+                          qint64 dehazeMs = 0; qint64 vignetteMs = 0; qint64 grainMs = 0; };
+
+    /* Apply p to img in place. Returns true on success (and trivially when p is identity,
+       leaving img untouched). Fills *t when non-null. */
+    bool Apply(WorkingImage &img, const EditParams &p, StageTimings *t = nullptr);
+
+    /* Blend a full-strength raw-denoised image toward the clean one, per the Global "Denoise raw"
+       amounts (the interactive slider blend for the PMRID pre-demosaic denoiser -- see
+       MW::ensureRawDenoise). The (denoised - clean) correction is split, in scene-linear RGB, into
+       a luma term (scaled by lum) and a per-channel chroma term (scaled by max(lum,chr)), so
+       highlights (where the correction is ~0) pass through. Writes into out (set to clean when the
+       dimensions mismatch or both amounts are 0). Static: carries no develop state. */
+    static void BlendRawDenoise(const WorkingImage &clean, const WorkingImage &denoised,
+                                float lum, float chr, WorkingImage &out);
 
 private:
-    void Denoise(WorkingImage &img, const EditParams &p);        // 1
-    void WhiteBalance(WorkingImage &img, const EditParams &p);   // 2
-    void Exposure(WorkingImage &img, const EditParams &p);       // 3
-    void Contrast(WorkingImage &img, const EditParams &p);       // 4
-    void ToneRegions(WorkingImage &img, const EditParams &p);    // 5 highlights/shadows/whites/blacks
-    void Texture(WorkingImage &img, const EditParams &p);        // 6
-    void Dehaze(WorkingImage &img, const EditParams &p);         // 7
+    /* Spatial op: local (maskable) NR, owns a full-image pass, run BEFORE the fused point pass
+       (fixed pipeline order). Two independent strengths: EditParams::localDenoiseLuma = luminance
+       NR (ratio-preserving, chroma untouched); EditParams::localDenoiseChroma = colour/chroma NR
+       (downscaled opponent-chroma blur, luminance kept exact). Luma runs first, then chroma on the
+       result. This is the GLOBAL (no-mask) case; the planned scope compositor calls it per scope,
+       bounded to the mask bbox and blended by the scope's alpha (see notes/Documentation.txt
+       "Scope & masking model"). No-op when both strengths are 0. */
+    void Denoise(WorkingImage &img, const EditParams &p);
+
+    /* Spatial op (pipeline #6): mid-frequency local contrast on LUMINANCE only (ratio-preserving,
+       like Denoise), in the perceptual domain. A Gaussian base isolates a mid-frequency detail
+       band; positive texture amplifies it, negative attenuates it. The base radius scales with
+       image size so the proxy preview matches the full-res result. Runs AFTER the point pass.
+       No-op when EditParams::texture is 0. */
+    void Texture(WorkingImage &img, const EditParams &p);
+
+    /* Spatial op (pipeline #7): an APPROXIMATE dehaze (not dark-channel-prior) -- large-radius
+       luminance local contrast + a contrast pull about a low pivot (deepens shadows / extends
+       range) + a saturation boost, since haze flattens contrast and desaturates. Positive
+       removes haze, negative adds it. No-op when EditParams::dehaze is 0. */
+    void Dehaze(WorkingImage &img, const EditParams &p);
+
+    /* Spatial op (pipeline #8, runs LAST): a radial exposure vignette about the image
+       centre. vignetteExposure is the EV applied at the corners (negative darkens = the
+       classic vignette, positive brightens), ramping smoothly to 0 at the centre;
+       vignetteFeather (0..1) shapes the falloff (high = gradual/reaches inward, low =
+       concentrated in the corners). Custom / off-centre vignettes are done with radial
+       masks, so this global op is just the two sliders. No-op when the EV is 0. */
+    void Vignette(WorkingImage &img, const EditParams &p);
+
+    /* Spatial op (pipeline #9, runs LAST -- after Vignette): monochromatic film grain
+       added to luminance (ratio-preserving, like Texture/Denoise). Deterministic
+       (fixed-seed noise) so a re-render does not make the grain shimmer, and the particle
+       size scales with the image so the proxy preview matches full res. grainAmount is
+       the strength, grainSize the particle size, grainRoughness the amplitude
+       irregularity. No-op when grainAmount is 0. */
+    void Grain(WorkingImage &img, const EditParams &p);
+
+    /* Precomputed once per Apply(); the fused point pass reads only these. active == false
+       means no implemented point op would change a pixel, so the pass is skipped entirely. */
+    struct PointCoeffs {
+        bool  active        = false;
+        /* Per-channel scene-linear gain = white balance (temp/tint) folded with exposure (2^EV)
+           AND the Colour RGB sliders (red/green/blue). All are pure linear multiplies, so they
+           commute and combine into one per-channel factor applied before the perceptual tone
+           curve. {1,1,1} = identity. */
+        float channelGain[3] = {1.0f, 1.0f, 1.0f};
+        float white         = 1.0f;   // linear value that maps to display white
+
+        /* Perceptual-domain tone curve: contrast + the four tone-region controls
+           (highlights/shadows/whites/blacks) are all pure 1-D functions of a channel's
+           white-normalised value, so they are baked once into a lookup table. The table is
+           indexed by the perceptual value s = (v/white)^(1/gamma) in [0, toneLutSMax] and
+           returns the white-normalised LINEAR output (i.e. it folds the gamma decode back in),
+           so the hot loop does one pow (encode) + one interpolated lookup instead of several
+           pow/exp per pixel. toneActive == false => identity tone curve (skip it). */
+        static constexpr int kLutSize = 1024;
+        bool  toneActive = false;
+        float toneLutSMax = 1.0f;          // perceptual s domain the table spans is [0, this]
+        float toneLut[kLutSize] = {};      // s -> white-normalised linear output
+
+        /* HSL (hue/saturation/luminance) -- a cross-channel point op applied AFTER the tone curve
+           in the same fused pass (it mixes the three channels, so unlike the tone curve it cannot
+           be a per-channel LUT). hueMat is a 3x3 rotation about the neutral axis (row-major, used
+           only when hue != 0); satFactor scales chroma about luma; vibAmount is a per-pixel
+           saturation boost weighted by how muted the pixel already is (0 = off); lumGain is a
+           uniform gain. hslActive == false => identity (skip the block). */
+        bool  hslActive  = false;
+        float hueMat[9]  = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+        float satFactor  = 1.0f;
+        float vibAmount  = 0.0f;
+        float lumGain    = 1.0f;
+
+        /* Colour grading (Color Mix panel) -- tonal-range tinting applied after HSL in
+           the same fused pass. For each of the three ranges [0]=shadows, [1]=midtones,
+           [2]=highlights: gradeTint is a zero-luma RGB chroma push (hue+sat pre-scaled)
+           ADDED to the pixel, gradeLum a per-range luminance gain delta. Both weighted
+           per pixel by smooth tonal windows of the pixel's luma (see applyPointOps).
+           gradeActive == false => identity (skip the block). */
+        bool  gradeActive = false;
+        float gradeTint[3][3] = {};   // [range][rgb], zero-luma chroma offset
+        float gradeLum[3]     = {};   // [range] luminance gain delta (0 = none)
+    };
+    static PointCoeffs buildPointCoeffs(const EditParams &p, const WorkingImage &img);
+
+    /* The fused per-pixel pass, parallelised over row ranges. */
+    void applyPointOps(WorkingImage &img, const PointCoeffs &c);
 };
 
 #endif // DEVELOP_H

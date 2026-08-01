@@ -257,6 +257,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::MetadataReadingColumn, new QStandardItem("Meta Reading")); horizontalHeaderItem(G::MetadataReadingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataStatusColumn, new QStandardItem("Meta Status")); horizontalHeaderItem(G::MetadataStatusColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::RawRenderColumn, new QStandardItem("Raw Render")); horizontalHeaderItem(G::RawRenderColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating")); horizontalHeaderItem(G::_RatingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_LabelColumn, new QStandardItem("_Label")); horizontalHeaderItem(G::_LabelColumn)->setData(true, G::GeekRole);
@@ -1402,6 +1403,11 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.fPath = fPath;
     m.fName = index(row, G::NameColumn).data().toString();
     m.type = index(row, G::TypeColumn).data().toString();
+    /* ImageDecoder::load() selects the in-house RAW decoder off m.ext in independent
+       mode; keep it populated (from the same TypeColumn cache mode uses) so
+       decodeIndependent takes the raw path instead of falling back to the display-
+       referred embedded JPG. */
+    m.ext = m.type;
     m.size = index(row, G::ByteSizeColumn).data().toInt();
     m.video = index(row, G::VideoColumn).data().toInt();
     m.sidecar = index(row, G::SidecarColumn).data().toInt();
@@ -1950,6 +1956,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::AttemptsColumn), 0);
     setData(index(row, G::DecoderIdColumn), -1);
     setData(index(row, G::DecoderReturnStatusColumn), 0);
+    setData(index(row, G::RawRenderColumn), false);
     // calc size in MB req'd to store image in cache
     if (!m.video) {
         int w, h;

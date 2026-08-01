@@ -1,5 +1,35 @@
 #include "Main/mainwindow.h"
 
+/*
+    Builds the "Decode Raw is On" toolbar icon: a 2px white border surrounding a
+    2x2 Bayer-style quadrant grid (top-left red, top-right green, bottom-left
+    green, bottom-right blue).  Rendered at 2x for crisp display on Retina.
+*/
+static QIcon makeUseRawOnIcon()
+{
+    const int size = 16;                     // 16x16 px to match toolbar icons
+    const int border = 2;                    // 2px white border
+
+    QPixmap pm(size, size);
+    pm.fill(Qt::white);
+
+    const int inner = size - 2 * border;
+    const int half = inner / 2;
+    const int x0 = border;
+    const int x1 = border + half;
+    const int y0 = border;
+    const int y1 = border + half;
+
+    QPainter p(&pm);
+    p.fillRect(QRect(x0, y0, half, half), QColor(255,   0,   0));  // top-left  red
+    p.fillRect(QRect(x1, y0, half, half), QColor(  0, 255,   0));  // top-right green
+    p.fillRect(QRect(x0, y1, half, half), QColor(  0, 255,   0));  // bottom-left  green
+    p.fillRect(QRect(x1, y1, half, half), QColor(  0,   0, 255));  // bottom-right blue
+    p.end();
+
+    return QIcon(pm);
+}
+
 void MW::updateStatus(bool keepBase, QString s, QString source)
 {
 /*
@@ -33,6 +63,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     QString zoomPct = "";
     QString base = "";
     QString spacer = "   ";
+    QString raw = "";
 
     // update G::availableMemory
 #ifdef Q_OS_WIN
@@ -62,6 +93,8 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
             base += spacer +" Selected: " + s;
             // Picked count
             base += spacer + "Picked: " + getPicked();
+            // Raw rendering
+            base += spacer + getRawRendered();
         }
 
         QString preBase = "";
@@ -163,7 +196,7 @@ void MW::updateStatusBar()
     }
 
     if (G::useRaw) {
-        useRawBtn->setIcon(QIcon(":/images/icon16/raw.png"));
+        useRawBtn->setIcon(makeUseRawOnIcon());
         useRawBtn->setToolTip("Decode Raw is On (demosaic sensor data).  Click to toggle on/off");
     }
     else {
@@ -244,8 +277,8 @@ int MW::availableSpaceForProgressBar()
 QString MW::getPosition()
 {
 /*
-    This function is used by MW::updateStatus to report the current image relative to all the
-    images in the folder ie 17 of 80.
+    This function is used by MW::updateStatus to report the current image relative to all
+    the images in the folder ie 17 of 80.
 
     It is displayed on the status bar and in the infoView.
 */
@@ -297,6 +330,15 @@ QString MW::getPicked()
     return QString::number(count) + " ("  + pickMemSize + ")";
 }
 
+QString MW::getRawRendered()
+{
+    if (G::isLogger) G::log("MW::getRawRendered");
+    if (dm->sf->index(dm->currentSfRow, G::RawRenderColumn).data().toBool()) {
+        return "RAW";
+    }
+    return "";
+}
+
 QString MW::getSelectedFileSize()
 {
 /*
@@ -317,6 +359,16 @@ void MW::updateProgressBarWidth()
         progress->setContainerWidth(cacheBarProgressWidth);
         imageCache->updateStatus(ImageCache::StatusAction::All, "MW::updateProgressBarWidth");
     }
+}
+
+void MW::setCacheProgressEnabled(bool on)
+{
+    if (G::isLogger) G::log("MW::setCacheProgressEnabled");
+    /* Gate the cache rows (ImageCache + MetaRead) as a group so they honor the
+       "Show caching progress" preference while other rows (e.g. FocusStack) can
+       still appear. */
+    progress->setRowEnabled(progress->imageCacheRow(), on);
+    progress->setRowEnabled(progressMetaReadRow, on);
 }
 
 void MW::setCacheRunningLightsWidth() {
@@ -407,7 +459,9 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
     }
     imageThreadRunningLabel->setText("◉");
     if (G::showCacheProgress) {
-        progress->setVisible(showCacheLabel);
+        /* Show the ImageCache row while caching is active; Progress shows/hides its
+           own container from row content. */
+        progress->showRow(progress->imageCacheRow(), showCacheLabel);
         bool isAutoSize = imageCache->getAutoMaxMB();
         quint64 maxMB = imageCache->getMaxMB();
         QString tip = getImageCacheRunningTip(isAutoSize, maxMB);
@@ -651,6 +705,10 @@ void MW::toggleUseRaw(Tog n)
     if (n == Tog::on) G::useRaw = true;
 
     updateStatusBar();  // updates btn image and tooltip
+
+    /* Keep the Develop panel's "Edit: Raw / Embedded Preview" selector in sync with the status
+       bar button (both drive G::useRaw). */
+    if (developProperties) developProperties->syncEditRaw(G::useRaw);
 
     if (dm->rowCount() == 0) return;
 

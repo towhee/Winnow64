@@ -563,6 +563,67 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
     sidecarFile.close();
 }
 
+void Metadata::writeDevelopSidecar(QString fPath, QString blob)
+{
+/*
+    Persist the per-image Develop edit state (base64 of the EditStack JSON) to the image's XMP
+    sidecar winnow:Develop attribute. Develop edits are Winnow-private and always live in the
+    sidecar (never written into the source file), so there is no ExifTool branch. An empty blob
+    clears the attribute (image reset to identity); we avoid creating a sidecar just to store
+    nothing. Mirrors writeOrientation and is safe to call off the GUI thread via QtConcurrent.
+*/
+    if (G::isLogger) G::log("Metadata::writeDevelopSidecar");
+
+    QFileInfo info(fPath);
+    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
+    const bool exists = QFileInfo::exists(sidecarPath);
+    if (blob.isEmpty() && !exists) return;          // nothing to write or clear
+
+    // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
+    if (QFileInfo(sidecarPath).isSymLink()) {
+        QString msg = "Refusing to write sidecar: path is a symlink.";
+        G::issue("Warning", msg, "Metadata::writeDevelopSidecar", -1, sidecarPath);
+        return;
+    }
+    QFile sidecarFile(sidecarPath);
+    if (!sidecarFile.open(QIODevice::ReadWrite)) {
+        QString msg = "Failed to open sidecar to write develop settings.";
+        G::issue("Warning", msg, "Metadata::writeDevelopSidecar", -1, sidecarPath);
+        return;
+    }
+    Xmp xmp(sidecarFile, G::dmInstance);
+    if (!xmp.isValid) xmp.fix();
+    xmp.setItem("develop", blob.toLatin1());        // "" removes the attribute
+    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
+        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
+    xmp.setItem("modifydate", modifyDate.toLatin1());
+    if (!xmp.writeSidecar(sidecarFile)) {
+        QString msg = "Failed to write develop settings to sidecar.";
+        G::issue("Warning", msg, "Metadata::writeDevelopSidecar", -1, sidecarPath);
+    }
+    sidecarFile.close();
+}
+
+QString Metadata::readDevelopSidecar(QString fPath)
+{
+/*
+    Read the per-image Develop edit state (base64 blob) from the sidecar's winnow:Develop
+    attribute, or "" if there is no sidecar / no develop data.
+*/
+    if (G::isLogger) G::log("Metadata::readDevelopSidecar");
+
+    QFileInfo info(fPath);
+    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
+    if (!QFileInfo::exists(sidecarPath)) return "";
+
+    QFile sidecarFile(sidecarPath);
+    if (!sidecarFile.open(QIODevice::ReadOnly)) return "";
+    Xmp xmp(sidecarFile, G::dmInstance);
+    QString blob = xmp.getItem("develop");
+    sidecarFile.close();
+    return blob;
+}
+
 bool Metadata::writeXMP(const QString &fPath, QString src)
 {
 /*

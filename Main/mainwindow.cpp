@@ -1,6 +1,28 @@
 ﻿#include "Main/mainwindow.h"
 #include "Main/global.h"
+#include "Develop/workingimage.h"
+#include "Develop/workingimagecache.h"
+#include "Develop/inputtransform.h"
+#include "Develop/brushstamp.h"
+#include "Develop/rangemask.h"
+#include "Develop/subjectmask.h"
+#include "Develop/skymask.h"
+#include "Develop/depthmask.h"
+#include "Develop/objectmask.h"
+#include "Develop/develop.h"
+#include "ImageFormats/Raw/pmrid.h"
+#include "Utilities/inference/miganfill.h"
+#include "Utilities/inference/lamafill.h"
+#include "Cache/imagedecoder.h"
+#include "Utilities/subjectpredictor.h"
+#include "Utilities/skypredictor.h"
+#include "Utilities/depthpredictor.h"
+#include "Utilities/objectmaskpredictor.h"
+#include "Develop/Transform/croptransform.h"
+#include <QMutex>
+#include <memory>
 #include <QMetaEnum>
+#include <cmath>            // std::sqrt (updateDevelopScopes sampling stride)
 #include <cstdlib>          // std::_Exit (used by runSelfTest)
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -55,6 +77,8 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {filterDockTabText,   ":/images/icon16/filters_white.png"},
         {metadataDockTabText, ":/images/icon16/metadata_white.png"},
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
+        {developDockTabText,  ":/images/icon16/develop_white.png"},
+        {historyDockTabText,  ":/images/icon16/history_white.png"},
     };
     const QHash<QString, QDockWidget*> dockFor = {
         {folderDockTabText,   folderDock},
@@ -62,6 +86,8 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {filterDockTabText,   filterDock},
         {metadataDockTabText, metadataDock},
         {embelDockTabText,    embelDock},
+        {developDockTabText,  developDock},
+        {historyDockTabText,  historyDock},
     };
 
     busy = true;
@@ -212,6 +238,70 @@ void MW::scheduleDockTabUpdate()
     });
 }
 
+QDockWidget* MW::dockForTabText(const QString &tabText)
+{
+    if (tabText == folderDockTabText)   return folderDock;
+    if (tabText == favDockTabText)      return favDock;
+    if (tabText == filterDockTabText)   return filterDock;
+    if (tabText == metadataDockTabText) return metadataDock;
+    if (tabText == embelDockTabText)    return embelDock;
+    if (tabText == developDockTabText)  return developDock;
+    if (tabText == historyDockTabText)  return historyDock;
+    return nullptr;
+}
+
+void MW::moveDroppedDockLast()
+{
+/*
+    WORK IN PROGRESS - currently DISABLED (the dockLocationChanged connection in
+    initialize() is commented out). It broke dock-tab selection: clicking a tab
+    could no longer raise its dock. Cause not yet diagnosed (likely the re-tabify /
+    raise() firing on interactions that are not true drops). Left intact for a
+    later fix; do not re-enable the connection until tab selection is verified.
+
+    When a dock is dropped into an existing tab group, QMainWindow inserts it at
+    the drop position (often the front). We want a dropped dock to always become
+    the LAST (rightmost) tab in its group, regardless of where it was dropped.
+
+    Connected to each dock's dockLocationChanged. After the drop settles (deferred
+    zero timer), find the tab bar now holding the moved dock, read the group in
+    visual (tab) order, and if the moved dock is not already last, re-tabify it
+    after the current last dock. tabifyDockWidget(last, moved) moves moved's tab
+    immediately after last's, so it becomes the rightmost. The "already last"
+    early-out makes the re-tabify (which re-fires this signal) a no-op the second
+    time, so there is no recursion.
+
+    Tab identity is by text title, falling back to the learned key map when the
+    tabs are in graphic mode (empty text) - the same identity scheme as
+    updateDockTabGraphics.
+*/
+    QDockWidget *moved = qobject_cast<QDockWidget*>(sender());
+    if (!moved) return;
+    QTimer::singleShot(0, this, [this, moved]() {
+        if (moved->isFloating()) return;
+        const QList<QTabBar *> bars = findChildren<QTabBar *>();
+        for (QTabBar *bar : bars) {
+            QList<QDockWidget*> ordered;
+            int movedIndex = -1;
+            for (int i = 0; i < bar->count(); ++i) {
+                QString title = bar->tabText(i);
+                if (title.isEmpty())   // graphic mode: recover learned title
+                    title = dockTabTitleByKey.value(bar->tabData(i).toULongLong());
+                QDockWidget *d = dockForTabText(title);
+                if (!d) continue;
+                if (d == moved) movedIndex = ordered.size();
+                ordered << d;
+            }
+            if (movedIndex < 0) continue;                    // not this bar
+            if (ordered.size() < 2) return;                  // nothing to reorder
+            if (movedIndex == ordered.size() - 1) return;    // already last
+            tabifyDockWidget(ordered.last(), moved);
+            moved->raise();
+            return;
+        }
+    });
+}
+
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::MW", "START APPLICATION", true);
@@ -291,6 +381,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createMessageView();
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
+
+    /* Apply the persisted Develop enabled state now that BOTH the dock (createDocks) and
+       developAction (createActions) exist -- createDocks runs first, so this cannot live in
+       createDevelopDock. */
+    syncDevelopPanelEnabled();   // gated by developAction AND Develop operation mode
 
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
@@ -608,10 +703,18 @@ void MW::showEvent(QShowEvent *event)
 
     // restore prior geometry and state
     if (isSettings) {
+        /* Versioned restore (winnowStateVersion). A WindowState saved by a build that predates
+           developDock has no place for it; restoring it leaves develop's dock group orphaned as
+           empty zombie tab bars, and the QMainWindow dock layout then never converges -- the
+           tabbed docks flicker continuously (diagnosed via persistent count==0 tab bars in a
+           perpetual LayoutRequest loop). With a version tag, restoreState() rejects the stale
+           state (returns false, changes nothing) and the clean layout built in initialize()
+           stands. The state is re-saved with the current version on exit, so this self-heals
+           after one launch (cost: a one-time reset of saved dock sizes/positions). */
         restoreGeometry(settings->value("Geometry").toByteArray());
-        restoreState(settings->value("WindowState").toByteArray());
+        restoreState(settings->value("WindowState").toByteArray(), winnowStateVersion);
         restoreGeometry(settings->value("Geometry").toByteArray());
-        restoreState(settings->value("WindowState").toByteArray());
+        restoreState(settings->value("WindowState").toByteArray(), winnowStateVersion);
     }
     else {
         defaultWorkspace();
@@ -632,7 +735,6 @@ void MW::showEvent(QShowEvent *event)
 
     // initial status bar icon state
     updateStatusBar();
-    progress->setVisible(G::showCacheProgress);
 
     // set initial visibility in embellish template
     embelTemplateChange(embelProperties->templateId);
@@ -645,6 +747,13 @@ void MW::showEvent(QShowEvent *event)
 
     // set screen attributes in global
     setDisplayResolution();
+
+    /* Hide the Develop tool at startup: Winnow always opens in Preview mode. History is
+       part of the Develop tool (tabbed with it, shown and hidden with it), so it must be
+       hidden here too -- restoreState() above re-shows every dock the last session had
+       visible, and hiding Develop alone left History on screen, visible but disabled.
+       Both actions are unchecked so the View menu agrees with what is on screen. */
+    closeDevelopDock();     // hides developDock + historyDock, unchecks both actions
 
     QMainWindow::showEvent(event);
 
@@ -695,6 +804,9 @@ void MW::closeEvent(QCloseEvent *event)
 
     // for debugging crash test
     //if (testCrash) return;
+
+    // persist any unsaved per-image Develop edits to their sidecars before teardown
+    if (developProperties) developProperties->flushAll();
 
     stop("MW::closeEvent");
 
@@ -943,6 +1055,162 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     QMainWindow::keyReleaseEvent(event);
 }
 
+bool MW::thumbViewHasFocus() const
+{
+    const QWidget *fw = QApplication::focusWidget();
+    if (!fw || !thumbView) return false;
+    return fw == thumbView || thumbView->isAncestorOf(fw);
+}
+
+/* The bare/Shift'd navigation keys, plus the pick-nav and random-image combos, all move
+   the selection off the current image. In Develop mode they are suppressed unless the
+   thumbnails have the focus (see developShortcutIntercept). Alt+key is EXCLUDED:
+   Alt+arrow / Alt+Home etc scroll and pan within the image rather than changing the
+   selection, which is useful while developing -- but Ctrl+Shift+Alt+Left/Right IS pick
+   navigation, hence the Ctrl test. */
+static bool isSelectionKey(const QKeyEvent *e)
+{
+    switch (e->key()) {
+    case Qt::Key_Left:   case Qt::Key_Right:
+    case Qt::Key_Up:     case Qt::Key_Down:
+    case Qt::Key_PageUp: case Qt::Key_PageDown:
+    case Qt::Key_Home:   case Qt::Key_End:
+        break;
+    default:
+        return false;
+    }
+    const Qt::KeyboardModifiers m = e->modifiers();
+    if ((m & Qt::AltModifier) && !(m & Qt::ControlModifier)) return false;  // scroll/pan
+    return true;
+}
+
+bool MW::developShortcutIntercept(QEvent *event)
+{
+/*
+    Develop mode's shortcut arbiter, called from eventFilter for both
+    QEvent::ShortcutOverride and QEvent::KeyPress. Two rules, in order:
+
+      1. A key in developShortcuts runs its Develop action in place of the global action
+         bound to the same key (S = spot tool here, Slideshow in Preview).
+      2. A selection key is swallowed unless thumbView has the focus, so arrows and page
+         keys cannot navigate off the image being developed.
+
+    Everything else falls through and behaves exactly as it does in Preview mode. Returns
+    true when the key has been consumed.
+
+    Both event types are handled, in the two-step ReplacePanel::eventFilter established:
+    accept the ShortcutOverride (which is what frees the key from the global QAction --
+    Qt sends it before the shortcut system runs), then act on the KeyPress that follows.
+    Doing the work on the KeyPress rather than the override matters twice over. It is the
+    only event Qt guarantees for keys NO global action owns (R/N/M/H), and consuming it
+    makes rule 2 a real "ignore": accepting only the override would free an arrow from
+    keyDownAction and then let it reach the loupe, where QGraphicsView scrolls on arrows.
+
+    Tool-local keys ([ ] etc) are not in the table, so an armed tool still gets them from
+    its own ShortcutOverride claim in ImageView::event -- tool-local outranks mode-local.
+*/
+    QKeyEvent *e = static_cast<QKeyEvent *>(event);
+    QWidget *fw = QApplication::focusWidget();
+    const bool isOverride = event->type() == QEvent::ShortcutOverride;
+
+    /* Never arbitrate a dialog's keystrokes. This mirrors the MODELESS DIALOG SHORTCUT
+       GUARD below, which cannot cover these keys: it works off ownsShortcut(), and a
+       Develop action has no QKeySequence for that to match. Without this a bare S typed
+       into a Preferences field would arm the spot tool. Floating QDockWidgets are also
+       separate top-level windows but belong to the MW workspace, hence the QDialog
+       test. */
+    QWidget *win = fw ? fw->window() : nullptr;
+    if (win && win != this && qobject_cast<QDialog *>(win)) return false;
+
+    /* Esc collapses the active MASK tool (hide its settings), like the other Develop
+       tools exit on Esc. Checked BEFORE the value-editor guard below: while a mask is
+       edited focus is usually on a dock slider (Hue/Sat) or the Color Range wheel, so the
+       guard would otherwise swallow Esc first. Yields to the WB dropper and Transform,
+       whose own Esc handlers run below. Escape owns no global QAction, so only KeyPress
+       arrives. */
+    if (e->key() == Qt::Key_Escape && !e->isAutoRepeat() && !isOverride && developProperties
+        && !developProperties->isWbDropperActive() && !developCropEditing
+        && developProperties->escapeMaskTool()) {
+        event->accept();
+        return true;
+    }
+
+    /* A value editor owns its keys unconditionally: arrows nudge a Develop slider,
+       letters type into the search field. Arbitrating those away would break both. */
+    if (qobject_cast<QAbstractSlider *>(fw)  || qobject_cast<QAbstractSpinBox *>(fw) ||
+        qobject_cast<QLineEdit *>(fw)        || qobject_cast<QComboBox *>(fw))
+        return false;
+
+    /* 1b. Esc disarms the white-balance dropper. It is armed from the Develop dock, so
+       focus is in the dock and ImageView never sees the key -- the arbiter is the only
+       place that reliably gets it, the same reason Transform's Esc lives here. Checked
+       BEFORE the Transform block: the dropper is the more recently armed tool, so it
+       owns Esc while it is up. Escape owns no global QAction, so only KeyPress
+       arrives. */
+    if (developProperties && developProperties->isWbDropperActive()
+        && e->key() == Qt::Key_Escape && !e->isAutoRepeat()) {
+        event->accept();
+        if (!isOverride) developProperties->cancelWbDropper();
+        return true;
+    }
+
+    /* 1a. While a Transform (crop/level/warp) is active, its A/F/C/L/W act on the
+       Transform panel and must beat the window-level shortcuts on those keys (A Run
+       Droplet, C Compare ...). This runs before Qt's shortcut system and independent of
+       which widget holds focus, so it works whether the panel or the crop overlay is
+       focused. Text editors (aspect combo, angle field) are already excluded by the
+       value-editor guard above, so typing still works. Contextual, so NOT in
+       developShortcuts. */
+    if (developCropEditing && transformPanel && e->modifiers() == Qt::NoModifier
+        && !e->isAutoRepeat()) {
+        const int k = e->key();
+        if (k == Qt::Key_A || k == Qt::Key_F || k == Qt::Key_C ||
+            k == Qt::Key_L || k == Qt::Key_W) {
+            event->accept();
+            if (!isOverride) transformPanel->handleTransformShortcut(k);
+            return true;
+        }
+        /* Esc cancels the whole transform session (discard + hide the panel), not just
+           the active mode. Escape owns no global QAction, so only KeyPress arrives. */
+        if (k == Qt::Key_Escape) {
+            event->accept();
+            if (!isOverride) cancelDevelopTransform();
+            return true;
+        }
+        /* Enter/Return commits the transform and closes the panel, like pressing R again
+           (toggleDevelopTransform's commit-on-hide). EXCEPTION: while a warp quad is
+           traced, Enter commits the quad (rectify) instead -- leave it to ImageView's own
+           warp-commit path (ImageView::event / keyPressEvent), so fall through here. */
+        if ((k == Qt::Key_Return || k == Qt::Key_Enter)
+            && !(imageView && imageView->cropIsWarp())) {
+            event->accept();
+            if (!isOverride) toggleDevelopTransform();
+            return true;
+        }
+    }
+
+    /* 1. Develop mode local shortcut beats the global action on the same key. Held keys
+       must not re-fire: every one of these is a toggle or pops a dialog. */
+    if (e->modifiers() == Qt::NoModifier && !e->isAutoRepeat()) {
+        if (QAction *a = developShortcuts.value(e->key())) {
+            event->accept();
+            if (!isOverride) {          // the override only frees the key; act now
+                if (G::isLogger) G::log("MW::developShortcutIntercept", a->objectName());
+                a->trigger();
+            }
+            return true;
+        }
+    }
+
+    // 2. Selection keys are inert unless the user is deliberately in the thumbnails
+    if (isSelectionKey(e) && !thumbViewHasFocus()) {
+        event->accept();
+        return true;
+    }
+
+    return false;
+}
+
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
     // return false to propagate events
@@ -1111,6 +1379,57 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* DEVELOP MODE LOCAL SHORTCUTS
+       The ShortcutOverride pass runs before Qt's shortcut system, so a Develop key beats
+       the global action bound to it; the KeyPress pass does the work (and swallows the
+       selection keys). Must precede the navigation intercept below, which would otherwise
+       act on an arrow first. See MW::developShortcutIntercept. */
+    {
+        if (!G::isInitializing && G::operationMode == G::OperationMode::Develop
+            && (event->type() == QEvent::ShortcutOverride
+                || event->type() == QEvent::KeyPress)) {
+            if (developShortcutIntercept(event)) return true;
+        }
+    }
+
+    /* DEVELOP MODE: hold Space to borrow the loupe zoom/pan gesture over a mask / spot /
+       crop tool (click toggles zoom, drag pans a zoomed image); release resumes the tool.
+       ImageView usually lacks keyboard focus in Develop, so drive it from this global
+       filter, which sees KeyPress AND KeyRelease. Space is bound to zoomToggleAction
+       globally, so the ShortcutOverride pass is accepted to free the key (as
+       developShortcutIntercept does) and stop that action firing. A value editor keeps
+       Space as a literal character; auto-repeat is ignored so a held key can't
+       flicker. */
+    {
+        if (!G::isInitializing && G::operationMode == G::OperationMode::Develop && imageView
+            && (event->type() == QEvent::ShortcutOverride
+                || event->type() == QEvent::KeyPress
+                || event->type() == QEvent::KeyRelease)) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            if (e->key() == Qt::Key_Space) {
+                QWidget *fw = QApplication::focusWidget();
+                const bool editor =
+                    qobject_cast<QAbstractSlider *>(fw)  || qobject_cast<QAbstractSpinBox *>(fw) ||
+                    qobject_cast<QLineEdit *>(fw)        || qobject_cast<QComboBox *>(fw);
+                if (!editor) {
+                    /* Accept frees the key from the global shortcut on the override
+                       pass (so zoomToggleAction can't fire); KeyPress/Release acts. */
+                    event->accept();
+                    if (event->type() == QEvent::KeyPress && !e->isAutoRepeat())
+                        imageView->setSpacePanOverride(true);
+                    else if (event->type() == QEvent::KeyRelease && !e->isAutoRepeat())
+                        imageView->setSpacePanOverride(false);
+                    return true;
+                }
+            }
+        }
+    }
+
+    /* Clear the Space zoom/pan override if the app deactivates while Space is held -- a
+       release delivered to another app would otherwise leave the override stuck on. */
+    if (event->type() == QEvent::ApplicationDeactivate && imageView)
+        imageView->setSpacePanOverride(false);
+
     /* KEYPRESS INTERCEPT (NAVIGATION and MODIFIERS) */
     {
         if (!G::isInitializing && (event->type() == QEvent::KeyPress)) {
@@ -1142,12 +1461,26 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
                 // if (e->key() == Qt::Key_Return) loupeDisplay("MW::eventFilter Key_Return");  // search filter not mix with sel->save/recover
 
+                /* Don't navigate images when a value editor (e.g. a Develop slider) has focus:
+                   it consumes arrows to nudge its value. This is insurance -- the slider also
+                   accepts the key so it should not reach here -- against the app event filter
+                   seeing the key at MWWindow as it propagates up an unconsumed key. */
+                QWidget *fw = QApplication::focusWidget();
+                bool editorHasFocus =
+                    qobject_cast<QAbstractSlider*>(fw)  ||
+                    qobject_cast<QAbstractSpinBox*>(fw) ||
+                    qobject_cast<QLineEdit*>(fw)        ||
+                    qobject_cast<QComboBox*>(fw);
+
+                /* In Develop mode an arrow only reaches here when the thumbnails have the
+                   focus -- developShortcutIntercept (above) consumes the others. */
+
                 // faster than using menu shortcuts
-                if (e->key() == Qt::Key_Right) {
+                if (e->key() == Qt::Key_Right && !editorHasFocus) {
                     if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter Key_Right");
                     sel->next(e->modifiers());
                 }
-                if (e->key() == Qt::Key_Left) {
+                if (e->key() == Qt::Key_Left && !editorHasFocus) {
                     if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter Key_Left");
                     sel->prev(e->modifiers());
                 }
@@ -2286,6 +2619,23 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
+
+    /* A new folder invalidates the current image's develop denoise caches (they hold the
+       previous folder image's ~60MP bases). Drop them so revisiting an image RE-DECODES
+       (showing progress again) rather than short-circuiting on a stale hit, and so we
+       don't pin hundreds of MB across folders. The pre-develop WorkingImageCache is
+       cleared separately on the ImageCache thread (its folder reset). */
+    developDenoised.reset();
+    developDenoisedKey.clear();
+    developPmridFull.reset();
+    developPmridKey.clear();
+    developPmridResSource.clear();     // drop the noise-model snapshot with its base
+    developPmridResK = developPmridResB = 0.0;
+    developPmridResHadNP = false;
+    developProxy.reset();
+    developProxyPath.clear();
+    developWorkTriedPath.clear();
+
     // block repeated clicks to folders or bookmarks while processing this one.
     bookmarks->setEnabled(false);
     fsTree->setEnabled(false);
@@ -2430,6 +2780,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     QString fPath = dm->sf->index(current.row(), 0).data(G::PathRole).toString();
     settings->setValue("lastFileSelection", fPath);
 
+    /* Per-image Develop edit state: load this image's saved EditStack into the dock (also flushes
+       the previous image's edits to its sidecar). The developed preview is applied after the
+       loupe image is shown (applyDevelopPreviewIfEdited). Videos are not developable, so hand the
+       dock an empty path -- it still flushes the image we are leaving, then points at nothing.
+       In Preview mode the Develop panel is disabled and no edits can be made, so leave it untouched
+       (no edits are pending to flush either); setOperationMode re-syncs it on entering Develop. */
+    if (developProperties && G::operationMode == G::OperationMode::Develop) {
+        const bool selIsVideo = dm->sf->index(current.row(), G::VideoColumn).data().toBool();
+        developProperties->setCurrentImage(selIsVideo ? QString() : fPath);
+    }
+
     /* SCROLL CONTROL:
        When an item (icon or row) is selected the default behavior is to scroll the item
        to the center of the view (thumbView, gridView or tableView) so the user does not
@@ -2470,8 +2831,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
 
-    if (!G::isSlideShow) progress->setVisible(G::showCacheProgress);
-
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
 
     // update loupe/video view
@@ -2502,9 +2861,43 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             {
                 centralLayout->setCurrentIndex(LoupeTab);
             }
+            /* Develop mode: remember the zoom/pan of the image being left BEFORE it is
+               replaced, so the developed image shows the same area when it arrives
+               (which can be seconds later, after the demosaic).  Preview mode gets this
+               for free because the swap is synchronous.  ImageView keeps the capture in
+               step with any pan/zoom made meanwhile (eg a thumbnail click pans to the
+               clicked point on mouse release, after this selection change). */
+            if (G::operationMode == G::OperationMode::Develop) {
+                imageView->captureDevelopView(fPath);
+            }
             if (imageView->loadImage(fPath, false, fun)) {
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                     loupeDisplay(fun);
+                }
+                applyDevelopPreviewIfEdited();   // overlay saved develop edits, if any
+            }
+            /* Image-cache miss in Develop mode on a RAW: the scene-linear sensor decode
+               is slow (~2-3s), so paint the embedded JPG preview immediately instead of a
+               blank loupe. The developed image replaces it when the decode lands
+               (refreshViewsOnCacheChange). */
+            else if (G::operationMode == G::OperationMode::Develop && G::useRaw
+                     && isFileRaw(fPath) && !icd->contains(fPath)) {
+                if (imageView->loadImageInterim(fPath)) {
+                    if (G::mode == "Loupe" ||
+                        G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+                        loupeDisplay(fun);
+                    }
+                }
+                /* If the saved recipe has a "Denoise raw" amount, start the denoise
+                   decode now (not after the ImageCache decode + settle): it shows from
+                   the start and produces the clean + PMRID bases in one pass, publishing
+                   the clean base so the ImageCache decode reuses it. No-op without a
+                   denoise edit or off the Winnow engine. */
+                if (developProperties && developAutoRunDenoise) {
+                    const auto mj = developProperties->stackJob();
+                    ensureRawDenoise(fPath, mj.global,
+                                     WorkingImageCache::instance().get(fPath),
+                                     currentImageIso());
                 }
             }
         }
@@ -2914,9 +3307,7 @@ bool MW::reset(QString src)
 
     fsTree->setEnabled(true);
     bookmarks->setEnabled(true);
-    progress->clearImageCacheProgress();
-    progress->clearMetaReadProgress();
-    progress->setVisible(false);
+    progress->reset();
     // updateImageCacheStatus();
     filterStatusLabel->setVisible(false);
     updateClassification();
@@ -2929,6 +3320,7 @@ bool MW::reset(QString src)
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
     imageView->clear();
+    if (scopesView) scopesView->clear();
     G::isFirstImageNewInstance = true;
 
     // dm->newInstance();       // newInstance moved to folderSelectionChange()
@@ -3021,23 +3413,69 @@ void MW::memoryWatchdogTick()
 
     Cheap on macOS (single task_info syscall, microseconds). The cap and
     latch live in Main/global.h.
+
+    Response is graduated rather than a single hard abort:
+
+      • footprint >= cap (G::memoryAbortMB): engage the ImageCache decode throttle —
+        park decoders and shrink/trim the cache to free memory. No teardown, no dialog.
+        This is the normal Decode-Raw pressure case (full-res raws are large).
+      • footprint drops below the resume threshold (cap with ~12% hysteresis): release
+        the throttle and resume caching.
+      • footprint >= critical (cap + headroom): genuine runaway the throttle could not
+        contain — fall back to the old hard onMemoryOverrun abort dialog to avoid OS OOM.
+
+    With Decode Raw off, small JPEG/HEIC decodes never reach the cap, so none of this
+    engages — the raw-off path is unchanged.
 */
     if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
     const quint64 cap = G::memoryAbortMB;
     if (cap == 0) return;
     const quint64 footprintMB = G::processFootprintMB();
-    if (footprintMB == 0 || footprintMB < cap) return;
+    if (footprintMB == 0) return;
 
-    // Atomic latch: if another subsystem already tripped between our load
-    // above and here, let its queued signal drive onMemoryOverrun — don't
-    // double-fire.
-    bool expected = false;
-    if (G::memoryOverrunFlag.compare_exchange_strong(
-            expected, true,
-            std::memory_order_acq_rel, std::memory_order_relaxed))
-    {
-        onMemoryOverrun(footprintMB, cap);
+    const quint64 resumeMB   = (cap * 88) / 100;                 // ~12% hysteresis
+    const quint64 criticalMB = cap + qMax<quint64>(2048, cap / 10);
+
+    // Last resort: throttle could not contain the footprint → hard abort (dialog).
+    if (footprintMB >= criticalMB) {
+        bool expected = false;
+        if (G::memoryOverrunFlag.compare_exchange_strong(
+                expected, true,
+                std::memory_order_acq_rel, std::memory_order_relaxed))
+        {
+            if (imageCache) {
+                imageCache->setMemoryThrottled(false);
+                imageCache->noteMemoryWarning(
+                    QString("CRITICAL footprint=%1 MB >= %2 MB; throttle failed, "
+                            "hard abort.").arg(footprintMB).arg(criticalMB));
+            }
+            memoryThrottleActive = false;
+            onMemoryOverrun(footprintMB, criticalMB);
+        }
+        return;
     }
+
+    if (footprintMB >= cap) {
+        // Engage throttle (idempotent). setMemoryThrottled only flips an atomic, so the
+        // decode choke point stops immediately; memoryPause does the freeing on the
+        // ImageCache thread.
+        if (!memoryThrottleActive && imageCache) {
+            memoryThrottleActive = true;
+            imageCache->setMemoryThrottled(true);
+            QMetaObject::invokeMethod(imageCache, "memoryPause", Qt::QueuedConnection,
+                                      Q_ARG(quint64, footprintMB), Q_ARG(quint64, cap));
+        }
+    }
+    else if (footprintMB <= resumeMB) {
+        // Recovered: release throttle and resume caching.
+        if (memoryThrottleActive && imageCache) {
+            memoryThrottleActive = false;
+            imageCache->setMemoryThrottled(false);
+            QMetaObject::invokeMethod(imageCache, "memoryResume", Qt::QueuedConnection,
+                                      Q_ARG(quint64, footprintMB));
+        }
+    }
+    // Between resumeMB and cap while throttled: hold — let the trim keep draining.
 }
 
 void MW::onMemoryOverrun(quint64 footprintMB, quint64 capMB)
@@ -3113,7 +3551,8 @@ void MW::nullFiltration()
     setCentralMessage(msg);
     infoView->clearInfo();
     imageView->clear();
-    progress->setVisible(false);
+    if (scopesView) scopesView->clear();
+    progress->reset();
     isDragDrop = false;
 }
 
@@ -3451,7 +3890,7 @@ void MW::folderChangeCompleted()
     // if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
 
     // hide metadata read progress
-    progress->clearMetaReadProgress();
+    progress->clearProgress(progressMetaReadRow);
     updateMetadataThreadRunStatus(false, true);
 
     // build filters if filter dock is visible
@@ -4673,8 +5112,10 @@ void MW::toggleFullScreen()
             metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
             metadataDock->setVisible(fullScreenDocks.isMetadata);
         }
-        embelDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
-        embelDock->setVisible(fullScreenDocks.isMetadata);
+        developDockVisibleAction->setChecked(fullScreenDocks.isDevelop);
+        developDock->setVisible(fullScreenDocks.isDevelop);
+        embelDockVisibleAction->setChecked(fullScreenDocks.isEmbellish);
+        embelDock->setVisible(fullScreenDocks.isEmbellish);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
         thumbDock->setVisible(fullScreenDocks.isThumbs);
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
@@ -4931,6 +5372,2266 @@ void MW::setRotation(int degrees)
     }
 }
 
+namespace {
+/* Compose one Develop preview from a source WorkingImage: run Develop + OutputTransform, apply
+   the EXIF rotation, and (proxy only) upscale to the displayed full-res dimensions so the loupe
+   pixmap swap keeps zoom/fit/scene untouched (ImageView::setDevelopPreview's contract). Pure --
+   reads only its arguments (the source WorkingImage is const), so it is safe to call on a
+   background thread for the full-res settle render. degrees/fullW/fullH are computed by the
+   caller on the GUI thread (orientation needs the sort/filter model). */
+QImage developComposite(const WorkingImage &src, const EditParams &edit, int degrees,
+                        bool fullRes, int fullW, int fullH,
+                        WorkingImageCache::RenderTimings *timings = nullptr)
+{
+    QImage out;
+    if (!WorkingImageCache::render(src, edit, out, timings)) return QImage();
+    if (degrees != 0) {
+        QTransform trans;
+        trans.rotate(degrees);
+        /* Proxy: fast (still small); full-res: smooth for the final image. */
+        out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
+    }
+    if (!fullRes && (out.width() != fullW || out.height() != fullH))
+        out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    return out;
+}
+
+/* A mask component pre-parsed once so the per-pixel loop is branch-light. Geometry is in
+   output-normalized coords (0..1 of the oriented image), matching what the ImageView overlay edits.
+   Radial fields are precomputed in OUTPUT-PIXEL space (Wo,Ho) so the ellipse keeps its aspect and
+   rotation; eval converts the normalized pixel to output pixels via Wo,Ho. */
+struct MaskComp {
+    int    tool = 0;                // 0 Linear, 1 Radial
+    int    op = 0;                  // 0 Add (union), 1 Subtract (removes)
+    bool   inverted = false;
+    bool   hardStep = true;         // feather == 0
+    bool   valid = false;
+    double feat = 0.0;              // feather fraction 0..1
+    /* Linear */
+    double p1x = 0, p1y = 0, dx = 0, dy = 0, invLen2 = 0, lo = 0.5, hi = 0.5;
+    /* Radial (output-pixel space) */
+    double cpx = 0, cpy = 0, iax = 0, iay = 0, cosA = 1, sinA = 0;
+};
+
+MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho)
+{
+    MaskComp g;
+    g.tool = m.tool;
+    g.op = m.op;
+    g.inverted = m.inverted;
+    g.feat = qBound(0.0, double(m.feather)/100.0, 1.0);
+    g.hardStep = (g.feat <= 0.0);
+    QJsonParseError err;
+    const QJsonDocument doc = QJsonDocument::fromJson(m.paramsJson.toUtf8(), &err);
+    if (err.error != QJsonParseError::NoError || !doc.isObject()) return g;
+    const QJsonObject o = doc.object();
+
+    if (m.tool == 0) {              // Linear
+        if (!o.contains("x1") || !o.contains("y1") || !o.contains("x2") || !o.contains("y2")) return g;
+        g.p1x = o["x1"].toDouble(); g.p1y = o["y1"].toDouble();
+        const double p2x = o["x2"].toDouble(), p2y = o["y2"].toDouble();
+        g.dx = p2x - g.p1x; g.dy = p2y - g.p1y;
+        const double len2 = g.dx*g.dx + g.dy*g.dy;
+        if (len2 <= 1e-12) return g;
+        g.invLen2 = 1.0 / len2;
+        g.lo = 0.5 - 0.5*g.feat; g.hi = 0.5 + 0.5*g.feat;
+        g.hardStep = (g.hi <= g.lo);
+        g.valid = true;
+    }
+    else if (m.tool == 1) {         // Radial
+        if (!o.contains("cx") || !o.contains("cy") || !o.contains("rx") || !o.contains("ry")) return g;
+        const double cx = o["cx"].toDouble(), cy = o["cy"].toDouble();
+        const double rx = o["rx"].toDouble(), ry = o["ry"].toDouble();
+        const double ax = rx * Wo, ay = ry * Ho;        // semi-axes in output pixels
+        if (ax <= 1e-6 || ay <= 1e-6) return g;
+        const double ang = o["angle"].toDouble() * 0.017453292519943295;   // deg -> rad
+        g.cpx = cx * Wo; g.cpy = cy * Ho;
+        g.iax = 1.0 / ax; g.iay = 1.0 / ay;
+        g.cosA = std::cos(ang); g.sinA = std::sin(ang);
+        g.valid = true;
+    }
+    return g;
+}
+
+inline float smoother(double v)
+{
+    v = v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v);
+    return float(v * v * v * (v * (v * 6.0 - 15.0) + 10.0));   // smootherstep (quintic)
+}
+
+inline float evalMaskComp(const MaskComp &g, double onx, double ony, double Wo, double Ho)
+{
+    double v;
+    if (g.tool == 1) {              // Radial: distance in the ellipse's local frame (1 = boundary)
+        const double ddx = onx*Wo - g.cpx, ddy = ony*Ho - g.cpy;
+        const double rdx = ddx*g.cosA + ddy*g.sinA;     // rotate by -angle
+        const double rdy = -ddx*g.sinA + ddy*g.cosA;
+        const double ex = rdx*g.iax, ey = rdy*g.iay;
+        const double d = std::sqrt(ex*ex + ey*ey);
+        if (g.hardStep) v = (d <= 1.0) ? 1.0 : 0.0;     // hard edge at the boundary
+        else            v = 1.0 - smoother((d - (1.0 - g.feat)) / g.feat);   // 1 inside -> 0 at edge
+    }
+    else {                          // Linear: projection along p1->p2
+        const double t = ((onx - g.p1x)*g.dx + (ony - g.p1y)*g.dy) * g.invLen2;
+        v = g.hardStep ? (t >= 0.5 ? 1.0 : 0.0) : smoother((t - g.lo) / (g.hi - g.lo));
+    }
+    const float r = float(v);       // both paths already produced the final 0..1 mask value
+    return g.inverted ? 1.0f - r : r;
+}
+
+/* Cache of rasterized brush masks (work-space coverage, before component invert). A render replays
+   every dab, so caching avoids re-rasterizing on each non-brush slider tick. Keyed by the brush
+   paramsJson + target dims + degrees. Accessed from the GUI thread (proxy) AND the full-res worker
+   thread, so it is mutex-guarded. */
+QMutex g_brushCacheMutex;
+QHash<QString, std::shared_ptr<const std::vector<float>>> g_brushCache;
+
+std::shared_ptr<const std::vector<float>>
+brushRasterCached(const QString &paramsJson, int w, int h, int degrees, const QString &fPath)
+{
+    /* Only the (small) proxy buffer is worth caching: it is re-rasterized on every slider tick of a
+       drag. The full-res buffer is huge (~w*h*4 bytes) and built once per settle, so we skip caching
+       it rather than risk hundreds of MB per entry. */
+    const bool cacheable = (size_t(w) * h) <= 4'000'000;
+    const QString key = fPath + "|" + paramsJson + "|" + QString::number(w) + "x" + QString::number(h)
+                      + "@" + QString::number(degrees);
+    if (cacheable) {
+        QMutexLocker lk(&g_brushCacheMutex);
+        auto it = g_brushCache.find(key);
+        if (it != g_brushCache.end()) return it.value();
+    }
+    auto buf = std::make_shared<std::vector<float>>(size_t(w) * h, 0.0f);
+    std::vector<float> scratch;
+    const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
+                                   .object().value("strokes").toArray();
+    const auto guide = BrushStamp::getGuide(fPath);   // guide the preview used
+
+    /* An auto-mask stroke rasterized before its confinement input is registered paints
+       UNCONFINED (full brush). Detect that so we don't cache the poisoned buffer: a lum
+       stroke needs the guide; an "ai" stroke needs its SAM field. Caching a guideless
+       result would replay the full brush on every later slider tick (the proxy is cached)
+       while the settle render -- uncached -- rebuilds it confined once the guide lands,
+       so the preview flashes broad then snaps to the auto-mask band. */
+    bool autoInputsReady = true;
+    for (const QJsonValue &sv : strokes) {
+        const QJsonObject so = sv.toObject();
+        if (!so.value("autoMask").toBool(false)) continue;
+        const QJsonArray pts = so.value("pts").toArray();
+        if (pts.size() < 2) continue;
+        if (so.value("autoMaskMode").toString("lum") == "ai") {
+            if (!BrushStamp::getSamField(
+                    BrushStamp::samFieldKey(fPath, pts.at(0).toDouble(), pts.at(1).toDouble())))
+                autoInputsReady = false;
+        }
+        else if (!guide || !guide->valid()) autoInputsReady = false;
+    }
+
+    BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees, guide.get(), fPath);
+    if (cacheable && autoInputsReady) {
+        QMutexLocker lk(&g_brushCacheMutex);
+        if (g_brushCache.size() > 8) g_brushCache.clear();      // crude cap (proxy-size entries)
+        g_brushCache.insert(key, buf);
+    }
+    return buf;
+}
+
+/* One component to combine: a parametric eval (Linear/Radial), a pre-rasterized Brush coverage
+   buffer (work-space, indexed by pixel), or a content-range eval (Luminance/Color Range) that
+   samples the display-referred RangeRef at the mapped output coords. */
+struct CompDesc {
+    bool isBrush = false;
+    bool isRange = false;
+    bool isSubject = false;         // Subject OR Background (Background = subjectBaseInvert)
+    bool subjectBaseInvert = false; // Background: select 1 - subject saliency
+    bool isSky = false;
+    bool isDepth = false;           // Depth Range: band [rlo,rhi] over the depth field
+    bool isObject = false;          // Object Mask (SAM 2): per-brush ObjectRef (not shared by path)
+    std::shared_ptr<const ObjectMask::ObjectRef> objRef;  // this component's decoded coverage
+    MaskComp param;                                       // parametric
+    std::shared_ptr<const std::vector<float>> brush;      // brush coverage (raw, pre-invert)
+    int  op = 0;
+    bool inverted = false;
+    /* Range (content) component. */
+    int    rangeTool = 0;                                 // ColorRange / LuminanceRange
+    double rlo = 0, rhi = 1, hueLo = 20, hueHi = 20, satLo = 0.25, satHi = 0.25, feather = 0;
+    bool   rangeValid = false;
+    std::vector<RangeMask::ColorSample> samples;          // colour samples (opponent space)
+    /* Subject (AI saliency) component -- coverage is the shared SubjectRef; feather/inverted above. */
+};
+
+/* ObjectRef store key: path + a hash of the brush blob. Unlike Subject/Sky/Depth (one param-
+   independent ref per path), an object mask's coverage depends on its brush, so each component's
+   brush gets its own ref and several object masks on one image coexist. MW::ensureObjectMask
+   registers under this key; buildMaskBuffer's object sampler looks it up by the SAME key. */
+QString objectRefKey(const QString &fPath, const QString &paramsJson)
+{
+    return fPath + "|obj|" + QString::number(qHash(paramsJson));
+}
+
+/* Rasterize the scope's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
+   it aligns with the linear blend before developComposite applies the EXIF rotation. Each pixel is
+   mapped work-normalized -> output-normalized (output = work rotated CW by degrees) before each
+   component is evaluated, so the geometry edited on the oriented loupe lines up. */
+std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int w, int h, int degrees,
+                                   const QString &fPath)
+{
+    std::vector<float> out(size_t(w) * size_t(h), 0.0f);
+    if (w <= 0 || h <= 0) return out;
+    const bool swap = (degrees == 90 || degrees == 270);
+    const double Wo = swap ? h : w, Ho = swap ? w : h;   // output (oriented) pixel dimensions
+
+    /* Content-range components (Luminance/Color Range) sample this display-referred reference of the
+       developed base; built + registered on the GUI thread (MW::ensureRangeRef). Absent (not yet
+       built) => range components yield 0, mirroring a brush with no auto-mask guide. */
+    std::shared_ptr<const RangeMask::RangeRef> ref;
+    for (const MaskComponent &m : components)
+        if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) {
+            ref = RangeMask::getRef(fPath);
+            break;
+        }
+
+    /* AI subject mask samples this fixed saliency map (built + registered by MW::ensureSubjectMask).
+       Absent (not yet built) => subject components yield 0, like an unbuilt RangeRef. */
+    /* Subject AND Background both sample the U^2-Net saliency (Background = inverted Subject). */
+    std::shared_ptr<const SubjectMask::SubjectRef> subjRef;
+    for (const MaskComponent &m : components)
+        if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) {
+            subjRef = SubjectMask::getRef(fPath); break;
+        }
+
+    std::shared_ptr<const SkyMask::SkyRef> skyRef;
+    for (const MaskComponent &m : components)
+        if (m.tool == int(MaskTool::Sky)) { skyRef = SkyMask::getRef(fPath); break; }
+
+    std::shared_ptr<const DepthMask::DepthRef> depthRef;
+    for (const MaskComponent &m : components)
+        if (m.tool == int(MaskTool::Depth)) { depthRef = DepthMask::getRef(fPath); break; }
+
+    QVector<CompDesc> comps;
+    comps.reserve(components.size());
+    for (const MaskComponent &m : components) {
+        if (m.tool == 2) {                                // Brush: rasterize (cached) strokes
+            CompDesc d;
+            d.isBrush = true;
+            d.brush = brushRasterCached(m.paramsJson, w, h, degrees, fPath);
+            d.op = m.op;
+            d.inverted = m.inverted;
+            comps.append(d);
+        }
+        else if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) {
+            if (!ref || !ref->valid()) continue;          // reference not ready -> no effect
+            const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
+            CompDesc d;
+            d.isRange   = true;
+            d.rangeTool = m.tool;
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
+            if (m.tool == int(MaskTool::LuminanceRange)) {
+                d.rlo = o.value("lo").toDouble(0.0);
+                d.rhi = o.value("hi").toDouble(1.0);
+            }
+            else {
+                d.hueLo = o.value("hueLo").toDouble(20.0);
+                d.hueHi = o.value("hueHi").toDouble(20.0);
+                d.satLo = o.value("satLo").toDouble(25.0) / 100.0;
+                d.satHi = o.value("satHi").toDouble(25.0) / 100.0;
+                const QJsonArray sa = o.value("samples").toArray();
+                for (const QJsonValue &sv : sa) {
+                    const QJsonArray c = sv.toArray();
+                    if (c.size() < 3) continue;
+                    d.samples.push_back(RangeMask::toHueSat(float(c[0].toDouble()),
+                                                            float(c[1].toDouble()),
+                                                            float(c[2].toDouble())));
+                }
+            }
+            comps.append(d);
+        }
+        else if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) {
+            if (!subjRef || !subjRef->valid()) continue;  // saliency not ready -> no effect
+            CompDesc d;
+            d.isSubject = true;
+            d.subjectBaseInvert = (m.tool == int(MaskTool::Background));   // background = 1 - subject
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
+            comps.append(d);
+        }
+        else if (m.tool == int(MaskTool::Sky)) {
+            if (!skyRef || !skyRef->valid()) continue;    // sky coverage not ready -> no effect
+            CompDesc d;
+            d.isSky     = true;
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
+            comps.append(d);
+        }
+        else if (m.tool == int(MaskTool::Depth)) {
+            if (!depthRef || !depthRef->valid()) continue;  // depth field not ready -> no effect
+            const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
+            CompDesc d;
+            d.isDepth   = true;
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
+            d.rlo       = o.value("lo").toDouble(0.0);      // depth band [lo,hi], 0=near..1=far
+            d.rhi       = o.value("hi").toDouble(0.5);
+            comps.append(d);
+        }
+        else if (m.tool == int(MaskTool::Object)) {
+            /* Per-brush ref (keyed path+brush), built by MW::ensureObjectMask. Absent (not yet
+               decoded, or this brush empty) => no effect, like an unbuilt SubjectRef. */
+            auto objRef = ObjectMask::getRef(objectRefKey(fPath, m.paramsJson));
+            if (!objRef || !objRef->valid()) continue;
+            CompDesc d;
+            d.isObject  = true;
+            d.objRef    = objRef;
+            d.op        = m.op;
+            d.inverted  = m.inverted;
+            d.feather   = m.feather;
+            comps.append(d);
+        }
+        else {
+            const MaskComp g = parseMaskComp(m, Wo, Ho);
+            if (!g.valid) continue;
+            CompDesc d;
+            d.param = g;
+            d.op = g.op;
+            comps.append(d);
+        }
+    }
+    if (comps.isEmpty()) return out;     // no usable geometry -> all-zero (no effect)
+    const RangeMask::RangeRef *refp = ref ? ref.get() : nullptr;
+    const SubjectMask::SubjectRef *subjp = subjRef ? subjRef.get() : nullptr;
+    const SkyMask::SkyRef *skyp = skyRef ? skyRef.get() : nullptr;
+    const DepthMask::DepthRef *depthp = depthRef ? depthRef.get() : nullptr;
+
+    const double invW = 1.0/w, invH = 1.0/h;
+    auto rows = [&](int y0, int y1) {
+        for (int y = y0; y < y1; ++y) {
+            const double wny = (y + 0.5) * invH;
+            float *row = out.data() + size_t(y) * w;
+            for (int x = 0; x < w; ++x) {
+                const size_t k = size_t(y) * w + x;
+                const double wnx = (x + 0.5) * invW;
+                double onx, ony;
+                switch (degrees) {           // work-normalized -> output-normalized (CW rotation)
+                    case 90:  onx = 1.0 - wny; ony = wnx;       break;
+                    case 180: onx = 1.0 - wnx; ony = 1.0 - wny; break;
+                    case 270: onx = wny;       ony = 1.0 - wnx; break;
+                    default:  onx = wnx;       ony = wny;       break;
+                }
+                float m = 0.0f;
+                for (const CompDesc &d : comps) {
+                    float c;
+                    if (d.isBrush) { c = (*d.brush)[k]; if (d.inverted) c = 1.0f - c; }
+                    else if (d.isRange) {
+                        c = (d.rangeTool == int(MaskTool::LuminanceRange))
+                              ? RangeMask::lumCoverage(*refp, onx, ony, d.rlo, d.rhi, d.feather, d.inverted)
+                              : RangeMask::colorCoverage(*refp, onx, ony, d.samples,
+                                                         d.hueLo, d.hueHi, d.satLo, d.satHi,
+                                                         d.feather, d.inverted);
+                    }
+                    else if (d.isSubject)
+                        c = SubjectMask::coverage(*subjp, onx, ony, float(d.feather),
+                                                  d.inverted ^ d.subjectBaseInvert);
+                    else if (d.isSky)
+                        c = SkyMask::coverage(*skyp, onx, ony, float(d.feather), d.inverted);
+                    else if (d.isDepth)
+                        c = DepthMask::coverage(*depthp, onx, ony, d.rlo, d.rhi, d.feather, d.inverted);
+                    else if (d.isObject)
+                        c = ObjectMask::coverage(*d.objRef, onx, ony, float(d.feather), d.inverted);
+                    else           c = evalMaskComp(d.param, onx, ony, Wo, Ho);  // invert inside
+                    /* Sequential fold: Subtract removes, Intersect keeps overlap,
+                       Add unions. */
+                    if      (d.op == int(MaskOp::Subtract))  m *= (1.0f - c);
+                    else if (d.op == int(MaskOp::Intersect)) m *= c;
+                    else                                     m = qMax(m, c);
+                }
+                row[x] = m;
+            }
+        }
+    };
+
+    const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
+    if (maxThreads == 1 || size_t(w)*size_t(h) < (size_t(1) << 16)) { rows(0, h); return out; }
+    const int chunks = qMin(maxThreads, h);
+    const int per = (h + chunks - 1) / chunks;
+    QVector<QFuture<void>> futs;
+    futs.reserve(chunks);
+    for (int k = 0; k < chunks; ++k) {
+        const int y0 = k * per, y1 = qMin(h, y0 + per);
+        if (y0 >= y1) break;
+        futs.append(QtConcurrent::run(QThreadPool::globalInstance(), [=]{ rows(y0, y1); }));
+    }
+    for (QFuture<void> &f : futs) f.waitForFinished();
+    return out;
+}
+
+/* developComposite for a full scope stack: composite every enabled scope in scene-linear (each
+   developed from the original and blended by its mask), then apply orientation / proxy scaling
+   exactly as developComposite does. Falls back to the single-pass developComposite when there are
+   no non-Global scopes. */
+QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::StackRenderJob &job,
+                             int degrees, bool fullRes, int fullW, int fullH, const QString &fPath,
+                             WorkingImageCache::RenderTimings *timings = nullptr)
+{
+    QImage out;
+    if (job.scopes.isEmpty()) {             // just Global -> the fast single-pass path
+        out = developComposite(src, job.global, degrees, fullRes, fullW, fullH, timings);
+    }
+    else {
+        std::vector<WorkingImageCache::StackScope> sl;
+        sl.reserve(job.scopes.size());
+        for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes) {
+            WorkingImageCache::StackScope s;
+            s.params = L.params;
+            if (!L.components.isEmpty())         // empty masks => global scope (no buffer needed)
+                s.mask = buildMaskBuffer(L.components, src.width, src.height, degrees, fPath);
+            sl.push_back(std::move(s));
+        }
+        if (!WorkingImageCache::renderStack(src, job.global, sl, out, timings)) return QImage();
+        if (degrees != 0) {
+            QTransform trans;
+            trans.rotate(degrees);
+            out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
+        }
+        if (!fullRes && (out.width() != fullW || out.height() != fullH))
+            out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    }
+
+    /* Fill Replace heals BEFORE geometry, on the developed oriented full frame, so heals
+       stay glued to content when later cropped/straightened. The replace engine
+       (lamafill.cpp) heals Spot/Fill kinds by exemplar clone -- no model needed -- and
+       Object kinds (or clone fallbacks) with LaMa; the model path no-ops warn-if-absent.
+       Flip G::useLamaSpotFill off (global.cpp) to revert to the MI-GAN engine. */
+    if (!out.isNull() && !job.spots.isEmpty()) {
+        if (G::useLamaSpotFill)
+            LamaFill::apply(out, job.spots, fPath);   // fPath keys the pinned sources
+        else
+            MiganFill::apply(out, job.spots);
+    }
+
+    /* Geometry (crop / straighten / warp) is applied LAST -- after the develop ops + EXIF
+       orientation -- on the full-output-dimension image, so the crop dims match for the
+       proxy and the full-res render. Callers pass identity geometry while the crop tool
+       is being edited (the loupe then shows the full frame for the overlay). */
+    if (!out.isNull() && !job.geometry.isIdentity())
+        out = CropTransform::applyGeometry(out, job.geometry);
+    return out;
+}
+
+/* True if any enabled scope carries a content-range mask (Luminance/Color Range) -- these need the
+   display-referred base reference (MW::ensureRangeRef) built before the composite. */
+bool stackHasRangeMask(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
+            if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange))
+                return true;
+    return false;
+}
+
+/* True if any enabled scope carries an AI Subject mask -- these need the saliency map
+   (MW::ensureSubjectMask) built before the composite. */
+bool stackHasSubjectMask(const DevelopProperties::StackRenderJob &job)
+{
+    /* Background reuses the subject saliency (inverted), so it needs the ref built too. */
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
+            if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) return true;
+    return false;
+}
+
+/* True if any enabled scope carries an AI Sky mask -- needs the sky coverage (MW::ensureSkyMask). */
+bool stackHasSkyMask(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
+            if (m.tool == int(MaskTool::Sky)) return true;
+    return false;
+}
+
+/* True if any enabled scope carries an AI Depth Range mask -- needs the depth field (ensureDepthMask). */
+bool stackHasDepthMask(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
+            if (m.tool == int(MaskTool::Depth)) return true;
+    return false;
+}
+
+/* True if any enabled scope carries an AI Object mask -- each needs its brush decoded into an
+   ObjectRef (MW::ensureObjectMask) before the composite. */
+bool stackHasObjectMask(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components)
+            if (m.tool == int(MaskTool::Object)) return true;
+    return false;
+}
+
+/* True if any enabled scope carries a Brush mask with a LUMINANCE auto-mask stroke -- it
+   needs the guide registered (ImageView::ensureAutoGuide) before the composite, else the
+   stroke rasterizes unconfined. ("ai" strokes instead use SAM fields.) */
+bool stackHasLumAutoMaskBrush(const DevelopProperties::StackRenderJob &job)
+{
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        for (const MaskComponent &m : L.components) {
+            if (m.tool != int(MaskTool::Brush)) continue;
+            const QJsonArray strokes = QJsonDocument::fromJson(m.paramsJson.toUtf8())
+                                           .object().value("strokes").toArray();
+            for (const QJsonValue &sv : strokes) {
+                const QJsonObject so = sv.toObject();
+                if (so.value("autoMask").toBool(false) &&
+                    so.value("autoMaskMode").toString("lum") != "ai")
+                    return true;
+            }
+        }
+    return false;
+}
+} // namespace
+
+void MW::developParamsChange()
+{
+/*
+    A Develop dock slider changed (DevelopProperties::paramsChanged). A fast drag fires this
+    many times per second, and each re-render is a real cost, so we COALESCE: render the
+    screen-resolution proxy at most once per event-loop turn (the 0ms single-shot collapses a
+    burst of ticks into one render) and (re)arm a settle timer so the crisp full-resolution
+    render runs only once the slider stops moving. The full-res render runs OFF the GUI thread
+    (renderDevelopFullResAsync) so it never freezes the drag; developParamsGen is bumped here so a
+    render that finishes after the params move on is discarded as stale.
+*/
+    if (G::isLogger) G::log("MW::developParamsChange");
+
+    ++developParamsGen;
+    if (!developProxyRenderTimer->isActive()) developProxyRenderTimer->start(0);
+    developFullResTimer->start(kDevelopSettleMs);
+}
+
+void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
+                        const EditParams &base, int degrees)
+{
+/*
+    Build (once per image + base params) the display-referred RGB reference the content-range
+    masks measure against, and register it by path so the loupe overlay and the off-thread render
+    sample the identical map. It is the developed GLOBAL scope only (Global params + OutputTransform +
+    EXIF orientation), capped in size -- range selection does not need full resolution, and base-
+    only keeps a range mask from feeding back on its own selection. Cheap no-op when already
+    current (keyed on path + a base-params signature), so range-slider drags and colour samples
+    never rebuild it -- they only re-threshold the cached reference.
+*/
+    if (G::isLogger) G::log("MW::ensureRangeRef");
+    const QByteArray key =
+        QJsonDocument(EditStack::paramsToJson(base)).toJson(QJsonDocument::Compact);
+    if (fPath == developRangeRefPath && key == developRangeRefBaseKey && RangeMask::getRef(fPath))
+        return;                                       // already current
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    int fw = small.width, fh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    if (img.isNull()) return;
+    const QImage rgb = img.convertToFormat(QImage::Format_ARGB32);
+
+    auto r = std::make_shared<RangeMask::RangeRef>();
+    r->w = rgb.width(); r->h = rgb.height();
+    r->rgb.resize(size_t(r->w) * size_t(r->h) * 3);
+    for (int y = 0; y < r->h; ++y) {
+        const QRgb *line = reinterpret_cast<const QRgb*>(rgb.constScanLine(y));
+        float *dst = r->rgb.data() + size_t(y) * size_t(r->w) * 3;
+        for (int x = 0; x < r->w; ++x) {
+            const QRgb p = line[x];
+            dst[x*3+0] = float(qRed(p))   / 255.0f;
+            dst[x*3+1] = float(qGreen(p)) / 255.0f;
+            dst[x*3+2] = float(qBlue(p))  / 255.0f;
+        }
+    }
+    RangeMask::putRef(fPath, r);
+    developRangeRefPath = fPath;
+    developRangeRefBaseKey = key;
+}
+
+void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
+                           const EditParams &base, int degrees)
+{
+/*
+    Build (once per image) the U^2-Net saliency map the "Select Subject" mask samples, and register
+    it by path so the loupe overlay and the off-thread render sample the identical coverage. The
+    model sees the developed GLOBAL scope (downscaled, output-oriented) -- the same reference the range
+    masks use -- so the saliency lines up with what the user sees. Cached by path only: subject
+    detection does not depend on the develop sliders, so slider drags never re-run inference (a cheap
+    no-op once the map exists). Inference is synchronous on the GUI thread (~200-400ms, one-shot per
+    image on the user's add/select action) with a busy cursor.
+*/
+    if (G::isLogger) G::log("MW::ensureSubjectMask");
+    if (fPath == developSubjectRefPath && SubjectMask::getRef(fPath)) return;   // already current
+
+    /* Lazily load u2net.onnx (from the executable dir, next to focus_point_model.onnx). */
+    if (!subjectPredictor) {
+        const QString modelPath =
+            QDir(QCoreApplication::applicationDirPath()).filePath("u2net.onnx");
+        subjectPredictor = new SubjectPredictor(modelPath, 320);
+        if (!subjectPredictor->isLoaded())
+            qWarning("Select Subject: u2net.onnx not found or failed to load at %s",
+                     modelPath.toUtf8().constData());
+    }
+    if (!subjectPredictor->isLoaded()) return;
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    int fw = small.width, fh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    if (img.isNull()) return;
+
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    auto r = std::make_shared<SubjectMask::SubjectRef>();
+    const bool ok = subjectPredictor->predict(img, r->cov, r->w, r->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !r->valid()) return;
+
+    SubjectMask::putRef(fPath, r);
+    developSubjectRefPath = fPath;
+}
+
+void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
+                       const EditParams &base, int degrees)
+{
+/*
+    Sky twin of ensureSubjectMask: build (once per image) the sky coverage the "Select Sky" mask
+    samples and register it by path, from the developed GLOBAL scope (downscaled, output-oriented) so
+    it lines up with what the user sees. Cached by path only; synchronous on the GUI thread with a
+    busy cursor. Lazily loads skyseg.onnx.
+*/
+    if (G::isLogger) G::log("MW::ensureSkyMask");
+    if (fPath == developSkyRefPath && SkyMask::getRef(fPath)) return;      // already current
+
+    if (!skyPredictor) {
+        const QString modelPath =
+            QDir(QCoreApplication::applicationDirPath()).filePath("skyseg.onnx");
+        skyPredictor = new SkyPredictor(modelPath, 320);
+        if (!skyPredictor->isLoaded())
+            qWarning("Select Sky: skyseg.onnx not found or failed to load at %s",
+                     modelPath.toUtf8().constData());
+    }
+    if (!skyPredictor->isLoaded()) return;
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    int fw = small.width, fh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    if (img.isNull()) return;
+
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    auto r = std::make_shared<SkyMask::SkyRef>();
+    const bool ok = skyPredictor->predict(img, r->cov, r->w, r->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !r->valid()) return;
+
+    SkyMask::putRef(fPath, r);
+    developSkyRefPath = fPath;
+}
+
+void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
+                         const EditParams &base, int degrees)
+{
+/*
+    Depth twin of ensureSkyMask: build (once per image) the MiDaS depth field the "Depth Range" mask
+    bands over, from the developed GLOBAL scope (downscaled, output-oriented). Cached by path only;
+    synchronous on the GUI thread with a busy cursor. Lazily loads midas.onnx.
+*/
+    if (G::isLogger) G::log("MW::ensureDepthMask");
+    if (fPath == developDepthRefPath && DepthMask::getRef(fPath)) return;      // already current
+
+    if (!depthPredictor) {
+        const QString modelPath =
+            QDir(QCoreApplication::applicationDirPath()).filePath("midas.onnx");
+        depthPredictor = new DepthPredictor(modelPath, 256);
+        if (!depthPredictor->isLoaded())
+            qWarning("Depth Range: midas.onnx not found or failed to load at %s",
+                     modelPath.toUtf8().constData());
+    }
+    if (!depthPredictor->isLoaded()) return;
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    int fw = small.width, fh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    if (img.isNull()) return;
+
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    auto r = std::make_shared<DepthMask::DepthRef>();
+    const bool ok = depthPredictor->predict(img, r->depth, r->w, r->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !r->valid()) return;
+
+    DepthMask::putRef(fPath, r);
+    developDepthRefPath = fPath;
+}
+
+namespace {
+/* Rasterize the object PERIMETER brush from paramsJson into a W*H coverage (row-major,
+   0/1, output-oriented), then fill the enclosed region -- the silhouette handed to SAM 2
+   as a dense prompt. CONTRACT (the perimeter brush UI emits this): {"size":N,"strokes":
+   [{"pts":[x,y,...],"size":N,"erase":bool},...]} with x,y output-normalized 0..1. The
+   strokes are the traced boundary; fillEnclosed decides closure + fills the interior.
+   Returns false (no coverage) unless the perimeter forms a CLOSED loop -- an open trace
+   is not a selection yet (mirrors the preview's amber/green signal). Uses the SAME
+   BrushStamp rasterize + ObjectMask::fillEnclosed as the overlay so the two agree. */
+bool parseObjectBrush(const QString &paramsJson, int W, int H, std::vector<float> &cov)
+{
+    if (paramsJson.isEmpty() || W <= 0 || H <= 0) return false;
+    const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    const QJsonArray strokes = o.value("strokes").toArray();
+    if (strokes.isEmpty()) return false;
+
+    /* Rasterize the perimeter strokes (output-oriented, so degrees = 0). Each stroke is a
+       solid dab run (feather 0, flow 100); erase strokes remove from the wall.
+       BrushStamp::rasterize reads size/feather/flow/erase per stroke (like Brush). */
+    std::vector<float> perim(size_t(W) * size_t(H), 0.0f), scratch;
+    BrushStamp::rasterize(strokes, perim.data(), scratch, W, H, /*degrees*/0);
+
+    std::vector<float> fill;
+    const bool closed = ObjectMask::fillEnclosed(perim, W, H, ObjectMask::bridgePx(W, H), fill);
+    if (!closed) return false;                 // open perimeter -> no selection yet
+    cov = std::move(fill);
+    return true;
+}
+} // namespace
+
+void MW::ensureObjectMask(const QString &fPath, const WorkingImage &work,
+                          const EditParams &base, int degrees, const QString &paramsJson)
+{
+/*
+    Build the SAM 2 "Object Mask" coverage for one brush component. TWO-PHASE (unlike the other AI
+    masks): the heavy encoder runs ONCE per image (cached in objectMaskPredictor, keyed by path --
+    the ~1s cost), then the light decoder runs PER brush edit (~40ms), refining the painted-and-
+    filled stroke to the object edge. The result is registered under objectRefKey(path, brush) so it
+    is a no-op once decoded and several object masks per image coexist. Synchronous on the GUI thread
+    with a busy cursor. Lazily loads sam2_encoder/decoder.onnx (the decoder MUST be the fixed-shape
+    export -- see ObjectMaskPredictor). A component with no brush yet just warms the encoder.
+*/
+    if (G::isLogger) G::log("MW::ensureObjectMask");
+    const QString refKey = objectRefKey(fPath, paramsJson);
+    if (ObjectMask::getRef(refKey)) return;                 // this brush already decoded
+
+    /* Phase 1: lazily load the predictor + encode the base ONCE per image (cached). */
+    int gw, gh;
+    if (!ensureObjectEncoder(fPath, work, base, degrees, gw, gh)) return;
+
+    /* Phase 2: decode the brush stroke. No stroke yet -> encoder is warmed, nothing to register. */
+    std::vector<float> brushCov;
+    if (!parseObjectBrush(paramsJson, gw, gh, brushCov)) return;
+
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    auto r = std::make_shared<ObjectMask::ObjectRef>();
+    const bool ok = objectMaskPredictor->refine(brushCov, gw, gh, r->cov, r->w, r->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !r->valid()) return;
+
+    ObjectMask::putRef(refKey, r);
+}
+
+bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, int &gw, int &gh)
+{
+/*
+    Phase 1 shared by the Object Mask and the Brush "AI" auto-mask: lazily load the SAM 2 encoder+
+    decoder (next to u2net.onnx in the executable dir) and encode the developed base ONCE per image,
+    caching image_embed + high_res_feats in objectMaskPredictor (keyed by developObjectImagePath).
+    ~1s CPU. Outputs the oriented guide dims. Returns false if the model is missing or encode failed.
+*/
+    if (!objectMaskPredictor) {
+        const QDir dir(QCoreApplication::applicationDirPath());
+        objectMaskPredictor = new ObjectMaskPredictor(dir.filePath("sam2_encoder.onnx"),
+                                                      dir.filePath("sam2_decoder.onnx"), 1024);
+        if (!objectMaskPredictor->isLoaded())
+            qWarning("Object Mask: sam2_encoder/decoder.onnx not found or failed to load in %s",
+                     dir.absolutePath().toUtf8().constData());
+    }
+    if (!objectMaskPredictor->isLoaded()) return false;
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    gw = small.width; gh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(gw, gh);
+
+    if (developObjectImagePath != fPath || !objectMaskPredictor->hasImage()) {
+        const QImage img = developComposite(small, base, degrees, /*fullRes*/true, gw, gh);
+        if (img.isNull()) return false;
+        QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+        const bool okEnc = objectMaskPredictor->setImage(img);
+        QGuiApplication::restoreOverrideCursor();
+        if (!okEnc) return false;
+        developObjectImagePath = fPath;
+    }
+    return true;
+}
+
+void MW::ensureBrushSamField(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, double seedOnx, double seedOny)
+{
+/*
+    Brush "AI" auto-mask (2nd auto-mask mode). Decode the SAM 2 object under a stroke's seed point
+    (a single positive point prompt) and register the coverage as a BrushStamp SAM field keyed by
+    the seed, so BrushStamp::rasterize (preview AND render) confines the stroke to that object.
+    Two-phase like ensureObjectMask, sharing the encoder embedding via ensureObjectEncoder. A no-op
+    once this seed is decoded. GUI thread (busy cursor); ~40ms decode after the one-time encode.
+*/
+    if (G::isLogger) G::log("MW::ensureBrushSamField");
+    const QString key = BrushStamp::samFieldKey(fPath, seedOnx, seedOny);
+    if (BrushStamp::getSamField(key)) return;               // this stroke already decoded
+
+    int gw, gh;
+    if (!ensureObjectEncoder(fPath, work, base, degrees, gw, gh)) return;
+
+    auto field = std::make_shared<BrushStamp::Guide>();
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    const bool ok = objectMaskPredictor->refinePoint(seedOnx, seedOny, field->lum, field->w, field->h);
+    QGuiApplication::restoreOverrideCursor();
+    if (!ok || !field->valid()) return;
+
+    BrushStamp::putSamField(key, field);
+}
+
+void MW::ensureBrushSamFields(const QString &fPath, const WorkingImage &work,
+                              const EditParams &base, int degrees, const QString &paramsJson)
+{
+    /* Render pre-pass: ensure a SAM field exists for every AI-auto-mask stroke in a Brush component,
+       so the render confines them exactly as the preview did. No-op for luminance/plain strokes. */
+    const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
+                                   .object().value("strokes").toArray();
+    for (const QJsonValue &sv : strokes) {
+        const QJsonObject so = sv.toObject();
+        if (!so.value("autoMask").toBool(false)) continue;
+        if (so.value("autoMaskMode").toString("lum") != "ai") continue;
+        const QJsonArray pts = so.value("pts").toArray();
+        if (pts.size() < 2) continue;
+        ensureBrushSamField(fPath, work, base, degrees, pts.at(0).toDouble(), pts.at(1).toDouble());
+    }
+}
+
+void MW::onBrushSamFieldRequested(double onx, double ony)
+{
+/*
+    ImageView started a Brush stroke in AI auto-mask mode. Decode the SAM object under the seed now
+    (synchronous -- direct-connected on the GUI thread), so the caller can read the field back from
+    the BrushStamp store immediately and confine the live stroke. Same prep as onAiMaskEditBegin.
+*/
+    if (G::isLogger) G::log("MW::onBrushSamFieldRequested");
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;
+    const auto mj = developProperties->stackJob();
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    ensureBrushSamField(fPath, *work, mj.global, degrees, onx, ony);
+}
+
+void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
+                           const QString &paramsJson, double /*feather*/)
+{
+/*
+    A mask tool became active in the dock. For an AI tool (Subject/Background/Sky/Depth), build its
+    coverage now (and repaint) so the loupe tint appears immediately on add/select -- the render path
+    only builds the ref when a non-identity scope carries the mask, so a just-added mask on an
+    unadjusted scope would otherwise show nothing. Cached by path, so re-selecting is a no-op.
+*/
+    const bool needsSubject = (tool == int(MaskTool::Subject) || tool == int(MaskTool::Background));
+    const bool isSky        = (tool == int(MaskTool::Sky));
+    const bool isDepth      = (tool == int(MaskTool::Depth));
+    const bool isObject     = (tool == int(MaskTool::Object));
+    /* Brush in "AI" auto-mask mode: warm the SAM 2 encoder now (encode-only) so the first stroke's
+       decode is instant instead of paying the ~1s encode. */
+    const bool isBrushAi    = (tool == int(MaskTool::Brush) &&
+                               QJsonDocument::fromJson(paramsJson.toUtf8()).object()
+                                   .value("autoMaskMode").toString("lum") == "ai");
+    if (!needsSubject && !isSky && !isDepth && !isObject && !isBrushAi) return;
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;
+    const auto mj = developProperties->stackJob();
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    if (needsSubject)   ensureSubjectMask(fPath, *work, mj.global, degrees);   // Background = inverted subject
+    else if (isSky)     ensureSkyMask(fPath, *work, mj.global, degrees);
+    else if (isDepth)   ensureDepthMask(fPath, *work, mj.global, degrees);
+    else if (isObject)  ensureObjectMask(fPath, *work, mj.global, degrees, paramsJson);  // warms encoder; decodes if a stroke exists
+    else { int gw, gh; ensureObjectEncoder(fPath, *work, mj.global, degrees, gw, gh); }   // isBrushAi: warm only
+    imageView->viewport()->update();   // heal the tint now the ref exists
+}
+
+void MW::warmBrushSamEncoder()
+{
+/*
+    The Brush "AI edge (SAM)" checkbox was just turned on (the tool is already active, so maskEditBegin
+    won't re-fire). Warm the shared SAM 2 encoder for the current image now, so the first AI stroke
+    only pays the ~40ms decode. Encode is cached, so this is a no-op if already warm.
+*/
+    if (G::isLogger) G::log("MW::warmBrushSamEncoder");
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;
+    const auto mj = developProperties->stackJob();
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    int gw, gh;
+    ensureObjectEncoder(fPath, *work, mj.global, degrees, gw, gh);
+}
+
+void MW::updateMaskOverlayTint()
+{
+/*
+    While any mask tool is expanded, the loupe shows the WHOLE mask (all the scope's Add/
+    Subtract tools composited) as a red coverage tint, under the active tool's handles. Rebuild it
+    whenever the mask selection or geometry changes (wired to maskEditBegin/End + paramsChanged), or
+    clear it when no tool is expanded. The composite reuses the render-path buildMaskBuffer, so the
+    tint is pixel-consistent with the developed result.
+*/
+    if (G::isLogger) G::log("MW::updateMaskOverlayTint");
+    if (!developProperties->maskOverlayActive()) { imageView->clearScopeMaskTint(); return; }
+
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty() || currentIsVideo()) { imageView->clearScopeMaskTint(); return; }
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) { imageView->clearScopeMaskTint(); return; }
+    const QVector<MaskComponent> components = developProperties->activeScopeComponents();
+    if (components.isEmpty()) { imageView->clearScopeMaskTint(); return; }
+
+    /* The in-progress (uncommitted) tool is a real component in `components`; draw it BLUE and
+       exclude it from the RED committed veil. `components` (all) still drives the ref-building
+       below so the blue preview composites too. */
+    const int pendIdx = developProperties->pendingMaskIndex();
+    QVector<MaskComponent> redMasks = components;
+    MaskComponent pendingM;
+    const bool hasBlue = (pendIdx >= 0 && pendIdx < components.size());
+    if (hasBlue) { pendingM = components.at(pendIdx); redMasks.removeAt(pendIdx); }
+
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    const EditParams base = developProperties->stackJob().global;
+
+    /* Build any content/AI references the scope's tools sample (cached; no-op if already present),
+       so the composite is non-zero even for a just-added mask on an unadjusted scope. */
+    bool needRange = false, needSubject = false, needSky = false, needDepth = false;
+    for (const MaskComponent &m : components) {
+        if      (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) needRange = true;
+        else if (m.tool == int(MaskTool::Subject)    || m.tool == int(MaskTool::Background))     needSubject = true;
+        else if (m.tool == int(MaskTool::Sky))        needSky = true;
+        else if (m.tool == int(MaskTool::Depth))      needDepth = true;
+    }
+    if (needRange)   ensureRangeRef(fPath, *work, base, degrees);
+    if (needSubject) ensureSubjectMask(fPath, *work, base, degrees);
+    if (needSky)     ensureSkyMask(fPath, *work, base, degrees);
+    if (needDepth)   ensureDepthMask(fPath, *work, base, degrees);
+    /* Object components are per-brush, so build each one from its own component params. */
+    for (const MaskComponent &m : components)
+        if (m.tool == int(MaskTool::Object))
+            ensureObjectMask(fPath, *work, base, degrees, m.paramsJson);
+    /* Brush "AI" auto-mask strokes need their SAM object fields before the tint composites. */
+    for (const MaskComponent &m : components)
+        if (m.tool == int(MaskTool::Brush))
+            ensureBrushSamFields(fPath, *work, base, degrees, m.paramsJson);
+
+    /* Composite at a capped resolution (geometry is normalized, so any size is faithful) -- the tint
+       is smooth-scaled onto the image, so a couple of MP is ample and keeps live drags cheap. */
+    int mw = work->width, mh = work->height;
+    if (mw <= 0 || mh <= 0) { imageView->clearScopeMaskTint(); return; }
+    const int cap = 1600;
+    const double sc = qMin(1.0, double(cap) / qMax(mw, mh));
+    const int bw = qMax(1, int(mw * sc)), bh = qMax(1, int(mh * sc));
+    const std::vector<float> buf = buildMaskBuffer(redMasks, bw, bh, degrees, fPath);
+
+    /* RESULT VEIL: the whole-mask composite as a flat RED coverage tint, alpha by
+       coverage. This is the TRUE resulting mask -- Subtract holes stay holes, and
+       nothing is painted back over a hole (the constituent marks below are EDGES only),
+       so the veil alone answers "what does this scope affect?". */
+    QImage tint(bw, bh, QImage::Format_ARGB32_Premultiplied);
+    const int maxA = 150;             // full-coverage alpha
+    for (int y = 0; y < bh; ++y) {
+        QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
+        const float *mrow = buf.data() + size_t(y) * bw;
+        for (int x = 0; x < bw; ++x) {
+            const int a = int(qBound(0.0f, mrow[x], 1.0f) * maxA + 0.5f);
+            row[x] = a ? qRgba(220 * a / 255, 40 * a / 255, 40 * a / 255, a) : 0;
+        }
+    }
+
+    /* BREAKDOWN: outline each constituent over the veil so the user can read HOW the
+       result is built, in a register that can never be mistaken for the result FILL --
+       Add tools GREEN, Subtract tools BLUE. The RESULT VEIL WINS: a mark is painted only
+       where the result is absent (buf < gateT), so a tool's coverage that survives into
+       the result reads RED, and its green/blue only shows where it was EXCLUDED (an Add
+       cut away by a Subtract, or a Subtract's footprint). This also stops a noisy
+       content mask (Color/Luminance Range) whose per-pixel "edges" are everywhere from
+       fogging the subject green -- there the coverage IS the result, so it stays red.
+       The SELECTED tool is drawn thicker and LAST. Result view (false) = veil alone. */
+    /* Breakdown/legend describe the RED committed tools (redMasks). While a BLUE tool is
+       previewed it is the selected one, so no committed tool is highlighted. */
+    int selIdx = hasBlue ? -1 : developProperties->activeMaskIndex();
+    if (selIdx >= redMasks.size()) selIdx = -1;
+    if (maskShowBreakdown) {
+        const QColor addCol(70, 220, 110), subCol(60, 150, 255);
+        const float gateT = 0.12f;   // result present here -> red wins, skip the mark
+        /* Paint the inner-boundary pixels of a coverage buffer into the tint, but only
+           where the result is absent. `thick` is the neighbourhood radius: 1 = a 1px
+           ring, 2 = a thicker selected-tool ring. */
+        auto outline = [&](const std::vector<float> &cov, const QColor &col, int thick) {
+            const float T = 0.5f;
+            for (int y = 0; y < bh; ++y) {
+                QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
+                for (int x = 0; x < bw; ++x) {
+                    const size_t idx = size_t(y) * bw + x;
+                    if (cov[idx] < T || buf[idx] > gateT) continue;   // absent/in result
+                    bool edge = false;
+                    for (int dy = -thick; dy <= thick && !edge; ++dy)
+                        for (int dx = -thick; dx <= thick; ++dx) {
+                            const int nx = x + dx, ny = y + dy;
+                            if (nx < 0 || ny < 0 || nx >= bw || ny >= bh ||
+                                cov[size_t(ny) * bw + nx] < T) { edge = true; break; }
+                        }
+                    if (!edge) continue;
+                    const int a = 235;
+                    row[x] = qRgba(col.red() * a / 255, col.green() * a / 255,
+                                   col.blue() * a / 255, a);
+                }
+            }
+        };
+        /* Non-selected constituents first (thin), selected last (thick) so it wins. */
+        for (int i = 0; i < redMasks.size(); ++i) {
+            if (i == selIdx || !redMasks[i].enabled) continue;
+            MaskComponent c = redMasks[i];
+            const bool sub = (c.op == int(MaskOp::Subtract));
+            c.op = int(MaskOp::Add);         // outline the footprint, not the sign
+            outline(buildMaskBuffer({c}, bw, bh, degrees, fPath), sub ? subCol : addCol, 1);
+        }
+        if (selIdx >= 0 && selIdx < redMasks.size()) {
+            MaskComponent c = redMasks[selIdx];
+            const bool sub = (c.op == int(MaskOp::Subtract));
+            c.op = int(MaskOp::Add);
+            outline(buildMaskBuffer({c}, bw, bh, degrees, fPath), sub ? subCol : addCol, 2);
+        }
+    }
+    /* PENDING (blue) preview: the in-progress tool being defined in the MaskPanel, drawn
+       over the red committed veil so the user sees exactly what a combine would fold in.
+       Uncommitted -- discarded on Cancel/Esc. */
+    if (hasBlue) {
+        const std::vector<float> pbuf = buildMaskBuffer({pendingM}, bw, bh, degrees, fPath);
+        const int pA = 150;
+        for (int y = 0; y < bh; ++y) {
+            QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
+            const float *prow = pbuf.data() + size_t(y) * bw;
+            for (int x = 0; x < bw; ++x) {
+                const int a = int(qBound(0.0f, prow[x], 1.0f) * pA + 0.5f);
+                if (a) row[x] = qRgba(40 * a / 255, 120 * a / 255, 255 * a / 255, a);
+            }
+        }
+    }
+    if (degrees != 0) tint = tint.transformed(QTransform().rotate(degrees));
+    imageView->setScopeMaskTint(tint);
+
+    /* Legend: tell ImageView which tool/role is being edited (and the mode), so the
+       on-canvas chip can label the overlay (see ImageView::setMaskLegend). */
+    QString selName;
+    int selOp = -1;
+    if (selIdx >= 0 && selIdx < redMasks.size()) {
+        selName = DevelopProperties::maskToolName(redMasks[selIdx].tool);
+        selOp   = redMasks[selIdx].op;
+    }
+    imageView->setMaskLegend(maskShowBreakdown, selName, selOp);
+}
+
+void MW::toggleMaskBreakdown()
+{
+/*
+    Scope menu "Show mask breakdown": flip the mask overlay between Result view (the veil
+    alone -- "what does this scope affect?") and Breakdown view (the veil plus a green/blue
+    outline of every constituent -- "how is the mask built?"). Session-wide; rebuilds tint.
+*/
+    if (G::isLogger) G::log("MW::toggleMaskBreakdown");
+    maskShowBreakdown = !maskShowBreakdown;
+    if (developProperties) developProperties->setMaskBreakdownShown(maskShowBreakdown);
+    updateMaskOverlayTint();
+}
+
+void MW::renderDevelopPreview(bool fullRes)
+{
+/*
+    Re-render the current image through Develop + OutputTransform and push the result straight
+    to the loupe, using the WorkingImage-cache hot path: keep the cached pre-develop scene-
+    linear image and re-run only the cheap develop stage -- no decode, no demosaic, no file read.
+
+    fullRes=false (interactive drag) renders a screen-resolution PROXY (cached per path) and
+    upscales it to the displayed dimensions, so a 50MP RAW costs a few MP of work per tick.
+    fullRes=true (drag settled) renders the full image once for a crisp result.
+
+    PHASE 1 (Develop ops): this is a live, in-session preview. The edit is NOT yet persisted
+    or written back to the image cache, so navigating away and back shows the un-developed
+    image. Per-image persistence (sidecar) and the scope/mask stack land in later phases.
+    See notes/Documentation.txt "Scope & masking model".
+*/
+    if (G::isLogger) G::log("MW::renderDevelopPreview");
+
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    if (currentIsVideo()) return;               // Develop operates on stills, not videos
+
+    auto mj = developProperties->stackJob();   // full scope stack (independent of active scope)
+    /* While the crop tool is active, suppress only the CROP (the overlay sets it, applied on commit)
+       but KEEP the warp/straighten: before Rectify there is none (full frame); after Rectify the
+       stored quad warps the frame so the crop overlay can be placed on the corrected canvas. */
+    if (developCropEditing && !developCropShowResult) {
+        mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
+        mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
+    }
+
+    /* Reuse the cached pre-develop (full-res) WorkingImage. RAW always caches it at decode;
+       non-raw caches it the first time it is developed. */
+    auto work = WorkingImageCache::instance().get(fPath);
+    const bool wantRaw = isFileRaw(fPath) && G::useRaw;
+    /* Develop needs the SCENE-LINEAR raw WorkingImage, not the tone-mapped 8-bit display image. It
+       may be absent (evicted from the small WorkingImageCache during Preview read-ahead) OR a prior
+       develop-miss may have cached a display-referred one under this path. Decode it OFF the GUI
+       thread (ensureDevelopWork) and bail -- doing it inline froze the first slider drag by ~1s on a
+       50MP RAW. The completion re-renders; until then the loupe keeps showing the current image.
+       developWorkTriedPath guards a display-referred format (no scene-linear result possible): after
+       one async attempt we fall through and render the display-referred fallback below, not loop. */
+    if (wantRaw && (!work || !work->sceneReferred) && developWorkTriedPath != fPath) {
+        ensureDevelopWork(fPath);
+        return;
+    }
+    if (!work) {
+        /* Non-raw (JPG/TIFF/HEIC), or the raw re-decode failed: build the pre-develop WorkingImage
+           from the decoded display image. Correct for display-referred files; a last resort for raw. */
+        if (!icd->contains(fPath)) return;          // not decoded yet; nothing to preview
+        const QImage src = icd->imCache.value(fPath);
+        if (src.isNull()) return;
+        auto built = std::make_shared<WorkingImage>();
+        InputTransform input;
+        if (!input.FromImage(src, *built)) return;
+        WorkingImageCache::instance().put(fPath, built);
+        work = built;
+    }
+
+    /* Global image for the render: the raw-DENOISED WorkingImage when the Global scope's "Denoise raw"
+       is set and ready, else the clean cached image. The heavy denoise runs on settle (see
+       renderDevelopFullResAsync -> ensureRawDenoise), so a slider tick never blocks on it. */
+    const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.global, work);
+
+    QElapsedTimer probe;
+    if (G::isReportDevelopTime) probe.start();
+    qint64 tProxy = 0;
+
+    /* Pick the render source: full-res for the settled render, else the screen-resolution proxy
+       (built once per image, sized a little over the loupe viewport so a modest zoom still
+       looks reasonable mid-drag). */
+    const WorkingImage *srcImg = base.get();
+    if (!fullRes) {
+        if (developProxyPath != fPath || !developProxy) {
+            const QSize vp = imageView->viewport()->size();
+            const int target = qMax(800, qMax(vp.width(), vp.height()) * 3 / 2);
+            developProxy = std::make_shared<WorkingImage>(
+                WorkingImageCache::downscaled(*base, target));
+            developProxyPath = fPath;
+            if (G::isReportDevelopTime) tProxy = probe.restart();
+        }
+        srcImg = developProxy.get();
+    }
+
+    /* Orientation must be computed here (GUI thread): it reads the sort/filter model. */
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    int fw = work->width, fh = work->height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+
+    /* Content-range masks need the display-referred base reference in place before the composite
+       (built from the FULL-res work so it is proxy-independent; cached, so this is a no-op unless
+       the base params or image changed). */
+    if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.global, degrees);
+    if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.global, degrees);
+    if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.global, degrees);
+    if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.global, degrees);
+    if (stackHasObjectMask(mj))
+        for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+            for (const MaskComponent &m : L.components)
+                if (m.tool == int(MaskTool::Object))
+                    ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
+    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM field before rendering. */
+    for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+        for (const MaskComponent &m : L.components)
+            if (m.tool == int(MaskTool::Brush))
+                ensureBrushSamFields(fPath, *work, mj.global, degrees, m.paramsJson);
+    /* Brush luminance auto-mask: guarantee the guide is registered (built from the loupe,
+       the same one the overlay samples) so proxy and settle confine identically -- else a
+       guideless proxy paints the full brush and the settle snaps it to the band. */
+    if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
+
+    const QImage out = developCompositeStack(*srcImg, mj, degrees, fullRes, fw, fh, fPath);
+    if (out.isNull()) return;
+    const qint64 tRender = G::isReportDevelopTime ? probe.restart() : 0;
+
+    imageView->setDevelopPreview(out);
+    updateDevelopScopes(out);   // scopes reflect exactly what is shown
+
+    if (G::isReportDevelopTime) {
+        qDebug().noquote() << "[DevTime]" << (fullRes ? "full " : "proxy")
+                           << srcImg->width << "x" << srcImg->height
+                           << " proxyBuild" << tProxy << " render+compose" << tRender
+                           << " preview" << probe.restart() << "ms";
+    }
+}
+
+int MW::developOrientationDegrees(const WorkingImage &work, const QString &fPath) const
+{
+/*
+    EXIF rotation (degrees) to apply to a scene-referred (RAW) render so it matches the loupe.
+    The RAW decoder hands back a SENSOR-NATIVE (unrotated) WorkingImage and ImageDecoder::run()
+    rotates the display image afterwards via rotate(); a non-raw work is built from the already-
+    rotated display image, so display-referred renders need no rotation. Reads the sort/filter
+    model, so it MUST run on the GUI thread. (PHASE 1: mirrors ImageDecoder::rotate(); fold into a
+    shared helper when the edit pipeline is unified.)
+*/
+    Q_UNUSED(work)
+    int degrees = 0;
+    const int sfRow = dm->proxyRowFromPath(fPath);
+    if (sfRow >= 0 && sfRow < dm->sf->rowCount()) {
+        const int orientation =
+            dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
+        const int rotationDegrees =
+            dm->sf->index(sfRow, G::RotationDegreesColumn).data().toInt();
+        if (orientation == 3)      degrees = rotationDegrees + 180;
+        else if (orientation == 6) degrees = rotationDegrees + 90;
+        else if (orientation == 8) degrees = rotationDegrees + 270;
+        else                       degrees = rotationDegrees;
+        if (degrees > 360) degrees -= 360;
+    }
+    return degrees;
+}
+
+bool MW::currentIsVideo() const
+{
+    if (!dm || !dm->sf || dm->currentSfRow < 0 || dm->currentSfRow >= dm->sf->rowCount())
+        return false;
+    return dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+}
+
+bool MW::currentDevelopEditsVisible() const
+{
+    /* Develop edits render only in Develop mode. Preview mode is fast, as-shot review: it shows the
+       embedded preview / decoded image WITHOUT the saved develop recipe. */
+    if (G::operationMode != G::OperationMode::Develop) return false;
+    if (!developProperties || developProperties->currentIsIdentity()) return false;
+    /* A RAW file's edits are calibrated for the demosaiced render, so they show only in raw mode
+       (in preview mode the loupe shows the untouched embedded JPG). A non-RAW file (JPG/TIFF/PNG)
+       IS the developable image, so its edits show regardless of useRaw. */
+    return G::useRaw || !isFileRaw(dm->currentFilePath);
+}
+
+bool MW::isFileRaw(const QString &fPath) const
+{
+    if (!metadata) return false;
+    const QString ext = QFileInfo(fPath).suffix().toLower();
+    return metadata->hasJpg.contains(ext);
+}
+
+void MW::applyDevelopPreviewIfEdited()
+{
+/*
+    Called right after the current image's loupe pixmap is shown. If the image has saved Develop
+    edits that should be visible (currentDevelopEditsVisible), render them over the loupe using the
+    existing coalesced proxy + async settle pipeline; otherwise the normal decoded image is left.
+    Safe to call more than once per image (the render path is keyed on dm->currentFilePath and
+    coalesced).
+*/
+    if (G::isLogger) G::log("MW::applyDevelopPreviewIfEdited");
+    if (currentIsVideo()) return;               // Develop operates on stills, not videos
+    /* An edited image (raw on) renders its saved params, and that render refreshes the scopes via
+       setDevelopPreview. Otherwise nothing overlays the loupe, so refresh the scopes here from the
+       decoded image actually shown (valid in preview mode too). */
+    if (!currentDevelopEditsVisible()) {
+        updateDevelopScopes(icd->imCache.value(dm->currentFilePath));
+        return;
+    }
+    developParamsChange();   // schedule the proxy + full-res settle render of the saved params
+}
+
+void MW::renderDevelopFullResAsync()
+{
+/*
+    Render the crisp full-resolution preview OFF the GUI thread (it is ~1.3s on a 50MP RAW and run
+    synchronously would freeze the drag -- and the freeze itself fakes "settle" pauses that re-fire
+    this timer, so it would run repeatedly mid-drag). developRenderPool drives one render at a
+    time; the result is marshalled back to the GUI thread (onDevelopFullResReady) and applied only
+    if still current. Inputs that need the GUI thread (current path, edit params, orientation) are
+    captured here; the WorkingImage is const and held alive by a shared_ptr for the worker.
+*/
+    if (G::isLogger) G::log("MW::renderDevelopFullResAsync");
+    if (developFullResInFlight) return;   // one at a time; onDevelopFullResReady re-arms if needed
+
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    if (currentIsVideo()) return;               // Develop operates on stills, not videos
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;                    // proxy render builds/caches it first; nothing to do yet
+
+    auto mj = developProperties->stackJob();          // full stack, captured on the GUI thread
+    if (developCropEditing && !developCropShowResult) {   // suppress crop, keep warp (see renderDevelopPreview)
+        mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
+        mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
+    }
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    const quint64 gen = developParamsGen;
+
+    /* Ensure the raw-DENOISED base is ready before the crisp full-res render. If "Denoise raw" is
+       set but the denoised image for the current amounts isn't cached yet, compute it off-thread
+       and bail -- ensureRawDenoise() repaints and re-arms this render when it lands. */
+    const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.global, work);
+    if (base == work &&
+        (mj.global.denoiseLuma > 0.0f || mj.global.denoiseChroma > 0.0f) &&
+        G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
+        /* Run PMRID when Auto run is on, OR when the PMRID base is already cached (a
+           manual "Denoise" already ran) -- an amount change is then only a cheap re-blend
+           (reuses developPmridFull) and must NOT fall through to the clean render, which
+           would drop the denoise. */
+        if (developAutoRunDenoise || rawDenoiseReadyForCurrent()) {
+            ensureRawDenoise(fPath, mj.global, work, currentImageIso());
+            return;   // wait for the (re)blended base; PMRID re-arms this render
+        }
+    }
+    /* On the Apple engine PMRID can't run (no CFA), so "Denoise raw" is inert -- don't bail here
+       (there is no denoised base coming); fall through and render the clean base at full res. */
+
+    /* Ensure the content-range reference is registered before the background render samples it
+       (GUI thread; cached, so normally a no-op after the proxy render already built it). */
+    if (stackHasRangeMask(mj)) ensureRangeRef(fPath, *work, mj.global, degrees);
+    if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.global, degrees);
+    if (stackHasSkyMask(mj)) ensureSkyMask(fPath, *work, mj.global, degrees);
+    if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.global, degrees);
+    if (stackHasObjectMask(mj))
+        for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+            for (const MaskComponent &m : L.components)
+                if (m.tool == int(MaskTool::Object))
+                    ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
+    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM field before the render. */
+    for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+        for (const MaskComponent &m : L.components)
+            if (m.tool == int(MaskTool::Brush))
+                ensureBrushSamFields(fPath, *work, mj.global, degrees, m.paramsJson);
+    /* Register the brush luminance auto-mask guide (GUI thread) before dispatching the
+       worker, so the off-thread render confines the stroke the same as the proxy did. */
+    if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
+
+    developFullResInFlight = true;
+    std::shared_ptr<const WorkingImage> src = base;   // denoised base when set, else clean; kept alive
+    std::shared_ptr<const WorkingImage> clean = work; // un-denoised base for verify
+    developRenderPool->start([this, src, clean, mj, degrees, fPath, gen]() {
+        QElapsedTimer t;
+        WorkingImageCache::RenderTimings rt;
+        const bool probe = G::isReportDevelopTime;
+        if (probe) t.start();
+        const QImage out = developCompositeStack(*src, mj, degrees, /*fullRes*/true, 0, 0, fPath,
+                                                 probe ? &rt : nullptr);
+        const qint64 ms = probe ? t.elapsed() : 0;
+
+        /* Cheap pixel-change verification (developVerifyMaxAbs): at a small fixed size,
+           render the CLEAN base with identity params (the un-developed original) vs the
+           actual base (incl. raw denoise) with the recipe -- geometry suppressed on both
+           so the sizes match -- and measure the pixel difference. maxAbs==0 proves the
+           develop produced NOTHING visible over the original (the failure class
+           behind the denoise + Apple-demosaic bugs). ~256px, sub-ms. */
+        int vMaxAbs = -1;
+        double vMeanAbs = -1.0;
+        {
+            DevelopProperties::StackRenderJob idJob;  // identity: default base, no scopes
+            DevelopProperties::StackRenderJob edJob = mj;
+            idJob.geometry = Geometry();
+            edJob.geometry = Geometry();  // isolate recipe/denoise from crop/warp
+            /* Downscale once; reuse the clean baseline when no raw denoise is active
+               (src==clean), so the common case pays a single O(N) downscale, not two. */
+            const WorkingImage baseSmall = WorkingImageCache::downscaled(*src, 256);
+            WorkingImage cleanSmallStore;
+            const WorkingImage *cleanSmall = &baseSmall;
+            if (src != clean) { cleanSmallStore = WorkingImageCache::downscaled(*clean, 256);
+                                cleanSmall = &cleanSmallStore; }
+            const QImage baseImg = developCompositeStack(*cleanSmall, idJob, degrees, false, 0, 0, fPath);
+            const QImage editImg = developCompositeStack(baseSmall,   edJob, degrees, false, 0, 0, fPath);
+            if (!baseImg.isNull() && !editImg.isNull() && baseImg.size() == editImg.size()) {
+                const QImage a = baseImg.convertToFormat(QImage::Format_RGB888);
+                const QImage b = editImg.convertToFormat(QImage::Format_RGB888);
+                quint64 acc = 0, n = 0;
+                int mx = 0;
+                const int wb = a.width() * 3;
+                for (int r = 0; r < a.height(); ++r) {
+                    const uchar *pa = a.constScanLine(r);
+                    const uchar *pb = b.constScanLine(r);
+                    for (int i = 0; i < wb; ++i) {
+                        const int d = qAbs(int(pa[i]) - int(pb[i]));
+                        acc += quint64(d);
+                        if (d > mx) mx = d;
+                        ++n;
+                    }
+                }
+                vMaxAbs = mx;
+                vMeanAbs = n ? double(acc) / double(n) : -1.0;
+            }
+        }
+        const bool vRecipeIdentity = mj.global.isIdentity() && mj.scopes.isEmpty();
+        const bool vGeometryActive = !mj.geometry.isIdentity();
+
+        QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt,
+                                         vMaxAbs, vMeanAbs, vRecipeIdentity, vGeometryActive]() {
+            if (G::isReportDevelopTime)
+                qDebug().noquote() << "[DevTime] full(async)" << out.width() << "x" << out.height()
+                                   << " total" << ms
+                                   << " (copy" << rt.copyMs << " develop" << rt.developMs
+                                   << " toImage" << rt.toImageMs << ")ms"
+                                   << " develop=[denoise" << rt.denoiseMs << " point" << rt.pointMs
+                                   << " texture" << rt.textureMs << " dehaze" << rt.dehazeMs
+                                   << " vignette" << rt.vignetteMs << " grain" << rt.grainMs << "]";
+            if (dm && fPath == dm->currentFilePath) {
+                developVerifyMaxAbs = vMaxAbs;
+                developVerifyMeanAbs = vMeanAbs;
+                developVerifyRecipeIdentity = vRecipeIdentity;
+                developVerifyGeometryActive = vGeometryActive;
+                developVerifyPath = fPath;
+            }
+            onDevelopFullResReady(out, fPath, gen);
+        });
+    });
+}
+
+void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen)
+{
+/*
+    GUI-thread completion for a background full-res render. Apply the image only if it is still
+    current (same image shown, no slider change since it launched); otherwise discard it. If newer
+    params arrived while it ran, re-arm the settle timer so the latest settled value still gets a
+    crisp render -- this also covers the case where the timer fired and was skipped because a render
+    was already in flight.
+*/
+    if (G::isLogger) G::log("MW::onDevelopFullResReady");
+    developFullResInFlight = false;
+
+    const bool currentImage = (fPath == dm->currentFilePath);
+    if (!out.isNull() && currentImage && gen == developParamsGen) {
+        imageView->setDevelopPreview(out);
+        updateDevelopScopes(out);
+    }
+
+    if (currentImage && gen != developParamsGen)
+        developFullResTimer->start(kDevelopSettleMs);
+}
+
+/* Cache key for the raw-denoised base: image path + the two Global "Denoise raw" amounts + ISO. */
+static QString rawDenoiseKey(const QString &fPath, const EditParams &base, int iso)
+{
+    return QString("%1|dnL=%2|dnC=%3|iso=%4")
+        .arg(fPath).arg(base.denoiseLuma).arg(base.denoiseChroma).arg(iso);
+}
+
+/* Cache key for the FULL-strength PMRID base (amount-independent -- the model runs once per image;
+   the two amounts only scale the blend). */
+static QString pmridBaseKey(const QString &fPath, int iso)
+{
+    return QString("%1|iso=%2").arg(fPath).arg(iso);
+}
+
+int MW::currentImageIso() const
+{
+    if (!dm || !dm->sf) return 0;
+    return dm->sf->index(dm->currentSfRow, G::ISOColumn).data().toInt();
+}
+
+std::shared_ptr<const WorkingImage> MW::developRawDenoisedBase(
+    const QString &fPath, const EditParams &base,
+    const std::shared_ptr<const WorkingImage> &clean)
+{
+/*
+    The base image the develop render should start from. "Denoise raw" is a Global-only, RAW-only
+    global op: when it is set and the denoised WorkingImage for the current amounts is cached, that
+    is the base; otherwise the clean cached image is used (and ensureRawDenoise() computes the
+    denoised one off-thread on settle). Pure lookup -- never runs the model.
+*/
+    if (!clean || (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f))
+        return clean;
+    /* PMRID is Winnow-engine only; on the Apple engine "Denoise raw" is inert, so serve
+       the clean base even if a Winnow-denoised base is still cached (the key is engine-
+       independent, so this is what makes a Winnow->Apple switch actually update). */
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine)
+        return clean;
+    const QString key = rawDenoiseKey(fPath, base, currentImageIso());
+    if (developDenoisedKey == key && developDenoised) return developDenoised;
+    return clean;   // not ready yet -> serve clean; ensureRawDenoise() fills it in
+}
+
+void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
+                          const std::shared_ptr<const WorkingImage> &clean, int iso)
+{
+/*
+    Build the raw-denoised base off the GUI thread (developRenderPool). PMRID runs
+    PRE-demosaic, so the denoised base comes from DECODING the raw with the denoiser on
+    (ImageDecoder::decodeRawWorking, in-house/Winnow engine only) -- NOT from an
+    already-demosaiced image. That one decode ALSO returns the CLEAN base (outClean,
+    demosaiced from the same mosaic before PMRID), so a single UnpackCfa yields both bases
+    the blend needs instead of a second full decode; the clean base is published to
+    WorkingImageCache so the rest of the develop pipeline reuses it. The heavy decode runs
+    ONCE per image and is cached (developPmridFull, keyed path+iso); the two Global amounts
+    only scale a cheap luma/chroma blend (Develop::BlendRawDenoise), so a slider drag
+    re-blends without re-running the model. Callable on image select (clean == null): the
+    worker decodes both bases and progress shows from the start. Coalesced -- one job.
+*/
+    if (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f) return;
+    /* PMRID needs the CFA mosaic -> Winnow engine only. On the Apple engine "Denoise raw"
+       is inert; bail so a slider drag doesn't trigger a full re-decode that denoises
+       nothing. */
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    const QString key = rawDenoiseKey(fPath, base, iso);
+    if (developDenoisedKey == key && developDenoised) return;   // already current
+    /* ONE job at a time. Concurrent jobs (one per drag value) finish out of order and a
+       stale early result can win the cache, so the lookup never matches the slider.
+       Serialize: while a job runs, skip new requests; the completion re-renders, and the
+       render's gate re-triggers this for the latest params -- so it converges on where
+       the sliders end up. */
+    if (!developDenoiseInFlightKey.isEmpty()) return;
+    developDenoiseInFlightKey = key;
+
+    /* Build the raw metadata (rawInfo + ISO) on the GUI thread for the off-thread decode;
+       the worker then consults only this copy (no DataModel access). Reuse the cached
+       full-strength PMRID base for this image if we already have it (amount change). */
+    const QString pkey = pmridBaseKey(fPath, iso);
+    ImageMetadata m;
+    m.fPath = fPath;
+    m.ISONum = iso;
+    // model drives the PMRID calibration
+    m.model = dm->sf->index(dm->currentSfRow, G::CameraModelColumn).data().toString();
+    dm->fPathRawInfoGet(fPath, m.rawInfo);
+    std::shared_ptr<const WorkingImage> pmridCached =
+        (developPmridKey == pkey && developPmridFull) ? developPmridFull : nullptr;
+
+    // clean base if the caller had one (may be null on select)
+    std::shared_ptr<const WorkingImage> src = clean;
+    const EditParams b = base;
+    developRenderPool->start([this, src, b, key, pkey, fPath, m, pmridCached]() {
+        /* Resolve both bases. The PMRID base and the clean base come from ONE decode
+           (shared UnpackCfa) when either is missing; a pure amount change (both cached)
+           skips the decode and just re-blends. clean is taken from the caller, else
+           WorkingImageCache, else the decode's outClean. */
+        std::shared_ptr<const WorkingImage> pmrid = pmridCached;
+        std::shared_ptr<const WorkingImage> cleanBase =
+            src ? src : WorkingImageCache::instance().get(fPath);
+        // freshClean is published to WorkingImageCache if the decode produced it
+        std::shared_ptr<const WorkingImage> freshClean;
+        /* Diagnostic: the (k,b) tier PMRID used for THIS decode (captured right after the
+           decode so a concurrent run can't overwrite the global; read-ahead is off in
+           Develop anyway). Only meaningful when a decode actually ran (capturedRes). */
+        PMRID::Resolution decodeRes;
+        bool capturedRes = false;
+        if (!pmrid || !cleanBase) {
+            /* Reveal the progress row (EMPTY) as the decode starts; PMRID then fills it
+               per tile. Must not updateProgress(0,1) here -- FromStart would paint the
+               whole bar (item 0 of 1 = full width), leaving it stuck at 100%. */
+            QMetaObject::invokeMethod(this, [this]() {
+                progress->showRow(progressRawDenoiseRow, true);
+            });
+            auto prog = [this](int done, int total) {
+                QMetaObject::invokeMethod(this, [this, done, total]() {
+                    progress->updateProgress(progressRawDenoiseRow, done, total);
+                });
+            };
+            ImageDecoder dec(0, dm, metadata);
+            /* Ask for the clean base only when we don't already have it, so the common
+               amount-change decode (clean cached, PMRID evicted) skips a demosaic. */
+            std::shared_ptr<const WorkingImage> decodedClean;
+            auto decodedPmrid =
+                dec.decodeRawWorking(m, true, prog, cleanBase ? nullptr : &decodedClean);
+            if (decodedPmrid) {
+                if (!pmrid) pmrid = decodedPmrid;
+                if (!cleanBase && decodedClean) {
+                    cleanBase = decodedClean;
+                    freshClean = decodedClean;
+                }
+                decodeRes = PMRID::LastResolution();
+                capturedRes = true;
+            }
+        }
+        /* No in-house decoder (lossless ARW -> Apple) or the decode failed. */
+        if (!pmrid || !cleanBase) {
+            QMetaObject::invokeMethod(this, [this]() {
+                developDenoiseInFlightKey.clear();
+                progress->clearProgress(progressRawDenoiseRow);  // hide the row
+            });
+            return;
+        }
+        /* Blend clean <-> PMRID by the luma/chroma amounts (cheap, per-settle). */
+        auto blended = std::make_shared<WorkingImage>();
+        Develop::BlendRawDenoise(*cleanBase, *pmrid, b.denoiseLuma, b.denoiseChroma, *blended);
+        std::shared_ptr<const WorkingImage> result = blended;
+
+        QMetaObject::invokeMethod(this, [this, result, pmrid, freshClean, key, pkey, fPath,
+                                         decodeRes, capturedRes]() {
+            // job finished; allow the next (latest) one
+            developDenoiseInFlightKey.clear();
+            progress->clearProgress(progressRawDenoiseRow);   // hide the progress row
+            if (!dm || fPath != dm->currentFilePath) return;  // navigated away; drop it
+            /* Engine switched to Apple mid-decode: this Winnow result is stale -- drop
+               it so it can't re-publish a Winnow base the Apple render would ignore. */
+            if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+            /* Publish the freshly-decoded clean base so renderDevelopPreview /
+               ensureDevelopWork reuse it, not trigger another scene-linear decode. */
+            if (freshClean && !WorkingImageCache::instance().contains(fPath))
+                WorkingImageCache::instance().put(fPath, freshClean);
+            developPmridFull = pmrid;      // cache the full base for other amounts
+            developPmridKey = pkey;
+            if (capturedRes) {             // noise-model snapshot for this base (diag)
+                developPmridResSource = decodeRes.source;
+                developPmridResK = decodeRes.k;
+                developPmridResB = decodeRes.b;
+                developPmridResHadNP = decodeRes.hadNoiseProfile;
+            }
+            developDenoised = result;
+            developDenoisedKey = key;
+            if (developProperties)
+                developProperties->updateDenoiseRunState(true);   // -> "Denoised"
+            developProxy.reset();          // rebuild proxy from the denoised base
+            developProxyPath.clear();
+            ++developParamsGen;            // discard any stale in-flight full-res
+            renderDevelopPreview(false);   // repaint the proxy now
+            developFullResTimer->start(kDevelopSettleMs);   // and a crisp full-res
+        });
+    });
+}
+
+void MW::onAutoRunDenoiseToggled(bool on)
+{
+    if (G::isLogger) G::log("MW::onAutoRunDenoiseToggled");
+    developAutoRunDenoise = on;
+    settings->setValue("Develop/autoRunDenoise", on);
+    /* Turning auto ON behaves "as currently done": run the denoise for the current image
+       now so it updates without waiting for the next param change. */
+    if (on) runRawDenoiseNow();
+}
+
+void MW::runRawDenoiseNow()
+{
+    if (G::isLogger) G::log("MW::runRawDenoiseNow");
+    if (!G::useRaw || !developProperties || !dm) return;
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) return;
+    /* PMRID is Winnow-engine only; inert on Apple. */
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    const auto mj = developProperties->stackJob();
+    ensureRawDenoise(fPath, mj.global, WorkingImageCache::instance().get(fPath),
+                     currentImageIso());
+}
+
+void MW::clearRawDenoiseNow()
+{
+    if (G::isLogger) G::log("MW::clearRawDenoiseNow");
+    /* "Denoise" unchecked: drop BOTH the blended and the full-strength PMRID base so the
+       render falls back to clean and the amount sliders disable again. Reset the checkbox
+       label and re-render. (With Auto run on, the next auto trigger recomputes it.) */
+    developDenoised.reset();
+    developDenoisedKey.clear();
+    developPmridFull.reset();
+    developPmridKey.clear();
+    if (developProperties) developProperties->updateDenoiseRunState(false);
+    developParamsChange();
+}
+
+bool MW::rawDenoiseReadyForCurrent()
+{
+    /* True once the full-strength PMRID base for the current image is cached -- i.e. the
+       heavy denoise has completed. Amount-independent (the base is keyed path+iso; the
+       sliders only scale the blend), so it stays true across denoise-amount changes. It
+       drives both the "Denoise"/"Denoised" checkbox and the amount-slider enabled. */
+    if (!dm) return false;
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty() || !developPmridFull) return false;
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return false;
+    return developPmridKey == pmridBaseKey(fPath, currentImageIso());
+}
+
+void MW::onDemosaicProgress(const QString &fPath, int done, int total)
+{
+    /* Relayed from an ImageCache decoder thread. Show the "Demosaic" status-bar row only
+       for the CURRENT image's Winnow raw demosaic while Auto-run denoise is off (with it
+       on, the "Denoise raw" path shows its own row). Cleared when the current image
+       finishes caching (setCached, wired in createImageCache). */
+    if (developAutoRunDenoise) return;
+    if (G::operationMode != G::OperationMode::Develop || !G::useRaw) return;
+    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    if (!dm || fPath != dm->currentFilePath) return;
+    progress->showRow(progressDemosaicRow, true);
+    progress->updateProgress(progressDemosaicRow, done, total);
+}
+
+void MW::ensureDevelopWork(const QString &fPath)
+{
+/*
+    Decode the current image's SCENE-LINEAR pre-develop WorkingImage OFF the GUI thread when it is
+    missing from WorkingImageCache (evicted, or only a display-referred one cached), then re-render.
+    decodeIndependent caches the scene-linear WorkingImage as a side effect. Coalesced -- one decode
+    in flight. This replaces the old synchronous re-decode in renderDevelopPreview that blocked the
+    first slider drag ~1s on a 50MP RAW; the slider stays live and the develop preview appears once
+    the decode lands (the loupe shows the current image meanwhile).
+*/
+    if (fPath.isEmpty()) return;
+    if (developWorkInFlight == fPath) return;               // already decoding this image
+    developWorkInFlight = fPath;
+
+    ImageMetadata m = dm->imMetadata(fPath);                // GUI thread: read the datamodel
+    if (m.fPath.isEmpty()) m.fPath = fPath;
+    /* ImageDecoder::load() selects the in-house RAW decoder off m.ext in independent
+       mode; without it the scene-linear decode is skipped and the base falls back to
+       the display-referred embedded JPG (wrong size + not scene-linear), breaking the
+       "Denoise raw" blend. imMetadata() now populates ext, so this is a defensive
+       fallback for the rare empty-struct return (invalid row). */
+    if (m.ext.isEmpty()) m.ext = QFileInfo(fPath).suffix().toLower();
+    const quint64 gen = developParamsGen;
+    /* Show the Winnow raw demosaic progress on this develop-open decode -- the "Denoise
+       raw" path (ensureRawDenoise) shows its own row and runs only when Auto run is on,
+       so this covers the manual (Auto run off) case. Raw + in-house engine only. */
+    const bool showDemosaic = !developAutoRunDenoise && G::useRaw && isFileRaw(fPath)
+        && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine;
+
+    developRenderPool->start([this, fPath, m, gen, showDemosaic]() mutable {
+        ImageDecoder dec(0, dm, metadata);
+        std::function<void(int, int)> prog;
+        if (showDemosaic) {
+            QMetaObject::invokeMethod(this, [this]() {
+                progress->showRow(progressDemosaicRow, true);
+            });
+            prog = [this](int done, int total) {
+                QMetaObject::invokeMethod(this, [this, done, total]() {
+                    progress->updateProgress(progressDemosaicRow, done, total);
+                });
+            };
+        }
+        QImage img;
+        dec.decodeIndependent(img, metadata, m, prog);   // caches the scene-linear work
+        QMetaObject::invokeMethod(this, [this, fPath, gen, showDemosaic]() {
+            if (showDemosaic) progress->clearProgress(progressDemosaicRow);
+            developWorkInFlight.clear();
+            if (!dm || fPath != dm->currentFilePath) return;   // navigated away; drop it
+            /* Success (scene-linear work now cached) -> clear the marker so a future eviction can
+               re-decode. Otherwise (display-referred format, e.g. lossless ARW) -> mark it so the
+               re-render below uses the display fallback instead of looping the async decode. */
+            auto w = WorkingImageCache::instance().get(fPath);
+            if (w && w->sceneReferred) developWorkTriedPath.clear();
+            else                        developWorkTriedPath = fPath;
+            renderDevelopPreview(false);                       // render the proxy (scene-linear or fallback)
+            if (gen == developParamsGen)                       // no newer edit arrived; settle a crisp one
+                developFullResTimer->start(kDevelopSettleMs);
+        });
+    });
+}
+
+/* Cheap, size-agnostic pixel-difference between two QImages: sample both on a normalised
+   grid (no scaling of the large image) and return the max and mean per-pixel max-channel
+   difference in 0..255. Used for the develop render verifications. maxAbs == 0 =>
+   visually identical. */
+static void imageGridDiff(const QImage &a, const QImage &b, int grid, int &maxAbs, double &meanAbs)
+{
+    maxAbs = -1;
+    meanAbs = -1.0;
+    if (a.isNull() || b.isNull() || grid < 1) return;
+    quint64 acc = 0;
+    int mx = 0, cnt = 0;
+    for (int gy = 0; gy < grid; ++gy) {
+        const double fy = (gy + 0.5) / grid;
+        const int ay = qMin(a.height() - 1, int(fy * a.height()));
+        const int by = qMin(b.height() - 1, int(fy * b.height()));
+        for (int gx = 0; gx < grid; ++gx) {
+            const double fx = (gx + 0.5) / grid;
+            const QRgb ca = a.pixel(qMin(a.width() - 1, int(fx * a.width())), ay);
+            const QRgb cb = b.pixel(qMin(b.width() - 1, int(fx * b.width())), by);
+            const int d = qMax(qMax(qAbs(qRed(ca) - qRed(cb)), qAbs(qGreen(ca) - qGreen(cb))),
+                               qAbs(qBlue(ca) - qBlue(cb)));
+            acc += quint64(d);
+            if (d > mx) mx = d;
+            ++cnt;
+        }
+    }
+    maxAbs = mx;
+    meanAbs = cnt ? double(acc) / cnt : -1.0;
+}
+
+void MW::updateDevelopScopes(const QImage &shown)
+{
+/*
+    Rebuild the Develop scopes (histogram + vectorscope) from the image currently shown. Called
+    after each develop preview render (the post-render `out`) and, for an unedited image, from the
+    decoded image. One strided sample pass at a fixed budget fills both scopes, so the cost is the
+    same on a 50MP RAW as on the small proxy. Cheap no-op while the scopes are hidden; a null image
+    clears them. Stays on the GUI thread (the sample budget keeps it sub-millisecond); revisit only
+    if a probe shows otherwise.
+*/
+    if (G::isLogger) G::log("MW::updateDevelopScopes");
+    developShownImage = shown;   // cache for the cursor readout (implicitly shared; free)
+
+    /* Verify the Develop display differs from the Preview (embedded) image captured on
+       mode entry -- confirms the decode change (demosaic) and/or edits actually altered
+       pixels. Grid-sampled, so it is cheap even on a 50MP `shown` (no scaling). Runs for
+       edited AND unedited displays. */
+    if (dm && !shown.isNull() && !developVerifyPreviewBaseline.isNull()
+        && developVerifyPreviewBaselinePath == dm->currentFilePath) {
+        // 64x64 grid: negligible per drag tick
+        imageGridDiff(developVerifyPreviewBaseline, shown, 64,
+                      developVerifyVsPreviewMaxAbs, developVerifyVsPreviewMeanAbs);
+        developVerifyVsPreviewPath = dm->currentFilePath;
+    }
+
+    if (!scopesView || !developScopesVisible) return;   // hidden: skip the sample cost
+    if (shown.isNull()) { scopesView->clear(); return; }
+
+    /* One conversion to a 32-bit format for fast scanline access (avoids per-pixel QImage::pixel). */
+    QImage im = shown;
+    if (im.format() != QImage::Format_RGB32 &&
+        im.format() != QImage::Format_ARGB32 &&
+        im.format() != QImage::Format_ARGB32_Premultiplied)
+        im = im.convertToFormat(QImage::Format_RGB32);
+
+    const int W = im.width();
+    const int H = im.height();
+    if (W < 1 || H < 1) { scopesView->clear(); return; }
+
+    constexpr qint64 budget = 180000;
+    const int step = qMax(1, static_cast<int>(std::sqrt(static_cast<double>(W) * H / budget)));
+
+    ScopeData d;
+    d.clear();
+    for (int y = 0; y < H; y += step) {
+        /* constScanLine: never detaches (im may share `shown`'s buffer), so a 50MP full-res
+           `out` is sampled in place rather than deep-copied. */
+        const QRgb *line = reinterpret_cast<const QRgb*>(im.constScanLine(y));
+        for (int x = 0; x < W; x += step) {
+            const QRgb p = line[x];
+            const int r = qRed(p), g = qGreen(p), b = qBlue(p);
+            d.hist[0][r]++;
+            d.hist[1][g]++;
+            d.hist[2][b]++;
+            /* BT.709 luma, integer (coeffs * 256 = 54,183,19). */
+            const int luma = (r * 54 + g * 183 + b * 19) >> 8;
+            d.hist[3][luma & 0xff]++;
+            /* BT.601 Cb/Cr around 128 (coeffs * 256), quantised to VN bins for the vectorscope. */
+            const int cb = qBound(0, 128 + ((-43 * r - 85 * g + 128 * b) >> 8), 255);
+            const int cr = qBound(0, 128 + ((128 * r - 107 * g - 21 * b) >> 8), 255);
+            d.vec[(cr * ScopeData::VN) >> 8][(cb * ScopeData::VN) >> 8]++;
+        }
+    }
+    scopesView->setData(d);
+}
+
+void MW::toggleDevelopScopes()
+{
+/*
+    Develop editor-bar toggle: show/hide the scopes strip and persist the choice. When re-shown,
+    repopulate from the image currently displayed -- re-render the developed preview if the image
+    has edits (so the scope matches what is on screen), else sample the decoded image.
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopScopes");
+    developScopesVisible = !developScopesVisible;
+    if (scopesView) scopesView->setVisible(developScopesVisible);
+    if (developScopesBtn) developScopesBtn->setActive(developScopesVisible);
+    settings->setValue("Develop/scopesVisible", developScopesVisible);
+    if (developScopesVisible) {
+        if (currentDevelopEditsVisible())
+            developParamsChange();
+        else
+            updateDevelopScopes(icd->imCache.value(dm->currentFilePath));
+    }
+}
+
+void MW::toggleDevelopTransform()
+{
+/*
+    Develop editor-bar toggle (also bound to "R"): show/hide the Transform crop/perspective panel
+    and persist the choice. When shown it brings the Develop dock forward so the panel is visible.
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopTransform");
+    /* Transform/Crop only exists in Develop mode. In Preview mode tell the user how to switch and
+       leave the panel closed. */
+    if (G::operationMode != G::OperationMode::Develop) {
+        if (G::popup) G::popup->showPopup("Transform/Crop is only available in Develop Mode, "
+                                          "which can be set in the status bar or the shortcut \"D\".",
+                                          3000);
+        return;
+    }
+    developTransformVisible = !developTransformVisible;
+    if (transformPanel) transformPanel->setVisible(developTransformVisible);
+    if (developTransformAction) developTransformAction->setChecked(developTransformVisible);
+    if (developTransformBtn) developTransformBtn->setActive(developTransformVisible);
+    settings->setValue("Develop/transformVisible", developTransformVisible);
+    if (developTransformVisible && developDock) {
+        developDock->setVisible(true);
+        developDock->raise();
+    }
+    /* The crop tool appears whenever the Transform panel is shown (R / editor-bar button), and
+       commits + clears when it is hidden. */
+    if (imageView && transformPanel) {
+        if (developTransformVisible) enterDevelopCrop();
+        else                         exitDevelopCrop();
+    }
+}
+
+void MW::toggleDevelopReplace()
+{
+/*
+    Title-bar spot button (also "S" in Develop mode): arm/disarm the Fill
+    Replace (spot/fill/object heal) tool. DevelopProperties owns the armed state; the
+    ReplacePanel's visibility tracks it via spotActiveChanged (see createDevelopDock), so
+    Escape on the loupe closes the panel through the same path.
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopReplace");
+    if (G::operationMode != G::OperationMode::Develop) {
+        if (G::popup) G::popup->showPopup("Fill Replace is only available in Develop Mode, "
+                                          "which can be set in the status bar or the shortcut \"D\".",
+                                          3000);
+        return;
+    }
+    if (developProperties)
+        developProperties->onSpotToolToggled(!developProperties->isSpotActive());
+}
+
+void MW::toggleDevelopWbSampler()
+{
+/*
+    "W" in Develop mode (and the Develop menu): arm/disarm the Basic panel's white-
+    balance dropper -- click a neutral to balance from it, Opt/Alt-click skin to correct
+    the skin colour. DevelopProperties owns the armed state, so this just flips it and
+    the dock button / cursor / loupe follow.
+
+    W is claimed by an ACTIVE Transform session for Warp (developShortcutIntercept rule
+    1a, which runs before the developShortcuts table), so this is only reached when no
+    Transform is up -- tool-local beats mode-local, the same ranking S and the brush keys
+    already follow.
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopWbSampler");
+    if (G::operationMode != G::OperationMode::Develop) {
+        if (G::popup)
+            G::popup->showPopup("The white balance sampler is only available in Develop "
+                                "Mode, which can be set in the status bar or the "
+                                "shortcut \"D\".", 3000);
+        return;
+    }
+    if (developProperties) developProperties->toggleWbDropper();
+}
+
+void MW::toggleMaskOverlay()
+{
+/*
+    "O" (Develop mode): hide/show the current scope's mask overlay tint (the red coverage
+    visualisation) so the user can see the developed image without it while still editing.
+    The visibility state lives in ImageView (per mask-edit session); this just flips it.
+    No-op when no mask tool is active.
+*/
+    if (G::isLogger) G::log("MW::toggleMaskOverlay");
+    if (imageView) imageView->toggleMaskTint();
+}
+
+void MW::developNewScope()
+{
+/*
+    "N" (Develop mode): add a scope to the current image's edit stack. DevelopProperties
+    owns the flow (name dialog, append, select the new scope) and no-ops without a current
+    image; this just brings the dock forward so the new scope's tree is visible.
+*/
+    if (G::isLogger) G::log("MW::developNewScope");
+    if (!developProperties) return;
+    if (developDock) { developDock->setVisible(true); developDock->raise(); }
+    developProperties->newScope();
+}
+
+void MW::developSavePreset()
+{
+/*
+    Cmd+Shift+N (Develop mode only): save the current image's develop state as a named,
+    reusable preset. DevelopProperties owns the flow (checklist dialog + QSettings write)
+    and no-ops with a message when there is no current image or it has no edits.
+*/
+    if (G::isLogger) G::log("MW::developSavePreset");
+    if (!developProperties) return;
+    developProperties->saveDevelopPreset();
+}
+
+void MW::developRunPreset()
+{
+/*
+    "P" (Develop mode): apply a saved develop preset to the current image. NOT BUILT YET
+    -- the preset-picker + apply path is outstanding (saving a preset is Cmd+Shift+N). The
+    title-bar Preset button, the P arbiter key, menu item and help entry are wired so the
+    feature only needs this body.
+*/
+    if (G::isLogger) G::log("MW::developRunPreset");
+    if (G::popup)
+        G::popup->showPopup("Applying develop presets is not implemented yet.", 2000);
+}
+
+void MW::developAddToMask()
+{
+/*
+    "M" (Develop mode): pop the Add/Subtract mask-tool menu at the cursor for the active
+    scope, the same menu the tree's [+] mask row shows. DevelopProperties handles the Global
+    scope case (it cannot be masked) with its own message.
+*/
+    if (G::isLogger) G::log("MW::developAddToMask");
+    if (!developProperties) return;
+    if (developDock) { developDock->setVisible(true); developDock->raise(); }
+    developProperties->showMaskMenu();
+}
+
+void MW::developExport()
+{
+/*
+    "X" (Develop mode): export the developed image. NOT BUILT YET -- the render-to-file
+    path is still outstanding (see notes/Documentation.txt "Develop Export"). The action,
+    menu item, shortcut and help entry are wired so the feature only needs this body.
+*/
+    if (G::isLogger) G::log("MW::developExport");
+    if (G::popup)
+        G::popup->showPopup("Develop export is not implemented yet.", 2000);
+}
+
+void MW::enterDevelopCrop()
+{
+/*
+    Begin editing the crop. Show the FULL developed frame (developCropEditing suppresses the stored
+    geometry in the render) so the overlay can be positioned over the whole image, then start the
+    crop overlay from the stored crop rectangle.
+*/
+    if (G::isLogger) G::log("MW::enterDevelopCrop");
+    if (!imageView || !transformPanel || developCropEditing) return;
+    developCropEditing = true;
+    developCropShowResult = false;               // start in editing (overlay), not result-preview
+    /* Snapshot pre-session geometry so Esc (cancelDevelopTransform) can revert it. */
+    developCropGeometryBackup = developProperties->currentGeometry();
+    transformPanel->setPreviewShown(false);      // eye reflects "editing", not "showing result"
+    renderDevelopPreview(false);     // full frame (geometry suppressed); refits if it was cropped
+    const Geometry g = developProperties->currentGeometry();
+    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             transformPanel->isAspectFlipped(),
+                             QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    transformPanel->setLevelAngle(g.straighten);         // show the stored angle in the Level field
+    setDevelopTransformMode(transformPanel->mode());     // arm the panel's current mode's tool
+}
+
+void MW::exitDevelopCrop()
+{
+/*
+    Commit the crop: write the overlay's rectangle into the image's EditStack geometry (persists via
+    the sidecar) and re-render with the geometry applied, so the loupe shows the cropped result.
+*/
+    if (G::isLogger) G::log("MW::exitDevelopCrop");
+    if (!imageView || !developCropEditing) return;
+    /* When result-preview is on, the overlay was already committed + dropped at the toggle, so only
+       read/commit the overlay crop when we are still in editing mode. */
+    if (!developCropShowResult) {
+        const QRectF crop = imageView->cropRect();
+        imageView->endCropEdit();
+        if (developProperties) {
+            Geometry g = developProperties->currentGeometry();
+            g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
+            developProperties->setCurrentGeometry(g);
+        }
+    }
+    developCropEditing = false;
+    developCropShowResult = false;
+    renderDevelopPreview(false);     // geometry applied -> cropped result
+}
+
+void MW::cancelDevelopTransform()
+{
+/*
+    Esc while the Transform panel is open: cancel the session instead of committing it.
+    Discard every crop/straighten/warp change made since the panel opened by restoring the
+    geometry snapshot taken in enterDevelopCrop, drop the crop overlay WITHOUT reading its
+    rectangle, and hide the panel with the same visibility bookkeeping as
+    toggleDevelopTransform's hide path (minus the commit). Counterpart to exitDevelopCrop.
+*/
+    if (G::isLogger) G::log("MW::cancelDevelopTransform");
+    if (!developTransformVisible || !developCropEditing) return;
+
+    if (imageView) imageView->endCropEdit();     // drop overlay; do NOT commit cropRect()
+    if (developProperties)
+        developProperties->setCurrentGeometry(developCropGeometryBackup);   // revert
+    developCropEditing = false;
+    developCropShowResult = false;
+
+    /* Hide the panel (toggleDevelopTransform's hide branch, without exitDevelopCrop). */
+    developTransformVisible = false;
+    if (transformPanel) transformPanel->setVisible(false);
+    if (developTransformAction) developTransformAction->setChecked(false);
+    if (developTransformBtn) developTransformBtn->setActive(false);
+    settings->setValue("Develop/transformVisible", false);
+
+    renderDevelopPreview(false);     // restored geometry applied -> pre-session result
+}
+
+void MW::rectifyDevelopCrop()
+{
+/*
+    Commit the 4-point warp (Rectify button). Store the traced quad + the suggested (largest
+    inscribed) crop into the image's geometry, then re-render: because the crop tool is still active
+    the render KEEPS the warp but suppresses the crop, so the loupe shows the CORRECTED canvas and
+    the crop overlay is restarted on it for the user to set the final crop. Non-destructive: the
+    warp is a stored parameter, not baked pixels.
+*/
+    if (G::isLogger) G::log("MW::rectifyDevelopCrop");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    if (!imageView->cropIsWarp()) return;
+
+    const QRectF suggested = imageView->computeRectifyCrop();
+    if (!suggested.isValid()) return;            // degenerate quad: leave the overlay as-is
+
+    Geometry g = developProperties->currentGeometry();
+    g.hasWarp = true;
+    imageView->cropQuad(g.quad);                 // traced corners (oriented-image normalized space)
+    g.cropX = suggested.x();     g.cropY = suggested.y();
+    g.cropW = suggested.width(); g.cropH = suggested.height();
+    developProperties->setCurrentGeometry(g);
+
+    renderDevelopPreview(false);                 // warp kept, crop suppressed -> corrected canvas
+    /* Restart the crop overlay (rectangle mode) on the corrected canvas at the suggested crop, and
+       return the panel toggle to Crop so the UI matches the rectangle overlay. */
+    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             transformPanel->isAspectFlipped(),
+                             suggested);
+    transformPanel->setMode(TransformPanel::CropMode);
+}
+
+void MW::applyDevelopLevel(double deltaDeg)
+{
+/*
+    A level line was drawn on the (straighten-applied) frame. Add its angle to the stored straighten,
+    auto-fit the crop to the rotation wedges (analytic largest inscribed rect, using the developed
+    frame's dimensions), then re-render the straightened canvas and restart the crop overlay.
+*/
+    if (G::isLogger) G::log("MW::applyDevelopLevel");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    if (deltaDeg == 0.0) return;
+
+    const QString fPath = dm->currentFilePath;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) return;
+    int fw = work->width, fh = work->height;
+    if (work->sceneReferred) {
+        const int deg = developOrientationDegrees(*work, fPath);
+        if (deg == 90 || deg == 270) std::swap(fw, fh);
+    }
+
+    Geometry g = developProperties->currentGeometry();
+    g.straighten = qBound(-45.0, g.straighten + deltaDeg, 45.0);
+    /* Auto-crop to the wedges (analytic; only meaningful without a warp -- with a warp the crop is
+       in post-warp space, so leave it and let the user re-crop). */
+    if (!g.hasWarp) {
+        const QRectF c = CropTransform::straightenCropNorm(fw, fh, g.straighten);
+        g.cropX = c.x(); g.cropY = c.y(); g.cropW = c.width(); g.cropH = c.height();
+    }
+    developProperties->setCurrentGeometry(g);
+
+    renderDevelopPreview(false);                 // straighten kept, crop suppressed -> level canvas
+    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             transformPanel->isAspectFlipped(),
+                             QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    transformPanel->setLevelAngle(g.straighten); // reflect the new angle in the Level field
+}
+
+void MW::setDevelopTransformMode(int mode)
+{
+/*
+    The Transform panel's Crop / Level / Warp toggle changed: arm the matching ImageView tool on the
+    live crop overlay. Crop restarts the rectangle overlay from the stored crop; Level arms the
+    draw-a-level tool; Warp seeds the 4-point quad for corner dragging. Only meaningful while the
+    crop editor is active (the panel is only visible then).
+*/
+    if (G::isLogger) G::log("MW::setDevelopTransformMode");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    switch (mode) {
+    case TransformPanel::CropMode: {
+        const Geometry g = developProperties->currentGeometry();
+        imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                                 transformPanel->isAspectFlipped(),
+                                 QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+        break;
+    }
+    case TransformPanel::LevelMode:
+        imageView->beginLevel();
+        break;
+    case TransformPanel::WarpMode:
+        imageView->beginWarp();
+        break;
+    }
+}
+
+void MW::setDevelopLevelAngle(double degrees)
+{
+/*
+    An absolute straighten angle was typed into the Level field. Convert it to a delta and reuse the
+    drawn-level path so the crop auto-fits and the canvas re-renders identically.
+*/
+    if (G::isLogger) G::log("MW::setDevelopLevelAngle");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    const Geometry g = developProperties->currentGeometry();
+    const double target = qBound(-45.0, degrees, 45.0);
+    if (target == g.straighten) return;
+    applyDevelopLevel(target - g.straighten);
+}
+
+void MW::resetDevelopTransformMode(int mode)
+{
+/*
+    A per-row Transform reset ([R] on a mode line): clear just that mode's contribution to the
+    geometry, leave the others, then re-render and restart the crop overlay on the result.
+*/
+    if (G::isLogger) G::log("MW::resetDevelopTransformMode");
+    if (!imageView || !developProperties || !developCropEditing) return;
+    Geometry g = developProperties->currentGeometry();
+    switch (mode) {
+    case TransformPanel::CropMode:
+        /* Reset the aspect to "As shot" (free) first, else beginCropEdit below re-fits
+           the full frame to the locked aspect and the reset appears to do nothing. */
+        transformPanel->setAspectAsShot();
+        g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
+        break;
+    case TransformPanel::LevelMode:
+        g.straighten = 0.0;
+        transformPanel->setLevelAngle(0.0);
+        break;
+    case TransformPanel::WarpMode: {
+        g.hasWarp = false;
+        const double identity[8] = {0,0, 1,0, 1,1, 0,1};
+        for (int k = 0; k < 8; ++k) g.quad[k] = identity[k];
+        break;
+    }
+    }
+    developProperties->setCurrentGeometry(g);
+    developCropShowResult = false;
+    transformPanel->setPreviewShown(false);
+    renderDevelopPreview(false);
+    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
+                             transformPanel->isAspectFlipped(),
+                             QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    /* beginCropEdit re-arms the crop cursor; restore the row's own tool so resetting the
+       Level/Warp row keeps its cursor instead of dropping back to the crop tool. */
+    setDevelopTransformMode(mode);
+}
+
+void MW::onImageCursorPos(double xFraction, double yFraction)
+{
+/*
+    The loupe cursor is at (xFraction, yFraction) of the displayed image. Sample that one pixel
+    from the cached shown QImage (O(1)) and drive the scopes' readout marker. Cheap no-op while
+    the scopes are hidden or no image is shown.
+*/
+    if (!scopesView || !developScopesVisible) return;
+    if (developShownImage.isNull()) { scopesView->clearMarker(); return; }
+
+    const int x = qBound(0, static_cast<int>(xFraction * developShownImage.width()),
+                         developShownImage.width() - 1);
+    const int y = qBound(0, static_cast<int>(yFraction * developShownImage.height()),
+                         developShownImage.height() - 1);
+    const QRgb p = developShownImage.pixel(x, y);
+    scopesView->setMarker(qRed(p), qGreen(p), qBlue(p));
+}
+
 bool MW::isValidPath(QString &path)
 {
     if (G::isLogger) G::log("MW::isValidPath");
@@ -4983,6 +7684,7 @@ void MW::updateState()
     setMetadataDockVisibility();
     setEmbelDockVisibility();
     setDevelopDockVisibility();
+    setHistoryDockVisibility();     // follows Develop (set just above)
     setThumbDockVisibity();
     // setShootingInfoVisibility();
     updateStatusBar();
@@ -5132,7 +7834,7 @@ void MW::ingest()
 
               Root Folder                   (rootFolderPath)
             + Path to base folder           (fromRootToBaseFolder) source pathTemplateString
-            + Base Folder Description       (baseFolderDescription)
+            + Global Folder Description       (baseFolderDescription)
             + File Name                     (fileBaseName)     source filenameTemplateString
             + File Suffix                   (fileSuffix)
 
@@ -5161,6 +7863,9 @@ void MW::ingest()
 */
 
     if (G::isLogger) G::log("MW::ingest");
+
+    // flush any unsaved per-image Develop edits so their sidecars are current before they are copied
+    if (developProperties) developProperties->flushAll();
 
     // check if background ingest in progress
     if (G::isRunningBackgroundIngest) {
@@ -6071,12 +8776,12 @@ void MW::rory()
     if (pref != nullptr) pref->rory();
     if (G::isRory) {
         G::showCacheProgress = true;
-        progress->setCacheRowsEnabled(true);
+        setCacheProgressEnabled(true);
         refreshAfterImageCacheSizeChange();
     }
     else {
         G::showCacheProgress = false;
-        progress->setCacheRowsEnabled(false);
+        setCacheProgressEnabled(false);
         refreshAfterImageCacheSizeChange();
     }
 

@@ -52,7 +52,21 @@ enum UserRole
     UR_IconList,                        // list of icons for comboBox
     UR_IsBtn,                           // button to run a secondary widget or help
     UR_BtnText,                         // button text
-    UR_Color                            // QColor for text in LineEdit, LabelEdit
+    UR_Color,                           // QColor for text in LineEdit, LabelEdit, Start slider
+    UR_Color1,                          // QColor end in Slider
+    UR_LeafSingleLine,                  // header-style row drawn single-line but in LEAF text colour
+    UR_DeleteBtn,                       // draw a delete [-] glyph at the row's right (delegate-drawn)
+    UR_AddBtn,                          // draw an add [+] glyph left of the [-] (delegate-drawn)
+    UR_ShowDecoration,                  // force expand/collapse arrow, no children
+    UR_ExtraIndent,                     // one extra indent level for a leaf caption
+    UR_ExtraRowHeight,                  // extra px added to a row height (top+bottom pad)
+    UR_isDivider,                       // spacer/divider row (see addDivider)
+    UR_DividerHeight,                   // divider: total row height in px
+    UR_DividerLineHeight,               // divider: line thickness in px (0 = gap only)
+    UR_DividerColor,                    // divider: line QColor (alpha 0 = gap only)
+    UR_LogScale,                        // Slider: UR_Min/UR_Max are a LOG value range
+    UR_FlashLevel,                      // caption: 0..1 flash tint feedback
+    UR_CaptionColor                     // header caption: override pen QColor (mask role)
 };
 
 // reqd as can only pass QVariant convertable type through StandardItemModel
@@ -66,8 +80,17 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
+    /* Nudge on Left/Right (PageUp/PageDown = larger step) and ACCEPT the key, so it does
+       not propagate up to MW::eventFilter and move image selection. Needed because the
+       Develop sliders use singleStep 0 (QAbstractSlider would then step by 0 and ignore). */
+    void keyPressEvent(QKeyEvent *event) override;
+    /* Repaint the host SliderEditor when focus arrives/leaves so its focus cue
+       (accent bar) tracks which slider the Develop arrow-nudge keys will act on. */
+    void focusInEvent(QFocusEvent *event) override;
+    void focusOutEvent(QFocusEvent *event) override;
 
 private:
+    void syncFocusRepaint();    // repaint the value + caption cells on focus in/out
     int div;
 };
 
@@ -78,6 +101,8 @@ public:
     SliderEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     void setValue(QVariant value);
     double value();
+    void focusSlider();     // give keyboard focus to the inner slider (nudge target)
+    bool sliderHasFocus() const;   // true while the inner slider owns keyboard focus
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -93,6 +118,16 @@ private:
     void change(double value);
     void sliderMoved();
     void updateSliderWhenLineEdited();
+    /* Log-scale mode (UR_LogScale): the slider's integer position is a point on a
+       LOGARITHMIC ramp between UR_Min and UR_Max, not the value itself. Needed by the
+       white-balance Temp slider, whose 2000..50000 K range would otherwise cram every
+       useful temperature into the first sixth of the track. valueFromPos/posFromValue
+       convert; everything outside this class still sees the real value. */
+    bool logScale;
+    double valueFromPos(int pos) const;
+    int    posFromValue(double v) const;
+    double logMin, logMax;
+    static constexpr int kLogSteps = 1000;
     bool outOfRange;
     bool isInt;
     int div;
@@ -239,6 +274,7 @@ public:
     void removeItem(QString item);
     void renameItem(QString oldText, QString newText);
     void refresh(QStringList items);
+    void setRenamable(bool on);     // make the combo's text editable so the current item can be renamed
     WidgetCSS css;
 
 protected:
@@ -247,6 +283,7 @@ protected:
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
+    void itemRenamed(QString oldText, QString newText);
 
 public slots:
     void fontSizeChanged(int fontSize);
@@ -256,6 +293,7 @@ private:
     QComboBox *comboBox;
     QString source;
     QModelIndex idx;
+    bool isRenamable = false;
 };
 
 class PlusMinusEditor : public QWidget

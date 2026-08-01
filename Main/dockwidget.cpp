@@ -110,6 +110,18 @@ void BarBtn::setIcon(const QIcon &icon)
     QToolButton::setIcon(icon);
 }
 
+void BarBtn::setActive(bool on)
+{
+    /* Override the inherited (border:none) style with a blue accent border when active,
+       matching a conventional checked button. Appended after G::css so it wins; cleared
+       back to G::css when inactive. */
+    if (on)
+        setStyleSheet(G::css + "QToolButton { border: 1px solid " + G::appleBlue.name() +
+                      "; border-radius: 2px; }");
+    else
+        setStyleSheet(G::css);
+}
+
 //void BarBtn::enterEvent(QEvent*)
 //{
 //    setStyleSheet
@@ -636,6 +648,10 @@ QString MW::dockTabToolTip(const QString &tabText)
     if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
     if (tabText == developDockTabText)  return tip(developDockTabText,   "F9");
+    /* History is Develop-only, so its key is Develop mode local ("H", dispatched by the
+       arbiter) rather than an F-key like the docks above -- the tab is only ever seen in
+       Develop mode, where H always works. */
+    if (tabText == historyDockTabText)  return tip(historyDockTabText,  "H");
     return QString();
 }
 
@@ -734,6 +750,7 @@ void MW::applyDockCollapseState()
     apply(metadataDock, "MetadataDock");
     apply(thumbDock,    "ThumbDock");
     apply(embelDock,    "EmbelDock");
+    apply(historyDock,  "HistoryDock");
 }
 
 void MW::embelDockActivated(QDockWidget *dockWidget)

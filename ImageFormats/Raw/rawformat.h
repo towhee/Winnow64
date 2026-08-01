@@ -2,6 +2,7 @@
 #define RAWFORMAT_H
 
 #include <memory>
+#include <functional>
 #include <QImage>
 #include <QFile>
 #include <QString>
@@ -9,6 +10,7 @@
 #include "Metadata/imagemetadata.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "Develop/editparams.h"
+#include "Develop/workingimage.h"
 
 /*
     Base class for full-sensor RAW decoding. The shared, camera-agnostic pipeline lives
@@ -34,14 +36,41 @@ public:
        nullptr if the format has no sensor decoder yet. */
     static std::unique_ptr<RawFormat> Create(const QString &ext);
 
+    /* Cheap membership test (no allocation) for "does this extension have a sensor
+       decoder". Used to decide, without constructing a decoder, whether a decode will take
+       the memory-heavy full-sensor path. Shares one extension->factory table with Create()
+       (see rawformat.cpp), so the two can never drift out of sync. */
+    static bool HasSensorDecoder(const QString &ext);
+
     /* Full sensor decode: file -> demosaiced, colour-managed display QImage. When edit is
        non-null and non-identity, develop adjustments are applied in the linear working space
        (before the output transform). abort (when non-null) is polled between stages and inside
        the demosaic loop so a long decode can bail promptly on shutdown / navigation; an aborted
-       decode returns false with lastError() == "Aborted". */
+       decode returns false with lastError() == "Aborted".
+
+       outWork (when non-null) receives the PRE-develop WorkingImage (post-RawColor, scene-
+       linear) as a shared_ptr -- no pixel copy. The caller caches it (WorkingImageCache) so a
+       later slider change re-renders via Develop + OutputTransform without re-decoding. The
+       snapshot is always pre-develop: when edit is non-identity the develop runs on a private
+       copy, leaving the shared image pristine.
+
+       denoiseRaw applies the PMRID pre-demosaic raw denoiser (in-house/Winnow engine only) at
+       full strength before demosaic, so outWork is the DENOISED pre-develop base. The default
+       (false) leaves the decode clean -- the clean WorkingImage is cached, and the "Denoise raw"
+       amount is produced by a separate denoiseRaw=true decode and blended (MW::ensureRawDenoise).
+       No-op on the Apple engine (no CFA) and for non-Bayer patterns.
+
+       outClean (when non-null AND denoiseRaw) additionally receives the CLEAN pre-develop base --
+       the same mosaic demosaiced BEFORE PMRID -- so one decode (one UnpackCfa) yields both the
+       clean and denoised bases that MW::ensureRawDenoise blends, instead of two separate decodes.
+       Ignored when denoiseRaw is false (outWork is already the clean base). */
     bool Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 const EditParams *edit = nullptr,
-                const QAtomicInt *abort = nullptr);
+                const QAtomicInt *abort = nullptr,
+                std::shared_ptr<const WorkingImage> *outWork = nullptr,
+                bool denoiseRaw = false,
+                const std::function<void(int, int)> &denoiseProgress = {},
+                std::shared_ptr<const WorkingImage> *outClean = nullptr);
 
     QString lastError() const { return errMsg; }
 

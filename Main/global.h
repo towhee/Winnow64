@@ -133,6 +133,7 @@ Q_NAMESPACE
         MetadataReadingColumn,
         MetadataStatusColumn,       // tri-state G::MetaStatus: NotAttempted/Failed/Loaded
         IconLoadedColumn,
+        RawRenderColumn,
         CompareColumn,
         // original values
         _RatingColumn,
@@ -204,6 +205,29 @@ Q_NAMESPACE
     enum class FolderOp : quint8 { Add, Remove, Toggle };
     Q_ENUM_NS(FolderOp)    // optional, enables nice string conversion via QMetaEnum
 
+    /* Which engine decodes a RAW file to the shared WorkingImage (demosaic + global colour /
+       baseline luminance NR + start WB / black / white). Both converge on WorkingImage, so
+       everything downstream (Develop, masked luminance NR, OutputTransform) is engine-agnostic.
+
+         winnowDecodeRawEngine  in-house decoder (RawFormat::UnpackCfa -> Demosaic -> RawColor).
+                                The portable baseline -- the ONLY engine on Windows, and the
+                                canonical engine for focus stacking (cross-platform-deterministic,
+                                CFA-level control).
+         appleDecodeRawEngine   macOS Core Image (CIRAWFilter) front-end. High-quality GPU
+                                demosaic + NR. macOS-ONLY: callers MUST fall back to
+                                winnowDecodeRawEngine on non-mac (see G::decodeRawEngine). */
+    enum class DecodeRawEngine : quint8 { winnowDecodeRawEngine, appleDecodeRawEngine };
+    Q_ENUM_NS(DecodeRawEngine)
+
+    /* Winnow's top-level operation mode (more may follow).
+         Preview  fast image review: uses the embedded preview JPGs and keeps a large forward
+                  cache of upcoming images.
+         Develop  view/edit a SINGLE image at best quality (scene-linear raw decode); maintaining
+                  a large forward cache is a low priority here.
+       Toggled by the D shortcut and the status-bar Operation Mode dropdown (extreme left). */
+    enum class OperationMode : quint8 { Preview, Develop };
+    Q_ENUM_NS(OperationMode)
+
     // Generic stringify function
     template <typename Enum>
     inline QString enumClassToString(Enum value)
@@ -259,6 +283,11 @@ Q_NAMESPACE
     extern bool useDWCollapse;   // master switch for dock collapse/expand/solo mode
     extern bool useDockTitleGraphic;   // master switch: show a graphic instead of text on dock tabs
     extern bool useMultimedia;
+    extern bool useLamaSpotFill;   // spot tool heals with LaMa (GPU) instead of MI-GAN
+    extern bool useReplaceFillModes;   // Fill/Object modes shelved; false = spots only
+    extern bool useScopeHeaderLab;     // true = experimental ScopeHeaderLab in dock
+    extern int  spotFillCorrectMode;   // model-path heal correction 0-3, see global.cpp
+    extern bool spotFillGrain;         // match surround grain into the heal (N toggles)
     extern bool useUpdateStatus ;
     extern bool useFilterView;      // not finished
     extern bool useReadIcons;
@@ -349,7 +378,7 @@ Q_NAMESPACE
        0 = not yet known (e.g. before the image cache has run). */
     extern std::atomic<qint64> imageCacheHeadroomMB;
 
-    /* Test override for Layer 3, so the shrink / evict / hysteresis path can be validated
+    /* Test override for Scope 3, so the shrink / evict / hysteresis path can be validated
        deterministically without starving the machine. See DataModel::memoryPressureLevel
        and applyIconCachePressure.
          -1 = use the real signal (availableMemoryMB)
@@ -389,6 +418,22 @@ Q_NAMESPACE
        recursive tree. Set false to restore the per-folder emit (A/B baseline). */
     extern bool throttleFolderLoadMsg;
 
+    /* Selects the RAW decode engine (see DecodeRawEngine). Defaults to the portable in-house
+       engine; appleDecodeRawEngine is honoured only on macOS and otherwise falls back to
+       winnowDecodeRawEngine. A/B knob for the Core Image vs in-house decode paths. */
+    extern DecodeRawEngine decodeRawEngine;
+    extern OperationMode operationMode;     // Preview (fast review) vs Develop (best-quality single image)
+
+    /* Develop slider-drag latency probe. When true, MW::developParamsChange logs per-stage
+       timings (copy / Apply / ToImage / rotate / preview) for each re-render so the dominant
+       cost can be measured before optimising. Default false. */
+    extern bool isReportDevelopTime;
+
+    /* Gate for the OPTIONAL debounce-while-editing write of per-image Develop settings to the XMP
+       sidecar (a short time after edits settle). Navigate-away / quit / pre-op flushes always run
+       regardless of this flag. Default true; turn off to avoid mid-edit disk writes. */
+    extern bool isDevelopDebounceWrite;
+
     /* Phase-2 probe: count of Thumb::loadThumb 100ms retry waits (file-open contention with
        ImageCache) across all reader threads. Reset in MetaRead::initialize, reported in
        MetaRead::allFinished. High count => the retry loop is a real staller. */
@@ -408,6 +453,30 @@ Q_NAMESPACE
     extern QColor selectionColor;
     extern QColor mouseOverColor;
     extern QColor appleBlue;
+    extern QString lightgray;
+    extern QString darkgray;
+    extern QString lightpurple;
+    extern QString darkpurple;
+    extern QString lightblue;
+    extern QString darkblue;
+    extern QString lightyellow;
+    extern QString darkyellow;
+    extern QString lightorange;
+    extern QString darkorange;
+    extern QString lightred;
+    extern QString darkred;
+    extern QString lightcyan;
+    extern QString darkcyan;
+    extern QString lightgreen;
+    extern QString darkgreen;
+    extern QString lightteal;
+    extern QString darkteal;
+    extern QString lightmaroon;
+    extern QString darkmaroon;
+    extern QString lightpink;
+    extern QString darkpink;
+    extern QString lightmagenta;
+    extern QString darkmagenta;
 
     extern QColor labelNoneColor;
     extern QColor labelRedColor;

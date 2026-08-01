@@ -18,7 +18,9 @@ void MW::writeSettings()
 
     // state
     settings->setValue("Geometry", saveGeometry());
-    settings->setValue("WindowState", saveState());
+    /* Versioned so a state written here is only restored by a build with the same dock set
+       (see MW::winnowStateVersion and MW::showEvent). */
+    settings->setValue("WindowState", saveState(winnowStateVersion));
     settings->setValue("isFullScreen", isFullScreen());
 
     // full screen
@@ -26,6 +28,8 @@ void MW::writeSettings()
     settings->setValue("isFullScreenFavs", fullScreenDocks.isFavs);
     settings->setValue("isFullScreenFilters", fullScreenDocks.isFilters);
     settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
+    settings->setValue("isFullScreenDevelop", fullScreenDocks.isDevelop);
+    settings->setValue("isFullScreenEmbellish", fullScreenDocks.isEmbellish);
     settings->setValue("isFullScreenThumbs", fullScreenDocks.isThumbs);
     settings->setValue("isFullScreenStatusBar", fullScreenDocks.isStatusBar);
 
@@ -62,6 +66,7 @@ void MW::writeSettings()
     settings->setValue("includeSidecars", G::includeSidecars);
     settings->setValue("colorManage", G::colorManage);
     settings->setValue("useRaw", G::useRaw);
+    settings->setValue("decodeRawEngine", static_cast<int>(G::decodeRawEngine));
     settings->setValue("rememberLastDir", rememberLastDir);
     settings->setValue("checkIfUpdate", checkIfUpdate);
     settings->setValue("updateSkipVersion", updateSkipVersion);
@@ -124,6 +129,7 @@ void MW::writeSettings()
     settings->setValue("isMetadataDockVisible", metadataDockVisibleAction->isChecked());
     settings->setValue("isEmbelDockVisible", embelDockVisibleAction->isChecked());
     settings->setValue("isDevelopDockVisible", developDockVisibleAction->isChecked());
+    settings->setValue("isHistoryDockVisible", historyDockVisibleAction->isChecked());
     settings->setValue("isThumbDockVisible", thumbDockVisibleAction->isChecked());
 
     /* Property Editor */
@@ -255,6 +261,7 @@ void MW::writeSettings()
     if (thumbDock)    settings->setValue("ThumbDock", thumbDock->isCollapsed());
     if (embelDock)    settings->setValue("EmbelDock", embelDock->isCollapsed());
     if (developDock)  settings->setValue("DevelopDock", developDock->isCollapsed());
+    if (historyDock)  settings->setValue("HistoryDock", historyDock->isCollapsed());
     settings->endGroup();
 
     settings->beginGroup("DockSoloMode");
@@ -452,6 +459,18 @@ bool MW::loadSettings()
     if (settings->contains("includeSidecars")) G::includeSidecars = settings->value("includeSidecars").toBool();
     if (settings->contains("colorManage")) G::colorManage = settings->value("colorManage").toBool();
     if (settings->contains("useRaw")) G::useRaw = settings->value("useRaw").toBool();
+    if (settings->contains("decodeRawEngine")) {
+        /* Sticky RAW decode engine (Develop "Demosaic" combo). appleDecodeRawEngine is
+           macOS-only; off-mac the decode callers fall back to winnow anyway, but
+           normalize here so the combo and applyCoreVisibility reflect the engine that
+           will run. */
+        auto e = static_cast<G::DecodeRawEngine>(settings->value("decodeRawEngine").toInt());
+#ifndef Q_OS_MAC
+        if (e == G::DecodeRawEngine::appleDecodeRawEngine)
+            e = G::DecodeRawEngine::winnowDecodeRawEngine;
+#endif
+        G::decodeRawEngine = e;
+    }
     // if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
     rememberLastDir = false;    // remove rememberLastDir for now 2025-03-21
     if (settings->contains("checkIfUpdate")) checkIfUpdate = settings->value("checkIfUpdate").toBool();
@@ -493,6 +512,8 @@ bool MW::loadSettings()
     if (settings->contains("isFullScreenFavs")) fullScreenDocks.isFavs = settings->value("isFullScreenFavs").toBool();
     if (settings->contains("isFullScreenFilters")) fullScreenDocks.isFilters = settings->value("isFullScreenFilters").toBool();
     if (settings->contains("isFullScreenMetadata")) fullScreenDocks.isMetadata = settings->value("isFullScreenMetadata").toBool();
+    if (settings->contains("isFullScreenDevelop")) fullScreenDocks.isDevelop = settings->value("isFullScreenDevelop").toBool();
+    if (settings->contains("isFullScreenEmbellish")) fullScreenDocks.isEmbellish = settings->value("isFullScreenEmbellish").toBool();
     if (settings->contains("isFullScreenThumbs")) fullScreenDocks.isThumbs = settings->value("isFullScreenThumbs").toBool();
     if (settings->contains("isFullScreenStatusBar")) fullScreenDocks.isStatusBar = settings->value("isFullScreenStatusBar").toBool();
 

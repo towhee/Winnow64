@@ -74,6 +74,7 @@
         <file>images/down_arrow_disabled.png</file>
         <file>images/down_arrow.png</file>
         <file>images/down-arrow1.png</file>
+        <file>images/contextMenu.png</file>
         <file>images/down-arrow2.png</file>
         <file>images/frame.png</file>
         <file>images/pagefold.png</file>
@@ -130,12 +131,20 @@
         <file>images/icon16/gear.png</file>
         <file>images/icon16/close.png</file>
         <file>images/icon16/refresh.png</file>
+        <file>images/icon16/reset.png</file>
+        <file>images/icon16/addMask.png</file>
+        <file>images/icon16/rename.png</file>
+        <file>images/icon16/eye.png</file>
+        <file>images/icon16/eye_off.png</file>
+        <file>images/icon16/spot.png</file>
         <file>images/icon16/foldertree.png</file>
         <file>images/icon16/foldertree_white.png</file>
         <file>images/icon16/bookmarks_white.png</file>
         <file>images/icon16/filters_white.png</file>
         <file>images/icon16/metadata_white.png</file>
         <file>images/icon16/embellish_white.png</file>
+        <file>images/icon16/develop_white.png</file>
+        <file>images/icon16/history_white.png</file>
         <file>images/icon16/anchor.png</file>
         <file>images/icon16/rectangle.png</file>
         <file>images/icon16/text.png</file>
@@ -214,5 +223,7 @@
         <file>images/icon16/nolink.png</file>
         <file>Docs/performancetipshelp.html</file>
         <file>Docs/focusstackingtipshelp.html</file>
+        <file>images/icon16/ellipsis.png</file>
+        <file>Docs/develophelp.html</file>
     </qresource>
 </RCC>

@@ -124,7 +124,25 @@ set(WINNOW_SOURCES
     Develop/develop.cpp
     Develop/inputtransform.cpp
     Develop/outputtransform.cpp
+    Develop/whitebalance.cpp
+    Develop/workingimagecache.cpp
     Develop/Properties/developproperties.cpp
+    Develop/Properties/colorgradewheel.cpp
+    Develop/Properties/colorrangewheel.cpp
+    Develop/Properties/scopeheader.cpp
+    Develop/Properties/scopeheaderlab.cpp
+    Develop/Properties/rawpanel.cpp
+    Develop/Properties/maskpanel.cpp
+    Develop/Properties/maskeditor.cpp
+    Develop/Properties/paneleditor.cpp
+    Develop/Scopes/histogramview.cpp
+    Develop/Scopes/vectorscopeview.cpp
+    Develop/Scopes/toneregionslider.cpp
+    Develop/Scopes/scopesview.cpp
+    Develop/Transform/transformpanel.cpp
+    Develop/Transform/croptransform.cpp
+    Develop/Replace/replacepanel.cpp
+    Develop/History/historyview.cpp
 
     # Dialogs
     Dialogs/aboutdlg.cpp
@@ -132,6 +150,7 @@ set(WINNOW_SOURCES
     Dialogs/appdlg.cpp
     Dialogs/copystyledlg.cpp
     Dialogs/editlistdlg.cpp
+    Dialogs/savedeveloppresetdlg.cpp
     Dialogs/erasememcardimagesdlg.cpp
     Dialogs/findduplicatesdlg.cpp
     Dialogs/imagedlg.cpp
@@ -193,8 +212,10 @@ set(WINNOW_SOURCES
     # ImageFormats
     ImageFormats/Canon/canon.cpp
     ImageFormats/Canon/canoncr3.cpp
+    ImageFormats/Canon/crx.cpp
     ImageFormats/Dng/dng.cpp
     ImageFormats/Fuji/fuji.cpp
+    ImageFormats/Fuji/fujicompressed.cpp
     ImageFormats/Heic/Heic.cpp
     ImageFormats/Jpeg/jpeg.cpp
     ImageFormats/Nikon/nikon.cpp
@@ -203,8 +224,11 @@ set(WINNOW_SOURCES
     ImageFormats/Png/png.cpp
     ImageFormats/Raw/cameramatrix.cpp
     ImageFormats/Raw/demosaic.cpp
+    ImageFormats/Raw/losslessjpeg.cpp
     ImageFormats/Raw/rawcolor.cpp
+    ImageFormats/Raw/pmrid.cpp
     ImageFormats/Raw/rawformat.cpp
+    ImageFormats/Raw/tiffwalk.cpp
     ImageFormats/Sony/sony.cpp
     ImageFormats/Tiff/rorytiff.cpp
     ImageFormats/Tiff/tiff.cpp
@@ -304,6 +328,14 @@ set(WINNOW_SOURCES
     Utilities/dropshadowlabel.cpp
     Utilities/focuspointtrainer.cpp
     Utilities/focuspredictor.cpp
+    Utilities/inference/inferencesession.cpp
+    Utilities/inference/ortbackend.cpp
+    Utilities/inference/miganfill.cpp
+    Utilities/inference/lamafill.cpp
+    Utilities/subjectpredictor.cpp
+    Utilities/objectmaskpredictor.cpp
+    Utilities/skypredictor.cpp
+    Utilities/depthpredictor.cpp
     Utilities/foldercompressor.cpp
     Utilities/htmlwindow.cpp
     Utilities/icc.cpp
@@ -349,17 +381,40 @@ set(WINNOW_HEADERS
     Datamodel/selection.h
 
     Develop/develop.h
+    Develop/colorgrade.h
     Develop/editparams.h
     Develop/inputtransform.h
     Develop/outputtransform.h
+    Develop/rangemask.h
+    Develop/whitebalance.h
     Develop/workingimage.h
     Develop/Properties/developproperties.h
+    Develop/Properties/colorgradewheel.h
+    Develop/Properties/colorrangewheel.h
+    Develop/Properties/scopeheader.h
+    Develop/Properties/scopeheaderbase.h
+    Develop/Properties/scopeheaderlab.h
+    Develop/Properties/rawpanel.h
+    Develop/Properties/maskpanel.h
+    Develop/Properties/maskeditor.h
+    Develop/Properties/paneleditor.h
+    Develop/Scopes/scopedata.h
+    Develop/Scopes/histogramview.h
+    Develop/Scopes/vectorscopeview.h
+    Develop/Scopes/toneregionslider.h
+    Develop/Scopes/scopesview.h
+    Develop/Transform/transformpanel.h
+    Develop/Transform/croptransform.h
+    Develop/Replace/replacepanel.h
+    Develop/History/develophistory.h
+    Develop/History/historyview.h
 
     Dialogs/aboutdlg.h
     Dialogs/addthumbnailsdlg.h
     Dialogs/appdlg.h
     Dialogs/copystyledlg.h
     Dialogs/editlistdlg.h
+    Dialogs/savedeveloppresetdlg.h
     Dialogs/erasememcardimagesdlg.h
     Dialogs/findduplicatesdlg.h
     Dialogs/imagedlg.h
@@ -422,6 +477,7 @@ set(WINNOW_HEADERS
     ImageFormats/Canon/canoncr3.h
     ImageFormats/Dng/dng.h
     ImageFormats/Fuji/fuji.h
+    ImageFormats/Fuji/fujicompressed.h
     ImageFormats/Heic/heic.h
     ImageFormats/Heic/heif.h
     ImageFormats/Jpeg/jpeg.h
@@ -429,10 +485,14 @@ set(WINNOW_HEADERS
     ImageFormats/Olympus/olympus.h
     ImageFormats/Panasonic/panasonic.h
     ImageFormats/Png/png.h
+    ImageFormats/Raw/applerawdecode.h
     ImageFormats/Raw/cameramatrix.h
     ImageFormats/Raw/demosaic.h
+    ImageFormats/Raw/losslessjpeg.h
     ImageFormats/Raw/rawcolor.h
+    ImageFormats/Raw/pmrid.h
     ImageFormats/Raw/rawformat.h
+    ImageFormats/Raw/tiffwalk.h
     ImageFormats/Raw/rawimage.h
     ImageFormats/Sony/sony.h
     ImageFormats/Tiff/rorytiff.h
@@ -490,6 +550,15 @@ set(WINNOW_HEADERS
     Utilities/dropshadowlabel.h
     Utilities/focuspointtrainer.h
     Utilities/focuspredictor.h
+    Utilities/inference/inferencebackend.h
+    Utilities/inference/inferencesession.h
+    Utilities/inference/ortbackend.h
+    Utilities/inference/miganfill.h
+    Utilities/inference/lamafill.h
+    Utilities/subjectpredictor.h
+    Utilities/objectmaskpredictor.h
+    Utilities/skypredictor.h
+    Utilities/depthpredictor.h
     Utilities/foldercompressor.h
     Utilities/htmlwindow.h
     Utilities/icc.h
@@ -585,6 +654,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/notes PREFIX "notes" FILES ${WINNO
 if(APPLE)
     list(APPEND WINNOW_SOURCES
         Cache/framedecoder_mac.mm
+        ImageFormats/Raw/applerawdecode.mm
         Image/thumb_mac.mm
         ImageFormats/Jpeg/jpeg2.cpp
         ImageFormats/Jpeg/jpegturbo.cpp
@@ -626,6 +696,7 @@ qt_add_executable(Winnow
     ${WINNOW_RESOURCES}
     ${WINNOW_NOTES}
     Main/help.cpp
+    notes/RawDecode_ToDo.txt
 )
 
 target_compile_definitions(Winnow PRIVATE
@@ -677,6 +748,17 @@ if(MSVC)
 endif()
 
 # =============================================================================
+# ONNX Runtime (unified neural-inference layer: raw denoise + future models).
+# Opt-in until the runtime is vendored on both platforms: OFF leaves the app
+# building exactly as before, with Utilities/inference compiled as a no-op stub
+# (IsLoaded() == false) so neural features silently disable. Turning it ON and
+# pointing it at an ORT install with the platform EP (CoreML on macOS -> ANE,
+# DirectML on Windows) defines WINNOW_HAVE_ORT and links/bundles the runtime.
+# See notes/Documentation.txt "INFERENCE".
+# =============================================================================
+option(WINNOW_ENABLE_ORT "Link ONNX Runtime for neural inference (raw denoise, ...)" OFF)
+
+# =============================================================================
 # macOS dependencies + bundle resources
 # =============================================================================
 if(APPLE)
@@ -690,6 +772,7 @@ if(APPLE)
         "-framework Foundation"
         "-framework ImageIO"
         "-framework CoreGraphics"
+        "-framework CoreImage"
         "-framework AVFoundation"
         "-framework CoreMedia"
     )
@@ -697,13 +780,16 @@ if(APPLE)
     # OpenCV (Homebrew). Linked directly to avoid OpenCV's CMake config pulling
     # in transitive deps like -framework AGL (Apple's removed OpenGL framework).
     # Mirrors the explicit LIBS approach in winnow64.pro.
+    # Version-AGNOSTIC names (libopencv_core.dylib -> current) so a Homebrew opencv bump
+    # (e.g. 4.11 -> 4.13) doesn't need a CMake edit and can't strand a hardcoded soname.
     target_link_directories(Winnow PRIVATE ${HOMEBREW_PREFIX}/lib)
     target_link_libraries(Winnow PRIVATE
-        opencv_core.411
-        opencv_imgproc.411
+        opencv_core
+        opencv_imgproc
         opencv_imgcodecs
         opencv_video
-        opencv_dnn.411
+        opencv_dnn
+        opencv_photo        # cv::seamlessClone (LamaFill Poisson heal correction)
     )
     target_include_directories(Winnow PRIVATE
         ${HOMEBREW_PREFIX}/opt/opencv/include/opencv4)
@@ -725,6 +811,25 @@ if(APPLE)
     # zlib (system)
     find_package(ZLIB REQUIRED)
     target_link_libraries(Winnow PRIVATE ZLIB::ZLIB)
+
+    # ONNX Runtime (Homebrew `onnxruntime`, built with the CoreML EP -> ANE). The
+    # CoreML provider header ships in the same include dir. Opt-in via WINNOW_ENABLE_ORT.
+    if(WINNOW_ENABLE_ORT)
+        find_path(ORT_INCLUDE_DIR onnxruntime_cxx_api.h
+            PATHS ${HOMEBREW_PREFIX}/include/onnxruntime
+                  ${HOMEBREW_PREFIX}/opt/onnxruntime/include)
+        find_library(ORT_LIB onnxruntime
+            PATHS ${HOMEBREW_PREFIX}/lib ${HOMEBREW_PREFIX}/opt/onnxruntime/lib)
+        if(ORT_INCLUDE_DIR AND ORT_LIB)
+            target_include_directories(Winnow PRIVATE ${ORT_INCLUDE_DIR})
+            target_link_libraries(Winnow PRIVATE ${ORT_LIB})
+            target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_ORT)
+            message(STATUS "ONNX Runtime enabled (macOS/CoreML): ${ORT_LIB}")
+        else()
+            message(WARNING "WINNOW_ENABLE_ORT is ON but onnxruntime was not found "
+                            "(brew install onnxruntime); neural inference stays disabled.")
+        endif()
+    endif()
 
     # ---- Bundle settings ----
     set_target_properties(Winnow PROPERTIES
@@ -784,12 +889,91 @@ if(APPLE)
     # droplet + a version-correct QtCore are staged fresh into the bundle by the
     # Winnet target's POST_BUILD step below (search "Winnet — the Embellish").
 
-    # Single file: ONNX model
+    # ONNX models bundled into the .app (Contents/MacOS): focus point (tracked in git) + U^2-Net
+    # subject saliency. u2net.onnx (~176 MB) is large; if it is absent, warn rather than fail so the
+    # project still builds -- the Select Subject mask then simply no-ops until the file is added.
     target_sources(Winnow PRIVATE ReleaseExtras/focus_point_model.onnx)
     set_source_files_properties(ReleaseExtras/focus_point_model.onnx PROPERTIES
         MACOSX_PACKAGE_LOCATION "MacOS"
         HEADER_FILE_ONLY TRUE
         SKIP_AUTOGEN TRUE)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/u2net.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/u2net.onnx)
+        set_source_files_properties(ReleaseExtras/u2net.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/u2net.onnx not found -- 'Select Subject' mask will no-op. "
+                        "Download u2net.onnx into ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/migan.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/migan.onnx)
+        set_source_files_properties(ReleaseExtras/migan.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/migan.onnx not found -- spot fill will no-op. "
+                        "Export migan.onnx into ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/lama.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/lama.onnx)
+        set_source_files_properties(ReleaseExtras/lama.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/lama.onnx not found -- LaMa spot fill falls back "
+                        "to MI-GAN. Export lama.onnx into ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/skyseg.onnx)
+        set_source_files_properties(ReleaseExtras/skyseg.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/skyseg.onnx not found -- 'Select Sky' mask will no-op. "
+                        "Add skyseg.onnx to ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/midas.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/midas.onnx)
+        set_source_files_properties(ReleaseExtras/midas.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
+                        "Add midas.onnx to ReleaseExtras/ to enable it.")
+    endif()
+    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0) for the Base "Denoise raw"
+    # control on the in-house decode path. Warn-if-absent; without it, PMRID no-ops.
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx")
+        target_sources(Winnow PRIVATE ReleaseExtras/pmrid.onnx)
+        set_source_files_properties(ReleaseExtras/pmrid.onnx PROPERTIES
+            MACOSX_PACKAGE_LOCATION "MacOS"
+            HEADER_FILE_ONLY TRUE
+            SKIP_AUTOGEN TRUE)
+    else()
+        message(WARNING "ReleaseExtras/pmrid.onnx not found -- pre-demosaic raw denoise will no-op. "
+                        "Add pmrid.onnx to ReleaseExtras/ to enable it.")
+    endif()
+    # SAM 2 object-mask pair (encoder + FIXED-SHAPE decoder). Produced by
+    # ReleaseExtras/tools/export_sam2.sh; the decoder MUST be the pinned/onnxsim'd export or
+    # OpenCV DNN cannot load it (see Utilities/objectmaskpredictor.h). Warn-if-absent like the rest.
+    foreach(_m sam2_encoder sam2_decoder)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx")
+            target_sources(Winnow PRIVATE ReleaseExtras/${_m}.onnx)
+            set_source_files_properties(ReleaseExtras/${_m}.onnx PROPERTIES
+                MACOSX_PACKAGE_LOCATION "MacOS"
+                HEADER_FILE_ONLY TRUE
+                SKIP_AUTOGEN TRUE)
+        else()
+            message(WARNING "ReleaseExtras/${_m}.onnx not found -- 'Object Mask' will no-op. "
+                            "Run ReleaseExtras/tools/export_sam2.sh to produce it.")
+        endif()
+    endforeach()
 endif()
 
 # =============================================================================
@@ -883,6 +1067,22 @@ if(WIN32)
         ${LIB_DIR}/libtiff/include
     )
 
+    # ONNX Runtime (vendored DirectML build under Lib/onnxruntime/windows). Opt-in via
+    # WINNOW_ENABLE_ORT. Runtime DLLs (onnxruntime.dll, DirectML.dll,
+    # onnxruntime_providers_shared.dll) are deployed next to Winnow.exe below.
+    if(WINNOW_ENABLE_ORT)
+        set(ORT_DIR ${LIB_DIR}/onnxruntime/windows)
+        if(EXISTS ${ORT_DIR}/lib/onnxruntime.lib)
+            target_include_directories(Winnow PRIVATE ${ORT_DIR}/include)
+            target_link_libraries(Winnow PRIVATE ${ORT_DIR}/lib/onnxruntime.lib)
+            target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_ORT)
+            message(STATUS "ONNX Runtime enabled (Windows/DirectML): ${ORT_DIR}")
+        else()
+            message(WARNING "WINNOW_ENABLE_ORT is ON but ${ORT_DIR}/lib/onnxruntime.lib "
+                            "was not found; neural inference stays disabled.")
+        endif()
+    endif()
+
     # App icon (+ version info) for Winnow.exe and Winnet.exe. A bare .ico in
     # target_sources is ignored by MSVC; the icon must come from a .rc compiled
     # by rc and linked in. The icon path is baked into the .rc at configure time
@@ -962,12 +1162,79 @@ if(WIN32)
         COMMENT "Deploying third-party runtime DLLs"
         VERBATIM)
 
-    # ONNX focus model (tracked in git).
+    # ONNX Runtime DirectML runtime DLLs (only when the runtime is enabled + vendored).
+    if(WINNOW_ENABLE_ORT AND EXISTS ${LIB_DIR}/onnxruntime/windows/lib/onnxruntime.dll)
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${LIB_DIR}/onnxruntime/windows/lib/onnxruntime.dll"
+                "${LIB_DIR}/onnxruntime/windows/lib/onnxruntime_providers_shared.dll"
+                "${LIB_DIR}/onnxruntime/windows/lib/DirectML.dll"
+                "${_winnow_out}"
+            COMMENT "Deploying ONNX Runtime (DirectML) DLLs"
+            VERBATIM)
+    endif()
+
+    # ONNX models (tracked in git): focus point + U^2-Net subject saliency.
     add_custom_command(TARGET Winnow POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/focus_point_model.onnx" "${_winnow_out}"
         COMMENT "Deploying focus_point_model.onnx"
         VERBATIM)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/u2net.onnx")
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/u2net.onnx" "${_winnow_out}"
+            COMMENT "Deploying u2net.onnx"
+            VERBATIM)
+    else()
+        message(WARNING "ReleaseExtras/u2net.onnx not found -- 'Select Subject' mask will no-op. "
+                        "Download u2net.onnx into ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx")
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx" "${_winnow_out}"
+            COMMENT "Deploying skyseg.onnx"
+            VERBATIM)
+    else()
+        message(WARNING "ReleaseExtras/skyseg.onnx not found -- 'Select Sky' mask will no-op. "
+                        "Add skyseg.onnx to ReleaseExtras/ to enable it.")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/midas.onnx")
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/midas.onnx" "${_winnow_out}"
+            COMMENT "Deploying midas.onnx"
+            VERBATIM)
+    else()
+        message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
+                        "Add midas.onnx to ReleaseExtras/ to enable it.")
+    endif()
+    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0). Warn-if-absent; without it,
+    # PMRID no-ops.
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx")
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx" "${_winnow_out}"
+            COMMENT "Deploying pmrid.onnx"
+            VERBATIM)
+    else()
+        message(WARNING "ReleaseExtras/pmrid.onnx not found -- pre-demosaic raw denoise will no-op. "
+                        "Add pmrid.onnx to ReleaseExtras/ to enable it.")
+    endif()
+    # SAM 2 object-mask pair (encoder + FIXED-SHAPE decoder; see ReleaseExtras/tools/export_sam2.sh).
+    foreach(_m sam2_encoder sam2_decoder)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx")
+            add_custom_command(TARGET Winnow POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx" "${_winnow_out}"
+                COMMENT "Deploying ${_m}.onnx"
+                VERBATIM)
+        else()
+            message(WARNING "ReleaseExtras/${_m}.onnx not found -- 'Object Mask' will no-op. "
+                            "Run ReleaseExtras/tools/export_sam2.sh to produce it.")
+        endif()
+    endforeach()
 
     # ExifTool (et.exe) is not in git; it lives in release/. Warn rather than
     # fail the build if absent.

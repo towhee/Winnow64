@@ -778,7 +778,10 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     // Bounce between random bookmarked folders, cycling images in each,
     // until ESC is pressed or something crashes. Prompts for delay/duration.
-    bounceFoldersStressTest();
+    // bounceFoldersStressTest();
+    developDock->raise();
+    developDockVisibleAction->setChecked(true);
+
 }
 // Shift Cmd G: /Users/roryhill/Library/Preferences/com.winnow.winnow_101.plist
 /*
