@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+	"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+	<!--
+	  Entitlements for LOCAL DEVELOPMENT builds only (CMake POST_BUILD signing).
+	  Release/notarised builds use entitlements.plist + hardened runtime instead.
+
+	  The point of signing dev builds is a stable code-signing identity, so the
+	  TCC (Files and Folders / Photos / iCloud) grants survive a recompile. The
+	  hardened runtime is deliberately NOT enabled here so lldb attaches without
+	  friction; get-task-allow is what permits the debugger once the binary is
+	  signed with a real certificate rather than the linker's ad-hoc signature.
+	-->
+
+	<key>com.apple.security.get-task-allow</key>
+	<true/>
+
+	<!-- Homebrew/Qt dylibs and Qt Creator's DYLD_* run environment -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+	<key>com.apple.security.cs.allow-dyld-environment-variables</key>
+	<true/>
+
+</dict>
+</plist>

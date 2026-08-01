@@ -64,7 +64,7 @@ ScopeHeader::ScopeHeader(QWidget *parent) : ScopeHeaderBase(parent)
        menu, like EmbelProperties::effectNewBtn triggers effectContextMenu. */
     scopeMenuBtn = new BarBtn();
     scopeMenuBtn->setToolTip("Scope actions (new mask, reset, remove, rename)");
-    scopeMenuBtn->setIcon(":/images/icon16/ellipsis.png", G::iconOpacity);
+    scopeMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
     connect(scopeMenuBtn, &BarBtn::clicked, this, [this]{ showScopeMenu(); });
 
     previewBtn = new BarBtn();

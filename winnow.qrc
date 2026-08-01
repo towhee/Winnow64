@@ -225,5 +225,6 @@
         <file>Docs/focusstackingtipshelp.html</file>
         <file>images/icon16/ellipsis.png</file>
         <file>Docs/develophelp.html</file>
+        <file>images/icon16/ellipsis_vertical.png</file>
     </qresource>
 </RCC>
