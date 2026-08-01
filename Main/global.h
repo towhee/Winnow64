@@ -285,7 +285,7 @@ Q_NAMESPACE
     extern bool useMultimedia;
     extern bool useLamaSpotFill;   // spot tool heals with LaMa (GPU) instead of MI-GAN
     extern bool useReplaceFillModes;   // Fill/Object modes shelved; false = spots only
-    extern bool useLayerHeaderLab;     // true = experimental LayerHeaderLab in dock
+    extern bool useScopeHeaderLab;     // true = experimental ScopeHeaderLab in dock
     extern int  spotFillCorrectMode;   // model-path heal correction 0-3, see global.cpp
     extern bool spotFillGrain;         // match surround grain into the heal (N toggles)
     extern bool useUpdateStatus ;
@@ -378,7 +378,7 @@ Q_NAMESPACE
        0 = not yet known (e.g. before the image cache has run). */
     extern std::atomic<qint64> imageCacheHeadroomMB;
 
-    /* Test override for Layer 3, so the shrink / evict / hysteresis path can be validated
+    /* Test override for Scope 3, so the shrink / evict / hysteresis path can be validated
        deterministically without starving the machine. See DataModel::memoryPressureLevel
        and applyIconCachePressure.
          -1 = use the real signal (availableMemoryMB)

@@ -11,7 +11,7 @@
     carries no cross-thread state.
 
     The operation order is fixed and hard-coded (Lightroom-like); order matters and is not a
-    caller concern. Ops are split by cost (see notes/Documentation.txt "Layer & masking
+    caller concern. Ops are split by cost (see notes/Documentation.txt "Scope & masking
     model"):
 
         SPATIAL ops (denoise, texture, dehaze) need a neighbourhood, so each owns a full-image
@@ -38,7 +38,7 @@ public:
        leaving img untouched). Fills *t when non-null. */
     bool Apply(WorkingImage &img, const EditParams &p, StageTimings *t = nullptr);
 
-    /* Blend a full-strength raw-denoised image toward the clean one, per the Base "Denoise raw"
+    /* Blend a full-strength raw-denoised image toward the clean one, per the Global "Denoise raw"
        amounts (the interactive slider blend for the PMRID pre-demosaic denoiser -- see
        MW::ensureRawDenoise). The (denoised - clean) correction is split, in scene-linear RGB, into
        a luma term (scaled by lum) and a per-channel chroma term (scaled by max(lum,chr)), so
@@ -52,9 +52,9 @@ private:
        (fixed pipeline order). Two independent strengths: EditParams::localDenoiseLuma = luminance
        NR (ratio-preserving, chroma untouched); EditParams::localDenoiseChroma = colour/chroma NR
        (downscaled opponent-chroma blur, luminance kept exact). Luma runs first, then chroma on the
-       result. This is the GLOBAL (no-mask) case; the planned layer compositor calls it per layer,
-       bounded to the mask bbox and blended by the layer's alpha (see notes/Documentation.txt
-       "Layer & masking model"). No-op when both strengths are 0. */
+       result. This is the GLOBAL (no-mask) case; the planned scope compositor calls it per scope,
+       bounded to the mask bbox and blended by the scope's alpha (see notes/Documentation.txt
+       "Scope & masking model"). No-op when both strengths are 0. */
     void Denoise(WorkingImage &img, const EditParams &p);
 
     /* Spatial op (pipeline #6): mid-frequency local contrast on LUMINANCE only (ratio-preserving,

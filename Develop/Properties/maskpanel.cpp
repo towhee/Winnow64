@@ -73,9 +73,9 @@ void MaskPanel::buildUi()
     QPushButton *addBtn = new QPushButton(tr("Add"), combineRow);
     QPushButton *subBtn = new QPushButton(tr("Subtract"), combineRow);
     QPushButton *intBtn = new QPushButton(tr("Intersect"), combineRow);
-    addBtn->setToolTip("Add this tool's area to the layer mask");
-    subBtn->setToolTip("Remove this tool's area from the layer mask");
-    intBtn->setToolTip("Keep only where this tool overlaps the layer mask");
+    addBtn->setToolTip("Add this tool's area to the mask");
+    subBtn->setToolTip("Remove this tool's area from the mask");
+    intBtn->setToolTip("Keep only where this tool overlaps the mask");
     /* MaskOp: Add=0, Subtract=1, Intersect=2 (see editstack.h). */
     connect(addBtn, &QPushButton::clicked, this, [this]{ emit committed(0); });
     connect(subBtn, &QPushButton::clicked, this, [this]{ emit committed(1); });

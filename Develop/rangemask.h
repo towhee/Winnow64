@@ -14,7 +14,7 @@
     RangeRef supplies those values.
 
     RangeRef is a display-referred RGB map (0..1, gamma-encoded sRGB as shown) of the
-    DEVELOPED BASE layer -- Base params + OutputTransform + EXIF orientation -- output-
+    DEVELOPED GLOBAL scope -- Global params + OutputTransform + EXIF orientation -- output-
     oriented and capped in size. It is BASE-ONLY (not the full composite) on purpose: a range
     mask that shifts its own tones must not feed back into its own selection (which would
     oscillate). Coverage is measured on what the user sees: luminance uses the same Rec.601

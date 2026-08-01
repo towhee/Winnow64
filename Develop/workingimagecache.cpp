@@ -207,8 +207,8 @@ inline void maskParallelFor(size_t n, F fn)
 }
 } // namespace
 
-/* ---- Masked-layer blend space (A/B, one flag to flip + revert) ----
-   A (kPerceptualMaskBlend = false): lerp the masked layer in SCENE-LINEAR light -- physically
+/* ---- Masked-scope blend space (A/B, one flag to flip + revert) ----
+   A (kPerceptualMaskBlend = false): lerp the masked scope in SCENE-LINEAR light -- physically
    faithful, but a STRONG masked adjustment's visible falloff is front-loaded because the display
    gamma steepens it near coverage m=1 (a linear feather then reads abrupt at the size edge).
    B (true, current): lerp in a PERCEPTUAL (gamma 2.2) space, so the DISPLAYED brightness tracks m
@@ -221,7 +221,7 @@ inline float maskDec(float y) { return y <= 0.0f ? 0.0f : std::pow(y, 2.2f); }  
 }
 
 bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &base,
-                                    const std::vector<StackLayer> &layers,
+                                    const std::vector<StackScope> &scopes,
                                     QImage &out, RenderTimings *timings)
 {
     if (!work.isValid()) return false;
@@ -231,25 +231,25 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
     if (timings) t.start();
     Develop develop;
 
-    /* Accumulator = Base applied globally. Owned (mutable) so layers can blend into it. */
+    /* Accumulator = Global applied globally. Owned (mutable) so scopes can blend into it. */
     WorkingImage acc = work;
     if (!base.isIdentity()) develop.Apply(acc, base, nullptr);
 
-    for (const StackLayer &L : layers) {
-        if (!L.mask.empty() && L.mask.size() != n) continue;   // malformed mask: skip the layer
+    for (const StackScope &L : scopes) {
+        if (!L.mask.empty() && L.mask.size() != n) continue;   // malformed mask: skip the scope
 
-        /* Develop this layer from the running ACCUMULATOR (the result of the layers below), so where
-           layer masks overlap the adjustments COMPOUND rather than the top layer replacing the one
-           below -- e.g. two overlapping +1-stop layers give ~+2 stops in the overlap. In scene-linear
+        /* Develop this scope from the running ACCUMULATOR (the result of the scopes below), so where
+           masks overlap the adjustments COMPOUND rather than the top scope replacing the one
+           below -- e.g. two overlapping +1-stop scopes give ~+2 stops in the overlap. In scene-linear
            this stacking is the natural per-op composition (exposure multiplies, etc.). An identity
-           layer aliases acc (no copy/Apply) and blends to a no-op. */
+           scope aliases acc (no copy/Apply) and blends to a no-op. */
         WorkingImage layBuf;
         const WorkingImage *layP = &acc;
         if (!L.params.isIdentity()) { layBuf = acc; develop.Apply(layBuf, L.params, nullptr); layP = &layBuf; }
 
         const float *hi = layP->rgb.data();
         float *dst = acc.rgb.data();
-        if (L.mask.empty()) {                                  // global layer: its params on top of acc
+        if (L.mask.empty()) {                                  // global scope: its params on top of acc
             const float *src = hi;
             maskParallelFor(n, [=](size_t i0, size_t i1) {
                 std::copy(src + i0*3, src + i1*3, dst + i0*3);
@@ -261,8 +261,8 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
                 for (size_t i = i0; i < i1; ++i) {
                     const float m = mk[i];
                     const size_t j = i * 3;
-                    if (m <= 0.0f) continue;                       // layer has no effect here
-                    if (m >= 1.0f) {                               // fully the layer
+                    if (m <= 0.0f) continue;                       // scope has no effect here
+                    if (m >= 1.0f) {                               // fully the scope
                         dst[j+0] = hi[j+0]; dst[j+1] = hi[j+1]; dst[j+2] = hi[j+2];
                         continue;
                     }

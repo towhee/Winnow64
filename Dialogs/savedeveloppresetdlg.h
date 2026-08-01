@@ -6,7 +6,7 @@
 /*
     Save Develop Preset dialog (Lightroom-style "New Develop Preset"). Presents a
     collapsible, scrollable checklist of every settable Develop item, grouped as
-    Global settings / Base layer / Layer N. Items that differ from their default on
+    Global settings / Global scope / Scope N. Items that differ from their default on
     the current image are pre-checked (and their group pre-expanded).
 
     The dialog is UI-only: it renders a model handed to it and reports the preset
@@ -22,7 +22,7 @@ struct PresetLeaf {
 };
 
 struct PresetGroup {
-    QString title;              // "Global settings" / "Base layer" / "Layer 1"
+    QString title;              // "Global settings" / "Global scope" / "Scope 1"
     bool    checkable = true;   // false => a non-checkable container header (Global)
     QVector<PresetLeaf> leaves;
 };

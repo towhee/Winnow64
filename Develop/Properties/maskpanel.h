@@ -10,8 +10,8 @@ class BarBtn;
 class MaskEditor;
 
 /*
-    MaskPanel (experimental, behind G::useLayerHeaderLab) -- the transient mask build-up
-    strip. It appears ABOVE the Layers list only while a mask tool is being defined and
+    MaskPanel (experimental, behind G::useScopeHeaderLab) -- the transient mask build-up
+    strip. It appears ABOVE the Scopes list only while a mask tool is being defined and
     closes on commit or cancel/Esc.
 
         | Mask: Linear Gradient             [x] |   <- header + cancel

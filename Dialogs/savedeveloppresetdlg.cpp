@@ -2,8 +2,8 @@
 
 /*
     See savedeveloppresetdlg.h. Builds a QTreeWidget from the supplied groups: each
-    group is a top-level row; layer groups carry an auto-tristate parent checkbox (so
-    toggling the layer toggles all its leaves and the parent reflects the children),
+    group is a top-level row; scope groups carry an auto-tristate parent checkbox (so
+    toggling the scope toggles all its leaves and the parent reflects the children),
     while the Global group is a plain container header whose leaves are individually
     checkable. Leaves start checked when their `changed` flag is set.
 */
@@ -62,7 +62,7 @@ SaveDevelopPresetDlg::SaveDevelopPresetDlg(const QVector<PresetGroup> &groups,
             li->setData(0, GroupRole, g.title);
             anyChanged = anyChanged || leaf.changed;
         }
-        /* Expand Global always (a container) and any layer with a changed leaf. */
+        /* Expand Global always (a container) and any scope with a changed leaf. */
         gi->setExpanded(!g.checkable || anyChanged);
     }
 

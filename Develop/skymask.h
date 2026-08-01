@@ -8,7 +8,7 @@
     by image path and sampled identically by the ImageView overlay (preview) and the develop render
     (buildMaskBuffer) so the two are pixel-identical. Header-only (all inline, no Q_OBJECT).
 
-    A SEPARATE store from SubjectMask on purpose: a layer stack may carry both a Subject and a Sky
+    A SEPARATE store from SubjectMask on purpose: a scope stack may carry both a Subject and a Sky
     mask on the same image, so their coverage maps must not collide on the shared path key.
 
     onx/ony are OUTPUT-normalized (0..1 of the oriented image) -- the same space the geometric, range

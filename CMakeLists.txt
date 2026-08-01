@@ -129,8 +129,8 @@ set(WINNOW_SOURCES
     Develop/Properties/developproperties.cpp
     Develop/Properties/colorgradewheel.cpp
     Develop/Properties/colorrangewheel.cpp
-    Develop/Properties/layerheader.cpp
-    Develop/Properties/layerheaderlab.cpp
+    Develop/Properties/scopeheader.cpp
+    Develop/Properties/scopeheaderlab.cpp
     Develop/Properties/rawpanel.cpp
     Develop/Properties/maskpanel.cpp
     Develop/Properties/maskeditor.cpp
@@ -142,6 +142,7 @@ set(WINNOW_SOURCES
     Develop/Transform/transformpanel.cpp
     Develop/Transform/croptransform.cpp
     Develop/Replace/replacepanel.cpp
+    Develop/History/historyview.cpp
 
     # Dialogs
     Dialogs/aboutdlg.cpp
@@ -390,9 +391,9 @@ set(WINNOW_HEADERS
     Develop/Properties/developproperties.h
     Develop/Properties/colorgradewheel.h
     Develop/Properties/colorrangewheel.h
-    Develop/Properties/layerheader.h
-    Develop/Properties/layerheaderbase.h
-    Develop/Properties/layerheaderlab.h
+    Develop/Properties/scopeheader.h
+    Develop/Properties/scopeheaderbase.h
+    Develop/Properties/scopeheaderlab.h
     Develop/Properties/rawpanel.h
     Develop/Properties/maskpanel.h
     Develop/Properties/maskeditor.h
@@ -405,6 +406,8 @@ set(WINNOW_HEADERS
     Develop/Transform/transformpanel.h
     Develop/Transform/croptransform.h
     Develop/Replace/replacepanel.h
+    Develop/History/develophistory.h
+    Develop/History/historyview.h
 
     Dialogs/aboutdlg.h
     Dialogs/addthumbnailsdlg.h

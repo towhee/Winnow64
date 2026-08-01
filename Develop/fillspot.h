@@ -204,7 +204,7 @@ inline void rasterizeStrokeMax(const Stroke &st, int w, int h,
     stored featherPct is legacy metadata; the heal engines derive their own transition
     band). The single stroke ("pts"), or the painted area ("strokes") composited IN
     ORDER -- add strokes max into the coverage, erase strokes multiply it by
-    (1 - alpha), so paint/erase/repaint layers the way it was painted. Fills cov
+    (1 - alpha), so paint/erase/repaint scopes the way it was painted. Fills cov
     (row-major w*h, 0..1) and the inclusive nonzero bbox [bx0,by0,bx1,by1]; empty when
     bx1<bx0 (e.g. everything painted was erased).
 */

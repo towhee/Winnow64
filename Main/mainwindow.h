@@ -46,8 +46,9 @@
 #include "Develop/Scopes/scopesview.h"
 #include "Develop/Transform/transformpanel.h"
 #include "Develop/Replace/replacepanel.h"
-#include "Develop/Properties/layerheader.h"
-#include "Develop/Properties/layerheaderlab.h"   // experimental, G::useLayerHeaderLab
+#include "Develop/History/historyview.h"
+#include "Develop/Properties/scopeheader.h"
+#include "Develop/Properties/scopeheaderlab.h"   // experimental, G::useScopeHeaderLab
 #include "Develop/Properties/rawpanel.h"          // lab UI raw-decode strip
 #include "Develop/Properties/maskpanel.h"         // lab UI mask-editing strip
 #include "Embellish/embelexport.h"
@@ -172,8 +173,8 @@ public:
 
     /* Version tag for saveState()/restoreState(). BUMP whenever the set of docks changes so a
        window state saved by an older build (missing the new dock) is rejected rather than
-       restored into an inconsistent layout. v1: added developDock. */
-    static constexpr int winnowStateVersion = 1;
+       restored into an inconsistent layout. v1: added developDock. v2: added historyDock. */
+    static constexpr int winnowStateVersion = 2;
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -222,6 +223,7 @@ public:
         bool isMetadataDockVisible;
         bool isEmbelDockVisible;
         bool isDevelopDockVisible;
+        bool isHistoryDockVisible;
         bool isThumbDockVisible;
         bool isImageDockVisible;
         // View
@@ -582,13 +584,13 @@ private slots:
     /* GUI-thread completion for a background full-res render: apply the image if its params/image
        are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
     void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen);
-    /* Base image the develop render pipeline should start from: the raw-DENOISED WorkingImage when
-       the Base layer has "Denoise raw" (denoiseLuma/denoiseChroma) set and it is ready, else the
+    /* Global image the develop render pipeline should start from: the raw-DENOISED WorkingImage when
+       the Global scope has "Denoise raw" (denoiseLuma/denoiseChroma) set and it is ready, else the
        clean cached WorkingImage. Pure lookup (no work); the async compute is ensureRawDenoise(). */
     std::shared_ptr<const WorkingImage> developRawDenoisedBase(
         const QString &fPath, const EditParams &base,
         const std::shared_ptr<const WorkingImage> &clean);
-    /* Compute the raw-denoised base for the current Base params OFF the GUI thread (developRenderPool),
+    /* Compute the raw-denoised base for the current Global params OFF the GUI thread (developRenderPool),
        cache it (developDenoised), then repaint. Coalesced (one in flight); no-op if already current or
        already computing this key. Called from the settle path so a drag does not spawn many DNN runs. */
     void ensureRawDenoise(const QString &fPath, const EditParams &base,
@@ -597,7 +599,7 @@ private slots:
        turning it ON runs the denoise for the current image immediately. */
     void onAutoRunDenoiseToggled(bool on);
     /* Dock "Denoise" checkbox handlers: runRawDenoiseNow forces ensureRawDenoise for the
-       current image + Base params regardless of developAutoRunDenoise; clearRawDenoiseNow
+       current image + Global params regardless of developAutoRunDenoise; clearRawDenoiseNow
        drops the denoised base and re-renders clean. rawDenoiseReadyForCurrent reports
        whether a denoised base is cached for the current image + params (drives the
        "Denoise"/"Denoised" checkbox state). */
@@ -632,10 +634,10 @@ private slots:
        claims W for Warp while it is active (arbiter rule 1a), so this only runs when no
        Transform session is up. */
     void toggleDevelopWbSampler();
-    void toggleMaskOverlay();     // "O": hide/show the active layer mask overlay tint
-    void toggleMaskBreakdown();   // layer menu: Result view <-> Breakdown (outlines)
-    void developNewLayer();       // "N": add a layer to the current image's stack
-    void developNewMask();        // "M": pop the Add/Subtract mask tool menu
+    void toggleMaskOverlay();     // "O": hide/show the active mask overlay tint
+    void toggleMaskBreakdown();   // scope menu: Result view <-> Breakdown (outlines)
+    void developNewScope();       // "N": add a scope to the current image's stack
+    void developAddToMask();        // "M": pop the Add/Subtract mask tool menu
     void developExport();         // "X": export the developed image (not built yet)
     void developSavePreset();     // Cmd+Shift+N: save develop state as a preset
     void developRunPreset();      // P: apply a saved develop preset (stub)
@@ -824,12 +826,14 @@ private slots:
     void setMetadataDockVisibility();
     void setEmbelDockVisibility();
     void setDevelopDockVisibility();
+    void setHistoryDockVisibility();
     void setMetadataDockFixedSize();    // rgh finish or remove
 
     void focusOnDock(DockWidget *dockWidget);
     void closeThumbDock();
     void closeEmbelDock();
     void closeDevelopDock();
+    void closeHistoryDock();
     void closeFolderDock();
     void closeFavDock();
     void closeFilterDock();
@@ -837,6 +841,7 @@ private slots:
     void showThumbDock();
     void showEmbelDock();
     void showDevelopDock();
+    void showHistoryDock();
     void showFolderDock();
     void showFavDock();
     void showFilterDock();
@@ -1076,8 +1081,8 @@ private:
        QKeySequence -- their keys live in developShortcuts and are dispatched by
        developShortcutIntercept, so S/X can also stay bound to Slideshow/Reject
        globally. */
-    QAction *developNewLayerAction;     // N
-    QAction *developNewMaskAction;      // M
+    QAction *developNewScopeAction;     // N
+    QAction *developAddToMaskAction;      // M
     QAction *developSpotAction;         // S
     QAction *developWbSamplerAction = nullptr;    // W (Transform owns W while it is up)
     QAction *developExportAction;       // X
@@ -1088,7 +1093,7 @@ private:
     BarBtn *developScopesBtn = nullptr;
     BarBtn *developTransformBtn = nullptr;
     BarBtn *developSpotBtn = nullptr;
-    QAction *developScopesAction;       // H
+    QAction *developScopesAction;       // G
     // developTransformAction (R) and toggleMaskOverlayAction (O) live with the docks
 
     // Embellish
@@ -1141,8 +1146,9 @@ private:
     QAction *thumbDockVisibleAction;
     QAction *embelDockVisibleAction;
     QAction *developDockVisibleAction;
+    QAction *historyDockVisibleAction = nullptr;   // "H": develop-mode local (arbiter)
     QAction *developTransformAction;    // "R": toggle the Develop Transform (crop) panel
-    QAction *toggleMaskOverlayAction;   // "O": hide/show the layer's mask overlay tint
+    QAction *toggleMaskOverlayAction;   // "O": hide/show the scope's mask overlay tint
 //    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
@@ -1291,6 +1297,9 @@ private:
     DockWidget *propertiesDock;
     DockWidget *embelDock;
     DockWidget *developDock;
+    /* Develop edit history. Tabbed with developDock and shown/hidden with it (the two are
+       one tool), so every developDock visibility change mirrors onto this. */
+    DockWidget *historyDock = nullptr;
     /* The dock's normal features, captured at creation so setDevelopPanelEnabled() can
        strip them (lock float/move) while disabled and restore them when re-enabled. */
     QDockWidget::DockWidgetFeatures developDockFeatures = QDockWidget::NoDockWidgetFeatures;
@@ -1310,6 +1319,7 @@ private:
     DockTitleBar *metaTitleBar;
     DockTitleBar *embelTitleBar;
     DockTitleBar *developTitleBar;
+    DockTitleBar *historyTitleBar = nullptr;
     BarBtn *embelRunBtn;
     FSTree *fsTree;
     BookMarks *bookmarks;
@@ -1337,6 +1347,9 @@ private:
        toggled by a button on the Develop editor bar and persisted (Develop/scopesVisible). */
     ScopesView *scopesView = nullptr;
     bool developScopesVisible = true;
+    /* The History dock's list of develop actions (hover previews a state, a click reverts
+       to it). DevelopProperties owns the timeline it views. */
+    HistoryView *historyView = nullptr;
     /* Develop Transform (crop + perspective) panel: a control strip below the scopes and above
        the property tree. Toggled by a button on the Develop editor bar and the "R" shortcut;
        visibility persists (Develop/transformVisible). */
@@ -1409,7 +1422,7 @@ private:
     double developVerifyVsPreviewMeanAbs = -1.0;
     // image the last display-vs-Preview verification ran on:
     QString developVerifyVsPreviewPath;
-    /* Interactive "Denoise raw": PMRID is a heavy DNN run PRE-demosaic (Base-only, RAW-only,
+    /* Interactive "Denoise raw": PMRID is a heavy DNN run PRE-demosaic (Global-only, RAW-only,
        Winnow engine only). ensureRawDenoise re-decodes the raw with PMRID once to build the
        full-strength denoised base (developPmridFull, keyed path+iso), then blends clean<->PMRID by
        the two amounts (luma/chroma split) into developDenoised (keyed path+amounts+iso). So the
@@ -1439,8 +1452,8 @@ private:
     QString developWorkTriedPath;                 // path already async-decoded but with no scene-linear result
                                                   // (display-referred format) -> render the fallback, don't loop
     /* Content-range mask (Luminance/Color Range) reference: a display-referred RGB map of the
-       developed BASE layer, registered by path (RangeMask::putRef) and sampled identically by
-       the loupe overlay and the render. Base-only so a range mask cannot feed back on its own
+       developed GLOBAL scope, registered by path (RangeMask::putRef) and sampled identically by
+       the loupe overlay and the render. Global-only so a range mask cannot feed back on its own
        selection. Rebuilt only when the base params or the image change (range-slider ticks and
        colour samples just re-threshold), tracked by path + a base-params signature. */
     void ensureRangeRef(const QString &fPath, const WorkingImage &work,
@@ -1453,7 +1466,7 @@ private:
     void ensureSubjectMask(const QString &fPath, const WorkingImage &work,
                            const EditParams &base, int degrees);
     /* Build the AI coverage + show the loupe tint the moment a Subject/Sky mask is selected -- the
-       render path skips identity layers, so it cannot be relied on to build the ref before the user
+       render path skips identity scopes, so it cannot be relied on to build the ref before the user
        has adjusted a slider. Connected to DevelopProperties::maskEditBegin; no-op for other tools. */
     void onAiMaskEditBegin(int tool, int op, bool inverted, const QString &paramsJson,
                            double feather);
@@ -1464,11 +1477,11 @@ private:
     /* Pre-warm the SAM 2 encoder for the current image when Brush "AI" auto-mask is enabled via the
        dock checkbox (the tool is already active, so maskEditBegin does not re-fire). */
     void warmBrushSamEncoder();
-    /* Rebuild (or clear) the whole-layer mask coverage tint shown in the loupe while a mask tool is
-       expanded: composite the active layer's Add/Subtract tools (buildMaskBuffer) into a red tint
+    /* Rebuild (or clear) the whole-mask coverage tint shown in the loupe while a mask tool is
+       expanded: composite the active scope's Add/Subtract tools (buildMaskBuffer) into a red tint
        and hand it to ImageView. Cheap (capped resolution); a no-op when no tool is expanded. */
     void updateMaskOverlayTint();
-    /* Mask overlay display mode (layer menu toggle). true = Breakdown: the result veil
+    /* Mask overlay display mode (scope menu toggle). true = Breakdown: the result veil
        PLUS a green(Add)/blue(Subtract) outline of each constituent;
        false = Result: the composite veil alone. Session-wide, default true. */
     bool maskShowBreakdown = true;
@@ -1630,6 +1643,7 @@ private:
     QString metadataDockTabText;
     QString embelDockTabText;
     QString developDockTabText;
+    QString historyDockTabText;
     QString thumbDockTabText;
 
     QStringList dockTextNames;
@@ -1645,6 +1659,7 @@ private:
     void createThumbDock();
     void createEmbelDock();
     void createDevelopDock();
+    void createHistoryDock();
     QTabBar* tabifiedBar();
     bool isDockTabified(QDockWidget *dock);
     QString dockTabToolTip(const QString &tabText);
@@ -1660,6 +1675,7 @@ private:
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
     void developDockVisibilityChange();
+    void historyDockVisibilityChange();
 
 public:
     // dock collapse/expand area-scoped helpers (used by DockTitleBar context menu)

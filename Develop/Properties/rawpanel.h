@@ -13,9 +13,9 @@ class BarBtn;
 class PanelEditor;
 
 /*
-    RawPanel (experimental, behind G::useLayerHeaderLab) -- the Develop dock's raw-decode
-    strip, hoisted OUT of the property tree's Base "Core" rows into a self-contained panel
-    that sits ABOVE the Layers list. Shown only for raw files (DevelopProperties toggles
+    RawPanel (experimental, behind G::useScopeHeaderLab) -- the Develop dock's raw-decode
+    strip, hoisted OUT of the property tree's Global "Core" rows into a self-contained panel
+    that sits ABOVE the Scopes list. Shown only for raw files (DevelopProperties toggles
     its visibility via currentIsRaw()).
 
         | Raw                               [?] |
@@ -27,8 +27,8 @@ class PanelEditor;
 
     Like TransformPanel it carries NO model state: every control emits a signal and every
     display is pushed back in by DevelopProperties (setEditSource / setEngine /
-    setDenoiseRunState / setDenoiseValues). The raw params themselves live on the Base
-    layer (layer 0) of the edit stack. Signal/param contract mirrors the old Core rows so
+    setDenoiseRunState / setDenoiseValues). The raw params themselves live on the Global
+    scope (scope 0) of the edit stack. Signal/param contract mirrors the old Core rows so
     the existing MW wiring (useRawRequested, demosaicEngineChanged, autoRunDenoiseToggled,
     runRawDenoiseRequested, clearRawDenoiseRequested) is reused unchanged.
 */

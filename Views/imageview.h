@@ -176,16 +176,16 @@ public slots:
     void setSpotReplaceMode(int mode);
     /* The dock pushes the current image's spot centres (normalized) to draw the pins. */
     void setSpotPins(const QVector<QPointF> &pins);
-    /* The whole-layer mask (all Add/Subtract tools composited) as a red coverage tint, shown under
+    /* The whole-mask mask (all Add/Subtract tools composited) as a red coverage tint, shown under
        the active tool's handles while any mask tool is expanded. MW builds it (buildMaskBuffer);
        clear when no tool is expanded. */
-    void setLayerMaskTint(const QImage &tint);
-    void clearLayerMaskTint();
+    void setScopeMaskTint(const QImage &tint);
+    void clearScopeMaskTint();
     /* Legend content for the on-canvas overlay chip, pushed by MW when it rebuilds the
        tint: whether Breakdown outlines show, and the selected tool name + op (-1 none,
        0 Add, 1 Subtract). Drawn in drawForeground while the overlay is visible. */
     void setMaskLegend(bool breakdown, const QString &selName, int selOp);
-    /* "M": hide/show the mask overlay tint (both the whole-layer composite and the per-tool preview)
+    /* "M": hide/show the mask overlay tint (both the whole-mask composite and the per-tool preview)
        while editing a mask -- handles/cursor stay so editing continues. No-op outside mask editing. */
     void toggleMaskTint();
     /* Force the mask overlay tint hidden (e.g. an adjustment slider was changed so the
@@ -254,7 +254,7 @@ signals:
        persist into the MaskComponent. */
     void maskGeometryChanged(const QString &paramsJson);
     /* The mask overlay tint was shown/hidden (by "O", by an adjustment slider, or by
-       the start of a new mask edit) so the dock's layer menu shows the matching check
+       the start of a new mask edit) so the dock's scope menu shows the matching check
        state. */
     void maskTintVisibilityChanged(bool shown);
     /* Brush size changed on the canvas ([ ] keys or two-finger drag); sync the dock. */
@@ -520,8 +520,8 @@ private:
     QPointF maskViewportToNorm(QPoint vp) const;    // viewport px -> normalized image
     QPointF maskViewportToImage(QPoint vp) const;   // viewport px -> image-pixel (pmItem) coords
     int     maskHitTest(QPoint vp) const;           // which handle is under vp (-1 none)
-    /* drawTint=false draws only the tool's handles/guides/cursor/swatches (the whole-layer composite
-       tint has already been painted underneath by the layer-mask overlay). */
+    /* drawTint=false draws only the tool's handles/guides/cursor/swatches (the whole-mask composite
+       tint has already been painted underneath by the mask overlay). */
     void    drawLinearMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Linear tool
     void    drawRadialMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Radial tool
     void    drawBrushMask(QPainter *p, const QRectF &br, bool drawTint = true);   // overlay for the Brush tool
@@ -576,7 +576,7 @@ private:
     void    rebuildContentPreview();                // dispatch to the subject / sky / depth / range builder
     QString maskRangeParams;                       // lo/hi/hue/samples JSON, active tool
     QImage  maskRangePreview;                       // coverage tint (output-oriented), like the brush
-    QImage  maskLayerTint;                          // whole-layer composite coverage tint (output-oriented), all tools
+    QImage  scopeMaskTint;                          // whole-mask composite coverage tint (output-oriented), all tools
     bool    maskTintHidden = false;                 // "M": suppress the mask overlay tint
     /* On-canvas legend state (set by setMaskLegend, drawn in drawMaskLegend). */
     bool    maskLegendBreakdown = true;             // Breakdown outlines vs Result view

@@ -1083,17 +1083,17 @@ void MW::createUtilActions()
        each text renders the key hint the missing sequence would otherwise supply -- the
        same idiom pickAction and jumpAction use for their multi-key hints. */
 
-    developNewLayerAction = new QAction(tr("New Layer\tN"), this);
-    developNewLayerAction->setObjectName("developNewLayer");
-    developNewLayerAction->setShortcutVisibleInContextMenu(true);
-    addAction(developNewLayerAction);
-    connect(developNewLayerAction, &QAction::triggered, this, &MW::developNewLayer);
+    developNewScopeAction = new QAction(tr("New Mask\tN"), this);
+    developNewScopeAction->setObjectName("developNewScope");
+    developNewScopeAction->setShortcutVisibleInContextMenu(true);
+    addAction(developNewScopeAction);
+    connect(developNewScopeAction, &QAction::triggered, this, &MW::developNewScope);
 
-    developNewMaskAction = new QAction(tr("New Mask\tM"), this);
-    developNewMaskAction->setObjectName("developNewMask");
-    developNewMaskAction->setShortcutVisibleInContextMenu(true);
-    addAction(developNewMaskAction);
-    connect(developNewMaskAction, &QAction::triggered, this, &MW::developNewMask);
+    developAddToMaskAction = new QAction(tr("Add to Mask\tM"), this);
+    developAddToMaskAction->setObjectName("developAddToMask");
+    developAddToMaskAction->setShortcutVisibleInContextMenu(true);
+    addAction(developAddToMaskAction);
+    connect(developAddToMaskAction, &QAction::triggered, this, &MW::developAddToMask);
 
     developSpotAction = new QAction(tr("Spot Removal Tool\tS"), this);
     developSpotAction->setObjectName("developSpot");
@@ -1137,7 +1137,7 @@ void MW::createUtilActions()
     addAction(developRunPresetAction);
     connect(developRunPresetAction, &QAction::triggered, this, &MW::developRunPreset);
 
-    developScopesAction = new QAction(tr("Histogram / Vectorscope\tH"), this);
+    developScopesAction = new QAction(tr("Histogram / Vectorscope\tG"), this);
     developScopesAction->setObjectName("developScopes");
     developScopesAction->setShortcutVisibleInContextMenu(true);
     developScopesAction->setCheckable(true);
@@ -1513,6 +1513,19 @@ void MW::createWindowActions()
     addAction(developDockVisibleAction);
     connect(developDockVisibleAction, &QAction::triggered, this, &MW::showDevelopDock);
 
+    /* "H" (Develop mode only) shows/raises the Develop History panel. The dock only
+       exists alongside the Develop dock, so the key is Develop mode local: it carries no
+       QKeySequence and loadDevelopShortcuts owns it, with the tab in the text rendering
+       the hint. The other panel toggles are global F-keys (F3-F9). */
+    historyDockVisibleAction = new QAction(tr("Develop History Panel\tH"), this);
+    historyDockVisibleAction->setObjectName("toggleHistoryDock");
+    historyDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    historyDockVisibleAction->setCheckable(true);
+    if (isSettings && settings->contains("isHistoryDockVisible")) historyDockVisibleAction->setChecked(settings->value("isHistoryDockVisible").toBool());
+    else historyDockVisibleAction->setChecked(false);
+    addAction(historyDockVisibleAction);
+    connect(historyDockVisibleAction, &QAction::triggered, this, &MW::showHistoryDock);
+
     /* "R" (Develop mode only) toggles the Develop Transform (crop + perspective) panel.
        Like every Develop-local action it has no QKeySequence -- loadDevelopShortcuts owns
        the key, and the tab in the text renders the hint a key-less action cannot. */
@@ -1524,7 +1537,7 @@ void MW::createWindowActions()
     addAction(developTransformAction);
     connect(developTransformAction, &QAction::triggered, this, &MW::toggleDevelopTransform);
 
-    /* "O" hides/shows the current layer's mask overlay tint while a mask tool is active
+    /* "O" hides/shows the current scope's mask overlay tint while a mask tool is active
        (see the real image without the red coverage tint; handles/cursor stay). No-op
        outside mask editing. */
     toggleMaskOverlayAction = new QAction(tr("Mask Overlay\tO"), this);
@@ -2134,8 +2147,8 @@ void MW::createUtilMenu()
     developMenu->addAction(developAction);          // enable/disable the Develop panel
     developMenu->addAction(operationModeAction);    // D: works in both modes
     developMenu->addSeparator();
-    developMenu->addAction(developNewLayerAction);
-    developMenu->addAction(developNewMaskAction);
+    developMenu->addAction(developNewScopeAction);
+    developMenu->addAction(developAddToMaskAction);
     developMenu->addAction(toggleMaskOverlayAction);
     developMenu->addSeparator();
     developMenu->addAction(developTransformAction);
@@ -2185,6 +2198,7 @@ void MW::createViewMenu()
     viewMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) viewMenu->addAction(embelDockVisibleAction);
     viewMenu->addAction(developDockVisibleAction);
+    viewMenu->addAction(historyDockVisibleAction);
     // viewMenu->addSeparator();
     //    windowMenu->addAction(windowTitleBarVisibleAction);
     #ifdef Q_OS_WIN
@@ -3140,7 +3154,7 @@ void MW::loadDevelopShortcuts()
     The Develop mode local shortcut table: a bare key -> the action to run INSTEAD of
     whatever the global table above binds that key to.  MW::developShortcutIntercept looks
     the key up here while G::operationMode == Develop; in Preview nothing changes, so S is
-    still Slideshow, X still Reject and H still unbound.
+    still Slideshow, G still Grid view, X still Reject and H still unbound.
 
     These keys are deliberately NOT QAction shortcuts.  Qt permits one QAction per key
     sequence -- bind "S" to both Slideshow and the spot tool and QShortcutMap reports an
@@ -3156,15 +3170,16 @@ void MW::loadDevelopShortcuts()
     if (G::isLogger) G::log("MW::loadDevelopShortcuts");
     developShortcuts.clear();
     developShortcuts[Qt::Key_R] = developTransformAction;   // global: unbound
-    developShortcuts[Qt::Key_N] = developNewLayerAction;    // global: unbound
-    developShortcuts[Qt::Key_M] = developNewMaskAction;     // global: unbound
+    developShortcuts[Qt::Key_N] = developNewScopeAction;    // global: unbound
+    developShortcuts[Qt::Key_M] = developAddToMaskAction;     // global: unbound
     developShortcuts[Qt::Key_O] = toggleMaskOverlayAction;  // global: Open folder
     developShortcuts[Qt::Key_S] = developSpotAction;        // global: Slideshow
     /* W is ALSO claimed by an active Transform session for Warp (arbiter rule 1a, which
        runs before this table), so it reaches the dropper only when no Transform is up. */
     developShortcuts[Qt::Key_W] = developWbSamplerAction;   // global: New Workspace
     developShortcuts[Qt::Key_X] = developExportAction;      // global: Reject
-    developShortcuts[Qt::Key_H] = developScopesAction;      // global: unbound
+    developShortcuts[Qt::Key_G] = developScopesAction;      // global: Grid view
+    developShortcuts[Qt::Key_H] = historyDockVisibleAction; // global: unbound
     developShortcuts[Qt::Key_P] = developRunPresetAction;   // global: Pick
 }
 
@@ -3179,7 +3194,7 @@ void MW::syncDevelopMenuEnabled()
     if (G::isLogger) G::log("MW::syncDevelopMenuEnabled");
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
     const QList<QAction *> modeLocal {
-        developNewLayerAction, developNewMaskAction, toggleMaskOverlayAction,
+        developNewScopeAction, developAddToMaskAction, toggleMaskOverlayAction,
         developTransformAction, developSpotAction, developWbSamplerAction,
         developScopesAction, developExportAction,
         developSavePresetAction, developRunPresetAction

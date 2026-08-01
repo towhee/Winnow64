@@ -11,7 +11,7 @@ class ColorRangeWheel;
 
 /*
     MaskEditor -- a PanelEditor that renders ONE mask tool's settings inside the MaskPanel
-    (above the Layers list). It reuses PanelEditor's tree-styled slider/checkbox rows, so
+    (above the Scope list). It reuses PanelEditor's tree-styled slider/checkbox rows, so
     the controls look identical to Exposure/Contrast, and adds the per-tool row set plus
     the Color Range hue/sat wheel.
 
