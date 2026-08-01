@@ -86,3 +86,15 @@ packaging/windows/config.ps1
 
 # Per-machine Claude Code settings (do not commit)
 .claude/settings.local.json
+ReleaseExtras/lama.onnx
+ReleaseExtras/midas.onnx
+ReleaseExtras/migan.onnx
+ReleaseExtras/placeholder.txt
+ReleaseExtras/pmrid.onnx
+ReleaseExtras/sam2_decoder.onnx
+ReleaseExtras/sam2_encoder.onnx
+ReleaseExtras/skyseg.onnx
+ReleaseExtras/tools/export_sam2.py
+ReleaseExtras/tools/export_sam2.sh
+ReleaseExtras/tools/README.md
+ReleaseExtras/u2net.onnx
