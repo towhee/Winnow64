@@ -24,9 +24,10 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
 {
     if (G::isLogger) G::log("ScopeHeaderLab::ScopeHeaderLab");
 
-    /* contextMenu.png: a light-gray (176,176,176) chevron, matching the title-bar glyphs
-       (e.g. questionmark.png); generated from down-arrow1.png. */
-    menuIcon = QIcon(QPixmap(":/images/contextMenu.png"));
+    /* ellipsis_vertical.png: the vertical "kebab" glyph for the panel and per-row scope
+       action menus. Drawn gray 176 like questionmark.png and dimmed by the same
+       G::iconOpacity (via BarBtn::setIcon(path, opacity)) so it reads at the identical
+       brightness as the "?" tip buttons above it. */
 
     QVBoxLayout *outer = new QVBoxLayout(this);
     outer->setContentsMargins(0, 0, 0, 0);
@@ -54,7 +55,7 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
                                   .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
     panelMenuBtn = new BarBtn();
     panelMenuBtn->setToolTip("Scope actions (new mask)");
-    panelMenuBtn->setIcon(menuIcon);
+    panelMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
     panelMenuBtn->setIconSize(QSize(16, 16));
     connect(panelMenuBtn, &BarBtn::clicked, this, [this]{ showPanelMenu(); });
     hb->addWidget(collapseBtn);
@@ -158,7 +159,7 @@ QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
     if (!r.isGlobal) {
         BarBtn *menuBtn = new BarBtn();
         menuBtn->setToolTip("Scope actions (add to mask, reset, remove, rename)");
-        menuBtn->setIcon(menuIcon);
+        menuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
         menuBtn->setIconSize(QSize(16, 16));
         const QString nm = r.name;
         connect(menuBtn, &BarBtn::clicked, this,

@@ -80,7 +80,8 @@ private:
     QWidget     *rowsContainer = nullptr;
     QVBoxLayout *rowsLayout    = nullptr;
 
-    QIcon menuIcon;                        // contextMenu.png (light-gray chevron)
+    /* menuIcon removed: the scope menu buttons now load ellipsis_vertical.png through
+       BarBtn::setIcon(path, G::iconOpacity) at each call site. */
 
     QStringList names;                     // current row names (for currentScopeName)
     int  activeIndex  = 0;

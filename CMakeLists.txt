@@ -1013,6 +1013,20 @@ if(APPLE)
     get_filename_component(_winnow_qt_root "${_winnow_qt_bin}" DIRECTORY)
     set(_winnow_qt_core_fw "${_winnow_qt_root}/lib/QtCore.framework")
 
+    # Homebrew's /opt/homebrew/lib/QtCore.framework is a keg-link farm: its
+    # Headers/QtCore/Resources entries are symlinks to ../../Cellar/..., which
+    # dangle once copied into the bundle. That yields a malformed framework that
+    # codesign rejects ("bundle format unrecognized"), which in turn blocks
+    # signing Winnow.app at all. Resolve the real (self-relative) framework and
+    # copy that instead.
+    file(REAL_PATH "${_winnow_qt_core_fw}/QtCore" _winnow_qt_core_bin)
+    get_filename_component(_winnow_fw_real "${_winnow_qt_core_bin}" DIRECTORY)
+    get_filename_component(_winnow_fw_real "${_winnow_fw_real}" DIRECTORY)
+    get_filename_component(_winnow_fw_real "${_winnow_fw_real}" DIRECTORY)
+    if(_winnow_fw_real MATCHES "QtCore\\.framework$")
+        set(_winnow_qt_core_fw "${_winnow_fw_real}")
+    endif()
+
     # Stage the master droplet + a version-correct QtCore into the Winnow app
     # bundle at Contents/MacOS/Winnets/ — where applicationDirPath()/Winnets/...
     # resolves at runtime and where syncWinnets() copies from. Attached to Winnet
@@ -1256,6 +1270,60 @@ if(WIN32)
             "$<TARGET_FILE:Winnet>" "${_winnow_out}"
         COMMENT "Deploying Winnet.exe (built target)"
         VERBATIM)
+endif()
+
+# =============================================================================
+# macOS: stable dev signature — stops the repeated "Winnow would like to access
+# your Documents/Desktop/Pictures/iCloud" prompts after every recompile.
+#   The linker ad-hoc-signs the bundle, so its designated requirement is a plain
+#   cdhash of the binary. Every recompile changes that hash, TCC therefore sees
+#   an app it has never met, and every granted folder is asked for again. Signing
+#   with a real certificate makes the requirement "this bundle id, this team",
+#   which is identical across rebuilds, so the grants stick.
+#   Signed WITHOUT the hardened runtime and WITH get-task-allow, so debugging is
+#   unaffected; release signing stays with packaging/macos/deploy.command.
+#   Set -DWINNOW_DEV_CODESIGN_IDENTITY="" to turn this off (or "-" for ad-hoc).
+# =============================================================================
+if(APPLE)
+    set(WINNOW_DEV_CODESIGN_IDENTITY "Developer ID Application: Robert Hill (2663CS489R)"
+        CACHE STRING "codesign identity for local dev builds; empty = do not sign")
+
+    if(WINNOW_DEV_CODESIGN_IDENTITY)
+        # find-identity, not find-certificate: only the former requires a usable
+        # PRIVATE KEY. A machine that imported the .cer alone would pass a
+        # certificate check and then fail every build at codesign.
+        execute_process(
+            COMMAND security find-identity -v -p codesigning
+            OUTPUT_VARIABLE _winnow_identities
+            ERROR_QUIET)
+        string(FIND "${_winnow_identities}" "${WINNOW_DEV_CODESIGN_IDENTITY}"
+               _winnow_identity_pos)
+        if(_winnow_identity_pos EQUAL -1)
+            message(WARNING
+                "Dev codesign identity unusable on this machine: "
+                "${WINNOW_DEV_CODESIGN_IDENTITY}\n"
+                "  Builds continue, ad-hoc signed, but macOS will re-prompt for "
+                "file access after every rebuild.\n"
+                "  Fix: import the Developer ID Application identity (.p12, with "
+                "its private key) into the login keychain — see packaging/README.md.")
+        else()
+            # Last POST_BUILD step on Winnow, so everything staged into the
+            # bundle (Winnets, ExifTool, models) is in place before the resource
+            # seal is computed. --deep is required, not cosmetic: Contents/MacOS
+            # holds nested code the build re-copies unsigned each time (the
+            # Winnet droplet, exiftool_wrapper), and codesign refuses to seal a
+            # bundle whose nested code carries no signature at all.
+            set(_winnow_dev_entitlements
+                "${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/dev-entitlements.plist")
+            add_custom_command(TARGET Winnow POST_BUILD
+                COMMAND codesign --force --deep
+                        --sign "${WINNOW_DEV_CODESIGN_IDENTITY}"
+                        --entitlements "${_winnow_dev_entitlements}"
+                        "$<TARGET_BUNDLE_DIR:Winnow>"
+                COMMENT "Signing Winnow.app with a stable identity (keeps TCC grants)"
+                VERBATIM)
+        endif()
+    endif()
 endif()
 
 # =============================================================================
