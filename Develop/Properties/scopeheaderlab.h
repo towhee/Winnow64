@@ -1,0 +1,96 @@
+#ifndef SCOPEHEADERLAB_H
+#define SCOPEHEADERLAB_H
+
+#include "Develop/Properties/scopeheaderbase.h"
+
+#include <QIcon>
+#include <QString>
+#include <QStringList>
+#include <QVector>
+
+class QLabel;
+class QCheckBox;
+class QVBoxLayout;
+class BarBtn;
+
+/*
+    ScopeHeaderLab (experimental, behind G::useScopeHeaderLab) -- the redesigned Develop
+    dock scope control. It replaces the dropdown ScopeHeader with a VERTICAL LIST:
+
+        | Scopes                            [v] |   <- gradient header + panel menu
+        | [x] Global                              |   <- checkbox = show/hide (no [v] menu)
+        | [x] Scope 1                       [v] |   <- checkbox = show/hide, [v] = actions
+        | [ ] Scope 2                       [v] |
+
+    Still a ScopeHeaderBase, so DevelopProperties binds it exactly like the dropdown
+    (bindScopeHeader) and drives it via setScopeRows(); the class name stays
+    ScopeHeaderLab so the swap-in path (copy over scopeheader.*) is unchanged.
+
+    Interaction (all rebuild-safe -- emissions that loop back into setScopeRows are
+    deferred a tick so a row widget is never deleted inside its own signal handler):
+      - Click a row body        -> scopeSelected(name)      (makes it the active scope)
+      - Row checkbox            -> scopeEnabledToggled(i,on) (EditScope::enabled)
+      - Panel [v]               -> addScopeRequested
+      - Row  [v]                -> selects the row, then addMask / reset / remove / rename
+
+    The whole-mask preview eye, collapse arrow and mask-overlay menu rows of the old
+    header are gone: show/hide is the per-row checkbox, and the mask-overlay controls
+    move to the Mask panel. Those base setters are kept as inert state-holders so the
+    interface (and DevelopProperties' existing calls) still compile and behave.
+*/
+class ScopeHeaderLab : public ScopeHeaderBase
+{
+    Q_OBJECT
+public:
+    explicit ScopeHeaderLab(QWidget *parent = nullptr);
+
+    /* Legacy contract: forwards to setScopeRows (all enabled, index 0 = Global). */
+    void setScopes(const QStringList &names, int currentIndex) override;
+    /* Primary refresh: rebuild the list from names + per-scope enabled + Global flag. */
+    void setScopeRows(const QVector<ScopeRowInfo> &rows, int active) override;
+
+    void setPreviewShown(bool shown) override { previewShown = shown; }
+    void setGlobalActive(bool isGlobal) override { globalActive = isGlobal; }
+    void setMaskOverlayAvailable(bool available) override { maskOverlayAvailable = available; }
+    void setMaskOverlayShown(bool shown) override { maskOverlayShown = shown; }
+    void setMaskBreakdownShown(bool shown) override { maskBreakdownShown = shown; }
+    void setCollapsed(bool collapsed) override;      // hide/show the rows container
+    bool isCollapsed() const override { return collapsed; }
+    QString currentScopeName() const override;
+
+protected:
+    void paintEvent(QPaintEvent *) override;         // gradient behind the header band
+    bool eventFilter(QObject *watched, QEvent *event) override;   // row-body clicks
+
+private:
+    void rebuild(const QVector<ScopeRowInfo> &rows, int active);
+    QWidget *makeRow(int index, const ScopeRowInfo &r, bool active);
+    void showPanelMenu();                 // panel [v]: Add new scope
+    void showRowMenu(int index, const QString &name);   // row [v]: per-scope actions
+    void selectRowDeferred(const QString &name);        // emit scopeSelected next tick
+    /* The header's collapse arrow: hide/show the scope LIST (not the tree). Collapsing
+       falls back to Global, since no scope can be picked while the list is hidden. */
+    void toggleListCollapsed();
+    void updateListCollapseIcon();
+
+    QWidget     *headerBand    = nullptr;
+    BarBtn      *collapseBtn   = nullptr;
+    QLabel      *titleLabel    = nullptr;
+    BarBtn      *panelMenuBtn  = nullptr;
+    QWidget     *rowsContainer = nullptr;
+    QVBoxLayout *rowsLayout    = nullptr;
+
+    QIcon menuIcon;                        // contextMenu.png (light-gray chevron)
+
+    QStringList names;                     // current row names (for currentScopeName)
+    int  activeIndex  = 0;
+    bool previewShown = true;
+    bool collapsed    = false;             // base setCollapsed state (inert)
+    bool listCollapsed = false;            // header arrow: the scope LIST is hidden
+    bool globalActive   = true;
+    bool maskOverlayAvailable = false;
+    bool maskOverlayShown     = true;
+    bool maskBreakdownShown   = true;
+};
+
+#endif // SCOPEHEADERLAB_H

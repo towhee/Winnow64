@@ -7,20 +7,776 @@ We just made architecture changes in the conversation 'Raw decoder and editor'. 
   to the View menu with shortcut F9, and save everything to settings as per the other docks.  Add a
   separate Properties file similar to the embellish one.
 
-The initial setup:
-Develop dock items:
-    Layers (header with minus/plus) same as Embellish templates
-        Select layer (dropdown)
-    Basic (header)
+I want to be able to customize the column(i) width for a specific row of the
+PropertyEditor::QTreeView as part of the addItem process. Also, I want to be
+able to set individual row heights as well.  I would like the column width
+units to be percent of the  entire width, and row height to be percent of the
+default row height.  I anticipate needing this for the section that holds the
+histogram (left side) and vector scope (right side). How do you suggest we do this.
+
+The Develop dock layout:
+Develop dock (btns: Graphs, Transform, Reset All, ?, X)
+    Histogram/VectorScope side by side
+    Core (btns: presets, save preset, transform (crop symbol))
+        Demosaic dropdown (Apple, Winnow, Other...)
         Denoise (checkbox)
-        Temp (slider)
-        Tint (slider)
-        Exposure (slider)
-        Contrast (slider)
-        Highlights (slider)
-        Shadows (slider)
-        Whites (slider)
-        Blacks (slider)
-        Texture (slider)
-        Dehaze (slider)
-    Effects (header)
+        Transform
+            Crop
+            Rotate/Level
+            Perspective
+    Layers (btns: btns: minus/plus)
+        Select layer (lineedit dropdown) (Children if not Base layer)
+            Combine masks method
+            Mask 1
+            Mask 2...
+        Basic (header)
+            Temp (slider)
+            Tint (slider)
+            Tone segment (slider)
+            Exposure (slider)
+            Contrast (slider)
+            Highlights (slider)
+            Shadows (slider)
+            Whites (slider)
+            Blacks (slider)
+            Texture (slider)
+            Dehaze (slider)
+        Color
+            Red slidder
+            Green slider
+            Blue slider
+            Hue slider
+            Saturation slider
+            Luminance slider
+        Effects (header)
+            Vignette
+            Grain
+
+I am looking for input on how to structure the Layers.  I am looking for a space efficient
+layout that allows the user to add masks to a non-Base layer. When a new mask is selected
+the user can select the type of mask and add/subtract from the mask same as Lightroom.
+Multple masks can be created and the overall layer mask can be the intersection or union of
+the individual masks.  While a mask is being built, a mask control with settings relevant to
+the mask tool should appear, perhaps like the scopes, but under Layers. I am thinking we
+might have an add mask button that shows a list of mask types to get started, similar to
+how Embellish "adds an effect to this style".
+
+Please do not make any program changes until we have ironed out the design/layout for the
+layer/mask process.  Feel free to suggest extending the propertywidgets to facilitate an
+improved, clear, space efficient layout (such as adding buttons after a combobox in the
+ComboBoxEditor).
+
+Design change: [] = widget ie combobox, button etc
+There will only be one mask per layer, with a list of mask tools used to build the mask.
+Each mask tool can add or subtract from the mask.  The first mask tool must be added.
+When you click on a mask tool its settings become visible.  Somewhere we need a Done button
+to end the mask build.  Here is a mockup of the new layout:
+
+Layers
+Select layer    [Layer 2          v] [M]
+Add linear gradient                  [-]
+Subtract brush                       [-]
+
+[M] Mask button dropdown list {Add linear gradient, Add brush, ... Subtract linear gradient,
+    Subtract brush, ...}
+[-] Remove button
+
+To avoid row duplication instead of:
+
+ Subtract brush                      [-]
+vSubtract brush                     [..]
+   Feather
+   Invert
+
+Let's do:
+vSubtract brush                      [-]
+   Feather      [Slider]
+   Invert       [ChkBox]
+   Done         [ChkBox]
+
+
+
+Make sure you can read white-balance multipliers, black/white levels, CFA phase for every camera
+in the list.  This has been a problem in some of the cameras we have already done.  Can you
+read how exiftool does this and replicate it in Winnow.
+
+[Session: 98% (Resets: 10:20)] [Week: 99% (Resets: Sat 15:00)]
+
+Update(Develop/Properties/developproperties.cpp)
+  ⎿  Added 6 lines
+      508
+      509      isPopulating = false;
+      510      isRebuildingMasks = false;
+      511 +
+      512 +    /* Force a full content repaint. The header-style tool rows draw their caption across the full
+      513 +       row width (into the value column via r4 = w0 + w1); after an expand/collapse the view only
+      514 +       repaints a narrow dirty region, which clips the caption to column 0 until the next hover.
+      515 +       A whole-viewport update paints every row with the full clip, so the text is not truncated. */
+      516 +    viewport()->update();
+      517  }
+      518
+      519  void DevelopProperties::setSelectedMask(int index)
+
+⏺ Done. After rebuildMaskTools() finishes (which runs on every expand/collapse/add/delete via setSelectedMask), it now calls
+  viewport()->update() to force a full content repaint.
+
+  The cause: the header-style tool rows draw their caption across the full row width (into the value column via the delegate's r4 = w0 +
+  w1). On collapse the view only repaints a narrow dirty region, so the caption gets clipped to column 0 — exactly what you saw — until a
+  hover triggers a full repaint. Forcing a whole-viewport update reproduces that full repaint immediately, so the captions stay full-width.
+
+  This is a one-line, low-cost fix (one coalesced repaint per rebuild). Please rebuild and confirm the expand→collapse no longer truncates.
+
+
+Before splitter resize:
+PROBE2 Vertial linear gradi widget DevelopProperties isTree true w0 107 w1 202 r QRect(10,123 97x20) r.right 106 capLeft 10 capRight 309 rCapW 299 deco true delBtn false grad true hasClip false clip QRectF(-1416,-55 0x0) cap= Vertial linear gradient WB: Basic
+After splitter resize:
+PROBE2 Layers               widget DevelopProperties isTree true w0 107 w1 198 r QRect(10,62 97x20) r.right 106 capLeft 5 capRight 267 rCapW 262 deco false delBtn false grad true hasClip false clip QRectF(-1420,-55 0x0) cap= Layers
+PROBE2 (+) Linear Gradient  widget DevelopProperties isTree true w0 107 w1 198 r QRect(20,103 285x20) r.right 304 capLeft 20 capRight 278 rCapW 258 deco true delBtn true grad false hasClip false clip QRectF(-1420,-55 0x0) cap= (+) Linear Gradient
+PROBE2 Vertial linear gradi widget DevelopProperties isTree true w0 107 w1 198 r QRect(10,123 97x20) r.right 106 capLeft 10 capRight 305 rCapW 295 deco true delBtn false grad true hasClip false clip QRectF(-1420,-55 0x0) cap= Vertial linear gradient WB: Basic
+PROBE2 Vertial linear gradi widget DevelopProperties isTree true w0 107 w1 198 r QRect(10,143 97x20) r.right 106 capLeft 10 capRight 305 rCapW 295 deco true delBtn false grad true hasClip false clip QRectF(-1420,-55 0x0) cap= Vertial linear gradient WB: Color
+PROBE2 Vertial linear gradi widget DevelopProperties isTree true w0 107 w1 198 r QRect(10,163 97x20) r.right 106 capLeft 10 capRight 305 rCapW 295 deco true delBtn false grad true hasClip false clip QRectF(-1420,-55 0x0) cap= Vertial linear gradient WB: Effects
+
+Develop module Transform panel design
+Open below Scopes panel (shortcut "R"), above the developproperties tree.
+Aspect dropdown:
+    As shot
+    1 x 1
+    3 x 2
+    4 x 3
+    5 x 7
+    4 x 5
+    8.5 x 11
+    16 x 9
+    16 x 10
+    ------
+    Add custom aspect
+
+A lock / unlock toggle (show locked / unlocked symbols) when clicked or shortcut A
+
+A tool to draw level
+
+A checkbox to fill extra canvas if necessary
+
+When Transform panel has the focus, a crop tool that defines a rectangular crop, or
+when modifer alt/opt defines a 4 point polygon where all 4 corners can be dragged in
+any direction.  When a transform button in the Transform panel then rfecalculates the
+geometry to make the polygon to make it a rectangle.
+
+Please give me your thoughts on this design.
+
+All develop pipeline applies to all selected images
+Can a crop be defined on a zoomed image
+When ImageView::isFit == true then show crop tool pointer
+When crop active Return or Enter or R completes crop
+Undo feature, Reset feature
+Hide/show changes by layer and layer tool and basic, color and effects panel
+Reset basic, color and effects panel settings to default
+
+Layout
+
+Crop aspect   [aspect dropdown          ] [Lock]  [Reset]
+Level amount  [amount   ]                 [Level]
+
+[Reset crop]  [Reset warp]
+
+Whenever you're back, the queue is:
+- Warp — the 4-point polygon (Alt-drag) + Rectify.
+- Persistence + apply — wire cropChanged into the edit stack and actually crop the rendered/exported pixels.
+- Plus the smaller refinements: image-switch re-init, zoomed-in entry, content-aware fill.
+
+Cancel history for now.  Let me define two terms:
+Preview - show/ignore a group of settings, for example the Color settings in Base layer
+Reset - set a group of settings back to their defaults
+I want to be able to preview and/or reset:
+- a layer
+- layer basic
+- layer color
+- layer effects
+- transform
+I see two approaches:
+1. Create Preview and reset buttons and add them to all the (crop / layer / basic / color / effect) headers
+2. Create a context menu.
+What are your thoughts?
+
+|---------------------------------------------------|
+|Transform                               [?] [E] [R]|
+|---------------------------------------------------|
+|                                                   |
+|  Crop (C) / Level (L) / Warp (W) tabs             |
+| aspect [aspect dropdown           ]         [L][R]| or
+| angle  [amount lineedit  ]                     [R]| or
+|                                                [R]|
+|                                                   |
+|---------------------------------------------------|
+
+or
+
+New Transform layout:
+
+|---------------------------------------------------|
+|Transform                               [?] [E] [R]|
+|---------------------------------------------------|
+|                                                   |
+|[Crop ] aspect [aspect dropdown           ]  [L][R]|
+|[Level] angle  [amount lineedit  ]              [R]|
+|[Warp ]                                         [R]|
+|                                                   |
+|---------------------------------------------------|
+
+[E] - eye symbol button
+[L] - lock symbol button
+[R] - reset symbol button (create circle chasing itself reset.png)
+Make sure the [R] buttons are all vertically aligned
+
+Change Transform header formatting to same as a properties header (ie DevelopProperties::addCoreHeader)
+In the header, replace the refresh.png with the new reset.png you are creating.
+
+
+[Crop ] / [Level] / [Warp] are mode selection 3 way toggle.  Only one can be selected.  Format
+buttons so selected has selected background and border. Assign shortcuts: Crop (C),
+Level (L) and Warp (W).  Make appropriate tooltips.
+
+I want to streamline the Develop panel, removing CoreHeader and embedding the layer
+dropdown into a layout above the DevelopProperties tree.
+
+Remove CoreHeader from DevelopProperties
+Replace LayersHeader with a new LayerHeader outside DevelopProperties tree, which shows
+the children of the selected layer as tree items.  Format same way as Transfor Header.
+
+In Develop I want to change the LayerHeader to add "Layer" to left of the layer dropdown and
+eliminate the [?] button.  Keep the preview button [E].
+
+|---------------------------------------------------|
+|>Layer[Layer dropdown                 ]         [E]|
+|---------------------------------------------------|
+
+Layer dropdown changes.
+- After the layers listed add a separator and a new item: "Add new layer"
+- Add another separator
+- Add action items for the selected layer unless it is the base layer as mocked below
+
+Layer dropdown mockup:
+  Base
+  Layer 1 (or whatever name assigned)
+ √Layer 2 (Selected layer)
+  More Layers
+  ---
+  Add new layer
+  --- (hide if base is selected)
+  Reset Layer 2 (hide if base is selected)
+  Remove Layer 2 (hide if base is selected)
+  Rename Layer 2 (hide if base is selected)
+
+
+Buttons:
+  [R] is renameLayer button (new rename.png required)
+  [M] is the maskMenuBtn
+  [E] is the preview button
+  [-] remove selected layer
+  [+] Add a new layer (open dialog to enter name, defaulting to layer n)
+
+Automatically show when Base is selected:
+ >[Base                            ]
+   Demosaic   (copy from CoreHeader into top of DevelopProperties tree)
+   Denoise    (copy from CoreHeader into top of DevelopProperties tree)
+
+ >[Layer 1                         ]
+   > first mask (create as row in DevelopProperties tree)
+   > ...
+   > ...
+
+Review and summarize to make sure we are in agreement before making any changes.
+
+I think you were right about too many buttons on the LayerHeader.  Get rid of
+Rename, Reset, +, -, addMask buttons and add [?] button.  Replace with a context
+menu that includes the removed button actions.
+
+OpenCV DNN is the ONNX runtime here (not onnxruntime), which constrains model choice.
+
+hasSensorDecoder
+
+Mode: View / Develop
+Raw: Sensor / Preview
+
+Add two buttons to the Develop Panel title bar: "Raw" and "Rendered".  When the selected image is not a raw format then disable "Raw"
+ and Select "Rendered".  This is to give the user the choice to edit the raw version or the embedded preview when it is a raw format.
+ When the user selects "Raw" then run the raw decoder, otherwise run the rendered decoder (ie JPG or HEIC etc). Also, add Raw or Rendered
+ to the JSON edit data saved to the xmp sidecar.
+
+Create a 16 px button (developBtn) with 3 thick horizontal lines (red, green, blue).
+
+If the file type is a raw file, in the develop panel, under the layer selection row, add
+another row to choose whether to edit the raw data or the embedded preview:
+|---------------------------------------------------|
+|>Layer[Layer dropdown                 ]         [E]|
+|---------------------------------------------------|
+|Edit:          • Raw    • Embedded Preview         |
+|  Demosaic                                         |
+|  Denoise raw                                      |
+
+The checkboxes (•) are A/B.  They need to be synced with useRawBtn in the status bar.
+
+If Edit Raw is selected then show the Demosaic and Denoise rows. Note Demosaic and
+Denoise are offset approximately 2 characters. They should align with "Temp" in the Basic
+section.
+
+brew install onnxruntime
+python export_nafnet.py
+configure -DWINNOW_ENABLE_ORT=ON
+
+JDNDM & SGNet (Self-Guidance Network), BJDD (Blind Joint Demosaicing and Denoising) and
+Unified-Demosaicing (Samsung Labs)
+
+Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.67 chrAmt=1.00  luma 11ms  chroma 32ms
+Develop::Denoise [TEST] 8640x5760 (49.8 MP) lumAmt=0.67 chrAmt=1.00  luma 58ms  chroma 159ms
+Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.00 chrAmt=1.00  luma 0ms  chroma 30ms
+Develop::Denoise [TEST] 8640x5760 (49.8 MP) lumAmt=0.00 chrAmt=1.00  luma 0ms  chroma 145ms
+Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.00 chrAmt=0.97  luma 0ms  chroma 31ms
+Develop::Denoise [TEST] 8640x5760 (49.8 MP) lumAmt=0.00 chrAmt=0.97  luma 0ms  chroma 168ms
+Develop::Denoise [TEST] 1363x909 (1.2 MP) lumAmt=0.00 chrAmt=0.07  luma 0ms  chroma 7ms
+
+- Build/run
+- Select /Users/roryhill/Pictures/_test/2004-09-24_0098_Mountain Sheep.jpg in Preview Mode.
+- Zoom to 100%
+- Switch to Develop Mode (Demosaic = Apple, Edit = Raw)
+- No change from the embedded preview from Preview Mode
+- Select Edit = Embedded Preview (no change)
+- Select Edit = Raw (Apple demosaic runs and image updates)
+Conclusion: Apple demosaic is not triggered initially when change to Develop Mode
+
+
+Take a look at the design of progress.h/cpp.  Can you modify it so a progress bar can be
+added at runtime, but still retain the ImageCache custom behavior?  There are currently
+update and clear custom functions for each progress bar, where there should only be one
+except for the Image Cache exception.  Also, note that I started to add the Raw Denoise
+progress row, but did not add separate clear and update functions pending this review.
+
+Export
+Crop (Expand generative fill)
+Remove/replace masked area
+Presets
+Color profiles
+Color mixer
+
+------------------------------
+Regenerative fill:
+
+See https://gemini.google.com/app/7a2267e405881f53 for how to use LaMa on MacOS.
+
+Every existing Develop edit is parametric — a slider value re-applied cheaply on each
+render tick. Regen fill is not: it synthesizes pixels via a ~100–500 ms inference pass
+you can't run per-tick. So it must follow the ObjectMask pattern, not the slider pattern:
+
+- User defines a region → on commit (stroke-end / button press), run LaMa once on the tile.
+
+- Cache the synthesized RGB patch as a path-registered FillRef (a direct analogue of
+ObjectMask::ObjectRef — same putRef/getRef/mutex store, but carrying an RGB patch + its
+mask instead of a coverage alpha).
+
+- The render just composites the cached patch within the mask (feathered). No inference
+on the render thread.
+
+This makes fill a new layer kind in StackRenderJob: instead of EditParams applied through
+a mask, a Fill layer substitutes its FillRef patch inside the mask. LaMa is
+deterministic, so the cached patch is stable and re-renders reproduce exactly.
+
+Pipeline order (the one real tradeoff): fill should composite last — after adjustments
+and geometry, on the near-final oriented image. Reason: LaMa synthesizes from the current
+surroundings, so filling against the already-adjusted, already-warped image makes the
+result self-consistent by construction, and it's the only way the expand-crop case works
+(the empty region only exists after geometry). The cost: if the user later cranks
+exposure, the baked patch won't track it. I'd bake at commit and offer a debounced
+auto-regenerate when surroundings change materially (reuse the existing
+debounceWriteTimer idiom) — this is exactly how Lightroom/Photoshop behave.
+
+The three use cases → three discoverable entry points, one engine
+
+Per the discoverability goal, I'd not bury this in the "Add mask" menu — a user removing
+a tourist doesn't think "mask." Make it a first-class, labeled tool:
+
+1. Spot / small brushed fill — a labeled "Heal / Fill" brush tool
+
+- Visible entry in the Develop dock with a healing-brush icon + tooltip ("Remove spots
+and small objects"). If it becomes a dock tab, it needs the 16×16 white glyph
+registration from the [dock-tab-graphics rule](every tabbable dock).
+
+- Reuses the existing brush infrastructure wholesale — maskBrush* buffers,
+size/flow/feather, [ ] keys, two-finger size, Alt-erase. Those modifiers stay as
+accelerators on top of the visible tool, not the only way in.
+
+- Fill fires on stroke-end; the brushed region → LaMa tile → FillRef.
+
+2. Object removal — reuse the region selectors, add a prominent action
+
+- The mask tools you already have (Object/SAM, Subject, Brush) are the region selector.
+So: on a Fill layer, once a mask exists, surface a prominent on-canvas "Remove" / "Fill"
+button floating near the selection (discovered where the work is), plus the same action
+in the panel.
+
+- This reuses maskEditBegin/End, the perimeter-paint fillEnclosed closure, and SegRefine
+matting untouched — you're just adding a "now synthesize the masked region" action after
+the mask is defined.
+
+3. Expand fill for crops — a contextual button in the Transform panel
+
+- This mask is free and exact: after crop/straighten/warp, you already know
+deterministically which output pixels have no source. No brushing, no segmentation.
+
+- Discoverability done right: a "Fill edges" toggle/button that appears in the Transform
+panel only when the geometry exposes empty pixels — surfaced at the exact moment it's
+relevant — plus an on-canvas hint over the empty wedges. The out-of-bounds region becomes
+the fill mask directly.
+
+What you reuse vs. build
+
+┌──────────────────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────┐
+│                   Reuse as-is                    │                                  Build new                                  │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ ORT/ANE inference layer (PMRID's exact path)     │ LaMa ONNX export + session wiring                                           │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ Brush buffers, size/flow/feather, [ ], Alt-erase │ FillRef store (RGB patch, ObjectRef-cloned)                                 │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ Mask tools + maskEditBegin/End handshake         │ Fill layer kind in StackRenderJob + composite                               │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ SegRefine, fillEnclosed closure                  │ Tile extraction: scene-linear→sRGB8, run, back to linear, feather composite │
+├──────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ debounceWriteTimer, EditStack persistence        │ Transform "Fill edges" contextual affordance                                │
+└──────────────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────┘
+
+The whole thing is one LaMa session + three mask-builders + one composite-back, mirroring
+how ObjectMask already bridges the ImageView preview and the render.
+
+Open decisions for you
+
+1. Layer model: dedicated "Fill" layer kind, or a "Fill" action available on any existing
+non-Base mask layer? I lean toward a dedicated Fill layer — clearer in the layer
+dropdown, and its "no adjustment sliders, just a synthesized patch" nature is visibly
+distinct.
+
+2. Naming: "Heal", "Remove", "Generative Fill", or "Fill"? Affects the icon/tooltip and
+how discoverable the intent is. ("Remove" reads most honestly given it's LaMa, not
+prompt-driven generation.)
+
+3. Model: LaMa vs MI-GAN — still worth the quick prototype bake-off on your real
+straighten wedges before wiring, since case 3 is their weakest mode.
+
+
+Want me to (a) turn this into a task list and start the FillRef + Fill-layer scaffolding, or (b) do the LaMa-vs-MI-GAN export/quality bake-off first? I'd recommend (b) — it de-risks the model choice before any UI is committed.
+
+How to get (k, b):
+First: use DNG tag 51041
+Second: use IsoKB tables (A7R5, A1M2) + append tables with Bill Claff results
+Third: use blind per-image estimation
+
+Single source of truth for the tint color
+
+ImageView::maskTintColor() — Views/imageview.cpp:769
+return (maskOp == 1) ? QColor(40,110,230)   // Subtract = blue
+                     : QColor(220,40,40);   // Add = red
+This drives every per-tool preview (brush, range, subject, sky, depth) — they all start with const QColor base = maskTintColor();. Change it here and all individual tools update.
+
+⚠️ Gotcha: the whole-layer composite tint does not call maskTintColor(). Its color is hard-coded separately in Main/mainwindow.cpp:6104 (qRgba(220*a/255, 40*a/255, 40*a/255, a)). So a color change needs editing both places.
+
+---
+A. Turn the overlay on/off
+
+┌───────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                      Concern                      │                                            file:function                                             │
+├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ "M" toggle (hides both whole-layer + per-tool)    │ ImageView::toggleMaskTint() — Views/imageview.cpp:724 (flips maskTintHidden)                         │
+├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Force-hide (slider changed)                       │ ImageView::hideMaskTint() — Views/imageview.cpp:734                                                  │
+├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ The gate that reads the flag & dispatches drawing │ ImageView::drawForeground() — Views/imageview.cpp:1356–1380 (showTint, haveComposite, per-tool tint) │
+├───────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ "M" action wiring / shortcut                      │ MW::… toggleMaskOverlayAction — Main/menusandactions.cpp:1459                                        │
+└───────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+B. Whole-layer mask (the composite of all Add/Subtract tools)
+
+┌─────────────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│             Concern             │                                                       file:function                                                       │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Build + push the composite tint │ MW::updateMaskOverlayTint() — Main/mainwindow.cpp:~6051–6108 (color at 6104, full-coverage alpha maxA=150 at 6098)        │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Receive / show it               │ ImageView::setLayerMaskTint() — Views/imageview.cpp:709                                                                   │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Clear it                        │ ImageView::clearLayerMaskTint() — Views/imageview.cpp:717                                                                 │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Paint it                        │ drawForeground() haveComposite block — imageview.cpp:1357–1367                                                            │
+├─────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Is the overlay active at all?   │ DevelopProperties::maskOverlayActive() — Develop/Properties/developproperties.cpp:810 (gates whether MW builds vs clears) │
+└─────────────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+C. Individual layer mask tools (per-tool preview)
+
+Color comes from maskTintColor() (above); full-coverage alpha is 150/255 (e.g. imageview.cpp:1902). Draw/build functions:
+
+┌──────────────────────────┬────────────────────────────────────────────────────────────────────┬─────────────────────────────────────┐
+│           Tool           │                               build                                │                draw                 │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Linear                   │ —                                                                  │ drawLinearMask() imageview.cpp:1422 │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Radial                   │ —                                                                  │ drawRadialMask() 1497               │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Brush                    │ brushRebuildPreview() 1617                                         │ drawBrushMask() 1815                │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Object (SAM)             │ objRebuildPreview() 1776                                           │ drawObjectMask() 1383               │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Range (Lum/Color)        │ buildRangePreview() 1870                                           │ drawRangeMask() 2074                │
+├──────────────────────────┼────────────────────────────────────────────────────────────────────┼─────────────────────────────────────┤
+│ Subject / Sky / Depth AI │ buildSubjectPreview() 1930, buildSkyPreview(), buildDepthPreview() │ shares drawRangeMask()              │
+└──────────────────────────┴────────────────────────────────────────────────────────────────────┴─────────────────────────────────────┘
+
+---
+Quick recipe:
+- Change tint color: edit maskTintColor() (imageview.cpp:769) and the qRgba(...) at mainwindow.cpp:6104.
+- Change tint strength: maxA (mainwindow.cpp:6098) + the 150.0/255.0 per-tool constants in the build*Preview functions.
+- On/off behavior: toggleMaskTint()/hideMaskTint() + the showTint gate in drawForeground().
+
+Want me to unify the two color sites so maskTintColor() is the only place, and hoist the alpha constant to one named value?
+
+
+
+I want to change the Develop Mode layers dropdown to only include the Layer names, and
+move the rest of the dropdown items: Add new layer, space, Reset X, Remove X, Rename X
+(where X is the current layer name) to a separate menu that is triggered by
+layerMenuBtn similar to how embelproperties effectNewBtn triggers EmbelProperties::effectContextMenu.
+
+Spot fill quality issue.
+- The likely better fix for noisy images is an exemplar/PatchMatch inpaint that copies real neighboring pixels (so the fill carries the actual grain), or heal-denoised-then-reinject-matched-noise, rather than a synthesis GAN.
+- If keeping MI-GAN, post-match the patch's noise statistics to the surroundings so it stops reading as a smooth smudge.
+- Exposure tracking is a separate decision — the post-develop heal is the higher-quality path; confirm with the [SpotProbe] whether it already tracks before redoing the upstream refactor.
+
+Spot fill next steps: Create a Replace Panel to host filling.
+
+Replace (triggered by clicking current spot fill button) opens a Replace panel similar to the
+Crop panel:
+
+|---------------------------------------------------|
+| Fill Replace                                [?][E]|
+|---------------------------------------------------|
+| • (S)pot                                          |
+| • (F)ill                                          |
+| • (O)bject                                        |
+|---------------------------------------------------|
+
+where:
+() = shortcut.  Replace () with shortcut character in bold color G::header2Color.
+[?] = questionFillBtn
+[E] = previewBtn
+Shortcut F toggles Replace panel show/hide
+
+Clone:  Default to clone spot fill, fall back to LaMa as the fallback for holes that have
+no clean source neighborhood.  Just a spot - no dragging.
+
+Fill: User drags brush to paint the fill area. Replace with clone fill, fallback to LaMa as the fallback for holes that have
+no clean source neighborhood.
+
+Object: Object select using brush drag, then LaMa regenerative fill.
+
+
+
+We need to isolate Develop Mode shortcuts from Preview Mode shortcuts:
+D       Develop toggle
+R       Crop toggle
+N       New Layer
+M       New Mask
+S       Spot tool
+X       Export
+H       Histogram/Vectorscope toggle
+
+Develop Presets like lightroom:
+
+Create a Save Preset dialog: contains a scrollable checklist of all settable items in the
+develop module to be included in the preset: crop, level, warp, raw noise reduction (lum,
+color), spots, histogram tone settings (one checkbox for the 3 settings), each layer
+(all basic, color and effects). Include Select all, Select none, Cancel and Save buttons.
+
+I want to review the list of checkable settings.
+
+Save the preset checked items in settings in a group heirarchy:
+    Develop Presets
+        Preset 1 name
+            Global
+                crop : value (if set)
+                level : value (if set)
+                ...
+            Base layer
+                all non-default settings checked
+            Layer 1
+                all non-default settings checked
+            ...
+
+Dialog Mockup:
+|--------------------------------------|
+|        Create Develop Preset         |
+|--------------------------------------|
+| Preset name: [lineedit             ] |
+|                                      |
+| > Global settings                    |
+|   [ ] Raw noise reduction            |
+|   [ ] Histogram tonal ranges         |
+|   [ ] Crop                           |
+|   [ ] Level                          |
+|   [ ] Warp                           |
+|                                      |
+| > [ ] Base layer                     |
+|       [ ] Temp                       |
+|       [ ] Tint                       |
+|       [ ] ...                        |
+|                                      |
+| > [ ] Layer 1                        |
+|       [ ] Temp                       |
+|       [ ] Tint                       |
+|       [ ] ...                        |
+|                                      |
+| Select all  Select none  Cancel Save |
+|--------------------------------------|
+
+where > means subitems can be collaped/expanded.
+
+Shortcut: Shift-Cmd-N in develop mode only
+Add to context menus that also include solo mode in the develop panel
+
+In Preview Mode, when imageView is visible (loupe), a mouse click toggles the zoom and a
+mouse drag pans the imageview if zoom > fit. In Develop Mode, the mouse is used as a
+brush or a grab for mask tools, but we still need to zoom and pan. Can you add use
+alt/opt to change to the zoom/pan behavior as well. When alt/opt is released, the mouse
+must return to its prior state. For example, if the user was brushing a mask, and
+switched to zoom/pan by pressing alt/opt, when they released alt/opt then they should
+return to brushing the mask.
+
+In develop panel, demosaic section, between demosaic row and denoise lum row, add another row:
+[ ] auto run denoise         [Run Denoise]
+where
+[ ] = checkbox
+[Run Denoise] = a push button.
+When auto run denoise is on then execute the raw denoise same as is currently being done.
+When auto run denoise is off, execute the raw denoise when [Run Denoise] is clicked.
+
+Change [Run Denoise] button to a checkbox and change layout to:
+[ ] Denoise         [ ] Auto run
+
+aligned with Demosaic from row above in base layer panel.
+
+When '[ ] Denoise' is checked, run denoise.  When denoising completes, change '[ ] Denoise'
+to '[ ] Denoised.
+
+
+In Preview Mode, if zoomed more than fit, then the zoom box is shown in the thumbView
+thumbnail cursor. If another thumbView icon is selected, then the imageView is zoomed and
+panned to show the same area. This behavior should be replicated in Develop Mode. When a
+new image is selected in Develop Mode, after demosaic, the same zoom and pan must be
+executed.
+
+In a new Color Mix panel I want to combine the Lightroom Color mixer and Color grading
+controls in a minamilist layout.  I'm thinking of something like this, but I am looking f
+or your input:
+
+|--------------------------------------|
+| Color Tweaking                       |
+|--------------------------------------|
+| []Dark   []Mid    []Light            |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|           Color Wheel                |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+| Luminance  [ slider            ]     |
+
+where [] = checkbox (check all three to adjust entire range
+
+Can we integrate the Lightroom color mixer into this?  Does it give us different
+functionality.
+
+
+Alternate approach to layers and masks:
+
+Append layers with a checkbox, name and dropmenu.  When a new layer is created, select the
+initial mask tool from the mask tool list (add vs subtract not required).  The initial mask
+is created and shown with a red tint.  When mask is called again, select a new mask tool,
+define the mask (with a blue tint) and then either add, subtract or intersect with the
+existing layer mask to update the layer mask.  Do not save the blue tinted mask.  Repeat to
+keep building the layer mask.
+
+|--------------------------------------|
+| Layers                            [v]|
+|--------------------------------------|
+| Base                                 |
+| []Layer 1                         [v]|
+| []Layer 2                         [v]|
+
+where [v] = contextMenu.png.  /Users/roryhill/Projects/Winnow64/images/down-arrow1.png
+Change color  to G::selectionColor on a 16 pixel background and call it contextMenu.png.
+[] = checkbox (hide/show layer effect)
+
+When a mask is required, open a panel above layers to edit the mask.
+|--------------------------------------|
+| Mask                              [v]|
+|--------------------------------------|
+| Mask title                           |
+| Existing mask stuff                  |
+|                                      |
+| [Add]  [Subtract]  [Intersect]       |
+|--------------------------------------|
+Close the Mask panel after Add, Subtract, Intersect or Esc.
+
+Move the contents of the Base layer to a separate panel above Layers:
+|--------------------------------------|
+| Raw                               [?]|
+|--------------------------------------|
+| Prev base layer rows                 |
+|                                      |
+|--------------------------------------|
+
+Only show Raaw panel when one or more of the selected files is a raw file.
+
+/Users/roryhill/Projects/Winnow64/images/contextMenu.png
+/Users/roryhill/Projects/Winnow64/images/icon16/questionmark.png
+
+Change how the layer masks work.
+
+In the layer dropdown menu
+replace "Add mask to layer" with three menu options:
+- "Add to layername mask"
+- "Subtract from layername mask"
+- "Intersect layername mask"
+
+Next present mask tool options (same as present).
+
+Show mask tool in mask panel.  In the mask panel replace Add, Subtract and Intersect with
+Done button.
+
+All mask tools use the same mask tint (currently red).
+
+In develop, I have changed the LayersHeader text from 'Layers' to 'Scope'.  Change the
+Base Layer text description from 'Base' to 'Global'.
+
+Create a new dock called 'History' that is shown next to the Develop dock.  The History
+dock should be patterned after the Lightroom develop history function, listing each
+develop action, and allow the user to return to any previous history action, the same as
+lightroom.  The History dock should open/show and close/hide in conjunction with the
+Develop dock.  The develop actions are already recorded to the sidecar file, so History
+should use or sync with the sidecar file.  When the mouse hovers over a history item, the
+imageView should match that point in the action history.  Each History action item should
+show the action item description and value (where relevent).  For example:
+    Global: Exposure                    +5
+    Subject Mask: Hue                  -18
+
+
+
+
+
+If in Develop mode when close Winnow, when reopen, the Develop panel is not visible (correct behavior), but the History panel is visible
+  and disabled (wrong behavior).  Winnow opens in Preview mode, so the History panel should be hidden.
+
+

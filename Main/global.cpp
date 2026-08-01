@@ -47,10 +47,10 @@ bool isRory = false;
 QWaitCondition waitCondition;
 QMutex gMutex;
 
-QThread* guiThread;;            // use to check
+QThread* guiThread;;                    // use to check
 
 // flow
-bool isInitializing = true;            // flag program starting / initializing
+bool isInitializing = true;             // flag program starting / initializing
 std::atomic<bool> stop{false};
 std::atomic<bool> removingFolderFromDM{false};
 std::atomic<bool> removingRowsFromDM{false};
@@ -79,6 +79,19 @@ bool useInfoView = true;
 bool useDWCollapse = false;         // master switch for dock collapse/expand/solo mode
 bool useDockTitleGraphic = true;    // master switch: show a graphic instead of text on dock tabs (TEST: on for folders tab)
 bool useMultimedia = true;
+bool useLamaSpotFill = true;        // TEST: spot heals with LaMa (GPU); false -> MI-GAN
+/* Fill/Object replace modes SHELVED 2026-07-17 (Winnow scope = spot cleanup only; see
+   Documentation.txt "WHAT WAS TRIED"). The ReplacePanel + engines are kept; this flag
+   re-enables the panel and the Fill/Object modes if the feature is revisited. */
+bool useReplaceFillModes = false;
+/* Develop dock Scope header: true swaps the experimental ScopeHeaderLab in for the
+   shipping ScopeHeader (both satisfy ScopeHeaderBase). Scratch flag for reshaping the
+   Scope section; retire it once the lab design is copied back over scopeheader.*. */
+bool useScopeHeaderLab = true;
+/* Model-path heal correction (Object fills + clone fallbacks; clone heals need none).
+   Poisson default: keeps the model's content with the level solved from the boundary. */
+int  spotFillCorrectMode = 1;       // A/B: 0 none 1 Poisson 2 low-freq 3 harmonic
+bool spotFillGrain = true;          // add surround-matched grain to the heal (N toggles)
 bool useUpdateStatus = true;
 bool useFilterView = true;          // not finished
 bool useProcessEvents = false;
@@ -93,8 +106,7 @@ int displayVirtualVerticalPixels;   // current monitor
 qreal actDevicePixelRatio;          // current monitor
 qreal sysDevicePixelRatio;          // current monitor
 
-// Mac = Trash PC = recycle bin
-QString trash;
+QString trash;                      // Mac = Trash PC = recycle bin
 
 // application parameters
 QString strFontSize;                // app font point size
@@ -117,8 +129,32 @@ QColor pushButtonBackgroundColor;   // define after app stylesheet defined
 QColor scrollBarHandleBackgroundColor; // = QColor(20,30,20);
 QColor helpColor = QColor(37,65,40);
 QColor appleBlue = QColor(21,113,211);      // #1571D3
-QColor selectionColor = QColor(68,95,118);
+QColor selectionColor = QColor(68,95,118);  // #445f76
 QColor mouseOverColor = QColor(40,54,66);
+QString lightgray = "#aaaaaa";
+QString darkgray = "#111111";
+QString lightpurple = "#5f496e";
+QString darkpurple = "#3d0066";
+QString lightblue = "#1f4e85";
+QString darkblue = "#0a1633";
+QString lightyellow = "#857a1f";
+QString darkyellow = "#1a1800";
+QString lightorange = "#854a1f";
+QString darkorange = "#1a0d00";
+QString lightred = "#850000";
+QString darkred = "#110000";
+QString lightcyan = "#1f8585";
+QString darkcyan = "#001a1a";
+QString lightgreen = "#1f851f";
+QString darkgreen = "#001a00";
+QString lightteal = "#1f8567";
+QString darkteal = "#00261c";
+QString lightmaroon = "#5e1a1a";
+QString darkmaroon = "#1a0000";
+QString lightpink = "#854963";
+QString darkpink = "#3d0022";
+QString lightmagenta = "#850085";
+QString darkmagenta = "#1a001a";
 
 QString css;                        // app stylesheet;
 
@@ -157,41 +193,6 @@ std::atomic<quint64> availableMemoryMB{0};
 int winnowMemoryBeforeCacheMB;
 int metaCacheMB;
 
-// memory overrun guardrail
-quint64 memoryAbortMB = 6000;
-std::atomic<bool> memoryOverrunFlag{false};
-
-quint64 processFootprintMB()
-{
-#ifdef Q_OS_MAC
-    task_vm_info_data_t info{};
-    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
-    if (task_info(mach_task_self(), TASK_VM_INFO,
-                  reinterpret_cast<task_info_t>(&info), &count) == KERN_SUCCESS) {
-        return static_cast<quint64>(info.phys_footprint / (1024ull * 1024ull));
-    }
-    return 0;
-#elif defined(Q_OS_WIN)
-    PROCESS_MEMORY_COUNTERS pmc{};
-    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
-        return static_cast<quint64>(pmc.WorkingSetSize / (1024ull * 1024ull));
-    }
-    return 0;
-#else
-    return 0;
-#endif
-}
-
-quint64 computeMemoryAbortMB(quint64 totalRamMB)
-{
-    if (totalRamMB == 0) return memoryAbortMB;
-    const quint64 reserve  = std::max<quint64>(4096, totalRamMB / 4);
-    const quint64 ceiling  = (totalRamMB * 85) / 100;
-    const quint64 floorMB  = std::min<quint64>(2048, totalRamMB / 2);
-    const quint64 candidate = (totalRamMB > reserve) ? totalRamMB - reserve : floorMB;
-    return std::clamp(candidate, floorMB, ceiling);
-}
-
 // view
 QString mode;                       // In MW: Loupe, Grid, Table or Compare
 QString fileSelectionChangeSource;  // GridMouseClick, ThumbMouseClick, TableMouseClick
@@ -207,9 +208,17 @@ bool   showCacheProgress = true;        // single gate for ImageCache + MetaRead
 std::atomic<qint64> imageCacheHeadroomMB{0};  // image cache's remaining intended claim (MB)
 int iconPressureTestLevel = -1;         // -1 real; 0 normal+recovered; 1 warn; 2 critical; 3 normal-not-recovered
 bool useVisibleOnlyIconEmit = true;     // setIcon1/setValDm notify views only for visible rows (set false for prior behavior)
+
+// Mode (Preview / Develop)
+OperationMode operationMode = OperationMode::Preview;   // start in fast-review Preview mode
+
 bool useBatchedFolderInsert = true;    // batched per-folder insert (one rowsInserted + one dataChanged); cuts Phase-1 insert ~34%. Z-A reorder fixed: dynamic sort disabled during load, restored once at end (see DataModel::scheduleProcessing / restoreProxySortAfterLoad)
 bool isPerfProbe = false;               // emit [PERF] Phase 1/2 load timing lines (A/B load-pipeline changes); off in production
 bool throttleFolderLoadMsg = true;     // throttle addFolder progress message to ~50ms (per-folder centralMsg repaint cost ~1.3s/1333 folders)
+// DecodeRawEngine decodeRawEngine = DecodeRawEngine::winnowDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
+DecodeRawEngine decodeRawEngine = DecodeRawEngine::appleDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
+bool isReportDevelopTime = false;       // log per-stage Develop re-render timings on slider drag (latency probe; off in production)
+bool isDevelopDebounceWrite = true;     // also flush per-image develop settings to sidecar a short time after edits settle
 std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)
 
 // status
@@ -267,6 +276,41 @@ QElapsedTimer t;
 bool isTimer;
 bool isTest;
 bool isStressTest;
+
+// memory overrun guardrail
+quint64 memoryAbortMB = 6000;
+std::atomic<bool> memoryOverrunFlag{false};
+
+quint64 processFootprintMB()
+{
+#ifdef Q_OS_MAC
+    task_vm_info_data_t info{};
+    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+    if (task_info(mach_task_self(), TASK_VM_INFO,
+                  reinterpret_cast<task_info_t>(&info), &count) == KERN_SUCCESS) {
+        return static_cast<quint64>(info.phys_footprint / (1024ull * 1024ull));
+    }
+    return 0;
+#elif defined(Q_OS_WIN)
+    PROCESS_MEMORY_COUNTERS pmc{};
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        return static_cast<quint64>(pmc.WorkingSetSize / (1024ull * 1024ull));
+    }
+    return 0;
+#else
+    return 0;
+#endif
+}
+
+quint64 computeMemoryAbortMB(quint64 totalRamMB)
+{
+    if (totalRamMB == 0) return memoryAbortMB;
+    const quint64 reserve  = std::max<quint64>(4096, totalRamMB / 4);
+    const quint64 ceiling  = (totalRamMB * 85) / 100;
+    const quint64 floorMB  = std::min<quint64>(2048, totalRamMB / 2);
+    const quint64 candidate = (totalRamMB > reserve) ? totalRamMB - reserve : floorMB;
+    return std::clamp(candidate, floorMB, ceiling);
+}
 
 QString s(QVariant x)
 // helper function to convert variable values to a string for reporting

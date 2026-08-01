@@ -4,6 +4,7 @@
 #include "Develop/develop.h"
 #include "Develop/inputtransform.h"
 #include "Develop/outputtransform.h"
+#include "Develop/workingimagecache.h"
 #include <memory>
 
 #ifdef Q_OS_MAC
@@ -292,25 +293,66 @@ bool ImageDecoder::load()
     developApplied = false;  // reset per decode; the RAW path sets it when it develops
 
     /*
-        FULL-SENSOR RAW DECODE.
-        RawFormat::Create() returns nullptr for formats with no sensor decoder yet, so those
-        RAW files fall through to the embedded-JPG path below unchanged. When a decoder exists
-        this is the call site that produces a demosaiced image. The decode needs the raw-sensor
-        fields (RawSensorInfo): in independent mode indMeta already carries them; in cache mode
-        we fetch them from the DataModel's per-file store (populated during the metadata read)
-        via the lock-guarded getter -- cheaper and thread-safer than rebuilding the whole
+        FULL-SENSOR RAW DECODE. RawFormat::Create() returns nullptr for formats with no
+        sensor decoder yet, so those RAW files fall through to the embedded-JPG path
+        below unchanged. When a decoder exists this is the call site that produces a
+        demosaiced image. The decode needs the raw-sensor fields (RawSensorInfo): in
+        independent mode indMeta already carries them; in cache mode we fetch them from
+        the DataModel's per-file store (populated during the metadata read) via the
+        lock-guarded getter -- cheaper and thread-safer than rebuilding the whole
         ImageMetadata, since UnpackCfa only consults rawInfo.
     */
-    if (G::useRaw) {
+    if (G::operationMode == G::OperationMode::Develop && G::useRaw) {
         if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
+            /* Reuse an already-decoded clean base (e.g. one MW::ensureRawDenoise
+               published on select) instead of repeating the costly
+               UnpackCfa+Demosaic+RawColor: transform it straight to the display image.
+               This removes the redundant second decode when the develop denoise path has
+               run first. Skipped when nothing scene-linear is cached. */
+            if (auto cached = WorkingImageCache::instance().get(fPath);
+                cached && cached->sceneReferred && !abort.loadAcquire()) {
+                OutputTransform output;
+                if (output.ToImage(*cached, image)) {
+                    decoderToUse = Raw;
+                    developApplied = true;
+                    imFile.close();
+                    status = Status::Success;
+                    emit setValSf(sfRow, G::RawRenderColumn, true, instance,
+                                  "ImageDecoder::load", Qt::EditRole,
+                                  int(Qt::AlignRight | Qt::AlignVCenter));
+                    return true;
+                }
+            }
             ImageMetadata rawMeta;
             if (isIndependent) rawMeta = indMeta;
-            else dm->fPathRawInfoGet(fPath, rawMeta.rawInfo);
-            if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort)) {
+            else {
+                dm->fPathRawInfoGet(fPath, rawMeta.rawInfo);
+                rawMeta.ISONum = dm->sf->index(sfRow, G::ISOColumn).data().toInt();  // "Denoise raw" conditioning
+                rawMeta.model  = dm->sf->index(sfRow, G::CameraModelColumn).data().toString();  // PMRID calibration
+            }
+            std::shared_ptr<const WorkingImage> work;
+            /* Demosaic progress: a cache-mode decode reports per tile via the
+               demosaicProgress signal (ImageCache relays it to MW); the independent path
+               (ensureDevelopWork) uses its own decodeProgress callback. */
+            std::function<void(int, int)> demProg = decodeProgress;
+            if (!isIndependent) {
+                const int row = sfRow;
+                const QString fp = fPath;
+                demProg = [this, row, fp](int d, int t){ emit demosaicProgress(row, fp, d, t); };
+            }
+            if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort, &work,
+                                  false, demProg)) {
                 decoderToUse = Raw;
                 developApplied = true;   // RAW develops internally; skip the generic pass
+                /* Cache the pre-develop WorkingImage so a later edit re-renders without
+                   re-decoding/re-demosaicing (UnpackCfa+Demosaic+RawColor is the costly part;
+                   Develop+OutputTransform that follow are cheap). */
+                WorkingImageCache::instance().put(fPath, work);
                 imFile.close();
                 status = Status::Success;
+                emit setValSf(sfRow, G::RawRenderColumn, true, instance,
+                              "ImageDecoder::load", Qt::EditRole,
+                              int(Qt::AlignRight | Qt::AlignVCenter));
                 return true;
             }
             /* Aborted mid-decode (shutdown / navigation): bail now rather than wasting
@@ -687,17 +729,26 @@ void ImageDecoder::applyDevelop()
     hot browsing path untouched: an unedited image never round-trips through the float buffer.
 */
     if (isLog || G::isLogger) G::log("ImageDecoder::applyDevelop", "sfRow = " + QString::number(sfRow));
+    /* Preview mode shows the as-shot image WITHOUT the saved develop recipe (fast review). Only the
+       browse/loupe decode is gated on mode; independent decodes (focus stack) still develop. */
+    if (!isIndependent && G::operationMode != G::OperationMode::Develop) return;
     if (developApplied || editParams.isIdentity() || image.isNull()) return;
 
-    InputTransform input;
-    WorkingImage work;
-    if (!input.FromImage(image, work)) return;
+    /* Reuse the pre-develop WorkingImage if a prior decode cached it (skips InputTransform);
+       otherwise build it once from the decoded QImage and cache it for next time. The cached
+       image is scene-LINEAR (post-InputTransform), matching what the RAW path stores. */
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) {
+        auto built = std::make_shared<WorkingImage>();
+        InputTransform input;
+        if (!input.FromImage(image, *built)) return;
+        WorkingImageCache::instance().put(fPath, built);
+        work = built;
+    }
 
-    Develop develop;
-    develop.Apply(work, editParams);
-
-    OutputTransform output;
-    output.ToImage(work, image);
+    /* Re-render through Develop + OutputTransform. render() copies the cached image (Develop
+       mutates in place) and leaves the cache entry pristine for the next slider value. */
+    WorkingImageCache::render(*work, editParams, image);
 }
 
 void ImageDecoder::colorManage()
@@ -724,7 +775,8 @@ void ImageDecoder::colorManage()
     ICC::transform(iccBuf, image);
 }
 
-bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m)
+bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m,
+                                     const std::function<void(int, int)> &progress)
 {
 /*
     This function is called externally, does not require the DataModel and does not
@@ -746,6 +798,7 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
     indMeta = m;
     fPath = m.fPath;
     sfRow = -1;
+    decodeProgress = progress;      // forwarded to the RAW demosaic by load()
 
     if (load()) {
         if (metadata->rotateFormats.contains(ext)) rotate();
@@ -756,4 +809,32 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
     }
     qDebug() << "ImageDecoder::decode failed" << fPath;
     return false;
+}
+
+std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMetadata &m,
+                                                                   bool denoiseRaw,
+                                                                   const std::function<void(int, int)> &progress,
+                                                                   std::shared_ptr<const WorkingImage> *outClean)
+{
+/*
+    Uncached raw sensor decode -> pre-develop WorkingImage, for the "Denoise raw" base
+    (MW::ensureRawDenoise). denoiseRaw runs PMRID pre-demosaic (in-house/Winnow engine only, see
+    RawFormat::Decode). Consults only the supplied m (fPath + rawInfo + ISONum) so it is safe to
+    call from the develop render pool. Does NOT touch WorkingImageCache.
+*/
+    if (G::isLogger) G::log("  ImageDecoder::decodeRawWorking", m.fPath);
+    const QString ext = QFileInfo(m.fPath).suffix().toLower();
+    std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext);
+    if (!rawFormat) return nullptr;                     // no in-house decoder for this format
+
+    QFile file(m.fPath);
+    if (!file.open(QIODevice::ReadOnly)) return nullptr;
+
+    QImage throwaway;                                    // develop skipped: identity edit
+    const EditParams identity;
+    std::shared_ptr<const WorkingImage> work;
+    const bool ok = rawFormat->Decode(file, m, throwaway, &identity, &abort, &work, denoiseRaw,
+                                      progress, outClean);
+    file.close();
+    return ok ? work : nullptr;
 }

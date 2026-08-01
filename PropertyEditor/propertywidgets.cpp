@@ -1,5 +1,7 @@
 #include "propertywidgets.h"
 #include "Main/global.h"
+#include <cmath>
+#include <algorithm>
 
 /*
 The property editor has four components:
@@ -28,11 +30,17 @@ Slider::Slider(Qt::Orientation orientation, int div, QWidget *parent) : QSlider(
 {
     setOrientation(orientation);
     this->div = div;
+    /* Accept click and Tab focus so the Develop arrow-nudge keys (Left/Right, plus
+       PageUp/PageDown for the larger step) land on this slider. Image navigation is
+       gated on the main window holding focus, so a focused slider keeps the arrows. */
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 void Slider::mousePressEvent(QMouseEvent *event)
 {
     QSlider::mousePressEvent(event);
+    /* Take keyboard focus on click so arrows immediately nudge this slider. */
+    setFocus(Qt::MouseFocusReason);
     int min = minimum();
     int max = maximum();
     int value = event->pos().x() * 1.0 / width() * (max - min) + min;
@@ -49,6 +57,49 @@ void Slider::mousePressEvent(QMouseEvent *event)
              << value
                 ;
                 //*/
+}
+
+void Slider::keyPressEvent(QKeyEvent *event)
+{
+    int s = singleStep() ? singleStep() : 1;
+    int ps = pageStep() ? pageStep() : s * 10;
+    switch (event->key()) {
+    case Qt::Key_Left:
+    case Qt::Key_Down:
+        setValue(value() - s);   event->accept(); return;
+    case Qt::Key_Right:
+    case Qt::Key_Up:
+        setValue(value() + s);   event->accept(); return;
+    case Qt::Key_PageDown:
+        setValue(value() - ps);  event->accept(); return;
+    case Qt::Key_PageUp:
+        setValue(value() + ps);  event->accept(); return;
+    }
+    QSlider::keyPressEvent(event);
+}
+
+/* Repaint the value cell (SliderEditor focus fill) AND the caption cell (delegate tints
+   it the same blue) on focus in/out. The SliderEditor is a persistent editor parented to
+   the view's viewport, so parentWidget()->parentWidget() is that viewport; repainting it
+   lets the delegate re-tint the caption. */
+void Slider::syncFocusRepaint()
+{
+    if (!parentWidget()) return;
+    parentWidget()->update();                              // SliderEditor value-cell cue
+    if (parentWidget()->parentWidget())
+        parentWidget()->parentWidget()->update();          // viewport -> caption tint
+}
+
+void Slider::focusInEvent(QFocusEvent *event)
+{
+    QSlider::focusInEvent(event);
+    syncFocusRepaint();
+}
+
+void Slider::focusOutEvent(QFocusEvent *event)
+{
+    QSlider::focusOutEvent(event);
+    syncFocusRepaint();
 }
 
 /* SLIDER EDITOR *****************************************************************************/
@@ -72,6 +123,14 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     int lineEditWidth = idx.data(UR_FixedWidth).toInt();
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
+    QString sCol = idx.data(UR_Color).toString();
+    QString eCol = idx.data(UR_Color1).toString();
+    // qDebug() << "sCol = " << sCol;
+    if (sCol.isEmpty()) sCol = "red";
+    if (eCol.isEmpty()) eCol = "white";
+    // slider groove background
+    QString bg = QString("background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop: 0.0 %1, stop: 1.0 %2);")
+                     .arg(sCol.trimmed(), eCol.trimmed());
     // divisor if converting integer slider value to double
     div = idx.data(UR_Div).toInt();
     int step = idx.data(UR_DivPx).toInt();
@@ -80,28 +139,42 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     if (div == 0) div = 1;
     source = idx.data(UR_Source).toString();
 
+    /* Log scale: UR_Min/UR_Max are the VALUE range and the slider runs over kLogSteps
+       positions along a logarithmic ramp between them (see the header). */
+    logScale = idx.data(UR_LogScale).toBool() && min > 0 && max > min;
+    logMin = logScale ? std::log(double(min)) : 0.0;
+    logMax = logScale ? std::log(double(max)) : 1.0;
+
     slider = new Slider(Qt::Horizontal, div);
-//    slider = new QSlider(Qt::Horizontal);
     slider->setObjectName("DisableGoActions");  // used in MW::focusChange
-    slider->setMinimum(min);
-    slider->setMaximum(max);
-    slider->setSingleStep(step);
-    slider->setPageStep(step * 10);
+    slider->setMinimum(logScale ? 0 : min);
+    slider->setMaximum(logScale ? kLogSteps : max);
+    if (logScale) {
+        /* One step ~ 0.4% of the value, so an arrow-key nudge is a fine adjustment at
+           any temperature rather than a fixed number of Kelvin. */
+        slider->setSingleStep(1);
+        slider->setPageStep(kLogSteps / 20);
+    } else {
+        slider->setSingleStep(step);
+        slider->setPageStep(step * 10);
+    }
     slider->setStyleSheet(
          "QSlider {"
             "background: transparent;"
             "margin-left:2;"
          "}"
          "QSlider::sub-page:horizontal {"
-            "background:#1571d3;"   // apple blue
+            // "background:#1571d3;"   // apple blue, left side to the slider handle
             "height:3px;"
          "}"
          "QSlider::add-page:horizontal {"
              "background:transparent;"
              "height:3px;"
          "}"
-         "QSlider::groove:horizontal {"
-            "background: #646464;"
+         "QSlider::groove:horizontal {" +
+            bg +
+            // "background:qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 green, stop:1 magenta);"  // not working
+            // "background: #646464;" // gray
             "border:none;"
             "height:3px;"
          "}"
@@ -115,6 +188,21 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
          "QSlider::handle:focus, QSlider::handle:hover{"
             "background:#1571d3;"
          "}"
+         /* Disabled (e.g. Preview operation mode): grey the vivid groove/handle so the whole
+            slider reads as deactivated. The coloured rules above set explicit backgrounds that
+            override the default disabled palette, so :disabled must be spelled out here. */
+         "QSlider::groove:horizontal:disabled {"
+            "background:#4b4b4b;"
+            "border:none;"
+            "height:3px;"
+         "}"
+         "QSlider::sub-page:horizontal:disabled {"
+            "background:#4b4b4b;"
+            "height:3px;"
+         "}"
+         "QSlider::handle:horizontal:disabled {"
+            "background:#5a5a5a;"
+         "}"
     );
     slider->setWindowFlags(Qt::FramelessWindowHint);
     slider->setAttribute(Qt::WA_TranslucentBackground);
@@ -123,7 +211,8 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     lineEdit->setObjectName("DisableGoActions");    // used in MW::focusChange
     lineEdit->setMaximumWidth(lineEditWidth);
     lineEdit->setAlignment(Qt::AlignRight);
-    lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}");
+    lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}"
+                            "QLineEdit:disabled {color:gray;}");   // grey value in Preview mode
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -137,10 +226,29 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
 
+    /* Route focus given to the editor container onto the slider, so clicking or tabbing
+       into the row lets the arrow keys nudge the slider (and paints the focus cue). */
+    setFocusProxy(slider);
+
     outOfRange = false;
-    int sliderValue = static_cast<int>(idx.data(Qt::EditRole).toDouble() * div);
+    const double initial = idx.data(Qt::EditRole).toDouble();
+    int sliderValue = logScale ? posFromValue(initial)
+                               : static_cast<int>(initial * div);
     slider->setValue(sliderValue);
     emit slider->valueChanged(sliderValue);
+}
+
+double SliderEditor::valueFromPos(int pos) const
+{
+    const double f = double(pos) / kLogSteps;
+    return std::exp(logMin + f * (logMax - logMin));
+}
+
+int SliderEditor::posFromValue(double v) const
+{
+    if (v <= 0.0) return 0;
+    const double f = (std::log(v) - logMin) / (logMax - logMin);
+    return std::clamp(static_cast<int>(f * kLogSteps + 0.5), 0, kLogSteps);
 }
 
 double SliderEditor::value()
@@ -152,7 +260,18 @@ double SliderEditor::value()
 void SliderEditor::setValue(QVariant value)
 {
     if (G::isLogger) G::log("SliderEditor::setValue");
-    slider->setValue(value.toInt());
+    slider->setValue(logScale ? posFromValue(value.toDouble()) : value.toInt());
+}
+
+void SliderEditor::focusSlider()
+{
+    if (G::isLogger) G::log("SliderEditor::focusSlider");
+    if (slider) slider->setFocus(Qt::MouseFocusReason);
+}
+
+bool SliderEditor::sliderHasFocus() const
+{
+    return slider && slider->hasFocus();
 }
 
 void SliderEditor::sliderMoved()
@@ -165,6 +284,14 @@ void SliderEditor::change(double value)
 {
     if (G::isLogger) G::log("SliderEditor::change");
     if (outOfRange) return;
+    if (logScale) {
+        /* Round to 10 K: the ramp gives far finer resolution than is meaningful, and an
+           unrounded 5487 K reads as noise next to Lightroom's tidy numbers. */
+        const double v = std::round(valueFromPos(static_cast<int>(value)) / 10.0) * 10.0;
+        lineEdit->setText(QString::number(v, 'f', 0));
+        emit editorValueChanged(this);
+        return;
+    }
     double v = static_cast<double>(value) / div;
     if (isInt) {
         lineEdit->setText(QString::number(v));
@@ -178,6 +305,12 @@ void SliderEditor::change(double value)
 void SliderEditor::updateSliderWhenLineEdited()
 {
     if (G::isLogger) G::log("SliderEditor::updateSliderWhenLineEdited");
+    if (logScale) {
+        /* Typed values are clamped into range rather than allowed out of it: there is no
+           meaningful temperature beyond the ramp's ends. */
+        slider->setValue(posFromValue(lineEdit->text().toDouble()));
+        return;
+    }
     int sliderValue = static_cast<int>(lineEdit->text().toDouble() * div);
     if (sliderValue >= slider->minimum() && sliderValue <= slider->maximum()) {
         outOfRange = false;
@@ -201,11 +334,23 @@ void SliderEditor::fontSizeChanged(int fontSize)
 
 void SliderEditor::paintEvent(QPaintEvent *event)
 {
-    if (outOfRange)
-        setStyleSheet(G::cssError);
-    else
-        setStyleSheet("");      // fall back to the app cascade (G::css)
+    /* Only re-polish when the desired stylesheet actually changes (setStyleSheet is
+       expensive and would otherwise churn on every repaint). */
+    const QString want = outOfRange ? G::cssError : QString();
+    if (styleSheet() != want) setStyleSheet(want);
     QWidget::paintEvent(event);
+
+    /* Focus cue: mark the slider the Develop arrow-nudge keys will act on. The slider and
+       lineEdit are translucent, so the fill drawn here shows around them. The delegate
+       tints the CAPTION cell the same blue (see PropertyDelegate::paint), so the whole
+       selected row reads as one blue band. */
+    if (slider->hasFocus()) {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(0x15, 0x71, 0xd3, 40));   // subtle accent fill
+        p.drawRoundedRect(rect().adjusted(0, 1, -1, -1), 3, 3);
+    }
 }
 
 /* LABEL EDITOR ******************************************************************************/
@@ -230,7 +375,7 @@ LabelEditor::LabelEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
 //                            "border-radius:0px;"
                             "color:" + clr + ";"
                             "}"
-                            "Qlabel:disabled {color:gray}"
+                            "QLabel:disabled {color:gray}"
                             );
     label->setWindowFlags(Qt::FramelessWindowHint);
     label->setAttribute(Qt::WA_TranslucentBackground);
@@ -293,7 +438,7 @@ LineEditor::LineEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent
                                 "margin-left:0px;"
                                 "color:" + clr +";"
                             "}"
-                            "QlineEdit:disabled"
+                            "QLineEdit:disabled"
                             "{"
                                 "color:gray;"
                             "}"
@@ -361,8 +506,7 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     spinBox->setMinimum(min);
     spinBox->setMaximum(max);
     spinBox->setStyleSheet("QSpinBox {background:transparent; border:none;"
-                           "padding:0px; border-radius:0px;}"
-                           "margin-left:-7;"
+                           "padding:0px; border-radius:0px; margin-left:-7;}"
                            "QSpinBox:disabled {color:gray}");
     spinBox->setWindowFlags(Qt::FramelessWindowHint);
     spinBox->setAttribute(Qt::WA_TranslucentBackground);
@@ -542,7 +686,8 @@ CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     source = idx.data(UR_Source).toString();
     checkBox = new QCheckBox(parent);
     checkBox->setObjectName("DisableGoActions");  // used in MW::focusChange
-    checkBox->setStyleSheet("QCheckBox {background: transparent; border:none;}");
+    checkBox->setStyleSheet("QCheckBox {background: transparent; border:none;}"
+                            "QCheckBox:disabled {color:gray}");
     checkBox->setWindowFlags(Qt::FramelessWindowHint);
     checkBox->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -611,6 +756,9 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
                                 "padding: 0px 0px 0px 0px;"
                                 "border: none;"
                             "}"
+                            "QComboBox:disabled {"
+                                "color: gray;"
+                            "}"
                             "QComboBox::item:selected {"
                                 "background-color: rgb(68,95,118);"
                             "}"
@@ -636,6 +784,14 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(comboBox, Qt::AlignLeft);
     layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
+
+    /* Optional trailing buttons: any BarBtns queued in the global `btns` vector before this editor
+       is created are placed after the combo (e.g. the Develop "Select layer" combo's [M] mask
+       menu button). Same drain-and-clear idiom as BarBtnEditor, so only the editor created
+       immediately after the queue picks them up. */
+    for (int b = 0; b < btns.size(); ++b) layout->addWidget(btns.at(b));
+    btns.clear();
+
     setLayout(layout);
 
     if (idx.data(UR_IconList).toStringList().length() == 0)
@@ -699,6 +855,39 @@ void ComboBoxEditor::renameItem(QString oldText, QString newText)
     change(i);
 }
 
+void ComboBoxEditor::setRenamable(bool on)
+{
+/*
+    Makes the combo's text editable so the user can rename the CURRENTLY SELECTED item in place.
+    A committed edit (Enter / focus-out) that actually changes the text emits itemRenamed(old, new);
+    the owner decides whether to accept it (and refreshes the list). Selecting a different item from
+    the dropdown leaves the text matching that item, so it never reads as a rename.
+*/
+    if (G::isLogger) G::log("ComboBoxEditor::setRenamable");
+    isRenamable = on;
+    comboBox->setEditable(on);
+    if (!on) return;
+
+    comboBox->setInsertPolicy(QComboBox::NoInsert);     // Enter must not append a new item
+    const QString clr = idx.data(UR_Color).toString();
+    comboBox->lineEdit()->setStyleSheet("QLineEdit { background: transparent; border: none;"
+                                        "color:" + clr + "; padding: 0px; }"
+                                        "QLineEdit:disabled { color: gray; }");
+
+    connect(comboBox->lineEdit(), &QLineEdit::editingFinished, this, [=]() {
+        const int i = comboBox->currentIndex();
+        if (i < 0) return;
+        const QString oldText = comboBox->itemText(i);
+        const QString newText = comboBox->lineEdit()->text().trimmed();
+        if (newText.isEmpty() || newText == oldText) {
+            comboBox->lineEdit()->setText(oldText);     // restore the displayed name
+            return;
+        }
+        /* Defer so the owner can rebuild the combo (refresh) outside this widget's own signal. */
+        QTimer::singleShot(0, this, [=]() { emit itemRenamed(oldText, newText); });
+    });
+}
+
 void ComboBoxEditor::refresh(QStringList items)
 {
 /*
@@ -743,6 +932,9 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
     QString pushBtnStyle =
         "QPushButton {"
             "min-width: 25px;"
+        "}"
+        "QPushButton:disabled {"
+            "color: gray;"
         "}"
         ;
     minusBtn = new QPushButton;
@@ -806,7 +998,7 @@ BarBtnEditor::BarBtnEditor(const QModelIndex, QWidget *parent)
 {
     if (G::isLogger) G::log("BarBtnEditor::BarBtnEditor");
     QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->setContentsMargins(0,2,0,2);
+    layout->setContentsMargins(0,2,6,2);        // small right inset so buttons don't touch the edge
     layout->setSpacing(0);
     layout->setAlignment(Qt::AlignRight);
     for (int i = 0; i < btns.size(); ++i) {
@@ -835,7 +1027,8 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
                                 "background: transparent;"      // this works
                                 "border:none;"       // nada
                                 "padding:0px;"
-                            "}");
+                            "}"
+                            "QLineEdit:disabled {color:gray;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -933,6 +1126,9 @@ void ColorEditor::updateLabelWhenLineEdited(QString value)
                         "QPushButton:hover {"
                             "border: 1px solid yellow;"
                         "}"
+                        "QPushButton:disabled {"
+                            "background-color:#4b4b4b;"
+                        "}"
                         );
     emit editorValueChanged(this);
 }
@@ -961,7 +1157,8 @@ SelectFolderEditor::SelectFolderEditor(const QModelIndex &idx, QWidget *parent) 
                                 "background: transparent;"      // this works
                                 "border:none;"                  // nada
                                 "padding:0px;"
-                            "}");
+                            "}"
+                            "QLineEdit:disabled {color:gray;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
     lineEdit->setContextMenuPolicy(Qt::ActionsContextMenu);
@@ -1033,7 +1230,8 @@ SelectFileEditor::SelectFileEditor(const QModelIndex &idx, QWidget *parent) : QW
                             "background: transparent;"      // this works
                             "border:none;"                  // nada
                             "padding:0px;"
-                            "}");
+                            "}"
+                            "QLineEdit:disabled {color:gray;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
     lineEdit->setContextMenuPolicy(Qt::ActionsContextMenu);

@@ -1,0 +1,126 @@
+DEVELOP SCOPES - IMPLEMENTATION PLAN  (RawDecode_ToDo #20 histogram, #21 vectorscope)
+================================================================================
+Status: DONE 2026-06-27 (histogram + vectorscope both built, sharing one sample
+pass). No existing live-histogram widget reused (only dead
+Effects/REF_imageblitz_effects.h and a FocusStack quantile helper).
+
+LAYOUT DECISION (2026-06-27): we evaluated embedding the scopes as a column-
+spanned root row INSIDE the property tree (so per-row width/height could be set in
+addItem). Rejected: QTreeView has no per-row column widths, the spanned-row +
+index-widget route pokes the brittle tree/insert code, and a scope is most useful
+PINNED (an in-tree row scrolls away). Chosen: a standalone ScopesView widget ABOVE
+the tree (step 3 below), histogram left + vectorscope right via a QHBoxLayout split.
+The "left/right %" became that layout's stretch ratio; no PropertyEditor changes.
+
+AS BUILT:
+  - Develop/Scopes/{scopedata.h, histogramview, vectorscopeview, scopesview}.
+  - MW::updateDevelopScopes(const QImage&) -- ~180k-px strided sample, fills both;
+    constScanLine (no detach); cheap no-op while scopes hidden.
+  - ScopesView (fixed 144px) above developProperties in a container at
+    createDevelopDock; toggle BarBtn (graphic.png) on the editor bar ->
+    MW::toggleDevelopScopes; persisted Develop/scopesVisible.
+  - Triggers: both setDevelopPreview sites pass `out`; applyDevelopPreviewIfEdited
+    samples the decoded image when unedited; cleared at the two imageView->clear sites.
+
+TONE-REGION SLIDER (added 2026-06-27, under the histogram):
+  - Develop/Scopes/ToneRegionSlider: gradient track + 3 ordered handles (blacks|shadows|
+    highlights|whites splits), shares the histogram x-axis. Recentre (smooth) semantics chosen.
+  - EditParams: toneShadowCenter/toneCrossover/toneHighlightCenter (0.25/0.50/0.75 default,
+    serialized in editstack.h). Develop::buildToneLut moves the shadows/highlights Gaussian
+    centres to the outer handles, sigma = gap-to-crossover * kToneSigmaSpan (defaults == old
+    fixed centres + kToneSigma, so a no-op until moved). Blacks/whites pinned at 0/1.
+  - Wiring: DevelopProperties::bindToneSlider (createDevelopDock) -> onToneSplitsChanged writes
+    active-layer params + paramsChanged (live, coalesced); populateSlidersFromStack pushes saved
+    positions on image switch. Splits not in isIdentity (only matter with a tone slider engaged).
+
+GOAL
+  A live RGB(+luma) histogram (and later a vectorscope) in the Develop dock that
+  reflects the image currently shown in the loupe and updates as Develop sliders
+  move, using the EXISTING coalesced render path (no new decode, no new timers).
+
+--------------------------------------------------------------------------------
+KEY FACTS (verified against the tree on this date)
+--------------------------------------------------------------------------------
+- Develop dock: developProperties (DevelopProperties : PropertyEditor, a tree) is
+  the dock's sole widget, set at Main/initialize.cpp:1771 (developDock->setWidget).
+- Live preview is produced as a finished sRGB 8-bit QImage `out`:
+    * proxy (GUI thread, mid-drag):  MW::renderDevelopPreview  -> mainwindow.cpp:5065
+                                     imageView->setDevelopPreview(out)
+    * full-res settle (async->GUI):  MW::onDevelopFullResReady  -> mainwindow.cpp:5179
+                                     imageView->setDevelopPreview(out)
+  `out` is post-Develop + OutputTransform + orientation == exactly what the user
+  sees == the correct scope source.
+- Coalescing already exists: developParamsChange()/developParamsGen + the 0ms proxy
+  timer collapse a drag burst into one proxy render per event-loop turn; the settle
+  timer drives one crisp full-res render. Scopes piggyback on this - NO new timers.
+- When NOT editing (just navigated to an image, identity edits) there is no develop
+  preview; the loupe shows the decoded image (icd->imCache.value(fPath)). Scopes
+  must still update from that. Source = "currently displayed image", not "develop
+  output", so preview-mode (useRaw off, embedded JPG) histograms are valid too.
+  (Consistent with the applyDevelopPreviewIfEdited useRaw gate added 2026-06-27 -
+  that gate governs only whether edits OVERLAY, not what the scope samples.)
+
+--------------------------------------------------------------------------------
+DESIGN
+--------------------------------------------------------------------------------
+1. SAMPLING / COMPUTE  (new, shared by both scopes)
+   - One chokepoint: MW::updateDevelopScopes(const QImage &shown).
+   - Strided sample to a fixed budget (~150-200k px: step = max(1, sqrt(W*H/budget)))
+     so cost is independent of a 50MP file; mid-drag we pass the PROXY `out` (already
+     small) so it is near-free. Single pass over the sampled pixels fills:
+        * 256-bin R, G, B, luma counts  (histogram, #20)
+        * later: u'v' or Cb/Cr 2-D accumulation (vectorscope, #21)
+     Build BOTH from the same sample loop so one downsample feeds both (the reason
+     #20/#21 are listed to be built together).
+   - GUI thread is fine at this budget; revisit QtConcurrent only if a probe shows it
+     (per feedback_instrument_dont_guess_perf + feedback_develop_perf_priority).
+
+2. WIDGETS  (new, Develop/Scopes/)
+   - HistogramView : QWidget. Holds the four 256-int arrays; setData() -> update();
+     paintEvent draws 3 channel polylines with a lighten/additive blend on a dark
+     ground, fixed height ~140px. (VectorscopeView added in #21, same folder.)
+   - Block comments per CLAUDE.md style.
+
+3. DOCK LAYOUT
+   - Wrap the dock content: container QWidget + QVBoxLayout { HistogramView (fixed
+     ~140px, top), developProperties (tree, stretch) }. Change
+     developDock->setWidget(container) at Main/initialize.cpp:1771; leave
+     developProperties otherwise untouched. (Lightroom puts the scope at panel top.)
+   - Hold a HistogramView* on MW (like developProperties) for updates.
+
+4. UPDATE TRIGGERS
+   a. After each imageView->setDevelopPreview(out) (both sites) -> updateDevelopScopes(out).
+   b. On image shown without edits: in the loupe-show path near
+      applyDevelopPreviewIfEdited (setandupdate.cpp:634) -> updateDevelopScopes(decoded).
+   c. Clear scopes when no image (ImageView::clear path).
+   - Optional later: only compute when developDock is visible (cheap guard).
+
+--------------------------------------------------------------------------------
+PHASING
+--------------------------------------------------------------------------------
+PHASE A (#20 histogram):
+  A1 HistogramView widget (paint + setData).
+  A2 MW::updateDevelopScopes() sampling/bin pass; HistogramView* member.
+  A3 Dock layout wrap in initialize.cpp.
+  A4 Wire the 3 update triggers; clear on no-image.
+  A5 Probe cost on a 50MP RAW drag (G::isReportDevelopTime style); confirm the proxy
+     path stays cheap.
+PHASE B (#21 vectorscope):
+  B1 VectorscopeView widget.
+  B2 Extend the SAME sample loop to accumulate chroma; push to both views.
+  B3 Add below/beside the histogram in the container.
+
+--------------------------------------------------------------------------------
+OPEN DECISIONS (defaults chosen; confirm when starting)
+--------------------------------------------------------------------------------
+- Bins 256; channels drawn separately + blended (vs combined luma). Default: R/G/B
+  overlay, luma optional.
+- x-axis perceptual (matches the displayed 8-bit values) - simplest and matches what
+  the user sees; not scene-linear.
+- Vectorscope space: CIE u'v' (WB-intuitive) vs YCbCr Cb/Cr (cheaper). Lean Cb/Cr.
+- Scope height / whether collapsible. Default fixed ~140px, revisit.
+
+Files likely touched: Develop/Scopes/* (new), Main/mainwindow.{h,cpp},
+Main/initialize.cpp, Main/setandupdate.cpp, Views/imageview.cpp (clear hook),
+CMakeLists.txt (new sources), notes/Documentation.txt (DEVELOP section),
+notes/RawDecode_ToDo.txt (#20/#21 status).

@@ -1831,6 +1831,10 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 
     // thumbnail excluding any black border (t)
     QRect *thumbRect = iconViewDelegate->thumbRectCache.object(sfRow);
+    /* Cache miss: the cell has not been painted yet (e.g. selecting another file at
+       >fit zoom scrolls this row into view before its delegate paints and caches the
+       rect). object() then returns null -- guard it like the sibling call ~line 1640. */
+    if (!thumbRect) return;
     int tW = thumbRect->width();
     int tH = thumbRect->height();
 

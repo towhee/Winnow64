@@ -42,6 +42,15 @@
 #include "Main/dockwidget.h"
 #include "Embellish/Properties/embelproperties.h"
 #include "Develop/Properties/developproperties.h"
+#include "Develop/workingimage.h"
+#include "Develop/Scopes/scopesview.h"
+#include "Develop/Transform/transformpanel.h"
+#include "Develop/Replace/replacepanel.h"
+#include "Develop/History/historyview.h"
+#include "Develop/Properties/scopeheader.h"
+#include "Develop/Properties/scopeheaderlab.h"   // experimental, G::useScopeHeaderLab
+#include "Develop/Properties/rawpanel.h"          // lab UI raw-decode strip
+#include "Develop/Properties/maskpanel.h"         // lab UI mask-editing strip
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
 
@@ -162,6 +171,11 @@ public:
     bool isShiftOnOpen;               // used when opening if shift key pressed
     QString args;                     // opening args
 
+    /* Version tag for saveState()/restoreState(). BUMP whenever the set of docks changes so a
+       window state saved by an older build (missing the new dock) is rejected rather than
+       restored into an inconsistent layout. v1: added developDock. v2: added historyDock. */
+    static constexpr int winnowStateVersion = 2;
+
     // debugging flags
     bool ignoreSelectionChange = false;
     bool isStartupArgs = false;
@@ -173,6 +187,9 @@ public:
     QSettings *settings;
     QString iniPath;
     QMap<QString, QAction *> actionKeys;
+    /* Develop mode local shortcuts: Qt::Key (bare, no modifiers) -> the action to run
+       instead of whatever the global shortcut table binds that key to. */
+    QHash<int, QAction *> developShortcuts;
 
     QMap<QString, QString> pathTemplates;
     QMap<QString, QString> filenameTemplates;
@@ -206,6 +223,7 @@ public:
         bool isMetadataDockVisible;
         bool isEmbelDockVisible;
         bool isDevelopDockVisible;
+        bool isHistoryDockVisible;
         bool isThumbDockVisible;
         bool isImageDockVisible;
         // View
@@ -255,6 +273,8 @@ public:
         bool isFavs;
         bool isFilters;
         bool isMetadata;
+        bool isDevelop;
+        bool isEmbellish;
         bool isThumbs;
         bool isStatusBar;
     } fullScreenDocks;
@@ -536,6 +556,115 @@ private slots:
     void setColorClassForRow(int sfRow, QString colorClass);
 
     void setRotation(int degrees);
+    /* A Develop dock slider changed: schedule a coalesced proxy re-render now and (re)arm the
+       full-resolution settle render. Connected to DevelopProperties::paramsChanged. */
+    void developParamsChange();
+    /* Re-render the current image through Develop + OutputTransform and push it to the loupe.
+       fullRes=false renders the screen-resolution proxy (interactive drag); fullRes=true
+       renders the full image (drag settled). The WorkingImage-cache hot path: no decode. */
+    void renderDevelopPreview(bool fullRes);
+    /* Launch the full-resolution settle render on developRenderPool (off the GUI thread) so a
+       large RAW does not freeze the drag. At most one runs at a time; the result is applied via
+       onDevelopFullResReady only if still current. */
+    void renderDevelopFullResAsync();
+    /* After the current image's loupe pixmap is shown, render its saved Develop edits over it (if
+       any). No-op for an unedited image. Reuses the coalesced proxy + async settle pipeline. */
+    void applyDevelopPreviewIfEdited();
+    /* True when the current image has Develop edits that should be shown. A RAW file's edits show
+       only in raw mode (useRaw): in preview mode the loupe shows the untouched embedded JPG. A
+       non-RAW file (e.g. a JPG) is always the developable image, so its edits show regardless. */
+    bool currentDevelopEditsVisible() const;
+    /* True if fPath is a raw file (a format that carries an embedded jpg preview). Used by the
+       Develop panel to show the raw-only rows (Edit source, Demosaic, Denoise raw). */
+    bool isFileRaw(const QString &fPath) const;
+    /* True when the current selection is a video. The Develop module operates on decoded still
+       frames, so every Develop entry point (dock load + preview/full-res render) is gated on this to
+       avoid trying to develop a video. */
+    bool currentIsVideo() const;
+    /* GUI-thread completion for a background full-res render: apply the image if its params/image
+       are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
+    void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen);
+    /* Global image the develop render pipeline should start from: the raw-DENOISED WorkingImage when
+       the Global scope has "Denoise raw" (denoiseLuma/denoiseChroma) set and it is ready, else the
+       clean cached WorkingImage. Pure lookup (no work); the async compute is ensureRawDenoise(). */
+    std::shared_ptr<const WorkingImage> developRawDenoisedBase(
+        const QString &fPath, const EditParams &base,
+        const std::shared_ptr<const WorkingImage> &clean);
+    /* Compute the raw-denoised base for the current Global params OFF the GUI thread (developRenderPool),
+       cache it (developDenoised), then repaint. Coalesced (one in flight); no-op if already current or
+       already computing this key. Called from the settle path so a drag does not spawn many DNN runs. */
+    void ensureRawDenoise(const QString &fPath, const EditParams &base,
+                          const std::shared_ptr<const WorkingImage> &clean, int iso);
+    /* Dock "auto run denoise" checkbox handler: store developAutoRunDenoise (+ persist);
+       turning it ON runs the denoise for the current image immediately. */
+    void onAutoRunDenoiseToggled(bool on);
+    /* Dock "Denoise" checkbox handlers: runRawDenoiseNow forces ensureRawDenoise for the
+       current image + Global params regardless of developAutoRunDenoise; clearRawDenoiseNow
+       drops the denoised base and re-renders clean. rawDenoiseReadyForCurrent reports
+       whether a denoised base is cached for the current image + params (drives the
+       "Denoise"/"Denoised" checkbox state). */
+    void runRawDenoiseNow();
+    void clearRawDenoiseNow();
+    bool rawDenoiseReadyForCurrent();
+    /* Show the status-bar "Demosaic" progress row while the CURRENT image's Winnow raw
+       demosaic decodes with Auto-run denoise off (relayed from ImageCache). */
+    void onDemosaicProgress(const QString &fPath, int done, int total);
+    /* Ensure the current image's scene-linear (pre-develop) WorkingImage is cached, decoding it OFF
+       the GUI thread when it is missing (evicted / a display-referred one cached), then re-render.
+       Coalesced (one decode in flight). Replaces the old synchronous re-decode inside
+       renderDevelopPreview that froze the first slider drag by ~1s on a 50MP RAW. */
+    void ensureDevelopWork(const QString &fPath);
+    /* ISO of the current image (sort/filter model, GUI thread) for the denoise model conditioning. */
+    int currentImageIso() const;
+    /* EXIF rotation (degrees) to apply to a scene-referred render so it matches the loupe. Reads
+       the sort/filter model, so it MUST run on the GUI thread. */
+    int developOrientationDegrees(const WorkingImage &work, const QString &fPath) const;
+    /* Refresh the Develop scopes (histogram + vectorscope) from the image currently shown: the
+       develop preview after a render, else the decoded image. One strided sample pass feeds both
+       scopes; no-op (cheap) while the scopes are hidden. A null image clears the scopes. */
+    void updateDevelopScopes(const QImage &shown);
+    /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the choice. */
+    void toggleDevelopScopes();
+    /* Show/hide the Develop Transform panel (editor-bar toggle / "R"); persists. */
+    void toggleDevelopTransform();
+    /* Show/hide the Fill Replace panel (title-bar spot button / "S" in Develop mode):
+       visible == the replace (spot/fill/object) tool is armed on the loupe. */
+    void toggleDevelopReplace();
+    /* "W" in Develop mode: arm/disarm the Basic panel's white-balance dropper. Transform
+       claims W for Warp while it is active (arbiter rule 1a), so this only runs when no
+       Transform session is up. */
+    void toggleDevelopWbSampler();
+    void toggleMaskOverlay();     // "O": hide/show the active mask overlay tint
+    void toggleMaskBreakdown();   // scope menu: Result view <-> Breakdown (outlines)
+    void developNewScope();       // "N": add a scope to the current image's stack
+    void developAddToMask();        // "M": pop the Add/Subtract mask tool menu
+    void developExport();         // "X": export the developed image (not built yet)
+    void developSavePreset();     // Cmd+Shift+N: save develop state as a preset
+    void developRunPreset();      // P: apply a saved develop preset (stub)
+    /* Enter/exit the crop editor: enter shows the full frame + overlay (geometry suppressed); exit
+       commits the crop into the image's EditStack geometry and re-renders the cropped result. */
+    void enterDevelopCrop();
+    void exitDevelopCrop();
+    /* Esc while the Transform panel is open: cancel the session -- discard every
+       crop/straighten/warp change made since it opened (restore the enter-time geometry
+       snapshot), drop the overlay WITHOUT committing, and hide the panel. The counterpart
+       to toggleDevelopTransform's commit-on-hide. */
+    void cancelDevelopTransform();
+    /* Rectify the 4-point warp: store the quad + suggested crop into the image's geometry, then
+       re-render so the corrected canvas shows with the crop overlay on it (two-phase warp). */
+    void rectifyDevelopCrop();
+    /* Apply a drawn level line: add deltaDeg to the straighten, auto-fit the crop to the rotation
+       wedges, re-render the straightened canvas and restart the crop overlay. */
+    void applyDevelopLevel(double deltaDeg);
+    /* Transform panel mode toggle (TransformPanel::Mode): arm the matching ImageView crop tool. */
+    void setDevelopTransformMode(int mode);
+    /* Level field: set the straighten to an absolute angle (typed into the panel). */
+    void setDevelopLevelAngle(double degrees);
+    /* Per-row Transform reset: clear just the crop / straighten / warp (TransformPanel::Mode). */
+    void resetDevelopTransformMode(int mode);
+    /* Loupe cursor moved to a normalized position over the displayed image: sample that pixel and
+       drive the scopes' readout marker (no-op while the scopes are hidden). */
+    void onImageCursorPos(double xFraction, double yFraction);
     void infoViewChanged(QStandardItem* item);
 //    void filterLastDay();
     void filterDockTabMousePress();
@@ -697,12 +826,14 @@ private slots:
     void setMetadataDockVisibility();
     void setEmbelDockVisibility();
     void setDevelopDockVisibility();
+    void setHistoryDockVisibility();
     void setMetadataDockFixedSize();    // rgh finish or remove
 
     void focusOnDock(DockWidget *dockWidget);
     void closeThumbDock();
     void closeEmbelDock();
     void closeDevelopDock();
+    void closeHistoryDock();
     void closeFolderDock();
     void closeFavDock();
     void closeFilterDock();
@@ -710,6 +841,7 @@ private slots:
     void showThumbDock();
     void showEmbelDock();
     void showDevelopDock();
+    void showHistoryDock();
     void showFolderDock();
     void showFavDock();
     void showFilterDock();
@@ -765,6 +897,7 @@ private:
 
     QMenu *utilitiesMenu;
     QMenu *utilMenu;
+        QMenu *developMenu;
         QMenu *embelMenu;
             QMenu *embelExportMenu;
             QMenu *embelExportOverrideMenu;
@@ -940,6 +1073,29 @@ private:
     QAction *sortFocalLengthAction;
     QAction *sortTitleAction;
 
+    // Develop
+    QAction *developAction;
+    QAction *operationModeAction;   // D shortcut: toggle Preview <-> Develop mode
+
+    /* Develop mode local shortcuts (see loadDevelopShortcuts).  These actions carry NO
+       QKeySequence -- their keys live in developShortcuts and are dispatched by
+       developShortcutIntercept, so S/X can also stay bound to Slideshow/Reject
+       globally. */
+    QAction *developNewScopeAction;     // N
+    QAction *developAddToMaskAction;      // M
+    QAction *developSpotAction;         // S
+    QAction *developWbSamplerAction = nullptr;    // W (Transform owns W while it is up)
+    QAction *developExportAction;       // X
+    QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
+    QAction *developRunPresetAction = nullptr;    // P (develop-mode local, arbiter)
+    /* Title-bar toggle buttons that carry the blue "active" border while their panel /
+       tool is on (kept in sync from the toggle handlers). */
+    BarBtn *developScopesBtn = nullptr;
+    BarBtn *developTransformBtn = nullptr;
+    BarBtn *developSpotBtn = nullptr;
+    QAction *developScopesAction;       // G
+    // developTransformAction (R) and toggleMaskOverlayAction (O) live with the docks
+
     // Embellish
     QAction *embelNewTemplateAction;
     QAction *embelExportAction;
@@ -990,6 +1146,9 @@ private:
     QAction *thumbDockVisibleAction;
     QAction *embelDockVisibleAction;
     QAction *developDockVisibleAction;
+    QAction *historyDockVisibleAction = nullptr;   // "H": develop-mode local (arbiter)
+    QAction *developTransformAction;    // "R": toggle the Develop Transform (crop) panel
+    QAction *toggleMaskOverlayAction;   // "O": hide/show the scope's mask overlay tint
 //    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
@@ -1012,6 +1171,7 @@ private:
     // Help Diagnostics Menu
     QAction *diagnosticsAllAction;
     QAction *diagnosticsCurrentAction;
+    QAction *diagnosticsDevelopAction;
     QAction *diagnosticsMainAction;
     QAction *diagnosticsSelectionAction;
     QAction *diagnosticsWorkspacesAction;
@@ -1060,6 +1220,7 @@ private:
     QAction *filterGroupAct;
     QAction *sortGroupAct;
     QAction *utilGroupAct;
+    QAction *developGroupAct;
     QAction *embelGroupAct;
     QAction *focusStackGroupAct;
     QAction *viewGroupAct;
@@ -1104,6 +1265,7 @@ private:
     BarBtn *includeSidecarsToggleBtn;
     BarBtn *colorManageToggleBtn;
     BarBtn *useRawBtn;
+    QComboBox *operationModeCombo = nullptr;   // status-bar Operation Mode dropdown (Preview/Develop)
     BarBtn *panToFocusToggleBtn;
     BarBtn *modifyImagesBtn;
     BarBtn *cacheMethodBtn;
@@ -1113,6 +1275,12 @@ private:
     QLabel *slideShowStatusLabel;
     QLabel *cacheStatusLabel;
     Progress *progress;
+    /* Progress rows added at runtime (ImageCache is owned by Progress itself).
+       Each is driven with progress->updateProgress(id, ...)/clearProgress(id). */
+    int progressMetaReadRow = -1;
+    int progressFocusStackRow = -1;
+    int progressRawDenoiseRow = -1;
+    int progressDemosaicRow = -1;
     int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
@@ -1129,12 +1297,29 @@ private:
     DockWidget *propertiesDock;
     DockWidget *embelDock;
     DockWidget *developDock;
+    /* Develop edit history. Tabbed with developDock and shown/hidden with it (the two are
+       one tool), so every developDock visibility change mirrors onto this. */
+    DockWidget *historyDock = nullptr;
+    /* The dock's normal features, captured at creation so setDevelopPanelEnabled() can
+       strip them (lock float/move) while disabled and restore them when re-enabled. */
+    QDockWidget::DockWidgetFeatures developDockFeatures = QDockWidget::NoDockWidgetFeatures;
+    void setDevelopPanelEnabled(bool on);   // enable/disable the whole Develop dock + panel
+    /* The Develop panel is enabled only when the user's Develop toggle is on AND the operation
+       mode is Develop -- Preview mode always greys it out. Call after either input changes. */
+    void syncDevelopPanelEnabled();
+    /* Operation mode (G::operationMode): Preview (fast review) vs Develop (best-quality single
+       image). setOperationMode applies a mode and syncs the status-bar dropdown; toggleOperationMode
+       flips between the two (D shortcut). Behavior wiring (suspend read-ahead, raw re-decode on
+       Develop) is layered on in setOperationMode as it lands. */
+    void setOperationMode(G::OperationMode mode);
+    void toggleOperationMode();
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
     DockTitleBar *metaTitleBar;
     DockTitleBar *embelTitleBar;
     DockTitleBar *developTitleBar;
+    DockTitleBar *historyTitleBar = nullptr;
     BarBtn *embelRunBtn;
     FSTree *fsTree;
     BookMarks *bookmarks;
@@ -1156,7 +1341,188 @@ private:
     VideoView *videoView;
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
-    DevelopProperties *developProperties;
+    DevelopProperties *developProperties = nullptr;
+    /* Live Develop scopes (histogram + vectorscope) shown above the property tree in the
+       Develop dock. Fed by updateDevelopScopes() from the displayed image / preview render;
+       toggled by a button on the Develop editor bar and persisted (Develop/scopesVisible). */
+    ScopesView *scopesView = nullptr;
+    bool developScopesVisible = true;
+    /* The History dock's list of develop actions (hover previews a state, a click reverts
+       to it). DevelopProperties owns the timeline it views. */
+    HistoryView *historyView = nullptr;
+    /* Develop Transform (crop + perspective) panel: a control strip below the scopes and above
+       the property tree. Toggled by a button on the Develop editor bar and the "R" shortcut;
+       visibility persists (Develop/transformVisible). */
+    TransformPanel *transformPanel = nullptr;
+    /* Fill Replace (spot/fill/object heal) strip below the Transform panel. Visible only
+       while the replace tool is armed (like the Transform panel / crop tool pairing). */
+    ReplacePanel *replacePanel = nullptr;
+    bool developTransformVisible = false;
+    /* True while the crop tool is being edited: the render pipeline then SUPPRESSES the geometry
+       (shows the full frame for the overlay); committing the crop clears it and re-renders cropped. */
+    bool developCropEditing = false;
+    /* Transform Preview eye "live result toggle" (only meaningful while developCropEditing): true =
+       peek at the cropped/warped RESULT (overlay dropped, geometry applied in the render); false =
+       normal editing (full frame + overlay). Reset on enter/exit crop. */
+    bool developCropShowResult = false;
+    /* Snapshot of the image's Geometry taken when the Transform panel opens
+       (enterDevelopCrop), so Esc (cancelDevelopTransform) can restore it. Straighten and
+       warp are written live during a session, so a cancel must revert them, not just skip
+       the pending overlay crop. */
+    Geometry developCropGeometryBackup;
+    /* The QImage last pushed to the scopes (== what the loupe shows; implicitly shared, so
+       holding it is free). Sampled per pixel for the cursor readout marker. */
+    QImage developShownImage;
+    /* Develop slider-drag preview pipeline. A drag re-renders only the cheap Develop +
+       OutputTransform stage from the cached pre-develop WorkingImage. To stay interactive on
+       large RAW files the drag renders a screen-resolution PROXY (developProxy, cached per
+       path), coalesced so a fast drag collapses to one render; a settle timer then renders the
+       full-resolution image once the slider stops. See MW::developParamsChange /
+       renderDevelopPreview and notes/Documentation.txt "DEVELOP / IMAGE EDIT". */
+    std::shared_ptr<WorkingImage> developProxy;
+    QString developProxyPath;
+    QTimer *developProxyRenderTimer = nullptr;   // coalesces rapid ticks into one proxy render
+    QTimer *developFullResTimer = nullptr;       // fires once the drag settles (full-res render)
+    /* Full-res settle render runs OFF the GUI thread (it is ~1.3s on a 50MP RAW and would
+       otherwise freeze the drag). developRenderPool drives one such render at a time; the result
+       is marshalled back to the GUI thread and applied only if still current. developParamsGen is
+       bumped on every slider change so a finished render that no longer matches the latest params
+       (or image) is discarded. See MW::renderDevelopFullResAsync. */
+    static constexpr int kDevelopSettleMs = 160;  // full-res render fires this long after the drag pauses
+    QThreadPool *developRenderPool = nullptr;
+    quint64 developParamsGen = 0;                 // ++ on every Develop param change (staleness guard)
+    bool developFullResInFlight = false;          // a background full-res render is running
+
+    /* Develop render verification (cheap, updated on each full-res settle; reported by
+       the Develop diagnostics). Renders the base at a small fixed size TWICE -- the clean
+       base with identity params vs the actual base (incl. raw denoise) with the recipe
+       (geometry suppressed so sizes match) -- and measures the pixel difference. Confirms
+       the develop pipeline truly changed pixels: a maxAbs of 0 means the render is pixel-
+       identical to the un-developed original (the failure class behind the denoise +
+       Apple-demosaic bugs). See renderDevelopFullResAsync. */
+    int developVerifyMaxAbs = -1;    // max |edited-original| 0..255; -1 = not run
+    double developVerifyMeanAbs = -1.0;   // mean |edited-original| 0..255
+    // no non-geometry edits at verify time (so no change expected):
+    bool developVerifyRecipeIdentity = true;
+    // crop/warp present (changes pixels independently of the recipe):
+    bool developVerifyGeometryActive = false;
+    QString developVerifyPath;       // image the last recipe verification ran on
+
+    /* Second verification axis -- the Develop DISPLAY vs the Preview (embedded)
+       image. The Preview image is captured (downscaled) on entering Develop; each
+       develop display (edited OR not, via updateDevelopScopes) is grid-sampled against
+       it. This is what confirms the DECODE change (embedded preview -> demosaic) actually
+       altered pixels, independent of any edits -- so it populates even for an unedited
+       image (unlike the recipe check, which needs an edited settle). */
+    // downscaled Preview (embedded) image; captured on Develop entry:
+    QImage developVerifyPreviewBaseline;
+    QString developVerifyPreviewBaselinePath;
+    // max channel diff (0..255) display vs Preview; >0 = changed:
+    int developVerifyVsPreviewMaxAbs = -1;
+    double developVerifyVsPreviewMeanAbs = -1.0;
+    // image the last display-vs-Preview verification ran on:
+    QString developVerifyVsPreviewPath;
+    /* Interactive "Denoise raw": PMRID is a heavy DNN run PRE-demosaic (Global-only, RAW-only,
+       Winnow engine only). ensureRawDenoise re-decodes the raw with PMRID once to build the
+       full-strength denoised base (developPmridFull, keyed path+iso), then blends clean<->PMRID by
+       the two amounts (luma/chroma split) into developDenoised (keyed path+amounts+iso). So the
+       model runs ONCE per image; amount changes only re-blend (cheap), and later exposure/tone
+       edits reuse the base. With no denoise the render uses the clean cached image unchanged. See
+       developRawDenoisedBase / ensureRawDenoise. */
+    std::shared_ptr<const WorkingImage> developDenoised;
+    /* Run mode for the heavy PMRID denoise. true (default): run automatically on image
+       select / entering Develop / a denoise-param settle (the auto call sites gate on
+       this). false: run only when the dock's "Run Denoise" button is clicked
+       (runRawDenoiseNow). Persisted to QSettings Develop/autoRunDenoise. */
+    bool developAutoRunDenoise = true;
+    QString developDenoisedKey;                   // "path|dnL|dnC|iso"; empty when clean
+    QString developDenoiseInFlightKey;            // key currently being computed (coalesce guard)
+    // full-strength PMRID base, reused across amounts
+    std::shared_ptr<const WorkingImage> developPmridFull;
+    QString developPmridKey;                      // "path|iso" for developPmridFull
+    /* Diagnostic snapshot of the (k,b) noise-model tier (PMRID::resolveKB) that produced
+       developPmridFull -- valid for exactly developPmridKey, so the Develop diagnostics
+       report shows it ONLY for the current image's base, never a stale one. Set in
+       ensureRawDenoise when PMRID decodes; cleared/reset with developPmridFull. */
+    QString developPmridResSource;                // resolveKB tier name; "" = unset
+    double  developPmridResK = 0.0;
+    double  developPmridResB = 0.0;
+    bool    developPmridResHadNP = false;
+    QString developWorkInFlight;                  // path whose scene-linear decode is running (ensureDevelopWork coalesce)
+    QString developWorkTriedPath;                 // path already async-decoded but with no scene-linear result
+                                                  // (display-referred format) -> render the fallback, don't loop
+    /* Content-range mask (Luminance/Color Range) reference: a display-referred RGB map of the
+       developed GLOBAL scope, registered by path (RangeMask::putRef) and sampled identically by
+       the loupe overlay and the render. Global-only so a range mask cannot feed back on its own
+       selection. Rebuilt only when the base params or the image change (range-slider ticks and
+       colour samples just re-threshold), tracked by path + a base-params signature. */
+    void ensureRangeRef(const QString &fPath, const WorkingImage &work,
+                        const EditParams &base, int degrees);
+    QString developRangeRefPath;
+    QByteArray developRangeRefBaseKey;
+    /* AI "Select Subject" mask: the U^2-Net saliency map (SubjectMask store) built once per image by
+       ensureSubjectMask. Keyed on path only (independent of develop sliders). The predictor loads
+       u2net.onnx lazily on first use. */
+    void ensureSubjectMask(const QString &fPath, const WorkingImage &work,
+                           const EditParams &base, int degrees);
+    /* Build the AI coverage + show the loupe tint the moment a Subject/Sky mask is selected -- the
+       render path skips identity scopes, so it cannot be relied on to build the ref before the user
+       has adjusted a slider. Connected to DevelopProperties::maskEditBegin; no-op for other tools. */
+    void onAiMaskEditBegin(int tool, int op, bool inverted, const QString &paramsJson,
+                           double feather);
+    /* ImageView is starting a Brush stroke in "AI" auto-mask mode: synchronously decode the SAM
+       object under the stroke's seed point so the live preview can confine the stroke to it.
+       Connected to ImageView::maskBrushSamFieldRequested (direct, same thread). */
+    void onBrushSamFieldRequested(double onx, double ony);
+    /* Pre-warm the SAM 2 encoder for the current image when Brush "AI" auto-mask is enabled via the
+       dock checkbox (the tool is already active, so maskEditBegin does not re-fire). */
+    void warmBrushSamEncoder();
+    /* Rebuild (or clear) the whole-mask coverage tint shown in the loupe while a mask tool is
+       expanded: composite the active scope's Add/Subtract tools (buildMaskBuffer) into a red tint
+       and hand it to ImageView. Cheap (capped resolution); a no-op when no tool is expanded. */
+    void updateMaskOverlayTint();
+    /* Mask overlay display mode (scope menu toggle). true = Breakdown: the result veil
+       PLUS a green(Add)/blue(Subtract) outline of each constituent;
+       false = Result: the composite veil alone. Session-wide, default true. */
+    bool maskShowBreakdown = true;
+    QString developSubjectRefPath;
+    class SubjectPredictor *subjectPredictor = nullptr;
+    /* AI "Select Sky" mask: single-channel sky coverage (SkyMask store) built once per image by
+       ensureSkyMask (skyseg.onnx, lazily loaded). Keyed on path only. Twin of the Subject mask. */
+    void ensureSkyMask(const QString &fPath, const WorkingImage &work,
+                       const EditParams &base, int degrees);
+    QString developSkyRefPath;
+    class SkyPredictor *skyPredictor = nullptr;
+    /* AI "Depth Range" mask: a MiDaS depth field (DepthMask store) built once per image by
+       ensureDepthMask (midas.onnx, lazily loaded). Keyed on path only. The mask selects a [near,far]
+       band of the field (like Luminance Range over depth). */
+    void ensureDepthMask(const QString &fPath, const WorkingImage &work,
+                         const EditParams &base, int degrees);
+    QString developDepthRefPath;
+    class DepthPredictor *depthPredictor = nullptr;
+    /* AI "Object Mask" (SAM 2): a PROMPTABLE brush mask. Two-phase, unlike the other AI masks:
+       ensureObjectMask encodes the developed base ONCE per image (cached in objectMaskPredictor)
+       then decodes the component's brush stroke (paramsJson) into an ObjectRef. Because the coverage
+       DEPENDS on the brush, the ObjectRef is keyed by path + brush signature (objectRefKey), so
+       several object masks on one image coexist. Lazily loads sam2_encoder/decoder.onnx. */
+    void ensureObjectMask(const QString &fPath, const WorkingImage &work,
+                          const EditParams &base, int degrees, const QString &paramsJson);
+    /* Shared with the Brush "AI" auto-mask: lazily load the predictor and ensure the SAM 2 encoder
+       embedding for fPath is cached (Phase 1). Returns false + leaves nothing cached on failure;
+       outputs the oriented guide dims. */
+    bool ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, int &gw, int &gh);
+    /* Brush "AI" auto-mask (2nd auto-mask mode): decode the SAM 2 object under a stroke's seed point
+       (output-normalized) and register it in the BrushStamp SAM-field store, so the brush rasterizer
+       (preview + render) confines the stroke to that object. Reuses objectMaskPredictor's encoder. */
+    void ensureBrushSamField(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, double seedOnx, double seedOny);
+    /* Ensure the SAM field for every AI-auto-mask stroke in a Brush component's paramsJson (render
+       pre-pass; a no-op for luminance/plain strokes and already-decoded fields). */
+    void ensureBrushSamFields(const QString &fPath, const WorkingImage &work,
+                              const EditParams &base, int degrees, const QString &paramsJson);
+    QString developObjectImagePath;   // path whose encoder embedding is cached in objectMaskPredictor
+    class ObjectMaskPredictor *objectMaskPredictor = nullptr;
     Preferences *pref = nullptr;
     StressTest *stressTest;
     QFrame *embelFrame;
@@ -1185,6 +1551,7 @@ private:
     QTimer *memoryWatchdog = nullptr;
     void memoryWatchdogTick();
     bool memoryDialogActive = false;
+    bool memoryThrottleActive = false;  // ImageCache decode throttle engaged (pressure)
     QWidget *folderDockEmptyWidget;
     QWidget *favDockEmptyWidget;
     QWidget *filterDockEmptyWidget;
@@ -1276,6 +1643,7 @@ private:
     QString metadataDockTabText;
     QString embelDockTabText;
     QString developDockTabText;
+    QString historyDockTabText;
     QString thumbDockTabText;
 
     QStringList dockTextNames;
@@ -1291,6 +1659,7 @@ private:
     void createThumbDock();
     void createEmbelDock();
     void createDevelopDock();
+    void createHistoryDock();
     QTabBar* tabifiedBar();
     bool isDockTabified(QDockWidget *dock);
     QString dockTabToolTip(const QString &tabText);
@@ -1299,11 +1668,14 @@ private:
     bool isSelectedDockTab(QDockWidget *dock);
     void updateDockTabGraphics(QTabBar *tabBar);   // responsive text/graphic dock tab titles
     void scheduleDockTabUpdate();                  // deferred re-eval of all dock tab bars
+    void moveDroppedDockLast();  // a dock dropped into a tab group lands last
+    QDockWidget* dockForTabText(const QString &tabText);
     QHash<quint64, QString> dockTabTitleByKey;     // QMainWindow tab key -> dock title (learned)
     void folderDockVisibilityChange();
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
     void developDockVisibilityChange();
+    void historyDockVisibilityChange();
 
 public:
     // dock collapse/expand area-scoped helpers (used by DockTitleBar context menu)
@@ -1375,6 +1747,9 @@ private:
     void createStatusBar();
     int availableSpaceForProgressBar();
     void updateProgressBarWidth();
+    /* Gate the cache progress rows (ImageCache + MetaRead) as a group, honoring
+       the "Show caching progress" preference. */
+    void setCacheProgressEnabled(bool on);
     void updateStatusBar();
     void createMessageView();
     void createPreferences();
@@ -1393,6 +1768,15 @@ private:
     void writeSettings();
     bool loadSettings();
     void loadShortcuts(bool defaultShortcuts);
+    /* Build the Develop mode local shortcut table (key -> action).  Called at the end of
+       loadShortcuts, once every action exists. */
+    void loadDevelopShortcuts();
+    /* Develop mode shortcut arbiter, called from eventFilter on QEvent::ShortcutOverride.
+       Returns true when it has consumed the key. */
+    bool developShortcutIntercept(QEvent *event);
+    bool thumbViewHasFocus() const;     // the selection keys' gate in Develop mode
+    /* Grey the Develop menu's mode-local items outside Develop mode (aboutToShow). */
+    void syncDevelopMenuEnabled();
     void startLog();
     void closeLog();
     void clearLog();
@@ -1428,6 +1812,7 @@ private:
     QString getPosition();
     QString getZoom();
     QString getPicked();
+    QString getRawRendered();
     QString getSelectedFileSize();
     double macActualDevicePixelRatio(QPoint loc, QScreen *screen);
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
@@ -1444,6 +1829,8 @@ private:
     void diagnosticsAll();
     void diagnosticsCurrent();
     QString diagnostics();
+    QString developDiagnostics();
+    void diagnosticsDevelop();
     void diagnosticsMain();
     void diagnosticsSelection();
     void diagnosticsWorkspaces();

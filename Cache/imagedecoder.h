@@ -6,6 +6,7 @@
 #include <QThread>
 #include <QWaitCondition>
 #include <atomic>
+#include <functional>
 #include "Cache/cachedata.h"
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
@@ -16,13 +17,32 @@
 #include "ImageFormats/Heic/heic.h"
 #endif
 
+struct WorkingImage;
+
 class ImageDecoder : public QObject
 {
     Q_OBJECT
 public:
     ImageDecoder(int id, DataModel *dm, Metadata *metadata);
     ~ImageDecoder() override;
-    bool decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m);
+    /* progress (when set) is forwarded to the RAW demosaic (in-house/Winnow engine) for
+       per-tile status-bar feedback -- used by MW::ensureDevelopWork to show demosaic
+       progress on develop-open. Inert for non-raw formats and the Apple engine. */
+    bool decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m,
+                           const std::function<void(int, int)> &progress = {});
+
+    /* Decode the raw sensor file straight to a pre-develop WorkingImage, uncached (does NOT touch
+       WorkingImageCache), for the "Denoise raw" base. m must carry fPath + rawInfo + ISONum.
+       denoiseRaw runs the PMRID pre-demosaic denoiser (in-house/Winnow engine only). Returns
+       nullptr if the format has no in-house decoder or the decode fails. Thread-safe: consults only
+       the supplied m (no DataModel access), so callable from the develop render pool. progress (when
+       set) is forwarded to the PMRID denoiser for per-tile status-bar feedback. outClean (when
+       non-null AND denoiseRaw) also receives the CLEAN pre-develop base (pre-PMRID) from the same
+       decode, so one UnpackCfa yields both bases MW::ensureRawDenoise needs. */
+    std::shared_ptr<const WorkingImage> decodeRawWorking(const ImageMetadata &m, bool denoiseRaw,
+                                                         const std::function<void(int, int)> &progress = {},
+                                                         std::shared_ptr<const WorkingImage> *outClean = nullptr);
+
     bool isRunning() const;
     void setIdle();
     void setBusy();
@@ -36,6 +56,9 @@ public:
     QString fPath;
     QString errMsg;
     qint64 nsToDecode;
+    /* Progress sink for the RAW demosaic, set by decodeIndependent and forwarded to
+       RawFormat::Decode by load(). Empty for all other decode paths. */
+    std::function<void(int, int)> decodeProgress;
 
     enum Status {
         Undefined,
@@ -102,6 +125,10 @@ signals:
     // stable view even if the decoder has already started the next decode() on its thread.
     void done(int threadId, int doneStatus, int doneSfRow,
               QImage doneImage, QString doneFPath, qint64 doneMsToDecode);
+    /* Per-tile progress of the in-house RAW demosaic (cache-mode decode). ImageCache
+       relays it to MW, which shows a "Demosaic" status-bar row for the current image
+       while a Winnow raw decodes with Auto-run denoise off (MW::onDemosaicProgress). */
+    void demosaicProgress(int sfRow, QString fPath, int done, int total);
 
 private:
     QThread decoderThread;

@@ -138,6 +138,13 @@ public:
     bool writeXMP(const QString &imageFileName, QString src = "Undefined");
     static void writeOrientation(QString fPath, QString orientationNumber);
 
+    /* Per-image Develop edit state (base64 of the EditStack JSON) <-> the XMP sidecar's
+       winnow:Develop attribute. Static and self-contained (open the sidecar, one Xmp item), so
+       writeDevelopSidecar can run off the GUI thread via QtConcurrent like writeOrientation.
+       An empty blob removes nothing here; the dock only writes when the stack is non-identity. */
+    static void writeDevelopSidecar(QString fPath, QString blob);
+    static QString readDevelopSidecar(QString fPath);
+
 
     QFile file;
     bool okToReadXmp;

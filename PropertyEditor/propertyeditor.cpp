@@ -238,7 +238,7 @@ QModelIndex PropertyEditor::findCaptionIndex(QString name)
 
 QModelIndex PropertyEditor::findValueIndex(QString name)
 {
-    qDebug() << "PropertyEditor::findValueIndex name =" << name;
+    // qDebug() << "PropertyEditor::findValueIndex name =" << name;
     QModelIndex start = model->index(0,0,QModelIndex());
     QModelIndexList list = model->match(start, UR_Name, name, 1, Qt::MatchExactly | Qt::MatchRecursive);
     if (list.size() > 0) {
@@ -358,6 +358,10 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
     model->setData(valIdx, false, UR_isHidden);
     model->setData(capIdx, true, UR_isEnabled);
     model->setData(valIdx, true, UR_isEnabled);
+
+    // model->setData(capIdx, false, UR_isDivider);
+    // model->setData(valIdx, false, UR_isDivider);
+
     model->setData(capIdx, i.key, UR_Source);           // key = "effect" for sortOrder
 
     // if no value associated (header item or spacer etc) then we are done
@@ -377,8 +381,10 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
     model->setData(valIdx, i.max, UR_Max);
     model->setData(valIdx, i.div, UR_Div);
     model->setData(valIdx, i.step, UR_DivPx);
+    model->setData(valIdx, i.logScale, UR_LogScale);
     model->setData(valIdx, i.fixedWidth, UR_FixedWidth);
     model->setData(valIdx, i.color, UR_Color);
+    model->setData(valIdx, i.color1, UR_Color1);
     model->setData(valIdx, i.dropList, UR_StringList);
     model->setData(valIdx, i.dropIconList, UR_IconList);
     model->setData(valIdx, i.index, UR_QModelIndex);
@@ -393,6 +399,43 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
     model->setData(valIdx, QVariant::fromValue(static_cast<void*>(editor)), UR_Editor);
 
     return editor;
+}
+
+void PropertyEditor::addDivider(int height, int lineHeight, QColor lineColor,
+                                QModelIndex parIdx, QString parentName, QString name)
+{
+    if (G::isLogger) G::log("PropertyEditor::addDivider");
+
+    /* Build the row through addItem with hasValue = false, so it returns after the
+       caption roles (no value editor is created) -- the same path headers use. capIdx is
+       left pointing at the new caption cell. */
+    ItemInfo i;
+    clearItemInfo(i);
+    i.name = name;
+    i.parIdx = parIdx;
+    i.parentName = parentName;
+    i.isHeader = false;
+    i.isDecoration = false;
+    i.isIndent = false;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    const QModelIndex idx = capIdx;
+    model->setData(idx, true, UR_isDivider);
+    model->setData(idx, height, UR_DividerHeight);
+    model->setData(idx, lineHeight, UR_DividerLineHeight);
+    model->setData(idx, lineColor, UR_DividerColor);
+
+    /* One full-width, non-interactive cell: span column 0 across the row and drop the
+       selectable/editable flags so clicks and keyboard navigation skip it (it stays
+       enabled so it is not greyed by applyItemsEnabled). */
+    setFirstColumnSpanned(idx.row(), idx.parent(), true);
+    auto strip = [this](const QModelIndex &x) {
+        if (QStandardItem *it = model->itemFromIndex(x)) it->setFlags(Qt::ItemIsEnabled);
+    };
+    strip(idx);
+    strip(idx.sibling(idx.row(), ValColumn));
 }
 
 void PropertyEditor::clearItemInfo(ItemInfo &i)
@@ -420,6 +463,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.min = 0;                      // DT_Spinbox, DT_Slider
     i.max = 0;                      // DT_Spinbox, DT_Slider
     i.div = 1;                      // DT_Slider (zero == int, nonzero = double)
+    i.logScale = false;             // DT_Slider (min/max a log range)
     i.step = 1;                    // DT_Slider
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
@@ -578,8 +622,15 @@ void PropertyEditor::mouseDoubleClickEvent(QMouseEvent *event)
     QModelIndex idx = indexAt(event->pos());
     idx = model->index(idx.row(), ValColumn, idx.parent());
     QVariant value = idx.data(UR_DefaultValue);
-    if (idx.data(UR_DelegateType).toInt() == DT_Slider)
-        value = idx.data(UR_DefaultValue).toDouble() * idx.data(UR_Div).toInt();
+    if (idx.data(UR_DelegateType).toInt() == DT_Slider) {
+        /* setItemValue sets the slider POSITION, which is the real value times div.
+           Integer sliders carry div == 0 (see SliderEditor, which treats it as 1), so
+           guard against it here -- otherwise a non-zero default (e.g. Vignette Feather =
+           50) multiplies to 0 and double-click appears to do nothing. */
+        int div = idx.data(UR_Div).toInt();
+        if (div == 0) div = 1;
+        value = idx.data(UR_DefaultValue).toDouble() * div;
+    }
     setItemValue(idx, value);
 }
 

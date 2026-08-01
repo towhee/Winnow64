@@ -46,6 +46,7 @@ protected:
 //    bool eventFilter(QObject *editor, QEvent *event) override;
 
 private:
+    int newRowHeight = 0;
     bool isDebug = false;
 };
 

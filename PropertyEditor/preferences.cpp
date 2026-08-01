@@ -176,8 +176,10 @@ void Preferences::itemChange(QModelIndex idx)
            G::showCacheProgress directly, so no per-class setters are needed. */
         bool hide = v.toBool();
         G::showCacheProgress = !hide;
-        mw->progress->setVisible(G::showCacheProgress);
-        mw->progress->setCacheRowsEnabled(G::showCacheProgress);
+        /* Gate the cache rows; Progress shows/hides its own container from row
+           content, so we don't toggle the whole widget here (that would also hide
+           a concurrent FocusStack / RawDenoise row). */
+        mw->setCacheProgressEnabled(G::showCacheProgress);
         mw->settings->setValue("showCacheProgress", G::showCacheProgress);
     }
 
@@ -398,6 +400,17 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "fullScreenShowMetadata") {
         mw->fullScreenDocks.isMetadata = v.toBool();
+        qDebug() << "mw->fullScreenDocks.isMetadata =" << mw->fullScreenDocks.isMetadata;
+    }
+
+    if (source == "fullScreenShowDevelop") {
+        mw->fullScreenDocks.isDevelop = v.toBool();
+        qDebug() << "mw->fullScreenDocks.isDevelop =" << mw->fullScreenDocks.isDevelop;
+    }
+
+    if (source == "fullScreenShowEmbellish") {
+        mw->fullScreenDocks.isEmbellish = v.toBool();
+        qDebug() << "mw->fullScreenDocks.isEmbellish =" << mw->fullScreenDocks.isEmbellish;
     }
 
     if (source == "fullScreenShowThumbs") {
@@ -1364,6 +1377,32 @@ void Preferences::addFullScreen()
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isMetadata;
     i.key = "fullScreenShowMetadata";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show develop
+    i.name = "fullScreenShowDevelop";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show develop";
+    i.tooltip = "When you switch to full screen show the develop dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isDevelop;
+    i.key = "fullScreenShowDevelop";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show embellish
+    i.name = "fullScreenShowEmbellish";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show embellish";
+    i.tooltip = "When you switch to full screen show the embellish dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isDevelop;
+    i.key = "fullScreenShowEmbellish";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

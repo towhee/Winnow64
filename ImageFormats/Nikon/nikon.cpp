@@ -2,6 +2,9 @@
 #include "Main/global.h"
 #include "Metadata/iptc.h"      // req'd to report embedded jpeg
 #include "Metadata/ExifTool.h"  // req'd for some Nikon lenses not in lookup
+#include "ImageFormats/Raw/tiffwalk.h"
+#include "ImageFormats/Raw/rawimage.h"
+#include "ImageFormats/Raw/cameramatrix.h"
 
 // ExifTool documentation: https://exiftool.org/TagNames/Nikon.html
 
@@ -1061,6 +1064,298 @@ bool Nikon::parse(MetadataParameters &p,
 
         if (p.report) p.xmpString = xmp.docToQString();
 //        if (p.report) p.xmpString = xmp.xmpAsString();
+    }
+
+    return true;
+}
+
+/* ------------------------------------------------------------------------------------------
+   NikonRaw::UnpackCfa  --  Nikon NEF compressed sensor unpack (Huffman + curve + predictors)
+   Ported from dcraw's nikon_load_raw; validated byte-identical to libraw on 12/14-bit lossless.
+   ------------------------------------------------------------------------------------------ */
+
+namespace {
+
+/* dcraw's Nikon Huffman trees: 16 code-length counts followed by the leaf symbols (low nibble =
+   bit length, high nibble = shift for the lossy trees). Index by version/bit-depth. */
+const quint8 kNikonTree[6][32] = {
+ {0,1,5,1,1,1,1,1,1,2,0,0,0,0,0,0, 5,4,3,6,2,7,1,0,8,9,11,10,12,0,0,0},
+ {0,1,5,1,1,1,1,1,1,2,0,0,0,0,0,0, 0x39,0x5a,0x38,0x27,0x16,5,4,3,2,1,0,11,12,12,0,0},
+ {0,1,4,2,3,1,2,0,0,0,0,0,0,0,0,0, 5,4,6,3,7,2,8,1,9,0,10,11,12,0,0,0},
+ {0,1,4,3,1,1,1,1,1,2,0,0,0,0,0,0, 5,6,4,7,8,3,9,2,1,0,10,11,12,13,14,0},
+ {0,1,5,1,1,1,1,1,1,1,2,0,0,0,0,0, 8,0x5c,0x4b,0x3a,0x29,7,6,5,4,3,2,1,0,13,14,0},
+ {0,1,4,2,2,3,1,2,0,0,0,0,0,0,0,0, 7,6,8,5,9,4,10,3,11,12,2,0,1,13,14,0},
+};
+
+struct NHuff {
+    int mincode[17];
+    int maxcode[17];
+    int valptr[17];
+    quint8 sym[16];
+    void build(const quint8 *tree) {
+        int counts[16], nsym = 0;
+        for (int i = 0; i < 16; ++i) { counts[i] = tree[i]; nsym += counts[i]; }
+        for (int i = 0; i < nsym && i < 16; ++i) sym[i] = tree[16 + i];
+        int code = 0, j = 0;
+        for (int l = 1; l <= 16; ++l) {
+            if (counts[l - 1]) {
+                valptr[l] = j; mincode[l] = code; code += counts[l - 1];
+                maxcode[l] = code - 1; j += counts[l - 1];
+            } else maxcode[l] = -1;
+            code <<= 1;
+        }
+    }
+};
+
+/* Plain MSB-first bit reader over the raw data (Nikon raw has no byte stuffing). */
+struct NBits {
+    const uchar *d; qint64 size, pos; quint32 buf = 0; int cnt = 0;
+    int bit() {
+        if (cnt == 0) { buf = (pos < size) ? d[pos] : 0; ++pos; cnt = 8; }
+        --cnt; return (buf >> cnt) & 1;
+    }
+    quint32 bits(int n) { quint32 v = 0; while (n-- > 0) v = (v << 1) | bit(); return v; }
+    int huff(const NHuff &h) {
+        int l = 1, code = bit();
+        while (l <= 16 && code > h.maxcode[l]) { ++l; code = (code << 1) | bit(); }
+        return l <= 16 ? h.sym[h.valptr[l] + code - h.mincode[l]] : 0;
+    }
+};
+
+} // namespace
+
+bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) { errMsg = "NEF: not a TIFF file."; return false; }
+
+    /* Find the CFA SubIFD (Compression 34713 = Nikon NEF compressed). */
+    QList<quint32> queue { r.firstIfd() };
+    QSet<quint32> seen;
+    Ifd ifd0, rawIfd;
+    bool haveIfd0 = false, haveRaw = false;
+    quint64 bestArea = 0;
+    while (!queue.isEmpty()) {
+        const quint32 off = queue.takeFirst();
+        if (off == 0 || seen.contains(off)) continue;
+        seen.insert(off);
+        Ifd tags; QList<quint32> subs; quint32 next = 0;
+        if (!r.readIfd(off, tags, subs, next)) continue;
+        if (!haveIfd0) { ifd0 = tags; haveIfd0 = true; }
+        for (quint32 s : subs) queue << s;
+        if (next) queue << next;
+        if (tags.contains(259) && r.scalar(tags[259]) == 34713 &&
+            tags.contains(256) && tags.contains(257) && tags.contains(273)) {
+            /* Some bodies (e.g. Z9) expose several NEF-compressed SubIFDs -- the full-resolution
+               sensor frame alongside smaller or placeholder ones (including a 0x0 entry). Keep the
+               largest valid candidate rather than the last seen, which would otherwise land on the
+               0x0 IFD and fail the geometry check (UnpackCfa returns false -> preview fallback). */
+            const quint64 area = quint64(r.scalar(tags[256])) * quint64(r.scalar(tags[257]));
+            if (area > bestArea) { rawIfd = tags; haveRaw = true; bestArea = area; }
+        }
+    }
+    if (!haveRaw) { errMsg = "NEF: no compressed CFA SubIFD (uncompressed NEF not handled)."; return false; }
+
+    const int W = int(r.scalar(rawIfd[256]));
+    const int H = int(r.scalar(rawIfd[257]));
+    const int bps = rawIfd.contains(258) ? int(r.scalar(rawIfd[258])) : 14;
+    const quint32 dataOff = r.scalar(rawIfd[273]);
+    if (W <= 0 || H <= 0 || (bps != 12 && bps != 14)) { errMsg = "NEF: bad CFA geometry/bps."; return false; }
+
+    /* Navigate the Nikon type-3 MakerNote: IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C).
+       Its data is "Nikon\0" + 2 version bytes + "\0\0" + an embedded TIFF whose offsets are
+       relative to that embedded header (base = makerNote + 10). */
+    if (!haveIfd0 || !ifd0.contains(0x8769)) { errMsg = "NEF: no ExifIFD."; return false; }
+    Ifd exif; QList<quint32> es; quint32 en = 0;
+    if (!r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) || !exif.contains(0x927C)) {
+        errMsg = "NEF: no MakerNote."; return false;
+    }
+    const quint32 mnBase = r.ifdPointer(exif[0x927C]) + 10;
+    Reader mr;
+    if (!mr.init(&file, mnBase)) { errMsg = "NEF: bad MakerNote header."; return false; }
+    Ifd mn; QList<quint32> ms; quint32 mnn = 0;
+    if (!mr.readIfd(mr.firstIfd(), mn, ms, mnn) || !mn.contains(0x96)) {
+        errMsg = "NEF: no linearization table (0x96)."; return false;
+    }
+
+    /* The 0x96 linearization/Huffman metadata. Read enough to cover the optional curve+split. */
+    const quint32 metaAbs = mnBase + mr.ifdPointer(mn[0x96]);
+    if (!file.seek(metaAbs)) { errMsg = "NEF: seek to 0x96 failed."; return false; }
+    const QByteArray meta = file.read(2048);
+    if (meta.size() < 14) { errMsg = "NEF: short 0x96."; return false; }
+    const bool mbig = mr.big();
+    auto mg16 = [&](int o) -> int {
+        const uchar a = uchar(meta[o]), b = uchar(meta[o + 1]);
+        return mbig ? ((a << 8) | b) : ((b << 8) | a);
+    };
+
+    const int ver0 = uchar(meta[0]), ver1 = uchar(meta[1]);
+    int p = 2;
+    if (ver0 == 0x49 || ver1 == 0x58) p += 2110;        // (some bodies) skip to vpred
+    int huff = 0;
+    if (ver0 == 0x46) huff = 2;
+    if (bps == 14) huff += 3;
+
+    int vpred[2][2];
+    for (int i = 0; i < 4; ++i) vpred[i >> 1][i & 1] = mg16(p + 2 * i);
+    p += 8;
+
+    int maxv = (1 << bps) & 0x7fff;
+    std::vector<int> curve(0x10000);
+    for (int i = 0; i < 0x10000; ++i) curve[i] = i;     // identity by default
+    const int csize = mg16(p); p += 2;
+    const int step = (csize > 1) ? maxv / (csize - 1) : 0;
+    int split = 0;
+    if (ver0 == 0x44 && ver1 == 0x20 && step > 0) {
+        for (int i = 0; i < csize; ++i) curve[i * step] = mg16(p + 2 * i);
+        for (int i = 0; i < maxv; ++i) {
+            const int rmd = i % step;
+            curve[i] = (curve[i - rmd] * (step - rmd) + curve[i - rmd + step] * rmd) / step;
+        }
+        split = mg16(562);                               // offset 562 within the 0x96 block
+    } else if (ver0 != 0x46 && csize <= 0x4001) {
+        for (int i = 0; i < csize; ++i) curve[i] = mg16(p + 2 * i);
+        maxv = csize;
+    }
+    while (maxv > 1 && curve[maxv - 2] == curve[maxv - 1]) --maxv;
+
+    /* Read the compressed raw data and decode. */
+    if (!file.seek(dataOff)) { errMsg = "NEF: seek to raw data failed."; return false; }
+    const QByteArray data = file.readAll();
+    NBits br{ reinterpret_cast<const uchar *>(data.constData()), data.size(), 0 };
+
+    NHuff h; h.build(kNikonTree[huff]);
+
+    raw.width = W;
+    raw.height = H;
+    raw.cfa.assign(size_t(W) * size_t(H), 0);
+    int hpred[2] = { 0, 0 };
+    uint16_t lo = 0xFFFF;                                // running min for the black estimate
+
+    for (int row = 0; row < H; ++row) {
+        if (split && row == split) { h.build(kNikonTree[huff + 1]); maxv += 16 << 1; }
+        for (int col = 0; col < W; ++col) {
+            const int i = br.huff(h);
+            const int len = i & 15, shl = i >> 4;
+            int diff = ((int(br.bits(len - shl)) << 1) + 1) << shl >> 1;
+            if (len > 0 && (diff & (1 << (len - 1))) == 0) diff -= (1 << len) - (shl ? 0 : 1);
+            if ((col & ~1) == 0) { vpred[row & 1][col] += diff; hpred[col] = vpred[row & 1][col]; }
+            else                   hpred[col & 1] += diff;
+            int val = hpred[col & 1];
+            if (val < 0) val = 0;
+            const uint16_t out = uint16_t(curve[val & 0x3FFF]);
+            raw.cfa[size_t(row) * W + col] = out;
+            if (out < lo) lo = out;
+        }
+    }
+
+    /* CFA phase. Most Nikon bodies are RGGB, but older sensors start the active area on a
+       different Bayer phase (D100 is GRBG, D2H is GBRG); decoding those as RGGB swaps the
+       green photosites into the red/blue channels and renders greens as magenta. The raw
+       SubIFD's CFAPattern (tag 0x828E, plane colours 0=R,1=G,2=B over the 2x2
+       CFARepeatPatternDim) carries the true phase, so read it and fall back to RGGB only
+       when it is absent or not one of the four Bayer phases. */
+    raw.pattern = CfaPattern::RGGB;
+    if (rawIfd.contains(0x828E)) {
+        const QByteArray cfa = r.bytes(rawIfd[0x828E]);
+        if (cfa.size() >= 4) {
+            const uint8_t pc[4] = { uint8_t(cfa[0]), uint8_t(cfa[1]),
+                                    uint8_t(cfa[2]), uint8_t(cfa[3]) };
+            const CfaPattern pat = cfaPatternFromPlaneColor(pc);
+            if (pat != CfaPattern::Unknown) raw.pattern = pat;
+        }
+    }
+    raw.white = uint16_t((1u << bps) - 1);
+
+    /* Black level. Modern bodies record the per-channel pedestal in MakerNote tag 0x3d (4 SHORTs;
+       e.g. D850 400, D810 600, Z9 1008); use it directly. The decoded frame minimum is a poor
+       substitute -- a single sub-pedestal hot/noisy pixel drags it below the true black, so the
+       shared SubtractBlack then under-subtracts and the image renders washed-out and low-contrast
+       (seen on the D850, whose darkest pixel was 78 vs a true 400). Older bodies (D2H, D100, D800E)
+       omit 0x3d and have a ~0 pedestal, so fall back to the decoded minimum (at/near zero there). */
+    bool haveBlack = false;
+    if (mn.contains(0x3d)) {
+        const QVector<quint32> bl = mr.u32s(mn[0x3d]);
+        if (bl.size() == 4) {
+            for (int i = 0; i < 4; ++i) raw.black[i] = uint16_t(bl[i]);
+            haveBlack = true;
+        }
+    }
+    if (!haveBlack)
+        for (int i = 0; i < 4; ++i) raw.black[i] = lo;   // self-calibrated fallback (no 0x3d)
+
+    const QString model = (haveIfd0 && ifd0.contains(272)) ? r.ascii(ifd0[272]) : QString();
+
+    /* Active-area crop. Most NEFs store exactly the active area, but a few older bodies pad the
+       frame with masked (optical-black) columns that, demosaiced, fringe the left/right edges
+       magenta. libraw crops these to a per-model active area; mirror its margins here. Margins
+       are even, so the CFA phase at the cropped origin is unchanged (the CFAPattern read above
+       still holds). Add a row per affected model as encountered; modern bodies need no crop. */
+    {
+        int left = 0, top = 0, cw = W, ch = H;
+        if (model == "NIKON D2H" && W == 2496 && H == 1648) { left = 6; cw = 2482; }  // libraw margins
+        if (left != 0 || top != 0 || cw != W || ch != H) {
+            std::vector<uint16_t> cropped(size_t(cw) * size_t(ch));
+            for (int y = 0; y < ch; ++y) {
+                const uint16_t *src = &raw.cfa[size_t(y + top) * W + left];
+                uint16_t *dst = &cropped[size_t(y) * cw];
+                for (int x = 0; x < cw; ++x) dst[x] = src[x];
+            }
+            raw.cfa.swap(cropped);
+            raw.width = cw;
+            raw.height = ch;
+        }
+    }
+
+    xyzToCamForModel(model, raw.xyzToCam);               // identity fallback if unknown
+
+    /* As-shot white balance.
+       Modern bodies store green-normalised multipliers UNENCRYPTED in MakerNote tag 0x0C
+       (WhiteBalanceRBLevels, 4 RATIONALs in order R, B, G1, G2) -- the values libraw reports as
+       cam_mul, no decryption needed. Older bodies (D2H, D100) have no 0x0C and carry WB in the
+       ColorBalance block 0x97 instead; its early pre-encryption versions ("0100".."0103") hold
+       the same RGGB levels as 16-bit ints at a fixed offset (layout ported from dcraw's
+       parse_makernote). Without this the matrix-derived neutral WB is used, giving a warm cast. */
+    if (mn.contains(0x0C)) {
+        const QVector<double> wb = mr.reals(mn[0x0C]);
+        /* Order R, B, G1, G2. Some bodies (D100) store only R/B and leave the green entries 0,
+           meaning "green-normalised to 1"; substitute 1.0 rather than rejecting the tag (a zero
+           green multiplier would otherwise drop the WB and leave a heavy green cast). */
+        if (wb.size() >= 2 && wb[0] > 0 && wb[1] > 0) {
+            const double g1 = (wb.size() >= 3 && wb[2] > 0) ? wb[2] : 1.0;
+            const double g2 = (wb.size() >= 4 && wb[3] > 0) ? wb[3] : g1;
+            raw.camMul[0] = float(wb[0]);                // R
+            raw.camMul[1] = float(g1);                   // G1
+            raw.camMul[2] = float(wb[1]);                // B
+            raw.camMul[3] = float(g2);                   // G2
+        }
+    } else if (mn.contains(0x97)) {
+        const QByteArray cb = mr.bytes(mn[0x97]);
+        const bool be = mr.big();
+        auto s16 = [&](int o) -> int {
+            const uchar a = uchar(cb[o]), b = uchar(cb[o + 1]);
+            return be ? ((a << 8) | b) : ((b << 8) | a);
+        };
+        /* Per dcraw: the 4 ASCII version bytes select the offset and the file order of the four
+           levels. iR/iG1/iB/iG2 are their indices within the 4-short run at that offset. */
+        int off = -1, iR = 0, iG1 = 1, iB = 2, iG2 = 3;
+        if (cb.size() >= 4) {
+            const QByteArray ver = cb.left(4);
+            if      (ver == "0100" && cb.size() >= 80) { off = 72; iR=0; iB=1; iG1=2; iG2=3; }
+            else if (ver == "0102" && cb.size() >= 18) { off = 10; iR=0; iG1=1; iG2=2; iB=3; }
+            else if (ver == "0103" && cb.size() >= 28) { off = 20; iR=0; iG1=1; iB=2; iG2=3; }
+        }
+        if (off >= 0) {
+            const int R = s16(off + 2*iR), G1 = s16(off + 2*iG1),
+                      B = s16(off + 2*iB), G2 = s16(off + 2*iG2);
+            if (R > 0 && G1 > 0 && B > 0) {
+                raw.camMul[0] = float(R);  raw.camMul[1] = float(G1);
+                raw.camMul[2] = float(B);  raw.camMul[3] = float(G2 > 0 ? G2 : G1);
+            }
+        }
     }
 
     return true;
