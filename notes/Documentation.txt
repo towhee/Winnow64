@@ -1763,12 +1763,12 @@ Develop Mode Local Shortcuts
 
         R   Crop / Transform panel      developTransformAction   (Preview: unbound)
         N   New Mask                    developNewScopeAction    (Preview: unbound)
-        M   Add to Mask                 developAddToMaskAction   (Preview: unbound)
+        M   Tweak Mask                  developAddToMaskAction   (Preview: unbound)
         O   Mask overlay tint on/off    toggleMaskOverlayAction  (Preview: Open folder)
         S   Spot removal tool           developSpotAction        (Preview: Slideshow)
         W   White balance sampler       developWbSamplerAction   (Preview: New workspace)
         X   Export (STUB, see below)    developExportAction      (Preview: Reject)
-        G   Histogram / vectorscope     developScopesAction      (Preview: Grid view)
+        G   Scopes layout cycle         developScopesAction      (Preview: Grid view)
         H   Develop History panel       historyDockVisibleAction (Preview: unbound)
         P   Run/apply preset (STUB)     developRunPresetAction   (Preview: Pick)
 
@@ -3248,11 +3248,13 @@ Scope & mask model (Global + masks)
                MW::toggleMaskBreakdown), and Reset/Remove/Rename <scope> ->
                resetActiveScope / deleteScope / renameActiveScope. The per-scope group
                is OMITTED for Global (index 0) -- ScopeHeader::setGlobalActive, driven by
-               updateMaskMenuBtn. MASK ENTRY POINTS: a scope's first mask tool is offered
-               automatically when the scope is created (newScope -> showMaskMenu); further tools are
-               added via the dropdown "Add to <mask>" or the [+] glyph on each mask-tool row in
-               the tree (UR_AddBtn, hit-tested in mousePressEvent -> showMaskMenu). The dropdown entry
-               covers the case where the scope has no masks at all (skipped on create, or all deleted).
+               updateMaskMenuBtn. MASK ENTRY POINTS: a scope's first mask tool is
+               offered automatically when the scope is created (newScope ->
+               showMaskMenu); further tools are added via the dropdown "Tweak <mask>
+               mask" or the [+] glyph on each mask-tool row in the tree (UR_AddBtn,
+               hit-tested in mousePressEvent -> showMaskMenu). The dropdown entry
+               covers the case where the scope has no masks at all (skipped on create,
+               or all deleted).
                DevelopProperties::bindScopeHeader connects these signals.
                TREE = ACTIVE SCOPE: the tree is REBUILT for the active scope by buildTree() (on image
                change, scope switch and mask add/remove/select): the scope's top items first (Global =>
@@ -3280,7 +3282,33 @@ Scope & mask model (Global + masks)
                writes the state whenever the user toggles one of the three headers (mask tool rows,
                which also expand/collapse, are filtered out by name). SECTION HEADERS: the Basic, Color
                and Effects headers append the active scope's name (e.g. "Global: Basic", "Sky:
-               Color") via updateSectionHeaderCaptions(). PREVIEW / RESET: each section header
+               Color") via updateSectionHeaderCaptions(). They carry NO band at all
+               (UR_HeaderFlat): they sit on the panel background, like the rows below
+               them. The gradient marks a PANEL-level band (Raw, Scope, Transform), and
+               a section belongs to the scope selected in the Scope band above it, so it
+               is a tier below -- its grouping comes from the containment rail, not from
+               banding. The fill is SKIPPED rather than drawn in a matching colour, so it
+               stays exact in any theme (the view has already painted the row in the
+               palette base). Set in DevelopProperties::addHeader for any header with a
+               previewGroup; PropertyDelegate::paint reads UR_HeaderFlat from the CAPTION
+               index (both column passes read the same sibling, so a value-column-only
+               repaint does not put the gradient back).
+               CONTAINMENT RAIL: a 3px G::selectionColor line down the panel's left edge
+               (G::scopeRailX / G::scopeRailW; scopeRailW = 0 removes it) ties the
+               sections to the scope they belong to. It is drawn in TWO halves that meet
+               at the widget boundary: ScopeHeaderLab::paintEvent runs it from under the
+               "Scope" band -- so it spans the WHOLE scope list, Global + every mask, not
+               just the selected row -- to its own bottom edge, and
+               DevelopProperties::paintEvent continues it from the viewport top to the
+               bottom of the LAST VISIBLE ROW (indexAt(0,0) then walk indexBelow -- NOT
+               model row 0, which may be a hidden row, and indexBelow of a hidden index
+               is invalid). Since the rail colour is
+               the selected row's own band colour, the stretch crossing that row is
+               invisible: the selection reads as a gap in the rail. The tree's 1px QSS
+               border
+               insets its viewport, so the tree half is drawn 1px left of the band half to
+               stay in line.
+               PREVIEW / RESET: each section header
                (Basic/Color/Effects) carries an eye BarBtn that toggles that group's Preview flag on
                the active scope; the whole-mask eye + reset live in the ScopeHeader widget
                (EditScope::showBasic/showColor/showEffects/showScope, all default true, persisted in
@@ -3297,22 +3325,31 @@ Scope & mask model (Global + masks)
                Collapse all go through DevelopProperties::setAllSectionsExpanded,
                which calls QTreeView expandAll/collapseAll AND drives the Scope row
                (its collapse arrow lives in the ScopeHeader band, not the tree --
-               ScopeHeader::setCollapsed + setTreeCollapsed). Solo mode is a checkable
-               toggle (persisted as Settings "Develop/isSolo", restored in initialize
-               via setSolo) that, when on, collapses the other top-level sections
-               whenever one is expanded (PropertyEditor::collapseAllExcept in
-               mousePressEvent). The Scope row is folded into Solo too: expanding an
-               adjustment section (Basic/Color/Effects) collapses the scope
-               (DevelopProperties::onSectionExpanded) and expanding the scope collapses
-               those sections (setTreeCollapsed). The Demosaic row is a scope item, NOT
-               a Solo peer, so expanding it never collapses the scope. A bulk guard
-               (isBulkExpandCollapse) keeps Expand all from tripping the Solo handler.
+               ScopeHeader::setCollapsed + setTreeCollapsed) and the Raw panel
+               (RawPanel::setCollapsed). Solo mode is a checkable toggle (persisted as
+               Settings "Develop/isSolo", restored in initialize via setSolo) that,
+               when on, collapses the other top-level sections whenever one is expanded
+               (PropertyEditor::collapseAllExcept in mousePressEvent). The two widgets
+               that sit OUTSIDE the tree -- the Scope row and, in the lab UI, the Raw
+               panel -- are Solo peers as well, and the base class cannot reach them, so
+               DevelopProperties::soloCollapseOthers(owner) folds every peer except the
+               one just opened. It is called from onSectionExpanded (a Basic/Color/
+               Effects header expanded), from setTreeCollapsed(false) (the scope's own
+               items shown) and from the RawPanel::collapseToggled handler bound in
+               bindRawPanel (the user expanded the Raw panel). RawPanel::setCollapsed is
+               programmatic and emits nothing, so a fold cannot bounce back into the
+               panel that triggered it; the state persists as "Develop/rawCollapsed".
+               The Demosaic row is a scope item, NOT a Solo peer, so expanding it never
+               collapses the scope. A bulk guard (isBulkExpandCollapse) keeps Expand all
+               from tripping the Solo handler.
                For a RAW file being edited as raw (currentIsRaw() && G::useRaw) the menu
                also offers "Raw demosaic" -- captioned "Raw demosaic and denoise" when
                the engine is Winnow (that engine adds the raw-denoise rows). It is a
-               navigation shortcut: DevelopProperties::showRawDemosaic activates the Global
-               scope (onScopeSelected, since the Demosaic/Denoise Core rows exist only
-               there) and un-collapses the scope items so the rows are visible.
+               navigation shortcut: DevelopProperties::showRawDemosaic activates the
+               Global scope (onScopeSelected, the Demosaic/Denoise Core rows exist only
+               there) and un-collapses the scope items so the rows are visible. In the
+               lab UI those controls live in the Raw panel instead, so showRawDemosaic
+               just un-collapses that panel (and folds its peers away under Solo).
                Group->keys mapping follows the UI (texture/dehaze are Basic; tone
                splits are Basic for Reset only; localDenoiseLuma -- the Effects "Denoise" (local NR,
                key "localDenoise") -- is in Effects; denoiseLuma/denoiseChroma are the Global "Denoise
@@ -3448,6 +3485,14 @@ Scope & mask model (Global + masks)
                (maskTintHideRequested -> hideMaskTint) so the effect is visible; re-shown
                by "O", the scope menu's "Show mask overlay" row, or re-selecting a tool.
                Mask-only edits (Feather/Invert/Range/Brush) keep the overlay shown.
+               COMPLETING A TOOL HIDES THE TINT: [Done] (finishFirstMask) and [Add]/
+               [Subtract]/[Intersect] (commitPendingMask) both emit maskTintHideRequested
+               after paramsChanged, so the red coverage clears the moment the tool is
+               folded in and the user sees the developed result. The overlay stays LATCHED
+               (maskLatched -> maskOverlayActive), so it is only hidden, not gone: "O" or
+               the scope menu row brings the combined mask back. maskTintHidden is sticky,
+               so selecting another scope with a mask re-shows it explicitly
+               (onScopeSelected -> maskTintShowRequested -> ImageView::showMaskTint).
              - BREAKDOWN OUTLINES (which constituents build this mask?): the veil is a
                FILL, so to show HOW it is built without repainting over it, each
                constituent is drawn as an EDGE on top of the veil -- Add tools GREEN
@@ -4158,11 +4203,27 @@ Develop scopes (histogram + vectorscope)
     cleared at the imageView->clear() sites. No new timers -- it piggybacks the existing coalesced
     render path. The pass is a cheap no-op while the scopes are hidden.
 
-    A button on the Develop editor bar (graphic.png), or "G" in Develop mode, toggles
-    the strip via MW::toggleDevelopScopes; the choice persists as Settings
-    "Develop/scopesVisible". (A standalone widget above the tree was
-    chosen over an in-tree spanned row so the scope stays pinned rather than scrolling away; see
+    A button on the Develop editor bar (graphic.png) shows/hides the strip
+    (MW::toggleDevelopScopes -> setDevelopScopesVisible); the choice persists as Settings
+    "Develop/scopesVisible". (A standalone widget above the tree was chosen over an
+    in-tree spanned row so the scope stays pinned rather than scrolling away; see
     notes/Develop_Scopes_Plan.txt for the rejected alternative.)
+
+    Layout cycle: "G" in Develop mode (and the Develop menu's "Histogram / Vectorscope",
+    which is NOT checkable because it steps rather than toggles) runs
+    MW::cycleDevelopScopes:
+
+        both scopes -> histogram only -> vectorscope only -> hidden -> both ...
+
+    ScopesView::setScopeLayout hides the scope(s) not wanted -- a hidden widget is an
+    empty layout item, and the stretches are re-set to 0 as well -- so the surviving
+    scope expands to fill the strip. The tone-region slider shares the histogram's
+    x-axis and so follows the histogram. The layout persists as Settings
+    "Develop/scopesLayout" (the ScopesView::ScopeLayout values 0/1/2, so do not
+    renumber the enum) and is re-applied in createDevelopDock, i.e. the strip returns
+    in the state it was left in. Hiding is the last step of the cycle rather than a
+    separate key, and re-showing (by G or the button) repopulates the scopes, which go
+    stale while hidden.
 
     Tone-region slider (ToneRegionSlider, under the histogram, sharing its x-axis): a black->white
     track with three draggable handles that split the tonal range into blacks | shadows |

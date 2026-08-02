@@ -551,6 +551,9 @@ Q_NAMESPACE
     extern int scrollBarThickness;
     extern int propertyWidgetMarginLeft;
     extern int propertyWidgetMarginRight;
+    extern int decorationTitleGap;
+    extern int scopeRailX;              // Develop scope containment rail: left edge
+    extern int scopeRailW;              // ditto: width (0 = no rail)
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?
 
@@ -585,6 +588,9 @@ Q_NAMESPACE
                     bool zeroElapsedTime = false);
     extern IssueLog *issueLog;
     extern void newIssueLog();
+    /* Stop + destroy the issue log, nulling G::issueLog under issueListMutex first
+       so late queued calls into G::issue() cannot touch a freed IssueLog. */
+    extern void deleteIssueLog();
     extern QMutex issueListMutex;
 
     // Severity threshold — issues at or below this level are dropped before

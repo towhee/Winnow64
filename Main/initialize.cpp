@@ -1889,6 +1889,9 @@ void MW::createDevelopDock()
     /* Adjustment slider changed while a mask overlay is shown -> hide coverage tint. */
     connect(developProperties, &DevelopProperties::maskTintHideRequested,
             imageView, &ImageView::hideMaskTint);
+    /* Scope selected -> un-hide the tint so that scope's combined mask shows. */
+    connect(developProperties, &DevelopProperties::maskTintShowRequested,
+            imageView, &ImageView::showMaskTint);
     /* Scope menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
     connect(developProperties, &DevelopProperties::maskOverlayToggleRequested,
             this, &MW::toggleMaskOverlay);
@@ -1924,12 +1927,18 @@ void MW::createDevelopDock()
        The scopes keep a fixed height; developProperties takes the remaining (stretch) space.
        Visibility is user-toggled from the editor bar below and persisted. */
     developScopesVisible = settings->value("Develop/scopesVisible", true).toBool();
+    /* Which scopes the strip shows ("G" cycles both / histogram / vectorscope). */
+    developScopesLayout = settings->value("Develop/scopesLayout", ScopesView::Both).toInt();
+    if (developScopesLayout < ScopesView::Both ||
+        developScopesLayout > ScopesView::VectorscopeOnly)
+        developScopesLayout = ScopesView::Both;
     developAutoRunDenoise = settings->value("Develop/autoRunDenoise", true).toBool();
     QWidget *developContainer = new QWidget(developDock);
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
     developContainerLayout->setContentsMargins(0, 0, 0, 0);
     developContainerLayout->setSpacing(0);
     scopesView = new ScopesView(developContainer);
+    scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
     scopesView->setVisible(developScopesVisible);
     developContainerLayout->addWidget(scopesView);
     /* Transform (crop + perspective) strip sits directly below the scopes and above the tree.
@@ -2125,7 +2134,8 @@ void MW::createDevelopDock()
     // show/hide the histogram + vectorscope scopes strip
     developScopesBtn = new BarBtn();
     developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
-    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope  (G)");
+    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope.  "
+                                 "G cycles both / histogram / vectorscope / hidden");
     developScopesBtn->setActive(developScopesVisible);
     connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
     developTitleLayout->addWidget(developScopesBtn);

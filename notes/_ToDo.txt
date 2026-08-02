@@ -3,14 +3,14 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- The open lock in Transform should be more obvious.
+- Masks still different colors, need to maintain mask tool history as before
+- List stuff to disable in Develop Mode (menu items and shortcuts)
 - WB undo
 - Press D while not in loupe mode does not work
 - Raw demosaic Winnow wrong for /Users/roryhill/Pictures/_test_raw/NEF D7200.NEF
-- Expand/contract layer mask or submask
+- Expand/contract layer mask or submask (shrink/grow)
 - Change submask feather, rebuild submask?
 - Spot fill quality issue (reassess)
-- WB temp values, sampler
 - Redo help preformance tips
 - Cannot use Embellish panel when in Develop mode
 - Add Sharpen and Soften sliders

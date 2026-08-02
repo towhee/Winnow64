@@ -264,6 +264,19 @@ bool showAllTableColumns;
 int scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal
 int propertyWidgetMarginLeft = 5;
 int propertyWidgetMarginRight = 2;
+/* Clear space between an expand/collapse arrow and the header title it precedes, in the
+   Develop/property panels: the property tree rows (PropertyDelegate) and the widget
+   header bands (RawPanel, ScopeHeader, ScopeHeaderLab). Raise it to give crowded titles
+   more breathing room. */
+int decorationTitleGap = 3;
+/* Develop dock CONTAINMENT RAIL: a vertical accent line down the left edge, running from
+   the top of the selected scope row (ScopeHeaderLab) through the whole property tree
+   (DevelopProperties), so the Basic/Color/Color Mix/Effects sections read as the contents
+   of that scope rather than as siblings of the Scope band. Drawn in G::selectionColor, so
+   over the selected row itself it is invisible and the rail appears to grow out of it.
+   scopeRailW = 0 removes the rail everywhere. */
+int scopeRailX = 3;
+int scopeRailW = 3;
 QModelIndexList copyCutIdxList;
 QStringList copyCutFileList;
 
@@ -413,6 +426,25 @@ IssueLog *issueLog = nullptr;
 void newIssueLog()
 {
     issueLog = new IssueLog();
+}
+
+void deleteIssueLog()
+{
+/*
+    Tear down the issue log during shutdown.  G::issueLog is nulled while holding
+    issueListMutex - the same mutex issue() and issueBeginSession() hold when they
+    call issueLog->log() - before the object is destroyed.  Without this, queued
+    signals still draining from the event loop after MW::closeEvent (eg
+    DataModel::setValSf -> G::issue) dereference a freed IssueLog and crash in
+    QThread::isRunning().
+*/
+    IssueLog *log = nullptr;
+    {
+        QMutexLocker locker(&issueListMutex);
+        log = issueLog;
+        issueLog = nullptr;
+    }
+    delete log;     // IssueLog::~IssueLog stops the thread
 }
 
 static QObject *modelInstance = nullptr;

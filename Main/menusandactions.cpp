@@ -1089,7 +1089,7 @@ void MW::createUtilActions()
     addAction(developNewScopeAction);
     connect(developNewScopeAction, &QAction::triggered, this, &MW::developNewScope);
 
-    developAddToMaskAction = new QAction(tr("Add to Mask\tM"), this);
+    developAddToMaskAction = new QAction(tr("Tweak Mask\tM"), this);
     developAddToMaskAction->setObjectName("developAddToMask");
     developAddToMaskAction->setShortcutVisibleInContextMenu(true);
     addAction(developAddToMaskAction);
@@ -1137,12 +1137,14 @@ void MW::createUtilActions()
     addAction(developRunPresetAction);
     connect(developRunPresetAction, &QAction::triggered, this, &MW::developRunPreset);
 
+    /* Not checkable: each trigger steps the scopes strip on through both scopes ->
+       histogram only -> vectorscope only -> hidden -> both ... The editor-bar button
+       beside the Develop dock title is the plain show/hide (and carries the state). */
     developScopesAction = new QAction(tr("Histogram / Vectorscope\tG"), this);
     developScopesAction->setObjectName("developScopes");
     developScopesAction->setShortcutVisibleInContextMenu(true);
-    developScopesAction->setCheckable(true);
     addAction(developScopesAction);
-    connect(developScopesAction, &QAction::triggered, this, &MW::toggleDevelopScopes);
+    connect(developScopesAction, &QAction::triggered, this, &MW::cycleDevelopScopes);
 
     // Embellish menu
     int n;          // used to populate action lists
@@ -3203,6 +3205,5 @@ void MW::syncDevelopMenuEnabled()
 
     // Reflect live state for the checkable toggles
     if (developTransformAction) developTransformAction->setChecked(developTransformVisible);
-    if (developScopesAction) developScopesAction->setChecked(developScopesVisible);
 }
 
