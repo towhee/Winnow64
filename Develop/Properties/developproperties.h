@@ -154,6 +154,10 @@ protected:
        through beside the Demosaic value row's arrow). rootIsDecorated stays true. */
     void drawBranches(QPainter *painter, const QRect &rect,
                       const QModelIndex &index) const override;
+    /* Carry the Scope band's containment rail (G::scopeRailX/W) down the tree's left
+       edge, so the scope rows above and the sections below read as one block. Drawn
+       over the rows, after the base paint. */
+    void paintEvent(QPaintEvent *event) override;
 
 public slots:
     void itemChange(QModelIndex idx) override;
@@ -264,6 +268,9 @@ signals:
        shown -> ImageView hides the red coverage tint so the effect on the masked pixels
        is visible. */
     void maskTintHideRequested();
+    /* Another scope was selected -> ImageView un-hides the tint so that scope's combined
+       mask is visible (the hidden flag is sticky). */
+    void maskTintShowRequested();
     /* The scope menu's "Show mask overlay" row was clicked -> MW flips the tint. */
     void maskOverlayToggleRequested();
     /* The scope menu's "Show mask breakdown" row -> MW flips Result/Breakdown view. */
@@ -388,6 +395,14 @@ private:
        vice versa. */
     void setAllSectionsExpanded(bool expand);
     void onSectionExpanded(const QModelIndex &idx);
+
+    /* Solo mode peers: the Raw panel and the Scope row are widgets outside the tree, so
+       the base PropertyEditor's sibling-collapse cannot reach them. soloCollapseOthers
+       folds every peer except the one just opened; owner says which that is (for a
+       section, keepSection names it). No-op unless Solo is on, and skipped during the
+       Expand-all / Collapse-all sweep. */
+    enum class SoloOwner { RawPanel, ScopeRow, Section };
+    void soloCollapseOthers(SoloOwner owner, const QString &keepSection = QString());
 
     /* Item builders. div converts the integer slider amount to a double (eg /100), and
        defaults to identity (0) so an absent value is a no-op edit. */

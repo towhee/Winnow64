@@ -28,13 +28,13 @@ ScopeHeader::ScopeHeader(QWidget *parent) : ScopeHeaderBase(parent)
 
     /* Collapse arrow: hides/shows the selected scope's rows in the tree below. Matches
        the tree's branch arrows (PropertyDelegate draws the same pixmap at 9x9, full
-       opacity in the gutter). The button is one indentation wide (10px, the tree's
-       gutter) with no padding, so the 9x9 icon sits in the gutter and the "Scope" label
-       after it lands at x=10 -- aligned with the tree's section-header captions. */
+       opacity in the gutter). The button is exactly icon-wide with no padding, so the
+       arrow sits in the tree's gutter and the "Scope" label, G::decorationTitleGap after
+       it, lands where the tree's section-header captions do. */
     collapseBtn = new BarBtn();
     collapseBtn->setToolTip("Hide or show this scope's settings");
     collapseBtn->setIconSize(QSize(9, 9));
-    collapseBtn->setFixedSize(10, 16);
+    collapseBtn->setFixedSize(9, 16);
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
     updateCollapseIcon();
@@ -77,12 +77,13 @@ ScopeHeader::ScopeHeader(QWidget *parent) : ScopeHeaderBase(parent)
     updatePreviewIcon();
 
     QHBoxLayout *row = new QHBoxLayout(this);
-    /* margin.left 0 + a gutter-width (10px) arrow button + spacing 0 puts the arrow in
-       the tree's gutter and the "Scope" label at one indentation (x=10), aligning it with
-       the tree's section-header captions. Tweak if the tree frame/indentation changes. */
+    /* margin.left 0 + an icon-wide arrow button + G::decorationTitleGap puts the arrow in
+       the tree's gutter and the "Scope" label just clear of it, aligning it with the
+       tree's section-header captions. Tweak if the tree frame/indentation changes. */
     row->setContentsMargins(0, 3, 6, 3);
     row->setSpacing(0);
     row->addWidget(collapseBtn);
+    row->addSpacing(G::decorationTitleGap);
     row->addWidget(scopeLabel);
     row->addSpacing(6);
     row->addWidget(combo, 1);
@@ -141,7 +142,7 @@ void ScopeHeader::showScopeMenu()
     if (!globalActive) {
         const QString nm = currentScopeName();
         menu.addSeparator();
-        connect(menu.addAction(tr("Add to %1\tM").arg(nm)), &QAction::triggered,
+        connect(menu.addAction(tr("Tweak %1 mask\tM").arg(nm)), &QAction::triggered,
                 this, [this]{ emit addMaskRequested(); });
         /* Show/hide the red mask coverage tint on the loupe. Only meaningful while a mask
            tool is expanded (its overlay is being edited), so the row is omitted if not.

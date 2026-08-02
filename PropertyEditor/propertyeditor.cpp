@@ -619,6 +619,20 @@ void PropertyEditor::mouseDoubleClickEvent(QMouseEvent *event)
     Set the value to the default value
 */
     if (G::isLogger) G::log("PropertyEditor::mouseDoubleClickEvent");
+
+    /* Qt sends MouseButtonDblClick INSTEAD of the second press, so a branch row (which
+       expands / collapses on press) must toggle again here.  Otherwise a double click
+       toggles once and leaves the branch in the opposite state instead of back where it
+       started.  The row is the one the preceding press toggled (pressBranch), not a
+       fresh hit test, as expanding / solo-collapsing has moved the rows under the
+       cursor. */
+    if (pressBranch.isValid()) {
+        const QModelIndex branch = pressBranch;
+        pressBranch = QModelIndex();
+        toggleBranch(branch);
+        return;
+    }
+
     QModelIndex idx = indexAt(event->pos());
     idx = model->index(idx.row(), ValColumn, idx.parent());
     QVariant value = idx.data(UR_DefaultValue);
@@ -634,31 +648,58 @@ void PropertyEditor::mouseDoubleClickEvent(QMouseEvent *event)
     setItemValue(idx, value);
 }
 
+void PropertyEditor::toggleBranch(const QModelIndex &capIdx)
+{
+/*
+    Expand / collapse a branch (a caption row that has children).
+*/
+    bool isRoot = capIdx.parent() == QModelIndex();
+    bool wasExpanded = isExpanded(capIdx);
+    if (isRoot && !wasExpanded && isSolo) collapseAllExcept();
+
+    if (capIdx.data(UR_okToCollapseRoot).toBool()) {
+        if (isExpandRecursively) {
+            wasExpanded ? collapse(capIdx) : expandRecursively(capIdx);
+        }
+        else {
+            wasExpanded ? collapse(capIdx) : expand(capIdx);
+        }
+    }
+}
+
+bool PropertyEditor::toggleBranchAt(const QPoint &pos)
+{
+/*
+    Expand / collapse the branch under pos and remember it as pressBranch, so the
+    MouseButtonDblClick that follows can toggle THE SAME row (see
+    mouseDoubleClickEvent).  Rows shift when a branch expands or a solo collapse runs,
+    so the double click cannot just re-hit-test its position.
+
+    Returns true if pos is on a branch row, whether or not it toggled (a root that is
+    not okToCollapseRoot stays put).
+*/
+    QModelIndex idx = indexAt(pos);
+    if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
+    QStandardItem *item = idx.isValid() ? model->itemFromIndex(idx) : nullptr;
+    if (!item || !item->hasChildren()) {
+        pressBranch = QModelIndex();
+        return false;
+    }
+    pressBranch = idx;
+    toggleBranch(idx);
+    return true;
+}
+
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
 /*
-    Set the current index and expand/collapse when click anywhere on a row that has children.
+    Set the current index and expand/collapse when click anywhere on a row that
+    has children.
 */
 {
     // ignore right mouse clicks (reserved for context menu)
     if (event->button() == Qt::RightButton) return;
 
-    QModelIndex idx = indexAt(event->pos());
-    if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
-    QStandardItem *item = model->itemFromIndex(idx);
-    if (idx.isValid() && item->hasChildren()) {
-        bool isRoot = idx.parent() == QModelIndex();
-        bool wasExpanded = isExpanded(idx);
-        if (isRoot && !wasExpanded && isSolo) collapseAllExcept();
-
-        if (idx.data(UR_okToCollapseRoot).toBool()) {
-            if (isExpandRecursively) {
-                wasExpanded ? collapse(idx) : expandRecursively(idx);
-            }
-            else {
-                wasExpanded ? collapse(idx) : expand(idx);
-            }
-        }
-    }
+    toggleBranchAt(event->pos());
 }
 
 void PropertyEditor::mouseReleaseEvent(QMouseEvent * /*event*/)

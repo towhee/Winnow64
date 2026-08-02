@@ -864,8 +864,12 @@ void MW::closeEvent(QCloseEvent *event)
     delete recentFolders;
     delete ingestHistoryFolders;
     delete embel;
-    delete G::issueLog;
-    delete G::popup;
+    G::deleteIssueLog();
+    /* Null the global before destroying: posted events can still drain after
+       closeEvent and many call sites guard on G::popup != nullptr. */
+    Popup *popup = G::popup;
+    G::popup = nullptr;
+    delete popup;
 
     event->accept();
 }
@@ -7223,12 +7227,22 @@ void MW::updateDevelopScopes(const QImage &shown)
 void MW::toggleDevelopScopes()
 {
 /*
-    Develop editor-bar toggle: show/hide the scopes strip and persist the choice. When re-shown,
-    repopulate from the image currently displayed -- re-render the developed preview if the image
-    has edits (so the scope matches what is on screen), else sample the decoded image.
+    Develop editor-bar toggle: show/hide the scopes strip and persist the choice.
 */
     if (G::isLogger) G::log("MW::toggleDevelopScopes");
-    developScopesVisible = !developScopesVisible;
+    setDevelopScopesVisible(!developScopesVisible);
+}
+
+void MW::setDevelopScopesVisible(bool isVisible)
+{
+/*
+    Show/hide the scopes strip and persist the choice. When shown, repopulate from the
+    image currently displayed -- re-render the developed preview if the image has edits
+    (so the scope matches what is on screen), else sample the decoded image
+    (updateDevelopScopes no-ops while the strip is hidden, so the data is stale by then).
+*/
+    if (G::isLogger) G::log("MW::setDevelopScopesVisible");
+    developScopesVisible = isVisible;
     if (scopesView) scopesView->setVisible(developScopesVisible);
     if (developScopesBtn) developScopesBtn->setActive(developScopesVisible);
     settings->setValue("Develop/scopesVisible", developScopesVisible);
@@ -7238,6 +7252,44 @@ void MW::toggleDevelopScopes()
         else
             updateDevelopScopes(icd->imCache.value(dm->currentFilePath));
     }
+}
+
+void MW::cycleDevelopScopes()
+{
+/*
+    "G" in Develop mode (also the Develop menu item): step the scopes strip through
+
+        both scopes -> histogram only -> vectorscope only -> hidden -> both ...
+
+    The single-scope layouts expand to fill the strip. Both the layout and the visibility
+    are persisted, so the strip comes back the way it was left in the next session.
+*/
+    if (G::isLogger) G::log("MW::cycleDevelopScopes");
+    if (!scopesView) return;
+
+    if (!developScopesVisible) {
+        /* Hidden: reappear at the start of the cycle. */
+        developScopesLayout = ScopesView::Both;
+        scopesView->setScopeLayout(ScopesView::Both);
+        settings->setValue("Develop/scopesLayout", developScopesLayout);
+        setDevelopScopesVisible(true);
+        return;
+    }
+
+    switch (developScopesLayout) {
+    case ScopesView::Both:
+        developScopesLayout = ScopesView::HistogramOnly;
+        break;
+    case ScopesView::HistogramOnly:
+        developScopesLayout = ScopesView::VectorscopeOnly;
+        break;
+    default:
+        /* Last layout: hide the strip (the layout it reappears with is set above). */
+        setDevelopScopesVisible(false);
+        return;
+    }
+    scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
+    settings->setValue("Develop/scopesLayout", developScopesLayout);
 }
 
 void MW::toggleDevelopTransform()

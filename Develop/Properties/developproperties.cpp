@@ -573,6 +573,12 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
     connect(rawPanel, &RawPanel::denoiseLumaChanged,   this, [this](int v){ setGlobalDenoise(true,  v); });
     connect(rawPanel, &RawPanel::denoiseChromaChanged, this, [this](int v){ setGlobalDenoise(false, v); });
     connect(rawPanel, &RawPanel::tipsRequested, this, &DevelopProperties::howThisWorks);
+    /* Solo: the Raw panel is a peer of the Scope row and the adjustment sections, so
+       expanding it folds them away. */
+    connect(rawPanel, &RawPanel::collapseToggled, this, [this](bool collapsed){
+        if (collapsed) return;
+        soloCollapseOthers(SoloOwner::RawPanel);
+    });
 
     syncRawPanel();
 }
@@ -765,7 +771,7 @@ void DevelopProperties::commitPendingMask(int op)
     const QString toolName = maskToolName(scope->components[pendingIdx].tool);
     pendingIdx = -1;
     selectedMaskIndex = -1;                // flatten: committed tools are not re-opened
-    maskLatched = true;                    // keep the combined (red) mask overlay showing
+    maskLatched = true;                    // overlay stays AVAILABLE ("O" re-shows it)
     maskPanelOpen = false;
     if (maskPanel) maskPanel->hide();
     const QString verb = op == int(MaskOp::Subtract)  ? "Subtract "
@@ -774,12 +780,16 @@ void DevelopProperties::commitPendingMask(int op)
     noteEdit(verb + toolName);
     buildTree();
     emit paramsChanged();
+    /* The tool is done: get the red coverage tint off the image so the user sees the
+       developed result. The overlay is still latched, so "O" (or the header menu row)
+       brings it back. Must follow paramsChanged() -- that rebuilds/re-sets the tint. */
+    emit maskTintHideRequested();
 }
 
 void DevelopProperties::finishFirstMask()
 {
-    /* [Done] on the first tool: already committed (red); close the panel but keep the
-       mask overlay showing. */
+    /* [Done] on the first tool: already committed (red); close the panel and hide the
+       overlay tint (still latched, so "O" re-shows it). */
     pendingIdx = -1;
     selectedMaskIndex = -1;
     maskLatched = true;
@@ -787,6 +797,7 @@ void DevelopProperties::finishFirstMask()
     if (maskPanel) maskPanel->hide();
     buildTree();
     emit paramsChanged();
+    emit maskTintHideRequested();
 }
 
 void DevelopProperties::cancelMaskTool()
@@ -890,6 +901,9 @@ void DevelopProperties::onScopeSelected(const QString &name)
     if (scopeHeader) scopeHeader->setCollapsed(false);
 
     emit paramsChanged();         // the renderer shows the active scope
+    /* Selecting a scope is an explicit "show me this mask", so clear any sticky hidden
+       flag left by finishing a tool or moving an adjustment slider. */
+    if (hasMask) emit maskTintShowRequested();
 }
 
 void DevelopProperties::onSpotToolToggled(bool active)
@@ -1021,14 +1035,34 @@ void DevelopProperties::setTreeCollapsed(bool collapsed)
     applyCoreVisibility();           // core rows also depend on collapse state
 
     /* Solo: showing the scope's items is one of the mutually-exclusive sections, so
-       collapse the three adjustment sections (they would otherwise stay open alongside
-       the scope). Skipped during the Expand-all bulk sweep, which wants all open. */
-    if (!collapsed && !isBulkExpandCollapse &&
-        setting->value("Develop/isSolo", false).toBool()) {
-        for (const char *h : {"BasicHeader", "ColorHeader", "EffectsHeader"}) {
-            const QModelIndex idx = findCaptionIndex(h);
-            if (idx.isValid()) collapse(idx);
-        }
+       collapse its peers -- the three adjustment sections and the Raw panel (they would
+       otherwise stay open alongside the scope). */
+    if (!collapsed) soloCollapseOthers(SoloOwner::ScopeRow);
+}
+
+void DevelopProperties::soloCollapseOthers(SoloOwner owner, const QString &keepSection)
+{
+    /* Skipped during the Expand-all / Collapse-all sweep, which drives every peer. */
+    if (isBulkExpandCollapse) return;
+    if (!setting->value("Develop/isSolo", false).toBool()) return;
+
+    /* Raw panel (lab UI, raw files only -- null or hidden otherwise). */
+    if (owner != SoloOwner::RawPanel && rawPanel && !rawPanel->isCollapsed())
+        rawPanel->setCollapsed(true);
+
+    /* The scope's own items; its collapse arrow lives in the ScopeHeader band, not the
+       tree, so it has to be driven by hand. */
+    if (owner != SoloOwner::ScopeRow && !scopeItemsCollapsed) {
+        setTreeCollapsed(true);
+        if (scopeHeader) scopeHeader->setCollapsed(true);
+    }
+
+    /* The adjustment sections. The base PropertyEditor already collapses tree siblings
+       when a root expands; this also covers the Raw panel / Scope row cases. */
+    for (const char *h : {"BasicHeader", "ColorHeader", "EffectsHeader"}) {
+        if (keepSection == QLatin1String(h)) continue;
+        const QModelIndex idx = findCaptionIndex(h);
+        if (idx.isValid()) collapse(idx);
     }
 }
 
@@ -1400,9 +1434,17 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
 void DevelopProperties::showRawDemosaic()
 {
     if (G::isLogger) G::log("DevelopProperties::showRawDemosaic");
+    /* Lab UI: the Demosaic / raw-denoise controls live in the Raw panel, not the tree, so
+       just un-collapse it -- under Solo that folds its peers away. */
+    if (rawPanel && G::useScopeHeaderLab && currentIsRaw()) {   // == syncRawPanel's test
+        if (rawPanel->isCollapsed()) rawPanel->setCollapsed(false);
+        soloCollapseOthers(SoloOwner::RawPanel);
+        return;
+    }
+
     /* Reveal the Demosaic (and, on the Winnow engine, raw-denoise) rows: they are Core
-       rows on the Global scope, hidden while the scope items are collapsed. Bulk-guarded so
-       un-collapsing does not fold the adjustment sections under Solo. */
+       rows on the Global scope, hidden while the scope items are collapsed. Bulk-guarded
+       so un-collapsing does not fold the adjustment sections under Solo. */
     if (activeScopeIndex != 0) onScopeSelected(currentScopeNames().value(0));
     isBulkExpandCollapse = true;
     setTreeCollapsed(false);
@@ -1414,31 +1456,27 @@ void DevelopProperties::setAllSectionsExpanded(bool expand)
 {
     if (G::isLogger) G::log("DevelopProperties::setAllSectionsExpanded");
     /* Expand/Collapse all also drives the Scope row, whose collapse arrow lives in the
-       ScopeHeader band (not the tree). The bulk guard stops onSectionExpanded from
-       re-collapsing the scope as the tree sections expand under Solo. */
+       ScopeHeader band (not the tree), and the Raw panel. The bulk guard stops
+       onSectionExpanded re-collapsing them as the tree sections expand under Solo. */
     isBulkExpandCollapse = true;
     if (expand) expandAll();
     else        collapseAll();
     setTreeCollapsed(!expand);                          // show/hide the scope's own items
     if (scopeHeader) scopeHeader->setCollapsed(!expand);
+    if (rawPanel) rawPanel->setCollapsed(!expand);
     isBulkExpandCollapse = false;
 }
 
 void DevelopProperties::onSectionExpanded(const QModelIndex &idx)
 {
     /* Solo: one section open at a time. The base PropertyEditor collapses the sibling
-       tree sections when a root is expanded; extend that to the Scope row (a separate
-       widget above the tree). Only the three adjustment sections are peers of the scope
-       -- the Demosaic row is itself a scope item (it hides when the scope collapses), so
-       expanding it must NOT collapse the scope. Skipped during the Expand-all sweep. */
-    if (isBulkExpandCollapse) return;
-    if (!setting->value("Develop/isSolo", false).toBool()) return;
+       tree sections when a root is expanded; extend that to the Scope row and the Raw
+       panel (separate widgets above the tree). Only the three adjustment sections are
+       peers -- the Demosaic row is itself a scope item (it hides when the scope
+       collapses), so expanding it must NOT collapse the scope. */
     const QString name = idx.data(UR_Name).toString();
     if (name != "BasicHeader" && name != "ColorHeader" && name != "EffectsHeader") return;
-    if (!scopeItemsCollapsed) {
-        setTreeCollapsed(true);
-        if (scopeHeader) scopeHeader->setCollapsed(true);
-    }
+    soloCollapseOthers(SoloOwner::Section, name);
 }
 
 void DevelopProperties::showMaskMenu()
@@ -1933,9 +1971,14 @@ void DevelopProperties::onMaskSelectionChanged()
 
 void DevelopProperties::mousePressEvent(QMouseEvent *event)
 {
-    /* Clicking a tool row toggles its settings (the base class does not select on click, so we read
-       the row's UR_MaskIndex ourselves and rebuild). We manage the tool's expand state via the
-       selection, so we do NOT fall through to the base expand/collapse for these rows. */
+    /* Clicking a tool row toggles its settings (the base class does not select on click,
+       so we read the row's UR_MaskIndex ourselves and rebuild). We manage the tool's
+       expand state via the selection, so we do NOT fall through to the base
+       expand/collapse for these rows.
+
+       This press is not a branch expand/collapse unless the base says so below: stale
+       state would make the following double click (if any) toggle an unrelated branch. */
+    pressBranch = QModelIndex();
     if (event->button() == Qt::LeftButton) {
         const QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
@@ -2032,6 +2075,32 @@ void DevelopProperties::flashCaption(const QModelIndex &capIdx)
     anim->start();
 }
 
+void DevelopProperties::paintEvent(QPaintEvent *event)
+{
+    PropertyEditor::paintEvent(event);
+
+    /* The scope containment rail, continued from ScopeHeaderLab (which draws the same
+       2px G::selectionColor line from the selected scope row down to its bottom edge --
+       see G::scopeRailX/W). It runs to the BOTTOM OF THE LAST ROW, not the bottom of the
+       viewport: the empty space under a short tree is not part of the scope's block.
+       The tree's 1px QSS border (widgetcss treeView) insets the viewport, so the rail is
+       drawn one pixel left of the band's x to stay in line with it. */
+    if (G::scopeRailW <= 0) return;
+
+    /* Start from the topmost VISIBLE row (indexAt), not model row 0: the Develop tree
+       hides rows (Core / mask / raw-only rows), and indexBelow on a hidden index returns
+       an invalid index, which would end the walk immediately. */
+    QModelIndex last = indexAt(QPoint(0, 0));
+    if (!last.isValid()) return;
+    for (QModelIndex below = indexBelow(last); below.isValid(); below = indexBelow(below))
+        last = below;
+    const int bottom = qMin(visualRect(last).bottom() + 1, viewport()->height());
+    if (bottom <= 0) return;
+
+    QPainter p(viewport());
+    p.fillRect(G::scopeRailX - 1, 0, G::scopeRailW, bottom, G::selectionColor);
+}
+
 void DevelopProperties::drawBranches(QPainter *, const QRect &, const QModelIndex &) const
 {
     /* Intentionally empty: draw no native branch indicator. Every expandable Develop row
@@ -2080,6 +2149,11 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
        Scope band above the tree. Only the header content shifts -- its child rows keep
        their own indentation (the delegate reads UR_ExtraIndent on the header caption). */
     model->setData(capIdx, true, UR_ExtraIndent);
+    /* A section header belongs to the scope selected in the Scope band above, so it is a
+       tier BELOW that band: a flat band, not the panel-header gradient the Scope and Raw
+       bands use. Without this the sections read as siblings of Scope rather than as its
+       contents. */
+    if (previewGroup >= 0) model->setData(capIdx, true, UR_HeaderFlat);
 }
 
 void DevelopProperties::addSlider(const QString &key, const QString &caption,

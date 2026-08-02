@@ -623,8 +623,15 @@ private slots:
        develop preview after a render, else the decoded image. One strided sample pass feeds both
        scopes; no-op (cheap) while the scopes are hidden. A null image clears the scopes. */
     void updateDevelopScopes(const QImage &shown);
-    /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the choice. */
+    /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the
+       choice. */
     void toggleDevelopScopes();
+    /* Apply a scopes-strip visibility, repopulating the scopes when it is shown;
+       persists. */
+    void setDevelopScopesVisible(bool isVisible);
+    /* "G" in Develop mode: step the scopes strip through both scopes -> histogram only ->
+       vectorscope only -> hidden -> both ... ; persists the layout and the visibility. */
+    void cycleDevelopScopes();
     /* Show/hide the Develop Transform panel (editor-bar toggle / "R"); persists. */
     void toggleDevelopTransform();
     /* Show/hide the Fill Replace panel (title-bar spot button / "S" in Develop mode):
@@ -1347,6 +1354,10 @@ private:
        toggled by a button on the Develop editor bar and persisted (Develop/scopesVisible). */
     ScopesView *scopesView = nullptr;
     bool developScopesVisible = true;
+    /* Which scopes the strip shows (ScopesView::ScopeLayout, cycled by "G" and persisted
+       in Develop/scopesLayout). Held as an int so mainwindow.h needs no scopes
+       include. */
+    int developScopesLayout = 0;
     /* The History dock's list of develop actions (hover previews a state, a click reverts
        to it). DevelopProperties owns the timeline it views. */
     HistoryView *historyView = nullptr;

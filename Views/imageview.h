@@ -192,6 +192,9 @@ public slots:
        user can see the effect on the masked pixels). No-op outside mask editing or if
        already hidden. */
     void hideMaskTint();
+    /* Force the mask overlay tint shown again (e.g. another scope was selected, so its
+       combined mask should be visible). No-op if it is already showing. */
+    void showMaskTint();
     void setMaskFeather(double feather);
     void setMaskInverted(bool inverted);
     void setMaskBrushSettings(double size, double feather, double flow, bool autoMask,

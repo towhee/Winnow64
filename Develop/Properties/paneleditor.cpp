@@ -149,6 +149,9 @@ void PanelEditor::mousePressEvent(QMouseEvent *event)
     /* Click a slider row's caption -> focus its slider (arrow keys nudge) + flash the
        caption, like DevelopProperties::mousePressEvent (the base does not select on
        click). */
+    /* Not a branch expand/collapse unless the base says so below: stale state would make
+       the following double click (if any) toggle an unrelated branch. */
+    pressBranch = QModelIndex();
     if (event->button() == Qt::LeftButton) {
         const QModelIndex idx = indexAt(event->pos());
         if (idx.isValid() && idx.column() == CapColumn) {
