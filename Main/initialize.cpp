@@ -2002,8 +2002,13 @@ void MW::createDevelopDock()
                                      QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
         }
     });
-    /* Transform Reset: clear crop/straighten/warp back to identity (destructive) and return to
-       editing on the full frame. */
+    /* Transform [X]: close the panel exactly as the editor-bar button / "R" does --
+       commit the crop session, hide the panel and update the action/button state. */
+    connect(transformPanel, &TransformPanel::closeRequested, this, [this]{
+        if (developTransformVisible) toggleDevelopTransform();
+    });
+    /* Transform Reset: clear crop/straighten/warp back to identity (destructive) and
+       return to editing on the full frame. */
     connect(transformPanel, &TransformPanel::resetRequested, this, [this]{
         if (!developProperties) return;
         developProperties->setCurrentGeometry(Geometry());      // identity

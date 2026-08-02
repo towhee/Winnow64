@@ -74,7 +74,9 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     rowsContainer = new QWidget(this);
     rowsContainer->setAttribute(Qt::WA_TranslucentBackground);
     rowsLayout = new QVBoxLayout(rowsContainer);
-    rowsLayout->setContentsMargins(0, 0, 0, 2);
+    /* No bottom margin: the tree's first section header butts straight onto the last
+       scope row, so the scope list and the sections read as one uninterrupted block. */
+    rowsLayout->setContentsMargins(0, 0, 0, 0);
     rowsLayout->setSpacing(0);
     outer->addWidget(rowsContainer);
 

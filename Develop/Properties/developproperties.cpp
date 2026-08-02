@@ -80,6 +80,15 @@ void DevelopProperties::initialize()
     setHeaderHidden(true);
     ignoreFontSizeChangeSignals = false;
 
+    /* No frame. The app stylesheet gives every QTreeView a 1px border (widgetcss
+       treeView), which drew a box round the tree: a seam between the scope list and the
+       first section header, and a 1px break in the containment rail where it crossed
+       from the Scope band into the tree. setFrameShape alone is not enough once the QSS
+       styles QTreeView -- a widget-level rule is needed too (same as PanelEditor). The
+       block's bottom edge is closed by paintEvent's rule instead. */
+    setFrameShape(QFrame::NoFrame);
+    setStyleSheet("QTreeView { border: none; }");
+
     /* Column widths. The dock minimum width is set in MW::createDevelopDock so the
        header - and + buttons are always visible. */
     stringToFitCaptions = "=captions column=";
@@ -2083,8 +2092,8 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
        2px G::selectionColor line from the selected scope row down to its bottom edge --
        see G::scopeRailX/W). It runs to the BOTTOM OF THE LAST ROW, not the bottom of the
        viewport: the empty space under a short tree is not part of the scope's block.
-       The tree's 1px QSS border (widgetcss treeView) insets the viewport, so the rail is
-       drawn one pixel left of the band's x to stay in line with it. */
+       The frame is off (initialize), so the viewport shares this widget's origin and the
+       two halves line up at the same x with no correction. */
     if (G::scopeRailW <= 0) return;
 
     /* Start from the topmost VISIBLE row (indexAt), not model row 0: the Develop tree
@@ -2098,7 +2107,18 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
     if (bottom <= 0) return;
 
     QPainter p(viewport());
-    p.fillRect(G::scopeRailX - 1, 0, G::scopeRailW, bottom, G::selectionColor);
+    p.fillRect(G::scopeRailX, 0, G::scopeRailW, bottom, G::selectionColor);
+
+    /* Close the block: a full-width rule just under the last row, in the shade the tree's
+       old QSS border used (backgroundShade + 15), so the bottom edge is as legible as the
+       Scope band at the top. Only when there is empty dock below it -- if the rows fill
+       or overflow the viewport, the panel edge already ends the block and a rule pinned
+       to the last visible row would be a false bottom. */
+    const int ruleY = bottom + 3;
+    if (ruleY < viewport()->height() - 1) {
+        const int m = G::backgroundShade + 15;
+        p.fillRect(0, ruleY, viewport()->width(), 1, QColor(m, m, m));
+    }
 }
 
 void DevelopProperties::drawBranches(QPainter *, const QRect &, const QModelIndex &) const

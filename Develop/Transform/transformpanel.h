@@ -24,8 +24,9 @@ class BarBtn;
     that model; the image-side overlay and the warp engine are wired to these signals via MW.
 
     Layout:
-        - A property-style gradient header ("Transform") with three trailing BarBtns: [?] tips,
-          [E] preview eye (show/ignore the whole transform), [R] reset (clear crop/straighten/warp).
+        - A property-style gradient header ("Transform") with four trailing BarBtns: [?] tips,
+          [E] preview eye (show/ignore the whole transform), [R] reset (clear crop/straighten/warp)
+          and [X] close (extreme right -- commits the session and hides the panel, same as "R").
         - A three-way MODE toggle (Crop / Level / Warp -- only one selected at a time; shortcuts
           C / L / W whenever Transform is active, whether the panel or the crop overlay holds
           focus) down the left, each row carrying that mode's controls
@@ -72,7 +73,8 @@ signals:
     void rectifyRequested();               // apply perspective rectify to the drawn quad
     void tipsRequested();                  // [?] clicked
     void previewToggled(bool shown);       // eye: show (true) or ignore (false) the transform
-    void resetRequested();                 // header reset: clear crop/straighten/warp to identity
+    void resetRequested();                 // header reset: all transforms to identity
+    void closeRequested();                 // header [X]: close panel (commits session)
     void resetModeRequested(int mode);     // per-row reset: clear just this mode's contribution
 
 public slots:
@@ -118,6 +120,7 @@ private:
     BarBtn      *tipBtn       = nullptr;
     BarBtn      *previewBtn   = nullptr;    // eye: show/ignore the transform (Geometry::show)
     BarBtn      *headerResetBtn = nullptr;  // clear crop/straighten/warp back to identity
+    BarBtn      *closeBtn     = nullptr;    // [X] at the extreme right: close the panel
 
     bool previewShown = true;              // mirror of the current image's Geometry::show
     bool aspectLocked = false;
