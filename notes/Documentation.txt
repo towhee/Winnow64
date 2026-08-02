@@ -3304,10 +3304,17 @@ Scope & mask model (Global + masks)
                model row 0, which may be a hidden row, and indexBelow of a hidden index
                is invalid). Since the rail colour is
                the selected row's own band colour, the stretch crossing that row is
-               invisible: the selection reads as a gap in the rail. The tree's 1px QSS
-               border
-               insets its viewport, so the tree half is drawn 1px left of the band half to
-               stay in line.
+               invisible: the selection reads as a gap in the rail.
+               ONE BLOCK: the seam between the scope list and the tree is closed --
+               rowsLayout has no bottom margin, and DevelopProperties turns OFF the frame
+               (setFrameShape + a widget-level "QTreeView { border: none; }", since the
+               app QSS gives every QTreeView a 1px border). That border was both a seam
+               and a 1px break in the rail; with it gone the viewport shares the widget
+               origin, so both rail halves use the same x. The block's bottom is closed
+               by a full-width rule 3px under the LAST ROW in the old border's shade
+               (backgroundShade + 15), drawn only when empty dock remains below it -- if
+               the rows fill or overflow the viewport, the panel edge already ends the
+               block and a rule at the last visible row would be a false bottom.
                PREVIEW / RESET: each section header
                (Basic/Color/Effects) carries an eye BarBtn that toggles that group's Preview flag on
                the active scope; the whole-mask eye + reset live in the ScopeHeader widget
@@ -4273,9 +4280,13 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
 
     Layout (redesigned): a property-style gradient HEADER band ("Transform", drawn by an internal
     GradientHeader QWidget using the same backgroundShade +5 -> -15 gradient as PropertyDelegate)
-    with three trailing BarBtns: [?] tips ("Crop and transform tips"), [E] preview eye (show/ignore
-    the whole transform, previewToggled), [R] reset (clear crop/straighten/warp to identity,
-    resetRequested; icon reset.png -- the "chasing arrows" glyph, replacing the old refresh.png).
+    with four trailing BarBtns: [?] tips ("Crop and transform tips"), [E] preview eye
+    (show/ignore the whole transform, previewToggled), [R] reset (clear the crop,
+    straighten and warp to identity, resetRequested; icon reset.png -- "chasing arrows",
+    replacing the old refresh.png) and, at the extreme right, [X] close (close.png,
+    closeRequested). The [X] runs MW::toggleDevelopTransform's hide path, so closing from
+    the header commits the crop session and clears the tool exactly like the editor-bar
+    Transform button or "R" (Esc still CANCELS via MW::cancelDevelopTransform).
 
     Below it a three-way MODE toggle down the left (Crop / Level / Warp -- a mutually exclusive
     QButtonGroup; the selected button gets a teal (#1b8a83) background + border). Each mode row

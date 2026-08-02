@@ -113,7 +113,7 @@ TransformPanel::TransformPanel(QWidget *parent, QSettings *settings)
 
 void TransformPanel::buildUi()
 {
-    /* -------- Header: property-style gradient band, caption left, [?] [E] [R] trailing -------- */
+    /* -------- Header: gradient band, caption left, [?] [E] [R] [X] trailing -------- */
     GradientHeader *header = new GradientHeader(this);
 
     QLabel *title = new QLabel(tr("Transform"), header);
@@ -141,6 +141,13 @@ void TransformPanel::buildUi()
     headerResetBtn->setToolTip(tr("Reset crop, straighten and perspective to the full frame"));
     connect(headerResetBtn, &BarBtn::clicked, this, &TransformPanel::resetRequested);
 
+    /* Close the panel (same as the editor-bar Transform button / "R"): commits the crop
+       session and hides the panel. Kept last so it sits at the extreme right. */
+    closeBtn = new BarBtn();
+    closeBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
+    closeBtn->setToolTip(tr("Close the Transform panel (R)"));
+    connect(closeBtn, &BarBtn::clicked, this, &TransformPanel::closeRequested);
+
     QHBoxLayout *headerRow = new QHBoxLayout(header);
     headerRow->setContentsMargins(6, 3, 6, 3);
     headerRow->setSpacing(6);
@@ -149,6 +156,7 @@ void TransformPanel::buildUi()
     headerRow->addWidget(tipBtn);
     headerRow->addWidget(previewBtn);
     headerRow->addWidget(headerResetBtn);
+    headerRow->addWidget(closeBtn);
 
     /* -------- Mode toggle (Crop / Level / Warp): mutually exclusive, teal-when-selected -------- */
     const int bs = G::backgroundShade;
