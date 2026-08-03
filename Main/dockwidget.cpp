@@ -670,10 +670,11 @@ QString MW::dockTabToolTip(const QString &tabText)
     if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
     if (tabText == developDockTabText)  return tip(developDockTabText,   "F9");
-    /* History is Develop-only, so its key is Develop mode local ("H", dispatched by the
-       arbiter) rather than an F-key like the docks above -- the tab is only ever seen in
-       Develop mode, where H always works. */
+    /* History and Presets are Develop-only, so their keys are Develop mode local ("H" /
+       "P", dispatched by the arbiter) rather than F-keys like the docks above -- their
+       tabs are only ever seen in Develop mode, where H and P always work. */
     if (tabText == historyDockTabText)  return tip(historyDockTabText,  "H");
+    if (tabText == presetsDockTabText)  return tip(presetsDockTabText,  "P");
     return QString();
 }
 
@@ -773,6 +774,7 @@ void MW::applyDockCollapseState()
     apply(thumbDock,    "ThumbDock");
     apply(embelDock,    "EmbelDock");
     apply(historyDock,  "HistoryDock");
+    apply(presetsDock,  "PresetsDock");
 }
 
 void MW::embelDockActivated(QDockWidget *dockWidget)

@@ -625,6 +625,13 @@ Q_NAMESPACE
     extern int popUpLoadFolderStep;
     extern Popup *popup;
     extern void newPopUp(QWidget *widget, QWidget *centralWidget);
+
+    /* Problems found while READING SETTINGS AT STARTUP -- e.g. a saved value that no
+       longer names anything this build understands. MW::loadSettings runs long before
+       G::newPopUp creates the popup, so these cannot be shown when they are detected:
+       append the message here and MW::whenActivated shows them once the window is up.
+       See notes/Documentation.txt "Corrupted or changed develop settings". */
+    extern QStringList startupWarnings;
 }
 #endif // GLOBAL_H
 

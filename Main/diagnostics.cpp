@@ -103,6 +103,7 @@ void MW::reportWorkspaceState()
              << "\nisEmbelDockVisible" << w.isEmbelDockVisible
              << "\nisDevelopDockVisible" << w.isDevelopDockVisible
              << "\nisHistoryDockVisible" << w.isHistoryDockVisible
+             << "\nisPresetsDockVisible" << w.isPresetsDockVisible
              << "\nisThumbDockVisible" << w.isThumbDockVisible
              << "\nthumbSpacing" << w.thumbSpacing
              << "\nthumbPadding" << w.thumbPadding

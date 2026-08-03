@@ -125,13 +125,8 @@ void VectorscopeView::paintEvent(QPaintEvent *)
        stays as the 100% reference, so higher zoom reveals low-saturation detail (and clips the
        outer fully-saturated points). */
     const double pr = radius * zoom;
-    if (zoom > 1.0) {
-        p.setPen(QColor(150, 150, 150));
-        p.drawText(r.adjusted(0, 1, -3, 0), Qt::AlignTop | Qt::AlignRight,
-                   QString::number(qRound(zoom * 100)) + "%");
-    }
 
-    if (!hasData) return;
+    if (!hasData) { drawZoomLabel(p); return; }
 
     /* Log-scaled intensity: chroma counts span a huge range (the neutral cluster
        dominates), so log keeps faint coloured excursions visible. */
@@ -180,4 +175,19 @@ void VectorscopeView::paintEvent(QPaintEvent *)
         p.setPen(QPen(QColor(255, 255, 255), 1.5));
         p.drawEllipse(QPointF(px, py), 4.5, 4.5);
     }
+
+    drawZoomLabel(p);   // last, so a zoomed trace cannot obscure the readout
+}
+
+void VectorscopeView::drawZoomLabel(QPainter &p)
+{
+/*
+    The magnification readout, bottom right corner, shown only when zoomed past the 100%
+    graticule. Drawn on top of the trace (the strip's close button is the ScopesView's,
+    not the scope's -- see ScopesView).
+*/
+    if (zoom <= 1.0) return;
+    p.setPen(QColor(150, 150, 150));
+    p.drawText(rect().adjusted(0, 0, -3, -1), Qt::AlignBottom | Qt::AlignRight,
+               QString::number(qRound(zoom * 100)) + "%");
 }

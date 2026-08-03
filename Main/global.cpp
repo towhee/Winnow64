@@ -389,6 +389,7 @@ void newPopUp(QWidget *widget, QWidget *centralWidget)
 {
     popup = new Popup(widget, centralWidget);
 }
+QStringList startupWarnings;
 
 //*** LOGGER ******************************************************************************
 
