@@ -145,6 +145,11 @@ struct FillSpot {
 };
 
 struct EditStack {
+    /* Sidecar format version this build WRITES. Bump only when the JSON shape changes in
+       a way older builds cannot read; a stack stamped higher than this was written by a
+       newer Winnow and is reported to the user on load (see fromBase64). */
+    static constexpr int kVersion = 1;
+
     int                 version = 1;
     QVector<EditScope>  scopes;
     Geometry            geometry;       // crop/straighten/warp, applied last
@@ -395,19 +400,207 @@ struct EditStack {
         return s;
     }
 
-    /* Base64(compact JSON) -- the value stored in the winnow:Develop sidecar attribute. */
+    /* Base64(compact JSON) -- the value stored in the winnow:Develop sidecar
+       attribute. */
     QString toBase64() const {
         const QByteArray json = QJsonDocument(toJson()).toJson(QJsonDocument::Compact);
         return QString::fromLatin1(json.toBase64());
     }
 
-    static EditStack fromBase64(const QString &b64) {
-        if (b64.isEmpty()) return EditStack();
+    /* ----------------------------------------------------------------------------------
+       Loading a POSSIBLY CORRUPT sidecar.
+
+       A sidecar is a user file: it can be truncated by a crash, mangled by a sync client,
+       hand-edited, or written by a future build. Forward tolerance (unknown keys ignored,
+       absent keys defaulted) handles VERSION drift, but it cannot tell "this image has no
+       edits" apart from "this image's edits could not be read" -- both used to come back
+       as a default EditStack, silently. Callers need that distinction, because the second
+       case means the user's work is missing from the panel and their next edit will
+       overwrite whatever is still on disk.
+
+       So the load reports a Status and an issue list, and every value that reaches the
+       render pipeline is range-checked by sanitize(). See notes/Documentation.txt
+       "Corrupted or changed develop settings".
+       ------------------------------------------------------------------------------- */
+
+    enum class Status {
+        Ok,         // parsed cleanly (possibly with repairs -- see the issue list)
+        Absent,     // no sidecar / empty attribute: a normal unedited image, NOT an error
+        Corrupt     // present but unreadable: bad base64, bad JSON, or not a JSON object
+    };
+
+    /* Clamp helper: rejects NaN / infinity as well as out-of-range. JSON cannot encode a
+       non-finite number, but a hand-edited or partially-overwritten file can still yield
+       one via a huge exponent, and a single NaN reaching the pipeline turns the whole
+       image black. Returns true when v had to be changed. */
+    static bool clampF(float &v, float lo, float hi, float fallback) {
+        if (!(v == v) || v < -3.0e38f || v > 3.0e38f) { v = fallback; return true; }
+        if (v < lo) { v = lo; return true; }
+        if (v > hi) { v = hi; return true; }
+        return false;
+    }
+
+    static bool clampD(double &v, double lo, double hi, double fallback) {
+        if (!(v == v) || v < -1.0e300 || v > 1.0e300) { v = fallback; return true; }
+        if (v < lo) { v = lo; return true; }
+        if (v > hi) { v = hi; return true; }
+        return false;
+    }
+
+    /* Force one EditParams into its documented ranges (the same limits the panel sliders
+       enforce, so a repaired value is always one the user could have dialled in). Appends
+       a short description of anything it had to change. */
+    static void sanitizeParams(EditParams &p, const QString &where, QStringList *issues) {
+        const EditParams def;
+        int fixed = 0;
+        /* Temp is ABSOLUTE Kelvin with 0 as the "as shot" sentinel, so 0 is legal but
+           anything between 0 and kMinKelvin is not (see Develop/whitebalance.h --
+           duplicated as literals here to keep this header off the render hot path). */
+        if (p.temp != 0.0f && clampF(p.temp, 2000.0f, 50000.0f, def.temp)) ++fixed;
+        if (clampF(p.tint, -150.0f, 150.0f, def.tint)) ++fixed;
+        if (p.wbPreset < 0 || p.wbPreset > 32) { p.wbPreset = def.wbPreset; ++fixed; }
+
+        if (clampF(p.exposure,   -5.0f,   5.0f,   def.exposure))   ++fixed;
+        if (clampF(p.contrast,   -100.0f, 100.0f, def.contrast))   ++fixed;
+        if (clampF(p.highlights, -100.0f, 100.0f, def.highlights)) ++fixed;
+        if (clampF(p.shadows,    -100.0f, 100.0f, def.shadows))    ++fixed;
+        if (clampF(p.whites,     -100.0f, 100.0f, def.whites))     ++fixed;
+        if (clampF(p.blacks,     -100.0f, 100.0f, def.blacks))     ++fixed;
+        if (clampF(p.texture,    -100.0f, 100.0f, def.texture))    ++fixed;
+        if (clampF(p.dehaze,     -100.0f, 100.0f, def.dehaze))     ++fixed;
+
+        if (clampF(p.toneShadowCenter,    0.0f, 1.0f, def.toneShadowCenter))    ++fixed;
+        if (clampF(p.toneCrossover,       0.0f, 1.0f, def.toneCrossover))       ++fixed;
+        if (clampF(p.toneHighlightCenter, 0.0f, 1.0f, def.toneHighlightCenter)) ++fixed;
+        /* The splits must stay ordered or the tone curve's region weights invert. */
+        if (!(p.toneShadowCenter <= p.toneCrossover &&
+              p.toneCrossover <= p.toneHighlightCenter)) {
+            p.toneShadowCenter    = def.toneShadowCenter;
+            p.toneCrossover       = def.toneCrossover;
+            p.toneHighlightCenter = def.toneHighlightCenter;
+            ++fixed;
+        }
+
+        if (clampF(p.red,        -100.0f, 100.0f, def.red))        ++fixed;
+        if (clampF(p.green,      -100.0f, 100.0f, def.green))      ++fixed;
+        if (clampF(p.blue,       -100.0f, 100.0f, def.blue))       ++fixed;
+        if (clampF(p.hue,        -100.0f, 100.0f, def.hue))        ++fixed;
+        if (clampF(p.saturation, -100.0f, 100.0f, def.saturation)) ++fixed;
+        if (clampF(p.vibrance,   -100.0f, 100.0f, def.vibrance))   ++fixed;
+        if (clampF(p.luminance,  -100.0f, 100.0f, def.luminance))  ++fixed;
+
+        /* Colour grading: hue degrees wrap, sat 0..1, lum -100..100. */
+        float *hues[] = {&p.gradeShadowHue, &p.gradeMidHue, &p.gradeHighHue};
+        float *sats[] = {&p.gradeShadowSat, &p.gradeMidSat, &p.gradeHighSat};
+        float *lums[] = {&p.gradeShadowLum, &p.gradeMidLum, &p.gradeHighLum};
+        for (int i = 0; i < 3; ++i) {
+            if (clampF(*hues[i], 0.0f, 360.0f, 0.0f)) ++fixed;
+            if (clampF(*sats[i], 0.0f, 1.0f,   0.0f)) ++fixed;
+            if (clampF(*lums[i], -100.0f, 100.0f, 0.0f)) ++fixed;
+        }
+
+        if (clampF(p.denoiseLuma,   0.0f, 1.0f, def.denoiseLuma))   ++fixed;
+        if (clampF(p.denoiseChroma, 0.0f, 1.0f, def.denoiseChroma)) ++fixed;
+        if (clampF(p.localDenoiseLuma,   0.0f, 1.0f, 0.0f)) ++fixed;
+        if (clampF(p.localDenoiseChroma, 0.0f, 1.0f, 0.0f)) ++fixed;
+
+        if (clampF(p.vignetteExposure, -5.0f, 5.0f, 0.0f)) ++fixed;
+        if (clampF(p.vignetteFeather,  0.0f, 1.0f, def.vignetteFeather)) ++fixed;
+        if (clampF(p.grainAmount,    0.0f, 1.0f, 0.0f)) ++fixed;
+        if (clampF(p.grainSize,      0.0f, 1.0f, def.grainSize)) ++fixed;
+        if (clampF(p.grainRoughness, 0.0f, 1.0f, def.grainRoughness)) ++fixed;
+
+        if (fixed && issues)
+            issues->append(QStringLiteral("%1: %2 adjustment%3 out of range")
+                           .arg(where).arg(fixed).arg(fixed == 1 ? "" : "s"));
+    }
+
+    /* Range-check a whole stack in place. Anything that cannot be repaired into a legal
+       value is DROPPED rather than rendered: an unknown mask tool has no geometry we can
+       interpret, so keeping it would paint an arbitrary area. */
+    static void sanitize(EditStack &s, QStringList *issues = nullptr) {
+        /* Geometry. A zero / negative / non-finite crop divides by zero downstream. */
+        Geometry &g = s.geometry;
+        bool geomFixed = false;
+        geomFixed |= clampD(g.cropX, 0.0, 1.0, 0.0);
+        geomFixed |= clampD(g.cropY, 0.0, 1.0, 0.0);
+        geomFixed |= clampD(g.cropW, 0.0001, 1.0, 1.0);
+        geomFixed |= clampD(g.cropH, 0.0001, 1.0, 1.0);
+        geomFixed |= clampD(g.straighten, -45.0, 45.0, 0.0);
+        if (g.cropX + g.cropW > 1.0) { g.cropX = 0.0; g.cropW = 1.0; geomFixed = true; }
+        if (g.cropY + g.cropH > 1.0) { g.cropY = 0.0; g.cropH = 1.0; geomFixed = true; }
+        if (g.hasWarp) {
+            /* geometryFromJson only fills quad when the array is exactly 8 long, so a
+               truncated quad would otherwise warp through the DEFAULT corners. */
+            bool quadBad = false;
+            for (double &q : g.quad) quadBad |= clampD(q, -4.0, 5.0, 0.0);
+            if (quadBad) { g.hasWarp = false; geomFixed = true; }
+        }
+        if (geomFixed && issues)
+            issues->append(QStringLiteral("Crop / perspective was out of range"));
+
+        /* Scopes. */
+        int droppedMasks = 0;
+        for (EditScope &l : s.scopes) {
+            if (l.combine < 0 || l.combine > int(MaskCombine::Intersect))
+                l.combine = int(MaskCombine::Union);
+            clampF(l.opacity, 0.0f, 1.0f, 1.0f);
+            for (int i = l.components.size() - 1; i >= 0; --i) {
+                MaskComponent &m = l.components[i];
+                /* tool / op are serialized as int and both enums are APPEND ONLY, so a
+                   value past the end is either corruption or a tool from a newer build.
+                   Either way this build cannot render it -- drop it. */
+                if (m.tool < 0 || m.tool > int(MaskTool::Object) ||
+                    m.op   < 0 || m.op   > int(MaskOp::Intersect)) {
+                    l.components.removeAt(i);
+                    ++droppedMasks;
+                    continue;
+                }
+                clampF(m.feather, 0.0f, 100.0f, 50.0f);
+            }
+            sanitizeParams(l.params, l.name.isEmpty() ? QStringLiteral("Scope") : l.name,
+                           issues);
+        }
+        if (droppedMasks && issues)
+            issues->append(QStringLiteral("%1 mask%2 used an unknown tool and %3 skipped")
+                           .arg(droppedMasks).arg(droppedMasks == 1 ? "" : "s")
+                           .arg(droppedMasks == 1 ? "was" : "were"));
+
+        /* Scope 0 is Global by contract -- several call sites index it directly. */
+        if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+        s.scopes[0].name = QStringLiteral("Global");
+    }
+
+    /* Parse + range-check. status/issues may be null when the caller does not care (the
+       one-argument form preserves the original behaviour for existing call sites). */
+    static EditStack fromBase64(const QString &b64, Status *status = nullptr,
+                                QStringList *issues = nullptr) {
+        auto report = [status](Status st) { if (status) *status = st; };
+        if (b64.isEmpty()) { report(Status::Absent); return EditStack(); }
+        /* Qt's tolerant base64 decode silently skips invalid characters, so garbage in
+           gives a short QByteArray rather than an error -- the JSON parse below is what
+           actually catches it. */
         const QByteArray json = QByteArray::fromBase64(b64.toLatin1());
         QJsonParseError err;
         const QJsonDocument doc = QJsonDocument::fromJson(json, &err);
-        if (err.error != QJsonParseError::NoError || !doc.isObject()) return EditStack();
-        return fromJson(doc.object());
+        if (err.error != QJsonParseError::NoError || !doc.isObject()) {
+            report(Status::Corrupt);
+            if (issues)
+                issues->append(QStringLiteral("Develop settings could not be read (%1)")
+                               .arg(err.error == QJsonParseError::NoError
+                                    ? QStringLiteral("not a settings record")
+                                    : err.errorString()));
+            return EditStack();
+        }
+        EditStack s = fromJson(doc.object());
+        if (s.version > kVersion && issues)
+            issues->append(QStringLiteral("Written by a newer version of Winnow "
+                                          "(format %1, this build reads %2) -- unknown "
+                                          "settings were ignored")
+                           .arg(s.version).arg(kVersion));
+        sanitize(s, issues);
+        report(Status::Ok);
+        return s;
     }
 };
 

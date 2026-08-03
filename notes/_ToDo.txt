@@ -1,12 +1,18 @@
 WHAT'S NEW
+- Develop Module
 - Develop History panel
+- Develop Presets panel
 - Focus Stacking
 
 BUGS / TO DO
+- Implementation must plan for changes to develop settings over time
+- What to do when History or Presets use out-of-date setting
+- New docking panels need to be added to fullscreen settings (Develop, History, Presets).
 - Masks still different colors, need to maintain mask tool history as before
+- Develop copy / paste
 - List stuff to disable in Develop Mode (menu items and shortcuts)
 - WB undo
-- Press D while not in loupe mode does not work
+- Do not show MetaRead and ImageCache status lights in Develop mode.
 - Raw demosaic Winnow wrong for /Users/roryhill/Pictures/_test_raw/NEF D7200.NEF
 - Expand/contract layer mask or submask (shrink/grow)
 - Change submask feather, rebuild submask?
@@ -16,7 +22,6 @@ BUGS / TO DO
 - Add Sharpen and Soften sliders
 - Review what is needed in ReleaseExtras
 - Drag dock tabify to the right (last) - WIP
-- Develop presets (selection dialog)
 - Reformat the documentation.txt (when have lots of tokens)
 - Add Develop Panel to Full Screen defaults in properties
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and

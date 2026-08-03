@@ -9,6 +9,7 @@
 
 class QVBoxLayout;
 class QHBoxLayout;
+class BarBtn;
 
 /*
     The Develop dock's scopes panel: a fixed-height strip placed ABOVE the property
@@ -22,6 +23,11 @@ class QHBoxLayout;
 
     setData() fans one ScopeData out to both child scopes; clear() blanks them when no
     image is shown. MW owns this widget and feeds it from updateDevelopScopes().
+
+    A single close [X] (BarBtn) belongs to the STRIP, not to either scope: it is a child
+    of this widget floated over the top right corner (kept there by resizeEvent, since
+    the scopes fill the layout) and emits closeRequested, which MW turns into hiding the
+    strip. Whichever scope currently occupies that corner sits behind it.
 */
 class ScopesView : public QWidget
 {
@@ -48,16 +54,20 @@ public:
 signals:
     void vectorscopeZoomChanged(double z);     // user picked a zoom from the vectorscope menu
     void vectorscopeSkinLineChanged(bool on);  // user toggled the skin line
+    void closeRequested();                     // user clicked the strip's [X]
 
 protected:
-    /* Consume double-clicks landing on the strip's margins so they do not bubble to the dock
-       (which would un/redock); the child scopes consume their own. */
+    /* Consume double-clicks landing on the strip's margins so they do not bubble to
+       the dock (which would un/redock); the child scopes consume their own. */
     void mouseDoubleClickEvent(QMouseEvent *event) override;
+    /* Keep the floating [X] pinned to the top right corner. */
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
     HistogramView *histogram;
     VectorscopeView *vectorscope;
     ToneRegionSlider *tone;
+    BarBtn *closeBtn = nullptr;         // floats over the strip's top right corner
     QVBoxLayout *leftCol = nullptr;     // histogram + tone slider column
     QHBoxLayout *rowLay = nullptr;      // leftCol | vectorscope
     ScopeLayout curLayout = Both;

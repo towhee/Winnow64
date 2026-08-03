@@ -143,6 +143,8 @@ set(WINNOW_SOURCES
     Develop/Transform/croptransform.cpp
     Develop/Replace/replacepanel.cpp
     Develop/History/historyview.cpp
+    Develop/Presets/developpresets.cpp
+    Develop/Presets/presetsview.cpp
 
     # Dialogs
     Dialogs/aboutdlg.cpp
@@ -408,6 +410,8 @@ set(WINNOW_HEADERS
     Develop/Replace/replacepanel.h
     Develop/History/develophistory.h
     Develop/History/historyview.h
+    Develop/Presets/developpresets.h
+    Develop/Presets/presetsview.h
 
     Dialogs/aboutdlg.h
     Dialogs/addthumbnailsdlg.h

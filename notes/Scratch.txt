@@ -796,3 +796,11 @@ as legible as its top.
 5. Card fill — alternative to 1, not additive. Fill the whole scope-owned region at backgroundShade + 4 with a 1px border, so it's a card
 hanging off the selected row. Unmistakable, but heavier and it fights the dock's flat look. Only worth trying if the rail reads too subtle
 once you see it.
+
+Presets
+
+Add a Presets panel (with same UI behavior as History panel) that replicates Lightroom Classic
+presets.  There will only be user defined presets.  The shortcut for the Presets panel is 'P'.
+Create a 'New Preset Dialog' with the checkable list of develop settings in the tree under
+Scope.  Include buttons to select all/none for each subheader (Basic, Color...) and also for
+all the settings.

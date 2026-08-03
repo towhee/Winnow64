@@ -115,8 +115,11 @@ Table of Contents
          - Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
          - White balance (absolute, Kelvin)
          - Color Mix panel (colour grading)
-         - Develop presets (save)
+         - Develop presets (the Presets dock)
          - Develop history (the History dock)
+         - Adding or changing a develop adjustment (checklist)
+         - Stale presets and history (schema drift)
+         - Corrupted or changed develop settings
 
 
 ******************************************************************************************
@@ -169,7 +172,9 @@ Dock Window State (versioning)
     "WindowState" (MW::settings writes it; MW::showEvent restores it). Both calls pass
     MW::winnowStateVersion.
 
-    RULE: BUMP winnowStateVersion whenever the SET of docks changes (a dock added or removed).
+    History: v1 added developDock, v2 added historyDock, v3 added presetsDock.
+
+    RULE: BUMP winnowStateVersion whenever the SET of docks changes (added or removed).
     A WindowState saved by an older build does not contain the new dock, and restoring it
     leaves that dock's group orphaned as empty "zombie" tab bars; the dock layout then never
     converges and the tabbed docks flicker continuously. The version tag makes restoreState()
@@ -181,7 +186,8 @@ Dock Window State (versioning)
     dock in one area with a dock in another area (e.g. the left-area metadataDock with the
     right-area embelDock) -- a cross-area tabify drags both into one area and crams every dock
     into a single tab group, where the raised tab oscillates against the squeezed central
-    widget. embel + develop tab together on the RIGHT (see initialize() tabifyDockWidget calls).
+    widget. embel + develop + history + presets tab together on the RIGHT (see
+    initialize() tabifyDockWidget calls).
 
     developDock (added with the raw editor) was the first dock to trip this: the pre-existing
     saved state predated it AND, once saved during a flicker, the corrupt state perpetuated
@@ -868,6 +874,12 @@ Cache Status
       and imageThreadRunningLabel) turn from green to red to indicate datamodel metadata
       and image caching respectively. A status light on the lower right of each thumbnail
       is made visible when the associated image is cached.
+
+      The two lights are shown in Preview mode only. Develop mode works on the single
+      current image with the read-ahead trimmed to it, so folder caching progress is not
+      meaningful there and both lights are hidden. MW::updateStatusBar owns the
+      visibility (driven by G::operationMode) and MW::setOperationMode calls it on every
+      mode change (see "Operation Mode").
 
     • An image cache progress bar shows the status of every image in the folder: target
       range, isCached and cursor position.
@@ -1770,12 +1782,12 @@ Develop Mode Local Shortcuts
         X   Export (STUB, see below)    developExportAction      (Preview: Reject)
         G   Scopes layout cycle         developScopesAction      (Preview: Grid view)
         H   Develop History panel       historyDockVisibleAction (Preview: unbound)
-        P   Run/apply preset (STUB)     developRunPresetAction   (Preview: Pick)
+        P   Develop Presets panel       presetsDockVisibleAction (Preview: Pick)
 
-    H is the odd one out in that its action is NOT Develop-menu local: it is the View
-    menu's "Develop History Panel" dock toggle, which stays enabled in both modes (the
-    menu item works in Preview) while the KEY is Develop-only, because the History dock
-    only exists alongside the Develop dock.
+    H and P are the odd ones out in that their actions are NOT Develop-menu local: they
+    are the View menu's "Develop History Panel" / "Develop Presets Panel" dock toggles,
+    which stay enabled in both modes (the menu items work in Preview) while the KEYS are
+    Develop-only, because those docks only exist alongside the Develop dock.
 
     W is DOUBLY contextual: an ACTIVE Transform session claims it for Warp (arbiter rule
     1a, which runs before this table), so W reaches the white balance dropper only when
@@ -1920,7 +1932,7 @@ Develop Mode Local Shortcuts
     bare-key table). It is kept Develop-only by its enabled state -- setOperationMode
     enables it only in Develop mode and syncDevelopMenuEnabled greys the menu item in
     Preview -- since a disabled QAction's shortcut does not fire. See the "Develop presets
-    (save)" subsection in the DEVELOP section.
+    (the Presets dock)" subsection in the DEVELOP section.
 
     Export is a stub
     ......................................................................................
@@ -2519,11 +2531,17 @@ OPERATION MODE (Preview vs Develop)
     mode switch, which re-applies the mode default. The standalone status-bar useRawBtn is REMOVED
     (commented out; button still created/wired in case it returns).
 
-    Behaviour implemented: (1) setTargetRange targets ONLY the current image in Develop mode (no
-    forward read-ahead -> the current image's scene-linear WorkingImage is not evicted); (2)
-    renderDevelopPreview re-decodes the raw on a WorkingImage miss OR when the cached one is
-    display-referred (a prior develop-miss fallback), via ImageDecoder::decodeIndependent (which
-    caches the scene-linear WorkingImage). Non-raw files still build from the display image.
+    The mode also hides the two cache running lights (metadataThreadRunningLabel,
+    imageThreadRunningLabel) in Develop and shows them in Preview -- folder caching
+    progress has no meaning when read-ahead is suspended. MW::updateStatusBar sets the
+    visibility from G::operationMode; setOperationMode calls it (see "Cache Status").
+
+    Behaviour implemented: (1) setTargetRange targets ONLY the current image in Develop
+    mode (no forward read-ahead -> the current image's scene-linear WorkingImage is not
+    evicted); (2) renderDevelopPreview re-decodes the raw on a WorkingImage miss OR when
+    the cached one is display-referred (a prior develop-miss fallback), via
+    ImageDecoder::decodeIndependent (which caches the scene-linear WorkingImage). Non-raw
+    files still build from the display image.
 
     OPEN QUESTION (decide later): should THUMBNAIL generation ALWAYS use the embedded preview
     (useRaw=false) for raw files, even in Develop mode? Rationale: in Develop you edit ONE image;
@@ -4256,9 +4274,20 @@ Develop scopes (histogram + vectorscope)
 
     Vectorscope zoom: a right-click menu (100/150/200%) magnifies the plotted trace + marker
     outward from the centre to reveal low-saturation detail; the graticule circle stays as the
-    100% reference and a small "%"-label shows when zoomed. VectorscopeView::setZoom +
-    zoomChanged; ScopesView re-emits as vectorscopeZoomChanged; MW restores/persists it as
-    Settings "Develop/vectorscopeZoom".
+    100% reference and a small "%"-label shows in the BOTTOM RIGHT corner when zoomed.
+    VectorscopeView::setZoom + zoomChanged; ScopesView re-emits as vectorscopeZoomChanged;
+    MW restores/persists it as Settings "Develop/vectorscopeZoom".
+
+    Strip close button: ONE [X] for the whole strip, owned by ScopesView rather than by
+    either scope. It is a BarBtn (close.png, the same chrome button as the dock title
+    bars) parented to ScopesView and FLOATED over the top right corner -- not placed in
+    the layout, which the scopes fill; a layout slot would steal width from whichever
+    scope is on the right. ScopesView::resizeEvent pins it to that corner and raise()s
+    it (setScopeLayout raises it too, since the scope underneath changes with the
+    layout), so it sits over the histogram or the vectorscope, whichever is there. Its
+    click emits ScopesView::closeRequested -> MW::closeDevelopScopes ->
+    setDevelopScopesVisible(false): the strip hides and the LAYOUT IS LEFT ALONE, so "G"
+    or the editor-bar button brings it back showing the same scope(s) as before.
 
     Skin-tone line: the same right-click menu toggles a flesh-tone reference line -- the YIQ
     I-axis, which from our BT.601 Cb/Cr coefficients is (Cr-128) = -1.946*(Cb-128); skin of every
@@ -4723,65 +4752,123 @@ Color Mix panel (colour grading)
     kGradeLumStrength) in develop.cpp.
 
 
-Develop presets (save)
------------------------
+Develop presets (the Presets dock)
+-----------------------------------
 
-    Save the current image's develop state as a named, reusable preset (Lightroom's
-    "New Develop Preset"). SAVE ONLY for now -- applying a preset is a later task.
-    SAVING a preset is reached two ways: Cmd+Shift+N (Develop mode only) or the Develop
-    dock context menu ("Save Develop Preset...", in the same menu as Expand all /
-    Collapse all / Solo). APPLYING (running) a saved preset is the colour-wheel Preset
-    button in the Develop panel title bar, or the "P" key -- a STUB for now (the
-    picker/apply path is not built; MW::developRunPreset). The title-bar Preset + Export
-    buttons are colourful BarBtn glyphs in the same style as the Scope and Transform
-    buttons (Export -> lightning, also a stub).
+    Named, reusable develop recipes (Lightroom's Presets panel). ONLY USER-DEFINED
+    presets exist -- Winnow ships none. A preset is created from the current image
+    (Cmd+Shift+N, the Develop dock context menu, the Presets dock [+] button, or that
+    dock's right-click "New Preset..."), and applied by clicking it in the Presets dock.
 
-    Active border. The Develop title-bar buttons that toggle a panel/tool -- Scopes,
-    Transform and Spot -- carry a blue (G::appleBlue) border while their panel is shown /
-    the tool is armed, like a conventional checked toolbutton (BarBtn::setActive). MW
-    keeps them as members and calls setActive from the toggle handlers
-    (toggleDevelopScopes, toggleDevelopTransform + cancelDevelopTransform,
-    spotActiveChanged) so the border tracks the real state even when toggled by the
-    keyboard (H / R / Esc / S). The Preset + Export buttons are momentary (no panel), so
-    they show no persistent border yet.
+    THE APPLY IS A MERGE. A preset holds only the settings that were TICKED when it was
+    saved, so applying it writes those and leaves everything else on the image alone: a
+    Temp-only preset moves Temp and nothing else. This is Lightroom's behaviour and it
+    is what makes small, stackable presets useful. Mechanically it falls out of the
+    store: DevelopPresets::read reports only the keys QSettings actually holds, and
+    DevelopProperties::mergePreset writes only those.
+
+    THE TARGET IS THE ACTIVE SCOPE. The preset records which scope it was captured from
+    (sourceScope) but that is display metadata only. The values land on whatever scope
+    is selected in the Develop panel when the preset is clicked, so a preset saved from
+    a Sky mask can be dropped onto Global, or onto a different image's Subject mask.
+    Nothing can fail to match. The per-image items are the exception: the raw decode
+    engine, the raw NR pair and the tone splits belong to no scope (they are Global by
+    definition) and the crop / level / warp / spots are geometry, so those always go to
+    scope 0 / the Geometry regardless of what is active.
+
+    THE MASK DOES NOT TRAVEL. A mask's geometry is specific to the source image's
+    content, so a preset captured from a mask scope carries its ADJUSTMENTS only. There
+    is no scaffolding for mask-carrying presets.
+
+    The dock. Develop, History and Presets are ONE TOOL: all three are tabbed together
+    in the right area and are shown / hidden together (createPresetsDock, and every
+    setDevelopDockVisibility / setDevelopPanelEnabled / setOperationMode / showDevelopDock
+    site mirrors History's handling). Develop is always raised as the front tab, so
+    Presets is reached by clicking its tab, by "P" (menu View > Develop Presets Panel),
+    or by the colour-wheel Preset button in the Develop title bar. P is a Develop MODE
+    LOCAL key (developShortcuts / developShortcutIntercept), NOT a QKeySequence --
+    QKeySequence("P") would clash with the global Pick. Like F3-F9 and H it shows /
+    raises rather than toggles. Adding the dock bumped winnowStateVersion to 3 and
+    needed the usual new-dock checklist (presets_white.png + qrc + graphicFor / dockFor
+    + dockTextNames + a dockTabToolTip case).
+
+    The list (Develop/Presets/presetsview.{h,cpp}, PresetsView + PresetDelegate) is
+    deliberately the same interaction as the History list beside it, and a trimmed copy
+    of its code: a QListWidget with a hover-fill delegate, a DEBOUNCED hover
+    (kHoverDelayMs) so a fast sweep does not queue a render per row, and a click emitted
+    a tick late because applying rebuilds the Develop tree from inside the row's own
+    event handler. Hovering previews the preset applied on the loupe (previewStack, the
+    same override History uses -- proxy render only, no full-res settle); leaving the
+    list, or tabbing the dock away, restores the real state. The one thing NOT previewed
+    is the raw decode engine: switching it forces a full raw re-decode, far too
+    expensive for a passing cursor, so it is applied on click only.
+
+    Applying records ONE history entry, labelled with the scope that received it
+    ("Sky: Preset: Warm Portrait"), so a preset is undone by clicking the History row
+    above it. An empty list shows a "click + to create one" placeholder row rather than
+    an empty box.
+
+    Right-clicking a preset gives Update with Current Settings / Rename... / Delete (and
+    New Preset... anywhere in the list). The view owns the confirm / input prompts so
+    DevelopProperties only ever receives a decided action. "Update" keeps the preset's
+    SHAPE -- the same ticked settings -- and refills their values from the current
+    image's active scope, so updating never silently widens a preset.
 
     Dialog (Dialogs/savedeveloppresetdlg.{h,cpp}, SaveDevelopPresetDlg). A preset-name
-    field plus a collapsible, scrollable checklist of every settable item. Items that
-    differ from their default on the current image are pre-checked and their group
-    pre-expanded, so the user can Save immediately or fine-tune. Buttons: Select all /
-    Select none / Cancel / Save (Save is disabled until the name is non-empty; an
-    existing name prompts to overwrite). Right-clicking the checklist pops Expand all /
-    Collapse all.
+    field, a Scope combo, and a collapsible, scrollable checklist grouped exactly like
+    the Develop panel's Scope tree:
 
-    The dialog is UI-only: it renders a model of PresetGroup { title, checkable, leaves }
-    and reports back the preset name + the checked leaf keys per group. It knows nothing
-    of the develop data model or the settings layout. Groups:
-        Global settings   a non-checkable container. Leaves: Raw demosaic (the decode
-                          engine, G::decodeRawEngine), Raw noise reduction (Global
-                          denoiseLuma+denoiseChroma), Histogram tonal ranges (the three
-                          tone splits), Crop, Level (straighten) and Warp (each a SEPARATE
-                          leaf, from the per-image Geometry), Spots (all spot heals).
-                          Raw demosaic + Raw noise reduction only apply to raw files, and
-                          raw NR (PMRID) is the Winnow engine only; both stay listed but
-                          are pre-checked only when relevant (demosaic when the file is
-                          raw; raw NR when raw AND not decoded by Apple).
-        Global edits /     one checkable tri-state parent per scope. Leaves are the Basic /
-        Mask N            Color / Effects adjustments (temp..grain). Denoise folds in its
-                          Color (chroma); Vignette folds in its feather; Grain folds in
-                          size + roughness. Mask geometry is content-specific and is NOT a
-                          preset item.
+        Global settings   a non-checkable container, and PER IMAGE (the Scope combo does
+                          not affect it). Leaves: Raw demosaic (the decode engine,
+                          G::decodeRawEngine), Raw noise reduction (Global denoiseLuma +
+                          denoiseChroma), Histogram tonal ranges (the three tone splits),
+                          Crop, Level (straighten) and Warp (each a SEPARATE leaf, from
+                          the per-image Geometry), Spots (all spot heals). Raw demosaic +
+                          raw NR only apply to raw files, and raw NR (PMRID) is the
+                          Winnow engine only; both stay listed but are pre-checked only
+                          when relevant.
+        Basic / Color /   one checkable tri-state group per Develop section, each with
+        Color Mix /       its own [All] / [None] buttons. Leaves follow the panel's own
+        Effects           controls, so a control that folds several params in is ONE
+                          tick: White balance = temp + tint, each Color Mix range =
+                          its hue + sat + lum, Denoise = luma + chroma, Vignette folds
+                          in its feather, Grain folds in size + roughness.
 
-    Write (DevelopProperties::saveDevelopPreset / writePreset / writeScopeLeaves). The
-    caller snapshots the current image's EditStack and persists the checked values to
-    QSettings under the requested hierarchy:
-        Develop Presets/<name>/Global/<key>       = value
-        Develop Presets/<name>/Global edits/<key>  = value
-        Develop Presets/<name>/Mask 1/<key>        = value
+    Items that differ from their default IN THE SELECTED SCOPE are pre-checked and their
+    group pre-expanded, so the user can Save immediately or fine-tune. Moving the Scope
+    combo does not rebuild the tree -- the leaf keys are identical in every scope, so it
+    just re-applies that scope's changed set (changedPerScope, computed by
+    DevelopProperties::changedLeavesForScope). Buttons: Select all / Select none / Cancel
+    / Save (Save is disabled until the name is non-empty; an existing name prompts to
+    overwrite). Right-clicking the checklist pops Expand all / Collapse all.
+
+    GOTCHA: the global stylesheet sets "QPushButton { min-width: 100px }", which would
+    force the dialog absurdly wide via the per-group [All] / [None] pairs. They clear it
+    with a local "min-width: 0" -- the same override MaskPanel needs.
+
+    The dialog is UI-only: it renders a model of PresetGroup { title, checkable,
+    showAllNone, leaves } and reports back the preset name, the chosen scope index and
+    the checked leaf keys per group. It knows nothing of the develop data model or the
+    settings layout.
+
+    Store (Develop/Presets/developpresets.{h,cpp}, DevelopPresets). Owns ALL preset
+    persistence -- names / read / write / rename / remove -- so DevelopProperties never
+    touches QSettings for presets. Layout:
+
+        Develop Presets/<name>/sourceScope  = "Global" | "Sky" | ...   (display only)
+        Develop Presets/<name>/Global/<key> = the per-image settings
+        Develop Presets/<name>/Edits/<key>  = the captured scope's adjustments
+        Develop Presets/<name>/Global/spots = a QSettings array of FillSpot paramsJson
+
     Leaf keys reuse the EditParams JSON field names and store the RAW param values (the
-    source of truth, e.g. denoise 0..1), so a future "apply preset" can assign them
-    straight back (mirroring EditStack::paramsFromJson). Geometry is stored as crop
-    ("x,y,w,h"), straighten and warp ("q0..q7"); spots as a QSettings array of paramsJson.
-    Writing a preset first clears any prior group of the same name (overwrite).
+    source of truth, e.g. denoise 0..1), so applying is a straight assignment back --
+    DevelopPresets::assignParam mirrors EditStack::paramsFromJson, and is kept apart
+    from DevelopProperties::applyKeyToParams, which takes the DOCK's slider keys and
+    div-scales them (0..100 -> 0..1). Geometry is stored as crop ("x,y,w,h"), straighten
+    and warp ("q0..q7"). Writing a preset first clears any prior group of the same name
+    (overwrite). "Edits" was called "Global edits" in the first, save-only build, when a
+    preset could only come from the Global scope; read() still accepts that name, and
+    ignores the per-scope "Mask N" groups that build also wrote.
 
     Shortcut wiring. Two separate actions:
       - developSavePresetAction (SAVE, Cmd+Shift+N). Unlike the bare-key Develop actions
@@ -4790,30 +4877,43 @@ Develop presets (save)
         QKeySequence ("Ctrl+Shift+N"). It is enabled only in Develop mode --
         setOperationMode tracks the mode (a disabled QAction's shortcut does not fire) and
         syncDevelopMenuEnabled greys the menu item in Preview.
-      - developRunPresetAction (RUN/apply, "P" + the title-bar Preset button). P is
-        globally Pick, so like the other bare Develop keys it is dispatched by
+      - presetsDockVisibleAction (SHOW the dock, "P" + the title-bar Preset button + View
+        menu). P is globally Pick, so like the other bare Develop keys it is dispatched by
         developShortcutIntercept via the developShortcuts table (loadDevelopShortcuts),
-        NOT a real QKeySequence -- QKeySequence("P") would clash with Pick. Stub for now.
+        NOT a real QKeySequence.
 
-
+    Active border. The Develop title-bar buttons that toggle a panel/tool -- Scopes,
+    Transform, Spot and now Preset -- carry a blue (G::appleBlue) border while their
+    panel is shown / the tool is armed, like a conventional checked toolbutton
+    (BarBtn::setActive). MW keeps them as members and calls setActive from the toggle
+    handlers (toggleDevelopScopes, toggleDevelopTransform + cancelDevelopTransform,
+    spotActiveChanged) so the border tracks the real state even when toggled by the
+    keyboard (H / R / Esc / S). The Preset button is the awkward one, because "its panel
+    is up" means "the Presets dock is the FRONT TAB", and a tabified dock keeps
+    isVisible() == true when a sibling tab is selected -- so visibilityChanged never
+    fires on a tab switch. MW::updateDevelopPresetBtn is therefore driven from three
+    places: presetsDockVisibilityChange, QMainWindow::tabifiedDockWidgetActivated (the
+    only reliable signal for a tab click) and showPresetsDock (raise() on an already
+    "visible" dock emits nothing). Export -> lightning is still a stub with no border.
 Develop history (the History dock)
 -----------------------------------
 
     A Lightroom-style list of every develop action on the current image. Hovering an
     entry previews that state in the loupe; clicking it reverts the image to it. The
-    dock is tabbed with the Develop dock in the right area and is shown / hidden with
-    it -- the two are one tool. Develop is always raised as the front tab of the pair
-    (History is shown first, then Develop, then raised), so History is reached by
-    clicking its tab -- or with "H" (menu View > Develop History Panel). H is a Develop
+    dock is tabbed with the Develop and Presets docks in the right area and is shown /
+    hidden with them -- the three are one tool. Develop is always raised as the front
+    tab of the group (History and Presets are shown first, then Develop, then raised),
+    so History is reached by clicking its tab -- or with "H" (menu View > Develop
+    History Panel). H is a Develop
     MODE LOCAL key (developShortcuts / developShortcutIntercept), not a QKeySequence,
     since the dock is Develop-only; the F-key series the other docks use ran out at F10
     (F11 is taken by macOS). Like F3-F9 it shows/raises rather than toggles.
 
     STARTUP. Winnow always opens in Preview mode, so MW::showEvent hides the Develop
-    tool after restoreState() -- through closeDevelopDock(), which takes History with
-    it and unchecks both dock actions. Hiding developDock alone was not enough:
-    restoreState() re-shows every dock the last session had visible, so quitting from
-    Develop mode reopened with History on screen, visible but disabled.
+    tool after restoreState() -- through closeDevelopDock(), which takes History and
+    Presets with it and unchecks all three dock actions. Hiding developDock alone was
+    not enough: restoreState() re-shows every dock the last session had visible, so
+    quitting from Develop mode reopened with History on screen, visible but disabled.
 
     GOTCHA (cost an afternoon): a TABIFIED dock keeps isVisible() == true even when a
     sibling tab is selected -- that is why isSelectedDockTab tests the visible REGION.
@@ -4878,3 +4978,202 @@ Develop history (the History dock)
     action left / value right). MW::createHistoryDock runs AFTER createDevelopDock (it
     binds to developProperties). Adding the dock required the full new-dock checklist
     above, including the history_white.png glyph and the winnowStateVersion bump to 2.
+
+
+Adding or changing a develop adjustment (checklist)
+----------------------------------------------------
+
+    A new slider (or a change to an existing one) is NOT a one-file edit: the value has to
+    reach the pipeline, survive a round trip through the sidecar, repopulate the panel on
+    the next image, and be capturable by a preset. Twelve touch points, in dependency
+    order. Working example: grainAmount (the Effects "Grain" slider) -- grep it to see
+    every site at once.
+
+    1. Develop/editparams.h -- THREE edits, not one.
+         • the field + its identity default + a block comment giving meaning and range
+         • EditParams::resetGroup() -- add it to its Group case. Miss this and the
+           section Reset button and the Preview eye silently skip it.
+         • EditParams::isIdentity() -- add it ONLY if it is a primary control. Sub-
+           modifiers (vignetteFeather, grainSize, grainRoughness, the tone splits) are
+           deliberately left out: they are inert until their amount is non-zero, so
+           counting them would make an untouched image non-identity and write a sidecar.
+
+    2. Develop/develop.h + develop.cpp -- the op itself.
+         • tuning constants in the constexpr block at the top of develop.cpp
+         • the function, declared in develop.h and implemented in develop.cpp
+         • the call in Develop::Apply(), at the right place in the fixed pipeline order
+           (Denoise #1 -> fused point pass -> Texture #6 -> Dehaze #7 -> Vignette #8 ->
+           Grain #9). A POINT op costs nothing extra if folded into buildPointCoeffs /
+           applyPointOps; a SPATIAL op owns its own pass.
+         • parallelFor every per-pixel loop; downscale for large-radius blurs.
+
+    3. Develop/editstack.h -- paramsToJson() AND paramsFromJson(). paramsFromJson is
+       forward tolerant (an absent key keeps its default), so ADDING a field needs no
+       version bump and old sidecars stay valid.
+
+    4. developproperties.cpp, addBasic / addColor / addColorMix / addEffects -- the
+       addSlider call: dock key, caption, tooltip, section header, min, max, divisor,
+       colours, default. A sub-control of the slider above it uses a "   "-indented
+       caption ("   Feather", "   Size").
+
+    5. developproperties.cpp, applyKeyToParams() -- dock key -> EditParams field, applying
+       the DIVISOR scaling (a 0..100 slider backing a 0..1 field writes f / 100.0f).
+
+    6. developproperties.cpp, populateSlidersFromStack() -- the setSliderReal() call, the
+       exact inverse of 5 (p.field * 100.0). If 5 and 6 disagree the value drifts a little
+       further every time the user navigates away and back.
+
+    7-9. Presets -- four functions, and NOTE THE KEY NAMESPACE CHANGE:
+         • kBasicLeaves / kColorLeaves / kColorMixLeaves / kEffectsLeaves in
+           developproperties.cpp -- the checklist row's key + label. Params the panel
+           treats as one control fold into ONE leaf (Grain = amount + size + roughness).
+         • leafChanged() -- is this leaf non-default? Tests the PRIMARY param(s) only,
+           matching isIdentity().
+         • collectScopeLeaves() -- writes the values under their EditStack JSON FIELD
+           names (raw, unscaled), not the dock slider keys.
+         • DevelopPresets::assignParam() in Develop/Presets/developpresets.cpp -- the
+           other half: JSON field name -> field, raw, NO divisor scaling.
+       applyKeyToParams (dock keys, scaled) and assignParam (JSON names, raw) are the two
+       key namespaces, and the easiest thing in Develop to get wrong.
+
+    10. History -- FREE for a normal slider: the generic tree-edit handler calls noteEdit
+        with the caption and value, and noteEdit snapshots the whole EditStack. NOT free
+        for a custom editor (the colour wheel, the WB row, the tone-range slider) -- those
+        need their own noteEdit(action, value, mergeKey) call, and the mergeKey is what
+        collapses a drag into one history row instead of forty.
+
+    11. This file -- for a slider like Grain that is four places: the pipeline order list
+        under Architecture, the spatial-op description under Scope & mask model, the
+        slider inventory under Develop dock (UI), and the leaf-folding note under Develop
+        presets. Then sync the Table of Contents.
+
+    12. Docs/develophelp.html -- the in-app user help. Currently LAGS the panel (no
+        Vignette or Grain entry), so this step is a known gap rather than an established
+        habit.
+
+    MASKABLE OR GLOBAL-ONLY? A per-scope adjustment belongs to a Group and is edited on
+    whichever scope is active. A Global-only one (denoiseLuma / denoiseChroma, the tone
+    splits) belongs to NO Group, cannot be previewed or reset per section, and must be
+    read from scopes[0] in buildPreset() and written to scopes[0] in mergePreset()
+    whatever scope is active.
+
+
+Stale presets and history (schema drift)
+-----------------------------------------
+
+    What happens to a user's saved presets and their History when an adjustment is later
+    renamed, rescaled or removed. The two behave completely differently.
+
+    HISTORY IS IMMUNE. Entries are in-memory EditStack structs, session scoped (see
+    Develop history above): they are discarded on quit and nothing is written to the
+    sidecar. A snapshot therefore can never be older than the binary holding it, so no
+    migration is possible or needed. The only drift is cosmetic -- an entry's action label
+    is the slider caption FROZEN as a string at record time, so renaming a caption
+    mid-session leaves earlier rows reading the old name until the next launch.
+
+    PRESETS ARE THE EXPOSURE POINT. They live in QSettings indefinitely, key by key, and
+    are applied by assigning the stored value straight into an EditParams field. Three
+    ways a key goes stale, in increasing order of harm:
+
+      • REMOVED key -- harmless. read() returns it, mergePreset() hands it to
+        assignParam(), an if / else-if chain with no final else, so an unknown key is
+        silently ignored. The preset applies minus that one setting.
+      • RENAMED key -- silent data loss. Same mechanism as removed: the user's preset
+        quietly stops carrying that adjustment, with no warning and nothing in the UI to
+        show it happened.
+      • RESCALED or REDEFINED key -- silent CORRUPTION, the case that actually matters.
+        assignParam writes the stored float straight into the field, so if a 0..1 field
+        becomes 0..100 (or an EV becomes a percentage, or the op's maths is retuned) every
+        old preset applies a wildly wrong value and reads to the user as broken.
+
+    THE RULE: treat a preset key as a published format. ADD keys freely -- an absent key
+    is a no-op both in a preset (childKeys() reports only what was written) and in a
+    sidecar (paramsFromJson defaults it). NEVER rename or rescale one in place.
+
+    THE MIGRATION HOOK exists for when that is genuinely unavoidable. Every preset carries
+    a schema stamp: DevelopPresets::write() stores `version = kVersion` at the preset root
+    (beside sourceScope, so it never lands in the Global/Edits key sweeps), and read()
+    calls migrate() before returning -- i.e. before any value reaches assignParam. To
+    change an existing key: bump kVersion and append ONE ordered step to migrate(),
+        if (p.version < N) { ...rewrite the affected keys in p.params / p.globals...; }
+    so an old preset falls through every intervening step in turn. A preset stamped NEWER
+    than kVersion (a downgraded build) is passed through untouched -- assignParam already
+    ignores keys it does not recognise, which degrades better than guessing backwards.
+
+    Presets written before the stamp existed have no version key and read back as 1, which
+    is correct by definition -- v1 is the schema they were written against -- so the
+    default in read() must stay 1 forever. They are NOT rewritten on startup: they get
+    their stamp the next time that preset is saved or renamed, and until then behave
+    identically. Sidecars have the same hook available via EditParams::version, which is
+    persisted and round-tripped but not yet branched on.
+
+
+Corrupted or changed develop settings
+--------------------------------------
+
+    Develop state is read back from three stores that the app does not fully control: the
+    per-image XMP sidecar (a user file that a crash, a sync client or a hand edit can
+    damage), the preset store in QSettings, and the general settings.ini. Forward
+    tolerance handles values that are ABSENT. This section is about values that are
+    PRESENT but wrong -- unreadable, out of range, or naming something this build has no
+    code for, like an unknown demosaic engine.
+
+    THE OLD FAILURE MODE was uniform and silent: every one of these read paths fell back
+    to a default without telling anyone. A corrupt sidecar came back as "this image has no
+    edits" -- indistinguishable from an untouched image -- and the user's next edit
+    overwrote what was still on disk.
+
+    WHAT IS VALIDATED
+
+      • Sidecar (EditStack::fromBase64) now returns a Status -- Ok / Absent / Corrupt --
+        so callers can tell "unedited" from "unreadable", plus a list of repairs. A stack
+        stamped newer than EditStack::kVersion is reported.
+      • EditStack::sanitize / sanitizeParams range-check every value that reaches the
+        render pipeline, against the SAME limits the panel sliders enforce, so a repaired
+        value is always one the user could have dialled in. It rejects NaN and infinity
+        (one NaN turns the whole image black), orders the three tone splits, repairs a
+        degenerate crop (a zero or negative width divides by zero downstream), and drops a
+        warp whose quad did not survive (geometryFromJson only fills quad when the array
+        is exactly 8 long, so a truncated one would otherwise warp through the DEFAULTS).
+      • Mask components whose tool or op is outside its enum are DROPPED, not rendered:
+        both enums are append-only, so an out-of-range value is either corruption or a
+        tool from a newer build, and neither has geometry this build can interpret.
+      • Presets are range-checked too, in mergePreset -- their values come from QSettings
+        as bare QVariants and reach EditParams through a plain toFloat().
+      • The raw decode engine is validated in three places (see below).
+
+    THE DEMOSAIC ENGINE, the worst of the silent cases. G::DecodeRawEngine has two
+    enumerators and three code paths tested against them, so a value that is NEITHER does
+    not merely pick the wrong decoder -- it fails every test. RawFormat skips the Apple
+    branch AND the winnow-only PMRID raw denoise, and the user gets un-denoised raws with
+    no indication why. Three ways in, all now closed:
+
+      • settings.ini: MW::loadSettings cast the stored int straight to the enum. It is
+        now range-checked before the cast.
+      • A preset: applyPreset tested `== "apple"` and treated everything else as winnow.
+        It now matches both tokens explicitly and warns on anything else.
+      • Cross-platform: the Apple engine is macOS-only and its branch is compiled out
+        elsewhere, but MW's demosaicEngineChanged handler set it unconditionally -- so a
+        preset built on a Mac silently disabled raw denoise on Windows. Now clamped.
+
+    WHEN TO NOTIFY (and when not to)
+
+    Notify when the user would otherwise discover the loss themselves: settings that could
+    not be read, a mask that will not be drawn, values that had to be limited, a store
+    written by a newer Winnow. Do NOT notify for the cases forward tolerance exists to
+    absorb -- an absent sidecar (the normal state of an unedited image) or an unknown KEY
+    in an otherwise valid record, which is by design.
+
+    ANTI-SPAM IS THE HARD PART. Sidecars are read on EVERY image the user visits, so a
+    damaged folder could fire one popup per file -- arrow-keying through fifty of them
+    would bury the app. DevelopProperties::warnOnce therefore reports each KIND of problem
+    at most once per session (warnedIssues holds the kinds already shown) while still
+    logging every occurrence, and the message says other images may be affected. Startup
+    settings use a second channel: MW::loadSettings runs long before G::newPopUp exists,
+    so those messages queue in G::startupWarnings and MW::whenActivated shows them as ONE
+    popup once the window is up.
+
+    A CORRUPT SIDECAR IS NEVER REWRITTEN BEHIND THE USER. The damaged file stays on disk
+    -- it may be recoverable, and a silent overwrite is the exact failure this path exists
+    to prevent. It is replaced only when the user edits that image, which is an explicit
+    act, and the popup says so.

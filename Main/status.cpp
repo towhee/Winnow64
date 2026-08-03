@@ -249,6 +249,14 @@ void MW::updateStatusBar()
     // subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
 
     slideShowStatusLabel->setVisible(G::isSlideShow);
+
+    /* The metadata and image cache running lights report background caching, which is a
+       Preview mode activity (read-ahead over the folder).  Develop works on the single
+       current image with the read-ahead trimmed, so the lights are meaningless there:
+       show them in Preview, hide them in Develop. */
+    bool inPreview = G::operationMode == G::OperationMode::Preview;
+    metadataThreadRunningLabel->setVisible(inPreview);
+    imageThreadRunningLabel->setVisible(inPreview);
 }
 
 int MW::availableSpaceForProgressBar()
