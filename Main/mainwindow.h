@@ -272,14 +272,16 @@ public:
 
     // full screen behavior
     struct FullScreenDocks {
-        bool isFolders;
-        bool isFavs;
-        bool isFilters;
-        bool isMetadata;
-        bool isDevelop;
-        bool isEmbellish;
-        bool isThumbs;
-        bool isStatusBar;
+        bool isFolders = false;
+        bool isFavs = false;
+        bool isFilters = false;
+        bool isMetadata = false;
+        bool isDevelop = false;
+        bool isHistory = false;
+        bool isPresets = false;
+        bool isEmbellish = false;
+        bool isThumbs = true;
+        bool isStatusBar = true;
     } fullScreenDocks;
 
     bool wasFullSpaceOnDiffScreen = false;
@@ -652,6 +654,10 @@ private slots:
     void developAddToMask();        // "M": pop the Add/Subtract mask tool menu
     void developExport();         // "X": export the developed image (not built yet)
     void developSavePreset();     // Cmd+Shift+N: save develop state as a preset
+    /* Cmd+Opt+C / Cmd+Opt+V: copy the ticked develop settings to the develop clipboard
+       and merge them onto another image (Lightroom's Copy / Paste Settings). */
+    void developCopySettings();
+    void developPasteSettings();
     /* Enter/exit the crop editor: enter shows the full frame + overlay (geometry suppressed); exit
        commits the crop into the image's EditStack geometry and re-renders the cropped result. */
     void enterDevelopCrop();
@@ -1101,6 +1107,8 @@ private:
     QAction *developWbSamplerAction = nullptr;    // W (Transform owns W while it is up)
     QAction *developExportAction;       // X
     QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
+    QAction *developCopySettingsAction = nullptr;  // Cmd+Opt+C (real, mode-gated)
+    QAction *developPasteSettingsAction = nullptr; // Cmd+Opt+V (real, mode-gated)
     /* Title-bar toggle buttons that carry the blue "active" border while their panel /
        tool is on (kept in sync from the toggle handlers). */
     BarBtn *developScopesBtn = nullptr;

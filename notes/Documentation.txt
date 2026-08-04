@@ -116,6 +116,7 @@ Table of Contents
          - White balance (absolute, Kelvin)
          - Color Mix panel (colour grading)
          - Develop presets (the Presets dock)
+         - Copy / paste develop settings (the develop clipboard)
          - Develop history (the History dock)
          - Adding or changing a develop adjustment (checklist)
          - Stale presets and history (schema drift)
@@ -4790,7 +4791,12 @@ Develop presets (the Presets dock)
     QKeySequence("P") would clash with the global Pick. Like F3-F9 and H it shows /
     raises rather than toggles. Adding the dock bumped winnowStateVersion to 3 and
     needed the usual new-dock checklist (presets_white.png + qrc + graphicFor / dockFor
-    + dockTextNames + a dockTabToolTip case).
+    + dockTextNames + a dockTabToolTip case). FULL SCREEN is the one exception to
+    "shown / hidden together": Preferences > Full screen defaults has its own "Show
+    develop presets" (and "Show develop history") checkbox, so each dock can be set
+    independently for full screen (MW::toggleFullScreen / fullScreenDocks.isPresets,
+    persisted as isFullScreenPresets). Presets and History are still applied BEFORE
+    Develop there, and Develop raised after, to keep Develop the front tab.
 
     The list (Develop/Presets/presetsview.{h,cpp}, PresetsView + PresetDelegate) is
     deliberately the same interaction as the History list beside it, and a trimmed copy
@@ -4895,6 +4901,56 @@ Develop presets (the Presets dock)
     places: presetsDockVisibilityChange, QMainWindow::tabifiedDockWidgetActivated (the
     only reliable signal for a tab click) and showPresetsDock (raise() on an already
     "visible" dock emits nothing). Export -> lightning is still a stub with no border.
+
+
+Copy / paste develop settings (the develop clipboard)
+------------------------------------------------------
+
+    Lightroom's Copy Settings / Paste Settings. AN UNNAMED PRESET, and deliberately not a
+    second mechanism: Copy opens the SAME checklist dialog and captures with the same
+    DevelopProperties::buildPreset; Paste merges with the same mergePreset. Everything
+    the presets section says therefore holds unchanged -- only the ticked settings are
+    written, the target is the ACTIVE scope, the per-image items (raw engine, raw NR, tone
+    splits, crop / level / warp) go to scope 0 / the geometry whatever is active, spots
+    APPEND rather than replace, and the mask does not travel. Pasting is one history step
+    ("Sky: Paste settings"), so it is undone by clicking the row above it in History.
+
+    The buffer is a single slot that every Copy overwrites, held by the SAME store class
+    (DevelopPresets) under its own QSettings root, "Develop Clipboard/buffer":
+    read/write/migrate are shared with presets via readGroup/writeGroup, so the copy
+    buffer gets the schema version and forward-tolerance for free, and cannot appear in
+    names() or collide with a preset the user names "clipboard". It survives a restart,
+    as Lightroom's does. DevelopPreset also carries sourceImage (display only), which is
+    what lets the UI say WHAT would be pasted.
+
+    UI.
+      - Dialog: SaveDevelopPresetDlg::Mode::CopySettings -- the same groups, Scope combo,
+        pre-checked "differs from default" and All / None, minus the name field (there is
+        nothing to name) and its overwrite check. Title "Copy Develop Settings", button
+        "Copy". One dialog class: "pick a set of develop settings, from a scope" is the
+        same question either way.
+      - Menu: Utilities > Develop, above Save Develop Preset. Paste RENAMES itself to
+        "Paste Develop Settings from IMG_1234.NEF" in syncDevelopMenuEnabled, so the menu
+        answers "have I copied anything?" without being opened twice.
+      - The Develop dock context menu carries the same three items.
+      - Shortcuts: Cmd/Ctrl+Opt/Alt+C and +V, real QKeySequences (like Save Preset's
+        Cmd+Shift+N -- the bare-key arbiter only handles UNMODIFIED keys), enabled only in
+        Develop mode by setOperationMode. Lightroom's own keys are Shift+Cmd+C/V, but
+        Shift+Cmd+C is already "Copy images" in Winnow and two enabled actions on one
+        sequence is an ambiguous shortcut, so the Opt/Alt pair was taken instead.
+
+    GOTCHA: Paste is NOT disabled on an empty clipboard. syncDevelopMenuEnabled runs on
+    aboutToShow, and a disabled QAction's shortcut does not fire, so greying it there
+    would leave Cmd+Opt+V dead until the menu happened to be opened again after a copy.
+    The slot reports "No develop settings have been copied yet" instead.
+
+    NOT DONE: pasting onto a multi-image selection (Lightroom's Sync Settings). Every
+    piece is in place -- read the target's sidecar into an EditStack, mergePreset, mark
+    dirty, flushImage -- but Winnow does not render develop into thumbnails, so a bulk
+    paste would change nothing the user can see. It needs a visible "edited" indicator in
+    the datamodel first.
+
+
 Develop history (the History dock)
 -----------------------------------
 
@@ -4907,7 +4963,9 @@ Develop history (the History dock)
     History Panel). H is a Develop
     MODE LOCAL key (developShortcuts / developShortcutIntercept), not a QKeySequence,
     since the dock is Develop-only; the F-key series the other docks use ran out at F10
-    (F11 is taken by macOS). Like F3-F9 it shows/raises rather than toggles.
+    (F11 is taken by macOS). Like F3-F9 it shows/raises rather than toggles. In FULL
+    SCREEN it is independent of the group: Preferences > Full screen defaults > "Show
+    develop history" (fullScreenDocks.isHistory, persisted as isFullScreenHistory).
 
     STARTUP. Winnow always opens in Preview mode, so MW::showEvent hides the Develop
     tool after restoreState() -- through closeDevelopDock(), which takes History and

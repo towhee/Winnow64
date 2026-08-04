@@ -16,26 +16,33 @@ SaveDevelopPresetDlg::SaveDevelopPresetDlg(const QVector<PresetGroup> &groups,
                                            const QVector<QSet<QString>> &changedPerScope,
                                            int activeScope,
                                            const QStringList &existingNames,
+                                           Mode mode,
                                            QWidget *parent)
     : QDialog(parent), existingNames(existingNames), changedPerScope(changedPerScope)
 {
-    setWindowTitle(tr("Create Develop Preset"));
+    const bool isCopy = (mode == Mode::CopySettings);
+    setWindowTitle(isCopy ? tr("Copy Develop Settings") : tr("Create Develop Preset"));
     setModal(true);
 
     QVBoxLayout *lay = new QVBoxLayout(this);
 
-    /* Preset name + the scope the values are captured from. */
+    /* Preset name (none when copying) + the scope the values are captured from. */
     QFormLayout *form = new QFormLayout;
-    nameEdit = new QLineEdit(this);
-    nameEdit->setPlaceholderText(tr("Untitled preset"));
-    form->addRow(tr("Preset name:"), nameEdit);
+    if (!isCopy) {
+        nameEdit = new QLineEdit(this);
+        nameEdit->setPlaceholderText(tr("Untitled preset"));
+        form->addRow(tr("Preset name:"), nameEdit);
+    }
     scopeCombo = new QComboBox(this);
     scopeCombo->addItems(scopeNames);
     if (activeScope >= 0 && activeScope < scopeNames.size())
         scopeCombo->setCurrentIndex(activeScope);
     scopeCombo->setEnabled(scopeNames.size() > 1);
-    scopeCombo->setToolTip(tr("Which scope's adjustments to capture. Applying the preset "
-                              "writes them to whatever scope is active then."));
+    scopeCombo->setToolTip(isCopy
+        ? tr("Which scope's adjustments to copy. Pasting writes them to whatever scope "
+             "is active then.")
+        : tr("Which scope's adjustments to capture. Applying the preset "
+             "writes them to whatever scope is active then."));
     form->addRow(tr("Scope:"), scopeCombo);
     lay->addLayout(form);
 
@@ -109,12 +116,12 @@ SaveDevelopPresetDlg::SaveDevelopPresetDlg(const QVector<PresetGroup> &groups,
         tree->setItemWidget(gi, 1, w);
     }
 
-    /* Button row: Select all / Select none on the left, Cancel / Save on the right. */
+    /* Button row: Select all / Select none left, Cancel / Save (Copy) right. */
     QHBoxLayout *btnLay = new QHBoxLayout;
     QPushButton *selAll  = new QPushButton(tr("Select all"), this);
     QPushButton *selNone = new QPushButton(tr("Select none"), this);
     QPushButton *cancel  = new QPushButton(tr("Cancel"), this);
-    saveBtn = new QPushButton(tr("Save"), this);
+    saveBtn = new QPushButton(isCopy ? tr("Copy") : tr("Save"), this);
     saveBtn->setDefault(true);
     btnLay->addWidget(selAll);
     btnLay->addWidget(selNone);
@@ -127,8 +134,9 @@ SaveDevelopPresetDlg::SaveDevelopPresetDlg(const QVector<PresetGroup> &groups,
     connect(selNone, &QPushButton::clicked, this, [this]{ setAllChecked(false); });
     connect(cancel,  &QPushButton::clicked, this, &QDialog::reject);
     connect(saveBtn, &QPushButton::clicked, this, &SaveDevelopPresetDlg::onAccept);
-    connect(nameEdit, &QLineEdit::textChanged, this,
-            &SaveDevelopPresetDlg::updateSaveEnabled);
+    if (nameEdit)
+        connect(nameEdit, &QLineEdit::textChanged, this,
+                &SaveDevelopPresetDlg::updateSaveEnabled);
     connect(scopeCombo, &QComboBox::currentIndexChanged, this,
             &SaveDevelopPresetDlg::applyScopeChanged);
 
@@ -139,7 +147,7 @@ SaveDevelopPresetDlg::SaveDevelopPresetDlg(const QVector<PresetGroup> &groups,
 
 QString SaveDevelopPresetDlg::presetName() const
 {
-    return nameEdit->text().trimmed();
+    return nameEdit ? nameEdit->text().trimmed() : QString();
 }
 
 int SaveDevelopPresetDlg::scopeIndex() const
@@ -202,11 +210,14 @@ void SaveDevelopPresetDlg::applyScopeChanged(int scope)
 
 void SaveDevelopPresetDlg::updateSaveEnabled()
 {
-    saveBtn->setEnabled(!presetName().isEmpty());
+    /* Copying has no name to validate, so Copy is always available -- copying nothing is
+       harmless and clears the buffer, which is a legitimate thing to want. */
+    saveBtn->setEnabled(!nameEdit || !presetName().isEmpty());
 }
 
 void SaveDevelopPresetDlg::onAccept()
 {
+    if (!nameEdit) { accept(); return; }        // CopySettings: no name, no overwrite
     const QString name = presetName();
     if (name.isEmpty()) return;
     if (existingNames.contains(name, Qt::CaseInsensitive)) {

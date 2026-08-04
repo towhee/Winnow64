@@ -5,9 +5,7 @@ WHAT'S NEW
 - Focus Stacking
 
 BUGS / TO DO
-- Implementation must plan for changes to develop settings over time
-- What to do when History or Presets use out-of-date setting
-- New docking panels need to be added to fullscreen settings (Develop, History, Presets).
+- Determine full screen behavior in full screen mode.
 - Masks still different colors, need to maintain mask tool history as before
 - Develop copy / paste
 - List stuff to disable in Develop Mode (menu items and shortcuts)

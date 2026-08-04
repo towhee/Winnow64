@@ -7,6 +7,7 @@
 #include "Develop/editstack.h"
 #include "Develop/History/develophistory.h"
 #include "Develop/Presets/developpresets.h"
+#include "Dialogs/savedeveloppresetdlg.h"    // PresetGroup: the checklist model
 #include "Develop/workingimage.h"
 #include "Develop/Properties/colorgradewheel.h"
 #include "Develop/Properties/colorrangewheel.h"
@@ -224,6 +225,23 @@ public slots:
     void updatePresetFromCurrent(const QString &name);
     void renamePreset(const QString &from, const QString &to);
     void deletePreset(const QString &name);
+
+    /* ---- Copy / Paste develop settings (Lightroom's Copy Settings / Paste Settings) --
+       An UNNAMED preset, and deliberately the same machinery: copyDevelopSettings opens
+       the same checklist (in Copy mode -- no name field), captures the ticked settings
+       from the chosen scope with the same buildPreset, and stores them in the develop
+       clipboard; pasteDevelopSettings merges that buffer into the ACTIVE scope of the
+       current image with the same mergePreset + one history step, exactly as applying a
+       preset does. So copy/paste inherits every preset rule: only what you ticked is
+       written, the target is the active scope, per-image items go to scope 0 / the
+       geometry, spots append, and the mask does not travel.
+
+       hasCopiedSettings / copiedSettingsSource drive the menu's enabled state and its
+       tooltip ("Paste 'Basic' settings from IMG_1234.NEF"). */
+    void copyDevelopSettings();
+    void pasteDevelopSettings();
+    bool hasCopiedSettings() const;
+    QString copiedSettingsSource() const;   // file name copied from, or empty
 
     /* ---- White balance (Basic panel, above Temp) ---------------------------------
        The dropper: ImageView reports the normalized point the user clicked, and
@@ -456,6 +474,18 @@ private:
     static QSet<QString> changedLeavesForScope(const EditParams &p);
     EditStack     mergePreset(const DevelopPreset &preset, EditStack s, int target) const;
     int           targetScopeIndex(const EditStack &s) const;   // active, clamped valid
+
+    /* The checklist model (Global settings + one group per Develop section), pre-checked
+       from what differs from default in `s`. Shared by Save Preset and Copy Settings --
+       they ask the user the same question. */
+    QVector<PresetGroup> buildChecklistGroups(const EditStack &s) const;
+
+    /* Apply an already-read preset to the current image: the shared body of applyPreset
+       and pasteDevelopSettings (mask-tool teardown, merge, rebuild, one history step,
+       decode-engine switch). `label` is the history text ("Preset: Warm" / "Paste
+       settings"); `source` names the preset or the clipboard in any warning. */
+    void applyPresetObject(const DevelopPreset &preset, const QString &label,
+                           const QString &source);
 
     QString uniqueScopeName(const QString &name) const;  // unique within this image
 

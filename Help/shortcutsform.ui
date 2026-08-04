@@ -1337,6 +1337,28 @@
        </item>
        <item>
         <property name="text">
+         <string>Copy Develop Settings</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Opt/Alt + C</string>
+        </property>
+        <property name="text">
+         <string>Opens a checklist and copies the settings you tick to the develop clipboard; in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Paste Develop Settings</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Opt/Alt + V</string>
+        </property>
+        <property name="text">
+         <string>Applies the copied settings to this image, on the selected scope, as one history step; in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Run Develop Preset</string>
         </property>
         <property name="text">

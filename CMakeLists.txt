@@ -10,7 +10,7 @@ if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
 endif()
 
-project(Winnow VERSION 2.05 LANGUAGES C CXX)
+project(Winnow VERSION 2.06 LANGUAGES C CXX)
 
 # Single source of truth for the app version. project(VERSION ...) above feeds:
 #   - Main/winnow_version.h (generated below) -> the in-app version string

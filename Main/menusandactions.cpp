@@ -1127,6 +1127,28 @@ void MW::createUtilActions()
     addAction(developSavePresetAction);
     connect(developSavePresetAction, &QAction::triggered, this, &MW::developSavePreset);
 
+    /* Copy / Paste Develop Settings (Lightroom's Copy Settings / Paste Settings). Like
+       Save Develop Preset these are modified combos with REAL QKeySequences, enabled only
+       in Develop mode. Lightroom's own keys are Ctrl/Cmd+Shift+C/V, but Shift+Cmd+C is
+       already "Copy images" here, so Winnow uses Ctrl+Alt+C / Ctrl+Alt+V (Cmd+Opt+C /
+       Cmd+Opt+V on macOS) -- both free, and nothing else has to be given up. Paste is
+       additionally gated on something having been copied (syncDevelopMenuEnabled). */
+    developCopySettingsAction = new QAction(tr("Copy Develop Settings…"), this);
+    developCopySettingsAction->setObjectName("developCopySettings");
+    developCopySettingsAction->setShortcut(QKeySequence("Ctrl+Alt+C"));
+    developCopySettingsAction->setShortcutVisibleInContextMenu(true);
+    developCopySettingsAction->setEnabled(false);
+    addAction(developCopySettingsAction);
+    connect(developCopySettingsAction, &QAction::triggered, this, &MW::developCopySettings);
+
+    developPasteSettingsAction = new QAction(tr("Paste Develop Settings"), this);
+    developPasteSettingsAction->setObjectName("developPasteSettings");
+    developPasteSettingsAction->setShortcut(QKeySequence("Ctrl+Alt+V"));
+    developPasteSettingsAction->setShortcutVisibleInContextMenu(true);
+    developPasteSettingsAction->setEnabled(false);
+    addAction(developPasteSettingsAction);
+    connect(developPasteSettingsAction, &QAction::triggered, this, &MW::developPasteSettings);
+
     /* Not checkable: each trigger steps the scopes strip on through both scopes ->
        histogram only -> vectorscope only -> hidden -> both ... The editor-bar button
        beside the Develop dock title is the plain show/hide (and carries the state). */
@@ -2161,6 +2183,9 @@ void MW::createUtilMenu()
     developMenu->addSeparator();
     developMenu->addAction(developScopesAction);
     developMenu->addAction(developExportAction);
+    developMenu->addSeparator();
+    developMenu->addAction(developCopySettingsAction);
+    developMenu->addAction(developPasteSettingsAction);
     developMenu->addAction(developSavePresetAction);
     /* Grey the mode-local items outside Develop mode: their keys belong to other actions
        there, so an enabled item would advertise a shortcut that does something else. */
@@ -3201,9 +3226,21 @@ void MW::syncDevelopMenuEnabled()
         developNewScopeAction, developAddToMaskAction, toggleMaskOverlayAction,
         developTransformAction, developSpotAction, developWbSamplerAction,
         developScopesAction, developExportAction,
-        developSavePresetAction
+        developSavePresetAction, developCopySettingsAction, developPasteSettingsAction
     };
     for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);
+
+    /* Paste names what it would paste, so the menu answers "have I copied anything?" on
+       sight. It is deliberately NOT disabled on an empty clipboard: this runs on
+       aboutToShow, and a disabled QAction's shortcut does not fire, so greying it here
+       would leave Cmd+Opt+V dead until the menu were opened again after a copy. The slot
+       says "nothing copied yet" instead. */
+    if (developPasteSettingsAction && developProperties) {
+        const QString from = developProperties->copiedSettingsSource();
+        developPasteSettingsAction->setText(
+            from.isEmpty() ? tr("Paste Develop Settings")
+                           : tr("Paste Develop Settings from %1").arg(from));
+    }
 
     // Reflect live state for the checkable toggles
     if (developTransformAction) developTransformAction->setChecked(developTransformVisible);

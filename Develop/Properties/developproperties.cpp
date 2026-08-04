@@ -1426,8 +1426,16 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
         aRawDemosaic = menu.addAction(winnow ? "Raw demosaic and denoise" : "Raw demosaic");
     }
 
-    /* Save the current image's develop state as a reusable preset (also Cmd+Shift+N). */
+    /* Copy / paste the ticked settings between images (also Cmd+Opt+C / Cmd+Opt+V), and
+       save them as a reusable preset (also Cmd+Shift+N). Paste names its source, so the
+       menu itself says what is on the clipboard. */
     menu.addSeparator();
+    QAction *aCopySettings = menu.addAction("Copy Develop Settings…");
+    aCopySettings->setEnabled(!currentImagePath.isEmpty() && !currentIsIdentity());
+    const QString from = copiedSettingsSource();
+    QAction *aPasteSettings = menu.addAction(
+        from.isEmpty() ? "Paste Develop Settings" : "Paste Develop Settings from " + from);
+    aPasteSettings->setEnabled(!currentImagePath.isEmpty() && hasCopiedSettings());
     QAction *aSavePreset = menu.addAction("Save Develop Preset…");
     aSavePreset->setEnabled(!currentImagePath.isEmpty() && !currentIsIdentity());
 
@@ -1437,6 +1445,8 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
     else if (chosen == aReset)       resetSection(group);
     else if (chosen == aExpandAll)   setAllSectionsExpanded(true);
     else if (chosen == aCollapseAll) setAllSectionsExpanded(false);
+    else if (chosen == aCopySettings)  copyDevelopSettings();
+    else if (chosen == aPasteSettings) pasteDevelopSettings();
     else if (chosen == aSavePreset)  saveDevelopPreset();
     else if (chosen == aRawDemosaic) showRawDemosaic();
     else if (chosen == aSolo) {
@@ -3662,6 +3672,7 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
     preset.name = name;
     const QStringList names = currentScopeNames();
     preset.sourceScope = names.value(srcScope, QStringLiteral("Global"));
+    preset.sourceImage = QFileInfo(currentImagePath).fileName();   // display only
 
     /* Per-image items. The raw NR pair and the tone splits live in the Global scope by
        definition, so they are read from scope 0 whatever the source scope is. */
@@ -3705,19 +3716,8 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
     return preset;
 }
 
-void DevelopProperties::saveDevelopPreset()
+QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s) const
 {
-    if (G::isLogger) G::log("DevelopProperties::saveDevelopPreset");
-    if (currentImagePath.isEmpty()) {
-        if (G::popup) G::popup->showPopup("No image to save a develop preset from.");
-        return;
-    }
-    const EditStack s = stackCache.value(currentImagePath);
-    if (s.isIdentity()) {
-        if (G::popup) G::popup->showPopup("No develop edits to save as a preset.");
-        return;
-    }
-
     const EditParams def;
     const Geometry gdef;
     const EditParams base = s.scopes.isEmpty() ? def : s.scopes.first().params;
@@ -3764,13 +3764,29 @@ void DevelopProperties::saveDevelopPreset()
             g.leaves.append({sec.leaves[i].key, sec.leaves[i].label, false});
         groups.append(g);
     }
+    return groups;
+}
+
+void DevelopProperties::saveDevelopPreset()
+{
+    if (G::isLogger) G::log("DevelopProperties::saveDevelopPreset");
+    if (currentImagePath.isEmpty()) {
+        if (G::popup) G::popup->showPopup("No image to save a develop preset from.");
+        return;
+    }
+    const EditStack s = stackCache.value(currentImagePath);
+    if (s.isIdentity()) {
+        if (G::popup) G::popup->showPopup("No develop edits to save as a preset.");
+        return;
+    }
 
     QVector<QSet<QString>> changedPerScope;
     for (const EditScope &l : s.scopes)
         changedPerScope.append(changedLeavesForScope(l.params));
 
-    SaveDevelopPresetDlg dlg(groups, currentScopeNames(), changedPerScope,
-                             activeScopeIndex, presets->names(), mw);
+    SaveDevelopPresetDlg dlg(buildChecklistGroups(s), currentScopeNames(), changedPerScope,
+                             activeScopeIndex, presets->names(),
+                             SaveDevelopPresetDlg::Mode::SavePreset, mw);
     if (dlg.exec() != QDialog::Accepted) return;
 
     presets->write(buildPreset(dlg.presetName(), dlg.scopeIndex(), dlg.selected(), s));
@@ -3885,15 +3901,25 @@ void DevelopProperties::applyPreset(const QString &name)
         if (G::popup) G::popup->showPopup("No image to apply a develop preset to.");
         return;
     }
-    const DevelopPreset preset = presets->read(name);
+    applyPresetObject(presets->read(name), "Preset: " + name, "Preset \"" + name + "\"");
+}
 
+void DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QString &label,
+                                          const QString &source)
+{
+/*
+    Merge a preset-shaped object into the current image for real. Shared by applyPreset
+    (a named preset from the Presets dock) and pasteDevelopSettings (the unnamed develop
+    clipboard) -- the two differ only in where the object came from and how the history
+    step and any warning are worded.
+*/
     /* A preset stamped newer than this build's schema may hold keys whose MEANING has
        since changed; DevelopPresets::migrate passes it through untouched and assignParam
        drops what it does not know, so it still applies -- just not necessarily in full.
        Warned here rather than in read(), which also runs on hover-preview. */
     if (preset.version > DevelopPresets::kVersion)
         warnOnce("newerPreset",
-                 "Preset \"" + name + "\" was saved by a newer version of Winnow.\n"
+                 source + " was saved by a newer version of Winnow.\n"
                  "Settings this version does not understand were skipped.");
 
     /* A half-built mask tool indexes into the scope we are about to rewrite, so retire it
@@ -3922,9 +3948,9 @@ void DevelopProperties::applyPreset(const QString &name)
     if (spotMode) emitSpotPins();
     isRestoringHistory = false;
 
-    /* ONE history step, labelled with the scope that received it ("Sky: Preset: Warm").
-       Also marks the sidecar dirty and arms the debounced write. */
-    noteScopeEdit(historyScopeLabel(), "Preset: " + name);
+    /* ONE history step, labelled with the scope that received it ("Sky: Preset: Warm",
+       "Sky: Paste settings"). Also marks the sidecar dirty and arms the write. */
+    noteScopeEdit(historyScopeLabel(), label);
 
     /* The decode engine is not part of the EditStack: MW owns it and must re-decode.
        The stored token is matched EXPLICITLY against the two engines rather than testing
@@ -3938,11 +3964,91 @@ void DevelopProperties::applyPreset(const QString &name)
             emit demosaicEngineChanged(eng == "apple");
         else
             warnOnce("unknownEngine",
-                     "Preset \"" + name + "\" names an unknown raw decoder (\"" + eng +
+                     source + " names an unknown raw decoder (\"" + eng +
                      "\").\nThe current decoder was kept.");
     }
 
     emit paramsChanged();               // full render + settled full-res
+}
+
+/* ---- Copy / paste develop settings ------------------------------------------------ */
+
+void DevelopProperties::copyDevelopSettings()
+{
+/*
+    Lightroom's "Copy Settings" (Cmd+Opt+C). The same checklist as Save Preset, minus the
+    name: what the user ticks is captured from the chosen scope into the develop
+    clipboard, replacing whatever was there. Nothing is applied to any image here.
+*/
+    if (G::isLogger) G::log("DevelopProperties::copyDevelopSettings");
+    if (!presets) return;
+    if (currentImagePath.isEmpty()) {
+        if (G::popup) G::popup->showPopup("No image to copy develop settings from.");
+        return;
+    }
+    const EditStack s = stackCache.value(currentImagePath);
+    if (s.isIdentity()) {
+        if (G::popup) G::popup->showPopup("This image has no develop settings to copy.");
+        return;
+    }
+
+    QVector<QSet<QString>> changedPerScope;
+    for (const EditScope &l : s.scopes)
+        changedPerScope.append(changedLeavesForScope(l.params));
+
+    SaveDevelopPresetDlg dlg(buildChecklistGroups(s), currentScopeNames(), changedPerScope,
+                             activeScopeIndex, QStringList(),
+                             SaveDevelopPresetDlg::Mode::CopySettings, mw);
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    /* buildPreset needs a name (it is the QSettings group); writeClipboard supplies the
+       fixed slot name, so what is passed here is only a label. */
+    const DevelopPreset buf =
+        buildPreset("buffer", dlg.scopeIndex(), dlg.selected(), s);
+    presets->writeClipboard(buf);
+    if (G::popup) {
+        G::popup->showPopup(buf.isEmpty()
+            ? "Nothing was ticked, so the develop clipboard is now empty."
+            : "Copied develop settings from " + buf.sourceImage + ".");
+    }
+}
+
+void DevelopProperties::pasteDevelopSettings()
+{
+/*
+    Lightroom's "Paste Settings" (Cmd+Opt+V). Merges the develop clipboard into the
+    CURRENT image exactly as applying a preset does: only the copied settings are
+    written, they land on the ACTIVE scope, and it is one undoable history step.
+*/
+    if (G::isLogger) G::log("DevelopProperties::pasteDevelopSettings");
+    if (!presets) return;
+    if (currentImagePath.isEmpty()) {
+        if (G::popup) G::popup->showPopup("No image to paste develop settings onto.");
+        return;
+    }
+    const DevelopPreset buf = presets->readClipboard();
+    if (buf.isEmpty()) {
+        if (G::popup)
+            G::popup->showPopup("No develop settings have been copied yet.  "
+                                "Use Copy Develop Settings first.");
+        return;
+    }
+    applyPresetObject(buf, "Paste settings", "The copied develop settings");
+    if (G::popup) {
+        const QString from = buf.sourceImage.isEmpty()
+                             ? QString() : " from " + buf.sourceImage;
+        G::popup->showPopup("Pasted develop settings" + from + ".");
+    }
+}
+
+bool DevelopProperties::hasCopiedSettings() const
+{
+    return presets && presets->hasClipboard();
+}
+
+QString DevelopProperties::copiedSettingsSource() const
+{
+    return presets ? presets->readClipboard().sourceImage : QString();
 }
 
 void DevelopProperties::updatePresetFromCurrent(const QString &name)

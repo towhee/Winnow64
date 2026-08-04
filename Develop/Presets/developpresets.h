@@ -57,9 +57,14 @@ struct DevelopPreset {
     QString           name;
     int               version = 1;   // schema of the stored keys; see kVersion
     QString           sourceScope;   // scope it was captured from (display only)
+    QString           sourceImage;   // file name it was captured from (display only)
     QVariantHash      globals;       // demosaicEngine, raw NR, tone splits, geometry
     QVariantHash      params;        // EditParams JSON key -> raw value
     QVector<FillSpot> spots;
+
+    /* Nothing was ticked. Applying it is a no-op, so the callers use this to say
+       "nothing copied yet" rather than silently pasting nothing. */
+    bool isEmpty() const { return globals.isEmpty() && params.isEmpty() && spots.isEmpty(); }
 };
 
 class DevelopPresets : public QObject
@@ -74,6 +79,16 @@ public:
     void          write(const DevelopPreset &p);  // overwrites any preset of that name
     bool          rename(const QString &from, const QString &to);
     void          remove(const QString &name);
+
+    /* ---- The develop CLIPBOARD (Copy / Paste Develop Settings) --------------------
+       Copy captures exactly what a preset captures -- the same checklist, the same
+       partial recipe -- it just has no name, so it goes to a single slot that every Copy
+       overwrites, and Paste merges it with the same mergePreset(). It lives under its own
+       QSettings root: it therefore inherits the version / migrate path, survives a
+       restart (Lightroom's copy buffer does too) and can never turn up in names(). */
+    DevelopPreset readClipboard() const;
+    void          writeClipboard(const DevelopPreset &p);
+    bool          hasClipboard() const;
 
     /* Assign one RAW preset value onto an EditParams, keyed by its EditStack JSON field
        name. Unknown keys are ignored, so a preset written by a later build loads here
@@ -90,6 +105,11 @@ signals:
 
 private:
     static constexpr const char *kRoot = "Develop Presets";
+    /* The clipboard's own root and its single fixed slot name. Separate from kRoot so the
+       buffer is invisible to names() / contains() and cannot collide with a preset the
+       user happens to name "clipboard". */
+    static constexpr const char *kClipRoot = "Develop Clipboard";
+    static constexpr const char *kClipName = "buffer";
     /* The adjustments group. kEditsLegacy is what the first (save-only) build wrote,
        when a preset could only come from the Global scope; read() still accepts it. */
     static constexpr const char *kEdits       = "Edits";
@@ -100,6 +120,11 @@ private:
        one `if (p.version < N) { ...convert p.params / p.globals...; }` step, in order,
        so a v1 preset migrates through every intervening version. */
     static void migrate(DevelopPreset &p);
+
+    /* The store, parameterised by root: presets and the clipboard are the same object in
+       the same layout, differing only in where they live and who may enumerate them. */
+    DevelopPreset readGroup(const char *root, const QString &name) const;
+    void          writeGroup(const char *root, const DevelopPreset &p);
 
     QSettings *setting;
 };

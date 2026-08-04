@@ -29,6 +29,8 @@ void MW::writeSettings()
     settings->setValue("isFullScreenFilters", fullScreenDocks.isFilters);
     settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
     settings->setValue("isFullScreenDevelop", fullScreenDocks.isDevelop);
+    settings->setValue("isFullScreenHistory", fullScreenDocks.isHistory);
+    settings->setValue("isFullScreenPresets", fullScreenDocks.isPresets);
     settings->setValue("isFullScreenEmbellish", fullScreenDocks.isEmbellish);
     settings->setValue("isFullScreenThumbs", fullScreenDocks.isThumbs);
     settings->setValue("isFullScreenStatusBar", fullScreenDocks.isStatusBar);
@@ -533,6 +535,8 @@ bool MW::loadSettings()
     if (settings->contains("isFullScreenFilters")) fullScreenDocks.isFilters = settings->value("isFullScreenFilters").toBool();
     if (settings->contains("isFullScreenMetadata")) fullScreenDocks.isMetadata = settings->value("isFullScreenMetadata").toBool();
     if (settings->contains("isFullScreenDevelop")) fullScreenDocks.isDevelop = settings->value("isFullScreenDevelop").toBool();
+    if (settings->contains("isFullScreenHistory")) fullScreenDocks.isHistory = settings->value("isFullScreenHistory").toBool();
+    if (settings->contains("isFullScreenPresets")) fullScreenDocks.isPresets = settings->value("isFullScreenPresets").toBool();
     if (settings->contains("isFullScreenEmbellish")) fullScreenDocks.isEmbellish = settings->value("isFullScreenEmbellish").toBool();
     if (settings->contains("isFullScreenThumbs")) fullScreenDocks.isThumbs = settings->value("isFullScreenThumbs").toBool();
     if (settings->contains("isFullScreenStatusBar")) fullScreenDocks.isStatusBar = settings->value("isFullScreenStatusBar").toBool();
