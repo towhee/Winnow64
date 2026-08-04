@@ -779,4 +779,28 @@ show the action item description and value (where relevent).  For example:
 If in Develop mode when close Winnow, when reopen, the Develop panel is not visible (correct behavior), but the History panel is visible
   and disabled (wrong behavior).  Winnow opens in Preview mode, so the History panel should be hidden.
 
+1. Left containment rail — done, awaiting your build. A 2px selectionColor line from the top of the selected scope row down through the
+tree to the last visible row. Ties the sections to the selected scope, not just to the Scope band. Cancel with G::scopeRailW = 0.
 
+2. Drop the "Global: " prefix. Repeating the scope name on four consecutive headers is a text workaround for the missing visual grouping —
+once 1 lands, the headers can read just Basic / Color / Color Mix / Effects. Calmer, and buys back caption width on a narrow dock. One
+line in updateSectionHeaderCaptions().
+
+3. Dim the section captions to header3Color (#42738a). They currently use header2Color — the same teal as "Raw" and "Scope" — which
+actively fights the hierarchy. The delegate already has that pen (hdrPen).
+
+4. Close the seam. No gap between the active scope row and the first section header; inset the section band's left edge to the indent so
+it visibly sits inside the scope row's width; add a divider plus a few px of padding after the last section so the group's bottom edge is
+as legible as its top.
+
+5. Card fill — alternative to 1, not additive. Fill the whole scope-owned region at backgroundShade + 4 with a 1px border, so it's a card
+hanging off the selected row. Unmistakable, but heavier and it fights the dock's flat look. Only worth trying if the rail reads too subtle
+once you see it.
+
+Presets
+
+Add a Presets panel (with same UI behavior as History panel) that replicates Lightroom Classic
+presets.  There will only be user defined presets.  The shortcut for the Presets panel is 'P'.
+Create a 'New Preset Dialog' with the checkable list of develop settings in the tree under
+Scope.  Include buttons to select all/none for each subheader (Basic, Color...) and also for
+all the settings.

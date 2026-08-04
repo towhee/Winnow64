@@ -76,6 +76,38 @@ the version, edit only the `project(... VERSION ...)` line.**
    # edit QT_DIR, DEVELOPER_ID, ARCHIVE_DIR, upload settings
    ```
 
+### macOS dev builds are signed too (not just releases)
+
+Every local build of the `Winnow` target is signed by a CMake POST_BUILD step
+with `WINNOW_DEV_CODESIGN_IDENTITY` (defaults to the same Developer ID as
+`config.sh`) and `packaging/macos/dev-entitlements.plist`.
+
+This is not about distribution — it is what stops macOS asking to confirm access
+to Documents / Desktop / Pictures / iCloud on *every* run. Without it the linker
+ad-hoc-signs the bundle, so the designated requirement is a cdhash of the binary;
+each recompile changes it, TCC sees an app it has never seen, and re-prompts. A
+real certificate gives a `identifier "com.winnow.Winnow" … subject.OU =
+"2663CS489R"` requirement that is identical across rebuilds, so grants persist.
+
+Dev signing deliberately omits the hardened runtime and adds
+`com.apple.security.get-task-allow`, so lldb/Qt Creator debugging is unaffected.
+Release signing is unchanged: `deploy.command` re-signs the staged bundle with
+`entitlements.plist` and `--options runtime` before notarization.
+
+Disable with `-DWINNOW_DEV_CODESIGN_IDENTITY=""` (falls back to ad-hoc, and the
+repeated prompts return).
+
+**On a second Mac** (MacBook Pro / Mac Studio) nothing extra is needed *provided
+step 4 above was done there* — the identity must be importable as an identity,
+i.e. the `.p12` with its private key, not a bare `.cer`. Configure checks with
+`security find-identity -v -p codesigning`; if the identity is missing it warns,
+skips signing and the build still succeeds.
+
+The macOS privacy database is per-machine and is not in git, iCloud or Migration
+Assistant's synced set, so each Mac still asks once on the first signed run and
+then remembers. What travels in git is the *stable identity* that makes the
+answer stick.
+
 ### Windows 11
 
 1. Visual Studio 2022 (Desktop C++ workload) — includes the MSVC toolchain and,

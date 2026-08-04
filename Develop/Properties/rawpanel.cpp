@@ -8,6 +8,7 @@
 #include <QButtonGroup>
 #include <QComboBox>
 #include <QCheckBox>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPainter>
@@ -40,8 +41,9 @@ void RawPanel::buildUi()
     outer->setSpacing(0);
 
     /* Header band (collapse arrow + "Raw" + [?]); transparent so paintEvent draws the
-       gradient behind. The arrow sits in a 10px gutter and the caption lands at x=10,
-       matching the tree's section headers (same idiom as the old ScopeHeader). */
+       gradient behind. The arrow sits in the tree's gutter and the caption follows
+       G::decorationTitleGap clear of it, matching the tree's section headers (same idiom
+       as the old ScopeHeader). */
     headerBand = new QWidget(this);
     headerBand->setAttribute(Qt::WA_TranslucentBackground);
     headerBand->setCursor(Qt::PointingHandCursor);
@@ -52,7 +54,7 @@ void RawPanel::buildUi()
     collapseBtn = new BarBtn();
     collapseBtn->setToolTip("Hide or show the raw decode controls");
     collapseBtn->setIconSize(QSize(9, 9));
-    collapseBtn->setFixedSize(10, 16);
+    collapseBtn->setFixedSize(9, 16);
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
     titleLabel = new QLabel(tr("Raw"), headerBand);
@@ -63,6 +65,7 @@ void RawPanel::buildUi()
     tipBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
     connect(tipBtn, &BarBtn::clicked, this, [this]{ emit tipsRequested(); });
     hb->addWidget(collapseBtn);
+    hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(titleLabel);
     hb->addStretch(1);
     hb->addWidget(tipBtn);
@@ -131,6 +134,35 @@ void RawPanel::buildUi()
     nb->setSpacing(4);
     rb->addWidget(denoiseBlock);
 
+    /* Divider below the "Render using" row, matching the rules the property tree draws
+       between the Basic / Color / Effects groups: a centred 1px line, inset 6px, in
+       G::backgroundShade + 20 (see DevelopProperties::addDivider), with an extra 3px of
+       breathing room above it. It lives in denoiseBlock so it hides with the denoise
+       group on the Apple engine rather than dangling under the last visible row. */
+    QWidget *demDivider = new QWidget(denoiseBlock);
+    demDivider->setFixedHeight(8);
+    QVBoxLayout *ddl = new QVBoxLayout(demDivider);
+    ddl->setContentsMargins(6, 5, 6, 2);
+    ddl->setSpacing(0);
+    QFrame *demRule = new QFrame(demDivider);
+    demRule->setFixedHeight(1);
+    const int divShade = G::backgroundShade + 20;
+    demRule->setStyleSheet(QString("background: %1; border: none;")
+                               .arg(QColor(divShade, divShade, divShade).name()));
+    ddl->addWidget(demRule);
+    nb->addWidget(demDivider);
+
+    /* Group caption for the raw denoise controls that follow. */
+    QWidget *nrRow = new QWidget(denoiseBlock);
+    QHBoxLayout *nrl = new QHBoxLayout(nrRow);
+    nrl->setContentsMargins(10, 0, 10, 0);
+    nrl->setSpacing(0);
+    QLabel *nrLbl = new QLabel(tr("Noise Reduction:"), nrRow);
+    nrLbl->setStyleSheet(capCss);
+    nrl->addWidget(nrLbl);
+    nrl->addStretch(1);
+    nb->addWidget(nrRow);
+
     /* Run row: "Denoise"/"Denoised" + "Auto run". */
     QWidget *runRow = new QWidget(denoiseBlock);
     QHBoxLayout *nl = new QHBoxLayout(runRow);
@@ -172,7 +204,16 @@ void RawPanel::buildUi()
 
 void RawPanel::toggleCollapsed()
 {
-    collapsed = !collapsed;
+    setCollapsed(!collapsed);
+    /* User-driven only: DevelopProperties folds the tree sections / Scope row in when
+       Solo mode is on. Programmatic setCollapsed calls stay silent so the solo handler
+       cannot bounce back into the panel that triggered it. */
+    emit collapseToggled(collapsed);
+}
+
+void RawPanel::setCollapsed(bool collapse)
+{
+    collapsed = collapse;
     if (body) body->setVisible(!collapsed);
     updateCollapseIcon();
     if (setting) setting->setValue("Develop/rawCollapsed", collapsed);
@@ -192,8 +233,12 @@ bool RawPanel::eventFilter(QObject *watched, QEvent *event)
 {
     /* A single left click anywhere on the header band -- the caption (which ignores the
        press so it propagates here) or the empty area -- toggles collapse. The [?] tip and
-       collapse-arrow buttons consume their own clicks, so they keep working. */
-    if (watched == headerBand && event->type() == QEvent::MouseButtonPress) {
+       collapse-arrow buttons consume their own clicks, so they keep working.
+       MouseButtonDblClick is included because Qt sends it INSTEAD of the second press:
+       without it a double click would toggle once (leaving the panel in the opposite
+       state) rather than toggling twice back to where it started. */
+    if (watched == headerBand && (event->type() == QEvent::MouseButtonPress ||
+                                  event->type() == QEvent::MouseButtonDblClick)) {
         QMouseEvent *me = static_cast<QMouseEvent *>(event);
         if (me->button() == Qt::LeftButton) { toggleCollapsed(); return true; }
     }

@@ -4,11 +4,16 @@
 #include <QWidget>
 #include "Develop/Scopes/scopedata.h"
 
+class QPainter;
+
 /*
     A live vectorscope of the image currently shown in the loupe: a 2-D Cb/Cr
     accumulation drawn on a dark circular graticule. Hue is angle, saturation is radius
     from the neutral centre, so casts and over-saturation read at a glance (handy for
     white balance). setData() copies the VN x VN counts and repaints; clear() blanks it.
+
+    The zoom readout ("150%", shown only above 100%) is painted in the bottom right
+    corner. Closing the strip is the ScopesView's [X], not this scope's.
 
     Counts come from the same MW::updateDevelopScopes sample pass that feeds the
     histogram.
@@ -37,11 +42,14 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
 
 private:
+    void drawZoomLabel(QPainter &p);   // bottom right readout, painted last
+
+
     quint32 vec[ScopeData::VN][ScopeData::VN];
     bool hasData = false;
     int marker[3] = { 0, 0, 0 };   // cursor pixel R,G,B
     bool hasMarker = false;
-    double zoom = 1.0;             // plot magnification (graticule stays the 100% reference ring)
+    double zoom = 1.0;             // plot magnification (graticule = the 100% ring)
     bool showSkinLine = false;     // skin-tone (YIQ I-axis) reference line
 };
 

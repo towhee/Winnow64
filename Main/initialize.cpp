@@ -1826,6 +1826,18 @@ void MW::createDevelopDock()
        re-decode relies on renderDevelopPreview's raw re-decode path (gated on isFileRaw && useRaw). */
     connect(developProperties, &DevelopProperties::demosaicEngineChanged, this,
             [this](bool useApple){
+#ifndef Q_OS_MAC
+                /* The Apple engine is macOS-only and its decode branch is compiled out
+                   here, so setting it off-mac would not merely be ignored: it matches
+                   NEITHER engine test, which silently disables the winnow-only PMRID raw
+                   denoise. Reachable off-mac by applying a preset made on a Mac. */
+                if (useApple) {
+                    useApple = false;
+                    if (G::popup)
+                        G::popup->showPopup("The Apple raw decoder is macOS only.<br>"
+                                            "Using the Winnow decoder.", 4000);
+                }
+#endif
                 G::decodeRawEngine = useApple ? G::DecodeRawEngine::appleDecodeRawEngine
                                               : G::DecodeRawEngine::winnowDecodeRawEngine;
                 /* Clear the WHOLE WorkingImageCache, not just the current file: the
@@ -1889,6 +1901,9 @@ void MW::createDevelopDock()
     /* Adjustment slider changed while a mask overlay is shown -> hide coverage tint. */
     connect(developProperties, &DevelopProperties::maskTintHideRequested,
             imageView, &ImageView::hideMaskTint);
+    /* Scope selected -> un-hide the tint so that scope's combined mask shows. */
+    connect(developProperties, &DevelopProperties::maskTintShowRequested,
+            imageView, &ImageView::showMaskTint);
     /* Scope menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
     connect(developProperties, &DevelopProperties::maskOverlayToggleRequested,
             this, &MW::toggleMaskOverlay);
@@ -1924,12 +1939,18 @@ void MW::createDevelopDock()
        The scopes keep a fixed height; developProperties takes the remaining (stretch) space.
        Visibility is user-toggled from the editor bar below and persisted. */
     developScopesVisible = settings->value("Develop/scopesVisible", true).toBool();
+    /* Which scopes the strip shows ("G" cycles both / histogram / vectorscope). */
+    developScopesLayout = settings->value("Develop/scopesLayout", ScopesView::Both).toInt();
+    if (developScopesLayout < ScopesView::Both ||
+        developScopesLayout > ScopesView::VectorscopeOnly)
+        developScopesLayout = ScopesView::Both;
     developAutoRunDenoise = settings->value("Develop/autoRunDenoise", true).toBool();
     QWidget *developContainer = new QWidget(developDock);
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
     developContainerLayout->setContentsMargins(0, 0, 0, 0);
     developContainerLayout->setSpacing(0);
     scopesView = new ScopesView(developContainer);
+    scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
     scopesView->setVisible(developScopesVisible);
     developContainerLayout->addWidget(scopesView);
     /* Transform (crop + perspective) strip sits directly below the scopes and above the tree.
@@ -1993,8 +2014,13 @@ void MW::createDevelopDock()
                                      QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
         }
     });
-    /* Transform Reset: clear crop/straighten/warp back to identity (destructive) and return to
-       editing on the full frame. */
+    /* Transform [X]: close the panel exactly as the editor-bar button / "R" does --
+       commit the crop session, hide the panel and update the action/button state. */
+    connect(transformPanel, &TransformPanel::closeRequested, this, [this]{
+        if (developTransformVisible) toggleDevelopTransform();
+    });
+    /* Transform Reset: clear crop/straighten/warp back to identity (destructive) and
+       return to editing on the full frame. */
     connect(transformPanel, &TransformPanel::resetRequested, this, [this]{
         if (!developProperties) return;
         developProperties->setCurrentGeometry(Geometry());      // identity
@@ -2106,6 +2132,9 @@ void MW::createDevelopDock()
     scopesView->setVectorscopeSkinLine(settings->value("Develop/vectorscopeSkinLine", false).toBool());
     connect(scopesView, &ScopesView::vectorscopeSkinLineChanged, this,
             [this](bool on){ settings->setValue("Develop/vectorscopeSkinLine", on); });
+    /* The strip's [X] (top right corner): hide the scopes ("G" or the editor-bar
+       button brings them back with the same layout). */
+    connect(scopesView, &ScopesView::closeRequested, this, &MW::closeDevelopScopes);
     developDock->setFloating(false);
     developDock->setVisible(true);
     // prevent MW splitter resizing developDock so the header - and + buttons stay visible
@@ -2125,7 +2154,8 @@ void MW::createDevelopDock()
     // show/hide the histogram + vectorscope scopes strip
     developScopesBtn = new BarBtn();
     developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
-    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope  (G)");
+    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope.  "
+                                 "G cycles both / histogram / vectorscope / hidden");
     developScopesBtn->setActive(developScopesVisible);
     connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
     developTitleLayout->addWidget(developScopesBtn);
@@ -2155,13 +2185,15 @@ void MW::createDevelopDock()
     developTitleLayout->addWidget(developSpotBtn);
     developTitleLayout->addSpacing(10);
 
-    /* Preset: apply a saved develop preset (P). STUB for now -- the picker/apply path is
-       not built yet (saving a preset is Cmd+Shift+N, or the dock context menu). The
-       colour-wheel glyph matches the Scope / Transform title-bar button style. */
-    BarBtn *developPresetBtn = new BarBtn();
+    /* Preset: show / raise the Presets dock, where a click applies a saved preset (P).
+       Saving one is Cmd+Shift+N, the dock context menu, or the [+] in that dock's title
+       bar. The colour-wheel glyph matches the Scope / Transform title-bar button style,
+       and like them it carries the blue active border while its panel is the front tab
+       (driven from presetsDockVisibilityChange). */
+    developPresetBtn = new BarBtn();
     developPresetBtn->setIcon(":/images/icon16/colorwheel.png", G::iconOpacity);
-    developPresetBtn->setToolTip("Select a develop preset.  (P)");
-    connect(developPresetBtn, &BarBtn::clicked, this, &MW::developRunPreset);
+    developPresetBtn->setToolTip("Develop presets: apply a saved preset  (P)");
+    connect(developPresetBtn, &BarBtn::clicked, this, &MW::showPresetsDock);
     developTitleLayout->addWidget(developPresetBtn);
     developTitleLayout->addSpacing(10);
 
@@ -2294,6 +2326,107 @@ void MW::createHistoryDock()
     historyTitleLayout->addSpacing(5);
 }
 
+void MW::createPresetsDock()
+{
+/*
+    The saved develop presets (Lightroom's Presets panel): user-defined, named develop
+    recipes. Hovering a row previews that preset applied to the current image; clicking it
+    applies it to the ACTIVE scope. The store lives in DevelopProperties (QSettings under
+    "Develop Presets"), so this dock is a pure view -- created AFTER createDevelopDock so
+    developProperties exists to bind to.
+
+    Unlike History, presets are PERSISTENT: they outlive the session and are not tied to
+    any one image.
+*/
+    if (G::isLogger) G::log("MW::createPresetsDock");
+
+    presetsDockTabText = "Presets";
+    dockTextNames << presetsDockTabText;
+    presetsDock = new DockWidget(presetsDockTabText, "PresetsDock", this);
+    presetsDock->setObjectName("PresetsDock");
+
+    presetsView = new PresetsView(presetsDock);
+    presetsDock->setWidget(presetsView);
+    if (developProperties) developProperties->bindPresetsView(presetsView);
+
+    presetsDock->setFloating(false);
+    presetsDock->setVisible(false);          // shown with the Develop dock
+    connect(presetsDock, &DockWidget::focus, this, &MW::focusOnDock);
+    connect(presetsDock, &QDockWidget::visibilityChanged,
+            this, &MW::presetsDockVisibilityChange);
+    /* Clicking a sibling TAB does not change any dock's isVisible(), so the title-bar
+       button's border has to learn about tab switches from here. */
+    connect(this, &QMainWindow::tabifiedDockWidgetActivated,
+            this, [this](QDockWidget *){ updateDevelopPresetBtn(); });
+
+    // customize the presetsDock titlebar
+    QHBoxLayout *presetsTitleLayout = new QHBoxLayout();
+    presetsTitleLayout->setContentsMargins(0, 0, 0, 0);
+    presetsTitleLayout->setSpacing(0);
+    presetsTitleBar = new DockTitleBar("Develop Presets", presetsTitleLayout);
+    presetsDock->setTitleBarWidget(presetsTitleBar);
+    presetsTitleBar->setToolTip(dockTabToolTip(presetsDockTabText));
+
+    /* New preset. The same flow as Cmd+Shift+N, put where the presets are so it can be
+       found without knowing the shortcut. */
+    BarBtn *presetsNewBtn = new BarBtn();
+    presetsNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
+    presetsNewBtn->setToolTip("Create a develop preset from this image  (Cmd+Shift+N)");
+    connect(presetsNewBtn, &BarBtn::clicked, this, &MW::developSavePreset);
+    presetsTitleLayout->addWidget(presetsNewBtn);
+
+    // Spacer
+    presetsTitleLayout->addSpacing(10);
+
+    // question mark button
+    BarBtn *presetsQuestionBtn = new BarBtn();
+    presetsQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
+    presetsQuestionBtn->setToolTip("How this works: develop preset tips");
+    connect(presetsQuestionBtn, &BarBtn::clicked, this, [this]{
+        if (G::popup) G::popup->showPopup(
+            "<b>Develop Presets</b><br>"
+            "Your saved develop recipes. Hover one to preview it on this image; "
+            "click it to apply it.<br>"
+            "A preset holds only the settings you ticked when you saved it, so "
+            "applying it leaves everything else alone.<br>"
+            "It is applied to the scope selected in the Develop panel.<br><br>"
+            "Click + (or Cmd+Shift+N) to make one from the current image. "
+            "Right-click a preset to update, rename or delete it.", 7000);
+    });
+    presetsTitleLayout->addWidget(presetsQuestionBtn);
+
+    // Spacer
+    presetsTitleLayout->addSpacing(10);
+
+    // collapse/expand body button
+    if (G::useDWCollapse) {
+        BarBtn *presetsCollapseBtn = new BarBtn();
+        presetsCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        presetsCollapseBtn->setToolTip("Collapse panel.");
+        connect(presetsCollapseBtn, &BarBtn::clicked, presetsDock, &DockWidget::toggleCollapsed);
+        connect(presetsDock, &DockWidget::collapsedChanged, presetsCollapseBtn,
+                [presetsCollapseBtn](bool c){
+            presetsCollapseBtn->setIcon(c ? ":/images/icon16/expand.png"
+                                          : ":/images/icon16/collapse.png", G::iconOpacity);
+            presetsCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        presetsTitleLayout->addWidget(presetsCollapseBtn);
+
+        // Spacer
+        presetsTitleLayout->addSpacing(10);
+    }
+
+    // close button
+    BarBtn *presetsCloseBtn = new BarBtn();
+    presetsCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
+    presetsCloseBtn->setToolTip("Hide the Presets Panel");
+    connect(presetsCloseBtn, &BarBtn::clicked, this, &MW::closePresetsDock);
+    presetsTitleLayout->addWidget(presetsCloseBtn);
+
+    // Spacer
+    presetsTitleLayout->addSpacing(5);
+}
+
 void MW::setDevelopPanelEnabled(bool on)
 {
     if (G::isLogger) G::log("MW::setDevelopPanelEnabled");
@@ -2304,9 +2437,14 @@ void MW::setDevelopPanelEnabled(bool on)
        state. So strip the features while disabled and restore the captured set when on. */
     developDock->setFeatures(on ? developDockFeatures : QDockWidget::NoDockWidgetFeatures);
     if (developProperties) developProperties->setPanelEnabled(on);
-    /* History is part of the Develop tool: it comes and goes with it. Show it FIRST --
-       showing a tabified dock makes it the front tab, so Develop must be shown last (and
-       raised) or the pair would open on the History tab. */
+    /* History and Presets are part of the Develop tool: they come and go with it. Show
+       them FIRST -- showing a tabified dock makes it the front tab, so Develop must be
+       shown last (and raised) or the group would open on one of their tabs. */
+    if (presetsDock) {
+        presetsDock->setEnabled(on);
+        presetsDock->setVisible(on);
+        if (presetsDockVisibleAction) presetsDockVisibleAction->setChecked(on);
+    }
     if (historyDock) {
         historyDock->setEnabled(on);
         historyDock->setVisible(on);
@@ -2338,9 +2476,10 @@ void MW::setOperationMode(G::OperationMode mode)
     if (G::isLogger)
         G::log("MW::setOperationMode", mode == G::OperationMode::Develop ? "Develop" : "Preview");
 
-    // Only show develop (and its history) in Develop Mode. History first, so Develop
-    // ends up the front tab of the pair (see setDevelopPanelEnabled).
+    /* Only show develop (and its History / Presets panels) in Develop Mode. Those two
+       first, so Develop ends up the front tab (see setDevelopPanelEnabled). */
     const bool inDevelop = (mode == G::OperationMode::Develop);
+    if (presetsDock) presetsDock->setVisible(inDevelop);
     if (historyDock) historyDock->setVisible(inDevelop);
     developDock->setVisible(inDevelop);
     if (inDevelop) developDock->raise();
@@ -2353,6 +2492,11 @@ void MW::setOperationMode(G::OperationMode mode)
 
     if (G::operationMode == mode) return;               // no change
     G::operationMode = mode;
+
+    /* Refresh the status bar for the new mode: it hides the metadata / image cache
+       running lights in Develop and shows them in Preview. */
+    updateStatusBar();
+
     if (operationModeCombo) {
         QSignalBlocker block(operationModeCombo);   // setCurrentIndex must not re-fire
         operationModeCombo->setCurrentIndex(int(mode));
@@ -2495,6 +2639,29 @@ void MW::historyDockVisibilityChange()
     }
 }
 
+void MW::presetsDockVisibilityChange()
+{
+    if (G::isLogger) G::log("MW::presetsDockVisibilityChange");
+    /* createDocks runs BEFORE createActions, so the action can still be null here. */
+    if (!presetsDock || !developProperties) return;
+    if (presetsDock->isVisible()) {
+        if (presetsDockVisibleAction) presetsDockVisibleAction->setChecked(true);
+    }
+    else {
+        /* Tabbed away or hidden mid-hover: never leave the loupe showing a previewed
+           preset the user can no longer see the row for. */
+        developProperties->endPresetPreview();
+    }
+    updateDevelopPresetBtn();
+}
+
+void MW::updateDevelopPresetBtn()
+{
+    if (!developPresetBtn) return;
+    developPresetBtn->setActive(presetsDock && presetsDock->isVisible()
+                                && isSelectedDockTab(presetsDock));
+}
+
 void MW::createDocks()
 {
     if (G::isLogger) G::log("MW::createDocks");
@@ -2506,6 +2673,7 @@ void MW::createDocks()
     createEmbelDock();
     createDevelopDock();
     createHistoryDock();   // after Develop: it binds to developProperties
+    createPresetsDock();   // ditto
 
     // connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 
@@ -2517,6 +2685,7 @@ void MW::createDocks()
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
     addDockWidget(Qt::RightDockWidgetArea, developDock);
     addDockWidget(Qt::RightDockWidgetArea, historyDock);
+    addDockWidget(Qt::RightDockWidgetArea, presetsDock);
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
@@ -2530,15 +2699,17 @@ void MW::createDocks()
        (tab-bar flicker). embel + develop tab together on the RIGHT via the line below. This
        default normally only shows when no saved WindowState is restored. */
     if (!hideEmbellish) MW::tabifyDockWidget(embelDock, developDock);
-    /* History joins the same RIGHT group, immediately after Develop -- the two are one
-       tool and are shown/hidden together (see setHistoryDockVisibility). */
+    /* History and Presets join the same RIGHT group, immediately after Develop -- the
+       three are one tool and are shown/hidden together (see setHistoryDockVisibility /
+       setPresetsDockVisibility). */
     MW::tabifyDockWidget(developDock, historyDock);
+    MW::tabifyDockWidget(historyDock, presetsDock);
 
     // Re-evaluate responsive dock tab titles when a dock is dragged between
     // docks/areas or floated: dragging into a tab group changes the tab count
     // without a reliable resize/show on the surviving docks.
     for (DockWidget *d : {folderDock, favDock, filterDock, metadataDock, embelDock,
-                          developDock, historyDock}) {
+                          developDock, historyDock, presetsDock}) {
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
         /* WORK IN PROGRESS - DISABLED.
@@ -2564,6 +2735,7 @@ void MW::createDocks()
     wireSolo(embelDock);
     wireSolo(developDock);
     wireSolo(historyDock);
+    wireSolo(presetsDock);
 }
 
 void MW::createMessageView()

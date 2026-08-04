@@ -47,6 +47,7 @@
 #include "Develop/Transform/transformpanel.h"
 #include "Develop/Replace/replacepanel.h"
 #include "Develop/History/historyview.h"
+#include "Develop/Presets/presetsview.h"
 #include "Develop/Properties/scopeheader.h"
 #include "Develop/Properties/scopeheaderlab.h"   // experimental, G::useScopeHeaderLab
 #include "Develop/Properties/rawpanel.h"          // lab UI raw-decode strip
@@ -173,8 +174,9 @@ public:
 
     /* Version tag for saveState()/restoreState(). BUMP whenever the set of docks changes so a
        window state saved by an older build (missing the new dock) is rejected rather than
-       restored into an inconsistent layout. v1: added developDock. v2: added historyDock. */
-    static constexpr int winnowStateVersion = 2;
+       restored into an inconsistent layout. v1: added developDock. v2: added historyDock.
+       v3: added presetsDock. */
+    static constexpr int winnowStateVersion = 3;
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -224,6 +226,7 @@ public:
         bool isEmbelDockVisible;
         bool isDevelopDockVisible;
         bool isHistoryDockVisible;
+        bool isPresetsDockVisible;
         bool isThumbDockVisible;
         bool isImageDockVisible;
         // View
@@ -623,8 +626,17 @@ private slots:
        develop preview after a render, else the decoded image. One strided sample pass feeds both
        scopes; no-op (cheap) while the scopes are hidden. A null image clears the scopes. */
     void updateDevelopScopes(const QImage &shown);
-    /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the choice. */
+    /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the
+       choice. */
     void toggleDevelopScopes();
+    /* Apply a scopes-strip visibility, repopulating the scopes when it is shown;
+       persists. */
+    void setDevelopScopesVisible(bool isVisible);
+    /* "G" in Develop mode: step the scopes strip through both scopes -> histogram only ->
+       vectorscope only -> hidden -> both ... ; persists the layout and the visibility. */
+    void cycleDevelopScopes();
+    /* The scopes strip's own [X]: hide the strip, keeping its layout; persists. */
+    void closeDevelopScopes();
     /* Show/hide the Develop Transform panel (editor-bar toggle / "R"); persists. */
     void toggleDevelopTransform();
     /* Show/hide the Fill Replace panel (title-bar spot button / "S" in Develop mode):
@@ -640,7 +652,6 @@ private slots:
     void developAddToMask();        // "M": pop the Add/Subtract mask tool menu
     void developExport();         // "X": export the developed image (not built yet)
     void developSavePreset();     // Cmd+Shift+N: save develop state as a preset
-    void developRunPreset();      // P: apply a saved develop preset (stub)
     /* Enter/exit the crop editor: enter shows the full frame + overlay (geometry suppressed); exit
        commits the crop into the image's EditStack geometry and re-renders the cropped result. */
     void enterDevelopCrop();
@@ -827,6 +838,7 @@ private slots:
     void setEmbelDockVisibility();
     void setDevelopDockVisibility();
     void setHistoryDockVisibility();
+    void setPresetsDockVisibility();
     void setMetadataDockFixedSize();    // rgh finish or remove
 
     void focusOnDock(DockWidget *dockWidget);
@@ -834,6 +846,7 @@ private slots:
     void closeEmbelDock();
     void closeDevelopDock();
     void closeHistoryDock();
+    void closePresetsDock();
     void closeFolderDock();
     void closeFavDock();
     void closeFilterDock();
@@ -842,6 +855,7 @@ private slots:
     void showEmbelDock();
     void showDevelopDock();
     void showHistoryDock();
+    void showPresetsDock();
     void showFolderDock();
     void showFavDock();
     void showFilterDock();
@@ -1087,12 +1101,12 @@ private:
     QAction *developWbSamplerAction = nullptr;    // W (Transform owns W while it is up)
     QAction *developExportAction;       // X
     QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
-    QAction *developRunPresetAction = nullptr;    // P (develop-mode local, arbiter)
     /* Title-bar toggle buttons that carry the blue "active" border while their panel /
        tool is on (kept in sync from the toggle handlers). */
     BarBtn *developScopesBtn = nullptr;
     BarBtn *developTransformBtn = nullptr;
     BarBtn *developSpotBtn = nullptr;
+    BarBtn *developPresetBtn = nullptr;    // shows/raises the Presets dock (P)
     QAction *developScopesAction;       // G
     // developTransformAction (R) and toggleMaskOverlayAction (O) live with the docks
 
@@ -1147,6 +1161,7 @@ private:
     QAction *embelDockVisibleAction;
     QAction *developDockVisibleAction;
     QAction *historyDockVisibleAction = nullptr;   // "H": develop-mode local (arbiter)
+    QAction *presetsDockVisibleAction = nullptr;   // "P": develop-mode local (arbiter)
     QAction *developTransformAction;    // "R": toggle the Develop Transform (crop) panel
     QAction *toggleMaskOverlayAction;   // "O": hide/show the scope's mask overlay tint
 //    QAction *windowTitleBarVisibleAction;
@@ -1300,6 +1315,9 @@ private:
     /* Develop edit history. Tabbed with developDock and shown/hidden with it (the two are
        one tool), so every developDock visibility change mirrors onto this. */
     DockWidget *historyDock = nullptr;
+    /* Develop presets. Also tabbed with developDock and shown/hidden with it -- Develop,
+       History and Presets are one tool. */
+    DockWidget *presetsDock = nullptr;
     /* The dock's normal features, captured at creation so setDevelopPanelEnabled() can
        strip them (lock float/move) while disabled and restore them when re-enabled. */
     QDockWidget::DockWidgetFeatures developDockFeatures = QDockWidget::NoDockWidgetFeatures;
@@ -1320,6 +1338,7 @@ private:
     DockTitleBar *embelTitleBar;
     DockTitleBar *developTitleBar;
     DockTitleBar *historyTitleBar = nullptr;
+    DockTitleBar *presetsTitleBar = nullptr;
     BarBtn *embelRunBtn;
     FSTree *fsTree;
     BookMarks *bookmarks;
@@ -1347,9 +1366,16 @@ private:
        toggled by a button on the Develop editor bar and persisted (Develop/scopesVisible). */
     ScopesView *scopesView = nullptr;
     bool developScopesVisible = true;
+    /* Which scopes the strip shows (ScopesView::ScopeLayout, cycled by "G" and persisted
+       in Develop/scopesLayout). Held as an int so mainwindow.h needs no scopes
+       include. */
+    int developScopesLayout = 0;
     /* The History dock's list of develop actions (hover previews a state, a click reverts
        to it). DevelopProperties owns the timeline it views. */
     HistoryView *historyView = nullptr;
+    /* The Presets dock's list of saved develop presets (hover previews it applied, a
+       click applies it). DevelopProperties owns the store it views. */
+    PresetsView *presetsView = nullptr;
     /* Develop Transform (crop + perspective) panel: a control strip below the scopes and above
        the property tree. Toggled by a button on the Develop editor bar and the "R" shortcut;
        visibility persists (Develop/transformVisible). */
@@ -1644,6 +1670,7 @@ private:
     QString embelDockTabText;
     QString developDockTabText;
     QString historyDockTabText;
+    QString presetsDockTabText;
     QString thumbDockTabText;
 
     QStringList dockTextNames;
@@ -1660,6 +1687,7 @@ private:
     void createEmbelDock();
     void createDevelopDock();
     void createHistoryDock();
+    void createPresetsDock();
     QTabBar* tabifiedBar();
     bool isDockTabified(QDockWidget *dock);
     QString dockTabToolTip(const QString &tabText);
@@ -1676,6 +1704,12 @@ private:
     void embelDockVisibilityChange();
     void developDockVisibilityChange();
     void historyDockVisibilityChange();
+    void presetsDockVisibilityChange();
+    /* The Develop title-bar Preset button reads as a checked toolbutton while the Presets
+       dock is the front tab. A TABIFIED dock keeps isVisible() == true when a sibling tab
+       is selected, so visibilityChanged alone cannot see a tab switch -- this is called
+       from there AND from tabifiedDockWidgetActivated / showPresetsDock. */
+    void updateDevelopPresetBtn();
 
 public:
     // dock collapse/expand area-scoped helpers (used by DockTitleBar context menu)

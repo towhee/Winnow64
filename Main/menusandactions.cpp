@@ -1089,7 +1089,7 @@ void MW::createUtilActions()
     addAction(developNewScopeAction);
     connect(developNewScopeAction, &QAction::triggered, this, &MW::developNewScope);
 
-    developAddToMaskAction = new QAction(tr("Add to Mask\tM"), this);
+    developAddToMaskAction = new QAction(tr("Tweak Mask\tM"), this);
     developAddToMaskAction->setObjectName("developAddToMask");
     developAddToMaskAction->setShortcutVisibleInContextMenu(true);
     addAction(developAddToMaskAction);
@@ -1127,22 +1127,14 @@ void MW::createUtilActions()
     addAction(developSavePresetAction);
     connect(developSavePresetAction, &QAction::triggered, this, &MW::developSavePreset);
 
-    /* Run (apply) a saved preset -- the title-bar Preset button + "P". P is globally
-       Pick, so like the other bare Develop keys it goes through developShortcutIntercept
-       (loadDevelopShortcuts) rather than a real QKeySequence, which would clash with
-       Pick. Applying presets is not built yet (stub); saving is Cmd+Shift+N above. */
-    developRunPresetAction = new QAction(tr("Run Develop Preset\tP"), this);
-    developRunPresetAction->setObjectName("developRunPreset");
-    developRunPresetAction->setShortcutVisibleInContextMenu(true);
-    addAction(developRunPresetAction);
-    connect(developRunPresetAction, &QAction::triggered, this, &MW::developRunPreset);
-
+    /* Not checkable: each trigger steps the scopes strip on through both scopes ->
+       histogram only -> vectorscope only -> hidden -> both ... The editor-bar button
+       beside the Develop dock title is the plain show/hide (and carries the state). */
     developScopesAction = new QAction(tr("Histogram / Vectorscope\tG"), this);
     developScopesAction->setObjectName("developScopes");
     developScopesAction->setShortcutVisibleInContextMenu(true);
-    developScopesAction->setCheckable(true);
     addAction(developScopesAction);
-    connect(developScopesAction, &QAction::triggered, this, &MW::toggleDevelopScopes);
+    connect(developScopesAction, &QAction::triggered, this, &MW::cycleDevelopScopes);
 
     // Embellish menu
     int n;          // used to populate action lists
@@ -1525,6 +1517,18 @@ void MW::createWindowActions()
     else historyDockVisibleAction->setChecked(false);
     addAction(historyDockVisibleAction);
     connect(historyDockVisibleAction, &QAction::triggered, this, &MW::showHistoryDock);
+
+    /* "P" (Develop mode only) shows/raises the Develop Presets panel, the same deal as
+       "H" above -- and P is globally Pick, so a real QKeySequence("P") would clash with
+       it; loadDevelopShortcuts owns the key. */
+    presetsDockVisibleAction = new QAction(tr("Develop Presets Panel\tP"), this);
+    presetsDockVisibleAction->setObjectName("togglePresetsDock");
+    presetsDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    presetsDockVisibleAction->setCheckable(true);
+    if (isSettings && settings->contains("isPresetsDockVisible")) presetsDockVisibleAction->setChecked(settings->value("isPresetsDockVisible").toBool());
+    else presetsDockVisibleAction->setChecked(false);
+    addAction(presetsDockVisibleAction);
+    connect(presetsDockVisibleAction, &QAction::triggered, this, &MW::showPresetsDock);
 
     /* "R" (Develop mode only) toggles the Develop Transform (crop + perspective) panel.
        Like every Develop-local action it has no QKeySequence -- loadDevelopShortcuts owns
@@ -2157,7 +2161,6 @@ void MW::createUtilMenu()
     developMenu->addSeparator();
     developMenu->addAction(developScopesAction);
     developMenu->addAction(developExportAction);
-    developMenu->addAction(developRunPresetAction);
     developMenu->addAction(developSavePresetAction);
     /* Grey the mode-local items outside Develop mode: their keys belong to other actions
        there, so an enabled item would advertise a shortcut that does something else. */
@@ -2199,6 +2202,7 @@ void MW::createViewMenu()
     if (!hideEmbellish) viewMenu->addAction(embelDockVisibleAction);
     viewMenu->addAction(developDockVisibleAction);
     viewMenu->addAction(historyDockVisibleAction);
+    viewMenu->addAction(presetsDockVisibleAction);
     // viewMenu->addSeparator();
     //    windowMenu->addAction(windowTitleBarVisibleAction);
     #ifdef Q_OS_WIN
@@ -3180,7 +3184,7 @@ void MW::loadDevelopShortcuts()
     developShortcuts[Qt::Key_X] = developExportAction;      // global: Reject
     developShortcuts[Qt::Key_G] = developScopesAction;      // global: Grid view
     developShortcuts[Qt::Key_H] = historyDockVisibleAction; // global: unbound
-    developShortcuts[Qt::Key_P] = developRunPresetAction;   // global: Pick
+    developShortcuts[Qt::Key_P] = presetsDockVisibleAction; // global: Pick
 }
 
 void MW::syncDevelopMenuEnabled()
@@ -3197,12 +3201,11 @@ void MW::syncDevelopMenuEnabled()
         developNewScopeAction, developAddToMaskAction, toggleMaskOverlayAction,
         developTransformAction, developSpotAction, developWbSamplerAction,
         developScopesAction, developExportAction,
-        developSavePresetAction, developRunPresetAction
+        developSavePresetAction
     };
     for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);
 
     // Reflect live state for the checkable toggles
     if (developTransformAction) developTransformAction->setChecked(developTransformVisible);
-    if (developScopesAction) developScopesAction->setChecked(developScopesVisible);
 }
 

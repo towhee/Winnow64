@@ -79,6 +79,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
         {developDockTabText,  ":/images/icon16/develop_white.png"},
         {historyDockTabText,  ":/images/icon16/history_white.png"},
+        {presetsDockTabText,  ":/images/icon16/presets_white.png"},
     };
     const QHash<QString, QDockWidget*> dockFor = {
         {folderDockTabText,   folderDock},
@@ -88,6 +89,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {embelDockTabText,    embelDock},
         {developDockTabText,  developDock},
         {historyDockTabText,  historyDock},
+        {presetsDockTabText,  presetsDock},
     };
 
     busy = true;
@@ -247,6 +249,7 @@ QDockWidget* MW::dockForTabText(const QString &tabText)
     if (tabText == embelDockTabText)    return embelDock;
     if (tabText == developDockTabText)  return developDock;
     if (tabText == historyDockTabText)  return historyDock;
+    if (tabText == presetsDockTabText)  return presetsDock;
     return nullptr;
 }
 
@@ -684,6 +687,15 @@ void MW::whenActivated(Qt::ApplicationState state)
         qDebug() << "MW::whenActivated" << popupMsg;
     }
 
+    /* Settings that could not be read at startup (see G::startupWarnings). loadSettings
+       runs before the popup exists, so the report waits until here. Shown as ONE popup so
+       several bad settings cannot bury the user in toasts. */
+    if (!G::startupWarnings.isEmpty()) {
+        G::popup->showPopup(G::startupWarnings.join("<p>"), 5000, true, 0.75,
+                            Qt::AlignLeft);
+        qDebug() << "MW::whenActivated startupWarnings" << G::startupWarnings;
+        G::startupWarnings.clear();
+    }
 }
 
 //   EVENT HANDLERS
@@ -748,12 +760,12 @@ void MW::showEvent(QShowEvent *event)
     // set screen attributes in global
     setDisplayResolution();
 
-    /* Hide the Develop tool at startup: Winnow always opens in Preview mode. History is
-       part of the Develop tool (tabbed with it, shown and hidden with it), so it must be
-       hidden here too -- restoreState() above re-shows every dock the last session had
-       visible, and hiding Develop alone left History on screen, visible but disabled.
-       Both actions are unchecked so the View menu agrees with what is on screen. */
-    closeDevelopDock();     // hides developDock + historyDock, unchecks both actions
+    /* Hide the Develop tool at startup: Winnow always opens in Preview mode. History and
+       Presets are part of the Develop tool (tabbed with it, shown and hidden with it), so
+       they must be hidden here too -- restoreState() above re-shows every dock the last
+       session had visible, and hiding Develop alone left them on screen, visible but
+       disabled. All three actions are unchecked so the View menu agrees. */
+    closeDevelopDock();     // hides develop + history + presets, unchecks their actions
 
     QMainWindow::showEvent(event);
 
@@ -864,8 +876,12 @@ void MW::closeEvent(QCloseEvent *event)
     delete recentFolders;
     delete ingestHistoryFolders;
     delete embel;
-    delete G::issueLog;
-    delete G::popup;
+    G::deleteIssueLog();
+    /* Null the global before destroying: posted events can still drain after
+       closeEvent and many call sites guard on G::popup != nullptr. */
+    Popup *popup = G::popup;
+    G::popup = nullptr;
+    delete popup;
 
     event->accept();
 }
@@ -7223,12 +7239,22 @@ void MW::updateDevelopScopes(const QImage &shown)
 void MW::toggleDevelopScopes()
 {
 /*
-    Develop editor-bar toggle: show/hide the scopes strip and persist the choice. When re-shown,
-    repopulate from the image currently displayed -- re-render the developed preview if the image
-    has edits (so the scope matches what is on screen), else sample the decoded image.
+    Develop editor-bar toggle: show/hide the scopes strip and persist the choice.
 */
     if (G::isLogger) G::log("MW::toggleDevelopScopes");
-    developScopesVisible = !developScopesVisible;
+    setDevelopScopesVisible(!developScopesVisible);
+}
+
+void MW::setDevelopScopesVisible(bool isVisible)
+{
+/*
+    Show/hide the scopes strip and persist the choice. When shown, repopulate from the
+    image currently displayed -- re-render the developed preview if the image has edits
+    (so the scope matches what is on screen), else sample the decoded image
+    (updateDevelopScopes no-ops while the strip is hidden, so the data is stale by then).
+*/
+    if (G::isLogger) G::log("MW::setDevelopScopesVisible");
+    developScopesVisible = isVisible;
     if (scopesView) scopesView->setVisible(developScopesVisible);
     if (developScopesBtn) developScopesBtn->setActive(developScopesVisible);
     settings->setValue("Develop/scopesVisible", developScopesVisible);
@@ -7238,6 +7264,55 @@ void MW::toggleDevelopScopes()
         else
             updateDevelopScopes(icd->imCache.value(dm->currentFilePath));
     }
+}
+
+void MW::cycleDevelopScopes()
+{
+/*
+    "G" in Develop mode (also the Develop menu item): step the scopes strip through
+
+        both scopes -> histogram only -> vectorscope only -> hidden -> both ...
+
+    The single-scope layouts expand to fill the strip. Both the layout and the visibility
+    are persisted, so the strip comes back the way it was left in the next session.
+*/
+    if (G::isLogger) G::log("MW::cycleDevelopScopes");
+    if (!scopesView) return;
+
+    if (!developScopesVisible) {
+        /* Hidden: reappear at the start of the cycle. */
+        developScopesLayout = ScopesView::Both;
+        scopesView->setScopeLayout(ScopesView::Both);
+        settings->setValue("Develop/scopesLayout", developScopesLayout);
+        setDevelopScopesVisible(true);
+        return;
+    }
+
+    switch (developScopesLayout) {
+    case ScopesView::Both:
+        developScopesLayout = ScopesView::HistogramOnly;
+        break;
+    case ScopesView::HistogramOnly:
+        developScopesLayout = ScopesView::VectorscopeOnly;
+        break;
+    default:
+        /* Last layout: hide the strip (the layout it reappears with is set above). */
+        setDevelopScopesVisible(false);
+        return;
+    }
+    scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
+    settings->setValue("Develop/scopesLayout", developScopesLayout);
+}
+
+void MW::closeDevelopScopes()
+{
+/*
+    The scopes strip's own [X] (top right corner): hide the strip, exactly as the Develop
+    editor-bar button does. The layout is left alone, so "G" or the button brings the
+    strip back showing the same scope(s) it had.
+*/
+    if (G::isLogger) G::log("MW::closeDevelopScopes");
+    setDevelopScopesVisible(false);
 }
 
 void MW::toggleDevelopTransform()
@@ -7350,19 +7425,6 @@ void MW::developSavePreset()
     if (G::isLogger) G::log("MW::developSavePreset");
     if (!developProperties) return;
     developProperties->saveDevelopPreset();
-}
-
-void MW::developRunPreset()
-{
-/*
-    "P" (Develop mode): apply a saved develop preset to the current image. NOT BUILT YET
-    -- the preset-picker + apply path is outstanding (saving a preset is Cmd+Shift+N). The
-    title-bar Preset button, the P arbiter key, menu item and help entry are wired so the
-    feature only needs this body.
-*/
-    if (G::isLogger) G::log("MW::developRunPreset");
-    if (G::popup)
-        G::popup->showPopup("Applying develop presets is not implemented yet.", 2000);
 }
 
 void MW::developAddToMask()
@@ -7685,6 +7747,7 @@ void MW::updateState()
     setEmbelDockVisibility();
     setDevelopDockVisibility();
     setHistoryDockVisibility();     // follows Develop (set just above)
+    setPresetsDockVisibility();     // ditto
     setThumbDockVisibity();
     // setShootingInfoVisibility();
     updateStatusBar();

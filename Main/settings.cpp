@@ -130,6 +130,7 @@ void MW::writeSettings()
     settings->setValue("isEmbelDockVisible", embelDockVisibleAction->isChecked());
     settings->setValue("isDevelopDockVisible", developDockVisibleAction->isChecked());
     settings->setValue("isHistoryDockVisible", historyDockVisibleAction->isChecked());
+    settings->setValue("isPresetsDockVisible", presetsDockVisibleAction->isChecked());
     settings->setValue("isThumbDockVisible", thumbDockVisibleAction->isChecked());
 
     /* Property Editor */
@@ -262,6 +263,7 @@ void MW::writeSettings()
     if (embelDock)    settings->setValue("EmbelDock", embelDock->isCollapsed());
     if (developDock)  settings->setValue("DevelopDock", developDock->isCollapsed());
     if (historyDock)  settings->setValue("HistoryDock", historyDock->isCollapsed());
+    if (presetsDock)  settings->setValue("PresetsDock", presetsDock->isCollapsed());
     settings->endGroup();
 
     settings->beginGroup("DockSoloMode");
@@ -463,8 +465,26 @@ bool MW::loadSettings()
         /* Sticky RAW decode engine (Develop "Demosaic" combo). appleDecodeRawEngine is
            macOS-only; off-mac the decode callers fall back to winnow anyway, but
            normalize here so the combo and applyCoreVisibility reflect the engine that
-           will run. */
-        auto e = static_cast<G::DecodeRawEngine>(settings->value("decodeRawEngine").toInt());
+           will run.
+
+           VALIDATE BEFORE CASTING. The stored value is a plain int and the cast is
+           unchecked, so a damaged or newer-build setting could name an engine this
+           build has no enumerator for. That does not merely pick the wrong decoder --
+           it matches NEITHER branch downstream, so RawFormat skips the Apple path AND
+           the winnow-only PMRID raw denoise, leaving the user with silently missing
+           noise reduction. Fall back to the portable engine and say so. */
+        bool ok = false;
+        const int raw = settings->value("decodeRawEngine").toInt(&ok);
+        auto e = G::DecodeRawEngine::winnowDecodeRawEngine;
+        if (!ok || raw < int(G::DecodeRawEngine::winnowDecodeRawEngine) ||
+                   raw > int(G::DecodeRawEngine::appleDecodeRawEngine)) {
+            /* Deferred: G::popup does not exist this early in the constructor. */
+            G::startupWarnings << "The saved raw decode engine was not recognized.<br>"
+                                  "Using the Winnow decoder -- check Develop > Demosaic.";
+        }
+        else {
+            e = static_cast<G::DecodeRawEngine>(raw);
+        }
 #ifndef Q_OS_MAC
         if (e == G::DecodeRawEngine::appleDecodeRawEngine)
             e = G::DecodeRawEngine::winnowDecodeRawEngine;

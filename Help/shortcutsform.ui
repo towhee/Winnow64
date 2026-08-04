@@ -1041,6 +1041,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Develop Presets Panel</string>
+        </property>
+        <property name="text">
+         <string>P</string>
+        </property>
+        <property name="text">
+         <string>Shows / raises the develop presets panel; in Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Application Statusbar</string>
         </property>
         <property name="text">
@@ -1117,7 +1128,7 @@
        </item>
        <item>
         <property name="text">
-         <string>Add to Mask</string>
+         <string>Tweak Mask</string>
         </property>
         <property name="text">
          <string>M</string>
@@ -1299,7 +1310,7 @@
          <string>G</string>
         </property>
         <property name="text">
-         <string>Show / hide the scopes strip; in Develop mode. In Preview, G is Grid view</string>
+         <string>Steps the scopes strip through both scopes, histogram only (fills the strip), vectorscope only (fills the strip) and hidden; in Develop mode. In Preview, G is Grid view</string>
         </property>
        </item>
        <item>

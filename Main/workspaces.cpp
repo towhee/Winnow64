@@ -157,6 +157,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     embelDockVisibleAction->setChecked(w.isEmbelDockVisible);
     developDockVisibleAction->setChecked(w.isDevelopDockVisible);
     historyDockVisibleAction->setChecked(w.isHistoryDockVisible);
+    presetsDockVisibleAction->setChecked(w.isPresetsDockVisible);
     thumbDockVisibleAction->setChecked(w.isThumbDockVisible);
     infoVisibleAction->setChecked(w.isImageInfoVisible);
     // View
@@ -273,6 +274,7 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isEmbelDockVisible = embelDockVisibleAction->isChecked();
     wsd.isDevelopDockVisible = developDockVisibleAction->isChecked();
     wsd.isHistoryDockVisible = historyDockVisibleAction->isChecked();
+    wsd.isPresetsDockVisible = presetsDockVisibleAction->isChecked();
     wsd.isThumbDockVisible = thumbDockVisibleAction->isChecked();
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 
@@ -529,6 +531,7 @@ QString MW::reportWorkspaces()
             << "\n  isEmbelDockVisible        " << G::s(ws.isEmbelDockVisible)
             << "\n  isDevelopDockVisible      " << G::s(ws.isDevelopDockVisible)
             << "\n  isHistoryDockVisible      " << G::s(ws.isHistoryDockVisible)
+            << "\n  isPresetsDockVisible      " << G::s(ws.isPresetsDockVisible)
             << "\n  isThumbDockVisible        " << G::s(ws.isThumbDockVisible)
             << "\nView:"
             << "\n  isLoupeDisplay            " << G::s(ws.isLoupeDisplay)
@@ -600,6 +603,7 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         << "\nisEmbelDockVisible" << ws.isEmbelDockVisible
         << "\nisDevelopDockVisible" << ws.isDevelopDockVisible
         << "\nisHistoryDockVisible" << ws.isHistoryDockVisible
+        << "\nisPresetsDockVisible" << ws.isPresetsDockVisible
         << "\nisThumbDockVisible" << ws.isThumbDockVisible
         << "\nthumbSpacing" << ws.thumbSpacing
         << "\nthumbPadding" << ws.thumbPadding
@@ -661,6 +665,7 @@ void MW::loadWorkspaces()
         ws.isEmbelDockVisible = settings->value("isEmbelDockVisible").toBool();
         ws.isDevelopDockVisible = settings->value("isDevelopDockVisible").toBool();
         ws.isHistoryDockVisible = settings->value("isHistoryDockVisible").toBool();
+        ws.isPresetsDockVisible = settings->value("isPresetsDockVisible").toBool();
         ws.isThumbDockVisible = settings->value("isThumbDockVisible").toBool();
 
         // View
@@ -738,6 +743,7 @@ void MW::saveWorkspaces()
         settings->setValue("isEmbelDockVisible", ws.isEmbelDockVisible);
         settings->setValue("isDevelopDockVisible", ws.isDevelopDockVisible);
         settings->setValue("isHistoryDockVisible", ws.isHistoryDockVisible);
+        settings->setValue("isPresetsDockVisible", ws.isPresetsDockVisible);
         settings->setValue("isThumbDockVisible", ws.isThumbDockVisible);
 
         // View

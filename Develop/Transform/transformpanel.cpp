@@ -13,6 +13,11 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPainter>
+#include <QPainterPath>
+#include <QTransform>
+#include <QIcon>
+#include <QPixmap>
+#include <QImage>
 #include <QLinearGradient>
 #include <QInputDialog>
 #include <QSignalBlocker>
@@ -20,10 +25,50 @@
 #include <QKeyEvent>
 
 namespace {
-/* Padlock glyphs for the aspect-lock toggle (closed = ratio locked). Kept as UTF-8 so the
-   button needs no icon asset; both render on macOS and Windows. */
-const QString kLockClosed = QString::fromUtf8("\xF0\x9F\x94\x92");   // U+1F512
-const QString kLockOpen   = QString::fromUtf8("\xF0\x9F\x94\x93");   // U+1F513
+/* Padlock icon for the aspect-lock toggle, painted rather than loaded, so it needs no
+   asset, stays crisp on retina and can be tinted per state. The emoji glyphs it replaces
+   were too small and too low-contrast to read at a glance. Drawn in a nominal 16x16 box:
+   filled body, stroked shackle, punched-out keyhole; the open shackle is hinged on the
+   left leg and swung up to the right. */
+QIcon padlockIcon(bool closed, const QColor &color)
+{
+    const int px = 16;
+    const qreal dpr = 2.0;              // paint at 2x and tag it, so it downsamples
+    QImage img(QSize(px * dpr, px * dpr), QImage::Format_ARGB32_Premultiplied);
+    img.fill(Qt::transparent);
+    img.setDevicePixelRatio(dpr);
+
+    QPainter p(&img);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setPen(Qt::NoPen);
+    p.setBrush(color);
+    p.drawRoundedRect(QRectF(2.5, 7.0, 11.0, 7.5), 1.5, 1.5);
+
+    QPainterPath shackle;
+    shackle.moveTo(5.0, 7.0);
+    shackle.arcTo(QRectF(5.0, 3.0, 6.0, 6.0), 180.0, -180.0);
+    shackle.lineTo(11.0, closed ? 7.0 : 6.0);
+    if (!closed) {
+        /* Swing the whole shackle open about its left leg: the sprung-up tilt is what
+           makes locked and unlocked tell apart at 16px. */
+        QTransform t;
+        t.translate(5.0, 7.0);
+        t.rotate(-32.0);
+        t.translate(-5.0, -7.0);
+        shackle = t.map(shackle);
+    }
+    p.setBrush(Qt::NoBrush);
+    p.setPen(QPen(color, 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    p.drawPath(shackle);
+
+    /* Keyhole: cleared out of the body so it reads at 16px on any background. */
+    p.setCompositionMode(QPainter::CompositionMode_Clear);
+    p.setPen(QPen(Qt::black, 1.8, Qt::SolidLine, Qt::RoundCap));
+    p.drawLine(QPointF(8.0, 9.5), QPointF(8.0, 12.0));
+    p.end();
+
+    return QIcon(QPixmap::fromImage(img));
+}
 
 /* Parse a free-typed custom aspect ("21 x 9", "21:9", "21/9", "1.85x1") into w and h.
    Returns false if it is not two positive numbers separated by x / : or /. */
@@ -68,7 +113,7 @@ TransformPanel::TransformPanel(QWidget *parent, QSettings *settings)
 
 void TransformPanel::buildUi()
 {
-    /* -------- Header: property-style gradient band, caption left, [?] [E] [R] trailing -------- */
+    /* -------- Header: gradient band, caption left, [?] [E] [R] [X] trailing -------- */
     GradientHeader *header = new GradientHeader(this);
 
     QLabel *title = new QLabel(tr("Transform"), header);
@@ -96,6 +141,13 @@ void TransformPanel::buildUi()
     headerResetBtn->setToolTip(tr("Reset crop, straighten and perspective to the full frame"));
     connect(headerResetBtn, &BarBtn::clicked, this, &TransformPanel::resetRequested);
 
+    /* Close the panel (same as the editor-bar Transform button / "R"): commits the crop
+       session and hides the panel. Kept last so it sits at the extreme right. */
+    closeBtn = new BarBtn();
+    closeBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
+    closeBtn->setToolTip(tr("Close the Transform panel (R)"));
+    connect(closeBtn, &BarBtn::clicked, this, &TransformPanel::closeRequested);
+
     QHBoxLayout *headerRow = new QHBoxLayout(header);
     headerRow->setContentsMargins(6, 3, 6, 3);
     headerRow->setSpacing(6);
@@ -104,6 +156,7 @@ void TransformPanel::buildUi()
     headerRow->addWidget(tipBtn);
     headerRow->addWidget(previewBtn);
     headerRow->addWidget(headerResetBtn);
+    headerRow->addWidget(closeBtn);
 
     /* -------- Mode toggle (Crop / Level / Warp): mutually exclusive, teal-when-selected -------- */
     const int bs = G::backgroundShade;
@@ -189,8 +242,11 @@ void TransformPanel::buildUi()
     connect(aspectCombo, QOverload<int>::of(&QComboBox::activated),
             this, &TransformPanel::onAspectActivated);
 
-    lockBtn = new QToolButton(this);
-    lockBtn->setCheckable(true);
+    /* Chrome-free like the other bar buttons: toggling only swaps the padlock symbol
+       (closed and bright vs open and dim), never a border or background. Not checkable
+       for the same reason -- a checked QToolButton would draw a pressed background. */
+    lockBtn = new BarBtn();
+    lockBtn->setIconSize(QSize(16, 16));
     connect(lockBtn, &QToolButton::clicked, this, &TransformPanel::toggleAspectLock);
 
     /* Flip the aspect between landscape and portrait (swap w/h). Checkable so the
@@ -473,11 +529,13 @@ void TransformPanel::setLevelAngle(double degrees)
 void TransformPanel::updateLockButton()
 {
     if (!lockBtn) return;
-    const QSignalBlocker block(lockBtn);
-    lockBtn->setChecked(aspectLocked);
-    lockBtn->setText(aspectLocked ? kLockClosed : kLockOpen);
-    lockBtn->setToolTip(aspectLocked ? tr("Aspect ratio locked (A)")
-                                     : tr("Aspect ratio unlocked (A)"));
+    /* Closed and bright when locked, open and dim when not: the symbol alone carries
+       the state (no border or background change). */
+    lockBtn->setIcon(padlockIcon(aspectLocked, aspectLocked ? QColor(Qt::white)
+                                                            : QColor(110, 110, 110)));
+    lockBtn->setToolTip(aspectLocked
+        ? tr("Aspect ratio LOCKED: dragging the crop keeps the ratio (A)")
+        : tr("Aspect ratio unlocked: dragging the crop is free (A)"));
 }
 
 bool TransformPanel::eventFilter(QObject *watched, QEvent *event)

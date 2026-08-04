@@ -23,6 +23,23 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
     called.
 */
 
+/* Expand/collapse decoration geometry (the small arrow the delegate draws itself in the
+   gutter left of the caption cell -- see drawBranches, which suppresses the native one).
+
+   The arrow is anchored decoIndent left of the caption cell, which for a root row puts it
+   hard against the viewport left edge: it cannot move further left without being clipped.
+   So the arrow-to-title gap (G::decorationTitleGap, shared with the Develop widget header
+   bands) is taken out of the caption instead -- the title starts decoCapShift() right of
+   the cell edge. */
+namespace {
+    constexpr int decoSize   = 9;       // arrow pixmap size (square)
+    constexpr int decoIndent = 10;      // arrow left edge, left of the caption cell
+    // caption nudge needed to honour the gap, given the fixed arrow anchor
+    inline int decoCapShift() {
+        return qMax(0, decoSize + G::decorationTitleGap - decoIndent);
+    }
+}
+
 PropertyDelegate::PropertyDelegate(QWidget *parent): QStyledItemDelegate(parent)
 {
     isDebug = false;
@@ -503,6 +520,16 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         const QVariant capColorV = capIndex.data(UR_CaptionColor);
         if (capColorV.isValid()) capPen = QPen(capColorV.value<QColor>());
 
+        /* Header band fill. The gradient (a -> b) marks a PANEL-level header; a
+           UR_HeaderFlat header is a subordinate section INSIDE a panel (Develop's
+           Basic / Color / Color Mix / Effects under the Scope band) and gets NO band at
+           all -- it sits on the panel background, like the rows below it, so the tier
+           reads from the caption and the containment rail rather than from banding.
+           Skipping the fill (rather than filling with a matching colour) keeps it exact
+           in any theme: the view has already painted the row in the palette base. */
+        const bool flatHdr = capIndex.data(UR_HeaderFlat).toBool();
+        const bool fillHdr = index.data(UR_isBackgroundGradient).toBool() && !flatHdr;
+
         /* Right edge for a header caption that spans the row, in VIEWPORT coordinates so it is the
            same value whichever column is painting. The caption spans the full row (w0 + w1) but is
            pulled in before any right-aligned value-column widget (e.g. -/+ buttons) so a long
@@ -525,6 +552,11 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         const QTreeView *tv = qobject_cast<const QTreeView*>(option.widget);
         const bool deco = capIndex.data(UR_isDecoration).toBool();
         int capLeft = deco ? (tv ? tv->visualRect(capIndex).x() : r4.x()) : r2.x();
+        /* Keep the arrow-to-title gap clear. Applied to every decoration row, whether or
+           not the arrow is actually drawn (a childless deco row still reserves the
+           gutter), so captions stay aligned down the panel and the caption-column and
+           value-column passes compute the same capLeft. */
+        if (deco) capLeft += decoCapShift();
         /* Nest a header one indent level right (Develop's Basic/Color/Color Mix/Effects
            sections sit under the Layer band above the tree). Only the header's own
            content (arrow + caption) shifts; child rows keep their own indentation. */
@@ -554,16 +586,20 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         // header item in caption column
         if (index.column() == CapColumn) {
             // paint the gradient covering the decoration (caption column)
-            if (index.data(UR_isBackgroundGradient).toBool()) {
+            if (fillHdr) {
                 QRect capFill(1, r.y(), w0 - 1, r.height());
                 painter->fillRect(capFill, rootCategoryBackground);
             }
             // re-instate the decorations (UR_ShowDecoration forces the arrow even with no children,
             // e.g. an unselected mask-tool row that reveals its settings only when clicked open)
             if (deco && (hasChildren || capIndex.data(UR_ShowDecoration).toBool())) {
-                int x = r.x() - 10 + hdrExtraIndent;
-                int y = r0.top() + r0.height()/2 - 5;
-                painter->drawPixmap(x, y, 9, 9, isExpanded ? branchOpen : branchClosed);
+                int x = r.x() - decoIndent + hdrExtraIndent;
+                /* Centre on r4 -- the caption's rect, which is the row less 3px at the
+                   bottom -- NOT on the full row rect: centring on the row would sit the
+                   arrow ~2px below the title it decorates. */
+                int y = r4.top() + (r4.height() - decoSize)/2;
+                painter->drawPixmap(x, y, decoSize, decoSize,
+                                    isExpanded ? branchOpen : branchClosed);
             }
             drawHeaderCaption();
             // draw separator line if not gradient background
@@ -594,7 +630,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         // header row, value column
         else {
             // fill the value-column background, then redraw the spanned caption over it
-            if (index.data(UR_isBackgroundGradient).toBool())
+            if (fillHdr)
                 painter->fillRect(r, rootCategoryBackground);
             else {
                 painter->setPen(brdPen);
@@ -627,9 +663,11 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                native indicator (same position the header branch uses, r.x() - 10). */
             if (index.data(UR_isDecoration).toBool() &&
                 (hasChildren || index.data(UR_ShowDecoration).toBool())) {
-                int ax = r.x() - 10;
-                int ay = r0.top() + r0.height()/2 - 5;
-                painter->drawPixmap(ax, ay, 9, 9, isExpanded ? branchOpen : branchClosed);
+                int ax = r.x() - decoIndent;
+                // centre on r3, this row's caption rect (see the header arrow above)
+                int ay = r3.top() + (r3.height() - decoSize)/2;
+                painter->drawPixmap(ax, ay, decoSize, decoSize,
+                                    isExpanded ? branchOpen : branchClosed);
             }
 //            if (isSelected) painter->setPen(selPen);
             // disabled?
