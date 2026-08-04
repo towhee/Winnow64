@@ -1,2 +1,29 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(python3 *)",
+      "WebSearch",
+      "WebFetch(domain:doc.qt.io)",
+      "WebFetch(domain:forum.qt.io)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:www.photonstophotos.net)",
+      "WebFetch(domain:huggingface.co)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/linecheck.sh\""
+          }
+        ]
+      }
+    ]
+  }
 }
