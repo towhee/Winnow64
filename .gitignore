@@ -86,6 +86,8 @@ packaging/windows/config.ps1
 
 # Per-machine Claude Code settings (do not commit)
 .claude/settings.local.json
+# Claude Code runtime state (session id / pid), not configuration
+.claude/scheduled_tasks.lock
 ReleaseExtras/skyseg.onnx
 ReleaseExtras/u2net.onnx
 ReleaseExtras/sam2_decoder.onnx
