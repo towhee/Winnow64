@@ -103,6 +103,7 @@ void MW::reportWorkspaceState()
              << "\nisEmbelDockVisible" << w.isEmbelDockVisible
              << "\nisDevelopDockVisible" << w.isDevelopDockVisible
              << "\nisHistoryDockVisible" << w.isHistoryDockVisible
+             << "\nisPresetsDockVisible" << w.isPresetsDockVisible
              << "\nisThumbDockVisible" << w.isThumbDockVisible
              << "\nthumbSpacing" << w.thumbSpacing
              << "\nthumbPadding" << w.thumbPadding
@@ -805,6 +806,7 @@ void MW::allIssuesReport()
 /*
     Show the issue log, which is stored in the file G::issueLogFile
 */
+    if (G::issueLog == nullptr) return;
     diagnosticsReport(G::issueLog->logText(), "Winnow Issues");
 }
 

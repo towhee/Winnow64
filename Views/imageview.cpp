@@ -1312,6 +1312,17 @@ void ImageView::hideMaskTint()
     viewport()->update();
 }
 
+void ImageView::showMaskTint()
+{
+    /* The hidden flag is sticky (it survives commits and scope changes), so an explicit
+       "show this mask" event -- selecting another scope -- has to clear it or the scope's
+       combined mask would stay invisible. */
+    if (!maskTintHidden) return;
+    maskTintHidden = false;
+    emit maskTintVisibilityChanged(true);
+    viewport()->update();
+}
+
 void ImageView::setMaskFeather(double feather)
 {
     maskFeather = feather;

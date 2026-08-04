@@ -45,9 +45,15 @@ public:
     void setAutoRun(bool on);
     void setDenoiseValues(int luma0to100, int chroma0to100);
     void setCaptionWidth(int w);                  // align denoise sliders to the tree
+    /* Collapse state, so the panel can take part in the tree's Solo / Expand-all /
+       Collapse-all behaviour: it is a peer of the Basic / Color / Effects sections
+       and the Scope row. setCollapsed is programmatic (persists, no signal). */
+    void setCollapsed(bool collapsed);
+    bool isCollapsed() const { return collapsed; }
 
 signals:
     void tipsRequested();                         // [?]
+    void collapseToggled(bool collapsed);         // USER collapsed / expanded the panel
     void editSourceChanged(bool raw);             // Raw / Embedded Preview
     void demosaicChanged(bool apple);             // Apple (true) / Winnow (false)
     void denoiseRunToggled(bool on);              // "Denoise" checkbox (run / clear)

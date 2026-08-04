@@ -107,6 +107,12 @@ public:
     QMap<QString, QModelIndex> sourceIdx;
 
 protected:
+    void toggleBranch(const QModelIndex &capIdx);
+    bool toggleBranchAt(const QPoint &pos);
+    /* The branch row the last mousePressEvent expanded / collapsed, so the double click
+       that may follow can toggle it back.  Subclasses that intercept a press without
+       calling PropertyEditor::mousePressEvent must clear it. */
+    QPersistentModelIndex pressBranch;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;

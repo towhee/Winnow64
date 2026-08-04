@@ -4,6 +4,7 @@
 #include "Develop/Properties/maskpanel.h"
 #include "Develop/Properties/maskeditor.h"
 #include "Develop/History/historyview.h"
+#include "Develop/Presets/presetsview.h"
 #include "Develop/fillspot.h"
 #include "Main/mainwindow.h"
 #include "Main/global.h"
@@ -12,6 +13,7 @@
 #include "Develop/rangemask.h"
 #include "Develop/workingimagecache.h"
 #include "Dialogs/savedeveloppresetdlg.h"
+#include <QFileInfo>
 #include <QRegularExpression>
 #include <QVariantAnimation>
 #include <algorithm>
@@ -33,6 +35,9 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        labelled EditStack snapshot per action via noteEdit and is never written to the
        sidecar (which holds only the current state). */
     history = new DevelopHistory(this);
+    /* The named develop presets (the Presets dock's model). Unlike history these ARE
+       persistent -- they live in QSettings under "Develop Presets". */
+    presets = new DevelopPresets(setting, this);
     /* The mask-tool chooser, popped when a new mask is created (newScope). */
     maskMenu = new QMenu(this);
     /* The Scope list (in the ScopeHeader widget) shows the CURRENT IMAGE's scopes --
@@ -79,6 +84,15 @@ void DevelopProperties::initialize()
     setMouseTracking(false);
     setHeaderHidden(true);
     ignoreFontSizeChangeSignals = false;
+
+    /* No frame. The app stylesheet gives every QTreeView a 1px border (widgetcss
+       treeView), which drew a box round the tree: a seam between the scope list and the
+       first section header, and a 1px break in the containment rail where it crossed
+       from the Scope band into the tree. setFrameShape alone is not enough once the QSS
+       styles QTreeView -- a widget-level rule is needed too (same as PanelEditor). The
+       block's bottom edge is closed by paintEvent's rule instead. */
+    setFrameShape(QFrame::NoFrame);
+    setStyleSheet("QTreeView { border: none; }");
 
     /* Column widths. The dock minimum width is set in MW::createDevelopDock so the
        header - and + buttons are always visible. */
@@ -573,6 +587,12 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
     connect(rawPanel, &RawPanel::denoiseLumaChanged,   this, [this](int v){ setGlobalDenoise(true,  v); });
     connect(rawPanel, &RawPanel::denoiseChromaChanged, this, [this](int v){ setGlobalDenoise(false, v); });
     connect(rawPanel, &RawPanel::tipsRequested, this, &DevelopProperties::howThisWorks);
+    /* Solo: the Raw panel is a peer of the Scope row and the adjustment sections, so
+       expanding it folds them away. */
+    connect(rawPanel, &RawPanel::collapseToggled, this, [this](bool collapsed){
+        if (collapsed) return;
+        soloCollapseOthers(SoloOwner::RawPanel);
+    });
 
     syncRawPanel();
 }
@@ -765,7 +785,7 @@ void DevelopProperties::commitPendingMask(int op)
     const QString toolName = maskToolName(scope->components[pendingIdx].tool);
     pendingIdx = -1;
     selectedMaskIndex = -1;                // flatten: committed tools are not re-opened
-    maskLatched = true;                    // keep the combined (red) mask overlay showing
+    maskLatched = true;                    // overlay stays AVAILABLE ("O" re-shows it)
     maskPanelOpen = false;
     if (maskPanel) maskPanel->hide();
     const QString verb = op == int(MaskOp::Subtract)  ? "Subtract "
@@ -774,12 +794,16 @@ void DevelopProperties::commitPendingMask(int op)
     noteEdit(verb + toolName);
     buildTree();
     emit paramsChanged();
+    /* The tool is done: get the red coverage tint off the image so the user sees the
+       developed result. The overlay is still latched, so "O" (or the header menu row)
+       brings it back. Must follow paramsChanged() -- that rebuilds/re-sets the tint. */
+    emit maskTintHideRequested();
 }
 
 void DevelopProperties::finishFirstMask()
 {
-    /* [Done] on the first tool: already committed (red); close the panel but keep the
-       mask overlay showing. */
+    /* [Done] on the first tool: already committed (red); close the panel and hide the
+       overlay tint (still latched, so "O" re-shows it). */
     pendingIdx = -1;
     selectedMaskIndex = -1;
     maskLatched = true;
@@ -787,6 +811,7 @@ void DevelopProperties::finishFirstMask()
     if (maskPanel) maskPanel->hide();
     buildTree();
     emit paramsChanged();
+    emit maskTintHideRequested();
 }
 
 void DevelopProperties::cancelMaskTool()
@@ -890,6 +915,9 @@ void DevelopProperties::onScopeSelected(const QString &name)
     if (scopeHeader) scopeHeader->setCollapsed(false);
 
     emit paramsChanged();         // the renderer shows the active scope
+    /* Selecting a scope is an explicit "show me this mask", so clear any sticky hidden
+       flag left by finishing a tool or moving an adjustment slider. */
+    if (hasMask) emit maskTintShowRequested();
 }
 
 void DevelopProperties::onSpotToolToggled(bool active)
@@ -1021,14 +1049,34 @@ void DevelopProperties::setTreeCollapsed(bool collapsed)
     applyCoreVisibility();           // core rows also depend on collapse state
 
     /* Solo: showing the scope's items is one of the mutually-exclusive sections, so
-       collapse the three adjustment sections (they would otherwise stay open alongside
-       the scope). Skipped during the Expand-all bulk sweep, which wants all open. */
-    if (!collapsed && !isBulkExpandCollapse &&
-        setting->value("Develop/isSolo", false).toBool()) {
-        for (const char *h : {"BasicHeader", "ColorHeader", "EffectsHeader"}) {
-            const QModelIndex idx = findCaptionIndex(h);
-            if (idx.isValid()) collapse(idx);
-        }
+       collapse its peers -- the three adjustment sections and the Raw panel (they would
+       otherwise stay open alongside the scope). */
+    if (!collapsed) soloCollapseOthers(SoloOwner::ScopeRow);
+}
+
+void DevelopProperties::soloCollapseOthers(SoloOwner owner, const QString &keepSection)
+{
+    /* Skipped during the Expand-all / Collapse-all sweep, which drives every peer. */
+    if (isBulkExpandCollapse) return;
+    if (!setting->value("Develop/isSolo", false).toBool()) return;
+
+    /* Raw panel (lab UI, raw files only -- null or hidden otherwise). */
+    if (owner != SoloOwner::RawPanel && rawPanel && !rawPanel->isCollapsed())
+        rawPanel->setCollapsed(true);
+
+    /* The scope's own items; its collapse arrow lives in the ScopeHeader band, not the
+       tree, so it has to be driven by hand. */
+    if (owner != SoloOwner::ScopeRow && !scopeItemsCollapsed) {
+        setTreeCollapsed(true);
+        if (scopeHeader) scopeHeader->setCollapsed(true);
+    }
+
+    /* The adjustment sections. The base PropertyEditor already collapses tree siblings
+       when a root expands; this also covers the Raw panel / Scope row cases. */
+    for (const char *h : {"BasicHeader", "ColorHeader", "EffectsHeader"}) {
+        if (keepSection == QLatin1String(h)) continue;
+        const QModelIndex idx = findCaptionIndex(h);
+        if (idx.isValid()) collapse(idx);
     }
 }
 
@@ -1400,9 +1448,17 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
 void DevelopProperties::showRawDemosaic()
 {
     if (G::isLogger) G::log("DevelopProperties::showRawDemosaic");
+    /* Lab UI: the Demosaic / raw-denoise controls live in the Raw panel, not the tree, so
+       just un-collapse it -- under Solo that folds its peers away. */
+    if (rawPanel && G::useScopeHeaderLab && currentIsRaw()) {   // == syncRawPanel's test
+        if (rawPanel->isCollapsed()) rawPanel->setCollapsed(false);
+        soloCollapseOthers(SoloOwner::RawPanel);
+        return;
+    }
+
     /* Reveal the Demosaic (and, on the Winnow engine, raw-denoise) rows: they are Core
-       rows on the Global scope, hidden while the scope items are collapsed. Bulk-guarded so
-       un-collapsing does not fold the adjustment sections under Solo. */
+       rows on the Global scope, hidden while the scope items are collapsed. Bulk-guarded
+       so un-collapsing does not fold the adjustment sections under Solo. */
     if (activeScopeIndex != 0) onScopeSelected(currentScopeNames().value(0));
     isBulkExpandCollapse = true;
     setTreeCollapsed(false);
@@ -1414,31 +1470,27 @@ void DevelopProperties::setAllSectionsExpanded(bool expand)
 {
     if (G::isLogger) G::log("DevelopProperties::setAllSectionsExpanded");
     /* Expand/Collapse all also drives the Scope row, whose collapse arrow lives in the
-       ScopeHeader band (not the tree). The bulk guard stops onSectionExpanded from
-       re-collapsing the scope as the tree sections expand under Solo. */
+       ScopeHeader band (not the tree), and the Raw panel. The bulk guard stops
+       onSectionExpanded re-collapsing them as the tree sections expand under Solo. */
     isBulkExpandCollapse = true;
     if (expand) expandAll();
     else        collapseAll();
     setTreeCollapsed(!expand);                          // show/hide the scope's own items
     if (scopeHeader) scopeHeader->setCollapsed(!expand);
+    if (rawPanel) rawPanel->setCollapsed(!expand);
     isBulkExpandCollapse = false;
 }
 
 void DevelopProperties::onSectionExpanded(const QModelIndex &idx)
 {
     /* Solo: one section open at a time. The base PropertyEditor collapses the sibling
-       tree sections when a root is expanded; extend that to the Scope row (a separate
-       widget above the tree). Only the three adjustment sections are peers of the scope
-       -- the Demosaic row is itself a scope item (it hides when the scope collapses), so
-       expanding it must NOT collapse the scope. Skipped during the Expand-all sweep. */
-    if (isBulkExpandCollapse) return;
-    if (!setting->value("Develop/isSolo", false).toBool()) return;
+       tree sections when a root is expanded; extend that to the Scope row and the Raw
+       panel (separate widgets above the tree). Only the three adjustment sections are
+       peers -- the Demosaic row is itself a scope item (it hides when the scope
+       collapses), so expanding it must NOT collapse the scope. */
     const QString name = idx.data(UR_Name).toString();
     if (name != "BasicHeader" && name != "ColorHeader" && name != "EffectsHeader") return;
-    if (!scopeItemsCollapsed) {
-        setTreeCollapsed(true);
-        if (scopeHeader) scopeHeader->setCollapsed(true);
-    }
+    soloCollapseOthers(SoloOwner::Section, name);
 }
 
 void DevelopProperties::showMaskMenu()
@@ -1933,9 +1985,14 @@ void DevelopProperties::onMaskSelectionChanged()
 
 void DevelopProperties::mousePressEvent(QMouseEvent *event)
 {
-    /* Clicking a tool row toggles its settings (the base class does not select on click, so we read
-       the row's UR_MaskIndex ourselves and rebuild). We manage the tool's expand state via the
-       selection, so we do NOT fall through to the base expand/collapse for these rows. */
+    /* Clicking a tool row toggles its settings (the base class does not select on click,
+       so we read the row's UR_MaskIndex ourselves and rebuild). We manage the tool's
+       expand state via the selection, so we do NOT fall through to the base
+       expand/collapse for these rows.
+
+       This press is not a branch expand/collapse unless the base says so below: stale
+       state would make the following double click (if any) toggle an unrelated branch. */
+    pressBranch = QModelIndex();
     if (event->button() == Qt::LeftButton) {
         const QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
@@ -2032,6 +2089,43 @@ void DevelopProperties::flashCaption(const QModelIndex &capIdx)
     anim->start();
 }
 
+void DevelopProperties::paintEvent(QPaintEvent *event)
+{
+    PropertyEditor::paintEvent(event);
+
+    /* The scope containment rail, continued from ScopeHeaderLab (which draws the same
+       2px G::selectionColor line from the selected scope row down to its bottom edge --
+       see G::scopeRailX/W). It runs to the BOTTOM OF THE LAST ROW, not the bottom of the
+       viewport: the empty space under a short tree is not part of the scope's block.
+       The frame is off (initialize), so the viewport shares this widget's origin and the
+       two halves line up at the same x with no correction. */
+    if (G::scopeRailW <= 0) return;
+
+    /* Start from the topmost VISIBLE row (indexAt), not model row 0: the Develop tree
+       hides rows (Core / mask / raw-only rows), and indexBelow on a hidden index returns
+       an invalid index, which would end the walk immediately. */
+    QModelIndex last = indexAt(QPoint(0, 0));
+    if (!last.isValid()) return;
+    for (QModelIndex below = indexBelow(last); below.isValid(); below = indexBelow(below))
+        last = below;
+    const int bottom = qMin(visualRect(last).bottom() + 1, viewport()->height());
+    if (bottom <= 0) return;
+
+    QPainter p(viewport());
+    p.fillRect(G::scopeRailX, 0, G::scopeRailW, bottom, G::selectionColor);
+
+    /* Close the block: a full-width rule just under the last row, in the shade the tree's
+       old QSS border used (backgroundShade + 15), so the bottom edge is as legible as the
+       Scope band at the top. Only when there is empty dock below it -- if the rows fill
+       or overflow the viewport, the panel edge already ends the block and a rule pinned
+       to the last visible row would be a false bottom. */
+    const int ruleY = bottom + 3;
+    if (ruleY < viewport()->height() - 1) {
+        const int m = G::backgroundShade + 15;
+        p.fillRect(0, ruleY, viewport()->width(), 1, QColor(m, m, m));
+    }
+}
+
 void DevelopProperties::drawBranches(QPainter *, const QRect &, const QModelIndex &) const
 {
     /* Intentionally empty: draw no native branch indicator. Every expandable Develop row
@@ -2080,6 +2174,11 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
        Scope band above the tree. Only the header content shifts -- its child rows keep
        their own indentation (the delegate reads UR_ExtraIndent on the header caption). */
     model->setData(capIdx, true, UR_ExtraIndent);
+    /* A section header belongs to the scope selected in the Scope band above, so it is a
+       tier BELOW that band: a flat band, not the panel-header gradient the Scope and Raw
+       bands use. Without this the sections read as siblings of Scope rather than as its
+       contents. */
+    if (previewGroup >= 0) model->setData(capIdx, true, UR_HeaderFlat);
 }
 
 void DevelopProperties::addSlider(const QString &key, const QString &caption,
@@ -3202,9 +3301,18 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
         return;
     }
 
-    /* Load the stack on first touch (cheap: no sidecar => fast empty read), then cache it. */
-    if (!stackCache.contains(fPath))
-        stackCache.insert(fPath, EditStack::fromBase64(Metadata::readDevelopSidecar(fPath)));
+    /* Load the stack on first touch (cheap: no sidecar => fast empty read), then cache
+       it. A sidecar is a user file and can be corrupt: fromBase64 range-checks what it
+       can and reports what it could not, so a bad record degrades to "no edits" rather
+       than feeding NaNs into the pipeline -- and the user is told, not silently
+       emptied. */
+    if (!stackCache.contains(fPath)) {
+        EditStack::Status st = EditStack::Status::Absent;
+        QStringList issues;
+        stackCache.insert(fPath, EditStack::fromBase64(
+                              Metadata::readDevelopSidecar(fPath), &st, &issues));
+        reportStackIssues(fPath, int(st), issues);
+    }
 
     /* Ensure at least one scope so the combo + active editing have something to point at. An
        all-identity stack is still treated as identity (not persisted), so this never creates a
@@ -3371,47 +3479,230 @@ void DevelopProperties::applyHistoryEntry(int index)
 }
 
 /* --------------------------------------------------------------------------------
-   Develop presets (save). Snapshot the current image's EditStack into a named preset
-   in QSettings via the Save Develop Preset checklist. Applying a preset is a later task.
+   Develop presets (the Presets dock)
+
+   A preset is a NAMED, PARTIAL develop recipe: the settings the user ticked in the
+   Save Develop Preset checklist, captured from ONE scope of one image and stored in
+   QSettings by DevelopPresets. Saving is Cmd+Shift+N / the dock context menu / the
+   Presets dock [+]; applying is a click in the Presets dock (hover previews it).
+
+   THE APPLY IS A MERGE. Only the keys the preset actually holds are written, into the
+   scope that is ACTIVE at apply time -- so a Temp-only preset moves Temp and nothing
+   else, and a preset captured from a mask can be dropped onto Global (or vice versa).
+   The per-image items (raw decode engine, raw NR, tone splits, crop / level / warp,
+   spots) belong to no scope and always go to scope 0 / the geometry.
+
+   Mask geometry never travels: it is specific to the source image's content.
    -------------------------------------------------------------------------------- */
 
-/* Build one scope's checklist group: the Basic / Color / Effects adjustment leaves
-   (mask geometry is content-specific and not a preset item). Vignette folds in its
-   feather; Grain folds in size + roughness (their "changed" test is the primary only,
-   matching isIdentity). Raw NR and the tone splits are surfaced under Global. */
-static PresetGroup scopePresetGroup(const EditScope &l, int index)
+namespace {
+
+struct PresetLeafDef { const char *key; const char *label; };
+
+/* The adjustment leaves, grouped and ordered exactly like the Develop panel's Scope
+   tree (addBasic / addColor / addColorMix / addEffects). One table drives the dialog's
+   groups, the pre-checked test and the value write, so the three cannot drift apart.
+   A leaf that folds several params in (white balance, a grade range, denoise, vignette,
+   grain) is ONE tick -- the panel treats them as one control. */
+const PresetLeafDef kBasicLeaves[] = {
+    {"whiteBalance", "White balance (Temp + Tint)"},
+    {"exposure",     "Exposure"},
+    {"contrast",     "Contrast"},
+    {"highlights",   "Highlights"},
+    {"shadows",      "Shadows"},
+    {"whites",       "Whites"},
+    {"blacks",       "Blacks"},
+    {"texture",      "Texture"},
+    {"dehaze",       "Dehaze"},
+};
+const PresetLeafDef kColorLeaves[] = {
+    {"red",        "Red"},
+    {"green",      "Green"},
+    {"blue",       "Blue"},
+    {"hue",        "Hue"},
+    {"saturation", "Saturation"},
+    {"luminance",  "Luminance"},
+    {"vibrance",   "Vibrance"},
+};
+const PresetLeafDef kColorMixLeaves[] = {
+    {"gradeShadow", "Shadows"},
+    {"gradeMid",    "Midtones"},
+    {"gradeHigh",   "Highlights"},
+};
+const PresetLeafDef kEffectsLeaves[] = {
+    {"denoise",  "Denoise"},
+    {"vignette", "Vignette"},
+    {"grain",    "Grain"},
+};
+
+struct PresetSectionDef {
+    const char *title;
+    const PresetLeafDef *leaves;
+    int count;
+};
+const PresetSectionDef kSections[] = {
+    {"Basic",     kBasicLeaves,    int(sizeof(kBasicLeaves)    / sizeof(PresetLeafDef))},
+    {"Color",     kColorLeaves,    int(sizeof(kColorLeaves)    / sizeof(PresetLeafDef))},
+    {"Color Mix", kColorMixLeaves, int(sizeof(kColorMixLeaves) / sizeof(PresetLeafDef))},
+    {"Effects",   kEffectsLeaves,  int(sizeof(kEffectsLeaves)  / sizeof(PresetLeafDef))},
+};
+
+/* Does this leaf differ from its default? A folded leaf tests its PRIMARY params, the
+   same ones EditParams::isIdentity looks at (a feather or grain size on its own is not
+   an edit -- it is inert until its amount is non-zero). */
+bool leafChanged(const QString &key, const EditParams &p)
 {
-    const EditParams &p = l.params;
     const EditParams def;
-    PresetGroup g;
-    g.title = index == 0 ? QStringLiteral("Global edits")
-                         : QStringLiteral("Mask %1").arg(index);
-    g.checkable = true;
-    auto add = [&](const QString &key, const QString &label, bool changed) {
-        g.leaves.append({key, label, changed});
+    if (key == "whiteBalance") return p.temp != def.temp || p.tint != def.tint;
+    if (key == "exposure")     return p.exposure   != def.exposure;
+    if (key == "contrast")     return p.contrast   != def.contrast;
+    if (key == "highlights")   return p.highlights != def.highlights;
+    if (key == "shadows")      return p.shadows    != def.shadows;
+    if (key == "whites")       return p.whites     != def.whites;
+    if (key == "blacks")       return p.blacks     != def.blacks;
+    if (key == "texture")      return p.texture    != def.texture;
+    if (key == "dehaze")       return p.dehaze     != def.dehaze;
+    if (key == "red")          return p.red        != def.red;
+    if (key == "green")        return p.green      != def.green;
+    if (key == "blue")         return p.blue       != def.blue;
+    if (key == "hue")          return p.hue        != def.hue;
+    if (key == "saturation")   return p.saturation != def.saturation;
+    if (key == "luminance")    return p.luminance  != def.luminance;
+    if (key == "vibrance")     return p.vibrance   != def.vibrance;
+    if (key == "gradeShadow")  return p.gradeShadowSat != def.gradeShadowSat ||
+                                      p.gradeShadowLum != def.gradeShadowLum;
+    if (key == "gradeMid")     return p.gradeMidSat != def.gradeMidSat ||
+                                      p.gradeMidLum != def.gradeMidLum;
+    if (key == "gradeHigh")    return p.gradeHighSat != def.gradeHighSat ||
+                                      p.gradeHighLum != def.gradeHighLum;
+    if (key == "denoise")      return p.localDenoiseLuma   != def.localDenoiseLuma ||
+                                      p.localDenoiseChroma != def.localDenoiseChroma;
+    if (key == "vignette")     return p.vignetteExposure != def.vignetteExposure;
+    if (key == "grain")        return p.grainAmount      != def.grainAmount;
+    return false;
+}
+
+}   // namespace
+
+QSet<QString> DevelopProperties::changedLeavesForScope(const EditParams &p)
+{
+    QSet<QString> changed;
+    for (const PresetSectionDef &sec : kSections)
+        for (int i = 0; i < sec.count; ++i)
+            if (leafChanged(sec.leaves[i].key, p)) changed.insert(sec.leaves[i].key);
+    return changed;
+}
+
+void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QString> &lk,
+                                           QVariantHash &out)
+{
+    /* Store RAW EditParams field values under their EditStack JSON key names (the source
+       of truth, e.g. denoise 0..1), so applying is a straight assignment back --
+       DevelopPresets::assignParam is the other half. */
+    const struct { const char *leaf; const char *field; float v; } scal[] = {
+        {"exposure",   "exposure",   p.exposure},
+        {"contrast",   "contrast",   p.contrast},
+        {"highlights", "highlights", p.highlights},
+        {"shadows",    "shadows",    p.shadows},
+        {"whites",     "whites",     p.whites},
+        {"blacks",     "blacks",     p.blacks},
+        {"texture",    "texture",    p.texture},
+        {"dehaze",     "dehaze",     p.dehaze},
+        {"red",        "red",        p.red},
+        {"green",      "green",      p.green},
+        {"blue",       "blue",       p.blue},
+        {"hue",        "hue",        p.hue},
+        {"saturation", "saturation", p.saturation},
+        {"luminance",  "luminance",  p.luminance},
+        {"vibrance",   "vibrance",   p.vibrance},
     };
-    add("temp",       "Temp",       p.temp       != def.temp);
-    add("tint",       "Tint",       p.tint       != def.tint);
-    add("exposure",   "Exposure",   p.exposure   != def.exposure);
-    add("contrast",   "Contrast",   p.contrast   != def.contrast);
-    add("highlights", "Highlights", p.highlights != def.highlights);
-    add("shadows",    "Shadows",    p.shadows    != def.shadows);
-    add("whites",     "Whites",     p.whites     != def.whites);
-    add("blacks",     "Blacks",     p.blacks     != def.blacks);
-    add("texture",    "Texture",    p.texture    != def.texture);
-    add("dehaze",     "Dehaze",     p.dehaze     != def.dehaze);
-    add("red",        "Red",        p.red        != def.red);
-    add("green",      "Green",      p.green      != def.green);
-    add("blue",       "Blue",       p.blue       != def.blue);
-    add("hue",        "Hue",        p.hue        != def.hue);
-    add("saturation", "Saturation", p.saturation != def.saturation);
-    add("luminance",  "Luminance",  p.luminance  != def.luminance);
-    add("vibrance",   "Vibrance",   p.vibrance   != def.vibrance);
-    add("denoise",  "Denoise",  p.localDenoiseLuma   != def.localDenoiseLuma ||
-                                p.localDenoiseChroma != def.localDenoiseChroma);
-    add("vignette", "Vignette", p.vignetteExposure != def.vignetteExposure);
-    add("grain",    "Grain",    p.grainAmount      != def.grainAmount);
-    return g;
+    for (const auto &e : scal)
+        if (lk.contains(e.leaf)) out.insert(e.field, e.v);
+
+    if (lk.contains("whiteBalance")) {
+        out.insert("temp", p.temp);
+        out.insert("tint", p.tint);
+        out.insert("wbPreset", p.wbPreset);
+    }
+    if (lk.contains("gradeShadow")) {
+        out.insert("gradeShadowHue", p.gradeShadowHue);
+        out.insert("gradeShadowSat", p.gradeShadowSat);
+        out.insert("gradeShadowLum", p.gradeShadowLum);
+    }
+    if (lk.contains("gradeMid")) {
+        out.insert("gradeMidHue", p.gradeMidHue);
+        out.insert("gradeMidSat", p.gradeMidSat);
+        out.insert("gradeMidLum", p.gradeMidLum);
+    }
+    if (lk.contains("gradeHigh")) {
+        out.insert("gradeHighHue", p.gradeHighHue);
+        out.insert("gradeHighSat", p.gradeHighSat);
+        out.insert("gradeHighLum", p.gradeHighLum);
+    }
+    if (lk.contains("denoise")) {
+        out.insert("localDenoiseLuma", p.localDenoiseLuma);
+        out.insert("localDenoiseChroma", p.localDenoiseChroma);
+    }
+    if (lk.contains("vignette")) {
+        out.insert("vignetteExposure", p.vignetteExposure);
+        out.insert("vignetteFeather", p.vignetteFeather);
+    }
+    if (lk.contains("grain")) {
+        out.insert("grainAmount", p.grainAmount);
+        out.insert("grainSize", p.grainSize);
+        out.insert("grainRoughness", p.grainRoughness);
+    }
+}
+
+DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
+                                             const QHash<QString, QSet<QString>> &selected,
+                                             const EditStack &s) const
+{
+    DevelopPreset preset;
+    preset.name = name;
+    const QStringList names = currentScopeNames();
+    preset.sourceScope = names.value(srcScope, QStringLiteral("Global"));
+
+    /* Per-image items. The raw NR pair and the tone splits live in the Global scope by
+       definition, so they are read from scope 0 whatever the source scope is. */
+    const EditParams base = s.scopes.isEmpty() ? EditParams() : s.scopes.first().params;
+    const QSet<QString> gk = selected.value("Global settings");
+    if (gk.contains("demosaic")) {
+        const bool apple =
+            G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
+        preset.globals.insert("demosaicEngine", QString(apple ? "apple" : "winnow"));
+    }
+    if (gk.contains("rawNoise")) {
+        preset.globals.insert("denoiseLuma", base.denoiseLuma);
+        preset.globals.insert("denoiseChroma", base.denoiseChroma);
+    }
+    if (gk.contains("histogram")) {
+        preset.globals.insert("toneShadowCenter", base.toneShadowCenter);
+        preset.globals.insert("toneCrossover", base.toneCrossover);
+        preset.globals.insert("toneHighlightCenter", base.toneHighlightCenter);
+    }
+    if (gk.contains("crop")) {
+        const Geometry &g = s.geometry;
+        preset.globals.insert("crop", QStringLiteral("%1,%2,%3,%4")
+            .arg(g.cropX).arg(g.cropY).arg(g.cropW).arg(g.cropH));
+    }
+    if (gk.contains("level"))
+        preset.globals.insert("straighten", s.geometry.straighten);
+    if (gk.contains("warp") && s.geometry.hasWarp) {
+        QStringList q;
+        for (double v : s.geometry.quad) q << QString::number(v);
+        preset.globals.insert("warp", q.join(','));
+    }
+    if (gk.contains("spots")) preset.spots = s.spots;
+
+    /* The adjustments, from the chosen scope. */
+    if (srcScope >= 0 && srcScope < s.scopes.size()) {
+        QSet<QString> lk;
+        for (const PresetSectionDef &sec : kSections)
+            lk.unite(selected.value(QString::fromLatin1(sec.title)));
+        collectScopeLeaves(s.scopes[srcScope].params, lk, preset.params);
+    }
+    return preset;
 }
 
 void DevelopProperties::saveDevelopPreset()
@@ -3433,8 +3724,9 @@ void DevelopProperties::saveDevelopPreset()
 
     QVector<PresetGroup> groups;
 
-    /* Global settings: a non-checkable container. Raw NR + tone splits come from the Global
-       scope; crop / level / warp / spots from the per-image Geometry + spot history. */
+    /* Global settings: a non-checkable container, and PER IMAGE -- it does not follow the
+       dialog's Scope combo. Raw NR + tone splits come from the Global scope; crop / level
+       / warp / spots from the per-image Geometry + spot history. */
     /* Raw demosaic + raw denoise only apply to a raw file, and denoise (PMRID) is the
        Winnow engine only. Both leaves stay listed, but pre-check them only when relevant:
        demosaic when the file is raw; raw NR when it is raw AND not decoded by Apple. */
@@ -3447,6 +3739,7 @@ void DevelopProperties::saveDevelopPreset()
     PresetGroup gg;
     gg.title = "Global settings";
     gg.checkable = false;
+    gg.showAllNone = false;
     gg.leaves.append({"demosaic", "Raw demosaic", isRaw});
     gg.leaves.append({"rawNoise", "Raw noise reduction",
         isRaw && !usingApple && rawNoiseChanged});
@@ -3460,119 +3753,326 @@ void DevelopProperties::saveDevelopPreset()
     gg.leaves.append({"spots", "Spots", !s.spots.isEmpty()});
     groups.append(gg);
 
-    /* One group per scope (Global + extras). */
-    for (int i = 0; i < s.scopes.size(); ++i)
-        groups.append(scopePresetGroup(s.scopes[i], i));
+    /* One group per Develop section. The leaves are the same in every scope, so the
+       dialog switches scopes by re-checking them from changedPerScope. */
+    for (const PresetSectionDef &sec : kSections) {
+        PresetGroup g;
+        g.title = QString::fromLatin1(sec.title);
+        g.checkable = true;
+        g.showAllNone = true;
+        for (int i = 0; i < sec.count; ++i)
+            g.leaves.append({sec.leaves[i].key, sec.leaves[i].label, false});
+        groups.append(g);
+    }
 
-    SaveDevelopPresetDlg dlg(groups, presetNames(), mw);
+    QVector<QSet<QString>> changedPerScope;
+    for (const EditScope &l : s.scopes)
+        changedPerScope.append(changedLeavesForScope(l.params));
+
+    SaveDevelopPresetDlg dlg(groups, currentScopeNames(), changedPerScope,
+                             activeScopeIndex, presets->names(), mw);
     if (dlg.exec() != QDialog::Accepted) return;
 
-    writePreset(dlg.presetName(), dlg.selected(), s);
-    setting->sync();            // flush to disk now (QSettings otherwise defers it)
+    presets->write(buildPreset(dlg.presetName(), dlg.scopeIndex(), dlg.selected(), s));
     if (G::popup) G::popup->showPopup("Saved develop preset \"" + dlg.presetName() + "\".");
 }
 
-QStringList DevelopProperties::presetNames() const
+/* ---- Applying a preset ------------------------------------------------------------ */
+
+int DevelopProperties::targetScopeIndex(const EditStack &s) const
 {
-    setting->beginGroup("Develop Presets");
-    QStringList names = setting->childGroups();
-    setting->endGroup();
-    return names;
+    if (s.scopes.isEmpty()) return -1;
+    return (activeScopeIndex >= 0 && activeScopeIndex < s.scopes.size())
+           ? activeScopeIndex : 0;
 }
 
-void DevelopProperties::writePreset(const QString &name,
-                                    const QHash<QString, QSet<QString>> &selected,
-                                    const EditStack &s)
+EditStack DevelopProperties::mergePreset(const DevelopPreset &preset, EditStack s,
+                                         int target) const
 {
-    const EditParams base = s.scopes.isEmpty() ? EditParams() : s.scopes.first().params;
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    if (target < 0 || target >= s.scopes.size()) target = 0;
 
-    setting->beginGroup("Develop Presets");
-    setting->beginGroup(name);
-    setting->remove("");                    // overwrite: clear any prior contents
+    /* The adjustments land on the target scope. */
+    for (auto it = preset.params.constBegin(); it != preset.params.constEnd(); ++it)
+        DevelopPresets::assignParam(it.key(), it.value(), s.scopes[target].params);
 
-    /* Global. */
-    const QSet<QString> gk = selected.value("Global settings");
-    if (!gk.isEmpty()) {
-        setting->beginGroup("Global");
-        if (gk.contains("demosaic")) {
+    /* The per-image items belong to no scope: the raw NR pair and the tone splits are
+       Global (scope 0) by definition, the rest is geometry. */
+    for (auto it = preset.globals.constBegin(); it != preset.globals.constEnd(); ++it) {
+        const QString &k = it.key();
+        if (k == "crop") {
+            const QStringList v = it.value().toString().split(',');
+            if (v.size() == 4) {
+                s.geometry.cropX = v[0].toDouble();
+                s.geometry.cropY = v[1].toDouble();
+                s.geometry.cropW = v[2].toDouble();
+                s.geometry.cropH = v[3].toDouble();
+            }
+        }
+        else if (k == "straighten") {
+            s.geometry.straighten = it.value().toDouble();
+        }
+        else if (k == "warp") {
+            const QStringList v = it.value().toString().split(',');
+            if (v.size() == 8) {
+                for (int i = 0; i < 8; ++i) s.geometry.quad[i] = v[i].toDouble();
+                s.geometry.hasWarp = true;
+            }
+        }
+        else if (k != "demosaicEngine") {   // the decode engine is not part of the stack
+            DevelopPresets::assignParam(k, it.value(), s.scopes[0].params);
+        }
+    }
+
+    /* Spots heal in order, each over the accumulation of the prior ones, so a preset's
+       spots are APPENDED rather than replacing what the image already has. */
+    s.spots += preset.spots;
+    /* Preset values are QVariants from QSettings and reach EditParams as a bare toFloat()
+       (DevelopPresets::assignParam), so a hand-edited or damaged store can inject values
+       no slider could produce. Range-check the MERGED stack for the same reason the
+       sidecar load does -- this covers the hover preview as well as the click. */
+    EditStack::sanitize(s);
+    return s;
+}
+
+void DevelopProperties::bindPresetsView(PresetsView *view)
+{
+    if (G::isLogger) G::log("DevelopProperties::bindPresetsView");
+    presetsView = view;
+    if (!presetsView) return;
+    presetsView->bindPresets(presets);
+    connect(presetsView, &PresetsView::presetHovered,
+            this, &DevelopProperties::previewPreset);
+    connect(presetsView, &PresetsView::hoverEnded,
+            this, &DevelopProperties::endPresetPreview);
+    connect(presetsView, &PresetsView::presetChosen,
+            this, &DevelopProperties::applyPreset);
+    connect(presetsView, &PresetsView::newPresetRequested,
+            this, &DevelopProperties::saveDevelopPreset);
+    connect(presetsView, &PresetsView::updateRequested,
+            this, &DevelopProperties::updatePresetFromCurrent);
+    connect(presetsView, &PresetsView::renameRequested,
+            this, &DevelopProperties::renamePreset);
+    connect(presetsView, &PresetsView::deleteRequested,
+            this, &DevelopProperties::deletePreset);
+}
+
+void DevelopProperties::previewPreset(const QString &name)
+{
+    if (G::isLogger) G::log("DevelopProperties::previewPreset", name);
+    if (!presets || currentImagePath.isEmpty()) return;
+    /* The crop overlay and an open mask tool own the canvas; a hover preview underneath
+       them would fight for it (same guard as previewHistoryEntry). */
+    if (maskPanelOpen || spotMode) return;
+    const EditStack s = stackCache.value(currentImagePath);
+    /* NOT previewed: the raw decode engine. Switching it forces a full raw re-decode,
+       which a passing cursor must never trigger -- it is applied on click only. */
+    previewStack = mergePreset(presets->read(name), s, targetScopeIndex(s));
+    previewActive = true;
+    emit historyPreviewChanged();       // proxy render only, no full-res settle
+}
+
+void DevelopProperties::endPresetPreview()
+{
+    endHistoryPreview();                // one preview override, one way to end it
+}
+
+void DevelopProperties::applyPreset(const QString &name)
+{
+    if (G::isLogger) G::log("DevelopProperties::applyPreset", name);
+    if (!presets) return;
+    if (currentImagePath.isEmpty()) {
+        if (G::popup) G::popup->showPopup("No image to apply a develop preset to.");
+        return;
+    }
+    const DevelopPreset preset = presets->read(name);
+
+    /* A preset stamped newer than this build's schema may hold keys whose MEANING has
+       since changed; DevelopPresets::migrate passes it through untouched and assignParam
+       drops what it does not know, so it still applies -- just not necessarily in full.
+       Warned here rather than in read(), which also runs on hover-preview. */
+    if (preset.version > DevelopPresets::kVersion)
+        warnOnce("newerPreset",
+                 "Preset \"" + name + "\" was saved by a newer version of Winnow.\n"
+                 "Settings this version does not understand were skipped.");
+
+    /* A half-built mask tool indexes into the scope we are about to rewrite, so retire it
+       first (the same teardown applyHistoryEntry does). */
+    if (maskPanelOpen) {
+        EditScope *l = activeScope();
+        if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
+            l->components.removeAt(pendingIdx);
+        pendingIdx = -1;
+        selectedMaskIndex = -1;
+        maskPanelOpen = false;
+        if (maskPanel) maskPanel->hide();
+    }
+    maskLatched = false;
+    previewActive = false;              // the previewed state is about to become real
+    previewStack = EditStack();
+
+    isRestoringHistory = true;          // suppress recording while the panel repopulates
+    EditStack s = stackCache.value(currentImagePath);
+    s = mergePreset(preset, s, targetScopeIndex(s));
+    stackCache[currentImagePath] = s;
+    if (activeScopeIndex >= s.scopes.size()) activeScopeIndex = 0;
+
+    refreshScopeList();
+    buildTree();                        // repopulates the sliders from the new stack
+    if (spotMode) emitSpotPins();
+    isRestoringHistory = false;
+
+    /* ONE history step, labelled with the scope that received it ("Sky: Preset: Warm").
+       Also marks the sidecar dirty and arms the debounced write. */
+    noteScopeEdit(historyScopeLabel(), "Preset: " + name);
+
+    /* The decode engine is not part of the EditStack: MW owns it and must re-decode.
+       The stored token is matched EXPLICITLY against the two engines rather than testing
+       for "apple" and treating everything else as winnow -- otherwise a preset naming an
+       engine this build does not have (a typo, a newer Winnow, a hand-edited settings
+       file) would silently decode with the other one and the user would wonder why the
+       preset looks different. */
+    if (preset.globals.contains("demosaicEngine")) {
+        const QString eng = preset.globals.value("demosaicEngine").toString().toLower();
+        if (eng == "apple" || eng == "winnow")
+            emit demosaicEngineChanged(eng == "apple");
+        else
+            warnOnce("unknownEngine",
+                     "Preset \"" + name + "\" names an unknown raw decoder (\"" + eng +
+                     "\").\nThe current decoder was kept.");
+    }
+
+    emit paramsChanged();               // full render + settled full-res
+}
+
+void DevelopProperties::updatePresetFromCurrent(const QString &name)
+{
+/*
+    "Update with Current Settings": keep the preset's SHAPE (the same ticked settings)
+    but refill its values from the current image's active scope. Anything the preset
+    does not hold stays absent, so updating never silently widens a preset.
+*/
+    if (G::isLogger) G::log("DevelopProperties::updatePresetFromCurrent", name);
+    if (!presets) return;
+    if (currentImagePath.isEmpty()) {
+        if (G::popup) G::popup->showPopup("No image to update the preset from.");
+        return;
+    }
+    DevelopPreset preset = presets->read(name);
+    const EditStack s = stackCache.value(currentImagePath);
+    const int src = targetScopeIndex(s);
+    if (src < 0) return;
+    /* Serialize once: paramsToJson is the same key -> value mapping the preset stores,
+       so refilling is a lookup rather than another field-by-field switch. */
+    const QJsonObject sj = EditStack::paramsToJson(s.scopes[src].params);
+    const QJsonObject bj = EditStack::paramsToJson(s.scopes.first().params);
+
+    for (auto it = preset.params.begin(); it != preset.params.end(); ++it)
+        it.value() = sj.value(it.key()).toVariant();
+
+    for (auto it = preset.globals.begin(); it != preset.globals.end(); ++it) {
+        const QString &k = it.key();
+        if (k == "demosaicEngine") {
             const bool apple =
                 G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
-            setting->setValue("demosaicEngine", apple ? "apple" : "winnow");
+            it.value() = QString(apple ? "apple" : "winnow");
         }
-        if (gk.contains("rawNoise")) {
-            setting->setValue("denoiseLuma", base.denoiseLuma);
-            setting->setValue("denoiseChroma", base.denoiseChroma);
-        }
-        if (gk.contains("histogram")) {
-            setting->setValue("toneShadowCenter", base.toneShadowCenter);
-            setting->setValue("toneCrossover", base.toneCrossover);
-            setting->setValue("toneHighlightCenter", base.toneHighlightCenter);
-        }
-        if (gk.contains("crop")) {
+        else if (k == "crop") {
             const Geometry &g = s.geometry;
-            setting->setValue("crop", QStringLiteral("%1,%2,%3,%4")
-                .arg(g.cropX).arg(g.cropY).arg(g.cropW).arg(g.cropH));
+            it.value() = QStringLiteral("%1,%2,%3,%4")
+                .arg(g.cropX).arg(g.cropY).arg(g.cropW).arg(g.cropH);
         }
-        if (gk.contains("level"))
-            setting->setValue("straighten", s.geometry.straighten);
-        if (gk.contains("warp") && s.geometry.hasWarp) {
+        else if (k == "straighten") {
+            it.value() = s.geometry.straighten;
+        }
+        else if (k == "warp") {
             QStringList q;
             for (double v : s.geometry.quad) q << QString::number(v);
-            setting->setValue("warp", q.join(','));
+            it.value() = q.join(',');
         }
-        if (gk.contains("spots") && !s.spots.isEmpty()) {
-            setting->beginWriteArray("spots");
-            for (int i = 0; i < s.spots.size(); ++i) {
-                setting->setArrayIndex(i);
-                setting->setValue("params", s.spots[i].paramsJson);
-                setting->setValue("enabled", s.spots[i].enabled);
-            }
-            setting->endArray();
+        else {
+            it.value() = bj.value(k).toVariant();
         }
-        setting->endGroup();
     }
+    if (!preset.spots.isEmpty()) preset.spots = s.spots;
+    preset.sourceScope = currentScopeNames().value(src, QStringLiteral("Global"));
 
-    /* One sub-group per scope, keyed by the same title the checklist used. */
-    for (int i = 0; i < s.scopes.size(); ++i) {
-        const QString title = i == 0 ? QStringLiteral("Global edits")
-                                     : QStringLiteral("Mask %1").arg(i);
-        const QSet<QString> lk = selected.value(title);
-        if (lk.isEmpty()) continue;
-        setting->beginGroup(title);
-        writeScopeLeaves(s.scopes[i].params, lk);
-        setting->endGroup();
-    }
-
-    setting->endGroup();                    // name
-    setting->endGroup();                    // Develop Presets
+    presets->write(preset);
+    if (G::popup) G::popup->showPopup("Updated develop preset \"" + name + "\".");
 }
 
-void DevelopProperties::writeScopeLeaves(const EditParams &p, const QSet<QString> &lk)
+void DevelopProperties::renamePreset(const QString &from, const QString &to)
 {
-    /* Store raw EditParams field values under their JSON key names (the source of truth),
-       so a future apply can assign them straight back. */
-    const struct { const char *k; float v; } scal[] = {
-        {"temp", p.temp}, {"tint", p.tint}, {"exposure", p.exposure},
-        {"contrast", p.contrast}, {"highlights", p.highlights}, {"shadows", p.shadows},
-        {"whites", p.whites}, {"blacks", p.blacks}, {"texture", p.texture},
-        {"dehaze", p.dehaze}, {"red", p.red}, {"green", p.green}, {"blue", p.blue},
-        {"hue", p.hue}, {"saturation", p.saturation}, {"luminance", p.luminance},
-        {"vibrance", p.vibrance},
-    };
-    for (const auto &e : scal)
-        if (lk.contains(e.k)) setting->setValue(e.k, e.v);
-    if (lk.contains("denoise")) {
-        setting->setValue("localDenoiseLuma", p.localDenoiseLuma);
-        setting->setValue("localDenoiseChroma", p.localDenoiseChroma);
+    if (G::isLogger) G::log("DevelopProperties::renamePreset", from);
+    if (!presets) return;
+    if (!presets->rename(from, to) && G::popup)
+        G::popup->showPopup("A preset named \"" + to + "\" already exists.");
+}
+
+void DevelopProperties::deletePreset(const QString &name)
+{
+    if (G::isLogger) G::log("DevelopProperties::deletePreset", name);
+    if (presets) presets->remove(name);
+}
+
+/* --------------------------------------------------------------------------------
+   Reporting corrupt / unreadable develop settings.
+
+   A sidecar is read on EVERY image the user visits, so a folder of damaged files must
+   not produce a popup per image -- arrow-keying through 50 of them would bury the app in
+   toasts. The policy is therefore WARN ONCE PER ISSUE KIND PER SESSION: the first
+   occurrence pops up naming the file and says it may affect others, and every occurrence
+   (first or not) goes to the log. warnedIssues holds the kinds already reported.
+
+   What warrants a popup at all: anything the user would otherwise discover as missing or
+   wrong work -- settings that could not be read, a mask that will not be drawn, values
+   that had to be clamped. What does NOT: an absent sidecar (the normal state of an
+   unedited image) and unknown KEYS from a newer build, which forward tolerance is
+   designed to ignore. See notes/Documentation.txt "Corrupted or changed develop
+   settings".
+   -------------------------------------------------------------------------------- */
+
+void DevelopProperties::warnOnce(const QString &kind, const QString &msg)
+{
+    if (G::isLogger) G::log("DevelopProperties::warnOnce", kind + ": " + msg);
+    if (warnedIssues.contains(kind)) return;      // already told them this session
+    warnedIssues.insert(kind);
+    if (G::popup) G::popup->showPopup(msg, 4000);
+}
+
+void DevelopProperties::reportStackIssues(const QString &fPath, int status,
+                                          const QStringList &issues)
+{
+    const QString file = QFileInfo(fPath).fileName();
+
+    if (status == int(EditStack::Status::Corrupt)) {
+        /* The stack is now empty, but the DAMAGED SIDECAR IS STILL ON DISK. We do not
+           delete or rewrite it here: the user may be able to recover it, and a silent
+           overwrite is exactly the failure this whole path exists to prevent. It is
+           replaced only if the user edits this image (flushImage), which is an explicit
+           act -- so say so plainly. */
+        warnOnce("corruptSidecar",
+                 "Develop settings for \"" + file + "\" could not be read and have been "
+                 "ignored.\nThe file is unchanged until you edit this image; editing it "
+                 "will replace those settings.\n(Other images may be affected too -- see "
+                 "the log.)");
+        return;
     }
-    if (lk.contains("vignette")) {
-        setting->setValue("vignetteExposure", p.vignetteExposure);
-        setting->setValue("vignetteFeather", p.vignetteFeather);
-    }
-    if (lk.contains("grain")) {
-        setting->setValue("grainAmount", p.grainAmount);
-        setting->setValue("grainSize", p.grainSize);
-        setting->setValue("grainRoughness", p.grainRoughness);
+
+    /* Repairs: the stack loaded, but something in it was not renderable as stored. */
+    for (const QString &issue : issues) {
+        if (issue.startsWith("Written by a newer"))
+            warnOnce("newerFormat",
+                     "\"" + file + "\" was developed in a newer version of Winnow.\n"
+                     "Settings this version does not understand were ignored.");
+        else if (issue.contains("unknown tool"))
+            warnOnce("unknownMaskTool",
+                     "One or more masks on \"" + file + "\" use a tool this version does "
+                     "not have, and are not being applied.");
+        else
+            warnOnce("outOfRange",
+                     "Some develop settings for \"" + file + "\" were outside their "
+                     "valid range and have been limited.");
     }
 }
 

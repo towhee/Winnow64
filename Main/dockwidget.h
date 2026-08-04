@@ -102,6 +102,7 @@ private:
     QRect defaultFloatingGeometry;
     QRect floatingGeometry;
     bool hasCustomTitleBar();
+    bool isTitleBarPos(const QPoint &globalPos) const;
     void rpt(QString s);
     QRect deconstructSavedGeometry(QByteArray geometry);
     void save();

@@ -24,9 +24,10 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
 {
     if (G::isLogger) G::log("ScopeHeaderLab::ScopeHeaderLab");
 
-    /* contextMenu.png: a light-gray (176,176,176) chevron, matching the title-bar glyphs
-       (e.g. questionmark.png); generated from down-arrow1.png. */
-    menuIcon = QIcon(QPixmap(":/images/contextMenu.png"));
+    /* ellipsis_vertical.png: the vertical "kebab" glyph for the panel and per-row scope
+       action menus. Drawn gray 176 like questionmark.png and dimmed by the same
+       G::iconOpacity (via BarBtn::setIcon(path, opacity)) so it reads at the identical
+       brightness as the "?" tip buttons above it. */
 
     QVBoxLayout *outer = new QVBoxLayout(this);
     outer->setContentsMargins(0, 0, 0, 0);
@@ -41,12 +42,13 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     QHBoxLayout *hb = new QHBoxLayout(headerBand);
     hb->setContentsMargins(0, 3, 6, 3);
     hb->setSpacing(0);
-    /* Collapse arrow (branch glyph) in a gutter-width button, matching the tree's section
-       headers + the Raw panel: click it (or the caption) to hide/show the list. */
+    /* Collapse arrow (branch glyph) in an icon-wide button, matching the tree's section
+       headers + the Raw panel: click it (or the caption) to hide/show the list. The
+       caption follows G::decorationTitleGap clear of the arrow. */
     collapseBtn = new BarBtn();
     collapseBtn->setToolTip("Hide or show the scope list");
     collapseBtn->setIconSize(QSize(9, 9));
-    collapseBtn->setFixedSize(10, 16);
+    collapseBtn->setFixedSize(9, 16);
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleListCollapsed(); });
     titleLabel = new QLabel(tr("Scope"), headerBand);
@@ -54,20 +56,27 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
                                   .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
     panelMenuBtn = new BarBtn();
     panelMenuBtn->setToolTip("Scope actions (new mask)");
-    panelMenuBtn->setIcon(menuIcon);
+    panelMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
     panelMenuBtn->setIconSize(QSize(16, 16));
     connect(panelMenuBtn, &BarBtn::clicked, this, [this]{ showPanelMenu(); });
     hb->addWidget(collapseBtn);
+    hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(titleLabel);
     hb->addStretch(1);
     hb->addWidget(panelMenuBtn);
     outer->addWidget(headerBand);
     updateListCollapseIcon();
 
-    /* Rows container: one row widget per scope, rebuilt by setScopeRows. */
+    /* Rows container: one row widget per scope, rebuilt by setScopeRows. Translucent for
+       the same reason headerBand is: under the app stylesheet a plain QWidget fills its
+       background opaquely, which painted over the containment rail this widget draws
+       behind its children (probe-confirmed -- the rail was drawn but invisible). */
     rowsContainer = new QWidget(this);
+    rowsContainer->setAttribute(Qt::WA_TranslucentBackground);
     rowsLayout = new QVBoxLayout(rowsContainer);
-    rowsLayout->setContentsMargins(0, 0, 0, 2);
+    /* No bottom margin: the tree's first section header butts straight onto the last
+       scope row, so the scope list and the sections read as one uninterrupted block. */
+    rowsLayout->setContentsMargins(0, 0, 0, 0);
     rowsLayout->setSpacing(0);
     outer->addWidget(rowsContainer);
 
@@ -87,6 +96,18 @@ void ScopeHeaderLab::paintEvent(QPaintEvent *)
     g.setColorAt(0, QColor(a, a, a));
     g.setColorAt(1, QColor(b, b, b));
     p.fillRect(r, g);
+
+    /* Containment rail (G::scopeRailX/W): starts under the "Scope" band -- so it spans
+       the WHOLE scope list (Global + every mask), not just the selected row -- and runs
+       to this widget's bottom edge, where DevelopProperties picks it up and carries it
+       to the last tree row. The list and the sections below it are then bracketed as one
+       block. The rail is G::selectionColor, the same fill as the selected row's band, so
+       the stretch crossing that row is invisible: the selection reads as a gap in the
+       rail rather than as its origin. */
+    if (G::scopeRailW > 0) {
+        const int top = r.bottom() + 1;
+        p.fillRect(G::scopeRailX, top, G::scopeRailW, height() - top, G::selectionColor);
+    }
 }
 
 void ScopeHeaderLab::setScopes(const QStringList &n, int currentIndex)
@@ -130,9 +151,14 @@ QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
     QWidget *row = new QWidget(rowsContainer);
     row->setProperty("scopeName", r.name);      // read back by the row-body click filter
     row->installEventFilter(this);
-    /* Active row: a selectionColor band + white caption; others transparent. */
+    /* Active row: a selectionColor band + white caption; others transparent -- and
+       genuinely transparent, so the containment rail painted behind them shows through
+       (see rowsContainer). The active row's band is the rail's own colour, so the rail
+       simply merges into it. */
     if (active)
         row->setStyleSheet(QString("background: %1;").arg(G::selectionColor.name()));
+    else
+        row->setAttribute(Qt::WA_TranslucentBackground);
 
     QHBoxLayout *hb = new QHBoxLayout(row);
     hb->setContentsMargins(10, 2, 6, 2);
@@ -158,7 +184,7 @@ QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
     if (!r.isGlobal) {
         BarBtn *menuBtn = new BarBtn();
         menuBtn->setToolTip("Scope actions (add to mask, reset, remove, rename)");
-        menuBtn->setIcon(menuIcon);
+        menuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
         menuBtn->setIconSize(QSize(16, 16));
         const QString nm = r.name;
         connect(menuBtn, &BarBtn::clicked, this,
@@ -174,8 +200,12 @@ bool ScopeHeaderLab::eventFilter(QObject *watched, QEvent *event)
     /* A single left click anywhere on the header band (caption or empty area) toggles the
        list collapse; the arrow + [v] buttons consume their own clicks. A click on a row
        body (incl. its name label, which ignores the press so it propagates up) selects
-       that scope; checkbox / menu-button clicks are consumed by those widgets. */
-    if (event->type() == QEvent::MouseButtonPress && watched == headerBand) {
+       that scope; checkbox / menu-button clicks are consumed by those widgets.
+       MouseButtonDblClick is included because Qt sends it INSTEAD of the second press:
+       without it a double click would toggle once (leaving the list in the opposite
+       state) rather than toggling twice back to where it started. */
+    if ((event->type() == QEvent::MouseButtonPress ||
+         event->type() == QEvent::MouseButtonDblClick) && watched == headerBand) {
         QMouseEvent *me = static_cast<QMouseEvent *>(event);
         if (me->button() == Qt::LeftButton) { toggleListCollapsed(); return true; }
     }
@@ -235,7 +265,7 @@ void ScopeHeaderLab::showRowMenu(int index, const QString &name)
        button -- must not happen inside its own click handler). */
     enum { AddMask = 1, Reset, Remove, Rename };
     QMenu menu(this);
-    QAction *aMask   = menu.addAction(tr("Add to %1\tM").arg(name));
+    QAction *aMask   = menu.addAction(tr("Tweak %1 mask\tM").arg(name));
     aMask->setData(AddMask);
     menu.addSeparator();
     menu.addAction(tr("Reset %1").arg(name))->setData(Reset);

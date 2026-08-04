@@ -6,6 +6,7 @@
 #include "Develop/editparams.h"
 #include "Develop/editstack.h"
 #include "Develop/History/develophistory.h"
+#include "Develop/Presets/developpresets.h"
 #include "Develop/workingimage.h"
 #include "Develop/Properties/colorgradewheel.h"
 #include "Develop/Properties/colorrangewheel.h"
@@ -16,6 +17,7 @@ class ScopeHeaderBase;
 class RawPanel;
 class MaskPanel;
 class HistoryView;
+class PresetsView;
 class QVariantAnimation;
 
 /*
@@ -116,6 +118,11 @@ public:
        class owns the DevelopHistory model it views and answers its hover/click. */
     void bindHistoryView(HistoryView *view);
 
+    /* The Presets dock's list (owned by MW, lives in its own dock). Bind it once; this
+       class owns the DevelopPresets store it views and answers its hover/click and its
+       New / Update / Rename / Delete requests. */
+    void bindPresetsView(PresetsView *view);
+
     /* History hover: show entry i's state in the loupe WITHOUT touching the stored stack
        or the sliders (previewStack overrides what stackJob/editParams report). The caller
        renders the PROXY only -- hovering must not spin up full-res settle renders. */
@@ -154,6 +161,10 @@ protected:
        through beside the Demosaic value row's arrow). rootIsDecorated stays true. */
     void drawBranches(QPainter *painter, const QRect &rect,
                       const QModelIndex &index) const override;
+    /* Carry the Scope band's containment rail (G::scopeRailX/W) down the tree's left
+       edge, so the scope rows above and the sections below read as one block. Drawn
+       over the rows, after the base paint. */
+    void paintEvent(QPaintEvent *event) override;
 
 public slots:
     void itemChange(QModelIndex idx) override;
@@ -193,11 +204,26 @@ public slots:
 
     void howThisWorks();                          // Develop help
 
-    /* Snapshot the current image's develop state into a named preset (QSettings). Opens
-       the Save Develop Preset checklist dialog; no-op (with a message) when there is no
-       current image or it has no edits. Reached via Cmd+Shift+N and the dock context
-       menu. Applying a preset is a separate, later task. */
+    /* ---- Develop presets (the Presets dock) --------------------------------------
+       saveDevelopPreset snapshots the current image's develop state into a named preset:
+       it opens the Save Develop Preset checklist dialog (name, source scope, the ticked
+       settings) and hands the result to the DevelopPresets store. No-op with a message
+       when there is no current image or it has no edits. Reached via Cmd+Shift+N, the
+       Develop dock context menu and the Presets dock's [+].
+
+       previewPreset / endPresetPreview are the Presets list's HOVER: show the preset
+       applied on the loupe without touching the stored stack or the sliders (the same
+       previewStack override History uses). applyPreset is the CLICK: merge the preset
+       into the ACTIVE scope for real, rebuild the panel and record one history step.
+       updatePresetFromCurrent / renamePreset / deletePreset serve the list's context
+       menu. */
     void saveDevelopPreset();
+    void previewPreset(const QString &name);
+    void endPresetPreview();
+    void applyPreset(const QString &name);
+    void updatePresetFromCurrent(const QString &name);
+    void renamePreset(const QString &from, const QString &to);
+    void deletePreset(const QString &name);
 
     /* ---- White balance (Basic panel, above Temp) ---------------------------------
        The dropper: ImageView reports the normalized point the user clicked, and
@@ -264,6 +290,9 @@ signals:
        shown -> ImageView hides the red coverage tint so the effect on the masked pixels
        is visible. */
     void maskTintHideRequested();
+    /* Another scope was selected -> ImageView un-hides the tint so that scope's combined
+       mask is visible (the hidden flag is sticky). */
+    void maskTintShowRequested();
     /* The scope menu's "Show mask overlay" row was clicked -> MW flips the tint. */
     void maskOverlayToggleRequested();
     /* The scope menu's "Show mask breakdown" row -> MW flips Result/Breakdown view. */
@@ -389,6 +418,14 @@ private:
     void setAllSectionsExpanded(bool expand);
     void onSectionExpanded(const QModelIndex &idx);
 
+    /* Solo mode peers: the Raw panel and the Scope row are widgets outside the tree, so
+       the base PropertyEditor's sibling-collapse cannot reach them. soloCollapseOthers
+       folds every peer except the one just opened; owner says which that is (for a
+       section, keepSection names it). No-op unless Solo is on, and skipped during the
+       Expand-all / Collapse-all sweep. */
+    enum class SoloOwner { RawPanel, ScopeRow, Section };
+    void soloCollapseOthers(SoloOwner owner, const QString &keepSection = QString());
+
     /* Item builders. div converts the integer slider amount to a double (eg /100), and
        defaults to identity (0) so an absent value is a no-op edit. */
     void addHeader(const QString &name, const QString &parent,
@@ -400,16 +437,25 @@ private:
     void addCheckbox(const QString &key, const QString &caption, const QString &tooltip,
                      QModelIndex parIdx, const QString &parentName, bool defaultValue = false);
 
-    /* ---- Develop presets (save) --------------------------------------------------
-       presetNames lists the existing preset groups; writePreset persists the dialog's
-       selection under "Develop Presets/<name>/Global|Global scope|Scope N/";
-       writeScopeLeaves writes one scope group's checked adjustment values (raw
-       EditParams field values under their JSON key names, so a future apply can
-       round-trip them). */
-    QStringList presetNames() const;
-    void writePreset(const QString &name, const QHash<QString, QSet<QString>> &selected,
-                     const EditStack &stack);
-    void writeScopeLeaves(const EditParams &p, const QSet<QString> &keys);
+    /* ---- Develop presets ----------------------------------------------------------
+       buildPreset turns the dialog's ticked keys into a DevelopPreset, reading the
+       adjustments out of scope `srcScope` and the per-image items out of the stack;
+       collectScopeLeaves fills the adjustment values for one set of checked keys.
+       changedLeavesForScope reports which adjustment leaves differ from their default
+       in a scope -- the dialog's pre-checked state, recomputed as its combo moves.
+
+       mergePreset is the SINGLE apply point, shared by hover-preview and click-apply: it
+       returns a copy of `s` with the preset's stored keys written into scope `target`
+       (the per-image items always going to scope 0 / the geometry). Absent keys are left
+       alone -- that is what makes a preset partial. */
+    DevelopPreset buildPreset(const QString &name, int srcScope,
+                              const QHash<QString, QSet<QString>> &selected,
+                              const EditStack &stack) const;
+    static void   collectScopeLeaves(const EditParams &p, const QSet<QString> &keys,
+                                     QVariantHash &out);
+    static QSet<QString> changedLeavesForScope(const EditParams &p);
+    EditStack     mergePreset(const DevelopPreset &preset, EditStack s, int target) const;
+    int           targetScopeIndex(const EditStack &s) const;   // active, clamped valid
 
     QString uniqueScopeName(const QString &name) const;  // unique within this image
 
@@ -445,6 +491,17 @@ private:
     QSet<QString> dirty;
     QString currentImagePath;
 
+    /* ---- Corrupt / unreadable develop settings -------------------------------------
+       Sidecars are read on every image the user visits, so a damaged folder must not pop
+       one toast per file: warnOnce reports each KIND of problem at most once a session
+       (warnedIssues holds the kinds already shown) while still logging every occurrence.
+       reportStackIssues maps what EditStack::fromBase64 found onto those kinds; status is
+       an EditStack::Status, passed as int so this header need not order its includes
+       around it. See notes/Documentation.txt "Corrupted or changed develop settings". */
+    void warnOnce(const QString &kind, const QString &msg);
+    void reportStackIssues(const QString &fPath, int status, const QStringList &issues);
+    QSet<QString> warnedIssues;
+
     /* ---- Edit history (the History dock) ------------------------------------------
        noteEdit() is the SINGLE commit point for every develop action: it marks the
        sidecar dirty (what the old bare dirty.insert did), pushes a labelled snapshot of
@@ -471,6 +528,8 @@ private:
 
     DevelopHistory *history = nullptr;
     HistoryView *historyView = nullptr;
+    DevelopPresets *presets = nullptr;
+    PresetsView *presetsView = nullptr;
     EditStack previewStack;
     bool previewActive = false;
     bool isRestoringHistory = false;
