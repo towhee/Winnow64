@@ -3,6 +3,11 @@
 # Scope: documentation files (.txt/.md) flag ALL lines; code files flag COMMENT lines only
 # (block /* ... */ and trailing //). Pure code lines are left alone. Reports back via a
 # decision:block reason so the violations get reflowed to <=90 (the indent counts).
+
+# Needs jq; on a machine without it (Windows has been one), no-op rather than
+# emitting a stream of hook errors on every edit.
+command -v jq >/dev/null 2>&1 || exit 0
+
 input=$(cat)
 f=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
 case "$f" in
