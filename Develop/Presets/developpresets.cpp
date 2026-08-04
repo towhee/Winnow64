@@ -27,16 +27,22 @@ bool DevelopPresets::contains(const QString &name) const
 
 DevelopPreset DevelopPresets::read(const QString &name) const
 {
+    return readGroup(kRoot, name);
+}
+
+DevelopPreset DevelopPresets::readGroup(const char *root, const QString &name) const
+{
     DevelopPreset p;
     if (!setting || name.isEmpty()) return p;
     p.name = name;
 
-    setting->beginGroup(kRoot);
+    setting->beginGroup(root);
     setting->beginGroup(name);
     /* Presets written before the version key existed are v1 by definition -- v1 is the
        schema they were written against -- so the default here must stay 1 forever. */
     p.version     = setting->value("version", 1).toInt();
     p.sourceScope = setting->value("sourceScope").toString();
+    p.sourceImage = setting->value("sourceImage").toString();
 
     /* Global: the per-image settings. childKeys() is what makes the merge work -- only
        the keys actually written are reported, and an absent key stays absent. */
@@ -64,7 +70,7 @@ DevelopPreset DevelopPresets::read(const QString &name) const
     setting->endGroup();
 
     setting->endGroup();                // name
-    setting->endGroup();                // kRoot
+    setting->endGroup();                // root
 
     /* Convert anything older than kVersion BEFORE the values reach assignParam. */
     if (p.version != kVersion) migrate(p);
@@ -89,14 +95,23 @@ void DevelopPresets::write(const DevelopPreset &p)
 {
     if (!setting || p.name.isEmpty()) return;
     if (G::isLogger) G::log("DevelopPresets::write", p.name);
+    writeGroup(kRoot, p);
+    setting->sync();                    // flush now (QSettings otherwise defers it)
+    emit changed();
+}
 
-    setting->beginGroup(kRoot);
+void DevelopPresets::writeGroup(const char *root, const DevelopPreset &p)
+{
+    if (!setting || p.name.isEmpty()) return;
+
+    setting->beginGroup(root);
     setting->beginGroup(p.name);
     setting->remove("");                // overwrite: clear any prior contents
     /* Always stamp the CURRENT schema, whatever version p arrived as: what is about to
        be written is by definition kVersion-shaped (read() has already migrated). */
     setting->setValue("version", kVersion);
     if (!p.sourceScope.isEmpty()) setting->setValue("sourceScope", p.sourceScope);
+    if (!p.sourceImage.isEmpty()) setting->setValue("sourceImage", p.sourceImage);
 
     if (!p.globals.isEmpty() || !p.spots.isEmpty()) {
         setting->beginGroup("Global");
@@ -122,9 +137,35 @@ void DevelopPresets::write(const DevelopPreset &p)
     }
 
     setting->endGroup();                // name
-    setting->endGroup();                // kRoot
-    setting->sync();                    // flush now (QSettings otherwise defers it)
-    emit changed();
+    setting->endGroup();                // root
+}
+
+DevelopPreset DevelopPresets::readClipboard() const
+{
+    return readGroup(kClipRoot, kClipName);
+}
+
+void DevelopPresets::writeClipboard(const DevelopPreset &p)
+{
+    if (!setting) return;
+    if (G::isLogger) G::log("DevelopPresets::writeClipboard");
+    /* One slot, always the same key: every Copy replaces what was there. No changed()
+       signal -- the Presets list does not show the buffer, so nothing to reload. */
+    DevelopPreset buf = p;
+    buf.name = kClipName;
+    writeGroup(kClipRoot, buf);
+    setting->sync();
+}
+
+bool DevelopPresets::hasClipboard() const
+{
+    if (!setting) return false;
+    setting->beginGroup(kClipRoot);
+    const bool has = setting->childGroups().contains(kClipName);
+    setting->endGroup();
+    /* A slot holding nothing (everything unticked) is "nothing copied": pasting it would
+       do nothing, and Paste should read as unavailable rather than silently no-op. */
+    return has && !readClipboard().isEmpty();
 }
 
 bool DevelopPresets::rename(const QString &from, const QString &to)

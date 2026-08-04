@@ -11,6 +11,13 @@
     captured. Items that differ from their default in the selected scope are pre-checked
     (and their group pre-expanded), so the user can Save immediately or fine-tune.
 
+    TWO MODES, one dialog. "Pick a set of develop settings, from a scope" is the whole
+    job, and Copy Develop Settings (Lightroom's Copy Settings, Cmd+Opt+C) asks exactly
+    that question -- it just has nowhere to put a name, since the copy buffer is a single
+    unnamed slot. Mode::CopySettings therefore drops the name field (and its overwrite
+    check) and relabels the dialog; everything else -- the groups, the Scope combo, the
+    pre-checked "what differs from default", the All / None buttons -- is identical.
+
     Each adjustment group carries its own [All] / [None] buttons, and the button row
     carries Select all / Select none for the whole checklist.
 
@@ -42,16 +49,22 @@ class SaveDevelopPresetDlg : public QDialog
 {
     Q_OBJECT
 public:
+    /* SavePreset: name the selection and store it. CopySettings: no name -- the selection
+       goes to the single-slot develop clipboard. */
+    enum class Mode { SavePreset, CopySettings };
+
     /* changedPerScope[i] = the leaf keys that differ from default in scope i; it drives
-       the pre-checked state of every checkable group as the Scope combo changes. */
+       the pre-checked state of every checkable group as the Scope combo changes.
+       existingNames is the overwrite check, and is unused (pass {}) in CopySettings. */
     SaveDevelopPresetDlg(const QVector<PresetGroup> &groups,
                          const QStringList &scopeNames,
                          const QVector<QSet<QString>> &changedPerScope,
                          int activeScope,
                          const QStringList &existingNames,
+                         Mode mode = Mode::SavePreset,
                          QWidget *parent = nullptr);
 
-    QString presetName() const;
+    QString presetName() const;     // always empty in CopySettings (there is no name)
     int     scopeIndex() const;     // index into the scopeNames handed in
     /* Checked leaf keys per group title (only the leaves the user left checked). */
     QHash<QString, QSet<QString>> selected() const;
@@ -65,10 +78,10 @@ private:
     void applyScopeChanged(int scope);   // re-check the scope groups for that scope
     void updateSaveEnabled();
 
-    QLineEdit   *nameEdit  = nullptr;
+    QLineEdit   *nameEdit  = nullptr;   // null in CopySettings
     QComboBox   *scopeCombo = nullptr;
     QTreeWidget *tree      = nullptr;
-    QPushButton *saveBtn   = nullptr;
+    QPushButton *saveBtn   = nullptr;   // "Save" / "Copy"
     QStringList  existingNames;
     QVector<QSet<QString>> changedPerScope;
 

@@ -339,8 +339,10 @@ QString MW::diagnostics()
     rpt << "\n" << "fullScreenDocks.isFavs = " << G::s(fullScreenDocks.isFavs);
     rpt << "\n" << "fullScreenDocks.isFilters = " << G::s(fullScreenDocks.isFilters);
     rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isMetadata);
-    rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isDevelop);
-    rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isEmbellish);
+    rpt << "\n" << "fullScreenDocks.isDevelop = " << G::s(fullScreenDocks.isDevelop);
+    rpt << "\n" << "fullScreenDocks.isHistory = " << G::s(fullScreenDocks.isHistory);
+    rpt << "\n" << "fullScreenDocks.isPresets = " << G::s(fullScreenDocks.isPresets);
+    rpt << "\n" << "fullScreenDocks.isEmbellish = " << G::s(fullScreenDocks.isEmbellish);
     rpt << "\n" << "fullScreenDocks.isThumbs = " << G::s(fullScreenDocks.isThumbs);
     rpt << "\n" << "fullScreenDocks.isStatusBar = " << G::s(fullScreenDocks.isStatusBar);
     rpt << "\n" << "isNormalScreen = " << G::s(!isFullScreen());

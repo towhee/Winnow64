@@ -2391,7 +2391,9 @@ void MW::createPresetsDock()
             "applying it leaves everything else alone.<br>"
             "It is applied to the scope selected in the Develop panel.<br><br>"
             "Click + (or Cmd+Shift+N) to make one from the current image. "
-            "Right-click a preset to update, rename or delete it.", 7000);
+            "Right-click a preset to update, rename or delete it.<br><br>"
+            "For a one-off, skip the preset: Cmd+Opt+C copies the settings you tick "
+            "and Cmd+Opt+V pastes them onto another image.", 7000);
     });
     presetsTitleLayout->addWidget(presetsQuestionBtn);
 
@@ -2484,11 +2486,13 @@ void MW::setOperationMode(G::OperationMode mode)
     developDock->setVisible(inDevelop);
     if (inDevelop) developDock->raise();
 
-    /* Save Develop Preset carries a real Cmd+Shift+N shortcut, so gate it by mode here
-       (before the no-change return, so it always tracks the mode) -- a disabled QAction's
-       shortcut does not fire, keeping it Develop-only. */
-    if (developSavePresetAction)
-        developSavePresetAction->setEnabled(mode == G::OperationMode::Develop);
+    /* Save Develop Preset and Copy / Paste Develop Settings carry real shortcuts
+       (Cmd+Shift+N, Cmd+Opt+C, Cmd+Opt+V), so gate them by mode here (before the
+       no-change return, so they always track the mode) -- a disabled QAction's shortcut
+       does not fire, keeping them Develop-only. */
+    for (QAction *a : {developSavePresetAction, developCopySettingsAction,
+                       developPasteSettingsAction})
+        if (a) a->setEnabled(inDevelop);
 
     if (G::operationMode == mode) return;               // no change
     G::operationMode = mode;

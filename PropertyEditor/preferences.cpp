@@ -400,17 +400,22 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "fullScreenShowMetadata") {
         mw->fullScreenDocks.isMetadata = v.toBool();
-        qDebug() << "mw->fullScreenDocks.isMetadata =" << mw->fullScreenDocks.isMetadata;
     }
 
     if (source == "fullScreenShowDevelop") {
         mw->fullScreenDocks.isDevelop = v.toBool();
-        qDebug() << "mw->fullScreenDocks.isDevelop =" << mw->fullScreenDocks.isDevelop;
+    }
+
+    if (source == "fullScreenShowHistory") {
+        mw->fullScreenDocks.isHistory = v.toBool();
+    }
+
+    if (source == "fullScreenShowPresets") {
+        mw->fullScreenDocks.isPresets = v.toBool();
     }
 
     if (source == "fullScreenShowEmbellish") {
         mw->fullScreenDocks.isEmbellish = v.toBool();
-        qDebug() << "mw->fullScreenDocks.isEmbellish =" << mw->fullScreenDocks.isEmbellish;
     }
 
     if (source == "fullScreenShowThumbs") {
@@ -1394,6 +1399,32 @@ void Preferences::addFullScreen()
     i.type = "bool";
     addItem(i);
 
+    // Full screen - show develop history
+    i.name = "fullScreenShowHistory";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show develop history";
+    i.tooltip = "When you switch to full screen show the develop history dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isHistory;
+    i.key = "fullScreenShowHistory";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show develop presets
+    i.name = "fullScreenShowPresets";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show develop presets";
+    i.tooltip = "When you switch to full screen show the develop presets dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isPresets;
+    i.key = "fullScreenShowPresets";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
     // Full screen - show embellish
     i.name = "fullScreenShowEmbellish";
     i.parentName = "FullScreenHeader";
@@ -1401,7 +1432,7 @@ void Preferences::addFullScreen()
     i.tooltip = "When you switch to full screen show the embellish dock.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->fullScreenDocks.isDevelop;
+    i.value = mw->fullScreenDocks.isEmbellish;
     i.key = "fullScreenShowEmbellish";
     i.delegateType = DT_Checkbox;
     i.type = "bool";

@@ -5128,8 +5128,19 @@ void MW::toggleFullScreen()
             metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
             metadataDock->setVisible(fullScreenDocks.isMetadata);
         }
+        /* History and Presets are tabbed with Develop, so show them before Develop and
+           then raise Develop, otherwise one of them becomes the front tab. */
+        if (presetsDock && presetsDockVisibleAction) {
+            presetsDockVisibleAction->setChecked(fullScreenDocks.isPresets);
+            presetsDock->setVisible(fullScreenDocks.isPresets);
+        }
+        if (historyDock && historyDockVisibleAction) {
+            historyDockVisibleAction->setChecked(fullScreenDocks.isHistory);
+            historyDock->setVisible(fullScreenDocks.isHistory);
+        }
         developDockVisibleAction->setChecked(fullScreenDocks.isDevelop);
         developDock->setVisible(fullScreenDocks.isDevelop);
+        if (fullScreenDocks.isDevelop) developDock->raise();
         embelDockVisibleAction->setChecked(fullScreenDocks.isEmbellish);
         embelDock->setVisible(fullScreenDocks.isEmbellish);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
@@ -7425,6 +7436,31 @@ void MW::developSavePreset()
     if (G::isLogger) G::log("MW::developSavePreset");
     if (!developProperties) return;
     developProperties->saveDevelopPreset();
+}
+
+void MW::developCopySettings()
+{
+/*
+    Cmd+Opt+C (Develop mode only): copy the ticked develop settings from this image to the
+    develop clipboard -- Lightroom's Copy Settings. DevelopProperties owns the flow (the
+    Save Preset checklist in Copy mode, then the clipboard write) and reports its own
+    messages when there is no image or it has no edits.
+*/
+    if (G::isLogger) G::log("MW::developCopySettings");
+    if (!developProperties) return;
+    developProperties->copyDevelopSettings();
+}
+
+void MW::developPasteSettings()
+{
+/*
+    Cmd+Opt+V (Develop mode only): merge the develop clipboard onto the current image, on
+    the active scope, as one history step -- Lightroom's Paste Settings. Says so when
+    nothing has been copied yet.
+*/
+    if (G::isLogger) G::log("MW::developPasteSettings");
+    if (!developProperties) return;
+    developProperties->pasteDevelopSettings();
 }
 
 void MW::developAddToMask()
