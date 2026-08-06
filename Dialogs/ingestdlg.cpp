@@ -1,6 +1,7 @@
 #include "ingestdlg.h"
 #include "ui_ingestdlg.h"
 #include "Utilities/htmlwindow.h"
+#include "Utilities/tokenfilename.h"
 #include <QDebug>
 
 /*
@@ -750,133 +751,18 @@ void IngestDlg::on_selectRootFolderBtn_2_clicked()
     updateFolderPaths();
 }
 
-bool IngestDlg::isToken(QString tokenString, int pos)
-{
-    if (G::isLogger) G::log("IngestDlg::isToken");
-    if (pos >= tokenString.length()) return false;
-//    qDebug() << "IngestDlg::isToken  tokenString =" << tokenString << pos;
-    QChar ch = tokenString.at(pos);
-    if (ch.unicode() == 8233) return false;     // Paragraph Separator
-    if (ch == '{') return false;                // qt6.2 changed " to '
-    if (pos == 0) return false;
-
-    // look backwards
-    bool foundPossibleTokenStart = false;
-    int startPos = 0;
-    for (int i = pos; i >= 0; i--) {
-        ch = tokenString.at(i);
-        if (i < pos && ch == '}') return false; // qt6.2 changed " to '
-        if (ch == '{') {                        // qt6.2 changed " to '
-            foundPossibleTokenStart = true;
-            startPos = i + 1;
-        }
-        if (foundPossibleTokenStart) break;
-    }
-
-    if (!foundPossibleTokenStart) return false;
-
-    // look forwards
-    QString token;
-//    int n = tokenString.length();
-    for (int i = pos; i < tokenString.length(); i++) {
-        ch = tokenString.at(i);
-        if (ch == '}') {                        // qt6.2 changed " to '
-            for (int j = startPos; j < i; j++) {
-                token.append(tokenString.at(j));
-            }
-            if (exampleMap.contains(token)) {
-                currentToken = token;
-                tokenStart = startPos - 1;
-                tokenEnd = i + 1;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
 {
+/*
+    Delegates to the shared token parser (Utilities/tokenfilename.h). The token language
+    is common to Ingest, Rename and Export -- this used to be a private copy in each, so
+    a token added in one place did not appear in the others.
+*/
     if (G::isLogger) G::log("IngestDlg::parseTokenString");
-    QString fPath = info.absoluteFilePath();
+    const QString fPath = info.absoluteFilePath();
     if (fPath == "") return "";
-    ImageMetadata m = dm->imMetadata(fPath);
-    createdDate = m.createdDate;
-//    qDebug() << "IngestDlg::" << fPath << createdDate;
-    QString s;
-    int i = 0;
-    while (i < tokenString.length()) {
-        if (isToken(tokenString, i + 1)) {
-            QString tokenResult;
-            // get metadata related to token
-            if (currentToken == "YYYY")
-                tokenResult = createdDate.date().toString("yyyy");
-            if (currentToken == "YY")
-                tokenResult = createdDate.date().toString("yy");
-            if (currentToken == "MONTH")
-                tokenResult = createdDate.date().toString("MMMM").toUpper();
-            if (currentToken == "Month")
-                tokenResult = createdDate.date().toString("MMMM");
-            if (currentToken == "MON")
-                tokenResult = createdDate.date().toString("MMM").toUpper();
-            if (currentToken == "Mon")
-                tokenResult = createdDate.date().toString("MMM");
-            if (currentToken == "MM")
-                tokenResult = createdDate.date().toString("MM");
-            if (currentToken == "DAY")
-                tokenResult = createdDate.date().toString("dddd").toUpper();
-            if (currentToken == "Day")
-                tokenResult = createdDate.date().toString("dddd");
-            if (currentToken == "DDD")
-                tokenResult = createdDate.date().toString("ddd").toUpper();
-            if (currentToken == "Ddd")
-                tokenResult = createdDate.date().toString("ddd");
-            if (currentToken == "DD")
-                tokenResult = createdDate.date().toString("dd");
-            if (currentToken == "HOUR")
-                tokenResult = createdDate.time().toString("hh");
-            if (currentToken == "MINUTE")
-                tokenResult = createdDate.time().toString("mm");
-            if (currentToken == "SECOND")
-                tokenResult = createdDate.time().toString("ss");
-            if (currentToken == "MILLISECOND")
-                tokenResult = createdDate.time().toString("zzz");
-            if (currentToken == "TITLE")
-                tokenResult = m.title;
-            if (currentToken == "CREATOR")
-                tokenResult = m.creator;
-            if (currentToken == "COPYRIGHT")
-                tokenResult = m.copyright;
-            if (currentToken == "ORIGINAL FILENAME")
-                tokenResult = info.baseName();
-            if (currentToken == "MAKE")
-                tokenResult = m.make;
-            if (currentToken == "MODEL")
-                tokenResult = m.model;
-            if (currentToken == "DIMENSIONS")
-                tokenResult = m.dimensions;
-            if (currentToken == "SHUTTER SPEED")
-                tokenResult = m.exposureTime;
-            if (currentToken == "APERTURE")
-                tokenResult = m.aperture;
-            if (currentToken == "ISO")
-                tokenResult = m.ISO;
-            if (currentToken == "FOCAL LENGTH")
-                tokenResult = m.focalLength;
-            // sequence from XX to XXXXXXX.  seqNum must be pre-assigned.
-            if (currentToken.left(2) == "XX") {
-                seqWidth = currentToken.length();
-                tokenResult = QString("%1").arg(seqNum, seqWidth , 10, QChar('0'));
-            }
-            s.append(tokenResult);
-            i = tokenEnd;
-        }
-        else {
-            s.append(tokenString.at(i));
-            i++;
-        }
-    }
-    return s;
+    const ImageMetadata m = dm->imMetadata(fPath);
+    return TokenFileName::parse(m, info, tokenString, seqNum);
 }
 
 void IngestDlg::updateFolderPaths()
@@ -1279,81 +1165,22 @@ void IngestDlg::on_autoRadio_toggled(bool checked)
 void IngestDlg::initTokenList()
 {
 /*
-The list of tokens in the token editor will appear in this order.
+    The token editor lists tokens in this order. Both the order and the token set come
+    from the shared table (Utilities/tokenfilename.h), so Ingest, Rename and Export offer
+    exactly the same tokens.
 */
     if (G::isLogger) G::log("IngestDlg::initTokenList");
-    tokens  << "ORIGINAL FILENAME"
-            << "YYYY"
-            << "YY"
-            << "MONTH"
-            << "Month"
-            << "MON"
-            << "Mon"
-            << "MM"
-            << "DAY"
-            << "Day"
-            << "DDD"
-            << "Ddd"
-            << "DD"
-            << "HOUR"
-            << "MINUTE"
-            << "SECOND"
-            << "MILLISECOND"
-            << "TITLE"
-            << "CREATOR"
-            << "COPYRIGHT"
-            << "MAKE"
-            << "MODEL"
-            << "DIMENSIONS"
-            << "SHUTTER SPEED"
-            << "APERTURE"
-            << "ISO"
-            << "FOCAL LENGTH"
-            << "XX"
-            << "XXX"
-            << "XXXX"
-            << "XXXXX"
-            << "XXXXXX"
-            << "XXXXXXX"
-               ;
+    tokens = TokenFileName::tokens();
 }
 
 void IngestDlg::initExampleMap()
 {
+/*
+    Example values shown beside each token in the editor -- from the shared table, so an
+    example cannot drift from what parse() actually produces.
+*/
     if (G::isLogger) G::log("IngestDlg::initExampleMap");
-    exampleMap["ORIGINAL FILENAME"] = "_C8I0024";
-    exampleMap["YYYY"] = "2018";
-    exampleMap["YY"] = "18";
-    exampleMap["MONTH"] = "JANUARY";
-    exampleMap["Month"] = "January";
-    exampleMap["MON"] = "JAN";
-    exampleMap["Mon"] = "Jan";
-    exampleMap["MM"] = "01";
-    exampleMap["DAY"] = "WEDNESDAY";
-    exampleMap["Day"] = "Wednesday";
-    exampleMap["DDD"] = "WED";
-    exampleMap["Ddd"] = "Wed";
-    exampleMap["DD"] = "07";
-    exampleMap["HOUR"] = "08";
-    exampleMap["MINUTE"] = "32";
-    exampleMap["SECOND"] = "45";
-    exampleMap["MILLISECOND"] = "167";
-    exampleMap["TITLE"] = "Hill_Wedding";
-    exampleMap["CREATOR"] = "Rory Hill";
-    exampleMap["COPYRIGHT"] = "2018 Rory Hill";
-    exampleMap["MAKE"] = "Canon";
-    exampleMap["MODEL"] = "Canon EOS-1D X Mark II";
-    exampleMap["DIMENSIONS"] = "5472x3648";
-    exampleMap["SHUTTER SPEED"] = "1/1000 sec";
-    exampleMap["APERTURE"] = "f/5.6";
-    exampleMap["ISO"] = "1600";
-    exampleMap["FOCAL LENGTH"] = "840 mm";
-    exampleMap["XX"] = "01";
-    exampleMap["XXX"] = "001";
-    exampleMap["XXXX"] = "0001";
-    exampleMap["XXXXX"] = "00001";
-    exampleMap["XXXXXX"] = "000001";
-    exampleMap["XXXXXXX"] = "0000001";
+    exampleMap = TokenFileName::exampleMap();
 }
 
 void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)

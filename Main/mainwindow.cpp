@@ -2805,6 +2805,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (developProperties && G::operationMode == G::OperationMode::Develop) {
         const bool selIsVideo = dm->sf->index(current.row(), G::VideoColumn).data().toBool();
         developProperties->setCurrentImage(selIsVideo ? QString() : fPath);
+        /* The current image counts toward the multi-image warning, so the banner has to
+           follow the current index as well as the selection set. */
+        updateDevelopSelectionWarning();
     }
 
     /* SCROLL CONTROL:
@@ -5408,10 +5411,14 @@ namespace {
    caller on the GUI thread (orientation needs the sort/filter model). */
 QImage developComposite(const WorkingImage &src, const EditParams &edit, int degrees,
                         bool fullRes, int fullW, int fullH,
-                        WorkingImageCache::RenderTimings *timings = nullptr)
+                        WorkingImageCache::RenderTimings *timings = nullptr,
+                        WorkingImageCache::OutDepth depth =
+                            WorkingImageCache::OutDepth::Eight,
+                        WorkingImageCache::Space space =
+                            WorkingImageCache::Space::sRGB)
 {
     QImage out;
-    if (!WorkingImageCache::render(src, edit, out, timings)) return QImage();
+    if (!WorkingImageCache::render(src, edit, out, timings, depth, space)) return QImage();
     if (degrees != 0) {
         QTransform trans;
         trans.rotate(degrees);
@@ -5799,13 +5806,68 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
    developed from the original and blended by its mask), then apply orientation / proxy scaling
    exactly as developComposite does. Falls back to the single-pass developComposite when there are
    no non-Global scopes. */
+/*
+    Run the Fill Replace heals over img in place, preserving its bit depth.
+
+    Both heal engines are 8-bit: LaMa/MI-GAN are 8-bit models, and the exemplar clone path
+    works in ARGB32. Handing them a 16-bit export image would flatten the WHOLE frame to 8
+    bits over a few small heals. So for a deep image the heal runs on an 8-bit copy and
+    only the pixels it actually CHANGED are written back, promoted to 16 bits. Healed
+    pixels are synthesized, so 8-bit precision there costs nothing; every untouched pixel
+    keeps its full 16-bit value.
+*/
+void applySpots(QImage &img, const QVector<FillSpot> &spots, const QString &fPath)
+{
+    auto heal = [&spots, &fPath](QImage &target) {
+        if (G::useLamaSpotFill)
+            LamaFill::apply(target, spots, fPath);   // fPath keys the pinned sources
+        else
+            MiganFill::apply(target, spots);
+    };
+
+    const bool deep = img.format() == QImage::Format_RGBX64 ||
+                      img.format() == QImage::Format_RGBA64 ||
+                      img.format() == QImage::Format_RGBA64_Premultiplied;
+    if (!deep) { heal(img); return; }
+
+    const QImage before = img.convertToFormat(QImage::Format_ARGB32);
+    QImage after = before;
+    after.detach();                       // heal() mutates in place; keep `before` intact
+    heal(after);
+    after = after.convertToFormat(QImage::Format_ARGB32);
+    if (after.size() != before.size()) {   // engine resized: shouldn't happen, take as-is
+        img = after;
+        return;
+    }
+
+    /* Write back only the changed pixels, 8-bit -> 16-bit by the exact 257x scale
+       (255*257 == 65535, so full-scale maps to full-scale). */
+    const int W = img.width(), H = img.height();
+    for (int y = 0; y < H; ++y) {
+        const QRgb *b = reinterpret_cast<const QRgb*>(before.constScanLine(y));
+        const QRgb *a = reinterpret_cast<const QRgb*>(after.constScanLine(y));
+        quint16 *d = reinterpret_cast<quint16*>(img.scanLine(y));
+        for (int x = 0; x < W; ++x) {
+            if (a[x] == b[x]) continue;
+            d[x * 4 + 0] = quint16(qRed(a[x])   * 257);
+            d[x * 4 + 1] = quint16(qGreen(a[x]) * 257);
+            d[x * 4 + 2] = quint16(qBlue(a[x])  * 257);
+        }
+    }
+}
+
 QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::StackRenderJob &job,
                              int degrees, bool fullRes, int fullW, int fullH, const QString &fPath,
-                             WorkingImageCache::RenderTimings *timings = nullptr)
+                             WorkingImageCache::RenderTimings *timings = nullptr,
+                             WorkingImageCache::OutDepth depth =
+                                 WorkingImageCache::OutDepth::Eight,
+                             WorkingImageCache::Space space =
+                                 WorkingImageCache::Space::sRGB)
 {
     QImage out;
     if (job.scopes.isEmpty()) {             // just Global -> the fast single-pass path
-        out = developComposite(src, job.global, degrees, fullRes, fullW, fullH, timings);
+        out = developComposite(src, job.global, degrees, fullRes, fullW, fullH, timings,
+                               depth, space);
     }
     else {
         std::vector<WorkingImageCache::StackScope> sl;
@@ -5817,7 +5879,8 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                 s.mask = buildMaskBuffer(L.components, src.width, src.height, degrees, fPath);
             sl.push_back(std::move(s));
         }
-        if (!WorkingImageCache::renderStack(src, job.global, sl, out, timings)) return QImage();
+        if (!WorkingImageCache::renderStack(src, job.global, sl, out, timings, depth, space))
+            return QImage();
         if (degrees != 0) {
             QTransform trans;
             trans.rotate(degrees);
@@ -5832,12 +5895,7 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
        (lamafill.cpp) heals Spot/Fill kinds by exemplar clone -- no model needed -- and
        Object kinds (or clone fallbacks) with LaMa; the model path no-ops warn-if-absent.
        Flip G::useLamaSpotFill off (global.cpp) to revert to the MI-GAN engine. */
-    if (!out.isNull() && !job.spots.isEmpty()) {
-        if (G::useLamaSpotFill)
-            LamaFill::apply(out, job.spots, fPath);   // fPath keys the pinned sources
-        else
-            MiganFill::apply(out, job.spots);
-    }
+    if (!out.isNull() && !job.spots.isEmpty()) applySpots(out, job.spots, fPath);
 
     /* Geometry (crop / straighten / warp) is applied LAST -- after the develop ops + EXIF
        orientation -- on the full-output-dimension image, so the crop dims match for the
@@ -7476,16 +7534,303 @@ void MW::developAddToMask()
     developProperties->showMaskMenu();
 }
 
+bool MW::prepareExport(QStringList &targets)
+{
+/*
+    Shared entry work for every export path: flush anything that has not reached the
+    sidecars yet, build the list of selected images, and lazily create the exporter and
+    the preset store. Returns false (with a popup) when there is nothing to export.
+
+    The flush matters. A develop edit made across a multi-image selection is BATCHED
+    (DevelopProperties::kPropagateMs), and the exporter reads each image's stored stack --
+    so without flushing first, an export fired straight after a slider drag would write
+    the pre-edit recipe for every image except the current one.
+*/
+    if (G::isLogger) G::log("MW::prepareExport");
+
+    if (developProperties) developProperties->flushPropagation();
+    if (developProperties) developProperties->flushAll();
+
+    targets.clear();
+    if (dm && dm->selectionModel) {
+        const QModelIndexList rows = dm->selectionModel->selectedRows();
+        for (const QModelIndex &idx : rows) {
+            const QString fPath = idx.data(G::PathRole).toString();
+            if (!fPath.isEmpty()) targets << fPath;
+        }
+    }
+    if (targets.isEmpty() && !dm->currentFilePath.isEmpty())
+        targets << dm->currentFilePath;
+
+    if (targets.isEmpty()) {
+        if (G::popup) G::popup->showPopup("No images selected to export", 1500);
+        return false;
+    }
+
+    if (!exportPresets) exportPresets = new ExportPresets(settings, this);
+    if (!imageExporter) imageExporter = new ImageExporter(dm, metadata, this);
+    return true;
+}
+
+void MW::developPixelSource(const QString &fPath, bool want16Bit,
+                            OutputTransform::Space space,
+                            std::function<void(bool, const QImage &)> done)
+{
+/*
+    Render one image's FULL develop recipe for the exporter.
+
+    This is renderDevelopFullResAsync's staging, reused: the GUI thread owns the datamodel
+    reads, the stack capture, the orientation and the mask prerequisites (they are
+    synchronous and keep path-keyed caches that the live edit session also uses), while
+    the decode and the composite -- the seconds-long parts -- run on developRenderPool. It
+    is written as a chain rather than a blocking call so the exporter's batch never holds
+    the GUI thread across an image.
+
+    Unlike the preview path this uses stackJobFor(fPath): every image gets its OWN stored
+    recipe, which is the whole point of a batch export.
+*/
+    if (G::isLogger) G::log("MW::developPixelSource");
+
+    if (fPath.isEmpty() || !developProperties) { done(false, QImage()); return; }
+
+    const auto depth = want16Bit ? WorkingImageCache::OutDepth::Sixteen
+                                 : WorkingImageCache::OutDepth::Eight;
+    /* The develop render ENCODES into the chosen space, so the image handed back is
+       tagged with it below -- ImageExporter::save() then writes that tag through instead
+       of converting. */
+    const QColorSpace outSpace = OutputTransform::ColorSpaceOf(space);
+
+    /* GUI thread: this image's stored recipe, and the metadata the decoder needs. */
+    const DevelopProperties::StackRenderJob mj = developProperties->stackJobFor(fPath);
+    ImageMetadata m = dm->imMetadata(fPath);
+    if (m.fPath.isEmpty()) m.fPath = fPath;
+    if (m.ext.isEmpty()) m.ext = QFileInfo(fPath).suffix().toLower();
+
+    /* Step 1 (worker): make sure the scene-linear WorkingImage exists. decodeIndependent
+       caches it as a side effect, so an image already visited is a cache hit. */
+    developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, done]() mutable {
+        auto work = WorkingImageCache::instance().get(fPath);
+        bool decodedHere = false;
+        if (!work) {
+            ImageDecoder dec(0, dm, metadata);
+            QImage img;
+            dec.decodeIndependent(img, metadata, m, nullptr);
+            work = WorkingImageCache::instance().get(fPath);
+            decodedHere = true;
+            if (!work && !img.isNull()) {
+                /* Display-referred format (or the raw decode failed): build the working
+                   image from the decoded 8-bit image, as renderDevelopPreview does. */
+                auto built = std::make_shared<WorkingImage>();
+                InputTransform input;
+                if (input.FromImage(img, *built)) {
+                    WorkingImageCache::instance().put(fPath, built);
+                    work = built;
+                }
+            }
+        }
+        if (!work) {
+            QMetaObject::invokeMethod(this, [done]() { done(false, QImage()); });
+            return;
+        }
+
+        /* Step 2 (GUI thread): orientation + the mask prerequisites, which must not run
+           concurrently with the live session's use of the same path-keyed caches. */
+        QMetaObject::invokeMethod(this, [this, fPath, work, mj, depth, space, outSpace,
+                                         decodedHere, done]() {
+            const int degrees = work->sceneReferred
+                                    ? developOrientationDegrees(*work, fPath) : 0;
+
+            if (stackHasRangeMask(mj))   ensureRangeRef(fPath, *work, mj.global, degrees);
+            if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.global, degrees);
+            if (stackHasSkyMask(mj))     ensureSkyMask(fPath, *work, mj.global, degrees);
+            if (stackHasDepthMask(mj))   ensureDepthMask(fPath, *work, mj.global, degrees);
+            if (stackHasObjectMask(mj))
+                for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+                    for (const MaskComponent &c : L.components)
+                        if (c.tool == int(MaskTool::Object))
+                            ensureObjectMask(fPath, *work, mj.global, degrees, c.paramsJson);
+            for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
+                for (const MaskComponent &c : L.components)
+                    if (c.tool == int(MaskTool::Brush))
+                        ensureBrushSamFields(fPath, *work, mj.global, degrees, c.paramsJson);
+
+            /* Step 3 (worker): the composite itself. */
+            developRenderPool->start([this, fPath, work, mj, degrees, depth, space,
+                                      outSpace, decodedHere, done]() {
+                QImage out = developCompositeStack(*work, mj, degrees,
+                                                   /*fullRes*/true, 0, 0, fPath,
+                                                   nullptr, depth, space);
+                /* Tag at the export boundary, not inside the composite: the geometry and
+                   spot stages round-trip through OpenCV / fresh QImages, which would drop
+                   a tag set any earlier. */
+                if (!out.isNull()) out.setColorSpace(outSpace);
+                /* Leave the interactive cache as we found it: a long batch would
+                   otherwise evict the image the user is actively editing (the cache is
+                   byte-budgeted and this walks every selected image). */
+                if (decodedHere && fPath != dm->currentFilePath)
+                    WorkingImageCache::instance().remove(fPath);
+                QMetaObject::invokeMethod(this, [done, out]() {
+                    done(!out.isNull(), out);
+                });
+            });
+        });
+    });
+}
+
+void MW::previewPixelSource(const QString &fPath,
+                            std::function<void(bool, const QImage &)> done)
+{
+/*
+    The plain (no develop recipe) pixel source behind File > Save Preview as: the same
+    Pixmap decode the old SaveAsDlg used, so that command's output is unchanged apart
+    from now going through the shared exporter -- which gives it the naming, resizing,
+    ICC tag and metadata copy it never had.
+*/
+    if (G::isLogger) G::log("MW::previewPixelSource");
+
+    Pixmap pixmap(this, dm, metadata);
+    QImage image;
+    QString path = fPath;                    // Pixmap::load takes a non-const reference
+    const bool ok = pixmap.load(path, image, "MW::previewPixelSource");
+    done(ok && !image.isNull(), image);
+}
+
+void MW::onExportFinished(const ImageExporter::Result &result, bool addToFolderView)
+{
+/*
+    Report the outcome, and surface the new files if they landed in a folder that is
+    currently loaded -- otherwise an export into the folder you are looking at appears to
+    have done nothing until a manual refresh.
+*/
+    if (G::isLogger) G::log("MW::onExportFinished");
+
+    QString msg;
+    if (result.aborted)
+        msg = "Export cancelled -- " + QString::number(result.written.count()) + " written";
+    else
+        msg = "Exported " + QString::number(result.written.count()) + " image" +
+              (result.written.count() == 1 ? "" : "s");
+    if (!result.skipped.isEmpty())
+        msg += ", " + QString::number(result.skipped.count()) + " skipped";
+    if (!result.failed.isEmpty())
+        msg += ", " + QString::number(result.failed.count()) + " failed";
+    if (G::popup) G::popup->showPopup(msg, 2500);
+
+    if (result.written.isEmpty()) return;
+
+    bool loadedFolderTouched = false;
+    for (const QString &folder : result.folders)
+        if (dm && dm->isFolderLoaded(folder)) loadedFolderTouched = true;
+
+    if (loadedFolderTouched) {
+        if (addToFolderView) insertFiles(result.written);
+        else refresh();
+    }
+    fsTree->updateCount();
+    bookmarks->updateCount();
+}
+
 void MW::developExport()
 {
 /*
-    "X" (Develop mode): export the developed image. NOT BUILT YET -- the render-to-file
-    path is still outstanding (see notes/Documentation.txt "Develop Export"). The action,
-    menu item, shortcut and help entry are wired so the feature only needs this body.
+    "X" (Develop mode): export the selected images with their develop recipes applied.
+    Opens the shared export dialog with the DEVELOP pixel source; the dialog collects the
+    settings and drives ImageExporter, which stays alive after the dialog closes only long
+    enough to finish (the dialog stays open for the duration).
 */
     if (G::isLogger) G::log("MW::developExport");
-    if (G::popup)
-        G::popup->showPopup("Develop export is not implemented yet.", 2000);
+
+    QStringList targets;
+    if (!prepareExport(targets)) return;
+
+    imageExporter->setPixelSource(
+        [this](const QString &fPath, ImageExporter::Done done) {
+            const ExportSettings &es = imageExporter->activeSettings();
+            developPixelSource(fPath, es.wants16Bit(),
+                               ImageExporter::renderSpace(es.space), done);
+        });
+
+    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentFilePath,
+                  filenameTemplates, ExportDlg::Mode::Develop, this);
+    QMetaObject::Connection c = connect(imageExporter, &ImageExporter::finished, this,
+        [this](const ImageExporter::Result &r) {
+            onExportFinished(r, imageExporter->activeSettings().addToFolderView);
+        });
+    dlg.exec();
+    disconnect(c);
+    if (exportPresets) exportPresets->writeLast(dlg.settings());
+}
+
+void MW::developExportWithPreset(const QString &presetName)
+{
+/*
+    Develop > Export with preset > <name>: run a saved export preset over the selection
+    with NO dialog. An export preset is complete (it carries its destination), so there is
+    nothing left to ask -- progress and the result go through G::popup instead.
+*/
+    if (G::isLogger) G::log("MW::developExportWithPreset");
+
+    QStringList targets;
+    if (!prepareExport(targets)) return;
+    if (!exportPresets->contains(presetName)) {
+        if (G::popup) G::popup->showPopup("Export preset not found: " + presetName, 2000);
+        return;
+    }
+
+    const ExportSettings s = exportPresets->read(presetName);
+    if (s.dest == ExportSettings::ChosenFolder && s.folderPath.isEmpty()) {
+        if (G::popup)
+            G::popup->showPopup("The export preset \"" + presetName +
+                                "\" has no destination folder.", 2500);
+        return;
+    }
+
+    imageExporter->setPixelSource(
+        [this](const QString &fPath, ImageExporter::Done done) {
+            const ExportSettings &es = imageExporter->activeSettings();
+            developPixelSource(fPath, es.wants16Bit(),
+                               ImageExporter::renderSpace(es.space), done);
+        });
+
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(targets.count());
+    G::popup->showPopup("Exporting " + QString::number(targets.count()) +
+                        " images with \"" + presetName + "\"", 0, true, 1);
+
+    /* Single-shot connections: the exporter outlives this call, so both are dropped in
+       the finished handler (which needs its own handle, hence the shared holder). */
+    auto conns = std::make_shared<QVector<QMetaObject::Connection>>();
+    conns->append(connect(imageExporter, &ImageExporter::progress, this,
+        [](int done, int) { if (G::popup) G::popup->setProgress(done); }));
+    conns->append(connect(imageExporter, &ImageExporter::finished, this,
+        [this, conns](const ImageExporter::Result &r) {
+            if (G::popup) { G::popup->setProgressVisible(false); G::popup->reset(); }
+            const bool addToView = imageExporter->activeSettings().addToFolderView;
+            for (const QMetaObject::Connection &c : *conns) disconnect(c);
+            onExportFinished(r, addToView);
+        }));
+
+    imageExporter->run(targets, s);
+}
+
+void MW::buildDevelopExportPresetMenu()
+{
+/*
+    Rebuild Develop > Export with preset from the preset store, the same way
+    embelExportMenu is rebuilt from the embellish templates. Disabled (and empty) until
+    the user has saved a preset.
+*/
+    if (!developExportPresetMenu) return;
+    developExportPresetMenu->clear();
+
+    if (!exportPresets) exportPresets = new ExportPresets(settings, this);
+    const QStringList names = exportPresets->names();
+    developExportPresetMenu->setEnabled(!names.isEmpty());
+    for (const QString &name : names) {
+        QAction *a = developExportPresetMenu->addAction(name);
+        connect(a, &QAction::triggered, this,
+                [this, name]() { developExportWithPreset(name); });
+    }
 }
 
 void MW::enterDevelopCrop()

@@ -108,6 +108,10 @@ public:
     int    memoryPressureLevel();       // 0 normal / 1 warn / 2 critical, from availableMemoryMB
     void   applyIconCachePressure();    // Layer 3: shrink-only pressure valve with hysteresis
     bool isPath(QString fPath);
+    /* Is folderPath one of the folders currently loaded? The single definition of that
+       test: folderSet answers the common case in O(1), and a cleaned comparison catches
+       the same folder spelled differently (trailing slash, "..", double separator). */
+    bool isFolderLoaded(const QString &folderPath) const;
     void rebuildRowFromPathHash();
     int nextPick();
     int prevPick();

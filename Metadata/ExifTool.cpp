@@ -148,13 +148,16 @@ int ExifTool::close()
     return process.exitCode();
 }
 
-void ExifTool::copyAllTags(QString src, QString dst)
+void ExifTool::copyAllTags(QString src, QString dst, bool excludeIcc)
 {
     if (!ensureRunning("ExifTool::copyAllTags")) return;
     QByteArray args;
     args += "-TagsFromFile\n";
     args += src.toUtf8() + "\n";
     args += "-all:all\n";
+    /* "--TAG" excludes: keep the ICC profile the writer already embedded, which describes
+       the pixels we actually produced, rather than the source's. */
+    if (excludeIcc) args += "--icc_profile:all\n";
     if (isOverWrite) args += "-overwrite_original\n";
     args += dst.toUtf8() + "\n";
     args += "-execute\n";

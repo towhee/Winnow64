@@ -18,6 +18,58 @@ inline float SrgbGamma(float v)
                            : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
 }
 
+/* Adobe RGB (1998) transfer: a pure power curve, gamma 563/256 = 2.19921875 exactly (the
+   spec's odd number, not 2.2 -- the difference is visible in a gradient). */
+constexpr float kAdobeGammaInv = 256.0f / 563.0f;
+
+/*
+    Linear working space (sRGB / Rec.709 primaries, D65) -> linear output primaries, row
+    major. Both are the product of sRGB->XYZ and XYZ->target with matching D65 white, so
+    no chromatic adaptation is involved and each row sums to 1 (white -> white).
+
+    Adobe RGB shares sRGB's red and blue primaries and differs only in green, which is why
+    its matrix is mostly identity -- red borrows from green, and blue borrows a little
+    green back.
+*/
+struct Encoding {
+    float m[9];         // primaries matrix; unused when identity
+    bool  identity;     // sRGB in, sRGB out: skip the matrix entirely
+    float gammaInv;     // 0 => sRGB piecewise transfer, else a pure power curve
+};
+
+Encoding EncodingFor(OutputTransform::Space space)
+{
+    switch (space) {
+    case OutputTransform::Space::DisplayP3:
+        return { { 0.8224620f, 0.1775380f, 0.0000000f,
+                   0.0331942f, 0.9668058f, 0.0000000f,
+                   0.0170826f, 0.0723974f, 0.9105199f }, false, 0.0f };
+    case OutputTransform::Space::AdobeRGB:
+        return { { 0.7151256f, 0.2848744f, 0.0000000f,
+                   0.0000000f, 1.0000000f, 0.0000000f,
+                   0.0000000f, 0.0411619f, 0.9588381f }, false, kAdobeGammaInv };
+    case OutputTransform::Space::sRGB:
+        break;
+    }
+    return { { 1,0,0, 0,1,0, 0,0,1 }, true, 0.0f };
+}
+
+/* Primaries conversion, in LINEAR -- before the transfer function, after the tone curve.
+   Values above 1 are left alone here; the transfer clamps. */
+inline void ToPrimaries(const float m[9], float &r, float &g, float &b)
+{
+    const float R = m[0]*r + m[1]*g + m[2]*b;
+    const float G = m[3]*r + m[4]*g + m[5]*b;
+    const float B = m[6]*r + m[7]*g + m[8]*b;
+    r = R; g = G; b = B;
+}
+
+/* Linear -> the output space's transfer function. */
+inline float Transfer(float v, float gammaInv)
+{
+    return gammaInv > 0.0f ? std::pow(Clamp01(v), gammaInv) : SrgbGamma(v);
+}
+
 /*
     Baseline tone curve for scene-referred (RAW) data: a fixed exposure lift followed by the
     ACES (Narkowicz) filmic shoulder, applied in linear before the sRGB transfer. A raw render
@@ -37,48 +89,20 @@ inline float BaselineTone(float v)
     return Clamp01((v * (a * v + b)) / (v * (c * v + d) + e));
 }
 
-} // namespace
-
-bool OutputTransform::ToImage(const WorkingImage &img, QImage &out)
+/*
+    Run processRows(y0, y1) over the image's rows, parallelised over disjoint row chunks
+    (QtConcurrent + the global pool) exactly as Develop::applyPointOps is. Rows are
+    disjoint, so the threads write into the output buffer without contention. Shared by
+    the 8-bit and 16-bit transforms -- only the per-pixel packing differs between them.
+*/
+template <typename RowFn>
+void RunRows(int H, RowFn processRows)
 {
-    if (!img.isValid()) return false;
-
-    const int W = img.width;
-    const int H = img.height;
-    const float scale = img.white > 0.0f ? 1.0f / img.white : 1.0f;
-
-    out = QImage(W, H, QImage::Format_RGB888);
-    if (out.isNull()) return false;
-
-    const bool tone = img.sceneReferred;    // baseline tone curve for RAW only
-    const float *rgb = img.rgb.data();
-    uchar *bits = out.bits();
-    const qsizetype bpl = out.bytesPerLine();
-
-    /* Per-pixel float -> 8-bit with the (optional) baseline tone curve and the sRGB transfer.
-       This is the dominant slider-drag cost (per-pixel pow), so it is parallelised over row
-       ranges the same way Develop::applyPointOps is (QtConcurrent + the global pool). Rows are
-       disjoint, so the threads write into out's buffer without contention. */
-    auto processRows = [=](int y0, int y1) {
-        for (int y = y0; y < y1; ++y) {
-            uchar *line = bits + static_cast<qsizetype>(y) * bpl;
-            const size_t base = static_cast<size_t>(y) * W * 3;
-            for (int x = 0; x < W; ++x) {
-                const size_t o = base + static_cast<size_t>(x) * 3;
-                for (int c = 0; c < 3; ++c) {
-                    float v = rgb[o + c] * scale;
-                    if (tone) v = BaselineTone(v);
-                    line[x * 3 + c] = static_cast<uchar>(std::lround(SrgbGamma(v) * 255.0f));
-                }
-            }
-        }
-    };
-
     const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
     const int kMinRowsPerChunk = 64;
     if (maxThreads == 1 || H < kMinRowsPerChunk * 2) {
         processRows(0, H);
-        return true;
+        return;
     }
 
     const int chunks = qMin(maxThreads, (H + kMinRowsPerChunk - 1) / kMinRowsPerChunk);
@@ -93,5 +117,109 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out)
                                          [processRows, y0, y1]() { processRows(y0, y1); }));
     }
     for (QFuture<void> &f : futures) f.waitForFinished();
+}
+
+} // namespace
+
+QColorSpace OutputTransform::ColorSpaceOf(Space space)
+{
+    switch (space) {
+    case Space::DisplayP3: return QColorSpace(QColorSpace::DisplayP3);
+    case Space::AdobeRGB:  return QColorSpace(QColorSpace::AdobeRgb);
+    case Space::sRGB:      break;
+    }
+    return QColorSpace(QColorSpace::SRgb);
+}
+
+bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space)
+{
+    if (!img.isValid()) return false;
+
+    const int W = img.width;
+    const int H = img.height;
+    const float scale = img.white > 0.0f ? 1.0f / img.white : 1.0f;
+
+    out = QImage(W, H, QImage::Format_RGB888);
+    if (out.isNull()) return false;
+
+    const bool tone = img.sceneReferred;    // baseline tone curve for RAW only
+    const Encoding enc = EncodingFor(space);
+    const float *rgb = img.rgb.data();
+    uchar *bits = out.bits();
+    const qsizetype bpl = out.bytesPerLine();
+
+    /* Per-pixel float -> 8-bit: the (optional) baseline tone curve, then the primaries
+       matrix in linear, then the transfer function. This is the dominant slider-drag cost
+       (per-pixel pow), so it runs over parallel row chunks (RunRows). The sRGB path skips
+       the matrix outright rather than multiplying by an identity. */
+    auto processRows = [=](int y0, int y1) {
+        for (int y = y0; y < y1; ++y) {
+            uchar *line = bits + static_cast<qsizetype>(y) * bpl;
+            const size_t base = static_cast<size_t>(y) * W * 3;
+            for (int x = 0; x < W; ++x) {
+                const size_t o = base + static_cast<size_t>(x) * 3;
+                float v[3];
+                for (int c = 0; c < 3; ++c) {
+                    v[c] = rgb[o + c] * scale;
+                    if (tone) v[c] = BaselineTone(v[c]);
+                }
+                if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
+                for (int c = 0; c < 3; ++c)
+                    line[x * 3 + c] = static_cast<uchar>(
+                        std::lround(Transfer(v[c], enc.gammaInv) * 255.0f));
+            }
+        }
+    };
+
+    RunRows(H, processRows);
+    return true;
+}
+
+bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space space)
+{
+/*
+    16-bit twin of ToImage, for the export path. Identical maths -- the same baseline tone
+    curve, primaries and transfer -- quantised to 16 bits per channel into
+    Format_RGBX64 (four quint16 per pixel: R, G, B, unused-opaque). The develop pipeline
+    is float
+    throughout, so this is the only stage that loses precision; at 16 bits the loss is
+    below what any downstream edit can reveal.
+*/
+    if (!img.isValid()) return false;
+
+    const int W = img.width;
+    const int H = img.height;
+    const float scale = img.white > 0.0f ? 1.0f / img.white : 1.0f;
+
+    out = QImage(W, H, QImage::Format_RGBX64);
+    if (out.isNull()) return false;
+
+    const bool tone = img.sceneReferred;    // baseline tone curve for RAW only
+    const Encoding enc = EncodingFor(space);
+    const float *rgb = img.rgb.data();
+    uchar *bits = out.bits();
+    const qsizetype bpl = out.bytesPerLine();
+
+    auto processRows = [=](int y0, int y1) {
+        for (int y = y0; y < y1; ++y) {
+            quint16 *line = reinterpret_cast<quint16*>(bits + static_cast<qsizetype>(y) * bpl);
+            const size_t base = static_cast<size_t>(y) * W * 3;
+            for (int x = 0; x < W; ++x) {
+                const size_t o = base + static_cast<size_t>(x) * 3;
+                float v[3];
+                for (int c = 0; c < 3; ++c) {
+                    v[c] = rgb[o + c] * scale;
+                    if (tone) v[c] = BaselineTone(v[c]);
+                }
+                if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
+                for (int c = 0; c < 3; ++c)
+                    line[x * 4 + c] = static_cast<quint16>(
+                        std::lround(Transfer(v[c], enc.gammaInv) * 65535.0f));
+                line[x * 4 + 3] = 0xFFFF;   // RGBX64: the fourth channel is unused/opaque
+            }
+        }
+    };
+
+    RunRows(H, processRows);
     return true;
 }

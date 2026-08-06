@@ -15,8 +15,23 @@
 
 <p>Additional layers each contain a layer mask.  The layer mask is created and modified using mask tools (linear gradient, brush ...).  Each mask tool can add to or subtract from the layer mask.  While a mask is active, the edits to Basic, Color and Effects are localized to the layer mask.
  
+<h2>Editing more than one image</h2>
+<p>Develop edits apply to <b>every selected image</b>.  If more than one image is selected a red banner appears at the top of the Develop panel telling you how many, because the other images are not on screen while you edit.  Each adjustment is copied to the other images as an absolute value, so Exposure +0.5 means +0.5 on all of them, whatever they started from.  Only settings that you actually change are copied &mdash; the rest of each image's recipe is left alone.</p>
+
+<p>Masks, spot heals and the crop are specific to the image they were made on and are never copied by an adjustment.  Paste Settings (and applying a preset) also apply to the whole selection, and those do carry the crop and spot heals, because you asked for that exact recipe.</p>
+
 <h2>Raw Files</h2>
 <p>In the base layer you can choose to source: either the raw data or the embedded preview image all cameras save in the raw files.  If you select 'Raw' then you can select how to demosaic (convert raw data into pixels).  If you choose Winnow to demosaic, then you can also run noise reduction on the raw data, which is much better than running noise reduction later in the develop pipeline when the pixels are already 'baked'.</p>
+
+<h2>Export</h2>
+<p>Press <b>X</b> (or Develop &gt; Export Developed Image) to write the selected images out with their develop settings applied.  Every selected image is exported with <b>its own recipe</b> &mdash; masks, spot heals and crop included &mdash; not the recipe of the image you happen to be looking at.</p>
+
+<p>The export dialog covers where the files go (a subfolder of the source folder, or any folder you choose), what they are called (a filename template plus a suffix, and what to do when the name already exists), the format, and the size.  Beyond JPEG, PNG and BMP you can write <b>TIFF</b> &mdash; at 8 or <b>16 bits</b> per channel, which is worth using when the image will be edited further &mdash; and, on macOS, HEIC.  Turn on <b>Copy metadata from the original</b> to carry the camera, lens, date and copyright across; it costs about a fifth of a second per image.</p>
+
+<p>Exporting a folder of raw files takes a while, so the export runs in the background: the progress bar counts the images and <b>Stop</b> ends the run, leaving the files already written in place.</p>
+
+<h2>Export presets</h2>
+<p>Save the settings in the export dialog as a named preset with <b>New</b>.  An export preset remembers <i>everything</i>, including the destination folder, so Develop &gt; <b>Export with preset</b> &gt; <i>your preset</i> exports the selection immediately without opening the dialog at all.  Use it for the exports you repeat &mdash; a web-sized JPEG, a full-size 16-bit TIFF for retouching.</p>
 
 </body>
 </html>

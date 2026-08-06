@@ -53,6 +53,28 @@ cv::Mat toBgra(const QImage &img)
     return view.clone();
 }
 
+/* QImage -> owned 16-bit RGBA cv::Mat, the 16-bit twin of toBgra for a deep (export)
+   image. RGBA64 is R,G,B,A as quint16 -- a different channel ORDER to toBgra's BGRA,
+   which does not matter here: warpPerspective is geometric, and only channel 3 (alpha,
+   the same index in both) is read, for the validity mask. */
+cv::Mat toRgba64(const QImage &img)
+{
+    const QImage c = img.convertToFormat(QImage::Format_RGBA64);
+    cv::Mat view(c.height(), c.width(), CV_16UC4,
+                 const_cast<uchar *>(c.bits()), c.bytesPerLine());
+    return view.clone();
+}
+
+/* True for the 16-bit-per-channel QImage formats the export path produces. Everything
+   downstream that has to pick a working format branches on this so a 16-bit export is not
+   silently flattened to 8 bits by an intermediate stage. */
+bool isDeep(const QImage &img)
+{
+    return img.format() == QImage::Format_RGBX64 ||
+           img.format() == QImage::Format_RGBA64 ||
+           img.format() == QImage::Format_RGBA64_Premultiplied;
+}
+
 inline double dist(const cv::Point2f &a, const cv::Point2f &b)
 {
     return std::hypot(double(a.x) - b.x, double(a.y) - b.y);
@@ -110,15 +132,21 @@ QImage CropTransform::rectifyPerspective(const QImage &src, const QPointF quad[4
                                             0, 0, 1);
     const cv::Mat Hfull = T * Hm;
 
+    /* Warp at the SOURCE's bit depth: a 16-bit export image goes through a CV_16UC4
+       warp, an 8-bit one through CV_8UC4 as before. Routing everything through 8 bits
+       here would silently flatten a 16-bit export as soon as the recipe held a warp. */
+    const bool deep = isDeep(src);
     cv::Mat dst;
-    cv::warpPerspective(toBgra(src), dst, Hfull, cv::Size(outW, outH),
-                        cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0, 0));
+    cv::warpPerspective(deep ? toRgba64(src) : toBgra(src), dst, Hfull,
+                        cv::Size(outW, outH), cv::INTER_LINEAR, cv::BORDER_CONSTANT,
+                        cv::Scalar(0, 0, 0, 0));
 
-    /* Validity mask = solidly opaque pixels (drop the interpolated semi-transparent fringe). The
-       largest-inscribed-rectangle search runs on a downscaled mask for speed, then scales back. */
+    /* Validity mask = solidly opaque pixels (drop the interpolated semi-transparent
+       fringe). The largest-inscribed-rectangle search runs on a downscaled mask for
+       speed, then scales back. */
     std::vector<cv::Mat> ch;
     cv::split(dst, ch);
-    cv::Mat mask = ch[3] >= 250;
+    cv::Mat mask = ch[3] >= (deep ? 250 * 257 : 250);   // same cut-off at either depth
 
     const int kMaxSearch = 1000;
     const double s = std::min(1.0, double(kMaxSearch) / std::max(outW, outH));
@@ -138,10 +166,12 @@ QImage CropTransform::rectifyPerspective(const QImage &src, const QPointF quad[4
     outCropNorm = QRectF(double(best.x) / outW, double(best.y) / outH,
                          double(best.width) / outW, double(best.height) / outH);
 
-    /* BGRA cv::Mat -> ARGB32 QImage (same byte order). */
-    QImage out(dst.cols, dst.rows, QImage::Format_ARGB32);
+    /* cv::Mat -> QImage, same byte order in both cases (BGRA -> ARGB32's little-endian
+       bytes; RGBA-16 -> RGBA64). */
+    QImage out(dst.cols, dst.rows, deep ? QImage::Format_RGBA64 : QImage::Format_ARGB32);
+    const size_t rowBytes = size_t(dst.cols) * (deep ? 8 : 4);
     for (int y = 0; y < dst.rows; ++y)
-        std::memcpy(out.scanLine(y), dst.ptr(y), size_t(dst.cols) * 4);
+        std::memcpy(out.scanLine(y), dst.ptr(y), rowBytes);
     return out;
 }
 
@@ -151,13 +181,17 @@ QImage CropTransform::applyGeometry(const QImage &src, const Geometry &g)
 
     QImage img = src;
 
-    /* 1) Straighten: rotate about the centre, expanding the canvas (the crop trims the corners).
-       Convert to ARGB32 first so the exposed wedges are TRANSPARENT (not black), matching the warp
-       and letting straightenCropNorm / the view background behave. */
+    /* 1) Straighten: rotate about the centre, expanding the canvas (the crop trims the
+       corners). Convert to an ALPHA format first so the exposed wedges are TRANSPARENT
+       (not black), matching the warp and letting straightenCropNorm / the view background
+       behave. A 16-bit (export) image takes RGBA64 so the rotation does not flatten it to
+       8 bits; everything else keeps ARGB32. */
     if (g.straighten != 0.0) {
         QTransform t;
         t.rotate(g.straighten);
-        img = img.convertToFormat(QImage::Format_ARGB32).transformed(t, Qt::SmoothTransformation);
+        const QImage::Format alphaFmt =
+            isDeep(img) ? QImage::Format_RGBA64 : QImage::Format_ARGB32;
+        img = img.convertToFormat(alphaFmt).transformed(t, Qt::SmoothTransformation);
     }
 
     /* 2) Warp: rectify the 4-point quad (its corners are in this image's normalized space). */

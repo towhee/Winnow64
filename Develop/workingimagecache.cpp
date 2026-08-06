@@ -146,17 +146,23 @@ void WorkingImageCache::evictLocked()
 }
 
 bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit, QImage &out,
-                               RenderTimings *timings)
+                               RenderTimings *timings, OutDepth depth, Space space)
 {
     if (!work.isValid()) return false;
 
     OutputTransform output;
+    /* One place decides the final quantisation and colour space, for both paths below. */
+    auto toImage = [&output, depth, space](const WorkingImage &src, QImage &dst) {
+        return depth == OutDepth::Sixteen ? output.ToImage16(src, dst, space)
+                                          : output.ToImage(src, dst, space);
+    };
 
-    /* Identity edit: no Develop, no copy -- transform the cached image straight to QImage. */
+    /* Identity edit: no Develop, no copy -- transform the cached image straight to
+       QImage. */
     if (edit.isIdentity()) {
         QElapsedTimer t;
         if (timings) t.start();
-        const bool ok = output.ToImage(work, out);
+        const bool ok = toImage(work, out);
         if (timings) timings->toImageMs = t.elapsed();
         return ok;
     }
@@ -179,7 +185,7 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
         timings->vignetteMs = stage.vignetteMs;
         timings->grainMs = stage.grainMs;
     }
-    const bool ok = output.ToImage(developed, out);
+    const bool ok = toImage(developed, out);
     if (timings) timings->toImageMs = t.elapsed();
     return ok;
 }
@@ -222,7 +228,8 @@ inline float maskDec(float y) { return y <= 0.0f ? 0.0f : std::pow(y, 2.2f); }  
 
 bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &base,
                                     const std::vector<StackScope> &scopes,
-                                    QImage &out, RenderTimings *timings)
+                                    QImage &out, RenderTimings *timings, OutDepth depth,
+                                    Space space)
 {
     if (!work.isValid()) return false;
     const size_t n = size_t(work.width) * size_t(work.height);
@@ -283,7 +290,8 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
     if (timings) timings->developMs = t.restart();
 
     OutputTransform output;
-    const bool ok = output.ToImage(acc, out);
+    const bool ok = depth == OutDepth::Sixteen ? output.ToImage16(acc, out, space)
+                                               : output.ToImage(acc, out, space);
     if (timings) timings->toImageMs = t.elapsed();
     return ok;
 }

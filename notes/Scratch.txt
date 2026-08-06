@@ -804,3 +804,13 @@ presets.  There will only be user defined presets.  The shortcut for the Presets
 Create a 'New Preset Dialog' with the checkable list of develop settings in the tree under
 Scope.  Include buttons to select all/none for each subheader (Basic, Color...) and also for
 all the settings.
+
+Export
+
+Create the export function in develop. Review the Preview mode MW::saveAsFile and
+EmbelExport::exportImages. Consider a strategy for how we can combine/integrate these
+with the develop export in the future.
+
+Which image types you think you can convert to besides jpg, png and bmp?  Show me how you will layout the export dialog.
+
+

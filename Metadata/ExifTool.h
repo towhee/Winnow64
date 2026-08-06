@@ -10,7 +10,10 @@ class ExifTool : public QObject
 public:
     ExifTool();
     int execute(QStringList &args);
-    void copyAllTags(QString src, QString dst);
+    /* -TagsFromFile src -all:all dst. excludeIcc adds --icc_profile:all, for a dst whose
+       pixels are NOT in the source's colour space: the caller has already embedded the
+       right profile and must not have the source's copied over it. */
+    void copyAllTags(QString src, QString dst, bool excludeIcc = false);
     void copyICC(QString src, QString dst);
     QString readTag(QString fPath, QString tag);
     void writeTitle(QString dst, QString val);

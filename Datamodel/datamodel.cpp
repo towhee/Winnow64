@@ -3185,6 +3185,21 @@ QList<int> DataModel::failedMetadataRows()
     return rows;
 }
 
+bool DataModel::isFolderLoaded(const QString &folderPath) const
+{
+/*
+    Read-only, GUI thread, unlocked -- the same access the direct folderList readers this
+    replaced were already doing. folderList is only ever appended to by addFolder, or
+    cleared on a new load, both on the GUI thread.
+*/
+    if (folderPath.isEmpty()) return false;
+    if (folderSet.contains(folderPath)) return true;    // exact spelling: the usual case
+    const QString want = QDir::cleanPath(folderPath);
+    for (const QString &f : folderList)
+        if (QDir::cleanPath(f) == want) return true;
+    return false;
+}
+
 bool DataModel::isPath(QString fPath)
 {
     if (G::isLogger) G::log("DataModel::isPath");

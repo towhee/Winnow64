@@ -117,8 +117,10 @@ Table of Contents
          - Color Mix panel (colour grading)
          - Develop presets (the Presets dock)
          - Copy / paste develop settings (the develop clipboard)
+         - Multi-image editing (edits apply to the whole selection)
          - Develop history (the History dock)
          - Adding or changing a develop adjustment (checklist)
+         - Export (getting developed images out)
          - Stale presets and history (schema drift)
          - Corrupted or changed develop settings
 
@@ -1726,6 +1728,8 @@ The Menu vs Shortcut Pitfall
     Therefore menus whose children carry shortcuts are gated with the local setMenuEnabled()
     helper, which disables the menu AND every child action individually:
     ratingsMenu, labelsMenu, sortMenu, filterMenu, utilitiesMenu, embelExportMenu.
+    developExportPresetMenu is the exception that needs none of this: its items are built
+    on aboutToShow and carry no shortcuts, so disabling the menu alone is enough.
     The Open With submenu is iterated the same way but stays enabled so manageAppAction
     remains reachable; only its per-app actions are gated.
 
@@ -1780,7 +1784,7 @@ Develop Mode Local Shortcuts
         O   Mask overlay tint on/off    toggleMaskOverlayAction  (Preview: Open folder)
         S   Spot removal tool           developSpotAction        (Preview: Slideshow)
         W   White balance sampler       developWbSamplerAction   (Preview: New workspace)
-        X   Export (STUB, see below)    developExportAction      (Preview: Reject)
+        X   Export developed images     developExportAction      (Preview: Reject)
         G   Scopes layout cycle         developScopesAction      (Preview: Grid view)
         H   Develop History panel       historyDockVisibleAction (Preview: unbound)
         P   Develop Presets panel       presetsDockVisibleAction (Preview: Pick)
@@ -1935,11 +1939,13 @@ Develop Mode Local Shortcuts
     Preview -- since a disabled QAction's shortcut does not fire. See the "Develop presets
     (the Presets dock)" subsection in the DEVELOP section.
 
-    Export is a stub
+    Export with preset is a submenu, not an action
     ......................................................................................
-    MW::developExport() only shows a "not implemented yet" popup: the render-to-file path
-    does not exist yet.  Action, menu item, shortcut and help entry are wired, so the
-    feature needs only that function body.
+    Develop > Export with preset is a QMenu rebuilt on aboutToShow from the export preset
+    store (MW::buildDevelopExportPresetMenu), the way embelExportMenu is rebuilt from the
+    embellish templates. It has no action and therefore no shortcut, so it is kept
+    Develop-local by syncDevelopMenuEnabled disabling the MENU (which also disables it
+    when no export preset has been saved yet). See "Export" in the DEVELOP section.
 
 ------------------------------------------------------------------------------------------
 Rules by Action
@@ -1960,6 +1966,11 @@ Rules by Action
       • Embellish: embelExportMenu + children, embelNew/Read/SaveTemplate.
       • View: asLoupe, asGrid, asTable, copyInfoTextToClipboard, slideShow,
         zoomTo/In/Out/Toggle, thumbsEnlarge/Shrink.
+
+    Requires Develop mode (syncDevelopMenuEnabled, not the gate() table):
+      • every action in the Develop-mode shortcut table above, plus the
+        developExportPresetMenu submenu, which additionally requires at least one saved
+        export preset.
 
     Requires selection count >= 2:
       • asCompare (compare view), meanStack, focusStack.
@@ -2651,6 +2662,29 @@ Architecture
     (mean luma 0.434 vs 0.445; validated in numpy against the preview). It is a fixed default
     look, not per-image auto-exposure; a future Develop "exposure" can override it. Non-raw
     output is unchanged (tone curve skipped), so the unedited-JPEG round trip stays identity.
+
+    OUTPUT COLOUR SPACES: OutputTransform::ToImage / ToImage16 take an
+    OutputTransform::Space -- sRGB (default), DisplayP3 or AdobeRGB. The pipeline works in
+    scene-linear with sRGB (Rec.709) primaries at D65, so the conversion is a 3x3 to the
+    target primaries applied in LINEAR (after the baseline tone curve, before the
+    transfer), then the target's transfer curve: the sRGB piecewise curve for sRGB AND P3
+    (which is what the P3 display spec uses), gamma 563/256 = 2.19921875 for Adobe RGB.
+    Both matrices are non-negative with rows summing to 1, so white stays white and
+    in-gamut input cannot leave 0..1; the sRGB path skips the matrix entirely rather than
+    multiplying by an identity, so the loupe hot path is unchanged.
+
+    Adobe RGB shares sRGB's red and blue primaries -- only green differs -- so its matrix
+    is nearly identity. Whoever writes the QImage must TAG it to match, via
+    OutputTransform::ColorSpaceOf(space); a mismatch is worse than no tag at all.
+
+    Validated against Qt's own colour engine as an oracle (QImage::convertedToColorSpace
+    over 11 patches incl. primaries, greys and near-black): max channel error 0/255 for
+    sRGB and Display P3, 1/255 for Adobe RGB (Qt's fixed-point rounding). Arbitrary
+    destination ICC profiles via Lcms2 remain a later phase.
+
+    The space is threaded through WorkingImageCache::render / renderStack (Space, default
+    sRGB) and MW::developComposite / developCompositeStack exactly as OutDepth is, and is
+    chosen per export -- see COLOUR SPACE under Export.
 
     PERF (keeps Winnow fast): WORKINGIMAGE CACHE (Develop/workingimagecache.h, DONE). The
     expensive part of a RAW is UnpackCfa -> Demosaic -> RawColor, which produces the pre-develop
@@ -4944,11 +4978,77 @@ Copy / paste develop settings (the develop clipboard)
     would leave Cmd+Opt+V dead until the menu happened to be opened again after a copy.
     The slot reports "No develop settings have been copied yet" instead.
 
-    NOT DONE: pasting onto a multi-image selection (Lightroom's Sync Settings). Every
-    piece is in place -- read the target's sidecar into an EditStack, mergePreset, mark
-    dirty, flushImage -- but Winnow does not render develop into thumbnails, so a bulk
-    paste would change nothing the user can see. It needs a visible "edited" indicator in
-    the datamodel first.
+    MULTI-IMAGE. Paste lands on the WHOLE selection, not just the current image -- see
+    the next section. Paste is the whole-object path: every other selected image gets the
+    same mergePreset onto its scope 0, so the copied crop, straighten, warp and spot
+    heals travel with it exactly as they do on the current image. The confirmation says
+    how many images were written ("Pasted develop settings from IMG_1234.NEF onto 12
+    images"), since silence about a bulk overwrite is how a user loses forty recipes.
+
+
+Multi-image editing (edits apply to the whole selection)
+---------------------------------------------------------
+
+    With more than one image selected, EVERY develop edit made on the current image is
+    copied to every other selected image -- Lightroom's Auto Sync, always on. Paste
+    Settings and Apply Preset do the same. The Develop dock carries a red banner ("12
+    images selected -- every edit applies to all 12") whenever the selection is larger
+    than one, because the images being changed are off-screen and the change is
+    otherwise invisible until the user navigates to them.
+
+    THE RULES (DevelopProperties, "Multi-image editing" block in the header):
+
+      - ABSOLUTE, not relative. The target gets the same VALUE, not the same delta. So
+        Temp lands as the same Kelvin everywhere (temp/tint are absolute -- see White
+        balance above) and Exposure +0.5 means +0.5 EV on every image, whatever each
+        started from. A delta rule would be unpredictable on a mixed selection where
+        some images are already edited.
+      - GLOBAL SCOPE ONLY. Only scope 0's EditParams travel. A mask scope's params
+        describe pixels chosen from THIS image's content, so an edit made inside a mask
+        scope stays on the current image -- the same rule presets follow (the mask never
+        travels). Mask geometry, spot heals and crop / straighten / warp are per-image
+        for the same reason and are never propagated by an adjustment. (A pasted preset
+        is different: it carries its own per-image items and applies them, because the
+        user explicitly asked for that recipe.)
+      - WHAT CHANGED, not the whole recipe. Each commit is diffed against propagateBase
+        -- the current image's scope-0 params as of the previous commit -- and only the
+        fields that actually moved are written. Propagation therefore never overwrites
+        settings on the other images that the user did not just touch: syncing Exposure
+        onto twelve images leaves each one's own Temp alone.
+
+    WHERE IT HOOKS. queuePropagation() is called from noteScopeEdit(), the single commit
+    point every develop action already goes through. That is deliberate: any future edit
+    path gets multi-image behaviour by construction rather than by remembering to add a
+    call. The field-by-field diff and copy share ONE table of member pointers
+    (kFloatFields / kIntFields, above diffParamFields) so they cannot drift apart -- see
+    step 10 of the adjustment checklist.
+
+    BATCHING. A slider drag commits continuously and each target may need a sidecar read,
+    so commits accumulate in pendingFields and land once edits settle (kPropagateMs,
+    400 ms). propagateTargets is captured when a batch OPENS, so changing the selection
+    mid-drag cannot redirect edits the user has already made -- and the drag reads the
+    selection once instead of once per tick. flushPropagation() forces the batch out
+    early; MW::updateDevelopSelectionWarning calls it on every selection change, and it
+    also runs before an image switch, a history revert, a preset / paste, and flushAll.
+
+    PERSISTENCE. Propagated images are marked dirty like any edited image and written by
+    the ordinary flush path. The debounced write was widened from flushImage(current) to
+    flushAll() for this: a crash should lose no more of the other selected images than it
+    loses of the one being edited.
+
+    HISTORY is recorded on a propagated image only if it ALREADY has history, i.e. the
+    user has opened it this session. Seeding an unvisited image would push the live one
+    out of DevelopHistory's LRU store (kMaxImages = 40) for no benefit -- an image the
+    user has never opened has nothing to revert to but its sidecar, which is exactly what
+    its baseline entry will say when they do open it. Propagated entries coalesce on the
+    field set, so a long Exposure drag reads as one "Exposure" step on every image.
+
+    VIDEOS in the selection are skipped: they have no develop recipe, and writing one
+    would leave a sidecar the pipeline never reads.
+
+    STILL MISSING: thumbnails do not render develop, so a bulk edit changes nothing the
+    user can SEE in the grid. The banner is what covers that gap today; a per-row
+    "edited" indicator in the datamodel is the real fix.
 
 
 Develop history (the History dock)
@@ -5043,7 +5143,7 @@ Adding or changing a develop adjustment (checklist)
 
     A new slider (or a change to an existing one) is NOT a one-file edit: the value has to
     reach the pipeline, survive a round trip through the sidecar, repopulate the panel on
-    the next image, and be capturable by a preset. Twelve touch points, in dependency
+    the next image, and be capturable by a preset. Thirteen touch points, in dependency
     order. Working example: grainAmount (the Effects "Grain" slider) -- grep it to see
     every site at once.
 
@@ -5094,18 +5194,24 @@ Adding or changing a develop adjustment (checklist)
        applyKeyToParams (dock keys, scaled) and assignParam (JSON names, raw) are the two
        key namespaces, and the easiest thing in Develop to get wrong.
 
-    10. History -- FREE for a normal slider: the generic tree-edit handler calls noteEdit
+    10. Multi-image editing -- kFloatFields (or kIntFields) in the anonymous namespace
+        above DevelopProperties::diffParamFields. ONE row: the EditParams field name and
+        a pointer to the member. The diff and the copy both walk that table, so a field
+        missing from it is a field that silently does NOT propagate to the rest of the
+        selection while every other slider does -- the worst kind of bug to notice.
+
+    11. History -- FREE for a normal slider: the generic tree-edit handler calls noteEdit
         with the caption and value, and noteEdit snapshots the whole EditStack. NOT free
         for a custom editor (the colour wheel, the WB row, the tone-range slider) -- those
         need their own noteEdit(action, value, mergeKey) call, and the mergeKey is what
         collapses a drag into one history row instead of forty.
 
-    11. This file -- for a slider like Grain that is four places: the pipeline order list
+    12. This file -- for a slider like Grain that is four places: the pipeline order list
         under Architecture, the spatial-op description under Scope & mask model, the
         slider inventory under Develop dock (UI), and the leaf-folding note under Develop
         presets. Then sync the Table of Contents.
 
-    12. Docs/develophelp.html -- the in-app user help. Currently LAGS the panel (no
+    13. Docs/develophelp.html -- the in-app user help. Currently LAGS the panel (no
         Vignette or Grain entry), so this step is a known gap rather than an established
         habit.
 
@@ -5114,6 +5220,229 @@ Adding or changing a develop adjustment (checklist)
     splits) belongs to NO Group, cannot be previewed or reset per section, and must be
     read from scopes[0] in buildPreset() and written to scopes[0] in mergePreset()
     whatever scope is active.
+
+
+Export (getting developed images out)
+--------------------------------------
+
+    "X" in Develop mode exports the SELECTED images with each image's own develop recipe
+    applied. Everything about writing an image out of Winnow lives in one place, and the
+    only thing that varies between the three callers is where the pixels come from.
+
+    WHY ONE ENGINE. Winnow had two unrelated export loops, and neither could do the job:
+
+      • MW::saveAsFile / SaveAsDlg rendered through Pixmap::load -- the BROWSE decode --
+        so it applied no develop recipe, embedded no ICC profile and copied no EXIF. Three
+        formats, one quality spin, no naming or resizing.
+      • EmbelExport::exportImages had the mature batch (progress, Esc abort, subfolder
+        destination, suffix, overwrite policy, ExifTool tag/ICC/thumbnail copy) but reads
+        each file FROM DISK, so it cannot see a develop edit either, and its quality is
+        hardcoded at 100.
+
+    A third copy was the wrong end state, so Export/ owns the shared engine. SaveAsDlg has
+    been retired onto it (File > Save Preview as now opens the same dialog with the plain
+    pixel source and its develop-only rows hidden). EmbelExport is NOT migrated yet; when
+    it is, Develop -> Embellish composition becomes possible for the first time, because
+    Embel's source becomes the developed QImage instead of QImage(fPath).
+
+    THE PIECES
+
+      Export/exportsettings.h    ExportSettings (destination, naming, format, sizing) plus
+                                 the curated writable-format table.
+      Export/exportpresets.*     Named presets in QSettings; the DevelopPresets contract.
+      Export/imageexporter.*     ImageExporter: the batch engine.
+      Dialogs/exportdlg.*        The dialog (hand-built, no .ui).
+      Utilities/tokenfilename.*  The shared {TOKEN} filename parser.
+
+    PIXEL SOURCE. ImageExporter owns destination resolution, naming, uniquify/skip/
+    overwrite, resizing, saving, colour-space tagging, the ExifTool copy, progress and
+    abort. It does NOT generate pixels: a PixelSource callback does, and it is
+    ASYNCHRONOUS BY CONTRACT --
+
+        using Done = std::function<void(bool ok, const QImage &img)>;
+        using PixelSource = std::function<void(const QString &fPath, Done done)>;
+
+    -- because one full-resolution raw render is ~1s and a synchronous batch would freeze
+    the GUI for minutes. The batch is a CHAIN, not a loop: startNext() asks the source for
+    one image and returns; onImageReady() saves it and queues the next through the event
+    loop. That is what keeps progress painting and Cancel responsive throughout.
+
+    MW::developPixelSource is the develop provider and reuses renderDevelopFullResAsync's
+    staging exactly: GUI thread captures the recipe and the metadata, developRenderPool
+    decodes, GUI thread runs the mask prerequisites (ensureRangeRef / Subject / Sky /
+    Depth / Object / BrushSam -- they are synchronous and keep path-keyed caches the live
+    edit session also uses, so they must not race it), then developRenderPool composites.
+    An image the exporter decoded ITSELF is dropped from WorkingImageCache afterwards, so
+    a long batch does not evict the image the user is actively editing.
+
+    PER-IMAGE RECIPES. DevelopProperties::stackJobFor(fPath) is the export twin of
+    stackJob(): it reads the image's OWN stored EditStack (stackFor loads the sidecar on
+    first touch), ignores the History hover override (a hovered row must never reach a
+    file) and ignores the Transform / Replace preview eyes (those are VIEW toggles -- an
+    export always renders the stored recipe in full). Both share buildStackJob().
+
+    prepareExport() calls flushPropagation() + flushAll() FIRST. A develop edit across a
+    multi-image selection is batched (kPropagateMs), and the exporter reads stored stacks,
+    so without the flush an export fired straight after a slider drag would write the
+    pre-edit recipe for every image except the current one.
+
+    FORMATS. jpg, png, tif, heic and bmp, resolved at runtime against
+    QImageWriter::supportedImageFormats() so a missing plugin DROPS the entry rather than
+    failing at save time -- HEIC writes on macOS via the bundled qmacheif plugin and is
+    simply absent on a stock Windows build. The table says which controls each format
+    supports (depth, quality, TIFF compression) and the dialog HIDES the rest -- caption
+    and control both, in ExportDlg::updateEnabledStates. A setting the format does not
+    have is not one that could be switched on, so greying it would only invite the user
+    to look for the switch. (Greying is kept for controls whose row IS live but currently
+    irrelevant: the destination folder field, the sizing spin boxes.) Nothing in the
+    dialog hard-codes a format name.
+
+    Depth and Compression share their grid rows with Type and Space, which never hide, so
+    only the Quality row can empty out; buildUi pins every row to a shared height, so that
+    row's minimum is dropped to 0 while hidden or the empty row stays as a blank gap. Both
+    caption COLUMNS keep the width measured at build time, so the fields do not shift
+    sideways as the format changes.
+
+    DESTINATION. Three choices, widest scope first in the dialog: Source folder (beside
+    the originals), Source subfolder (a named subfolder of each image's own folder,
+    created on demand) and Folder (one chosen folder for the whole batch).
+    ExportSettings::Dest numbers them 0 SubfolderOfSource, 1 ChosenFolder, 2 SourceFolder
+    -- SourceFolder is APPENDED rather than inserted in reading order because "dest" is a
+    published preset key and renumbering would silently reinterpret every stored preset.
+
+    OVERWRITING THE ORIGINALS. Source folder + no suffix + no template + a format whose
+    extension matches the source resolves to the source path itself. Only exists ==
+    Overwrite actually destroys anything (Unique name and Skip already handle it), so
+    ExportDlg::onExportClicked counts those collisions and requires a confirmation naming
+    the count, defaulting to Cancel. Reachable before via Folder pointed at the source
+    folder; the Source folder option just makes it one click away.
+
+    AFTER THE BATCH (MW::onExportFinished). Nothing on screen changes unless the export
+    landed in a folder the datamodel has loaded. When it did, "Insert exported images
+    without rescanning the folder" picks HOW they appear: ticked inserts the written files
+    into the open model in place (insertFiles), unticked rescans the folders (refresh).
+    Both end up showing the new files -- the checkbox is insert-vs-rescan, not
+    show-vs-hide, which is what its old label ("Add exported images to the folder view")
+    got wrong. The setting key stays addToFolderView.
+
+    The checkbox is DISABLED unless a destination folder is loaded, since it can have no
+    effect otherwise (ImageExporter::willTouchLoadedFolder, re-evaluated on every edit;
+    for a subfolder-of-source destination it tests one folder per distinct SOURCE folder,
+    not one per file). Its checked state is left alone while disabled, so pointing the
+    export back at an open folder restores the user's choice.
+
+    DataModel::isFolderLoaded is the single definition of "is this folder loaded" -- the
+    dialog's enable test and onExportFinished's act-on test must not disagree about a
+    folder spelled with a trailing slash. folderSet answers the common case in O(1), with
+    a QDir::cleanPath comparison as the fallback.
+
+    16-BIT. OutputTransform::ToImage16 is the 16-bit twin of ToImage: same tone curve and
+    transfer function, packed to Format_RGBX64. The develop pipeline is float throughout,
+    so the 8-bit pack was the only place precision was lost. The depth is threaded through
+    WorkingImageCache::render / renderStack (OutDepth, defaulting to Eight so every
+    interactive caller is untouched) and developComposite / developCompositeStack.
+
+    Three later stages had to be taught 16 bits or they would have silently flattened the
+    whole frame:
+
+      • Straighten (CropTransform::applyGeometry) converted to ARGB32 for the
+        transparent corner wedges; it now picks RGBA64 for a deep image.
+      • Warp (rectifyPerspective) round-tripped through 8-bit BGRA OpenCV; it now warps
+        CV_16UC4 when the source is deep, with the opacity cut-off scaled to match.
+      • Spot heals are 8-bit by nature (LaMa / MI-GAN are 8-bit models, and the clone
+        path works in ARGB32). applySpots() heals an 8-bit COPY and writes back only
+        the pixels that actually CHANGED, promoted 257x. Healed pixels are synthesized so
+        8-bit precision there costs nothing, and every untouched pixel keeps its 16 bits.
+
+    COLOUR SPACE. sRGB, Display P3 or Adobe RGB, chosen in the dialog and carried in the
+    preset (OutputSpace). Every export is TAGGED -- exports used to be untagged, which
+    left every viewer guessing.
+
+    ImageExporter::renderSpace() maps the export layer's published OutputSpace onto
+    OutputTransform::Space; the two enums stay separate because Develop must not depend on
+    Export. The two pixel sources then reach the same place from opposite directions:
+
+      Develop  developPixelSource passes the space down through developCompositeStack ->
+               WorkingImageCache::renderStack -> OutputTransform, which ENCODES in it, and
+               tags the finished image with OutputTransform::ColorSpaceOf. save() sees a
+               tag that already matches and writes it through untouched. The tag is set at
+               the export boundary, NOT inside the composite: the spot and geometry stages
+               round-trip through OpenCV and fresh QImages, which drop it.
+      Preview  File > Save Preview as hands over the plain browse decode, so save()
+               CONVERTS it to the target with Qt (an untagged decode is taken as sRGB,
+               which is what untagged means in practice). Verified that Qt's conversion
+               works in place for RGB888, RGBX64, ARGB32 and RGB32.
+
+    THE ICC TRAP: copySourceMetadata used to copy the source's ICC profile onto the
+    export. That was always questionable -- a raw's profile describes the CAMERA space and
+    a JPEG's describes what it was shot in, neither of which survives the develop
+    pipeline -- and with a selectable output space it would flatly mislabel the file. The
+    copy now excludes it (ExifTool::copyAllTags gained excludeIcc, which adds
+    --icc_profile:all, rather than trusting -all:all's block-tag behaviour); the profile
+    the writer embedded is the one that describes the pixels.
+
+    Wide-gamut output at 8 bits can band in smooth gradients -- the dialog's tooltip says
+    so and points at 16-bit.
+
+    FIXED SIZE. The dialog is not resizable: ExportDlg::fitToContents pins it to the
+    design width (kDialogWidth, 820) and to whatever height the layout asks for. The
+    fields are sized to their content rather than to their grid column -- template 290,
+    suffix 165, every Format combo 100 -- so a wider window would show nothing more, and a
+    taller one would just pool space under the last section. fitToContents is re-run
+    whenever the form's height can change (updateEnabledStates hiding the Quality row,
+    setBusy showing the progress bar), since a fixed-size dialog cannot absorb that on
+    its own.
+
+    TWO FORMATTINGS, one dialog (SCRATCH). G::useExportDlgIngestStyle (global.cpp) picks
+    how ExportDlg is dressed: true formats it like IngestDlg -- QGroupBox sections whose
+    title is two points up on the body text, 32px-high buttons -- while false keeps the
+    original compact layout (bold caption over a rule, a tinted bordered panel for the
+    presets). Only ExportDlg::addSection and a few size choices differ;
+    every control, signal and behaviour is shared, so neither branch can drift in what it
+    DOES. This is a scratch flag for comparing the two in one build, exactly like
+    G::useScopeHeaderLab: once one wins, delete the other branch in buildUi/addSection and
+    retire the flag.
+
+    Note the group-box title font is set on the BOX, and a widget's font propagates to its
+    children, so addSection puts the controls in an inner widget whose font is reset to
+    the dialog's -- otherwise every control inherits the enlarged title size.
+
+    THE PRESET BAR keeps its selection while you edit. Changing a setting marks the
+    preset "modified" (the label beside the combo) and ENABLES Update, which writes the
+    form back to the still-selected preset; Update is disabled while the form matches.
+    The combo must NOT be reset to "(none)" on an edit: it is the only record of which
+    preset Update targets, so clearing it makes Update unreachable in the one situation
+    it exists for -- you can only want it after editing, and editing would have cleared
+    it. Rename and Delete act on the STORED preset, so they stay enabled whether or not
+    the form has been edited, and a Rename leaves an edited form still modified.
+
+    EXPORT PRESETS are COMPLETE, unlike develop presets. A develop preset is partial on
+    purpose (an absent key means "don't touch that adjustment"); an export preset is a
+    whole ExportSettings INCLUDING the destination, which is what lets Develop > Export
+    with preset > <name> run with no dialog at all. An absent key falls back to the
+    ExportSettings default, so an old preset survives a new field. The same versioning
+    contract as develop presets applies -- see "Stale presets and history" below: add keys
+    freely, never rename or rescale one in place.
+
+    THE TOKEN PARSER. {TOKEN} filename templates were parsed by two identical private
+    copies (IngestDlg::parseTokenString and RenameFileDlg::parseTokenString). Adding a
+    third for Export would have been three. The language now lives in
+    Utilities/tokenfilename.h -- one ordered table driving the token list, the example map
+    and the parser -- and Ingest and Rename delegate to it, so a token added there appears
+    in all three at once.
+
+    THE TEMPLATE EDITOR is likewise the one editor (Dialogs/tokendlg.h). File naming's
+    Template editor button, on the right of the Example row, opens TokenDlg on
+    MW::filenameTemplates -- the same map Ingest and Rename edit, held by REFERENCE by the
+    dialog and persisted by MW -- so a template created while exporting is offered by the
+    other two immediately, and vice versa. That shared map is why ExportDlg takes it
+    non-const.
+
+    Afterwards the combo is rebuilt and lands back on the template it was on: by key, then
+    (a RENAME moves the key while the token string stays put) by token string, then
+    "Original file name", which is where a DELETED template has to end up. The rebuild is
+    signal-blocked -- it is not a user edit -- so the preset is only marked modified when
+    the token string the export would actually use has changed.
 
 
 Stale presets and history (schema drift)
@@ -5128,6 +5457,15 @@ Stale presets and history (schema drift)
     migration is possible or needed. The only drift is cosmetic -- an entry's action label
     is the slider caption FROZEN as a string at record time, so renaming a caption
     mid-session leaves earlier rows reading the old name until the next launch.
+
+    EXPORT PRESETS have the same exposure and the same contract (Export/exportpresets.h):
+    they live in QSettings indefinitely and are applied by assigning stored values into an
+    ExportSettings, so add keys freely and never rename or rescale one in place. They are
+    less fragile in one respect -- read() starts from a default-constructed ExportSettings
+    and overwrites field by field, so a key added after a preset was saved keeps its
+    struct default instead of reading back as 0. When a key genuinely must change meaning:
+    bump kVersion and convert in migrate(), which runs inside read() before any value
+    reaches the struct.
 
     PRESETS ARE THE EXPOSURE POINT. They live in QSettings indefinitely, key by key, and
     are applied by assigning the stored value straight into an EditParams field. Three

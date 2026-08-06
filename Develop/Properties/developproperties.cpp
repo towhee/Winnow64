@@ -58,7 +58,16 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        pre-op flushes always run regardless. */
     debounceWriteTimer = new QTimer(this);
     debounceWriteTimer->setSingleShot(true);
-    connect(debounceWriteTimer, &QTimer::timeout, this, [this]{ flushImage(currentImagePath); });
+    /* flushAll, not just the current image: with a multi-image selection the propagated
+       edits made on the OTHER selected images are dirty too, and a crash should lose no
+       more of them than it loses of the image being edited. */
+    connect(debounceWriteTimer, &QTimer::timeout, this, [this]{ flushAll(); });
+
+    /* Multi-image editing: a slider drag commits continuously, so the copy to the other
+       selected images is batched and applied once the edits settle. */
+    propagateTimer = new QTimer(this);
+    propagateTimer->setSingleShot(true);
+    connect(propagateTimer, &QTimer::timeout, this, [this]{ flushPropagation(); });
 
     /* Persist the Basic/Color/Effects section expand-state across sessions (QSettings). Fires for
        every expand/collapse; persistSectionExpanded filters to the three section headers. */
@@ -3152,11 +3161,37 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
     /* A hovered History row overrides what renders, without disturbing the stored stack
        or the sliders (see previewHistoryEntry). */
     const EditStack s = previewActive ? previewStack : stackCache.value(currentImagePath);
-    /* Transform Preview: previewed off -> bypass geometry at render (identity), while the stored
-       crop/warp stays in the cache so the overlay still draws (see currentGeometry). */
-    job.geometry = s.geometry.show ? s.geometry : Geometry();
+    /* Transform Preview: previewed off -> bypass geometry at render (identity), while
+       the stored crop/warp stays in the cache so the overlay still draws (see
+       currentGeometry). */
+    const bool useGeometry = s.geometry.show;
     /* Replace preview eye off -> render without the heals (spots stay in the cache). */
-    if (spotsShown) job.spots = s.spots; // healed before geometry (Global-only too)
+    return buildStackJob(s, useGeometry, spotsShown);
+}
+
+DevelopProperties::StackRenderJob DevelopProperties::stackJobFor(const QString &fPath)
+{
+/*
+    The EXPORT twin of stackJob(): the stack for ANY image, read from that image's own
+    stored EditStack rather than the dock's current one. See the header for why the
+    History hover override and the two preview eyes are deliberately not consulted.
+*/
+    if (fPath.isEmpty()) return StackRenderJob();
+    /* Always render the stored recipe in full: geometry on, spots on. */
+    return buildStackJob(stackFor(fPath), true, true);
+}
+
+DevelopProperties::StackRenderJob
+DevelopProperties::buildStackJob(const EditStack &s, bool useGeometry, bool useSpots) const
+{
+/*
+    The shared body behind stackJob() (preview) and stackJobFor() (export). The two
+    differ only in WHICH stack they hand in and whether the view toggles apply, so the
+    compositing rules below live here once.
+*/
+    StackRenderJob job;
+    job.geometry = useGeometry ? s.geometry : Geometry();
+    if (useSpots) job.spots = s.spots;   // healed before geometry (Global-only too)
     if (s.scopes.isEmpty()) return job;
     /* Global (scope 0): apply its params (previewed groups folded off) when enabled; a
        disabled Global contributes identity params -- the image with no develop adjustments,
@@ -3303,6 +3338,9 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     maskLatched = false;         // a fresh image starts with no latched mask overlay
     previewActive = false;       // a History hover does not follow the image
     previewStack = EditStack();
+    /* A queued multi-image batch belongs to the image being left; land it before the
+       diff base moves to the new image. */
+    flushPropagation();
     flushImage(currentImagePath);              // persist edits to the image being left
     cancelWbDropper();                  // an armed dropper does not follow the image
     currentImagePath = fPath;
@@ -3312,26 +3350,16 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     }
 
     /* Load the stack on first touch (cheap: no sidecar => fast empty read), then cache
-       it. A sidecar is a user file and can be corrupt: fromBase64 range-checks what it
-       can and reports what it could not, so a bad record degrades to "no edits" rather
-       than feeding NaNs into the pipeline -- and the user is told, not silently
-       emptied. */
-    if (!stackCache.contains(fPath)) {
-        EditStack::Status st = EditStack::Status::Absent;
-        QStringList issues;
-        stackCache.insert(fPath, EditStack::fromBase64(
-                              Metadata::readDevelopSidecar(fPath), &st, &issues));
-        reportStackIssues(fPath, int(st), issues);
-    }
-
-    /* Ensure at least one scope so the combo + active editing have something to point at. An
-       all-identity stack is still treated as identity (not persisted), so this never creates a
-       sidecar for an unedited image. */
-    EditStack &s = stackCache[fPath];
-    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
-    s.scopes[0].name = "Global";    // index 0 is the (un-removable) Global scope
+       it, with at least one scope so the combo + active editing have something to point
+       at (stackFor). A sidecar is a user file and can be corrupt: fromBase64 range-checks
+       what it can and reports what it could not, so a bad record degrades to "no edits"
+       rather than feeding NaNs into the pipeline -- and the user is told, not silently
+       emptied. An all-identity stack is still treated as identity (not persisted), so
+       this never creates a sidecar for an unedited image. */
+    EditStack &s = stackFor(fPath);
     activeScopeIndex = 0;
     selectedMaskIndex = -1;
+    syncPropagateBase();     // multi-image edits are diffed from this image's state
 
     /* Baseline history entry for this image ("Original", or "Saved settings" when the
        sidecar already carried edits). Idempotent, so returning to an image keeps the
@@ -3388,6 +3416,10 @@ void DevelopProperties::noteScopeEdit(const QString &scope, const QString &actio
         history->record(currentImagePath, scope, action, value, mergeKey,
                         stackCache.value(currentImagePath));
     }
+    /* Multi-image editing: whatever this commit changed in the GLOBAL scope is queued
+       for the other selected images. Hooked here rather than at each edit site so it
+       covers every develop action by construction -- present and future. */
+    queuePropagation(action, value);
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
         debounceWriteTimer->start(kDebounceWriteMs);
 }
@@ -3452,6 +3484,9 @@ void DevelopProperties::applyHistoryEntry(int index)
     if (!history || currentImagePath.isEmpty()) return;
     const HistoryEntry *e = history->at(currentImagePath, index);
     if (!e) return;
+    /* History is per-image: a revert here must not un-edit the rest of the selection,
+       but a batch queued BEFORE the revert was a real edit and still has to land. */
+    flushPropagation();
 
     /* A half-built mask tool indexes into the scope we are about to replace, so retire it
        first (same teardown setCurrentImage does when leaving an image). */
@@ -3482,6 +3517,7 @@ void DevelopProperties::applyHistoryEntry(int index)
     buildTree();                        // scope/mask structure may differ from now
     if (spotMode) emitSpotPins();
     isRestoringHistory = false;
+    syncPropagateBase();                // the restored state is the new diff baseline
 
     emit paramsChanged();               // full render + settled full-res
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
@@ -3901,18 +3937,30 @@ void DevelopProperties::applyPreset(const QString &name)
         if (G::popup) G::popup->showPopup("No image to apply a develop preset to.");
         return;
     }
-    applyPresetObject(presets->read(name), "Preset: " + name, "Preset \"" + name + "\"");
+    const int n = applyPresetObject(presets->read(name), "Preset: " + name,
+                                    "Preset \"" + name + "\"");
+    /* Silent on a single image (the sliders move, which is confirmation enough), but a
+       multi-image selection must say what it just did to the images off-screen. */
+    if (n > 1 && G::popup)
+        G::popup->showPopup("Applied preset \"" + name + "\" to " +
+                            QString::number(n) + " images.");
 }
 
-void DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QString &label,
-                                          const QString &source)
+int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QString &label,
+                                         const QString &source)
 {
 /*
     Merge a preset-shaped object into the current image for real. Shared by applyPreset
     (a named preset from the Presets dock) and pasteDevelopSettings (the unnamed develop
     clipboard) -- the two differ only in where the object came from and how the history
     step and any warning are worded.
+
+    With more than one image selected it lands on the whole selection: the current image
+    here, every other selected image via propagatePreset. Returns how many images were
+    written.
 */
+    /* Whatever the sliders had queued for the selection belongs BEFORE this preset. */
+    flushPropagation();
     /* A preset stamped newer than this build's schema may hold keys whose MEANING has
        since changed; DevelopPresets::migrate passes it through untouched and assignParam
        drops what it does not know, so it still applies -- just not necessarily in full.
@@ -3949,8 +3997,14 @@ void DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QSt
     isRestoringHistory = false;
 
     /* ONE history step, labelled with the scope that received it ("Sky: Preset: Warm",
-       "Sky: Paste settings"). Also marks the sidecar dirty and arms the write. */
+       "Sky: Paste settings"). Also marks the sidecar dirty and arms the write.
+       propagateSuspended: the other selected images get the WHOLE preset object below,
+       not the scope-0 field diff this commit would otherwise queue. */
+    propagateSuspended = true;
     noteScopeEdit(historyScopeLabel(), label);
+    propagateSuspended = false;
+
+    const int nImages = 1 + propagatePreset(preset, label);
 
     /* The decode engine is not part of the EditStack: MW owns it and must re-decode.
        The stored token is matched EXPLICITLY against the two engines rather than testing
@@ -3969,6 +4023,7 @@ void DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QSt
     }
 
     emit paramsChanged();               // full render + settled full-res
+    return nImages;
 }
 
 /* ---- Copy / paste develop settings ------------------------------------------------ */
@@ -4033,11 +4088,15 @@ void DevelopProperties::pasteDevelopSettings()
                                 "Use Copy Develop Settings first.");
         return;
     }
-    applyPresetObject(buf, "Paste settings", "The copied develop settings");
+    const int n = applyPresetObject(buf, "Paste settings", "The copied develop settings");
     if (G::popup) {
         const QString from = buf.sourceImage.isEmpty()
                              ? QString() : " from " + buf.sourceImage;
-        G::popup->showPopup("Pasted develop settings" + from + ".");
+        /* Say how many images were pasted onto: with a multi-image selection the paste
+           reaches all of them, and silence about that is how a user overwrites 40
+           images without noticing. */
+        const QString onto = n > 1 ? " onto " + QString::number(n) + " images" : QString();
+        G::popup->showPopup("Pasted develop settings" + from + onto + ".");
     }
 }
 
@@ -4195,8 +4254,238 @@ void DevelopProperties::flushImage(const QString &fPath)
 
 void DevelopProperties::flushAll()
 {
+    flushPropagation();      // a queued batch is an edit; it must reach the sidecars too
     const QList<QString> paths = dirty.values();
     for (const QString &p : paths) flushImage(p);
+}
+
+/* --------------------------------------------------------------------------------
+   Multi-image editing (Lightroom's Auto Sync)
+
+   With more than one image selected, a Global adjustment made on the current image is
+   copied to every other selected image. See the "Multi-image editing" block in
+   developproperties.h for the rules; this is the machinery.
+   -------------------------------------------------------------------------------- */
+
+namespace {
+
+/* Every propagatable EditParams field, as a member pointer. ONE table drives both the
+   diff and the copy, so the two can never disagree about what an adjustment is -- and
+   adding an adjustment to EditParams means adding exactly one row here for multi-image
+   editing to pick it up (see the checklist in notes/Documentation.txt).
+
+   version is deliberately absent: it describes the struct, not an adjustment. */
+struct FloatField { const char *name; float EditParams::*m; };
+const FloatField kFloatFields[] = {
+    {"temp",                &EditParams::temp},
+    {"tint",                &EditParams::tint},
+    {"exposure",            &EditParams::exposure},
+    {"contrast",            &EditParams::contrast},
+    {"highlights",          &EditParams::highlights},
+    {"shadows",             &EditParams::shadows},
+    {"whites",              &EditParams::whites},
+    {"blacks",              &EditParams::blacks},
+    {"toneShadowCenter",    &EditParams::toneShadowCenter},
+    {"toneCrossover",       &EditParams::toneCrossover},
+    {"toneHighlightCenter", &EditParams::toneHighlightCenter},
+    {"texture",             &EditParams::texture},
+    {"dehaze",              &EditParams::dehaze},
+    {"red",                 &EditParams::red},
+    {"green",               &EditParams::green},
+    {"blue",                &EditParams::blue},
+    {"hue",                 &EditParams::hue},
+    {"saturation",          &EditParams::saturation},
+    {"vibrance",            &EditParams::vibrance},
+    {"luminance",           &EditParams::luminance},
+    {"gradeShadowHue",      &EditParams::gradeShadowHue},
+    {"gradeShadowSat",      &EditParams::gradeShadowSat},
+    {"gradeShadowLum",      &EditParams::gradeShadowLum},
+    {"gradeMidHue",         &EditParams::gradeMidHue},
+    {"gradeMidSat",         &EditParams::gradeMidSat},
+    {"gradeMidLum",         &EditParams::gradeMidLum},
+    {"gradeHighHue",        &EditParams::gradeHighHue},
+    {"gradeHighSat",        &EditParams::gradeHighSat},
+    {"gradeHighLum",        &EditParams::gradeHighLum},
+    {"denoiseLuma",         &EditParams::denoiseLuma},
+    {"denoiseChroma",       &EditParams::denoiseChroma},
+    {"localDenoiseLuma",    &EditParams::localDenoiseLuma},
+    {"localDenoiseChroma",  &EditParams::localDenoiseChroma},
+    {"vignetteExposure",    &EditParams::vignetteExposure},
+    {"vignetteFeather",     &EditParams::vignetteFeather},
+    {"grainAmount",         &EditParams::grainAmount},
+    {"grainSize",           &EditParams::grainSize},
+    {"grainRoughness",      &EditParams::grainRoughness},
+};
+struct IntField { const char *name; int EditParams::*m; };
+const IntField kIntFields[] = {
+    {"wbPreset", &EditParams::wbPreset},
+};
+
+}   // namespace
+
+QSet<QString> DevelopProperties::diffParamFields(const EditParams &a, const EditParams &b)
+{
+    QSet<QString> changed;
+    for (const FloatField &f : kFloatFields)
+        if (a.*(f.m) != b.*(f.m)) changed.insert(QString::fromLatin1(f.name));
+    for (const IntField &f : kIntFields)
+        if (a.*(f.m) != b.*(f.m)) changed.insert(QString::fromLatin1(f.name));
+    return changed;
+}
+
+void DevelopProperties::copyParamFields(const EditParams &src, EditParams &dst,
+                                        const QSet<QString> &fields)
+{
+    for (const FloatField &f : kFloatFields)
+        if (fields.contains(QString::fromLatin1(f.name))) dst.*(f.m) = src.*(f.m);
+    for (const IntField &f : kIntFields)
+        if (fields.contains(QString::fromLatin1(f.name))) dst.*(f.m) = src.*(f.m);
+}
+
+EditStack &DevelopProperties::stackFor(const QString &fPath)
+{
+    if (!stackCache.contains(fPath)) {
+        EditStack::Status st = EditStack::Status::Absent;
+        QStringList issues;
+        stackCache.insert(fPath, EditStack::fromBase64(
+                              Metadata::readDevelopSidecar(fPath), &st, &issues));
+        reportStackIssues(fPath, int(st), issues);
+    }
+    EditStack &s = stackCache[fPath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    s.scopes[0].name = "Global";      // index 0 is the (un-removable) Global scope
+    return s;
+}
+
+QStringList DevelopProperties::otherSelectedPaths() const
+{
+    QStringList paths;
+    if (!mw || !mw->dm || !mw->dm->selectionModel) return paths;
+    const QModelIndexList rows = mw->dm->selectionModel->selectedRows();
+    if (rows.count() < 2) return paths;          // nothing to fan out to
+    for (const QModelIndex &idx : rows) {
+        /* A video has no develop recipe; writing one would create a sidecar the
+           pipeline never reads. */
+        if (idx.siblingAtColumn(G::VideoColumn).data().toBool()) continue;
+        const QString p = idx.data(G::PathRole).toString();
+        if (p.isEmpty() || p == currentImagePath) continue;
+        paths << p;
+    }
+    return paths;
+}
+
+int DevelopProperties::selectedEditCount() const
+{
+    if (currentImagePath.isEmpty()) return 0;
+    return otherSelectedPaths().count() + 1;     // the current image is always included
+}
+
+void DevelopProperties::syncPropagateBase()
+{
+    const EditStack s = stackCache.value(currentImagePath);
+    propagateBase = s.scopes.isEmpty() ? EditParams() : s.scopes.at(0).params;
+}
+
+void DevelopProperties::queuePropagation(const QString &action, const QString &value)
+{
+    if (currentImagePath.isEmpty()) return;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (s.scopes.isEmpty()) return;
+    const EditParams &now = s.scopes.at(0).params;
+
+    /* Our own writes are not user edits: a repopulate or a history restore adopts the
+       new state as the diff base so the NEXT real edit measures from it, and nothing is
+       queued. Same for the whole-object paths (paste / preset), which propagate the
+       merged object themselves. */
+    if (propagateSuspended || isPopulating || isRestoringHistory) {
+        propagateBase = now;
+        return;
+    }
+
+    const QSet<QString> changed = diffParamFields(propagateBase, now);
+    propagateBase = now;                 // consumed either way: it is the new baseline
+    if (changed.isEmpty()) return;       // a mask/spot/geometry edit -- stays per-image
+
+    /* The batch belongs to the selection that was live when it OPENED, so a selection
+       change mid-drag cannot redirect edits the user has already made -- and a drag
+       (which commits continuously) reads the selection once, not once per tick. */
+    if (pendingFields.isEmpty()) {
+        propagateTargets = otherSelectedPaths();
+        if (propagateTargets.isEmpty()) return;   // single image: nothing to fan out to
+    }
+    pendingFields += changed;
+    propagateAction = action;
+    propagateValue  = value;
+    if (propagateTimer) propagateTimer->start(kPropagateMs);
+}
+
+void DevelopProperties::flushPropagation()
+{
+    if (propagateTimer) propagateTimer->stop();
+    if (pendingFields.isEmpty() || propagateTargets.isEmpty()) {
+        pendingFields.clear();
+        propagateTargets.clear();
+        return;
+    }
+    const QSet<QString> fields = pendingFields;
+    const QStringList targets = propagateTargets;
+    pendingFields.clear();
+    propagateTargets.clear();
+
+    const EditStack cur = stackCache.value(currentImagePath);
+    if (cur.scopes.isEmpty()) return;
+    const EditParams src = cur.scopes.at(0).params;
+
+    if (G::isLogger) G::log("DevelopProperties::flushPropagation",
+                            QString::number(targets.count()) + " images");
+
+    /* One history entry per target per settled gesture, coalesced on the field set: a
+       long Exposure drag reads as one "Exposure" step on every image, not one per tick.
+       Only images the user has already opened carry history (seeding an unvisited image
+       here would evict the live one from the LRU store for no benefit -- see
+       DevelopHistory::kMaxImages).
+
+       The key is SORTED: a QSet's iteration order is not stable, and an unstable key
+       would defeat the coalescing it exists for. */
+    QStringList names = fields.values();
+    names.sort();
+    const QString mergeKey = "sync/" + names.join(',');
+    for (const QString &p : targets) {
+        EditStack &t = stackFor(p);
+        copyParamFields(src, t.scopes[0].params, fields);
+        EditStack::sanitize(t);
+        dirty.insert(p);
+        if (history && history->count(p) > 0)
+            history->record(p, "Global", propagateAction, propagateValue, mergeKey, t);
+    }
+    if (G::isDevelopDebounceWrite && debounceWriteTimer)
+        debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+int DevelopProperties::propagatePreset(const DevelopPreset &preset, const QString &label)
+{
+/*
+    Paste Settings / Apply Preset onto the OTHER selected images. Unlike an adjustment
+    (which propagates only the fields that moved) a preset is applied as a whole object
+    through the same mergePreset the current image used, so the copied per-image items
+    -- crop, straighten, warp and appended spot heals -- travel exactly as they do on
+    the current image. The target is always scope 0: a mask scope on the current image
+    has no counterpart on another image (the mask never travels).
+*/
+    const QStringList targets = otherSelectedPaths();
+    if (targets.isEmpty()) return 0;
+    if (G::isLogger) G::log("DevelopProperties::propagatePreset",
+                            QString::number(targets.count()) + " images");
+    for (const QString &p : targets) {
+        EditStack &t = stackFor(p);
+        t = mergePreset(preset, t, 0);
+        dirty.insert(p);
+        if (history && history->count(p) > 0)
+            history->record(p, "Global", label, QString(), QString(), t);
+    }
+    if (G::isDevelopDebounceWrite && debounceWriteTimer)
+        debounceWriteTimer->start(kDebounceWriteMs);
+    return targets.count();
 }
 
 void DevelopProperties::populateSlidersFromStack()

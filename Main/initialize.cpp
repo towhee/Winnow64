@@ -694,6 +694,10 @@ void MW::createSelection()
        index changes (fileSelectionChange). */
     connect(sel->sm, &QItemSelectionModel::selectionChanged,
             this, &MW::enableSelectionDependentMenus);
+    /* Develop edits apply to the whole selection, so the dock's red multi-image banner
+       tracks the selection set (and any queued propagation lands before it changes). */
+    connect(sel->sm, &QItemSelectionModel::selectionChanged,
+            this, &MW::updateDevelopSelectionWarning);
     connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
     connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrentSF);
 }
@@ -1949,6 +1953,20 @@ void MW::createDevelopDock()
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
     developContainerLayout->setContentsMargins(0, 0, 0, 0);
     developContainerLayout->setSpacing(0);
+    /* Multi-image editing warning, pinned above everything else in the dock. Develop
+       edits and Paste Settings apply to the WHOLE selection, so when more than one
+       image is selected the user is editing images that are not on screen -- a red
+       banner is the only thing loud enough to make that obvious before the fact.
+       Hidden whenever the selection is a single image (updateDevelopSelectionWarning). */
+    developSelectionWarning = new QLabel(developContainer);
+    developSelectionWarning->setObjectName("developSelectionWarning");
+    developSelectionWarning->setAlignment(Qt::AlignCenter);
+    developSelectionWarning->setWordWrap(true);
+    developSelectionWarning->setStyleSheet(
+        "QLabel { background-color: #D01515; color: white; font-weight: bold;"
+        " padding: 4px 6px; }");
+    developSelectionWarning->setVisible(false);
+    developContainerLayout->addWidget(developSelectionWarning);
     scopesView = new ScopesView(developContainer);
     scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
     scopesView->setVisible(developScopesVisible);
@@ -2579,6 +2597,9 @@ void MW::setOperationMode(G::OperationMode mode)
         else {
             developProperties->flushAll();
         }
+        /* Show/hide the multi-image warning for the mode we just entered (the banner is
+           only reachable in Develop, but its text is stale until refreshed). */
+        updateDevelopSelectionWarning();
     }
     syncDevelopPanelEnabled();
 
@@ -2594,6 +2615,28 @@ void MW::toggleOperationMode()
     if (G::isLogger) G::log("MW::toggleOperationMode");
     setOperationMode(G::operationMode == G::OperationMode::Develop
                          ? G::OperationMode::Preview : G::OperationMode::Develop);
+}
+
+void MW::updateDevelopSelectionWarning()
+{
+/*
+    Refresh the Develop dock's red multi-image banner from the current selection. Every
+    develop edit and every Paste Settings applies to the whole selection, so the banner
+    is the standing warning that the panel is not editing one image.
+
+    It also lands any propagation the sliders have queued: that batch belongs to the
+    selection that was live when the edit was made, and it must be written before the
+    new selection can claim it (DevelopProperties::flushPropagation).
+*/
+    if (G::isLogger) G::log("MW::updateDevelopSelectionWarning");
+    if (developProperties) developProperties->flushPropagation();
+    if (!developSelectionWarning) return;
+    const int n = developProperties ? developProperties->selectedEditCount() : 0;
+    developSelectionWarning->setVisible(n > 1);
+    if (n > 1)
+        developSelectionWarning->setText(
+            QString::number(n) + " images selected - every edit applies to all " +
+            QString::number(n));
 }
 
 void MW::developDockVisibilityChange()
