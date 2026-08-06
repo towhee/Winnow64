@@ -8,6 +8,7 @@
 #include <memory>
 #include "Develop/workingimage.h"
 #include "Develop/editparams.h"
+#include "Develop/outputtransform.h"
 
 class QImage;
 
@@ -80,12 +81,26 @@ public:
         qint64 vignetteMs = 0; qint64 grainMs = 0;
     };
 
+    /* Output bit depth of the final OutputTransform. Eight (Format_RGB888) is the
+       interactive/loupe path and the default everywhere. Sixteen (Format_RGBX64) is used
+       only by the EXPORT path -- the develop pipeline is float throughout, so the pack to
+       8 bits is the sole place precision is lost. */
+    enum class OutDepth { Eight, Sixteen };
+
+    /* Output colour space of the final OutputTransform, defaulting to sRGB so every
+       interactive caller is unaffected. Only the EXPORT path passes anything else; note
+       that whatever writes the resulting QImage must TAG it to match (see
+       OutputTransform::ColorSpaceOf). */
+    using Space = OutputTransform::Space;
+
     /* Render a WorkingImage through Develop + OutputTransform into out. Copies the image
        only when edit is non-identity (Develop mutates in place). Returns false if work is
        invalid or the output transform fails. Static and stateless: usable with a cached
        entry or any WorkingImage the caller owns. Fills *timings when non-null. */
     static bool render(const WorkingImage &work, const EditParams &edit, QImage &out,
-                       RenderTimings *timings = nullptr);
+                       RenderTimings *timings = nullptr,
+                       OutDepth depth = OutDepth::Eight,
+                       Space space = Space::sRGB);
 
     /* One scope of a stack composite: its develop params and a 0..1 mask (row-major width*height,
        matching work; empty => the scope applies globally). */
@@ -100,7 +115,9 @@ public:
        OutputTransform. An identity params side skips its develop (aliases work). */
     static bool renderStack(const WorkingImage &work, const EditParams &base,
                             const std::vector<StackScope> &scopes,
-                            QImage &out, RenderTimings *timings = nullptr);
+                            QImage &out, RenderTimings *timings = nullptr,
+                            OutDepth depth = OutDepth::Eight,
+                            Space space = Space::sRGB);
 
     /* Area-downsampled copy of src whose longest edge is <= targetLongEdge (white /
        sceneReferred carried through). Used to build the interactive develop PROXY so a slider

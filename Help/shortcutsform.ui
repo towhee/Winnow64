@@ -1321,7 +1321,7 @@
          <string>X</string>
         </property>
         <property name="text">
-         <string>Exports the developed image; in Develop mode. NOT IMPLEMENTED YET</string>
+         <string>Exports the selected images with their develop settings applied; in Develop mode</string>
         </property>
        </item>
        <item>

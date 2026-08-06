@@ -49,7 +49,6 @@ private:
     void initExampleMap();
     void updateExistingSequence();
     int getSequenceStart(const QString &path);
-    bool isToken(QString tokenString, int pos);
     QString parseTokenString(QFileInfo info, QString tokenString);
     void updateExample();
     void diagFiles();
@@ -72,10 +71,6 @@ private:
     QMap<QString, QString> exampleMap;
     QStringList tokens;
     QDateTime createdDate;
-    QString currentToken;
-    int tokenStart;
-    int tokenEnd;
-    int seqWidth;
     int seqNum;
     QDate seqDate;
 

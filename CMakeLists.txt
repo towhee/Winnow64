@@ -165,8 +165,8 @@ set(WINNOW_SOURCES
     Dialogs/managetilesdlg.cpp
     Dialogs/patterndlg.cpp
     Dialogs/preferencesdlg.cpp
+    Dialogs/exportdlg.cpp
     Dialogs/renamedlg.cpp
-    Dialogs/saveasdlg.cpp
     Dialogs/selectionorpicksdlg.cpp
     Dialogs/testaligndlg.cpp
     Dialogs/tokendlg.cpp
@@ -181,6 +181,10 @@ set(WINNOW_SOURCES
     Embellish/embel.cpp
     Embellish/embelexport.cpp
     Embellish/Properties/embelproperties.cpp
+
+    # Export
+    Export/exportpresets.cpp
+    Export/imageexporter.cpp
 
     # File
     File/bookmarks.cpp
@@ -349,6 +353,7 @@ set(WINNOW_SOURCES
     Utilities/reportdialog.cpp
     Utilities/showhelp.cpp
     Utilities/stresstest.cpp
+    Utilities/tokenfilename.cpp
     Utilities/usbutil.cpp
     Utilities/utilities.cpp
     Utilities/winnets.cpp
@@ -431,8 +436,8 @@ set(WINNOW_HEADERS
     Dialogs/managetilesdlg.h
     Dialogs/patterndlg.h
     Dialogs/preferencesdlg.h
+    Dialogs/exportdlg.h
     Dialogs/renamedlg.h
-    Dialogs/saveasdlg.h
     Dialogs/selectionorpicksdlg.h
     Dialogs/testaligndlg.h
     Dialogs/tokendlg.h
@@ -449,6 +454,10 @@ set(WINNOW_HEADERS
     Embellish/embel.h
     Embellish/embelexport.h
     Embellish/Properties/embelproperties.h
+
+    Export/exportpresets.h
+    Export/exportsettings.h
+    Export/imageexporter.h
 
     File/bookmarks.h
     File/fstree.h
@@ -575,6 +584,7 @@ set(WINNOW_HEADERS
     Utilities/reportdialog.h
     Utilities/showhelp.h
     Utilities/stresstest.h
+    Utilities/tokenfilename.h
     Utilities/usbutil.h
     Utilities/utilities.h
     Utilities/winnets.h
@@ -614,7 +624,6 @@ set(WINNOW_FORMS
     Dialogs/patterndlg.ui
     Dialogs/renamedlg.ui
     Dialogs/renamefiledlg.ui
-    Dialogs/saveasdlg.ui
     Dialogs/selectionorpicksdlg.ui
     Dialogs/test1.ui
     Dialogs/test12.ui

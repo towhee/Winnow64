@@ -66,6 +66,20 @@ public:
     };
     StackRenderJob stackJob();
 
+    /* stackJob for ANY image, for the non-interactive EXPORT path. It differs from
+       stackJob() in exactly the ways a render-to-file must differ from a preview:
+
+         o It reads the image's OWN stored stack (stackFor loads the sidecar on first
+           touch), so a batch export gives every selected image its own recipe.
+         o The History hover override (previewStack) is ignored -- a hovered row must
+           never leak into an exported file.
+         o The Transform / Replace preview eyes (geometry.show, spotsShown) are ignored.
+           Those are VIEW toggles: an export always renders the stored recipe in full.
+
+       Not const: stackFor() caches the sidecar it just read. It does not otherwise touch
+       the edit state -- nothing here marks an image dirty or records history. */
+    StackRenderJob stackJobFor(const QString &fPath);
+
     /* Whole-mask overlay: true when a mask tool is expanded on a mask (so MW should
        show the composited mask), plus the active scope's ordered mask tools to composite. */
     bool maskOverlayActive() const;
@@ -96,8 +110,23 @@ public:
        drags to the active scope's tone-split params and keep a pointer so image switches push the
        saved positions back into it. */
     void bindToneSlider(ToneRegionSlider *slider);
-    void flushImage(const QString &fPath);        // write one image's dirty stack to its sidecar
-    void flushAll();                              // write all dirty stacks (quit / pre-op)
+    void flushImage(const QString &fPath);  // write one image's dirty stack to sidecar
+    void flushAll();                        // write every dirty stack (quit/pre-op)
+
+    /* ---- Multi-image editing (edits apply to the whole selection) -------------------
+       When more than one image is selected, a Global adjustment made on the current
+       image is copied to every other selected image (Lightroom's Auto Sync). See the
+       "Multi-image editing" block in the private section for the rules.
+
+       flushPropagation applies whatever is queued RIGHT NOW instead of waiting for the
+       debounce. MW calls it whenever the selection changes (the queued batch belongs to
+       the selection that was live when editing started, so it must land first) and
+       before any operation that reads the sidecars.
+
+       selectedEditCount is what the Develop dock's red banner reports: how many images
+       the next edit will touch (1 = just the current image). */
+    void flushPropagation();
+    int  selectedEditCount() const;
 
     /* The scope dropdown (scopes + scope actions) and the preview eye live in a gradient header
        widget ABOVE this tree (see ScopeHeaderBase). Bind it once; this class drives its
@@ -483,8 +512,11 @@ private:
     /* Apply an already-read preset to the current image: the shared body of applyPreset
        and pasteDevelopSettings (mask-tool teardown, merge, rebuild, one history step,
        decode-engine switch). `label` is the history text ("Preset: Warm" / "Paste
-       settings"); `source` names the preset or the clipboard in any warning. */
-    void applyPresetObject(const DevelopPreset &preset, const QString &label,
+       settings"); `source` names the preset or the clipboard in any warning.
+       With a multi-image selection it also merges into every other selected image
+       (propagatePreset). Returns the number of images written, so the caller's
+       confirmation can say so. */
+    int  applyPresetObject(const DevelopPreset &preset, const QString &label,
                            const QString &source);
 
     QString uniqueScopeName(const QString &name) const;  // unique within this image
@@ -520,6 +552,59 @@ private:
     QHash<QString, EditStack> stackCache;
     QSet<QString> dirty;
     QString currentImagePath;
+    /* stackCache entry for any image, loading it from the sidecar on first touch. The
+       propagation path needs stacks for images the user has never visited. */
+    EditStack &stackFor(const QString &fPath);
+
+    /* The compositing rules shared by stackJob() and stackJobFor(): which scopes and mask
+       components survive into a render job. The callers differ only in which EditStack
+       they supply and whether the geometry / spots view toggles apply. */
+    StackRenderJob buildStackJob(const EditStack &s, bool useGeometry, bool useSpots) const;
+
+    /* ---- Multi-image editing (Lightroom's Auto Sync) -------------------------------
+       With more than one image selected, an adjustment made on the current image is
+       copied to every other selected image. The rules:
+
+       o ABSOLUTE, not relative. The target gets the same VALUE, not the same delta --
+         so Temp lands as the same Kelvin on every image (temp/tint are absolute; see
+         Develop/whitebalance.h), and Exposure +0.5 means +0.5 EV everywhere. This is
+         what Auto Sync does and it is the only rule that makes a mixed selection
+         (some images already edited) predictable.
+       o GLOBAL SCOPE ONLY. Only scope 0's EditParams travel. A mask scope's params
+         describe pixels chosen from THIS image's content, so an edit made inside a
+         mask scope stays on the current image -- the same rule presets follow (the
+         mask never travels). Mask geometry, spot heals and crop/straighten/warp are
+         per-image for the same reason and are never propagated by an adjustment.
+       o WHAT CHANGED, not the whole recipe. Each commit is diffed against
+         propagateBase (the current image's scope-0 params as of the previous commit)
+         and only the fields that actually moved are written, so propagation never
+         overwrites settings on the other images that the user did not just touch.
+
+       Paste Settings / Apply Preset do NOT go through the diff: they merge the whole
+       preset object into every selected image (propagatePreset), so the copied crop,
+       spots and per-image items travel exactly as they do on the current image.
+
+       BATCHING. A slider drag commits continuously and each target may need a sidecar
+       read, so commits accumulate into pendingFields and land once edits settle
+       (kPropagateMs). propagateTargets is captured when a batch OPENS, so changing the
+       selection mid-drag cannot redirect edits already made. */
+    void queuePropagation(const QString &action, const QString &value);
+    void syncPropagateBase();                  // adopt the current stack as the diff base
+    /* Whole-object merge into the other selected images; returns how many it wrote. */
+    int  propagatePreset(const DevelopPreset &preset, const QString &label);
+    QStringList otherSelectedPaths() const;    // selected images minus the current one
+    /* The names of the EditParams fields that differ, and the copy of those fields --
+       one field table drives both (see kFloatFields / kIntFields in the .cpp). */
+    static QSet<QString> diffParamFields(const EditParams &a, const EditParams &b);
+    static void copyParamFields(const EditParams &src, EditParams &dst,
+                                const QSet<QString> &fields);
+    EditParams propagateBase;              // current image scope-0 params at last commit
+    QSet<QString> pendingFields;           // fields waiting to be copied to the targets
+    QStringList propagateTargets;          // captured when the batch opened
+    QString propagateAction, propagateValue;    // history label for the batch
+    bool propagateSuspended = false;       // whole-object paths do their own propagation
+    QTimer *propagateTimer = nullptr;
+    static constexpr int kPropagateMs = 400;    // apply this long after edits settle
 
     /* ---- Corrupt / unreadable develop settings -------------------------------------
        Sidecars are read on every image the user visits, so a damaged folder must not pop

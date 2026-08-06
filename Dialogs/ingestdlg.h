@@ -58,7 +58,6 @@ public:
     Ui::IngestDlg *ui;
     void initTokenList();
     void initExampleMap();
-    bool isToken(QString tokenString, int pos);
     QString parseTokenString(QFileInfo info, QString tokenString);
     void ingest();
     void buildFileNameSequence();
@@ -142,7 +141,6 @@ public:
     int& filenameTemplateSelected;
     QString fileSuffix;
 
-    int seqWidth;
     int seqNum;
     QDate seqDate;
 
@@ -151,8 +149,6 @@ public:
     int fileCount;
     float fileMB;
 
-    QString currentToken;
-    int tokenStart, tokenEnd;
 
 private slots:
     void updateFolderPaths();

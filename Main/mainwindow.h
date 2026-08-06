@@ -54,6 +54,8 @@
 #include "Develop/Properties/maskpanel.h"         // lab UI mask-editing strip
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
+#include "Export/imageexporter.h"
+#include "Export/exportpresets.h"
 
 #include "Cache/cachedata.h"
 #include "Cache/metaread.h"
@@ -65,7 +67,7 @@
 
 #include "File/ingest.h"
 #include "ingestdlg.h"
-#include "saveasdlg.h"
+#include "exportdlg.h"
 #include "aboutdlg.h"
 #include "findduplicatesdlg.h"
 //#include "selectionorpicksdlg.h"
@@ -652,7 +654,11 @@ private slots:
     void toggleMaskBreakdown();   // scope menu: Result view <-> Breakdown (outlines)
     void developNewScope();       // "N": add a scope to the current image's stack
     void developAddToMask();        // "M": pop the Add/Subtract mask tool menu
-    void developExport();         // "X": export the developed image (not built yet)
+    void developExport();         // "X": export the developed selection (opens ExportDlg)
+    /* Develop > Export with preset > <name>: run the named export preset over the
+       selection with no dialog, reporting through G::popup. */
+    void developExportWithPreset(const QString &presetName);
+    void buildDevelopExportPresetMenu();     // rebuild it from the preset store
     void developSavePreset();     // Cmd+Shift+N: save develop state as a preset
     /* Cmd+Opt+C / Cmd+Opt+V: copy the ticked develop settings to the develop clipboard
        and merge them onto another image (Lightroom's Copy / Paste Settings). */
@@ -901,6 +907,25 @@ private slots:
 private:
 //    QApplication *app;
 
+    /* ---- Export helpers ------------------------------------------------------------
+       Plain methods, deliberately NOT slots: moc cannot parse a std::function parameter
+       (it reads "void(bool, const QImage&)" as a return type) and silently emits a broken
+       signature for the whole class.
+
+       prepareExport flushes pending develop edits to the sidecars, builds the selection
+       and lazily creates the exporter + preset store; it returns false when there is
+       nothing to export. The two *PixelSource methods are the ImageExporter::PixelSource
+       implementations -- develop renders the full stored recipe (staged across the GUI
+       thread and developRenderPool, like renderDevelopFullResAsync, so a batch never
+       freezes the UI), preview hands over the plain browse decode. onExportFinished is
+       the shared completion for every export entry point. */
+    bool prepareExport(QStringList &targets);
+    void developPixelSource(const QString &fPath, bool want16Bit,
+                            OutputTransform::Space space,
+                            std::function<void(bool, const QImage &)> done);
+    void previewPixelSource(const QString &fPath,
+                            std::function<void(bool, const QImage &)> done);
+    void onExportFinished(const ImageExporter::Result &result, bool addToFolderView);
 
     QMenuBar *thumbsMenuBar;
     QMenu *fileMenu;
@@ -1384,9 +1409,16 @@ private:
     /* The Presets dock's list of saved develop presets (hover previews it applied, a
        click applies it). DevelopProperties owns the store it views. */
     PresetsView *presetsView = nullptr;
-    /* Develop Transform (crop + perspective) panel: a control strip below the scopes and above
-       the property tree. Toggled by a button on the Develop editor bar and the "R" shortcut;
-       visibility persists (Develop/transformVisible). */
+    /* Multi-image editing warning: a red banner at the top of the Develop dock, shown
+       only when more than one image is selected, because every develop edit and every
+       Paste Settings then lands on ALL of them (DevelopProperties::flushPropagation).
+       Editing images you cannot see is destructive and invisible, so the warning is
+       loud. updateDevelopSelectionWarning refreshes it from the selection. */
+    QLabel *developSelectionWarning = nullptr;
+    void updateDevelopSelectionWarning();
+    /* Develop Transform (crop + perspective) panel: a control strip below the scopes
+       and above the property tree. Toggled by a button on the Develop editor bar and
+       the "R" shortcut; visibility persists (Develop/transformVisible). */
     TransformPanel *transformPanel = nullptr;
     /* Fill Replace (spot/fill/object heal) strip below the Transform panel. Visible only
        while the replace tool is armed (like the Transform panel / crop tool pairing). */
@@ -1572,7 +1604,11 @@ private:
     InfoView *infoView;
     Ingest *backgroundIngest = nullptr;
     IngestDlg *ingestDlg;
-    SaveAsDlg *saveAsDlg;
+    /* Export: one engine + one preset store shared by the Develop export, the no-dialog
+       preset export and File > Save Preview as. Created lazily by prepareExport(). */
+    ImageExporter *imageExporter = nullptr;
+    ExportPresets *exportPresets = nullptr;
+    QMenu         *developExportPresetMenu = nullptr;
     LoadUsbDlg *loadUsbDlg;
     AboutDlg *aboutDlg;
     WorkspaceDlg *workspaceDlg;

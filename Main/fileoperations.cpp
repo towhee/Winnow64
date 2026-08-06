@@ -218,28 +218,35 @@ void MW::shareFiles()
 
 void MW::saveAsFile()
 {
-    if (G::isLogger) G::log("MW::saveAsFile");
-    QModelIndexList selection = dm->selectionModel->selectedRows();
-    if (selection.length() == 0) {
-        G::popup->showPopup("No images selected for save as operation", 1500);
-        return;
-    }
-    saveAsDlg = new SaveAsDlg(selection, metadata, dm);
-    saveAsDlg->setStyleSheet(G::css);
-    if (saveAsDlg->exec() == QDialog::Accepted) {
-        QString savedFolderPath = saveAsDlg->getFolderPath();
-        qDebug() << "MW::saveAsFile"
-                 << "savedFolderPath =" << savedFolderPath
-                 << "dm->folderList =" << dm->folderList
-            ;
-        if (dm->folderList.contains(savedFolderPath)) {
-            qDebug() << "User saved to:" << savedFolderPath << "Do something";
-            refresh();
-        }
-    }
+/*
+    File > Save Preview as: write the selected images out WITHOUT a develop recipe -- the
+    plain browse decode, which is what "preview" means here.
 
-    fsTree->updateCount();
-    bookmarks->updateCount();
+    This runs through the same ExportDlg / ImageExporter as the Develop export, differing
+    only in the pixel source it supplies. It replaces the old SaveAsDlg, whose private
+    copy of the export loop offered three formats, no naming control, no resizing, no ICC
+    tag and no metadata copy. Mode::Preview hides settings the browse decode cannot honour
+    (bit depth), since an 8-bit source cannot deliver a 16-bit file.
+*/
+    if (G::isLogger) G::log("MW::saveAsFile");
+
+    QStringList targets;
+    if (!prepareExport(targets)) return;
+
+    imageExporter->setPixelSource(
+        [this](const QString &fPath, ImageExporter::Done done) {
+            previewPixelSource(fPath, done);
+        });
+
+    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentFilePath,
+                  filenameTemplates, ExportDlg::Mode::Preview, this);
+    QMetaObject::Connection c = connect(imageExporter, &ImageExporter::finished, this,
+        [this](const ImageExporter::Result &r) {
+            onExportFinished(r, imageExporter->activeSettings().addToFolderView);
+        });
+    dlg.exec();
+    disconnect(c);
+    if (exportPresets) exportPresets->writeLast(dlg.settings());
 }
 
 void MW::dmInsert(QStringList pathList)

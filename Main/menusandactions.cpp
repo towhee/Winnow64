@@ -2183,6 +2183,13 @@ void MW::createUtilMenu()
     developMenu->addSeparator();
     developMenu->addAction(developScopesAction);
     developMenu->addAction(developExportAction);
+    /* Export with preset: the same batch as developExportAction but with no dialog, one
+       item per saved export preset. Rebuilt from the store on every show, the way
+       embelExportMenu is rebuilt from the embellish templates -- a preset saved in the
+       export dialog appears here without any other plumbing. */
+    developExportPresetMenu = developMenu->addMenu(tr("Export with preset"));
+    connect(developExportPresetMenu, &QMenu::aboutToShow,
+            this, &MW::buildDevelopExportPresetMenu);
     developMenu->addSeparator();
     developMenu->addAction(developCopySettingsAction);
     developMenu->addAction(developPasteSettingsAction);
@@ -3229,6 +3236,13 @@ void MW::syncDevelopMenuEnabled()
         developSavePresetAction, developCopySettingsAction, developPasteSettingsAction
     };
     for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);
+
+    /* The Export with preset submenu is Develop-local for the same reason, but it is a
+       QMenu (no action of its own), and it is meaningless with no saved presets. */
+    if (developExportPresetMenu) {
+        if (!exportPresets) exportPresets = new ExportPresets(settings, this);
+        developExportPresetMenu->setEnabled(inDevelop && !exportPresets->names().isEmpty());
+    }
 
     /* Paste names what it would paste, so the menu answers "have I copied anything?" on
        sight. It is deliberately NOT disabled on an empty clipboard: this runs on
