@@ -46,7 +46,7 @@ private:
     changed() and reports back to DevelopProperties:
 
       presetHovered(name)  hover settled on a row  -> preview that preset in the loupe
-      hoverEnded()         cursor left the list    -> restore the real state
+      hoverEnded()         hover left a preset row -> restore the real state
       presetChosen(name)   a row was clicked       -> apply the preset to the image
 
     plus the management requests raised from the context menu (the view owns the rename /
@@ -84,7 +84,8 @@ private:
     static constexpr int kHoverDelayMs = 120;
 
     QString nameForRow(int row) const;      // empty when the row is the placeholder
-    void setHover(int row);
+    void setHover(int row);                 // ends the preview off a preset row
+    void endHoverPreview();                 // emits hoverEnded() if a preview is live
     void showMenu(const QPoint &pos);
 
     DevelopPresets *presets = nullptr;

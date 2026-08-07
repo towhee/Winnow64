@@ -31,27 +31,64 @@ namespace {
    stretching to whatever share of the window its grid column happens to get. */
 constexpr int kDialogWidth   = 820;
 constexpr int kTemplateWidth = 290;
-constexpr int kFormatWidth   = 100;   // every combo in the Format group
+constexpr int kSuffixWidth   = 165;
+/* The Format group's two columns. Column 1 holds the values with something to say
+   ("Display P3", "Adobe RGB"); column 2's are short ("8-bit", "LZW"). */
+constexpr int kTypeWidth     = 130;   // Type, Space
+constexpr int kFormatWidth   = 100;   // Depth, Compression
+/* Extra gap before the Format group's second pair, on top of the caption column both
+   grids share. The Format fields are the narrower ones, so without it Depth and
+   Compression crowd up behind Type and Space. */
+constexpr int kFormatPairGap = 50;
+/* Buttons. kButtonWidth is the dialog's standard; the preset row's four are narrower so
+   New/Update/Rename/Delete and the combo they act on share one line. Both are FRAME
+   widths -- what you measure on screen -- and kButtonChrome converts to the content box a
+   stylesheet width means: widgetcss.cpp gives QPushButton padding-left/right 5px and a
+   1px border, so 5+5+1+1. */
+constexpr int kButtonWidth    = 100;
+constexpr int kPresetBtnWidth = 75;
+constexpr int kButtonChrome   = 12;
 
-/* Every button in this dialog is the same 100px wide. That happens to match the global
-   stylesheet's QPushButton min-width, but it is set explicitly here so the row widths do
-   not silently change if that global is ever revisited (see memory
+/* Buttons are kButtonWidth wide unless asked otherwise -- the preset row's four are
+   narrower, so they and the combo they act on fit one line. The global stylesheet's
+   QPushButton min-width is the same 100, but as a CONTENT width, which is why an
+   unguarded button in this dialog measures 112 (see memory
    project_global_pushbutton_minwidth). noFocus keeps the secondary buttons out of the tab
    order so Export stays the default.
 
-   fitText=true is for a caption that will not fit 100px ("Template editor"): the width is
-   left to the caption instead, which the global min-width still floors at 100.
+   THE WIDTH HAS TO BE SAID IN THE BUTTON'S OWN STYLESHEET. Nothing else survives: Qt
+   applies a stylesheet min-width by writing it onto the widget's minimumWidth when the
+   button is polished, and that write always lands last -- after setFixedWidth here, and
+   after an ensurePolished() meant to get ahead of it -- so a button asked for anything
+   under the global rule just comes out at the global width. Setting min-width AND
+   max-width on the button itself is the one instruction the re-polish cannot undo,
+   because it is what the re-polish applies. (Setting only min-width: 0 undoes the floor
+   but leaves each button at its own text width -- New 41, Rename 65.)
 
-   IngestDlg's buttons are 32px high, so the Ingest-style formatting matches that. */
-void sizeButton(QPushButton *b, bool noFocus = true, bool fitText = false)
+   A stylesheet width is the CONTENT box, so the padding and border come back on top:
+   hence kButtonChrome. That is the one number here that has to agree with widgetcss.cpp;
+   change the QPushButton padding there and these buttons move by the difference.
+
+   fitText=true is for a caption that will not fit ("Template editor"): no width is
+   imposed at all, so the caption sets it and the global min-width floors it.
+
+   The 32px height is IngestDlg's, which this dialog is dressed to match. */
+void sizeButton(QPushButton *b, bool noFocus = true, bool fitText = false,
+                int width = kButtonWidth)
 {
-    if (fitText) b->setMinimumWidth(b->sizeHint().width());
-    else b->setFixedWidth(100);
-    if (G::useExportDlgIngestStyle) b->setFixedHeight(32);
+    if (fitText) {
+        b->setMinimumWidth(b->sizeHint().width());
+    }
+    else {
+        const int content = qMax(0, width - kButtonChrome);
+        b->setStyleSheet(QString("QPushButton { min-width: %1px; max-width: %1px; }")
+                             .arg(content));
+    }
+    b->setFixedHeight(32);
     if (noFocus) b->setFocusPolicy(Qt::NoFocus);
 }
 
-/* The thin rule used both under a section caption and as a standalone divider. */
+/* The thin rule dividing the settings from the footer's action row. */
 QFrame *separatorLine(QWidget *parent)
 {
     QFrame *line = new QFrame(parent);
@@ -59,23 +96,6 @@ QFrame *separatorLine(QWidget *parent)
     line->setStyleSheet("QFrame { border-color:" + G::disabledColor.name() + ";"
                         "border-width:0.5px; border-style:inset; }");
     return line;
-}
-
-/* A section header: bold caption over a thin rule, matching the mock-up's grouping
-   without the heavy border a QGroupBox would draw. */
-QWidget *sectionHeader(const QString &title, QWidget *parent)
-{
-    QWidget *w = new QWidget(parent);
-    QVBoxLayout *v = new QVBoxLayout(w);
-    v->setContentsMargins(0, 8, 0, 2);
-    v->setSpacing(2);
-    QLabel *lab = new QLabel(title, w);
-    QFont f = lab->font();
-    f.setBold(true);
-    lab->setFont(f);
-    v->addWidget(lab);
-    v->addWidget(separatorLine(w));
-    return w;
 }
 } // namespace
 
@@ -132,13 +152,13 @@ void ExportDlg::fitToContents()
     The WIDTH is the design number (kDialogWidth). The HEIGHT is asked of the layout: the
     sizeHint is the height at which the trailing stretch contributes nothing, so the scope
     row keeps the same gap below it (to the footer rule) as above it. It also tracks what
-    actually varies -- the mode, the font size, what G::css adds to the controls, and
-    whether the Quality row is showing.
+    actually varies -- the mode, the font size, and what G::css adds to the controls.
 
-    Which is why it is recomputed rather than set once in the constructor:
-    updateEnabledStates hides whole rows as the format changes. The height constraint has
-    to be released before measuring, or the layout hands back the height already in force
-    instead of the one the contents now want.
+    Which is why it is recomputed rather than set once in the constructor: setBusy adds and
+    removes the progress bar. (Changing FORMAT does not change the height -- every control
+    the format hides shares a row with one it cannot hide.) The height constraint has to be
+    released before measuring, or the layout hands back the height already in force instead
+    of the one the contents now want.
 */
     setFixedWidth(kDialogWidth);
     setMinimumHeight(0);
@@ -149,14 +169,6 @@ void ExportDlg::fitToContents()
 
 QVBoxLayout *ExportDlg::addSection(QVBoxLayout *lay, const QString &title)
 {
-    if (!G::useExportDlgIngestStyle) {
-        lay->addWidget(sectionHeader(title, this));
-        QVBoxLayout *inner = new QVBoxLayout;
-        inner->setContentsMargins(0, 0, 0, 0);
-        lay->addLayout(inner);
-        return inner;
-    }
-
     /*
         IngestDlg groups its settings in QGroupBoxes whose title font is two points up on
         the body text (it hardcodes 14 against a 12pt default; taking the delta instead
@@ -197,8 +209,8 @@ void ExportDlg::buildUi()
        The preset controls act ON the rest of the dialog (they load and store the whole
        form) rather than being one of its settings, so both formattings set them apart --
        Ingest style with a QGroupBox like every other section, the original with its own
-       bordered, tinted panel. Two rows either way -- the name, then the actions on it --
-       so nothing is crowded however long a preset name is. */
+       bordered, tinted panel. One row either way -- the name and the four actions on it,
+       with the name taking whatever width the actions leave. */
     QVBoxLayout *presetLay = nullptr;
     if (G::useExportDlgIngestStyle) {
         presetLay = addSection(lay, tr("Preset"));
@@ -230,6 +242,7 @@ void ExportDlg::buildUi()
     }
 
     QHBoxLayout *presetRow = new QHBoxLayout;
+    presetRow->setSpacing(6);        // the four buttons read as one block of actions
     /* The group box supplies its own "Preset" title in Ingest style, so the inline bold
        caption would just repeat it. */
     if (!G::useExportDlgIngestStyle) {
@@ -240,9 +253,10 @@ void ExportDlg::buildUi()
         presetRow->addWidget(presetCaption);
     }
     presetCombo = new QComboBox(this);
-    /* Fill the row. AdjustToContents would shrink it back to the longest preset name, so
-       it is deliberately not used; an Expanding policy plus the layout stretch below lets
-       the combo take all the slack the caption and state label leave. */
+    /* Sized to what is left of the row once the state label and the four buttons have had
+       theirs -- the preset NAME is the variable-length thing here, so it gets the slack.
+       AdjustToContents would shrink it back to the longest name instead and is
+       deliberately not used; an Expanding policy plus the layout stretch does it. */
     presetCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     presetCombo->setMinimumWidth(220);
     presetRow->addWidget(presetCombo, 1);
@@ -254,22 +268,19 @@ void ExportDlg::buildUi()
     presetStateLab->setStyleSheet("QLabel { color:" + G::disabledColor.name() + ";"
                                   "font-style: italic; border: none; }");
     presetStateLab->setVisible(false);
-    presetRow->addWidget(presetStateLab);   // trails the combo at the right of the row
-    presetLay->addLayout(presetRow);
-    presetLay->addSpacing(10);       // breathing room between the name and its actions
+    presetRow->addWidget(presetStateLab);   // trails the combo, before its buttons
 
-    QHBoxLayout *presetBtnRow = new QHBoxLayout;
-    presetBtnRow->setSpacing(6);
+    /* The actions sit on the SAME row as the name they act on: four short verbs against
+       one combo read as one control, and the panel costs one line instead of two. */
     presetNewBtn    = new QPushButton(tr("New"), this);
     presetUpdateBtn = new QPushButton(tr("Update"), this);
     presetRenameBtn = new QPushButton(tr("Rename"), this);
     presetDeleteBtn = new QPushButton(tr("Delete"), this);
     for (QPushButton *b : {presetNewBtn, presetUpdateBtn, presetRenameBtn, presetDeleteBtn}) {
-        sizeButton(b);
-        presetBtnRow->addWidget(b);
+        sizeButton(b, /*noFocus*/true, /*fitText*/false, kPresetBtnWidth);
+        presetRow->addWidget(b);
     }
-    presetBtnRow->addStretch(1);
-    presetLay->addLayout(presetBtnRow);
+    presetLay->addLayout(presetRow);
 
     presetNewBtn->setToolTip(tr("Save these settings as a new named export preset"));
     presetRenameBtn->setToolTip(tr("Rename the selected preset"));
@@ -312,6 +323,12 @@ void ExportDlg::buildUi()
     QVector<QLabel *> capCol0, capCol2;
     auto cap = [&](const QString &text, QVector<QLabel *> &into) {
         QLabel *l = new QLabel(text, this);
+        /* RIGHT-aligned, because the caption column is pinned to the widest caption in
+           either grid: left-aligned, every shorter caption ends somewhere different and
+           leaves a ragged gap before its field. Flush right puts every caption the same
+           small distance from the control it names, which is what ties the two
+           together. */
+        l->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
         into.append(l);
         return l;
     };
@@ -323,7 +340,16 @@ void ExportDlg::buildUi()
        full width. */
     name->addWidget(cap(tr("Template:"), capCol0), 0, 0);
     templateCombo = new QComboBox(this);
-    templateCombo->addItem(tr("Original file name"));      // index 0 == no template
+    /* Exactly the templates, in the same order the token editor lists them -- the combo
+       and the editor are two views of MW's one map and must not disagree. There is no
+       synthetic "no template" entry: Ingest and Rename do not offer one either, and the
+       one this dialog used to add ("Original file name") sat one space away from the
+       real "Original filename" template that means the same thing. Keeping the original
+       name IS that template. */
+    if (filenameTemplates.isEmpty()) {        // same seed as IngestDlg and RenameFileDlg
+        filenameTemplates["YYYY-MM-DD_XXXX"] = "{YYYY}-{MM}-{DD}_{XXXX}";
+        filenameTemplates["Original filename"] = "{ORIGINAL FILENAME}";
+    }
     for (auto it = filenameTemplates.cbegin(); it != filenameTemplates.cend(); ++it)
         templateCombo->addItem(it.key(), it.value());
     templateCombo->setFixedWidth(kTemplateWidth);
@@ -332,7 +358,7 @@ void ExportDlg::buildUi()
     suffixEdit = new QLineEdit(this);
     /* A suffix is a handful of characters ("_dev"), so it is sized to that rather than
        taking column 3's full share the way the combos in the Format grid below do. */
-    suffixEdit->setFixedWidth(165);
+    suffixEdit->setFixedWidth(kSuffixWidth);
     name->addWidget(suffixEdit, 0, 3);
     name->addWidget(cap(tr("If the file exists:"), capCol0), 1, 0);
     QHBoxLayout *existsRow = new QHBoxLayout;
@@ -343,7 +369,9 @@ void ExportDlg::buildUi()
     existsRow->addWidget(uniqueRadio);
     existsRow->addWidget(skipRadio);
     existsRow->addStretch(1);
-    name->addLayout(existsRow, 1, 1, 1, 3);
+    /* Through the trailing slack column (see the alignment pass): these two rows use the
+       full width of the group, not just as far as the Suffix field. */
+    name->addLayout(existsRow, 1, 1, 1, 4);
     /* The example and the editor that changes it share the last row: the example grows
        from the left, the button is pushed to the right edge of the group, where the
        Destination group's Select button also sits. */
@@ -357,7 +385,7 @@ void ExportDlg::buildUi()
     exampleRow->addWidget(exampleLab);
     exampleRow->addStretch(1);
     exampleRow->addWidget(templateEditorBtn);
-    name->addLayout(exampleRow, 2, 1, 1, 3);
+    name->addLayout(exampleRow, 2, 1, 1, 4);
     nameLay->addLayout(name);
 
     /* ---- Format ---- */
@@ -391,50 +419,132 @@ void ExportDlg::buildUi()
     compressionCombo->addItem(tr("LZW"), 1);
     compressionCombo->addItem(tr("None"), 0);
     fmt->addWidget(compressionCombo, 1, 3);
-    /* All four the same width: their contents are short ("JPEG", "16-bit", "LZW"), and
-       four combos of one width read as one group where four different widths read as an
-       accident. */
-    for (QComboBox *c : {typeCombo, depthCombo, spaceCombo, compressionCombo})
+    /* One width per COLUMN, not one width for all four: two combos of a width read as a
+       column, four different widths read as an accident. The column-1 pair is the wider
+       one because that is where the long values live ("Display P3", "Adobe RGB").
+
+       Getting either number to stick takes two things, because G::css gives EVERY
+       QComboBox "min-width: 6em" and Qt applies a stylesheet min-width by writing it onto
+       the widget's minimumWidth at polish -- always last, after anything set here, which
+       is what floors an unguarded combo at about 130.
+
+       (1) Clear that floor in the combo's OWN sheet, so the re-polish writes 0 instead.
+       On its own that would leave the combo at its text width, since nothing is left to
+       hold it open. (2) The pinned grid column supplies the width instead: the column is
+       exactly kTypeWidth / kFormatWidth, the combo is Expanding, and setFixedWidth caps
+       it there -- a maximum, unlike a minimum, is not something the stylesheet touches.
+
+       The buttons cannot do this (no column to pin), so sizeButton states its width in
+       the sheet itself. Note that 130 is only what the floor HAPPENS to be at the dev
+       font and DPI -- 6em is not 130px anywhere else. */
+    for (QComboBox *c : {typeCombo, spaceCombo}) {
+        c->setStyleSheet("QComboBox { min-width: 0px; }");
+        c->setFixedWidth(kTypeWidth);
+    }
+    for (QComboBox *c : {depthCombo, compressionCombo}) {
+        c->setStyleSheet("QComboBox { min-width: 0px; }");
         c->setFixedWidth(kFormatWidth);
-    qualityCapLab = cap(tr("Quality:"), capCol0);
-    fmt->addWidget(qualityCapLab, qualityRow, 0);
+    }
+    /* Quality shares the Type row with Depth, in the same cells, because no format has
+       both: quality is the lossy formats' setting (JPEG, HEIC) and depth is the lossless
+       ones' (PNG, TIFF) -- see the table in Export/exportsettings.h. Only one of the two
+       is ever visible, so the group is two rows for every format instead of three with a
+       hole in it, and the slider gets the width that Depth's 100px combo would waste.
+
+       IF A FORMAT EVER HAS BOTH (a 16-bit lossy format would), they would draw on top of
+       each other: give quality its own row again rather than trying to fit both here. */
+    qualityCapLab = cap(tr("Quality:"), capCol2);
+    fmt->addWidget(qualityCapLab, 0, 2);
     qualitySlider = new QSlider(Qt::Horizontal, this);
     qualitySlider->setRange(1, 100);
-    fmt->addWidget(qualitySlider, qualityRow, 1, 1, 2);
     qualityLab = new QLabel(this);
     qualityLab->setMinimumWidth(30);
-    fmt->addWidget(qualityLab, qualityRow, 3);
+    /* Slider and its value travel together, from the field column out through the slack
+       column to the right edge of the group. */
+    QHBoxLayout *qualityBox = new QHBoxLayout;
+    qualityBox->addWidget(qualitySlider, 1);
+    qualityBox->addWidget(qualityLab);
+    fmt->addLayout(qualityBox, 0, 3, 1, 2);
     fmtLay->addLayout(fmt);
-    fmtGrid = fmt;      // updateEnabledStates collapses the Quality row when it empties
 
     /* ---- Align the File naming and Format grids --------------------------------------
-       They are separate layouts in separate group boxes, so nothing lines their
-       columns up by itself: each caption column would size to its own widest
-       caption, putting the Template combo somewhere else than Type and Space.
+       They are separate layouts in separate group boxes, so nothing lines their columns
+       up by itself. Both are (caption, field, caption, field), and both boxes are the
+       same width with the same margins, so every column is pinned to a width shared by
+       both grids and ALL the leftover is parked in one column both grids can spare.
 
-       Both boxes are the same width with the same margins, so it is enough to
-       (a) pin both caption columns to the widest caption found in EITHER grid and
-       (b) give both field columns the same stretch. Qt then hands each stretchy
-       column the same share of what is left, and the fields land on the same x in
-       both groups.
+       WHICH COLUMN TAKES THE SLACK IS THE WHOLE TRICK, and it must not be one of the four.
+       Stretch on the field columns 1 and 3 does not work, however equal: the fields are
+       fixed-width, so a stretchy field column cannot use the space it is handed, and
+       QGridLayout passes the leftover on to whatever CAN grow -- the caption columns. The
+       two grids have different field widths (290 + 165 against 130 + 100), so they had
+       different leftovers to pass on and their caption columns came out different widths.
+       That is what put Type and Space right of Template even with both caption columns
+       pinned to the same minimum. Stretching the middle caption column instead has the
+       same failing in reverse: it pushes the second pair out to the right edge, leaving a
+       chasm between the two pairs that grows with the dialog.
 
-       Equal stretch on 1 and 3 also stops the template combo eating all the slack, which
-       would leave column 3 too narrow for the Format grid's combos. (The suffix field
-       itself no longer depends on that -- it is fixed-width, and simply sits at the left
-       of its column.) */
+       So the slack goes in a FIFTH column, empty, past the last field. Columns 0 to 3 then
+       sit at exactly their pinned widths: column 0 is the shared caption width, so Type
+       and Space start on the same x as Template, and each second pair follows its OWN
+       first field -- Suffix after the 290px template combo, Depth and Compression after
+       the 130px type combo -- rather than being flung to the right edge. The two rows that
+       are meant to use the whole width (the exists radios, the example + editor button)
+       span into the slack column to keep it. */
+    /* ensurePolished before measuring: a caption's size hint is not final until the style
+       and the stylesheet have been applied to it, and that otherwise happens later, on
+       the first layout pass -- leaving this measurement short and every width derived
+       from it wrong by the difference. */
     auto widestCap = [](const QVector<QLabel *> &labs) {
         int w = 0;
-        for (QLabel *l : labs) w = qMax(w, l->sizeHint().width());
+        for (QLabel *l : labs) {
+            l->ensurePolished();
+            w = qMax(w, l->sizeHint().width());
+        }
         return w;
     };
     const int capW0 = widestCap(capCol0);
     const int capW2 = widestCap(capCol2);
+    /* Fix every caption AT that width, rather than only pinning the column minimum to it.
+       A minimum is a floor, so the column could still come out wider than capW0 if some
+       caption asked for more, and then anything that lines up by arithmetic instead of by
+       being in the grid (the Size group below) would be out by the difference. Fixed
+       captions make the column exactly capW0 in every grid. None is clipped: capW0 is the
+       widest of them. */
+    for (QLabel *l : capCol0) l->setFixedWidth(capW0);
+    for (QLabel *l : capCol2) l->setFixedWidth(capW2);
+    /* Fixing the width means the label no longer fills its cell, and a layout item that
+       cannot fill its cell sits at the LEFT of it unless told otherwise -- parking the
+       caption at the far side of any column wider than the caption (the Format group's
+       column 2, widened by kFormatPairGap) instead of against the field it names.
+       Aligning the ITEM right puts the label back on the field; the label's own
+       right-aligned text then has nowhere left to go. setAlignment ignores a widget that
+       is not in that layout, so both grids can be offered every caption. */
+    for (QGridLayout *g : {name, fmt})
+        for (const QVector<QLabel *> &caps : {capCol0, capCol2})
+            for (QLabel *l : caps) g->setAlignment(l, Qt::AlignRight | Qt::AlignVCenter);
+    /* Whatever gap the style gave the first grid, both grids use -- a caption column of
+       the same width still puts the fields on different x if the gap after it differs. */
+    const int colGap = name->horizontalSpacing();
     for (QGridLayout *g : {name, fmt}) {
+        g->setContentsMargins(0, 0, 0, 0);
+        g->setHorizontalSpacing(colGap);
         g->setColumnMinimumWidth(0, capW0);
         g->setColumnMinimumWidth(2, capW2);
-        g->setColumnStretch(1, 1);
-        g->setColumnStretch(3, 1);
+        for (int c = 0; c < 4; ++c) g->setColumnStretch(c, 0);
+        g->setColumnStretch(4, 1);          // the empty column that takes the slack
     }
+    /* The field columns are pinned to the field, not left to its size hint: the
+       stylesheet has a say in that hint (see the combo widths above), and a column
+       narrower than its field would shrink the field with it. */
+    name->setColumnMinimumWidth(1, kTemplateWidth);
+    name->setColumnMinimumWidth(3, kSuffixWidth);
+    fmt->setColumnMinimumWidth(1, kTypeWidth);
+    fmt->setColumnMinimumWidth(3, kFormatWidth);
+    /* Widening the caption column is what carries the gap: the caption is right-aligned
+       in it, so Depth and Compression move right WITH their fields and stay hard against
+       them. */
+    fmt->setColumnMinimumWidth(2, capW2 + kFormatPairGap);
 
     /* ---- One vertical rhythm across all three settings grids -------------------------
        A grid row is as tall as the tallest thing in it, so left alone the rows step
@@ -468,7 +578,6 @@ void ExportDlg::buildUi()
     for (QGridLayout *g : {dest, name, fmt})
         for (int r = 0; r < g->rowCount(); ++r)
             g->setRowMinimumHeight(r, rowH);
-    fmtRowH = rowH;    // so a hidden Quality row can be pinned back to it when it returns
     copyMetadataChk = new QCheckBox(tr("Copy metadata from the original"), this);
     copyMetadataChk->setToolTip(tr("Copy EXIF, IPTC and the ICC profile from the source "
                                    "file. Adds roughly a fifth of a second per image."));
@@ -477,7 +586,16 @@ void ExportDlg::buildUi()
     metaRow->addWidget(copyMetadataChk);
     metaRow->addWidget(embedThumbChk);
     metaRow->addStretch(1);
-    fmtLay->addLayout(metaRow);
+    /* In the grid, on the field column, so these two line up with the combos above them:
+       they are settings like the combos, not a heading for the group. Placed in the GRID
+       rather than indented by hand in the section layout -- an indent of "caption column
+       plus gap" is arithmetic that has to agree with what the style and stylesheet
+       actually did to the caption, and it came out a few pixels short. Let the grid put
+       the row where its own column 1 is.
+
+       Added AFTER the row-height pass above deliberately: that pass pinned the rows the
+       grid had then, so this one keeps its natural height instead of a field's. */
+    fmt->addLayout(metaRow, 2, 1, 1, 4);
 
     /* ---- Image sizing ---- */
     QVBoxLayout *sizeLay = addSection(lay, tr("Size"));
@@ -497,10 +615,31 @@ void ExportDlg::buildUi()
     size->addWidget(percentRadio);
     size->addWidget(percentSpin);
     size->addStretch(1);
-    sizeLay->addLayout(size);
     dontEnlargeChk = new QCheckBox(tr("Don't enlarge"), this);
     dontEnlargeChk->setToolTip(tr("Never scale an image UP to reach the target size"));
-    sizeLay->addWidget(dontEnlargeChk);
+    /* Both rows start on the field column, like the Format group's checkboxes, so the
+       whole dialog has one left edge for controls and one for captions. This group has no
+       captions of its own, so it borrows the geometry: a column 0 of exactly the caption
+       width (the captions are fixed to it -- see the alignment pass) and the same column
+       gap.
+
+       That column is held open by a WIDGET, not by a column minimum alone. QGridLayout
+       puts its column spacing between columns that hold something, so a column 0 that is
+       merely wide starts column 1 a whole gap to the left of where the other groups start
+       theirs -- which is exactly how far out this group was. A stand-in widget makes the
+       column occupied, and the gap lands like everywhere else. */
+    QWidget *sizeCapCol = new QWidget(this);
+    sizeCapCol->setFixedWidth(capW0);
+    QGridLayout *sizeGrid = new QGridLayout;
+    sizeGrid->setContentsMargins(0, 0, 0, 0);
+    sizeGrid->setHorizontalSpacing(colGap);
+    sizeGrid->setColumnMinimumWidth(0, capW0);
+    sizeGrid->setColumnStretch(0, 0);
+    sizeGrid->setColumnStretch(1, 1);
+    sizeGrid->addWidget(sizeCapCol, 0, 0, 2, 1);
+    sizeGrid->addLayout(size, 0, 1);
+    sizeGrid->addWidget(dontEnlargeChk, 1, 1);
+    sizeLay->addLayout(sizeGrid);
 
     /* ---- Scope ----
        What gets exported, not how, so it sits outside the settings group boxes -- last,
@@ -646,12 +785,13 @@ void ExportDlg::settingsToUi()
     folderEdit->setText(current.folderPath);
     addToViewChk->setChecked(current.addToFolderView);
 
-    /* The template combo stores the token string as item data; index 0 is "no template".
-       A template that has since been deleted falls back to the original file name. */
-    int tIdx = 0;
-    for (int i = 1; i < templateCombo->count(); ++i)
-        if (templateCombo->itemData(i).toString() == current.tokenTemplate) { tIdx = i; break; }
-    templateCombo->setCurrentIndex(tIdx);
+    /* The template combo stores the token string as item data. A stored template that no
+       longer exists -- deleted since the preset was saved -- and the empty one that older
+       settings used for "no template" both fall back to whichever template keeps the
+       original name, and failing that to the first one there is. */
+    int tIdx = templateCombo->findData(current.tokenTemplate);
+    if (tIdx < 0) tIdx = templateCombo->findData(QString("{ORIGINAL FILENAME}"));
+    templateCombo->setCurrentIndex(qMax(0, tIdx));
     suffixEdit->setText(current.suffix);
     overwriteRadio->setChecked(current.exists == ExportSettings::Overwrite);
     uniqueRadio->setChecked(current.exists == ExportSettings::UniqueName);
@@ -687,9 +827,9 @@ void ExportDlg::uiToSettings()
     current.folderPath = folderEdit->text();
     current.addToFolderView = addToViewChk->isChecked();
 
-    current.tokenTemplate = templateCombo->currentIndex() > 0
-                                ? templateCombo->currentData().toString()
-                                : QString();
+    /* Empty when there are no templates at all (every one deleted in the editor), which
+       the engine already reads as "keep the original base name". */
+    current.tokenTemplate = templateCombo->currentData().toString();
     current.suffix = suffixEdit->text();
     current.exists = overwriteRadio->isChecked() ? ExportSettings::Overwrite
                    : skipRadio->isChecked()      ? ExportSettings::Skip
@@ -733,15 +873,8 @@ void ExportDlg::updateEnabledStates()
     qualityCapLab->setVisible(showQuality);
     qualitySlider->setVisible(showQuality);
     qualityLab->setVisible(showQuality);
-    /* Depth and Compression share their rows with Type and Space, which never hide, so
-       only Quality can leave a row empty -- and buildUi pinned every row to fmtRowH,
-       which would hold that empty row open as a blank gap. */
-    if (fmtGrid) {
-        fmtGrid->setRowMinimumHeight(qualityRow, showQuality ? fmtRowH : 0);
-        /* The form just got a row shorter or taller and the dialog is fixed-size, so it
-           has to be re-measured or the difference shows up as dead space. */
-        fitToContents();
-    }
+    /* No re-measure needed: every one of these shares a row with Type or Space, which
+       never hide, so hiding them cannot change the form's height. */
     spaceCombo->setEnabled(spaceCombo->count() > 1);
 
     subfolderEdit->setEnabled(subfolderRadio->isChecked());
@@ -803,11 +936,9 @@ void ExportDlg::onTemplateEditor()
     QMap<QString, QString> usingTokenMap;              // dummy: only Ingest tracks these
     QStringList tokens = TokenFileName::tokens();
     QMap<QString, QString> exampleMap = TokenFileName::exampleMap();
-    /* TokenDlg indexes the template map; the combo offsets that by one for its
-       "Original file name" entry, which is not a template. */
-    int index = qMax(0, templateCombo->currentIndex() - 1);
-    QString currentKey = templateCombo->currentIndex() > 0
-                             ? templateCombo->currentText() : QString();
+    /* TokenDlg indexes the same map the combo lists, so the index is the combo's. */
+    int index = qMax(0, templateCombo->currentIndex());
+    QString currentKey = templateCombo->currentText();
 
     TokenDlg tokenDlg(tokens, exampleMap, filenameTemplates, usingTokenMap,
                       index, currentKey, title, this);
@@ -815,8 +946,8 @@ void ExportDlg::onTemplateEditor()
 
     /* Rebuild the list and land back on the same template for continuity. Renaming is
        what makes this more than a refresh: the key moves while the token string does
-       not, so a lost key falls back to matching the token string, and only then to
-       "Original file name" (which is what a deleted template must land on).
+       not, so a lost key falls back to matching the token string, and only then to the
+       first template there is (which is what a deleted one must land on).
 
        Signals are blocked because a rebuild is not an edit -- the preset only becomes
        dirty if the template the dialog will export with actually changed. */
@@ -824,10 +955,9 @@ void ExportDlg::onTemplateEditor()
     {
         QSignalBlocker block(templateCombo);
         templateCombo->clear();
-        templateCombo->addItem(tr("Original file name"));      // index 0 == no template
         for (auto it = filenameTemplates.cbegin(); it != filenameTemplates.cend(); ++it)
             templateCombo->addItem(it.key(), it.value());
-        int idx = currentKey.isEmpty() ? 0 : templateCombo->findText(currentKey);
+        int idx = currentKey.isEmpty() ? -1 : templateCombo->findText(currentKey);
         if (idx < 0) idx = templateCombo->findData(wasTemplate);
         templateCombo->setCurrentIndex(qMax(0, idx));
     }

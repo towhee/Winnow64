@@ -129,14 +129,30 @@ QString PresetsView::nameForRow(int row) const
     return it->data(PresetDelegate::NameRole).toString();
 }
 
+void PresetsView::endHoverPreview()
+{
+    if (!hoverEmitted) return;
+    hoverEmitted = false;
+    emit hoverEnded();              // put the real state back on the loupe
+}
+
 void PresetsView::setHover(int row)
 {
     if (row == hoverRow) return;
     hoverRow = row;
     delegate->setHoveredRow(row);
     viewport()->update();
-    if (row < 0) hoverTimer->stop();
-    else         hoverTimer->start(kHoverDelayMs);
+
+    /* Only a preset row previews. Landing anywhere else -- the blank space below the
+       last preset, or the empty-list placeholder -- must take the preview off the loupe
+       here: that space is still inside the list, so no leaveEvent is coming. */
+    if (nameForRow(row).isEmpty()) {
+        hoverTimer->stop();
+        endHoverPreview();
+    }
+    else {
+        hoverTimer->start(kHoverDelayMs);
+    }
 }
 
 void PresetsView::mouseMoveEvent(QMouseEvent *event)
@@ -147,11 +163,7 @@ void PresetsView::mouseMoveEvent(QMouseEvent *event)
 
 void PresetsView::leaveEvent(QEvent *event)
 {
-    setHover(-1);
-    if (hoverEmitted) {
-        hoverEmitted = false;
-        emit hoverEnded();          // put the real state back on the loupe
-    }
+    setHover(-1);                   // ends any live preview
     QListWidget::leaveEvent(event);
 }
 
@@ -179,10 +191,6 @@ void PresetsView::showMenu(const QPoint &pos)
     /* Hovering the row that opened the menu left a preview on the loupe; the menu grabs
        the mouse, so no leaveEvent will arrive to undo it. */
     setHover(-1);
-    if (hoverEmitted) {
-        hoverEmitted = false;
-        emit hoverEnded();
-    }
 
     QMenu menu(this);
     QAction *aNew    = menu.addAction(tr("New Preset..."));
