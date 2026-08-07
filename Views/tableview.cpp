@@ -426,7 +426,7 @@ void TableView::paintEvent(QPaintEvent *event)
 void TableView::keyPressEvent(QKeyEvent *event){
     // navigation keys are executed in MW::eventFilter to make sure they work no matter
     // what has the focus
-    if (event->key() == Qt::Key_Return) emit displayLoupe("TableView::keyPressEvent Key_Return");
+    if (G::isEnterKey(event)) emit displayLoupe("TableView::keyPressEvent Enter");
 }
 
 void TableView::mousePressEvent(QMouseEvent *event)

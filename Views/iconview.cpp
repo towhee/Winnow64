@@ -1500,7 +1500,7 @@ void IconView::keyPressEvent(QKeyEvent *event){
     // what has the focus
     // qDebug() << "IconView::keyPressEvent" << event << objectName();
     if (objectName() == "Grid") {
-        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) m2->loupeDisplay();
+        if (G::isEnterKey(event)) m2->loupeDisplay();
     }
 }
 

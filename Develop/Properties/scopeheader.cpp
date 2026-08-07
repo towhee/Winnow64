@@ -39,7 +39,7 @@ ScopeHeader::ScopeHeader(QWidget *parent) : ScopeHeaderBase(parent)
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
     updateCollapseIcon();
 
-    scopeLabel = new QLabel(tr("Scope"), this);
+    scopeLabel = new QLabel(tr("Global and Masks"), this);
     /* Clicking the label toggles collapse as if the arrow was clicked. */
     scopeLabel->setCursor(Qt::PointingHandCursor);
     scopeLabel->installEventFilter(this);

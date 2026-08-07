@@ -753,7 +753,7 @@
          <string>Loupe View</string>
         </property>
         <property name="text">
-         <string>E   or   Enter</string>
+         <string>E   or   Return / Enter</string>
         </property>
         <property name="text">
          <string/>
@@ -1230,7 +1230,7 @@
          <string>Commit Transform</string>
         </property>
         <property name="text">
-         <string>Enter</string>
+         <string>Return / Enter</string>
         </property>
         <property name="text">
          <string>Applies this crop / level / warp and closes the panel, the same as pressing R again (while tracing a Warp quad, Enter commits the quad instead); in Develop mode</string>

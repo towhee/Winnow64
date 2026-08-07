@@ -233,7 +233,7 @@ void MW::jump()
 
     protected:
         void keyPressEvent(QKeyEvent *event) override {
-            if (event->key() == Qt::Key_Return || (event->key() == Qt::Key_Enter)) {
+            if (G::isEnterKey(event)) {
                 accept();
             } else if (event->key() == Qt::Key_Escape) {
                 reject();

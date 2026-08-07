@@ -935,8 +935,7 @@ void MW::keyPressEvent(QKeyEvent *event)
     if (G::isLogger) G::log("MW::keyPressEvent");
     // qDebug() << "MW::keyPressEvent" << event;
 
-    if (event->key() == Qt::Key_Return) {
-        qDebug() << "MW::keyPressEvent Key_Return";
+    if (G::isEnterKey(event)) {
         if (G::mode == "Loupe") {
             if (dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool()) {
                 if (G::useMultimedia) videoView->playOrPause();
@@ -1177,7 +1176,7 @@ bool MW::developShortcutIntercept(QEvent *event)
        focused. Text editors (aspect combo, angle field) are already excluded by the
        value-editor guard above, so typing still works. Contextual, so NOT in
        developShortcuts. */
-    if (developCropEditing && transformPanel && e->modifiers() == Qt::NoModifier
+    if (developCropEditing && transformPanel && G::bareModifiers(e) == Qt::NoModifier
         && !e->isAutoRepeat()) {
         const int k = e->key();
         if (k == Qt::Key_A || k == Qt::Key_F || k == Qt::Key_C ||
@@ -1197,8 +1196,7 @@ bool MW::developShortcutIntercept(QEvent *event)
            (toggleDevelopTransform's commit-on-hide). EXCEPTION: while a warp quad is
            traced, Enter commits the quad (rectify) instead -- leave it to ImageView's own
            warp-commit path (ImageView::event / keyPressEvent), so fall through here. */
-        if ((k == Qt::Key_Return || k == Qt::Key_Enter)
-            && !(imageView && imageView->cropIsWarp())) {
+        if (G::isEnterKey(k) && !(imageView && imageView->cropIsWarp())) {
             event->accept();
             if (!isOverride) toggleDevelopTransform();
             return true;
@@ -1207,7 +1205,7 @@ bool MW::developShortcutIntercept(QEvent *event)
 
     /* 1. Develop mode local shortcut beats the global action on the same key. Held keys
        must not re-fire: every one of these is a toggle or pops a dialog. */
-    if (e->modifiers() == Qt::NoModifier && !e->isAutoRepeat()) {
+    if (G::bareModifiers(e) == Qt::NoModifier && !e->isAutoRepeat()) {
         if (QAction *a = developShortcuts.value(e->key())) {
             event->accept();
             if (!isOverride) {          // the override only frees the key; act now
@@ -1457,13 +1455,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                   << "key =" << e->key()
                   << k
                      ; //*/
-            // Return Key show loupe mode
-            if (e->key() == Qt::Key_Return) {
+            // Return/Enter show loupe mode
+            if (G::isEnterKey(e)) {
                 if (obj->objectName() == "Thumbnails" ||
                     obj->objectName() == "Grid"
                    )
                 {
-                    loupeDisplay("MW::eventFilter Key_Return");
+                    loupeDisplay("MW::eventFilter Enter");
                 }
             }
 

@@ -31,7 +31,12 @@ ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent
 
     // Toggle zoom dialog off (MW shortcuts inactive while ZoomDlg has focus)
     QAction *okayAction = new QAction(tr("Okay"), this);
-    okayAction->setShortcut(QKeySequence("Return"));
+    /* Return and Enter are interchangeable (see G::isEnterKey).  The keypad variant is
+       listed with and without Qt::KeypadModifier because QShortcutMap does not reliably
+       strip it on macOS. */
+    okayAction->setShortcuts({QKeySequence(Qt::Key_Return),
+                              QKeySequence(Qt::Key_Enter),
+                              QKeySequence(Qt::KeypadModifier | Qt::Key_Enter)});
     this->addAction(okayAction);
     connect(okayAction, SIGNAL(triggered(bool)), this, SLOT(closeZoomDlg()));
 
