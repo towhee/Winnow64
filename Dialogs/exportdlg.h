@@ -145,9 +145,8 @@ private:
     QLabel       *exampleLab = nullptr;
 
     /* Format. The caption labels are kept because a setting the chosen format does not
-       have is HIDDEN, caption and all -- see updateEnabledStates. fmtGrid and fmtRowH go
-       with them: the Quality row can empty out completely, and buildUi pinned every row
-       to fmtRowH, which an empty row would otherwise hold open as a blank gap. */
+       have is HIDDEN, caption and all -- see updateEnabledStates. Quality and Depth share
+       the same cells (no format has both), so hiding either never empties a row. */
     QComboBox    *typeCombo = nullptr;
     QComboBox    *depthCombo = nullptr;
     QComboBox    *spaceCombo = nullptr;
@@ -157,9 +156,6 @@ private:
     QLabel       *depthCapLab = nullptr;
     QLabel       *compressionCapLab = nullptr;
     QLabel       *qualityCapLab = nullptr;
-    QGridLayout  *fmtGrid = nullptr;
-    int           fmtRowH = 0;
-    static constexpr int qualityRow = 2;
     QCheckBox    *copyMetadataChk = nullptr;
     QCheckBox    *embedThumbChk = nullptr;
 

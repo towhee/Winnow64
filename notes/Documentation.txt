@@ -5297,11 +5297,10 @@ Export (getting developed images out)
     irrelevant: the destination folder field, the sizing spin boxes.) Nothing in the
     dialog hard-codes a format name.
 
-    Depth and Compression share their grid rows with Type and Space, which never hide, so
-    only the Quality row can empty out; buildUi pins every row to a shared height, so that
-    row's minimum is dropped to 0 while hidden or the empty row stays as a blank gap. Both
-    caption COLUMNS keep the width measured at build time, so the fields do not shift
-    sideways as the format changes.
+    Every hideable control shares a row with one that never hides -- Depth and Quality
+    with Type, Compression with Space -- so no row can empty out and leave a gap, and the
+    group is the same height for every format. Both caption COLUMNS keep the width
+    measured at build time, so nothing shifts sideways as the format changes either.
 
     DESTINATION. Three choices, widest scope first in the dialog: Source folder (beside
     the originals), Source subfolder (a named subfolder of each image's own folder,
@@ -5387,11 +5386,90 @@ Export (getting developed images out)
     FIXED SIZE. The dialog is not resizable: ExportDlg::fitToContents pins it to the
     design width (kDialogWidth, 820) and to whatever height the layout asks for. The
     fields are sized to their content rather than to their grid column -- template 290,
-    suffix 165, every Format combo 100 -- so a wider window would show nothing more, and a
-    taller one would just pool space under the last section. fitToContents is re-run
-    whenever the form's height can change (updateEnabledStates hiding the Quality row,
-    setBusy showing the progress bar), since a fixed-size dialog cannot absorb that on
-    its own.
+    suffix 165, Type and Space 130 (they hold "Display P3"), Depth and Compression 100 --
+    so a wider window would show nothing more, and a taller one would just pool space
+    under the last section. fitToContents is re-run whenever the form's height can change
+    -- which is setBusy adding or removing the progress bar, and nothing else: changing
+    FORMAT never changes the height, because every control a format hides shares a row
+    with one it cannot hide.
+
+    QUALITY SITS ON THE TYPE ROW, in the same cells as Depth, because no format has both:
+    quality belongs to the lossy formats (JPEG, HEIC) and depth to the lossless ones (PNG,
+    TIFF). Only one is ever visible, so the group is two rows for every format instead of
+    three with a hole in it, and the slider gets the width Depth's 100px combo would have
+    wasted (it runs out through the slack column, with its value at the right edge). A
+    format with BOTH -- a 16-bit lossy format -- would draw them on top of each other and
+    needs its own row back.
+
+    The Name and Format grids are two layouts in two group boxes, so buildUi lines them up
+    by hand: same margins, same column gap, both caption columns pinned to the widest
+    caption in EITHER grid, each field column pinned to its own field, and the captions
+    RIGHT-aligned so each sits hard against the control it names.
+
+    WHICH COLUMN TAKES THE SLACK is the part that is easy to get wrong, and it must not be
+    one of the four. Stretch on the FIELD columns does not work however equal, because the
+    fields are fixed-width: a stretchy field column cannot use the space it is given, and
+    QGridLayout passes the leftover to whatever can grow, i.e. the caption columns. The
+    two grids have different field widths (290 + 165 against 130 + 100), so the leftovers
+    differed too and their caption columns came out different widths -- which is what put
+    Type and Space right of Template even with both caption columns pinned to the same
+    minimum. Stretching the middle caption column instead fails the other way: it
+    pushes the second pair out to the right edge and opens a chasm between the pairs.
+
+    So the slack sits in a FIFTH, empty column past the last field. Columns 0-3 then hold
+    their pinned widths: column 0 is shared, so Type and Space start on the same x as
+    Template, and each second pair follows its OWN first field (Suffix after the 290px
+    template combo, Depth and Compression after the 130px type combo plus a 50px gap,
+    kFormatPairGap, added to that grid's caption column). The two rows meant
+    to use the whole width -- the exists radios, and the example + Template editor button
+    -- span into the slack column to keep it. The Format group's two checkboxes are in the
+    grid too, on the field column, so they line up with the combos above them; they go in
+    AFTER the row-height pass so they keep their natural height rather than a field's. The
+    Size group has no captions of its own and borrows the same geometry: a column 0 of the
+    caption width, so its radios and Don't enlarge start on that one left edge too. That
+    column is held open by a stand-in WIDGET, not by a column minimum alone -- QGridLayout
+    only puts its column spacing between columns that hold something, so a merely-wide
+    column 0 starts column 1 a whole gap left of where the other groups start theirs.
+
+    Two measurement rules make that arithmetic safe. The captions are ensurePolished()
+    BEFORE being measured -- a size hint is not final until the style and the stylesheet
+    have been applied, which otherwise happens on the first layout pass, leaving the
+    measurement short. And every caption is then FIXED at the measured width rather than
+    the column merely being floored at it, so column 0 is exactly capW0 in every grid and
+    a group that lines up by arithmetic cannot drift from one that lines up by being in
+    the grid. A fixed-width label no longer fills its cell, though, and an item that
+    cannot fill its cell sits at the LEFT of it -- so the caption ITEMS are aligned right
+    as well, or Depth and Compression drift to the far side of their kFormatPairGap-
+    widened column instead of staying against their combos.
+
+    WATCH THE GLOBAL STYLESHEET when fixing a control's width. G::css sets
+    "min-width: 6em" on every QComboBox and "min-width: 100px" on every QPushButton
+    (Main/widgetcss.cpp), and Qt applies a stylesheet min-width by writing it onto the
+    widget's minimumWidth when the widget is POLISHED. That write ALWAYS LANDS LAST --
+    after setFixedWidth in buildUi, and after an ensurePolished() meant to get ahead of it
+    (tried; it does not work) -- so an unguarded control silently takes the global width:
+    ~130px for a combo, 112 for a button (100 content + 5+5 padding + 1+1 border, since a
+    stylesheet width is the CONTENT box).
+
+    A per-widget sheet is the only thing the re-polish cannot overrule, because it is what
+    the re-polish applies. Two shapes of that, both in use here:
+
+      - Say the width IN the sheet, min-width AND max-width, converted to content units
+        (sizeButton, minus kButtonChrome). Works anywhere; the cost is that kButtonChrome
+        has to agree with widgetcss.cpp's QPushButton padding and border.
+      - Clear the floor with "min-width: 0px" and let a pinned GRID COLUMN supply the
+        width, the control being Expanding with setFixedWidth as its cap (the Format
+        combos). A maximum is safe -- the global rules set no max-width. Needs a column to
+        pin, which the preset buttons do not have.
+
+    Clearing the floor WITHOUT something to hold the control open leaves it at its own
+    text width: that is how the preset buttons came out New 41px, Update 55, Rename 65,
+    Delete 52, all asked for 75.
+
+    THE PRESET BAR IS ONE ROW: the combo and New / Update / Rename / Delete together, with
+    the combo Expanding so the preset NAME takes whatever the four buttons and the
+    "modified" label leave. The buttons were moved off their own second row (and cut from
+    100px to kPresetBtnWidth) to buy that line back.
 
     TWO FORMATTINGS, one dialog (SCRATCH). G::useExportDlgIngestStyle (global.cpp) picks
     how ExportDlg is dressed: true formats it like IngestDlg -- QGroupBox sections whose
@@ -5439,10 +5517,22 @@ Export (getting developed images out)
     non-const.
 
     Afterwards the combo is rebuilt and lands back on the template it was on: by key, then
-    (a RENAME moves the key while the token string stays put) by token string, then
-    "Original file name", which is where a DELETED template has to end up. The rebuild is
+    (a RENAME moves the key while the token string stays put) by token string, then the
+    first template there is, which is where a DELETED one has to end up. The rebuild is
     signal-blocked -- it is not a user edit -- so the preset is only marked modified when
     the token string the export would actually use has changed.
+
+    THE COMBO LISTS EXACTLY THE TEMPLATES, in the editor's own order -- the two are views
+    of one map and must not disagree. It offers no synthetic "no template" entry: Ingest
+    and Rename do not either, and keeping the original name IS a template
+    ("{ORIGINAL FILENAME}"). The entry ExportDlg used to prepend, "Original file name",
+    sat one space away from the real "Original filename" template that does the same
+    thing, so the combo listed four things where the editor listed three. Like the other
+    two dialogs, ExportDlg seeds the map with the stock pair if it is empty.
+
+    ExportSettings::tokenTemplate is still allowed to be EMPTY -- it is a published preset
+    key, older presets hold it, and the engine reads it as "keep the original base name".
+    Loading one selects the template that keeps the original name, or the first one.
 
 
 Stale presets and history (schema drift)

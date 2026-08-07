@@ -813,4 +813,9 @@ with the develop export in the future.
 
 Which image types you think you can convert to besides jpg, png and bmp?  Show me how you will layout the export dialog.
 
+In develop presets panel if I move the mouse over the last preset to below the preset,
+but still inside the panel, the imageView rendering is not always updated even though the
+preset item selection is changing. If I move the mouse from the last preset item to
+outside the develop presets panel then the imageView updates.
+
 
