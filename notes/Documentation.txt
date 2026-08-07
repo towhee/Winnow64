@@ -5471,15 +5471,13 @@ Export (getting developed images out)
     "modified" label leave. The buttons were moved off their own second row (and cut from
     100px to kPresetBtnWidth) to buy that line back.
 
-    TWO FORMATTINGS, one dialog (SCRATCH). G::useExportDlgIngestStyle (global.cpp) picks
-    how ExportDlg is dressed: true formats it like IngestDlg -- QGroupBox sections whose
-    title is two points up on the body text, 32px-high buttons -- while false keeps the
-    original compact layout (bold caption over a rule, a tinted bordered panel for the
-    presets). Only ExportDlg::addSection and a few size choices differ;
-    every control, signal and behaviour is shared, so neither branch can drift in what it
-    DOES. This is a scratch flag for comparing the two in one build, exactly like
-    G::useScopeHeaderLab: once one wins, delete the other branch in buildUi/addSection and
-    retire the flag.
+    FORMATTED LIKE INGESTDLG: QGroupBox sections whose title is two points up on the body
+    text, and 32px-high buttons. ExportDlg::addSection makes the box, so every section
+    (Preset included) is dressed the same way and the callers only see the layout they add
+    their rows to. An earlier compact formatting -- bold caption over a rule, a tinted
+    bordered panel for the presets -- was carried alongside this one behind a scratch
+    flag, G::useExportDlgIngestStyle, to compare the two in one build; the Ingest style
+    won and the flag and the other branch were deleted 2026-08-07.
 
     Note the group-box title font is set on the BOX, and a widget's font propagates to its
     children, so addSection puts the controls in an inner widget whose font is reset to

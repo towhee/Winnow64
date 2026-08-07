@@ -207,51 +207,14 @@ void ExportDlg::buildUi()
 
     /* ---- Preset section ---------------------------------------------------------------
        The preset controls act ON the rest of the dialog (they load and store the whole
-       form) rather than being one of its settings, so both formattings set them apart --
-       Ingest style with a QGroupBox like every other section, the original with its own
-       bordered, tinted panel. One row either way -- the name and the four actions on it,
-       with the name taking whatever width the actions leave. */
-    QVBoxLayout *presetLay = nullptr;
-    if (G::useExportDlgIngestStyle) {
-        presetLay = addSection(lay, tr("Preset"));
-    }
-    else {
-        /* The panel shade must differ from BOTH the dialog background and the buttons
-           sitting on it, or the buttons vanish into it. Winnow's theme is a greyscale
-           ramp off G::backgroundShade (see widgetcss.cpp): buttons are shade-10, borders
-           shade+40. So take the panel a step the OTHER way, shade+12, giving three
-           distinct levels -- buttons darkest, dialog mid, panel lightest. Near-white
-           themes have no headroom above, so those step down instead. */
-        const int bgShade = G::backgroundShade;
-        const int panelShade = qBound(0, bgShade <= 235 ? bgShade + 12 : bgShade - 12, 255);
-        const QColor panelColor(panelShade, panelShade, panelShade);
-
-        QFrame *presetFrame = new QFrame(this);
-        presetFrame->setObjectName("presetFrame");
-        presetFrame->setStyleSheet(
-            "QFrame#presetFrame {"
-                "border: 1px solid " + G::borderColor.name() + ";"
-                "border-radius: 4px;"
-                "background-color: " + panelColor.name() + ";"
-            "}");
-        presetLay = new QVBoxLayout(presetFrame);
-        presetLay->setContentsMargins(10, 8, 10, 8);
-        presetLay->setSpacing(6);
-        lay->addWidget(presetFrame);
-        lay->addSpacing(6);      // detach the panel from the settings sections below
-    }
+       form) rather than being one of its settings, but they still get a group box like
+       every other section -- its title names them, so no inline caption is needed. One
+       row: the name and the four actions on it, with the name taking whatever width the
+       actions leave. */
+    QVBoxLayout *presetLay = addSection(lay, tr("Preset"));
 
     QHBoxLayout *presetRow = new QHBoxLayout;
     presetRow->setSpacing(6);        // the four buttons read as one block of actions
-    /* The group box supplies its own "Preset" title in Ingest style, so the inline bold
-       caption would just repeat it. */
-    if (!G::useExportDlgIngestStyle) {
-        QLabel *presetCaption = new QLabel(tr("Preset"), this);
-        QFont pf = presetCaption->font();
-        pf.setBold(true);
-        presetCaption->setFont(pf);
-        presetRow->addWidget(presetCaption);
-    }
     presetCombo = new QComboBox(this);
     /* Sized to what is left of the row once the state label and the four buttons have had
        theirs -- the preset NAME is the variable-length thing here, so it gets the slack.
@@ -668,9 +631,8 @@ void ExportDlg::buildUi()
     /* ---- Footer: progress + buttons ----
        Closed off from the settings above by its own rule, so the action row reads as the
        end of the dialog rather than as a continuation of the scope row. IngestDlg does the
-       same (its full-width Line above the Cancel / OK pair), so both formattings keep it
-       -- in Ingest style the group boxes already close themselves, but the rule still
-       separates the settings from the actions. */
+       same (its full-width Line above the Cancel / OK pair). The group boxes already close
+       themselves, but the rule still separates the settings from the actions. */
     lay->addSpacing(6);
     lay->addWidget(separatorLine(this));
     lay->addSpacing(6);

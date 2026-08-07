@@ -75,10 +75,9 @@ private:
     /* Pin the dialog to its design width and to whatever height the controls currently
        need. The dialog is NOT resizable -- see the comment on the definition. */
     void fitToContents();
-    /* Add a titled section to `lay` and return the layout its rows go in. The two
-       formattings differ only here: G::useExportDlgIngestStyle gives a QGroupBox with an
-       enlarged title (matching IngestDlg), otherwise a bold caption over a rule. Callers
-       add their rows to the returned layout and never see which was used. */
+    /* Add a titled section to `lay` and return the layout its rows go in: a QGroupBox
+       with an enlarged title, matching IngestDlg. Callers add their rows to the returned
+       layout and never see the container. */
     QVBoxLayout *addSection(QVBoxLayout *lay, const QString &title);
     void loadFormats();              // fill the type combo from what this build can write
     void settingsToUi();             // push `current` into the controls

@@ -88,12 +88,6 @@ bool useReplaceFillModes = false;
    shipping ScopeHeader (both satisfy ScopeHeaderBase). Scratch flag for reshaping the
    Scope section; retire it once the lab design is copied back over scopeheader.*. */
 bool useScopeHeaderLab = true;
-/* Export dialog formatting: true dresses ExportDlg like IngestDlg (QGroupBox sections
-   with 14pt titles, 32px-high buttons, wider dialog), false keeps the original compact
-   layout (bold caption + rule sections, tinted preset panel). SCRATCH FLAG for comparing
-   the two side by side -- once one wins, delete the other branch in ExportDlg::buildUi
-   and retire this. */
-bool useExportDlgIngestStyle = true;
 /* Model-path heal correction (Object fills + clone fallbacks; clone heals need none).
    Poisson default: keeps the model's content with the level solved from the boundary. */
 int  spotFillCorrectMode = 1;       // A/B: 0 none 1 Poisson 2 low-freq 3 harmonic
