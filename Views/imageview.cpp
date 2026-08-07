@@ -3924,7 +3924,7 @@ bool ImageView::event(QEvent *event) {
         QKeyEvent *ke = static_cast<QKeyEvent *>(event);
         const bool sizeKey = ke->key() == Qt::Key_BracketLeft || ke->key() == Qt::Key_BracketRight;
         const bool autoKey = maskTool == 2 && ke->key() == Qt::Key_A;   // A is brush-only
-        if (ke->modifiers() == Qt::NoModifier && (sizeKey || autoKey)) {
+        if (G::bareModifiers(ke) == Qt::NoModifier && (sizeKey || autoKey)) {
             event->accept();
             return true;
         }
@@ -3938,8 +3938,8 @@ bool ImageView::event(QEvent *event) {
     if (event->type() == QEvent::ShortcutOverride && spotEditMode) {
         QKeyEvent *ke = static_cast<QKeyEvent *>(event);
         const bool k = ke->key() == Qt::Key_BracketLeft || ke->key() == Qt::Key_BracketRight
-                       || ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter;
-        if (ke->modifiers() == Qt::NoModifier && k) {
+                       || G::isEnterKey(ke);
+        if (G::bareModifiers(ke) == Qt::NoModifier && k) {
             event->accept();
             return true;
         }
@@ -3949,7 +3949,7 @@ bool ImageView::event(QEvent *event) {
        is being traced, so the key commits the warp (see keyPressEvent). */
     if (event->type() == QEvent::ShortcutOverride && cropActive() && cropWarp) {
         QKeyEvent *ke = static_cast<QKeyEvent *>(event);
-        if (ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter) {
+        if (G::isEnterKey(ke)) {
             event->accept();
             return true;
         }
@@ -3985,8 +3985,7 @@ bool ImageView::event(QEvent *event) {
 void ImageView::keyPressEvent(QKeyEvent *event){
     /* Commit a perspective warp with Enter/Return (the ShortcutOverride above frees the key from its
        global binding while the quad is being traced). */
-    if (cropActive() && cropWarp &&
-        (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)) {
+    if (cropActive() && cropWarp && G::isEnterKey(event)) {
         emit warpCommitRequested();
         return;
     }
@@ -4006,8 +4005,7 @@ void ImageView::keyPressEvent(QKeyEvent *event){
             spotBrushSize = qMin(100.0, spotBrushSize + 1); viewport()->update(); return; }
         /* Fill mode: Enter commits the pending painted area as ONE FillSpot; Escape
            clears the pending paint first, then a second Escape exits the tool. */
-        if ((event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
-            && !spotPainting && !spotPending.isEmpty()) {
+        if (G::isEnterKey(event) && !spotPainting && !spotPending.isEmpty()) {
             std::vector<FillSpotGeom::Stroke> strokes;
             strokes.reserve(spotPending.size());
             for (const SpotPendingStroke &st : spotPending) {

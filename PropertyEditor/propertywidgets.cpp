@@ -666,7 +666,7 @@ bool DoubleSpinBoxEditor::eventFilter(QObject *object, QEvent *event)
 {
     if (event->type() == QEvent::KeyPress) {
         const auto key = static_cast<QKeyEvent *>(event)->key();
-        if (key == Qt::Key_Enter || key == Qt::Key_Return || key == Qt::Key_Tab)
+        if (G::isEnterKey(key) || key == Qt::Key_Tab)
             emit editorValueChanged(this);
     }
     else if (event->type() == QEvent::FocusAboutToChange &&

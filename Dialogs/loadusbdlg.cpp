@@ -54,9 +54,12 @@ void LoadUsbDlg::on_usbList_itemClicked(QListWidgetItem *item)
 void LoadUsbDlg::keyPressEvent(QKeyEvent *event)
 {
     QDialog::keyPressEvent(event);
-    if (event->key() == Qt::Key_Return) {
-        selectedDrive = ui->usbList->currentItem()->text();
-        accept();
+    if (G::isEnterKey(event)) {
+        // nothing highlighted yet: the key is a no-op, not a crash
+        if (QListWidgetItem *item = ui->usbList->currentItem()) {
+            selectedDrive = item->text();
+            accept();
+        }
     }
 }
 

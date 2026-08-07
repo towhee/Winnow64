@@ -240,6 +240,24 @@ Q_NAMESPACE
         return {};
     }
 
+    /* Return and Enter are the same command key everywhere in Winnow: every operation
+       bound to one must also fire on the other.  The Enter key (numeric keypad Enter,
+       or Fn+Return on a MacBook) reports Qt::Key_Enter and ALSO sets
+       Qt::KeypadModifier, so a "bare key" test written as
+       `e->modifiers() == Qt::NoModifier` silently rejects it -- use bareModifiers()
+       for those gates.  See notes/Documentation.txt "Return and Enter". */
+    inline bool isEnterKey(int key) {
+        return key == Qt::Key_Return || key == Qt::Key_Enter;
+    }
+    inline bool isEnterKey(const QKeyEvent *e) {
+        return e && isEnterKey(e->key());
+    }
+
+    // Modifiers with KeypadModifier removed, for `== Qt::NoModifier` style gates.
+    inline Qt::KeyboardModifiers bareModifiers(const QKeyEvent *e) {
+        return e->modifiers() & ~Qt::KeypadModifier;
+    }
+
     // mutex
     extern QWaitCondition waitCondition;
     extern QMutex gMutex;

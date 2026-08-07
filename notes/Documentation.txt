@@ -76,6 +76,7 @@ Table of Contents
          - Overview
          - Conditions and Triggers
          - The Menu vs Shortcut Pitfall
+         - Return and Enter
          - Disabled Shortcut Feedback
          - Develop Mode Local Shortcuts
          - Rules by Action
@@ -1732,6 +1733,58 @@ The Menu vs Shortcut Pitfall
     on aboutToShow and carry no shortcuts, so disabling the menu alone is enough.
     The Open With submenu is iterated the same way but stays enabled so manageAppAction
     remains reachable; only its per-app actions are gated.
+
+------------------------------------------------------------------------------------------
+Return and Enter
+------------------------------------------------------------------------------------------
+
+    Return and Enter are the SAME command key in Winnow: every operation bound to one
+    must also fire on the other.  Two traps make this easy to get wrong, so never test
+    the key codes by hand -- use the helpers in `Main/global.h`:
+
+      • G::isEnterKey(int) / G::isEnterKey(const QKeyEvent*)
+            true for Qt::Key_Return and Qt::Key_Enter.
+
+      • G::bareModifiers(const QKeyEvent*)
+            the event's modifiers with Qt::KeypadModifier removed.  Use it for every
+            "bare key" gate, i.e. write
+
+                if (G::bareModifiers(e) == Qt::NoModifier) ...
+
+            NOT `e->modifiers() == Qt::NoModifier`.
+
+    Trap 1: the Enter key -- numeric keypad Enter, or Fn+Return on a MacBook -- reports
+    Qt::Key_Enter, not Qt::Key_Return.  A handler testing only Key_Return ignores it.
+
+    Trap 2: that same press ALSO sets Qt::KeypadModifier.  A gate written as
+    `modifiers() == Qt::NoModifier` therefore rejects keypad Enter even when the handler
+    inside it does test Key_Enter.  This is the subtler of the two and it silently broke
+    the Develop Transform commit and the spot-tool fill commit.
+
+    QAction shortcuts cannot use the helpers, so bind all three sequences:
+
+        act->setShortcuts({QKeySequence(Qt::Key_Return),
+                           QKeySequence(Qt::Key_Enter),
+                           QKeySequence(Qt::KeypadModifier | Qt::Key_Enter)});
+
+    QShortcutMap does not reliably strip KeypadModifier on macOS, hence the third entry.
+    ZoomDlg (`Dialogs/zoomdlg.cpp`) is the only Return/Enter QAction shortcut in the app.
+
+    Qt already treats the two keys identically in QLineEdit (returnPressed), QDialog
+    (default-button activation) and QAbstractItemView (activated), so connections to
+    those signals need nothing.  Only hand-rolled keyPressEvent / eventFilter / event()
+    handlers do.
+
+    Known gap, deliberately not fixed
+    ......................................................................................
+    Qt::KeypadModifier is handled NOWHERE else in Winnow.  MW::ownsShortcut and
+    MW::disabledActionForShortcut both build a QKeySequence from e->keyCombination(),
+    which keeps the modifier, so no keypad key can ever match a stored sequence.  The
+    numeric keypad is therefore inert for every other shortcut.
+
+    This is left as-is on purpose: stripping the modifier there would newly make keypad
+    1-5 set ratings and keypad 6-0 set colour labels, which they do not do today.  It is
+    recorded here so it stays a decision rather than a rediscovery.
 
 ------------------------------------------------------------------------------------------
 Disabled Shortcut Feedback

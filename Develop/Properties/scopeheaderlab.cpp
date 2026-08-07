@@ -51,7 +51,7 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     collapseBtn->setFixedSize(9, 16);
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleListCollapsed(); });
-    titleLabel = new QLabel(tr("Scope"), headerBand);
+    titleLabel = new QLabel(tr("Global and Masks"), headerBand);
     titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
                                   .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
     panelMenuBtn = new BarBtn();
