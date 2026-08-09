@@ -147,6 +147,11 @@ public:
     // End-to-end metadata read used by the metadata test layer (tests/). Reads
     // filePath through the full Metadata pipeline and exits 0 if make/model and
     // dimensions parsed (and match WINNOW_METATEST_MAKE/MODEL if set), else 2.
+    /* Headless DEVELOP stress driver for ThreadSanitizer: simulates a brush drag on a
+       multi-submask scope while switching images, toggling the veil and re-selecting the
+       folder, so the worker-thread proxy render collides with the GUI thread's use of the
+       same caches. See tests/tsan/run_tsan_develop.sh. */
+    void runDevelopStressTest(const QString &folderPath, int durationMs);
     void runMetaTest(const QString &filePath);
 
     // Headless soak used by the soak test layer (tests/soak). Bounces between

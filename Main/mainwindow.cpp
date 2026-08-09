@@ -21,6 +21,7 @@
 #include "Develop/Transform/croptransform.h"
 #include <QMutex>
 #include <QScopeGuard>      // updateMaskOverlayTint probe (it has many early returns)
+#include <QtMath>          // qSin (runDevelopStressTest's synthetic stroke)
 #include <memory>
 #include <QMetaEnum>
 #include <cmath>            // std::sqrt (updateDevelopScopes sampling stride)
@@ -618,6 +619,139 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         // in-flight queued signals to a half-destroyed MW (teardown assert). The
         // orderly shutdown path (window close) is not what this smoke test covers.
         std::_Exit(rows > 0 ? 0 : 2);
+    });
+}
+
+void MW::runDevelopStressTest(const QString &folderPath, int durationMs)
+{
+/*
+    Headless DEVELOP stress driver, for ThreadSanitizer (tests/tsan/run_tsan_develop.sh).
+
+    WHY IT EXISTS: --selftest and --soaktest exercise the folder-load concurrency only.
+    Neither enters Develop, builds a mask or triggers a proxy render, so nothing in the
+    suite went near the interactive render path -- which is precisely the part that now
+    runs on a worker (developProxyPool) while the GUI thread keeps touching the same
+    caches. This drives that collision on purpose.
+
+    WHAT IT RACES:
+      o a simulated brush drag -- the pending submask's stroke grows and is pushed through
+        setActiveMaskParams, which is exactly what ImageView emits, so every tick runs
+        updateMaskOverlayTint + renderDevelopPreview -> worker;
+      o veil toggles, which flip whether the GUI thread composites at all;
+      o IMAGE SWITCHES mid-drag, so a worker completes against a changed currentFilePath
+        and its result must be discarded;
+      o direct renderDevelopPreview() calls, standing in for the crop/warp/level callers
+        that re-render WITHOUT bumping developParamsGen -- the case developProxyPending
+        exists for;
+      o folder re-selection, which clears developStackCache and the fold cache from the GUI
+        thread while a worker may be reading them.
+
+    Exits by std::_Exit like runSelfTest: TSan reports each race live as a WARNING, and the
+    script scans the log rather than trusting an exit code.
+*/
+    if (G::isLogger) G::log("MW::runDevelopStressTest", folderPath);
+    centralLayout->setCurrentIndex(LoupeTab);
+
+    const int submasks = qMax(1, qEnvironmentVariableIntValue("WINNOW_DEVTEST_SUBMASKS"));
+    const int loadMs   = qMax(1000, qEnvironmentVariableIntValue("WINNOW_DEVTEST_LOAD_MS"));
+    const int tickMs   = qMax(1, qEnvironmentVariableIntValue("WINNOW_DEVTEST_TICK_MS"));
+
+    /* WINNOW_DEVTEST_SERIAL=1 caps the GLOBAL pool at one thread, which makes every
+       developParallelRows / maskParallelFor / Develop::parallelFor take its SERIAL path.
+       That removes the QtConcurrent boundary from the picture, leaving exactly one axis of
+       concurrency -- the GUI thread against the proxy worker -- which is what this test
+       exists to validate.
+
+       It matters because the default log is dominated by an ARTIFACT, not by findings:
+       Homebrew Qt is not TSan-instrumented, so QFuture::waitForFinished()'s happens-before
+       edge is invisible to the tool. A parallel-for's lambdas capture the caller's stack by
+       reference; once the caller returns and reuses that stack, every one of those reads is
+       reported as a race. Confirmed by A/B: the same reports appear with the proxy render
+       forced back onto the GUI thread, where that concurrency cannot exist. */
+    if (qEnvironmentVariableIntValue("WINNOW_DEVTEST_SERIAL") == 1) {
+        QThreadPool::globalInstance()->setMaxThreadCount(1);
+        fprintf(stderr, "DEVTEST: global pool capped at 1 (parallel-for serial)\n");
+        fflush(stderr);
+    }
+
+    /* NO SIDECAR WRITES. The driver makes thousands of edits; left on, the debounce would
+       litter the test folder with .xmp files -- and the first run of this test did exactly
+       that to tests/fixtures. flushAll() on quit is moot: the driver ends with _Exit. */
+    G::isDevelopDebounceWrite = false;
+
+    if (fsTree->select(folderPath))
+        folderSelectionChange(folderPath, G::FolderOp::Add, /*resetDataModel*/true, false);
+
+    /* Let the folder load and the first image decode before Develop is switched on: the
+       mode change rebuilds the image cache, and racing it with the initial load would
+       measure a different thing (that path is what run_tsan.sh already covers). */
+    QTimer::singleShot(loadMs, this, [this, folderPath, submasks, tickMs, durationMs]() {
+        const int rows = dm ? dm->sf->rowCount() : 0;
+        if (rows < 1) {
+            fprintf(stderr, "DEVTEST: no images in %s\n", folderPath.toLocal8Bit().constData());
+            fflush(stderr);
+            std::_Exit(2);
+        }
+        sel->setCurrentRow(0);
+        setOperationMode(G::OperationMode::Develop);
+
+        if (!developProperties->selfTestAddMaskScope(submasks)) {
+            fprintf(stderr, "DEVTEST: could not build a mask scope (no current image)\n");
+            fflush(stderr);
+            std::_Exit(2);
+        }
+        fprintf(stderr, "DEVTEST: rows=%d submasks=%d tick=%dms\n", rows, submasks, tickMs);
+        fflush(stderr);
+
+        /* The drag. Each tick appends a point to the pending stroke and hands it over the
+           way ImageView does, then every so often perturbs the state the worker is racing
+           against. Counters are heap-allocated because the lambda outlives this scope. */
+        QTimer *drag = new QTimer(this);
+        drag->setInterval(tickMs);
+        int *tick = new int(0);
+        connect(drag, &QTimer::timeout, this, [this, tick, rows, submasks]() {
+            ++(*tick);
+            /* Re-arm after a churn: re-selecting the folder resets the datamodel, which
+               reloads each image's stack from its sidecar -- and the scope built above was
+               never written to one. Without this the drag silently degrades into rendering
+               an empty stack, which is what the first run of this driver actually did. */
+            if (developProperties->activeScopeComponents().size() < submasks) {
+                if (!developProperties->selfTestAddMaskScope(submasks)) return;
+            }
+            const int n = 2 + (*tick % 40);          // stroke grows, then restarts
+            QString pts;
+            for (int i = 0; i < n; ++i) {
+                const double t = double(i) / double(n);
+                pts += QString("%1,%2").arg(0.10 + 0.80 * t)
+                                       .arg(0.30 + 0.35 * qSin(t * 6.0));
+                if (i < n - 1) pts += ",";
+            }
+            developProperties->setActiveMaskParams(
+                QString("{\"size\":22,\"flow\":100,\"autoMask\":false,\"strokes\":"
+                        "[{\"size\":22,\"feather\":0,\"flow\":100,\"erase\":false,"
+                        "\"autoMask\":false,\"pts\":[%1]}]}").arg(pts));
+
+            if (*tick % 7 == 0)  imageView->toggleMaskTint();      // veil on/off mid-drag
+            if (*tick % 11 == 0) renderDevelopPreview(false);      // the crop-style caller
+            if (*tick % 23 == 0 && rows > 1)                       // switch image mid-drag
+                sel->setCurrentRow(*tick / 23 % rows);
+        });
+        drag->start();
+
+        /* Periodically yank the ground out from under the worker: a folder re-selection
+           clears developStackCache and the mask fold cache on the GUI thread. */
+        QTimer *churn = new QTimer(this);
+        churn->setInterval(qMax(500, durationMs / 8));
+        connect(churn, &QTimer::timeout, this, [this, folderPath]() {
+            folderSelectionChange(folderPath, G::FolderOp::Add, /*resetDataModel*/true, false);
+        });
+        churn->start();
+
+        QTimer::singleShot(durationMs, this, [this, tick]() {
+            fprintf(stderr, "DEVTEST: done ticks=%d\n", *tick);
+            fflush(stderr);
+            std::_Exit(0);
+        });
     });
 }
 
@@ -5809,6 +5943,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
                                    MaskBuildStats *stats = nullptr)
 {
     QElapsedTimer buildProbe;
+    const qint64 rasterMsOnEntry = stats ? stats->rasterMs : 0;
     if (stats) buildProbe.start();
     std::vector<float> out(size_t(w) * size_t(h), 0.0f);
     if (w <= 0 || h <= 0) return out;
@@ -6069,7 +6204,10 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
         }
     };
 
-    if (stats) { stats->setupMs += buildProbe.restart() - stats->rasterMs;
+    /* Subtract only the raster time THIS call accrued: stats are accumulated across
+       calls (the veil makes two), so using the running total drove setup negative. */
+    if (stats) { stats->setupMs += buildProbe.restart()
+                                   - (stats->rasterMs - rasterMsOnEntry);
                  stats->comps += comps.size(); }
 
     /* Fold the part that belongs to the next prefix, snapshot it, then fold the rest. */
@@ -6086,8 +6224,15 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
         if (g_maskFoldCache.size() > kMaskFoldKeys) g_maskFoldCache.clear();
         QVector<MaskFoldEntry> &entries = g_maskFoldCache[foldKey];
         /* Write back over the entry we resumed from -- this caller's own slot.
-           Overwriting a different caller's is exactly the thrash the vector prevents. */
-        int slot = foldSlot;
+           Overwriting a different caller's is exactly the thrash the vector prevents.
+
+           foldSlot is only a HINT: it was chosen under an EARLIER acquisition of this
+           mutex, and between then and now the cache can have been cleared -- by
+           maskFoldCacheClear() from the GUI thread's ensureRangeRef, by the key cap just
+           above, or by another render. Re-validate it against the vector as it stands or
+           entries[slot] indexes off the end. That is a SEGV, not a wrong pixel, and
+           tests/tsan/run_tsan_develop.sh crashed on it within a minute. */
+        int slot = (foldSlot >= 0 && foldSlot < entries.size()) ? foldSlot : -1;
         if (slot < 0) {
             if (entries.size() < kMaskFoldEntriesPerKey) {
                 entries.append(MaskFoldEntry());

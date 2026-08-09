@@ -9,6 +9,7 @@ CMake/CTest + one script.
 | **smoke** | Real app launches, opens a folder, loads images, no crash | `ctest -L smoke` |
 | **metadata** | Full Metadata pipeline parses a real committed camera file (make/model/dims) | `ctest -L metadata` |
 | **tsan**  | No data races during folder-load concurrency | `tests/tsan/run_tsan.sh` |
+| **tsan (develop)** | No races between the GUI thread and the Develop render worker | `tests/tsan/run_tsan_develop.sh` |
 | **soak**  | Races + memory growth under sustained folder bounce (load/navigate) | `tests/soak/run_soak.sh` |
 
 ## Quick start (unit + smoke)
@@ -37,6 +38,41 @@ tests/tsan/run_tsan.sh        # configures mac-tsan, builds, runs, scans for rac
 Race detection is by **log scan** (the self-test ends with `std::_Exit`, which
 skips TSan's atexit summary; per-race warnings still print live). Suppressions
 come from `tsan.supp` in the repo root.
+
+### Develop render (`run_tsan_develop.sh`)
+
+`run_tsan.sh` and the soak layer only exercise folder-load concurrency — neither
+enters Develop, builds a mask or triggers a proxy render. Since the interactive
+proxy render moved to a worker (`MW::developProxyPool`) while the GUI thread
+keeps using the same caches, that needed its own layer:
+
+```sh
+tests/tsan/run_tsan_develop.sh          # ~45 s drag under TSan
+WINNOW_DEVTEST_MS=180000 tests/tsan/run_tsan_develop.sh    # longer hunt
+```
+
+Driven by the hidden `--devtest <folder>` flag → `MW::runDevelopStressTest`:
+a simulated brush drag on a multi-submask scope, while switching images,
+toggling the veil, re-rendering through the crop-style caller and re-selecting
+the folder. It always works on a **throwaway copy** of the images (Develop
+flushes sidecars on navigate-away, so it must never run against a real folder).
+
+Two things about reading its output:
+
+- **`WINNOW_DEVTEST_SERIAL=1` is the default and matters.** It caps the global
+  pool at one thread so every `parallelFor` runs serially. Homebrew Qt is not
+  TSan-instrumented, so `QFuture::waitForFinished()`'s happens-before edge is
+  invisible: a parallel-for's lambdas capture the caller's stack by reference,
+  and once the caller returns and reuses that stack, every one of those reads is
+  reported as a race. Measured here: **49 reports parallel, 5 serial**, and the
+  44 that vanish are all that artifact — confirmed by A/B, since the same
+  reports appear with the render forced back onto the GUI thread where the
+  concurrency cannot exist. Serial mode leaves one axis, GUI vs worker, which is
+  the point. `WINNOW_DEVTEST_SERIAL=0` shows the noisy picture.
+- **Failure is scoped.** Only races naming the Develop render fail the run; the
+  folder-load / metadata-reader family is counted and printed as a warning (it
+  is a separate, known concern). Crashes always fail — the first run of this
+  test SEGV'd and would otherwise have "passed".
 
 ## Soak layer
 
